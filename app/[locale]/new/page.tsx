@@ -68,6 +68,7 @@ import { StatusBar } from "@/components/workspace-v2/status-bar";
 import { TopBar } from "@/components/workspace-v2/top-bar";
 import { stripEditorInstrumentation } from "@/components/workspace-v2/strip-editor-instrumentation";
 import { useDarkMode } from "@/lib/use-dark-mode";
+import { useIsMobile } from "@/components/workspace-v2/use-is-mobile";
 
 // Outer shell exists so `useSearchParams()` in the inner component has a
 // Suspense boundary, matching the /new V1 pattern.
@@ -199,6 +200,21 @@ function NewV2Inner() {
     entryMode === "template" ? "templates" : "chat",
   );
   const [leftCollapsed, setLeftCollapsed] = useState(false);
+  const isMobile = useIsMobile();
+  // Mobile: the canvas is the hero. Editing/choosing enter with the panel
+  // closed (rail only); guided entry flows enter with it open — there the
+  // panel IS the screen (brief form, gallery, paste box). Re-applies on
+  // every entry-mode transition, never on desktop.
+  const mobileEntrySynced = useRef<EntryMode | null>(null);
+  useEffect(() => {
+    if (!isMobile) {
+      mobileEntrySynced.current = null;
+      return;
+    }
+    if (mobileEntrySynced.current === entryMode) return;
+    mobileEntrySynced.current = entryMode;
+    setLeftCollapsed(entryMode === "editing" || entryMode === "choosing");
+  }, [isMobile, entryMode]);
   // Which account section the workspace CENTER renders is kept IN THE URL
   // (?view=business|projects|analytics|messages; absent = the page canvas) so a
   // refresh or shared link lands on the same section. Opening a page navigates
@@ -528,6 +544,11 @@ function NewV2Inner() {
     [aiPrompt],
   );
   const aiGenerating = aiGenState.kind === "generating";
+  // Mobile: the brief panel covers the canvas, so close it the moment the
+  // stream starts — the user should watch their page assemble, not the form.
+  useEffect(() => {
+    if (isMobile && aiGenState.kind === "generating") setLeftCollapsed(true);
+  }, [isMobile, aiGenState.kind]);
   const [genSlow, setGenSlow] = useState(false);
   const [genModel] = useAIModel();
   const handleAiGenerate = useCallback(() => {
@@ -1588,6 +1609,9 @@ function NewV2Inner() {
           onPreviewTemplate={(t) => {
             setPreviewingTemplate(t);
             setTemplateError(null);
+            // Mobile: the gallery overlays the canvas — close it so the
+            // tapped template's preview is actually visible.
+            if (isMobile) setLeftCollapsed(true);
           }}
           previewingTemplateId={previewingTemplate?.id ?? null}
           onPreviewSection={handlePreviewSection}
@@ -1797,7 +1821,7 @@ function NewV2Inner() {
               {!hasBusinessInfo &&
                 loadedProject &&
                 !makeYoursDismissed.has(loadedProject.id) && (
-                  <div className="absolute top-3 left-1/2 -translate-x-1/2 z-30 flex items-center gap-2 pl-3.5 pr-1.5 py-1.5 rounded-full bg-elev border bd shadow-card fade-in max-w-[calc(100%-2rem)]">
+                  <div className="absolute top-12 lg:top-3 left-1/2 -translate-x-1/2 z-30 flex items-center gap-2 pl-3.5 pr-1.5 py-1.5 rounded-full bg-elev border bd shadow-card fade-in max-w-[calc(100%-2rem)]">
                     <span className="inline-flex items-center gap-1.5 text-[12px] fg whitespace-nowrap min-w-0">
                       <Sparkles size={13} className="text-accent shrink-0" />
                       <b className="fg">{t("makeYours.title")}</b>
@@ -1829,7 +1853,7 @@ function NewV2Inner() {
                 // constant between editing-on and editing-off — the user sees
                 // the same render regardless of whether the inspector is open.
                 // Pattern parallels Figma/Webflow/Framer's right rail.
-                <div className="absolute right-0 top-0 bottom-0 z-20 shadow-2xl">
+                <div className="absolute right-0 top-0 bottom-0 z-30 shadow-2xl max-md:left-12">
                   <PropertiesPanel
                     selection={inspectSelection}
                     pageMeta={pageMeta}

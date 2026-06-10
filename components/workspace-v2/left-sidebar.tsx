@@ -25,6 +25,7 @@ import {
   Monitor,
   PanelLeft,
   PanelRight,
+  X,
 } from "./icons";
 import type { Section } from "./mock-data";
 import type { BriefFormState } from "@/components/workspace/types";
@@ -361,7 +362,10 @@ export function LeftSidebar({
   }
 
   return (
-    <aside className="h-full shrink-0 flex bg-side border-r bd">
+    // On mobile (< md) the expanded panel can't share the row with the canvas
+    // (272px of a 390px screen leaves nothing) — it overlays the whole row
+    // instead, rail included, and the header grows a close button.
+    <aside className="h-full shrink-0 flex bg-side border-r bd max-md:absolute max-md:inset-0 max-md:z-40 max-md:border-r-0">
       {/* The icon rail stays vertical + fixed — identical to collapsed; the
           panel just opens to its right (it never reflows into a top row). */}
       <div className="h-full w-12 shrink-0 flex flex-col items-center pt-2 gap-1 border-r bd">
@@ -424,11 +428,19 @@ export function LeftSidebar({
           </button>
         </Tooltip>
       </div>
-      <div className="w-[272px] shrink-0 flex flex-col min-w-0">
+      <div className="w-[272px] max-md:w-auto max-md:flex-1 shrink-0 flex flex-col min-w-0">
       <div className="flex items-center justify-between px-3 py-1.5 border-b bd shrink-0">
         <span className="text-[10px] uppercase tracking-[0.16em] fg-faint font-semibold ui-small">
           {tabTitle(activeMeta.id)}
         </span>
+        <button
+          type="button"
+          onClick={onToggleCollapse}
+          aria-label={t("sidebar.collapsePanel")}
+          className="md:hidden -mr-1 inline-flex h-6 w-6 items-center justify-center rounded-md fg-muted hover:fg hover:bg-hover transition"
+        >
+          <X size={13} />
+        </button>
       </div>
       <div key={`${entryMode}:${mode}`} className="flex-1 min-h-0 fade-slide">
         {entryMode === "choosing" ? (
