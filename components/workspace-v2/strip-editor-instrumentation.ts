@@ -20,18 +20,25 @@
 // Fast path skips the parse when there's nothing to strip.
 export function stripEditorInstrumentation(html: string): string {
   if (!html) return html;
-  if (!html.includes("data-openlen-") && !html.includes("contenteditable")) {
+  if (
+    !html.includes("data-openlen-") &&
+    !html.includes("contenteditable") &&
+    !html.includes("data-ol-motion") &&
+    !html.includes("data-ol-counted")
+  ) {
     return html;
   }
   if (typeof DOMParser === "undefined") return html;
   try {
     const doc = new DOMParser().parseFromString(html, "text/html");
     // Injected <style>/<script> + the UI nodes they create (drag handles,
-    // replace buttons, drop indicator, copy chip) + the inline-edit overlay
-    // all carry a marker — removing the marked elements clears the surface.
+    // replace buttons, drop indicator, copy chip) + the inline-edit overlay +
+    // the motion/music preview artifacts (injector scripts, preview styles,
+    // the preview player host) all carry a marker — removing the marked
+    // elements clears the surface.
     doc
       .querySelectorAll(
-        "[data-openlen-inline-edit],[data-openlen-reorder],[data-openlen-replace],[data-openlen-section-select],[data-openlen-inspect],[data-openlen-edit-overlay]",
+        "[data-openlen-inline-edit],[data-openlen-reorder],[data-openlen-replace],[data-openlen-section-select],[data-openlen-inspect],[data-openlen-edit-overlay],[data-openlen-motion-preview],[data-openlen-music-preview],#ol-motion-preview-style,#ol-music-preview-style",
       )
       .forEach((n) => n.remove());
     // inline-edit run-wrappers: UNWRAP (replace with children) — never delete,
@@ -74,6 +81,27 @@ export function stripEditorInstrumentation(html: string): string {
         doc.body.removeAttribute(attr);
       }
     }
+    // Motion-preview runtime state. The preview applies the REAL motion
+    // runtime to the live DOM, so a save captured mid-preview carries its
+    // mutations: the <html> marker/classes, per-element reveal classes, and
+    // stat counters frozen mid-count (data-ol-counted + the original text
+    // stashed in data-ol-orig). Restore the originals — motion reaches the
+    // published page solely through the publish-time bake, which needs a
+    // clean (marker-free) document to fire.
+    const root = doc.documentElement;
+    root.removeAttribute("data-ol-motion");
+    root.classList.remove("ol-motion-native", "ol-motion-js");
+    if (!root.getAttribute("class")) root.removeAttribute("class");
+    doc.querySelectorAll(".ol-in").forEach((n) => {
+      n.classList.remove("ol-in");
+      if (!n.getAttribute("class")) n.removeAttribute("class");
+    });
+    doc.querySelectorAll("[data-ol-counted]").forEach((n) => {
+      const orig = n.getAttribute("data-ol-orig");
+      if (orig != null) n.textContent = orig;
+      n.removeAttribute("data-ol-counted");
+      n.removeAttribute("data-ol-orig");
+    });
     return "<!doctype html>\n" + doc.documentElement.outerHTML;
   } catch {
     return html;

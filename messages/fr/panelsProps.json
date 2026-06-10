@@ -138,5 +138,18 @@
       "dramatic": "Apparitions cinématographiques, parallaxe plus forte, titre épinglé"
     },
     "note": "Ajoute une chorégraphie de défilement façon Apple sur votre page publiée. Figée, elle est identique — elle ne bouge qu'au défilement et respecte la préférence de mouvement réduit."
+  },
+  "music": {
+    "title": "Musique",
+    "upload": "Importer un titre",
+    "uploading": "Envoi…",
+    "replace": "Remplacer le titre",
+    "remove": "Retirer",
+    "trackTitle": "Titre",
+    "addCover": "Ajouter une pochette",
+    "changeCover": "Changer la pochette",
+    "uploadError": "Échec de l'envoi — essayez un autre fichier.",
+    "formats": "MP3, M4A, OGG ou WAV · jusqu'à 12 Mo.",
+    "note": "Ajoute un lecteur flottant à votre page publiée, assorti à votre thème. Les navigateurs ne lancent jamais le son automatiquement : le visiteur appuie pour écouter. Utilisez de l'audio dont vous détenez les droits."
   }
 }

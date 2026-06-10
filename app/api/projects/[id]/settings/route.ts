@@ -1,7 +1,11 @@
 import { and, eq } from "drizzle-orm";
 import { auth } from "@/auth";
 import { db, schema } from "@/lib/db";
-import type { FormConfig, ProjectData } from "@/lib/projects/types";
+import type {
+  FormConfig,
+  MusicSettings,
+  ProjectData,
+} from "@/lib/projects/types";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // PATCH /api/projects/[id]/settings — update non-HTML project settings.
@@ -37,10 +41,24 @@ interface PatchBody {
   /** Motion Looks preset, or null/"" to turn motion off. Takes effect on
    *  the next publish. */
   motion?: string | null;
+  /** Page music: the floating player's track, or null to remove it. Takes
+   *  effect on the next publish (previews live in the editor). */
+  music?: { src?: string; title?: string; cover?: string } | null;
 }
 
 function clean(v: unknown, max: number): string {
   return typeof v === "string" ? v.trim().slice(0, max) : "";
+}
+
+/** Asset URLs in music settings must point at THIS project's uploads —
+ *  the relative LocalFs API path or the absolute (LocalFs-with-base / S3)
+ *  form, both of which carry `/<projectId>/` in the path. Keeps a page from
+ *  pulling audio/covers off arbitrary third-party hosts. */
+function isOwnAssetUrl(url: string, projectId: string): boolean {
+  return (
+    url.includes(`/api/projects/${projectId}/assets/`) ||
+    (/^https:\/\//i.test(url) && url.includes(`/${projectId}/`))
+  );
 }
 
 export async function PATCH(
@@ -68,11 +86,42 @@ export async function PATCH(
       );
     }
   }
-  if (!hasFormPatch && !hasAnalyticsToggle && !hasMotion) {
+  const hasMusic = "music" in body;
+  let musicValue: MusicSettings | null = null;
+  if (hasMusic && body.music !== null) {
+    const m = body.music;
+    if (!m || typeof m !== "object") {
+      return json(
+        { error: "invalid_body", message: "music must be an object or null" },
+        400,
+      );
+    }
+    const src = clean(m.src, MAX_URL);
+    if (!src || !isOwnAssetUrl(src, id)) {
+      return json(
+        { error: "invalid_body", message: "music.src must be one of this project's uploaded assets" },
+        400,
+      );
+    }
+    const cover = clean(m.cover, MAX_URL);
+    if (cover && !isOwnAssetUrl(cover, id)) {
+      return json(
+        { error: "invalid_body", message: "music.cover must be one of this project's uploaded assets" },
+        400,
+      );
+    }
+    const title = clean(m.title, 120);
+    musicValue = {
+      src,
+      ...(title ? { title } : {}),
+      ...(cover ? { cover } : {}),
+    };
+  }
+  if (!hasFormPatch && !hasAnalyticsToggle && !hasMotion && !hasMusic) {
     return json(
       {
         error: "invalid_body",
-        message: "expected formIndex+patch OR analyticsDisabled OR motion",
+        message: "expected formIndex+patch OR analyticsDisabled OR motion OR music",
       },
       400,
     );
@@ -141,6 +190,10 @@ export async function PATCH(
     const m = body.motion;
     if (m && m !== "") nextSettings.motion = m;
     else delete nextSettings.motion;
+  }
+  if (hasMusic) {
+    if (musicValue) nextSettings.music = musicValue;
+    else delete nextSettings.music;
   }
 
   const nextData: ProjectData = {

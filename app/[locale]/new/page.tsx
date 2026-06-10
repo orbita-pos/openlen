@@ -20,6 +20,7 @@ import { setGenerationBusy } from "@/lib/generation-busy";
 import { useAIModel } from "@/components/workspace-v2/model-picker";
 import type {
   FormConfig,
+  MusicSettings,
   ProjectSettings,
   StoredChatTurn,
 } from "@/lib/projects/types";
@@ -1394,6 +1395,31 @@ function NewV2Inner() {
     },
     [loadedProject?.id, loadedProject?.settings?.motion],
   );
+  // Page music — set/replace/remove the floating player's track. Optimistic
+  // like motion: updates the setting locally (which re-applies the live
+  // iframe preview via the musicTrack prop) and PATCHes in the background;
+  // rolls back on failure. Takes effect on the next publish.
+  const applyMusic = useCallback(
+    (music: MusicSettings | null) => {
+      const projectId = loadedProject?.id;
+      if (!projectId) return;
+      const prev = loadedProject?.settings?.music;
+      const next = music ?? undefined;
+      setLoadedProject((p) =>
+        p ? { ...p, settings: { ...p.settings, music: next } } : p,
+      );
+      void fetch(`/api/projects/${projectId}/settings`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ music }),
+      }).catch(() => {
+        setLoadedProject((p) =>
+          p ? { ...p, settings: { ...p.settings, music: prev } } : p,
+        );
+      });
+    },
+    [loadedProject?.id, loadedProject?.settings?.music],
+  );
   const toggleInspect = useCallback(() => {
     setInspectMode((m) => !m);
     setInspectSelection(null);
@@ -1667,6 +1693,7 @@ function NewV2Inner() {
                 insertRequest={insertRequest}
                 removeRequest={removeRequest}
                 motionPreset={loadedProject.settings?.motion}
+                musicTrack={loadedProject.settings?.music ?? null}
                 onIframeRef={(el) => {
                   iframeElRef.current = el;
                 }}
@@ -1773,6 +1800,8 @@ function NewV2Inner() {
                     originalAccent={originalTheme?.tokens["--ol-accent"] || undefined}
                     motion={loadedProject?.settings?.motion}
                     onApplyMotion={loadedProject ? applyMotion : undefined}
+                    music={loadedProject?.settings?.music}
+                    onApplyMusic={loadedProject ? applyMusic : undefined}
                     onSendTestFormEmail={sendTestFormEmail}
                     onClearSelection={() => setInspectSelection(null)}
                     onClose={() => {

@@ -138,5 +138,18 @@
       "dramatic": "Cineastische Einblendungen, stärkere Parallaxe, fixierte Überschrift"
     },
     "note": "Fügt Apple-artige Scroll-Choreografie auf deiner veröffentlichten Seite hinzu. Eingefroren sieht sie identisch aus – sie bewegt sich nur beim Scrollen und respektiert die Einstellung für reduzierte Bewegung."
+  },
+  "music": {
+    "title": "Musik",
+    "upload": "Track hochladen",
+    "uploading": "Wird hochgeladen…",
+    "replace": "Track ersetzen",
+    "remove": "Entfernen",
+    "trackTitle": "Titel",
+    "addCover": "Cover hinzufügen",
+    "changeCover": "Cover ändern",
+    "uploadError": "Upload fehlgeschlagen — bitte eine andere Datei versuchen.",
+    "formats": "MP3, M4A, OGG oder WAV · bis 12 MB.",
+    "note": "Fügt deiner veröffentlichten Seite einen schwebenden Player im Stil deines Themes hinzu. Browser spielen Ton nie automatisch ab — Besucher tippen zum Anhören. Verwende nur Audio, an dem du die Rechte hast."
   }
 }

@@ -19,6 +19,7 @@ import { optimizeHtmlForProduction } from "@/lib/publish/optimize-html";
 import { bakeResponsiveImages } from "@/lib/publish/image-bake";
 import { bakeGoogleFonts } from "@/lib/publish/font-bake";
 import { bakeMotion } from "@/lib/publish/motion";
+import { bakeMusic } from "@/lib/publish/music";
 import {
   annotateLanguageCluster,
   buildRobots,
@@ -30,7 +31,7 @@ import { consolidateUnsplashCredits } from "@/lib/publish/credits";
 import { wirePublishedForms } from "@/lib/publish/forms";
 import { injectAnalyticsSnippet } from "@/lib/analytics/snippet";
 import { injectLogoIntoHtml } from "@/lib/branding/inject-logo";
-import type { FormConfig } from "@/lib/projects/types";
+import type { FormConfig, MusicSettings } from "@/lib/projects/types";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Publish-to-disk primitives — versioned releases + `current` symlink.
@@ -145,6 +146,11 @@ export interface PublishParams {
    *  is stamped with scroll choreography (CSS + sealed runtime). Absent /
    *  invalid = no motion. Applied to the root doc AND every locale variant. */
   motion?: string;
+  /** Page music (settings.music). When set, the floating tap-to-play player
+   *  is baked in (markup + CSS + sealed runtime); LocalFs-hosted audio/cover
+   *  files are copied into the release's assets dir first so the published
+   *  page is self-contained. Applied to the root doc AND locale variants. */
+  music?: MusicSettings;
 }
 
 const ASSET_URL_RE_FOR =
@@ -238,6 +244,39 @@ async function migrateLocalAssets(params: {
       return `/assets/${filename}`;
     },
   );
+}
+
+/** Migrate ONE asset URL (not embedded in the HTML — e.g. settings.music's
+ *  audio/cover, which only enters the document at bake time, after
+ *  migrateLocalAssets already ran). LocalFs API URLs get their file copied
+ *  into the release's shared assets dir and become subdomain-relative;
+ *  S3/absolute non-API URLs pass through untouched. Best-effort: on copy
+ *  failure the original URL is returned so the page still works via the
+ *  Node fallback. */
+async function migrateSingleAsset(
+  url: string,
+  projectId: string,
+  subDir: string,
+): Promise<string> {
+  const m = ASSET_URL_RE_FOR(projectId).exec(url);
+  if (!m) return url;
+  const filename = m[1];
+  if (!/^[A-Za-z0-9._-]+$/.test(filename) || filename.includes("..")) {
+    return url;
+  }
+  const targetDir = safeJoin(subDir, "assets");
+  await mkdir(targetDir, { recursive: true });
+  const dst = path.join(targetDir, filename);
+  try {
+    await stat(dst); // already present from a prior publish — idempotent
+  } catch {
+    try {
+      await copyFile(path.join(getUploadDir(), projectId, filename), dst);
+    } catch {
+      return url;
+    }
+  }
+  return `/assets/${filename}`;
 }
 
 // Match Unsplash CDN URLs in any HTML/CSS context. The exclude set stops
@@ -528,6 +567,36 @@ export async function publishToDir(
     } catch (err) {
       // eslint-disable-next-line no-console
       console.warn("[publishToDir] motion bake failed; publishing without it", err);
+    }
+  }
+
+  // Page music: bake the floating tap-to-play player when the project has a
+  // track. Same placement rationale as motion (locale variants inherit it,
+  // the seal hashes the runtime). The track/cover URLs only enter the HTML
+  // here — after migrateLocalAssets already ran — so LocalFs-hosted files
+  // get their own single-asset migration into the release. Soft-fail.
+  if (process.env.OPENLEN_MUSIC !== "0" && params.music?.src) {
+    try {
+      let music = params.music;
+      if (params.projectId) {
+        music = {
+          ...music,
+          src: await migrateSingleAsset(music.src, params.projectId, subDir),
+          ...(music.cover
+            ? {
+                cover: await migrateSingleAsset(
+                  music.cover,
+                  params.projectId,
+                  subDir,
+                ),
+              }
+            : {}),
+        };
+      }
+      migratedHtml = bakeMusic(migratedHtml, music);
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.warn("[publishToDir] music bake failed; publishing without it", err);
     }
   }
 

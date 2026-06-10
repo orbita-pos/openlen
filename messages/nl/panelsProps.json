@@ -138,5 +138,18 @@
       "dramatic": "Cinematische onthullingen, sterkere parallax, vastgezette kop"
     },
     "note": "Voegt Apple-achtige scrollchoreografie toe aan je gepubliceerde pagina. Bevroren ziet hij er identiek uit — hij beweegt alleen bij scrollen en respecteert de voorkeur voor minder beweging."
+  },
+  "music": {
+    "title": "Muziek",
+    "upload": "Track uploaden",
+    "uploading": "Uploaden…",
+    "replace": "Track vervangen",
+    "remove": "Verwijderen",
+    "trackTitle": "Titel",
+    "addCover": "Hoes toevoegen",
+    "changeCover": "Hoes wijzigen",
+    "uploadError": "Uploaden mislukt — probeer een ander bestand.",
+    "formats": "MP3, M4A, OGG of WAV · tot 12 MB.",
+    "note": "Voegt een zwevende tap-to-play-speler toe aan je gepubliceerde pagina, in de stijl van je thema. Browsers spelen geluid nooit automatisch af — bezoekers tikken om te luisteren. Gebruik audio waarvan je de rechten hebt."
   }
 }

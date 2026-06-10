@@ -138,5 +138,18 @@
       "dramatic": "Cinematic reveals, stronger parallax, a pinned headline"
     },
     "note": "Adds Apple-style scroll choreography on your live page. The page looks identical frozen — it only moves as visitors scroll, and respects reduced-motion settings."
+  },
+  "music": {
+    "title": "Music",
+    "upload": "Upload track",
+    "uploading": "Uploading…",
+    "replace": "Replace track",
+    "remove": "Remove",
+    "trackTitle": "Title",
+    "addCover": "Add cover",
+    "changeCover": "Change cover",
+    "uploadError": "Upload failed — try a different file.",
+    "formats": "MP3, M4A, OGG or WAV · up to 12 MB.",
+    "note": "Adds a floating tap-to-play player to your live page, styled to match your theme. Browsers never autoplay sound — visitors tap to listen. Use audio you have the rights to."
   }
 }

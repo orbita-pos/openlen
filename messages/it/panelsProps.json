@@ -138,5 +138,18 @@
       "dramatic": "Comparse cinematografiche, parallasse più forte, titolo fissato"
     },
     "note": "Aggiunge una coreografia di scorrimento in stile Apple sulla tua pagina pubblicata. Ferma è identica — si muove solo allo scorrimento e rispetta la preferenza di movimento ridotto."
+  },
+  "music": {
+    "title": "Musica",
+    "upload": "Carica brano",
+    "uploading": "Caricamento…",
+    "replace": "Sostituisci brano",
+    "remove": "Rimuovi",
+    "trackTitle": "Titolo",
+    "addCover": "Aggiungi copertina",
+    "changeCover": "Cambia copertina",
+    "uploadError": "Caricamento non riuscito — prova con un altro file.",
+    "formats": "MP3, M4A, OGG o WAV · fino a 12 MB.",
+    "note": "Aggiunge un player flottante alla tua pagina pubblicata, in linea con il tuo tema. I browser non riproducono mai l'audio da soli: il visitatore tocca per ascoltare. Usa audio di cui possiedi i diritti."
   }
 }

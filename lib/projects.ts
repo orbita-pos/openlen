@@ -693,6 +693,7 @@ export async function publishProject(
       analyticsEnabled: !project.data?.settings?.analyticsDisabled,
       logoUrl: effectiveLogoUrl,
       motion: project.data?.settings?.motion,
+      music: project.data?.settings?.music,
       sourceLang,
       buildLocaleDocs:
         targets.length > 0
