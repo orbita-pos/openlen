@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="en" style="--ol-bg: #0b0e16; --ol-surface: #141927; --ol-fg: #eef0f8; --ol-border: #2a3149; --ol-accent: #e879f9; --ol-font-display: 'Space Grotesk', sans-serif; --ol-r-scale: 1.2" data-ol-tematica="anime-noir">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MIRU — digital artist & streamer</title>
+<meta name="description" content="Art, streams and commissions by MIRU — tokyo nights, neon dreams.">
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ol-bg:#0b0e16; --ol-surface:#141927; --ol-fg:#eef0f8; --ol-border:#2a3149;
+    --ol-accent:#e879f9; --ol-accent-r:232,121,249;
+    --ol-font-display:'Space Grotesk',sans-serif; --ol-r-scale:1.2;
+  }
+  body{background:var(--ol-bg);color:var(--ol-fg);font-family:'Inter',sans-serif}
+  .display{font-family:var(--ol-font-display)}
+  .card{
+    background:var(--ol-surface);
+    border:1px solid var(--ol-border);
+    border-radius:calc(10px + 7px * var(--ol-r-scale,1));
+  }
+  .pill{border-radius:999px}
+  .link-row{transition:transform .18s ease, box-shadow .18s ease}
+  .link-row:hover{transform:translateY(-2px);box-shadow:0 14px 34px -18px rgba(var(--ol-accent-r,232,121,249),.55)}
+  .link-row:active{transform:translateY(0) scale(.99)}
+  .social{color:var(--ol-fg);opacity:.78;transition:opacity .15s ease, color .15s ease, transform .15s ease}
+  .social:hover{opacity:1;color:var(--ol-accent);transform:translateY(-1px)}
+  .avatar-ring{box-shadow:0 0 0 3px var(--ol-bg), 0 0 0 5px var(--ol-accent)}
+  .dot{background:var(--ol-accent);box-shadow:0 0 0 4px rgba(var(--ol-accent-r,232,121,249),.18)}
+  .work{border-radius:calc(8px + 5px * var(--ol-r-scale,1));transition:transform .2s ease}
+  .work:hover{transform:scale(1.03)}
+  @media (prefers-reduced-motion: reduce){
+    .link-row,.social,.work{transition:none}
+    .link-row:hover,.social:hover,.work:hover{transform:none}
+  }
+</style>
+<link rel="stylesheet" data-ol-tematica href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&display=swap"><style data-ol-tematica>
+/* ── world ───────────────────────────────────────────────────────────── */
+html[data-ol-tematica="anime-noir"]::before{content:"";position:fixed;inset:0;z-index:-1;
+background-image:url("https://images.openlen.com/tematicas/anime-noir-rainglass-1920.webp");background-size:cover;background-position:center;
+background-repeat:no-repeat}
+@media (max-width:640px){html[data-ol-tematica="anime-noir"]::before{background-image:url("https://images.openlen.com/tematicas/anime-noir-rainglass-1920.webp")}}
+html[data-ol-tematica="anime-noir"]::after{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;
+background-image:linear-gradient(180deg, rgba(11,14,22,0.62) 0%, rgba(11,14,22,0.45) 45%, rgba(11,14,22,0.68) 100%), radial-gradient(rgba(255,255,255,0.10) 1px, transparent 1.3px);background-size:auto, 4px 4px}
+/* the page's own grounds go transparent so the world shows through — these
+   must out-rank the canonize force rules (attribute selector + !important) */
+[data-ol-tematica="anime-noir"] body,[data-ol-tematica="anime-noir"] [data-ol-bg-carrier]{background-color:transparent !important;background-image:none !important}
+[data-ol-tematica="anime-noir"] :is(body,main,[data-ol-bg-carrier])>:is(section,header,footer,nav,article,div,aside){background-color:transparent !important;background-image:none !important}
+/* ── ink ─────────────────────────────────────────────────────────────── */
+[data-ol-tematica="anime-noir"] :is(h1,h2,h3,h4,h5,h6,p,li,blockquote,figcaption,dt,dd,small):not([class*="bg-clip"]):not([class*="text-transparent"]){color:var(--ol-fg,#18181b) !important}
+/* ── glass ───────────────────────────────────────────────────────────── */
+[data-ol-tematica="anime-noir"] :is([class*="card"],form,pre,table){
+background-color:color-mix(in srgb, var(--ol-surface, #fff) 55%, transparent) !important;background-image:none !important;
+-webkit-backdrop-filter:blur(16px) saturate(1.35);
+backdrop-filter:blur(16px) saturate(1.35);
+border-color:color-mix(in srgb, var(--ol-border, rgba(0,0,0,.15)) 55%, transparent)}
+[data-ol-tematica="anime-noir"] nav{background-color:color-mix(in srgb, var(--ol-surface, #fff) 65%, transparent) !important;background-image:none !important;
+-webkit-backdrop-filter:blur(16px) saturate(1.35);
+backdrop-filter:blur(16px) saturate(1.35)}
+/* ── delight ─────────────────────────────────────────────────────────── */
+[data-ol-tematica="anime-noir"] ::selection{background:var(--ol-accent,#18181b);color:var(--ol-bg,#fff)}
+</style></head>
+<body class="min-h-screen antialiased">
+
+<nav class="sticky top-0 z-10">
+  <div class="max-w-md mx-auto px-5 h-14 flex items-center justify-between">
+    <span class="display font-bold tracking-[0.18em] text-sm">MIRU</span>
+    <a href="#links" class="pill px-4 py-1.5 text-[12.5px] font-semibold"
+       style="background:var(--ol-accent);color:var(--ol-bg)">Commission me</a>
+  </div>
+</nav>
+
+<main class="max-w-md mx-auto px-5 pt-10 pb-16 text-center">
+
+  <div class="avatar-ring pill w-24 h-24 mx-auto flex items-center justify-center"
+       style="background:linear-gradient(135deg, var(--ol-accent), color-mix(in srgb, var(--ol-accent) 35%, var(--ol-bg)))">
+    <span class="display text-4xl font-bold" style="color:var(--ol-bg)">M</span>
+  </div>
+
+  <h1 class="display text-3xl font-bold mt-5 tracking-tight">miru<span style="color:var(--ol-accent)">.exe</span></h1>
+  <p class="mt-2 text-[14.5px]" style="color:var(--ol-fg);opacity:.82">✦ digital artist &amp; streamer ✧ painting tokyo nights</p>
+
+  <div class="mt-3 flex items-center justify-center gap-2">
+    <span class="pill inline-flex items-center gap-1.5 px-3 py-1 text-[11.5px] font-medium card">
+      <span class="dot w-1.5 h-1.5 pill"></span> commissions open
+    </span>
+    <span class="pill inline-flex items-center gap-1 px-3 py-1 text-[11.5px] font-medium card">
+      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+      Tokyo, JP
+    </span>
+  </div>
+
+  <div class="mt-6 flex items-center justify-center gap-5">
+    <a class="social" href="#" aria-label="X">
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M18.9 1.2h3.7l-8.2 9.3L24 22.8h-7.6l-5.9-7.7-6.8 7.7H0l8.7-10L-.5 1.2H7.3l5.3 7 6.3-7Zm-1.3 19.4h2L6.2 3.3H4l13.6 17.3Z" transform="translate(.5 0) scale(.95)"/></svg>
+    </a>
+    <a class="social" href="#" aria-label="Instagram">
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="0.5" fill="currentColor"/></svg>
+    </a>
+    <a class="social" href="#" aria-label="TikTok">
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M16.6 2h3a6.9 6.9 0 0 0 .3 1.8 5.6 5.6 0 0 0 2.5 3.1c.5.3 1 .5 1.6.6v3.3a9 9 0 0 1-4.4-1.4v6.4a7.4 7.4 0 1 1-7.4-7.4c.3 0 .7 0 1 .1v3.4a4 4 0 1 0 2.9 3.9V2.5c0-.2 0-.3.5-.5Z" transform="scale(.92)"/></svg>
+    </a>
+    <a class="social" href="#" aria-label="Twitch">
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 2H3v16h5v4l4-4h5l4-4V2z"/><path d="M11 7v4M16 7v4"/></svg>
+    </a>
+    <a class="social" href="#" aria-label="YouTube">
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22.5 6.4a3 3 0 0 0-2.1-2.1C18.5 3.8 12 3.8 12 3.8s-6.5 0-8.4.5A3 3 0 0 0 1.5 6.4 31 31 0 0 0 1 12a31 31 0 0 0 .5 5.6 3 3 0 0 0 2.1 2.1c1.9.5 8.4.5 8.4.5s6.5 0 8.4-.5a3 3 0 0 0 2.1-2.1A31 31 0 0 0 23 12a31 31 0 0 0-.5-5.6Z"/><path d="m10 15 5-3-5-3z" fill="currentColor" stroke="none"/></svg>
+    </a>
+  </div>
+
+  <div id="links" class="mt-8 flex flex-col gap-3 text-left">
+    <a href="#" class="card link-row flex items-center gap-3.5 px-4 py-4">
+      <span class="text-xl" aria-hidden="true">🎨</span>
+      <span class="flex-1">
+        <span class="block text-[14.5px] font-semibold">Print shop</span>
+        <span class="block text-[12px]" style="opacity:.62">posters · acrylic charms · zines</span>
+      </span>
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="opacity:.5" aria-hidden="true"><polyline points="9 18 15 12 9 6"/></svg>
+    </a>
+    <a href="#" class="card link-row flex items-center gap-3.5 px-4 py-4">
+      <span class="text-xl" aria-hidden="true">📺</span>
+      <span class="flex-1">
+        <span class="block text-[14.5px] font-semibold">Live on Twitch</span>
+        <span class="block text-[12px]" style="opacity:.62">paint sessions · tue &amp; fri, 9pm JST</span>
+      </span>
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="opacity:.5" aria-hidden="true"><polyline points="9 18 15 12 9 6"/></svg>
+    </a>
+    <a href="#" class="card link-row flex items-center gap-3.5 px-4 py-4">
+      <span class="text-xl" aria-hidden="true">💌</span>
+      <span class="flex-1">
+        <span class="block text-[14.5px] font-semibold">Commission info</span>
+        <span class="block text-[12px]" style="opacity:.62">2 slots left this month</span>
+      </span>
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="opacity:.5" aria-hidden="true"><polyline points="9 18 15 12 9 6"/></svg>
+    </a>
+    <a href="#" class="card link-row flex items-center gap-3.5 px-4 py-4">
+      <span class="text-xl" aria-hidden="true">☕</span>
+      <span class="flex-1">
+        <span class="block text-[14.5px] font-semibold">Buy me a matcha</span>
+        <span class="block text-[12px]" style="opacity:.62">support the next zine</span>
+      </span>
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="opacity:.5" aria-hidden="true"><polyline points="9 18 15 12 9 6"/></svg>
+    </a>
+  </div>
+
+  <div class="mt-9 text-left">
+    <div class="flex items-baseline justify-between">
+      <h2 class="display text-[13px] font-semibold tracking-[0.14em] uppercase" style="opacity:.7">Latest work</h2>
+      <a href="#" class="text-[12px] font-medium" style="color:var(--ol-accent)">see all →</a>
+    </div>
+    <div class="mt-3 grid grid-cols-3 gap-2.5">
+      <img class="work w-full aspect-[4/5] object-cover" src="https://images.openlen.com/392-japan-sakura-tree-800.webp" alt="Night sakura painting" loading="lazy">
+      <img class="work w-full aspect-[4/5] object-cover" src="https://images.openlen.com/393-japan-fuji-twilight-800.webp" alt="Mt Fuji at twilight painting" loading="lazy">
+      <img class="work w-full aspect-[4/5] object-cover" src="https://images.openlen.com/394-japan-bamboo-forest-800.webp" alt="Bamboo forest lantern painting" loading="lazy">
+    </div>
+  </div>
+
+  <footer class="mt-12 text-[11px]" style="opacity:.45">
+    © MIRU · tokyo nights, neon dreams
+  </footer>
+
+</main>
+
+</body>
+</html>
