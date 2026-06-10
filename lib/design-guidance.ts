@@ -47,6 +47,14 @@ OUTPUT FORMAT — strict rules (instant failure if violated)
 • All images: inline SVG (for logos, illustrations, icons, mockups) OR
   \`<div>\` with \`bg-gradient-to-br\` as a placeholder for hero shots. NO
   external image URLs (unsplash, picsum, placehold.co, etc).
+• On EVERY such gradient placeholder that stands for a PHOTO (a hero image,
+  a feature shot, a gallery tile — a box meant to hold a real photograph),
+  add \`data-ol-photo="<2-4 word subject>"\` describing what the photo shows
+  (e.g. \`data-ol-photo="fresh street tacos"\`, \`data-ol-photo="modern open
+  office"\`, \`data-ol-photo="snowy mountain peak"\`). A real curated photo is
+  swapped in after generation, so be specific and concrete about the subject.
+  Only mark boxes that are PURE image areas (no text/buttons inside them) —
+  put captions/headlines as siblings, NOT inside the photo box.
 • Mobile-responsive at 360px minimum width — test mental: the page must
   not break on iPhone SE.
 • Lift-on-hover transitions for buttons and cards (50-150ms ease).

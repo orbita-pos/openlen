@@ -13,6 +13,7 @@ import { generateHtmlStream } from "@/lib/ai-stream/generate";
 import { selectReferenceTemplate } from "@/lib/templates/select-reference";
 import { fetchImageAsInlineData } from "@/lib/ai/inline-image";
 import { critiqueGeneratedPage } from "@/lib/ai/vision-critique";
+import { photographHtml } from "@/lib/imagery/photograph";
 import { recordCriticRun, recordRegenOutcome } from "@/lib/ai/quality-metrics";
 import type { InlineImage, Message } from "@/lib/ai-gateway";
 import {
@@ -72,7 +73,7 @@ NON-NEGOTIABLE CONSTRAINTS:
 - NO React, NO Babel, NO JSX, NO <script type="text/babel">, NO window.X globals, NO import statements anywhere.
 - NO data-slot-path= attribute anywhere — that is a reserved editor-mode marker.
 - NO login / signup / "my account" / dashboard UI. Public marketing pages only.
-- Inline SVG for logos / icons / illustrations. NO external image URLs. For hero / product imagery use a <div> with a tasteful bg-gradient-to-br placeholder.
+- Inline SVG for logos / icons / illustrations. NO external image URLs. For hero / product / gallery PHOTO imagery use a <div> with a tasteful bg-gradient-to-br placeholder AND a \`data-ol-photo="<2-4 word subject>"\` attribute naming what the photo shows (a real curated photo is swapped in after generation). Mark only pure image boxes — no text/buttons inside them.
 - Mobile-responsive down to 360px width.
 
 OUTPUT FORMAT — follow exactly:
@@ -487,6 +488,25 @@ ${brief}`;
               );
               recordRegenOutcome(false);
             }
+          }
+        }
+
+        // ── Born With Imagery ───────────────────────────────────────────────
+        // Swap real curated photos into the gradient image-placeholders the
+        // model marked (data-ol-photo). Deterministic library match on the
+        // model's subject hints — no extra AI call, no network. Soft-fail:
+        // a hiccup just keeps the gradient placeholders.
+        if (process.env.OPENLEN_IMAGERY !== "0") {
+          try {
+            const photographed = await photographHtml({ html, brief });
+            if (photographed.applied > 0) {
+              html = photographed.html;
+              // eslint-disable-next-line no-console
+              console.log(`[generate] imagery — ${photographed.applied} photo(s) placed`);
+            }
+          } catch (err) {
+            // eslint-disable-next-line no-console
+            console.warn("[generate] imagery failed; keeping gradient placeholders", err);
           }
         }
 
