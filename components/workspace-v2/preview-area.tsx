@@ -133,6 +133,14 @@ export function PreviewArea({
   const t = useTranslations("wsChrome");
   const [device, setDevice] = useState<Device>("desktop");
   const [zoom, setZoom] = useState<Zoom>("fit");
+  // On phone-sized screens the canvas pane is itself phone-sized — fitting
+  // the 1280px desktop layout there renders an unreadable miniature. Default
+  // to the mobile device once mounted; the segmented control still wins.
+  const deviceTouchedRef = useRef(false);
+  useEffect(() => {
+    if (deviceTouchedRef.current) return;
+    if (window.matchMedia("(max-width: 767px)").matches) setDevice("mobile");
+  }, []);
   const [refreshTick, setRefreshTick] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
   const iframeLocalRef = useRef<HTMLIFrameElement | null>(null);
@@ -368,15 +376,18 @@ export function PreviewArea({
         <Segmented<Device>
           size="sm"
           value={device}
-          onChange={setDevice}
+          onChange={(d) => {
+            deviceTouchedRef.current = true;
+            setDevice(d);
+          }}
           options={[
             { value: "desktop", label: "", ariaLabel: t("preview.viewport.desktop"), icon: Monitor },
             { value: "tablet", label: "", ariaLabel: t("preview.viewport.tablet"), icon: Tablet },
             { value: "mobile", label: "", ariaLabel: t("preview.viewport.mobile"), icon: Smartphone },
           ]}
         />
-        <span className="h-5 w-px bg-[color:var(--border)]" />
-        <div className="inline-flex items-center gap-0.5 rounded-md border bd bg-elev p-0.5">
+        <span className="hidden sm:block h-5 w-px bg-[color:var(--border)]" />
+        <div className="hidden sm:inline-flex items-center gap-0.5 rounded-md border bd bg-elev p-0.5">
           {(["50", "75", "100", "fit"] as const).map((z) => (
             <button
               key={z}

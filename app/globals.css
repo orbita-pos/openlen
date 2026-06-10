@@ -310,20 +310,23 @@
   }
 }
 
-@media (min-width: 768px) {
-  /* `:has()` makes this fire on the very first paint as soon as the
-     workspace mounts (no useEffect lag). Without it, /new's layout
-     classNames are set client-side after hydration and the StatusBar
-     briefly appears mid-page because `h-full` on the workspace-v2 root
-     collapses to 0 while body height is still auto.
-     The `.workspace-locked` clauses below are kept as a fallback for
-     older browsers without `:has()` support. */
-  html:has(.workspace-v2),
-  body:has(.workspace-v2),
-  html.workspace-locked,
-  body.workspace-locked {
-    height: 100vh;
-    min-height: 0;
-    overflow: hidden;
-  }
+/* `:has()` makes this fire on the very first paint as soon as the
+   workspace mounts (no useEffect lag). Without it, /new's layout
+   classNames are set client-side after hydration and the StatusBar
+   briefly appears mid-page because `h-full` on the workspace-v2 root
+   collapses to 0 while body height is still auto.
+   The `.workspace-locked` clauses below are kept as a fallback for
+   older browsers without `:has()` support.
+   All viewports, including mobile — without the lock the h-full chain
+   collapses and the workspace floats at content height over a white void.
+   `dvh` (where supported) tracks the iOS URL-bar resize; `vh` is the
+   fallback. */
+html:has(.workspace-v2),
+body:has(.workspace-v2),
+html.workspace-locked,
+body.workspace-locked {
+  height: 100vh;
+  height: 100dvh;
+  min-height: 0;
+  overflow: hidden;
 }

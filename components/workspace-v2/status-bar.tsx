@@ -95,10 +95,10 @@ export function StatusBar({ saving, published, lastSavedAt }: StatusBarProps) {
           <Cloud size={10} className="pulse-soft" />
           <span className="font-semibold">{t("status.saving")}</span>
         </span>
-        <kbd className="inline-flex items-center px-1 rounded bg-elev border bd font-mono text-[10px]">
+        <kbd className="hidden md:inline-flex items-center px-1 rounded bg-elev border bd font-mono text-[10px]">
           ⌘K
         </kbd>
-        <span>{t("status.commandPalette")}</span>
+        <span className="hidden md:inline">{t("status.commandPalette")}</span>
       </div>
     </div>
   );

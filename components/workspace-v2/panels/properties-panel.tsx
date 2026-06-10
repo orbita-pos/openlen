@@ -246,7 +246,7 @@ export function PropertiesPanel({
 }: PropertiesPanelProps) {
   const t = useTranslations("panelsProps");
   return (
-    <aside className="h-full w-[300px] shrink-0 bg-side border-l bd flex flex-col fade-slide">
+    <aside className="h-full w-[300px] max-md:w-full shrink-0 bg-side border-l bd flex flex-col fade-slide">
       <div className="flex items-center justify-between px-3 h-10 border-b bd shrink-0">
         <span className="text-[10px] uppercase tracking-[0.16em] fg-faint font-semibold ui-small">
           {t("header.inspector")}
