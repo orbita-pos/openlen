@@ -106,3 +106,7 @@ public/openlen-images/*.webp
 /.photo-export/
 /.photo-batch*/
 /spike/
+
+# Tematica art workbench (originals archive + smoke screenshots — local only)
+.tematicas-art/
+.tematica-smoke/

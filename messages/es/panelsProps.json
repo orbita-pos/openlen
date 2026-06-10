@@ -151,5 +151,11 @@
     "uploadError": "No se pudo subir — prueba con otro archivo.",
     "formats": "MP3, M4A, OGG o WAV · hasta 12 MB.",
     "note": "Añade un reproductor flotante a tu página publicada, con el estilo de tu tema. Los navegadores nunca reproducen sonido solos: el visitante toca para escuchar. Usa audio del que tengas derechos."
+  },
+  "tematica": {
+    "title": "Temática",
+    "off": "Ninguna",
+    "bg": "Fondo",
+    "note": "Envuelve tu página en un mundo completo: fondo, tarjetas glass, paleta y tipografía a juego. Se combina con Looks y Motion; quítala cuando quieras."
   }
 }

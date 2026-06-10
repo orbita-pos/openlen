@@ -52,6 +52,12 @@ import {
   type PageMeta,
 } from "@/components/workspace-v2/panels/properties-panel";
 import { lookFromAccent } from "@/lib/palette-gen";
+import {
+  readTematicaBackdrop,
+  readTematicaId,
+  tematicaCss,
+  type TematicaPreset,
+} from "@/lib/tematicas/presets";
 import { PageAssembling } from "@/components/workspace-v2/page-assembling";
 import {
   ReplaceAssetModal,
@@ -1215,6 +1221,51 @@ function NewV2Inner() {
     setActiveLook(null);
     applyLookForMode(null, modeRef.current);
   }, [applyLookForMode]);
+  // Temática — install/remove a full-page world. The kit's stylesheet + font
+  // link persist IN the document (the iframe stamps them, then saves through
+  // the normal funnel — thumbnails/exports/published all carry the world);
+  // its token bundle rides the existing theme-bundle channel so the accent,
+  // fonts and radius re-derive exactly like a Look. Off re-applies the page's
+  // captured baseline.
+  const applyTematica = useCallback(
+    (kit: TematicaPreset | null, backdropId?: string) => {
+      const win = iframeElRef.current?.contentWindow;
+      if (!win) return;
+      if (kit) {
+        win.postMessage(
+          {
+            type: "openlen:apply-prop",
+            scope: "tematica",
+            id: kit.id,
+            css: tematicaCss(kit, backdropId),
+            fontHref: kit.fontHref ?? "",
+            bg: backdropId ?? "",
+          },
+          "*",
+        );
+        setActiveLook(kit.tokens);
+        applyThemeBundle(kit.tokens);
+        applyThemeMode(kit.mode);
+      } else {
+        win.postMessage(
+          { type: "openlen:apply-prop", scope: "tematica", id: "", css: "", fontHref: "", bg: "" },
+          "*",
+        );
+        resetTheme();
+      }
+    },
+    [applyThemeBundle, applyThemeMode, resetTheme],
+  );
+  // The active kit + backdrop variant, read off the live document so the
+  // picker stays true after reloads, restores and chat redesigns.
+  const activeTematica = useMemo(
+    () => readTematicaId(loadedProject?.html ?? ""),
+    [loadedProject?.html],
+  );
+  const activeTematicaBg = useMemo(
+    () => readTematicaBackdrop(loadedProject?.html ?? ""),
+    [loadedProject?.html],
+  );
   // Form config is not HTML — it persists straight to ProjectData.settings
   // (so the notify email never reaches the published page source).
   const applyFormConfig = useCallback(
@@ -1802,6 +1853,9 @@ function NewV2Inner() {
                     onApplyMotion={loadedProject ? applyMotion : undefined}
                     music={loadedProject?.settings?.music}
                     onApplyMusic={loadedProject ? applyMusic : undefined}
+                    tematica={activeTematica}
+                    tematicaBg={activeTematicaBg}
+                    onApplyTematica={loadedProject ? applyTematica : undefined}
                     onSendTestFormEmail={sendTestFormEmail}
                     onClearSelection={() => setInspectSelection(null)}
                     onClose={() => {

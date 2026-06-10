@@ -151,5 +151,11 @@
     "uploadError": "Upload failed — try a different file.",
     "formats": "MP3, M4A, OGG or WAV · up to 12 MB.",
     "note": "Adds a floating tap-to-play player to your live page, styled to match your theme. Browsers never autoplay sound — visitors tap to listen. Use audio you have the rights to."
+  },
+  "tematica": {
+    "title": "World",
+    "off": "None",
+    "bg": "Backdrop",
+    "note": "Wraps your page in a full-page world — backdrop, glass cards, matching palette and type. Composes with Looks and Motion; turn it off anytime."
   }
 }
