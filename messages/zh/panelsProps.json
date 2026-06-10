@@ -121,7 +121,10 @@
       "minimal": "极简",
       "vibrant": "鲜明",
       "expressive": "个性"
-    }
+    },
+    "fromLogo": "我的标志",
+    "fromLogoHint": "用你标志的颜色为页面重新配色——可读性有保证。",
+    "fromLogoError": "无法读取标志——请重新上传。"
   },
   "motion": {
     "title": "动效",

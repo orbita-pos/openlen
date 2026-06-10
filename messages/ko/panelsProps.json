@@ -121,7 +121,10 @@
       "minimal": "미니멀",
       "vibrant": "비비드",
       "expressive": "개성적"
-    }
+    },
+    "fromLogo": "내 로고",
+    "fromLogoHint": "로고 색상으로 페이지를 다시 칠합니다 — 가독성은 보장돼요.",
+    "fromLogoError": "로고를 읽을 수 없어요. 다시 업로드해 보세요."
   },
   "motion": {
     "title": "모션",

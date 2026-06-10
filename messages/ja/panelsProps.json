@@ -121,7 +121,10 @@
       "minimal": "ミニマル",
       "vibrant": "鮮やか",
       "expressive": "個性的"
-    }
+    },
+    "fromLogo": "ロゴから",
+    "fromLogoHint": "ロゴの色からページを配色します — 読みやすさは保証されます。",
+    "fromLogoError": "ロゴを読み取れませんでした。再アップロードしてください。"
   },
   "motion": {
     "title": "モーション",

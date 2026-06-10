@@ -85,21 +85,48 @@ export function deriveWorldFromPixels(data: Uint8ClampedArray): DerivedWorld {
 
 const SAMPLE_SIZE = 64;
 
+function analyzeDrawable(
+  source: CanvasImageSource,
+  width: number,
+  height: number,
+): DerivedWorld {
+  const scale = SAMPLE_SIZE / Math.max(width, height, 1);
+  const w = Math.max(1, Math.round(width * scale));
+  const h = Math.max(1, Math.round(height * scale));
+  const canvas = document.createElement("canvas");
+  canvas.width = w;
+  canvas.height = h;
+  const ctx = canvas.getContext("2d", { willReadFrequently: true });
+  if (!ctx) return { mode: "light", accent: FALLBACK_ACCENT };
+  ctx.drawImage(source, 0, 0, w, h);
+  return deriveWorldFromPixels(ctx.getImageData(0, 0, w, h).data);
+}
+
+/** Browser wrapper for a hosted image (the project's logo). Loads through an
+ *  <img> element so SVG logos decode too. Callers must pass a same-origin,
+ *  data: or proxied URL — cross-origin pixels would taint the canvas. */
+export async function deriveWorldFromUrl(url: string): Promise<DerivedWorld> {
+  const img = new Image();
+  img.decoding = "async";
+  await new Promise<void>((resolve, reject) => {
+    img.onload = () => resolve();
+    img.onerror = () => reject(new Error("image load failed"));
+    img.src = url;
+  });
+  // SVGs without intrinsic dimensions report 0×0 — rasterize at sample size.
+  return analyzeDrawable(
+    img,
+    img.naturalWidth || SAMPLE_SIZE,
+    img.naturalHeight || SAMPLE_SIZE,
+  );
+}
+
 /** Browser wrapper: downsample the just-picked local file and analyze it.
  *  Local file → no canvas taint, no CORS, no proxy needed. */
 export async function deriveWorldFromFile(file: Blob): Promise<DerivedWorld> {
   const bitmap = await createImageBitmap(file);
   try {
-    const scale = SAMPLE_SIZE / Math.max(bitmap.width, bitmap.height, 1);
-    const w = Math.max(1, Math.round(bitmap.width * scale));
-    const h = Math.max(1, Math.round(bitmap.height * scale));
-    const canvas = document.createElement("canvas");
-    canvas.width = w;
-    canvas.height = h;
-    const ctx = canvas.getContext("2d", { willReadFrequently: true });
-    if (!ctx) return { mode: "light", accent: FALLBACK_ACCENT };
-    ctx.drawImage(bitmap, 0, 0, w, h);
-    return deriveWorldFromPixels(ctx.getImageData(0, 0, w, h).data);
+    return analyzeDrawable(bitmap, bitmap.width, bitmap.height);
   } finally {
     bitmap.close();
   }

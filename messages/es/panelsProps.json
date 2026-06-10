@@ -121,7 +121,10 @@
       "minimal": "Minimal",
       "vibrant": "Vibrante",
       "expressive": "Expresivo"
-    }
+    },
+    "fromLogo": "Tu logo",
+    "fromLogoHint": "Recolorea la página con los colores de tu logo — legibilidad garantizada.",
+    "fromLogoError": "No se pudo leer el logo — intenta resubirlo."
   },
   "motion": {
     "title": "Movimiento",
