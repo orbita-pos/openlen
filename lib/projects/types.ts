@@ -51,11 +51,24 @@ export interface ProjectSettings {
   music?: MusicSettings;
 }
 
+/** One additional page of a multi-page site. The home page stays at
+ *  ProjectData.html; extra pages live under their URL slug ("menu" →
+ *  <sub>.openlen.com/menu). Same HTML contract as the home document. */
+export interface SitePage {
+  /** Publish-ready static HTML for this page. */
+  html: string;
+  /** Display name in the site-pages panel. Absent → derived from the slug. */
+  title?: string;
+}
+
 export interface ProjectData {
   /** Publish-ready static HTML — the source of truth for the project. */
   html: string;
   /** Non-HTML project settings (form config, …). Absent on older rows. */
   settings?: ProjectSettings;
+  /** Multi-page: extra pages keyed by slug. Absent/empty = classic
+   *  single-page project (every pre-existing row). Home is `html` above. */
+  pages?: Record<string, SitePage>;
 }
 
 // One persisted Chat-tab turn. The Chat panel's live turn type carries HTML

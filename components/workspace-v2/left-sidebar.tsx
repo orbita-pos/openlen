@@ -22,6 +22,7 @@ import {
   HistoryIcon,
   Inbox,
   Layers,
+  ListTree,
   Monitor,
   PanelLeft,
   PanelRight,
@@ -39,6 +40,8 @@ import {
 } from "./panels/chat-panel";
 import { PagesPanel } from "./panels/pages-panel";
 import { PastePanel } from "./panels/paste-panel";
+import { SitePagesPanel } from "./panels/site-pages-panel";
+import type { SitePageSummary } from "@/lib/projects/site-pages";
 import { SectionsPanel } from "./panels/sections-panel";
 import { TemplatesPanel } from "./panels/templates-panel";
 import { VersionsPanel } from "./panels/versions-panel";
@@ -108,6 +111,7 @@ function GlobalSections({
 }
 
 export type SidebarMode =
+  | "site"
   | "chat"
   | "templates"
   | "library"
@@ -120,6 +124,7 @@ interface ModeTab {
 }
 
 const MODE_TABS: ModeTab[] = [
+  { id: "site", icon: ListTree },
   { id: "chat", icon: ChatIcon },
   { id: "templates", icon: Grid3 },
   { id: "library", icon: Layers },
@@ -164,6 +169,9 @@ interface LeftSidebarProps {
    *  pointing the user at the iframe (instead of the slot form). */
   flatProjectHtml?: string;
   flatProjectId?: string;
+  /** Multi-page: slug of the site page the canvas is editing (null = home).
+   *  Forwarded to ChatPanel so chat edits land in the right document. */
+  flatProjectPage?: string | null;
   onFlatHtmlUpdate?: (html: string) => void;
   /** Persisted Chat-tab transcript — seeds the chat so a reload / tab
    *  switch restores the conversation instead of an empty composer. */
@@ -227,6 +235,12 @@ interface LeftSidebarProps {
   activeBusinessId?: string;
   onPickBusiness?: (id: string) => void;
   onAddBusiness?: () => void;
+  /** Multi-page site tree (Site tab) — owned by the parent. */
+  sitePages?: SitePageSummary[];
+  activeSitePage?: string | null;
+  onSwitchSitePage?: (slug: string | null) => void;
+  onCreateSitePage?: (slug: string) => Promise<string | null>;
+  onDeleteSitePage?: (slug: string) => Promise<boolean>;
 }
 
 export function LeftSidebar({
@@ -248,6 +262,7 @@ export function LeftSidebar({
   onSelectSection,
   flatProjectHtml,
   flatProjectId,
+  flatProjectPage = null,
   onFlatHtmlUpdate,
   flatProjectChat,
   onChatChange,
@@ -276,6 +291,11 @@ export function LeftSidebar({
   activeBusinessId = "",
   onPickBusiness,
   onAddBusiness,
+  sitePages = [],
+  activeSitePage = null,
+  onSwitchSitePage,
+  onCreateSitePage,
+  onDeleteSitePage,
 }: LeftSidebarProps) {
   const showBusinessSwitcher = businesses.length > 0 && !!onPickBusiness;
   const t = useTranslations("wsChrome");
@@ -288,10 +308,12 @@ export function LeftSidebar({
 
   // Tab visibility rules:
   // Templates stays visible while editing (the panel is browse-only on an
-  // existing page — you can't swap a page for a template). Library is
-  // editing-only (it inserts into the current project).
+  // existing page — you can't swap a page for a template). Library and Site
+  // (the project's page tree) are editing-only — both operate on the
+  // currently loaded project.
   const visibleTabs = MODE_TABS.filter((tab) => {
-    if (entryMode !== "editing" && tab.id === "library") return false;
+    if (entryMode !== "editing" && (tab.id === "library" || tab.id === "site"))
+      return false;
     return true;
   });
 
@@ -462,10 +484,20 @@ export function LeftSidebar({
           />
         ) : (
           <>
+            {mode === "site" && (
+              <SitePagesPanel
+                pages={sitePages}
+                activePage={activeSitePage}
+                onSwitch={onSwitchSitePage ?? (() => {})}
+                onCreate={onCreateSitePage ?? (async () => "errInvalid")}
+                onDelete={onDeleteSitePage ?? (async () => false)}
+              />
+            )}
             {mode === "chat" && (
               <ChatPanel
                 flatProjectId={flatProjectId}
                 flatProjectHtml={flatProjectHtml}
+                flatProjectPage={flatProjectPage}
                 onFlatHtmlUpdate={onFlatHtmlUpdate}
                 flatProjectChat={flatProjectChat}
                 onChatChange={onChatChange}

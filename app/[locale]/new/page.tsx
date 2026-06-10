@@ -69,6 +69,8 @@ import { TopBar } from "@/components/workspace-v2/top-bar";
 import { stripEditorInstrumentation } from "@/components/workspace-v2/strip-editor-instrumentation";
 import { useDarkMode } from "@/lib/use-dark-mode";
 import { useIsMobile } from "@/components/workspace-v2/use-is-mobile";
+import { listSitePages } from "@/lib/projects/site-pages";
+import type { SitePage } from "@/lib/projects/types";
 
 // Outer shell exists so `useSearchParams()` in the inner component has a
 // Suspense boundary, matching the /new V1 pattern.
@@ -102,6 +104,10 @@ interface LoadedProject {
    *  Empty string for projects whose orchestrator never set it (legacy
    *  rows pre-Session-12). */
   html: string;
+  /** Multi-page: extra site pages keyed by slug (data.pages). The home
+   *  document stays at `html`; the canvas shows whichever the ?page=
+   *  param selects. */
+  pages: Record<string, SitePage>;
   /** True when this project was created from a template or pasted HTML —
    *  i.e. `data.filledBlocks` is empty. Flat projects don't have slot-
    *  based structure, so customization splits into two surfaces:
@@ -215,6 +221,10 @@ function NewV2Inner() {
     mobileEntrySynced.current = entryMode;
     setLeftCollapsed(entryMode === "editing" || entryMode === "choosing");
   }, [isMobile, entryMode]);
+  // Multi-page: ?page=<slug> selects which site page the canvas shows.
+  // Resolved against the loaded project — an unknown slug acts as home
+  // (and gets stripped from the URL once the project arrives).
+  const pageParam = searchParams.get("page");
   // Which account section the workspace CENTER renders is kept IN THE URL
   // (?view=business|projects|analytics|messages; absent = the page canvas) so a
   // refresh or shared link lands on the same section. Opening a page navigates
@@ -239,6 +249,31 @@ function NewV2Inner() {
   );
   const [saving, setSaving] = useState(false);
   const [loadedProject, setLoadedProject] = useState<LoadedProject | null>(null);
+  // The active site page (null = home) and the document the canvas edits.
+  // Everything that used to read loadedProject.html for DISPLAY reads
+  // activeDoc; saves route into the matching slot via activeSitePageRef.
+  const activeSitePage =
+    pageParam && loadedProject?.pages?.[pageParam] ? pageParam : null;
+  const activeSitePageRef = useRef<string | null>(null);
+  activeSitePageRef.current = activeSitePage;
+  const activeDoc = activeSitePage
+    ? loadedProject?.pages?.[activeSitePage]?.html ?? ""
+    : loadedProject?.html ?? "";
+  const sitePages = useMemo(
+    () => listSitePages({ html: "", pages: loadedProject?.pages }),
+    [loadedProject?.pages],
+  );
+  // Strip a stale ?page= once the project has loaded without that slug
+  // (deleted page, mistyped share link).
+  useEffect(() => {
+    if (!pageParam || !loadedProject) return;
+    if (!loadedProject.pages[pageParam]) {
+      const params = new URLSearchParams(searchParams.toString());
+      params.delete("page");
+      const qs = params.toString();
+      router.replace(qs ? `/new?${qs}` : "/new");
+    }
+  }, [pageParam, loadedProject, searchParams, router]);
   const [publishModalOpen, setPublishModalOpen] = useState(false);
   const [customDomainOpen, setCustomDomainOpen] = useState(false);
   const [vercelOpen, setVercelOpen] = useState(false);
@@ -787,6 +822,7 @@ function NewV2Inner() {
                 html?: string;
                 filledBlocks?: unknown[];
                 settings?: ProjectSettings;
+                pages?: Record<string, SitePage>;
               };
             };
           }
@@ -799,6 +835,12 @@ function NewV2Inner() {
       // Sanitize on load too — a project edited before this fix shipped may
       // already have leaked editor scripts baked into data.html.
       const html = stripEditorInstrumentation(p.data?.html ?? "");
+      const pages: Record<string, SitePage> = {};
+      for (const [slug, page] of Object.entries(p.data?.pages ?? {})) {
+        if (page && typeof page.html === "string") {
+          pages[slug] = { ...page, html: stripEditorInstrumentation(page.html) };
+        }
+      }
       setLoadedProject({
         id: p.id,
         title: p.title,
@@ -807,6 +849,7 @@ function NewV2Inner() {
         hasUnpublishedChanges: p.hasUnpublishedChanges,
         logoUrl: p.logoUrl ?? null,
         html,
+        pages,
         isFlat: filledCount === 0,
         userBrief: p.userBrief ?? "",
         chatHistory: p.chatHistory ?? [],
@@ -958,6 +1001,67 @@ function NewV2Inner() {
   // lost. The editor scripts only POST while in edit mode, so an always-mounted
   // listener never receives spurious saves. Inline-edit, Reorder, Replace,
   // Insert and inspect-mode property edits all emit via this same contract.
+  // Pending autosave — stashed so a page switch can flush it before the
+  // canvas swaps documents (otherwise the debounced save could land on the
+  // newly-active page's slot).
+  const pendingSaveRef = useRef<{
+    projectId: string;
+    html: string;
+    source: string;
+    page: string | null;
+  } | null>(null);
+  const persistDoc = useCallback(
+    (p: { projectId: string; html: string; source: string; page: string | null }) => {
+      setSavingStatus("saving");
+      void fetch(`/api/projects/${p.projectId}/html`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          html: p.html,
+          source: p.source,
+          baseUpdatedAt: projectUpdatedAtRef.current,
+          ...(p.page ? { page: p.page } : {}),
+        }),
+      })
+        .then(async (r) => {
+          setSavingStatus(r.ok ? "saved" : "idle");
+          if (r.ok) {
+            // Nudge other tabs of this project to refetch the new HTML.
+            syncChannelRef.current?.postMessage({ projectId: p.projectId });
+            // Advance the concurrency base to the version the server just
+            // wrote — so this tab's own next save isn't read as a clobber.
+            const saved = (await r.json().catch(() => null)) as
+              | { updatedAt?: string }
+              | null;
+            if (saved?.updatedAt) {
+              projectUpdatedAtRef.current = new Date(saved.updatedAt).getTime();
+            }
+            setLoadedProject((prev) =>
+              prev && prev.id === p.projectId
+                ? { ...prev, hasUnpublishedChanges: !!prev.subdomain }
+                : prev,
+            );
+            if (savedFlashRef.current !== null)
+              window.clearTimeout(savedFlashRef.current);
+            savedFlashRef.current = window.setTimeout(
+              () => setSavingStatus("idle"),
+              1600,
+            );
+          }
+        })
+        .catch(() => setSavingStatus("idle"));
+    },
+    [],
+  );
+  const flushPendingSave = useCallback(() => {
+    if (saveTimerRef.current !== null) {
+      window.clearTimeout(saveTimerRef.current);
+      saveTimerRef.current = null;
+    }
+    const p = pendingSaveRef.current;
+    pendingSaveRef.current = null;
+    if (p) persistDoc(p);
+  }, [persistDoc]);
   useEffect(() => {
     if (!loadedProject) return;
     const projectId = loadedProject.id;
@@ -984,9 +1088,18 @@ function NewV2Inner() {
               : e.data.source === "section-insert"
                 ? "section-insert"
                 : "inline-edit";
-      setLoadedProject((prev) =>
-        prev && prev.id === projectId ? { ...prev, html } : prev,
-      );
+      // Multi-page: route the edit into the document the canvas is showing.
+      const page = activeSitePageRef.current;
+      setLoadedProject((prev) => {
+        if (!prev || prev.id !== projectId) return prev;
+        if (page && prev.pages[page]) {
+          return {
+            ...prev,
+            pages: { ...prev.pages, [page]: { ...prev.pages[page], html } },
+          };
+        }
+        return { ...prev, html };
+      });
       // A structural change (reorder / section insert) shifts sibling indices,
       // so the inspector's positional :nth-of-type path is now stale — drop the
       // selection so the next property edit can't land on the wrong element
@@ -994,47 +1107,13 @@ function NewV2Inner() {
       if (source === "reorder" || source === "section-insert") {
         setInspectSelection(null);
       }
+      pendingSaveRef.current = { projectId, html, source, page };
       if (saveTimerRef.current !== null) window.clearTimeout(saveTimerRef.current);
       saveTimerRef.current = window.setTimeout(() => {
-        setSavingStatus("saving");
-        void fetch(`/api/projects/${projectId}/html`, {
-          method: "PATCH",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({
-            html,
-            source,
-            baseUpdatedAt: projectUpdatedAtRef.current,
-          }),
-        })
-          .then(async (r) => {
-            setSavingStatus(r.ok ? "saved" : "idle");
-            if (r.ok) {
-              // Nudge other tabs of this project to refetch the new HTML.
-              syncChannelRef.current?.postMessage({ projectId });
-              // Advance the concurrency base to the version the server just
-              // wrote — so this tab's own next save isn't read as a clobber.
-              const saved = (await r.json().catch(() => null)) as
-                | { updatedAt?: string }
-                | null;
-              if (saved?.updatedAt) {
-                projectUpdatedAtRef.current = new Date(
-                  saved.updatedAt,
-                ).getTime();
-              }
-              setLoadedProject((prev) =>
-                prev && prev.id === projectId
-                  ? { ...prev, hasUnpublishedChanges: !!prev.subdomain }
-                  : prev,
-              );
-              if (savedFlashRef.current !== null)
-                window.clearTimeout(savedFlashRef.current);
-              savedFlashRef.current = window.setTimeout(
-                () => setSavingStatus("idle"),
-                1600,
-              );
-            }
-          })
-          .catch(() => setSavingStatus("idle"));
+        saveTimerRef.current = null;
+        const p = pendingSaveRef.current;
+        pendingSaveRef.current = null;
+        if (p) persistDoc(p);
       }, 500);
     };
 
@@ -1056,6 +1135,64 @@ function NewV2Inner() {
     // The save reads the fresh subdomain via functional setState, so it stays
     // correct without the dep.
   }, [loadedProject?.id]);
+
+  // Multi-page: switch the canvas to another site page. Flushes any pending
+  // autosave FIRST so the debounced write can't land in the wrong slot, and
+  // clears the positional inspector selection (paths are per-document).
+  const switchSitePage = useCallback(
+    (slug: string | null) => {
+      flushPendingSave();
+      setInspectSelection(null);
+      const params = new URLSearchParams(searchParams.toString());
+      if (slug) params.set("page", slug);
+      else params.delete("page");
+      const qs = params.toString();
+      router.push(qs ? `/new?${qs}` : "/new");
+      if (isMobile) setLeftCollapsed(true);
+    },
+    [flushPendingSave, searchParams, router, isMobile],
+  );
+
+  const createSitePage = useCallback(
+    async (slug: string): Promise<string | null> => {
+      const id = loadedProject?.id;
+      if (!id) return "errInvalid";
+      flushPendingSave();
+      const res = await fetch(`/api/projects/${id}/pages`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ slug }),
+      }).catch(() => null);
+      if (!res) return "errInvalid";
+      if (!res.ok) {
+        const body = (await res.json().catch(() => null)) as { error?: string } | null;
+        if (body?.error === "exists") return "errExists";
+        if (body?.error === "reserved") return "errReserved";
+        if (body?.error === "limit_reached") return "errLimit";
+        return "errInvalid";
+      }
+      await refetchProject(id);
+      switchSitePage(slug);
+      return null;
+    },
+    [loadedProject?.id, refetchProject, switchSitePage, flushPendingSave],
+  );
+
+  const deleteSitePage = useCallback(
+    async (slug: string): Promise<boolean> => {
+      const id = loadedProject?.id;
+      if (!id) return false;
+      flushPendingSave();
+      const res = await fetch(`/api/projects/${id}/pages/${slug}`, {
+        method: "DELETE",
+      }).catch(() => null);
+      if (!res?.ok) return false;
+      if (activeSitePageRef.current === slug) switchSitePage(null);
+      await refetchProject(id);
+      return true;
+    },
+    [loadedProject?.id, refetchProject, switchSitePage, flushPendingSave],
+  );
 
   // Reset transient interaction modes whenever the loaded project changes
   // (cross-project switches inside /new). Without this, the iframe
@@ -1292,12 +1429,12 @@ function NewV2Inner() {
   // The active kit + backdrop variant, read off the live document so the
   // picker stays true after reloads, restores and chat redesigns.
   const activeTematica = useMemo(
-    () => readTematicaId(loadedProject?.html ?? ""),
-    [loadedProject?.html],
+    () => readTematicaId(activeDoc),
+    [activeDoc],
   );
   const activeTematicaBg = useMemo(
-    () => readTematicaBackdrop(loadedProject?.html ?? ""),
-    [loadedProject?.html],
+    () => readTematicaBackdrop(activeDoc),
+    [activeDoc],
   );
   // Form config is not HTML — it persists straight to ProjectData.settings
   // (so the notify email never reaches the published page source).
@@ -1618,13 +1755,25 @@ function NewV2Inner() {
           lockedTabs={lockedTabs}
           lockReason={lockReason}
           entryMode={entryMode}
-          flatProjectHtml={loadedProject?.html}
+          flatProjectHtml={loadedProject ? activeDoc : undefined}
+          flatProjectPage={activeSitePage}
           flatProjectId={loadedProject?.id}
-          onFlatHtmlUpdate={(newHtml) =>
-            setLoadedProject((prev) =>
-              prev ? { ...prev, html: newHtml } : prev,
-            )
-          }
+          onFlatHtmlUpdate={(newHtml) => {
+            const page = activeSitePageRef.current;
+            setLoadedProject((prev) => {
+              if (!prev) return prev;
+              if (page && prev.pages[page]) {
+                return {
+                  ...prev,
+                  pages: {
+                    ...prev.pages,
+                    [page]: { ...prev.pages[page], html: newHtml },
+                  },
+                };
+              }
+              return { ...prev, html: newHtml };
+            });
+          }}
           flatProjectChat={loadedProject?.chatHistory}
           onChatChange={() => {
             const id = loadedProject?.id;
@@ -1637,11 +1786,14 @@ function NewV2Inner() {
           projectLoading={!!projectParam && !loadedProject}
           savingStatus={savingStatus}
           currentProjectId={loadedProject?.id ?? null}
-          onRestoreApplied={(newHtml) =>
+          onRestoreApplied={(newHtml) => {
+            // Versions are home-scoped (v1) — the restored document IS the
+            // home page, so land the canvas there before applying it.
+            if (activeSitePageRef.current) switchSitePage(null);
             setLoadedProject((prev) =>
               prev ? { ...prev, html: newHtml } : prev,
-            )
-          }
+            );
+          }}
           sectionSelectMode={sectionSelectMode}
           onToggleSectionSelect={(active) => setSectionSelectMode(active)}
           scopedSelection={scopedSelection}
@@ -1662,6 +1814,11 @@ function NewV2Inner() {
           activeBusinessId={activeBusinessId}
           onPickBusiness={setActiveBusiness}
           onAddBusiness={() => setProfileModalOpen(true)}
+          sitePages={sitePages}
+          activeSitePage={activeSitePage}
+          onSwitchSitePage={switchSitePage}
+          onCreateSitePage={createSitePage}
+          onDeleteSitePage={deleteSitePage}
         />
         {/* One <main> landmark for the workspace center. `contents` keeps the
             flex layout byte-identical (generates no box) while giving the a11y
@@ -1766,11 +1923,11 @@ function NewV2Inner() {
           <PreviewPlaceholder mode={entryMode} />
         )}
         {entryMode === "editing" &&
-          (loadedProject?.html ? (
+          (loadedProject && activeDoc ? (
             <>
               <PreviewArea
-                doc={loadedProject.html}
-                docKey={loadedProject.id}
+                doc={activeDoc}
+                docKey={`${loadedProject.id}:${activeSitePage ?? ""}`}
                 redesigning={chatRedesigning}
                 editableInjection={editableInjection}
                 sectionSelectMode={sectionSelectMode}
@@ -1786,8 +1943,12 @@ function NewV2Inner() {
                 }}
                 openInNewTabUrl={
                   loadedProject.subdomain
-                    ? `https://${loadedProject.subdomain}.openlen.com`
-                    : `/api/projects/${loadedProject.id}/raw`
+                    ? `https://${loadedProject.subdomain}.openlen.com${
+                        activeSitePage ? `/${activeSitePage}` : ""
+                      }`
+                    : `/api/projects/${loadedProject.id}/raw${
+                        activeSitePage ? `?page=${activeSitePage}` : ""
+                      }`
                 }
               />
               {lastInserted && (
@@ -1857,7 +2018,7 @@ function NewV2Inner() {
                   <PropertiesPanel
                     selection={inspectSelection}
                     pageMeta={pageMeta}
-                    html={loadedProject?.html}
+                    html={activeDoc}
                     analyticsDisabled={
                       loadedProject?.settings?.analyticsDisabled ?? false
                     }

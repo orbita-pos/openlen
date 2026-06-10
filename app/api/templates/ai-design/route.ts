@@ -247,6 +247,7 @@ function stripMarkdownFences(s: string): string {
 interface AiDesignBody {
   projectId?: string;
   currentHtml?: string;
+  page?: string;
   prompt?: string;
   history?: HistoryTurn[];
   /** "gemini-pro" (default) or "gemini-flash" — the model the Chat panel picked. */
@@ -280,6 +281,10 @@ export async function POST(req: Request): Promise<Response> {
   }
 
   const currentHtml = typeof body.currentHtml === "string" ? body.currentHtml : "";
+  // Multi-page: when set, the edit reads/writes data.pages[page].html
+  // instead of the home document. Validated against the stored map below
+  // (after the project row loads).
+  const pageSlugRaw = typeof body.page === "string" ? body.page.trim() : "";
   if (!/<html[\s>]/i.test(currentHtml) || !/<\/html>/i.test(currentHtml)) {
     return errorJson(400, "currentHtml must be a full HTML document");
   }
@@ -368,6 +373,9 @@ export async function POST(req: Request): Promise<Response> {
     .limit(1);
   const existing = rows[0];
   if (!existing) return errorJson(404, "project not found");
+  const pageSlug =
+    pageSlugRaw && existing.data?.pages?.[pageSlugRaw] ? pageSlugRaw : null;
+  if (pageSlugRaw && !pageSlug) return errorJson(404, "page not found");
 
   const aiModel: AIModel = body.model === "gemini-flash" ? "gemini-flash" : "gemini-pro";
   const PROVIDER = resolveAIProvider(aiModel);
@@ -815,10 +823,16 @@ VISUAL CONTEXT: the attached image is a full-page render of the CURRENT page (wh
         try {
           // Preserve data.settings (per-form notify/redirect/success +
           // analyticsDisabled) — only the html changes here.
-          const nextData: ProjectData = {
-            ...(existing.data ?? {}),
-            html: trimmedHtml,
-          };
+          const base: ProjectData = existing.data ?? { html: "" };
+          const nextData: ProjectData = pageSlug
+            ? {
+                ...base,
+                pages: {
+                  ...base.pages,
+                  [pageSlug]: { ...base.pages?.[pageSlug], html: trimmedHtml },
+                },
+              }
+            : { ...base, html: trimmedHtml };
           await db
             .update(schema.projects)
             .set({ data: nextData, updatedAt: now })
@@ -846,6 +860,11 @@ VISUAL CONTEXT: the attached image is a full-page render of the CURRENT page (wh
           outputMode === "ops"
             ? `Ops (${appliedOpCount}): ${prompt.slice(0, 70)}${prompt.length > 70 ? "…" : ""}`
             : `Rewrite: ${prompt.slice(0, 76)}${prompt.length > 76 ? "…" : ""}`;
+        if (pageSlug) {
+          // Versions are home-scoped in v1 — a subpage snapshot restored onto
+          // home would corrupt it. Skip until projectVersions carries a page
+          // column.
+        } else
         await createVersion({
           projectId,
           html: trimmedHtml,

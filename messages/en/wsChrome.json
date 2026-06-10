@@ -1,6 +1,10 @@
 {
   "sidebar": {
     "tabs": {
+      "site": {
+        "label": "Site",
+        "title": "Site pages"
+      },
       "chat": {
         "label": "Chat",
         "title": "Chat with Orchestra"
@@ -162,5 +166,20 @@
     "ariaLabel": "Live preview of {name}",
     "iframeTitle": "{name} live preview",
     "applied": "Applied"
+  },
+  "sitePages": {
+    "home": "Home",
+    "addPage": "New page",
+    "slugPlaceholder": "menu, about, prices…",
+    "create": "Create page",
+    "creating": "Creating…",
+    "cancel": "Cancel",
+    "deleteLabel": "Delete /{slug}",
+    "deleteConfirm": "Delete the /{slug} page? Its content is lost.",
+    "errInvalid": "Use only letters, numbers and hyphens.",
+    "errReserved": "That name is reserved.",
+    "errExists": "That page already exists.",
+    "errLimit": "Page limit reached.",
+    "hint": "New pages are born as a copy of Home, wearing your look. Link to them with /slug links."
   }
 }

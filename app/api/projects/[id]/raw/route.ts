@@ -10,7 +10,7 @@ export const runtime = "nodejs";
 // the JSON GET + parse. Browser caches the response per-id so scrolling the
 // project list doesn't refetch.
 export async function GET(
-  _req: Request,
+  req: Request,
   ctx: { params: Promise<{ id: string }> },
 ): Promise<Response> {
   const session = await auth();
@@ -28,6 +28,22 @@ export async function GET(
     .limit(1);
   const row = rows[0];
   if (!row) return text("not found", 404);
+
+  // Multi-page: ?page=<slug> serves that site page's document instead of
+  // home — the editor's "open in new tab" for an unpublished subpage.
+  const pageSlug = new URL(req.url).searchParams.get("page");
+  if (pageSlug) {
+    const page = row.data?.pages?.[pageSlug];
+    if (!page) return text("page not found", 404);
+    return new Response(page.html, {
+      status: 200,
+      headers: {
+        "content-type": "text/html; charset=utf-8",
+        "cache-control": "private, no-cache, must-revalidate",
+        "x-frame-options": "SAMEORIGIN",
+      },
+    });
+  }
 
   const html = row.data?.html ?? "";
   return new Response(html, {

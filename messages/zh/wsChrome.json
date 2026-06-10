@@ -1,6 +1,10 @@
 {
   "sidebar": {
     "tabs": {
+      "site": {
+        "label": "站点",
+        "title": "站点页面"
+      },
       "chat": {
         "label": "对话",
         "title": "与 Orchestra 对话"
@@ -162,5 +166,20 @@
     "ariaLabel": "{name} 的实时预览",
     "iframeTitle": "{name} 实时预览",
     "applied": "已应用"
+  },
+  "sitePages": {
+    "home": "首页",
+    "addPage": "新页面",
+    "slugPlaceholder": "menu、about、prices…",
+    "create": "创建页面",
+    "creating": "创建中…",
+    "cancel": "取消",
+    "deleteLabel": "删除 /{slug}",
+    "deleteConfirm": "删除页面 /{slug}？其内容将丢失。",
+    "errInvalid": "只能使用字母、数字和连字符。",
+    "errReserved": "该名称已被保留。",
+    "errExists": "该页面已存在。",
+    "errLimit": "已达到页面数量上限。",
+    "hint": "新页面会作为首页的副本诞生，带着你的风格。用 /slug 链接把它们串起来。"
   }
 }

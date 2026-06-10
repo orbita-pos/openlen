@@ -1,6 +1,10 @@
 {
   "sidebar": {
     "tabs": {
+      "site": {
+        "label": "サイト",
+        "title": "サイトのページ"
+      },
       "chat": {
         "label": "チャット",
         "title": "Orchestra とチャット"
@@ -162,5 +166,20 @@
     "ariaLabel": "{name} のライブプレビュー",
     "iframeTitle": "{name} のライブプレビュー",
     "applied": "適用済み"
+  },
+  "sitePages": {
+    "home": "ホーム",
+    "addPage": "新しいページ",
+    "slugPlaceholder": "menu、about、prices…",
+    "create": "ページを作成",
+    "creating": "作成中…",
+    "cancel": "キャンセル",
+    "deleteLabel": "/{slug} を削除",
+    "deleteConfirm": "ページ /{slug} を削除しますか？内容は失われます。",
+    "errInvalid": "英数字とハイフンのみ使用できます。",
+    "errReserved": "その名前は予約されています。",
+    "errExists": "そのページは既に存在します。",
+    "errLimit": "ページ数の上限に達しました。",
+    "hint": "新しいページはホームのコピーとして、同じルックで生まれます。/slug リンクでつなげましょう。"
   }
 }

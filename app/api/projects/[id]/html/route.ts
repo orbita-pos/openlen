@@ -2,6 +2,7 @@ import { and, desc, eq } from "drizzle-orm";
 import { auth } from "@/auth";
 import { db, schema } from "@/lib/db";
 import type { ProjectData } from "@/lib/projects/types";
+import { validatePageSlug } from "@/lib/projects/site-pages";
 import { createVersion } from "@/lib/projects/versions";
 import { sanitizeForPublish } from "@/lib/html-engine";
 
@@ -42,6 +43,11 @@ interface PatchBody {
    *  only idle-checkpointed every few minutes, so without this a two-tab
    *  edit race could drop text that lives in no version. */
   baseUpdatedAt?: number;
+  /** Multi-page: slug of the site page being saved. Absent = the home
+   *  document (data.html). Subpage saves skip the version timeline + the
+   *  conflict snapshot in v1 — versions are home-scoped until the
+   *  projectVersions table grows a page column. */
+  page?: string;
 }
 
 export async function PATCH(
@@ -97,6 +103,43 @@ export async function PATCH(
     .limit(1);
   const existing = rows[0];
   if (!existing) return json({ error: "not_found" }, 404);
+
+  // Multi-page: a `page` slug routes the save into data.pages[slug].html.
+  // The page must already exist (creation goes through POST /pages) so a
+  // mistyped slug can't silently grow the map. Subpage saves are
+  // last-write-wins in v1 — no version snapshots, no conflict guard.
+  if (typeof body.page === "string" && body.page.length > 0) {
+    const check = validatePageSlug(body.page);
+    const slug = check.ok ? check.slug : null;
+    const page = slug ? existing.data?.pages?.[slug] : undefined;
+    if (!slug || !page || !existing.data) {
+      return json({ error: "page_not_found" }, 404);
+    }
+    const now = new Date();
+    const nextData: ProjectData = {
+      ...existing.data,
+      pages: {
+        ...existing.data.pages,
+        [slug]: { ...page, html },
+      },
+    };
+    try {
+      await db
+        .update(schema.projects)
+        .set({ data: nextData, updatedAt: now })
+        .where(
+          and(
+            eq(schema.projects.id, id),
+            eq(schema.projects.userId, session.user.id),
+          ),
+        );
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error("[projects/html] page db update failed", err);
+      return json({ error: "db_update_failed" }, 500);
+    }
+    return json({ ok: true, updatedAt: now.toISOString() }, 200);
+  }
 
   // Concurrency guard. If another writer changed data.html since the client
   // loaded its base, the current HTML is about to be clobbered — snapshot it

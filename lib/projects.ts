@@ -15,6 +15,7 @@ import { purgeSubdomain } from "@/lib/publish/cache-purge";
 import { backupReleaseToR2 } from "@/lib/publish/backup-r2";
 import { createVersion } from "@/lib/projects/versions";
 import { getChatMessages } from "@/lib/projects/chat";
+import { pagesForPublish } from "@/lib/projects/site-pages";
 import { normalizeBornCanonical } from "@/lib/normalize";
 import { ensurePageMeta } from "@/lib/publish/ensure-page-meta";
 import { upgradeDataUriOgImage } from "@/lib/branding/upgrade-og-image";
@@ -694,6 +695,7 @@ export async function publishProject(
       logoUrl: effectiveLogoUrl,
       motion: project.data?.settings?.motion,
       music: project.data?.settings?.music,
+      pages: pagesForPublish(project.data),
       sourceLang,
       buildLocaleDocs:
         targets.length > 0
