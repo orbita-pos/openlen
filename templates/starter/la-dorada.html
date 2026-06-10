@@ -1,0 +1,174 @@
+<!doctype html>
+<html lang="en" style="--ol-bg: #faf4ec; --ol-surface: #fffdf9; --ol-fg: #4a382c; --ol-border: #ecdfd0; --ol-accent: #c2703e; --ol-font-display: 'Fraunces', serif; --ol-r-scale: 1.4" data-ol-tematica="wanderlust">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>La Dorada — boutique stays on the golden coast</title>
+<meta name="description" content="La Dorada is a nine-suite boutique hotel over the sea — infinity pool, golden-hour terraces, breakfast till noon.">
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,700;1,9..144,500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ol-bg:#faf4ec; --ol-surface:#fffdf9; --ol-fg:#4a382c; --ol-border:#ecdfd0;
+    --ol-accent:#c2703e; --ol-accent-r:194,112,62;
+    --ol-font-display:'Fraunces',serif; --ol-r-scale:1.4;
+  }
+  body{background:var(--ol-bg);color:var(--ol-fg);font-family:'Inter',sans-serif}
+  .display{font-family:var(--ol-font-display)}
+  .card{
+    background:var(--ol-surface);
+    border:1px solid var(--ol-border);
+    border-radius:calc(10px + 7px * var(--ol-r-scale,1));
+  }
+  .pill{border-radius:999px}
+  .btn-main{background:var(--ol-accent);color:var(--ol-bg);transition:transform .18s ease, filter .18s ease}
+  .btn-main:hover{transform:translateY(-1px);filter:brightness(1.06)}
+  .room{border-radius:calc(9px + 6px * var(--ol-r-scale,1));overflow:hidden}
+  .room img{transition:transform .35s ease}
+  .room:hover img{transform:scale(1.04)}
+  .field{background:var(--ol-bg);border:1px solid var(--ol-border);color:var(--ol-fg);border-radius:calc(7px + 4px * var(--ol-r-scale,1))}
+  .field::placeholder{color:var(--ol-fg);opacity:.45}
+  .field:focus{outline:2px solid var(--ol-accent);outline-offset:1px}
+  .rule{width:42px;height:2px;background:var(--ol-accent)}
+  @media (prefers-reduced-motion: reduce){
+    .btn-main,.room img{transition:none}
+    .btn-main:hover,.room:hover img{transform:none}
+  }
+</style>
+<link rel="stylesheet" data-ol-tematica href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,700&display=swap"><style data-ol-tematica>
+/* ── world ───────────────────────────────────────────────────────────── */
+html[data-ol-tematica="wanderlust"]::before{content:"";position:fixed;inset:0;z-index:-1;
+background-image:url("https://images.openlen.com/tematicas/wanderlust-pool-1920.webp");background-size:cover;background-position:center;
+background-repeat:no-repeat}
+@media (max-width:640px){html[data-ol-tematica="wanderlust"]::before{background-image:url("https://images.openlen.com/tematicas/wanderlust-pool-p-1080.webp")}}
+html[data-ol-tematica="wanderlust"]::after{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;
+background-image:linear-gradient(180deg, rgba(255,253,249,0.5) 0%, rgba(255,253,249,0.28) 45%, rgba(255,253,249,0.58) 100%);background-size:auto}
+/* the page's own grounds go transparent so the world shows through — these
+   must out-rank the canonize force rules (attribute selector + !important) */
+[data-ol-tematica="wanderlust"] body,[data-ol-tematica="wanderlust"] [data-ol-bg-carrier]{background-color:transparent !important;background-image:none !important}
+[data-ol-tematica="wanderlust"] :is(body,main,[data-ol-bg-carrier])>:is(section,header,footer,nav,article,div,aside){background-color:transparent !important;background-image:none !important}
+/* ── ink ─────────────────────────────────────────────────────────────── */
+[data-ol-tematica="wanderlust"] :is(h1,h2,h3,h4,h5,h6,p,li,blockquote,figcaption,dt,dd,small):not([class*="bg-clip"]):not([class*="text-transparent"]){color:var(--ol-fg,#18181b) !important}
+/* ── glass ───────────────────────────────────────────────────────────── */
+[data-ol-tematica="wanderlust"] :is([class*="card"],form,pre,table){
+background-color:color-mix(in srgb, var(--ol-surface, #fff) 70%, transparent) !important;background-image:none !important;
+-webkit-backdrop-filter:blur(14px) saturate(1.35);
+backdrop-filter:blur(14px) saturate(1.35);
+border-color:color-mix(in srgb, var(--ol-border, rgba(0,0,0,.15)) 55%, transparent)}
+[data-ol-tematica="wanderlust"] nav{background-color:color-mix(in srgb, var(--ol-surface, #fff) 80%, transparent) !important;background-image:none !important;
+-webkit-backdrop-filter:blur(14px) saturate(1.35);
+backdrop-filter:blur(14px) saturate(1.35)}
+/* ── delight ─────────────────────────────────────────────────────────── */
+[data-ol-tematica="wanderlust"] ::selection{background:var(--ol-accent,#18181b);color:var(--ol-bg,#fff)}
+</style></head>
+<body class="min-h-screen antialiased">
+
+<nav class="sticky top-0 z-10">
+  <div class="max-w-5xl mx-auto px-6 h-16 flex items-center justify-between">
+    <span class="display font-bold tracking-[0.14em] text-[15px]">LA DORADA</span>
+    <div class="hidden sm:flex items-center gap-6 text-[13px] font-medium" style="opacity:.85">
+      <a href="#suites">Suites</a>
+      <a href="#mornings">Mornings</a>
+      <a href="#find-us">Find us</a>
+    </div>
+    <a href="#book" class="pill btn-main px-5 py-2 text-[13px] font-semibold">Book a stay</a>
+  </div>
+</nav>
+
+<main>
+
+  <section class="max-w-5xl mx-auto px-6 pt-20 pb-16 sm:pt-28 text-center">
+    <p class="text-[12px] font-semibold tracking-[0.22em] uppercase" style="color:var(--ol-accent)">Nine suites over the sea</p>
+    <h1 class="display text-5xl sm:text-6xl font-medium mt-4 leading-[1.05] tracking-tight">
+      Stay until the light<br><em>turns golden.</em>
+    </h1>
+    <p class="mt-5 max-w-xl mx-auto text-[15.5px] leading-relaxed" style="opacity:.85">
+      A small house on the cliff — infinity pool, linen rooms, breakfast till noon
+      and the sea doing the rest. No lobby, no rush, no shoes required.
+    </p>
+    <div class="mt-8 flex items-center justify-center gap-3">
+      <a href="#book" class="pill btn-main px-7 py-3 text-[14px] font-semibold">Check dates</a>
+      <a href="#suites" class="pill px-7 py-3 text-[14px] font-semibold card">See the suites</a>
+    </div>
+    <p class="mt-4 text-[12px]" style="opacity:.6">May–October · from $240/night · adults only</p>
+  </section>
+
+  <section id="suites" class="max-w-5xl mx-auto px-6 py-14">
+    <div class="rule mx-auto"></div>
+    <h2 class="display text-3xl sm:text-4xl font-medium text-center mt-4">The suites</h2>
+    <p class="text-center mt-2 text-[14px]" style="opacity:.75">Three ways to wake up by the water.</p>
+    <div class="mt-8 grid sm:grid-cols-3 gap-4">
+      <div class="card room">
+        <img class="w-full aspect-[4/3] object-cover" src="https://images.openlen.com/tematicas/wanderlust-suite-800.webp" alt="Linen suite at dawn with sea view" loading="lazy">
+        <div class="p-4 text-left">
+          <h3 class="display text-lg font-semibold">The Linen Room</h3>
+          <p class="mt-1 text-[12.5px] leading-relaxed" style="opacity:.7">King bed, morning sun, a window that takes the whole wall.</p>
+          <p class="mt-2 text-[12.5px] font-semibold" style="color:var(--ol-accent)">from $240/night</p>
+        </div>
+      </div>
+      <div class="card room">
+        <img class="w-full aspect-[4/3] object-cover" src="https://images.openlen.com/tematicas/wanderlust-pool-800.webp" alt="Infinity pool at golden hour" loading="lazy">
+        <div class="p-4 text-left">
+          <h3 class="display text-lg font-semibold">The Pool Suite</h3>
+          <p class="mt-1 text-[12.5px] leading-relaxed" style="opacity:.7">Steps from the infinity edge — first in the water, last out.</p>
+          <p class="mt-2 text-[12.5px] font-semibold" style="color:var(--ol-accent)">from $310/night</p>
+        </div>
+      </div>
+      <div class="card room">
+        <img class="w-full aspect-[4/3] object-cover" src="https://images.openlen.com/tematicas/wanderlust-water-800.webp" alt="Turquoise sea water texture" loading="lazy">
+        <div class="p-4 text-left">
+          <h3 class="display text-lg font-semibold">The Cove Room</h3>
+          <p class="mt-1 text-[12.5px] leading-relaxed" style="opacity:.7">Our quietest corner, with a private path down to the cove.</p>
+          <p class="mt-2 text-[12.5px] font-semibold" style="color:var(--ol-accent)">from $280/night</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="mornings" class="max-w-5xl mx-auto px-6 py-14">
+    <div class="grid sm:grid-cols-3 gap-4 text-center">
+      <div class="card px-6 py-7">
+        <span class="text-2xl" aria-hidden="true">🍳</span>
+        <h3 class="display text-lg font-semibold mt-2">Breakfast till noon</h3>
+        <p class="mt-1.5 text-[12.5px] leading-relaxed" style="opacity:.7">Slow mornings are the point. Eggs, figs, good bread, better coffee.</p>
+      </div>
+      <div class="card px-6 py-7">
+        <span class="text-2xl" aria-hidden="true">🌊</span>
+        <h3 class="display text-lg font-semibold mt-2">The water, always</h3>
+        <p class="mt-1.5 text-[12.5px] leading-relaxed" style="opacity:.7">Infinity pool at golden hour, the cove at noon, towels everywhere.</p>
+      </div>
+      <div class="card px-6 py-7">
+        <span class="text-2xl" aria-hidden="true">🛵</span>
+        <h3 class="display text-lg font-semibold mt-2">The coast road</h3>
+        <p class="mt-1.5 text-[12.5px] leading-relaxed" style="opacity:.7">Vespas to borrow, a map of coves, and dinner spots only locals know.</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="book" class="max-w-5xl mx-auto px-6 py-14">
+    <div class="card max-w-xl mx-auto px-6 py-7 sm:px-8">
+      <div class="rule"></div>
+      <h2 class="display text-2xl sm:text-3xl font-medium mt-3">Check your dates</h2>
+      <p class="mt-1.5 text-[13px]" style="opacity:.7">Tell us when — we answer the same day with what's free.</p>
+      <form class="mt-5 grid sm:grid-cols-2 gap-3 text-left">
+        <input class="field px-4 py-3 text-[13.5px]" type="text" name="name" placeholder="Your name" required>
+        <input class="field px-4 py-3 text-[13.5px]" type="email" name="email" placeholder="you@email.com" required>
+        <input class="field px-4 py-3 text-[13.5px]" type="text" name="dates" placeholder="Dates (e.g. Jul 12–16)">
+        <input class="field px-4 py-3 text-[13.5px]" type="text" name="guests" placeholder="Guests">
+        <button class="pill btn-main sm:col-span-2 px-6 py-3 text-[14px] font-semibold" type="submit">Request availability</button>
+      </form>
+    </div>
+  </section>
+
+  <footer id="find-us" class="max-w-5xl mx-auto px-6 pt-6 pb-14 text-center">
+    <p class="display text-lg font-medium">La Dorada</p>
+    <p class="mt-1 text-[12.5px]" style="opacity:.7">Camí de la Llum 9, the golden coast · hello@ladorada.example</p>
+    <p class="mt-4 text-[11px]" style="opacity:.45">© La Dorada · come for a night, stay for the light</p>
+  </footer>
+
+</main>
+
+</body>
+</html>
