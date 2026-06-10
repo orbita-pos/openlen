@@ -151,5 +151,11 @@
     "uploadError": "Falha no envio — tente outro arquivo.",
     "formats": "MP3, M4A, OGG ou WAV · até 12 MB.",
     "note": "Adiciona um player flutuante à sua página publicada, no estilo do seu tema. Os navegadores nunca tocam som sozinhos — o visitante toca para ouvir. Use áudio sobre o qual você tenha direitos."
+  },
+  "tematica": {
+    "title": "Mundo",
+    "off": "Nenhum",
+    "bg": "Fundo",
+    "note": "Envolve sua página em um mundo completo — fundo, cartões de vidro, paleta e tipografia combinando. Combina com Looks e Motion; desative quando quiser."
   }
 }

@@ -151,5 +151,11 @@
     "uploadError": "Caricamento non riuscito — prova con un altro file.",
     "formats": "MP3, M4A, OGG o WAV · fino a 12 MB.",
     "note": "Aggiunge un player flottante alla tua pagina pubblicata, in linea con il tuo tema. I browser non riproducono mai l'audio da soli: il visitatore tocca per ascoltare. Usa audio di cui possiedi i diritti."
+  },
+  "tematica": {
+    "title": "Mondo",
+    "off": "Nessuno",
+    "bg": "Sfondo",
+    "note": "Avvolge la tua pagina in un mondo completo — sfondo, schede in vetro, palette e tipografia abbinate. Si combina con Looks e Motion; disattivalo quando vuoi."
   }
 }

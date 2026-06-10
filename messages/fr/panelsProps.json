@@ -151,5 +151,11 @@
     "uploadError": "Échec de l'envoi — essayez un autre fichier.",
     "formats": "MP3, M4A, OGG ou WAV · jusqu'à 12 Mo.",
     "note": "Ajoute un lecteur flottant à votre page publiée, assorti à votre thème. Les navigateurs ne lancent jamais le son automatiquement : le visiteur appuie pour écouter. Utilisez de l'audio dont vous détenez les droits."
+  },
+  "tematica": {
+    "title": "Univers",
+    "off": "Aucun",
+    "bg": "Fond",
+    "note": "Habille votre page d'un univers complet — fond, cartes en verre, palette et typographie assorties. Se combine avec Looks et Motion ; désactivez-le à tout moment."
   }
 }

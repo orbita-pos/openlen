@@ -30,6 +30,10 @@ import {
   THEME_CATEGORIES,
   type ThemePreset,
 } from "@/lib/theme-presets";
+import {
+  TEMATICA_PRESETS,
+  type TematicaPreset,
+} from "@/lib/tematicas/presets";
 import { lookFromAccent } from "@/lib/palette-gen";
 import { ReplaceAssetModal, type ImageTab } from "../replace-asset-modal";
 import {
@@ -50,6 +54,7 @@ import {
   PaletteIcon,
   Pencil,
   Sparkles,
+  WandSparkles,
   X,
 } from "../icons";
 
@@ -172,6 +177,13 @@ interface PropertiesPanelProps {
   /** Persist the page-music track (null removes it). Omit to hide the Music
    *  section. Persists + previews live in the iframe. */
   onApplyMusic?: (music: MusicSettings | null) => void;
+  /** Temática: the active kit id read off the document ("" = none). */
+  tematica?: string;
+  /** The active backdrop-variant id ("" = the kit's hero scene). */
+  tematicaBg?: string;
+  /** Install a full-page world (null removes it; backdropId picks a scene).
+   *  Omit to hide the row. */
+  onApplyTematica?: (kit: TematicaPreset | null, backdropId?: string) => void;
   /** Fire a test lead notification email to whichever address would
    *  receive the real one for this form. Resolves with the result so
    *  the FormView can render inline feedback. Omit to hide the button. */
@@ -209,6 +221,9 @@ export function PropertiesPanel({
   onApplyMotion,
   music,
   onApplyMusic,
+  tematica,
+  tematicaBg,
+  onApplyTematica,
   onSendTestFormEmail,
   onClearSelection,
   onClose,
@@ -265,6 +280,9 @@ export function PropertiesPanel({
             onApplyMotion={onApplyMotion}
             music={music}
             onApplyMusic={onApplyMusic}
+            tematica={tematica}
+            tematicaBg={tematicaBg}
+            onApplyTematica={onApplyTematica}
           />
         )}
       </div>
@@ -779,6 +797,9 @@ function PageView({
   onApplyMotion,
   music,
   onApplyMusic,
+  tematica,
+  tematicaBg,
+  onApplyTematica,
 }: {
   pageMeta: PageMeta | null;
   html?: string;
@@ -797,6 +818,9 @@ function PageView({
   onApplyMotion?: (preset: string) => void;
   music?: MusicSettings;
   onApplyMusic?: (music: MusicSettings | null) => void;
+  tematica?: string;
+  tematicaBg?: string;
+  onApplyTematica?: (kit: TematicaPreset | null, backdropId?: string) => void;
 }) {
   // Recompute the SEO report on every HTML change. Cheap (DOMParser on
   // ~50-100KB), no debouncing needed — the parent only updates html when
@@ -824,6 +848,13 @@ function PageView({
   }
   return (
     <div className="fade-in" ref={rootRef}>
+      {onApplyTematica && (
+        <TematicaSection
+          active={tematica}
+          activeBg={tematicaBg}
+          onApply={onApplyTematica}
+        />
+      )}
       {onApplyLook && (
         <ThemeSection
           mode={pageMeta.mode ?? "light"}
@@ -1226,6 +1257,115 @@ function MotionSection({
         ))}
       </div>
       <p className="text-[10.5px] fg-faint leading-relaxed mt-2">{t("motion.note")}</p>
+    </Section>
+  );
+}
+
+// Temática — full-page worlds (the guns.lol / Carrd aesthetic). Image tiles
+// rather than orbs: each kit IS its backdrop. Clicking the active tile turns
+// the world off; "Ninguna" resets to the page's own baseline. The kit lands
+// in the document (style + font link + html attr) via the inspect script and
+// its tokens ride the Looks channel — see lib/tematicas/presets.ts.
+function TematicaSection({
+  active,
+  activeBg,
+  onApply,
+}: {
+  active?: string;
+  activeBg?: string;
+  onApply: (kit: TematicaPreset | null, backdropId?: string) => void;
+}) {
+  const t = useTranslations("panelsProps");
+  const none = !active;
+  const activeKit = TEMATICA_PRESETS.find((k) => k.id === active);
+  const currentBg = activeBg || activeKit?.backdrops[0]?.id;
+  return (
+    <Section label={t("tematica.title")} icon={<WandSparkles size={11} />}>
+      <div className="grid grid-cols-3 gap-1.5 pt-0.5">
+        <button
+          type="button"
+          aria-pressed={none}
+          title={t("tematica.off")}
+          onClick={() => onApply(null)}
+          className={
+            "h-14 rounded-lg text-[10px] font-medium transition flex items-center justify-center " +
+            (none
+              ? "ring-2 ring-[var(--accent-strong)] bg-elev fg"
+              : "ring-1 bd border-dashed bg-elev fg-muted hover:fg")
+          }
+        >
+          {t("tematica.off")}
+        </button>
+        {TEMATICA_PRESETS.map((k) => {
+          const on = active === k.id;
+          return (
+            <button
+              key={k.id}
+              type="button"
+              aria-pressed={on}
+              title={`${k.name} — ${k.hint}`}
+              onClick={() => onApply(on ? null : k)}
+              className={
+                "relative h-14 rounded-lg overflow-hidden transition text-left " +
+                (on
+                  ? "ring-2 ring-[var(--accent-strong)]"
+                  : "ring-1 bd hover:ring-2")
+              }
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={k.backdrops[0].thumb}
+                alt=""
+                loading="lazy"
+                decoding="async"
+                className="absolute inset-0 w-full h-full object-cover"
+              />
+              <span className="absolute inset-x-0 bottom-0 px-1.5 pb-0.5 pt-2 text-[9.5px] font-semibold text-white truncate bg-gradient-to-t from-black/60 to-transparent">
+                {k.name}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+      {activeKit && activeKit.backdrops.length > 1 && (
+        <div className="mt-2">
+          <div className="text-[10px] uppercase tracking-[0.14em] fg-faint font-semibold mb-1.5">
+            {t("tematica.bg")}
+          </div>
+          <div className="grid grid-cols-4 gap-1.5">
+            {activeKit.backdrops.map((b) => {
+              const on = currentBg === b.id;
+              return (
+                <button
+                  key={b.id}
+                  type="button"
+                  aria-pressed={on}
+                  title={b.id}
+                  onClick={() => onApply(activeKit, b.id)}
+                  className={
+                    "relative h-10 rounded-md overflow-hidden transition " +
+                    (on
+                      ? "ring-2 ring-[var(--accent-strong)]"
+                      : "ring-1 bd hover:ring-2")
+                  }
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={b.thumb}
+                    alt=""
+                    loading="lazy"
+                    decoding="async"
+                    className="absolute inset-0 w-full h-full object-cover"
+                  />
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+      <p className="text-[10.5px] fg-faint leading-relaxed mt-2">
+        {t("tematica.note")}
+      </p>
     </Section>
   );
 }

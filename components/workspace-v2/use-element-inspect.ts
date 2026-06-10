@@ -649,6 +649,43 @@ const INSPECT_SCRIPT = `
     postPageMeta();
   }
 
+  // Temática — install/remove a kit's full-page world. The kit's stylesheet
+  // (backdrop + scrim + glass + ink, built by lib/tematicas/presets.ts) and
+  // its display-font <link> land as data-ol-tematica-TAGGED elements in
+  // <head>, plus the kit id stamped on <html>. These PERSIST in the saved
+  // document (same model as the Looks inline vars — the page must carry its
+  // world in thumbnails/exports/published, not only in the editor). The
+  // parent applies the kit's token bundle separately via theme-bundle.
+  function applyTematica(id, css, fontHref, bg) {
+    var root = document.documentElement;
+    var old = document.querySelectorAll('style[data-ol-tematica],link[data-ol-tematica]');
+    for (var i = 0; i < old.length; i++) old[i].remove();
+    if (!id) {
+      root.removeAttribute('data-ol-tematica');
+      root.removeAttribute('data-ol-tematica-bg');
+      postClean();
+      postPageMeta();
+      return;
+    }
+    root.setAttribute('data-ol-tematica', id);
+    if (bg) root.setAttribute('data-ol-tematica-bg', bg);
+    else root.removeAttribute('data-ol-tematica-bg');
+    var head = document.head || document.documentElement;
+    if (fontHref) {
+      var l = document.createElement('link');
+      l.rel = 'stylesheet';
+      l.href = fontHref;
+      l.setAttribute('data-ol-tematica', '');
+      head.appendChild(l);
+    }
+    var s = document.createElement('style');
+    s.setAttribute('data-ol-tematica', '');
+    s.textContent = css || '';
+    head.appendChild(s);
+    postClean();
+    postPageMeta();
+  }
+
   function applyTheme(prop, value) {
     var root = document.documentElement;
     // The light/dark toggle is an attribute on <html>, not a CSS variable.
@@ -723,6 +760,13 @@ const INSPECT_SCRIPT = `
       applyTheme(d.prop, typeof d.value === 'string' ? d.value : '');
     } else if (d.scope === 'theme-bundle' && d.tokens && typeof d.tokens === 'object') {
       applyThemeBundle(d.tokens);
+    } else if (d.scope === 'tematica') {
+      applyTematica(
+        typeof d.id === 'string' ? d.id : '',
+        typeof d.css === 'string' ? d.css : '',
+        typeof d.fontHref === 'string' ? d.fontHref : '',
+        typeof d.bg === 'string' ? d.bg : '',
+      );
     }
   });
 

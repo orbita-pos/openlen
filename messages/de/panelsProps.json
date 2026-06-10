@@ -151,5 +151,11 @@
     "uploadError": "Upload fehlgeschlagen — bitte eine andere Datei versuchen.",
     "formats": "MP3, M4A, OGG oder WAV · bis 12 MB.",
     "note": "Fügt deiner veröffentlichten Seite einen schwebenden Player im Stil deines Themes hinzu. Browser spielen Ton nie automatisch ab — Besucher tippen zum Anhören. Verwende nur Audio, an dem du die Rechte hast."
+  },
+  "tematica": {
+    "title": "Welt",
+    "off": "Keine",
+    "bg": "Hintergrund",
+    "note": "Hüllt deine Seite in eine komplette Welt — Hintergrund, Glaskarten, passende Palette und Typografie. Kombinierbar mit Looks und Motion; jederzeit abschaltbar."
   }
 }

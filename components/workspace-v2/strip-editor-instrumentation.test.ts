@@ -105,6 +105,22 @@ describe("stripEditorInstrumentation — Editor V5 markers", () => {
     expect(out).toContain('class="hero"'); // sibling classes survive
   });
 
+  it("PRESERVES the persisted temática world (style + font link + html attr)", () => {
+    // Temáticas persist IN the document by design (like the Looks inline
+    // vars) — the backstop must never confuse them with editor chrome.
+    const out = stripEditorInstrumentation(
+      `<!doctype html><html data-ol-tematica="coquette"><head>` +
+        `<link rel="stylesheet" data-ol-tematica href="https://fonts.googleapis.com/css2?family=Playfair+Display">` +
+        `<style data-ol-tematica>html[data-ol-tematica="coquette"]::before{content:""}</style>` +
+        `</head><body data-openlen-edit-mode><h1 data-openlen-editable>Hero</h1></body></html>`,
+    );
+    expect(out).toContain('data-ol-tematica="coquette"');
+    expect(out).toContain("<style data-ol-tematica");
+    expect(out).toContain('<link rel="stylesheet" data-ol-tematica');
+    expect(out).not.toContain("data-openlen-editable");
+    expect(out).not.toContain("data-openlen-edit-mode");
+  });
+
   it("leaves a full editor-session capture with ZERO leaked markers", () => {
     // Simulates a Properties-panel ('props') save taken while an inline-edit
     // run is open: the shared live DOM carries inline-edit's markers.
