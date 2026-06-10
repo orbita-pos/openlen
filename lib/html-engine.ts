@@ -20,8 +20,10 @@
 import {
   applyOps as rustApplyOps,
   buildScopedView as rustBuildScopedView,
+  applyPhotoSlots as rustApplyPhotoSlots,
   consolidateUnsplashCredits as rustConsolidateUnsplashCredits,
   extractLogo as rustExtractLogo,
+  extractPhotoSlots as rustExtractPhotoSlots,
   extractTranslatables as rustExtractTranslatables,
   HtmlStream as RustHtmlStream,
   injectLogo as rustInjectLogo,
@@ -50,6 +52,9 @@ import type {
   OptimizeResult as RustOptimizeResult,
   OptimizeStats,
   ParseResult as RustParseResult,
+  PhotoApplyResult as RustPhotoApplyResult,
+  PhotoAssignment as RustPhotoAssignment,
+  PhotoSlot as RustPhotoSlot,
   ResponsiveImageEntry,
   RewriteImagesResult as RustRewriteImagesResult,
   SanitizeRemovedCounts,
@@ -303,6 +308,48 @@ export function rewriteResponsiveImages(
     lazied: r.lazied,
     heroSrc: r.heroSrc ?? null,
   };
+}
+
+export interface PhotoSlot {
+  subject: string;
+  hasText: boolean;
+}
+
+export interface PhotoAssignment {
+  /** Largest variant → the `src`. Empty string = leave this slot untouched. */
+  src: string;
+  srcset: string;
+  alt: string;
+}
+
+export interface PhotoApplyResult {
+  html: string;
+  applied: number;
+}
+
+/** Find the `[data-ol-photo]` image slots an AI-generated page marks, in
+ *  document order, with each slot's subject hint + whether it has overlaid
+ *  text. Pair with applyPhotoSlots, which walks the SAME order. See
+ *  crates/html-engine/src/publish/photos.rs. */
+export function extractPhotoSlots(html: string): PhotoSlot[] {
+  return (rustExtractPhotoSlots(html) as RustPhotoSlot[]).map((s) => ({
+    subject: s.subject,
+    hasText: s.hasText,
+  }));
+}
+
+/** Inject a curated photo into each marked slot (by document order). An
+ *  empty `src` leaves that slot as its gradient placeholder. The marker
+ *  attribute is always removed. */
+export function applyPhotoSlots(
+  html: string,
+  assignments: PhotoAssignment[],
+): PhotoApplyResult {
+  const r = rustApplyPhotoSlots(
+    html,
+    assignments as RustPhotoAssignment[],
+  ) as RustPhotoApplyResult;
+  return { html: r.html, applied: r.applied };
 }
 
 /** Every translatable string of the document — visible text nodes plus

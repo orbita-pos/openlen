@@ -380,6 +380,57 @@ pub fn extract_translatables(html: String) -> Vec<String> {
     publish::extract_translatables(&html)
 }
 
+#[napi(object, js_name = "PhotoSlot")]
+pub struct JsPhotoSlot {
+    pub subject: String,
+    pub has_text: bool,
+}
+
+#[napi]
+pub fn extract_photo_slots(html: String) -> Vec<JsPhotoSlot> {
+    publish::extract_photo_slots(&html)
+        .into_iter()
+        .map(|s| JsPhotoSlot {
+            subject: s.subject,
+            has_text: s.has_text,
+        })
+        .collect()
+}
+
+#[napi(object, js_name = "PhotoAssignment")]
+pub struct JsPhotoAssignment {
+    /// Largest variant → the `src`. Empty string = leave this slot untouched.
+    pub src: String,
+    pub srcset: String,
+    pub alt: String,
+}
+
+#[napi(object, js_name = "PhotoApplyResult")]
+pub struct JsPhotoApplyResult {
+    pub html: String,
+    pub applied: u32,
+}
+
+#[napi]
+pub fn apply_photo_slots(
+    html: String,
+    assignments: Vec<JsPhotoAssignment>,
+) -> JsPhotoApplyResult {
+    let native: Vec<publish::PhotoAssignment> = assignments
+        .into_iter()
+        .map(|a| publish::PhotoAssignment {
+            src: a.src,
+            srcset: a.srcset,
+            alt: a.alt,
+        })
+        .collect();
+    let r = publish::apply_photo_slots(&html, &native);
+    JsPhotoApplyResult {
+        html: r.html,
+        applied: r.applied,
+    }
+}
+
 #[napi]
 pub fn reinject_translatables(
     html: String,
