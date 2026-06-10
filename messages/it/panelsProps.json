@@ -122,5 +122,21 @@
       "vibrant": "Vivace",
       "expressive": "Espressivo"
     }
+  },
+  "motion": {
+    "title": "Movimento",
+    "off": "Off",
+    "preset": {
+      "calm": "Delicato",
+      "editorial": "Editoriale",
+      "dramatic": "Drammatico"
+    },
+    "hint": {
+      "off": "Nessuna animazione allo scorrimento",
+      "calm": "Comparsa graduale quando le sezioni entrano",
+      "editorial": "Comparse scaglionate, parallasse dell'hero, numeri animati",
+      "dramatic": "Comparse cinematografiche, parallasse più forte, titolo fissato"
+    },
+    "note": "Aggiunge una coreografia di scorrimento in stile Apple sulla tua pagina pubblicata. Ferma è identica — si muove solo allo scorrimento e rispetta la preferenza di movimento ridotto."
   }
 }

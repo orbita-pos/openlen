@@ -47,6 +47,7 @@ import {
   Inbox,
   PaletteIcon,
   Pencil,
+  Sparkles,
   X,
 } from "../icons";
 
@@ -157,6 +158,12 @@ interface PropertiesPanelProps {
   onResetTheme?: () => void;
   /** The page's original accent hex — renders the "Original" bead's color. */
   originalAccent?: string;
+  /** Motion Looks: the active preset ("calm" | "editorial" | "dramatic"),
+   *  or undefined for none. Drives the Motion bead row's selected state. */
+  motion?: string;
+  /** Apply a motion preset (or "" to turn it off). Omit to hide the Motion
+   *  row. Persists + previews live in the iframe. */
+  onApplyMotion?: (preset: string) => void;
   /** Fire a test lead notification email to whichever address would
    *  receive the real one for this form. Resolves with the result so
    *  the FormView can render inline feedback. Omit to hide the button. */
@@ -190,6 +197,8 @@ export function PropertiesPanel({
   onApplyThemeMode,
   onResetTheme,
   originalAccent,
+  motion,
+  onApplyMotion,
   onSendTestFormEmail,
   onClearSelection,
   onClose,
@@ -242,6 +251,8 @@ export function PropertiesPanel({
             onApplyThemeMode={onApplyThemeMode}
             onResetTheme={onResetTheme}
             originalAccent={originalAccent}
+            motion={motion}
+            onApplyMotion={onApplyMotion}
           />
         )}
       </div>
@@ -752,6 +763,8 @@ function PageView({
   onApplyThemeMode,
   onResetTheme,
   originalAccent,
+  motion,
+  onApplyMotion,
 }: {
   pageMeta: PageMeta | null;
   html?: string;
@@ -766,6 +779,8 @@ function PageView({
   onApplyThemeMode?: (mode: "light" | "dark") => void;
   onResetTheme?: () => void;
   originalAccent?: string;
+  motion?: string;
+  onApplyMotion?: (preset: string) => void;
 }) {
   // Recompute the SEO report on every HTML change. Cheap (DOMParser on
   // ~50-100KB), no debouncing needed — the parent only updates html when
@@ -803,6 +818,7 @@ function PageView({
           originalAccent={originalAccent}
         />
       )}
+      {onApplyMotion && <MotionSection motion={motion} onApply={onApplyMotion} />}
       {report && <SeoHealthSection report={report} onFix={focusField} />}
       {onApplyLogoUrl && (
         <LogoSection
@@ -1145,6 +1161,52 @@ function ThemeSection({
           {t("theme.noDark")}
         </p>
       )}
+    </Section>
+  );
+}
+
+// Motion Looks — a second bead row under the Looks orbs. A different axis
+// (movement, not color), so these are labeled pills rather than colour orbs:
+// Off + Calm / Editorial / Dramatic. Picking one previews live in the iframe
+// (motion-preview injector) and persists to data.settings.motion; the page
+// looks identical frozen — the choreography only shows on scroll.
+function MotionSection({
+  motion,
+  onApply,
+}: {
+  motion?: string;
+  onApply: (preset: string) => void;
+}) {
+  const t = useTranslations("panelsProps");
+  const PRESETS = ["calm", "editorial", "dramatic"] as const;
+  const Pill = ({ value, label, hint }: { value: string; label: string; hint: string }) => {
+    const on = (motion ?? "") === value;
+    return (
+      <button
+        type="button"
+        aria-pressed={on}
+        title={hint}
+        onClick={() => onApply(value)}
+        className={
+          "h-7 px-2.5 rounded-full text-[11px] font-medium ring-1 transition " +
+          (on
+            ? "bg-[var(--accent-strong)] text-white ring-transparent"
+            : "bg-elev fg-muted bd hover:fg")
+        }
+      >
+        {label}
+      </button>
+    );
+  };
+  return (
+    <Section label={t("motion.title")} icon={<Sparkles size={11} />}>
+      <div className="flex flex-wrap gap-1.5 pt-0.5">
+        <Pill value="" label={t("motion.off")} hint={t("motion.hint.off")} />
+        {PRESETS.map((p) => (
+          <Pill key={p} value={p} label={t(`motion.preset.${p}`)} hint={t(`motion.hint.${p}`)} />
+        ))}
+      </div>
+      <p className="text-[10.5px] fg-faint leading-relaxed mt-2">{t("motion.note")}</p>
     </Section>
   );
 }

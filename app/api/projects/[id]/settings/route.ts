@@ -34,6 +34,9 @@ interface PatchBody {
    *  toggle does not retroactively affect already-published HTML — it
    *  only takes effect on the next publish. */
   analyticsDisabled?: boolean;
+  /** Motion Looks preset, or null/"" to turn motion off. Takes effect on
+   *  the next publish. */
+  motion?: string | null;
 }
 
 function clean(v: unknown, max: number): string {
@@ -55,11 +58,21 @@ export async function PATCH(
   const hasFormPatch =
     typeof body.formIndex === "number" && body.patch && typeof body.patch === "object";
   const hasAnalyticsToggle = typeof body.analyticsDisabled === "boolean";
-  if (!hasFormPatch && !hasAnalyticsToggle) {
+  const hasMotion = "motion" in body;
+  if (hasMotion) {
+    const m = body.motion;
+    if (m !== null && !["calm", "editorial", "dramatic", ""].includes(m as string)) {
+      return json(
+        { error: "invalid_body", message: "motion must be calm|editorial|dramatic or null" },
+        400,
+      );
+    }
+  }
+  if (!hasFormPatch && !hasAnalyticsToggle && !hasMotion) {
     return json(
       {
         error: "invalid_body",
-        message: "expected formIndex+patch OR analyticsDisabled",
+        message: "expected formIndex+patch OR analyticsDisabled OR motion",
       },
       400,
     );
@@ -123,6 +136,11 @@ export async function PATCH(
   const nextSettings = { ...data.settings, forms };
   if (hasAnalyticsToggle) {
     nextSettings.analyticsDisabled = body.analyticsDisabled === true;
+  }
+  if (hasMotion) {
+    const m = body.motion;
+    if (m && m !== "") nextSettings.motion = m;
+    else delete nextSettings.motion;
   }
 
   const nextData: ProjectData = {

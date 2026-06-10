@@ -122,5 +122,21 @@
       "vibrant": "Vibrant",
       "expressive": "Expressive"
     }
+  },
+  "motion": {
+    "title": "Motion",
+    "off": "Off",
+    "preset": {
+      "calm": "Calm",
+      "editorial": "Editorial",
+      "dramatic": "Dramatic"
+    },
+    "hint": {
+      "off": "No scroll animation",
+      "calm": "Gentle fade-in as sections enter view",
+      "editorial": "Staggered reveals, hero parallax, animated stats",
+      "dramatic": "Cinematic reveals, stronger parallax, a pinned headline"
+    },
+    "note": "Adds Apple-style scroll choreography on your live page. The page looks identical frozen — it only moves as visitors scroll, and respects reduced-motion settings."
   }
 }

@@ -122,5 +122,21 @@
       "vibrant": "Vif",
       "expressive": "Expressif"
     }
+  },
+  "motion": {
+    "title": "Mouvement",
+    "off": "Désactivé",
+    "preset": {
+      "calm": "Doux",
+      "editorial": "Éditorial",
+      "dramatic": "Spectaculaire"
+    },
+    "hint": {
+      "off": "Aucune animation au défilement",
+      "calm": "Apparition douce quand les sections entrent",
+      "editorial": "Apparitions échelonnées, parallaxe du héros, chiffres animés",
+      "dramatic": "Apparitions cinématographiques, parallaxe plus forte, titre épinglé"
+    },
+    "note": "Ajoute une chorégraphie de défilement façon Apple sur votre page publiée. Figée, elle est identique — elle ne bouge qu'au défilement et respecte la préférence de mouvement réduit."
   }
 }

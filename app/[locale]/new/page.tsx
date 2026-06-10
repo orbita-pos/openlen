@@ -1369,6 +1369,31 @@ function NewV2Inner() {
     },
     [loadedProject?.id],
   );
+  // Motion Looks — pick a scroll-choreography preset. Optimistic: updates the
+  // setting locally (which re-applies the live iframe preview via the
+  // motionPreset prop) and PATCHes in the background; rolls back on failure.
+  // "" clears motion. Takes effect on the next publish.
+  const applyMotion = useCallback(
+    (preset: string) => {
+      const projectId = loadedProject?.id;
+      if (!projectId) return;
+      const prev = loadedProject?.settings?.motion;
+      const next = preset || undefined;
+      setLoadedProject((p) =>
+        p ? { ...p, settings: { ...p.settings, motion: next } } : p,
+      );
+      void fetch(`/api/projects/${projectId}/settings`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ motion: preset || null }),
+      }).catch(() => {
+        setLoadedProject((p) =>
+          p ? { ...p, settings: { ...p.settings, motion: prev } } : p,
+        );
+      });
+    },
+    [loadedProject?.id, loadedProject?.settings?.motion],
+  );
   const toggleInspect = useCallback(() => {
     setInspectMode((m) => !m);
     setInspectSelection(null);
@@ -1641,6 +1666,7 @@ function NewV2Inner() {
                 onToggleInspect={toggleInspect}
                 insertRequest={insertRequest}
                 removeRequest={removeRequest}
+                motionPreset={loadedProject.settings?.motion}
                 onIframeRef={(el) => {
                   iframeElRef.current = el;
                 }}
@@ -1745,6 +1771,8 @@ function NewV2Inner() {
                       loadedProject && originalTheme ? resetTheme : undefined
                     }
                     originalAccent={originalTheme?.tokens["--ol-accent"] || undefined}
+                    motion={loadedProject?.settings?.motion}
+                    onApplyMotion={loadedProject ? applyMotion : undefined}
                     onSendTestFormEmail={sendTestFormEmail}
                     onClearSelection={() => setInspectSelection(null)}
                     onClose={() => {
