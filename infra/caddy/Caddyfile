@@ -168,6 +168,24 @@ openlen.com, www.openlen.com {
 	root * /var/www/openlen/{labels.2}/current
 	try_files {path} {path}/index.html /index.html
 	file_server
+
+	# Dead subdomains (no release dir → even the /index.html fallback 404s)
+	# get the branded OpenLen 404 instead of Caddy's blank default. The file
+	# is emitted from lib/publish/not-found-page.ts by apply-404.ps1 —
+	# "_system" can never collide with a real sub (slugs are alphanumeric).
+	# Live subs never reach this for page navigations (try_files always
+	# lands on index.html); only their missing assets do, which is fine —
+	# the status code is still 404.
+	handle_errors {
+		@notfound expression {http.error.status_code} == 404
+		handle @notfound {
+			root * /var/www/openlen/_system
+			rewrite * /404.html
+			file_server {
+				status 404
+			}
+		}
+	}
 }
 
 # ─── Custom domains — on-demand TLS, rewrite to /served/<host>/<path> ─

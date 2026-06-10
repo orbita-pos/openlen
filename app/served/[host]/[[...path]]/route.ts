@@ -1,6 +1,7 @@
 import { readFile, stat } from "node:fs/promises";
 import path from "node:path";
 import { lookupDomain } from "@/lib/custom-domains";
+import { NOT_FOUND_HTML } from "@/lib/publish/not-found-page";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Custom-domain HTML server (`/served/...`).
@@ -152,22 +153,22 @@ async function serve(
   const host = params.host.toLowerCase();
   const found = await lookupDomain(host);
   if (!found || !found.verified || !found.subdomain) {
-    return notFound();
+    return notFound(includeBody);
   }
 
   const resolved = resolveFile(found.subdomain, params.path ?? []);
-  if (!resolved) return notFound();
+  if (!resolved) return notFound(includeBody);
 
   // Containment check — never let a constructed path escape the publish root.
   const rootNorm = path.normalize(PUBLISH_ROOT) + path.sep;
   const absNorm = path.normalize(resolved.absolutePath);
-  if (!absNorm.startsWith(rootNorm)) return notFound();
+  if (!absNorm.startsWith(rootNorm)) return notFound(includeBody);
 
   let body: ArrayBuffer | null = null;
   let size: number;
   try {
     const s = await stat(absNorm);
-    if (!s.isFile()) return notFound();
+    if (!s.isFile()) return notFound(includeBody);
     size = s.size;
     if (includeBody) {
       const buf = await readFile(absNorm);
@@ -179,7 +180,7 @@ async function serve(
       body = ab;
     }
   } catch {
-    return notFound();
+    return notFound(includeBody);
   }
 
   const headers: Record<string, string> = {
@@ -192,10 +193,15 @@ async function serve(
   return new Response(includeBody ? body : null, { status: 200, headers });
 }
 
-function notFound(): Response {
-  return new Response("Not Found", {
+// The branded dead-link page (same HTML Caddy serves for dead *.openlen.com
+// subdomains via handle_errors). Body omitted on HEAD per spec.
+function notFound(includeBody: boolean): Response {
+  return new Response(includeBody ? NOT_FOUND_HTML : null, {
     status: 404,
-    headers: { "Content-Type": "text/plain; charset=utf-8" },
+    headers: {
+      "Content-Type": "text/html; charset=utf-8",
+      "Cache-Control": "public, max-age=300",
+    },
   });
 }
 
