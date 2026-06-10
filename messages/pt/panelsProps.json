@@ -138,5 +138,18 @@
       "dramatic": "Surgimentos cinematográficos, parallax mais forte, título fixo"
     },
     "note": "Adiciona coreografia de rolagem estilo Apple na sua página publicada. Congelada fica idêntica — só se move ao rolar e respeita a preferência de movimento reduzido."
+  },
+  "music": {
+    "title": "Música",
+    "upload": "Enviar faixa",
+    "uploading": "Enviando…",
+    "replace": "Substituir faixa",
+    "remove": "Remover",
+    "trackTitle": "Título",
+    "addCover": "Adicionar capa",
+    "changeCover": "Trocar capa",
+    "uploadError": "Falha no envio — tente outro arquivo.",
+    "formats": "MP3, M4A, OGG ou WAV · até 12 MB.",
+    "note": "Adiciona um player flutuante à sua página publicada, no estilo do seu tema. Os navegadores nunca tocam som sozinhos — o visitante toca para ouvir. Use áudio sobre o qual você tenha direitos."
   }
 }

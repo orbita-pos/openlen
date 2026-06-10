@@ -138,5 +138,18 @@
       "dramatic": "Apariciones cinematográficas, parallax fuerte, titular fijo"
     },
     "note": "Agrega coreografía de scroll estilo Apple en tu página publicada. Congelada se ve idéntica — solo se mueve al hacer scroll, y respeta la preferencia de movimiento reducido."
+  },
+  "music": {
+    "title": "Música",
+    "upload": "Subir pista",
+    "uploading": "Subiendo…",
+    "replace": "Reemplazar pista",
+    "remove": "Quitar",
+    "trackTitle": "Título",
+    "addCover": "Añadir portada",
+    "changeCover": "Cambiar portada",
+    "uploadError": "No se pudo subir — prueba con otro archivo.",
+    "formats": "MP3, M4A, OGG o WAV · hasta 12 MB.",
+    "note": "Añade un reproductor flotante a tu página publicada, con el estilo de tu tema. Los navegadores nunca reproducen sonido solos: el visitante toca para escuchar. Usa audio del que tengas derechos."
   }
 }

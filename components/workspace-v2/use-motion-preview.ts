@@ -35,6 +35,7 @@ const MOTION_PREVIEW_SCRIPT = `(function(){
     var st=document.getElementById('ol-motion-preview-style');
     if(!preset){ if(st)st.remove(); root.removeAttribute('data-ol-motion'); return; }
     if(!st){ st=document.createElement('style'); st.id='ol-motion-preview-style';
+      st.setAttribute('data-openlen-motion-preview','');
       (document.head||document.documentElement).appendChild(st); }
     st.textContent=css||'';
     root.setAttribute('data-ol-motion',preset);

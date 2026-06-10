@@ -3,14 +3,17 @@ import { auth } from "@/auth";
 import { db, schema } from "@/lib/db";
 import { legacyWebp2000Variant, processImage } from "@/lib/images";
 import {
+  ACCEPTED_AUDIO_MIMES,
   ACCEPTED_MIMES,
   extForMime,
   getAssetStorage,
+  MAX_AUDIO_UPLOAD_BYTES,
   MAX_UPLOAD_BYTES,
 } from "@/lib/projects/assets";
 
 // ─────────────────────────────────────────────────────────────────────────────
-// POST /api/projects/[id]/assets — upload an image asset for a project.
+// POST /api/projects/[id]/assets — upload an image or audio asset for a
+// project (audio feeds the page-music player; settings.music.src points here).
 //
 // Body: multipart/form-data with a single `file` field.
 // Response: { url, filename, contentType, size }
@@ -23,6 +26,7 @@ import {
 export const runtime = "nodejs";
 
 const ACCEPTED_MIME_SET = new Set<string>(ACCEPTED_MIMES);
+const ACCEPTED_AUDIO_MIME_SET = new Set<string>(ACCEPTED_AUDIO_MIMES);
 
 export async function POST(
   req: Request,
@@ -57,26 +61,28 @@ export async function POST(
     return json({ error: "missing_file" }, 400);
   }
 
-  const size = file.size;
-  if (size <= 0) return json({ error: "empty_file" }, 400);
-  if (size > MAX_UPLOAD_BYTES) {
-    return json(
-      {
-        error: "too_large",
-        message: `Max upload size is ${Math.floor(MAX_UPLOAD_BYTES / 1024 / 1024)} MB`,
-      },
-      413,
-    );
-  }
-
   const mime = (file.type || "").toLowerCase();
-  if (!ACCEPTED_MIME_SET.has(mime)) {
+  const isAudio = ACCEPTED_AUDIO_MIME_SET.has(mime);
+  if (!ACCEPTED_MIME_SET.has(mime) && !isAudio) {
     return json(
       {
         error: "unsupported_type",
-        message: `Allowed types: ${ACCEPTED_MIMES.join(", ")}`,
+        message: `Allowed types: ${[...ACCEPTED_MIMES, ...ACCEPTED_AUDIO_MIMES].join(", ")}`,
       },
       415,
+    );
+  }
+
+  const size = file.size;
+  const maxBytes = isAudio ? MAX_AUDIO_UPLOAD_BYTES : MAX_UPLOAD_BYTES;
+  if (size <= 0) return json({ error: "empty_file" }, 400);
+  if (size > maxBytes) {
+    return json(
+      {
+        error: "too_large",
+        message: `Max upload size is ${Math.floor(maxBytes / 1024 / 1024)} MB`,
+      },
+      413,
     );
   }
 
@@ -91,15 +97,16 @@ export async function POST(
     return json({ error: "read_failed" }, 500);
   }
 
-  // Optimize before storage. SVG (vector) and GIF (animation) bypass —
-  // the Rust pipeline can't preserve either (vector → raster lossy;
-  // animation → single frame). Everything else: downscale to 2000px max
-  // on the longer edge + WebP at quality 85. On any pipeline failure
-  // ship the original — the page still works, just heavier.
+  // Optimize before storage. Audio bypasses entirely (stored as-is). SVG
+  // (vector) and GIF (animation) bypass too — the Rust pipeline can't
+  // preserve either (vector → raster lossy; animation → single frame).
+  // Everything else: downscale to 2000px max on the longer edge + WebP at
+  // quality 85. On any pipeline failure ship the original — the page still
+  // works, just heavier.
   let finalBuffer = buffer;
   let finalExt = ext;
   let finalMime = mime;
-  if (mime !== "image/svg+xml" && mime !== "image/gif") {
+  if (!isAudio && mime !== "image/svg+xml" && mime !== "image/gif") {
     try {
       const { variants } = await processImage({
         input: buffer,

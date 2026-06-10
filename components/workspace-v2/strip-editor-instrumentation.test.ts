@@ -66,6 +66,45 @@ describe("stripEditorInstrumentation — Editor V5 markers", () => {
     expect(stripEditorInstrumentation(clean)).toBe(clean);
   });
 
+  it("removes motion/music preview scripts, styles and the preview player", () => {
+    const out = stripEditorInstrumentation(
+      `<!doctype html><html data-ol-motion="editorial" class="ol-motion-js"><head>` +
+        `<style id="ol-motion-preview-style" data-openlen-motion-preview>.x{}</style>` +
+        `<style id="ol-music-preview-style" data-openlen-music-preview>.olmp{}</style>` +
+        `</head><body><h1>Hi</h1>` +
+        `<script data-openlen-motion-preview>void 0</script>` +
+        `<script data-openlen-music-preview>void 0</script>` +
+        `<div data-openlen-music-preview data-openlen-edit-noedit>` +
+        `<div class="olmp" data-ol-music><audio src="/a.mp3"></audio></div></div>` +
+        `</body></html>`,
+    );
+    expect(out).not.toContain("data-openlen-motion-preview");
+    expect(out).not.toContain("data-openlen-music-preview");
+    expect(out).not.toContain("ol-motion-preview-style");
+    expect(out).not.toContain("ol-music-preview-style");
+    expect(out).not.toContain("data-ol-music");
+    expect(out).not.toContain("<audio");
+    expect(out).not.toContain("data-ol-motion");
+    expect(out).not.toContain("ol-motion-js");
+    expect(out).toContain("<h1>Hi</h1>");
+  });
+
+  it("restores motion-runtime mutations: reveal classes + frozen counters", () => {
+    const out = stripEditorInstrumentation(
+      DOC(
+        `<section class="hero ol-in"><h1>Hero</h1>` +
+          `<span data-openlen-editable data-ol-counted data-ol-orig="1,200+">37+</span></section>` +
+          `<p class="ol-in">lead</p>`,
+      ),
+    );
+    expect(out).not.toContain("ol-in");
+    expect(out).not.toContain("data-ol-counted");
+    expect(out).not.toContain("data-ol-orig");
+    expect(out).not.toContain("37+");
+    expect(out).toContain("1,200+"); // counter text restored to the original
+    expect(out).toContain('class="hero"'); // sibling classes survive
+  });
+
   it("leaves a full editor-session capture with ZERO leaked markers", () => {
     // Simulates a Properties-panel ('props') save taken while an inline-edit
     // run is open: the shared live DOM carries inline-edit's markers.

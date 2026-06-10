@@ -20,6 +20,9 @@ import { injectImageReplace } from "./use-image-replace";
 import { injectInlineEdit } from "./use-inline-edit";
 import { injectMotionPreview } from "./use-motion-preview";
 import { motionCss, isMotionPreset } from "@/lib/publish/motion-presets";
+import { injectMusicPreview } from "./use-music-preview";
+import { isMusicSettings, musicCss, musicMarkup } from "@/lib/publish/music-player";
+import type { MusicSettings } from "@/lib/projects/types";
 import { injectSectionInsert } from "./use-section-insert";
 import { injectSectionReorder } from "./use-section-reorder";
 import { injectSectionSelect } from "./use-section-select";
@@ -94,6 +97,10 @@ interface PreviewAreaProps {
    *  iframe (re)load since the preview overlay isn't part of the saved doc.
    *  Undefined / invalid = no motion. */
   motionPreset?: string;
+  /** Page-music track to preview live (settings.music). The iframe drops the
+   *  real player via the music-preview injector; re-posted on every iframe
+   *  (re)load. Null / undefined = no player. */
+  musicTrack?: MusicSettings | null;
   /** Stable identity for the iframe `key` (the project id). The iframe should
    *  remount only on a genuine document switch — NOT on every content edit.
    *  Without this we key on `doc.slice(0,120)`, which a top-of-page insert (a
@@ -120,6 +127,7 @@ export function PreviewArea({
   insertRequest = null,
   removeRequest = null,
   motionPreset,
+  musicTrack = null,
   docKey,
 }: PreviewAreaProps) {
   const t = useTranslations("wsChrome");
@@ -158,6 +166,7 @@ export function PreviewArea({
     html = injectSectionSelect(html);
     html = injectSectionInsert(html);
     html = injectMotionPreview(html);
+    html = injectMusicPreview(html);
     return html;
   };
   const [stableSrcDoc, setStableSrcDoc] = useState<string>(() => derive(doc));
@@ -228,8 +237,22 @@ export function PreviewArea({
   const motionRef = useRef(motionMsg);
   motionRef.current = motionMsg;
 
+  // Music preview — the saved track rendered to the same markup/CSS publish
+  // bakes. Held in a ref for the iframe-ready re-post, like motion.
+  const musicMsg = useMemo(() => {
+    const track = isMusicSettings(musicTrack) ? musicTrack : null;
+    return {
+      type: "openlen:apply-music" as const,
+      html: track ? musicMarkup(track) : "",
+      css: track ? musicCss() : "",
+    };
+  }, [musicTrack]);
+  const musicRef = useRef(musicMsg);
+  musicRef.current = musicMsg;
+
   // On iframe ready (fresh load, or post-srcDoc-change reload), push the
-  // current mode + motion state so the iframe matches the parent immediately.
+  // current mode + motion + music state so the iframe matches the parent
+  // immediately.
   useEffect(() => {
     const onMessage = (e: MessageEvent) => {
       if (!e.data || typeof e.data !== "object") return;
@@ -238,6 +261,7 @@ export function PreviewArea({
       if (!win) return;
       win.postMessage({ type: "openlen:set-mode", ...modesRef.current }, "*");
       win.postMessage(motionRef.current, "*");
+      win.postMessage(musicRef.current, "*");
     };
     window.addEventListener("message", onMessage);
     return () => window.removeEventListener("message", onMessage);
@@ -247,6 +271,11 @@ export function PreviewArea({
   useEffect(() => {
     iframeLocalRef.current?.contentWindow?.postMessage(motionMsg, "*");
   }, [motionMsg]);
+
+  // Live re-apply when the track changes (upload / retitle / remove).
+  useEffect(() => {
+    iframeLocalRef.current?.contentWindow?.postMessage(musicMsg, "*");
+  }, [musicMsg]);
 
   // Section-insert — when the parent bumps the request nonce (user clicked
   // Insert in the Library tab), post the fragment into the live iframe. The

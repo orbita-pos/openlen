@@ -53,7 +53,18 @@ export interface AssetStorage {
   get(projectId: string, filename: string): Promise<AssetGetResult | null>;
 }
 
-const VALID_EXT = new Set(["png", "jpg", "jpeg", "webp", "gif", "svg"]);
+const VALID_EXT = new Set([
+  "png",
+  "jpg",
+  "jpeg",
+  "webp",
+  "gif",
+  "svg",
+  "mp3",
+  "m4a",
+  "ogg",
+  "wav",
+]);
 
 function hashContents(b: Buffer): string {
   return crypto.createHash("sha256").update(b).digest("hex").slice(0, 16);
@@ -67,7 +78,7 @@ function safeFilename(hash: string, ext: string): string {
   const clean = normalizeExt(ext);
   if (!VALID_EXT.has(clean)) {
     throw new Error(
-      `Unsupported extension "${ext}" — allowed: png/jpg/jpeg/webp/gif/svg`,
+      `Unsupported extension "${ext}" — allowed: png/jpg/jpeg/webp/gif/svg/mp3/m4a/ogg/wav`,
     );
   }
   return `${hash}.${clean}`;
@@ -93,6 +104,14 @@ function mimeForExt(ext: string): string {
       return "image/gif";
     case "svg":
       return "image/svg+xml";
+    case "mp3":
+      return "audio/mpeg";
+    case "m4a":
+      return "audio/mp4";
+    case "ogg":
+      return "audio/ogg";
+    case "wav":
+      return "audio/wav";
     default:
       return "application/octet-stream";
   }
@@ -262,12 +281,22 @@ export function getAssetStorage(): AssetStorage {
 }
 
 export const MAX_UPLOAD_BYTES = 8 * 1024 * 1024; // 8 MB
+export const MAX_AUDIO_UPLOAD_BYTES = 12 * 1024 * 1024; // 12 MB
 export const ACCEPTED_MIMES = [
   "image/png",
   "image/jpeg",
   "image/webp",
   "image/gif",
   "image/svg+xml",
+] as const;
+// Page-music uploads (the floating player). Audio skips the image pipeline:
+// stored as-is, hash-named, served with the mime mapped above.
+export const ACCEPTED_AUDIO_MIMES = [
+  "audio/mpeg",
+  "audio/mp4",
+  "audio/x-m4a",
+  "audio/ogg",
+  "audio/wav",
 ] as const;
 
 export function extForMime(mime: string): string | null {
@@ -282,6 +311,15 @@ export function extForMime(mime: string): string | null {
       return "gif";
     case "image/svg+xml":
       return "svg";
+    case "audio/mpeg":
+      return "mp3";
+    case "audio/mp4":
+    case "audio/x-m4a":
+      return "m4a";
+    case "audio/ogg":
+      return "ogg";
+    case "audio/wav":
+      return "wav";
     default:
       return null;
   }

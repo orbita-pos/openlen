@@ -15,6 +15,19 @@ export interface FormConfig {
   redirectUrl?: string;
 }
 
+/** Page music — the floating tap-to-play player baked at publish time.
+ *  `src` (and optional `cover`) point at this project's uploaded assets
+ *  (LocalFs API path or S3 public URL); the audio file itself never lives
+ *  in the HTML. */
+export interface MusicSettings {
+  /** Audio file URL (project asset upload). */
+  src: string;
+  /** Track title shown in the player. Absent → a generic label. */
+  title?: string;
+  /** Cover image URL (project asset upload). Absent → a music-note glyph. */
+  cover?: string;
+}
+
 /** Project-level settings that aren't part of the HTML document. */
 export interface ProjectSettings {
   /** Per-form config, keyed by the form's index — its position among all
@@ -34,6 +47,8 @@ export interface ProjectSettings {
   /** Motion Looks: scroll-choreography preset baked at publish time
    *  ("calm" | "editorial" | "dramatic"). Absent = no motion. */
   motion?: string;
+  /** Page music: the floating player baked at publish time. Absent = none. */
+  music?: MusicSettings;
 }
 
 export interface ProjectData {

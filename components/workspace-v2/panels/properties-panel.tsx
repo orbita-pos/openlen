@@ -22,7 +22,7 @@ import {
   type ReactNode,
 } from "react";
 import { useTranslations } from "next-intl";
-import type { FormConfig } from "@/lib/projects/types";
+import type { FormConfig, MusicSettings } from "@/lib/projects/types";
 import { checkSeo, type SeoIssue, type SeoFixField } from "@/lib/seo-check";
 import { defaultLogoDataUrl } from "@/lib/branding/default-logo";
 import {
@@ -45,6 +45,8 @@ import {
   Globe,
   ImageIcon,
   Inbox,
+  Loader,
+  MusicIcon,
   PaletteIcon,
   Pencil,
   Sparkles,
@@ -164,6 +166,12 @@ interface PropertiesPanelProps {
   /** Apply a motion preset (or "" to turn it off). Omit to hide the Motion
    *  row. Persists + previews live in the iframe. */
   onApplyMotion?: (preset: string) => void;
+  /** Page music: the saved track, or undefined for none. Drives the Music
+   *  section's state. */
+  music?: MusicSettings;
+  /** Persist the page-music track (null removes it). Omit to hide the Music
+   *  section. Persists + previews live in the iframe. */
+  onApplyMusic?: (music: MusicSettings | null) => void;
   /** Fire a test lead notification email to whichever address would
    *  receive the real one for this form. Resolves with the result so
    *  the FormView can render inline feedback. Omit to hide the button. */
@@ -199,6 +207,8 @@ export function PropertiesPanel({
   originalAccent,
   motion,
   onApplyMotion,
+  music,
+  onApplyMusic,
   onSendTestFormEmail,
   onClearSelection,
   onClose,
@@ -253,6 +263,8 @@ export function PropertiesPanel({
             originalAccent={originalAccent}
             motion={motion}
             onApplyMotion={onApplyMotion}
+            music={music}
+            onApplyMusic={onApplyMusic}
           />
         )}
       </div>
@@ -765,6 +777,8 @@ function PageView({
   originalAccent,
   motion,
   onApplyMotion,
+  music,
+  onApplyMusic,
 }: {
   pageMeta: PageMeta | null;
   html?: string;
@@ -781,6 +795,8 @@ function PageView({
   originalAccent?: string;
   motion?: string;
   onApplyMotion?: (preset: string) => void;
+  music?: MusicSettings;
+  onApplyMusic?: (music: MusicSettings | null) => void;
 }) {
   // Recompute the SEO report on every HTML change. Cheap (DOMParser on
   // ~50-100KB), no debouncing needed — the parent only updates html when
@@ -819,6 +835,9 @@ function PageView({
         />
       )}
       {onApplyMotion && <MotionSection motion={motion} onApply={onApplyMotion} />}
+      {onApplyMusic && (
+        <MusicSection projectId={projectId} music={music} onApply={onApplyMusic} />
+      )}
       {report && <SeoHealthSection report={report} onFix={focusField} />}
       {onApplyLogoUrl && (
         <LogoSection
@@ -1207,6 +1226,181 @@ function MotionSection({
         ))}
       </div>
       <p className="text-[10.5px] fg-faint leading-relaxed mt-2">{t("motion.note")}</p>
+    </Section>
+  );
+}
+
+// Page music — the floating tap-to-play player (guns.lol-style page song).
+// Upload a track (audio goes through the project-assets endpoint, stored
+// as-is), optionally retitle it + add a cover. The player previews live in
+// the iframe (music-preview injector) and persists to data.settings.music;
+// it reaches the published page via the publish-time bake, skinned by the
+// page's own --ol-* tokens.
+function MusicSection({
+  projectId,
+  music,
+  onApply,
+}: {
+  projectId?: string;
+  music?: MusicSettings;
+  onApply: (music: MusicSettings | null) => void;
+}) {
+  const t = useTranslations("panelsProps");
+  const [busy, setBusy] = useState<"track" | "cover" | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const trackInputRef = useRef<HTMLInputElement>(null);
+  const coverInputRef = useRef<HTMLInputElement>(null);
+
+  const upload = useCallback(
+    async (file: File): Promise<string> => {
+      if (!projectId) throw new Error("no project");
+      const fd = new FormData();
+      fd.append("file", file);
+      const res = await fetch(`/api/projects/${projectId}/assets`, {
+        method: "POST",
+        body: fd,
+      });
+      const data = (await res.json().catch(() => ({}))) as {
+        url?: string;
+        message?: string;
+      };
+      if (!res.ok || !data.url) throw new Error(data.message || "upload failed");
+      return data.url;
+    },
+    [projectId],
+  );
+
+  const pickTrack = useCallback(
+    async (file: File | null) => {
+      if (!file) return;
+      setError(null);
+      setBusy("track");
+      try {
+        const url = await upload(file);
+        const base = file.name.replace(/\.[^.]+$/, "").slice(0, 120).trim();
+        onApply({
+          src: url,
+          title: music?.title || base || undefined,
+          cover: music?.cover,
+        });
+      } catch {
+        setError(t("music.uploadError"));
+      } finally {
+        setBusy(null);
+      }
+    },
+    [upload, onApply, music?.title, music?.cover, t],
+  );
+
+  const pickCover = useCallback(
+    async (file: File | null) => {
+      if (!file || !music) return;
+      setError(null);
+      setBusy("cover");
+      try {
+        const url = await upload(file);
+        onApply({ ...music, cover: url });
+      } catch {
+        setError(t("music.uploadError"));
+      } finally {
+        setBusy(null);
+      }
+    },
+    [upload, onApply, music, t],
+  );
+
+  return (
+    <Section label={t("music.title")} icon={<MusicIcon size={11} />}>
+      <input
+        ref={trackInputRef}
+        type="file"
+        accept="audio/mpeg,audio/mp4,audio/x-m4a,audio/ogg,audio/wav,.mp3,.m4a,.ogg,.wav"
+        className="hidden"
+        onChange={(e) => {
+          void pickTrack(e.target.files?.[0] ?? null);
+          e.target.value = "";
+        }}
+      />
+      <input
+        ref={coverInputRef}
+        type="file"
+        accept="image/png,image/jpeg,image/webp"
+        className="hidden"
+        onChange={(e) => {
+          void pickCover(e.target.files?.[0] ?? null);
+          e.target.value = "";
+        }}
+      />
+      {!music ? (
+        <>
+          <button
+            type="button"
+            disabled={busy !== null || !projectId}
+            onClick={() => trackInputRef.current?.click()}
+            className="w-full h-8 rounded-lg border border-dashed bd text-[11.5px] fg-muted hover:fg transition flex items-center justify-center gap-1.5 disabled:opacity-50"
+          >
+            {busy === "track" ? (
+              <>
+                <Loader size={12} className="animate-spin" />
+                {t("music.uploading")}
+              </>
+            ) : (
+              t("music.upload")
+            )}
+          </button>
+          <p className="text-[10.5px] fg-faint">{t("music.formats")}</p>
+        </>
+      ) : (
+        <>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              title={music.cover ? t("music.changeCover") : t("music.addCover")}
+              disabled={busy !== null}
+              onClick={() => coverInputRef.current?.click()}
+              className="w-9 h-9 shrink-0 rounded-lg overflow-hidden bg-elev bd ring-1 flex items-center justify-center fg-muted hover:fg transition disabled:opacity-50"
+            >
+              {busy === "cover" ? (
+                <Loader size={12} className="animate-spin" />
+              ) : music.cover ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={music.cover} alt="" className="w-full h-full object-cover" />
+              ) : (
+                <MusicIcon size={14} />
+              )}
+            </button>
+            <div className="flex-1 min-w-0">
+              <TextField
+                label={t("music.trackTitle")}
+                value={music.title ?? ""}
+                onCommit={(v) =>
+                  onApply({ ...music, title: v.trim().slice(0, 120) || undefined })
+                }
+              />
+            </div>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <button
+              type="button"
+              disabled={busy !== null}
+              onClick={() => trackInputRef.current?.click()}
+              className="h-7 px-2.5 rounded-full text-[11px] font-medium ring-1 bg-elev fg-muted bd hover:fg transition disabled:opacity-50"
+            >
+              {busy === "track" ? t("music.uploading") : t("music.replace")}
+            </button>
+            <button
+              type="button"
+              disabled={busy !== null}
+              onClick={() => onApply(null)}
+              className="h-7 px-2.5 rounded-full text-[11px] font-medium ring-1 bg-elev fg-muted bd hover:fg transition disabled:opacity-50"
+            >
+              {t("music.remove")}
+            </button>
+          </div>
+        </>
+      )}
+      {error && <p className="text-[10.5px] text-red-500">{error}</p>}
+      <p className="text-[10.5px] fg-faint leading-relaxed mt-1">{t("music.note")}</p>
     </Section>
   );
 }
