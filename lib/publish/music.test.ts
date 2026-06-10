@@ -92,6 +92,13 @@ test("css is token-driven with fallbacks + motion gated on reduced-motion", () =
   assert.ok(css.includes("@media (prefers-reduced-motion:no-preference)"));
 });
 
+test("player defends against kit button ornaments (no pseudo content inside)", () => {
+  // Temática extraCss decorates [class*="btn"] buttons with ::before/::after
+  // ornaments — .olmp-btn matches, so the widget must null them out or the
+  // play icon grows a flower (seen live with coquette).
+  assert.ok(musicCss().includes(".olmp ::before,.olmp ::after{content:none !important}"));
+});
+
 test("bake without <head> still injects (style after body open)", () => {
   const frag = "<html><body><main><p>x</p></main></body></html>";
   const out = bakeMusic(frag, TRACK);

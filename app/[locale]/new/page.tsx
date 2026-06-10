@@ -1240,6 +1240,9 @@ function NewV2Inner() {
             css: tematicaCss(kit, backdropId),
             fontHref: kit.fontHref ?? "",
             bg: backdropId ?? "",
+            // The kit grounds, for the contrast re-ink pass (the iframe
+            // measures old text colors against the NEW world).
+            tokens: kit.tokens,
           },
           "*",
         );

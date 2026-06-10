@@ -156,6 +156,11 @@
     "title": "Mundo",
     "off": "Nenhum",
     "bg": "Fundo",
-    "note": "Envolve sua página em um mundo completo — fundo, cartões de vidro, paleta e tipografia combinando. Combina com Looks e Motion; desative quando quiser."
+    "note": "Envolve sua página em um mundo completo — fundo, cartões de vidro, paleta e tipografia combinando. Combina com Looks e Motion; desative quando quiser.",
+    "custom": "Sua foto",
+    "uploading": "Enviando…",
+    "uploadError": "Falha no envio — tente outra imagem.",
+    "light": "Clara",
+    "dark": "Escura"
   }
 }

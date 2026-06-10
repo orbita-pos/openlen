@@ -656,10 +656,100 @@ const INSPECT_SCRIPT = `
   // document (same model as the Looks inline vars — the page must carry its
   // world in thumbnails/exports/published, not only in the editor). The
   // parent applies the kit's token bundle separately via theme-bundle.
-  function applyTematica(id, css, fontHref, bg) {
+
+  // Contrast re-ink — the deterministic "acomodar" pass. The kit CSS re-inks
+  // block text but deliberately leaves spans/links/divs alone so intentional
+  // accent words survive; on an ink-direction flip (dark page → light world)
+  // those keep their old-world colors and go illegible. This pass measures
+  // every text-bearing element's computed color against the NEW world's
+  // grounds and re-inks only what fails: saturated colors (the page's old
+  // accent) become var(--ol-accent), neutrals become var(--ol-fg). Originals
+  // are stashed in data-ol-reink so removing/switching the world restores
+  // them exactly.
+  function olLum(r, g, b) {
+    function lin(c) {
+      c = c / 255;
+      return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+    }
+    return 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b);
+  }
+  function olCr(l1, l2) {
+    var hi = Math.max(l1, l2);
+    var lo = Math.min(l1, l2);
+    return (hi + 0.05) / (lo + 0.05);
+  }
+  function olParse(c) {
+    var m = /rgba?\\(\\s*([\\d.]+)[,\\s]+([\\d.]+)[,\\s]+([\\d.]+)(?:[,\\s/]+([\\d.]+))?\\s*\\)/.exec('' + c);
+    if (m) {
+      return { r: +m[1], g: +m[2], b: +m[3], a: m[4] === undefined ? 1 : +m[4] };
+    }
+    var h = /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.exec(('' + c).trim());
+    if (!h) return null;
+    var s = h[1];
+    if (s.length === 3) s = s[0] + s[0] + s[1] + s[1] + s[2] + s[2];
+    return {
+      r: parseInt(s.slice(0, 2), 16),
+      g: parseInt(s.slice(2, 4), 16),
+      b: parseInt(s.slice(4, 6), 16),
+      a: 1,
+    };
+  }
+  function olRestoreReink() {
+    var els = document.querySelectorAll('[data-ol-reink]');
+    for (var i = 0; i < els.length; i++) {
+      var prev = els[i].getAttribute('data-ol-reink');
+      if (prev) els[i].style.color = prev;
+      else els[i].style.removeProperty('color');
+      els[i].removeAttribute('data-ol-reink');
+    }
+  }
+  function olReinkForWorld(tokens) {
+    var bg = olParse(tokens['--ol-bg']);
+    var surface = olParse(tokens['--ol-surface']);
+    if (!bg || !surface) return;
+    var bgL = olLum(bg.r, bg.g, bg.b);
+    var surfaceL = olLum(surface.r, surface.g, surface.b);
+    var all = document.body ? document.body.querySelectorAll('*') : [];
+    for (var i = 0; i < all.length; i++) {
+      var el = all[i];
+      if (el.namespaceURI && el.namespaceURI.indexOf('svg') > -1) continue;
+      var tag = el.tagName;
+      if (tag === 'SCRIPT' || tag === 'STYLE' || tag === 'LINK' || tag === 'AUDIO') continue;
+      if (el.closest && el.closest('[data-openlen-music-preview],[data-openlen-edit-overlay]')) continue;
+      // Only elements that directly carry text.
+      var hasText = false;
+      for (var n = el.firstChild; n; n = n.nextSibling) {
+        if (n.nodeType === 3 && /\\S/.test(n.nodeValue)) { hasText = true; break; }
+      }
+      if (!hasText) continue;
+      var cs;
+      try { cs = getComputedStyle(el); } catch (_) { continue; }
+      // Gradient/clipped text paints from background-image, not color.
+      if ((cs.webkitBackgroundClip || cs.backgroundClip) === 'text') continue;
+      var col = olParse(cs.color);
+      if (!col || col.a < 0.5) continue;
+      var L = olLum(col.r, col.g, col.b);
+      // Readable on either ground (page scrim or glass card)? Leave it.
+      if (olCr(L, bgL) >= 3 || olCr(L, surfaceL) >= 3) continue;
+      if (!el.getAttribute('data-ol-reink')) {
+        el.setAttribute('data-ol-reink', el.style.color || '');
+      }
+      var chroma = Math.max(col.r, col.g, col.b) - Math.min(col.r, col.g, col.b);
+      el.style.setProperty(
+        'color',
+        chroma > 50 ? 'var(--ol-accent)' : 'var(--ol-fg)',
+        'important',
+      );
+    }
+  }
+
+  function applyTematica(id, css, fontHref, bg, tokens) {
     var root = document.documentElement;
     var old = document.querySelectorAll('style[data-ol-tematica],link[data-ol-tematica]');
     for (var i = 0; i < old.length; i++) old[i].remove();
+    // Always undo a prior pass first — switching kits re-measures fresh,
+    // removing the kit restores the page's own colors exactly.
+    olRestoreReink();
     if (!id) {
       root.removeAttribute('data-ol-tematica');
       root.removeAttribute('data-ol-tematica-bg');
@@ -682,6 +772,7 @@ const INSPECT_SCRIPT = `
     s.setAttribute('data-ol-tematica', '');
     s.textContent = css || '';
     head.appendChild(s);
+    if (tokens && typeof tokens === 'object') olReinkForWorld(tokens);
     postClean();
     postPageMeta();
   }
@@ -766,6 +857,7 @@ const INSPECT_SCRIPT = `
         typeof d.css === 'string' ? d.css : '',
         typeof d.fontHref === 'string' ? d.fontHref : '',
         typeof d.bg === 'string' ? d.bg : '',
+        d.tokens && typeof d.tokens === 'object' ? d.tokens : null,
       );
     }
   });

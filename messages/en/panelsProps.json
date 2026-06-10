@@ -156,6 +156,11 @@
     "title": "World",
     "off": "None",
     "bg": "Backdrop",
-    "note": "Wraps your page in a full-page world — backdrop, glass cards, matching palette and type. Composes with Looks and Motion; turn it off anytime."
+    "note": "Wraps your page in a full-page world — backdrop, glass cards, matching palette and type. Composes with Looks and Motion; turn it off anytime.",
+    "custom": "Your photo",
+    "uploading": "Uploading…",
+    "uploadError": "Upload failed — try a different image.",
+    "light": "Light",
+    "dark": "Dark"
   }
 }
