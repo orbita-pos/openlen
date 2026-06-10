@@ -156,6 +156,11 @@
     "title": "Welt",
     "off": "Keine",
     "bg": "Hintergrund",
-    "note": "Hüllt deine Seite in eine komplette Welt — Hintergrund, Glaskarten, passende Palette und Typografie. Kombinierbar mit Looks und Motion; jederzeit abschaltbar."
+    "note": "Hüllt deine Seite in eine komplette Welt — Hintergrund, Glaskarten, passende Palette und Typografie. Kombinierbar mit Looks und Motion; jederzeit abschaltbar.",
+    "custom": "Dein Foto",
+    "uploading": "Wird hochgeladen…",
+    "uploadError": "Upload fehlgeschlagen — bitte ein anderes Bild versuchen.",
+    "light": "Hell",
+    "dark": "Dunkel"
   }
 }

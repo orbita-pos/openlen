@@ -31,9 +31,17 @@ import {
   type ThemePreset,
 } from "@/lib/theme-presets";
 import {
+  buildCustomTematica,
+  CUSTOM_TEMATICA_ID,
+  readInlineToken,
+  readTematicaBackdropUrl,
   TEMATICA_PRESETS,
   type TematicaPreset,
 } from "@/lib/tematicas/presets";
+import {
+  deriveWorldFromFile,
+  FALLBACK_ACCENT,
+} from "@/lib/tematicas/derive-from-image";
 import { lookFromAccent } from "@/lib/palette-gen";
 import { ReplaceAssetModal, type ImageTab } from "../replace-asset-modal";
 import {
@@ -853,6 +861,9 @@ function PageView({
           active={tematica}
           activeBg={tematicaBg}
           onApply={onApplyTematica}
+          projectId={projectId}
+          html={html}
+          mode={pageMeta?.mode ?? "light"}
         />
       )}
       {onApplyLook && (
@@ -1270,15 +1281,71 @@ function TematicaSection({
   active,
   activeBg,
   onApply,
+  projectId,
+  html,
+  mode = "light",
 }: {
   active?: string;
   activeBg?: string;
   onApply: (kit: TematicaPreset | null, backdropId?: string) => void;
+  projectId?: string;
+  html?: string;
+  mode?: "light" | "dark";
 }) {
   const t = useTranslations("panelsProps");
   const none = !active;
   const activeKit = TEMATICA_PRESETS.find((k) => k.id === active);
   const currentBg = activeBg || activeKit?.backdrops[0]?.id;
+  const isCustom = active === CUSTOM_TEMATICA_ID;
+  const customUrl = isCustom ? readTematicaBackdropUrl(html ?? "") : "";
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  // "Tu foto" — upload the image + derive its world in parallel. The derived
+  // accent/luminance feed lookFromAccent, whose AA walk makes the ink
+  // readable no matter what the photo looks like.
+  const pickCustom = useCallback(
+    async (file: File | null) => {
+      if (!file || !projectId) return;
+      setError(null);
+      setBusy(true);
+      try {
+        const fd = new FormData();
+        fd.append("file", file);
+        const [res, derived] = await Promise.all([
+          fetch(`/api/projects/${projectId}/assets`, { method: "POST", body: fd }),
+          deriveWorldFromFile(file).catch(() => ({
+            mode: "light" as const,
+            accent: FALLBACK_ACCENT,
+          })),
+        ]);
+        const data = (await res.json().catch(() => ({}))) as { url?: string };
+        if (!res.ok || !data.url) throw new Error("upload failed");
+        const tokens = lookFromAccent(derived.accent)[derived.mode];
+        onApply(buildCustomTematica(data.url, { mode: derived.mode, tokens }));
+      } catch {
+        setError(t("tematica.uploadError"));
+      } finally {
+        setBusy(false);
+      }
+    },
+    [projectId, onApply, t],
+  );
+
+  // Manual ink-direction override for the custom world — rebuilds the same
+  // backdrop with the AA-walked palette of the other mode.
+  const flipCustom = useCallback(
+    (nextMode: "light" | "dark") => {
+      const url = readTematicaBackdropUrl(html ?? "");
+      if (!url) return;
+      const accent = readInlineToken(html ?? "", "--ol-accent") || FALLBACK_ACCENT;
+      const tokens = lookFromAccent(accent)[nextMode];
+      onApply(buildCustomTematica(url, { mode: nextMode, tokens }));
+    },
+    [html, onApply],
+  );
+
   return (
     <Section label={t("tematica.title")} icon={<WandSparkles size={11} />}>
       <div className="grid grid-cols-3 gap-1.5 pt-0.5">
@@ -1326,7 +1393,73 @@ function TematicaSection({
             </button>
           );
         })}
+        {isCustom && customUrl && (
+          <button
+            type="button"
+            aria-pressed
+            title={t("tematica.custom")}
+            onClick={() => onApply(null)}
+            className="relative h-14 rounded-lg overflow-hidden transition text-left ring-2 ring-[var(--accent-strong)]"
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={customUrl}
+              alt=""
+              loading="lazy"
+              decoding="async"
+              className="absolute inset-0 w-full h-full object-cover"
+            />
+            <span className="absolute inset-x-0 bottom-0 px-1.5 pb-0.5 pt-2 text-[9.5px] font-semibold text-white truncate bg-gradient-to-t from-black/60 to-transparent">
+              {t("tematica.custom")}
+            </span>
+          </button>
+        )}
+        <input
+          ref={fileRef}
+          type="file"
+          accept="image/png,image/jpeg,image/webp"
+          className="hidden"
+          onChange={(e) => {
+            void pickCustom(e.target.files?.[0] ?? null);
+            e.target.value = "";
+          }}
+        />
+        <button
+          type="button"
+          disabled={busy || !projectId}
+          title={t("tematica.custom")}
+          onClick={() => fileRef.current?.click()}
+          className="h-14 rounded-lg text-[10px] font-medium transition flex flex-col items-center justify-center gap-1 ring-1 bd border-dashed bg-elev fg-muted hover:fg disabled:opacity-50"
+        >
+          {busy ? (
+            <Loader size={13} className="animate-spin" />
+          ) : (
+            <ImageIcon size={13} />
+          )}
+          {busy ? t("tematica.uploading") : t("tematica.custom")}
+        </button>
       </div>
+      {isCustom && (
+        <div className="mt-2 flex items-center gap-1.5">
+          {(["light", "dark"] as const).map((m) => (
+            <button
+              key={m}
+              type="button"
+              aria-pressed={mode === m}
+              onClick={() => flipCustom(m)}
+              className={
+                "h-7 px-2.5 rounded-full text-[11px] font-medium ring-1 transition " +
+                (mode === m
+                  ? "bg-[var(--accent-strong)] text-white ring-transparent"
+                  : "bg-elev fg-muted bd hover:fg")
+              }
+            >
+              {t(`tematica.${m}`)}
+            </button>
+          ))}
+        </div>
+      )}
+      {error && <p className="text-[10.5px] text-red-500 mt-2">{error}</p>}
       {activeKit && activeKit.backdrops.length > 1 && (
         <div className="mt-2">
           <div className="text-[10px] uppercase tracking-[0.14em] fg-faint font-semibold mb-1.5">

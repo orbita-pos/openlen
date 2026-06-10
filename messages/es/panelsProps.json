@@ -156,6 +156,11 @@
     "title": "Temática",
     "off": "Ninguna",
     "bg": "Fondo",
-    "note": "Envuelve tu página en un mundo completo: fondo, tarjetas glass, paleta y tipografía a juego. Se combina con Looks y Motion; quítala cuando quieras."
+    "note": "Envuelve tu página en un mundo completo: fondo, tarjetas glass, paleta y tipografía a juego. Se combina con Looks y Motion; quítala cuando quieras.",
+    "custom": "Tu foto",
+    "uploading": "Subiendo…",
+    "uploadError": "No se pudo subir — prueba con otra imagen.",
+    "light": "Clara",
+    "dark": "Oscura"
   }
 }

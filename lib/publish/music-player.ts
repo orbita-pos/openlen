@@ -87,6 +87,9 @@ box-sizing:border-box;background:var(--ol-surface,#fff);color:var(--ol-fg,#18181
 border:1px solid var(--ol-border,rgba(24,24,27,.12));border-radius:calc(12px + 6px * var(--ol-r-scale,1));
 box-shadow:0 16px 40px -16px rgba(0,0,0,.3);font-family:inherit;line-height:1.2;text-align:left}
 .olmp,.olmp *{box-sizing:border-box;margin:0}
+/* The widget defends itself from kit flourishes — temática button ornaments
+   target [class*="btn"] and would decorate .olmp-btn's play icon. */
+.olmp ::before,.olmp ::after{content:none !important}
 @supports ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){
 .olmp{background:color-mix(in srgb,var(--ol-surface,#fff) 78%,transparent);
 -webkit-backdrop-filter:blur(16px) saturate(1.5);backdrop-filter:blur(16px) saturate(1.5)}}

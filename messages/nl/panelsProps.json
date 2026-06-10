@@ -156,6 +156,11 @@
     "title": "Wereld",
     "off": "Geen",
     "bg": "Achtergrond",
-    "note": "Hult je pagina in een complete wereld — achtergrond, glazen kaarten, bijpassend palet en typografie. Combineert met Looks en Motion; zet het uit wanneer je wilt."
+    "note": "Hult je pagina in een complete wereld — achtergrond, glazen kaarten, bijpassend palet en typografie. Combineert met Looks en Motion; zet het uit wanneer je wilt.",
+    "custom": "Jouw foto",
+    "uploading": "Uploaden…",
+    "uploadError": "Uploaden mislukt — probeer een andere afbeelding.",
+    "light": "Licht",
+    "dark": "Donker"
   }
 }

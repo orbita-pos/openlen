@@ -156,6 +156,11 @@
     "title": "Univers",
     "off": "Aucun",
     "bg": "Fond",
-    "note": "Habille votre page d'un univers complet — fond, cartes en verre, palette et typographie assorties. Se combine avec Looks et Motion ; désactivez-le à tout moment."
+    "note": "Habille votre page d'un univers complet — fond, cartes en verre, palette et typographie assorties. Se combine avec Looks et Motion ; désactivez-le à tout moment.",
+    "custom": "Votre photo",
+    "uploading": "Envoi…",
+    "uploadError": "Échec de l'envoi — essayez une autre image.",
+    "light": "Clair",
+    "dark": "Sombre"
   }
 }

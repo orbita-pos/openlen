@@ -156,6 +156,11 @@
     "title": "Mondo",
     "off": "Nessuno",
     "bg": "Sfondo",
-    "note": "Avvolge la tua pagina in un mondo completo — sfondo, schede in vetro, palette e tipografia abbinate. Si combina con Looks e Motion; disattivalo quando vuoi."
+    "note": "Avvolge la tua pagina in un mondo completo — sfondo, schede in vetro, palette e tipografia abbinate. Si combina con Looks e Motion; disattivalo quando vuoi.",
+    "custom": "La tua foto",
+    "uploading": "Caricamento…",
+    "uploadError": "Caricamento non riuscito — prova con un'altra immagine.",
+    "light": "Chiaro",
+    "dark": "Scuro"
   }
 }

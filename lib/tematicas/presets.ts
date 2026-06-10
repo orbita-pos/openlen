@@ -338,6 +338,63 @@ export function getTematica(id: string): TematicaPreset | undefined {
   return TEMATICA_PRESETS.find((k) => k.id === id);
 }
 
+// ─── Custom world (user-uploaded backdrop) ──────────────────────────────────
+
+export const CUSTOM_TEMATICA_ID = "custom";
+
+function hexToRgbTriplet(hex: string): string {
+  const m = /^#?([0-9a-fA-F]{6})$/.exec(hex.trim());
+  if (!m) return "255,255,255";
+  const h = m[1];
+  return `${parseInt(h.slice(0, 2), 16)},${parseInt(h.slice(2, 4), 16)},${parseInt(h.slice(4, 6), 16)}`;
+}
+
+/** Build a runtime kit from a user-uploaded backdrop. The 5 color tokens
+ *  come from lookFromAccent (WCAG-AA-walked) picked for the image's ink
+ *  direction, so "green photo + green text" cannot happen; the scrim is the
+ *  derived ground at the standard kit opacities. Typography is deliberately
+ *  NOT touched — the page keeps its own fonts. */
+export function buildCustomTematica(
+  backdropUrl: string,
+  derived: { mode: "light" | "dark"; tokens: Record<string, string> },
+): TematicaPreset {
+  const bg = derived.tokens["--ol-bg"] ?? (derived.mode === "dark" ? "#101318" : "#f8f7f4");
+  const rgb = hexToRgbTriplet(bg);
+  const stops =
+    derived.mode === "dark" ? [0.62, 0.45, 0.68] : [0.5, 0.3, 0.55];
+  return {
+    id: CUSTOM_TEMATICA_ID,
+    name: "Custom",
+    hint: "Your own backdrop",
+    mode: derived.mode,
+    tokens: derived.tokens,
+    backdrops: [{ id: "custom", desktop: backdropUrl, thumb: backdropUrl }],
+    scrim: `linear-gradient(180deg, rgba(${rgb},${stops[0]}) 0%, rgba(${rgb},${stops[1]}) 45%, rgba(${rgb},${stops[2]}) 100%)`,
+    texture: "none",
+    glass: { surfacePct: 62, blur: 16 },
+  };
+}
+
+/** The active backdrop image URL, read out of the document's kit stylesheet
+ *  (the ::before layer). Used to thumb the "Custom" picker tile and to
+ *  rebuild the custom kit on a light/dark flip after a reload. */
+export function readTematicaBackdropUrl(html: string): string {
+  const m =
+    /html\[data-ol-tematica[^{]*::before\{[^}]*background-image:url\("([^"]+)"\)/i.exec(
+      html,
+    );
+  return m?.[1] ?? "";
+}
+
+/** Read one inline --ol-* token off the <html style="…"> attribute. */
+export function readInlineToken(html: string, token: string): string {
+  const tag = /<html\b[^>]*>/i.exec(html)?.[0] ?? "";
+  const re = new RegExp(
+    `${token.replace(/[.*+?^${}()|[\\]\\\\-]/g, "\\$&")}\\s*:\\s*([^;"]+)`,
+  );
+  return re.exec(tag)?.[1]?.trim() ?? "";
+}
+
 /** The active kit id stamped on a document, or "" when none. */
 export function readTematicaId(html: string): string {
   const m = /<html\b[^>]*\bdata-ol-tematica="([^"]*)"/i.exec(html);
