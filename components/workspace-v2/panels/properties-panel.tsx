@@ -40,6 +40,7 @@ import {
 } from "@/lib/tematicas/presets";
 import {
   deriveWorldFromFile,
+  deriveWorldFromUrl,
   FALLBACK_ACCENT,
 } from "@/lib/tematicas/derive-from-image";
 import { lookFromAccent } from "@/lib/palette-gen";
@@ -165,6 +166,12 @@ interface PropertiesPanelProps {
    *  iframe as scope "theme-bundle", landing atomically. Omit to hide the
    *  Looks row (entry-mode panels with no real project). */
   onApplyLook?: (tokens: Record<string, string>) => void;
+  /** Apply a Look in an EXPLICIT ink direction — used by "De tu logo", where
+   *  the logo's own luminance decides light vs dark. */
+  onApplyLookForMode?: (
+    tokens: Record<string, string>,
+    mode: "light" | "dark",
+  ) => void;
   /** Flip the page's light/dark mode (deterministic; the panel only offers
    *  the toggle when pageMeta.hasDark — a designed dark palette exists). */
   onApplyThemeMode?: (mode: "light" | "dark") => void;
@@ -222,6 +229,7 @@ export function PropertiesPanel({
   onToggleAnalytics,
   onApplyLogoUrl,
   onApplyLook,
+  onApplyLookForMode,
   onApplyThemeMode,
   onResetTheme,
   originalAccent,
@@ -281,6 +289,7 @@ export function PropertiesPanel({
             onToggleAnalytics={onToggleAnalytics}
             onApplyLogoUrl={onApplyLogoUrl}
             onApplyLook={onApplyLook}
+            onApplyLookForMode={onApplyLookForMode}
             onApplyThemeMode={onApplyThemeMode}
             onResetTheme={onResetTheme}
             originalAccent={originalAccent}
@@ -798,6 +807,7 @@ function PageView({
   onToggleAnalytics,
   onApplyLogoUrl,
   onApplyLook,
+  onApplyLookForMode,
   onApplyThemeMode,
   onResetTheme,
   originalAccent,
@@ -819,6 +829,10 @@ function PageView({
   onToggleAnalytics?: (disabled: boolean) => void;
   onApplyLogoUrl?: (logoUrl: string | null) => void;
   onApplyLook?: (tokens: Record<string, string>) => void;
+  onApplyLookForMode?: (
+    tokens: Record<string, string>,
+    mode: "light" | "dark",
+  ) => void;
   onApplyThemeMode?: (mode: "light" | "dark") => void;
   onResetTheme?: () => void;
   originalAccent?: string;
@@ -871,9 +885,12 @@ function PageView({
           mode={pageMeta.mode ?? "light"}
           hasDark={!!pageMeta.hasDark}
           onApplyLook={onApplyLook}
+          onApplyLookForMode={onApplyLookForMode}
           onApplyMode={onApplyThemeMode}
           onReset={onResetTheme}
           originalAccent={originalAccent}
+          logoUrl={logoUrl}
+          projectId={projectId}
         />
       )}
       {onApplyMotion && <MotionSection motion={motion} onApply={onApplyMotion} />}
@@ -996,6 +1013,21 @@ const INLINE_PRESET_MAX = 4;
 
 // A glossy accent bead button + label — shared by presets, Original, and the
 // generator preview.
+// Resolve a logo URL to something canvas can read pixels from: data: and
+// same-origin URLs go direct; cross-origin (R2 sends no CORS) goes through
+// the SSRF-guarded proxy-image route.
+function logoFetchUrl(logoUrl: string, projectId?: string): string {
+  if (logoUrl.startsWith("data:") || logoUrl.startsWith("/")) return logoUrl;
+  try {
+    if (new URL(logoUrl).origin === window.location.origin) return logoUrl;
+  } catch {
+    return logoUrl;
+  }
+  return projectId
+    ? `/api/projects/${projectId}/proxy-image?url=${encodeURIComponent(logoUrl)}`
+    : logoUrl;
+}
+
 function Bead({
   accent,
   label,
@@ -1115,19 +1147,30 @@ function ThemeSection({
   hasDark,
   originalAccent,
   onApplyLook,
+  onApplyLookForMode,
   onApplyMode,
   onReset,
+  logoUrl,
+  projectId,
 }: {
   mode: "light" | "dark";
   hasDark: boolean;
   originalAccent?: string;
   onApplyLook: (tokens: Record<string, string>) => void;
+  onApplyLookForMode?: (
+    tokens: Record<string, string>,
+    mode: "light" | "dark",
+  ) => void;
   onApplyMode?: (mode: "light" | "dark") => void;
   onReset?: () => void;
+  logoUrl?: string | null;
+  projectId?: string;
 }) {
   const t = useTranslations("panelsProps");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [expanded, setExpanded] = useState(false);
+  const [logoBusy, setLogoBusy] = useState(false);
+  const [logoError, setLogoError] = useState(false);
   const hasMore = THEME_PRESETS.length > INLINE_PRESET_MAX;
 
   const applyPreset = (preset: ThemePreset) => {
@@ -1138,6 +1181,56 @@ function ThemeSection({
     onApplyLook(lookFromAccent(accent).light);
     setSelectedId(null);
   };
+  // "De tu logo" — read the logo's pixels (proxied when cross-origin), let
+  // its dominant hue seed the AA-walked palette and its luminance pick the
+  // ink direction: a black-and-orange logo yields a dark page with orange
+  // accents, readable by construction.
+  const applyFromLogo = async () => {
+    if (!logoUrl || !onApplyLookForMode || logoBusy) return;
+    setLogoError(false);
+    setLogoBusy(true);
+    try {
+      const derived = await deriveWorldFromUrl(logoFetchUrl(logoUrl, projectId));
+      onApplyLookForMode(lookFromAccent(derived.accent).light, derived.mode);
+      setSelectedId("__logo__");
+    } catch {
+      setLogoError(true);
+    } finally {
+      setLogoBusy(false);
+    }
+  };
+  const logoBead =
+    logoUrl && onApplyLookForMode ? (
+      <button
+        type="button"
+        title={t("theme.fromLogoHint")}
+        aria-pressed={selectedId === "__logo__"}
+        onClick={() => void applyFromLogo()}
+        className="group flex w-10 flex-col items-center gap-1.5 focus:outline-none"
+      >
+        <span
+          className={
+            "relative inline-flex h-8 w-8 items-center justify-center rounded-full border bd bg-elev overflow-hidden transition-transform duration-150 group-hover:scale-[1.08] group-active:scale-95 " +
+            (selectedId === "__logo__"
+              ? "ring-2 ring-[var(--accent-strong)]"
+              : "")
+          }
+        >
+          {logoBusy ? (
+            <Loader size={12} className="animate-spin" />
+          ) : (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={logoUrl} alt="" className="h-full w-full object-contain p-1" />
+          )}
+          <span className="absolute -bottom-0.5 -right-0.5 inline-flex h-3.5 w-3.5 items-center justify-center rounded-full bg-app border bd text-[8px] leading-none fg-muted shadow-sm">
+            ✨
+          </span>
+        </span>
+        <span className="text-[9.5px] fg-faint leading-none truncate max-w-full">
+          {t("theme.fromLogo")}
+        </span>
+      </button>
+    ) : null;
   const originalBead = onReset ? (
     <Bead
       accent={originalAccent || "#9ca3af"}
@@ -1157,6 +1250,7 @@ function ThemeSection({
       {!expanded ? (
         <div className="flex flex-wrap gap-x-1.5 gap-y-3 pt-0.5">
           {originalBead}
+          {logoBead}
           {THEME_PRESETS.slice(0, INLINE_PRESET_MAX).map((p) => (
             <Bead
               key={p.id}
@@ -1179,6 +1273,7 @@ function ThemeSection({
         <div className="flex flex-col gap-3.5 pt-0.5">
           <div className="flex flex-wrap items-start gap-x-1.5 gap-y-3">
             {originalBead}
+            {logoBead}
             <ExpandBead
               expanded
               label={t("theme.less")}
@@ -1221,6 +1316,9 @@ function ThemeSection({
         <p className="text-[10.5px] fg-faint leading-relaxed">
           {t("theme.noDark")}
         </p>
+      )}
+      {logoError && (
+        <p className="text-[10.5px] text-red-500 mt-2">{t("theme.fromLogoError")}</p>
       )}
     </Section>
   );

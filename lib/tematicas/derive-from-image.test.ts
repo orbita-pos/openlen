@@ -47,6 +47,29 @@ describe("deriveWorldFromPixels", () => {
     expect(deriveWorldFromPixels(solid(128, 128, 128)).accent).toBe(FALLBACK_ACCENT);
   });
 
+  it("black-and-orange logo → dark world with an orange accent (the brand case)", () => {
+    // 70% black mark, 30% orange wordmark on transparency — black has no
+    // chroma so it can't vote for the accent, but it drags luminance down.
+    const n = 300;
+    const d = new Uint8ClampedArray(n * 4);
+    for (let i = 0; i < n; i++) {
+      const orange = i % 10 < 3;
+      d[i * 4] = orange ? 255 : 10;
+      d[i * 4 + 1] = orange ? 122 : 10;
+      d[i * 4 + 2] = orange ? 26 : 10;
+      d[i * 4 + 3] = 255;
+    }
+    const w = deriveWorldFromPixels(d);
+    expect(w.mode).toBe("dark");
+    const m = /^#(..)(..)(..)$/.exec(w.accent)!;
+    const [r, g, b] = [m[1], m[2], m[3]].map((x) => parseInt(x, 16));
+    expect(r).toBeGreaterThan(g);
+    expect(g).toBeGreaterThan(b);
+    // And the derived dark palette reads AA — black/orange page, legible.
+    const tokens = lookFromAccent(w.accent).dark;
+    expect(wcagContrast(tokens["--ol-fg"], tokens["--ol-bg"])).toBeGreaterThanOrEqual(4.5);
+  });
+
   it("transparent pixels don't vote", () => {
     const d = solid(80, 200, 120);
     for (let i = 0; i < d.length; i += 4) d[i + 3] = 0;

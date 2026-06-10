@@ -121,7 +121,10 @@
       "minimal": "Minimal",
       "vibrant": "Lebhaft",
       "expressive": "Ausdrucksstark"
-    }
+    },
+    "fromLogo": "Dein Logo",
+    "fromLogoHint": "Färbt die Seite in den Farben deines Logos — Lesbarkeit garantiert.",
+    "fromLogoError": "Logo konnte nicht gelesen werden — bitte erneut hochladen."
   },
   "motion": {
     "title": "Bewegung",

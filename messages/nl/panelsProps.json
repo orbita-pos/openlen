@@ -121,7 +121,10 @@
       "minimal": "Minimaal",
       "vibrant": "Levendig",
       "expressive": "Expressief"
-    }
+    },
+    "fromLogo": "Jouw logo",
+    "fromLogoHint": "Kleurt de pagina in de kleuren van je logo — leesbaarheid gegarandeerd.",
+    "fromLogoError": "Kon het logo niet lezen — upload het opnieuw."
   },
   "motion": {
     "title": "Beweging",

@@ -1221,6 +1221,15 @@ function NewV2Inner() {
     setActiveLook(null);
     applyLookForMode(null, modeRef.current);
   }, [applyLookForMode]);
+  // "De tu logo" — apply a Look in an EXPLICIT ink direction (the logo's),
+  // remembering the light bundle so the existing Dark toggle keeps working.
+  const applyLookWithMode = useCallback(
+    (lightBundle: Record<string, string>, mode: "light" | "dark") => {
+      setActiveLook(lightBundle);
+      applyLookForMode(lightBundle, mode);
+    },
+    [applyLookForMode],
+  );
   // Temática — install/remove a full-page world. The kit's stylesheet + font
   // link persist IN the document (the iframe stamps them, then saves through
   // the normal funnel — thumbnails/exports/published all carry the world);
@@ -1847,6 +1856,7 @@ function NewV2Inner() {
                     onToggleAnalytics={applyAnalyticsDisabled}
                     onApplyLogoUrl={loadedProject ? applyLogoUrl : undefined}
                     onApplyLook={loadedProject ? applyLook : undefined}
+                    onApplyLookForMode={loadedProject ? applyLookWithMode : undefined}
                     onApplyThemeMode={loadedProject ? toggleThemeMode : undefined}
                     onResetTheme={
                       loadedProject && originalTheme ? resetTheme : undefined
