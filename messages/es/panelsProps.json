@@ -122,5 +122,21 @@
       "vibrant": "Vibrante",
       "expressive": "Expresivo"
     }
+  },
+  "motion": {
+    "title": "Movimiento",
+    "off": "Apagado",
+    "preset": {
+      "calm": "Sutil",
+      "editorial": "Editorial",
+      "dramatic": "Dramático"
+    },
+    "hint": {
+      "off": "Sin animación de scroll",
+      "calm": "Aparición suave cuando las secciones entran",
+      "editorial": "Apariciones escalonadas, parallax del hero, números animados",
+      "dramatic": "Apariciones cinematográficas, parallax fuerte, titular fijo"
+    },
+    "note": "Agrega coreografía de scroll estilo Apple en tu página publicada. Congelada se ve idéntica — solo se mueve al hacer scroll, y respeta la preferencia de movimiento reducido."
   }
 }

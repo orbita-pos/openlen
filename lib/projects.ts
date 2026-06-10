@@ -692,6 +692,7 @@ export async function publishProject(
       formConfigs: project.data?.settings?.forms,
       analyticsEnabled: !project.data?.settings?.analyticsDisabled,
       logoUrl: effectiveLogoUrl,
+      motion: project.data?.settings?.motion,
       sourceLang,
       buildLocaleDocs:
         targets.length > 0

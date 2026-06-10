@@ -122,5 +122,21 @@
       "vibrant": "Vibrante",
       "expressive": "Expressivo"
     }
+  },
+  "motion": {
+    "title": "Movimento",
+    "off": "Desligado",
+    "preset": {
+      "calm": "Suave",
+      "editorial": "Editorial",
+      "dramatic": "Dramático"
+    },
+    "hint": {
+      "off": "Sem animação de rolagem",
+      "calm": "Surgimento suave quando as seções entram",
+      "editorial": "Surgimentos escalonados, parallax do herói, números animados",
+      "dramatic": "Surgimentos cinematográficos, parallax mais forte, título fixo"
+    },
+    "note": "Adiciona coreografia de rolagem estilo Apple na sua página publicada. Congelada fica idêntica — só se move ao rolar e respeita a preferência de movimento reduzido."
   }
 }

@@ -122,5 +122,21 @@
       "vibrant": "Levendig",
       "expressive": "Expressief"
     }
+  },
+  "motion": {
+    "title": "Beweging",
+    "off": "Uit",
+    "preset": {
+      "calm": "Rustig",
+      "editorial": "Editorial",
+      "dramatic": "Dramatisch"
+    },
+    "hint": {
+      "off": "Geen scroll-animatie",
+      "calm": "Zacht infaden wanneer secties verschijnen",
+      "editorial": "Gefaseerde onthullingen, hero-parallax, geanimeerde cijfers",
+      "dramatic": "Cinematische onthullingen, sterkere parallax, vastgezette kop"
+    },
+    "note": "Voegt Apple-achtige scrollchoreografie toe aan je gepubliceerde pagina. Bevroren ziet hij er identiek uit — hij beweegt alleen bij scrollen en respecteert de voorkeur voor minder beweging."
   }
 }

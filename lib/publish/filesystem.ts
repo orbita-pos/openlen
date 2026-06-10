@@ -18,6 +18,7 @@ import { sanitizeForPublish, sealRelease } from "@/lib/html-engine";
 import { optimizeHtmlForProduction } from "@/lib/publish/optimize-html";
 import { bakeResponsiveImages } from "@/lib/publish/image-bake";
 import { bakeGoogleFonts } from "@/lib/publish/font-bake";
+import { bakeMotion } from "@/lib/publish/motion";
 import {
   annotateLanguageCluster,
   buildRobots,
@@ -140,6 +141,10 @@ export interface PublishParams {
   /** The page's own language — hreflang of the root document. Defaults to
    *  the <html lang> attribute, then "en". */
   sourceLang?: string;
+  /** Motion Looks preset (calm | editorial | dramatic). When set, the page
+   *  is stamped with scroll choreography (CSS + sealed runtime). Absent /
+   *  invalid = no motion. Applied to the root doc AND every locale variant. */
+  motion?: string;
 }
 
 const ASSET_URL_RE_FOR =
@@ -512,6 +517,18 @@ export async function publishToDir(
   const analyticsEnabled = params.analyticsEnabled ?? true;
   if (params.projectId && analyticsEnabled) {
     migratedHtml = injectAnalyticsSnippet(migratedHtml, params.projectId);
+  }
+
+  // Motion Looks: stamp scroll choreography (CSS + runtime) when the project
+  // chose a preset. Done here so locale variants (built from migratedHtml
+  // below) inherit it and the per-doc seal hashes the runtime. Soft-fail.
+  if (process.env.OPENLEN_MOTION !== "0") {
+    try {
+      migratedHtml = bakeMotion(migratedHtml, params.motion);
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.warn("[publishToDir] motion bake failed; publishing without it", err);
+    }
   }
 
   // Speak Every Language: translated locale variants of the final baked

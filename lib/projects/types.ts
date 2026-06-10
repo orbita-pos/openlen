@@ -31,6 +31,9 @@ export interface ProjectSettings {
    *  (/<code>/index.html variants, translated at publish time). Validated
    *  against PUBLISH_LOCALES; the page's own language is skipped. */
   languages?: string[];
+  /** Motion Looks: scroll-choreography preset baked at publish time
+   *  ("calm" | "editorial" | "dramatic"). Absent = no motion. */
+  motion?: string;
 }
 
 export interface ProjectData {

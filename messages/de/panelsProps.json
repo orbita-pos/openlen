@@ -122,5 +122,21 @@
       "vibrant": "Lebhaft",
       "expressive": "Ausdrucksstark"
     }
+  },
+  "motion": {
+    "title": "Bewegung",
+    "off": "Aus",
+    "preset": {
+      "calm": "Ruhig",
+      "editorial": "Editorial",
+      "dramatic": "Dramatisch"
+    },
+    "hint": {
+      "off": "Keine Scroll-Animation",
+      "calm": "Sanftes Einblenden, wenn Abschnitte erscheinen",
+      "editorial": "Gestaffelte Einblendungen, Hero-Parallaxe, animierte Zahlen",
+      "dramatic": "Cineastische Einblendungen, stärkere Parallaxe, fixierte Überschrift"
+    },
+    "note": "Fügt Apple-artige Scroll-Choreografie auf deiner veröffentlichten Seite hinzu. Eingefroren sieht sie identisch aus – sie bewegt sich nur beim Scrollen und respektiert die Einstellung für reduzierte Bewegung."
   }
 }

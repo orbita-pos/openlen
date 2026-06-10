@@ -18,6 +18,8 @@ import { IconBtn, Segmented } from "./ui";
 import { injectElementInspect } from "./use-element-inspect";
 import { injectImageReplace } from "./use-image-replace";
 import { injectInlineEdit } from "./use-inline-edit";
+import { injectMotionPreview } from "./use-motion-preview";
+import { motionCss, isMotionPreset } from "@/lib/publish/motion-presets";
 import { injectSectionInsert } from "./use-section-insert";
 import { injectSectionReorder } from "./use-section-reorder";
 import { injectSectionSelect } from "./use-section-select";
@@ -87,6 +89,11 @@ interface PreviewAreaProps {
    *  re-serializes through the same save path — no reload (the live DOM is
    *  already correct, so we suppress the srcDoc re-derive like insert does). */
   removeRequest?: { nonce: number } | null;
+  /** Motion Looks preset to preview live ("calm" | "editorial" | "dramatic").
+   *  The iframe applies it via the motion-preview injector; re-posted on every
+   *  iframe (re)load since the preview overlay isn't part of the saved doc.
+   *  Undefined / invalid = no motion. */
+  motionPreset?: string;
   /** Stable identity for the iframe `key` (the project id). The iframe should
    *  remount only on a genuine document switch — NOT on every content edit.
    *  Without this we key on `doc.slice(0,120)`, which a top-of-page insert (a
@@ -112,6 +119,7 @@ export function PreviewArea({
   onToggleInspect,
   insertRequest = null,
   removeRequest = null,
+  motionPreset,
   docKey,
 }: PreviewAreaProps) {
   const t = useTranslations("wsChrome");
@@ -149,6 +157,7 @@ export function PreviewArea({
     html = injectInlineEdit(html);
     html = injectSectionSelect(html);
     html = injectSectionInsert(html);
+    html = injectMotionPreview(html);
     return html;
   };
   const [stableSrcDoc, setStableSrcDoc] = useState<string>(() => derive(doc));
@@ -205,20 +214,39 @@ export function PreviewArea({
     );
   }, [editingActive, sectionSelectMode]);
 
+  // Motion preview — the chosen preset's CSS, recomputed only when it changes.
+  // Held in a ref so the iframe-ready handler (which re-posts on every reload,
+  // since the preview overlay isn't part of the saved doc) reads the latest.
+  const motionMsg = useMemo(() => {
+    const preset = isMotionPreset(motionPreset) ? motionPreset : "";
+    return {
+      type: "openlen:apply-motion" as const,
+      preset,
+      css: preset ? motionCss(preset) : "",
+    };
+  }, [motionPreset]);
+  const motionRef = useRef(motionMsg);
+  motionRef.current = motionMsg;
+
   // On iframe ready (fresh load, or post-srcDoc-change reload), push the
-  // current mode state so the iframe matches the parent immediately.
+  // current mode + motion state so the iframe matches the parent immediately.
   useEffect(() => {
     const onMessage = (e: MessageEvent) => {
       if (!e.data || typeof e.data !== "object") return;
       if (e.data.type !== "openlen:iframe-ready") return;
-      iframeLocalRef.current?.contentWindow?.postMessage(
-        { type: "openlen:set-mode", ...modesRef.current },
-        "*",
-      );
+      const win = iframeLocalRef.current?.contentWindow;
+      if (!win) return;
+      win.postMessage({ type: "openlen:set-mode", ...modesRef.current }, "*");
+      win.postMessage(motionRef.current, "*");
     };
     window.addEventListener("message", onMessage);
     return () => window.removeEventListener("message", onMessage);
   }, []);
+
+  // Live re-apply when the user picks a different motion bead (no reload).
+  useEffect(() => {
+    iframeLocalRef.current?.contentWindow?.postMessage(motionMsg, "*");
+  }, [motionMsg]);
 
   // Section-insert — when the parent bumps the request nonce (user clicked
   // Insert in the Library tab), post the fragment into the live iframe. The
