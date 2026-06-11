@@ -1,12 +1,15 @@
 import { ProviderError } from "./oauth";
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Vercel deploy driver — POST the project's static index.html inline to the
-// Deployments API and return the live URL. Plain fetch, no SDK.
+// Vercel deploy driver — POST the project's static files (index.html + one
+// <slug>/index.html per site page) inline to the Deployments API and return
+// the live URL. Plain fetch, no SDK.
 //
-// Re-deploying with the same `name` updates the same Vercel project. We don't
-// poll readyState: a single static file is READY within a couple of seconds,
-// and the returned production alias resolves as soon as the build settles.
+// Re-deploying with the same `name` updates the same Vercel project. Each
+// deployment is a complete immutable snapshot, so pages deleted since the
+// last deploy disappear on their own. We don't poll readyState: a handful of
+// static files is READY within a couple of seconds, and the returned
+// production alias resolves as soon as the build settles.
 // ─────────────────────────────────────────────────────────────────────────────
 
 export interface VercelDeployResult {
@@ -18,7 +21,7 @@ export async function deployToVercel(
   token: string,
   teamId: string | null,
   name: string,
-  html: string,
+  files: Array<{ path: string; content: string }>,
 ): Promise<VercelDeployResult> {
   const url = new URL("https://api.vercel.com/v13/deployments");
   if (teamId) url.searchParams.set("teamId", teamId);
@@ -32,7 +35,7 @@ export async function deployToVercel(
     },
     body: JSON.stringify({
       name,
-      files: [{ file: "index.html", data: html }],
+      files: files.map((f) => ({ file: f.path, data: f.content })),
       projectSettings: { framework: null },
       target: "production",
     }),
