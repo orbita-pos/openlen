@@ -7,20 +7,27 @@ export const dynamic = "force-dynamic";
 // ─────────────────────────────────────────────────────────────────────────────
 // POST /api/export/zip
 //
-// Body: { html: string } — a project's `data`.
+// Body: a project's `data` — { html: string, pages?: Record<slug, { html }> }.
 // Returns: application/zip with
-//   - index.html  (the page — a complete self-contained document)
-//   - README.md   (how to open / host)
+//   - index.html           (home — a complete self-contained document)
+//   - <slug>/index.html    (one per site page — static hosts serve /<slug>)
+//   - README.md            (how to open / host)
 //
 // An OpenLen page is already a single self-contained HTML document (Tailwind
 // via CDN, fonts via <link>, inline <style>, inline SVG), so the export is
-// just that file plus a short readme. No styles.css, no images/ folder —
+// just those files plus a short readme. No styles.css, no images/ folder —
 // there is nothing external to bundle.
 // ─────────────────────────────────────────────────────────────────────────────
 
 interface ExportBody {
   html?: string;
+  pages?: Record<string, { html?: string }>;
 }
+
+// Same shape the publish slug validator accepts — anything else in the
+// client-supplied pages map is skipped rather than allowed to write an
+// arbitrary path into the archive.
+const SLUG_RE = /^[a-z0-9](?:[a-z0-9-]{0,38}[a-z0-9])?$/;
 
 export async function POST(req: Request): Promise<Response> {
   const session = await auth();
@@ -46,6 +53,15 @@ export async function POST(req: Request): Promise<Response> {
   try {
     const zip = new JSZip();
     zip.file("index.html", html);
+    const pages = (body as ExportBody).pages;
+    if (pages && typeof pages === "object") {
+      for (const [slug, pg] of Object.entries(pages)) {
+        const pageHtml = typeof pg?.html === "string" ? pg.html : "";
+        if (!SLUG_RE.test(slug)) continue;
+        if (!/<html[\s>]/i.test(pageHtml) || !/<\/html>/i.test(pageHtml)) continue;
+        zip.file(`${slug}/index.html`, pageHtml);
+      }
+    }
     zip.file("README.md", buildReadme(html));
     const bytes = await zip.generateAsync({
       type: "uint8array",
