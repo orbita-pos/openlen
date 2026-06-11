@@ -175,11 +175,14 @@
     "creating": "Création…",
     "cancel": "Annuler",
     "deleteLabel": "Supprimer /{slug}",
-    "deleteConfirm": "Supprimer la page /{slug} ? Son contenu sera perdu.",
     "errInvalid": "Lettres, chiffres et tirets uniquement.",
     "errReserved": "Ce nom est réservé.",
     "errExists": "Cette page existe déjà.",
     "errLimit": "Limite de pages atteinte.",
-    "hint": "Les nouvelles pages naissent avec votre look — nav et footer inclus — sur une toile vierge. Reliez-les avec des liens /slug."
+    "hint": "Les nouvelles pages naissent avec votre look — nav et footer inclus — sur une toile vierge. Reliez-les avec des liens /slug.",
+    "deleteTitle": "Supprimer /{slug} ?",
+    "deleteBody": "Son contenu sera perdu, sans retour possible. Si elle est publiée, elle disparaîtra de votre site au prochain déploiement.",
+    "confirmLabel": "Tapez {slug} pour confirmer",
+    "confirmBtn": "Supprimer la page"
   }
 }

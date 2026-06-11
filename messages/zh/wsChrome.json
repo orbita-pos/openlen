@@ -175,11 +175,14 @@
     "creating": "创建中…",
     "cancel": "取消",
     "deleteLabel": "删除 /{slug}",
-    "deleteConfirm": "删除页面 /{slug}？其内容将丢失。",
     "errInvalid": "只能使用字母、数字和连字符。",
     "errReserved": "该名称已被保留。",
     "errExists": "该页面已存在。",
     "errLimit": "已达到页面数量上限。",
-    "hint": "新页面会带着你的风格诞生——含导航和页脚，内容为空白画布。用 /slug 链接把它们串起来。"
+    "hint": "新页面会带着你的风格诞生——含导航和页脚，内容为空白画布。用 /slug 链接把它们串起来。",
+    "deleteTitle": "删除 /{slug}？",
+    "deleteBody": "其内容将丢失且无法撤销。若已发布，下次部署时它将从你的站点消失。",
+    "confirmLabel": "输入 {slug} 以确认",
+    "confirmBtn": "删除页面"
   }
 }

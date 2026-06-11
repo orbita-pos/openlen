@@ -175,11 +175,14 @@
     "creating": "Creating…",
     "cancel": "Cancel",
     "deleteLabel": "Delete /{slug}",
-    "deleteConfirm": "Delete the /{slug} page? Its content is lost.",
     "errInvalid": "Use only letters, numbers and hyphens.",
     "errReserved": "That name is reserved.",
     "errExists": "That page already exists.",
     "errLimit": "Page limit reached.",
-    "hint": "New pages are born wearing your look — nav and footer included — with a blank canvas. Link to them with /slug links."
+    "hint": "New pages are born wearing your look — nav and footer included — with a blank canvas. Link to them with /slug links.",
+    "deleteTitle": "Delete /{slug}?",
+    "deleteBody": "Its content is lost and can’t be undone. If it’s published, it disappears from your live site on the next deploy.",
+    "confirmLabel": "Type {slug} to confirm",
+    "confirmBtn": "Delete page"
   }
 }

@@ -175,11 +175,14 @@
     "creating": "만드는 중…",
     "cancel": "취소",
     "deleteLabel": "/{slug} 삭제",
-    "deleteConfirm": "/{slug} 페이지를 삭제할까요? 내용이 사라집니다.",
     "errInvalid": "영문, 숫자, 하이픈만 사용할 수 있어요.",
     "errReserved": "예약된 이름이에요.",
     "errExists": "이미 있는 페이지예요.",
     "errLimit": "페이지 한도에 도달했어요.",
-    "hint": "새 페이지는 내 룩을 입고 태어나요 — 내비와 푸터 포함, 내용은 빈 캔버스. /slug 링크로 연결하세요."
+    "hint": "새 페이지는 내 룩을 입고 태어나요 — 내비와 푸터 포함, 내용은 빈 캔버스. /slug 링크로 연결하세요.",
+    "deleteTitle": "/{slug} 페이지를 삭제할까요?",
+    "deleteBody": "내용이 사라지며 되돌릴 수 없어요. 게시 중이라면 다음 배포 때 사이트에서 사라져요.",
+    "confirmLabel": "확인을 위해 {slug} 입력",
+    "confirmBtn": "페이지 삭제"
   }
 }

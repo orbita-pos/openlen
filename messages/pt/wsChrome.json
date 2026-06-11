@@ -175,11 +175,14 @@
     "creating": "Criando…",
     "cancel": "Cancelar",
     "deleteLabel": "Excluir /{slug}",
-    "deleteConfirm": "Excluir a página /{slug}? O conteúdo será perdido.",
     "errInvalid": "Use apenas letras, números e hífens.",
     "errReserved": "Esse nome é reservado.",
     "errExists": "Essa página já existe.",
     "errLimit": "Limite de páginas atingido.",
-    "hint": "Páginas novas nascem com o seu look — nav e rodapé incluídos — e uma tela em branco. Aponte para elas com links /slug."
+    "hint": "Páginas novas nascem com o seu look — nav e rodapé incluídos — e uma tela em branco. Aponte para elas com links /slug.",
+    "deleteTitle": "Excluir /{slug}?",
+    "deleteBody": "O conteúdo será perdido e não pode ser desfeito. Se estiver publicada, desaparecerá do seu site no próximo deploy.",
+    "confirmLabel": "Digite {slug} para confirmar",
+    "confirmBtn": "Excluir página"
   }
 }
