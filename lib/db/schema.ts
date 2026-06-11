@@ -166,6 +166,13 @@ export const projects = pgTable(
     // detection in the UI compares this against current `data.html`
     // to surface an "unpublished changes" pill.
     publishedHtml: text("publishedHtml"),
+    // Fingerprint of data.pages at the moment of publish (hashSitePages in
+    // lib/projects.ts; "" = published with zero pages). Lets the drift pill
+    // light up on subpage edits without storing every page's html twice.
+    // NULL = published before this column existed (or after a release
+    // rollback, where the live pages are unknown) — pages are then skipped
+    // by the comparison, so legacy rows never show a false "changed".
+    publishedPagesHash: text("publishedPagesHash"),
     // First 12 chars of sha256(optimized published HTML). Points at the
     // on-disk release dir under /var/www/openlen/<sub>/releases/<sha>/.
     // The TopBar "Previous deploys" UI joins this against listReleases()
@@ -318,6 +325,9 @@ export const formSubmissions = pgTable(
       country?: string | null;
       device?: string | null;
       browser?: string | null;
+      /** Site page the form lives on (null/absent = home) — lead triage
+       *  for multi-page sites. */
+      page?: string | null;
     }>(),
     createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
   },
