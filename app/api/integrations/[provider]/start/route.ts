@@ -9,6 +9,7 @@ import {
   publicOrigin,
   signState,
 } from "@/lib/integrations/oauth";
+import { validatePageSlug } from "@/lib/projects/site-pages";
 import { routing } from "@/i18n/routing";
 
 export const runtime = "nodejs";
@@ -41,6 +42,13 @@ export async function GET(
   const locale = (routing.locales as readonly string[]).includes(localeParam)
     ? localeParam
     : routing.defaultLocale;
+  // Site page the workspace was on — carried through the signed state so the
+  // return redirect lands back on the same document. Normalized here; the
+  // workspace already strips a stale ?page= on load, so existence isn't
+  // re-checked.
+  const pageParam = req.nextUrl.searchParams.get("page") ?? "";
+  const pageCheck = pageParam ? validatePageSlug(pageParam) : null;
+  const page = pageCheck?.ok ? pageCheck.slug : "";
   if (!projectId) {
     return NextResponse.json({ error: "missing_project" }, { status: 400 });
   }
@@ -61,6 +69,7 @@ export async function GET(
 
   const workspace = new URL(`/${locale}/new`, publicOrigin());
   workspace.searchParams.set("project", projectId);
+  if (page) workspace.searchParams.set("page", page);
 
   if (!providerConfigured(provider)) {
     workspace.searchParams.set("connect_error", "not_configured");
@@ -68,7 +77,7 @@ export async function GET(
     return NextResponse.redirect(workspace);
   }
 
-  const state = signState({ projectId, provider, locale });
+  const state = signState({ projectId, provider, locale, ...(page ? { page } : {}) });
   const res = NextResponse.redirect(authorizeUrl(provider, state));
   res.cookies.set(STATE_COOKIE, state, {
     httpOnly: true,

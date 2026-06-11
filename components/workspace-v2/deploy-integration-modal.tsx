@@ -120,9 +120,14 @@ export function DeployIntegrationModal({
 
   const onConnect = () => {
     setConnecting(true);
+    // Carry the active site page so the OAuth round-trip lands back on the
+    // same document instead of resetting the canvas to home.
+    const pageSlug = new URLSearchParams(window.location.search).get("page");
     const url = `/api/integrations/${provider}/start?project=${encodeURIComponent(
       projectId,
-    )}&locale=${encodeURIComponent(locale)}`;
+    )}&locale=${encodeURIComponent(locale)}${
+      pageSlug ? `&page=${encodeURIComponent(pageSlug)}` : ""
+    }`;
     window.location.href = url;
   };
 
