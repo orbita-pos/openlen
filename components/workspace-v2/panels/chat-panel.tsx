@@ -187,6 +187,10 @@ interface DesignTurn {
   errorText?: string;
   /** HTML before this turn ran — used to revert via Undo. */
   preEditHtml: string;
+  /** Site page this turn edited (null = home), snapshotted at send time.
+   *  Undo/Retry target THIS page — the canvas may have switched since.
+   *  undefined = pre-multipage turn; falls back to the current page. */
+  page?: string | null;
   postEditHtml?: string;
   appliedAt?: number;
   /** ms-epoch when the turn started — drives the elapsed-time label
@@ -229,7 +233,9 @@ function AIDesignChat({
   projectId: string;
   projectHtml: string;
   page?: string | null;
-  onLocalUpdate: (newHtml: string) => void;
+  /** Write a document's html into the parent's project state. `page`
+   *  pins the slot (null = home); undefined = whatever page is active. */
+  onLocalUpdate: (newHtml: string, page?: string | null) => void;
   initialChat?: StoredChatTurn[];
   onChatChange?: () => void;
   onRedesigningChange?: (active: boolean) => void;
@@ -423,6 +429,12 @@ function AIDesignChat({
       // imageOverride lets Retry re-send the failed turn's original image;
       // undefined = use the live composer image, null = explicitly none.
       const img = imageOverride !== undefined ? imageOverride : attachedImage;
+      // Snapshot the page scope at send time — preEditHtml is THIS page's
+      // document, and the drip / apply / revert / undo legs must all write
+      // back to the same slot even if the user switches pages mid-stream.
+      // (Retry intentionally re-targets whatever page is active when it
+      // fires: it snapshots fresh preEditHtml + page, same as a new send.)
+      const turnPage = pageRef.current;
       const preEditHtml = projectHtmlRef.current;
       const turnId =
         typeof crypto !== "undefined" && "randomUUID" in crypto
@@ -436,6 +448,7 @@ function AIDesignChat({
         assistantReasoning: "",
         status: "streaming",
         preEditHtml,
+        page: turnPage,
         startedAt: Date.now(),
         streamedChars: 0,
       };
@@ -465,7 +478,7 @@ function AIDesignChat({
       const flushHtml = () => {
         if (htmlBuf.value.length > lastFlushedLen) {
           lastFlushedLen = htmlBuf.value.length;
-          onLocalUpdate(htmlBuf.value);
+          onLocalUpdate(htmlBuf.value, turnPage);
         }
       };
       const scheduleFlush = () => {
@@ -507,7 +520,7 @@ function AIDesignChat({
             prompt,
             history,
             model,
-            ...(pageRef.current ? { page: pageRef.current } : {}),
+            ...(turnPage ? { page: turnPage } : {}),
             ...(turnScope ? { scope: turnScope } : {}),
             ...(turnImage ? { attachedImage: turnImage } : {}),
           }),
@@ -628,13 +641,13 @@ function AIDesignChat({
         clearFlush();
 
         if (errorMessage) {
-          if (lastFlushedLen > 0) onLocalUpdate(preEditHtml);
+          if (lastFlushedLen > 0) onLocalUpdate(preEditHtml, turnPage);
           updateTurn(turnId, { status: "error", errorText: errorMessage });
           return;
         }
 
         if (!finalHtml) {
-          if (lastFlushedLen > 0) onLocalUpdate(preEditHtml);
+          if (lastFlushedLen > 0) onLocalUpdate(preEditHtml, turnPage);
           updateTurn(turnId, {
             status: "error",
             errorText: t("errors.noFinalHtml"),
@@ -642,7 +655,7 @@ function AIDesignChat({
           return;
         }
 
-        onLocalUpdate(finalHtml);
+        onLocalUpdate(finalHtml, turnPage);
         updateTurn(turnId, {
           status: "applied",
           postEditHtml: finalHtml,
@@ -662,7 +675,7 @@ function AIDesignChat({
         // Roll the iframe back to the pre-edit page — a cancel/abort lands here
         // mid Mode-B drip and would otherwise leave a truncated document onscreen
         // (the error/noFinalHtml branches above already revert; this one didn't).
-        if (lastFlushedLen > 0) onLocalUpdate(preEditHtml);
+        if (lastFlushedLen > 0) onLocalUpdate(preEditHtml, turnPage);
         if (abort.signal.aborted) {
           updateTurn(turnId, {
             status: "error",
@@ -716,7 +729,12 @@ function AIDesignChat({
       // Restored (pre-reload) turns carry no preEditHtml — their revisions
       // are reachable via the Versions tab, not this inline Undo.
       if (!turn.preEditHtml) return;
-      onLocalUpdate(turn.preEditHtml);
+      // Undo targets the turn's OWN page (snapshotted at send time) — the
+      // canvas may be on another page by now, and home must never receive a
+      // subpage's pre-edit document. Pre-multipage turns carry no page field
+      // and fall back to the current page (their only possible target).
+      const targetPage = turn.page === undefined ? pageRef.current : turn.page;
+      onLocalUpdate(turn.preEditHtml, targetPage);
       updateTurn(turn.id, { status: "reverted" });
       try {
         await fetch(`/api/projects/${projectId}/html`, {
@@ -724,7 +742,7 @@ function AIDesignChat({
           headers: { "content-type": "application/json" },
           body: JSON.stringify({
             html: turn.preEditHtml,
-            ...(pageRef.current ? { page: pageRef.current } : {}),
+            ...(targetPage ? { page: targetPage } : {}),
           }),
         });
       } catch {
