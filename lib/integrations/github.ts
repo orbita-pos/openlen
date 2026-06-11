@@ -1,13 +1,15 @@
 import { ProviderError } from "./oauth";
 
 // ─────────────────────────────────────────────────────────────────────────────
-// GitHub deploy driver — push the project's static index.html to a repo in the
-// connected user's account and enable GitHub Pages. Plain fetch (no @octokit)
-// to stay symmetric with the Vercel driver and add zero dependencies.
+// GitHub deploy driver — push the project's static files (index.html + one
+// <slug>/index.html per site page) to a repo in the connected user's account
+// and enable GitHub Pages. Plain fetch (no @octokit) to stay symmetric with
+// the Vercel driver and add zero dependencies.
 //
 // Flow: GET /user (owner) → POST /user/repos (tolerate 422 "exists") →
-// GET /repos/.. (default branch) → GET .../contents/index.html (capture sha if
-// present) → PUT .../contents/index.html (base64 body; sha only on update) →
+// GET /repos/.. (default branch) → per file: GET .../contents/<path> (capture
+// sha if present) → PUT .../contents/<path> (base64 body; sha only on update)
+// → delete <slug>/index.html files left over from since-deleted pages →
 // POST .../pages (tolerate 409 already-enabled).
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -46,7 +48,7 @@ export interface GitHubDeployResult {
 export async function deployToGitHub(
   token: string,
   name: string,
-  html: string,
+  files: Array<{ path: string; content: string }>,
 ): Promise<GitHubDeployResult> {
   // 1. Resolve the owner login.
   const userRes = await fetch(`${API}/user`, { headers: ghHeaders(token) });
@@ -78,27 +80,69 @@ export async function deployToGitHub(
   const repo = await ghBody(repoRes);
   const branch = typeof repo.default_branch === "string" ? repo.default_branch : "main";
 
-  // 4. Existing index.html sha (for update). 404 on an empty/new repo ⇒ create.
-  let sha: string | undefined;
-  const getRes = await fetch(`${API}/repos/${owner}/${name}/contents/index.html`, {
-    headers: ghHeaders(token),
-  });
-  if (getRes.ok) {
-    const existing = await ghBody(getRes);
-    if (typeof existing.sha === "string") sha = existing.sha;
+  // 4. Commit every file (content MUST be base64). The contents API needs the
+  // existing blob sha to update; 404 on an empty/new repo or new path ⇒ create.
+  // Sequential on purpose — parallel PUTs to the same branch race on the head
+  // commit and GitHub rejects the losers with 409s.
+  for (const f of files) {
+    let sha: string | undefined;
+    const getRes = await fetch(
+      `${API}/repos/${owner}/${name}/contents/${f.path}`,
+      { headers: ghHeaders(token) },
+    );
+    if (getRes.ok) {
+      const existing = await ghBody(getRes);
+      if (typeof existing.sha === "string") sha = existing.sha;
+    }
+    const putRes = await fetch(
+      `${API}/repos/${owner}/${name}/contents/${f.path}`,
+      {
+        method: "PUT",
+        headers: { ...ghHeaders(token), "Content-Type": "application/json" },
+        body: JSON.stringify({
+          message: "Deploy from OpenLen",
+          content: Buffer.from(f.content, "utf8").toString("base64"),
+          ...(sha ? { sha } : {}),
+        }),
+      },
+    );
+    if (!putRes.ok) {
+      fail(putRes, await ghBody(putRes), `Could not commit ${f.path}.`);
+    }
   }
 
-  // 5. Commit index.html (content MUST be base64).
-  const putRes = await fetch(`${API}/repos/${owner}/${name}/contents/index.html`, {
-    method: "PUT",
-    headers: { ...ghHeaders(token), "Content-Type": "application/json" },
-    body: JSON.stringify({
-      message: "Deploy from OpenLen",
-      content: Buffer.from(html, "utf8").toString("base64"),
-      ...(sha ? { sha } : {}),
-    }),
-  });
-  if (!putRes.ok) fail(putRes, await ghBody(putRes), "Could not commit index.html.");
+  // 5. Remove <slug>/index.html files from site pages deleted since the last
+  // deploy, so their URLs don't stay live. Strictly scoped to that path shape
+  // and never index.html itself — files the user added by hand are untouched.
+  // Soft: a stale page is cosmetic, cleanup must never fail the deploy.
+  try {
+    const keep = new Set(files.map((f) => f.path));
+    const treeRes = await fetch(
+      `${API}/repos/${owner}/${name}/git/trees/${branch}?recursive=1`,
+      { headers: ghHeaders(token) },
+    );
+    if (treeRes.ok) {
+      const tree = await ghBody(treeRes);
+      const entries = Array.isArray(tree.tree) ? tree.tree : [];
+      for (const raw of entries) {
+        const entry = raw as { path?: unknown; sha?: unknown };
+        const path = typeof entry.path === "string" ? entry.path : "";
+        const blobSha = typeof entry.sha === "string" ? entry.sha : "";
+        if (!path || !blobSha || keep.has(path)) continue;
+        if (!/^[a-z0-9][a-z0-9-]*\/index\.html$/.test(path)) continue;
+        await fetch(`${API}/repos/${owner}/${name}/contents/${path}`, {
+          method: "DELETE",
+          headers: { ...ghHeaders(token), "Content-Type": "application/json" },
+          body: JSON.stringify({
+            message: "Remove deleted page (OpenLen)",
+            sha: blobSha,
+          }),
+        }).catch(() => {});
+      }
+    }
+  } catch {
+    /* soft */
+  }
 
   // 6. Enable GitHub Pages from the default branch root. 409 = already enabled.
   const pagesRes = await fetch(`${API}/repos/${owner}/${name}/pages`, {

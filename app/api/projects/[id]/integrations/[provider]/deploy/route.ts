@@ -13,7 +13,8 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 // POST /api/projects/[id]/integrations/[provider]/deploy  body: { name }
-// Push the project's optimized static HTML to the connected provider account.
+// Push the project's optimized static files (home + one <slug>/index.html per
+// site page) to the connected provider account.
 //
 // Status map (UI matches on these):
 //   400 invalid_name   — name fails the slug regex
@@ -61,6 +62,7 @@ export async function POST(
       teamId: conn.teamId,
       name,
       html: exportHtml.html,
+      pages: exportHtml.pages,
     });
     await recordDeployment({
       projectId: id,
