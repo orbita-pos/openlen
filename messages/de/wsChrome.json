@@ -179,11 +179,14 @@
     "creating": "Wird erstellt…",
     "cancel": "Abbrechen",
     "deleteLabel": "/{slug} löschen",
-    "deleteConfirm": "Seite /{slug} löschen? Ihr Inhalt geht verloren.",
     "errInvalid": "Nur Buchstaben, Zahlen und Bindestriche.",
     "errReserved": "Dieser Name ist reserviert.",
     "errExists": "Diese Seite existiert bereits.",
     "errLimit": "Seitenlimit erreicht.",
-    "hint": "Neue Seiten entstehen als Kopie der Startseite, in deinem Look. Verlinke sie mit /slug-Links."
+    "hint": "Neue Seiten entstehen in deinem Look — Navigation und Footer inklusive — mit leerer Fläche. Verlinke sie mit /slug-Links.",
+    "deleteTitle": "/{slug} löschen?",
+    "deleteBody": "Der Inhalt geht unwiderruflich verloren. Falls veröffentlicht, verschwindet die Seite beim nächsten Deploy von deiner Website.",
+    "confirmLabel": "Tippe {slug} zur Bestätigung",
+    "confirmBtn": "Seite löschen"
   }
 }

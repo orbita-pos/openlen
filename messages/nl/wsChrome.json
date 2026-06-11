@@ -179,11 +179,14 @@
     "creating": "Aanmaken…",
     "cancel": "Annuleren",
     "deleteLabel": "/{slug} verwijderen",
-    "deleteConfirm": "Pagina /{slug} verwijderen? De inhoud gaat verloren.",
     "errInvalid": "Alleen letters, cijfers en streepjes.",
     "errReserved": "Die naam is gereserveerd.",
     "errExists": "Die pagina bestaat al.",
     "errLimit": "Paginalimiet bereikt.",
-    "hint": "Nieuwe pagina’s ontstaan als kopie van Home, in jouw look. Verwijs ernaar met /slug-links."
+    "hint": "Nieuwe pagina’s ontstaan in jouw look — nav en footer inbegrepen — met een leeg canvas. Verwijs ernaar met /slug-links.",
+    "deleteTitle": "/{slug} verwijderen?",
+    "deleteBody": "De inhoud gaat onherroepelijk verloren. Als de pagina gepubliceerd is, verdwijnt ze bij de volgende deploy van je site.",
+    "confirmLabel": "Typ {slug} om te bevestigen",
+    "confirmBtn": "Pagina verwijderen"
   }
 }

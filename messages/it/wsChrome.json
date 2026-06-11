@@ -179,11 +179,14 @@
     "creating": "Creazione…",
     "cancel": "Annulla",
     "deleteLabel": "Elimina /{slug}",
-    "deleteConfirm": "Eliminare la pagina /{slug}? Il contenuto andrà perso.",
     "errInvalid": "Solo lettere, numeri e trattini.",
     "errReserved": "Questo nome è riservato.",
     "errExists": "Questa pagina esiste già.",
     "errLimit": "Limite di pagine raggiunto.",
-    "hint": "Le nuove pagine nascono come copia della Home, con il tuo look. Collegale con link /slug."
+    "hint": "Le nuove pagine nascono con il tuo look — nav e footer inclusi — su una tela bianca. Collegale con link /slug.",
+    "deleteTitle": "Eliminare /{slug}?",
+    "deleteBody": "Il contenuto andrà perso e non si può annullare. Se è pubblicata, sparirà dal tuo sito al prossimo deploy.",
+    "confirmLabel": "Scrivi {slug} per confermare",
+    "confirmBtn": "Elimina pagina"
   }
 }
