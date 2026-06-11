@@ -28,6 +28,19 @@ export interface MusicSettings {
   cover?: string;
 }
 
+/** Site assistant — the visitor-facing AI chat on the published page. The
+ *  brain (`facts`) never ships in the page source; the widget calls
+ *  /api/assistant/[sub] which reads it server-side. */
+export interface AssistantSettings {
+  /** Master switch. Absent/false → no widget injected, endpoint refuses. */
+  enabled?: boolean;
+  /** Owner-written business facts (hours, prices, shipping, policies, FAQ)
+   *  that the page itself doesn't spell out. */
+  facts?: string;
+  /** Optional tone steer ("cálido", "formal", …). Absent → default. */
+  tone?: string;
+}
+
 /** Project-level settings that aren't part of the HTML document. */
 export interface ProjectSettings {
   /** Per-form config, keyed by the form's index — its position among all
@@ -49,6 +62,8 @@ export interface ProjectSettings {
   motion?: string;
   /** Page music: the floating player baked at publish time. Absent = none. */
   music?: MusicSettings;
+  /** Site assistant: visitor-facing AI chat. Absent = off. */
+  assistant?: AssistantSettings;
 }
 
 /** One additional page of a multi-page site. The home page stays at

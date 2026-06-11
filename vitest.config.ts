@@ -30,6 +30,7 @@ export default defineConfig({
       "lib/palette-gen-look.test.ts",
       "lib/theme-presets.test.ts",
       "lib/tematicas/**/*.test.ts",
+      "lib/site-assistant/**/*.test.ts",
     ],
     exclude: ["node_modules/**", "tests/e2e/**", ".next/**"],
   },
