@@ -430,7 +430,13 @@ interface AssistantBake {
  *  always used. Runs for the home document AND each site page; all asset
  *  writes are hash-named + idempotent, so repeated runs share the release's
  *  assets dir. */
-async function bakeDocument(html: string, ctx: BakeDocumentCtx): Promise<string> {
+async function bakeDocument(
+  html: string,
+  ctx: BakeDocumentCtx,
+  // Site-page slug this document publishes as (null = home) — forms wiring
+  // uses it for page-scoped config + lead attribution.
+  page: string | null = null,
+): Promise<string> {
   const optimized = await optimizeHtmlForProduction(html);
 
   // Consolidate Unsplash credits BEFORE the asset migrations below. We need
@@ -498,7 +504,7 @@ async function bakeDocument(html: string, ctx: BakeDocumentCtx): Promise<string>
 
   // Wire <form>s to the OpenLen submit endpoint. Soft-fail.
   try {
-    migratedHtml = wirePublishedForms(migratedHtml, ctx.sub, ctx.formConfigs);
+    migratedHtml = wirePublishedForms(migratedHtml, ctx.sub, ctx.formConfigs, page);
   } catch (err) {
     // eslint-disable-next-line no-console
     console.warn("[publishToDir] form wiring failed; publishing without it", err);
@@ -724,7 +730,7 @@ export async function publishToDir(
         `publishToDir: refusing to write page /${page.slug} containing data-slot-path`,
       );
     }
-    let doc = await bakeDocument(pageSanitized.html, bakeCtx);
+    let doc = await bakeDocument(pageSanitized.html, bakeCtx, page.slug);
     doc = annotateLanguageCluster(doc, {
       baseUrl,
       selfPath: `/${page.slug}/`,

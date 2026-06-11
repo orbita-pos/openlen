@@ -17,21 +17,43 @@ function submitBase(): string {
 }
 
 /** Wire every <form> in the published HTML to OpenLen's submit endpoint,
- *  bake per-form config (from ProjectData.settings.forms, keyed by document-
- *  order index), and inject the inline-submit script. No-op when the page
- *  has no forms. */
+ *  bake per-form config (from ProjectData.settings.forms), and inject the
+ *  inline-submit script. No-op when the page has no forms.
+ *
+ *  Multi-page: `page` is the site-page slug this document publishes as
+ *  (null/absent = home). It rides the action's query string — the Rust pass
+ *  writes the action verbatim and both the inline-submit fetch and a native
+ *  POST preserve it — so the submit endpoint can resolve page-scoped config
+ *  and attribute the lead. Config keys: home forms use the legacy document-
+ *  order index ("0"); site-page forms use "<slug>:<index>", falling back to
+ *  the shared legacy key when no scoped entry exists. */
 export function wirePublishedForms(
   html: string,
   subdomain: string,
   formConfigs?: Record<string, FormConfig>,
+  page?: string | null,
 ): string {
-  const action = `${submitBase()}/api/f/${subdomain}`;
-  const configs: WireFormConfig[] = formConfigs
-    ? Object.entries(formConfigs).map(([k, v]) => ({
-        index: Number(k),
-        successMessage: v.successMessage,
-        redirectUrl: v.redirectUrl,
-      }))
-    : [];
+  const action =
+    `${submitBase()}/api/f/${subdomain}` +
+    (page ? `?page=${encodeURIComponent(page)}` : "");
+  const byIndex = new Map<number, FormConfig>();
+  for (const [k, v] of Object.entries(formConfigs ?? {})) {
+    if (/^\d+$/.test(k)) byIndex.set(Number(k), v);
+  }
+  if (page) {
+    const prefix = `${page}:`;
+    for (const [k, v] of Object.entries(formConfigs ?? {})) {
+      if (!k.startsWith(prefix)) continue;
+      const idx = Number(k.slice(prefix.length));
+      if (Number.isInteger(idx) && idx >= 0) byIndex.set(idx, v);
+    }
+  }
+  const configs: WireFormConfig[] = [...byIndex.entries()].map(
+    ([index, v]) => ({
+      index,
+      successMessage: v.successMessage,
+      redirectUrl: v.redirectUrl,
+    }),
+  );
   return rustWirePublishedForms(html, action, configs);
 }

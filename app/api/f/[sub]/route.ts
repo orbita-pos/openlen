@@ -28,6 +28,9 @@ function publishedBase(sub: string): string {
   return `https://${sub}.${host}`;
 }
 
+// Same slug shape lib/projects/site-pages.ts accepts.
+const PAGE_SLUG_RE = /^[a-z0-9](?:[a-z0-9-]{0,38}[a-z0-9])?$/;
+
 export async function POST(
   req: Request,
   { params }: { params: Promise<{ sub: string }> },
@@ -36,29 +39,34 @@ export async function POST(
   const wantsJson = (req.headers.get("accept") ?? "").includes(
     "application/json",
   );
+  // Multi-page: the publish wiring appends ?page=<slug> to the form action so
+  // we know which document the form lives on — drives page-scoped config,
+  // lead attribution, and the no-JS redirect target.
+  const pageParam = new URL(req.url).searchParams.get("page") ?? "";
+  const page = PAGE_SLUG_RE.test(pageParam) ? pageParam : null;
 
   const owner = await getSubdomainOwner(sub);
-  if (!owner) return done(wantsJson, sub, false, 404);
+  if (!owner) return done(wantsJson, sub, false, 404, page);
 
   // Per-IP rate-limit — anti-spam on a public endpoint.
   const ip = getClientIp(req);
   const limit = await checkAndConsume(ipLimitKey(ip, "form-submit"), [
     { windowMs: HOUR, max: 20, label: "hourly" },
   ]);
-  if (!limit.ok) return done(wantsJson, sub, false, 429);
+  if (!limit.ok) return done(wantsJson, sub, false, 429, page);
 
   let form: FormData;
   try {
     form = await req.formData();
   } catch {
-    return done(wantsJson, sub, false, 400);
+    return done(wantsJson, sub, false, 400, page);
   }
 
   // Honeypot — bots fill the hidden field; humans never see it. Pretend
   // success so the bot doesn't learn it was caught, but store nothing.
   const hp = form.get("_openlen_hp");
   if (typeof hp === "string" && hp.trim().length > 0) {
-    return done(wantsJson, sub, true, 200);
+    return done(wantsJson, sub, true, 200, page);
   }
 
   const data: Record<string, string> = {};
@@ -79,7 +87,7 @@ export async function POST(
     data[key.slice(0, 200)] = value.slice(0, MAX_FIELD_LEN);
     count += 1;
   }
-  if (count === 0) return done(wantsJson, sub, false, 400);
+  if (count === 0) return done(wantsJson, sub, false, 400, page);
 
   // Capture submission-time signals for the email + analytics. Country
   // comes from Cloudflare's CF-IPCountry; device + browser are derived
@@ -101,16 +109,19 @@ export async function POST(
         country,
         device,
         browser,
+        // Which document the form lives on (null = home) — the Leads views
+        // surface it so multi-page sites can triage by source page.
+        page,
       },
     });
   } catch (err) {
     // eslint-disable-next-line no-console
     console.error("[forms] record failed", err);
-    return done(wantsJson, sub, false, 500);
+    return done(wantsJson, sub, false, 500, page);
   }
 
   // Fire-and-forget — notifying the owner must never delay the visitor.
-  void notifyOwner(owner.projectId, data, formIndex, {
+  void notifyOwner(owner.projectId, data, formIndex, page, {
     submittedAt,
     country,
     device,
@@ -121,7 +132,7 @@ export async function POST(
     console.error("[forms] notifyOwner failed", err);
   });
 
-  return done(wantsJson, sub, true, 200);
+  return done(wantsJson, sub, true, 200, page);
 }
 
 interface NotifyMeta {
@@ -136,6 +147,7 @@ async function notifyOwner(
   projectId: string,
   data: Record<string, string>,
   formIndex: number | null,
+  page: string | null,
   meta: NotifyMeta,
 ): Promise<void> {
   const rows = await db
@@ -151,11 +163,14 @@ async function notifyOwner(
   const row = rows[0];
   if (!row) return;
   // The per-form notify override (Phase 2) wins over the account email;
-  // fall back to the account email when it's unset.
+  // fall back to the account email when it's unset. Site-page forms resolve
+  // their scoped key ("<slug>:<index>") first, then the legacy shared index.
   let to = row.email ?? "";
   if (formIndex !== null) {
+    const forms = row.projectData?.settings?.forms;
     const override =
-      row.projectData?.settings?.forms?.[String(formIndex)]?.notifyEmail;
+      (page ? forms?.[`${page}:${formIndex}`]?.notifyEmail : undefined) ??
+      forms?.[String(formIndex)]?.notifyEmail;
     if (override) to = override;
   }
   if (!to) {
@@ -182,6 +197,7 @@ function done(
   sub: string,
   ok: boolean,
   errStatus: number,
+  page: string | null,
 ): Response {
   if (wantsJson) {
     return new Response(JSON.stringify({ ok }), {
@@ -194,11 +210,13 @@ function done(
       },
     });
   }
-  // Native (no-JS) form POST — redirect the visitor back to the page.
+  // Native (no-JS) form POST — redirect the visitor back to the page the
+  // form actually lives on (home, or /<slug>/ for a site page).
+  const path = page ? `/${page}/` : "/";
   return new Response(null, {
     status: 303,
     headers: {
-      Location: `${publishedBase(sub)}/?openlen_form=${ok ? "ok" : "err"}`,
+      Location: `${publishedBase(sub)}${path}?openlen_form=${ok ? "ok" : "err"}`,
     },
   });
 }

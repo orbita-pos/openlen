@@ -69,7 +69,7 @@ import { TopBar } from "@/components/workspace-v2/top-bar";
 import { stripEditorInstrumentation } from "@/components/workspace-v2/strip-editor-instrumentation";
 import { useDarkMode } from "@/lib/use-dark-mode";
 import { useIsMobile } from "@/components/workspace-v2/use-is-mobile";
-import { listSitePages } from "@/lib/projects/site-pages";
+import { formConfigKey, listSitePages } from "@/lib/projects/site-pages";
 import type { SitePage } from "@/lib/projects/types";
 
 // Outer shell exists so `useSearchParams()` in the inner component has a
@@ -556,19 +556,37 @@ function NewV2Inner() {
   const reseedCurrentPage = useCallback(async () => {
     const id = loadedProject?.id;
     if (!id) return;
+    // Seed the document on the canvas — and write the response back into
+    // that same slot, even if the user switched pages while the seed ran.
+    const page = activeSitePageRef.current;
     try {
       const res = await fetch(`/api/projects/${id}/seed-profile`, {
         method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(page ? { page } : {}),
       });
       if (!res.ok) return;
       const data = (await res.json().catch(() => null)) as {
         html?: string;
+        page?: string | null;
       } | null;
       const html = data?.html;
+      const seededPage = data?.page ?? null;
       if (html) {
-        setLoadedProject((prev) =>
-          prev && prev.id === id ? { ...prev, html } : prev,
-        );
+        setLoadedProject((prev) => {
+          if (!prev || prev.id !== id) return prev;
+          if (seededPage) {
+            if (!prev.pages[seededPage]) return prev;
+            return {
+              ...prev,
+              pages: {
+                ...prev.pages,
+                [seededPage]: { ...prev.pages[seededPage], html },
+              },
+            };
+          }
+          return { ...prev, html };
+        });
       }
     } catch {
       /* ignore */
@@ -1453,10 +1471,14 @@ function NewV2Inner() {
     (formIndex: number, patch: Partial<FormConfig>) => {
       const projectId = loadedProject?.id;
       if (!projectId) return;
+      // Forms on a site page persist under their scoped key — home's form
+      // at the same index keeps its own config.
+      const page = activeSitePageRef.current;
+      const key = formConfigKey(page, formIndex);
       void fetch(`/api/projects/${projectId}/settings`, {
         method: "PATCH",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ formIndex, patch }),
+        body: JSON.stringify({ formIndex, patch, ...(page ? { page } : {}) }),
       })
         .then((r) => (r.ok ? r.json() : null))
         .then((res) => {
@@ -1465,8 +1487,8 @@ function NewV2Inner() {
           setLoadedProject((prev) => {
             if (!prev) return prev;
             const forms = { ...(prev.settings?.forms ?? {}) };
-            if (res.config) forms[String(formIndex)] = res.config;
-            else delete forms[String(formIndex)];
+            if (res.config) forms[key] = res.config;
+            else delete forms[key];
             return { ...prev, settings: { ...prev.settings, forms } };
           });
         })
@@ -1485,12 +1507,13 @@ function NewV2Inner() {
       const projectId = loadedProject?.id;
       if (!projectId) return { ok: false, message: t("formEmail.noProject") };
       try {
+        const page = activeSitePageRef.current;
         const res = await fetch(
           `/api/projects/${projectId}/forms/test-email`,
           {
             method: "POST",
             headers: { "content-type": "application/json" },
-            body: JSON.stringify({ formIndex }),
+            body: JSON.stringify({ formIndex, ...(page ? { page } : {}) }),
           },
         );
         const data = (await res.json().catch(() => ({}))) as {
@@ -2077,9 +2100,21 @@ function NewV2Inner() {
                     logoUrl={loadedProject?.logoUrl ?? null}
                     formConfig={
                       typeof inspectSelection?.formIndex === "number"
-                        ? loadedProject?.settings?.forms?.[
-                            String(inspectSelection.formIndex)
-                          ] ?? null
+                        ? // Scoped key first; a site-page form without its own
+                          // config shows the legacy shared one — exactly what
+                          // publish wiring resolves for it.
+                          loadedProject?.settings?.forms?.[
+                            formConfigKey(
+                              activeSitePage,
+                              inspectSelection.formIndex,
+                            )
+                          ] ??
+                          (activeSitePage
+                            ? loadedProject?.settings?.forms?.[
+                                String(inspectSelection.formIndex)
+                              ]
+                            : undefined) ??
+                          null
                         : null
                     }
                     onApplyElementProp={applyElementProp}

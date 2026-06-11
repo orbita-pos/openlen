@@ -12,12 +12,15 @@ const SUBMISSIONS_LIMIT = 200;
 export interface SubmissionItem {
   id: string;
   data: Record<string, string>;
+  /** Site page the form lives on (null = home / pre-multipage rows). */
+  page: string | null;
   createdAt: Date;
 }
 
 /** Store one form submission for a project. The `meta` blob captures
  *  triage signals: visitor IP / UA / referer, plus the derived country +
- *  device + browser the API also sent to the notification email. */
+ *  device + browser the API also sent to the notification email, and the
+ *  site page the form lives on. */
 export async function recordSubmission(params: {
   projectId: string;
   data: Record<string, string>;
@@ -28,6 +31,7 @@ export async function recordSubmission(params: {
     country?: string | null;
     device?: string | null;
     browser?: string | null;
+    page?: string | null;
   };
 }): Promise<void> {
   await db.insert(schema.formSubmissions).values({
@@ -41,16 +45,24 @@ export async function recordSubmission(params: {
 export async function listSubmissions(
   projectId: string,
 ): Promise<SubmissionItem[]> {
-  return db
+  const rows = await db
     .select({
       id: schema.formSubmissions.id,
       data: schema.formSubmissions.data,
+      meta: schema.formSubmissions.meta,
       createdAt: schema.formSubmissions.createdAt,
     })
     .from(schema.formSubmissions)
     .where(eq(schema.formSubmissions.projectId, projectId))
     .orderBy(desc(schema.formSubmissions.createdAt))
     .limit(SUBMISSIONS_LIMIT);
+  // Surface only the page from meta — ip/ua stay server-side.
+  return rows.map((r) => ({
+    id: r.id,
+    data: r.data,
+    page: r.meta?.page ?? null,
+    createdAt: r.createdAt,
+  }));
 }
 
 export interface UserSubmissionItem {
@@ -66,6 +78,7 @@ export interface UserSubmissionItem {
     country?: string | null;
     device?: string | null;
     browser?: string | null;
+    page?: string | null;
   } | null;
   createdAt: Date;
 }

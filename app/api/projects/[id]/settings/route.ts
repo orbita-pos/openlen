@@ -1,6 +1,7 @@
 import { and, eq } from "drizzle-orm";
 import { auth } from "@/auth";
 import { db, schema } from "@/lib/db";
+import { formConfigKey, validatePageSlug } from "@/lib/projects/site-pages";
 import type {
   FormConfig,
   MusicSettings,
@@ -28,6 +29,10 @@ const MAX_URL = 2000;
 interface PatchBody {
   /** Index of the <form> being configured (document order). */
   formIndex?: number;
+  /** Multi-page: site page the form lives on (absent = home). The config
+   *  persists under "<slug>:<index>" so home's form at the same index keeps
+   *  its own config. */
+  page?: string;
   /** Fields to merge into that form's config. */
   patch?: {
     notifyEmail?: string;
@@ -154,10 +159,22 @@ export async function PATCH(
     ...(data.settings?.forms ?? {}),
   };
 
+  let formKey: string | null = null;
   if (hasFormPatch) {
     const formIndex = body.formIndex as number;
     const patch = body.patch as NonNullable<PatchBody["patch"]>;
-    const key = String(formIndex);
+    // Multi-page: a form on a site page persists under its scoped key so
+    // home's form at the same index keeps its own config.
+    let page: string | null = null;
+    if (typeof body.page === "string" && body.page.length > 0) {
+      const check = validatePageSlug(body.page);
+      if (!check.ok) {
+        return json({ error: "invalid_body", message: "bad page slug" }, 400);
+      }
+      page = check.slug;
+    }
+    const key = formConfigKey(page, formIndex);
+    formKey = key;
     const next: FormConfig = { ...(forms[key] ?? {}) };
 
     if ("notifyEmail" in patch) {
@@ -221,9 +238,7 @@ export async function PATCH(
   // update its local mirror; absent on analytics-only updates. `settings`
   // is the full merged settings blob so callers can sync more than the
   // form they just touched.
-  const config = hasFormPatch
-    ? (forms[String(body.formIndex as number)] ?? null)
-    : null;
+  const config = formKey !== null ? (forms[formKey] ?? null) : null;
   return json({ ok: true, config, settings: nextSettings }, 200);
 }
 
