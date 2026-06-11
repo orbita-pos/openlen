@@ -1,6 +1,8 @@
 import { and, eq } from "drizzle-orm";
 import { auth } from "@/auth";
 import { db, schema } from "@/lib/db";
+import type { ProjectData } from "@/lib/projects/types";
+import { validatePageSlug } from "@/lib/projects/site-pages";
 import { getSection, getSectionHtml } from "@/lib/sections/store";
 import {
   getCreditState,
@@ -21,7 +23,7 @@ import {
 
 // ─────────────────────────────────────────────────────────────────────────────
 // POST /api/sections/prepare
-// Body: { projectId, slug }
+// Body: { projectId, slug, page? }   (page = site-page slug the canvas shows)
 //
 // "Use on my page" — the section library now MATCHES BEFORE inserting: a section
 // only ever lands in the page already recoloured to the host palette (raw insert
@@ -46,6 +48,9 @@ interface Body {
   projectId?: string;
   slug?: string;
   model?: string;
+  /** Multi-page: slug of the site page being edited — its html (not home's)
+   *  is the palette source. Absent/unknown = home. */
+  page?: string;
 }
 
 export async function POST(req: Request): Promise<Response> {
@@ -71,7 +76,10 @@ export async function POST(req: Request): Promise<Response> {
     return json({ error: "section_html_unavailable" }, 502);
   }
 
-  // Host palette from the user's CURRENT page.
+  // Host palette from the document the canvas is actually showing — home, or
+  // data.pages[slug] when the body names a site page. A stale/deleted slug
+  // just falls back to home: this only steers the palette, and subpages are
+  // born from home's shell so the palettes track anyway.
   const rows = await db
     .select({ data: schema.projects.data })
     .from(schema.projects)
@@ -79,7 +87,13 @@ export async function POST(req: Request): Promise<Response> {
     .limit(1);
   const existing = rows[0];
   if (!existing) return json({ error: "not_found" }, 404);
-  const pageHtml = (existing.data as { html?: string })?.html ?? "";
+  const data = existing.data as ProjectData | null;
+  let pageHtml = data?.html ?? "";
+  if (typeof body?.page === "string" && body.page.length > 0) {
+    const check = validatePageSlug(body.page);
+    const pg = check.ok ? data?.pages?.[check.slug] : undefined;
+    if (pg?.html) pageHtml = pg.html;
+  }
   const palette = extractHostPalette(pageHtml);
 
   // The fragment's own scoped stylesheet (the [data-sec="slug"] rules).

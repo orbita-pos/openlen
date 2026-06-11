@@ -382,21 +382,30 @@ function NewV2Inner() {
   const handleUseSection = async (spec: SectionSpec) => {
     if (!loadedProject || usingSection) return;
     const proj = loadedProject;
+    // Snapshot the page scope: the palette is extracted from THIS document,
+    // and the themed fragment must not land on a page switched to mid-flight.
+    const page = activeSitePageRef.current;
     setUsingSection(true);
     setUseError(null);
     try {
       const res = await fetch("/api/sections/prepare", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ projectId: proj.id, slug: spec.id }),
+        body: JSON.stringify({
+          projectId: proj.id,
+          slug: spec.id,
+          ...(page ? { page } : {}),
+        }),
       });
       const data = (await res.json().catch(() => null)) as
         | { html?: string; error?: string }
         | null;
-      // Navigated to another project while prepare was in flight? The fragment is
-      // themed for `proj`, so dropping it into the now-current project would inject
-      // the wrong palette. Abort silently (the credit for the call still applies).
+      // Navigated to another project / another page while prepare was in
+      // flight? The fragment is themed for that document, so dropping it into
+      // the now-current one would inject the wrong palette. Abort silently
+      // (the credit for the call still applies).
       if (loadedIdRef.current !== proj.id) return;
+      if (activeSitePageRef.current !== page) return;
       if (!res.ok || !data?.html) {
         setUseError(
           data?.error === "no_credits"
