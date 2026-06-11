@@ -189,14 +189,14 @@ export function AssistantPanel({
           spellCheck
           className="flex-1 min-h-[120px] w-full px-2.5 py-2 text-[12px] leading-relaxed rounded-md ring-1 ring-[color:var(--border)] bg-[color:var(--bg)] fg placeholder:fg-faint focus:outline-none focus:ring-[color:var(--border-strong)] resize-none disabled:opacity-50 nice-scroll"
         />
-        <div className="mt-1 flex items-center justify-between">
-          <label className="text-[10px] uppercase tracking-[0.14em] fg-faint font-semibold">
-            Tono
-          </label>
+        <div className="mt-1 text-right">
           <span className="text-[10px] fg-faint font-mono tabular-nums">
             {facts.length}/{FACTS_MAX}
           </span>
         </div>
+        <label className="mt-2 block text-[10px] uppercase tracking-[0.14em] fg-faint font-semibold mb-1.5">
+          Tono
+        </label>
         <input
           type="text"
           value={tone}
