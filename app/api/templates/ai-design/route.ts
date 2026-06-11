@@ -852,6 +852,27 @@ VISUAL CONTEXT: the attached image is a full-page render of the CURRENT page (wh
           return;
         }
 
+        // Snapshot the pre-edit document FIRST (the server-side stored state
+        // — already sanitized), so an AI edit is always undoable even when
+        // this document had no versions yet (typical for site pages and for
+        // inline edits inside the idle-checkpoint window). createVersion
+        // dedups within the scope, so this no-ops when already captured.
+        const preEditHtml = pageSlug
+          ? existing.data?.pages?.[pageSlug]?.html ?? ""
+          : existing.data?.html ?? "";
+        if (preEditHtml && preEditHtml !== trimmedHtml) {
+          await createVersion({
+            projectId,
+            html: preEditHtml,
+            label: "Before AI edit",
+            source: "manual",
+            page: pageSlug,
+          }).catch((err: unknown) => {
+            // eslint-disable-next-line no-console
+            console.error("[ai-design] pre-edit snapshot failed", err);
+          });
+        }
+
         // Snapshot the post-chat state into the version timeline so the
         // user can restore later. Failures here don't break the stream —
         // we still apply the HTML and emit done. The label tags the mode
@@ -860,16 +881,12 @@ VISUAL CONTEXT: the attached image is a full-page render of the CURRENT page (wh
           outputMode === "ops"
             ? `Ops (${appliedOpCount}): ${prompt.slice(0, 70)}${prompt.length > 70 ? "…" : ""}`
             : `Rewrite: ${prompt.slice(0, 76)}${prompt.length > 76 ? "…" : ""}`;
-        if (pageSlug) {
-          // Versions are home-scoped in v1 — a subpage snapshot restored onto
-          // home would corrupt it. Skip until projectVersions carries a page
-          // column.
-        } else
         await createVersion({
           projectId,
           html: trimmedHtml,
           label: versionLabel,
           source: "chat",
+          page: pageSlug,
         }).catch((err: unknown) => {
           // eslint-disable-next-line no-console
           console.error("[ai-design] version snapshot failed", err);
