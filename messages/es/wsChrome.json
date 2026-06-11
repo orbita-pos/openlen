@@ -180,6 +180,6 @@
     "errReserved": "Ese nombre está reservado.",
     "errExists": "Esa página ya existe.",
     "errLimit": "Límite de páginas alcanzado.",
-    "hint": "Las páginas nuevas nacen como copia del Inicio, con tu look. Enlázalas con links /slug."
+    "hint": "Las páginas nuevas nacen con tu look — nav y footer incluidos — y un lienzo en blanco. Enlázalas con links /slug."
   }
 }

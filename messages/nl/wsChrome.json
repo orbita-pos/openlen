@@ -180,6 +180,6 @@
     "errReserved": "Die naam is gereserveerd.",
     "errExists": "Die pagina bestaat al.",
     "errLimit": "Paginalimiet bereikt.",
-    "hint": "Nieuwe pagina’s ontstaan als kopie van Home, in jouw look. Verwijs ernaar met /slug-links."
+    "hint": "Nieuwe pagina’s ontstaan in jouw look — nav en footer inbegrepen — met een leeg canvas. Verwijs ernaar met /slug-links."
   }
 }

@@ -77,3 +77,60 @@ export function pagesForPublish(
     .filter((slug) => typeof pages[slug]?.html === "string" && pages[slug].html.length > 0)
     .map((slug) => ({ slug, html: pages[slug].html }));
 }
+
+function escapeHtml(s: string): string {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+/** A new page's starting document: the home page's SHELL — the full <head>
+ *  (styles, tokens, fonts, temática attrs on <html>) plus its nav/header and
+ *  footer — with the body content replaced by a titled empty hero. Born
+ *  wearing the look without dragging the whole Home along. Returns null when
+ *  the home document doesn't parse; callers fall back to the full copy. */
+export function buildPageShell(homeHtml: string, title: string): string | null {
+  const bodyOpen = /<body[^>]*>/i.exec(homeHtml);
+  const bodyCloseIdx = homeHtml.lastIndexOf("</body>");
+  if (!bodyOpen || bodyCloseIdx < 0) return null;
+  const openEnd = bodyOpen.index + bodyOpen[0].length;
+  if (bodyCloseIdx < openEnd) return null;
+
+  let prefix = homeHtml.slice(0, openEnd);
+  const bodyInner = homeHtml.slice(openEnd, bodyCloseIdx);
+  const suffix = homeHtml.slice(bodyCloseIdx);
+
+  const safeTitle = escapeHtml(title);
+  prefix = prefix.replace(
+    /<title>[\s\S]*?<\/title>/i,
+    `<title>${safeTitle}</title>`,
+  );
+
+  // Keep the chrome the visitor expects on every page: the first
+  // header/nav and the last footer. Everything in between becomes a
+  // titled blank canvas.
+  const header =
+    /<header[\s\S]*?<\/header>/i.exec(bodyInner)?.[0] ??
+    /<nav[\s\S]*?<\/nav>/i.exec(bodyInner)?.[0] ??
+    "";
+  let footer = "";
+  for (const m of bodyInner.matchAll(/<footer[\s\S]*?<\/footer>/gi)) {
+    footer = m[0];
+  }
+
+  const isSpanish = /<html[^>]*\blang=["']?es/i.test(homeHtml);
+  const placeholder = isSpanish
+    ? "Esta página está lista para tu contenido — edítala como cualquier otra."
+    : "This page is ready for your content — edit it like any other.";
+
+  const hero = `
+<section style="min-height:55vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;text-align:center;padding:96px 24px;">
+  <h1 style="margin:0;font-size:clamp(38px,6vw,60px);letter-spacing:-0.02em;line-height:1.05;">${safeTitle}</h1>
+  <p style="margin:0;max-width:520px;opacity:0.72;font-size:17px;line-height:1.6;">${placeholder}</p>
+</section>
+`;
+
+  return `${prefix}\n${header}${hero}${footer}\n${suffix}`;
+}
