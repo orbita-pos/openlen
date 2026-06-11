@@ -20,6 +20,7 @@ import { bakeResponsiveImages } from "@/lib/publish/image-bake";
 import { bakeGoogleFonts } from "@/lib/publish/font-bake";
 import { bakeMotion } from "@/lib/publish/motion";
 import { bakeMusic } from "@/lib/publish/music";
+import { bakeAssistantWidget } from "@/lib/publish/assistant-widget";
 import {
   annotateLanguageCluster,
   buildRobots,
@@ -156,6 +157,11 @@ export interface PublishParams {
    *  are assumed pre-validated (lib/projects/site-pages). Locale variants
    *  stay home-only; subpages get their own canonical. */
   pages?: Array<{ slug: string; html: string }>;
+  /** Site assistant (settings.assistant). When enabled, the visitor-facing
+   *  chat widget IIFE is injected before </body> on the root doc AND every
+   *  page/locale variant. The owner's business brain never ships — the widget
+   *  calls back to /api/assistant/<sub> which reads it server-side. */
+  assistant?: AssistantBake;
 }
 
 const ASSET_URL_RE_FOR =
@@ -408,6 +414,15 @@ interface BakeDocumentCtx {
   motion?: string;
   /** Already asset-migrated by the caller — bake only. */
   music?: MusicSettings;
+  /** Site assistant widget config. Absent/disabled = no widget injected. */
+  assistant?: AssistantBake;
+}
+
+interface AssistantBake {
+  enabled: boolean;
+  businessName: string;
+  accent?: string;
+  greeting?: string;
 }
 
 /** The per-document publish bake — every transform between sanitize and the
@@ -527,7 +542,28 @@ async function bakeDocument(html: string, ctx: BakeDocumentCtx): Promise<string>
     }
   }
 
+  // Site assistant — visitor-facing AI chat widget. Last, so the IIFE sits
+  // just before </body> after every other rewrite.
+  if (process.env.OPENLEN_ASSISTANT !== "0" && ctx.assistant?.enabled) {
+    try {
+      migratedHtml = bakeAssistantWidget(migratedHtml, {
+        sub: ctx.sub,
+        apiBase: assistantApiBase(),
+        businessName: ctx.assistant.businessName,
+        accent: ctx.assistant.accent,
+        greeting: ctx.assistant.greeting,
+      });
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.warn("[publishToDir] assistant widget inject failed; publishing without it", err);
+    }
+  }
+
   return migratedHtml;
+}
+
+function assistantApiBase(): string {
+  return process.env.NEXT_PUBLIC_SITE_URL?.trim() || "https://openlen.com";
 }
 
 export interface PublishResult {
@@ -617,6 +653,7 @@ export async function publishToDir(
     logoUrl: params.logoUrl,
     motion: params.motion,
     music: effectiveMusic,
+    assistant: params.assistant,
   };
   let migratedHtml = await bakeDocument(publishHtml, bakeCtx);
 
