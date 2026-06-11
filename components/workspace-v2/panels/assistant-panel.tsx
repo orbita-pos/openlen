@@ -17,6 +17,8 @@ interface AssistantConfig {
   enabled: boolean;
   facts: string;
   tone: string;
+  used?: number;
+  cap?: number;
 }
 
 const FACTS_MAX = 4000;
@@ -33,6 +35,7 @@ export function AssistantPanel({
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [usage, setUsage] = useState<{ used: number; cap: number } | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -48,6 +51,9 @@ export function AssistantPanel({
         setEnabled(d.enabled);
         setFacts(d.facts);
         setTone(d.tone);
+        if (typeof d.used === "number" && typeof d.cap === "number") {
+          setUsage({ used: d.used, cap: d.cap });
+        }
       })
       .catch(() => {})
       .finally(() => {
@@ -144,6 +150,24 @@ export function AssistantPanel({
             />
           </span>
         </button>
+        {usage && (
+          <div className="mt-2">
+            <div className="flex items-center justify-between text-[10px] fg-faint mb-1">
+              <span>Mensajes este mes</span>
+              <span className="font-mono tabular-nums">
+                {usage.used}/{usage.cap}
+              </span>
+            </div>
+            <div className="h-1 w-full rounded-full bg-black/10 dark:bg-white/10 overflow-hidden">
+              <div
+                className="h-full rounded-full bg-[var(--accent-strong)] transition-all"
+                style={{
+                  width: `${Math.min(100, usage.cap ? (usage.used / usage.cap) * 100 : 0)}%`,
+                }}
+              />
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Business brain */}
