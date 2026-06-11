@@ -85,6 +85,9 @@ export interface StatePayload {
   projectId: string;
   provider: Provider;
   locale: string;
+  /** Site page the workspace was showing (?page=) — restored on return so
+   *  the round-trip lands the user back on the same document. */
+  page?: string;
   nonce: string;
 }
 

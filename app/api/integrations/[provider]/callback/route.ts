@@ -40,10 +40,16 @@ export async function GET(
       ? verified.locale
       : routing.defaultLocale;
   const projectId = verified?.projectId ?? "";
+  // Land back on the site page the user left from (signed through the state;
+  // the workspace strips it if the page no longer exists).
+  const page = verified?.page ?? "";
 
   const backTo = (qp: Record<string, string>): Response => {
     const u = new URL(`/${locale}/new`, publicOrigin());
-    if (projectId) u.searchParams.set("project", projectId);
+    if (projectId) {
+      u.searchParams.set("project", projectId);
+      if (page) u.searchParams.set("page", page);
+    }
     for (const [k, v] of Object.entries(qp)) u.searchParams.set(k, v);
     const res = NextResponse.redirect(u);
     res.cookies.set(STATE_COOKIE, "", { path: "/", maxAge: 0 });
