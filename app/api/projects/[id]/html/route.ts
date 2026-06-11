@@ -1,4 +1,4 @@
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, isNull } from "drizzle-orm";
 import { auth } from "@/auth";
 import { db, schema } from "@/lib/db";
 import type { ProjectData } from "@/lib/projects/types";
@@ -7,12 +7,16 @@ import { createVersion } from "@/lib/projects/versions";
 import { sanitizeForPublish } from "@/lib/html-engine";
 
 // ─────────────────────────────────────────────────────────────────────────────
-// PATCH /api/projects/[id]/html — overwrite `data.html` for a project.
+// PATCH /api/projects/[id]/html — overwrite one of the project's documents:
+// `data.html` (home) or, with `page`, `data.pages[slug].html`.
 //
 // Used by the Design panel on flat (template-clone / paste) projects to
 // persist token swaps (accent color, fonts) without going through the
-// orchestrator. The handler only swaps `html` inside the JSONB envelope;
+// orchestrator. The handler only swaps the html inside the JSONB envelope;
 // everything else in `data` (meta, plan, cost, …) is preserved verbatim.
+//
+// Version snapshots + the concurrent-edit guard apply to BOTH scopes — each
+// document keeps its own timeline (projectVersions.page).
 //
 // `hasUnpublishedChanges` is computed at read time in lib/projects.ts by
 // comparing `data.html` to `publishedHtml`, so no work to do here beyond
@@ -23,7 +27,7 @@ export const runtime = "nodejs";
 
 const MAX_HTML_BYTES = 8 * 1024 * 1024;
 // Idle-based checkpoint cadence for inline content edits — if it's been
-// at least this long since the project's most-recent version of any kind,
+// at least this long since the document's most-recent version of any kind,
 // the next PATCH writes a "manual" snapshot so the user has natural undo
 // points across long editing sessions. Short bursts of edits share a
 // single snapshot; sustained editing produces one checkpoint per window.
@@ -38,15 +42,13 @@ interface PatchBody {
   source?: "inline-edit" | "reorder" | "replace" | "props" | "section-insert";
   /** ms-epoch of the project's updatedAt this tab last wrote. When it no
    *  longer matches, another writer (typically a second browser tab) changed
-   *  data.html since — the current HTML is about to be clobbered, so we
+   *  the project since — the current document is about to be clobbered, so we
    *  snapshot it into the version history first. Inline-edit autosaves are
    *  only idle-checkpointed every few minutes, so without this a two-tab
    *  edit race could drop text that lives in no version. */
   baseUpdatedAt?: number;
   /** Multi-page: slug of the site page being saved. Absent = the home
-   *  document (data.html). Subpage saves skip the version timeline + the
-   *  conflict snapshot in v1 — versions are home-scoped until the
-   *  projectVersions table grows a page column. */
+   *  document (data.html). */
   page?: string;
 }
 
@@ -106,52 +108,30 @@ export async function PATCH(
 
   // Multi-page: a `page` slug routes the save into data.pages[slug].html.
   // The page must already exist (creation goes through POST /pages) so a
-  // mistyped slug can't silently grow the map. Subpage saves are
-  // last-write-wins in v1 — no version snapshots, no conflict guard.
+  // mistyped slug can't silently grow the map.
+  let page: string | null = null;
   if (typeof body.page === "string" && body.page.length > 0) {
     const check = validatePageSlug(body.page);
     const slug = check.ok ? check.slug : null;
-    const page = slug ? existing.data?.pages?.[slug] : undefined;
-    if (!slug || !page || !existing.data) {
-      return json({ error: "page_not_found" }, 404);
-    }
-    const now = new Date();
-    const nextData: ProjectData = {
-      ...existing.data,
-      pages: {
-        ...existing.data.pages,
-        [slug]: { ...page, html },
-      },
-    };
-    try {
-      await db
-        .update(schema.projects)
-        .set({ data: nextData, updatedAt: now })
-        .where(
-          and(
-            eq(schema.projects.id, id),
-            eq(schema.projects.userId, session.user.id),
-          ),
-        );
-    } catch (err) {
-      // eslint-disable-next-line no-console
-      console.error("[projects/html] page db update failed", err);
-      return json({ error: "db_update_failed" }, 500);
-    }
-    return json({ ok: true, updatedAt: now.toISOString() }, 200);
+    const pageRow =
+      slug && existing.data ? existing.data.pages?.[slug] : undefined;
+    if (!slug || !pageRow) return json({ error: "page_not_found" }, 404);
+    page = slug;
   }
 
-  // Concurrency guard. If another writer changed data.html since the client
-  // loaded its base, the current HTML is about to be clobbered — snapshot it
-  // into the version history first so the about-to-be-lost state stays
-  // recoverable. createVersion dedups against the latest version, so the
-  // common no-conflict first save (base 0) costs nothing. Soft — never
-  // blocks the save.
+  // Concurrency guard. If another writer changed the project since the client
+  // loaded its base, the current document is about to be clobbered — snapshot
+  // it into the version history first so the about-to-be-lost state stays
+  // recoverable. createVersion dedups against the latest version in the same
+  // scope, so the common no-conflict first save (base 0) costs nothing.
+  // Soft — never blocks the save.
   if (
     typeof body.baseUpdatedAt === "number" &&
     existing.updatedAt.getTime() !== body.baseUpdatedAt
   ) {
-    const staleHtml = existing.data?.html ?? "";
+    const staleHtml = page
+      ? existing.data?.pages?.[page]?.html ?? ""
+      : existing.data?.html ?? "";
     if (staleHtml && staleHtml !== html) {
       try {
         await createVersion({
@@ -159,6 +139,7 @@ export async function PATCH(
           html: staleHtml,
           label: "Saved before a concurrent edit",
           source: "manual",
+          page,
         });
       } catch (err) {
         // eslint-disable-next-line no-console
@@ -168,8 +149,17 @@ export async function PATCH(
   }
 
   // Preserve everything else in `data` (notably data.settings — the Phase 2
-  // form config) — only `html` is being replaced here.
-  const nextData: ProjectData = { ...existing.data, html };
+  // form config — and sibling pages) — only this document's html changes.
+  const baseData: ProjectData = existing.data ?? { html: "" };
+  const nextData: ProjectData = page
+    ? {
+        ...baseData,
+        pages: {
+          ...baseData.pages,
+          [page]: { ...baseData.pages?.[page], html },
+        },
+      }
+    : { ...baseData, html };
   const now = new Date();
 
   try {
@@ -197,6 +187,7 @@ export async function PATCH(
         html,
         label: "Reordered sections",
         source: "reorder",
+        page,
       });
     } else if (body.source === "replace") {
       // Asset replacements (icon / image swap) are intentional, distinct
@@ -206,6 +197,7 @@ export async function PATCH(
         html,
         label: "Replaced asset",
         source: "replace",
+        page,
       });
     } else if (body.source === "props") {
       // Inspector edits (link target, alt text, SEO) are discrete,
@@ -215,6 +207,7 @@ export async function PATCH(
         html,
         label: "Edited properties",
         source: "manual",
+        page,
       });
     } else if (body.source === "section-insert") {
       // Inserting a library section is a discrete structural action —
@@ -224,13 +217,22 @@ export async function PATCH(
         html,
         label: "Inserted section",
         source: "manual",
+        page,
       });
     } else {
-      // Inline-edit autosave: idle-checkpoint as before.
+      // Inline-edit autosave: idle-checkpoint as before, per document —
+      // home churn must not suppress a subpage's checkpoint (or vice versa).
       const latest = await db
         .select({ createdAt: schema.projectVersions.createdAt })
         .from(schema.projectVersions)
-        .where(eq(schema.projectVersions.projectId, id))
+        .where(
+          and(
+            eq(schema.projectVersions.projectId, id),
+            page === null
+              ? isNull(schema.projectVersions.page)
+              : eq(schema.projectVersions.page, page),
+          ),
+        )
         .orderBy(desc(schema.projectVersions.createdAt))
         .limit(1);
       const lastAt = latest[0]?.createdAt;
@@ -241,6 +243,7 @@ export async function PATCH(
           html,
           label: "Edited content",
           source: "manual",
+          page,
         });
       }
     }

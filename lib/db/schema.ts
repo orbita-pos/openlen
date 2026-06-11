@@ -216,10 +216,11 @@ export const businessProfiles = pgTable(
 // HTML lifecycle — clone, chat-applied redesign, publish, paste. The Versions
 // sidebar lists these (newest first) so users can restore to any point.
 //
-// Capped at 50 rows per project — the helper module evicts the oldest beyond
-// that. Full HTML stored per row (50-100KB typical); 50 rows × 100KB = ~5MB
-// per project worst-case, which Neon handles fine. If this becomes a cost
-// problem, switch to diff-based storage later (no API change required).
+// Capped at 50 unpinned rows per (project, page) scope — the helper module
+// evicts the oldest beyond that; pinned rows are exempt (≤10 per project,
+// enforced at pin time). Full HTML stored per row (50-100KB typical), which
+// Neon handles fine. If this becomes a cost problem, switch to diff-based
+// storage later (no API change required).
 export const projectVersions = pgTable(
   "projectVersions",
   {
@@ -238,6 +239,12 @@ export const projectVersions = pgTable(
     label: text("label").notNull(),
     // Full HTML at this snapshot. text() not jsonb — html is opaque to us.
     html: text("html").notNull(),
+    // Multi-page: which document this snapshots. NULL = the home document
+    // (data.html); a slug = data.pages[slug].html. Restore writes back into
+    // the same slot, so a /pricing snapshot can never overwrite home.
+    page: text("page"),
+    // Pinned versions survive eviction (and show a pin in the timeline).
+    pinned: boolean("pinned").notNull().default(false),
     createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
   },
   (table) => [

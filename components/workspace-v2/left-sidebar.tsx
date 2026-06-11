@@ -174,7 +174,10 @@ interface LeftSidebarProps {
   /** Multi-page: slug of the site page the canvas is editing (null = home).
    *  Forwarded to ChatPanel so chat edits land in the right document. */
   flatProjectPage?: string | null;
-  onFlatHtmlUpdate?: (html: string) => void;
+  /** Write a document's html into the parent's project state. `page` pins
+   *  the slot (null = home); undefined = whatever page is active (legacy
+   *  single-arg callers). */
+  onFlatHtmlUpdate?: (html: string, page?: string | null) => void;
   /** Persisted Chat-tab transcript — seeds the chat so a reload / tab
    *  switch restores the conversation instead of an empty composer. */
   flatProjectChat?: StoredChatTurn[];
@@ -195,9 +198,17 @@ interface LeftSidebarProps {
    *  to highlight the active card and no-op its click, and by VersionsPanel
    *  to fetch the project's snapshot timeline. */
   currentProjectId?: string | null;
-  /** Called after a version restore succeeds, with the restored HTML so
-   *  the parent can refresh `loadedProject.html` and the preview iframe. */
-  onRestoreApplied?: (html: string) => void;
+  /** Called after a version restore succeeds, with the restored HTML, the
+   *  page scope it landed on (null = home) and the server's new updatedAt
+   *  (ms) so the parent can refresh the right document + the preview iframe. */
+  onRestoreApplied?: (
+    html: string,
+    page: string | null,
+    updatedAtMs?: number,
+  ) => void;
+  /** Flush any pending canvas autosave (resolving once it settled) before
+   *  VersionsPanel asks the server to snapshot the current document. */
+  onPrepareSnapshot?: () => Promise<void>;
   /** Section-select state owned by the parent and threaded into ChatPanel
    *  so the iframe (in PreviewArea) and the chat composer stay in sync. */
   sectionSelectMode?: boolean;
@@ -273,6 +284,7 @@ export function LeftSidebar({
   savingStatus = null,
   currentProjectId = null,
   onRestoreApplied,
+  onPrepareSnapshot,
   sectionSelectMode = false,
   onToggleSectionSelect,
   scopedSelection = null,
@@ -537,7 +549,10 @@ export function LeftSidebar({
             {mode === "versions" && (
               <VersionsPanel
                 currentProjectId={currentProjectId}
+                activeSitePage={activeSitePage}
+                sitePages={sitePages}
                 onRestoreApplied={onRestoreApplied}
+                onPrepareSnapshot={onPrepareSnapshot}
               />
             )}
           </>

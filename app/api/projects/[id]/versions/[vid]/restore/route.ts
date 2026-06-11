@@ -3,12 +3,13 @@ import { restoreVersion } from "@/lib/projects/versions";
 
 export const runtime = "nodejs";
 
-// POST /api/projects/<id>/versions/<vid>/restore — overwrites the project's
-// current data.html with the version's snapshot. Snapshots the pre-restore
-// state as a new version first, so the restore is itself undoable.
+// POST /api/projects/<id>/versions/<vid>/restore — overwrites the version's
+// own document (home's data.html, or data.pages[slug].html for a site-page
+// snapshot) with the snapshot. Snapshots the pre-restore state as a new
+// version first, so the restore is itself undoable.
 //
-// Returns the restored HTML so the client can refresh the iframe without
-// having to round-trip through GET /api/projects/<id>.
+// Returns the restored HTML + the page scope it landed on so the client can
+// refresh the right document without a round-trip through GET /api/projects.
 export async function POST(
   _req: Request,
   ctx: { params: Promise<{ id: string; vid: string }> },

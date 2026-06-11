@@ -838,17 +838,32 @@ export async function publishProject(
   }
 
   // 7. Snapshot the published HTML into the version history so the user
-  // has a permanent "this is what's live right now" marker. Soft-fail —
-  // the publish itself is already done.
+  // has a permanent "this is what's live right now" marker — one snapshot
+  // per document (home + each site page, in its own scope). createVersion
+  // dedups within the scope, so pages unchanged since their last snapshot
+  // cost nothing. Soft-fail — the publish itself is already done.
+  const publishLabel = `Published to ${v.value}.${publishBaseHost()}`;
   await createVersion({
     projectId: params.projectId,
     html,
-    label: `Published to ${v.value}.${publishBaseHost()}`,
+    label: publishLabel,
     source: "publish",
   }).catch((err) => {
     // eslint-disable-next-line no-console
     console.error("[publish] version snapshot failed", err);
   });
+  for (const pg of pagesForPublish(project.data)) {
+    await createVersion({
+      projectId: params.projectId,
+      html: pg.html,
+      label: publishLabel,
+      source: "publish",
+      page: pg.slug,
+    }).catch((err) => {
+      // eslint-disable-next-line no-console
+      console.error("[publish] page version snapshot failed", pg.slug, err);
+    });
+  }
 
   // 8. Purge the Cloudflare edge cache so the next visitor sees the
   // new HTML instead of the previous deploy. Soft-fails when CF env

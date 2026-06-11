@@ -1011,9 +1011,9 @@ function NewV2Inner() {
     page: string | null;
   } | null>(null);
   const persistDoc = useCallback(
-    (p: { projectId: string; html: string; source: string; page: string | null }) => {
+    (p: { projectId: string; html: string; source: string; page: string | null }): Promise<void> => {
       setSavingStatus("saving");
-      void fetch(`/api/projects/${p.projectId}/html`, {
+      return fetch(`/api/projects/${p.projectId}/html`, {
         method: "PATCH",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
@@ -1053,14 +1053,16 @@ function NewV2Inner() {
     },
     [],
   );
-  const flushPendingSave = useCallback(() => {
+  // Returns a promise that settles when the flushed save did — "save version
+  // now" awaits it so the server-side snapshot reads the latest keystrokes.
+  const flushPendingSave = useCallback((): Promise<void> => {
     if (saveTimerRef.current !== null) {
       window.clearTimeout(saveTimerRef.current);
       saveTimerRef.current = null;
     }
     const p = pendingSaveRef.current;
     pendingSaveRef.current = null;
-    if (p) persistDoc(p);
+    return p ? persistDoc(p) : Promise.resolve();
   }, [persistDoc]);
   useEffect(() => {
     if (!loadedProject) return;
@@ -1141,7 +1143,7 @@ function NewV2Inner() {
   // clears the positional inspector selection (paths are per-document).
   const switchSitePage = useCallback(
     (slug: string | null) => {
-      flushPendingSave();
+      void flushPendingSave();
       setInspectSelection(null);
       const params = new URLSearchParams(searchParams.toString());
       if (slug) params.set("page", slug);
@@ -1157,7 +1159,7 @@ function NewV2Inner() {
     async (slug: string): Promise<string | null> => {
       const id = loadedProject?.id;
       if (!id) return "errInvalid";
-      flushPendingSave();
+      void flushPendingSave();
       const res = await fetch(`/api/projects/${id}/pages`, {
         method: "POST",
         headers: { "content-type": "application/json" },
@@ -1182,7 +1184,7 @@ function NewV2Inner() {
     async (slug: string): Promise<boolean> => {
       const id = loadedProject?.id;
       if (!id) return false;
-      flushPendingSave();
+      void flushPendingSave();
       const res = await fetch(`/api/projects/${id}/pages/${slug}`, {
         method: "DELETE",
       }).catch(() => null);
@@ -1758,11 +1760,20 @@ function NewV2Inner() {
           flatProjectHtml={loadedProject ? activeDoc : undefined}
           flatProjectPage={activeSitePage}
           flatProjectId={loadedProject?.id}
-          onFlatHtmlUpdate={(newHtml) => {
-            const page = activeSitePageRef.current;
+          onFlatHtmlUpdate={(newHtml, pageOverride) => {
+            // Chat pins its turn's page so mid-stream page switches (or a
+            // cross-page Undo) can't write the wrong slot; single-arg
+            // callers keep targeting whatever page is active.
+            const page =
+              pageOverride === undefined
+                ? activeSitePageRef.current
+                : pageOverride;
             setLoadedProject((prev) => {
               if (!prev) return prev;
-              if (page && prev.pages[page]) {
+              if (page) {
+                // Page deleted since the write was pinned — drop rather
+                // than let a subpage document fall through onto home.
+                if (!prev.pages[page]) return prev;
                 return {
                   ...prev,
                   pages: {
@@ -1786,14 +1797,44 @@ function NewV2Inner() {
           projectLoading={!!projectParam && !loadedProject}
           savingStatus={savingStatus}
           currentProjectId={loadedProject?.id ?? null}
-          onRestoreApplied={(newHtml) => {
-            // Versions are home-scoped (v1) — the restored document IS the
-            // home page, so land the canvas there before applying it.
+          onRestoreApplied={(newHtml, page, updatedAtMs) => {
+            // Advance the concurrency base to the restore's write so this
+            // tab's next autosave isn't read as a clobber.
+            if (typeof updatedAtMs === "number" && Number.isFinite(updatedAtMs)) {
+              projectUpdatedAtRef.current = updatedAtMs;
+            }
+            if (page) {
+              if (!loadedProject) return;
+              if (loadedProject.pages[page]) {
+                setLoadedProject((prev) =>
+                  prev && prev.pages[page]
+                    ? {
+                        ...prev,
+                        pages: {
+                          ...prev.pages,
+                          [page]: { ...prev.pages[page], html: newHtml },
+                        },
+                      }
+                    : prev,
+                );
+                // Land the canvas on the restored page so the effect is visible.
+                if (activeSitePageRef.current !== page) switchSitePage(page);
+              } else {
+                // The restore recreated a since-deleted page — refetch the
+                // authoritative pages map, then land the canvas on it.
+                void refetchProject(loadedProject.id).then(() =>
+                  switchSitePage(page),
+                );
+              }
+              return;
+            }
+            // Home snapshot — land the canvas there before applying it.
             if (activeSitePageRef.current) switchSitePage(null);
             setLoadedProject((prev) =>
               prev ? { ...prev, html: newHtml } : prev,
             );
           }}
+          onPrepareSnapshot={flushPendingSave}
           sectionSelectMode={sectionSelectMode}
           onToggleSectionSelect={(active) => setSectionSelectMode(active)}
           scopedSelection={scopedSelection}
