@@ -36,6 +36,10 @@
       "brief": {
         "label": "Briefing",
         "title": "Projekt-Briefing (KI-Kontext)"
+      },
+      "assistant": {
+        "label": "Assistent",
+        "title": "Chat-Assistent für Besucher"
       }
     },
     "tabLocked": "{label} — gesperrt",

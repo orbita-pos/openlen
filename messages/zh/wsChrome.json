@@ -36,6 +36,10 @@
       "brief": {
         "label": "需求说明",
         "title": "项目需求说明（AI 上下文）"
+      },
+      "assistant": {
+        "label": "助手",
+        "title": "访客聊天助手"
       }
     },
     "tabLocked": "{label} — 已锁定",

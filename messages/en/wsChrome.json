@@ -36,6 +36,10 @@
       "brief": {
         "label": "Brief",
         "title": "Project brief (AI context)"
+      },
+      "assistant": {
+        "label": "Assistant",
+        "title": "Chat assistant for visitors"
       }
     },
     "tabLocked": "{label} — locked",

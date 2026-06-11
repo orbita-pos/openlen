@@ -36,6 +36,10 @@
       "brief": {
         "label": "ブリーフ",
         "title": "プロジェクトブリーフ（AI コンテキスト）"
+      },
+      "assistant": {
+        "label": "アシスタント",
+        "title": "訪問者向けチャットアシスタント"
       }
     },
     "tabLocked": "{label} — ロック中",
