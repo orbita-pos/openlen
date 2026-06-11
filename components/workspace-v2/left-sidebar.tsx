@@ -23,10 +23,10 @@ import {
   Inbox,
   Layers,
   ListTree,
-  MessageSq,
   Monitor,
   PanelLeft,
   PanelRight,
+  Sparkles,
   X,
 } from "./icons";
 import type { Section } from "./mock-data";
@@ -132,7 +132,7 @@ const MODE_TABS: ModeTab[] = [
   { id: "templates", icon: Grid3 },
   { id: "library", icon: Layers },
   { id: "pages", icon: FileText },
-  { id: "assistant", icon: MessageSq },
+  { id: "assistant", icon: Sparkles },
   { id: "versions", icon: HistoryIcon },
 ];
 
