@@ -40,7 +40,6 @@ import {
   ChatPanel,
   type ScopedSelection,
 } from "./panels/chat-panel";
-import { PagesPanel } from "./panels/pages-panel";
 import { PastePanel } from "./panels/paste-panel";
 import { SitePagesPanel } from "./panels/site-pages-panel";
 import type { SitePageSummary } from "@/lib/projects/site-pages";
@@ -131,7 +130,6 @@ const MODE_TABS: ModeTab[] = [
   { id: "chat", icon: ChatIcon },
   { id: "templates", icon: Grid3 },
   { id: "library", icon: Layers },
-  { id: "pages", icon: FileText },
   { id: "assistant", icon: Sparkles },
   { id: "versions", icon: HistoryIcon },
 ];
@@ -532,9 +530,6 @@ export function LeftSidebar({
             )}
             {mode === "library" && (
               <SectionsPanel onPreview={onPreviewSection ?? (() => {})} />
-            )}
-            {mode === "pages" && (
-              <PagesPanel currentProjectId={currentProjectId} />
             )}
             {mode === "assistant" && (
               <AssistantPanel currentProjectId={currentProjectId} />
