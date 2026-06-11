@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { and, desc, eq, gte, isNotNull, isNull, ne, sql as sqlOp } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
 import type { ProjectData, StoredChatTurn } from "@/lib/projects/types";
@@ -36,6 +37,36 @@ import { getProfile } from "@/lib/business-profiles/store";
 // ─────────────────────────────────────────────────────────────────────────────
 
 export type ProjectStatus = "draft" | "published" | "archived";
+
+/** Stable fingerprint of the site pages as they'd publish (slug-sorted,
+ *  empty-html pages excluded — mirrors pagesForPublish). "" = zero pages.
+ *  Stored as projects.publishedPagesHash at publish; compared at read time
+ *  so the "unpublished changes" pill lights on subpage edits too. */
+export function hashSitePages(data: ProjectData | null | undefined): string {
+  const pages = pagesForPublish(data);
+  if (pages.length === 0) return "";
+  const h = createHash("sha256");
+  for (const pg of pages) {
+    h.update(pg.slug, "utf8").update("\u0000").update(pg.html, "utf8").update("\u0000");
+  }
+  return h.digest("hex").slice(0, 16);
+}
+
+/** The drift comparison both read paths share: home html byte-diff, plus the
+ *  pages fingerprint when the publish recorded one (NULL = legacy publish or
+ *  post-rollback — pages are skipped, so old rows can't false-positive). */
+function computeUnpublishedChanges(row: {
+  subdomain: string | null;
+  publishedHtml: string | null;
+  publishedPagesHash: string | null;
+  data: ProjectData | null;
+  currentHtml: string;
+}): boolean {
+  if (row.subdomain === null || row.publishedHtml === null) return false;
+  if (row.publishedHtml !== row.currentHtml) return true;
+  if (row.publishedPagesHash === null) return false;
+  return hashSitePages(row.data) !== row.publishedPagesHash;
+}
 
 export interface ProjectSummary {
   id: string;
@@ -162,6 +193,7 @@ export async function listProjects(userId: string): Promise<ProjectSummary[]> {
       subdomain: schema.projects.subdomain,
       publishedAt: schema.projects.publishedAt,
       publishedHtml: schema.projects.publishedHtml,
+      publishedPagesHash: schema.projects.publishedPagesHash,
       data: schema.projects.data,
       createdAt: schema.projects.createdAt,
       updatedAt: schema.projects.updatedAt,
@@ -187,10 +219,7 @@ export async function listProjects(userId: string): Promise<ProjectSummary[]> {
       profileId: row.profileId,
       subdomain: row.subdomain,
       publishedAt: row.publishedAt,
-      hasUnpublishedChanges:
-        row.subdomain !== null && row.publishedHtml !== null
-          ? row.publishedHtml !== currentHtml
-          : false,
+      hasUnpublishedChanges: computeUnpublishedChanges({ ...row, currentHtml }),
       sectionCount: countSections(currentHtml),
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
@@ -286,10 +315,7 @@ export async function getProject(
     profileId: row.profileId,
     subdomain: row.subdomain,
     publishedAt: row.publishedAt,
-    hasUnpublishedChanges:
-      row.subdomain !== null && row.publishedHtml !== null
-        ? row.publishedHtml !== currentHtml
-        : false,
+    hasUnpublishedChanges: computeUnpublishedChanges({ ...row, currentHtml }),
     sectionCount: countSections(currentHtml),
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
@@ -669,6 +695,7 @@ export async function publishProject(
     .select({
       publishedAt: schema.projects.publishedAt,
       publishedHtml: schema.projects.publishedHtml,
+      publishedPagesHash: schema.projects.publishedPagesHash,
       publishedReleaseSha: schema.projects.publishedReleaseSha,
       status: schema.projects.status,
     })
@@ -684,6 +711,7 @@ export async function publishProject(
         subdomain: v.value,
         publishedAt: now,
         publishedHtml: html,
+        publishedPagesHash: hashSitePages(project.data),
         status: "published",
         deployUrl: `${v.value}.${publishBaseHost()}`,
         updatedAt: now,
@@ -773,6 +801,7 @@ export async function publishProject(
           subdomain: previousSubdomain,
           publishedAt: prev?.publishedAt ?? null,
           publishedHtml: prev?.publishedHtml ?? null,
+          publishedPagesHash: prev?.publishedPagesHash ?? null,
           publishedReleaseSha: prev?.publishedReleaseSha ?? null,
           status: prev?.status ?? "draft",
           deployUrl: previousSubdomain
@@ -868,9 +897,15 @@ export async function publishProject(
   // 8. Purge the Cloudflare edge cache so the next visitor sees the
   // new HTML instead of the previous deploy. Soft-fails when CF env
   // vars aren't set or the API call errors — stale edge content will
-  // flush within `s-maxage` anyway. Locale variants + sitemap purge too.
+  // flush within `s-maxage` anyway. Locale variants, site pages (CF
+  // caches /pricing and /pricing/ as distinct URLs — purge both) and
+  // the sitemap purge too.
   await purgeSubdomain(v.value, [
     ...publishResult.locales.map((l) => `/${l}/`),
+    ...pagesForPublish(project.data).flatMap((pg) => [
+      `/${pg.slug}`,
+      `/${pg.slug}/`,
+    ]),
     "/sitemap.xml",
   ]);
 
@@ -927,6 +962,7 @@ export async function unpublishProject(params: UnpublishParams): Promise<void> {
       subdomain: null,
       publishedAt: null,
       publishedHtml: null,
+      publishedPagesHash: null,
       publishedReleaseSha: null,
       // Flip published → draft. Archived stays archived (deliberate
       // un-publish of an archived project is rare but should preserve
@@ -1016,6 +1052,10 @@ export async function rollbackProject(
     .set({
       publishedAt: now,
       publishedHtml: html,
+      // The rolled-back release's page set isn't recorded anywhere, so the
+      // live pages are unknown — NULL makes the drift pill skip pages until
+      // the next real publish records a fresh fingerprint.
+      publishedPagesHash: null,
       publishedReleaseSha: params.sha,
       updatedAt: now,
     })
