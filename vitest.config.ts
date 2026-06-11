@@ -31,6 +31,7 @@ export default defineConfig({
       "lib/theme-presets.test.ts",
       "lib/tematicas/**/*.test.ts",
       "lib/site-assistant/**/*.test.ts",
+      "lib/publish/assistant-widget.test.ts",
     ],
     exclude: ["node_modules/**", "tests/e2e/**", ".next/**"],
   },

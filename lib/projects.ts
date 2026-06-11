@@ -695,6 +695,9 @@ export async function publishProject(
       logoUrl: effectiveLogoUrl,
       motion: project.data?.settings?.motion,
       music: project.data?.settings?.music,
+      assistant: project.data?.settings?.assistant?.enabled
+        ? { enabled: true, businessName: project.title || v.value }
+        : undefined,
       pages: pagesForPublish(project.data),
       sourceLang,
       buildLocaleDocs:
