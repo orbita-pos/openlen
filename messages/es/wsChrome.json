@@ -36,6 +36,10 @@
       "brief": {
         "label": "Brief",
         "title": "Brief del proyecto (contexto de IA)"
+      },
+      "assistant": {
+        "label": "Asistente",
+        "title": "Asistente de chat para visitantes"
       }
     },
     "tabLocked": "{label} — bloqueado",

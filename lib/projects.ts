@@ -449,6 +449,57 @@ export async function setProjectUserBrief(
   return result.length > 0;
 }
 
+/** Merge a patch into data.settings.assistant (read-modify-write). Returns the
+ *  new assistant settings, or null when the project isn't the user's. */
+export async function setProjectAssistant(
+  projectId: string,
+  userId: string,
+  patch: { enabled?: boolean; facts?: string; tone?: string },
+): Promise<{ enabled: boolean; facts: string; tone?: string } | null> {
+  const rows = await db
+    .select({ data: schema.projects.data })
+    .from(schema.projects)
+    .where(
+      and(
+        eq(schema.projects.id, projectId),
+        eq(schema.projects.userId, userId),
+      ),
+    )
+    .limit(1);
+  const data = rows[0]?.data;
+  if (!data) return null;
+
+  const settings = data.settings ?? {};
+  const current = settings.assistant ?? {};
+  const next = {
+    enabled: patch.enabled ?? current.enabled ?? false,
+    facts:
+      patch.facts !== undefined
+        ? patch.facts.slice(0, 4000)
+        : (current.facts ?? ""),
+    ...(patch.tone !== undefined
+      ? { tone: patch.tone.slice(0, 80) || undefined }
+      : current.tone
+        ? { tone: current.tone }
+        : {}),
+  };
+
+  const result = await db
+    .update(schema.projects)
+    .set({
+      data: { ...data, settings: { ...settings, assistant: next } },
+      updatedAt: new Date(),
+    })
+    .where(
+      and(
+        eq(schema.projects.id, projectId),
+        eq(schema.projects.userId, userId),
+      ),
+    )
+    .returning({ id: schema.projects.id });
+  return result.length > 0 ? next : null;
+}
+
 export async function duplicateProject(
   projectId: string,
   userId: string,

@@ -36,6 +36,10 @@
       "brief": {
         "label": "Briefing",
         "title": "Projectbriefing (AI-context)"
+      },
+      "assistant": {
+        "label": "Assistent",
+        "title": "Chatassistent voor bezoekers"
       }
     },
     "tabLocked": "{label} — vergrendeld",

@@ -23,6 +23,7 @@ import {
   Inbox,
   Layers,
   ListTree,
+  MessageSq,
   Monitor,
   PanelLeft,
   PanelRight,
@@ -32,6 +33,7 @@ import type { Section } from "./mock-data";
 import type { BriefFormState } from "@/components/workspace/types";
 import type { StoredChatTurn } from "@/lib/projects/types";
 import { AiBriefPanel } from "./panels/ai-brief-panel";
+import { AssistantPanel } from "./panels/assistant-panel";
 import { RailBusinessSwitcher } from "./business-switcher";
 import type { BusinessProfile } from "@/lib/business-profiles/types";
 import {
@@ -116,6 +118,7 @@ export type SidebarMode =
   | "templates"
   | "library"
   | "pages"
+  | "assistant"
   | "versions";
 
 interface ModeTab {
@@ -129,6 +132,7 @@ const MODE_TABS: ModeTab[] = [
   { id: "templates", icon: Grid3 },
   { id: "library", icon: Layers },
   { id: "pages", icon: FileText },
+  { id: "assistant", icon: MessageSq },
   { id: "versions", icon: HistoryIcon },
 ];
 
@@ -312,7 +316,10 @@ export function LeftSidebar({
   // (the project's page tree) are editing-only — both operate on the
   // currently loaded project.
   const visibleTabs = MODE_TABS.filter((tab) => {
-    if (entryMode !== "editing" && (tab.id === "library" || tab.id === "site"))
+    if (
+      entryMode !== "editing" &&
+      (tab.id === "library" || tab.id === "site" || tab.id === "assistant")
+    )
       return false;
     return true;
   });
@@ -528,6 +535,9 @@ export function LeftSidebar({
             )}
             {mode === "pages" && (
               <PagesPanel currentProjectId={currentProjectId} />
+            )}
+            {mode === "assistant" && (
+              <AssistantPanel currentProjectId={currentProjectId} />
             )}
             {mode === "versions" && (
               <VersionsPanel
