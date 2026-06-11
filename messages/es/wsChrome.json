@@ -175,11 +175,14 @@
     "creating": "Creando…",
     "cancel": "Cancelar",
     "deleteLabel": "Borrar /{slug}",
-    "deleteConfirm": "¿Borrar la página /{slug}? Su contenido se pierde.",
     "errInvalid": "Usa solo letras, números y guiones.",
     "errReserved": "Ese nombre está reservado.",
     "errExists": "Esa página ya existe.",
     "errLimit": "Límite de páginas alcanzado.",
-    "hint": "Las páginas nuevas nacen con tu look — nav y footer incluidos — y un lienzo en blanco. Enlázalas con links /slug."
+    "hint": "Las páginas nuevas nacen con tu look — nav y footer incluidos — y un lienzo en blanco. Enlázalas con links /slug.",
+    "deleteTitle": "¿Borrar /{slug}?",
+    "deleteBody": "Su contenido se pierde y no se puede deshacer. Si está publicada, desaparecerá de tu sitio en el próximo deploy.",
+    "confirmLabel": "Escribe {slug} para confirmar",
+    "confirmBtn": "Borrar página"
   }
 }
