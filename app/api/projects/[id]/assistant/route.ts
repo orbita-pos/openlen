@@ -1,11 +1,13 @@
 import { z } from "zod";
 import { auth } from "@/auth";
 import { getProject, setProjectAssistant } from "@/lib/projects";
+import { getAssistantUsage } from "@/lib/site-assistant/quota";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-// GET /api/projects/[id]/assistant — current assistant settings for the panel.
+// GET /api/projects/[id]/assistant — current assistant settings + monthly
+// usage for the panel.
 export async function GET(
   _req: Request,
   { params }: { params: Promise<{ id: string }> },
@@ -16,8 +18,15 @@ export async function GET(
   const project = await getProject(id, session.user.id);
   if (!project) return json({ error: "not_found" }, 404);
   const a = project.data?.settings?.assistant ?? {};
+  const usage = await getAssistantUsage(id, session.user.id);
   return json(
-    { enabled: a.enabled ?? false, facts: a.facts ?? "", tone: a.tone ?? "" },
+    {
+      enabled: a.enabled ?? false,
+      facts: a.facts ?? "",
+      tone: a.tone ?? "",
+      used: usage.used,
+      cap: usage.cap,
+    },
     200,
   );
 }

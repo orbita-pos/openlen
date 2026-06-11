@@ -12,6 +12,7 @@ import {
   type AssistantTurn,
 } from "@/lib/site-assistant/prompt";
 import { siteToText, detectPageLang } from "@/lib/site-assistant/extract-text";
+import { consumeAssistantMessage } from "@/lib/site-assistant/quota";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Public site-assistant endpoint. The chat widget on a published page POSTs
@@ -94,6 +95,18 @@ export async function POST(
 
   const pageText = siteToText(project.data);
   if (!pageText) return reply(403, { error: "disabled" });
+
+  // Per-site monthly cap (plan metering). Over cap, degrade gracefully to a
+  // lead capture instead of erroring — the owner still gets the contact, and
+  // the request never reaches Gemini (cost ceiling).
+  const quota = await consumeAssistantMessage(owner.projectId, owner.userId);
+  if (!quota.ok) {
+    return reply(200, {
+      respuesta:
+        "¡Gracias por escribir! En este momento no puedo responder por aquí, pero déjame tu nombre y correo y el equipo te contactará pronto.",
+      intent: "lead",
+    } satisfies AssistantReply);
+  }
 
   const messages = buildMessages(
     {
