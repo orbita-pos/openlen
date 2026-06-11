@@ -3,6 +3,7 @@ import { auth } from "@/auth";
 import { db, schema } from "@/lib/db";
 import { sendLeadNotificationEmail } from "@/lib/email";
 import { checkAndConsume } from "@/lib/limits";
+import { validatePageSlug } from "@/lib/projects/site-pages";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -12,7 +13,7 @@ const HOUR = 60 * 60 * 1000;
 // ─────────────────────────────────────────────────────────────────────────────
 // POST /api/projects/[id]/forms/test-email
 //
-// Body: { formIndex?: number }
+// Body: { formIndex?: number, page?: string }   (page = site-page slug)
 //
 // Owner-only. Sends a TEST lead notification to whichever address would
 // receive the real one for this form (per-form notifyEmail override falls
@@ -61,11 +62,17 @@ export async function POST(
 
   const body = (await req.json().catch(() => ({}))) as {
     formIndex?: number;
+    page?: string;
   };
   const formIndex =
     typeof body.formIndex === "number" && Number.isInteger(body.formIndex)
       ? body.formIndex
       : null;
+  const pageCheck =
+    typeof body.page === "string" && body.page.length > 0
+      ? validatePageSlug(body.page)
+      : null;
+  const page = pageCheck?.ok ? pageCheck.slug : null;
 
   const rows = await db
     .select({
@@ -85,12 +92,14 @@ export async function POST(
   const row = rows[0];
   if (!row) return json({ ok: false, reason: "not_found" }, 404);
 
-  // Same fallback logic as the public form endpoint: per-form notifyEmail
-  // override > account email.
+  // Same fallback logic as the public form endpoint: page-scoped per-form
+  // notifyEmail override > legacy shared override > account email.
   let to = row.accountEmail ?? "";
   if (formIndex !== null) {
+    const forms = row.data?.settings?.forms;
     const override =
-      row.data?.settings?.forms?.[String(formIndex)]?.notifyEmail;
+      (page ? forms?.[`${page}:${formIndex}`]?.notifyEmail : undefined) ??
+      forms?.[String(formIndex)]?.notifyEmail;
     if (override) to = override;
   }
   if (!to) {

@@ -11,6 +11,8 @@ import { Inbox } from "../icons";
 interface SubmissionItem {
   id: string;
   data: Record<string, string>;
+  /** Site page the form lives on (null = home / pre-multipage rows). */
+  page?: string | null;
   createdAt: string;
 }
 
@@ -114,8 +116,15 @@ function SubmissionCard({ item }: { item: SubmissionItem }) {
   const fields = Object.entries(item.data);
   return (
     <div className="rounded-lg ring-1 ring-[color:var(--border)] bg-[color:var(--bg)] px-2.5 py-2">
-      <div className="text-[10px] fg-faint ui-small mb-1.5">
-        {relativeTime(item.createdAt, t)}
+      <div className="mb-1.5 flex items-center gap-1.5">
+        <span className="text-[10px] fg-faint ui-small">
+          {relativeTime(item.createdAt, t)}
+        </span>
+        {item.page && (
+          <span className="inline-flex items-center px-1.5 h-[16px] rounded text-[9.5px] font-semibold ui-small bg-elev fg-muted ring-1 ring-[color:var(--border)] max-w-[120px]">
+            <span className="truncate">/{item.page}</span>
+          </span>
+        )}
       </div>
       {fields.length === 0 ? (
         <span className="text-[11.5px] fg-faint italic">{t("leads.emptySubmission")}</span>

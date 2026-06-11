@@ -51,6 +51,18 @@ export interface SitePageSummary {
   title: string;
 }
 
+/** Key into ProjectData.settings.forms for a form on a given document.
+ *  Home forms keep the legacy document-order index key ("0") so every
+ *  pre-multipage config keeps working; site-page forms use "<slug>:<index>"
+ *  (publish wiring + the submit endpoint fall back to the legacy key when a
+ *  page has no scoped entry — shared-config behavior until first edited). */
+export function formConfigKey(
+  page: string | null | undefined,
+  index: number,
+): string {
+  return page ? `${page}:${index}` : String(index);
+}
+
 /** Stable, display-ready listing of a project's extra pages. */
 export function listSitePages(data: ProjectData | null | undefined): SitePageSummary[] {
   const pages = data?.pages;

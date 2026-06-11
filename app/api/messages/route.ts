@@ -24,6 +24,7 @@ export async function GET(req: Request): Promise<Response> {
     data: r.data,
     country: r.meta?.country ?? null,
     device: r.meta?.device ?? null,
+    page: r.meta?.page ?? null,
     createdAt: r.createdAt,
   }));
   // Scope to one business (the workspace switcher): keep only leads whose

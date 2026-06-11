@@ -17,6 +17,8 @@ export interface DashLead {
   data: Record<string, string>;
   country: string | null;
   device: string | null;
+  /** Site page the form lives on (null = home / pre-multipage rows). */
+  page: string | null;
   createdAt: Date;
 }
 
@@ -104,12 +106,13 @@ function LeadCard({ lead }: { lead: DashLead }) {
         <div className="mt-3 flex items-center flex-wrap gap-3 text-[11px] text-zinc-400 dark:text-zinc-500">
           {lead.subdomain && (
             <a
-              href={`https://${lead.subdomain}.openlen.com`}
+              href={`https://${lead.subdomain}.openlen.com${lead.page ? `/${lead.page}/` : ""}`}
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-1 hover:text-coral-600 dark:hover:text-coral-400 transition"
             >
               <Globe size={11} /> {lead.subdomain}.openlen.com
+              {lead.page ? `/${lead.page}` : ""}
             </a>
           )}
           {lead.country && (
