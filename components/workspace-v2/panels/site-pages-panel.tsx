@@ -10,7 +10,6 @@ import { useTranslations } from "next-intl";
 import { validatePageSlug, MAX_SITE_PAGES } from "@/lib/projects/site-pages";
 import type { SitePageSummary } from "@/lib/projects/site-pages";
 import { FileText, HomeIcon, Loader, Plus, Trash, X } from "../icons";
-import { Tooltip } from "../ui";
 
 interface SitePagesPanelProps {
   pages: SitePageSummary[];
@@ -89,27 +88,26 @@ export function SitePagesPanel({
                 <FileText size={13} className="shrink-0" />
                 <span className="text-[12px] truncate tabular">/{p.slug}</span>
               </button>
-              <Tooltip label={t("sitePages.deleteLabel", { slug: p.slug })}>
-                <button
-                  type="button"
-                  disabled={deleting === p.slug}
-                  aria-label={t("sitePages.deleteLabel", { slug: p.slug })}
-                  onClick={async () => {
-                    if (!window.confirm(t("sitePages.deleteConfirm", { slug: p.slug })))
-                      return;
-                    setDeleting(p.slug);
-                    await onDelete(p.slug);
-                    setDeleting(null);
-                  }}
-                  className="absolute right-1 top-1 h-6 w-6 hidden group-hover:inline-flex items-center justify-center rounded fg-faint hover:text-red-500 hover:bg-hover transition disabled:opacity-50"
-                >
-                  {deleting === p.slug ? (
-                    <Loader size={11} className="animate-spin" />
-                  ) : (
-                    <Trash size={11} />
-                  )}
-                </button>
-              </Tooltip>
+              <button
+                type="button"
+                disabled={deleting === p.slug}
+                aria-label={t("sitePages.deleteLabel", { slug: p.slug })}
+                title={t("sitePages.deleteLabel", { slug: p.slug })}
+                onClick={async () => {
+                  if (!window.confirm(t("sitePages.deleteConfirm", { slug: p.slug })))
+                    return;
+                  setDeleting(p.slug);
+                  await onDelete(p.slug);
+                  setDeleting(null);
+                }}
+                className="absolute right-1 top-1 h-6 w-6 hidden group-hover:inline-flex items-center justify-center rounded fg-faint hover:text-red-500 hover:bg-hover transition disabled:opacity-50"
+              >
+                {deleting === p.slug ? (
+                  <Loader size={11} className="animate-spin" />
+                ) : (
+                  <Trash size={11} />
+                )}
+              </button>
             </div>
           );
         })}
@@ -167,7 +165,7 @@ export function SitePagesPanel({
             </button>
           </div>
         ) : (
-          <Tooltip label={atLimit ? t("sitePages.errLimit") : t("sitePages.addPage")}>
+          <>
             <button
               type="button"
               disabled={atLimit}
@@ -177,7 +175,12 @@ export function SitePagesPanel({
               <Plus size={12} />
               {t("sitePages.addPage")}
             </button>
-          </Tooltip>
+            {atLimit && (
+              <div className="px-1 pt-1 text-[10.5px] fg-faint">
+                {t("sitePages.errLimit")}
+              </div>
+            )}
+          </>
         )}
       </div>
       <div className="shrink-0 px-3 py-2 border-t bd text-[10.5px] fg-faint leading-relaxed">

@@ -180,6 +180,6 @@
     "errReserved": "That name is reserved.",
     "errExists": "That page already exists.",
     "errLimit": "Page limit reached.",
-    "hint": "New pages are born as a copy of Home, wearing your look. Link to them with /slug links."
+    "hint": "New pages are born wearing your look — nav and footer included — with a blank canvas. Link to them with /slug links."
   }
 }

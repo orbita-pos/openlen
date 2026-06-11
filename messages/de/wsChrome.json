@@ -180,6 +180,6 @@
     "errReserved": "Dieser Name ist reserviert.",
     "errExists": "Diese Seite existiert bereits.",
     "errLimit": "Seitenlimit erreicht.",
-    "hint": "Neue Seiten entstehen als Kopie der Startseite, in deinem Look. Verlinke sie mit /slug-Links."
+    "hint": "Neue Seiten entstehen in deinem Look — Navigation und Footer inklusive — mit leerer Fläche. Verlinke sie mit /slug-Links."
   }
 }

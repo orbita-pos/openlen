@@ -4,6 +4,7 @@ import { auth } from "@/auth";
 import { db, schema } from "@/lib/db";
 import type { ProjectData } from "@/lib/projects/types";
 import {
+  buildPageShell,
   listSitePages,
   MAX_SITE_PAGES,
   pageTitle,
@@ -78,9 +79,14 @@ export async function POST(
   }
 
   const title = parsed.data.title?.trim() || undefined;
+  // New pages are born as the home page's SHELL (head + nav + footer, blank
+  // titled canvas) so they wear the look without dragging Home's content
+  // along. If the home document doesn't parse, fall back to a full copy.
+  const displayTitle = pageTitle(slug, title ? { html: "", title } : undefined);
+  const pageHtml = buildPageShell(data.html, displayTitle) ?? data.html;
   const nextData: ProjectData = {
     ...data,
-    pages: { ...pages, [slug]: { html: data.html, ...(title ? { title } : {}) } },
+    pages: { ...pages, [slug]: { html: pageHtml, ...(title ? { title } : {}) } },
   };
   await db
     .update(schema.projects)
