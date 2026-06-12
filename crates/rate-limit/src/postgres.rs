@@ -44,7 +44,13 @@ use crate::types::{LimitDecision, LimitWindow, RemainingWindow, UsageWindow};
 pub(crate) const COUNT_SQL: &str =
     r#"SELECT COUNT(*)::bigint FROM "rateLimitEvents" WHERE "key" = $1 AND "createdAt" > $2"#;
 
-pub(crate) const OLDEST_SQL: &str = r#"SELECT "createdAt" FROM "rateLimitEvents" WHERE "key" = $1 AND "createdAt" > $2 ORDER BY "createdAt" LIMIT 1"#;
+// The column is `timestamp without time zone` (Drizzle's default — the values
+// are UTC wall time from `DEFAULT now()` on a UTC server), and sqlx decodes
+// `DateTime<Utc>` ONLY from TIMESTAMPTZ. The cast reinterprets the naive
+// value as UTC in SQL; without it, every BLOCKED decision — the only path
+// that reads this column back — failed with "mismatched types" and callers
+// 500'd instead of returning a clean 429 with resetAt.
+pub(crate) const OLDEST_SQL: &str = r#"SELECT ("createdAt" AT TIME ZONE 'UTC') FROM "rateLimitEvents" WHERE "key" = $1 AND "createdAt" > $2 ORDER BY "createdAt" LIMIT 1"#;
 
 pub(crate) const INSERT_SQL: &str =
     r#"INSERT INTO "rateLimitEvents" ("id", "key") VALUES ($1, $2)"#;
@@ -231,6 +237,9 @@ mod tests {
         assert!(OLDEST_SQL.to_uppercase().contains("ORDER BY"));
         assert!(OLDEST_SQL.to_uppercase().contains("LIMIT 1"));
         assert!(OLDEST_SQL.contains(r#""createdAt""#));
+        // The decode target is DateTime<Utc> (TIMESTAMPTZ) but the column is
+        // a naive timestamp — the UTC reinterpretation cast is load-bearing.
+        assert!(OLDEST_SQL.contains("AT TIME ZONE 'UTC'"));
     }
 
     #[test]
