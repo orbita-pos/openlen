@@ -9,10 +9,24 @@
 import crypto from "node:crypto";
 import { and, desc, eq, gt, lt, sql } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
+import {
+  SESSION_TTL_MS,
+  generateSessionToken,
+  hashSessionToken,
+} from "@/lib/members/session";
 
 export const LOGIN_TOKEN_TTL_MS = 15 * 60 * 1000; // 15 minutes
 
 const MEMBER_LIST_LIMIT = 1000;
+// A member accumulating logins keeps the newest N sessions; older devices
+// just re-login. (Supabase's analog is the single-session-per-user option —
+// we keep it loose, this only bounds row growth.)
+const SESSIONS_PER_MEMBER_CAP = 10;
+// lastSeenAt writes are throttled — a binge-reading member costs one UPDATE
+// per interval, not one per fetch.
+const SESSION_TOUCH_INTERVAL_MS = 5 * 60 * 1000;
+// Auth events older than this get swept opportunistically on logins.
+const AUTH_EVENTS_RETENTION_MS = 90 * 24 * 60 * 60 * 1000;
 
 export interface MemberItem {
   id: string;
@@ -234,4 +248,146 @@ export async function consumeLoginToken(
     .catch(() => {});
 
   return rows[0];
+}
+
+// ─── Sessions — opaque, server-side, revocable ──────────────────────────────
+
+export interface MemberSessionRow {
+  tokenHash: string;
+  projectId: string;
+  memberId: string;
+  lastSeenAt: Date;
+  expiresAt: Date;
+}
+
+/** Mint a session for a logged-in member. Returns the RAW token (cookie
+ *  value); only its hash is stored. Prunes the member's oldest sessions
+ *  beyond the cap, best-effort. */
+export async function createMemberSession(
+  projectId: string,
+  memberId: string,
+): Promise<string> {
+  const { raw, hash } = generateSessionToken();
+  await db.insert(schema.memberSessions).values({
+    tokenHash: hash,
+    projectId,
+    memberId,
+    expiresAt: new Date(Date.now() + SESSION_TTL_MS),
+  });
+  void db
+    .execute(
+      sql`DELETE FROM "memberSessions" WHERE "tokenHash" IN (
+        SELECT "tokenHash" FROM "memberSessions"
+        WHERE "memberId" = ${memberId}
+        ORDER BY "createdAt" DESC
+        OFFSET ${SESSIONS_PER_MEMBER_CAP}
+      )`,
+    )
+    .catch(() => {});
+  return raw;
+}
+
+/** Resolve a cookie value to its live session. Null = unknown, revoked, or
+ *  expired — verification IS this lookup; there is no signature to check. */
+export async function getMemberSession(
+  rawToken: string,
+): Promise<MemberSessionRow | null> {
+  const rows = await db
+    .select({
+      tokenHash: schema.memberSessions.tokenHash,
+      projectId: schema.memberSessions.projectId,
+      memberId: schema.memberSessions.memberId,
+      lastSeenAt: schema.memberSessions.lastSeenAt,
+      expiresAt: schema.memberSessions.expiresAt,
+    })
+    .from(schema.memberSessions)
+    .where(
+      and(
+        eq(schema.memberSessions.tokenHash, hashSessionToken(rawToken)),
+        gt(schema.memberSessions.expiresAt, new Date()),
+      ),
+    )
+    .limit(1);
+  return rows[0] ?? null;
+}
+
+/** Throttled lastSeenAt bump — fire-and-forget, never blocks the fetch. */
+export function maybeTouchMemberSession(session: MemberSessionRow): void {
+  if (Date.now() - session.lastSeenAt.getTime() < SESSION_TOUCH_INTERVAL_MS) {
+    return;
+  }
+  void db
+    .update(schema.memberSessions)
+    .set({ lastSeenAt: new Date() })
+    .where(eq(schema.memberSessions.tokenHash, session.tokenHash))
+    .catch(() => {});
+}
+
+/** Logout: kill exactly the presented session. */
+export async function deleteMemberSessionByHash(
+  tokenHash: string,
+): Promise<void> {
+  await db
+    .delete(schema.memberSessions)
+    .where(eq(schema.memberSessions.tokenHash, tokenHash));
+}
+
+/** "Cerrar todas las sesiones" — every device of one member, immediately.
+ *  (Member deletion doesn't need this: the FK cascade covers it.) */
+export async function deleteMemberSessions(
+  projectId: string,
+  memberId: string,
+): Promise<number> {
+  const rows = await db
+    .delete(schema.memberSessions)
+    .where(
+      and(
+        eq(schema.memberSessions.projectId, projectId),
+        eq(schema.memberSessions.memberId, memberId),
+      ),
+    )
+    .returning({ tokenHash: schema.memberSessions.tokenHash });
+  return rows.length;
+}
+
+// ─── Auth audit trail ────────────────────────────────────────────────────────
+
+export type MemberAuthEventType =
+  | "link_requested"
+  | "login"
+  | "logout"
+  | "invited"
+  | "removed";
+
+/** Fire-and-forget — the audit trail must never block or fail an auth path.
+ *  Logins also sweep events past retention for the project, best-effort. */
+export function recordMemberAuthEvent(params: {
+  projectId: string;
+  type: MemberAuthEventType;
+  memberId?: string | null;
+  email?: string | null;
+}): void {
+  void db
+    .insert(schema.memberAuthEvents)
+    .values({
+      projectId: params.projectId,
+      memberId: params.memberId ?? null,
+      email: params.email ? normalizeEmail(params.email) : null,
+      type: params.type,
+    })
+    .catch(() => {});
+  if (params.type === "login") {
+    void db
+      .delete(schema.memberAuthEvents)
+      .where(
+        and(
+          eq(schema.memberAuthEvents.projectId, params.projectId),
+          lt(
+            schema.memberAuthEvents.createdAt,
+            new Date(Date.now() - AUTH_EVENTS_RETENTION_MS),
+          ),
+        ),
+      )
+      .catch(() => {});
+  }
 }

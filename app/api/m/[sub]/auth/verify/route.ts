@@ -1,9 +1,11 @@
 import { gateStringsFor } from "@/lib/members/gate-stub";
-import { buildMemberCookie, signMemberSession } from "@/lib/members/session";
+import { buildMemberCookie } from "@/lib/members/session";
 import {
   activateMember,
   consumeLoginToken,
+  createMemberSession,
   getMemberByEmail,
+  recordMemberAuthEvent,
   upsertActiveMember,
 } from "@/lib/members/store";
 import { PAGE_SLUG_RE, json, loadMemberSite, seeOther } from "../../_shared";
@@ -124,9 +126,12 @@ export async function POST(
     return seeOther(errPath);
   }
 
-  const session = await signMemberSession({
-    memberId,
+  const session = await createMemberSession(site.projectId, memberId);
+  recordMemberAuthEvent({
     projectId: site.projectId,
+    memberId,
+    email: consumed.email,
+    type: "login",
   });
   const target = consumed.slug ? `/${consumed.slug}/` : "/";
   return seeOther(target, buildMemberCookie(session));

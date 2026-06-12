@@ -8,7 +8,12 @@ import {
   memberEmailCapWindows,
   siteEmailCapKey,
 } from "@/lib/members/limits";
-import { countMembers, getMemberByEmail, issueLoginToken } from "@/lib/members/store";
+import {
+  countMembers,
+  getMemberByEmail,
+  issueLoginToken,
+  recordMemberAuthEvent,
+} from "@/lib/members/store";
 import { sendMemberLoginEmail } from "@/lib/email";
 import { PAGE_SLUG_RE, json, loadMemberSite, memberLinkBase } from "../../_shared";
 
@@ -113,6 +118,11 @@ export async function POST(
       siteTitle: site.title,
       loginUrl,
       locale: site.locale,
+    });
+    recordMemberAuthEvent({
+      projectId: site.projectId,
+      email,
+      type: "link_requested",
     });
 
     return json({ ok: true }, 200);

@@ -38,6 +38,36 @@ async function main() {
     );`,
   );
 
+  await db.execute(
+    sql`CREATE TABLE IF NOT EXISTS "memberSessions" (
+      "tokenHash" text PRIMARY KEY,
+      "projectId" text NOT NULL REFERENCES "projects"("id") ON DELETE CASCADE,
+      "memberId" text NOT NULL REFERENCES "siteMembers"("id") ON DELETE CASCADE,
+      "createdAt" timestamp NOT NULL DEFAULT now(),
+      "lastSeenAt" timestamp NOT NULL DEFAULT now(),
+      "expiresAt" timestamp NOT NULL
+    );`,
+  );
+  await db.execute(
+    sql`CREATE INDEX IF NOT EXISTS "memberSessions_memberId_idx"
+      ON "memberSessions" ("memberId");`,
+  );
+
+  await db.execute(
+    sql`CREATE TABLE IF NOT EXISTS "memberAuthEvents" (
+      "id" text PRIMARY KEY,
+      "projectId" text NOT NULL REFERENCES "projects"("id") ON DELETE CASCADE,
+      "memberId" text,
+      "email" text,
+      "type" text NOT NULL,
+      "createdAt" timestamp NOT NULL DEFAULT now()
+    );`,
+  );
+  await db.execute(
+    sql`CREATE INDEX IF NOT EXISTS "memberAuthEvents_projectId_createdAt_idx"
+      ON "memberAuthEvents" ("projectId", "createdAt");`,
+  );
+
   console.log("members tables ready.");
   process.exit(0);
 }

@@ -31,8 +31,11 @@ export const MEMBER_LOGIN_IP_LIMITS: LimitWindow[] = [
 ];
 
 /** Per-target-email guard — caps how often any inbox can be hit with login
- *  mail through us (mail-bombing), regardless of requester IP. */
+ *  mail through us (mail-bombing), regardless of requester IP. The 60s
+ *  cooldown mirrors Supabase's default resend posture and keeps a double-tap
+ *  on "send me the link" from burning the site's monthly budget. */
 export const MEMBER_LOGIN_EMAIL_LIMITS: LimitWindow[] = [
+  { windowMs: MINUTE, max: 1, label: "cooldown" },
   { windowMs: 15 * MINUTE, max: 3, label: "15-minute" },
 ];
 

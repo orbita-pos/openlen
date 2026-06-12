@@ -5,7 +5,13 @@ import { db, schema } from "@/lib/db";
 import { getUserPlan } from "@/lib/limits";
 import { MEMBER_CAPS, memberEmailCapWindows, siteEmailCapKey } from "@/lib/members/limits";
 import { checkAndConsume } from "@/lib/limits";
-import { countMembers, inviteMember, issueLoginToken, listMembers } from "@/lib/members/store";
+import {
+  countMembers,
+  inviteMember,
+  issueLoginToken,
+  listMembers,
+  recordMemberAuthEvent,
+} from "@/lib/members/store";
 import { sendMemberLoginEmail } from "@/lib/email";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -90,6 +96,12 @@ export async function POST(
     parsed.data.name ?? null,
   );
   if (!created) return json({ error: "duplicate" }, 409);
+  recordMemberAuthEvent({
+    projectId: id,
+    memberId: member?.id,
+    email: parsed.data.email,
+    type: "invited",
+  });
 
   // Live site with the module on → the invite email carries a magic link.
   // Debits the shared monthly budget; when that's spent, the row still
