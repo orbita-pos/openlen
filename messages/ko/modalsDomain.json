@@ -131,7 +131,9 @@
     "languages": {
       "title": "다음 언어로도 게시",
       "hint": "각 언어는 /es/, /fr/ 등에 게시되며 배포할 때마다 자동 번역됩니다. 페이지의 원래 언어는 건너뜁니다."
-    }
+    },
+    "membersOffWarning": "{count}개 페이지가 멤버 전용으로 표시되어 있지만 멤버 모듈이 꺼져 있어 공개로 게시됩니다. 모듈 탭에서 켜세요.",
+    "membersGatedSummary": "{count}개의 멤버 전용 페이지가 로그인 뒤에 게시됩니다."
   },
   "inspector": {
     "radius": "반경",

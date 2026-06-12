@@ -118,7 +118,7 @@ openlen.com, www.openlen.com {
 
 	@doc {
 		not path *.css *.js *.jpg *.jpeg *.png *.gif *.webp *.svg *.ico *.woff *.woff2 *.avif
-		not path /c/* /api/f/* /uploads/* /assets/*
+		not path /c/* /api/f/* /api/m/* /uploads/* /assets/*
 	}
 	header @doc Cache-Control "public, max-age=60, s-maxage=3600, stale-while-revalidate=86400"
 
@@ -135,6 +135,17 @@ openlen.com, www.openlen.com {
 	# Lead-capture form submissions on published pages → Next.js.
 	handle /api/f/* {
 		reverse_proxy 127.0.0.1:3000
+	}
+
+	# Members module — same-host auth + protected-page fetch → Next.js.
+	# Same-host is load-bearing here (the session cookie must be first-party
+	# on the site's own domain). The @doc exclusion above is equally critical:
+	# without it Caddy stamps a public s-maxage header on these responses and
+	# Cloudflare would cache protected HTML at the edge.
+	handle /api/m/* {
+		reverse_proxy 127.0.0.1:3000 {
+			header_up CF-Connecting-IP {http.request.header.cf-connecting-ip}
+		}
 	}
 
 	# Global user-uploads dir (matches the apex /uploads block — same

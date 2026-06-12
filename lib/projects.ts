@@ -16,7 +16,11 @@ import { purgeSubdomain } from "@/lib/publish/cache-purge";
 import { backupReleaseToR2 } from "@/lib/publish/backup-r2";
 import { createVersion } from "@/lib/projects/versions";
 import { getChatMessages } from "@/lib/projects/chat";
-import { pagesForPublish } from "@/lib/projects/site-pages";
+import {
+  pagesForPublish,
+  sitePagesFingerprintInput,
+  splitPagesForPublish,
+} from "@/lib/projects/site-pages";
 import { normalizeBornCanonical } from "@/lib/normalize";
 import { ensurePageMeta } from "@/lib/publish/ensure-page-meta";
 import { upgradeDataUriOgImage } from "@/lib/branding/upgrade-og-image";
@@ -41,14 +45,15 @@ export type ProjectStatus = "draft" | "published" | "archived";
 /** Stable fingerprint of the site pages as they'd publish (slug-sorted,
  *  empty-html pages excluded — mirrors pagesForPublish). "" = zero pages.
  *  Stored as projects.publishedPagesHash at publish; compared at read time
- *  so the "unpublished changes" pill lights on subpage edits too. */
+ *  so the "unpublished changes" pill lights on subpage edits too. Members
+ *  gating folds in via sitePagesFingerprintInput — byte-identical to the
+ *  legacy slug/html stream when nothing is gated, so stored hashes from
+ *  pre-members publishes stay valid. */
 export function hashSitePages(data: ProjectData | null | undefined): string {
-  const pages = pagesForPublish(data);
-  if (pages.length === 0) return "";
+  const parts = sitePagesFingerprintInput(data);
+  if (parts.length === 0) return "";
   const h = createHash("sha256");
-  for (const pg of pages) {
-    h.update(pg.slug, "utf8").update("\u0000").update(pg.html, "utf8").update("\u0000");
-  }
+  for (const part of parts) h.update(part, "utf8");
   return h.digest("hex").slice(0, 16);
 }
 
@@ -758,6 +763,11 @@ export async function publishProject(
     effectiveLogoUrl = project.logoUrl;
   }
 
+  // Members module: gated pages leave the public release (a login stub takes
+  // their path) and publish into the protected store instead. With the module
+  // off, gatedPages is empty and everything ships public as always.
+  const { publicPages, gatedPages } = splitPagesForPublish(project.data);
+
   let publishResult: {
     sha: string;
     html: string;
@@ -777,7 +787,15 @@ export async function publishProject(
       assistant: project.data?.settings?.assistant?.enabled
         ? { enabled: true, businessName: project.title || v.value }
         : undefined,
-      pages: pagesForPublish(project.data),
+      pages: publicPages,
+      gatedPages: gatedPages.length > 0 ? gatedPages : undefined,
+      memberGate:
+        gatedPages.length > 0
+          ? {
+              projectTitle: project.title || v.value,
+              logoUrl: effectiveLogoUrl,
+            }
+          : undefined,
       sourceLang,
       buildLocaleDocs:
         targets.length > 0
@@ -902,6 +920,8 @@ export async function publishProject(
   // the sitemap purge too.
   await purgeSubdomain(v.value, [
     ...publishResult.locales.map((l) => `/${l}/`),
+    // pagesForPublish covers public AND gated slugs — gated stubs sit at the
+    // same public paths and CF caches them like any other HTML.
     ...pagesForPublish(project.data).flatMap((pg) => [
       `/${pg.slug}`,
       `/${pg.slug}/`,

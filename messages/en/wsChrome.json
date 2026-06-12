@@ -44,6 +44,10 @@
       "images": {
         "label": "Images",
         "title": "Image library"
+      },
+      "members": {
+        "label": "Modules",
+        "title": "Backend modules — members & more"
       }
     },
     "tabLocked": "{label} — locked",
@@ -199,6 +203,9 @@
     "deleteTitle": "Delete /{slug}?",
     "deleteBody": "Its content is lost and can’t be undone. If it’s published, it disappears from your live site on the next deploy.",
     "confirmLabel": "Type {slug} to confirm",
-    "confirmBtn": "Delete page"
+    "confirmBtn": "Delete page",
+    "membersOnlyBadge": "Members only",
+    "membersOnlyOn": "Make /{slug} members-only",
+    "membersOnlyOff": "Make /{slug} public"
   }
 }

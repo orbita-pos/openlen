@@ -1,0 +1,47 @@
+{
+  "title": "Moduli",
+  "subtitle": "Backend in un click per il tuo sito. Senza crediti, senza codice.",
+  "perProject": "Apri un progetto per gestire i suoi moduli.",
+  "module": {
+    "title": "Membri",
+    "tagline": "Login visitatori + pagine solo per membri",
+    "toggle": "Attiva membri",
+    "mode": {
+      "open": "Iscrizione aperta",
+      "invite": "Solo su invito",
+      "openHint": "Chiunque entra con la sua email — inviamo un link di accesso.",
+      "inviteHint": "Possono accedere solo le email che aggiungi sotto."
+    },
+    "gatedCount": "{count, plural, one {# pagina è solo per membri. Gestiscila nella scheda Site.} other {# pagine sono solo per membri. Gestiscile nella scheda Site.}}",
+    "gatedNone": "Ancora nessuna pagina riservata — segnane una col lucchetto nella scheda Site."
+  },
+  "included": {
+    "title": "Incluso nel tuo sito",
+    "open": "Apri",
+    "forms": "Moduli e lead",
+    "formsHint": "Ogni form cattura già lead",
+    "analytics": "Analytics",
+    "analyticsHint": "Visite e click, integrato",
+    "assistant": "Assistente IA",
+    "assistantHint": "Risponde ai tuoi visitatori"
+  },
+  "list": {
+    "title": "Membri",
+    "empty": "Ancora nessun membro. Invita qualcuno o condividi una pagina riservata e lascia che si iscrivano.",
+    "loadError": "Impossibile caricare i membri",
+    "status": {
+      "active": "Attivo",
+      "invited": "Invitato"
+    },
+    "remove": "Rimuovi {email}"
+  },
+  "invite": {
+    "placeholder": "email@esempio.com",
+    "cta": "Invita",
+    "duplicate": "Questa email è già membro.",
+    "cap": "Limite membri del tuo piano raggiunto.",
+    "error": "Invito non riuscito. Riprova.",
+    "sent": "Aggiunto ai tuoi membri.",
+    "sentEmailed": "Aggiunto — gli abbiamo inviato un link di accesso."
+  }
+}

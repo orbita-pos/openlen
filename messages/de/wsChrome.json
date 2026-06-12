@@ -44,6 +44,10 @@
       "images": {
         "label": "Bilder",
         "title": "Bildbibliothek"
+      },
+      "members": {
+        "label": "Module",
+        "title": "Backend-Module — Mitglieder & mehr"
       }
     },
     "tabLocked": "{label} — gesperrt",
@@ -199,6 +203,9 @@
     "deleteTitle": "/{slug} löschen?",
     "deleteBody": "Der Inhalt geht unwiderruflich verloren. Falls veröffentlicht, verschwindet die Seite beim nächsten Deploy von deiner Website.",
     "confirmLabel": "Tippe {slug} zur Bestätigung",
-    "confirmBtn": "Seite löschen"
+    "confirmBtn": "Seite löschen",
+    "membersOnlyBadge": "Nur Mitglieder",
+    "membersOnlyOn": "/{slug} nur für Mitglieder machen",
+    "membersOnlyOff": "/{slug} öffentlich machen"
   }
 }

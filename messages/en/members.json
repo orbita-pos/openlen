@@ -1,0 +1,47 @@
+{
+  "title": "Modules",
+  "subtitle": "One-click backend for your site. No credits, no code.",
+  "perProject": "Open a project to manage its modules.",
+  "module": {
+    "title": "Members",
+    "tagline": "Visitor login + members-only pages",
+    "toggle": "Enable members",
+    "mode": {
+      "open": "Open signup",
+      "invite": "Invite only",
+      "openHint": "Anyone can join with their email — we send them a sign-in link.",
+      "inviteHint": "Only emails you add below can sign in."
+    },
+    "gatedCount": "{count, plural, one {# page is members-only. Manage which in the Site tab.} other {# pages are members-only. Manage which in the Site tab.}}",
+    "gatedNone": "No members-only pages yet — flag one with the lock in the Site tab."
+  },
+  "included": {
+    "title": "Included with your site",
+    "open": "Open",
+    "forms": "Forms & leads",
+    "formsHint": "Every form already captures leads",
+    "analytics": "Analytics",
+    "analyticsHint": "Visits and clicks, built in",
+    "assistant": "AI assistant",
+    "assistantHint": "Answers your visitors' questions"
+  },
+  "list": {
+    "title": "Members",
+    "empty": "No members yet. Invite someone, or share a members-only page and let them sign up.",
+    "loadError": "Couldn't load members",
+    "status": {
+      "active": "Active",
+      "invited": "Invited"
+    },
+    "remove": "Remove {email}"
+  },
+  "invite": {
+    "placeholder": "email@example.com",
+    "cta": "Invite",
+    "duplicate": "That email is already a member.",
+    "cap": "Member limit reached for your plan.",
+    "error": "Couldn't invite. Try again.",
+    "sent": "Added to your members.",
+    "sentEmailed": "Added — we emailed them a sign-in link."
+  }
+}

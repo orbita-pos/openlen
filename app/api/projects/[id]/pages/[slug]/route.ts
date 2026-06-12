@@ -51,7 +51,14 @@ export async function GET(
   );
 }
 
-const RenameSchema = z.object({ title: z.string().min(1).max(120) });
+const PatchSchema = z
+  .object({
+    title: z.string().min(1).max(120).optional(),
+    membersOnly: z.boolean().optional(),
+  })
+  .refine((o) => o.title !== undefined || o.membersOnly !== undefined, {
+    message: "expected title and/or membersOnly",
+  });
 
 export async function PATCH(
   req: Request,
@@ -64,18 +71,41 @@ export async function PATCH(
   if (!slug) return json({ error: "invalid" }, 400);
 
   const body = await req.json().catch(() => null);
-  const parsed = RenameSchema.safeParse(body);
+  const parsed = PatchSchema.safeParse(body);
   if (!parsed.success) return json({ error: "invalid" }, 400);
 
   const row = await loadRow(id, session.user.id);
   const page = row?.data?.pages?.[slug];
   if (!row || !row.data || !page) return json({ error: "not_found" }, 404);
 
+  const nextPage = { ...page };
+  if (parsed.data.title !== undefined) {
+    nextPage.title = parsed.data.title.trim();
+  }
+  if (parsed.data.membersOnly !== undefined) {
+    if (parsed.data.membersOnly) nextPage.membersOnly = true;
+    else delete nextPage.membersOnly;
+  }
+
+  // Flipping a page to members-only auto-enables the module in the same
+  // read-modify-write — atomic, so the flag can never land "armed" with the
+  // master switch off by accident. The UI toasts off membersAutoEnabled.
+  let settings = row.data.settings;
+  let membersAutoEnabled = false;
+  if (parsed.data.membersOnly === true && settings?.members?.enabled !== true) {
+    settings = {
+      ...settings,
+      members: { enabled: true, mode: settings?.members?.mode ?? "open" },
+    };
+    membersAutoEnabled = true;
+  }
+
   const nextData: ProjectData = {
     ...row.data,
+    ...(settings !== row.data.settings ? { settings } : {}),
     pages: {
       ...row.data.pages,
-      [slug]: { ...page, title: parsed.data.title.trim() },
+      [slug]: nextPage,
     },
   };
   await db
@@ -84,7 +114,10 @@ export async function PATCH(
     .where(
       and(eq(schema.projects.id, id), eq(schema.projects.userId, session.user.id)),
     );
-  return json({ ok: true }, 200);
+  return json(
+    membersAutoEnabled ? { ok: true, membersAutoEnabled: true } : { ok: true },
+    200,
+  );
 }
 
 export async function DELETE(

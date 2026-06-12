@@ -39,6 +39,11 @@ export interface PublishModalProject {
   hasUnpublishedChanges: boolean;
   /** Speak Every Language: stored target locales (data.settings.languages). */
   languages?: string[];
+  /** Members module: pages flagged members-only while the module is OFF —
+   *  they'd publish wide open. >0 renders the amber warning. */
+  gatedFlagsWithModuleOff?: number;
+  /** Members module ON: count of pages that will publish gated. */
+  gatedPagesCount?: number;
 }
 
 export interface PublishModalProps {
@@ -413,6 +418,24 @@ export function PublishModal({
               {t("publish.languages.hint")}
             </div>
           </div>
+
+          {(project.gatedFlagsWithModuleOff ?? 0) > 0 && (
+            <div className="flex items-start gap-2 rounded-lg bg-amber-50 dark:bg-amber-500/10 ring-1 ring-amber-200 dark:ring-amber-500/30 px-3 py-2 text-[12px] text-amber-800 dark:text-amber-300">
+              <AlertCircle size={13} className="mt-0.5 shrink-0" />
+              <span>
+                {t("publish.membersOffWarning", {
+                  count: project.gatedFlagsWithModuleOff ?? 0,
+                })}
+              </span>
+            </div>
+          )}
+          {(project.gatedPagesCount ?? 0) > 0 && (
+            <div className="text-[11px] text-zinc-500 leading-relaxed">
+              {t("publish.membersGatedSummary", {
+                count: project.gatedPagesCount ?? 0,
+              })}
+            </div>
+          )}
 
           {isPublished && <SpeedCard projectId={project.id} active={open} />}
 

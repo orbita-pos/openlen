@@ -44,6 +44,10 @@
       "images": {
         "label": "이미지",
         "title": "이미지 라이브러리"
+      },
+      "members": {
+        "label": "모듈",
+        "title": "백엔드 모듈 — 멤버 등"
       }
     },
     "tabLocked": "{label} — 잠김",
@@ -199,6 +203,9 @@
     "deleteTitle": "/{slug} 페이지를 삭제할까요?",
     "deleteBody": "내용이 사라지며 되돌릴 수 없어요. 게시 중이라면 다음 배포 때 사이트에서 사라져요.",
     "confirmLabel": "확인을 위해 {slug} 입력",
-    "confirmBtn": "페이지 삭제"
+    "confirmBtn": "페이지 삭제",
+    "membersOnlyBadge": "멤버 전용",
+    "membersOnlyOn": "/{slug}을(를) 멤버 전용으로 설정",
+    "membersOnlyOff": "/{slug}을(를) 공개로 설정"
   }
 }

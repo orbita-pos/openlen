@@ -32,6 +32,8 @@ import { consolidateUnsplashCredits } from "@/lib/publish/credits";
 import { wirePublishedForms } from "@/lib/publish/forms";
 import { injectAnalyticsSnippet } from "@/lib/analytics/snippet";
 import { injectLogoIntoHtml } from "@/lib/branding/inject-logo";
+import { buildGateStub } from "@/lib/members/gate-stub";
+import { validatePageSlug } from "@/lib/projects/site-pages";
 import type { FormConfig, MusicSettings } from "@/lib/projects/types";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -162,6 +164,15 @@ export interface PublishParams {
    *  page/locale variant. The owner's business brain never ships — the widget
    *  calls back to /api/assistant/<sub> which reads it server-side. */
   assistant?: AssistantBake;
+  /** Members module: pages that publish as a login STUB at their public path
+   *  while the REAL document (full bake chain + seal) is written OUTSIDE the
+   *  release — <sub>/protected/<sha>/<slug>/index.html, unreachable by the
+   *  web tier — and served only by /api/m/[sub]/page/[slug] after a session
+   *  check. Slugs pre-validated like `pages`. */
+  gatedPages?: Array<{ slug: string; html: string }>;
+  /** Branding for the gate stubs (site title + optional logo on the login
+   *  card). Required in spirit when gatedPages is non-empty. */
+  memberGate?: { projectTitle: string; logoUrl?: string | null };
 }
 
 const ASSET_URL_RE_FOR =
@@ -583,6 +594,8 @@ export interface PublishResult {
   locales: string[];
   /** Site-page slugs published as /<slug>/index.html. */
   pages: string[];
+  /** Gated slugs — stub in the release, real doc under protected/<sha>/. */
+  gatedPages: string[];
 }
 
 /**
@@ -747,6 +760,51 @@ export async function publishToDir(
     pageDocs.push({ slug: page.slug, html: doc });
   }
 
+  // Members module: gated pages run the SAME chain (bake → canonical → seal),
+  // but the result never enters the release — it lands in protectedDocs and
+  // gets written under <sub>/protected/<sha>/ below. What DOES enter the
+  // release at the page's path is a login STUB with zero protected bytes.
+  // The stub is deliberately NOT sealed: a document's CSP survives
+  // document.open(), and a meta policy parsed during the member swap is
+  // additive — a sealed stub would block the protected doc's own sealed
+  // inline scripts. The stub carries no user content, so unsealed is safe
+  // (same posture as the branded 404 page).
+  const protectedDocs: Array<{ slug: string; html: string }> = [];
+  const stubFiles: Array<{ path: string; content: string }> = [];
+  for (const page of params.gatedPages ?? []) {
+    const pageSanitized = sanitizeForPublish(page.html);
+    if (pageSanitized.html === null) {
+      throw new Error(
+        `publishToDir: refusing to write gated page /${page.slug} containing data-slot-path`,
+      );
+    }
+    let doc = await bakeDocument(pageSanitized.html, bakeCtx, page.slug);
+    doc = annotateLanguageCluster(doc, {
+      baseUrl,
+      selfPath: `/${page.slug}/`,
+      cluster: [{ lang: sourceLang, path: `/${page.slug}/` }],
+    });
+    if (process.env.OPENLEN_CSP_SEAL !== "0") {
+      try {
+        doc = sealRelease(doc, submitOrigin()).html;
+      } catch (err) {
+        // eslint-disable-next-line no-console
+        console.warn(`[publishToDir] seal failed for gated page /${page.slug}; publishing unsealed`, err);
+      }
+    }
+    protectedDocs.push({ slug: page.slug, html: doc });
+    stubFiles.push({
+      path: `${page.slug}/index.html`,
+      content: buildGateStub({
+        sub,
+        slug: page.slug,
+        projectTitle: params.memberGate?.projectTitle ?? sub,
+        locale: sourceLang,
+        logoUrl: params.memberGate?.logoUrl,
+      }),
+    });
+  }
+
   // Site pages enter the sitemap as plain entries — they are NOT language
   // alternates of home, so they stay outside the hreflang cluster.
   let sitemap = buildSitemap(baseUrl, cluster);
@@ -767,11 +825,22 @@ export async function publishToDir(
       path: `${p.slug}/index.html`,
       content: p.html,
     })),
+    // Gate stubs occupy the gated pages' public paths inside the release.
+    ...stubFiles,
     { path: "sitemap.xml", content: sitemap },
     { path: "robots.txt", content: buildRobots(baseUrl) },
   ];
 
-  const sha = computeShaFiles(releaseFiles);
+  // Protected docs shape the sha (an edit to a gated page must mint a new
+  // release) without ever entering the release dir — the __protected__/
+  // prefix only exists inside this hash input.
+  const sha = computeShaFiles([
+    ...releaseFiles,
+    ...protectedDocs.map((p) => ({
+      path: `__protected__/${p.slug}/index.html`,
+      content: p.html,
+    })),
+  ]);
 
   const releaseDir = safeJoin(releasesDir, sha);
   let written = false;
@@ -806,6 +875,37 @@ export async function publishToDir(
     }
   }
 
+  // Members: write the protected docs OUTSIDE the public root, keyed by the
+  // SAME sha so stub and content always travel together (rollback included).
+  // This runs BEFORE the symlink flip — the member API resolves content via
+  // the current sha and must never land on a sha whose protected dir hasn't
+  // been written yet. Idempotent like the release write.
+  if (protectedDocs.length > 0) {
+    const protectedRoot = safeJoin(subDir, "protected");
+    const protectedShaDir = safeJoin(protectedRoot, sha);
+    let protectedExists = false;
+    try {
+      await stat(protectedShaDir);
+      protectedExists = true;
+    } catch {
+      // ENOENT — first write for this sha.
+    }
+    if (!protectedExists) {
+      const tmpDir = safeJoin(protectedRoot, `.tmp-${sha}-${randomUUID()}`);
+      await mkdir(tmpDir, { recursive: true });
+      try {
+        for (const p of protectedDocs) {
+          const dst = path.join(tmpDir, p.slug, "index.html");
+          await mkdir(path.dirname(dst), { recursive: true });
+          await writeFile(dst, p.html, "utf8");
+        }
+        await rename(tmpDir, protectedShaDir);
+      } finally {
+        await rm(tmpDir, { recursive: true, force: true }).catch(() => {});
+      }
+    }
+  }
+
   // Atomically flip the current symlink. symlink(target, current.new) then
   // rename(current.new, current) is atomic across POSIX. We use a relative
   // target so the symlink survives the dir being moved (and so a `cp -a` of
@@ -828,13 +928,70 @@ export async function publishToDir(
   // caller is currently rolling back.
   await pruneOldReleases(releasesDir, sha).catch(() => {});
 
+  // Keep the protected store in lockstep — drop protected/<sha> dirs whose
+  // release no longer exists. Best-effort, same posture as the prune above.
+  await pruneProtectedDirs(subDir, releasesDir).catch(() => {});
+
   return {
     sha,
     html: migratedHtml,
     written,
     locales: localeDocs.map((d) => d.locale),
     pages: pageDocs.map((p) => p.slug),
+    gatedPages: protectedDocs.map((p) => p.slug),
   };
+}
+
+/** Remove protected/<sha> dirs whose release was pruned. The release set is
+ *  the source of truth; anything protected without a matching release is
+ *  unreachable (getCurrentReleaseSha can never name it). */
+async function pruneProtectedDirs(
+  subDir: string,
+  releasesDir: string,
+): Promise<void> {
+  const protectedRoot = path.join(subDir, "protected");
+  let names: string[];
+  try {
+    names = await readdir(protectedRoot);
+  } catch {
+    return; // no protected dir — site has no gated pages
+  }
+  let releaseNames: Set<string>;
+  try {
+    releaseNames = new Set(await readdir(releasesDir));
+  } catch {
+    return;
+  }
+  await Promise.all(
+    names
+      .filter((n) => !n.startsWith(".") && !releaseNames.has(n))
+      .map((n) =>
+        rm(path.join(protectedRoot, n), { recursive: true, force: true }).catch(
+          () => {},
+        ),
+      ),
+  );
+}
+
+/** Read a gated page's protected document for the CURRENT release. Null when
+ *  the sub isn't published, the slug is malformed, or this sha has no
+ *  protected doc for the page (e.g. rolled back to a pre-gating release). */
+export async function readProtectedPage(
+  subdomain: string,
+  slug: string,
+): Promise<string | null> {
+  const v = validateSubdomain(subdomain);
+  if (!v.ok) return null;
+  const s = validatePageSlug(slug);
+  if (!s.ok || s.slug !== slug) return null;
+  const sha = await getCurrentReleaseSha(v.value);
+  if (!sha) return null;
+  const file = safeJoin(getRoot(), v.value, "protected", sha, slug, "index.html");
+  try {
+    return await readFile(file, "utf8");
+  } catch {
+    return null;
+  }
 }
 
 /**

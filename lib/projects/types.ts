@@ -41,6 +41,17 @@ export interface AssistantSettings {
   tone?: string;
 }
 
+/** Members module — visitor accounts on the published site. The member rows
+ *  live in the siteMembers table; this only holds the per-site switches. */
+export interface MembersSettings {
+  /** Master switch. Absent/false → no gating: membersOnly pages publish
+   *  public and /api/m/* refuses to issue logins. */
+  enabled?: boolean;
+  /** "open" → any visitor can sign up via magic link (default).
+   *  "invite" → only emails the owner pre-approved can log in. */
+  mode?: "open" | "invite";
+}
+
 /** Project-level settings that aren't part of the HTML document. */
 export interface ProjectSettings {
   /** Per-form config, keyed by the form's index — its position among all
@@ -64,6 +75,8 @@ export interface ProjectSettings {
   music?: MusicSettings;
   /** Site assistant: visitor-facing AI chat. Absent = off. */
   assistant?: AssistantSettings;
+  /** Members module: visitor login + members-only pages. Absent = off. */
+  members?: MembersSettings;
 }
 
 /** One additional page of a multi-page site. The home page stays at
@@ -74,6 +87,10 @@ export interface SitePage {
   html: string;
   /** Display name in the site-pages panel. Absent → derived from the slug. */
   title?: string;
+  /** Members-only: when the members module is enabled, this page publishes
+   *  as a login stub and its real document is served only to a logged-in
+   *  member (lib/members). Only subpages can carry this — home never gates. */
+  membersOnly?: boolean;
 }
 
 export interface ProjectData {

@@ -10,7 +10,17 @@ import { createPortal } from "react-dom";
 import { useTranslations } from "next-intl";
 import { validatePageSlug, MAX_SITE_PAGES } from "@/lib/projects/site-pages";
 import type { SitePageSummary } from "@/lib/projects/site-pages";
-import { AlertTriangle, FileText, HomeIcon, Loader, Plus, Trash, X } from "../icons";
+import {
+  AlertTriangle,
+  FileText,
+  HomeIcon,
+  Loader,
+  LockIcon,
+  LockOpen,
+  Plus,
+  Trash,
+  X,
+} from "../icons";
 import { useFocusTrap } from "../use-focus-trap";
 
 interface SitePagesPanelProps {
@@ -21,6 +31,9 @@ interface SitePagesPanelProps {
   /** Returns an i18n error key (sitePages.err*) or null on success. */
   onCreate: (slug: string) => Promise<string | null>;
   onDelete: (slug: string) => Promise<boolean>;
+  /** Members module: flip a subpage's members-only flag. Resolves false on
+   *  failure (the row reverts). Absent → no lock affordance rendered. */
+  onToggleMembersOnly?: (slug: string, next: boolean) => Promise<boolean>;
 }
 
 export function SitePagesPanel({
@@ -29,6 +42,7 @@ export function SitePagesPanel({
   onSwitch,
   onCreate,
   onDelete,
+  onToggleMembersOnly,
 }: SitePagesPanelProps) {
   const t = useTranslations("wsChrome");
   const [adding, setAdding] = useState(false);
@@ -37,6 +51,7 @@ export function SitePagesPanel({
   const [error, setError] = useState<string | null>(null);
   const [deleting, setDeleting] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
+  const [togglingLock, setTogglingLock] = useState<string | null>(null);
 
   const atLimit = pages.length >= MAX_SITE_PAGES;
   const draftCheck = draft.trim() ? validatePageSlug(draft) : null;
@@ -81,6 +96,7 @@ export function SitePagesPanel({
 
         {pages.map((p) => {
           const active = activePage === p.slug;
+          const gated = p.membersOnly === true;
           return (
             <div key={p.slug} className="relative group">
               <button
@@ -90,7 +106,48 @@ export function SitePagesPanel({
               >
                 <FileText size={13} className="shrink-0" />
                 <span className="text-[12px] truncate tabular">/{p.slug}</span>
+                {gated && (
+                  <span
+                    className="ml-auto shrink-0 text-accent group-hover:opacity-0 transition-opacity"
+                    title={t("sitePages.membersOnlyBadge")}
+                  >
+                    <LockIcon size={11} />
+                  </span>
+                )}
               </button>
+              {onToggleMembersOnly && (
+                <button
+                  type="button"
+                  disabled={togglingLock === p.slug}
+                  aria-label={t(
+                    gated ? "sitePages.membersOnlyOff" : "sitePages.membersOnlyOn",
+                    { slug: p.slug },
+                  )}
+                  title={t(
+                    gated ? "sitePages.membersOnlyOff" : "sitePages.membersOnlyOn",
+                    { slug: p.slug },
+                  )}
+                  onClick={async () => {
+                    if (togglingLock) return;
+                    setTogglingLock(p.slug);
+                    await onToggleMembersOnly(p.slug, !gated);
+                    setTogglingLock(null);
+                  }}
+                  className={`absolute right-8 top-1 h-6 w-6 hidden group-hover:inline-flex items-center justify-center rounded transition disabled:opacity-50 ${
+                    gated
+                      ? "text-accent hover:bg-hover"
+                      : "fg-faint hover:fg hover:bg-hover"
+                  }`}
+                >
+                  {togglingLock === p.slug ? (
+                    <Loader size={11} className="animate-spin" />
+                  ) : gated ? (
+                    <LockIcon size={11} />
+                  ) : (
+                    <LockOpen size={11} />
+                  )}
+                </button>
+              )}
               <button
                 type="button"
                 disabled={deleting === p.slug}

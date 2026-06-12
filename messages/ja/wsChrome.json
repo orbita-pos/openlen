@@ -44,6 +44,10 @@
       "images": {
         "label": "画像",
         "title": "画像ライブラリ"
+      },
+      "members": {
+        "label": "モジュール",
+        "title": "バックエンドモジュール — メンバーなど"
       }
     },
     "tabLocked": "{label} — ロック中",
@@ -199,6 +203,9 @@
     "deleteTitle": "/{slug} を削除しますか？",
     "deleteBody": "内容は失われ、元に戻せません。公開中の場合、次のデプロイでサイトから消えます。",
     "confirmLabel": "確認のため {slug} と入力",
-    "confirmBtn": "ページを削除"
+    "confirmBtn": "ページを削除",
+    "membersOnlyBadge": "メンバー限定",
+    "membersOnlyOn": "/{slug} をメンバー限定にする",
+    "membersOnlyOff": "/{slug} を公開にする"
   }
 }

@@ -131,7 +131,9 @@
     "languages": {
       "title": "Publique também em",
       "hint": "Cada idioma vai ao ar em /es/, /fr/… traduzido automaticamente a cada publicação. O idioma original da sua página é ignorado."
-    }
+    },
+    "membersOffWarning": "{count, plural, one {# página está marcada só-membros mas o módulo Membros está DESLIGADO — será publicada PÚBLICA. Ative-o na aba Módulos.} other {# páginas estão marcadas só-membros mas o módulo Membros está DESLIGADO — serão publicadas PÚBLICAS. Ative-o na aba Módulos.}}",
+    "membersGatedSummary": "{count, plural, one {# página só-membros será publicada atrás do login.} other {# páginas só-membros serão publicadas atrás do login.}}"
   },
   "inspector": {
     "radius": "Raio",

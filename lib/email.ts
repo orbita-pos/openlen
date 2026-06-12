@@ -1,4 +1,8 @@
 import { Resend } from "resend";
+import {
+  memberEmailStringsFor,
+  type MemberEmailStrings,
+} from "@/lib/members/email-strings";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Email — Resend client with console-log fallback.
@@ -63,6 +67,78 @@ export async function sendPasswordResetEmail(
     html,
     text,
   });
+}
+
+export interface MemberLoginEmail {
+  to: string;
+  /** The published SITE's title — this email speaks for the site, not for
+   *  OpenLen (members are the site's visitors, not our users). */
+  siteTitle: string;
+  loginUrl: string;
+  /** Site language — picks the copy from lib/members/email-strings. */
+  locale?: string | null;
+}
+
+/** Magic-link login email for the members module. Mirrors the password-reset
+ *  posture: dev fallback prints the URL, prod misconfig screams in the log. */
+export async function sendMemberLoginEmail(
+  input: MemberLoginEmail,
+): Promise<void> {
+  const live = liveClientOrWarn("member login email");
+  if (!live) {
+    if (process.env.NODE_ENV !== "production") {
+      // eslint-disable-next-line no-console
+      console.log(
+        `\n  📧 [DEV] Member login email to ${input.to} (${input.siteTitle})\n     ${input.loginUrl}\n     (set RESEND_API_KEY in .env.local to send real emails)\n`,
+      );
+    }
+    return;
+  }
+
+  const t = memberEmailStringsFor(input.locale);
+  const site = input.siteTitle.trim() || "your site";
+  await live.emails.send({
+    from,
+    to: input.to,
+    subject: t.subject.replace("{site}", site),
+    html: buildMemberLoginHtml(input, t, site),
+    text: [
+      t.heading.replace("{site}", site),
+      "",
+      t.body,
+      "",
+      input.loginUrl,
+      "",
+      t.ignore,
+    ].join("\n"),
+  });
+}
+
+function buildMemberLoginHtml(
+  input: MemberLoginEmail,
+  t: MemberEmailStrings,
+  site: string,
+): string {
+  // Neutral palette — the site's email in spirit, so no OpenLen orange.
+  return `<!doctype html>
+<html>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, sans-serif; background:#fafafa; margin:0; padding:32px; color:#0a0a0a;">
+  <table align="center" style="max-width:480px; width:100%; background:#fff; border-radius:16px; padding:32px; border:1px solid #e5e5e5;">
+    <tr><td>
+      <h1 style="font-size:20px; margin:0 0 12px; letter-spacing:-0.02em;">${escape(
+        t.heading.replace("{site}", site),
+      )}</h1>
+      <p style="font-size:14px; line-height:1.5; color:#525252; margin:0 0 24px;">${escape(t.body)}</p>
+      <p style="margin:0 0 24px;">
+        <a href="${escape(input.loginUrl)}" style="display:inline-block; background:#16181d; color:#fff; padding:11px 18px; border-radius:8px; text-decoration:none; font-weight:500; font-size:14px;">${escape(t.button)}</a>
+      </p>
+      <p style="font-size:12px; color:#737373; margin:0 0 8px;">${escape(t.linkHint)}</p>
+      <p style="font-size:12px; color:#525252; word-break:break-all; margin:0 0 24px;">${escape(input.loginUrl)}</p>
+      <p style="font-size:12px; color:#a3a3a3; margin:0;">${escape(t.ignore)}</p>
+    </td></tr>
+  </table>
+</body>
+</html>`;
 }
 
 export interface LeadNotificationMeta {
