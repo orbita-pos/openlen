@@ -689,6 +689,55 @@ export const memberLoginTokens = pgTable("memberLoginTokens", {
   createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
 });
 
+// Member sessions — server-side, opaque, revocable. The cookie carries a raw
+// random token; only its sha256 lands here. Supabase-reference posture: their
+// refresh tokens are single-use DB rows (revocation + theft containment live
+// server-side); our per-member traffic is small enough to collapse that into
+// one stateful session layer — no signed bearer tokens, so there is no
+// signing key to rotate and deleting a row IS the revocation.
+export const memberSessions = pgTable(
+  "memberSessions",
+  {
+    tokenHash: text("tokenHash").primaryKey(),
+    projectId: text("projectId")
+      .notNull()
+      .references(() => projects.id, { onDelete: "cascade" }),
+    memberId: text("memberId")
+      .notNull()
+      .references(() => siteMembers.id, { onDelete: "cascade" }),
+    createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
+    // Touched (throttled) on protected fetches — powers "last seen" later.
+    lastSeenAt: timestamp("lastSeenAt", { mode: "date" }).notNull().defaultNow(),
+    expiresAt: timestamp("expiresAt", { mode: "date" }).notNull(),
+  },
+  (table) => [index("memberSessions_memberId_idx").on(table.memberId)],
+);
+
+// Auth audit trail (Supabase-reference). memberId carries NO foreign key on
+// purpose — "removed" events must outlive the member row they describe.
+export const memberAuthEvents = pgTable(
+  "memberAuthEvents",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    projectId: text("projectId")
+      .notNull()
+      .references(() => projects.id, { onDelete: "cascade" }),
+    memberId: text("memberId"),
+    email: text("email"),
+    // link_requested | login | logout | invited | removed
+    type: text("type").notNull(),
+    createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("memberAuthEvents_projectId_createdAt_idx").on(
+      table.projectId,
+      table.createdAt,
+    ),
+  ],
+);
+
 // External-deploy OAuth connections — one row per (user, provider). The token
 // is an ACCOUNT-level credential (connect once, deploy any project), so it
 // lives at user grain, not per-project. Powers the Deploy-dropdown "Deploy to

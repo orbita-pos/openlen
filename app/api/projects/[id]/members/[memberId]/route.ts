@@ -1,7 +1,11 @@
 import { and, eq } from "drizzle-orm";
 import { auth } from "@/auth";
 import { db, schema } from "@/lib/db";
-import { deleteMember } from "@/lib/members/store";
+import {
+  deleteMember,
+  getMemberById,
+  recordMemberAuthEvent,
+} from "@/lib/members/store";
 
 // DELETE /api/projects/[id]/members/[memberId] — revoke a member. The row
 // delete IS the revocation: every protected fetch re-checks the row, so
@@ -30,8 +34,17 @@ export async function DELETE(
     .limit(1);
   if (owned.length === 0) return json({ error: "not_found" }, 404);
 
+  // Capture the email BEFORE the delete — the audit row must outlive the
+  // member it describes (memberAuthEvents carries no FK for this reason).
+  const member = await getMemberById(memberId);
   const removed = await deleteMember(id, memberId);
   if (!removed) return json({ error: "not_found" }, 404);
+  recordMemberAuthEvent({
+    projectId: id,
+    memberId,
+    email: member?.email,
+    type: "removed",
+  });
   return json({ ok: true }, 200);
 }
 

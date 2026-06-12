@@ -1,51 +1,42 @@
 // @vitest-environment node
 
-import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   MEMBER_COOKIE,
   buildMemberCookie,
   clearMemberCookie,
+  generateSessionToken,
+  hashSessionToken,
   readMemberCookie,
-  signMemberSession,
-  verifyMemberSession,
 } from "./session";
-
-const CLAIMS = { memberId: "mem-123", projectId: "proj-456" };
-
-beforeAll(() => {
-  process.env.NEXTAUTH_SECRET = "test-secret-for-member-sessions";
-});
 
 afterEach(() => {
   vi.unstubAllEnvs();
 });
 
-describe("member session JWT", () => {
-  it("round-trips claims", async () => {
-    const token = await signMemberSession(CLAIMS);
-    expect(token.split(".")).toHaveLength(3);
-    expect(await verifyMemberSession(token)).toEqual(CLAIMS);
+describe("opaque session tokens", () => {
+  it("are 256-bit, URL-safe, and hash deterministically", () => {
+    const { raw, hash } = generateSessionToken();
+    expect(raw.length).toBeGreaterThanOrEqual(42); // 32 bytes base64url
+    expect(raw).toMatch(/^[A-Za-z0-9_-]+$/);
+    expect(hash).toMatch(/^[0-9a-f]{64}$/);
+    expect(hashSessionToken(raw)).toBe(hash);
   });
 
-  it("rejects a tampered token", async () => {
-    const token = await signMemberSession(CLAIMS);
-    const [h, p, s] = token.split(".");
-    const forgedPayload = Buffer.from(
-      JSON.stringify({ mid: "attacker", pid: CLAIMS.projectId }),
-    ).toString("base64url");
-    expect(await verifyMemberSession(`${h}.${forgedPayload}.${s}`)).toBeNull();
-    expect(await verifyMemberSession(`${h}.${p}.AAAA${s.slice(4)}`)).toBeNull();
+  it("never repeat and never collide on hash", () => {
+    const seen = new Set<string>();
+    for (let i = 0; i < 50; i++) {
+      const { raw, hash } = generateSessionToken();
+      expect(seen.has(raw)).toBe(false);
+      seen.add(raw);
+      seen.add(hash);
+    }
   });
 
-  it("rejects a token signed with a different secret", async () => {
-    const token = await signMemberSession(CLAIMS);
-    vi.stubEnv("NEXTAUTH_SECRET", "a-rotated-secret");
-    expect(await verifyMemberSession(token)).toBeNull();
-  });
-
-  it("rejects garbage and empty strings", async () => {
-    expect(await verifyMemberSession("")).toBeNull();
-    expect(await verifyMemberSession("not-a-jwt")).toBeNull();
+  it("the raw token is unrecoverable from the stored hash", () => {
+    const { raw, hash } = generateSessionToken();
+    expect(hash).not.toContain(raw.slice(0, 8));
+    expect(hashSessionToken("guess")).not.toBe(hash);
   });
 });
 

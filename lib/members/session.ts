@@ -1,58 +1,34 @@
-// Member sessions — a signed JWT in a host-only cookie on the SITE's domain.
+// Member sessions — opaque server-side tokens in a host-only cookie.
 //
-// Deliberately separate from Auth.js (that's the platform account on
-// openlen.com): the member cookie is set by /api/m/[sub]/auth/verify on
-// <sub>.openlen.com (or the custom domain), carries no Domain attribute so the
-// browser scopes it to that exact host, and names a (member, project) pair.
-// The key derives from NEXTAUTH_SECRET via HKDF — same no-new-secret approach
-// as lib/integrations/crypto.ts, different salt/info so keys never collide.
+// Supabase-reference design, collapsed to our workload: their revocation +
+// theft-containment story lives in single-use refresh-token ROWS, with
+// short stateless access JWTs on top because their backends verify millions
+// of calls without a session lookup. Our protected fetches already hit the
+// DB once per request (member-row check), so the stateless layer buys
+// nothing — the cookie carries a raw 256-bit token, only its sha256 is
+// stored (memberSessions), and verification IS the row lookup. Deleting a
+// row is the revocation; there is no signing key, so there is nothing to
+// rotate and a leaked platform secret can't mint member sessions.
+//
+// Deliberately separate from Auth.js (the platform account on openlen.com):
+// this cookie is set by /api/m/[sub]/auth/verify on the SITE's own host,
+// carries no Domain attribute (host-only is the isolation between sites).
 
-import { hkdfSync } from "node:crypto";
-import { SignJWT, jwtVerify } from "jose";
+import crypto from "node:crypto";
 
 export const MEMBER_COOKIE = "ol_member";
 
-const SESSION_TTL_S = 30 * 24 * 60 * 60; // 30 days
+export const SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 days, absolute
+const SESSION_TTL_S = SESSION_TTL_MS / 1000;
 
-export interface MemberSessionClaims {
-  memberId: string;
-  projectId: string;
+/** Raw token goes in the cookie; only the hash ever touches the DB. */
+export function generateSessionToken(): { raw: string; hash: string } {
+  const raw = crypto.randomBytes(32).toString("base64url");
+  return { raw, hash: hashSessionToken(raw) };
 }
 
-function getKey(): Uint8Array {
-  const secret = process.env.NEXTAUTH_SECRET || process.env.AUTH_SECRET;
-  if (!secret) {
-    throw new Error("NEXTAUTH_SECRET is required to sign member sessions.");
-  }
-  return new Uint8Array(
-    hkdfSync("sha256", secret, "openlen-member-session", "ol-member-jwt", 32),
-  );
-}
-
-export async function signMemberSession(
-  claims: MemberSessionClaims,
-): Promise<string> {
-  return new SignJWT({ mid: claims.memberId, pid: claims.projectId })
-    .setProtectedHeader({ alg: "HS256" })
-    .setIssuedAt()
-    .setExpirationTime(`${SESSION_TTL_S}s`)
-    .sign(getKey());
-}
-
-/** Null on any failure — expired, tampered, wrong key, malformed claims. */
-export async function verifyMemberSession(
-  token: string,
-): Promise<MemberSessionClaims | null> {
-  try {
-    const { payload } = await jwtVerify(token, getKey(), {
-      algorithms: ["HS256"],
-    });
-    const { mid, pid } = payload;
-    if (typeof mid !== "string" || typeof pid !== "string") return null;
-    return { memberId: mid, projectId: pid };
-  } catch {
-    return null;
-  }
+export function hashSessionToken(raw: string): string {
+  return crypto.createHash("sha256").update(raw).digest("hex");
 }
 
 // No Domain attribute — host-only is the isolation mechanism (a session on
