@@ -17,9 +17,13 @@
 // last inserted back out and re-serializes — no reload, so the preview never
 // blanks to white.
 //
-// Parent → iframe:  { type: "openlen:section-insert", html: "<fragment>", sectionType }
+// Parent → iframe:  { type: "openlen:section-insert", html: "<fragment>", sectionType, anchorPath? }
 // Parent → iframe:  { type: "openlen:section-remove" }
 // Iframe → parent:  { type: "openlen:html-changed", outerHtml, source: "section-insert" }
+//
+// anchorPath (optional, drop engine): a body-relative :nth-of-type path of the
+// sibling to insert BEFORE — positional drops land where the user pointed.
+// Unresolvable/absent → the type-aware placementAnchor default.
 
 const INSERT_SCRIPT = `
 (function () {
@@ -107,7 +111,22 @@ const INSERT_SCRIPT = `
     return null;
   }
 
-  function insertFragment(fragHtml, sectionType) {
+  // Resolve a body-relative :nth-of-type path to the direct child of root
+  // that contains it (the drop engine addresses sections the same way the
+  // Replace/Inspect scripts do). Null when it doesn't resolve under root.
+  function resolveAnchor(root, anchorPath) {
+    if (!anchorPath || typeof anchorPath !== 'string') return null;
+    var el = null;
+    try {
+      el = document.querySelector('body > ' + anchorPath) || document.querySelector(anchorPath);
+    } catch (_) {
+      return null;
+    }
+    while (el && el.parentNode !== root) el = el.parentElement;
+    return el;
+  }
+
+  function insertFragment(fragHtml, sectionType, anchorPath) {
     var root = findContentRoot();
     if (!root) return null;
 
@@ -126,7 +145,7 @@ const INSERT_SCRIPT = `
     var tmp = document.createElement('div');
     tmp.innerHTML = fragHtml;
     var nodes = Array.prototype.slice.call(tmp.childNodes);
-    var anchor = placementAnchor(root, sectionType);
+    var anchor = resolveAnchor(root, anchorPath) || placementAnchor(root, sectionType);
     if (anchor && anchor.parentNode !== root) anchor = null; // safety
     var insertedEls = [];
     var insertedAll = [];
@@ -244,7 +263,7 @@ const INSERT_SCRIPT = `
     if (d.html === lastInsertHtml && (now - lastInsertAt) < 1200) return;
     lastInsertHtml = d.html;
     lastInsertAt = now;
-    var main = insertFragment(d.html, d.sectionType);
+    var main = insertFragment(d.html, d.sectionType, typeof d.anchorPath === 'string' ? d.anchorPath : null);
     if (!main) return;
     // Let layout settle (and any inserted <script> run) before serializing.
     setTimeout(postClean, 80);

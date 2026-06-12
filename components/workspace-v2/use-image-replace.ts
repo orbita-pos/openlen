@@ -16,7 +16,11 @@
 //        payload for icon: { svgMarkup: string }
 //        payload for image: { url: string, alt?: string }
 //   OUT: { type: "openlen:html-changed", outerHtml, source: "replace" }
+//   OUT: { type: "openlen:html-changed", outerHtml, source: "resize" }  // grip drag
+//   OUT: { type: "openlen:asset-remove", kind, path }                   // trash
 //   OUT: { type: "openlen:replace-cancelled" }  // ESC
+
+import { resizeWidthPct } from "./drop-place-core";
 
 const REPLACE_STYLE = `
 .openlen-replace-button {
@@ -46,6 +50,51 @@ const REPLACE_STYLE = `
 .openlen-replace-button svg {
   width: 12px;
   height: 12px;
+}
+.openlen-replace-remove {
+  position: absolute;
+  z-index: 999999;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  background: rgba(17,17,17,0.92);
+  color: white;
+  border: none;
+  border-radius: 7px;
+  cursor: pointer;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.18);
+  pointer-events: auto;
+  transition: transform 120ms ease, background 120ms ease;
+}
+.openlen-replace-remove:hover {
+  transform: translateY(-1px);
+  background: #dc2626;
+}
+.openlen-replace-remove svg { width: 13px; height: 13px; }
+.openlen-resize-grip {
+  position: absolute;
+  z-index: 999999;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: white;
+  border: 2.5px solid #FF5A36;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.25);
+  cursor: nwse-resize;
+  pointer-events: auto;
+  touch-action: none;
+}
+body[data-openlen-resizing] .openlen-replace-button,
+body[data-openlen-resizing] .openlen-replace-remove,
+body[data-openlen-resizing] .openlen-reorder-handle,
+body[data-openlen-resizing] .openlen-section-toolbar,
+body[data-openlen-resizing] .openlen-block-chip {
+  display: none !important;
+}
+body[data-openlen-resizing] [data-openlen-replace-target] {
+  outline: 2px solid rgba(255,90,54,0.9) !important;
 }
 [data-openlen-replace-target] {
   outline: 2px dashed rgba(255,90,54,0.55);
@@ -98,6 +147,8 @@ const REPLACE_STYLE = `
 /* Editor V3 gate — script + UI nodes live permanently in the persistent
    iframe; visibility is gated on body[data-openlen-edit-mode]. */
 body:not([data-openlen-edit-mode]) .openlen-replace-button,
+body:not([data-openlen-edit-mode]) .openlen-replace-remove,
+body:not([data-openlen-edit-mode]) .openlen-resize-grip,
 body:not([data-openlen-edit-mode]) .openlen-replace-copy-chip {
   display: none !important;
 }
@@ -109,7 +160,9 @@ body:not([data-openlen-edit-mode]) [data-openlen-replace-target] {
 
 const REPLACE_SCRIPT = `
 (function () {
+  var resizeWidthPct = ${resizeWidthPct.toString()};
   var hoverButton = null;
+  var removeButton = null;
   var hoveredEl = null;
   var hoveredKind = null;
   var hoveredPath = null;
@@ -192,6 +245,58 @@ const REPLACE_SCRIPT = `
     return hoverButton;
   }
 
+  // Trash sibling of the Replace pill — removes a dropped image (the parent
+  // routes it to the inspect script's applyRemoveImage: un-split / clear bg /
+  // remove the img, plus the drop-created section when it's left empty).
+  function ensureRemoveButton() {
+    if (removeButton) return removeButton;
+    var btn = document.createElement('button');
+    btn.type = 'button';
+    btn.setAttribute('data-openlen-replace', 'remove');
+    btn.className = 'openlen-replace-remove';
+    btn.title = 'Remove image';
+    btn.setAttribute('aria-label', 'Remove image');
+    btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>';
+    btn.addEventListener('click', onRemoveClick, true);
+    btn.addEventListener('mouseenter', cancelHide, true);
+    btn.addEventListener('mouseleave', scheduleHide, true);
+    document.body.appendChild(btn);
+    removeButton = btn;
+    return btn;
+  }
+
+  function onRemoveClick(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!hoveredPath) return;
+    try {
+      window.parent.postMessage({
+        type: 'openlen:asset-remove',
+        kind: hoveredKind,
+        path: hoveredPath,
+      }, '*');
+    } catch (_) {}
+    clearHover();
+  }
+
+  // The inspect script stops click propagation at document capture (its
+  // select gesture), which kills target-level listeners. This script
+  // registers FIRST (derive order), so a document-capture handler here wins
+  // the race and BOTH pill buttons stay clickable in edit mode (the main
+  // Replace pill had the same silent death — clicking the image worked,
+  // clicking the pill didn't).
+  function onDocChromeClick(e) {
+    var t = e.target;
+    if (!t || !t.closest) return;
+    if (t.closest('.openlen-replace-remove')) {
+      onRemoveClick(e);
+      return;
+    }
+    if (t.closest('.openlen-replace-button')) {
+      onButtonClick(e);
+    }
+  }
+
   function updateButton(el, kind) {
     var btn = ensureButton();
     var label = kind === 'icon' ? 'Replace icon' : 'Replace image';
@@ -207,14 +312,34 @@ const REPLACE_SCRIPT = `
     btn.style.top = top + 'px';
     btn.style.left = left + 'px';
     btn.style.display = 'inline-flex';
+    // The trash sibling sits just left of the pill — images only (removing
+    // an inline icon is a different, riskier edit).
+    var rm = ensureRemoveButton();
+    if (kind === 'image') {
+      rm.style.top = top + 'px';
+      rm.style.left = (left - 34) + 'px';
+      rm.style.display = 'inline-flex';
+    } else {
+      rm.style.display = 'none';
+    }
+    // The resize grip — real <img> only (a % width on an svg/bg-div behaves
+    // unpredictably; img + height:auto keeps the ratio).
+    if (kind === 'image' && el.tagName === 'IMG') {
+      positionGrip(el);
+    } else if (resizeGrip) {
+      resizeGrip.style.display = 'none';
+    }
   }
 
   function clearHover() {
+    if (resizing) return; // mid-drag the hover state must survive
     if (hoveredEl) hoveredEl.removeAttribute('data-openlen-replace-target');
     hoveredEl = null;
     hoveredKind = null;
     hoveredPath = null;
     if (hoverButton) hoverButton.style.display = 'none';
+    if (removeButton) removeButton.style.display = 'none';
+    if (resizeGrip) resizeGrip.style.display = 'none';
     document.body.removeAttribute('data-openlen-over-image');
   }
 
@@ -231,6 +356,7 @@ const REPLACE_SCRIPT = `
   }
 
   function onMouseMove(e) {
+    if (resizing) return;
     // While a reorder drag is in progress, suppress our hover button —
     // the dragged section's bounding rect is mid-transform and our
     // absolute-positioned button would float at a stale location.
@@ -472,21 +598,87 @@ const REPLACE_SCRIPT = `
     }
   }
 
-  function postClean() {
+  function postClean(source) {
     var clone = document.documentElement.cloneNode(true);
     clone.querySelectorAll('[data-openlen-replace]').forEach(function (n) { n.remove(); });
     clone.querySelectorAll('[data-openlen-replace-target]').forEach(function (n) {
       n.removeAttribute('data-openlen-replace-target');
     });
     var cloneBody = clone.querySelector('body');
-    if (cloneBody) cloneBody.removeAttribute('data-openlen-replace-mode');
+    if (cloneBody) {
+      cloneBody.removeAttribute('data-openlen-replace-mode');
+      cloneBody.removeAttribute('data-openlen-resizing');
+    }
     try {
       window.parent.postMessage({
         type: 'openlen:html-changed',
         outerHtml: '<!doctype html>\\n' + clone.outerHTML,
-        source: 'replace',
+        source: source || 'replace',
       }, '*');
     } catch (_) {}
+  }
+
+  // ── Resize grip — drag the corner to size an image (width %, responsive) ──
+  var resizeGrip = null;
+  var resizing = null; // { el, startX, startW, parentW }
+
+  function ensureGrip() {
+    if (resizeGrip) return resizeGrip;
+    var g = document.createElement('div');
+    g.setAttribute('data-openlen-replace', 'resize');
+    g.className = 'openlen-resize-grip';
+    g.title = 'Resize image';
+    g.addEventListener('pointerdown', onGripDown, true);
+    // Captured-pointer events land on the grip itself.
+    g.addEventListener('pointermove', onGripMove, true);
+    g.addEventListener('pointerup', onGripUp, true);
+    g.addEventListener('lostpointercapture', onGripUp, true);
+    g.addEventListener('mouseenter', cancelHide, true);
+    g.addEventListener('mouseleave', scheduleHide, true);
+    document.body.appendChild(g);
+    resizeGrip = g;
+    return g;
+  }
+
+  function positionGrip(el) {
+    var g = ensureGrip();
+    var r = el.getBoundingClientRect();
+    g.style.top = (r.bottom + window.scrollY - 8) + 'px';
+    g.style.left = (r.right + window.scrollX - 8) + 'px';
+    g.style.display = 'block';
+  }
+
+  function onGripDown(e) {
+    if (!hoveredEl || hoveredEl.tagName !== 'IMG') return;
+    e.preventDefault();
+    e.stopPropagation();
+    var parent = hoveredEl.parentElement;
+    if (!parent) return;
+    var pr = parent.getBoundingClientRect();
+    var ir = hoveredEl.getBoundingClientRect();
+    resizing = { el: hoveredEl, startX: e.clientX, startW: ir.width, parentW: pr.width };
+    document.body.setAttribute('data-openlen-resizing', '');
+    try { resizeGrip.setPointerCapture(e.pointerId); } catch (_) {}
+  }
+
+  function onGripMove(e) {
+    if (!resizing) return;
+    e.preventDefault();
+    var pct = resizeWidthPct(resizing.startW, e.clientX - resizing.startX, resizing.parentW);
+    resizing.el.style.width = pct + '%';
+    resizing.el.style.height = 'auto';
+    resizing.el.style.maxWidth = '100%';
+    positionGrip(resizing.el);
+  }
+
+  function onGripUp(e) {
+    if (!resizing) return;
+    var el = resizing.el;
+    resizing = null;
+    document.body.removeAttribute('data-openlen-resizing');
+    try { resizeGrip.releasePointerCapture(e.pointerId); } catch (_) {}
+    positionGrip(el);
+    postClean('resize');
   }
 
   function onParentMessage(e) {
@@ -525,6 +717,7 @@ const REPLACE_SCRIPT = `
     }
     document.addEventListener('mousemove', gated(onMouseMove), true);
     document.addEventListener('keydown', gated(onKey), true);
+    document.addEventListener('click', gated(onDocChromeClick), true);
     document.addEventListener('click', gated(onImageClick), true);
     window.addEventListener('message', onParentMessage);
   }

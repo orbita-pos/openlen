@@ -47,5 +47,22 @@
     "body": "Agrega la info de tu negocio a esta página.",
     "cta": "Agregar negocio",
     "dismiss": "Descartar"
+  },
+  "drop": {
+    "placeHint": "Haz clic donde quieras colocar la imagen · Esc cancela",
+    "uploading": "Subiendo imagen…",
+    "sectionName": "Sección de imagen"
+  },
+  "undoPill": {
+    "replaced": "Imagen reemplazada",
+    "background": "Fondo aplicado",
+    "split": "Imagen colocada junto al texto",
+    "swapped": "Imágenes intercambiadas",
+    "removed": "Imagen quitada",
+    "duplicated": "Sección duplicada",
+    "deleted": "Sección eliminada",
+    "moved": "Sección movida",
+    "resized": "Imagen redimensionada",
+    "blockMoved": "Bloque movido"
   }
 }

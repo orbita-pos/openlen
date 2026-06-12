@@ -139,5 +139,16 @@
     "for": "Voor",
     "none": "Geen bedrijf",
     "new": "Nieuw bedrijf"
+  },
+  "images": {
+    "hint": "Sleep een afbeelding naar de pagina, of klik om te plaatsen.",
+    "sources": {
+      "openlen": "OpenLen",
+      "unsplash": "Unsplash",
+      "profile": "Jouw bedrijf",
+      "uploads": "Jouw uploads"
+    },
+    "profileEmpty": "Voeg een logo of foto's toe aan je bedrijfsprofiel om ze hier te zien.",
+    "uploadsEmpty": "Afbeeldingen die je naar deze pagina uploadt verschijnen hier."
   }
 }

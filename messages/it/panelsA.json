@@ -139,5 +139,16 @@
     "for": "Per",
     "none": "Nessuna attività",
     "new": "Nuova attività"
+  },
+  "images": {
+    "hint": "Trascina un'immagine sulla pagina o clicca per posizionarla.",
+    "sources": {
+      "openlen": "OpenLen",
+      "unsplash": "Unsplash",
+      "profile": "La tua attività",
+      "uploads": "I tuoi caricamenti"
+    },
+    "profileEmpty": "Aggiungi un logo o foto al tuo profilo per vederli qui.",
+    "uploadsEmpty": "Le immagini che carichi su questa pagina appariranno qui."
   }
 }

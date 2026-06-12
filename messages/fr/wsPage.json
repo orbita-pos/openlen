@@ -47,5 +47,22 @@
     "body": "Ajoutez les infos de votre entreprise à cette page.",
     "cta": "Ajouter l’entreprise",
     "dismiss": "Ignorer"
+  },
+  "drop": {
+    "placeHint": "Cliquez là où placer l'image · Échap annule",
+    "uploading": "Téléversement de l'image…",
+    "sectionName": "Section image"
+  },
+  "undoPill": {
+    "replaced": "Image remplacée",
+    "background": "Fond appliqué",
+    "split": "Image placée à côté du texte",
+    "swapped": "Images échangées",
+    "removed": "Image retirée",
+    "duplicated": "Section dupliquée",
+    "deleted": "Section supprimée",
+    "moved": "Section déplacée",
+    "resized": "Image redimensionnée",
+    "blockMoved": "Bloc déplacé"
   }
 }

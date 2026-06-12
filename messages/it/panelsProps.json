@@ -39,7 +39,16 @@
       "right": "Allinea a destra"
     },
     "hide": "Nascondi elemento",
-    "hideHint": "Nascosto nella pagina pubblicata — qui appare attenuato così puoi ripristinarlo"
+    "hideHint": "Nascosto nella pagina pubblicata — qui appare attenuato così puoi ripristinarlo",
+    "gradient": "Gradiente",
+    "gradientAdd": "Aggiungi gradiente",
+    "gradientLinear": "Lineare",
+    "gradientRadial": "Radiale",
+    "gradientAngle": "Angolo",
+    "gradientStart": "Colore iniziale",
+    "gradientEnd": "Colore finale",
+    "gradientPresets": "Preset",
+    "gradientRemove": "Rimuovi"
   },
   "form": {
     "title": "Modulo",

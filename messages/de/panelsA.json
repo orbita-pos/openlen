@@ -139,5 +139,16 @@
     "for": "Für",
     "none": "Kein Unternehmen",
     "new": "Neues Unternehmen"
+  },
+  "images": {
+    "hint": "Ziehe ein Bild auf die Seite oder klicke, um es zu platzieren.",
+    "sources": {
+      "openlen": "OpenLen",
+      "unsplash": "Unsplash",
+      "profile": "Dein Unternehmen",
+      "uploads": "Deine Uploads"
+    },
+    "profileEmpty": "Füge deinem Profil ein Logo oder Fotos hinzu, um sie hier zu sehen.",
+    "uploadsEmpty": "Bilder, die du auf diese Seite hochlädst, erscheinen hier."
   }
 }

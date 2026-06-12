@@ -47,5 +47,22 @@
     "body": "Voeg je bedrijfsinfo toe aan deze pagina.",
     "cta": "Bedrijf toevoegen",
     "dismiss": "Sluiten"
+  },
+  "drop": {
+    "placeHint": "Klik waar je de afbeelding wilt plaatsen · Esc annuleert",
+    "uploading": "Afbeelding uploaden…",
+    "sectionName": "Afbeeldingssectie"
+  },
+  "undoPill": {
+    "replaced": "Afbeelding vervangen",
+    "background": "Achtergrond toegepast",
+    "split": "Afbeelding naast de tekst geplaatst",
+    "swapped": "Afbeeldingen gewisseld",
+    "removed": "Afbeelding verwijderd",
+    "duplicated": "Sectie gedupliceerd",
+    "deleted": "Sectie verwijderd",
+    "moved": "Sectie verplaatst",
+    "resized": "Afbeeldingsgrootte aangepast",
+    "blockMoved": "Blok verplaatst"
   }
 }

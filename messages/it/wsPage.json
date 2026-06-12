@@ -47,5 +47,22 @@
     "body": "Aggiungi le info della tua attività a questa pagina.",
     "cta": "Aggiungi attività",
     "dismiss": "Ignora"
+  },
+  "drop": {
+    "placeHint": "Clicca dove vuoi posizionare l'immagine · Esc annulla",
+    "uploading": "Caricamento immagine…",
+    "sectionName": "Sezione immagine"
+  },
+  "undoPill": {
+    "replaced": "Immagine sostituita",
+    "background": "Sfondo applicato",
+    "split": "Immagine accanto al testo",
+    "swapped": "Immagini scambiate",
+    "removed": "Immagine rimossa",
+    "duplicated": "Sezione duplicata",
+    "deleted": "Sezione eliminata",
+    "moved": "Sezione spostata",
+    "resized": "Immagine ridimensionata",
+    "blockMoved": "Blocco spostato"
   }
 }

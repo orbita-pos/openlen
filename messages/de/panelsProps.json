@@ -39,7 +39,16 @@
       "right": "Rechtsbündig"
     },
     "hide": "Element ausblenden",
-    "hideHint": "Auf der veröffentlichten Seite ausgeblendet — hier abgedunkelt, damit du es wiederherstellen kannst"
+    "hideHint": "Auf der veröffentlichten Seite ausgeblendet — hier abgedunkelt, damit du es wiederherstellen kannst",
+    "gradient": "Verlauf",
+    "gradientAdd": "Verlauf hinzufügen",
+    "gradientLinear": "Linear",
+    "gradientRadial": "Radial",
+    "gradientAngle": "Winkel",
+    "gradientStart": "Startfarbe",
+    "gradientEnd": "Endfarbe",
+    "gradientPresets": "Vorlagen",
+    "gradientRemove": "Entfernen"
   },
   "form": {
     "title": "Formular",

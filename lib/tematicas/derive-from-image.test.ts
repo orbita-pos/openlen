@@ -77,6 +77,14 @@ describe("deriveWorldFromPixels", () => {
     const w = deriveWorldFromPixels(d);
     expect(w.accent).toBe(FALLBACK_ACCENT);
   });
+
+  it("returns the average luminance (drives the drop engine's bg plan)", () => {
+    expect(deriveWorldFromPixels(solid(10, 10, 10)).lum).toBeLessThan(0.1);
+    expect(deriveWorldFromPixels(solid(245, 245, 245)).lum).toBeGreaterThan(0.9);
+    const mid = deriveWorldFromPixels(solid(128, 128, 128)).lum;
+    expect(mid).toBeGreaterThan(0.4);
+    expect(mid).toBeLessThan(0.6);
+  });
 });
 
 describe("custom world — any photo color yields readable ink (the green-on-green gate)", () => {

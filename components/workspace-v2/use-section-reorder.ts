@@ -30,7 +30,11 @@
 //
 // Parent contract (postMessage):
 //   { type: "openlen:html-changed", outerHtml, source: "reorder" }
+//   { type: "openlen:html-changed", outerHtml, source: "section-toolbar", action }
+//   { type: "openlen:html-changed", outerHtml, source: "block-move", action }
 //   { type: "openlen:reorder-cancelled" }  // ESC
+
+import { blockCandidates, splitContainer } from "./drop-place-core";
 
 const REORDER_STYLE = `
 .openlen-reorder-handle {
@@ -86,10 +90,83 @@ const REORDER_STYLE = `
   outline: 2px solid rgba(255,90,54,0.35);
   outline-offset: -2px;
 }
+.openlen-section-toolbar {
+  position: absolute;
+  z-index: 999999;
+  display: none;
+  align-items: center;
+  gap: 2px;
+  padding: 3px;
+  background: rgba(17,17,17,0.92);
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+  pointer-events: auto;
+}
+.openlen-section-toolbar.visible { display: inline-flex; }
+.openlen-section-toolbar button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border: none;
+  border-radius: 5px;
+  background: transparent;
+  color: #fff;
+  cursor: pointer;
+  padding: 0;
+}
+.openlen-section-toolbar button:hover { background: rgba(255,255,255,0.18); }
+.openlen-section-toolbar button[data-act="delete"]:hover { background: #dc2626; }
+.openlen-section-toolbar svg { width: 13px; height: 13px; }
+.openlen-block-chip {
+  position: absolute;
+  z-index: 999998;
+  display: none;
+  flex-direction: column;
+  gap: 1px;
+  padding: 2px;
+  background: rgba(17,17,17,0.88);
+  border-radius: 7px;
+  box-shadow: 0 3px 10px rgba(0,0,0,0.22);
+  pointer-events: auto;
+}
+.openlen-block-chip.visible { display: inline-flex; }
+.openlen-block-chip button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 18px;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: #fff;
+  cursor: pointer;
+  padding: 0;
+}
+.openlen-block-chip button:hover { background: rgba(255,255,255,0.18); }
+.openlen-block-chip svg { width: 11px; height: 11px; }
+[data-openlen-block-hover] {
+  outline: 1px dashed rgba(255,90,54,0.45);
+  outline-offset: 2px;
+}
+body:not([data-openlen-edit-mode]) .openlen-block-chip,
+body[data-openlen-drag-active] .openlen-block-chip,
+body[data-openlen-over-image] .openlen-block-chip {
+  display: none !important;
+}
+body:not([data-openlen-edit-mode]) [data-openlen-block-hover] {
+  outline: none !important;
+}
 /* Editor V3 gate — script + UI nodes live permanently in the persistent
    iframe; visibility is gated on body[data-openlen-edit-mode]. */
 body:not([data-openlen-edit-mode]) .openlen-reorder-handle,
-body:not([data-openlen-edit-mode]) .openlen-reorder-indicator {
+body:not([data-openlen-edit-mode]) .openlen-reorder-indicator,
+body:not([data-openlen-edit-mode]) .openlen-section-toolbar {
+  display: none !important;
+}
+body[data-openlen-drag-active] .openlen-section-toolbar {
   display: none !important;
 }
 body:not([data-openlen-edit-mode]) [data-openlen-reorder-index][data-openlen-hovering] {
@@ -105,6 +182,8 @@ body[data-openlen-drag-active] * {
 
 const REORDER_SCRIPT = `
 (function () {
+  var splitContainer = ${splitContainer.toString()};
+  var blockCandidates = ${blockCandidates.toString()};
   var IGNORE_TAGS = {HEADER:1, FOOTER:1, NAV:1, SCRIPT:1, STYLE:1, NOSCRIPT:1, META:1, LINK:1, TITLE:1, TEMPLATE:1};
   var MIN_HEIGHT = 60;
   var DRAG_THRESHOLD_MOUSE = 5;
@@ -240,6 +319,165 @@ const REORDER_SCRIPT = `
   var hoverHideTimer = null;
   var hoveredIdx = -1;
 
+  // Per-section floating toolbar (top-right; the drag handle owns top-left):
+  // move up/down, duplicate, delete. Mutations post through the same
+  // html-changed funnel with source 'section-toolbar' + the action, so the
+  // parent can show its one-step Undo pill.
+  var toolbar = null;
+  var toolbarIdx = -1;
+
+  function ensureToolbar() {
+    if (toolbar) return toolbar;
+    var tb = document.createElement('div');
+    tb.setAttribute('data-openlen-reorder', 'toolbar');
+    tb.className = 'openlen-section-toolbar';
+    tb.innerHTML =
+      '<button type="button" data-act="up" title="Move up" aria-label="Move up">' +
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m18 15-6-6-6 6"/></svg>' +
+      '</button>' +
+      '<button type="button" data-act="down" title="Move down" aria-label="Move down">' +
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>' +
+      '</button>' +
+      '<button type="button" data-act="duplicate" title="Duplicate section" aria-label="Duplicate section">' +
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>' +
+      '</button>' +
+      '<button type="button" data-act="delete" title="Delete section" aria-label="Delete section">' +
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>' +
+      '</button>';
+    tb.addEventListener('mouseenter', function () {
+      if (hoverHideTimer) { clearTimeout(hoverHideTimer); hoverHideTimer = null; }
+    });
+    tb.addEventListener('mouseleave', scheduleHideHandle);
+    document.body.appendChild(tb);
+    toolbar = tb;
+    return tb;
+  }
+
+  function positionToolbar(target) {
+    var tb = ensureToolbar();
+    tb.classList.add('visible');
+    var r = target.getBoundingClientRect();
+    var left = r.right + window.scrollX - tb.offsetWidth - 12;
+    if (left < r.left + window.scrollX + 8) left = r.left + window.scrollX + 8;
+    tb.style.top = (r.top + window.scrollY + 8) + 'px';
+    tb.style.left = left + 'px';
+  }
+
+  function hideToolbarNow() {
+    if (toolbar) toolbar.classList.remove('visible');
+    toolbarIdx = -1;
+  }
+
+  function onToolbarClick(e) {
+    var t = e.target;
+    if (!t || !t.closest) return;
+    var btn = t.closest('.openlen-section-toolbar button');
+    if (!btn) return;
+    e.preventDefault();
+    e.stopPropagation();
+    var act = btn.getAttribute('data-act');
+    var sec = draggables[toolbarIdx];
+    if (!sec || !sec.parentNode) return;
+    if (act === 'duplicate') {
+      var clone = sec.cloneNode(true);
+      // Duplicate ids would break anchors/CSS-by-id — strip them on the copy.
+      clone.removeAttribute('id');
+      var withId = clone.querySelectorAll('[id]');
+      for (var i = 0; i < withId.length; i++) withId[i].removeAttribute('id');
+      clone.removeAttribute('data-openlen-reorder-index');
+      clone.removeAttribute('data-openlen-hovering');
+      sec.parentNode.insertBefore(clone, sec.nextSibling);
+      try { clone.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch (_) {}
+    } else if (act === 'up' || act === 'down') {
+      var idx = draggables.indexOf(sec);
+      var other = act === 'up' ? draggables[idx - 1] : draggables[idx + 1];
+      if (!other) return;
+      if (act === 'up') sec.parentNode.insertBefore(sec, other);
+      else sec.parentNode.insertBefore(other, sec);
+      try { sec.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch (_) {}
+    } else if (act === 'delete') {
+      sec.parentNode.removeChild(sec);
+    } else {
+      return;
+    }
+    hideToolbarNow();
+    scheduleHideHandle();
+    refreshDraggables();
+    postClean('section-toolbar', act);
+  }
+
+  // Per-BLOCK move chip (↑↓ at the hovered block's left edge) — reorders the
+  // direct children of a section's content container, the same blocks the
+  // media-split would wrap. Deterministic swaps, no free drag: zero layout
+  // risk on arbitrary markup, and the parent's Undo pill covers regret.
+  var blockChip = null;
+  var blockEl = null;
+
+  function ensureBlockChip() {
+    if (blockChip) return blockChip;
+    var c = document.createElement('div');
+    c.setAttribute('data-openlen-reorder', 'block-chip');
+    c.className = 'openlen-block-chip';
+    c.innerHTML =
+      '<button type="button" data-block-act="up" title="Move block up" aria-label="Move block up">' +
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="m18 15-6-6-6 6"/></svg>' +
+      '</button>' +
+      '<button type="button" data-block-act="down" title="Move block down" aria-label="Move block down">' +
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>' +
+      '</button>';
+    document.body.appendChild(c);
+    blockChip = c;
+    return c;
+  }
+
+  function hideBlockChip() {
+    if (blockChip) blockChip.classList.remove('visible');
+    if (blockEl) blockEl.removeAttribute('data-openlen-block-hover');
+    blockEl = null;
+  }
+
+  function updateBlockChip(target, sectionEl) {
+    var container = splitContainer(sectionEl);
+    if (!container) { hideBlockChip(); return; }
+    var blocks = blockCandidates(container);
+    if (blocks.length < 2) { hideBlockChip(); return; }
+    // The hovered block = the candidate that contains the cursor's target.
+    var hit = null;
+    for (var i = 0; i < blocks.length; i++) {
+      if (blocks[i] === target || blocks[i].contains(target)) { hit = blocks[i]; break; }
+    }
+    if (!hit) { hideBlockChip(); return; }
+    if (blockEl && blockEl !== hit) blockEl.removeAttribute('data-openlen-block-hover');
+    blockEl = hit;
+    hit.setAttribute('data-openlen-block-hover', '');
+    var c = ensureBlockChip();
+    c.classList.add('visible');
+    var r = hit.getBoundingClientRect();
+    var left = r.left + window.scrollX - 30;
+    if (left < window.scrollX + 2) left = window.scrollX + 2;
+    c.style.left = left + 'px';
+    c.style.top = (r.top + window.scrollY + Math.max(0, r.height / 2 - 20)) + 'px';
+  }
+
+  function onBlockChipClick(e) {
+    var t = e.target;
+    if (!t || !t.closest) return;
+    var btn = t.closest('.openlen-block-chip button');
+    if (!btn || !blockEl || !blockEl.parentNode) return;
+    e.preventDefault();
+    e.stopPropagation();
+    var act = btn.getAttribute('data-block-act');
+    var container = blockEl.parentNode;
+    var blocks = blockCandidates(container);
+    var idx = blocks.indexOf(blockEl);
+    var other = act === 'up' ? blocks[idx - 1] : blocks[idx + 1];
+    if (!other) return;
+    if (act === 'up') container.insertBefore(blockEl, other);
+    else container.insertBefore(other, blockEl);
+    updateBlockChip(blockEl, blockEl);
+    postClean('block-move', act);
+  }
+
   function showHandleFor(idx) {
     // When the user is hovering an image-like asset, suppress the drag
     // handle so the Replace button is the only affordance — avoids the
@@ -267,6 +505,8 @@ const REORDER_SCRIPT = `
     }
     if (draggables[idx]) {
       draggables[idx].setAttribute('data-openlen-hovering', '');
+      positionToolbar(draggables[idx]);
+      toolbarIdx = idx;
     }
   }
 
@@ -281,6 +521,7 @@ const REORDER_SCRIPT = `
         if (prevEl) prevEl.removeAttribute('data-openlen-hovering');
       }
       hoveredIdx = -1;
+      hideToolbarNow();
     }, 140);
   }
 
@@ -298,14 +539,19 @@ const REORDER_SCRIPT = `
     }
     var target = e.target;
     if (!target || !target.closest) return;
-    // Cursor over our own handle — keep it visible.
-    if (target.closest('.openlen-reorder-handle')) {
+    // Cursor over our own chrome — keep it visible.
+    if (
+      target.closest('.openlen-reorder-handle') ||
+      target.closest('.openlen-section-toolbar') ||
+      target.closest('.openlen-block-chip')
+    ) {
       if (hoverHideTimer) { clearTimeout(hoverHideTimer); hoverHideTimer = null; }
       return;
     }
     var sectionEl = target.closest('[data-openlen-reorder-index]');
     if (!sectionEl) {
       scheduleHideHandle();
+      hideBlockChip();
       return;
     }
     var idxStr = sectionEl.getAttribute('data-openlen-reorder-index');
@@ -313,9 +559,11 @@ const REORDER_SCRIPT = `
     var idx = parseInt(idxStr, 10);
     if (!isFinite(idx) || idx < 0 || idx >= draggables.length) return;
     showHandleFor(idx);
+    updateBlockChip(target, draggables[idx]);
   }
 
   function refreshDraggables() {
+    hideBlockChip();
     tearDownHandles();
     draggables.forEach(function (el) {
       el.removeAttribute('data-openlen-reorder-index');
@@ -917,11 +1165,14 @@ const REORDER_SCRIPT = `
     } catch (_) {}
   }
 
-  function postClean() {
+  function postClean(source, action) {
     var clone = document.documentElement.cloneNode(true);
     clone.querySelectorAll('[data-openlen-reorder]').forEach(function (n) { n.remove(); });
     clone.querySelectorAll('[data-openlen-reorder-index]').forEach(function (n) {
       n.removeAttribute('data-openlen-reorder-index');
+    });
+    clone.querySelectorAll('[data-openlen-block-hover]').forEach(function (n) {
+      n.removeAttribute('data-openlen-block-hover');
     });
     clone.querySelectorAll('[data-openlen-hovering]').forEach(function (n) {
       n.removeAttribute('data-openlen-hovering');
@@ -950,15 +1201,14 @@ const REORDER_SCRIPT = `
     if (cloneBody) {
       cloneBody.removeAttribute('data-openlen-drag-active');
     }
+    var msg = {
+      type: 'openlen:html-changed',
+      outerHtml: '<!doctype html>\\n' + clone.outerHTML,
+      source: source || 'reorder',
+    };
+    if (action) msg.action = action;
     try {
-      window.parent.postMessage(
-        {
-          type: 'openlen:html-changed',
-          outerHtml: '<!doctype html>\\n' + clone.outerHTML,
-          source: 'reorder',
-        },
-        '*'
-      );
+      window.parent.postMessage(msg, '*');
     } catch (_) {}
   }
 
@@ -994,6 +1244,10 @@ const REORDER_SCRIPT = `
     document.addEventListener('pointercancel', gated(onPointerCancel), true);
     document.addEventListener('keydown', gated(onKey), true);
     document.addEventListener('mousemove', gated(onGlobalMouseMove), true);
+    // Document-capture: the inspect script stops click propagation in edit
+    // mode; this script registers earlier, so the toolbar stays clickable.
+    document.addEventListener('click', gated(onToolbarClick), true);
+    document.addEventListener('click', gated(onBlockChipClick), true);
     window.addEventListener('resize', repositionHandles);
   }
 

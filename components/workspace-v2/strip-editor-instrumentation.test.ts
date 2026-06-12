@@ -121,6 +121,25 @@ describe("stripEditorInstrumentation — Editor V5 markers", () => {
     expect(out).not.toContain("data-openlen-edit-mode");
   });
 
+  it("removes drop-engine + section-insert markers (incl. the just-inserted highlight)", () => {
+    const out = stripEditorInstrumentation(
+      `<!doctype html><html><head><style data-openlen-drop>.x{}</style></head>` +
+        `<body data-openlen-drop-active="drag">` +
+        `<img src="/a.webp" data-openlen-drop-target>` +
+        `<div data-openlen-drop="ui" class="openlen-drop-chip">Replace image</div>` +
+        `<section data-openlen-just-inserted style="outline: 2px solid rgba(255,90,54,0.65); outline-offset: 3px;"><img src="/b.webp"></section>` +
+        `<script data-openlen-section-insert>void 0</script>` +
+        `<script data-openlen-drop>void 0</script></body></html>`,
+    );
+    expect(out).not.toContain("data-openlen-drop");
+    expect(out).not.toContain("data-openlen-section-insert");
+    expect(out).not.toContain("data-openlen-just-inserted");
+    expect(out).not.toContain("openlen-drop-chip");
+    expect(out).not.toContain("outline");
+    expect(out).toContain('<img src="/a.webp">');
+    expect(out).toContain('<img src="/b.webp">');
+  });
+
   it("leaves a full editor-session capture with ZERO leaked markers", () => {
     // Simulates a Properties-panel ('props') save taken while an inline-edit
     // run is open: the shared live DOM carries inline-edit's markers.

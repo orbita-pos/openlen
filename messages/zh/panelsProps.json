@@ -39,7 +39,16 @@
       "right": "右对齐"
     },
     "hide": "隐藏元素",
-    "hideHint": "在已发布页面隐藏 — 这里以淡显显示，便于恢复"
+    "hideHint": "在已发布页面隐藏 — 这里以淡显显示，便于恢复",
+    "gradient": "渐变",
+    "gradientAdd": "添加渐变",
+    "gradientLinear": "线性",
+    "gradientRadial": "径向",
+    "gradientAngle": "角度",
+    "gradientStart": "起始颜色",
+    "gradientEnd": "结束颜色",
+    "gradientPresets": "预设",
+    "gradientRemove": "移除"
   },
   "form": {
     "title": "表单",

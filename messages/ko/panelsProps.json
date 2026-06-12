@@ -39,7 +39,16 @@
       "right": "오른쪽 정렬"
     },
     "hide": "요소 숨기기",
-    "hideHint": "게시된 페이지에서는 숨겨짐 — 여기서는 흐리게 표시되어 복원할 수 있습니다"
+    "hideHint": "게시된 페이지에서는 숨겨짐 — 여기서는 흐리게 표시되어 복원할 수 있습니다",
+    "gradient": "그라데이션",
+    "gradientAdd": "그라데이션 추가",
+    "gradientLinear": "선형",
+    "gradientRadial": "방사형",
+    "gradientAngle": "각도",
+    "gradientStart": "시작 색상",
+    "gradientEnd": "끝 색상",
+    "gradientPresets": "프리셋",
+    "gradientRemove": "제거"
   },
   "form": {
     "title": "양식",

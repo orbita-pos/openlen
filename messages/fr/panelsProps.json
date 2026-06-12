@@ -39,7 +39,16 @@
       "right": "Aligner à droite"
     },
     "hide": "Masquer l'élément",
-    "hideHint": "Masqué sur la page publiée — affiché en grisé ici pour pouvoir le restaurer"
+    "hideHint": "Masqué sur la page publiée — affiché en grisé ici pour pouvoir le restaurer",
+    "gradient": "Dégradé",
+    "gradientAdd": "Ajouter un dégradé",
+    "gradientLinear": "Linéaire",
+    "gradientRadial": "Radial",
+    "gradientAngle": "Angle",
+    "gradientStart": "Couleur de départ",
+    "gradientEnd": "Couleur de fin",
+    "gradientPresets": "Préréglages",
+    "gradientRemove": "Retirer"
   },
   "form": {
     "title": "Formulaire",

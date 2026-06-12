@@ -40,6 +40,10 @@
       "assistant": {
         "label": "Assistant",
         "title": "Assistant de chat pour les visiteurs"
+      },
+      "images": {
+        "label": "Images",
+        "title": "Bibliothèque d'images"
       }
     },
     "tabLocked": "{label} — verrouillé",
@@ -76,6 +80,14 @@
       "desktop": "Aperçu ordinateur",
       "tablet": "Aperçu tablette",
       "mobile": "Aperçu mobile"
+    },
+    "drop": {
+      "replace": "Remplacer l'image",
+      "newSection": "Nouvelle section",
+      "background": "Fond de section",
+      "splitLeft": "Image à gauche",
+      "splitRight": "Image à droite",
+      "swap": "Échanger les images"
     }
   },
   "placeholder": {

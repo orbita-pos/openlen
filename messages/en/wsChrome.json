@@ -40,6 +40,10 @@
       "assistant": {
         "label": "Assistant",
         "title": "Chat assistant for visitors"
+      },
+      "images": {
+        "label": "Images",
+        "title": "Image library"
       }
     },
     "tabLocked": "{label} — locked",
@@ -76,6 +80,14 @@
       "desktop": "Desktop preview",
       "tablet": "Tablet preview",
       "mobile": "Mobile preview"
+    },
+    "drop": {
+      "replace": "Replace image",
+      "newSection": "New section",
+      "background": "Section background",
+      "splitLeft": "Image on the left",
+      "splitRight": "Image on the right",
+      "swap": "Swap images"
     }
   },
   "placeholder": {

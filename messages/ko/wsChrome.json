@@ -40,6 +40,10 @@
       "assistant": {
         "label": "어시스턴트",
         "title": "방문자용 채팅 어시스턴트"
+      },
+      "images": {
+        "label": "이미지",
+        "title": "이미지 라이브러리"
       }
     },
     "tabLocked": "{label} — 잠김",
@@ -76,6 +80,14 @@
       "desktop": "데스크톱 미리보기",
       "tablet": "태블릿 미리보기",
       "mobile": "모바일 미리보기"
+    },
+    "drop": {
+      "replace": "이미지 교체",
+      "newSection": "새 섹션",
+      "background": "섹션 배경",
+      "splitLeft": "이미지 왼쪽",
+      "splitRight": "이미지 오른쪽",
+      "swap": "이미지 맞바꾸기"
     }
   },
   "placeholder": {

@@ -29,6 +29,7 @@ export default defineConfig({
       "lib/theme-derive.test.ts",
       "lib/palette-gen-look.test.ts",
       "lib/theme-presets.test.ts",
+      "lib/gradients.test.ts",
       "lib/tematicas/**/*.test.ts",
       "lib/site-assistant/**/*.test.ts",
       "lib/publish/assistant-widget.test.ts",

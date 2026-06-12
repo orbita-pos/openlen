@@ -40,6 +40,10 @@
       "assistant": {
         "label": "Assistente",
         "title": "Assistente de chat para visitantes"
+      },
+      "images": {
+        "label": "Imagens",
+        "title": "Biblioteca de imagens"
       }
     },
     "tabLocked": "{label} — bloqueado",
@@ -76,6 +80,14 @@
       "desktop": "Pré-visualização desktop",
       "tablet": "Pré-visualização tablet",
       "mobile": "Pré-visualização móvel"
+    },
+    "drop": {
+      "replace": "Substituir imagem",
+      "newSection": "Nova seção",
+      "background": "Fundo da seção",
+      "splitLeft": "Imagem à esquerda",
+      "splitRight": "Imagem à direita",
+      "swap": "Trocar imagens"
     }
   },
   "placeholder": {

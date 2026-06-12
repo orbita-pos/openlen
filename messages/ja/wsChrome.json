@@ -40,6 +40,10 @@
       "assistant": {
         "label": "アシスタント",
         "title": "訪問者向けチャットアシスタント"
+      },
+      "images": {
+        "label": "画像",
+        "title": "画像ライブラリ"
       }
     },
     "tabLocked": "{label} — ロック中",
@@ -76,6 +80,14 @@
       "desktop": "デスクトッププレビュー",
       "tablet": "タブレットプレビュー",
       "mobile": "モバイルプレビュー"
+    },
+    "drop": {
+      "replace": "画像を置き換え",
+      "newSection": "新しいセクション",
+      "background": "セクションの背景",
+      "splitLeft": "画像を左に",
+      "splitRight": "画像を右に",
+      "swap": "画像を入れ替え"
     }
   },
   "placeholder": {

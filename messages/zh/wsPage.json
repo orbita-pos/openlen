@@ -47,5 +47,22 @@
     "body": "将你的业务信息添加到此页面。",
     "cta": "添加业务",
     "dismiss": "关闭"
+  },
+  "drop": {
+    "placeHint": "点击想放置图片的位置 · Esc 取消",
+    "uploading": "正在上传图片…",
+    "sectionName": "图片区块"
+  },
+  "undoPill": {
+    "replaced": "已替换图片",
+    "background": "已应用背景",
+    "split": "图片已放在文字旁",
+    "swapped": "已交换图片",
+    "removed": "已移除图片",
+    "duplicated": "已复制区块",
+    "deleted": "已删除区块",
+    "moved": "已移动区块",
+    "resized": "已调整图片大小",
+    "blockMoved": "已移动块"
   }
 }
