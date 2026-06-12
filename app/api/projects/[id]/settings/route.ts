@@ -49,6 +49,9 @@ interface PatchBody {
   /** Page music: the floating player's track, or null to remove it. Takes
    *  effect on the next publish (previews live in the editor). */
   music?: { src?: string; title?: string; cover?: string } | null;
+  /** Members module switches. Merged into settings.members; gating takes
+   *  effect on the next publish. */
+  members?: { enabled?: boolean; mode?: "open" | "invite" };
 }
 
 function clean(v: unknown, max: number): string {
@@ -122,11 +125,34 @@ export async function PATCH(
       ...(cover ? { cover } : {}),
     };
   }
-  if (!hasFormPatch && !hasAnalyticsToggle && !hasMotion && !hasMusic) {
+  const hasMembers = "members" in body;
+  if (hasMembers) {
+    const m = body.members;
+    if (!m || typeof m !== "object") {
+      return json(
+        { error: "invalid_body", message: "members must be an object" },
+        400,
+      );
+    }
+    if ("enabled" in m && typeof m.enabled !== "boolean") {
+      return json(
+        { error: "invalid_body", message: "members.enabled must be boolean" },
+        400,
+      );
+    }
+    if ("mode" in m && m.mode !== "open" && m.mode !== "invite") {
+      return json(
+        { error: "invalid_body", message: "members.mode must be open|invite" },
+        400,
+      );
+    }
+  }
+  if (!hasFormPatch && !hasAnalyticsToggle && !hasMotion && !hasMusic && !hasMembers) {
     return json(
       {
         error: "invalid_body",
-        message: "expected formIndex+patch OR analyticsDisabled OR motion OR music",
+        message:
+          "expected formIndex+patch OR analyticsDisabled OR motion OR music OR members",
       },
       400,
     );
@@ -211,6 +237,13 @@ export async function PATCH(
   if (hasMusic) {
     if (musicValue) nextSettings.music = musicValue;
     else delete nextSettings.music;
+  }
+  if (hasMembers && body.members) {
+    nextSettings.members = {
+      ...(data.settings?.members ?? {}),
+      ...("enabled" in body.members ? { enabled: body.members.enabled } : {}),
+      ...("mode" in body.members ? { mode: body.members.mode } : {}),
+    };
   }
 
   const nextData: ProjectData = {

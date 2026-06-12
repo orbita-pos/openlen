@@ -49,6 +49,8 @@ export function validatePageSlug(raw: string): SlugCheck {
 export interface SitePageSummary {
   slug: string;
   title: string;
+  /** Present (true) only on gated pages — absent means public. */
+  membersOnly?: boolean;
 }
 
 /** Key into ProjectData.settings.forms for a form on a given document.
@@ -69,7 +71,11 @@ export function listSitePages(data: ProjectData | null | undefined): SitePageSum
   if (!pages) return [];
   return Object.keys(pages)
     .sort()
-    .map((slug) => ({ slug, title: pageTitle(slug, pages[slug]) }));
+    .map((slug) => ({
+      slug,
+      title: pageTitle(slug, pages[slug]),
+      ...(pages[slug]?.membersOnly === true ? { membersOnly: true } : {}),
+    }));
 }
 
 export function pageTitle(slug: string, page: SitePage | undefined): string {
@@ -78,7 +84,9 @@ export function pageTitle(slug: string, page: SitePage | undefined): string {
   return slug.replace(/-/g, " ").replace(/^\w/, (c) => c.toUpperCase());
 }
 
-/** The pages array publishToDir consumes — slug + html pairs. */
+/** The pages array publishToDir consumes — slug + html pairs. ALL non-empty
+ *  pages, gated included (version snapshots want the full set); the publish
+ *  path itself splits via splitPagesForPublish below. */
 export function pagesForPublish(
   data: ProjectData | null | undefined,
 ): Array<{ slug: string; html: string }> {
@@ -88,6 +96,48 @@ export function pagesForPublish(
     .sort()
     .filter((slug) => typeof pages[slug]?.html === "string" && pages[slug].html.length > 0)
     .map((slug) => ({ slug, html: pages[slug].html }));
+}
+
+/** Whether members gating is live for this project — the per-page flags only
+ *  take effect while the module's master switch is on. */
+export function membersGatingEnabled(
+  data: ProjectData | null | undefined,
+): boolean {
+  return data?.settings?.members?.enabled === true;
+}
+
+/** pagesForPublish, split into the docs that go to the public release vs the
+ *  ones that publish as a login stub + protected document. With the module
+ *  off, every page is public — flags stay inert. */
+export function splitPagesForPublish(data: ProjectData | null | undefined): {
+  publicPages: Array<{ slug: string; html: string }>;
+  gatedPages: Array<{ slug: string; html: string }>;
+} {
+  const gatingOn = membersGatingEnabled(data);
+  const publicPages: Array<{ slug: string; html: string }> = [];
+  const gatedPages: Array<{ slug: string; html: string }> = [];
+  for (const pg of pagesForPublish(data)) {
+    const gated = gatingOn && data?.pages?.[pg.slug]?.membersOnly === true;
+    (gated ? gatedPages : publicPages).push(pg);
+  }
+  return { publicPages, gatedPages };
+}
+
+/** Per-page strings hashSitePages digests. BACKWARD-COMPAT IS LOAD-BEARING:
+ *  with nothing gated this concatenates to exactly the legacy
+ *  "slug\u0000html\u0000" stream, so publishedPagesHash values recorded
+ *  before the members module exist stay valid (no phantom drift pill on
+ *  every published multi-page site). The "m\u0000" marker appends only for
+ *  EFFECTIVELY gated pages — flag + module both on — so toggling either one
+ *  changes the hash and lights the pill. */
+export function sitePagesFingerprintInput(
+  data: ProjectData | null | undefined,
+): string[] {
+  const gatingOn = membersGatingEnabled(data);
+  return pagesForPublish(data).map((pg) => {
+    const gated = gatingOn && data?.pages?.[pg.slug]?.membersOnly === true;
+    return `${pg.slug}\u0000${pg.html}\u0000${gated ? "m\u0000" : ""}`;
+  });
 }
 
 function escapeHtml(s: string): string {

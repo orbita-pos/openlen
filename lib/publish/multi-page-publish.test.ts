@@ -102,3 +102,109 @@ describe("publishToDir with site pages", () => {
     assert.deepEqual(a.pages, ["menu", "sobre-mi"]);
   });
 });
+
+describe("publishToDir with gated pages (members module)", () => {
+  let result: Awaited<ReturnType<typeof publishToDir>>;
+  before(async () => {
+    result = await publishToDir({
+      subdomain: "gatedtest",
+      html: DOC("home"),
+      pages: [{ slug: "menu", html: DOC("menu") }],
+      gatedPages: [{ slug: "privada", html: DOC("secreto") }],
+      memberGate: { projectTitle: "Mi Negocio" },
+    });
+  });
+
+  const releaseDir = () => {
+    const current = path.join(root, "gatedtest", "current");
+    try {
+      const sha = readFileSync(current, "utf8").trim();
+      return path.join(root, "gatedtest", "releases", sha);
+    } catch {
+      return current;
+    }
+  };
+
+  it("the public path carries a stub with ZERO protected bytes, no CSP, noindex", () => {
+    const stub = readFileSync(
+      path.join(releaseDir(), "privada", "index.html"),
+      "utf8",
+    );
+    assert.ok(!stub.includes("contenido secreto"));
+    assert.ok(!stub.includes("Content-Security-Policy"));
+    assert.ok(stub.includes('name="robots" content="noindex"'));
+    assert.ok(stub.includes('name="ol-member-gate"'));
+    assert.ok(stub.includes("/api/m/"));
+    assert.ok(stub.includes("Mi Negocio"));
+    // Home is Spanish → the stub speaks Spanish.
+    assert.ok(stub.includes("Solo miembros"));
+  });
+
+  it("the real document lands OUTSIDE the release, fully baked + sealed", () => {
+    const protectedFile = path.join(
+      root,
+      "gatedtest",
+      "protected",
+      result.sha,
+      "privada",
+      "index.html",
+    );
+    assert.ok(existsSync(protectedFile));
+    const doc = readFileSync(protectedFile, "utf8");
+    assert.ok(doc.includes("contenido secreto"));
+    const home = readFileSync(path.join(releaseDir(), "index.html"), "utf8");
+    assert.equal(
+      doc.includes("Content-Security-Policy"),
+      home.includes("Content-Security-Policy"),
+    );
+    // And never inside the release dir.
+    assert.ok(!existsSync(path.join(releaseDir(), "protected")));
+  });
+
+  it("gated slugs stay out of the sitemap; public ones stay in", () => {
+    const sitemap = readFileSync(path.join(releaseDir(), "sitemap.xml"), "utf8");
+    assert.ok(sitemap.includes("https://gatedtest.openlen.com/menu/"));
+    assert.ok(!sitemap.includes("privada"));
+  });
+
+  it("reports gated slugs separately", () => {
+    assert.deepEqual(result.pages, ["menu"]);
+    assert.deepEqual(result.gatedPages, ["privada"]);
+  });
+
+  it("editing only the GATED page mints a new sha (drift-consistent releases)", async () => {
+    const b = await publishToDir({
+      subdomain: "gatedtest",
+      html: DOC("home"),
+      pages: [{ slug: "menu", html: DOC("menu") }],
+      gatedPages: [{ slug: "privada", html: DOC("secreto-v2") }],
+      memberGate: { projectTitle: "Mi Negocio" },
+    });
+    assert.notEqual(b.sha, result.sha);
+    const v2 = readFileSync(
+      path.join(root, "gatedtest", "protected", b.sha, "privada", "index.html"),
+      "utf8",
+    );
+    assert.ok(v2.includes("contenido secreto-v2"));
+    // The prior sha's protected dir survives while its release survives
+    // (rollback keeps working).
+    assert.ok(
+      existsSync(
+        path.join(root, "gatedtest", "protected", result.sha, "privada", "index.html"),
+      ),
+    );
+  });
+
+  it("a gated page with editor markers fails the WHOLE publish", async () => {
+    await assert.rejects(
+      publishToDir({
+        subdomain: "gatedtest",
+        html: DOC("home"),
+        gatedPages: [
+          { slug: "mala", html: '<html><body data-slot-path="x">x</body></html>' },
+        ],
+      }),
+      /data-slot-path/,
+    );
+  });
+});

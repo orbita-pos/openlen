@@ -28,13 +28,15 @@ import {
   PanelLeft,
   PanelRight,
   Sparkles,
+  Users,
   X,
 } from "./icons";
 import type { Section } from "./mock-data";
 import type { BriefFormState } from "@/components/workspace/types";
-import type { StoredChatTurn } from "@/lib/projects/types";
+import type { MembersSettings, StoredChatTurn } from "@/lib/projects/types";
 import { AiBriefPanel } from "./panels/ai-brief-panel";
 import { AssistantPanel } from "./panels/assistant-panel";
+import { ModulesPanel } from "./panels/modules-panel";
 import { RailBusinessSwitcher } from "./business-switcher";
 import type { BusinessProfile } from "@/lib/business-profiles/types";
 import {
@@ -123,6 +125,7 @@ export type SidebarMode =
   | "library"
   | "pages"
   | "assistant"
+  | "members"
   | "versions";
 
 interface ModeTab {
@@ -137,6 +140,7 @@ const MODE_TABS: ModeTab[] = [
   { id: "images", icon: ImageIcon },
   { id: "library", icon: Layers },
   { id: "assistant", icon: Sparkles },
+  { id: "members", icon: Users },
   { id: "versions", icon: HistoryIcon },
 ];
 
@@ -264,6 +268,11 @@ interface LeftSidebarProps {
   onSwitchSitePage?: (slug: string | null) => void;
   onCreateSitePage?: (slug: string) => Promise<string | null>;
   onDeleteSitePage?: (slug: string) => Promise<boolean>;
+  /** Members module (Módulos tab) — settings mirror + mutators owned by the
+   *  parent, same ownership model as sitePages. */
+  membersSettings?: MembersSettings;
+  onUpdateMembersSettings?: (patch: MembersSettings) => Promise<boolean>;
+  onToggleMembersOnly?: (slug: string, next: boolean) => Promise<boolean>;
 }
 
 export function LeftSidebar({
@@ -321,6 +330,9 @@ export function LeftSidebar({
   onSwitchSitePage,
   onCreateSitePage,
   onDeleteSitePage,
+  membersSettings,
+  onUpdateMembersSettings,
+  onToggleMembersOnly,
 }: LeftSidebarProps) {
   const showBusinessSwitcher = businesses.length > 0 && !!onPickBusiness;
   const t = useTranslations("wsChrome");
@@ -342,6 +354,7 @@ export function LeftSidebar({
       (tab.id === "library" ||
         tab.id === "site" ||
         tab.id === "assistant" ||
+        tab.id === "members" ||
         tab.id === "images")
     )
       return false;
@@ -525,6 +538,7 @@ export function LeftSidebar({
                 onSwitch={onSwitchSitePage ?? (() => {})}
                 onCreate={onCreateSitePage ?? (async () => "errInvalid")}
                 onDelete={onDeleteSitePage ?? (async () => false)}
+                onToggleMembersOnly={onToggleMembersOnly}
               />
             )}
             {mode === "chat" && (
@@ -584,6 +598,17 @@ export function LeftSidebar({
             )}
             {mode === "assistant" && (
               <AssistantPanel currentProjectId={currentProjectId} />
+            )}
+            {mode === "members" && (
+              <ModulesPanel
+                currentProjectId={currentProjectId}
+                membersSettings={membersSettings}
+                gatedCount={sitePages.filter((p) => p.membersOnly).length}
+                onUpdateMembers={onUpdateMembersSettings}
+                onShowLeads={() => onSelectSection?.("messages")}
+                onShowAnalytics={() => onSelectSection?.("analytics")}
+                onShowAssistant={() => setMode("assistant")}
+              />
             )}
             {mode === "versions" && (
               <VersionsPanel

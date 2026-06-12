@@ -1,0 +1,47 @@
+{
+  "title": "Modules",
+  "subtitle": "Backend en un clic pour votre site. Sans crédits, sans code.",
+  "perProject": "Ouvrez un projet pour gérer ses modules.",
+  "module": {
+    "title": "Membres",
+    "tagline": "Connexion visiteurs + pages réservées aux membres",
+    "toggle": "Activer les membres",
+    "mode": {
+      "open": "Inscription ouverte",
+      "invite": "Sur invitation",
+      "openHint": "Chacun peut s'inscrire avec son e-mail — nous envoyons un lien de connexion.",
+      "inviteHint": "Seuls les e-mails ajoutés ci-dessous peuvent se connecter."
+    },
+    "gatedCount": "{count, plural, one {# page est réservée aux membres. Gérez-le dans l'onglet Site.} other {# pages sont réservées aux membres. Gérez-le dans l'onglet Site.}}",
+    "gatedNone": "Aucune page réservée pour l'instant — marquez-en une avec le cadenas dans l'onglet Site."
+  },
+  "included": {
+    "title": "Inclus avec votre site",
+    "open": "Ouvrir",
+    "forms": "Formulaires et leads",
+    "formsHint": "Chaque formulaire capture déjà des leads",
+    "analytics": "Analytics",
+    "analyticsHint": "Visites et clics, intégré",
+    "assistant": "Assistant IA",
+    "assistantHint": "Répond à vos visiteurs"
+  },
+  "list": {
+    "title": "Membres",
+    "empty": "Pas encore de membres. Invitez quelqu'un, ou partagez une page réservée et laissez-les s'inscrire.",
+    "loadError": "Impossible de charger les membres",
+    "status": {
+      "active": "Actif",
+      "invited": "Invité"
+    },
+    "remove": "Retirer {email}"
+  },
+  "invite": {
+    "placeholder": "email@exemple.com",
+    "cta": "Inviter",
+    "duplicate": "Cet e-mail est déjà membre.",
+    "cap": "Limite de membres de votre forfait atteinte.",
+    "error": "Invitation impossible. Réessayez.",
+    "sent": "Ajouté à vos membres.",
+    "sentEmailed": "Ajouté — un lien de connexion lui a été envoyé."
+  }
+}

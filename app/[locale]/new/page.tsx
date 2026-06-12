@@ -20,6 +20,7 @@ import { setGenerationBusy } from "@/lib/generation-busy";
 import { useAIModel } from "@/components/workspace-v2/model-picker";
 import type {
   FormConfig,
+  MembersSettings,
   MusicSettings,
   ProjectSettings,
   StoredChatTurn,
@@ -2246,6 +2247,80 @@ function NewV2Inner() {
     },
     [loadedProject?.id, loadedProject?.settings?.music],
   );
+  // Members module — settings switches (Módulos tab). Awaited (not optimistic)
+  // so the panel's toggle reflects the server truth; resolves false → no-op UI.
+  const updateMembersSettings = useCallback(
+    async (patch: MembersSettings): Promise<boolean> => {
+      const projectId = loadedProject?.id;
+      if (!projectId) return false;
+      try {
+        const r = await fetch(`/api/projects/${projectId}/settings`, {
+          method: "PATCH",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ members: patch }),
+        });
+        if (!r.ok) return false;
+        setLoadedProject((p) =>
+          p
+            ? {
+                ...p,
+                settings: {
+                  ...p.settings,
+                  members: { ...p.settings?.members, ...patch },
+                },
+              }
+            : p,
+        );
+        return true;
+      } catch {
+        return false;
+      }
+    },
+    [loadedProject?.id],
+  );
+  // Members module — flip a subpage's "solo miembros" flag from the Site tab.
+  // The server auto-enables the module when the first page gets gated (atomic
+  // read-modify-write); we mirror both the page flag and that auto-enable.
+  const toggleMembersOnly = useCallback(
+    async (slug: string, next: boolean): Promise<boolean> => {
+      const projectId = loadedProject?.id;
+      if (!projectId) return false;
+      try {
+        const r = await fetch(`/api/projects/${projectId}/pages/${slug}`, {
+          method: "PATCH",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ membersOnly: next }),
+        });
+        if (!r.ok) return false;
+        const d = (await r.json()) as { membersAutoEnabled?: boolean };
+        setLoadedProject((p) => {
+          if (!p || !p.pages[slug]) return p;
+          const page = { ...p.pages[slug] };
+          if (next) page.membersOnly = true;
+          else delete page.membersOnly;
+          return {
+            ...p,
+            pages: { ...p.pages, [slug]: page },
+            ...(d.membersAutoEnabled
+              ? {
+                  settings: {
+                    ...p.settings,
+                    members: {
+                      enabled: true,
+                      mode: p.settings?.members?.mode ?? "open",
+                    },
+                  },
+                }
+              : {}),
+          };
+        });
+        return true;
+      } catch {
+        return false;
+      }
+    },
+    [loadedProject?.id],
+  );
   const toggleInspect = useCallback(() => {
     setInspectMode((m) => !m);
     setInspectSelection(null);
@@ -2460,6 +2535,9 @@ function NewV2Inner() {
           onAddBusiness={() => setProfileModalOpen(true)}
           onPickImage={startPlacementAsset}
           sitePages={sitePages}
+          membersSettings={loadedProject?.settings?.members}
+          onUpdateMembersSettings={updateMembersSettings}
+          onToggleMembersOnly={toggleMembersOnly}
           activeSitePage={activeSitePage}
           onSwitchSitePage={switchSitePage}
           onCreateSitePage={createSitePage}
@@ -2840,6 +2918,15 @@ function NewV2Inner() {
             publishedAt: loadedProject.publishedAt,
             hasUnpublishedChanges: loadedProject.hasUnpublishedChanges,
             languages: loadedProject.settings?.languages,
+            ...(() => {
+              const flagged = Object.values(loadedProject.pages ?? {}).filter(
+                (p) => p.membersOnly,
+              ).length;
+              const on = loadedProject.settings?.members?.enabled === true;
+              return on
+                ? { gatedPagesCount: flagged }
+                : { gatedFlagsWithModuleOff: flagged };
+            })(),
           }}
           onSuccess={(newSubdomain) => {
             setLoadedProject((prev) =>

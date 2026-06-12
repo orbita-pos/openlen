@@ -131,7 +131,9 @@
     "languages": {
       "title": "Publica también en",
       "hint": "Cada idioma se publica en /en/, /fr/… con traducción automática en cada publicación. El idioma original de tu página se omite."
-    }
+    },
+    "membersOffWarning": "{count, plural, one {# página está marcada solo-miembros pero el módulo Miembros está APAGADO — se publicará PÚBLICA. Actívalo en la pestaña Módulos.} other {# páginas están marcadas solo-miembros pero el módulo Miembros está APAGADO — se publicarán PÚBLICAS. Actívalo en la pestaña Módulos.}}",
+    "membersGatedSummary": "{count, plural, one {# página solo-miembros se publicará detrás del acceso con login.} other {# páginas solo-miembros se publicarán detrás del acceso con login.}}"
   },
   "inspector": {
     "radius": "Radio",

@@ -195,6 +195,17 @@ import koMiNegocio from "../messages/ko/miNegocio.json";
 import zhMiNegocio from "../messages/zh/miNegocio.json";
 import nlMiNegocio from "../messages/nl/miNegocio.json";
 
+import enMembers from "../messages/en/members.json";
+import esMembers from "../messages/es/members.json";
+import ptMembers from "../messages/pt/members.json";
+import frMembers from "../messages/fr/members.json";
+import deMembers from "../messages/de/members.json";
+import itMembers from "../messages/it/members.json";
+import jaMembers from "../messages/ja/members.json";
+import koMembers from "../messages/ko/members.json";
+import zhMembers from "../messages/zh/members.json";
+import nlMembers from "../messages/nl/members.json";
+
 const MESSAGES = {
   en: {
     common: enCommon,
@@ -215,6 +226,7 @@ const MESSAGES = {
     modalsDomain: enModalsDomain,
     modalsDeploy: enModalsDeploy,
     miNegocio: enMiNegocio,
+    members: enMembers,
   },
   es: {
     common: esCommon,
@@ -235,6 +247,7 @@ const MESSAGES = {
     modalsDomain: esModalsDomain,
     modalsDeploy: esModalsDeploy,
     miNegocio: esMiNegocio,
+    members: esMembers,
   },
   pt: {
     common: ptCommon,
@@ -255,6 +268,7 @@ const MESSAGES = {
     modalsDomain: ptModalsDomain,
     modalsDeploy: ptModalsDeploy,
     miNegocio: ptMiNegocio,
+    members: ptMembers,
   },
   fr: {
     common: frCommon,
@@ -275,6 +289,7 @@ const MESSAGES = {
     modalsDomain: frModalsDomain,
     modalsDeploy: frModalsDeploy,
     miNegocio: frMiNegocio,
+    members: frMembers,
   },
   de: {
     common: deCommon,
@@ -295,6 +310,7 @@ const MESSAGES = {
     modalsDomain: deModalsDomain,
     modalsDeploy: deModalsDeploy,
     miNegocio: deMiNegocio,
+    members: deMembers,
   },
   it: {
     common: itCommon,
@@ -315,6 +331,7 @@ const MESSAGES = {
     modalsDomain: itModalsDomain,
     modalsDeploy: itModalsDeploy,
     miNegocio: itMiNegocio,
+    members: itMembers,
   },
   ja: {
     common: jaCommon,
@@ -335,6 +352,7 @@ const MESSAGES = {
     modalsDomain: jaModalsDomain,
     modalsDeploy: jaModalsDeploy,
     miNegocio: jaMiNegocio,
+    members: jaMembers,
   },
   ko: {
     common: koCommon,
@@ -355,6 +373,7 @@ const MESSAGES = {
     modalsDomain: koModalsDomain,
     modalsDeploy: koModalsDeploy,
     miNegocio: koMiNegocio,
+    members: koMembers,
   },
   zh: {
     common: zhCommon,
@@ -375,6 +394,7 @@ const MESSAGES = {
     modalsDomain: zhModalsDomain,
     modalsDeploy: zhModalsDeploy,
     miNegocio: zhMiNegocio,
+    members: zhMembers,
   },
   nl: {
     common: nlCommon,
@@ -395,6 +415,7 @@ const MESSAGES = {
     modalsDomain: nlModalsDomain,
     modalsDeploy: nlModalsDeploy,
     miNegocio: nlMiNegocio,
+    members: nlMembers,
   },
 } as const;
 

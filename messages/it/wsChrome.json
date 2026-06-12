@@ -44,6 +44,10 @@
       "images": {
         "label": "Immagini",
         "title": "Libreria immagini"
+      },
+      "members": {
+        "label": "Moduli",
+        "title": "Moduli backend — membri e altro"
       }
     },
     "tabLocked": "{label} — bloccato",
@@ -199,6 +203,9 @@
     "deleteTitle": "Eliminare /{slug}?",
     "deleteBody": "Il contenuto andrà perso e non si può annullare. Se è pubblicata, sparirà dal tuo sito al prossimo deploy.",
     "confirmLabel": "Scrivi {slug} per confermare",
-    "confirmBtn": "Elimina pagina"
+    "confirmBtn": "Elimina pagina",
+    "membersOnlyBadge": "Solo membri",
+    "membersOnlyOn": "Rendi /{slug} solo per membri",
+    "membersOnlyOff": "Rendi /{slug} pubblica"
   }
 }

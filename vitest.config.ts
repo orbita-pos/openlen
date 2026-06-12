@@ -33,6 +33,7 @@ export default defineConfig({
       "lib/tematicas/**/*.test.ts",
       "lib/site-assistant/**/*.test.ts",
       "lib/publish/assistant-widget.test.ts",
+      "lib/members/**/*.test.ts",
     ],
     exclude: ["node_modules/**", "tests/e2e/**", ".next/**"],
   },

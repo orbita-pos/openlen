@@ -647,6 +647,48 @@ export const passwordResetTokens = pgTable("passwordResetTokens", {
   createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
 });
 
+// ─── Members module — per-site visitor accounts (magic-link login) ──────────
+// A member belongs to ONE published site (projects row), never to the platform
+// `users` table — visitor identity is site-scoped by design (a member of site A
+// is a stranger on site B). Login is passwordless: memberLoginTokens mirrors
+// passwordResetTokens (sha256 hash at rest, short TTL, single-use). Applied in
+// prod via `npm run members:migrate` (scripts/members-migrate.ts).
+
+export const siteMembers = pgTable(
+  "siteMembers",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    projectId: text("projectId")
+      .notNull()
+      .references(() => projects.id, { onDelete: "cascade" }),
+    email: text("email").notNull(), // stored lowercase, normalized at the edges
+    name: text("name"),
+    // 'invited' rows (owner pre-approved an email) flip to 'active' on first login.
+    status: text("status").$type<"active" | "invited">().notNull().default("active"),
+    createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
+    lastLoginAt: timestamp("lastLoginAt", { mode: "date" }),
+  },
+  (table) => [
+    uniqueIndex("siteMembers_projectId_email_uq").on(table.projectId, table.email),
+  ],
+);
+
+export const memberLoginTokens = pgTable("memberLoginTokens", {
+  tokenHash: text("tokenHash").primaryKey(),
+  projectId: text("projectId")
+    .notNull()
+    .references(() => projects.id, { onDelete: "cascade" }),
+  email: text("email").notNull(),
+  // Gated page the visitor was trying to reach; the verify redirect is built
+  // from THIS stored value (never from request input) — no open redirect.
+  slug: text("slug"),
+  expires: timestamp("expires", { mode: "date" }).notNull(),
+  used: boolean("used").notNull().default(false),
+  createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
+});
+
 // External-deploy OAuth connections — one row per (user, provider). The token
 // is an ACCOUNT-level credential (connect once, deploy any project), so it
 // lives at user grain, not per-project. Powers the Deploy-dropdown "Deploy to

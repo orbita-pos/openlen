@@ -44,6 +44,10 @@
       "images": {
         "label": "图片",
         "title": "图片库"
+      },
+      "members": {
+        "label": "模块",
+        "title": "后端模块 — 会员及更多"
       }
     },
     "tabLocked": "{label} — 已锁定",
@@ -199,6 +203,9 @@
     "deleteTitle": "删除 /{slug}？",
     "deleteBody": "其内容将丢失且无法撤销。若已发布，下次部署时它将从你的站点消失。",
     "confirmLabel": "输入 {slug} 以确认",
-    "confirmBtn": "删除页面"
+    "confirmBtn": "删除页面",
+    "membersOnlyBadge": "会员专属",
+    "membersOnlyOn": "将 /{slug} 设为会员专属",
+    "membersOnlyOff": "将 /{slug} 设为公开"
   }
 }

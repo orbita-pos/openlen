@@ -1,0 +1,47 @@
+{
+  "title": "Modules",
+  "subtitle": "Backend met één klik voor je site. Geen credits, geen code.",
+  "perProject": "Open een project om de modules te beheren.",
+  "module": {
+    "title": "Leden",
+    "tagline": "Bezoekerslogin + pagina's alleen voor leden",
+    "toggle": "Leden inschakelen",
+    "mode": {
+      "open": "Open aanmelding",
+      "invite": "Alleen op uitnodiging",
+      "openHint": "Iedereen kan zich aanmelden met e-mail — we sturen een inloglink.",
+      "inviteHint": "Alleen e-mails die je hieronder toevoegt kunnen inloggen."
+    },
+    "gatedCount": "{count, plural, one {# pagina is alleen voor leden. Beheer dit in het Site-tabblad.} other {# pagina's zijn alleen voor leden. Beheer dit in het Site-tabblad.}}",
+    "gatedNone": "Nog geen ledenpagina's — markeer er één met het slot in het Site-tabblad."
+  },
+  "included": {
+    "title": "Inbegrepen bij je site",
+    "open": "Openen",
+    "forms": "Formulieren & leads",
+    "formsHint": "Elk formulier vangt al leads",
+    "analytics": "Analytics",
+    "analyticsHint": "Bezoeken en klikken, ingebouwd",
+    "assistant": "AI-assistent",
+    "assistantHint": "Beantwoordt vragen van bezoekers"
+  },
+  "list": {
+    "title": "Leden",
+    "empty": "Nog geen leden. Nodig iemand uit, of deel een ledenpagina en laat ze zich aanmelden.",
+    "loadError": "Kon leden niet laden",
+    "status": {
+      "active": "Actief",
+      "invited": "Uitgenodigd"
+    },
+    "remove": "{email} verwijderen"
+  },
+  "invite": {
+    "placeholder": "email@voorbeeld.nl",
+    "cta": "Uitnodigen",
+    "duplicate": "Dat e-mailadres is al lid.",
+    "cap": "Ledenlimiet van je plan bereikt.",
+    "error": "Uitnodigen mislukt. Probeer opnieuw.",
+    "sent": "Toegevoegd aan je leden.",
+    "sentEmailed": "Toegevoegd — inloglink per e-mail verstuurd."
+  }
+}

@@ -5,8 +5,11 @@ import {
   buildPageShell,
   listSitePages,
   MAX_SITE_PAGES,
+  membersGatingEnabled,
   pagesForPublish,
   pageTitle,
+  sitePagesFingerprintInput,
+  splitPagesForPublish,
   validatePageSlug,
 } from "./site-pages";
 import type { ProjectData } from "./types";
@@ -80,6 +83,92 @@ describe("listing + publish helpers", () => {
       { slug: "sobre-mi", html: "<html>about</html>" },
     ]);
     assert.deepEqual(pagesForPublish(undefined), []);
+  });
+});
+
+describe("members gating", () => {
+  const gatedData: ProjectData = {
+    html: "<html>home</html>",
+    settings: { members: { enabled: true } },
+    pages: {
+      menu: { html: "<html>menu</html>" },
+      privada: { html: "<html>secret</html>", membersOnly: true },
+    },
+  };
+
+  it("membersGatingEnabled requires the explicit switch", () => {
+    assert.equal(membersGatingEnabled(gatedData), true);
+    assert.equal(membersGatingEnabled({ html: "x" }), false);
+    assert.equal(membersGatingEnabled(null), false);
+    assert.equal(
+      membersGatingEnabled({ html: "x", settings: { members: {} } }),
+      false,
+    );
+  });
+
+  it("splitPagesForPublish separates gated pages when the module is on", () => {
+    const { publicPages, gatedPages } = splitPagesForPublish(gatedData);
+    assert.deepEqual(publicPages, [{ slug: "menu", html: "<html>menu</html>" }]);
+    assert.deepEqual(gatedPages, [
+      { slug: "privada", html: "<html>secret</html>" },
+    ]);
+  });
+
+  it("flags are inert while the module is off — everything publishes public", () => {
+    const off: ProjectData = {
+      ...gatedData,
+      settings: { members: { enabled: false } },
+    };
+    const { publicPages, gatedPages } = splitPagesForPublish(off);
+    assert.equal(gatedPages.length, 0);
+    assert.equal(publicPages.length, 2);
+    // pagesForPublish keeps returning the full set either way (snapshots).
+    assert.equal(pagesForPublish(gatedData).length, 2);
+  });
+
+  it("listSitePages marks gated pages, only when flagged", () => {
+    assert.deepEqual(listSitePages(gatedData), [
+      { slug: "menu", title: "Menu" },
+      { slug: "privada", title: "Privada", membersOnly: true },
+    ]);
+  });
+
+  it("fingerprint input is byte-identical to the legacy stream when nothing is gated", () => {
+    const plain: ProjectData = {
+      html: "<html>home</html>",
+      pages: {
+        menu: { html: "<html>menu</html>" },
+        "sobre-mi": { html: "<html>about</html>" },
+      },
+    };
+    const NUL = String.fromCharCode(0);
+    assert.deepEqual(sitePagesFingerprintInput(plain), [
+      `menu${NUL}<html>menu</html>${NUL}`,
+      `sobre-mi${NUL}<html>about</html>${NUL}`,
+    ]);
+    // A membersOnly flag with the module OFF must not move the hash either.
+    const flaggedModuleOff: ProjectData = {
+      ...plain,
+      pages: {
+        ...plain.pages,
+        menu: { html: "<html>menu</html>", membersOnly: true },
+      },
+    };
+    assert.deepEqual(
+      sitePagesFingerprintInput(flaggedModuleOff),
+      sitePagesFingerprintInput(plain),
+    );
+  });
+
+  it("an effectively gated page appends the marker and changes the stream", () => {
+    const parts = sitePagesFingerprintInput(gatedData);
+    const NUL = String.fromCharCode(0);
+    assert.equal(parts[1], `privada${NUL}<html>secret</html>${NUL}m${NUL}`);
+    const ungated = sitePagesFingerprintInput({
+      ...gatedData,
+      settings: { members: { enabled: false } },
+    });
+    assert.notDeepEqual(parts, ungated);
   });
 });
 

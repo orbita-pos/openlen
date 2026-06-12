@@ -1,0 +1,47 @@
+{
+  "title": "模块",
+  "subtitle": "一键后端。无需积分，无需代码。",
+  "perProject": "打开一个项目以管理其模块。",
+  "module": {
+    "title": "会员",
+    "tagline": "访客登录 + 会员专属页面",
+    "toggle": "启用会员",
+    "mode": {
+      "open": "开放注册",
+      "invite": "仅限邀请",
+      "openHint": "任何人都可以用邮箱加入 — 我们会发送登录链接。",
+      "inviteHint": "只有在下方添加的邮箱才能登录。"
+    },
+    "gatedCount": "{count} 个页面为会员专属。在 Site 标签页中管理。",
+    "gatedNone": "还没有会员专属页面 — 在 Site 标签页用锁标记一个。"
+  },
+  "included": {
+    "title": "你的网站已包含",
+    "open": "打开",
+    "forms": "表单与线索",
+    "formsHint": "每个表单都会收集线索",
+    "analytics": "分析",
+    "analyticsHint": "访问与点击，开箱即用",
+    "assistant": "AI 助手",
+    "assistantHint": "回答访客的问题"
+  },
+  "list": {
+    "title": "会员",
+    "empty": "还没有会员。邀请某人，或分享会员专属页面让他们注册。",
+    "loadError": "无法加载会员",
+    "status": {
+      "active": "活跃",
+      "invited": "已邀请"
+    },
+    "remove": "移除 {email}"
+  },
+  "invite": {
+    "placeholder": "email@example.com",
+    "cta": "邀请",
+    "duplicate": "该邮箱已是会员。",
+    "cap": "已达到你的套餐会员上限。",
+    "error": "邀请失败，请重试。",
+    "sent": "已添加到你的会员。",
+    "sentEmailed": "已添加 — 已通过邮件发送登录链接。"
+  }
+}

@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import { and, eq } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
 import { optimizeHtmlForProduction } from "@/lib/publish/optimize-html";
-import { pagesForPublish } from "@/lib/projects/site-pages";
+import { splitPagesForPublish } from "@/lib/projects/site-pages";
 import type { ProjectData } from "@/lib/projects/types";
 import { encryptToken } from "./crypto";
 import { ProviderError, type Provider } from "./oauth";
@@ -173,8 +173,10 @@ export async function getExportHtml(
   if (!row || row.userId !== userId) return null;
   const data = row.data as ProjectData;
   const optimized = await optimizeHtmlForProduction(data?.html ?? "");
+  // External hosts (GitHub Pages / Vercel) have no member gate — exporting a
+  // gated page there would publish it wide open. Public pages only.
   const pages = await Promise.all(
-    pagesForPublish(data).map(async (pg) => ({
+    splitPagesForPublish(data).publicPages.map(async (pg) => ({
       slug: pg.slug,
       html: (await optimizeHtmlForProduction(pg.html)).html,
     })),
