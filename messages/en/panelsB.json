@@ -96,7 +96,8 @@
       "desktop": "Desktop",
       "tablet": "Tablet"
     },
-    "browsers": "Browsers"
+    "browsers": "Browsers",
+    "pages": "Pages"
   },
   "leads": {
     "loadError": "Failed to load leads",

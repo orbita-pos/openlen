@@ -524,6 +524,10 @@ export const pageEvents = pgTable(
     // to count 'uniques' over a range — collision rate is negligible at the
     // scales OpenLen sees, and there's no way to invert the hash.
     uaHash: text("uaHash"),
+    // Site-page slug the event happened on; null = home (and every event
+    // recorded before multipage). Baked into the snippet at publish time,
+    // validated against the slug grammar at insert.
+    page: text("page"),
     ts: timestamp("ts", { mode: "date" }).notNull().defaultNow(),
   },
   (table) => [

@@ -96,7 +96,8 @@
       "desktop": "デスクトップ",
       "tablet": "タブレット"
     },
-    "browsers": "ブラウザ"
+    "browsers": "ブラウザ",
+    "pages": "ページ"
   },
   "leads": {
     "loadError": "リードの読み込みに失敗しました",

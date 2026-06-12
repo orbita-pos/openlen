@@ -163,6 +163,7 @@ function Content({ data }: { data: Insights }) {
     <div className="space-y-3">
       <KpiRow totals={data.totals} />
       <VisitsChart byDay={data.byDay} />
+      <TopPagesCard pages={data.topPages} />
       <TopLinksTable links={data.topLinks} />
       <SideBySide
         referrers={data.topReferrers}
@@ -235,6 +236,56 @@ function VisitsChart({ byDay }: { byDay: Insights["byDay"] }) {
         fill
         className="w-full h-12"
       />
+    </div>
+  );
+}
+
+// Views per document. Hidden for single-document sites — a lone "/" row
+// just repeats the Views KPI.
+function TopPagesCard({ pages }: { pages: InsightsRow[] }) {
+  const t = useTranslations("panelsB");
+  if (pages.length < 2) return null;
+  const total = pages.reduce((s, p) => s + p.count, 0);
+  return (
+    <div className="rounded-md border bd bg-elev p-2">
+      <div className="text-[9.5px] uppercase tracking-[0.14em] fg-faint font-semibold ui-small mb-1.5 px-1">
+        {t("insights.pages")}
+      </div>
+      <ul className="space-y-0.5">
+        {pages.map((p) => {
+          const pct = total > 0 ? Math.round((p.count / total) * 100) : 0;
+          return (
+            <li
+              key={p.key}
+              className="px-1 py-1 rounded-md hover:bg-app/40 transition flex items-center gap-2"
+            >
+              <span
+                className="min-w-0 flex-1 text-[11px] fg font-mono truncate"
+                title={p.key}
+              >
+                {p.key}
+              </span>
+              <span
+                className="shrink-0 h-1 w-12 rounded-full bg-app overflow-hidden"
+                aria-hidden
+              >
+                <span
+                  className="block h-full rounded-full bg-[color:var(--accent)]/70"
+                  style={{ width: `${pct}%` }}
+                />
+              </span>
+              <span className="shrink-0 text-right min-w-[44px]">
+                <span className="text-[11.5px] fg font-semibold tabular-nums">
+                  {p.count.toLocaleString()}
+                </span>
+                <span className="ml-1 text-[9.5px] fg-faint tabular-nums">
+                  {pct}%
+                </span>
+              </span>
+            </li>
+          );
+        })}
+      </ul>
     </div>
   );
 }

@@ -96,7 +96,8 @@
       "desktop": "Desktop",
       "tablet": "Tablet"
     },
-    "browsers": "Browser"
+    "browsers": "Browser",
+    "pages": "Pagine"
   },
   "leads": {
     "loadError": "Caricamento dei contatti non riuscito",

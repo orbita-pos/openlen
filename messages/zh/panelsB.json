@@ -96,7 +96,8 @@
       "desktop": "电脑",
       "tablet": "平板"
     },
-    "browsers": "浏览器"
+    "browsers": "浏览器",
+    "pages": "页面"
   },
   "leads": {
     "loadError": "加载线索失败",

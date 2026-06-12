@@ -18,8 +18,11 @@ export const dynamic = "force-dynamic";
 // Analytics that breaks navigation is worse than no analytics.
 //
 // Body shape (JSON):
-//   { t: "v", r?: string }                            -- pageview
-//   { t: "c", h: string, l?: string, r?: string }     -- outbound click
+//   { t: "v", r?: string, p?: string }                          -- pageview
+//   { t: "c", h: string, l?: string, r?: string, p?: string }   -- outbound click
+//
+// `p` is the site-page slug baked into the snippet at publish time; absent
+// or anything that isn't a valid slug stores as null (= home).
 //
 // Privacy contract:
 //   - No IP stored. No cookies. No raw User-Agent.
@@ -33,6 +36,14 @@ const UA_SALT = process.env.ANALYTICS_UA_SALT ?? "openlen-default-salt";
 const MAX_HREF = 2000;
 const MAX_LABEL = 80;
 const MAX_REFERRER = 500;
+
+// Same slug grammar as lib/projects/site-pages.ts — strict match, no
+// normalization: a beacon body is untrusted input, not a user typing.
+const PAGE_SLUG_RE = /^[a-z0-9](?:[a-z0-9-]{0,38}[a-z0-9])?$/;
+
+function parsePage(p: unknown): string | null {
+  return typeof p === "string" && PAGE_SLUG_RE.test(p) ? p : null;
+}
 
 function truncateString(s: unknown, max: number): string | null {
   if (typeof s !== "string") return null;
@@ -72,7 +83,13 @@ export async function POST(
     return new Response(null, { status: 204 });
   }
 
-  const data = body as { t?: unknown; h?: unknown; l?: unknown; r?: unknown };
+  const data = body as {
+    t?: unknown;
+    h?: unknown;
+    l?: unknown;
+    r?: unknown;
+    p?: unknown;
+  };
   const type = data.t === "v" ? "view" : data.t === "c" ? "click" : null;
   if (!type) return new Response(null, { status: 204 });
 
@@ -99,6 +116,7 @@ export async function POST(
       device,
       browser,
       uaHash,
+      page: parsePage(data.p),
     });
   } catch {
     // FK violation (unknown projectId), DB hiccup, anything — silently drop.
