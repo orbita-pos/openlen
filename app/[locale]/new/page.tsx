@@ -58,6 +58,22 @@ import {
   tematicaCss,
   type TematicaPreset,
 } from "@/lib/tematicas/presets";
+import {
+  deriveWorldFromFile,
+  deriveWorldFromUrl,
+  type DerivedWorld,
+} from "@/lib/tematicas/derive-from-image";
+import {
+  buildImageSectionHtml,
+  fileNameToAlt,
+  parseDropAsset,
+  sectionBgPlan,
+  DROP_ASSET_MIME,
+  type DropAsset,
+} from "@/components/workspace-v2/drop-place-core";
+import type { DropIntent } from "@/components/workspace-v2/use-drop-place";
+import { imageFetchUrl } from "@/lib/image-fetch-url";
+import { gradientBgPlan, parseSimpleGradient } from "@/lib/gradients";
 import { PageAssembling } from "@/components/workspace-v2/page-assembling";
 import {
   ReplaceAssetModal,
@@ -135,9 +151,20 @@ interface LoadedProject {
 
 type EntryMode = "choosing" | "ai" | "template" | "paste" | "editing";
 
+// What a drop/placement commit carries: an OS file (uploaded on commit) or a
+// panel asset whose URL is already hosted. The promises start at gesture time
+// so they resolve while the user aims.
+type DropSrc = {
+  file?: File;
+  asset?: DropAsset;
+  uploadPromise?: Promise<{ url: string } | null>;
+  worldPromise?: Promise<DerivedWorld | null>;
+};
+
 const ALL_TABS: SidebarMode[] = [
   "chat",
   "templates",
+  "images",
   "library",
   "pages",
   "versions",
@@ -182,6 +209,7 @@ function readThemeBaseline(m: Record<string, unknown>): {
 function NewV2Inner() {
   const t = useTranslations("wsPage");
   const tSections = useTranslations("panelsA");
+  const tAsset = useTranslations("modalsAsset");
   const [dark, toggleDark] = useDarkMode();
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -352,6 +380,7 @@ function NewV2Inner() {
     html: string;
     nonce: number;
     sectionType: string;
+    anchorPath?: string;
   } | null>(null);
   const insertNonceRef = useRef(0);
   // Undo-of-insert request — bumping the nonce tells PreviewArea to post
@@ -831,8 +860,23 @@ function NewV2Inner() {
   // wiring V3 primitives into the preview is deferred to a follow-up.
   const refetchProject = useCallback(
     async (id: string): Promise<void> => {
+      // A refetch must never clobber local edits the server hasn't seen yet:
+      // the focus/broadcast echo races the 500ms autosave debounce, so the
+      // fetched doc can be one edit behind and would silently revert the
+      // canvas (surfaced by the drop engine's Undo, but it could just as well
+      // eat a fresh text edit). Skip while a save is pending/in-flight or a
+      // local edit just happened; convergence resumes on the next idle nudge.
+      const editingLocally = () =>
+        pendingSaveRef.current !== null ||
+        saveTimerRef.current !== null ||
+        Date.now() - lastLocalEditAtRef.current < 2500;
+      if (editingLocally()) return;
       const res = await fetch(`/api/projects/${id}`);
       if (!res.ok) return;
+      // Re-check AFTER the await: a slow response (dev compiles, cold DB) can
+      // arrive seconds later carrying a long-stale document — applying it
+      // then would time-travel the canvas past edits made mid-flight.
+      if (editingLocally()) return;
       const data = (await res.json().catch(() => null)) as
         | {
             project?: {
@@ -959,6 +1003,12 @@ function NewV2Inner() {
     // shared the same edit-mode body attr).
     !sectionSelectMode;
 
+  // Drop engine — armed whenever a project is open, deliberately NOT tied to
+  // the Edit toggle: dragging a file over the page (or pasting an image) is
+  // unambiguous intent, and the iframe script is visually silent when idle.
+  const dropEnabled =
+    entryMode === "editing" && !!loadedProject && !sectionSelectMode;
+
   // Compute which sidebar tabs are locked based on the entry mode + the
   // loaded project's shape. In an entry flow, only the relevant tab is
   // interactive. In editing mode every tab opens — flat projects show a
@@ -1011,6 +1061,432 @@ function NewV2Inner() {
   // the iframe affordances. Same contentEditable + Reorder + Replace surface
   // works for every project, AI-generated or not.
   const editableInjection = editingActive;
+
+  // ---- Drop engine — parent orchestration ---------------------------------
+  // The iframe script (use-drop-place.ts) detects targets + posts intents;
+  // this side uploads the file and routes the result through the EXISTING
+  // apply contracts (swap-asset / apply-prop style-bg / section-insert), so
+  // every commit rides the normal html-changed save + version pipeline.
+  const [dropNotice, setDropNotice] = useState<
+    | { kind: "hint" }
+    | { kind: "uploading" }
+    | { kind: "error"; text: string }
+    | { kind: "done"; text: string }
+    | null
+  >(null);
+  // One-step undo for direct-manipulation commits (drops, trash, toolbar).
+  // The html-changed listener stashes the PREVIOUS document before applying
+  // any edit; "Deshacer" restores it, persists, and remounts the iframe via
+  // the docKey epoch (a state push alone is skipped while editing).
+  const loadedProjectRef = useRef(loadedProject);
+  loadedProjectRef.current = loadedProject;
+  const undoRef = useRef<{ html: string; page: string | null } | null>(null);
+  const pendingPillRef = useRef<string | null>(null);
+  // Timestamp of the last local edit/undo — refetchProject's anti-clobber
+  // guard reads it (see its comment).
+  const lastLocalEditAtRef = useRef(0);
+  const [undoEpoch, setUndoEpoch] = useState(0);
+  // Bridge: the drop message listener mounts before doUndo is declared.
+  const doUndoRef = useRef<() => void>(() => {});
+  const dropNoticeTimerRef = useRef<number | null>(null);
+  const placementRef = useRef<({ token: number } & DropSrc) | null>(null);
+  const placeTokenRef = useRef(0);
+  const dropBusyRef = useRef(false);
+  // Bumped before a swap-asset / style-bg commit: the apply lands in the LIVE
+  // iframe DOM, so the doc-change that follows must not reload the srcDoc
+  // (a white flash when the Edit toggle is off). Same skip the insert flow uses.
+  const [suppressReload, setSuppressReload] = useState(0);
+
+  const flashDropError = useCallback((text: string) => {
+    setDropNotice({ kind: "error", text });
+    if (dropNoticeTimerRef.current !== null)
+      window.clearTimeout(dropNoticeTimerRef.current);
+    dropNoticeTimerRef.current = window.setTimeout(
+      () => setDropNotice(null),
+      4000,
+    );
+  }, []);
+  useEffect(
+    () => () => {
+      if (dropNoticeTimerRef.current !== null)
+        window.clearTimeout(dropNoticeTimerRef.current);
+    },
+    [],
+  );
+
+  // Same constraints the assets route enforces — fail fast with the modal's
+  // own translated strings instead of waiting on a 4xx.
+  const validateDropFile = useCallback(
+    (file: File): string | null => {
+      if (!file.type.startsWith("image/")) return tAsset("upload.notImage");
+      if (file.size > 8 * 1024 * 1024)
+        return tAsset("upload.tooLarge", { max: 8 });
+      return null;
+    },
+    [tAsset],
+  );
+
+  const uploadDropFile = useCallback(
+    async (projectId: string, file: File): Promise<{ url: string } | null> => {
+      try {
+        const form = new FormData();
+        form.append("file", file);
+        const res = await fetch(`/api/projects/${projectId}/assets`, {
+          method: "POST",
+          body: form,
+        });
+        const data = (await res.json().catch(() => null)) as {
+          url?: string;
+        } | null;
+        if (!res.ok || !data?.url) return null;
+        return { url: data.url };
+      } catch {
+        return null;
+      }
+    },
+    [],
+  );
+
+  const cancelPlacement = useCallback(() => {
+    placementRef.current = null;
+    setDropNotice(null);
+    iframeElRef.current?.contentWindow?.postMessage(
+      { type: "openlen:place-cancel" },
+      "*",
+    );
+  }, []);
+
+  // Paste → placement mode. Upload + luminance-derive start immediately (in
+  // parallel) so they resolve while the user aims. A new paste supersedes the
+  // pending one.
+  const startPlacement = useCallback(
+    (file: File) => {
+      const projectId = loadedIdRef.current;
+      if (!projectId) return;
+      const err = validateDropFile(file);
+      if (err) {
+        flashDropError(err);
+        return;
+      }
+      placeTokenRef.current += 1;
+      const token = placeTokenRef.current;
+      placementRef.current = {
+        token,
+        file,
+        uploadPromise: uploadDropFile(projectId, file),
+        worldPromise: deriveWorldFromFile(file).catch(() => null),
+      };
+      iframeElRef.current?.contentWindow?.postMessage(
+        { type: "openlen:place-start", token },
+        "*",
+      );
+      setDropNotice({ kind: "hint" });
+    },
+    [validateDropFile, flashDropError, uploadDropFile],
+  );
+
+  // Click-to-place from the Images panel (also the mobile path): same
+  // placement mode as paste, minus validation/upload — the URL is already
+  // hosted. Luminance derives through the proxy while the user aims.
+  const startPlacementAsset = useCallback((asset: DropAsset) => {
+    const projectId = loadedIdRef.current;
+    if (!projectId) return;
+    placeTokenRef.current += 1;
+    const token = placeTokenRef.current;
+    placementRef.current = {
+      token,
+      asset,
+      worldPromise: deriveWorldFromUrl(
+        imageFetchUrl(asset.url, projectId),
+      ).catch(() => null),
+    };
+    iframeElRef.current?.contentWindow?.postMessage(
+      { type: "openlen:place-start", token },
+      "*",
+    );
+    setDropNotice({ kind: "hint" });
+  }, []);
+
+  const commitDrop = useCallback(
+    async (projectId: string, intent: DropIntent, src: DropSrc) => {
+      if (dropBusyRef.current) return;
+      if (src.file) {
+        const err = validateDropFile(src.file);
+        if (err) {
+          flashDropError(err);
+          return;
+        }
+      } else if (!src.asset) {
+        return;
+      }
+      dropBusyRef.current = true;
+      // Panel assets are already hosted — no upload, no "uploading" flash.
+      if (!src.asset) setDropNotice({ kind: "uploading" });
+      try {
+        const url = src.asset
+          ? src.asset.url
+          : ((await (src.uploadPromise ?? uploadDropFile(projectId, src.file!)))
+              ?.url ?? null);
+        // Navigated to another project mid-upload — don't apply to the wrong doc.
+        if (loadedIdRef.current !== projectId) return;
+        if (!url) {
+          flashDropError(tAsset("upload.networkError"));
+          return;
+        }
+        const win = iframeElRef.current?.contentWindow;
+        if (!win) return;
+        const alt =
+          src.asset?.alt ||
+          fileNameToAlt(
+            src.file
+              ? src.file.name
+              : decodeURIComponent(
+                  new URL(url, window.location.origin).pathname
+                    .split("/")
+                    .pop() ?? "",
+                ),
+          );
+        if (intent.action !== "new-section") {
+          setSuppressReload((n) => n + 1);
+          pendingPillRef.current = t(
+            intent.action === "replace-image"
+              ? "undoPill.replaced"
+              : intent.action === "section-bg"
+                ? "undoPill.background"
+                : "undoPill.split",
+          );
+        }
+        if (intent.action === "replace-image") {
+          win.postMessage(
+            {
+              type: "openlen:swap-asset",
+              kind: "image",
+              path: intent.path,
+              payload: {
+                url,
+                alt,
+                ...(src.asset?.credit ? { credit: src.asset.credit } : {}),
+              },
+            },
+            "*",
+          );
+        } else if (intent.action === "section-bg") {
+          const world = await (src.worldPromise ??
+            (src.file
+              ? deriveWorldFromFile(src.file)
+              : deriveWorldFromUrl(imageFetchUrl(url, projectId))
+            ).catch(() => null));
+          win.postMessage(
+            {
+              type: "openlen:apply-prop",
+              scope: "style-bg",
+              path: intent.path,
+              kind: "image",
+              value: url,
+              legibility: sectionBgPlan(world ? world.lum : 0.5),
+            },
+            "*",
+          );
+        } else if (intent.action === "media-split") {
+          win.postMessage(
+            {
+              type: "openlen:apply-prop",
+              scope: "split",
+              path: intent.path,
+              side: intent.side,
+              url,
+              alt,
+            },
+            "*",
+          );
+        } else if (intent.action === "new-section") {
+          insertNonceRef.current += 1;
+          setInsertRequest({
+            html: buildImageSectionHtml(url, alt),
+            nonce: insertNonceRef.current,
+            sectionType: "image",
+            anchorPath: intent.anchorPath ?? undefined,
+          });
+          // Rides the section-insert flash so the Undo pill works for free.
+          setLastInserted({ id: "drop-image", name: t("drop.sectionName") });
+        }
+        // Unsplash compliance: ping download_location when the photo is USED.
+        if (src.asset?.downloadLocation) {
+          void fetch("/api/unsplash/track-download", {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({
+              downloadLocation: src.asset.downloadLocation,
+            }),
+          }).catch(() => {});
+        }
+        setDropNotice(null);
+      } finally {
+        dropBusyRef.current = false;
+      }
+    },
+    [validateDropFile, flashDropError, uploadDropFile, tAsset, t],
+  );
+
+  // File-drag navigation guard — a drop that misses the iframe (sidebar, top
+  // bar) must never navigate the workspace away. preventDefault only: modal
+  // dropzones (Replace → Upload) handle their drops at target phase first.
+  useEffect(() => {
+    if (!(entryMode === "editing" && loadedProject)) return;
+    const guard = (e: DragEvent) => {
+      const types = e.dataTransfer?.types;
+      if (!types) return;
+      for (let i = 0; i < types.length; i++) {
+        if (types[i] === "Files" || types[i] === DROP_ASSET_MIME) {
+          e.preventDefault();
+          return;
+        }
+      }
+    };
+    window.addEventListener("dragover", guard);
+    window.addEventListener("drop", guard);
+    return () => {
+      window.removeEventListener("dragover", guard);
+      window.removeEventListener("drop", guard);
+    };
+  }, [entryMode, loadedProject?.id]);
+
+  // Clipboard paste (parent focus side) → placement mode. Skips real inputs +
+  // open dialogs; when focus sits in the canvas the iframe's own paste
+  // listener forwards the file here as openlen:paste-file.
+  useEffect(() => {
+    if (!dropEnabled) return;
+    const onPaste = (e: ClipboardEvent) => {
+      const el = document.activeElement as HTMLElement | null;
+      if (
+        el &&
+        (el.tagName === "INPUT" ||
+          el.tagName === "TEXTAREA" ||
+          el.isContentEditable)
+      )
+        return;
+      if (document.querySelector('[role="dialog"]')) return;
+      const file = e.clipboardData?.files?.[0];
+      if (!file || !file.type.startsWith("image/")) return;
+      e.preventDefault();
+      startPlacement(file);
+    };
+    document.addEventListener("paste", onPaste);
+    return () => document.removeEventListener("paste", onPaste);
+  }, [dropEnabled, startPlacement]);
+
+  // Esc on the parent side cancels a pending placement (the iframe handles
+  // Esc when focus sits in the canvas).
+  useEffect(() => {
+    if (!dropNotice || dropNotice.kind !== "hint") return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") cancelPlacement();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [dropNotice, cancelPlacement]);
+
+  // Ctrl/Cmd+Z (parent focus side) — one-step undo of the last change. The
+  // iframe forwards its own combo as openlen:undo-request when the canvas
+  // has focus; real inputs and the chat keep their native undo.
+  useEffect(() => {
+    if (!dropEnabled) return;
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.key !== "z" && e.key !== "Z") || (!e.ctrlKey && !e.metaKey)) return;
+      if (e.shiftKey || e.altKey) return;
+      const el = document.activeElement as HTMLElement | null;
+      if (
+        el &&
+        (el.tagName === "INPUT" ||
+          el.tagName === "TEXTAREA" ||
+          el.isContentEditable)
+      )
+        return;
+      if (document.querySelector('[role="dialog"]')) return;
+      e.preventDefault();
+      doUndoRef.current();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [dropEnabled]);
+
+  // Drop/place intents from the iframe script.
+  useEffect(() => {
+    if (!loadedProject) return;
+    const projectId = loadedProject.id;
+    const onMessage = (e: MessageEvent) => {
+      if (!e.data || typeof e.data !== "object") return;
+      if (iframeElRef.current && e.source !== iframeElRef.current.contentWindow)
+        return;
+      const d = e.data as {
+        type?: string;
+        intent?: DropIntent;
+        file?: File;
+        asset?: unknown;
+        token?: number;
+        path?: unknown;
+      };
+      if (d.type === "openlen:paste-file" && d.file instanceof File) {
+        startPlacement(d.file);
+      } else if (d.type === "openlen:undo-request") {
+        doUndoRef.current();
+      } else if (d.type === "openlen:drop-intent" && d.intent) {
+        if (d.intent.action === "swap-images") {
+          // No upload, no asset — just route the exchange to the inspect
+          // script's apply (src+alt travel; sizes stay with their slots).
+          const { fromPath, toPath } = d.intent;
+          if (
+            typeof fromPath === "string" &&
+            typeof toPath === "string" &&
+            fromPath.length < 400 &&
+            toPath.length < 400 &&
+            fromPath !== toPath
+          ) {
+            setSuppressReload((n) => n + 1);
+            pendingPillRef.current = t("undoPill.swapped");
+            iframeElRef.current?.contentWindow?.postMessage(
+              { type: "openlen:apply-prop", scope: "swap-images", fromPath, toPath },
+              "*",
+            );
+          }
+        } else if (d.file instanceof File) {
+          void commitDrop(projectId, d.intent, { file: d.file });
+        } else if (d.asset) {
+          // Re-validate parent-side through the same shape-checker the iframe
+          // ran — single source of truth for what an asset may carry.
+          const asset = parseDropAsset(JSON.stringify(d.asset));
+          if (asset) void commitDrop(projectId, d.intent, { asset });
+        }
+      } else if (d.type === "openlen:asset-remove") {
+        // The hover pill's trash button — the inspect script knows how to
+        // undo each drop kind (un-split / clear bg / remove img + empty section).
+        if (typeof d.path === "string" && d.path.length < 400) {
+          setSuppressReload((n) => n + 1);
+          pendingPillRef.current = t("undoPill.removed");
+          iframeElRef.current?.contentWindow?.postMessage(
+            { type: "openlen:apply-prop", scope: "remove-image", path: d.path },
+            "*",
+          );
+        }
+      } else if (d.type === "openlen:place-commit" && d.intent) {
+        const pending = placementRef.current;
+        if (!pending || pending.token !== d.token) return;
+        placementRef.current = null;
+        void commitDrop(projectId, d.intent, pending);
+      } else if (d.type === "openlen:place-cancelled") {
+        if (placementRef.current && placementRef.current.token === d.token) {
+          placementRef.current = null;
+          setDropNotice(null);
+        }
+      } else if (d.type === "openlen:iframe-ready" && placementRef.current) {
+        // srcDoc rebuilt mid-placement — the iframe's place-mode state is gone.
+        placementRef.current = null;
+        setDropNotice(null);
+      }
+    };
+    window.addEventListener("message", onMessage);
+    return () => window.removeEventListener("message", onMessage);
+  }, [loadedProject?.id, startPlacement, commitDrop]);
 
   // Save state surfaced to TopBar (chrome polish session renders the pill;
   // we just track it here so the contract is wired end-to-end).
@@ -1091,6 +1567,45 @@ function NewV2Inner() {
     pendingSaveRef.current = null;
     return p ? persistDoc(p) : Promise.resolve();
   }, [persistDoc]);
+
+  // "Deshacer" — restore the pre-edit snapshot the html-changed listener
+  // stashed, persist it, and remount the iframe (docKey epoch) so the canvas
+  // reflects it even mid-editing (a doc push alone is skipped while editing).
+  const doUndo = useCallback(() => {
+    const u = undoRef.current;
+    const projectId = loadedIdRef.current;
+    if (!u || !projectId) return;
+    undoRef.current = null;
+    lastLocalEditAtRef.current = Date.now();
+    setDropNotice(null);
+    if (saveTimerRef.current !== null) {
+      window.clearTimeout(saveTimerRef.current);
+      saveTimerRef.current = null;
+    }
+    pendingSaveRef.current = null;
+    setLoadedProject((prev) => {
+      if (!prev || prev.id !== projectId) return prev;
+      if (u.page && prev.pages[u.page]) {
+        return {
+          ...prev,
+          pages: {
+            ...prev.pages,
+            [u.page]: { ...prev.pages[u.page], html: u.html },
+          },
+        };
+      }
+      if (u.page) return prev;
+      return { ...prev, html: u.html };
+    });
+    setUndoEpoch((n) => n + 1);
+    void persistDoc({
+      projectId,
+      html: u.html,
+      source: "props",
+      page: u.page,
+    });
+  }, [persistDoc]);
+  doUndoRef.current = doUndo;
   useEffect(() => {
     if (!loadedProject) return;
     const projectId = loadedProject.id;
@@ -1107,18 +1622,30 @@ function NewV2Inner() {
       // scripts leak through. This is the one funnel every edit passes — strip
       // here so the stored + PATCHed HTML is the clean visitor document.
       const html = stripEditorInstrumentation(rawHtml);
+      const rawSource =
+        typeof e.data.source === "string" ? e.data.source : "inline-edit";
       const source =
-        e.data.source === "reorder"
+        rawSource === "reorder" ||
+        rawSource === "section-toolbar" ||
+        rawSource === "block-move"
           ? "reorder"
-          : e.data.source === "replace"
+          : rawSource === "replace"
             ? "replace"
-            : e.data.source === "props"
+            : rawSource === "props" || rawSource === "resize"
               ? "props"
-              : e.data.source === "section-insert"
+              : rawSource === "section-insert"
                 ? "section-insert"
                 : "inline-edit";
       // Multi-page: route the edit into the document the canvas is showing.
       const page = activeSitePageRef.current;
+      // One-step undo: stash the document as it was BEFORE this edit.
+      const prevHtml = page
+        ? loadedProjectRef.current?.pages[page]?.html
+        : loadedProjectRef.current?.html;
+      if (typeof prevHtml === "string" && prevHtml && prevHtml !== html) {
+        undoRef.current = { html: prevHtml, page: page ?? null };
+      }
+      lastLocalEditAtRef.current = Date.now();
       setLoadedProject((prev) => {
         if (!prev || prev.id !== projectId) return prev;
         if (page && prev.pages[page]) {
@@ -1129,12 +1656,39 @@ function NewV2Inner() {
         }
         return { ...prev, html };
       });
-      // A structural change (reorder / section insert) shifts sibling indices,
-      // so the inspector's positional :nth-of-type path is now stale — drop the
-      // selection so the next property edit can't land on the wrong element
-      // (the user re-clicks to re-select).
+      // A structural change (reorder / section insert / toolbar) shifts sibling
+      // indices, so the inspector's positional :nth-of-type path is now stale —
+      // drop the selection so the next property edit can't land on the wrong
+      // element (the user re-clicks to re-select).
       if (source === "reorder" || source === "section-insert") {
         setInspectSelection(null);
+      }
+      // The Deshacer pill — drop-pipeline commits pre-set their label; the
+      // section toolbar carries its action in the message.
+      const pillText =
+        pendingPillRef.current ??
+        (rawSource === "section-toolbar"
+          ? t(
+              e.data.action === "duplicate"
+                ? "undoPill.duplicated"
+                : e.data.action === "delete"
+                  ? "undoPill.deleted"
+                  : "undoPill.moved",
+            )
+          : rawSource === "block-move"
+            ? t("undoPill.blockMoved")
+            : rawSource === "resize"
+              ? t("undoPill.resized")
+              : null);
+      pendingPillRef.current = null;
+      if (pillText && undoRef.current) {
+        setDropNotice({ kind: "done", text: pillText });
+        if (dropNoticeTimerRef.current !== null)
+          window.clearTimeout(dropNoticeTimerRef.current);
+        dropNoticeTimerRef.current = window.setTimeout(
+          () => setDropNotice((n) => (n && n.kind === "done" ? null : n)),
+          6000,
+        );
       }
       pendingSaveRef.current = { projectId, html, source, page };
       if (saveTimerRef.current !== null) window.clearTimeout(saveTimerRef.current);
@@ -1157,13 +1711,16 @@ function NewV2Inner() {
         window.clearTimeout(savedFlashRef.current);
         savedFlashRef.current = null;
       }
+      // Undo snapshots don't survive a project switch.
+      undoRef.current = null;
+      pendingPillRef.current = null;
     };
     // Intentionally NOT depending on loadedProject.subdomain: it flips null→value
     // on first publish, and re-binding here would tear down the listener and
     // CANCEL a pending autosave debounce — dropping the last pre-publish edit.
     // The save reads the fresh subdomain via functional setState, so it stays
     // correct without the dep.
-  }, [loadedProject?.id]);
+  }, [loadedProject?.id, t]);
 
   // Multi-page: switch the canvas to another site page. Flushes any pending
   // autosave FIRST so the debounced write can't land in the wrong slot, and
@@ -1318,12 +1875,26 @@ function NewV2Inner() {
     },
     [],
   );
-  // Smart background — a solid color that replaces any gradient/image, or an
-  // image fill (background-image) on any element, or clearing the fill.
+  // Smart background — a solid color that replaces any gradient/image, an
+  // image fill (background-image), a CSS gradient string, or clearing the
+  // fill. Gradients ship a legibility plan (avg stop luminance → ink) so the
+  // scoped re-ink keeps the section's text readable, same as image drops.
   const applyBg = useCallback(
-    (path: string, kind: "color" | "image" | "clear", value: string) => {
+    (
+      path: string,
+      kind: "color" | "image" | "clear" | "gradient",
+      value: string,
+    ) => {
+      const g = kind === "gradient" ? parseSimpleGradient(value) : null;
       iframeElRef.current?.contentWindow?.postMessage(
-        { type: "openlen:apply-prop", scope: "style-bg", path, kind, value },
+        {
+          type: "openlen:apply-prop",
+          scope: "style-bg",
+          path,
+          kind,
+          value,
+          ...(g ? { legibility: gradientBgPlan(g.stops) } : {}),
+        },
         "*",
       );
     },
@@ -1887,6 +2458,7 @@ function NewV2Inner() {
           activeBusinessId={activeBusinessId}
           onPickBusiness={setActiveBusiness}
           onAddBusiness={() => setProfileModalOpen(true)}
+          onPickImage={startPlacementAsset}
           sitePages={sitePages}
           activeSitePage={activeSitePage}
           onSwitchSitePage={switchSitePage}
@@ -2000,7 +2572,7 @@ function NewV2Inner() {
             <>
               <PreviewArea
                 doc={activeDoc}
-                docKey={`${loadedProject.id}:${activeSitePage ?? ""}`}
+                docKey={`${loadedProject.id}:${activeSitePage ?? ""}:u${undoEpoch}`}
                 redesigning={chatRedesigning}
                 editableInjection={editableInjection}
                 sectionSelectMode={sectionSelectMode}
@@ -2009,6 +2581,8 @@ function NewV2Inner() {
                 onToggleInspect={toggleInspect}
                 insertRequest={insertRequest}
                 removeRequest={removeRequest}
+                dropEnabled={dropEnabled}
+                suppressReloadNonce={suppressReload}
                 motionPreset={loadedProject.settings?.motion}
                 musicTrack={loadedProject.settings?.music ?? null}
                 onIframeRef={(el) => {
@@ -2050,6 +2624,55 @@ function NewV2Inner() {
                   >
                     <X size={13} />
                   </button>
+                </div>
+              )}
+              {!lastInserted && dropNotice && (
+                <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-30 flex items-center gap-1.5 pl-3.5 pr-1.5 py-1.5 rounded-full bg-elev border bd shadow-card fade-in">
+                  <span className="inline-flex items-center gap-1.5 text-[12px] fg-muted whitespace-nowrap">
+                    {dropNotice.kind === "uploading" && (
+                      <span
+                        className="h-3 w-3 rounded-full border-2 border-current border-t-transparent animate-spin"
+                        aria-hidden
+                      />
+                    )}
+                    {dropNotice.kind === "done" && (
+                      <Check size={13} className="text-emerald-500" />
+                    )}
+                    {dropNotice.kind === "error" ? (
+                      <span className="text-red-500">{dropNotice.text}</span>
+                    ) : dropNotice.kind === "uploading" ? (
+                      t("drop.uploading")
+                    ) : dropNotice.kind === "done" ? (
+                      dropNotice.text
+                    ) : (
+                      t("drop.placeHint")
+                    )}
+                  </span>
+                  {dropNotice.kind === "done" && (
+                    <button
+                      type="button"
+                      onClick={doUndo}
+                      className="ml-1 inline-flex items-center gap-1 h-7 px-3 rounded-full text-[11.5px] font-medium fg-muted hover:fg hover:bg-hover transition"
+                    >
+                      <Undo size={12} />
+                      {t("inserted.undo")}
+                    </button>
+                  )}
+                  {(dropNotice.kind === "hint" || dropNotice.kind === "done") && (
+                    <button
+                      type="button"
+                      onClick={
+                        dropNotice.kind === "hint"
+                          ? cancelPlacement
+                          : () => setDropNotice(null)
+                      }
+                      aria-label={t("inserted.dismiss")}
+                      title={t("inserted.dismiss")}
+                      className="inline-flex items-center justify-center h-7 w-7 rounded-full fg-faint hover:fg hover:bg-hover transition"
+                    >
+                      <X size={13} />
+                    </button>
+                  )}
                 </div>
               )}
               {!hasBusinessInfo &&

@@ -47,5 +47,22 @@
     "body": "Füge die Infos deines Unternehmens zu dieser Seite hinzu.",
     "cta": "Business hinzufügen",
     "dismiss": "Schließen"
+  },
+  "drop": {
+    "placeHint": "Klicke, wo das Bild hin soll · Esc bricht ab",
+    "uploading": "Bild wird hochgeladen…",
+    "sectionName": "Bildabschnitt"
+  },
+  "undoPill": {
+    "replaced": "Bild ersetzt",
+    "background": "Hintergrund angewendet",
+    "split": "Bild neben dem Text platziert",
+    "swapped": "Bilder getauscht",
+    "removed": "Bild entfernt",
+    "duplicated": "Abschnitt dupliziert",
+    "deleted": "Abschnitt gelöscht",
+    "moved": "Abschnitt verschoben",
+    "resized": "Bildgröße geändert",
+    "blockMoved": "Block verschoben"
   }
 }

@@ -25,6 +25,7 @@ import path from "path";
 import crypto from "crypto";
 import {
   GetObjectCommand,
+  ListObjectsV2Command,
   PutObjectCommand,
   S3Client,
 } from "@aws-sdk/client-s3";
@@ -43,6 +44,15 @@ export interface AssetGetResult {
   contentType: string;
 }
 
+export interface AssetListItem {
+  filename: string;
+  contentType: string;
+  size: number;
+  url: string;
+  /** Upload time (ms epoch) — drives newest-first ordering in the panel. */
+  uploadedAt: number;
+}
+
 export interface AssetStorage {
   put(
     projectId: string,
@@ -51,6 +61,8 @@ export interface AssetStorage {
     contentType: string,
   ): Promise<AssetMetadata>;
   get(projectId: string, filename: string): Promise<AssetGetResult | null>;
+  /** The project's uploaded IMAGE assets (audio excluded), newest first. */
+  list(projectId: string): Promise<AssetListItem[]>;
 }
 
 const VALID_EXT = new Set([
@@ -89,6 +101,15 @@ function safeProjectId(id: string): string {
   // would be a path-traversal risk on the LocalFs backend.
   if (!/^[a-zA-Z0-9_-]+$/.test(id)) throw new Error("Invalid projectId");
   return id;
+}
+
+const IMAGE_EXT = new Set(["png", "jpg", "jpeg", "webp", "gif", "svg"]);
+
+function isImageFilename(filename: string): boolean {
+  if (!/^[a-zA-Z0-9._-]+$/.test(filename) || filename.includes("..")) {
+    return false;
+  }
+  return IMAGE_EXT.has(normalizeExt(filename.split(".").pop() ?? ""));
 }
 
 function mimeForExt(ext: string): string {
@@ -171,6 +192,34 @@ export class LocalFsAssetStorage implements AssetStorage {
     } catch {
       return null;
     }
+  }
+
+  async list(projectId: string): Promise<AssetListItem[]> {
+    const id = safeProjectId(projectId);
+    const projectDir = path.join(this.rootDir, id);
+    let names: string[];
+    try {
+      names = await fs.readdir(projectDir);
+    } catch {
+      return [];
+    }
+    const out: AssetListItem[] = [];
+    for (const filename of names) {
+      if (!isImageFilename(filename)) continue;
+      try {
+        const st = await fs.stat(path.join(projectDir, filename));
+        out.push({
+          filename,
+          contentType: mimeForExt(filename.split(".").pop() ?? ""),
+          size: st.size,
+          url: `${this.publicBase}/api/projects/${id}/assets/${filename}`,
+          uploadedAt: st.mtimeMs,
+        });
+      } catch {
+        /* raced a delete — skip */
+      }
+    }
+    return out.sort((a, b) => b.uploadedAt - a.uploadedAt);
   }
 }
 
@@ -255,6 +304,36 @@ export class S3AssetStorage implements AssetStorage {
       };
     } catch {
       return null;
+    }
+  }
+
+  async list(projectId: string): Promise<AssetListItem[]> {
+    const id = safeProjectId(projectId);
+    const prefix = `${id}/`;
+    try {
+      const res = await this.client.send(
+        new ListObjectsV2Command({
+          Bucket: this.bucket,
+          Prefix: prefix,
+          MaxKeys: 500,
+        }),
+      );
+      const out: AssetListItem[] = [];
+      for (const obj of res.Contents ?? []) {
+        const key = obj.Key ?? "";
+        const filename = key.slice(prefix.length);
+        if (!filename || !isImageFilename(filename)) continue;
+        out.push({
+          filename,
+          contentType: mimeForExt(filename.split(".").pop() ?? ""),
+          size: obj.Size ?? 0,
+          url: `${this.publicBase}/${key}`,
+          uploadedAt: obj.LastModified ? obj.LastModified.getTime() : 0,
+        });
+      }
+      return out.sort((a, b) => b.uploadedAt - a.uploadedAt);
+    } catch {
+      return [];
     }
   }
 }

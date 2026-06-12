@@ -47,5 +47,22 @@
     "body": "이 페이지에 내 비즈니스 정보를 추가하세요.",
     "cta": "비즈니스 추가",
     "dismiss": "닫기"
+  },
+  "drop": {
+    "placeHint": "이미지를 놓을 위치를 클릭 · Esc 취소",
+    "uploading": "이미지 업로드 중…",
+    "sectionName": "이미지 섹션"
+  },
+  "undoPill": {
+    "replaced": "이미지 교체됨",
+    "background": "배경 적용됨",
+    "split": "텍스트 옆에 이미지 배치됨",
+    "swapped": "이미지 맞바꿈",
+    "removed": "이미지 제거됨",
+    "duplicated": "섹션 복제됨",
+    "deleted": "섹션 삭제됨",
+    "moved": "섹션 이동됨",
+    "resized": "이미지 크기 조정됨",
+    "blockMoved": "블록 이동됨"
   }
 }

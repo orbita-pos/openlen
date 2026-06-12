@@ -18,6 +18,10 @@ import {
 // Body: multipart/form-data with a single `file` field.
 // Response: { url, filename, contentType, size }
 //
+// GET /api/projects/[id]/assets — list the project's uploaded IMAGE assets
+// (newest first; audio excluded). Feeds the Images panel's "Your uploads"
+// source. Response: { assets: [{ url, filename, contentType, size, uploadedAt }] }
+//
 // Auth: user must own the project. The asset is stored under that project's
 // namespace (LocalFs: <upload-dir>/<id>/<hash>.<ext>; S3: <id>/<hash>.<ext>).
 // Hash-based filename means re-uploading the same file is idempotent.
@@ -27,6 +31,40 @@ export const runtime = "nodejs";
 
 const ACCEPTED_MIME_SET = new Set<string>(ACCEPTED_MIMES);
 const ACCEPTED_AUDIO_MIME_SET = new Set<string>(ACCEPTED_AUDIO_MIMES);
+
+export async function GET(
+  req: Request,
+  { params }: { params: Promise<{ id: string }> },
+): Promise<Response> {
+  const session = await auth();
+  if (!session?.user?.id) return json({ error: "unauthorized" }, 401);
+  const { id } = await params;
+  const rows = await db
+    .select({ id: schema.projects.id })
+    .from(schema.projects)
+    .where(
+      and(
+        eq(schema.projects.id, id),
+        eq(schema.projects.userId, session.user.id),
+      ),
+    )
+    .limit(1);
+  if (rows.length === 0) return json({ error: "not_found" }, 404);
+
+  try {
+    const assets = (await getAssetStorage().list(id)).map((a) => ({
+      ...a,
+      // LocalFs without OPENLEN_APP_BASE_URL yields relative urls — resolve
+      // against the request origin, same as POST does.
+      url: /^https?:\/\//i.test(a.url) ? a.url : new URL(a.url, req.url).href,
+    }));
+    return json({ assets }, 200);
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error("[projects/assets] list failed", err);
+    return json({ error: "storage_failed" }, 500);
+  }
+}
 
 export async function POST(
   req: Request,

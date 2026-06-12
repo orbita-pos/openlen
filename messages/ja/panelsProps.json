@@ -39,7 +39,16 @@
       "right": "右揃え"
     },
     "hide": "要素を非表示",
-    "hideHint": "公開ページでは非表示 — ここでは薄く表示され、元に戻せます"
+    "hideHint": "公開ページでは非表示 — ここでは薄く表示され、元に戻せます",
+    "gradient": "グラデーション",
+    "gradientAdd": "グラデーションを追加",
+    "gradientLinear": "線形",
+    "gradientRadial": "放射状",
+    "gradientAngle": "角度",
+    "gradientStart": "開始色",
+    "gradientEnd": "終了色",
+    "gradientPresets": "プリセット",
+    "gradientRemove": "削除"
   },
   "form": {
     "title": "フォーム",

@@ -39,7 +39,16 @@
       "right": "Align right"
     },
     "hide": "Hide element",
-    "hideHint": "Hidden on the published page — shown dimmed here so you can restore it"
+    "hideHint": "Hidden on the published page — shown dimmed here so you can restore it",
+    "gradient": "Gradient",
+    "gradientAdd": "Add gradient",
+    "gradientLinear": "Linear",
+    "gradientRadial": "Radial",
+    "gradientAngle": "Angle",
+    "gradientStart": "Start color",
+    "gradientEnd": "End color",
+    "gradientPresets": "Presets",
+    "gradientRemove": "Remove"
   },
   "form": {
     "title": "Form",

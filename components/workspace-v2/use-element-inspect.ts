@@ -18,6 +18,8 @@
 // <head> edits both funnel through postClean, so persistence reuses the
 // existing openlen:html-changed → PATCH /html path (spike-verified byte-safe).
 
+import { splitContainer } from "./drop-place-core";
+
 const INSPECT_STYLE = `
 [data-openlen-inspect-hover] {
   outline: 2px solid rgba(255,90,54,0.4) !important;
@@ -50,6 +52,9 @@ body[data-openlen-edit-mode] [data-ol-hidden] {
 
 const INSPECT_SCRIPT = `
 (function () {
+  // Shared with the drop engine (drop-place-core.ts) — the SAME tested
+  // function decides splittability there and picks the transform target here.
+  var splitContainer = ${splitContainer.toString()};
   var SKIP = {HTML:1,HEAD:1,BODY:1,SCRIPT:1,STYLE:1,LINK:1,META:1,TITLE:1,NOSCRIPT:1,TEMPLATE:1};
   var hovered = null;
   var selected = null;
@@ -158,6 +163,9 @@ const INSPECT_SCRIPT = `
       borderRadius: isNaN(br) ? '' : String(br),
       hasBgImage: bgImg !== 'none' && bgImg !== '',
       hasGradient: /gradient/i.test(bgImg),
+      // Raw gradient string for the panel's round-trip editor — pure
+      // gradients only (a scrim+photo layer list must never prefill it).
+      bgGradient: (/gradient/i.test(bgImg) && bgImg.indexOf('url(') === -1) ? bgImg : '',
       bgImageUrl: urlMatch ? urlMatch[1] : '',
       borderWidth: isNaN(bw) ? '' : String(bw),
       borderColor: rgbToHex(cs.borderTopColor),
@@ -550,8 +558,11 @@ const INSPECT_SCRIPT = `
   //  kind 'color': solid color that WINS over any gradient/image (sets
   //                background-image:none so the colour is actually visible).
   //  kind 'image': fill the element's box with a picture (cover/center).
+  //                Optional leg = { ink, scrimColor, groundLum } (drop engine):
+  //                scrimColor layers a darkening gradient under the text, ink +
+  //                groundLum drive a scoped contrast re-ink of the subtree.
   //  kind 'clear': drop the fill image, revert to the underlying paint.
-  function applyBg(path, kind, value) {
+  function applyBg(path, kind, value, leg) {
     var el = resolvePath(path);
     if (!el) return;
     if (kind === 'color') {
@@ -565,18 +576,107 @@ const INSPECT_SCRIPT = `
         el.style.removeProperty('background-color');
       }
     } else if (kind === 'image' && value) {
-      el.style.setProperty('background-image', 'url("' + value + '")');
+      var bgVal = 'url("' + value + '")';
+      if (leg && typeof leg.scrimColor === 'string' && leg.scrimColor) {
+        bgVal = 'linear-gradient(' + leg.scrimColor + ', ' + leg.scrimColor + '), ' + bgVal;
+      }
+      el.style.setProperty('background-image', bgVal);
       el.style.setProperty('background-size', 'cover');
       el.style.setProperty('background-position', 'center');
       el.style.setProperty('background-repeat', 'no-repeat');
+      if (leg && typeof leg.ink === 'string' && leg.ink && typeof leg.groundLum === 'number') {
+        olReinkScoped(el, leg.groundLum, leg.ink);
+      }
+    } else if (kind === 'gradient' && value) {
+      // The editor passes a full CSS gradient string — set it directly (no
+      // url() wrapper); background-color stays underneath (the gradient
+      // covers it) and size/position are irrelevant for gradients.
+      el.style.setProperty('background-image', value);
+      if (leg && typeof leg.ink === 'string' && leg.ink && typeof leg.groundLum === 'number') {
+        olReinkScoped(el, leg.groundLum, leg.ink);
+      }
     } else if (kind === 'clear') {
       el.style.removeProperty('background-image');
       el.style.removeProperty('background-size');
       el.style.removeProperty('background-position');
       el.style.removeProperty('background-repeat');
+      // A bg drop may have re-inked this subtree's text for the removed
+      // ground — put the original colors back or light text strands on a
+      // light page.
+      olRestoreReinkIn(el);
     }
     postClean();
     if (selected === el) postSelected(el);
+  }
+
+  // Swap two page images (the drag-an-image-onto-another gesture). Sizes and
+  // classes stay with their slots — only src + alt travel, which is what
+  // keeps both layouts intact.
+  function applySwapImages(pathA, pathB) {
+    var a = resolvePath(pathA);
+    var b = resolvePath(pathB);
+    if (!a || !b || a === b) return;
+    if (a.tagName !== 'IMG' || b.tagName !== 'IMG') return;
+    var srcA = a.getAttribute('src') || '';
+    var altA = a.getAttribute('alt');
+    a.setAttribute('src', b.getAttribute('src') || '');
+    var altB = b.getAttribute('alt');
+    if (altB !== null) a.setAttribute('alt', altB);
+    else a.removeAttribute('alt');
+    b.setAttribute('src', srcA);
+    if (altA !== null) b.setAttribute('alt', altA);
+    else b.removeAttribute('alt');
+    postClean();
+  }
+
+  // Remove a dropped image — the inverse of each drop target:
+  //   split media cell → un-split (media out, copy cell unwrapped, grid off)
+  //   bg-filled div    → clear the fill + restore re-inked text
+  //   plain <img>      → remove it; a section left with no real content (the
+  //                      drop-created image section) goes with it
+  function applyRemoveImage(path) {
+    var el = resolvePath(path);
+    if (!el) return;
+    var media = el.closest ? el.closest('.ol-split-media') : null;
+    if (media && media.parentElement && media.parentElement.classList.contains('ol-split')) {
+      var container = media.parentElement;
+      container.removeChild(media);
+      // Unwrap OUR classless copy wrapper so the section returns to its
+      // original markup; an authored cell (carries classes) is left alone.
+      var copy = container.firstElementChild;
+      if (
+        copy &&
+        copy.tagName === 'DIV' &&
+        !copy.getAttribute('class') &&
+        container.children.length === 1
+      ) {
+        while (copy.firstChild) container.insertBefore(copy.firstChild, copy);
+        container.removeChild(copy);
+      }
+      container.classList.remove('ol-split');
+      if (!container.getAttribute('class')) container.removeAttribute('class');
+    } else if (el.tagName !== 'IMG') {
+      el.style.removeProperty('background-image');
+      el.style.removeProperty('background-size');
+      el.style.removeProperty('background-position');
+      el.style.removeProperty('background-repeat');
+      olRestoreReinkIn(el);
+    } else {
+      var section = el.closest ? el.closest('section, header, footer, article, aside') : null;
+      if (el.parentNode) el.parentNode.removeChild(el);
+      if (section && section.isConnected) {
+        var hasText = /\\S/.test(section.textContent || '');
+        var hasMedia = !!section.querySelector('img, svg, video, iframe, picture');
+        if (!hasText && !hasMedia && section.parentNode) {
+          section.parentNode.removeChild(section);
+        }
+      }
+    }
+    if (selected && !selected.isConnected) {
+      selected = null;
+      post({ type: 'openlen:element-deselected' });
+    }
+    postClean();
   }
 
   // Inject (once) the persistent rule that hides data-ol-hidden elements
@@ -703,6 +803,22 @@ const INSPECT_SCRIPT = `
       els[i].removeAttribute('data-ol-reink');
     }
   }
+  // Scoped restore — undoes a per-section re-ink pass (bg clear / re-drop /
+  // image removal) without touching the rest of the page.
+  function olRestoreReinkIn(rootEl) {
+    if (!rootEl || !rootEl.querySelectorAll) return;
+    var list = [rootEl];
+    var els = rootEl.querySelectorAll('[data-ol-reink]');
+    for (var i = 0; i < els.length; i++) list.push(els[i]);
+    for (var j = 0; j < list.length; j++) {
+      var el = list[j];
+      if (!el.getAttribute || el.getAttribute('data-ol-reink') === null) continue;
+      var prev = el.getAttribute('data-ol-reink');
+      if (prev) el.style.color = prev;
+      else el.style.removeProperty('color');
+      el.removeAttribute('data-ol-reink');
+    }
+  }
   function olReinkForWorld(tokens) {
     var bg = olParse(tokens['--ol-bg']);
     var surface = olParse(tokens['--ol-surface']);
@@ -740,6 +856,92 @@ const INSPECT_SCRIPT = `
         chroma > 50 ? 'var(--ol-accent)' : 'var(--ol-fg)',
         'important',
       );
+    }
+  }
+
+  // Media split (drop engine) — persistent, marker-free stylesheet so the
+  // layout ships with the page (same pattern as ensureHiddenStyle). Mobile
+  // stacks the cells; md+ goes two columns.
+  function ensureSplitStyle() {
+    if (document.querySelector('style[data-ol-split-style]')) return;
+    var s = document.createElement('style');
+    s.setAttribute('data-ol-split-style', '');
+    s.textContent =
+      '.ol-split{display:grid;grid-template-columns:1fr;gap:2rem;align-items:center;}' +
+      '@media (min-width:768px){.ol-split{grid-template-columns:1fr 1fr;}}' +
+      '.ol-split>*{min-width:0;}' +
+      '.ol-split-media{margin:0;}' +
+      '.ol-split-media>img{display:block;width:100%;height:auto;max-height:480px;object-fit:cover;border-radius:12px;}';
+    (document.head || document.documentElement).appendChild(s);
+  }
+
+  // Split a text section into copy + image columns: the container's children
+  // move into a copy cell, the image lands as the first (left) or last
+  // (right) cell. Uses the SAME splitContainer the drop script's canSplit
+  // ran, so the detected target and the transformed element always match.
+  function applySplit(path, side, url, alt) {
+    var el = resolvePath(path);
+    if (!el) return;
+    var container = splitContainer(el);
+    if (!container) return;
+    if (container.classList && container.classList.contains('ol-split')) return;
+    ensureSplitStyle();
+    var copy = document.createElement('div');
+    while (container.firstChild) copy.appendChild(container.firstChild);
+    var media = document.createElement('div');
+    media.className = 'ol-split-media';
+    var img = document.createElement('img');
+    img.setAttribute('src', url);
+    img.setAttribute('alt', alt || '');
+    img.setAttribute('loading', 'lazy');
+    media.appendChild(img);
+    container.appendChild(copy);
+    if (side === 'left') container.insertBefore(media, copy);
+    else container.appendChild(media);
+    container.classList.add('ol-split');
+    postClean();
+    if (selected === el) postSelected(el);
+  }
+
+  // Scoped re-ink for ONE section that just got an image background (the drop
+  // engine's "World per-section"). Measures text against the section's new
+  // ground luminance (scrim-attenuated, composed parent-side) and re-inks what
+  // fails with ONE concrete ink — saturated "accent" text on a photo is just
+  // as unreadable as neutral text, so there is no accent split here. Restores
+  // any prior pass within the subtree first, so a re-drop re-measures the true
+  // originals. Same data-ol-reink stash as the world pass (persists in saved
+  // HTML by design).
+  function olReinkScoped(rootEl, groundLum, ink) {
+    if (!rootEl || typeof groundLum !== 'number') return;
+    // Re-drops re-measure from the true originals.
+    olRestoreReinkIn(rootEl);
+    var all = rootEl.querySelectorAll('*');
+    var list = [rootEl];
+    for (var q = 0; q < all.length; q++) list.push(all[q]);
+    for (var i = 0; i < list.length; i++) {
+      var el = list[i];
+      if (el.namespaceURI && el.namespaceURI.indexOf('svg') > -1) continue;
+      var tag = el.tagName;
+      if (tag === 'SCRIPT' || tag === 'STYLE' || tag === 'LINK' || tag === 'AUDIO') continue;
+      if (el.closest && el.closest('[data-openlen-music-preview],[data-openlen-edit-overlay]')) continue;
+      // Only elements that directly carry text.
+      var hasText = false;
+      for (var n = el.firstChild; n; n = n.nextSibling) {
+        if (n.nodeType === 3 && /\\S/.test(n.nodeValue)) { hasText = true; break; }
+      }
+      if (!hasText) continue;
+      var cs;
+      try { cs = getComputedStyle(el); } catch (_) { continue; }
+      // Gradient/clipped text paints from background-image, not color.
+      if ((cs.webkitBackgroundClip || cs.backgroundClip) === 'text') continue;
+      var col = olParse(cs.color);
+      if (!col || col.a < 0.5) continue;
+      var L = olLum(col.r, col.g, col.b);
+      if (olCr(L, groundLum) >= 3) continue;
+      if (!el.getAttribute('data-ol-reink')) {
+        el.setAttribute('data-ol-reink', el.style.color || '');
+      }
+      el.style.setProperty('color', ink, 'important');
     }
   }
 
@@ -844,7 +1046,27 @@ const INSPECT_SCRIPT = `
     } else if (d.scope === 'style' && typeof d.path === 'string' && typeof d.prop === 'string') {
       applyStyle(d.path, d.prop, typeof d.value === 'string' ? d.value : '');
     } else if (d.scope === 'style-bg' && typeof d.path === 'string' && typeof d.kind === 'string') {
-      applyBg(d.path, d.kind, typeof d.value === 'string' ? d.value : '');
+      applyBg(
+        d.path,
+        d.kind,
+        typeof d.value === 'string' ? d.value : '',
+        d.legibility && typeof d.legibility === 'object' ? d.legibility : null,
+      );
+    } else if (d.scope === 'split' && typeof d.path === 'string' && typeof d.url === 'string') {
+      applySplit(
+        d.path,
+        d.side === 'right' ? 'right' : 'left',
+        d.url,
+        typeof d.alt === 'string' ? d.alt : '',
+      );
+    } else if (
+      d.scope === 'swap-images' &&
+      typeof d.fromPath === 'string' &&
+      typeof d.toPath === 'string'
+    ) {
+      applySwapImages(d.fromPath, d.toPath);
+    } else if (d.scope === 'remove-image' && typeof d.path === 'string') {
+      applyRemoveImage(d.path);
     } else if (d.scope === 'hide' && typeof d.path === 'string') {
       applyHide(d.path, !!d.on);
     } else if (d.scope === 'theme' && typeof d.prop === 'string') {

@@ -40,6 +40,10 @@
       "assistant": {
         "label": "助手",
         "title": "访客聊天助手"
+      },
+      "images": {
+        "label": "图片",
+        "title": "图片库"
       }
     },
     "tabLocked": "{label} — 已锁定",
@@ -76,6 +80,14 @@
       "desktop": "桌面预览",
       "tablet": "平板预览",
       "mobile": "移动预览"
+    },
+    "drop": {
+      "replace": "替换图片",
+      "newSection": "新区块",
+      "background": "区块背景",
+      "splitLeft": "图片在左",
+      "splitRight": "图片在右",
+      "swap": "交换图片"
     }
   },
   "placeholder": {

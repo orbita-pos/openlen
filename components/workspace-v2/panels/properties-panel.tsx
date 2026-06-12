@@ -43,10 +43,12 @@ import {
   deriveWorldFromUrl,
   FALLBACK_ACCENT,
 } from "@/lib/tematicas/derive-from-image";
+import { imageFetchUrl } from "@/lib/image-fetch-url";
 import { lookFromAccent } from "@/lib/palette-gen";
 import { ReplaceAssetModal, type ImageTab } from "../replace-asset-modal";
 import {
   ColorField,
+  GradientControl,
   RadiusField,
   Section,
   TextField,
@@ -92,6 +94,9 @@ export interface InspectSelection {
      *  top of background-color) — a solid color edit alone would be invisible. */
     hasBgImage?: boolean;
     hasGradient?: boolean;
+    /** Raw CSS gradient when the fill is a PURE gradient (no url() layer) —
+     *  round-trips into the gradient editor. */
+    bgGradient?: string;
     /** The fill image url(), when the element's background is a picture. */
     bgImageUrl?: string;
     /** Border (top edge, assumed uniform): integer px width + hex color. */
@@ -152,9 +157,13 @@ interface PropertiesPanelProps {
    *  + value; empty value removes it). */
   onApplyStyle: (path: string, prop: string, value: string) => void;
   /** Set the selected element's background: a solid color (replaces any
-   *  gradient/image fill), an image fill (background-image, any element), or
-   *  clear the fill. */
-  onApplyBg: (path: string, kind: "color" | "image" | "clear", value: string) => void;
+   *  gradient/image fill), an image fill (background-image, any element), a
+   *  CSS gradient string, or clear the fill. */
+  onApplyBg: (
+    path: string,
+    kind: "color" | "image" | "clear" | "gradient",
+    value: string,
+  ) => void;
   onApplyHide: (path: string, on: boolean) => void;
   /** Persist the analytics opt-out toggle. Omit to hide the Privacy
    *  section (e.g., on projects that can't be published yet). */
@@ -269,6 +278,7 @@ export function PropertiesPanel({
             selection={selection}
             formConfig={formConfig}
             projectId={projectId}
+            accent={originalAccent}
             onApply={onApplyElementProp}
             onApplyFormConfig={onApplyFormConfig}
             onApplyStyle={onApplyStyle}
@@ -311,6 +321,7 @@ function ElementView({
   selection,
   formConfig,
   projectId,
+  accent,
   onApply,
   onApplyFormConfig,
   onApplyStyle,
@@ -322,10 +333,16 @@ function ElementView({
   selection: InspectSelection;
   formConfig: FormConfig | null;
   projectId?: string;
+  /** The page's authored accent — seeds the gradient editor's presets. */
+  accent?: string;
   onApply: (path: string, name: string, value: string | null) => void;
   onApplyFormConfig: (formIndex: number, patch: Partial<FormConfig>) => void;
   onApplyStyle: (path: string, prop: string, value: string) => void;
-  onApplyBg: (path: string, kind: "color" | "image" | "clear", value: string) => void;
+  onApplyBg: (
+    path: string,
+    kind: "color" | "image" | "clear" | "gradient",
+    value: string,
+  ) => void;
   onApplyHide: (path: string, on: boolean) => void;
   onSendTestFormEmail?: (
     formIndex: number,
@@ -397,6 +414,7 @@ function ElementView({
         path={path}
         style={style}
         projectId={projectId}
+        accent={accent}
         onApply={onApplyStyle}
         onApplyBg={onApplyBg}
         onApplyHide={onApplyHide}
@@ -559,6 +577,7 @@ function StyleSection({
   path,
   style,
   projectId,
+  accent,
   onApply,
   onApplyBg,
   onApplyHide,
@@ -566,8 +585,13 @@ function StyleSection({
   path: string;
   style: InspectSelection["style"];
   projectId?: string;
+  accent?: string;
   onApply: (path: string, prop: string, value: string) => void;
-  onApplyBg: (path: string, kind: "color" | "image" | "clear", value: string) => void;
+  onApplyBg: (
+    path: string,
+    kind: "color" | "image" | "clear" | "gradient",
+    value: string,
+  ) => void;
   onApplyHide: (path: string, on: boolean) => void;
 }) {
   const t = useTranslations("panelsProps");
@@ -624,10 +648,13 @@ function StyleSection({
           </button>
         )}
       </div>
-      {s.hasGradient && !hasImage && (
-        <p className="text-[10px] fg-faint leading-snug">
-          {t("style.gradientHint")}
-        </p>
+      {!hasImage && (
+        <GradientControl
+          value={s.bgGradient ?? ""}
+          accent={accent}
+          onApply={(css) => onApplyBg(path, "gradient", css)}
+          onClear={() => onApplyBg(path, "clear", "")}
+        />
       )}
       <BorderControl
         width={s.borderWidth ?? ""}
@@ -1013,21 +1040,6 @@ const INLINE_PRESET_MAX = 4;
 
 // A glossy accent bead button + label — shared by presets, Original, and the
 // generator preview.
-// Resolve a logo URL to something canvas can read pixels from: data: and
-// same-origin URLs go direct; cross-origin (R2 sends no CORS) goes through
-// the SSRF-guarded proxy-image route.
-function logoFetchUrl(logoUrl: string, projectId?: string): string {
-  if (logoUrl.startsWith("data:") || logoUrl.startsWith("/")) return logoUrl;
-  try {
-    if (new URL(logoUrl).origin === window.location.origin) return logoUrl;
-  } catch {
-    return logoUrl;
-  }
-  return projectId
-    ? `/api/projects/${projectId}/proxy-image?url=${encodeURIComponent(logoUrl)}`
-    : logoUrl;
-}
-
 function Bead({
   accent,
   label,
@@ -1190,7 +1202,7 @@ function ThemeSection({
     setLogoError(false);
     setLogoBusy(true);
     try {
-      const derived = await deriveWorldFromUrl(logoFetchUrl(logoUrl, projectId));
+      const derived = await deriveWorldFromUrl(imageFetchUrl(logoUrl, projectId));
       onApplyLookForMode(lookFromAccent(derived.accent).light, derived.mode);
       setSelectedId("__logo__");
     } catch {

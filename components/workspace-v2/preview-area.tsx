@@ -15,6 +15,7 @@ import {
   X,
 } from "./icons";
 import { IconBtn, Segmented } from "./ui";
+import { injectDropPlace } from "./use-drop-place";
 import { injectElementInspect } from "./use-element-inspect";
 import { injectImageReplace } from "./use-image-replace";
 import { injectInlineEdit } from "./use-inline-edit";
@@ -86,7 +87,14 @@ interface PreviewAreaProps {
    *  (drives placement: navbar→top, footer→bottom, else→end); the iframe drops
    *  it into the page and posts back the changed HTML through the normal save
    *  path. */
-  insertRequest?: { html: string; nonce: number; sectionType?: string } | null;
+  insertRequest?: {
+    html: string;
+    nonce: number;
+    sectionType?: string;
+    /** Body-relative :nth-of-type path to insert BEFORE (drop engine);
+     *  omitted → the type-aware default placement. */
+    anchorPath?: string;
+  } | null;
   /** A pending Undo-of-insert. When `nonce` changes, the iframe is posted
    *  `openlen:section-remove`; it pulls the last-inserted nodes back out and
    *  re-serializes through the same save path — no reload (the live DOM is
@@ -107,6 +115,16 @@ interface PreviewAreaProps {
    *  prepended navbar) changes, forcing a remount that renders the stale
    *  pre-insert srcDoc and makes the just-added section vanish. */
   docKey?: string;
+  /** True whenever a project is open in editing mode — arms the drop engine
+   *  (drag an image from the OS / paste-then-place). Deliberately NOT tied to
+   *  the edit toggle: dragging a file over the page is unambiguous intent, and
+   *  the script is visually silent when idle. */
+  dropEnabled?: boolean;
+  /** Bump to suppress the NEXT doc-change reload (same mechanism the insert
+   *  flow uses internally). The drop engine bumps it before a swap-asset /
+   *  style-bg commit so the live-DOM apply doesn't get followed by a white
+   *  srcDoc reload when the Edit toggle is off. */
+  suppressReloadNonce?: number;
 }
 
 export function PreviewArea({
@@ -129,6 +147,8 @@ export function PreviewArea({
   motionPreset,
   musicTrack = null,
   docKey,
+  dropEnabled = false,
+  suppressReloadNonce = 0,
 }: PreviewAreaProps) {
   const t = useTranslations("wsChrome");
   const [device, setDevice] = useState<Device>("desktop");
@@ -162,6 +182,14 @@ export function PreviewArea({
   // reloads on a mode toggle — that's just a body attribute flip the parent
   // sends via postMessage. Eliminates the flicker, font-reload, and text
   // re-balance pass the old conditional-injection approach caused.
+  const dropLabels = {
+    replace: t("preview.drop.replace"),
+    newSection: t("preview.drop.newSection"),
+    background: t("preview.drop.background"),
+    splitLeft: t("preview.drop.splitLeft"),
+    splitRight: t("preview.drop.splitRight"),
+    swap: t("preview.drop.swap"),
+  };
   const derive = (rawDoc: string): string => {
     // Replace BEFORE Reorder so Replace's mousemove listener registers
     // first → fires first on each event → sets the `over-image` body
@@ -175,6 +203,7 @@ export function PreviewArea({
     html = injectSectionInsert(html);
     html = injectMotionPreview(html);
     html = injectMusicPreview(html);
+    html = injectDropPlace(html, dropLabels);
     return html;
   };
   const [stableSrcDoc, setStableSrcDoc] = useState<string>(() => derive(doc));
@@ -186,6 +215,27 @@ export function PreviewArea({
   // reads as "a white block got added on insert". The live DOM already shows the
   // section; the saved html carries it for the next genuine re-derive.
   const skipInsertReloadRef = useRef(false);
+  const lastSuppressNonce = useRef(suppressReloadNonce);
+  useEffect(() => {
+    if (suppressReloadNonce !== lastSuppressNonce.current) {
+      lastSuppressNonce.current = suppressReloadNonce;
+      skipInsertReloadRef.current = true;
+    }
+  }, [suppressReloadNonce]);
+  // docKey is the DOCUMENT IDENTITY (project:page:undo-epoch). When it
+  // changes, the editing-session skip below must not apply — the iframe is
+  // remounting anyway (its key), and serving it the stale stableSrcDoc would
+  // time-travel the canvas (an Undo or a page switch while the Edit toggle is
+  // on). Re-derive unconditionally.
+  const lastDocKeyRef = useRef(docKey);
+  useEffect(() => {
+    if (docKey === lastDocKeyRef.current) return;
+    lastDocKeyRef.current = docKey;
+    skipInsertReloadRef.current = false;
+    wasEditingRef.current = false;
+    setStableSrcDoc(derive(doc));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [docKey]);
   useEffect(() => {
     if (skipInsertReloadRef.current) {
       skipInsertReloadRef.current = false;
@@ -217,11 +267,13 @@ export function PreviewArea({
   const modesRef = useRef({
     editMode: editingActive,
     selectMode: sectionSelectMode,
+    dropEnabled,
   });
   useEffect(() => {
     modesRef.current = {
       editMode: editingActive,
       selectMode: sectionSelectMode,
+      dropEnabled,
     };
     const iframe = iframeLocalRef.current;
     if (!iframe?.contentWindow) return;
@@ -229,7 +281,7 @@ export function PreviewArea({
       { type: "openlen:set-mode", ...modesRef.current },
       "*",
     );
-  }, [editingActive, sectionSelectMode]);
+  }, [editingActive, sectionSelectMode, dropEnabled]);
 
   // Motion preview — the chosen preset's CSS, recomputed only when it changes.
   // Held in a ref so the iframe-ready handler (which re-posts on every reload,
@@ -303,6 +355,7 @@ export function PreviewArea({
         type: "openlen:section-insert",
         html: insertRequest.html,
         sectionType: insertRequest.sectionType,
+        anchorPath: insertRequest.anchorPath,
       },
       "*",
     );

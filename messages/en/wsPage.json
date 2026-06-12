@@ -47,5 +47,22 @@
     "body": "Add your business info to this page.",
     "cta": "Add business",
     "dismiss": "Dismiss"
+  },
+  "drop": {
+    "placeHint": "Click where you want to place the image · Esc cancels",
+    "uploading": "Uploading image…",
+    "sectionName": "Image section"
+  },
+  "undoPill": {
+    "replaced": "Image replaced",
+    "background": "Background applied",
+    "split": "Image placed beside the text",
+    "swapped": "Images swapped",
+    "removed": "Image removed",
+    "duplicated": "Section duplicated",
+    "deleted": "Section deleted",
+    "moved": "Section moved",
+    "resized": "Image resized",
+    "blockMoved": "Block moved"
   }
 }

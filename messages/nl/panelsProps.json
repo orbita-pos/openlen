@@ -39,7 +39,16 @@
       "right": "Rechts uitlijnen"
     },
     "hide": "Element verbergen",
-    "hideHint": "Verborgen op de gepubliceerde pagina — hier gedimd zodat je het kunt herstellen"
+    "hideHint": "Verborgen op de gepubliceerde pagina — hier gedimd zodat je het kunt herstellen",
+    "gradient": "Verloop",
+    "gradientAdd": "Verloop toevoegen",
+    "gradientLinear": "Lineair",
+    "gradientRadial": "Radiaal",
+    "gradientAngle": "Hoek",
+    "gradientStart": "Beginkleur",
+    "gradientEnd": "Eindkleur",
+    "gradientPresets": "Voorinstellingen",
+    "gradientRemove": "Verwijderen"
   },
   "form": {
     "title": "Formulier",

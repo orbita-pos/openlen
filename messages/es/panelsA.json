@@ -139,5 +139,16 @@
     "for": "Para",
     "none": "Sin negocio",
     "new": "Nuevo negocio"
+  },
+  "images": {
+    "hint": "Arrastra una imagen a la página, o haz clic para colocarla.",
+    "sources": {
+      "openlen": "OpenLen",
+      "unsplash": "Unsplash",
+      "profile": "Tu negocio",
+      "uploads": "Tus subidas"
+    },
+    "profileEmpty": "Agrega un logo o fotos a tu perfil de negocio para verlos aquí.",
+    "uploadsEmpty": "Las imágenes que subas a esta página aparecerán aquí."
   }
 }

@@ -38,7 +38,7 @@ export function stripEditorInstrumentation(html: string): string {
     // elements clears the surface.
     doc
       .querySelectorAll(
-        "[data-openlen-inline-edit],[data-openlen-reorder],[data-openlen-replace],[data-openlen-section-select],[data-openlen-inspect],[data-openlen-edit-overlay],[data-openlen-motion-preview],[data-openlen-music-preview],#ol-motion-preview-style,#ol-music-preview-style",
+        "[data-openlen-inline-edit],[data-openlen-reorder],[data-openlen-replace],[data-openlen-section-select],[data-openlen-inspect],[data-openlen-section-insert],[data-openlen-drop],[data-openlen-edit-overlay],[data-openlen-motion-preview],[data-openlen-music-preview],#ol-motion-preview-style,#ol-music-preview-style",
       )
       .forEach((n) => n.remove());
     // inline-edit run-wrappers: UNWRAP (replace with children) — never delete,
@@ -66,9 +66,20 @@ export function stripEditorInstrumentation(html: string): string {
       "data-openlen-editable",
       "data-openlen-edit-hidden",
       "data-openlen-edit-noedit",
+      "data-openlen-drop-target",
+      "data-openlen-block-hover",
     ]) {
       doc.querySelectorAll(`[${attr}]`).forEach((n) => n.removeAttribute(attr));
     }
+    // section-insert's transient highlight: drop the marker AND its inline
+    // outline (the script's own postClean does the same; this is the backstop
+    // for a sibling capture mid-highlight).
+    doc.querySelectorAll("[data-openlen-just-inserted]").forEach((n) => {
+      n.removeAttribute("data-openlen-just-inserted");
+      (n as HTMLElement).style.outline = "";
+      (n as HTMLElement).style.outlineOffset = "";
+      if (!n.getAttribute("style")) n.removeAttribute("style");
+    });
     if (doc.body) {
       for (const attr of [
         "data-openlen-drag-active",
@@ -77,6 +88,7 @@ export function stripEditorInstrumentation(html: string): string {
         "data-openlen-select-mode",
         "data-openlen-inspect-mode",
         "data-openlen-edit-mode",
+        "data-openlen-drop-active",
       ]) {
         doc.body.removeAttribute(attr);
       }

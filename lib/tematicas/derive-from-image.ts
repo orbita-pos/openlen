@@ -19,6 +19,8 @@ export interface DerivedWorld {
   mode: "light" | "dark";
   /** Dominant saturated color — the lookFromAccent seed. */
   accent: string;
+  /** Average luminance (0..1) — drives the drop engine's bg legibility plan. */
+  lum: number;
 }
 
 const HUE_BUCKETS = 12;
@@ -70,7 +72,7 @@ export function deriveWorldFromPixels(data: Uint8ClampedArray): DerivedWorld {
 
   let best = 0;
   for (let i = 1; i < HUE_BUCKETS; i++) if (weight[i] > weight[best]) best = i;
-  if (weight[best] <= 0) return { mode, accent: FALLBACK_ACCENT };
+  if (weight[best] <= 0) return { mode, accent: FALLBACK_ACCENT, lum: avgLum };
 
   const w = weight[best];
   const hex = (v: number) =>
@@ -80,6 +82,7 @@ export function deriveWorldFromPixels(data: Uint8ClampedArray): DerivedWorld {
   return {
     mode,
     accent: `#${hex(sumR[best] / w)}${hex(sumG[best] / w)}${hex(sumB[best] / w)}`,
+    lum: avgLum,
   };
 }
 
@@ -97,7 +100,7 @@ function analyzeDrawable(
   canvas.width = w;
   canvas.height = h;
   const ctx = canvas.getContext("2d", { willReadFrequently: true });
-  if (!ctx) return { mode: "light", accent: FALLBACK_ACCENT };
+  if (!ctx) return { mode: "light", accent: FALLBACK_ACCENT, lum: 0.5 };
   ctx.drawImage(source, 0, 0, w, h);
   return deriveWorldFromPixels(ctx.getImageData(0, 0, w, h).data);
 }

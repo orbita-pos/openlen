@@ -139,5 +139,16 @@
     "for": "用于",
     "none": "暂无店铺",
     "new": "新建店铺"
+  },
+  "images": {
+    "hint": "将图片拖到页面上，或点击放置。",
+    "sources": {
+      "openlen": "OpenLen",
+      "unsplash": "Unsplash",
+      "profile": "你的业务",
+      "uploads": "我的上传"
+    },
+    "profileEmpty": "在业务资料中添加logo或照片后将显示在这里。",
+    "uploadsEmpty": "上传到此页面的图片将显示在这里。"
   }
 }

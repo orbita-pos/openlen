@@ -40,6 +40,10 @@
       "assistant": {
         "label": "Assistent",
         "title": "Chat-Assistent für Besucher"
+      },
+      "images": {
+        "label": "Bilder",
+        "title": "Bildbibliothek"
       }
     },
     "tabLocked": "{label} — gesperrt",
@@ -76,6 +80,14 @@
       "desktop": "Desktop-Vorschau",
       "tablet": "Tablet-Vorschau",
       "mobile": "Mobile Vorschau"
+    },
+    "drop": {
+      "replace": "Bild ersetzen",
+      "newSection": "Neuer Abschnitt",
+      "background": "Abschnittshintergrund",
+      "splitLeft": "Bild links",
+      "splitRight": "Bild rechts",
+      "swap": "Bilder tauschen"
     }
   },
   "placeholder": {

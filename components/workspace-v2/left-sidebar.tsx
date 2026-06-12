@@ -20,6 +20,7 @@ import {
   FileText,
   Grid3,
   HistoryIcon,
+  ImageIcon,
   Inbox,
   Layers,
   ListTree,
@@ -40,6 +41,9 @@ import {
   ChatPanel,
   type ScopedSelection,
 } from "./panels/chat-panel";
+import { ImagesPanel } from "./panels/images-panel";
+import type { DropAsset } from "./drop-place-core";
+import { useIsMobile } from "./use-is-mobile";
 import { PastePanel } from "./panels/paste-panel";
 import { SitePagesPanel } from "./panels/site-pages-panel";
 import type { SitePageSummary } from "@/lib/projects/site-pages";
@@ -115,6 +119,7 @@ export type SidebarMode =
   | "site"
   | "chat"
   | "templates"
+  | "images"
   | "library"
   | "pages"
   | "assistant"
@@ -129,6 +134,7 @@ const MODE_TABS: ModeTab[] = [
   { id: "site", icon: ListTree },
   { id: "chat", icon: ChatIcon },
   { id: "templates", icon: Grid3 },
+  { id: "images", icon: ImageIcon },
   { id: "library", icon: Layers },
   { id: "assistant", icon: Sparkles },
   { id: "versions", icon: HistoryIcon },
@@ -248,6 +254,10 @@ interface LeftSidebarProps {
   activeBusinessId?: string;
   onPickBusiness?: (id: string) => void;
   onAddBusiness?: () => void;
+  /** Click-to-place from the Images tab — enters the same placement mode
+   *  paste uses (the parent owns the lifecycle). Drag needs no callback:
+   *  the cards carry their payload on the dataTransfer. */
+  onPickImage?: (asset: DropAsset) => void;
   /** Multi-page site tree (Site tab) — owned by the parent. */
   sitePages?: SitePageSummary[];
   activeSitePage?: string | null;
@@ -305,6 +315,7 @@ export function LeftSidebar({
   activeBusinessId = "",
   onPickBusiness,
   onAddBusiness,
+  onPickImage,
   sitePages = [],
   activeSitePage = null,
   onSwitchSitePage,
@@ -328,11 +339,17 @@ export function LeftSidebar({
   const visibleTabs = MODE_TABS.filter((tab) => {
     if (
       entryMode !== "editing" &&
-      (tab.id === "library" || tab.id === "site" || tab.id === "assistant")
+      (tab.id === "library" ||
+        tab.id === "site" ||
+        tab.id === "assistant" ||
+        tab.id === "images")
     )
       return false;
     return true;
   });
+  // After a click-to-place pick on mobile the panel overlays the canvas —
+  // collapse it so the user can aim the placement click.
+  const isMobileLayout = useIsMobile();
 
   if (collapsed) {
     return (
@@ -538,6 +555,28 @@ export function LeftSidebar({
                   })
                 }
                 previewingId={previewingTemplateId ?? null}
+              />
+            )}
+            {mode === "images" && (
+              <ImagesPanel
+                projectId={currentProjectId}
+                activeProfile={(() => {
+                  const p =
+                    businesses.find((b) => b.id === activeBusinessId) ??
+                    businesses.find((b) => b.isDefault) ??
+                    null;
+                  return p
+                    ? {
+                        name: p.name,
+                        logoUrl: p.data.brand?.logoUrl ?? null,
+                        photos: p.data.photos ?? [],
+                      }
+                    : null;
+                })()}
+                onPick={(asset) => {
+                  onPickImage?.(asset);
+                  if (isMobileLayout) onToggleCollapse();
+                }}
               />
             )}
             {mode === "library" && (

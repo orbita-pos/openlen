@@ -139,5 +139,16 @@
     "for": "対象",
     "none": "お店なし",
     "new": "新しいお店"
+  },
+  "images": {
+    "hint": "画像をページにドラッグするか、クリックして配置します。",
+    "sources": {
+      "openlen": "OpenLen",
+      "unsplash": "Unsplash",
+      "profile": "あなたのビジネス",
+      "uploads": "アップロード"
+    },
+    "profileEmpty": "ビジネスプロフィールにロゴや写真を追加するとここに表示されます。",
+    "uploadsEmpty": "このページにアップロードした画像がここに表示されます。"
   }
 }

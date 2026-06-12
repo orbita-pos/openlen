@@ -40,6 +40,10 @@
       "assistant": {
         "label": "Assistent",
         "title": "Chatassistent voor bezoekers"
+      },
+      "images": {
+        "label": "Afbeeldingen",
+        "title": "Afbeeldingenbibliotheek"
       }
     },
     "tabLocked": "{label} — vergrendeld",
@@ -76,6 +80,14 @@
       "desktop": "Desktopvoorbeeld",
       "tablet": "Tabletvoorbeeld",
       "mobile": "Mobiel voorbeeld"
+    },
+    "drop": {
+      "replace": "Afbeelding vervangen",
+      "newSection": "Nieuwe sectie",
+      "background": "Sectieachtergrond",
+      "splitLeft": "Afbeelding links",
+      "splitRight": "Afbeelding rechts",
+      "swap": "Afbeeldingen wisselen"
     }
   },
   "placeholder": {
