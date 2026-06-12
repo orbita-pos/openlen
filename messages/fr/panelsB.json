@@ -96,7 +96,8 @@
       "desktop": "Ordinateur",
       "tablet": "Tablette"
     },
-    "browsers": "Navigateurs"
+    "browsers": "Navigateurs",
+    "pages": "Pages"
   },
   "leads": {
     "loadError": "Échec du chargement des contacts",

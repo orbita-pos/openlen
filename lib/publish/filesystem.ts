@@ -525,7 +525,7 @@ async function bakeDocument(
 
   // Analytics tracker snippet — AFTER all other rewrites.
   if (ctx.projectId && ctx.analyticsEnabled) {
-    migratedHtml = injectAnalyticsSnippet(migratedHtml, ctx.projectId);
+    migratedHtml = injectAnalyticsSnippet(migratedHtml, ctx.projectId, page);
   }
 
   // Motion Looks. Soft-fail.

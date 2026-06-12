@@ -96,7 +96,8 @@
       "desktop": "데스크톱",
       "tablet": "태블릿"
     },
-    "browsers": "브라우저"
+    "browsers": "브라우저",
+    "pages": "페이지"
   },
   "leads": {
     "loadError": "리드를 불러오지 못했습니다",

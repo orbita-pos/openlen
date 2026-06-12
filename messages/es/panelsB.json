@@ -96,7 +96,8 @@
       "desktop": "Escritorio",
       "tablet": "Tablet"
     },
-    "browsers": "Navegadores"
+    "browsers": "Navegadores",
+    "pages": "Páginas"
   },
   "leads": {
     "loadError": "No se pudieron cargar los leads",

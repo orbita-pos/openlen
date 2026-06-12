@@ -55,6 +55,11 @@ export interface Insights {
   range: InsightsRange;
   totals: InsightsTotals;
   byDay: InsightsDayBucket[];
+  /** Views per document — key is the path ('/' = home, '/pricing' = site
+   *  page). Raw-only like referrers/browsers: the rollup doesn't carry the
+   *  page, so "all" range effectively shows the last ≤90 days. Events from
+   *  before the page column existed count as home. */
+  topPages: InsightsRow[];
   topReferrers: InsightsRow[];
   topCountries: InsightsRow[];
   topBrowsers: InsightsRow[];
@@ -282,6 +287,31 @@ async function getTopLinks(
     });
 }
 
+/** Views per document, newest-biggest first. A site caps at 21 documents
+ *  (home + MAX_SITE_PAGES) so the limit only trims junk. */
+async function getTopPages(
+  projectId: string,
+  since: Date | null,
+): Promise<InsightsRow[]> {
+  const rows = await db
+    .select({
+      page: schema.pageEvents.page,
+      count: sql<number>`COUNT(*)::int`,
+    })
+    .from(schema.pageEvents)
+    .where(
+      and(whereClause(projectId, since), eq(schema.pageEvents.type, "view")),
+    )
+    .groupBy(schema.pageEvents.page)
+    .orderBy(sql`COUNT(*) DESC`)
+    .limit(21);
+
+  return rows.map((r) => ({
+    key: r.page ? `/${r.page}` : "/",
+    count: Number(r.count),
+  }));
+}
+
 /** Top referrer hosts (the page's referrer header, grouped by host). */
 async function getTopReferrers(
   projectId: string,
@@ -408,6 +438,7 @@ export async function getInsights(
   const [
     totals,
     byDay,
+    topPages,
     topReferrers,
     topCountries,
     topBrowsers,
@@ -416,6 +447,7 @@ export async function getInsights(
   ] = await Promise.all([
     getTotals(projectId, since),
     getByDay(projectId, since),
+    getTopPages(projectId, since),
     getTopReferrers(projectId, since),
     getTopCountries(projectId, since),
     getTopBrowsers(projectId, since),
@@ -427,6 +459,7 @@ export async function getInsights(
     range,
     totals,
     byDay,
+    topPages,
     topReferrers,
     topCountries,
     topBrowsers,
@@ -677,12 +710,13 @@ async function getDeviceSplitAllRange(
 }
 
 async function getInsightsAll(projectId: string): Promise<Insights> {
-  // Top referrers stays raw-only (rollup doesn't track referrer). For
-  // "all" range that effectively shows "last 90 days of referrers" —
-  // acceptable v1 limit, fixable by adding referrer to the rollup later.
+  // Top referrers + pages stay raw-only (rollup tracks neither). For
+  // "all" range that effectively shows "the last 90 days" of each —
+  // acceptable v1 limit, fixable by adding them to the rollup later.
   const [
     totals,
     byDay,
+    topPages,
     topReferrers,
     topCountries,
     topBrowsers,
@@ -691,6 +725,7 @@ async function getInsightsAll(projectId: string): Promise<Insights> {
   ] = await Promise.all([
     getTotalsAllRange(projectId),
     getByDayAllRange(projectId),
+    getTopPages(projectId, null),
     getTopReferrers(projectId, null),
     getTopCountriesAllRange(projectId),
     getTopBrowsers(projectId, null),
@@ -702,6 +737,7 @@ async function getInsightsAll(projectId: string): Promise<Insights> {
     range: "all",
     totals,
     byDay,
+    topPages,
     topReferrers,
     topCountries,
     topBrowsers,

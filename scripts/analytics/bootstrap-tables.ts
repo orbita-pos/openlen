@@ -32,8 +32,15 @@ const STEPS: Step[] = [
         "device" text,
         "browser" text,
         "uaHash" text,
+        "page" text,
         "ts" timestamp DEFAULT now() NOT NULL
       )
+    `,
+  },
+  {
+    label: "column pageEvents.page (existing installs)",
+    query: `
+      ALTER TABLE "pageEvents" ADD COLUMN IF NOT EXISTS "page" text
     `,
   },
   {
@@ -102,7 +109,13 @@ async function runStep(step: Step): Promise<void> {
     // eslint-disable-next-line no-console
     console.log(`✓ ${step.label}`);
   } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
+    // Drizzle wraps DB errors (DrizzleQueryError) — the real message lives
+    // in the cause chain, so collect the whole chain before matching.
+    let msg = "";
+    for (let e: unknown = err; e instanceof Error; e = e.cause) {
+      msg += ` ${e.message}`;
+    }
+    if (!msg) msg = String(err);
     if (
       step.swallowExists &&
       (/already exists/i.test(msg) || /duplicate/i.test(msg))
