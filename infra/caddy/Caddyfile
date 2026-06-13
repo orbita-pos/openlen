@@ -118,7 +118,7 @@ openlen.com, www.openlen.com {
 
 	@doc {
 		not path *.css *.js *.jpg *.jpeg *.png *.gif *.webp *.svg *.ico *.woff *.woff2 *.avif
-		not path /c/* /api/f/* /api/m/* /uploads/* /assets/*
+		not path /c/* /api/f/* /api/m/* /api/cm/* /uploads/* /assets/*
 	}
 	header @doc Cache-Control "public, max-age=60, s-maxage=3600, stale-while-revalidate=86400"
 
@@ -143,6 +143,15 @@ openlen.com, www.openlen.com {
 	# without it Caddy stamps a public s-maxage header on these responses and
 	# Cloudflare would cache protected HTML at the edge.
 	handle /api/m/* {
+		reverse_proxy 127.0.0.1:3000 {
+			header_up CF-Connecting-IP {http.request.header.cf-connecting-ip}
+		}
+	}
+
+	# Comments module — same-host comments fetch/post + the /me login probe.
+	# Same-host so the ol_member cookie is first-party; @doc-excluded above so
+	# the live thread (no-store) is never edge-cached.
+	handle /api/cm/* {
 		reverse_proxy 127.0.0.1:3000 {
 			header_up CF-Connecting-IP {http.request.header.cf-connecting-ip}
 		}
