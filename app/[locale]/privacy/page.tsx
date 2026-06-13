@@ -112,6 +112,17 @@ export default async function PrivacyPage({
               formularios».
             </li>
             <li>
+              <strong>Módulos interactivos en páginas publicadas</strong> — si un
+              usuario activa los módulos de Miembros, Comentarios o Reservas,
+              guardamos los datos que el visitante proporciona a ese módulo (por
+              ejemplo, su correo para el acceso por enlace mágico; su nombre,
+              comentario o, en una reserva, su nombre, correo, nota y la fecha y
+              hora elegidas), junto con la dirección IP conservada brevemente para
+              limitar el abuso. Se aplica la misma relación responsable/encargado
+              del apartado «Datos de formularios»: el usuario que publica la página
+              es el responsable de esos datos.
+            </li>
+            <li>
               <strong>Analítica de páginas publicadas</strong> — analítica
               respetuosa, <strong>sin cookies</strong>, mediante un beacon del
               mismo origen. Ver el apartado «Analítica».
@@ -462,6 +473,17 @@ export default async function PrivacyPage({
               retained briefly for spam and abuse protection, plus the referrer and
               derived country, device, and browser). See the
               &quot;Published-page form data&quot; section.
+            </li>
+            <li>
+              <strong>Published-page interactive modules</strong> — if a user
+              turns on the Members, Comments, or Bookings module, we store the data
+              a visitor gives that module (for example, their email for magic-link
+              sign-in; their name and comment; or, for a booking, their name,
+              email, note, and chosen date and time), along with the IP address
+              retained briefly to limit abuse. The same controller/processor
+              relationship as the &quot;Published-page form data&quot; section
+              applies: the user who publishes the page is the controller of that
+              data.
             </li>
             <li>
               <strong>Published-page analytics</strong> — privacy-first,{" "}
