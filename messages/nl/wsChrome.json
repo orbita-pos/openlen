@@ -56,6 +56,10 @@
       "comments": {
         "label": "Reacties",
         "title": "Reacties modereren"
+      },
+      "bookings": {
+        "label": "Afspraken",
+        "title": "Afspraken beheren"
       }
     },
     "tabLocked": "{label} — vergrendeld",

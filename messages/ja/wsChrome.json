@@ -56,6 +56,10 @@
       "comments": {
         "label": "コメント",
         "title": "コメントをモデレート"
+      },
+      "bookings": {
+        "label": "予約",
+        "title": "予約を管理"
       }
     },
     "tabLocked": "{label} — ロック中",

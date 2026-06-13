@@ -8,12 +8,14 @@
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import type {
+  BookingsSettings,
   BroadcastSettings,
   CommentsSettings,
   MembersSettings,
 } from "@/lib/projects/types";
 import {
   BarChart3,
+  Calendar,
   Inbox,
   Loader,
   LockIcon,
@@ -53,6 +55,11 @@ interface ModulesPanelProps {
   onUpdateComments?: (patch: CommentsSettings) => Promise<boolean>;
   onInsertCommentsSection?: () => void;
   onShowComments?: () => void;
+  /** Bookings module enable card — toggles + settings + insert section. */
+  bookingsSettings?: BookingsSettings;
+  onUpdateBookings?: (patch: BookingsSettings) => Promise<boolean>;
+  onInsertBookingsSection?: () => void;
+  onShowBookings?: () => void;
   onShowLeads?: () => void;
   onShowAnalytics?: () => void;
   onShowAssistant?: () => void;
@@ -70,6 +77,10 @@ export function ModulesPanel({
   onUpdateComments,
   onInsertCommentsSection,
   onShowComments,
+  bookingsSettings,
+  onUpdateBookings,
+  onInsertBookingsSection,
+  onShowBookings,
   onShowLeads,
   onShowAnalytics,
   onShowAssistant,
@@ -77,14 +88,21 @@ export function ModulesPanel({
   const t = useTranslations("members");
   const tb = useTranslations("broadcast");
   const tc = useTranslations("comments");
+  const tbk = useTranslations("bookings");
   const enabled = membersSettings?.enabled === true;
   const mode = membersSettings?.mode === "invite" ? "invite" : "open";
   const broadcastOn = broadcastSettings?.enabled === true;
   const commentsOn = commentsSettings?.enabled === true;
   const commentsMod = commentsSettings?.moderation === "all" ? "all" : "moderated";
+  const bookingsOn = bookingsSettings?.enabled === true;
+  const bookingsRequireLogin = bookingsSettings?.requireLogin === true;
+  const bookingsAutoConfirm = bookingsSettings?.autoConfirm !== false;
+  const bookingsReminders = bookingsSettings?.sendReminders !== false;
   const [busy, setBusy] = useState(false);
   const [bcastBusy, setBcastBusy] = useState(false);
   const [cmtBusy, setCmtBusy] = useState(false);
+  const [bkBusy, setBkBusy] = useState(false);
+  const [bkInserted, setBkInserted] = useState(false);
   const [inserted, setInserted] = useState(false);
   const [autoPageSlug, setAutoPageSlug] = useState<string | null>(null);
 
@@ -134,6 +152,21 @@ export function ModulesPanel({
     setCmtBusy(true);
     await onUpdateComments({ moderation: next });
     setCmtBusy(false);
+  };
+  const updateBookings = async (patch: BookingsSettings) => {
+    if (bkBusy || !onUpdateBookings) return;
+    setBkBusy(true);
+    // Seed the creator tz from the browser on first enable so new services
+    // default to the right zone without the owner typing it.
+    if (patch.enabled === true && !bookingsSettings?.creatorTz) {
+      try {
+        patch.creatorTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      } catch {
+        /* leave unset; the editor defaults it */
+      }
+    }
+    await onUpdateBookings(patch);
+    setBkBusy(false);
   };
 
   return (
@@ -357,6 +390,86 @@ export function ModulesPanel({
                   </button>
                 </>
               )}
+            </div>
+          )}
+        </div>
+
+        {/* Bookings — appointment scheduling. Enabling reveals the Reservas tab. */}
+        <div className="rounded-lg ring-1 ring-[color:var(--border)] bg-[color:var(--bg)] p-2.5">
+          <div className="flex items-center gap-2">
+            <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-elev ring-1 ring-[color:var(--border)] text-accent">
+              <Calendar size={13} />
+            </span>
+            <div className="min-w-0 flex-1">
+              <div className="text-[12px] font-semibold fg leading-tight">{tbk("module.title")}</div>
+              <div className="text-[10.5px] fg-faint leading-snug">{tbk("module.tagline")}</div>
+            </div>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={bookingsOn}
+              aria-label={tbk("module.toggle")}
+              disabled={bkBusy}
+              onClick={() => void updateBookings({ enabled: !bookingsOn })}
+              className={`relative h-[18px] w-[32px] shrink-0 rounded-full transition ${
+                bookingsOn ? "bg-[var(--accent-strong)]" : "bg-zinc-300 dark:bg-zinc-700"
+              } disabled:opacity-50`}
+            >
+              <span
+                className={`absolute top-[2px] h-[14px] w-[14px] rounded-full bg-white shadow transition-all ${
+                  bookingsOn ? "left-[16px]" : "left-[2px]"
+                }`}
+              />
+            </button>
+          </div>
+          {bookingsOn && (
+            <div className="mt-2.5 space-y-1.5 fade-in">
+              <ToggleRow
+                label={tbk("module.requireLogin")}
+                hint={bookingsRequireLogin ? tbk("module.requireLoginHint") : tbk("module.guestHint")}
+                checked={bookingsRequireLogin}
+                disabled={bkBusy}
+                onChange={(v) => void updateBookings({ requireLogin: v })}
+              />
+              <ToggleRow
+                label={tbk("module.autoConfirm")}
+                hint={bookingsAutoConfirm ? tbk("module.autoConfirmHint") : tbk("module.approveHint")}
+                checked={bookingsAutoConfirm}
+                disabled={bkBusy}
+                onChange={(v) => void updateBookings({ autoConfirm: v })}
+              />
+              <ToggleRow
+                label={tbk("module.reminders")}
+                hint={tbk("module.remindersHint")}
+                checked={bookingsReminders}
+                disabled={bkBusy}
+                onChange={(v) => void updateBookings({ sendReminders: v })}
+              />
+              <p className="text-[10px] fg-faint leading-relaxed pt-0.5">{tbk("module.noCharge")}</p>
+              {onInsertBookingsSection && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    onInsertBookingsSection();
+                    setBkInserted(true);
+                  }}
+                  className="w-full h-7 rounded-md text-[11px] font-medium fg-muted hover:fg bg-elev ring-1 ring-[color:var(--border)] hover:bg-hover transition"
+                >
+                  {tbk("module.insert")}
+                </button>
+              )}
+              {bkInserted && (
+                <p className="text-[10.5px] leading-relaxed text-emerald-700 dark:text-emerald-400">
+                  {tbk("module.inserted")}
+                </p>
+              )}
+              <button
+                type="button"
+                onClick={onShowBookings}
+                className="w-full h-7 rounded-md text-[11px] font-medium text-white bg-[var(--accent-strong)] hover:brightness-105 transition"
+              >
+                {tbk("module.manage")}
+              </button>
             </div>
           )}
         </div>
@@ -594,6 +707,46 @@ function MembersList({ projectId }: { projectId: string }) {
           ))}
         </ul>
       )}
+    </div>
+  );
+}
+
+function ToggleRow({
+  label,
+  hint,
+  checked,
+  disabled,
+  onChange,
+}: {
+  label: string;
+  hint?: string;
+  checked: boolean;
+  disabled?: boolean;
+  onChange: (next: boolean) => void;
+}) {
+  return (
+    <div className="flex items-start gap-2">
+      <div className="min-w-0 flex-1">
+        <div className="text-[11px] font-medium fg leading-tight">{label}</div>
+        {hint && <div className="text-[10px] fg-faint leading-snug">{hint}</div>}
+      </div>
+      <button
+        type="button"
+        role="switch"
+        aria-checked={checked}
+        aria-label={label}
+        disabled={disabled}
+        onClick={() => onChange(!checked)}
+        className={`relative mt-0.5 h-[16px] w-[28px] shrink-0 rounded-full transition ${
+          checked ? "bg-[var(--accent-strong)]" : "bg-zinc-300 dark:bg-zinc-700"
+        } disabled:opacity-50`}
+      >
+        <span
+          className={`absolute top-[2px] h-[12px] w-[12px] rounded-full bg-white shadow transition-all ${
+            checked ? "left-[14px]" : "left-[2px]"
+          }`}
+        />
+      </button>
     </div>
   );
 }

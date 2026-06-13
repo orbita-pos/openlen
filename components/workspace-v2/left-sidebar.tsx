@@ -24,6 +24,7 @@ import {
   Inbox,
   Layers,
   ListTree,
+  Calendar,
   Megaphone,
   MessageSq,
   Monitor,
@@ -36,6 +37,7 @@ import {
 import type { Section } from "./mock-data";
 import type { BriefFormState } from "@/components/workspace/types";
 import type {
+  BookingsSettings,
   BroadcastSettings,
   CommentsSettings,
   MembersSettings,
@@ -46,6 +48,7 @@ import { AssistantPanel } from "./panels/assistant-panel";
 import { ModulesPanel } from "./panels/modules-panel";
 import { BroadcastPanel } from "./panels/broadcast-panel";
 import { CommentsPanel } from "./panels/comments-panel";
+import { BookingsPanel } from "./panels/bookings-panel";
 import { RailBusinessSwitcher } from "./business-switcher";
 import type { BusinessProfile } from "@/lib/business-profiles/types";
 import {
@@ -137,6 +140,7 @@ export type SidebarMode =
   | "members"
   | "broadcast"
   | "comments"
+  | "bookings"
   | "versions";
 
 interface ModeTab {
@@ -154,6 +158,7 @@ const MODE_TABS: ModeTab[] = [
   { id: "members", icon: Users },
   { id: "broadcast", icon: Megaphone },
   { id: "comments", icon: MessageSq },
+  { id: "bookings", icon: Calendar },
   { id: "versions", icon: HistoryIcon },
 ];
 
@@ -296,6 +301,10 @@ interface LeftSidebarProps {
   commentsSettings?: CommentsSettings;
   onUpdateCommentsSettings?: (patch: CommentsSettings) => Promise<boolean>;
   onInsertCommentsSection?: () => void;
+  /** Bookings module (Módulos card enables + settings; gates Reservas tab). */
+  bookingsSettings?: BookingsSettings;
+  onUpdateBookingsSettings?: (patch: BookingsSettings) => Promise<boolean>;
+  onInsertBookingsSection?: () => void;
 }
 
 export function LeftSidebar({
@@ -361,6 +370,9 @@ export function LeftSidebar({
   commentsSettings,
   onUpdateCommentsSettings,
   onInsertCommentsSection,
+  bookingsSettings,
+  onUpdateBookingsSettings,
+  onInsertBookingsSection,
 }: LeftSidebarProps) {
   const showBusinessSwitcher = businesses.length > 0 && !!onPickBusiness;
   const t = useTranslations("wsChrome");
@@ -385,13 +397,15 @@ export function LeftSidebar({
         tab.id === "members" ||
         tab.id === "broadcast" ||
         tab.id === "comments" ||
+        tab.id === "bookings" ||
         tab.id === "images")
     )
       return false;
-    // Broadcast + Comments are opt-in: their tabs appear once the module is
-    // enabled (from the Módulos panel), like a feature you switched on.
+    // Broadcast + Comments + Bookings are opt-in: their tabs appear once the
+    // module is enabled (from the Módulos panel), like a feature you switched on.
     if (tab.id === "broadcast" && !broadcastSettings?.enabled) return false;
     if (tab.id === "comments" && !commentsSettings?.enabled) return false;
+    if (tab.id === "bookings" && !bookingsSettings?.enabled) return false;
     return true;
   });
   // After a click-to-place pick on mobile the panel overlays the canvas —
@@ -639,13 +653,17 @@ export function LeftSidebar({
                 membersSettings={membersSettings}
                 broadcastSettings={broadcastSettings}
                 commentsSettings={commentsSettings}
+                bookingsSettings={bookingsSettings}
                 gatedCount={sitePages.filter((p) => p.membersOnly).length}
                 onUpdateMembers={onUpdateMembersSettings}
                 onUpdateBroadcast={onUpdateBroadcastSettings}
                 onUpdateComments={onUpdateCommentsSettings}
                 onInsertCommentsSection={onInsertCommentsSection}
+                onUpdateBookings={onUpdateBookingsSettings}
+                onInsertBookingsSection={onInsertBookingsSection}
                 onShowBroadcast={() => setMode("broadcast")}
                 onShowComments={() => setMode("comments")}
+                onShowBookings={() => setMode("bookings")}
                 onShowLeads={() => onSelectSection?.("messages")}
                 onShowAnalytics={() => onSelectSection?.("analytics")}
                 onShowAssistant={() => setMode("assistant")}
@@ -659,6 +677,12 @@ export function LeftSidebar({
             )}
             {mode === "comments" && (
               <CommentsPanel currentProjectId={currentProjectId} />
+            )}
+            {mode === "bookings" && (
+              <BookingsPanel
+                currentProjectId={currentProjectId}
+                defaultTz={bookingsSettings?.creatorTz}
+              />
             )}
             {mode === "versions" && (
               <VersionsPanel

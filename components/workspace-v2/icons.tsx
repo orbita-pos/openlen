@@ -280,6 +280,13 @@ export const HistoryIcon = (p: IconProps) => (
   </Base>
 );
 
+export const Calendar = (p: IconProps) => (
+  <Base {...p}>
+    <rect x="3" y="4" width="18" height="18" rx="2" />
+    <path d="M16 2v4M8 2v4M3 10h18" />
+  </Base>
+);
+
 export const Grid3 = (p: IconProps) => (
   <Base {...p}>
     <rect width="7" height="7" x="3" y="3" rx="1" />

@@ -56,6 +56,10 @@
       "comments": {
         "label": "Comments",
         "title": "Moderate comments"
+      },
+      "bookings": {
+        "label": "Bookings",
+        "title": "Manage bookings"
       }
     },
     "tabLocked": "{label} — locked",
