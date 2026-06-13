@@ -5,10 +5,17 @@ import { db, schema } from "@/lib/db";
 import {
   cancelBooking,
   getBooking,
+  getService,
   recordBookingEvent,
   setBookingStatus,
   type BookingRow,
 } from "@/lib/bookings/store";
+import { notifyBooking } from "@/lib/bookings/notify";
+
+function localeFromHtml(html: string | undefined | null): string {
+  const m = html ? /<html[^>]*\blang=["']?([a-zA-Z]{2})/i.exec(html) : null;
+  return m ? m[1].toLowerCase() : "en";
+}
 
 // PATCH /api/projects/[id]/bookings/[bookingId] { action }
 // Owner status transitions: confirm a pending, cancel a live booking, or mark a
@@ -31,7 +38,11 @@ export async function PATCH(
   const { id, bookingId } = await params;
 
   const owned = await db
-    .select({ id: schema.projects.id })
+    .select({
+      id: schema.projects.id,
+      subdomain: schema.projects.subdomain,
+      data: schema.projects.data,
+    })
     .from(schema.projects)
     .where(and(eq(schema.projects.id, id), eq(schema.projects.userId, session.user.id)))
     .limit(1);
@@ -64,7 +75,26 @@ export async function PATCH(
   }
 
   await recordBookingEvent(id, bookingId, parsed.data.action, "owner");
-  // R5 wires owner-cancel email here when action === "cancel".
+
+  // Owner cancellation → tell the visitor (CANCEL .ics). The manage link is
+  // moot on a cancelled booking, so the site base URL isn't needed.
+  if (parsed.data.action === "cancel" && updated.guestEmail) {
+    const service = await getService(id, updated.serviceId);
+    const sub = owned[0].subdomain ?? "";
+    await notifyBooking({
+      kind: "cancelled",
+      booking: updated,
+      serviceName: service?.name ?? "Booking",
+      serviceDescription: service?.description,
+      locationText: service?.locationText,
+      sub,
+      baseUrl: sub ? `https://${sub}.openlen.com` : "",
+      locale: localeFromHtml(owned[0].data?.html),
+      ownerEmail: session.user.email ?? null,
+      ownerName: session.user.name ?? null,
+      notifyCreator: false, // the owner initiated it — don't email themselves
+    });
+  }
 
   return json({ ok: true, status: updated.status }, 200);
 }

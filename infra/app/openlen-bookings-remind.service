@@ -1,0 +1,27 @@
+[Unit]
+Description=OpenLen — booking reminders + retention sweep
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=openlen-deploy
+Group=www-data
+
+# Same env layout as openlen-app.service — the .env.local lives in
+# /etc/openlen/app.env (640 root:openlen-deploy) and is read by tsx via
+# --env-file. Needs RESEND_API_KEY + EMAIL_FROM set to actually send.
+WorkingDirectory=/opt/openlen-app
+EnvironmentFile=/etc/openlen/app.env
+
+ExecStart=/usr/bin/npm run bookings:remind
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=openlen-bookings-remind
+
+# Needs DB + Resend network access but no filesystem writes outside its logs.
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=read-only

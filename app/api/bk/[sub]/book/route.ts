@@ -18,7 +18,8 @@ import {
 import { isSlotBookable } from "@/lib/bookings/rules";
 import { isKnownTimeZone } from "@/lib/bookings/tz";
 import { manageToken } from "@/lib/bookings/manage-token";
-import { json, loadBookingsSite, resolveMember } from "../_shared";
+import { notifyBooking } from "@/lib/bookings/notify";
+import { json, loadBookingsSite, resolveMember, siteBaseUrl } from "../_shared";
 
 // POST /api/bk/[sub]/book — create a booking (guest or member).
 //
@@ -145,14 +146,26 @@ export async function POST(
   if (!claim.ok) return json({ error: "slot_unavailable" }, 409);
 
   if (!claim.replay) {
-    await recordBookingEvent(site.projectId, claim.booking.id, "created", member ? "visitor" : "visitor", {
+    await recordBookingEvent(site.projectId, claim.booking.id, "created", "visitor", {
       serviceId: service.id,
       status,
       via: member ? "member" : "guest",
     });
+    // Confirmation to the visitor + a notice to the creator. Best-effort.
+    await notifyBooking({
+      kind: status === "confirmed" ? "confirmed" : "pending",
+      booking: claim.booking,
+      serviceName: service.name,
+      serviceDescription: service.description,
+      locationText: service.locationText,
+      sub: site.subdomain,
+      baseUrl: siteBaseUrl(req),
+      locale: site.locale,
+      ownerEmail: site.ownerEmail,
+      ownerName: site.ownerName,
+      notifyCreator: true,
+    });
   }
-
-  // R5 wires the confirmation email + .ics here (claim.replay → skip resend).
 
   return json(
     {

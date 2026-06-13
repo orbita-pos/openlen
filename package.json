@@ -26,6 +26,7 @@
     "broadcast:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/broadcast-migrate.ts",
     "comments:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/comments-migrate.ts",
     "bookings:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/bookings-migrate.ts",
+    "bookings:remind": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/bookings-remind.ts",
     "versions:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/versions-migrate.ts",
     "drift:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/drift-migrate.ts",
     "flight:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/flight-migrate.ts",
