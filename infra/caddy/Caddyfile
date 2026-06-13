@@ -176,9 +176,23 @@ openlen.com, www.openlen.com {
 	# Everything else → the current release directory for the requesting
 	# subdomain. try_files mirrors nginx: exact path, then path/index.html,
 	# then root index.html as a last-resort fallback.
-	root * /var/www/openlen/{labels.2}/current
-	try_files {path} {path}/index.html /index.html
-	file_server
+	#
+	# MUST stay wrapped in `handle`. try_files runs in Caddy's rewrite phase,
+	# BEFORE handle blocks evaluate — so a BARE try_files here rewrites every
+	# non-file path (e.g. /api/m/<sub>/page/<slug>, /c/<id>) to /index.html
+	# first, and the /api/m/* + /c/* handles above then never match (they see
+	# the rewritten /index.html) → the reverse_proxy is silently bypassed and
+	# the static homepage is served instead. Wrapping the static serve in its
+	# own `handle` makes it mutually exclusive with the proxied handles: a
+	# request enters exactly one handle, so the specific ones win and only the
+	# leftover traffic reaches try_files. (Forms survived a bare try_files
+	# because they POST to the apex absolute URL; member auth + analytics
+	# beacons are same-host and cannot, so they need this.)
+	handle {
+		root * /var/www/openlen/{labels.2}/current
+		try_files {path} {path}/index.html /index.html
+		file_server
+	}
 
 	# Dead subdomains (no release dir → even the /index.html fallback 404s)
 	# get the branded OpenLen 404 instead of Caddy's blank default. The file
