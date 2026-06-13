@@ -48,6 +48,10 @@
       "members": {
         "label": "모듈",
         "title": "백엔드 모듈 — 멤버 등"
+      },
+      "broadcast": {
+        "label": "Broadcast",
+        "title": "멤버에게 이메일 보내기"
       }
     },
     "tabLocked": "{label} — 잠김",

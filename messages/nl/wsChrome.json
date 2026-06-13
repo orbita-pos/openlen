@@ -48,6 +48,10 @@
       "members": {
         "label": "Modules",
         "title": "Backend-modules — leden en meer"
+      },
+      "broadcast": {
+        "label": "Broadcast",
+        "title": "Mail je leden"
       }
     },
     "tabLocked": "{label} — vergrendeld",

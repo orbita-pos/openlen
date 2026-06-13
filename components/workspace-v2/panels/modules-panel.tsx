@@ -7,12 +7,13 @@
 
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
-import type { MembersSettings } from "@/lib/projects/types";
+import type { BroadcastSettings, MembersSettings } from "@/lib/projects/types";
 import {
   BarChart3,
   Inbox,
   Loader,
   LockIcon,
+  Megaphone,
   Sparkles,
   Trash,
   Users,
@@ -38,6 +39,10 @@ interface ModulesPanelProps {
   onUpdateMembers?: (
     patch: MembersSettings,
   ) => Promise<{ ok: boolean; createdPageSlug?: string }>;
+  /** Broadcast module enable card — toggles settings.broadcast.enabled. */
+  broadcastSettings?: BroadcastSettings;
+  onUpdateBroadcast?: (patch: BroadcastSettings) => Promise<boolean>;
+  onShowBroadcast?: () => void;
   onShowLeads?: () => void;
   onShowAnalytics?: () => void;
   onShowAssistant?: () => void;
@@ -46,16 +51,22 @@ interface ModulesPanelProps {
 export function ModulesPanel({
   currentProjectId,
   membersSettings,
+  broadcastSettings,
   gatedCount,
   onUpdateMembers,
+  onUpdateBroadcast,
+  onShowBroadcast,
   onShowLeads,
   onShowAnalytics,
   onShowAssistant,
 }: ModulesPanelProps) {
   const t = useTranslations("members");
+  const tb = useTranslations("broadcast");
   const enabled = membersSettings?.enabled === true;
   const mode = membersSettings?.mode === "invite" ? "invite" : "open";
+  const broadcastOn = broadcastSettings?.enabled === true;
   const [busy, setBusy] = useState(false);
+  const [bcastBusy, setBcastBusy] = useState(false);
   const [autoPageSlug, setAutoPageSlug] = useState<string | null>(null);
 
   if (!currentProjectId) {
@@ -86,6 +97,12 @@ export function ModulesPanel({
     setBusy(true);
     await onUpdateMembers({ mode: next });
     setBusy(false);
+  };
+  const setBroadcastEnabled = async (next: boolean) => {
+    if (bcastBusy || !onUpdateBroadcast) return;
+    setBcastBusy(true);
+    await onUpdateBroadcast({ enabled: next });
+    setBcastBusy(false);
   };
 
   return (
@@ -171,6 +188,57 @@ export function ModulesPanel({
         </div>
 
         {enabled && <MembersList projectId={currentProjectId} />}
+
+        {/* Broadcast — email your members. Enabling reveals its own tab. */}
+        <div className="rounded-lg ring-1 ring-[color:var(--border)] bg-[color:var(--bg)] p-2.5">
+          <div className="flex items-center gap-2">
+            <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-elev ring-1 ring-[color:var(--border)] text-accent">
+              <Megaphone size={13} />
+            </span>
+            <div className="min-w-0 flex-1">
+              <div className="text-[12px] font-semibold fg leading-tight">
+                {tb("module.title")}
+              </div>
+              <div className="text-[10.5px] fg-faint leading-snug">
+                {tb("module.tagline")}
+              </div>
+            </div>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={broadcastOn}
+              aria-label={tb("module.toggle")}
+              disabled={bcastBusy}
+              onClick={() => void setBroadcastEnabled(!broadcastOn)}
+              className={`relative h-[18px] w-[32px] shrink-0 rounded-full transition ${
+                broadcastOn ? "bg-[var(--accent-strong)]" : "bg-zinc-300 dark:bg-zinc-700"
+              } disabled:opacity-50`}
+            >
+              <span
+                className={`absolute top-[2px] h-[14px] w-[14px] rounded-full bg-white shadow transition-all ${
+                  broadcastOn ? "left-[16px]" : "left-[2px]"
+                }`}
+              />
+            </button>
+          </div>
+          {broadcastOn && (
+            <div className="mt-2.5 fade-in">
+              {!enabled ? (
+                <p className="text-[10.5px] leading-relaxed text-amber-700 dark:text-amber-400">
+                  {tb("module.needsMembers")}
+                </p>
+              ) : (
+                <button
+                  type="button"
+                  onClick={onShowBroadcast}
+                  className="w-full h-7 rounded-md text-[11px] font-medium fg-muted hover:fg bg-elev ring-1 ring-[color:var(--border)] hover:bg-hover transition"
+                >
+                  {tb("module.enabledHint")}
+                </button>
+              )}
+            </div>
+          )}
+        </div>
 
         {/* Already-built capabilities — one click to their surfaces. */}
         <div className="pt-1">

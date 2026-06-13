@@ -24,6 +24,7 @@ import {
   Inbox,
   Layers,
   ListTree,
+  Megaphone,
   Monitor,
   PanelLeft,
   PanelRight,
@@ -33,10 +34,15 @@ import {
 } from "./icons";
 import type { Section } from "./mock-data";
 import type { BriefFormState } from "@/components/workspace/types";
-import type { MembersSettings, StoredChatTurn } from "@/lib/projects/types";
+import type {
+  BroadcastSettings,
+  MembersSettings,
+  StoredChatTurn,
+} from "@/lib/projects/types";
 import { AiBriefPanel } from "./panels/ai-brief-panel";
 import { AssistantPanel } from "./panels/assistant-panel";
 import { ModulesPanel } from "./panels/modules-panel";
+import { BroadcastPanel } from "./panels/broadcast-panel";
 import { RailBusinessSwitcher } from "./business-switcher";
 import type { BusinessProfile } from "@/lib/business-profiles/types";
 import {
@@ -126,6 +132,7 @@ export type SidebarMode =
   | "pages"
   | "assistant"
   | "members"
+  | "broadcast"
   | "versions";
 
 interface ModeTab {
@@ -141,6 +148,7 @@ const MODE_TABS: ModeTab[] = [
   { id: "library", icon: Layers },
   { id: "assistant", icon: Sparkles },
   { id: "members", icon: Users },
+  { id: "broadcast", icon: Megaphone },
   { id: "versions", icon: HistoryIcon },
 ];
 
@@ -276,6 +284,9 @@ interface LeftSidebarProps {
     patch: MembersSettings,
   ) => Promise<{ ok: boolean; createdPageSlug?: string }>;
   onToggleMembersOnly?: (slug: string, next: boolean) => Promise<boolean>;
+  /** Broadcast module (Módulos tab card enables it; gates the Broadcast tab). */
+  broadcastSettings?: BroadcastSettings;
+  onUpdateBroadcastSettings?: (patch: BroadcastSettings) => Promise<boolean>;
 }
 
 export function LeftSidebar({
@@ -336,6 +347,8 @@ export function LeftSidebar({
   membersSettings,
   onUpdateMembersSettings,
   onToggleMembersOnly,
+  broadcastSettings,
+  onUpdateBroadcastSettings,
 }: LeftSidebarProps) {
   const showBusinessSwitcher = businesses.length > 0 && !!onPickBusiness;
   const t = useTranslations("wsChrome");
@@ -358,9 +371,13 @@ export function LeftSidebar({
         tab.id === "site" ||
         tab.id === "assistant" ||
         tab.id === "members" ||
+        tab.id === "broadcast" ||
         tab.id === "images")
     )
       return false;
+    // Broadcast is opt-in: the tab only appears once the module is enabled
+    // (from the Módulos panel), like a feature you switched on.
+    if (tab.id === "broadcast" && !broadcastSettings?.enabled) return false;
     return true;
   });
   // After a click-to-place pick on mobile the panel overlays the canvas —
@@ -606,11 +623,20 @@ export function LeftSidebar({
               <ModulesPanel
                 currentProjectId={currentProjectId}
                 membersSettings={membersSettings}
+                broadcastSettings={broadcastSettings}
                 gatedCount={sitePages.filter((p) => p.membersOnly).length}
                 onUpdateMembers={onUpdateMembersSettings}
+                onUpdateBroadcast={onUpdateBroadcastSettings}
+                onShowBroadcast={() => setMode("broadcast")}
                 onShowLeads={() => onSelectSection?.("messages")}
                 onShowAnalytics={() => onSelectSection?.("analytics")}
                 onShowAssistant={() => setMode("assistant")}
+              />
+            )}
+            {mode === "broadcast" && (
+              <BroadcastPanel
+                currentProjectId={currentProjectId}
+                membersEnabled={membersSettings?.enabled === true}
               />
             )}
             {mode === "versions" && (

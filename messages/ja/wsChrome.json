@@ -48,6 +48,10 @@
       "members": {
         "label": "モジュール",
         "title": "バックエンドモジュール — メンバーなど"
+      },
+      "broadcast": {
+        "label": "Broadcast",
+        "title": "メンバーにメールを送る"
       }
     },
     "tabLocked": "{label} — ロック中",

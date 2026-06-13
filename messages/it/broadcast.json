@@ -1,0 +1,43 @@
+{
+  "title": "Broadcast",
+  "subtitle": "Scrivi ai tuoi membri.",
+  "perProject": "Apri un progetto per scrivere una campagna.",
+  "module": {
+    "title": "Broadcast",
+    "tagline": "Scrivi ai tuoi membri",
+    "toggle": "Attiva broadcast",
+    "enabledHint": "Apri la scheda Broadcast per scrivere la tua prima campagna.",
+    "needsMembers": "Attiva prima Membri — è a loro che arrivano le campagne."
+  },
+  "compose": {
+    "subjectLabel": "Oggetto",
+    "subjectPlaceholder": "Novità",
+    "bodyLabel": "Messaggio",
+    "bodyPlaceholder": "Scrivi ai tuoi membri… funzionano **grassetto**, *corsivo* e [link](https://…).",
+    "save": "Salva bozza",
+    "saved": "Salvato",
+    "sendTo": "Invia a {count} membri",
+    "sendToNone": "Ancora nessun membro",
+    "send": "Invia ora",
+    "sending": "Invio…",
+    "confirm": "Inviare a {count} membri ora? Non si può annullare.",
+    "remaining": "Ti restano {count} email questo mese"
+  },
+  "send": {
+    "sent": "Inviato a {count}.",
+    "capBlocked": "Questa campagna richiede {needed} email; te ne restano {remaining} questo mese.",
+    "inProgress": "C'è già un invio in corso.",
+    "notPublished": "Pubblica prima il tuo sito.",
+    "error": "Invio non riuscito. Riprova."
+  },
+  "history": {
+    "title": "Campagne",
+    "empty": "Ancora nessuna campagna.",
+    "draft": "Bozza",
+    "statusSending": "Invio",
+    "sent": "Inviata",
+    "failed": "Fallita",
+    "delivered": "{count} consegnate",
+    "delete": "Elimina"
+  }
+}

@@ -48,6 +48,10 @@
       "members": {
         "label": "Moduli",
         "title": "Moduli backend — membri e altro"
+      },
+      "broadcast": {
+        "label": "Broadcast",
+        "title": "Scrivi ai tuoi membri"
       }
     },
     "tabLocked": "{label} — bloccato",
