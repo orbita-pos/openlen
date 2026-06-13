@@ -52,6 +52,14 @@ export interface MembersSettings {
   mode?: "open" | "invite";
 }
 
+/** Broadcast module — email your members. Rows live in the broadcasts table;
+ *  this only holds the per-site master switch (gates the workspace tab). */
+export interface BroadcastSettings {
+  /** Master switch. Absent/false → the Broadcast tab stays hidden and the
+   *  send route refuses. Enabled from a card in the Módulos panel. */
+  enabled?: boolean;
+}
+
 /** Project-level settings that aren't part of the HTML document. */
 export interface ProjectSettings {
   /** Per-form config, keyed by the form's index — its position among all
@@ -77,6 +85,8 @@ export interface ProjectSettings {
   assistant?: AssistantSettings;
   /** Members module: visitor login + members-only pages. Absent = off. */
   members?: MembersSettings;
+  /** Broadcast module: email your members. Absent = off. */
+  broadcast?: BroadcastSettings;
 }
 
 /** One additional page of a multi-page site. The home page stays at

@@ -738,6 +738,93 @@ export const memberAuthEvents = pgTable(
   ],
 );
 
+// ─── Broadcast module — email your audience (members-only, v1) ──────────────
+// Applied in prod via `npm run broadcast:migrate`. Shares the members monthly
+// email budget (lib/broadcast/limits.ts). The recipient snapshot is taken at
+// SEND time so deleting a member later never erases who actually received a
+// past send (GDPR data-subject + audit). Unsubscribe needs NO token table —
+// it's a stateless HMAC of (projectId, memberId), durable + derivable (the
+// opposite of the single-use random login tokens).
+
+export const broadcasts = pgTable(
+  "broadcasts",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    projectId: text("projectId")
+      .notNull()
+      .references(() => projects.id, { onDelete: "cascade" }),
+    subject: text("subject").notNull(),
+    body: text("body").notNull(), // markdown source
+    status: text("status")
+      .$type<"draft" | "sending" | "sent" | "failed">()
+      .notNull()
+      .default("draft"),
+    audienceCount: integer("audienceCount"), // resolved at send start
+    sentCount: integer("sentCount"), // accepted by Resend
+    failedCount: integer("failedCount"),
+    failureReason: text("failureReason"),
+    sentAt: timestamp("sentAt", { mode: "date" }),
+    createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
+    updatedAt: timestamp("updatedAt", { mode: "date" }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("broadcasts_projectId_createdAt_idx").on(
+      table.projectId,
+      table.createdAt,
+    ),
+  ],
+);
+
+// Snapshot of who a sent broadcast targeted. memberId carries NO FK on
+// purpose (must survive member deletion, like memberAuthEvents.memberId).
+export const broadcastRecipients = pgTable(
+  "broadcastRecipients",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    broadcastId: text("broadcastId")
+      .notNull()
+      .references(() => broadcasts.id, { onDelete: "cascade" }),
+    memberId: text("memberId"), // snapshot, no FK
+    email: text("email").notNull(), // normalized lowercase
+    status: text("status").$type<"accepted" | "failed">().notNull(),
+    createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("broadcastRecipients_broadcastId_idx").on(table.broadcastId),
+  ],
+);
+
+// Per-project suppression list. v1: reason 'unsubscribed' only; phase 2 adds
+// 'bounced'/'complained' from a Resend webhook (the enum already fits, so no
+// later migration). Enforced at audience-resolution time.
+export const emailSuppressions = pgTable(
+  "emailSuppressions",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    projectId: text("projectId")
+      .notNull()
+      .references(() => projects.id, { onDelete: "cascade" }),
+    email: text("email").notNull(), // normalized lowercase
+    reason: text("reason")
+      .$type<"unsubscribed" | "bounced" | "complained">()
+      .notNull()
+      .default("unsubscribed"),
+    createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("emailSuppressions_projectId_email_uq").on(
+      table.projectId,
+      table.email,
+    ),
+  ],
+);
+
 // External-deploy OAuth connections — one row per (user, provider). The token
 // is an ACCOUNT-level credential (connect once, deploy any project), so it
 // lives at user grain, not per-project. Powers the Deploy-dropdown "Deploy to
