@@ -2248,18 +2248,25 @@ function NewV2Inner() {
     [loadedProject?.id, loadedProject?.settings?.music],
   );
   // Members module — settings switches (Módulos tab). Awaited (not optimistic)
-  // so the panel's toggle reflects the server truth; resolves false → no-op UI.
+  // so the panel's toggle reflects the server truth. First enable may also
+  // auto-create the members page server-side (home shell + lock); the
+  // response carries it so the Site tab updates without a refetch.
   const updateMembersSettings = useCallback(
-    async (patch: MembersSettings): Promise<boolean> => {
+    async (
+      patch: MembersSettings,
+    ): Promise<{ ok: boolean; createdPageSlug?: string }> => {
       const projectId = loadedProject?.id;
-      if (!projectId) return false;
+      if (!projectId) return { ok: false };
       try {
         const r = await fetch(`/api/projects/${projectId}/settings`, {
           method: "PATCH",
           headers: { "content-type": "application/json" },
           body: JSON.stringify({ members: patch }),
         });
-        if (!r.ok) return false;
+        if (!r.ok) return { ok: false };
+        const d = (await r.json()) as {
+          createdPage?: { slug: string; title: string; html: string };
+        };
         setLoadedProject((p) =>
           p
             ? {
@@ -2268,12 +2275,24 @@ function NewV2Inner() {
                   ...p.settings,
                   members: { ...p.settings?.members, ...patch },
                 },
+                ...(d.createdPage
+                  ? {
+                      pages: {
+                        ...p.pages,
+                        [d.createdPage.slug]: {
+                          html: d.createdPage.html,
+                          title: d.createdPage.title,
+                          membersOnly: true,
+                        },
+                      },
+                    }
+                  : {}),
               }
             : p,
         );
-        return true;
+        return { ok: true, createdPageSlug: d.createdPage?.slug };
       } catch {
-        return false;
+        return { ok: false };
       }
     },
     [loadedProject?.id],

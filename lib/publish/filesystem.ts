@@ -32,7 +32,8 @@ import { consolidateUnsplashCredits } from "@/lib/publish/credits";
 import { wirePublishedForms } from "@/lib/publish/forms";
 import { injectAnalyticsSnippet } from "@/lib/analytics/snippet";
 import { injectLogoIntoHtml } from "@/lib/branding/inject-logo";
-import { buildGateStub } from "@/lib/members/gate-stub";
+import { buildGateStub, wireMemberLogout } from "@/lib/members/gate-stub";
+import { detectSiteAccent } from "@/lib/members/site-accent";
 import { validatePageSlug } from "@/lib/projects/site-pages";
 import type { FormConfig, MusicSettings } from "@/lib/projects/types";
 
@@ -771,6 +772,17 @@ export async function publishToDir(
   // (same posture as the branded 404 page).
   const protectedDocs: Array<{ slug: string; html: string }> = [];
   const stubFiles: Array<{ path: string; content: string }> = [];
+  // The stub wears the site's accent — extracted deterministically from the
+  // baked home document (the brand source), computed once per publish.
+  // Null degrades to the neutral card.
+  let memberAccent: string | null = null;
+  if ((params.gatedPages ?? []).length > 0) {
+    try {
+      memberAccent = detectSiteAccent(migratedHtml);
+    } catch {
+      memberAccent = null;
+    }
+  }
   for (const page of params.gatedPages ?? []) {
     const pageSanitized = sanitizeForPublish(page.html);
     if (pageSanitized.html === null) {
@@ -779,6 +791,9 @@ export async function publishToDir(
       );
     }
     let doc = await bakeDocument(pageSanitized.html, bakeCtx, page.slug);
+    // Logout wiring (data-ol-logout elements) — BEFORE the seal so the
+    // inline script's hash enters the page's CSP.
+    doc = wireMemberLogout(doc, sub);
     doc = annotateLanguageCluster(doc, {
       baseUrl,
       selfPath: `/${page.slug}/`,
@@ -801,6 +816,7 @@ export async function publishToDir(
         projectTitle: params.memberGate?.projectTitle ?? sub,
         locale: sourceLang,
         logoUrl: params.memberGate?.logoUrl,
+        accent: memberAccent,
       }),
     });
   }

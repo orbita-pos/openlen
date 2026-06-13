@@ -13,7 +13,8 @@
       "inviteHint": "Possono accedere solo le email che aggiungi sotto."
     },
     "gatedCount": "{count, plural, one {# pagina è solo per membri. Gestiscila nella scheda Site.} other {# pagine sono solo per membri. Gestiscile nella scheda Site.}}",
-    "gatedNone": "Ancora nessuna pagina riservata — segnane una col lucchetto nella scheda Site."
+    "gatedNone": "Ancora nessuna pagina riservata — segnane una col lucchetto nella scheda Site.",
+    "autoPage": "Abbiamo creato /{slug} per te — già solo per membri, nata con lo stile del tuo sito. Modificala come qualsiasi altra pagina."
   },
   "included": {
     "title": "Incluso nel tuo sito",

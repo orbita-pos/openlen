@@ -32,8 +32,12 @@ interface ModulesPanelProps {
   membersSettings?: MembersSettings;
   /** How many pages currently carry the members-only flag. */
   gatedCount: number;
-  /** PATCH settings.members; resolves false on failure (panel reverts). */
-  onUpdateMembers?: (patch: MembersSettings) => Promise<boolean>;
+  /** PATCH settings.members. First enable may auto-create the members page
+   *  (born from the home shell, already locked) — createdPageSlug drives
+   *  the one-time hint under the toggle. */
+  onUpdateMembers?: (
+    patch: MembersSettings,
+  ) => Promise<{ ok: boolean; createdPageSlug?: string }>;
   onShowLeads?: () => void;
   onShowAnalytics?: () => void;
   onShowAssistant?: () => void;
@@ -52,6 +56,7 @@ export function ModulesPanel({
   const enabled = membersSettings?.enabled === true;
   const mode = membersSettings?.mode === "invite" ? "invite" : "open";
   const [busy, setBusy] = useState(false);
+  const [autoPageSlug, setAutoPageSlug] = useState<string | null>(null);
 
   if (!currentProjectId) {
     return (
@@ -69,7 +74,11 @@ export function ModulesPanel({
   const setEnabled = async (next: boolean) => {
     if (busy || !onUpdateMembers) return;
     setBusy(true);
-    await onUpdateMembers({ enabled: next });
+    const result = await onUpdateMembers({ enabled: next });
+    if (next && result.ok && result.createdPageSlug) {
+      setAutoPageSlug(result.createdPageSlug);
+    }
+    if (!next) setAutoPageSlug(null);
     setBusy(false);
   };
   const setMode = async (next: "open" | "invite") => {
@@ -124,6 +133,11 @@ export function ModulesPanel({
 
           {enabled && (
             <div className="mt-2.5 space-y-2 fade-in">
+              {autoPageSlug && (
+                <p className="rounded-md bg-emerald-500/10 ring-1 ring-emerald-500/30 px-2 py-1.5 text-[10.5px] leading-relaxed text-emerald-700 dark:text-emerald-400">
+                  {t("module.autoPage", { slug: autoPageSlug })}
+                </p>
+              )}
               <div className="flex rounded-md bg-elev ring-1 ring-[color:var(--border)] p-0.5">
                 {(["open", "invite"] as const).map((m) => (
                   <button

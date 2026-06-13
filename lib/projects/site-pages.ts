@@ -148,6 +148,40 @@ function escapeHtml(s: string): string {
     .replace(/"/g, "&quot;");
 }
 
+/** The members module's one-click page: when the module turns on and the
+ *  project has NO gated page yet, this builds a "/miembros" (es) or
+ *  "/members" (en) page from the home shell — the site's own look — with a
+ *  data-ol-logout link the publish-time wiring turns into a working logout
+ *  button. Null = nothing to create (a gated page exists, both slugs taken,
+ *  or the home document doesn't parse); enabling the module never fails on
+ *  this. The caller stores it with membersOnly: true. */
+export function buildAutoMembersPage(
+  data: ProjectData | null | undefined,
+): { slug: string; title: string; html: string } | null {
+  const pages = data?.pages ?? {};
+  if (Object.values(pages).some((p) => p?.membersOnly === true)) return null;
+  const homeHtml = data?.html ?? "";
+  const isSpanish = /<html[^>]*\blang=["']?es/i.test(homeHtml);
+  const slug = (isSpanish ? ["miembros", "members"] : ["members", "miembros"]).find(
+    (s) => !pages[s],
+  );
+  if (!slug) return null;
+  const title = isSpanish ? "Zona de miembros" : "Members area";
+  const shell = buildPageShell(homeHtml, title);
+  if (!shell) return null;
+
+  // Drop the logout link inside the hero (anchored on its signature style so
+  // a future shell redesign degrades to "no link", never a broken page).
+  const logoutLabel = isSpanish ? "Cerrar sesión" : "Log out";
+  const heroIdx = shell.indexOf("min-height:55vh");
+  if (heroIdx === -1) return { slug, title, html: shell };
+  const closeIdx = shell.indexOf("</section>", heroIdx);
+  if (closeIdx === -1) return { slug, title, html: shell };
+  const chip = `  <p style="margin:18px 0 0;"><a href="#" data-ol-logout style="font-size:13px;opacity:0.55;text-decoration:underline;cursor:pointer;color:inherit;">${logoutLabel}</a></p>\n`;
+  const html = shell.slice(0, closeIdx) + chip + shell.slice(closeIdx);
+  return { slug, title, html };
+}
+
 /** A new page's starting document: the home page's SHELL — the full <head>
  *  (styles, tokens, fonts, temática attrs on <html>) plus its nav/header and
  *  footer — with the body content replaced by a titled empty hero. Born

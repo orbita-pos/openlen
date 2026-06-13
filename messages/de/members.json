@@ -13,7 +13,8 @@
       "inviteHint": "Nur unten hinzugefügte E-Mails können sich anmelden."
     },
     "gatedCount": "{count, plural, one {# Seite ist nur für Mitglieder. Verwalte das im Site-Tab.} other {# Seiten sind nur für Mitglieder. Verwalte das im Site-Tab.}}",
-    "gatedNone": "Noch keine Mitglieder-Seiten — markiere eine mit dem Schloss im Site-Tab."
+    "gatedNone": "Noch keine Mitglieder-Seiten — markiere eine mit dem Schloss im Site-Tab.",
+    "autoPage": "Wir haben /{slug} für dich erstellt — bereits nur für Mitglieder, im Look deiner Seite. Bearbeite sie wie jede andere Seite."
   },
   "included": {
     "title": "In deiner Seite enthalten",

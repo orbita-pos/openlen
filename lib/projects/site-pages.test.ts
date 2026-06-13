@@ -2,6 +2,7 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import {
+  buildAutoMembersPage,
   buildPageShell,
   listSitePages,
   MAX_SITE_PAGES,
@@ -169,6 +170,64 @@ describe("members gating", () => {
       settings: { members: { enabled: false } },
     });
     assert.notDeepEqual(parts, ungated);
+  });
+});
+
+describe("buildAutoMembersPage", () => {
+  const HOME_ES = `<!doctype html><html lang="es"><head><title>Mi Negocio</title></head>
+<body><header><nav>menu</nav></header><section>contenido</section><footer>pie</footer></body></html>`;
+  const HOME_EN = HOME_ES.replace('lang="es"', 'lang="en"');
+
+  it("births /miembros for Spanish sites, wearing the shell + logout link", () => {
+    const created = buildAutoMembersPage({ html: HOME_ES });
+    assert.ok(created);
+    assert.equal(created.slug, "miembros");
+    assert.equal(created.title, "Zona de miembros");
+    assert.ok(created.html.includes("<nav>menu</nav>")); // site chrome kept
+    assert.ok(created.html.includes("pie"));
+    assert.ok(created.html.includes("Zona de miembros"));
+    assert.ok(created.html.includes("data-ol-logout"));
+    assert.ok(created.html.includes("Cerrar sesión"));
+  });
+
+  it("births /members for non-Spanish sites", () => {
+    const created = buildAutoMembersPage({ html: HOME_EN });
+    assert.ok(created);
+    assert.equal(created.slug, "members");
+    assert.ok(created.html.includes("Log out"));
+  });
+
+  it("skips when a gated page already exists", () => {
+    assert.equal(
+      buildAutoMembersPage({
+        html: HOME_ES,
+        pages: { privada: { html: "<html>x</html>", membersOnly: true } },
+      }),
+      null,
+    );
+  });
+
+  it("falls to the alternate slug when the first is taken; null when both are", () => {
+    const oneTaken = buildAutoMembersPage({
+      html: HOME_ES,
+      pages: { miembros: { html: "<html>x</html>" } },
+    });
+    assert.equal(oneTaken?.slug, "members");
+    assert.equal(
+      buildAutoMembersPage({
+        html: HOME_ES,
+        pages: {
+          miembros: { html: "<html>x</html>" },
+          members: { html: "<html>y</html>" },
+        },
+      }),
+      null,
+    );
+  });
+
+  it("never throws on an unparseable home — just declines", () => {
+    assert.equal(buildAutoMembersPage({ html: "sin body" }), null);
+    assert.equal(buildAutoMembersPage(null), null);
   });
 });
 
