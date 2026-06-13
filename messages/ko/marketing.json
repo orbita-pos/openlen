@@ -230,7 +230,8 @@
       "acceptableUse": "이용 정책",
       "refunds": "환불 및 취소",
       "subprocessors": "수탁 처리자",
-      "docs": "문서"
+      "docs": "문서",
+      "report": "악용 신고"
     }
   },
   "gallery": {

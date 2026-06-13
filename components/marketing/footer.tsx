@@ -47,6 +47,7 @@ export function Footer() {
       links: [
         { label: t("footer.legal.cookies"), href: "/cookie-policy" },
         { label: t("footer.legal.acceptableUse"), href: "/acceptable-use" },
+        { label: t("footer.legal.report"), href: "/report-abuse" },
         { label: t("footer.legal.refunds"), href: "/refund" },
         { label: t("footer.legal.subprocessors"), href: "/subprocessors" },
         { label: t("footer.legal.docs"), href: "/docs" },

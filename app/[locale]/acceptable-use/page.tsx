@@ -184,7 +184,9 @@ export default async function AcceptableUsePage({
 
           <h2>Denuncias de abuso y propiedad intelectual</h2>
           <p>
-            Para denunciar abusos, escríbenos a{" "}
+            Para denunciar abusos, usa nuestro{" "}
+            <Link href="/report-abuse">formulario de reporte</Link> o
+            escríbenos a{" "}
             <a href="mailto:info@jesusbr.com">info@jesusbr.com</a> e incluye la
             URL afectada y una descripción del problema. Para solicitar la
             retirada de contenido por infracción de propiedad intelectual (estilo
@@ -341,7 +343,8 @@ export default async function AcceptableUsePage({
 
           <h2>Reporting abuse and IP takedowns</h2>
           <p>
-            To report abuse, email us at{" "}
+            To report abuse, use our{" "}
+            <Link href="/report-abuse">report form</Link> or email us at{" "}
             <a href="mailto:info@jesusbr.com">info@jesusbr.com</a> with the
             affected URL and a description of the issue. To request the removal of
             content for intellectual-property infringement (DMCA-style), see the
