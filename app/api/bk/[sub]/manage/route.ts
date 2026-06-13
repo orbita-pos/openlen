@@ -1,7 +1,8 @@
 import { z } from "zod";
 import { getBooking, getService, cancelBooking, recordBookingEvent } from "@/lib/bookings/store";
 import { verifyManageToken } from "@/lib/bookings/manage-token";
-import { html, json, loadBookingsSite } from "../_shared";
+import { notifyBooking } from "@/lib/bookings/notify";
+import { html, json, loadBookingsSite, siteBaseUrl } from "../_shared";
 
 // /api/bk/[sub]/manage?b=<bookingId>&t=<token> — the link in a booking email.
 //
@@ -93,7 +94,7 @@ export async function GET(
   const url = new URL(req.url);
   const b = url.searchParams.get("b") || "";
   const t = url.searchParams.get("t") || "";
-  return render(sub, b, t, false);
+  return render(sub, b, t, false, siteBaseUrl(req));
 }
 
 export async function POST(
@@ -119,7 +120,7 @@ export async function POST(
     action = String(form?.get("action") ?? "");
   }
   if (action !== "cancel") return json({ error: "bad_action" }, 400);
-  return render(sub, b, t, true);
+  return render(sub, b, t, true, siteBaseUrl(req));
 }
 
 async function render(
@@ -127,6 +128,7 @@ async function render(
   bookingId: string,
   token: string,
   doCancel: boolean,
+  baseUrl: string,
 ): Promise<Response> {
   const site = await loadBookingsSite(sub);
   if (!site || !bookingId || !verifyManageToken(site.projectId, bookingId, token)) {
@@ -154,7 +156,20 @@ async function render(
     if (cancelled) {
       booking = cancelled;
       await recordBookingEvent(site.projectId, bookingId, "cancelled", "visitor");
-      // R5 wires the cancellation email + CANCEL .ics here.
+      const svc = await getService(site.projectId, booking.serviceId);
+      await notifyBooking({
+        kind: "cancelled",
+        booking,
+        serviceName: svc?.name ?? "Booking",
+        serviceDescription: svc?.description,
+        locationText: svc?.locationText,
+        sub: site.subdomain,
+        baseUrl,
+        locale: site.locale,
+        ownerEmail: site.ownerEmail,
+        ownerName: site.ownerName,
+        notifyCreator: true,
+      });
     } else {
       booking = (await getBooking(site.projectId, bookingId)) ?? booking;
     }

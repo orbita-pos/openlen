@@ -530,3 +530,49 @@ function escape(s: string): string {
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;");
 }
+
+// ─── Bookings — confirmation / reminder / cancellation, optional .ics ────────
+
+export interface BookingEmail {
+  to: string;
+  subject: string;
+  html: string;
+  text: string;
+  /** Hand-rolled VCALENDAR (lib/bookings/ics.ts) — attached as text/calendar. */
+  ics?: string | null;
+  icsFilename?: string;
+}
+
+/** Low-level booking send. Same dev-fallback posture as the other senders:
+ *  no RESEND_API_KEY → console-log (dev) / scream (prod), never throw. The .ics
+ *  rides as a base64 attachment so the recipient's client offers add-to-calendar. */
+export async function sendBookingEmail(input: BookingEmail): Promise<void> {
+  const live = liveClientOrWarn("booking email");
+  if (!live) {
+    if (process.env.NODE_ENV !== "production") {
+      // eslint-disable-next-line no-console
+      console.log(
+        `\n  📧 [DEV] Booking email to ${input.to}\n     ${input.subject}\n     ${input.ics ? "(+ .ics attached)" : ""}\n`,
+      );
+    }
+    return;
+  }
+  await live.emails.send({
+    from,
+    to: input.to,
+    subject: input.subject,
+    html: input.html,
+    text: input.text,
+    ...(input.ics
+      ? {
+          attachments: [
+            {
+              filename: input.icsFilename ?? "invite.ics",
+              content: Buffer.from(input.ics, "utf8").toString("base64"),
+              contentType: "text/calendar; method=REQUEST; charset=utf-8",
+            },
+          ],
+        }
+      : {}),
+  });
+}

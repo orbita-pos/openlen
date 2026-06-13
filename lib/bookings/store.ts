@@ -463,6 +463,56 @@ export async function countBookingsSince(
   return rows[0]?.n ?? 0;
 }
 
+// ─── Reminder sweep (systemd timer) ──────────────────────────────────────────
+
+/** Confirmed bookings starting in (now, withinUtc] that haven't been reminded
+ *  yet (reminderStage 0). Global across projects — the timer filters by each
+ *  site's sendReminders flag. */
+export async function listDueReminders(
+  nowUtc: Date,
+  withinUtc: Date,
+  limit = 500,
+): Promise<BookingRow[]> {
+  const rows = await db
+    .select()
+    .from(schema.bookings)
+    .where(
+      and(
+        eq(schema.bookings.status, "confirmed"),
+        eq(schema.bookings.reminderStage, 0),
+        gt(schema.bookings.startUtc, nowUtc),
+        lt(schema.bookings.startUtc, withinUtc),
+      ),
+    )
+    .orderBy(asc(schema.bookings.startUtc))
+    .limit(limit);
+  return rows as BookingRow[];
+}
+
+/** Atomically claim a reminder stage (0→1). Only the run that flips it returns
+ *  true → exactly-once send even if two timer fires overlap. */
+export async function claimReminder(bookingId: string, toStage = 1): Promise<boolean> {
+  const rows = await db
+    .update(schema.bookings)
+    .set({ reminderStage: toStage })
+    .where(
+      and(
+        eq(schema.bookings.id, bookingId),
+        eq(schema.bookings.reminderStage, toStage - 1),
+      ),
+    )
+    .returning({ id: schema.bookings.id });
+  return rows.length > 0;
+}
+
+/** Distinct project ids that have any booking row — drives the retention sweep. */
+export async function listProjectIdsWithBookings(): Promise<string[]> {
+  const rows = await db
+    .selectDistinct({ projectId: schema.bookings.projectId })
+    .from(schema.bookings);
+  return rows.map((r) => r.projectId);
+}
+
 // ─── Audit + housekeeping ────────────────────────────────────────────────────
 
 /** Append-only audit. Best-effort — never fail the action it describes. */

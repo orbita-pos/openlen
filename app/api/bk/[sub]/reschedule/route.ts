@@ -10,7 +10,8 @@ import {
 import { isSlotBookable } from "@/lib/bookings/rules";
 import { isKnownTimeZone } from "@/lib/bookings/tz";
 import { verifyManageToken } from "@/lib/bookings/manage-token";
-import { json, loadBookingsSite } from "../_shared";
+import { notifyBooking } from "@/lib/bookings/notify";
+import { json, loadBookingsSite, siteBaseUrl } from "../_shared";
 
 // POST /api/bk/[sub]/reschedule { b, t, newStartUtcMs, visitorTz? }
 // Token-authenticated (the manage link). Re-validates the NEW instant against
@@ -71,7 +72,19 @@ export async function POST(
     fromStart: result.old.startUtc.getTime(),
     toStart: result.booking.startUtc.getTime(),
   });
-  // R5 wires the reschedule email + sequence-bumped .ics here.
+  await notifyBooking({
+    kind: "rescheduled",
+    booking: result.booking,
+    serviceName: service.name,
+    serviceDescription: service.description,
+    locationText: service.locationText,
+    sub: site.subdomain,
+    baseUrl: siteBaseUrl(req),
+    locale: site.locale,
+    ownerEmail: site.ownerEmail,
+    ownerName: site.ownerName,
+    notifyCreator: true,
+  });
 
   return json(
     {

@@ -28,15 +28,25 @@ export function html(body: string, status: number): Response {
 export interface BookingsSite {
   projectId: string;
   ownerUserId: string;
+  ownerEmail: string | null;
+  ownerName: string | null;
   bookingsEnabled: boolean;
   requireLogin: boolean;
   autoConfirm: boolean;
   sendReminders: boolean;
+  /** The site's primary language (from <html lang>), for transactional email. */
+  locale: string;
   subdomain: string;
 }
 
-/** Resolve a published sub → its project + the bookings switches in one query.
- *  Null = unknown subdomain. */
+/** Two-letter site language from the home document's <html lang>, default en. */
+export function localeFromHtml(html: string | undefined | null): string {
+  const m = html ? /<html[^>]*\blang=["']?([a-zA-Z]{2})/i.exec(html) : null;
+  return m ? m[1].toLowerCase() : "en";
+}
+
+/** Resolve a published sub → its project + the bookings switches + the owner's
+ *  contact (for creator emails) in one query. Null = unknown subdomain. */
 export async function loadBookingsSite(sub: string): Promise<BookingsSite | null> {
   if (!/^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/.test(sub)) return null;
   const rows = await db
@@ -44,8 +54,11 @@ export async function loadBookingsSite(sub: string): Promise<BookingsSite | null
       projectId: schema.projects.id,
       ownerUserId: schema.projects.userId,
       data: schema.projects.data,
+      ownerEmail: schema.users.email,
+      ownerName: schema.users.name,
     })
     .from(schema.projects)
+    .leftJoin(schema.users, eq(schema.users.id, schema.projects.userId))
     .where(eq(schema.projects.subdomain, sub))
     .limit(1);
   const row = rows[0];
@@ -54,10 +67,13 @@ export async function loadBookingsSite(sub: string): Promise<BookingsSite | null
   return {
     projectId: row.projectId,
     ownerUserId: row.ownerUserId,
+    ownerEmail: row.ownerEmail ?? null,
+    ownerName: row.ownerName ?? null,
     bookingsEnabled: b?.enabled === true,
     requireLogin: b?.requireLogin === true,
     autoConfirm: b?.autoConfirm !== false, // default ON
     sendReminders: b?.sendReminders !== false, // default ON
+    locale: localeFromHtml(row.data?.html),
     subdomain: sub,
   };
 }
