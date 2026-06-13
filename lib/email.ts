@@ -141,6 +141,69 @@ function buildMemberLoginHtml(
 </html>`;
 }
 
+export interface AbuseReportEmail {
+  siteUrl: string;
+  category: string;
+  details: string;
+  reporterEmail?: string | null;
+  ip?: string | null;
+}
+
+/** Abuse report → the operator's inbox. The destination is deliberately the
+ *  address already published in the Acceptable Use Policy; override via
+ *  ABUSE_REPORT_EMAIL for self-hosters. CSAM / non-consensual categories get
+ *  an URGENT subject so they sort to the top. */
+export async function sendAbuseReportEmail(
+  input: AbuseReportEmail,
+): Promise<void> {
+  const to =
+    process.env.ABUSE_REPORT_EMAIL?.trim() || "info@jesusbr.com";
+  const urgent = input.category === "csam" || input.category === "intimate";
+  const subject = `${urgent ? "[URGENTE] " : ""}Reporte de abuso: ${input.category} — ${input.siteUrl.slice(0, 80)}`;
+
+  const live = liveClientOrWarn("abuse report email");
+  if (!live) {
+    if (process.env.NODE_ENV !== "production") {
+      // eslint-disable-next-line no-console
+      console.log(
+        `\n  📧 [DEV] Abuse report to ${to}\n     ${subject}\n     ${input.details.slice(0, 200)}\n`,
+      );
+    }
+    // Dev fallback counts as delivered; prod misconfig already screamed.
+    return;
+  }
+
+  const lines = [
+    `URL reportada: ${input.siteUrl}`,
+    `Categoría: ${input.category}`,
+    `Reportante: ${input.reporterEmail || "(anónimo)"}`,
+    `IP: ${input.ip || "—"}`,
+    "",
+    input.details,
+  ];
+  await live.emails.send({
+    from,
+    to,
+    subject,
+    ...(input.reporterEmail ? { replyTo: input.reporterEmail } : {}),
+    text: lines.join("\n"),
+    html: `<!doctype html><html><body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Inter,sans-serif;background:#fafafa;margin:0;padding:32px;color:#0a0a0a;">
+  <table align="center" style="max-width:520px;width:100%;background:#fff;border-radius:16px;padding:32px;border:1px solid ${urgent ? "#fca5a5" : "#e5e5e5"};">
+    <tr><td>
+      <h1 style="font-size:18px;margin:0 0 16px;letter-spacing:-0.02em;">${urgent ? "🚨 " : ""}Reporte de abuso</h1>
+      <table style="width:100%;border-collapse:collapse;margin:0 0 20px;">
+        <tr><td style="padding:5px 12px 5px 0;font-size:12px;color:#737373;white-space:nowrap;vertical-align:top;">URL</td><td style="padding:5px 0;font-size:13px;word-break:break-all;">${escape(input.siteUrl)}</td></tr>
+        <tr><td style="padding:5px 12px 5px 0;font-size:12px;color:#737373;">Categoría</td><td style="padding:5px 0;font-size:13px;font-weight:600;">${escape(input.category)}</td></tr>
+        <tr><td style="padding:5px 12px 5px 0;font-size:12px;color:#737373;">Reportante</td><td style="padding:5px 0;font-size:13px;">${escape(input.reporterEmail || "(anónimo)")}</td></tr>
+        <tr><td style="padding:5px 12px 5px 0;font-size:12px;color:#737373;">IP</td><td style="padding:5px 0;font-size:13px;">${escape(input.ip || "—")}</td></tr>
+      </table>
+      <p style="font-size:13.5px;line-height:1.6;color:#374151;white-space:pre-wrap;margin:0;">${escape(input.details)}</p>
+    </td></tr>
+  </table>
+</body></html>`,
+  });
+}
+
 export interface LeadNotificationMeta {
   /** When the submission was recorded server-side. Used to render
    *  "Submitted 14 min ago" in the email. */
