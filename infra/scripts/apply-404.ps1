@@ -16,20 +16,31 @@ $ErrorActionPreference = "Stop"
 $host_ = if ($env:OPENLEN_HOST) { $env:OPENLEN_HOST } else { "openlen" }
 $tmp = Join-Path ([IO.Path]::GetTempPath()) "openlen-404.html"
 
+# Never hang silently: connect within 15s, detect a dead/stalled connection
+# within ~30s, and refuse interactive prompts (BatchMode) — a missing host
+# key or passphrase becomes a visible error instead of an eternal wait.
+# (A run once sat for hours on Windows OpenSSH waiting on exactly that.)
+$sshOpts = @(
+  "-o", "BatchMode=yes",
+  "-o", "ConnectTimeout=15",
+  "-o", "ServerAliveInterval=10",
+  "-o", "ServerAliveCountMax=3"
+)
+
 Write-Host "[1/4] Emitting 404.html from lib/publish/not-found-page.ts" -ForegroundColor Cyan
 $html = npx tsx -e "import('./lib/publish/not-found-page.ts').then(m => process.stdout.write(m.NOT_FOUND_HTML))"
 if (-not $html) { throw "emit produced no output" }
 [IO.File]::WriteAllText($tmp, ($html -join "`n"), [Text.UTF8Encoding]::new($false))
 
 Write-Host "[2/4] Uploading 404.html -> /var/www/openlen/_system/" -ForegroundColor Cyan
-ssh $host_ "mkdir -p /var/www/openlen/_system"
-scp $tmp "${host_}:/var/www/openlen/_system/404.html"
+ssh @sshOpts $host_ "mkdir -p /var/www/openlen/_system"
+scp @sshOpts $tmp "${host_}:/var/www/openlen/_system/404.html"
 
 Write-Host "[3/4] Uploading Caddyfile -> /etc/caddy/Caddyfile" -ForegroundColor Cyan
-scp infra/caddy/Caddyfile "${host_}:/etc/caddy/Caddyfile"
+scp @sshOpts infra/caddy/Caddyfile "${host_}:/etc/caddy/Caddyfile"
 
 Write-Host "[4/4] Validating + reloading Caddy" -ForegroundColor Cyan
-ssh $host_ "caddy validate --config /etc/caddy/Caddyfile && systemctl reload caddy"
+ssh @sshOpts $host_ "caddy validate --config /etc/caddy/Caddyfile && systemctl reload caddy"
 
 Remove-Item $tmp -ErrorAction SilentlyContinue
 Write-Host ""
