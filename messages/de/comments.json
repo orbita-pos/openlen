@@ -1,0 +1,37 @@
+{
+  "title": "Kommentare",
+  "subtitle": "Moderiere die Kommentare deiner Mitglieder.",
+  "perProject": "Öffne ein Projekt, um Kommentare zu moderieren.",
+  "module": {
+    "title": "Kommentare",
+    "tagline": "Kommentare nur für Mitglieder auf deinen Seiten",
+    "toggle": "Kommentare aktivieren",
+    "needsMembers": "Aktiviere zuerst Mitglieder — nur Mitglieder können kommentieren.",
+    "modLabel": "Neue Kommentare",
+    "modModerated": "Erst freigeben",
+    "modAll": "Sofort posten",
+    "modModeratedHint": "Kommentare bleiben verborgen, bis du sie freigibst.",
+    "modAllHint": "Kommentare erscheinen sofort; du verbirgst oder löschst danach.",
+    "insert": "Einen Kommentarbereich zu dieser Seite hinzufügen",
+    "inserted": "Hinzugefügt — zieh ihn an die gewünschte Stelle und veröffentliche.",
+    "placeholderCaption": "Kommentare erscheinen hier beim Veröffentlichen."
+  },
+  "list": {
+    "title": "Kommentare",
+    "empty": "Noch keine Kommentare.",
+    "loadError": "Kommentare konnten nicht geladen werden",
+    "deletedMember": "Gelöschtes Mitglied",
+    "pending": "Ausstehend",
+    "visible": "Sichtbar",
+    "approve": "Freigeben",
+    "hide": "Verbergen",
+    "delete": "Löschen",
+    "ban": "Mitglied sperren",
+    "banConfirm": "Dieses Mitglied sperren? Es kann nicht mehr kommentieren."
+  },
+  "filter": {
+    "all": "Alle",
+    "pending": "Ausstehend",
+    "visible": "Sichtbar"
+  }
+}

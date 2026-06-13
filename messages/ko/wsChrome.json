@@ -52,6 +52,10 @@
       "broadcast": {
         "label": "Broadcast",
         "title": "멤버에게 이메일 보내기"
+      },
+      "comments": {
+        "label": "댓글",
+        "title": "댓글 관리"
       }
     },
     "tabLocked": "{label} — 잠김",

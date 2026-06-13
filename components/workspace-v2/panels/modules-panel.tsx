@@ -7,13 +7,18 @@
 
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
-import type { BroadcastSettings, MembersSettings } from "@/lib/projects/types";
+import type {
+  BroadcastSettings,
+  CommentsSettings,
+  MembersSettings,
+} from "@/lib/projects/types";
 import {
   BarChart3,
   Inbox,
   Loader,
   LockIcon,
   Megaphone,
+  MessageSq,
   Sparkles,
   Trash,
   Users,
@@ -43,6 +48,11 @@ interface ModulesPanelProps {
   broadcastSettings?: BroadcastSettings;
   onUpdateBroadcast?: (patch: BroadcastSettings) => Promise<boolean>;
   onShowBroadcast?: () => void;
+  /** Comments module enable card — toggles + moderation + insert section. */
+  commentsSettings?: CommentsSettings;
+  onUpdateComments?: (patch: CommentsSettings) => Promise<boolean>;
+  onInsertCommentsSection?: () => void;
+  onShowComments?: () => void;
   onShowLeads?: () => void;
   onShowAnalytics?: () => void;
   onShowAssistant?: () => void;
@@ -56,17 +66,26 @@ export function ModulesPanel({
   onUpdateMembers,
   onUpdateBroadcast,
   onShowBroadcast,
+  commentsSettings,
+  onUpdateComments,
+  onInsertCommentsSection,
+  onShowComments,
   onShowLeads,
   onShowAnalytics,
   onShowAssistant,
 }: ModulesPanelProps) {
   const t = useTranslations("members");
   const tb = useTranslations("broadcast");
+  const tc = useTranslations("comments");
   const enabled = membersSettings?.enabled === true;
   const mode = membersSettings?.mode === "invite" ? "invite" : "open";
   const broadcastOn = broadcastSettings?.enabled === true;
+  const commentsOn = commentsSettings?.enabled === true;
+  const commentsMod = commentsSettings?.moderation === "all" ? "all" : "moderated";
   const [busy, setBusy] = useState(false);
   const [bcastBusy, setBcastBusy] = useState(false);
+  const [cmtBusy, setCmtBusy] = useState(false);
+  const [inserted, setInserted] = useState(false);
   const [autoPageSlug, setAutoPageSlug] = useState<string | null>(null);
 
   if (!currentProjectId) {
@@ -103,6 +122,18 @@ export function ModulesPanel({
     setBcastBusy(true);
     await onUpdateBroadcast({ enabled: next });
     setBcastBusy(false);
+  };
+  const setCommentsEnabled = async (next: boolean) => {
+    if (cmtBusy || !onUpdateComments) return;
+    setCmtBusy(true);
+    await onUpdateComments({ enabled: next });
+    setCmtBusy(false);
+  };
+  const setCommentsMod = async (next: "all" | "moderated") => {
+    if (cmtBusy || !onUpdateComments || next === commentsMod) return;
+    setCmtBusy(true);
+    await onUpdateComments({ moderation: next });
+    setCmtBusy(false);
   };
 
   return (
@@ -235,6 +266,96 @@ export function ModulesPanel({
                 >
                   {tb("module.enabledHint")}
                 </button>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Comments — members-only comments. Enabling reveals its own tab. */}
+        <div className="rounded-lg ring-1 ring-[color:var(--border)] bg-[color:var(--bg)] p-2.5">
+          <div className="flex items-center gap-2">
+            <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-elev ring-1 ring-[color:var(--border)] text-accent">
+              <MessageSq size={13} />
+            </span>
+            <div className="min-w-0 flex-1">
+              <div className="text-[12px] font-semibold fg leading-tight">
+                {tc("module.title")}
+              </div>
+              <div className="text-[10.5px] fg-faint leading-snug">
+                {tc("module.tagline")}
+              </div>
+            </div>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={commentsOn}
+              aria-label={tc("module.toggle")}
+              disabled={cmtBusy}
+              onClick={() => void setCommentsEnabled(!commentsOn)}
+              className={`relative h-[18px] w-[32px] shrink-0 rounded-full transition ${
+                commentsOn ? "bg-[var(--accent-strong)]" : "bg-zinc-300 dark:bg-zinc-700"
+              } disabled:opacity-50`}
+            >
+              <span
+                className={`absolute top-[2px] h-[14px] w-[14px] rounded-full bg-white shadow transition-all ${
+                  commentsOn ? "left-[16px]" : "left-[2px]"
+                }`}
+              />
+            </button>
+          </div>
+          {commentsOn && (
+            <div className="mt-2.5 space-y-2 fade-in">
+              {!enabled ? (
+                <p className="text-[10.5px] leading-relaxed text-amber-700 dark:text-amber-400">
+                  {tc("module.needsMembers")}
+                </p>
+              ) : (
+                <>
+                  <div className="flex rounded-md bg-elev ring-1 ring-[color:var(--border)] p-0.5">
+                    {(["moderated", "all"] as const).map((m) => (
+                      <button
+                        key={m}
+                        type="button"
+                        disabled={cmtBusy}
+                        onClick={() => void setCommentsMod(m)}
+                        className={`flex-1 h-6 rounded text-[10.5px] font-medium transition ${
+                          commentsMod === m
+                            ? "bg-[color:var(--bg)] fg shadow-card"
+                            : "fg-faint hover:fg"
+                        }`}
+                      >
+                        {tc(m === "moderated" ? "module.modModerated" : "module.modAll")}
+                      </button>
+                    ))}
+                  </div>
+                  <p className="text-[10.5px] fg-faint leading-relaxed">
+                    {tc(commentsMod === "moderated" ? "module.modModeratedHint" : "module.modAllHint")}
+                  </p>
+                  {onInsertCommentsSection && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onInsertCommentsSection();
+                        setInserted(true);
+                      }}
+                      className="w-full h-7 rounded-md text-[11px] font-medium fg-muted hover:fg bg-elev ring-1 ring-[color:var(--border)] hover:bg-hover transition"
+                    >
+                      {tc("module.insert")}
+                    </button>
+                  )}
+                  {inserted && (
+                    <p className="text-[10.5px] leading-relaxed text-emerald-700 dark:text-emerald-400">
+                      {tc("module.inserted")}
+                    </p>
+                  )}
+                  <button
+                    type="button"
+                    onClick={onShowComments}
+                    className="w-full h-7 rounded-md text-[11px] font-medium text-white bg-[var(--accent-strong)] hover:brightness-105 transition"
+                  >
+                    {tc("title")}
+                  </button>
+                </>
               )}
             </div>
           )}

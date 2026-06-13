@@ -52,6 +52,10 @@
       "broadcast": {
         "label": "Broadcast",
         "title": "Mail je leden"
+      },
+      "comments": {
+        "label": "Reacties",
+        "title": "Reacties modereren"
       }
     },
     "tabLocked": "{label} — vergrendeld",

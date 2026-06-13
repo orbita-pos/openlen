@@ -217,6 +217,17 @@ import koBroadcast from "../messages/ko/broadcast.json";
 import zhBroadcast from "../messages/zh/broadcast.json";
 import nlBroadcast from "../messages/nl/broadcast.json";
 
+import enComments from "../messages/en/comments.json";
+import esComments from "../messages/es/comments.json";
+import ptComments from "../messages/pt/comments.json";
+import frComments from "../messages/fr/comments.json";
+import deComments from "../messages/de/comments.json";
+import itComments from "../messages/it/comments.json";
+import jaComments from "../messages/ja/comments.json";
+import koComments from "../messages/ko/comments.json";
+import zhComments from "../messages/zh/comments.json";
+import nlComments from "../messages/nl/comments.json";
+
 const MESSAGES = {
   en: {
     common: enCommon,
@@ -239,6 +250,7 @@ const MESSAGES = {
     miNegocio: enMiNegocio,
     members: enMembers,
     broadcast: enBroadcast,
+    comments: enComments,
   },
   es: {
     common: esCommon,
@@ -261,6 +273,7 @@ const MESSAGES = {
     miNegocio: esMiNegocio,
     members: esMembers,
     broadcast: esBroadcast,
+    comments: esComments,
   },
   pt: {
     common: ptCommon,
@@ -283,6 +296,7 @@ const MESSAGES = {
     miNegocio: ptMiNegocio,
     members: ptMembers,
     broadcast: ptBroadcast,
+    comments: ptComments,
   },
   fr: {
     common: frCommon,
@@ -305,6 +319,7 @@ const MESSAGES = {
     miNegocio: frMiNegocio,
     members: frMembers,
     broadcast: frBroadcast,
+    comments: frComments,
   },
   de: {
     common: deCommon,
@@ -327,6 +342,7 @@ const MESSAGES = {
     miNegocio: deMiNegocio,
     members: deMembers,
     broadcast: deBroadcast,
+    comments: deComments,
   },
   it: {
     common: itCommon,
@@ -349,6 +365,7 @@ const MESSAGES = {
     miNegocio: itMiNegocio,
     members: itMembers,
     broadcast: itBroadcast,
+    comments: itComments,
   },
   ja: {
     common: jaCommon,
@@ -371,6 +388,7 @@ const MESSAGES = {
     miNegocio: jaMiNegocio,
     members: jaMembers,
     broadcast: jaBroadcast,
+    comments: jaComments,
   },
   ko: {
     common: koCommon,
@@ -393,6 +411,7 @@ const MESSAGES = {
     miNegocio: koMiNegocio,
     members: koMembers,
     broadcast: koBroadcast,
+    comments: koComments,
   },
   zh: {
     common: zhCommon,
@@ -415,6 +434,7 @@ const MESSAGES = {
     miNegocio: zhMiNegocio,
     members: zhMembers,
     broadcast: zhBroadcast,
+    comments: zhComments,
   },
   nl: {
     common: nlCommon,
@@ -437,6 +457,7 @@ const MESSAGES = {
     miNegocio: nlMiNegocio,
     members: nlMembers,
     broadcast: nlBroadcast,
+    comments: nlComments,
   },
 } as const;
 

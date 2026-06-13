@@ -52,6 +52,10 @@
       "broadcast": {
         "label": "Broadcast",
         "title": "Scrivi ai tuoi membri"
+      },
+      "comments": {
+        "label": "Commenti",
+        "title": "Modera i commenti"
       }
     },
     "tabLocked": "{label} — bloccato",

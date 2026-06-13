@@ -1,0 +1,37 @@
+{
+  "title": "Reacties",
+  "subtitle": "Modereer de reacties van je leden.",
+  "perProject": "Open een project om reacties te modereren.",
+  "module": {
+    "title": "Reacties",
+    "tagline": "Reacties alleen voor leden op je pagina's",
+    "toggle": "Reacties inschakelen",
+    "needsMembers": "Zet eerst Leden aan — alleen leden kunnen reageren.",
+    "modLabel": "Nieuwe reacties",
+    "modModerated": "Eerst goedkeuren",
+    "modAll": "Direct plaatsen",
+    "modModeratedHint": "Reacties blijven verborgen tot je ze goedkeurt.",
+    "modAllHint": "Reacties verschijnen direct; je verbergt of verwijdert daarna.",
+    "insert": "Een reactiesectie aan deze pagina toevoegen",
+    "inserted": "Toegevoegd — sleep hem waar je wilt en publiceer.",
+    "placeholderCaption": "Reacties verschijnen hier na publiceren."
+  },
+  "list": {
+    "title": "Reacties",
+    "empty": "Nog geen reacties.",
+    "loadError": "Kon reacties niet laden",
+    "deletedMember": "Verwijderd lid",
+    "pending": "In afwachting",
+    "visible": "Zichtbaar",
+    "approve": "Goedkeuren",
+    "hide": "Verbergen",
+    "delete": "Verwijderen",
+    "ban": "Lid verbannen",
+    "banConfirm": "Dit lid verbannen? Het kan niet meer reageren."
+  },
+  "filter": {
+    "all": "Alle",
+    "pending": "In afwachting",
+    "visible": "Zichtbaar"
+  }
+}

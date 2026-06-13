@@ -1,0 +1,37 @@
+{
+  "title": "댓글",
+  "subtitle": "멤버의 댓글을 관리하세요.",
+  "perProject": "프로젝트를 열어 댓글을 관리하세요.",
+  "module": {
+    "title": "댓글",
+    "tagline": "페이지에 멤버 전용 댓글",
+    "toggle": "댓글 켜기",
+    "needsMembers": "먼저 멤버를 켜세요 — 멤버만 댓글을 달 수 있습니다.",
+    "modLabel": "새 댓글",
+    "modModerated": "먼저 승인",
+    "modAll": "즉시 게시",
+    "modModeratedHint": "승인할 때까지 댓글은 숨겨집니다.",
+    "modAllHint": "댓글이 즉시 표시되며, 이후에 숨기거나 삭제합니다.",
+    "insert": "이 페이지에 댓글 섹션 추가",
+    "inserted": "추가됨 — 원하는 곳으로 끌어다 놓고 게시하세요.",
+    "placeholderCaption": "게시하면 여기에 댓글이 표시됩니다."
+  },
+  "list": {
+    "title": "댓글",
+    "empty": "아직 댓글이 없습니다.",
+    "loadError": "댓글을 불러오지 못했습니다",
+    "deletedMember": "삭제된 멤버",
+    "pending": "대기 중",
+    "visible": "표시됨",
+    "approve": "승인",
+    "hide": "숨기기",
+    "delete": "삭제",
+    "ban": "멤버 차단",
+    "banConfirm": "이 멤버를 차단할까요? 다시 댓글을 달 수 없습니다."
+  },
+  "filter": {
+    "all": "전체",
+    "pending": "대기 중",
+    "visible": "표시됨"
+  }
+}
