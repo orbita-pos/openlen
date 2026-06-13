@@ -33,7 +33,7 @@ export default async function PrivacyPage({
   return (
     <LegalPage
       title={es ? "Aviso de privacidad" : "Privacy Policy"}
-      updated={es ? "Última actualización: 30 de mayo de 2026" : "Last updated: May 30, 2026"}
+      updated={es ? "Última actualización: 12 de junio de 2026" : "Last updated: June 12, 2026"}
     >
       {es ? (
         <>
@@ -196,6 +196,23 @@ export default async function PrivacyPage({
             privacidad, y atender los derechos de sus visitantes. Si eres visitante
             y deseas ejercer derechos sobre datos que enviaste en un formulario,
             contacta al dueño de esa página.
+          </p>
+
+          <h2>Membresías y correos a miembros (Broadcast)</h2>
+          <p>
+            Si el dueño de una página activa <strong>Miembros</strong>, los
+            visitantes pueden registrarse con su correo (acceso sin contraseña
+            por enlace mágico). Si además activa <strong>Broadcast</strong>, el
+            dueño puede enviar correos a sus miembros; OpenLen los entrega{" "}
+            <strong>por cuenta del dueño</strong> (encargado) usando nuestra
+            infraestructura de envío, y aparece como remitente del dominio
+            compartido. Cada correo incluye, por ley, la identidad del
+            remitente, una dirección postal y un{" "}
+            <strong>enlace de baja</strong> de un clic; las bajas se respetan de
+            inmediato y no vuelven a recibir campañas. OpenLen{" "}
+            <strong>no</strong> usa los correos de los miembros para sus propios
+            fines de marketing ni los comparte con terceros distintos de
+            nuestro proveedor de envío.
           </p>
 
           <h2>Cookies</h2>
@@ -528,6 +545,23 @@ export default async function PrivacyPage({
             honor their visitors&apos; rights. If you&apos;re a visitor and want to
             exercise rights over data you submitted through a form, contact that
             page&apos;s owner.
+          </p>
+
+          <h2>Memberships and member emails (Broadcast)</h2>
+          <p>
+            If a page owner enables <strong>Members</strong>, visitors can sign
+            up with their email (passwordless magic-link login). If they also
+            enable <strong>Broadcast</strong>, the owner can email their
+            members; OpenLen delivers those emails{" "}
+            <strong>on the owner&apos;s behalf</strong> (as a processor) using
+            our sending infrastructure, appearing as the sender on the shared
+            domain. Every email carries, as required by law, the sender&apos;s
+            identity, a postal address, and a one-click{" "}
+            <strong>unsubscribe</strong> link; unsubscribes take effect
+            immediately and those recipients receive no further campaigns.
+            OpenLen does <strong>not</strong> use members&apos; emails for its
+            own marketing or share them with anyone other than our sending
+            provider.
           </p>
 
           <h2>Cookies</h2>
