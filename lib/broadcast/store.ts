@@ -164,11 +164,15 @@ export async function claimBroadcastForSending(
   return rows.length > 0;
 }
 
+// Both marks are conditional on status='sending' — a broadcast can only be
+// finalized from the in-flight state it was claimed into. This keeps the
+// status machine honest if these are ever called outside the send route, and
+// makes a double-mark a no-op. Returns whether the row actually transitioned.
 export async function markBroadcastSent(
   broadcastId: string,
   counts: { sentCount: number; failedCount: number },
-): Promise<void> {
-  await db
+): Promise<boolean> {
+  const rows = await db
     .update(schema.broadcasts)
     .set({
       status: "sent",
@@ -177,7 +181,14 @@ export async function markBroadcastSent(
       sentAt: new Date(),
       updatedAt: new Date(),
     })
-    .where(eq(schema.broadcasts.id, broadcastId));
+    .where(
+      and(
+        eq(schema.broadcasts.id, broadcastId),
+        eq(schema.broadcasts.status, "sending"),
+      ),
+    )
+    .returning({ id: schema.broadcasts.id });
+  return rows.length > 0;
 }
 
 export async function markBroadcastFailed(
@@ -191,7 +202,12 @@ export async function markBroadcastFailed(
       failureReason: reason.slice(0, 500),
       updatedAt: new Date(),
     })
-    .where(eq(schema.broadcasts.id, broadcastId));
+    .where(
+      and(
+        eq(schema.broadcasts.id, broadcastId),
+        eq(schema.broadcasts.status, "sending"),
+      ),
+    );
 }
 
 /** Snapshot who actually received the send (accepted) or bounced at send time
