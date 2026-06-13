@@ -3,6 +3,7 @@ import {
   memberEmailStringsFor,
   type MemberEmailStrings,
 } from "@/lib/members/email-strings";
+import type { BroadcastEmailItem } from "@/lib/broadcast/render";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Email — Resend client with console-log fallback.
@@ -139,6 +140,61 @@ function buildMemberLoginHtml(
   </table>
 </body>
 </html>`;
+}
+
+// ─── Broadcast — email your members ─────────────────────────────────────────
+// (rendering lives in lib/broadcast/render.ts — pure, resend-free, testable;
+//  this file owns only the actual Resend send.)
+
+/** Send one batch (≤100) of pre-built broadcast emails via Resend's batch API
+ *  in PERMISSIVE mode (one bad address doesn't fail the batch) with a stable
+ *  idempotencyKey (safe to retry a timed-out chunk). Each email carries its
+ *  own one-click List-Unsubscribe headers. Returns accepted count + the
+ *  indices that Resend rejected. Dev (no key): logs + pretends delivered. */
+export async function sendBroadcastBatch(
+  items: BroadcastEmailItem[],
+  opts: { idempotencyKey: string },
+): Promise<{ accepted: number; failedIndices: number[] }> {
+  if (items.length === 0) return { accepted: 0, failedIndices: [] };
+
+  const live = liveClientOrWarn("broadcast email");
+  if (!live) {
+    if (process.env.NODE_ENV !== "production") {
+      // eslint-disable-next-line no-console
+      console.log(
+        `\n  📧 [DEV] Broadcast batch of ${items.length} → ${items.map((i) => i.to).join(", ").slice(0, 200)}\n     (set RESEND_API_KEY in .env.local to send for real)\n`,
+      );
+    }
+    return { accepted: items.length, failedIndices: [] };
+  }
+
+  const payload = items.map((it) => ({
+    from,
+    to: it.to,
+    subject: it.subject,
+    html: it.html,
+    text: it.text,
+    headers: {
+      "List-Unsubscribe": `<${it.unsubUrl}>`,
+      "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+    },
+  }));
+
+  const res = await live.batch.send(payload, {
+    batchValidation: "permissive",
+    idempotencyKey: opts.idempotencyKey,
+  });
+  if (res.error) {
+    throw new Error(res.error.message || "broadcast batch send failed");
+  }
+  const data = res.data as
+    | { data?: Array<{ id: string }>; errors?: Array<{ index: number; message: string }> }
+    | null;
+  const errs = Array.isArray(data?.errors) ? data!.errors : [];
+  const failedIndices = errs
+    .map((e) => e.index)
+    .filter((n): n is number => typeof n === "number");
+  return { accepted: items.length - failedIndices.length, failedIndices };
 }
 
 export interface AbuseReportEmail {
