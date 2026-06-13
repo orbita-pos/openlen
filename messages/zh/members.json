@@ -13,7 +13,8 @@
       "inviteHint": "只有在下方添加的邮箱才能登录。"
     },
     "gatedCount": "{count} 个页面为会员专属。在 Site 标签页中管理。",
-    "gatedNone": "还没有会员专属页面 — 在 Site 标签页用锁标记一个。"
+    "gatedNone": "还没有会员专属页面 — 在 Site 标签页用锁标记一个。",
+    "autoPage": "我们为你创建了 /{slug} — 已设为会员专属，并继承了你网站的设计。像编辑其他页面一样编辑它。"
   },
   "included": {
     "title": "你的网站已包含",

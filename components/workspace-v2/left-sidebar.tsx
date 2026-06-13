@@ -269,9 +269,12 @@ interface LeftSidebarProps {
   onCreateSitePage?: (slug: string) => Promise<string | null>;
   onDeleteSitePage?: (slug: string) => Promise<boolean>;
   /** Members module (Módulos tab) — settings mirror + mutators owned by the
-   *  parent, same ownership model as sitePages. */
+   *  parent, same ownership model as sitePages. Enabling may auto-create the
+   *  members page; the result carries its slug for the panel's hint. */
   membersSettings?: MembersSettings;
-  onUpdateMembersSettings?: (patch: MembersSettings) => Promise<boolean>;
+  onUpdateMembersSettings?: (
+    patch: MembersSettings,
+  ) => Promise<{ ok: boolean; createdPageSlug?: string }>;
   onToggleMembersOnly?: (slug: string, next: boolean) => Promise<boolean>;
 }
 

@@ -1,7 +1,11 @@
 import { and, eq } from "drizzle-orm";
 import { auth } from "@/auth";
 import { db, schema } from "@/lib/db";
-import { formConfigKey, validatePageSlug } from "@/lib/projects/site-pages";
+import {
+  buildAutoMembersPage,
+  formConfigKey,
+  validatePageSlug,
+} from "@/lib/projects/site-pages";
 import type {
   FormConfig,
   MusicSettings,
@@ -238,17 +242,38 @@ export async function PATCH(
     if (musicValue) nextSettings.music = musicValue;
     else delete nextSettings.music;
   }
+  let createdPage: { slug: string; title: string; html: string } | null = null;
   if (hasMembers && body.members) {
     nextSettings.members = {
       ...(data.settings?.members ?? {}),
       ...("enabled" in body.members ? { enabled: body.members.enabled } : {}),
       ...("mode" in body.members ? { mode: body.members.mode } : {}),
     };
+    // One-click promise: turning the module ON with no gated page yet also
+    // births the members page (home shell + lock + logout link), atomically
+    // in the same write. buildAutoMembersPage null = nothing to create.
+    const turningOn =
+      body.members.enabled === true && data.settings?.members?.enabled !== true;
+    if (turningOn) {
+      createdPage = buildAutoMembersPage(data);
+    }
   }
 
   const nextData: ProjectData = {
     ...data,
     settings: nextSettings,
+    ...(createdPage
+      ? {
+          pages: {
+            ...data.pages,
+            [createdPage.slug]: {
+              html: createdPage.html,
+              title: createdPage.title,
+              membersOnly: true,
+            },
+          },
+        }
+      : {}),
   };
 
   try {
@@ -270,9 +295,18 @@ export async function PATCH(
   // `config` is the per-form config the form-patch flow reads back to
   // update its local mirror; absent on analytics-only updates. `settings`
   // is the full merged settings blob so callers can sync more than the
-  // form they just touched.
+  // form they just touched. `createdPage` (members auto-page) carries its
+  // html so the workspace can mirror data.pages without a refetch.
   const config = formKey !== null ? (forms[formKey] ?? null) : null;
-  return json({ ok: true, config, settings: nextSettings }, 200);
+  return json(
+    {
+      ok: true,
+      config,
+      settings: nextSettings,
+      ...(createdPage ? { createdPage } : {}),
+    },
+    200,
+  );
 }
 
 function json(body: unknown, status: number): Response {

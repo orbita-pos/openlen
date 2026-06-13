@@ -208,3 +208,49 @@ describe("publishToDir with gated pages (members module)", () => {
     );
   });
 });
+
+describe("gated publish wears the site look", () => {
+  const BRANDED_HOME = `<!doctype html>
+<html lang="es"><head><meta charset="utf-8"><title>marca</title>
+<style>.btn{background:#e11d48}.link{color:#e11d48}.ring{border-color:#e11d48}</style>
+</head><body><h1>marca</h1></body></html>`;
+  const GATED_WITH_LOGOUT = `<!doctype html>
+<html lang="es"><head><meta charset="utf-8"><title>zona</title></head>
+<body><h1>zona</h1><p><a href="#" data-ol-logout>Cerrar sesión</a></p></body></html>`;
+
+  let result: Awaited<ReturnType<typeof publishToDir>>;
+  before(async () => {
+    result = await publishToDir({
+      subdomain: "brandtest",
+      html: BRANDED_HOME,
+      gatedPages: [{ slug: "zona", html: GATED_WITH_LOGOUT }],
+      memberGate: { projectTitle: "Marca" },
+    });
+  });
+
+  const releaseDir = () => {
+    const current = path.join(root, "brandtest", "current");
+    try {
+      const sha = readFileSync(current, "utf8").trim();
+      return path.join(root, "brandtest", "releases", sha);
+    } catch {
+      return current;
+    }
+  };
+
+  it("the stub picks up the site accent deterministically", () => {
+    const stub = readFileSync(path.join(releaseDir(), "zona", "index.html"), "utf8");
+    assert.ok(stub.includes("--btn-bg:#e11d48"), "accent in stub");
+    assert.match(stub, /--btn-fg:#[0-9a-fA-F]{6}/);
+  });
+
+  it("the protected doc gets working, SEALED logout wiring", () => {
+    const doc = readFileSync(
+      path.join(root, "brandtest", "protected", result.sha, "zona", "index.html"),
+      "utf8",
+    );
+    assert.ok(doc.includes("/api/m/brandtest/auth/logout"), "logout endpoint wired");
+    assert.ok(doc.includes("data-ol-logout"), "logout link kept");
+    assert.ok(doc.includes("Content-Security-Policy"), "doc still sealed");
+  });
+});

@@ -20,6 +20,7 @@
 // optional logo are the branding.
 
 import { PUBLISH_LOCALES } from "@/lib/publish/publish-locales";
+import { deriveAccentInk } from "@/lib/theme-derive";
 
 export interface GateStubParams {
   /** The site's subdomain — bakes the /api/m/<sub> base into the script. */
@@ -32,6 +33,10 @@ export interface GateStubParams {
   locale?: string | null;
   /** Site logo URL (user content — escaped). Absent → a neutral lock mark. */
   logoUrl?: string | null;
+  /** Site accent (#rrggbb, from detectSiteAccent at publish) — tints the
+   *  button/focus so the card wears the site's color. Absent/invalid →
+   *  the neutral monochrome look. */
+  accent?: string | null;
 }
 
 export interface GateStrings {
@@ -183,6 +188,20 @@ export function gateStringsFor(locale?: string | null): GateStrings {
   return (locale && STRINGS[locale]) || STRINGS.en;
 }
 
+/** Publish-time logout wiring for PROTECTED documents — same pattern as the
+ *  forms/analytics injects: a tiny IIFE before </body>, added pre-seal so
+ *  its hash enters the CSP. Any element carrying data-ol-logout (the
+ *  auto-created members page ships one) becomes a working logout control:
+ *  POST to the member API, then reload — the stub takes over. No-ops when
+ *  the document has no such element. */
+export function wireMemberLogout(html: string, sub: string): string {
+  if (!html.includes("data-ol-logout")) return html;
+  const script = `<script>(function(){document.addEventListener("click",function(e){var t=e.target&&e.target.closest&&e.target.closest("[data-ol-logout]");if(!t)return;e.preventDefault();fetch("/api/m/${sub}/auth/logout",{method:"POST",credentials:"same-origin"}).then(function(){location.reload()}).catch(function(){location.reload()});});})();</script>`;
+  const idx = html.lastIndexOf("</body>");
+  if (idx === -1) return html + script;
+  return html.slice(0, idx) + script + html.slice(idx);
+}
+
 function escapeHtml(s: string): string {
   return s
     .replace(/&/g, "&amp;")
@@ -201,6 +220,15 @@ export function buildGateStub(params: GateStubParams): string {
     params.locale && STRINGS[params.locale] ? params.locale : "en";
   const t = STRINGS[locale];
   const title = escapeHtml(params.projectTitle.trim() || params.sub);
+  // Site accent (validated) tints button/focus/lock; the ink keeps the
+  // button text readable on it (same engine as the Looks system).
+  const accentHex =
+    params.accent && /^#[0-9a-fA-F]{6}$/.test(params.accent.trim())
+      ? params.accent.trim().toLowerCase()
+      : null;
+  const accentCss = accentHex
+    ? `\n  :root{--btn-bg:${accentHex};--btn-fg:${deriveAccentInk(accentHex)};--focus:${accentHex}}`
+    : "";
   const logo = params.logoUrl?.trim()
     ? `<img class="logo" src="${escapeHtml(params.logoUrl.trim())}" alt="">`
     : `<svg class="logo lock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="11" width="16" height="9" rx="2.2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>`;
@@ -245,6 +273,7 @@ btn.disabled=false;setMsg(r.status===429?T.tooMany:T.checkInbox);
   :root{
     --bg:#fafafa;--fg:#16181d;--muted:#6b7280;--card:rgba(255,255,255,.72);
     --ring:rgba(22,24,29,.08);--field:rgba(22,24,29,.04);
+    --btn-bg:var(--fg);--btn-fg:var(--bg);--focus:var(--fg);
   }
   @media (prefers-color-scheme:dark){
     :root{--bg:#101216;--fg:#f3f4f6;--muted:#9ca3af;--card:rgba(255,255,255,.05);--ring:rgba(255,255,255,.10);--field:rgba(255,255,255,.06)}
@@ -264,7 +293,7 @@ btn.disabled=false;setMsg(r.status===429?T.tooMany:T.checkInbox);
     box-shadow:0 1px 2px rgba(0,0,0,.04),0 24px 80px -32px rgba(0,0,0,.25);
   }
   .logo{width:44px;height:44px;margin:0 auto 18px;display:block;object-fit:contain}
-  .logo.lock{opacity:.55;padding:4px}
+  .logo.lock{opacity:.55;padding:4px;color:var(--btn-bg)}
   .tag{font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);font-weight:600}
   h1{margin-top:8px;font-size:clamp(22px,5vw,28px);letter-spacing:-.02em;line-height:1.15;font-weight:700}
   #m-loading{margin-top:22px;font-size:14px;color:var(--muted)}
@@ -273,16 +302,16 @@ btn.disabled=false;setMsg(r.status===429?T.tooMany:T.checkInbox);
     width:100%;margin-top:20px;padding:13px 16px;font-size:15px;color:var(--fg);
     background:var(--field);border:1px solid var(--ring);border-radius:12px;outline:none;
   }
-  #m-email:focus{border-color:var(--fg)}
+  #m-email:focus{border-color:var(--focus)}
   #m-btn{
     width:100%;margin-top:10px;padding:13px 16px;font-size:14.5px;font-weight:600;
-    color:var(--bg);background:var(--fg);border:0;border-radius:12px;cursor:pointer;
+    color:var(--btn-fg);background:var(--btn-bg);border:0;border-radius:12px;cursor:pointer;
     transition:opacity .15s,transform .15s;
   }
   #m-btn:hover{opacity:.88}
   #m-btn:active{transform:scale(.985)}
   #m-btn:disabled{opacity:.5;cursor:default}
-  #m-msg{margin-top:14px;font-size:13.5px;line-height:1.5;color:var(--muted)}
+  #m-msg{margin-top:14px;font-size:13.5px;line-height:1.5;color:var(--muted)}${accentCss}
 </style>
 </head>
 <body>

@@ -13,7 +13,8 @@
       "inviteHint": "Solo pueden entrar los emails que agregues abajo."
     },
     "gatedCount": "{count, plural, one {# página es solo para miembros. Gestiónalo en la pestaña Site.} other {# páginas son solo para miembros. Gestiónalo en la pestaña Site.}}",
-    "gatedNone": "Aún no hay páginas solo para miembros — márcala con el candado en la pestaña Site."
+    "gatedNone": "Aún no hay páginas solo para miembros — márcala con el candado en la pestaña Site.",
+    "autoPage": "Te creamos /{slug} — ya es solo para miembros y nació con el diseño de tu sitio. Edítala como cualquier otra página."
   },
   "included": {
     "title": "Incluido con tu sitio",

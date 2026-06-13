@@ -13,7 +13,8 @@
       "inviteHint": "Only emails you add below can sign in."
     },
     "gatedCount": "{count, plural, one {# page is members-only. Manage which in the Site tab.} other {# pages are members-only. Manage which in the Site tab.}}",
-    "gatedNone": "No members-only pages yet — flag one with the lock in the Site tab."
+    "gatedNone": "No members-only pages yet — flag one with the lock in the Site tab.",
+    "autoPage": "We created /{slug} for you — already members-only, born with your site look. Edit it like any other page."
   },
   "included": {
     "title": "Included with your site",

@@ -13,7 +13,8 @@
       "inviteHint": "Alleen e-mails die je hieronder toevoegt kunnen inloggen."
     },
     "gatedCount": "{count, plural, one {# pagina is alleen voor leden. Beheer dit in het Site-tabblad.} other {# pagina's zijn alleen voor leden. Beheer dit in het Site-tabblad.}}",
-    "gatedNone": "Nog geen ledenpagina's — markeer er één met het slot in het Site-tabblad."
+    "gatedNone": "Nog geen ledenpagina's — markeer er één met het slot in het Site-tabblad.",
+    "autoPage": "We hebben /{slug} voor je gemaakt — al alleen voor leden, in de stijl van je site. Bewerk hem als elke andere pagina."
   },
   "included": {
     "title": "Inbegrepen bij je site",

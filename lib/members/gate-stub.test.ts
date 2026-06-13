@@ -2,7 +2,7 @@
 
 import { describe, expect, it } from "vitest";
 import { PUBLISH_LOCALES } from "@/lib/publish/publish-locales";
-import { buildGateStub } from "./gate-stub";
+import { buildGateStub, wireMemberLogout } from "./gate-stub";
 
 const BASE = {
   sub: "mi-negocio",
@@ -79,5 +79,40 @@ describe("buildGateStub", () => {
   it("falls back to the sub when the title is blank", () => {
     const html = buildGateStub({ ...BASE, projectTitle: "  " });
     expect(html).toContain("<h1>mi-negocio</h1>");
+  });
+
+  it("wears the site accent with readable ink, neutral without it", () => {
+    const neutral = buildGateStub(BASE);
+    expect(neutral).not.toContain("--btn-bg:#");
+    const tinted = buildGateStub({ ...BASE, accent: "#ff5a36" });
+    expect(tinted).toContain("--btn-bg:#ff5a36");
+    expect(tinted).toMatch(/--btn-fg:#[0-9a-fA-F]{6}/);
+    expect(tinted).toContain("--focus:#ff5a36");
+  });
+
+  it("ignores malformed accents", () => {
+    for (const bad of ["red", "#ff5a3", "#ff5a36aa", "url(x)", ""]) {
+      expect(buildGateStub({ ...BASE, accent: bad })).not.toContain("--btn-bg:#");
+    }
+  });
+});
+
+describe("wireMemberLogout", () => {
+  const DOC = (body: string) =>
+    `<!doctype html><html><head></head><body>${body}</body></html>`;
+
+  it("wires documents carrying data-ol-logout, before </body>", () => {
+    const wired = wireMemberLogout(
+      DOC(`<a href="#" data-ol-logout>Salir</a>`),
+      "mi-negocio",
+    );
+    expect(wired).toContain("/api/m/mi-negocio/auth/logout");
+    expect(wired.indexOf("<script>")).toBeLessThan(wired.indexOf("</body>"));
+    expect(wired).toContain("location.reload()");
+  });
+
+  it("no-ops on documents without the attribute", () => {
+    const doc = DOC("<p>nada</p>");
+    expect(wireMemberLogout(doc, "mi-negocio")).toBe(doc);
   });
 });
