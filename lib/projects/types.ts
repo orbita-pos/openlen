@@ -60,6 +60,17 @@ export interface BroadcastSettings {
   enabled?: boolean;
 }
 
+/** Comments module — members-only commenting on published pages. Requires the
+ *  members module. Rows live in siteComments; this holds the per-site switches. */
+export interface CommentsSettings {
+  /** Master switch. Requires members.enabled. Drives the publish-time widget
+   *  inject + the same-host post API. */
+  enabled?: boolean;
+  /** "moderated" (default) → comments are hidden until the owner approves.
+   *  "all" → visible immediately, owner hides/deletes after. */
+  moderation?: "all" | "moderated";
+}
+
 /** Project-level settings that aren't part of the HTML document. */
 export interface ProjectSettings {
   /** Per-form config, keyed by the form's index — its position among all
@@ -87,6 +98,8 @@ export interface ProjectSettings {
   members?: MembersSettings;
   /** Broadcast module: email your members. Absent = off. */
   broadcast?: BroadcastSettings;
+  /** Comments module: members-only comments on published pages. Absent = off. */
+  comments?: CommentsSettings;
 }
 
 /** One additional page of a multi-page site. The home page stays at
