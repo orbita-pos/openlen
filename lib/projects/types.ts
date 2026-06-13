@@ -71,6 +71,33 @@ export interface CommentsSettings {
   moderation?: "all" | "moderated";
 }
 
+/** Bookings module — appointment scheduling on the published site. Services +
+ *  their wall-clock availability live in the bookableServices table; bookings
+ *  in the bookings table. This holds only the per-site switches.
+ *
+ *  PAYMENTS ARE OUT OF SCOPE BY PRINCIPLE: OpenLen never charges for a booking.
+ *  A service may show an informational `priceDisplay` string, but the creator
+ *  collects by their own means — OpenLen is not a payment facilitator. */
+export interface BookingsSettings {
+  /** Master switch. Absent/false → the Reservas tab stays hidden, the widget
+   *  is not baked, and /api/bk/* refuses. Enabled from the Módulos panel. */
+  enabled?: boolean;
+  /** Default IANA zone for new services' wall-clock hours (e.g.
+   *  "America/Mexico_City"). Each service snapshots its own creatorTz. */
+  creatorTz?: string;
+  /** true → only logged-in members (lib/members) can book. false (default) →
+   *  guests book with name + email; a logged-in member is linked + prefilled. */
+  requireLogin?: boolean;
+  /** true (default) → a booking is 'confirmed' on submit. false → it lands
+   *  'pending' and the owner approves it from the Reservas panel. */
+  autoConfirm?: boolean;
+  /** true (default) → the reminder timer emails the visitor before the slot. */
+  sendReminders?: boolean;
+  /** GDPR retention: a past booking older than this many days is swept by the
+   *  reminder timer's housekeeping pass. Default 365; 0 → never. */
+  retentionDays?: number;
+}
+
 /** Project-level settings that aren't part of the HTML document. */
 export interface ProjectSettings {
   /** Per-form config, keyed by the form's index — its position among all
@@ -100,6 +127,8 @@ export interface ProjectSettings {
   broadcast?: BroadcastSettings;
   /** Comments module: members-only comments on published pages. Absent = off. */
   comments?: CommentsSettings;
+  /** Bookings module: appointment scheduling on the published site. Absent = off. */
+  bookings?: BookingsSettings;
 }
 
 /** One additional page of a multi-page site. The home page stays at

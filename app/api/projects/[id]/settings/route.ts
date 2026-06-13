@@ -1,5 +1,6 @@
 import { and, eq } from "drizzle-orm";
 import { auth } from "@/auth";
+import { isKnownTimeZone } from "@/lib/bookings/tz";
 import { db, schema } from "@/lib/db";
 import {
   buildAutoMembersPage,
@@ -60,6 +61,15 @@ interface PatchBody {
   broadcast?: { enabled?: boolean };
   /** Comments module switches. Merged into settings.comments. */
   comments?: { enabled?: boolean; moderation?: "all" | "moderated" };
+  /** Bookings module switches. Merged into settings.bookings. */
+  bookings?: {
+    enabled?: boolean;
+    creatorTz?: string;
+    requireLogin?: boolean;
+    autoConfirm?: boolean;
+    sendReminders?: boolean;
+    retentionDays?: number;
+  };
 }
 
 function clean(v: unknown, max: number): string {
@@ -181,6 +191,35 @@ export async function PATCH(
       return json({ error: "invalid_body", message: "comments.moderation must be all|moderated" }, 400);
     }
   }
+  const hasBookings = "bookings" in body;
+  if (hasBookings) {
+    const b = body.bookings;
+    if (!b || typeof b !== "object") {
+      return json({ error: "invalid_body", message: "bookings must be an object" }, 400);
+    }
+    for (const k of ["enabled", "requireLogin", "autoConfirm", "sendReminders"] as const) {
+      if (k in b && typeof b[k] !== "boolean") {
+        return json({ error: "invalid_body", message: `bookings.${k} must be boolean` }, 400);
+      }
+    }
+    if ("creatorTz" in b && b.creatorTz !== undefined) {
+      if (typeof b.creatorTz !== "string" || !isKnownTimeZone(b.creatorTz)) {
+        return json(
+          { error: "invalid_body", message: "bookings.creatorTz must be a valid IANA time zone" },
+          400,
+        );
+      }
+    }
+    if ("retentionDays" in b && b.retentionDays !== undefined) {
+      const r = b.retentionDays;
+      if (typeof r !== "number" || !Number.isInteger(r) || r < 0 || r > 3650) {
+        return json(
+          { error: "invalid_body", message: "bookings.retentionDays must be an integer 0-3650" },
+          400,
+        );
+      }
+    }
+  }
   if (
     !hasFormPatch &&
     !hasAnalyticsToggle &&
@@ -188,13 +227,14 @@ export async function PATCH(
     !hasMusic &&
     !hasMembers &&
     !hasBroadcast &&
-    !hasComments
+    !hasComments &&
+    !hasBookings
   ) {
     return json(
       {
         error: "invalid_body",
         message:
-          "expected formIndex+patch OR analyticsDisabled OR motion OR music OR members OR broadcast",
+          "expected formIndex+patch OR analyticsDisabled OR motion OR music OR members OR broadcast OR comments OR bookings",
       },
       400,
     );
@@ -326,6 +366,20 @@ export async function PATCH(
       !("moderation" in body.comments) &&
       !data.settings?.comments?.moderation
         ? { moderation: "moderated" as const }
+        : {}),
+    };
+  }
+  if (hasBookings && body.bookings) {
+    const b = body.bookings;
+    nextSettings.bookings = {
+      ...(data.settings?.bookings ?? {}),
+      ...("enabled" in b ? { enabled: b.enabled } : {}),
+      ...("creatorTz" in b && b.creatorTz !== undefined ? { creatorTz: b.creatorTz } : {}),
+      ...("requireLogin" in b ? { requireLogin: b.requireLogin } : {}),
+      ...("autoConfirm" in b ? { autoConfirm: b.autoConfirm } : {}),
+      ...("sendReminders" in b ? { sendReminders: b.sendReminders } : {}),
+      ...("retentionDays" in b && b.retentionDays !== undefined
+        ? { retentionDays: b.retentionDays }
         : {}),
     };
   }

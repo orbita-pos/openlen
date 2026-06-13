@@ -863,6 +863,126 @@ export const siteComments = pgTable(
   ],
 );
 
+// ─── Bookings module — appointment scheduling on published pages ────────────
+// Applied via `npm run bookings:migrate`. Two-table core + an audit log.
+//
+// bookableServices holds the per-service rules AND its weekly availability +
+// date exceptions as JSONB on the row (read as a unit by the availability
+// engine — no relational split). weeklyHours: Record<"0".."6", DayRange[]>,
+// exceptions: BookingException[] (see lib/bookings/availability.ts).
+//
+// PAYMENTS ARE OUT OF SCOPE: priceDisplay is an informational STRING only —
+// OpenLen never charges for a booking (see BookingsSettings).
+export const bookableServices = pgTable(
+  "bookableServices",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    projectId: text("projectId")
+      .notNull()
+      .references(() => projects.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    description: text("description"),
+    durationMin: integer("durationMin").notNull(),
+    slotIncrementMin: integer("slotIncrementMin").notNull().default(0), // 0 → use duration
+    bufferBeforeMin: integer("bufferBeforeMin").notNull().default(0),
+    bufferAfterMin: integer("bufferAfterMin").notNull().default(0),
+    minLeadTimeMin: integer("minLeadTimeMin").notNull().default(0),
+    maxDaysAhead: integer("maxDaysAhead").notNull().default(30),
+    creatorTz: text("creatorTz").notNull(),
+    weeklyHours: jsonb("weeklyHours").notNull().default({}),
+    exceptions: jsonb("exceptions").notNull().default([]),
+    // Seats per slot. v1 ships 1; the column lets a later capacity-N feature
+    // land without a migration (the slot guard already keys on seatNo).
+    capacity: integer("capacity").notNull().default(1),
+    priceDisplay: text("priceDisplay"), // informational TEXT only — never charged
+    locationText: text("locationText"), // address / video-call note shown to the visitor
+    status: text("status")
+      .$type<"active" | "archived">()
+      .notNull()
+      .default("active"),
+    sortOrder: integer("sortOrder").notNull().default(0),
+    createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
+    updatedAt: timestamp("updatedAt", { mode: "date" }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("bookableServices_projectId_idx").on(table.projectId, table.status),
+  ],
+);
+
+// One appointment. id is CLIENT-GENERATED (idempotency key = .ics UID stem),
+// so a retried POST can't double-book. memberId/guest* are SNAPSHOTS (no FK)
+// so the booking survives member deletion. creatorTz/visitorTz are snapshots
+// of the zones at booking time (rules can change later). The no-double-booking
+// guard is the partial unique index below — see lib/bookings/store.ts.
+export const bookings = pgTable(
+  "bookings",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    projectId: text("projectId")
+      .notNull()
+      .references(() => projects.id, { onDelete: "cascade" }),
+    serviceId: text("serviceId")
+      .notNull()
+      .references(() => bookableServices.id, { onDelete: "cascade" }),
+    startUtc: timestamp("startUtc", { mode: "date", withTimezone: true }).notNull(),
+    endUtc: timestamp("endUtc", { mode: "date", withTimezone: true }).notNull(),
+    seatNo: integer("seatNo").notNull().default(0),
+    status: text("status")
+      .$type<"pending" | "confirmed" | "cancelled" | "completed" | "no_show">()
+      .notNull()
+      .default("pending"),
+    memberId: text("memberId"), // snapshot, no FK
+    guestName: text("guestName"),
+    guestEmail: text("guestEmail"), // normalized
+    note: text("note"), // visitor's message to the creator
+    creatorTz: text("creatorTz").notNull(), // snapshot
+    visitorTz: text("visitorTz"), // snapshot of the visitor's zone
+    rescheduledFromId: text("rescheduledFromId"),
+    rescheduledToId: text("rescheduledToId"),
+    reminderStage: integer("reminderStage").notNull().default(0), // high-water: 0 none,1 sent
+    icsSequence: integer("icsSequence").notNull().default(0), // ++ on reschedule/cancel
+    cancelledAt: timestamp("cancelledAt", { mode: "date", withTimezone: true }),
+    createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
+  },
+  (table) => [
+    // THE GUARD: at most one live booking per (service, instant, seat). cancelled
+    // / completed / no_show rows drop out of the predicate → the slot frees.
+    uniqueIndex("bookings_slot_uq")
+      .on(table.serviceId, table.startUtc, table.seatNo)
+      .where(sqlOp`status in ('confirmed','pending')`),
+    index("bookings_projectId_startUtc_idx").on(table.projectId, table.startUtc),
+    index("bookings_serviceId_startUtc_idx").on(table.serviceId, table.startUtc),
+    // Reminder/retention sweeps scan live bookings by start time.
+    index("bookings_status_startUtc_idx").on(table.status, table.startUtc),
+  ],
+);
+
+// Append-only audit of everything that happened to a booking. bookingId is a
+// snapshot (no FK) so the trail survives a retention sweep of the booking row.
+export const bookingEvents = pgTable(
+  "bookingEvents",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    projectId: text("projectId")
+      .notNull()
+      .references(() => projects.id, { onDelete: "cascade" }),
+    bookingId: text("bookingId").notNull(), // snapshot, no FK
+    type: text("type").notNull(), // created|confirmed|cancelled|rescheduled|reminded|completed|no_show
+    actor: text("actor").notNull(), // visitor|owner|system
+    detail: jsonb("detail"),
+    createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("bookingEvents_bookingId_idx").on(table.bookingId, table.createdAt),
+  ],
+);
+
 // External-deploy OAuth connections — one row per (user, provider). The token
 // is an ACCOUNT-level credential (connect once, deploy any project), so it
 // lives at user grain, not per-project. Powers the Deploy-dropdown "Deploy to
