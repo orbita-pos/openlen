@@ -9,7 +9,7 @@ const { sendSpy, recordSpy } = vi.hoisted(() => ({
 vi.mock("@/lib/email", () => ({ sendBroadcastBatch: sendSpy }));
 vi.mock("@/lib/broadcast/store", () => ({ recordRecipients: recordSpy }));
 
-import { runBroadcastSend } from "./send";
+import { runBroadcastSend, withBroadcastSlot } from "./send";
 import type { AudienceMember } from "./audience";
 
 const audienceOf = (n: number): AudienceMember[] =>
@@ -72,20 +72,31 @@ describe("runBroadcastSend", () => {
     expect(snap.find((s) => s.email === "u0@x.co")!.status).toBe("accepted");
   });
 
-  it("serializes concurrent sends (single-flight)", async () => {
+});
+
+describe("withBroadcastSlot — single-flight budget guard", () => {
+  it("serializes concurrent critical sections (only one runs at a time)", async () => {
     let active = 0;
     let maxActive = 0;
-    sendSpy.mockImplementation(async (items: unknown[]) => {
+    const work = async () => {
       active++;
       maxActive = Math.max(maxActive, active);
       await new Promise((r) => setTimeout(r, 5));
       active--;
-      return { accepted: (items as unknown[]).length, failedIndices: [] };
-    });
+    };
     await Promise.all([
-      runBroadcastSend(baseParams(audienceOf(100))),
-      runBroadcastSend(baseParams(audienceOf(100))),
+      withBroadcastSlot(work),
+      withBroadcastSlot(work),
+      withBroadcastSlot(work),
     ]);
     expect(maxActive).toBe(1);
+  });
+
+  it("a throwing section doesn't wedge the chain", async () => {
+    await withBroadcastSlot(async () => {
+      throw new Error("boom");
+    }).catch(() => {});
+    const ran = await withBroadcastSlot(async () => "ok");
+    expect(ran).toBe("ok");
   });
 });

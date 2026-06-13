@@ -21,12 +21,23 @@ function escape(s: string): string {
     .replace(/"/g, "&quot;");
 }
 
+const POSTAL_PLACEHOLDER = "OpenLen — México";
+
 /** CAN-SPAM requires a physical postal address in every marketing email.
  *  OpenLen is the sender of record on the shared domain, so its operating-
- *  entity address (set via env) satisfies it. Set BROADCAST_POSTAL_ADDRESS on
- *  the box to a REAL address before going live. */
+ *  entity address (set via env) satisfies it. */
 export function broadcastPostalAddress(): string {
-  return process.env.BROADCAST_POSTAL_ADDRESS?.trim() || "OpenLen — México";
+  return process.env.BROADCAST_POSTAL_ADDRESS?.trim() || POSTAL_PLACEHOLDER;
+}
+
+/** True when a REAL postal address is configured. In production a campaign
+ *  must NOT go out on the placeholder (it would violate CAN-SPAM), so the
+ *  send route refuses until BROADCAST_POSTAL_ADDRESS is set. In dev the
+ *  placeholder is fine for testing. */
+export function isBroadcastPostalConfigured(): boolean {
+  if (process.env.NODE_ENV !== "production") return true;
+  const v = process.env.BROADCAST_POSTAL_ADDRESS?.trim();
+  return !!v && v !== POSTAL_PLACEHOLDER;
 }
 
 /** Minimal, XSS-safe Markdown → HTML for broadcast bodies. Escapes first,

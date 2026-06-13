@@ -22,9 +22,19 @@ export function broadcastEmailCapKey(projectId: string): string {
 /** Charge N emails against the monthly budget. checkAndConsume inserts exactly
  *  one rateLimitEvents row per call (no count param), so a broadcast of N
  *  records N rows in a single bulk insert — keeping the shared budget honest
- *  (one row per actual email, same as each magic-link login). Called AFTER the
- *  all-or-nothing pre-flight passes, so it never partially charges a blocked
- *  send. Chunked to stay well under Postgres' parameter ceiling. */
+ *  (one row per actual email, same as each magic-link login).
+ *
+ *  Called by the send route INSIDE withBroadcastSlot, after the cap pre-flight
+ *  passes and ONLY on a fresh (draft/failed) claim — never on a stale-crash
+ *  recovery (already charged). The slot serializes broadcasts so two can't
+ *  both pass the pre-flight and both charge. Member-login emails share the key
+ *  and aren't slot-gated, so a login can slip in between this route's
+ *  pre-flight read and charge — bounded "acceptable slop" the rate-limit
+ *  engine already documents (1 unit per login, negligible vs the budget).
+ *
+ *  Charging BEFORE delivery is intentional all-or-nothing: a failed send eats
+ *  the budget rather than leaving partial-delivery ambiguity. Chunked to stay
+ *  under Postgres' parameter ceiling. */
 export async function recordEmailCapUnits(
   projectId: string,
   count: number,
