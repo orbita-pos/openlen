@@ -303,10 +303,30 @@ export async function PATCH(
     };
   }
   if (hasComments && body.comments) {
+    // Comments require the members module (that's the whole anti-spam basis).
+    // Honor a members-enable arriving in the SAME PATCH, else the prior state.
+    const willHaveMembers =
+      (hasMembers && body.members?.enabled === true) ||
+      (data.settings?.members?.enabled === true && body.members?.enabled !== false);
+    if (body.comments.enabled === true && !willHaveMembers) {
+      return json(
+        { error: "invalid_body", message: "comments require the members module" },
+        400,
+      );
+    }
+    const firstEnable =
+      body.comments.enabled === true && data.settings?.comments?.enabled !== true;
     nextSettings.comments = {
       ...(data.settings?.comments ?? {}),
       ...("enabled" in body.comments ? { enabled: body.comments.enabled } : {}),
       ...("moderation" in body.comments ? { moderation: body.comments.moderation } : {}),
+      // Make the write self-documenting: default to the safe posture on first
+      // enable when no moderation is set (don't lean on the read-path default).
+      ...(firstEnable &&
+      !("moderation" in body.comments) &&
+      !data.settings?.comments?.moderation
+        ? { moderation: "moderated" as const }
+        : {}),
     };
   }
 

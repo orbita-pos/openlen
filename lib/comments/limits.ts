@@ -1,6 +1,11 @@
 // Comment-post anti-abuse. Members-only commenting already kills anonymous
 // spam; these caps stop a logged-in member from flooding a thread. Per-member
 // keys are project-scoped so a member of site A can't burn site B's budget.
+//
+// SOFT caps: the rate-limit engine is count-then-insert without a transaction
+// (documented in crates/rate-limit), so two requests racing right at the limit
+// may both pass. Acceptable here — the windows (2/min, 30/hr) are loose and a
+// couple of extra posts during a race cause no harm.
 
 import { createHash } from "node:crypto";
 import type { LimitWindow } from "@/lib/limits";
