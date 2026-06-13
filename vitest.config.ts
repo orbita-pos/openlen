@@ -34,6 +34,7 @@ export default defineConfig({
       "lib/site-assistant/**/*.test.ts",
       "lib/publish/assistant-widget.test.ts",
       "lib/members/**/*.test.ts",
+      "lib/broadcast/**/*.test.ts",
     ],
     exclude: ["node_modules/**", "tests/e2e/**", ".next/**"],
   },
