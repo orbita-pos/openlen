@@ -22,6 +22,7 @@ import { bakeMotion } from "@/lib/publish/motion";
 import { bakeMusic } from "@/lib/publish/music";
 import { bakeAssistantWidget } from "@/lib/publish/assistant-widget";
 import { bakeComments } from "@/lib/publish/comments-widget";
+import { bakeBookings } from "@/lib/publish/bookings-widget";
 import {
   annotateLanguageCluster,
   buildRobots,
@@ -171,6 +172,11 @@ export interface PublishParams {
    *  (at the data-ol-comments-section placeholder, or appended before
    *  </body>). The thread is fetched live from /api/cm/<sub>/*. */
   comments?: { enabled: boolean };
+  /** Bookings module (settings.bookings). When enabled, the appointment-booking
+   *  widget is injected on the root doc + every page/locale variant (at the
+   *  data-ol-bookings-section placeholder, or appended before </body>). Slots
+   *  are fetched live from /api/bk/<sub>/*. */
+  bookings?: { enabled: boolean };
   /** Members module: pages that publish as a login STUB at their public path
    *  while the REAL document (full bake chain + seal) is written OUTSIDE the
    *  release — <sub>/protected/<sha>/<slug>/index.html, unreachable by the
@@ -437,6 +443,9 @@ interface BakeDocumentCtx {
   /** Comments module. When enabled, the members-only comments widget is
    *  injected (at the placeholder, or appended) on every document. */
   comments?: { enabled: boolean };
+  /** Bookings module. When enabled, the appointment-booking widget is injected
+   *  (at the placeholder, or appended) on every document. */
+  bookings?: { enabled: boolean };
 }
 
 interface AssistantBake {
@@ -600,6 +609,16 @@ async function bakeDocument(
     }
   }
 
+  // Bookings widget — same window (before the seal so its inline hash is sealed).
+  if (process.env.OPENLEN_BOOKINGS !== "0" && ctx.bookings?.enabled) {
+    try {
+      migratedHtml = bakeBookings(migratedHtml, { sub: ctx.sub });
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.warn("[publishToDir] bookings widget inject failed; publishing without it", err);
+    }
+  }
+
   return migratedHtml;
 }
 
@@ -698,6 +717,7 @@ export async function publishToDir(
     music: effectiveMusic,
     assistant: params.assistant,
     comments: params.comments,
+    bookings: params.bookings,
   };
   let migratedHtml = await bakeDocument(publishHtml, bakeCtx);
 
