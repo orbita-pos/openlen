@@ -58,6 +58,8 @@ interface PatchBody {
   members?: { enabled?: boolean; mode?: "open" | "invite" };
   /** Broadcast module switch. Merged into settings.broadcast. */
   broadcast?: { enabled?: boolean };
+  /** Comments module switches. Merged into settings.comments. */
+  comments?: { enabled?: boolean; moderation?: "all" | "moderated" };
 }
 
 function clean(v: unknown, max: number): string {
@@ -166,13 +168,27 @@ export async function PATCH(
       );
     }
   }
+  const hasComments = "comments" in body;
+  if (hasComments) {
+    const c = body.comments;
+    if (!c || typeof c !== "object") {
+      return json({ error: "invalid_body", message: "comments must be an object" }, 400);
+    }
+    if ("enabled" in c && typeof c.enabled !== "boolean") {
+      return json({ error: "invalid_body", message: "comments.enabled must be boolean" }, 400);
+    }
+    if ("moderation" in c && c.moderation !== "all" && c.moderation !== "moderated") {
+      return json({ error: "invalid_body", message: "comments.moderation must be all|moderated" }, 400);
+    }
+  }
   if (
     !hasFormPatch &&
     !hasAnalyticsToggle &&
     !hasMotion &&
     !hasMusic &&
     !hasMembers &&
-    !hasBroadcast
+    !hasBroadcast &&
+    !hasComments
   ) {
     return json(
       {
@@ -284,6 +300,13 @@ export async function PATCH(
     nextSettings.broadcast = {
       ...(data.settings?.broadcast ?? {}),
       ...("enabled" in body.broadcast ? { enabled: body.broadcast.enabled } : {}),
+    };
+  }
+  if (hasComments && body.comments) {
+    nextSettings.comments = {
+      ...(data.settings?.comments ?? {}),
+      ...("enabled" in body.comments ? { enabled: body.comments.enabled } : {}),
+      ...("moderation" in body.comments ? { moderation: body.comments.moderation } : {}),
     };
   }
 
