@@ -33,7 +33,7 @@ export default async function AcceptableUsePage({
   return (
     <LegalPage
       title={es ? "Política de uso aceptable" : "Acceptable Use Policy"}
-      updated={es ? "Última actualización: 30 de mayo de 2026" : "Last updated: May 30, 2026"}
+      updated={es ? "Última actualización: 12 de junio de 2026" : "Last updated: June 12, 2026"}
     >
       {es ? (
         <>
@@ -85,6 +85,15 @@ export default async function AcceptableUsePage({
               sexual o íntimo que represente a personas reales sin su
               consentimiento, incluida la difusión de imágenes privadas y los
               montajes sexuales no consentidos de personas reales.
+            </li>
+            <li>
+              <strong>Contenido sexual explícito o para adultos</strong> —
+              pornografía, material sexual explícito y servicios para adultos
+              (incluidos los basados en suscripción a creadores de contenido
+              para adultos), ya sea su publicación o su venta a través del
+              Servicio. Esta restricción refleja las políticas de nuestros
+              proveedores de pago e infraestructura, que no permiten este tipo
+              de contenido.
             </li>
             <li>
               <strong>Contenido terrorista o extremista violento</strong> —
@@ -246,6 +255,14 @@ export default async function AcceptableUsePage({
               intimate content depicting real people without their consent,
               including the distribution of private images and non-consensual
               sexual deepfakes of real people.
+            </li>
+            <li>
+              <strong>Sexually explicit or adult content</strong> — pornography,
+              sexually explicit material, and adult services (including
+              subscription-based adult creator content), whether published or
+              sold through the Service. This restriction mirrors the policies of
+              our payment and infrastructure providers, which do not permit such
+              content.
             </li>
             <li>
               <strong>Terrorist or violent-extremist content</strong> — material
