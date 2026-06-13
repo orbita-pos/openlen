@@ -118,7 +118,7 @@ openlen.com, www.openlen.com {
 
 	@doc {
 		not path *.css *.js *.jpg *.jpeg *.png *.gif *.webp *.svg *.ico *.woff *.woff2 *.avif
-		not path /c/* /api/f/* /api/m/* /api/cm/* /uploads/* /assets/*
+		not path /c/* /api/f/* /api/m/* /api/cm/* /api/bk/* /uploads/* /assets/*
 	}
 	header @doc Cache-Control "public, max-age=60, s-maxage=3600, stale-while-revalidate=86400"
 
@@ -152,6 +152,16 @@ openlen.com, www.openlen.com {
 	# Same-host so the ol_member cookie is first-party; @doc-excluded above so
 	# the live thread (no-store) is never edge-cached.
 	handle /api/cm/* {
+		reverse_proxy 127.0.0.1:3000 {
+			header_up CF-Connecting-IP {http.request.header.cf-connecting-ip}
+		}
+	}
+
+	# Bookings module — same-host availability/book/manage/reschedule + the /me
+	# prefill probe. Same-host so the ol_member cookie is first-party (member
+	# bookings); @doc-excluded above so availability (no-store, changes on every
+	# booking) is never edge-cached.
+	handle /api/bk/* {
 		reverse_proxy 127.0.0.1:3000 {
 			header_up CF-Connecting-IP {http.request.header.cf-connecting-ip}
 		}
@@ -255,13 +265,14 @@ openlen.com, www.openlen.com {
 	}
 
 	# Pass-through paths — form submissions, analytics beacons, members +
-	# comments same-host APIs keep their original URLs so the Next handlers
-	# (/api/f, /c, /api/m, /api/cm) see them unchanged.
+	# comments + bookings same-host APIs keep their original URLs so the Next
+	# handlers (/api/f, /c, /api/m, /api/cm, /api/bk) see them unchanged.
 	#
 	# SECURITY: custom domains point straight at our IP (no Cloudflare in
 	# front), so a client-supplied CF-Connecting-IP is FORGEABLE and would let
 	# an attacker spoof their IP to dodge the per-IP rate limits on comment
-	# posting + magic-link login. OVERWRITE it with the true peer address (and
+	# posting, magic-link login + booking creation. OVERWRITE it with the true
+	# peer address (and
 	# drop the equally-forgeable CF-IPCountry) — there is no real CF header to
 	# trust here. On the *.openlen.com wildcard above, Cloudflare sets these
 	# headers and the origin isn't directly addressable, so that path keeps
