@@ -48,6 +48,10 @@
       "members": {
         "label": "模块",
         "title": "后端模块 — 会员及更多"
+      },
+      "broadcast": {
+        "label": "Broadcast",
+        "title": "给你的会员发邮件"
       }
     },
     "tabLocked": "{label} — 已锁定",

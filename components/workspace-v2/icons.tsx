@@ -456,6 +456,13 @@ export const LockOpen = (p: IconProps) => (
   </Base>
 );
 
+export const Megaphone = (p: IconProps) => (
+  <Base {...p}>
+    <path d="m3 11 18-5v12L3 13v-2z" />
+    <path d="M11.6 16.8a3 3 0 1 1-5.8-1.6" />
+  </Base>
+);
+
 export const Activity = (p: IconProps) => (
   <Base {...p}>
     <path d="M22 12h-2.48a2 2 0 0 0-1.93 1.46l-2.35 8.36a.5.5 0 0 1-.96 0L9.24 2.18a.5.5 0 0 0-.96 0l-2.35 8.36A2 2 0 0 1 4 12H2" />

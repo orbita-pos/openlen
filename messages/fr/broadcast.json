@@ -1,0 +1,43 @@
+{
+  "title": "Broadcast",
+  "subtitle": "Écrivez à vos membres.",
+  "perProject": "Ouvrez un projet pour écrire une campagne.",
+  "module": {
+    "title": "Broadcast",
+    "tagline": "Écrivez à vos membres",
+    "toggle": "Activer broadcast",
+    "enabledHint": "Ouvrez l'onglet Broadcast pour écrire votre première campagne.",
+    "needsMembers": "Activez Membres d'abord — c'est à eux que vont les campagnes."
+  },
+  "compose": {
+    "subjectLabel": "Objet",
+    "subjectPlaceholder": "Quoi de neuf",
+    "bodyLabel": "Message",
+    "bodyPlaceholder": "Écrivez à vos membres… **gras**, *italique* et [liens](https://…) fonctionnent.",
+    "save": "Enregistrer le brouillon",
+    "saved": "Enregistré",
+    "sendTo": "Envoyer à {count} membres",
+    "sendToNone": "Pas encore de membres",
+    "send": "Envoyer",
+    "sending": "Envoi…",
+    "confirm": "Envoyer à {count} membres maintenant ? Irréversible.",
+    "remaining": "Il reste {count} e-mails ce mois-ci"
+  },
+  "send": {
+    "sent": "Envoyé à {count}.",
+    "capBlocked": "Cette campagne nécessite {needed} e-mails ; il vous en reste {remaining} ce mois-ci.",
+    "inProgress": "Un envoi est déjà en cours.",
+    "notPublished": "Publiez votre site d'abord.",
+    "error": "Échec de l'envoi. Réessayez."
+  },
+  "history": {
+    "title": "Campagnes",
+    "empty": "Aucune campagne.",
+    "draft": "Brouillon",
+    "statusSending": "Envoi",
+    "sent": "Envoyée",
+    "failed": "Échec",
+    "delivered": "{count} remis",
+    "delete": "Supprimer"
+  }
+}

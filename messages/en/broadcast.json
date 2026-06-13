@@ -1,0 +1,43 @@
+{
+  "title": "Broadcast",
+  "subtitle": "Email your members.",
+  "perProject": "Open a project to write a campaign.",
+  "module": {
+    "title": "Broadcast",
+    "tagline": "Email your members",
+    "toggle": "Enable broadcast",
+    "enabledHint": "Open the Broadcast tab to write your first campaign.",
+    "needsMembers": "Turn on Members first — that's who broadcasts reach."
+  },
+  "compose": {
+    "subjectLabel": "Subject",
+    "subjectPlaceholder": "What's new",
+    "bodyLabel": "Message",
+    "bodyPlaceholder": "Write to your members… **bold**, *italic* and [links](https://…) work.",
+    "save": "Save draft",
+    "saved": "Saved",
+    "sendTo": "Send to {count} members",
+    "sendToNone": "No members yet",
+    "send": "Send now",
+    "sending": "Sending…",
+    "confirm": "Send to {count} members now? This can't be undone.",
+    "remaining": "{count} emails left this month"
+  },
+  "send": {
+    "sent": "Sent to {count}.",
+    "capBlocked": "This campaign needs {needed} emails; you have {remaining} left this month.",
+    "inProgress": "A send is already in progress.",
+    "notPublished": "Publish your site first.",
+    "error": "Couldn't send. Try again."
+  },
+  "history": {
+    "title": "Campaigns",
+    "empty": "No campaigns yet.",
+    "draft": "Draft",
+    "statusSending": "Sending",
+    "sent": "Sent",
+    "failed": "Failed",
+    "delivered": "{count} delivered",
+    "delete": "Delete"
+  }
+}

@@ -1,0 +1,43 @@
+{
+  "title": "Broadcast",
+  "subtitle": "Mail je leden.",
+  "perProject": "Open een project om een campagne te schrijven.",
+  "module": {
+    "title": "Broadcast",
+    "tagline": "Mail je leden",
+    "toggle": "Broadcast inschakelen",
+    "enabledHint": "Open het Broadcast-tabblad om je eerste campagne te schrijven.",
+    "needsMembers": "Zet eerst Leden aan — daar gaan de campagnes naartoe."
+  },
+  "compose": {
+    "subjectLabel": "Onderwerp",
+    "subjectPlaceholder": "Nieuws",
+    "bodyLabel": "Bericht",
+    "bodyPlaceholder": "Schrijf je leden… **vet**, *cursief* en [links](https://…) werken.",
+    "save": "Concept opslaan",
+    "saved": "Opgeslagen",
+    "sendTo": "Naar {count} leden sturen",
+    "sendToNone": "Nog geen leden",
+    "send": "Nu verzenden",
+    "sending": "Verzenden…",
+    "confirm": "Nu naar {count} leden sturen? Kan niet ongedaan worden.",
+    "remaining": "Nog {count} e-mails deze maand"
+  },
+  "send": {
+    "sent": "Naar {count} verzonden.",
+    "capBlocked": "Deze campagne heeft {needed} e-mails nodig; je hebt er deze maand nog {remaining}.",
+    "inProgress": "Er loopt al een verzending.",
+    "notPublished": "Publiceer eerst je site.",
+    "error": "Verzenden mislukt. Probeer opnieuw."
+  },
+  "history": {
+    "title": "Campagnes",
+    "empty": "Nog geen campagnes.",
+    "draft": "Concept",
+    "statusSending": "Verzenden",
+    "sent": "Verzonden",
+    "failed": "Mislukt",
+    "delivered": "{count} bezorgd",
+    "delete": "Verwijderen"
+  }
+}

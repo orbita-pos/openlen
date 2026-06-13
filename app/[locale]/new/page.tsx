@@ -19,6 +19,7 @@ import { useGeneration } from "@/lib/use-generation";
 import { setGenerationBusy } from "@/lib/generation-busy";
 import { useAIModel } from "@/components/workspace-v2/model-picker";
 import type {
+  BroadcastSettings,
   FormConfig,
   MembersSettings,
   MusicSettings,
@@ -2340,6 +2341,37 @@ function NewV2Inner() {
     },
     [loadedProject?.id],
   );
+  // Broadcast module — enable switch (Módulos card). Awaited; mirrors the
+  // members toggle. Enabling reveals the Broadcast tab.
+  const updateBroadcastSettings = useCallback(
+    async (patch: BroadcastSettings): Promise<boolean> => {
+      const projectId = loadedProject?.id;
+      if (!projectId) return false;
+      try {
+        const r = await fetch(`/api/projects/${projectId}/settings`, {
+          method: "PATCH",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ broadcast: patch }),
+        });
+        if (!r.ok) return false;
+        setLoadedProject((p) =>
+          p
+            ? {
+                ...p,
+                settings: {
+                  ...p.settings,
+                  broadcast: { ...p.settings?.broadcast, ...patch },
+                },
+              }
+            : p,
+        );
+        return true;
+      } catch {
+        return false;
+      }
+    },
+    [loadedProject?.id],
+  );
   const toggleInspect = useCallback(() => {
     setInspectMode((m) => !m);
     setInspectSelection(null);
@@ -2557,6 +2589,8 @@ function NewV2Inner() {
           membersSettings={loadedProject?.settings?.members}
           onUpdateMembersSettings={updateMembersSettings}
           onToggleMembersOnly={toggleMembersOnly}
+          broadcastSettings={loadedProject?.settings?.broadcast}
+          onUpdateBroadcastSettings={updateBroadcastSettings}
           activeSitePage={activeSitePage}
           onSwitchSitePage={switchSitePage}
           onCreateSitePage={createSitePage}

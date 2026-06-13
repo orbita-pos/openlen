@@ -1,0 +1,43 @@
+{
+  "title": "Broadcast",
+  "subtitle": "Schreib deinen Mitgliedern.",
+  "perProject": "Öffne ein Projekt, um eine Kampagne zu schreiben.",
+  "module": {
+    "title": "Broadcast",
+    "tagline": "Schreib deinen Mitgliedern",
+    "toggle": "Broadcast aktivieren",
+    "enabledHint": "Öffne den Broadcast-Tab, um deine erste Kampagne zu schreiben.",
+    "needsMembers": "Aktiviere zuerst Mitglieder — an sie gehen die Kampagnen."
+  },
+  "compose": {
+    "subjectLabel": "Betreff",
+    "subjectPlaceholder": "Neuigkeiten",
+    "bodyLabel": "Nachricht",
+    "bodyPlaceholder": "Schreib deinen Mitgliedern… **fett**, *kursiv* und [Links](https://…) funktionieren.",
+    "save": "Entwurf speichern",
+    "saved": "Gespeichert",
+    "sendTo": "An {count} Mitglieder senden",
+    "sendToNone": "Noch keine Mitglieder",
+    "send": "Jetzt senden",
+    "sending": "Senden…",
+    "confirm": "Jetzt an {count} Mitglieder senden? Nicht umkehrbar.",
+    "remaining": "Noch {count} E-Mails diesen Monat"
+  },
+  "send": {
+    "sent": "An {count} gesendet.",
+    "capBlocked": "Diese Kampagne braucht {needed} E-Mails; du hast diesen Monat noch {remaining}.",
+    "inProgress": "Es läuft bereits ein Versand.",
+    "notPublished": "Veröffentliche zuerst deine Seite.",
+    "error": "Senden fehlgeschlagen. Versuch es erneut."
+  },
+  "history": {
+    "title": "Kampagnen",
+    "empty": "Noch keine Kampagnen.",
+    "draft": "Entwurf",
+    "statusSending": "Senden",
+    "sent": "Gesendet",
+    "failed": "Fehlgeschlagen",
+    "delivered": "{count} zugestellt",
+    "delete": "Löschen"
+  }
+}
