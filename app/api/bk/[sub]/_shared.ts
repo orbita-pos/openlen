@@ -64,13 +64,18 @@ export async function loadBookingsSite(sub: string): Promise<BookingsSite | null
   const row = rows[0];
   if (!row) return null;
   const b = row.data?.settings?.bookings;
+  const membersOn = row.data?.settings?.members?.enabled === true;
   return {
     projectId: row.projectId,
     ownerUserId: row.ownerUserId,
     ownerEmail: row.ownerEmail ?? null,
     ownerName: row.ownerName ?? null,
     bookingsEnabled: b?.enabled === true,
-    requireLogin: b?.requireLogin === true,
+    // require-login depends on the members module — without it there's no way
+    // to log in, so a stale requireLogin would make the site unbookable. Treat
+    // it as off (guests allowed) whenever members is off. Defense in depth:
+    // reconcileModuleSettings already normalizes this on write.
+    requireLogin: b?.requireLogin === true && membersOn,
     autoConfirm: b?.autoConfirm !== false, // default ON
     sendReminders: b?.sendReminders !== false, // default ON
     locale: localeFromHtml(row.data?.html),

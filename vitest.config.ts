@@ -39,6 +39,9 @@ export default defineConfig({
       "lib/broadcast/**/*.test.ts",
       "lib/comments/**/*.test.ts",
       "lib/bookings/**/*.test.ts",
+      // NB: lib/projects/site-pages.test.ts is a node:test file (run via
+      // `tsx --test`), so include the vitest module-settings test explicitly.
+      "lib/projects/module-settings.test.ts",
     ],
     exclude: ["node_modules/**", "tests/e2e/**", ".next/**"],
   },

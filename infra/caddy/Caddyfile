@@ -122,12 +122,23 @@ openlen.com, www.openlen.com {
 	}
 	header @doc Cache-Control "public, max-age=60, s-maxage=3600, stale-while-revalidate=86400"
 
+	# Trustworthy client IP for the app's per-IP rate limits (magic-link
+	# requests, comment posts, bookings). *.openlen.com sits behind Cloudflare,
+	# so the real visitor IP arrives in CF-Connecting-IP — BUT a client that
+	# reaches the origin directly (bypassing Cloudflare) can forge that header
+	# and rotate it every request to defeat the limits. Trust the header only
+	# from real Cloudflare peer IPs; for anyone else use the actual connection
+	# IP ({remote.host}), which can't be spoofed. CF ranges: cloudflare.com/ips.
+	@not_cloudflare not remote_ip 173.245.48.0/20 103.21.244.0/22 103.22.200.0/22 103.31.4.0/22 141.101.64.0/18 108.162.192.0/18 190.93.240.0/20 188.114.96.0/20 197.234.240.0/22 198.41.128.0/17 162.158.0.0/15 104.16.0.0/13 104.24.0.0/14 172.64.0.0/13 131.0.72.0/22 2400:cb00::/32 2606:4700::/32 2803:f800::/32 2405:b500::/32 2405:8100::/32 2a06:98c0::/29 2c0f:f248::/32
+	vars cf_client_ip {http.request.header.cf-connecting-ip}
+	vars @not_cloudflare cf_client_ip {http.request.remote.host}
+
 	# Analytics beacons → Next.js, preserving CF-* headers for IP /
 	# country resolution at the app layer (request log is off here —
 	# the app handles its own aggregation).
 	handle /c/* {
 		reverse_proxy 127.0.0.1:3000 {
-			header_up CF-Connecting-IP {http.request.header.cf-connecting-ip}
+			header_up CF-Connecting-IP {vars.cf_client_ip}
 			header_up CF-IPCountry {http.request.header.cf-ipcountry}
 		}
 	}
@@ -144,7 +155,7 @@ openlen.com, www.openlen.com {
 	# Cloudflare would cache protected HTML at the edge.
 	handle /api/m/* {
 		reverse_proxy 127.0.0.1:3000 {
-			header_up CF-Connecting-IP {http.request.header.cf-connecting-ip}
+			header_up CF-Connecting-IP {vars.cf_client_ip}
 		}
 	}
 
@@ -153,7 +164,7 @@ openlen.com, www.openlen.com {
 	# the live thread (no-store) is never edge-cached.
 	handle /api/cm/* {
 		reverse_proxy 127.0.0.1:3000 {
-			header_up CF-Connecting-IP {http.request.header.cf-connecting-ip}
+			header_up CF-Connecting-IP {vars.cf_client_ip}
 		}
 	}
 
@@ -163,7 +174,7 @@ openlen.com, www.openlen.com {
 	# booking) is never edge-cached.
 	handle /api/bk/* {
 		reverse_proxy 127.0.0.1:3000 {
-			header_up CF-Connecting-IP {http.request.header.cf-connecting-ip}
+			header_up CF-Connecting-IP {vars.cf_client_ip}
 		}
 	}
 
