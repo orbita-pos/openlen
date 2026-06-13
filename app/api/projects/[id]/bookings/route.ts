@@ -32,15 +32,21 @@ export async function GET(
     ? [statusParam as BookingStatus]
     : undefined;
   const serviceId = url.searchParams.get("service") || undefined;
-  const fromMs = Number(url.searchParams.get("from"));
-  const toMs = Number(url.searchParams.get("to"));
+  // A MISSING param must be undefined, not 0 — Number(null) === 0 would set the
+  // filter to 1970 and exclude every real booking (the panel sends no params).
+  const dateParam = (k: string): Date | undefined => {
+    const v = url.searchParams.get(k);
+    if (v === null) return undefined;
+    const n = Number(v);
+    return Number.isFinite(n) ? new Date(n) : undefined;
+  };
 
   const [bookings, services] = await Promise.all([
     listBookings(id, {
       status,
       serviceId,
-      fromUtc: Number.isFinite(fromMs) ? new Date(fromMs) : undefined,
-      toUtc: Number.isFinite(toMs) ? new Date(toMs) : undefined,
+      fromUtc: dateParam("from"),
+      toUtc: dateParam("to"),
     }),
     listServices(id, { includeArchived: true }),
   ]);

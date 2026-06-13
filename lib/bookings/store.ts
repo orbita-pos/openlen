@@ -222,9 +222,12 @@ export async function getBusyIntervals(
   rangeStartUtcMs: number,
   rangeEndUtcMs: number,
 ): Promise<BusyInterval[]> {
-  const DAY = 86400000;
-  const lo = new Date(rangeStartUtcMs - DAY);
-  const hi = new Date(rangeEndUtcMs + DAY);
+  // Widen by 2 days each side: a service buffer can be up to 24h before AND
+  // after, so a booking up to ~48h outside the window can still block an
+  // in-window candidate via subtractBusy. A 1-day pad would miss those.
+  const PAD = 2 * 86400000;
+  const lo = new Date(rangeStartUtcMs - PAD);
+  const hi = new Date(rangeEndUtcMs + PAD);
   const rows = await db
     .select({ startUtc: schema.bookings.startUtc, endUtc: schema.bookings.endUtc })
     .from(schema.bookings)
@@ -321,10 +324,13 @@ export async function getBooking(
 
 /** Cancel from a LIVE state only (idempotent: already-cancelled → null). Bumps
  *  icsSequence so a CANCEL .ics supersedes the prior invite. Returns the row
- *  iff it actually transitioned, so the caller knows whether to email. */
+ *  iff it actually transitioned, so the caller knows whether to email.
+ *  `rescheduledToId` (reschedule path) is written in the SAME guarded UPDATE so
+ *  freeing the old slot and linking it to the new one is one atomic statement. */
 export async function cancelBooking(
   projectId: string,
   bookingId: string,
+  rescheduledToId?: string,
 ): Promise<BookingRow | null> {
   const rows = await db
     .update(schema.bookings)
@@ -332,6 +338,7 @@ export async function cancelBooking(
       status: "cancelled",
       cancelledAt: new Date(),
       icsSequence: sql`${schema.bookings.icsSequence} + 1`,
+      ...(rescheduledToId ? { rescheduledToId } : {}),
     })
     .where(
       and(
@@ -407,12 +414,11 @@ export async function rescheduleBooking(
   });
   if (!claim.ok) return { ok: false, reason: "slot_taken" };
 
-  // New slot held — now free the old. cancelBooking bumps the old row's seq.
-  await cancelBooking(projectId, old.id);
-  await db
-    .update(schema.bookings)
-    .set({ rescheduledToId: claim.booking.id })
-    .where(eq(schema.bookings.id, old.id));
+  // New slot held — free the old AND link it in ONE guarded UPDATE (cancel +
+  // rescheduledToId together), collapsing the prior two-statement window. If
+  // the owner cancelled `old` in the race gap, this matches nothing (null) and
+  // no stale link is written — the new booking still stands.
+  await cancelBooking(projectId, old.id, claim.booking.id);
 
   return { ok: true, booking: claim.booking, old };
 }

@@ -11,7 +11,7 @@ import { isSlotBookable } from "@/lib/bookings/rules";
 import { isKnownTimeZone } from "@/lib/bookings/tz";
 import { verifyManageToken } from "@/lib/bookings/manage-token";
 import { notifyBooking } from "@/lib/bookings/notify";
-import { json, loadBookingsSite, siteBaseUrl } from "../_shared";
+import { json, loadBookingsSite } from "../_shared";
 
 // POST /api/bk/[sub]/reschedule { b, t, newStartUtcMs, visitorTz? }
 // Token-authenticated (the manage link). Re-validates the NEW instant against
@@ -79,7 +79,8 @@ export async function POST(
     serviceDescription: service.description,
     locationText: service.locationText,
     sub: site.subdomain,
-    baseUrl: siteBaseUrl(req),
+    // DB-trusted host (not a forgeable request header) for the emailed link.
+    baseUrl: `https://${site.subdomain}.openlen.com`,
     locale: site.locale,
     ownerEmail: site.ownerEmail,
     ownerName: site.ownerName,

@@ -81,6 +81,25 @@ async function main() {
       ON "bookings" ("status", "startUtc");`,
   );
 
+  // OVERLAP guard. bookings_slot_uq only rejects IDENTICAL instants; two live
+  // bookings at DIFFERENT starts whose [start,end) ranges overlap (offered when
+  // slotIncrementMin < durationMin) would both pass it. A GiST exclusion over
+  // the time RANGE makes the DB — not the read-time check — forbid any overlap
+  // per (service, seat). Needs btree_gist for the scalar `=` operands.
+  await db.execute(sql`CREATE EXTENSION IF NOT EXISTS btree_gist;`);
+  await db.execute(sql`
+    DO $$
+    BEGIN
+      IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'bookings_slot_excl') THEN
+        ALTER TABLE "bookings" ADD CONSTRAINT "bookings_slot_excl"
+          EXCLUDE USING gist (
+            "serviceId" WITH =,
+            "seatNo" WITH =,
+            tstzrange("startUtc", "endUtc", '[)') WITH &&
+          ) WHERE (status IN ('confirmed','pending'));
+      END IF;
+    END $$;`);
+
   await db.execute(
     sql`CREATE TABLE IF NOT EXISTS "bookingEvents" (
       "id" text PRIMARY KEY,

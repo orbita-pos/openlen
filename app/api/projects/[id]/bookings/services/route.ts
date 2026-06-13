@@ -64,7 +64,6 @@ export async function POST(
     creatorTz: v.creatorTz,
     weeklyHours: (v.weeklyHours ?? {}) as Partial<Record<Weekday, DayRange[]>>,
     exceptions: (v.exceptions ?? []) as BookingException[],
-    capacity: v.capacity,
     priceDisplay: v.priceDisplay ?? null,
     locationText: v.locationText ?? null,
     sortOrder: v.sortOrder,
