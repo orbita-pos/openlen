@@ -787,6 +787,9 @@ export async function publishProject(
       assistant: project.data?.settings?.assistant?.enabled
         ? { enabled: true, businessName: project.title || v.value }
         : undefined,
+      comments: project.data?.settings?.comments?.enabled
+        ? { enabled: true }
+        : undefined,
       pages: publicPages,
       gatedPages: gatedPages.length > 0 ? gatedPages : undefined,
       memberGate:

@@ -21,6 +21,7 @@ import { bakeGoogleFonts } from "@/lib/publish/font-bake";
 import { bakeMotion } from "@/lib/publish/motion";
 import { bakeMusic } from "@/lib/publish/music";
 import { bakeAssistantWidget } from "@/lib/publish/assistant-widget";
+import { bakeComments } from "@/lib/publish/comments-widget";
 import {
   annotateLanguageCluster,
   buildRobots,
@@ -165,6 +166,11 @@ export interface PublishParams {
    *  page/locale variant. The owner's business brain never ships — the widget
    *  calls back to /api/assistant/<sub> which reads it server-side. */
   assistant?: AssistantBake;
+  /** Comments module (settings.comments). When enabled, the members-only
+   *  comments widget is injected on the root doc + every page/locale variant
+   *  (at the data-ol-comments-section placeholder, or appended before
+   *  </body>). The thread is fetched live from /api/cm/<sub>/*. */
+  comments?: { enabled: boolean };
   /** Members module: pages that publish as a login STUB at their public path
    *  while the REAL document (full bake chain + seal) is written OUTSIDE the
    *  release — <sub>/protected/<sha>/<slug>/index.html, unreachable by the
@@ -428,6 +434,9 @@ interface BakeDocumentCtx {
   music?: MusicSettings;
   /** Site assistant widget config. Absent/disabled = no widget injected. */
   assistant?: AssistantBake;
+  /** Comments module. When enabled, the members-only comments widget is
+   *  injected (at the placeholder, or appended) on every document. */
+  comments?: { enabled: boolean };
 }
 
 interface AssistantBake {
@@ -577,6 +586,22 @@ async function bakeDocument(
     }
   }
 
+  // Comments widget — AFTER the assistant, still BEFORE the seal (so its inline
+  // script hash enters the CSP). Renders at the placeholder or appends.
+  if (process.env.OPENLEN_COMMENTS !== "0" && ctx.comments?.enabled) {
+    try {
+      migratedHtml = bakeComments(migratedHtml, {
+        sub: ctx.sub,
+        apiBase: assistantApiBase(),
+        page,
+        locale: detectHtmlLang(migratedHtml) || "en",
+      });
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.warn("[publishToDir] comments widget inject failed; publishing without it", err);
+    }
+  }
+
   return migratedHtml;
 }
 
@@ -674,6 +699,7 @@ export async function publishToDir(
     motion: params.motion,
     music: effectiveMusic,
     assistant: params.assistant,
+    comments: params.comments,
   };
   let migratedHtml = await bakeDocument(publishHtml, bakeCtx);
 
