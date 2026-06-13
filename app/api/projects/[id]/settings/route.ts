@@ -56,6 +56,8 @@ interface PatchBody {
   /** Members module switches. Merged into settings.members; gating takes
    *  effect on the next publish. */
   members?: { enabled?: boolean; mode?: "open" | "invite" };
+  /** Broadcast module switch. Merged into settings.broadcast. */
+  broadcast?: { enabled?: boolean };
 }
 
 function clean(v: unknown, max: number): string {
@@ -151,12 +153,32 @@ export async function PATCH(
       );
     }
   }
-  if (!hasFormPatch && !hasAnalyticsToggle && !hasMotion && !hasMusic && !hasMembers) {
+  const hasBroadcast = "broadcast" in body;
+  if (hasBroadcast) {
+    const b = body.broadcast;
+    if (!b || typeof b !== "object") {
+      return json({ error: "invalid_body", message: "broadcast must be an object" }, 400);
+    }
+    if ("enabled" in b && typeof b.enabled !== "boolean") {
+      return json(
+        { error: "invalid_body", message: "broadcast.enabled must be boolean" },
+        400,
+      );
+    }
+  }
+  if (
+    !hasFormPatch &&
+    !hasAnalyticsToggle &&
+    !hasMotion &&
+    !hasMusic &&
+    !hasMembers &&
+    !hasBroadcast
+  ) {
     return json(
       {
         error: "invalid_body",
         message:
-          "expected formIndex+patch OR analyticsDisabled OR motion OR music OR members",
+          "expected formIndex+patch OR analyticsDisabled OR motion OR music OR members OR broadcast",
       },
       400,
     );
@@ -257,6 +279,12 @@ export async function PATCH(
     if (turningOn) {
       createdPage = buildAutoMembersPage(data);
     }
+  }
+  if (hasBroadcast && body.broadcast) {
+    nextSettings.broadcast = {
+      ...(data.settings?.broadcast ?? {}),
+      ...("enabled" in body.broadcast ? { enabled: body.broadcast.enabled } : {}),
+    };
   }
 
   const nextData: ProjectData = {
