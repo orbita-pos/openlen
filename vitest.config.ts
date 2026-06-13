@@ -35,6 +35,7 @@ export default defineConfig({
       "lib/publish/assistant-widget.test.ts",
       "lib/members/**/*.test.ts",
       "lib/broadcast/**/*.test.ts",
+      "lib/comments/**/*.test.ts",
     ],
     exclude: ["node_modules/**", "tests/e2e/**", ".next/**"],
   },
