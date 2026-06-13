@@ -37,6 +37,7 @@ export default defineConfig({
       "lib/members/**/*.test.ts",
       "lib/broadcast/**/*.test.ts",
       "lib/comments/**/*.test.ts",
+      "lib/bookings/**/*.test.ts",
     ],
     exclude: ["node_modules/**", "tests/e2e/**", ".next/**"],
   },
