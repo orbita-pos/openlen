@@ -7,6 +7,7 @@ import {
   formConfigKey,
   validatePageSlug,
 } from "@/lib/projects/site-pages";
+import { reconcileModuleSettings } from "@/lib/projects/module-settings";
 import type {
   FormConfig,
   MusicSettings,
@@ -384,9 +385,14 @@ export async function PATCH(
     };
   }
 
+  // Enforce the Members-dependency invariant in one place: disabling Members
+  // cascades comments/broadcast OFF and neutralizes bookings.requireLogin, so a
+  // stale flag can never bake a dead widget or strand a booking flow.
+  const reconciledSettings = reconcileModuleSettings(nextSettings);
+
   const nextData: ProjectData = {
     ...data,
-    settings: nextSettings,
+    settings: reconciledSettings,
     ...(createdPage
       ? {
           pages: {
@@ -427,7 +433,7 @@ export async function PATCH(
     {
       ok: true,
       config,
-      settings: nextSettings,
+      settings: reconciledSettings,
       ...(createdPage ? { createdPage } : {}),
     },
     200,

@@ -36,10 +36,14 @@ export async function loadCommentsSite(
   if (!row) return null;
   const members = row.data?.settings?.members;
   const comments = row.data?.settings?.comments;
+  const membersEnabled = members?.enabled === true;
   return {
     projectId: row.projectId,
-    membersEnabled: members?.enabled === true,
-    commentsEnabled: comments?.enabled === true,
+    membersEnabled,
+    // Comments require the members module — a stale comments flag with members
+    // off would surface a widget whose login/post can never work. Gate on both.
+    // Defense in depth: reconcileModuleSettings normalizes this on write.
+    commentsEnabled: comments?.enabled === true && membersEnabled,
     moderation: comments?.moderation === "all" ? "all" : "moderated",
   };
 }

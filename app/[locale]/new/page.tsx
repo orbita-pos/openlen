@@ -2270,13 +2270,17 @@ function NewV2Inner() {
         });
         if (!r.ok) return { ok: false };
         const d = (await r.json()) as {
+          settings?: ProjectSettings;
           createdPage?: { slug: string; title: string; html: string };
         };
         setLoadedProject((p) =>
           p
             ? {
                 ...p,
-                settings: {
+                // Trust the server's reconciled settings: disabling members
+                // cascades comments/broadcast off + drops bookings.requireLogin,
+                // so the dependent tabs/toggles converge without a refetch.
+                settings: d.settings ?? {
                   ...p.settings,
                   members: { ...p.settings?.members, ...patch },
                 },

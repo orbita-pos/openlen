@@ -272,7 +272,7 @@ export function ModulesPanel({
               role="switch"
               aria-checked={broadcastOn}
               aria-label={tb("module.toggle")}
-              disabled={bcastBusy}
+              disabled={bcastBusy || !enabled}
               onClick={() => void setBroadcastEnabled(!broadcastOn)}
               className={`relative h-[18px] w-[32px] shrink-0 rounded-full transition ${
                 broadcastOn ? "bg-[var(--accent-strong)]" : "bg-zinc-300 dark:bg-zinc-700"
@@ -285,7 +285,7 @@ export function ModulesPanel({
               />
             </button>
           </div>
-          {broadcastOn && (
+          {(broadcastOn || !enabled) && (
             <div className="mt-2.5 fade-in">
               {!enabled ? (
                 <p className="text-[10.5px] leading-relaxed text-amber-700 dark:text-amber-400">
@@ -323,7 +323,7 @@ export function ModulesPanel({
               role="switch"
               aria-checked={commentsOn}
               aria-label={tc("module.toggle")}
-              disabled={cmtBusy}
+              disabled={cmtBusy || !enabled}
               onClick={() => void setCommentsEnabled(!commentsOn)}
               className={`relative h-[18px] w-[32px] shrink-0 rounded-full transition ${
                 commentsOn ? "bg-[var(--accent-strong)]" : "bg-zinc-300 dark:bg-zinc-700"
@@ -336,7 +336,7 @@ export function ModulesPanel({
               />
             </button>
           </div>
-          {commentsOn && (
+          {(commentsOn || !enabled) && (
             <div className="mt-2.5 space-y-2 fade-in">
               {!enabled ? (
                 <p className="text-[10.5px] leading-relaxed text-amber-700 dark:text-amber-400">
@@ -424,13 +424,17 @@ export function ModulesPanel({
           </div>
           {bookingsOn && (
             <div className="mt-2.5 space-y-1.5 fade-in">
-              <ToggleRow
-                label={tbk("module.requireLogin")}
-                hint={bookingsRequireLogin ? tbk("module.requireLoginHint") : tbk("module.guestHint")}
-                checked={bookingsRequireLogin}
-                disabled={bkBusy}
-                onChange={(v) => void updateBookings({ requireLogin: v })}
-              />
+              {/* require-login depends on the members module — hide it when
+                  members is off so the owner can't arm an unbookable dead-end. */}
+              {enabled && (
+                <ToggleRow
+                  label={tbk("module.requireLogin")}
+                  hint={bookingsRequireLogin ? tbk("module.requireLoginHint") : tbk("module.guestHint")}
+                  checked={bookingsRequireLogin}
+                  disabled={bkBusy}
+                  onChange={(v) => void updateBookings({ requireLogin: v })}
+                />
+              )}
               <ToggleRow
                 label={tbk("module.autoConfirm")}
                 hint={bookingsAutoConfirm ? tbk("module.autoConfirmHint") : tbk("module.approveHint")}
