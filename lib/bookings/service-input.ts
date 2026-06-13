@@ -32,7 +32,8 @@ export const serviceInputSchema = z.object({
   creatorTz: z.string().refine(isKnownTimeZone, { message: "invalid IANA time zone" }),
   weeklyHours: z.record(weekdayKey, z.array(dayRange).max(12)).optional(),
   exceptions: z.array(exception).max(200).optional(),
-  capacity: z.number().int().min(1).max(100).optional(),
+  // capacity (multi-seat) is NOT a v1 input — seat allocation isn't built, so
+  // an owner-set capacity>1 would silently under-book. The column stays at 1.
   priceDisplay: z.string().trim().max(80).nullish(),
   locationText: z.string().trim().max(300).nullish(),
   sortOrder: z.number().int().min(0).max(9999).optional(),

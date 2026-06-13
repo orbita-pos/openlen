@@ -19,7 +19,7 @@ import { isSlotBookable } from "@/lib/bookings/rules";
 import { isKnownTimeZone } from "@/lib/bookings/tz";
 import { manageToken } from "@/lib/bookings/manage-token";
 import { notifyBooking } from "@/lib/bookings/notify";
-import { json, loadBookingsSite, resolveMember, siteBaseUrl } from "../_shared";
+import { json, loadBookingsSite, resolveMember } from "../_shared";
 
 // POST /api/bk/[sub]/book — create a booking (guest or member).
 //
@@ -159,7 +159,10 @@ export async function POST(
       serviceDescription: service.description,
       locationText: service.locationText,
       sub: site.subdomain,
-      baseUrl: siteBaseUrl(req),
+      // DB-trusted host, NOT a request header — a forgeable X-Forwarded-Host
+      // would otherwise bake an attacker domain into the emailed manage link
+      // (the HMAC token isn't host-bound). Custom domains use the openlen host.
+      baseUrl: `https://${site.subdomain}.openlen.com`,
       locale: site.locale,
       ownerEmail: site.ownerEmail,
       ownerName: site.ownerName,

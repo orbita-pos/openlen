@@ -49,7 +49,6 @@ export async function PATCH(
       ? { weeklyHours: v.weeklyHours as Partial<Record<Weekday, DayRange[]>> }
       : {}),
     ...(v.exceptions !== undefined ? { exceptions: v.exceptions as BookingException[] } : {}),
-    ...(v.capacity !== undefined ? { capacity: v.capacity } : {}),
     ...(v.priceDisplay !== undefined ? { priceDisplay: v.priceDisplay } : {}),
     ...(v.locationText !== undefined ? { locationText: v.locationText } : {}),
     ...(v.sortOrder !== undefined ? { sortOrder: v.sortOrder } : {}),

@@ -893,8 +893,10 @@ export const bookableServices = pgTable(
     creatorTz: text("creatorTz").notNull(),
     weeklyHours: jsonb("weeklyHours").notNull().default({}),
     exceptions: jsonb("exceptions").notNull().default([]),
-    // Seats per slot. v1 ships 1; the column lets a later capacity-N feature
-    // land without a migration (the slot guard already keys on seatNo).
+    // Seats per slot. v1 is ALWAYS 1 (not a writable input). Seat allocation is
+    // NOT built: a real capacity-N must derive a unique seatNo per booking and
+    // count overlapping live rows against capacity — NEVER count-then-insert,
+    // which reintroduces the soft-cap TOCTOU the slot guard exists to prevent.
     capacity: integer("capacity").notNull().default(1),
     priceDisplay: text("priceDisplay"), // informational TEXT only — never charged
     locationText: text("locationText"), // address / video-call note shown to the visitor
@@ -949,8 +951,13 @@ export const bookings = pgTable(
     createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
   },
   (table) => [
-    // THE GUARD: at most one live booking per (service, instant, seat). cancelled
-    // / completed / no_show rows drop out of the predicate → the slot frees.
+    // THE GUARD (exact-instant): at most one live booking per (service, instant,
+    // seat). cancelled / completed / no_show rows drop out → the slot frees.
+    // A SECOND, overlap-aware guard lives only in bookings-migrate.ts (Drizzle
+    // can't express it): a GiST EXCLUDE constraint `bookings_slot_excl` over
+    // tstzrange(startUtc,endUtc) per (serviceId,seatNo) WHERE status live —
+    // forbids overlapping ranges when slotIncrementMin < durationMin. Both are
+    // swallowed by claimBookingSlot's onConflictDoNothing (no target) → slot_taken.
     uniqueIndex("bookings_slot_uq")
       .on(table.serviceId, table.startUtc, table.seatNo)
       .where(sqlOp`status in ('confirmed','pending')`),
