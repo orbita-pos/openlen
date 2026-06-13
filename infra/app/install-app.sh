@@ -55,10 +55,18 @@ echo "[4/4] Installing + enabling systemd units..."
 install -m 644 "${SCRIPT_DIR}/openlen-app.service" /etc/systemd/system/openlen-app.service
 install -m 644 "${SCRIPT_DIR}/openlen-backup.service" /etc/systemd/system/openlen-backup.service
 install -m 644 "${SCRIPT_DIR}/openlen-backup.timer"   /etc/systemd/system/openlen-backup.timer
+# Scheduled jobs — analytics rollup (daily) + booking reminders/retention (15m).
+install -m 644 "${SCRIPT_DIR}/openlen-analytics-rollup.service"  /etc/systemd/system/openlen-analytics-rollup.service 2>/dev/null || true
+install -m 644 "${SCRIPT_DIR}/openlen-analytics-rollup.timer"    /etc/systemd/system/openlen-analytics-rollup.timer   2>/dev/null || true
+install -m 644 "${SCRIPT_DIR}/openlen-bookings-remind.service"   /etc/systemd/system/openlen-bookings-remind.service  2>/dev/null || true
+install -m 644 "${SCRIPT_DIR}/openlen-bookings-remind.timer"     /etc/systemd/system/openlen-bookings-remind.timer    2>/dev/null || true
 systemctl daemon-reload
 systemctl enable openlen-app.service
 # Backup timer stays disabled until /etc/openlen/rclone.conf is populated.
 # Enable manually with: systemctl enable --now openlen-backup.timer
+# Rollup + booking-reminder timers are safe to enable once the app env is set:
+#   systemctl enable --now openlen-analytics-rollup.timer
+#   systemctl enable --now openlen-bookings-remind.timer   # needs RESEND_API_KEY to email
 
 echo
 echo "✓ App scaffolding installed."
@@ -73,3 +81,7 @@ echo "Optional — nightly R2 backup of published landings:"
 echo "  a. Create /etc/openlen/rclone.conf with an [r2-published] remote (see"
 echo "     infra/scripts/backup-published-to-r2.sh for the format)."
 echo "  b. systemctl enable --now openlen-backup.timer"
+echo
+echo "Scheduled jobs (enable once the app env is populated):"
+echo "  systemctl enable --now openlen-analytics-rollup.timer"
+echo "  systemctl enable --now openlen-bookings-remind.timer   # booking reminders + retention"
