@@ -25,6 +25,7 @@ import {
   Layers,
   ListTree,
   Megaphone,
+  MessageSq,
   Monitor,
   PanelLeft,
   PanelRight,
@@ -36,6 +37,7 @@ import type { Section } from "./mock-data";
 import type { BriefFormState } from "@/components/workspace/types";
 import type {
   BroadcastSettings,
+  CommentsSettings,
   MembersSettings,
   StoredChatTurn,
 } from "@/lib/projects/types";
@@ -43,6 +45,7 @@ import { AiBriefPanel } from "./panels/ai-brief-panel";
 import { AssistantPanel } from "./panels/assistant-panel";
 import { ModulesPanel } from "./panels/modules-panel";
 import { BroadcastPanel } from "./panels/broadcast-panel";
+import { CommentsPanel } from "./panels/comments-panel";
 import { RailBusinessSwitcher } from "./business-switcher";
 import type { BusinessProfile } from "@/lib/business-profiles/types";
 import {
@@ -133,6 +136,7 @@ export type SidebarMode =
   | "assistant"
   | "members"
   | "broadcast"
+  | "comments"
   | "versions";
 
 interface ModeTab {
@@ -149,6 +153,7 @@ const MODE_TABS: ModeTab[] = [
   { id: "assistant", icon: Sparkles },
   { id: "members", icon: Users },
   { id: "broadcast", icon: Megaphone },
+  { id: "comments", icon: MessageSq },
   { id: "versions", icon: HistoryIcon },
 ];
 
@@ -287,6 +292,10 @@ interface LeftSidebarProps {
   /** Broadcast module (Módulos tab card enables it; gates the Broadcast tab). */
   broadcastSettings?: BroadcastSettings;
   onUpdateBroadcastSettings?: (patch: BroadcastSettings) => Promise<boolean>;
+  /** Comments module (Módulos card enables + moderation; gates Comments tab). */
+  commentsSettings?: CommentsSettings;
+  onUpdateCommentsSettings?: (patch: CommentsSettings) => Promise<boolean>;
+  onInsertCommentsSection?: () => void;
 }
 
 export function LeftSidebar({
@@ -349,6 +358,9 @@ export function LeftSidebar({
   onToggleMembersOnly,
   broadcastSettings,
   onUpdateBroadcastSettings,
+  commentsSettings,
+  onUpdateCommentsSettings,
+  onInsertCommentsSection,
 }: LeftSidebarProps) {
   const showBusinessSwitcher = businesses.length > 0 && !!onPickBusiness;
   const t = useTranslations("wsChrome");
@@ -372,12 +384,14 @@ export function LeftSidebar({
         tab.id === "assistant" ||
         tab.id === "members" ||
         tab.id === "broadcast" ||
+        tab.id === "comments" ||
         tab.id === "images")
     )
       return false;
-    // Broadcast is opt-in: the tab only appears once the module is enabled
-    // (from the Módulos panel), like a feature you switched on.
+    // Broadcast + Comments are opt-in: their tabs appear once the module is
+    // enabled (from the Módulos panel), like a feature you switched on.
     if (tab.id === "broadcast" && !broadcastSettings?.enabled) return false;
+    if (tab.id === "comments" && !commentsSettings?.enabled) return false;
     return true;
   });
   // After a click-to-place pick on mobile the panel overlays the canvas —
@@ -624,10 +638,14 @@ export function LeftSidebar({
                 currentProjectId={currentProjectId}
                 membersSettings={membersSettings}
                 broadcastSettings={broadcastSettings}
+                commentsSettings={commentsSettings}
                 gatedCount={sitePages.filter((p) => p.membersOnly).length}
                 onUpdateMembers={onUpdateMembersSettings}
                 onUpdateBroadcast={onUpdateBroadcastSettings}
+                onUpdateComments={onUpdateCommentsSettings}
+                onInsertCommentsSection={onInsertCommentsSection}
                 onShowBroadcast={() => setMode("broadcast")}
+                onShowComments={() => setMode("comments")}
                 onShowLeads={() => onSelectSection?.("messages")}
                 onShowAnalytics={() => onSelectSection?.("analytics")}
                 onShowAssistant={() => setMode("assistant")}
@@ -638,6 +656,9 @@ export function LeftSidebar({
                 currentProjectId={currentProjectId}
                 membersEnabled={membersSettings?.enabled === true}
               />
+            )}
+            {mode === "comments" && (
+              <CommentsPanel currentProjectId={currentProjectId} />
             )}
             {mode === "versions" && (
               <VersionsPanel

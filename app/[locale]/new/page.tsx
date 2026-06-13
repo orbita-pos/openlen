@@ -20,6 +20,7 @@ import { setGenerationBusy } from "@/lib/generation-busy";
 import { useAIModel } from "@/components/workspace-v2/model-picker";
 import type {
   BroadcastSettings,
+  CommentsSettings,
   FormConfig,
   MembersSettings,
   MusicSettings,
@@ -211,6 +212,7 @@ function readThemeBaseline(m: Record<string, unknown>): {
 function NewV2Inner() {
   const t = useTranslations("wsPage");
   const tSections = useTranslations("panelsA");
+  const tComments = useTranslations("comments");
   const tAsset = useTranslations("modalsAsset");
   const [dark, toggleDark] = useDarkMode();
   const searchParams = useSearchParams();
@@ -2372,6 +2374,50 @@ function NewV2Inner() {
     },
     [loadedProject?.id],
   );
+  // Comments module — enable + moderation switches (Módulos card). Awaited,
+  // mirrors the broadcast toggle.
+  const updateCommentsSettings = useCallback(
+    async (patch: CommentsSettings): Promise<boolean> => {
+      const projectId = loadedProject?.id;
+      if (!projectId) return false;
+      try {
+        const r = await fetch(`/api/projects/${projectId}/settings`, {
+          method: "PATCH",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ comments: patch }),
+        });
+        if (!r.ok) return false;
+        setLoadedProject((p) =>
+          p
+            ? {
+                ...p,
+                settings: {
+                  ...p.settings,
+                  comments: { ...p.settings?.comments, ...patch },
+                },
+              }
+            : p,
+        );
+        return true;
+      } catch {
+        return false;
+      }
+    },
+    [loadedProject?.id],
+  );
+  // Drop a comments-section placeholder into the live page (reuses the
+  // section-insert path). It's a STATIC marker — no Gemini, no credit; the
+  // publish bake swaps it for the live widget. The drop engine lets the
+  // creator drag it where they want.
+  const insertCommentsSection = useCallback(() => {
+    insertNonceRef.current += 1;
+    const caption = tComments("module.placeholderCaption");
+    setInsertRequest({
+      html: `<section data-ol-comments-section style="max-width:680px;margin:40px auto;padding:28px 24px;border:1px dashed #c9c9d0;border-radius:14px;text-align:center;color:#9a9aa0;font-size:14px;">${caption}</section>`,
+      nonce: insertNonceRef.current,
+      sectionType: "comments",
+    });
+  }, [tComments]);
   const toggleInspect = useCallback(() => {
     setInspectMode((m) => !m);
     setInspectSelection(null);
@@ -2591,6 +2637,9 @@ function NewV2Inner() {
           onToggleMembersOnly={toggleMembersOnly}
           broadcastSettings={loadedProject?.settings?.broadcast}
           onUpdateBroadcastSettings={updateBroadcastSettings}
+          commentsSettings={loadedProject?.settings?.comments}
+          onUpdateCommentsSettings={updateCommentsSettings}
+          onInsertCommentsSection={insertCommentsSection}
           activeSitePage={activeSitePage}
           onSwitchSitePage={switchSitePage}
           onCreateSitePage={createSitePage}

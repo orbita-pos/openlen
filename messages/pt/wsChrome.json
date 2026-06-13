@@ -52,6 +52,10 @@
       "broadcast": {
         "label": "Broadcast",
         "title": "Envie e-mails aos seus membros"
+      },
+      "comments": {
+        "label": "Comentários",
+        "title": "Moderar comentários"
       }
     },
     "tabLocked": "{label} — bloqueado",

@@ -52,6 +52,10 @@
       "broadcast": {
         "label": "Broadcast",
         "title": "メンバーにメールを送る"
+      },
+      "comments": {
+        "label": "コメント",
+        "title": "コメントをモデレート"
       }
     },
     "tabLocked": "{label} — ロック中",

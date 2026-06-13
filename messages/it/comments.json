@@ -1,0 +1,37 @@
+{
+  "title": "Commenti",
+  "subtitle": "Modera i commenti dei tuoi membri.",
+  "perProject": "Apri un progetto per moderare i commenti.",
+  "module": {
+    "title": "Commenti",
+    "tagline": "Commenti solo per membri sulle tue pagine",
+    "toggle": "Attiva commenti",
+    "needsMembers": "Attiva prima Membri — solo i membri possono commentare.",
+    "modLabel": "Nuovi commenti",
+    "modModerated": "Approva prima",
+    "modAll": "Pubblica subito",
+    "modModeratedHint": "I commenti restano nascosti finché non li approvi.",
+    "modAllHint": "I commenti appaiono subito; nascondi o elimini dopo.",
+    "insert": "Aggiungi una sezione commenti a questa pagina",
+    "inserted": "Aggiunta — trascinala dove vuoi e pubblica.",
+    "placeholderCaption": "I commenti appariranno qui alla pubblicazione."
+  },
+  "list": {
+    "title": "Commenti",
+    "empty": "Ancora nessun commento.",
+    "loadError": "Impossibile caricare i commenti",
+    "deletedMember": "Membro eliminato",
+    "pending": "In attesa",
+    "visible": "Visibile",
+    "approve": "Approva",
+    "hide": "Nascondi",
+    "delete": "Elimina",
+    "ban": "Banna membro",
+    "banConfirm": "Bannare questo membro? Non potrà più commentare."
+  },
+  "filter": {
+    "all": "Tutti",
+    "pending": "In attesa",
+    "visible": "Visibili"
+  }
+}

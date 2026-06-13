@@ -1,0 +1,37 @@
+{
+  "title": "Commentaires",
+  "subtitle": "Modérez les commentaires de vos membres.",
+  "perProject": "Ouvrez un projet pour modérer les commentaires.",
+  "module": {
+    "title": "Commentaires",
+    "tagline": "Commentaires réservés aux membres sur vos pages",
+    "toggle": "Activer les commentaires",
+    "needsMembers": "Activez d'abord Membres — seuls les membres peuvent commenter.",
+    "modLabel": "Nouveaux commentaires",
+    "modModerated": "Approuver d'abord",
+    "modAll": "Publier aussitôt",
+    "modModeratedHint": "Les commentaires restent masqués jusqu'à votre approbation.",
+    "modAllHint": "Les commentaires apparaissent aussitôt ; vous masquez ou supprimez ensuite.",
+    "insert": "Ajouter une section de commentaires à cette page",
+    "inserted": "Ajoutée — placez-la où vous voulez, puis publiez.",
+    "placeholderCaption": "Les commentaires apparaîtront ici à la publication."
+  },
+  "list": {
+    "title": "Commentaires",
+    "empty": "Aucun commentaire.",
+    "loadError": "Impossible de charger les commentaires",
+    "deletedMember": "Membre supprimé",
+    "pending": "En attente",
+    "visible": "Visible",
+    "approve": "Approuver",
+    "hide": "Masquer",
+    "delete": "Supprimer",
+    "ban": "Bannir le membre",
+    "banConfirm": "Bannir ce membre ? Il ne pourra plus commenter."
+  },
+  "filter": {
+    "all": "Tous",
+    "pending": "En attente",
+    "visible": "Visibles"
+  }
+}

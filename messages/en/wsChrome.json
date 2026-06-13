@@ -52,6 +52,10 @@
       "broadcast": {
         "label": "Broadcast",
         "title": "Email your members"
+      },
+      "comments": {
+        "label": "Comments",
+        "title": "Moderate comments"
       }
     },
     "tabLocked": "{label} — locked",
