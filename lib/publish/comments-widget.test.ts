@@ -3,7 +3,7 @@
 import { describe, expect, it } from "vitest";
 import { bakeComments } from "./comments-widget";
 
-const CFG = { sub: "mysite", apiBase: "https://openlen.com", page: null, locale: "es" };
+const CFG = { sub: "mysite", apiBase: "https://openlen.com", page: null };
 const DOC = (body: string) => `<!doctype html><html lang="es"><head></head><body>${body}</body></html>`;
 
 describe("bakeComments", () => {
@@ -55,8 +55,14 @@ describe("bakeComments", () => {
     expect(out).toContain("\\u003c/script");
   });
 
-  it("picks the locale strings and falls back to en", () => {
-    expect(bakeComments(DOC("x"), { ...CFG, locale: "es" })).toContain("Comentarios");
-    expect(bakeComments(DOC("x"), { ...CFG, locale: "xx" })).toContain('"title":"Comments"');
+  it("embeds ALL locale strings and picks by <html lang> at runtime", () => {
+    // The same baked widget must render correctly on translated locale
+    // variants, so it carries every locale and reads document.lang live.
+    const out = bakeComments(DOC("x"), CFG);
+    expect(out).toContain("Comentarios"); // es embedded
+    expect(out).toContain('"title":"Comments"'); // en embedded
+    expect(out).toContain("Kommentare"); // de embedded
+    expect(out).toContain("document.documentElement.lang");
+    expect(out).toContain("C.S[L]||C.S.en"); // runtime fallback to en
   });
 });

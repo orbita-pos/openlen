@@ -592,9 +592,7 @@ async function bakeDocument(
     try {
       migratedHtml = bakeComments(migratedHtml, {
         sub: ctx.sub,
-        apiBase: assistantApiBase(),
         page,
-        locale: detectHtmlLang(migratedHtml) || "en",
       });
     } catch (err) {
       // eslint-disable-next-line no-console

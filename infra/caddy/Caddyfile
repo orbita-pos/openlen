@@ -254,14 +254,23 @@ openlen.com, www.openlen.com {
 		Referrer-Policy "strict-origin-when-cross-origin"
 	}
 
-	# Pass-through paths — form submissions and analytics beacons keep
-	# their original URLs so the existing Next handlers (/api/f/[sub],
-	# /c/[projectId]) see them unchanged.
+	# Pass-through paths — form submissions, analytics beacons, members +
+	# comments same-host APIs keep their original URLs so the Next handlers
+	# (/api/f, /c, /api/m, /api/cm) see them unchanged.
+	#
+	# SECURITY: custom domains point straight at our IP (no Cloudflare in
+	# front), so a client-supplied CF-Connecting-IP is FORGEABLE and would let
+	# an attacker spoof their IP to dodge the per-IP rate limits on comment
+	# posting + magic-link login. OVERWRITE it with the true peer address (and
+	# drop the equally-forgeable CF-IPCountry) — there is no real CF header to
+	# trust here. On the *.openlen.com wildcard above, Cloudflare sets these
+	# headers and the origin isn't directly addressable, so that path keeps
+	# forwarding them.
 	@passthrough path /api/* /c/*
 	handle @passthrough {
 		reverse_proxy 127.0.0.1:3000 {
-			header_up CF-Connecting-IP {http.request.header.cf-connecting-ip}
-			header_up CF-IPCountry {http.request.header.cf-ipcountry}
+			header_up CF-Connecting-IP {http.request.remote.host}
+			header_up -CF-IPCountry
 		}
 	}
 

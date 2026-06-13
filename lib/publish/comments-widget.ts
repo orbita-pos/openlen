@@ -44,30 +44,38 @@ const STRINGS: Record<string, CommentsStrings> = {
 
 export interface CommentsWidgetConfig {
   sub: string;
-  apiBase: string;
   /** Page slug this thread belongs to (null = home). */
   page: string | null;
-  locale?: string | null;
 }
 
 const WIDGET_MARKER = "data-ol-comments-widget";
 const SECTION_MARKER = "data-ol-comments-section";
 
 function widgetScript(cfg: CommentsWidgetConfig): string {
-  const t = (cfg.locale && STRINGS[cfg.locale]) || STRINGS.en;
+  // RELATIVE API paths — load-bearing: the ol_member session cookie is
+  // host-only (first-party on the published site's host). A cross-host call to
+  // the apex would NOT carry the cookie, so /me would always say logged-out
+  // and POSTs would always 401. Same-host (relative) keeps the cookie in play;
+  // Caddy routes /api/cm/* and /api/m/* on both the wildcard and custom domains.
+  //
+  // Embed ALL locale strings and pick at RUNTIME from <html lang>: the widget
+  // is baked once and copied verbatim into translated locale variants (the
+  // bake is idempotent), so a build-time locale would freeze the root language
+  // onto every variant. Reading the page's own lang fixes that. (~1KB; stable.)
   const C = JSON.stringify({
     sub: cfg.sub,
-    api: cfg.apiBase,
     slug: cfg.page,
-    t,
+    S: STRINGS,
   }).replace(/</g, "\\u003c");
 
   return `<script ${WIDGET_MARKER}>(function(){try{
-var C=${C},T=C.t;
+var C=${C};
+var L=(document.documentElement.lang||"en").slice(0,2).toLowerCase();
+var T=C.S[L]||C.S.en;
 var host=document.querySelector("[data-ol-comments-host]");
 if(!host||host.shadowRoot)return;
 var R=host.attachShadow({mode:"open"});
-var q=function(u,o){return fetch(C.api+"/api/cm/"+C.sub+u,o||{})};
+var q=function(u,o){return fetch("/api/cm/"+C.sub+u,o||{})};
 R.innerHTML='<style>'
 +':host{all:initial;display:block}'
 +'*{box-sizing:border-box;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}'
@@ -114,7 +122,7 @@ btn.addEventListener("click",function(){box.innerHTML="";var inp=document.create
 var sb=document.createElement("button");sb.type="button";sb.textContent=T.sendLink;sb.style.marginTop="8px";
 box.appendChild(inp);box.appendChild(sb);inp.focus();
 sb.addEventListener("click",function(){var em=inp.value.trim();if(!em)return;sb.disabled=true;
-fetch(C.api+"/api/m/"+C.sub+"/auth/request",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({email:em,slug:C.slug})})
+fetch("/api/m/"+C.sub+"/auth/request",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({email:em,slug:C.slug})})
 .then(function(){box.innerHTML="";msg(box,T.checkInbox)}).catch(function(){sb.disabled=false;msg(box,T.error)})})})}
 function load(){q("/comments?slug="+(C.slug||"")).then(function(r){return r.json()}).then(function(j){render(j.comments)}).catch(function(){})}
 load();
@@ -124,7 +132,9 @@ q("/me",{credentials:"same-origin"}).then(function(r){return r.json()}).then(fun
 
 /** Inject the comments widget. Idempotent (skips if the widget script is
  *  already present). Renders in the data-ol-comments-section placeholder if
- *  the creator placed one, else appends before </body>. */
+ *  the creator placed one, else appends before </body>. The same baked widget
+ *  is copied into translated locale variants — it picks its UI language from
+ *  <html lang> at runtime, so each variant reads correctly. */
 export function bakeComments(html: string, cfg: CommentsWidgetConfig): string {
   if (html.includes(WIDGET_MARKER)) return html;
   const block = `<div data-ol-comments-host></div>${widgetScript(cfg)}`;
