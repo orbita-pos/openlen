@@ -24,6 +24,7 @@
     "billing:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/billing-migrate.ts",
     "members:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/members-migrate.ts",
     "broadcast:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/broadcast-migrate.ts",
+    "comments:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/comments-migrate.ts",
     "versions:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/versions-migrate.ts",
     "drift:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/drift-migrate.ts",
     "flight:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/flight-migrate.ts",

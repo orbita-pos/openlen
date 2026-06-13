@@ -825,6 +825,44 @@ export const emailSuppressions = pgTable(
   ],
 );
 
+// ─── Comments module — members-only commenting on published pages ───────────
+// Applied via `npm run comments:migrate`. memberId/authorName/authorEmail are
+// SNAPSHOTS (no FK, like broadcastRecipients) so a comment survives member
+// deletion for audit, while ban-member (deleting the siteMembers row) still
+// stops future posts. body is plain text — escaped on render, NEVER HTML.
+// parentId (1-level replies) ships now but is UI-deferred (no later migration).
+export const siteComments = pgTable(
+  "siteComments",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    projectId: text("projectId")
+      .notNull()
+      .references(() => projects.id, { onDelete: "cascade" }),
+    // Site page the comment lives on. null = home. Same slug shape as SitePage.
+    page: text("page"),
+    memberId: text("memberId"), // snapshot, no FK
+    authorName: text("authorName"),
+    authorEmail: text("authorEmail"), // normalized; never rendered publicly
+    body: text("body").notNull(),
+    parentId: text("parentId"), // 1-level replies, UI-deferred
+    status: text("status")
+      .$type<"visible" | "hidden">()
+      .notNull()
+      .default("hidden"),
+    createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("siteComments_projectId_page_createdAt_idx").on(
+      table.projectId,
+      table.page,
+      table.createdAt,
+    ),
+    index("siteComments_projectId_status_idx").on(table.projectId, table.status),
+  ],
+);
+
 // External-deploy OAuth connections — one row per (user, provider). The token
 // is an ACCOUNT-level credential (connect once, deploy any project), so it
 // lives at user grain, not per-project. Powers the Deploy-dropdown "Deploy to
