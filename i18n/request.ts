@@ -218,15 +218,25 @@ import zhBroadcast from "../messages/zh/broadcast.json";
 import nlBroadcast from "../messages/nl/broadcast.json";
 
 import enComments from "../messages/en/comments.json";
+import enBookings from "../messages/en/bookings.json";
 import esComments from "../messages/es/comments.json";
+import esBookings from "../messages/es/bookings.json";
 import ptComments from "../messages/pt/comments.json";
+import ptBookings from "../messages/pt/bookings.json";
 import frComments from "../messages/fr/comments.json";
+import frBookings from "../messages/fr/bookings.json";
 import deComments from "../messages/de/comments.json";
+import deBookings from "../messages/de/bookings.json";
 import itComments from "../messages/it/comments.json";
+import itBookings from "../messages/it/bookings.json";
 import jaComments from "../messages/ja/comments.json";
+import jaBookings from "../messages/ja/bookings.json";
 import koComments from "../messages/ko/comments.json";
+import koBookings from "../messages/ko/bookings.json";
 import zhComments from "../messages/zh/comments.json";
+import zhBookings from "../messages/zh/bookings.json";
 import nlComments from "../messages/nl/comments.json";
+import nlBookings from "../messages/nl/bookings.json";
 
 const MESSAGES = {
   en: {
@@ -251,6 +261,7 @@ const MESSAGES = {
     members: enMembers,
     broadcast: enBroadcast,
     comments: enComments,
+    bookings: enBookings,
   },
   es: {
     common: esCommon,
@@ -274,6 +285,7 @@ const MESSAGES = {
     members: esMembers,
     broadcast: esBroadcast,
     comments: esComments,
+    bookings: esBookings,
   },
   pt: {
     common: ptCommon,
@@ -297,6 +309,7 @@ const MESSAGES = {
     members: ptMembers,
     broadcast: ptBroadcast,
     comments: ptComments,
+    bookings: ptBookings,
   },
   fr: {
     common: frCommon,
@@ -320,6 +333,7 @@ const MESSAGES = {
     members: frMembers,
     broadcast: frBroadcast,
     comments: frComments,
+    bookings: frBookings,
   },
   de: {
     common: deCommon,
@@ -343,6 +357,7 @@ const MESSAGES = {
     members: deMembers,
     broadcast: deBroadcast,
     comments: deComments,
+    bookings: deBookings,
   },
   it: {
     common: itCommon,
@@ -366,6 +381,7 @@ const MESSAGES = {
     members: itMembers,
     broadcast: itBroadcast,
     comments: itComments,
+    bookings: itBookings,
   },
   ja: {
     common: jaCommon,
@@ -389,6 +405,7 @@ const MESSAGES = {
     members: jaMembers,
     broadcast: jaBroadcast,
     comments: jaComments,
+    bookings: jaBookings,
   },
   ko: {
     common: koCommon,
@@ -412,6 +429,7 @@ const MESSAGES = {
     members: koMembers,
     broadcast: koBroadcast,
     comments: koComments,
+    bookings: koBookings,
   },
   zh: {
     common: zhCommon,
@@ -435,6 +453,7 @@ const MESSAGES = {
     members: zhMembers,
     broadcast: zhBroadcast,
     comments: zhComments,
+    bookings: zhBookings,
   },
   nl: {
     common: nlCommon,
@@ -458,6 +477,7 @@ const MESSAGES = {
     members: nlMembers,
     broadcast: nlBroadcast,
     comments: nlComments,
+    bookings: nlBookings,
   },
 } as const;
 

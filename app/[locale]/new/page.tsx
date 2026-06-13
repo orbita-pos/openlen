@@ -19,6 +19,7 @@ import { useGeneration } from "@/lib/use-generation";
 import { setGenerationBusy } from "@/lib/generation-busy";
 import { useAIModel } from "@/components/workspace-v2/model-picker";
 import type {
+  BookingsSettings,
   BroadcastSettings,
   CommentsSettings,
   FormConfig,
@@ -213,6 +214,7 @@ function NewV2Inner() {
   const t = useTranslations("wsPage");
   const tSections = useTranslations("panelsA");
   const tComments = useTranslations("comments");
+  const tBookings = useTranslations("bookings");
   const tAsset = useTranslations("modalsAsset");
   const [dark, toggleDark] = useDarkMode();
   const searchParams = useSearchParams();
@@ -2418,6 +2420,44 @@ function NewV2Inner() {
       sectionType: "comments",
     });
   }, [tComments]);
+  const updateBookingsSettings = useCallback(
+    async (patch: BookingsSettings): Promise<boolean> => {
+      const projectId = loadedProject?.id;
+      if (!projectId) return false;
+      try {
+        const r = await fetch(`/api/projects/${projectId}/settings`, {
+          method: "PATCH",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ bookings: patch }),
+        });
+        if (!r.ok) return false;
+        setLoadedProject((p) =>
+          p
+            ? {
+                ...p,
+                settings: {
+                  ...p.settings,
+                  bookings: { ...p.settings?.bookings, ...patch },
+                },
+              }
+            : p,
+        );
+        return true;
+      } catch {
+        return false;
+      }
+    },
+    [loadedProject?.id],
+  );
+  const insertBookingsSection = useCallback(() => {
+    insertNonceRef.current += 1;
+    const caption = tBookings("module.placeholderCaption");
+    setInsertRequest({
+      html: `<section data-ol-bookings-section style="max-width:560px;margin:40px auto;padding:28px 24px;border:1px dashed #c9c9d0;border-radius:14px;text-align:center;color:#9a9aa0;font-size:14px;">${caption}</section>`,
+      nonce: insertNonceRef.current,
+      sectionType: "bookings",
+    });
+  }, [tBookings]);
   const toggleInspect = useCallback(() => {
     setInspectMode((m) => !m);
     setInspectSelection(null);
@@ -2640,6 +2680,9 @@ function NewV2Inner() {
           commentsSettings={loadedProject?.settings?.comments}
           onUpdateCommentsSettings={updateCommentsSettings}
           onInsertCommentsSection={insertCommentsSection}
+          bookingsSettings={loadedProject?.settings?.bookings}
+          onUpdateBookingsSettings={updateBookingsSettings}
+          onInsertBookingsSection={insertBookingsSection}
           activeSitePage={activeSitePage}
           onSwitchSitePage={switchSitePage}
           onCreateSitePage={createSitePage}

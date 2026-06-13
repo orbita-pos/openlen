@@ -56,6 +56,10 @@
       "comments": {
         "label": "댓글",
         "title": "댓글 관리"
+      },
+      "bookings": {
+        "label": "예약",
+        "title": "예약 관리"
       }
     },
     "tabLocked": "{label} — 잠김",

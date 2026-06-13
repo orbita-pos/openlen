@@ -56,6 +56,10 @@
       "comments": {
         "label": "评论",
         "title": "管理评论"
+      },
+      "bookings": {
+        "label": "预约",
+        "title": "管理预约"
       }
     },
     "tabLocked": "{label} — 已锁定",
