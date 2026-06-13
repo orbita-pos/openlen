@@ -8,11 +8,11 @@ Type=oneshot
 User=openlen-deploy
 Group=www-data
 
-# Same env layout as openlen-app.service — the .env.local lives in
-# /etc/openlen/app.env (640 root:openlen-deploy) and is read by tsx via
-# --env-file. Needs RESEND_API_KEY + EMAIL_FROM set to actually send.
+# SAME secrets file as openlen-app.service (/etc/openlen/openlen.env, 640
+# root:openlen-deploy, populated by install-app.sh) — DATABASE_URL etc. Needs
+# RESEND_API_KEY + EMAIL_FROM set to actually send reminder emails.
 WorkingDirectory=/opt/openlen-app
-EnvironmentFile=/etc/openlen/app.env
+EnvironmentFile=/etc/openlen/openlen.env
 
 ExecStart=/usr/bin/npm run bookings:remind
 
