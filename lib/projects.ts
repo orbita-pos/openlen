@@ -790,6 +790,9 @@ export async function publishProject(
       comments: project.data?.settings?.comments?.enabled
         ? { enabled: true }
         : undefined,
+      bookings: project.data?.settings?.bookings?.enabled
+        ? { enabled: true }
+        : undefined,
       pages: publicPages,
       gatedPages: gatedPages.length > 0 ? gatedPages : undefined,
       memberGate:
