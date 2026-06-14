@@ -17,6 +17,7 @@ import { backupReleaseToR2 } from "@/lib/publish/backup-r2";
 import { createVersion } from "@/lib/projects/versions";
 import { getChatMessages } from "@/lib/projects/chat";
 import {
+  pageEdgePaths,
   pagesForPublish,
   sitePagesFingerprintInput,
   splitPagesForPublish,
@@ -885,9 +886,12 @@ export async function publishProject(
     void backupReleaseToR2(v.value, publishResult.sha, publishResult.html);
   }
 
-  // 6. If the project's subdomain changed (rename), clean up the old dir.
+  // 6. If the project's subdomain changed (rename), clean up the old dir AND
+  // purge the old subdomain at the edge (home + every subpage) — else CF keeps
+  // serving the project at its previous address after a rename.
   if (previousSubdomain && previousSubdomain !== v.value) {
     await unpublishDir(previousSubdomain).catch(() => {});
+    await purgeSubdomain(previousSubdomain, pageEdgePaths(project.data)).catch(() => {});
   }
 
   // 7. Snapshot the published HTML into the version history so the user
@@ -926,12 +930,7 @@ export async function publishProject(
   // the sitemap purge too.
   await purgeSubdomain(v.value, [
     ...publishResult.locales.map((l) => `/${l}/`),
-    // pagesForPublish covers public AND gated slugs — gated stubs sit at the
-    // same public paths and CF caches them like any other HTML.
-    ...pagesForPublish(project.data).flatMap((pg) => [
-      `/${pg.slug}`,
-      `/${pg.slug}/`,
-    ]),
+    ...pageEdgePaths(project.data),
     "/sitemap.xml",
   ]);
 
@@ -967,6 +966,7 @@ export async function unpublishProject(params: UnpublishParams): Promise<void> {
       id: schema.projects.id,
       subdomain: schema.projects.subdomain,
       status: schema.projects.status,
+      data: schema.projects.data,
     })
     .from(schema.projects)
     .where(
@@ -982,6 +982,7 @@ export async function unpublishProject(params: UnpublishParams): Promise<void> {
   if (!row.subdomain) return;
 
   const sub = row.subdomain;
+  const subpagePaths = pageEdgePaths(row.data);
   await db
     .update(schema.projects)
     .set({
@@ -1005,8 +1006,9 @@ export async function unpublishProject(params: UnpublishParams): Promise<void> {
   await unpublishDir(sub).catch(() => {});
 
   // Purge the edge cache so visitors get a 404 immediately instead of
-  // a stale HIT for up to `s-maxage`.
-  await purgeSubdomain(sub);
+  // a stale HIT for up to `s-maxage` — home AND every subpage (else a
+  // taken-down subpage keeps serving its old content at the edge).
+  await purgeSubdomain(sub, subpagePaths);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1044,6 +1046,7 @@ export async function rollbackProject(
     .select({
       id: schema.projects.id,
       subdomain: schema.projects.subdomain,
+      data: schema.projects.data,
     })
     .from(schema.projects)
     .where(
@@ -1097,7 +1100,9 @@ export async function rollbackProject(
     console.error("[rollback] version snapshot failed", err);
   });
 
-  await purgeSubdomain(row.subdomain);
+  // Purge home AND every subpage — else a rollback leaves subpages serving the
+  // pre-rollback (wrong) content while only home flips, an inconsistent site.
+  await purgeSubdomain(row.subdomain, pageEdgePaths(row.data));
 
   return {
     sha: params.sha,

@@ -130,6 +130,54 @@ test.describe("Editor V5 overlay", () => {
       .toBe(true);
   });
 
+  // The page-switch safety net: switchSitePage posts `openlen:commit-edits`
+  // before remounting the iframe so typed-but-not-blurred text is committed
+  // (and posted as html-changed) instead of being lost or mis-routed.
+  test("commit-edits message commits an in-progress edit (page-switch safety)", async ({ page }) => {
+    const frame = await setup(page);
+    await page.frameLocator("#f").locator("#hero").click();
+    await expect.poll(() => overlayCount(frame)).toBe(1);
+
+    await page.keyboard.press("ControlOrMeta+a");
+    await page.keyboard.type("Committed by page switch");
+    // NO Enter/blur — simulate switchSitePage's pre-switch commit instead.
+    await page.evaluate(() => {
+      (document.getElementById("f") as HTMLIFrameElement).contentWindow!.postMessage(
+        { type: "openlen:commit-edits" },
+        "*",
+      );
+    });
+
+    // The edit is committed: overlay torn down + the real node carries the text.
+    await expect.poll(() => overlayCount(frame)).toBe(0);
+    expect(await frame.locator("#hero").textContent()).toBe("Committed by page switch");
+    // And an html-changed carrying the new text was posted (feeds pendingSaveRef).
+    await expect
+      .poll(async () => {
+        const all = await msgs(page);
+        return all.some(
+          (m) =>
+            m.type === "openlen:html-changed" &&
+            typeof m.outerHtml === "string" &&
+            (m.outerHtml as string).includes("Committed by page switch"),
+        );
+      })
+      .toBe(true);
+  });
+
+  test("commit-edits is a no-op when nothing is being edited", async ({ page }) => {
+    await setup(page);
+    await page.evaluate(() => {
+      (document.getElementById("f") as HTMLIFrameElement).contentWindow!.postMessage(
+        { type: "openlen:commit-edits" },
+        "*",
+      );
+    });
+    await page.waitForTimeout(200);
+    const all = await msgs(page);
+    expect(all.some((m) => m.type === "openlen:html-changed")).toBe(false);
+  });
+
   test("preserves inline marks when editing a run (strong + link survive)", async ({ page }) => {
     const frame = await setup(page);
     // Click the leading text run of the paragraph (before the <strong>).

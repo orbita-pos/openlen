@@ -21,7 +21,7 @@ export const dynamic = "force-dynamic";
 
 interface ExportBody {
   html?: string;
-  pages?: Record<string, { html?: string }>;
+  pages?: Record<string, { html?: string; membersOnly?: boolean }>;
 }
 
 // Same shape the publish slug validator accepts — anything else in the
@@ -54,15 +54,24 @@ export async function POST(req: Request): Promise<Response> {
     const zip = new JSZip();
     zip.file("index.html", html);
     const pages = (body as ExportBody).pages;
+    let excludedGated = 0;
     if (pages && typeof pages === "object") {
       for (const [slug, pg] of Object.entries(pages)) {
         const pageHtml = typeof pg?.html === "string" ? pg.html : "";
         if (!SLUG_RE.test(slug)) continue;
+        // Members-only pages are gated on the live site — a static ZIP can't
+        // enforce that, so exporting them would publish protected content as
+        // plaintext the moment the folder is dropped on Netlify/GitHub Pages.
+        // Exclude them; the README explains the omission.
+        if (pg?.membersOnly === true) {
+          excludedGated++;
+          continue;
+        }
         if (!/<html[\s>]/i.test(pageHtml) || !/<\/html>/i.test(pageHtml)) continue;
         zip.file(`${slug}/index.html`, pageHtml);
       }
     }
-    zip.file("README.md", buildReadme(html));
+    zip.file("README.md", buildReadme(html, excludedGated));
     const bytes = await zip.generateAsync({
       type: "uint8array",
       compression: "DEFLATE",
@@ -87,12 +96,16 @@ export async function POST(req: Request): Promise<Response> {
   }
 }
 
-function buildReadme(html: string): string {
+function buildReadme(html: string, excludedGated = 0): string {
   const title = extractTitle(html) ?? "Landing page";
+  const gatedNote =
+    excludedGated > 0
+      ? `\n> Note: ${excludedGated} members-only page${excludedGated === 1 ? "" : "s"} ${excludedGated === 1 ? "was" : "were"} left out of this export — a static folder can't enforce the members gate, so they stay on your OpenLen site only.\n`
+      : "";
   return `# ${title}
 
 Exported from OpenLen.
-
+${gatedNote}
 ## How to use
 
 **Open locally:** double-click \`index.html\`. It opens in your browser. No server required.

@@ -2,8 +2,10 @@ import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 import { auth } from "@/auth";
 import { db, schema } from "@/lib/db";
-import type { ProjectData } from "@/lib/projects/types";
+import type { FormConfig, ProjectData } from "@/lib/projects/types";
 import { pageTitle, validatePageSlug } from "@/lib/projects/site-pages";
+import { unpublishPageDir } from "@/lib/publish/filesystem";
+import { purgeSubdomain } from "@/lib/publish/cache-purge";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -18,7 +20,7 @@ export const dynamic = "force-dynamic";
 
 async function loadRow(projectId: string, userId: string) {
   const rows = await db
-    .select({ data: schema.projects.data })
+    .select({ data: schema.projects.data, subdomain: schema.projects.subdomain })
     .from(schema.projects)
     .where(
       and(eq(schema.projects.id, projectId), eq(schema.projects.userId, userId)),
@@ -134,13 +136,49 @@ export async function DELETE(
   if (!row || !row.data?.pages?.[slug]) return json({ error: "not_found" }, 404);
 
   const { [slug]: _removed, ...rest } = row.data.pages;
-  const nextData: ProjectData = { ...row.data, pages: rest };
+
+  // Clean the page's page-scoped form config ("<slug>:<index>" keys) so a
+  // recreated same-slug page doesn't silently re-inherit the old notify-email
+  // / redirect (wrong-recipient lead emails).
+  const forms = { ...(row.data.settings?.forms ?? {}) } as Record<string, FormConfig>;
+  let formsTouched = false;
+  for (const key of Object.keys(forms)) {
+    if (key.startsWith(`${slug}:`)) {
+      delete forms[key];
+      formsTouched = true;
+    }
+  }
+  const nextSettings = formsTouched
+    ? { ...row.data.settings, forms }
+    : row.data.settings;
+
+  const nextData: ProjectData = {
+    ...row.data,
+    pages: rest,
+    ...(formsTouched ? { settings: nextSettings } : {}),
+  };
   await db
     .update(schema.projects)
     .set({ data: nextData, updatedAt: new Date() })
     .where(
       and(eq(schema.projects.id, id), eq(schema.projects.userId, session.user.id)),
     );
+
+  // Clean the page's comments so a recreated same-slug page doesn't resurface
+  // the old page's thread. (Snapshots, no FK — must be cleared explicitly.)
+  await db
+    .delete(schema.siteComments)
+    .where(and(eq(schema.siteComments.projectId, id), eq(schema.siteComments.page, slug)))
+    .catch(() => {});
+
+  // If the project is live, de-publish the page NOW — drop it from the live
+  // release on disk + purge its edge cache — so a deleted page stops serving
+  // instead of lingering at <sub>/<slug>/ until the next manual Deploy.
+  if (row.subdomain) {
+    await unpublishPageDir(row.subdomain, slug).catch(() => {});
+    await purgeSubdomain(row.subdomain, [`/${slug}`, `/${slug}/`]).catch(() => {});
+  }
+
   return json({ ok: true }, 200);
 }
 

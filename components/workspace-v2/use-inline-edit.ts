@@ -1014,7 +1014,15 @@ ${CORE_SRC}
   function setupModeReceiver() {
     window.addEventListener('message', function (e) {
       var d = e.data;
-      if (!d || typeof d !== 'object' || d.type !== 'openlen:set-mode' || !document.body) return;
+      if (!d || typeof d !== 'object' || !document.body) return;
+      // Force-commit any in-progress inline edit (e.g. before a page switch
+      // remounts the iframe) so typed-but-not-blurred text isn't lost. No-op
+      // when nothing is being edited.
+      if (d.type === 'openlen:commit-edits') {
+        try { finishEdit(true); } catch (_c) {}
+        return;
+      }
+      if (d.type !== 'openlen:set-mode') return;
       if ('editMode' in d) {
         if (d.editMode) document.body.setAttribute('data-openlen-edit-mode', '');
         else document.body.removeAttribute('data-openlen-edit-mode');
