@@ -1733,14 +1733,25 @@ function NewV2Inner() {
   // clears the positional inspector selection (paths are per-document).
   const switchSitePage = useCallback(
     (slug: string | null) => {
-      void flushPendingSave();
-      setInspectSelection(null);
-      const params = new URLSearchParams(searchParams.toString());
-      if (slug) params.set("page", slug);
-      else params.delete("page");
-      const qs = params.toString();
-      router.push(qs ? `/new?${qs}` : "/new");
-      if (isMobile) setLeftCollapsed(true);
+      // Force-commit an in-progress inline edit FIRST — while the active page is
+      // still the OLD one — so typed-but-not-blurred text is captured into the
+      // pending save for the page being left, not lost or mis-routed onto the
+      // page we're switching to when the iframe remounts.
+      const win = iframeElRef.current?.contentWindow;
+      win?.postMessage({ type: "openlen:commit-edits" }, "*");
+      const go = () => {
+        void flushPendingSave();
+        setInspectSelection(null);
+        const params = new URLSearchParams(searchParams.toString());
+        if (slug) params.set("page", slug);
+        else params.delete("page");
+        const qs = params.toString();
+        router.push(qs ? `/new?${qs}` : "/new");
+        if (isMobile) setLeftCollapsed(true);
+      };
+      // Let the commit's html-changed reach pendingSaveRef before flush+navigate.
+      if (win) setTimeout(go, 60);
+      else go();
     },
     [flushPendingSave, searchParams, router, isMobile],
   );

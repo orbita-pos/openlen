@@ -98,6 +98,15 @@ export function pagesForPublish(
     .map((slug) => ({ slug, html: pages[slug].html }));
 }
 
+/** Cloudflare edge paths for every published subpage (NOT home — the caller's
+ *  purge already covers `/` and `/index.html`). CF caches `/pricing` and
+ *  `/pricing/` as distinct keys, so both are returned. Covers public AND gated
+ *  slugs — gated stubs sit at the same public paths. Used by publish, unpublish,
+ *  rollback and rename so a subpage is never left stale at the edge. */
+export function pageEdgePaths(data: ProjectData | null | undefined): string[] {
+  return pagesForPublish(data).flatMap((pg) => [`/${pg.slug}`, `/${pg.slug}/`]);
+}
+
 /** Whether members gating is live for this project — the per-page flags only
  *  take effect while the module's master switch is on. */
 export function membersGatingEnabled(

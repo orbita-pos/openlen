@@ -1200,6 +1200,28 @@ export async function unpublishDir(subdomain: string): Promise<void> {
 }
 
 /**
+ * Drop a single site page from the LIVE release so the deleted subpage stops
+ * serving immediately (Caddy 404s `<sub>/<slug>/`). The live site is
+ * `<sub>/current` → `releases/<sha>/`; we remove the slug dir under it. Prior
+ * releases are untouched, so a rollback can still restore the page. Idempotent.
+ * Called by the page-delete route. Best-effort: the caller soft-fails.
+ */
+export async function unpublishPageDir(
+  subdomain: string,
+  slug: string,
+): Promise<void> {
+  const v = validateSubdomain(subdomain);
+  if (!v.ok) {
+    throw new Error(`unpublishPageDir: invalid subdomain (${v.reason})`);
+  }
+  if (!/^[a-z0-9](?:[a-z0-9-]{0,38}[a-z0-9])?$/.test(slug)) {
+    throw new Error(`unpublishPageDir: invalid slug (${slug})`);
+  }
+  const pageDir = safeJoin(getRoot(), v.value, "current", slug);
+  await rm(pageDir, { recursive: true, force: true });
+}
+
+/**
  * Sweep stale tmp dirs under each subdomain. Called once at app startup
  * (instrumentation.ts).
  */
