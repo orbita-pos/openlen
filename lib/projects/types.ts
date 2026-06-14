@@ -172,4 +172,7 @@ export interface StoredChatTurn {
   errorText?: string;
   /** ms-epoch the turn was applied — drives the "Applied · 3h ago" label. */
   appliedAt?: number;
+  /** Site page this turn edited. null/undefined = home (data.html); a slug =
+   *  data.pages[slug].html. Pre-multipage rows are NULL → home. */
+  page?: string | null;
 }

@@ -1826,6 +1826,31 @@ function NewV2Inner() {
     loadedIdRef.current = newId;
   }, [loadedProject?.id]);
 
+  // Per-PAGE transient reset: switching the active site page (same project, via
+  // ?page=) must drop state that belongs to the page you're LEAVING —
+  //  • the captured theme baseline + active Look, so "Original"/Dark re-derive
+  //    from the page you're now on (not home);
+  //  • pageMeta, so the inspector reflects the new page's <head> not the old;
+  //  • the undo/insert pills, so clicking them can't invisibly revert a page
+  //    you're no longer viewing.
+  // First run is skipped (prev === undefined) so a normal load doesn't reset.
+  const prevActivePageRef = useRef<string | null | undefined>(undefined);
+  useEffect(() => {
+    if (
+      prevActivePageRef.current !== undefined &&
+      prevActivePageRef.current !== activeSitePage
+    ) {
+      setOriginalTheme(null);
+      setActiveLook(null);
+      setPageMeta(null);
+      setLastInserted(null);
+      setDropNotice(null);
+      undoRef.current = null;
+      pendingPillRef.current = null;
+    }
+    prevActivePageRef.current = activeSitePage;
+  }, [activeSitePage]);
+
   // ⌘E toggles the right-side Edit panel; Esc backs out of section-select.
   // The iframe-injected scripts have their own Esc handlers, but those only
   // fire when the iframe itself has focus — this covers the common case

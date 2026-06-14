@@ -286,6 +286,9 @@ export const projectChatMessages = pgTable(
       alt?: string;
     }>(),
     assistantReasoning: text("assistantReasoning").notNull(),
+    // Multi-page: which document this turn edited. NULL = the home document
+    // (data.html); a slug = data.pages[slug].html. Mirrors projectVersions.page.
+    page: text("page"),
     // 'applied' on insert; flipped to 'reverted' by Undo. 'error' turns are
     // never persisted (transient — they changed nothing).
     status: text("status").notNull(),

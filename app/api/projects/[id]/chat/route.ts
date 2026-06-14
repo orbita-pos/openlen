@@ -30,6 +30,7 @@ const TurnSchema = z.object({
     .optional(),
   assistantReasoning: z.string().max(20000),
   status: z.enum(["applied", "reverted"]),
+  page: z.string().max(200).nullable().optional(),
 });
 
 const StatusSchema = z.object({

@@ -107,7 +107,9 @@ export function ChatPanel({
     return (
       <AIDesignChat
         page={flatProjectPage}
-        key={flatProjectId}
+        // Page-aware key: switching ?page=<slug> remounts the chat so the
+        // transcript reseeds to THAT page's turns (not the whole project's).
+        key={`${flatProjectId}:${flatProjectPage ?? ""}`}
         projectId={flatProjectId}
         projectHtml={flatProjectHtml ?? ""}
         onLocalUpdate={onFlatHtmlUpdate}
@@ -202,6 +204,15 @@ interface DesignTurn {
   streamedChars?: number;
 }
 
+/** Two turns are on the same document when their page slugs match, treating
+ *  null/undefined (pre-multipage + home) as the home document. */
+function samePage(
+  a: string | null | undefined,
+  b: string | null | undefined,
+): boolean {
+  return (a ?? null) === (b ?? null);
+}
+
 const QUICK_PROMPT_KEYS: ReadonlyArray<string> = [
   "quickPrompts.premium",
   "quickPrompts.linear",
@@ -252,7 +263,7 @@ function AIDesignChat({
   // restores the conversation. Restored turns carry no HTML snapshot — their
   // inline Undo is hidden (the Versions tab covers older revisions).
   const [turns, setTurns] = useState<DesignTurn[]>(() =>
-    (initialChat ?? []).map(restoreTurn),
+    (initialChat ?? []).filter((s) => samePage(s.page, page)).map(restoreTurn),
   );
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
@@ -323,6 +334,7 @@ function AIDesignChat({
   const initialChatRef = useRef(initialChat);
   initialChatRef.current = initialChat;
   const initialChatSig = (initialChat ?? [])
+    .filter((s) => samePage(s.page, page))
     .map((s) => `${s.id}:${s.status}`)
     .join("|");
   const chatSeededRef = useRef(false);
@@ -332,7 +344,9 @@ function AIDesignChat({
       chatSeededRef.current = true;
       return;
     }
-    const server = initialChatRef.current ?? [];
+    const server = (initialChatRef.current ?? []).filter((s) =>
+      samePage(s.page, page),
+    );
     setTurns((prev) => {
       const prevById = new Map(prev.map((t) => [t.id, t]));
       const serverIds = new Set(server.map((s) => s.id));
@@ -462,7 +476,11 @@ function AIDesignChat({
       setSending(true);
 
       const history = turnsRef.current
-        .filter((t) => t.status === "applied" || t.status === "reverted")
+        .filter(
+          (t) =>
+            (t.status === "applied" || t.status === "reverted") &&
+            samePage(t.page, turnPage),
+        )
         .slice(-6)
         .flatMap((t) => [
           { role: "user" as const, content: t.userText },
@@ -669,6 +687,7 @@ function AIDesignChat({
           attachedImage: turnImage ?? undefined,
           assistantReasoning: accumulatedReasoning,
           status: "applied",
+          page: turnPage,
         });
       } catch (err) {
         clearFlush();
@@ -1260,6 +1279,7 @@ function restoreTurn(s: StoredChatTurn): DesignTurn {
     // No HTML snapshot persisted — empty preEditHtml hides the inline Undo.
     preEditHtml: "",
     appliedAt: s.appliedAt,
+    page: s.page,
   };
 }
 

@@ -39,6 +39,7 @@ export async function appendChatMessage(
       userText: turn.userText.slice(0, 4000),
       attachedImage: turn.attachedImage ?? null,
       assistantReasoning: turn.assistantReasoning.slice(0, 20_000),
+      page: turn.page ?? null,
       status: turn.status === "reverted" ? "reverted" : "applied",
     })
     .onConflictDoNothing();
@@ -89,5 +90,6 @@ function rowToTurn(
     appliedAt: row.createdAt.getTime(),
   };
   if (row.attachedImage) turn.attachedImage = row.attachedImage;
+  if (row.page) turn.page = row.page; // NULL stays undefined = home
   return turn;
 }
