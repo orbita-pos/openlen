@@ -36,7 +36,8 @@
     "footer": "Vorlagen sind statisches HTML – reines Markup, Tailwind CDN, Google Fonts. Beim Klonen gehören sie dir; nur dein Projekt beansprucht eine Subdomain, wenn du auf Veröffentlichen klickst.",
     "cannotApply": "Du kannst keine Vorlage auf eine Seite anwenden, die du gerade bearbeitest. Erstelle eine neue Seite, um eine zu verwenden.",
     "moreFamilies": "+{count} mehr",
-    "fewerFamilies": "Weniger"
+    "fewerFamilies": "Weniger",
+    "restyleHint": "Pick a template to restyle this page — your content stays, the design changes. Uses credits."
   },
   "sections": {
     "heading": "Abschnitts-Bibliothek",

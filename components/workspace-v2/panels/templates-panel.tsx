@@ -37,31 +37,25 @@ interface TemplateCardProps {
   template: TemplateSpec;
   onPreview: (t: TemplateSpec) => void;
   previewing: boolean;
-  /** Browse-only (editing an existing page) — the card can't be selected. */
-  disabled?: boolean;
 }
 
 function TemplateCard({
   template,
   onPreview,
   previewing,
-  disabled,
 }: TemplateCardProps) {
   const t = useTranslations("panelsA");
   const applied = previewing;
   return (
     <button
       type="button"
-      disabled={disabled}
-      onClick={disabled ? undefined : () => onPreview(template)}
+      onClick={() => onPreview(template)}
       aria-label={t("templates.previewTemplateAria", { name: template.name })}
       aria-pressed={applied}
       className={`group relative w-full text-left rounded-lg overflow-hidden ring-1 transition-all duration-200 ${
-        disabled
-          ? "ring-[color:var(--border)] opacity-60 cursor-not-allowed"
-          : applied
-            ? "ring-[var(--accent)] shadow-[0_4px_24px_-12px_color-mix(in_oklch,var(--accent)_60%,transparent)]"
-            : "ring-[color:var(--border)] hover:ring-[color:var(--border-strong)] hover:-translate-y-px hover:shadow-card"
+        applied
+          ? "ring-[var(--accent)] shadow-[0_4px_24px_-12px_color-mix(in_oklch,var(--accent)_60%,transparent)]"
+          : "ring-[color:var(--border)] hover:ring-[color:var(--border-strong)] hover:-translate-y-px hover:shadow-card"
       }`}
       style={{ background: "var(--bg)" }}
     >
@@ -72,7 +66,7 @@ function TemplateCard({
         applied={applied}
       />
 
-      {!applied && !disabled && (
+      {!applied && (
         <div
           aria-hidden
           className="absolute top-[18px] left-0 right-0 bottom-[88px] pointer-events-none flex items-end justify-center pb-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
@@ -163,9 +157,10 @@ export function TemplatesPanel({
   const t = useTranslations("panelsA");
   const searchParams = useSearchParams();
   const currentProjectId = searchParams.get("project");
-  // Editing an existing page → templates are browse-only (you can't swap a page
-  // for a template; create a new page to use one).
-  const browseOnly = !!currentProjectId;
+  // Editing an existing page → picking a template restyles THIS page (keeps your
+  // content); on a fresh start it clones a new project. Either way the cards are
+  // interactive — only the commit action (in the preview banner) differs.
+  const editing = !!currentProjectId;
   const { templates, byFamily, isLoading, error } = useTemplates();
 
   const tf = useTranslations("families");
@@ -187,10 +182,11 @@ export function TemplatesPanel({
         })}
       </p>
 
-      {browseOnly && (
-        <div className="mb-3 flex items-start gap-2 px-2.5 py-2 rounded-md ring-1 ring-amber-300/60 dark:ring-amber-500/30 bg-amber-50 dark:bg-amber-500/5">
-          <span className="text-[11px] text-amber-800 dark:text-amber-200 leading-snug">
-            {t("templates.cannotApply")}
+      {editing && (
+        <div className="mb-3 flex items-start gap-2 px-2.5 py-2 rounded-md ring-1 ring-[color:var(--border)] bg-elev">
+          <Sparkles size={13} className="text-accent shrink-0 mt-0.5" />
+          <span className="text-[11px] fg-muted leading-snug">
+            {t("templates.restyleHint")}
           </span>
         </div>
       )}
@@ -274,7 +270,6 @@ export function TemplatesPanel({
                     template={t}
                     onPreview={onPreview}
                     previewing={previewingId === t.id}
-                    disabled={browseOnly}
                   />
                 ))}
               </div>

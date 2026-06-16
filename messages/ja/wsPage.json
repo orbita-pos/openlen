@@ -5,7 +5,6 @@
     "imageChanged": "ここの画像を変更しました。画像の内容に合うように、周りの文章を更新してください。"
   },
   "lockReason": {
-    "choosing": "まずは出発点を選んでください",
     "created": "ページを作成すると利用できます"
   },
   "formEmail": {
@@ -64,5 +63,10 @@
     "moved": "セクションを移動しました",
     "resized": "画像のサイズを変更しました",
     "blockMoved": "ブロックを移動しました"
+  },
+  "templateApply": {
+    "applying": "Applying the template to your page…",
+    "notice": "Page restyled. Review the example content (testimonials, prices) before publishing.",
+    "lowCredits": "Not enough credits to restyle this page."
   }
 }

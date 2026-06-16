@@ -192,7 +192,7 @@ interface LeftSidebarProps {
   /** When set, the panel rendered in the active slot is overridden by the
    *  matching entry-mode component (PastePanel for `paste`, etc). The
    *  default mode-based panel rendering only applies in `editing` mode. */
-  entryMode?: "choosing" | "ai" | "template" | "paste" | "editing";
+  entryMode?: "ai" | "template" | "paste" | "editing";
   /** Raw HTML of the currently loaded flat project (template-clone or paste).
    *  When present, ChatPanel switches from the mock Orchestra round-trip to
    *  the real Gemini design surface, and ContentPanel renders a hint card
@@ -276,6 +276,9 @@ interface LeftSidebarProps {
   activeBusinessId?: string;
   onPickBusiness?: (id: string) => void;
   onAddBusiness?: () => void;
+  /** True while the parent is still fetching profiles — the rail shows a
+   *  pulsing avatar skeleton in the switcher slot so it doesn't pop in. */
+  businessesLoading?: boolean;
   /** Click-to-place from the Images tab — enters the same placement mode
    *  paste uses (the parent owns the lifecycle). Drag needs no callback:
    *  the cards carry their payload on the dataTransfer. */
@@ -356,6 +359,7 @@ export function LeftSidebar({
   activeBusinessId = "",
   onPickBusiness,
   onAddBusiness,
+  businessesLoading = false,
   onPickImage,
   sitePages = [],
   activeSitePage = null,
@@ -415,18 +419,15 @@ export function LeftSidebar({
   if (collapsed) {
     return (
       <aside className="h-full w-12 shrink-0 bg-side border-r bd flex flex-col items-center pt-2 gap-1">
-        {showBusinessSwitcher && (
-          <>
-            <RailBusinessSwitcher
-              businesses={businesses}
-              activeId={activeBusinessId}
-              onPick={onPickBusiness ?? (() => {})}
-              onAdd={onAddBusiness ?? (() => {})}
-              onOpenBusiness={() => onSelectSection?.("business")}
-            />
-            <div className="my-1 h-px w-6 bg-black/10 dark:bg-white/10" />
-          </>
-        )}
+        <BusinessRailEntry
+          loading={businessesLoading}
+          show={showBusinessSwitcher}
+          businesses={businesses}
+          activeBusinessId={activeBusinessId}
+          onPick={onPickBusiness}
+          onAdd={onAddBusiness}
+          onSelectSection={onSelectSection}
+        />
         <GlobalSections
           vertical
           active={activeSection}
@@ -486,18 +487,15 @@ export function LeftSidebar({
       {/* The icon rail stays vertical + fixed — identical to collapsed; the
           panel just opens to its right (it never reflows into a top row). */}
       <div className="h-full w-12 shrink-0 flex flex-col items-center pt-2 gap-1 border-r bd">
-        {showBusinessSwitcher && (
-          <>
-            <RailBusinessSwitcher
-              businesses={businesses}
-              activeId={activeBusinessId}
-              onPick={onPickBusiness ?? (() => {})}
-              onAdd={onAddBusiness ?? (() => {})}
-              onOpenBusiness={() => onSelectSection?.("business")}
-            />
-            <div className="my-1 h-px w-6 bg-black/10 dark:bg-white/10" />
-          </>
-        )}
+        <BusinessRailEntry
+          loading={businessesLoading}
+          show={showBusinessSwitcher}
+          businesses={businesses}
+          activeBusinessId={activeBusinessId}
+          onPick={onPickBusiness}
+          onAdd={onAddBusiness}
+          onSelectSection={onSelectSection}
+        />
         <GlobalSections
           vertical
           active={activeSection}
@@ -560,9 +558,7 @@ export function LeftSidebar({
         </button>
       </div>
       <div key={`${entryMode}:${mode}`} className="flex-1 min-h-0 fade-slide">
-        {entryMode === "choosing" ? (
-          <ChoosingPlaceholder />
-        ) : entryMode === "paste" ? (
+        {entryMode === "paste" ? (
           <PastePanel />
         ) : entryMode === "ai" && aiBriefState ? (
           <AiBriefPanel
@@ -701,26 +697,52 @@ export function LeftSidebar({
   );
 }
 
-// Placeholder shown in the sidebar panel area while the workspace is in
-// "choosing" entry mode. Every sidebar tab is locked, the empty state is
-// taking up the main area to the right — the panel is essentially idle, so
-// we explain that with a small visual rather than rendering a stale panel.
-function ChoosingPlaceholder() {
-  const t = useTranslations("wsChrome");
-  return (
-    <div className="h-full flex items-center justify-center px-6 py-8 text-center">
-      <div className="max-w-[200px]">
-        <div className="mx-auto mb-3 inline-flex h-9 w-9 items-center justify-center rounded-md ring-1 ring-[color:var(--border)] bg-elev fg-faint">
-          <Layers size={15} />
+// Rail slot for the active-business switcher. While the parent is still
+// fetching profiles, a pulsing avatar skeleton holds the slot (same h-7/w-7
+// footprint as the real avatar) so the rail doesn't jump when the switcher
+// pops in — and the slot reads as "something loads here", not an empty gap.
+function BusinessRailEntry({
+  loading,
+  show,
+  businesses,
+  activeBusinessId,
+  onPick,
+  onAdd,
+  onSelectSection,
+}: {
+  loading: boolean;
+  show: boolean;
+  businesses: BusinessProfile[];
+  activeBusinessId: string;
+  onPick?: (id: string) => void;
+  onAdd?: () => void;
+  onSelectSection?: (v: SectionView) => void;
+}) {
+  if (loading) {
+    return (
+      <>
+        <div
+          className="h-9 w-9 inline-flex items-center justify-center"
+          aria-hidden
+        >
+          <div className="h-7 w-7 rounded-lg ring-1 ring-black/5 dark:ring-white/10 bg-black/5 dark:bg-white/10 animate-pulse" />
         </div>
-        <p className="text-[11.5px] fg-muted leading-relaxed">
-          {t("sidebar.choosing.title")}
-        </p>
-        <p className="mt-2 text-[10.5px] fg-faint leading-relaxed">
-          {t("sidebar.choosing.hint")}
-        </p>
-      </div>
-    </div>
+        <div className="my-1 h-px w-6 bg-black/10 dark:bg-white/10" />
+      </>
+    );
+  }
+  if (!show) return null;
+  return (
+    <>
+      <RailBusinessSwitcher
+        businesses={businesses}
+        activeId={activeBusinessId}
+        onPick={onPick ?? (() => {})}
+        onAdd={onAdd ?? (() => {})}
+        onOpenBusiness={() => onSelectSection?.("business")}
+      />
+      <div className="my-1 h-px w-6 bg-black/10 dark:bg-white/10" />
+    </>
   );
 }
 

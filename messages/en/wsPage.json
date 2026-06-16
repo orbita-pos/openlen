@@ -5,7 +5,6 @@
     "imageChanged": "I just changed the image here. Update the surrounding copy so it matches what the image shows."
   },
   "lockReason": {
-    "choosing": "Pick a starting point first",
     "created": "Available once your page is created"
   },
   "formEmail": {
@@ -64,5 +63,10 @@
     "moved": "Section moved",
     "resized": "Image resized",
     "blockMoved": "Block moved"
+  },
+  "templateApply": {
+    "applying": "Applying the template to your page…",
+    "notice": "Page restyled. Review the example content (testimonials, prices) before publishing.",
+    "lowCredits": "Not enough credits to restyle this page."
   }
 }

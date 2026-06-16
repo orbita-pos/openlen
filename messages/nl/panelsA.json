@@ -36,7 +36,8 @@
     "footer": "Templates zijn statische HTML — pure markup, Tailwind CDN, Google Fonts. Klonen maakt ze van jou; alleen je project claimt een subdomein wanneer je op Deployen klikt.",
     "cannotApply": "Je kunt geen sjabloon toepassen op een pagina die je al bewerkt. Maak een nieuwe pagina om er een te gebruiken.",
     "moreFamilies": "+{count} meer",
-    "fewerFamilies": "Minder"
+    "fewerFamilies": "Minder",
+    "restyleHint": "Pick a template to restyle this page — your content stays, the design changes. Uses credits."
   },
   "sections": {
     "heading": "Sectiebibliotheek",

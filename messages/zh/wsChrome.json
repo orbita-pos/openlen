@@ -64,11 +64,7 @@
     },
     "tabLocked": "{label} — 已锁定",
     "expandPanel": "展开面板",
-    "collapsePanel": "收起面板",
-    "choosing": {
-      "title": "开始后，工具会出现在这里。",
-      "hint": "从右侧选择一个起点 →"
-    }
+    "collapsePanel": "收起面板"
   },
   "preview": {
     "zoomFit": "适应",
@@ -88,7 +84,9 @@
       "readOnly": "只读 — 在你确认前不会保存任何内容",
       "cloning": "正在克隆…",
       "use": "使用此模板 →",
-      "clear": "清除"
+      "clear": "清除",
+      "apply": "Apply to my page",
+      "applying": "Applying…"
     },
     "iframeTitle": "OpenLen 工作区预览",
     "redesigning": "正在重新设计你的页面…",

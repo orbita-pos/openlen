@@ -5,7 +5,6 @@
     "imageChanged": "Acabo de cambiar la imagen aquí. Actualiza el texto de alrededor para que coincida con lo que muestra la imagen."
   },
   "lockReason": {
-    "choosing": "Primero elige un punto de partida",
     "created": "Disponible cuando hayas creado tu página"
   },
   "formEmail": {
@@ -64,5 +63,10 @@
     "moved": "Sección movida",
     "resized": "Imagen redimensionada",
     "blockMoved": "Bloque movido"
+  },
+  "templateApply": {
+    "applying": "Aplicando la plantilla a tu página…",
+    "notice": "Página reestilizada. Revisa el contenido de ejemplo (testimonios, precios) antes de publicar.",
+    "lowCredits": "No tienes créditos suficientes para reestilizar esta página."
   }
 }

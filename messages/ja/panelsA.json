@@ -36,7 +36,8 @@
     "footer": "テンプレートは静的HTML — 純粋なマークアップ、Tailwind CDN、Google Fontsです。複製すればあなたのものになります。サブドメインを取得するのは、デプロイを押したときのあなたのプロジェクトだけです。",
     "cannotApply": "編集中のページにはテンプレートを適用できません。新しいページを作成して使ってください。",
     "moreFamilies": "他{count}件",
-    "fewerFamilies": "閉じる"
+    "fewerFamilies": "閉じる",
+    "restyleHint": "Pick a template to restyle this page — your content stays, the design changes. Uses credits."
   },
   "sections": {
     "heading": "セクションライブラリ",

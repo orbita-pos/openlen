@@ -17,8 +17,10 @@ export const ALL_BUSINESSES = "all";
 
 const inicialDe = (name: string) => (name.trim()[0] || "N").toUpperCase();
 
-// Faithful copy of the /business page's BizAvatar so the two switchers match.
-function BizAvatar({
+// Active-business avatar (logo on white, or the initial on the brand accent).
+// Adds a load-in fade so the logo doesn't pop over its white backdrop. Shared:
+// the rail switcher here AND the /business brand field reuse it (single source).
+export function BizAvatar({
   name,
   logoUrl,
   accent,
@@ -29,14 +31,35 @@ function BizAvatar({
   accent?: string | null;
   className?: string;
 }) {
+  // Until the logo decodes, the accent + initial stand in; the image fades in
+  // on top so there's no white flash. Reset when the source changes (e.g.
+  // switching active business).
+  const [loaded, setLoaded] = useState(false);
+  useEffect(() => {
+    setLoaded(false);
+  }, [logoUrl]);
   return (
     <span
-      className={`inline-flex items-center justify-center overflow-hidden text-white font-bold shrink-0 ${className}`}
-      style={{ background: logoUrl ? "#ffffff" : accent ?? "#FF5A36" }}
+      className={`relative inline-flex items-center justify-center overflow-hidden text-white font-bold shrink-0 transition-colors duration-300 ${className}`}
+      style={{ background: logoUrl && loaded ? "#ffffff" : accent ?? "#FF5A36" }}
     >
       {logoUrl ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={logoUrl} alt="" className="h-full w-full object-contain" />
+        <>
+          {!loaded && <span aria-hidden>{inicialDe(name)}</span>}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            ref={(el) => {
+              // Cached images may be `complete` before onLoad can attach.
+              if (el?.complete && el.naturalWidth > 0) setLoaded(true);
+            }}
+            src={logoUrl}
+            alt=""
+            onLoad={() => setLoaded(true)}
+            className={`absolute inset-0 h-full w-full object-contain transition-opacity duration-300 ${
+              loaded ? "opacity-100" : "opacity-0"
+            }`}
+          />
+        </>
       ) : (
         inicialDe(name)
       )}

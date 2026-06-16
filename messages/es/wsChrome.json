@@ -64,11 +64,7 @@
     },
     "tabLocked": "{label} — bloqueado",
     "expandPanel": "Expandir panel",
-    "collapsePanel": "Contraer panel",
-    "choosing": {
-      "title": "Las herramientas aparecen aquí cuando empieces.",
-      "hint": "Elige un punto de partida a la derecha →"
-    }
+    "collapsePanel": "Contraer panel"
   },
   "preview": {
     "zoomFit": "Ajustar",
@@ -88,7 +84,9 @@
       "readOnly": "Solo lectura — no se guarda nada hasta que confirmes",
       "cloning": "Clonando…",
       "use": "Usar esta plantilla →",
-      "clear": "Quitar"
+      "clear": "Quitar",
+      "apply": "Aplicar a mi página",
+      "applying": "Aplicando…"
     },
     "iframeTitle": "Vista previa del workspace de OpenLen",
     "redesigning": "Rediseñando tu página…",

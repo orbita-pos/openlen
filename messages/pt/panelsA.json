@@ -36,7 +36,8 @@
     "footer": "Os modelos são HTML estático — marcação pura, Tailwind via CDN, Google Fonts. Ao clonar, eles passam a ser seus; só o seu projeto reivindica um subdomínio quando você toca em Publicar.",
     "cannotApply": "Você não pode aplicar um modelo a uma página que já está editando. Crie uma página nova para usar um.",
     "moreFamilies": "+{count} mais",
-    "fewerFamilies": "Ver menos"
+    "fewerFamilies": "Ver menos",
+    "restyleHint": "Pick a template to restyle this page — your content stays, the design changes. Uses credits."
   },
   "sections": {
     "heading": "Biblioteca de seções",

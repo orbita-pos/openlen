@@ -64,11 +64,7 @@
     },
     "tabLocked": "{label} — locked",
     "expandPanel": "Expand panel",
-    "collapsePanel": "Collapse panel",
-    "choosing": {
-      "title": "Tools live here once you've started.",
-      "hint": "Pick a starting point from the right →"
-    }
+    "collapsePanel": "Collapse panel"
   },
   "preview": {
     "zoomFit": "Fit",
@@ -88,7 +84,9 @@
       "readOnly": "Read-only — nothing saved until you commit",
       "cloning": "Cloning…",
       "use": "Use this template →",
-      "clear": "Clear"
+      "clear": "Clear",
+      "apply": "Apply to my page",
+      "applying": "Applying…"
     },
     "iframeTitle": "OpenLen workspace preview",
     "redesigning": "Redesigning your page…",

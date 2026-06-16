@@ -34,7 +34,6 @@ import { isProfileFilled } from "@/lib/business-profiles/overlay";
 import { ALL_BUSINESSES } from "@/components/workspace-v2/business-switcher";
 import { CustomDomainModal } from "@/components/workspace-v2/custom-domain-modal";
 import { DeployIntegrationModal } from "@/components/workspace-v2/deploy-integration-modal";
-import { EmptyState } from "@/components/workspace-v2/empty-state";
 import { BusinessSection } from "../business/business-section";
 import { ProjectsSection } from "../projects/projects-section";
 import { AnalyticsSection } from "../analytics/analytics-section";
@@ -153,7 +152,7 @@ interface LoadedProject {
 // through, and it now also strips Editor V5's marker set (overlay, run-wrap,
 // editable/edit-hidden/edit-noedit).
 
-type EntryMode = "choosing" | "ai" | "template" | "paste" | "editing";
+type EntryMode = "ai" | "template" | "paste" | "editing";
 
 // What a drop/placement commit carries: an OS file (uploaded on commit) or a
 // panel asset whose URL is already hosted. The promises start at gesture time
@@ -223,17 +222,17 @@ function NewV2Inner() {
   const modeParam = searchParams.get("mode");
   const profileParam = searchParams.get("profile");
 
-  // Derive the entry mode from URL state. With ?project=<id> we go straight
-  // to editing; with ?mode=<ai|template|paste> we enter that guided flow;
-  // otherwise we show the chooser. Keeping it in the URL means refreshes and
-  // shared links land users in the same spot.
+  // Derive the entry mode from URL state. ?project=<id> → editing;
+  // ?mode=template|paste → that guided flow; everything else (?mode=ai or no
+  // params) lands directly in the AI brief — the default starting point. The
+  // Template/Paste flows are reached from the sidebar tabs, so there's no
+  // separate chooser screen. Keeping it in the URL means refreshes/shared links
+  // land in the same spot.
   const entryMode: EntryMode = projectParam
     ? "editing"
-    : modeParam === "ai" ||
-        modeParam === "template" ||
-        modeParam === "paste"
+    : modeParam === "template" || modeParam === "paste"
       ? modeParam
-      : "choosing";
+      : "ai";
 
   const [projectName, setProjectName] = useState(t("defaultProjectName"));
   const [mode, setMode] = useState<SidebarMode>(
@@ -241,10 +240,10 @@ function NewV2Inner() {
   );
   const [leftCollapsed, setLeftCollapsed] = useState(false);
   const isMobile = useIsMobile();
-  // Mobile: the canvas is the hero. Editing/choosing enter with the panel
-  // closed (rail only); guided entry flows enter with it open — there the
-  // panel IS the screen (brief form, gallery, paste box). Re-applies on
-  // every entry-mode transition, never on desktop.
+  // Mobile: the canvas is the hero. Editing enters with the panel closed (rail
+  // only); guided entry flows (ai/template/paste) enter with it open — there the
+  // panel IS the screen (brief form, gallery, paste box). Re-applies on every
+  // entry-mode transition, never on desktop.
   const mobileEntrySynced = useRef<EntryMode | null>(null);
   useEffect(() => {
     if (!isMobile) {
@@ -253,7 +252,7 @@ function NewV2Inner() {
     }
     if (mobileEntrySynced.current === entryMode) return;
     mobileEntrySynced.current = entryMode;
-    setLeftCollapsed(entryMode === "editing" || entryMode === "choosing");
+    setLeftCollapsed(entryMode === "editing");
   }, [isMobile, entryMode]);
   // Multi-page: ?page=<slug> selects which site page the canvas shows.
   // Resolved against the loaded project — an unknown slug acts as home
@@ -493,6 +492,9 @@ function NewV2Inner() {
   // Saved business profiles ("Mi negocio") — seed the curation flow. Fetched on
   // mount; the default profile auto-selects (the user can switch or pick none).
   const [profiles, setProfiles] = useState<BusinessProfile[]>([]);
+  // False until the first /api/profiles fetch settles — the rail shows a
+  // business-avatar skeleton while it's true so the switcher doesn't pop in.
+  const [profilesLoaded, setProfilesLoaded] = useState(false);
   const [selectedProfileId, setSelectedProfileId] = useState<string | null>(null);
   const [profileModalOpen, setProfileModalOpen] = useState(false);
   const refreshProfiles = useCallback(async () => {
@@ -512,6 +514,8 @@ function NewV2Inner() {
       });
     } catch {
       /* network — leave the picker empty */
+    } finally {
+      setProfilesLoaded(true);
     }
   }, [profileParam]);
   useEffect(() => {
@@ -848,6 +852,16 @@ function NewV2Inner() {
   } | null>(null);
   const [committingTemplate, setCommittingTemplate] = useState(false);
   const [templateError, setTemplateError] = useState<string | null>(null);
+  // Editing-mode restyle: applying a template's design to the CURRENT page (vs
+  // cloning a new project). `applyingTemplate` is true while the endpoint runs;
+  // `applyNotice` is the "review example content" reminder shown after success.
+  const [applyingTemplate, setApplyingTemplate] = useState(false);
+  const [applyNotice, setApplyNotice] = useState<string | null>(null);
+  useEffect(() => {
+    if (!applyNotice) return;
+    const id = setTimeout(() => setApplyNotice(null), 9000);
+    return () => clearTimeout(id);
+  }, [applyNotice]);
 
   // Light-up "Saving…" pill for 700ms whenever a section field mutates.
   const updateSection = useCallback(
@@ -1022,18 +1036,14 @@ function NewV2Inner() {
   // edit when that tab is active.
   const lockedTabs = useMemo<SidebarMode[]>(() => {
     if (entryMode === "editing") return [];
-    if (entryMode === "choosing") return [...ALL_TABS];
-    if (entryMode === "ai") return ALL_TABS.filter((t) => t !== "chat");
-    if (entryMode === "template")
-      return ALL_TABS.filter((t) => t !== "templates");
-    if (entryMode === "paste") return [...ALL_TABS];
-    return [];
+    // Entry flows (ai/template/paste): the two entry tabs stay reachable — chat
+    // (the AI brief) and templates (the gallery) — so the user can switch
+    // starting points without a chooser screen. Everything else unlocks once a
+    // project exists.
+    return ALL_TABS.filter((t) => t !== "chat" && t !== "templates");
   }, [entryMode]);
 
-  const lockReason =
-    entryMode === "choosing"
-      ? t("lockReason.choosing")
-      : t("lockReason.created");
+  const lockReason = t("lockReason.created");
 
   // If the project's "shape" makes the current sidebar tab inert, snap to
   // the first unlocked tab. Without this, a flat project loaded straight
@@ -2503,16 +2513,24 @@ function NewV2Inner() {
     setInspectSelection(null);
   }, []);
 
-  const handlePickAI = () => {
-    router.push("/new?mode=ai");
-  };
-  const handlePickTemplate = () => {
-    router.push("/new?mode=template");
-    setMode("templates");
-  };
-  const handlePickPaste = () => {
-    router.push("/new?mode=paste");
-    setMode("chat");
+  // Entry-flow tab switch: pre-project, clicking the Chat tab enters the AI
+  // brief and the Templates tab enters the gallery (both via the URL, since the
+  // panel + canvas are entryMode-gated). In editing every tab just switches the
+  // panel. Paste has no tab — it's reachable via ?mode=paste.
+  const handleTabSelect = (m: SidebarMode) => {
+    if (entryMode !== "editing") {
+      if (m === "chat") {
+        router.push("/new?mode=ai");
+        setMode("chat");
+        return;
+      }
+      if (m === "templates") {
+        router.push("/new?mode=template");
+        setMode("templates");
+        return;
+      }
+    }
+    setMode(m);
   };
 
   const handleUseTemplate = async () => {
@@ -2547,6 +2565,63 @@ function NewV2Inner() {
         err instanceof Error ? err.message : t("template.networkError"),
       );
       setCommittingTemplate(false);
+    }
+  };
+
+  // Editing mode: pour the current page's content into the previewed template's
+  // design (POST /apply-template), then feed the result into the live editor via
+  // the same setLoadedProject path the Chat tab uses. Saved + versioned server-side.
+  const handleApplyTemplate = async () => {
+    if (!previewingTemplate || !loadedProject || applyingTemplate) return;
+    setApplyingTemplate(true);
+    setTemplateError(null);
+    try {
+      const res = await fetch(`/api/projects/${loadedProject.id}/apply-template`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          templateId: previewingTemplate.id,
+          page: activeSitePage ?? undefined,
+          currentHtml: activeDoc,
+        }),
+      });
+      if (!res.ok) {
+        const data = (await res.json().catch(() => ({}))) as {
+          error?: string;
+          detail?: string;
+        };
+        setTemplateError(
+          res.status === 402
+            ? t("templateApply.lowCredits")
+            : data.detail ?? data.error ?? `HTTP ${res.status}`,
+        );
+        setApplyingTemplate(false);
+        return;
+      }
+      const data = (await res.json()) as { html: string };
+      const page = activeSitePage;
+      setLoadedProject((prev) => {
+        if (!prev) return prev;
+        if (page) {
+          if (!prev.pages[page]) return prev;
+          return {
+            ...prev,
+            pages: {
+              ...prev.pages,
+              [page]: { ...prev.pages[page], html: data.html },
+            },
+          };
+        }
+        return { ...prev, html: data.html };
+      });
+      setApplyingTemplate(false);
+      setPreviewingTemplate(null);
+      setApplyNotice(t("templateApply.notice"));
+    } catch (err) {
+      setTemplateError(
+        err instanceof Error ? err.message : t("template.networkError"),
+      );
+      setApplyingTemplate(false);
     }
   };
 
@@ -2595,7 +2670,7 @@ function NewV2Inner() {
           activeSection={centerView}
           onSelectSection={setCenterView}
           mode={mode}
-          setMode={setMode}
+          setMode={handleTabSelect}
           sections={sections}
           expanded={expanded}
           setExpanded={setExpanded}
@@ -2707,6 +2782,7 @@ function NewV2Inner() {
           aiOnManageProfiles={() => setProfileModalOpen(true)}
           aiHasBusinessInfo={hasBusinessInfo}
           businesses={profiles}
+          businessesLoading={!profilesLoaded}
           activeBusinessId={activeBusinessId}
           onPickBusiness={setActiveBusiness}
           onAddBusiness={() => setProfileModalOpen(true)}
@@ -2744,13 +2820,6 @@ function NewV2Inner() {
           <MessagesSection activeBusinessId={activeBusinessId} />
         ) : (
           <>
-        {entryMode === "choosing" && (
-          <EmptyState
-            onPickAI={handlePickAI}
-            onPickTemplate={handlePickTemplate}
-            onPickPaste={handlePickPaste}
-          />
-        )}
         {entryMode === "template" &&
           (previewingTemplate ? (
             <div className="flex-1 min-w-0 flex flex-col">
@@ -2830,7 +2899,37 @@ function NewV2Inner() {
         {entryMode === "paste" && (
           <PreviewPlaceholder mode={entryMode} />
         )}
-        {entryMode === "editing" &&
+        {entryMode === "editing" && previewingTemplate && (
+          applyingTemplate ? (
+            <section className="flex-1 min-w-0 min-h-0 flex flex-col bg-preview-a">
+              <PageAssembling html={activeDoc} caption={t("templateApply.applying")} />
+            </section>
+          ) : (
+            <div className="flex-1 min-w-0 flex flex-col">
+              {templateError && (
+                <div className="h-7 shrink-0 flex items-center justify-center gap-2 text-[11.5px] bg-red-50 dark:bg-red-500/10 text-red-700 dark:text-red-300 border-b bd">
+                  {templateError}
+                </div>
+              )}
+              <PreviewArea
+                doc=""
+                previewUrl={previewingTemplate.previewUrl}
+                templateName={previewingTemplate.name}
+                openInNewTabUrl={previewingTemplate.previewUrl}
+                templateApplyMode
+                onUseTemplate={() => {
+                  void handleApplyTemplate();
+                }}
+                useTemplateLoading={applyingTemplate}
+                onClearTemplate={() => {
+                  setPreviewingTemplate(null);
+                  setTemplateError(null);
+                }}
+              />
+            </div>
+          )
+        )}
+        {entryMode === "editing" && !previewingTemplate &&
           (loadedProject && activeDoc ? (
             <>
               <PreviewArea
@@ -2861,6 +2960,21 @@ function NewV2Inner() {
                       }`
                 }
               />
+              {applyNotice && (
+                <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-30 flex items-start gap-2 max-w-sm pl-3.5 pr-1.5 py-2 rounded-2xl bg-elev border bd shadow-card fade-in">
+                  <Check size={15} className="text-accent shrink-0 mt-0.5" />
+                  <span className="text-[12px] fg-muted leading-snug">{applyNotice}</span>
+                  <button
+                    type="button"
+                    onClick={() => setApplyNotice(null)}
+                    aria-label={t("inserted.dismiss")}
+                    title={t("inserted.dismiss")}
+                    className="inline-flex items-center justify-center h-7 w-7 rounded-full fg-faint hover:fg hover:bg-hover transition shrink-0"
+                  >
+                    <X size={13} />
+                  </button>
+                </div>
+              )}
               {lastInserted && (
                 <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-30 flex items-center gap-1.5 pl-3.5 pr-1.5 py-1.5 rounded-full bg-elev border bd shadow-card fade-in">
                   <span className="inline-flex items-center gap-1.5 text-[12px] fg-muted whitespace-nowrap">

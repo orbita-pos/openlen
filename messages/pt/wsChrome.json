@@ -64,11 +64,7 @@
     },
     "tabLocked": "{label} — bloqueado",
     "expandPanel": "Expandir painel",
-    "collapsePanel": "Recolher painel",
-    "choosing": {
-      "title": "As ferramentas aparecem aqui assim que você começar.",
-      "hint": "Escolha um ponto de partida à direita →"
-    }
+    "collapsePanel": "Recolher painel"
   },
   "preview": {
     "zoomFit": "Ajustar",
@@ -88,7 +84,9 @@
       "readOnly": "Somente leitura — nada é salvo até você confirmar",
       "cloning": "Clonando…",
       "use": "Usar este template →",
-      "clear": "Limpar"
+      "clear": "Limpar",
+      "apply": "Apply to my page",
+      "applying": "Applying…"
     },
     "iframeTitle": "Pré-visualização do espaço de trabalho do OpenLen",
     "redesigning": "Redesenhando sua página…",

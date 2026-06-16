@@ -5,7 +5,6 @@
     "imageChanged": "Ik heb de afbeelding hier zojuist gewijzigd. Werk de omringende tekst bij zodat die overeenkomt met wat de afbeelding toont."
   },
   "lockReason": {
-    "choosing": "Kies eerst een startpunt",
     "created": "Beschikbaar zodra je pagina is aangemaakt"
   },
   "formEmail": {
@@ -64,5 +63,10 @@
     "moved": "Sectie verplaatst",
     "resized": "Afbeeldingsgrootte aangepast",
     "blockMoved": "Blok verplaatst"
+  },
+  "templateApply": {
+    "applying": "Applying the template to your page…",
+    "notice": "Page restyled. Review the example content (testimonials, prices) before publishing.",
+    "lowCredits": "Not enough credits to restyle this page."
   }
 }

@@ -64,11 +64,7 @@
     },
     "tabLocked": "{label} — vergrendeld",
     "expandPanel": "Paneel uitvouwen",
-    "collapsePanel": "Paneel inklappen",
-    "choosing": {
-      "title": "De tools verschijnen hier zodra je begint.",
-      "hint": "Kies rechts een startpunt →"
-    }
+    "collapsePanel": "Paneel inklappen"
   },
   "preview": {
     "zoomFit": "Passend",
@@ -88,7 +84,9 @@
       "readOnly": "Alleen-lezen — er wordt niets opgeslagen tot je bevestigt",
       "cloning": "Klonen…",
       "use": "Dit sjabloon gebruiken →",
-      "clear": "Wissen"
+      "clear": "Wissen",
+      "apply": "Apply to my page",
+      "applying": "Applying…"
     },
     "iframeTitle": "Voorbeeld van OpenLen-werkruimte",
     "redesigning": "Je pagina wordt opnieuw ontworpen…",
