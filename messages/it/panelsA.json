@@ -36,7 +36,8 @@
     "footer": "I template sono HTML statico — markup puro, Tailwind CDN, Google Fonts. Clonandoli diventano tuoi; solo il tuo progetto rivendica un sottodominio quando premi Pubblica.",
     "cannotApply": "Non puoi applicare un modello a una pagina che stai già modificando. Crea una nuova pagina per usarne uno.",
     "moreFamilies": "+{count} altri",
-    "fewerFamilies": "Mostra meno"
+    "fewerFamilies": "Mostra meno",
+    "restyleHint": "Pick a template to restyle this page — your content stays, the design changes. Uses credits."
   },
   "sections": {
     "heading": "Libreria di sezioni",

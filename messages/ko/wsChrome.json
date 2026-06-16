@@ -64,11 +64,7 @@
     },
     "tabLocked": "{label} — 잠김",
     "expandPanel": "패널 펼치기",
-    "collapsePanel": "패널 접기",
-    "choosing": {
-      "title": "작업을 시작하면 여기에 도구가 나타납니다.",
-      "hint": "오른쪽에서 시작점을 선택하세요 →"
-    }
+    "collapsePanel": "패널 접기"
   },
   "preview": {
     "zoomFit": "맞춤",
@@ -88,7 +84,9 @@
       "readOnly": "읽기 전용 — 적용하기 전까지 저장되지 않습니다",
       "cloning": "복제 중…",
       "use": "이 템플릿 사용 →",
-      "clear": "지우기"
+      "clear": "지우기",
+      "apply": "Apply to my page",
+      "applying": "Applying…"
     },
     "iframeTitle": "OpenLen 워크스페이스 미리보기",
     "redesigning": "페이지를 다시 디자인하는 중…",

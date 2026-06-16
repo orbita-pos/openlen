@@ -36,7 +36,8 @@
     "footer": "Templates are static HTML — pure markup, Tailwind CDN, Google Fonts. Cloning makes them yours; only your project claims a subdomain when you hit Deploy.",
     "cannotApply": "You can’t apply a template to a page you’re already editing. Create a new page to use one.",
     "moreFamilies": "+{count} more",
-    "fewerFamilies": "Show less"
+    "fewerFamilies": "Show less",
+    "restyleHint": "Pick a template to restyle this page — your content stays, the design changes. Uses credits."
   },
   "sections": {
     "heading": "Section library",

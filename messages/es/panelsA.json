@@ -36,7 +36,8 @@
     "footer": "Las plantillas son HTML estático — markup puro, Tailwind CDN, Google Fonts. Al clonarla se vuelve tuya; solo tu proyecto reclama un subdominio cuando pulsas Deploy.",
     "cannotApply": "No puedes aplicar una plantilla a una página que ya estás editando. Crea una página nueva para usar una.",
     "moreFamilies": "+{count} más",
-    "fewerFamilies": "Ver menos"
+    "fewerFamilies": "Ver menos",
+    "restyleHint": "Elige un template para reestilizar esta página — tu contenido se queda, cambia el diseño. Usa créditos."
   },
   "sections": {
     "heading": "Biblioteca de secciones",

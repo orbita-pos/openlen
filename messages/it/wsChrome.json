@@ -64,11 +64,7 @@
     },
     "tabLocked": "{label} — bloccato",
     "expandPanel": "Espandi pannello",
-    "collapsePanel": "Comprimi pannello",
-    "choosing": {
-      "title": "Gli strumenti compaiono qui una volta iniziato.",
-      "hint": "Scegli un punto di partenza a destra →"
-    }
+    "collapsePanel": "Comprimi pannello"
   },
   "preview": {
     "zoomFit": "Adatta",
@@ -88,7 +84,9 @@
       "readOnly": "Sola lettura — nulla viene salvato finché non confermi",
       "cloning": "Clonazione…",
       "use": "Usa questo template →",
-      "clear": "Cancella"
+      "clear": "Cancella",
+      "apply": "Apply to my page",
+      "applying": "Applying…"
     },
     "iframeTitle": "Anteprima dello spazio di lavoro OpenLen",
     "redesigning": "Ridisegno della tua pagina in corso…",

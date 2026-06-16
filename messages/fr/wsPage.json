@@ -5,7 +5,6 @@
     "imageChanged": "Je viens de changer l'image ici. Mets à jour le texte autour pour qu'il corresponde à ce que montre l'image."
   },
   "lockReason": {
-    "choosing": "Choisissez d'abord un point de départ",
     "created": "Disponible une fois votre page créée"
   },
   "formEmail": {
@@ -64,5 +63,10 @@
     "moved": "Section déplacée",
     "resized": "Image redimensionnée",
     "blockMoved": "Bloc déplacé"
+  },
+  "templateApply": {
+    "applying": "Applying the template to your page…",
+    "notice": "Page restyled. Review the example content (testimonials, prices) before publishing.",
+    "lowCredits": "Not enough credits to restyle this page."
   }
 }

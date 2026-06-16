@@ -64,11 +64,7 @@
     },
     "tabLocked": "{label} — gesperrt",
     "expandPanel": "Panel ausklappen",
-    "collapsePanel": "Panel einklappen",
-    "choosing": {
-      "title": "Sobald du startest, erscheinen hier die Werkzeuge.",
-      "hint": "Wähle rechts einen Startpunkt →"
-    }
+    "collapsePanel": "Panel einklappen"
   },
   "preview": {
     "zoomFit": "Anpassen",
@@ -88,7 +84,9 @@
       "readOnly": "Schreibgeschützt — nichts wird gespeichert, bis du übernimmst",
       "cloning": "Wird geklont…",
       "use": "Diese Vorlage verwenden →",
-      "clear": "Zurücksetzen"
+      "clear": "Zurücksetzen",
+      "apply": "Apply to my page",
+      "applying": "Applying…"
     },
     "iframeTitle": "OpenLen Workspace-Vorschau",
     "redesigning": "Deine Seite wird neu gestaltet…",

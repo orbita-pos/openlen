@@ -13,6 +13,7 @@ import type {
   BusinessProfile,
   BusinessProfileData,
 } from "@/lib/business-profiles/types";
+import { BizAvatar } from "@/components/workspace-v2/business-switcher";
 
 /* ───────── Icons (lucide-style) ───────── */
 type IconProps = { size?: number; className?: string; stroke?: number };
@@ -126,9 +127,6 @@ function blankProfile(): LocalProfile {
   };
 }
 
-const inicialDe = (name: string) => (name.trim()[0] || "N").toUpperCase();
-
-// Business avatar: the brand logo if set, else the name's initial on the accent.
 async function uploadAsset(file: File): Promise<string | null> {
   const form = new FormData();
   form.append("file", file);
@@ -437,12 +435,12 @@ export function BusinessSection({
                   <div>
                     <Label>{t("brand.logo")}</Label>
                     <div className="flex items-center gap-3">
-                      {active.data.brand?.logoUrl ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img src={active.data.brand.logoUrl} alt="" className="h-16 w-16 shrink-0 rounded-2xl object-contain ring-1 ring-[#E5E3E1] dark:ring-white/10 bg-white" />
-                      ) : (
-                        <span className="inline-flex h-16 w-16 items-center justify-center rounded-2xl text-white text-[26px] font-bold shrink-0" style={{ background: active.data.brand?.accent ?? "#FF5A36" }}>{inicialDe(active.name)}</span>
-                      )}
+                      <BizAvatar
+                        name={active.name}
+                        logoUrl={active.data.brand?.logoUrl}
+                        accent={active.data.brand?.accent}
+                        className="h-16 w-16 rounded-2xl text-[26px] ring-1 ring-[#E5E3E1] dark:ring-white/10"
+                      />
                       <button onClick={() => logoRef.current?.click()} disabled={busyAsset}
                         className="flex-1 inline-flex items-center justify-center gap-2 h-16 rounded-xl border border-dashed border-[#D6D3D0] dark:border-white/15 text-[#8A8784] dark:text-[#9B9897] hover:border-coral-400 hover:text-coral-600 dark:hover:text-coral-300 transition text-[13px] font-medium disabled:opacity-60">
                         <Upload size={16} /> {t("brand.upload")}

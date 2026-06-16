@@ -36,7 +36,8 @@
     "footer": "템플릿은 정적 HTML이에요 — 순수 마크업, Tailwind CDN, Google Fonts. 복제하면 온전히 내 것이 되고, Deploy를 눌러야 비로소 내 프로젝트가 서브도메인을 차지해요.",
     "cannotApply": "이미 편집 중인 페이지에는 템플릿을 적용할 수 없습니다. 새 페이지를 만들어 사용하세요.",
     "moreFamilies": "+{count}개 더",
-    "fewerFamilies": "접기"
+    "fewerFamilies": "접기",
+    "restyleHint": "Pick a template to restyle this page — your content stays, the design changes. Uses credits."
   },
   "sections": {
     "heading": "섹션 라이브러리",

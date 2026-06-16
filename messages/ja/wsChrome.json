@@ -64,11 +64,7 @@
     },
     "tabLocked": "{label} — ロック中",
     "expandPanel": "パネルを展開",
-    "collapsePanel": "パネルを折りたたむ",
-    "choosing": {
-      "title": "始めると、ここにツールが表示されます。",
-      "hint": "右側から出発点を選んでください →"
-    }
+    "collapsePanel": "パネルを折りたたむ"
   },
   "preview": {
     "zoomFit": "全体表示",
@@ -88,7 +84,9 @@
       "readOnly": "読み取り専用 — 確定するまで保存されません",
       "cloning": "複製中…",
       "use": "このテンプレートを使う →",
-      "clear": "クリア"
+      "clear": "クリア",
+      "apply": "Apply to my page",
+      "applying": "Applying…"
     },
     "iframeTitle": "OpenLen ワークスペースプレビュー",
     "redesigning": "ページを再デザイン中…",
