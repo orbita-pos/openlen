@@ -49,6 +49,9 @@ export interface TemplateRecord {
   storageUrl: string;
   contentHash: string;
   size: number;
+  /** Extra pages for multi-page templates ({slug, html}); cloned into
+   *  project.data.pages by from-template. Empty for single-page templates. */
+  pages: Array<{ slug: string; html: string }>;
   status: TemplateStatus;
   /** Pre-rendered WebP thumbnail URL for gallery / homepage cards. Null
    *  until `templates:thumbnails` has been run for this row. */
@@ -133,6 +136,7 @@ export interface CreateOrUpdateInput {
   description: string;
   mode: TemplateMode;
   html: string;
+  pages?: Array<{ slug: string; html: string }>;
   status?: TemplateStatus;
 }
 
@@ -163,6 +167,7 @@ export async function upsertTemplate(
     storageUrl: uploaded.url,
     contentHash: hash,
     size: uploaded.size,
+    pages: input.pages ?? [],
     status,
     updatedAt: now,
     publishedAt: status === "published" ? now : null,
@@ -184,6 +189,7 @@ export async function upsertTemplate(
         storageUrl: values.storageUrl,
         contentHash: values.contentHash,
         size: values.size,
+        pages: values.pages,
         status: values.status,
         updatedAt: values.updatedAt,
         publishedAt: values.publishedAt,
@@ -226,6 +232,7 @@ function rowToRecord(row: typeof schema.templates.$inferSelect): TemplateRecord 
     storageUrl: row.storageUrl,
     contentHash: row.contentHash,
     size: row.size,
+    pages: (row.pages as Array<{ slug: string; html: string }>) ?? [],
     status: row.status as TemplateStatus,
     thumbnailUrl: row.thumbnailUrl,
     tileUrl: row.tileUrl,

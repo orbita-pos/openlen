@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { detectSlotPath } from "@/lib/html-engine";
+import { validatePageSlug } from "@/lib/projects/site-pages";
 
 // Shared Zod schemas + invariant helpers for the admin template endpoints.
 // Both POST (create / replace) and PUT (partial update) consume these so
@@ -68,6 +69,35 @@ export const HTML = z
   .min(20, "html body looks empty")
   .max(MAX_HTML_BYTES, `html exceeds ${MAX_HTML_BYTES} bytes`);
 
+// Extra pages for a MULTI-PAGE template. Each {slug, html}; slugs are validated
+// against the SAME rules + reserved set as user site-pages (validatePageSlug —
+// rejects "api", "assets", locale codes, etc.) and must be unique within the
+// array, so a cloned template can never collide with a system/locale path.
+export const PAGES = z
+  .array(z.object({ slug: SLUG, html: HTML }))
+  .max(20, "at most 20 extra pages")
+  .superRefine((arr, ctx) => {
+    const seen = new Set<string>();
+    arr.forEach((p, i) => {
+      const v = validatePageSlug(p.slug);
+      if (!v.ok || v.slug !== p.slug) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `page slug "${p.slug}" is invalid or reserved`,
+          path: [i, "slug"],
+        });
+      }
+      if (seen.has(p.slug)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `duplicate page slug "${p.slug}"`,
+          path: [i, "slug"],
+        });
+      }
+      seen.add(p.slug);
+    });
+  });
+
 // Full create / replace payload — every field required.
 export const CreateSchema = z.object({
   id: SLUG,
@@ -78,6 +108,8 @@ export const CreateSchema = z.object({
   description: z.string().min(1).max(500),
   mode: MODE,
   html: HTML,
+  // Extra pages for a multi-page template — each cloned into data.pages.
+  pages: PAGES.optional(),
   status: STATUS.optional(),
 });
 export type CreateTemplateInput = z.infer<typeof CreateSchema>;
@@ -93,6 +125,7 @@ export const UpdateSchema = z
     description: z.string().min(1).max(500).optional(),
     mode: MODE.optional(),
     html: HTML.optional(),
+    pages: PAGES.optional(),
     status: STATUS.optional(),
   })
   .refine((v) => Object.keys(v).length > 0, {

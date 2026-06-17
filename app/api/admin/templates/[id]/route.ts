@@ -44,7 +44,10 @@ export async function PUT(
     );
   }
 
-  if (parsed.data.html && htmlContainsEditorMarker(parsed.data.html)) {
+  const hasMarker =
+    (parsed.data.html != null && htmlContainsEditorMarker(parsed.data.html)) ||
+    (parsed.data.pages ?? []).some((p) => htmlContainsEditorMarker(p.html));
+  if (hasMarker) {
     return json(
       {
         error: "invalid_html",
@@ -78,6 +81,10 @@ export async function PUT(
     description: parsed.data.description ?? existing.description,
     mode: parsed.data.mode ?? existing.mode,
     html: bodyHtml,
+    // Preserve subpages unless the caller explicitly sends a new set —
+    // upsert always writes the pages column, so a partial update without
+    // this would wipe a multi-page template down to its home.
+    pages: parsed.data.pages ?? existing.pages,
     status: parsed.data.status ?? existing.status,
   });
 

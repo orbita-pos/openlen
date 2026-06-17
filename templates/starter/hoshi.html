@@ -1,0 +1,211 @@
+<!doctype html>
+<html lang="es" style="--ol-bg:#0e0a0d; --ol-surface:#1d161c; --ol-fg:#ffb3dd; --ol-border:rgba(255,179,221,.22); --ol-accent:#ff8fcb; --ol-accent-r:255,143,203; --ol-font-display:'Playfair Display',serif; --ol-r-scale:1.3">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Hoshi — link-in-bio para creadores</title>
+<meta name="description" content="Tu link-in-bio con estética neón: links, galería, tienda por DM/WhatsApp y un formulario para pedidos a medida.">
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Rubik+Glitch&family=Playfair+Display:ital,wght@1,500;1,600;1,700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ol-bg:#0e0a0d; --ol-surface:#1d161c; --ol-fg:#ffb3dd; --ol-fg-strong:#fff;
+    --ol-border:rgba(255,179,221,.22);
+    --ol-accent:#ff8fcb; --ol-accent-r:255,143,203;
+    --ol-accent-2:#c9a7ff; --ol-accent-2-r:201,167,255;   /* lila (no-canónico) */
+    --ol-cyan:#8ff0ff;                                      /* glitch (no-canónico) */
+    --ol-font-display:'Playfair Display',serif; --ol-r-scale:1.3;
+    --glow:0 0 12px rgba(var(--ol-accent-r),.85), 0 0 30px rgba(var(--ol-accent-r),.4);
+    --glow-l:0 0 12px rgba(var(--ol-accent-2-r),.8);
+  }
+  *{ -webkit-tap-highlight-color:transparent; box-sizing:border-box; }
+  body{ background:var(--ol-bg); color:var(--ol-fg); font-family:'Space Grotesk',sans-serif;
+    min-height:100dvh; overflow-x:hidden; }
+
+  /* ── fondo neón auto-contenido ── */
+  .bg-layer{ position:fixed; inset:0; z-index:-4; pointer-events:none;
+    background:radial-gradient(130% 100% at 50% 8%, rgba(74,47,68,.85) 0%, rgba(42,30,39,.9) 50%, var(--ol-bg) 100%); }
+  .dots-layer{ position:fixed; inset:0; z-index:-3; pointer-events:none;
+    background-image:radial-gradient(rgba(255,255,255,.16) 1px, transparent 1.7px); background-size:5px 5px;
+    mix-blend-mode:overlay; opacity:.45; }
+  .stars{ position:fixed; inset:0; z-index:-3; pointer-events:none; opacity:.7;
+    background-image:
+      radial-gradient(1.4px 1.4px at 18% 28%, rgba(var(--ol-accent-r),.9), transparent),
+      radial-gradient(1.2px 1.2px at 72% 16%, rgba(var(--ol-accent-2-r),.9), transparent),
+      radial-gradient(1.6px 1.6px at 44% 64%, rgba(255,255,255,.9), transparent),
+      radial-gradient(1.2px 1.2px at 88% 52%, rgba(var(--ol-accent-r),.85), transparent),
+      radial-gradient(1.3px 1.3px at 28% 84%, rgba(var(--ol-accent-2-r),.85), transparent);
+    animation:twinkle 4.5s ease-in-out infinite; }
+  @keyframes twinkle{ 0%,100%{opacity:.45} 50%{opacity:.9} }
+  .vignette{ position:fixed; inset:0; z-index:-2; pointer-events:none;
+    background:radial-gradient(ellipse 74% 66% at 50% 40%, transparent 26%, rgba(8,5,7,.6) 78%, rgba(6,3,5,.95) 100%); }
+
+  /* ── tipografía propia ── */
+  .display{ font-family:var(--ol-font-display); }
+  .serif-i{ font-family:var(--ol-font-display); font-style:italic; }
+  .glow-pink{ text-shadow:var(--glow); }
+  .glow-lilac{ text-shadow:var(--glow-l); }
+
+  /* username con aberración cromática (glitch, CSS puro) */
+  .uname{ font-family:'Rubik Glitch',cursive; position:relative; display:inline-block; color:var(--ol-fg-strong);
+    letter-spacing:1px; line-height:1; }
+  .uname::before,.uname::after{ content:attr(data-t); position:absolute; inset:0; }
+  .uname::before{ color:var(--ol-cyan); transform:translate(-2px,1px); mix-blend-mode:screen; animation:gl 3.2s infinite steps(2); }
+  .uname::after{ color:var(--ol-accent); transform:translate(2px,-1px); mix-blend-mode:screen; animation:gl2 2.7s infinite steps(2); }
+  @keyframes gl{ 0%,92%,100%{clip-path:inset(0 0 0 0); transform:translate(-2px,1px)} 94%{clip-path:inset(40% 0 30% 0); transform:translate(-5px,0)} 97%{clip-path:inset(10% 0 60% 0); transform:translate(3px,0)} }
+  @keyframes gl2{ 0%,90%,100%{clip-path:inset(0 0 0 0); transform:translate(2px,-1px)} 93%{clip-path:inset(60% 0 10% 0); transform:translate(5px,0)} 96%{clip-path:inset(20% 0 50% 0); transform:translate(-3px,0)} }
+
+  /* tarjeta con esquina recortada (firma visual) */
+  .notch{ position:relative;
+    background:linear-gradient(180deg, rgba(var(--ol-accent-r),.12), rgba(29,22,28,.42));
+    -webkit-backdrop-filter:blur(14px); backdrop-filter:blur(14px);
+    clip-path:polygon(0 0, calc(100% - 16px) 0, 100% 16px, 100% 100%, 16px 100%, 0 calc(100% - 16px));
+    box-shadow:0 10px 34px rgba(0,0,0,.4); }
+  .notch::before{ content:""; position:absolute; inset:0; pointer-events:none;
+    clip-path:polygon(0 0, calc(100% - 16px) 0, 100% 16px, 100% 100%, 16px 100%, 0 calc(100% - 16px));
+    border:1px solid var(--ol-border); }
+
+  .pill{ border-radius:999px; }
+  .link-pill{ transition:transform .18s ease, box-shadow .18s ease; }
+  .link-pill:hover{ transform:translateY(-2px); box-shadow:0 12px 30px -14px rgba(var(--ol-accent-r),.6); }
+
+  .social{ color:var(--ol-fg); transition:transform .25s cubic-bezier(.2,1.4,.4,1), color .25s; }
+  .social svg{ filter:drop-shadow(0 0 6px rgba(var(--ol-accent-r),.7)); }
+  .social:hover{ color:var(--ol-accent); transform:scale(1.25) translateY(-3px) rotate(-6deg); }
+
+  /* galería + lightbox CSS :target (sin JS) */
+  .gcell{ aspect-ratio:1; border-radius:calc(8px + 6px * var(--ol-r-scale,1)); overflow:hidden; display:block; position:relative;
+    border:1px solid var(--ol-border); transition:transform .25s, box-shadow .25s; background:var(--ol-surface); }
+  .gcell:hover{ transform:scale(1.05); box-shadow:0 0 16px rgba(var(--ol-accent-r),.7); z-index:1; }
+  .gcell img{ width:100%; height:100%; object-fit:cover; display:block; }
+  .lightbox{ position:fixed; inset:0; z-index:80; display:flex; align-items:center; justify-content:center;
+    background:rgba(8,5,7,.9); -webkit-backdrop-filter:blur(8px); backdrop-filter:blur(8px);
+    opacity:0; visibility:hidden; transition:opacity .25s, visibility .25s; padding:24px; }
+  .lightbox:target{ opacity:1; visibility:visible; }
+  .lightbox img{ max-width:min(430px,92vw); max-height:82vh; border-radius:18px;
+    border:2px solid rgba(var(--ol-accent-r),.6); box-shadow:0 0 40px rgba(var(--ol-accent-r),.5); }
+  .lightbox .close{ position:absolute; inset:0; }
+
+  /* tienda (vender por DM/WhatsApp) */
+  .shop{ display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  .manga{ position:relative; display:flex; flex-direction:column; text-align:left; overflow:hidden;
+    background:linear-gradient(180deg, rgba(var(--ol-accent-r),.12), rgba(29,22,28,.45));
+    border:1px solid var(--ol-border); border-radius:calc(10px + 7px * var(--ol-r-scale,1));
+    transition:transform .25s, box-shadow .25s; }
+  .manga:hover{ transform:translateY(-3px); box-shadow:0 0 18px rgba(var(--ol-accent-r),.5); }
+  .manga .cover{ aspect-ratio:2/3; overflow:hidden; position:relative; background:var(--ol-surface); }
+  .manga .cover img{ width:100%; height:100%; object-fit:cover; display:block; }
+  .manga .info{ padding:10px 11px 12px; display:flex; flex-direction:column; gap:4px; }
+  .manga .mtitle{ font-weight:600; color:var(--ol-fg-strong); font-size:13.5px; line-height:1.25; }
+  .manga .mprice{ font-family:var(--ol-font-display); font-style:italic; font-size:16px;
+    color:var(--ol-accent); text-shadow:var(--glow); }
+  .buy{ display:block; margin-top:7px; padding:9px; text-align:center; font-weight:700; font-size:12.5px;
+    letter-spacing:.3px; color:var(--ol-bg); border-radius:999px;
+    background:linear-gradient(100deg, var(--ol-accent), var(--ol-accent-2));
+    box-shadow:0 0 14px rgba(var(--ol-accent-r),.55); transition:transform .15s, box-shadow .25s; }
+  .buy:hover{ box-shadow:0 0 22px rgba(var(--ol-accent-r),.9); }
+  .buy:active{ transform:scale(.96); }
+  /* ficha de producto (subpágina) */
+  .pcover{ width:72%; max-width:260px; margin:0 auto; aspect-ratio:2/3; overflow:hidden;
+    border-radius:calc(10px + 7px * var(--ol-r-scale,1));
+    border:2px solid rgba(var(--ol-accent-r),.5); box-shadow:0 0 34px rgba(var(--ol-accent-r),.45); background:var(--ol-surface); }
+  .pcover img{ width:100%; height:100%; object-fit:cover; display:block; }
+
+  /* formulario */
+  .field{ background:var(--ol-surface); border:1px solid var(--ol-border); color:var(--ol-fg);
+    border-radius:calc(8px + 6px * var(--ol-r-scale,1)); }
+  .field::placeholder{ color:var(--ol-fg); opacity:.45; }
+  .field:focus{ outline:2px solid var(--ol-accent); outline-offset:1px; }
+
+  @media (prefers-reduced-motion: reduce){
+    .stars{ animation:none } .uname::before,.uname::after{ animation:none }
+    .link-pill,.social,.manga,.gcell,.buy{ transition:none }
+    .link-pill:hover,.social:hover,.manga:hover,.gcell:hover{ transform:none }
+  }
+</style>
+</head>
+<body class="antialiased">
+  <div class="bg-layer" aria-hidden="true"></div>
+  <div class="dots-layer" aria-hidden="true"></div>
+  <div class="stars" aria-hidden="true"></div>
+  <div class="vignette" aria-hidden="true"></div>
+
+  <main class="max-w-md mx-auto px-6 pt-12 pb-16 flex flex-col items-center text-center">
+
+    <!-- AVATAR -->
+    <div class="pill w-28 h-28 flex items-center justify-center overflow-hidden"
+         style="border:3px solid rgba(255,255,255,.9); box-shadow:0 0 24px rgba(var(--ol-accent-r),.85), 0 0 52px rgba(var(--ol-accent-r),.4)">
+      <img src="https://images.openlen.com/tematicas/coquette-petals-800.webp" alt="Tu foto" class="w-full h-full object-cover" style="object-position:center 20%">
+    </div>
+
+    <!-- NOMBRE glitch + tagline -->
+    <h1 class="uname glow-pink mt-7" data-t="tu_usuario" style="font-size:clamp(30px,10vw,44px)">tu_usuario</h1>
+    <p class="serif-i glow-lilac mt-3" style="font-size:22px; color:var(--ol-accent-2)">∴ mis links ♡ ∴</p>
+
+    <!-- ubicación / badge -->
+    <div class="pill inline-flex items-center gap-1.5 mt-5 px-3 py-1.5 text-[13px]"
+         style="background:rgba(var(--ol-accent-r),.08); border:1px solid var(--ol-border)">
+      <span aria-hidden="true">📍</span> <span class="uppercase tracking-wide">Tu ciudad</span>
+    </div>
+
+    <!-- REDES -->
+    <div class="flex items-center justify-center gap-7 mt-8">
+      <a class="social" href="#" target="_blank" rel="noopener" aria-label="Instagram"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="5.5"/><circle cx="12" cy="12" r="4.2"/><circle cx="17.4" cy="6.6" r="1.3" fill="currentColor" stroke="none"/></svg></a>
+      <a class="social" href="#" target="_blank" rel="noopener" aria-label="TikTok"><svg width="27" height="27" viewBox="0 0 24 24" fill="currentColor"><path d="M16 3c.4 2.6 1.9 4.4 4.5 4.6v3.1c-1.6.1-3-.4-4.5-1.3v6.6c0 4.2-3.4 6.9-7 6-3-.8-4.6-4.2-3.3-7.2 1-2.4 3.6-3.6 6.1-3v3.3c-.5-.2-1.1-.2-1.7-.1-1.2.3-1.9 1.4-1.6 2.6.3 1.2 1.6 1.9 2.8 1.4.9-.4 1.4-1.2 1.4-2.2V3H16z"/></svg></a>
+      <a class="social" href="#" target="_blank" rel="noopener" aria-label="Twitch"><svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor"><path d="M4 2 3 6v14h5v3h3l3-3h4l5-5V2H4zm17 11-3 3h-5l-3 3v-3H7V4h14v9zM16 7h-2v5h2V7zm-5 0H9v5h2V7z"/></svg></a>
+    </div>
+
+    <!-- LINKS (pills) -->
+    <div class="w-full mt-8 flex flex-col gap-3 text-left">
+      <a href="#" target="_blank" rel="noopener" class="notch link-pill flex items-center gap-3.5 px-4 py-4">
+        <span class="text-xl" aria-hidden="true">🎮</span>
+        <span class="flex-1"><span class="block text-[14.5px] font-semibold" style="color:var(--ol-fg-strong)">Mi Twitch</span><span class="block text-[12px]" style="opacity:.62">en vivo casi todas las noches</span></span>
+        <span style="color:var(--ol-accent)">→</span>
+      </a>
+      <a href="#" target="_blank" rel="noopener" class="notch link-pill flex items-center gap-3.5 px-4 py-4">
+        <span class="text-xl" aria-hidden="true">💜</span>
+        <span class="flex-1"><span class="block text-[14.5px] font-semibold" style="color:var(--ol-fg-strong)">Mi Discord</span><span class="block text-[12px]" style="opacity:.62">únete a la comunidad</span></span>
+        <span style="color:var(--ol-accent)">→</span>
+      </a>
+    </div>
+
+    <!-- GALERÍA + lightbox :target -->
+    <div class="w-full mt-9">
+      <div class="serif-i glow-lilac text-[19px] mb-3" style="color:var(--ol-accent-2)">∴ mi galería ♡ ∴</div>
+      <div class="grid grid-cols-3 gap-2.5">
+        <a class="gcell" href="#g1"><img src="https://images.openlen.com/tematicas/coquette-petals-800.webp" alt="Foto 1" loading="lazy"></a>
+        <a class="gcell" href="#g2"><img src="https://images.openlen.com/tematicas/coquette-satin-800.webp" alt="Foto 2" loading="lazy"></a>
+        <a class="gcell" href="#g3"><img src="https://images.openlen.com/tematicas/coquette-tulle-800.webp" alt="Foto 3" loading="lazy"></a>
+      </div>
+    </div>
+
+    <!-- BOTÓN A LA TIENDA (página propia /tienda/) -->
+    <a href="/tienda/" class="notch link-pill w-full mt-10 flex items-center gap-3.5 px-4 py-4 text-left">
+      <span class="text-xl" aria-hidden="true">🛒</span>
+      <span class="flex-1"><span class="block text-[14.5px] font-semibold" style="color:var(--ol-fg-strong)">Mi tienda ♡</span><span class="block text-[12px]" style="opacity:.62">míralo todo y pídelo por WhatsApp</span></span>
+      <span style="color:var(--ol-accent)">→</span>
+    </a>
+
+    <!-- ¿ALGO A LA MEDIDA? — formulario (OpenLen cablea el form al publicar) -->
+    <div class="notch w-full mt-10 px-5 py-5 text-left">
+      <h2 class="display text-lg font-bold" style="color:var(--ol-fg-strong)">¿quieres algo a la medida? ✦</h2>
+      <p class="mt-1 text-[12.5px]" style="opacity:.7">¿algo que no se puede hacer aquí? cuéntame tu idea y te armo una web propia.</p>
+      <form class="mt-3 flex flex-col gap-2.5">
+        <input class="field px-4 py-2.5 text-[13px]" type="text" name="name" placeholder="Tu nombre">
+        <input class="field px-4 py-2.5 text-[13px]" type="email" name="email" placeholder="Tu correo" required>
+        <textarea class="field px-4 py-2.5 text-[13px]" name="project_details" rows="3" placeholder="¿Qué necesitas? (ej: stats de juego en vivo, tienda, etc.)"></textarea>
+        <button class="buy" type="submit" style="margin-top:2px">pídeme una web a medida ♡</button>
+      </form>
+    </div>
+
+    <footer class="mt-12 text-[11px]" style="opacity:.45">hecho con ♡</footer>
+  </main>
+
+  <!-- lightboxes de la galería (CSS :target, sin JS) -->
+  <a class="lightbox" id="g1" href="#"><span class="close"></span><img src="https://images.openlen.com/tematicas/coquette-petals-800.webp" alt="Foto 1"></a>
+  <a class="lightbox" id="g2" href="#"><span class="close"></span><img src="https://images.openlen.com/tematicas/coquette-satin-800.webp" alt="Foto 2"></a>
+  <a class="lightbox" id="g3" href="#"><span class="close"></span><img src="https://images.openlen.com/tematicas/coquette-tulle-800.webp" alt="Foto 3"></a>
+</body>
+</html>
