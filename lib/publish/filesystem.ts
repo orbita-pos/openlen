@@ -33,6 +33,7 @@ import {
 import { consolidateUnsplashCredits } from "@/lib/publish/credits";
 import { wirePublishedForms } from "@/lib/publish/forms";
 import { injectAnalyticsSnippet } from "@/lib/analytics/snippet";
+import { injectTrackingStrip } from "@/lib/publish/tracking-strip";
 import { injectLogoIntoHtml } from "@/lib/branding/inject-logo";
 import { buildGateStub, wireMemberLogout } from "@/lib/members/gate-stub";
 import { detectSiteAccent } from "@/lib/members/site-accent";
@@ -556,6 +557,18 @@ async function bakeDocument(
   // Analytics tracker snippet — AFTER all other rewrites.
   if (ctx.projectId && ctx.analyticsEnabled) {
     migratedHtml = injectAnalyticsSnippet(migratedHtml, ctx.projectId, page);
+  }
+
+  // URL self-cleaner — strips tracking params (fbclid/utm_*) from the address
+  // bar on load. Unconditional (no projectId needed); before the seal so its
+  // inline-script hash is sealed into the CSP. Pure + soft-fail.
+  if (process.env.OPENLEN_TRACKING_STRIP !== "0") {
+    try {
+      migratedHtml = injectTrackingStrip(migratedHtml);
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.warn("[publishToDir] tracking-strip inject failed; publishing without it", err);
+    }
   }
 
   // Motion Looks. Soft-fail.

@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { and, eq } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
 import { optimizeHtmlForProduction } from "@/lib/publish/optimize-html";
+import { injectTrackingStrip } from "@/lib/publish/tracking-strip";
 import { splitPagesForPublish } from "@/lib/projects/site-pages";
 import type { ProjectData } from "@/lib/projects/types";
 import { encryptToken } from "./crypto";
@@ -172,21 +173,27 @@ export async function getExportHtml(
   const row = rows[0];
   if (!row || row.userId !== userId) return null;
   const data = row.data as ProjectData;
-  const optimized = await optimizeHtmlForProduction(data?.html ?? "");
+  // URL self-cleaner is host-agnostic (Vercel / GitHub Pages get ?fbclid too),
+  // so it's baked into the export. No seal/CSP on external hosts, so the plain
+  // inline script just runs. Injected before hashing so the drift sha matches
+  // the bytes actually deployed.
+  const optimizedHtml = injectTrackingStrip(
+    (await optimizeHtmlForProduction(data?.html ?? "")).html,
+  );
   // External hosts (GitHub Pages / Vercel) have no member gate — exporting a
   // gated page there would publish it wide open. Public pages only.
   const pages = await Promise.all(
     splitPagesForPublish(data).publicPages.map(async (pg) => ({
       slug: pg.slug,
-      html: (await optimizeHtmlForProduction(pg.html)).html,
+      html: injectTrackingStrip((await optimizeHtmlForProduction(pg.html)).html),
     })),
   );
-  const hash = createHash("sha256").update(optimized.html, "utf8");
+  const hash = createHash("sha256").update(optimizedHtml, "utf8");
   for (const pg of pages) {
     hash.update(`\u0000${pg.slug}\u0000`, "utf8").update(pg.html, "utf8");
   }
   const sha = hash.digest("hex").slice(0, 12);
-  return { html: optimized.html, pages, sha, title: row.title };
+  return { html: optimizedHtml, pages, sha, title: row.title };
 }
 
 // Dispatch a deploy to the right provider driver. Home ships as index.html,
