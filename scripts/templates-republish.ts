@@ -49,6 +49,9 @@ async function main() {
         description: row.description,
         mode: row.mode as TemplateMode,
         html,
+        // Preserve multi-page templates' subpages — upsert always writes the
+        // pages column, so omitting this would silently wipe them.
+        pages: (row.pages as Array<{ slug: string; html: string }>) ?? [],
         status: row.status as TemplateStatus,
       });
       console.log(

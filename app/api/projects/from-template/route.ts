@@ -85,6 +85,18 @@ export async function POST(req: Request): Promise<Response> {
     { title: entry.name, ...profileMeta(business.data) },
   );
 
+  // Multi-page template: clone each extra page through the same born-canonical
+  // chain (sanitize → normalize → ensurePageMeta) into project.data.pages, so a
+  // cloned site is multi-page from birth (e.g. Home + Tienda + product fichas).
+  const clonedPages: Record<string, { html: string }> = {};
+  for (const pg of entry.pages ?? []) {
+    const ps = sanitizeForPublish(pg.html);
+    if (ps.html === null) continue; // defensive: skip a page carrying editor markers
+    clonedPages[pg.slug] = {
+      html: ensurePageMeta(normalizeBornCanonical(ps.html), { title: entry.name }),
+    };
+  }
+
   const projectId = crypto.randomUUID();
   try {
     await db.insert(schema.projects).values({
@@ -102,7 +114,10 @@ export async function POST(req: Request): Promise<Response> {
       status: "draft",
       profileId: business.id,
       logoUrl: business.data.brand?.logoUrl ?? null,
-      data: { html: finalHtml },
+      data: {
+        html: finalHtml,
+        ...(Object.keys(clonedPages).length ? { pages: clonedPages } : {}),
+      },
     });
   } catch (err) {
     // eslint-disable-next-line no-console
@@ -123,6 +138,21 @@ export async function POST(req: Request): Promise<Response> {
     // eslint-disable-next-line no-console
     console.error("[from-template] initial version snapshot failed", err);
   });
+
+  // …and a v0 for each cloned subpage, so "back to original" works per page
+  // even if the user chats a subpage into oblivion before the first publish.
+  for (const [slug, pg] of Object.entries(clonedPages)) {
+    await createVersion({
+      projectId,
+      html: pg.html,
+      label: `Initial: ${entry.name}`,
+      source: "initial",
+      page: slug,
+    }).catch((err: unknown) => {
+      // eslint-disable-next-line no-console
+      console.error("[from-template] initial page version snapshot failed", slug, err);
+    });
+  }
 
   return json({ projectId, title: entry.name }, 200);
 }

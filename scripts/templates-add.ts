@@ -29,12 +29,18 @@ import { lintContract } from "../lib/contract/lint";
 interface ParsedFlags {
   htmlPath: string;
   flags: Record<string, string>;
+  pages: string[]; // raw "<slug>:<path>" specs from repeatable --page=
 }
 
 function parseArgs(argv: string[]): ParsedFlags | null {
   const positional: string[] = [];
   const flags: Record<string, string> = {};
+  const pages: string[] = [];
   for (const a of argv) {
+    if (a.startsWith("--page=")) {
+      pages.push(a.slice("--page=".length));
+      continue;
+    }
     if (a.startsWith("--")) {
       const eq = a.indexOf("=");
       if (eq === -1) {
@@ -50,7 +56,7 @@ function parseArgs(argv: string[]): ParsedFlags | null {
     }
   }
   if (positional.length !== 1) return null;
-  return { htmlPath: positional[0], flags };
+  return { htmlPath: positional[0], flags, pages };
 }
 
 function usage(): string {
@@ -64,6 +70,7 @@ function usage(): string {
     "    --mode=<dark|light|cream> \\",
     "    --pitch=<one-line hook> \\",
     "    --description=<full sentence> \\",
+    "    [--page=<slug>:<path/to/page.html> ...]  (repeatable — multi-page template) \\",
     "    [--status=draft|published|archived]",
   ].join("\n");
 }
@@ -75,7 +82,7 @@ async function main() {
     console.error(usage());
     process.exit(2);
   }
-  const { htmlPath, flags } = parsed;
+  const { htmlPath, flags, pages: pageSpecs } = parsed;
 
   const absPath = resolve(htmlPath);
   let html: string;
@@ -85,6 +92,25 @@ async function main() {
     const msg = err instanceof Error ? err.message : String(err);
     console.error(`Failed to read ${absPath}: ${msg}`);
     process.exit(1);
+  }
+
+  // Extra pages for a multi-page template: --page=<slug>:<file>, repeatable.
+  const pages: Array<{ slug: string; html: string }> = [];
+  for (const spec of pageSpecs) {
+    const ci = spec.indexOf(":");
+    if (ci < 1) {
+      console.error(`Invalid --page "${spec}" — use --page=<slug>:<path/to/page.html>`);
+      process.exit(2);
+    }
+    const slug = spec.slice(0, ci);
+    const pPath = spec.slice(ci + 1);
+    try {
+      pages.push({ slug, html: await readFile(resolve(pPath), "utf8") });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.error(`Failed to read page "${pPath}": ${msg}`);
+      process.exit(1);
+    }
   }
 
   // Build the payload then run it through the same Zod schema the HTTP
@@ -98,6 +124,7 @@ async function main() {
     description: flags.description,
     mode: flags.mode,
     html,
+    ...(pages.length ? { pages } : {}),
     ...(flags.status ? { status: flags.status } : {}),
   };
 
@@ -118,9 +145,12 @@ async function main() {
     process.exit(2);
   }
 
-  if (htmlContainsEditorMarker(result.data.html)) {
+  const markerOffender = htmlContainsEditorMarker(result.data.html)
+    ? "home"
+    : (result.data.pages ?? []).find((p) => htmlContainsEditorMarker(p.html))?.slug;
+  if (markerOffender) {
     console.error(
-      "HTML contains `data-slot-path=` — that marker is only valid in editor-mode workspace output, not in a curated template. Re-export the HTML without it.",
+      `HTML (${markerOffender}) contains \`data-slot-path=\` — that marker is only valid in editor-mode workspace output, not in a curated template. Re-export without it.`,
     );
     process.exit(1);
   }
@@ -128,28 +158,34 @@ async function main() {
   // Design-contract check (docs/openlen-contract.md). Warns by default so the
   // pre-contract library can still be (re-)added; pass --enforce-contract to
   // BLOCK on errors and guarantee a new template is born contract-clean.
-  const lint = lintContract(result.data.html, {
-    kind: "document",
-    mode: result.data.mode as "dark" | "light" | "cream",
-  });
-  if (lint.violations.length > 0) {
-    const errs = lint.violations.filter((v) => v.level === "error");
-    const warns = lint.violations.filter((v) => v.level === "warning");
-    console.log(`Contract lint: ${errs.length} errors, ${warns.length} warnings`);
-    for (const v of lint.violations) {
-      console.log(`  ${v.level === "error" ? "x" : "!"} [${v.rule}] ${v.detail}`);
+  const docsToLint = [
+    { label: "home", html: result.data.html },
+    ...(result.data.pages ?? []).map((p) => ({ label: p.slug, html: p.html })),
+  ];
+  let lintHadErrors = false;
+  for (const d of docsToLint) {
+    const lint = lintContract(d.html, {
+      kind: "document",
+      mode: result.data.mode as "dark" | "light" | "cream",
+    });
+    if (lint.violations.length > 0) {
+      const errs = lint.violations.filter((v) => v.level === "error");
+      const warns = lint.violations.filter((v) => v.level === "warning");
+      console.log(`Contract lint [${d.label}]: ${errs.length} errors, ${warns.length} warnings`);
+      for (const v of lint.violations) {
+        console.log(`  ${v.level === "error" ? "x" : "!"} [${v.rule}] ${v.detail}`);
+      }
+      if (!lint.ok) lintHadErrors = true;
     }
-    if (!lint.ok && flags["enforce-contract"] === "true") {
-      console.error(
-        "\nAborting — contract errors with --enforce-contract. Fix the HTML, or drop the flag to add anyway.",
-      );
-      process.exit(1);
-    }
-    if (!lint.ok) {
-      console.log(
-        "(adding despite contract errors — pass --enforce-contract to block)\n",
-      );
-    }
+  }
+  if (lintHadErrors && flags["enforce-contract"] === "true") {
+    console.error(
+      "\nAborting — contract errors with --enforce-contract. Fix the HTML, or drop the flag to add anyway.",
+    );
+    process.exit(1);
+  }
+  if (lintHadErrors) {
+    console.log("(adding despite contract errors — pass --enforce-contract to block)\n");
   }
 
   console.log(`Uploading "${result.data.id}" (${result.data.html.length} bytes)...`);
