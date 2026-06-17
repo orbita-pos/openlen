@@ -258,14 +258,6 @@ interface LeftSidebarProps {
   /** Generation mode — "quick" (curated, free) vs "scratch" (bespoke, Pro). */
   aiMode?: "quick" | "scratch";
   aiOnModeChange?: (m: "quick" | "scratch") => void;
-  /** "Mi negocio" picker state — seeds the curation flow from a saved profile. */
-  aiProfiles?: { id: string; name: string }[];
-  aiSelectedProfileId?: string | null;
-  aiOnSelectProfile?: (id: string | null) => void;
-  aiOnManageProfiles?: () => void;
-  /** Whether any saved profile holds real info — drives the brief screen's
-   *  cold-start import CTA vs the switch picker. */
-  aiHasBusinessInfo?: boolean;
   /** The account section shown in the workspace CENTER ("page" = the canvas).
    *  The global-section rail icons set this; the parent renders the section. */
   activeSection?: SectionView;
@@ -350,11 +342,6 @@ export function LeftSidebar({
   aiGenerating = false,
   aiMode = "quick",
   aiOnModeChange,
-  aiProfiles = [],
-  aiSelectedProfileId = null,
-  aiOnSelectProfile,
-  aiOnManageProfiles,
-  aiHasBusinessInfo = false,
   businesses = [],
   activeBusinessId = "",
   onPickBusiness,
@@ -567,11 +554,6 @@ export function LeftSidebar({
             generating={aiGenerating}
             mode={aiMode}
             onModeChange={aiOnModeChange ?? (() => {})}
-            profiles={aiProfiles}
-            selectedProfileId={aiSelectedProfileId}
-            onSelectProfile={aiOnSelectProfile}
-            onManageProfiles={aiOnManageProfiles}
-            hasBusinessInfo={aiHasBusinessInfo}
           />
         ) : (
           <>
@@ -601,6 +583,8 @@ export function LeftSidebar({
                 onClearScope={onClearScope}
                 pendingDraft={pendingDraft}
                 onPendingDraftConsumed={onPendingDraftConsumed}
+                sitePages={sitePages}
+                onSwitchSitePage={onSwitchSitePage}
               />
             )}
             {mode === "templates" && (

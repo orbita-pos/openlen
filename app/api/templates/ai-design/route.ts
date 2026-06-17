@@ -376,6 +376,33 @@ export async function POST(req: Request): Promise<Response> {
   const pageSlug =
     pageSlugRaw && existing.data?.pages?.[pageSlugRaw] ? pageSlugRaw : null;
   if (pageSlugRaw && !pageSlug) return errorJson(404, "page not found");
+  // Defense-in-depth against wrong-page corruption: the client pairs a live
+  // `currentHtml` with a `page` slug. Normally they're the SAME page, so
+  // currentHtml ≈ the stored page (modulo unsaved edits). A gross mismatch —
+  // a different <title> AND a wildly different length — means the client paired
+  // one page's HTML with another page's slug; persisting would overwrite the
+  // wrong page. Reject that, while staying tolerant of legitimate unsaved edits
+  // (same title or similar length passes through).
+  if (pageSlug) {
+    const storedPageHtml = existing.data?.pages?.[pageSlug]?.html ?? "";
+    if (storedPageHtml) {
+      const titleOf = (h: string) =>
+        /<title[^>]*>([\s\S]*?)<\/title>/i.exec(h)?.[1]?.trim().toLowerCase() ?? "";
+      const ct = titleOf(currentHtml);
+      const st = titleOf(storedPageHtml);
+      const lenRatio =
+        Math.min(currentHtml.length, storedPageHtml.length) /
+        Math.max(currentHtml.length, storedPageHtml.length, 1);
+      // Reject a gross mismatch: a different <title> AND a >2x size delta, OR an
+      // extreme >5x size delta alone (catches a wrong-page payload even when two
+      // pages happen to share a title) — both far outside a legitimate unsaved
+      // edit at send time. The client always snapshots currentHtml + page from
+      // one render, so this only ever fires on a buggy/crafted request.
+      if ((ct && st && ct !== st && lenRatio < 0.5) || lenRatio < 0.2) {
+        return errorJson(409, "currentHtml does not match the target page");
+      }
+    }
+  }
 
   const aiModel: AIModel = body.model === "gemini-flash" ? "gemini-flash" : "gemini-pro";
   const PROVIDER = resolveAIProvider(aiModel);

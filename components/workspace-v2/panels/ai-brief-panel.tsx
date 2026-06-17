@@ -10,13 +10,10 @@ import { useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import {
   ChevronUp,
-  Crosshair,
-  ImageIcon,
   Loader,
   Pencil,
   SendUp,
   Sparkles,
-  Wand,
   Zap,
 } from "../icons";
 import type { BriefFormState } from "@/components/workspace/types";
@@ -29,15 +26,6 @@ export interface AiBriefPanelProps {
   /** "quick" = curated (free), "scratch" = bespoke from-scratch (Pro). */
   mode: "quick" | "scratch";
   onModeChange: (m: "quick" | "scratch") => void;
-  /** Saved business profiles for the "Mi negocio" picker. */
-  profiles?: { id: string; name: string }[];
-  selectedProfileId?: string | null;
-  onSelectProfile?: (id: string | null) => void;
-  onManageProfiles?: () => void;
-  /** Whether ANY saved profile holds real info. False (only the empty lazy
-   *  default) → lead with the prominent "Agregar mi negocio" import CTA so the
-   *  page is born with the user's info. True → show the compact switch picker. */
-  hasBusinessInfo?: boolean;
 }
 
 export function AiBriefPanel({
@@ -46,11 +34,6 @@ export function AiBriefPanel({
   generating,
   mode,
   onModeChange,
-  profiles = [],
-  selectedProfileId = null,
-  onSelectProfile,
-  onManageProfiles,
-  hasBusinessInfo = false,
 }: AiBriefPanelProps) {
   const t = useTranslations("panelsA");
   const taRef = useRef<HTMLTextAreaElement>(null);
@@ -101,16 +84,6 @@ export function AiBriefPanel({
         </div>
       </div>
       <div className="shrink-0 px-3 pb-3">
-        {/* Hybrid identity capture — offered on the brief screen in BOTH modes
-            so the first page can be born with the user's real info. */}
-        <BusinessAttach
-          profiles={profiles}
-          selectedId={selectedProfileId}
-          hasBusinessInfo={hasBusinessInfo}
-          onSelect={onSelectProfile ?? (() => {})}
-          onManage={onManageProfiles ?? (() => {})}
-          disabled={generating}
-        />
         <div className="rounded-xl border bd bg-elev focus-within:border-[color:var(--accent)] focus-within:ring-1 focus-within:ring-[color:var(--accent-ring)]/30 transition">
           <textarea
             ref={taRef}
@@ -126,43 +99,14 @@ export function AiBriefPanel({
             disabled={generating}
             placeholder={t("aiBrief.placeholder")}
             maxLength={2000}
-            className="block w-full bg-transparent text-[12.5px] leading-relaxed px-3 pt-2.5 pb-1 fg placeholder:fg-faint focus:outline-none resize-none disabled:opacity-60"
+            className="block w-full bg-transparent text-[12.5px] leading-relaxed px-3 pt-2.5 pb-1 fg placeholder:fg-faint focus:outline-none resize-none nice-scroll disabled:opacity-60"
             style={{ minHeight: 32 }}
           />
           <div className="flex items-center justify-between px-1.5 pb-1.5 pt-0.5">
-            <div className="flex items-center gap-0.5">
-              {/* Same icon row as ChatPanel, intentionally disabled until
-                  the project exists. Gives the user a preview of the
-                  editing affordances that unlock after generation. */}
-              <button
-                type="button"
-                disabled
-                aria-label={t("aiBrief.attachImage")}
-                title={t("aiBrief.availableAfter")}
-                className="inline-flex h-7 w-7 items-center justify-center rounded-md fg-faint opacity-40 cursor-not-allowed"
-              >
-                <ImageIcon size={13} />
-              </button>
-              <button
-                type="button"
-                disabled
-                aria-label={t("aiBrief.scopeSection")}
-                title={t("aiBrief.availableAfter")}
-                className="inline-flex h-7 w-7 items-center justify-center rounded-md fg-faint opacity-40 cursor-not-allowed"
-              >
-                <Crosshair size={13} />
-              </button>
-              <button
-                type="button"
-                disabled
-                aria-label={t("aiBrief.autofill")}
-                title={t("aiBrief.availableAfter")}
-                className="inline-flex h-7 w-7 items-center justify-center rounded-md fg-faint opacity-40 cursor-not-allowed"
-              >
-                <Wand size={13} />
-              </button>
-              {/* Mode select — a compact dropdown (like the old model picker)
-                  so the two mode names don't crowd the row. */}
+            {/* Just the mode chooser on the left — the editing affordances
+                (image / scope / autofill) belong to the edit chat, not the
+                from-scratch brief, and crowding them here overflowed the row. */}
+            <div className="flex items-center gap-0.5 min-w-0">
               <ModeSelect
                 mode={mode}
                 onModeChange={onModeChange}
@@ -174,7 +118,7 @@ export function AiBriefPanel({
               onClick={onGenerate}
               disabled={!canGenerate}
               aria-label={t("aiBrief.generate")}
-              className={`inline-flex items-center justify-center gap-1 h-7 rounded-md text-[11.5px] font-medium transition ${
+              className={`inline-flex shrink-0 items-center justify-center gap-1 h-7 rounded-md text-[11.5px] font-medium transition ${
                 canGenerate
                   ? "px-2.5 bg-[var(--accent-strong)] text-white shadow-coral hover:brightness-105"
                   : "w-7 bg-hover fg-faint cursor-not-allowed"
@@ -274,163 +218,3 @@ function ModeSelect({
   );
 }
 
-// Identity capture entry on the brief screen. With no real business saved yet
-// (the empty lazy default), lead with a prominent "Agregar mi negocio" import
-// CTA so the page is born filled. Once a profile holds real info, show the
-// compact switch picker (which still offers "none" + "new business").
-function BusinessAttach({
-  profiles,
-  selectedId,
-  hasBusinessInfo,
-  onSelect,
-  onManage,
-  disabled,
-}: {
-  profiles: { id: string; name: string }[];
-  selectedId: string | null;
-  hasBusinessInfo: boolean;
-  onSelect: (id: string | null) => void;
-  onManage: () => void;
-  disabled: boolean;
-}) {
-  const t = useTranslations("panelsA");
-  if (!hasBusinessInfo) {
-    return (
-      <button
-        type="button"
-        onClick={onManage}
-        disabled={disabled}
-        className="mb-2 w-full inline-flex items-center justify-center gap-1.5 h-8 rounded-lg text-[11.5px] font-medium text-accent ring-1 ring-[color:var(--accent)]/35 bg-accent-soft hover:brightness-[1.03] transition disabled:opacity-40"
-      >
-        <Sparkles size={12} /> {t("profilePicker.add")}
-      </button>
-    );
-  }
-  return (
-    <ProfilePicker
-      profiles={profiles}
-      selectedId={selectedId}
-      onSelect={onSelect}
-      onManage={onManage}
-      disabled={disabled}
-    />
-  );
-}
-
-// "Mi negocio" picker — seeds generation from a saved profile. With no profiles
-// it's a single "add" link; with one or more it's a dropdown (+ "new business").
-// "None" = let the AI invent the copy.
-function ProfilePicker({
-  profiles,
-  selectedId,
-  onSelect,
-  onManage,
-  disabled,
-}: {
-  profiles: { id: string; name: string }[];
-  selectedId: string | null;
-  onSelect: (id: string | null) => void;
-  onManage: () => void;
-  disabled: boolean;
-}) {
-  const t = useTranslations("panelsA");
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!open) return;
-    const onDown = (e: PointerEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
-    };
-    window.addEventListener("pointerdown", onDown);
-    return () => window.removeEventListener("pointerdown", onDown);
-  }, [open]);
-
-  if (profiles.length === 0) {
-    return (
-      <button
-        type="button"
-        onClick={onManage}
-        disabled={disabled}
-        className="mb-2 inline-flex items-center gap-1.5 text-[11px] fg-muted hover:fg transition disabled:opacity-40"
-      >
-        <Sparkles size={11} /> {t("profilePicker.add")}
-      </button>
-    );
-  }
-
-  const selected = profiles.find((p) => p.id === selectedId) ?? null;
-  return (
-    <div className="mb-2 flex items-center gap-1.5 text-[11px]" ref={ref}>
-      <span className="fg-faint">{t("profilePicker.for")}</span>
-      <div className="relative">
-        <button
-          type="button"
-          disabled={disabled}
-          onClick={() => setOpen((o) => !o)}
-          className="inline-flex items-center gap-1 h-6 px-2 rounded-md fg hover:bg-hover ring-1 ring-[color:var(--border)] transition disabled:opacity-40"
-        >
-          <span className="max-w-[140px] truncate">
-            {selected ? selected.name : t("profilePicker.none")}
-          </span>
-          <ChevronUp size={9} className={open ? "rotate-180" : ""} />
-        </button>
-        {open && (
-          <div className="absolute bottom-full left-0 mb-1 w-48 rounded-lg border bd bg-elev shadow-card p-1 z-30">
-            <PickItem
-              active={selectedId === null}
-              label={t("profilePicker.none")}
-              onClick={() => {
-                onSelect(null);
-                setOpen(false);
-              }}
-            />
-            {profiles.map((p) => (
-              <PickItem
-                key={p.id}
-                active={selectedId === p.id}
-                label={p.name}
-                onClick={() => {
-                  onSelect(p.id);
-                  setOpen(false);
-                }}
-              />
-            ))}
-            <button
-              type="button"
-              onClick={() => {
-                setOpen(false);
-                onManage();
-              }}
-              className="w-full text-left px-2 py-1.5 rounded-md text-[11.5px] text-accent hover:bg-hover transition"
-            >
-              + {t("profilePicker.new")}
-            </button>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-function PickItem({
-  active,
-  label,
-  onClick,
-}: {
-  active: boolean;
-  label: string;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`w-full text-left px-2 py-1.5 rounded-md text-[11.5px] truncate transition ${
-        active ? "bg-accent-soft text-accent" : "fg hover:bg-hover"
-      }`}
-    >
-      {label}
-    </button>
-  );
-}

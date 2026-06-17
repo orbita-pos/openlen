@@ -2776,11 +2776,6 @@ function NewV2Inner() {
           aiGenerating={aiGenerating}
           aiMode={aiMode}
           aiOnModeChange={setAiMode}
-          aiProfiles={profiles}
-          aiSelectedProfileId={selectedProfileId}
-          aiOnSelectProfile={setSelectedProfileId}
-          aiOnManageProfiles={() => setProfileModalOpen(true)}
-          aiHasBusinessInfo={hasBusinessInfo}
           businesses={profiles}
           businessesLoading={!profilesLoaded}
           activeBusinessId={activeBusinessId}
