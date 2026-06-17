@@ -613,6 +613,10 @@ interface PublishParams {
    *  data.settings.languages for future republishes; when absent, the
    *  stored setting drives this publish. */
   languages?: string[];
+  /** Skip the post-publish Lighthouse flight check. Default false (normal
+   *  Deploy runs it). Bulk republishes set this so a catalog-wide sweep
+   *  doesn't queue N Chrome audits against the box's single flight-check slot. */
+  skipFlightCheck?: boolean;
 }
 interface PublishResult {
   subdomain: string;
@@ -941,12 +945,15 @@ export async function publishProject(
 
   // 10. Flight Check: Lighthouse the release artifact and persist the lab
   // report (the publish modal's Speed Card polls it). Fire-and-forget,
-  // serialized to one Chrome at a time, idempotent per (project, sha).
-  void runFlightCheck({
-    projectId: params.projectId,
-    subdomain: v.value,
-    releaseSha: publishResult.sha,
-  });
+  // serialized to one Chrome at a time, idempotent per (project, sha). Skipped
+  // on bulk republishes so a catalog-wide sweep doesn't queue N Chrome audits.
+  if (!params.skipFlightCheck) {
+    void runFlightCheck({
+      projectId: params.projectId,
+      subdomain: v.value,
+      releaseSha: publishResult.sha,
+    });
+  }
 
   return {
     subdomain: v.value,
