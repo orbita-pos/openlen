@@ -17,7 +17,9 @@ import {
   type RefObject,
 } from "react";
 import {
+  ChevronDown,
   Crosshair,
+  FileText,
   ImageIcon,
   Loader,
   SendUp,
@@ -29,6 +31,7 @@ import {
 import { ReplaceAssetModal } from "../replace-asset-modal";
 import { ModelPicker, useAIModel } from "../model-picker";
 import type { StoredChatTurn } from "@/lib/projects/types";
+import type { SitePageSummary } from "@/lib/projects/site-pages";
 import type { AIModel } from "@/lib/ai-provider";
 
 export interface ScopedSelection {
@@ -84,6 +87,10 @@ interface ChatPanelProps {
    *  into its local state so the parent can null it out. */
   pendingDraft?: string | null;
   onPendingDraftConsumed?: () => void;
+  /** Multi-page: the site's subpages + a switcher, so the composer can offer a
+   *  "which page am I editing" picker that jumps to the chosen page. */
+  sitePages?: SitePageSummary[];
+  onSwitchSitePage?: (slug: string | null) => void;
 }
 
 export function ChatPanel({
@@ -102,11 +109,15 @@ export function ChatPanel({
   onAutofill,
   pendingDraft = null,
   onPendingDraftConsumed,
+  sitePages = [],
+  onSwitchSitePage,
 }: ChatPanelProps) {
   if (flatProjectId && onFlatHtmlUpdate) {
     return (
       <AIDesignChat
         page={flatProjectPage}
+        sitePages={sitePages}
+        onSwitchSitePage={onSwitchSitePage}
         // Page-aware key: switching ?page=<slug> remounts the chat so the
         // transcript reseeds to THAT page's turns (not the whole project's).
         key={`${flatProjectId}:${flatProjectPage ?? ""}`}
@@ -240,6 +251,8 @@ function AIDesignChat({
   onAutofill,
   pendingDraft = null,
   onPendingDraftConsumed,
+  sitePages = [],
+  onSwitchSitePage,
 }: {
   projectId: string;
   projectHtml: string;
@@ -257,6 +270,8 @@ function AIDesignChat({
   onAutofill?: () => void;
   pendingDraft?: string | null;
   onPendingDraftConsumed?: () => void;
+  sitePages?: SitePageSummary[];
+  onSwitchSitePage?: (slug: string | null) => void;
 }) {
   const t = useTranslations("panelsChat");
   // Seed from the persisted transcript so a reload / tab-switch remount
@@ -792,6 +807,13 @@ function AIDesignChat({
 
   return (
     <div className="flex flex-col h-full">
+      {sitePages.length > 0 && (
+        <ChatPageBar
+          pages={sitePages}
+          active={page}
+          onSwitch={onSwitchSitePage ?? (() => {})}
+        />
+      )}
       <div
         ref={scrollRef}
         className="flex-1 overflow-y-auto nice-scroll px-3 py-3 space-y-3"
@@ -1172,7 +1194,7 @@ function Composer({
                 })
               : t("composer.placeholder")
           }
-          className="block w-full bg-transparent text-[12.5px] leading-relaxed px-3 pt-2.5 pb-1 fg placeholder:fg-faint focus:outline-none resize-none disabled:opacity-60"
+          className="block w-full bg-transparent text-[12.5px] leading-relaxed px-3 pt-2.5 pb-1 fg placeholder:fg-faint focus:outline-none resize-none nice-scroll disabled:opacity-60"
           style={{ minHeight: 32 }}
         />
         <div className="flex items-center justify-between px-1.5 pb-1.5 pt-0.5">
@@ -1265,6 +1287,96 @@ function Composer({
         </div>
       </div>
     </div>
+  );
+}
+
+// Prominent page selector at the TOP of the chat panel (a context bar, like the
+// reference's "New Hero Ticker ▾"). Lists Home + subpages; picking one navigates
+// (?page=<slug>) so the chat then edits that page. Hidden for single-page
+// projects (no subpages). Popover opens downward.
+function ChatPageBar({
+  pages,
+  active,
+  onSwitch,
+}: {
+  pages: SitePageSummary[];
+  active: string | null;
+  onSwitch: (slug: string | null) => void;
+}) {
+  const t = useTranslations("panelsChat");
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    const onDown = (e: PointerEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    window.addEventListener("pointerdown", onDown);
+    return () => window.removeEventListener("pointerdown", onDown);
+  }, [open]);
+  if (pages.length === 0) return null;
+  const homeLabel = t("composer.pageTargetHome");
+  const activeLabel = active
+    ? (pages.find((p) => p.slug === active)?.title ?? active)
+    : homeLabel;
+  const pick = (slug: string | null) => {
+    setOpen(false);
+    if (slug !== active) onSwitch(slug);
+  };
+  return (
+    <div className="shrink-0 px-3 pt-3" ref={ref}>
+      <div className="relative">
+        <button
+          type="button"
+          onClick={() => setOpen((o) => !o)}
+          aria-label={t("composer.pageTarget")}
+          title={t("composer.pageTarget")}
+          className="w-full inline-flex items-center gap-2 h-9 px-3 rounded-lg border bd bg-elev hover:bg-hover text-[12.5px] fg font-medium transition"
+        >
+          <FileText size={14} className="fg-muted shrink-0" />
+          <span className="flex-1 text-left truncate">{activeLabel}</span>
+          <ChevronDown
+            size={13}
+            className={`fg-muted shrink-0 transition-transform ${open ? "rotate-180" : ""}`}
+          />
+        </button>
+        {open && (
+          <div className="absolute top-full left-0 right-0 mt-1 rounded-lg border bd bg-elev shadow-card p-1 z-30 max-h-64 overflow-y-auto nice-scroll">
+            <PageItem label={homeLabel} on={active === null} onClick={() => pick(null)} />
+            {pages.map((p) => (
+              <PageItem
+                key={p.slug}
+                label={p.title}
+                on={active === p.slug}
+                onClick={() => pick(p.slug)}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function PageItem({
+  label,
+  on,
+  onClick,
+}: {
+  label: string;
+  on: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`w-full text-left px-2 py-1.5 rounded-md text-[11.5px] truncate transition ${
+        on ? "bg-accent-soft text-accent" : "fg hover:bg-hover"
+      }`}
+    >
+      {label}
+    </button>
   );
 }
 

@@ -65,6 +65,8 @@
     "autofill": "自分の情報で自動入力",
     "autofillLabel": "自動入力",
     "autofillTitle": "あなたのビジネス情報でテンプレートを自動入力 — スクリーンショットをアップロードするかデータを入力してください",
-    "send": "送信"
+    "send": "送信",
+    "pageTarget": "編集するページ",
+    "pageTargetHome": "ホーム"
   }
 }

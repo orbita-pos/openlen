@@ -65,6 +65,8 @@
     "autofill": "用我的信息自动填充",
     "autofillLabel": "自动填充",
     "autofillTitle": "用你的业务信息自动填充模板——上传截图或输入你的数据",
-    "send": "发送"
+    "send": "发送",
+    "pageTarget": "要编辑的页面",
+    "pageTargetHome": "首页"
   }
 }
