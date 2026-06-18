@@ -12,9 +12,11 @@ interface PageProps {
   params: Promise<{ slug: string; locale: string }>;
 }
 
-// Only the slugs in generateStaticParams() are valid. Any other slug
-// returns 404 BEFORE the page renders.
-export const dynamicParams = false;
+// generateStaticParams() pre-renders the known slugs at build time, but
+// dynamicParams=true lets templates added to the DB AFTER a deploy render
+// on-demand (so a new template's detail page exists without a redeploy).
+// A slug with no published template still 404s via notFound() below.
+export const dynamicParams = true;
 
 // Revalidate the static page every minute. Without this, editing a
 // template via `templates:add` (which changes its storageUrl content
