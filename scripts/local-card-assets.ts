@@ -18,8 +18,10 @@ import {
 } from "@/lib/templates/store";
 import { getTemplateStorage } from "@/lib/storage/templates";
 
-const IDS = ["aetherborn", "obra", "exodus"];
+const argvIds = process.argv.slice(2).filter((a) => !a.startsWith("--"));
+const IDS = argvIds.length ? argvIds : ["aetherborn", "obra", "exodus", "arcana"];
 const ROOT = "templates/starter";
+const ASSET_RE = new RegExp(`images\\.openlen\\.com/(${IDS.join("|")})/([^?]+)$`);
 
 async function main(): Promise<void> {
   const storage = getTemplateStorage();
@@ -37,7 +39,7 @@ async function main(): Promise<void> {
     const page = await browser.newPage();
     await page.setRequestInterception(true);
     page.on("request", (req) => {
-      const m = req.url().match(/images\.openlen\.com\/(aetherborn|obra|exodus)\/([^?]+)$/);
+      const m = req.url().match(ASSET_RE);
       if (m) {
         const f = resolve(`${ROOT}/${m[1]}-assets/${m[2]}`);
         if (existsSync(f)) {
