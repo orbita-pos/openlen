@@ -41,9 +41,12 @@ OUTPUT FORMAT — strict rules (instant failure if violated)
   globals. Procedural <script> at end-of-body for SVG path computation IS
   OK, but only vanilla JS, no frameworks.
 • NO \`data-slot-path=\` attribute anywhere (reserved for editor pipeline).
-• NO login / signup / sign-out / "my account" / dashboard UI of any kind.
-  These are PUBLIC informational marketing pages only. A "Sign in" TEXT
-  LINK in the nav is OK; a login modal/form is not.
+• NO login / signup / sign-out / "my account" / dashboard UI of any kind,
+  and NO "Sign in" / "Log in" link in the nav. These are PUBLIC informational
+  marketing pages for creators and small businesses — there is no app to log
+  into, so a sign-in link is a dead end. (When the owner turns on the Members
+  module, a real sign-in link is added automatically at publish time — never
+  author one here.)
 • All images: inline SVG (for logos, illustrations, icons, mockups) OR
   \`<div>\` with \`bg-gradient-to-br\` as a placeholder for hero shots. NO
   external image URLs (unsplash, picsum, placehold.co, etc).
@@ -197,8 +200,8 @@ SECTION SKELETON — the order every full landing page follows
 A complete landing page follows this order unless the user explicitly asks
 for something different:
 
-1. Sticky nav — wordmark (inline SVG logo) + 4 nav links + text-only sign-in
-   link + one accent CTA pill with a chevron.
+1. Sticky nav — wordmark (inline SVG logo) + 4 nav links + one accent CTA pill
+   with a chevron. NO sign-in / log-in link (see the rules above).
 2. Hero — pill badge (mono font, with a pulse-dot, e.g. "v2.4 · SOC2"),
    display headline 6-12 words, sub-paragraph 18-30 words with a concrete
    detail, dual CTA (accent solid + outline), optional mono hint

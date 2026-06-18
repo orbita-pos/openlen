@@ -254,3 +254,100 @@ describe("gated publish wears the site look", () => {
     assert.ok(doc.includes("Content-Security-Policy"), "doc still sealed");
   });
 });
+
+describe("members sign-in link on public docs (Part D)", () => {
+  // Template-style home: its own "Iniciar sesión" link next to the CTA.
+  const HOME_WITH_SIGNIN = `<!doctype html>
+<html lang="es"><head><meta charset="utf-8"><title>tienda</title>
+<style>:root{--ol-bg:#fff}</style></head>
+<body>
+  <header><nav><a href="#productos">Productos</a></nav>
+    <div><a href="#cta" class="text-sm">Iniciar sesión</a><a href="#cta" class="btn">Empezar</a></div>
+  </header>
+  <h1>tienda</h1>
+</body></html>`;
+  // AI-style public subpage: nav + heading, NO sign-in link.
+  const SUBPAGE_NO_SIGNIN = `<!doctype html>
+<html lang="es"><head><meta charset="utf-8"><title>precios</title>
+<style>:root{--ol-bg:#fff}</style></head>
+<body><header><nav><a href="#a">Planes</a></nav></header><h1>precios</h1></body></html>`;
+  // The gated portal (auto members page), members-only.
+  const PORTAL = `<!doctype html>
+<html lang="es"><head><meta charset="utf-8"><title>miembros</title></head>
+<body><h1>Zona de miembros</h1></body></html>`;
+
+  before(async () => {
+    await publishToDir({
+      subdomain: "signintest",
+      html: HOME_WITH_SIGNIN,
+      pages: [{ slug: "precios", html: SUBPAGE_NO_SIGNIN }],
+      gatedPages: [{ slug: "miembros", html: PORTAL }],
+      memberGate: { projectTitle: "Mi Tienda" },
+      memberSigninPath: "miembros",
+    });
+  });
+
+  const releaseDir = () => {
+    const current = path.join(root, "signintest", "current");
+    try {
+      return path.join(root, "signintest", "releases", readFileSync(current, "utf8").trim());
+    } catch {
+      return current;
+    }
+  };
+
+  it("rewires the home's own sign-in link to the portal (no duplicate)", () => {
+    const home = readFileSync(path.join(releaseDir(), "index.html"), "utf8");
+    assert.ok(home.includes("/miembros"), "sign-in points at the portal");
+    // Rewired, not injected: still exactly one sign-in, and the CTA is intact.
+    assert.equal((home.match(/Iniciar sesión/g) || []).length, 1, "exactly one sign-in");
+    assert.ok(home.includes("Empezar"), "the CTA button is untouched");
+  });
+
+  it("injects a sign-in link on a page that lacks one", () => {
+    const sub = readFileSync(path.join(releaseDir(), "precios", "index.html"), "utf8");
+    assert.ok(sub.includes("/miembros"), "points at the portal");
+    assert.ok(sub.includes("Iniciar sesión"), "injected sign-in present");
+  });
+
+  it("the portal path serves the login gate stub (the sign-in destination works)", () => {
+    const stub = readFileSync(path.join(releaseDir(), "miembros", "index.html"), "utf8");
+    assert.ok(stub.includes('name="ol-member-gate"'), "it is the gate stub");
+    // The stub builds the endpoint at runtime: var SUB="signintest"; "/api/m/"+SUB.
+    assert.ok(stub.includes("/api/m/"), "wired to the member API");
+    assert.ok(stub.includes("signintest"), "scoped to this site");
+  });
+
+  it("the sign-in link survives inside the CSP-sealed home", () => {
+    const home = readFileSync(path.join(releaseDir(), "index.html"), "utf8");
+    assert.ok(home.includes("Content-Security-Policy"), "home is sealed");
+    assert.ok(home.includes("/miembros"), "link still present after the seal");
+  });
+});
+
+describe("no sign-in when the members module is off", () => {
+  const HOME_WITH_SIGNIN = `<!doctype html>
+<html lang="es"><head><meta charset="utf-8"><title>off</title><style>:root{--ol-bg:#fff}</style></head>
+<body><header><div><a href="#cta">Iniciar sesión</a></div></header><h1>off</h1></body></html>`;
+
+  before(async () => {
+    // No gatedPages, no memberSigninPath → module off.
+    await publishToDir({ subdomain: "nosignin", html: HOME_WITH_SIGNIN });
+  });
+
+  const releaseDir = () => {
+    const current = path.join(root, "nosignin", "current");
+    try {
+      return path.join(root, "nosignin", "releases", readFileSync(current, "utf8").trim());
+    } catch {
+      return current;
+    }
+  };
+
+  it("leaves the page's authored sign-in untouched and injects nothing", () => {
+    const home = readFileSync(path.join(releaseDir(), "index.html"), "utf8");
+    assert.ok(!home.includes("data-ol-signin"), "nothing injected");
+    assert.ok(!home.includes("/miembros"), "no portal rewire");
+    assert.ok(home.includes("Iniciar sesión"), "authored link left as-is");
+  });
+});

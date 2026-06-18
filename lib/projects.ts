@@ -773,6 +773,16 @@ export async function publishProject(
   // off, gatedPages is empty and everything ships public as always.
   const { publicPages, gatedPages } = splitPagesForPublish(project.data);
 
+  // Members sign-in: when a gated portal exists, every public doc links to it.
+  // Prefer the canonical members page; fall back to the first gated slug.
+  // splitPagesForPublish only yields gatedPages when the module is on, so a
+  // non-empty list already means "show the sign-in".
+  const memberSigninPath =
+    gatedPages.length > 0
+      ? (gatedPages.find((p) => p.slug === "miembros" || p.slug === "members")
+          ?.slug ?? gatedPages[0].slug)
+      : undefined;
+
   let publishResult: {
     sha: string;
     html: string;
@@ -800,6 +810,7 @@ export async function publishProject(
         : undefined,
       pages: publicPages,
       gatedPages: gatedPages.length > 0 ? gatedPages : undefined,
+      memberSigninPath,
       memberGate:
         gatedPages.length > 0
           ? {
