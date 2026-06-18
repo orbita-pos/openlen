@@ -962,6 +962,41 @@ ${CORE_SRC}
     startEdit(t, e.clientX, e.clientY);
   }, true);
 
+  // Link guard — a srcdoc iframe has no URL of its own, so the page's hash /
+  // relative links resolve against the PARENT document (the /new workspace):
+  // clicking a nav link like "Sign in" (href="#cta") would load /new INSIDE
+  // the preview = an endless loop back into OpenLen. Suppress every in-page
+  // navigation here; for same-page anchors, do the smooth-scroll the visitor
+  // gets on the real published page (where the same href resolves correctly).
+  // Lives in the stripped-at-publish editor script, so published pages keep
+  // their native link behavior untouched.
+  document.addEventListener('click', function (e) {
+    if (e.defaultPrevented) return;
+    var a = e.target && e.target.closest ? e.target.closest('a[href]') : null;
+    if (!a) return;
+    var href = a.getAttribute('href') || '';
+    if (href.charAt(0) === '#') {
+      e.preventDefault();
+      if (isEditMode()) return; // editing the link text wins; don't scroll
+      var id = href.slice(1);
+      if (!id || id === 'top') {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        return;
+      }
+      var dest = null;
+      try {
+        dest = document.getElementById(id) ||
+          document.querySelector('[name="' + (window.CSS && CSS.escape ? CSS.escape(id) : id) + '"]');
+      } catch (_g) {}
+      if (dest && dest.scrollIntoView) dest.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      return;
+    }
+    // Any other navigation (relative path, http(s), mailto, tel) would pull the
+    // preview off the page; block it. The toolbar's "Open in new tab" is how to
+    // view the real published page. javascript: hrefs are left to run.
+    if (href && href.indexOf('javascript:') !== 0) e.preventDefault();
+  }, true);
+
   // Keep the overlay glued to a growing multi-line edit.
   document.addEventListener('input', function (e) {
     if (e.target !== overlay) return;

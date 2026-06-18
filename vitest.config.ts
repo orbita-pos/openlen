@@ -35,6 +35,7 @@ export default defineConfig({
       "lib/publish/assistant-widget.test.ts",
       "lib/publish/comments-widget.test.ts",
       "lib/publish/bookings-widget.test.ts",
+      "lib/publish/signin-link.test.ts",
       "lib/members/**/*.test.ts",
       "lib/broadcast/**/*.test.ts",
       "lib/comments/**/*.test.ts",

@@ -36,6 +36,7 @@ import { injectAnalyticsSnippet } from "@/lib/analytics/snippet";
 import { injectTrackingStrip } from "@/lib/publish/tracking-strip";
 import { injectLogoIntoHtml } from "@/lib/branding/inject-logo";
 import { buildGateStub, wireMemberLogout } from "@/lib/members/gate-stub";
+import { applySigninLink, signinLabelFor } from "@/lib/publish/signin-link";
 import { detectSiteAccent } from "@/lib/members/site-accent";
 import { validatePageSlug } from "@/lib/projects/site-pages";
 import type { FormConfig, MusicSettings } from "@/lib/projects/types";
@@ -187,6 +188,11 @@ export interface PublishParams {
   /** Branding for the gate stubs (site title + optional logo on the login
    *  card). Required in spirit when gatedPages is non-empty. */
   memberGate?: { projectTitle: string; logoUrl?: string | null };
+  /** Members module: when set (module on + a gated portal exists), every
+   *  PUBLIC doc gets a sign-in link to this portal slug — the page's own
+   *  sign-in link is rewired to it, or a neutral one is injected. Absent →
+   *  no-op (module off / no gated page). */
+  memberSigninPath?: string;
 }
 
 const ASSET_URL_RE_FOR =
@@ -734,6 +740,19 @@ export async function publishToDir(
   };
   let migratedHtml = await bakeDocument(publishHtml, bakeCtx);
 
+  // Members module — sign-in entry on public docs: rewire the page's own
+  // sign-in link to the gated portal, or inject one. BEFORE the locale
+  // variants (so they inherit + translate it) and BEFORE the seal. No portal
+  // (module off / no gated page) → no-op. OPENLEN_MEMBER_SIGNIN=0 disables it.
+  if (params.memberSigninPath && process.env.OPENLEN_MEMBER_SIGNIN !== "0") {
+    const lang =
+      params.sourceLang?.trim() || detectHtmlLang(migratedHtml) || "en";
+    migratedHtml = applySigninLink(migratedHtml, {
+      href: `/${params.memberSigninPath}`,
+      label: signinLabelFor(lang),
+    });
+  }
+
   // Speak Every Language: translated locale variants of the final baked
   // page, written as /<locale>/index.html inside the same release. Soft-
   // fail — the root page always publishes; a failed locale is just absent.
@@ -802,6 +821,12 @@ export async function publishToDir(
       );
     }
     let doc = await bakeDocument(pageSanitized.html, bakeCtx, page.slug);
+    if (params.memberSigninPath && process.env.OPENLEN_MEMBER_SIGNIN !== "0") {
+      doc = applySigninLink(doc, {
+        href: `/${params.memberSigninPath}`,
+        label: signinLabelFor(sourceLang),
+      });
+    }
     doc = annotateLanguageCluster(doc, {
       baseUrl,
       selfPath: `/${page.slug}/`,
