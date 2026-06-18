@@ -1,0 +1,486 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AVENIR Aurora — Gran turismo eléctrico</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#FFFFFF;
+    --surface:#F4F4F4;
+    --surface-2:#EAEAEA;
+    --fg:#181A1F;
+    --fg-muted:#5C5E63;
+    --fg-faint:#686A6F;
+    --border:rgba(0,0,0,0.10);
+    --border-strong:rgba(0,0,0,0.22);
+    --accent:#2C5BE6;
+    --accent-r:44,91,230;
+    --accent-ink:#FFFFFF;
+    --dark:#16181D;
+    --dark-fg:#F4F4F6;
+    --dark-muted:#A9ABB2;
+    --radius:6px;
+    --font-display:'Manrope', sans-serif;
+    --font-body:'Inter', system-ui, sans-serif;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  @media (prefers-reduced-motion: reduce){ html{scroll-behavior:auto} }
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--fg);
+    font-family:var(--font-body);
+    -webkit-font-smoothing:antialiased;
+    text-rendering:optimizeLegibility;
+  }
+  .font-display{font-family:var(--font-display)}
+  .wordmark{font-family:var(--font-display);font-weight:600;letter-spacing:0.35em}
+  .text-muted{color:var(--fg-muted)}
+  .text-faint{color:var(--fg-faint)}
+
+  /* Buttons */
+  .btn{
+    display:inline-flex;align-items:center;justify-content:center;gap:.5rem;
+    font-family:var(--font-body);font-weight:500;font-size:.9375rem;
+    padding:.8125rem 1.75rem;border-radius:var(--radius);
+    transition:background-color .16s ease, color .16s ease, border-color .16s ease, transform .16s ease;
+    cursor:pointer;border:1px solid transparent;text-decoration:none;white-space:nowrap;
+  }
+  .btn-accent{background:var(--accent);color:var(--accent-ink)}
+  .btn-accent:hover{background:#234ac2}
+  .btn-glass{background:rgba(255,255,255,0.16);color:#fff;border-color:rgba(255,255,255,0.5);backdrop-filter:blur(6px)}
+  .btn-glass:hover{background:rgba(255,255,255,0.28)}
+  .btn-dark{background:var(--fg);color:#fff}
+  .btn-dark:hover{background:#000}
+
+  /* Focus */
+  a,button{outline:none}
+  a:focus-visible,button:focus-visible{
+    outline:2px solid var(--accent);outline-offset:3px;border-radius:4px;
+  }
+
+  /* Image fallback wrapper */
+  .img-fill{background:var(--surface)}
+  .img-fill.dark{background:var(--dark)}
+  .img-fill img{transition:opacity .3s ease}
+
+  /* Nav */
+  .nav{transition:background-color .2s ease, border-color .2s ease, box-shadow .2s ease}
+  .nav-solid{background:rgba(255,255,255,0.92);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);box-shadow:0 1px 0 rgba(0,0,0,0.02)}
+  .nav-link{color:#fff;font-size:.9375rem;font-weight:500;text-decoration:none;padding:.4rem .2rem;transition:color .16s ease, opacity .16s ease;opacity:.92}
+  .nav-link:hover{opacity:1}
+  .nav-solid .nav-link{color:var(--fg)}
+  .nav-icon{color:#fff;transition:color .16s ease, opacity .16s ease;opacity:.92;display:inline-flex}
+  .nav-icon:hover{opacity:1}
+  .nav-solid .nav-icon{color:var(--fg)}
+  .nav-solid .wordmark-nav{color:var(--fg)}
+  .nav-solid .hamburger span{background:var(--fg)}
+  .wordmark-nav{color:#fff;transition:color .2s ease}
+  .hamburger span{background:#fff}
+  .nav-solid .nav-cta{background:var(--accent);color:#fff;border-color:transparent}
+
+  /* Carousel */
+  .rail{
+    display:flex;gap:1rem;overflow-x:auto;scroll-snap-type:x mandatory;
+    -webkit-overflow-scrolling:touch;scrollbar-width:none;padding-bottom:.25rem;
+  }
+  .rail::-webkit-scrollbar{display:none}
+  .rail > *{scroll-snap-align:start;flex:0 0 auto}
+  .arrow{
+    width:44px;height:44px;border-radius:999px;display:inline-flex;align-items:center;justify-content:center;
+    background:var(--bg);border:1px solid var(--border-strong);color:var(--fg);cursor:pointer;
+    transition:background-color .16s ease, opacity .16s ease, border-color .16s ease;
+  }
+  .arrow:hover{background:var(--surface)}
+  .arrow:disabled{opacity:.35;cursor:default}
+  .arrow.on-dark{background:rgba(255,255,255,0.08);border-color:rgba(255,255,255,0.28);color:#fff}
+  .arrow.on-dark:hover{background:rgba(255,255,255,0.16)}
+
+  /* Mobile menu */
+  .mobile-menu{max-height:0;overflow:hidden;transition:max-height .26s ease}
+  .mobile-menu.open{max-height:420px}
+
+  .stat-num{font-family:var(--font-display);font-weight:600;letter-spacing:-0.02em;line-height:1}
+</style>
+</head>
+<body>
+
+<!-- ============ NAV ============ -->
+<nav id="nav" class="nav fixed top-0 inset-x-0 z-50">
+  <div class="max-w-[1400px] mx-auto px-5 sm:px-8 h-[68px] flex items-center justify-between">
+    <a href="#top" class="wordmark wordmark-nav text-[1.05rem] sm:text-[1.15rem] select-none" aria-label="AVENIR — Inicio">AVENIR</a>
+
+    <div class="hidden lg:flex items-center gap-8" role="navigation" aria-label="Principal">
+      <a href="#modelos" class="nav-link">Modelos</a>
+      <a href="#carga" class="nav-link">Carga</a>
+      <a href="#energia" class="nav-link">Energía</a>
+      <a href="#descubre" class="nav-link">Descubre</a>
+      <a href="#tienda" class="nav-link">Tienda</a>
+    </div>
+
+    <div class="flex items-center gap-4">
+      <div class="hidden lg:flex items-center gap-4">
+        <button class="nav-icon" aria-label="Ayuda">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 1 1 3.6 2.2c-.8.4-1.1.9-1.1 1.8"/><circle cx="12" cy="16.5" r=".6" fill="currentColor" stroke="none"/></svg>
+        </button>
+        <button class="nav-icon" aria-label="Idioma">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.5 2.5 15 0 18M12 3c-2.5 2.5-2.5 15 0 18"/></svg>
+        </button>
+        <button class="nav-icon" aria-label="Cuenta">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.6"/><path d="M5 19.5a7 7 0 0 1 14 0"/></svg>
+        </button>
+      </div>
+      <button id="hamburger" class="hamburger lg:hidden flex flex-col justify-center gap-[5px] w-9 h-9 items-center" aria-label="Menú" aria-expanded="false" aria-controls="mobileMenu">
+        <span class="block w-5 h-[2px] rounded transition-all"></span>
+        <span class="block w-5 h-[2px] rounded transition-all"></span>
+        <span class="block w-5 h-[2px] rounded transition-all"></span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Mobile menu -->
+  <div id="mobileMenu" class="mobile-menu lg:hidden bg-white border-b" style="border-color:var(--border)">
+    <div class="px-5 py-3 flex flex-col">
+      <a href="#modelos" class="py-3 text-[15px] font-medium border-b" style="border-color:var(--border);color:var(--fg)">Modelos</a>
+      <a href="#carga" class="py-3 text-[15px] font-medium border-b" style="border-color:var(--border);color:var(--fg)">Carga</a>
+      <a href="#energia" class="py-3 text-[15px] font-medium border-b" style="border-color:var(--border);color:var(--fg)">Energía</a>
+      <a href="#descubre" class="py-3 text-[15px] font-medium border-b" style="border-color:var(--border);color:var(--fg)">Descubre</a>
+      <a href="#tienda" class="py-3 text-[15px] font-medium" style="color:var(--fg)">Tienda</a>
+    </div>
+  </div>
+</nav>
+
+<!-- ============ HERO ============ -->
+<header id="top" class="relative w-full" style="min-height:100svh">
+  <div class="img-fill absolute inset-0">
+    <img src="https://images.openlen.com/avenir/hero.webp" alt="AVENIR Aurora circulando por una carretera escénica al atardecer" class="w-full h-full object-cover" onerror="this.style.opacity=0">
+  </div>
+  <!-- top gradient for nav legibility -->
+  <div class="absolute inset-x-0 top-0 h-72 pointer-events-none" style="background:linear-gradient(to bottom, rgba(0,0,0,0.55), rgba(0,0,0,0))"></div>
+  <!-- bottom gradient -->
+  <div class="absolute inset-x-0 bottom-0 h-64 pointer-events-none" style="background:linear-gradient(to top, rgba(0,0,0,0.35), rgba(0,0,0,0))"></div>
+
+  <div class="relative z-10 flex flex-col items-center text-center px-5" style="padding-top:clamp(120px,16vh,180px)">
+    <h1 class="font-display text-white font-semibold tracking-[-0.02em]" style="font-size:clamp(3.5rem,11vw,8rem);line-height:0.95">Aurora</h1>
+    <p class="text-white/90 mt-4 font-medium" style="font-size:clamp(1rem,2.4vw,1.375rem)">Gran turismo eléctrico</p>
+    <div class="flex flex-col sm:flex-row gap-3 mt-9 w-full sm:w-auto max-w-[320px] sm:max-w-none">
+      <a href="#modelos" class="btn btn-accent w-full sm:w-auto">Ver inventario</a>
+      <a href="#descubre" class="btn btn-glass w-full sm:w-auto">Reservar</a>
+    </div>
+  </div>
+
+  <a href="#stats" class="absolute left-1/2 -translate-x-1/2 bottom-8 z-10 text-white/80 hover:text-white transition" aria-label="Desplázate hacia abajo">
+    <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="animate-bounce" style="animation-duration:1.8s"><path d="M6 9l6 6 6-6"/></svg>
+  </a>
+</header>
+
+<!-- ============ STATS ============ -->
+<section id="stats" class="bg-white">
+  <div class="max-w-[1100px] mx-auto px-5 sm:px-8 py-20 sm:py-28">
+    <div class="grid grid-cols-1 sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x" style="--tw-divide-opacity:1;border-color:var(--border)">
+      <div class="flex flex-col items-center text-center px-6 py-8 sm:py-2" style="border-color:var(--border)">
+        <div class="flex items-baseline gap-1.5">
+          <span class="stat-num text-[var(--fg)]" style="font-size:clamp(3.25rem,7vw,5.25rem)">660</span>
+          <span class="font-display font-medium text-muted text-lg sm:text-xl">km</span>
+        </div>
+        <span class="text-muted mt-3 text-[15px]">Autonomía (WLTP)</span>
+      </div>
+      <div class="flex flex-col items-center text-center px-6 py-8 sm:py-2" style="border-color:var(--border)">
+        <div class="flex items-baseline gap-1.5">
+          <span class="stat-num text-[var(--fg)]" style="font-size:clamp(3.25rem,7vw,5.25rem)">2,1</span>
+          <span class="font-display font-medium text-muted text-lg sm:text-xl">s</span>
+        </div>
+        <span class="text-muted mt-3 text-[15px]">0–100 km/h</span>
+      </div>
+      <div class="flex flex-col items-center text-center px-6 py-8 sm:py-2" style="border-color:var(--border)">
+        <div class="flex items-baseline gap-1.5">
+          <span class="stat-num text-[var(--fg)]" style="font-size:clamp(3.25rem,7vw,5.25rem)">1.020</span>
+          <span class="font-display font-medium text-muted text-lg sm:text-xl">cv</span>
+        </div>
+        <span class="text-muted mt-3 text-[15px]">Potencia máxima</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ INTERIOR full-bleed ============ -->
+<section id="descubre" class="relative w-full">
+  <div class="img-fill relative w-full" style="aspect-ratio:16/9;min-height:60vh">
+    <img src="https://images.openlen.com/avenir/interior.webp" alt="Cabina clara y amplia del AVENIR Aurora con pantalla central y vistas al exterior" class="w-full h-full object-cover" onerror="this.style.opacity=0">
+    <div class="absolute inset-x-0 bottom-0 h-1/2 pointer-events-none" style="background:linear-gradient(to top, rgba(0,0,0,0.5), rgba(0,0,0,0))"></div>
+    <div class="absolute left-0 bottom-0 p-6 sm:p-12">
+      <h2 class="font-display text-white font-medium tracking-[-0.02em]" style="font-size:clamp(1.875rem,4.5vw,3.25rem)">El interior, reinventado</h2>
+    </div>
+  </div>
+</section>
+
+<!-- ============ INTERIOR DE OTRO NIVEL (carrusel) ============ -->
+<section class="bg-white py-20 sm:py-28">
+  <div class="max-w-[1400px] mx-auto px-5 sm:px-8">
+    <div class="flex items-end justify-between gap-6 mb-8">
+      <h2 class="font-display font-medium tracking-[-0.02em]" style="font-size:clamp(1.875rem,4vw,3rem)">Interior de otro nivel</h2>
+      <div class="hidden sm:flex items-center gap-3" data-arrows="rail1">
+        <button class="arrow" data-dir="-1" data-target="rail1" aria-label="Anterior">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+        </button>
+        <button class="arrow" data-dir="1" data-target="rail1" aria-label="Siguiente">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <div id="rail1" class="rail" role="region" tabindex="0" aria-label="Galería del interior (desplázate con las flechas del teclado)">
+      <figure class="w-[80vw] sm:w-[520px] max-w-[560px]">
+        <div class="img-fill rounded-[var(--radius)] overflow-hidden" style="aspect-ratio:4/3">
+          <img src="https://images.openlen.com/avenir/cockpit.webp" alt="Puesto de conducción del Aurora con volante y panel minimalista" class="w-full h-full object-cover" onerror="this.style.opacity=0">
+        </div>
+        <figcaption class="mt-3 text-[15px] text-muted">Puesto de conducción envolvente</figcaption>
+      </figure>
+      <figure class="w-[80vw] sm:w-[520px] max-w-[560px]">
+        <div class="img-fill rounded-[var(--radius)] overflow-hidden" style="aspect-ratio:4/3">
+          <img src="https://images.openlen.com/avenir/screen.webp" alt="Pantalla central de gran formato del Aurora" class="w-full h-full object-cover" onerror="this.style.opacity=0">
+        </div>
+        <figcaption class="mt-3 text-[15px] text-muted">Pantalla central de 17″</figcaption>
+      </figure>
+      <figure class="w-[80vw] sm:w-[520px] max-w-[560px]">
+        <div class="img-fill rounded-[var(--radius)] overflow-hidden" style="aspect-ratio:4/3">
+          <img src="https://images.openlen.com/avenir/rear.webp" alt="Plazas traseras del Aurora con pantalla y conectividad" class="w-full h-full object-cover" onerror="this.style.opacity=0">
+        </div>
+        <figcaption class="mt-3 text-[15px] text-muted">Segunda fila conectada</figcaption>
+      </figure>
+      <figure class="w-[80vw] sm:w-[520px] max-w-[560px]">
+        <div class="img-fill rounded-[var(--radius)] overflow-hidden" style="aspect-ratio:4/3">
+          <img src="https://images.openlen.com/avenir/interior.webp" alt="Vista general de la cabina luminosa del Aurora" class="w-full h-full object-cover" onerror="this.style.opacity=0">
+        </div>
+        <figcaption class="mt-3 text-[15px] text-muted">Habitáculo panorámico</figcaption>
+      </figure>
+    </div>
+  </div>
+</section>
+
+<!-- ============ CARRUSEL DE CARACTERÍSTICAS ============ -->
+<section id="modelos" class="pb-20 sm:pb-28 pt-16 sm:pt-24" style="background:var(--surface)">
+  <div class="max-w-[1400px] mx-auto px-5 sm:px-8">
+    <div class="flex items-end justify-between gap-6 mb-8">
+      <h2 class="font-display font-medium tracking-[-0.02em]" style="font-size:clamp(1.875rem,4vw,3rem)">Pensado para la vida real</h2>
+      <div class="hidden sm:flex items-center gap-3">
+        <button class="arrow" data-dir="-1" data-target="rail2" aria-label="Anterior">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+        </button>
+        <button class="arrow" data-dir="1" data-target="rail2" aria-label="Siguiente">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <div id="rail2" class="rail" role="region" tabindex="0" aria-label="Características destacadas (desplázate con las flechas del teclado)">
+      <article class="w-[85vw] sm:w-[600px] max-w-[640px]">
+        <div class="img-fill rounded-[var(--radius)] overflow-hidden" style="aspect-ratio:3/2">
+          <img src="https://images.openlen.com/avenir/trunk.webp" alt="Portón trasero abierto del Aurora con maletero amplio" class="w-full h-full object-cover" onerror="this.style.opacity=0">
+        </div>
+        <h3 class="font-display font-medium mt-5 text-2xl tracking-[-0.01em]">Guárdalo todo</h3>
+        <p class="text-muted mt-2 text-[15px] leading-relaxed">Portón trasero manos libres y maletero gigante; asientos abatibles para llevar la bici, el equipaje y más.</p>
+      </article>
+      <article class="w-[85vw] sm:w-[600px] max-w-[640px]">
+        <div class="img-fill rounded-[var(--radius)] overflow-hidden" style="aspect-ratio:3/2">
+          <img src="https://images.openlen.com/avenir/rear.webp" alt="Pantalla y conectividad de la segunda fila del Aurora" class="w-full h-full object-cover" onerror="this.style.opacity=0">
+        </div>
+        <h3 class="font-display font-medium mt-5 text-2xl tracking-[-0.01em]">Siempre conectado</h3>
+        <p class="text-muted mt-2 text-[15px] leading-relaxed">Pantalla trasera, Bluetooth y conectividad de segunda fila para que cada viaje sea suyo.</p>
+      </article>
+      <article class="w-[85vw] sm:w-[600px] max-w-[640px]">
+        <div class="img-fill rounded-[var(--radius)] overflow-hidden" style="aspect-ratio:3/2">
+          <img src="https://images.openlen.com/avenir/cockpit.webp" alt="Interior del Aurora con sistema de sonido envolvente" class="w-full h-full object-cover" onerror="this.style.opacity=0">
+        </div>
+        <h3 class="font-display font-medium mt-5 text-2xl tracking-[-0.01em]">Sonido de estudio</h3>
+        <p class="text-muted mt-2 text-[15px] leading-relaxed">Sistema envolvente de 22 altavoces con audio inmersivo y cancelación activa de ruido.</p>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- ============ DETALLES (oscura) ============ -->
+<section id="energia" style="background:var(--dark);color:var(--dark-fg)" class="py-20 sm:py-28">
+  <div class="max-w-[1400px] mx-auto px-5 sm:px-8">
+    <h2 class="font-display font-medium tracking-[-0.02em] mb-10 sm:mb-14" style="font-size:clamp(1.875rem,4vw,3rem)">Cuidado en cada detalle</h2>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-8 md:gap-10">
+      <article>
+        <div class="img-fill dark rounded-[var(--radius)] overflow-hidden" style="aspect-ratio:4/5">
+          <img src="https://images.openlen.com/avenir/wheel.webp" alt="Llanta y freno cerámico del Aurora en detalle" class="w-full h-full object-cover" onerror="this.style.opacity=0">
+        </div>
+        <h3 class="font-display font-medium mt-5 text-xl">Rendimiento optimizado</h3>
+        <p class="mt-2 text-[15px] leading-relaxed" style="color:var(--dark-muted)">Llantas y neumáticos escalonados + frenos cerámicos para un agarre y una frenada de otro nivel.</p>
+      </article>
+      <article>
+        <div class="img-fill dark rounded-[var(--radius)] overflow-hidden" style="aspect-ratio:4/5">
+          <img src="https://images.openlen.com/avenir/aero.webp" alt="Detalle aerodinámico y alerón trasero del Aurora" class="w-full h-full object-cover" onerror="this.style.opacity=0">
+        </div>
+        <h3 class="font-display font-medium mt-5 text-xl">Aerodinámica avanzada</h3>
+        <p class="mt-2 text-[15px] leading-relaxed" style="color:var(--dark-muted)">Detalles exteriores que reducen la resistencia y un alerón que mejora la eficiencia y la estabilidad.</p>
+      </article>
+      <article>
+        <div class="img-fill dark rounded-[var(--radius)] overflow-hidden" style="aspect-ratio:4/5">
+          <img src="https://images.openlen.com/avenir/light.webp" alt="Faro adaptativo del Aurora iluminando la vía" class="w-full h-full object-cover" onerror="this.style.opacity=0">
+        </div>
+        <h3 class="font-display font-medium mt-5 text-xl">Faros adaptativos</h3>
+        <p class="mt-2 text-[15px] leading-relaxed" style="color:var(--dark-muted)">Los faros reaccionan a la vía y al tráfico para máxima visibilidad sin deslumbrar.</p>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- ============ GO ANYWHERE ============ -->
+<section id="carga" class="bg-white">
+  <div class="img-fill relative w-full" style="aspect-ratio:21/9;min-height:55vh">
+    <img src="https://images.openlen.com/avenir/aerial.webp" alt="Vista aérea del Aurora en una carretera de montaña junto a un lago" class="w-full h-full object-cover" onerror="this.style.opacity=0">
+  </div>
+  <div class="max-w-[1100px] mx-auto px-5 sm:px-8 py-16 sm:py-24 text-center">
+    <h2 class="font-display font-medium tracking-[-0.02em]" style="font-size:clamp(2rem,4.5vw,3.5rem)">Ve a cualquier parte</h2>
+    <p class="text-muted mt-5 text-[17px] leading-relaxed max-w-[640px] mx-auto">La red de carga rápida AVENIR te lleva más lejos con menos paradas. Planifica, conduce y recarga sin pensar en la batería: el Aurora calcula la ruta más eficiente por ti.</p>
+
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-8 sm:gap-6 mt-12 max-w-[820px] mx-auto">
+      <div class="flex flex-col items-center">
+        <span class="stat-num text-[var(--fg)] text-4xl sm:text-5xl">660</span>
+        <span class="text-muted mt-2 text-[15px]">km Autonomía</span>
+      </div>
+      <div class="flex flex-col items-center">
+        <span class="stat-num text-[var(--fg)] text-4xl sm:text-5xl">15</span>
+        <span class="text-muted mt-2 text-[15px]">min Recarga +280 km</span>
+      </div>
+      <div class="flex flex-col items-center">
+        <span class="stat-num text-[var(--fg)] text-4xl sm:text-5xl">12.500</span>
+        <span class="text-muted mt-2 text-[15px]">Cargadores AVENIR</span>
+      </div>
+    </div>
+
+    <div class="mt-12">
+      <a href="#modelos" class="btn btn-accent">Planifica tu ruta</a>
+    </div>
+  </div>
+</section>
+
+<!-- ============ FOOTER ============ -->
+<footer id="tienda" style="background:var(--surface)" class="pt-16 pb-10">
+  <div class="max-w-[1400px] mx-auto px-5 sm:px-8">
+    <div class="grid grid-cols-2 md:grid-cols-5 gap-8 sm:gap-6">
+      <div>
+        <h4 class="font-display font-semibold text-[13px] uppercase tracking-wider mb-4" style="color:var(--fg)">Modelos</h4>
+        <ul class="space-y-2.5">
+          <li><a href="#modelos" class="text-[14px] text-faint hover:text-[var(--fg)] transition">Aurora</a></li>
+          <li><a href="#modelos" class="text-[14px] text-faint hover:text-[var(--fg)] transition">Aurora GT</a></li>
+          <li><a href="#modelos" class="text-[14px] text-faint hover:text-[var(--fg)] transition">Inventario</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4 class="font-display font-semibold text-[13px] uppercase tracking-wider mb-4" style="color:var(--fg)">Carga</h4>
+        <ul class="space-y-2.5">
+          <li><a href="#carga" class="text-[14px] text-faint hover:text-[var(--fg)] transition">Carga rápida</a></li>
+          <li><a href="#carga" class="text-[14px] text-faint hover:text-[var(--fg)] transition">Carga en casa</a></li>
+          <li><a href="#carga" class="text-[14px] text-faint hover:text-[var(--fg)] transition">Planificador</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4 class="font-display font-semibold text-[13px] uppercase tracking-wider mb-4" style="color:var(--fg)">Energía</h4>
+        <ul class="space-y-2.5">
+          <li><a href="#energia" class="text-[14px] text-faint hover:text-[var(--fg)] transition">Batería</a></li>
+          <li><a href="#energia" class="text-[14px] text-faint hover:text-[var(--fg)] transition">Autonomía</a></li>
+          <li><a href="#energia" class="text-[14px] text-faint hover:text-[var(--fg)] transition">Garantía</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4 class="font-display font-semibold text-[13px] uppercase tracking-wider mb-4" style="color:var(--fg)">Empresa</h4>
+        <ul class="space-y-2.5">
+          <li><a href="#descubre" class="text-[14px] text-faint hover:text-[var(--fg)] transition">Sobre AVENIR</a></li>
+          <li><a href="#descubre" class="text-[14px] text-faint hover:text-[var(--fg)] transition">Empleo</a></li>
+          <li><a href="#descubre" class="text-[14px] text-faint hover:text-[var(--fg)] transition">Prensa</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4 class="font-display font-semibold text-[13px] uppercase tracking-wider mb-4" style="color:var(--fg)">Legal</h4>
+        <ul class="space-y-2.5">
+          <li><a href="#" class="text-[14px] text-faint hover:text-[var(--fg)] transition">Privacidad</a></li>
+          <li><a href="#" class="text-[14px] text-faint hover:text-[var(--fg)] transition">Cookies</a></li>
+          <li><a href="#" class="text-[14px] text-faint hover:text-[var(--fg)] transition">Términos</a></li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="mt-14 pt-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-5 border-t" style="border-color:var(--border)">
+      <span class="wordmark text-[1.1rem]" style="color:var(--fg)">AVENIR</span>
+      <div class="flex items-center gap-5">
+        <button class="flex items-center gap-2 text-[14px] text-faint hover:text-[var(--fg)] transition" aria-label="Seleccionar idioma">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.5 2.5 15 0 18M12 3c-2.5 2.5-2.5 15 0 18"/></svg>
+          España · Español
+        </button>
+        <span class="text-[14px] text-faint">© AVENIR. Todos los derechos reservados.</span>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<script>
+(function(){
+  var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  /* ---- Mobile menu ---- */
+  var hb = document.getElementById('hamburger');
+  var mm = document.getElementById('mobileMenu');
+  hb.addEventListener('click', function(){
+    var open = mm.classList.toggle('open');
+    hb.setAttribute('aria-expanded', open ? 'true' : 'false');
+  });
+  mm.querySelectorAll('a').forEach(function(a){
+    a.addEventListener('click', function(){
+      mm.classList.remove('open');
+      hb.setAttribute('aria-expanded','false');
+    });
+  });
+
+  /* ---- Nav solidify on scroll ---- */
+  var nav = document.getElementById('nav');
+  function onScroll(){
+    if(window.scrollY > 40){ nav.classList.add('nav-solid'); }
+    else{ nav.classList.remove('nav-solid'); }
+  }
+  onScroll();
+  window.addEventListener('scroll', onScroll, {passive:true});
+
+  /* ---- Carousels ---- */
+  function slideWidth(rail){
+    var first = rail.querySelector(':scope > *');
+    if(!first) return rail.clientWidth;
+    var style = getComputedStyle(rail);
+    var gap = parseFloat(style.columnGap || style.gap || '16') || 16;
+    return first.getBoundingClientRect().width + gap;
+  }
+  function updateArrows(rail){
+    var btns = document.querySelectorAll('[data-target="'+rail.id+'"]');
+    var maxScroll = rail.scrollWidth - rail.clientWidth - 2;
+    btns.forEach(function(b){
+      var dir = parseInt(b.getAttribute('data-dir'),10);
+      if(dir < 0){ b.disabled = rail.scrollLeft <= 2; }
+      else { b.disabled = rail.scrollLeft >= maxScroll; }
+    });
+  }
+  document.querySelectorAll('[data-dir][data-target]').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      var rail = document.getElementById(btn.getAttribute('data-target'));
+      var dir = parseInt(btn.getAttribute('data-dir'),10);
+      rail.scrollBy({ left: dir * slideWidth(rail), behavior: reduceMotion ? 'auto' : 'smooth' });
+    });
+  });
+  document.querySelectorAll('.rail').forEach(function(rail){
+    updateArrows(rail);
+    rail.addEventListener('scroll', function(){ updateArrows(rail); }, {passive:true});
+    window.addEventListener('resize', function(){ updateArrows(rail); });
+  });
+})();
+</script>
+</body>
+</html>

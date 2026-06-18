@@ -1,0 +1,439 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LIEBRE — Streetwear en ediciones limitadas</title>
+<meta name="description" content="LIEBRE — Streetwear en ediciones limitadas. Hecho para los que saltan primero.">
+
+<script src="https://cdn.tailwindcss.com"></script>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<style>
+  :root{
+    --bg:#0E0A0D;            /* casi negro, tinte cálido */
+    --surface:#171218;
+    --surface-2:#221A22;
+    --fg:#FBF5F8;            /* blanco cálido */
+    --fg-muted:#BCAEB6;
+    --fg-faint:#94909A;
+    --border:rgba(255,255,255,0.10);
+    --border-strong:rgba(255,255,255,0.20);
+    --accent:#FF1F6B;        /* magenta caliente — único acento */
+    --accent-r:255,31,107;
+    --accent-ink:#1A0410;
+    --radius:16px;
+    --font-display:'Space Grotesk', sans-serif;
+    --font-body:'Inter', system-ui, sans-serif;
+  }
+
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    margin:0;background:var(--bg);color:var(--fg);
+    font-family:var(--font-body);-webkit-font-smoothing:antialiased;overflow-x:hidden;
+  }
+  a{color:inherit;}
+
+  /* Focus visible magenta */
+  :focus-visible{outline:2.5px solid var(--accent);outline-offset:3px;border-radius:6px;}
+
+  /* Patrón sutil de glifos "L" repetidos en blanco */
+  .pattern{
+    position:absolute;inset:0;pointer-events:none;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='64' height='64' viewBox='0 0 64 64'%3E%3Cpath d='M16 12 L16 46 L42 46 L42 38 L24 38 L24 12 Z' fill='%23ffffff' fill-opacity='0.07'/%3E%3Cpath d='M48 30 L48 56 L66 56 L66 50 L54 50 L54 30 Z' fill='%23ffffff' fill-opacity='0.05'/%3E%3C/svg%3E");
+    background-size:64px 64px;
+  }
+
+  /* Wordmark gigante estilo neón */
+  .wordmark{
+    font-family:var(--font-display);font-weight:700;
+    font-size:clamp(56px,9vw,150px);line-height:.86;letter-spacing:-0.04em;
+    color:#fff;-webkit-text-stroke:1.5px rgba(255,255,255,.7);
+    margin:0;
+    text-shadow:0 0 24px rgba(255,255,255,.45),0 0 56px rgba(var(--accent-r),.55);
+    animation:glowPulse 4s ease-in-out infinite;
+  }
+  /* Hero split layout (texto izq · mascota der) */
+  .hero-grid{display:grid;grid-template-columns:1.02fr .98fr;gap:clamp(24px,4vw,56px);align-items:center;}
+  .hero-copy{display:flex;flex-direction:column;align-items:flex-start;text-align:left;gap:16px;}
+  .hero-mascot{height:min(74svh,640px);width:auto;max-width:100%;filter:drop-shadow(0 34px 46px rgba(26,4,16,.5));}
+  @media (max-width:860px){
+    .hero-grid{grid-template-columns:1fr;gap:8px;justify-items:center;}
+    .hero-copy{order:2;align-items:center;text-align:center;}
+    .hero-art{order:1;}
+    .hero-cta{justify-content:center;}
+    .hero-mascot{height:min(46svh,400px);}
+  }
+
+  /* Halo detrás del personaje (fallback elegante) */
+  .char-halo{
+    position:absolute;border-radius:999px;
+    background:radial-gradient(circle,rgba(255,255,255,.35) 0%,rgba(255,255,255,0) 68%);
+  }
+  .char-halo--accent{
+    background:radial-gradient(circle,rgba(var(--accent-r),.26) 0%,rgba(var(--accent-r),0) 70%);
+  }
+  .char-img{filter:drop-shadow(0 28px 36px rgba(0,0,0,.5));}
+  .char-img.float{animation:floatY 6s ease-in-out infinite;}
+  .char-img.float-sm{animation:floatYsm 7s ease-in-out infinite;}
+
+  /* Tarjetas */
+  .lift{transition:transform .14s ease, box-shadow .14s ease, border-color .14s ease;}
+  .lift:hover{transform:translateY(-6px);}
+  .benefit{transition:transform .14s ease, box-shadow .14s ease;}
+  .benefit:hover{transform:translateY(-3px);box-shadow:0 16px 34px rgba(0,0,0,.28);}
+  .benefit .sign{transition:transform .18s ease;}
+  .benefit[aria-expanded="true"] .sign{transform:rotate(45deg);}
+  .benefit .panel{overflow:hidden;max-height:0;opacity:0;transition:max-height .28s ease, opacity .22s ease;}
+  .benefit[aria-expanded="true"] .panel{max-height:160px;opacity:1;}
+
+  /* Producto */
+  .prod{transition:transform .14s ease, box-shadow .14s ease, border-color .14s ease;}
+  .prod:hover{transform:translateY(-6px);box-shadow:0 22px 44px rgba(0,0,0,.5);border-color:var(--border-strong);}
+  .prod .add{transition:background .14s ease, color .14s ease, border-color .14s ease;}
+  .prod:hover .add{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);}
+
+  /* Botones pill */
+  .pill{border-radius:999px;font-family:var(--font-display);font-weight:600;cursor:pointer;
+    transition:transform .12s ease, box-shadow .12s ease, background .12s ease;}
+  .pill:hover{transform:translateY(-3px);}
+  .round-btn{transition:transform .12s ease, box-shadow .12s ease;}
+  .round-btn:hover{transform:translateY(-2px);box-shadow:0 8px 22px rgba(var(--accent-r),.4);}
+
+  /* Nav links */
+  .navlink{color:var(--fg-muted);text-decoration:none;font-size:13px;font-weight:600;letter-spacing:.04em;transition:color .12s ease;}
+  .navlink:hover{color:var(--fg);}
+
+  .social{color:var(--fg-muted);transition:color .12s ease, border-color .12s ease;}
+  .social:hover{color:var(--fg);border-color:var(--border-strong);}
+  .footlink{color:var(--fg-muted);text-decoration:none;font-size:14px;transition:color .12s ease;}
+  .footlink:hover{color:var(--fg);}
+
+  /* Menú móvil */
+  .mobile-panel{overflow:hidden;max-height:0;opacity:0;transition:max-height .26s ease, opacity .2s ease;}
+  .mobile-panel.open{max-height:340px;opacity:1;}
+
+  @keyframes floatY{0%,100%{transform:translateY(0)}50%{transform:translateY(-16px)}}
+  @keyframes floatYsm{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
+  @keyframes glowPulse{
+    0%,100%{text-shadow:0 0 24px rgba(255,255,255,.45),0 0 56px rgba(var(--accent-r),.55)}
+    50%{text-shadow:0 0 34px rgba(255,255,255,.6),0 0 80px rgba(var(--accent-r),.7)}
+  }
+  @keyframes marquee{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+  .mq-track{display:flex;width:max-content;animation:marquee 26s linear infinite;}
+  .mq-seq{display:flex;align-items:center;flex:none;font-family:var(--font-display);font-weight:700;font-size:clamp(15px,2vw,21px);letter-spacing:.06em;color:var(--fg);}
+  .mq-seq span{padding:0 24px;white-space:nowrap;}
+  .mq-seq i{color:var(--accent);font-style:normal;}
+
+  /* Responsive helpers */
+  .nav-desktop{display:flex;}
+  .nav-burger{display:none;}
+  @media (max-width:820px){
+    .nav-desktop{display:none;}
+    .nav-burger{display:grid;}
+  }
+
+  @media (prefers-reduced-motion:reduce){
+    *{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important;scroll-behavior:auto!important;}
+  }
+</style>
+</head>
+
+<body id="top">
+
+  <!-- NAV -->
+  <nav class="sticky top-0 z-50 flex items-center justify-between gap-4"
+       style="padding:14px clamp(16px,4vw,40px);background:rgba(14,10,13,.55);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-bottom:1px solid var(--border);">
+    <a href="#top" class="flex items-center gap-3 min-w-0" style="text-decoration:none;color:var(--fg);">
+      <span class="relative grid place-items-center flex-none" style="width:40px;height:40px;border-radius:12px;background:linear-gradient(140deg,rgba(var(--accent-r),.25),rgba(var(--accent-r),.05));border:1px solid var(--border-strong);">
+        <span class="absolute" style="font-family:var(--font-display);font-weight:700;font-size:20px;color:var(--accent);">L</span>
+        <img src="https://images.openlen.com/liebre/logo.webp" alt="LIEBRE" onerror="this.style.opacity=0" class="relative" style="width:40px;height:40px;object-fit:contain;">
+      </span>
+      <span class="flex flex-col min-w-0" style="line-height:1.05;">
+        <span style="font-family:var(--font-display);font-weight:700;font-size:17px;letter-spacing:.02em;">LIEBRE</span>
+        <span class="truncate" style="font-size:10.5px;color:var(--fg-muted);max-width:240px;">Streetwear en ediciones limitadas.</span>
+      </span>
+    </a>
+
+    <div class="nav-desktop items-center" style="gap:26px;">
+      <a href="#tienda" class="navlink">TIENDA</a>
+      <a href="#tienda" class="navlink">COLECCIÓN</a>
+      <a href="#manifiesto" class="navlink">MANIFIESTO</a>
+      <a href="#comunidad" class="navlink">COMUNIDAD</a>
+      <button class="round-btn grid place-items-center" aria-label="Abrir carrito"
+              style="width:42px;height:42px;border-radius:999px;background:var(--accent);border:none;cursor:pointer;color:var(--accent-ink);">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1.4"></circle><circle cx="19" cy="21" r="1.4"></circle><path d="M2.5 3h2.2l2.3 12.4a1.6 1.6 0 0 0 1.6 1.3h8.8a1.6 1.6 0 0 0 1.6-1.2l1.7-7.3H6"></path></svg>
+      </button>
+    </div>
+
+    <button id="burger" class="nav-burger place-items-center" aria-label="Abrir menú" aria-expanded="false" aria-controls="mobileMenu"
+            style="width:44px;height:44px;border-radius:999px;background:var(--accent);border:none;cursor:pointer;color:var(--accent-ink);">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"></path></svg>
+    </button>
+  </nav>
+
+  <!-- MENÚ MÓVIL -->
+  <div id="mobileMenu" class="mobile-panel sticky z-40" style="top:69px;">
+    <div class="flex flex-col" style="gap:2px;padding:12px clamp(16px,4vw,40px) 20px;background:rgba(14,10,13,.94);backdrop-filter:blur(14px);border-bottom:1px solid var(--border);">
+      <a href="#tienda" class="mlink" style="padding:12px 6px;text-decoration:none;color:var(--fg);font-family:var(--font-display);font-weight:600;font-size:18px;border-bottom:1px solid var(--border);">TIENDA</a>
+      <a href="#tienda" class="mlink" style="padding:12px 6px;text-decoration:none;color:var(--fg);font-family:var(--font-display);font-weight:600;font-size:18px;border-bottom:1px solid var(--border);">COLECCIÓN</a>
+      <a href="#manifiesto" class="mlink" style="padding:12px 6px;text-decoration:none;color:var(--fg);font-family:var(--font-display);font-weight:600;font-size:18px;border-bottom:1px solid var(--border);">MANIFIESTO</a>
+      <a href="#comunidad" class="mlink" style="padding:12px 6px;text-decoration:none;color:var(--fg);font-family:var(--font-display);font-weight:600;font-size:18px;">COMUNIDAD</a>
+    </div>
+  </div>
+
+  <!-- HERO -->
+  <header class="relative flex items-center"
+          style="min-height:92svh;padding:clamp(16px,3vw,32px) clamp(16px,5vw,64px);background:var(--accent);overflow:hidden;">
+    <div class="pattern"></div>
+    <div class="absolute pointer-events-none" style="inset:auto 0 0 0;height:34%;background:linear-gradient(to bottom,rgba(14,10,13,0) 0%,rgba(14,10,13,0) 60%,rgba(14,10,13,.3) 100%);"></div>
+
+    <div class="hero-grid relative" style="max-width:1240px;margin:0 auto;width:100%;">
+      <!-- copy -->
+      <div class="hero-copy">
+        <div class="inline-flex items-center" style="gap:8px;padding:8px 16px;border-radius:999px;background:rgba(26,4,16,.46);border:1px solid rgba(26,4,16,.5);color:#fff;font-family:var(--font-display);font-weight:600;font-size:12.5px;letter-spacing:.16em;">
+          <span style="width:7px;height:7px;border-radius:999px;background:#fff;"></span>NUEVA TEMPORADA · DROP 07
+        </div>
+        <h1 class="wordmark">LIEBRE</h1>
+        <p style="max-width:440px;margin:0;color:var(--accent-ink);font-weight:500;font-size:clamp(14px,2.4vw,18px);">
+          Hecho para los que saltan primero. Cápsulas numeradas, sin restock.
+        </p>
+        <div class="hero-cta flex flex-wrap" style="gap:12px;margin-top:6px;">
+          <a href="#tienda" class="pill" style="padding:15px 28px;background:#fff;color:var(--accent-ink);text-decoration:none;font-size:15px;box-shadow:0 12px 30px rgba(26,4,16,.28);">Comprar el drop</a>
+          <a href="#tienda" class="pill" style="padding:15px 28px;background:transparent;color:var(--accent-ink);text-decoration:none;font-size:15px;border:1.5px solid rgba(26,4,16,.5);">Ver colección</a>
+        </div>
+      </div>
+
+      <!-- art -->
+      <div class="hero-art relative grid place-items-center">
+        <div class="char-halo" style="width:min(42vw,520px);height:min(42vw,520px);"></div>
+        <img src="https://images.openlen.com/liebre/hero.webp" alt="La mascota LIEBRE con gafas de sol y el look completo del drop"
+             onerror="this.style.opacity=0" class="relative char-img float hero-mascot">
+      </div>
+    </div>
+  </header>
+
+  <!-- MARQUEE / TICKER -->
+  <div aria-hidden="true" style="background:var(--surface-2);border-bottom:1px solid var(--border);overflow:hidden;padding:13px 0;">
+    <div class="mq-track">
+      <span class="mq-seq"><span>DROP 07</span><i>◆</i><span>EDICIÓN LIMITADA</span><i>◆</i><span>SIN RESTOCK</span><i>◆</i><span>SALTA PRIMERO</span><i>◆</i><span>HECHO A MANO</span><i>◆</i></span>
+      <span class="mq-seq"><span>DROP 07</span><i>◆</i><span>EDICIÓN LIMITADA</span><i>◆</i><span>SIN RESTOCK</span><i>◆</i><span>SALTA PRIMERO</span><i>◆</i><span>HECHO A MANO</span><i>◆</i></span>
+    </div>
+  </div>
+
+  <!-- BENEFICIOS -->
+  <section style="background:var(--surface);padding:clamp(56px,9vw,110px) clamp(16px,5vw,64px);">
+    <div class="grid items-center" style="max-width:1140px;margin:0 auto;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:clamp(28px,5vw,64px);">
+      <div class="relative grid place-items-center" style="min-height:280px;">
+        <div class="char-halo char-halo--accent" style="width:min(70%,320px);height:min(70%,320px);"></div>
+        <img src="https://images.openlen.com/liebre/point.webp" alt="La mascota LIEBRE señalando los beneficios"
+             onerror="this.style.opacity=0" class="relative char-img float-sm" style="width:min(80%,380px);height:auto;">
+      </div>
+
+      <div class="flex flex-col" style="gap:14px;">
+        <span style="font-family:var(--font-display);font-weight:600;font-size:12.5px;letter-spacing:.18em;color:var(--accent);">POR QUÉ LIEBRE</span>
+        <h2 style="margin:0 0 8px;font-family:var(--font-display);font-weight:700;font-size:clamp(28px,4.4vw,44px);line-height:1.02;letter-spacing:-.03em;color:var(--fg);">Membresía con beneficios reales.</h2>
+        <div id="benefits" class="flex flex-col" style="gap:14px;"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- DROPS / TIENDA -->
+  <section id="tienda" style="background:var(--bg);padding:clamp(56px,9vw,110px) clamp(16px,5vw,64px);">
+    <div style="max-width:1180px;margin:0 auto;">
+      <div class="flex flex-wrap items-end justify-between" style="gap:16px;margin-bottom:clamp(28px,5vw,52px);">
+        <div>
+          <span style="font-family:var(--font-display);font-weight:600;font-size:12.5px;letter-spacing:.18em;color:var(--accent);">DROP 07 · EN VIVO</span>
+          <h2 style="margin:8px 0 0;font-family:var(--font-display);font-weight:700;font-size:clamp(34px,6vw,62px);line-height:.9;letter-spacing:-.04em;color:var(--fg);">EL DROP</h2>
+        </div>
+        <p style="max-width:360px;margin:0;color:var(--fg-muted);font-size:14.5px;line-height:1.5;">El look completo de la mascota. Cuatro piezas numeradas, disponibles esta semana.</p>
+      </div>
+      <div id="products" class="grid" style="grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:clamp(14px,2.5vw,22px);"></div>
+    </div>
+  </section>
+
+  <!-- MANIFIESTO -->
+  <section id="manifiesto" style="background:var(--bg);padding:clamp(56px,9vw,120px) clamp(16px,5vw,64px);border-top:1px solid var(--border);">
+    <div class="grid items-center" style="max-width:1140px;margin:0 auto;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:clamp(32px,6vw,72px);">
+      <div class="relative grid place-items-center" style="min-height:300px;order:2;">
+        <div class="char-halo char-halo--accent" style="width:min(78%,360px);height:min(78%,360px);"></div>
+        <img src="https://images.openlen.com/liebre/chill.webp" alt="La mascota LIEBRE en pose relajada"
+             onerror="this.style.opacity=0" class="relative char-img float-sm" style="width:min(85%,400px);height:auto;animation-duration:8s;">
+      </div>
+      <div style="order:1;">
+        <span style="font-family:var(--font-display);font-weight:600;font-size:12.5px;letter-spacing:.18em;color:var(--accent);">EL MANIFIESTO</span>
+        <p style="margin:18px 0 0;font-family:var(--font-display);font-weight:500;font-size:clamp(22px,3.6vw,34px);line-height:1.28;letter-spacing:-.02em;color:var(--fg-muted);">
+          No hacemos ropa para todos. Hacemos <span style="color:var(--accent);font-weight:700;">ediciones limitadas</span> para una <span style="color:var(--fg);font-weight:700;">comunidad</span> que se mueve primero. Cada pieza es <span style="color:var(--fg);font-weight:700;">hecha a mano</span>, numerada y nacida en la <span style="color:var(--accent);font-weight:700;">cultura de calle</span>. Si dudas, ya es tarde. La liebre <span style="color:var(--fg);font-weight:700;">salta primero</span>.
+        </p>
+        <div class="flex flex-wrap items-center" style="gap:clamp(18px,3vw,34px);margin-top:34px;padding-top:26px;border-top:1px solid var(--border);">
+          <span style="font-family:var(--font-display);font-weight:600;font-size:14px;letter-spacing:.04em;color:var(--fg-faint);">URBE</span>
+          <span style="font-family:var(--font-display);font-weight:600;font-size:14px;letter-spacing:.04em;color:var(--fg-faint);">Asfalto Mag</span>
+          <span style="font-family:var(--font-display);font-weight:600;font-size:14px;letter-spacing:.04em;color:var(--fg-faint);">Drift</span>
+          <span style="font-family:var(--font-display);font-weight:600;font-size:14px;letter-spacing:.04em;color:var(--fg-faint);">Calle 9</span>
+          <span style="font-family:var(--font-display);font-weight:600;font-size:14px;letter-spacing:.04em;color:var(--fg-faint);">Hypeficticio</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- COMUNIDAD / NEWSLETTER -->
+  <section id="comunidad" class="relative" style="background:var(--accent);padding:clamp(56px,9vw,104px) clamp(16px,5vw,64px);overflow:hidden;">
+    <div class="pattern"></div>
+    <div class="relative text-center flex flex-col items-center" style="max-width:680px;margin:0 auto;gap:14px;">
+      <h2 style="margin:0;font-family:var(--font-display);font-weight:700;font-size:clamp(34px,6.5vw,68px);line-height:.92;letter-spacing:-.04em;color:#fff;">ÚNETE AL CÍRCULO</h2>
+      <p style="margin:0;color:var(--accent-ink);font-weight:500;font-size:clamp(15px,2.4vw,18px);">Entérate de cada drop antes que nadie. Acceso 24h anticipado.</p>
+      <form id="newsletter" class="flex flex-wrap justify-center w-full" style="gap:10px;max-width:480px;margin-top:10px;">
+        <input type="email" required placeholder="tu@correo.com" aria-label="Tu correo electrónico"
+               style="flex:1;min-width:200px;padding:15px 20px;border-radius:999px;border:1.5px solid rgba(26,4,16,.3);background:rgba(255,255,255,.92);color:var(--accent-ink);font-size:15px;font-family:var(--font-body);outline:none;">
+        <button type="submit" id="subBtn" class="pill" style="padding:15px 28px;background:var(--accent-ink);color:#fff;border:none;font-size:15px;">Apuntarme</button>
+      </form>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer style="background:var(--bg);padding:clamp(48px,7vw,80px) clamp(16px,5vw,64px) 32px;border-top:1px solid var(--border);">
+    <div class="grid" style="max-width:1140px;margin:0 auto;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:36px 28px;">
+      <div class="flex flex-col" style="gap:14px;min-width:200px;">
+        <div class="flex items-center" style="gap:12px;">
+          <span class="relative grid place-items-center" style="width:40px;height:40px;border-radius:12px;background:linear-gradient(140deg,rgba(var(--accent-r),.25),rgba(var(--accent-r),.05));border:1px solid var(--border-strong);">
+            <span class="absolute" style="font-family:var(--font-display);font-weight:700;font-size:20px;color:var(--accent);">L</span>
+            <img src="https://images.openlen.com/liebre/logo.webp" alt="LIEBRE" onerror="this.style.opacity=0" class="relative" style="width:40px;height:40px;object-fit:contain;">
+          </span>
+          <span style="font-family:var(--font-display);font-weight:700;font-size:18px;color:var(--fg);">LIEBRE</span>
+        </div>
+        <p style="margin:0;max-width:240px;color:var(--fg-muted);font-size:13.5px;line-height:1.5;">Streetwear en ediciones limitadas. Hecho para los que saltan primero.</p>
+        <div class="flex" style="gap:10px;margin-top:4px;">
+          <a href="#comunidad" class="social grid place-items-center" aria-label="Instagram" style="width:38px;height:38px;border-radius:999px;border:1px solid var(--border);"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="5"></rect><circle cx="12" cy="12" r="4"></circle><circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none"></circle></svg></a>
+          <a href="#comunidad" class="social grid place-items-center" aria-label="TikTok" style="width:38px;height:38px;border-radius:999px;border:1px solid var(--border);"><svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor"><path d="M16.5 3c.3 2 1.6 3.6 3.5 3.9v2.5c-1.3 0-2.6-.4-3.6-1.1v5.9a5.6 5.6 0 1 1-5.6-5.6c.3 0 .6 0 .9.1v2.6a3 3 0 1 0 2.1 2.9V3h2.7z"></path></svg></a>
+          <a href="#comunidad" class="social grid place-items-center" aria-label="X" style="width:38px;height:38px;border-radius:999px;border:1px solid var(--border);"><svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M18.2 2H21l-6.4 7.3L22 22h-6.3l-4.9-6.4L5.1 22H2.3l6.9-7.9L2 2h6.4l4.4 5.9L18.2 2zm-2.2 18h1.6L8.1 3.7H6.4L16 20z"></path></svg></a>
+        </div>
+      </div>
+
+      <div class="flex flex-col" style="gap:10px;">
+        <span style="font-family:var(--font-display);font-weight:600;font-size:12px;letter-spacing:.14em;color:var(--fg-faint);">TIENDA</span>
+        <a href="#tienda" class="footlink">Camisetas</a>
+        <a href="#tienda" class="footlink">Hoodies</a>
+        <a href="#tienda" class="footlink">Accesorios</a>
+      </div>
+      <div class="flex flex-col" style="gap:10px;">
+        <span style="font-family:var(--font-display);font-weight:600;font-size:12px;letter-spacing:.14em;color:var(--fg-faint);">COLECCIÓN</span>
+        <a href="#tienda" class="footlink">Drop 07</a>
+        <a href="#tienda" class="footlink">Archivo</a>
+        <a href="#comunidad" class="footlink">El Círculo</a>
+      </div>
+      <div class="flex flex-col" style="gap:10px;">
+        <span style="font-family:var(--font-display);font-weight:600;font-size:12px;letter-spacing:.14em;color:var(--fg-faint);">AYUDA</span>
+        <a href="#tienda" class="footlink">Envíos y cambios</a>
+        <a href="#tienda" class="footlink">Guía de tallas</a>
+        <a href="#tienda" class="footlink">Legal</a>
+      </div>
+    </div>
+    <div class="flex flex-wrap items-center justify-between" style="max-width:1140px;margin:36px auto 0;padding-top:22px;border-top:1px solid var(--border);gap:8px;">
+      <span style="color:var(--fg-faint);font-size:13px;">© LIEBRE — Salta primero.</span>
+      <span style="color:var(--fg-faint);font-size:13px;font-family:var(--font-display);letter-spacing:.06em;">DROP 07 · 2026</span>
+    </div>
+  </footer>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ---------- DATOS ---------- */
+  var PRODUCTS = [
+    { slug:"prod-tee",    nombre:"Camiseta Calavera", precio:"34€",  tag:"DROP 07" },
+    { slug:"prod-hoodie", nombre:"Hoodie Madriguera", precio:"79€",  tag:"NUEVO"   },
+    { slug:"prod-cap",    nombre:"Gorra Oreja Larga", precio:"29€",  tag:"ÚLTIMAS" },
+    { slug:"prod-kicks",  nombre:"Zapatillas Brinco", precio:"120€", tag:"DROP 07" }
+  ];
+
+  var BENEFITS = [
+    { title:"Drops semanales en cantidad limitada", body:"Cada semana una cápsula nueva, numerada y sin restock." },
+    { title:"Acceso anticipado para miembros",      body:"Únete al Círculo y compra 24h antes que nadie." },
+    { title:"Envío gratis + cambios fáciles",       body:"Envío gratis desde 50€ y 30 días para cambios." }
+  ];
+
+  function esc(s){ return String(s).replace(/[&<>"]/g, function(c){
+    return {"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[c];
+  }); }
+
+  /* ---------- RENDER PRODUCTOS ---------- */
+  var grid = document.getElementById("products");
+  grid.innerHTML = PRODUCTS.map(function(p){
+    var ultimas = p.tag === "ÚLTIMAS";
+    var tagBg = ultimas ? "var(--accent)" : "rgba(26,4,16,.72)";
+    var tagColor = ultimas ? "var(--accent-ink)" : "#fff";
+    return ''
+    + '<div class="prod flex flex-col" style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;">'
+    +   '<div class="relative grid place-items-center" style="aspect-ratio:1/1;background:radial-gradient(circle at 50% 36%,#F8EFF3 0%,#E9DCE2 100%);">'
+    +     '<span class="absolute" style="top:12px;left:12px;padding:5px 11px;border-radius:999px;background:'+tagBg+';color:'+tagColor+';font-family:var(--font-display);font-weight:600;font-size:10.5px;letter-spacing:.1em;">'+esc(p.tag)+'</span>'
+    +     '<img src="https://images.openlen.com/liebre/'+p.slug+'.webp" alt="'+esc(p.nombre)+'" onerror="this.style.opacity=0" style="width:84%;height:84%;object-fit:contain;filter:drop-shadow(0 14px 18px rgba(0,0,0,.22));">'
+    +   '</div>'
+    +   '<div class="flex flex-col" style="gap:12px;padding:16px;">'
+    +     '<div class="flex items-baseline justify-between" style="gap:10px;">'
+    +       '<h3 style="margin:0;font-family:var(--font-display);font-weight:600;font-size:15.5px;color:var(--fg);line-height:1.15;">'+esc(p.nombre)+'</h3>'
+    +       '<span style="font-family:var(--font-display);font-weight:700;font-size:16px;color:var(--fg);white-space:nowrap;">'+esc(p.precio)+'</span>'
+    +     '</div>'
+    +     '<button class="add" aria-label="Añadir '+esc(p.nombre)+' al carrito" style="width:100%;padding:11px 14px;border-radius:999px;border:1px solid var(--border-strong);background:transparent;color:var(--fg);font-family:var(--font-display);font-weight:600;font-size:14px;cursor:pointer;">Añadir</button>'
+    +   '</div>'
+    + '</div>';
+  }).join("");
+
+  /* ---------- RENDER BENEFICIOS (acordeón accesible) ---------- */
+  var benefitsEl = document.getElementById("benefits");
+  benefitsEl.innerHTML = BENEFITS.map(function(b, i){
+    return ''
+    + '<button class="benefit text-left" type="button" aria-expanded="'+(i===0?"true":"false")+'" aria-controls="benefit-panel-'+i+'" '
+    +   'style="background:#fff;border:none;border-radius:var(--radius);padding:20px 22px;cursor:pointer;box-shadow:0 1px 0 rgba(0,0,0,.04);width:100%;display:block;">'
+    +   '<div class="flex items-center" style="gap:14px;">'
+    +     '<span class="sign grid place-items-center flex-none" style="width:30px;height:30px;border-radius:999px;background:rgba(var(--accent-r),.12);color:var(--accent);font-family:var(--font-display);font-weight:700;font-size:18px;">+</span>'
+    +     '<h3 style="margin:0;font-family:var(--font-display);font-weight:600;font-size:clamp(16px,2.4vw,19px);color:#16110F;line-height:1.15;flex:1;">'+esc(b.title)+'</h3>'
+    +   '</div>'
+    +   '<div class="panel" id="benefit-panel-'+i+'"><p style="margin:14px 0 0;padding-left:44px;color:#4F4750;font-size:14.5px;line-height:1.5;">'+esc(b.body)+'</p></div>'
+    + '</button>';
+  }).join("");
+
+  function syncBenefits(){
+    benefitsEl.querySelectorAll(".benefit").forEach(function(c){
+      var open = c.getAttribute("aria-expanded") === "true";
+      var panel = c.querySelector(".panel");
+      if(panel){ if(open){ panel.removeAttribute("inert"); } else { panel.setAttribute("inert",""); } }
+    });
+  }
+  syncBenefits();
+  benefitsEl.addEventListener("click", function(e){
+    var card = e.target.closest(".benefit");
+    if(!card) return;
+    var open = card.getAttribute("aria-expanded") === "true";
+    // Cierra el resto (acordeón). Cambia a no-cierre si prefieres multi-abierto.
+    benefitsEl.querySelectorAll(".benefit").forEach(function(c){ c.setAttribute("aria-expanded","false"); });
+    card.setAttribute("aria-expanded", open ? "false" : "true");
+    syncBenefits();
+  });
+
+  /* ---------- MENÚ MÓVIL ---------- */
+  var burger = document.getElementById("burger");
+  var menu = document.getElementById("mobileMenu");
+  function closeMenu(){ menu.classList.remove("open"); menu.setAttribute("inert",""); burger.setAttribute("aria-expanded","false"); }
+  menu.setAttribute("inert","");
+  burger.addEventListener("click", function(){
+    var open = menu.classList.toggle("open");
+    if(open){ menu.removeAttribute("inert"); } else { menu.setAttribute("inert",""); }
+    burger.setAttribute("aria-expanded", open ? "true" : "false");
+  });
+  menu.querySelectorAll(".mlink").forEach(function(a){ a.addEventListener("click", closeMenu); });
+  window.addEventListener("resize", function(){ if(window.innerWidth > 820) closeMenu(); });
+
+  /* ---------- NEWSLETTER (sin backend) ---------- */
+  var form = document.getElementById("newsletter");
+  form.addEventListener("submit", function(e){
+    e.preventDefault();
+    document.getElementById("subBtn").textContent = "¡Apuntado!";
+  });
+})();
+</script>
+</body>
+</html>

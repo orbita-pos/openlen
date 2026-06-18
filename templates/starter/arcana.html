@@ -1,0 +1,519 @@
+<!doctype html>
+<html lang="es" class="dark">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>ARCANA — Portal Oficial</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Saira+Condensed:ital,wght@0,600;0,700;0,800;0,900;1,600;1,700;1,800;1,900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --bg:#0A0A0C;
+    --surface:#141417;
+    --surface-2:#1C1C21;
+    --fg:#F4F4F2;
+    --fg-muted:#9B9B98;
+    --fg-faint:#8A8A87;
+    --border:rgba(255,255,255,0.10);
+    --border-strong:rgba(255,255,255,0.22);
+    --accent:#F2C200;
+    --accent-r:242,194,0;
+    --accent-ink:#0A0A0C;
+    --radius:2px;
+    --font-display:'Saira Condensed', sans-serif;
+    --font-body:'Inter', system-ui, sans-serif;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--fg);
+    font-family:var(--font-body);
+    -webkit-font-smoothing:antialiased;
+    overflow-x:hidden;
+  }
+  ::selection{background:var(--accent);color:var(--accent-ink)}
+
+  .font-display{font-family:var(--font-display)}
+  .disp{
+    font-family:var(--font-display);
+    font-style:italic;
+    font-weight:900;
+    text-transform:uppercase;
+    letter-spacing:-0.02em;
+    line-height:0.92;
+  }
+  .skew{transform:skewX(-7deg)}
+  .skew-i{display:inline-block;transform:skewX(-7deg)}
+
+  /* ---- Semitono / halftone ---- */
+  .halftone{position:relative}
+  .halftone::after{
+    content:"";position:absolute;inset:0;pointer-events:none;
+    background-image:radial-gradient(rgba(255,255,255,0.05) 1px, transparent 1.2px);
+    background-size:4px 4px;
+    mix-blend-mode:screen;opacity:0.7;
+  }
+  .halftone-dark::after{
+    content:"";position:absolute;inset:0;pointer-events:none;
+    background-image:radial-gradient(rgba(10,10,12,0.22) 1px, transparent 1.2px);
+    background-size:4px 4px;
+  }
+  .halftone-dark{position:relative}
+
+  /* ---- focus ring ---- */
+  a:focus-visible, button:focus-visible, [tabindex]:focus-visible{
+    outline:2px solid var(--accent);
+    outline-offset:2px;
+  }
+
+  /* ---- nav underline ---- */
+  .saga-link{position:relative;color:var(--fg-muted);transition:color .12s ease}
+  .saga-link::after{
+    content:"";position:absolute;left:0;bottom:-6px;height:2px;width:0;
+    background:var(--accent);transition:width .14s ease;
+  }
+  .saga-link:hover,.saga-link:focus-visible{color:var(--fg)}
+  .saga-link:hover::after,.saga-link:focus-visible::after{width:100%}
+
+  /* ---- filmstrip ---- */
+  .filmstrip{
+    display:flex;gap:8px;overflow-x:auto;scroll-behavior:smooth;
+    scrollbar-width:none;cursor:grab;user-select:none;
+  }
+  .filmstrip::-webkit-scrollbar{display:none}
+  .filmstrip.dragging{cursor:grabbing;scroll-behavior:auto}
+  .film-cell{
+    flex:0 0 auto;width:62px;height:62px;position:relative;overflow:hidden;
+    border:1px solid rgba(10,10,12,0.5);background:#0A0A0C;border-radius:var(--radius);
+    transition:transform .12s ease, box-shadow .12s ease;
+  }
+  .film-cell img{width:100%;height:100%;object-fit:cover;object-position:center top;transition:transform .15s ease, opacity .2s ease}
+  .film-cell:hover{transform:translateY(-4px);box-shadow:0 8px 18px rgba(0,0,0,.5);z-index:2}
+  .film-cell:hover img{transform:scale(1.12)}
+
+  /* ---- char card ---- */
+  .char-card{
+    position:relative;display:block;overflow:hidden;
+    background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
+    transition:transform .13s ease, border-color .13s ease, box-shadow .13s ease;
+  }
+  .char-card:hover{transform:translateY(-6px);border-color:var(--accent);box-shadow:0 18px 40px rgba(0,0,0,.55)}
+  .char-card .bust{transition:transform .25s ease, opacity .25s ease}
+  .char-card:hover .bust{transform:scale(1.06)}
+  .char-card .ver{
+    position:absolute;right:12px;bottom:12px;opacity:0;transform:translateY(6px);
+    transition:opacity .14s ease, transform .14s ease;
+    display:inline-flex;align-items:center;gap:6px;
+    background:var(--accent);color:var(--accent-ink);
+    font-family:var(--font-display);font-style:italic;font-weight:800;
+    font-size:13px;letter-spacing:.02em;padding:4px 10px;border-radius:var(--radius);
+  }
+  .char-card:hover .ver{opacity:1;transform:translateY(0)}
+
+  .news-card{transition:transform .12s ease, border-color .12s ease}
+  .news-card:hover{transform:translateY(-5px);border-color:var(--border-strong)}
+
+  .ticker-dot{width:6px;height:6px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 0 rgba(var(--accent-r),.6);animation:pulse 2.2s infinite}
+  @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(var(--accent-r),.5)}70%{box-shadow:0 0 0 7px rgba(var(--accent-r),0)}100%{box-shadow:0 0 0 0 rgba(var(--accent-r),0)}}
+
+  @media (prefers-reduced-motion: reduce){
+    *{animation:none !important;transition:none !important;scroll-behavior:auto !important}
+  }
+
+  .lang-sel{color:var(--fg-muted);transition:color .12s}
+  .lang-sel[aria-current="true"]{color:var(--accent)}
+  .lang-sel:hover{color:var(--fg)}
+
+  .mobile-menu{transition:opacity .18s ease, transform .18s ease}
+</style>
+</head>
+<body>
+
+<!-- ============ TOP BAR ============ -->
+<header class="sticky top-0 z-50 backdrop-blur-md" style="background:rgba(10,10,12,0.82);border-bottom:1px solid var(--border)">
+  <div class="mx-auto max-w-[1400px] px-4 sm:px-6">
+    <div class="flex items-center gap-3 h-12">
+      <!-- logo + nombre -->
+      <a href="#top" class="flex items-center gap-2 shrink-0" aria-label="ARCANA — Portal Oficial">
+        <span class="relative inline-block w-7 h-7" style="border:1px solid var(--border-strong);border-radius:var(--radius)">
+          <span class="absolute inset-0 grid place-items-center disp" style="font-size:13px;color:var(--accent)">A</span>
+          <img src="https://images.openlen.com/arcana/logo.webp" alt="ARCANA" class="absolute inset-0 w-full h-full object-contain p-0.5" onerror="this.style.opacity=0" />
+        </span>
+        <span class="disp text-[13px] tracking-tight whitespace-nowrap hidden sm:inline">ARCANA <span style="color:var(--fg-faint)">— PORTAL OFICIAL</span></span>
+      </a>
+
+      <!-- novedad + ticker -->
+      <div class="hidden md:flex items-center gap-3 min-w-0 ml-2">
+        <span class="ticker-dot shrink-0" aria-hidden="true"></span>
+        <span class="disp text-[12px] px-2 py-0.5 shrink-0" style="background:var(--accent);color:var(--accent-ink);border-radius:var(--radius)">NOVEDAD</span>
+        <span class="text-[12px] truncate" style="color:var(--fg-muted)"><span style="color:var(--fg-faint);font-variant-numeric:tabular-nums">2026.06.17</span> · Se abre el Coliseo de ARCANA&nbsp;VII</span>
+      </div>
+
+      <!-- der: idioma + social -->
+      <div class="flex items-center gap-3 ml-auto shrink-0">
+        <nav class="hidden sm:flex items-center gap-1.5 text-[12px] disp" aria-label="Idioma">
+          <a href="#" class="lang-sel" aria-current="true">ESP</a>
+          <span style="color:var(--fg-faint)">·</span>
+          <a href="#" class="lang-sel">EN</a>
+          <span style="color:var(--fg-faint)">·</span>
+          <a href="#" class="lang-sel">JP</a>
+        </nav>
+        <div class="hidden sm:flex items-center gap-2" style="color:var(--fg-muted)">
+          <a href="#" aria-label="X (Twitter)" class="hover:text-white transition-colors" style="transition:color .12s"><svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M18.244 2H21.5l-7.5 8.57L23 22h-6.844l-5.36-7.01L4.66 22H1.4l8.02-9.166L1 2h7.02l4.85 6.41L18.244 2Zm-1.2 18h1.9L7.02 3.9H5.0L17.044 20Z"/></svg></a>
+          <a href="#" aria-label="Instagram" class="hover:text-white" style="transition:color .12s"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="3.6"/><circle cx="17.4" cy="6.6" r="1" fill="currentColor" stroke="none"/></svg></a>
+          <a href="#" aria-label="YouTube" class="hover:text-white" style="transition:color .12s"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M23 12s0-3.2-.41-4.73a2.46 2.46 0 0 0-1.73-1.74C19.34 5.12 12 5.12 12 5.12s-7.34 0-8.86.41A2.46 2.46 0 0 0 1.4 7.27C1 8.8 1 12 1 12s0 3.2.41 4.73a2.46 2.46 0 0 0 1.73 1.74c1.52.41 8.86.41 8.86.41s7.34 0 8.86-.41a2.46 2.46 0 0 0 1.73-1.74C23 15.2 23 12 23 12ZM9.75 15.02V8.98L15 12l-5.25 3.02Z"/></svg></a>
+        </div>
+        <button id="menuBtn" class="md:hidden grid place-items-center w-8 h-8" aria-label="Abrir menú" aria-expanded="false" style="border:1px solid var(--border-strong);border-radius:var(--radius);color:var(--fg)">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- mobile menu -->
+  <div id="mobileMenu" class="mobile-menu md:hidden hidden origin-top" style="border-top:1px solid var(--border);background:rgba(10,10,12,0.96)">
+    <nav class="px-5 py-4 flex flex-col gap-3 disp text-2xl" aria-label="Secciones (móvil)">
+      <a href="#historia" class="saga-link">HISTORIA</a>
+      <a href="#personajes" class="saga-link">PERSONAJES</a>
+      <a href="#noticias" class="saga-link">NOTICIAS</a>
+    </nav>
+    <div class="px-5 pb-4 flex items-center gap-2 text-[12px] disp" style="color:var(--fg-faint)">
+      <span style="color:var(--accent)">ESP</span><span>·</span><span>EN</span><span>·</span><span>JP</span>
+    </div>
+  </div>
+</header>
+
+<main id="top">
+
+<!-- ============ HERO ============ -->
+<section class="relative min-h-[100svh] flex flex-col justify-center halftone overflow-hidden">
+  <!-- fallback bg -->
+  <div class="absolute inset-0" style="background:radial-gradient(120% 80% at 50% 0%, #1a1410 0%, var(--bg) 60%)"></div>
+  <!-- key-art -->
+  <img src="https://images.openlen.com/arcana/hero.webp" alt="Escena de batalla de ARCANA VII" class="absolute inset-0 w-full h-full object-cover object-center" onerror="this.style.opacity=0" />
+  <!-- oscurecedores -->
+  <div class="absolute inset-0" style="background:linear-gradient(180deg, rgba(10,10,12,0.55) 0%, rgba(10,10,12,0.15) 35%, rgba(10,10,12,0.55) 70%, var(--bg) 100%)"></div>
+  <div class="absolute inset-x-0 bottom-0 h-2/3" style="background:linear-gradient(180deg, transparent, var(--bg))"></div>
+
+  <div class="relative z-10 mx-auto max-w-[1400px] w-full px-4 sm:px-6 text-center flex flex-col items-center pt-16 pb-28">
+    <p class="disp text-[12px] sm:text-[13px] tracking-[0.45em] mb-4" style="color:var(--fg);text-shadow:0 2px 12px rgba(0,0,0,.7)">PORTAL OFICIAL</p>
+
+    <!-- wordmark ARCANA -->
+    <div class="relative w-full max-w-[760px] flex items-center justify-center mb-1">
+      <span aria-hidden="true" class="disp text-[clamp(64px,18vw,200px)] leading-none select-none" style="color:var(--fg);text-shadow:0 0 50px rgba(0,0,0,.6)">ARC<span style="color:var(--accent)">A</span>NA</span>
+    </div>
+    <h1 class="sr-only">ARCANA — La Saga</h1>
+    <!-- emblema, debajo de ARCANA -->
+    <img src="https://images.openlen.com/arcana/logo.webp" alt="Emblema de ARCANA" class="h-20 sm:h-24 w-auto object-contain mb-1" style="filter:drop-shadow(0 6px 20px rgba(0,0,0,.55))" onerror="this.style.display='none'" />
+
+    <p class="disp text-[15px] sm:text-[17px] tracking-[0.25em] mt-1 mb-9 skew-i" style="color:var(--accent)">LA SAGA DE LOS ARCANOS</p>
+
+    <!-- nav saga -->
+    <nav class="flex flex-wrap items-center justify-center gap-x-5 gap-y-2 disp text-base sm:text-lg" aria-label="Secciones">
+      <a href="#historia" class="saga-link">HISTORIA</a>
+      <span style="color:var(--fg-faint)">·</span>
+      <a href="#personajes" class="saga-link">PERSONAJES</a>
+      <span style="color:var(--fg-faint)">·</span>
+      <a href="#noticias" class="saga-link">NOTICIAS</a>
+    </nav>
+  </div>
+
+  <!-- card studio -->
+  <a href="#" class="hidden lg:flex absolute right-6 bottom-24 z-10 items-center gap-3 px-3 py-2 backdrop-blur-md" style="background:rgba(20,20,23,0.7);border:1px solid var(--border);border-radius:var(--radius)">
+    <span class="relative w-9 h-9 grid place-items-center shrink-0" style="border:1px solid var(--border-strong);border-radius:var(--radius)">
+      <span class="disp text-sm" style="color:var(--accent)">A</span>
+      <img src="https://images.openlen.com/arcana/logo.webp" alt="ARCANA Studio" class="absolute inset-0 w-full h-full object-contain p-1" onerror="this.style.opacity=0" />
+    </span>
+    <span class="leading-tight text-left">
+      <span class="block disp text-[13px]">ARCANA STUDIO</span>
+      <span class="block text-[10px] tracking-wide" style="color:var(--fg-faint)">DESARROLLADOR OFICIAL</span>
+    </span>
+  </a>
+
+  <!-- scroll hint -->
+  <div class="absolute left-1/2 -translate-x-1/2 bottom-[88px] z-10 flex flex-col items-center gap-1" aria-hidden="true">
+    <span class="disp text-[10px] tracking-[0.3em]" style="color:var(--fg-faint)">DESLIZA</span>
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--fg-faint)" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+  </div>
+</section>
+
+<!-- ============ BARRA AMARILLA + FILMSTRIP ============ -->
+<section class="relative halftone-dark" style="background:var(--accent)" aria-label="Personajes destacados">
+  <div class="mx-auto max-w-[1400px] px-4 sm:px-6">
+    <div class="flex items-stretch gap-4 py-2.5">
+      <!-- izq: mini logo + handles -->
+      <div class="hidden sm:flex flex-col justify-center shrink-0 pr-4" style="border-right:1px solid rgba(10,10,12,0.18)">
+        <div class="flex items-center gap-2">
+          <span class="relative w-7 h-7 grid place-items-center shrink-0" style="border:1px solid rgba(10,10,12,0.35);border-radius:var(--radius)">
+            <span class="disp text-sm" style="color:var(--accent-ink)">A</span>
+            <img src="https://images.openlen.com/arcana/logo.webp" alt="ARCANA" class="absolute inset-0 w-full h-full object-contain p-0.5" style="filter:brightness(0)" onerror="this.style.opacity=0" />
+          </span>
+          <span class="disp text-[13px]" style="color:var(--accent-ink)">@ARCANA_OFICIAL</span>
+        </div>
+        <span class="disp text-[10px] tracking-[0.2em] mt-0.5" style="color:rgba(10,10,12,0.6)">#ARCANAVII · #COLISEO</span>
+      </div>
+
+      <!-- rótulo -->
+      <div class="flex flex-col justify-center shrink-0 pr-3">
+        <span class="disp italic text-[15px] sm:text-[17px] leading-none" style="color:var(--accent-ink)">PERSONAJES</span>
+        <span class="disp text-[11px] tracking-[0.15em] leading-none mt-0.5" style="color:rgba(10,10,12,0.65)">SAGA I–VII</span>
+      </div>
+
+      <!-- filmstrip -->
+      <div id="filmstrip" class="filmstrip flex-1 items-center" role="list" aria-label="Galería de personajes"></div>
+
+      <!-- index -->
+      <div class="flex items-center shrink-0 pl-2" style="border-left:1px solid rgba(10,10,12,0.18)">
+        <a href="#personajes" class="flex items-center gap-1.5 disp text-[13px] px-3 py-1.5" style="background:var(--accent-ink);color:var(--accent);border-radius:var(--radius)">
+          INDEX
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="14" y2="17"/></svg>
+        </a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ PERSONAJES ============ -->
+<section id="personajes" class="relative halftone py-16 sm:py-24" style="background:linear-gradient(180deg, var(--bg), var(--surface))">
+  <div class="relative z-10 mx-auto max-w-[1400px] px-4 sm:px-6">
+    <div class="flex items-end justify-between gap-4 mb-8 sm:mb-12">
+      <div>
+        <p class="disp text-[12px] tracking-[0.35em] mb-1" style="color:var(--accent)">BASE DE DATOS · 08 ARCANOS</p>
+        <h2 class="disp text-[clamp(44px,10vw,120px)]">PERSONAJES</h2>
+      </div>
+      <span class="hidden sm:block disp text-right text-sm max-w-[220px]" style="color:var(--fg-muted)">OCHO LUCHADORES. UN SOLO ARCANO MAYOR.</span>
+    </div>
+
+    <div id="charGrid" class="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4"></div>
+  </div>
+</section>
+
+<!-- ============ SAGA / HISTORIA ============ -->
+<section id="historia" class="relative overflow-hidden halftone" style="background:var(--bg)">
+  <div class="grid lg:grid-cols-2 min-h-[560px]">
+    <!-- texto -->
+    <div class="relative z-10 flex flex-col justify-center px-5 sm:px-10 lg:pl-[max(24px,calc((100vw-1400px)/2+24px))] py-16 lg:py-24">
+      <p class="disp text-[12px] tracking-[0.35em] mb-3" style="color:var(--accent)">LA SAGA · HISTORIA</p>
+      <h2 class="disp text-[clamp(40px,7vw,86px)] mb-6 max-w-[640px]">EL TORNEO DE<br/>LOS ARCANOS</h2>
+      <div class="max-w-[560px] space-y-4 text-[15px] leading-relaxed" style="color:var(--fg-muted)">
+        <p>Cada siglo, cuando los veintidós sellos se alinean, el Coliseo despierta y convoca a sus campeones. Quien dominé su arcano y derrote a los demás heredará el poder de reescribir el destino del mundo. ARCANA VII es la séptima convocatoria — y la más sangrienta.</p>
+        <p>En el centro de todo, una rivalidad que ha cruzado las siete sagas: <span style="color:var(--fg)">KAEL, el Heraldo de la Luz</span>, y <span style="color:var(--fg)">KORR, el Ocaso carmesí</span>. Maestro y discípulo, hermano contra hermano. Solo uno saldrá del Coliseo. El otro se convertirá en leyenda… o en advertencia.</p>
+      </div>
+      <a href="#" class="self-start mt-8 inline-flex items-center gap-2 disp text-sm px-5 py-2.5" style="border:1.5px solid var(--accent);color:var(--accent);border-radius:var(--radius);transition:background .12s,color .12s" onmouseover="this.style.background='var(--accent)';this.style.color='var(--accent-ink)'" onmouseout="this.style.background='transparent';this.style.color='var(--accent)'">
+        LEER LA HISTORIA
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><line x1="4" y1="12" x2="19" y2="12"/><polyline points="13 6 19 12 13 18"/></svg>
+      </a>
+    </div>
+
+    <!-- imagen -->
+    <div class="relative min-h-[340px] lg:min-h-full halftone">
+      <div class="absolute inset-0" style="background:radial-gradient(80% 90% at 70% 30%, rgba(214,58,74,0.28), transparent 60%), var(--surface)"></div>
+      <img src="https://images.openlen.com/arcana/korr.webp" alt="KORR, el Ocaso" class="absolute inset-0 w-full h-full object-contain object-bottom lg:object-right-bottom" style="filter:brightness(0.82) contrast(1.05)" onerror="this.style.opacity=0" />
+      <div class="absolute inset-0" style="background:linear-gradient(90deg, var(--bg) 0%, transparent 30%, transparent 70%, rgba(10,10,12,0.4) 100%)"></div>
+      <div class="absolute left-6 bottom-6 lg:hidden disp text-2xl" style="color:var(--fg)">KORR <span class="text-sm align-middle" style="color:var(--accent)">EL OCASO</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ TORNEO / NOTICIAS ============ -->
+<section id="noticias" class="relative halftone py-16 sm:py-24" style="background:var(--surface)">
+  <div class="relative z-10 mx-auto max-w-[1400px] px-4 sm:px-6">
+    <div class="flex items-end justify-between gap-4 mb-8 sm:mb-12">
+      <div>
+        <p class="disp text-[12px] tracking-[0.35em] mb-1" style="color:var(--accent)">TORNEO · COMUNICADOS</p>
+        <h2 class="disp text-[clamp(38px,8vw,96px)]">ÚLTIMAS NOTICIAS</h2>
+      </div>
+      <a href="#" class="hidden sm:inline-flex items-center gap-2 disp text-sm pb-2 saga-link" style="color:var(--accent)">VER TODAS</a>
+    </div>
+
+    <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4" id="newsGrid"></div>
+  </div>
+</section>
+
+<!-- ============ FOOTER ============ -->
+<footer class="relative" style="background:var(--bg);border-top:1px solid var(--border)">
+  <div class="mx-auto max-w-[1400px] px-4 sm:px-6 py-12">
+    <div class="grid md:grid-cols-[1.4fr_1fr_1fr_1fr] gap-8">
+      <div>
+        <div class="flex items-center gap-3 mb-4">
+          <span class="relative w-10 h-10 grid place-items-center shrink-0" style="border:1px solid var(--border-strong);border-radius:var(--radius)">
+            <span class="disp text-lg" style="color:var(--accent)">A</span>
+            <img src="https://images.openlen.com/arcana/logo.webp" alt="ARCANA" class="absolute inset-0 w-full h-full object-contain p-1" onerror="this.style.opacity=0" />
+          </span>
+          <span class="disp text-3xl">ARCANA</span>
+        </div>
+        <p class="text-[13px] max-w-[320px]" style="color:var(--fg-muted)">La saga de lucha de los arcanos mayores. Séptima convocatoria — El Coliseo está abierto.</p>
+        <div class="flex items-center gap-3 mt-5" style="color:var(--fg-muted)">
+          <a href="#" aria-label="X (Twitter)" class="hover:text-white" style="transition:color .12s"><svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2H21.5l-7.5 8.57L23 22h-6.844l-5.36-7.01L4.66 22H1.4l8.02-9.166L1 2h7.02l4.85 6.41L18.244 2Zm-1.2 18h1.9L7.02 3.9H5.0L17.044 20Z"/></svg></a>
+          <a href="#" aria-label="Instagram" class="hover:text-white" style="transition:color .12s"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="3.6"/><circle cx="17.4" cy="6.6" r="1" fill="currentColor" stroke="none"/></svg></a>
+          <a href="#" aria-label="YouTube" class="hover:text-white" style="transition:color .12s"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M23 12s0-3.2-.41-4.73a2.46 2.46 0 0 0-1.73-1.74C19.34 5.12 12 5.12 12 5.12s-7.34 0-8.86.41A2.46 2.46 0 0 0 1.4 7.27C1 8.8 1 12 1 12s0 3.2.41 4.73a2.46 2.46 0 0 0 1.73 1.74c1.52.41 8.86.41 8.86.41s7.34 0 8.86-.41a2.46 2.46 0 0 0 1.73-1.74C23 15.2 23 12 23 12ZM9.75 15.02V8.98L15 12l-5.25 3.02Z"/></svg></a>
+        </div>
+      </div>
+
+      <div>
+        <h3 class="disp text-sm mb-3" style="color:var(--fg-faint)">SAGA</h3>
+        <ul class="space-y-2 text-[13px]">
+          <li><a href="#historia" class="saga-link">Historia</a></li>
+          <li><a href="#personajes" class="saga-link">Personajes</a></li>
+          <li><a href="#noticias" class="saga-link">Torneo</a></li>
+        </ul>
+      </div>
+      <div>
+        <h3 class="disp text-sm mb-3" style="color:var(--fg-faint)">JUEGO</h3>
+        <ul class="space-y-2 text-[13px]">
+          <li><a href="#" class="saga-link">Reglas</a></li>
+          <li><a href="#" class="saga-link">e-Sports</a></li>
+          <li><a href="#" class="saga-link">Descargas</a></li>
+        </ul>
+      </div>
+      <div>
+        <h3 class="disp text-sm mb-3" style="color:var(--fg-faint)">MÁS</h3>
+        <ul class="space-y-2 text-[13px]">
+          <li><a href="#" class="saga-link">Contacto</a></li>
+          <li><a href="#" class="saga-link">Prensa</a></li>
+          <li><a href="#" class="saga-link">Soporte</a></li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mt-12 pt-6" style="border-top:1px solid var(--border)">
+      <p class="text-[12px]" style="color:var(--fg-faint)">© ARCANA — Todos los derechos reservados.</p>
+      <div class="flex items-center gap-2 text-[12px] disp">
+        <a href="#" class="lang-sel" aria-current="true">ESP</a><span style="color:var(--fg-faint)">·</span>
+        <a href="#" class="lang-sel">EN</a><span style="color:var(--fg-faint)">·</span>
+        <a href="#" class="lang-sel">JP</a>
+      </div>
+    </div>
+  </div>
+</footer>
+
+</main>
+
+<script>
+(function(){
+  "use strict";
+
+  // ---------- DATA ----------
+  var CHARS = [
+    { slug:"kael",   nombre:"KAEL",   arcano:"EL HERALDO",  elemento:"LUZ · ARTISTA MARCIAL", glow:"#E0B43A", rival:"KORR" },
+    { slug:"korr",   nombre:"KORR",   arcano:"EL OCASO",    elemento:"SOMBRA · JEFE FINAL",   glow:"#D63A4A", rival:"KAEL" },
+    { slug:"mora",   nombre:"MORA",   arcano:"LA SOMBRA",   elemento:"VENENO · KUNOICHI",     glow:"#8B5CF6", rival:"ISOLDE" },
+    { slug:"vesta",  nombre:"VESTA",  arcano:"LA PIRA",     elemento:"FUEGO · BOXEADORA",     glow:"#F4631E", rival:"VORN" },
+    { slug:"brann",  nombre:"BRANN",  arcano:"EL YUNQUE",   elemento:"TIERRA · AGARRADOR",    glow:"#C97A3A", rival:"AELITH" },
+    { slug:"aelith", nombre:"AELITH", arcano:"EL JUICIO",   elemento:"VIENTO · LUCHA AÉREA",  glow:"#38D0C4", rival:"BRANN" },
+    { slug:"vorn",   nombre:"VORN",   arcano:"LA SIEGA",    elemento:"TOXINA · GUADAÑERO",    glow:"#6FBF3A", rival:"VESTA" },
+    { slug:"isolde", nombre:"ISOLDE", arcano:"LA ESCARCHA", elemento:"HIELO · HECHICERA",     glow:"#4FA8E0", rival:"MORA" }
+  ];
+  var IMG_BASE = "https://images.openlen.com/arcana/";
+
+  // generic silhouette (data-uri) used as low-opacity fallback
+  var SIL = "data:image/svg+xml;utf8," + encodeURIComponent(
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 130"><g fill="rgba(255,255,255,0.10)"><circle cx="50" cy="34" r="20"/><path d="M50 58c-22 0-34 16-34 40v32h68V98c0-24-12-40-34-40Z"/></g></svg>'
+  );
+
+  function esc(s){ return String(s).replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
+
+  // ---------- FILMSTRIP ----------
+  var strip = document.getElementById("filmstrip");
+  CHARS.forEach(function(c){
+    var cell = document.createElement("div");
+    cell.className = "film-cell";
+    cell.setAttribute("role","listitem");
+    cell.setAttribute("title", c.nombre + " — " + c.arcano);
+    cell.innerHTML =
+      '<div style="position:absolute;inset:0;background:radial-gradient(80% 60% at 50% 0%, '+c.glow+'33, transparent 70%), #0A0A0C"></div>' +
+      '<img src="'+SIL+'" alt="" aria-hidden="true" style="position:absolute;inset:0;width:100%;height:100%;object-fit:contain;object-position:center bottom;opacity:.5"/>' +
+      '<img src="'+IMG_BASE+c.slug+'.webp" alt="'+esc(c.nombre)+'" style="position:absolute;inset:0;z-index:1;width:100%;height:100%;object-fit:cover;object-position:center top" onerror="this.style.opacity=0"/>';
+    strip.appendChild(cell);
+  });
+
+  // drag-scroll
+  (function(){
+    var isDown=false, startX=0, startScroll=0, moved=false;
+    strip.addEventListener("mousedown", function(e){ isDown=true; moved=false; startX=e.pageX; startScroll=strip.scrollLeft; strip.classList.add("dragging"); });
+    window.addEventListener("mouseup", function(){ isDown=false; strip.classList.remove("dragging"); });
+    window.addEventListener("mousemove", function(e){
+      if(!isDown) return; e.preventDefault();
+      var dx = e.pageX - startX; if(Math.abs(dx)>3) moved=true;
+      strip.scrollLeft = startScroll - dx;
+    });
+    strip.addEventListener("click", function(e){ if(moved){ e.preventDefault(); e.stopPropagation(); } }, true);
+    // wheel -> horizontal
+    strip.addEventListener("wheel", function(e){
+      if(Math.abs(e.deltaY) > Math.abs(e.deltaX)){ strip.scrollLeft += e.deltaY; e.preventDefault(); }
+    }, {passive:false});
+  })();
+
+  // ---------- CHAR GRID ----------
+  var grid = document.getElementById("charGrid");
+  CHARS.forEach(function(c){
+    var a = document.createElement("a");
+    a.href = "#personajes";
+    a.className = "char-card";
+    a.setAttribute("aria-label", c.nombre + ", " + c.arcano);
+    a.innerHTML =
+      '<div class="relative w-full aspect-[3/4] overflow-hidden">' +
+        '<div style="position:absolute;inset:0;background:radial-gradient(75% 55% at 50% 12%, '+c.glow+'2e, transparent 62%), linear-gradient(180deg,#17171b,#0e0e10)"></div>' +
+        '<img src="'+SIL+'" alt="" aria-hidden="true" style="position:absolute;left:50%;bottom:0;transform:translateX(-50%);height:80%;opacity:.5"/>' +
+        '<img class="bust" src="'+IMG_BASE+c.slug+'.webp" alt="'+esc(c.nombre)+'" style="position:absolute;inset:0;width:100%;height:100%;object-fit:contain;object-position:center bottom;filter:drop-shadow(0 12px 24px rgba(0,0,0,.5))" onerror="this.style.opacity=0"/>' +
+        '<div style="position:absolute;inset:0;background:linear-gradient(180deg,transparent 45%,rgba(10,10,12,0.75) 88%)"></div>' +
+        // elemento tag
+        '<span style="position:absolute;left:10px;top:10px;font-family:var(--font-display);font-style:italic;font-weight:800;font-size:10px;letter-spacing:.04em;padding:2px 7px;border-radius:2px;background:rgba(10,10,12,0.6);border:1px solid var(--border-strong);color:var(--fg)">'+esc(c.elemento.split(" · ")[0])+'</span>' +
+        '<span class="ver">VER <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"><polyline points="9 6 15 12 9 18"/></svg></span>' +
+      '</div>' +
+      '<div class="px-3 py-3" style="background:var(--surface)">' +
+        '<div class="flex items-baseline gap-2">' +
+          '<span class="disp text-2xl leading-none">'+esc(c.nombre)+'</span>' +
+          '<span class="disp italic text-[11px] leading-none" style="color:var(--accent)">'+esc(c.arcano)+'</span>' +
+        '</div>' +
+        '<div class="mt-1.5 text-[10.5px] tracking-wide" style="color:var(--fg-faint)">'+esc(c.elemento)+'</div>' +
+      '</div>';
+    grid.appendChild(a);
+  });
+
+  // ---------- NEWS ----------
+  var NEWS = [
+    { fecha:"2026.06.17", etiqueta:"Torneo",        titular:"Se abre el Coliseo de ARCANA VII: 64 luchadores confirmados", img:"news1", fb:"hero",   hue:42 },
+    { fecha:"2026.06.09", etiqueta:"Actualización", titular:"Parche 7.2 — Reequilibrio de VESTA y nuevo set de KORR",       img:"news2", fb:"korr",   hue:0 },
+    { fecha:"2026.05.28", etiqueta:"e-Sports",      titular:"La Liga de Arcanos anuncia su gran final en Tokio",           img:"news3", fb:"aelith", hue:200 }
+  ];
+  var newsGrid = document.getElementById("newsGrid");
+  NEWS.forEach(function(n){
+    var card = document.createElement("a");
+    card.href = "#";
+    card.className = "news-card block overflow-hidden";
+    card.style.cssText = "background:var(--surface-2);border:1px solid var(--border);border-radius:var(--radius)";
+    card.innerHTML =
+      '<div class="relative w-full aspect-[16/9] halftone overflow-hidden" style="background:linear-gradient(135deg, hsl('+n.hue+',45%,16%), #0d0d10)">' +
+        '<img src="'+IMG_BASE+n.img+'.webp" alt="" aria-hidden="true" data-fb="'+IMG_BASE+n.fb+'.webp" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center top;opacity:.9" onerror="if(this.dataset.fb){this.src=this.dataset.fb;this.removeAttribute(\'data-fb\');}else{this.style.opacity=0;}"/>' +
+        '<div style="position:absolute;inset:0;background:linear-gradient(180deg, rgba(10,10,12,0.12), rgba(10,10,12,0.72))"></div>' +
+        '<span style="position:absolute;left:10px;top:10px;font-family:var(--font-display);font-style:italic;font-weight:800;font-size:11px;padding:2px 8px;border-radius:2px;background:var(--accent);color:var(--accent-ink)">'+esc(n.etiqueta)+'</span>' +
+        '<span style="position:absolute;right:12px;bottom:10px;font-family:var(--font-display);font-style:italic;font-weight:900;font-size:40px;color:rgba(255,255,255,0.07)">VII</span>' +
+      '</div>' +
+      '<div class="p-4">' +
+        '<div class="text-[11px] mb-2" style="color:var(--fg-faint);font-variant-numeric:tabular-nums;font-family:ui-monospace,monospace">'+esc(n.fecha)+'</div>' +
+        '<h3 class="text-[15px] font-semibold leading-snug" style="color:var(--fg);text-wrap:pretty">'+esc(n.titular)+'</h3>' +
+        '<span class="inline-flex items-center gap-1 mt-3 disp text-[12px]" style="color:var(--accent)">LEER <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><polyline points="9 6 15 12 9 18"/></svg></span>' +
+      '</div>';
+    newsGrid.appendChild(card);
+  });
+
+  // ---------- MOBILE MENU ----------
+  var btn = document.getElementById("menuBtn");
+  var menu = document.getElementById("mobileMenu");
+  btn.addEventListener("click", function(){
+    var open = menu.classList.toggle("hidden") === false;
+    btn.setAttribute("aria-expanded", String(open));
+    btn.setAttribute("aria-label", open ? "Cerrar menú" : "Abrir menú");
+  });
+  menu.querySelectorAll("a").forEach(function(a){
+    a.addEventListener("click", function(){ menu.classList.add("hidden"); btn.setAttribute("aria-expanded","false"); });
+  });
+})();
+</script>
+</body>
+</html>
