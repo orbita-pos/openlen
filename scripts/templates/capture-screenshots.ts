@@ -21,6 +21,7 @@ import { db, schema } from "@/lib/db";
 import {
   captureTemplateScreenshot,
   launchScreenshotBrowser,
+  SCREENSHOT_VERSION,
 } from "@/lib/templates/capture-screenshot";
 
 const CONCURRENCY = 3;
@@ -46,10 +47,13 @@ async function listTargets(force: boolean): Promise<Row[]> {
   if (force) return rows;
 
   // Skip rows whose existing screenshotUrl already encodes the current
-  // contentHash — they're up to date. Match by the filename token so we
-  // aren't coupled to the URL prefix.
+  // contentHash AND the screenshot version — a version bump (capture-logic
+  // change) regenerates everything. Match by the filename token so we aren't
+  // coupled to the URL prefix.
   return rows.filter(
-    (r) => !r.screenshotUrl || !r.screenshotUrl.includes(`${r.id}-${r.contentHash}`),
+    (r) =>
+      !r.screenshotUrl ||
+      !r.screenshotUrl.includes(`${r.id}-${r.contentHash}-${SCREENSHOT_VERSION}`),
   );
 }
 
