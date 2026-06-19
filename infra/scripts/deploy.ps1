@@ -81,6 +81,20 @@ if (Test-Path "public") {
   New-Item -ItemType Directory -Force -Path ".next/standalone/public" | Out-Null
   Copy-Item -Recurse -Force "public/*" ".next/standalone/public/"
 }
+
+# Ship the tsx cron entrypoints + their source deps so the systemd timers
+# (openlen-bookings-remind, openlen-analytics-rollup) can actually run. The
+# standalone build traces only the server, not scripts/ or the full lib/
+# source; the timer units run `tsx ... scripts/*.ts` which needs those files
+# plus the @/* tsconfig path alias. node uses systemd's EnvironmentFile, so
+# --env-file-if-exists tolerates the absent .env.local on the box.
+New-Item -ItemType Directory -Force -Path ".next/standalone/scripts" | Out-Null
+Copy-Item -Recurse -Force "scripts/*" ".next/standalone/scripts/"
+New-Item -ItemType Directory -Force -Path ".next/standalone/lib" | Out-Null
+Copy-Item -Recurse -Force "lib/*" ".next/standalone/lib/"
+Copy-Item -Force "tsconfig.json" ".next/standalone/tsconfig.json"
+Copy-Item -Force "tsconfig.eval.json" ".next/standalone/tsconfig.eval.json"
+
 $size = (Get-ChildItem -Recurse ".next/standalone" | Measure-Object -Property Length -Sum).Sum
 Write-Host ("    standalone: {0} MB" -f [math]::Round($size/1MB, 1))
 
