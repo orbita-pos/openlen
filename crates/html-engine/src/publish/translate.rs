@@ -34,7 +34,12 @@ const EXCLUDED_TAGS: [&str; 12] = [
 
 const PLAIN_ATTRS: [&str; 4] = ["alt", "title", "placeholder", "aria-label"];
 
-const META_NAMES: [&str; 4] = ["description", "keywords", "twitter:title", "twitter:description"];
+const META_NAMES: [&str; 4] = [
+    "description",
+    "keywords",
+    "twitter:title",
+    "twitter:description",
+];
 const META_PROPERTIES: [&str; 4] = ["og:title", "og:description", "og:site_name", "og:image:alt"];
 
 enum Slot {
@@ -67,7 +72,9 @@ fn in_excluded_subtree(node: &NodeRef) -> bool {
 }
 
 fn meta_is_translatable(node: &NodeRef) -> bool {
-    let NodeData::Element(d) = node.data() else { return false };
+    let NodeData::Element(d) = node.data() else {
+        return false;
+    };
     let attrs = d.attributes.borrow();
     if let Some(name) = attrs.get("name") {
         if META_NAMES.contains(&name.to_ascii_lowercase().as_str()) {
@@ -83,7 +90,9 @@ fn meta_is_translatable(node: &NodeRef) -> bool {
 }
 
 fn input_value_is_translatable(node: &NodeRef) -> bool {
-    let NodeData::Element(d) = node.data() else { return false };
+    let NodeData::Element(d) = node.data() else {
+        return false;
+    };
     let attrs = d.attributes.borrow();
     attrs
         .get("type")

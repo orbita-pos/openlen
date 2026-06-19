@@ -193,21 +193,18 @@ static RGBA_BLACK_RE: Lazy<Regex> = Lazy::new(|| {
 // Tailwind `border-white/X` / `border-black/X` utilities. We only rewrite
 // when X is one of the over-cap steps. `\b` boundaries keep this from
 // matching things like `border-white/5-foo` if such a class ever existed.
-static TW_WHITE_RE: Lazy<Regex> = Lazy::new(|| {
-    Regex::new(r"\bborder-white/(\d{1,3})\b").expect("valid tailwind white regex")
-});
+static TW_WHITE_RE: Lazy<Regex> =
+    Lazy::new(|| Regex::new(r"\bborder-white/(\d{1,3})\b").expect("valid tailwind white regex"));
 
-static TW_BLACK_RE: Lazy<Regex> = Lazy::new(|| {
-    Regex::new(r"\bborder-black/(\d{1,3})\b").expect("valid tailwind black regex")
-});
+static TW_BLACK_RE: Lazy<Regex> =
+    Lazy::new(|| Regex::new(r"\bborder-black/(\d{1,3})\b").expect("valid tailwind black regex"));
 
 // Copy-detection: pull each <section>…</section>, then flatten its inner HTML
 // to text. Non-greedy + dotall; nested <section> is vanishingly rare in
 // generated marketing pages and a non-greedy match is fine for first-N-char
 // text extraction.
-static SECTION_RE: Lazy<Regex> = Lazy::new(|| {
-    Regex::new(r"(?is)<section\b[^>]*>(.*?)</section>").expect("valid section regex")
-});
+static SECTION_RE: Lazy<Regex> =
+    Lazy::new(|| Regex::new(r"(?is)<section\b[^>]*>(.*?)</section>").expect("valid section regex"));
 
 static TAG_RE: Lazy<Regex> =
     Lazy::new(|| Regex::new(r"(?s)<[^>]*>").expect("valid tag-strip regex"));
@@ -281,9 +278,7 @@ fn cap_border_alphas(html: &str, counts: &mut HardenCounts) -> String {
 fn format_alpha(a: f64) -> String {
     // Strip trailing zeros so `0.06` reads as `0.06` not `0.06000`.
     let s = format!("{:.2}", a);
-    s.trim_end_matches('0')
-        .trim_end_matches('.')
-        .to_string()
+    s.trim_end_matches('0').trim_end_matches('.').to_string()
 }
 
 // ─── Stage 2: normalize Tailwind border-white|black/{>5} → /5 ───────────────
@@ -529,9 +524,10 @@ mod tests {
         assert!(result.warnings.iter().any(|w| {
             w.kind == WarningKind::BannedPhrase && w.matched == "Streamline your workflow"
         }));
-        assert!(result.warnings.iter().any(|w| {
-            w.kind == WarningKind::BannedPhrase && w.matched == "cutting-edge"
-        }));
+        assert!(result
+            .warnings
+            .iter()
+            .any(|w| { w.kind == WarningKind::BannedPhrase && w.matched == "cutting-edge" }));
     }
 
     #[test]
@@ -594,9 +590,10 @@ mod tests {
     fn case_insensitive_phrase_matching() {
         let input = r#"<h1>STREAMLINE YOUR WORKFLOW</h1>"#;
         let result = harden_visual_quality(input);
-        assert!(result.warnings.iter().any(|w| {
-            w.matched.eq_ignore_ascii_case("Streamline your workflow")
-        }));
+        assert!(result
+            .warnings
+            .iter()
+            .any(|w| { w.matched.eq_ignore_ascii_case("Streamline your workflow") }));
     }
 
     #[test]

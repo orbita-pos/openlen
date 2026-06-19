@@ -171,9 +171,7 @@ impl TryFrom<StreamRequest> for NativeStreamRequest {
         }
         if let Some(schema_json) = r.response_schema_json {
             let schema: serde_json::Value = serde_json::from_str(&schema_json).map_err(|e| {
-                napi::Error::from_reason(format!(
-                    "responseSchemaJson is not valid JSON: {e}"
-                ))
+                napi::Error::from_reason(format!("responseSchemaJson is not valid JSON: {e}"))
             })?;
             req = req.with_response_schema(schema);
         }
@@ -446,10 +444,15 @@ mod tests {
             temperature: None,
             images: None,
             response_mime_type: Some("application/json".to_owned()),
-            response_schema_json: Some(r#"{"type":"OBJECT","properties":{"ok":{"type":"BOOLEAN"}}}"#.to_owned()),
+            response_schema_json: Some(
+                r#"{"type":"OBJECT","properties":{"ok":{"type":"BOOLEAN"}}}"#.to_owned(),
+            ),
         };
         let native: NativeStreamRequest = r.try_into().unwrap();
-        assert_eq!(native.response_mime_type.as_deref(), Some("application/json"));
+        assert_eq!(
+            native.response_mime_type.as_deref(),
+            Some("application/json")
+        );
         let schema = native.response_schema.expect("schema parsed");
         assert_eq!(schema["type"], "OBJECT");
         assert_eq!(schema["properties"]["ok"]["type"], "BOOLEAN");
@@ -470,7 +473,9 @@ mod tests {
             response_schema_json: Some("{not valid json".to_owned()),
         };
         let err = NativeStreamRequest::try_from(r).unwrap_err();
-        assert!(err.to_string().contains("responseSchemaJson is not valid JSON"));
+        assert!(err
+            .to_string()
+            .contains("responseSchemaJson is not valid JSON"));
     }
 
     #[test]

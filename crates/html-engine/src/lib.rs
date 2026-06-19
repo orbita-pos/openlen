@@ -412,10 +412,7 @@ pub struct JsPhotoApplyResult {
 }
 
 #[napi]
-pub fn apply_photo_slots(
-    html: String,
-    assignments: Vec<JsPhotoAssignment>,
-) -> JsPhotoApplyResult {
+pub fn apply_photo_slots(html: String, assignments: Vec<JsPhotoAssignment>) -> JsPhotoApplyResult {
     let native: Vec<publish::PhotoAssignment> = assignments
         .into_iter()
         .map(|a| publish::PhotoAssignment {
@@ -432,11 +429,7 @@ pub fn apply_photo_slots(
 }
 
 #[napi]
-pub fn reinject_translatables(
-    html: String,
-    texts: Vec<String>,
-    lang: String,
-) -> Option<String> {
+pub fn reinject_translatables(html: String, texts: Vec<String>, lang: String) -> Option<String> {
     publish::reinject_translatables(&html, &texts, &lang)
 }
 
