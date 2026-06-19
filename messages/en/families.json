@@ -32,5 +32,6 @@
   "wedding": { "label": "Wedding", "tagline": "A couple's wedding website — names + date hero, the story, the day-of schedule, venue + travel, RSVP, and registry." },
   "travel": { "label": "Travel & Tourism", "tagline": "Tour operators, trip planners, and destination marketing. Day-by-day itineraries, departure dates, route maps, booking CTA." },
   "food-beverage": { "label": "Food & Beverage", "tagline": "Consumer F&B brands — coffee, craft drinks, chocolate, pantry staples, snacks. Brand story, the product range, ingredients, where to buy." },
-  "fashion": { "label": "Fashion & Apparel", "tagline": "Fashion labels and seasonal collections — lookbooks, drops, the brand's point of view, fabric + craft, stockists. Image-forward." }
+  "fashion": { "label": "Fashion & Apparel", "tagline": "Fashion labels and seasonal collections — lookbooks, drops, the brand's point of view, fabric + craft, stockists. Image-forward." },
+  "photography": { "label": "Photography", "tagline": "Photographer portfolios — full-bleed galleries, series, the studio statement, and a booking CTA. Image-driven, restrained type." }
 }
