@@ -4,7 +4,7 @@ import { ArrowRight, Star } from "lucide-react";
 import { GithubIcon } from "@/components/ui/brand-icons";
 import { countProjectsSince } from "@/lib/projects";
 import { countTemplates } from "@/lib/templates/store";
-import { HeroPromptInput } from "./hero-prompt-input";
+import { HeroProduct } from "./hero-product";
 
 const avatarColors = ["#FF5A36", "#22d3ee", "#a78bfa", "#facc15", "#34d399"];
 
@@ -19,6 +19,9 @@ async function getRepoStars(): Promise<number | null> {
         Accept: "application/vnd.github+json",
         "User-Agent": "openlen-site",
       },
+      // Cap the wait so a slow/unreachable GitHub can't stall the home SSR —
+      // the chip just hides (caught below → null) instead of hanging the page.
+      signal: AbortSignal.timeout(2500),
       next: { revalidate: 3600 },
     });
     if (!res.ok) return null;
@@ -55,8 +58,8 @@ export async function Hero() {
         aria-hidden
       />
 
-      <div className="relative mx-auto max-w-6xl px-6 pt-20 pb-24 sm:pt-28 sm:pb-32">
-        <div className="flex flex-col items-center text-center">
+      <div className="relative mx-auto max-w-7xl px-6 pt-14 sm:pt-20">
+        <div className="flex flex-col items-start text-left">
           <Link
             href="/templates"
             className="group inline-flex items-center gap-2 rounded-full bg-white dark:bg-zinc-950 ring-1 ring-zinc-200 dark:ring-zinc-800 px-3 py-1 text-xs font-medium text-zinc-700 dark:text-zinc-300 shadow-sm hover:ring-zinc-300 dark:hover:ring-zinc-700 transition"
@@ -71,7 +74,7 @@ export async function Hero() {
             />
           </Link>
 
-          <h1 className="mt-7 max-w-4xl text-balance text-5xl sm:text-6xl md:text-7xl font-semibold tracking-tightest leading-[1.02]">
+          <h1 className="mt-6 max-w-4xl text-pretty text-5xl sm:text-6xl md:text-7xl lg:text-[76px] font-semibold tracking-tightest leading-[1.01]">
             {t.rich("hero.title", {
               br: () => <br />,
               muted: (chunks) => (
@@ -95,15 +98,8 @@ export async function Hero() {
               ),
             })}
           </p>
-          <p className="mt-3 max-w-xl text-pretty text-sm text-zinc-500 dark:text-zinc-400">
-            {t("hero.tagline")}
-          </p>
 
-          <div className="mt-10 w-full max-w-2xl">
-            <HeroPromptInput />
-          </div>
-
-          <div className="mt-5 flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-xs text-zinc-500 dark:text-zinc-400">
+          <div className="mt-8 flex flex-wrap items-center justify-start gap-x-4 gap-y-2 text-xs text-zinc-500 dark:text-zinc-400">
             {pagesThisWeek > 0 && (
               <>
                 <div className="flex items-center gap-2">
@@ -150,6 +146,12 @@ export async function Hero() {
           </div>
 
         </div>
+      </div>
+
+      {/* Product mock — wider than the copy column, anchored below it so its top
+          peeks into the fold (Framer/Linear style) and bleeds off the bottom. */}
+      <div className="relative mx-auto max-w-[88rem] px-6 mt-10 pb-20 sm:mt-14 sm:pb-24">
+        <HeroProduct />
       </div>
 
       <div

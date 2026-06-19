@@ -16,8 +16,7 @@
     "alphaBadge": "Alpha",
     "alphaPitch": "{count} handgemaakte templates — gratis tijdens de alpha",
     "title": "Landingspagina's die echt van jou zijn.<br></br><muted>AI-gebouwd.</muted> <gradient>Open source.</gradient>",
-    "subtitle": "Genereer vanuit een prompt, kies uit <strong>{count} templates</strong> of plak je eigen HTML. Bewerk, publiceer naar je subdomein en krijg <strong>privacy-first analytics</strong> standaard ingebouwd.",
-    "tagline": "Jouw HTML. Jouw subdomein. AGPLv3 — fork, controleer, self-host. Geen lock-in, geen toestemmingsbanners.",
+    "subtitle": "Genereer vanuit een prompt, kies een template of plak je eigen HTML. Publiceer op <strong>je subdomein</strong>.",
     "pagesThisWeek": "<strong>{count, number}</strong> pagina's deze week gegenereerd",
     "githubAria": "OpenLen op GitHub",
     "starOnGithub": "Geef een ster op GitHub"

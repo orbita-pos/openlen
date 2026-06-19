@@ -16,8 +16,7 @@
     "alphaBadge": "Alpha",
     "alphaPitch": "{count} handgebaute Vorlagen — während der Alpha kostenlos",
     "title": "Landingpages, die dir gehören.<br></br><muted>KI-gebaut.</muted> <gradient>Open Source.</gradient>",
-    "subtitle": "Erstelle aus einem Prompt, wähle aus <strong>{count} Vorlagen</strong> oder füge dein eigenes HTML ein. Bearbeite, veröffentliche auf deiner Subdomain und erhalte integrierte <strong>datenschutzfreundliche Analytics</strong>.",
-    "tagline": "Dein HTML. Deine Subdomain. AGPLv3 — forken, prüfen, selbst hosten. Kein Lock-in, keine Cookie-Banner.",
+    "subtitle": "Aus einem Prompt generieren, eine Vorlage wählen oder eigenes HTML einfügen. Auf <strong>deiner Subdomain</strong> veröffentlichen.",
     "pagesThisWeek": "<strong>{count, number}</strong> Seiten diese Woche erstellt",
     "githubAria": "OpenLen auf GitHub",
     "starOnGithub": "Auf GitHub mit Stern markieren"
