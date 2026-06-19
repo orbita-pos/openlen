@@ -32,5 +32,6 @@
   "wedding": { "label": "Bruiloft", "tagline": "De trouwwebsite van een stel — namen + datum als hero, het verhaal, het dagprogramma, locatie + reizen, RSVP en cadeaulijst." },
   "travel": { "label": "Reizen & Toerisme", "tagline": "Touroperators, reisplanners en bestemmingsmarketing. Dag-tot-dagreisschema's, vertrekdata, routekaarten, boekings-CTA." },
   "food-beverage": { "label": "Eten & Drinken", "tagline": "Consumentenmerken in eten en drinken — koffie, ambachtelijke dranken, chocolade, voorraadkastbasics, snacks. Merkverhaal, het assortiment, ingrediënten, waar te koop." },
-  "fashion": { "label": "Mode & Kleding", "tagline": "Modelabels en seizoenscollecties — lookbooks, drops, de visie van het merk, stof + ambacht, verkooppunten. Beeldgedreven." }
+  "fashion": { "label": "Mode & Kleding", "tagline": "Modelabels en seizoenscollecties — lookbooks, drops, de visie van het merk, stof + ambacht, verkooppunten. Beeldgedreven." },
+  "photography": { "label": "Fotografie", "tagline": "Fotografenportfolio's — paginavullende galerijen, series, het studiostatement en een boekings-CTA. Beeldgedreven, ingetogen typografie." }
 }

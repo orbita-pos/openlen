@@ -32,5 +32,6 @@
   "wedding": { "label": "Hochzeit", "tagline": "Die Hochzeitswebsite eines Paares – Namen + Datum als Hero, die Geschichte, der Tagesablauf, Location + Anreise, RSVP und Geschenkeliste." },
   "travel": { "label": "Reisen & Tourismus", "tagline": "Reiseveranstalter, Reiseplaner und Destinationsmarketing. Tag-für-Tag-Reiseverläufe, Abreisedaten, Routenkarten, Buchungs-CTA." },
   "food-beverage": { "label": "Food & Beverage", "tagline": "Endkunden-Marken für Essen & Trinken – Kaffee, Craft-Getränke, Schokolade, Vorratsgrundlagen, Snacks. Markengeschichte, das Produktsortiment, Zutaten, Bezugsquellen." },
-  "fashion": { "label": "Mode & Bekleidung", "tagline": "Modemarken und saisonale Kollektionen – Lookbooks, Drops, der Standpunkt der Marke, Stoff + Handwerk, Verkaufsstellen. Bildstark." }
+  "fashion": { "label": "Mode & Bekleidung", "tagline": "Modemarken und saisonale Kollektionen – Lookbooks, Drops, der Standpunkt der Marke, Stoff + Handwerk, Verkaufsstellen. Bildstark." },
+  "photography": { "label": "Fotografie", "tagline": "Fotografen-Portfolios — vollflächige Galerien, Serien, das Studio-Statement und ein Buchungs-CTA. Bildgetrieben, zurückhaltende Typografie." }
 }

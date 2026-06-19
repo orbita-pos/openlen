@@ -37,7 +37,8 @@ export type TemplateFamily =
   | "wedding"
   | "travel"
   | "food-beverage"
-  | "fashion";
+  | "fashion"
+  | "photography";
 
 export type TemplateMode = "dark" | "light" | "cream";
 export type TemplateStatus = "draft" | "published" | "archived";
@@ -215,5 +216,10 @@ export const TEMPLATE_FAMILY_META: Record<
     label: "Fashion & Apparel",
     tagline:
       "Fashion labels and seasonal collections — lookbooks, drops, the brand's point of view, fabric + craft, stockists. Image-forward.",
+  },
+  photography: {
+    label: "Photography",
+    tagline:
+      "Photographer portfolios — full-bleed galleries, series, the studio statement, and a booking CTA. Image-driven, restrained type.",
   },
 };

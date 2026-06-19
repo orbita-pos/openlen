@@ -174,6 +174,11 @@ const FAMILY_KEYWORDS: Record<TemplateFamily, string[]> = {
     "fashion", "moda", "apparel", "ropa", "clothing", "collection", "coleccion",
     "runway", "lookbook", "streetwear", "seasonal",
   ],
+  photography: [
+    "photography", "fotografia", "photographer", "fotografo", "photo", "foto",
+    "portfolio", "portafolio", "editorial", "studio", "gallery", "galeria",
+    "lookbook", "model", "modelo", "shoot",
+  ],
 };
 
 // Tiebreak order when families score equally — common, high-quality-template

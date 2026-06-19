@@ -32,5 +32,6 @@
   "wedding": { "label": "Matrimonio", "tagline": "Il sito del matrimonio di una coppia — hero con nomi + data, la storia, il programma del giorno, location + come arrivare, RSVP e lista nozze." },
   "travel": { "label": "Viaggi e turismo", "tagline": "Tour operator, organizzatori di viaggi e marketing di destinazione. Itinerari giorno per giorno, date di partenza, mappe dei percorsi, CTA di prenotazione." },
   "food-beverage": { "label": "Food & Beverage", "tagline": "Brand consumer del food & beverage — caffè, drink artigianali, cioccolato, prodotti da dispensa, snack. La storia del brand, la gamma di prodotti, gli ingredienti, dove acquistare." },
-  "fashion": { "label": "Moda e abbigliamento", "tagline": "Brand di moda e collezioni stagionali — lookbook, drop, il punto di vista del brand, tessuti + artigianalità, rivenditori. Centrati sulle immagini." }
+  "fashion": { "label": "Moda e abbigliamento", "tagline": "Brand di moda e collezioni stagionali — lookbook, drop, il punto di vista del brand, tessuti + artigianalità, rivenditori. Centrati sulle immagini." },
+  "photography": { "label": "Fotografia", "tagline": "Portfolio di fotografi — gallerie a tutto schermo, serie, la nota dello studio e una CTA di prenotazione. Guidato dalle immagini, tipografia sobria." }
 }
