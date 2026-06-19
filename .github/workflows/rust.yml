@@ -62,16 +62,25 @@ jobs:
       - name: cargo clippy
         run: cargo clippy -p openlen-html-engine --all-targets -- -D warnings
 
-      - name: cargo test
+      # Windows links the napi cdylib's napi_* symbols via delay-load, so the
+      # standalone test binaries (incl. integration tests) build and run fine.
+      - name: cargo test (full suite)
+        if: runner.os == 'Windows'
         run: cargo test -p openlen-html-engine --all-targets
-        # The napi cdylib references napi_* symbols that only the Node runtime
-        # provides. Standalone test binaries link fine on Windows (delay-load)
-        # but fail on Linux. The integration tests exercise pure-Rust paths and
-        # never call into those symbols, so let the Linux test link tolerate
-        # them as undefined. Production .node builds (rust-prebuild.yml) are
-        # unaffected — this flag is scoped to this step on Linux only.
+
+      # On Linux those napi_* symbols are only provided by the Node runtime.
+      # The link-arg lets the test binaries link past them as undefined, but the
+      # integration-test executables still abort at *load* — napi's module-
+      # registration constructor calls napi_create_function during process
+      # startup, before any test runs. The unit tests (--lib) don't trip that
+      # constructor and exercise the same pure-Rust logic; the full integration
+      # suite is covered by the Windows leg above. Production .node builds
+      # (rust-prebuild.yml / napi build) are unaffected by this scoped flag.
+      - name: cargo test (lib only — napi bins can't load standalone)
+        if: runner.os == 'Linux'
+        run: cargo test -p openlen-html-engine --lib
         env:
-          RUSTFLAGS: ${{ runner.os == 'Linux' && '-D warnings -C link-arg=-Wl,--unresolved-symbols=ignore-all' || '-D warnings' }}
+          RUSTFLAGS: "-D warnings -C link-arg=-Wl,--unresolved-symbols=ignore-all"
 
       - name: npm install (crate)
         working-directory: crates/html-engine
