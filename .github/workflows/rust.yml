@@ -64,6 +64,14 @@ jobs:
 
       - name: cargo test
         run: cargo test -p openlen-html-engine --all-targets
+        # The napi cdylib references napi_* symbols that only the Node runtime
+        # provides. Standalone test binaries link fine on Windows (delay-load)
+        # but fail on Linux. The integration tests exercise pure-Rust paths and
+        # never call into those symbols, so let the Linux test link tolerate
+        # them as undefined. Production .node builds (rust-prebuild.yml) are
+        # unaffected — this flag is scoped to this step on Linux only.
+        env:
+          RUSTFLAGS: ${{ runner.os == 'Linux' && '-D warnings -C link-arg=-Wl,--unresolved-symbols=ignore-all' || '-D warnings' }}
 
       - name: npm install (crate)
         working-directory: crates/html-engine
