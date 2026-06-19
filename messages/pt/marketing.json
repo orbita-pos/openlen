@@ -16,8 +16,7 @@
     "alphaBadge": "Alpha",
     "alphaPitch": "{count} templates feitos à mão — grátis durante o alpha",
     "title": "Landing pages que são suas.<br></br><muted>Criadas com IA.</muted> <gradient>Código aberto.</gradient>",
-    "subtitle": "Gere a partir de um prompt, escolha entre <strong>{count} templates</strong> ou cole seu próprio HTML. Edite, publique no seu subdomínio e tenha <strong>analytics que respeitam a privacidade</strong> de fábrica.",
-    "tagline": "Seu HTML. Seu subdomínio. AGPLv3 — bifurque, audite, hospede você mesmo. Sem aprisionamento, sem banners de consentimento.",
+    "subtitle": "Gere a partir de um prompt, escolha um modelo ou cole seu HTML. Publique no <strong>seu subdomínio</strong>.",
     "pagesThisWeek": "<strong>{count, number}</strong> páginas geradas esta semana",
     "githubAria": "OpenLen no GitHub",
     "starOnGithub": "Dar estrela no GitHub"

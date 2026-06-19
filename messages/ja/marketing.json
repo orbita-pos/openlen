@@ -16,8 +16,7 @@
     "alphaBadge": "アルファ版",
     "alphaPitch": "手作りのテンプレート {count} 点 — アルファ版の間は無料",
     "title": "あなたが所有するランディングページ。<br></br><muted>AIで構築。</muted> <gradient>オープンソース。</gradient>",
-    "subtitle": "プロンプトから生成、<strong>{count} 点のテンプレート</strong>から選択、または自分の HTML を貼り付け。編集してサブドメインに公開、<strong>プライバシー重視のアナリティクス</strong>を標準搭載。",
-    "tagline": "あなたの HTML。あなたのサブドメイン。AGPLv3 — フォーク、監査、セルフホストが自由。ロックインなし、同意バナーなし。",
+    "subtitle": "プロンプトから生成、テンプレートを選択、または自分のHTMLを貼り付け。<strong>あなたのサブドメイン</strong>に公開。",
     "pagesThisWeek": "今週生成されたページ数は <strong>{count, number}</strong>",
     "githubAria": "GitHub の OpenLen",
     "starOnGithub": "GitHub でスターを付ける"

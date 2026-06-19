@@ -16,8 +16,7 @@
     "alphaBadge": "알파",
     "alphaPitch": "직접 제작한 템플릿 {count}개 — 알파 기간 동안 무료",
     "title": "당신이 소유하는 랜딩 페이지.<br></br><muted>AI가 제작.</muted> <gradient>오픈 소스.</gradient>",
-    "subtitle": "프롬프트로 생성하거나, <strong>템플릿 {count}개</strong> 중에서 고르거나, 직접 만든 HTML을 붙여넣으세요. 편집하고, 내 서브도메인에 게시하고, <strong>프라이버시 우선 분석</strong>을 기본으로 사용하세요.",
-    "tagline": "당신의 HTML. 당신의 서브도메인. AGPLv3 — 포크하고, 감사하고, 직접 호스팅하세요. 종속도, 동의 배너도 없습니다.",
+    "subtitle": "프롬프트로 생성하거나, 템플릿을 고르거나, 직접 만든 HTML을 붙여넣으세요. <strong>나만의 서브도메인</strong>에 게시하세요.",
     "pagesThisWeek": "이번 주 생성된 페이지 <strong>{count, number}</strong>개",
     "githubAria": "GitHub의 OpenLen",
     "starOnGithub": "GitHub에서 Star 누르기"

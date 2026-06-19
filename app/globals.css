@@ -330,3 +330,34 @@ body.workspace-locked {
   min-height: 0;
   overflow: hidden;
 }
+
+/* Hero product mock (components/marketing/hero-product.tsx) — the Len editor
+   replica. Same token palette as the real workspace (app/[locale]/new/tokens.css):
+   light by default, dark when an ancestor has `.dark`, so the mock tracks the
+   marketing site's theme instead of being a permanent dark slab. */
+.hero-product {
+  --bg:            oklch(99% 0.003 12);
+  --bg-sidebar:    oklch(97% 0.005 12);
+  --bg-preview:    oklch(98% 0.003 12);
+  --bg-elev:       oklch(100% 0 0);
+  --fg:            oklch(15% 0.01 12);
+  --fg-muted:      oklch(45% 0.01 12);
+  --fg-faint:      oklch(48% 0.01 12);
+  --border:        oklch(85% 0.005 12 / 0.6);
+  --hover:         oklch(95% 0.005 12);
+  --accent:        #FF5A36;
+  --accent-strong: #D63916;
+  --accent-soft:   oklch(96% 0.04 30);
+}
+.dark .hero-product {
+  --bg:            oklch(11% 0.01 12);
+  --bg-sidebar:    oklch(13% 0.01 12);
+  --bg-preview:    oklch(10% 0.01 12);
+  --bg-elev:       oklch(15% 0.01 12);
+  --fg:            oklch(96% 0.005 12);
+  --fg-muted:      oklch(65% 0.01 12);
+  --fg-faint:      oklch(64% 0.01 12);
+  --border:        oklch(25% 0.01 12 / 0.7);
+  --hover:         oklch(18% 0.01 12);
+  --accent-soft:   oklch(28% 0.07 30);
+}
