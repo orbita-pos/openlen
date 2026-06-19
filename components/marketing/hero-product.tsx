@@ -227,7 +227,8 @@ export function HeroProduct() {
                   src="/hero-margot.webp"
                   alt="Página de fotógrafo creada con Len"
                   className="block w-full h-auto"
-                  loading="lazy"
+                  loading="eager"
+                  fetchPriority="high"
                   decoding="async"
                 />
               </div>
