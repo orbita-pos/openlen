@@ -14,7 +14,7 @@ Group=www-data
 WorkingDirectory=/opt/openlen-app
 EnvironmentFile=/etc/openlen/openlen.env
 
-ExecStart=/usr/bin/npm run bookings:remind
+ExecStart=/usr/bin/node /opt/openlen-app/cron/bookings-remind.mjs
 
 StandardOutput=journal
 StandardError=journal
