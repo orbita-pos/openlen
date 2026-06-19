@@ -259,11 +259,13 @@ mod tests {
 
     #[test]
     fn with_images_attaches_and_serializes() {
-        let req = StreamRequest::new("gemini-2.5-flash", vec![Message::user("hi")])
-            .with_images(vec![InlineImage {
-                mime_type: "image/jpeg".into(),
-                data_base64: "QUJD".into(),
-            }]);
+        let req =
+            StreamRequest::new("gemini-2.5-flash", vec![Message::user("hi")]).with_images(vec![
+                InlineImage {
+                    mime_type: "image/jpeg".into(),
+                    data_base64: "QUJD".into(),
+                },
+            ]);
         assert_eq!(req.images.len(), 1);
         let v: serde_json::Value = serde_json::to_value(&req).unwrap();
         assert_eq!(v["images"][0]["mime_type"], "image/jpeg");

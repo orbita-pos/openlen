@@ -173,7 +173,9 @@ fn strip_credential_inputs(doc: &NodeRef) {
     };
     for input in inputs {
         let is_credential = {
-            let NodeData::Element(d) = input.data() else { continue };
+            let NodeData::Element(d) = input.data() else {
+                continue;
+            };
             let attrs = d.attributes.borrow();
             let is_password = attrs
                 .get("type")
@@ -391,7 +393,12 @@ mod tests {
             <textarea name="message"></textarea>
         </form></body>"#;
         let out = wire_published_forms(html, ACTION, &[]);
-        for field in ["name=\"name\"", "name=\"email\"", "name=\"phone\"", "name=\"message\""] {
+        for field in [
+            "name=\"name\"",
+            "name=\"email\"",
+            "name=\"phone\"",
+            "name=\"message\"",
+        ] {
             assert!(out.contains(field), "missing {field}");
         }
     }

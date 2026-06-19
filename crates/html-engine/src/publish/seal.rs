@@ -147,7 +147,9 @@ fn add_noopener(doc: &NodeRef) -> u32 {
     };
     let mut added = 0u32;
     for a in anchors {
-        let NodeData::Element(d) = a.data() else { continue };
+        let NodeData::Element(d) = a.data() else {
+            continue;
+        };
         let mut attrs = d.attributes.borrow_mut();
         let is_blank = attrs
             .get("target")
@@ -186,7 +188,9 @@ fn collect_scripts(doc: &NodeRef) -> (Vec<String>, Vec<String>, Option<String>) 
     };
     for s in scripts {
         let src = {
-            let NodeData::Element(d) = s.data() else { continue };
+            let NodeData::Element(d) = s.data() else {
+                continue;
+            };
             let attrs = d.attributes.borrow();
             attrs.get("src").map(str::to_string)
         };
@@ -261,7 +265,9 @@ fn build_policy(
 /// Insert the policy meta right after `<meta charset>` when present (charset
 /// should stay first in head), else as the first child of <head>.
 fn inject_csp_meta(doc: &NodeRef, policy: &str) {
-    let Ok(head) = doc.select_first("head") else { return };
+    let Ok(head) = doc.select_first("head") else {
+        return;
+    };
     let head_node = head.as_node().clone();
     let meta_html = format!(
         r#"<meta http-equiv="Content-Security-Policy" content="{}" data-ol-csp>"#,
@@ -269,7 +275,10 @@ fn inject_csp_meta(doc: &NodeRef, policy: &str) {
     );
     let nodes = parse_fragment_children(&meta_html);
 
-    let charset = doc.select("meta[charset]").ok().and_then(|mut it| it.next());
+    let charset = doc
+        .select("meta[charset]")
+        .ok()
+        .and_then(|mut it| it.next());
     if let Some(anchor) = charset {
         let anchor_node = anchor.as_node().clone();
         // insert_after reverses ordering for multiple nodes; we have one.
@@ -288,7 +297,10 @@ mod tests {
     use super::*;
 
     fn hash_token(text: &str) -> String {
-        format!("'sha256-{}'", BASE64.encode(Sha256::digest(text.as_bytes())))
+        format!(
+            "'sha256-{}'",
+            BASE64.encode(Sha256::digest(text.as_bytes()))
+        )
     }
 
     #[test]
@@ -313,7 +325,7 @@ mod tests {
         let r = seal_release(&html, None);
         assert!(r.sealed);
         assert_eq!(r.script_hashes, vec![hash_token(body)]);
-        assert!(r.html.contains(&hash_token(body).replace('\'', "'")));
+        assert!(r.html.contains(&hash_token(body)));
     }
 
     #[test]
@@ -330,7 +342,8 @@ mod tests {
 
     #[test]
     fn external_cdn_script_allowlisted_by_origin() {
-        let html = r#"<head><script src="https://cdn.tailwindcss.com"></script></head><body></body>"#;
+        let html =
+            r#"<head><script src="https://cdn.tailwindcss.com"></script></head><body></body>"#;
         let r = seal_release(html, None);
         assert!(r.sealed);
         assert_eq!(r.external_scripts, vec!["https://cdn.tailwindcss.com"]);
@@ -406,7 +419,8 @@ mod tests {
 
     #[test]
     fn meta_placed_after_charset() {
-        let html = r#"<html><head><meta charset="utf-8"><title>t</title></head><body></body></html>"#;
+        let html =
+            r#"<html><head><meta charset="utf-8"><title>t</title></head><body></body></html>"#;
         let r = seal_release(html, None);
         let charset_pos = r.html.find("charset").unwrap();
         let csp_pos = r.html.find("data-ol-csp").unwrap();

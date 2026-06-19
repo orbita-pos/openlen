@@ -516,7 +516,10 @@ mod tests {
         assert_eq!(body.contents[0].role, "user");
         let si = body.system_instruction.as_ref().unwrap();
         assert_eq!(si.parts.len(), 1);
-        assert_eq!(si.parts[0].text.as_deref(), Some("you are a helpful assistant"));
+        assert_eq!(
+            si.parts[0].text.as_deref(),
+            Some("you are a helpful assistant")
+        );
     }
 
     #[test]
@@ -606,11 +609,11 @@ mod tests {
 
         // Native camelCase wire shape under generationConfig.
         let v: serde_json::Value = serde_json::to_value(&body).unwrap();
-        assert_eq!(v["generationConfig"]["responseMimeType"], "application/json");
         assert_eq!(
-            v["generationConfig"]["responseSchema"]["type"],
-            "OBJECT"
+            v["generationConfig"]["responseMimeType"],
+            "application/json"
         );
+        assert_eq!(v["generationConfig"]["responseSchema"]["type"], "OBJECT");
         assert_eq!(
             v["generationConfig"]["responseSchema"]["properties"]["shouldRegenerate"]["type"],
             "BOOLEAN"

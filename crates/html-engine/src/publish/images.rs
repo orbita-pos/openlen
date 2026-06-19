@@ -89,7 +89,9 @@ pub fn rewrite_responsive_images(html: &str, images: &[ResponsiveImage]) -> Rewr
             })
             .unwrap_or(false);
 
-        let NodeData::Element(d) = node.data() else { continue };
+        let NodeData::Element(d) = node.data() else {
+            continue;
+        };
         let mut attrs = d.attributes.borrow_mut();
 
         if in_picture || attrs.get("srcset").is_some() {
@@ -106,8 +108,7 @@ pub fn rewrite_responsive_images(html: &str, images: &[ResponsiveImage]) -> Rewr
             .get("loading")
             .map(|v| v.eq_ignore_ascii_case("lazy"))
             .unwrap_or(false);
-        let is_hero =
-            !hero_seen && entry.width >= HERO_MIN_WIDTH && !author_lazy;
+        let is_hero = !hero_seen && entry.width >= HERO_MIN_WIDTH && !author_lazy;
 
         attrs.insert("src", entry.fallback_src.clone());
         attrs.insert("srcset", entry.srcset.clone());
@@ -224,7 +225,9 @@ mod tests {
         let r = rewrite_responsive_images(html, &[entry("/a.jpg", 1600, 900)]);
         assert_eq!(r.rewritten, 1);
         assert!(r.html.contains(r#"src="/assets/hash-1600w.webp""#));
-        assert!(r.html.contains(r#"srcset="/assets/hash-400w.webp 400w, /assets/hash-1600w.webp 1600w""#));
+        assert!(r
+            .html
+            .contains(r#"srcset="/assets/hash-400w.webp 400w, /assets/hash-1600w.webp 1600w""#));
         assert!(r.html.contains(r#"sizes="100vw""#));
         assert!(r.html.contains(r#"width="1600""#));
         assert!(r.html.contains(r#"height="900""#));
@@ -265,7 +268,8 @@ mod tests {
 
     #[test]
     fn small_image_before_hero_is_not_hero_and_not_lazied() {
-        let html = r#"<html><head></head><body><img src="/logo.png"><img src="/a.jpg"></body></html>"#;
+        let html =
+            r#"<html><head></head><body><img src="/logo.png"><img src="/a.jpg"></body></html>"#;
         let r = rewrite_responsive_images(
             html,
             &[entry("/logo.png", 200, 80), entry("/a.jpg", 1600, 900)],
@@ -309,8 +313,7 @@ mod tests {
 
     #[test]
     fn img_inside_picture_is_never_touched() {
-        let html =
-            r#"<body><picture><source srcset="/a.avif"><img src="/a.jpg"></picture></body>"#;
+        let html = r#"<body><picture><source srcset="/a.avif"><img src="/a.jpg"></picture></body>"#;
         let r = rewrite_responsive_images(html, &[entry("/a.jpg", 1600, 900)]);
         assert_eq!(r.html, html);
     }
@@ -331,7 +334,11 @@ mod tests {
         let html = r#"<body><img src="https://images.unsplash.com/photo?a=1&amp;w=2"></body>"#;
         let r = rewrite_responsive_images(
             html,
-            &[entry("https://images.unsplash.com/photo?a=1&w=2", 1600, 900)],
+            &[entry(
+                "https://images.unsplash.com/photo?a=1&w=2",
+                1600,
+                900,
+            )],
         );
         assert_eq!(r.rewritten, 1);
         assert!(r.html.contains("/assets/hash-1600w.webp"));

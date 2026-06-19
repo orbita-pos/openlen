@@ -186,7 +186,9 @@ mod tests {
         let r = apply_photo_slots(html, &[assign("tacos")]);
         assert_eq!(r.applied, 1);
         assert!(r.html.contains("data-ol-photo-img"));
-        assert!(r.html.contains("https://images.openlen.com/tacos-1920.webp"));
+        assert!(r
+            .html
+            .contains("https://images.openlen.com/tacos-1920.webp"));
         assert!(r.html.contains("srcset="));
         assert!(r.html.contains("object-fit:cover"));
         assert!(r.html.contains("position:relative;overflow:hidden"));
@@ -208,7 +210,8 @@ mod tests {
 
     #[test]
     fn empty_assignment_leaves_unmatched_slot_as_gradient() {
-        let html = r#"<body><div class="bg-gradient-to-br" data-ol-photo="quokka on mars"></div></body>"#;
+        let html =
+            r#"<body><div class="bg-gradient-to-br" data-ol-photo="quokka on mars"></div></body>"#;
         let r = apply_photo_slots(html, &[assign("")]);
         assert_eq!(r.applied, 0);
         assert!(!r.html.contains("<img"));
