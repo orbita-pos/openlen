@@ -27,6 +27,7 @@
     "comments:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/comments-migrate.ts",
     "bookings:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/bookings-migrate.ts",
     "bookings:remind": "tsx --env-file-if-exists=.env.local --tsconfig tsconfig.eval.json scripts/bookings-remind.ts",
+    "cron:bundle": "node scripts/build-cron.mjs",
     "versions:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/versions-migrate.ts",
     "chat:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/chat-migrate.ts",
     "drift:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/drift-migrate.ts",
@@ -130,6 +131,7 @@
     "playwright": "^1.60.0",
     "postcss": "^8.5.0",
     "tailwindcss": "^3.4.17",
+    "esbuild": "^0.28.0",
     "tsx": "^4.22.0",
     "typescript": "^5.7.2",
     "vitest": "^2.1.9"
