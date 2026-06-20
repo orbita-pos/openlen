@@ -145,6 +145,13 @@ const FAMILY_KEYWORDS: Record<TemplateFamily, string[]> = {
     "game", "juego", "gaming", "gamer", "esports", "multiplayer", "indie game",
     "playable", "rpg",
   ],
+  sports: [
+    "sport", "deporte", "football", "futbol", "soccer", "mma", "ufc", "boxing",
+    "boxeo", "fight", "pelea", "combat", "combate", "match", "partido", "team",
+    "equipo", "league", "liga", "tournament", "torneo", "athlete", "atleta",
+    "stadium", "estadio", "championship", "campeonato", "fixture", "matchday",
+    "wrestling", "fighter", "luchador", "kickboxing", "octagon", "ring",
+  ],
   "local-services": [
     "plumber", "plumbing", "electrician", "electricista", "cleaning", "limpieza",
     "landscaping", "contractor", "handyman", "hvac", "roofing", "local business",

@@ -23,6 +23,7 @@
   "open-source": { "label": "Open Source", "tagline": "OSS project home pages — install command, code examples, GitHub stars, contributor community. For frameworks, libraries, and tools." },
   "music": { "label": "Music / Release", "tagline": "Album and EP release pages — giant album art, tracklist, streaming badges, tour dates, press quotes, merch." },
   "gaming": { "label": "Gaming", "tagline": "Indie game launches and studio home pages — cinematic key art, trailers, platform badges, wishlist counters, press quotes." },
+  "sports": { "label": "Sports", "tagline": "Sports & combat event pages — fight cards, match schedules, rosters, live countdowns, and bold hero key art." },
   "local-services": { "label": "Local Services", "tagline": "Home-service businesses — plumbers, landscapers, cleaners, electricians, contractors. Service area, free-quote CTA, before/after, star reviews." },
   "nonprofit": { "label": "Nonprofit", "tagline": "Cause and fundraising pages — mission hero, impact metrics, a working donation widget, transparency badges, beneficiary stories." },
   "wellness": { "label": "Wellness / Fitness", "tagline": "Brick-and-mortar studios — yoga, strength gyms, pilates, climbing, day spas. Class schedules, membership tiers, instructor bios, intro offers." },
