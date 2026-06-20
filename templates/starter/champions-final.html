@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html><head><style>
+    .sc-placeholder{background:rgba(255,255,255,.3);border:1px solid rgba(0,0,0,.5);
+      border-radius:2px;box-sizing:border-box;overflow:hidden}
+    @keyframes sc-shine{0%{background-position:100% 50%}100%{background-position:0% 50%}}
+    html.sc-dc-streaming .sc-placeholder,
+    html.sc-dc-streaming .sc-interp.sc-missing{position:relative;
+      background:color-mix(in srgb,currentColor 5%,transparent);
+      border-color:transparent}
+    html.sc-dc-streaming .sc-placeholder::before,
+    html.sc-dc-streaming .sc-interp.sc-missing::before{content:'';
+      position:absolute;inset:0;pointer-events:none;
+      background:linear-gradient(90deg,rgba(217,119,87,0) 25%,rgba(247,225,211,.95) 37%,rgba(217,119,87,0) 63%);
+      background-size:400% 100%;animation:sc-shine 1.4s ease infinite}
+    html.sc-dc-streaming .sc-placeholder:nth-child(n+9 of .sc-placeholder)::before,
+    html.sc-dc-streaming .sc-interp.sc-missing:nth-child(n+9 of .sc-interp.sc-missing)::before{animation:none;
+      background:color-mix(in srgb,currentColor 8%,transparent)}
+    .sc-placeholder-error{padding:4px 8px;font:11px/1.4 ui-monospace,monospace;
+      color:rgba(0,0,0,.7);word-break:break-word}
+    .sc-interp.sc-missing{display:inline-block;width:2em;height:1em;overflow:hidden;
+      vertical-align:text-bottom;background:rgba(255,255,255,.3);border:1px solid rgba(0,0,0,.5);
+      border-radius:2px;box-sizing:border-box;color:transparent;
+      user-select:none}
+    .sc-interp.sc-unresolved{font-family:ui-monospace,monospace;font-size:.85em;
+      color:rgba(0,0,0,.5);background:rgba(0,0,0,.05);border-radius:3px;
+      padding:0 3px}
+    .sc-host.sc-has-error{position:relative}
+    .sc-logic-error{position:absolute;top:8px;left:8px;z-index:2147483647;max-width:60ch;
+      padding:6px 10px;background:#b00020;color:#fff;font:12px/1.4 ui-monospace,monospace;
+      border-radius:4px;white-space:pre-wrap;pointer-events:none}
+    /* Mirrors PRINT_BASELINE_CSS in apps/web deck-stage-export.ts — keep both
+       in sync until dc-runtime regains a build step. */
+    @media print {
+      @page { margin: 0.5cm; }
+      section, article, figure, table { break-inside: avoid; }
+      *, *::before, *::after {
+        print-color-adjust: exact; -webkit-print-color-adjust: exact;
+        backdrop-filter: none !important; -webkit-backdrop-filter: none !important;
+        animation-delay: -99s !important; animation-duration: .001s !important;
+        animation-iteration-count: 1 !important; animation-fill-mode: both !important;
+        animation-play-state: running !important; transition-duration: 0s !important;
+      }
+    }</style>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>x-dc{display:none!important}</style>
+<style></style><style>html,body{height:100%;margin:0}#dc-root,#dc-root>.sc-host{height:100%}</style><link rel="preconnect" href="https://fonts.googleapis.com" data-dc-tpl="1"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="" data-dc-tpl="2"><link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800;900&amp;display=swap" rel="stylesheet" data-dc-tpl="3"><style data-dc-tpl="4">
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: #0a1130; }
+  @keyframes clPulse { 0% { box-shadow: 0 0 0 0 rgba(30,224,208,.55); } 70% { box-shadow: 0 0 0 8px rgba(30,224,208,0); } 100% { box-shadow: 0 0 0 0 rgba(30,224,208,0); } }
+  image-slot { display:block; width:100%; height:100%; }</style><style>@keyframes auroraFade{0%{opacity:0}2.5%{opacity:1}12.5%{opacity:1}15%{opacity:0}100%{opacity:0}}</style><style>@keyframes auroraFade{0%{opacity:0}2.5%{opacity:1}12.5%{opacity:1}15%{opacity:0}100%{opacity:0}}</style><style>@keyframes auroraFade{0%{opacity:0}2.5%{opacity:1}12.5%{opacity:1}15%{opacity:0}100%{opacity:0}}</style><style>.aucar-slide{opacity:0;z-index:1;}.aucarHero:not(:has(.aucar-radio:checked)) .aucar-slide{animation:auroraFade 40s linear infinite;}.aucarHero:has(.aucar-radio:checked) .aucar-slide{animation:none;opacity:0;}.aucarHero:has(#aucar-0:checked) .aucar-s0{opacity:1;z-index:2;}.aucarHero:has(#aucar-1:checked) .aucar-s1{opacity:1;z-index:2;}.aucarHero:has(#aucar-2:checked) .aucar-s2{opacity:1;z-index:2;}.aucarHero:has(#aucar-3:checked) .aucar-s3{opacity:1;z-index:2;}.aucarHero:has(#aucar-4:checked) .aucar-s4{opacity:1;z-index:2;}.aucarHero:has(#aucar-5:checked) .aucar-s5{opacity:1;z-index:2;}.aucarHero:has(#aucar-6:checked) .aucar-s6{opacity:1;z-index:2;}.aucarHero:has(#aucar-7:checked) .aucar-s7{opacity:1;z-index:2;}</style><style>.aucar-slide{transition:opacity .6s ease;}</style><style>/*aucar-uniform*/</style><style>@keyframes auDotW{0%{width:8px;background:rgba(255,255,255,.4)}2.5%{width:30px;background:#fff}12.5%{width:30px;background:#fff}15%{width:8px;background:rgba(255,255,255,.4)}100%{width:8px;background:rgba(255,255,255,.4)}}.aucarHero .aucar-dot{display:block;width:8px;background:rgba(255,255,255,.4);transform:none;transition:width .45s cubic-bezier(.4,0,.2,1),background .45s ease;}.aucarHero .aucar-dot:hover{background:rgba(255,255,255,.75);}.aucarHero:not(:has(.aucar-radio:checked)) .aucar-dot{animation:auDotW 40s linear infinite;}.aucarHero:has(.aucar-radio:checked) .aucar-dot{animation:none;}.aucarHero:has(#aucar-0:checked) .aucar-dot-0{width:30px;background:#fff;}.aucarHero:has(#aucar-1:checked) .aucar-dot-1{width:30px;background:#fff;}.aucarHero:has(#aucar-2:checked) .aucar-dot-2{width:30px;background:#fff;}.aucarHero:has(#aucar-3:checked) .aucar-dot-3{width:30px;background:#fff;}.aucarHero:has(#aucar-4:checked) .aucar-dot-4{width:30px;background:#fff;}.aucarHero:has(#aucar-5:checked) .aucar-dot-5{width:30px;background:#fff;}.aucarHero:has(#aucar-6:checked) .aucar-dot-6{width:30px;background:#fff;}.aucarHero:has(#aucar-7:checked) .aucar-dot-7{width:30px;background:#fff;}</style><style>
+.sport-burger{display:none;}
+.sport-mt{display:none;}
+.sport-mnav{display:none;}
+@media(max-width:900px){
+  .sport-hide-mobile{display:none!important;}
+  .sport-cnav{overflow:visible!important;}
+  .sport-burger{display:inline-flex;align-items:center;justify-content:center;margin-left:auto;cursor:pointer;font-size:24px;line-height:1;width:42px;height:42px;color:#ffffff;user-select:none;}
+  .sport-mnav{position:absolute;top:100%;left:0;right:0;display:none;flex-direction:column;background:linear-gradient(rgb(14,31,156),rgb(10,21,104));box-shadow:0 14px 30px rgba(0,0,0,.35);z-index:60;padding:6px 0;}
+  .sport-mnav a{display:block;padding:14px 24px;color:#ffffff;text-decoration:none;font-size:15px;letter-spacing:.04em;border-bottom:1px solid rgba(127,127,127,.18);}
+  .sport-mnav a:last-child{border-bottom:none;}
+  #mnav-champions-final:checked ~ .sport-mnav{display:flex;}
+}</style></head>
+<body>
+<div id="dc-root"><div class="sc-host" data-sc-name="Champions Final"><div data-dc-tpl="10" style="font-family: Archivo, sans-serif; background: rgb(10, 17, 48); color: rgb(255, 255, 255); min-width: 360px; overflow-x: hidden;">
+
+  
+  <div data-dc-tpl="11" style="background: rgb(5, 5, 7); height: 38px; display: flex; align-items: center; justify-content: space-between; padding: 0px clamp(16px, 4vw, 40px);">
+    <div data-dc-tpl="12" style="display: flex; align-items: center; gap: 6px; font-weight: 700; font-size: 14px; color: rgb(255, 255, 255);">CONTINENTAL<span data-dc-tpl="13" style="color: rgba(255, 255, 255, 0.55); font-weight: 500;">.com</span>
+      <svg data-dc-tpl="14" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.6)" stroke-width="3"><path data-dc-tpl="15" d="m6 9 6 6 6-6"></path></svg>
+    </div>
+    <div data-dc-tpl="16" style="display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; color: rgb(255, 255, 255);">Iniciar sesión
+      <span data-dc-tpl="17" style="width: 22px; height: 22px; border-radius: 50%; border: 1.5px solid rgba(255, 255, 255, 0.6); display: grid; place-items: center;"><svg data-dc-tpl="18" width="12" height="12" viewBox="0 0 24 24" fill="rgba(255,255,255,.85)"><circle data-dc-tpl="19" cx="12" cy="8" r="4"></circle><path data-dc-tpl="20" d="M4 21c0-4 4-6 8-6s8 2 8 6"></path></svg></span>
+    </div>
+  </div>
+
+  
+  <nav data-dc-tpl="21" style="background: linear-gradient(rgb(14, 31, 156), rgb(10, 21, 104)); display: flex; align-items: center; gap: clamp(10px, 1.6vw, 26px); padding: 0px clamp(16px, 4vw, 40px); height: 80px; position: relative; z-index: 30; flex-wrap: nowrap; overflow-x: auto;" class="sport-cnav">
+    <a data-dc-tpl="22" href="#" style="text-decoration: none; display: flex; align-items: center; gap: 10px; padding-right: 14px;">
+      <span data-dc-tpl="23" style="width: 46px; height: 46px; border-radius: 50%; background: radial-gradient(circle at 50% 38%, rgb(19, 48, 200), rgb(8, 18, 79)); border: 1.5px solid rgba(255, 255, 255, 0.5); display: grid; place-items: center; flex: 0 0 auto;">
+        <svg data-dc-tpl="24" width="26" height="26" viewBox="0 0 24 24" fill="#fff"><path data-dc-tpl="25" d="M12 2l2.6 6.4L21 9l-5 4.6 1.4 6.9L12 17.3 5.6 20.5 7 13.6 2 9l6.4-.6z"></path></svg>
+      </span>
+      <span data-dc-tpl="26" style="line-height: 0.92; font-weight: 800; font-size: 13px; letter-spacing: 0.02em; color: rgb(255, 255, 255);">CONTINENTAL<br data-dc-tpl="27"><span data-dc-tpl="28" style="font-weight: 600; color: rgba(255, 255, 255, 0.8);">LEAGUE</span></span>
+    </a>
+    <a data-dc-tpl="29" href="#" style="text-decoration: none; color: rgb(255, 255, 255); font-weight: 600; font-size: 15px; white-space: nowrap;" class="sport-hide-mobile">Partidos</a>
+    <a data-dc-tpl="30" href="#" style="text-decoration: none; color: rgb(6, 40, 61); background: rgb(30, 224, 208); font-weight: 700; font-size: 15px; padding: 8px 18px; border-radius: 999px; white-space: nowrap;" class="sport-hide-mobile">CONTI.tv</a>
+    <a data-dc-tpl="31" href="#" style="text-decoration: none; color: rgb(255, 255, 255); font-weight: 600; font-size: 15px; white-space: nowrap;" class="sport-hide-mobile">Sorteos</a>
+    <a data-dc-tpl="32" href="#" style="text-decoration: none; color: rgb(255, 255, 255); font-weight: 600; font-size: 15px; white-space: nowrap; display: flex; align-items: center; gap: 5px;" class="sport-hide-mobile">Gaming <svg data-dc-tpl="33" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><path data-dc-tpl="34" d="m6 9 6 6 6-6"></path></svg></a>
+    <a data-dc-tpl="35" href="#" style="text-decoration: none; color: rgb(255, 255, 255); font-weight: 600; font-size: 15px; white-space: nowrap;" class="sport-hide-mobile">Equipos</a>
+    <a data-dc-tpl="36" href="#" style="text-decoration: none; color: rgb(255, 255, 255); font-weight: 600; font-size: 15px; white-space: nowrap;" class="sport-hide-mobile">Noticias</a>
+    <a data-dc-tpl="37" href="#" style="text-decoration: none; color: rgb(255, 255, 255); font-weight: 600; font-size: 15px; white-space: nowrap; display: flex; align-items: center; gap: 5px;" class="sport-hide-mobile">Historia <svg data-dc-tpl="38" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><path data-dc-tpl="39" d="m6 9 6 6 6-6"></path></svg></a>
+    <a data-dc-tpl="40" href="#" style="text-decoration: none; color: rgb(255, 255, 255); font-weight: 600; font-size: 15px; white-space: nowrap;" class="sport-hide-mobile">Sobre</a>
+    <a data-dc-tpl="41" href="#" style="text-decoration: none; color: rgb(255, 255, 255); font-weight: 600; font-size: 15px; white-space: nowrap;" class="sport-hide-mobile">Tienda</a>
+  <input type="checkbox" id="mnav-champions-final" class="sport-mt" aria-hidden="true"><label for="mnav-champions-final" class="sport-burger" aria-label="Menu">☰</label><div class="sport-mnav"><a href="#">Partidos</a><a href="#">CONTI.tv</a><a href="#">Sorteos</a><a href="#">Gaming</a><a href="#">Equipos</a><a href="#">Noticias</a><a href="#">Historia</a><a href="#">Sobre</a><a href="#">Tienda</a></div></nav>
+
+  
+  <section data-dc-tpl="42" data-screen-label="Hero — Aurora FC" style="position: relative; width: 100%; height: 56.25vw; overflow: hidden; background: rgb(10, 21, 104);" class="aucarHero">
+    
+      <div class="sc-host-x" data-dc-tpl="44" style="position: absolute; left: 0px; right: 0px; bottom: 0px; width: 100%; height: 56.25vw;"><div style="display:block;width:100%;height:100%; ;background-image:url('https://images.openlen.com/champions-final/aurora-official-film.webp');background-size:cover;background-position:center;background-repeat:no-repeat;;animation-delay:-0.6s;" class="aucar-slide aucar-s0"></div></div>
+    
+      <div class="sc-host-x" data-dc-tpl="44" style="position: absolute; left: 0px; right: 0px; bottom: 0px; width: 100%; height: 56.25vw;"><div style="display:block;width:100%;height:100%; ;background-image:url('https://images.openlen.com/champions-final/aurora-training.webp');background-size:cover;background-position:center;background-repeat:no-repeat;;animation-delay:4.4s;" class="aucar-slide aucar-s1"></div></div>
+    
+      <div class="sc-host-x" data-dc-tpl="44" style="position: absolute; left: 0px; right: 0px; bottom: 0px; width: 100%; height: 56.25vw;"><div style="display:block;width:100%;height:100%; ;background-image:url('https://images.openlen.com/champions-final/aurora-winning.webp');background-size:cover;background-position:center;background-repeat:no-repeat;;animation-delay:9.4s;" class="aucar-slide aucar-s2"></div></div>
+    
+      <div class="sc-host-x" data-dc-tpl="44" style="position: absolute; left: 0px; right: 0px; bottom: 0px; width: 100%; height: 56.25vw;"><div style="display:block;width:100%;height:100%; ;background-image:url('https://images.openlen.com/champions-final/aurora-road.webp');background-size:cover;background-position:center;background-repeat:no-repeat;;animation-delay:14.4s;" class="aucar-slide aucar-s3"></div></div>
+    
+      <div class="sc-host-x" data-dc-tpl="44" style="position: absolute; left: 0px; right: 0px; bottom: 0px; width: 100%; height: 56.25vw;"><div style="display:block;width:100%;height:100%; ;background-image:url('https://images.openlen.com/champions-final/aurora-dressing.webp');background-size:cover;background-position:center;background-repeat:no-repeat;;animation-delay:19.4s;" class="aucar-slide aucar-s4"></div></div>
+    
+      <div class="sc-host-x" data-dc-tpl="44" style="position: absolute; left: 0px; right: 0px; bottom: 0px; width: 100%; height: 56.25vw;"><div style="display:block;width:100%;height:100%; ;background-image:url('https://images.openlen.com/champions-final/aurora-faithful.webp');background-size:cover;background-position:center;background-repeat:no-repeat;;animation-delay:24.4s;" class="aucar-slide aucar-s5"></div></div>
+    
+      <div class="sc-host-x" data-dc-tpl="44" style="position: absolute; left: 0px; right: 0px; bottom: 0px; width: 100%; height: 56.25vw;"><div style="display:block;width:100%;height:100%; ;background-image:url('https://images.openlen.com/champions-final/aurora-faces.webp');background-size:cover;background-position:center;background-repeat:no-repeat;;animation-delay:29.4s;" class="aucar-slide aucar-s6"></div></div>
+    
+      <div class="sc-host-x" data-dc-tpl="44" style="position: absolute; left: 0px; right: 0px; bottom: 0px; width: 100%; height: 56.25vw;"><div style="display:block;width:100%;height:100%; ;background-image:url('https://images.openlen.com/champions-final/aurora-team.webp');background-size:cover;background-position:center;background-repeat:no-repeat;;animation-delay:34.4s;" class="aucar-slide aucar-s7"></div></div>
+    
+
+    
+    <div data-dc-tpl="45" style="position: absolute; left: 0px; right: 0px; bottom: 0px; height: 120px; background: linear-gradient(transparent, rgba(5, 9, 30, 0.55)); pointer-events: none; z-index: 6;"></div>
+    <div data-dc-tpl="46" style="position: absolute; left: 0px; right: 0px; bottom: clamp(12px, 2.4vh, 26px); z-index: 10; display: flex; justify-content: center; gap: 9px;;align-items:center;">
+      
+        <label for="aucar-0" class="aucar-dot aucar-dot-0" style="cursor:pointer;height:6px;border-radius:999px;padding:0;box-shadow:0 1px 3px rgba(0,0,0,.45);animation-delay:-0.6s;"></label>
+      
+        <label for="aucar-1" class="aucar-dot aucar-dot-1" style="cursor:pointer;height:6px;border-radius:999px;padding:0;box-shadow:0 1px 3px rgba(0,0,0,.45);animation-delay:4.4s;"></label>
+      
+        <label for="aucar-2" class="aucar-dot aucar-dot-2" style="cursor:pointer;height:6px;border-radius:999px;padding:0;box-shadow:0 1px 3px rgba(0,0,0,.45);animation-delay:9.4s;"></label>
+      
+        <label for="aucar-3" class="aucar-dot aucar-dot-3" style="cursor:pointer;height:6px;border-radius:999px;padding:0;box-shadow:0 1px 3px rgba(0,0,0,.45);animation-delay:14.4s;"></label>
+      
+        <label for="aucar-4" class="aucar-dot aucar-dot-4" style="cursor:pointer;height:6px;border-radius:999px;padding:0;box-shadow:0 1px 3px rgba(0,0,0,.45);animation-delay:19.4s;"></label>
+      
+        <label for="aucar-5" class="aucar-dot aucar-dot-5" style="cursor:pointer;height:6px;border-radius:999px;padding:0;box-shadow:0 1px 3px rgba(0,0,0,.45);animation-delay:24.4s;"></label>
+      
+        <label for="aucar-6" class="aucar-dot aucar-dot-6" style="cursor:pointer;height:6px;border-radius:999px;padding:0;box-shadow:0 1px 3px rgba(0,0,0,.45);animation-delay:29.4s;"></label>
+      
+        <label for="aucar-7" class="aucar-dot aucar-dot-7" style="cursor:pointer;height:6px;border-radius:999px;padding:0;box-shadow:0 1px 3px rgba(0,0,0,.45);animation-delay:34.4s;"></label>
+      
+    <div style="position:absolute;left:0;bottom:0;width:1px;height:1px;opacity:0;overflow:hidden;pointer-events:none;"><input type="radio" name="auroracar" id="aucar-0" class="aucar-radio"><input type="radio" name="auroracar" id="aucar-1" class="aucar-radio"><input type="radio" name="auroracar" id="aucar-2" class="aucar-radio"><input type="radio" name="auroracar" id="aucar-3" class="aucar-radio"><input type="radio" name="auroracar" id="aucar-4" class="aucar-radio"><input type="radio" name="auroracar" id="aucar-5" class="aucar-radio"><input type="radio" name="auroracar" id="aucar-6" class="aucar-radio"><input type="radio" name="auroracar" id="aucar-7" class="aucar-radio"></div></div>
+  </section>
+
+  
+  <section data-dc-tpl="49" style="max-width: 1200px; margin: 0px auto; padding: 48px clamp(20px, 4vw, 40px) 18px;">
+    <div data-dc-tpl="50" style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px;">
+      <h2 data-dc-tpl="51" style="margin: 0px; font-weight: 800; font-size: 28px; letter-spacing: -0.01em;">Próximos partidos de Aurora FC</h2>
+      <a data-dc-tpl="52" href="#" style="text-decoration: none; color: rgb(30, 224, 208); font-weight: 700; font-size: 14px;">Calendario completo →</a>
+    </div>
+    <div data-dc-tpl="53" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px;">
+      
+        <div data-dc-tpl="55" class="scp0" style="background: linear-gradient(rgb(16, 30, 110), rgb(11, 21, 80)); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 14px; padding: 18px; transition: transform 0.14s, border-color 0.14s;">
+          <div data-dc-tpl="56" style="display: flex; align-items: center; justify-content: space-between; font-size: 12px; color: rgba(255, 255, 255, 0.6); font-weight: 600;">
+            <span data-dc-tpl="57"><span class="sc-interp">Jornada 1</span></span><span data-dc-tpl="58"><span class="sc-interp">14 Ago</span></span>
+          </div>
+          <div data-dc-tpl="59" style="display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 16px 0px 14px;">
+            <div data-dc-tpl="60" style="display: flex; flex-direction: column; align-items: center; gap: 8px; flex: 1 1 0%;">
+              <span data-dc-tpl="61" style="width: 42px; height: 42px; border-radius: 50%; background: rgb(19, 48, 200); display: grid; place-items: center; font-weight: 800; color: rgb(255, 255, 255); font-size: 15px;"><span class="sc-interp">A</span></span>
+              <span data-dc-tpl="62" style="font-weight: 700; font-size: 13px; text-align: center;"><span class="sc-interp">Aurora FC</span></span>
+            </div>
+            <span data-dc-tpl="63" style="font-weight: 800; font-size: 13px; color: rgba(255, 255, 255, 0.45); letter-spacing: 0.08em;">VS</span>
+            <div data-dc-tpl="64" style="display: flex; flex-direction: column; align-items: center; gap: 8px; flex: 1 1 0%;">
+              <span data-dc-tpl="65" style="width: 42px; height: 42px; border-radius: 50%; background: rgb(179, 64, 26); display: grid; place-items: center; font-weight: 800; color: rgb(255, 255, 255); font-size: 15px;"><span class="sc-interp">M</span></span>
+              <span data-dc-tpl="66" style="font-weight: 700; font-size: 13px; text-align: center;"><span class="sc-interp">Mercury</span></span>
+            </div>
+          </div>
+          <div data-dc-tpl="67" style="text-align: center; font-size: 12px; color: rgba(255, 255, 255, 0.55); border-top: 1px solid rgba(255, 255, 255, 0.08); padding-top: 10px;"><span class="sc-interp">Estadio Aurora, Nova</span></div>
+        </div>
+      
+        <div data-dc-tpl="55" class="scp0" style="background: linear-gradient(rgb(16, 30, 110), rgb(11, 21, 80)); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 14px; padding: 18px; transition: transform 0.14s, border-color 0.14s;">
+          <div data-dc-tpl="56" style="display: flex; align-items: center; justify-content: space-between; font-size: 12px; color: rgba(255, 255, 255, 0.6); font-weight: 600;">
+            <span data-dc-tpl="57"><span class="sc-interp">Jornada 2</span></span><span data-dc-tpl="58"><span class="sc-interp">21 Ago</span></span>
+          </div>
+          <div data-dc-tpl="59" style="display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 16px 0px 14px;">
+            <div data-dc-tpl="60" style="display: flex; flex-direction: column; align-items: center; gap: 8px; flex: 1 1 0%;">
+              <span data-dc-tpl="61" style="width: 42px; height: 42px; border-radius: 50%; background: rgb(122, 16, 32); display: grid; place-items: center; font-weight: 800; color: rgb(255, 255, 255); font-size: 15px;"><span class="sc-interp">B</span></span>
+              <span data-dc-tpl="62" style="font-weight: 700; font-size: 13px; text-align: center;"><span class="sc-interp">Brightwave</span></span>
+            </div>
+            <span data-dc-tpl="63" style="font-weight: 800; font-size: 13px; color: rgba(255, 255, 255, 0.45); letter-spacing: 0.08em;">VS</span>
+            <div data-dc-tpl="64" style="display: flex; flex-direction: column; align-items: center; gap: 8px; flex: 1 1 0%;">
+              <span data-dc-tpl="65" style="width: 42px; height: 42px; border-radius: 50%; background: rgb(19, 48, 200); display: grid; place-items: center; font-weight: 800; color: rgb(255, 255, 255); font-size: 15px;"><span class="sc-interp">A</span></span>
+              <span data-dc-tpl="66" style="font-weight: 700; font-size: 13px; text-align: center;"><span class="sc-interp">Aurora FC</span></span>
+            </div>
+          </div>
+          <div data-dc-tpl="67" style="text-align: center; font-size: 12px; color: rgba(255, 255, 255, 0.55); border-top: 1px solid rgba(255, 255, 255, 0.08); padding-top: 10px;"><span class="sc-interp">Brightwave Park, Oslo</span></div>
+        </div>
+      
+        <div data-dc-tpl="55" class="scp0" style="background: linear-gradient(rgb(16, 30, 110), rgb(11, 21, 80)); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 14px; padding: 18px; transition: transform 0.14s, border-color 0.14s;">
+          <div data-dc-tpl="56" style="display: flex; align-items: center; justify-content: space-between; font-size: 12px; color: rgba(255, 255, 255, 0.6); font-weight: 600;">
+            <span data-dc-tpl="57"><span class="sc-interp">Supercopa</span></span><span data-dc-tpl="58"><span class="sc-interp">28 Ago</span></span>
+          </div>
+          <div data-dc-tpl="59" style="display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 16px 0px 14px;">
+            <div data-dc-tpl="60" style="display: flex; flex-direction: column; align-items: center; gap: 8px; flex: 1 1 0%;">
+              <span data-dc-tpl="61" style="width: 42px; height: 42px; border-radius: 50%; background: rgb(19, 48, 200); display: grid; place-items: center; font-weight: 800; color: rgb(255, 255, 255); font-size: 15px;"><span class="sc-interp">A</span></span>
+              <span data-dc-tpl="62" style="font-weight: 700; font-size: 13px; text-align: center;"><span class="sc-interp">Aurora FC</span></span>
+            </div>
+            <span data-dc-tpl="63" style="font-weight: 800; font-size: 13px; color: rgba(255, 255, 255, 0.45); letter-spacing: 0.08em;">VS</span>
+            <div data-dc-tpl="64" style="display: flex; flex-direction: column; align-items: center; gap: 8px; flex: 1 1 0%;">
+              <span data-dc-tpl="65" style="width: 42px; height: 42px; border-radius: 50%; background: rgb(13, 107, 63); display: grid; place-items: center; font-weight: 800; color: rgb(255, 255, 255); font-size: 15px;"><span class="sc-interp">H</span></span>
+              <span data-dc-tpl="66" style="font-weight: 700; font-size: 13px; text-align: center;"><span class="sc-interp">Halcyon</span></span>
+            </div>
+          </div>
+          <div data-dc-tpl="67" style="text-align: center; font-size: 12px; color: rgba(255, 255, 255, 0.55); border-top: 1px solid rgba(255, 255, 255, 0.08); padding-top: 10px;"><span class="sc-interp">Arena Continental, Lisboa</span></div>
+        </div>
+      
+        <div data-dc-tpl="55" class="scp0" style="background: linear-gradient(rgb(16, 30, 110), rgb(11, 21, 80)); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 14px; padding: 18px; transition: transform 0.14s, border-color 0.14s;">
+          <div data-dc-tpl="56" style="display: flex; align-items: center; justify-content: space-between; font-size: 12px; color: rgba(255, 255, 255, 0.6); font-weight: 600;">
+            <span data-dc-tpl="57"><span class="sc-interp">Jornada 3</span></span><span data-dc-tpl="58"><span class="sc-interp">04 Sep</span></span>
+          </div>
+          <div data-dc-tpl="59" style="display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 16px 0px 14px;">
+            <div data-dc-tpl="60" style="display: flex; flex-direction: column; align-items: center; gap: 8px; flex: 1 1 0%;">
+              <span data-dc-tpl="61" style="width: 42px; height: 42px; border-radius: 50%; background: rgb(12, 122, 140); display: grid; place-items: center; font-weight: 800; color: rgb(255, 255, 255); font-size: 15px;"><span class="sc-interp">C</span></span>
+              <span data-dc-tpl="62" style="font-weight: 700; font-size: 13px; text-align: center;"><span class="sc-interp">Coast</span></span>
+            </div>
+            <span data-dc-tpl="63" style="font-weight: 800; font-size: 13px; color: rgba(255, 255, 255, 0.45); letter-spacing: 0.08em;">VS</span>
+            <div data-dc-tpl="64" style="display: flex; flex-direction: column; align-items: center; gap: 8px; flex: 1 1 0%;">
+              <span data-dc-tpl="65" style="width: 42px; height: 42px; border-radius: 50%; background: rgb(19, 48, 200); display: grid; place-items: center; font-weight: 800; color: rgb(255, 255, 255); font-size: 15px;"><span class="sc-interp">A</span></span>
+              <span data-dc-tpl="66" style="font-weight: 700; font-size: 13px; text-align: center;"><span class="sc-interp">Aurora FC</span></span>
+            </div>
+          </div>
+          <div data-dc-tpl="67" style="text-align: center; font-size: 12px; color: rgba(255, 255, 255, 0.55); border-top: 1px solid rgba(255, 255, 255, 0.08); padding-top: 10px;"><span class="sc-interp">Coast Stadium, Brighton</span></div>
+        </div>
+      
+    </div>
+  </section>
+
+  
+  <section data-dc-tpl="68" style="max-width: 1200px; margin: 0px auto; padding: 34px clamp(20px, 4vw, 40px) 72px;">
+    <h2 data-dc-tpl="69" style="margin: 0px 0px 20px; font-weight: 800; font-size: 28px;">Últimas noticias</h2>
+    <div data-dc-tpl="70" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 18px;">
+      
+        <a data-dc-tpl="72" href="#" class="scp1" style="text-decoration: none; display: block; border-radius: 14px; overflow: hidden; background: rgb(11, 21, 80); border: 1px solid rgba(255, 255, 255, 0.08); transition: transform 0.14s;;color:#fff;">
+          <div data-dc-tpl="73" style="position: relative; width: 100%; aspect-ratio: 16 / 9; overflow: hidden; background: linear-gradient(135deg, rgb(19, 48, 200), rgb(155, 60, 255));">
+            <div class="sc-host-x" data-dc-tpl="74" style="position: absolute; inset: 0px; width: 100%; height: 100%;"><div style="display:block;width:100%;height:100%;;background-image:url('https://images.openlen.com/champions-final/v3news-1.webp');background-size:cover;background-position:center;background-repeat:no-repeat;"></div></div>
+          </div>
+          <div data-dc-tpl="75" style="padding: 16px 18px 20px;">
+            <div data-dc-tpl="76" style="font-weight: 700; font-size: 11px; letter-spacing: 0.1em; color: rgb(30, 224, 208);"><span class="sc-interp">CRÓNICA</span></div>
+            <div data-dc-tpl="77" style="font-weight: 700; font-size: 17px; line-height: 1.25; margin-top: 6px; text-wrap: pretty;"><span class="sc-interp">Aurora FC conquista su segunda corona continental en una final épica en Nova Budapest</span></div>
+          </div>
+        </a>
+      
+        <a data-dc-tpl="72" href="#" class="scp1" style="text-decoration: none; display: block; border-radius: 14px; overflow: hidden; background: rgb(11, 21, 80); border: 1px solid rgba(255, 255, 255, 0.08); transition: transform 0.14s;;color:#fff;">
+          <div data-dc-tpl="73" style="position: relative; width: 100%; aspect-ratio: 16 / 9; overflow: hidden; background: linear-gradient(135deg, rgb(19, 48, 200), rgb(155, 60, 255));">
+            <div class="sc-host-x" data-dc-tpl="74" style="position: absolute; inset: 0px; width: 100%; height: 100%;"><div style="display:block;width:100%;height:100%;;background-image:url('https://images.openlen.com/champions-final/v3news-2.webp');background-size:cover;background-position:center;background-repeat:no-repeat;"></div></div>
+          </div>
+          <div data-dc-tpl="75" style="padding: 16px 18px 20px;">
+            <div data-dc-tpl="76" style="font-weight: 700; font-size: 11px; letter-spacing: 0.1em; color: rgb(30, 224, 208);"><span class="sc-interp">TÁCTICA</span></div>
+            <div data-dc-tpl="77" style="font-weight: 700; font-size: 17px; line-height: 1.25; margin-top: 6px; text-wrap: pretty;"><span class="sc-interp">El pressing alto de Aurora que ahogó al rival: anatomía del gol del título</span></div>
+          </div>
+        </a>
+      
+        <a data-dc-tpl="72" href="#" class="scp1" style="text-decoration: none; display: block; border-radius: 14px; overflow: hidden; background: rgb(11, 21, 80); border: 1px solid rgba(255, 255, 255, 0.08); transition: transform 0.14s;;color:#fff;">
+          <div data-dc-tpl="73" style="position: relative; width: 100%; aspect-ratio: 16 / 9; overflow: hidden; background: linear-gradient(135deg, rgb(19, 48, 200), rgb(155, 60, 255));">
+            <div class="sc-host-x" data-dc-tpl="74" style="position: absolute; inset: 0px; width: 100%; height: 100%;"><div style="display:block;width:100%;height:100%;;background-image:url('https://images.openlen.com/champions-final/v3news-3.webp');background-size:cover;background-position:center;background-repeat:no-repeat;"></div></div>
+          </div>
+          <div data-dc-tpl="75" style="padding: 16px 18px 20px;">
+            <div data-dc-tpl="76" style="font-weight: 700; font-size: 11px; letter-spacing: 0.1em; color: rgb(30, 224, 208);"><span class="sc-interp">ENTREVISTA</span></div>
+            <div data-dc-tpl="77" style="font-weight: 700; font-size: 17px; line-height: 1.25; margin-top: 6px; text-wrap: pretty;"><span class="sc-interp">A. Dos Santos: “Esta aurora no se apaga; ya pensamos en defender el título”</span></div>
+          </div>
+        </a>
+      
+    </div>
+  </section>
+
+  <footer data-dc-tpl="78" style="border-top: 1px solid rgba(255, 255, 255, 0.08); padding: 26px; text-align: center; display: flex; align-items: center; justify-content: center; gap: 10px;">
+    <span data-dc-tpl="79" style="width: 30px; height: 30px; border-radius: 50%; background: radial-gradient(circle at 50% 38%, rgb(19, 48, 200), rgb(8, 18, 79)); border: 1.5px solid rgba(255, 255, 255, 0.5); display: grid; place-items: center;"><svg data-dc-tpl="80" width="17" height="17" viewBox="0 0 24 24" fill="#fff"><path data-dc-tpl="81" d="M12 2l2.6 6.4L21 9l-5 4.6 1.4 6.9L12 17.3 5.6 20.5 7 13.6 2 9l6.4-.6z"></path></svg></span>
+    <span data-dc-tpl="82" style="font-weight: 800; font-size: 15px; color: rgba(255, 255, 255, 0.85);">CONTINENTAL LEAGUE</span>
+  </footer></div></div></div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+</body></html>

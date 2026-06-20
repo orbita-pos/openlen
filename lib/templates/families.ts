@@ -38,7 +38,8 @@ export type TemplateFamily =
   | "travel"
   | "food-beverage"
   | "fashion"
-  | "photography";
+  | "photography"
+  | "sports";
 
 export type TemplateMode = "dark" | "light" | "cream";
 export type TemplateStatus = "draft" | "published" | "archived";
@@ -166,6 +167,11 @@ export const TEMPLATE_FAMILY_META: Record<
     label: "Gaming",
     tagline:
       "Indie game launches and studio home pages — cinematic key art, trailers, platform badges, wishlist counters, press quotes.",
+  },
+  sports: {
+    label: "Sports",
+    tagline:
+      "Sports & combat event pages — fight cards, match schedules, rosters, live countdowns, and bold hero key art.",
   },
   "local-services": {
     label: "Local Services",

@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html><head><style>
+    .sc-placeholder{background:rgba(255,255,255,.3);border:1px solid rgba(0,0,0,.5);
+      border-radius:2px;box-sizing:border-box;overflow:hidden}
+    @keyframes sc-shine{0%{background-position:100% 50%}100%{background-position:0% 50%}}
+    html.sc-dc-streaming .sc-placeholder,
+    html.sc-dc-streaming .sc-interp.sc-missing{position:relative;
+      background:color-mix(in srgb,currentColor 5%,transparent);
+      border-color:transparent}
+    html.sc-dc-streaming .sc-placeholder::before,
+    html.sc-dc-streaming .sc-interp.sc-missing::before{content:'';
+      position:absolute;inset:0;pointer-events:none;
+      background:linear-gradient(90deg,rgba(217,119,87,0) 25%,rgba(247,225,211,.95) 37%,rgba(217,119,87,0) 63%);
+      background-size:400% 100%;animation:sc-shine 1.4s ease infinite}
+    html.sc-dc-streaming .sc-placeholder:nth-child(n+9 of .sc-placeholder)::before,
+    html.sc-dc-streaming .sc-interp.sc-missing:nth-child(n+9 of .sc-interp.sc-missing)::before{animation:none;
+      background:color-mix(in srgb,currentColor 8%,transparent)}
+    .sc-placeholder-error{padding:4px 8px;font:11px/1.4 ui-monospace,monospace;
+      color:rgba(0,0,0,.7);word-break:break-word}
+    .sc-interp.sc-missing{display:inline-block;width:2em;height:1em;overflow:hidden;
+      vertical-align:text-bottom;background:rgba(255,255,255,.3);border:1px solid rgba(0,0,0,.5);
+      border-radius:2px;box-sizing:border-box;color:transparent;
+      user-select:none}
+    .sc-interp.sc-unresolved{font-family:ui-monospace,monospace;font-size:.85em;
+      color:rgba(0,0,0,.5);background:rgba(0,0,0,.05);border-radius:3px;
+      padding:0 3px}
+    .sc-host.sc-has-error{position:relative}
+    .sc-logic-error{position:absolute;top:8px;left:8px;z-index:2147483647;max-width:60ch;
+      padding:6px 10px;background:#b00020;color:#fff;font:12px/1.4 ui-monospace,monospace;
+      border-radius:4px;white-space:pre-wrap;pointer-events:none}
+    /* Mirrors PRINT_BASELINE_CSS in apps/web deck-stage-export.ts — keep both
+       in sync until dc-runtime regains a build step. */
+    @media print {
+      @page { margin: 0.5cm; }
+      section, article, figure, table { break-inside: avoid; }
+      *, *::before, *::after {
+        print-color-adjust: exact; -webkit-print-color-adjust: exact;
+        backdrop-filter: none !important; -webkit-backdrop-filter: none !important;
+        animation-delay: -99s !important; animation-duration: .001s !important;
+        animation-iteration-count: 1 !important; animation-fill-mode: both !important;
+        animation-play-state: running !important; transition-duration: 0s !important;
+      }
+    }
+  </style>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>x-dc{display:none!important}</style>
+<style></style><style>html,body{height:100%;margin:0}#dc-root,#dc-root>.sc-host{height:100%}</style><link rel="preconnect" href="https://fonts.googleapis.com" data-dc-tpl="1"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="" data-dc-tpl="2"><link href="https://fonts.googleapis.com/css2?family=Saira+Condensed:wght@500;600;700;800;900&amp;family=Saira:wght@400;500;600;700&amp;display=swap" rel="stylesheet" data-dc-tpl="3"><style data-dc-tpl="4">
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: #0d0606; }
+  @keyframes vgsPulse { 0% { box-shadow: 0 0 0 0 rgba(255,255,255,.5); } 70% { box-shadow: 0 0 0 8px rgba(255,255,255,0); } 100% { box-shadow: 0 0 0 0 rgba(255,255,255,0); } }
+  image-slot { display:block; width:100%; height:100%; }
+</style><style>
+.sport-burger{display:none;}
+.sport-mt{display:none;}
+.sport-mnav{display:none;}
+@media(max-width:820px){
+  .sport-hide-mobile{display:none!important;}
+  .sport-cnav{overflow:visible!important;}
+  .sport-burger{display:inline-flex;align-items:center;justify-content:center;margin-left:auto;cursor:pointer;font-size:24px;line-height:1;width:42px;height:42px;color:#14181f;user-select:none;}
+  .sport-mnav{position:absolute;top:100%;left:0;right:0;display:none;flex-direction:column;background:#ffffff;box-shadow:0 14px 30px rgba(0,0,0,.35);z-index:60;padding:6px 0;}
+  .sport-mnav a{display:block;padding:14px 24px;color:#14181f;text-decoration:none;font-size:15px;letter-spacing:.04em;border-bottom:1px solid rgba(127,127,127,.18);}
+  .sport-mnav a:last-child{border-bottom:none;}
+  #mnav-vegas-faceoff:checked ~ .sport-mnav{display:flex;}
+}</style><style>@media(max-width:820px){.sport-mflex{display:flex!important;align-items:center!important;justify-content:space-between!important;}}</style></head>
+<body>
+<div id="dc-root"><div class="sc-host" data-sc-name="Vegas Faceoff"><div data-dc-tpl="10" style="font-family: Saira, sans-serif; background: rgb(13, 6, 6); color: rgb(255, 255, 255); min-width: 360px; overflow-x: hidden;">
+
+  
+  <header data-dc-tpl="11" style="position: relative; z-index: 40; margin: 16px auto 0px; width: 94%; max-width: 1180px; background: rgb(255, 255, 255); border-radius: 4px; height: 66px; display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; padding: 0px 26px; box-shadow: rgba(0, 0, 0, 0.4) 0px 12px 34px; flex-wrap: nowrap;" class="sport-mflex">
+    <nav data-dc-tpl="12" style="display: flex; gap: 26px; align-items: center; font-family: &quot;Saira Condensed&quot;, sans-serif; font-weight: 700; font-size: 13px; letter-spacing: 0.06em;" class="sport-hide-mobile">
+      <a data-dc-tpl="13" href="#" style="color: rgb(200, 16, 46); text-decoration: none; padding-bottom: 2px; border-bottom: 2px solid rgb(200, 16, 46);">EVENTOS</a>
+      <a data-dc-tpl="14" href="#" style="color: rgb(20, 24, 31); text-decoration: none;">RANKINGS</a>
+      <a data-dc-tpl="15" href="#" style="color: rgb(20, 24, 31); text-decoration: none;">PELEADORES</a>
+      <a data-dc-tpl="16" href="#" style="color: rgb(20, 24, 31); text-decoration: none;">CONTENIDO DESTACADO</a>
+    </nav>
+    <a data-dc-tpl="17" href="#" style="text-decoration: none; display: flex; flex-direction: column; align-items: center; line-height: 0.82;">
+      <span data-dc-tpl="18" style="font-family: &quot;Saira Condensed&quot;, sans-serif; font-weight: 900; font-size: 30px; letter-spacing: -0.02em; color: rgb(20, 24, 31);">APEX</span>
+      <span data-dc-tpl="19" style="width: 34px; height: 3px; background: rgb(200, 16, 46); margin-top: 3px;"></span>
+    </a>
+    <nav data-dc-tpl="20" style="display: flex; gap: 24px; align-items: center; justify-content: flex-end; font-family: &quot;Saira Condensed&quot;, sans-serif; font-weight: 700; font-size: 13px; letter-spacing: 0.06em; color: rgb(20, 24, 31);" class="sport-hide-mobile">
+      <a data-dc-tpl="21" href="#" style="color: rgb(20, 24, 31); text-decoration: none;">REDES SOCIALES</a>
+      <a data-dc-tpl="22" href="#" style="color: rgb(20, 24, 31); text-decoration: none;">VE</a>
+      <a data-dc-tpl="23" href="#" style="color: rgb(20, 24, 31); text-decoration: none;">TIENDA</a>
+      <svg data-dc-tpl="24" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#14181f" stroke-width="2.4"><circle data-dc-tpl="25" cx="11" cy="11" r="7"></circle><path data-dc-tpl="26" d="m21 21-4.3-4.3"></path></svg>
+    </nav>
+  <input type="checkbox" id="mnav-vegas-faceoff" class="sport-mt" aria-hidden="true"><label for="mnav-vegas-faceoff" class="sport-burger" aria-label="Menu">☰</label><div class="sport-mnav"><a href="#">EVENTOS</a><a href="#">RANKINGS</a><a href="#">PELEADORES</a><a href="#">CONTENIDO DESTACADO</a><a href="#">REDES SOCIALES</a><a href="#">VE</a><a href="#">TIENDA</a></div></header>
+
+  
+  <section data-dc-tpl="27" data-screen-label="Hero — Furia 32" style="position: relative; width: 100%; background: rgb(13, 6, 6); padding-top: 16px;">
+    <div class="sc-host-x" data-dc-tpl="28" style="width: 100%; height: 54vw;"><div style="display:block;width:100%;height:100%;;background-image:url('https://images.openlen.com/vegas-faceoff/furia-valdez-walker.webp');background-size:cover;background-position:center;background-repeat:no-repeat;"></div></div>
+  </section>
+
+  
+  <section data-dc-tpl="29" style="max-width: 1180px; margin: 0px auto; padding: 60px 26px 26px;">
+    <div data-dc-tpl="30" style="display: flex; align-items: center; gap: 14px; margin-bottom: 6px;">
+      <span data-dc-tpl="31" style="width: 10px; height: 10px; border-radius: 50%; background: rgb(200, 16, 46); animation: 1.8s ease 0s infinite normal none running vgsPulse;"></span>
+      <span data-dc-tpl="32" style="font-family: &quot;Saira Condensed&quot;, sans-serif; font-weight: 700; font-size: 13px; letter-spacing: 0.16em; color: rgb(200, 16, 46);">CARTELERA · FURIA 32</span>
+    </div>
+    <h2 data-dc-tpl="33" style="margin: 0px 0px 26px; font-family: &quot;Saira Condensed&quot;, sans-serif; font-weight: 900; font-size: 38px; color: rgb(255, 255, 255);">CARTELERA COMPLETA</h2>
+    <div data-dc-tpl="34" style="border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 10px; overflow: hidden; background: rgb(21, 9, 9);">
+      
+        <a data-dc-tpl="36" href="#" style="position: relative; display: block; height: clamp(112px, 12vw, 176px); border-bottom: 1px solid rgba(255, 255, 255, 0.07); overflow: hidden; text-decoration: none;">
+          <div class="sc-host-x" data-dc-tpl="37" style="position: absolute; inset: 0px; width: 100%; height: 100%;"><div style="display:block;width:100%;height:100%;;background-image:url('https://images.openlen.com/vegas-faceoff/faceoff-1.webp');background-size:cover;background-position:center 32%;background-repeat:no-repeat;"></div></div>
+          <div data-dc-tpl="38" style="position: absolute; inset: 0px; background: radial-gradient(72% 130%, rgba(8, 2, 3, 0.82) 0%, rgba(8, 2, 3, 0.42) 52%, rgba(8, 2, 3, 0.05) 82%);"></div>
+          <div data-dc-tpl="39" style="position: absolute; inset: 0px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; text-align: center; padding: 8px 12px;">
+            <span data-dc-tpl="40" style="font-family: &quot;Saira Condensed&quot;, sans-serif; font-weight: 700; font-size: clamp(9px, 1.1vw, 12px); letter-spacing: 0.18em; color: rgb(255, 59, 84); white-space: nowrap;"><span class="sc-interp">PESO WÉLTER · ESTELAR</span></span>
+            <div data-dc-tpl="41" style="display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: clamp(14px, 3vw, 40px); width: 100%; max-width: 740px;">
+              <span data-dc-tpl="42" style="text-align: right; font-family: &quot;Saira Condensed&quot;, sans-serif; font-weight: 900; font-size: clamp(20px, 3vw, 40px); letter-spacing: -0.01em; color: rgb(255, 255, 255); text-shadow: rgba(0, 0, 0, 0.85) 0px 2px 12px;"><span class="sc-interp">ELLIS</span></span>
+              <span data-dc-tpl="43" style="font-family: &quot;Saira Condensed&quot;, sans-serif; font-weight: 700; font-size: clamp(13px, 1.5vw, 18px); color: rgb(255, 59, 84);">VS</span>
+              <span data-dc-tpl="44" style="text-align: left; font-family: &quot;Saira Condensed&quot;, sans-serif; font-weight: 900; font-size: clamp(20px, 3vw, 40px); letter-spacing: -0.01em; color: rgb(255, 255, 255); text-shadow: rgba(0, 0, 0, 0.85) 0px 2px 12px;"><span class="sc-interp">HART</span></span>
+            </div>
+            <span data-dc-tpl="45" style="font-family: Saira, sans-serif; font-size: clamp(10px, 1.1vw, 12px); color: rgba(255, 255, 255, 0.55); white-space: nowrap;"><span class="sc-interp">19-2-0  vs  17-4-0  ·  5 ASALTOS</span></span>
+          </div>
+        </a>
+      
+        <a data-dc-tpl="36" href="#" style="position: relative; display: block; height: clamp(112px, 12vw, 176px); border-bottom: 1px solid rgba(255, 255, 255, 0.07); overflow: hidden; text-decoration: none;">
+          <div class="sc-host-x" data-dc-tpl="37" style="position: absolute; inset: 0px; width: 100%; height: 100%;"><div style="display:block;width:100%;height:100%;;background-image:url('https://images.openlen.com/vegas-faceoff/faceoff-2.webp');background-size:cover;background-position:center 32%;background-repeat:no-repeat;"></div></div>
+          <div data-dc-tpl="38" style="position: absolute; inset: 0px; background: radial-gradient(72% 130%, rgba(8, 2, 3, 0.82) 0%, rgba(8, 2, 3, 0.42) 52%, rgba(8, 2, 3, 0.05) 82%);"></div>
+          <div data-dc-tpl="39" style="position: absolute; inset: 0px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; text-align: center; padding: 8px 12px;">
+            <span data-dc-tpl="40" style="font-family: &quot;Saira Condensed&quot;, sans-serif; font-weight: 700; font-size: clamp(9px, 1.1vw, 12px); letter-spacing: 0.18em; color: rgb(255, 59, 84); white-space: nowrap;"><span class="sc-interp">PESO PAJA · FEMENIL</span></span>
+            <div data-dc-tpl="41" style="display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: clamp(14px, 3vw, 40px); width: 100%; max-width: 740px;">
+              <span data-dc-tpl="42" style="text-align: right; font-family: &quot;Saira Condensed&quot;, sans-serif; font-weight: 900; font-size: clamp(20px, 3vw, 40px); letter-spacing: -0.01em; color: rgb(255, 255, 255); text-shadow: rgba(0, 0, 0, 0.85) 0px 2px 12px;"><span class="sc-interp">REYNA</span></span>
+              <span data-dc-tpl="43" style="font-family: &quot;Saira Condensed&quot;, sans-serif; font-weight: 700; font-size: clamp(13px, 1.5vw, 18px); color: rgb(255, 59, 84);">VS</span>
+              <span data-dc-tpl="44" style="text-align: left; font-family: &quot;Saira Condensed&quot;, sans-serif; font-weight: 900; font-size: clamp(20px, 3vw, 40px); letter-spacing: -0.01em; color: rgb(255, 255, 255); text-shadow: rgba(0, 0, 0, 0.85) 0px 2px 12px;"><span class="sc-interp">WHITLOCK</span></span>
+            </div>
+            <span data-dc-tpl="45" style="font-family: Saira, sans-serif; font-size: clamp(10px, 1.1vw, 12px); color: rgba(255, 255, 255, 0.55); white-space: nowrap;"><span class="sc-interp">14-1-0  vs  12-2-0  ·  3 ASALTOS</span></span>
+          </div>
+        </a>
+      
+        <a data-dc-tpl="36" href="#" style="position: relative; display: block; height: clamp(112px, 12vw, 176px); border-bottom: 1px solid rgba(255, 255, 255, 0.07); overflow: hidden; text-decoration: none;">
+          <div class="sc-host-x" data-dc-tpl="37" style="position: absolute; inset: 0px; width: 100%; height: 100%;"><div style="display:block;width:100%;height:100%;;background-image:url('https://images.openlen.com/vegas-faceoff/faceoff-3.webp');background-size:cover;background-position:center 32%;background-repeat:no-repeat;"></div></div>
+          <div data-dc-tpl="38" style="position: absolute; inset: 0px; background: radial-gradient(72% 130%, rgba(8, 2, 3, 0.82) 0%, rgba(8, 2, 3, 0.42) 52%, rgba(8, 2, 3, 0.05) 82%);"></div>
+          <div data-dc-tpl="39" style="position: absolute; inset: 0px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; text-align: center; padding: 8px 12px;">
+            <span data-dc-tpl="40" style="font-family: &quot;Saira Condensed&quot;, sans-serif; font-weight: 700; font-size: clamp(9px, 1.1vw, 12px); letter-spacing: 0.18em; color: rgb(255, 59, 84); white-space: nowrap;"><span class="sc-interp">PESO MEDIO</span></span>
+            <div data-dc-tpl="41" style="display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: clamp(14px, 3vw, 40px); width: 100%; max-width: 740px;">
+              <span data-dc-tpl="42" style="text-align: right; font-family: &quot;Saira Condensed&quot;, sans-serif; font-weight: 900; font-size: clamp(20px, 3vw, 40px); letter-spacing: -0.01em; color: rgb(255, 255, 255); text-shadow: rgba(0, 0, 0, 0.85) 0px 2px 12px;"><span class="sc-interp">PETROV</span></span>
+              <span data-dc-tpl="43" style="font-family: &quot;Saira Condensed&quot;, sans-serif; font-weight: 700; font-size: clamp(13px, 1.5vw, 18px); color: rgb(255, 59, 84);">VS</span>
+              <span data-dc-tpl="44" style="text-align: left; font-family: &quot;Saira Condensed&quot;, sans-serif; font-weight: 900; font-size: clamp(20px, 3vw, 40px); letter-spacing: -0.01em; color: rgb(255, 255, 255); text-shadow: rgba(0, 0, 0, 0.85) 0px 2px 12px;"><span class="sc-interp">NAWAZ</span></span>
+            </div>
+            <span data-dc-tpl="45" style="font-family: Saira, sans-serif; font-size: clamp(10px, 1.1vw, 12px); color: rgba(255, 255, 255, 0.55); white-space: nowrap;"><span class="sc-interp">20-5-0  vs  17-2-0  ·  3 ASALTOS</span></span>
+          </div>
+        </a>
+      
+        <a data-dc-tpl="36" href="#" style="position: relative; display: block; height: clamp(112px, 12vw, 176px); border-bottom: 1px solid rgba(255, 255, 255, 0.07); overflow: hidden; text-decoration: none;">
+          <div class="sc-host-x" data-dc-tpl="37" style="position: absolute; inset: 0px; width: 100%; height: 100%;"><div style="display:block;width:100%;height:100%;;background-image:url('https://images.openlen.com/vegas-faceoff/faceoff-4.webp');background-size:cover;background-position:center 32%;background-repeat:no-repeat;"></div></div>
+          <div data-dc-tpl="38" style="position: absolute; inset: 0px; background: radial-gradient(72% 130%, rgba(8, 2, 3, 0.82) 0%, rgba(8, 2, 3, 0.42) 52%, rgba(8, 2, 3, 0.05) 82%);"></div>
+          <div data-dc-tpl="39" style="position: absolute; inset: 0px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; text-align: center; padding: 8px 12px;">
+            <span data-dc-tpl="40" style="font-family: &quot;Saira Condensed&quot;, sans-serif; font-weight: 700; font-size: clamp(9px, 1.1vw, 12px); letter-spacing: 0.18em; color: rgb(255, 59, 84); white-space: nowrap;"><span class="sc-interp">PESO GALLO</span></span>
+            <div data-dc-tpl="41" style="display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: clamp(14px, 3vw, 40px); width: 100%; max-width: 740px;">
+              <span data-dc-tpl="42" style="text-align: right; font-family: &quot;Saira Condensed&quot;, sans-serif; font-weight: 900; font-size: clamp(20px, 3vw, 40px); letter-spacing: -0.01em; color: rgb(255, 255, 255); text-shadow: rgba(0, 0, 0, 0.85) 0px 2px 12px;"><span class="sc-interp">NAKAMURA</span></span>
+              <span data-dc-tpl="43" style="font-family: &quot;Saira Condensed&quot;, sans-serif; font-weight: 700; font-size: clamp(13px, 1.5vw, 18px); color: rgb(255, 59, 84);">VS</span>
+              <span data-dc-tpl="44" style="text-align: left; font-family: &quot;Saira Condensed&quot;, sans-serif; font-weight: 900; font-size: clamp(20px, 3vw, 40px); letter-spacing: -0.01em; color: rgb(255, 255, 255); text-shadow: rgba(0, 0, 0, 0.85) 0px 2px 12px;"><span class="sc-interp">SALAS</span></span>
+            </div>
+            <span data-dc-tpl="45" style="font-family: Saira, sans-serif; font-size: clamp(10px, 1.1vw, 12px); color: rgba(255, 255, 255, 0.55); white-space: nowrap;"><span class="sc-interp">13-0-0  vs  11-1-0  ·  3 ASALTOS</span></span>
+          </div>
+        </a>
+      
+        <a data-dc-tpl="36" href="#" style="position: relative; display: block; height: clamp(112px, 12vw, 176px); border-bottom: 1px solid rgba(255, 255, 255, 0.07); overflow: hidden; text-decoration: none;">
+          <div class="sc-host-x" data-dc-tpl="37" style="position: absolute; inset: 0px; width: 100%; height: 100%;"><div style="display:block;width:100%;height:100%;;background-image:url('https://images.openlen.com/vegas-faceoff/faceoff-5.webp');background-size:cover;background-position:center 32%;background-repeat:no-repeat;"></div></div>
+          <div data-dc-tpl="38" style="position: absolute; inset: 0px; background: radial-gradient(72% 130%, rgba(8, 2, 3, 0.82) 0%, rgba(8, 2, 3, 0.42) 52%, rgba(8, 2, 3, 0.05) 82%);"></div>
+          <div data-dc-tpl="39" style="position: absolute; inset: 0px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; text-align: center; padding: 8px 12px;">
+            <span data-dc-tpl="40" style="font-family: &quot;Saira Condensed&quot;, sans-serif; font-weight: 700; font-size: clamp(9px, 1.1vw, 12px); letter-spacing: 0.18em; color: rgb(255, 59, 84); white-space: nowrap;"><span class="sc-interp">PESO PLUMA</span></span>
+            <div data-dc-tpl="41" style="display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: clamp(14px, 3vw, 40px); width: 100%; max-width: 740px;">
+              <span data-dc-tpl="42" style="text-align: right; font-family: &quot;Saira Condensed&quot;, sans-serif; font-weight: 900; font-size: clamp(20px, 3vw, 40px); letter-spacing: -0.01em; color: rgb(255, 255, 255); text-shadow: rgba(0, 0, 0, 0.85) 0px 2px 12px;"><span class="sc-interp">FARÉS</span></span>
+              <span data-dc-tpl="43" style="font-family: &quot;Saira Condensed&quot;, sans-serif; font-weight: 700; font-size: clamp(13px, 1.5vw, 18px); color: rgb(255, 59, 84);">VS</span>
+              <span data-dc-tpl="44" style="text-align: left; font-family: &quot;Saira Condensed&quot;, sans-serif; font-weight: 900; font-size: clamp(20px, 3vw, 40px); letter-spacing: -0.01em; color: rgb(255, 255, 255); text-shadow: rgba(0, 0, 0, 0.85) 0px 2px 12px;"><span class="sc-interp">ADEYEMI</span></span>
+            </div>
+            <span data-dc-tpl="45" style="font-family: Saira, sans-serif; font-size: clamp(10px, 1.1vw, 12px); color: rgba(255, 255, 255, 0.55); white-space: nowrap;"><span class="sc-interp">18-3-0  vs  16-4-0  ·  3 ASALTOS</span></span>
+          </div>
+        </a>
+      
+    </div>
+  </section>
+
+  
+  <section data-dc-tpl="46" style="max-width: 1180px; margin: 0px auto; padding: 30px 26px;">
+    <div data-dc-tpl="47" style="background: linear-gradient(100deg, rgb(11, 11, 20), rgb(26, 19, 34)); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 10px; padding: 34px; display: flex; flex-wrap: wrap; gap: 20px; align-items: center; justify-content: space-between;">
+      <div data-dc-tpl="48">
+        <div data-dc-tpl="49" style="font-family: &quot;Saira Condensed&quot;, sans-serif; font-weight: 700; font-size: 12px; letter-spacing: 0.16em; color: rgb(200, 16, 46);">EVENTO PRINCIPAL · SÁB 20 JUN · 22:00 ET</div>
+        <div data-dc-tpl="50" style="font-family: &quot;Saira Condensed&quot;, sans-serif; font-weight: 900; font-size: 30px; color: rgb(255, 255, 255); margin-top: 4px;">NO TE PIERDAS NI UN GOLPE</div>
+        <div data-dc-tpl="51" style="font-family: Saira, sans-serif; font-size: 14px; color: rgba(255, 255, 255, 0.6); margin-top: 4px;">Transmisión en vivo y resúmenes inmediatos en STREAM+</div>
+      </div>
+      <a data-dc-tpl="52" href="#" class="scp0" style="text-decoration: none; background: rgb(200, 16, 46); color: rgb(255, 255, 255); font-family: &quot;Saira Condensed&quot;, sans-serif; font-weight: 800; font-size: 15px; letter-spacing: 0.06em; padding: 16px 36px; border-radius: 4px; transition: transform 0.12s, background 0.12s;">VE EN STREAM+ →</a>
+    </div>
+  </section>
+
+  
+  <section data-dc-tpl="53" style="max-width: 1180px; margin: 0px auto; padding: 30px 26px 70px;">
+    <h2 data-dc-tpl="54" style="margin: 0px 0px 20px; font-family: &quot;Saira Condensed&quot;, sans-serif; font-weight: 900; font-size: 34px; color: rgb(255, 255, 255);">LO ÚLTIMO</h2>
+    <div data-dc-tpl="55" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px;">
+      
+        <a data-dc-tpl="57" href="#" class="scp1" style="text-decoration: none; display: block; background: rgb(21, 9, 9); border: 1px solid rgba(255, 255, 255, 0.07); border-radius: 8px; overflow: hidden; transition: transform 0.14s, border-color 0.14s;">
+          <div data-dc-tpl="58" style="position: relative; width: 100%; aspect-ratio: 16 / 9; overflow: hidden; background: linear-gradient(135deg, rgb(125, 10, 28), rgb(200, 16, 46));">
+            <div class="sc-host-x" data-dc-tpl="59" style="position: absolute; inset: 0px; width: 100%; height: 100%;"><div style="display:block;width:100%;height:100%;;background-image:url('https://images.openlen.com/vegas-faceoff/v2news-1.webp');background-size:cover;background-position:center;background-repeat:no-repeat;"></div></div>
+          </div>
+          <div data-dc-tpl="60" style="padding: 16px;">
+            <div data-dc-tpl="61" style="font-family: &quot;Saira Condensed&quot;, sans-serif; font-weight: 700; font-size: 10px; letter-spacing: 0.12em; color: rgb(200, 16, 46);"><span class="sc-interp">PREVIA</span></div>
+            <div data-dc-tpl="62" style="font-family: Saira, sans-serif; font-weight: 600; font-size: 15px; color: rgb(255, 255, 255); line-height: 1.28; margin-top: 5px; text-wrap: pretty;"><span class="sc-interp">Valdez y Walker chocan por el cinturón vacante en una guerra de estilos</span></div>
+          </div>
+        </a>
+      
+        <a data-dc-tpl="57" href="#" class="scp1" style="text-decoration: none; display: block; background: rgb(21, 9, 9); border: 1px solid rgba(255, 255, 255, 0.07); border-radius: 8px; overflow: hidden; transition: transform 0.14s, border-color 0.14s;">
+          <div data-dc-tpl="58" style="position: relative; width: 100%; aspect-ratio: 16 / 9; overflow: hidden; background: linear-gradient(135deg, rgb(125, 10, 28), rgb(200, 16, 46));">
+            <div class="sc-host-x" data-dc-tpl="59" style="position: absolute; inset: 0px; width: 100%; height: 100%;"><div style="display:block;width:100%;height:100%;;background-image:url('https://images.openlen.com/vegas-faceoff/v2news-2.webp');background-size:cover;background-position:center;background-repeat:no-repeat;"></div></div>
+          </div>
+          <div data-dc-tpl="60" style="padding: 16px;">
+            <div data-dc-tpl="61" style="font-family: &quot;Saira Condensed&quot;, sans-serif; font-weight: 700; font-size: 10px; letter-spacing: 0.12em; color: rgb(200, 16, 46);"><span class="sc-interp">PESAJE</span></div>
+            <div data-dc-tpl="62" style="font-family: Saira, sans-serif; font-weight: 600; font-size: 15px; color: rgb(255, 255, 255); line-height: 1.28; margin-top: 5px; text-wrap: pretty;"><span class="sc-interp">Careo encendido: tuvieron que separar a Valdez y Walker en el último cara a cara</span></div>
+          </div>
+        </a>
+      
+        <a data-dc-tpl="57" href="#" class="scp1" style="text-decoration: none; display: block; background: rgb(21, 9, 9); border: 1px solid rgba(255, 255, 255, 0.07); border-radius: 8px; overflow: hidden; transition: transform 0.14s, border-color 0.14s;">
+          <div data-dc-tpl="58" style="position: relative; width: 100%; aspect-ratio: 16 / 9; overflow: hidden; background: linear-gradient(135deg, rgb(125, 10, 28), rgb(200, 16, 46));">
+            <div class="sc-host-x" data-dc-tpl="59" style="position: absolute; inset: 0px; width: 100%; height: 100%;"><div style="display:block;width:100%;height:100%;;background-image:url('https://images.openlen.com/vegas-faceoff/v2news-3.webp');background-size:cover;background-position:center;background-repeat:no-repeat;"></div></div>
+          </div>
+          <div data-dc-tpl="60" style="padding: 16px;">
+            <div data-dc-tpl="61" style="font-family: &quot;Saira Condensed&quot;, sans-serif; font-weight: 700; font-size: 10px; letter-spacing: 0.12em; color: rgb(200, 16, 46);"><span class="sc-interp">ODDS</span></div>
+            <div data-dc-tpl="62" style="font-family: Saira, sans-serif; font-weight: 600; font-size: 15px; color: rgb(255, 255, 255); line-height: 1.28; margin-top: 5px; text-wrap: pretty;"><span class="sc-interp">Las casas abren a Valdez −150 como favorito; Nakamura, la sorpresa de la coestelar</span></div>
+          </div>
+        </a>
+      
+    </div>
+  </section>
+
+  <footer data-dc-tpl="63" style="border-top: 1px solid rgba(255, 255, 255, 0.07); padding: 26px; text-align: center; font-family: &quot;Saira Condensed&quot;, sans-serif; font-weight: 800; font-size: 22px; color: rgba(255, 255, 255, 0.85);">APEX <span data-dc-tpl="64" style="display: inline-block; width: 26px; height: 3px; background: rgb(200, 16, 46); vertical-align: middle; margin-left: 2px;"></span></footer></div></div></div>
+
+
+
+
+
+</body></html>

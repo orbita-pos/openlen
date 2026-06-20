@@ -32,6 +32,7 @@ export const FAMILY = z.enum([
   "open-source",
   "music",
   "gaming",
+  "sports",
   "local-services",
   "nonprofit",
   "wellness",

@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html><head><style>
+    .sc-placeholder{background:rgba(255,255,255,.3);border:1px solid rgba(0,0,0,.5);
+      border-radius:2px;box-sizing:border-box;overflow:hidden}
+    @keyframes sc-shine{0%{background-position:100% 50%}100%{background-position:0% 50%}}
+    html.sc-dc-streaming .sc-placeholder,
+    html.sc-dc-streaming .sc-interp.sc-missing{position:relative;
+      background:color-mix(in srgb,currentColor 5%,transparent);
+      border-color:transparent}
+    html.sc-dc-streaming .sc-placeholder::before,
+    html.sc-dc-streaming .sc-interp.sc-missing::before{content:'';
+      position:absolute;inset:0;pointer-events:none;
+      background:linear-gradient(90deg,rgba(217,119,87,0) 25%,rgba(247,225,211,.95) 37%,rgba(217,119,87,0) 63%);
+      background-size:400% 100%;animation:sc-shine 1.4s ease infinite}
+    html.sc-dc-streaming .sc-placeholder:nth-child(n+9 of .sc-placeholder)::before,
+    html.sc-dc-streaming .sc-interp.sc-missing:nth-child(n+9 of .sc-interp.sc-missing)::before{animation:none;
+      background:color-mix(in srgb,currentColor 8%,transparent)}
+    .sc-placeholder-error{padding:4px 8px;font:11px/1.4 ui-monospace,monospace;
+      color:rgba(0,0,0,.7);word-break:break-word}
+    .sc-interp.sc-missing{display:inline-block;width:2em;height:1em;overflow:hidden;
+      vertical-align:text-bottom;background:rgba(255,255,255,.3);border:1px solid rgba(0,0,0,.5);
+      border-radius:2px;box-sizing:border-box;color:transparent;
+      user-select:none}
+    .sc-interp.sc-unresolved{font-family:ui-monospace,monospace;font-size:.85em;
+      color:rgba(0,0,0,.5);background:rgba(0,0,0,.05);border-radius:3px;
+      padding:0 3px}
+    .sc-host.sc-has-error{position:relative}
+    .sc-logic-error{position:absolute;top:8px;left:8px;z-index:2147483647;max-width:60ch;
+      padding:6px 10px;background:#b00020;color:#fff;font:12px/1.4 ui-monospace,monospace;
+      border-radius:4px;white-space:pre-wrap;pointer-events:none}
+    /* Mirrors PRINT_BASELINE_CSS in apps/web deck-stage-export.ts — keep both
+       in sync until dc-runtime regains a build step. */
+    @media print {
+      @page { margin: 0.5cm; }
+      section, article, figure, table { break-inside: avoid; }
+      *, *::before, *::after {
+        print-color-adjust: exact; -webkit-print-color-adjust: exact;
+        backdrop-filter: none !important; -webkit-backdrop-filter: none !important;
+        animation-delay: -99s !important; animation-duration: .001s !important;
+        animation-iteration-count: 1 !important; animation-fill-mode: both !important;
+        animation-play-state: running !important; transition-duration: 0s !important;
+      }
+    }
+  </style>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>x-dc{display:none!important}</style>
+<style></style><style>html,body{height:100%;margin:0}#dc-root,#dc-root>.sc-host{height:100%}</style><link rel="preconnect" href="https://fonts.googleapis.com" data-dc-tpl="1"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="" data-dc-tpl="2"><link href="https://fonts.googleapis.com/css2?family=Saira+Condensed:wght@500;600;700;800;900&amp;family=Saira:wght@400;500;600;700&amp;display=swap" rel="stylesheet" data-dc-tpl="3"><style data-dc-tpl="4">
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: #0c0a16; }
+  @keyframes apxFloat { 0%,100% { transform: translateY(0) rotate(var(--r,0deg)); } 50% { transform: translateY(-16px) rotate(calc(var(--r,0deg) + 6deg)); } }
+  @keyframes apxTwinkle { 0%,100% { opacity: .55; } 50% { opacity: 1; } }
+  @keyframes apxPulse { 0% { box-shadow: 0 0 0 0 rgba(210,10,10,.55); } 70% { box-shadow: 0 0 0 9px rgba(210,10,10,0); } 100% { box-shadow: 0 0 0 0 rgba(210,10,10,0); } }
+  image-slot { display:block; width:100%; height:100%; }
+</style><style>
+.sport-burger{display:none;}
+.sport-mt{display:none;}
+.sport-mnav{display:none;}
+@media(max-width:820px){
+  .sport-hide-mobile{display:none!important;}
+  .sport-cnav{overflow:visible!important;}
+  .sport-burger{display:inline-flex;align-items:center;justify-content:center;margin-left:auto;cursor:pointer;font-size:24px;line-height:1;width:42px;height:42px;color:#14181f;user-select:none;}
+  .sport-mnav{position:absolute;top:100%;left:0;right:0;display:none;flex-direction:column;background:#ffffff;box-shadow:0 14px 30px rgba(0,0,0,.35);z-index:60;padding:6px 0;}
+  .sport-mnav a{display:block;padding:14px 24px;color:#14181f;text-decoration:none;font-size:15px;letter-spacing:.04em;border-bottom:1px solid rgba(127,127,127,.18);}
+  .sport-mnav a:last-child{border-bottom:none;}
+  #mnav-apex-freedom:checked ~ .sport-mnav{display:flex;}
+}</style><style>@media(max-width:820px){.sport-mflex{display:flex!important;align-items:center!important;justify-content:space-between!important;}}</style></head>
+<body>
+<div id="dc-root"><div class="sc-host" data-sc-name="Apex Freedom"><div data-dc-tpl="10" style="font-family: Saira, sans-serif; background: rgb(12, 10, 22); color: rgb(255, 255, 255); min-width: 360px; overflow-x: hidden;">
+
+  
+  <header data-dc-tpl="11" style="position: relative; z-index: 40; margin: 16px auto 0px; width: 94%; max-width: 1180px; background: rgb(255, 255, 255); border-radius: 4px; height: 66px; display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; padding: 0px 26px; box-shadow: rgba(0, 0, 0, 0.35) 0px 12px 34px; flex-wrap: nowrap;" class="sport-mflex">
+      <nav data-dc-tpl="12" style="display: flex; gap: 26px; align-items: center; font-family: &quot;Saira Condensed&quot;, sans-serif; font-weight: 700; font-size: 13px; letter-spacing: 0.06em; color: rgb(20, 24, 31);" class="sport-hide-mobile">
+        <a data-dc-tpl="13" href="#" style="color: rgb(20, 24, 31); text-decoration: none;">EVENTOS</a>
+        <a data-dc-tpl="14" href="#" style="color: rgb(20, 24, 31); text-decoration: none;">RANKINGS</a>
+        <a data-dc-tpl="15" href="#" style="color: rgb(20, 24, 31); text-decoration: none;">PELEADORES</a>
+        <a data-dc-tpl="16" href="#" style="color: rgb(20, 24, 31); text-decoration: none;">CONTENIDO DESTACADO</a>
+      </nav>
+      <a data-dc-tpl="17" href="#" style="text-decoration: none; display: flex; flex-direction: column; align-items: center; line-height: 0.82;">
+        <span data-dc-tpl="18" style="font-family: &quot;Saira Condensed&quot;, sans-serif; font-weight: 900; font-size: 30px; letter-spacing: -0.02em; color: rgb(20, 24, 31);">APEX</span>
+        <span data-dc-tpl="19" style="width: 34px; height: 3px; background: rgb(210, 10, 10); margin-top: 3px;"></span>
+      </a>
+      <nav data-dc-tpl="20" style="display: flex; gap: 24px; align-items: center; justify-content: flex-end; font-family: &quot;Saira Condensed&quot;, sans-serif; font-weight: 700; font-size: 13px; letter-spacing: 0.06em; color: rgb(20, 24, 31);" class="sport-hide-mobile">
+        <a data-dc-tpl="21" href="#" style="color: rgb(20, 24, 31); text-decoration: none;">REDES SOCIALES</a>
+        <a data-dc-tpl="22" href="#" style="color: rgb(20, 24, 31); text-decoration: none;">VE</a>
+        <a data-dc-tpl="23" href="#" style="color: rgb(20, 24, 31); text-decoration: none;">TIENDA</a>
+        <svg data-dc-tpl="24" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#14181f" stroke-width="2.4"><circle data-dc-tpl="25" cx="11" cy="11" r="7"></circle><path data-dc-tpl="26" d="m21 21-4.3-4.3"></path></svg>
+      </nav>
+    <input type="checkbox" id="mnav-apex-freedom" class="sport-mt" aria-hidden="true"><label for="mnav-apex-freedom" class="sport-burger" aria-label="Menu">☰</label><div class="sport-mnav"><a href="#">EVENTOS</a><a href="#">RANKINGS</a><a href="#">PELEADORES</a><a href="#">CONTENIDO DESTACADO</a><a href="#">REDES SOCIALES</a><a href="#">VE</a><a href="#">TIENDA</a></div></header>
+
+  
+  <section data-dc-tpl="27" data-screen-label="Hero — AFC Liberty 250" style="position: relative; width: 100%; background: rgb(12, 10, 22); padding-top: 16px;">
+    <div class="sc-host-x" data-dc-tpl="28" style="width: 100%; height: 56.25vw;"><div style="display:block;width:100%;height:100%;;background-image:url('https://images.openlen.com/apex-freedom/afc-valor-stryker.webp');background-size:cover;background-position:center;background-repeat:no-repeat;"></div></div>
+  </section>
+
+  
+  <section data-dc-tpl="29" style="background: rgb(17, 16, 30); border-top: 1px solid rgba(255, 255, 255, 0.07); border-bottom: 1px solid rgba(255, 255, 255, 0.07);">
+    <div data-dc-tpl="30" style="max-width: 1180px; margin: 0px auto; padding: 22px 26px; display: flex; flex-wrap: wrap; gap: 20px; align-items: center; justify-content: space-between;">
+      <div data-dc-tpl="31" style="font-family: &quot;Saira Condensed&quot;, sans-serif; font-weight: 800; font-size: 20px; letter-spacing: 0.08em; color: rgb(255, 255, 255);">EL EVENTO ESTELAR COMIENZA EN</div>
+      <div data-dc-tpl="32" style="display: flex; gap: 14px; font-family: &quot;Saira Condensed&quot;, sans-serif;">
+        <div data-dc-tpl="33" style="text-align: center; min-width: 62px;"><div data-dc-tpl="34" style="font-size: 40px; font-weight: 900; color: rgb(255, 255, 255); font-variant-numeric: tabular-nums; line-height: 1;"><span class="sc-interp">11</span></div><div data-dc-tpl="35" style="font-size: 11px; letter-spacing: 0.18em; color: rgba(255, 255, 255, 0.5);">DÍAS</div></div>
+        <div data-dc-tpl="36" style="font-size: 40px; font-weight: 300; color: rgba(255, 255, 255, 0.25); line-height: 1;">:</div>
+        <div data-dc-tpl="37" style="text-align: center; min-width: 62px;"><div data-dc-tpl="38" style="font-size: 40px; font-weight: 900; color: rgb(255, 255, 255); font-variant-numeric: tabular-nums; line-height: 1;"><span class="sc-interp">07</span></div><div data-dc-tpl="39" style="font-size: 11px; letter-spacing: 0.18em; color: rgba(255, 255, 255, 0.5);">HORAS</div></div>
+        <div data-dc-tpl="40" style="font-size: 40px; font-weight: 300; color: rgba(255, 255, 255, 0.25); line-height: 1;">:</div>
+        <div data-dc-tpl="41" style="text-align: center; min-width: 62px;"><div data-dc-tpl="42" style="font-size: 40px; font-weight: 900; color: rgb(255, 255, 255); font-variant-numeric: tabular-nums; line-height: 1;"><span class="sc-interp">34</span></div><div data-dc-tpl="43" style="font-size: 11px; letter-spacing: 0.18em; color: rgba(255, 255, 255, 0.5);">MIN</div></div>
+        <div data-dc-tpl="44" style="font-size: 40px; font-weight: 300; color: rgba(255, 255, 255, 0.25); line-height: 1;">:</div>
+        <div data-dc-tpl="45" style="text-align: center; min-width: 62px;"><div data-dc-tpl="46" style="font-size: 40px; font-weight: 900; color: rgb(210, 10, 10); font-variant-numeric: tabular-nums; line-height: 1;"><span class="sc-interp">08</span></div><div data-dc-tpl="47" style="font-size: 11px; letter-spacing: 0.18em; color: rgba(255, 255, 255, 0.5);">SEG</div></div>
+      </div>
+    </div>
+  </section>
+
+  
+  <section data-dc-tpl="48" style="max-width: 1180px; margin: 0px auto; padding: 56px 26px 20px;">
+    <div data-dc-tpl="49" style="display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 24px;">
+      <h2 data-dc-tpl="50" style="margin: 0px; font-family: &quot;Saira Condensed&quot;, sans-serif; font-weight: 900; font-size: 34px; letter-spacing: -0.01em; color: rgb(255, 255, 255);">PRÓXIMOS EVENTOS</h2>
+      <a data-dc-tpl="51" href="#" style="text-decoration: none; font-family: &quot;Saira Condensed&quot;, sans-serif; font-weight: 700; font-size: 13px; letter-spacing: 0.08em; color: rgb(210, 10, 10);">VER TODOS →</a>
+    </div>
+    <div data-dc-tpl="52" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(330px, 1fr)); gap: 24px;">
+      
+        <a data-dc-tpl="54" href="#" class="scp0" style="text-decoration: none; display: block; background: rgb(21, 19, 31); border: 1px solid rgba(255, 255, 255, 0.07); border-radius: 6px; overflow: hidden; transition: transform 0.14s, border-color 0.14s;">
+          <div data-dc-tpl="55" style="position: relative; width: 100%; aspect-ratio: 3 / 1; overflow: hidden; background: linear-gradient(135deg, rgb(58, 44, 94), rgb(124, 75, 134));">
+            <div class="sc-host-x" data-dc-tpl="56" style="position: absolute; inset: 0px; width: 100%; height: 100%;"><div style="display:block;width:100%;height:100%;;background-image:url('https://images.openlen.com/apex-freedom/afc-maddox-vega.webp');background-size:cover;background-position:center;background-repeat:no-repeat;"></div></div>
+          </div>
+          <div data-dc-tpl="57" style="padding: 13px 16px; display: flex; align-items: center; justify-content: space-between; gap: 10px;">
+            <div data-dc-tpl="58" style="font-family: Saira, sans-serif; font-size: 13px; color: rgba(255, 255, 255, 0.62);"><span class="sc-interp">Sáb 19 Jul · New Liberty City</span></div>
+            <span data-dc-tpl="59" style="font-family: &quot;Saira Condensed&quot;, sans-serif; font-weight: 700; font-size: 11px; letter-spacing: 0.08em; color: rgb(210, 10, 10); white-space: nowrap;">VER EVENTO →</span>
+          </div>
+        </a>
+      
+        <a data-dc-tpl="54" href="#" class="scp0" style="text-decoration: none; display: block; background: rgb(21, 19, 31); border: 1px solid rgba(255, 255, 255, 0.07); border-radius: 6px; overflow: hidden; transition: transform 0.14s, border-color 0.14s;">
+          <div data-dc-tpl="55" style="position: relative; width: 100%; aspect-ratio: 3 / 1; overflow: hidden; background: linear-gradient(135deg, rgb(58, 44, 94), rgb(124, 75, 134));">
+            <div class="sc-host-x" data-dc-tpl="56" style="position: absolute; inset: 0px; width: 100%; height: 100%;"><div style="display:block;width:100%;height:100%;;background-image:url('https://images.openlen.com/apex-freedom/afc-torin-kross.webp');background-size:cover;background-position:center;background-repeat:no-repeat;"></div></div>
+          </div>
+          <div data-dc-tpl="57" style="padding: 13px 16px; display: flex; align-items: center; justify-content: space-between; gap: 10px;">
+            <div data-dc-tpl="58" style="font-family: Saira, sans-serif; font-size: 13px; color: rgba(255, 255, 255, 0.62);"><span class="sc-interp">Sáb 19 Jul · New Liberty City</span></div>
+            <span data-dc-tpl="59" style="font-family: &quot;Saira Condensed&quot;, sans-serif; font-weight: 700; font-size: 11px; letter-spacing: 0.08em; color: rgb(210, 10, 10); white-space: nowrap;">VER EVENTO →</span>
+          </div>
+        </a>
+      
+        <a data-dc-tpl="54" href="#" class="scp0" style="text-decoration: none; display: block; background: rgb(21, 19, 31); border: 1px solid rgba(255, 255, 255, 0.07); border-radius: 6px; overflow: hidden; transition: transform 0.14s, border-color 0.14s;">
+          <div data-dc-tpl="55" style="position: relative; width: 100%; aspect-ratio: 3 / 1; overflow: hidden; background: linear-gradient(135deg, rgb(58, 44, 94), rgb(124, 75, 134));">
+            <div class="sc-host-x" data-dc-tpl="56" style="position: absolute; inset: 0px; width: 100%; height: 100%;"><div style="display:block;width:100%;height:100%;;background-image:url('https://images.openlen.com/apex-freedom/afc-ryder-drake.webp');background-size:cover;background-position:center;background-repeat:no-repeat;"></div></div>
+          </div>
+          <div data-dc-tpl="57" style="padding: 13px 16px; display: flex; align-items: center; justify-content: space-between; gap: 10px;">
+            <div data-dc-tpl="58" style="font-family: Saira, sans-serif; font-size: 13px; color: rgba(255, 255, 255, 0.62);"><span class="sc-interp">Sáb 19 Jul · New Liberty City</span></div>
+            <span data-dc-tpl="59" style="font-family: &quot;Saira Condensed&quot;, sans-serif; font-weight: 700; font-size: 11px; letter-spacing: 0.08em; color: rgb(210, 10, 10); white-space: nowrap;">VER EVENTO →</span>
+          </div>
+        </a>
+      
+    </div>
+  </section>
+
+  
+  <section data-dc-tpl="60" style="max-width: 1180px; margin: 0px auto; padding: 40px 26px 70px; display: grid; grid-template-columns: minmax(0px, 1fr) minmax(0px, 1.4fr); gap: 34px; align-items: start;">
+    <div data-dc-tpl="61">
+      <h2 data-dc-tpl="62" style="margin: 0px 0px 18px; font-family: &quot;Saira Condensed&quot;, sans-serif; font-weight: 900; font-size: 34px; color: rgb(255, 255, 255);">RANKINGS <span data-dc-tpl="63" style="color: rgba(255, 255, 255, 0.4); font-size: 18px; font-weight: 700;">P4P</span></h2>
+      <div data-dc-tpl="64" style="background: rgb(21, 19, 31); border: 1px solid rgba(255, 255, 255, 0.07); border-radius: 6px; overflow: hidden;">
+        
+          <div data-dc-tpl="66" style="display: flex; align-items: center; gap: 14px; padding: 13px 16px; border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
+            <span data-dc-tpl="67" style="font-family: &quot;Saira Condensed&quot;, sans-serif; font-weight: 900; font-size: 20px; color: rgb(210, 10, 10); width: 24px; font-variant-numeric: tabular-nums;"><span class="sc-interp">1</span></span>
+            <span data-dc-tpl="68" style="flex: 1 1 0%; font-family: Saira, sans-serif; font-weight: 600; font-size: 15px; color: rgb(255, 255, 255);"><span class="sc-interp">Diego Marchetti</span></span>
+            <span data-dc-tpl="69" style="font-family: Saira, sans-serif; font-size: 12px; color: rgba(255, 255, 255, 0.45);"><span class="sc-interp">24-1-0</span></span>
+            <span data-dc-tpl="70" style="font-family: &quot;Saira Condensed&quot;, sans-serif; font-weight: 700; font-size: 12px; color: rgb(62, 207, 142);"><span class="sc-interp">NUEVO</span></span>
+          </div>
+        
+          <div data-dc-tpl="66" style="display: flex; align-items: center; gap: 14px; padding: 13px 16px; border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
+            <span data-dc-tpl="67" style="font-family: &quot;Saira Condensed&quot;, sans-serif; font-weight: 900; font-size: 20px; color: rgb(210, 10, 10); width: 24px; font-variant-numeric: tabular-nums;"><span class="sc-interp">2</span></span>
+            <span data-dc-tpl="68" style="flex: 1 1 0%; font-family: Saira, sans-serif; font-weight: 600; font-size: 15px; color: rgb(255, 255, 255);"><span class="sc-interp">Adrian Voss</span></span>
+            <span data-dc-tpl="69" style="font-family: Saira, sans-serif; font-size: 12px; color: rgba(255, 255, 255, 0.45);"><span class="sc-interp">19-2-0</span></span>
+            <span data-dc-tpl="70" style="font-family: &quot;Saira Condensed&quot;, sans-serif; font-weight: 700; font-size: 12px; color: rgb(62, 207, 142);"><span class="sc-interp">▲ 1</span></span>
+          </div>
+        
+          <div data-dc-tpl="66" style="display: flex; align-items: center; gap: 14px; padding: 13px 16px; border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
+            <span data-dc-tpl="67" style="font-family: &quot;Saira Condensed&quot;, sans-serif; font-weight: 900; font-size: 20px; color: rgb(210, 10, 10); width: 24px; font-variant-numeric: tabular-nums;"><span class="sc-interp">3</span></span>
+            <span data-dc-tpl="68" style="flex: 1 1 0%; font-family: Saira, sans-serif; font-weight: 600; font-size: 15px; color: rgb(255, 255, 255);"><span class="sc-interp">Emeka Okafor</span></span>
+            <span data-dc-tpl="69" style="font-family: Saira, sans-serif; font-size: 12px; color: rgba(255, 255, 255, 0.45);"><span class="sc-interp">21-3-0</span></span>
+            <span data-dc-tpl="70" style="font-family: &quot;Saira Condensed&quot;, sans-serif; font-weight: 700; font-size: 12px; color: rgb(210, 10, 10);"><span class="sc-interp">▼ 1</span></span>
+          </div>
+        
+          <div data-dc-tpl="66" style="display: flex; align-items: center; gap: 14px; padding: 13px 16px; border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
+            <span data-dc-tpl="67" style="font-family: &quot;Saira Condensed&quot;, sans-serif; font-weight: 900; font-size: 20px; color: rgb(210, 10, 10); width: 24px; font-variant-numeric: tabular-nums;"><span class="sc-interp">4</span></span>
+            <span data-dc-tpl="68" style="flex: 1 1 0%; font-family: Saira, sans-serif; font-weight: 600; font-size: 15px; color: rgb(255, 255, 255);"><span class="sc-interp">Luca Benítez</span></span>
+            <span data-dc-tpl="69" style="font-family: Saira, sans-serif; font-size: 12px; color: rgba(255, 255, 255, 0.45);"><span class="sc-interp">17-0-0</span></span>
+            <span data-dc-tpl="70" style="font-family: &quot;Saira Condensed&quot;, sans-serif; font-weight: 700; font-size: 12px; color: rgba(255, 255, 255, 0.4);"><span class="sc-interp">—</span></span>
+          </div>
+        
+          <div data-dc-tpl="66" style="display: flex; align-items: center; gap: 14px; padding: 13px 16px; border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
+            <span data-dc-tpl="67" style="font-family: &quot;Saira Condensed&quot;, sans-serif; font-weight: 900; font-size: 20px; color: rgb(210, 10, 10); width: 24px; font-variant-numeric: tabular-nums;"><span class="sc-interp">5</span></span>
+            <span data-dc-tpl="68" style="flex: 1 1 0%; font-family: Saira, sans-serif; font-weight: 600; font-size: 15px; color: rgb(255, 255, 255);"><span class="sc-interp">Kenji Tanaka</span></span>
+            <span data-dc-tpl="69" style="font-family: Saira, sans-serif; font-size: 12px; color: rgba(255, 255, 255, 0.45);"><span class="sc-interp">16-2-0</span></span>
+            <span data-dc-tpl="70" style="font-family: &quot;Saira Condensed&quot;, sans-serif; font-weight: 700; font-size: 12px; color: rgb(62, 207, 142);"><span class="sc-interp">▲ 2</span></span>
+          </div>
+        
+      </div>
+    </div>
+    <div data-dc-tpl="71">
+      <h2 data-dc-tpl="72" style="margin: 0px 0px 18px; font-family: &quot;Saira Condensed&quot;, sans-serif; font-weight: 900; font-size: 34px; color: rgb(255, 255, 255);">ÚLTIMAS NOTICIAS</h2>
+      <div data-dc-tpl="73" style="display: flex; flex-direction: column; gap: 14px;">
+        
+          <a data-dc-tpl="75" href="#" class="scp1" style="text-decoration: none; display: flex; gap: 16px; background: rgb(21, 19, 31); border: 1px solid rgba(255, 255, 255, 0.07); border-radius: 6px; overflow: hidden; transition: border-color 0.14s;;align-items:center;">
+            <div class="sc-host-x" data-dc-tpl="76" style="width: 130px; height: 96px;;flex-shrink:0;min-width:130px;"><div style="display:block;width:100%;height:100%;;background-image:url('https://images.openlen.com/apex-freedom/news-1.webp');background-size:cover;background-position:center;background-repeat:no-repeat;;filter:brightness(1.15) contrast(1.03);box-shadow:inset 0 0 0 1px rgba(255,255,255,.08);"></div></div>
+            <div data-dc-tpl="77" style="padding: 13px 14px 13px 0px;">
+              <div data-dc-tpl="78" style="font-family: &quot;Saira Condensed&quot;, sans-serif; font-weight: 700; font-size: 10px; letter-spacing: 0.12em; color: rgb(210, 10, 10);"><span class="sc-interp">ENTREVISTA</span></div>
+              <div data-dc-tpl="79" style="font-family: Saira, sans-serif; font-weight: 600; font-size: 15px; color: rgb(255, 255, 255); line-height: 1.25; margin-top: 4px; text-wrap: pretty;"><span class="sc-interp">Voss promete acabar la pelea en el segundo asalto: “Marchetti nunca enfrentó a alguien como yo”</span></div>
+            </div>
+          </a>
+        
+          <a data-dc-tpl="75" href="#" class="scp1" style="text-decoration: none; display: flex; gap: 16px; background: rgb(21, 19, 31); border: 1px solid rgba(255, 255, 255, 0.07); border-radius: 6px; overflow: hidden; transition: border-color 0.14s;;align-items:center;">
+            <div class="sc-host-x" data-dc-tpl="76" style="width: 130px; height: 96px;;flex-shrink:0;min-width:130px;"><div style="display:block;width:100%;height:100%;;background-image:url('https://images.openlen.com/apex-freedom/news-2.webp');background-size:cover;background-position:center;background-repeat:no-repeat;;filter:brightness(1.15) contrast(1.03);box-shadow:inset 0 0 0 1px rgba(255,255,255,.08);"></div></div>
+            <div data-dc-tpl="77" style="padding: 13px 14px 13px 0px;">
+              <div data-dc-tpl="78" style="font-family: &quot;Saira Condensed&quot;, sans-serif; font-weight: 700; font-size: 10px; letter-spacing: 0.12em; color: rgb(210, 10, 10);"><span class="sc-interp">PESAJE</span></div>
+              <div data-dc-tpl="79" style="font-family: Saira, sans-serif; font-weight: 600; font-size: 15px; color: rgb(255, 255, 255); line-height: 1.25; margin-top: 4px; text-wrap: pretty;"><span class="sc-interp">Ambos peleadores dieron el peso: 70.3 kg en la báscula oficial de Washington</span></div>
+            </div>
+          </a>
+        
+          <a data-dc-tpl="75" href="#" class="scp1" style="text-decoration: none; display: flex; gap: 16px; background: rgb(21, 19, 31); border: 1px solid rgba(255, 255, 255, 0.07); border-radius: 6px; overflow: hidden; transition: border-color 0.14s;;align-items:center;">
+            <div class="sc-host-x" data-dc-tpl="76" style="width: 130px; height: 96px;;flex-shrink:0;min-width:130px;"><div style="display:block;width:100%;height:100%;;background-image:url('https://images.openlen.com/apex-freedom/news-3.webp');background-size:cover;background-position:center;background-repeat:no-repeat;;filter:brightness(1.15) contrast(1.03);box-shadow:inset 0 0 0 1px rgba(255,255,255,.08);"></div></div>
+            <div data-dc-tpl="77" style="padding: 13px 14px 13px 0px;">
+              <div data-dc-tpl="78" style="font-family: &quot;Saira Condensed&quot;, sans-serif; font-weight: 700; font-size: 10px; letter-spacing: 0.12em; color: rgb(210, 10, 10);"><span class="sc-interp">ANÁLISIS</span></div>
+              <div data-dc-tpl="79" style="font-family: Saira, sans-serif; font-weight: 600; font-size: 15px; color: rgb(255, 255, 255); line-height: 1.25; margin-top: 4px; text-wrap: pretty;"><span class="sc-interp">Las 5 claves tácticas que definirán el duelo por el título indiscutido</span></div>
+            </div>
+          </a>
+        
+      </div>
+    </div>
+  </section>
+
+  <footer data-dc-tpl="80" style="border-top: 1px solid rgba(255, 255, 255, 0.07); padding: 26px; text-align: center; font-family: &quot;Saira Condensed&quot;, sans-serif; font-weight: 800; font-size: 22px; letter-spacing: -0.01em; color: rgba(255, 255, 255, 0.85);">APEX <span data-dc-tpl="81" style="display: inline-block; width: 26px; height: 3px; background: rgb(210, 10, 10); vertical-align: middle; margin-left: 2px;"></span></footer></div></div></div>
+
+
+
+
+
+
+
+
+
+</body></html>
