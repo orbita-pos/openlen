@@ -21,7 +21,9 @@
     "send": "Jetzt senden",
     "sending": "Senden…",
     "confirm": "Jetzt an {count} Mitglieder senden? Nicht umkehrbar.",
-    "remaining": "Noch {count} E-Mails diesen Monat"
+    "remaining": "Noch {count} E-Mails diesen Monat",
+    "editing": "Entwurf bearbeiten",
+    "cancelEdit": "Bearbeitung abbrechen"
   },
   "send": {
     "sent": "An {count} gesendet.",
@@ -38,6 +40,9 @@
     "sent": "Gesendet",
     "failed": "Fehlgeschlagen",
     "delivered": "{count} zugestellt",
-    "delete": "Löschen"
+    "delete": "Löschen",
+    "edit": "Bearbeiten",
+    "send": "Senden",
+    "confirmSend": "Jetzt senden?"
   }
 }

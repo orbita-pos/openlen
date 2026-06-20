@@ -31,9 +31,21 @@ Edit, then `systemctl restart openlen-app`. Full reference: `infra/app/env.examp
   `${NEXTAUTH_URL}/api/billing/webhook` (format: Raw).
 - `GITHUB_DEPLOY_*`, `VERCEL_*` — Deploy-dropdown export targets
 - `R2_*` (assets), `CLOUDFLARE_ZONE_ID/API_TOKEN` (publish cache purge)
+- **`BROADCAST_POSTAL_ADDRESS`** — CAN-SPAM postal address stamped into every
+  Broadcast email. The Send route returns 503 until this is set (required only
+  to use the Broadcast module).
 
 The billing schema migration is already applied to Neon and `deploy.ps1` re-runs
 `billing:migrate` (idempotent) as a gate before the swap — no manual step.
+
+> **Backend-module migrations are NOT automated.** Unlike `billing:migrate`, the
+> modules ship their own CLIs — `members:migrate`, `comments:migrate`,
+> `broadcast:migrate`, `bookings:migrate` — that `deploy.ps1` does **not** run.
+> Apply them manually against the prod `DATABASE_URL` (same model as
+> `billing:migrate`: run locally, idempotent `CREATE TABLE IF NOT EXISTS`) BEFORE
+> enabling a module — otherwise the first widget load / send throws
+> `relation does not exist` (500). Comments + Broadcast also require **Members**
+> migrated first.
 
 ---
 

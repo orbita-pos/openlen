@@ -21,7 +21,9 @@
     "send": "지금 보내기",
     "sending": "보내는 중…",
     "confirm": "지금 {count}명에게 보낼까요? 되돌릴 수 없습니다.",
-    "remaining": "이번 달 {count}통 남음"
+    "remaining": "이번 달 {count}통 남음",
+    "editing": "초안 편집 중",
+    "cancelEdit": "편집 취소"
   },
   "send": {
     "sent": "{count}명에게 보냈습니다.",
@@ -38,6 +40,9 @@
     "sent": "발송됨",
     "failed": "실패",
     "delivered": "{count}건 전달",
-    "delete": "삭제"
+    "delete": "삭제",
+    "edit": "편집",
+    "send": "보내기",
+    "confirmSend": "지금 보낼까요?"
   }
 }

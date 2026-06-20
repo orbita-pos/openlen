@@ -21,7 +21,9 @@
     "send": "立即发送",
     "sending": "发送中…",
     "confirm": "现在发送给 {count} 位会员？无法撤销。",
-    "remaining": "本月还剩 {count} 封"
+    "remaining": "本月还剩 {count} 封",
+    "editing": "正在编辑草稿",
+    "cancelEdit": "取消编辑"
   },
   "send": {
     "sent": "已发送给 {count} 人。",
@@ -38,6 +40,9 @@
     "sent": "已发送",
     "failed": "失败",
     "delivered": "已送达 {count}",
-    "delete": "删除"
+    "delete": "删除",
+    "edit": "编辑",
+    "send": "发送",
+    "confirmSend": "立即发送？"
   }
 }

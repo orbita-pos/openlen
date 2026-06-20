@@ -21,7 +21,9 @@
     "send": "Envoyer",
     "sending": "Envoi…",
     "confirm": "Envoyer à {count} membres maintenant ? Irréversible.",
-    "remaining": "Il reste {count} e-mails ce mois-ci"
+    "remaining": "Il reste {count} e-mails ce mois-ci",
+    "editing": "Modification du brouillon",
+    "cancelEdit": "Annuler"
   },
   "send": {
     "sent": "Envoyé à {count}.",
@@ -38,6 +40,9 @@
     "sent": "Envoyée",
     "failed": "Échec",
     "delivered": "{count} remis",
-    "delete": "Supprimer"
+    "delete": "Supprimer",
+    "edit": "Modifier",
+    "send": "Envoyer",
+    "confirmSend": "Envoyer maintenant ?"
   }
 }

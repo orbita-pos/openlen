@@ -124,9 +124,10 @@ export async function POST(
       return { status: 200, body: { ok: true, sentCount: 0, failedCount: 0 } };
     }
 
-    // Charge ONLY on a fresh send (draft/failed). A stale-sending recovery
-    // was already charged on its first attempt — re-charging is the bug.
-    if (priorStatus === "draft" || priorStatus === "failed") {
+    // Charge ONLY on the first (draft) attempt. A 'failed' retry and a
+    // stale-'sending' crash-recovery were both already charged when the
+    // broadcast was first claimed out of 'draft' — re-charging is the bug.
+    if (priorStatus === "draft") {
       await recordEmailCapUnits(id, audience.length);
     }
 
