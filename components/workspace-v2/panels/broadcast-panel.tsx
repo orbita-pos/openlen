@@ -1,17 +1,19 @@
 // Broadcast — compose + send a campaign to your members, with history.
 // Audience = active members minus unsubscribed (resolved server-side). The
-// compose area is plain subject + lightweight-markdown body; "Send now" has
-// an inline confirm step. Mirrors ModulesPanel header + SubmissionsPanel list.
+// compose area is plain subject + lightweight-markdown body; "Send now" has an
+// inline confirm step. Saved drafts can be re-opened (Edit) or sent (Send)
+// straight from the history list. Mirrors ModulesPanel header + SubmissionsPanel list.
 
 "use client";
 
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
-import { Loader, Megaphone, Trash, Users } from "../icons";
+import { Loader, Megaphone, Pencil, SendUp, Trash, Users } from "../icons";
 
 interface BroadcastItem {
   id: string;
   subject: string;
+  body: string;
   status: "draft" | "sending" | "sent" | "failed";
   audienceCount: number | null;
   sentCount: number | null;
@@ -34,9 +36,11 @@ export function BroadcastPanel({
   const t = useTranslations("broadcast");
   const [subject, setSubject] = useState("");
   const [body, setBody] = useState("");
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [preview, setPreview] = useState<Preview | null>(null);
   const [history, setHistory] = useState<BroadcastItem[] | null>(null);
   const [confirming, setConfirming] = useState(false);
+  const [confirmingRow, setConfirmingRow] = useState<string | null>(null);
   const [busy, setBusy] = useState<"saving" | "sending" | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
   const [deleting, setDeleting] = useState<string | null>(null);
@@ -63,21 +67,41 @@ export function BroadcastPanel({
     }
     setHistory(null);
     setPreview(null);
+    setEditingId(null);
+    setSubject("");
+    setBody("");
     loadHistory(currentProjectId);
     loadPreview(currentProjectId);
   }, [currentProjectId]);
 
   if (!currentProjectId) {
-    return (
-      <Empty icon={<Megaphone size={14} />} text={t("perProject")} />
-    );
+    return <Empty icon={<Megaphone size={14} />} text={t("perProject")} />;
   }
 
   const audience = preview?.audienceCount ?? 0;
   const remaining = preview?.remaining ?? 0;
   const canCompose = subject.trim().length > 0 && body.trim().length > 0;
 
-  const create = async (): Promise<string | null> => {
+  const resetCompose = () => {
+    setSubject("");
+    setBody("");
+    setEditingId(null);
+    setConfirming(false);
+  };
+
+  // Create a new draft, or persist edits to the draft being edited. Returns id.
+  const persistDraft = async (): Promise<string | null> => {
+    if (editingId) {
+      const r = await fetch(
+        `/api/projects/${currentProjectId}/broadcasts/${editingId}`,
+        {
+          method: "PATCH",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ subject: subject.trim(), body: body.trim() }),
+        },
+      );
+      return r.ok ? editingId : null;
+    }
     const r = await fetch(`/api/projects/${currentProjectId}/broadcasts`, {
       method: "POST",
       headers: { "content-type": "application/json" },
@@ -92,11 +116,10 @@ export function BroadcastPanel({
     if (!canCompose || busy) return;
     setBusy("saving");
     setMsg(null);
-    const id = await create();
+    const id = await persistDraft();
     setBusy(null);
     if (id) {
-      setSubject("");
-      setBody("");
+      resetCompose();
       setMsg(t("compose.saved"));
       loadHistory(currentProjectId);
     } else {
@@ -104,17 +127,9 @@ export function BroadcastPanel({
     }
   };
 
-  const send = async () => {
-    if (!canCompose || busy) return;
-    setBusy("sending");
-    setMsg(null);
-    setConfirming(false);
-    const id = await create();
-    if (!id) {
-      setBusy(null);
-      setMsg(t("send.error"));
-      return;
-    }
+  // POST the send for an existing broadcast id; handle every status the route
+  // can return. Clears the compose editor when the sent campaign is loaded there.
+  const sendById = async (id: string, clearComposeOnOk: boolean) => {
     try {
       const r = await fetch(
         `/api/projects/${currentProjectId}/broadcasts/${id}/send`,
@@ -139,16 +154,55 @@ export function BroadcastPanel({
       } else if (!r.ok) {
         setMsg(t("send.error"));
       } else {
-        setSubject("");
-        setBody("");
+        if (clearComposeOnOk) resetCompose();
         setMsg(t("send.sent", { count: d.sentCount ?? 0 }));
       }
     } catch {
       setMsg(t("send.error"));
     }
+  };
+
+  // Compose "Send now" — persist (create or update) then send.
+  const send = async () => {
+    if (!canCompose || busy) return;
+    setBusy("sending");
+    setMsg(null);
+    setConfirming(false);
+    const id = await persistDraft();
+    if (!id) {
+      setBusy(null);
+      setMsg(t("send.error"));
+      return;
+    }
+    await sendById(id, true);
     setBusy(null);
     loadHistory(currentProjectId);
     loadPreview(currentProjectId);
+  };
+
+  // Send a saved draft straight from its history row (two-tap confirm).
+  const sendRow = async (id: string) => {
+    if (busy) return;
+    if (confirmingRow !== id) {
+      setConfirmingRow(id);
+      return;
+    }
+    setConfirmingRow(null);
+    setBusy("sending");
+    setMsg(null);
+    await sendById(id, editingId === id);
+    setBusy(null);
+    loadHistory(currentProjectId);
+    loadPreview(currentProjectId);
+  };
+
+  const startEdit = (b: BroadcastItem) => {
+    setEditingId(b.id);
+    setSubject(b.subject);
+    setBody(b.body);
+    setConfirming(false);
+    setConfirmingRow(null);
+    setMsg(null);
   };
 
   const remove = async (id: string) => {
@@ -158,7 +212,11 @@ export function BroadcastPanel({
         `/api/projects/${currentProjectId}/broadcasts/${id}`,
         { method: "DELETE" },
       );
-      if (r.ok) loadHistory(currentProjectId);
+      if (r.ok) {
+        if (editingId === id) resetCompose();
+        if (confirmingRow === id) setConfirmingRow(null);
+        loadHistory(currentProjectId);
+      }
     } finally {
       setDeleting(null);
     }
@@ -183,6 +241,21 @@ export function BroadcastPanel({
 
         {/* Compose */}
         <div className="rounded-lg ring-1 ring-[color:var(--border)] bg-[color:var(--bg)] p-2.5 space-y-2">
+          {editingId && (
+            <div className="flex items-center justify-between gap-2">
+              <span className="inline-flex items-center gap-1 text-[10px] font-semibold ui-small px-1.5 h-[18px] rounded bg-elev fg-muted">
+                <Pencil size={9} /> {t("compose.editing")}
+              </span>
+              <button
+                type="button"
+                onClick={resetCompose}
+                aria-label={t("compose.cancelEdit")}
+                className="h-5 px-1.5 rounded text-[10.5px] fg-faint hover:fg hover:bg-hover transition"
+              >
+                ×
+              </button>
+            </div>
+          )}
           <input
             value={subject}
             onChange={(e) => {
@@ -271,12 +344,42 @@ export function BroadcastPanel({
                       {b.subject}
                     </span>
                     <StatusPill t={t} status={b.status} />
+                    {b.status === "draft" && editingId !== b.id && (
+                      <>
+                        <button
+                          type="button"
+                          disabled={busy !== null || deleting === b.id}
+                          aria-label={t("history.edit")}
+                          onClick={() => startEdit(b)}
+                          className="h-6 w-6 hidden group-hover:inline-flex items-center justify-center rounded fg-faint hover:fg hover:bg-hover transition disabled:opacity-50 shrink-0"
+                        >
+                          <Pencil size={10} />
+                        </button>
+                        <button
+                          type="button"
+                          disabled={busy !== null || audience === 0}
+                          aria-label={t("history.send")}
+                          onClick={() => void sendRow(b.id)}
+                          className={`h-6 items-center justify-center rounded text-[var(--accent-strong)] hover:bg-hover transition disabled:opacity-50 shrink-0 ${
+                            confirmingRow === b.id
+                              ? "inline-flex px-1.5 text-[9.5px] font-semibold"
+                              : "w-6 hidden group-hover:inline-flex"
+                          }`}
+                        >
+                          {confirmingRow === b.id ? (
+                            t("history.confirmSend")
+                          ) : (
+                            <SendUp size={10} />
+                          )}
+                        </button>
+                      </>
+                    )}
                     {(b.status === "draft" ||
                       b.status === "sent" ||
                       b.status === "failed") && (
                       <button
                         type="button"
-                        disabled={deleting === b.id}
+                        disabled={deleting === b.id || busy !== null}
                         aria-label={t("history.delete")}
                         onClick={() => void remove(b.id)}
                         className="h-6 w-6 hidden group-hover:inline-flex items-center justify-center rounded fg-faint hover:text-red-500 hover:bg-hover transition disabled:opacity-50 shrink-0"

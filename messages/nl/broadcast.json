@@ -21,7 +21,9 @@
     "send": "Nu verzenden",
     "sending": "Verzenden…",
     "confirm": "Nu naar {count} leden sturen? Kan niet ongedaan worden.",
-    "remaining": "Nog {count} e-mails deze maand"
+    "remaining": "Nog {count} e-mails deze maand",
+    "editing": "Concept bewerken",
+    "cancelEdit": "Bewerken annuleren"
   },
   "send": {
     "sent": "Naar {count} verzonden.",
@@ -38,6 +40,9 @@
     "sent": "Verzonden",
     "failed": "Mislukt",
     "delivered": "{count} bezorgd",
-    "delete": "Verwijderen"
+    "delete": "Verwijderen",
+    "edit": "Bewerken",
+    "send": "Verzenden",
+    "confirmSend": "Nu verzenden?"
   }
 }

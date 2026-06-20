@@ -21,7 +21,9 @@
     "send": "Enviar agora",
     "sending": "Enviando…",
     "confirm": "Enviar para {count} membros agora? Não dá para desfazer.",
-    "remaining": "Restam {count} e-mails este mês"
+    "remaining": "Restam {count} e-mails este mês",
+    "editing": "Editando rascunho",
+    "cancelEdit": "Cancelar edição"
   },
   "send": {
     "sent": "Enviado para {count}.",
@@ -38,6 +40,9 @@
     "sent": "Enviada",
     "failed": "Falhou",
     "delivered": "{count} entregues",
-    "delete": "Excluir"
+    "delete": "Excluir",
+    "edit": "Editar",
+    "send": "Enviar",
+    "confirmSend": "Enviar agora?"
   }
 }

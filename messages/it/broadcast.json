@@ -21,7 +21,9 @@
     "send": "Invia ora",
     "sending": "Invio…",
     "confirm": "Inviare a {count} membri ora? Non si può annullare.",
-    "remaining": "Ti restano {count} email questo mese"
+    "remaining": "Ti restano {count} email questo mese",
+    "editing": "Modifica bozza",
+    "cancelEdit": "Annulla modifica"
   },
   "send": {
     "sent": "Inviato a {count}.",
@@ -38,6 +40,9 @@
     "sent": "Inviata",
     "failed": "Fallita",
     "delivered": "{count} consegnate",
-    "delete": "Elimina"
+    "delete": "Elimina",
+    "edit": "Modifica",
+    "send": "Invia",
+    "confirmSend": "Inviare ora?"
   }
 }

@@ -21,7 +21,9 @@
     "send": "今すぐ送信",
     "sending": "送信中…",
     "confirm": "{count} 名のメンバーに今すぐ送信しますか？取り消せません。",
-    "remaining": "今月はあと {count} 通"
+    "remaining": "今月はあと {count} 通",
+    "editing": "下書きを編集中",
+    "cancelEdit": "編集をキャンセル"
   },
   "send": {
     "sent": "{count} 名に送信しました。",
@@ -38,6 +40,9 @@
     "sent": "送信済み",
     "failed": "失敗",
     "delivered": "{count} 件配信",
-    "delete": "削除"
+    "delete": "削除",
+    "edit": "編集",
+    "send": "送信",
+    "confirmSend": "今すぐ送信？"
   }
 }

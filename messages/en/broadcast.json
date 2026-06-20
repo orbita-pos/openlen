@@ -21,7 +21,9 @@
     "send": "Send now",
     "sending": "Sending…",
     "confirm": "Send to {count} members now? This can't be undone.",
-    "remaining": "{count} emails left this month"
+    "remaining": "{count} emails left this month",
+    "editing": "Editing draft",
+    "cancelEdit": "Cancel edit"
   },
   "send": {
     "sent": "Sent to {count}.",
@@ -38,6 +40,9 @@
     "sent": "Sent",
     "failed": "Failed",
     "delivered": "{count} delivered",
-    "delete": "Delete"
+    "delete": "Delete",
+    "edit": "Edit",
+    "send": "Send",
+    "confirmSend": "Send now?"
   }
 }

@@ -118,7 +118,7 @@ openlen.com, www.openlen.com {
 
 	@doc {
 		not path *.css *.js *.jpg *.jpeg *.png *.gif *.webp *.svg *.ico *.woff *.woff2 *.avif
-		not path /c/* /api/f/* /api/m/* /api/cm/* /api/bk/* /uploads/* /assets/*
+		not path /c/* /api/f/* /api/m/* /api/cm/* /api/bk/* /api/b/* /uploads/* /assets/*
 	}
 	header @doc Cache-Control "public, max-age=60, s-maxage=3600, stale-while-revalidate=86400"
 
@@ -173,6 +173,19 @@ openlen.com, www.openlen.com {
 	# bookings); @doc-excluded above so availability (no-store, changes on every
 	# booking) is never edge-cached.
 	handle /api/bk/* {
+		reverse_proxy 127.0.0.1:3000 {
+			header_up CF-Connecting-IP {vars.cf_client_ip}
+		}
+	}
+
+	# Broadcast module — same-host unsubscribe. The opt-out link and the RFC 8058
+	# one-click List-Unsubscribe-Post target embedded in every campaign email point
+	# at <sub>.openlen.com/api/b/<sub>/unsubscribe, so the signed token must resolve
+	# on the site's own domain; @doc-excluded above so the confirmation is never
+	# edge-cached. WITHOUT this handle the request falls through to try_files and
+	# serves the static homepage with 200 — the opt-out is silently dropped, which
+	# is a CAN-SPAM / RFC 8058 violation.
+	handle /api/b/* {
 		reverse_proxy 127.0.0.1:3000 {
 			header_up CF-Connecting-IP {vars.cf_client_ip}
 		}
