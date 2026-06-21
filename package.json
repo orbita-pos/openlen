@@ -26,6 +26,7 @@
     "broadcast:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/broadcast-migrate.ts",
     "comments:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/comments-migrate.ts",
     "bookings:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/bookings-migrate.ts",
+    "collections:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/collections-migrate.ts",
     "bookings:remind": "tsx --env-file-if-exists=.env.local --tsconfig tsconfig.eval.json scripts/bookings-remind.ts",
     "cron:bundle": "node scripts/build-cron.mjs",
     "versions:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/versions-migrate.ts",

@@ -14,6 +14,7 @@ import {
 } from "@/lib/publish/filesystem";
 import { purgeSubdomain } from "@/lib/publish/cache-purge";
 import { backupReleaseToR2 } from "@/lib/publish/backup-r2";
+import { getDefaultCollection, listItems, type ItemRow } from "@/lib/collections/store";
 import { createVersion } from "@/lib/projects/versions";
 import { getChatMessages } from "@/lib/projects/chat";
 import {
@@ -783,6 +784,22 @@ export async function publishProject(
           ?.slug ?? gatedPages[0].slug)
       : undefined;
 
+  // Collections module: read the published items + layout at publish time so
+  // the bake renders them as STATIC HTML (no runtime API). Off → undefined.
+  let collectionsBake:
+    | { enabled: true; items: ItemRow[]; layout: "grid" | "list" }
+    | undefined;
+  if (project.data?.settings?.collections?.enabled) {
+    const col = await getDefaultCollection(params.projectId);
+    if (col) {
+      collectionsBake = {
+        enabled: true,
+        items: await listItems(params.projectId, col.id, { includeArchived: false }),
+        layout: col.layout,
+      };
+    }
+  }
+
   let publishResult: {
     sha: string;
     html: string;
@@ -808,6 +825,7 @@ export async function publishProject(
       bookings: project.data?.settings?.bookings?.enabled
         ? { enabled: true }
         : undefined,
+      collections: collectionsBake,
       pages: publicPages,
       gatedPages: gatedPages.length > 0 ? gatedPages : undefined,
       memberSigninPath,

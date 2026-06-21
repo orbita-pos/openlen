@@ -23,6 +23,8 @@ import { bakeMusic } from "@/lib/publish/music";
 import { bakeAssistantWidget } from "@/lib/publish/assistant-widget";
 import { bakeComments } from "@/lib/publish/comments-widget";
 import { bakeBookings } from "@/lib/publish/bookings-widget";
+import { bakeCollections } from "@/lib/publish/collections-block";
+import type { ItemRow } from "@/lib/collections/store";
 import {
   annotateLanguageCluster,
   buildRobots,
@@ -179,6 +181,11 @@ export interface PublishParams {
    *  data-ol-bookings-section placeholder, or appended before </body>). Slots
    *  are fetched live from /api/bk/<sub>/*. */
   bookings?: { enabled: boolean };
+  /** Collections module (settings.collections). When enabled, the owner's item
+   *  list is baked as STATIC HTML (a grid/list of cards) at the
+   *  data-ol-collection-section placeholder, or appended before </body>. No
+   *  runtime API — re-baked from the DB on every publish. */
+  collections?: { enabled: boolean; items: ItemRow[]; layout: "grid" | "list" };
   /** Members module: pages that publish as a login STUB at their public path
    *  while the REAL document (full bake chain + seal) is written OUTSIDE the
    *  release — <sub>/protected/<sha>/<slug>/index.html, unreachable by the
@@ -453,6 +460,9 @@ interface BakeDocumentCtx {
   /** Bookings module. When enabled, the appointment-booking widget is injected
    *  (at the placeholder, or appended) on every document. */
   bookings?: { enabled: boolean };
+  /** Collections module. When enabled, the owner's item list is baked as STATIC
+   *  HTML (grid/list of cards) at the placeholder, or appended. */
+  collections?: { enabled: boolean; items: ItemRow[]; layout: "grid" | "list" };
 }
 
 interface AssistantBake {
@@ -501,6 +511,20 @@ async function bakeDocument(
     } catch (err) {
       // eslint-disable-next-line no-console
       console.warn("[publishToDir] asset migration failed; using unrewritten HTML", err);
+    }
+  }
+
+  // Collections — bake the owner's item list as STATIC HTML BEFORE the image
+  // bake so the card <img>s get the same responsive/lazy treatment. Soft-fail.
+  if (process.env.OPENLEN_COLLECTION !== "0" && ctx.collections?.enabled) {
+    try {
+      migratedHtml = bakeCollections(migratedHtml, {
+        items: ctx.collections.items,
+        layout: ctx.collections.layout,
+      });
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.warn("[publishToDir] collections bake failed; publishing without it", err);
     }
   }
 
@@ -737,6 +761,7 @@ export async function publishToDir(
     assistant: params.assistant,
     comments: params.comments,
     bookings: params.bookings,
+    collections: params.collections,
   };
   let migratedHtml = await bakeDocument(publishHtml, bakeCtx);
 

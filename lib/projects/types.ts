@@ -98,6 +98,20 @@ export interface BookingsSettings {
   retentionDays?: number;
 }
 
+/** Collections module — owner-managed item lists (products / menu / listings /
+ *  events / team / portfolio) rendered on the published page. Items live in the
+ *  collections + collection_items tables and bake into STATIC HTML at publish
+ *  time; this holds only the per-site master switch. The list config
+ *  (name / preset / layout) lives on the collection ROW, not here.
+ *
+ *  PUBLIC + payment-free: a per-item priceDisplay is shown but never charged;
+ *  the per-item CTA links out (OpenLen is not a payment facilitator). */
+export interface CollectionsSettings {
+  /** Master switch. Absent/false → the Collections tab stays hidden and the
+   *  grid is not baked. Enabled from a card in the Módulos panel. */
+  enabled?: boolean;
+}
+
 /** Project-level settings that aren't part of the HTML document. */
 export interface ProjectSettings {
   /** Per-form config, keyed by the form's index — its position among all
@@ -129,6 +143,8 @@ export interface ProjectSettings {
   comments?: CommentsSettings;
   /** Bookings module: appointment scheduling on the published site. Absent = off. */
   bookings?: BookingsSettings;
+  /** Collections module: owner-managed item lists rendered on the page. Absent = off. */
+  collections?: CollectionsSettings;
 }
 
 /** One additional page of a multi-page site. The home page stays at
