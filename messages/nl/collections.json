@@ -57,6 +57,7 @@
     "save": "Opslaan",
     "saving": "Opslaan…",
     "cancel": "Annuleren",
-    "saveError": "Kon niet opslaan. Controleer de links en probeer opnieuw."
+    "saveError": "Kon niet opslaan. Controleer de links en probeer opnieuw.",
+    "pickImage": "Kiezen"
   }
 }

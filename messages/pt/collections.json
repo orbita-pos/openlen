@@ -57,6 +57,7 @@
     "save": "Guardar",
     "saving": "A guardar…",
     "cancel": "Cancelar",
-    "saveError": "Não foi possível guardar. Verifique os links e tente de novo."
+    "saveError": "Não foi possível guardar. Verifique os links e tente de novo.",
+    "pickImage": "Escolher"
   }
 }

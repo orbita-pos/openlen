@@ -10,7 +10,8 @@
 
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
-import { ChevronLeft, Grid3, Loader, Pencil, Plus, Trash } from "../icons";
+import { ChevronLeft, Grid3, ImageIcon, Loader, Pencil, Plus, Trash } from "../icons";
+import { ReplaceAssetModal } from "../replace-asset-modal";
 
 const PRESETS = ["products", "menu", "listings", "events", "team", "portfolio"] as const;
 const MAX_ITEMS = 60;
@@ -296,6 +297,7 @@ function ItemEditor({
   const [tags, setTags] = useState((item?.tags ?? []).join(", "));
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const [pickerOpen, setPickerOpen] = useState(false);
 
   const save = async () => {
     setSaving(true);
@@ -369,7 +371,21 @@ function ItemEditor({
           <textarea className={`${inputCls} min-h-[64px] resize-y py-1.5`} value={description} onChange={(e) => setDescription(e.target.value)} />
         </Field>
         <Field label={t("editor.image")} hint={t("editor.imageHint")}>
-          <input className={inputCls} value={imageUrl} onChange={(e) => setImageUrl(e.target.value)} placeholder="https://…" />
+          <div className="flex items-center gap-1.5">
+            <input
+              className={`${inputCls} flex-1`}
+              value={imageUrl}
+              onChange={(e) => setImageUrl(e.target.value)}
+              placeholder="https://…"
+            />
+            <button
+              type="button"
+              onClick={() => setPickerOpen(true)}
+              className="shrink-0 h-8 px-2.5 rounded-md text-[11px] font-medium fg-muted hover:fg bg-elev ring-1 ring-[color:var(--border)] hover:bg-hover transition inline-flex items-center gap-1"
+            >
+              <ImageIcon size={12} /> {t("editor.pickImage")}
+            </button>
+          </div>
         </Field>
         <div className="grid grid-cols-2 gap-2">
           <Field label={t("editor.price")} hint={t("editor.priceHint")}>
@@ -412,6 +428,19 @@ function ItemEditor({
           {saving ? t("editor.saving") : t("editor.save")}
         </button>
       </div>
+
+      <ReplaceAssetModal
+        open={pickerOpen}
+        kind="image"
+        currentSrc={imageUrl || null}
+        projectId={projectId}
+        initialTab="openlen"
+        onClose={() => setPickerOpen(false)}
+        onPick={(p) => {
+          if (p.url) setImageUrl(p.url);
+          setPickerOpen(false);
+        }}
+      />
     </div>
   );
 }

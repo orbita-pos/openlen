@@ -57,6 +57,7 @@
     "save": "保存",
     "saving": "保存中…",
     "cancel": "取消",
-    "saveError": "无法保存。请检查链接后重试。"
+    "saveError": "无法保存。请检查链接后重试。",
+    "pickImage": "选择"
   }
 }

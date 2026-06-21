@@ -57,6 +57,7 @@
     "save": "Save",
     "saving": "Saving…",
     "cancel": "Cancel",
-    "saveError": "Couldn't save. Check the links and try again."
+    "saveError": "Couldn't save. Check the links and try again.",
+    "pickImage": "Choose"
   }
 }
