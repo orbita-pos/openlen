@@ -37,7 +37,7 @@ describe("itemInputSchema", () => {
   });
 
   it("rejects unsafe cta url schemes", () => {
-    for (const u of ["javascript:alert(1)", "data:text/html,x", "vbscript:x"]) {
+    for (const u of ["javascript:alert(1)", "data:text/html,x", "vbscript:x", "//evil.com"]) {
       expect(itemInputSchema.safeParse({ title: "a", ctaUrl: u }).success).toBe(false);
     }
   });
@@ -50,6 +50,7 @@ describe("itemInputSchema", () => {
 
   it("rejects a data: image url, accepts https + site-relative", () => {
     expect(itemInputSchema.safeParse({ title: "a", imageUrl: "data:image/png;base64,xx" }).success).toBe(false);
+    expect(itemInputSchema.safeParse({ title: "a", imageUrl: "//evil.com/x.jpg" }).success).toBe(false);
     expect(itemInputSchema.safeParse({ title: "a", imageUrl: "https://x/a.jpg" }).success).toBe(true);
     expect(itemInputSchema.safeParse({ title: "a", imageUrl: "/assets/a.webp" }).success).toBe(true);
   });

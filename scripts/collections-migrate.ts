@@ -28,6 +28,11 @@ async function main() {
     sql`CREATE INDEX IF NOT EXISTS "collections_projectId_idx"
       ON "collections" ("projectId", "status");`,
   );
+  // At most one ACTIVE collection per project (v1 single-collection invariant).
+  await db.execute(
+    sql`CREATE UNIQUE INDEX IF NOT EXISTS "collections_project_active_uq"
+      ON "collections" ("projectId") WHERE "status" = 'active';`,
+  );
 
   await db.execute(
     sql`CREATE TABLE IF NOT EXISTS "collection_items" (

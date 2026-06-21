@@ -499,6 +499,23 @@ async function bakeDocument(
     console.warn("[publishToDir] credit consolidation failed; using uncredited HTML", err);
   }
 
+  // Collections — bake the owner's item list as STATIC HTML. Runs BEFORE the
+  // LocalFs asset migration + responsive bake so card <img>s get the same URL
+  // rewrite + srcset/lazy treatment. ALWAYS called (even disabled/empty) so a
+  // stray editor placeholder is stripped and never ships; only the home doc
+  // (page === null) auto-appends the grid when there's no placeholder.
+  if (process.env.OPENLEN_COLLECTION !== "0") {
+    try {
+      const colCfg = ctx.collections?.enabled
+        ? { items: ctx.collections.items, layout: ctx.collections.layout }
+        : { items: [], layout: "grid" as const };
+      migratedHtml = bakeCollections(migratedHtml, colCfg, page === null);
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.warn("[publishToDir] collections bake failed; publishing without it", err);
+    }
+  }
+
   // Move LocalFs uploads to the subdomain's shared assets dir and rewrite
   // their URLs so the web tier serves them directly.
   if (ctx.projectId) {
@@ -511,20 +528,6 @@ async function bakeDocument(
     } catch (err) {
       // eslint-disable-next-line no-console
       console.warn("[publishToDir] asset migration failed; using unrewritten HTML", err);
-    }
-  }
-
-  // Collections — bake the owner's item list as STATIC HTML BEFORE the image
-  // bake so the card <img>s get the same responsive/lazy treatment. Soft-fail.
-  if (process.env.OPENLEN_COLLECTION !== "0" && ctx.collections?.enabled) {
-    try {
-      migratedHtml = bakeCollections(migratedHtml, {
-        items: ctx.collections.items,
-        layout: ctx.collections.layout,
-      });
-    } catch (err) {
-      // eslint-disable-next-line no-console
-      console.warn("[publishToDir] collections bake failed; publishing without it", err);
     }
   }
 

@@ -38,6 +38,18 @@ function esc(s: string): string {
     .replace(/'/g, "&#39;");
 }
 
+// Scheme allow-lists — the API already validates these, but a row written
+// directly to the DB must NOT inject a javascript:/data: URL into href/src.
+// `/(?!/)` rejects protocol-relative `//evil.com`.
+const SAFE_HREF_RE = /^(https?:\/\/|mailto:|tel:|\/(?!\/)|#)/i;
+const SAFE_IMG_RE = /^(https?:\/\/|\/(?!\/))/i;
+function safeHref(s: string | null): string | null {
+  return s && SAFE_HREF_RE.test(s.trim()) ? s : null;
+}
+function safeImg(s: string | null): string | null {
+  return s && SAFE_IMG_RE.test(s.trim()) ? s : null;
+}
+
 /** Readable text color on an accent background (luminance threshold). */
 function inkOn(accent: string): string {
   const m = /^#?([0-9a-f]{6})$/i.exec(accent.trim());
@@ -53,20 +65,23 @@ function badgeHtml(badge: string | null, accent: string): string {
 }
 
 function ctaHtml(item: ItemRow, accent: string): string {
-  if (!item.ctaLabel || !item.ctaUrl) return "";
-  return `<a href="${esc(item.ctaUrl)}" style="margin-top:auto;align-self:flex-start;display:inline-block;text-decoration:none;font-size:13px;font-weight:600;padding:9px 16px;border-radius:10px;background:${accent};color:${inkOn(accent)};">${esc(item.ctaLabel)}</a>`;
+  const href = safeHref(item.ctaUrl);
+  if (!item.ctaLabel || !href) return "";
+  return `<a href="${esc(href)}" style="margin-top:auto;align-self:flex-start;display:inline-block;text-decoration:none;font-size:13px;font-weight:600;padding:9px 16px;border-radius:10px;background:${accent};color:${inkOn(accent)};">${esc(item.ctaLabel)}</a>`;
 }
 
 function gridCard(item: ItemRow, accent: string): string {
-  const img = item.imageUrl
-    ? `<img src="${esc(item.imageUrl)}" alt="${esc(item.title)}" loading="lazy" style="width:100%;aspect-ratio:4/3;object-fit:cover;display:block;background:#f4f4f6;">`
+  const src = safeImg(item.imageUrl);
+  const img = src
+    ? `<img src="${esc(src)}" alt="${esc(item.title)}" loading="lazy" style="width:100%;aspect-ratio:4/3;object-fit:cover;display:block;background:#f4f4f6;">`
     : "";
   return `<article style="border:1px solid ${CARD_BORDER};border-radius:14px;overflow:hidden;background:#fff;display:flex;flex-direction:column;">${img}<div style="padding:16px;display:flex;flex-direction:column;gap:7px;flex:1;">${badgeHtml(item.badge, accent)}<h3 style="margin:0;font-size:16px;font-weight:700;line-height:1.3;color:${INK};">${esc(item.title)}</h3>${item.subtitle ? `<div style="font-size:13px;color:${MUTED};">${esc(item.subtitle)}</div>` : ""}${item.priceDisplay ? `<div style="font-size:15px;font-weight:700;color:${accent};">${esc(item.priceDisplay)}</div>` : ""}${item.description ? `<p style="margin:0;font-size:13.5px;line-height:1.55;color:#52525b;">${esc(item.description)}</p>` : ""}${ctaHtml(item, accent)}</div></article>`;
 }
 
 function listRow(item: ItemRow, accent: string): string {
-  const thumb = item.imageUrl
-    ? `<img src="${esc(item.imageUrl)}" alt="${esc(item.title)}" loading="lazy" style="width:84px;height:84px;flex:0 0 auto;object-fit:cover;border-radius:10px;background:#f4f4f6;">`
+  const src = safeImg(item.imageUrl);
+  const thumb = src
+    ? `<img src="${esc(src)}" alt="${esc(item.title)}" loading="lazy" style="width:84px;height:84px;flex:0 0 auto;object-fit:cover;border-radius:10px;background:#f4f4f6;">`
     : "";
   return `<div style="display:flex;gap:16px;padding:16px 0;border-bottom:1px solid ${CARD_BORDER};align-items:flex-start;">${thumb}<div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:5px;"><div style="display:flex;justify-content:space-between;gap:14px;align-items:baseline;"><h3 style="margin:0;font-size:16px;font-weight:700;line-height:1.3;color:${INK};">${esc(item.title)}</h3>${item.priceDisplay ? `<span style="flex:0 0 auto;font-size:15px;font-weight:700;color:${accent};">${esc(item.priceDisplay)}</span>` : ""}</div>${badgeHtml(item.badge, accent)}${item.subtitle ? `<div style="font-size:13px;color:${MUTED};">${esc(item.subtitle)}</div>` : ""}${item.description ? `<p style="margin:0;font-size:13.5px;line-height:1.55;color:#52525b;">${esc(item.description)}</p>` : ""}${ctaHtml(item, accent)}</div></div>`;
 }
@@ -83,12 +98,19 @@ function container(cfg: CollectionsBakeConfig, accent: string): string {
 /** Bake the collection grid/list into the page. Idempotent. Replaces the
  *  data-ol-collection-section placeholder, else appends before </body>. With no
  *  items it just clears the placeholder (so the dashed editor box never ships). */
-export function bakeCollections(html: string, cfg: CollectionsBakeConfig): string {
+export function bakeCollections(
+  html: string,
+  cfg: CollectionsBakeConfig,
+  allowAppend = true,
+): string {
   if (html.includes(WIDGET_MARKER)) return html;
 
   const accent = detectSiteAccent(html) ?? FALLBACK_ACCENT;
   const block = cfg.items.length ? container(cfg, accent) : `<div ${WIDGET_MARKER}></div>`;
 
+  // Replace the editor placeholder wherever it sits (any page). With no items
+  // the block is an empty widget div, so the dashed editor box never ships —
+  // even when the module is disabled (the bake is still called to strip it).
   const markerRe = new RegExp(
     `<(section|div)[^>]*\\b${SECTION_MARKER}\\b[^>]*>[\\s\\S]*?<\\/\\1>`,
     "i",
@@ -96,8 +118,12 @@ export function bakeCollections(html: string, cfg: CollectionsBakeConfig): strin
   if (markerRe.test(html)) {
     return html.replace(markerRe, () => block);
   }
-  if (!cfg.items.length) return html;
-
-  const idx = html.lastIndexOf("</body>");
-  return idx === -1 ? html + block : html.slice(0, idx) + block + html.slice(idx);
+  // No placeholder: only the home/primary document auto-appends the grid, and
+  // only when there are items — never blanket-append the heavy grid onto every
+  // subpage of a multi-page site.
+  if (cfg.items.length && allowAppend) {
+    const idx = html.lastIndexOf("</body>");
+    return idx === -1 ? html + block : html.slice(0, idx) + block + html.slice(idx);
+  }
+  return html;
 }
