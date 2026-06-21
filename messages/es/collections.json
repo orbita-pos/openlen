@@ -27,7 +27,7 @@
   },
   "items": {
     "add": "Añadir elemento",
-    "empty": "Aún no hay elementos.",
+    "empty": "Aún no hay elementos. Añade el primero y publica para mostrarlo en tu página.",
     "edit": "Editar",
     "archive": "Quitar",
     "full": "Límite alcanzado ({n} elementos).",

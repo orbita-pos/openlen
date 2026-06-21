@@ -27,7 +27,7 @@
   },
   "items": {
     "add": "Eintrag hinzufügen",
-    "empty": "Noch keine Einträge.",
+    "empty": "Noch keine Einträge. Füge den ersten hinzu und veröffentliche, um ihn auf deiner Seite zu zeigen.",
     "edit": "Bearbeiten",
     "archive": "Entfernen",
     "full": "Limit erreicht ({n} Einträge).",

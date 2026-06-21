@@ -27,7 +27,7 @@
   },
   "items": {
     "add": "Item toevoegen",
-    "empty": "Nog geen items.",
+    "empty": "Nog geen items. Voeg het eerste toe en publiceer om het op je pagina te tonen.",
     "edit": "Bewerken",
     "archive": "Verwijderen",
     "full": "Limiet bereikt ({n} items).",
