@@ -71,6 +71,8 @@ interface PatchBody {
     sendReminders?: boolean;
     retentionDays?: number;
   };
+  /** Collections module switch. Merged into settings.collections. */
+  collections?: { enabled?: boolean };
 }
 
 function clean(v: unknown, max: number): string {
@@ -221,6 +223,16 @@ export async function PATCH(
       }
     }
   }
+  const hasCollections = "collections" in body;
+  if (hasCollections) {
+    const c = body.collections;
+    if (!c || typeof c !== "object") {
+      return json({ error: "invalid_body", message: "collections must be an object" }, 400);
+    }
+    if ("enabled" in c && typeof c.enabled !== "boolean") {
+      return json({ error: "invalid_body", message: "collections.enabled must be boolean" }, 400);
+    }
+  }
   if (
     !hasFormPatch &&
     !hasAnalyticsToggle &&
@@ -229,13 +241,14 @@ export async function PATCH(
     !hasMembers &&
     !hasBroadcast &&
     !hasComments &&
-    !hasBookings
+    !hasBookings &&
+    !hasCollections
   ) {
     return json(
       {
         error: "invalid_body",
         message:
-          "expected formIndex+patch OR analyticsDisabled OR motion OR music OR members OR broadcast OR comments OR bookings",
+          "expected formIndex+patch OR analyticsDisabled OR motion OR music OR members OR broadcast OR comments OR bookings OR collections",
       },
       400,
     );
@@ -382,6 +395,12 @@ export async function PATCH(
       ...("retentionDays" in b && b.retentionDays !== undefined
         ? { retentionDays: b.retentionDays }
         : {}),
+    };
+  }
+  if (hasCollections && body.collections) {
+    nextSettings.collections = {
+      ...(data.settings?.collections ?? {}),
+      ...("enabled" in body.collections ? { enabled: body.collections.enabled } : {}),
     };
   }
 
