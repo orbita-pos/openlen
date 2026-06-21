@@ -1,0 +1,62 @@
+{
+  "title": "Collections",
+  "subtitle": "Affichez une liste d'éléments sur votre page.",
+  "perProject": "Ouvrez un projet pour gérer votre collection.",
+  "module": {
+    "title": "Collections",
+    "tagline": "Une grille de produits, menu, annonces…",
+    "toggle": "Activer les collections",
+    "manage": "Gérer les éléments",
+    "insert": "Insérer une section de collection",
+    "inserted": "Ajoutée — glissez-la où vous voulez.",
+    "noCharge": "Les prix sont affichés, jamais facturés — le bouton ne fait que rediriger.",
+    "placeholderCaption": "Collection — vos éléments apparaissent ici à la publication"
+  },
+  "config": {
+    "preset": "Type",
+    "layoutGrid": "Grille",
+    "layoutList": "Liste"
+  },
+  "presets": {
+    "products": "Produits",
+    "menu": "Menu",
+    "listings": "Annonces",
+    "events": "Événements",
+    "team": "Équipe",
+    "portfolio": "Portfolio"
+  },
+  "items": {
+    "add": "Ajouter un élément",
+    "empty": "Aucun élément pour l'instant.",
+    "edit": "Modifier",
+    "archive": "Retirer",
+    "full": "Limite atteinte ({n} éléments).",
+    "loadError": "Chargement impossible."
+  },
+  "reorder": {
+    "up": "Monter",
+    "down": "Descendre"
+  },
+  "editor": {
+    "newTitle": "Nouvel élément",
+    "editTitle": "Modifier l'élément",
+    "title": "Titre",
+    "titlePlaceholder": "Nom de l'élément",
+    "subtitle": "Sous-titre",
+    "description": "Description",
+    "image": "URL de l'image",
+    "imageHint": "Collez un lien — depuis l'onglet Images, Unsplash ou le vôtre.",
+    "price": "Prix",
+    "priceHint": "Seulement affiché — OpenLen ne facture jamais.",
+    "badge": "Badge",
+    "ctaLabel": "Texte du bouton",
+    "ctaUrl": "Lien du bouton",
+    "tags": "Tags",
+    "tagsHint": "Séparés par des virgules.",
+    "noCharge": "Le bouton redirige (WhatsApp, une page, etc.) — il n'y a pas de paiement.",
+    "save": "Enregistrer",
+    "saving": "Enregistrement…",
+    "cancel": "Annuler",
+    "saveError": "Échec de l'enregistrement. Vérifiez les liens et réessayez."
+  }
+}

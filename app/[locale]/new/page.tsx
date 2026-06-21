@@ -20,6 +20,7 @@ import { setGenerationBusy } from "@/lib/generation-busy";
 import { useAIModel } from "@/components/workspace-v2/model-picker";
 import type {
   BookingsSettings,
+  CollectionsSettings,
   BroadcastSettings,
   CommentsSettings,
   FormConfig,
@@ -214,6 +215,7 @@ function NewV2Inner() {
   const tSections = useTranslations("panelsA");
   const tComments = useTranslations("comments");
   const tBookings = useTranslations("bookings");
+  const tCollections = useTranslations("collections");
   const tAsset = useTranslations("modalsAsset");
   const [dark, toggleDark] = useDarkMode();
   const searchParams = useSearchParams();
@@ -2499,6 +2501,44 @@ function NewV2Inner() {
     },
     [loadedProject?.id],
   );
+  const updateCollectionsSettings = useCallback(
+    async (patch: CollectionsSettings): Promise<boolean> => {
+      const projectId = loadedProject?.id;
+      if (!projectId) return false;
+      try {
+        const r = await fetch(`/api/projects/${projectId}/settings`, {
+          method: "PATCH",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ collections: patch }),
+        });
+        if (!r.ok) return false;
+        setLoadedProject((p) =>
+          p
+            ? {
+                ...p,
+                settings: {
+                  ...p.settings,
+                  collections: { ...p.settings?.collections, ...patch },
+                },
+              }
+            : p,
+        );
+        return true;
+      } catch {
+        return false;
+      }
+    },
+    [loadedProject?.id],
+  );
+  const insertCollectionsSection = useCallback(() => {
+    insertNonceRef.current += 1;
+    const caption = tCollections("module.placeholderCaption");
+    setInsertRequest({
+      html: `<section data-ol-collection-section style="max-width:1100px;margin:40px auto;padding:28px 24px;border:1px dashed #c9c9d0;border-radius:14px;text-align:center;color:#9a9aa0;font-size:14px;">${caption}</section>`,
+      nonce: insertNonceRef.current,
+      sectionType: "collection",
+    });
+  }, [tCollections]);
   const insertBookingsSection = useCallback(() => {
     insertNonceRef.current += 1;
     const caption = tBookings("module.placeholderCaption");
@@ -2794,6 +2834,9 @@ function NewV2Inner() {
           bookingsSettings={loadedProject?.settings?.bookings}
           onUpdateBookingsSettings={updateBookingsSettings}
           onInsertBookingsSection={insertBookingsSection}
+          collectionsSettings={loadedProject?.settings?.collections}
+          onUpdateCollectionsSettings={updateCollectionsSettings}
+          onInsertCollectionsSection={insertCollectionsSection}
           activeSitePage={activeSitePage}
           onSwitchSitePage={switchSitePage}
           onCreateSitePage={createSitePage}

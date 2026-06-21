@@ -28,6 +28,7 @@ import {
   Megaphone,
   MessageSq,
   Monitor,
+  Package,
   PanelLeft,
   PanelRight,
   Sparkles,
@@ -39,6 +40,7 @@ import type { BriefFormState } from "@/components/workspace/types";
 import type {
   BookingsSettings,
   BroadcastSettings,
+  CollectionsSettings,
   CommentsSettings,
   MembersSettings,
   StoredChatTurn,
@@ -49,6 +51,7 @@ import { ModulesPanel } from "./panels/modules-panel";
 import { BroadcastPanel } from "./panels/broadcast-panel";
 import { CommentsPanel } from "./panels/comments-panel";
 import { BookingsPanel } from "./panels/bookings-panel";
+import { CollectionsPanel } from "./panels/collections-panel";
 import { RailBusinessSwitcher } from "./business-switcher";
 import type { BusinessProfile } from "@/lib/business-profiles/types";
 import {
@@ -141,6 +144,7 @@ export type SidebarMode =
   | "broadcast"
   | "comments"
   | "bookings"
+  | "collections"
   | "versions";
 
 interface ModeTab {
@@ -159,6 +163,7 @@ const MODE_TABS: ModeTab[] = [
   { id: "broadcast", icon: Megaphone },
   { id: "comments", icon: MessageSq },
   { id: "bookings", icon: Calendar },
+  { id: "collections", icon: Package },
   { id: "versions", icon: HistoryIcon },
 ];
 
@@ -300,6 +305,10 @@ interface LeftSidebarProps {
   bookingsSettings?: BookingsSettings;
   onUpdateBookingsSettings?: (patch: BookingsSettings) => Promise<boolean>;
   onInsertBookingsSection?: () => void;
+  /** Collections module (Módulos card enables it; gates the Collections tab). */
+  collectionsSettings?: CollectionsSettings;
+  onUpdateCollectionsSettings?: (patch: CollectionsSettings) => Promise<boolean>;
+  onInsertCollectionsSection?: () => void;
 }
 
 export function LeftSidebar({
@@ -364,6 +373,9 @@ export function LeftSidebar({
   bookingsSettings,
   onUpdateBookingsSettings,
   onInsertBookingsSection,
+  collectionsSettings,
+  onUpdateCollectionsSettings,
+  onInsertCollectionsSection,
 }: LeftSidebarProps) {
   const showBusinessSwitcher = businesses.length > 0 && !!onPickBusiness;
   const t = useTranslations("wsChrome");
@@ -389,14 +401,16 @@ export function LeftSidebar({
         tab.id === "broadcast" ||
         tab.id === "comments" ||
         tab.id === "bookings" ||
+        tab.id === "collections" ||
         tab.id === "images")
     )
       return false;
-    // Broadcast + Comments + Bookings are opt-in: their tabs appear once the
-    // module is enabled (from the Módulos panel), like a feature you switched on.
+    // Broadcast + Comments + Bookings + Collections are opt-in: their tabs
+    // appear once the module is enabled (from the Módulos panel).
     if (tab.id === "broadcast" && !broadcastSettings?.enabled) return false;
     if (tab.id === "comments" && !commentsSettings?.enabled) return false;
     if (tab.id === "bookings" && !bookingsSettings?.enabled) return false;
+    if (tab.id === "collections" && !collectionsSettings?.enabled) return false;
     return true;
   });
   // After a click-to-place pick on mobile the panel overlays the canvas —
@@ -641,9 +655,13 @@ export function LeftSidebar({
                 onInsertCommentsSection={onInsertCommentsSection}
                 onUpdateBookings={onUpdateBookingsSettings}
                 onInsertBookingsSection={onInsertBookingsSection}
+                collectionsSettings={collectionsSettings}
+                onUpdateCollections={onUpdateCollectionsSettings}
+                onInsertCollectionsSection={onInsertCollectionsSection}
                 onShowBroadcast={() => setMode("broadcast")}
                 onShowComments={() => setMode("comments")}
                 onShowBookings={() => setMode("bookings")}
+                onShowCollections={() => setMode("collections")}
                 onShowLeads={() => onSelectSection?.("messages")}
                 onShowAnalytics={() => onSelectSection?.("analytics")}
                 onShowAssistant={() => setMode("assistant")}
@@ -663,6 +681,9 @@ export function LeftSidebar({
                 currentProjectId={currentProjectId}
                 defaultTz={bookingsSettings?.creatorTz}
               />
+            )}
+            {mode === "collections" && (
+              <CollectionsPanel currentProjectId={currentProjectId} />
             )}
             {mode === "versions" && (
               <VersionsPanel

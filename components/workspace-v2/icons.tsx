@@ -296,6 +296,15 @@ export const Grid3 = (p: IconProps) => (
   </Base>
 );
 
+export const Package = (p: IconProps) => (
+  <Base {...p}>
+    <path d="m7.5 4.27 9 5.15" />
+    <path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z" />
+    <path d="m3.3 7 8.7 5 8.7-5" />
+    <path d="M12 22V12" />
+  </Base>
+);
+
 export const FileText = (p: IconProps) => (
   <Base {...p}>
     <path d="M14.5 22H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h7l7 7v11a2 2 0 0 1-2 2z" />

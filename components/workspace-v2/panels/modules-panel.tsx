@@ -10,12 +10,14 @@ import { useTranslations } from "next-intl";
 import type {
   BookingsSettings,
   BroadcastSettings,
+  CollectionsSettings,
   CommentsSettings,
   MembersSettings,
 } from "@/lib/projects/types";
 import {
   BarChart3,
   Calendar,
+  Grid3,
   Inbox,
   Loader,
   LockIcon,
@@ -60,6 +62,11 @@ interface ModulesPanelProps {
   onUpdateBookings?: (patch: BookingsSettings) => Promise<boolean>;
   onInsertBookingsSection?: () => void;
   onShowBookings?: () => void;
+  /** Collections module enable card — toggle + insert section + manage. */
+  collectionsSettings?: CollectionsSettings;
+  onUpdateCollections?: (patch: CollectionsSettings) => Promise<boolean>;
+  onInsertCollectionsSection?: () => void;
+  onShowCollections?: () => void;
   onShowLeads?: () => void;
   onShowAnalytics?: () => void;
   onShowAssistant?: () => void;
@@ -81,6 +88,10 @@ export function ModulesPanel({
   onUpdateBookings,
   onInsertBookingsSection,
   onShowBookings,
+  collectionsSettings,
+  onUpdateCollections,
+  onInsertCollectionsSection,
+  onShowCollections,
   onShowLeads,
   onShowAnalytics,
   onShowAssistant,
@@ -89,6 +100,7 @@ export function ModulesPanel({
   const tb = useTranslations("broadcast");
   const tc = useTranslations("comments");
   const tbk = useTranslations("bookings");
+  const tcol = useTranslations("collections");
   const enabled = membersSettings?.enabled === true;
   const mode = membersSettings?.mode === "invite" ? "invite" : "open";
   const broadcastOn = broadcastSettings?.enabled === true;
@@ -98,11 +110,14 @@ export function ModulesPanel({
   const bookingsRequireLogin = bookingsSettings?.requireLogin === true;
   const bookingsAutoConfirm = bookingsSettings?.autoConfirm !== false;
   const bookingsReminders = bookingsSettings?.sendReminders !== false;
+  const collectionsOn = collectionsSettings?.enabled === true;
   const [busy, setBusy] = useState(false);
   const [bcastBusy, setBcastBusy] = useState(false);
   const [cmtBusy, setCmtBusy] = useState(false);
   const [bkBusy, setBkBusy] = useState(false);
   const [bkInserted, setBkInserted] = useState(false);
+  const [colBusy, setColBusy] = useState(false);
+  const [colInserted, setColInserted] = useState(false);
   const [inserted, setInserted] = useState(false);
   const [autoPageSlug, setAutoPageSlug] = useState<string | null>(null);
 
@@ -167,6 +182,12 @@ export function ModulesPanel({
     }
     await onUpdateBookings(patch);
     setBkBusy(false);
+  };
+  const updateCollections = async (patch: CollectionsSettings) => {
+    if (colBusy || !onUpdateCollections) return;
+    setColBusy(true);
+    await onUpdateCollections(patch);
+    setColBusy(false);
   };
 
   return (
@@ -473,6 +494,65 @@ export function ModulesPanel({
                 className="w-full h-7 rounded-md text-[11px] font-medium text-white bg-[var(--accent-strong)] hover:brightness-105 transition"
               >
                 {tbk("module.manage")}
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* Collections — item lists baked statically. Enabling reveals its tab. */}
+        <div className="rounded-lg ring-1 ring-[color:var(--border)] bg-[color:var(--bg)] p-2.5">
+          <div className="flex items-center gap-2">
+            <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-elev ring-1 ring-[color:var(--border)] text-accent">
+              <Grid3 size={13} />
+            </span>
+            <div className="min-w-0 flex-1">
+              <div className="text-[12px] font-semibold fg leading-tight">{tcol("module.title")}</div>
+              <div className="text-[10.5px] fg-faint leading-snug">{tcol("module.tagline")}</div>
+            </div>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={collectionsOn}
+              aria-label={tcol("module.toggle")}
+              disabled={colBusy}
+              onClick={() => void updateCollections({ enabled: !collectionsOn })}
+              className={`relative h-[18px] w-[32px] shrink-0 rounded-full transition ${
+                collectionsOn ? "bg-[var(--accent-strong)]" : "bg-zinc-300 dark:bg-zinc-700"
+              } disabled:opacity-50`}
+            >
+              <span
+                className={`absolute top-[2px] h-[14px] w-[14px] rounded-full bg-white shadow transition-all ${
+                  collectionsOn ? "left-[16px]" : "left-[2px]"
+                }`}
+              />
+            </button>
+          </div>
+          {collectionsOn && (
+            <div className="mt-2.5 space-y-1.5 fade-in">
+              <p className="text-[10px] fg-faint leading-relaxed">{tcol("module.noCharge")}</p>
+              {onInsertCollectionsSection && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    onInsertCollectionsSection();
+                    setColInserted(true);
+                  }}
+                  className="w-full h-7 rounded-md text-[11px] font-medium fg-muted hover:fg bg-elev ring-1 ring-[color:var(--border)] hover:bg-hover transition"
+                >
+                  {tcol("module.insert")}
+                </button>
+              )}
+              {colInserted && (
+                <p className="text-[10.5px] leading-relaxed text-emerald-700 dark:text-emerald-400">
+                  {tcol("module.inserted")}
+                </p>
+              )}
+              <button
+                type="button"
+                onClick={onShowCollections}
+                className="w-full h-7 rounded-md text-[11px] font-medium text-white bg-[var(--accent-strong)] hover:brightness-105 transition"
+              >
+                {tcol("module.manage")}
               </button>
             </div>
           )}
