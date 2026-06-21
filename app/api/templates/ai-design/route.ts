@@ -24,6 +24,7 @@ import {
   type ScopedView,
 } from "@/lib/html-ops";
 import { normalizeBornCanonical } from "@/lib/normalize";
+import { applyModuleIntent } from "@/lib/projects/module-intent";
 import { ensurePageMeta } from "@/lib/publish/ensure-page-meta";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -846,20 +847,28 @@ VISUAL CONTEXT: the attached image is a full-page render of the CURRENT page (wh
 
         const reasoning = accumulatedReasoning.trim();
         const now = new Date();
+        let enabledModules: string[] = [];
 
         try {
           // Preserve data.settings (per-form notify/redirect/success +
           // analyticsDisabled) — only the html changes here.
           const base: ProjectData = existing.data ?? { html: "" };
+          // AI→módulos bridge: enable a module whose placeholder this edit added.
+          const moduleIntent = applyModuleIntent(base.settings, trimmedHtml);
+          enabledModules = moduleIntent.enabled;
+          const withSettings = moduleIntent.enabled.length
+            ? { settings: moduleIntent.settings }
+            : {};
           const nextData: ProjectData = pageSlug
             ? {
                 ...base,
+                ...withSettings,
                 pages: {
                   ...base.pages,
                   [pageSlug]: { ...base.pages?.[pageSlug], html: trimmedHtml },
                 },
               }
-            : { ...base, html: trimmedHtml };
+            : { ...base, html: trimmedHtml, ...withSettings };
           await db
             .update(schema.projects)
             .set({ data: nextData, updatedAt: now })
@@ -941,6 +950,7 @@ VISUAL CONTEXT: the attached image is a full-page render of the CURRENT page (wh
           updatedAt: now.toISOString(),
           mode: outputMode,
           appliedOpCount,
+          enabledModules,
         });
         closeStream();
       } catch (err) {

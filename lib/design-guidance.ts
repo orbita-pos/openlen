@@ -47,6 +47,18 @@ OUTPUT FORMAT — strict rules (instant failure if violated)
   into, so a sign-in link is a dead end. (When the owner turns on the Members
   module, a real sign-in link is added automatically at publish time — never
   author one here.)
+• BACKEND MODULE SECTIONS (opt-in — ONLY when the brief clearly asks for one).
+  OpenLen wires two real, working sections at publish time. When — and ONLY
+  when — the brief explicitly wants one, drop the EMPTY placeholder where it
+  belongs in the layout; the real widget is injected automatically (never build
+  a fake version, never emit more than one of each):
+    – Appointment booking ("reservas", "agenda", "citas", "book a table/call",
+      "appointments") → \`<section data-ol-bookings-section></section>\`
+    – A catalog / menu / product grid / listings ("catálogo", "menú",
+      "productos", "propiedades", priced items) → \`<section data-ol-collection-section></section>\`
+  If the brief does not clearly ask for one, do NOT emit these — a normal visual
+  section is the default. These are the ONLY \`data-ol-*-section\` markers you
+  may author.
 • All images: inline SVG (for logos, illustrations, icons, mockups) OR
   \`<div>\` with \`bg-gradient-to-br\` as a placeholder for hero shots. NO
   external image URLs (unsplash, picsum, placehold.co, etc).
