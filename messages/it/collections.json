@@ -57,6 +57,7 @@
     "save": "Salva",
     "saving": "Salvataggio…",
     "cancel": "Annulla",
-    "saveError": "Impossibile salvare. Controlla i link e riprova."
+    "saveError": "Impossibile salvare. Controlla i link e riprova.",
+    "pickImage": "Scegli"
   }
 }

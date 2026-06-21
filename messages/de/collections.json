@@ -57,6 +57,7 @@
     "save": "Speichern",
     "saving": "Speichern…",
     "cancel": "Abbrechen",
-    "saveError": "Speichern fehlgeschlagen. Prüfe die Links und versuche es erneut."
+    "saveError": "Speichern fehlgeschlagen. Prüfe die Links und versuche es erneut.",
+    "pickImage": "Wählen"
   }
 }

@@ -57,6 +57,7 @@
     "save": "Enregistrer",
     "saving": "Enregistrement…",
     "cancel": "Annuler",
-    "saveError": "Échec de l'enregistrement. Vérifiez les liens et réessayez."
+    "saveError": "Échec de l'enregistrement. Vérifiez les liens et réessayez.",
+    "pickImage": "Choisir"
   }
 }
