@@ -60,6 +60,10 @@
       "bookings": {
         "label": "Agendamentos",
         "title": "Gerenciar agendamentos"
+      },
+      "collections": {
+        "label": "Coleções",
+        "title": "Gerir coleção"
       }
     },
     "tabLocked": "{label} — bloqueado",

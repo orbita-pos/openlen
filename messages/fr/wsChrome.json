@@ -60,6 +60,10 @@
       "bookings": {
         "label": "Réservations",
         "title": "Gérer les réservations"
+      },
+      "collections": {
+        "label": "Collections",
+        "title": "Gérer la collection"
       }
     },
     "tabLocked": "{label} — verrouillé",

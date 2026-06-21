@@ -60,6 +60,10 @@
       "bookings": {
         "label": "予約",
         "title": "予約を管理"
+      },
+      "collections": {
+        "label": "コレクション",
+        "title": "コレクションを管理"
       }
     },
     "tabLocked": "{label} — ロック中",
