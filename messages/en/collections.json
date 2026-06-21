@@ -27,7 +27,7 @@
   },
   "items": {
     "add": "Add item",
-    "empty": "No items yet.",
+    "empty": "No items yet. Add your first item — then publish to show it on your page.",
     "edit": "Edit",
     "archive": "Remove",
     "full": "Limit reached ({n} items).",
