@@ -12,7 +12,7 @@ import {
 } from "react";
 import { useSearchParams } from "next/navigation";
 import { useRouter } from "@/i18n/navigation";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { PublishModal } from "@/components/workspace/publish-modal";
 import { useCuration } from "@/lib/use-curation";
 import { useGeneration } from "@/lib/use-generation";
@@ -217,6 +217,7 @@ function NewV2Inner() {
   const tBookings = useTranslations("bookings");
   const tCollections = useTranslations("collections");
   const tAsset = useTranslations("modalsAsset");
+  const locale = useLocale();
   const [dark, toggleDark] = useDarkMode();
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -240,6 +241,14 @@ function NewV2Inner() {
   const [mode, setMode] = useState<SidebarMode>(
     entryMode === "template" ? "templates" : "chat",
   );
+  // Keep the sidebar panel synced to the URL-derived entry mode. Rail clicks set
+  // `mode` directly, but browser back/forward only change the URL (entryMode) —
+  // without this, navigating back to ?mode=template keeps the previous panel
+  // (e.g. Chat) shown. Editing tab-switches don't change entryMode, so this
+  // never clobbers them.
+  useEffect(() => {
+    setMode(entryMode === "template" ? "templates" : "chat");
+  }, [entryMode]);
   const [leftCollapsed, setLeftCollapsed] = useState(false);
   const isMobile = useIsMobile();
   // Mobile: the canvas is the hero. Editing enters with the panel closed (rail
@@ -722,7 +731,7 @@ function NewV2Inner() {
     if (entryMode !== "ai") return;
     const projectId = aiGenState.projectId;
     const timer = setTimeout(() => {
-      window.location.href = `/new?project=${projectId}`;
+      window.location.href = `/${locale}/new?project=${projectId}`;
     }, 1100);
     return () => clearTimeout(timer);
   }, [aiGenState, entryMode]);
@@ -2599,7 +2608,7 @@ function NewV2Inner() {
       }
       const data = (await res.json()) as { projectId: string };
       // Hard nav so the page re-mounts with the new project loaded.
-      window.location.href = `/new?project=${data.projectId}`;
+      window.location.href = `/${locale}/new?project=${data.projectId}`;
     } catch (err) {
       setTemplateError(
         err instanceof Error ? err.message : t("template.networkError"),

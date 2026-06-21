@@ -8,12 +8,13 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { useRouter } from "@/i18n/navigation";
 import { FileText, Sparkles, X } from "../icons";
 
 export function PastePanel() {
   const t = useTranslations("panelsA");
+  const locale = useLocale();
   const router = useRouter();
   const [title, setTitle] = useState("");
   const [html, setHtml] = useState("");
@@ -56,7 +57,7 @@ export function PastePanel() {
       // Hard nav (window.location) rather than router.push because the page
       // needs to re-mount and re-fetch with the new project — soft nav would
       // keep stale state (templatePreview, entryMode, etc).
-      window.location.href = `/new?project=${data.projectId}`;
+      window.location.href = `/${locale}/new?project=${data.projectId}`;
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
       setSubmitting(false);
