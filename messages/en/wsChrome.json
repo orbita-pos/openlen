@@ -60,6 +60,10 @@
       "bookings": {
         "label": "Bookings",
         "title": "Manage bookings"
+      },
+      "collections": {
+        "label": "Collections",
+        "title": "Manage collection"
       }
     },
     "tabLocked": "{label} — locked",

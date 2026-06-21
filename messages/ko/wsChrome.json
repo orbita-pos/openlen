@@ -60,6 +60,10 @@
       "bookings": {
         "label": "예약",
         "title": "예약 관리"
+      },
+      "collections": {
+        "label": "컬렉션",
+        "title": "컬렉션 관리"
       }
     },
     "tabLocked": "{label} — 잠김",

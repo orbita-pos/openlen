@@ -60,6 +60,10 @@
       "bookings": {
         "label": "Afspraken",
         "title": "Afspraken beheren"
+      },
+      "collections": {
+        "label": "Collecties",
+        "title": "Collectie beheren"
       }
     },
     "tabLocked": "{label} — vergrendeld",
