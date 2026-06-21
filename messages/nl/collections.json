@@ -1,0 +1,62 @@
+{
+  "title": "Collecties",
+  "subtitle": "Toon een lijst met items op je pagina.",
+  "perProject": "Open een project om je collectie te beheren.",
+  "module": {
+    "title": "Collecties",
+    "tagline": "Een raster van producten, menu, advertenties…",
+    "toggle": "Collecties inschakelen",
+    "manage": "Items beheren",
+    "insert": "Collectiesectie invoegen",
+    "inserted": "Toegevoegd — sleep hem waar je wilt.",
+    "noCharge": "Prijzen worden getoond, nooit in rekening gebracht — de knop linkt alleen door.",
+    "placeholderCaption": "Collectie — je items verschijnen hier bij publicatie"
+  },
+  "config": {
+    "preset": "Type",
+    "layoutGrid": "Raster",
+    "layoutList": "Lijst"
+  },
+  "presets": {
+    "products": "Producten",
+    "menu": "Menu",
+    "listings": "Advertenties",
+    "events": "Evenementen",
+    "team": "Team",
+    "portfolio": "Portfolio"
+  },
+  "items": {
+    "add": "Item toevoegen",
+    "empty": "Nog geen items.",
+    "edit": "Bewerken",
+    "archive": "Verwijderen",
+    "full": "Limiet bereikt ({n} items).",
+    "loadError": "Kon niet laden."
+  },
+  "reorder": {
+    "up": "Omhoog",
+    "down": "Omlaag"
+  },
+  "editor": {
+    "newTitle": "Nieuw item",
+    "editTitle": "Item bewerken",
+    "title": "Titel",
+    "titlePlaceholder": "Itemnaam",
+    "subtitle": "Ondertitel",
+    "description": "Beschrijving",
+    "image": "Afbeeldings-URL",
+    "imageHint": "Plak een link — uit het tabblad Afbeeldingen, Unsplash of je eigen.",
+    "price": "Prijs",
+    "priceHint": "Alleen getoond — OpenLen brengt nooit kosten in rekening.",
+    "badge": "Badge",
+    "ctaLabel": "Knoptekst",
+    "ctaUrl": "Knoplink",
+    "tags": "Tags",
+    "tagsHint": "Gescheiden door komma's.",
+    "noCharge": "De knop linkt naar buiten (WhatsApp, een pagina, enz.) — er is geen afrekenen.",
+    "save": "Opslaan",
+    "saving": "Opslaan…",
+    "cancel": "Annuleren",
+    "saveError": "Kon niet opslaan. Controleer de links en probeer opnieuw."
+  }
+}

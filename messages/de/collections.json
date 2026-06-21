@@ -1,0 +1,62 @@
+{
+  "title": "Sammlungen",
+  "subtitle": "Zeige eine Liste von Einträgen auf deiner Seite.",
+  "perProject": "Öffne ein Projekt, um deine Sammlung zu verwalten.",
+  "module": {
+    "title": "Sammlungen",
+    "tagline": "Ein Raster aus Produkten, Menü, Anzeigen…",
+    "toggle": "Sammlungen aktivieren",
+    "manage": "Einträge verwalten",
+    "insert": "Sammlungsbereich einfügen",
+    "inserted": "Hinzugefügt — zieh ihn, wohin du willst.",
+    "noCharge": "Preise werden angezeigt, nie berechnet — der Button verlinkt nur.",
+    "placeholderCaption": "Sammlung — deine Einträge erscheinen hier beim Veröffentlichen"
+  },
+  "config": {
+    "preset": "Typ",
+    "layoutGrid": "Raster",
+    "layoutList": "Liste"
+  },
+  "presets": {
+    "products": "Produkte",
+    "menu": "Menü",
+    "listings": "Anzeigen",
+    "events": "Events",
+    "team": "Team",
+    "portfolio": "Portfolio"
+  },
+  "items": {
+    "add": "Eintrag hinzufügen",
+    "empty": "Noch keine Einträge.",
+    "edit": "Bearbeiten",
+    "archive": "Entfernen",
+    "full": "Limit erreicht ({n} Einträge).",
+    "loadError": "Konnte nicht laden."
+  },
+  "reorder": {
+    "up": "Nach oben",
+    "down": "Nach unten"
+  },
+  "editor": {
+    "newTitle": "Neuer Eintrag",
+    "editTitle": "Eintrag bearbeiten",
+    "title": "Titel",
+    "titlePlaceholder": "Name des Eintrags",
+    "subtitle": "Untertitel",
+    "description": "Beschreibung",
+    "image": "Bild-URL",
+    "imageHint": "Füge einen Link ein — aus dem Bilder-Tab, Unsplash oder deinen eigenen.",
+    "price": "Preis",
+    "priceHint": "Nur angezeigt — OpenLen berechnet nie.",
+    "badge": "Badge",
+    "ctaLabel": "Button-Text",
+    "ctaUrl": "Button-Link",
+    "tags": "Tags",
+    "tagsHint": "Mit Kommas getrennt.",
+    "noCharge": "Der Button verlinkt nach außen (WhatsApp, eine Seite usw.) — kein Checkout.",
+    "save": "Speichern",
+    "saving": "Speichern…",
+    "cancel": "Abbrechen",
+    "saveError": "Speichern fehlgeschlagen. Prüfe die Links und versuche es erneut."
+  }
+}

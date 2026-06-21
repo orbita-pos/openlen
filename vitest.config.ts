@@ -40,6 +40,7 @@ export default defineConfig({
       "lib/broadcast/**/*.test.ts",
       "lib/comments/**/*.test.ts",
       "lib/bookings/**/*.test.ts",
+      "lib/collections/**/*.test.ts",
       // NB: lib/projects/site-pages.test.ts is a node:test file (run via
       // `tsx --test`), so include the vitest project tests explicitly.
       "lib/projects/module-settings.test.ts",

@@ -1,0 +1,62 @@
+{
+  "title": "合集",
+  "subtitle": "在你的页面上展示一组项目。",
+  "perProject": "打开一个项目来管理你的合集。",
+  "module": {
+    "title": "合集",
+    "tagline": "产品、菜单、列表的网格…",
+    "toggle": "启用合集",
+    "manage": "管理项目",
+    "insert": "插入合集板块",
+    "inserted": "已添加 — 拖到你想要的位置。",
+    "noCharge": "价格仅展示，绝不收费 — 按钮只是跳转链接。",
+    "placeholderCaption": "合集 — 发布后你的项目会显示在这里"
+  },
+  "config": {
+    "preset": "类型",
+    "layoutGrid": "网格",
+    "layoutList": "列表"
+  },
+  "presets": {
+    "products": "产品",
+    "menu": "菜单",
+    "listings": "列表",
+    "events": "活动",
+    "team": "团队",
+    "portfolio": "作品集"
+  },
+  "items": {
+    "add": "添加项目",
+    "empty": "还没有项目。",
+    "edit": "编辑",
+    "archive": "移除",
+    "full": "已达上限（{n} 个）。",
+    "loadError": "无法加载。"
+  },
+  "reorder": {
+    "up": "上移",
+    "down": "下移"
+  },
+  "editor": {
+    "newTitle": "新项目",
+    "editTitle": "编辑项目",
+    "title": "标题",
+    "titlePlaceholder": "项目名称",
+    "subtitle": "副标题",
+    "description": "描述",
+    "image": "图片 URL",
+    "imageHint": "粘贴链接 — 来自图片标签页、Unsplash 或你自己的。",
+    "price": "价格",
+    "priceHint": "仅展示 — OpenLen 绝不收费。",
+    "badge": "标签",
+    "ctaLabel": "按钮文字",
+    "ctaUrl": "按钮链接",
+    "tags": "标签",
+    "tagsHint": "用逗号分隔。",
+    "noCharge": "按钮跳转到外部（WhatsApp、页面等）— 没有结账。",
+    "save": "保存",
+    "saving": "保存中…",
+    "cancel": "取消",
+    "saveError": "无法保存。请检查链接后重试。"
+  }
+}
