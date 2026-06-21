@@ -1,5 +1,6 @@
 import { auth } from "@/auth";
 import { createProject } from "@/lib/projects";
+import { applyModuleIntent } from "@/lib/projects/module-intent";
 import { resolveProfileForCreation } from "@/lib/business-profiles/store";
 import { seedBrandIntoHtml, profileMeta } from "@/lib/business-profiles/seed-html";
 import type { BusinessProfile, BusinessProfileData } from "@/lib/business-profiles/types";
@@ -514,6 +515,7 @@ ${brief}`;
         const title = extractTitle(html) ?? brief.slice(0, 60).trim();
 
         let projectId: string;
+        let enabledModules: string[] = [];
         try {
           // Reuse the profile resolved up front (a save-time resolve only if
           // that failed). Seed brand accent + contact widget (no-op for an empty
@@ -523,12 +525,17 @@ ${brief}`;
             title,
             ...profileMeta(business.data),
           });
+          // AI→módulos bridge: if the page carries a module placeholder, turn
+          // that module on so the publish bake wires the real widget.
+          const moduleIntent = applyModuleIntent(undefined, html);
+          enabledModules = moduleIntent.enabled;
           projectId = await createProject(userId, {
             html,
             brief,
             title,
             profileId: business.id,
             logoUrl: business.data.brand?.logoUrl ?? null,
+            settings: moduleIntent.enabled.length ? moduleIntent.settings : undefined,
           });
         } catch (err) {
           // eslint-disable-next-line no-console
@@ -550,7 +557,7 @@ ${brief}`;
           console.error("[generate] initial version snapshot failed", err);
         });
 
-        emit("project_saved", { projectId, title, regenerated });
+        emit("project_saved", { projectId, title, regenerated, enabledModules });
         closeStream();
       } catch (err) {
         upstreamAbort.abort();

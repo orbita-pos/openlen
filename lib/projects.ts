@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import { and, desc, eq, gte, isNotNull, isNull, ne, sql as sqlOp } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
-import type { ProjectData, StoredChatTurn } from "@/lib/projects/types";
+import type { ProjectData, ProjectSettings, StoredChatTurn } from "@/lib/projects/types";
 import { getUserPlan } from "@/lib/limits";
 import { subdomainLimitForPlan } from "@/lib/subdomain/limits";
 import { validateSubdomain } from "@/lib/subdomain/validate";
@@ -154,6 +154,9 @@ export interface CreateProjectInput {
   /** The brand logo to seed as the project's logo (inspector default / card
    *  badge / OG). Optional — null/omitted leaves it unset. */
   logoUrl?: string | null;
+  /** Initial module settings (the AI→módulos bridge sets settings.bookings /
+   *  settings.collections when the generated page carries their placeholder). */
+  settings?: ProjectSettings;
 }
 
 export async function createProject(
@@ -176,7 +179,7 @@ export async function createProject(
     status: "draft",
     profileId: input.profileId ?? null,
     logoUrl: input.logoUrl ?? null,
-    data: { html: input.html },
+    data: { html: input.html, ...(input.settings ? { settings: input.settings } : {}) },
   });
   // Render a card thumbnail in the background so the project doesn't show the
   // placeholder icon in /projects. Fire-and-forget: never delays the create
