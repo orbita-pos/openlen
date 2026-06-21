@@ -101,11 +101,12 @@ export function CollectionsPanel({ currentProjectId }: { currentProjectId?: stri
   const updateConfig = async (patch: Partial<Pick<Collection, "preset" | "layout">>) => {
     if (!collection) return;
     setCollection({ ...collection, ...patch });
-    await fetch(`/api/projects/${currentProjectId}/collections`, {
+    const r = await fetch(`/api/projects/${currentProjectId}/collections`, {
       method: "PATCH",
       headers: { "content-type": "application/json" },
       body: JSON.stringify(patch),
-    }).catch(() => {});
+    }).catch(() => null);
+    if (!r || !r.ok) load(currentProjectId); // rollback to server truth
   };
 
   const archive = async (id: string) => {
@@ -122,8 +123,9 @@ export function CollectionsPanel({ currentProjectId }: { currentProjectId?: stri
     if (j < 0 || j >= live.length) return;
     const arr = live.slice();
     [arr[idx], arr[j]] = [arr[j], arr[idx]];
-    // Optimistic: show the reordered live items immediately (archived are hidden).
-    setItems(arr);
+    // Optimistic: show the reordered live items immediately; keep archived rows
+    // in state so they aren't dropped until the reload.
+    setItems([...arr, ...(items ?? []).filter((i) => i.status !== "published")]);
     await fetch(`/api/projects/${currentProjectId}/collections/items/reorder`, {
       method: "PATCH",
       headers: { "content-type": "application/json" },

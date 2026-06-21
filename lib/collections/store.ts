@@ -96,8 +96,14 @@ export async function getOrCreateDefaultCollection(
       preset: defaults?.preset ?? "products",
       layout: defaults?.layout ?? "grid",
     })
+    .onConflictDoNothing()
     .returning();
-  return rowToCollection(rows[0]);
+  if (rows[0]) return rowToCollection(rows[0]);
+  // Lost the insert race — the partial unique index rejected a 2nd active row;
+  // converge on the winner.
+  const after = await getDefaultCollection(projectId);
+  if (after) return after;
+  throw new Error("getOrCreateDefaultCollection: insert + refetch both empty");
 }
 
 export async function updateDefaultCollection(

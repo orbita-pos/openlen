@@ -1037,6 +1037,12 @@ export const collections = pgTable(
   },
   (table) => [
     index("collections_projectId_idx").on(table.projectId, table.status),
+    // v1 is single-collection: at most ONE active collection per project. The
+    // partial unique index makes getOrCreateDefaultCollection's race converge
+    // (mirrors businessProfiles_userId_default_uq).
+    uniqueIndex("collections_project_active_uq")
+      .on(table.projectId)
+      .where(sqlOp`status = 'active'`),
   ],
 );
 

@@ -13,7 +13,7 @@ const safeHref = z
   .string()
   .trim()
   .max(2000)
-  .refine((v) => /^(https?:\/\/|mailto:|tel:|\/|#)/i.test(v), {
+  .refine((v) => /^(https?:\/\/|mailto:|tel:|\/(?!\/)|#)/i.test(v), {
     message: "unsupported or unsafe link",
   });
 
@@ -23,7 +23,7 @@ const imageSrc = z
   .string()
   .trim()
   .max(2000)
-  .refine((v) => /^(https?:\/\/|\/)/i.test(v), {
+  .refine((v) => /^(https?:\/\/|\/(?!\/))/i.test(v), {
     message: "image must be an https URL or a site path",
   });
 
