@@ -351,7 +351,7 @@ export function PublishModal({
                 id="publish-subdomain"
                 value={value}
                 onChange={(e) =>
-                  setValue(e.target.value.toLowerCase().replace(/\s+/g, ""))
+                  setValue(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""))
                 }
                 onKeyDown={(e) => {
                   if (e.key === "Enter" && canPublish) {
