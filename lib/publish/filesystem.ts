@@ -25,6 +25,7 @@ import { bakeComments } from "@/lib/publish/comments-widget";
 import { bakeBookings } from "@/lib/publish/bookings-widget";
 import { bakeCollections } from "@/lib/publish/collections-block";
 import { bakeVideoEmbeds } from "@/lib/publish/video-embed";
+import { bakeCarousels } from "@/lib/publish/carousel";
 import type { ItemRow } from "@/lib/collections/store";
 import {
   annotateLanguageCluster,
@@ -676,6 +677,19 @@ async function bakeDocument(
     } catch (err) {
       // eslint-disable-next-line no-console
       console.warn("[publishToDir] video embed bake failed; publishing without it", err);
+    }
+  }
+
+  // Carousel arrows — wire <button data-ol-scroll> to scroll the closest
+  // [data-ol-scroller] row. Sealed inline runtime (templates ship buttons; the
+  // script is stripped by sanitize and re-injected here). OPENLEN_CAROUSEL=0
+  // disables it.
+  if (process.env.OPENLEN_CAROUSEL !== "0") {
+    try {
+      migratedHtml = bakeCarousels(migratedHtml);
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.warn("[publishToDir] carousel bake failed; publishing without it", err);
     }
   }
 
