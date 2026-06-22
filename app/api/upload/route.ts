@@ -44,6 +44,17 @@ const ALLOWED_MIME = new Set([
   "image/gif",
 ]);
 
+// Self-hosted video for the cinematic showcase (hero loops + short clips).
+// Stored as-is — no transcode (creators pre-encode) — and served from R2; the
+// published page references it via <video src> (born-static, CSP-safe: the
+// seal never touches <video>). 50 MB cap (a 30s 720p clip is ~5 MB).
+const MAX_VIDEO_SIZE_BYTES = 50 * 1024 * 1024;
+const ALLOWED_VIDEO_MIME = new Map<string, string>([
+  ["video/mp4", "mp4"],
+  ["video/webm", "webm"],
+  ["video/quicktime", "mov"],
+]);
+
 function extForFormat(fmt: ImageFormat): string {
   switch (fmt) {
     case "jpeg":
@@ -113,20 +124,24 @@ export async function POST(req: Request): Promise<Response> {
     return json({ error: "Missing 'file' field" }, 400);
   }
 
+  const isVideo = ALLOWED_VIDEO_MIME.has(file.type);
+  const isImage = ALLOWED_MIME.has(file.type);
+  if (!isVideo && !isImage) {
+    return json(
+      { error: `File type "${file.type || "unknown"}" not allowed. Allowed: JPEG, PNG, WebP, GIF, MP4, WebM, MOV.` },
+      415,
+    );
+  }
+  const maxBytes = isVideo ? MAX_VIDEO_SIZE_BYTES : MAX_SIZE_BYTES;
+  const maxLabel = isVideo ? "50 MB" : "5 MB";
+
   // Read the size BEFORE pulling the bytes into memory. Some clients still
   // populate file.size correctly even when sending a stream, and we'd rather
   // bail early on a huge upload than buffer it just to reject.
-  if (file.size > MAX_SIZE_BYTES) {
+  if (file.size > maxBytes) {
     return json(
-      { error: `File too large (${formatBytes(file.size)} > 5 MB max)` },
+      { error: `File too large (${formatBytes(file.size)} > ${maxLabel} max)` },
       413,
-    );
-  }
-
-  if (!ALLOWED_MIME.has(file.type)) {
-    return json(
-      { error: `File type "${file.type || "unknown"}" not allowed. Allowed: JPEG, PNG, WebP, GIF.` },
-      415,
     );
   }
 
@@ -139,15 +154,31 @@ export async function POST(req: Request): Promise<Response> {
   const buffer = Buffer.from(await file.arrayBuffer());
   // Defensive: clients can lie about size in the multipart envelope. The real
   // size lives in the buffer we just allocated.
-  if (buffer.byteLength > MAX_SIZE_BYTES) {
+  if (buffer.byteLength > maxBytes) {
     return json(
-      { error: `File too large (${formatBytes(buffer.byteLength)} > 5 MB max)` },
+      { error: `File too large (${formatBytes(buffer.byteLength)} > ${maxLabel} max)` },
       413,
     );
   }
 
   const hash = randomBytes(8).toString("hex");
   const storage = getStorage();
+
+  // ─── Video pass-through ──────────────────────────────────────────────────
+  // No decode/transcode — store the bytes as-is and return the URL. The page
+  // references it via <video src>; the publish seal leaves <video> intact.
+  if (isVideo) {
+    const ext = ALLOWED_VIDEO_MIME.get(file.type)!;
+    const key = `uploads/${generationId}/${hash}.${ext}`;
+    try {
+      const result = await storage.upload({ key, contentType: file.type, body: buffer });
+      const body: UploadResponse = { url: result.url, size: result.size, key, variants: [] };
+      return json(body, 200);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      return json({ error: `Upload failed: ${message}` }, 500);
+    }
+  }
 
   // ─── GIF pass-through ──────────────────────────────────────────────────
   // Re-encoding an animated GIF would either strip the animation (sharp's
