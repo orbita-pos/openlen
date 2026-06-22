@@ -36,7 +36,7 @@ import {
   type ResponsiveVariant,
 } from "./responsive-image";
 
-export type ReplaceKind = "icon" | "image";
+export type ReplaceKind = "icon" | "image" | "video";
 
 export interface ReplaceCredit {
   /** Photographer name. */
@@ -140,12 +140,14 @@ export function ReplaceAssetModal({
               id="replace-asset-title"
               className="text-[14px] sm:text-[15px] font-semibold fg font-display"
             >
-              {kind === "icon" ? t("header.iconTitle") : t("header.imageTitle")}
+              {kind === "icon" ? t("header.iconTitle") : kind === "video" ? "Replace video" : t("header.imageTitle")}
             </div>
             <div className="hidden sm:block text-[12px] fg-faint mt-0.5 leading-snug">
               {kind === "icon"
                 ? t("header.iconSubtitle")
-                : t("header.imageSubtitle")}
+                : kind === "video"
+                  ? "Upload an MP4 or paste a video URL (YouTube/Vimeo cards play in-page on publish)"
+                  : t("header.imageSubtitle")}
             </div>
           </div>
           <button
@@ -166,6 +168,7 @@ export function ReplaceAssetModal({
             projectId={projectId ?? null}
             activeProfile={activeProfile ?? null}
             initialTab={initialTab}
+            media={kind === "video" ? "video" : "image"}
             onPick={onPick}
           />
         )}
@@ -299,6 +302,7 @@ function ImagePicker({
   projectId,
   activeProfile,
   initialTab,
+  media = "image",
   onPick,
 }: {
   currentSrc: string | null;
@@ -309,6 +313,7 @@ function ImagePicker({
     photos?: string[];
   } | null;
   initialTab?: ImageTab;
+  media?: "image" | "video";
   onPick: (payload: ReplacePayload) => void;
 }) {
   const t = useTranslations("modalsAsset");
@@ -322,8 +327,10 @@ function ImagePicker({
   const canEditCurrent =
     !!currentSrc && !!projectId && /^https?:\/\//i.test(currentSrc);
   // Caller's choice wins, but "edit" only when it's actually available.
-  const resolvedInitial: ImageTab =
-    initialTab && (initialTab !== "edit" || canEditCurrent)
+  const isVideo = media === "video";
+  const resolvedInitial: ImageTab = isVideo
+    ? "upload"
+    : initialTab && (initialTab !== "edit" || canEditCurrent)
       ? initialTab
       : canEditCurrent
         ? "edit"
@@ -333,44 +340,48 @@ function ImagePicker({
   return (
     <div className="flex flex-col">
       <div className="px-4 sm:px-5 pt-2.5 flex gap-1 text-[12.5px] border-b bd shrink-0">
-        {canEditCurrent && (
+        {!isVideo && canEditCurrent && (
           <TabButton active={tab === "edit"} onClick={() => setTab("edit")}>
             {t("image.tabs.edit")}
           </TabButton>
         )}
-        <TabButton active={tab === "openlen"} onClick={() => setTab("openlen")}>
-          {t("image.tabs.openlen")}
-        </TabButton>
-        {hasProfileAssets && (
+        {!isVideo && (
+          <TabButton active={tab === "openlen"} onClick={() => setTab("openlen")}>
+            {t("image.tabs.openlen")}
+          </TabButton>
+        )}
+        {!isVideo && hasProfileAssets && (
           <TabButton active={tab === "profiles"} onClick={() => setTab("profiles")}>
             {t("image.tabs.profiles")}
           </TabButton>
         )}
-        <TabButton active={tab === "paste"} onClick={() => setTab("paste")}>
-          {t("image.tabs.paste")}
-        </TabButton>
-        <TabButton active={tab === "unsplash"} onClick={() => setTab("unsplash")}>
-          {t("image.tabs.unsplash")}
-        </TabButton>
         <TabButton active={tab === "upload"} onClick={() => setTab("upload")}>
           {t("image.tabs.upload")}
         </TabButton>
+        <TabButton active={tab === "paste"} onClick={() => setTab("paste")}>
+          {t("image.tabs.paste")}
+        </TabButton>
+        {!isVideo && (
+          <TabButton active={tab === "unsplash"} onClick={() => setTab("unsplash")}>
+            {t("image.tabs.unsplash")}
+          </TabButton>
+        )}
       </div>
-      {tab === "edit" && canEditCurrent && (
+      {!isVideo && tab === "edit" && canEditCurrent && (
         <UploadTab
           projectId={projectId}
           initialSrc={currentSrc}
           onPick={onPick}
         />
       )}
-      {tab === "openlen" && <OpenLenTab onPick={onPick} />}
-      {tab === "profiles" && hasProfileAssets && activeProfile && (
+      {!isVideo && tab === "openlen" && <OpenLenTab onPick={onPick} />}
+      {!isVideo && tab === "profiles" && hasProfileAssets && activeProfile && (
         <BusinessProfilesTab profile={activeProfile} onPick={onPick} />
       )}
-      {tab === "paste" && <PasteUrlTab currentSrc={currentSrc} onPick={onPick} />}
-      {tab === "unsplash" && <UnsplashTab onPick={onPick} />}
+      {tab === "paste" && <PasteUrlTab currentSrc={currentSrc} media={media} onPick={onPick} />}
+      {!isVideo && tab === "unsplash" && <UnsplashTab onPick={onPick} />}
       {tab === "upload" && (
-        <UploadTab projectId={projectId} onPick={onPick} />
+        <UploadTab projectId={projectId} media={media} onPick={onPick} />
       )}
     </div>
   );
@@ -445,9 +456,11 @@ function TabButton({
 
 function PasteUrlTab({
   currentSrc,
+  media = "image",
   onPick,
 }: {
   currentSrc: string | null;
+  media?: "image" | "video";
   onPick: (payload: ReplacePayload) => void;
 }) {
   const t = useTranslations("modalsAsset");
@@ -542,6 +555,17 @@ function PasteUrlTab({
                 <div className="text-[12px] fg-faint">
                   {t("paste.previewError")}
                 </div>
+              ) : media === "video" ? (
+                <video
+                  src={url.trim()}
+                  muted
+                  controls
+                  onLoadedData={() => setPreviewLoaded(true)}
+                  onError={() => setPreviewError(true)}
+                  className={`max-h-full max-w-full object-contain transition-opacity duration-200 ${
+                    previewLoaded ? "opacity-100" : "opacity-0"
+                  }`}
+                />
               ) : (
                 /* eslint-disable-next-line @next/next/no-img-element */
                 <img
@@ -1046,6 +1070,7 @@ type UploadStatus = "idle" | "selected" | "uploading" | "done" | "error";
 function UploadTab({
   projectId,
   initialSrc,
+  media = "image",
   onPick,
 }: {
   projectId: string | null;
@@ -1053,6 +1078,7 @@ function UploadTab({
    *  (crop / remove-bg / AI) instead of an empty dropzone — the in-place
    *  "edit the image you clicked" flow. */
   initialSrc?: string | null;
+  media?: "image" | "video";
   onPick: (payload: ReplacePayload) => void;
 }) {
   const t = useTranslations("modalsAsset");
@@ -1077,6 +1103,9 @@ function UploadTab({
   // Crop/adjust + background removal only make sense on raster formats — SVG
   // would rasterize and GIF would lose animation, so they're hidden for those.
   const canEdit = !!file && /^image\/(png|jpe?g|webp)$/.test(file.type);
+  const isVideo = media === "video";
+  const maxMb = isVideo ? 50 : MAX_UPLOAD_MB;
+  const acceptMimes = isVideo ? "video/mp4,video/webm,video/quicktime" : ACCEPT_MIMES;
 
   useEffect(() => {
     if (!file) {
@@ -1115,19 +1144,20 @@ function UploadTab({
 
   const acceptFile = useCallback((next: File) => {
     setError(null);
-    if (next.size > MAX_UPLOAD_MB * 1024 * 1024) {
-      setError(t("upload.tooLarge", { max: MAX_UPLOAD_MB }));
+    if (next.size > maxMb * 1024 * 1024) {
+      setError(t("upload.tooLarge", { max: maxMb }));
       setStatus("error");
       return;
     }
-    if (!/^image\//.test(next.type)) {
-      setError(t("upload.notImage"));
+    const typeOk = isVideo ? /^video\//.test(next.type) : /^image\//.test(next.type);
+    if (!typeOk) {
+      setError(isVideo ? "Please choose an MP4 or WebM video." : t("upload.notImage"));
       setStatus("error");
       return;
     }
     setFile(next);
     setStatus("selected");
-  }, [t]);
+  }, [t, isVideo, maxMb]);
 
   const handleInputChange = (e: ChangeEvent<HTMLInputElement>) => {
     const next = e.target.files?.[0];
@@ -1271,7 +1301,7 @@ function UploadTab({
           <input
             ref={inputRef}
             type="file"
-            accept={ACCEPT_MIMES}
+            accept={acceptMimes}
             className="sr-only"
             onChange={handleInputChange}
           />

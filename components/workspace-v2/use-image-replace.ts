@@ -201,6 +201,7 @@ const REPLACE_SCRIPT = `
     if (size < 8) return null;
 
     if (tag === 'IMG') return 'image';
+    if (tag === 'VIDEO') return 'video';
 
     if (tag === 'svg') {
       return size <= 32 ? 'icon' : 'image';
@@ -299,9 +300,11 @@ const REPLACE_SCRIPT = `
 
   function updateButton(el, kind) {
     var btn = ensureButton();
-    var label = kind === 'icon' ? 'Replace icon' : 'Replace image';
+    var label = kind === 'icon' ? 'Replace icon' : kind === 'video' ? 'Replace video' : 'Replace image';
     var iconSvg = kind === 'icon'
       ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3.51-7.13"/><polyline points="21 4 21 11 14 11"/></svg>'
+      : kind === 'video'
+      ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>'
       : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>';
     btn.innerHTML = iconSvg + '<span>' + label + '</span>';
     var rect = el.getBoundingClientRect();
@@ -394,6 +397,7 @@ const REPLACE_SCRIPT = `
     var currentSrc = null;
     var currentSvg = null;
     if (hoveredEl.tagName === 'IMG') currentSrc = hoveredEl.src;
+    if (hoveredEl.tagName === 'VIDEO') { var hs = hoveredEl.querySelector('source'); currentSrc = (hs && hs.getAttribute('src')) || hoveredEl.getAttribute('src') || ''; }
     if (hoveredEl.tagName === 'svg') currentSvg = hoveredEl.outerHTML;
     try {
       window.parent.postMessage({
@@ -419,6 +423,7 @@ const REPLACE_SCRIPT = `
     var currentSrc = null;
     var currentSvg = null;
     if (target.tagName === 'IMG') currentSrc = target.src;
+    if (target.tagName === 'VIDEO') { var ts = target.querySelector('source'); currentSrc = (ts && ts.getAttribute('src')) || target.getAttribute('src') || ''; }
     if (target.tagName === 'svg') currentSvg = target.outerHTML;
     try {
       window.parent.postMessage({
@@ -518,6 +523,16 @@ const REPLACE_SCRIPT = `
         }
       }
       return newImage;
+    }
+
+    if (kind === 'video' && payload && typeof payload.url === 'string') {
+      var vurl = payload.url.trim();
+      if (!vurl || target.tagName !== 'VIDEO') return null;
+      var sourceEl = target.querySelector('source');
+      if (sourceEl) sourceEl.setAttribute('src', vurl);
+      else target.setAttribute('src', vurl);
+      try { target.load(); } catch (_) {}
+      return target;
     }
 
     return null;
@@ -692,7 +707,7 @@ const REPLACE_SCRIPT = `
       // postClean before showing the chip so the serialized HTML doesn't
       // include the chip in case the user accepts/saves immediately.
       postClean();
-      showCopyChip(newTarget, data.kind);
+      if (data.kind !== 'video') showCopyChip(newTarget, data.kind);
     } else {
       try {
         window.parent.postMessage({
