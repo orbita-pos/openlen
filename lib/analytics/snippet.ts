@@ -4,8 +4,14 @@
 // user's actual page interaction.
 //
 // What it sends:
-//   POST /c/<projectId> { t:"v", r:<referrer>, p:<page> }            -- pageview
-//   POST /c/<projectId> { t:"c", h:<href>, l:<linkLabel>, p:<page> } -- outbound click
+//   POST /c/<projectId> { t:"v", r:<referrer>, p:<page>, cid, s:<source> } -- pageview
+//   POST /c/<projectId> { t:"c", h:<href>, l:<linkLabel>, p:<page>, cid }  -- outbound click
+//
+// `cid` is the session visitor id (lib/analytics/cid.ts) stamped on every
+// beacon so the Insights funnel can join saw → clicked → submitted → booked.
+// `s` is the session's first-touch source (utm + referrer host), sent on the
+// view beacon only and frozen per session, so the funnel attributes a visitor
+// to one acquisition channel.
 //
 // `p` is the site-page slug, null on the home document. Baked at publish
 // time (each document gets its own snippet copy) rather than read from
@@ -17,12 +23,15 @@
 // infra/nginx/openlen.conf). Same-origin = no CORS preflight = beacon is
 // fire-and-forget instant.
 
+import { cidExpr, sourceExpr } from "@/lib/analytics/cid";
+
 const SNIPPET_TEMPLATE = (projectId: string, page: string | null) => `<script>(function(){
 var P=${JSON.stringify(projectId)},G=${JSON.stringify(page)},E="/c/"+P;
-function s(d){try{d.p=G;var b=JSON.stringify(d);
+var CID=${cidExpr()},SRC=${sourceExpr()};
+function s(d){try{d.p=G;if(CID)d.cid=CID;var b=JSON.stringify(d);
 if(navigator.sendBeacon)navigator.sendBeacon(E,b);
 else fetch(E,{method:"POST",body:b,keepalive:true,headers:{"content-type":"application/json"}});}catch(e){}}
-s({t:"v",r:document.referrer||null});
+s({t:"v",r:document.referrer||null,s:SRC});
 document.addEventListener("click",function(e){
 var a=e.target.closest&&e.target.closest('a[href^=http]');if(!a)return;
 try{if(new URL(a.href).host===location.host)return;}catch(_){return;}

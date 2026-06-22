@@ -32,6 +32,8 @@ export async function recordSubmission(params: {
     device?: string | null;
     browser?: string | null;
     page?: string | null;
+    /** Session visitor id — funnel attribution (lib/analytics/cid.ts). */
+    cid?: string;
   };
 }): Promise<void> {
   await db.insert(schema.formSubmissions).values({
@@ -79,6 +81,7 @@ export interface UserSubmissionItem {
     device?: string | null;
     browser?: string | null;
     page?: string | null;
+    cid?: string;
   } | null;
   createdAt: Date;
 }

@@ -39,6 +39,8 @@ const BodySchema = z.object({
   name: z.string().trim().max(120).optional(),
   email: z.string().trim().email().max(200).optional(),
   note: z.string().trim().max(1000).optional(),
+  // Session visitor id (lib/analytics/cid.ts) — funnel attribution. Optional.
+  cid: z.string().trim().max(40).regex(/^[A-Za-z0-9-]+$/).optional(),
 });
 
 const DAY = 86400000;
@@ -142,6 +144,7 @@ export async function POST(
     note: body.note ?? null,
     creatorTz: service.creatorTz,
     visitorTz,
+    cid: body.cid ?? null,
   });
   if (!claim.ok) return json({ error: "slot_unavailable" }, 409);
 

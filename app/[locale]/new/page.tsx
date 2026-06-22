@@ -2820,6 +2820,13 @@ function NewV2Inner() {
           onClearScope={() => setScopedSelection(null)}
           pendingDraft={pendingChatDraft}
           onPendingDraftConsumed={() => setPendingChatDraft(null)}
+          onApplyCoachTip={(instruction) => {
+            // Page Coach → reuse the Chat: load the instruction into the
+            // composer and switch to the Chat tab (same flow as the post-swap
+            // chip). The user reviews and hits Send → ai-design applies it.
+            setPendingChatDraft(instruction);
+            setMode("chat");
+          }}
           aiBriefState={aiBriefFormState}
           aiOnGenerate={handleAiGenerate}
           aiGenerating={aiGenerating}

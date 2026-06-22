@@ -22,6 +22,7 @@ export default defineConfig({
       "components/workspace-v2/**/*.test.ts",
       "lib/workspace-v2/**/*.test.ts",
       "lib/sections/**/*.test.ts",
+      "lib/analytics/**/*.test.ts",
       "lib/assemble/**/*.test.ts",
       "lib/curate/**/*.test.ts",
       "lib/business-profiles/**/*.test.ts",

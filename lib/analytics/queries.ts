@@ -14,8 +14,9 @@
 // returning visitors across days. Plausible-grade dedup needs raw uaHashes,
 // which we shed after 90d on purpose — privacy > exactness for headline KPIs.
 
-import { and, eq, gte, inArray, sql } from "drizzle-orm";
+import { and, asc, eq, gte, inArray, sql } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
+import { sourceKey, type EventSource } from "@/lib/analytics/cid";
 
 export type InsightsRange = "7d" | "30d" | "90d" | "all";
 
@@ -707,6 +708,163 @@ async function getDeviceSplitAllRange(
     else if (k === "tablet") split.tablet = n;
   }
   return split;
+}
+
+// ─── Conversion funnel — saw → clicked → submitted → booked ────────────────
+//
+// Distinct session visitor ids (cid, lib/analytics/cid.ts) that reached each
+// stage, plus first-touch acquisition source per visitor with lead attribution.
+// "Untracked" = submissions/bookings with no cid (e.g. a native no-JS form POST
+// where the JS-stamped hidden input never filled) — reported honestly rather
+// than silently dropped or mis-attributed.
+//
+// Source is frozen client-side per session, so a cid maps to exactly one source
+// — the per-cid scan below collapses to ~one row per visitor. Capped at
+// SOURCE_SCAN_CAP; a daily rollup (deferred) replaces the scan at scale.
+
+export interface FunnelSource {
+  /** utm_source, else referrer host, else "direct". */
+  key: string;
+  visitors: number;
+  leads: number;
+}
+
+export interface Funnel {
+  range: InsightsRange;
+  /** Distinct cids with a view / click / form submission / booking. */
+  saw: number;
+  clicked: number;
+  submitted: number;
+  booked: number;
+  /** Submissions / bookings with no cid — untracked (e.g. native no-JS POST). */
+  untrackedLeads: number;
+  untrackedBookings: number;
+  /** Top acquisition sources by first-touch, with lead attribution. */
+  sources: FunnelSource[];
+}
+
+const SOURCE_SCAN_CAP = 5000;
+
+// "booked" = a successful conversion. Exclude cancelled / no_show so the
+// terminal funnel rate isn't inflated by bookings that fell through. Aligns
+// with the slot-guard's live set (confirmed/pending) + completed past ones.
+const BOOKED_STATUSES = ["confirmed", "pending", "completed"] as const;
+
+export async function getFunnel(
+  projectId: string,
+  range: InsightsRange,
+): Promise<Funnel> {
+  const since = sinceFor(range);
+  const evScope = since
+    ? and(
+        eq(schema.pageEvents.projectId, projectId),
+        gte(schema.pageEvents.ts, since),
+      )
+    : eq(schema.pageEvents.projectId, projectId);
+  const subScope = since
+    ? and(
+        eq(schema.formSubmissions.projectId, projectId),
+        gte(schema.formSubmissions.createdAt, since),
+      )
+    : eq(schema.formSubmissions.projectId, projectId);
+  const bkScope = and(
+    eq(schema.bookings.projectId, projectId),
+    inArray(schema.bookings.status, BOOKED_STATUSES),
+    ...(since ? [gte(schema.bookings.createdAt, since)] : []),
+  );
+
+  const cidJson = sql<string>`${schema.formSubmissions.meta} ->> 'cid'`;
+
+  const [stageRows, subRows, bkRows, sourceCidRows, leadCidRows] =
+    await Promise.all([
+      db
+        .select({
+          saw: sql<number>`COUNT(DISTINCT ${schema.pageEvents.cid}) FILTER (WHERE ${schema.pageEvents.type} = 'view')::int`,
+          clicked: sql<number>`COUNT(DISTINCT ${schema.pageEvents.cid}) FILTER (WHERE ${schema.pageEvents.type} = 'click')::int`,
+        })
+        .from(schema.pageEvents)
+        .where(and(evScope, sql`${schema.pageEvents.cid} IS NOT NULL`)),
+      db
+        .select({
+          submitted: sql<number>`COUNT(DISTINCT ${schema.formSubmissions.meta} ->> 'cid')::int`,
+          untracked: sql<number>`COUNT(*) FILTER (WHERE ${schema.formSubmissions.meta} ->> 'cid' IS NULL)::int`,
+        })
+        .from(schema.formSubmissions)
+        .where(subScope),
+      db
+        .select({
+          booked: sql<number>`COUNT(DISTINCT ${schema.bookings.cid})::int`,
+          untracked: sql<number>`COUNT(*) FILTER (WHERE ${schema.bookings.cid} IS NULL)::int`,
+        })
+        .from(schema.bookings)
+        .where(bkScope),
+      // First-touch source per cid: DISTINCT ON (cid) ORDER BY cid, ts ASC →
+      // exactly one row per cid = its EARLIEST view's source. Deterministic
+      // (the cap truncates a stable cid-ordered set, not an arbitrary one).
+      db
+        .selectDistinctOn([schema.pageEvents.cid], {
+          cid: schema.pageEvents.cid,
+          source: schema.pageEvents.source,
+        })
+        .from(schema.pageEvents)
+        .where(
+          and(
+            evScope,
+            eq(schema.pageEvents.type, "view"),
+            sql`${schema.pageEvents.cid} IS NOT NULL`,
+          ),
+        )
+        .orderBy(schema.pageEvents.cid, asc(schema.pageEvents.ts))
+        .limit(SOURCE_SCAN_CAP),
+      // Distinct cids that submitted a lead — attributed to their source below.
+      // Ordered so the cap truncates deterministically.
+      db
+        .selectDistinct({ cid: cidJson })
+        .from(schema.formSubmissions)
+        .where(and(subScope, sql`${schema.formSubmissions.meta} ->> 'cid' IS NOT NULL`))
+        .orderBy(cidJson)
+        .limit(SOURCE_SCAN_CAP),
+    ]);
+
+  // cid → first-touch source key (one row per cid from DISTINCT ON).
+  const cidToSrc = new Map<string, string>();
+  for (const r of sourceCidRows) {
+    if (!r.cid || cidToSrc.has(r.cid)) continue;
+    cidToSrc.set(r.cid, sourceKey(r.source as EventSource | null));
+  }
+  const visitorsBySrc = new Map<string, number>();
+  for (const src of cidToSrc.values()) {
+    visitorsBySrc.set(src, (visitorsBySrc.get(src) ?? 0) + 1);
+  }
+  const leadsBySrc = new Map<string, number>();
+  for (const r of leadCidRows) {
+    if (!r.cid) continue;
+    // A lead whose cid has no in-range view (e.g. converted on a prior day
+    // outside the range) is "unattributed" — don't fold it into "direct".
+    const src = cidToSrc.get(r.cid) ?? "unattributed";
+    leadsBySrc.set(src, (leadsBySrc.get(src) ?? 0) + 1);
+  }
+  const sources: FunnelSource[] = [
+    ...new Set([...visitorsBySrc.keys(), ...leadsBySrc.keys()]),
+  ]
+    .map((key) => ({
+      key,
+      visitors: visitorsBySrc.get(key) ?? 0,
+      leads: leadsBySrc.get(key) ?? 0,
+    }))
+    .sort((a, b) => b.visitors - a.visitors || b.leads - a.leads)
+    .slice(0, 8);
+
+  return {
+    range,
+    saw: Number(stageRows[0]?.saw ?? 0),
+    clicked: Number(stageRows[0]?.clicked ?? 0),
+    submitted: Number(subRows[0]?.submitted ?? 0),
+    booked: Number(bkRows[0]?.booked ?? 0),
+    untrackedLeads: Number(subRows[0]?.untracked ?? 0),
+    untrackedBookings: Number(bkRows[0]?.untracked ?? 0),
+    sources,
+  };
 }
 
 async function getInsightsAll(projectId: string): Promise<Insights> {

@@ -108,5 +108,31 @@
     "empty": "Nenhum lead ainda.",
     "emptyHint": "Publique sua página — cada envio de formulário chega aqui.",
     "emptySubmission": "Envio vazio"
+  },
+  "coach": {
+    "title": "Page Coach",
+    "apply": "Apply with AI",
+    "dismiss": "Dismiss",
+    "tip": {
+      "no-clicks": "{views} people viewed your page but no one clicked a link. Your call-to-action is not converting.",
+      "low-ctr": "Only {pct}% of visitors interact with your page. Strengthen your call-to-action.",
+      "no-leads": "There are clicks ({clicks}) but no one is leaving their details. There is no clear way to get in touch.",
+      "healthy": "Your page is converting well: {views} visits, {leads} leads. Keep sharing it.",
+      "insufficient": "Too few visits ({views}) for a recommendation yet. Share your page and check back."
+    },
+    "instruction": {
+      "no-clicks": "Make the main call-to-action far more visible and persuasive: move it above the fold, raise its contrast, and improve the button text so it invites a click.",
+      "low-ctr": "Strengthen the main call-to-action: make it more prominent with clearer, more persuasive text, and reduce surrounding distractions so more visitors click.",
+      "no-leads": "Add a short lead-capture form (name and email) right next to the main call-to-action, or simplify the existing form so it takes less effort to leave details."
+    },
+    "funnel": {
+      "title": "Conversion funnel",
+      "saw": "Saw",
+      "clicked": "Clicked",
+      "submitted": "Contacted",
+      "booked": "Booked",
+      "approx": "Approximate · per-browser in one session",
+      "untracked": "{count} untracked"
+    }
   }
 }

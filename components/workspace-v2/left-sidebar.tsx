@@ -59,6 +59,7 @@ import {
   type ScopedSelection,
 } from "./panels/chat-panel";
 import { ImagesPanel } from "./panels/images-panel";
+import { InsightsPanel } from "./panels/insights-panel";
 import type { DropAsset } from "./drop-place-core";
 import { useIsMobile } from "./use-is-mobile";
 import { PastePanel } from "./panels/paste-panel";
@@ -145,6 +146,7 @@ export type SidebarMode =
   | "comments"
   | "bookings"
   | "collections"
+  | "insights"
   | "versions";
 
 interface ModeTab {
@@ -164,6 +166,7 @@ const MODE_TABS: ModeTab[] = [
   { id: "comments", icon: MessageSq },
   { id: "bookings", icon: Calendar },
   { id: "collections", icon: Package },
+  { id: "insights", icon: BarChart3 },
   { id: "versions", icon: HistoryIcon },
 ];
 
@@ -254,6 +257,9 @@ interface LeftSidebarProps {
    *  `onPendingDraftConsumed` so the same draft isn't reapplied. */
   pendingDraft?: string | null;
   onPendingDraftConsumed?: () => void;
+  /** Page Coach "Apply with AI" (Insights tab) — the parent loads the
+   *  instruction into the Chat composer and switches to the Chat tab. */
+  onApplyCoachTip?: (instruction: string) => void;
   /** AI generation brief form state — only used when entryMode === "ai".
    *  Rendered in the sidebar panel slot so the brief input lives next
    *  to the empty preview, like the other entry modes. */
@@ -346,6 +352,7 @@ export function LeftSidebar({
   onClearScope,
   pendingDraft = null,
   onPendingDraftConsumed,
+  onApplyCoachTip,
   aiBriefState,
   aiOnGenerate,
   aiGenerating = false,
@@ -402,6 +409,7 @@ export function LeftSidebar({
         tab.id === "comments" ||
         tab.id === "bookings" ||
         tab.id === "collections" ||
+        tab.id === "insights" ||
         tab.id === "images")
     )
       return false;
@@ -599,6 +607,12 @@ export function LeftSidebar({
                 onPendingDraftConsumed={onPendingDraftConsumed}
                 sitePages={sitePages}
                 onSwitchSitePage={onSwitchSitePage}
+              />
+            )}
+            {mode === "insights" && (
+              <InsightsPanel
+                currentProjectId={currentProjectId}
+                onApplyTip={onApplyCoachTip}
               />
             )}
             {mode === "templates" && (

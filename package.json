@@ -73,6 +73,7 @@
     "spike:judge": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/spike-judge.ts",
     "spike:export": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/spike-export.ts",
     "analytics:rollup": "tsx --env-file-if-exists=.env.local --tsconfig tsconfig.eval.json scripts/analytics/rollup-daily.ts",
+    "analytics:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/analytics-migrate.ts",
     "analytics:bootstrap": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/analytics/bootstrap-tables.ts",
     "analytics:republish": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/analytics/republish-with-snippet.ts",
     "cf:setup-cache-rule": "tsx --env-file=infra/.env.production --tsconfig tsconfig.eval.json scripts/infra/setup-cf-cache-rule.ts",
