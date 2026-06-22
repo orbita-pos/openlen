@@ -256,8 +256,15 @@ fn build_policy(
         Some(origin) if !origin.trim().is_empty() => format!("'self' {}", origin.trim()),
         _ => "'self'".to_string(),
     };
+    // frame-src: defense-in-depth for the in-page video embeds. The sanitizer
+    // already strips all user iframes; the only frames on a published page are
+    // the canonical YouTube/Vimeo embeds our bake injects (lib/publish/
+    // video-embed.ts). Locking frame-src to exactly those two origins means any
+    // other iframe that somehow slipped through is blocked by the page's own CSP.
     format!(
-        "script-src {}; object-src 'none'; base-uri 'none'; form-action {}",
+        "script-src {}; object-src 'none'; base-uri 'none'; \
+         frame-src https://www.youtube-nocookie.com https://player.vimeo.com; \
+         form-action {}",
         script_src, form_action
     )
 }
@@ -312,7 +319,19 @@ mod tests {
         assert!(r.html.contains("object-src 'none'"));
         assert!(r.html.contains("base-uri 'none'"));
         assert!(r.html.contains("form-action 'self'"));
+        assert!(r.html.contains("frame-src https://www.youtube-nocookie.com https://player.vimeo.com"));
         assert!(r.html.contains("data-ol-csp"));
+    }
+
+    #[test]
+    fn frame_src_locks_to_video_embed_origins() {
+        // Only the canonical YouTube/Vimeo embed origins may be framed; the
+        // sanitizer strips user iframes, so nothing else should ever be framed.
+        let html = r#"<html><head></head><body><p>x</p></body></html>"#;
+        let r = seal_release(html, None);
+        assert!(r.html.contains("frame-src https://www.youtube-nocookie.com https://player.vimeo.com"));
+        assert!(!r.html.contains("frame-src 'self'"));
+        assert!(!r.html.contains("frame-src *"));
     }
 
     #[test]
