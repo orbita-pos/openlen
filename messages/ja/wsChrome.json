@@ -64,6 +64,10 @@
       "collections": {
         "label": "コレクション",
         "title": "コレクションを管理"
+      },
+      "modulos": {
+        "label": "モジュール",
+        "title": "サイトモジュール"
       }
     },
     "tabLocked": "{label} — ロック中",
