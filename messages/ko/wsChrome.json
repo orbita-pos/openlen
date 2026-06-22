@@ -64,6 +64,10 @@
       "collections": {
         "label": "컬렉션",
         "title": "컬렉션 관리"
+      },
+      "modulos": {
+        "label": "모듈",
+        "title": "사이트 모듈"
       }
     },
     "tabLocked": "{label} — 잠김",

@@ -64,6 +64,10 @@
       "collections": {
         "label": "合集",
         "title": "管理合集"
+      },
+      "modulos": {
+        "label": "模块",
+        "title": "站点模块"
       }
     },
     "tabLocked": "{label} — 已锁定",

@@ -274,7 +274,7 @@ export function ModulesPanel({
 
         {enabled && <MembersList projectId={currentProjectId} />}
 
-        {/* Broadcast — email your members. Enabling reveals its own tab. */}
+        {/* Broadcast — email your members. Opened from this Módulos hub (onShowBroadcast). */}
         <div className="rounded-lg ring-1 ring-[color:var(--border)] bg-[color:var(--bg)] p-2.5">
           <div className="flex items-center gap-2">
             <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-elev ring-1 ring-[color:var(--border)] text-accent">
@@ -325,7 +325,7 @@ export function ModulesPanel({
           )}
         </div>
 
-        {/* Comments — members-only comments. Enabling reveals its own tab. */}
+        {/* Comments — members-only comments. Opened from this Módulos hub (onShowComments). */}
         <div className="rounded-lg ring-1 ring-[color:var(--border)] bg-[color:var(--bg)] p-2.5">
           <div className="flex items-center gap-2">
             <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-elev ring-1 ring-[color:var(--border)] text-accent">
@@ -499,7 +499,7 @@ export function ModulesPanel({
           )}
         </div>
 
-        {/* Collections — item lists baked statically. Enabling reveals its tab. */}
+        {/* Collections — item lists baked statically. Opened from this Módulos hub (onShowCollections). */}
         <div className="rounded-lg ring-1 ring-[color:var(--border)] bg-[color:var(--bg)] p-2.5">
           <div className="flex items-center gap-2">
             <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-elev ring-1 ring-[color:var(--border)] text-accent">

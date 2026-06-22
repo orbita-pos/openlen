@@ -24,15 +24,10 @@ import {
   Inbox,
   Layers,
   ListTree,
-  Calendar,
-  Megaphone,
-  MessageSq,
   Monitor,
   Package,
   PanelLeft,
   PanelRight,
-  Sparkles,
-  Users,
   X,
 } from "./icons";
 import type { Section } from "./mock-data";
@@ -146,6 +141,7 @@ export type SidebarMode =
   | "comments"
   | "bookings"
   | "collections"
+  | "modulos"
   | "insights"
   | "versions";
 
@@ -160,12 +156,10 @@ const MODE_TABS: ModeTab[] = [
   { id: "templates", icon: Grid3 },
   { id: "images", icon: ImageIcon },
   { id: "library", icon: Layers },
-  { id: "assistant", icon: Sparkles },
-  { id: "members", icon: Users },
-  { id: "broadcast", icon: Megaphone },
-  { id: "comments", icon: MessageSq },
-  { id: "bookings", icon: Calendar },
-  { id: "collections", icon: Package },
+  // One "Módulos" hub replaces the six per-module rail icons (members,
+  // broadcast, comments, bookings, collections, assistant) — they're reached
+  // from inside ModulesPanel now, not the rail.
+  { id: "modulos", icon: Package },
   { id: "insights", icon: BarChart3 },
   { id: "versions", icon: HistoryIcon },
 ];
@@ -391,7 +385,19 @@ export function LeftSidebar({
   const isLocked = (id: SidebarMode) => lockedSet.has(id);
   const tabLabel = (id: SidebarMode) => t(`sidebar.tabs.${id}.label`);
   const tabTitle = (id: SidebarMode) => t(`sidebar.tabs.${id}.title`);
-  const activeMeta = MODE_TABS.find((tab) => tab.id === mode) ?? MODE_TABS[0];
+  // The backend-module panels are reached from the "modulos" hub, not their own
+  // rail icons — so the Módulos tab reads as active while inside any of them,
+  // and each sub-panel offers a back link to the hub.
+  const MODULE_SUB_MODES = new Set<SidebarMode>([
+    "broadcast",
+    "comments",
+    "bookings",
+    "collections",
+    "assistant",
+  ]);
+  const inModuleArea = mode === "modulos" || MODULE_SUB_MODES.has(mode);
+  const isTabActive = (id: SidebarMode) =>
+    mode === id || (id === "modulos" && inModuleArea);
 
   // Tab visibility rules:
   // Templates stays visible while editing (the panel is browse-only on an
@@ -399,26 +405,18 @@ export function LeftSidebar({
   // (the project's page tree) are editing-only — both operate on the
   // currently loaded project.
   const visibleTabs = MODE_TABS.filter((tab) => {
+    // Editing-only tabs (need a loaded project): the page tree, section library,
+    // image picker, insights, and the modules hub. The individual modules live
+    // inside the hub now, so their opt-in gating moved there too.
     if (
       entryMode !== "editing" &&
       (tab.id === "library" ||
         tab.id === "site" ||
-        tab.id === "assistant" ||
-        tab.id === "members" ||
-        tab.id === "broadcast" ||
-        tab.id === "comments" ||
-        tab.id === "bookings" ||
-        tab.id === "collections" ||
+        tab.id === "modulos" ||
         tab.id === "insights" ||
         tab.id === "images")
     )
       return false;
-    // Broadcast + Comments + Bookings + Collections are opt-in: their tabs
-    // appear once the module is enabled (from the Módulos panel).
-    if (tab.id === "broadcast" && !broadcastSettings?.enabled) return false;
-    if (tab.id === "comments" && !commentsSettings?.enabled) return false;
-    if (tab.id === "bookings" && !bookingsSettings?.enabled) return false;
-    if (tab.id === "collections" && !collectionsSettings?.enabled) return false;
     return true;
   });
   // After a click-to-place pick on mobile the panel overlays the canvas —
@@ -444,7 +442,7 @@ export function LeftSidebar({
         />
         <div className="my-1 h-px w-6 bg-black/10 dark:bg-white/10" />
         {visibleTabs.map((tab) => {
-          const active = mode === tab.id;
+          const active = isTabActive(tab.id);
           const locked = isLocked(tab.id);
           const I = tab.icon;
           const label = locked
@@ -512,7 +510,7 @@ export function LeftSidebar({
         />
         <div className="my-1 h-px w-6 bg-black/10 dark:bg-white/10" />
         {visibleTabs.map((tab) => {
-          const active = mode === tab.id;
+          const active = isTabActive(tab.id);
           const locked = isLocked(tab.id);
           const I = tab.icon;
           const label = locked
@@ -555,7 +553,19 @@ export function LeftSidebar({
       <div className="w-[272px] max-md:w-auto max-md:flex-1 shrink-0 flex flex-col min-w-0">
       <div className="flex items-center justify-between px-3 py-1.5 border-b bd shrink-0">
         <span className="text-[10px] uppercase tracking-[0.16em] fg-faint font-semibold ui-small">
-          {tabTitle(activeMeta.id)}
+          {inModuleArea && mode !== "modulos" ? (
+            <button
+              type="button"
+              onClick={() => setMode("modulos")}
+              className="inline-flex items-center gap-1 hover:fg transition"
+              title={tabTitle("modulos")}
+            >
+              <span aria-hidden>‹</span>
+              <span>{tabTitle(mode)}</span>
+            </button>
+          ) : (
+            tabTitle(mode)
+          )}
         </span>
         <button
           type="button"
@@ -655,7 +665,7 @@ export function LeftSidebar({
             {mode === "assistant" && (
               <AssistantPanel currentProjectId={currentProjectId} />
             )}
-            {mode === "members" && (
+            {mode === "modulos" && (
               <ModulesPanel
                 currentProjectId={currentProjectId}
                 membersSettings={membersSettings}

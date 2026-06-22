@@ -64,6 +64,10 @@
       "collections": {
         "label": "Coleções",
         "title": "Gerir coleção"
+      },
+      "modulos": {
+        "label": "Módulos",
+        "title": "Módulos do site"
       }
     },
     "tabLocked": "{label} — bloqueado",
