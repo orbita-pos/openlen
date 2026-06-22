@@ -45,6 +45,7 @@ export const FAMILY = z.enum([
   "food-beverage",
   "fashion",
   "photography",
+  "cinema",
 ]);
 export const MODE = z.enum(["dark", "light", "cream"]);
 export const STATUS = z.enum(["draft", "published", "archived"]);
