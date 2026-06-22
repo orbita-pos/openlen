@@ -186,6 +186,12 @@ const FAMILY_KEYWORDS: Record<TemplateFamily, string[]> = {
     "portfolio", "portafolio", "editorial", "studio", "gallery", "galeria",
     "lookbook", "model", "modelo", "shoot",
   ],
+  cinema: [
+    "cinema", "cine", "film", "pelicula", "movie", "streaming", "stream",
+    "video", "trailer", "reel", "episodes", "episodios", "series", "serie",
+    "channel", "canal", "watch", "showcase", "production", "produccion",
+    "documentary", "documental", "originals", "screening", "premiere", "estreno",
+  ],
 };
 
 // Tiebreak order when families score equally — common, high-quality-template

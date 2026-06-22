@@ -39,7 +39,8 @@ export type TemplateFamily =
   | "food-beverage"
   | "fashion"
   | "photography"
-  | "sports";
+  | "sports"
+  | "cinema";
 
 export type TemplateMode = "dark" | "light" | "cream";
 export type TemplateStatus = "draft" | "published" | "archived";
@@ -227,5 +228,10 @@ export const TEMPLATE_FAMILY_META: Record<
     label: "Photography",
     tagline:
       "Photographer portfolios — full-bleed galleries, series, the studio statement, and a booking CTA. Image-driven, restrained type.",
+  },
+  cinema: {
+    label: "Cinema / Video",
+    tagline:
+      "Video-forward entertainment pages — streaming-style poster rows, hero reels, episode grids. For studios, channels, and creators who lead with motion.",
   },
 };
