@@ -768,7 +768,7 @@ function NewV2Inner() {
         // Same — legacy. Close any open asset modal as a courtesy.
         setAssetModal(null);
       } else if (data.type === "openlen:asset-clicked") {
-        const kind = data.kind === "icon" || data.kind === "image"
+        const kind = data.kind === "icon" || data.kind === "image" || data.kind === "video"
           ? (data.kind as ReplaceKind)
           : null;
         if (!kind || typeof data.path !== "string") return;
