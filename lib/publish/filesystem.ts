@@ -24,6 +24,7 @@ import { bakeAssistantWidget } from "@/lib/publish/assistant-widget";
 import { bakeComments } from "@/lib/publish/comments-widget";
 import { bakeBookings } from "@/lib/publish/bookings-widget";
 import { bakeCollections } from "@/lib/publish/collections-block";
+import { bakeVideoEmbeds } from "@/lib/publish/video-embed";
 import type { ItemRow } from "@/lib/collections/store";
 import {
   annotateLanguageCluster,
@@ -662,6 +663,19 @@ async function bakeDocument(
     } catch (err) {
       // eslint-disable-next-line no-console
       console.warn("[publishToDir] bookings widget inject failed; publishing without it", err);
+    }
+  }
+
+  // In-page video playback — upgrade YouTube/Vimeo <a> links to a sealed
+  // lightbox (canonical embed from a server-validated id). Universal, like
+  // images (no module flag); before the seal so the runtime hash is sealed.
+  // OPENLEN_VIDEO_EMBED=0 disables it.
+  if (process.env.OPENLEN_VIDEO_EMBED !== "0") {
+    try {
+      migratedHtml = bakeVideoEmbeds(migratedHtml);
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.warn("[publishToDir] video embed bake failed; publishing without it", err);
     }
   }
 
