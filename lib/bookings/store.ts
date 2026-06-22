@@ -64,6 +64,7 @@ export interface BookingRow {
   reminderStage: number;
   icsSequence: number;
   cancelledAt: Date | null;
+  cid: string | null;
   createdAt: Date;
 }
 
@@ -263,6 +264,8 @@ export interface NewBookingInput {
   visitorTz?: string | null;
   rescheduledFromId?: string | null;
   icsSequence?: number;
+  /** Session visitor id — funnel attribution (lib/analytics/cid.ts). */
+  cid?: string | null;
 }
 
 export type ClaimResult =
@@ -295,6 +298,7 @@ export async function claimBookingSlot(
       visitorTz: input.visitorTz ?? null,
       rescheduledFromId: input.rescheduledFromId ?? null,
       icsSequence: input.icsSequence ?? 0,
+      cid: input.cid ?? null,
     })
     .onConflictDoNothing()
     .returning();

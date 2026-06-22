@@ -40,12 +40,19 @@ The billing schema migration is already applied to Neon and `deploy.ps1` re-runs
 
 > **Backend-module migrations are NOT automated.** Unlike `billing:migrate`, the
 > modules ship their own CLIs — `members:migrate`, `comments:migrate`,
-> `broadcast:migrate`, `bookings:migrate` — that `deploy.ps1` does **not** run.
-> Apply them manually against the prod `DATABASE_URL` (same model as
-> `billing:migrate`: run locally, idempotent `CREATE TABLE IF NOT EXISTS`) BEFORE
-> enabling a module — otherwise the first widget load / send throws
-> `relation does not exist` (500). Comments + Broadcast also require **Members**
-> migrated first.
+> `broadcast:migrate`, `bookings:migrate`, `analytics:migrate` — that `deploy.ps1`
+> does **not** run. Apply them manually against the prod `DATABASE_URL` (same
+> model as `billing:migrate`: run locally, idempotent DDL) BEFORE deploying the
+> code that uses the new columns — otherwise the first write throws
+> `column/relation does not exist` (500). Comments + Broadcast also require
+> **Members** migrated first.
+>
+> ⚠️ **`analytics:migrate` is a HARD pre-deploy gate** (Conversion Brain / funnel
+> cid). It adds `pageEvents.cid` + `pageEvents.source` + `bookings.cid`. Because
+> the booking insert (`claimBookingSlot`) now writes `bookings.cid`, deploying
+> the new code BEFORE this migration would make **every booking POST 500** (and
+> silently drop analytics beacons). Run `npm run analytics:migrate` against prod
+> first; it's idempotent (`ADD COLUMN IF NOT EXISTS`).
 
 ---
 

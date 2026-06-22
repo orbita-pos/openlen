@@ -108,5 +108,31 @@
     "empty": "Aún no hay leads.",
     "emptyHint": "Publica tu página — cada envío de formulario llegará aquí.",
     "emptySubmission": "Envío vacío"
+  },
+  "coach": {
+    "title": "Page Coach",
+    "apply": "Aplicar con IA",
+    "dismiss": "Descartar",
+    "tip": {
+      "no-clicks": "{views} personas vieron tu página pero nadie tocó un enlace. Tu llamada a la acción no está convirtiendo.",
+      "low-ctr": "Solo el {pct}% de quienes visitan tu página interactúan. Refuerza tu llamada a la acción.",
+      "no-leads": "Hay clics ({clicks}) pero nadie deja sus datos. Falta una vía de contacto clara.",
+      "healthy": "Tu página convierte bien: {views} visitas, {leads} contactos. Sigue compartiéndola.",
+      "insufficient": "Aún pocas visitas ({views}) para una recomendación. Comparte tu página y vuelve."
+    },
+    "instruction": {
+      "no-clicks": "Haz la llamada a la acción principal mucho más visible y persuasiva: súbela arriba del todo, auméntale el contraste y mejora el texto del botón para que invite a hacer clic.",
+      "low-ctr": "Refuerza la llamada a la acción principal: hazla más prominente, con un texto más claro y persuasivo, y reduce distracciones alrededor para que más visitantes hagan clic.",
+      "no-leads": "Añade un formulario de contacto breve (nombre y email) junto a la llamada a la acción principal, o simplifica el formulario existente para que cueste menos dejar los datos."
+    },
+    "funnel": {
+      "title": "Embudo de conversión",
+      "saw": "Vieron",
+      "clicked": "Tocaron",
+      "submitted": "Contactaron",
+      "booked": "Reservaron",
+      "approx": "Aproximado · por navegador en una sesión",
+      "untracked": "{count} sin rastrear"
+    }
   }
 }

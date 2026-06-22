@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { db, schema } from "@/lib/db";
 import { isBot, normalizeCountry, parseUserAgent } from "@/lib/analytics/parse";
+import { parseCid, parseSource } from "@/lib/analytics/cid";
 import {
   getClientIp,
   shouldDropForRateLimit,
@@ -89,6 +90,8 @@ export async function POST(
     l?: unknown;
     r?: unknown;
     p?: unknown;
+    cid?: unknown;
+    s?: unknown;
   };
   const type = data.t === "v" ? "view" : data.t === "c" ? "click" : null;
   if (!type) return new Response(null, { status: 204 });
@@ -117,6 +120,10 @@ export async function POST(
       browser,
       uaHash,
       page: parsePage(data.p),
+      // Session visitor id (joins the funnel stages) + first-touch source
+      // (sent on the view beacon only). Both untrusted → validated.
+      cid: parseCid(data.cid),
+      source: parseSource(data.s),
     });
   } catch {
     // FK violation (unknown projectId), DB hiccup, anything — silently drop.

@@ -11,7 +11,9 @@ import { useEffect, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import { BarChart3 } from "../icons";
 import { Sparkline } from "../insights-sparkline";
+import { PageCoach, FunnelBar } from "./page-coach";
 import type {
+  Funnel,
   Insights,
   InsightsRange,
   InsightsLink,
@@ -27,33 +29,46 @@ const RANGES: ReadonlyArray<{ id: InsightsRange; label: string }> = [
 
 export function InsightsPanel({
   currentProjectId,
+  onApplyTip,
 }: {
   currentProjectId?: string | null;
+  /** Page Coach "Apply with AI" — hands a localized instruction to the parent,
+   *  which loads it into the Chat composer and switches to the Chat tab. */
+  onApplyTip?: (instruction: string) => void;
 }) {
   const t = useTranslations("panelsB");
   const [range, setRange] = useState<InsightsRange>("7d");
   const [data, setData] = useState<Insights | null>(null);
+  const [funnel, setFunnel] = useState<Funnel | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!currentProjectId) {
       setData(null);
+      setFunnel(null);
       return;
     }
     let cancelled = false;
     setLoading(true);
     setError(null);
-    void fetch(
-      `/api/projects/${currentProjectId}/insights?range=${range}`,
-    )
-      .then(async (r) => {
-        if (!r.ok) throw new Error(`HTTP ${r.status}`);
-        return (await r.json()) as Insights;
-      })
-      .then((d) => {
+    // Insights drives the panel; the funnel is additive (Page Coach + funnel
+    // bar). A funnel failure (e.g. pre-migration) is soft — insights still show.
+    void Promise.all([
+      fetch(`/api/projects/${currentProjectId}/insights?range=${range}`).then(
+        async (r) => {
+          if (!r.ok) throw new Error(`HTTP ${r.status}`);
+          return (await r.json()) as Insights;
+        },
+      ),
+      fetch(`/api/projects/${currentProjectId}/funnel?range=${range}`)
+        .then((r) => (r.ok ? (r.json() as Promise<Funnel>) : null))
+        .catch(() => null),
+    ])
+      .then(([ins, fun]) => {
         if (cancelled) return;
-        setData(d);
+        setData(ins);
+        setFunnel(fun);
         setLoading(false);
       })
       .catch((err: unknown) => {
@@ -91,6 +106,12 @@ export function InsightsPanel({
         </div>
       )}
       <div className="flex-1 min-h-0 overflow-y-auto nice-scroll px-3 pb-3">
+        {funnel && (
+          <div className="space-y-3 mb-3">
+            <PageCoach funnel={funnel} onApplyTip={onApplyTip} />
+            {funnel.saw > 0 && <FunnelBar funnel={funnel} />}
+          </div>
+        )}
         {data ? (
           <Content data={data} />
         ) : loading ? (

@@ -5,6 +5,7 @@ import { recordSubmission } from "@/lib/projects/forms";
 import { checkAndConsume, getClientIp, ipLimitKey } from "@/lib/limits";
 import { sendLeadNotificationEmail } from "@/lib/email";
 import { normalizeCountry, parseUserAgent } from "@/lib/analytics/parse";
+import { parseCid } from "@/lib/analytics/cid";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Public form-submission endpoint. A <form> on a published page (wired by
@@ -72,6 +73,7 @@ export async function POST(
   const data: Record<string, string> = {};
   let count = 0;
   let formIndex: number | null = null;
+  let cid: string | undefined;
   for (const [key, value] of form.entries()) {
     if (key === "_openlen_hp") continue;
     if (key === "_openlen_form") {
@@ -80,6 +82,12 @@ export async function POST(
         const n = Number.parseInt(value, 10);
         if (Number.isInteger(n) && n >= 0) formIndex = n;
       }
+      continue;
+    }
+    if (key === "_openlen_cid") {
+      // Session visitor id (JS-stamped hidden input) — links this lead to its
+      // view for funnel attribution. Validated; absent on a native no-JS POST.
+      cid = parseCid(value) ?? undefined;
       continue;
     }
     if (typeof value !== "string") continue; // v1: no file uploads
@@ -112,6 +120,7 @@ export async function POST(
         // Which document the form lives on (null = home) — the Leads views
         // surface it so multi-page sites can triage by source page.
         page,
+        cid,
       },
     });
   } catch (err) {

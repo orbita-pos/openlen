@@ -15,6 +15,8 @@
 //
 // XSS-safe: every dynamic value renders via textContent / createElement.
 
+import { cidExpr } from "@/lib/analytics/cid";
+
 interface BookingsStrings {
   title: string;
   loading: string;
@@ -205,6 +207,7 @@ var noteI=document.createElement("textarea");noteI.placeholder=T.note;noteI.maxL
 var btn=document.createElement("button");btn.type="button";btn.className="pri";btn.textContent=T.book;wrap.appendChild(btn);
 btn.addEventListener("click",function(){
 var payload={id:(crypto.randomUUID?crypto.randomUUID():String(Date.now())+Math.random()),serviceId:state.service.id,startUtcMs:state.slot.start,visitorTz:TZ};
+var __ci=${cidExpr()};if(__ci)payload.cid=__ci;
 if(!state.member){var em=(emailI.value||"").trim();if(!em){emailI.focus();return}payload.email=em;payload.name=(nameI.value||"").trim()}
 var nt=(noteI.value||"").trim();if(nt)payload.note=nt;
 btn.disabled=true;btn.textContent=T.booking;

@@ -331,6 +331,10 @@ export const formSubmissions = pgTable(
       /** Site page the form lives on (null/absent = home) — lead triage
        *  for multi-page sites. */
       page?: string | null;
+      /** Session visitor id (lib/analytics/cid.ts) — joins this lead back to
+       *  its view in pageEvents for funnel + source attribution. Absent on a
+       *  native no-JS POST (the hidden input is JS-populated) = "untracked". */
+      cid?: string;
     }>(),
     createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
   },
@@ -537,6 +541,23 @@ export const pageEvents = pgTable(
     // recorded before multipage). Baked into the snippet at publish time,
     // validated against the slug grammar at insert.
     page: text("page"),
+    // Session visitor id (lib/analytics/cid.ts) — sessionStorage-scoped, NOT a
+    // persistent cross-session identifier, so the privacy-first / no-consent
+    // posture above still holds. Joins the funnel: a cid's view → click →
+    // (formSubmissions.meta.cid) → (bookings.cid). Null on pre-cid rows and
+    // when storage is blocked.
+    cid: text("cid"),
+    // First-touch acquisition source for the session, frozen client-side and
+    // sent on the view beacon: { utmSource?, utmMedium?, utmCampaign?, ref? }
+    // (ref = cross-origin referrer host). Null when nothing identifiable. See
+    // EventSource in lib/analytics/cid.ts — kept inline here so the schema
+    // (imported everywhere) carries no analytics dependency.
+    source: jsonb("source").$type<{
+      utmSource?: string;
+      utmMedium?: string;
+      utmCampaign?: string;
+      ref?: string;
+    }>(),
     ts: timestamp("ts", { mode: "date" }).notNull().defaultNow(),
   },
   (table) => [
@@ -546,6 +567,8 @@ export const pageEvents = pgTable(
       table.type,
       table.ts,
     ),
+    // Funnel join: distinct cids per stage + first-touch source per cid.
+    index("pageEvents_projectId_cid_idx").on(table.projectId, table.cid),
   ],
 );
 
@@ -957,6 +980,10 @@ export const bookings = pgTable(
     reminderStage: integer("reminderStage").notNull().default(0), // high-water: 0 none,1 sent
     icsSequence: integer("icsSequence").notNull().default(0), // ++ on reschedule/cancel
     cancelledAt: timestamp("cancelledAt", { mode: "date", withTimezone: true }),
+    // Session visitor id (lib/analytics/cid.ts) — joins this booking back to its
+    // view for the Insights funnel's "booked" stage. Null when JS/storage was
+    // unavailable at booking time.
+    cid: text("cid"),
     createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
   },
   (table) => [

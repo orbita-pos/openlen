@@ -11,9 +11,29 @@ import {
   type WireFormConfig,
 } from "@/lib/html-engine";
 import type { FormConfig } from "@/lib/projects/types";
+import { cidExpr } from "@/lib/analytics/cid";
 
 function submitBase(): string {
   return process.env.NEXT_PUBLIC_SITE_URL?.trim() || "https://openlen.com";
+}
+
+const CID_STAMP_MARKER = "data-ol-cid-stamp";
+
+// Add the session visitor id to every OpenLen-wired <form> as a hidden input so
+// the existing `new FormData(form)` submit (Rust forms.rs — untouched) carries
+// it. The field is namespaced `_openlen_cid` (like `_openlen_hp`/`_openlen_form`)
+// so it never collides with a real lead field. Done in JS, NOT in the markup, on
+// purpose: a native no-JS POST leaves the input absent (= "untracked" lead),
+// which the funnel reports honestly rather than pretending to attribute. Sealed
+// like every other publish-time inline script (its hash enters script-src at
+// the seal step). Idempotent + soft.
+function injectFormCidStamp(html: string): string {
+  if (html.includes(CID_STAMP_MARKER)) return html;
+  // Only when the Rust pass actually wired a form to our submit endpoint.
+  if (!html.includes("/api/f/")) return html;
+  const script = `<script ${CID_STAMP_MARKER}>(function(){try{var c=${cidExpr()};if(!c)return;var fs=document.querySelectorAll('form[action*="/api/f/"]');for(var i=0;i<fs.length;i++){var f=fs[i];if(f.querySelector('input[name=_openlen_cid]'))continue;var h=document.createElement('input');h.type='hidden';h.name='_openlen_cid';h.value=c;f.appendChild(h)}}catch(e){}})();</script>`;
+  const idx = html.lastIndexOf("</body>");
+  return idx === -1 ? html + script : html.slice(0, idx) + script + html.slice(idx);
 }
 
 /** Wire every <form> in the published HTML to OpenLen's submit endpoint,
@@ -55,5 +75,5 @@ export function wirePublishedForms(
       redirectUrl: v.redirectUrl,
     }),
   );
-  return rustWirePublishedForms(html, action, configs);
+  return injectFormCidStamp(rustWirePublishedForms(html, action, configs));
 }
