@@ -1311,12 +1311,24 @@ function UploadTab({
                 className="mx-auto inline-block rounded overflow-hidden ring-1 ring-[color:var(--border)]"
                 style={CHECKER_STYLE}
               >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={previewUrl}
-                  alt={t("upload.previewAlt")}
-                  className="max-h-36 object-contain block"
-                />
+                {isVideo ? (
+                  <video
+                    src={previewUrl}
+                    muted
+                    controls
+                    playsInline
+                    className="max-h-36 object-contain block"
+                  />
+                ) : (
+                  <>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={previewUrl}
+                      alt={t("upload.previewAlt")}
+                      className="max-h-36 object-contain block"
+                    />
+                  </>
+                )}
               </div>
               <div className="text-[11px] fg-muted">
                 {file?.name} · {prettySize(file?.size ?? 0)}
