@@ -24,7 +24,7 @@ import { bakeAssistantWidget } from "@/lib/publish/assistant-widget";
 import { bakeComments } from "@/lib/publish/comments-widget";
 import { bakeBookings } from "@/lib/publish/bookings-widget";
 import { bakeCollections } from "@/lib/publish/collections-block";
-import { bakeVideoEmbeds } from "@/lib/publish/video-embed";
+import { bakeVideoEmbeds, bakeMediaPreconnect } from "@/lib/publish/video-embed";
 import { bakeCarousels } from "@/lib/publish/carousel";
 import type { ItemRow } from "@/lib/collections/store";
 import {
@@ -678,6 +678,16 @@ async function bakeDocument(
       // eslint-disable-next-line no-console
       console.warn("[publishToDir] video embed bake failed; publishing without it", err);
     }
+  }
+
+  // Resource hint for self-hosted video: warm the cross-origin media host
+  // (uploads/R2) so a cinema autoplay hero starts without a cold handshake.
+  // No-op when there's no absolute-https <video>/<source> on the page.
+  try {
+    migratedHtml = bakeMediaPreconnect(migratedHtml);
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.warn("[publishToDir] media preconnect bake failed; skipping", err);
   }
 
   // Carousel arrows — wire <button data-ol-scroll> to scroll the closest

@@ -105,6 +105,42 @@ export function ensureFontDisplaySwap(css: string): string {
   );
 }
 
+/** The single woff2 worth preloading: the LATIN subset of the FIRST family in
+ *  the FIRST css2 request — the page's primary/display font, the one most
+ *  likely in the LCP text. Capped at one file on purpose: preloading more would
+ *  undo the unicode-range subsetting (forcing every script subset to download).
+ *  Returns null when it can't be confidently identified — fail-open, no preload.
+ *  Pure — exported for unit tests. */
+export function pickPreloadFontFile(
+  cssUrls: string[],
+  baked: Map<string, string>,
+): string | null {
+  for (const url of cssUrls) {
+    let fam: string;
+    try {
+      const f = new URL(url).searchParams.get("family");
+      if (!f) continue;
+      fam = f.split(":")[0].replace(/\+/g, " ").trim().toLowerCase();
+    } catch {
+      continue;
+    }
+    const css = baked.get(url);
+    if (!fam || !css) continue;
+    let fallback: string | null = null;
+    for (const block of css.match(FONT_FACE_BLOCK_RE) || []) {
+      const fm = /font-family\s*:\s*["']?([^"';}]+)["']?/i.exec(block);
+      if (!fm || fm[1].trim().toLowerCase() !== fam) continue;
+      const um = /url\(\s*\/assets\/(f-[A-Za-z0-9._-]+\.woff2)/i.exec(block);
+      if (!um) continue;
+      if (!fallback) fallback = um[1];
+      // The latin base subset (Western text) — preload this exact one.
+      if (/unicode-range\s*:[^;}]*U\+0000-00FF/i.test(block)) return um[1];
+    }
+    if (fallback) return fallback;
+  }
+  return null;
+}
+
 type FetchLike = typeof fetch;
 
 async function fetchWithTimeout(
@@ -291,6 +327,14 @@ export async function bakeGoogleFonts(params: {
       const rel = relTokens(full);
       return rel.includes("preconnect") || rel.includes("dns-prefetch") ? "" : full;
     });
+  }
+
+  // Preload the primary font's latin woff2 (mirrors the hero-image preload) so
+  // first text paint isn't blocked on the @font-face fetch. Exactly one file.
+  const preloadFile = pickPreloadFontFile(cssUrls, baked);
+  if (preloadFile && !out.includes("data-ol-font-preload")) {
+    const link = `<link rel="preload" href="/assets/${preloadFile}" as="font" type="font/woff2" crossorigin data-ol-font-preload>`;
+    out = out.replace(/<style data-ol-font-baked>/, (s) => `${link}${s}`);
   }
 
   try {

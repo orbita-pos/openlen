@@ -14,7 +14,35 @@ import {
   bakeGoogleFonts,
   collectGoogleCssUrls,
   ensureFontDisplaySwap,
+  pickPreloadFontFile,
 } from "./font-bake";
+
+// ─── pickPreloadFontFile ──────────────────────────────────────────────────────
+
+const FF = (fam: string, file: string, range?: string) =>
+  `@font-face{font-family:'${fam}';font-style:normal;font-weight:400;font-display:swap;` +
+  `src:url(/assets/${file}) format('woff2')${range ? `;unicode-range:${range}` : ""}}`;
+
+test("pickPreloadFontFile: returns the FIRST family's latin woff2", () => {
+  const url = "https://fonts.googleapis.com/css2?family=Geist:wght@400;600&family=Inter:wght@400";
+  const css =
+    FF("Geist", "f-cyr.woff2", "U+0301,U+0400-045F") +
+    FF("Geist", "f-lat.woff2", "U+0000-00FF,U+0131") +
+    FF("Inter", "f-inter.woff2", "U+0000-00FF");
+  assert.equal(pickPreloadFontFile([url], new Map([[url, css]])), "f-lat.woff2");
+});
+
+test("pickPreloadFontFile: falls back to the first block when no latin range", () => {
+  const url = "https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400";
+  const css = FF("Noto Sans JP", "f-jp.woff2"); // no unicode-range
+  assert.equal(pickPreloadFontFile([url], new Map([[url, css]])), "f-jp.woff2");
+});
+
+test("pickPreloadFontFile: null when the first family has no baked file", () => {
+  const url = "https://fonts.googleapis.com/css2?family=Geist:wght@400";
+  const css = FF("Inter", "f-inter.woff2", "U+0000-00FF"); // different family only
+  assert.equal(pickPreloadFontFile([url], new Map([[url, css]])), null);
+});
 
 // ─── Harness ────────────────────────────────────────────────────────────────
 
