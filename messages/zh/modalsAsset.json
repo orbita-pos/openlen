@@ -142,6 +142,12 @@
     "bgHint": "首次会下载模型 — 在你的浏览器中运行，可能需要片刻。",
     "bgFailed": "无法移除背景，请换一张图片试试。",
     "aiEdit": "AI 编辑",
+    "presets": {
+      "pro": "专业级",
+      "light": "更亮",
+      "studio": "影棚背景",
+      "sharpen": "更清晰"
+    },
     "aiPlaceholder": "描述修改 — 例如：去掉左边的人",
     "aiApply": "生成",
     "aiWorking": "生成中…",

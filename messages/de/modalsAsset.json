@@ -142,6 +142,12 @@
     "bgHint": "Beim ersten Mal wird das Modell geladen — es läuft in deinem Browser, das kann einen Moment dauern.",
     "bgFailed": "Hintergrund konnte nicht entfernt werden. Versuche ein anderes Bild.",
     "aiEdit": "KI-Bearbeitung",
+    "presets": {
+      "pro": "Pro-Look",
+      "light": "Heller",
+      "studio": "Studio-Hintergrund",
+      "sharpen": "Schärfer"
+    },
     "aiPlaceholder": "Beschreibe die Änderung — z. B. entferne die Person links",
     "aiApply": "Generieren",
     "aiWorking": "Wird generiert…",

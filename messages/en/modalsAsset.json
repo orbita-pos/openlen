@@ -142,6 +142,12 @@
     "bgHint": "First run downloads the model — it runs in your browser, may take a moment.",
     "bgFailed": "Couldn't remove the background. Try another image.",
     "aiEdit": "AI edit",
+    "presets": {
+      "pro": "Make it pro",
+      "light": "Brighter",
+      "studio": "Studio backdrop",
+      "sharpen": "Sharpen"
+    },
     "aiPlaceholder": "Describe the change — e.g. remove the person on the left",
     "aiApply": "Generate",
     "aiWorking": "Generating…",

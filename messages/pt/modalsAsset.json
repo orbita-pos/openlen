@@ -142,6 +142,12 @@
     "bgHint": "A primeira vez baixa o modelo — roda no seu navegador, pode demorar um pouco.",
     "bgFailed": "Não foi possível remover o fundo. Tente outra imagem.",
     "aiEdit": "Editar com IA",
+    "presets": {
+      "pro": "Deixe pro",
+      "light": "Mais luz",
+      "studio": "Fundo de estúdio",
+      "sharpen": "Mais nítida"
+    },
     "aiPlaceholder": "Descreva a mudança — ex. remova a pessoa à esquerda",
     "aiApply": "Gerar",
     "aiWorking": "Gerando…",

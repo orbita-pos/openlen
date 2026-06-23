@@ -142,6 +142,12 @@
     "bgHint": "Le premier lancement télécharge le modèle — il s'exécute dans votre navigateur, cela peut prendre un instant.",
     "bgFailed": "Impossible de supprimer le fond. Essayez une autre image.",
     "aiEdit": "Édition IA",
+    "presets": {
+      "pro": "Rendre pro",
+      "light": "Plus lumineux",
+      "studio": "Fond studio",
+      "sharpen": "Plus nette"
+    },
     "aiPlaceholder": "Décrivez le changement — ex. enlevez la personne à gauche",
     "aiApply": "Générer",
     "aiWorking": "Génération…",
