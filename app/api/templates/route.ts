@@ -50,5 +50,6 @@ function stripInternals(t: Awaited<ReturnType<typeof listTemplates>>[number]) {
     contentHash: t.contentHash,
     thumbnailUrl: t.thumbnailUrl,
     tileUrl: t.tileUrl,
+    featured: t.featured,
   };
 }

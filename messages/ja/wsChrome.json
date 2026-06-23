@@ -127,6 +127,14 @@
     },
     "sidebar": "サイドバー"
   },
+  "start": {
+    "headline": "あなたの次のページはここから",
+    "subtitle": "検証済みのテンプレートをワンクリックで無料で選ぶか、AI に伝えてください。",
+    "pasteHtml": "または自分の HTML を貼り付け",
+    "galleryHeading": "検証済みテンプレート",
+    "search": "テンプレートを検索…",
+    "noResults": "「{query}」の結果はありません"
+  },
   "empty": {
     "badge": "OpenLen ワークスペース",
     "heading": "何から始めますか？",

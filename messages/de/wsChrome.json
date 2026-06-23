@@ -127,6 +127,14 @@
     },
     "sidebar": "Seitenleiste"
   },
+  "start": {
+    "headline": "Deine nächste Seite beginnt hier",
+    "subtitle": "Wähle eine geprüfte Vorlage — kostenlos, ein Klick — oder beschreibe sie mit KI.",
+    "pasteHtml": "oder füge dein eigenes HTML ein",
+    "galleryHeading": "Geprüfte Vorlagen",
+    "search": "Vorlagen suchen…",
+    "noResults": "Keine Ergebnisse für „{query}“"
+  },
   "empty": {
     "badge": "OpenLen Workspace",
     "heading": "Womit möchtest du starten?",

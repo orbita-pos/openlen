@@ -127,6 +127,14 @@
     },
     "sidebar": "Barra lateral"
   },
+  "start": {
+    "headline": "Tu próxima página empieza aquí",
+    "subtitle": "Elige una plantilla verificada — gratis, en un clic — o descríbela con IA.",
+    "pasteHtml": "o pega tu propio HTML",
+    "galleryHeading": "Plantillas verificadas",
+    "search": "Buscar plantillas…",
+    "noResults": "Sin resultados para «{query}»"
+  },
   "empty": {
     "badge": "Workspace de OpenLen",
     "heading": "¿Con qué quieres empezar?",

@@ -45,6 +45,8 @@ export interface TemplateSpec {
   imageUrl: string | null;
   /** Brand accent — surfaced in the card chrome for visual identity. */
   accent: string;
+  /** Curated "popular" flag — these lead the gallery wall. */
+  featured: boolean;
 }
 
 interface ApiListItem {
@@ -59,6 +61,7 @@ interface ApiListItem {
   contentHash: string;
   thumbnailUrl?: string | null;
   tileUrl?: string | null;
+  featured?: boolean;
 }
 
 export function apiItemToSpec(t: ApiListItem): TemplateSpec {
@@ -72,5 +75,6 @@ export function apiItemToSpec(t: ApiListItem): TemplateSpec {
     previewUrl: t.storageUrl,
     imageUrl: t.thumbnailUrl ?? null,
     accent: t.accent,
+    featured: t.featured ?? false,
   };
 }
