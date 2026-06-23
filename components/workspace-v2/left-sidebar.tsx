@@ -72,6 +72,7 @@ import type { ComponentType } from "react";
 export type SectionView =
   | "page"
   | "projects"
+  | "templates"
   | "analytics"
   | "messages"
   | "modulos"
@@ -84,6 +85,7 @@ const GLOBAL_SECTIONS: ReadonlyArray<{
 }> = [
   { view: "page", icon: Monitor, key: "nav.page" },
   { view: "projects", icon: FileText, key: "nav.myPages" },
+  { view: "templates", icon: Grid3, key: "nav.templates" },
   { view: "modulos", icon: Package, key: "nav.modulos" },
   { view: "analytics", icon: BarChart3, key: "nav.analytics" },
   { view: "messages", icon: Inbox, key: "nav.messages" },
@@ -153,7 +155,9 @@ interface ModeTab {
 const MODE_TABS: ModeTab[] = [
   { id: "site", icon: ListTree },
   { id: "chat", icon: ChatIcon },
-  { id: "templates", icon: Grid3 },
+  // Plantillas moved to a full-center VIEW (GLOBAL_SECTIONS) — browsing a
+  // gallery wants the width. The in-panel TemplatesPanel render stays (the
+  // bare-/new entry flow still uses it); only the editing rail tab is removed.
   { id: "images", icon: ImageIcon },
   { id: "library", icon: Layers },
   // Módulos moved to a full-center VIEW (GLOBAL_SECTIONS) — it's config/mgmt,

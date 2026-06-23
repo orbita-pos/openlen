@@ -31,6 +31,10 @@ interface TemplatesPanelProps {
   /** ID of the template currently being previewed in the main area, used
    *  to highlight which card is "selected". */
   previewingId: string | null;
+  /** Center-view layout: render the cards in a responsive multi-column grid
+   *  and let the parent own scroll/width/padding. Default (false) is the
+   *  272px rail layout (single column, own scroll). */
+  grid?: boolean;
 }
 
 interface TemplateCardProps {
@@ -143,6 +147,7 @@ function FamilyHeader({
 export function TemplatesPanel({
   onPreview,
   previewingId,
+  grid = false,
 }: TemplatesPanelProps) {
   const [familyFilter, setFamilyFilter] = useState<TemplateFamily | "all">(
     "all",
@@ -169,7 +174,7 @@ export function TemplatesPanel({
   );
 
   return (
-    <div className="overflow-y-auto nice-scroll h-full px-3 py-3">
+    <div className={grid ? "" : "overflow-y-auto nice-scroll h-full px-3 py-3"}>
       <div className="flex items-center gap-2 mb-2">
         <Sparkles size={13} className="text-accent" />
         <h2 className="text-[11px] uppercase tracking-[0.16em] fg-faint font-semibold ui-small">
@@ -263,7 +268,7 @@ export function TemplatesPanel({
                 tagline={tf(`${family.id}.tagline`)}
                 count={familyTemplates.length}
               />
-              <div className="flex flex-col gap-3">
+              <div className={grid ? "grid grid-cols-2 lg:grid-cols-3 gap-3.5" : "flex flex-col gap-3"}>
                 {familyTemplates.map((t) => (
                   <TemplateCard
                     key={t.id}
