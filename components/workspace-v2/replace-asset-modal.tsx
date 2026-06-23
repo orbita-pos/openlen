@@ -1094,7 +1094,6 @@ function UploadTab({
   const [bgBusy, setBgBusy] = useState(false);
   const [bgError, setBgError] = useState<string | null>(null);
   const [aiOpen, setAiOpen] = useState(false);
-  const [aiPrompt, setAiPrompt] = useState("");
   const [aiBusy, setAiBusy] = useState(false);
   const [aiError, setAiError] = useState<string | null>(null);
   // One-tap AI presets — canned prompts to the same Nano Banana endpoint. The
@@ -1271,8 +1270,8 @@ function UploadTab({
     }
   }, [file, t]);
 
-  const handleAiEdit = useCallback(async (instructionArg?: string) => {
-    const instruction = (instructionArg ?? aiPrompt).trim();
+  const handleAiEdit = useCallback(async (instructionArg: string) => {
+    const instruction = instructionArg.trim();
     if (!file || !projectId || !instruction) return;
     setAiBusy(true);
     setAiError(null);
@@ -1283,7 +1282,6 @@ function UploadTab({
       setError(null);
       setProgress(0);
       setAiOpen(false);
-      setAiPrompt("");
     } catch (err) {
       const code = err instanceof AiEditError ? err.code : "";
       setAiError(
@@ -1296,7 +1294,7 @@ function UploadTab({
     } finally {
       setAiBusy(false);
     }
-  }, [file, projectId, aiPrompt, t]);
+  }, [file, projectId, t]);
 
   if (!projectId) {
     return (
@@ -1430,36 +1428,6 @@ function UploadTab({
                             {t(`editor.presets.${p.key}`)}
                           </button>
                         ))}
-                      </div>
-                      {/* Or describe a custom change (kept for power users). */}
-                      <div className="flex items-center gap-1.5">
-                      <input
-                        type="text"
-                        value={aiPrompt}
-                        onChange={(e) => setAiPrompt(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter" && aiPrompt.trim() && !aiBusy) {
-                            e.preventDefault();
-                            void handleAiEdit();
-                          }
-                        }}
-                        disabled={aiBusy}
-                        placeholder={t("editor.aiPlaceholder")}
-                        className="flex-1 h-8 px-2.5 rounded-md border bd bg-app text-[12px] fg placeholder:fg-faint focus:outline-none focus:border-[color:var(--accent)] focus:ring-1 focus:ring-[color:var(--accent-ring)]/30 transition disabled:opacity-60"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => void handleAiEdit()}
-                        disabled={aiBusy || !aiPrompt.trim()}
-                        className="shrink-0 inline-flex items-center justify-center gap-1.5 h-8 px-3 rounded-md text-[12px] font-medium bg-[var(--accent-strong)] text-white hover:brightness-105 shadow-coral transition disabled:opacity-40 disabled:cursor-not-allowed"
-                      >
-                        {aiBusy ? (
-                          <Loader2 size={13} className="animate-spin" aria-hidden />
-                        ) : (
-                          <Sparkles size={13} aria-hidden />
-                        )}
-                        {aiBusy ? t("editor.aiWorking") : t("editor.aiApply")}
-                      </button>
                       </div>
                     </div>
                   )}
