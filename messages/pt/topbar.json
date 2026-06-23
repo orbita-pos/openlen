@@ -56,5 +56,10 @@
     "minutes": "há {count}min",
     "hours": "há {count}h",
     "days": "há {count}d"
+  },
+  "sound": {
+    "mute": "Silenciar sons",
+    "unmute": "Ativar som",
+    "volume": "Volume"
   }
 }

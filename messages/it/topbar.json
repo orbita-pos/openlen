@@ -56,5 +56,10 @@
     "minutes": "{count} min fa",
     "hours": "{count} h fa",
     "days": "{count} g fa"
+  },
+  "sound": {
+    "mute": "Disattiva i suoni",
+    "unmute": "Attiva il suono",
+    "volume": "Volume"
   }
 }

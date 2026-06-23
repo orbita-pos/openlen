@@ -151,6 +151,22 @@ export const Moon = (p: IconProps) => (
   </Base>
 );
 
+export const Volume2 = (p: IconProps) => (
+  <Base {...p}>
+    <path d="M11 4.702a.705.705 0 0 0-1.203-.498L6.413 7.587A1.4 1.4 0 0 1 5.416 8H3a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2.416a1.4 1.4 0 0 1 .997.413l3.383 3.384A.705.705 0 0 0 11 19.298z" />
+    <path d="M16 9a5 5 0 0 1 0 6" />
+    <path d="M19.364 18.364a9 9 0 0 0 0-12.728" />
+  </Base>
+);
+
+export const VolumeX = (p: IconProps) => (
+  <Base {...p}>
+    <path d="M11 4.702a.705.705 0 0 0-1.203-.498L6.413 7.587A1.4 1.4 0 0 1 5.416 8H3a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2.416a1.4 1.4 0 0 1 .997.413l3.383 3.384A.705.705 0 0 0 11 19.298z" />
+    <path d="m16 9 6 6" />
+    <path d="m22 9-6 6" />
+  </Base>
+);
+
 export const Eye = (p: IconProps) => (
   <Base {...p}>
     <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />

@@ -56,5 +56,10 @@
     "minutes": "vor {count}m",
     "hours": "vor {count}h",
     "days": "vor {count}d"
+  },
+  "sound": {
+    "mute": "Töne stummschalten",
+    "unmute": "Ton an",
+    "volume": "Lautstärke"
   }
 }

@@ -56,5 +56,10 @@
     "minutes": "il y a {count} min",
     "hours": "il y a {count} h",
     "days": "il y a {count} j"
+  },
+  "sound": {
+    "mute": "Couper le son",
+    "unmute": "Activer le son",
+    "volume": "Volume"
   }
 }
