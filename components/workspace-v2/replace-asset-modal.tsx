@@ -1097,6 +1097,36 @@ function UploadTab({
   const [aiPrompt, setAiPrompt] = useState("");
   const [aiBusy, setAiBusy] = useState(false);
   const [aiError, setAiError] = useState<string | null>(null);
+  // One-tap AI presets — canned prompts to the same Nano Banana endpoint. The
+  // prompt is English (the image model responds best in English); only the chip
+  // LABEL is localized. Each says "keep the same subject" so the model improves
+  // the photography without changing what the product is.
+  const AI_PRESETS: { key: string; emoji: string; prompt: string }[] = [
+    {
+      key: "pro",
+      emoji: "✨",
+      prompt:
+        "Make this photo look professional and high-end: clean, even studio lighting, crisp sharp focus, vivid true-to-life colors, and a tidy uncluttered background. Keep the exact same subject/product — do not change what it is, only improve the photography.",
+    },
+    {
+      key: "light",
+      emoji: "💡",
+      prompt:
+        "Relight this photo with bright, soft, flattering light. Fix dark, dull or muddy areas and balance the exposure. Keep the same subject completely unchanged.",
+    },
+    {
+      key: "studio",
+      emoji: "🎬",
+      prompt:
+        "Place the main subject on a clean, professional studio background with a soft, natural shadow. Keep the subject exactly the same.",
+    },
+    {
+      key: "sharpen",
+      emoji: "🔍",
+      prompt:
+        "Sharpen and clean up this photo: remove blur and noise, recover fine detail, and make it look crisp and high-resolution. Keep the same subject completely unchanged.",
+    },
+  ];
   const inputRef = useRef<HTMLInputElement>(null);
   const busy = bgBusy || aiBusy;
 
@@ -1241,8 +1271,8 @@ function UploadTab({
     }
   }, [file, t]);
 
-  const handleAiEdit = useCallback(async () => {
-    const instruction = aiPrompt.trim();
+  const handleAiEdit = useCallback(async (instructionArg?: string) => {
+    const instruction = (instructionArg ?? aiPrompt).trim();
     if (!file || !projectId || !instruction) return;
     setAiBusy(true);
     setAiError(null);
@@ -1385,10 +1415,24 @@ function UploadTab({
                   </div>
 
                   {aiOpen && (
-                    <div
-                      className="flex items-center gap-1.5"
-                      onClick={(e) => e.stopPropagation()}
-                    >
+                    <div className="space-y-2" onClick={(e) => e.stopPropagation()}>
+                      {/* One-tap presets — the wow surface for non-tech creators. */}
+                      <div className="flex flex-wrap gap-1.5">
+                        {AI_PRESETS.map((p) => (
+                          <button
+                            key={p.key}
+                            type="button"
+                            disabled={aiBusy}
+                            onClick={() => void handleAiEdit(p.prompt)}
+                            className="inline-flex items-center gap-1.5 h-7 px-2.5 rounded-full text-[11.5px] font-medium ring-1 ring-[color:var(--border)] bg-app fg-muted hover:fg hover:bg-accent-soft hover:ring-[color:var(--accent)] hover:text-[color:var(--accent)] transition disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            <span aria-hidden>{p.emoji}</span>
+                            {t(`editor.presets.${p.key}`)}
+                          </button>
+                        ))}
+                      </div>
+                      {/* Or describe a custom change (kept for power users). */}
+                      <div className="flex items-center gap-1.5">
                       <input
                         type="text"
                         value={aiPrompt}
@@ -1416,6 +1460,7 @@ function UploadTab({
                         )}
                         {aiBusy ? t("editor.aiWorking") : t("editor.aiApply")}
                       </button>
+                      </div>
                     </div>
                   )}
                 </div>
