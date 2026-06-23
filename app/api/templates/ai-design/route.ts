@@ -405,7 +405,10 @@ export async function POST(req: Request): Promise<Response> {
     }
   }
 
-  const aiModel: AIModel = body.model === "gemini-flash" ? "gemini-flash" : "gemini-pro";
+  // Default to Flash; only the explicit "gemini-pro" opts into the pricier
+  // model. The old default (anything-not-flash → Pro) silently billed 4× on
+  // a fresh browser / empty localStorage / undefined model.
+  const aiModel: AIModel = body.model === "gemini-pro" ? "gemini-pro" : "gemini-flash";
   const PROVIDER = resolveAIProvider(aiModel);
   if (!PROVIDER.key) {
     return errorJson(500, `${PROVIDER.label} API key missing`);
