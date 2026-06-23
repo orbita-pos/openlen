@@ -171,7 +171,6 @@ type DropSrc = {
 
 const ALL_TABS: SidebarMode[] = [
   "chat",
-  "templates",
   "images",
   "library",
   "pages",
@@ -903,6 +902,16 @@ function NewV2Inner() {
   // `applyNotice` is the "review example content" reminder shown after success.
   const [applyingTemplate, setApplyingTemplate] = useState(false);
   const [applyNotice, setApplyNotice] = useState<string | null>(null);
+  // Plantillas VIEW restyle bridges the async setCenterView("page") so the
+  // gallery doesn't flash for one frame between clearing the preview and the
+  // canvas mounting. Cleared once the apply settles (success → center left the
+  // view; error → the preview is still shown).
+  const [restyling, setRestyling] = useState(false);
+  useEffect(() => {
+    if (!applyingTemplate && (centerView !== "templates" || previewingTemplate)) {
+      setRestyling(false);
+    }
+  }, [applyingTemplate, centerView, previewingTemplate]);
   useEffect(() => {
     if (!applyNotice) return;
     const id = setTimeout(() => setApplyNotice(null), 9000);
@@ -1082,11 +1091,12 @@ function NewV2Inner() {
   // edit when that tab is active.
   const lockedTabs = useMemo<SidebarMode[]>(() => {
     if (entryMode === "editing") return [];
-    // Entry flows: Templates stays reachable as a sidebar entry. On the AI
-    // landing the brief lives in the center (StartLanding), so the sidebar Chat
-    // tab is locked there too — only Template/Paste entries still expose Chat as
-    // a "switch to AI start" shortcut. Everything else unlocks once a project exists.
-    const locked = ALL_TABS.filter((t) => t !== "chat" && t !== "templates");
+    // Entry flows: on the AI landing the brief lives in the center
+    // (StartLanding), so the sidebar Chat tab is locked there too — only
+    // Template/Paste entries still expose Chat as a "switch to AI start"
+    // shortcut. Everything else unlocks once a project exists. (Plantillas is a
+    // center VIEW now, not a sidebar tab — it isn't part of this lock set.)
+    const locked = ALL_TABS.filter((t) => t !== "chat");
     return entryMode === "ai" ? [...locked, "chat"] : locked;
   }, [entryMode]);
 
@@ -2659,6 +2669,7 @@ function NewV2Inner() {
   const handleApplyTemplate = async () => {
     if (!previewingTemplate || !loadedProject || applyingTemplate) return;
     setApplyingTemplate(true);
+    setRestyling(centerView === "templates");
     setTemplateError(null);
     try {
       const res = await fetch(`/api/projects/${loadedProject.id}/apply-template`, {
@@ -2950,7 +2961,7 @@ function NewV2Inner() {
                 }}
               />
             </div>
-          ) : (
+          ) : restyling ? null : (
             <div className="flex-1 min-w-0 min-h-0 overflow-y-auto nice-scroll bg-app">
               <div className="max-w-[1100px] mx-auto px-6 sm:px-8 py-8">
                 <TemplatesPanel
