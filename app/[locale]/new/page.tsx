@@ -39,6 +39,7 @@ import { BusinessSection } from "../business/business-section";
 import { ProjectsSection } from "../projects/projects-section";
 import { AnalyticsSection } from "../analytics/analytics-section";
 import { MessagesSection } from "../messages/messages-section";
+import { ModulesView } from "@/components/workspace-v2/modules-view";
 import {
   LeftSidebar,
   type SidebarMode,
@@ -309,6 +310,7 @@ function NewV2Inner() {
     viewParam === "projects" ||
     viewParam === "analytics" ||
     viewParam === "messages" ||
+    viewParam === "modulos" ||
     viewParam === "business"
       ? viewParam
       : "page";
@@ -2911,6 +2913,27 @@ function NewV2Inner() {
           <AnalyticsSection activeBusinessId={activeBusinessId} />
         ) : centerView === "messages" ? (
           <MessagesSection activeBusinessId={activeBusinessId} />
+        ) : centerView === "modulos" ? (
+          <ModulesView
+            currentProjectId={loadedProject?.id ?? null}
+            gatedCount={sitePages.filter((p) => p.membersOnly).length}
+            membersSettings={loadedProject?.settings?.members}
+            onUpdateMembersSettings={updateMembersSettings}
+            broadcastSettings={loadedProject?.settings?.broadcast}
+            onUpdateBroadcastSettings={updateBroadcastSettings}
+            commentsSettings={loadedProject?.settings?.comments}
+            onUpdateCommentsSettings={updateCommentsSettings}
+            onInsertCommentsSection={insertCommentsSection}
+            bookingsSettings={loadedProject?.settings?.bookings}
+            onUpdateBookingsSettings={updateBookingsSettings}
+            onInsertBookingsSection={insertBookingsSection}
+            collectionsSettings={loadedProject?.settings?.collections}
+            onUpdateCollectionsSettings={updateCollectionsSettings}
+            onInsertCollectionsSection={insertCollectionsSection}
+            onShowLeads={() => setCenterView("messages")}
+            onShowAnalytics={() => setCenterView("analytics")}
+            onReturnToCanvas={() => setCenterView("page")}
+          />
         ) : (
           <>
         {entryMode === "template" &&
