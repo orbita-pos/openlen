@@ -48,7 +48,7 @@ export function useGeneration(): UseGenerationResult {
   // from stops server-side (saves Gemini credits / metered usage).
   useEffect(() => () => abortRef.current?.abort(), []);
 
-  const generate = useCallback(async (brief: string, model: AIModel = "gemini-pro", profileId: string | null = null) => {
+  const generate = useCallback(async (brief: string, model: AIModel = "gemini-flash", profileId: string | null = null) => {
     // Cancel any in-flight generation before starting a new one.
     abortRef.current?.abort();
     const controller = new AbortController();
