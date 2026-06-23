@@ -40,6 +40,7 @@ import { ProjectsSection } from "../projects/projects-section";
 import { AnalyticsSection } from "../analytics/analytics-section";
 import { MessagesSection } from "../messages/messages-section";
 import { ModulesView } from "@/components/workspace-v2/modules-view";
+import { TemplatesPanel } from "@/components/workspace-v2/panels/templates-panel";
 import {
   LeftSidebar,
   type SidebarMode,
@@ -311,6 +312,7 @@ function NewV2Inner() {
     viewParam === "analytics" ||
     viewParam === "messages" ||
     viewParam === "modulos" ||
+    viewParam === "templates" ||
     viewParam === "business"
       ? viewParam
       : "page";
@@ -2700,6 +2702,9 @@ function NewV2Inner() {
       setApplyingTemplate(false);
       setPreviewingTemplate(null);
       setApplyNotice(t("templateApply.notice"));
+      // Restyle from the Plantillas VIEW happens over the center gallery — land
+      // back on the canvas so the user sees the result (no-op when already there).
+      setCenterView("page");
     } catch (err) {
       setTemplateError(
         err instanceof Error ? err.message : t("template.networkError"),
@@ -2934,6 +2939,44 @@ function NewV2Inner() {
             onShowAnalytics={() => setCenterView("analytics")}
             onReturnToCanvas={() => setCenterView("page")}
           />
+        ) : centerView === "templates" ? (
+          previewingTemplate ? (
+            <div className="flex-1 min-w-0 flex flex-col">
+              {templateError && (
+                <div className="h-7 shrink-0 flex items-center justify-center gap-2 text-[11.5px] bg-red-50 dark:bg-red-500/10 text-red-700 dark:text-red-300 border-b bd">
+                  {templateError}
+                </div>
+              )}
+              <PreviewArea
+                doc=""
+                previewUrl={previewingTemplate.previewUrl}
+                templateName={previewingTemplate.name}
+                openInNewTabUrl={previewingTemplate.previewUrl}
+                templateApplyMode={!!loadedProject}
+                onUseTemplate={() => {
+                  void (loadedProject ? handleApplyTemplate() : handleUseTemplate());
+                }}
+                useTemplateLoading={loadedProject ? applyingTemplate : committingTemplate}
+                onClearTemplate={() => {
+                  setPreviewingTemplate(null);
+                  setTemplateError(null);
+                }}
+              />
+            </div>
+          ) : (
+            <div className="flex-1 min-w-0 min-h-0 overflow-y-auto nice-scroll bg-app">
+              <div className="max-w-[1100px] mx-auto px-6 sm:px-8 py-8">
+                <TemplatesPanel
+                  grid
+                  onPreview={(tpl) => {
+                    setPreviewingTemplate(tpl);
+                    setTemplateError(null);
+                  }}
+                  previewingId={null}
+                />
+              </div>
+            </div>
+          )
         ) : (
           <>
         {entryMode === "template" &&
