@@ -34,5 +34,6 @@
   "travel": { "label": "Reizen & Toerisme", "tagline": "Touroperators, reisplanners en bestemmingsmarketing. Dag-tot-dagreisschema's, vertrekdata, routekaarten, boekings-CTA." },
   "food-beverage": { "label": "Eten & Drinken", "tagline": "Consumentenmerken in eten en drinken — koffie, ambachtelijke dranken, chocolade, voorraadkastbasics, snacks. Merkverhaal, het assortiment, ingrediënten, waar te koop." },
   "fashion": { "label": "Mode & Kleding", "tagline": "Modelabels en seizoenscollecties — lookbooks, drops, de visie van het merk, stof + ambacht, verkooppunten. Beeldgedreven." },
-  "photography": { "label": "Fotografie", "tagline": "Fotografenportfolio's — paginavullende galerijen, series, het studiostatement en een boekings-CTA. Beeldgedreven, ingetogen typografie." }
+  "photography": { "label": "Fotografie", "tagline": "Fotografenportfolio's — paginavullende galerijen, series, het studiostatement en een boekings-CTA. Beeldgedreven, ingetogen typografie." },
+  "cinema": { "label": "Cinema / Video", "tagline": "Video-gedreven entertainmentpagina's — posterrijen in streamingstijl, hero-reels, afleveringsrasters. Voor studio's, kanalen en creators die met beweging leiden." }
 }

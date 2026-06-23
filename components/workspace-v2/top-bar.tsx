@@ -27,6 +27,8 @@ import {
   RefreshCw,
   Sparkles,
   Sun,
+  Volume2,
+  VolumeX,
   X,
 } from "./icons";
 import { IconBtn, StatusDot } from "./ui";
@@ -34,6 +36,71 @@ import { CreditPill } from "@/components/app/credit-pill";
 import { OpenLenMark } from "@/components/openlen-logo";
 import { LocaleSwitcher } from "@/components/locale-switcher";
 import { defaultLogoDataUrl } from "@/lib/branding/default-logo";
+
+// Sound control — the speaker icon opens a small popover with a mute toggle +
+// a volume slider (0–100%). Volume 0 = muted. Dragging the slider previews a
+// click at the new level so the user can dial it in by ear.
+function SoundControl({
+  volume,
+  onVolume,
+  onToggleMute,
+}: {
+  volume: number;
+  onVolume: (v: number) => void;
+  onToggleMute: () => void;
+}) {
+  const t = useTranslations("topbar");
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  const muted = volume === 0;
+  useEffect(() => {
+    if (!open) return;
+    const onDown = (e: PointerEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    window.addEventListener("pointerdown", onDown);
+    return () => window.removeEventListener("pointerdown", onDown);
+  }, [open]);
+  const pct = Math.round(volume * 100);
+  return (
+    // data-no-sound: the global click listener skips this — the volume slider's
+    // own setVolume preview is the only feedback here (avoids a double-click).
+    <div className="relative" ref={ref} data-no-sound>
+
+      <IconBtn
+        label={muted ? t("sound.unmute") : t("sound.mute")}
+        onClick={() => setOpen((o) => !o)}
+      >
+        {muted ? <VolumeX size={14} /> : <Volume2 size={14} />}
+      </IconBtn>
+      {open && (
+        <div className="absolute right-0 top-full mt-1.5 z-50 flex items-center gap-2 rounded-lg border bd bg-elev shadow-card px-2.5 py-2 w-44">
+          <button
+            type="button"
+            onClick={onToggleMute}
+            aria-label={muted ? t("sound.unmute") : t("sound.mute")}
+            className="shrink-0 fg-muted hover:fg transition"
+          >
+            {muted ? <VolumeX size={14} /> : <Volume2 size={14} />}
+          </button>
+          <input
+            type="range"
+            min={0}
+            max={100}
+            step={5}
+            value={pct}
+            onChange={(e) => onVolume(Number(e.target.value) / 100)}
+            aria-label={t("sound.volume")}
+            className="flex-1 h-1 cursor-pointer accent-[color:var(--accent)]"
+          />
+          <span className="shrink-0 w-8 text-right text-[10px] fg-faint tabular-nums">
+            {pct}%
+          </span>
+        </div>
+      )}
+    </div>
+  );
+}
 
 interface ReleaseEntry {
   sha: string;
@@ -76,6 +143,9 @@ interface TopBarProps {
   onDeployGitHub?: () => void;
   dark: boolean;
   onToggleDark: () => void;
+  soundVolume: number;
+  onSoundVolume: (v: number) => void;
+  onToggleSoundMute: () => void;
 }
 
 export function TopBar({
@@ -93,6 +163,9 @@ export function TopBar({
   onDeployGitHub,
   dark,
   onToggleDark,
+  soundVolume,
+  onSoundVolume,
+  onToggleSoundMute,
 }: TopBarProps) {
   const t = useTranslations("topbar");
   const locale = useLocale();
@@ -557,6 +630,11 @@ export function TopBar({
         >
           {dark ? <Sun size={14} /> : <Moon size={14} />}
         </IconBtn>
+        <SoundControl
+          volume={soundVolume}
+          onVolume={onSoundVolume}
+          onToggleMute={onToggleSoundMute}
+        />
         <div className="relative" ref={profRef}>
           <button
             type="button"

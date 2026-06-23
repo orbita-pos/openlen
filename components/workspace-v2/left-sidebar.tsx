@@ -459,7 +459,7 @@ export function LeftSidebar({
                   setMode(tab.id);
                   onToggleCollapse();
                 }}
-                className={`h-8 w-8 inline-flex items-center justify-center rounded-md transition-all duration-150 ease-out ${
+                className={`h-8 w-8 inline-flex items-center justify-center rounded-md transition-colors duration-150 ease-out ${
                   locked
                     ? "fg-faint opacity-50 cursor-not-allowed"
                     : active
@@ -526,7 +526,7 @@ export function LeftSidebar({
                   if (locked) return;
                   setMode(tab.id);
                 }}
-                className={`h-8 w-8 inline-flex items-center justify-center rounded-md transition-all duration-150 ease-out ${
+                className={`h-8 w-8 inline-flex items-center justify-center rounded-md transition-colors duration-150 ease-out ${
                   locked
                     ? "fg-faint opacity-50 cursor-not-allowed"
                     : active

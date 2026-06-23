@@ -56,5 +56,10 @@
     "minutes": "{count}分前",
     "hours": "{count}時間前",
     "days": "{count}日前"
+  },
+  "sound": {
+    "mute": "サウンドをミュート",
+    "unmute": "サウンドをオン",
+    "volume": "音量"
   }
 }

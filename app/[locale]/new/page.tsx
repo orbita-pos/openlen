@@ -88,6 +88,7 @@ import { StatusBar } from "@/components/workspace-v2/status-bar";
 import { TopBar } from "@/components/workspace-v2/top-bar";
 import { stripEditorInstrumentation } from "@/components/workspace-v2/strip-editor-instrumentation";
 import { useDarkMode } from "@/lib/use-dark-mode";
+import { useEditorSound } from "@/lib/use-editor-sound";
 import { useIsMobile } from "@/components/workspace-v2/use-is-mobile";
 import { formConfigKey, listSitePages } from "@/lib/projects/site-pages";
 import type { SitePage } from "@/lib/projects/types";
@@ -219,6 +220,31 @@ function NewV2Inner() {
   const tAsset = useTranslations("modalsAsset");
   const locale = useLocale();
   const [dark, toggleDark] = useDarkMode();
+  // Editor sound (creamy click on rail switching) + TopBar volume control.
+  const {
+    volume: soundVolume,
+    setVolume: setSoundVolume,
+    toggleMute: toggleSoundMute,
+    playClick,
+    playReward,
+  } = useEditorSound();
+
+  // The creamy click on EVERY button/link in the workspace (not just the rail),
+  // via one delegated listener. Excludes [data-no-sound] + disabled controls;
+  // the published-page preview is a separate document so it stays silent.
+  useEffect(() => {
+    const onDown = (e: PointerEvent) => {
+      if (e.button !== 0) return; // primary press only
+      const el = (e.target as Element | null)?.closest?.(
+        "button, [role='button'], a[href]",
+      );
+      if (!el || el.closest("[data-no-sound]")) return;
+      if (el instanceof HTMLButtonElement && el.disabled) return;
+      playClick();
+    };
+    document.addEventListener("pointerdown", onDown, true);
+    return () => document.removeEventListener("pointerdown", onDown, true);
+  }, [playClick]);
   const searchParams = useSearchParams();
   const router = useRouter();
   const projectParam = searchParams.get("project");
@@ -2711,6 +2737,9 @@ function NewV2Inner() {
         }
         dark={dark}
         onToggleDark={toggleDark}
+        soundVolume={soundVolume}
+        onSoundVolume={setSoundVolume}
+        onToggleSoundMute={toggleSoundMute}
       />
       <div className="flex-1 min-h-0 flex relative">
         <LeftSidebar
@@ -3282,6 +3311,7 @@ function NewV2Inner() {
             })(),
           }}
           onSuccess={(newSubdomain) => {
+            if (newSubdomain) playReward(); // celebrate a real publish (not unpublish)
             setLoadedProject((prev) =>
               prev
                 ? {

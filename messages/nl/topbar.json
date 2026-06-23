@@ -56,5 +56,10 @@
     "minutes": "{count}m geleden",
     "hours": "{count}u geleden",
     "days": "{count}d geleden"
+  },
+  "sound": {
+    "mute": "Geluid dempen",
+    "unmute": "Geluid aan",
+    "volume": "Volume"
   }
 }

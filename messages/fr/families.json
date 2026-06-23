@@ -34,5 +34,6 @@
   "travel": { "label": "Voyage & Tourisme", "tagline": "Tour-opérateurs, organisateurs de séjours et marketing de destination. Itinéraires jour par jour, dates de départ, cartes d'itinéraire, CTA de réservation." },
   "food-beverage": { "label": "Alimentation & Boissons", "tagline": "Marques agroalimentaires grand public — café, boissons artisanales, chocolat, produits d'épicerie, snacks. Histoire de marque, la gamme de produits, ingrédients, où acheter." },
   "fashion": { "label": "Mode & Prêt-à-porter", "tagline": "Maisons de mode et collections saisonnières — lookbooks, drops, le point de vue de la marque, tissu + savoir-faire, points de vente. Axé image." },
-  "photography": { "label": "Photographie", "tagline": "Portfolios de photographe — galeries plein cadre, séries, la note du studio et un CTA de réservation. Guidé par l'image, typographie sobre." }
+  "photography": { "label": "Photographie", "tagline": "Portfolios de photographe — galeries plein cadre, séries, la note du studio et un CTA de réservation. Guidé par l'image, typographie sobre." },
+  "cinema": { "label": "Cinéma / Vidéo", "tagline": "Pages de divertissement axées vidéo — rangées d'affiches façon streaming, reels en vedette, grilles d'épisodes. Pour studios, chaînes et créateurs qui misent sur le mouvement." }
 }

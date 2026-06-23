@@ -56,5 +56,10 @@
     "minutes": "{count} 分钟前",
     "hours": "{count} 小时前",
     "days": "{count} 天前"
+  },
+  "sound": {
+    "mute": "静音",
+    "unmute": "开启声音",
+    "volume": "音量"
   }
 }

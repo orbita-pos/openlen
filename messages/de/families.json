@@ -34,5 +34,6 @@
   "travel": { "label": "Reisen & Tourismus", "tagline": "Reiseveranstalter, Reiseplaner und Destinationsmarketing. Tag-für-Tag-Reiseverläufe, Abreisedaten, Routenkarten, Buchungs-CTA." },
   "food-beverage": { "label": "Food & Beverage", "tagline": "Endkunden-Marken für Essen & Trinken – Kaffee, Craft-Getränke, Schokolade, Vorratsgrundlagen, Snacks. Markengeschichte, das Produktsortiment, Zutaten, Bezugsquellen." },
   "fashion": { "label": "Mode & Bekleidung", "tagline": "Modemarken und saisonale Kollektionen – Lookbooks, Drops, der Standpunkt der Marke, Stoff + Handwerk, Verkaufsstellen. Bildstark." },
-  "photography": { "label": "Fotografie", "tagline": "Fotografen-Portfolios — vollflächige Galerien, Serien, das Studio-Statement und ein Buchungs-CTA. Bildgetrieben, zurückhaltende Typografie." }
+  "photography": { "label": "Fotografie", "tagline": "Fotografen-Portfolios — vollflächige Galerien, Serien, das Studio-Statement und ein Buchungs-CTA. Bildgetrieben, zurückhaltende Typografie." },
+  "cinema": { "label": "Kino / Video", "tagline": "Video-orientierte Unterhaltungsseiten — Posterreihen im Streaming-Stil, Hero-Reels, Episodenraster. Für Studios, Sender und Creator, die mit Bewegung führen." }
 }

@@ -56,5 +56,10 @@
     "minutes": "{count}m ago",
     "hours": "{count}h ago",
     "days": "{count}d ago"
+  },
+  "sound": {
+    "mute": "Mute sounds",
+    "unmute": "Sound on",
+    "volume": "Volume"
   }
 }
