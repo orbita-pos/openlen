@@ -31,20 +31,7 @@ import {
   X,
 } from "./icons";
 import type { Section } from "./mock-data";
-import type {
-  BookingsSettings,
-  BroadcastSettings,
-  CollectionsSettings,
-  CommentsSettings,
-  MembersSettings,
-  StoredChatTurn,
-} from "@/lib/projects/types";
-import { AssistantPanel } from "./panels/assistant-panel";
-import { ModulesPanel } from "./panels/modules-panel";
-import { BroadcastPanel } from "./panels/broadcast-panel";
-import { CommentsPanel } from "./panels/comments-panel";
-import { BookingsPanel } from "./panels/bookings-panel";
-import { CollectionsPanel } from "./panels/collections-panel";
+import type { StoredChatTurn } from "@/lib/projects/types";
 import { RailBusinessSwitcher } from "./business-switcher";
 import type { BusinessProfile } from "@/lib/business-profiles/types";
 import {
@@ -279,29 +266,9 @@ interface LeftSidebarProps {
   onSwitchSitePage?: (slug: string | null) => void;
   onCreateSitePage?: (slug: string) => Promise<string | null>;
   onDeleteSitePage?: (slug: string) => Promise<boolean>;
-  /** Members module (Módulos tab) — settings mirror + mutators owned by the
-   *  parent, same ownership model as sitePages. Enabling may auto-create the
-   *  members page; the result carries its slug for the panel's hint. */
-  membersSettings?: MembersSettings;
-  onUpdateMembersSettings?: (
-    patch: MembersSettings,
-  ) => Promise<{ ok: boolean; createdPageSlug?: string }>;
+  /** Members-only page toggle, used by the Site (page tree) panel. The module
+   *  settings/handlers themselves now live in ModulesView (the center view). */
   onToggleMembersOnly?: (slug: string, next: boolean) => Promise<boolean>;
-  /** Broadcast module (Módulos tab card enables it; gates the Broadcast tab). */
-  broadcastSettings?: BroadcastSettings;
-  onUpdateBroadcastSettings?: (patch: BroadcastSettings) => Promise<boolean>;
-  /** Comments module (Módulos card enables + moderation; gates Comments tab). */
-  commentsSettings?: CommentsSettings;
-  onUpdateCommentsSettings?: (patch: CommentsSettings) => Promise<boolean>;
-  onInsertCommentsSection?: () => void;
-  /** Bookings module (Módulos card enables + settings; gates Reservas tab). */
-  bookingsSettings?: BookingsSettings;
-  onUpdateBookingsSettings?: (patch: BookingsSettings) => Promise<boolean>;
-  onInsertBookingsSection?: () => void;
-  /** Collections module (Módulos card enables it; gates the Collections tab). */
-  collectionsSettings?: CollectionsSettings;
-  onUpdateCollectionsSettings?: (patch: CollectionsSettings) => Promise<boolean>;
-  onInsertCollectionsSection?: () => void;
 }
 
 export function LeftSidebar({
@@ -351,20 +318,7 @@ export function LeftSidebar({
   onSwitchSitePage,
   onCreateSitePage,
   onDeleteSitePage,
-  membersSettings,
-  onUpdateMembersSettings,
   onToggleMembersOnly,
-  broadcastSettings,
-  onUpdateBroadcastSettings,
-  commentsSettings,
-  onUpdateCommentsSettings,
-  onInsertCommentsSection,
-  bookingsSettings,
-  onUpdateBookingsSettings,
-  onInsertBookingsSection,
-  collectionsSettings,
-  onUpdateCollectionsSettings,
-  onInsertCollectionsSection,
 }: LeftSidebarProps) {
   const showBusinessSwitcher = businesses.length > 0 && !!onPickBusiness;
   const t = useTranslations("wsChrome");
@@ -373,19 +327,7 @@ export function LeftSidebar({
   const isLocked = (id: SidebarMode) => lockedSet.has(id);
   const tabLabel = (id: SidebarMode) => t(`sidebar.tabs.${id}.label`);
   const tabTitle = (id: SidebarMode) => t(`sidebar.tabs.${id}.title`);
-  // The backend-module panels are reached from the "modulos" hub, not their own
-  // rail icons — so the Módulos tab reads as active while inside any of them,
-  // and each sub-panel offers a back link to the hub.
-  const MODULE_SUB_MODES = new Set<SidebarMode>([
-    "broadcast",
-    "comments",
-    "bookings",
-    "collections",
-    "assistant",
-  ]);
-  const inModuleArea = mode === "modulos" || MODULE_SUB_MODES.has(mode);
-  const isTabActive = (id: SidebarMode) =>
-    mode === id || (id === "modulos" && inModuleArea);
+  const isTabActive = (id: SidebarMode) => mode === id;
 
   // Tab visibility rules:
   // Templates stays visible while editing (the panel is browse-only on an
@@ -400,7 +342,6 @@ export function LeftSidebar({
       entryMode !== "editing" &&
       (tab.id === "library" ||
         tab.id === "site" ||
-        tab.id === "modulos" ||
         tab.id === "insights" ||
         tab.id === "images")
     )
@@ -541,19 +482,7 @@ export function LeftSidebar({
       <div className="w-[272px] max-md:w-auto max-md:flex-1 shrink-0 flex flex-col min-w-0">
       <div className="flex items-center justify-between px-3 py-1.5 border-b bd shrink-0">
         <span className="text-[10px] uppercase tracking-[0.16em] fg-faint font-semibold ui-small">
-          {inModuleArea && mode !== "modulos" ? (
-            <button
-              type="button"
-              onClick={() => setMode("modulos")}
-              className="inline-flex items-center gap-1 hover:fg transition"
-              title={tabTitle("modulos")}
-            >
-              <span aria-hidden>‹</span>
-              <span>{tabTitle(mode)}</span>
-            </button>
-          ) : (
-            tabTitle(mode)
-          )}
+          {tabTitle(mode)}
         </span>
         <button
           type="button"
@@ -655,53 +584,6 @@ export function LeftSidebar({
             )}
             {mode === "library" && (
               <SectionsPanel onPreview={onPreviewSection ?? (() => {})} />
-            )}
-            {mode === "assistant" && (
-              <AssistantPanel currentProjectId={currentProjectId} />
-            )}
-            {mode === "modulos" && (
-              <ModulesPanel
-                currentProjectId={currentProjectId}
-                membersSettings={membersSettings}
-                broadcastSettings={broadcastSettings}
-                commentsSettings={commentsSettings}
-                bookingsSettings={bookingsSettings}
-                gatedCount={sitePages.filter((p) => p.membersOnly).length}
-                onUpdateMembers={onUpdateMembersSettings}
-                onUpdateBroadcast={onUpdateBroadcastSettings}
-                onUpdateComments={onUpdateCommentsSettings}
-                onInsertCommentsSection={onInsertCommentsSection}
-                onUpdateBookings={onUpdateBookingsSettings}
-                onInsertBookingsSection={onInsertBookingsSection}
-                collectionsSettings={collectionsSettings}
-                onUpdateCollections={onUpdateCollectionsSettings}
-                onInsertCollectionsSection={onInsertCollectionsSection}
-                onShowBroadcast={() => setMode("broadcast")}
-                onShowComments={() => setMode("comments")}
-                onShowBookings={() => setMode("bookings")}
-                onShowCollections={() => setMode("collections")}
-                onShowLeads={() => onSelectSection?.("messages")}
-                onShowAnalytics={() => onSelectSection?.("analytics")}
-                onShowAssistant={() => setMode("assistant")}
-              />
-            )}
-            {mode === "broadcast" && (
-              <BroadcastPanel
-                currentProjectId={currentProjectId}
-                membersEnabled={membersSettings?.enabled === true}
-              />
-            )}
-            {mode === "comments" && (
-              <CommentsPanel currentProjectId={currentProjectId} />
-            )}
-            {mode === "bookings" && (
-              <BookingsPanel
-                currentProjectId={currentProjectId}
-                defaultTz={bookingsSettings?.creatorTz}
-              />
-            )}
-            {mode === "collections" && (
-              <CollectionsPanel currentProjectId={currentProjectId} />
             )}
             {mode === "versions" && (
               <VersionsPanel
