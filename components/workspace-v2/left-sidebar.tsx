@@ -74,6 +74,7 @@ export type SectionView =
   | "projects"
   | "analytics"
   | "messages"
+  | "modulos"
   | "business";
 
 const GLOBAL_SECTIONS: ReadonlyArray<{
@@ -83,6 +84,7 @@ const GLOBAL_SECTIONS: ReadonlyArray<{
 }> = [
   { view: "page", icon: Monitor, key: "nav.page" },
   { view: "projects", icon: FileText, key: "nav.myPages" },
+  { view: "modulos", icon: Package, key: "nav.modulos" },
   { view: "analytics", icon: BarChart3, key: "nav.analytics" },
   { view: "messages", icon: Inbox, key: "nav.messages" },
   // "business" lives in the top RailBusinessSwitcher now (avatar → "Abrir
@@ -154,10 +156,8 @@ const MODE_TABS: ModeTab[] = [
   { id: "templates", icon: Grid3 },
   { id: "images", icon: ImageIcon },
   { id: "library", icon: Layers },
-  // One "Módulos" hub replaces the six per-module rail icons (members,
-  // broadcast, comments, bookings, collections, assistant) — they're reached
-  // from inside ModulesPanel now, not the rail.
-  { id: "modulos", icon: Package },
+  // Módulos moved to a full-center VIEW (GLOBAL_SECTIONS) — it's config/mgmt,
+  // not a canvas-side tool. Reached from the rail's views group now.
   { id: "insights", icon: BarChart3 },
   { id: "versions", icon: HistoryIcon },
 ];
