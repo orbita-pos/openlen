@@ -30,5 +30,14 @@ export function normalizeProfileData(raw: unknown): BusinessProfileData {
         }))
         .filter((l) => l.url.length > 0)
     : [];
-  return { ...base, brand, photos, links };
+  const out: BusinessProfileData = { ...base, brand, photos, links };
+  // Display preferences for the floating contact bar: only persist explicit
+  // values (absent → undefined → the widget's own defaults: shown, right side).
+  if (typeof obj.showContactWidget === "boolean") {
+    out.showContactWidget = obj.showContactWidget;
+  }
+  if (obj.contactWidgetSide === "left" || obj.contactWidgetSide === "right") {
+    out.contactWidgetSide = obj.contactWidgetSide;
+  }
+  return out;
 }

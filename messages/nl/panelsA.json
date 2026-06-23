@@ -113,7 +113,11 @@
       "instagram": "Instagram",
       "color": "Merkkleur",
       "takeFromLogo": "Uit logo",
-      "photos": "Foto's"
+      "photos": "Foto's",
+      "contactWidget": {
+        "label": "Zwevende contactbalk",
+        "hint": "Zet WhatsApp, socials en contact vast in de hoek van je pagina's."
+      }
     },
     "errors": {
       "image": "Alleen JPG- of PNG-afbeeldingen.",

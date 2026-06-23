@@ -113,7 +113,11 @@
       "instagram": "Instagram",
       "color": "品牌色",
       "takeFromLogo": "从徽标提取",
-      "photos": "照片"
+      "photos": "照片",
+      "contactWidget": {
+        "label": "悬浮联系栏",
+        "hint": "将 WhatsApp、社交媒体和联系方式固定显示在页面角落。"
+      }
     },
     "errors": {
       "image": "只支持 JPG 或 PNG 图片。",

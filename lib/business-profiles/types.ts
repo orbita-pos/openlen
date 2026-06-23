@@ -23,6 +23,12 @@ export type BusinessProfileData = ExtractedBusinessData & {
   brand?: BusinessProfileBrand | null;
   photos?: string[]; // image URLs
   links?: BusinessProfileLink[];
+  // Show the floating contact bar (WhatsApp/socials/contact) on seeded pages.
+  // Defaults ON — only an explicit `false` hides it. Opt-out, not opt-in, so
+  // existing profiles keep current behaviour.
+  showContactWidget?: boolean;
+  // Which corner the floating contact bar sits in. Defaults to "right".
+  contactWidgetSide?: "left" | "right";
 };
 
 // The DB row type (id, userId, name, data, isDefault, timestamps).

@@ -113,7 +113,11 @@
       "instagram": "Instagram",
       "color": "Markenfarbe",
       "takeFromLogo": "Aus dem Logo",
-      "photos": "Fotos"
+      "photos": "Fotos",
+      "contactWidget": {
+        "label": "Schwebende Kontaktleiste",
+        "hint": "WhatsApp, soziale Netzwerke und Kontakt fest in der Ecke deiner Seiten anzeigen."
+      }
     },
     "errors": {
       "image": "Nur JPG- oder PNG-Bilder.",

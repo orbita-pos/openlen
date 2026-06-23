@@ -73,6 +73,104 @@ describe("seedBrandIntoHtml", () => {
     expect(out).not.toContain("data-ol-contact-widget");
   });
 
+  it("showContactWidget:false hides the bar even with real contact", () => {
+    const out = seedBrandIntoHtml(
+      HTML,
+      profile({
+        showContactWidget: false,
+        contact: {
+          whatsapp: "5512345678",
+          phone: null,
+          email: null,
+          address: null,
+          socials: null,
+        },
+      }),
+    );
+    expect(out).not.toContain("data-ol-contact-widget");
+  });
+
+  it("re-seeding with showContactWidget:false strips a previously-baked bar", () => {
+    const contact = {
+      whatsapp: "5512345678",
+      phone: null,
+      email: null,
+      address: null,
+      socials: null,
+    };
+    const withBar = seedBrandIntoHtml(HTML, profile({ contact }));
+    expect(withBar).toContain("data-ol-contact-widget");
+    const off = seedBrandIntoHtml(
+      withBar,
+      profile({ contact, showContactWidget: false }),
+    );
+    expect(off).not.toContain("data-ol-contact-widget");
+  });
+
+  it("single contact renders a direct FAB (no collapse, no checkbox)", () => {
+    const out = seedBrandIntoHtml(
+      HTML,
+      profile({
+        contact: { whatsapp: "5512345678", phone: null, email: null, address: null, socials: null },
+      }),
+    );
+    expect(out).toContain("data-ol-contact-widget");
+    expect(out).toContain("wa.me/");
+    expect(out).not.toContain('type="checkbox"');
+    expect(out).not.toContain("ol-cw-fab");
+  });
+
+  it("defaults the bar to the right; contactWidgetSide:left moves it left", () => {
+    const c = { whatsapp: "5512345678", phone: null, email: null, address: null, socials: null };
+    const right = seedBrandIntoHtml(HTML, profile({ contact: c }));
+    expect(right).toContain("right:16px");
+    const left = seedBrandIntoHtml(HTML, profile({ contactWidgetSide: "left", contact: c }));
+    expect(left).toContain("left:16px");
+    expect(left).not.toContain("right:16px");
+  });
+
+  it("multiple contacts collapse into a pure-CSS speed-dial (no JS)", () => {
+    const out = seedBrandIntoHtml(
+      HTML,
+      profile({
+        contact: {
+          whatsapp: "5512345678",
+          phone: "5598765432",
+          email: null,
+          address: null,
+          socials: { instagram: "openlen", facebook: null, tiktok: null, website: null },
+        },
+      }),
+    );
+    expect(out).toContain("data-ol-contact-widget");
+    expect(out).toContain("ol-cw-fab");
+    expect(out).toContain("ol-cw-items");
+    expect(out).toContain('type="checkbox"');
+    expect(out).toContain("wa.me/");
+    expect(out).toContain("instagram.com/openlen");
+    // The collapse must be pure CSS — a <script> would be stripped/blocked by
+    // the publish seal, leaving the bar stuck closed.
+    expect(out).not.toContain("<script");
+  });
+
+  it("multi-contact speed-dial is idempotent on re-seed (nested markup strips clean)", () => {
+    const data = profile({
+      contact: {
+        whatsapp: "5512345678",
+        phone: "5598765432",
+        email: null,
+        address: null,
+        socials: { instagram: "openlen", facebook: null, tiktok: null, website: null },
+      },
+    });
+    const once = seedBrandIntoHtml(HTML, data);
+    const twice = seedBrandIntoHtml(once, data);
+    expect(twice).toBe(once);
+    // Count structural tokens, not the class names (which recur in the <style>).
+    expect(twice.match(/<div data-ol-contact-widget/g)?.length).toBe(1);
+    expect(twice.match(/id="ol-cw-t"/g)?.length).toBe(1);
+  });
+
   it("is idempotent — re-seeding never duplicates the widget or accent", () => {
     const data = profile({
       brand: { accent: "#1166EE", logoUrl: null },

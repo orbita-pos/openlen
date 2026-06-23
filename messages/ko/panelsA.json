@@ -113,7 +113,11 @@
       "instagram": "Instagram",
       "color": "브랜드 색상",
       "takeFromLogo": "로고에서",
-      "photos": "사진"
+      "photos": "사진",
+      "contactWidget": {
+        "label": "플로팅 연락처 바",
+        "hint": "WhatsApp·SNS·연락처를 페이지 모서리에 고정 표시합니다."
+      }
     },
     "errors": {
       "image": "JPG 또는 PNG 이미지만 가능해요.",

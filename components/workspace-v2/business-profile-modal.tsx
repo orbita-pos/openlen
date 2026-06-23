@@ -29,6 +29,7 @@ interface Draft {
   accent: string; // brand colour hex (derived from the logo or typed)
   logoUrl: string;
   photos: string[];
+  showContactWidget: boolean; // floating contact bar on seeded pages
 }
 
 const EMPTY: Draft = {
@@ -43,6 +44,7 @@ const EMPTY: Draft = {
   accent: "",
   logoUrl: "",
   photos: [],
+  showContactWidget: true,
 };
 
 export interface BusinessProfileModalProps {
@@ -399,6 +401,22 @@ export function BusinessProfileModal({
               <Field label={t("profile.fields.email")} value={draft.email} onChange={(v) => setDraft((d) => ({ ...d, email: v }))} />
               <Field label={t("profile.fields.address")} value={draft.address} onChange={(v) => setDraft((d) => ({ ...d, address: v }))} />
               <Field label={t("profile.fields.instagram")} value={draft.instagram} onChange={(v) => setDraft((d) => ({ ...d, instagram: v }))} placeholder="@" />
+              <label className="flex items-center justify-between gap-3 py-1.5 cursor-pointer select-none">
+                <span className="min-w-0">
+                  <span className="block text-[12.5px] fg font-medium">{t("profile.fields.contactWidget.label")}</span>
+                  <span className="block text-[11px] fg-faint mt-0.5 leading-snug">{t("profile.fields.contactWidget.hint")}</span>
+                </span>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={draft.showContactWidget}
+                  aria-label={t("profile.fields.contactWidget.label")}
+                  onClick={() => setDraft((d) => ({ ...d, showContactWidget: !d.showContactWidget }))}
+                  className={`relative shrink-0 h-5 w-9 rounded-full transition ${draft.showContactWidget ? "bg-[color:var(--accent)]" : "bg-[color:var(--border-strong,#9ca3af)]"}`}
+                >
+                  <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-all ${draft.showContactWidget ? "left-[18px]" : "left-0.5"}`} />
+                </button>
+              </label>
               <div>
                 <span className="text-[10.5px] font-medium fg-muted uppercase tracking-wider">
                   {t("profile.fields.color")}
@@ -581,6 +599,7 @@ function draftFromExtracted(data: Record<string, unknown>): Draft {
     accent: "",
     logoUrl: "",
     photos: [],
+    showContactWidget: true,
   };
 }
 
@@ -599,6 +618,7 @@ function draftFromProfile(p: BusinessProfile): Draft {
     accent: str(data.brand?.accent),
     logoUrl: str(data.brand?.logoUrl),
     photos: Array.isArray(data.photos) ? data.photos : [],
+    showContactWidget: data.showContactWidget !== false,
   };
 }
 
@@ -634,5 +654,6 @@ function draftToData(d: Draft): BusinessProfileData {
         ? { logoUrl: d.logoUrl.trim() || null, accent: d.accent.trim() || null }
         : null,
     photos: d.photos,
+    showContactWidget: d.showContactWidget,
   };
 }

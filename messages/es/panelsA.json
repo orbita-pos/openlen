@@ -113,7 +113,11 @@
       "instagram": "Instagram",
       "color": "Color de marca",
       "takeFromLogo": "Del logo",
-      "photos": "Fotos"
+      "photos": "Fotos",
+      "contactWidget": {
+        "label": "Barra de contacto flotante",
+        "hint": "Fija WhatsApp, redes y contacto en la esquina de tus páginas."
+      }
     },
     "errors": {
       "image": "Solo imágenes JPG o PNG.",

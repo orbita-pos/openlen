@@ -48,7 +48,12 @@
     "addressPlaceholder": "Straat, nummer, wijk, plaats",
     "facebook": "Facebook",
     "facebookPlaceholder": "Je pagina",
-    "tiktok": "TikTok"
+    "tiktok": "TikTok",
+    "widgetLabel": "Zwevende contactbalk",
+    "widgetHint": "Zet WhatsApp, socials en contact vast in de hoek van je pagina's. Uit: wordt niet toegevoegd aan nieuwe pagina's.",
+    "widgetSide": "Positie",
+    "sideLeft": "Links",
+    "sideRight": "Rechts"
   },
   "links": {
     "title": "Meer links",

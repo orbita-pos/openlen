@@ -48,7 +48,12 @@
     "addressPlaceholder": "街道、门牌号、社区、城市",
     "facebook": "Facebook",
     "facebookPlaceholder": "你的主页",
-    "tiktok": "TikTok"
+    "tiktok": "TikTok",
+    "widgetLabel": "悬浮联系栏",
+    "widgetHint": "将 WhatsApp、社交媒体和联系方式固定显示在页面角落。关闭后，新页面将不再添加。",
+    "widgetSide": "位置",
+    "sideLeft": "左",
+    "sideRight": "右"
   },
   "links": {
     "title": "更多链接",

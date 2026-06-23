@@ -48,7 +48,12 @@
     "addressPlaceholder": "Street, number, neighborhood, city",
     "facebook": "Facebook",
     "facebookPlaceholder": "Your page",
-    "tiktok": "TikTok"
+    "tiktok": "TikTok",
+    "widgetLabel": "Floating contact bar",
+    "widgetHint": "Pin WhatsApp, socials & contact to the corner of your published pages. Off hides it on new pages.",
+    "widgetSide": "Position",
+    "sideLeft": "Left",
+    "sideRight": "Right"
   },
   "links": {
     "title": "More links",
