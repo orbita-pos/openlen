@@ -175,6 +175,25 @@ test("bake: local hero gets srcset/sizes/dimensions, hero preload, below-fold la
     for (const f of files) {
       await stat(path.join(subDir, "assets", f));
     }
+
+    // AVIF: the <img> is wrapped in a <picture> with an AVIF <source>, the
+    // hero preload is AVIF-typed, and the .avif variant files landed on disk.
+    assert.ok(r.html.includes("<picture>"), "expected <picture> wrapping");
+    assert.match(
+      r.html,
+      /<source type="image\/avif" srcset="[^"]*-400w\.avif 400w, [^"]*-800w\.avif 800w, [^"]*-1200w\.avif 1200w"/,
+    );
+    assert.match(
+      r.html,
+      /<link rel="preload" as="image" type="image\/avif" imagesrcset="[^"]*\.avif/,
+    );
+    const avifFiles = new Set(
+      [...r.html.matchAll(/\/assets\/([a-f0-9]{16}-\d+w\.avif)/g)].map((m) => m[1]),
+    );
+    assert.ok(avifFiles.size >= 3, `expected ≥3 AVIF variants, got ${avifFiles.size}`);
+    for (const f of avifFiles) {
+      await stat(path.join(subDir, "assets", f));
+    }
   });
 });
 

@@ -39,6 +39,11 @@ pub struct ResponsiveImage {
     /// Intrinsic dimensions of the largest variant (aspect-ratio source).
     pub width: u32,
     pub height: u32,
+    /// AVIF srcset (same widths as `srcset`), present only when AVIF variants
+    /// were baked. When set, the <img> is wrapped in a <picture> with an AVIF
+    /// <source> (+ a WebP <source>) so modern browsers fetch the smaller AVIF;
+    /// when None the <img srcset> path (WebP only) is used unchanged.
+    pub avif_srcset: Option<String>,
 }
 
 #[derive(Debug, Default)]
@@ -110,17 +115,20 @@ pub fn rewrite_responsive_images(html: &str, images: &[ResponsiveImage]) -> Rewr
             .unwrap_or(false);
         let is_hero = !hero_seen && entry.width >= HERO_MIN_WIDTH && !author_lazy;
 
+        // Hero + anything above it (eager) renders at most viewport-wide.
+        let sizes = if is_hero || (!hero_seen && !author_lazy) {
+            "100vw"
+        } else {
+            "auto, 100vw"
+        };
+
         attrs.insert("src", entry.fallback_src.clone());
-        attrs.insert("srcset", entry.srcset.clone());
-        attrs.insert(
-            "sizes",
-            if is_hero || (!hero_seen && !author_lazy) {
-                // Hero + anything above it (eager) renders at most viewport-wide.
-                "100vw".to_string()
-            } else {
-                "auto, 100vw".to_string()
-            },
-        );
+        // With AVIF the <picture><source>s carry srcset/sizes; a bare <img>
+        // keeps them so non-<picture> rendering still gets responsive WebP.
+        if entry.avif_srcset.is_none() {
+            attrs.insert("srcset", entry.srcset.clone());
+            attrs.insert("sizes", sizes.to_string());
+        }
         if attrs.get("width").is_none() && attrs.get("height").is_none() {
             attrs.insert("width", entry.width.to_string());
             attrs.insert("height", entry.height.to_string());
@@ -141,6 +149,26 @@ pub fn rewrite_responsive_images(html: &str, images: &[ResponsiveImage]) -> Rewr
                 attrs.insert("decoding", "async".to_string());
             }
         }
+        drop(attrs);
+
+        // AVIF → wrap the <img> in a <picture> so a supporting browser fetches
+        // the smaller AVIF, falling back to the WebP <source>, then the <img>.
+        if let Some(avif) = entry.avif_srcset.as_deref() {
+            let picture_html = format!(
+                concat!(
+                    r#"<picture><source type="image/avif" srcset="{}" sizes="{}">"#,
+                    r#"<source type="image/webp" srcset="{}" sizes="{}"></picture>"#,
+                ),
+                escape_attr(avif),
+                escape_attr(sizes),
+                escape_attr(&entry.srcset),
+                escape_attr(sizes),
+            );
+            if let Some(picture) = parse_fragment_children(&picture_html).into_iter().next() {
+                node.insert_before(picture.clone());
+                picture.append(node.clone());
+            }
+        }
         rewritten += 1;
     }
 
@@ -159,10 +187,19 @@ pub fn rewrite_responsive_images(html: &str, images: &[ResponsiveImage]) -> Rewr
             .unwrap_or(false);
         if !already {
             if let Ok(head) = doc.select_first("head") {
-                let link = format!(
-                    r#"<link rel="preload" as="image" imagesrcset="{}" imagesizes="100vw" fetchpriority="high" data-ol-img-preload>"#,
-                    escape_attr(&entry.srcset)
-                );
+                // Preload the format the browser will actually fetch: type-gated
+                // AVIF when baked (so non-AVIF browsers skip it instead of
+                // double-downloading), else the WebP srcset.
+                let link = match entry.avif_srcset.as_deref() {
+                    Some(avif) => format!(
+                        r#"<link rel="preload" as="image" type="image/avif" imagesrcset="{}" imagesizes="100vw" fetchpriority="high" data-ol-img-preload>"#,
+                        escape_attr(avif)
+                    ),
+                    None => format!(
+                        r#"<link rel="preload" as="image" imagesrcset="{}" imagesizes="100vw" fetchpriority="high" data-ol-img-preload>"#,
+                        escape_attr(&entry.srcset)
+                    ),
+                };
                 let head_node = head.as_node().clone();
                 for n in parse_fragment_children(&link) {
                     head_node.append(n);
@@ -193,6 +230,17 @@ mod tests {
             ),
             width,
             height,
+            avif_srcset: None,
+        }
+    }
+
+    fn entry_avif(src: &str, width: u32, height: u32) -> ResponsiveImage {
+        ResponsiveImage {
+            avif_srcset: Some(format!(
+                "/assets/hash-400w.avif 400w, /assets/hash-{}w.avif {}w",
+                width, width
+            )),
+            ..entry(src, width, height)
         }
     }
 
@@ -358,6 +406,42 @@ mod tests {
         let once = rewrite_responsive_images(html, &manifest);
         // Second run: srcs now point at variants (no manifest match) and every
         // touched img carries a srcset → skipped. Byte-equal output.
+        let twice = rewrite_responsive_images(&once.html, &manifest);
+        assert_eq!(once.html, twice.html);
+        assert_eq!(twice.rewritten, 0);
+    }
+
+    #[test]
+    fn avif_entry_wraps_img_in_picture_with_typed_sources_and_preload() {
+        let html = r#"<html><head></head><body><img src="/a.jpg" alt="hero"></body></html>"#;
+        let r = rewrite_responsive_images(html, &[entry_avif("/a.jpg", 1600, 900)]);
+        assert_eq!(r.rewritten, 1);
+        assert!(r.html.contains("<picture>"));
+        assert!(r.html.contains(
+            r#"<source type="image/avif" srcset="/assets/hash-400w.avif 400w, /assets/hash-1600w.avif 1600w" sizes="100vw">"#
+        ));
+        assert!(r.html.contains(
+            r#"<source type="image/webp" srcset="/assets/hash-400w.webp 400w, /assets/hash-1600w.webp 1600w" sizes="100vw">"#
+        ));
+        // The <img> keeps src/dims/alt but carries NO srcset (the sources own it).
+        assert!(r.html.contains(r#"src="/assets/hash-1600w.webp""#));
+        assert!(r.html.contains(r#"alt="hero""#));
+        let img_start = r.html.find("<img").unwrap();
+        let img_end = img_start + r.html[img_start..].find('>').unwrap();
+        let img_tag = &r.html[img_start..=img_end];
+        assert!(!img_tag.contains("srcset"), "img must not carry srcset: {img_tag}");
+        // Hero preload is AVIF-typed.
+        assert!(r.html.contains(
+            r#"<link rel="preload" as="image" type="image/avif" imagesrcset="/assets/hash-400w.avif 400w, /assets/hash-1600w.avif 1600w""#
+        ));
+    }
+
+    #[test]
+    fn avif_picture_is_idempotent() {
+        let html = r#"<html><head></head><body><img src="/a.jpg"></body></html>"#;
+        let manifest = [entry_avif("/a.jpg", 1600, 900)];
+        let once = rewrite_responsive_images(html, &manifest);
+        // Second run: the <img> now lives inside <picture> → skipped (in_picture).
         let twice = rewrite_responsive_images(&once.html, &manifest);
         assert_eq!(once.html, twice.html);
         assert_eq!(twice.rewritten, 0);

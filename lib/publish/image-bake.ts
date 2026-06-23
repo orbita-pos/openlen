@@ -47,9 +47,14 @@ import { processImage } from "@/lib/images";
 
 const BAKE_WIDTHS = [400, 800, 1400, 2000];
 const WEBP_QUALITY = 82;
+// AVIF at q65 matches the proven upload-path quality (no blur complaints) and
+// is ~20-30% smaller than the WebP@82 it sits in front of via <picture>.
+const AVIF_QUALITY = 65;
 const FETCH_TIMEOUT_MS = 15_000;
 const MAX_SOURCE_BYTES = 20 * 1024 * 1024;
-const SIDECAR_VERSION = 1;
+// v2: the variant set now also bakes AVIF; the bump invalidates v1 (WebP-only)
+// sidecars so existing pages pick up AVIF on their next publish.
+const SIDECAR_VERSION = 2;
 
 const IMG_TAG_RE = /<img\b[^>]*>/gi;
 const SRC_ATTR_RE = /\bsrc\s*=\s*(?:"([^"]*)"|'([^']*)')/i;
@@ -188,6 +193,8 @@ interface BakeMeta {
   width: number;
   height: number;
   variants: VariantMeta[];
+  /** AVIF variants (same widths); empty when AVIF encoding was unavailable. */
+  avifVariants: VariantMeta[];
 }
 
 async function readSidecar(
@@ -205,6 +212,7 @@ async function readSidecar(
     width?: unknown;
     height?: unknown;
     variants?: unknown;
+    avifVariants?: unknown;
   };
   if (
     p?.v !== SIDECAR_VERSION ||
@@ -215,20 +223,31 @@ async function readSidecar(
   ) {
     return null;
   }
-  const variants: VariantMeta[] = [];
-  for (const v of p.variants as { file?: unknown; width?: unknown }[]) {
-    if (typeof v?.file !== "string" || typeof v?.width !== "number") return null;
-    if (!/^[A-Za-z0-9._-]+$/.test(v.file)) return null;
-    variants.push({ file: v.file, width: v.width });
-  }
+  const parseMetas = (raw: unknown): VariantMeta[] | null => {
+    if (!Array.isArray(raw)) return null;
+    const out: VariantMeta[] = [];
+    for (const v of raw as { file?: unknown; width?: unknown }[]) {
+      if (typeof v?.file !== "string" || typeof v?.width !== "number") return null;
+      if (!/^[A-Za-z0-9._-]+$/.test(v.file)) return null;
+      out.push({ file: v.file, width: v.width });
+    }
+    return out;
+  };
+  const variants = parseMetas(p.variants);
+  if (!variants || variants.length === 0) return null;
+  // avifVariants may legitimately be absent/empty (AVIF unavailable that run).
+  const avifVariants = p.avifVariants === undefined ? [] : parseMetas(p.avifVariants);
+  if (avifVariants === null) return null;
   // All referenced files must still exist — a pruned/partial assets dir
   // invalidates the sidecar and forces a re-encode.
   try {
-    await Promise.all(variants.map((v) => stat(path.join(assetsDir, v.file))));
+    await Promise.all(
+      [...variants, ...avifVariants].map((v) => stat(path.join(assetsDir, v.file))),
+    );
   } catch {
     return null;
   }
-  return { width: p.width, height: p.height, variants };
+  return { width: p.width, height: p.height, variants, avifVariants };
 }
 
 /** Encode (or reuse) the multi-width variant set for one source image and
@@ -245,39 +264,54 @@ async function ensureVariants(
 
   const { variants } = await processImage({
     input: bytes,
-    variants: BAKE_WIDTHS.map((w) => ({
-      width: w,
-      format: "webp" as const,
-      quality: WEBP_QUALITY,
-    })),
+    // WebP (fallback) + AVIF (the <picture> winner) at every width, one decode.
+    variants: BAKE_WIDTHS.flatMap((w) => [
+      { width: w, format: "webp" as const, quality: WEBP_QUALITY },
+      { width: w, format: "avif" as const, quality: AVIF_QUALITY },
+    ]),
     autoOrient: true,
     withoutEnlargement: true,
   });
-  // withoutEnlargement clamps targets to the intrinsic width, so a small
-  // source produces duplicate widths — keep one variant per output width.
-  const byWidth = new Map<number, (typeof variants)[number]>();
-  for (const v of variants) {
-    if (!byWidth.has(v.width)) byWidth.set(v.width, v);
-  }
-  const unique = [...byWidth.values()].sort((a, b) => a.width - b.width);
-  if (unique.length === 0) return null;
 
-  const metas: VariantMeta[] = [];
-  for (const v of unique) {
-    const file = `${hash}-${v.width}w.webp`;
-    const dst = path.join(assetsDir, file);
-    try {
-      await stat(dst);
-    } catch {
-      await writeFile(dst, v.bytes);
+  // withoutEnlargement clamps targets to the intrinsic width, so a small source
+  // produces duplicate widths — keep one variant per (format, width), ascending.
+  const collect = (fmt: "webp" | "avif") => {
+    const byWidth = new Map<number, (typeof variants)[number]>();
+    for (const v of variants) {
+      if (v.format === fmt && !byWidth.has(v.width)) byWidth.set(v.width, v);
     }
-    metas.push({ file, width: v.width });
-  }
-  const largest = unique[unique.length - 1];
+    return [...byWidth.values()].sort((a, b) => a.width - b.width);
+  };
+  const write = async (
+    uniques: typeof variants,
+    fmt: "webp" | "avif",
+  ): Promise<VariantMeta[]> => {
+    const metas: VariantMeta[] = [];
+    for (const v of uniques) {
+      const file = `${hash}-${v.width}w.${fmt}`;
+      const dst = path.join(assetsDir, file);
+      try {
+        await stat(dst);
+      } catch {
+        await writeFile(dst, v.bytes);
+      }
+      metas.push({ file, width: v.width });
+    }
+    return metas;
+  };
+
+  const webpUnique = collect("webp");
+  if (webpUnique.length === 0) return null;
+  const variantsMeta = await write(webpUnique, "webp");
+  // AVIF is best-effort: if the encoder produced none, we still ship WebP.
+  const avifVariants = await write(collect("avif"), "avif");
+
+  const largest = webpUnique[webpUnique.length - 1];
   const meta: BakeMeta = {
     width: largest.width,
     height: largest.height,
-    variants: metas,
+    variants: variantsMeta,
+    avifVariants,
   };
   await writeFile(
     sidecarPath,
@@ -338,6 +372,13 @@ export async function bakeResponsiveImages(params: {
               .join(", "),
             width: meta.width,
             height: meta.height,
+            // Present → the Rust pass wraps this <img> in a <picture> with an
+            // AVIF <source>; absent → the WebP <img srcset> path is used.
+            avifSrcset: meta.avifVariants.length
+              ? meta.avifVariants
+                  .map((v) => `/assets/${v.file} ${v.width}w`)
+                  .join(", ")
+              : undefined,
           };
         } catch (err) {
           // eslint-disable-next-line no-console

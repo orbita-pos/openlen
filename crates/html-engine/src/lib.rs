@@ -313,6 +313,9 @@ pub struct JsResponsiveImageEntry {
     pub srcset: String,
     pub width: u32,
     pub height: u32,
+    /// AVIF srcset (same widths), present → the <img> is wrapped in <picture>
+    /// with an AVIF <source> + WebP fallback. Absent → WebP <img srcset> path.
+    pub avif_srcset: Option<String>,
 }
 
 #[napi(object, js_name = "RewriteImagesResult")]
@@ -336,6 +339,7 @@ pub fn rewrite_responsive_images(
             srcset: i.srcset,
             width: i.width,
             height: i.height,
+            avif_srcset: i.avif_srcset,
         })
         .collect();
     let r = publish::rewrite_responsive_images(&html, &native);
