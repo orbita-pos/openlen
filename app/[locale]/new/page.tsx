@@ -2876,20 +2876,7 @@ function NewV2Inner() {
           onAddBusiness={() => setProfileModalOpen(true)}
           onPickImage={startPlacementAsset}
           sitePages={sitePages}
-          membersSettings={loadedProject?.settings?.members}
-          onUpdateMembersSettings={updateMembersSettings}
           onToggleMembersOnly={toggleMembersOnly}
-          broadcastSettings={loadedProject?.settings?.broadcast}
-          onUpdateBroadcastSettings={updateBroadcastSettings}
-          commentsSettings={loadedProject?.settings?.comments}
-          onUpdateCommentsSettings={updateCommentsSettings}
-          onInsertCommentsSection={insertCommentsSection}
-          bookingsSettings={loadedProject?.settings?.bookings}
-          onUpdateBookingsSettings={updateBookingsSettings}
-          onInsertBookingsSection={insertBookingsSection}
-          collectionsSettings={loadedProject?.settings?.collections}
-          onUpdateCollectionsSettings={updateCollectionsSettings}
-          onInsertCollectionsSection={insertCollectionsSection}
           activeSitePage={activeSitePage}
           onSwitchSitePage={switchSitePage}
           onCreateSitePage={createSitePage}
