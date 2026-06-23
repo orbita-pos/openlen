@@ -113,7 +113,11 @@
       "instagram": "Instagram",
       "color": "ブランドカラー",
       "takeFromLogo": "ロゴから取得",
-      "photos": "写真"
+      "photos": "写真",
+      "contactWidget": {
+        "label": "フローティング連絡先バー",
+        "hint": "WhatsApp・SNS・連絡先をページの隅に固定表示します。"
+      }
     },
     "errors": {
       "image": "JPGまたはPNGの画像のみです。",

@@ -48,7 +48,12 @@
     "addressPlaceholder": "Straße, Hausnummer, Viertel, Stadt",
     "facebook": "Facebook",
     "facebookPlaceholder": "Deine Seite",
-    "tiktok": "TikTok"
+    "tiktok": "TikTok",
+    "widgetLabel": "Schwebende Kontaktleiste",
+    "widgetHint": "WhatsApp, soziale Netzwerke und Kontakt fest in der Ecke deiner Seiten anzeigen. Aus: wird auf neuen Seiten nicht hinzugefügt.",
+    "widgetSide": "Position",
+    "sideLeft": "Links",
+    "sideRight": "Rechts"
   },
   "links": {
     "title": "Weitere Links",

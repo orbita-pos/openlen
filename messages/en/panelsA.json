@@ -113,7 +113,11 @@
       "instagram": "Instagram",
       "color": "Brand color",
       "takeFromLogo": "From logo",
-      "photos": "Photos"
+      "photos": "Photos",
+      "contactWidget": {
+        "label": "Floating contact bar",
+        "hint": "Pin WhatsApp, socials & contact to the corner of your pages."
+      }
     },
     "errors": {
       "image": "Only JPG or PNG images.",

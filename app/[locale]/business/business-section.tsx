@@ -94,6 +94,8 @@ function emptyData(): BusinessProfileData {
     brand: { logoUrl: null, accent: null },
     photos: [],
     links: [],
+    showContactWidget: true,
+    contactWidgetSide: "right",
   };
 }
 
@@ -275,6 +277,10 @@ export function BusinessSection({
     updateActive((p) => ({ ...p, data: { ...p.data, contact: { ...p.data.contact!, [k]: v || null } } }));
   const setSocial = (k: "instagram" | "facebook" | "tiktok", v: string) =>
     updateActive((p) => ({ ...p, data: { ...p.data, contact: { ...p.data.contact!, socials: { ...p.data.contact!.socials!, [k]: v || null } } } }));
+  const setShowWidget = (v: boolean) =>
+    updateActive((p) => ({ ...p, data: { ...p.data, showContactWidget: v } }));
+  const setSide = (v: "left" | "right") =>
+    updateActive((p) => ({ ...p, data: { ...p.data, contactWidgetSide: v } }));
 
   const onLogo = async (file: File) => {
     setBusyAsset(true);
@@ -503,6 +509,33 @@ export function BusinessSection({
                   <div><Label>{t("contact.facebook")}</Label><Field icon={Facebook} value={active.data.contact?.socials?.facebook ?? ""} onChange={(v) => setSocial("facebook", v)} placeholder={t("contact.facebookPlaceholder")} /></div>
                   <div><Label>{t("contact.tiktok")}</Label><Field icon={Tiktok} value={active.data.contact?.socials?.tiktok ?? ""} onChange={(v) => setSocial("tiktok", v)} placeholder="@tunegocio" /></div>
                 </div>
+                <label className="mt-4 flex items-center justify-between gap-4 rounded-lg bg-white dark:bg-[#121214] ring-1 ring-[#E5E3E1] dark:ring-white/10 px-4 py-3 cursor-pointer select-none">
+                  <span className="min-w-0">
+                    <span className="block text-[14px] font-medium text-[#1A1A1A] dark:text-[#F4F4F3]">{t("contact.widgetLabel")}</span>
+                    <span className="block text-[12px] text-[#8A8784] dark:text-[#9B9897] mt-0.5 leading-snug">{t("contact.widgetHint")}</span>
+                  </span>
+                  <button type="button" role="switch" aria-checked={active.data.showContactWidget !== false} aria-label={t("contact.widgetLabel")}
+                    onClick={() => setShowWidget(active.data.showContactWidget === false)}
+                    className={`relative shrink-0 h-6 w-11 rounded-full transition ${active.data.showContactWidget !== false ? "bg-coral-500" : "bg-[#D4D1CE] dark:bg-white/15"}`}>
+                    <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all ${active.data.showContactWidget !== false ? "left-[22px]" : "left-0.5"}`} />
+                  </button>
+                </label>
+                {active.data.showContactWidget !== false && (
+                  <div className="mt-3 flex items-center justify-between gap-4">
+                    <span className="text-[13px] text-[#1A1A1A] dark:text-[#F4F4F3]">{t("contact.widgetSide")}</span>
+                    <div className="inline-flex rounded-lg ring-1 ring-[#E5E3E1] dark:ring-white/10 overflow-hidden">
+                      {(["left", "right"] as const).map((s) => {
+                        const on = (active.data.contactWidgetSide ?? "right") === s;
+                        return (
+                          <button key={s} type="button" onClick={() => setSide(s)} aria-pressed={on}
+                            className={`px-3.5 h-9 text-[12.5px] font-medium transition ${on ? "bg-coral-500 text-white" : "text-[#8A8784] dark:text-[#9B9897] hover:bg-[#F5F3F1] dark:hover:bg-white/5"}`}>
+                            {t(s === "left" ? "contact.sideLeft" : "contact.sideRight")}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
               </Card>
 
               <Card className="p-6">

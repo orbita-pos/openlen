@@ -48,7 +48,12 @@
     "addressPlaceholder": "Rue, numéro, quartier, ville",
     "facebook": "Facebook",
     "facebookPlaceholder": "Votre page",
-    "tiktok": "TikTok"
+    "tiktok": "TikTok",
+    "widgetLabel": "Barre de contact flottante",
+    "widgetHint": "Épinglez WhatsApp, réseaux sociaux et contact dans le coin de vos pages. Désactivée : non ajoutée aux nouvelles pages.",
+    "widgetSide": "Position",
+    "sideLeft": "Gauche",
+    "sideRight": "Droite"
   },
   "links": {
     "title": "Plus de liens",

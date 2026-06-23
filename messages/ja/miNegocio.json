@@ -48,7 +48,12 @@
     "addressPlaceholder": "都道府県、市区町村、番地",
     "facebook": "Facebook",
     "facebookPlaceholder": "あなたのページ",
-    "tiktok": "TikTok"
+    "tiktok": "TikTok",
+    "widgetLabel": "フローティング連絡先バー",
+    "widgetHint": "WhatsApp・SNS・連絡先をページの隅に固定表示します。オフにすると新しいページには追加されません。",
+    "widgetSide": "位置",
+    "sideLeft": "左",
+    "sideRight": "右"
   },
   "links": {
     "title": "その他のリンク",

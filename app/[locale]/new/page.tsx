@@ -2895,7 +2895,16 @@ function NewV2Inner() {
         <main className="contents">
         <h1 className="sr-only">{t("a11y.workspaceHeading")}</h1>
         {centerView === "business" ? (
-          <BusinessSection embedded onChanged={refreshProfiles} />
+          <BusinessSection
+            embedded
+            onChanged={() => {
+              void refreshProfiles();
+              // Auto-reaplicar: re-seed the open page so contact-bar changes
+              // (show/hide, side) show up immediately instead of only on new
+              // pages. No-op when no project is open. recolor:false keeps design.
+              void reseedCurrentPage();
+            }}
+          />
         ) : centerView === "projects" ? (
           <ProjectsSection activeBusinessId={activeBusinessId} />
         ) : centerView === "analytics" ? (

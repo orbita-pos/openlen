@@ -48,7 +48,12 @@
     "addressPlaceholder": "도로명, 번지, 동네, 도시",
     "facebook": "Facebook",
     "facebookPlaceholder": "내 페이지",
-    "tiktok": "TikTok"
+    "tiktok": "TikTok",
+    "widgetLabel": "플로팅 연락처 바",
+    "widgetHint": "WhatsApp·SNS·연락처를 페이지 모서리에 고정 표시합니다. 끄면 새 페이지에는 추가되지 않습니다.",
+    "widgetSide": "위치",
+    "sideLeft": "왼쪽",
+    "sideRight": "오른쪽"
   },
   "links": {
     "title": "더 많은 링크",
