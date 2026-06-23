@@ -31,7 +31,6 @@ import {
   X,
 } from "./icons";
 import type { Section } from "./mock-data";
-import type { BriefFormState } from "@/components/workspace/types";
 import type {
   BookingsSettings,
   BroadcastSettings,
@@ -40,7 +39,6 @@ import type {
   MembersSettings,
   StoredChatTurn,
 } from "@/lib/projects/types";
-import { AiBriefPanel } from "./panels/ai-brief-panel";
 import { AssistantPanel } from "./panels/assistant-panel";
 import { ModulesPanel } from "./panels/modules-panel";
 import { BroadcastPanel } from "./panels/broadcast-panel";
@@ -254,15 +252,6 @@ interface LeftSidebarProps {
   /** Page Coach "Apply with AI" (Insights tab) — the parent loads the
    *  instruction into the Chat composer and switches to the Chat tab. */
   onApplyCoachTip?: (instruction: string) => void;
-  /** AI generation brief form state — only used when entryMode === "ai".
-   *  Rendered in the sidebar panel slot so the brief input lives next
-   *  to the empty preview, like the other entry modes. */
-  aiBriefState?: BriefFormState;
-  aiOnGenerate?: () => void;
-  aiGenerating?: boolean;
-  /** Generation mode — "quick" (curated, free) vs "scratch" (bespoke, Pro). */
-  aiMode?: "quick" | "scratch";
-  aiOnModeChange?: (m: "quick" | "scratch") => void;
   /** The account section shown in the workspace CENTER ("page" = the canvas).
    *  The global-section rail icons set this; the parent renders the section. */
   activeSection?: SectionView;
@@ -347,11 +336,6 @@ export function LeftSidebar({
   pendingDraft = null,
   onPendingDraftConsumed,
   onApplyCoachTip,
-  aiBriefState,
-  aiOnGenerate,
-  aiGenerating = false,
-  aiMode = "quick",
-  aiOnModeChange,
   businesses = [],
   activeBusinessId = "",
   onPickBusiness,
@@ -579,13 +563,19 @@ export function LeftSidebar({
       <div key={`${entryMode}:${mode}`} className="flex-1 min-h-0 fade-slide">
         {entryMode === "paste" ? (
           <PastePanel />
-        ) : entryMode === "ai" && aiBriefState ? (
-          <AiBriefPanel
-            state={aiBriefState}
-            onGenerate={aiOnGenerate ?? (() => {})}
-            generating={aiGenerating}
-            mode={aiMode}
-            onModeChange={aiOnModeChange ?? (() => {})}
+        ) : entryMode === "ai" ? (
+          // Bare /new (no page): the AI brief lives in the center (StartLanding),
+          // so the sidebar shows the gallery here — never a duplicate composer.
+          // The sidebar AI/chat is reserved for editing an existing page.
+          <TemplatesPanel
+            onPreview={(t) =>
+              onPreviewTemplate?.({
+                id: t.id,
+                name: t.name,
+                previewUrl: t.previewUrl,
+              })
+            }
+            previewingId={previewingTemplateId ?? null}
           />
         ) : (
           <>

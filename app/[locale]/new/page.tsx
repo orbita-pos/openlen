@@ -48,6 +48,7 @@ import { Check, Sparkles, Undo, X } from "@/components/workspace-v2/icons";
 import { SectionPreviewModal } from "@/components/workspace-v2/section-preview-modal";
 import type { SectionSpec } from "@/components/workspace-v2/sections-data";
 import { PreviewPlaceholder } from "@/components/workspace-v2/preview-placeholder";
+import { StartLanding } from "@/components/workspace-v2/start-landing";
 import { SECTIONS, type Section } from "@/components/workspace-v2/mock-data";
 import { PreviewArea } from "@/components/workspace-v2/preview-area";
 import {
@@ -265,7 +266,7 @@ function NewV2Inner() {
 
   const [projectName, setProjectName] = useState(t("defaultProjectName"));
   const [mode, setMode] = useState<SidebarMode>(
-    entryMode === "template" ? "templates" : "chat",
+    entryMode === "template" || entryMode === "ai" ? "templates" : "chat",
   );
   // Keep the sidebar panel synced to the URL-derived entry mode. Rail clicks set
   // `mode` directly, but browser back/forward only change the URL (entryMode) —
@@ -273,23 +274,27 @@ function NewV2Inner() {
   // (e.g. Chat) shown. Editing tab-switches don't change entryMode, so this
   // never clobbers them.
   useEffect(() => {
-    setMode(entryMode === "template" ? "templates" : "chat");
+    setMode(entryMode === "template" || entryMode === "ai" ? "templates" : "chat");
   }, [entryMode]);
-  const [leftCollapsed, setLeftCollapsed] = useState(false);
+  const [leftCollapsed, setLeftCollapsed] = useState(entryMode === "ai");
   const isMobile = useIsMobile();
-  // Mobile: the canvas is the hero. Editing enters with the panel closed (rail
-  // only); guided entry flows (ai/template/paste) enter with it open — there the
-  // panel IS the screen (brief form, gallery, paste box). Re-applies on every
-  // entry-mode transition, never on desktop.
-  const mobileEntrySynced = useRef<EntryMode | null>(null);
+  // Collapse the sidebar to the rail when the center carries the whole surface,
+  // re-applied once per entry-mode transition (a synced ref so a manual toggle
+  // persists). DESKTOP: the AI landing (bare /new, no page) collapses — its
+  // composer + template mosaic live in the center (StartLanding), so the sidebar
+  // AI brief would just be a duplicate; the sidebar AI/chat belongs to editing a
+  // page. Template/Paste stay open (the panel IS the entry). MOBILE: the panel
+  // overlays the canvas, so editing + the AI landing both enter closed.
+  const entrySynced = useRef<string | null>(null);
   useEffect(() => {
-    if (!isMobile) {
-      mobileEntrySynced.current = null;
-      return;
-    }
-    if (mobileEntrySynced.current === entryMode) return;
-    mobileEntrySynced.current = entryMode;
-    setLeftCollapsed(entryMode === "editing");
+    const key = `${isMobile ? "m" : "d"}:${entryMode}`;
+    if (entrySynced.current === key) return;
+    entrySynced.current = key;
+    setLeftCollapsed(
+      isMobile
+        ? entryMode === "editing" || entryMode === "ai"
+        : entryMode === "ai",
+    );
   }, [isMobile, entryMode]);
   // Multi-page: ?page=<slug> selects which site page the canvas shows.
   // Resolved against the loaded project — an unknown slug acts as home
@@ -1073,11 +1078,12 @@ function NewV2Inner() {
   // edit when that tab is active.
   const lockedTabs = useMemo<SidebarMode[]>(() => {
     if (entryMode === "editing") return [];
-    // Entry flows (ai/template/paste): the two entry tabs stay reachable — chat
-    // (the AI brief) and templates (the gallery) — so the user can switch
-    // starting points without a chooser screen. Everything else unlocks once a
-    // project exists.
-    return ALL_TABS.filter((t) => t !== "chat" && t !== "templates");
+    // Entry flows: Templates stays reachable as a sidebar entry. On the AI
+    // landing the brief lives in the center (StartLanding), so the sidebar Chat
+    // tab is locked there too — only Template/Paste entries still expose Chat as
+    // a "switch to AI start" shortcut. Everything else unlocks once a project exists.
+    const locked = ALL_TABS.filter((t) => t !== "chat" && t !== "templates");
+    return entryMode === "ai" ? [...locked, "chat"] : locked;
   }, [entryMode]);
 
   const lockReason = t("lockReason.created");
@@ -2856,11 +2862,6 @@ function NewV2Inner() {
             setPendingChatDraft(instruction);
             setMode("chat");
           }}
-          aiBriefState={aiBriefFormState}
-          aiOnGenerate={handleAiGenerate}
-          aiGenerating={aiGenerating}
-          aiMode={aiMode}
-          aiOnModeChange={setAiMode}
           businesses={profiles}
           businessesLoading={!profilesLoaded}
           activeBusinessId={activeBusinessId}
@@ -2975,8 +2976,41 @@ function NewV2Inner() {
                 </div>
               </div>
             </section>
+          ) : previewingTemplate ? (
+            <div className="flex-1 min-w-0 flex flex-col">
+              {templateError && (
+                <div className="h-7 shrink-0 flex items-center justify-center gap-2 text-[11.5px] bg-red-50 dark:bg-red-500/10 text-red-700 dark:text-red-300 border-b bd">
+                  {templateError}
+                </div>
+              )}
+              <PreviewArea
+                doc=""
+                previewUrl={previewingTemplate.previewUrl}
+                templateName={previewingTemplate.name}
+                openInNewTabUrl={previewingTemplate.previewUrl}
+                onUseTemplate={() => {
+                  void handleUseTemplate();
+                }}
+                useTemplateLoading={committingTemplate}
+                onClearTemplate={() => {
+                  setPreviewingTemplate(null);
+                  setTemplateError(null);
+                }}
+              />
+            </div>
           ) : (
-            <PreviewPlaceholder mode="ai" />
+            <StartLanding
+              aiState={aiBriefFormState}
+              onGenerate={handleAiGenerate}
+              generating={aiGenerating}
+              aiMode={aiMode}
+              onModeChange={setAiMode}
+              onPreviewTemplate={(tpl) => {
+                setPreviewingTemplate(tpl);
+                setTemplateError(null);
+              }}
+              onPaste={() => router.push("/new?mode=paste")}
+            />
           )
         )}
         {entryMode === "paste" && (

@@ -127,6 +127,14 @@
     },
     "sidebar": "사이드바"
   },
+  "start": {
+    "headline": "다음 페이지는 여기서 시작됩니다",
+    "subtitle": "검증된 템플릿을 무료로 한 번에 선택하거나 AI로 설명하세요.",
+    "pasteHtml": "또는 내 HTML 붙여넣기",
+    "galleryHeading": "검증된 템플릿",
+    "search": "템플릿 검색…",
+    "noResults": "“{query}”에 대한 결과가 없습니다"
+  },
   "empty": {
     "badge": "OpenLen 워크스페이스",
     "heading": "무엇으로 시작하시겠어요?",

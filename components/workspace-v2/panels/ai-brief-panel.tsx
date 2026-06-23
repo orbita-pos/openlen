@@ -143,8 +143,9 @@ export function AiBriefPanel({
 
 // Mode select — the curated/bespoke chooser, styled as a compact dropdown
 // (the same pattern as the old model picker) so its two option names live in
-// the popover instead of crowding the composer row.
-function ModeSelect({
+// the popover instead of crowding the composer row. Exported so the /new
+// start landing can reuse the exact same quick/scratch control.
+export function ModeSelect({
   mode,
   onModeChange,
   disabled,

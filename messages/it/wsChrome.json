@@ -127,6 +127,14 @@
     },
     "sidebar": "Barra laterale"
   },
+  "start": {
+    "headline": "La tua prossima pagina inizia qui",
+    "subtitle": "Scegli un template verificato — gratis, con un clic — o descrivilo con l’IA.",
+    "pasteHtml": "o incolla il tuo HTML",
+    "galleryHeading": "Template verificati",
+    "search": "Cerca template…",
+    "noResults": "Nessun risultato per «{query}»"
+  },
   "empty": {
     "badge": "Spazio di lavoro OpenLen",
     "heading": "Da cosa vuoi partire?",

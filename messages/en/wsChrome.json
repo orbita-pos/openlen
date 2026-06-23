@@ -127,6 +127,14 @@
     },
     "sidebar": "Sidebar"
   },
+  "start": {
+    "headline": "Your next page starts here",
+    "subtitle": "Pick a verified template — free, one click — or describe it with AI.",
+    "pasteHtml": "or paste your own HTML",
+    "galleryHeading": "Verified templates",
+    "search": "Search templates…",
+    "noResults": "No results for “{query}”"
+  },
   "empty": {
     "badge": "OpenLen Workspace",
     "heading": "What do you want to start with?",

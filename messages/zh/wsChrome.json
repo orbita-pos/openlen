@@ -127,6 +127,14 @@
     },
     "sidebar": "侧边栏"
   },
+  "start": {
+    "headline": "你的下一个页面从这里开始",
+    "subtitle": "一键免费选择已验证的模板，或用 AI 描述它。",
+    "pasteHtml": "或粘贴你自己的 HTML",
+    "galleryHeading": "已验证的模板",
+    "search": "搜索模板…",
+    "noResults": "没有“{query}”的结果"
+  },
   "empty": {
     "badge": "OpenLen 工作区",
     "heading": "你想从什么开始？",

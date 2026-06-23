@@ -127,6 +127,14 @@
     },
     "sidebar": "Zijbalk"
   },
+  "start": {
+    "headline": "Je volgende pagina begint hier",
+    "subtitle": "Kies een geverifieerd sjabloon — gratis, één klik — of beschrijf het met AI.",
+    "pasteHtml": "of plak je eigen HTML",
+    "galleryHeading": "Geverifieerde sjablonen",
+    "search": "Sjablonen zoeken…",
+    "noResults": "Geen resultaten voor “{query}”"
+  },
   "empty": {
     "badge": "OpenLen-werkruimte",
     "heading": "Waarmee wil je beginnen?",

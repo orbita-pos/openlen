@@ -39,6 +39,13 @@ export const Check = (p: IconProps) => (
   </Base>
 );
 
+export const Search = (p: IconProps) => (
+  <Base {...p}>
+    <circle cx="11" cy="11" r="8" />
+    <path d="m21 21-4.3-4.3" />
+  </Base>
+);
+
 export const Pin = (p: IconProps) => (
   <Base {...p}>
     <path d="M12 17v5" />

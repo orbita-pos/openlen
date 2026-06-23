@@ -127,6 +127,14 @@
     },
     "sidebar": "Barra lateral"
   },
+  "start": {
+    "headline": "Sua próxima página começa aqui",
+    "subtitle": "Escolha um modelo verificado — grátis, em um clique — ou descreva com IA.",
+    "pasteHtml": "ou cole seu próprio HTML",
+    "galleryHeading": "Modelos verificados",
+    "search": "Buscar modelos…",
+    "noResults": "Sem resultados para “{query}”"
+  },
   "empty": {
     "badge": "Espaço de trabalho OpenLen",
     "heading": "Por onde você quer começar?",
