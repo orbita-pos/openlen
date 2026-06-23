@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { extractVideoId, buildEmbedUrl, bakeVideoEmbeds } from "./video-embed";
+import { extractVideoId, buildEmbedUrl, bakeVideoEmbeds, bakeMediaPreconnect } from "./video-embed";
 
 describe("extractVideoId — valid", () => {
   it("youtube watch", () => {
@@ -81,5 +81,46 @@ describe("bakeVideoEmbeds", () => {
     expect(out).toContain(`data-ol-video="yt:dQw4w9WgXcQ"`);
     expect(out).toContain(`data-ol-video="vm:123456789"`);
     expect((out.match(/<script data-ol-video-lightbox>/g) || []).length).toBe(1);
+  });
+});
+
+describe("bakeVideoEmbeds — embed preconnect hint", () => {
+  const page = (href: string) => `<html><head></head><body><a href="${href}">v</a></body></html>`;
+  it("adds a YouTube preconnect (only) when a YT link is present", () => {
+    const out = bakeVideoEmbeds(page("https://youtu.be/dQw4w9WgXcQ"));
+    expect(out).toContain('<link rel="preconnect" href="https://www.youtube-nocookie.com">');
+    // (the runtime JS always mentions player.vimeo.com in its provider map; assert
+    // on the preconnect LINK, which should NOT be present for a YT-only page.)
+    expect(out).not.toContain('<link rel="preconnect" href="https://player.vimeo.com">');
+  });
+  it("adds a Vimeo preconnect when a Vimeo link is present", () => {
+    const out = bakeVideoEmbeds(page("https://vimeo.com/123456789"));
+    expect(out).toContain('<link rel="preconnect" href="https://player.vimeo.com">');
+  });
+  it("adds NO preconnect when there is no recognized video link", () => {
+    const out = bakeVideoEmbeds(page("https://example.com/about"));
+    expect(out).not.toContain("preconnect");
+  });
+});
+
+describe("bakeMediaPreconnect — self-hosted video", () => {
+  it("preconnects to the cross-origin host of a <video src>", () => {
+    const out = bakeMediaPreconnect(
+      '<html><head></head><body><video src="https://uploads.openlen.com/v/abc.mp4"></video></body></html>',
+    );
+    expect(out).toContain('<link rel="preconnect" href="https://uploads.openlen.com" data-ol-media-preconnect>');
+  });
+  it("preconnects for a cross-origin <source src> too", () => {
+    const out = bakeMediaPreconnect('<head></head><video><source src="https://r2.example.com/a.webm"></video>');
+    expect(out).toContain('href="https://r2.example.com"');
+  });
+  it("is a no-op for relative / same-origin media", () => {
+    const html = '<head></head><video src="/uploads/a.mp4"></video>';
+    expect(bakeMediaPreconnect(html)).toBe(html);
+  });
+  it("is idempotent", () => {
+    const html = '<head></head><video src="https://uploads.openlen.com/a.mp4"></video>';
+    const once = bakeMediaPreconnect(html);
+    expect(bakeMediaPreconnect(once)).toBe(once);
   });
 });

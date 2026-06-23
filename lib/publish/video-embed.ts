@@ -95,6 +95,7 @@ export function bakeVideoEmbeds(html: string): string {
   if (html.includes(MARKER)) return html;
 
   let tagged = 0;
+  const providers = new Set<"youtube" | "vimeo">();
   const out = html.replace(/<a\b([^>]*)>/gi, (full, attrs: string) => {
     if (/\bdata-ol-video\s*=/i.test(attrs)) return full;
     const m = attrs.match(/\bhref\s*=\s*("([^"]*)"|'([^']*)')/i);
@@ -103,13 +104,19 @@ export function bakeVideoEmbeds(html: string): string {
     const ref = extractVideoId(href);
     if (!ref) return full;
     tagged++;
+    providers.add(ref.provider);
     const tag = `${ref.provider === "youtube" ? "yt" : "vm"}:${ref.id}`;
     return `<a data-ol-video="${tag}"${attrs}>`;
   });
 
   if (tagged === 0) return html;
 
-  const style = `<style ${MARKER}>${LIGHTBOX_CSS}</style>`;
+  // Warm DNS+TLS to the embed origin(s) actually present, so the first click
+  // opens the player without paying a cold handshake.
+  const hints =
+    (providers.has("youtube") ? `<link rel="preconnect" href="https://www.youtube-nocookie.com">` : "") +
+    (providers.has("vimeo") ? `<link rel="preconnect" href="https://player.vimeo.com">` : "");
+  const style = `${hints}<style ${MARKER}>${LIGHTBOX_CSS}</style>`;
   const script = `<script ${MARKER}>${LIGHTBOX_JS}</script>`;
 
   const headClose = /<\/head\s*>/i;
@@ -122,4 +129,38 @@ export function bakeVideoEmbeds(html: string): string {
   return idx === -1
     ? withStyle + script
     : withStyle.slice(0, idx) + script + withStyle.slice(idx);
+}
+
+const MEDIA_MARKER = "data-ol-media-preconnect";
+
+/** Warm a connection to the cross-origin host(s) serving self-hosted
+ *  <video>/<source> (e.g. uploads.openlen.com / R2) so a cinema autoplay hero
+ *  starts streaming without a cold DNS+TLS handshake. Baked images are
+ *  localized to /assets, so the only absolute-https media src left is the raw
+ *  uploaded video. No-op when all media is same-origin/relative or already
+ *  processed; capped at 2 origins. */
+export function bakeMediaPreconnect(html: string): string {
+  if (html.includes(MEDIA_MARKER)) return html;
+  const origins = new Set<string>();
+  const re = /<(?:video|source)\b[^>]*\bsrc\s*=\s*("([^"]*)"|'([^']*)')/gi;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(html)) !== null) {
+    const src = (m[2] ?? m[3] ?? "").trim();
+    if (!/^https:\/\//i.test(src)) continue;
+    try {
+      origins.add(new URL(src).origin);
+    } catch {
+      /* skip unparseable src */
+    }
+  }
+  if (origins.size === 0) return html;
+  const hints = [...origins]
+    .slice(0, 2)
+    .map((o) => `<link rel="preconnect" href="${o}" ${MEDIA_MARKER}>`)
+    .join("");
+
+  const headClose = /<\/head\s*>/i;
+  if (headClose.test(html)) return html.replace(headClose, (c) => `${hints}${c}`);
+  if (/<body\b[^>]*>/i.test(html)) return html.replace(/<body\b[^>]*>/i, (b) => `${hints}${b}`);
+  return hints + html;
 }
