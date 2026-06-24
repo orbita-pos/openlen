@@ -1,0 +1,644 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Jesús — Indie maker · Construyo y envío software de verdad</title>
+<link rel="preload" as="font" type="font/woff2" crossorigin href="fonts/k3kPo8UDI-1M0wlSV9XAw6lQkqWY8Q82sLydOxI.woff2">
+<style id="ol-fonts">
+@font-face { font-family: 'Archivo'; font-style: normal; font-weight: 400; font-stretch: 100%; font-display: swap; src: url(fonts/k3kPo8UDI-1M0wlSV9XAw6lQkqWY8Q82sLydOxI.woff2) format('woff2'); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+@font-face { font-family: 'Archivo'; font-style: normal; font-weight: 500; font-stretch: 100%; font-display: swap; src: url(fonts/k3kPo8UDI-1M0wlSV9XAw6lQkqWY8Q82sLydOxI.woff2) format('woff2'); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+@font-face { font-family: 'Archivo'; font-style: normal; font-weight: 600; font-stretch: 100%; font-display: swap; src: url(fonts/k3kPo8UDI-1M0wlSV9XAw6lQkqWY8Q82sLydOxI.woff2) format('woff2'); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+@font-face { font-family: 'Archivo Narrow'; font-style: normal; font-weight: 400; font-display: swap; src: url(fonts/tss0ApVBdCYD5Q7hcxTE1ArZ0bbwiXw.woff2) format('woff2'); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+@font-face { font-family: 'Archivo Narrow'; font-style: normal; font-weight: 500; font-display: swap; src: url(fonts/tss0ApVBdCYD5Q7hcxTE1ArZ0bbwiXw.woff2) format('woff2'); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+@font-face { font-family: 'Archivo Narrow'; font-style: normal; font-weight: 600; font-display: swap; src: url(fonts/tss0ApVBdCYD5Q7hcxTE1ArZ0bbwiXw.woff2) format('woff2'); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+@font-face { font-family: 'Fraunces'; font-style: italic; font-weight: 300; font-display: swap; src: url(fonts/6NU58FyLNQOQZAnv9ZwNjucMHVn85Ni7emAe9lKqZTnbB-gzTK0K1ChjeveQ.woff2) format('woff2'); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+@font-face { font-family: 'Fraunces'; font-style: italic; font-weight: 400; font-display: swap; src: url(fonts/6NU58FyLNQOQZAnv9ZwNjucMHVn85Ni7emAe9lKqZTnbB-gzTK0K1ChjeveQ.woff2) format('woff2'); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+@font-face { font-family: 'Fraunces'; font-style: italic; font-weight: 500; font-display: swap; src: url(fonts/6NU58FyLNQOQZAnv9ZwNjucMHVn85Ni7emAe9lKqZTnbB-gzTK0K1ChjeveQ.woff2) format('woff2'); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+@font-face { font-family: 'Fraunces'; font-style: normal; font-weight: 300; font-display: swap; src: url(fonts/6NU78FyLNQOQZAnv9bYEvDiIdE9Ea92uemAk_WBq8U_9v0c2Wa0KxC9TeA.woff2) format('woff2'); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+@font-face { font-family: 'Fraunces'; font-style: normal; font-weight: 400; font-display: swap; src: url(fonts/6NU78FyLNQOQZAnv9bYEvDiIdE9Ea92uemAk_WBq8U_9v0c2Wa0KxC9TeA.woff2) format('woff2'); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+@font-face { font-family: 'Fraunces'; font-style: normal; font-weight: 500; font-display: swap; src: url(fonts/6NU78FyLNQOQZAnv9bYEvDiIdE9Ea92uemAk_WBq8U_9v0c2Wa0KxC9TeA.woff2) format('woff2'); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+@font-face { font-family: 'Fraunces'; font-style: normal; font-weight: 600; font-display: swap; src: url(fonts/6NU78FyLNQOQZAnv9bYEvDiIdE9Ea92uemAk_WBq8U_9v0c2Wa0KxC9TeA.woff2) format('woff2'); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+@font-face { font-family: 'Fraunces'; font-style: normal; font-weight: 700; font-display: swap; src: url(fonts/6NU78FyLNQOQZAnv9bYEvDiIdE9Ea92uemAk_WBq8U_9v0c2Wa0KxC9TeA.woff2) format('woff2'); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+</style>
+<meta name="description" content="Soy Jesús. Hago productos de software que salen a producción, no demos. Mi estrella es OpenLen, un constructor de landing pages con IA. También envié InariWatch y OrbitaPOS. Esta página la publiqué con OpenLen.">
+<style>*,:after,:before{--tw-border-spacing-x:0;--tw-border-spacing-y:0;--tw-translate-x:0;--tw-translate-y:0;--tw-rotate:0;--tw-skew-x:0;--tw-skew-y:0;--tw-scale-x:1;--tw-scale-y:1;--tw-pan-x: ;--tw-pan-y: ;--tw-pinch-zoom: ;--tw-scroll-snap-strictness:proximity;--tw-gradient-from-position: ;--tw-gradient-via-position: ;--tw-gradient-to-position: ;--tw-ordinal: ;--tw-slashed-zero: ;--tw-numeric-figure: ;--tw-numeric-spacing: ;--tw-numeric-fraction: ;--tw-ring-inset: ;--tw-ring-offset-width:0px;--tw-ring-offset-color:#fff;--tw-ring-color:rgba(59,130,246,.5);--tw-ring-offset-shadow:0 0 #0000;--tw-ring-shadow:0 0 #0000;--tw-shadow:0 0 #0000;--tw-shadow-colored:0 0 #0000;--tw-blur: ;--tw-brightness: ;--tw-contrast: ;--tw-grayscale: ;--tw-hue-rotate: ;--tw-invert: ;--tw-saturate: ;--tw-sepia: ;--tw-drop-shadow: ;--tw-backdrop-blur: ;--tw-backdrop-brightness: ;--tw-backdrop-contrast: ;--tw-backdrop-grayscale: ;--tw-backdrop-hue-rotate: ;--tw-backdrop-invert: ;--tw-backdrop-opacity: ;--tw-backdrop-saturate: ;--tw-backdrop-sepia: ;--tw-contain-size: ;--tw-contain-layout: ;--tw-contain-paint: ;--tw-contain-style: }::backdrop{--tw-border-spacing-x:0;--tw-border-spacing-y:0;--tw-translate-x:0;--tw-translate-y:0;--tw-rotate:0;--tw-skew-x:0;--tw-skew-y:0;--tw-scale-x:1;--tw-scale-y:1;--tw-pan-x: ;--tw-pan-y: ;--tw-pinch-zoom: ;--tw-scroll-snap-strictness:proximity;--tw-gradient-from-position: ;--tw-gradient-via-position: ;--tw-gradient-to-position: ;--tw-ordinal: ;--tw-slashed-zero: ;--tw-numeric-figure: ;--tw-numeric-spacing: ;--tw-numeric-fraction: ;--tw-ring-inset: ;--tw-ring-offset-width:0px;--tw-ring-offset-color:#fff;--tw-ring-color:rgba(59,130,246,.5);--tw-ring-offset-shadow:0 0 #0000;--tw-ring-shadow:0 0 #0000;--tw-shadow:0 0 #0000;--tw-shadow-colored:0 0 #0000;--tw-blur: ;--tw-brightness: ;--tw-contrast: ;--tw-grayscale: ;--tw-hue-rotate: ;--tw-invert: ;--tw-saturate: ;--tw-sepia: ;--tw-drop-shadow: ;--tw-backdrop-blur: ;--tw-backdrop-brightness: ;--tw-backdrop-contrast: ;--tw-backdrop-grayscale: ;--tw-backdrop-hue-rotate: ;--tw-backdrop-invert: ;--tw-backdrop-opacity: ;--tw-backdrop-saturate: ;--tw-backdrop-sepia: ;--tw-contain-size: ;--tw-contain-layout: ;--tw-contain-paint: ;--tw-contain-style: }/*! tailwindcss v3.4.17 | MIT License | https://tailwindcss.com*/*,:after,:before{border:0 solid #e5e7eb;box-sizing:border-box}:after,:before{--tw-content:""}:host,html{line-height:1.5;-webkit-text-size-adjust:100%;font-family:ui-sans-serif,system-ui,sans-serif,Apple Color Emoji,Segoe UI Emoji,Segoe UI Symbol,Noto Color Emoji;font-feature-settings:normal;font-variation-settings:normal;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-tap-highlight-color:transparent}body{line-height:inherit;margin:0}hr{border-top-width:1px;color:inherit;height:0}abbr:where([title]){-webkit-text-decoration:underline dotted;text-decoration:underline dotted}h1,h2,h3,h4,h5,h6{font-size:inherit;font-weight:inherit}a{color:inherit;text-decoration:inherit}b,strong{font-weight:bolder}code,kbd,pre,samp{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,Liberation Mono,Courier New,monospace;font-feature-settings:normal;font-size:1em;font-variation-settings:normal}small{font-size:80%}sub,sup{font-size:75%;line-height:0;position:relative;vertical-align:baseline}sub{bottom:-.25em}sup{top:-.5em}table{border-collapse:collapse;border-color:inherit;text-indent:0}button,input,optgroup,select,textarea{color:inherit;font-family:inherit;font-feature-settings:inherit;font-size:100%;font-variation-settings:inherit;font-weight:inherit;letter-spacing:inherit;line-height:inherit;margin:0;padding:0}button,select{text-transform:none}button,input:where([type=button]),input:where([type=reset]),input:where([type=submit]){-webkit-appearance:button;background-color:transparent;background-image:none}:-moz-focusring{outline:auto}:-moz-ui-invalid{box-shadow:none}progress{vertical-align:baseline}::-webkit-inner-spin-button,::-webkit-outer-spin-button{height:auto}[type=search]{-webkit-appearance:textfield;outline-offset:-2px}::-webkit-search-decoration{-webkit-appearance:none}::-webkit-file-upload-button{-webkit-appearance:button;font:inherit}summary{display:list-item}blockquote,dd,dl,figure,h1,h2,h3,h4,h5,h6,hr,p,pre{margin:0}fieldset{margin:0}fieldset,legend{padding:0}menu,ol,ul{list-style:none;margin:0;padding:0}dialog{padding:0}textarea{resize:vertical}input::-moz-placeholder,textarea::-moz-placeholder{color:#9ca3af;opacity:1}input::placeholder,textarea::placeholder{color:#9ca3af;opacity:1}[role=button],button{cursor:pointer}:disabled{cursor:default}audio,canvas,embed,iframe,img,object,svg,video{display:block;vertical-align:middle}img,video{height:auto;max-width:100%}[hidden]:where(:not([hidden=until-found])){display:none}.fixed{position:fixed}.absolute{position:absolute}.relative{position:relative}.inset-0{inset:0}.bottom-5{bottom:1.25rem}.left-0{left:0}.left-1\/2{left:50%}.left-5{left:1.25rem}.right-0{right:0}.top-0{top:0}.top-1\/2{top:50%}.z-\[9000\]{z-index:9000}.mx-auto{margin-left:auto;margin-right:auto}.mb-12{margin-bottom:3rem}.mb-16{margin-bottom:4rem}.mb-2{margin-bottom:.5rem}.mb-5{margin-bottom:1.25rem}.mb-6{margin-bottom:1.5rem}.mb-7{margin-bottom:1.75rem}.ml-1{margin-left:.25rem}.ml-1\.5{margin-left:.375rem}.mt-16{margin-top:4rem}.mt-2{margin-top:.5rem}.mt-24{margin-top:6rem}.mt-3{margin-top:.75rem}.mt-4{margin-top:1rem}.mt-5{margin-top:1.25rem}.mt-7{margin-top:1.75rem}.mt-8{margin-top:2rem}.block{display:block}.inline-block{display:inline-block}.flex{display:flex}.inline-flex{display:inline-flex}.grid{display:grid}.hidden{display:none}.aspect-\[16\/10\]{aspect-ratio:16/10}.aspect-video{aspect-ratio:16/9}.h-1\.5{height:.375rem}.h-2{height:.5rem}.h-20{height:5rem}.h-full{height:100%}.h-px{height:1px}.min-h-screen{min-height:100vh}.w-1\.5{width:.375rem}.w-10{width:2.5rem}.w-12{width:3rem}.w-2{width:.5rem}.w-20{width:5rem}.w-full{width:100%}.max-w-\[1560px\]{max-width:1560px}.max-w-md{max-width:28rem}.flex-1{flex:1 1 0%}.-translate-x-1\/2{--tw-translate-x:-50%}.-translate-x-1\/2,.-translate-y-1\/2{transform:translate(var(--tw-translate-x),var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y))}.-translate-y-1\/2{--tw-translate-y:-50%}.transform{transform:translate(var(--tw-translate-x),var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y))}@keyframes ping{75%,to{opacity:0;transform:scale(2)}}.animate-ping{animation:ping 1s cubic-bezier(0,0,.2,1) infinite}.cursor-pointer{cursor:pointer}.grid-cols-1{grid-template-columns:repeat(1,minmax(0,1fr))}.grid-cols-2{grid-template-columns:repeat(2,minmax(0,1fr))}.flex-col{flex-direction:column}.flex-wrap{flex-wrap:wrap}.items-start{align-items:flex-start}.items-end{align-items:flex-end}.items-center{align-items:center}.justify-end{justify-content:flex-end}.justify-center{justify-content:center}.justify-between{justify-content:space-between}.gap-1{gap:.25rem}.gap-1\.5{gap:.375rem}.gap-10{gap:2.5rem}.gap-11{gap:2.75rem}.gap-2{gap:.5rem}.gap-2\.5{gap:.625rem}.gap-3{gap:.75rem}.gap-4{gap:1rem}.gap-5{gap:1.25rem}.gap-6{gap:1.5rem}.gap-8{gap:2rem}.gap-x-12{-moz-column-gap:3rem;column-gap:3rem}.gap-y-10{row-gap:2.5rem}.self-start{align-self:flex-start}.overflow-hidden,.truncate{overflow:hidden}.truncate{text-overflow:ellipsis;white-space:nowrap}.break-words{overflow-wrap:break-word}.rounded-\[6px\]{border-radius:6px}.rounded-full{border-radius:9999px}.border{border-width:1px}.border-y{border-top-width:1px}.border-b,.border-y{border-bottom-width:1px}.border-t{border-top-width:1px}.border-\[var\(--line\)\]{border-color:var(--line)}.border-opacity-20{--tw-border-opacity:0.2}.bg-\[var\(--accent\)\]{background-color:var(--accent)}.bg-\[var\(--accent-soft\)\]{background-color:var(--accent-soft)}.bg-\[var\(--ink\)\]{background-color:var(--ink)}.bg-\[var\(--paper-2\)\]{background-color:var(--paper-2)}.object-cover{-o-object-fit:cover;object-fit:cover}.p-4{padding:1rem}.p-5{padding:1.25rem}.px-2{padding-left:.5rem;padding-right:.5rem}.px-3{padding-left:.75rem;padding-right:.75rem}.px-4{padding-left:1rem;padding-right:1rem}.px-6{padding-left:1.5rem;padding-right:1.5rem}.px-9{padding-left:2.25rem;padding-right:2.25rem}.py-1{padding-bottom:.25rem;padding-top:.25rem}.py-1\.5{padding-bottom:.375rem;padding-top:.375rem}.py-10{padding-bottom:2.5rem;padding-top:2.5rem}.py-24{padding-bottom:6rem;padding-top:6rem}.py-28{padding-bottom:7rem;padding-top:7rem}.py-3{padding-bottom:.75rem;padding-top:.75rem}.py-4{padding-bottom:1rem;padding-top:1rem}.py-5{padding-bottom:1.25rem;padding-top:1.25rem}.py-7{padding-bottom:1.75rem;padding-top:1.75rem}.pb-10{padding-bottom:2.5rem}.pb-9{padding-bottom:2.25rem}.pt-12{padding-top:3rem}.pt-24{padding-top:6rem}.pt-28{padding-top:7rem}.pt-8{padding-top:2rem}.pt-9{padding-top:2.25rem}.text-center{text-align:center}.text-right{text-align:right}.\!text-\[10px\]{font-size:10px!important}.\!text-\[9px\]{font-size:9px!important}.text-2xl{font-size:1.5rem;line-height:2rem}.text-3xl{font-size:1.875rem;line-height:2.25rem}.text-\[1\.1rem\]{font-size:1.1rem}.text-\[1\.7rem\]{font-size:1.7rem}.text-\[10px\]{font-size:10px}.text-\[14px\]{font-size:14px}.text-\[15px\]{font-size:15px}.text-\[clamp\(1\.15rem\2c 2\.6vw\2c 2rem\)\]{font-size:clamp(1.15rem,2.6vw,2rem)}.text-\[clamp\(1\.5rem\2c 5vw\2c 4rem\)\]{font-size:clamp(1.5rem,5vw,4rem)}.text-\[clamp\(1\.6rem\2c 3\.6vw\2c 3\.1rem\)\]{font-size:clamp(1.6rem,3.6vw,3.1rem)}.text-\[clamp\(2\.2rem\2c 6vw\2c 5rem\)\]{font-size:clamp(2.2rem,6vw,5rem)}.text-\[clamp\(2\.4rem\2c 5\.5vw\2c 4\.4rem\)\]{font-size:clamp(2.4rem,5.5vw,4.4rem)}.text-\[clamp\(2\.4rem\2c 6vw\2c 5rem\)\]{font-size:clamp(2.4rem,6vw,5rem)}.text-\[clamp\(2\.6rem\2c 4vw\2c 3\.6rem\)\]{font-size:clamp(2.6rem,4vw,3.6rem)}.text-\[clamp\(2rem\2c 3\.4vw\2c 3rem\)\]{font-size:clamp(2rem,3.4vw,3rem)}.text-\[clamp\(2rem\2c 5vw\2c 3\.4rem\)\]{font-size:clamp(2rem,5vw,3.4rem)}.text-\[clamp\(3rem\2c 8vw\2c 7rem\)\]{font-size:clamp(3rem,8vw,7rem)}.text-base{font-size:1rem;line-height:1.5rem}.text-lg{font-size:1.125rem}.text-lg,.text-xl{line-height:1.75rem}.text-xl{font-size:1.25rem}.font-medium{font-weight:500}.font-normal{font-weight:400}.font-semibold{font-weight:600}.italic{font-style:italic}.leading-\[\.92\]{line-height:.92}.leading-\[\.95\]{line-height:.95}.leading-\[\.9\]{line-height:.9}.leading-\[1\.05\]{line-height:1.05}.leading-\[1\.22\]{line-height:1.22}.leading-\[1\.25\]{line-height:1.25}.leading-relaxed{line-height:1.625}.\!tracking-\[\.08em\]{letter-spacing:.08em!important}.\!tracking-\[\.12em\]{letter-spacing:.12em!important}.tracking-\[-\.02em\]{letter-spacing:-.02em}.tracking-\[-\.035em\]{letter-spacing:-.035em}.tracking-\[-\.03em\]{letter-spacing:-.03em}.tracking-\[-\.04em\]{letter-spacing:-.04em}.tracking-tight{letter-spacing:-.025em}.text-\[\#f3efe6\]{--tw-text-opacity:1;color:rgb(243 239 230/var(--tw-text-opacity,1))}.text-\[var\(--accent\)\]{color:var(--accent)}.text-\[var\(--accent-soft\)\]{color:var(--accent-soft)}.text-\[var\(--ink\)\]{color:var(--ink)}.text-\[var\(--ink-soft\)\]{color:var(--ink-soft)}.text-\[var\(--paper\)\]{color:var(--paper)}.text-\[var\(--paper-2\)\]{color:var(--paper-2)}.opacity-60{opacity:.6}.mix-blend-difference{mix-blend-mode:difference}.sepia{--tw-sepia:sepia(100%)}.filter,.sepia{filter:var(--tw-blur) var(--tw-brightness) var(--tw-contrast) var(--tw-grayscale) var(--tw-hue-rotate) var(--tw-invert) var(--tw-saturate) var(--tw-sepia) var(--tw-drop-shadow)}.transition-colors{transition-duration:.15s;transition-property:color,background-color,border-color,text-decoration-color,fill,stroke;transition-timing-function:cubic-bezier(.4,0,.2,1)}.transition-opacity{transition-duration:.15s;transition-property:opacity;transition-timing-function:cubic-bezier(.4,0,.2,1)}.transition-transform{transition-duration:.15s;transition-property:transform;transition-timing-function:cubic-bezier(.4,0,.2,1)}.hover\:text-\[var\(--accent-soft\)\]:hover{color:var(--accent-soft)}.hover\:opacity-55:hover{opacity:.55}.group:hover .group-hover\:translate-x-1{--tw-translate-x:0.25rem}.group:hover .group-hover\:translate-x-1,.group:hover .group-hover\:translate-y-1\.5{transform:translate(var(--tw-translate-x),var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y))}.group:hover .group-hover\:translate-y-1\.5{--tw-translate-y:0.375rem}@media (min-width:640px){.sm\:block{display:block}}@media (min-width:768px){.md\:bottom-7{bottom:1.75rem}.md\:left-7{left:1.75rem}.md\:col-span-1{grid-column:span 1/span 1}.md\:col-span-10{grid-column:span 10/span 10}.md\:col-span-2{grid-column:span 2/span 2}.md\:col-span-3{grid-column:span 3/span 3}.md\:col-span-4{grid-column:span 4/span 4}.md\:col-span-5{grid-column:span 5/span 5}.md\:col-span-7{grid-column:span 7/span 7}.md\:col-span-8{grid-column:span 8/span 8}.md\:col-span-9{grid-column:span 9/span 9}.md\:col-start-10{grid-column-start:10}.md\:col-start-11{grid-column-start:11}.md\:col-start-5{grid-column-start:5}.md\:col-start-7{grid-column-start:7}.md\:col-start-9{grid-column-start:9}.md\:mb-16{margin-bottom:4rem}.md\:mb-24{margin-bottom:6rem}.md\:mb-8{margin-bottom:2rem}.md\:mt-32{margin-top:8rem}.md\:block{display:block}.md\:flex{display:flex}.md\:h-28{height:7rem}.md\:w-28{width:7rem}.md\:grid-cols-12{grid-template-columns:repeat(12,minmax(0,1fr))}.md\:grid-cols-3{grid-template-columns:repeat(3,minmax(0,1fr))}.md\:flex-row{flex-direction:row}.md\:items-center{align-items:center}.md\:justify-end{justify-content:flex-end}.md\:justify-between{justify-content:space-between}.md\:gap-12{gap:3rem}.md\:gap-5{gap:1.25rem}.md\:gap-y-14{row-gap:3.5rem}.md\:p-5{padding:1.25rem}.md\:p-7{padding:1.75rem}.md\:px-12{padding-left:3rem;padding-right:3rem}.md\:px-6{padding-left:1.5rem;padding-right:1.5rem}.md\:py-14{padding-bottom:3.5rem;padding-top:3.5rem}.md\:py-36{padding-bottom:9rem;padding-top:9rem}.md\:py-40{padding-bottom:10rem;padding-top:10rem}.md\:py-44{padding-bottom:11rem;padding-top:11rem}.md\:py-9{padding-bottom:2.25rem;padding-top:2.25rem}.md\:pt-32{padding-top:8rem}.md\:text-2xl{font-size:1.5rem;line-height:2rem}.md\:text-3xl{font-size:1.875rem;line-height:2.25rem}.md\:text-4xl{font-size:2.25rem;line-height:2.5rem}.md\:text-\[3\.2rem\]{font-size:3.2rem}.md\:text-base{font-size:1rem;line-height:1.5rem}.md\:text-lg{font-size:1.125rem;line-height:1.75rem}.md\:text-xl{font-size:1.25rem;line-height:1.75rem}}</style>
+<style>
+  :root{
+    --paper:#f3efe6;
+    --paper-2:#e9e3d6;
+    --ink:#16130f;
+    --ink-soft:#564e44;
+    --line:#c8c0b1;
+    --line-soft:#d9d2c4;
+    --accent:#9a3b27;
+    --accent-soft:#c2745c;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    background:var(--paper);
+    color:var(--ink);
+    font-family:'Archivo',sans-serif;
+    -webkit-font-smoothing:antialiased;
+    text-rendering:optimizeLegibility;
+    overflow-x:hidden;
+  }
+  ::selection{background:var(--accent);color:var(--paper)}
+  .serif{font-family:'Fraunces',serif;font-optical-sizing:auto}
+  .narrow{font-family:'Archivo Narrow',sans-serif}
+  .grain{
+    position:fixed;inset:0;pointer-events:none;z-index:9998;opacity:.05;mix-blend-mode:multiply;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  .edge{border-color:var(--line)}
+  .edge-soft{border-color:var(--line-soft)}
+
+  .reveal{opacity:0;transform:translateY(28px);transition:opacity 1.05s cubic-bezier(.16,1,.3,1),transform 1.05s cubic-bezier(.16,1,.3,1)}
+  .reveal.in{opacity:1;transform:none}
+  .reveal[data-d="1"]{transition-delay:.09s}
+  .reveal[data-d="2"]{transition-delay:.18s}
+  .reveal[data-d="3"]{transition-delay:.27s}
+  @media (prefers-reduced-motion:reduce){
+    .reveal{opacity:1!important;transform:none!important;transition:none}
+    .marq{animation:none!important}
+  }
+
+  /* HERO — escala brutal, peso con autoridad, itálica dramática */
+  .hero-l1{
+    font-size:clamp(2.6rem,11vw,11rem);
+    line-height:.86;
+    letter-spacing:-.045em;
+    font-weight:500;
+  }
+  .hero-l2{
+    font-size:clamp(3.4rem,15.5vw,16rem);
+    line-height:.8;
+    letter-spacing:-.055em;
+    font-weight:600;
+  }
+  .hero-em{
+    font-style:italic;
+    font-weight:400;
+    color:var(--accent);
+  }
+  .label{font-family:'Archivo Narrow',sans-serif;font-size:11px;letter-spacing:.28em;text-transform:uppercase}
+  .num-label{font-feature-settings:"tnum","ss01";letter-spacing:.06em}
+
+  .marq{display:flex;white-space:nowrap;will-change:transform;animation:marq 44s linear infinite}
+  @keyframes marq{to{transform:translateX(-50%)}}
+
+  /* PROJECT ROWS */
+  .proj{transition:background .55s cubic-bezier(.16,1,.3,1)}
+  .proj:hover{background:var(--ink)}
+  .proj:hover .p-ink{color:var(--paper)}
+  .proj:hover .p-soft{color:var(--paper-2);opacity:.62}
+  .proj:hover .p-num{color:var(--accent-soft)}
+  .proj:hover .p-arrow{transform:translate(7px,-7px);color:var(--accent-soft)}
+  .proj:hover .p-tag{border-color:#4a4238;color:var(--accent-soft)}
+  .proj:hover .p-frame{border-color:#4a4238}
+  .proj:hover .p-img{filter:grayscale(0) contrast(1) brightness(.96)}
+  .proj:hover .p-live{color:var(--accent-soft);border-color:#4a4238}
+  .p-arrow{transition:transform .55s cubic-bezier(.16,1,.3,1),color .55s}
+  .p-tag{transition:border-color .55s,color .55s}
+  .p-live{transition:border-color .55s,color .55s}
+  .p-live:hover{color:var(--paper)}
+  .p-frame{transition:border-color .55s}
+  .p-img{
+    filter:grayscale(.32) contrast(1.02) sepia(.06);
+    transition:filter .7s cubic-bezier(.16,1,.3,1),transform 1.1s cubic-bezier(.16,1,.3,1);
+    width:100%;height:100%;object-fit:cover;display:block;
+  }
+  .proj:hover .p-img{transform:scale(1.035)}
+
+  /* VIDEO facade */
+  .vid-frame{border:1px solid var(--line);background:var(--ink)}
+  .vid-poster{filter:grayscale(.28) contrast(1.03) brightness(.86) sepia(.05);transition:filter .8s,transform 1.2s cubic-bezier(.16,1,.3,1)}
+  .vid-wrap:hover .vid-poster{filter:grayscale(0) brightness(.78);transform:scale(1.025)}
+  .vid-play{transition:transform .55s cubic-bezier(.16,1,.3,1),background .45s,color .45s}
+  .vid-wrap:hover .vid-play{transform:translate(-50%,-50%) scale(1.06);background:var(--accent);color:var(--paper)}
+
+  a{color:inherit;text-decoration:none}
+
+  /* ===== BUILD-IT-LIVE — browser frame mini-landing (editorial) ===== */
+  .bw-window{
+    background:var(--paper);
+    border:1px solid var(--line);
+    box-shadow:0 1px 0 var(--line-soft),0 40px 80px -40px rgba(22,19,15,.4);
+  }
+  .bw-bar{
+    border-bottom:1px solid var(--line-soft);
+    background:var(--paper-2);
+  }
+  .bw-dot{width:10px;height:10px;border-radius:9999px;border:1px solid var(--line)}
+  .bw-url{
+    background:var(--paper);
+    border:1px solid var(--line-soft);
+    color:var(--ink-soft);
+  }
+
+  /* the mini canvas */
+  .bw-canvas{background:var(--paper);position:relative}
+
+  /* shared: every block starts as a thin-outline wireframe placeholder */
+  .bw-blk{
+    border:1px solid var(--line);
+    background:transparent;
+    border-radius:2px;
+    position:relative;
+    overflow:hidden;
+  }
+  /* the "fill" layer that wipes in during stage 2 */
+  .bw-fill{
+    position:absolute;inset:0;
+    transform:scaleX(0);
+    transform-origin:left center;
+    border-radius:1px;
+  }
+
+  /* run the loop only once the section is seen */
+  .build-run .bw-fill{animation:bwFill 9s cubic-bezier(.16,1,.3,1) infinite}
+  .build-run .bw-blk{animation:bwSolid 9s ease infinite}
+
+  /* hero */
+  .build-run .bw-hero .bw-fill{
+    background:linear-gradient(120deg,var(--accent) 0%,var(--accent-soft) 100%);
+    animation-delay:.9s;
+  }
+  .build-run .bw-hero{animation-delay:.9s}
+  /* image */
+  .build-run .bw-pic .bw-fill{
+    background:
+      radial-gradient(60% 90% at 75% 20%,rgba(255,255,255,.18),transparent 60%),
+      linear-gradient(160deg,#3a322a 0%,#1f1b16 100%);
+    animation-delay:1.25s;
+  }
+  .build-run .bw-pic{animation-delay:1.25s}
+  /* text lines */
+  .build-run .bw-tx1 .bw-fill{background:var(--ink);animation-delay:1.55s}
+  .build-run .bw-tx2 .bw-fill{background:var(--ink-soft);animation-delay:1.75s}
+  .build-run .bw-tx3 .bw-fill{background:var(--ink-soft);animation-delay:1.95s}
+  .build-run .bw-tx1{animation-delay:1.55s}
+  .build-run .bw-tx2{animation-delay:1.75s}
+  .build-run .bw-tx3{animation-delay:1.95s}
+  /* button */
+  .build-run .bw-btn .bw-fill{background:var(--accent);animation-delay:2.2s}
+  .build-run .bw-btn{animation-delay:2.2s}
+  /* navbar pills */
+  .build-run .bw-nav .bw-fill{background:var(--ink);animation-delay:.55s}
+  .build-run .bw-nav{animation-delay:.55s}
+  .build-run .bw-logo .bw-fill{background:var(--accent);animation-delay:.45s}
+  .build-run .bw-logo{animation-delay:.45s}
+
+  @keyframes bwFill{
+    0%,4%   {transform:scaleX(0)}
+    24%,82% {transform:scaleX(1)}
+    93%,100%{transform:scaleX(0)}
+  }
+  @keyframes bwSolid{
+    0%,4%   {border-color:var(--line)}
+    20%,86% {border-color:transparent}
+    96%,100%{border-color:var(--line)}
+  }
+
+  /* the address bar "types" the subdomain via a sweeping caret feel */
+  .build-run .bw-typing{animation:bwType 9s steps(1) infinite}
+  @keyframes bwType{
+    0%,6%{opacity:.45}
+    14%,100%{opacity:1}
+  }
+
+  /* button label appears only when filled */
+  .bw-btn-label{opacity:0}
+  .build-run .bw-btn-label{animation:bwLabel 9s ease infinite;animation-delay:2.35s}
+  @keyframes bwLabel{
+    0%,2%{opacity:0}
+    6%,82%{opacity:1}
+    90%,100%{opacity:0}
+  }
+  .build-run .bw-hero-label{animation:bwLabel 9s ease infinite;animation-delay:1.05s;opacity:0}
+
+  @media (prefers-reduced-motion:reduce){
+    .build-run .bw-fill,
+    .build-run .bw-blk,
+    .build-run .bw-typing,
+    .build-run .bw-btn-label,
+    .build-run .bw-hero-label{animation:none!important}
+    /* show the FINISHED state */
+    .bw-fill{transform:scaleX(1)!important}
+    .bw-blk{border-color:transparent!important}
+    .bw-btn-label,.bw-hero-label{opacity:1!important}
+  }
+</style>
+</head>
+<body>
+<main>
+<div class="grain"></div>
+
+<!-- NAV -->
+<header class="fixed top-0 left-0 right-0 z-[9000] mix-blend-difference text-[#f3efe6]">
+  <div class="max-w-[1560px] mx-auto px-6 md:px-12 h-20 flex items-center justify-between">
+    <a href="#top" class="serif text-xl font-medium tracking-tight">Jesús<span class="text-[var(--accent-soft)]">.</span></a>
+    <nav class="hidden md:flex items-center gap-11 label">
+      <a href="#work" class="hover:opacity-55 transition-opacity">Trabajo</a>
+      <a href="#about" class="hover:opacity-55 transition-opacity">Estudio</a>
+      <a href="#method" class="hover:opacity-55 transition-opacity">Método</a>
+      <a href="#contact" class="hover:opacity-55 transition-opacity">Contacto</a>
+    </nav>
+    <span class="label hidden sm:block">MX · MMXXVI</span>
+  </div>
+</header>
+
+<!-- HERO -->
+<section id="top" class="relative min-h-screen flex flex-col justify-between pt-28 pb-9 px-6 md:px-12">
+  <!-- top meta row -->
+  <div class="max-w-[1560px] w-full mx-auto grid grid-cols-2 md:grid-cols-12 gap-4 items-start label text-[var(--ink-soft)]">
+    <span class="reveal md:col-span-3">Indie maker · Builder</span>
+    <span class="reveal hidden md:block md:col-span-5 md:col-start-5 text-center" data-d="1">Software de verdad, no demos · Enviando ahora mismo</span>
+    <span class="reveal num-label text-right md:col-span-2 md:col-start-11" data-d="2">N.º 001 — Índice</span>
+  </div>
+
+  <!-- the type itself -->
+  <div class="max-w-[1560px] w-full mx-auto">
+    <div class="flex items-center gap-4 mb-5 reveal">
+      <span class="h-px w-12 bg-[var(--accent)]"></span>
+      <p class="serif italic text-[var(--accent)] text-lg md:text-2xl">Indie maker · Enviando ahora mismo —</p>
+    </div>
+    <h1 class="reveal" data-d="1">
+      <span class="hero-l1 serif block">Construyo <span class="serif font-normal italic text-[var(--ink-soft)]">y envío</span></span>
+      <span class="hero-l2 serif block">software <span class="hero-em">de verdad.</span></span>
+    </h1>
+  </div>
+
+  <!-- bottom anchor row -->
+  <div class="max-w-[1560px] w-full mx-auto grid grid-cols-1 md:grid-cols-12 gap-8 items-end pt-9 border-t edge reveal" data-d="2">
+    <p class="md:col-span-5 text-[15px] leading-relaxed text-[var(--ink-soft)]">
+      Soy Jesús. Hago productos de software que salen a producción, no presentaciones bonitas que mueren en un Figma. Mi estrella es <span class="text-[var(--ink)] font-medium">OpenLen</span>, un constructor de landing pages con IA. También envié <span class="text-[var(--ink)]">InariWatch</span> y <span class="text-[var(--ink)]">OrbitaPOS</span>.
+    </p>
+    <div class="md:col-span-3 md:col-start-7 flex items-center gap-3">
+      <span class="relative flex h-2 w-2">
+        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-[var(--accent)] opacity-60"></span>
+        <span class="relative inline-flex rounded-full h-2 w-2 bg-[var(--accent)]"></span>
+      </span>
+      <span class="label text-[var(--ink-soft)]">Enviando ahora mismo</span>
+    </div>
+    <a href="#work" class="md:col-span-2 md:col-start-11 group flex items-center justify-between md:justify-end gap-4 serif text-lg font-medium">
+      <span>Ver el trabajo</span>
+      <span class="text-[var(--accent)] group-hover:translate-y-1.5 transition-transform">↓</span>
+    </a>
+  </div>
+</section>
+
+<!-- HOOK BAND -->
+<div class="border-y edge bg-[var(--paper-2)] px-6 md:px-12 py-7 md:py-9">
+  <div class="max-w-[1560px] mx-auto grid grid-cols-1 md:grid-cols-12 gap-5 items-center reveal">
+    <span class="md:col-span-2 label text-[var(--accent)] num-label">Esta página —</span>
+    <p class="md:col-span-10 serif text-[clamp(1.15rem,2.6vw,2rem)] leading-[1.25] tracking-[-.02em] text-[var(--ink)]">
+      Esta misma página la construyó <span class="hero-em">OpenLen</span>. Sin plataforma externa — la armé pieza por pieza y la publiqué con mi propio producto.
+    </p>
+  </div>
+</div>
+
+<!-- MARQUEE -->
+<div class="border-b edge py-5 overflow-hidden bg-[var(--paper-2)]">
+  <div class="marq serif text-[1.7rem] md:text-[3.2rem] font-medium text-[var(--ink)]">
+    <span class="flex items-center">
+      <span class="px-9">OpenLen</span><span class="px-9 text-[var(--accent)] text-[1.1rem] md:text-2xl">✦</span>
+      <span class="px-9 italic font-normal">InariWatch</span><span class="px-9 text-[var(--accent)] text-[1.1rem] md:text-2xl">✦</span>
+      <span class="px-9">OrbitaPOS</span><span class="px-9 text-[var(--accent)] text-[1.1rem] md:text-2xl">✦</span>
+      <span class="px-9 italic font-normal">Diseño</span><span class="px-9 text-[var(--accent)] text-[1.1rem] md:text-2xl">✦</span>
+      <span class="px-9">Ingeniería</span><span class="px-9 text-[var(--accent)] text-[1.1rem] md:text-2xl">✦</span>
+      <span class="px-9 italic font-normal">Producto</span><span class="px-9 text-[var(--accent)] text-[1.1rem] md:text-2xl">✦</span>
+    </span>
+    <span class="flex items-center" aria-hidden="true">
+      <span class="px-9">OpenLen</span><span class="px-9 text-[var(--accent)] text-[1.1rem] md:text-2xl">✦</span>
+      <span class="px-9 italic font-normal">InariWatch</span><span class="px-9 text-[var(--accent)] text-[1.1rem] md:text-2xl">✦</span>
+      <span class="px-9">OrbitaPOS</span><span class="px-9 text-[var(--accent)] text-[1.1rem] md:text-2xl">✦</span>
+      <span class="px-9 italic font-normal">Diseño</span><span class="px-9 text-[var(--accent)] text-[1.1rem] md:text-2xl">✦</span>
+      <span class="px-9">Ingeniería</span><span class="px-9 text-[var(--accent)] text-[1.1rem] md:text-2xl">✦</span>
+      <span class="px-9 italic font-normal">Producto</span><span class="px-9 text-[var(--accent)] text-[1.1rem] md:text-2xl">✦</span>
+    </span>
+  </div>
+</div>
+
+<!-- WORK -->
+<section id="work" class="px-6 md:px-12 py-24 md:py-40">
+  <div class="max-w-[1560px] mx-auto">
+    <div class="grid grid-cols-1 md:grid-cols-12 gap-8 items-end mb-16 md:mb-24 reveal">
+      <div class="md:col-span-8">
+        <span class="num-label label text-[var(--ink-soft)] block mb-6">N.º 001 — Trabajo seleccionado</span>
+        <h2 class="serif text-[clamp(3rem,8vw,7rem)] leading-[.9] tracking-[-.04em] font-semibold">
+          Tres productos.<br><span class="italic font-normal text-[var(--accent)]">Todos enviados.</span>
+        </h2>
+      </div>
+      <p class="md:col-span-3 md:col-start-10 text-[14px] leading-relaxed text-[var(--ink-soft)]">
+        Software de verdad, no demos. Cada cosa de esta lista salió a producción de verdad — una sigue viva, dos open source.
+      </p>
+    </div>
+
+    <!-- 01 OpenLen -->
+    <a href="https://openlen.com" class="proj group block border-t edge reveal">
+      <div class="grid grid-cols-1 md:grid-cols-12 gap-6 py-10 md:py-14 px-2 md:px-6 items-center">
+        <span class="p-num serif text-[var(--accent)] text-2xl md:text-3xl md:col-span-1 num-label font-medium self-start">01</span>
+        <div class="md:col-span-3 self-start">
+          <h3 class="p-ink serif text-[clamp(2rem,5vw,3.4rem)] tracking-[-.03em] font-semibold transition-colors leading-[.95]">OpenLen</h3>
+          <p class="p-soft label text-[var(--ink-soft)] mt-4 transition-colors">★ Estrella · En vivo</p>
+          <div class="flex flex-wrap gap-2 mt-5">
+            <span class="p-tag label text-[var(--ink-soft)] border border-[var(--line)] rounded-full px-3 py-1">Next.js</span>
+            <span class="p-tag label text-[var(--ink-soft)] border border-[var(--line)] rounded-full px-3 py-1">Gemini</span>
+            <span class="p-tag label text-[var(--ink-soft)] border border-[var(--line)] rounded-full px-3 py-1">Rust</span>
+            <span class="p-tag label text-[var(--ink-soft)] border border-[var(--line)] rounded-full px-3 py-1">Self-host</span>
+          </div>
+          <a href="https://openlen.com" target="_blank" rel="noopener noreferrer" class="p-live label text-[var(--ink-soft)] border border-[var(--line)] rounded-full px-4 py-1.5 mt-5 inline-flex items-center gap-1.5">Ver en vivo ↗</a>
+        </div>
+        <p class="p-soft md:col-span-3 text-[15px] leading-relaxed text-[var(--ink-soft)] transition-colors self-start">
+          Describe una página, edítala y publícala en tu propio subdominio. La IA pone la estética.
+        </p>
+        <div class="md:col-span-4 md:col-start-9">
+          <div class="p-frame border edge overflow-hidden aspect-[16/10]">
+            <img class="p-img" src="img/editorial/openlen.webp" width="1280" height="860" loading="lazy" alt="Constructor visual de OpenLen mostrando una landing en edición">
+          </div>
+          <div class="flex items-center justify-end gap-3 mt-3">
+            <span class="p-tag label text-[var(--ink-soft)] border border-[var(--line)] rounded-full px-4 py-1.5">★ Estrella</span>
+            <span class="p-arrow serif text-2xl text-[var(--ink)]">↗</span>
+          </div>
+        </div>
+      </div>
+    </a>
+
+    <!-- 02 InariWatch -->
+    <a href="https://github.com/orbita-pos/inariwatch" class="proj group block border-t edge reveal">
+      <div class="grid grid-cols-1 md:grid-cols-12 gap-6 py-10 md:py-14 px-2 md:px-6 items-center">
+        <span class="p-num serif text-[var(--accent)] text-2xl md:text-3xl md:col-span-1 num-label font-medium self-start">02</span>
+        <div class="md:col-span-3 self-start">
+          <h3 class="p-ink serif text-[clamp(2rem,5vw,3.4rem)] tracking-[-.03em] font-semibold transition-colors leading-[.95]">InariWatch</h3>
+          <p class="p-soft label text-[var(--ink-soft)] mt-4 transition-colors">Monitoreo · Archivado</p>
+          <div class="flex flex-wrap gap-2 mt-5">
+            <span class="p-tag label text-[var(--ink-soft)] border border-[var(--line)] rounded-full px-3 py-1">Error tracking</span>
+            <span class="p-tag label text-[var(--ink-soft)] border border-[var(--line)] rounded-full px-3 py-1">Node</span>
+            <span class="p-tag label text-[var(--ink-soft)] border border-[var(--line)] rounded-full px-3 py-1">Open source</span>
+          </div>
+          <a href="https://github.com/orbita-pos/inariwatch" target="_blank" rel="noopener noreferrer" class="p-live label text-[var(--ink-soft)] border border-[var(--line)] rounded-full px-4 py-1.5 mt-5 inline-flex items-center gap-1.5">Código ↗</a>
+        </div>
+        <p class="p-soft md:col-span-3 text-[15px] leading-relaxed text-[var(--ink-soft)] transition-colors self-start">
+          Captura cada error de tu app Node antes de que lo haga tu usuario. Una línea para instalar.
+        </p>
+        <div class="md:col-span-4 md:col-start-9">
+          <div class="p-frame border edge overflow-hidden aspect-[16/10]">
+            <img class="p-img" src="img/editorial/inariwatch.webp" width="1280" height="860" loading="lazy" alt="Panel de InariWatch listando errores capturados de una app Node">
+          </div>
+          <div class="flex items-center justify-end gap-3 mt-3">
+            <span class="p-tag label text-[var(--ink-soft)] border border-[var(--line)] rounded-full px-4 py-1.5">Open source</span>
+            <span class="p-arrow serif text-2xl text-[var(--ink)]">↗</span>
+          </div>
+        </div>
+      </div>
+    </a>
+
+    <!-- 03 OrbitaPOS -->
+    <a href="https://github.com/orbita-pos/orbitapos" class="proj group block border-t border-b edge reveal">
+      <div class="grid grid-cols-1 md:grid-cols-12 gap-6 py-10 md:py-14 px-2 md:px-6 items-center">
+        <span class="p-num serif text-[var(--accent)] text-2xl md:text-3xl md:col-span-1 num-label font-medium self-start">03</span>
+        <div class="md:col-span-3 self-start">
+          <h3 class="p-ink serif text-[clamp(2rem,5vw,3.4rem)] tracking-[-.03em] font-semibold transition-colors leading-[.95]">OrbitaPOS</h3>
+          <p class="p-soft label text-[var(--ink-soft)] mt-4 transition-colors">Punto de venta · Archivado</p>
+          <div class="flex flex-wrap gap-2 mt-5">
+            <span class="p-tag label text-[var(--ink-soft)] border border-[var(--line)] rounded-full px-3 py-1">Next.js</span>
+            <span class="p-tag label text-[var(--ink-soft)] border border-[var(--line)] rounded-full px-3 py-1">Expo</span>
+            <span class="p-tag label text-[var(--ink-soft)] border border-[var(--line)] rounded-full px-3 py-1">Open source</span>
+          </div>
+          <a href="https://github.com/orbita-pos/orbitapos" target="_blank" rel="noopener noreferrer" class="p-live label text-[var(--ink-soft)] border border-[var(--line)] rounded-full px-4 py-1.5 mt-5 inline-flex items-center gap-1.5">Código ↗</a>
+        </div>
+        <p class="p-soft md:col-span-3 text-[15px] leading-relaxed text-[var(--ink-soft)] transition-colors self-start">
+          Punto de venta para tiendas — web + app móvil. Cobra, controla inventario y saca tickets, sin complicaciones.
+        </p>
+        <div class="md:col-span-4 md:col-start-9">
+          <div class="p-frame border edge overflow-hidden aspect-[16/10]">
+            <img class="p-img" src="img/editorial/orbitapos.webp" width="1280" height="860" loading="lazy" alt="Punto de venta OrbitaPOS para tiendas en web y app móvil">
+          </div>
+          <div class="flex items-center justify-end gap-3 mt-3">
+            <span class="p-tag label text-[var(--ink-soft)] border border-[var(--line)] rounded-full px-4 py-1.5">Open source</span>
+            <span class="p-arrow serif text-2xl text-[var(--ink)]">↗</span>
+          </div>
+        </div>
+      </div>
+    </a>
+  </div>
+</section>
+
+<!-- VIDEO / MEDIA -->
+<section id="media" class="px-6 md:px-12 py-24 md:py-36 bg-[var(--paper-2)] border-y edge">
+  <div class="max-w-[1560px] mx-auto">
+    <div class="grid grid-cols-1 md:grid-cols-12 gap-8 items-end mb-12 md:mb-16 reveal">
+      <div class="md:col-span-8">
+        <span class="num-label label text-[var(--ink-soft)] block mb-6">N.º 002 — Imágenes y video</span>
+        <h2 class="serif text-[clamp(2.2rem,6vw,5rem)] leading-[.92] tracking-[-.035em] font-semibold">
+          Imágenes y video —<br><span class="italic font-normal text-[var(--accent)]">sí, tu página de OpenLen puede llevarlos.</span>
+        </h2>
+      </div>
+      <p class="md:col-span-3 md:col-start-10 text-[14px] leading-relaxed text-[var(--ink-soft)]">
+        Fotografía, motion y reproducción en página. Todo dentro del mismo documento que publicas — sin servicios externos.
+      </p>
+    </div>
+
+    <div class="vid-wrap relative reveal" data-d="1">
+      <div class="vid-frame relative overflow-hidden aspect-video">
+        <video id="lux-video" class="w-full h-full object-cover block" preload="none"
+               poster="video/poster.jpg"
+               width="1600" height="900" controls playsinline>
+          <source src="video/openlen-explainer.mp4" type="video/mp4">
+          Tu navegador no soporta la reproducción de video.
+        </video>
+
+        <!-- facade -->
+        <div id="lux-facade" class="absolute inset-0 cursor-pointer">
+          <img class="vid-poster w-full h-full object-cover" src="video/poster.jpg" width="1600" height="900" loading="lazy" alt="Vista previa del video demostración de OpenLen">
+          <span class="absolute inset-0 bg-[var(--ink)]/25"></span>
+          <button id="lux-play" type="button" aria-label="Reproducir el video"
+                  class="vid-play absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center justify-center w-20 h-20 md:w-28 md:h-28 rounded-full bg-[var(--paper)]/92 text-[var(--ink)] border border-[var(--line)]">
+            <span class="serif text-3xl md:text-4xl ml-1.5">▶</span>
+          </button>
+          <span class="absolute bottom-5 left-5 md:bottom-7 md:left-7 label text-[var(--paper)]">Demo · OpenLen en acción</span>
+        </div>
+      </div>
+      <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mt-5">
+        <p class="serif italic text-[var(--accent)] text-base md:text-lg">Reproducción en página, dentro del documento publicado —</p>
+        <span class="label text-[var(--ink-soft)] num-label">OpenLen genera páginas así · 57KB · LCP 1.2s · 100 Lighthouse</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ABOUT / ESTUDIO -->
+<section id="about" class="px-6 md:px-12 py-24 md:py-40">
+  <div class="max-w-[1560px] mx-auto grid grid-cols-1 md:grid-cols-12 gap-10 md:gap-12">
+    <div class="md:col-span-3">
+      <span class="num-label label text-[var(--ink-soft)]">N.º 003 — El estudio</span>
+    </div>
+    <div class="md:col-span-9">
+      <p class="serif text-[clamp(1.6rem,3.6vw,3.1rem)] leading-[1.22] tracking-[-.02em] text-[var(--ink)] font-normal">
+        Diseño, escribo el backend, peleo con el deploy y vuelvo a empezar — <em class="hero-em">todo solo, todo en producción.</em> Builder solitario con manía por enviar: producto que la gente puede usar hoy, corriendo en mi propio Hetzner.
+      </p>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-8 mt-16 pt-12 border-t edge">
+        <div class="reveal">
+          <p class="serif text-[clamp(2.6rem,4vw,3.6rem)] text-[var(--accent)] font-semibold tracking-[-.03em] num-label">03</p>
+          <p class="label text-[var(--ink-soft)] mt-3">Productos enviados</p>
+        </div>
+        <div class="reveal" data-d="1">
+          <p class="serif text-[clamp(2.6rem,4vw,3.6rem)] text-[var(--accent)] font-semibold tracking-[-.03em] num-label">1×</p>
+          <p class="label text-[var(--ink-soft)] mt-3">Solo, sin equipo</p>
+        </div>
+        <div class="reveal" data-d="2">
+          <p class="serif text-[clamp(2rem,3.4vw,3rem)] text-[var(--accent)] font-semibold tracking-[-.02em] num-label leading-[1.05]">Self-host</p>
+          <p class="label text-[var(--ink-soft)] mt-3">en mi Hetzner</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- BUILD-IT-LIVE / SIGNATURE MOMENT -->
+<section id="method" class="relative px-6 md:px-12 py-28 md:py-44 overflow-hidden bg-[var(--paper-2)] border-y edge">
+  <div class="max-w-[1560px] mx-auto">
+    <div class="flex items-center justify-between mb-12 md:mb-16 reveal">
+      <span class="num-label label text-[var(--ink-soft)]">N.º 004 — Míralo construir</span>
+      <span class="label text-[var(--ink-soft)] hidden md:block">Esqueleto · Relleno · Publicado</span>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-12 gap-x-12 gap-y-10 md:gap-y-14 items-center">
+      <!-- left: copy -->
+      <div class="md:col-span-5">
+        <p class="serif italic text-[var(--accent)] text-xl md:text-2xl mb-5 reveal">Míralo construir —</p>
+        <h3 class="serif text-[clamp(2.4rem,5.5vw,4.4rem)] leading-[.95] tracking-[-.035em] font-semibold reveal" data-d="1">
+          Describe una página. <em class="hero-em">OpenLen la arma.</em>
+        </h3>
+        <p class="text-[15px] md:text-base leading-relaxed text-[var(--ink-soft)] mt-7 max-w-md reveal" data-d="2">
+          HTML estático, servido directo desde disco — sin runtime, sin esperas. La página se monta sola, capa por capa, frente a ti.
+        </p>
+        <div class="flex items-center gap-4 mt-8 reveal" data-d="3">
+          <span class="h-px w-10 bg-[var(--accent)]"></span>
+          <span class="label text-[var(--ink-soft)] num-label">Sin runtime, sin esperas · ~57KB · 100 Lighthouse</span>
+        </div>
+      </div>
+
+      <!-- right: the building browser -->
+      <div class="md:col-span-7 reveal" data-d="2">
+        <div id="build-frame" class="bw-window rounded-[6px] overflow-hidden">
+          <!-- chrome bar -->
+          <div class="bw-bar flex items-center gap-3 px-4 py-3">
+            <div class="flex items-center gap-2">
+              <span class="bw-dot" style="background:var(--accent-soft)"></span>
+              <span class="bw-dot" style="background:var(--line)"></span>
+              <span class="bw-dot" style="background:var(--line)"></span>
+            </div>
+            <div class="bw-url flex-1 flex items-center gap-2 rounded-full px-4 py-1.5 ml-1">
+              <span class="text-[10px]" style="color:var(--accent)">●</span>
+              <span class="bw-typing label !tracking-[.08em] !text-[10px] truncate">taqueria.openlen.com</span>
+            </div>
+            <span class="label !text-[9px] text-[var(--ink-soft)] hidden sm:block">publicado</span>
+          </div>
+
+          <!-- canvas: the mini-landing assembling -->
+          <div class="bw-canvas p-5 md:p-7" style="aspect-ratio:16/11">
+            <!-- navbar -->
+            <div class="flex items-center justify-between mb-6 md:mb-8">
+              <div class="bw-blk bw-logo" style="width:34px;height:34px;border-radius:8px"><span class="bw-fill"></span></div>
+              <div class="flex items-center gap-2.5">
+                <div class="bw-blk bw-nav" style="width:42px;height:9px"><span class="bw-fill"></span></div>
+                <div class="bw-blk bw-nav" style="width:42px;height:9px;animation-delay:.65s!important"><span class="bw-fill" style="animation-delay:.65s!important"></span></div>
+                <div class="bw-blk bw-nav" style="width:42px;height:9px;animation-delay:.75s!important"><span class="bw-fill" style="animation-delay:.75s!important"></span></div>
+              </div>
+            </div>
+
+            <!-- hero block -->
+            <div class="bw-blk bw-hero relative flex flex-col justify-end p-4 md:p-5 mb-5" style="height:34%;min-height:96px;border-radius:4px">
+              <span class="bw-fill"></span>
+              <div class="bw-hero-label relative serif text-[var(--paper)] text-base md:text-2xl tracking-[-.02em] leading-[1.05]">Taquería<br>El Buen Pastor</div>
+            </div>
+
+            <!-- two-up: image + text/btn -->
+            <div class="grid grid-cols-2 gap-4 md:gap-5">
+              <!-- image -->
+              <div class="bw-blk bw-pic" style="height:96px;border-radius:4px"><span class="bw-fill"></span></div>
+              <!-- text column -->
+              <div class="flex flex-col justify-center gap-2.5">
+                <div class="bw-blk bw-tx1" style="height:11px;width:90%"><span class="bw-fill"></span></div>
+                <div class="bw-blk bw-tx2" style="height:9px;width:100%"><span class="bw-fill"></span></div>
+                <div class="bw-blk bw-tx3" style="height:9px;width:72%"><span class="bw-fill"></span></div>
+                <div class="bw-blk bw-btn relative mt-2 flex items-center justify-center" style="height:30px;width:118px;border-radius:9999px">
+                  <span class="bw-fill"></span>
+                  <span class="bw-btn-label relative label !text-[9px] !tracking-[.12em] text-[var(--paper)]">Reservar</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CONTACT / FOOTER -->
+<footer id="contact" class="px-6 md:px-12 pt-24 md:pt-32 pb-10 border-t edge bg-[var(--ink)] text-[var(--paper)]">
+  <div class="max-w-[1560px] mx-auto">
+    <div class="grid grid-cols-1 md:grid-cols-12 gap-10 items-start">
+      <div class="md:col-span-8 reveal">
+        <p class="serif italic text-[var(--accent-soft)] text-lg md:text-xl mb-2">¿Construimos algo?</p>
+        <p class="serif text-[clamp(2.4rem,6vw,5rem)] leading-[.9] tracking-[-.04em] font-semibold mb-7">Enviemos juntos.</p>
+        <a href="mailto:info@jesusbr.com" class="serif text-[clamp(1.5rem,5vw,4rem)] leading-[.9] tracking-[-.03em] font-normal italic text-[var(--paper)] hover:text-[var(--accent-soft)] transition-colors inline-block break-words">
+          info@jesusbr.com
+        </a>
+      </div>
+      <div class="md:col-span-3 md:col-start-10 flex flex-col gap-1 label text-[var(--paper-2)] reveal" data-d="1">
+        <a href="https://openlen.com" class="flex items-center justify-between border-b edge-soft border-opacity-20 py-4 hover:text-[var(--accent-soft)] transition-colors group"><span>OpenLen</span><span class="group-hover:translate-x-1 transition-transform">↗</span></a>
+        <a href="https://github.com/orbita-pos/inariwatch" class="flex items-center justify-between border-b edge-soft border-opacity-20 py-4 hover:text-[var(--accent-soft)] transition-colors group"><span>InariWatch</span><span class="group-hover:translate-x-1 transition-transform">↗</span></a>
+        <a href="https://github.com/orbita-pos/orbitapos" class="flex items-center justify-between border-b edge-soft border-opacity-20 py-4 hover:text-[var(--accent-soft)] transition-colors group"><span>OrbitaPOS</span><span class="group-hover:translate-x-1 transition-transform">↗</span></a>
+      </div>
+    </div>
+
+    <div class="flex flex-col md:flex-row items-center justify-between gap-6 mt-24 md:mt-32 pt-8 border-t border-[var(--ink-soft)]/40">
+      <p class="label text-[var(--paper-2)] opacity-60">Indie maker · Envía software de verdad · © 2026</p>
+      <a href="https://openlen.com" class="group flex items-center gap-2.5 label text-[var(--paper-2)] hover:text-[var(--accent-soft)] transition-colors">
+        <span class="w-1.5 h-1.5 rounded-full bg-[var(--accent-soft)]"></span>
+        Hecho con OpenLen
+        <span class="group-hover:translate-x-1 transition-transform">↗</span>
+      </a>
+      <p class="label text-[var(--paper-2)] opacity-60 num-label">N.º 001 · MX</p>
+    </div>
+  </div>
+</footer>
+
+<script>
+(function(){
+  var io=new IntersectionObserver(function(entries){
+    entries.forEach(function(en){ if(en.isIntersecting){en.target.classList.add('in');io.unobserve(en.target);} });
+  },{threshold:.12});
+  document.querySelectorAll('.reveal').forEach(function(el){io.observe(el);});
+
+  // start the build-it-live loop only when seen
+  var frame=document.getElementById('build-frame');
+  if(frame){
+    var bio=new IntersectionObserver(function(entries){
+      entries.forEach(function(en){
+        if(en.isIntersecting){ frame.classList.add('build-run'); bio.unobserve(en.target); }
+      });
+    },{threshold:.25});
+    bio.observe(frame);
+  }
+
+  var video=document.getElementById('lux-video');
+  var facade=document.getElementById('lux-facade');
+  if(video&&facade){
+    function play(){
+      facade.style.display='none';
+      try{video.play();}catch(e){}
+    }
+    facade.addEventListener('click',play);
+    video.addEventListener('play',function(){facade.style.display='none';});
+  }
+})();
+</script>
+</main>
+</body>
+</html>
