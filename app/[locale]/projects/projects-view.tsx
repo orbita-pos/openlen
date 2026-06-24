@@ -41,6 +41,7 @@ import {
   Zap,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
+import { useToast } from "@/components/workspace-v2/toast";
 import { defaultLogoDataUrl } from "@/lib/branding/default-logo";
 import type { ProjectStatus, ProjectSummary } from "@/lib/projects";
 
@@ -107,6 +108,7 @@ export function ProjectsView({
   profiles: BusinessOption[];
 }) {
   const t = useTranslations("projects");
+  const toast = useToast();
   const router = useRouter();
   const searchParams = useSearchParams();
   const [projects, setProjects] = useState(initial);
@@ -200,7 +202,7 @@ export function ProjectsView({
     async (id: string): Promise<boolean> => {
       const res = await fetch(`/api/projects/${id}`, { method: "DELETE" });
       if (!res.ok) {
-        alert(t("actions.deleteError", { error: res.statusText }));
+        toast.error(t("toast.deleteError"));
         return false;
       }
       setProjects((prev) => prev.filter((p) => p.id !== id));
@@ -209,10 +211,11 @@ export function ProjectsView({
         next.delete(id);
         return next;
       });
+      toast.success(t("toast.deleted"));
       refresh();
       return true;
     },
-    [refresh],
+    [refresh, t, toast],
   );
 
   const confirmDelete = useCallback(async () => {
@@ -234,15 +237,16 @@ export function ProjectsView({
         body: JSON.stringify({ status: "archived" }),
       });
       if (!res.ok) {
-        alert(t("actions.archiveError", { error: res.statusText }));
+        toast.error(t("toast.archiveError"));
         return;
       }
       setProjects((prev) =>
         prev.map((p) => (p.id === id ? { ...p, status: "archived" } : p)),
       );
+      toast.success(t("toast.archived"));
       refresh();
     },
-    [refresh],
+    [refresh, t, toast],
   );
 
   const onMove = useCallback(
@@ -253,36 +257,40 @@ export function ProjectsView({
         body: JSON.stringify({ profileId }),
       });
       if (!res.ok) {
-        alert(t("actions.moveError", { error: res.statusText }));
+        toast.error(t("toast.moveError"));
         return;
       }
       setProjects((prev) =>
         prev.map((p) => (p.id === id ? { ...p, profileId } : p)),
       );
       setMoveTarget(null);
+      const business = profiles.find((b) => b.id === profileId)?.name?.trim();
+      toast.success(t("toast.moved", { business: business || "—" }));
     },
-    [t],
+    [t, toast, profiles],
   );
 
   const onRename = useCallback(
     async (id: string, currentTitle: string) => {
       const next = prompt(t("actions.renamePrompt"), currentTitle);
       if (!next || next.trim() === "" || next === currentTitle) return;
+      const trimmed = next.trim();
       const res = await fetch(`/api/projects/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title: next.trim() }),
+        body: JSON.stringify({ title: trimmed }),
       });
       if (!res.ok) {
-        alert(t("actions.renameError", { error: res.statusText }));
+        toast.error(t("toast.renameError"));
         return;
       }
       setProjects((prev) =>
-        prev.map((p) => (p.id === id ? { ...p, title: next.trim() } : p)),
+        prev.map((p) => (p.id === id ? { ...p, title: trimmed } : p)),
       );
+      toast.success(t("toast.renamed", { name: trimmed }));
       refresh();
     },
-    [refresh],
+    [refresh, t, toast],
   );
 
   const onDuplicate = useCallback(
@@ -291,7 +299,7 @@ export function ProjectsView({
         method: "POST",
       });
       if (!res.ok) {
-        alert(t("actions.duplicateError", { error: res.statusText }));
+        toast.error(t("toast.duplicateError"));
         return;
       }
       const data = (await res.json().catch(() => null)) as {
@@ -307,9 +315,10 @@ export function ProjectsView({
         };
         setProjects((prev) => [newProject, ...prev]);
       }
+      toast.success(t("toast.duplicated"));
       refresh();
     },
-    [refresh],
+    [refresh, t, toast],
   );
 
   const onDownloadZip = useCallback(async (id: string) => {
@@ -317,7 +326,7 @@ export function ProjectsView({
       r.ok ? r.json() : null,
     );
     if (!proj?.project?.data) {
-      alert(t("actions.exportLoadError"));
+      toast.error(t("toast.exportLoadError"));
       return;
     }
     const res = await fetch("/api/export/zip", {
@@ -326,44 +335,67 @@ export function ProjectsView({
       body: JSON.stringify(proj.project.data),
     });
     if (!res.ok) {
-      alert(t("actions.zipError", { error: res.statusText }));
+      toast.error(t("toast.zipError"));
       return;
     }
     const blob = await res.blob();
     const filename = `${proj.project.title.toLowerCase().replace(/[^a-z0-9]+/g, "-")}.zip`;
     triggerDownload(blob, filename);
-  }, [t]);
+    toast.success(t("toast.downloadStarted"));
+  }, [t, toast]);
 
   const onBulkDelete = useCallback(async () => {
     if (selected.size === 0) return;
     if (!confirm(t("actions.bulkDeleteConfirm", { count: selected.size }))) return;
     const ids = Array.from(selected);
-    await Promise.all(
-      ids.map((id) => fetch(`/api/projects/${id}`, { method: "DELETE" })),
-    );
+    const count = ids.length;
+    try {
+      const results = await Promise.all(
+        ids.map((id) => fetch(`/api/projects/${id}`, { method: "DELETE" })),
+      );
+      if (!results.every((r) => r.ok)) {
+        toast.error(t("toast.somethingWrong"));
+        return;
+      }
+    } catch {
+      toast.error(t("toast.somethingWrong"));
+      return;
+    }
     setProjects((prev) => prev.filter((p) => !selected.has(p.id)));
     setSelected(new Set());
+    toast.success(t("toast.bulkDeleted", { count }));
     refresh();
-  }, [selected, refresh]);
+  }, [selected, refresh, t, toast]);
 
   const onBulkArchive = useCallback(async () => {
     if (selected.size === 0) return;
     const ids = Array.from(selected);
-    await Promise.all(
-      ids.map((id) =>
-        fetch(`/api/projects/${id}`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ status: "archived" }),
-        }),
-      ),
-    );
+    const count = ids.length;
+    try {
+      const results = await Promise.all(
+        ids.map((id) =>
+          fetch(`/api/projects/${id}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ status: "archived" }),
+          }),
+        ),
+      );
+      if (!results.every((r) => r.ok)) {
+        toast.error(t("toast.somethingWrong"));
+        return;
+      }
+    } catch {
+      toast.error(t("toast.somethingWrong"));
+      return;
+    }
     setProjects((prev) =>
       prev.map((p) => (selected.has(p.id) ? { ...p, status: "archived" } : p)),
     );
     setSelected(new Set());
+    toast.success(t("toast.bulkArchived", { count }));
     refresh();
-  }, [selected, refresh]);
+  }, [selected, refresh, t, toast]);
 
   const toggleSelect = (id: string) =>
     setSelected((prev) => {

@@ -22,6 +22,7 @@ import {
   X,
 } from "../icons";
 import { useFocusTrap } from "../use-focus-trap";
+import { useToast } from "../toast";
 
 interface SitePagesPanelProps {
   pages: SitePageSummary[];
@@ -45,6 +46,7 @@ export function SitePagesPanel({
   onToggleMembersOnly,
 }: SitePagesPanelProps) {
   const t = useTranslations("wsChrome");
+  const toast = useToast();
   const [adding, setAdding] = useState(false);
   const [draft, setDraft] = useState("");
   const [creating, setCreating] = useState(false);
@@ -246,10 +248,16 @@ export function SitePagesPanel({
           busy={deleting === deleteTarget}
           onClose={() => setDeleteTarget(null)}
           onConfirm={async () => {
-            setDeleting(deleteTarget);
-            const ok = await onDelete(deleteTarget);
+            const slug = deleteTarget;
+            setDeleting(slug);
+            const ok = await onDelete(slug);
             setDeleting(null);
-            if (ok) setDeleteTarget(null);
+            if (ok) {
+              setDeleteTarget(null);
+              toast.success(t("toast.deleted.title"));
+            } else {
+              toast.error(t("toast.deleteFailed.title"));
+            }
           }}
         />
       )}

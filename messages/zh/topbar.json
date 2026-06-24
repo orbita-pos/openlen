@@ -39,7 +39,9 @@
     "confirm": "要将线上站点回滚到部署 {sha} 吗？访客将在几秒内看到这个较早的版本。",
     "errorGone": "该部署已从磁盘清理，无法恢复。",
     "errorGeneric": "回滚失败，请重试。",
-    "inProgress": "回滚中…"
+    "inProgress": "回滚中…",
+    "successTitle": "已回滚到 {sha}",
+    "successBody": "你的线上站点现在显示的是这个较早的部署版本。"
   },
   "theme": {
     "lightMode": "浅色模式",

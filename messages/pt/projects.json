@@ -199,5 +199,23 @@
   },
   "sections": {
     "comingSoon": "Vamos conectar aqui no próximo passo."
+  },
+  "toast": {
+    "deleted": "Página excluída",
+    "deleteError": "Não foi possível excluir a página.",
+    "renamed": "Renomeada para {name}",
+    "renameError": "Não foi possível renomear a página.",
+    "duplicated": "Página duplicada",
+    "duplicateError": "Não foi possível duplicar a página.",
+    "archived": "Página arquivada",
+    "archiveError": "Não foi possível arquivar a página.",
+    "moved": "Movida para {business}",
+    "moveError": "Não foi possível mover a página.",
+    "downloadStarted": "Download iniciado",
+    "exportLoadError": "Não foi possível carregar a página para exportar.",
+    "zipError": "Não foi possível gerar o .zip.",
+    "bulkDeleted": "{count, plural, one {# página excluída} other {# páginas excluídas}}",
+    "bulkArchived": "{count, plural, one {# página arquivada} other {# páginas arquivadas}}",
+    "somethingWrong": "Algo deu errado"
   }
 }

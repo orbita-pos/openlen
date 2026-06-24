@@ -7,6 +7,16 @@
     "daysAgo": "{count} d geleden",
     "weeksAgo": "{count} w geleden"
   },
+  "toast": {
+    "restored": "Hersteld naar {label}",
+    "restoredNoLabel": "Hersteld naar deze versie",
+    "restoreError": "Kon de versie niet herstellen",
+    "saved": "Versie opgeslagen · {label}",
+    "saveError": "Kon de versie niet opslaan",
+    "pinned": "Versie vastgezet",
+    "unpinned": "Versie losgemaakt",
+    "pinError": "Kon het vastzetten niet bijwerken"
+  },
   "pages": {
     "newPage": "Nieuwe pagina",
     "active": "Actief",

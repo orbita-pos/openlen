@@ -33,5 +33,11 @@
     "all": "전체",
     "pending": "대기 중",
     "visible": "표시됨"
+  },
+  "toast": {
+    "deleted": "댓글을 삭제했습니다",
+    "deleteError": "댓글을 삭제하지 못했습니다",
+    "banned": "작성자를 차단했습니다",
+    "banError": "작성자를 차단하지 못했습니다"
   }
 }

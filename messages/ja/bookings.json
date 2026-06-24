@@ -92,5 +92,14 @@
     "statusCompleted": "完了",
     "statusNoShow": "無断キャンセル",
     "cancelConfirm": "この予約をキャンセルしますか？訪問者に通知されます。"
+  },
+  "toast": {
+    "archived": "サービスをアーカイブしました",
+    "archiveError": "サービスをアーカイブできませんでした。",
+    "confirm": "予約を確定しました",
+    "cancel": "予約をキャンセルしました",
+    "complete": "予約を完了しました",
+    "no_show": "無断キャンセルとして記録しました",
+    "actionError": "予約を更新できませんでした。"
   }
 }

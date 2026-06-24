@@ -44,5 +44,9 @@
     "edit": "编辑",
     "send": "发送",
     "confirmSend": "立即发送？"
+  },
+  "toast": {
+    "deleted": "活动已删除",
+    "deleteError": "无法删除该活动，请重试。"
   }
 }

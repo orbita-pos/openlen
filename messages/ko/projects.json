@@ -199,5 +199,23 @@
   },
   "sections": {
     "comingSoon": "다음 단계에서 여기에 표시됩니다."
+  },
+  "toast": {
+    "deleted": "페이지를 삭제했습니다",
+    "deleteError": "페이지를 삭제하지 못했습니다.",
+    "renamed": "{name}(으)로 이름을 변경했습니다",
+    "renameError": "페이지 이름을 변경하지 못했습니다.",
+    "duplicated": "페이지를 복제했습니다",
+    "duplicateError": "페이지를 복제하지 못했습니다.",
+    "archived": "페이지를 보관했습니다",
+    "archiveError": "페이지를 보관하지 못했습니다.",
+    "moved": "{business}(으)로 이동했습니다",
+    "moveError": "페이지를 이동하지 못했습니다.",
+    "downloadStarted": "다운로드를 시작했습니다",
+    "exportLoadError": "내보낼 페이지를 불러오지 못했습니다.",
+    "zipError": ".zip 파일을 만들지 못했습니다.",
+    "bulkDeleted": "{count, plural, other {페이지 #개를 삭제했습니다}}",
+    "bulkArchived": "{count, plural, other {페이지 #개를 보관했습니다}}",
+    "somethingWrong": "문제가 발생했습니다"
   }
 }

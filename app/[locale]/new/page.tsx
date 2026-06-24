@@ -89,6 +89,7 @@ import {
 } from "@/components/workspace-v2/replace-asset-modal";
 import { StatusBar } from "@/components/workspace-v2/status-bar";
 import { TopBar } from "@/components/workspace-v2/top-bar";
+import { useToast } from "@/components/workspace-v2/toast";
 import { stripEditorInstrumentation } from "@/components/workspace-v2/strip-editor-instrumentation";
 import { useDarkMode } from "@/lib/use-dark-mode";
 import { useEditorSound } from "@/lib/use-editor-sound";
@@ -222,6 +223,7 @@ function NewV2Inner() {
   const tAsset = useTranslations("modalsAsset");
   const locale = useLocale();
   const [dark, toggleDark] = useDarkMode();
+  const toast = useToast();
   // Editor sound (creamy click on rail switching) + TopBar volume control.
   const {
     volume: soundVolume,
@@ -2160,7 +2162,10 @@ function NewV2Inner() {
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ formIndex, patch, ...(page ? { page } : {}) }),
       })
-        .then((r) => (r.ok ? r.json() : null))
+        .then((r) => {
+          if (!r.ok) throw new Error(`PATCH failed (${r.status})`);
+          return r.json();
+        })
         .then((res) => {
           if (!res) return;
           // Mirror the server's merged form config into local state.
@@ -2171,10 +2176,13 @@ function NewV2Inner() {
             else delete forms[key];
             return { ...prev, settings: { ...prev.settings, forms } };
           });
+          toast.success(t("toast.formSaved"));
         })
-        .catch(() => {});
+        .catch(() => {
+          toast.error(t("toast.formError"));
+        });
     },
-    [loadedProject?.id],
+    [loadedProject?.id, toast, t],
   );
   // Send a test lead notification email to whichever address would receive
   // the real one for this form. The button in the inspector's Form section
@@ -2244,14 +2252,16 @@ function NewV2Inner() {
       })
         .then((r) => {
           if (!r.ok) throw new Error(`PATCH failed (${r.status})`);
+          toast.success(t("toast.logoUpdated"));
         })
         .catch(() => {
           setLoadedProject((p) =>
             p ? { ...p, logoUrl: prevLogoUrl } : p,
           );
+          toast.error(t("toast.logoError"));
         });
     },
-    [loadedProject?.id, loadedProject?.logoUrl],
+    [loadedProject?.id, loadedProject?.logoUrl, toast, t],
   );
 
   const persistRename = useCallback(
@@ -2270,9 +2280,10 @@ function NewV2Inner() {
         })
         .catch(() => {
           setProjectName(prevName);
+          toast.error(t("toast.renameError"));
         });
     },
-    [loadedProject?.id, projectName],
+    [loadedProject?.id, projectName, toast, t],
   );
 
   const applyAnalyticsDisabled = useCallback(
@@ -2291,19 +2302,27 @@ function NewV2Inner() {
         method: "PATCH",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ analyticsDisabled: disabled }),
-      }).catch(() => {
-        // On failure roll the toggle back so UI matches server state.
-        setLoadedProject((prev) =>
-          prev
-            ? {
-                ...prev,
-                settings: { ...prev.settings, analyticsDisabled: !disabled },
-              }
-            : prev,
-        );
-      });
+      })
+        .then((r) => {
+          if (!r.ok) throw new Error(`PATCH failed (${r.status})`);
+          toast.success(
+            t(disabled ? "toast.analyticsDisabled" : "toast.analyticsEnabled"),
+          );
+        })
+        .catch(() => {
+          // On failure roll the toggle back so UI matches server state.
+          setLoadedProject((prev) =>
+            prev
+              ? {
+                  ...prev,
+                  settings: { ...prev.settings, analyticsDisabled: !disabled },
+                }
+              : prev,
+          );
+          toast.error(t("toast.saveError"));
+        });
     },
-    [loadedProject?.id],
+    [loadedProject?.id, toast, t],
   );
   // Motion Looks — pick a scroll-choreography preset. Optimistic: updates the
   // setting locally (which re-applies the live iframe preview via the
@@ -2322,13 +2341,18 @@ function NewV2Inner() {
         method: "PATCH",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ motion: preset || null }),
-      }).catch(() => {
-        setLoadedProject((p) =>
-          p ? { ...p, settings: { ...p.settings, motion: prev } } : p,
-        );
-      });
+      })
+        .then((r) => {
+          if (!r.ok) throw new Error(`PATCH failed (${r.status})`);
+        })
+        .catch(() => {
+          setLoadedProject((p) =>
+            p ? { ...p, settings: { ...p.settings, motion: prev } } : p,
+          );
+          toast.error(t("toast.saveError"));
+        });
     },
-    [loadedProject?.id, loadedProject?.settings?.motion],
+    [loadedProject?.id, loadedProject?.settings?.motion, toast, t],
   );
   // Page music — set/replace/remove the floating player's track. Optimistic
   // like motion: updates the setting locally (which re-applies the live
@@ -2347,13 +2371,18 @@ function NewV2Inner() {
         method: "PATCH",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ music }),
-      }).catch(() => {
-        setLoadedProject((p) =>
-          p ? { ...p, settings: { ...p.settings, music: prev } } : p,
-        );
-      });
+      })
+        .then((r) => {
+          if (!r.ok) throw new Error(`PATCH failed (${r.status})`);
+        })
+        .catch(() => {
+          setLoadedProject((p) =>
+            p ? { ...p, settings: { ...p.settings, music: prev } } : p,
+          );
+          toast.error(t("toast.saveError"));
+        });
     },
-    [loadedProject?.id, loadedProject?.settings?.music],
+    [loadedProject?.id, loadedProject?.settings?.music, toast, t],
   );
   // Members module — settings switches (Módulos tab). Awaited (not optimistic)
   // so the panel's toggle reflects the server truth. First enable may also
@@ -2371,7 +2400,10 @@ function NewV2Inner() {
           headers: { "content-type": "application/json" },
           body: JSON.stringify({ members: patch }),
         });
-        if (!r.ok) return { ok: false };
+        if (!r.ok) {
+          toast.error(t("toast.moduleError"));
+          return { ok: false };
+        }
         const d = (await r.json()) as {
           settings?: ProjectSettings;
           createdPage?: { slug: string; title: string; html: string };
@@ -2402,12 +2434,21 @@ function NewV2Inner() {
               }
             : p,
         );
+        if (typeof patch.enabled === "boolean") {
+          const module = t("toast.moduleMembers");
+          toast.success(
+            t(patch.enabled ? "toast.moduleEnabled" : "toast.moduleDisabled", {
+              module,
+            }),
+          );
+        }
         return { ok: true, createdPageSlug: d.createdPage?.slug };
       } catch {
+        toast.error(t("toast.moduleError"));
         return { ok: false };
       }
     },
-    [loadedProject?.id],
+    [loadedProject?.id, toast, t],
   );
   // Members module — flip a subpage's "solo miembros" flag from the Site tab.
   // The server auto-enables the module when the first page gets gated (atomic
@@ -2422,7 +2463,10 @@ function NewV2Inner() {
           headers: { "content-type": "application/json" },
           body: JSON.stringify({ membersOnly: next }),
         });
-        if (!r.ok) return false;
+        if (!r.ok) {
+          toast.error(t("toast.membersOnlyError"));
+          return false;
+        }
         const d = (await r.json()) as { membersAutoEnabled?: boolean };
         setLoadedProject((p) => {
           if (!p || !p.pages[slug]) return p;
@@ -2445,12 +2489,16 @@ function NewV2Inner() {
               : {}),
           };
         });
+        toast.success(
+          t(next ? "toast.membersOnlyOn" : "toast.membersOnlyOff"),
+        );
         return true;
       } catch {
+        toast.error(t("toast.membersOnlyError"));
         return false;
       }
     },
-    [loadedProject?.id],
+    [loadedProject?.id, toast, t],
   );
   // Broadcast module — enable switch (Módulos card). Awaited; mirrors the
   // members toggle. Enabling reveals the Broadcast tab.
@@ -2464,7 +2512,10 @@ function NewV2Inner() {
           headers: { "content-type": "application/json" },
           body: JSON.stringify({ broadcast: patch }),
         });
-        if (!r.ok) return false;
+        if (!r.ok) {
+          toast.error(t("toast.moduleError"));
+          return false;
+        }
         setLoadedProject((p) =>
           p
             ? {
@@ -2476,12 +2527,21 @@ function NewV2Inner() {
               }
             : p,
         );
+        if (typeof patch.enabled === "boolean") {
+          const module = t("toast.moduleBroadcast");
+          toast.success(
+            t(patch.enabled ? "toast.moduleEnabled" : "toast.moduleDisabled", {
+              module,
+            }),
+          );
+        }
         return true;
       } catch {
+        toast.error(t("toast.moduleError"));
         return false;
       }
     },
-    [loadedProject?.id],
+    [loadedProject?.id, toast, t],
   );
   // Comments module — enable + moderation switches (Módulos card). Awaited,
   // mirrors the broadcast toggle.
@@ -2495,7 +2555,10 @@ function NewV2Inner() {
           headers: { "content-type": "application/json" },
           body: JSON.stringify({ comments: patch }),
         });
-        if (!r.ok) return false;
+        if (!r.ok) {
+          toast.error(t("toast.moduleError"));
+          return false;
+        }
         setLoadedProject((p) =>
           p
             ? {
@@ -2507,12 +2570,21 @@ function NewV2Inner() {
               }
             : p,
         );
+        if (typeof patch.enabled === "boolean") {
+          const module = t("toast.moduleComments");
+          toast.success(
+            t(patch.enabled ? "toast.moduleEnabled" : "toast.moduleDisabled", {
+              module,
+            }),
+          );
+        }
         return true;
       } catch {
+        toast.error(t("toast.moduleError"));
         return false;
       }
     },
-    [loadedProject?.id],
+    [loadedProject?.id, toast, t],
   );
   // Drop a comments-section placeholder into the live page (reuses the
   // section-insert path). It's a STATIC marker — no Gemini, no credit; the
@@ -2537,7 +2609,10 @@ function NewV2Inner() {
           headers: { "content-type": "application/json" },
           body: JSON.stringify({ bookings: patch }),
         });
-        if (!r.ok) return false;
+        if (!r.ok) {
+          toast.error(t("toast.moduleError"));
+          return false;
+        }
         setLoadedProject((p) =>
           p
             ? {
@@ -2549,12 +2624,21 @@ function NewV2Inner() {
               }
             : p,
         );
+        if (typeof patch.enabled === "boolean") {
+          const module = t("toast.moduleBookings");
+          toast.success(
+            t(patch.enabled ? "toast.moduleEnabled" : "toast.moduleDisabled", {
+              module,
+            }),
+          );
+        }
         return true;
       } catch {
+        toast.error(t("toast.moduleError"));
         return false;
       }
     },
-    [loadedProject?.id],
+    [loadedProject?.id, toast, t],
   );
   const updateCollectionsSettings = useCallback(
     async (patch: CollectionsSettings): Promise<boolean> => {
@@ -2566,7 +2650,10 @@ function NewV2Inner() {
           headers: { "content-type": "application/json" },
           body: JSON.stringify({ collections: patch }),
         });
-        if (!r.ok) return false;
+        if (!r.ok) {
+          toast.error(t("toast.moduleError"));
+          return false;
+        }
         setLoadedProject((p) =>
           p
             ? {
@@ -2578,12 +2665,21 @@ function NewV2Inner() {
               }
             : p,
         );
+        if (typeof patch.enabled === "boolean") {
+          const module = t("toast.moduleCollections");
+          toast.success(
+            t(patch.enabled ? "toast.moduleEnabled" : "toast.moduleDisabled", {
+              module,
+            }),
+          );
+        }
         return true;
       } catch {
+        toast.error(t("toast.moduleError"));
         return false;
       }
     },
-    [loadedProject?.id],
+    [loadedProject?.id, toast, t],
   );
   const insertCollectionsSection = useCallback(() => {
     insertNonceRef.current += 1;
@@ -3418,7 +3514,20 @@ function NewV2Inner() {
             })(),
           }}
           onSuccess={(newSubdomain) => {
-            if (newSubdomain) playReward(); // celebrate a real publish (not unpublish)
+            if (newSubdomain) {
+              playReward(); // celebrate a real publish (not unpublish)
+              toast.success(t("toast.publishedTitle"), {
+                description: t("toast.publishedBody", { subdomain: newSubdomain }),
+                action: {
+                  label: t("toast.openSite"),
+                  href: `https://${newSubdomain}.openlen.com`,
+                },
+              });
+            } else {
+              toast.info(t("toast.unpublishedTitle"), {
+                description: t("toast.unpublishedBody"),
+              });
+            }
             setLoadedProject((prev) =>
               prev
                 ? {

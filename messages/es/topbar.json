@@ -39,7 +39,9 @@
     "confirm": "¿Restaurar el sitio en vivo al despliegue {sha}? Los visitantes verán esta versión anterior en cuestión de segundos.",
     "errorGone": "Ese despliegue se eliminó del disco y no se puede restaurar.",
     "errorGeneric": "No se pudo restaurar. Inténtalo de nuevo.",
-    "inProgress": "Restaurando…"
+    "inProgress": "Restaurando…",
+    "successTitle": "Restaurado a {sha}",
+    "successBody": "Tu sitio en vivo ahora sirve este despliegue anterior."
   },
   "theme": {
     "lightMode": "Modo claro",

@@ -6,6 +6,16 @@
     "apply": "Toepassen",
     "loading": "Laden…"
   },
+  "toast": {
+    "imageUploaded": "Afbeelding geüpload",
+    "imageUploadError": "Kon de afbeelding niet uploaden",
+    "videoUploaded": "Video geüpload",
+    "videoUploadError": "Kon de video niet uploaden",
+    "bgRemoved": "Achtergrond verwijderd",
+    "bgRemoveError": "Kon de achtergrond niet verwijderen",
+    "imageEdited": "Afbeelding bewerkt",
+    "imageEditError": "Kon de afbeelding niet bewerken"
+  },
   "header": {
     "iconTitle": "Pictogram vervangen",
     "imageTitle": "Afbeelding vervangen",

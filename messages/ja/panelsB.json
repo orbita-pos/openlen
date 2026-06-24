@@ -134,5 +134,15 @@
       "approx": "Approximate · per-browser in one session",
       "untracked": "{count} untracked"
     }
+  },
+  "toast": {
+    "restored": "{label} に復元しました",
+    "restoredNoLabel": "このバージョンに復元しました",
+    "restoreError": "バージョンを復元できませんでした",
+    "saved": "バージョンを保存しました · {label}",
+    "saveError": "バージョンを保存できませんでした",
+    "pinned": "バージョンをピン留めしました",
+    "unpinned": "ピン留めを解除しました",
+    "pinError": "ピン留めを更新できませんでした"
   }
 }

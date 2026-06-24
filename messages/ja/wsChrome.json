@@ -233,5 +233,13 @@
     "membersOnlyBadge": "メンバー限定",
     "membersOnlyOn": "/{slug} をメンバー限定にする",
     "membersOnlyOff": "/{slug} を公開にする"
+  },
+  "toast": {
+    "deleted": {
+      "title": "ページを削除しました"
+    },
+    "deleteFailed": {
+      "title": "ページを削除できませんでした。"
+    }
   }
 }

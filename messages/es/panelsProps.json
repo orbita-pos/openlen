@@ -174,5 +174,11 @@
     "uploadError": "No se pudo subir — prueba con otra imagen.",
     "light": "Clara",
     "dark": "Oscura"
+  },
+  "toast": {
+    "themeFromLogo": "Estilo derivado del logo",
+    "themeFromLogoError": "No se pudo leer el logo — intenta resubirlo.",
+    "worldApplied": "Temática aplicada",
+    "worldError": "No se pudo subir — prueba con otra imagen."
   }
 }

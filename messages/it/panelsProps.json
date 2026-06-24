@@ -174,5 +174,11 @@
     "uploadError": "Caricamento non riuscito — prova con un'altra immagine.",
     "light": "Chiaro",
     "dark": "Scuro"
+  },
+  "toast": {
+    "themeFromLogo": "Tema ricavato dal logo",
+    "themeFromLogoError": "Impossibile leggere il logo — prova a ricaricarlo.",
+    "worldApplied": "Mondo applicato",
+    "worldError": "Caricamento non riuscito — prova con un'altra immagine."
   }
 }

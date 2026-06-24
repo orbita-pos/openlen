@@ -134,5 +134,15 @@
       "approx": "Approximate · per-browser in one session",
       "untracked": "{count} untracked"
     }
+  },
+  "toast": {
+    "restored": "Ripristinata alla versione {label}",
+    "restoredNoLabel": "Ripristinata a questa versione",
+    "restoreError": "Impossibile ripristinare la versione",
+    "saved": "Versione salvata · {label}",
+    "saveError": "Impossibile salvare la versione",
+    "pinned": "Versione fissata",
+    "unpinned": "Versione sbloccata",
+    "pinError": "Impossibile aggiornare il pin"
   }
 }

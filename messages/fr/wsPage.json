@@ -68,5 +68,31 @@
     "applying": "Applying the template to your page…",
     "notice": "Page restyled. Review the example content (testimonials, prices) before publishing.",
     "lowCredits": "Not enough credits to restyle this page."
+  },
+  "toast": {
+    "publishedTitle": "Publiée",
+    "publishedBody": "Votre page est en ligne sur {subdomain}.openlen.com",
+    "openSite": "Ouvrir le site",
+    "unpublishedTitle": "Page dépubliée",
+    "unpublishedBody": "Elle n'est plus accessible à cette adresse.",
+    "moduleEnabled": "{module} activé",
+    "moduleDisabled": "{module} désactivé",
+    "moduleError": "Mise à jour du module impossible.",
+    "moduleMembers": "Membres",
+    "moduleBroadcast": "Broadcast",
+    "moduleComments": "Commentaires",
+    "moduleBookings": "Réservations",
+    "moduleCollections": "Collections",
+    "membersOnlyOn": "La page est désormais réservée aux membres",
+    "membersOnlyOff": "La page est désormais publique",
+    "membersOnlyError": "Impossible de modifier l'accès à la page.",
+    "renameError": "Renommage de la page impossible.",
+    "logoUpdated": "Logo mis à jour",
+    "logoError": "Mise à jour du logo impossible.",
+    "formSaved": "Réglages du formulaire enregistrés",
+    "formError": "Enregistrement des réglages du formulaire impossible.",
+    "analyticsEnabled": "Statistiques activées",
+    "analyticsDisabled": "Statistiques désactivées",
+    "saveError": "Impossible d'enregistrer la modification."
   }
 }

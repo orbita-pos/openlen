@@ -5,6 +5,16 @@
   "loading": "Loading…",
   "theme": "Switch theme",
   "toast": "Saved. Your pages now use this info.",
+  "toasts": {
+    "deleted": "Profile deleted",
+    "deleteError": "Couldn't delete the profile. Try again.",
+    "logoUploaded": "Logo uploaded",
+    "logoError": "Couldn't upload the logo. Try again.",
+    "photosUploaded": "{count, plural, one {# photo uploaded} other {# photos uploaded}}",
+    "photosError": "Couldn't upload the photos. Try again.",
+    "defaultSet": "Set as default",
+    "defaultError": "Couldn't set as default. Try again."
+  },
   "deleteConfirm": "Delete \"{name}\"?",
   "switcher": {
     "change": "Switch business",

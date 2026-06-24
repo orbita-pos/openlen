@@ -155,5 +155,9 @@
     },
     "profileEmpty": "Adicione um logo ou fotos ao seu perfil para vê-los aqui.",
     "uploadsEmpty": "As imagens que você enviar para esta página aparecerão aqui."
+  },
+  "toast": {
+    "saved": "Perfil salvo",
+    "saveError": "Não foi possível salvar o seu negócio. Tente novamente."
   }
 }

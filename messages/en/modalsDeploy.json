@@ -1,4 +1,9 @@
 {
+  "toast": {
+    "deployedTitle": "Deployed to {provider}",
+    "deployedBody": "Your page is building — it goes live in a moment.",
+    "disconnectedTitle": "Disconnected from {provider}"
+  },
   "header": {
     "titleVercel": "Deploy to Vercel",
     "titleGithub": "Push to GitHub",

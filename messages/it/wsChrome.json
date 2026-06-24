@@ -233,5 +233,13 @@
     "membersOnlyBadge": "Solo membri",
     "membersOnlyOn": "Rendi /{slug} solo per membri",
     "membersOnlyOff": "Rendi /{slug} pubblica"
+  },
+  "toast": {
+    "deleted": {
+      "title": "Pagina eliminata"
+    },
+    "deleteFailed": {
+      "title": "Impossibile eliminare la pagina."
+    }
   }
 }

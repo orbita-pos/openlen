@@ -119,5 +119,15 @@
     "confirmLabel": "Digite {name} para confirmar",
     "cancel": "Cancelar",
     "confirm": "Excluir empresa"
+  },
+  "toasts": {
+    "deleted": "Perfil excluído",
+    "deleteError": "Não foi possível excluir o perfil. Tente novamente.",
+    "logoUploaded": "Logo enviado",
+    "logoError": "Não foi possível enviar o logo. Tente novamente.",
+    "photosUploaded": "{count, plural, one {# foto enviada} other {# fotos enviadas}}",
+    "photosError": "Não foi possível enviar as fotos. Tente novamente.",
+    "defaultSet": "Definido como padrão",
+    "defaultError": "Não foi possível definir como padrão. Tente novamente."
   }
 }

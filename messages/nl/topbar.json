@@ -39,7 +39,9 @@
     "confirm": "De live site terugzetten naar implementatie {sha}? Bezoekers zien deze oudere versie binnen enkele seconden.",
     "errorGone": "Die implementatie is van de schijf verwijderd en kan niet worden hersteld.",
     "errorGeneric": "Terugzetten mislukt. Probeer het opnieuw.",
-    "inProgress": "Terugzetten…"
+    "inProgress": "Terugzetten…",
+    "successTitle": "Teruggezet naar {sha}",
+    "successBody": "Je live site serveert nu deze eerdere implementatie."
   },
   "theme": {
     "lightMode": "Lichte modus",

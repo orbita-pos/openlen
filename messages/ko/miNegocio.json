@@ -5,6 +5,16 @@
   "loading": "불러오는 중…",
   "theme": "테마 바꾸기",
   "toast": "저장했어요. 이제 페이지에 이 정보가 쓰여요.",
+  "toasts": {
+    "deleted": "가게를 삭제했어요",
+    "deleteError": "가게를 삭제하지 못했어요. 다시 시도해 주세요.",
+    "logoUploaded": "로고를 올렸어요",
+    "logoError": "로고를 올리지 못했어요. 다시 시도해 주세요.",
+    "photosUploaded": "{count, plural, other {사진 #장을 올렸어요}}",
+    "photosError": "사진을 올리지 못했어요. 다시 시도해 주세요.",
+    "defaultSet": "기본으로 설정했어요",
+    "defaultError": "기본으로 설정하지 못했어요. 다시 시도해 주세요."
+  },
   "deleteConfirm": "\"{name}\"을(를) 삭제할까요?",
   "switcher": {
     "change": "가게 바꾸기",

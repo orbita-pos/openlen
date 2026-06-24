@@ -1,4 +1,13 @@
 {
+  "toast": {
+    "publishedTitle": "Gepubliceerd",
+    "publishedBody": "Je pagina is live op {subdomain}.openlen.com",
+    "domainClaimedTitle": "{domain} geclaimd",
+    "domainClaimedBody": "Voeg de onderstaande DNS-records toe en verifieer daarna.",
+    "domainVerifiedTitle": "{domain} geverifieerd",
+    "domainVerifiedBody": "Het TLS-certificaat wordt uitgegeven — het gaat zo live.",
+    "domainRemovedTitle": "{domain} verwijderd"
+  },
   "customDomain": {
     "validation": {
       "invalidHostname": "Geen geldige hostnaam.",

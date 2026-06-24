@@ -8,6 +8,7 @@
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Check, EyeOff, Loader, MessageSq, Trash, Users } from "../icons";
+import { useToast } from "../toast";
 
 interface CommentItem {
   id: string;
@@ -27,6 +28,7 @@ export function CommentsPanel({
   currentProjectId?: string | null;
 }) {
   const t = useTranslations("comments");
+  const toast = useToast();
   const [items, setItems] = useState<CommentItem[] | null>(null);
   const [pending, setPending] = useState(0);
   const [filter, setFilter] = useState<Filter>("all");
@@ -72,11 +74,22 @@ export function CommentsPanel({
     );
   }
 
-  const act = async (id: string, fn: () => Promise<Response>) => {
+  const act = async (
+    id: string,
+    fn: () => Promise<Response>,
+    cb?: { onSuccess?: () => void; onError?: () => void },
+  ) => {
     setBusy(id);
     try {
       const r = await fn();
-      if (r.ok && currentProjectId) load(currentProjectId, filter);
+      if (r.ok) {
+        if (currentProjectId) load(currentProjectId, filter);
+        cb?.onSuccess?.();
+      } else {
+        cb?.onError?.();
+      }
+    } catch {
+      cb?.onError?.();
     } finally {
       setBusy(null);
       setConfirmBan(null);
@@ -91,12 +104,24 @@ export function CommentsPanel({
       }),
     );
   const remove = (id: string) =>
-    act(id, () =>
-      fetch(`/api/projects/${currentProjectId}/comments/${id}`, { method: "DELETE" }),
+    act(
+      id,
+      () =>
+        fetch(`/api/projects/${currentProjectId}/comments/${id}`, { method: "DELETE" }),
+      {
+        onSuccess: () => toast.success(t("toast.deleted")),
+        onError: () => toast.error(t("toast.deleteError")),
+      },
     );
   const ban = (id: string) =>
-    act(id, () =>
-      fetch(`/api/projects/${currentProjectId}/comments/${id}/ban`, { method: "POST" }),
+    act(
+      id,
+      () =>
+        fetch(`/api/projects/${currentProjectId}/comments/${id}/ban`, { method: "POST" }),
+      {
+        onSuccess: () => toast.success(t("toast.banned")),
+        onError: () => toast.error(t("toast.banError")),
+      },
     );
 
   return (

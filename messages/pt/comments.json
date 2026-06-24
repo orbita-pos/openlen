@@ -33,5 +33,11 @@
     "all": "Todos",
     "pending": "Pendentes",
     "visible": "Visíveis"
+  },
+  "toast": {
+    "deleted": "Comentário excluído",
+    "deleteError": "Não foi possível excluir o comentário",
+    "banned": "Autor banido",
+    "banError": "Não foi possível banir o autor"
   }
 }

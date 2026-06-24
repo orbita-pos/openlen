@@ -5,6 +5,16 @@
   "loading": "Cargando…",
   "theme": "Cambiar tema",
   "toast": "Guardado. Tus páginas ya usan esta info.",
+  "toasts": {
+    "deleted": "Negocio eliminado",
+    "deleteError": "No se pudo eliminar el negocio. Inténtalo de nuevo.",
+    "logoUploaded": "Logo subido",
+    "logoError": "No se pudo subir el logo. Inténtalo de nuevo.",
+    "photosUploaded": "{count, plural, one {# foto subida} other {# fotos subidas}}",
+    "photosError": "No se pudieron subir las fotos. Inténtalo de nuevo.",
+    "defaultSet": "Establecido como principal",
+    "defaultError": "No se pudo establecer como principal. Inténtalo de nuevo."
+  },
   "deleteConfirm": "¿Eliminar \"{name}\"?",
   "switcher": {
     "change": "Cambiar negocio",

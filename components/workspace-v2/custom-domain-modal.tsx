@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { useFocusTrap } from "./use-focus-trap";
+import { useToast } from "./toast";
 import {
   AlertCircle,
   CheckCircle2,
@@ -124,6 +125,7 @@ export function CustomDomainModal({
   onAutoPublished,
 }: CustomDomainModalProps) {
   const t = useTranslations("modalsDomain");
+  const toast = useToast();
   const [domains, setDomains] = useState<DomainRow[] | null>(null);
   const [loading, setLoading] = useState(false);
   const [input, setInput] = useState("");
@@ -279,6 +281,9 @@ export function CustomDomainModal({
       }
       setAutoPublishedSub(sub);
       onAutoPublished?.(sub);
+      toast.success(t("toast.publishedTitle"), {
+        description: t("toast.publishedBody", { subdomain: sub }),
+      });
       await refresh();
     } catch {
       setError(t("customDomain.errors.networkPreparing"));
@@ -344,6 +349,9 @@ export function CustomDomainModal({
       setInput("");
       if (body.dns && body.domain) {
         setLastAddedDns({ domain: body.domain, dns: body.dns });
+        toast.success(t("toast.domainClaimedTitle", { domain: body.domain }), {
+          description: t("toast.domainClaimedBody"),
+        });
         // Probe Domain Connect now so the Connect button appears in
         // the same render as the manual DNS panel — avoids a "manual
         // first, button appears 500ms later" flicker.
@@ -374,6 +382,9 @@ export function CustomDomainModal({
         setError(body.message || t("customDomain.errors.verifyFailed"));
       } else {
         setError(null);
+        toast.success(t("toast.domainVerifiedTitle", { domain }), {
+          description: t("toast.domainVerifiedBody"),
+        });
         // Keep the DNS panel collapsed once verified.
         if (lastAddedDns?.domain === domain) setLastAddedDns(null);
       }
@@ -400,6 +411,7 @@ export function CustomDomainModal({
         setError(t("customDomain.errors.removeFailed"));
       } else {
         setError(null);
+        toast.success(t("toast.domainRemovedTitle", { domain }));
         if (lastAddedDns?.domain === domain) setLastAddedDns(null);
       }
       await refresh();

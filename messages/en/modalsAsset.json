@@ -155,6 +155,16 @@
     "aiNoCredits": "Not enough credits for an AI edit.",
     "aiFailed": "Couldn't edit the image. Try a different instruction."
   },
+  "toast": {
+    "imageUploaded": "Image uploaded",
+    "imageUploadError": "Couldn't upload the image",
+    "videoUploaded": "Video uploaded",
+    "videoUploadError": "Couldn't upload the video",
+    "bgRemoved": "Background removed",
+    "bgRemoveError": "Couldn't remove the background",
+    "imageEdited": "Image edited",
+    "imageEditError": "Couldn't edit the image"
+  },
   "autofill": {
     "title": "Fill with your info",
     "subtitle": "Upload an image with your info — or just describe your business. Your template fills with your real content; the design stays the same.",

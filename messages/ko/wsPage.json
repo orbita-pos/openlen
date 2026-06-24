@@ -68,5 +68,31 @@
     "applying": "Applying the template to your page…",
     "notice": "Page restyled. Review the example content (testimonials, prices) before publishing.",
     "lowCredits": "Not enough credits to restyle this page."
+  },
+  "toast": {
+    "publishedTitle": "게시됨",
+    "publishedBody": "{subdomain}.openlen.com 에서 페이지가 공개되었습니다",
+    "openSite": "사이트 열기",
+    "unpublishedTitle": "게시 해제됨",
+    "unpublishedBody": "해당 주소에서 더 이상 접속할 수 없습니다.",
+    "moduleEnabled": "{module}을(를) 켰습니다",
+    "moduleDisabled": "{module}을(를) 껐습니다",
+    "moduleError": "모듈을 업데이트하지 못했습니다.",
+    "moduleMembers": "멤버",
+    "moduleBroadcast": "Broadcast",
+    "moduleComments": "댓글",
+    "moduleBookings": "예약",
+    "moduleCollections": "컬렉션",
+    "membersOnlyOn": "이제 페이지가 멤버 전용입니다",
+    "membersOnlyOff": "이제 페이지가 공개되었습니다",
+    "membersOnlyError": "페이지 접근 권한을 변경하지 못했습니다.",
+    "renameError": "페이지 이름을 변경하지 못했습니다.",
+    "logoUpdated": "로고를 업데이트했습니다",
+    "logoError": "로고를 업데이트하지 못했습니다.",
+    "formSaved": "양식 설정을 저장했습니다",
+    "formError": "양식 설정을 저장하지 못했습니다.",
+    "analyticsEnabled": "분석을 켰습니다",
+    "analyticsDisabled": "분석을 껐습니다",
+    "saveError": "변경 사항을 저장하지 못했습니다."
   }
 }

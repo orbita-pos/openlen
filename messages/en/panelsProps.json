@@ -174,5 +174,11 @@
     "uploadError": "Upload failed — try a different image.",
     "light": "Light",
     "dark": "Dark"
+  },
+  "toast": {
+    "themeFromLogo": "Theme derived from logo",
+    "themeFromLogoError": "Couldn't read the logo — try re-uploading it.",
+    "worldApplied": "World applied",
+    "worldError": "Upload failed — try a different image."
   }
 }

@@ -199,5 +199,23 @@
   },
   "sections": {
     "comingSoon": "Bientôt disponible ici."
+  },
+  "toast": {
+    "deleted": "Page supprimée",
+    "deleteError": "Suppression de la page impossible.",
+    "renamed": "Renommée en {name}",
+    "renameError": "Renommage de la page impossible.",
+    "duplicated": "Page dupliquée",
+    "duplicateError": "Duplication de la page impossible.",
+    "archived": "Page archivée",
+    "archiveError": "Archivage de la page impossible.",
+    "moved": "Déplacée vers {business}",
+    "moveError": "Déplacement de la page impossible.",
+    "downloadStarted": "Téléchargement démarré",
+    "exportLoadError": "Impossible de charger la page à exporter.",
+    "zipError": "Création du .zip impossible.",
+    "bulkDeleted": "{count, plural, one {# page supprimée} other {# pages supprimées}}",
+    "bulkArchived": "{count, plural, one {# page archivée} other {# pages archivées}}",
+    "somethingWrong": "Une erreur s'est produite"
   }
 }

@@ -1,4 +1,13 @@
 {
+  "toast": {
+    "publishedTitle": "公開しました",
+    "publishedBody": "ページは {subdomain}.openlen.com で公開中です",
+    "domainClaimedTitle": "{domain} を取得しました",
+    "domainClaimedBody": "下記の DNS レコードを追加してから、検証してください。",
+    "domainVerifiedTitle": "{domain} を検証しました",
+    "domainVerifiedBody": "TLS 証明書を発行しています — まもなく有効になります。",
+    "domainRemovedTitle": "{domain} を削除しました"
+  },
   "customDomain": {
     "validation": {
       "invalidHostname": "有効なホスト名ではありません。",

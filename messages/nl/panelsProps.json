@@ -3,6 +3,12 @@
     "inspector": "Inspecteur",
     "closeInspector": "Inspecteur sluiten"
   },
+  "toast": {
+    "themeFromLogo": "Thema afgeleid van logo",
+    "themeFromLogoError": "Kon het logo niet lezen — probeer het opnieuw te uploaden.",
+    "worldApplied": "Wereld toegepast",
+    "worldError": "Uploaden mislukt — probeer een andere afbeelding."
+  },
   "element": {
     "pageSettings": "Pagina-instellingen"
   },

@@ -199,5 +199,23 @@
   },
   "sections": {
     "comingSoon": "次のステップでここに表示されます。"
+  },
+  "toast": {
+    "deleted": "ページを削除しました",
+    "deleteError": "ページを削除できませんでした。",
+    "renamed": "{name} に名前を変更しました",
+    "renameError": "ページの名前を変更できませんでした。",
+    "duplicated": "ページを複製しました",
+    "duplicateError": "ページを複製できませんでした。",
+    "archived": "ページをアーカイブしました",
+    "archiveError": "ページをアーカイブできませんでした。",
+    "moved": "{business} に移動しました",
+    "moveError": "ページを移動できませんでした。",
+    "downloadStarted": "ダウンロードを開始しました",
+    "exportLoadError": "エクスポート用にページを読み込めませんでした。",
+    "zipError": ".zip を作成できませんでした。",
+    "bulkDeleted": "{count, plural, other {# 件のページを削除しました}}",
+    "bulkArchived": "{count, plural, other {# 件のページをアーカイブしました}}",
+    "somethingWrong": "問題が発生しました"
   }
 }

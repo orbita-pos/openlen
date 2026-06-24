@@ -39,7 +39,9 @@
     "confirm": "Reverter o site no ar para a publicação {sha}? Os visitantes verão esta versão anterior em segundos.",
     "errorGone": "Essa publicação foi removida do disco e não pode ser restaurada.",
     "errorGeneric": "Falha na reversão. Tente novamente.",
-    "inProgress": "Revertendo…"
+    "inProgress": "Revertendo…",
+    "successTitle": "Revertido para {sha}",
+    "successBody": "Seu site no ar agora exibe esta publicação anterior."
   },
   "theme": {
     "lightMode": "Modo claro",

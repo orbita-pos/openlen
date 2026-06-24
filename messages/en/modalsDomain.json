@@ -1,4 +1,13 @@
 {
+  "toast": {
+    "publishedTitle": "Published",
+    "publishedBody": "Your page is live at {subdomain}.openlen.com",
+    "domainClaimedTitle": "{domain} claimed",
+    "domainClaimedBody": "Add the DNS records below, then verify.",
+    "domainVerifiedTitle": "{domain} verified",
+    "domainVerifiedBody": "TLS certificate is being issued — it goes live shortly.",
+    "domainRemovedTitle": "{domain} removed"
+  },
   "customDomain": {
     "validation": {
       "invalidHostname": "Not a valid hostname.",

@@ -32,6 +32,7 @@ import {
   X,
 } from "./icons";
 import { IconBtn, StatusDot } from "./ui";
+import { useToast } from "./toast";
 import { CreditPill } from "@/components/app/credit-pill";
 import { OpenLenMark } from "@/components/openlen-logo";
 import { LocaleSwitcher } from "@/components/locale-switcher";
@@ -168,6 +169,7 @@ export function TopBar({
   onToggleSoundMute,
 }: TopBarProps) {
   const t = useTranslations("topbar");
+  const toast = useToast();
   const locale = useLocale();
   const { data: session } = useSession();
   const userName = session?.user?.name ?? "";
@@ -273,7 +275,7 @@ export function TopBar({
       });
       if (!res.ok) {
         const body = (await res.json().catch(() => ({}))) as { error?: string };
-        window.alert(
+        toast.error(
           body.error === "release_gone"
             ? t("rollback.errorGone")
             : t("rollback.errorGeneric"),
@@ -282,6 +284,9 @@ export function TopBar({
       }
       setDeployOpen(false);
       onRolledBack?.();
+      toast.success(t("rollback.successTitle", { sha }), {
+        description: t("rollback.successBody"),
+      });
     } finally {
       setRollingSha(null);
     }

@@ -230,5 +230,15 @@
       "streamRead": "Échec de la lecture du flux",
       "unknown": "Erreur inconnue"
     }
+  },
+  "toast": {
+    "imageUploaded": "Image importée",
+    "imageUploadError": "Import de l'image impossible",
+    "videoUploaded": "Vidéo importée",
+    "videoUploadError": "Import de la vidéo impossible",
+    "bgRemoved": "Fond supprimé",
+    "bgRemoveError": "Suppression du fond impossible",
+    "imageEdited": "Image modifiée",
+    "imageEditError": "Modification de l'image impossible"
   }
 }

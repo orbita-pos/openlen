@@ -174,5 +174,11 @@
     "uploadError": "Échec de l'envoi — essayez une autre image.",
     "light": "Clair",
     "dark": "Sombre"
+  },
+  "toast": {
+    "themeFromLogo": "Thème dérivé du logo",
+    "themeFromLogoError": "Impossible de lire le logo — essayez de le réimporter.",
+    "worldApplied": "Univers appliqué",
+    "worldError": "Échec de l'import — essayez une autre image."
   }
 }

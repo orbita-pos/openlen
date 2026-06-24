@@ -92,5 +92,14 @@
     "statusCompleted": "완료됨",
     "statusNoShow": "노쇼",
     "cancelConfirm": "이 예약을 취소할까요? 방문자에게 알림이 갑니다."
+  },
+  "toast": {
+    "archived": "서비스를 보관했습니다",
+    "archiveError": "서비스를 보관하지 못했습니다.",
+    "confirm": "예약을 확정했습니다",
+    "cancel": "예약을 취소했습니다",
+    "complete": "예약을 완료 처리했습니다",
+    "no_show": "노쇼로 표시했습니다",
+    "actionError": "예약을 업데이트하지 못했습니다."
   }
 }

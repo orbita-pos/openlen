@@ -92,5 +92,14 @@
     "statusCompleted": "Abgeschlossen",
     "statusNoShow": "Nicht erschienen",
     "cancelConfirm": "Diese Buchung stornieren? Der Besucher wird benachrichtigt."
+  },
+  "toast": {
+    "archived": "Leistung archiviert",
+    "archiveError": "Die Leistung konnte nicht archiviert werden.",
+    "confirm": "Buchung bestätigt",
+    "cancel": "Buchung storniert",
+    "complete": "Buchung abgeschlossen",
+    "no_show": "Als nicht erschienen markiert",
+    "actionError": "Die Buchung konnte nicht aktualisiert werden."
   }
 }

@@ -9,6 +9,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Calendar, Check, ChevronLeft, Loader, Pencil, Plus, Trash, X } from "../icons";
+import { useToast } from "../toast";
 
 type Weekday = 0 | 1 | 2 | 3 | 4 | 5 | 6;
 interface DayRange {
@@ -72,6 +73,7 @@ export function BookingsPanel({
   defaultTz?: string;
 }) {
   const t = useTranslations("bookings");
+  const toast = useToast();
   const [view, setView] = useState<"services" | "bookings">("services");
   const [services, setServices] = useState<Service[] | null>(null);
   const [bookings, setBookings] = useState<Booking[] | null>(null);
@@ -179,7 +181,15 @@ export function BookingsPanel({
             onAdd={() => setEditing("new")}
             onEdit={(s) => setEditing(s)}
             onArchive={async (id) => {
-              await fetch(`/api/projects/${currentProjectId}/bookings/services/${id}`, { method: "DELETE" });
+              try {
+                const r = await fetch(`/api/projects/${currentProjectId}/bookings/services/${id}`, {
+                  method: "DELETE",
+                });
+                if (!r.ok) throw new Error(String(r.status));
+                toast.success(t("toast.archived"));
+              } catch {
+                toast.error(t("toast.archiveError"));
+              }
               loadServices(currentProjectId);
             }}
           />
@@ -188,12 +198,18 @@ export function BookingsPanel({
             bookings={bookings}
             services={services ?? []}
             onAction={async (id, action) => {
-              const r = await fetch(`/api/projects/${currentProjectId}/bookings/${id}`, {
-                method: "PATCH",
-                headers: { "content-type": "application/json" },
-                body: JSON.stringify({ action }),
-              });
-              if (r.ok) loadBookings(currentProjectId);
+              try {
+                const r = await fetch(`/api/projects/${currentProjectId}/bookings/${id}`, {
+                  method: "PATCH",
+                  headers: { "content-type": "application/json" },
+                  body: JSON.stringify({ action }),
+                });
+                if (!r.ok) throw new Error(String(r.status));
+                loadBookings(currentProjectId);
+                toast.success(t(`toast.${action}` as const));
+              } catch {
+                toast.error(t("toast.actionError"));
+              }
             }}
           />
         )}

@@ -1,4 +1,9 @@
 {
+  "toast": {
+    "deployedTitle": "Geïmplementeerd naar {provider}",
+    "deployedBody": "Je pagina wordt gebouwd — hij gaat zo live.",
+    "disconnectedTitle": "Ontkoppeld van {provider}"
+  },
   "header": {
     "titleVercel": "Implementeren op Vercel",
     "titleGithub": "Pushen naar GitHub",

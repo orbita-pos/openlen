@@ -119,5 +119,15 @@
     "confirmLabel": "Digita {name} per confermare",
     "cancel": "Annulla",
     "confirm": "Elimina attività"
+  },
+  "toasts": {
+    "deleted": "Profilo eliminato",
+    "deleteError": "Impossibile eliminare il profilo. Riprova.",
+    "logoUploaded": "Logo caricato",
+    "logoError": "Impossibile caricare il logo. Riprova.",
+    "photosUploaded": "{count, plural, one {# foto caricata} other {# foto caricate}}",
+    "photosError": "Impossibile caricare le foto. Riprova.",
+    "defaultSet": "Impostata come predefinita",
+    "defaultError": "Impossibile impostarla come predefinita. Riprova."
   }
 }

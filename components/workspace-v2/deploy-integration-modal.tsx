@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { useFocusTrap } from "./use-focus-trap";
+import { useToast } from "./toast";
 import {
   AlertCircle,
   CheckCircle2,
@@ -64,6 +65,7 @@ export function DeployIntegrationModal({
   initialErrorKey,
 }: DeployIntegrationModalProps) {
   const t = useTranslations("modalsDeploy");
+  const toast = useToast();
   const locale = useLocale();
   const label = PROVIDER_LABEL[provider];
 
@@ -171,6 +173,12 @@ export function DeployIntegrationModal({
       }
       await refresh();
       setJustDeployed(true);
+      toast.success(t("toast.deployedTitle", { provider: label }), {
+        description: t("toast.deployedBody"),
+        ...(body.liveUrl
+          ? { action: { label: t("connected.open"), href: body.liveUrl } }
+          : {}),
+      });
     } catch {
       setError(t("errors.network"));
     } finally {
@@ -181,9 +189,16 @@ export function DeployIntegrationModal({
   const onDisconnect = async () => {
     if (!window.confirm(t("confirmDisconnect", { provider: label }))) return;
     try {
-      await fetch(`/api/integrations/${provider}`, { method: "DELETE" });
+      const res = await fetch(`/api/integrations/${provider}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) {
+        setError(t("errors.network"));
+        return;
+      }
       setError(null);
       await refresh();
+      toast.success(t("toast.disconnectedTitle", { provider: label }));
     } catch {
       setError(t("errors.network"));
     }

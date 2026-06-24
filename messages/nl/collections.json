@@ -2,6 +2,10 @@
   "title": "Collecties",
   "subtitle": "Toon een lijst met items op je pagina.",
   "perProject": "Open een project om je collectie te beheren.",
+  "toast": {
+    "archived": "Item verwijderd",
+    "archiveError": "Kon het item niet verwijderen. Probeer het opnieuw."
+  },
   "module": {
     "title": "Collecties",
     "tagline": "Een raster van producten, menu, advertenties…",

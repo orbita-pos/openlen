@@ -59,5 +59,9 @@
     "cancel": "取消",
     "saveError": "无法保存。请检查链接后重试。",
     "pickImage": "选择"
+  },
+  "toast": {
+    "archived": "项目已移除",
+    "archiveError": "无法移除该项目，请重试。"
   }
 }

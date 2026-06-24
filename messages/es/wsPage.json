@@ -68,5 +68,31 @@
     "applying": "Aplicando la plantilla a tu página…",
     "notice": "Página reestilizada. Revisa el contenido de ejemplo (testimonios, precios) antes de publicar.",
     "lowCredits": "No tienes créditos suficientes para reestilizar esta página."
+  },
+  "toast": {
+    "publishedTitle": "Publicada",
+    "publishedBody": "Tu página está en vivo en {subdomain}.openlen.com",
+    "openSite": "Abrir sitio",
+    "unpublishedTitle": "Página despublicada",
+    "unpublishedBody": "Ya no está disponible en esa dirección.",
+    "moduleEnabled": "{module} activado",
+    "moduleDisabled": "{module} desactivado",
+    "moduleError": "No se pudo actualizar el módulo.",
+    "moduleMembers": "Miembros",
+    "moduleBroadcast": "Difusión",
+    "moduleComments": "Comentarios",
+    "moduleBookings": "Reservas",
+    "moduleCollections": "Colecciones",
+    "membersOnlyOn": "La página ahora es solo para miembros",
+    "membersOnlyOff": "La página ahora es pública",
+    "membersOnlyError": "No se pudo cambiar el acceso a la página.",
+    "renameError": "No se pudo renombrar la página.",
+    "logoUpdated": "Logo actualizado",
+    "logoError": "No se pudo actualizar el logo.",
+    "formSaved": "Ajustes del formulario guardados",
+    "formError": "No se pudieron guardar los ajustes del formulario.",
+    "analyticsEnabled": "Analíticas activadas",
+    "analyticsDisabled": "Analíticas desactivadas",
+    "saveError": "No se pudo guardar el cambio."
   }
 }

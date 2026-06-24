@@ -65,6 +65,16 @@
     "previewRestore": "Restore this version",
     "previewClose": "Close preview"
   },
+  "toast": {
+    "restored": "Restored to {label}",
+    "restoredNoLabel": "Restored to this version",
+    "restoreError": "Couldn't restore the version",
+    "saved": "Version saved · {label}",
+    "saveError": "Couldn't save the version",
+    "pinned": "Version pinned",
+    "unpinned": "Version unpinned",
+    "pinError": "Couldn't update the pin"
+  },
   "insights": {
     "loadError": "Failed to load insights",
     "title": "Insights",

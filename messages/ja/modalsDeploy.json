@@ -1,4 +1,9 @@
 {
+  "toast": {
+    "deployedTitle": "{provider} にデプロイしました",
+    "deployedBody": "ページをビルドしています — まもなく公開されます。",
+    "disconnectedTitle": "{provider} の接続を解除しました"
+  },
   "header": {
     "titleVercel": "Vercel にデプロイ",
     "titleGithub": "GitHub にプッシュ",

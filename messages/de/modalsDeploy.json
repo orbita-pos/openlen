@@ -1,4 +1,9 @@
 {
+  "toast": {
+    "deployedTitle": "Auf {provider} veröffentlicht",
+    "deployedBody": "Deine Seite wird erstellt — sie geht gleich live.",
+    "disconnectedTitle": "Von {provider} getrennt"
+  },
   "header": {
     "titleVercel": "Bei Vercel veröffentlichen",
     "titleGithub": "Zu GitHub pushen",

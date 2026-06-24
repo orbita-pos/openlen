@@ -174,5 +174,11 @@
     "uploadError": "上传失败——请换一张图片试试。",
     "light": "浅色",
     "dark": "深色"
+  },
+  "toast": {
+    "themeFromLogo": "已从标志生成主题",
+    "themeFromLogoError": "无法读取标志——请尝试重新上传。",
+    "worldApplied": "世界已应用",
+    "worldError": "上传失败——请换一张图片试试。"
   }
 }

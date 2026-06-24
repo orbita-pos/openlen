@@ -65,6 +65,16 @@
     "previewRestore": "Restaurar esta versión",
     "previewClose": "Cerrar vista previa"
   },
+  "toast": {
+    "restored": "Restaurado a {label}",
+    "restoredNoLabel": "Restaurado a esta versión",
+    "restoreError": "No se pudo restaurar la versión",
+    "saved": "Versión guardada · {label}",
+    "saveError": "No se pudo guardar la versión",
+    "pinned": "Versión fijada",
+    "unpinned": "Versión desfijada",
+    "pinError": "No se pudo actualizar la fijación"
+  },
   "insights": {
     "loadError": "No se pudieron cargar las estadísticas",
     "title": "Estadísticas",

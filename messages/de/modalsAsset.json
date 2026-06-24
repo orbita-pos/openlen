@@ -230,5 +230,15 @@
       "streamRead": "Stream konnte nicht gelesen werden",
       "unknown": "Unbekannter Fehler"
     }
+  },
+  "toast": {
+    "imageUploaded": "Bild hochgeladen",
+    "imageUploadError": "Das Bild konnte nicht hochgeladen werden",
+    "videoUploaded": "Video hochgeladen",
+    "videoUploadError": "Das Video konnte nicht hochgeladen werden",
+    "bgRemoved": "Hintergrund entfernt",
+    "bgRemoveError": "Der Hintergrund konnte nicht entfernt werden",
+    "imageEdited": "Bild bearbeitet",
+    "imageEditError": "Das Bild konnte nicht bearbeitet werden"
   }
 }

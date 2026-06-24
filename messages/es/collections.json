@@ -59,5 +59,9 @@
     "cancel": "Cancelar",
     "saveError": "No se pudo guardar. Revisa los enlaces e inténtalo de nuevo.",
     "pickImage": "Elegir"
+  },
+  "toast": {
+    "archived": "Elemento quitado",
+    "archiveError": "No se pudo quitar el elemento. Inténtalo de nuevo."
   }
 }

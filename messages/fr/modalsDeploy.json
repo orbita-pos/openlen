@@ -1,4 +1,9 @@
 {
+  "toast": {
+    "deployedTitle": "Déployé sur {provider}",
+    "deployedBody": "Votre page est en cours de construction — elle sera en ligne dans un instant.",
+    "disconnectedTitle": "Déconnecté de {provider}"
+  },
   "header": {
     "titleVercel": "Déployer sur Vercel",
     "titleGithub": "Publier sur GitHub",

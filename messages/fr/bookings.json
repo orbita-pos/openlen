@@ -92,5 +92,14 @@
     "statusCompleted": "Terminée",
     "statusNoShow": "Absence",
     "cancelConfirm": "Annuler cette réservation ? Le visiteur est prévenu."
+  },
+  "toast": {
+    "archived": "Service archivé",
+    "archiveError": "Archivage du service impossible.",
+    "confirm": "Réservation confirmée",
+    "cancel": "Réservation annulée",
+    "complete": "Réservation terminée",
+    "no_show": "Marquée comme absence",
+    "actionError": "Mise à jour de la réservation impossible."
   }
 }

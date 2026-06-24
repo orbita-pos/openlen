@@ -33,5 +33,11 @@
     "all": "All",
     "pending": "Pending",
     "visible": "Visible"
+  },
+  "toast": {
+    "deleted": "Comment deleted",
+    "deleteError": "Couldn't delete comment",
+    "banned": "Author banned",
+    "banError": "Couldn't ban author"
   }
 }

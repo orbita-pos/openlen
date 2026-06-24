@@ -119,5 +119,15 @@
     "confirmLabel": "Tapez {name} pour confirmer",
     "cancel": "Annuler",
     "confirm": "Supprimer l’entreprise"
+  },
+  "toasts": {
+    "deleted": "Profil supprimé",
+    "deleteError": "Suppression du profil impossible. Réessayez.",
+    "logoUploaded": "Logo importé",
+    "logoError": "Import du logo impossible. Réessayez.",
+    "photosUploaded": "{count, plural, one {# photo importée} other {# photos importées}}",
+    "photosError": "Import des photos impossible. Réessayez.",
+    "defaultSet": "Définie par défaut",
+    "defaultError": "Impossible de définir par défaut. Réessayez."
   }
 }
