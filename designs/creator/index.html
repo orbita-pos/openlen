@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Jesús — Construyo y envío software de verdad · creator.openlen.com</title>
+<link rel="preload" as="font" type="font/woff2" crossorigin href="fonts/i7dPIFZifjKcF5UAWdDRYEF8RQ.woff2">
+<style id="ol-fonts">
+@font-face { font-family: 'Space Mono'; font-style: normal; font-weight: 400; font-display: swap; src: url(fonts/i7dPIFZifjKcF5UAWdDRYEF8RQ.woff2) format('woff2'); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+@font-face { font-family: 'Space Mono'; font-style: normal; font-weight: 700; font-display: swap; src: url(fonts/i7dMIFZifjKcF5UAWdDRaPpZUFWaHg.woff2) format('woff2'); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+</style>
+<meta name="description" content="La misma página, 4 diseños. Todo construido con OpenLen. Indie maker: OpenLen, InariWatch, OrbitaPOS.">
+<meta property="og:title" content="Jesús — la misma página, 4 diseños, todo OpenLen">
+<meta property="og:description" content="Cambia el diseño con un toque. Con imágenes y video. Hecho con OpenLen.">
+<style>
+  :root{
+    --pill-bg:#141a2b;
+    --pill-edge:#2b3756;
+    --pill-text:#cdd6ef;
+    --pill-dim:#7e8ab0;
+    --pill-active:#2ee6c5;
+    --pill-active-ink:#06231d;
+    --pill-glow:rgba(46,230,197,.18);
+    --pill-dot:#1d2740;
+    --pill-dot-text:#9aa6c4;
+    --pill-radius:999px;
+    --pill-border:1px;
+    --pill-shadow:0 14px 40px -12px rgba(0,0,0,.7);
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{height:100%;background:#0a0a0a;overflow:hidden;font-family:'Space Mono',monospace}
+
+  /* ---- stage: stacked iframes, crossfade ---- */
+  .stage{position:fixed;inset:0}
+  .frame{
+    position:absolute;inset:0;width:100%;height:100%;border:0;
+    opacity:0;visibility:hidden;transform:scale(1.012);
+    transition:opacity .5s cubic-bezier(.4,0,.2,1),transform .6s cubic-bezier(.4,0,.2,1),visibility 0s linear .5s;
+  }
+  .frame.active{opacity:1;visibility:visible;transform:none;transition:opacity .5s cubic-bezier(.4,0,.2,1),transform .6s cubic-bezier(.4,0,.2,1),visibility 0s}
+
+  /* loading veil */
+  .veil{position:fixed;inset:0;background:#0a0a0a;display:flex;align-items:center;justify-content:center;z-index:50;transition:opacity .5s ease}
+  .veil.gone{opacity:0;pointer-events:none}
+  .veil span{color:#5a6488;font-size:12px;letter-spacing:.28em;text-transform:uppercase;animation:bli 1.3s steps(1) infinite}
+  @keyframes bli{0%,60%{opacity:1}61%,100%{opacity:.25}}
+
+  /* ---- switcher dock (caption + pill), bottom-center ---- */
+  .dock{
+    position:fixed;left:50%;bottom:22px;transform:translateX(-50%);
+    z-index:60;display:flex;flex-direction:column;align-items:center;gap:9px;
+    animation:rise .7s .3s cubic-bezier(.2,.7,.2,1) both;
+  }
+  @keyframes rise{from{opacity:0;transform:translateX(-50%) translateY(16px)}to{opacity:1;transform:translateX(-50%)}}
+
+  .caption{
+    font-size:10.5px;letter-spacing:.2em;text-transform:uppercase;white-space:nowrap;user-select:none;
+    color:var(--pill-dim);transition:color .45s ease;
+  }
+  .caption b{color:var(--pill-text);font-weight:700;transition:color .45s ease}
+
+  .switch{
+    display:flex;align-items:center;gap:13px;
+    padding:8px 8px 8px 18px;
+    border-radius:var(--pill-radius);
+    background:var(--pill-bg);
+    border:var(--pill-border) solid var(--pill-edge);
+    box-shadow:var(--pill-shadow);
+    backdrop-filter:blur(8px);
+    transition:background .45s ease,border-color .45s ease,box-shadow .45s ease,border-radius .45s ease,padding .3s ease;
+  }
+  .switch .lbl{font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--pill-dim);white-space:nowrap;user-select:none;transition:color .45s ease}
+  .dots{display:flex;align-items:center;gap:6px}
+  .dot{
+    position:relative;width:34px;height:34px;border-radius:calc(var(--pill-radius) - 0px);cursor:pointer;
+    border:0;background:var(--pill-dot);color:var(--pill-dot-text);
+    font-family:'Space Mono',monospace;font-size:13px;font-weight:700;
+    display:flex;align-items:center;justify-content:center;
+    transition:background .35s ease,color .35s ease,transform .25s cubic-bezier(.34,1.4,.64,1),box-shadow .35s ease,border-radius .45s ease;
+  }
+  /* brutalist square-ish dots when radius small */
+  .dot:hover{filter:brightness(1.12);transform:translateY(-1px)}
+  .dot.on{
+    background:var(--pill-active);color:var(--pill-active-ink);transform:none;
+    box-shadow:0 0 0 4px var(--pill-glow),0 4px 14px -2px var(--pill-glow);
+  }
+  .dot.on:hover{transform:none;filter:none}
+
+  .name{min-width:74px;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--pill-text);white-space:nowrap;transition:opacity .2s ease,color .45s ease}
+  .sep{width:1px;height:22px;background:var(--pill-edge);transition:background .45s ease}
+
+  @media (max-width:520px){
+    .switch .lbl{display:none}
+    .name{display:none}
+    .caption{font-size:9.5px;letter-spacing:.14em}
+  }
+</style>
+</head>
+<body>
+
+<div class="veil" id="veil"><span>Cargando · OpenLen</span></div>
+
+<div class="stage" id="stage">
+  <iframe class="frame active" data-variant="brutal"    src="variant-brutal.html" title="Diseño Brutal"></iframe>
+  <iframe class="frame"        data-variant="noir"      title="Diseño Noir"></iframe>
+  <iframe class="frame"        data-variant="editorial" title="Diseño Editorial"></iframe>
+  <iframe class="frame"        data-variant="warm"      title="Diseño Cálido"></iframe>
+</div>
+
+<div class="dock">
+  <div class="caption">1 página · 4 diseños · <b>todo OpenLen</b></div>
+  <nav class="switch" id="switch" aria-label="Cambiar diseño">
+    <span class="lbl">Variantes</span>
+    <div class="dots" id="dots">
+      <button class="dot on" data-i="0" aria-label="Diseño Brutal">1</button>
+      <button class="dot"    data-i="1" aria-label="Diseño Noir">2</button>
+      <button class="dot"    data-i="2" aria-label="Diseño Editorial">3</button>
+      <button class="dot"    data-i="3" aria-label="Diseño Cálido">4</button>
+    </div>
+    <div class="sep"></div>
+    <div class="name" id="name">Brutal</div>
+  </nav>
+</div>
+
+<script>
+  const NAMES = ['Brutal','Noir','Editorial','Cálida'];
+
+  // each pill dresses itself in the colors of the active design
+  const THEMES = {
+    0: { bg:'#f4f1ea', edge:'#0a0a0a', text:'#0a0a0a', dim:'#5f5f57', active:'#d8ff3e', activeInk:'#0a0a0a', glow:'rgba(216,255,62,.45)', dot:'#ffffff', dotText:'#0a0a0a', radius:'9px',   border:'2px', shadow:'5px 5px 0 #0a0a0a' },
+    1: { bg:'#0e0e12', edge:'#2c2c34', text:'#e7d8c2', dim:'#74747e', active:'#ff6a00', activeInk:'#0a0a0a', glow:'rgba(255,106,0,.5)',  dot:'#1b1b22', dotText:'#b7a98f', radius:'999px', border:'1px', shadow:'0 16px 44px -14px rgba(0,0,0,.75)' },
+    2: { bg:'#f3efe6', edge:'#d6c9b4', text:'#16130f', dim:'#897c69', active:'#9a3b27', activeInk:'#f3efe6', glow:'rgba(154,59,39,.4)',   dot:'#ffffff', dotText:'#16130f', radius:'999px', border:'1px', shadow:'0 14px 34px -16px rgba(40,30,20,.4)' },
+    3: { bg:'#f6ece0', edge:'#e3d2b8', text:'#241f1b', dim:'#a48b78', active:'#e2603c', activeInk:'#ffffff', glow:'rgba(226,96,60,.45)',  dot:'#ffffff', dotText:'#241f1b', radius:'999px', border:'1px', shadow:'0 16px 40px -16px rgba(120,60,30,.34)' },
+  };
+
+  const sw = document.getElementById('switch');
+  const frames = [...document.querySelectorAll('.frame')];
+  const dots   = [...document.querySelectorAll('.dot')];
+  const nameEl = document.getElementById('name');
+  const veil = document.getElementById('veil');
+  const loaded = new Set([0]);
+  let cur = 0;
+
+  frames.forEach((f,i)=> f.addEventListener('load', ()=>{ loaded.add(i); if(i===cur) veil.classList.add('gone'); }));
+
+  function applyTheme(i){
+    const t = THEMES[i];
+    const r = document.documentElement.style;
+    r.setProperty('--pill-bg', t.bg);
+    r.setProperty('--pill-edge', t.edge);
+    r.setProperty('--pill-text', t.text);
+    r.setProperty('--pill-dim', t.dim);
+    r.setProperty('--pill-active', t.active);
+    r.setProperty('--pill-active-ink', t.activeInk);
+    r.setProperty('--pill-glow', t.glow);
+    r.setProperty('--pill-dot', t.dot);
+    r.setProperty('--pill-dot-text', t.dotText);
+    r.setProperty('--pill-radius', t.radius);
+    r.setProperty('--pill-border', t.border);
+    r.setProperty('--pill-shadow', t.shadow);
+  }
+
+  function show(i){
+    if(i===cur || i<0 || i>=frames.length) return;
+    const f = frames[i];
+    if(!f.getAttribute('src')) f.setAttribute('src','variant-'+f.dataset.variant+'.html');
+    frames[cur].classList.remove('active');
+    dots[cur].classList.remove('on');
+    cur = i;
+    frames[cur].classList.add('active');
+    dots[cur].classList.add('on');
+    applyTheme(cur);
+    // safety: if you reach one before it finished preloading, veil it until ready
+    if(loaded.has(cur)){ veil.classList.add('gone'); } else { veil.classList.remove('gone'); }
+    nameEl.style.opacity = 0;
+    setTimeout(()=>{ nameEl.textContent = NAMES[cur]; nameEl.style.opacity = 1; }, 140);
+  }
+
+  dots.forEach((d,i)=> d.addEventListener('click', ()=>show(i)) );
+  window.addEventListener('keydown', e=>{
+    if(e.key>='1' && e.key<='4'){ show(+e.key-1); }
+    else if(e.key==='ArrowRight'){ show((cur+1)%frames.length); }
+    else if(e.key==='ArrowLeft'){ show((cur-1+frames.length)%frames.length); }
+  });
+
+  // drop the veil once Brutal (the only page loaded initially) paints
+  if(frames[0].contentDocument && frames[0].contentDocument.readyState==='complete'){
+    veil.classList.add('gone');
+  } else {
+    frames[0].addEventListener('load', ()=> setTimeout(()=>veil.classList.add('gone'),200));
+  }
+  setTimeout(()=>veil.classList.add('gone'), 3000); // hard fallback
+
+  // PERF: only ONE page loads at first paint (great for Lighthouse). Preload the other
+  // 3 on the user's first gesture — by the time they reach the switcher, they're ready.
+  let preloaded=false;
+  function preloadRest(){
+    if(preloaded) return; preloaded=true;
+    let k = 1;
+    (function next(){
+      if(k>=frames.length) return;
+      const f = frames[k++];
+      if(!f.getAttribute('src')) f.setAttribute('src','variant-'+f.dataset.variant+'.html');
+      setTimeout(next, 220);
+    })();
+  }
+  ['pointerdown','pointermove','keydown','wheel','touchstart'].forEach(ev=>
+    window.addEventListener(ev, preloadRest, {once:true, passive:true}));
+
+  applyTheme(0); // brutal on first paint
+</script>
+</body>
+</html>

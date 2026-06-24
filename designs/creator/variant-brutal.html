@@ -1,0 +1,795 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Jesús — Construyo y envío software de verdad</title>
+<link rel="preload" as="font" type="font/woff2" crossorigin href="fonts/HTxqL289NzCGg4MzN6KJ7eW6CYyF_g.woff2">
+<style id="ol-fonts">
+@font-face { font-family: 'Archivo Black'; font-style: normal; font-weight: 400; font-display: swap; src: url(fonts/HTxqL289NzCGg4MzN6KJ7eW6CYyF_g.woff2) format('woff2'); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+@font-face { font-family: 'Space Grotesk'; font-style: normal; font-weight: 400; font-display: swap; src: url(fonts/V8mDoQDjQSkFtoMM3T6r8E7mPbF4Cw.woff2) format('woff2'); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+@font-face { font-family: 'Space Grotesk'; font-style: normal; font-weight: 500; font-display: swap; src: url(fonts/V8mDoQDjQSkFtoMM3T6r8E7mPbF4Cw.woff2) format('woff2'); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+@font-face { font-family: 'Space Grotesk'; font-style: normal; font-weight: 600; font-display: swap; src: url(fonts/V8mDoQDjQSkFtoMM3T6r8E7mPbF4Cw.woff2) format('woff2'); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+@font-face { font-family: 'Space Grotesk'; font-style: normal; font-weight: 700; font-display: swap; src: url(fonts/V8mDoQDjQSkFtoMM3T6r8E7mPbF4Cw.woff2) format('woff2'); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+@font-face { font-family: 'Space Mono'; font-style: normal; font-weight: 400; font-display: swap; src: url(fonts/i7dPIFZifjKcF5UAWdDRYEF8RQ.woff2) format('woff2'); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+@font-face { font-family: 'Space Mono'; font-style: normal; font-weight: 700; font-display: swap; src: url(fonts/i7dMIFZifjKcF5UAWdDRaPpZUFWaHg.woff2) format('woff2'); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+</style>
+<meta name="description" content="Jesús es un indie maker que envía productos de software de verdad: OpenLen, InariWatch, OrbitaPOS. Esta misma página la construyó OpenLen.">
+<meta property="og:title" content="Jesús — Construyo y envío software de verdad">
+<meta property="og:description" content="Indie maker. OpenLen, InariWatch, OrbitaPOS. Esta página la construyó OpenLen.">
+<meta property="og:type" content="website">
+<style>*,:after,:before{--tw-border-spacing-x:0;--tw-border-spacing-y:0;--tw-translate-x:0;--tw-translate-y:0;--tw-rotate:0;--tw-skew-x:0;--tw-skew-y:0;--tw-scale-x:1;--tw-scale-y:1;--tw-pan-x: ;--tw-pan-y: ;--tw-pinch-zoom: ;--tw-scroll-snap-strictness:proximity;--tw-gradient-from-position: ;--tw-gradient-via-position: ;--tw-gradient-to-position: ;--tw-ordinal: ;--tw-slashed-zero: ;--tw-numeric-figure: ;--tw-numeric-spacing: ;--tw-numeric-fraction: ;--tw-ring-inset: ;--tw-ring-offset-width:0px;--tw-ring-offset-color:#fff;--tw-ring-color:rgba(59,130,246,.5);--tw-ring-offset-shadow:0 0 #0000;--tw-ring-shadow:0 0 #0000;--tw-shadow:0 0 #0000;--tw-shadow-colored:0 0 #0000;--tw-blur: ;--tw-brightness: ;--tw-contrast: ;--tw-grayscale: ;--tw-hue-rotate: ;--tw-invert: ;--tw-saturate: ;--tw-sepia: ;--tw-drop-shadow: ;--tw-backdrop-blur: ;--tw-backdrop-brightness: ;--tw-backdrop-contrast: ;--tw-backdrop-grayscale: ;--tw-backdrop-hue-rotate: ;--tw-backdrop-invert: ;--tw-backdrop-opacity: ;--tw-backdrop-saturate: ;--tw-backdrop-sepia: ;--tw-contain-size: ;--tw-contain-layout: ;--tw-contain-paint: ;--tw-contain-style: }::backdrop{--tw-border-spacing-x:0;--tw-border-spacing-y:0;--tw-translate-x:0;--tw-translate-y:0;--tw-rotate:0;--tw-skew-x:0;--tw-skew-y:0;--tw-scale-x:1;--tw-scale-y:1;--tw-pan-x: ;--tw-pan-y: ;--tw-pinch-zoom: ;--tw-scroll-snap-strictness:proximity;--tw-gradient-from-position: ;--tw-gradient-via-position: ;--tw-gradient-to-position: ;--tw-ordinal: ;--tw-slashed-zero: ;--tw-numeric-figure: ;--tw-numeric-spacing: ;--tw-numeric-fraction: ;--tw-ring-inset: ;--tw-ring-offset-width:0px;--tw-ring-offset-color:#fff;--tw-ring-color:rgba(59,130,246,.5);--tw-ring-offset-shadow:0 0 #0000;--tw-ring-shadow:0 0 #0000;--tw-shadow:0 0 #0000;--tw-shadow-colored:0 0 #0000;--tw-blur: ;--tw-brightness: ;--tw-contrast: ;--tw-grayscale: ;--tw-hue-rotate: ;--tw-invert: ;--tw-saturate: ;--tw-sepia: ;--tw-drop-shadow: ;--tw-backdrop-blur: ;--tw-backdrop-brightness: ;--tw-backdrop-contrast: ;--tw-backdrop-grayscale: ;--tw-backdrop-hue-rotate: ;--tw-backdrop-invert: ;--tw-backdrop-opacity: ;--tw-backdrop-saturate: ;--tw-backdrop-sepia: ;--tw-contain-size: ;--tw-contain-layout: ;--tw-contain-paint: ;--tw-contain-style: }/*! tailwindcss v3.4.17 | MIT License | https://tailwindcss.com*/*,:after,:before{border:0 solid #e5e7eb;box-sizing:border-box}:after,:before{--tw-content:""}:host,html{line-height:1.5;-webkit-text-size-adjust:100%;font-family:ui-sans-serif,system-ui,sans-serif,Apple Color Emoji,Segoe UI Emoji,Segoe UI Symbol,Noto Color Emoji;font-feature-settings:normal;font-variation-settings:normal;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-tap-highlight-color:transparent}body{line-height:inherit;margin:0}hr{border-top-width:1px;color:inherit;height:0}abbr:where([title]){-webkit-text-decoration:underline dotted;text-decoration:underline dotted}h1,h2,h3,h4,h5,h6{font-size:inherit;font-weight:inherit}a{color:inherit;text-decoration:inherit}b,strong{font-weight:bolder}code,kbd,pre,samp{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,Liberation Mono,Courier New,monospace;font-feature-settings:normal;font-size:1em;font-variation-settings:normal}small{font-size:80%}sub,sup{font-size:75%;line-height:0;position:relative;vertical-align:baseline}sub{bottom:-.25em}sup{top:-.5em}table{border-collapse:collapse;border-color:inherit;text-indent:0}button,input,optgroup,select,textarea{color:inherit;font-family:inherit;font-feature-settings:inherit;font-size:100%;font-variation-settings:inherit;font-weight:inherit;letter-spacing:inherit;line-height:inherit;margin:0;padding:0}button,select{text-transform:none}button,input:where([type=button]),input:where([type=reset]),input:where([type=submit]){-webkit-appearance:button;background-color:transparent;background-image:none}:-moz-focusring{outline:auto}:-moz-ui-invalid{box-shadow:none}progress{vertical-align:baseline}::-webkit-inner-spin-button,::-webkit-outer-spin-button{height:auto}[type=search]{-webkit-appearance:textfield;outline-offset:-2px}::-webkit-search-decoration{-webkit-appearance:none}::-webkit-file-upload-button{-webkit-appearance:button;font:inherit}summary{display:list-item}blockquote,dd,dl,figure,h1,h2,h3,h4,h5,h6,hr,p,pre{margin:0}fieldset{margin:0}fieldset,legend{padding:0}menu,ol,ul{list-style:none;margin:0;padding:0}dialog{padding:0}textarea{resize:vertical}input::-moz-placeholder,textarea::-moz-placeholder{color:#9ca3af;opacity:1}input::placeholder,textarea::placeholder{color:#9ca3af;opacity:1}[role=button],button{cursor:pointer}:disabled{cursor:default}audio,canvas,embed,iframe,img,object,svg,video{display:block;vertical-align:middle}img,video{height:auto;max-width:100%}[hidden]:where(:not([hidden=until-found])){display:none}.pointer-events-none{pointer-events:none}.absolute{position:absolute}.relative{position:relative}.sticky{position:sticky}.right-\[14px\]{right:14px}.top-0{top:0}.top-1\/2{top:50%}.z-10{z-index:10}.z-40{z-index:40}.order-1{order:1}.order-2{order:2}.mx-auto{margin-left:auto;margin-right:auto}.mb-3{margin-bottom:.75rem}.mb-4{margin-bottom:1rem}.mb-5{margin-bottom:1.25rem}.mb-6{margin-bottom:1.5rem}.mb-\[28px\]{margin-bottom:28px}.mb-\[46px\]{margin-bottom:46px}.mt-1{margin-top:.25rem}.mt-3{margin-top:.75rem}.mt-4{margin-top:1rem}.mt-5{margin-top:1.25rem}.mt-6{margin-top:1.5rem}.mt-\[23px\]{margin-top:23px}.mt-\[46px\]{margin-top:46px}.block{display:block}.inline-block{display:inline-block}.flex{display:flex}.inline-flex{display:inline-flex}.grid{display:grid}.hidden{display:none}.h-16{height:4rem}.w-full{width:100%}.max-w-2xl{max-width:42rem}.max-w-\[1380px\]{max-width:1380px}.max-w-\[30rem\]{max-width:30rem}.max-w-\[38rem\]{max-width:38rem}.max-w-xs{max-width:20rem}.flex-1{flex:1 1 0%}.shrink-0{flex-shrink:0}.transform{transform:translate(var(--tw-translate-x),var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y))}@keyframes pulse{50%{opacity:.5}}.animate-pulse{animation:pulse 2s cubic-bezier(.4,0,.6,1) infinite}.select-none{-webkit-user-select:none;-moz-user-select:none;user-select:none}.grid-cols-3{grid-template-columns:repeat(3,minmax(0,1fr))}.flex-col{flex-direction:column}.flex-wrap{flex-wrap:wrap}.items-start{align-items:flex-start}.items-end{align-items:flex-end}.items-center{align-items:center}.justify-center{justify-content:center}.justify-between{justify-content:space-between}.gap-2{gap:.5rem}.gap-3{gap:.75rem}.gap-4{gap:1rem}.gap-5{gap:1.25rem}.gap-7{gap:1.75rem}.gap-\[12px\]{gap:12px}.gap-\[23px\]{gap:23px}.space-y-5>:not([hidden])~:not([hidden]){--tw-space-y-reverse:0;margin-bottom:calc(1.25rem*var(--tw-space-y-reverse));margin-top:calc(1.25rem*(1 - var(--tw-space-y-reverse)))}.self-start{align-self:flex-start}.overflow-hidden{overflow:hidden}.p-\[18px\]{padding:18px}.p-\[21px\]{padding:21px}.px-2{padding-left:.5rem;padding-right:.5rem}.px-2\.5{padding-left:.625rem;padding-right:.625rem}.px-3{padding-left:.75rem;padding-right:.75rem}.px-4{padding-left:1rem;padding-right:1rem}.px-5{padding-left:1.25rem;padding-right:1.25rem}.px-7{padding-left:1.75rem;padding-right:1.75rem}.px-\[23px\]{padding-left:23px;padding-right:23px}.py-1{padding-bottom:.25rem;padding-top:.25rem}.py-1\.5{padding-bottom:.375rem;padding-top:.375rem}.py-10{padding-bottom:2.5rem;padding-top:2.5rem}.py-2{padding-bottom:.5rem;padding-top:.5rem}.py-3{padding-bottom:.75rem;padding-top:.75rem}.py-4{padding-bottom:1rem;padding-top:1rem}.py-\[46px\]{padding-bottom:46px;padding-top:46px}.py-\[69px\]{padding-bottom:69px;padding-top:69px}.pb-0{padding-bottom:0}.pb-\[46px\]{padding-bottom:46px}.pt-\[46px\]{padding-top:46px}.text-center{text-align:center}.text-2xl{font-size:1.5rem;line-height:2rem}.text-3xl{font-size:1.875rem;line-height:2.25rem}.text-5xl{font-size:3rem;line-height:1}.text-base{font-size:1rem;line-height:1.5rem}.text-lg{font-size:1.125rem;line-height:1.75rem}.text-sm{font-size:.875rem;line-height:1.25rem}.text-xl{font-size:1.25rem;line-height:1.75rem}.font-medium{font-weight:500}.font-semibold{font-weight:600}.uppercase{text-transform:uppercase}.leading-\[\.8\]{line-height:.8}.leading-\[\.92\]{line-height:.92}.leading-\[\.95\]{line-height:.95}.leading-\[1\.1\]{line-height:1.1}.leading-\[1\.55\]{line-height:1.55}.leading-\[1\.5\]{line-height:1.5}.leading-snug{line-height:1.375}.tracking-tight{letter-spacing:-.025em}.shadow{--tw-shadow:0 1px 3px 0 rgba(0,0,0,.1),0 1px 2px -1px rgba(0,0,0,.1);--tw-shadow-colored:0 1px 3px 0 var(--tw-shadow-color),0 1px 2px -1px var(--tw-shadow-color);box-shadow:var(--tw-ring-offset-shadow,0 0 #0000),var(--tw-ring-shadow,0 0 #0000),var(--tw-shadow)}.outline{outline-style:solid}.ring{--tw-ring-offset-shadow:var(--tw-ring-inset) 0 0 0 var(--tw-ring-offset-width) var(--tw-ring-offset-color);--tw-ring-shadow:var(--tw-ring-inset) 0 0 0 calc(3px + var(--tw-ring-offset-width)) var(--tw-ring-color);box-shadow:var(--tw-ring-offset-shadow),var(--tw-ring-shadow),var(--tw-shadow,0 0 #0000)}@media (min-width:640px){.sm\:inline{display:inline}}@media (min-width:768px){.md\:right-\[32px\]{right:32px}.md\:order-1{order:1}.md\:order-2{order:2}.md\:col-span-4{grid-column:span 4/span 4}.md\:col-span-5{grid-column:span 5/span 5}.md\:col-span-7{grid-column:span 7/span 7}.md\:col-span-8{grid-column:span 8/span 8}.md\:mb-5{margin-bottom:1.25rem}.md\:mt-\[46px\]{margin-top:46px}.md\:mt-\[69px\]{margin-top:69px}.md\:block{display:block}.md\:max-w-sm{max-width:24rem}.md\:grid-cols-12{grid-template-columns:repeat(12,minmax(0,1fr))}.md\:grid-cols-2{grid-template-columns:repeat(2,minmax(0,1fr))}.md\:flex-row{flex-direction:row}.md\:justify-end{justify-content:flex-end}.md\:gap-7{gap:1.75rem}.md\:gap-\[46px\]{gap:46px}.md\:border-b-0{border-bottom-width:0}.md\:border-r-4{border-right-width:4px}.md\:p-\[24px\]{padding:24px}.md\:p-\[28px\]{padding:28px}.md\:p-\[42px\]{padding:42px}.md\:px-\[46px\]{padding-left:46px;padding-right:46px}.md\:py-\[138px\]{padding-bottom:138px;padding-top:138px}.md\:py-\[92px\]{padding-bottom:92px;padding-top:92px}.md\:pb-\[69px\]{padding-bottom:69px}.md\:pt-\[92px\]{padding-top:92px}.md\:text-right{text-align:right}.md\:text-2xl{font-size:1.5rem;line-height:2rem}.md\:text-3xl{font-size:1.875rem;line-height:2.25rem}.md\:text-4xl{font-size:2.25rem;line-height:2.5rem}.md\:text-5xl{font-size:3rem;line-height:1}.md\:text-6xl{font-size:3.75rem;line-height:1}.md\:text-lg{font-size:1.125rem;line-height:1.75rem}}@media (min-width:1024px){.lg\:col-span-4{grid-column:span 4/span 4}.lg\:col-span-8{grid-column:span 8/span 8}.lg\:grid-cols-12{grid-template-columns:repeat(12,minmax(0,1fr))}.lg\:flex-row{flex-direction:row}.lg\:items-end{align-items:flex-end}.lg\:justify-between{justify-content:space-between}.lg\:gap-12{gap:3rem}.lg\:self-end{align-self:flex-end}.lg\:pb-2{padding-bottom:.5rem}}</style>
+<style>
+  :root{
+    --ink:#0a0a0a;
+    --paper:#f4f1ea;
+    --acid:#d8ff3e;
+    --coral:#ff5a3c;
+    --blue:#3a4cff;
+    --line:#0a0a0a;
+    --mod:46px;
+    --body-dim:#3a3a3a;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    margin:0;
+    background:var(--paper);
+    color:var(--ink);
+    font-family:'Space Grotesk',sans-serif;
+    -webkit-font-smoothing:antialiased;
+    text-rendering:optimizeLegibility;
+    overflow-x:hidden;
+  }
+  ::selection{background:var(--coral);color:var(--paper)}
+
+  /* ---- DISPLAY TYPE — tracking is inverse to size (no opsz on Archivo Black) ---- */
+  /* tighter base tracking; kern+liga on so capital pairs (AV, TO, VE) close up */
+  .display{font-family:'Archivo Black',sans-serif;line-height:.82;letter-spacing:-.03em;font-feature-settings:'kern' 1,'liga' 1;font-kerning:normal}
+  .colossal{font-size:clamp(4rem,20vw,17rem);letter-spacing:-.06em}
+  .mega{font-size:clamp(2.6rem,12.4vw,11.4rem);letter-spacing:-.055em;line-height:.85}
+  .mid{font-size:clamp(2.2rem,7.6vw,6rem);letter-spacing:-.045em}
+  .proj h3{letter-spacing:-.05em;line-height:.8}
+  nav .display.text-xl{letter-spacing:-.02em}
+  /* optical left-bearing: Archivo Black caps carry a fat left side-bearing — pull flush */
+  .optical-flush{margin-left:-.055em}
+
+  .mono{font-family:'Space Mono',monospace}
+  /* 2-step mono scale: caption 11 / label 13 */
+  .label-mono{font-family:'Space Mono',monospace;text-transform:uppercase;letter-spacing:.16em;font-size:11px;line-height:1.2}
+  .label-mono.lg{font-size:13px}
+
+  .edge{border:3px solid var(--line)}
+  .edge-4{border:4px solid var(--line)}
+  .edge-b{border-bottom:3px solid var(--line)}
+  .edge-b4{border-bottom:4px solid var(--line)}
+  .edge-t{border-top:3px solid var(--line)}
+  .hard-shadow{box-shadow:8px 8px 0 var(--ink)}
+  .hard-shadow-lg{box-shadow:14px 14px 0 var(--ink)}
+  .hard-shadow-sm{box-shadow:5px 5px 0 var(--ink)}
+
+  /* per-block colored shadows — abandon the uniform black-block signature */
+  .sh-blue{box-shadow:10px 10px 0 var(--blue)}
+  .sh-coral{box-shadow:10px 10px 0 var(--coral)}
+  .sh-ink{box-shadow:10px 10px 0 var(--ink)}
+
+  /* halftone dot-shadow for mono badges (NON-template) */
+  .badge-dot{position:relative}
+  .badge-dot::after{
+    content:"";position:absolute;left:5px;top:5px;right:-5px;bottom:-5px;z-index:-1;
+    background-image:radial-gradient(var(--ink) 1.1px,transparent 1.1px);
+    background-size:4px 4px;
+  }
+
+  /* receipt-perforation divider */
+  .perf-divider{height:12px;background-image:repeating-linear-gradient(90deg,var(--ink) 0 14px,transparent 14px 28px)}
+
+  /* infinite marquee — 2 identical groups, -50% = one full copy */
+  .marquee{display:flex;width:max-content;animation:scroll 18s linear infinite;will-change:transform}
+  .marquee:hover{animation-play-state:paused}
+  @keyframes scroll{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+  .marquee span{padding:0 1.4rem;display:inline-flex;align-items:center;white-space:nowrap}
+
+  /* grid texture — anchored to module, content starts on a line */
+  .gridlines{
+    background-image:
+      linear-gradient(to right, rgba(10,10,10,.07) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(10,10,10,.07) 1px, transparent 1px);
+    background-size:var(--mod) var(--mod);
+    background-position:0 0;
+  }
+  .gridlines-pale{
+    background-image:
+      linear-gradient(to right, rgba(244,241,234,.08) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(244,241,234,.08) 1px, transparent 1px);
+    background-size:var(--mod) var(--mod);
+    background-position:0 0;
+  }
+
+  /* reveal — tighter, staggered. single canonical ease shared with cards */
+  [data-reveal]{opacity:0;transform:translateY(22px);transition:opacity .55s cubic-bezier(.2,.7,.2,1),transform .55s cubic-bezier(.2,.7,.2,1)}
+  [data-reveal].in{opacity:1;transform:none}
+
+  /* project card hover — unified overshoot curve */
+  .proj{transition:transform .22s cubic-bezier(.34,1.4,.64,1),box-shadow .22s cubic-bezier(.34,1.4,.64,1),background .22s linear}
+  .proj:hover{transform:translate(-7px,-7px)}
+  .proj.sh-blue:hover{box-shadow:18px 18px 0 var(--blue)}
+  .proj.sh-coral:hover{box-shadow:18px 18px 0 var(--coral)}
+  .proj.sh-ink:hover{box-shadow:18px 18px 0 var(--ink)}
+
+  /* project media — hard-clipped, ratio-locked, slight zoom on card hover */
+  .proj-media{position:relative;overflow:hidden;background:var(--ink)}
+  .proj-media img{display:block;width:100%;height:100%;object-fit:cover;filter:saturate(.92) contrast(1.05);transition:transform .4s cubic-bezier(.2,.7,.2,1)}
+  .proj:hover .proj-media img{transform:scale(1.045)}
+  /* duotone-ish color wash tag pinned on each shot */
+  .media-tag{position:absolute;left:0;bottom:0;font-family:'Space Mono',monospace;text-transform:uppercase;letter-spacing:.16em;font-size:10px;padding:4px 9px;background:var(--ink);color:var(--acid);border-top:3px solid var(--line);border-right:3px solid var(--line)}
+
+  /* tiles — composited scale only, overshoot snap */
+  .tile{transition:transform .14s cubic-bezier(.34,1.4,.64,1),background .14s linear;will-change:transform}
+
+  /* VIDEO facade — brutalist play block */
+  .vid-wrap{position:relative;aspect-ratio:16/9;overflow:hidden;background:var(--ink)}
+  .vid-wrap video{display:block;width:100%;height:100%;object-fit:cover}
+  .vid-facade{position:absolute;inset:0;cursor:pointer;border:0;padding:0;margin:0;background:transparent;display:block}
+  .vid-facade img{width:100%;height:100%;object-fit:cover;filter:saturate(.9) contrast(1.06)}
+  .vid-facade::before{content:"";position:absolute;inset:0;background:rgba(10,10,10,.18)}
+  .vid-play{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);display:flex;align-items:center;gap:14px;transition:transform .2s cubic-bezier(.34,1.4,.64,1)}
+  .vid-facade:hover .vid-play{transform:translate(-50%,-50%) scale(1.06)}
+  .vid-play-btn{width:78px;height:78px;display:flex;align-items:center;justify-content:center;background:var(--acid);border:4px solid var(--ink);box-shadow:8px 8px 0 var(--ink)}
+  .vid-play-btn svg{width:30px;height:30px;margin-left:4px}
+  .vid-play-label{font-family:'Space Mono',monospace;text-transform:uppercase;letter-spacing:.16em;font-size:12px;background:var(--ink);color:var(--paper);padding:7px 12px;border:3px solid var(--acid)}
+  @media (max-width:640px){.vid-play-btn{width:60px;height:60px}.vid-play-btn svg{width:24px;height:24px}.vid-play-label{display:none}}
+
+  /* cursor — ring + dot, NO mix-blend; impossible to lose */
+  #cur-ring{position:fixed;top:0;left:0;width:30px;height:30px;margin:-15px 0 0 -15px;border:2px solid var(--ink);border-radius:999px;box-shadow:0 0 0 1.5px var(--paper);pointer-events:none;z-index:9999;opacity:0;will-change:left,top,transform;transition:transform .2s cubic-bezier(.34,1.4,.64,1),opacity .2s ease}
+  #cur-dot{position:fixed;top:0;left:0;width:6px;height:6px;margin:-3px 0 0 -3px;background:var(--coral);border-radius:999px;pointer-events:none;z-index:10000;box-shadow:0 0 0 1px var(--paper);opacity:0;will-change:transform;transition:transform .18s cubic-bezier(.34,1.4,.64,1),opacity .2s ease}
+  #cur-ring.live,#cur-dot.live{opacity:1}
+  #cur-ring.hot{transform:scale(1.5)}
+  #cur-dot.hot{transform:scale(0)}
+  @media (pointer:coarse){#cur-ring,#cur-dot{display:none}}
+
+  .rot-n{transform:rotate(-1.5deg)}
+  .rot-p{transform:rotate(2.5deg)}
+
+  a.linkish{position:relative}
+  a.linkish::after{content:"";position:absolute;left:0;bottom:-3px;width:100%;height:3px;background:currentColor;transform:scaleX(0);transform-origin:right;transition:transform .3s cubic-bezier(.2,.7,.2,1)}
+  a.linkish:hover::after{transform:scaleX(1);transform-origin:left}
+
+  .stroke-ink{-webkit-text-stroke:3px var(--ink);color:transparent}
+  .stroke-acid{-webkit-text-stroke:3px var(--acid);color:transparent}
+  .colossal.stroke-ink,.colossal.stroke-acid{-webkit-text-stroke-width:2px}
+  @media (max-width:768px){.stroke-ink,.stroke-acid{-webkit-text-stroke-width:2px}.colossal.stroke-ink,.colossal.stroke-acid{-webkit-text-stroke-width:2px}}
+  .stroke-paper{-webkit-text-stroke:2px var(--paper);color:transparent}
+
+  /* radar ping for live dot — replaces generic animate-pulse */
+  @keyframes ping-ship{
+    0%{box-shadow:0 0 0 0 rgba(255,90,60,.6)}
+    70%{box-shadow:0 0 0 7px rgba(255,90,60,0)}
+    100%{box-shadow:0 0 0 0 rgba(255,90,60,0)}
+  }
+  .ping-ship{animation:ping-ship 1.8s cubic-bezier(.4,0,.2,1) infinite}
+
+  /* vertical ship-stamp (semantic watermark) */
+  .ship-stamp{writing-mode:vertical-rl;transform:rotate(180deg);font-family:'Space Mono',monospace;font-size:11px;text-transform:uppercase;letter-spacing:.16em;color:var(--ink);opacity:.5}
+
+  /* corner ribbon for 'El truco' card */
+  .truco-ribbon{
+    position:absolute;top:14px;right:-34px;transform:rotate(45deg);
+    background:var(--ink);color:var(--acid);
+    font-family:'Space Mono',monospace;font-size:10px;letter-spacing:.16em;text-transform:uppercase;
+    padding:4px 40px;
+  }
+
+  /* sticky-header offset for anchors */
+  #top,#work,#about,#play,#contact{scroll-margin-top:4.5rem}
+
+  /* ============================================================
+     "MÍRALO CONSTRUIR" — self-assembling browser-frame demo
+     skeleton → cascade fill → finished landing → pause → loop
+     ============================================================ */
+  .browser-frame{
+    background:var(--paper);
+    position:relative;
+  }
+  .browser-chrome{
+    display:flex;align-items:center;gap:12px;
+    padding:11px 16px;
+    background:var(--ink);
+    border-bottom:4px solid var(--line);
+  }
+  .browser-dots{display:flex;gap:7px}
+  .browser-dots i{width:13px;height:13px;border-radius:0;display:block;border:2px solid var(--paper)}
+  .browser-dots i:nth-child(1){background:var(--coral)}
+  .browser-dots i:nth-child(2){background:var(--acid)}
+  .browser-dots i:nth-child(3){background:var(--blue)}
+  .browser-url{
+    flex:1;
+    font-family:'Space Mono',monospace;font-size:12px;letter-spacing:.04em;
+    background:var(--paper);color:var(--ink);
+    padding:6px 12px;
+    border:2px solid var(--paper);
+    display:flex;align-items:center;gap:8px;
+    overflow:hidden;white-space:nowrap;
+  }
+  .browser-url .lock{width:8px;height:8px;background:var(--blue);border-radius:999px;flex:none}
+  .browser-url .scheme{color:var(--body-dim)}
+  .browser-canvas{
+    padding:20px;
+    background:#fff;
+    min-height:340px;
+  }
+  @media (min-width:768px){ .browser-canvas{ padding:32px; min-height:420px } }
+
+  /* generic build-block: starts as dashed outline skeleton, fills on cue */
+  .bb{
+    position:relative;
+    border:3px dashed #c9c4b8;
+    background:repeating-linear-gradient(45deg,#efece4 0 9px,#e6e2d8 9px 18px);
+    opacity:0;
+    transform:translateY(10px);
+    transition:opacity .45s cubic-bezier(.2,.7,.2,1),transform .45s cubic-bezier(.2,.7,.2,1);
+  }
+  .bb.skel{ opacity:1; transform:none } /* skeleton appeared */
+  .bb.fill{
+    border-style:solid;border-color:var(--line);
+    background:#fff;
+    transition:background .5s cubic-bezier(.2,.7,.2,1),border-color .5s cubic-bezier(.2,.7,.2,1),color .5s,opacity .45s,transform .45s;
+  }
+
+  /* mini-landing layout */
+  .ml-nav{display:flex;align-items:center;justify-content:space-between;padding:9px 14px;height:48px}
+  .ml-brand{width:84px;height:14px}
+  .ml-links{display:flex;gap:10px}
+  .ml-links span{width:34px;height:9px;display:block;background:#d8d3c8;transition:background .5s}
+  .ml-nav.fill .ml-brand{background:var(--ink)}
+  .ml-nav.fill .ml-links span{background:var(--ink);opacity:.55}
+
+  .ml-hero{margin-top:16px;height:118px;overflow:hidden;display:flex;flex-direction:column;justify-content:center;gap:11px;padding:0 18px}
+  @media (min-width:768px){ .ml-hero{height:150px} }
+  .ml-hl{height:18px;width:72%;background:#d8d3c8;transition:background .5s,width .5s}
+  .ml-hl.two{width:52%;height:18px;margin-top:2px}
+  .ml-hero.fill{background:linear-gradient(120deg,var(--acid) 0%,var(--acid) 58%,#c7eb24 100%)}
+  .ml-hero.fill .ml-hl{background:var(--ink)}
+
+  .ml-row{display:grid;grid-template-columns:1.15fr 1fr;gap:14px;margin-top:14px}
+  @media (max-width:520px){ .ml-row{grid-template-columns:1fr} }
+  .ml-img{min-height:120px}
+  .ml-img.fill{
+    background:
+      radial-gradient(circle at 70% 28%,rgba(255,255,255,.35),transparent 42%),
+      linear-gradient(135deg,var(--blue) 0%,#2a39d6 60%,var(--ink) 100%);
+  }
+  .ml-img .ml-imgtag{
+    position:absolute;left:0;bottom:0;
+    font-family:'Space Mono',monospace;text-transform:uppercase;letter-spacing:.16em;font-size:9px;
+    padding:3px 7px;background:var(--ink);color:var(--acid);
+    opacity:0;transition:opacity .5s .15s;
+  }
+  .ml-img.fill .ml-imgtag{opacity:1}
+
+  .ml-copy{display:flex;flex-direction:column;justify-content:center;gap:10px;padding:6px 4px}
+  .ml-line{height:11px;background:#d8d3c8;transition:background .5s,width .5s}
+  .ml-line.l1{width:90%}
+  .ml-line.l2{width:80%}
+  .ml-line.l3{width:60%}
+  .ml-copy.fill .ml-line{background:var(--ink);opacity:.78}
+  .ml-btn{margin-top:6px;height:34px;width:128px}
+  .ml-btn.fill{
+    background:var(--coral);border-color:var(--line) !important;
+    display:flex;align-items:center;justify-content:center;
+  }
+  .ml-btn .ml-btntxt{
+    font-family:'Space Mono',monospace;text-transform:uppercase;letter-spacing:.14em;font-size:10px;color:#fff;
+    opacity:0;transition:opacity .4s .12s;
+  }
+  .ml-btn.fill .ml-btntxt{opacity:1}
+
+  /* the "compiling" status caption under the frame */
+  .build-status{
+    font-family:'Space Mono',monospace;text-transform:uppercase;letter-spacing:.14em;font-size:11px;
+    display:inline-flex;align-items:center;gap:9px;
+  }
+  .build-status .blip{width:9px;height:9px;background:var(--acid);border-radius:999px;display:inline-block;transition:background .3s}
+  .build-status[data-phase="done"] .blip{background:var(--coral)}
+
+  @media (prefers-reduced-motion: reduce){
+    [data-reveal]{opacity:1;transform:none;transition:none}
+    .marquee{animation:none}
+    .ping-ship{animation:none}
+    html{scroll-behavior:auto}
+    #cur-ring,#cur-dot{transition:opacity .2s ease}
+    .proj:hover .proj-media img{transform:none}
+    .bb{opacity:1;transform:none;transition:none}
+  }
+</style>
+</head>
+<body>
+<main>
+
+<div id="cur-ring"></div>
+<div id="cur-dot"></div>
+
+<!-- NAV -->
+<header class="edge-b4 sticky top-0 z-40" style="background:var(--paper)">
+  <div class="max-w-[1380px] mx-auto px-[23px] md:px-[46px] h-16 flex items-center justify-between">
+    <a href="#top" class="display text-xl tracking-tight">JESÚS<span style="color:var(--coral)">.</span></a>
+    <nav class="label-mono flex items-center gap-4 md:gap-7">
+      <a href="#work" class="linkish hidden sm:inline">Trabajo</a>
+      <a href="#about" class="linkish hidden sm:inline">El maker</a>
+      <a href="#play" class="linkish hidden sm:inline">Míralo construir</a>
+      <a href="#contact" class="edge px-3 py-1.5 hard-shadow-sm inline-block" style="background:var(--acid)">Hablemos →</a>
+    </nav>
+  </div>
+</header>
+
+<!-- HERO -->
+<section id="top" class="relative gridlines edge-b4 overflow-hidden">
+  <div class="max-w-[1380px] mx-auto px-[23px] md:px-[46px] pt-[46px] md:pt-[92px] pb-0 relative z-10">
+
+    <!-- status row — one boxed live pill, the rest underline-mono -->
+    <div class="flex flex-wrap items-center gap-4 mb-[46px]" data-reveal>
+      <span class="label-mono edge px-3 py-1.5 flex items-center gap-2" style="background:#fff">
+        <span class="ping-ship" style="width:9px;height:9px;background:var(--coral);border-radius:999px;display:inline-block"></span>
+        Enviando ahora mismo · <span id="uptime">uptime…</span>
+      </span>
+      <span class="label-mono linkish" style="color:var(--body-dim)">Indie maker · 1×</span>
+      <span class="label-mono linkish hidden sm:inline" style="color:var(--body-dim)">Software de verdad, no demos</span>
+    </div>
+
+    <!-- giant title — single brand accent (acid dot), broken baseline = 46px step -->
+    <h1 class="display mega optical-flush relative" data-reveal style="overflow:visible">
+      <span class="block">CONSTRUYO</span>
+      <span class="block second-line">Y <span class="stroke-ink">ENVÍO</span><span style="color:var(--acid)">.</span></span>
+    </h1>
+
+    <div class="grid md:grid-cols-12 gap-[23px] md:gap-[46px] mt-[46px] md:mt-[69px] pb-[46px] md:pb-[69px]">
+      <div class="md:col-span-7" data-reveal>
+        <p class="text-lg md:text-2xl leading-[1.1] max-w-2xl font-medium">
+          Soy Jesús. Hago productos de software que salen a producción, no presentaciones bonitas que mueren en un Figma. Mi estrella es <strong style="background:var(--acid);padding:0 .15em">OpenLen</strong>, un constructor de landing pages con IA. También envié <strong>InariWatch</strong> y <strong>OrbitaPOS</strong>.
+        </p>
+        <div class="flex flex-wrap gap-3 mt-[23px]">
+          <a href="#work" class="edge hard-shadow-sm px-5 py-3 label-mono inline-block" style="background:var(--ink);color:var(--paper)">Ver el trabajo →</a>
+          <a href="#contact" class="edge hard-shadow-sm px-5 py-3 label-mono inline-block" style="background:#fff">Escríbeme</a>
+        </div>
+      </div>
+      <div class="md:col-span-5 flex md:justify-end items-start" data-reveal>
+        <div class="edge-4 sh-coral rot-p p-[21px] md:p-[42px] w-full md:max-w-sm relative" style="background:var(--acid);border-top:3px dashed var(--ink);overflow:hidden">
+          <span class="truco-ribbon">esta · página</span>
+          <p class="label-mono mb-3 inline-block px-2 py-1" style="background:var(--ink);color:var(--acid)">El truco</p>
+          <p class="display text-2xl md:text-3xl leading-[.92] mb-4">Esta misma página la construyó OpenLen.</p>
+          <p class="text-sm leading-[1.5] mb-4 font-medium">Sin plataforma externa: la armé pieza por pieza y la publiqué con mi propio producto.</p>
+          <a href="#work" class="label-mono linkish inline-block">Ver cómo lo hace →</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- semantic ship-stamp watermark (replaces mute '003') -->
+  <div class="ship-stamp absolute right-[14px] md:right-[32px] top-1/2 pointer-events-none select-none hidden md:block" style="transform:translateY(-50%) rotate(180deg)">SHIP №003 · 2026-06-23 · MX</div>
+</section>
+
+<!-- MARQUEE — manifesto strip, 2 identical groups -->
+<div class="overflow-hidden" style="background:var(--ink)">
+  <div class="edge-b4 rot-n" style="width:104%;margin-left:-2%;background:var(--ink);color:var(--paper)">
+    <div class="marquee py-3 display text-2xl md:text-4xl uppercase">
+      <span>DESCRIBE <span style="color:var(--acid)">✦</span></span><span>EDITA <span style="color:var(--acid)">✦</span></span><span>PUBLICA <span style="color:var(--acid)">✦</span></span><span>OpenLen <span style="color:var(--acid)">─►</span></span><span class="stroke-paper">SHIP DAILY</span><span style="color:var(--acid)">✦</span><span>EN PRODUCCIÓN <span style="color:var(--acid)">✦</span></span><span>SIN COMITÉ <span style="color:var(--acid)">✦</span></span><span>HETZNER <span style="color:var(--acid)">✦</span></span><span>HTML ESTÁTICO <span style="color:var(--acid)">✦</span></span>
+      <span>DESCRIBE <span style="color:var(--acid)">✦</span></span><span>EDITA <span style="color:var(--acid)">✦</span></span><span>PUBLICA <span style="color:var(--acid)">✦</span></span><span>OpenLen <span style="color:var(--acid)">─►</span></span><span class="stroke-paper">SHIP DAILY</span><span style="color:var(--acid)">✦</span><span>EN PRODUCCIÓN <span style="color:var(--acid)">✦</span></span><span>SIN COMITÉ <span style="color:var(--acid)">✦</span></span><span>HETZNER <span style="color:var(--acid)">✦</span></span><span>HTML ESTÁTICO <span style="color:var(--acid)">✦</span></span>
+    </div>
+  </div>
+</div>
+
+<!-- SELECTED WORK -->
+<section id="work" class="edge-b4">
+  <div class="max-w-[1380px] mx-auto px-[23px] md:px-[46px] py-[46px] md:py-[92px]">
+
+    <div class="flex flex-wrap items-end justify-between gap-4 mb-[46px]" data-reveal>
+      <h2 class="display mid">TRABAJO<br>SELEC<span style="color:var(--blue)">CIO</span>NADO</h2>
+      <p class="label-mono lg max-w-xs md:text-right" style="color:var(--body-dim)">
+        [ SHIP №003 · 03 productos ]<br>enviados — uno vivo, dos open source.
+      </p>
+    </div>
+
+    <!-- OPENLEN — acid hero column, blue shadow, full-bleed shot -->
+    <article class="proj edge-4 sh-blue grid md:grid-cols-12 mb-[46px] overflow-hidden" data-reveal style="background:#fff">
+      <div class="md:col-span-4 edge-b4 md:border-b-0 md:border-r-4 p-[21px] md:p-[42px] flex flex-col justify-between" style="border-color:var(--line);background:var(--acid)">
+        <div>
+          <span class="label-mono edge px-2 py-1 inline-block mb-5" style="background:var(--ink);color:var(--acid)">★ Estrella</span>
+          <h3 class="display text-5xl md:text-6xl">Open<br>Len</h3>
+        </div>
+        <p class="label-mono mt-6 inline-flex items-center gap-2"><span style="width:8px;height:8px;background:var(--coral);border-radius:999px;display:inline-block"></span>Builder + IA · Live</p>
+      </div>
+      <div class="md:col-span-8 grid md:grid-cols-2">
+        <div class="proj-media edge-b4 md:border-b-0 md:border-r-4 order-2 md:order-1" style="border-color:var(--line);min-height:240px;aspect-ratio:1280/860">
+          <img src="img/brutal/openlen.webp" width="1280" height="860" loading="lazy" alt="Captura del constructor de páginas con IA de OpenLen en acción">
+          <span class="media-tag">// builder.openlen</span>
+        </div>
+        <div class="p-[21px] md:p-[42px] flex flex-col justify-center order-1 md:order-2">
+          <p class="text-xl md:text-2xl font-semibold leading-snug mb-4">Describe una página, edítala y publícala en <span style="background:var(--acid)">tu propio subdominio</span>. La IA pone la estética.</p>
+          <p class="label-mono mb-5" style="color:var(--ink)"><strong>OpenLen genera páginas así: 57KB · 1.2s · 100 Lighthouse</strong></p>
+          <div class="flex flex-wrap gap-2 label-mono">
+            <span class="edge px-2.5 py-1">Next.js</span><span class="edge px-2.5 py-1">Gemini</span><span class="edge px-2.5 py-1">Rust</span><span class="edge px-2.5 py-1" style="background:var(--blue);color:#fff">Self-host</span>
+          </div>
+          <a href="https://openlen.com" target="_blank" rel="noopener noreferrer" class="label-mono linkish inline-block mt-5">Ver en vivo ↗</a>
+        </div>
+      </div>
+    </article>
+
+    <!-- ROW: INARIWATCH (coral, wider) + ORBITAPOS (blue accent, narrower, base) -->
+    <div class="grid md:grid-cols-12 gap-[23px] md:gap-[46px]">
+      <article class="proj edge-4 sh-ink md:col-span-7 flex flex-col" data-reveal style="background:var(--coral);color:#fff">
+        <div class="proj-media edge-b4" style="border-color:var(--line);aspect-ratio:1280/860;max-height:240px">
+          <img src="img/brutal/inariwatch.webp" width="1280" height="860" loading="lazy" alt="Panel de InariWatch mostrando errores capturados de una app Node">
+          <span class="media-tag">// inariwatch.dash</span>
+        </div>
+        <div class="p-[21px] md:p-[42px] flex flex-col justify-between flex-1">
+          <div>
+            <div class="flex flex-wrap items-center gap-2 mb-6">
+              <span class="label-mono edge px-2 py-1 inline-block" style="background:#fff;color:var(--ink)">Monitoreo</span>
+              <span class="label-mono edge px-2 py-1 inline-block" style="background:var(--ink);color:var(--acid);border-color:var(--ink)">Open source</span>
+            </div>
+            <h3 class="display text-5xl md:text-6xl mb-5">Inari<br>Watch</h3>
+            <p class="text-lg md:text-2xl font-semibold leading-snug">Captura cada error de tu app Node antes de que lo haga tu usuario.</p>
+          </div>
+          <div class="mt-6">
+            <p class="label-mono">Error tracking · una línea para instalar</p>
+            <a href="https://github.com/orbita-pos/inariwatch" target="_blank" rel="noopener noreferrer" class="label-mono linkish inline-block mt-3">Código ↗</a>
+          </div>
+        </div>
+      </article>
+
+      <article class="proj md:col-span-5 edge-4 flex flex-col gridlines-pale" data-reveal style="background:var(--ink);color:var(--paper);border-style:dashed;border-color:var(--paper)">
+        <div class="proj-media" style="border-bottom:3px dashed var(--paper);aspect-ratio:1280/860;max-height:200px">
+          <img src="img/brutal/orbitapos.webp" width="1280" height="860" loading="lazy" alt="Captura de OrbitaPOS, el punto de venta para tiendas en web y app móvil">
+          <span class="media-tag" style="border-color:var(--blue);color:#fff;background:var(--blue)">// orbitapos.pos</span>
+        </div>
+        <div class="p-[21px] md:p-[42px] flex flex-col justify-between flex-1">
+          <div>
+            <span class="label-mono edge px-2 py-1 inline-block mb-6" style="background:var(--blue);color:#fff;border-color:var(--blue)">Punto de venta</span>
+            <h3 class="display text-5xl md:text-6xl mb-5"><span style="color:var(--blue)">Orbita</span><br>POS</h3>
+            <p class="text-lg md:text-2xl font-semibold leading-snug">Punto de venta para tiendas — web + app móvil. Cobra, controla inventario y saca tickets, sin complicaciones.</p>
+          </div>
+          <div class="mt-6">
+            <div class="flex flex-wrap gap-2 label-mono">
+              <span class="edge px-2.5 py-1" style="border-color:var(--paper)">Next.js</span><span class="edge px-2.5 py-1" style="border-color:var(--paper)">Expo</span><span class="edge px-2.5 py-1" style="border-color:var(--paper)">Open source</span>
+            </div>
+            <a href="https://github.com/orbita-pos/orbitapos" target="_blank" rel="noopener noreferrer" class="label-mono linkish inline-block mt-4">Código ↗</a>
+          </div>
+        </div>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- IMÁGENES Y VIDEO — proof block, brutalist video facade -->
+<section id="media" class="edge-b4 gridlines">
+  <div class="max-w-[1380px] mx-auto px-[23px] md:px-[46px] py-[46px] md:py-[92px]">
+    <div class="flex flex-wrap items-end justify-between gap-4 mb-[46px]" data-reveal>
+      <h2 class="display mid">IMÁGENES<br>Y <span style="color:var(--coral)">VIDEO</span></h2>
+      <p class="label-mono lg max-w-xs md:text-right" style="color:var(--body-dim)">
+        [ media nativo ]<br>sí, tu página de OpenLen puede llevarlos.
+      </p>
+    </div>
+
+    <div class="proj edge-4 sh-coral overflow-hidden" data-reveal style="background:var(--ink)">
+      <div class="vid-wrap">
+        <button type="button" class="vid-facade" id="vidFacade" aria-label="Reproducir el video demo">
+          <img src="video/poster.jpg" width="1600" height="900" loading="lazy" alt="Poster del video demo: una página construida con OpenLen">
+          <span class="vid-play">
+            <span class="vid-play-btn" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none"><path d="M6 4l14 8-14 8V4z" fill="#0a0a0a"/></svg>
+            </span>
+            <span class="vid-play-label">Reproducir demo →</span>
+          </span>
+        </button>
+        <video id="demoVid" preload="none" controls playsinline
+          poster="video/poster.jpg"
+          style="display:none">
+          <source src="video/openlen-explainer.mp4" type="video/mp4">
+        </video>
+      </div>
+      <div class="edge-t p-[18px] md:p-[28px] flex flex-wrap items-center justify-between gap-3" style="border-color:var(--paper);background:var(--acid)">
+        <p class="label-mono" style="color:var(--ink)">// video HTML5 · poster + play · servido estático</p>
+        <p class="label-mono" style="color:var(--ink)">OpenLen genera páginas así: 57KB · 1.2s · 100</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- SIGNATURE INTERACTIVE MOMENT — "Míralo construir": self-assembling browser-frame demo -->
+<section id="play" class="edge-b4 overflow-hidden" style="background:var(--ink)">
+  <div class="max-w-[1380px] mx-auto px-[23px] md:px-[46px] py-[46px] md:py-[92px]">
+    <div class="flex flex-wrap items-end justify-between gap-3 mb-[28px]" data-reveal>
+      <h2 class="display text-3xl md:text-5xl uppercase" style="color:var(--paper)">Míralo <span style="color:var(--acid)">construir</span></h2>
+      <p class="label-mono" style="color:var(--acid)">OpenLen arma la página solo</p>
+    </div>
+    <p class="text-base md:text-lg max-w-[38rem] mb-[46px] leading-[1.55]" style="color:rgba(244,241,234,.9)" data-reveal>Describe una página. OpenLen la arma — HTML estático, servido desde disco.</p>
+
+    <div class="grid lg:grid-cols-12 gap-[23px] md:gap-[46px] items-start">
+
+      <!-- the browser frame -->
+      <div class="lg:col-span-8" data-reveal>
+        <div class="edge-4 hard-shadow-lg browser-frame" id="buildFrame" aria-label="Demostración: una mini landing armándose sola">
+          <div class="browser-chrome">
+            <div class="browser-dots"><i></i><i></i><i></i></div>
+            <div class="browser-url"><span class="lock"></span><span class="scheme">https://</span>taqueria.openlen.com</div>
+          </div>
+          <div class="browser-canvas">
+
+            <!-- mini-landing: nav -->
+            <div class="bb ml-nav" data-bb="1">
+              <div class="ml-brand"></div>
+              <div class="ml-links"><span></span><span></span><span></span></div>
+            </div>
+
+            <!-- mini-landing: hero -->
+            <div class="bb ml-hero" data-bb="2">
+              <div class="ml-hl"></div>
+              <div class="ml-hl two"></div>
+            </div>
+
+            <!-- mini-landing: image + copy row -->
+            <div class="ml-row">
+              <div class="bb ml-img" data-bb="3">
+                <span class="ml-imgtag">// img.servida</span>
+              </div>
+              <div class="bb ml-copy" data-bb="4" style="border:none;background:none">
+                <div class="ml-line l1"></div>
+                <div class="ml-line l2"></div>
+                <div class="ml-line l3"></div>
+                <div class="bb ml-btn" data-bb="5">
+                  <span class="ml-btntxt">Reservar →</span>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+
+      <!-- side caption / status -->
+      <div class="lg:col-span-4 flex flex-col gap-5" data-reveal>
+        <div class="edge-4 p-[21px] md:p-[28px]" style="background:var(--acid);color:var(--ink)">
+          <p class="build-status" id="buildStatus" data-phase="skeleton">
+            <span class="blip"></span><span id="buildStatusTxt">Levantando estructura…</span>
+          </p>
+          <div class="perf-divider edge-b" style="margin:18px 0;border-color:var(--ink)"></div>
+          <p class="display text-xl md:text-2xl leading-[.95] mb-3">De wireframe a página real, en cascada.</p>
+          <p class="text-sm leading-[1.5] font-medium">Esqueleto primero, luego se rellena pieza por pieza. Lo que queda al final es lo que se sirve: HTML plano, directo desde disco.</p>
+        </div>
+        <div class="edge-4 p-[18px] md:p-[24px] flex items-center gap-3" style="background:#fff;color:var(--ink)">
+          <span class="label-mono" style="color:var(--ink)">Sin runtime, sin esperas · ~57KB · 100 Lighthouse</span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ABSURD-SCALE MOMENT — inverted: ink ground + acid outline -->
+<section class="edge-b4 overflow-hidden relative" style="background:var(--ink)">
+  <div class="max-w-[1380px] mx-auto px-[23px] md:px-[46px] py-[69px] md:py-[138px]">
+    <p class="label-mono mb-3 md:mb-5" style="color:var(--acid)" data-reveal>[ La regla ]</p>
+    <div class="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-7 lg:gap-12">
+      <div class="optical-flush shrink-0" data-reveal>
+        <p class="display colossal stroke-acid leading-[.8]">SHIP<span style="color:var(--coral);-webkit-text-stroke:0">.</span></p>
+      </div>
+      <p class="self-start lg:self-end lg:pb-2 text-base md:text-2xl font-semibold max-w-[30rem]" style="color:var(--paper)" data-reveal>Una idea por la mañana. Algo en producción por la noche. <span style="background:var(--coral);color:var(--paper);padding:0 .12em;box-decoration-break:clone;-webkit-box-decoration-break:clone">Sin permiso, sin comité, sin excusas.</span></p>
+    </div>
+  </div>
+</section>
+
+<!-- ABOUT -->
+<section id="about" class="edge-b4 gridlines">
+  <div class="max-w-[1380px] mx-auto px-[23px] md:px-[46px] py-[46px] md:py-[92px] grid md:grid-cols-12 gap-[23px] md:gap-[46px] items-start">
+    <div class="md:col-span-7" data-reveal>
+      <p class="label-mono mb-5">[ Sobre el maker ]</p>
+      <p class="display leading-[.92]" style="font-size:clamp(1.8rem,5.2vw,3.8rem)">
+        Diseño, escribo el backend, peleo con el deploy y vuelvo a empezar — todo solo, todo <span style="color:var(--coral)">en producción</span>.
+      </p>
+    </div>
+    <div class="md:col-span-5 space-y-5 md:mt-[46px]" data-reveal>
+      <p class="text-base md:text-lg leading-[1.55]" style="color:var(--body-dim)">Builder solitario con manía por enviar: producto que la gente puede usar hoy, corriendo en mi propio Hetzner.</p>
+      <div class="grid grid-cols-3 gap-[12px]">
+        <div class="edge p-[21px] hard-shadow-sm" style="background:#fff"><div class="display text-3xl md:text-4xl">03</div><div class="label-mono mt-1">Productos enviados</div></div>
+        <div class="edge p-[21px] hard-shadow-sm" style="background:var(--acid)"><div class="display text-3xl md:text-4xl">1×</div><div class="label-mono mt-1">Solo, sin equipo</div></div>
+        <div class="edge p-[21px] hard-shadow-sm" style="background:var(--blue);color:#fff"><div class="display text-3xl md:text-4xl">Self-host</div><div class="label-mono mt-1">en mi Hetzner</div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- receipt-perforation divider (printed/shipped cadence) -->
+<div class="perf-divider edge-b4"></div>
+
+<!-- CONTACT / CTA — inverted ground, dark close -->
+<section id="contact" class="edge-b4 gridlines-pale" style="background:var(--ink);color:var(--paper)">
+  <div class="max-w-[1380px] mx-auto px-[23px] md:px-[46px] py-[69px] md:py-[138px] text-center" data-reveal>
+    <p class="label-mono mb-6" style="color:var(--acid)">[ ¿Construimos algo? ]</p>
+    <h2 class="display optical-flush" style="font-size:clamp(2.8rem,12vw,10rem);line-height:.86;overflow:visible">
+      <span class="block">ENVIE<span style="color:var(--coral)">MOS</span></span>
+      <span class="block">JUN<span style="display:inline-block;background:var(--coral);color:var(--ink);padding:0 .08em">TOS</span></span>
+    </h2>
+    <div class="flex flex-wrap items-center justify-center gap-4 mt-[46px]">
+      <a href="mailto:info@jesusbr.com" class="edge-4 hard-shadow px-7 py-4 display text-lg uppercase inline-block" style="background:var(--acid);color:var(--ink)">Escríbeme →</a>
+      <a href="#work" class="edge-4 hard-shadow px-7 py-4 display text-lg uppercase inline-block" style="background:var(--blue);color:#fff">Ver el trabajo</a>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer style="background:var(--ink);color:var(--paper)">
+  <div class="max-w-[1380px] mx-auto px-[23px] md:px-[46px] py-10 flex flex-col md:flex-row items-center justify-between gap-5">
+    <div class="display text-2xl">JESÚS<span style="color:var(--coral)">.</span></div>
+    <div class="label-mono text-center md:text-right" style="opacity:.7">
+      Indie maker · Envía software de verdad<br>
+      © 2026 — todos los derechos, ninguna excusa.
+    </div>
+    <a href="https://jesus.openlen.com" title="jesus.openlen.com" class="label-mono px-4 py-2 inline-flex items-center gap-2" style="border:2px solid var(--acid);background:var(--acid);color:var(--ink)">
+      <span class="ping-ship" style="width:8px;height:8px;background:var(--coral);border-radius:999px;display:inline-block"></span>
+      Hecho con OpenLen ↗
+    </a>
+  </div>
+</footer>
+
+<script>
+  const reduce = window.matchMedia('(prefers-reduced-motion:reduce)').matches;
+
+  // scroll reveal — with stagger across siblings within a section
+  const io = new IntersectionObserver((entries)=>{
+    entries.forEach((e)=>{
+      if(e.isIntersecting){
+        const sibs = e.target.parentElement ? [...e.target.parentElement.querySelectorAll(':scope > [data-reveal]')] : [e.target];
+        const i = Math.max(0, sibs.indexOf(e.target));
+        e.target.style.transitionDelay = ((i%6)*70)+'ms';
+        e.target.classList.add('in');
+        io.unobserve(e.target);
+      }
+    });
+  },{threshold:.12});
+  document.querySelectorAll('[data-reveal]').forEach(el=>io.observe(el));
+
+  // VIDEO facade — swap poster button for the real <video> on click, then autoplay
+  (function(){
+    const facade=document.getElementById('vidFacade');
+    const vid=document.getElementById('demoVid');
+    if(!facade||!vid) return;
+    facade.addEventListener('click',()=>{
+      facade.style.display='none';
+      vid.style.display='block';
+      vid.play().catch(()=>{ /* user can hit native controls */ });
+    });
+  })();
+
+  // uptime counter — makes "enviando ahora mismo" literal
+  (function(){
+    const el=document.getElementById('uptime');
+    if(!el) return;
+    const start=Date.parse('2026-06-09T00:00:00Z');
+    function tick(){
+      const ms=Date.now()-start;
+      const d=Math.floor(ms/864e5);
+      const h=Math.floor(ms%864e5/36e5).toString().padStart(2,'0');
+      const m=Math.floor(ms%36e5/6e4).toString().padStart(2,'0');
+      el.textContent=`uptime ${d}d ${h}h ${m}m`;
+    }
+    tick(); if(!reduce) setInterval(tick,60000);
+  })();
+
+  // custom cursor — ring (lerped) + dot (instant), no blend mode
+  const ring = document.getElementById('cur-ring');
+  const dot  = document.getElementById('cur-dot');
+  if (!window.matchMedia('(pointer:coarse)').matches) {
+    let cx=window.innerWidth/2, cy=window.innerHeight/2, tx=cx, ty=cy, seen=false;
+    // seed offscreen so there is no top-left flash on first paint
+    ring.style.left='-100px'; ring.style.top='-100px';
+    dot.style.transform='translate(-100px,-100px)';
+    window.addEventListener('mousemove',e=>{
+      tx=e.clientX; ty=e.clientY;
+      dot.style.transform=`translate(${tx}px,${ty}px)`;
+      if(!seen){ seen=true; cx=tx; cy=ty; ring.classList.add('live'); dot.classList.add('live'); }
+    });
+    window.addEventListener('mouseleave',()=>{ ring.classList.remove('live'); dot.classList.remove('live'); });
+    window.addEventListener('mouseenter',()=>{ if(seen){ ring.classList.add('live'); dot.classList.add('live'); } });
+    (function loop(){
+      // slightly higher lerp = tighter follow, less jelly on fast flicks
+      cx+=(tx-cx)*.22; cy+=(ty-cy)*.22;
+      ring.style.left=cx+'px'; ring.style.top=cy+'px';
+      requestAnimationFrame(loop);
+    })();
+    const hotSel='a,button,.proj,.tile,input,textarea';
+    document.querySelectorAll(hotSel).forEach(el=>{
+      el.addEventListener('mouseenter',()=>{ring.classList.add('hot');dot.classList.add('hot');});
+      el.addEventListener('mouseleave',()=>{ring.classList.remove('hot');dot.classList.remove('hot');});
+    });
+  }
+
+  // ============================================================
+  // "MÍRALO CONSTRUIR" — self-assembling mini-landing, on loop.
+  // Stage 1: skeleton blocks appear (dashed outline).
+  // Stage 2: cascade fill — each block takes color/content.
+  // Final: hold ~1.5s, reset, replay. Starts on viewport entry.
+  // prefers-reduced-motion → render the FINAL assembled state, no loop.
+  // ============================================================
+  (function(){
+    const frame = document.getElementById('buildFrame');
+    if(!frame) return;
+    const blocks = [...frame.querySelectorAll('[data-bb]')].sort(
+      (a,b)=>(+a.dataset.bb)-(+b.dataset.bb)
+    );
+    const statusEl = document.getElementById('buildStatus');
+    const statusTxt = document.getElementById('buildStatusTxt');
+
+    // fill helpers — some blocks need a child to flip too (nav/copy)
+    const nav  = frame.querySelector('.ml-nav');
+    const hero = frame.querySelector('.ml-hero');
+    const copy = frame.querySelector('.ml-copy');
+
+    function setStatus(phase, txt){
+      if(!statusEl) return;
+      statusEl.dataset.phase = phase;
+      if(statusTxt) statusTxt.textContent = txt;
+    }
+
+    function clearAll(){
+      blocks.forEach(b=>b.classList.remove('skel','fill'));
+      if(nav)  nav.classList.remove('fill');
+      if(hero) hero.classList.remove('fill');
+      if(copy) copy.classList.remove('fill');
+    }
+
+    function assembleFinal(){
+      // immediate, no transitions — used for reduced-motion
+      blocks.forEach(b=>b.classList.add('skel','fill'));
+      if(nav)  nav.classList.add('fill');
+      if(hero) hero.classList.add('fill');
+      if(copy) copy.classList.add('fill');
+      setStatus('done','Página lista · servida desde disco');
+    }
+
+    let timers = [];
+    function t(fn,ms){ timers.push(setTimeout(fn,ms)); }
+    function clearTimers(){ timers.forEach(clearTimeout); timers = []; }
+
+    function runCycle(){
+      clearTimers();
+      clearAll();
+      setStatus('skeleton','Levantando estructura…');
+
+      // STAGE 1 — skeletons appear in reading order (~0–0.8s)
+      blocks.forEach((b,i)=>{
+        t(()=>b.classList.add('skel'), 80 + i*120);
+      });
+
+      // STAGE 2 — cascade fill (~0.8–2s)
+      t(()=>setStatus('filling','Rellenando bloques…'), 820);
+      t(()=>{ blocks[0].classList.add('fill'); nav && nav.classList.add('fill'); }, 900);
+      t(()=>{ blocks[1].classList.add('fill'); hero && hero.classList.add('fill'); }, 1120);
+      t(()=>{ blocks[2].classList.add('fill'); }, 1360);
+      t(()=>{ blocks[3].classList.add('fill'); copy && copy.classList.add('fill'); }, 1600);
+      t(()=>{ blocks[4].classList.add('fill'); }, 1840);
+
+      // FINAL — polished, hold, then loop
+      t(()=>setStatus('done','Página lista · servida desde disco'), 2050);
+      t(()=>runCycle(), 2050 + 1500); // ~1.5s pause then replay
+    }
+
+    let started = false;
+    const buildIO = new IntersectionObserver((entries)=>{
+      entries.forEach(e=>{
+        if(e.isIntersecting){
+          if(reduce){ assembleFinal(); buildIO.disconnect(); return; }
+          if(!started){ started = true; runCycle(); }
+        } else {
+          // pause off-screen to save cycles; resume re-runs from skeleton
+          if(!reduce){ clearTimers(); started = false; }
+        }
+      });
+    },{threshold:.3});
+
+    if(reduce){ assembleFinal(); }
+    else { buildIO.observe(frame); }
+  })();
+</script>
+</main>
+</body>
+</html>
