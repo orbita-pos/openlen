@@ -134,5 +134,15 @@
       "approx": "Approximate · per-browser in one session",
       "untracked": "{count} untracked"
     }
+  },
+  "toast": {
+    "restored": "Wiederhergestellt zu {label}",
+    "restoredNoLabel": "Auf diese Version wiederhergestellt",
+    "restoreError": "Die Version konnte nicht wiederhergestellt werden",
+    "saved": "Version gespeichert · {label}",
+    "saveError": "Die Version konnte nicht gespeichert werden",
+    "pinned": "Version angeheftet",
+    "unpinned": "Version gelöst",
+    "pinError": "Das Anheften konnte nicht aktualisiert werden"
   }
 }

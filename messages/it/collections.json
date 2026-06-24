@@ -59,5 +59,9 @@
     "cancel": "Annulla",
     "saveError": "Impossibile salvare. Controlla i link e riprova.",
     "pickImage": "Scegli"
+  },
+  "toast": {
+    "archived": "Elemento rimosso",
+    "archiveError": "Impossibile rimuovere l'elemento. Riprova."
   }
 }

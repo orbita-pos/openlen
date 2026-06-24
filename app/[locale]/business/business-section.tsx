@@ -14,6 +14,7 @@ import type {
   BusinessProfileData,
 } from "@/lib/business-profiles/types";
 import { BizAvatar } from "@/components/workspace-v2/business-switcher";
+import { useToast } from "@/components/workspace-v2/toast";
 
 /* ───────── Icons (lucide-style) ───────── */
 type IconProps = { size?: number; className?: string; stroke?: number };
@@ -203,6 +204,7 @@ export function BusinessSection({
   onChanged?: () => void;
 }) {
   const t = useTranslations("miNegocio");
+  const toast = useToast();
   const router = useRouter();
   const locale = useLocale();
 
@@ -290,6 +292,8 @@ export function BusinessSection({
         ...p,
         data: { ...p.data, brand: { logoUrl: url ?? p.data.brand?.logoUrl ?? null, accent: accent ?? p.data.brand?.accent ?? null } },
       }));
+      if (url) toast.success(t("toasts.logoUploaded"));
+      else toast.error(t("toasts.logoError"));
     } finally {
       setBusyAsset(false);
     }
@@ -297,10 +301,16 @@ export function BusinessSection({
   const onPhotos = async (files: File[]) => {
     setBusyAsset(true);
     try {
+      let uploaded = 0;
       for (const f of files.slice(0, 8)) {
         const url = await uploadAsset(f);
-        if (url) updateActive((p) => ({ ...p, data: { ...p.data, photos: [...(p.data.photos ?? []), url] } }));
+        if (url) {
+          uploaded += 1;
+          updateActive((p) => ({ ...p, data: { ...p.data, photos: [...(p.data.photos ?? []), url] } }));
+        }
       }
+      if (uploaded > 0) toast.success(t("toasts.photosUploaded", { count: uploaded }));
+      else toast.error(t("toasts.photosError"));
     } finally {
       setBusyAsset(false);
     }
@@ -343,9 +353,18 @@ export function BusinessSection({
 
   const makeDefault = async () => {
     if (!active || active.isNew) return;
-    await fetch(`/api/profiles/${active.id}`, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ setDefault: true }) });
-    setData((d) => d.map((p) => ({ ...p, isDefault: p.id === active.id })));
-    onChanged?.();
+    try {
+      const res = await fetch(`/api/profiles/${active.id}`, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ setDefault: true }) });
+      if (!res.ok) {
+        toast.error(t("toasts.defaultError"));
+        return;
+      }
+      setData((d) => d.map((p) => ({ ...p, isDefault: p.id === active.id })));
+      onChanged?.();
+      toast.success(t("toasts.defaultSet"));
+    } catch {
+      toast.error(t("toasts.defaultError"));
+    }
   };
   const removeActiveLocal = () => {
     setData((d) => {
@@ -372,10 +391,17 @@ export function BusinessSection({
     if (!active || active.isNew) return;
     setDeleting(true);
     try {
-      await fetch(`/api/profiles/${active.id}`, { method: "DELETE" });
+      const res = await fetch(`/api/profiles/${active.id}`, { method: "DELETE" });
+      if (!res.ok) {
+        toast.error(t("toasts.deleteError"));
+        return;
+      }
       setDeleteOpen(false);
       removeActiveLocal();
       onChanged?.();
+      toast.success(t("toasts.deleted"));
+    } catch {
+      toast.error(t("toasts.deleteError"));
     } finally {
       setDeleting(false);
     }

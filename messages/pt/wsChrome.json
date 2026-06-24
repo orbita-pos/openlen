@@ -74,6 +74,14 @@
     "expandPanel": "Expandir painel",
     "collapsePanel": "Recolher painel"
   },
+  "toast": {
+    "deleted": {
+      "title": "Página excluída"
+    },
+    "deleteFailed": {
+      "title": "Não foi possível excluir a página."
+    }
+  },
   "preview": {
     "zoomFit": "Ajustar",
     "toolbar": {

@@ -213,6 +213,14 @@
     "iframeTitle": "{name} 实时预览",
     "applied": "已应用"
   },
+  "toast": {
+    "deleted": {
+      "title": "页面已删除"
+    },
+    "deleteFailed": {
+      "title": "无法删除该页面。"
+    }
+  },
   "sitePages": {
     "home": "首页",
     "addPage": "新页面",

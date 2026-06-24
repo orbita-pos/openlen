@@ -230,5 +230,15 @@
       "streamRead": "Lettura dello stream non riuscita",
       "unknown": "Errore sconosciuto"
     }
+  },
+  "toast": {
+    "imageUploaded": "Immagine caricata",
+    "imageUploadError": "Impossibile caricare l'immagine",
+    "videoUploaded": "Video caricato",
+    "videoUploadError": "Impossibile caricare il video",
+    "bgRemoved": "Sfondo rimosso",
+    "bgRemoveError": "Impossibile rimuovere lo sfondo",
+    "imageEdited": "Immagine modificata",
+    "imageEditError": "Impossibile modificare l'immagine"
   }
 }

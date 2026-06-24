@@ -5,6 +5,16 @@
   "loading": "Laden…",
   "theme": "Thema wisselen",
   "toast": "Opgeslagen. Je pagina's gebruiken nu deze gegevens.",
+  "toasts": {
+    "deleted": "Profiel verwijderd",
+    "deleteError": "Kon het profiel niet verwijderen. Probeer het opnieuw.",
+    "logoUploaded": "Logo geüpload",
+    "logoError": "Kon het logo niet uploaden. Probeer het opnieuw.",
+    "photosUploaded": "{count, plural, one {# foto geüpload} other {# foto's geüpload}}",
+    "photosError": "Kon de foto's niet uploaden. Probeer het opnieuw.",
+    "defaultSet": "Als standaard ingesteld",
+    "defaultError": "Kon niet als standaard instellen. Probeer het opnieuw."
+  },
   "deleteConfirm": "\"{name}\" verwijderen?",
   "switcher": {
     "change": "Ander bedrijf kiezen",

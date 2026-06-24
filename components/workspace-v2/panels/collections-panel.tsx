@@ -12,6 +12,7 @@ import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { ChevronLeft, Grid3, ImageIcon, Loader, Pencil, Plus, Trash } from "../icons";
 import { ReplaceAssetModal } from "../replace-asset-modal";
+import { useToast } from "../toast";
 
 const PRESETS = ["products", "menu", "listings", "events", "team", "portfolio"] as const;
 const MAX_ITEMS = 60;
@@ -39,6 +40,7 @@ interface Collection {
 
 export function CollectionsPanel({ currentProjectId }: { currentProjectId?: string | null }) {
   const t = useTranslations("collections");
+  const toast = useToast();
   const [collection, setCollection] = useState<Collection | null>(null);
   const [items, setItems] = useState<Item[] | null>(null);
   const [editing, setEditing] = useState<Item | "new" | null>(null);
@@ -112,10 +114,15 @@ export function CollectionsPanel({ currentProjectId }: { currentProjectId?: stri
 
   const archive = async (id: string) => {
     setBusyId(id);
-    await fetch(`/api/projects/${currentProjectId}/collections/items/${id}`, {
+    const r = await fetch(`/api/projects/${currentProjectId}/collections/items/${id}`, {
       method: "DELETE",
-    }).catch(() => {});
+    }).catch(() => null);
     setBusyId(null);
+    if (!r || !r.ok) {
+      toast.error(t("toast.archiveError"));
+    } else {
+      toast.success(t("toast.archived"));
+    }
     load(currentProjectId);
   };
 

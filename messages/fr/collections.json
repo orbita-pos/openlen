@@ -59,5 +59,9 @@
     "cancel": "Annuler",
     "saveError": "Échec de l'enregistrement. Vérifiez les liens et réessayez.",
     "pickImage": "Choisir"
+  },
+  "toast": {
+    "archived": "Élément retiré",
+    "archiveError": "Impossible de retirer l'élément. Réessayez."
   }
 }

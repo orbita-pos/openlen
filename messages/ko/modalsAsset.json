@@ -230,5 +230,15 @@
       "streamRead": "스트림 읽기 실패",
       "unknown": "알 수 없는 오류"
     }
+  },
+  "toast": {
+    "imageUploaded": "이미지를 업로드했습니다",
+    "imageUploadError": "이미지를 업로드하지 못했습니다",
+    "videoUploaded": "동영상을 업로드했습니다",
+    "videoUploadError": "동영상을 업로드하지 못했습니다",
+    "bgRemoved": "배경을 제거했습니다",
+    "bgRemoveError": "배경을 제거하지 못했습니다",
+    "imageEdited": "이미지를 편집했습니다",
+    "imageEditError": "이미지를 편집하지 못했습니다"
   }
 }

@@ -230,5 +230,15 @@
       "streamRead": "ストリームの読み取りに失敗しました",
       "unknown": "不明なエラー"
     }
+  },
+  "toast": {
+    "imageUploaded": "画像をアップロードしました",
+    "imageUploadError": "画像をアップロードできませんでした",
+    "videoUploaded": "動画をアップロードしました",
+    "videoUploadError": "動画をアップロードできませんでした",
+    "bgRemoved": "背景を削除しました",
+    "bgRemoveError": "背景を削除できませんでした",
+    "imageEdited": "画像を編集しました",
+    "imageEditError": "画像を編集できませんでした"
   }
 }

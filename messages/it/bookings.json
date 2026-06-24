@@ -92,5 +92,14 @@
     "statusCompleted": "Completata",
     "statusNoShow": "Assente",
     "cancelConfirm": "Annullare questa prenotazione? Il visitatore verrà avvisato."
+  },
+  "toast": {
+    "archived": "Servizio archiviato",
+    "archiveError": "Impossibile archiviare il servizio.",
+    "confirm": "Prenotazione confermata",
+    "cancel": "Prenotazione annullata",
+    "complete": "Prenotazione completata",
+    "no_show": "Segnata come assente",
+    "actionError": "Impossibile aggiornare la prenotazione."
   }
 }

@@ -59,5 +59,9 @@
     "cancel": "Cancel",
     "saveError": "Couldn't save. Check the links and try again.",
     "pickImage": "Choose"
+  },
+  "toast": {
+    "archived": "Item removed",
+    "archiveError": "Couldn't remove the item. Try again."
   }
 }

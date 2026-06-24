@@ -155,5 +155,9 @@
     },
     "profileEmpty": "Füge deinem Profil ein Logo oder Fotos hinzu, um sie hier zu sehen.",
     "uploadsEmpty": "Bilder, die du auf diese Seite hochlädst, erscheinen hier."
+  },
+  "toast": {
+    "saved": "Profil gespeichert",
+    "saveError": "Dein Unternehmen konnte nicht gespeichert werden. Versuch es erneut."
   }
 }

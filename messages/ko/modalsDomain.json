@@ -1,4 +1,13 @@
 {
+  "toast": {
+    "publishedTitle": "게시됨",
+    "publishedBody": "{subdomain}.openlen.com 에서 페이지가 공개되었습니다",
+    "domainClaimedTitle": "{domain} 등록됨",
+    "domainClaimedBody": "아래 DNS 레코드를 추가한 뒤 인증하세요.",
+    "domainVerifiedTitle": "{domain} 인증됨",
+    "domainVerifiedBody": "TLS 인증서를 발급하는 중입니다 — 곧 공개됩니다.",
+    "domainRemovedTitle": "{domain} 삭제됨"
+  },
   "customDomain": {
     "validation": {
       "invalidHostname": "유효한 호스트명이 아닙니다.",

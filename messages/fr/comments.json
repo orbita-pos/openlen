@@ -33,5 +33,11 @@
     "all": "Tous",
     "pending": "En attente",
     "visible": "Visibles"
+  },
+  "toast": {
+    "deleted": "Commentaire supprimé",
+    "deleteError": "Suppression du commentaire impossible",
+    "banned": "Auteur banni",
+    "banError": "Impossible de bannir l'auteur"
   }
 }

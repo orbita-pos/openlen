@@ -134,5 +134,15 @@
       "approx": "Approximate · per-browser in one session",
       "untracked": "{count} untracked"
     }
+  },
+  "toast": {
+    "restored": "Restaurée vers {label}",
+    "restoredNoLabel": "Restaurée vers cette version",
+    "restoreError": "Restauration de la version impossible",
+    "saved": "Version enregistrée · {label}",
+    "saveError": "Enregistrement de la version impossible",
+    "pinned": "Version épinglée",
+    "unpinned": "Version désépinglée",
+    "pinError": "Modification de l'épingle impossible"
   }
 }

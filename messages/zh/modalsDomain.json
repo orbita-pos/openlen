@@ -1,4 +1,13 @@
 {
+  "toast": {
+    "publishedTitle": "已发布",
+    "publishedBody": "你的页面已上线：{subdomain}.openlen.com",
+    "domainClaimedTitle": "已申请 {domain}",
+    "domainClaimedBody": "请添加下方的 DNS 记录，然后进行验证。",
+    "domainVerifiedTitle": "已验证 {domain}",
+    "domainVerifiedBody": "正在签发 TLS 证书——稍后即可上线。",
+    "domainRemovedTitle": "已移除 {domain}"
+  },
   "customDomain": {
     "validation": {
       "invalidHostname": "主机名无效。",

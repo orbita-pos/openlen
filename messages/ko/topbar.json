@@ -39,7 +39,9 @@
     "confirm": "공개된 사이트를 {sha} 배포로 되돌릴까요? 방문자에게는 몇 초 안에 이 이전 버전이 표시됩니다.",
     "errorGone": "해당 배포는 디스크에서 정리되어 복원할 수 없습니다.",
     "errorGeneric": "되돌리기에 실패했습니다. 다시 시도해 주세요.",
-    "inProgress": "되돌리는 중…"
+    "inProgress": "되돌리는 중…",
+    "successTitle": "{sha} 배포로 되돌렸습니다",
+    "successBody": "이제 공개 사이트가 이 이전 배포를 제공합니다."
   },
   "theme": {
     "lightMode": "라이트 모드",

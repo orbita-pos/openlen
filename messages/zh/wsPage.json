@@ -68,5 +68,31 @@
     "applying": "Applying the template to your page…",
     "notice": "Page restyled. Review the example content (testimonials, prices) before publishing.",
     "lowCredits": "Not enough credits to restyle this page."
+  },
+  "toast": {
+    "publishedTitle": "已发布",
+    "publishedBody": "你的页面已上线：{subdomain}.openlen.com",
+    "openSite": "打开站点",
+    "unpublishedTitle": "页面已取消发布",
+    "unpublishedBody": "该地址已无法访问。",
+    "moduleEnabled": "已启用{module}",
+    "moduleDisabled": "已停用{module}",
+    "moduleError": "无法更新该模块。",
+    "moduleMembers": "会员",
+    "moduleBroadcast": "Broadcast",
+    "moduleComments": "评论",
+    "moduleBookings": "预约",
+    "moduleCollections": "合集",
+    "membersOnlyOn": "页面现已设为仅限会员",
+    "membersOnlyOff": "页面现已设为公开",
+    "membersOnlyError": "无法更改页面访问权限。",
+    "renameError": "无法重命名该页面。",
+    "logoUpdated": "标志已更新",
+    "logoError": "无法更新标志。",
+    "formSaved": "表单设置已保存",
+    "formError": "无法保存表单设置。",
+    "analyticsEnabled": "已启用分析",
+    "analyticsDisabled": "已停用分析",
+    "saveError": "无法保存更改。"
   }
 }

@@ -116,6 +116,24 @@
     "bulkDeleteConfirm": "Delete {count} pages? This cannot be undone.",
     "moveError": "Could not move: {error}"
   },
+  "toast": {
+    "deleted": "Page deleted",
+    "deleteError": "Couldn't delete the page.",
+    "renamed": "Renamed to {name}",
+    "renameError": "Couldn't rename the page.",
+    "duplicated": "Page duplicated",
+    "duplicateError": "Couldn't duplicate the page.",
+    "archived": "Page archived",
+    "archiveError": "Couldn't archive the page.",
+    "moved": "Moved to {business}",
+    "moveError": "Couldn't move the page.",
+    "downloadStarted": "Download started",
+    "exportLoadError": "Couldn't load the page to export.",
+    "zipError": "Couldn't build the .zip.",
+    "bulkDeleted": "{count, plural, one {# page deleted} other {# pages deleted}}",
+    "bulkArchived": "{count, plural, one {# page archived} other {# pages archived}}",
+    "somethingWrong": "Something went wrong"
+  },
   "relativeTime": {
     "justNow": "just now",
     "minutesAgo": "{count} min ago",

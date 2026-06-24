@@ -44,5 +44,9 @@
     "edit": "Modifica",
     "send": "Invia",
     "confirmSend": "Inviare ora?"
+  },
+  "toast": {
+    "deleted": "Campagna eliminata",
+    "deleteError": "Impossibile eliminare la campagna. Riprova."
   }
 }

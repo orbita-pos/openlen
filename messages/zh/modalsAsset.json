@@ -230,5 +230,15 @@
       "streamRead": "数据流读取失败",
       "unknown": "未知错误"
     }
+  },
+  "toast": {
+    "imageUploaded": "图片已上传",
+    "imageUploadError": "无法上传该图片",
+    "videoUploaded": "视频已上传",
+    "videoUploadError": "无法上传该视频",
+    "bgRemoved": "背景已移除",
+    "bgRemoveError": "无法移除背景",
+    "imageEdited": "图片已编辑",
+    "imageEditError": "无法编辑该图片"
   }
 }

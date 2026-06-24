@@ -59,5 +59,9 @@
     "cancel": "Abbrechen",
     "saveError": "Speichern fehlgeschlagen. Prüfe die Links und versuche es erneut.",
     "pickImage": "Wählen"
+  },
+  "toast": {
+    "archived": "Eintrag entfernt",
+    "archiveError": "Der Eintrag konnte nicht entfernt werden. Versuch es erneut."
   }
 }

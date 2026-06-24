@@ -44,5 +44,9 @@
     "edit": "Editar",
     "send": "Enviar",
     "confirmSend": "Enviar agora?"
+  },
+  "toast": {
+    "deleted": "Campanha excluída",
+    "deleteError": "Não foi possível excluir a campanha. Tente novamente."
   }
 }

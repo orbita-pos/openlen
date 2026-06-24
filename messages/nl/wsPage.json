@@ -68,5 +68,31 @@
     "applying": "Applying the template to your page…",
     "notice": "Page restyled. Review the example content (testimonials, prices) before publishing.",
     "lowCredits": "Not enough credits to restyle this page."
+  },
+  "toast": {
+    "publishedTitle": "Gepubliceerd",
+    "publishedBody": "Je pagina is live op {subdomain}.openlen.com",
+    "openSite": "Site openen",
+    "unpublishedTitle": "Publicatie ongedaan gemaakt",
+    "unpublishedBody": "De pagina is niet meer bereikbaar op dat adres.",
+    "moduleEnabled": "{module} ingeschakeld",
+    "moduleDisabled": "{module} uitgeschakeld",
+    "moduleError": "Kon de module niet bijwerken.",
+    "moduleMembers": "Leden",
+    "moduleBroadcast": "Broadcast",
+    "moduleComments": "Reacties",
+    "moduleBookings": "Afspraken",
+    "moduleCollections": "Collecties",
+    "membersOnlyOn": "Pagina is nu alleen voor leden",
+    "membersOnlyOff": "Pagina is nu openbaar",
+    "membersOnlyError": "Kon de paginatoegang niet wijzigen.",
+    "renameError": "Kon de pagina niet hernoemen.",
+    "logoUpdated": "Logo bijgewerkt",
+    "logoError": "Kon het logo niet bijwerken.",
+    "formSaved": "Formulierinstellingen opgeslagen",
+    "formError": "Kon de formulierinstellingen niet opslaan.",
+    "analyticsEnabled": "Analytics ingeschakeld",
+    "analyticsDisabled": "Analytics uitgeschakeld",
+    "saveError": "Kon de wijziging niet opslaan."
   }
 }

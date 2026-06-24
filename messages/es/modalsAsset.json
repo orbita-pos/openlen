@@ -155,6 +155,16 @@
     "aiNoCredits": "No tienes créditos suficientes para una edición con IA.",
     "aiFailed": "No se pudo editar la imagen. Prueba con otra instrucción."
   },
+  "toast": {
+    "imageUploaded": "Imagen subida",
+    "imageUploadError": "No se pudo subir la imagen",
+    "videoUploaded": "Video subido",
+    "videoUploadError": "No se pudo subir el video",
+    "bgRemoved": "Fondo eliminado",
+    "bgRemoveError": "No se pudo quitar el fondo",
+    "imageEdited": "Imagen editada",
+    "imageEditError": "No se pudo editar la imagen"
+  },
   "autofill": {
     "title": "Llenar con tu info",
     "subtitle": "Sube una imagen con tu info — o simplemente describe tu negocio. Tu plantilla se llena con tu contenido real; el diseño no cambia.",

@@ -92,5 +92,14 @@
     "statusCompleted": "Completada",
     "statusNoShow": "No asistió",
     "cancelConfirm": "¿Cancelar esta reserva? Se notifica al visitante."
+  },
+  "toast": {
+    "archived": "Servicio archivado",
+    "archiveError": "No se pudo archivar el servicio.",
+    "confirm": "Reserva confirmada",
+    "cancel": "Reserva cancelada",
+    "complete": "Reserva completada",
+    "no_show": "Marcada como no asistió",
+    "actionError": "No se pudo actualizar la reserva."
   }
 }

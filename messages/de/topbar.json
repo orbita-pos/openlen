@@ -39,7 +39,9 @@
     "confirm": "Die Live-Seite auf Deployment {sha} zurücksetzen? Besucher sehen diese frühere Version innerhalb von Sekunden.",
     "errorGone": "Dieses Deployment wurde von der Festplatte entfernt und kann nicht wiederhergestellt werden.",
     "errorGeneric": "Zurücksetzen fehlgeschlagen. Versuche es erneut.",
-    "inProgress": "Wird zurückgesetzt…"
+    "inProgress": "Wird zurückgesetzt…",
+    "successTitle": "Auf {sha} zurückgesetzt",
+    "successBody": "Deine Live-Seite liefert jetzt dieses frühere Deployment aus."
   },
   "theme": {
     "lightMode": "Heller Modus",

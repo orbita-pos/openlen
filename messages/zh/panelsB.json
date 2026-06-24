@@ -134,5 +134,15 @@
       "approx": "Approximate · per-browser in one session",
       "untracked": "{count} untracked"
     }
+  },
+  "toast": {
+    "restored": "已恢复到 {label}",
+    "restoredNoLabel": "已恢复到此版本",
+    "restoreError": "无法恢复该版本",
+    "saved": "版本已保存 · {label}",
+    "saveError": "无法保存该版本",
+    "pinned": "版本已固定",
+    "unpinned": "版本已取消固定",
+    "pinError": "无法更新固定状态"
   }
 }

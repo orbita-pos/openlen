@@ -11,6 +11,10 @@
     "modeQuick": "Snel",
     "modeScratch": "Vanaf nul"
   },
+  "toast": {
+    "saved": "Profiel opgeslagen",
+    "saveError": "Kon je bedrijf niet opslaan. Probeer het opnieuw."
+  },
   "brief": {
     "label": "Briefing",
     "description": "Vaste context die de AI bij elke chat ziet. Merk, tone of voice, randvoorwaarden, herinneringen.",

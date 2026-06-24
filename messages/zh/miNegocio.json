@@ -119,5 +119,15 @@
     "confirmLabel": "输入 {name} 以确认",
     "cancel": "取消",
     "confirm": "删除业务"
+  },
+  "toasts": {
+    "deleted": "资料已删除",
+    "deleteError": "无法删除该资料，请重试。",
+    "logoUploaded": "标志已上传",
+    "logoError": "无法上传标志，请重试。",
+    "photosUploaded": "{count, plural, other {已上传 # 张照片}}",
+    "photosError": "无法上传照片，请重试。",
+    "defaultSet": "已设为默认",
+    "defaultError": "无法设为默认，请重试。"
   }
 }

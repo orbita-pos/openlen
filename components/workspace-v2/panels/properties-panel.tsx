@@ -45,6 +45,7 @@ import {
 } from "@/lib/tematicas/derive-from-image";
 import { imageFetchUrl } from "@/lib/image-fetch-url";
 import { lookFromAccent } from "@/lib/palette-gen";
+import { useToast } from "../toast";
 import { ReplaceAssetModal, type ImageTab } from "../replace-asset-modal";
 import {
   ColorField,
@@ -1179,6 +1180,7 @@ function ThemeSection({
   projectId?: string;
 }) {
   const t = useTranslations("panelsProps");
+  const toast = useToast();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [expanded, setExpanded] = useState(false);
   const [logoBusy, setLogoBusy] = useState(false);
@@ -1205,8 +1207,10 @@ function ThemeSection({
       const derived = await deriveWorldFromUrl(imageFetchUrl(logoUrl, projectId));
       onApplyLookForMode(lookFromAccent(derived.accent).light, derived.mode);
       setSelectedId("__logo__");
+      toast.success(t("toast.themeFromLogo"));
     } catch {
       setLogoError(true);
+      toast.error(t("toast.themeFromLogoError"));
     } finally {
       setLogoBusy(false);
     }
@@ -1403,6 +1407,7 @@ function TematicaSection({
   mode?: "light" | "dark";
 }) {
   const t = useTranslations("panelsProps");
+  const toast = useToast();
   const none = !active;
   const activeKit = TEMATICA_PRESETS.find((k) => k.id === active);
   const currentBg = activeBg || activeKit?.backdrops[0]?.id;
@@ -1434,13 +1439,15 @@ function TematicaSection({
         if (!res.ok || !data.url) throw new Error("upload failed");
         const tokens = lookFromAccent(derived.accent)[derived.mode];
         onApply(buildCustomTematica(data.url, { mode: derived.mode, tokens }));
+        toast.success(t("toast.worldApplied"));
       } catch {
         setError(t("tematica.uploadError"));
+        toast.error(t("toast.worldError"));
       } finally {
         setBusy(false);
       }
     },
-    [projectId, onApply, t],
+    [projectId, onApply, t, toast],
   );
 
   // Manual ink-direction override for the custom world — rebuilds the same

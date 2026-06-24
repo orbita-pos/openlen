@@ -174,5 +174,11 @@
     "uploadError": "Upload fehlgeschlagen — bitte ein anderes Bild versuchen.",
     "light": "Hell",
     "dark": "Dunkel"
+  },
+  "toast": {
+    "themeFromLogo": "Thema aus Logo abgeleitet",
+    "themeFromLogoError": "Das Logo konnte nicht gelesen werden — lade es erneut hoch.",
+    "worldApplied": "Welt angewendet",
+    "worldError": "Upload fehlgeschlagen — versuche ein anderes Bild."
   }
 }

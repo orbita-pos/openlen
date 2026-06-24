@@ -1,5 +1,23 @@
 {
   "metaTitle": "Mijn pagina's",
+  "toast": {
+    "deleted": "Pagina verwijderd",
+    "deleteError": "Kon de pagina niet verwijderen.",
+    "renamed": "Hernoemd naar {name}",
+    "renameError": "Kon de pagina niet hernoemen.",
+    "duplicated": "Pagina gedupliceerd",
+    "duplicateError": "Kon de pagina niet dupliceren.",
+    "archived": "Pagina gearchiveerd",
+    "archiveError": "Kon de pagina niet archiveren.",
+    "moved": "Verplaatst naar {business}",
+    "moveError": "Kon de pagina niet verplaatsen.",
+    "downloadStarted": "Download gestart",
+    "exportLoadError": "Kon de pagina niet laden om te exporteren.",
+    "zipError": "Kon de .zip niet maken.",
+    "bulkDeleted": "{count, plural, one {# pagina verwijderd} other {# pagina's verwijderd}}",
+    "bulkArchived": "{count, plural, one {# pagina gearchiveerd} other {# pagina's gearchiveerd}}",
+    "somethingWrong": "Er is iets misgegaan"
+  },
   "header": {
     "myPages": "Mijn pagina's",
     "newPage": "Nieuwe pagina"

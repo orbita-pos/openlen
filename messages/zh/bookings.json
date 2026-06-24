@@ -92,5 +92,14 @@
     "statusCompleted": "已完成",
     "statusNoShow": "未到",
     "cancelConfirm": "取消这个预约吗？访客会收到通知。"
+  },
+  "toast": {
+    "archived": "服务已归档",
+    "archiveError": "无法归档该服务。",
+    "confirm": "预约已确认",
+    "cancel": "预约已取消",
+    "complete": "预约已完成",
+    "no_show": "已标记为未到",
+    "actionError": "无法更新该预约。"
   }
 }

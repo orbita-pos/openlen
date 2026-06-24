@@ -540,3 +540,11 @@ export const AlertTriangle = (p: IconProps) => (
     <path d="M12 17h.01" />
   </Base>
 );
+
+export const Info = (p: IconProps) => (
+  <Base {...p}>
+    <circle cx="12" cy="12" r="10" />
+    <path d="M12 16v-4" />
+    <path d="M12 8h.01" />
+  </Base>
+);

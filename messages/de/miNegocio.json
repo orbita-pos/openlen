@@ -119,5 +119,15 @@
     "confirmLabel": "Tippe {name} zum Bestätigen",
     "cancel": "Abbrechen",
     "confirm": "Unternehmen löschen"
+  },
+  "toasts": {
+    "deleted": "Profil gelöscht",
+    "deleteError": "Das Profil konnte nicht gelöscht werden. Versuch es erneut.",
+    "logoUploaded": "Logo hochgeladen",
+    "logoError": "Das Logo konnte nicht hochgeladen werden. Versuch es erneut.",
+    "photosUploaded": "{count, plural, one {# Foto hochgeladen} other {# Fotos hochgeladen}}",
+    "photosError": "Die Fotos konnten nicht hochgeladen werden. Versuch es erneut.",
+    "defaultSet": "Als Standard festgelegt",
+    "defaultError": "Konnte nicht als Standard festgelegt werden. Versuch es erneut."
   }
 }

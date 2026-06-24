@@ -33,5 +33,11 @@
     "all": "全部",
     "pending": "待审核",
     "visible": "可见"
+  },
+  "toast": {
+    "deleted": "评论已删除",
+    "deleteError": "无法删除评论",
+    "banned": "作者已封禁",
+    "banError": "无法封禁作者"
   }
 }

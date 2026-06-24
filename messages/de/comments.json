@@ -33,5 +33,11 @@
     "all": "Alle",
     "pending": "Ausstehend",
     "visible": "Sichtbar"
+  },
+  "toast": {
+    "deleted": "Kommentar gelöscht",
+    "deleteError": "Kommentar konnte nicht gelöscht werden",
+    "banned": "Autor gesperrt",
+    "banError": "Autor konnte nicht gesperrt werden"
   }
 }

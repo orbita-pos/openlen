@@ -39,7 +39,9 @@
     "confirm": "Ripristinare il sito online alla pubblicazione {sha}? I visitatori vedranno questa versione precedente nel giro di pochi secondi.",
     "errorGone": "Questa pubblicazione è stata rimossa dal disco e non può essere ripristinata.",
     "errorGeneric": "Ripristino non riuscito. Riprova.",
-    "inProgress": "Ripristino in corso…"
+    "inProgress": "Ripristino in corso…",
+    "successTitle": "Ripristinata la pubblicazione {sha}",
+    "successBody": "Il tuo sito online ora mostra questa pubblicazione precedente."
   },
   "theme": {
     "lightMode": "Tema chiaro",

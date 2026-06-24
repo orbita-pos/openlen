@@ -155,5 +155,9 @@
     },
     "profileEmpty": "Ajoutez un logo ou des photos à votre profil pour les voir ici.",
     "uploadsEmpty": "Les images que vous importez sur cette page apparaîtront ici."
+  },
+  "toast": {
+    "saved": "Profil enregistré",
+    "saveError": "Impossible d'enregistrer votre entreprise. Réessayez."
   }
 }

@@ -68,5 +68,31 @@
     "applying": "Applying the template to your page…",
     "notice": "Page restyled. Review the example content (testimonials, prices) before publishing.",
     "lowCredits": "Not enough credits to restyle this page."
+  },
+  "toast": {
+    "publishedTitle": "公開しました",
+    "publishedBody": "ページは {subdomain}.openlen.com で公開中です",
+    "openSite": "サイトを開く",
+    "unpublishedTitle": "ページを非公開にしました",
+    "unpublishedBody": "そのアドレスではアクセスできなくなりました。",
+    "moduleEnabled": "{module} を有効にしました",
+    "moduleDisabled": "{module} を無効にしました",
+    "moduleError": "モジュールを更新できませんでした。",
+    "moduleMembers": "メンバー",
+    "moduleBroadcast": "Broadcast",
+    "moduleComments": "コメント",
+    "moduleBookings": "予約",
+    "moduleCollections": "コレクション",
+    "membersOnlyOn": "ページをメンバー限定にしました",
+    "membersOnlyOff": "ページを公開にしました",
+    "membersOnlyError": "ページのアクセス権を変更できませんでした。",
+    "renameError": "ページの名前を変更できませんでした。",
+    "logoUpdated": "ロゴを更新しました",
+    "logoError": "ロゴを更新できませんでした。",
+    "formSaved": "フォーム設定を保存しました",
+    "formError": "フォーム設定を保存できませんでした。",
+    "analyticsEnabled": "アナリティクスを有効にしました",
+    "analyticsDisabled": "アナリティクスを無効にしました",
+    "saveError": "変更を保存できませんでした。"
   }
 }

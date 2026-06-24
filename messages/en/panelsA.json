@@ -1,4 +1,8 @@
 {
+  "toast": {
+    "saved": "Profile saved",
+    "saveError": "Couldn't save your business. Try again."
+  },
   "aiBrief": {
     "title": "Describe your page",
     "subtitle": "Tell me what you want — I'll compose the page for you.",

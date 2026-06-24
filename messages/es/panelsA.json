@@ -1,4 +1,8 @@
 {
+  "toast": {
+    "saved": "Negocio guardado",
+    "saveError": "No se pudo guardar tu negocio. Inténtalo de nuevo."
+  },
   "aiBrief": {
     "title": "Describe tu página",
     "subtitle": "Dime qué quieres y yo compongo la página por ti.",

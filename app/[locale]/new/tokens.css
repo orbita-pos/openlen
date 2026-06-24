@@ -109,6 +109,12 @@
 @keyframes wv2-fade-out { from{opacity:1} to{opacity:0} }
 .workspace-v2 .fade-out { animation: wv2-fade-out 200ms ease-in both; }
 
+@keyframes wv2-toast-in {
+  from { opacity: 0; transform: translateY(10px) scale(0.98); }
+  to   { opacity: 1; transform: none; }
+}
+.workspace-v2 .toast-in { animation: wv2-toast-in 220ms cubic-bezier(.2,.8,.2,1) both; }
+
 .workspace-v2 .inline-edit-target:hover {
   outline: 1px dashed var(--accent);
   outline-offset: 2px;

@@ -2,6 +2,10 @@
   "title": "Broadcast",
   "subtitle": "Mail je leden.",
   "perProject": "Open een project om een campagne te schrijven.",
+  "toast": {
+    "deleted": "Campagne verwijderd",
+    "deleteError": "Kon de campagne niet verwijderen. Probeer het opnieuw."
+  },
   "module": {
     "title": "Broadcast",
     "tagline": "Mail je leden",

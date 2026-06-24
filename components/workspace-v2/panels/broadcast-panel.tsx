@@ -8,6 +8,7 @@
 
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
+import { useToast } from "@/components/workspace-v2/toast";
 import { Loader, Megaphone, Pencil, SendUp, Trash, Users } from "../icons";
 
 interface BroadcastItem {
@@ -34,6 +35,7 @@ export function BroadcastPanel({
   membersEnabled?: boolean;
 }) {
   const t = useTranslations("broadcast");
+  const toast = useToast();
   const [subject, setSubject] = useState("");
   const [body, setBody] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -216,7 +218,12 @@ export function BroadcastPanel({
         if (editingId === id) resetCompose();
         if (confirmingRow === id) setConfirmingRow(null);
         loadHistory(currentProjectId);
+        toast.success(t("toast.deleted"));
+      } else {
+        toast.error(t("toast.deleteError"));
       }
+    } catch {
+      toast.error(t("toast.deleteError"));
     } finally {
       setDeleting(null);
     }

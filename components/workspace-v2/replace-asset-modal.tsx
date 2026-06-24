@@ -18,6 +18,7 @@ import {
   type IconCategory,
 } from "@/lib/lucide-curated";
 import { useFocusTrap } from "./use-focus-trap";
+import { useToast } from "./toast";
 import { ImageEditor } from "./image-editor";
 import { removeBackground } from "./bg-remove";
 import { aiEditImage, AiEditError } from "./ai-edit";
@@ -1082,6 +1083,7 @@ function UploadTab({
   onPick: (payload: ReplacePayload) => void;
 }) {
   const t = useTranslations("modalsAsset");
+  const toast = useToast();
   const [file, setFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [alt, setAlt] = useState("");
@@ -1224,6 +1226,10 @@ function UploadTab({
     xhr.onerror = () => {
       setError(t("upload.networkError"));
       setStatus("error");
+      toast.error(
+        isVideo ? t("toast.videoUploadError") : t("toast.imageUploadError"),
+        { description: t("upload.networkError") },
+      );
     };
     xhr.onload = () => {
       try {
@@ -1231,22 +1237,31 @@ function UploadTab({
         if (xhr.status >= 200 && xhr.status < 300 && data?.url) {
           setStatus("done");
           onPick({ url: data.url as string, alt: alt.trim() || undefined });
+          toast.success(
+            isVideo ? t("toast.videoUploaded") : t("toast.imageUploaded"),
+          );
         } else {
           setError(
             data?.message ?? data?.error ?? t("upload.failed", { status: xhr.status }),
           );
           setStatus("error");
+          toast.error(
+            isVideo ? t("toast.videoUploadError") : t("toast.imageUploadError"),
+          );
         }
       } catch {
         setError(t("upload.failed", { status: xhr.status }));
         setStatus("error");
+        toast.error(
+          isVideo ? t("toast.videoUploadError") : t("toast.imageUploadError"),
+        );
       }
     };
 
     const form = new FormData();
     form.append("file", file);
     xhr.send(form);
-  }, [file, projectId, alt, onPick, t]);
+  }, [file, projectId, alt, onPick, t, toast, isVideo]);
 
   const handleRemoveBg = useCallback(async () => {
     if (!file) return;
@@ -1263,12 +1278,14 @@ function UploadTab({
       setStatus("selected");
       setError(null);
       setProgress(0);
+      toast.success(t("toast.bgRemoved"));
     } catch (err) {
       setBgError(err instanceof Error ? err.message : t("editor.bgFailed"));
+      toast.error(t("toast.bgRemoveError"));
     } finally {
       setBgBusy(false);
     }
-  }, [file, t]);
+  }, [file, t, toast]);
 
   const handleAiEdit = useCallback(async (instructionArg: string) => {
     const instruction = instructionArg.trim();
@@ -1282,6 +1299,7 @@ function UploadTab({
       setError(null);
       setProgress(0);
       setAiOpen(false);
+      toast.success(t("toast.imageEdited"));
     } catch (err) {
       const code = err instanceof AiEditError ? err.code : "";
       setAiError(
@@ -1291,10 +1309,14 @@ function UploadTab({
             ? err.message
             : t("editor.aiFailed"),
       );
+      toast.error(t("toast.imageEditError"), {
+        description:
+          code === "insufficient_credits" ? t("editor.aiNoCredits") : undefined,
+      });
     } finally {
       setAiBusy(false);
     }
-  }, [file, projectId, t]);
+  }, [file, projectId, t, toast]);
 
   if (!projectId) {
     return (

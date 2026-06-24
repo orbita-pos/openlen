@@ -1,4 +1,9 @@
 {
+  "toast": {
+    "deployedTitle": "已部署到 {provider}",
+    "deployedBody": "你的页面正在构建——稍后即可上线。",
+    "disconnectedTitle": "已断开与 {provider} 的连接"
+  },
   "header": {
     "titleVercel": "部署到 Vercel",
     "titleGithub": "推送到 GitHub",

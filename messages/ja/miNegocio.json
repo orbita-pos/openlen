@@ -119,5 +119,15 @@
     "confirmLabel": "{name} と入力して確認",
     "cancel": "キャンセル",
     "confirm": "ビジネスを削除"
+  },
+  "toasts": {
+    "deleted": "プロフィールを削除しました",
+    "deleteError": "プロフィールを削除できませんでした。もう一度お試しください。",
+    "logoUploaded": "ロゴをアップロードしました",
+    "logoError": "ロゴをアップロードできませんでした。もう一度お試しください。",
+    "photosUploaded": "{count, plural, other {# 枚の写真をアップロードしました}}",
+    "photosError": "写真をアップロードできませんでした。もう一度お試しください。",
+    "defaultSet": "メインに設定しました",
+    "defaultError": "メインに設定できませんでした。もう一度お試しください。"
   }
 }

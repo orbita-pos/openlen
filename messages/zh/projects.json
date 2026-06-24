@@ -199,5 +199,23 @@
   },
   "sections": {
     "comingSoon": "下一步将在这里显示。"
+  },
+  "toast": {
+    "deleted": "页面已删除",
+    "deleteError": "无法删除该页面。",
+    "renamed": "已重命名为 {name}",
+    "renameError": "无法重命名该页面。",
+    "duplicated": "页面已复制",
+    "duplicateError": "无法复制该页面。",
+    "archived": "页面已归档",
+    "archiveError": "无法归档该页面。",
+    "moved": "已移动到 {business}",
+    "moveError": "无法移动该页面。",
+    "downloadStarted": "下载已开始",
+    "exportLoadError": "无法加载该页面以导出。",
+    "zipError": "无法构建 .zip 文件。",
+    "bulkDeleted": "{count, plural, other {已删除 # 个页面}}",
+    "bulkArchived": "{count, plural, other {已归档 # 个页面}}",
+    "somethingWrong": "出了点问题"
   }
 }

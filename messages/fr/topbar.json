@@ -39,7 +39,9 @@
     "confirm": "Rétablir le site en ligne sur le déploiement {sha} ? Les visiteurs verront cette version antérieure en quelques secondes.",
     "errorGone": "Ce déploiement a été supprimé du disque et ne peut pas être restauré.",
     "errorGeneric": "Échec du rétablissement. Réessayez.",
-    "inProgress": "Rétablissement…"
+    "inProgress": "Rétablissement…",
+    "successTitle": "Rétabli sur {sha}",
+    "successBody": "Votre site en ligne sert désormais ce déploiement antérieur."
   },
   "theme": {
     "lightMode": "Mode clair",

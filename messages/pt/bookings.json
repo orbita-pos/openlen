@@ -92,5 +92,14 @@
     "statusCompleted": "Concluído",
     "statusNoShow": "Não compareceu",
     "cancelConfirm": "Cancelar este agendamento? O visitante será avisado."
+  },
+  "toast": {
+    "archived": "Serviço arquivado",
+    "archiveError": "Não foi possível arquivar o serviço.",
+    "confirm": "Agendamento confirmado",
+    "cancel": "Agendamento cancelado",
+    "complete": "Agendamento concluído",
+    "no_show": "Marcado como não compareceu",
+    "actionError": "Não foi possível atualizar o agendamento."
   }
 }

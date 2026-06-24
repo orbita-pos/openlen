@@ -155,5 +155,9 @@
     },
     "profileEmpty": "在业务资料中添加logo或照片后将显示在这里。",
     "uploadsEmpty": "上传到此页面的图片将显示在这里。"
+  },
+  "toast": {
+    "saved": "资料已保存",
+    "saveError": "无法保存你的业务，请重试。"
   }
 }

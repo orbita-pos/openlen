@@ -233,5 +233,13 @@
     "membersOnlyBadge": "멤버 전용",
     "membersOnlyOn": "/{slug}을(를) 멤버 전용으로 설정",
     "membersOnlyOff": "/{slug}을(를) 공개로 설정"
+  },
+  "toast": {
+    "deleted": {
+      "title": "페이지를 삭제했습니다"
+    },
+    "deleteFailed": {
+      "title": "페이지를 삭제하지 못했습니다."
+    }
   }
 }

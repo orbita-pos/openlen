@@ -116,6 +116,24 @@
     "bulkDeleteConfirm": "¿Eliminar {count} páginas? Esta acción no se puede deshacer.",
     "moveError": "No se pudo mover: {error}"
   },
+  "toast": {
+    "deleted": "Página eliminada",
+    "deleteError": "No se pudo eliminar la página.",
+    "renamed": "Renombrada a {name}",
+    "renameError": "No se pudo renombrar la página.",
+    "duplicated": "Página duplicada",
+    "duplicateError": "No se pudo duplicar la página.",
+    "archived": "Página archivada",
+    "archiveError": "No se pudo archivar la página.",
+    "moved": "Movida a {business}",
+    "moveError": "No se pudo mover la página.",
+    "downloadStarted": "Descarga iniciada",
+    "exportLoadError": "No se pudo cargar la página para exportarla.",
+    "zipError": "No se pudo crear el .zip.",
+    "bulkDeleted": "{count, plural, one {# página eliminada} other {# páginas eliminadas}}",
+    "bulkArchived": "{count, plural, one {# página archivada} other {# páginas archivadas}}",
+    "somethingWrong": "Algo salió mal"
+  },
   "relativeTime": {
     "justNow": "ahora mismo",
     "minutesAgo": "hace {count} min",

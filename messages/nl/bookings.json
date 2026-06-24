@@ -2,6 +2,15 @@
   "title": "Afspraken",
   "subtitle": "Diensten, openingstijden en je afspraken.",
   "perProject": "Open een project om afspraken te beheren.",
+  "toast": {
+    "archived": "Dienst gearchiveerd",
+    "archiveError": "Kon de dienst niet archiveren.",
+    "confirm": "Afspraak bevestigd",
+    "cancel": "Afspraak geannuleerd",
+    "complete": "Afspraak voltooid",
+    "no_show": "Gemarkeerd als niet verschenen",
+    "actionError": "Kon de afspraak niet bijwerken."
+  },
   "module": {
     "title": "Afspraken",
     "tagline": "Laat bezoekers afspraken inplannen",

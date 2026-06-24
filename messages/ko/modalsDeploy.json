@@ -1,4 +1,9 @@
 {
+  "toast": {
+    "deployedTitle": "{provider}에 배포됨",
+    "deployedBody": "페이지를 빌드하는 중입니다 — 잠시 후 공개됩니다.",
+    "disconnectedTitle": "{provider} 연결 해제됨"
+  },
   "header": {
     "titleVercel": "Vercel에 배포",
     "titleGithub": "GitHub에 푸시",

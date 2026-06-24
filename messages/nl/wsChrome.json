@@ -74,6 +74,14 @@
     "expandPanel": "Paneel uitvouwen",
     "collapsePanel": "Paneel inklappen"
   },
+  "toast": {
+    "deleted": {
+      "title": "Pagina verwijderd"
+    },
+    "deleteFailed": {
+      "title": "Kon de pagina niet verwijderen."
+    }
+  },
   "preview": {
     "zoomFit": "Passend",
     "toolbar": {

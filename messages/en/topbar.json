@@ -39,7 +39,9 @@
     "confirm": "Roll back the live site to deploy {sha}? Visitors will see this earlier version within seconds.",
     "errorGone": "That deploy has been pruned from disk and can't be restored.",
     "errorGeneric": "Rollback failed. Try again.",
-    "inProgress": "Rolling back…"
+    "inProgress": "Rolling back…",
+    "successTitle": "Rolled back to {sha}",
+    "successBody": "Your live site now serves this earlier deploy."
   },
   "theme": {
     "lightMode": "Light mode",

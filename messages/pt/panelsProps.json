@@ -174,5 +174,11 @@
     "uploadError": "Falha no envio — tente outra imagem.",
     "light": "Clara",
     "dark": "Escura"
+  },
+  "toast": {
+    "themeFromLogo": "Tema gerado a partir do logo",
+    "themeFromLogoError": "Não foi possível ler o logo — tente reenviá-lo.",
+    "worldApplied": "Mundo aplicado",
+    "worldError": "Falha no envio — tente outra imagem."
   }
 }

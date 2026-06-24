@@ -29,6 +29,7 @@ import { useTranslations } from "next-intl";
 import type { SitePageSummary } from "@/lib/projects/site-pages";
 import { Check, HistoryIcon, Loader, Pencil, Pin, Plus, Sparkles, X } from "../icons";
 import { useFocusTrap } from "../use-focus-trap";
+import { useToast } from "../toast";
 
 type VersionSource =
   | "initial"
@@ -80,6 +81,7 @@ export function VersionsPanel({
   onPrepareSnapshot,
 }: VersionsPanelProps) {
   const t = useTranslations("panelsB");
+  const toast = useToast();
   const [items, setItems] = useState<VersionItem[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [restoring, setRestoring] = useState<string | null>(null);
@@ -192,15 +194,22 @@ export function VersionsPanel({
         // ("Before restoring…" + the forward marker) we want to show.
         await refetch().catch(() => {});
         setPreviewing(null);
+        const label = (data.label ?? item.label)?.trim();
+        toast.success(
+          label
+            ? t("toast.restored", { label })
+            : t("toast.restoredNoLabel"),
+        );
       } catch (err) {
         setError(
           err instanceof Error ? err.message : t("versions.restoreError"),
         );
+        toast.error(t("toast.restoreError"));
       } finally {
         setRestoring(null);
       }
     },
-    [currentProjectId, onRestoreApplied, refetch],
+    [currentProjectId, onRestoreApplied, refetch, t, toast],
   );
 
   const doPin = useCallback(
@@ -234,13 +243,17 @@ export function VersionsPanel({
               )
             : prev,
         );
+        toast.success(
+          item.pinned ? t("toast.unpinned") : t("toast.pinned"),
+        );
       } catch (err) {
         setError(err instanceof Error ? err.message : t("versions.pinError"));
+        toast.error(t("toast.pinError"));
       } finally {
         setPinBusyId(null);
       }
     },
-    [currentProjectId, t],
+    [currentProjectId, t, toast],
   );
 
   const doRename = useCallback(
@@ -281,11 +294,12 @@ export function VersionsPanel({
       // Flush the canvas's debounced autosave first — the snapshot reads the
       // project server-side and must see the latest keystrokes.
       await onPrepareSnapshot?.().catch(() => {});
+      const label = saveName.trim() || t("versions.defaultSaveName");
       const res = await fetch(`/api/projects/${currentProjectId}/versions`, {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
-          label: saveName.trim() || t("versions.defaultSaveName"),
+          label,
           page: activeScope,
         }),
       });
@@ -293,8 +307,10 @@ export function VersionsPanel({
       setSaveName("");
       setSaveOpen(false);
       await refetch().catch(() => {});
+      toast.success(t("toast.saved", { label }));
     } catch {
       setError(t("versions.saveError"));
+      toast.error(t("toast.saveError"));
     } finally {
       setSaveBusy(false);
     }
@@ -306,6 +322,7 @@ export function VersionsPanel({
     onPrepareSnapshot,
     refetch,
     t,
+    toast,
   ]);
 
   if (!currentProjectId) {

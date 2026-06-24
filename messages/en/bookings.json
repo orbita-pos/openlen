@@ -92,5 +92,14 @@
     "statusCompleted": "Completed",
     "statusNoShow": "No-show",
     "cancelConfirm": "Cancel this booking? The visitor is notified."
+  },
+  "toast": {
+    "archived": "Service archived",
+    "archiveError": "Couldn't archive the service.",
+    "confirm": "Booking confirmed",
+    "cancel": "Booking cancelled",
+    "complete": "Booking completed",
+    "no_show": "Marked as no-show",
+    "actionError": "Couldn't update the booking."
   }
 }

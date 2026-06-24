@@ -9,6 +9,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { useFocusTrap } from "./use-focus-trap";
+import { useToast } from "./toast";
 import type {
   BusinessProfile,
   BusinessProfileData,
@@ -61,6 +62,7 @@ export function BusinessProfileModal({
   editProfile,
 }: BusinessProfileModalProps) {
   const t = useTranslations("panelsA");
+  const toast = useToast();
   const trapRef = useFocusTrap(open);
   const fileRef = useRef<HTMLInputElement>(null);
   const logoColorRef = useRef<HTMLInputElement>(null);
@@ -272,13 +274,15 @@ export function BusinessProfileModal({
         return;
       }
       onSaved(json.profile);
+      toast.success(t("toast.saved"));
       onClose();
     } catch (err) {
       setError(err instanceof Error ? err.message : t("profile.errors.save"));
+      toast.error(t("toast.saveError"));
     } finally {
       setBusy(false);
     }
-  }, [draft, editProfile, onSaved, onClose, t]);
+  }, [draft, editProfile, onSaved, onClose, t, toast]);
 
   if (!open) return null;
 

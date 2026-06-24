@@ -155,5 +155,9 @@
     },
     "profileEmpty": "Aggiungi un logo o foto al tuo profilo per vederli qui.",
     "uploadsEmpty": "Le immagini che carichi su questa pagina appariranno qui."
+  },
+  "toast": {
+    "saved": "Profilo salvato",
+    "saveError": "Impossibile salvare la tua attività. Riprova."
   }
 }
