@@ -2435,10 +2435,10 @@ function NewV2Inner() {
             : p,
         );
         if (typeof patch.enabled === "boolean") {
-          const module = t("toast.moduleMembers");
+          const moduleName = t("toast.moduleMembers");
           toast.success(
             t(patch.enabled ? "toast.moduleEnabled" : "toast.moduleDisabled", {
-              module,
+              module: moduleName,
             }),
           );
         }
@@ -2528,10 +2528,10 @@ function NewV2Inner() {
             : p,
         );
         if (typeof patch.enabled === "boolean") {
-          const module = t("toast.moduleBroadcast");
+          const moduleName = t("toast.moduleBroadcast");
           toast.success(
             t(patch.enabled ? "toast.moduleEnabled" : "toast.moduleDisabled", {
-              module,
+              module: moduleName,
             }),
           );
         }
@@ -2571,10 +2571,10 @@ function NewV2Inner() {
             : p,
         );
         if (typeof patch.enabled === "boolean") {
-          const module = t("toast.moduleComments");
+          const moduleName = t("toast.moduleComments");
           toast.success(
             t(patch.enabled ? "toast.moduleEnabled" : "toast.moduleDisabled", {
-              module,
+              module: moduleName,
             }),
           );
         }
@@ -2625,10 +2625,10 @@ function NewV2Inner() {
             : p,
         );
         if (typeof patch.enabled === "boolean") {
-          const module = t("toast.moduleBookings");
+          const moduleName = t("toast.moduleBookings");
           toast.success(
             t(patch.enabled ? "toast.moduleEnabled" : "toast.moduleDisabled", {
-              module,
+              module: moduleName,
             }),
           );
         }
@@ -2666,10 +2666,10 @@ function NewV2Inner() {
             : p,
         );
         if (typeof patch.enabled === "boolean") {
-          const module = t("toast.moduleCollections");
+          const moduleName = t("toast.moduleCollections");
           toast.success(
             t(patch.enabled ? "toast.moduleEnabled" : "toast.moduleDisabled", {
-              module,
+              module: moduleName,
             }),
           );
         }
