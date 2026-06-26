@@ -36,7 +36,8 @@ export async function GET(
 
   const stream = new ReadableStream<Uint8Array>({
     async start(controller) {
-      let closed = false;
+      let closed = false;   // Fix 2: stop emitting
+      let cleaned = false;  // Fix 2: cleanup already ran
       let keepaliveId: ReturnType<typeof setInterval> | undefined;
       let off: (() => void) | undefined;
 
@@ -47,12 +48,17 @@ export async function GET(
             ENCODER.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`),
           );
         } catch {
+          // Fix 2: emit failure triggers full cleanup, not just a flag flip.
           closed = true;
+          cleanup();
         }
       };
 
+      // Fix 2: cleanup guards on `cleaned`, not `closed`, so an emit failure
+      // before cancel/abort doesn't poison the cleanup path.
       const cleanup = () => {
-        if (closed) return;
+        if (cleaned) return;
+        cleaned = true;
         closed = true;
         if (keepaliveId !== undefined) clearInterval(keepaliveId);
         off?.();
@@ -69,29 +75,55 @@ export async function GET(
 
       hub.markOnline(projectId, userId);
 
-      // Backfill messages the client missed (since cursor)
-      const backfill = await listMessagesSince(conversationId, since);
-      for (const m of backfill) {
-        emit("message", { type: "message", message: m });
-      }
+      // Fix 1: Subscribe BEFORE backfill so live events published during the
+      // await are captured in the pending buffer rather than lost.
+      const seen = new Set<string>();
+      const pending: HubEvent[] = [];
+      let buffering = true;
 
-      // Announce this user is online to the other participant
-      hub.publish(conversationId, { type: "presence", userId, online: true });
+      const emitEvent = (evt: HubEvent) => {
+        if (evt.type === "message") {
+          if (seen.has(evt.message.id)) return;
+          seen.add(evt.message.id);
+        }
+        emit(evt.type, evt);
+      };
 
-      // Subscribe to live hub events for this conversation
       off = hub.subscribe(conversationId, {
         id: randomUUID(),
         userId,
-        send: (evt: HubEvent) => emit(evt.type, evt),
+        send: (evt: HubEvent) => {
+          if (buffering) pending.push(evt);
+          else emitEvent(evt);
+        },
       });
 
-      // 25s comment keepalive so Caddy / proxies don't close the idle connection
+      // Fix 3: Wrap backfill so a rejection doesn't leave presence leaked.
+      try {
+        const backfill = await listMessagesSince(conversationId, since);
+        for (const m of backfill) emitEvent({ type: "message", message: m });
+      } catch {
+        cleanup();
+        return;
+      }
+
+      // Flush live events that arrived during backfill, deduped via seen.
+      buffering = false;
+      for (const evt of pending) emitEvent(evt);
+
+      // Announce this user is online AFTER the stream is ready so the peer
+      // doesn't receive a presence event before messages are in order.
+      hub.publish(conversationId, { type: "presence", userId, online: true });
+
+      // 25s keepalive so Caddy / proxies don't close the idle connection.
       keepaliveId = setInterval(() => {
         if (closed) return;
         try {
           controller.enqueue(ENCODER.encode(": keepalive\n\n"));
         } catch {
-          /* ignore */
+          // Fix 2: keepalive failure also triggers full cleanup.
+          closed = true;
+          cleanup();
         }
       }, 25_000);
 
