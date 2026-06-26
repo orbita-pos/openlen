@@ -69,6 +69,20 @@ async function main() {
   await db.execute(sql`CREATE INDEX IF NOT EXISTS "chatEvents_projectId_createdAt_idx"
     ON "chatEvents" ("projectId", "createdAt");`);
 
+  await db.execute(sql`CREATE TABLE IF NOT EXISTS "chatAgents" (
+    "id" text PRIMARY KEY,
+    "projectId" text NOT NULL REFERENCES "projects"("id") ON DELETE CASCADE,
+    "userId" text REFERENCES "users"("id") ON DELETE CASCADE,
+    "invitedEmail" text NOT NULL,
+    "status" text NOT NULL DEFAULT 'invited',
+    "createdAt" timestamp NOT NULL DEFAULT now(),
+    "acceptedAt" timestamp
+  );`);
+  await db.execute(sql`CREATE UNIQUE INDEX IF NOT EXISTS "chatAgents_projectId_email_uq"
+    ON "chatAgents" ("projectId", "invitedEmail");`);
+  await db.execute(sql`CREATE INDEX IF NOT EXISTS "chatAgents_userId_idx"
+    ON "chatAgents" ("userId");`);
+
   console.log("private chat tables ready.");
   process.exit(0);
 }

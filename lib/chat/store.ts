@@ -318,3 +318,39 @@ export async function listOwnerInbox(ownerUserId: string): Promise<Array<{ proje
   }
   return out;
 }
+
+/** Full inbox for a platform user: their OWNED projects + projects where they are
+ *  an active agent. Agents see conversations via the project's owner chat_user.
+ *  Results are deduped by projectId (in the unlikely case owner + agent rows coexist). */
+export async function listInbox(
+  userId: string,
+): Promise<Array<{ projectId: string; projectTitle: string; conversations: ConversationSummary[] }>> {
+  // Import here to avoid a circular dep at module load time (agents imports schema, not store)
+  const { listAgentProjectIds } = await import("@/lib/chat/agents");
+
+  const owned = await listOwnerInbox(userId);
+  const ownedIds = new Set(owned.map((e) => e.projectId));
+
+  const agentProjectIds = await listAgentProjectIds(userId);
+  const agentEntries: Array<{ projectId: string; projectTitle: string; conversations: ConversationSummary[] }> = [];
+
+  for (const pid of agentProjectIds) {
+    if (ownedIds.has(pid)) continue; // already in owned list
+    const projRows = await db
+      .select({ title: schema.projects.title, data: schema.projects.data })
+      .from(schema.projects)
+      .where(eq(schema.projects.id, pid))
+      .limit(1);
+    const proj = projRows[0];
+    if (!proj) continue;
+    if (proj.data?.settings?.chat?.enabled !== true) continue;
+    const owner = await getChatOwner(pid);
+    if (!owner) continue;
+    const conversations = await listConversations(pid, owner.id);
+    if (conversations.length > 0) {
+      agentEntries.push({ projectId: pid, projectTitle: proj.title ?? pid, conversations });
+    }
+  }
+
+  return [...owned, ...agentEntries];
+}

@@ -2,6 +2,7 @@ import { and, eq } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
 import { checkAndConsume } from "@/lib/limits";
 import { getChatOwner, getChatUserById } from "@/lib/chat/store";
+import { listAgentUserIds } from "@/lib/chat/agents";
 import { sendChatNotificationEmail } from "@/lib/email";
 import { hub } from "@/lib/chat/hub";
 
@@ -50,10 +51,9 @@ export async function notifyOwnerIfOffline(
   if (!project) return;
   const projectTitle = project.title ?? projectId;
 
-  // 4. Presence check: owner (or agent — agents wired in P4-5 via listAgentUserIds) has a live Desk SSE
-  // connection tracked in the hub. When present, skip the email — someone's handling it.
-  // TODO(P4-5): replace [] with listAgentUserIds(projectId) once agent support lands.
-  if (hub.isProjectStaffOnline(projectId, project.userId, [])) return;
+  // 4. Presence check: owner OR any active agent has a live Desk SSE connection
+  // tracked in the hub. When present, skip the email — someone's handling it.
+  if (hub.isProjectStaffOnline(projectId, project.userId, await listAgentUserIds(projectId))) return;
 
   // 5. Debounce: at most 1 notification per 10 min per conversation
   const { ok } = await checkAndConsume(`chat:notify:${conversationId}`, [

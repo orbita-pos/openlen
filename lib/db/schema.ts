@@ -865,6 +865,27 @@ export const chatEvents = pgTable(
   (table) => [index("chatEvents_projectId_createdAt_idx").on(table.projectId, table.createdAt)],
 );
 
+// Platform users granted Desk access to a project as agents. An agent replies
+// AS the business (ownerChatUserId) — the conversation stays 2-participant.
+// v1: invite existing OpenLen users only (userId always set on insert).
+// uniqueIndex on (projectId, invitedEmail) makes inviteAgent idempotent.
+export const chatAgents = pgTable(
+  "chatAgents",
+  {
+    id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+    projectId: text("projectId").notNull().references(() => projects.id, { onDelete: "cascade" }),
+    userId: text("userId").references(() => users.id, { onDelete: "cascade" }), // nullable until accepted (v1: always set)
+    invitedEmail: text("invitedEmail").notNull(), // stored lowercase
+    status: text("status").$type<"invited" | "active">().notNull().default("invited"),
+    createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
+    acceptedAt: timestamp("acceptedAt", { mode: "date" }),
+  },
+  (t) => [
+    uniqueIndex("chatAgents_projectId_email_uq").on(t.projectId, t.invitedEmail),
+    index("chatAgents_userId_idx").on(t.userId),
+  ],
+);
+
 // ─── Broadcast module — email your audience (members-only, v1) ──────────────
 // Applied in prod via `npm run broadcast:migrate`. Shares the members monthly
 // email budget (lib/broadcast/limits.ts). The recipient snapshot is taken at

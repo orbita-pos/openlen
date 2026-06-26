@@ -26,6 +26,7 @@ export async function POST(
   const text = (typeof parsed.body === "string" ? parsed.body : "").trim().slice(0, MAX_BODY);
   if (text.length === 0) return json({ error: "bad_request" }, 400);
 
+  // agents reply AS the business (ownerChatUserId) — keeps the conversation 2-participant
   const m = await insertMessage(conversationId, ctx.ownerChatUserId, text);
   hub.publish(conversationId, { type: "message", message: m });
   return json(

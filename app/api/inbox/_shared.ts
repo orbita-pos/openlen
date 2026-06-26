@@ -1,13 +1,14 @@
 // Shared plumbing for the owner Desk API (/api/inbox/*). All routes here are
 // gated by Auth.js (session cookie), NOT the visitor ol_chat cookie.
 
-import { and, eq } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { auth } from "@/auth";
 import { db, schema } from "@/lib/db";
 import {
   getConversationForUser,
   getOrCreateOwnerChatUser,
 } from "@/lib/chat/store";
+import { resolveProjectAccess } from "@/lib/chat/agents";
 
 export function json(body: unknown, status: number): Response {
   return new Response(JSON.stringify(body), {
@@ -42,21 +43,21 @@ export async function requireOwnerForConversation(
   if (!conv) return { error: 404 };
   const { projectId } = conv;
 
-  // 3. Verify the session user OWNS this project
+  // 3. Verify the session user has access: owner OR active agent
+  const access = await resolveProjectAccess(projectId, session.user.id);
+  if (!access) return { error: 404 };
+
+  // Load project title for owner chat_user provisioning
   const projRows = await db
     .select({ title: schema.projects.title })
     .from(schema.projects)
-    .where(
-      and(
-        eq(schema.projects.id, projectId),
-        eq(schema.projects.userId, session.user.id),
-      ),
-    )
+    .where(eq(schema.projects.id, projectId))
     .limit(1);
   const project = projRows[0];
   if (!project) return { error: 404 };
 
-  // 4. Provision the owner chat_user (idempotent)
+  // 4. Provision the owner chat_user (idempotent) — agents act through the SAME
+  //    owner chat_user so conversations stay 2-participant.
   const { id: ownerChatUserId } = await getOrCreateOwnerChatUser(
     projectId,
     session.user.id,
