@@ -7,6 +7,10 @@ import { json, loadChatSite } from "../../_shared";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+// A valid cost-12 bcrypt hash compared against when the username is unknown,
+// so login always takes full bcrypt cost and can't be used to enumerate usernames.
+const DUMMY_HASH = "$2b$12$U5g.9HqlMGI8.St.ytB.UOFWQvr6z7dw7cT/wJPYNWRwoOfNzy/ua";
+
 export async function POST(req: Request, { params }: { params: Promise<{ sub: string }> }): Promise<Response> {
   const { sub } = await params;
   const site = await loadChatSite(sub);
@@ -22,7 +26,8 @@ export async function POST(req: Request, { params }: { params: Promise<{ sub: st
   if (!username || !isValidPassword(password)) return json({ error: "invalid" }, 401);
 
   const user = await getChatUserByUsername(site.projectId, username);
-  if (!user || user.status !== "active" || !(await verifyPassword(password, user.passwordHash))) {
+  const passwordOk = await verifyPassword(password, user?.passwordHash ?? DUMMY_HASH);
+  if (!user || user.status !== "active" || !passwordOk) {
     return json({ error: "invalid" }, 401);
   }
 
