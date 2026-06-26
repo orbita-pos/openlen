@@ -123,6 +123,16 @@
       "fabHint": "A floating chat button appears in the corner of your published page.",
       "sectionHint": "A chat inbox section is embedded in your page content.",
       "bothHint": "Both a floating button and an embedded section are shown."
+    },
+    "team": {
+      "title": "Team",
+      "invite": "Invite",
+      "placeholder": "Email address",
+      "remove": "Remove agent",
+      "noAccount": "That email has no OpenLen account yet.",
+      "statusInvited": "Invited",
+      "statusActive": "Active",
+      "empty": "No agents yet — invite a teammate to help handle chats."
     }
   }
 }

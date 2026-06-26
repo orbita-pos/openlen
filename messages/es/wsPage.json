@@ -123,6 +123,16 @@
       "fabHint": "Un botón flotante de chat aparece en la esquina de tu página publicada.",
       "sectionHint": "Una sección de chat se integra en el contenido de tu página.",
       "bothHint": "Se muestran tanto el botón flotante como la sección integrada."
+    },
+    "team": {
+      "title": "Equipo",
+      "invite": "Invitar",
+      "placeholder": "Correo electrónico",
+      "remove": "Eliminar agente",
+      "noAccount": "Ese correo no tiene cuenta en OpenLen todavía.",
+      "statusInvited": "Invitado",
+      "statusActive": "Activo",
+      "empty": "Sin agentes todavía — invita a un compañero para atender los chats."
     }
   }
 }

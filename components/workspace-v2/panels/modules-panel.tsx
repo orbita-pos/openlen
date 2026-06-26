@@ -527,6 +527,9 @@ export function ModulesPanel({
                 disabled={chatBusy}
                 onChange={(v) => void updateChat({ selfServeJoin: v })}
               />
+              {currentProjectId && (
+                <AgentsList projectId={currentProjectId} tw={tw} />
+              )}
             </div>
           )}
         </ModCard>
@@ -926,6 +929,166 @@ function MembersList({ projectId }: { projectId: string }) {
                   <Loader size={11} className="animate-spin" />
                 ) : (
                   <Trash size={11} />
+                )}
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+interface AgentItem {
+  id: string;
+  invitedEmail: string;
+  status: string;
+  createdAt: string;
+}
+
+function AgentsList({
+  projectId,
+  tw,
+}: {
+  projectId: string;
+  tw: ReturnType<typeof useTranslations<"wsPage">>;
+}) {
+  const [agents, setAgents] = useState<AgentItem[] | null>(null);
+  const [email, setEmail] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [removing, setRemoving] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const load = () => {
+    void fetch(`/api/projects/${projectId}/agents`)
+      .then(async (r) => {
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        return r.json() as Promise<{ agents: AgentItem[] }>;
+      })
+      .then((d) => setAgents(d.agents))
+      .catch(() => setAgents([]));
+  };
+
+  useEffect(() => {
+    setAgents(null);
+    load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [projectId]);
+
+  const invite = async () => {
+    const trimmed = email.trim().toLowerCase();
+    if (!trimmed || busy) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const r = await fetch(`/api/projects/${projectId}/agents`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ email: trimmed }),
+      });
+      if (r.status === 404) {
+        const d = (await r.json()) as { error?: string };
+        if (d.error === "no_account") {
+          setError(tw("chat.team.noAccount"));
+        } else {
+          setError(tw("chat.team.noAccount"));
+        }
+      } else if (r.status === 400) {
+        setError(tw("chat.team.noAccount"));
+      } else if (!r.ok) {
+        setError(tw("chat.team.noAccount"));
+      } else {
+        setEmail("");
+        load();
+      }
+    } catch {
+      setError(tw("chat.team.noAccount"));
+    }
+    setBusy(false);
+  };
+
+  const remove = async (agentId: string) => {
+    setRemoving(agentId);
+    try {
+      const r = await fetch(`/api/projects/${projectId}/agents/${agentId}`, {
+        method: "DELETE",
+      });
+      if (r.ok) load();
+    } finally {
+      setRemoving(null);
+    }
+  };
+
+  return (
+    <div className="pt-2 space-y-2">
+      <div className="text-[10.5px] uppercase tracking-[0.14em] fg-faint font-semibold">
+        {tw("chat.team.title")}
+      </div>
+
+      {/* Invite row */}
+      <div className="flex items-center gap-1.5">
+        <input
+          value={email}
+          onChange={(e) => { setEmail(e.target.value); setError(null); }}
+          onKeyDown={(e) => { if (e.key === "Enter") void invite(); }}
+          type="email"
+          placeholder={tw("chat.team.placeholder")}
+          className="flex-1 min-w-0 bg-app ring-1 ring-[color:var(--border)] rounded-lg px-2.5 h-8 text-[12px] fg outline-none focus:ring-[color:var(--accent)] transition"
+        />
+        <button
+          type="button"
+          disabled={busy || !email.trim()}
+          onClick={() => void invite()}
+          className="shrink-0 h-8 px-3 rounded-lg bg-[var(--accent-strong)] text-white text-[12px] font-medium hover:brightness-105 transition disabled:opacity-50 inline-flex items-center gap-1"
+        >
+          {busy && <Loader size={10} className="animate-spin" />}
+          {tw("chat.team.invite")}
+        </button>
+      </div>
+      {error && (
+        <p className="text-[11px] text-red-600 dark:text-red-400 leading-snug">{error}</p>
+      )}
+
+      {/* Agent list */}
+      {agents === null && (
+        <div className="space-y-1">
+          {[0, 1].map((i) => (
+            <div key={i} className="h-8 rounded-lg bg-zinc-200/60 dark:bg-zinc-800/50 animate-pulse" />
+          ))}
+        </div>
+      )}
+      {agents !== null && agents.length === 0 && (
+        <p className="text-[11px] fg-faint leading-snug">{tw("chat.team.empty")}</p>
+      )}
+      {agents !== null && agents.length > 0 && (
+        <ul className="space-y-0.5">
+          {agents.map((a) => (
+            <li
+              key={a.id}
+              className="group flex items-center gap-2 rounded-lg px-2 h-8 hover:bg-hover transition"
+            >
+              <span className="flex-1 min-w-0 text-[12px] fg truncate">{a.invitedEmail}</span>
+              <span
+                className={`shrink-0 text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${
+                  a.status === "active"
+                    ? "text-emerald-700 dark:text-emerald-400 bg-emerald-500/10"
+                    : "fg-faint bg-hover"
+                }`}
+              >
+                {a.status === "active" ? tw("chat.team.statusActive") : tw("chat.team.statusInvited")}
+              </span>
+              <button
+                type="button"
+                disabled={removing === a.id}
+                aria-label={tw("chat.team.remove")}
+                title={tw("chat.team.remove")}
+                onClick={() => void remove(a.id)}
+                className="h-6 w-6 hidden group-hover:inline-flex items-center justify-center rounded-md fg-faint hover:text-red-500 hover:bg-hover transition disabled:opacity-50 shrink-0"
+              >
+                {removing === a.id ? (
+                  <Loader size={10} className="animate-spin" />
+                ) : (
+                  <Trash size={10} />
                 )}
               </button>
             </li>
