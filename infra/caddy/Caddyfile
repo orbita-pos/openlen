@@ -118,7 +118,7 @@ openlen.com, www.openlen.com {
 
 	@doc {
 		not path *.css *.js *.jpg *.jpeg *.png *.gif *.webp *.svg *.ico *.woff *.woff2 *.avif
-		not path /c/* /api/f/* /api/m/* /api/cm/* /api/bk/* /api/b/* /uploads/* /assets/*
+		not path /c/* /api/f/* /api/m/* /api/cm/* /api/bk/* /api/b/* /api/chat/* /uploads/* /assets/*
 	}
 	header @doc Cache-Control "public, max-age=60, s-maxage=3600, stale-while-revalidate=86400"
 
@@ -186,6 +186,17 @@ openlen.com, www.openlen.com {
 	# serves the static homepage with 200 — the opt-out is silently dropped, which
 	# is a CAN-SPAM / RFC 8058 violation.
 	handle /api/b/* {
+		reverse_proxy 127.0.0.1:3000 {
+			header_up CF-Connecting-IP {vars.cf_client_ip}
+		}
+	}
+
+	# Chat widget — same-host visitor AI chat API. The ol_chat session cookie is
+	# host-only (no Domain= attribute) so it only flows on same-origin requests;
+	# without this handle the request falls through to try_files and serves the
+	# static homepage instead of reaching the Next.js handler. @doc-excluded above
+	# so chat responses (no-store, per-visitor) are never edge-cached.
+	handle /api/chat/* {
 		reverse_proxy 127.0.0.1:3000 {
 			header_up CF-Connecting-IP {vars.cf_client_ip}
 		}
