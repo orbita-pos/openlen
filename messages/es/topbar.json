@@ -63,5 +63,21 @@
     "mute": "Silenciar sonidos",
     "unmute": "Activar sonido",
     "volume": "Volumen"
+  },
+  "preview": {
+    "label": "Enlace de vista previa",
+    "createTitle": "Compartir una vista previa",
+    "createSubtitle": "Deja que alguien lo vea antes de publicar",
+    "onHint": "Cualquiera con este enlace puede ver el borrador actual. No lo indexan los buscadores.",
+    "copy": "Copiar",
+    "copiedShort": "Copiado",
+    "open": "Abrir",
+    "revoke": "Desactivar",
+    "created": "Enlace de vista previa listo",
+    "copiedDesc": "Copiado a tu portapapeles — compártelo con quien quieras.",
+    "copied": "Enlace copiado",
+    "copyError": "No se pudo copiar. Selecciona el enlace y cópialo a mano.",
+    "revoked": "Enlace de vista previa desactivado",
+    "error": "Algo salió mal. Inténtalo de nuevo."
   }
 }

@@ -49,6 +49,7 @@ export default defineConfig({
       "lib/projects/module-settings.test.ts",
       "lib/projects/module-intent.test.ts",
       "lib/projects/page-edge-paths.test.ts",
+      "lib/projects/preview.test.ts",
     ],
     exclude: ["node_modules/**", "tests/e2e/**", ".next/**"],
   },

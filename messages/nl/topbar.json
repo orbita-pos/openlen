@@ -63,5 +63,21 @@
     "mute": "Geluid dempen",
     "unmute": "Geluid aan",
     "volume": "Volume"
+  },
+  "preview": {
+    "label": "Voorbeeldlink",
+    "createTitle": "Voorbeeld delen",
+    "createSubtitle": "Laat iemand dit concept zien voordat je publiceert",
+    "onHint": "Iedereen met deze link kan het huidige concept bekijken. Het wordt niet geïndexeerd door zoekmachines.",
+    "copy": "Kopiëren",
+    "copiedShort": "Gekopieerd",
+    "open": "Openen",
+    "revoke": "Uitschakelen",
+    "created": "Voorbeeldlink klaar",
+    "copiedDesc": "Gekopieerd naar je klembord — deel het met wie je wilt.",
+    "copied": "Link gekopieerd",
+    "copyError": "Kopiëren mislukt. Selecteer de link en kopieer hem handmatig.",
+    "revoked": "Voorbeeldlink uitgeschakeld",
+    "error": "Er ging iets mis. Probeer het opnieuw."
   }
 }

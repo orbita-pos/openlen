@@ -63,5 +63,21 @@
     "mute": "Disattiva i suoni",
     "unmute": "Attiva il suono",
     "volume": "Volume"
+  },
+  "preview": {
+    "label": "Link di anteprima",
+    "createTitle": "Condividi un'anteprima",
+    "createSubtitle": "Fai vedere questa bozza a qualcuno prima di pubblicare",
+    "onHint": "Chiunque abbia questo link può vedere la bozza attuale. Non è indicizzato dai motori di ricerca.",
+    "copy": "Copia",
+    "copiedShort": "Copiato",
+    "open": "Apri",
+    "revoke": "Disattiva",
+    "created": "Link di anteprima pronto",
+    "copiedDesc": "Copiato negli appunti — condividilo con chi vuoi.",
+    "copied": "Link copiato",
+    "copyError": "Impossibile copiare. Seleziona il link e copialo manualmente.",
+    "revoked": "Link di anteprima disattivato",
+    "error": "Qualcosa è andato storto. Riprova."
   }
 }

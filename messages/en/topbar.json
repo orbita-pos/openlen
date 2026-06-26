@@ -63,5 +63,21 @@
     "mute": "Mute sounds",
     "unmute": "Sound on",
     "volume": "Volume"
+  },
+  "preview": {
+    "label": "Preview link",
+    "createTitle": "Share a preview",
+    "createSubtitle": "Let someone see this draft before you publish",
+    "onHint": "Anyone with this link can view the current draft. It isn't indexed by search engines.",
+    "copy": "Copy",
+    "copiedShort": "Copied",
+    "open": "Open",
+    "revoke": "Turn off",
+    "created": "Preview link ready",
+    "copiedDesc": "Copied to your clipboard — share it with anyone.",
+    "copied": "Link copied",
+    "copyError": "Couldn't copy. Select the link and copy it manually.",
+    "revoked": "Preview link turned off",
+    "error": "Something went wrong. Try again."
   }
 }

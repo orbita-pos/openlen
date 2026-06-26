@@ -63,5 +63,21 @@
     "mute": "静音",
     "unmute": "开启声音",
     "volume": "音量"
+  },
+  "preview": {
+    "label": "预览链接",
+    "createTitle": "分享预览",
+    "createSubtitle": "在发布前让别人先看看这个草稿",
+    "onHint": "任何拥有此链接的人都能查看当前草稿。它不会被搜索引擎收录。",
+    "copy": "复制",
+    "copiedShort": "已复制",
+    "open": "打开",
+    "revoke": "关闭",
+    "created": "预览链接已就绪",
+    "copiedDesc": "已复制到剪贴板 — 可以分享给任何人。",
+    "copied": "链接已复制",
+    "copyError": "无法复制。请选中链接手动复制。",
+    "revoked": "预览链接已关闭",
+    "error": "出了点问题，请重试。"
   }
 }

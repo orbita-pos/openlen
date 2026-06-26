@@ -171,8 +171,10 @@ export default function middleware(req: NextRequest): ReturnType<typeof intlMidd
 
 export const config = {
   // Run on every browsable path so `/` negotiates a locale. Excludes API
-  // routes, Next internals, the published-page handlers (served, c) and any
-  // path with a dot (static assets + metadata files: robots.txt, sitemap.xml,
-  // icon.svg, og.png, favicon.ico, …).
-  matcher: ["/((?!api|_next|_vercel|served|c|.*\\..*).*)"],
+  // routes, Next internals, the published-page handlers (served, c), the
+  // token-gated draft preview (p/) and any path with a dot (static assets +
+  // metadata files: robots.txt, sitemap.xml, icon.svg, og.png, favicon.ico, …).
+  // `p/` (with the slash) excludes only /p/<id> — NOT /projects, /pricing, …
+  // which start with a bare `p`.
+  matcher: ["/((?!api|_next|_vercel|served|c|p/|.*\\..*).*)"],
 };

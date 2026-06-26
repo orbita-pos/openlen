@@ -18,15 +18,21 @@ import { useLocale, useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
 import { signOut, useSession } from "next-auth/react";
 import {
+  Check,
   ChevronDown,
   ChevronRight,
+  Copy,
   ExternalLink,
+  Eye,
   Globe,
   HistoryIcon,
+  Link as LinkIcon,
+  Loader,
   Moon,
   RefreshCw,
   Sparkles,
   Sun,
+  Trash,
   Volume2,
   VolumeX,
   X,
@@ -202,6 +208,14 @@ export function TopBar({
   // to "saved" and back to false 3s later, so the indicator disappears on
   // its own without parent involvement.
   const [showSaved, setShowSaved] = useState(false);
+  // Draft-preview link state. null = not fetched yet (the dropdown fetches on
+  // open, like releases); { enabled, token } once known.
+  const [preview, setPreview] = useState<{
+    enabled: boolean;
+    token: string | null;
+  } | null>(null);
+  const [previewBusy, setPreviewBusy] = useState(false);
+  const [copied, setCopied] = useState(false);
   const deployRef = useRef<HTMLDivElement>(null);
   const profRef = useRef<HTMLDivElement>(null);
 
@@ -261,6 +275,97 @@ export function TopBar({
       cancelled = true;
     };
   }, [deployOpen, projectId, published]);
+
+  // Fetch the current preview-link state when the dropdown opens for a loaded
+  // project (published or not — a draft link is the whole point pre-publish).
+  useEffect(() => {
+    if (!deployOpen || !projectId) {
+      setPreview(null);
+      setCopied(false);
+      return;
+    }
+    let cancelled = false;
+    void fetch(`/api/projects/${projectId}/preview`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        if (cancelled) return;
+        if (d && typeof d.enabled === "boolean") {
+          setPreview({ enabled: d.enabled, token: d.token ?? null });
+        } else {
+          setPreview({ enabled: false, token: null });
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setPreview({ enabled: false, token: null });
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [deployOpen, projectId]);
+
+  const previewUrl =
+    preview?.enabled && preview.token && projectId && typeof window !== "undefined"
+      ? `${window.location.origin}/p/${projectId}?t=${preview.token}`
+      : null;
+
+  const onCreatePreview = async () => {
+    if (!projectId || previewBusy) return;
+    setPreviewBusy(true);
+    try {
+      const res = await fetch(`/api/projects/${projectId}/preview`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: "{}",
+      });
+      if (!res.ok) {
+        toast.error(t("preview.error"));
+        return;
+      }
+      const d = (await res.json()) as { token: string };
+      setPreview({ enabled: true, token: d.token });
+      const url = `${window.location.origin}/p/${projectId}?t=${d.token}`;
+      const copiedOk = await copyToClipboard(url);
+      toast.success(t("preview.created"), {
+        description: copiedOk ? t("preview.copiedDesc") : undefined,
+      });
+    } catch {
+      toast.error(t("preview.error"));
+    } finally {
+      setPreviewBusy(false);
+    }
+  };
+
+  const onCopyPreview = async () => {
+    if (!previewUrl) return;
+    if (await copyToClipboard(previewUrl)) {
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1800);
+      toast.success(t("preview.copied"));
+    } else {
+      toast.error(t("preview.copyError"));
+    }
+  };
+
+  const onRevokePreview = async () => {
+    if (!projectId || previewBusy) return;
+    setPreviewBusy(true);
+    try {
+      const res = await fetch(`/api/projects/${projectId}/preview`, {
+        method: "DELETE",
+      });
+      if (!res.ok) {
+        toast.error(t("preview.error"));
+        return;
+      }
+      setPreview({ enabled: false, token: null });
+      setCopied(false);
+      toast.success(t("preview.revoked"));
+    } catch {
+      toast.error(t("preview.error"));
+    } finally {
+      setPreviewBusy(false);
+    }
+  };
 
   const onRollbackClick = async (sha: string) => {
     if (!projectId || rollingSha) return;
@@ -488,6 +593,84 @@ export function TopBar({
                 </button>
               )}
 
+              {/* Share a preview — a token-gated link to the CURRENT draft so
+                  someone elsewhere can see it before it's published. Shows for
+                  any loaded project (draft or live). Self-contained: state is
+                  fetched on open, the URL is built from window.origin. */}
+              {projectId && (
+                <>
+                  <div className="border-t bd my-1" />
+                  <div className="px-2.5 pt-1.5 pb-1 text-[10px] uppercase tracking-wider fg-faint flex items-center gap-1.5">
+                    <LinkIcon size={10} />
+                    {t("preview.label")}
+                  </div>
+                  {preview?.enabled && previewUrl ? (
+                    <div className="px-2.5 pb-2">
+                      <p className="text-[11px] fg-faint mb-1.5 leading-snug">
+                        {t("preview.onHint")}
+                      </p>
+                      <div className="text-[10.5px] fg-muted font-mono break-all rounded-md bg-app ring-1 ring-[color:var(--border)] px-2 py-1.5 mb-1.5">
+                        {previewUrl.replace(/^https?:\/\//, "")}
+                      </div>
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <button
+                          type="button"
+                          onClick={() => void onCopyPreview()}
+                          className="inline-flex items-center gap-1 h-6 px-2 rounded text-[11px] font-medium text-[var(--accent)] ring-1 ring-[color:var(--accent)]/30 hover:bg-[color:var(--accent)]/10 transition"
+                        >
+                          {copied ? <Check size={10} /> : <Copy size={10} />}{" "}
+                          {copied ? t("preview.copiedShort") : t("preview.copy")}
+                        </button>
+                        <a
+                          href={previewUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          onClick={() => setDeployOpen(false)}
+                          className="inline-flex items-center gap-1 h-6 px-2 rounded text-[11px] font-medium fg-muted ring-1 ring-[color:var(--border)] hover:bg-hover transition"
+                        >
+                          <ExternalLink size={10} /> {t("preview.open")}
+                        </a>
+                        <button
+                          type="button"
+                          disabled={previewBusy}
+                          onClick={() => void onRevokePreview()}
+                          className="inline-flex items-center gap-1 h-6 px-2 rounded text-[11px] font-medium text-red-700 dark:text-red-300 hover:bg-red-50 dark:hover:bg-red-500/10 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          <Trash size={10} /> {t("preview.revoke")}
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      disabled={previewBusy || preview === null}
+                      onClick={() => void onCreatePreview()}
+                      className="flex items-center gap-3 w-full text-left px-2.5 py-2 rounded-md hover:bg-hover transition group disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md ring-1 ring-[color:var(--accent)]/30 bg-[color:var(--accent)]/10 text-[var(--accent)]">
+                        {previewBusy ? (
+                          <Loader size={13} className="animate-spin" />
+                        ) : (
+                          <Eye size={13} />
+                        )}
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block text-[13px] font-semibold tracking-tight fg">
+                          {t("preview.createTitle")}
+                        </span>
+                        <span className="block text-[11px] fg-faint">
+                          {t("preview.createSubtitle")}
+                        </span>
+                      </span>
+                      <ChevronRight
+                        size={12}
+                        className="fg-faint group-hover:text-[var(--accent)] transition"
+                      />
+                    </button>
+                  )}
+                </>
+              )}
+
               <div className="border-t bd my-1" />
 
               {/* Custom domain — real, working entry. Opens a modal that
@@ -693,6 +876,30 @@ export function TopBar({
       </div>
     </header>
   );
+}
+
+async function copyToClipboard(text: string): Promise<boolean> {
+  try {
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(text);
+      return true;
+    }
+  } catch {
+    // fall through to the legacy path (clipboard API needs a secure context)
+  }
+  try {
+    const ta = document.createElement("textarea");
+    ta.value = text;
+    ta.style.position = "fixed";
+    ta.style.opacity = "0";
+    document.body.appendChild(ta);
+    ta.select();
+    const ok = document.execCommand("copy");
+    document.body.removeChild(ta);
+    return ok;
+  } catch {
+    return false;
+  }
 }
 
 function formatRelative(

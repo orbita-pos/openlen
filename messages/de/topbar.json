@@ -63,5 +63,21 @@
     "mute": "Töne stummschalten",
     "unmute": "Ton an",
     "volume": "Lautstärke"
+  },
+  "preview": {
+    "label": "Vorschau-Link",
+    "createTitle": "Vorschau teilen",
+    "createSubtitle": "Lass jemanden diesen Entwurf vor dem Veröffentlichen sehen",
+    "onHint": "Jeder mit diesem Link kann den aktuellen Entwurf sehen. Er wird von Suchmaschinen nicht indexiert.",
+    "copy": "Kopieren",
+    "copiedShort": "Kopiert",
+    "open": "Öffnen",
+    "revoke": "Deaktivieren",
+    "created": "Vorschau-Link bereit",
+    "copiedDesc": "In die Zwischenablage kopiert — teile ihn mit wem du willst.",
+    "copied": "Link kopiert",
+    "copyError": "Kopieren fehlgeschlagen. Markiere den Link und kopiere ihn manuell.",
+    "revoked": "Vorschau-Link deaktiviert",
+    "error": "Etwas ist schiefgelaufen. Versuche es erneut."
   }
 }

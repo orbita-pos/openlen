@@ -63,5 +63,21 @@
     "mute": "Couper le son",
     "unmute": "Activer le son",
     "volume": "Volume"
+  },
+  "preview": {
+    "label": "Lien d'aperçu",
+    "createTitle": "Partager un aperçu",
+    "createSubtitle": "Laissez quelqu'un voir ce brouillon avant de publier",
+    "onHint": "Toute personne disposant de ce lien peut voir le brouillon actuel. Il n'est pas indexé par les moteurs de recherche.",
+    "copy": "Copier",
+    "copiedShort": "Copié",
+    "open": "Ouvrir",
+    "revoke": "Désactiver",
+    "created": "Lien d'aperçu prêt",
+    "copiedDesc": "Copié dans le presse-papiers — partagez-le avec qui vous voulez.",
+    "copied": "Lien copié",
+    "copyError": "Impossible de copier. Sélectionnez le lien et copiez-le manuellement.",
+    "revoked": "Lien d'aperçu désactivé",
+    "error": "Une erreur s'est produite. Réessayez."
   }
 }

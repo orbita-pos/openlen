@@ -161,6 +161,16 @@ export interface SitePage {
   membersOnly?: boolean;
 }
 
+/** Shareable draft-preview link. Present once the owner enables "Share a
+ *  preview" in the workspace; `token` gates the public GET /p/<id>?t=… handler
+ *  that serves the CURRENT draft HTML to anyone holding it — no login, before
+ *  the page is ever published to a subdomain. Deleting this revokes every
+ *  outstanding link. Never baked into published HTML (it's config, like
+ *  settings). */
+export interface PreviewSettings {
+  token: string;
+}
+
 export interface ProjectData {
   /** Publish-ready static HTML — the source of truth for the project. */
   html: string;
@@ -169,6 +179,8 @@ export interface ProjectData {
   /** Multi-page: extra pages keyed by slug. Absent/empty = classic
    *  single-page project (every pre-existing row). Home is `html` above. */
   pages?: Record<string, SitePage>;
+  /** Shareable draft-preview link. Absent = no preview link issued. */
+  preview?: PreviewSettings;
 }
 
 // One persisted Chat-tab turn. The Chat panel's live turn type carries HTML

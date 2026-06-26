@@ -63,5 +63,21 @@
     "mute": "Silenciar sons",
     "unmute": "Ativar som",
     "volume": "Volume"
+  },
+  "preview": {
+    "label": "Link de pré-visualização",
+    "createTitle": "Compartilhar uma prévia",
+    "createSubtitle": "Deixe alguém ver este rascunho antes de publicar",
+    "onHint": "Qualquer pessoa com este link pode ver o rascunho atual. Não é indexado pelos buscadores.",
+    "copy": "Copiar",
+    "copiedShort": "Copiado",
+    "open": "Abrir",
+    "revoke": "Desativar",
+    "created": "Link de prévia pronto",
+    "copiedDesc": "Copiado para a área de transferência — compartilhe com quem quiser.",
+    "copied": "Link copiado",
+    "copyError": "Não foi possível copiar. Selecione o link e copie manualmente.",
+    "revoked": "Link de prévia desativado",
+    "error": "Algo deu errado. Tente novamente."
   }
 }
