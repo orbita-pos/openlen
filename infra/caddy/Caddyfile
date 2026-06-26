@@ -191,14 +191,17 @@ openlen.com, www.openlen.com {
 		}
 	}
 
-	# Chat widget — same-host visitor AI chat API. The ol_chat session cookie is
-	# host-only (no Domain= attribute) so it only flows on same-origin requests;
+	# Chat module — same-host visitor messaging API (incl. the SSE stream). The
+	# ol_chat session cookie is host-only (no Domain=) so it only flows same-origin;
 	# without this handle the request falls through to try_files and serves the
-	# static homepage instead of reaching the Next.js handler. @doc-excluded above
-	# so chat responses (no-store, per-visitor) are never edge-cached.
+	# static homepage instead of the Next.js handler. @doc-excluded above so chat
+	# responses (no-store, per-visitor) are never edge-cached. flush_interval -1
+	# keeps the SSE stream (/api/chat/<sub>/stream) flowing token-by-token (the
+	# owner /api/inbox/* stream rides the apex catch-all which already flushes).
 	handle /api/chat/* {
 		reverse_proxy 127.0.0.1:3000 {
 			header_up CF-Connecting-IP {vars.cf_client_ip}
+			flush_interval -1
 		}
 	}
 
