@@ -25,6 +25,7 @@ import { bakeComments } from "@/lib/publish/comments-widget";
 import { bakeBookings } from "@/lib/publish/bookings-widget";
 import { bakeCollections } from "@/lib/publish/collections-block";
 import { bakeWhatsAppButton } from "@/lib/publish/whatsapp-button";
+import { bakeChatWidget } from "@/lib/publish/chat-widget";
 import { bakeVideoEmbeds, bakeMediaPreconnect } from "@/lib/publish/video-embed";
 import { bakeCarousels } from "@/lib/publish/carousel";
 import type { ItemRow } from "@/lib/collections/store";
@@ -199,6 +200,9 @@ export interface PublishParams {
    *  variant — suppressed if the page already carries the profile contact
    *  widget (no double FAB). */
   whatsapp?: WhatsAppSettings;
+  /** Private chat module (settings.chat). When enabled, the 1:1 messaging
+   *  widget is baked on the root doc + every page/locale variant. */
+  chat?: ChatBake;
   /** Members module: pages that publish as a login STUB at their public path
    *  while the REAL document (full bake chain + seal) is written OUTSIDE the
    *  release — <sub>/protected/<sha>/<slug>/index.html, unreachable by the
@@ -479,6 +483,8 @@ interface BakeDocumentCtx {
   /** WhatsApp button. When enabled with a usable number, a floating FAB is baked
    *  (suppressed if the profile contact widget is already present). */
   whatsapp?: WhatsAppSettings;
+  /** Private chat module. When enabled, the 1:1 messaging widget is baked. */
+  chat?: ChatBake;
 }
 
 interface AssistantBake {
@@ -486,6 +492,13 @@ interface AssistantBake {
   businessName: string;
   accent?: string;
   greeting?: string;
+}
+
+interface ChatBake {
+  enabled: boolean;
+  accent?: string;
+  mount: "fab" | "section" | "both";
+  selfServeJoin: boolean;
 }
 
 /** The per-document publish bake — every transform between sanitize and the
@@ -681,6 +694,28 @@ async function bakeDocument(
     }
   }
 
+  // Private chat widget — AFTER bookings, BEFORE video-embed (so its sealed
+  // script hash enters the CSP). Gated on OPENLEN_CHAT != "0" and chat.enabled.
+  // Corner stacking: the assistant FAB is already baked (right corner, 18 px);
+  // lift the chat FAB above it. WhatsApp is baked AFTER chat and counts both
+  // assistant + chat when computing its own bottomPx.
+  if (process.env.OPENLEN_CHAT !== "0" && ctx.chat?.enabled) {
+    try {
+      const chatWantsFab = ctx.chat.mount !== "section";
+      const rightBelowChat = ctx.assistant?.enabled === true ? 1 : 0;
+      migratedHtml = bakeChatWidget(migratedHtml, {
+        sub: ctx.sub,
+        accent: ctx.chat.accent,
+        mount: ctx.chat.mount,
+        selfServeJoin: ctx.chat.selfServeJoin,
+        ...(chatWantsFab && rightBelowChat > 0 ? { bottomPx: 18 + rightBelowChat * 68 } : {}),
+      });
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.warn("[publishToDir] chat widget inject failed; publishing without it", err);
+    }
+  }
+
   // In-page video playback — upgrade YouTube/Vimeo <a> links to a sealed
   // lightbox (canonical embed from a server-validated id). Universal, like
   // images (no module flag); before the seal so the runtime hash is sealed.
@@ -721,17 +756,22 @@ async function bakeDocument(
   // seal. Self-suppresses if the profile contact widget is already on the page.
   if (process.env.OPENLEN_WHATSAPP !== "0" && ctx.whatsapp?.enabled && ctx.whatsapp.number) {
     try {
-      // Stack ABOVE another widget that owns the same bottom corner so neither
-      // is occluded: the site-assistant button (right), the music player (left).
+      // Stack ABOVE all FABs already baked in the same corner so none are
+      // occluded. Right corner: assistant (18 px) + chat FAB (86 px when
+      // assistant present, else 18 px). Left corner: music player.
       const waSide = ctx.whatsapp.side === "left" ? "left" : "right";
-      const cornerTaken =
-        (waSide === "right" && ctx.assistant?.enabled === true) ||
-        (waSide === "left" && !!ctx.music?.src);
+      const chatFabOnRight =
+        ctx.chat?.enabled === true && ctx.chat.mount !== "section";
+      const priorRightFabs =
+        (ctx.assistant?.enabled === true ? 1 : 0) +
+        (chatFabOnRight ? 1 : 0);
+      const leftOccupied = waSide === "left" && !!ctx.music?.src;
       migratedHtml = bakeWhatsAppButton(migratedHtml, {
         number: ctx.whatsapp.number,
         message: ctx.whatsapp.message,
         side: ctx.whatsapp.side,
-        bottomPx: cornerTaken ? 86 : 18,
+        bottomPx:
+          waSide === "right" ? 18 + priorRightFabs * 68 : leftOccupied ? 86 : 18,
       });
     } catch (err) {
       // eslint-disable-next-line no-console
@@ -854,6 +894,7 @@ export async function publishToDir(
     bookings: params.bookings,
     collections: params.collections,
     whatsapp: params.whatsapp,
+    chat: params.chat,
   };
   let migratedHtml = await bakeDocument(publishHtml, bakeCtx);
 

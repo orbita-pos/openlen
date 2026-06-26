@@ -15,7 +15,7 @@
 
 import { waHref } from "./whatsapp-button";
 
-export type ModuleSurface = "bookings" | "collections" | "comments" | "whatsapp";
+export type ModuleSurface = "bookings" | "collections" | "comments" | "whatsapp" | "chat";
 
 export interface ModuleSectionOpts {
   /** Page language; Spanish copy when it starts with "es", else English. */
@@ -49,12 +49,17 @@ const COPY = {
     es: { eyebrow: "WhatsApp", heading: "¿Tienes dudas? Escríbenos", body: "Te respondemos rápido por WhatsApp.", cta: "Escribir por WhatsApp" },
     en: { eyebrow: "WhatsApp", heading: "Questions? Message us", body: "We reply fast on WhatsApp.", cta: "Chat on WhatsApp" },
   },
+  chat: {
+    es: { eyebrow: "Chat privado", heading: "Habla directamente con nosotros", body: "Inicia sesión y envíanos un mensaje — te respondemos al momento." },
+    en: { eyebrow: "Private chat", heading: "Talk directly with us", body: "Sign in and send us a message — we reply right away." },
+  },
 } as const;
 
 const SECTION_MARKER: Record<Exclude<ModuleSurface, "whatsapp">, string> = {
   bookings: "data-ol-bookings-section",
   collections: "data-ol-collection-section",
   comments: "data-ol-comments-section",
+  chat: "data-ol-chat-section",
 };
 
 const WA_ICON =
