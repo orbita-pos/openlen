@@ -834,6 +834,13 @@ export async function publishProject(
       whatsapp: project.data?.settings?.whatsapp?.enabled
         ? project.data.settings.whatsapp
         : undefined,
+      chat: project.data?.settings?.chat?.enabled
+        ? {
+            enabled: true,
+            mount: project.data.settings.chat.mount ?? "both",
+            selfServeJoin: project.data.settings.chat.selfServeJoin !== false,
+          }
+        : undefined,
       pages: publicPages,
       gatedPages: gatedPages.length > 0 ? gatedPages : undefined,
       memberSigninPath,
