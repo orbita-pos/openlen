@@ -1,0 +1,25 @@
+import { describe, expect, it, vi } from "vitest";
+import { hub } from "@/lib/chat/hub";
+
+describe("chat hub", () => {
+  it("delivers a published message only to that conversation's subscribers", () => {
+    const a = vi.fn(), b = vi.fn();
+    const offA = hub.subscribe("c1", { id: "s1", userId: "u1", send: a });
+    hub.subscribe("c2", { id: "s2", userId: "u2", send: b });
+    hub.publish("c1", { type: "message", message: { id: "m1" } as never });
+    expect(a).toHaveBeenCalledOnce();
+    expect(b).not.toHaveBeenCalled();
+    offA();
+    hub.publish("c1", { type: "message", message: { id: "m2" } as never });
+    expect(a).toHaveBeenCalledOnce(); // unsubscribed
+  });
+  it("tracks presence per project (online until offline)", () => {
+    hub.markOnline("p1", "owner1");
+    expect(hub.isProjectStaffOnline("p1", "owner1", [])).toBe(true);
+    expect(hub.isProjectStaffOnline("p2", "owner1", [])).toBe(false);
+  });
+  it("counts an agent as staff-online", () => {
+    hub.markOnline("p3", "agentX");
+    expect(hub.isProjectStaffOnline("p3", "ownerZ", ["agentX"])).toBe(true);
+  });
+});
