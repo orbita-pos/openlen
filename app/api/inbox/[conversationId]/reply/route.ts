@@ -1,4 +1,5 @@
 import { insertMessage } from "@/lib/chat/store";
+import { hub } from "@/lib/chat/hub";
 import { json, requireOwnerForConversation } from "../../_shared";
 
 export const runtime = "nodejs";
@@ -26,6 +27,7 @@ export async function POST(
   if (text.length === 0) return json({ error: "bad_request" }, 400);
 
   const m = await insertMessage(conversationId, ctx.ownerChatUserId, text);
+  hub.publish(conversationId, { type: "message", message: m });
   return json(
     {
       message: {
