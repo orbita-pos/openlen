@@ -30,7 +30,7 @@ const locales = routing.locales as readonly string[];
 // the middleware's edge bundle and break `next build`.
 const { auth } = NextAuth(authConfig);
 
-const PROTECTED = ["/new", "/projects"];
+const PROTECTED = ["/new", "/projects", "/inbox"];
 
 function localeFromPath(pathname: string): string {
   const seg = pathname.split("/")[1];

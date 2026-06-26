@@ -248,6 +248,17 @@ import nlComments from "../messages/nl/comments.json";
 import nlBookings from "../messages/nl/bookings.json";
 import nlCollections from "../messages/nl/collections.json";
 
+import enInbox from "../messages/en/inbox.json";
+import esInbox from "../messages/es/inbox.json";
+import ptInbox from "../messages/pt/inbox.json";
+import frInbox from "../messages/fr/inbox.json";
+import deInbox from "../messages/de/inbox.json";
+import itInbox from "../messages/it/inbox.json";
+import jaInbox from "../messages/ja/inbox.json";
+import koInbox from "../messages/ko/inbox.json";
+import zhInbox from "../messages/zh/inbox.json";
+import nlInbox from "../messages/nl/inbox.json";
+
 const MESSAGES = {
   en: {
     common: enCommon,
@@ -273,6 +284,7 @@ const MESSAGES = {
     comments: enComments,
     bookings: enBookings,
     collections: enCollections,
+    inbox: enInbox,
   },
   es: {
     common: esCommon,
@@ -298,6 +310,7 @@ const MESSAGES = {
     comments: esComments,
     bookings: esBookings,
     collections: esCollections,
+    inbox: esInbox,
   },
   pt: {
     common: ptCommon,
@@ -323,6 +336,7 @@ const MESSAGES = {
     comments: ptComments,
     bookings: ptBookings,
     collections: ptCollections,
+    inbox: ptInbox,
   },
   fr: {
     common: frCommon,
@@ -348,6 +362,7 @@ const MESSAGES = {
     comments: frComments,
     bookings: frBookings,
     collections: frCollections,
+    inbox: frInbox,
   },
   de: {
     common: deCommon,
@@ -373,6 +388,7 @@ const MESSAGES = {
     comments: deComments,
     bookings: deBookings,
     collections: deCollections,
+    inbox: deInbox,
   },
   it: {
     common: itCommon,
@@ -398,6 +414,7 @@ const MESSAGES = {
     comments: itComments,
     bookings: itBookings,
     collections: itCollections,
+    inbox: itInbox,
   },
   ja: {
     common: jaCommon,
@@ -423,6 +440,7 @@ const MESSAGES = {
     comments: jaComments,
     bookings: jaBookings,
     collections: jaCollections,
+    inbox: jaInbox,
   },
   ko: {
     common: koCommon,
@@ -448,6 +466,7 @@ const MESSAGES = {
     comments: koComments,
     bookings: koBookings,
     collections: koCollections,
+    inbox: koInbox,
   },
   zh: {
     common: zhCommon,
@@ -473,6 +492,7 @@ const MESSAGES = {
     comments: zhComments,
     bookings: zhBookings,
     collections: zhCollections,
+    inbox: zhInbox,
   },
   nl: {
     common: nlCommon,
@@ -498,6 +518,7 @@ const MESSAGES = {
     comments: nlComments,
     bookings: nlBookings,
     collections: nlCollections,
+    inbox: nlInbox,
   },
 } as const;
 

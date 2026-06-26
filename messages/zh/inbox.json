@@ -1,0 +1,13 @@
+{
+  "title": "Inbox",
+  "subtitle": "Messages from visitors to your pages",
+  "empty": "No messages yet",
+  "emptyHint": "When a visitor messages one of your published pages, the conversation shows up here.",
+  "loadError": "Couldn't load messages. Try again in a moment.",
+  "visitor": "Visitor",
+  "selectPrompt": "Select a conversation to read and reply.",
+  "threadEmpty": "No messages in this conversation yet.",
+  "back": "Back",
+  "placeholder": "Write a reply…",
+  "send": "Send"
+}
