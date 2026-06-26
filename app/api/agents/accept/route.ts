@@ -127,20 +127,14 @@ export async function POST(req: Request): Promise<Response> {
     return seeOther(`/login?next=${encodeURIComponent(acceptUrl)}`);
   }
 
-  // Consume (single-use, atomic)
-  const consumed = await consumeAgentInviteToken(token);
+  // Consume (single-use, atomic). Email is enforced inside the WHERE so a
+  // wrong-account attempt returns null WITHOUT burning the token — the real
+  // invitee can retry after signing in as the invited address.
+  const consumed = await consumeAgentInviteToken(token, session.user.email);
   if (!consumed) {
     return htmlPage(
-      "Invite expired",
-      `<h1>Link expired or already used</h1><p>This invite link has already been used or has expired. Ask the workspace owner to send a new invitation.</p>`,
-    );
-  }
-
-  // Email-match guard — the invitee must be logged in AS the invited address
-  if (session.user.email.toLowerCase() !== consumed.email) {
-    return htmlPage(
-      "Wrong account",
-      `<h1>Wrong account</h1><p>This invitation was sent to <strong>${esc(consumed.email)}</strong>. Please sign in with that email address and try the link again.</p>`,
+      "Invite invalid or wrong account",
+      `<h1>Invalid link or wrong account</h1><p>This invite link is invalid, has expired, or was sent to a different email address. Sign in as the invited address and try the link again.</p>`,
     );
   }
 

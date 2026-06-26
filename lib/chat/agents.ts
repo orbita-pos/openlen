@@ -30,9 +30,12 @@ export async function issueAgentInviteToken(
 }
 
 /** Single-use atomic consume. Returns {projectId, email} or null if
- *  invalid / already used / expired. */
+ *  invalid / already used / expired / email mismatch.
+ *  The email is folded into the atomic WHERE so a wrong-account attempt
+ *  matches 0 rows and leaves used=false — the token is NOT burned. */
 export async function consumeAgentInviteToken(
   rawToken: string,
+  email: string,
 ): Promise<{ projectId: string; email: string } | null> {
   const rows = await db
     .update(schema.chatAgentInviteTokens)
@@ -40,6 +43,7 @@ export async function consumeAgentInviteToken(
     .where(
       and(
         eq(schema.chatAgentInviteTokens.tokenHash, sha256Hex(rawToken)),
+        eq(schema.chatAgentInviteTokens.email, email.trim().toLowerCase()),
         eq(schema.chatAgentInviteTokens.used, false),
         gt(schema.chatAgentInviteTokens.expires, new Date()),
       ),
