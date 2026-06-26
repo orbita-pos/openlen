@@ -531,6 +531,76 @@ function escape(s: string): string {
     .replace(/"/g, "&quot;");
 }
 
+// ─── Chat — offline-owner notification ───────────────────────────────────────
+
+export async function sendChatNotificationEmail(input: {
+  to: string;
+  ownerName: string | null;
+  senderName: string;
+  messageBody: string;
+  deskUrl: string;
+  projectTitle: string;
+}): Promise<void> {
+  const preview = input.messageBody.slice(0, 200);
+
+  const live = liveClientOrWarn("chat notification email");
+  if (!live) {
+    if (process.env.NODE_ENV !== "production") {
+      // eslint-disable-next-line no-console
+      console.log(`[DEV] chat notification to ${input.to}: ${preview}`);
+    }
+    return;
+  }
+
+  const greeting = input.ownerName ? `Hi ${input.ownerName},` : "Hi,";
+  const text = [
+    greeting,
+    "",
+    `${input.senderName} sent you a message on "${input.projectTitle}":`,
+    "",
+    preview,
+    "",
+    `Reply in your inbox: ${input.deskUrl}`,
+  ].join("\n");
+
+  await live.emails.send({
+    from,
+    to: input.to,
+    subject: `New message on ${input.projectTitle}`,
+    text,
+    html: buildChatNotificationHtml({ ...input, preview }),
+  });
+}
+
+function buildChatNotificationHtml(input: {
+  ownerName: string | null;
+  senderName: string;
+  preview: string;
+  deskUrl: string;
+  projectTitle: string;
+}): string {
+  const greeting = input.ownerName ? `Hi ${escape(input.ownerName)},` : "Hi,";
+  return `<!doctype html>
+<html>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, sans-serif; background:#fafafa; margin:0; padding:32px; color:#0a0a0a;">
+  <table align="center" style="max-width:480px; width:100%; background:#fff; border-radius:16px; padding:32px; border:1px solid #e5e5e5;">
+    <tr><td>
+      <div style="display:flex; align-items:center; gap:8px; margin-bottom:24px;">
+        <span style="display:inline-block; width:24px; height:24px; background:#FF5A36; border-radius:6px; color:#fff; font-weight:700; text-align:center; line-height:24px; font-size:15px;">O</span>
+        <span style="font-weight:600; font-size:14px;">OpenLen</span>
+      </div>
+      <h1 style="font-size:20px; margin:0 0 4px; letter-spacing:-0.02em;">New message</h1>
+      <p style="font-size:14px; line-height:1.5; color:#525252; margin:0 0 14px;">${greeting} <strong>${escape(input.senderName)}</strong> sent you a message on <strong>${escape(input.projectTitle)}</strong>.</p>
+      <blockquote style="margin:0 0 24px; padding:12px 16px; background:#f5f5f5; border-left:3px solid #e5e5e5; border-radius:0 8px 8px 0; font-size:13.5px; color:#374151; line-height:1.6; white-space:pre-wrap;">${escape(input.preview)}</blockquote>
+      <p style="margin:0;">
+        <a href="${escape(input.deskUrl)}" style="display:inline-block; background:#FF5A36; color:#fff; padding:11px 18px; border-radius:8px; text-decoration:none; font-weight:500; font-size:14px;">Open inbox</a>
+      </p>
+    </td></tr>
+  </table>
+</body>
+</html>`;
+}
+
 // ─── Bookings — confirmation / reminder / cancellation, optional .ics ────────
 
 export interface BookingEmail {

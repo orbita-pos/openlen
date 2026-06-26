@@ -3,6 +3,7 @@ import { encodeCursor } from "@/lib/chat/cursor";
 import {
   getConversationForUser, insertMessage, listMessagesSince, recordChatEvent,
 } from "@/lib/chat/store";
+import { notifyOwnerIfOffline } from "@/lib/chat/notify";
 import { json, loadChatSite, requireChatSession } from "../_shared";
 
 export const runtime = "nodejs";
@@ -54,5 +55,6 @@ export async function POST(req: Request, { params }: { params: Promise<{ sub: st
 
   const m = await insertMessage(conversationId, session.user.id, text);
   recordChatEvent(site.projectId, "message", session.user.id);
+  void notifyOwnerIfOffline(site.projectId, conversationId, session.user.id, text).catch((e) => console.error("[chat] notify failed", e));
   return json({ message: { id: m.id, authorId: m.authorId, body: m.body, createdAt: m.createdAt.toISOString(), mine: true } }, 200);
 }
