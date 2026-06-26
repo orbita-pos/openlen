@@ -8,6 +8,7 @@ import {
   validatePageSlug,
 } from "@/lib/projects/site-pages";
 import { reconcileModuleSettings } from "@/lib/projects/module-settings";
+import { getOrCreateOwnerChatUser } from "@/lib/chat/store";
 import type {
   FormConfig,
   MusicSettings,
@@ -314,7 +315,7 @@ export async function PATCH(
   }
 
   const rows = await db
-    .select({ data: schema.projects.data })
+    .select({ data: schema.projects.data, title: schema.projects.title })
     .from(schema.projects)
     .where(
       and(
@@ -471,6 +472,18 @@ export async function PATCH(
       ...("selfServeJoin" in c ? { selfServeJoin: c.selfServeJoin } : {}),
       ...("mount" in c ? { mount: c.mount } : {}),
     };
+  }
+  if (hasChat && body.chat?.enabled === true && data.settings?.chat?.enabled !== true) {
+    // Auto-provision the owner chat_user so visitors can "message the business".
+    // Idempotent; awaited so a follow-up read sees it.
+    try {
+      await getOrCreateOwnerChatUser(id, session.user.id, {
+        email: session.user.email ?? null,
+        displayName: existing.title,
+      });
+    } catch (err) {
+      console.warn("[settings] owner chat provisioning failed (will retry lazily)", err);
+    }
   }
 
   // Enforce the Members-dependency invariant in one place: disabling Members
