@@ -22,6 +22,7 @@ export function json(body: unknown, status: number): Response {
 
 export interface ChatSiteContext {
   projectId: string;
+  userId: string;
   chatEnabled: boolean;
   selfServeJoin: boolean;
   locale: string;
@@ -31,7 +32,7 @@ export interface ChatSiteContext {
 export async function loadChatSite(sub: string): Promise<ChatSiteContext | null> {
   if (!/^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/.test(sub)) return null;
   const rows = await db
-    .select({ id: schema.projects.id, title: schema.projects.title, data: schema.projects.data })
+    .select({ id: schema.projects.id, userId: schema.projects.userId, title: schema.projects.title, data: schema.projects.data })
     .from(schema.projects)
     .where(eq(schema.projects.subdomain, sub))
     .limit(1);
@@ -40,6 +41,7 @@ export async function loadChatSite(sub: string): Promise<ChatSiteContext | null>
   const chat = row.data?.settings?.chat;
   return {
     projectId: row.id,
+    userId: row.userId ?? "",
     chatEnabled: chat?.enabled === true,
     selfServeJoin: chat?.selfServeJoin !== false, // default open
     locale: detectLang(row.data?.html ?? ""),
