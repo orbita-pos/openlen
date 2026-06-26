@@ -2,6 +2,7 @@ import { ipLimitKey, checkAndConsume, type LimitWindow } from "@/lib/limits";
 import { encodeCursor } from "@/lib/chat/cursor";
 import {
   getConversationForUser, insertMessage, listMessagesSince, recordChatEvent,
+  markConversationRead, getOtherReadAt,
 } from "@/lib/chat/store";
 import { notifyOwnerIfOffline } from "@/lib/chat/notify";
 import { hub } from "@/lib/chat/hub";
@@ -32,7 +33,17 @@ export async function GET(req: Request, { params }: { params: Promise<{ sub: str
     mine: m.authorId === session.user.id,
   }));
   const nextCursor = rows.length > 0 ? encodeCursor(rows[rows.length - 1]) : (since ?? null);
-  return json({ messages, nextCursor }, 200);
+
+  // Mark this participant's read position and publish a live read event.
+  const selfId = session.user.id;
+  const now = new Date();
+  try {
+    await markConversationRead(site.projectId, conversationId, selfId, now);
+    hub.publish(conversationId, { type: "read", userId: selfId, readAt: now.toISOString() });
+  } catch { /* non-fatal: read receipt must never break the message response */ }
+  const otherReadAt = await getOtherReadAt(site.projectId, conversationId, selfId).catch(() => null);
+
+  return json({ messages, nextCursor, otherReadAt: otherReadAt ? otherReadAt.toISOString() : null }, 200);
 }
 
 export async function POST(req: Request, { params }: { params: Promise<{ sub: string }> }): Promise<Response> {

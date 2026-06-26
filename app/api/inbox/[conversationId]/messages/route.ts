@@ -1,5 +1,6 @@
 import { encodeCursor } from "@/lib/chat/cursor";
-import { listMessagesSince } from "@/lib/chat/store";
+import { listMessagesSince, markConversationRead, getOtherReadAt } from "@/lib/chat/store";
+import { hub } from "@/lib/chat/hub";
 import { json, requireOwnerForConversation } from "../../_shared";
 
 export const runtime = "nodejs";
@@ -25,5 +26,15 @@ export async function GET(
   }));
   const nextCursor =
     rows.length > 0 ? encodeCursor(rows[rows.length - 1]) : (since ?? null);
-  return json({ messages, nextCursor }, 200);
+
+  // Mark this participant's read position and publish a live read event.
+  const selfId = ctx.ownerChatUserId;
+  const now = new Date();
+  try {
+    await markConversationRead(ctx.projectId, conversationId, selfId, now);
+    hub.publish(conversationId, { type: "read", userId: selfId, readAt: now.toISOString() });
+  } catch { /* non-fatal */ }
+  const otherReadAt = await getOtherReadAt(ctx.projectId, conversationId, selfId).catch(() => null);
+
+  return json({ messages, nextCursor, otherReadAt: otherReadAt ? otherReadAt.toISOString() : null }, 200);
 }

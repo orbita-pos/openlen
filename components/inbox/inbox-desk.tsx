@@ -6,7 +6,7 @@
 // child (auto-escaped) — never dangerouslySetInnerHTML — so a hostile visitor
 // name or message can't inject markup. Talks to the P3-5 owner Desk API.
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { ArrowLeft, Inbox, Loader2, MessageSquare, Send } from "lucide-react";
 
@@ -46,6 +46,8 @@ export function InboxDesk() {
   const [sending, setSending] = useState(false);
   const [peerOnline, setPeerOnline] = useState(false);
   const [peerTyping, setPeerTyping] = useState(false);
+  // otherReadAt: the OTHER participant's last-read timestamp (visitor, for the owner desk).
+  const [otherReadAt, setOtherReadAt] = useState<Date | null>(null);
   // Outgoing typing ping state — debounce timer + last value sent (avoids spam).
   const typingPing = useRef<{ timer: ReturnType<typeof setTimeout> | null; on: boolean }>({
     timer: null,
@@ -94,6 +96,7 @@ export function InboxDesk() {
     let cursor: string | null = null;
     setMessages(null);
     setThreadError(false);
+    setOtherReadAt(null);
 
     const load = async (since: string | null) => {
       try {
@@ -108,9 +111,13 @@ export function InboxDesk() {
         const data = (await res.json()) as {
           messages?: Message[];
           nextCursor?: string | null;
+          otherReadAt?: string | null;
         };
         if (cancelled) return;
         cursor = data.nextCursor ?? cursor;
+        // Update otherReadAt from the initial load only (since === null) —
+        // polling responses don't change the read pointer unless a read event fires.
+        if (!since && data.otherReadAt) setOtherReadAt(new Date(data.otherReadAt));
         const incoming = data.messages ?? [];
         if (since) {
           if (incoming.length) appendMessages(incoming);
@@ -149,6 +156,7 @@ export function InboxDesk() {
         userId?: string;
         online?: boolean;
         isTyping?: boolean;
+        readAt?: string;
       };
       try {
         evt = JSON.parse(raw);
@@ -165,6 +173,9 @@ export function InboxDesk() {
         setPeerTyping(!!evt.isTyping);
         if (typingTimer) clearTimeout(typingTimer);
         if (evt.isTyping) typingTimer = setTimeout(() => setPeerTyping(false), 4000);
+      } else if (evt.type === "read" && evt.userId === otherUserId && evt.readAt) {
+        // Visitor read our messages — advance their last-read pointer.
+        setOtherReadAt(new Date(evt.readAt));
       }
     };
 
@@ -176,6 +187,7 @@ export function InboxDesk() {
     es.addEventListener("message", (e: MessageEvent) => onFrame(e.data));
     es.addEventListener("presence", (e) => onFrame((e as MessageEvent).data));
     es.addEventListener("typing", (e) => onFrame((e as MessageEvent).data));
+    es.addEventListener("read", (e) => onFrame((e as MessageEvent).data));
     es.onerror = () => {
       es?.close();
       es = null;
@@ -247,6 +259,19 @@ export function InboxDesk() {
     },
     [pingTyping],
   );
+
+  // The id of the owner's LAST own message that the visitor has read
+  // (createdAt <= otherReadAt). Only the last qualifying message shows the
+  // "✓✓" indicator — one indicator per thread, not per message.
+  const lastSeenMsgId = useMemo<string | null>(() => {
+    if (!otherReadAt || !messages) return null;
+    const orat = otherReadAt.getTime();
+    let lastId: string | null = null;
+    for (const m of messages) {
+      if (m.mine && new Date(m.createdAt).getTime() <= orat) lastId = m.id;
+    }
+    return lastId;
+  }, [messages, otherReadAt]);
 
   const hasAny = !!inbox && inbox.some((g) => g.conversations.length > 0);
 
@@ -394,7 +419,7 @@ export function InboxDesk() {
                     {messages.map((m) => (
                       <li
                         key={m.id}
-                        className={`flex ${m.mine ? "justify-end" : "justify-start"}`}
+                        className={`flex ${m.mine ? "flex-col items-end" : "justify-start"}`}
                       >
                         <div
                           className={`max-w-[78%] rounded-2xl px-3.5 py-2 text-[14px] leading-snug ${
@@ -412,6 +437,11 @@ export function InboxDesk() {
                             {formatTime(m.createdAt, locale)}
                           </span>
                         </div>
+                        {m.mine && lastSeenMsgId === m.id && (
+                          <span className="mt-0.5 text-[10px] text-zinc-400 dark:text-zinc-500">
+                            ✓✓ Visto
+                          </span>
+                        )}
                       </li>
                     ))}
                   </ul>

@@ -3,7 +3,8 @@ import type { MessageRow } from "@/lib/chat/store";
 export type HubEvent =
   | { type: "message"; message: MessageRow }
   | { type: "presence"; userId: string; online: boolean }
-  | { type: "typing"; userId: string; isTyping: boolean };
+  | { type: "typing"; userId: string; isTyping: boolean }
+  | { type: "read"; userId: string; readAt: string };
 
 export interface Subscriber {
   id: string;

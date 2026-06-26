@@ -258,6 +258,63 @@ export function recordChatEvent(projectId: string, type: string, chatUserId?: st
   void db.insert(schema.chatEvents).values({ projectId, type, chatUserId: chatUserId ?? null }).catch(() => {});
 }
 
+/** Mark a conversation read for `userId` (sets aReadAt or bReadAt, no-op if
+ *  not a participant). One UPDATE scoped to projectId+conversationId. */
+export async function markConversationRead(
+  projectId: string,
+  conversationId: string,
+  userId: string,
+  readAt: Date,
+): Promise<void> {
+  const rows = await db
+    .select({
+      id: schema.chatConversations.id,
+      a: schema.chatConversations.aUserId,
+      b: schema.chatConversations.bUserId,
+    })
+    .from(schema.chatConversations)
+    .where(and(
+      eq(schema.chatConversations.id, conversationId),
+      eq(schema.chatConversations.projectId, projectId),
+    ))
+    .limit(1);
+  const row = rows[0];
+  if (!row) return;
+  if (userId === row.a) {
+    await db.update(schema.chatConversations).set({ aReadAt: readAt }).where(eq(schema.chatConversations.id, conversationId));
+  } else if (userId === row.b) {
+    await db.update(schema.chatConversations).set({ bReadAt: readAt }).where(eq(schema.chatConversations.id, conversationId));
+  }
+  // no-op if userId is not a participant
+}
+
+/** Return the OTHER participant's last-read timestamp (null if never read or
+ *  userId is not a participant). */
+export async function getOtherReadAt(
+  projectId: string,
+  conversationId: string,
+  selfUserId: string,
+): Promise<Date | null> {
+  const rows = await db
+    .select({
+      a: schema.chatConversations.aUserId,
+      b: schema.chatConversations.bUserId,
+      aReadAt: schema.chatConversations.aReadAt,
+      bReadAt: schema.chatConversations.bReadAt,
+    })
+    .from(schema.chatConversations)
+    .where(and(
+      eq(schema.chatConversations.id, conversationId),
+      eq(schema.chatConversations.projectId, projectId),
+    ))
+    .limit(1);
+  const row = rows[0];
+  if (!row) return null;
+  if (selfUserId === row.a) return row.bReadAt ?? null;
+  if (selfUserId === row.b) return row.aReadAt ?? null;
+  return null;
+}
+
 /** The space's owner chat_user, or null. */
 export async function getChatOwner(projectId: string): Promise<ChatUserRow | null> {
   const rows = await db

@@ -46,6 +46,9 @@ async function main() {
     ON "chatConversations" ("projectId", "aUserId", "bUserId");`);
   await db.execute(sql`CREATE INDEX IF NOT EXISTS "chatConversations_a_idx" ON "chatConversations" ("aUserId");`);
   await db.execute(sql`CREATE INDEX IF NOT EXISTS "chatConversations_b_idx" ON "chatConversations" ("bUserId");`);
+  // Read-receipt columns (idempotent) — added in P5 Task 2.
+  await db.execute(sql`ALTER TABLE "chatConversations" ADD COLUMN IF NOT EXISTS "aReadAt" timestamp;`);
+  await db.execute(sql`ALTER TABLE "chatConversations" ADD COLUMN IF NOT EXISTS "bReadAt" timestamp;`);
 
   await db.execute(sql`CREATE TABLE IF NOT EXISTS "chatMessages" (
     "id" text PRIMARY KEY,

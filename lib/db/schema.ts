@@ -825,6 +825,11 @@ export const chatConversations = pgTable(
     aUserId: text("aUserId").notNull(), // normalized pair: aUserId <= bUserId (string compare)
     bUserId: text("bUserId").notNull(),
     lastMessageAt: timestamp("lastMessageAt", { mode: "date" }),
+    // Per-conversation last-read timestamps (read receipts). Set to NOW() when
+    // the corresponding participant opens the thread (messages GET). Null until
+    // first read. aReadAt belongs to aUserId, bReadAt to bUserId.
+    aReadAt: timestamp("aReadAt", { mode: "date" }),
+    bReadAt: timestamp("bReadAt", { mode: "date" }),
     createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
   },
   (table) => [
