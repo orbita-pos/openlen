@@ -25,7 +25,7 @@ import {
 } from "@/lib/projects/site-pages";
 import { normalizeBornCanonical } from "@/lib/normalize";
 import { ensurePageMeta } from "@/lib/publish/ensure-page-meta";
-import { upgradeDataUriOgImage } from "@/lib/branding/upgrade-og-image";
+import { ensureSocialOgImage } from "@/lib/branding/social-image";
 import { resolveProjectLogo } from "@/lib/branding/resolve-project-logo";
 import { renderProjectThumbnail } from "@/lib/projects/thumbnail";
 import { runFlightCheck } from "@/lib/publish/flight-check";
@@ -679,15 +679,17 @@ export async function publishProject(
 
   // Born-complete the <head> at publish too, so even legacy projects (and
   // pages published without ever opening the editor) ship with a real meta
-  // description / og tags / favicon. Then host any branded og:image card so
-  // social crawlers can fetch it. Both soft: a hiccup must never block a
-  // publish.
+  // description / og tags / favicon. Then resolve a RASTER og:image (the page's
+  // hero, or a rendered branded card) so the link unfurls on WhatsApp / X /
+  // Facebook — and fill twitter:image / og:image dims / og:url. Both soft: a
+  // hiccup must never block a publish.
   let html = ensurePageMeta(project.data?.html ?? "", { title: project.title });
   try {
-    html = await upgradeDataUriOgImage(html);
+    const baseUrl = `https://${v.value}.${process.env.PUBLISH_BASE_HOST?.trim() || "openlen.com"}`;
+    html = await ensureSocialOgImage(html, { title: project.title, baseUrl });
   } catch (err) {
     // eslint-disable-next-line no-console
-    console.warn("[publish] og:image upgrade failed; continuing", err);
+    console.warn("[publish] social og:image failed; continuing", err);
   }
   const now = new Date();
 

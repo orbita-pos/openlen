@@ -39,6 +39,7 @@ import { wirePublishedForms } from "@/lib/publish/forms";
 import { injectAnalyticsSnippet } from "@/lib/analytics/snippet";
 import { injectTrackingStrip } from "@/lib/publish/tracking-strip";
 import { injectLogoIntoHtml } from "@/lib/branding/inject-logo";
+import { absolutizeSocialMeta } from "@/lib/branding/social-image";
 import { buildGateStub, wireMemberLogout } from "@/lib/members/gate-stub";
 import { applySigninLink, signinLabelFor } from "@/lib/publish/signin-link";
 import { detectSiteAccent } from "@/lib/members/site-accent";
@@ -701,6 +702,20 @@ async function bakeDocument(
       // eslint-disable-next-line no-console
       console.warn("[publishToDir] carousel bake failed; publishing without it", err);
     }
+  }
+
+  // Social meta must be ABSOLUTE for crawlers — re-absolutize any og:image /
+  // twitter:image / og:url that an asset migration above relativized (e.g. an
+  // Unsplash hero og:image → /assets/<hash>.webp). No-op for the hosted-PNG
+  // card + already-absolute heroes. MUST run after every URL rewrite above.
+  try {
+    migratedHtml = absolutizeSocialMeta(
+      migratedHtml,
+      `https://${ctx.sub}.${publishedBaseHost()}`,
+    );
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.warn("[publishToDir] social meta absolutize failed; skipping", err);
   }
 
   return migratedHtml;

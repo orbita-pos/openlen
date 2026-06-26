@@ -11,9 +11,9 @@
 //      to drop into the same call sites as normalizeBornCanonical.
 //
 // Pure string/regex work — no DOM parser (server runs have no DOMParser, and
-// jsdom is too heavy for the request path). Server-only: the branded og:image
-// card is base64-encoded so the publish-time uploader (upgradeDataUriOgImage)
-// can host it for social crawlers, which can't fetch data: URIs.
+// jsdom is too heavy for the request path). The branded og:image card is a
+// base64 SVG placeholder; at publish lib/branding/social-image rasterizes it to
+// a hosted PNG (social crawlers can't fetch data: URIs and don't render SVG).
 
 import { defaultLogoSvg } from "@/lib/branding/default-logo";
 
@@ -83,6 +83,16 @@ export function ensurePageMeta(
     additions.push(
       `<meta property="og:image" content="${escAttr(ogImage)}" />`,
     );
+  }
+
+  // Social-card type + Twitter large-image card. The og:image these reference
+  // becomes a real raster at publish (lib/branding/social-image) — here we just
+  // declare intent so X shows a large card and the type is explicit.
+  if (!hasMeta(out, "name", "twitter:card")) {
+    additions.push(`<meta name="twitter:card" content="summary_large_image" />`);
+  }
+  if (!hasMeta(out, "property", "og:type")) {
+    additions.push(`<meta property="og:type" content="website" />`);
   }
 
   if (!hasFavicon(out)) {

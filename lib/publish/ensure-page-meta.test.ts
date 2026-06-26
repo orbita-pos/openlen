@@ -108,6 +108,25 @@ test("non-destructive: existing tags are preserved", () => {
   assert.equal(metaContent(out, "property", "og:title"), "Original Title");
 });
 
+test("adds twitter:card + og:type for social unfurl", () => {
+  const out = ensurePageMeta(DOC(), { title: "Acme Widgets" });
+  assert.equal(
+    metaContent(out, "name", "twitter:card"),
+    "summary_large_image",
+  );
+  assert.equal(metaContent(out, "property", "og:type"), "website");
+});
+
+test("twitter:card + og:type are non-destructive", () => {
+  const head = [
+    '<meta name="twitter:card" content="summary">',
+    '<meta property="og:type" content="article">',
+  ].join("");
+  const out = ensurePageMeta(DOC(head), { title: "X" });
+  assert.equal(metaContent(out, "name", "twitter:card"), "summary");
+  assert.equal(metaContent(out, "property", "og:type"), "article");
+});
+
 test("idempotent — second pass changes nothing", () => {
   const once = ensurePageMeta(DOC(), { title: "Acme Widgets" });
   const twice = ensurePageMeta(once, { title: "Acme Widgets" });
