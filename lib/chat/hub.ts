@@ -18,7 +18,7 @@ interface PresenceEntry {
   offlineTimer?: ReturnType<typeof setTimeout>;
 }
 
-function createHub() {
+export function createHub() {
   // conversationId → Map<subId, Subscriber>
   const subs = new Map<string, Map<string, Subscriber>>();
 
@@ -54,6 +54,8 @@ function createHub() {
         byId.delete(id);
       }
     }
+    // If pruning emptied the inner map, remove the conversation key too.
+    if (byId.size === 0) subs.delete(conversationId);
   }
 
   function markOnline(projectId: string, userId: string): void {
@@ -84,6 +86,9 @@ function createHub() {
     entry.count = Math.max(0, entry.count - 1);
     if (entry.count > 0) return; // still has other open connections
 
+    // Already at 0 with a grace timer running — don't double-schedule.
+    if (entry.offlineTimer !== undefined) return;
+
     // Refcount hit 0. Start a ~12s grace timer before truly removing the entry.
     // This prevents a page refresh from briefly flipping the owner "offline"
     // and sending an unnecessary email notification to a visitor who's still there.
@@ -101,7 +106,8 @@ function createHub() {
     // An entry with count > 0 is online. An entry with count === 0 is in
     // the grace window (offlineTimer pending) — treat as still online so
     // callers don't trigger spurious offline actions during reconnects.
-    return entry !== undefined && entry.count > 0;
+    // Online if actively connected OR within the grace window (offlineTimer pending).
+    return entry !== undefined && (entry.count > 0 || entry.offlineTimer !== undefined);
   }
 
   function isProjectStaffOnline(
