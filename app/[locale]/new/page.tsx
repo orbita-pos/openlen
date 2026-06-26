@@ -18,6 +18,7 @@ import { useCuration } from "@/lib/use-curation";
 import { useGeneration } from "@/lib/use-generation";
 import { setGenerationBusy } from "@/lib/generation-busy";
 import { useAIModel } from "@/components/workspace-v2/model-picker";
+import { buildModuleSection } from "@/lib/publish/module-sections";
 import type {
   BookingsSettings,
   CollectionsSettings,
@@ -218,7 +219,6 @@ function readThemeBaseline(m: Record<string, unknown>): {
 function NewV2Inner() {
   const t = useTranslations("wsPage");
   const tSections = useTranslations("panelsA");
-  const tComments = useTranslations("comments");
   const tBookings = useTranslations("bookings");
   const tCollections = useTranslations("collections");
   const tAsset = useTranslations("modalsAsset");
@@ -2593,13 +2593,54 @@ function NewV2Inner() {
   // creator drag it where they want.
   const insertCommentsSection = useCallback(() => {
     insertNonceRef.current += 1;
-    const caption = tComments("module.placeholderCaption");
     setInsertRequest({
-      html: `<section data-ol-comments-section style="max-width:680px;margin:40px auto;padding:28px 24px;border:1px dashed #c9c9d0;border-radius:14px;text-align:center;color:#9a9aa0;font-size:14px;">${caption}</section>`,
+      html: buildModuleSection("comments", { lang: locale }),
       nonce: insertNonceRef.current,
       sectionType: "comments",
     });
-  }, [tComments]);
+  }, [locale]);
+  const insertWhatsappSection = useCallback(() => {
+    const wa = loadedProject?.settings?.whatsapp;
+    const html = buildModuleSection("whatsapp", {
+      lang: locale,
+      whatsapp: { number: wa?.number, message: wa?.message },
+    });
+    if (!html) {
+      toast.error(t("toast.whatsappNeedNumber"));
+      return;
+    }
+    insertNonceRef.current += 1;
+    setInsertRequest({ html, nonce: insertNonceRef.current, sectionType: "whatsapp" });
+  }, [locale, loadedProject?.settings?.whatsapp, toast, t]);
+  const createModulePage = useCallback(
+    async (module: "bookings" | "collections"): Promise<void> => {
+      const id = loadedProject?.id;
+      if (!id) return;
+      void flushPendingSave();
+      const res = await fetch(`/api/projects/${id}/pages`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ module }),
+      }).catch(() => null);
+      const body = (await res?.json().catch(() => null)) as
+        | { ok?: boolean; error?: string; slug?: string; page?: { slug?: string } }
+        | null;
+      if (res?.ok && body?.page?.slug) {
+        await refetchProject(id);
+        switchSitePage(body.page.slug);
+        toast.success(t("toast.modulePageCreated"));
+        return;
+      }
+      if (body?.error === "exists" && body.slug) {
+        await refetchProject(id);
+        switchSitePage(body.slug);
+        toast.info(t("toast.modulePageExists"));
+        return;
+      }
+      toast.error(t("toast.moduleError"));
+    },
+    [loadedProject?.id, refetchProject, switchSitePage, flushPendingSave, toast, t],
+  );
   const updateBookingsSettings = useCallback(
     async (patch: BookingsSettings): Promise<boolean> => {
       const projectId = loadedProject?.id;
@@ -3073,6 +3114,8 @@ function NewV2Inner() {
             onInsertCollectionsSection={insertCollectionsSection}
             whatsappSettings={loadedProject?.settings?.whatsapp}
             onUpdateWhatsappSettings={updateWhatsappSettings}
+            onCreateModulePage={createModulePage}
+            onAddWhatsappSection={insertWhatsappSection}
             onShowLeads={() => setCenterView("messages")}
             onShowAnalytics={() => setCenterView("analytics")}
             onReturnToCanvas={() => setCenterView("page")}

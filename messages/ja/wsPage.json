@@ -94,7 +94,10 @@
     "analyticsEnabled": "アナリティクスを有効にしました",
     "analyticsDisabled": "アナリティクスを無効にしました",
     "saveError": "変更を保存できませんでした。",
-    "moduleWhatsapp": "WhatsApp"
+    "moduleWhatsapp": "WhatsApp",
+    "whatsappNeedNumber": "先にWhatsApp番号を追加してください",
+    "modulePageCreated": "ページを作成しました",
+    "modulePageExists": "既存のページを開きました"
   },
   "whatsapp": {
     "title": "WhatsAppボタン",
@@ -102,5 +105,10 @@
     "numberPlaceholder": "電話番号（例: 5512345678）",
     "messagePlaceholder": "定型メッセージ（任意）",
     "note": "公開ページの右下に表示されます。10桁の番号はメキシコ（+52）として扱われます。"
+  },
+  "moduleSurface": {
+    "createBookingPage": "予約ページを作成",
+    "createCatalogPage": "カタログページを作成",
+    "addWhatsappSection": "WhatsAppセクションを追加"
   }
 }

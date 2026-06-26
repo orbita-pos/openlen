@@ -49,6 +49,10 @@ export interface ModulesViewProps {
   onInsertCollectionsSection?: () => void;
   whatsappSettings?: WhatsAppSettings;
   onUpdateWhatsappSettings?: (patch: WhatsAppSettings) => Promise<boolean>;
+  /** Create a dedicated, brand-matched page for a module (bookings/collections). */
+  onCreateModulePage?: (module: "bookings" | "collections") => void | Promise<void>;
+  /** Insert the designed WhatsApp CTA section into the home. */
+  onAddWhatsappSection?: () => void;
   /** Jump to the account sections that already host these (center swap). */
   onShowLeads?: () => void;
   onShowAnalytics?: () => void;
@@ -93,6 +97,11 @@ export function ModulesView(props: ModulesViewProps) {
               onShowCollections={() => setSub("collections")}
               whatsappSettings={props.whatsappSettings}
               onUpdateWhatsapp={props.onUpdateWhatsappSettings}
+              onCreateModulePage={async (m) => {
+                await props.onCreateModulePage?.(m);
+                props.onReturnToCanvas?.();
+              }}
+              onAddWhatsappSection={() => afterInsert(props.onAddWhatsappSection)}
               onShowLeads={props.onShowLeads}
               onShowAnalytics={props.onShowAnalytics}
               onShowAssistant={() => setSub("assistant")}

@@ -94,7 +94,10 @@
     "analyticsEnabled": "Analytics ativado",
     "analyticsDisabled": "Analytics desativado",
     "saveError": "Não foi possível salvar a alteração.",
-    "moduleWhatsapp": "WhatsApp"
+    "moduleWhatsapp": "WhatsApp",
+    "whatsappNeedNumber": "Primeiro adicione um número de WhatsApp",
+    "modulePageCreated": "Página criada",
+    "modulePageExists": "Abri a página existente"
   },
   "whatsapp": {
     "title": "Botão de WhatsApp",
@@ -102,5 +105,10 @@
     "numberPlaceholder": "Número (ex. 5512345678)",
     "messagePlaceholder": "Mensagem pré-escrita (opcional)",
     "note": "Aparece no canto inferior direito ao publicar. Um número de 10 dígitos é lido como México (+52)."
+  },
+  "moduleSurface": {
+    "createBookingPage": "Criar página de reservas",
+    "createCatalogPage": "Criar página de catálogo",
+    "addWhatsappSection": "Adicionar seção de WhatsApp"
   }
 }

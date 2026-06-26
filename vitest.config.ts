@@ -39,6 +39,7 @@ export default defineConfig({
       "lib/publish/collections-block.test.ts",
       "lib/publish/video-embed.test.ts",
       "lib/publish/signin-link.test.ts",
+      "lib/publish/module-sections.test.ts",
       "lib/publish/whatsapp-button.test.ts",
       "lib/members/**/*.test.ts",
       "lib/broadcast/**/*.test.ts",

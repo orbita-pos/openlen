@@ -74,6 +74,10 @@ interface ModulesPanelProps {
   /** WhatsApp button module — toggle + number + prefilled message. */
   whatsappSettings?: WhatsAppSettings;
   onUpdateWhatsapp?: (patch: WhatsAppSettings) => Promise<boolean>;
+  /** Create a dedicated brand-matched page for the module (bookings/collections). */
+  onCreateModulePage?: (module: "bookings" | "collections") => void | Promise<void>;
+  /** Insert the designed WhatsApp CTA section into the home. */
+  onAddWhatsappSection?: () => void;
   onShowLeads?: () => void;
   onShowAnalytics?: () => void;
   onShowAssistant?: () => void;
@@ -101,6 +105,8 @@ export function ModulesPanel({
   onShowCollections,
   whatsappSettings,
   onUpdateWhatsapp,
+  onCreateModulePage,
+  onAddWhatsappSection,
   onShowLeads,
   onShowAnalytics,
   onShowAssistant,
@@ -323,6 +329,12 @@ export function ModulesPanel({
                 manageLabel={tbk("module.manage")}
                 note={tbk("module.noCharge")}
               />
+              {onCreateModulePage && (
+                <SurfaceButton
+                  label={tw("moduleSurface.createBookingPage")}
+                  onClick={() => void onCreateModulePage("bookings")}
+                />
+              )}
             </div>
           )}
         </ModCard>
@@ -404,15 +416,23 @@ export function ModulesPanel({
           onToggle={() => void updateCollections({ enabled: !collectionsOn })}
         >
           {collectionsOn && (
-            <CardActions
-              onInsert={onInsertCollectionsSection ? () => { onInsertCollectionsSection(); setColInserted(true); } : undefined}
-              insertLabel={tcol("module.insert")}
-              inserted={colInserted}
-              insertedLabel={tcol("module.inserted")}
-              onManage={onShowCollections}
-              manageLabel={tcol("module.manage")}
-              note={tcol("module.noCharge")}
-            />
+            <div className="space-y-2">
+              <CardActions
+                onInsert={onInsertCollectionsSection ? () => { onInsertCollectionsSection(); setColInserted(true); } : undefined}
+                insertLabel={tcol("module.insert")}
+                inserted={colInserted}
+                insertedLabel={tcol("module.inserted")}
+                onManage={onShowCollections}
+                manageLabel={tcol("module.manage")}
+                note={tcol("module.noCharge")}
+              />
+              {onCreateModulePage && (
+                <SurfaceButton
+                  label={tw("moduleSurface.createCatalogPage")}
+                  onClick={() => void onCreateModulePage("collections")}
+                />
+              )}
+            </div>
           )}
         </ModCard>
 
@@ -448,6 +468,12 @@ export function ModulesPanel({
                 className="w-full bg-app ring-1 ring-[color:var(--border)] rounded-lg px-3 h-9 text-[13px] fg outline-none focus:ring-[color:var(--accent)] transition"
               />
               <p className="text-[10.5px] fg-faint leading-relaxed">{tw("whatsapp.note")}</p>
+              {!!whatsappSettings?.number?.trim() && onAddWhatsappSection && (
+                <SurfaceButton
+                  label={tw("moduleSurface.addWhatsappSection")}
+                  onClick={onAddWhatsappSection}
+                />
+              )}
             </div>
           )}
         </ModCard>
@@ -577,6 +603,26 @@ function Segment({
         </button>
       ))}
     </div>
+  );
+}
+
+// A prominent full-width accent action (e.g. "Create booking page" / "Add
+// WhatsApp section") — the new branded-surface CTA on a module card.
+function SurfaceButton({
+  label,
+  onClick,
+}: {
+  label: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="w-full inline-flex items-center justify-center h-8 rounded-lg text-[12px] font-medium text-white bg-[var(--accent-strong)] hover:brightness-105 transition"
+    >
+      {label}
+    </button>
   );
 }
 

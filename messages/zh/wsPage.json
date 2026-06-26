@@ -94,7 +94,10 @@
     "analyticsEnabled": "已启用分析",
     "analyticsDisabled": "已停用分析",
     "saveError": "无法保存更改。",
-    "moduleWhatsapp": "WhatsApp"
+    "moduleWhatsapp": "WhatsApp",
+    "whatsappNeedNumber": "请先填写 WhatsApp 号码",
+    "modulePageCreated": "页面已创建",
+    "modulePageExists": "已打开现有页面"
   },
   "whatsapp": {
     "title": "WhatsApp 按钮",
@@ -102,5 +105,10 @@
     "numberPlaceholder": "电话号码（例如 5512345678）",
     "messagePlaceholder": "预填消息（可选）",
     "note": "显示在已发布页面的右下角。10 位号码会被识别为墨西哥（+52）。"
+  },
+  "moduleSurface": {
+    "createBookingPage": "创建预约页面",
+    "createCatalogPage": "创建目录页面",
+    "addWhatsappSection": "添加 WhatsApp 版块"
   }
 }

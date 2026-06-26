@@ -94,7 +94,10 @@
     "analyticsEnabled": "Analytics ingeschakeld",
     "analyticsDisabled": "Analytics uitgeschakeld",
     "saveError": "Kon de wijziging niet opslaan.",
-    "moduleWhatsapp": "WhatsApp"
+    "moduleWhatsapp": "WhatsApp",
+    "whatsappNeedNumber": "Voeg eerst een WhatsApp-nummer toe",
+    "modulePageCreated": "Pagina gemaakt",
+    "modulePageExists": "Bestaande pagina geopend"
   },
   "whatsapp": {
     "title": "WhatsApp-knop",
@@ -102,5 +105,10 @@
     "numberPlaceholder": "Nummer (bijv. 5512345678)",
     "messagePlaceholder": "Vooraf ingevuld bericht (optioneel)",
     "note": "Verschijnt rechtsonder op je gepubliceerde pagina. Een 10-cijferig nummer wordt gelezen als Mexico (+52)."
+  },
+  "moduleSurface": {
+    "createBookingPage": "Boekingspagina maken",
+    "createCatalogPage": "Cataloguspagina maken",
+    "addWhatsappSection": "WhatsApp-sectie toevoegen"
   }
 }

@@ -94,7 +94,10 @@
     "analyticsEnabled": "Statistiche attivate",
     "analyticsDisabled": "Statistiche disattivate",
     "saveError": "Impossibile salvare la modifica.",
-    "moduleWhatsapp": "WhatsApp"
+    "moduleWhatsapp": "WhatsApp",
+    "whatsappNeedNumber": "Aggiungi prima un numero WhatsApp",
+    "modulePageCreated": "Pagina creata",
+    "modulePageExists": "Pagina esistente aperta"
   },
   "whatsapp": {
     "title": "Pulsante WhatsApp",
@@ -102,5 +105,10 @@
     "numberPlaceholder": "Numero (es. 5512345678)",
     "messagePlaceholder": "Messaggio precompilato (facoltativo)",
     "note": "Appare in basso a destra sulla pagina pubblicata. Un numero di 10 cifre è letto come Messico (+52)."
+  },
+  "moduleSurface": {
+    "createBookingPage": "Crea pagina prenotazioni",
+    "createCatalogPage": "Crea pagina catalogo",
+    "addWhatsappSection": "Aggiungi sezione WhatsApp"
   }
 }

@@ -94,7 +94,10 @@
     "analyticsEnabled": "Statistiques activées",
     "analyticsDisabled": "Statistiques désactivées",
     "saveError": "Impossible d'enregistrer la modification.",
-    "moduleWhatsapp": "WhatsApp"
+    "moduleWhatsapp": "WhatsApp",
+    "whatsappNeedNumber": "Ajoutez d'abord un numéro WhatsApp",
+    "modulePageCreated": "Page créée",
+    "modulePageExists": "Page existante ouverte"
   },
   "whatsapp": {
     "title": "Bouton WhatsApp",
@@ -102,5 +105,10 @@
     "numberPlaceholder": "Numéro (ex. 5512345678)",
     "messagePlaceholder": "Message pré-rempli (facultatif)",
     "note": "S'affiche en bas à droite sur votre page publiée. Un numéro à 10 chiffres est lu comme le Mexique (+52)."
+  },
+  "moduleSurface": {
+    "createBookingPage": "Créer une page de réservation",
+    "createCatalogPage": "Créer une page catalogue",
+    "addWhatsappSection": "Ajouter une section WhatsApp"
   }
 }
