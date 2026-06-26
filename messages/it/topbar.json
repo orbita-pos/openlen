@@ -78,6 +78,25 @@
     "copied": "Link copiato",
     "copyError": "Impossibile copiare. Seleziona il link e copialo manualmente.",
     "revoked": "Link di anteprima disattivato",
-    "error": "Qualcosa è andato storto. Riprova."
+    "error": "Qualcosa è andato storto. Riprova.",
+    "qr": "QR",
+    "qrTitle": "Scansiona per aprire",
+    "qrClose": "Chiudi",
+    "expiryLabel": "Scade",
+    "expiryNever": "Mai",
+    "expiry1d": "1 giorno",
+    "expiry7d": "7 giorni",
+    "expiry30d": "30 giorni",
+    "expiryStateNever": "Nessuna scadenza",
+    "expiryStateExpired": "Scaduto",
+    "expiryStateIn": "tra {days}g",
+    "expiryClearedToast": "Scadenza rimossa",
+    "expirySetToast": "Scade tra {days} giorni",
+    "passcodeOn": "Con password",
+    "passcodeRemove": "Rimuovi",
+    "passcodePlaceholder": "Imposta una password…",
+    "passcodeSet": "Imposta",
+    "passcodeSetToast": "Password impostata",
+    "passcodeClearedToast": "Password rimossa"
   }
 }

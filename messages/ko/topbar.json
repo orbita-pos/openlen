@@ -78,6 +78,25 @@
     "copied": "링크 복사됨",
     "copyError": "복사하지 못했습니다. 링크를 선택해 직접 복사하세요.",
     "revoked": "미리보기 링크를 껐습니다",
-    "error": "문제가 발생했습니다. 다시 시도하세요."
+    "error": "문제가 발생했습니다. 다시 시도하세요.",
+    "qr": "QR",
+    "qrTitle": "스캔하여 열기",
+    "qrClose": "닫기",
+    "expiryLabel": "만료",
+    "expiryNever": "안 함",
+    "expiry1d": "1일",
+    "expiry7d": "7일",
+    "expiry30d": "30일",
+    "expiryStateNever": "만료 없음",
+    "expiryStateExpired": "만료됨",
+    "expiryStateIn": "{days}일 후",
+    "expiryClearedToast": "만료를 해제했습니다",
+    "expirySetToast": "{days}일 후 만료",
+    "passcodeOn": "비밀번호 설정됨",
+    "passcodeRemove": "제거",
+    "passcodePlaceholder": "비밀번호 설정…",
+    "passcodeSet": "설정",
+    "passcodeSetToast": "비밀번호를 설정했습니다",
+    "passcodeClearedToast": "비밀번호를 제거했습니다"
   }
 }

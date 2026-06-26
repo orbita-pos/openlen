@@ -78,6 +78,25 @@
     "copied": "Link copied",
     "copyError": "Couldn't copy. Select the link and copy it manually.",
     "revoked": "Preview link turned off",
-    "error": "Something went wrong. Try again."
+    "error": "Something went wrong. Try again.",
+    "qr": "QR",
+    "qrTitle": "Scan to open",
+    "qrClose": "Close",
+    "expiryLabel": "Expires",
+    "expiryNever": "Never",
+    "expiry1d": "1 day",
+    "expiry7d": "7 days",
+    "expiry30d": "30 days",
+    "expiryStateNever": "No expiry",
+    "expiryStateExpired": "Expired",
+    "expiryStateIn": "in {days}d",
+    "expiryClearedToast": "Expiry removed",
+    "expirySetToast": "Expires in {days} days",
+    "passcodeOn": "Password set",
+    "passcodeRemove": "Remove",
+    "passcodePlaceholder": "Set a password…",
+    "passcodeSet": "Set",
+    "passcodeSetToast": "Password set",
+    "passcodeClearedToast": "Password removed"
   }
 }

@@ -78,6 +78,25 @@
     "copied": "Link copiado",
     "copyError": "Não foi possível copiar. Selecione o link e copie manualmente.",
     "revoked": "Link de prévia desativado",
-    "error": "Algo deu errado. Tente novamente."
+    "error": "Algo deu errado. Tente novamente.",
+    "qr": "QR",
+    "qrTitle": "Escaneie para abrir",
+    "qrClose": "Fechar",
+    "expiryLabel": "Expira",
+    "expiryNever": "Nunca",
+    "expiry1d": "1 dia",
+    "expiry7d": "7 dias",
+    "expiry30d": "30 dias",
+    "expiryStateNever": "Sem expiração",
+    "expiryStateExpired": "Expirado",
+    "expiryStateIn": "em {days}d",
+    "expiryClearedToast": "Expiração removida",
+    "expirySetToast": "Expira em {days} dias",
+    "passcodeOn": "Com senha",
+    "passcodeRemove": "Remover",
+    "passcodePlaceholder": "Defina uma senha…",
+    "passcodeSet": "Definir",
+    "passcodeSetToast": "Senha definida",
+    "passcodeClearedToast": "Senha removida"
   }
 }

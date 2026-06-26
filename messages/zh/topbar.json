@@ -78,6 +78,25 @@
     "copied": "链接已复制",
     "copyError": "无法复制。请选中链接手动复制。",
     "revoked": "预览链接已关闭",
-    "error": "出了点问题，请重试。"
+    "error": "出了点问题，请重试。",
+    "qr": "QR",
+    "qrTitle": "扫码打开",
+    "qrClose": "关闭",
+    "expiryLabel": "有效期",
+    "expiryNever": "永不",
+    "expiry1d": "1 天",
+    "expiry7d": "7 天",
+    "expiry30d": "30 天",
+    "expiryStateNever": "永不过期",
+    "expiryStateExpired": "已过期",
+    "expiryStateIn": "{days} 天后",
+    "expiryClearedToast": "已移除有效期",
+    "expirySetToast": "{days} 天后过期",
+    "passcodeOn": "已设密码",
+    "passcodeRemove": "移除",
+    "passcodePlaceholder": "设置密码…",
+    "passcodeSet": "设置",
+    "passcodeSetToast": "已设置密码",
+    "passcodeClearedToast": "已移除密码"
   }
 }

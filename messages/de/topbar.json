@@ -78,6 +78,25 @@
     "copied": "Link kopiert",
     "copyError": "Kopieren fehlgeschlagen. Markiere den Link und kopiere ihn manuell.",
     "revoked": "Vorschau-Link deaktiviert",
-    "error": "Etwas ist schiefgelaufen. Versuche es erneut."
+    "error": "Etwas ist schiefgelaufen. Versuche es erneut.",
+    "qr": "QR",
+    "qrTitle": "Zum Öffnen scannen",
+    "qrClose": "Schließen",
+    "expiryLabel": "Läuft ab",
+    "expiryNever": "Nie",
+    "expiry1d": "1 Tag",
+    "expiry7d": "7 Tage",
+    "expiry30d": "30 Tage",
+    "expiryStateNever": "Kein Ablauf",
+    "expiryStateExpired": "Abgelaufen",
+    "expiryStateIn": "in {days}T",
+    "expiryClearedToast": "Ablauf entfernt",
+    "expirySetToast": "Läuft in {days} Tagen ab",
+    "passcodeOn": "Passwortgeschützt",
+    "passcodeRemove": "Entfernen",
+    "passcodePlaceholder": "Passwort festlegen…",
+    "passcodeSet": "Festlegen",
+    "passcodeSetToast": "Passwort festgelegt",
+    "passcodeClearedToast": "Passwort entfernt"
   }
 }

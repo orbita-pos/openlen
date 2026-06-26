@@ -78,6 +78,25 @@
     "copied": "リンクをコピーしました",
     "copyError": "コピーできませんでした。リンクを選択して手動でコピーしてください。",
     "revoked": "プレビューリンクを無効にしました",
-    "error": "問題が発生しました。もう一度お試しください。"
+    "error": "問題が発生しました。もう一度お試しください。",
+    "qr": "QR",
+    "qrTitle": "スキャンして開く",
+    "qrClose": "閉じる",
+    "expiryLabel": "有効期限",
+    "expiryNever": "なし",
+    "expiry1d": "1日",
+    "expiry7d": "7日",
+    "expiry30d": "30日",
+    "expiryStateNever": "期限なし",
+    "expiryStateExpired": "期限切れ",
+    "expiryStateIn": "あと{days}日",
+    "expiryClearedToast": "有効期限を解除しました",
+    "expirySetToast": "{days}日後に期限切れ",
+    "passcodeOn": "パスワード設定済み",
+    "passcodeRemove": "削除",
+    "passcodePlaceholder": "パスワードを設定…",
+    "passcodeSet": "設定",
+    "passcodeSetToast": "パスワードを設定しました",
+    "passcodeClearedToast": "パスワードを削除しました"
   }
 }

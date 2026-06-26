@@ -28,7 +28,9 @@ import {
   HistoryIcon,
   Link as LinkIcon,
   Loader,
+  LockIcon,
   Moon,
+  QrCode,
   RefreshCw,
   Sparkles,
   Sun,
@@ -39,6 +41,7 @@ import {
 } from "./icons";
 import { IconBtn, StatusDot } from "./ui";
 import { useToast } from "./toast";
+import { QRCodeSVG } from "qrcode.react";
 import { CreditPill } from "@/components/app/credit-pill";
 import { OpenLenMark } from "@/components/openlen-logo";
 import { LocaleSwitcher } from "@/components/locale-switcher";
@@ -113,6 +116,36 @@ interface ReleaseEntry {
   sha: string;
   mtime: string;
   isCurrent: boolean;
+}
+
+interface PreviewState {
+  enabled: boolean;
+  token: string | null;
+  expiresAt: string | null;
+  hasPasscode: boolean;
+}
+
+const PREVIEW_OFF: PreviewState = {
+  enabled: false,
+  token: null,
+  expiresAt: null,
+  hasPasscode: false,
+};
+
+interface PreviewApiState {
+  enabled?: boolean;
+  token: string | null;
+  expiresAt: string | null;
+  hasPasscode: boolean;
+}
+
+function toPreviewState(d: PreviewApiState): PreviewState {
+  return {
+    enabled: d.enabled ?? !!d.token,
+    token: d.token ?? null,
+    expiresAt: d.expiresAt ?? null,
+    hasPasscode: !!d.hasPasscode,
+  };
 }
 
 interface TopBarProps {
@@ -209,13 +242,13 @@ export function TopBar({
   // its own without parent involvement.
   const [showSaved, setShowSaved] = useState(false);
   // Draft-preview link state. null = not fetched yet (the dropdown fetches on
-  // open, like releases); { enabled, token } once known.
-  const [preview, setPreview] = useState<{
-    enabled: boolean;
-    token: string | null;
-  } | null>(null);
+  // open, like releases); the rest once known.
+  const [preview, setPreview] = useState<PreviewState | null>(null);
   const [previewBusy, setPreviewBusy] = useState(false);
   const [copied, setCopied] = useState(false);
+  // QR modal target — captured on open so it survives the dropdown closing.
+  const [qrUrl, setQrUrl] = useState<string | null>(null);
+  const [pwInput, setPwInput] = useState("");
   const deployRef = useRef<HTMLDivElement>(null);
   const profRef = useRef<HTMLDivElement>(null);
 
@@ -290,13 +323,18 @@ export function TopBar({
       .then((d) => {
         if (cancelled) return;
         if (d && typeof d.enabled === "boolean") {
-          setPreview({ enabled: d.enabled, token: d.token ?? null });
+          setPreview({
+            enabled: d.enabled,
+            token: d.token ?? null,
+            expiresAt: d.expiresAt ?? null,
+            hasPasscode: !!d.hasPasscode,
+          });
         } else {
-          setPreview({ enabled: false, token: null });
+          setPreview(PREVIEW_OFF);
         }
       })
       .catch(() => {
-        if (!cancelled) setPreview({ enabled: false, token: null });
+        if (!cancelled) setPreview(PREVIEW_OFF);
       });
     return () => {
       cancelled = true;
@@ -321,8 +359,8 @@ export function TopBar({
         toast.error(t("preview.error"));
         return;
       }
-      const d = (await res.json()) as { token: string };
-      setPreview({ enabled: true, token: d.token });
+      const d = (await res.json()) as PreviewApiState;
+      setPreview(toPreviewState(d));
       const url = `${window.location.origin}/p/${projectId}?t=${d.token}`;
       const copiedOk = await copyToClipboard(url);
       toast.success(t("preview.created"), {
@@ -346,6 +384,69 @@ export function TopBar({
     }
   };
 
+  // POST a partial update (expiry / passcode) and sync local state.
+  const patchPreview = async (body: Record<string, unknown>): Promise<boolean> => {
+    if (!projectId) return false;
+    try {
+      const res = await fetch(`/api/projects/${projectId}/preview`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      if (!res.ok) {
+        toast.error(t("preview.error"));
+        return false;
+      }
+      setPreview(toPreviewState((await res.json()) as PreviewApiState));
+      return true;
+    } catch {
+      toast.error(t("preview.error"));
+      return false;
+    }
+  };
+
+  const onSetExpiry = async (days: number | null) => {
+    if (previewBusy) return;
+    setPreviewBusy(true);
+    try {
+      if (await patchPreview({ expiresInDays: days })) {
+        toast.success(
+          days === null
+            ? t("preview.expiryClearedToast")
+            : t("preview.expirySetToast", { days }),
+        );
+      }
+    } finally {
+      setPreviewBusy(false);
+    }
+  };
+
+  const onSetPasscode = async () => {
+    const pw = pwInput.trim();
+    if (!pw || previewBusy) return;
+    setPreviewBusy(true);
+    try {
+      if (await patchPreview({ passcode: pw })) {
+        setPwInput("");
+        toast.success(t("preview.passcodeSetToast"));
+      }
+    } finally {
+      setPreviewBusy(false);
+    }
+  };
+
+  const onClearPasscode = async () => {
+    if (previewBusy) return;
+    setPreviewBusy(true);
+    try {
+      if (await patchPreview({ passcode: null })) {
+        toast.success(t("preview.passcodeClearedToast"));
+      }
+    } finally {
+      setPreviewBusy(false);
+    }
+  };
+
   const onRevokePreview = async () => {
     if (!projectId || previewBusy) return;
     setPreviewBusy(true);
@@ -357,8 +458,9 @@ export function TopBar({
         toast.error(t("preview.error"));
         return;
       }
-      setPreview({ enabled: false, token: null });
+      setPreview(PREVIEW_OFF);
       setCopied(false);
+      setPwInput("");
       toast.success(t("preview.revoked"));
     } catch {
       toast.error(t("preview.error"));
@@ -405,6 +507,7 @@ export function TopBar({
     savingStatus === "saving" || (savingStatus === "saved" && showSaved);
 
   return (
+    <>
     <header className="relative z-30 h-[60px] shrink-0 border-b bd bg-app flex items-center justify-between px-3 sm:px-4 gap-3">
       <div className="flex items-center gap-3 min-w-0">
         <Link
@@ -638,6 +741,77 @@ export function TopBar({
                         >
                           <Trash size={10} /> {t("preview.revoke")}
                         </button>
+                        <button
+                          type="button"
+                          onClick={() => setQrUrl(previewUrl)}
+                          className="inline-flex items-center gap-1 h-6 px-2 rounded text-[11px] font-medium fg-muted ring-1 ring-[color:var(--border)] hover:bg-hover transition"
+                        >
+                          <QrCode size={10} /> {t("preview.qr")}
+                        </button>
+                      </div>
+
+                      {/* Expiry — preset menu; the disabled placeholder shows
+                          the current state and snaps back after a pick. */}
+                      <div className="mt-2 flex items-center gap-2 text-[11px]">
+                        <span className="fg-faint shrink-0">{t("preview.expiryLabel")}</span>
+                        <select
+                          value=""
+                          disabled={previewBusy}
+                          onChange={(e) => {
+                            const v = e.target.value;
+                            if (v) void onSetExpiry(v === "never" ? null : Number(v));
+                          }}
+                          className="flex-1 h-6 rounded bg-app ring-1 ring-[color:var(--border)] px-1.5 text-[11px] fg cursor-pointer disabled:opacity-50"
+                        >
+                          <option value="" disabled>
+                            {expiryLabel(preview.expiresAt, t)}
+                          </option>
+                          <option value="never">{t("preview.expiryNever")}</option>
+                          <option value="1">{t("preview.expiry1d")}</option>
+                          <option value="7">{t("preview.expiry7d")}</option>
+                          <option value="30">{t("preview.expiry30d")}</option>
+                        </select>
+                      </div>
+
+                      {/* Passcode — set/clear a viewer passcode. */}
+                      <div className="mt-1.5 flex items-center gap-1.5">
+                        {preview.hasPasscode ? (
+                          <>
+                            <span className="inline-flex items-center gap-1 text-[11px] fg-muted">
+                              <LockIcon size={10} /> {t("preview.passcodeOn")}
+                            </span>
+                            <button
+                              type="button"
+                              disabled={previewBusy}
+                              onClick={() => void onClearPasscode()}
+                              className="ml-auto inline-flex items-center h-6 px-2 rounded text-[11px] font-medium fg-muted ring-1 ring-[color:var(--border)] hover:bg-hover transition disabled:opacity-50"
+                            >
+                              {t("preview.passcodeRemove")}
+                            </button>
+                          </>
+                        ) : (
+                          <>
+                            <input
+                              type="text"
+                              value={pwInput}
+                              onChange={(e) => setPwInput(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") void onSetPasscode();
+                              }}
+                              maxLength={128}
+                              placeholder={t("preview.passcodePlaceholder")}
+                              className="flex-1 h-6 rounded bg-app ring-1 ring-[color:var(--border)] px-2 text-[11px] fg outline-none focus:ring-[color:var(--accent)]"
+                            />
+                            <button
+                              type="button"
+                              disabled={previewBusy || !pwInput.trim()}
+                              onClick={() => void onSetPasscode()}
+                              className="inline-flex items-center h-6 px-2 rounded text-[11px] font-medium text-[var(--accent)] ring-1 ring-[color:var(--accent)]/30 hover:bg-[color:var(--accent)]/10 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                              {t("preview.passcodeSet")}
+                            </button>
+                          </>
+                        )}
                       </div>
                     </div>
                   ) : (
@@ -875,7 +1049,49 @@ export function TopBar({
         </div>
       </div>
     </header>
+    {qrUrl && (
+      <div
+        className="workspace-v2 fixed inset-0 z-[120] flex items-center justify-center bg-black/50 p-4"
+        onClick={() => setQrUrl(null)}
+        role="dialog"
+        aria-modal="true"
+      >
+        <div
+          className="bg-elev rounded-2xl border bd shadow-elev p-5 w-[min(90vw,20rem)] text-center"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="text-[13px] font-semibold fg mb-3">
+            {t("preview.qrTitle")}
+          </div>
+          <div className="inline-flex rounded-xl bg-white p-3">
+            <QRCodeSVG value={qrUrl} size={196} level="M" />
+          </div>
+          <div className="mt-3 text-[10.5px] fg-faint font-mono break-all">
+            {qrUrl.replace(/^https?:\/\//, "")}
+          </div>
+          <button
+            type="button"
+            onClick={() => setQrUrl(null)}
+            className="mt-4 h-8 px-4 rounded-md bg-[var(--accent-strong)] text-white text-[12px] font-medium hover:brightness-105 transition"
+          >
+            {t("preview.qrClose")}
+          </button>
+        </div>
+      </div>
+    )}
+    </>
   );
+}
+
+function expiryLabel(
+  expiresAt: string | null,
+  t: (key: string, values?: Record<string, string | number>) => string,
+): string {
+  if (!expiresAt) return t("preview.expiryStateNever");
+  const ms = Date.parse(expiresAt) - Date.now();
+  if (!Number.isFinite(ms) || ms <= 0) return t("preview.expiryStateExpired");
+  const days = Math.ceil(ms / 86_400_000);
+  return t("preview.expiryStateIn", { days });
 }
 
 async function copyToClipboard(text: string): Promise<boolean> {

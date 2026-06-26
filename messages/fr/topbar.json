@@ -78,6 +78,25 @@
     "copied": "Lien copié",
     "copyError": "Impossible de copier. Sélectionnez le lien et copiez-le manuellement.",
     "revoked": "Lien d'aperçu désactivé",
-    "error": "Une erreur s'est produite. Réessayez."
+    "error": "Une erreur s'est produite. Réessayez.",
+    "qr": "QR",
+    "qrTitle": "Scannez pour ouvrir",
+    "qrClose": "Fermer",
+    "expiryLabel": "Expire",
+    "expiryNever": "Jamais",
+    "expiry1d": "1 jour",
+    "expiry7d": "7 jours",
+    "expiry30d": "30 jours",
+    "expiryStateNever": "Sans expiration",
+    "expiryStateExpired": "Expiré",
+    "expiryStateIn": "dans {days}j",
+    "expiryClearedToast": "Expiration supprimée",
+    "expirySetToast": "Expire dans {days} jours",
+    "passcodeOn": "Protégé par mot de passe",
+    "passcodeRemove": "Retirer",
+    "passcodePlaceholder": "Définir un mot de passe…",
+    "passcodeSet": "Définir",
+    "passcodeSetToast": "Mot de passe défini",
+    "passcodeClearedToast": "Mot de passe retiré"
   }
 }

@@ -78,6 +78,25 @@
     "copied": "Link gekopieerd",
     "copyError": "Kopiëren mislukt. Selecteer de link en kopieer hem handmatig.",
     "revoked": "Voorbeeldlink uitgeschakeld",
-    "error": "Er ging iets mis. Probeer het opnieuw."
+    "error": "Er ging iets mis. Probeer het opnieuw.",
+    "qr": "QR",
+    "qrTitle": "Scan om te openen",
+    "qrClose": "Sluiten",
+    "expiryLabel": "Verloopt",
+    "expiryNever": "Nooit",
+    "expiry1d": "1 dag",
+    "expiry7d": "7 dagen",
+    "expiry30d": "30 dagen",
+    "expiryStateNever": "Geen vervaldatum",
+    "expiryStateExpired": "Verlopen",
+    "expiryStateIn": "over {days}d",
+    "expiryClearedToast": "Vervaldatum verwijderd",
+    "expirySetToast": "Verloopt over {days} dagen",
+    "passcodeOn": "Met wachtwoord",
+    "passcodeRemove": "Verwijderen",
+    "passcodePlaceholder": "Stel een wachtwoord in…",
+    "passcodeSet": "Instellen",
+    "passcodeSetToast": "Wachtwoord ingesteld",
+    "passcodeClearedToast": "Wachtwoord verwijderd"
   }
 }

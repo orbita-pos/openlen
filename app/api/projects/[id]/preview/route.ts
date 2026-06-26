@@ -1,8 +1,8 @@
 import { and, eq } from "drizzle-orm";
 import { auth } from "@/auth";
 import { db, schema } from "@/lib/db";
-import { generatePreviewToken } from "@/lib/projects/preview";
-import type { ProjectData } from "@/lib/projects/types";
+import { generatePreviewToken, hashPasscode } from "@/lib/projects/preview";
+import type { PreviewSettings, ProjectData } from "@/lib/projects/types";
 
 export const runtime = "nodejs";
 
@@ -67,8 +67,15 @@ export async function GET(
   const { id } = await params;
   const data = await loadOwnedData(id, session.user.id);
   if (!data) return json({ error: "not_found" }, 404);
-  const token = data.preview?.token ?? null;
-  return json({ enabled: !!token, token }, 200);
+  return json(stateOf(data.preview), 200);
+}
+
+interface PostBody {
+  rotate?: boolean;
+  /** 1..365 → set expiry that many days out; null → never expires; absent → keep. */
+  expiresInDays?: number | null;
+  /** non-empty → set passcode; null/"" → clear it; absent → keep. */
+  passcode?: string | null;
 }
 
 export async function POST(
@@ -79,21 +86,56 @@ export async function POST(
   if (!session?.user?.id) return json({ error: "unauthorized" }, 401);
   const { id } = await params;
 
-  const body = (await req.json().catch(() => ({}))) as { rotate?: boolean };
+  const raw = await req.json().catch(() => ({}));
+  const body: PostBody = raw && typeof raw === "object" ? (raw as PostBody) : {};
   const data = await loadOwnedData(id, session.user.id);
   if (!data) return json({ error: "not_found" }, 404);
 
-  const existing = data.preview?.token;
-  const token = existing && !body.rotate ? existing : generatePreviewToken();
+  const prev = data.preview;
+  const token = prev?.token && !body.rotate ? prev.token : generatePreviewToken();
+  const next: PreviewSettings = { ...(prev ?? {}), token };
 
-  if (token !== existing) {
-    const ok = await writeData(id, session.user.id, {
-      ...data,
-      preview: { token },
-    });
-    if (!ok) return json({ error: "db_update_failed" }, 500);
+  if ("expiresInDays" in body) {
+    const d = body.expiresInDays;
+    if (d === null) {
+      delete next.expiresAt;
+    } else if (typeof d === "number" && Number.isInteger(d) && d >= 1 && d <= 365) {
+      next.expiresAt = new Date(Date.now() + d * 86_400_000).toISOString();
+    } else {
+      return json({ error: "invalid_body", message: "expiresInDays must be 1-365 or null" }, 400);
+    }
   }
-  return json({ enabled: true, token }, 200);
+
+  if ("passcode" in body) {
+    const p = body.passcode;
+    if (p === null || p === "") {
+      delete next.passcodeHash;
+    } else if (typeof p === "string" && p.length <= 128) {
+      next.passcodeHash = hashPasscode(id, p);
+    } else {
+      return json({ error: "invalid_body", message: "passcode must be a string ≤128 chars or null" }, 400);
+    }
+  }
+
+  const ok = await writeData(id, session.user.id, { ...data, preview: next });
+  if (!ok) return json({ error: "db_update_failed" }, 500);
+  return json(stateOf(next), 200);
+}
+
+/** The client-facing shape — never leaks the passcode hash, just whether one
+ *  is set. `token` is the owner's own. */
+function stateOf(preview: PreviewSettings | undefined): {
+  enabled: boolean;
+  token: string | null;
+  expiresAt: string | null;
+  hasPasscode: boolean;
+} {
+  return {
+    enabled: !!preview?.token,
+    token: preview?.token ?? null,
+    expiresAt: preview?.expiresAt ?? null,
+    hasPasscode: !!preview?.passcodeHash,
+  };
 }
 
 export async function DELETE(

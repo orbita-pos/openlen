@@ -169,6 +169,11 @@ export interface SitePage {
  *  settings). */
 export interface PreviewSettings {
   token: string;
+  /** ISO timestamp; the link 404s once passed. Absent = never expires. */
+  expiresAt?: string;
+  /** HMAC of the viewer passcode (lib/projects/preview.hashPasscode) — never
+   *  the plaintext. Absent = no passcode (anyone with the link gets in). */
+  passcodeHash?: string;
 }
 
 export interface ProjectData {
