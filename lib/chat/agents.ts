@@ -1,9 +1,68 @@
 // Team seats — platform users (chatAgents) granted Desk access to a project.
 // Agents reply AS the business (ownerChatUserId); conversations stay 2-participant.
-// v1: invite existing OpenLen users only (no magic-link invites for non-users).
+// v1: existing-user → instant active; non-user → invited row + magic-link email.
 
-import { and, eq } from "drizzle-orm";
+import crypto from "node:crypto";
+import { and, eq, gt, lt } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
+
+export const INVITE_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days — invitee may need to sign up
+
+function sha256Hex(value: string): string {
+  return crypto.createHash("sha256").update(value).digest("hex");
+}
+
+/** Issue a magic-link invite token. Raw token goes in the email; only sha256
+ *  is stored. Returns the raw token. */
+export async function issueAgentInviteToken(
+  projectId: string,
+  email: string,
+): Promise<string> {
+  const rawToken = crypto.randomBytes(32).toString("base64url");
+  await db.insert(schema.chatAgentInviteTokens).values({
+    tokenHash: sha256Hex(rawToken),
+    projectId,
+    email: email.toLowerCase().trim(),
+    expires: new Date(Date.now() + INVITE_TTL_MS),
+    used: false,
+  });
+  return rawToken;
+}
+
+/** Single-use atomic consume. Returns {projectId, email} or null if
+ *  invalid / already used / expired. */
+export async function consumeAgentInviteToken(
+  rawToken: string,
+): Promise<{ projectId: string; email: string } | null> {
+  const rows = await db
+    .update(schema.chatAgentInviteTokens)
+    .set({ used: true })
+    .where(
+      and(
+        eq(schema.chatAgentInviteTokens.tokenHash, sha256Hex(rawToken)),
+        eq(schema.chatAgentInviteTokens.used, false),
+        gt(schema.chatAgentInviteTokens.expires, new Date()),
+      ),
+    )
+    .returning({
+      projectId: schema.chatAgentInviteTokens.projectId,
+      email: schema.chatAgentInviteTokens.email,
+    });
+  if (rows.length === 0) return null;
+
+  // Opportunistic cleanup of expired tokens, best-effort.
+  void db
+    .delete(schema.chatAgentInviteTokens)
+    .where(
+      and(
+        eq(schema.chatAgentInviteTokens.projectId, rows[0].projectId),
+        lt(schema.chatAgentInviteTokens.expires, new Date()),
+      ),
+    )
+    .catch(() => {});
+
+  return rows[0];
+}
 
 function normalizeEmail(email: string): string {
   return email.toLowerCase().trim();
@@ -91,12 +150,18 @@ export async function listAgents(
   return rows;
 }
 
-/** Invite (or re-activate) an OpenLen user as an agent. v1 rejects non-users.
- *  Idempotent via onConflictDoUpdate on (projectId, invitedEmail). */
+/** Invite an OpenLen user or a non-registered email as an agent.
+ *  - Existing user → instant active (same-session path, unchanged).
+ *  - Non-user → upsert invited row (userId null) + issue token → caller sends email.
+ *  Idempotent via onConflict on (projectId, invitedEmail). */
 export async function inviteAgent(
   projectId: string,
   email: string,
-): Promise<{ agent: { id: string; invitedEmail: string; status: string; createdAt: Date } } | { error: "no_account" } | { error: "self" }> {
+): Promise<
+  | { agent: { id: string; invitedEmail: string; status: string; createdAt: Date } }
+  | { agent: { id: string; invitedEmail: string; status: string; createdAt: Date }; invited: true; token: string }
+  | { error: "self" }
+> {
   const normalized = normalizeEmail(email);
 
   // Look up the platform user by email
@@ -105,31 +170,52 @@ export async function inviteAgent(
     .from(schema.users)
     .where(eq(schema.users.email, normalized))
     .limit(1);
-  if (userRows.length === 0) return { error: "no_account" };
-  const inviteeUserId = userRows[0].id;
 
-  // Reject if the invitee IS the project owner
+  // Reject self-invite (applies to existing users only — non-users can't be self)
   const projRows = await db
     .select({ userId: schema.projects.userId })
     .from(schema.projects)
     .where(eq(schema.projects.id, projectId))
     .limit(1);
-  if (projRows[0]?.userId === inviteeUserId) return { error: "self" };
 
-  const now = new Date();
+  if (userRows.length > 0) {
+    const inviteeUserId = userRows[0].id;
+    if (projRows[0]?.userId === inviteeUserId) return { error: "self" };
+
+    // Existing user → instant active
+    const now = new Date();
+    const rows = await db
+      .insert(schema.chatAgents)
+      .values({
+        projectId,
+        userId: inviteeUserId,
+        invitedEmail: normalized,
+        status: "active",
+        acceptedAt: now,
+      })
+      .onConflictDoUpdate({
+        target: [schema.chatAgents.projectId, schema.chatAgents.invitedEmail],
+        set: { userId: inviteeUserId, status: "active", acceptedAt: now },
+      })
+      .returning({
+        id: schema.chatAgents.id,
+        invitedEmail: schema.chatAgents.invitedEmail,
+        status: schema.chatAgents.status,
+        createdAt: schema.chatAgents.createdAt,
+      });
+    return { agent: rows[0] };
+  }
+
+  // Non-registered email → upsert invited row (userId null), issue token
   const rows = await db
     .insert(schema.chatAgents)
     .values({
       projectId,
-      userId: inviteeUserId,
+      userId: null,
       invitedEmail: normalized,
-      status: "active",
-      acceptedAt: now,
+      status: "invited",
     })
-    .onConflictDoUpdate({
-      target: [schema.chatAgents.projectId, schema.chatAgents.invitedEmail],
-      set: { userId: inviteeUserId, status: "active", acceptedAt: now },
-    })
+    .onConflictDoNothing()
     .returning({
       id: schema.chatAgents.id,
       invitedEmail: schema.chatAgents.invitedEmail,
@@ -137,7 +223,26 @@ export async function inviteAgent(
       createdAt: schema.chatAgents.createdAt,
     });
 
-  return { agent: rows[0] };
+  // Fetch the row (may already exist from a prior invite)
+  const agent = rows[0] ?? (await db
+    .select({
+      id: schema.chatAgents.id,
+      invitedEmail: schema.chatAgents.invitedEmail,
+      status: schema.chatAgents.status,
+      createdAt: schema.chatAgents.createdAt,
+    })
+    .from(schema.chatAgents)
+    .where(
+      and(
+        eq(schema.chatAgents.projectId, projectId),
+        eq(schema.chatAgents.invitedEmail, normalized),
+      ),
+    )
+    .limit(1)
+    .then((r) => r[0]));
+
+  const token = await issueAgentInviteToken(projectId, normalized);
+  return { agent, invited: true, token };
 }
 
 /** Remove an agent by their chatAgents row id, scoped to the project. */

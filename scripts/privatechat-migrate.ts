@@ -86,6 +86,16 @@ async function main() {
   await db.execute(sql`CREATE INDEX IF NOT EXISTS "chatAgents_userId_idx"
     ON "chatAgents" ("userId");`);
 
+  // P5 Task 3: magic-link invite tokens for non-registered emails
+  await db.execute(sql`CREATE TABLE IF NOT EXISTS "chatAgentInviteTokens" (
+    "tokenHash" text PRIMARY KEY,
+    "projectId" text NOT NULL REFERENCES "projects"("id") ON DELETE CASCADE,
+    "email" text NOT NULL,
+    "expires" timestamp NOT NULL,
+    "used" boolean NOT NULL DEFAULT false,
+    "createdAt" timestamp NOT NULL DEFAULT now()
+  );`);
+
   console.log("private chat tables ready.");
   process.exit(0);
 }

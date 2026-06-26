@@ -3,6 +3,7 @@ import { auth } from "@/auth";
 import { db, schema } from "@/lib/db";
 import { listAgents, inviteAgent, countAgents } from "@/lib/chat/agents";
 import { getUserPlan, AGENT_LIMITS } from "@/lib/limits";
+import { sendAgentInviteEmail } from "@/lib/email";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -69,15 +70,27 @@ export async function POST(
 
   const result = await inviteAgent(id, body.email.trim());
   if ("error" in result) {
-    if (result.error === "no_account") {
-      return json(
-        { error: "no_account", message: "That email has no OpenLen account yet." },
-        404,
-      );
-    }
     if (result.error === "self") {
       return json({ error: "self", message: "You cannot invite yourself." }, 400);
     }
   }
+
+  // Non-registered email → send the magic-link invite email
+  if ("invited" in result && result.invited) {
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://openlen.com";
+    const acceptUrl = `${siteUrl}/api/agents/accept?token=${encodeURIComponent(result.token)}`;
+
+    // Fetch project title for the email
+    const projRows = await db
+      .select({ title: schema.projects.title })
+      .from(schema.projects)
+      .where(eq(schema.projects.id, id))
+      .limit(1);
+    const projectTitle = projRows[0]?.title ?? "";
+
+    void sendAgentInviteEmail({ to: emailNorm, projectTitle, acceptUrl }).catch(() => {});
+    return json({ agent: result.agent, emailed: true }, 200);
+  }
+
   return json(result, 200);
 }

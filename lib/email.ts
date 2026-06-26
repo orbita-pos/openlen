@@ -531,6 +531,75 @@ function escape(s: string): string {
     .replace(/"/g, "&quot;");
 }
 
+// ─── Agent invite — magic-link for non-registered emails ─────────────────────
+
+export interface AgentInviteEmail {
+  to: string;
+  projectTitle: string;
+  acceptUrl: string;
+  locale?: string | null;
+}
+
+/** Magic-link invite email sent to a non-OpenLen-user who was invited as a
+ *  chat agent. Dev fallback prints the URL; prod misconfig screams in the log. */
+export async function sendAgentInviteEmail(
+  input: AgentInviteEmail,
+): Promise<void> {
+  const live = liveClientOrWarn("agent invite email");
+  if (!live) {
+    if (process.env.NODE_ENV !== "production") {
+      // eslint-disable-next-line no-console
+      console.log(
+        `\n  📧 [DEV] Agent invite email to ${input.to} (${input.projectTitle})\n     ${input.acceptUrl}\n     (set RESEND_API_KEY in .env.local to send real emails)\n`,
+      );
+    }
+    return;
+  }
+
+  const title = input.projectTitle.trim() || "a site";
+  await live.emails.send({
+    from,
+    to: input.to,
+    subject: `You're invited to help with chat on ${title}`,
+    html: buildAgentInviteHtml(input, title),
+    text: [
+      `You've been invited to help manage chat on "${title}".`,
+      "",
+      "Click the link below to accept. You'll need to create a free OpenLen account first if you don't have one — the link stays valid for 7 days.",
+      "",
+      input.acceptUrl,
+      "",
+      "If you weren't expecting this invitation, you can ignore this email.",
+    ].join("\n"),
+  });
+}
+
+function buildAgentInviteHtml(input: AgentInviteEmail, title: string): string {
+  return `<!doctype html>
+<html>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, sans-serif; background:#fafafa; margin:0; padding:32px; color:#0a0a0a;">
+  <table align="center" style="max-width:480px; width:100%; background:#fff; border-radius:16px; padding:32px; border:1px solid #e5e5e5;">
+    <tr><td>
+      <div style="display:flex; align-items:center; gap:8px; margin-bottom:24px;">
+        <span style="display:inline-block; width:24px; height:24px; background:#FF5A36; border-radius:6px; color:#fff; font-weight:700; text-align:center; line-height:24px; font-size:15px;">O</span>
+        <span style="font-weight:600; font-size:14px;">OpenLen</span>
+      </div>
+      <h1 style="font-size:20px; margin:0 0 12px; letter-spacing:-0.02em;">You're invited</h1>
+      <p style="font-size:14px; line-height:1.5; color:#525252; margin:0 0 24px;">
+        You've been invited to help manage chat on <strong>${escape(title)}</strong>. Accept below — you'll create a free account if you don't have one yet.
+      </p>
+      <p style="margin:0 0 24px;">
+        <a href="${escape(input.acceptUrl)}" style="display:inline-block; background:#FF5A36; color:#fff; padding:11px 18px; border-radius:8px; text-decoration:none; font-weight:500; font-size:14px;">Accept invitation</a>
+      </p>
+      <p style="font-size:12px; color:#737373; margin:0 0 8px;">Or paste this link into your browser:</p>
+      <p style="font-size:12px; color:#525252; word-break:break-all; margin:0 0 24px;">${escape(input.acceptUrl)}</p>
+      <p style="font-size:12px; color:#a3a3a3; margin:0;">This link expires in 7 days. If you weren't expecting this invitation, you can ignore this email.</p>
+    </td></tr>
+  </table>
+</body>
+</html>`;
+}
+
 // ─── Chat — offline-owner notification ───────────────────────────────────────
 
 export async function sendChatNotificationEmail(input: {

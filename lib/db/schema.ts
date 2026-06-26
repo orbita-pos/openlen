@@ -891,6 +891,21 @@ export const chatAgents = pgTable(
   ],
 );
 
+// Magic-link invite tokens for chatAgents (non-registered email invites).
+// Same security posture as memberLoginTokens: raw token goes in the email,
+// only its sha256 is stored here; single-use; 7-day TTL (invitee may need
+// to sign up first). Applied via `npm run privatechat:migrate`.
+export const chatAgentInviteTokens = pgTable("chatAgentInviteTokens", {
+  tokenHash: text("tokenHash").primaryKey(),
+  projectId: text("projectId")
+    .notNull()
+    .references(() => projects.id, { onDelete: "cascade" }),
+  email: text("email").notNull(), // stored lowercase
+  expires: timestamp("expires", { mode: "date" }).notNull(),
+  used: boolean("used").notNull().default(false),
+  createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
+});
+
 // ─── Broadcast module — email your audience (members-only, v1) ──────────────
 // Applied in prod via `npm run broadcast:migrate`. Shares the members monthly
 // email budget (lib/broadcast/limits.ts). The recipient snapshot is taken at
