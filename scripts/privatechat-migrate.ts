@@ -1,0 +1,75 @@
+// Create the Private Chat module tables (idempotent). Used instead of db:push
+// because the full-schema push stops on an UNRELATED pending prompt; this
+// applies ONLY the chat DDL. Keep in sync with the Drizzle defs in
+// lib/db/schema.ts. NOTE: the `chat:migrate` script is a DIFFERENT, unrelated
+// migration (projectChatMessages). Run: npm run privatechat:migrate
+
+import { sql } from "drizzle-orm";
+import { db } from "../lib/db";
+
+async function main() {
+  await db.execute(sql`CREATE TABLE IF NOT EXISTS "chatUsers" (
+    "id" text PRIMARY KEY,
+    "projectId" text NOT NULL REFERENCES "projects"("id") ON DELETE CASCADE,
+    "username" text NOT NULL,
+    "passwordHash" text NOT NULL,
+    "email" text,
+    "displayName" text,
+    "role" text NOT NULL DEFAULT 'member',
+    "status" text NOT NULL DEFAULT 'active',
+    "createdAt" timestamp NOT NULL DEFAULT now(),
+    "lastSeenAt" timestamp
+  );`);
+  await db.execute(sql`CREATE UNIQUE INDEX IF NOT EXISTS "chatUsers_projectId_username_uq"
+    ON "chatUsers" ("projectId", "username");`);
+
+  await db.execute(sql`CREATE TABLE IF NOT EXISTS "chatSessions" (
+    "tokenHash" text PRIMARY KEY,
+    "projectId" text NOT NULL REFERENCES "projects"("id") ON DELETE CASCADE,
+    "chatUserId" text NOT NULL REFERENCES "chatUsers"("id") ON DELETE CASCADE,
+    "createdAt" timestamp NOT NULL DEFAULT now(),
+    "lastSeenAt" timestamp NOT NULL DEFAULT now(),
+    "expiresAt" timestamp NOT NULL
+  );`);
+  await db.execute(sql`CREATE INDEX IF NOT EXISTS "chatSessions_chatUserId_idx"
+    ON "chatSessions" ("chatUserId");`);
+
+  await db.execute(sql`CREATE TABLE IF NOT EXISTS "chatConversations" (
+    "id" text PRIMARY KEY,
+    "projectId" text NOT NULL REFERENCES "projects"("id") ON DELETE CASCADE,
+    "aUserId" text NOT NULL,
+    "bUserId" text NOT NULL,
+    "lastMessageAt" timestamp,
+    "createdAt" timestamp NOT NULL DEFAULT now()
+  );`);
+  await db.execute(sql`CREATE UNIQUE INDEX IF NOT EXISTS "chatConversations_pair_uq"
+    ON "chatConversations" ("projectId", "aUserId", "bUserId");`);
+  await db.execute(sql`CREATE INDEX IF NOT EXISTS "chatConversations_a_idx" ON "chatConversations" ("aUserId");`);
+  await db.execute(sql`CREATE INDEX IF NOT EXISTS "chatConversations_b_idx" ON "chatConversations" ("bUserId");`);
+
+  await db.execute(sql`CREATE TABLE IF NOT EXISTS "chatMessages" (
+    "id" text PRIMARY KEY,
+    "conversationId" text NOT NULL REFERENCES "chatConversations"("id") ON DELETE CASCADE,
+    "authorId" text NOT NULL,
+    "body" text NOT NULL,
+    "createdAt" timestamp NOT NULL DEFAULT now(),
+    "readAt" timestamp
+  );`);
+  await db.execute(sql`CREATE INDEX IF NOT EXISTS "chatMessages_conversation_created_idx"
+    ON "chatMessages" ("conversationId", "createdAt");`);
+
+  await db.execute(sql`CREATE TABLE IF NOT EXISTS "chatEvents" (
+    "id" text PRIMARY KEY,
+    "projectId" text NOT NULL REFERENCES "projects"("id") ON DELETE CASCADE,
+    "chatUserId" text,
+    "type" text NOT NULL,
+    "createdAt" timestamp NOT NULL DEFAULT now()
+  );`);
+  await db.execute(sql`CREATE INDEX IF NOT EXISTS "chatEvents_projectId_createdAt_idx"
+    ON "chatEvents" ("projectId", "createdAt");`);
+
+  console.log("private chat tables ready.");
+  process.exit(0);
+}
+
+main().catch((err) => { console.error(err); process.exit(1); });

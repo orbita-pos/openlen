@@ -32,6 +32,7 @@
     "cron:bundle": "node scripts/build-cron.mjs",
     "versions:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/versions-migrate.ts",
     "chat:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/chat-migrate.ts",
+    "privatechat:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/privatechat-migrate.ts",
     "drift:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/drift-migrate.ts",
     "templates:pages-migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/templates-pages-migrate.ts",
     "flight:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/flight-migrate.ts",

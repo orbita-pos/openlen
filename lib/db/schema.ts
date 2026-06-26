@@ -770,6 +770,101 @@ export const memberAuthEvents = pgTable(
   ],
 );
 
+// ─── Private Chat module — a closed per-space @username messenger ────────────
+// NOT the editor AI transcript (projectChatMessages) nor the Site Assistant.
+// Visitor identities are @username + password, scoped to ONE project (a member
+// of space A is a stranger in space B). Mirrors the members tables: sha256
+// session tokens at rest, host-only cookie, delete-row = revocation. Applied in
+// prod via `npm run privatechat:migrate` (the `chat:migrate` name is taken).
+
+export const chatUsers = pgTable(
+  "chatUsers",
+  {
+    id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+    projectId: text("projectId")
+      .notNull()
+      .references(() => projects.id, { onDelete: "cascade" }),
+    username: text("username").notNull(), // lowercase, no leading @, normalized at edges
+    passwordHash: text("passwordHash").notNull(),
+    email: text("email"), // optional — recovery + offline notifications
+    displayName: text("displayName"),
+    role: text("role").$type<"member" | "agent" | "owner">().notNull().default("member"),
+    status: text("status").$type<"active" | "blocked">().notNull().default("active"),
+    createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
+    lastSeenAt: timestamp("lastSeenAt", { mode: "date" }),
+  },
+  (table) => [
+    uniqueIndex("chatUsers_projectId_username_uq").on(table.projectId, table.username),
+  ],
+);
+
+export const chatSessions = pgTable(
+  "chatSessions",
+  {
+    tokenHash: text("tokenHash").primaryKey(),
+    projectId: text("projectId")
+      .notNull()
+      .references(() => projects.id, { onDelete: "cascade" }),
+    chatUserId: text("chatUserId")
+      .notNull()
+      .references(() => chatUsers.id, { onDelete: "cascade" }),
+    createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
+    lastSeenAt: timestamp("lastSeenAt", { mode: "date" }).notNull().defaultNow(),
+    expiresAt: timestamp("expiresAt", { mode: "date" }).notNull(),
+  },
+  (table) => [index("chatSessions_chatUserId_idx").on(table.chatUserId)],
+);
+
+export const chatConversations = pgTable(
+  "chatConversations",
+  {
+    id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+    projectId: text("projectId")
+      .notNull()
+      .references(() => projects.id, { onDelete: "cascade" }),
+    aUserId: text("aUserId").notNull(), // normalized pair: aUserId <= bUserId (string compare)
+    bUserId: text("bUserId").notNull(),
+    lastMessageAt: timestamp("lastMessageAt", { mode: "date" }),
+    createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("chatConversations_pair_uq").on(table.projectId, table.aUserId, table.bUserId),
+    index("chatConversations_a_idx").on(table.aUserId),
+    index("chatConversations_b_idx").on(table.bUserId),
+  ],
+);
+
+export const chatMessages = pgTable(
+  "chatMessages",
+  {
+    id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+    conversationId: text("conversationId")
+      .notNull()
+      .references(() => chatConversations.id, { onDelete: "cascade" }),
+    authorId: text("authorId").notNull(), // snapshot, no FK (author may be deleted)
+    body: text("body").notNull(), // plaintext; rendered as text, never innerHTML
+    createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
+    readAt: timestamp("readAt", { mode: "date" }),
+  },
+  (table) => [
+    index("chatMessages_conversation_created_idx").on(table.conversationId, table.createdAt),
+  ],
+);
+
+export const chatEvents = pgTable(
+  "chatEvents",
+  {
+    id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+    projectId: text("projectId")
+      .notNull()
+      .references(() => projects.id, { onDelete: "cascade" }),
+    chatUserId: text("chatUserId"), // snapshot, no FK
+    type: text("type").notNull(), // register | login | logout | blocked | message
+    createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
+  },
+  (table) => [index("chatEvents_projectId_createdAt_idx").on(table.projectId, table.createdAt)],
+);
+
 // ─── Broadcast module — email your audience (members-only, v1) ──────────────
 // Applied in prod via `npm run broadcast:migrate`. Shares the members monthly
 // email budget (lib/broadcast/limits.ts). The recipient snapshot is taken at
