@@ -17,6 +17,7 @@
     "templates:seed": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/templates-seed.ts",
     "templates:add": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/templates-add.ts",
     "templates:republish": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/templates-republish.ts",
+    "templates:republish-one": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/templates-republish-one.ts",
     "templates:count": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/count-templates.ts",
     "assistant:evals": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/assistant-evals.ts",
     "sections:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/sections-migrate.ts",
