@@ -76,6 +76,14 @@ export const IP_LIMITS: Record<string, LimitWindow[]> = {
     { windowMs: 15 * 60 * 1000, max: 20, label: "15-minute" },
     { windowMs: HOUR, max: 60, label: "hourly" },
   ],
+  chat_register: [
+    { windowMs: HOUR, max: 8, label: "hourly" },
+    { windowMs: DAY, max: 30, label: "daily" },
+  ],
+  chat_login: [
+    { windowMs: 15 * 60 * 1000, max: 20, label: "15-minute" },
+    { windowMs: HOUR, max: 60, label: "hourly" },
+  ],
 };
 
 export interface LimitDecision {

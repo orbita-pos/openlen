@@ -43,6 +43,14 @@ export interface AssistantSettings {
 
 /** Members module — visitor accounts on the published site. The member rows
  *  live in the siteMembers table; this only holds the per-site switches. */
+export interface ChatSettings {
+  /** Master switch. Absent/false → chat widget not baked + API routes refuse. */
+  enabled?: boolean;
+  /** true (default) → any visitor can register a chat username.
+   *  false → owner must invite (future). */
+  selfServeJoin?: boolean;
+}
+
 export interface MembersSettings {
   /** Master switch. Absent/false → no gating: membersOnly pages publish
    *  public and /api/m/* refuses to issue logins. */
@@ -152,6 +160,8 @@ export interface ProjectSettings {
   music?: MusicSettings;
   /** Site assistant: visitor-facing AI chat. Absent = off. */
   assistant?: AssistantSettings;
+  /** Private chat module: per-project visitor chat. Absent = off. */
+  chat?: ChatSettings;
   /** Members module: visitor login + members-only pages. Absent = off. */
   members?: MembersSettings;
   /** Broadcast module: email your members. Absent = off. */
