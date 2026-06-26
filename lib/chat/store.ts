@@ -310,7 +310,7 @@ export async function listOwnerInbox(ownerUserId: string): Promise<Array<{ proje
     .where(eq(schema.projects.userId, ownerUserId));
   const out: Array<{ projectId: string; projectTitle: string; conversations: ConversationSummary[] }> = [];
   for (const p of projects) {
-    if ((p.data as { settings?: { chat?: { enabled?: boolean } } } | null)?.settings?.chat?.enabled !== true) continue;
+    if (p.data?.settings?.chat?.enabled !== true) continue;
     const owner = await getChatOwner(p.id);
     if (!owner) continue;
     const conversations = await listConversations(p.id, owner.id);
