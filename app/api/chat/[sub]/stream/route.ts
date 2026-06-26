@@ -107,6 +107,10 @@ export async function GET(
         return;
       }
 
+      // Snapshot the owner's current online state so the widget shows the
+      // correct dot immediately, before the next presence event arrives.
+      emit("presence", { type: "presence", userId: convo.otherUserId, online: hub.isUserOnline(site.projectId, site.userId) });
+
       // Flush live events that arrived during backfill, deduped via seen.
       buffering = false;
       for (const evt of pending) emitEvent(evt);

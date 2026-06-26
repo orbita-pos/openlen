@@ -1,7 +1,8 @@
 import { and, eq } from "drizzle-orm";
 import { auth } from "@/auth";
 import { db, schema } from "@/lib/db";
-import { listAgents, inviteAgent } from "@/lib/chat/agents";
+import { listAgents, inviteAgent, countAgents } from "@/lib/chat/agents";
+import { getUserPlan, AGENT_LIMITS } from "@/lib/limits";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -56,6 +57,14 @@ export async function POST(
   const body = (await req.json().catch(() => null)) as { email?: unknown } | null;
   if (!body || typeof body.email !== "string" || !body.email.trim()) {
     return json({ error: "invalid_body", message: "email is required" }, 400);
+  }
+
+  const emailNorm = body.email.trim().toLowerCase();
+  const plan = await getUserPlan(session.user.id);
+  const cap = AGENT_LIMITS[plan];
+  const alreadyAgent = (await listAgents(id)).some((a) => a.invitedEmail === emailNorm);
+  if (!alreadyAgent && (await countAgents(id)) >= cap) {
+    return json({ error: "agent_limit_reached", cap, current: await countAgents(id) }, 402);
   }
 
   const result = await inviteAgent(id, body.email.trim());

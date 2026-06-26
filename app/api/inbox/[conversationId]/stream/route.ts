@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { hub } from "@/lib/chat/hub";
 import type { HubEvent } from "@/lib/chat/hub";
-import { listMessagesSince } from "@/lib/chat/store";
+import { listMessagesSince, getConversationForUser } from "@/lib/chat/store";
 import { json, requireOwnerForConversation } from "../../_shared";
 
 export const runtime = "nodejs";
@@ -107,6 +107,13 @@ export async function GET(
       } catch {
         cleanup();
         return;
+      }
+
+      // Snapshot the visitor's current online state so the Desk shows the
+      // correct dot immediately, before the next presence event arrives.
+      const peer = await getConversationForUser(projectId, conversationId, ownerChatUserId);
+      if (peer) {
+        emit("presence", { type: "presence", userId: peer.otherUserId, online: hub.isUserOnline(projectId, peer.otherUserId) });
       }
 
       // Flush live events that arrived during backfill, deduped via seen.

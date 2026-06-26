@@ -24,6 +24,9 @@ import {
 
 export type Plan = "free" | "pro";
 
+// Tunable agent-seat caps per plan.
+export const AGENT_LIMITS: Record<Plan, number> = { free: 0, pro: 3 };
+
 export interface LimitWindow {
   /** Sliding window in milliseconds (e.g. 60 * 60 * 1000 for 1 hour). */
   windowMs: number;

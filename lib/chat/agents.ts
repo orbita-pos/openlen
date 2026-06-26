@@ -66,6 +66,15 @@ export async function listAgentUserIds(projectId: string): Promise<string[]> {
   return rows.flatMap((r) => (r.userId ? [r.userId] : []));
 }
 
+/** Count ALL chatAgents rows for a project (invited + active) for cap enforcement. */
+export async function countAgents(projectId: string): Promise<number> {
+  const rows = await db
+    .select({ id: schema.chatAgents.id })
+    .from(schema.chatAgents)
+    .where(eq(schema.chatAgents.projectId, projectId));
+  return rows.length;
+}
+
 /** All agent rows for a project (for the management UI). */
 export async function listAgents(
   projectId: string,
