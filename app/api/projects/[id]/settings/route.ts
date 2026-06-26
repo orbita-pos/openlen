@@ -80,6 +80,12 @@ interface PatchBody {
     message?: string;
     side?: "left" | "right";
   };
+  /** Private chat module. Merged into settings.chat. Takes effect next publish. */
+  chat?: {
+    enabled?: boolean;
+    selfServeJoin?: boolean;
+    mount?: "fab" | "section" | "both";
+  };
 }
 
 function clean(v: unknown, max: number): string {
@@ -259,6 +265,22 @@ export async function PATCH(
       return json({ error: "invalid_body", message: "whatsapp.side must be left|right" }, 400);
     }
   }
+  const hasChat = "chat" in body;
+  if (hasChat) {
+    const c = body.chat;
+    if (!c || typeof c !== "object") {
+      return json({ error: "invalid_body", message: "chat must be an object" }, 400);
+    }
+    if ("enabled" in c && typeof c.enabled !== "boolean") {
+      return json({ error: "invalid_body", message: "chat.enabled must be boolean" }, 400);
+    }
+    if ("selfServeJoin" in c && typeof c.selfServeJoin !== "boolean") {
+      return json({ error: "invalid_body", message: "chat.selfServeJoin must be boolean" }, 400);
+    }
+    if ("mount" in c && c.mount !== undefined && c.mount !== "fab" && c.mount !== "section" && c.mount !== "both") {
+      return json({ error: "invalid_body", message: "chat.mount must be fab|section|both" }, 400);
+    }
+  }
   if (
     !hasFormPatch &&
     !hasAnalyticsToggle &&
@@ -269,13 +291,14 @@ export async function PATCH(
     !hasComments &&
     !hasBookings &&
     !hasCollections &&
-    !hasWhatsapp
+    !hasWhatsapp &&
+    !hasChat
   ) {
     return json(
       {
         error: "invalid_body",
         message:
-          "expected formIndex+patch OR analyticsDisabled OR motion OR music OR members OR broadcast OR comments OR bookings OR collections OR whatsapp",
+          "expected formIndex+patch OR analyticsDisabled OR motion OR music OR members OR broadcast OR comments OR bookings OR collections OR whatsapp OR chat",
       },
       400,
     );
@@ -438,6 +461,15 @@ export async function PATCH(
       ...("number" in w ? { number: (w.number ?? "").trim() } : {}),
       ...("message" in w ? { message: (w.message ?? "").trim() } : {}),
       ...("side" in w ? { side: w.side } : {}),
+    };
+  }
+  if (hasChat && body.chat) {
+    const c = body.chat;
+    nextSettings.chat = {
+      ...(data.settings?.chat ?? {}),
+      ...("enabled" in c ? { enabled: c.enabled } : {}),
+      ...("selfServeJoin" in c ? { selfServeJoin: c.selfServeJoin } : {}),
+      ...("mount" in c ? { mount: c.mount } : {}),
     };
   }
 
