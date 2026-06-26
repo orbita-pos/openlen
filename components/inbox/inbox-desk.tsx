@@ -44,6 +44,13 @@ export function InboxDesk() {
   const [threadError, setThreadError] = useState(false);
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
+  const [peerOnline, setPeerOnline] = useState(false);
+  const [peerTyping, setPeerTyping] = useState(false);
+  // Outgoing typing ping state — debounce timer + last value sent (avoids spam).
+  const typingPing = useRef<{ timer: ReturnType<typeof setTimeout> | null; on: boolean }>({
+    timer: null,
+    on: false,
+  });
 
   const loadInbox = useCallback(async () => {
     setInboxError(false);
@@ -123,6 +130,70 @@ export function InboxDesk() {
     };
   }, [selected, appendMessages]);
 
+  // Live SSE layered on the poll (fallback). Streamed messages are RAW — compute
+  // `mine` (a streamed message authored by the visitor → not ours). Presence +
+  // typing drive the header. On error we close and let the 3s poll carry on.
+  useEffect(() => {
+    if (!selected) return;
+    const conversationId = selected.id;
+    const otherUserId = selected.otherUserId;
+    setPeerOnline(false);
+    setPeerTyping(false);
+    let typingTimer: ReturnType<typeof setTimeout> | null = null;
+    let es: EventSource | null = null;
+
+    const onFrame = (raw: string) => {
+      let evt: {
+        type?: string;
+        message?: { id: string; authorId: string; body: string; createdAt: string };
+        userId?: string;
+        online?: boolean;
+        isTyping?: boolean;
+      };
+      try {
+        evt = JSON.parse(raw);
+      } catch {
+        return;
+      }
+      if (evt.type === "message" && evt.message) {
+        const m = evt.message;
+        appendMessages([{ ...m, mine: m.authorId !== otherUserId }]);
+      } else if (evt.type === "presence") {
+        if (evt.userId === otherUserId) setPeerOnline(!!evt.online);
+      } else if (evt.type === "typing") {
+        if (evt.userId !== otherUserId) return;
+        setPeerTyping(!!evt.isTyping);
+        if (typingTimer) clearTimeout(typingTimer);
+        if (evt.isTyping) typingTimer = setTimeout(() => setPeerTyping(false), 4000);
+      }
+    };
+
+    try {
+      es = new EventSource(`/api/inbox/${conversationId}/stream`);
+    } catch {
+      return;
+    }
+    es.addEventListener("message", (e: MessageEvent) => onFrame(e.data));
+    es.addEventListener("presence", (e) => onFrame((e as MessageEvent).data));
+    es.addEventListener("typing", (e) => onFrame((e as MessageEvent).data));
+    es.onerror = () => {
+      es?.close();
+      es = null;
+    };
+
+    return () => {
+      if (typingTimer) clearTimeout(typingTimer);
+      const ping = typingPing.current;
+      if (ping.timer) {
+        clearTimeout(ping.timer);
+        ping.timer = null;
+      }
+      ping.on = false;
+      es?.close();
+      es = null;
+    };
+  }, [selected, appendMessages]);
+
   // Auto-scroll the thread to the newest message.
   const threadEndRef = useRef<HTMLDivElement | null>(null);
   useEffect(() => {
@@ -149,6 +220,33 @@ export function InboxDesk() {
       setSending(false);
     }
   }, [draft, selected, sending, appendMessages]);
+
+  // Fire a typing ping (deduped against the last value sent) to the peer.
+  const pingTyping = useCallback(
+    (isTyping: boolean) => {
+      const st = typingPing.current;
+      if (st.on === isTyping || !selected) return;
+      st.on = isTyping;
+      void fetch(`/api/inbox/${selected.id}/typing`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ isTyping }),
+      }).catch(() => {});
+    },
+    [selected],
+  );
+
+  // On every keystroke: signal typing, then debounce a "stopped" after idle.
+  const onDraftChange = useCallback(
+    (value: string) => {
+      setDraft(value);
+      const st = typingPing.current;
+      pingTyping(true);
+      if (st.timer) clearTimeout(st.timer);
+      st.timer = setTimeout(() => pingTyping(false), 1500);
+    },
+    [pingTyping],
+  );
 
   const hasAny = !!inbox && inbox.some((g) => g.conversations.length > 0);
 
@@ -253,14 +351,28 @@ export function InboxDesk() {
                   <ArrowLeft size={18} />
                 </button>
                 <div className="min-w-0">
-                  <p className="truncate text-[14px] font-semibold">
+                  <p className="flex items-center gap-1.5 truncate text-[14px] font-semibold">
                     {selected.otherDisplayName ||
                       selected.otherUsername ||
                       t("visitor")}
+                    {peerOnline && (
+                      <span
+                        className="inline-block h-2 w-2 shrink-0 rounded-full bg-emerald-500"
+                        aria-hidden
+                      />
+                    )}
                   </p>
-                  <p className="truncate text-[12px] text-zinc-400 dark:text-zinc-500">
-                    @{selected.otherUsername}
-                  </p>
+                  {peerTyping ? (
+                    <span className="inline-flex items-center gap-0.5 py-[3px]" aria-label="typing">
+                      <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-zinc-400 [animation-delay:-0.3s]" />
+                      <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-zinc-400 [animation-delay:-0.15s]" />
+                      <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-zinc-400" />
+                    </span>
+                  ) : (
+                    <p className="truncate text-[12px] text-zinc-400 dark:text-zinc-500">
+                      @{selected.otherUsername}
+                    </p>
+                  )}
                 </div>
               </div>
 
@@ -310,16 +422,19 @@ export function InboxDesk() {
               <form
                 onSubmit={(e) => {
                   e.preventDefault();
+                  pingTyping(false);
                   void send();
                 }}
                 className="flex items-end gap-2 border-t border-zinc-200 px-3 py-2.5 dark:border-zinc-800 sm:px-4"
               >
                 <textarea
                   value={draft}
-                  onChange={(e) => setDraft(e.target.value)}
+                  onChange={(e) => onDraftChange(e.target.value)}
+                  onBlur={() => pingTyping(false)}
                   onKeyDown={(e) => {
                     if (e.key === "Enter" && !e.shiftKey) {
                       e.preventDefault();
+                      pingTyping(false);
                       void send();
                     }
                   }}
