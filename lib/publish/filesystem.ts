@@ -705,7 +705,9 @@ async function bakeDocument(
       const rightBelowChat = ctx.assistant?.enabled === true ? 1 : 0;
       migratedHtml = bakeChatWidget(migratedHtml, {
         sub: ctx.sub,
-        accent: ctx.chat.accent,
+        // Brand-match the widget to the page's own accent ("con el color de tu
+        // página"); falls back to the widget's coral when undetectable.
+        accent: ctx.chat.accent ?? detectSiteAccent(migratedHtml) ?? undefined,
         mount: ctx.chat.mount,
         selfServeJoin: ctx.chat.selfServeJoin,
         ...(chatWantsFab && rightBelowChat > 0 ? { bottomPx: 18 + rightBelowChat * 68 } : {}),
