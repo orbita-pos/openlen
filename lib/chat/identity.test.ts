@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  deriveOwnerUsername,
   hashPassword,
   isValidPassword,
   isValidUsername,
@@ -39,5 +40,21 @@ describe("chat identity", () => {
     expect(sanitizeDisplayName("  Juan   Pérez ")).toBe("Juan Pérez");
     expect(sanitizeDisplayName("   ")).toBeNull();
     expect(sanitizeDisplayName("x".repeat(60))!.length).toBe(40);
+  });
+});
+
+describe("deriveOwnerUsername", () => {
+  it("normalizes a title into a valid username", () => {
+    expect(deriveOwnerUsername("Café Luna")).toMatch(/^[a-z][a-z0-9_]{2,19}$/);
+    expect(deriveOwnerUsername("Café Luna")).toBe("caf_luna");
+  });
+  it("falls back to 'owner' for unusable titles", () => {
+    expect(deriveOwnerUsername("")).toBe("owner");
+    expect(deriveOwnerUsername("123")).toBe("owner");       // can't start with a digit
+    expect(deriveOwnerUsername("!!")).toBe("owner");
+  });
+  it("caps at 20 chars and trims trailing underscores", () => {
+    expect(deriveOwnerUsername("A very long business name here").length).toBeLessThanOrEqual(20);
+    expect(deriveOwnerUsername("Hello!!!").endsWith("_")).toBe(false);
   });
 });

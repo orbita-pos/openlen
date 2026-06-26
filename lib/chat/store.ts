@@ -2,6 +2,7 @@
 // messages. Mirrors lib/members/store.ts (sha256 tokens at rest, single-pair
 // conversations, snapshot author ids). Every query is scoped by projectId.
 
+import crypto from "node:crypto";
 import { and, asc, desc, eq, gt, ilike, ne, or, sql } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
 import { decodeCursor } from "@/lib/chat/cursor";
@@ -10,6 +11,7 @@ import {
   generateSessionToken,
   hashSessionToken,
 } from "@/lib/chat/session";
+import { deriveOwnerUsername, hashPassword } from "@/lib/chat/identity";
 
 const SEARCH_LIMIT = 12;
 const CONVO_LIMIT = 200;
@@ -254,4 +256,65 @@ export async function listMessagesSince(
 
 export function recordChatEvent(projectId: string, type: string, chatUserId?: string | null): void {
   void db.insert(schema.chatEvents).values({ projectId, type, chatUserId: chatUserId ?? null }).catch(() => {});
+}
+
+/** The space's owner chat_user, or null. */
+export async function getChatOwner(projectId: string): Promise<ChatUserRow | null> {
+  const rows = await db
+    .select(USER_COLS)
+    .from(schema.chatUsers)
+    .where(and(eq(schema.chatUsers.projectId, projectId), eq(schema.chatUsers.role, "owner")))
+    .limit(1);
+  return rows[0] ?? null;
+}
+
+/** Idempotently ensure the project's owner chat_user exists. The owner never
+ *  logs in with a password (Auth.js only) — passwordHash is an unusable random
+ *  sentinel. Username derived from the display name; 'owner' fallback; uniqueness
+ *  resolved by suffixing on collision. */
+export async function getOrCreateOwnerChatUser(
+  projectId: string,
+  _ownerUserId: string,
+  opts: { email?: string | null; displayName?: string | null } = {},
+): Promise<{ id: string }> {
+  const existing = await getChatOwner(projectId);
+  if (existing) return { id: existing.id };
+  const base = deriveOwnerUsername(opts.displayName ?? "");
+  const passwordHash = await hashPassword(crypto.randomUUID());
+  for (let i = 0; i < 5; i++) {
+    const username = i === 0 ? base : `${base.slice(0, 17)}_${i}`;
+    const r = await registerChatUser(projectId, username, passwordHash, {
+      role: "owner",
+      email: opts.email ?? null,
+      displayName: opts.displayName ?? null,
+    });
+    if ("id" in r) return { id: r.id };
+    // 'taken' on this username — another owner may have just been created; re-check
+    const now = await getChatOwner(projectId);
+    if (now) return { id: now.id };
+  }
+  // extremely unlikely — last resort with a random handle
+  const r = await registerChatUser(projectId, `owner_${crypto.randomUUID().slice(0, 8)}`, passwordHash, { role: "owner", email: opts.email ?? null, displayName: opts.displayName ?? null });
+  if ("id" in r) return { id: r.id };
+  const fallback = await getChatOwner(projectId);
+  if (fallback) return { id: fallback.id };
+  throw new Error("could not provision owner chat user");
+}
+
+/** Inbox across ALL of one platform-user's chat-enabled projects: every
+ *  conversation the owner participates in, tagged with its project. */
+export async function listOwnerInbox(ownerUserId: string): Promise<Array<{ projectId: string; projectTitle: string; conversations: ConversationSummary[] }>> {
+  const projects = await db
+    .select({ id: schema.projects.id, title: schema.projects.title, data: schema.projects.data })
+    .from(schema.projects)
+    .where(eq(schema.projects.userId, ownerUserId));
+  const out: Array<{ projectId: string; projectTitle: string; conversations: ConversationSummary[] }> = [];
+  for (const p of projects) {
+    if ((p.data as { settings?: { chat?: { enabled?: boolean } } } | null)?.settings?.chat?.enabled !== true) continue;
+    const owner = await getChatOwner(p.id);
+    if (!owner) continue;
+    const conversations = await listConversations(p.id, owner.id);
+    if (conversations.length > 0) out.push({ projectId: p.id, projectTitle: p.title ?? p.id, conversations });
+  }
+  return out;
 }
