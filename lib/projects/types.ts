@@ -41,8 +41,7 @@ export interface AssistantSettings {
   tone?: string;
 }
 
-/** Members module — visitor accounts on the published site. The member rows
- *  live in the siteMembers table; this only holds the per-site switches. */
+/** Private chat module — a closed per-space @username messenger. Only the per-site switches live here; chat users/messages live in the chat* tables. */
 export interface ChatSettings {
   /** Master switch. Absent/false → chat widget not baked + API routes refuse. */
   enabled?: boolean;
@@ -53,6 +52,7 @@ export interface ChatSettings {
   mount?: "fab" | "section" | "both";
 }
 
+/** Members module — visitor accounts on the published site (siteMembers). */
 export interface MembersSettings {
   /** Master switch. Absent/false → no gating: membersOnly pages publish
    *  public and /api/m/* refuses to issue logins. */

@@ -1,4 +1,4 @@
-import { getClientIp, ipLimitKey, checkAndConsume, type LimitWindow } from "@/lib/limits";
+import { ipLimitKey, checkAndConsume, type LimitWindow } from "@/lib/limits";
 import { encodeCursor } from "@/lib/chat/cursor";
 import {
   getConversationForUser, insertMessage, listMessagesSince, recordChatEvent,

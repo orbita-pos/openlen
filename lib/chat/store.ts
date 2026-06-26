@@ -231,9 +231,7 @@ export async function listMessagesSince(
   };
   const decoded = cursor ? decodeCursor(cursor) : null;
   const base = eq(schema.chatMessages.conversationId, conversationId);
-  // Explicit OR is more reliable than the Postgres row-value `(a,b)>(c,d)`
-  // form because Drizzle's sql`` interpolation of column refs inside a raw
-  // template can produce mismatched aliases in some driver versions.
+  // Keyset paging on (createdAt, id): strictly-after the cursor. Correctness relies on createdAt being millisecond-precision (see insertMessage + the timestamp(3) column) so getTime() round-trips exactly against the boundary.
   const where = decoded
     ? and(
         base,

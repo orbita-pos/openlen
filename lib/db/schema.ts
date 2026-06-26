@@ -843,7 +843,7 @@ export const chatMessages = pgTable(
       .references(() => chatConversations.id, { onDelete: "cascade" }),
     authorId: text("authorId").notNull(), // snapshot, no FK (author may be deleted)
     body: text("body").notNull(), // plaintext; rendered as text, never innerHTML
-    createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
+    createdAt: timestamp("createdAt", { mode: "date", precision: 3 }).notNull().defaultNow(),
     readAt: timestamp("readAt", { mode: "date" }),
   },
   (table) => [

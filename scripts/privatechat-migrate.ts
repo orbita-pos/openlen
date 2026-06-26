@@ -52,9 +52,10 @@ async function main() {
     "conversationId" text NOT NULL REFERENCES "chatConversations"("id") ON DELETE CASCADE,
     "authorId" text NOT NULL,
     "body" text NOT NULL,
-    "createdAt" timestamp NOT NULL DEFAULT now(),
+    "createdAt" timestamp(3) NOT NULL DEFAULT now(),
     "readAt" timestamp
   );`);
+  await db.execute(sql`ALTER TABLE "chatMessages" ALTER COLUMN "createdAt" TYPE timestamp(3);`);
   await db.execute(sql`CREATE INDEX IF NOT EXISTS "chatMessages_conversation_created_idx"
     ON "chatMessages" ("conversationId", "createdAt");`);
 
