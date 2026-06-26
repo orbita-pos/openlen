@@ -111,9 +111,16 @@ export async function GET(
 
       // Snapshot the visitor's current online state so the Desk shows the
       // correct dot immediately, before the next presence event arrives.
-      const peer = await getConversationForUser(projectId, conversationId, ownerChatUserId);
-      if (peer) {
-        emit("presence", { type: "presence", userId: peer.otherUserId, online: hub.isUserOnline(projectId, peer.otherUserId) });
+      // Guarded like the backfill (Fix 3): a rejection here is before the
+      // abort listener is wired, so it must run cleanup or presence leaks.
+      try {
+        const peer = await getConversationForUser(projectId, conversationId, ownerChatUserId);
+        if (peer) {
+          emit("presence", { type: "presence", userId: peer.otherUserId, online: hub.isUserOnline(projectId, peer.otherUserId) });
+        }
+      } catch {
+        cleanup();
+        return;
       }
 
       // Flush live events that arrived during backfill, deduped via seen.
