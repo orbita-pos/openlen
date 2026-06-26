@@ -499,6 +499,8 @@ interface ChatBake {
   accent?: string;
   mount: "fab" | "section" | "both";
   selfServeJoin: boolean;
+  /** Business name — shown as the thread title when a visitor messages the owner. */
+  title?: string;
 }
 
 /** The per-document publish bake — every transform between sanitize and the
@@ -710,6 +712,7 @@ async function bakeDocument(
         accent: ctx.chat.accent ?? detectSiteAccent(migratedHtml) ?? undefined,
         mount: ctx.chat.mount,
         selfServeJoin: ctx.chat.selfServeJoin,
+        title: ctx.chat.title,
         ...(chatWantsFab && rightBelowChat > 0 ? { bottomPx: 18 + rightBelowChat * 68 } : {}),
       });
     } catch (err) {

@@ -839,6 +839,7 @@ export async function publishProject(
             enabled: true,
             mount: project.data.settings.chat.mount ?? "both",
             selfServeJoin: project.data.settings.chat.selfServeJoin !== false,
+            title: project.title,
           }
         : undefined,
       pages: publicPages,
