@@ -34,6 +34,7 @@ export interface MessageRow {
 export interface ConversationSummary {
   id: string; otherUserId: string; otherUsername: string;
   otherDisplayName: string | null; lastMessageAt: Date | null;
+  assignedUserId: string | null; assigneeName: string | null; assignedAt: Date | null;
 }
 
 const USER_COLS = {
@@ -173,8 +174,12 @@ export async function listConversations(projectId: string, userId: string): Prom
       a: schema.chatConversations.aUserId,
       b: schema.chatConversations.bUserId,
       lastMessageAt: schema.chatConversations.lastMessageAt,
+      assignedUserId: schema.chatConversations.assignedUserId,
+      assignedAt: schema.chatConversations.assignedAt,
+      assigneeName: schema.users.name,
     })
     .from(schema.chatConversations)
+    .leftJoin(schema.users, eq(schema.chatConversations.assignedUserId, schema.users.id))
     .where(and(
       eq(schema.chatConversations.projectId, projectId),
       or(eq(schema.chatConversations.aUserId, userId), eq(schema.chatConversations.bUserId, userId)),
@@ -196,8 +201,35 @@ export async function listConversations(projectId: string, userId: string): Prom
       otherUsername: u?.username ?? "?",
       otherDisplayName: u?.displayName ?? null,
       lastMessageAt: r.lastMessageAt,
+      assignedUserId: r.assignedUserId ?? null,
+      assigneeName: r.assigneeName ?? null,
+      assignedAt: r.assignedAt ?? null,
     };
   });
+}
+
+/** Assign (or release) a conversation to a platform user. Scoped by
+ *  (projectId, conversationId) so a bad actor can't reassign across projects.
+ *  Pass userId=null to release. Returns the new state or {error:"not_found"}. */
+export async function assignConversation(
+  projectId: string,
+  conversationId: string,
+  userId: string | null,
+): Promise<{ assignedUserId: string | null; assignedAt: Date | null } | { error: "not_found" }> {
+  const now = userId ? new Date() : null;
+  const rows = await db
+    .update(schema.chatConversations)
+    .set({ assignedUserId: userId, assignedAt: now })
+    .where(and(
+      eq(schema.chatConversations.id, conversationId),
+      eq(schema.chatConversations.projectId, projectId),
+    ))
+    .returning({
+      assignedUserId: schema.chatConversations.assignedUserId,
+      assignedAt: schema.chatConversations.assignedAt,
+    });
+  if (rows.length === 0) return { error: "not_found" };
+  return { assignedUserId: rows[0].assignedUserId ?? null, assignedAt: rows[0].assignedAt ?? null };
 }
 
 export async function insertMessage(conversationId: string, authorId: string, body: string): Promise<MessageRow> {

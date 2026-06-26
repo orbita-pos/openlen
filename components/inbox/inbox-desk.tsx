@@ -8,6 +8,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
+import { useSession } from "next-auth/react";
 import { ArrowLeft, Inbox, Loader2, MessageSquare, Send } from "lucide-react";
 
 interface Conversation {
@@ -16,6 +17,9 @@ interface Conversation {
   otherUsername: string;
   otherDisplayName: string | null;
   lastMessageAt: string | null;
+  assignedUserId: string | null;
+  assigneeName: string | null;
+  assignedAt: string | null;
 }
 interface ProjectGroup {
   projectId: string;
@@ -35,10 +39,20 @@ const POLL_MS = 3000;
 export function InboxDesk() {
   const t = useTranslations("inbox");
   const locale = useLocale();
+  const { data: session } = useSession();
+  const myUserId = session?.user?.id ?? null;
 
   const [inbox, setInbox] = useState<ProjectGroup[] | null>(null);
   const [inboxError, setInboxError] = useState(false);
   const [selected, setSelected] = useState<Conversation | null>(null);
+  // Assignment state for the selected thread (kept separate so SSE can update it
+  // without replacing the whole selected conversation object).
+  const [assignment, setAssignment] = useState<{
+    assignedUserId: string | null;
+    assigneeName: string | null;
+    assignedAt: string | null;
+  } | null>(null);
+  const [assigning, setAssigning] = useState(false);
 
   const [messages, setMessages] = useState<Message[] | null>(null);
   const [threadError, setThreadError] = useState(false);
@@ -71,6 +85,55 @@ export function InboxDesk() {
     }
   }, []);
 
+  // Patch an assignment update into both the list and the selected-thread state.
+  const applyAssignment = useCallback(
+    (
+      conversationId: string,
+      patch: { assignedUserId: string | null; assigneeName: string | null; assignedAt: string | null },
+    ) => {
+      setInbox((prev) => {
+        if (!prev) return prev;
+        return prev.map((g) => ({
+          ...g,
+          conversations: g.conversations.map((c) =>
+            c.id === conversationId ? { ...c, ...patch } : c,
+          ),
+        }));
+      });
+      setSelected((prev) => (prev?.id === conversationId ? { ...prev, ...patch } : prev));
+      setAssignment((prev) =>
+        prev === null || selected?.id === conversationId ? patch : prev,
+      );
+    },
+    [selected?.id],
+  );
+
+  const doAssign = useCallback(
+    async (body: { userId?: string | null }) => {
+      if (!selected || assigning) return;
+      setAssigning(true);
+      try {
+        const res = await fetch(`/api/inbox/${selected.id}/assign`, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify(body),
+        });
+        if (!res.ok) return;
+        const data = (await res.json()) as {
+          assignedUserId: string | null;
+          assigneeName: string | null;
+          assignedAt: string | null;
+        };
+        applyAssignment(selected.id, data);
+      } catch {
+        // leave state as-is; user can retry
+      } finally {
+        setAssigning(false);
+      }
+    },
+    [selected, assigning, applyAssignment],
+  );
+
   useEffect(() => {
     void loadInbox();
   }, [loadInbox]);
@@ -85,6 +148,19 @@ export function InboxDesk() {
       return fresh.length ? [...base, ...fresh] : base;
     });
   }, []);
+
+  // Sync assignment state when the selected conversation changes.
+  useEffect(() => {
+    if (!selected) {
+      setAssignment(null);
+      return;
+    }
+    setAssignment({
+      assignedUserId: selected.assignedUserId,
+      assigneeName: selected.assigneeName,
+      assignedAt: selected.assignedAt,
+    });
+  }, [selected?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Load the selected thread + poll for new messages every POLL_MS. Cursor is
   // an effect-local so the interval closure always sees the latest value; the
@@ -157,6 +233,10 @@ export function InboxDesk() {
         online?: boolean;
         isTyping?: boolean;
         readAt?: string;
+        conversationId?: string;
+        assignedUserId?: string | null;
+        assigneeName?: string | null;
+        assignedAt?: string | null;
       };
       try {
         evt = JSON.parse(raw);
@@ -176,6 +256,12 @@ export function InboxDesk() {
       } else if (evt.type === "read" && evt.userId === otherUserId && evt.readAt) {
         // Visitor read our messages — advance their last-read pointer.
         setOtherReadAt(new Date(evt.readAt));
+      } else if (evt.type === "assignment" && evt.conversationId) {
+        applyAssignment(evt.conversationId, {
+          assignedUserId: evt.assignedUserId ?? null,
+          assigneeName: evt.assigneeName ?? null,
+          assignedAt: evt.assignedAt ?? null,
+        });
       }
     };
 
@@ -188,6 +274,7 @@ export function InboxDesk() {
     es.addEventListener("presence", (e) => onFrame((e as MessageEvent).data));
     es.addEventListener("typing", (e) => onFrame((e as MessageEvent).data));
     es.addEventListener("read", (e) => onFrame((e as MessageEvent).data));
+    es.addEventListener("assignment", (e) => onFrame((e as MessageEvent).data));
     es.onerror = () => {
       es?.close();
       es = null;
@@ -204,7 +291,7 @@ export function InboxDesk() {
       es?.close();
       es = null;
     };
-  }, [selected, appendMessages]);
+  }, [selected, appendMessages, applyAssignment]);
 
   // Auto-scroll the thread to the newest message.
   const threadEndRef = useRef<HTMLDivElement | null>(null);
@@ -317,6 +404,10 @@ export function InboxDesk() {
                       const name =
                         c.otherDisplayName || c.otherUsername || t("visitor");
                       const active = selected?.id === c.id;
+                      const assignLabel =
+                        c.assignedUserId && myUserId && c.assignedUserId === myUserId
+                          ? "Tú"
+                          : c.assigneeName ?? null;
                       return (
                         <li key={c.id}>
                           <button
@@ -337,11 +428,22 @@ export function InboxDesk() {
                                 @{c.otherUsername}
                               </span>
                             </span>
-                            {c.lastMessageAt && (
-                              <span className="shrink-0 text-[11px] text-zinc-400 dark:text-zinc-500">
-                                {formatRelative(c.lastMessageAt, locale)}
-                              </span>
-                            )}
+                            <span className="flex shrink-0 flex-col items-end gap-1">
+                              {c.lastMessageAt && (
+                                <span className="text-[11px] text-zinc-400 dark:text-zinc-500">
+                                  {formatRelative(c.lastMessageAt, locale)}
+                                </span>
+                              )}
+                              {assignLabel ? (
+                                <span className="rounded-full bg-coral-500/10 px-1.5 py-0.5 text-[10px] font-medium text-coral-600 dark:text-coral-400">
+                                  {assignLabel}
+                                </span>
+                              ) : (
+                                <span className="rounded-full bg-zinc-100 px-1.5 py-0.5 text-[10px] text-zinc-400 dark:bg-zinc-800 dark:text-zinc-500">
+                                  Libre
+                                </span>
+                              )}
+                            </span>
                           </button>
                         </li>
                       );
@@ -375,7 +477,7 @@ export function InboxDesk() {
                 >
                   <ArrowLeft size={18} />
                 </button>
-                <div className="min-w-0">
+                <div className="min-w-0 flex-1">
                   <p className="flex items-center gap-1.5 truncate text-[14px] font-semibold">
                     {selected.otherDisplayName ||
                       selected.otherUsername ||
@@ -399,6 +501,14 @@ export function InboxDesk() {
                     </p>
                   )}
                 </div>
+                {/* Assignment control */}
+                <AssignmentControl
+                  assignment={assignment}
+                  myUserId={myUserId}
+                  assigning={assigning}
+                  onClaim={() => void doAssign({})}
+                  onRelease={() => void doAssign({ userId: null })}
+                />
               </div>
 
               <div className="flex-1 overflow-y-auto px-3 py-4 sm:px-4">
@@ -489,6 +599,71 @@ export function InboxDesk() {
           )}
         </section>
       </div>
+    </div>
+  );
+}
+
+function AssignmentControl({
+  assignment,
+  myUserId,
+  assigning,
+  onClaim,
+  onRelease,
+}: {
+  assignment: { assignedUserId: string | null; assigneeName: string | null; assignedAt: string | null } | null;
+  myUserId: string | null;
+  assigning: boolean;
+  onClaim: () => void;
+  onRelease: () => void;
+}) {
+  const isMine = !!assignment?.assignedUserId && myUserId === assignment.assignedUserId;
+  const isAssigned = !!assignment?.assignedUserId;
+
+  if (!isAssigned) {
+    return (
+      <button
+        type="button"
+        onClick={onClaim}
+        disabled={assigning}
+        className="shrink-0 rounded-lg border border-zinc-200 px-2.5 py-1 text-[12px] font-medium text-zinc-600 transition hover:border-coral-400 hover:text-coral-600 disabled:opacity-40 dark:border-zinc-700 dark:text-zinc-400"
+      >
+        {assigning ? <Loader2 size={12} className="animate-spin" /> : "Atender"}
+      </button>
+    );
+  }
+
+  if (isMine) {
+    return (
+      <button
+        type="button"
+        onClick={onRelease}
+        disabled={assigning}
+        className="shrink-0 rounded-lg border border-coral-200 bg-coral-500/5 px-2.5 py-1 text-[12px] font-medium text-coral-600 transition hover:bg-coral-500/10 disabled:opacity-40 dark:border-coral-800 dark:text-coral-400"
+      >
+        {assigning ? (
+          <Loader2 size={12} className="animate-spin" />
+        ) : (
+          "Liberar"
+        )}
+      </button>
+    );
+  }
+
+  // Assigned to someone else — show who + a release option
+  return (
+    <div className="flex shrink-0 items-center gap-1.5">
+      <span className="rounded-full bg-zinc-100 px-2 py-0.5 text-[11px] text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">
+        {assignment.assigneeName ?? "Otro"}
+      </span>
+      <button
+        type="button"
+        onClick={onRelease}
+        disabled={assigning}
+        title="Liberar conversación"
+        className="rounded-lg border border-zinc-200 px-2 py-1 text-[11px] text-zinc-500 transition hover:border-zinc-300 hover:text-zinc-700 disabled:opacity-40 dark:border-zinc-700 dark:text-zinc-400"
+      >
+        {assigning ? <Loader2 size={11} className="animate-spin" /> : "Liberar"}
+      </button>
     </div>
   );
 }

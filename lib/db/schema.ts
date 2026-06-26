@@ -830,6 +830,10 @@ export const chatConversations = pgTable(
     // first read. aReadAt belongs to aUserId, bReadAt to bUserId.
     aReadAt: timestamp("aReadAt", { mode: "date" }),
     bReadAt: timestamp("bReadAt", { mode: "date" }),
+    // Platform user (users.id) currently handling this conversation. Claim =
+    // set to self; release = set to null; reassign = owner-only.
+    assignedUserId: text("assignedUserId").references(() => users.id, { onDelete: "set null" }),
+    assignedAt: timestamp("assignedAt", { mode: "date" }),
     createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
   },
   (table) => [

@@ -4,7 +4,8 @@ export type HubEvent =
   | { type: "message"; message: MessageRow }
   | { type: "presence"; userId: string; online: boolean }
   | { type: "typing"; userId: string; isTyping: boolean }
-  | { type: "read"; userId: string; readAt: string };
+  | { type: "read"; userId: string; readAt: string }
+  | { type: "assignment"; conversationId: string; assignedUserId: string | null; assigneeName: string | null; assignedAt: string | null };
 
 export interface Subscriber {
   id: string;

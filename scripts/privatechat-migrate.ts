@@ -96,6 +96,10 @@ async function main() {
     "createdAt" timestamp NOT NULL DEFAULT now()
   );`);
 
+  // P5 Task 4: claim-based assignment columns
+  await db.execute(sql`ALTER TABLE "chatConversations" ADD COLUMN IF NOT EXISTS "assignedUserId" text;`);
+  await db.execute(sql`ALTER TABLE "chatConversations" ADD COLUMN IF NOT EXISTS "assignedAt" timestamp;`);
+
   console.log("private chat tables ready.");
   process.exit(0);
 }
