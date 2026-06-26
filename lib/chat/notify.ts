@@ -1,10 +1,10 @@
-import { and, desc, eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
 import { checkAndConsume } from "@/lib/limits";
 import { getChatOwner, getChatUserById } from "@/lib/chat/store";
 import { sendChatNotificationEmail } from "@/lib/email";
+import { hub } from "@/lib/chat/hub";
 
-const OFFLINE_THRESHOLD_MS = 5 * 60 * 1000;
 const DEBOUNCE_WINDOW_MS = 10 * 60 * 1000;
 
 /** Fire-and-forget: email the project owner when a visitor messages them and
@@ -40,30 +40,26 @@ export async function notifyOwnerIfOffline(
   if (owner.id !== aUserId && owner.id !== bUserId) return;
   if (senderUserId === owner.id) return;
 
-  // 3. Offline check: no active session or idle >5 min
-  const sessionRows = await db
-    .select({ lastSeenAt: schema.chatSessions.lastSeenAt })
-    .from(schema.chatSessions)
-    .where(eq(schema.chatSessions.chatUserId, owner.id))
-    .orderBy(desc(schema.chatSessions.lastSeenAt))
-    .limit(1);
-  const lastSeenAt = sessionRows[0]?.lastSeenAt;
-  if (lastSeenAt && Date.now() - lastSeenAt.getTime() <= OFFLINE_THRESHOLD_MS) return;
-
-  // 4. Debounce: at most 1 notification per 10 min per conversation
-  const { ok } = await checkAndConsume(`chat:notify:${conversationId}`, [
-    { windowMs: DEBOUNCE_WINDOW_MS, max: 1, label: "per-conversation" },
-  ]);
-  if (!ok) return;
-
-  // 5. Resolve project (title + fallback userId for email lookup)
+  // 3. Resolve project (userId + title) — needed for hub presence check + email
   const projectRows = await db
     .select({ userId: schema.projects.userId, title: schema.projects.title })
     .from(schema.projects)
     .where(eq(schema.projects.id, projectId))
     .limit(1);
   const project = projectRows[0];
-  const projectTitle = project?.title ?? projectId;
+  if (!project) return;
+  const projectTitle = project.title ?? projectId;
+
+  // 4. Presence check: owner (or agent — agents wired in P4-5 via listAgentUserIds) has a live Desk SSE
+  // connection tracked in the hub. When present, skip the email — someone's handling it.
+  // TODO(P4-5): replace [] with listAgentUserIds(projectId) once agent support lands.
+  if (hub.isProjectStaffOnline(projectId, project.userId, [])) return;
+
+  // 5. Debounce: at most 1 notification per 10 min per conversation
+  const { ok } = await checkAndConsume(`chat:notify:${conversationId}`, [
+    { windowMs: DEBOUNCE_WINDOW_MS, max: 1, label: "per-conversation" },
+  ]);
+  if (!ok) return;
 
   // 5a. Prefer owner chat_user.email
   const chatEmailRows = await db
