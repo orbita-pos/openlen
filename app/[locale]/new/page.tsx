@@ -21,6 +21,7 @@ import { useAIModel } from "@/components/workspace-v2/model-picker";
 import { buildModuleSection } from "@/lib/publish/module-sections";
 import type {
   BookingsSettings,
+  ChatSettings,
   CollectionsSettings,
   BroadcastSettings,
   CommentsSettings,
@@ -2768,6 +2769,46 @@ function NewV2Inner() {
     },
     [loadedProject?.id, toast, t],
   );
+  const updateChatSettings = useCallback(
+    async (patch: ChatSettings): Promise<boolean> => {
+      const projectId = loadedProject?.id;
+      if (!projectId) return false;
+      try {
+        const r = await fetch(`/api/projects/${projectId}/settings`, {
+          method: "PATCH",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ chat: patch }),
+        });
+        if (!r.ok) {
+          toast.error(t("toast.moduleError"));
+          return false;
+        }
+        setLoadedProject((p) =>
+          p
+            ? {
+                ...p,
+                settings: {
+                  ...p.settings,
+                  chat: { ...p.settings?.chat, ...patch },
+                },
+              }
+            : p,
+        );
+        if (typeof patch.enabled === "boolean") {
+          toast.success(
+            t(patch.enabled ? "toast.moduleEnabled" : "toast.moduleDisabled", {
+              module: "Chat",
+            }),
+          );
+        }
+        return true;
+      } catch {
+        toast.error(t("toast.moduleError"));
+        return false;
+      }
+    },
+    [loadedProject?.id, toast, t],
+  );
   const insertCollectionsSection = useCallback(() => {
     insertNonceRef.current += 1;
     const caption = tCollections("module.placeholderCaption");
@@ -3118,6 +3159,8 @@ function NewV2Inner() {
             onInsertCollectionsSection={insertCollectionsSection}
             whatsappSettings={loadedProject?.settings?.whatsapp}
             onUpdateWhatsappSettings={updateWhatsappSettings}
+            chatSettings={loadedProject?.settings?.chat}
+            onUpdateChatSettings={updateChatSettings}
             onCreateModulePage={createModulePage}
             onAddWhatsappSection={insertWhatsappSection}
             onShowLeads={() => setCenterView("messages")}

@@ -14,6 +14,7 @@ import { useTranslations } from "next-intl";
 import type {
   BookingsSettings,
   BroadcastSettings,
+  ChatSettings,
   CollectionsSettings,
   CommentsSettings,
   MembersSettings,
@@ -49,6 +50,8 @@ export interface ModulesViewProps {
   onInsertCollectionsSection?: () => void;
   whatsappSettings?: WhatsAppSettings;
   onUpdateWhatsappSettings?: (patch: WhatsAppSettings) => Promise<boolean>;
+  chatSettings?: ChatSettings;
+  onUpdateChatSettings?: (patch: ChatSettings) => Promise<boolean>;
   /** Create a dedicated, brand-matched page for a module (bookings/collections). */
   onCreateModulePage?: (module: "bookings" | "collections") => void | Promise<void>;
   /** Insert the designed WhatsApp CTA section into the home. */
@@ -97,6 +100,8 @@ export function ModulesView(props: ModulesViewProps) {
               onShowCollections={() => setSub("collections")}
               whatsappSettings={props.whatsappSettings}
               onUpdateWhatsapp={props.onUpdateWhatsappSettings}
+              chatSettings={props.chatSettings}
+              onUpdateChat={props.onUpdateChatSettings}
               onCreateModulePage={async (m) => {
                 await props.onCreateModulePage?.(m);
                 props.onReturnToCanvas?.();

@@ -110,5 +110,19 @@
     "createBookingPage": "Criar página de reservas",
     "createCatalogPage": "Criar página de catálogo",
     "addWhatsappSection": "Adicionar seção de WhatsApp"
+  },
+  "chat": {
+    "title": "Chat",
+    "tagline": "Private messaging for your page visitors",
+    "selfServeJoin": "Open registration",
+    "selfServeJoinHint": "Any visitor can create a chat username without an invite.",
+    "mount": {
+      "fab": "Button",
+      "section": "Section",
+      "both": "Both",
+      "fabHint": "A floating chat button appears in the corner of your published page.",
+      "sectionHint": "A chat inbox section is embedded in your page content.",
+      "bothHint": "Both a floating button and an embedded section are shown."
+    }
   }
 }

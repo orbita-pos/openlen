@@ -13,6 +13,7 @@ import { useTranslations } from "next-intl";
 import type {
   BookingsSettings,
   BroadcastSettings,
+  ChatSettings,
   CollectionsSettings,
   CommentsSettings,
   MembersSettings,
@@ -21,6 +22,7 @@ import type {
 import {
   BarChart3,
   Calendar,
+  ChatIcon,
   Grid3,
   Inbox,
   Loader,
@@ -74,6 +76,9 @@ interface ModulesPanelProps {
   /** WhatsApp button module — toggle + number + prefilled message. */
   whatsappSettings?: WhatsAppSettings;
   onUpdateWhatsapp?: (patch: WhatsAppSettings) => Promise<boolean>;
+  /** Private chat module — toggle + mount + self-serve. */
+  chatSettings?: ChatSettings;
+  onUpdateChat?: (patch: ChatSettings) => Promise<boolean>;
   /** Create a dedicated brand-matched page for the module (bookings/collections). */
   onCreateModulePage?: (module: "bookings" | "collections") => void | Promise<void>;
   /** Insert the designed WhatsApp CTA section into the home. */
@@ -105,6 +110,8 @@ export function ModulesPanel({
   onShowCollections,
   whatsappSettings,
   onUpdateWhatsapp,
+  chatSettings,
+  onUpdateChat,
   onCreateModulePage,
   onAddWhatsappSection,
   onShowLeads,
@@ -128,9 +135,13 @@ export function ModulesPanel({
   const bookingsReminders = bookingsSettings?.sendReminders !== false;
   const collectionsOn = collectionsSettings?.enabled === true;
   const whatsappOn = whatsappSettings?.enabled === true;
+  const chatOn = chatSettings?.enabled === true;
+  const chatMount = chatSettings?.mount ?? "both";
+  const chatSelfServe = chatSettings?.selfServeJoin !== false;
   const [waBusy, setWaBusy] = useState(false);
   const [waNumber, setWaNumber] = useState(whatsappSettings?.number ?? "");
   const [waMessage, setWaMessage] = useState(whatsappSettings?.message ?? "");
+  const [chatBusy, setChatBusy] = useState(false);
   const [busy, setBusy] = useState(false);
   const [bcastBusy, setBcastBusy] = useState(false);
   const [cmtBusy, setCmtBusy] = useState(false);
@@ -148,6 +159,7 @@ export function ModulesPanel({
     commentsOn,
     collectionsOn,
     whatsappOn,
+    chatOn,
   ].filter(Boolean).length;
 
   if (!currentProjectId) {
@@ -226,6 +238,12 @@ export function ModulesPanel({
   };
   const commitWhatsapp = () => {
     void updateWhatsapp({ number: waNumber.trim(), message: waMessage.trim() });
+  };
+  const updateChat = async (patch: ChatSettings) => {
+    if (chatBusy || !onUpdateChat) return;
+    setChatBusy(true);
+    await onUpdateChat(patch);
+    setChatBusy(false);
   };
 
   return (
@@ -474,6 +492,41 @@ export function ModulesPanel({
                   onClick={onAddWhatsappSection}
                 />
               )}
+            </div>
+          )}
+        </ModCard>
+
+        {/* Chat */}
+        <ModCard
+          icon={<ChatIcon size={18} />}
+          title={tw("chat.title")}
+          tagline={tw("chat.tagline")}
+          on={chatOn}
+          busy={chatBusy}
+          onToggle={() => void updateChat({ enabled: !chatOn })}
+        >
+          {chatOn && (
+            <div className="space-y-2">
+              <Segment
+                value={chatMount}
+                options={[
+                  { id: "fab", label: tw("chat.mount.fab") },
+                  { id: "section", label: tw("chat.mount.section") },
+                  { id: "both", label: tw("chat.mount.both") },
+                ]}
+                disabled={chatBusy}
+                onPick={(v) => void updateChat({ mount: v as "fab" | "section" | "both" })}
+              />
+              <p className="text-[11.5px] fg-faint leading-relaxed">
+                {tw(`chat.mount.${chatMount}Hint`)}
+              </p>
+              <ToggleRow
+                label={tw("chat.selfServeJoin")}
+                hint={tw("chat.selfServeJoinHint")}
+                checked={chatSelfServe}
+                disabled={chatBusy}
+                onChange={(v) => void updateChat({ selfServeJoin: v })}
+              />
             </div>
           )}
         </ModCard>
