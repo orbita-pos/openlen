@@ -82,6 +82,9 @@ export async function GET(
       let buffering = true;
 
       const emitEvent = (evt: HubEvent) => {
+        // Staff-only events (internal team routing) must never cross the
+        // visitor trust boundary — they carry platform user ids + account names.
+        if (evt.type === "assignment") return;
         if (evt.type === "message") {
           if (seen.has(evt.message.id)) return;
           seen.add(evt.message.id);

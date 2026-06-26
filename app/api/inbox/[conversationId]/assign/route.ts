@@ -33,6 +33,16 @@ export async function POST(
     // empty body → claim to self
   }
 
+  // userId, when present, must be a string or null — reject anything else
+  // before it reaches the DB layer (a non-string id would throw → 500).
+  if (
+    parsed.userId !== undefined &&
+    parsed.userId !== null &&
+    typeof parsed.userId !== "string"
+  ) {
+    return json({ error: "bad_request" }, 400);
+  }
+
   const { userId: callerId, projectId } = ctx;
 
   // Determine assignment target
