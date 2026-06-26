@@ -130,6 +130,9 @@
       "placeholder": "Email address",
       "remove": "Remove agent",
       "noAccount": "That email has no OpenLen account yet.",
+      "selfInvite": "You can't invite yourself.",
+      "inviteError": "Couldn't send the invite. Try again.",
+      "removeError": "Couldn't remove the agent.",
       "statusInvited": "Invited",
       "statusActive": "Active",
       "empty": "No agents yet — invite a teammate to help handle chats."

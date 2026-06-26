@@ -988,21 +988,17 @@ function AgentsList({
       });
       if (r.status === 404) {
         const d = (await r.json()) as { error?: string };
-        if (d.error === "no_account") {
-          setError(tw("chat.team.noAccount"));
-        } else {
-          setError(tw("chat.team.noAccount"));
-        }
+        setError(tw(d.error === "no_account" ? "chat.team.noAccount" : "chat.team.inviteError"));
       } else if (r.status === 400) {
-        setError(tw("chat.team.noAccount"));
+        setError(tw("chat.team.selfInvite"));
       } else if (!r.ok) {
-        setError(tw("chat.team.noAccount"));
+        setError(tw("chat.team.inviteError"));
       } else {
         setEmail("");
         load();
       }
     } catch {
-      setError(tw("chat.team.noAccount"));
+      setError(tw("chat.team.inviteError"));
     }
     setBusy(false);
   };
@@ -1014,6 +1010,9 @@ function AgentsList({
         method: "DELETE",
       });
       if (r.ok) load();
+      else setError(tw("chat.team.removeError"));
+    } catch {
+      setError(tw("chat.team.removeError"));
     } finally {
       setRemoving(null);
     }

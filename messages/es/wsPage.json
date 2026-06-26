@@ -130,6 +130,9 @@
       "placeholder": "Correo electrónico",
       "remove": "Eliminar agente",
       "noAccount": "Ese correo no tiene cuenta en OpenLen todavía.",
+      "selfInvite": "No puedes invitarte a ti mismo.",
+      "inviteError": "No se pudo invitar. Inténtalo de nuevo.",
+      "removeError": "No se pudo quitar al agente.",
       "statusInvited": "Invitado",
       "statusActive": "Activo",
       "empty": "Sin agentes todavía — invita a un compañero para atender los chats."
