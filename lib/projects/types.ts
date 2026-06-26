@@ -49,6 +49,8 @@ export interface ChatSettings {
   /** true (default) → any visitor can register a chat username.
    *  false → owner must invite (future). */
   selfServeJoin?: boolean;
+  /** Where the widget mounts on the published page. Default "both". */
+  mount?: "fab" | "section" | "both";
 }
 
 export interface MembersSettings {
