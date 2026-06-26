@@ -93,6 +93,14 @@
     "formError": "フォーム設定を保存できませんでした。",
     "analyticsEnabled": "アナリティクスを有効にしました",
     "analyticsDisabled": "アナリティクスを無効にしました",
-    "saveError": "変更を保存できませんでした。"
+    "saveError": "変更を保存できませんでした。",
+    "moduleWhatsapp": "WhatsApp"
+  },
+  "whatsapp": {
+    "title": "WhatsAppボタン",
+    "tagline": "公開ページに浮かぶWhatsAppボタン",
+    "numberPlaceholder": "電話番号（例: 5512345678）",
+    "messagePlaceholder": "定型メッセージ（任意）",
+    "note": "公開ページの右下に表示されます。10桁の番号はメキシコ（+52）として扱われます。"
   }
 }

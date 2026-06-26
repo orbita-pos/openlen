@@ -17,6 +17,7 @@ import type {
   CollectionsSettings,
   CommentsSettings,
   MembersSettings,
+  WhatsAppSettings,
 } from "@/lib/projects/types";
 import { ModulesPanel } from "./panels/modules-panel";
 import { BroadcastPanel } from "./panels/broadcast-panel";
@@ -46,6 +47,8 @@ export interface ModulesViewProps {
   collectionsSettings?: CollectionsSettings;
   onUpdateCollectionsSettings?: (patch: CollectionsSettings) => Promise<boolean>;
   onInsertCollectionsSection?: () => void;
+  whatsappSettings?: WhatsAppSettings;
+  onUpdateWhatsappSettings?: (patch: WhatsAppSettings) => Promise<boolean>;
   /** Jump to the account sections that already host these (center swap). */
   onShowLeads?: () => void;
   onShowAnalytics?: () => void;
@@ -88,6 +91,8 @@ export function ModulesView(props: ModulesViewProps) {
               onUpdateCollections={props.onUpdateCollectionsSettings}
               onInsertCollectionsSection={() => afterInsert(props.onInsertCollectionsSection)}
               onShowCollections={() => setSub("collections")}
+              whatsappSettings={props.whatsappSettings}
+              onUpdateWhatsapp={props.onUpdateWhatsappSettings}
               onShowLeads={props.onShowLeads}
               onShowAnalytics={props.onShowAnalytics}
               onShowAssistant={() => setSub("assistant")}

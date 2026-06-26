@@ -16,6 +16,7 @@ import type {
   CollectionsSettings,
   CommentsSettings,
   MembersSettings,
+  WhatsAppSettings,
 } from "@/lib/projects/types";
 import {
   BarChart3,
@@ -70,6 +71,9 @@ interface ModulesPanelProps {
   onUpdateCollections?: (patch: CollectionsSettings) => Promise<boolean>;
   onInsertCollectionsSection?: () => void;
   onShowCollections?: () => void;
+  /** WhatsApp button module — toggle + number + prefilled message. */
+  whatsappSettings?: WhatsAppSettings;
+  onUpdateWhatsapp?: (patch: WhatsAppSettings) => Promise<boolean>;
   onShowLeads?: () => void;
   onShowAnalytics?: () => void;
   onShowAssistant?: () => void;
@@ -95,6 +99,8 @@ export function ModulesPanel({
   onUpdateCollections,
   onInsertCollectionsSection,
   onShowCollections,
+  whatsappSettings,
+  onUpdateWhatsapp,
   onShowLeads,
   onShowAnalytics,
   onShowAssistant,
@@ -104,6 +110,7 @@ export function ModulesPanel({
   const tc = useTranslations("comments");
   const tbk = useTranslations("bookings");
   const tcol = useTranslations("collections");
+  const tw = useTranslations("wsPage");
   const enabled = membersSettings?.enabled === true;
   const mode = membersSettings?.mode === "invite" ? "invite" : "open";
   const broadcastOn = broadcastSettings?.enabled === true;
@@ -114,6 +121,10 @@ export function ModulesPanel({
   const bookingsAutoConfirm = bookingsSettings?.autoConfirm !== false;
   const bookingsReminders = bookingsSettings?.sendReminders !== false;
   const collectionsOn = collectionsSettings?.enabled === true;
+  const whatsappOn = whatsappSettings?.enabled === true;
+  const [waBusy, setWaBusy] = useState(false);
+  const [waNumber, setWaNumber] = useState(whatsappSettings?.number ?? "");
+  const [waMessage, setWaMessage] = useState(whatsappSettings?.message ?? "");
   const [busy, setBusy] = useState(false);
   const [bcastBusy, setBcastBusy] = useState(false);
   const [cmtBusy, setCmtBusy] = useState(false);
@@ -124,9 +135,14 @@ export function ModulesPanel({
   const [inserted, setInserted] = useState(false);
   const [autoPageSlug, setAutoPageSlug] = useState<string | null>(null);
 
-  const activeCount = [enabled, bookingsOn, broadcastOn, commentsOn, collectionsOn].filter(
-    Boolean,
-  ).length;
+  const activeCount = [
+    enabled,
+    bookingsOn,
+    broadcastOn,
+    commentsOn,
+    collectionsOn,
+    whatsappOn,
+  ].filter(Boolean).length;
 
   if (!currentProjectId) {
     return (
@@ -195,6 +211,15 @@ export function ModulesPanel({
     setColBusy(true);
     await onUpdateCollections(patch);
     setColBusy(false);
+  };
+  const updateWhatsapp = async (patch: WhatsAppSettings) => {
+    if (waBusy || !onUpdateWhatsapp) return;
+    setWaBusy(true);
+    await onUpdateWhatsapp(patch);
+    setWaBusy(false);
+  };
+  const commitWhatsapp = () => {
+    void updateWhatsapp({ number: waNumber.trim(), message: waMessage.trim() });
   };
 
   return (
@@ -388,6 +413,42 @@ export function ModulesPanel({
               manageLabel={tcol("module.manage")}
               note={tcol("module.noCharge")}
             />
+          )}
+        </ModCard>
+
+        {/* WhatsApp */}
+        <ModCard
+          icon={<MessageSq size={18} />}
+          title={tw("whatsapp.title")}
+          tagline={tw("whatsapp.tagline")}
+          on={whatsappOn}
+          busy={waBusy}
+          onToggle={() => void updateWhatsapp({ enabled: !whatsappOn })}
+        >
+          {whatsappOn && (
+            <div className="space-y-2">
+              <input
+                value={waNumber}
+                onChange={(e) => setWaNumber(e.target.value)}
+                onBlur={commitWhatsapp}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") (e.target as HTMLInputElement).blur();
+                }}
+                inputMode="tel"
+                maxLength={32}
+                placeholder={tw("whatsapp.numberPlaceholder")}
+                className="w-full bg-app ring-1 ring-[color:var(--border)] rounded-lg px-3 h-9 text-[13px] fg outline-none focus:ring-[color:var(--accent)] transition"
+              />
+              <input
+                value={waMessage}
+                onChange={(e) => setWaMessage(e.target.value)}
+                onBlur={commitWhatsapp}
+                maxLength={300}
+                placeholder={tw("whatsapp.messagePlaceholder")}
+                className="w-full bg-app ring-1 ring-[color:var(--border)] rounded-lg px-3 h-9 text-[13px] fg outline-none focus:ring-[color:var(--accent)] transition"
+              />
+              <p className="text-[10.5px] fg-faint leading-relaxed">{tw("whatsapp.note")}</p>
+            </div>
           )}
         </ModCard>
       </div>

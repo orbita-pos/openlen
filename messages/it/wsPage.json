@@ -93,6 +93,14 @@
     "formError": "Impossibile salvare le impostazioni del modulo.",
     "analyticsEnabled": "Statistiche attivate",
     "analyticsDisabled": "Statistiche disattivate",
-    "saveError": "Impossibile salvare la modifica."
+    "saveError": "Impossibile salvare la modifica.",
+    "moduleWhatsapp": "WhatsApp"
+  },
+  "whatsapp": {
+    "title": "Pulsante WhatsApp",
+    "tagline": "Un pulsante WhatsApp fluttuante sulla tua pagina",
+    "numberPlaceholder": "Numero (es. 5512345678)",
+    "messagePlaceholder": "Messaggio precompilato (facoltativo)",
+    "note": "Appare in basso a destra sulla pagina pubblicata. Un numero di 10 cifre è letto come Messico (+52)."
   }
 }

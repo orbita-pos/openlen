@@ -93,6 +93,14 @@
     "formError": "Não foi possível salvar as configurações do formulário.",
     "analyticsEnabled": "Analytics ativado",
     "analyticsDisabled": "Analytics desativado",
-    "saveError": "Não foi possível salvar a alteração."
+    "saveError": "Não foi possível salvar a alteração.",
+    "moduleWhatsapp": "WhatsApp"
+  },
+  "whatsapp": {
+    "title": "Botão de WhatsApp",
+    "tagline": "Um botão flutuante de WhatsApp na sua página",
+    "numberPlaceholder": "Número (ex. 5512345678)",
+    "messagePlaceholder": "Mensagem pré-escrita (opcional)",
+    "note": "Aparece no canto inferior direito ao publicar. Um número de 10 dígitos é lido como México (+52)."
   }
 }

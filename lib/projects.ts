@@ -831,6 +831,9 @@ export async function publishProject(
         ? { enabled: true }
         : undefined,
       collections: collectionsBake,
+      whatsapp: project.data?.settings?.whatsapp?.enabled
+        ? project.data.settings.whatsapp
+        : undefined,
       pages: publicPages,
       gatedPages: gatedPages.length > 0 ? gatedPages : undefined,
       memberSigninPath,

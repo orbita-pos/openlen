@@ -93,6 +93,14 @@
     "formError": "Enregistrement des réglages du formulaire impossible.",
     "analyticsEnabled": "Statistiques activées",
     "analyticsDisabled": "Statistiques désactivées",
-    "saveError": "Impossible d'enregistrer la modification."
+    "saveError": "Impossible d'enregistrer la modification.",
+    "moduleWhatsapp": "WhatsApp"
+  },
+  "whatsapp": {
+    "title": "Bouton WhatsApp",
+    "tagline": "Un bouton WhatsApp flottant sur votre page",
+    "numberPlaceholder": "Numéro (ex. 5512345678)",
+    "messagePlaceholder": "Message pré-rempli (facultatif)",
+    "note": "S'affiche en bas à droite sur votre page publiée. Un numéro à 10 chiffres est lu comme le Mexique (+52)."
   }
 }

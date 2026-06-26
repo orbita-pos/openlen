@@ -93,6 +93,14 @@
     "formError": "无法保存表单设置。",
     "analyticsEnabled": "已启用分析",
     "analyticsDisabled": "已停用分析",
-    "saveError": "无法保存更改。"
+    "saveError": "无法保存更改。",
+    "moduleWhatsapp": "WhatsApp"
+  },
+  "whatsapp": {
+    "title": "WhatsApp 按钮",
+    "tagline": "在你发布的页面上浮动的 WhatsApp 按钮",
+    "numberPlaceholder": "电话号码（例如 5512345678）",
+    "messagePlaceholder": "预填消息（可选）",
+    "note": "显示在已发布页面的右下角。10 位号码会被识别为墨西哥（+52）。"
   }
 }

@@ -93,6 +93,14 @@
     "formError": "Couldn't save form settings.",
     "analyticsEnabled": "Analytics enabled",
     "analyticsDisabled": "Analytics disabled",
-    "saveError": "Couldn't save the change."
+    "saveError": "Couldn't save the change.",
+    "moduleWhatsapp": "WhatsApp"
+  },
+  "whatsapp": {
+    "title": "WhatsApp button",
+    "tagline": "A floating tap-to-chat button on your page",
+    "numberPlaceholder": "Phone number (e.g. 5512345678)",
+    "messagePlaceholder": "Prefilled message (optional)",
+    "note": "Shows bottom-right on your published page. A 10-digit number is read as Mexico (+52)."
   }
 }

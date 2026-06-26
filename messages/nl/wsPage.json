@@ -93,6 +93,14 @@
     "formError": "Kon de formulierinstellingen niet opslaan.",
     "analyticsEnabled": "Analytics ingeschakeld",
     "analyticsDisabled": "Analytics uitgeschakeld",
-    "saveError": "Kon de wijziging niet opslaan."
+    "saveError": "Kon de wijziging niet opslaan.",
+    "moduleWhatsapp": "WhatsApp"
+  },
+  "whatsapp": {
+    "title": "WhatsApp-knop",
+    "tagline": "Een zwevende WhatsApp-knop op je pagina",
+    "numberPlaceholder": "Nummer (bijv. 5512345678)",
+    "messagePlaceholder": "Vooraf ingevuld bericht (optioneel)",
+    "note": "Verschijnt rechtsonder op je gepubliceerde pagina. Een 10-cijferig nummer wordt gelezen als Mexico (+52)."
   }
 }

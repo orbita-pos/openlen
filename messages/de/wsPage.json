@@ -93,6 +93,14 @@
     "formError": "Die Formulareinstellungen konnten nicht gespeichert werden.",
     "analyticsEnabled": "Analytics aktiviert",
     "analyticsDisabled": "Analytics deaktiviert",
-    "saveError": "Die Änderung konnte nicht gespeichert werden."
+    "saveError": "Die Änderung konnte nicht gespeichert werden.",
+    "moduleWhatsapp": "WhatsApp"
+  },
+  "whatsapp": {
+    "title": "WhatsApp-Button",
+    "tagline": "Ein schwebender WhatsApp-Button auf deiner Seite",
+    "numberPlaceholder": "Nummer (z. B. 5512345678)",
+    "messagePlaceholder": "Vorausgefüllte Nachricht (optional)",
+    "note": "Erscheint unten rechts auf der veröffentlichten Seite. Eine 10-stellige Nummer wird als Mexiko (+52) gelesen."
   }
 }

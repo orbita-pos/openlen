@@ -93,6 +93,14 @@
     "formError": "No se pudieron guardar los ajustes del formulario.",
     "analyticsEnabled": "Analíticas activadas",
     "analyticsDisabled": "Analíticas desactivadas",
-    "saveError": "No se pudo guardar el cambio."
+    "saveError": "No se pudo guardar el cambio.",
+    "moduleWhatsapp": "WhatsApp"
+  },
+  "whatsapp": {
+    "title": "Botón de WhatsApp",
+    "tagline": "Un botón flotante de WhatsApp en tu página",
+    "numberPlaceholder": "Número (ej. 5512345678)",
+    "messagePlaceholder": "Mensaje pre-escrito (opcional)",
+    "note": "Aparece abajo-derecha al publicar. Un número de 10 dígitos se toma como México (+52)."
   }
 }

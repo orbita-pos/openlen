@@ -24,6 +24,7 @@ import { bakeAssistantWidget } from "@/lib/publish/assistant-widget";
 import { bakeComments } from "@/lib/publish/comments-widget";
 import { bakeBookings } from "@/lib/publish/bookings-widget";
 import { bakeCollections } from "@/lib/publish/collections-block";
+import { bakeWhatsAppButton } from "@/lib/publish/whatsapp-button";
 import { bakeVideoEmbeds, bakeMediaPreconnect } from "@/lib/publish/video-embed";
 import { bakeCarousels } from "@/lib/publish/carousel";
 import type { ItemRow } from "@/lib/collections/store";
@@ -44,7 +45,11 @@ import { buildGateStub, wireMemberLogout } from "@/lib/members/gate-stub";
 import { applySigninLink, signinLabelFor } from "@/lib/publish/signin-link";
 import { detectSiteAccent } from "@/lib/members/site-accent";
 import { validatePageSlug } from "@/lib/projects/site-pages";
-import type { FormConfig, MusicSettings } from "@/lib/projects/types";
+import type {
+  FormConfig,
+  MusicSettings,
+  WhatsAppSettings,
+} from "@/lib/projects/types";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Publish-to-disk primitives — versioned releases + `current` symlink.
@@ -189,6 +194,11 @@ export interface PublishParams {
    *  data-ol-collection-section placeholder, or appended before </body>. No
    *  runtime API — re-baked from the DB on every publish. */
   collections?: { enabled: boolean; items: ItemRow[]; layout: "grid" | "list" };
+  /** WhatsApp button (settings.whatsapp). When enabled with a usable number, a
+   *  floating tap-to-chat FAB is baked on the root doc + every page/locale
+   *  variant — suppressed if the page already carries the profile contact
+   *  widget (no double FAB). */
+  whatsapp?: WhatsAppSettings;
   /** Members module: pages that publish as a login STUB at their public path
    *  while the REAL document (full bake chain + seal) is written OUTSIDE the
    *  release — <sub>/protected/<sha>/<slug>/index.html, unreachable by the
@@ -466,6 +476,9 @@ interface BakeDocumentCtx {
   /** Collections module. When enabled, the owner's item list is baked as STATIC
    *  HTML (grid/list of cards) at the placeholder, or appended. */
   collections?: { enabled: boolean; items: ItemRow[]; layout: "grid" | "list" };
+  /** WhatsApp button. When enabled with a usable number, a floating FAB is baked
+   *  (suppressed if the profile contact widget is already present). */
+  whatsapp?: WhatsAppSettings;
 }
 
 interface AssistantBake {
@@ -704,6 +717,28 @@ async function bakeDocument(
     }
   }
 
+  // WhatsApp tap-to-chat FAB (settings.whatsapp). Pure HTML/CSS, before the
+  // seal. Self-suppresses if the profile contact widget is already on the page.
+  if (process.env.OPENLEN_WHATSAPP !== "0" && ctx.whatsapp?.enabled && ctx.whatsapp.number) {
+    try {
+      // Stack ABOVE another widget that owns the same bottom corner so neither
+      // is occluded: the site-assistant button (right), the music player (left).
+      const waSide = ctx.whatsapp.side === "left" ? "left" : "right";
+      const cornerTaken =
+        (waSide === "right" && ctx.assistant?.enabled === true) ||
+        (waSide === "left" && !!ctx.music?.src);
+      migratedHtml = bakeWhatsAppButton(migratedHtml, {
+        number: ctx.whatsapp.number,
+        message: ctx.whatsapp.message,
+        side: ctx.whatsapp.side,
+        bottomPx: cornerTaken ? 86 : 18,
+      });
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.warn("[publishToDir] whatsapp button bake failed; publishing without it", err);
+    }
+  }
+
   // Social meta must be ABSOLUTE for crawlers — re-absolutize any og:image /
   // twitter:image / og:url that an asset migration above relativized (e.g. an
   // Unsplash hero og:image → /assets/<hash>.webp). No-op for the hosted-PNG
@@ -818,6 +853,7 @@ export async function publishToDir(
     comments: params.comments,
     bookings: params.bookings,
     collections: params.collections,
+    whatsapp: params.whatsapp,
   };
   let migratedHtml = await bakeDocument(publishHtml, bakeCtx);
 

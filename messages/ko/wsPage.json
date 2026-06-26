@@ -93,6 +93,14 @@
     "formError": "양식 설정을 저장하지 못했습니다.",
     "analyticsEnabled": "분석을 켰습니다",
     "analyticsDisabled": "분석을 껐습니다",
-    "saveError": "변경 사항을 저장하지 못했습니다."
+    "saveError": "변경 사항을 저장하지 못했습니다.",
+    "moduleWhatsapp": "WhatsApp"
+  },
+  "whatsapp": {
+    "title": "WhatsApp 버튼",
+    "tagline": "게시된 페이지에 떠 있는 WhatsApp 버튼",
+    "numberPlaceholder": "전화번호 (예: 5512345678)",
+    "messagePlaceholder": "미리 입력된 메시지 (선택)",
+    "note": "게시된 페이지 오른쪽 아래에 표시됩니다. 10자리 번호는 멕시코(+52)로 인식됩니다."
   }
 }

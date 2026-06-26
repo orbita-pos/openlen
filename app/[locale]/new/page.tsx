@@ -28,6 +28,7 @@ import type {
   MusicSettings,
   ProjectSettings,
   StoredChatTurn,
+  WhatsAppSettings,
 } from "@/lib/projects/types";
 import { BusinessProfileModal } from "@/components/workspace-v2/business-profile-modal";
 import type { BusinessProfile } from "@/lib/business-profiles/types";
@@ -2681,6 +2682,47 @@ function NewV2Inner() {
     },
     [loadedProject?.id, toast, t],
   );
+  const updateWhatsappSettings = useCallback(
+    async (patch: WhatsAppSettings): Promise<boolean> => {
+      const projectId = loadedProject?.id;
+      if (!projectId) return false;
+      try {
+        const r = await fetch(`/api/projects/${projectId}/settings`, {
+          method: "PATCH",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ whatsapp: patch }),
+        });
+        if (!r.ok) {
+          toast.error(t("toast.moduleError"));
+          return false;
+        }
+        setLoadedProject((p) =>
+          p
+            ? {
+                ...p,
+                settings: {
+                  ...p.settings,
+                  whatsapp: { ...p.settings?.whatsapp, ...patch },
+                },
+              }
+            : p,
+        );
+        if (typeof patch.enabled === "boolean") {
+          const moduleName = t("toast.moduleWhatsapp");
+          toast.success(
+            t(patch.enabled ? "toast.moduleEnabled" : "toast.moduleDisabled", {
+              module: moduleName,
+            }),
+          );
+        }
+        return true;
+      } catch {
+        toast.error(t("toast.moduleError"));
+        return false;
+      }
+    },
+    [loadedProject?.id, toast, t],
+  );
   const insertCollectionsSection = useCallback(() => {
     insertNonceRef.current += 1;
     const caption = tCollections("module.placeholderCaption");
@@ -3029,6 +3071,8 @@ function NewV2Inner() {
             collectionsSettings={loadedProject?.settings?.collections}
             onUpdateCollectionsSettings={updateCollectionsSettings}
             onInsertCollectionsSection={insertCollectionsSection}
+            whatsappSettings={loadedProject?.settings?.whatsapp}
+            onUpdateWhatsappSettings={updateWhatsappSettings}
             onShowLeads={() => setCenterView("messages")}
             onShowAnalytics={() => setCenterView("analytics")}
             onReturnToCanvas={() => setCenterView("page")}

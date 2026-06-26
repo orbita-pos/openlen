@@ -112,6 +112,23 @@ export interface CollectionsSettings {
   enabled?: boolean;
 }
 
+/** WhatsApp button module — a floating tap-to-chat FAB baked on the published
+ *  page. Distinct from the business-profile contact widget (which seeds a full
+ *  contact stack at create time from "Mi negocio"): this is a per-page,
+ *  publish-time toggle that needs no profile. When the page already carries the
+ *  profile contact widget, this is suppressed at bake so there's no double FAB. */
+export interface WhatsAppSettings {
+  /** Master switch. Absent/false → nothing baked. */
+  enabled?: boolean;
+  /** Phone number (any format; non-digits stripped). A 10-digit number is
+   *  assumed Mexico → +52. Absent/empty → nothing baked even if enabled. */
+  number?: string;
+  /** Optional prefilled message (wa.me `?text=`). */
+  message?: string;
+  /** Corner the FAB sits in. Default "right". */
+  side?: "left" | "right";
+}
+
 /** Project-level settings that aren't part of the HTML document. */
 export interface ProjectSettings {
   /** Per-form config, keyed by the form's index — its position among all
@@ -145,6 +162,8 @@ export interface ProjectSettings {
   bookings?: BookingsSettings;
   /** Collections module: owner-managed item lists rendered on the page. Absent = off. */
   collections?: CollectionsSettings;
+  /** WhatsApp button: a floating tap-to-chat FAB baked at publish. Absent = off. */
+  whatsapp?: WhatsAppSettings;
 }
 
 /** One additional page of a multi-page site. The home page stays at

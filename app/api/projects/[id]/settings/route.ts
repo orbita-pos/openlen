@@ -73,6 +73,13 @@ interface PatchBody {
   };
   /** Collections module switch. Merged into settings.collections. */
   collections?: { enabled?: boolean };
+  /** WhatsApp button. Merged into settings.whatsapp. Takes effect next publish. */
+  whatsapp?: {
+    enabled?: boolean;
+    number?: string;
+    message?: string;
+    side?: "left" | "right";
+  };
 }
 
 function clean(v: unknown, max: number): string {
@@ -233,6 +240,25 @@ export async function PATCH(
       return json({ error: "invalid_body", message: "collections.enabled must be boolean" }, 400);
     }
   }
+  const hasWhatsapp = "whatsapp" in body;
+  if (hasWhatsapp) {
+    const w = body.whatsapp;
+    if (!w || typeof w !== "object") {
+      return json({ error: "invalid_body", message: "whatsapp must be an object" }, 400);
+    }
+    if ("enabled" in w && typeof w.enabled !== "boolean") {
+      return json({ error: "invalid_body", message: "whatsapp.enabled must be boolean" }, 400);
+    }
+    if ("number" in w && w.number !== undefined && (typeof w.number !== "string" || w.number.length > 32)) {
+      return json({ error: "invalid_body", message: "whatsapp.number must be a string ≤32 chars" }, 400);
+    }
+    if ("message" in w && w.message !== undefined && (typeof w.message !== "string" || w.message.length > 300)) {
+      return json({ error: "invalid_body", message: "whatsapp.message must be a string ≤300 chars" }, 400);
+    }
+    if ("side" in w && w.side !== undefined && w.side !== "left" && w.side !== "right") {
+      return json({ error: "invalid_body", message: "whatsapp.side must be left|right" }, 400);
+    }
+  }
   if (
     !hasFormPatch &&
     !hasAnalyticsToggle &&
@@ -242,13 +268,14 @@ export async function PATCH(
     !hasBroadcast &&
     !hasComments &&
     !hasBookings &&
-    !hasCollections
+    !hasCollections &&
+    !hasWhatsapp
   ) {
     return json(
       {
         error: "invalid_body",
         message:
-          "expected formIndex+patch OR analyticsDisabled OR motion OR music OR members OR broadcast OR comments OR bookings OR collections",
+          "expected formIndex+patch OR analyticsDisabled OR motion OR music OR members OR broadcast OR comments OR bookings OR collections OR whatsapp",
       },
       400,
     );
@@ -401,6 +428,16 @@ export async function PATCH(
     nextSettings.collections = {
       ...(data.settings?.collections ?? {}),
       ...("enabled" in body.collections ? { enabled: body.collections.enabled } : {}),
+    };
+  }
+  if (hasWhatsapp && body.whatsapp) {
+    const w = body.whatsapp;
+    nextSettings.whatsapp = {
+      ...(data.settings?.whatsapp ?? {}),
+      ...("enabled" in w ? { enabled: w.enabled } : {}),
+      ...("number" in w ? { number: (w.number ?? "").trim() } : {}),
+      ...("message" in w ? { message: (w.message ?? "").trim() } : {}),
+      ...("side" in w ? { side: w.side } : {}),
     };
   }
 
