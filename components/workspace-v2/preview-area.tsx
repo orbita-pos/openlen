@@ -314,18 +314,50 @@ export function PreviewArea({
   const musicRef = useRef(musicMsg);
   musicRef.current = musicMsg;
 
+  // Section-insert plumbing. The fragment must land only AFTER the iframe
+  // runtime is listening — on a fresh PreviewArea mount (e.g. returning from the
+  // Modules view, which unmounts this component) the iframe is still loading, so
+  // a message posted the instant contentWindow exists is silently dropped. We
+  // gate the post on readiness and (re)flush it from the iframe-ready handler.
+  const lastInsertNonce = useRef<number>(0);
+  const iframeReadyRef = useRef(false);
+  const insertReqRef = useRef(insertRequest);
+  insertReqRef.current = insertRequest;
+  const flushInsert = useRef<() => void>(() => {});
+  flushInsert.current = () => {
+    const req = insertReqRef.current;
+    if (!req || req.nonce === lastInsertNonce.current) return;
+    const win = iframeLocalRef.current?.contentWindow;
+    if (!win) return;
+    lastInsertNonce.current = req.nonce;
+    // Don't let the resulting html-changed reload the iframe (it would blank to
+    // white); the section is injected into the live DOM directly.
+    skipInsertReloadRef.current = true;
+    win.postMessage(
+      {
+        type: "openlen:section-insert",
+        html: req.html,
+        sectionType: req.sectionType,
+        anchorPath: req.anchorPath,
+      },
+      "*",
+    );
+  };
+
   // On iframe ready (fresh load, or post-srcDoc-change reload), push the
-  // current mode + motion + music state so the iframe matches the parent
-  // immediately.
+  // current mode + motion + music state so the iframe matches the parent — and
+  // flush any pending section-insert that arrived before the runtime listened.
   useEffect(() => {
     const onMessage = (e: MessageEvent) => {
       if (!e.data || typeof e.data !== "object") return;
       if (e.data.type !== "openlen:iframe-ready") return;
       const win = iframeLocalRef.current?.contentWindow;
       if (!win) return;
+      iframeReadyRef.current = true;
       win.postMessage({ type: "openlen:set-mode", ...modesRef.current }, "*");
       win.postMessage(motionRef.current, "*");
       win.postMessage(musicRef.current, "*");
+      flushInsert.current();
     };
     window.addEventListener("message", onMessage);
     return () => window.removeEventListener("message", onMessage);
@@ -341,28 +373,11 @@ export function PreviewArea({
     iframeLocalRef.current?.contentWindow?.postMessage(musicMsg, "*");
   }, [musicMsg]);
 
-  // Section-insert — when the parent bumps the request nonce (user clicked
-  // Insert in the Library tab), post the fragment into the live iframe. The
-  // injected script (use-section-insert.ts) drops it in and posts the changed
-  // HTML back through the normal openlen:html-changed save path.
-  const lastInsertNonce = useRef<number>(0);
+  // When the parent bumps the insert nonce: post now if the iframe is already
+  // ready (Library-tab insert while on the canvas); otherwise defer — the
+  // iframe-ready handler flushes it once the runtime is listening.
   useEffect(() => {
-    if (!insertRequest || insertRequest.nonce === lastInsertNonce.current) return;
-    const iframe = iframeLocalRef.current;
-    if (!iframe?.contentWindow) return;
-    lastInsertNonce.current = insertRequest.nonce;
-    // Don't let the resulting html-changed reload the iframe (it would blank to
-    // white); the section is injected into the live DOM directly.
-    skipInsertReloadRef.current = true;
-    iframe.contentWindow.postMessage(
-      {
-        type: "openlen:section-insert",
-        html: insertRequest.html,
-        sectionType: insertRequest.sectionType,
-        anchorPath: insertRequest.anchorPath,
-      },
-      "*",
-    );
+    if (iframeReadyRef.current) flushInsert.current();
   }, [insertRequest]);
 
   // Undo-of-insert — mirror of the insert effect. The iframe removes the

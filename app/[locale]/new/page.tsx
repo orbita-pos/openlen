@@ -2592,17 +2592,21 @@ function NewV2Inner() {
   // publish bake swaps it for the live widget. The drop engine lets the
   // creator drag it where they want.
   const insertCommentsSection = useCallback(() => {
+    // Match the PAGE's language (es/en from <html lang>), not the UI locale, so
+    // the band copy reads in the visitor's language. Same split the pages API uses.
+    const lang = /<html[^>]*\blang=["']?es/i.test(loadedProject?.html ?? "") ? "es" : "en";
     insertNonceRef.current += 1;
     setInsertRequest({
-      html: buildModuleSection("comments", { lang: locale }),
+      html: buildModuleSection("comments", { lang }),
       nonce: insertNonceRef.current,
       sectionType: "comments",
     });
-  }, [locale]);
+  }, [loadedProject?.html]);
   const insertWhatsappSection = useCallback(() => {
     const wa = loadedProject?.settings?.whatsapp;
+    const lang = /<html[^>]*\blang=["']?es/i.test(loadedProject?.html ?? "") ? "es" : "en";
     const html = buildModuleSection("whatsapp", {
-      lang: locale,
+      lang,
       whatsapp: { number: wa?.number, message: wa?.message },
     });
     if (!html) {
@@ -2611,7 +2615,7 @@ function NewV2Inner() {
     }
     insertNonceRef.current += 1;
     setInsertRequest({ html, nonce: insertNonceRef.current, sectionType: "whatsapp" });
-  }, [locale, loadedProject?.settings?.whatsapp, toast, t]);
+  }, [loadedProject?.html, loadedProject?.settings?.whatsapp, toast, t]);
   const createModulePage = useCallback(
     async (module: "bookings" | "collections"): Promise<void> => {
       const id = loadedProject?.id;
