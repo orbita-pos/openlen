@@ -111,6 +111,14 @@ public/openlen-images/*.webp
 /templates/draft/
 /templates-draft/
 /templates/drafts/
+# Leftover SOURCE copies of templates ALREADY registered in the DB gallery (R2).
+# The 3 seeded starter HTMLs (mirror/manuscript/counter) + manifest.ts stay tracked;
+# every other *.html dropped here is an already-"metido" template's local copy —
+# NOT pending registration. Ignored so the dirty tree doesn't look like ~149 un-added templates.
+/templates/starter/*.html
+!/templates/starter/mirror.html
+!/templates/starter/manuscript.html
+!/templates/starter/counter.html
 *.tar.gz
 /tests/visual/corpus/templates/
 /tests/visual/corpus/sections/
