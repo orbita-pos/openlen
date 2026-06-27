@@ -145,9 +145,18 @@ export function ModulesPanel({
   const [waMessage, setWaMessage] = useState(whatsappSettings?.message ?? "");
   const [chatBusy, setChatBusy] = useState(false);
   const [chatWelcomeLocal, setChatWelcomeLocal] = useState(chatSettings?.welcome ?? "");
-  const [chatQRs, setChatQRs] = useState<{ q: string; a: string }[]>(chatSettings?.quickReplies ?? []);
+  const [chatQRs, setChatQRs] = useState<{ _key: string; q: string; a: string }[]>(
+    (chatSettings?.quickReplies ?? []).map(r => ({ _key: crypto.randomUUID(), q: r.q, a: r.a }))
+  );
   const [busy, setBusy] = useState(false);
   const [bcastBusy, setBcastBusy] = useState(false);
+
+  // Fix 3: resync chat local state when the active project changes
+  useEffect(() => {
+    setChatWelcomeLocal(chatSettings?.welcome ?? "");
+    setChatQRs((chatSettings?.quickReplies ?? []).map(r => ({ _key: crypto.randomUUID(), q: r.q, a: r.a })));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentProjectId]);
   const [cmtBusy, setCmtBusy] = useState(false);
   const [bkBusy, setBkBusy] = useState(false);
   const [bkInserted, setBkInserted] = useState(false);
@@ -542,12 +551,13 @@ export function ModulesPanel({
                 <div className="text-[12px] font-medium fg-muted">{tw("chat.welcome")}</div>
                 <input
                   value={chatWelcomeLocal}
+                  disabled={chatBusy}
                   onChange={(e) => setChatWelcomeLocal(e.target.value)}
                   onBlur={(e) => void updateChat({ welcome: e.target.value })}
                   onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }}
                   maxLength={200}
                   placeholder={tw("chat.welcomePlaceholder")}
-                  className="w-full bg-app ring-1 ring-[color:var(--border)] rounded-lg px-3 h-9 text-[13px] fg outline-none focus:ring-[color:var(--accent)] transition"
+                  className="w-full bg-app ring-1 ring-[color:var(--border)] rounded-lg px-3 h-9 text-[13px] fg outline-none focus:ring-[color:var(--accent)] transition disabled:opacity-50"
                 />
               </div>
               <div className="space-y-1">
@@ -565,38 +575,41 @@ export function ModulesPanel({
               <div className="space-y-1.5">
                 <div className="text-[12px] font-medium fg-muted">{tw("chat.quickReplies")}</div>
                 {chatQRs.map((qr, i) => (
-                  <div key={i} className="flex items-center gap-1.5">
+                  <div key={qr._key} className="flex items-center gap-1.5">
                     <input
                       value={qr.q}
+                      disabled={chatBusy}
                       onChange={(e) => {
                         const next = chatQRs.map((r, j) => j === i ? { ...r, q: e.target.value } : r);
                         setChatQRs(next);
-                        void updateChat({ quickReplies: next });
+                        void updateChat({ quickReplies: next.map(({ q, a }) => ({ q, a })) });
                       }}
                       placeholder={tw("chat.qrQ")}
                       maxLength={50}
-                      className="flex-1 min-w-0 bg-app ring-1 ring-[color:var(--border)] rounded-lg px-2.5 h-8 text-[12px] fg outline-none focus:ring-[color:var(--accent)] transition"
+                      className="flex-1 min-w-0 bg-app ring-1 ring-[color:var(--border)] rounded-lg px-2.5 h-8 text-[12px] fg outline-none focus:ring-[color:var(--accent)] transition disabled:opacity-50"
                     />
                     <input
                       value={qr.a}
+                      disabled={chatBusy}
                       onChange={(e) => {
                         const next = chatQRs.map((r, j) => j === i ? { ...r, a: e.target.value } : r);
                         setChatQRs(next);
-                        void updateChat({ quickReplies: next });
+                        void updateChat({ quickReplies: next.map(({ q, a }) => ({ q, a })) });
                       }}
                       placeholder={tw("chat.qrA")}
                       maxLength={300}
-                      className="flex-1 min-w-0 bg-app ring-1 ring-[color:var(--border)] rounded-lg px-2.5 h-8 text-[12px] fg outline-none focus:ring-[color:var(--accent)] transition"
+                      className="flex-1 min-w-0 bg-app ring-1 ring-[color:var(--border)] rounded-lg px-2.5 h-8 text-[12px] fg outline-none focus:ring-[color:var(--accent)] transition disabled:opacity-50"
                     />
                     <button
                       type="button"
                       aria-label="Remove"
+                      disabled={chatBusy}
                       onClick={() => {
                         const next = chatQRs.filter((_, j) => j !== i);
                         setChatQRs(next);
-                        void updateChat({ quickReplies: next });
+                        void updateChat({ quickReplies: next.map(({ q, a }) => ({ q, a })) });
                       }}
-                      className="shrink-0 h-8 w-8 inline-flex items-center justify-center rounded-lg fg-faint hover:text-red-500 hover:bg-hover transition"
+                      className="shrink-0 h-8 w-8 inline-flex items-center justify-center rounded-lg fg-faint hover:text-red-500 hover:bg-hover transition disabled:opacity-40"
                     >
                       <Trash size={12} />
                     </button>
@@ -604,10 +617,10 @@ export function ModulesPanel({
                 ))}
                 <button
                   type="button"
-                  disabled={chatQRs.length >= 6}
+                  disabled={chatBusy || chatQRs.length >= 6}
                   onClick={() => {
                     if (chatQRs.length >= 6) return;
-                    setChatQRs([...chatQRs, { q: "", a: "" }]);
+                    setChatQRs([...chatQRs, { _key: crypto.randomUUID(), q: "", a: "" }]);
                   }}
                   className="h-7 px-3 rounded-lg text-[12px] font-medium fg-muted hover:fg bg-app ring-1 ring-[color:var(--border)] hover:bg-hover transition disabled:opacity-40"
                 >
