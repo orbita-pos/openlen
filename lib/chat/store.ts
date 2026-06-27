@@ -11,7 +11,7 @@ import {
   generateSessionToken,
   hashSessionToken,
 } from "@/lib/chat/session";
-import { deriveOwnerUsername, hashPassword } from "@/lib/chat/identity";
+import { deriveOwnerUsername, hashPassword, isValidUsername } from "@/lib/chat/identity";
 
 const SEARCH_LIMIT = 12;
 const CONVO_LIMIT = 200;
@@ -77,6 +77,75 @@ export async function getChatUserByUsername(projectId: string, username: string)
     .limit(1);
   return rows[0] ?? null;
 }
+
+// ─── Passwordless guest + member-linked identity helpers ─────────────────────
+
+function slugifyHandle(raw: string): string {
+  const base = (raw || "")
+    .toLowerCase()
+    .normalize("NFD").replace(/[̀-ͯ]/g, "") // strip accents
+    .replace(/[^a-z0-9_]+/g, "_").replace(/_+/g, "_").replace(/^_+|_+$/g, "")
+    .slice(0, 12);
+  return /^[a-z]/.test(base) ? base : "u" + base; // must start with a letter
+}
+
+export async function generateUniqueUsername(projectId: string, base: string): Promise<string> {
+  const root = slugifyHandle(base) || "invitado";
+  for (let i = 0; i < 6; i++) {
+    const suffix = Math.floor(Math.random() * 0x100000).toString(36); // up to ~4 chars
+    const candidate = `${root}_${suffix}`.slice(0, 20);
+    if (!isValidUsername(candidate)) continue;
+    const exists = await getChatUserByUsername(projectId, candidate);
+    if (!exists) return candidate;
+  }
+  // last resort: time-free deterministic-ish fallback that's still unique-checked
+  const fallback = `invitado_${Math.floor(Math.random() * 0x10000000).toString(36)}`.slice(0, 20);
+  return fallback;
+}
+
+export async function createGuestChatUser(
+  projectId: string,
+  opts: { displayName: string; email?: string | null },
+): Promise<{ id: string }> {
+  const username = await generateUniqueUsername(projectId, opts.displayName || "invitado");
+  const rows = await db
+    .insert(schema.chatUsers)
+    .values({
+      projectId, username, passwordHash: null,
+      displayName: opts.displayName, email: opts.email ?? null, role: "member",
+    })
+    .returning({ id: schema.chatUsers.id });
+  return { id: rows[0].id };
+}
+
+export async function getChatUserByMemberId(projectId: string, memberId: string): Promise<{ id: string } | null> {
+  const rows = await db
+    .select({ id: schema.chatUsers.id })
+    .from(schema.chatUsers)
+    .where(and(eq(schema.chatUsers.projectId, projectId), eq(schema.chatUsers.memberId, memberId)))
+    .limit(1);
+  return rows[0] ?? null;
+}
+
+export async function findOrCreateMemberChatUser(
+  projectId: string,
+  member: { id: string; name: string | null; email: string },
+): Promise<{ id: string }> {
+  const existing = await getChatUserByMemberId(projectId, member.id);
+  if (existing) return existing;
+  const display = (member.name && member.name.trim()) || member.email.split("@")[0];
+  const username = await generateUniqueUsername(projectId, member.name || member.email.split("@")[0]);
+  const rows = await db
+    .insert(schema.chatUsers)
+    .values({
+      projectId, username, passwordHash: null, memberId: member.id,
+      displayName: display, email: member.email, role: "member",
+    })
+    .returning({ id: schema.chatUsers.id });
+  return { id: rows[0].id };
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 
 export async function getChatUserById(id: string): Promise<ChatUserRow | null> {
   const rows = await db.select(USER_COLS).from(schema.chatUsers).where(eq(schema.chatUsers.id, id)).limit(1);

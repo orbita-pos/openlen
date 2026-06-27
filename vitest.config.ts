@@ -17,6 +17,7 @@ export default defineConfig({
     },
   },
   test: {
+    globalSetup: ["./vitest.global-setup.ts"],
     environment: "jsdom",
     include: [
       "components/workspace-v2/**/*.test.ts",
