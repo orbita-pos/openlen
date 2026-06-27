@@ -167,16 +167,25 @@ export async function scheduleNotification(
 /**
  * Claim and process a single notification job.
  *
- * The UPDATE → RETURNING is the atomic claim: two concurrent workers calling
- * runJob with the same id race on this UPDATE; exactly one wins (gets 1 row
- * back) and the other returns immediately (gets 0 rows).
+ * The UPDATE → RETURNING is the atomic claim and also a lease: it requires the
+ * row be currently due (`runAfter <= now()`) and pushes `runAfter` 5 minutes
+ * into the future. Postgres row-locks the UPDATE, so concurrent claims (e.g. an
+ * inline runJob racing the cron drainer, or two runJob calls on the same id)
+ * serialize — the first wins and leases the row; the second re-evaluates its
+ * `runAfter <= now()` against the new (future) value, matches 0 rows, and backs
+ * off. The drainer's `runAfter <= now()` SELECT likewise won't re-pick an
+ * in-flight (leased) job. The terminal updates below (done / dead / retry /
+ * quiet-defer) overwrite status and/or runAfter, so the lease self-clears on
+ * completion; if the worker dies mid-job the lease expires after 5 min and the
+ * drainer reclaims it.
  */
 export async function runJob(jobId: string): Promise<void> {
   const claim = await db.execute(sql`
     UPDATE "notificationJobs"
     SET "attempts" = "attempts" + 1,
+        "runAfter" = now() + interval '5 minutes',
         "updatedAt" = now()
-    WHERE "id" = ${jobId} AND "status" = 'pending'
+    WHERE "id" = ${jobId} AND "status" = 'pending' AND "runAfter" <= now()
     RETURNING "id", "attempts", "payload"
   `);
 

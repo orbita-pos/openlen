@@ -361,6 +361,26 @@ describe("runJob", () => {
     expect((await getJob(id))?.status).toBe("done");
   });
 
+  it("(B1) concurrent runJob(id) on a fresh pending job → exactly ONE send (lease blocks the second claim)", async () => {
+    mockIsOnline.mockReturnValue(false);
+    mockWebPushSend.mockResolvedValue("sent");
+
+    // One fresh, due pending job — the in-flight race the cron drainer + inline
+    // send hit in prod: both claim WHERE status='pending' AND runAfter<=now().
+    const id = await insertJob({ runAfter: new Date(), attempts: 0 });
+
+    // Two workers race on the SAME id. Postgres row-locks the claim UPDATE so
+    // they serialize: the first leases runAfter +5min; the second re-evaluates
+    // `runAfter <= now()` against the new (future) value → 0 rows → no-op.
+    await Promise.all([runJob(id), runJob(id)]);
+
+    const totalSends = mockWebPushSend.mock.calls.length + mockEmailSend.mock.calls.length;
+    expect(totalSends).toBe(1); // exactly one notification — no duplicate
+
+    const job = await getJob(id);
+    expect(job?.status).toBe("done");
+  });
+
   it("(e) push throws AND email throws → nothing delivered → retry (pending, attempts++)", async () => {
     mockIsOnline.mockReturnValue(false);
     mockWebPushSend.mockRejectedValue(new Error("push transient error"));
