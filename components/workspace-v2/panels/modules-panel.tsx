@@ -138,6 +138,7 @@ export function ModulesPanel({
   const chatOn = chatSettings?.enabled === true;
   const chatMount = chatSettings?.mount ?? "both";
   const chatSelfServe = chatSettings?.selfServeJoin !== false;
+  const chatIdentityMode = chatSettings?.identityMode ?? "guest";
   const [waBusy, setWaBusy] = useState(false);
   const [waNumber, setWaNumber] = useState(whatsappSettings?.number ?? "");
   const [waMessage, setWaMessage] = useState(whatsappSettings?.message ?? "");
@@ -526,6 +527,13 @@ export function ModulesPanel({
                 checked={chatSelfServe}
                 disabled={chatBusy}
                 onChange={(v) => void updateChat({ selfServeJoin: v })}
+              />
+              <ToggleRow
+                label={tw("chat.requireAccount")}
+                hint={tw("chat.requireAccountHint")}
+                checked={chatIdentityMode === "account"}
+                disabled={chatBusy}
+                onChange={(v) => void updateChat({ identityMode: v ? "account" : "guest" })}
               />
               {currentProjectId && (
                 <AgentsList projectId={currentProjectId} tw={tw} />

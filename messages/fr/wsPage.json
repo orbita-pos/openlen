@@ -116,6 +116,8 @@
     "tagline": "Private messaging for your page visitors",
     "selfServeJoin": "Open registration",
     "selfServeJoinHint": "Any visitor can create a chat username without an invite.",
+    "requireAccount": "Require visitors to sign in",
+    "requireAccountHint": "Off: visitors just enter a name (+ optional email). On: visitors create a @username + password.",
     "mount": {
       "fab": "Button",
       "section": "Section",

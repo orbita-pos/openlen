@@ -116,6 +116,8 @@
     "tagline": "Mensajería privada para los visitantes de tu página",
     "selfServeJoin": "Registro abierto",
     "selfServeJoinHint": "Cualquier visitante puede crear un nombre de usuario de chat sin invitación.",
+    "requireAccount": "Pedir cuenta a los visitantes",
+    "requireAccountHint": "Apagado: el visitante solo pone su nombre (+ email opcional). Encendido: crea @usuario + contraseña.",
     "mount": {
       "fab": "Botón",
       "section": "Sección",

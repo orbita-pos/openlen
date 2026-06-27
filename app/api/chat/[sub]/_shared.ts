@@ -25,6 +25,7 @@ export interface ChatSiteContext {
   userId: string;
   chatEnabled: boolean;
   selfServeJoin: boolean;
+  identityMode: "guest" | "account";
   locale: string;
   title: string;
 }
@@ -44,6 +45,7 @@ export async function loadChatSite(sub: string): Promise<ChatSiteContext | null>
     userId: row.userId ?? "",
     chatEnabled: chat?.enabled === true,
     selfServeJoin: chat?.selfServeJoin !== false, // default open
+    identityMode: chat?.identityMode === "account" ? "account" : "guest", // default guest
     locale: detectLang(row.data?.html ?? ""),
     title: row.title?.trim() || sub,
   };

@@ -50,6 +50,10 @@ export interface ChatSettings {
   selfServeJoin?: boolean;
   /** Where the widget mounts on the published page. Default "both". */
   mount?: "fab" | "section" | "both";
+  /** How non-members identify. "guest" (default) = name + optional email, no password
+   *  (= lead capture). "account" = @username + password. Members are auto-identified
+   *  regardless (the member bridge). */
+  identityMode?: "guest" | "account";
 }
 
 /** Members module — visitor accounts on the published site (siteMembers). */

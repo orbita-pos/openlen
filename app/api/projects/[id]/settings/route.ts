@@ -86,6 +86,7 @@ interface PatchBody {
     enabled?: boolean;
     selfServeJoin?: boolean;
     mount?: "fab" | "section" | "both";
+    identityMode?: "guest" | "account";
   };
 }
 
@@ -281,6 +282,9 @@ export async function PATCH(
     if ("mount" in c && c.mount !== undefined && c.mount !== "fab" && c.mount !== "section" && c.mount !== "both") {
       return json({ error: "invalid_body", message: "chat.mount must be fab|section|both" }, 400);
     }
+    if ("identityMode" in c && c.identityMode !== undefined && c.identityMode !== "guest" && c.identityMode !== "account") {
+      return json({ error: "invalid_body", message: "chat.identityMode must be guest|account" }, 400);
+    }
   }
   if (
     !hasFormPatch &&
@@ -471,6 +475,7 @@ export async function PATCH(
       ...("enabled" in c ? { enabled: c.enabled } : {}),
       ...("selfServeJoin" in c ? { selfServeJoin: c.selfServeJoin } : {}),
       ...("mount" in c ? { mount: c.mount } : {}),
+      ...("identityMode" in c ? { identityMode: c.identityMode } : {}),
     };
   }
   if (hasChat && body.chat?.enabled === true && data.settings?.chat?.enabled !== true) {
