@@ -9,7 +9,8 @@
 import { useCallback } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { FileText, Inbox, MessageSquare } from "lucide-react";
+import { ArrowLeft, FileText, Inbox, MessageSquare } from "lucide-react";
+import { Link } from "@/i18n/navigation";
 import { InboxDesk } from "./inbox-desk";
 import { InboxForms } from "./inbox-forms";
 import { PushActivation } from "./push-activation";
@@ -37,7 +38,15 @@ export function InboxHub() {
   return (
     <div className="flex h-dvh flex-col bg-white text-zinc-900 dark:bg-[#0a0a0a] dark:text-zinc-100">
       <header className="shrink-0 border-b border-zinc-200 dark:border-zinc-800">
-        <div className="flex items-center gap-2 px-4 pt-3 sm:px-6">
+        <div className="flex items-center gap-2 px-3 pt-3 sm:px-5">
+          <Link
+            href="/new"
+            aria-label={t("backToWorkspace")}
+            title={t("backToWorkspace")}
+            className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-zinc-500 transition hover:bg-zinc-100 hover:text-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-900 dark:hover:text-zinc-200"
+          >
+            <ArrowLeft size={18} />
+          </Link>
           <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-coral-500/10 text-coral-500">
             <Inbox size={16} />
           </span>

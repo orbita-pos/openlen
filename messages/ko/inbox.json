@@ -1,4 +1,5 @@
 {
+  "backToWorkspace": "작업 공간으로 돌아가기",
   "tabs": { "chat": "채팅", "forms": "양식" },
   "title": "Inbox",
   "subtitle": "Messages from visitors to your pages",

@@ -1,4 +1,5 @@
 {
+  "backToWorkspace": "返回工作区",
   "tabs": { "chat": "聊天", "forms": "表单" },
   "title": "Inbox",
   "subtitle": "Messages from visitors to your pages",

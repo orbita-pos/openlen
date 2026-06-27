@@ -1,4 +1,5 @@
 {
+  "backToWorkspace": "Retour à l'espace de travail",
   "tabs": { "chat": "Chat", "forms": "Formulaires" },
   "title": "Inbox",
   "subtitle": "Messages from visitors to your pages",

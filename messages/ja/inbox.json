@@ -1,4 +1,5 @@
 {
+  "backToWorkspace": "ワークスペースに戻る",
   "tabs": { "chat": "チャット", "forms": "フォーム" },
   "title": "Inbox",
   "subtitle": "Messages from visitors to your pages",
