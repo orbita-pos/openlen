@@ -97,6 +97,20 @@ public/openlen-images/*.webp
 # superpowers specs/plans + one-off briefs — internal planning, kept local only
 /docs/superpowers/
 /docs/claude-video-showcase-brief.md
+# AI template-generation prompts + design/image briefs — competitive method, local only
+/docs/claude-*-prompts.md
+/docs/*-design-brief.md
+/docs/*-image-prompts.md
+/docs/*-art-prompts.md
+# Rust dev session handoffs + soak logs — internal noise, local only
+/docs/rust-*-handoff.md
+/docs/rust-f1-soak-*.md
+# Benchmark / cutover tooling + sample dumps — local only
+/bench/
+# Draft / unfinished templates — local only
+/templates/draft/
+/templates-draft/
+/templates/drafts/
 *.tar.gz
 /tests/visual/corpus/templates/
 /tests/visual/corpus/sections/
