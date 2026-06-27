@@ -39,6 +39,7 @@ describe("unified chat identity helpers", () => {
     expect(row.displayName).toBe("Cliente Uno");
     expect(row.email).toBe("c1@x.com");
     expect(row.role).toBe("member");
+    expect(row.username).toMatch(/^[a-z][a-z0-9_]{2,19}$/);
   });
 
   it("find-or-create for a member is idempotent (dedups by memberId)", async () => {
@@ -52,5 +53,7 @@ describe("unified chat identity helpers", () => {
     expect(row.passwordHash).toBeNull();
     expect(row.memberId).toBe("m-123");
     expect(row.displayName).toBe("Ana Pérez");
+    expect(row.role).toBe("member");
+    expect(row.email).toBe("ana@x.com");
   });
 });

@@ -91,16 +91,14 @@ function slugifyHandle(raw: string): string {
 
 export async function generateUniqueUsername(projectId: string, base: string): Promise<string> {
   const root = slugifyHandle(base) || "invitado";
-  for (let i = 0; i < 6; i++) {
-    const suffix = Math.floor(Math.random() * 0x100000).toString(36); // up to ~4 chars
+  for (let i = 0; i < 10; i++) {
+    const suffix = crypto.randomBytes(4).toString("hex"); // 8 hex chars → ~4e9 space
     const candidate = `${root}_${suffix}`.slice(0, 20);
     if (!isValidUsername(candidate)) continue;
     const exists = await getChatUserByUsername(projectId, candidate);
     if (!exists) return candidate;
   }
-  // last resort: time-free deterministic-ish fallback that's still unique-checked
-  const fallback = `invitado_${Math.floor(Math.random() * 0x10000000).toString(36)}`.slice(0, 20);
-  return fallback;
+  throw new Error("could not generate a unique chat username");
 }
 
 export async function createGuestChatUser(
@@ -141,8 +139,13 @@ export async function findOrCreateMemberChatUser(
       projectId, username, passwordHash: null, memberId: member.id,
       displayName: display, email: member.email, role: "member",
     })
+    .onConflictDoNothing({ target: [schema.chatUsers.projectId, schema.chatUsers.memberId] })
     .returning({ id: schema.chatUsers.id });
-  return { id: rows[0].id };
+  if (rows.length > 0) return { id: rows[0].id };
+  // lost the race — the other writer created it; re-read.
+  const after = await getChatUserByMemberId(projectId, member.id);
+  if (after) return after;
+  throw new Error("findOrCreateMemberChatUser: insert conflicted but row not found");
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

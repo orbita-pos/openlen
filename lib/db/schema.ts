@@ -796,6 +796,7 @@ export const chatUsers = pgTable(
   },
   (table) => [
     uniqueIndex("chatUsers_projectId_username_uq").on(table.projectId, table.username),
+    uniqueIndex("chatUsers_projectId_memberId_uq").on(table.projectId, table.memberId),
   ],
 );
 
