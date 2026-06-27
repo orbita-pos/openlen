@@ -139,10 +139,13 @@ export function ModulesPanel({
   const chatMount = chatSettings?.mount ?? "both";
   const chatSelfServe = chatSettings?.selfServeJoin !== false;
   const chatIdentityMode = chatSettings?.identityMode ?? "guest";
+  const chatTheme = chatSettings?.theme ?? "light";
   const [waBusy, setWaBusy] = useState(false);
   const [waNumber, setWaNumber] = useState(whatsappSettings?.number ?? "");
   const [waMessage, setWaMessage] = useState(whatsappSettings?.message ?? "");
   const [chatBusy, setChatBusy] = useState(false);
+  const [chatWelcomeLocal, setChatWelcomeLocal] = useState(chatSettings?.welcome ?? "");
+  const [chatQRs, setChatQRs] = useState<{ q: string; a: string }[]>(chatSettings?.quickReplies ?? []);
   const [busy, setBusy] = useState(false);
   const [bcastBusy, setBcastBusy] = useState(false);
   const [cmtBusy, setCmtBusy] = useState(false);
@@ -535,6 +538,83 @@ export function ModulesPanel({
                 disabled={chatBusy}
                 onChange={(v) => void updateChat({ identityMode: v ? "account" : "guest" })}
               />
+              <div className="space-y-1">
+                <div className="text-[12px] font-medium fg-muted">{tw("chat.welcome")}</div>
+                <input
+                  value={chatWelcomeLocal}
+                  onChange={(e) => setChatWelcomeLocal(e.target.value)}
+                  onBlur={(e) => void updateChat({ welcome: e.target.value })}
+                  onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }}
+                  maxLength={200}
+                  placeholder={tw("chat.welcomePlaceholder")}
+                  className="w-full bg-app ring-1 ring-[color:var(--border)] rounded-lg px-3 h-9 text-[13px] fg outline-none focus:ring-[color:var(--accent)] transition"
+                />
+              </div>
+              <div className="space-y-1">
+                <div className="text-[12px] font-medium fg-muted">{tw("chat.theme")}</div>
+                <Segment
+                  value={chatTheme}
+                  options={[
+                    { id: "light", label: tw("chat.themeLight") },
+                    { id: "dark", label: tw("chat.themeDark") },
+                  ]}
+                  disabled={chatBusy}
+                  onPick={(v) => void updateChat({ theme: v as "light" | "dark" })}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <div className="text-[12px] font-medium fg-muted">{tw("chat.quickReplies")}</div>
+                {chatQRs.map((qr, i) => (
+                  <div key={i} className="flex items-center gap-1.5">
+                    <input
+                      value={qr.q}
+                      onChange={(e) => {
+                        const next = chatQRs.map((r, j) => j === i ? { ...r, q: e.target.value } : r);
+                        setChatQRs(next);
+                        void updateChat({ quickReplies: next });
+                      }}
+                      placeholder={tw("chat.qrQ")}
+                      maxLength={50}
+                      className="flex-1 min-w-0 bg-app ring-1 ring-[color:var(--border)] rounded-lg px-2.5 h-8 text-[12px] fg outline-none focus:ring-[color:var(--accent)] transition"
+                    />
+                    <input
+                      value={qr.a}
+                      onChange={(e) => {
+                        const next = chatQRs.map((r, j) => j === i ? { ...r, a: e.target.value } : r);
+                        setChatQRs(next);
+                        void updateChat({ quickReplies: next });
+                      }}
+                      placeholder={tw("chat.qrA")}
+                      maxLength={300}
+                      className="flex-1 min-w-0 bg-app ring-1 ring-[color:var(--border)] rounded-lg px-2.5 h-8 text-[12px] fg outline-none focus:ring-[color:var(--accent)] transition"
+                    />
+                    <button
+                      type="button"
+                      aria-label="Remove"
+                      onClick={() => {
+                        const next = chatQRs.filter((_, j) => j !== i);
+                        setChatQRs(next);
+                        void updateChat({ quickReplies: next });
+                      }}
+                      className="shrink-0 h-8 w-8 inline-flex items-center justify-center rounded-lg fg-faint hover:text-red-500 hover:bg-hover transition"
+                    >
+                      <Trash size={12} />
+                    </button>
+                  </div>
+                ))}
+                <button
+                  type="button"
+                  disabled={chatQRs.length >= 6}
+                  onClick={() => {
+                    if (chatQRs.length >= 6) return;
+                    setChatQRs([...chatQRs, { q: "", a: "" }]);
+                  }}
+                  className="h-7 px-3 rounded-lg text-[12px] font-medium fg-muted hover:fg bg-app ring-1 ring-[color:var(--border)] hover:bg-hover transition disabled:opacity-40"
+                >
+                  + {tw("chat.qrAdd")}
+                </button>
+                <p className="text-[10.5px] fg-faint leading-relaxed">{tw("chat.qrHint")}</p>
+              </div>
               {currentProjectId && (
                 <AgentsList projectId={currentProjectId} tw={tw} />
               )}
