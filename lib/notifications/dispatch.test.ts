@@ -320,7 +320,7 @@ describe("runJob", () => {
     expect(job?.status).toBe("done");
   });
 
-  it("(e) push throws → email is still attempted (fallback)", async () => {
+  it("(e) push throws + email 'sent' → job done (notify once, no retry)", async () => {
     mockIsOnline.mockReturnValue(false);
     mockWebPushSend.mockRejectedValue(new Error("push transient error"));
     mockEmailSend.mockResolvedValue("sent");
@@ -330,9 +330,46 @@ describe("runJob", () => {
 
     expect(mockEmailSend).toHaveBeenCalledOnce();
 
-    // Per spec: push throw sets retryNeeded=true regardless of email success.
-    // Email IS the fallback delivery, but the push failure still schedules a retry
-    // so the push is reattempted (push-first policy). Job stays pending with backoff.
+    // Email delivered → the owner was notified once. Even though push threw, the
+    // job is DONE: retrying would re-send the email (duplicate/spam). lastError
+    // is also cleared on the done path.
+    const job = await getJob(id);
+    expect(job?.status).toBe("done");
+    expect(job?.lastError).toBeNull();
+  });
+
+  it("(e) no double-send: re-running a delivered job is a 0-row claim (no extra sends/deliveries)", async () => {
+    mockIsOnline.mockReturnValue(false);
+    mockWebPushSend.mockRejectedValue(new Error("push transient error"));
+    mockEmailSend.mockResolvedValue("sent");
+
+    const id = await insertJob();
+    await runJob(id);
+    expect((await getJob(id))?.status).toBe("done");
+
+    const sendsBefore = mockWebPushSend.mock.calls.length + mockEmailSend.mock.calls.length;
+    const deliveriesBefore = (await getDeliveries()).length;
+
+    // Second run: the atomic claim matches no 'pending' row → 0 rows → no work.
+    await runJob(id);
+
+    const sendsAfter = mockWebPushSend.mock.calls.length + mockEmailSend.mock.calls.length;
+    const deliveriesAfter = (await getDeliveries()).length;
+
+    expect(sendsAfter).toBe(sendsBefore); // no second send of any channel
+    expect(deliveriesAfter).toBe(deliveriesBefore); // no extra delivery rows
+    expect((await getJob(id))?.status).toBe("done");
+  });
+
+  it("(e) push throws AND email throws → nothing delivered → retry (pending, attempts++)", async () => {
+    mockIsOnline.mockReturnValue(false);
+    mockWebPushSend.mockRejectedValue(new Error("push transient error"));
+    mockEmailSend.mockRejectedValue(new Error("email transient error"));
+
+    const id = await insertJob({ attempts: 0 });
+    await runJob(id);
+
+    // No channel delivered → genuine failure → retry path stays covered.
     const job = await getJob(id);
     expect(job?.status).toBe("pending");
     expect(job?.attempts).toBe(1);
@@ -367,7 +404,7 @@ describe("runJob", () => {
     expect(withinQuietHours(prefs, new Date())).toBe(true);
 
     const before = Date.now();
-    const id = await insertJob({ runAfter: new Date() });
+    const id = await insertJob({ runAfter: new Date(), attempts: 0 });
 
     // Clear any calls from previous tests' inflight async runJobs
     mockWebPushSend.mockClear();
@@ -378,6 +415,8 @@ describe("runJob", () => {
     const job = await getJob(id);
     expect(job?.status).toBe("pending");
     expect(job?.runAfter.getTime()).toBeGreaterThan(before);
+    // Deferring for quiet hours must not burn a real attempt (Minor 2).
+    expect(job?.attempts).toBe(0);
     expect(mockWebPushSend).not.toHaveBeenCalled();
     expect(mockEmailSend).not.toHaveBeenCalled();
 

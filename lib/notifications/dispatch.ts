@@ -216,9 +216,15 @@ export async function runJob(jobId: string): Promise<void> {
 
   if (withinQuietHours(prefs, now)) {
     const delayMins = minutesUntilEndOfQuiet(prefs, now);
+    // Deferring for quiet hours isn't a failed send — restore the attempt the
+    // atomic claim consumed so a job created mid-quiet-window keeps all 5 tries.
     await db
       .update(schema.notificationJobs)
-      .set({ runAfter: new Date(now.getTime() + delayMins * 60_000), updatedAt: now })
+      .set({
+        attempts: attempts - 1,
+        runAfter: new Date(now.getTime() + delayMins * 60_000),
+        updatedAt: now,
+      })
       .where(eq(schema.notificationJobs.id, jobId));
     return;
   }
@@ -230,6 +236,7 @@ export async function runJob(jobId: string): Promise<void> {
   //    A channel throw = transient failure → retry; a 'skipped' return = clean skip.
 
   let retryNeeded = false;
+  let delivered = false;
   let lastError: string | null = null;
 
   const webpushCh = CHANNELS.find((c) => c.id === "webpush");
@@ -242,6 +249,7 @@ export async function runJob(jobId: string): Promise<void> {
     try {
       const r = await webpushCh.send(event);
       webpushResult = r;
+      if (r === "sent") delivered = true;
       await logDelivery({
         userId: event.recipientUserId,
         channel: "webpush",
@@ -280,6 +288,7 @@ export async function runJob(jobId: string): Promise<void> {
       // Push was not sent (skipped / threw / not attempted) → try email
       try {
         const r = await emailCh.send(event);
+        if (r === "sent") delivered = true;
         await logDelivery({
           userId: event.recipientUserId,
           channel: "email",
@@ -303,11 +312,15 @@ export async function runJob(jobId: string): Promise<void> {
     }
   }
 
-  // 4. Final outcome
-  if (!retryNeeded) {
+  // 4. Final outcome — notify ONCE. If any channel delivered ('sent'), the job
+  //    is done even if another channel threw (no duplicate notification on the
+  //    next attempt). Only retry when nothing was delivered AND a send failed;
+  //    a clean no-recipient skip (!delivered && !retryNeeded) is also done since
+  //    retrying can't conjure a recipient.
+  if (delivered || !retryNeeded) {
     await db
       .update(schema.notificationJobs)
-      .set({ status: "done", updatedAt: new Date() })
+      .set({ status: "done", lastError: null, updatedAt: new Date() })
       .where(eq(schema.notificationJobs.id, jobId));
     return;
   }
@@ -344,10 +357,12 @@ export async function runJob(jobId: string): Promise<void> {
 /**
  * Drain all overdue pending jobs, up to `limit`.
  *
- * Uses `FOR UPDATE SKIP LOCKED` so concurrent drain processes (e.g. two
- * systemd timer firings overlapping) don't double-process the same job.
- * The atomic UPDATE claim inside `runJob` is the definitive race protection;
- * SKIP LOCKED is an efficiency optimisation on top.
+ * The atomic UPDATE claim inside `runJob` is the real concurrency guard — two
+ * overlapping drains race on that UPDATE and exactly one wins per job. The
+ * `FOR UPDATE SKIP LOCKED` here is effectively a no-op under neon-http (each
+ * `db.execute` is its own implicit transaction, so the row lock releases the
+ * instant this SELECT returns); it's kept because it's harmless and becomes a
+ * real efficiency win on a pooled/transactional driver.
  */
 export async function drainPending(limit = 25): Promise<number> {
   const result = await db.execute(sql`
