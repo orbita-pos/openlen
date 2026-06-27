@@ -1,0 +1,14 @@
+[Unit]
+Description=OpenLen — notification queue drainer timer
+Requires=openlen-notifications-drain.service
+
+[Timer]
+# Every 1 minute — short-lived drainer that retries pending push notification
+# jobs. RandomizedDelaySec=10s (small: a 1-min timer tolerates little jitter).
+# Persistent=true catches up any missed windows (e.g. after a box reboot).
+OnCalendar=*:0/1
+Persistent=true
+RandomizedDelaySec=10s
+
+[Install]
+WantedBy=timers.target
