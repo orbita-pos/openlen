@@ -841,6 +841,9 @@ export async function publishProject(
             selfServeJoin: project.data.settings.chat.selfServeJoin !== false,
             title: project.title,
             identityMode: project.data?.settings?.chat?.identityMode,
+            welcome: project.data?.settings?.chat?.welcome,
+            quickReplies: project.data?.settings?.chat?.quickReplies,
+            theme: project.data?.settings?.chat?.theme,
           }
         : undefined,
       pages: publicPages,

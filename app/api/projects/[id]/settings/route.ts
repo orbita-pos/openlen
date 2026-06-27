@@ -87,6 +87,9 @@ interface PatchBody {
     selfServeJoin?: boolean;
     mount?: "fab" | "section" | "both";
     identityMode?: "guest" | "account";
+    welcome?: string;
+    quickReplies?: { q: string; a: string }[];
+    theme?: "light" | "dark";
   };
 }
 
@@ -285,6 +288,22 @@ export async function PATCH(
     if ("identityMode" in c && c.identityMode !== undefined && c.identityMode !== "guest" && c.identityMode !== "account") {
       return json({ error: "invalid_body", message: "chat.identityMode must be guest|account" }, 400);
     }
+    if ("welcome" in c && c.welcome !== undefined && typeof c.welcome !== "string") {
+      return json({ error: "invalid_body", message: "chat.welcome must be a string" }, 400);
+    }
+    if ("theme" in c && c.theme !== undefined && c.theme !== "light" && c.theme !== "dark") {
+      return json({ error: "invalid_body", message: "chat.theme must be light|dark" }, 400);
+    }
+    if ("quickReplies" in c && c.quickReplies !== undefined) {
+      if (!Array.isArray(c.quickReplies) || c.quickReplies.length > 6) {
+        return json({ error: "invalid_body", message: "chat.quickReplies must be an array of ≤6" }, 400);
+      }
+      for (const qr of c.quickReplies) {
+        if (!qr || typeof qr.q !== "string" || typeof qr.a !== "string") {
+          return json({ error: "invalid_body", message: "each quickReply needs string q + a" }, 400);
+        }
+      }
+    }
   }
   if (
     !hasFormPatch &&
@@ -476,6 +495,14 @@ export async function PATCH(
       ...("selfServeJoin" in c ? { selfServeJoin: c.selfServeJoin } : {}),
       ...("mount" in c ? { mount: c.mount } : {}),
       ...("identityMode" in c ? { identityMode: c.identityMode } : {}),
+      ...("welcome" in c ? { welcome: (c.welcome ?? "").trim().slice(0, 200) } : {}),
+      ...("theme" in c ? { theme: c.theme } : {}),
+      ...("quickReplies" in c ? {
+        quickReplies: (c.quickReplies ?? [])
+          .map((qr) => ({ q: String(qr.q).trim().slice(0, 40), a: String(qr.a).trim().slice(0, 500) }))
+          .filter((qr) => qr.q.length > 0 && qr.a.length > 0)
+          .slice(0, 6),
+      } : {}),
     };
   }
   if (hasChat && body.chat?.enabled === true && data.settings?.chat?.enabled !== true) {

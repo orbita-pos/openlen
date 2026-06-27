@@ -503,6 +503,9 @@ interface ChatBake {
   title?: string;
   /** How non-members identify. "guest" (default) = name + optional email. */
   identityMode?: "guest" | "account";
+  welcome?: string;
+  quickReplies?: { q: string; a: string }[];
+  theme?: "light" | "dark";
 }
 
 /** The per-document publish bake — every transform between sanitize and the
@@ -716,6 +719,9 @@ async function bakeDocument(
         selfServeJoin: ctx.chat.selfServeJoin,
         title: ctx.chat.title,
         identityMode: ctx.chat.identityMode,
+        welcome: ctx.chat.welcome,
+        quickReplies: ctx.chat.quickReplies,
+        theme: ctx.chat.theme,
         ...(chatWantsFab && rightBelowChat > 0 ? { bottomPx: 18 + rightBelowChat * 68 } : {}),
       });
     } catch (err) {

@@ -54,6 +54,12 @@ export interface ChatSettings {
    *  (= lead capture). "account" = @username + password. Members are auto-identified
    *  regardless (the member bridge). */
   identityMode?: "guest" | "account";
+  /** Greeting bubble shown at the top of the "message the business" thread. */
+  welcome?: string;
+  /** FAQ chips answered client-side on tap (never hits the inbox). */
+  quickReplies?: { q: string; a: string }[];
+  /** Widget appearance. Default "light". The brand accent is unchanged either way. */
+  theme?: "light" | "dark";
 }
 
 /** Members module — visitor accounts on the published site (siteMembers). */

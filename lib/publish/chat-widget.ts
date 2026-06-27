@@ -85,6 +85,9 @@ export interface ChatWidgetConfig {
   /** How non-members identify. "guest" (default) = name + optional email.
    *  "account" = @username + password. */
   identityMode?: "guest" | "account";
+  welcome?: string;
+  quickReplies?: { q: string; a: string }[];
+  theme?: "light" | "dark";
 }
 
 const DEFAULT_ACCENT = "#ff6b5e";
@@ -108,6 +111,9 @@ function widgetScript(cfg: ChatWidgetConfig): string {
     bottom: cfg.bottomPx,
     title: cfg.title,
     identityMode: cfg.identityMode || "guest",
+    welcome: cfg.welcome,
+    quickReplies: cfg.quickReplies,
+    theme: cfg.theme || "light",
     S: STRINGS,
   }).replace(/</g, "\\u003c");
 
