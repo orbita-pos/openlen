@@ -16,6 +16,7 @@ import { mkdir, readFile, readdir, stat, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { processImage } from "../../lib/images";
 import { IMAGE_META, type ImageMeta, type ImageStyle } from "./meta";
+import { PREMIUM_IMAGES } from "./premium-meta";
 import type { TemplateFamily } from "../../lib/templates/families";
 import { getOpenLenImageStorage } from "../../lib/storage/openlen-images";
 
@@ -146,6 +147,10 @@ async function main() {
 
     console.log(`  ok  #${String(meta.promptNum).padStart(2)} ${baseId}`);
   }
+
+  // Premium template imagery already lives on R2 — append so the "By OpenLen"
+  // picker surfaces it too (and a reprocess never drops it). See premium-meta.ts.
+  manifest.images.push(...PREMIUM_IMAGES);
 
   manifest.count = manifest.images.length;
   const manifestPath = join(OUTPUT_DIR, "manifest.json");
