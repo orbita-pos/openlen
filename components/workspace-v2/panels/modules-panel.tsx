@@ -578,27 +578,25 @@ export function ModulesPanel({
                   <div key={qr._key} className="flex items-center gap-1.5">
                     <input
                       value={qr.q}
-                      disabled={chatBusy}
                       onChange={(e) => {
                         const next = chatQRs.map((r, j) => j === i ? { ...r, q: e.target.value } : r);
                         setChatQRs(next);
-                        void updateChat({ quickReplies: next.map(({ q, a }) => ({ q, a })) });
                       }}
+                      onBlur={() => void updateChat({ quickReplies: chatQRs.map(({ q, a }) => ({ q, a })) })}
                       placeholder={tw("chat.qrQ")}
-                      maxLength={50}
-                      className="flex-1 min-w-0 bg-app ring-1 ring-[color:var(--border)] rounded-lg px-2.5 h-8 text-[12px] fg outline-none focus:ring-[color:var(--accent)] transition disabled:opacity-50"
+                      maxLength={40}
+                      className="flex-1 min-w-0 bg-app ring-1 ring-[color:var(--border)] rounded-lg px-2.5 h-8 text-[12px] fg outline-none focus:ring-[color:var(--accent)] transition"
                     />
                     <input
                       value={qr.a}
-                      disabled={chatBusy}
                       onChange={(e) => {
                         const next = chatQRs.map((r, j) => j === i ? { ...r, a: e.target.value } : r);
                         setChatQRs(next);
-                        void updateChat({ quickReplies: next.map(({ q, a }) => ({ q, a })) });
                       }}
+                      onBlur={() => void updateChat({ quickReplies: chatQRs.map(({ q, a }) => ({ q, a })) })}
                       placeholder={tw("chat.qrA")}
-                      maxLength={300}
-                      className="flex-1 min-w-0 bg-app ring-1 ring-[color:var(--border)] rounded-lg px-2.5 h-8 text-[12px] fg outline-none focus:ring-[color:var(--accent)] transition disabled:opacity-50"
+                      maxLength={500}
+                      className="flex-1 min-w-0 bg-app ring-1 ring-[color:var(--border)] rounded-lg px-2.5 h-8 text-[12px] fg outline-none focus:ring-[color:var(--accent)] transition"
                     />
                     <button
                       type="button"
