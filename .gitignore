@@ -94,6 +94,9 @@ public/openlen-images/*.webp
 /V3_AUDIT.md
 /INARI_DESIGN_ENGINE.md
 /docs/SHOW_HN_DRAFT.md
+# superpowers specs/plans + one-off briefs — internal planning, kept local only
+/docs/superpowers/
+/docs/claude-video-showcase-brief.md
 *.tar.gz
 /tests/visual/corpus/templates/
 /tests/visual/corpus/sections/
