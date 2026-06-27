@@ -153,8 +153,7 @@ export async function scheduleNotification(
     RETURNING "id"
   `);
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const rows = (result as any).rows as Array<{ id: string }>;
+  const rows = result.rows as unknown as Array<{ id: string }>;
   const jobId = rows[0]?.id;
 
   if (jobId) {
@@ -189,12 +188,7 @@ export async function runJob(jobId: string): Promise<void> {
     RETURNING "id", "attempts", "payload"
   `);
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const claimRows = (claim as any).rows as Array<{
-    id: string;
-    attempts: number;
-    payload: Record<string, unknown>;
-  }>;
+  const claimRows = claim.rows as unknown as Array<{ id: string; attempts: number; payload: Record<string, unknown> }>;
 
   if (claimRows.length === 0) return; // already claimed, done, or dead
 
@@ -383,8 +377,7 @@ export async function drainPending(limit = 25): Promise<number> {
     FOR UPDATE SKIP LOCKED
   `);
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const rows = (result as any).rows as Array<{ id: string }>;
+  const rows = result.rows as unknown as Array<{ id: string }>;
 
   for (const { id } of rows) {
     await runJob(id);

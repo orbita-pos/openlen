@@ -48,8 +48,7 @@ export function PushActivation() {
     const isIos = /iphone|ipad|ipod/i.test(navigator.userAgent);
     const isStandalone =
       window.matchMedia("(display-mode: standalone)").matches ||
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (navigator as any).standalone === true;
+      (navigator as Navigator & { standalone?: boolean }).standalone === true;
 
     if (isIos && !isStandalone) {
       setState("ios-needs-install");
