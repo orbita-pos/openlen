@@ -1415,3 +1415,54 @@ export const flightReports = pgTable(
     ),
   ],
 );
+
+// ─── Web Push notifications — subscriptions, preferences, deliveries, jobs ───
+// Applied via `npm run notifications:migrate`. Four tables:
+//   pushSubscriptions    — one row per browser endpoint per user
+//   notificationPreferences — per-user channel opt-ins + quiet hours
+//   notificationDeliveries  — append-only audit of every send attempt
+//   notificationJobs     — lightweight poll queue (no pg-boss/Redis)
+// The partial unique index on notificationJobs is load-bearing for dedup:
+// only one pending job per dedupeKey can exist at a time.
+
+export const pushSubscriptions = pgTable("pushSubscriptions", {
+  endpoint: text("endpoint").primaryKey(),
+  userId: text("userId").notNull().references(() => users.id, { onDelete: "cascade" }),
+  p256dh: text("p256dh").notNull(),
+  auth: text("auth").notNull(),
+  userAgent: text("userAgent"),
+  createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
+  lastUsedAt: timestamp("lastUsedAt", { mode: "date" }),
+}, (t) => [index("pushSubscriptions_userId_idx").on(t.userId)]);
+
+export const notificationPreferences = pgTable("notificationPreferences", {
+  userId: text("userId").primaryKey().references(() => users.id, { onDelete: "cascade" }),
+  webPushEnabled: boolean("webPushEnabled").notNull().default(true),
+  emailEnabled: boolean("emailEnabled").notNull().default(true),
+  quietFrom: text("quietFrom"), quietUntil: text("quietUntil"),
+  timezone: text("timezone").notNull().default("America/Lima"),
+  updatedAt: timestamp("updatedAt", { mode: "date" }).notNull().defaultNow(),
+});
+
+export const notificationDeliveries = pgTable("notificationDeliveries", {
+  id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  userId: text("userId").notNull(),
+  channel: text("channel").notNull(),
+  status: text("status").$type<"sent" | "failed" | "skipped" | "dlq">().notNull(),
+  eventType: text("eventType").notNull(),
+  conversationId: text("conversationId"),
+  detail: text("detail"),
+  createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
+}, (t) => [index("notificationDeliveries_userId_createdAt_idx").on(t.userId, t.createdAt)]);
+
+export const notificationJobs = pgTable("notificationJobs", {
+  id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  dedupeKey: text("dedupeKey"),
+  payload: jsonb("payload").$type<Record<string, unknown>>().notNull(),
+  status: text("status").$type<"pending" | "done" | "dead">().notNull().default("pending"),
+  attempts: integer("attempts").notNull().default(0),
+  runAfter: timestamp("runAfter", { mode: "date" }).notNull().defaultNow(),
+  lastError: text("lastError"),
+  createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
+  updatedAt: timestamp("updatedAt", { mode: "date" }).notNull().defaultNow(),
+}, (t) => [index("notificationJobs_status_runAfter_idx").on(t.status, t.runAfter)]);
