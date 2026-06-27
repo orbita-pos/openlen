@@ -9,5 +9,14 @@
   "threadEmpty": "No messages in this conversation yet.",
   "back": "Back",
   "placeholder": "Write a reply…",
-  "send": "Send"
+  "send": "Send",
+  "push": {
+    "legend": "🔔 Get notified on your phone when someone messages you. Activate below. If you prefer not to, we'll still notify you by email.",
+    "activate": "Activate notifications",
+    "activeThisDevice": "✅ You're receiving alerts on this device",
+    "turnOff": "Turn off",
+    "blocked": "Notifications are blocked — enable them in your browser settings.",
+    "iosInstall": "On iPhone: tap Share → Add to Home Screen, then open the app from the icon and activate notifications.",
+    "unsupported": "Your browser doesn't support notifications; we'll notify you by email instead."
+  }
 }

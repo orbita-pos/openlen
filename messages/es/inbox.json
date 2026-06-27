@@ -9,5 +9,14 @@
   "threadEmpty": "Aún no hay mensajes en esta conversación.",
   "back": "Volver",
   "placeholder": "Escribe una respuesta…",
-  "send": "Enviar"
+  "send": "Enviar",
+  "push": {
+    "legend": "🔔 ¿Quieres que te avise en tu celular cuando te escriban? Actívalo desde tu teléfono (un toque). Si no, te llega por email.",
+    "activate": "Activar notificaciones",
+    "activeThisDevice": "✅ Recibes alertas en este dispositivo",
+    "turnOff": "Apagar",
+    "blocked": "Están bloqueadas — actívalas en Ajustes del navegador.",
+    "iosInstall": "En iPhone: Compartir → Agregar a inicio, luego abre desde el ícono y activa.",
+    "unsupported": "Tu navegador no soporta notificaciones; te avisamos por email."
+  }
 }

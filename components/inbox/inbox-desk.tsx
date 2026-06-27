@@ -10,6 +10,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { useSession } from "next-auth/react";
 import { ArrowLeft, Inbox, Loader2, MessageSquare, Send } from "lucide-react";
+import { PushActivation } from "./push-activation";
 
 interface Conversation {
   id: string;
@@ -375,6 +376,8 @@ export function InboxDesk() {
           </p>
         </div>
       </header>
+
+      <PushActivation />
 
       <div className="flex min-h-0 flex-1">
         {/* Conversation list */}
