@@ -1,4 +1,5 @@
 {
+  "tabs": { "chat": "Chat", "forms": "Formularios" },
   "title": "Mensajes",
   "subtitle": "Mensajes de los visitantes de tus páginas",
   "empty": "Aún no hay mensajes",

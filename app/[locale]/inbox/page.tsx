@@ -1,7 +1,7 @@
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { redirect } from "@/i18n/navigation";
 import { auth } from "@/auth";
-import { InboxDesk } from "@/components/inbox/inbox-desk";
+import { InboxHub } from "@/components/inbox/inbox-hub";
 
 export async function generateMetadata({
   params,
@@ -25,5 +25,5 @@ export default async function InboxPage({
   setRequestLocale(locale);
   const session = await auth();
   if (!session?.user?.id) redirect({ href: "/login?next=/inbox", locale });
-  return <InboxDesk />;
+  return <InboxHub />;
 }

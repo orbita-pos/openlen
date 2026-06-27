@@ -210,7 +210,7 @@ export function DashboardNav({
   }[] = [
     { key: "pages", href: "/projects", label: t("nav.myPages") },
     { key: "business", href: "/business", label: t("nav.myBusiness") },
-    { key: "messages", href: "/messages", label: t("nav.messages") },
+    { key: "messages", href: "/inbox", label: t("nav.messages") },
   ];
   return (
     <nav className="flex items-center gap-0.5">

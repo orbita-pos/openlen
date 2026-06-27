@@ -10,7 +10,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { useSession } from "next-auth/react";
 import { ArrowLeft, Inbox, Loader2, MessageSquare, Send } from "lucide-react";
-import { PushActivation } from "./push-activation";
 
 interface Conversation {
   id: string;
@@ -364,22 +363,7 @@ export function InboxDesk() {
   const hasAny = !!inbox && inbox.some((g) => g.conversations.length > 0);
 
   return (
-    <div className="flex h-dvh flex-col bg-white text-zinc-900 dark:bg-[#0a0a0a] dark:text-zinc-100">
-      <header className="flex items-center gap-2 border-b border-zinc-200 px-4 py-3 dark:border-zinc-800 sm:px-6">
-        <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-coral-500/10 text-coral-500">
-          <Inbox size={16} />
-        </span>
-        <div className="min-w-0">
-          <h1 className="text-[15px] font-semibold leading-tight">{t("title")}</h1>
-          <p className="truncate text-[12px] text-zinc-500 dark:text-zinc-400">
-            {t("subtitle")}
-          </p>
-        </div>
-      </header>
-
-      <PushActivation />
-
-      <div className="flex min-h-0 flex-1">
+    <div className="flex min-h-0 flex-1 bg-white text-zinc-900 dark:bg-[#0a0a0a] dark:text-zinc-100">
         {/* Conversation list */}
         <aside
           className={`w-full shrink-0 overflow-y-auto border-r border-zinc-200 dark:border-zinc-800 md:w-80 lg:w-96 ${
@@ -601,7 +585,6 @@ export function InboxDesk() {
             </>
           )}
         </section>
-      </div>
     </div>
   );
 }

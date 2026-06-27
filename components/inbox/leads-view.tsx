@@ -1,9 +1,9 @@
 "use client";
 
-// Mensajes — the cross-project leads inbox. Every form submission from the
-// user's published pages, newest-first. Read-only for now; the data + email
-// notification already exist (lib/email.ts), this just surfaces them where the
-// user lands instead of buried in the workspace sidebar.
+// Formularios — the cross-project leads inbox. Every form submission from the
+// user's published pages, newest-first. Read-only. Lives as a tab inside the
+// unified /inbox hub (next to Chat). The data + email notification already
+// exist (lib/email.ts); this surfaces them.
 
 import { useLocale, useTranslations } from "next-intl";
 import { Globe, Inbox, Mail, MapPin } from "lucide-react";

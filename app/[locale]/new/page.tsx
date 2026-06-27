@@ -41,7 +41,6 @@ import { DeployIntegrationModal } from "@/components/workspace-v2/deploy-integra
 import { BusinessSection } from "../business/business-section";
 import { ProjectsSection } from "../projects/projects-section";
 import { AnalyticsSection } from "../analytics/analytics-section";
-import { MessagesSection } from "../messages/messages-section";
 import { ModulesView } from "@/components/workspace-v2/modules-view";
 import { TemplatesPanel } from "@/components/workspace-v2/panels/templates-panel";
 import {
@@ -313,7 +312,6 @@ function NewV2Inner() {
   const centerView: SectionView =
     viewParam === "projects" ||
     viewParam === "analytics" ||
-    viewParam === "messages" ||
     viewParam === "modulos" ||
     viewParam === "templates" ||
     viewParam === "business"
@@ -321,6 +319,12 @@ function NewV2Inner() {
       : "page";
   const setCenterView = useCallback(
     (v: SectionView) => {
+      // The inbox (chat + form leads) is its own destination now — the unified
+      // /inbox hub — not an in-workspace center view.
+      if (v === "messages") {
+        router.push("/inbox");
+        return;
+      }
       const params = new URLSearchParams(searchParams.toString());
       if (v === "page") params.delete("view");
       else params.set("view", v);
@@ -329,6 +333,10 @@ function NewV2Inner() {
     },
     [searchParams, router],
   );
+  // Stale bookmark: the in-workspace Mensajes view moved to the /inbox hub.
+  useEffect(() => {
+    if (viewParam === "messages") router.replace("/inbox?tab=forms");
+  }, [viewParam, router]);
   const [saving, setSaving] = useState(false);
   const [loadedProject, setLoadedProject] = useState<LoadedProject | null>(null);
   // The active site page (null = home) and the document the canvas edits.
@@ -3138,8 +3146,6 @@ function NewV2Inner() {
           <ProjectsSection activeBusinessId={activeBusinessId} />
         ) : centerView === "analytics" ? (
           <AnalyticsSection activeBusinessId={activeBusinessId} />
-        ) : centerView === "messages" ? (
-          <MessagesSection activeBusinessId={activeBusinessId} />
         ) : centerView === "modulos" ? (
           <ModulesView
             currentProjectId={loadedProject?.id ?? null}
@@ -3163,7 +3169,7 @@ function NewV2Inner() {
             onUpdateChatSettings={updateChatSettings}
             onCreateModulePage={createModulePage}
             onAddWhatsappSection={insertWhatsappSection}
-            onShowLeads={() => setCenterView("messages")}
+            onShowLeads={() => router.push("/inbox?tab=forms")}
             onShowAnalytics={() => setCenterView("analytics")}
             onReturnToCanvas={() => setCenterView("page")}
           />

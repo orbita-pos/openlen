@@ -35,7 +35,7 @@ const NAV: ReadonlyArray<{
 }> = [
   { key: "pages", href: "/projects", icon: FileText, labelKey: "nav.myPages" },
   { key: "analytics", href: "/analytics", icon: BarChart3, labelKey: "nav.analytics" },
-  { key: "messages", href: "/messages", icon: Inbox, labelKey: "nav.messages" },
+  { key: "messages", href: "/inbox", icon: Inbox, labelKey: "nav.messages" },
   { key: "business", href: "/business", icon: Store, labelKey: "nav.myBusiness" },
 ];
 

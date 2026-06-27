@@ -1,4 +1,5 @@
 {
+  "tabs": { "chat": "Chat", "forms": "Moduli" },
   "title": "Inbox",
   "subtitle": "Messages from visitors to your pages",
   "empty": "No messages yet",
