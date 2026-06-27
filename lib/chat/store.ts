@@ -22,7 +22,7 @@ export interface ChatUserRow {
   id: string;
   projectId: string;
   username: string;
-  passwordHash: string;
+  passwordHash: string | null;
   displayName: string | null;
   role: "member" | "agent" | "owner";
   status: "active" | "blocked";

@@ -785,8 +785,9 @@ export const chatUsers = pgTable(
       .notNull()
       .references(() => projects.id, { onDelete: "cascade" }),
     username: text("username").notNull(), // lowercase, no leading @, normalized at edges
-    passwordHash: text("passwordHash").notNull(),
+    passwordHash: text("passwordHash"), // nullable: guests + member-linked users have no password
     email: text("email"), // optional — recovery + offline notifications
+    memberId: text("memberId").references(() => siteMembers.id, { onDelete: "set null" }),
     displayName: text("displayName"),
     role: text("role").$type<"member" | "agent" | "owner">().notNull().default("member"),
     status: text("status").$type<"active" | "blocked">().notNull().default("active"),

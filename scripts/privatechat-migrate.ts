@@ -100,6 +100,11 @@ async function main() {
   await db.execute(sql`ALTER TABLE "chatConversations" ADD COLUMN IF NOT EXISTS "assignedUserId" text;`);
   await db.execute(sql`ALTER TABLE "chatConversations" ADD COLUMN IF NOT EXISTS "assignedAt" timestamp;`);
 
+  // Unified-identity: guests + member-linked users have no password; memberId links to a site member.
+  await db.execute(sql`ALTER TABLE "chatUsers" ALTER COLUMN "passwordHash" DROP NOT NULL;`);
+  await db.execute(sql`ALTER TABLE "chatUsers" ADD COLUMN IF NOT EXISTS "memberId" text;`);
+  await db.execute(sql`CREATE INDEX IF NOT EXISTS "chatUsers_memberId_idx" ON "chatUsers" ("memberId");`);
+
   console.log("private chat tables ready.");
   process.exit(0);
 }
