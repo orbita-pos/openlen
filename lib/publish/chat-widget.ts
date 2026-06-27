@@ -48,11 +48,15 @@ interface ChatStrings {
   online: string;
   typing: string;
   seen: string;
+  /** Guest identity form strings (only required in en/es; other locales fall back). */
+  guestName?: string;
+  guestEmail?: string;
+  guestStart?: string;
 }
 
 const STRINGS: Record<string, ChatStrings> = {
-  en: { title: "Messages", login: "Log in", register: "Sign up", username: "Username", password: "Password", displayName: "Display name (optional)", loginBtn: "Log in", registerBtn: "Create account", inviteOnly: "This space is invite-only.", errBadUser: "Invalid username.", errBadPass: "Password is too short.", errTaken: "That username is taken.", errInvalid: "Wrong username or password.", errRate: "Too many attempts. Wait a moment.", search: "Search @username", noConvos: "No conversations yet.", noUsers: "No users found.", compose: "Write a message…", send: "Send", back: "Back", logout: "Log out", open: "Open chat", close: "Close", error: "Something went wrong.", messageBusiness: "Message the business", online: "Online", typing: "typing…", seen: "Seen" },
-  es: { title: "Mensajes", login: "Entrar", register: "Crear cuenta", username: "Usuario", password: "Contraseña", displayName: "Nombre visible (opcional)", loginBtn: "Entrar", registerBtn: "Crear cuenta", inviteOnly: "Este espacio es solo por invitación.", errBadUser: "Usuario no válido.", errBadPass: "La contraseña es muy corta.", errTaken: "Ese usuario ya existe.", errInvalid: "Usuario o contraseña incorrectos.", errRate: "Demasiados intentos. Espera un momento.", search: "Buscar @usuario", noConvos: "Aún no hay conversaciones.", noUsers: "No se encontraron usuarios.", compose: "Escribe un mensaje…", send: "Enviar", back: "Atrás", logout: "Salir", open: "Abrir chat", close: "Cerrar", error: "Algo salió mal.", messageBusiness: "Escribir al negocio", online: "En línea", typing: "escribiendo…", seen: "Visto" },
+  en: { title: "Messages", login: "Log in", register: "Sign up", username: "Username", password: "Password", displayName: "Display name (optional)", loginBtn: "Log in", registerBtn: "Create account", inviteOnly: "This space is invite-only.", errBadUser: "Invalid username.", errBadPass: "Password is too short.", errTaken: "That username is taken.", errInvalid: "Wrong username or password.", errRate: "Too many attempts. Wait a moment.", search: "Search @username", noConvos: "No conversations yet.", noUsers: "No users found.", compose: "Write a message…", send: "Send", back: "Back", logout: "Log out", open: "Open chat", close: "Close", error: "Something went wrong.", messageBusiness: "Message the business", online: "Online", typing: "typing…", seen: "Seen", guestName: "Your name", guestEmail: "Email (optional)", guestStart: "Start chat" },
+  es: { title: "Mensajes", login: "Entrar", register: "Crear cuenta", username: "Usuario", password: "Contraseña", displayName: "Nombre visible (opcional)", loginBtn: "Entrar", registerBtn: "Crear cuenta", inviteOnly: "Este espacio es solo por invitación.", errBadUser: "Usuario no válido.", errBadPass: "La contraseña es muy corta.", errTaken: "Ese usuario ya existe.", errInvalid: "Usuario o contraseña incorrectos.", errRate: "Demasiados intentos. Espera un momento.", search: "Buscar @usuario", noConvos: "Aún no hay conversaciones.", noUsers: "No se encontraron usuarios.", compose: "Escribe un mensaje…", send: "Enviar", back: "Atrás", logout: "Salir", open: "Abrir chat", close: "Cerrar", error: "Algo salió mal.", messageBusiness: "Escribir al negocio", online: "En línea", typing: "escribiendo…", seen: "Visto", guestName: "Tu nombre", guestEmail: "Email (opcional)", guestStart: "Empezar chat" },
   pt: { title: "Mensagens", login: "Entrar", register: "Criar conta", username: "Usuário", password: "Senha", displayName: "Nome de exibição (opcional)", loginBtn: "Entrar", registerBtn: "Criar conta", inviteOnly: "Este espaço é apenas por convite.", errBadUser: "Usuário inválido.", errBadPass: "A senha é muito curta.", errTaken: "Esse usuário já existe.", errInvalid: "Usuário ou senha incorretos.", errRate: "Muitas tentativas. Aguarde um momento.", search: "Buscar @usuário", noConvos: "Ainda não há conversas.", noUsers: "Nenhum usuário encontrado.", compose: "Escreva uma mensagem…", send: "Enviar", back: "Voltar", logout: "Sair", open: "Abrir chat", close: "Fechar", error: "Algo deu errado.", messageBusiness: "Mensagem para o negócio", online: "Online", typing: "digitando…", seen: "Seen" },
   fr: { title: "Messages", login: "Connexion", register: "Créer un compte", username: "Nom d'utilisateur", password: "Mot de passe", displayName: "Nom affiché (facultatif)", loginBtn: "Se connecter", registerBtn: "Créer un compte", inviteOnly: "Cet espace est sur invitation uniquement.", errBadUser: "Nom d'utilisateur invalide.", errBadPass: "Le mot de passe est trop court.", errTaken: "Ce nom est déjà pris.", errInvalid: "Nom d'utilisateur ou mot de passe incorrect.", errRate: "Trop de tentatives. Patientez un instant.", search: "Chercher @utilisateur", noConvos: "Aucune conversation pour l'instant.", noUsers: "Aucun utilisateur trouvé.", compose: "Écrire un message…", send: "Envoyer", back: "Retour", logout: "Déconnexion", open: "Ouvrir le chat", close: "Fermer", error: "Une erreur s'est produite.", messageBusiness: "Contacter l'entreprise", online: "En ligne", typing: "en train d'écrire…", seen: "Seen" },
   de: { title: "Nachrichten", login: "Anmelden", register: "Registrieren", username: "Benutzername", password: "Passwort", displayName: "Anzeigename (optional)", loginBtn: "Anmelden", registerBtn: "Konto erstellen", inviteOnly: "Dieser Bereich ist nur auf Einladung.", errBadUser: "Ungültiger Benutzername.", errBadPass: "Das Passwort ist zu kurz.", errTaken: "Dieser Benutzername ist vergeben.", errInvalid: "Benutzername oder Passwort falsch.", errRate: "Zu viele Versuche. Bitte warte einen Moment.", search: "@Benutzer suchen", noConvos: "Noch keine Unterhaltungen.", noUsers: "Keine Benutzer gefunden.", compose: "Nachricht schreiben…", send: "Senden", back: "Zurück", logout: "Abmelden", open: "Chat öffnen", close: "Schließen", error: "Etwas ist schiefgelaufen.", messageBusiness: "Das Unternehmen anschreiben", online: "Online", typing: "schreibt…", seen: "Seen" },
@@ -78,6 +82,9 @@ export interface ChatWidgetConfig {
   bottomPx?: number;
   /** Business display name — shown as the thread title in messageOwner(). */
   title?: string;
+  /** How non-members identify. "guest" (default) = name + optional email.
+   *  "account" = @username + password. */
+  identityMode?: "guest" | "account";
 }
 
 const DEFAULT_ACCENT = "#ff6b5e";
@@ -100,6 +107,7 @@ function widgetScript(cfg: ChatWidgetConfig): string {
     branding: cfg.branding ?? true,
     bottom: cfg.bottomPx,
     title: cfg.title,
+    identityMode: cfg.identityMode || "guest",
     S: STRINGS,
   }).replace(/</g, "\\u003c");
 
@@ -193,6 +201,25 @@ function mapErr(s,code){if(code==="bad_username")return T.errBadUser;if(code==="
 
 function authView(){
 clearBody();loBtn.style.display="none";
+if(C.identityMode==="guest"){
+  var gw=el("div","auth");
+  var ge=el("div","err");
+  var gn=el("input");gn.placeholder=T.guestName;gn.autocomplete="name";
+  var gm=el("input");gm.placeholder=T.guestEmail;gm.type="email";gm.autocomplete="email";
+  var gb=el("button","go",T.guestStart);gb.type="button";
+  gw.appendChild(ge);gw.appendChild(gn);gw.appendChild(gm);gw.appendChild(gb);
+  if(!C.selfServeJoin){gw.appendChild(el("div","note",T.inviteOnly))}
+  gb.addEventListener("click",function(){
+    var nm=(gn.value||"").trim();if(!nm){ge.textContent=T.error;return}
+    gb.disabled=true;ge.textContent="";
+    jpost("/auth/guest",{name:nm,email:(gm.value||"").trim()||undefined}).then(function(x){
+      gb.disabled=false;
+      if(x.s===200&&x.j&&x.j.user){me=x.j.user;listView()}else{ge.textContent=mapErr(x.s,x.j&&x.j.error)}
+    }).catch(function(){gb.disabled=false;ge.textContent=T.error});
+  });
+  bd.appendChild(gw);setTimeout(function(){try{gn.focus()}catch(e){}},0);
+  return;
+}
 var w=el("div","auth");
 var tabs=el("div","tabs");
 var tL=el("button",null,T.login);tL.type="button";

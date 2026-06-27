@@ -501,6 +501,8 @@ interface ChatBake {
   selfServeJoin: boolean;
   /** Business name — shown as the thread title when a visitor messages the owner. */
   title?: string;
+  /** How non-members identify. "guest" (default) = name + optional email. */
+  identityMode?: "guest" | "account";
 }
 
 /** The per-document publish bake — every transform between sanitize and the
@@ -713,6 +715,7 @@ async function bakeDocument(
         mount: ctx.chat.mount,
         selfServeJoin: ctx.chat.selfServeJoin,
         title: ctx.chat.title,
+        identityMode: ctx.chat.identityMode,
         ...(chatWantsFab && rightBelowChat > 0 ? { bottomPx: 18 + rightBelowChat * 68 } : {}),
       });
     } catch (err) {
