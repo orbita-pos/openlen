@@ -787,7 +787,11 @@ export const chatUsers = pgTable(
     username: text("username").notNull(), // lowercase, no leading @, normalized at edges
     passwordHash: text("passwordHash"), // nullable: guests + member-linked users have no password
     email: text("email"), // optional — recovery + offline notifications
-    memberId: text("memberId").references(() => siteMembers.id, { onDelete: "set null" }),
+    // Links a member-auto-identified chat user to its siteMember. No FK by
+    // design (mirrors memberAuthEvents.memberId): the /me bridge re-validates
+    // via getMemberById + status before reuse, so a stale id is inert; this also
+    // keeps test/guest inserts free of a hard member dependency.
+    memberId: text("memberId"),
     displayName: text("displayName"),
     role: text("role").$type<"member" | "agent" | "owner">().notNull().default("member"),
     status: text("status").$type<"active" | "blocked">().notNull().default("active"),

@@ -105,6 +105,8 @@ async function main() {
   await db.execute(sql`ALTER TABLE "chatUsers" ADD COLUMN IF NOT EXISTS "memberId" text;`);
   await db.execute(sql`CREATE INDEX IF NOT EXISTS "chatUsers_memberId_idx" ON "chatUsers" ("memberId");`);
   await db.execute(sql`CREATE UNIQUE INDEX IF NOT EXISTS "chatUsers_projectId_memberId_uq" ON "chatUsers" ("projectId", "memberId");`);
+  // memberId is intentionally NOT a FK (see lib/db/schema.ts) — the /me bridge
+  // re-validates the member, so referential integrity isn't required here.
 
   console.log("private chat tables ready.");
   process.exit(0);
