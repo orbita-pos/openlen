@@ -4,6 +4,7 @@ import { join } from "node:path";
 import type { SceneSpec } from "../three3d/scene-spec";
 import { coerceSceneSpec } from "../three3d/scene-spec";
 import { backgroundCss } from "../three3d/background";
+import { findBackdropTarget, mergeStyle, withId } from "../three3d/backdrop-placement";
 // readRuntimeJs is native-free (pure fs.readFileSync). Imported here so this
 // module stays native-free and vitest can load it without a .node binary.
 import { readRuntimeJs } from "./scene-host";
@@ -47,76 +48,14 @@ export interface SceneInjectOptions {
   height?: number;
 }
 
-// --- Hero-scoped backdrop helpers ---
-
-function getAttr(tag: string, attr: string): string | null {
-  const m = new RegExp(`\\b${attr}="([^"]*)"`, "i").exec(tag);
-  return m ? m[1] : null;
-}
-
-function withId(tag: string, id: string): string {
-  if (/\bid="/.test(tag)) return tag;
-  const gtIdx = tag.lastIndexOf(">");
-  return tag.slice(0, gtIdx) + ` id="${id}"` + tag.slice(gtIdx);
-}
-
-// Append extra CSS properties to an element's inline style, stripping any
-// trailing semicolon so the result stays well-formed.
-function mergeStyle(tag: string, extra: string): string {
-  const m = /\bstyle="([^"]*)"/.exec(tag);
-  if (m) {
-    const existing = m[1].replace(/;\s*$/, "");
-    return tag.slice(0, m.index) + `style="${existing};${extra}"` + tag.slice(m.index + m[0].length);
-  }
-  const gtIdx = tag.lastIndexOf(">");
-  return tag.slice(0, gtIdx) + ` style="${extra}"` + tag.slice(gtIdx);
-}
-
-interface TagInfo { tagStart: number; tagEnd: number; existingId: string | null; }
-
-// Find the element that will host the hero backdrop.
-// Priority: data-ol-3d-scene marker → first <section> → first element child of <body>.
-// Returns null only if none of these exist (extremely bare HTML).
-function findBackdropTarget(html: string): TagInfo | null {
-  // 1. Element carrying the data-ol-3d-scene marker
-  if (html.includes(PLACEHOLDER)) {
-    const markerIdx = html.indexOf(PLACEHOLDER);
-    const tagStart = html.lastIndexOf("<", markerIdx);
-    if (tagStart !== -1) {
-      const tagEnd = html.indexOf(">", tagStart) + 1;
-      if (tagEnd > 0) {
-        return { tagStart, tagEnd, existingId: getAttr(html.slice(tagStart, tagEnd), "id") };
-      }
-    }
-  }
-  // 2. First <section>
-  const secIdx = html.indexOf("<section");
-  if (secIdx !== -1) {
-    const tagEnd = html.indexOf(">", secIdx) + 1;
-    if (tagEnd > 0) {
-      return { tagStart: secIdx, tagEnd, existingId: getAttr(html.slice(secIdx, tagEnd), "id") };
-    }
-  }
-  // 3. First element child of <body>
-  const bodyIdx = html.indexOf("<body");
-  if (bodyIdx !== -1) {
-    const bodyGt = html.indexOf(">", bodyIdx);
-    if (bodyGt !== -1) {
-      let i = bodyGt + 1;
-      while (i < html.length && /\s/.test(html[i])) i++;
-      if (i < html.length && html[i] === "<" && html[i + 1] !== "/" && html[i + 1] !== "!") {
-        const tagEnd = html.indexOf(">", i) + 1;
-        if (tagEnd > 0) {
-          return { tagStart: i, tagEnd, existingId: getAttr(html.slice(i, tagEnd), "id") };
-        }
-      }
-    }
-  }
-  return null;
-}
-
 // Inject the scene as an absolute-positioned backdrop INSIDE the hero target
-// element, so the hero's own content always paints above it (z-index:1).
+// element. Uses z-index:-1 on the backdrop so it paints above the target's own
+// background but below ALL its content (including Tailwind .absolute overlays at
+// z-auto). The target gets position:relative;isolation:isolate (stacking-context
+// containment) so z-index:-1 is contained within the hero and never escapes
+// behind <body>. No content-above <style> rule is emitted — it had specificity
+// (1,1,0) which beat Tailwind's .absolute (0,1,0), yanking overlay divs into
+// normal flow and collapsing them.
 function injectBackdropScene(
   html: string,
   opts: SceneInjectOptions,
@@ -127,8 +66,8 @@ function injectBackdropScene(
   const target = findBackdropTarget(html);
 
   const blockStyle = target
-    ? `position:absolute;inset:0;z-index:0;pointer-events:none;overflow:hidden${bg ? `;background:${bg}` : ""}`
-    : `position:fixed;inset:0;z-index:0;pointer-events:none${bg ? `;background:${bg}` : ""}`;
+    ? `position:absolute;inset:0;z-index:-1;pointer-events:none;overflow:hidden${bg ? `;background:${bg}` : ""}`
+    : `position:fixed;inset:0;z-index:-1;pointer-events:none${bg ? `;background:${bg}` : ""}`;
 
   const block = `<div data-ol-3d-block ${MARKER} data-ol-3d-runtime="${opts.runtimeUrl}" style="${blockStyle}">
 <img data-ol-3d-poster src="${opts.posterUrl}" width="${w}" height="${h}" fetchpriority="high" decoding="async" alt="" style="width:100%;height:100%;object-fit:cover;transition:opacity .6s ease">
@@ -147,13 +86,17 @@ function injectBackdropScene(
   const targetId = target.existingId ?? "ol3d-hero";
   let openTag = html.slice(target.tagStart, target.tagEnd);
   openTag = withId(openTag, targetId);
-  openTag = mergeStyle(openTag, "position:relative;isolation:isolate");
-  // Guarantee hero content renders above the backdrop on any HTML.
-  const contentAboveStyle = `<style>#${targetId}>:not([data-ol-3d-block]){position:relative;z-index:1}</style>`;
+  // Required: position:relative + isolation:isolate create a stacking context
+  // that contains the z-index:-1 backdrop (it won't escape behind <body>).
+  // For the data-ol-3d-scene marker (empty slot): also inject min-height so the
+  // slot has visible area — real sections already have height from their content.
+  let targetStyles = "position:relative;isolation:isolate";
+  if (target.isMarker) targetStyles += ";min-height:70vh";
+  openTag = mergeStyle(openTag, targetStyles);
+
   return (
     html.slice(0, target.tagStart) +
     openTag +
-    contentAboveStyle +
     block +
     html.slice(target.tagEnd)
   );

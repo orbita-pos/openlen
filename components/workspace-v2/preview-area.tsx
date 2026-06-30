@@ -30,59 +30,7 @@ import { injectSectionSelect } from "./use-section-select";
 import { PageBuildingLoader } from "./page-building-loader";
 import { coerceSceneSpec } from "@/lib/three3d/scene-spec";
 import { backgroundCss } from "@/lib/three3d/background";
-
-// ---------------------------------------------------------------------------
-// 3D preview helpers — mirror lib/publish/procedural-3d.ts findBackdropTarget
-// so the editor preview matches the published output exactly.
-// ---------------------------------------------------------------------------
-
-interface Preview3dTarget {
-  tagStart: number;
-  tagEnd: number;
-  existingId: string | null;
-}
-
-function preview3dGetAttr(tag: string, attr: string): string | null {
-  const m = new RegExp(`\\b${attr}="([^"]*)"`, "i").exec(tag);
-  return m ? m[1] : null;
-}
-
-// Same 3-priority finder as procedural-3d.ts → findBackdropTarget.
-function findPreview3dTarget(html: string): Preview3dTarget | null {
-  const PLACEHOLDER = "data-ol-3d-scene";
-  // 1. Element carrying the data-ol-3d-scene marker
-  if (html.includes(PLACEHOLDER)) {
-    const markerIdx = html.indexOf(PLACEHOLDER);
-    const tagStart = html.lastIndexOf("<", markerIdx);
-    if (tagStart !== -1) {
-      const tagEnd = html.indexOf(">", tagStart) + 1;
-      if (tagEnd > 0)
-        return { tagStart, tagEnd, existingId: preview3dGetAttr(html.slice(tagStart, tagEnd), "id") };
-    }
-  }
-  // 2. First <section>
-  const secIdx = html.indexOf("<section");
-  if (secIdx !== -1) {
-    const tagEnd = html.indexOf(">", secIdx) + 1;
-    if (tagEnd > 0)
-      return { tagStart: secIdx, tagEnd, existingId: preview3dGetAttr(html.slice(secIdx, tagEnd), "id") };
-  }
-  // 3. First element child of <body>
-  const bodyIdx = html.indexOf("<body");
-  if (bodyIdx !== -1) {
-    const bodyGt = html.indexOf(">", bodyIdx);
-    if (bodyGt !== -1) {
-      let i = bodyGt + 1;
-      while (i < html.length && /\s/.test(html[i])) i++;
-      if (i < html.length && html[i] === "<" && html[i + 1] !== "/" && html[i + 1] !== "!") {
-        const tagEnd = html.indexOf(">", i) + 1;
-        if (tagEnd > 0)
-          return { tagStart: i, tagEnd, existingId: preview3dGetAttr(html.slice(i, tagEnd), "id") };
-      }
-    }
-  }
-  return null;
-}
+import { findBackdropTarget } from "@/lib/three3d/backdrop-placement";
 
 // ---------------------------------------------------------------------------
 
@@ -416,8 +364,13 @@ export function PreviewArea({
     }
 
     // Background preset: mirror bake's hero-scoped placement (procedural-3d.ts).
-    const target = findPreview3dTarget(stableSrcDoc);
-    const backdropStyle = `position:absolute;inset:0;z-index:0;pointer-events:none;overflow:hidden${bg ? `;background:${bg}` : ""}`;
+    // Uses z-index:-1 on the backdrop (same as bake). With isolation:isolate on
+    // the target, z-index:-1 paints above the target's own background but below
+    // ALL content — including Tailwind .absolute overlays at z-auto. No
+    // content-above rule is emitted: it had specificity (1,1,0) which beat
+    // Tailwind .absolute (0,1,0), collapsing overlay divs into normal flow.
+    const target = findBackdropTarget(stableSrcDoc);
+    const backdropStyle = `position:absolute;inset:0;z-index:-1;pointer-events:none;overflow:hidden${bg ? `;background:${bg}` : ""}`;
     const backdrop =
       `<div data-openlen-3d-preview style="${backdropStyle}">` +
       `<canvas id="ol-3d-preview-canvas" data-openlen-3d-preview style="position:absolute;inset:0;width:100%;height:100%"></canvas>` +
@@ -430,25 +383,14 @@ export function PreviewArea({
       return idx === -1 ? stableSrcDoc + layer : stableSrcDoc.slice(0, idx) + layer + stableSrcDoc.slice(idx);
     }
 
-    // Build a CSS selector that targets the hero WITHOUT mutating its attributes.
-    // Positioning rules live in a tagged <style data-openlen-3d-preview> so they
-    // are stripped by all capture paths (use-inline-edit, use-element-inspect,
-    // strip-editor-instrumentation) and never reach the saved HTML.
-    const targetTag = stableSrcDoc.slice(target.tagStart, target.tagEnd);
-    let heroSelector: string;
-    if (target.existingId) {
-      heroSelector = `#${target.existingId}`;
-    } else if (/\bdata-ol-3d-scene\b/.test(targetTag)) {
-      heroSelector = `[data-ol-3d-scene]`;
-    } else if (targetTag.startsWith("<section")) {
-      heroSelector = `body>section:first-of-type`;
-    } else {
-      heroSelector = `body>*:first-child`;
-    }
+    // Build a CSS selector from the shared finder result. Positioning rules live
+    // in a tagged <style data-openlen-3d-preview> so they are stripped by all
+    // capture paths (use-inline-edit, use-element-inspect, strip-editor-
+    // instrumentation) and never reach the saved HTML. No child rule emitted.
+    const heroSelector = target.cssSelector;
     const styleTag =
       `<style data-openlen-3d-preview>` +
       `${heroSelector}{position:relative;isolation:isolate}` +
-      `${heroSelector}>:not([data-openlen-3d-preview]){position:relative;z-index:1}` +
       `</style>`;
 
     // Insert backdrop immediately inside the hero's opening tag, then append

@@ -37,8 +37,10 @@ const { SAMPLE_SPEC } = await import("../../lib/three3d/scene-spec.ts");
 const lighthouse = (await import("lighthouse")).default;
 const puppeteer = (await import("puppeteer")).default;
 
-// Minimal but complete gate page:
-// - 3D block FIRST so the poster img is above the fold → LCP element
+// Realistic gate page:
+// - hero <section data-ol-3d-scene> with real content (h1 + p) — exercises the
+//   actual hero-scoped backdrop placement, not an empty-slot blind test
+// - bake adds position:relative;isolation:isolate;min-height:70vh to the section
 // - meta description → SEO 100
 // - <link rel="icon" href="data:,"> → suppresses favicon.ico 404 → best-practices 100
 const PAGE = `<!doctype html><html lang="es"><head><meta charset="utf-8">
@@ -46,8 +48,10 @@ const PAGE = `<!doctype html><html lang="es"><head><meta charset="utf-8">
 <meta name="description" content="OpenLen 3D scene — Born with depth">
 <link rel="icon" href="data:,">
 <title>3D gate</title></head><body>
-<section data-ol-3d-scene></section>
-<main style="padding:24px"><h1>Born with depth</h1><p>contenido</p></main>
+<section data-ol-3d-scene style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:80px 32px;text-align:center;color:#fff">
+  <h1 style="font-size:clamp(2rem,5vw,3.5rem);font-weight:900;line-height:1.1;margin:0 0 16px">Born with depth</h1>
+  <p style="font-size:1.1rem;opacity:.75;max-width:480px;margin:0">Un fondo 3D procedural como telón del héroe.</p>
+</section>
 </body></html>`;
 
 // ── Static assertion (no Chrome needed) ────────────────────────────────────
@@ -211,9 +215,9 @@ try {
   if (results.seo < 100) fail.push(`seo ${results.seo} < 100`);
   if (results.lcpMs > 1600) fail.push(`LCP ${results.lcpMs}ms > 1600`);
   if (results.tbtMs > 200) fail.push(`TBT ${results.tbtMs}ms > 200`);
-  // For background preset the block is position:fixed;inset:0 — Chrome's LCP
-  // algorithm excludes images that cover the full viewport from LCP candidates
-  // (per the LCP spec). Page content (text) correctly becomes the LCP element.
+  // For background preset the block is position:absolute;inset:0 hero-scoped
+  // (not viewport-fixed). The poster img or the hero <h1> may be the LCP
+  // element depending on page structure. Either is valid for this gate.
   // For non-background presets (accent/divider) the block is inline, so the
   // poster img must still be the LCP candidate.
   if (SAMPLE_SPEC.preset !== "background" && !/data-ol-3d-poster/i.test(lcpEl)) {

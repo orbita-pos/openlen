@@ -37,10 +37,10 @@ describe("injectSceneMarkup", () => {
   });
 });
 
-describe("injectSceneMarkup — background preset hero-scoped backdrop", () => {
+describe("injectSceneMarkup — background preset hero-scoped backdrop (Fix 1: z-index:-1)", () => {
   const BGSPEC = { ...SAMPLE_SPEC, background: "gradient" as const };
   const withSection =
-    '<html><head></head><body><section id="hero" style="padding:4rem;color:#fff"><h1>Title</h1><p>Text</p></section></body></html>';
+    '<html><head></head><body><section id="hero" style="padding:4rem;color:#fff"><h1>Title</h1><div class="absolute inset-0 bg-gradient-to-br from-purple-900/60"></div><p>Text</p></section></body></html>';
   const out = injectSceneMarkup(withSection, { spec: BGSPEC, posterUrl: "/assets/p.avif", runtimeUrl: "/assets/r.js" });
 
   it("block lands INSIDE the first section, not before </body>", () => {
@@ -52,28 +52,89 @@ describe("injectSceneMarkup — background preset hero-scoped backdrop", () => {
     expect(blockIdx).toBeLessThan(sectionCloseIdx);
   });
 
-  it("backdrop wrapper uses position:absolute, not position:fixed", () => {
+  it("backdrop wrapper uses position:absolute;z-index:-1 (not z-index:0 or positive)", () => {
     const divStart = out.indexOf("<div data-ol-3d-block");
     expect(divStart).toBeGreaterThan(-1);
     const divTag = out.slice(divStart, out.indexOf(">", divStart) + 1);
     expect(divTag).toContain("position:absolute");
+    expect(divTag).toContain("z-index:-1");
+    expect(divTag).not.toContain("z-index:0");
     expect(divTag).not.toContain("position:fixed");
+  });
+
+  it("does NOT emit a content-above :not([data-ol-3d-block]) style rule", () => {
+    expect(out).not.toMatch(/:not\(\[data-ol-3d-block\]\)/);
+  });
+
+  it("target element gets position:relative;isolation:isolate (required for z-index:-1 containment)", () => {
+    const sectionIdx = out.indexOf("<section");
+    const sectionTagEnd = out.indexOf(">", sectionIdx) + 1;
+    const openTag = out.slice(sectionIdx, sectionTagEnd);
+    expect(openTag).toContain("position:relative");
+    expect(openTag).toContain("isolation:isolate");
   });
 
   it("poster keeps fetchpriority=high inside the hero target", () => {
     expect(out).toContain('fetchpriority="high"');
   });
 
-  it("injects content-above scoped style rule for the target id", () => {
-    // Existing id="hero" is preserved; style rule uses it.
-    expect(out).toMatch(/#hero>:not\(\[data-ol-3d-block\]\)\{position:relative;z-index:1\}/);
-  });
-
-  it("assigns ol3d-hero id and matching style rule when section has no id", () => {
+  it("assigns ol3d-hero id when section has no id", () => {
     const noId = '<html><head></head><body><section style="padding:2rem"><h1>Hi</h1></section></body></html>';
     const r = injectSceneMarkup(noId, { spec: BGSPEC, posterUrl: "/assets/p.avif", runtimeUrl: "/assets/r.js" });
     expect(r).toContain('id="ol3d-hero"');
-    expect(r).toMatch(/#ol3d-hero>:not\(\[data-ol-3d-block\]\)\{position:relative;z-index:1\}/);
+  });
+
+  it("no content-above rule even when section has no id", () => {
+    const noId = '<html><head></head><body><section style="padding:2rem"><h1>Hi</h1></section></body></html>';
+    const r = injectSceneMarkup(noId, { spec: BGSPEC, posterUrl: "/assets/p.avif", runtimeUrl: "/assets/r.js" });
+    expect(r).not.toMatch(/:not\(\[data-ol-3d-block\]\)/);
+  });
+});
+
+describe("injectSceneMarkup — marker target gets min-height (Fix 3)", () => {
+  const BGSPEC = { ...SAMPLE_SPEC, background: "gradient" as const };
+
+  it("adds min-height to the data-ol-3d-scene marker so the slot has visible area", () => {
+    const marker = '<html><head></head><body><section data-ol-3d-scene></section></body></html>';
+    const r = injectSceneMarkup(marker, { spec: BGSPEC, posterUrl: "/assets/p.avif", runtimeUrl: "/assets/r.js" });
+    const sectionIdx = r.indexOf("<section");
+    const sectionTag = r.slice(sectionIdx, r.indexOf(">", sectionIdx) + 1);
+    expect(sectionTag).toContain("min-height");
+  });
+
+  it("does NOT add min-height to a real section with content (priority 2)", () => {
+    const real = '<html><head></head><body><section id="hero" style="padding:4rem"><h1>Title</h1></section></body></html>';
+    const r = injectSceneMarkup(real, { spec: BGSPEC, posterUrl: "/assets/p.avif", runtimeUrl: "/assets/r.js" });
+    const sectionIdx = r.indexOf("<section");
+    const sectionTag = r.slice(sectionIdx, r.indexOf(">", sectionIdx) + 1);
+    // Real section should not have min-height injected (it already has content height)
+    expect(sectionTag).not.toContain("min-height");
+  });
+});
+
+describe("injectSceneMarkup — single-quoted attribute handling", () => {
+  const BGSPEC = { ...SAMPLE_SPEC, background: "gradient" as const };
+
+  it("mergeStyle handles single-quoted style= correctly", () => {
+    const singleQ = `<html><head></head><body><section id='hero' style='padding:4rem;color:#fff'><h1>Hi</h1></section></body></html>`;
+    const r = injectSceneMarkup(singleQ, { spec: BGSPEC, posterUrl: "/assets/p.avif", runtimeUrl: "/assets/r.js" });
+    // Should not produce a duplicate style= attribute
+    const matches = r.match(/\bstyle=/g) ?? [];
+    const heroSection = r.slice(r.indexOf("<section"), r.indexOf(">", r.indexOf("<section")) + 1);
+    const styleCount = (heroSection.match(/\bstyle=/g) ?? []).length;
+    expect(styleCount).toBe(1);
+    // Should still inject position:relative;isolation:isolate
+    expect(heroSection).toContain("position:relative");
+    expect(heroSection).toContain("isolation:isolate");
+  });
+
+  it("withId handles single-quoted id= correctly (does not add duplicate)", () => {
+    const singleId = `<html><head></head><body><section id='hero'><h1>Hi</h1></section></body></html>`;
+    const r = injectSceneMarkup(singleId, { spec: BGSPEC, posterUrl: "/assets/p.avif", runtimeUrl: "/assets/r.js" });
+    const heroSection = r.slice(r.indexOf("<section"), r.indexOf(">", r.indexOf("<section")) + 1);
+    // Should not add a second id attribute
+    const idCount = (heroSection.match(/\bid=/g) ?? []).length;
+    expect(idCount).toBe(1);
   });
 });
 
