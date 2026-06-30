@@ -132,6 +132,17 @@ export interface CollectionsSettings {
   enabled?: boolean;
 }
 
+/** 3D scene module — a gesture-gated WebGL scene baked at publish time.
+ *  The AVIF poster is the LCP image; the Three.js runtime loads ONLY on a
+ *  "Ver en 3D" tap and only when capability gates pass (WebGL, memory, motion
+ *  prefs, data-saver). Stored loosely here; coerced to SceneSpec at bake time. */
+export interface Scene3dSettings {
+  /** Master switch. Absent/false → nothing baked. */
+  enabled?: boolean;
+  /** A SceneSpec object. Stored loosely, coerced via coerceSceneSpec() at bake time. */
+  spec?: unknown;
+}
+
 /** WhatsApp button module — a floating tap-to-chat FAB baked on the published
  *  page. Distinct from the business-profile contact widget (which seeds a full
  *  contact stack at create time from "Mi negocio"): this is a per-page,
@@ -186,6 +197,8 @@ export interface ProjectSettings {
   collections?: CollectionsSettings;
   /** WhatsApp button: a floating tap-to-chat FAB baked at publish. Absent = off. */
   whatsapp?: WhatsAppSettings;
+  /** 3D scene: gesture-gated WebGL scene with AVIF poster baked at publish. Absent = off. */
+  scene3d?: Scene3dSettings;
 }
 
 /** One additional page of a multi-page site. The home page stays at

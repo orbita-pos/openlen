@@ -831,6 +831,9 @@ export async function publishProject(
         ? { enabled: true }
         : undefined,
       collections: collectionsBake,
+      scene3d: project.data?.settings?.scene3d?.enabled
+        ? { enabled: true, spec: project.data.settings.scene3d.spec }
+        : undefined,
       whatsapp: project.data?.settings?.whatsapp?.enabled
         ? project.data.settings.whatsapp
         : undefined,

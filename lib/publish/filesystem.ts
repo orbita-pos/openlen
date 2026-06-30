@@ -28,6 +28,7 @@ import { bakeWhatsAppButton } from "@/lib/publish/whatsapp-button";
 import { bakeChatWidget } from "@/lib/publish/chat-widget";
 import { bakeVideoEmbeds, bakeMediaPreconnect } from "@/lib/publish/video-embed";
 import { bakeCarousels } from "@/lib/publish/carousel";
+import { bake3dScene } from "./procedural-3d";
 import type { ItemRow } from "@/lib/collections/store";
 import {
   annotateLanguageCluster,
@@ -200,6 +201,9 @@ export interface PublishParams {
    *  variant — suppressed if the page already carries the profile contact
    *  widget (no double FAB). */
   whatsapp?: WhatsAppSettings;
+  /** 3D scene (settings.scene3d). When enabled, a gesture-gated WebGL block
+   *  with AVIF poster (LCP) and deferred runtime is baked into the root doc. */
+  scene3d?: { enabled: boolean; spec?: unknown };
   /** Private chat module (settings.chat). When enabled, the 1:1 messaging
    *  widget is baked on the root doc + every page/locale variant. */
   chat?: ChatBake;
@@ -483,6 +487,8 @@ interface BakeDocumentCtx {
   /** WhatsApp button. When enabled with a usable number, a floating FAB is baked
    *  (suppressed if the profile contact widget is already present). */
   whatsapp?: WhatsAppSettings;
+  /** 3D scene. When enabled, a gesture-gated WebGL block with AVIF poster is baked. */
+  scene3d?: { enabled: boolean; spec?: unknown };
   /** Private chat module. When enabled, the 1:1 messaging widget is baked. */
   chat?: ChatBake;
 }
@@ -766,6 +772,19 @@ async function bakeDocument(
     }
   }
 
+  // 3D scene — gesture-gated WebGL block with AVIF poster (LCP) and deferred
+  // runtime (loaded ONLY on "Ver en 3D" tap + capability gates). Runs BEFORE
+  // the CSP seal so the bootstrap inline script gets its hash captured.
+  // OPENLEN_3D_SCENE=0 disables it.
+  if (process.env.OPENLEN_3D_SCENE !== "0" && ctx.scene3d?.enabled) {
+    try {
+      migratedHtml = await bake3dScene({ html: migratedHtml, subDir: ctx.subDir, spec: ctx.scene3d.spec });
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.warn("[publishToDir] 3D scene bake failed; publishing without it", err);
+    }
+  }
+
   // WhatsApp tap-to-chat FAB (settings.whatsapp). Pure HTML/CSS, before the
   // seal. Self-suppresses if the profile contact widget is already on the page.
   if (process.env.OPENLEN_WHATSAPP !== "0" && ctx.whatsapp?.enabled && ctx.whatsapp.number) {
@@ -908,6 +927,7 @@ export async function publishToDir(
     bookings: params.bookings,
     collections: params.collections,
     whatsapp: params.whatsapp,
+    scene3d: params.scene3d,
     chat: params.chat,
   };
   let migratedHtml = await bakeDocument(publishHtml, bakeCtx);

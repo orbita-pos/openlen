@@ -58,6 +58,7 @@ export default defineConfig({
       "lib/projects/preview.test.ts",
       "lib/notifications/**/*.test.ts",
       "lib/publish/scene-host.test.ts",
+      "lib/publish/procedural-3d.test.ts",
     ],
     exclude: ["node_modules/**", "tests/e2e/**", ".next/**"],
   },
