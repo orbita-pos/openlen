@@ -19,9 +19,18 @@ export interface SceneConfig {
   driftAmplitude: number; // world units
   lights: LightSpec[];
   cameraZ: number;
+  geometryKind: import("../scene-spec").GeometryKind;
+  materialKind: import("../scene-spec").MaterialKind;
+  cluster: boolean;
+  exposure: number;
+  envIntensity: number;
+  accentColor: string;
 }
 
 const DEFAULT_COLOR = "#7C5CFF";
+
+const EXPOSURE: Record<Look, number> = { studio: 1.0, soft: 1.05, dramatic: 1.15, neutral: 1.0 };
+const ENV_INTENSITY: Record<Look, number> = { studio: 1.5, soft: 1.4, dramatic: 1.3, neutral: 1.35 };
 
 const LIGHT_RIGS: Record<Look, LightSpec[]> = {
   studio: [
@@ -58,5 +67,11 @@ export function buildSceneConfig(spec: SceneSpec): SceneConfig {
     driftAmplitude: moving && spec.motion.kind !== "rotate" ? spec.motion.amplitude * 0.4 : 0,
     lights: LIGHT_RIGS[spec.look],
     cameraZ: spec.camera.framing === "wide" ? 6 : spec.camera.framing === "offset" ? 4.5 : 4,
+    geometryKind: spec.geometry.kind,
+    materialKind: spec.material.kind,
+    cluster: spec.preset === "background",
+    exposure: EXPOSURE[spec.look],
+    envIntensity: ENV_INTENSITY[spec.look],
+    accentColor: spec.material.colors[0] ?? DEFAULT_COLOR,
   };
 }

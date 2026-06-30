@@ -30,3 +30,18 @@ describe("buildSceneConfig", () => {
     expect(c.color).toMatch(/^#[0-9a-fA-F]{6}$/);
   });
 });
+
+describe("buildSceneConfig — quality fields", () => {
+  it("carries geometry/material kind, cluster flag, exposure, envIntensity, accentColor", () => {
+    const c = buildSceneConfig({ ...SAMPLE_SPEC, preset: "background", look: "dramatic" });
+    expect(c.geometryKind).toBe(SAMPLE_SPEC.geometry.kind);
+    expect(c.materialKind).toBe(SAMPLE_SPEC.material.kind);
+    expect(c.cluster).toBe(true); // background → cluster
+    expect(c.exposure).toBeGreaterThan(0);
+    expect(c.envIntensity).toBeGreaterThan(0);
+    expect(c.accentColor).toMatch(/^#[0-9a-fA-F]{6}$/);
+  });
+  it("single object for accent preset", () => {
+    expect(buildSceneConfig({ ...SAMPLE_SPEC, preset: "accent" }).cluster).toBe(false);
+  });
+});
