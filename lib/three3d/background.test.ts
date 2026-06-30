@@ -11,8 +11,23 @@ describe("backgroundCss", () => {
     expect(css).toContain("linear-gradient");
     expect(css!.toLowerCase()).toContain("7c5cff");
   });
-  it("dramatic look yields a dark base", () => {
-    const css = backgroundCss({ ...SAMPLE_SPEC, background: "gradient", look: "dramatic" });
+  it("dramatic look yields a dark base for non-glass materials", () => {
+    const css = backgroundCss({
+      ...SAMPLE_SPEC,
+      background: "gradient",
+      look: "dramatic",
+      material: { ...SAMPLE_SPEC.material, kind: "matte" },
+    });
     expect(css).toMatch(/#12|#1b/);
+  });
+  it("glassy material with dramatic look yields a light base (not dark)", () => {
+    const css = backgroundCss({
+      ...SAMPLE_SPEC,
+      background: "gradient",
+      look: "dramatic",
+      material: { ...SAMPLE_SPEC.material, kind: "glass", colors: ["#7C5CFF"] },
+    });
+    expect(css).toContain("linear-gradient");
+    expect(css).not.toMatch(/#12|#1b/);
   });
 });

@@ -26,7 +26,20 @@ function makeGeometry(kind: GeometryKind, radius: number, segments: number): Buf
   }
 }
 
-function glassMaterial(cfg: SceneConfig): MeshPhysicalMaterial {
+function glassMaterial(cfg: SceneConfig, faceted: boolean): MeshPhysicalMaterial {
+  if (faceted) {
+    // Faceted gem recipe: high IOR + dispersion + flat shading reads each face as a prismatic facet.
+    return new MeshPhysicalMaterial({
+      transmission: 1, thickness: 1.2, roughness: 0.04, ior: 1.9, dispersion: 0.95,
+      iridescence: 1, iridescenceIOR: 1.4, iridescenceThicknessRange: [120, 700],
+      clearcoat: 0.5, clearcoatRoughness: 0.08, metalness: 0, transparent: true,
+      color: new Color(0xffffff),
+      attenuationColor: new Color(cfg.accentColor), attenuationDistance: 9.0,
+      flatShading: true,
+      envMapIntensity: cfg.envIntensity,
+    });
+  }
+  // Smooth glass recipe (unchanged).
   return new MeshPhysicalMaterial({
     transmission: 1, thickness: 1.0, roughness: 0.13, ior: 1.5, dispersion: 0.5,
     iridescence: 1, iridescenceIOR: 1.4, iridescenceThicknessRange: [130, 740],
@@ -37,8 +50,8 @@ function glassMaterial(cfg: SceneConfig): MeshPhysicalMaterial {
   });
 }
 
-function makeMaterial(kind: MaterialKind, cfg: SceneConfig): Material {
-  if (kind === "glass" || kind === "iridescent") return glassMaterial(cfg);
+function makeMaterial(kind: MaterialKind, cfg: SceneConfig, faceted = false): Material {
+  if (kind === "glass" || kind === "iridescent") return glassMaterial(cfg, faceted);
   if (kind === "chrome" || kind === "metal") {
     return new MeshStandardMaterial({ color: new Color(cfg.accentColor), metalness: 1, roughness: kind === "chrome" ? 0.05 : 0.25, envMapIntensity: cfg.envIntensity });
   }
@@ -98,16 +111,19 @@ export function mount(canvas: HTMLCanvasElement, spec: SceneSpec, opts: { onRead
   if (cfg.geometryKind === "particles") {
     root.add(track(particleField(cfg)));
   } else if (cfg.cluster) {
-    const lead = new Mesh(makeGeometry(cfg.geometryKind, cfg.radius * 0.75, cfg.segments), makeMaterial(cfg.materialKind, cfg));
+    const leadFaceted = cfg.geometryKind === "icosa";
+    const lead = new Mesh(makeGeometry(cfg.geometryKind, cfg.radius * 0.75, cfg.segments), makeMaterial(cfg.materialKind, cfg, leadFaceted));
     lead.position.set(0.1, 0.55, 0);
-    const box = new Mesh(new RoundedBoxGeometry(cfg.radius * 1.05, cfg.radius * 1.05, cfg.radius * 1.05, 8, cfg.radius * 0.26), makeMaterial(cfg.materialKind, cfg));
+    // Companions (RoundedBox, Capsule) are smooth — never faceted.
+    const box = new Mesh(new RoundedBoxGeometry(cfg.radius * 1.05, cfg.radius * 1.05, cfg.radius * 1.05, 8, cfg.radius * 0.26), makeMaterial(cfg.materialKind, cfg, false));
     box.position.set(-0.15, -0.55, 0.25); box.rotation.set(0.2, 0.5, 0.05);
-    const cap = new Mesh(new CapsuleGeometry(cfg.radius * 0.4, cfg.radius * 0.9, 24, 48), makeMaterial(cfg.materialKind, cfg));
+    const cap = new Mesh(new CapsuleGeometry(cfg.radius * 0.4, cfg.radius * 0.9, 24, 48), makeMaterial(cfg.materialKind, cfg, false));
     cap.position.set(1.1, -0.05, -0.15); cap.rotation.z = 0.95;
     root.add(track(lead), track(box), track(cap));
     root.position.set(1.2, 0, 0); root.rotation.y = -0.15;
   } else {
-    root.add(track(new Mesh(makeGeometry(cfg.geometryKind, cfg.radius, cfg.segments), makeMaterial(cfg.materialKind, cfg))));
+    const faceted = cfg.geometryKind === "icosa";
+    root.add(track(new Mesh(makeGeometry(cfg.geometryKind, cfg.radius, cfg.segments), makeMaterial(cfg.materialKind, cfg, faceted))));
   }
   scene.add(root);
 

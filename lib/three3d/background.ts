@@ -14,7 +14,11 @@ export function backgroundCss(spec: SceneSpec): string | null {
   if (spec.background === "transparent") return null;
   const accent = (spec.material.colors[0] ?? DEFAULT_ACCENT).replace("#", "");
   if (spec.background === "color") return `#${accent}14`;
-  const [a, b] = BASE[spec.look];
-  const accentAlpha = spec.look === "dramatic" ? "33" : "1f";
+  // Glass/iridescent transmit the background — dark backdrops read as opaque/dull.
+  // Override dramatic→soft so glassy materials always render on a light field.
+  const glassy = spec.material.kind === "glass" || spec.material.kind === "iridescent";
+  const look = glassy && spec.look === "dramatic" ? "soft" : spec.look;
+  const [a, b] = BASE[look];
+  const accentAlpha = look === "dramatic" ? "33" : "1f";
   return `linear-gradient(120deg, ${a} 0%, ${b} 55%, #${accent}${accentAlpha} 120%)`;
 }
