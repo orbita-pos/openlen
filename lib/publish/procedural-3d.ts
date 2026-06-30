@@ -47,24 +47,135 @@ export interface SceneInjectOptions {
   height?: number;
 }
 
+// --- Hero-scoped backdrop helpers ---
+
+function getAttr(tag: string, attr: string): string | null {
+  const m = new RegExp(`\\b${attr}="([^"]*)"`, "i").exec(tag);
+  return m ? m[1] : null;
+}
+
+function withId(tag: string, id: string): string {
+  if (/\bid="/.test(tag)) return tag;
+  const gtIdx = tag.lastIndexOf(">");
+  return tag.slice(0, gtIdx) + ` id="${id}"` + tag.slice(gtIdx);
+}
+
+// Append extra CSS properties to an element's inline style, stripping any
+// trailing semicolon so the result stays well-formed.
+function mergeStyle(tag: string, extra: string): string {
+  const m = /\bstyle="([^"]*)"/.exec(tag);
+  if (m) {
+    const existing = m[1].replace(/;\s*$/, "");
+    return tag.slice(0, m.index) + `style="${existing};${extra}"` + tag.slice(m.index + m[0].length);
+  }
+  const gtIdx = tag.lastIndexOf(">");
+  return tag.slice(0, gtIdx) + ` style="${extra}"` + tag.slice(gtIdx);
+}
+
+interface TagInfo { tagStart: number; tagEnd: number; existingId: string | null; }
+
+// Find the element that will host the hero backdrop.
+// Priority: data-ol-3d-scene marker → first <section> → first element child of <body>.
+// Returns null only if none of these exist (extremely bare HTML).
+function findBackdropTarget(html: string): TagInfo | null {
+  // 1. Element carrying the data-ol-3d-scene marker
+  if (html.includes(PLACEHOLDER)) {
+    const markerIdx = html.indexOf(PLACEHOLDER);
+    const tagStart = html.lastIndexOf("<", markerIdx);
+    if (tagStart !== -1) {
+      const tagEnd = html.indexOf(">", tagStart) + 1;
+      if (tagEnd > 0) {
+        return { tagStart, tagEnd, existingId: getAttr(html.slice(tagStart, tagEnd), "id") };
+      }
+    }
+  }
+  // 2. First <section>
+  const secIdx = html.indexOf("<section");
+  if (secIdx !== -1) {
+    const tagEnd = html.indexOf(">", secIdx) + 1;
+    if (tagEnd > 0) {
+      return { tagStart: secIdx, tagEnd, existingId: getAttr(html.slice(secIdx, tagEnd), "id") };
+    }
+  }
+  // 3. First element child of <body>
+  const bodyIdx = html.indexOf("<body");
+  if (bodyIdx !== -1) {
+    const bodyGt = html.indexOf(">", bodyIdx);
+    if (bodyGt !== -1) {
+      let i = bodyGt + 1;
+      while (i < html.length && /\s/.test(html[i])) i++;
+      if (i < html.length && html[i] === "<" && html[i + 1] !== "/" && html[i + 1] !== "!") {
+        const tagEnd = html.indexOf(">", i) + 1;
+        if (tagEnd > 0) {
+          return { tagStart: i, tagEnd, existingId: getAttr(html.slice(i, tagEnd), "id") };
+        }
+      }
+    }
+  }
+  return null;
+}
+
+// Inject the scene as an absolute-positioned backdrop INSIDE the hero target
+// element, so the hero's own content always paints above it (z-index:1).
+function injectBackdropScene(
+  html: string,
+  opts: SceneInjectOptions,
+  w: number,
+  h: number,
+  bg: string | null,
+): string {
+  const target = findBackdropTarget(html);
+
+  const blockStyle = target
+    ? `position:absolute;inset:0;z-index:0;pointer-events:none;overflow:hidden${bg ? `;background:${bg}` : ""}`
+    : `position:fixed;inset:0;z-index:0;pointer-events:none${bg ? `;background:${bg}` : ""}`;
+
+  const block = `<div data-ol-3d-block ${MARKER} data-ol-3d-runtime="${opts.runtimeUrl}" style="${blockStyle}">
+<img data-ol-3d-poster src="${opts.posterUrl}" width="${w}" height="${h}" fetchpriority="high" decoding="async" alt="" style="width:100%;height:100%;object-fit:cover;transition:opacity .6s ease">
+<canvas data-ol-3d-canvas hidden style="position:absolute;inset:0;width:100%;height:100%"></canvas>
+<button data-ol-3d-launch type="button" style="position:absolute;left:50%;bottom:16px;transform:translateX(-50%);padding:8px 16px;border-radius:9999px;border:0;background:rgba(0,0,0,.55);color:#fff;font:600 14px system-ui;cursor:pointer;pointer-events:auto">Ver en 3D</button>
+<script type="application/json" data-ol-3d-spec>${JSON.stringify(opts.spec).replace(/</g, "\\u003c")}</script>
+<script data-ol-3d-boot>${BOOTSTRAP_JS}</script>
+</div>`;
+
+  if (!target) {
+    // Safe fallback: append before </body> so it never crashes on bare HTML.
+    const idx = html.lastIndexOf("</body>");
+    return idx === -1 ? html + block : html.slice(0, idx) + block + html.slice(idx);
+  }
+
+  const targetId = target.existingId ?? "ol3d-hero";
+  let openTag = html.slice(target.tagStart, target.tagEnd);
+  openTag = withId(openTag, targetId);
+  openTag = mergeStyle(openTag, "position:relative;isolation:isolate");
+  // Guarantee hero content renders above the backdrop on any HTML.
+  const contentAboveStyle = `<style>#${targetId}>:not([data-ol-3d-block]){position:relative;z-index:1}</style>`;
+  return (
+    html.slice(0, target.tagStart) +
+    openTag +
+    contentAboveStyle +
+    block +
+    html.slice(target.tagEnd)
+  );
+}
+
 export function injectSceneMarkup(html: string, opts: SceneInjectOptions): string {
   if (html.includes(MARKER)) return html; // idempotent
   const w = opts.width ?? 1600;
   const h = opts.height ?? 900;
   const bg = backgroundCss(opts.spec);
-  // For the background preset, become a fixed full-bleed layer behind page content.
-  // For accent/divider presets, keep the current inline-block behaviour.
   const isBackground = opts.spec.preset === "background";
-  const blockStyle = isBackground
-    ? `position:fixed;inset:0;z-index:0;pointer-events:none${bg ? `;background:${bg}` : ""}`
-    : `position:relative;overflow:hidden${bg ? `;background:${bg}` : ""}`;
-  // pointer-events:none on the wrapper would swallow clicks on the launch button;
-  // restore per-element interactivity for the background preset.
-  const btnExtra = isBackground ? ";pointer-events:auto" : "";
+
+  if (isBackground) {
+    return injectBackdropScene(html, opts, w, h, bg);
+  }
+
+  // accent / divider: inline-block behaviour unchanged.
+  const blockStyle = `position:relative;overflow:hidden${bg ? `;background:${bg}` : ""}`;
   const block = `<div data-ol-3d-block ${MARKER} data-ol-3d-runtime="${opts.runtimeUrl}" style="${blockStyle}">
 <img data-ol-3d-poster src="${opts.posterUrl}" width="${w}" height="${h}" fetchpriority="high" decoding="async" alt="" style="width:100%;height:100%;object-fit:cover;transition:opacity .6s ease">
 <canvas data-ol-3d-canvas hidden style="position:absolute;inset:0;width:100%;height:100%"></canvas>
-<button data-ol-3d-launch type="button" style="position:absolute;left:50%;bottom:16px;transform:translateX(-50%);padding:8px 16px;border-radius:9999px;border:0;background:rgba(0,0,0,.55);color:#fff;font:600 14px system-ui;cursor:pointer${btnExtra}">Ver en 3D</button>
+<button data-ol-3d-launch type="button" style="position:absolute;left:50%;bottom:16px;transform:translateX(-50%);padding:8px 16px;border-radius:9999px;border:0;background:rgba(0,0,0,.55);color:#fff;font:600 14px system-ui;cursor:pointer">Ver en 3D</button>
 <script type="application/json" data-ol-3d-spec>${JSON.stringify(opts.spec).replace(/</g, "\\u003c")}</script>
 <script data-ol-3d-boot>${BOOTSTRAP_JS}</script>
 </div>`;

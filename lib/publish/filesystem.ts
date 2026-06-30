@@ -775,9 +775,9 @@ async function bakeDocument(
   // 3D scene — gesture-gated WebGL block with AVIF poster (LCP) and deferred
   // runtime (loaded ONLY on "Ver en 3D" tap + capability gates). Runs BEFORE
   // the CSP seal so the bootstrap inline script gets its hash captured.
-  // OPENLEN_3D_SCENE=0 disables it.
-  if (process.env.OPENLEN_3D_SCENE !== "0" && ctx.scene3d?.enabled &&
-      (page === null || migratedHtml.includes("data-ol-3d-scene"))) {
+  // Bakes on home AND every subpage so preview == publish. OPENLEN_3D_SCENE=0
+  // disables it. Poster assets are content-hashed/shared — no byte duplication.
+  if (process.env.OPENLEN_3D_SCENE !== "0" && ctx.scene3d?.enabled) {
     try {
       migratedHtml = await bake3dScene({ html: migratedHtml, subDir: ctx.subDir, spec: ctx.scene3d.spec });
     } catch (err) {
