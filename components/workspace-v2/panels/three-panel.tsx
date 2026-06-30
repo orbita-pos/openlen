@@ -237,6 +237,7 @@ export function ThreePanel({
               Quitar 3D
             </button>
           )}
+          <p className="text-[10px] fg-faint text-center pt-0.5">Se aplica como fondo del hero, en todo el sitio.</p>
         </div>
 
         {provider && (
