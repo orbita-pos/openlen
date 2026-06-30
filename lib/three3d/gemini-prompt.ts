@@ -19,6 +19,7 @@ SceneSpec shape (all numeric params are 0..1):
 - look: "studio" | "soft" | "dramatic" | "neutral"  (lighting recipe)
 - camera.framing: "centered" | "offset" | "wide"
 - background: "transparent" | "color" | "gradient"
+Behavior mapping: "float-rotate" → motion.kind "drift"; "still" → motion.kind "still".
 
 Rules: it must be ABSTRACT/decorative (no recognizable real objects — those are unsupported). Set accentLinked:true when the brand color should drive the material; otherwise pick tasteful colors. Keep it premium and varied.
 
@@ -29,7 +30,13 @@ ${examples}`;
 export function buildUserPrompt(input: GenInput): string {
   const parts = [`Brief: "${input.describe}"`];
   if (input.look) parts.push(`Look: ${input.look}`);
-  if (input.behavior) parts.push(`Behavior: ${input.behavior}`);
+  if (input.behavior) {
+    if (input.behavior === "still") {
+      parts.push("Motion: still — no movement (use motion.kind \"still\", speed 0, amplitude 0).");
+    } else if (input.behavior === "float-rotate") {
+      parts.push("Motion: gentle floating drift with slow rotation (use motion.kind \"drift\").");
+    }
+  }
   if (input.brandMatch !== false && input.accent) parts.push(`Brand accent: ${input.accent} (set accentLinked:true and use it)`);
   parts.push("Output ONLY the JSON SceneSpec.");
   return parts.join("\n");

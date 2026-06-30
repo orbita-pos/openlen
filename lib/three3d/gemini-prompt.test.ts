@@ -25,4 +25,17 @@ describe("buildUserPrompt", () => {
     expect(p).toContain("still");
     expect(p).toContain("#0044FF");
   });
+  it("omits the brand-accent line when brandMatch is false", () => {
+    const p = buildUserPrompt({ describe: "x", accent: "#0044FF", brandMatch: false });
+    expect(p).not.toContain("#0044FF");
+  });
+  it("works with only the required brief (no look/behavior/accent)", () => {
+    const p = buildUserPrompt({ describe: "solo un brief" });
+    expect(p).toContain("solo un brief");
+    expect(p).toContain("JSON");
+  });
+  it("maps 'still' behavior to a motion.kind still hint", () => {
+    const p = buildUserPrompt({ describe: "x", behavior: "still" });
+    expect(p.toLowerCase()).toContain("still");
+  });
 });
