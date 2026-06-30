@@ -22,8 +22,9 @@
 //
 // Chrome note:
 //   bake3dScene (without renderPoster) lazy-imports scene-poster → Chrome.
-//   If Chrome cannot launch the gate exits with DONE_WITH_CONCERNS and defers
-//   the live Lighthouse check to the Hetzner box (has google-chrome-stable).
+//   If Chrome cannot launch the gate exits 1 (GATE NOT SATISFIED) — a missing
+//   Chrome is never a soft pass. Run on the Hetzner box (google-chrome-stable +
+//   PUPPETEER_EXECUTABLE_PATH) where Chrome is available.
 //   Static assertion (no eager <script src>) always runs via a fake renderer.
 
 import { mkdtempSync, writeFileSync, readFileSync } from "node:fs";
@@ -160,11 +161,13 @@ try {
   const tbt = lhr.audits["total-blocking-time"]?.numericValue ?? 1e9;
 
   // In Lighthouse v13 the "largest-contentful-paint-element" audit was removed.
-  // The LCP element node is in lcp-breakdown-insight.details.items[1] (the node
-  // item; items[0] is the subpart timing table). lcp-discovery-insight.details
-  // also carries it but the breakdown is more stable for this assertion.
+  // Scan all items for the first whose snippet is an actual HTML element tag —
+  // positional access (items[1]) is fragile when Lighthouse reorders the table.
+  const lcpItems = lhr.audits["lcp-breakdown-insight"]?.details?.items ?? [];
   const lcpEl =
-    lhr.audits["lcp-breakdown-insight"]?.details?.items?.[1]?.snippet ?? "";
+    lcpItems.find(
+      (it) => typeof it?.snippet === "string" && it.snippet.trim().startsWith("<"),
+    )?.snippet ?? "";
 
   results = {
     performance: score("performance"),
@@ -178,14 +181,15 @@ try {
   console.log("\nLighthouse results:");
   console.log(JSON.stringify(results, null, 2));
 
+  if (/src="\/assets\/openlen-3d-[^"]+\.js"/.test(baked)) fail.push("eager runtime <script src> present in served HTML (must load only on gesture)");
   if (results.performance < 99) fail.push(`performance ${results.performance} < 99`);
   if (results.accessibility < 100) fail.push(`a11y ${results.accessibility} < 100`);
   if (results.bestPractices < 100) fail.push(`best-practices ${results.bestPractices} < 100`);
   if (results.seo < 100) fail.push(`seo ${results.seo} < 100`);
   if (results.lcpMs > 1600) fail.push(`LCP ${results.lcpMs}ms > 1600`);
   if (results.tbtMs > 200) fail.push(`TBT ${results.tbtMs}ms > 200`);
-  if (!/data-ol-3d-poster|<img/i.test(lcpEl)) {
-    fail.push(`LCP element is not the poster img: ${lcpEl}`);
+  if (!/data-ol-3d-poster/i.test(lcpEl)) {
+    fail.push(`LCP element is not the poster img: ${lcpEl || "(empty)"}`);
   }
 } catch (err) {
   const msg = err?.message ?? String(err);
@@ -211,11 +215,10 @@ if (fail.length) {
 }
 
 if (chromeDeferred) {
-  console.log(
-    "\nDONE_WITH_CONCERNS — static assertions PASSED; Lighthouse deferred (Chrome unavailable).",
+  console.error(
+    "\nGATE NOT SATISFIED — Lighthouse did not run (Chrome unavailable). A deferred run is a FAILURE, not a pass. Run this gate in a Chrome-equipped environment (the Hetzner box has google-chrome-stable + set PUPPETEER_EXECUTABLE_PATH).",
   );
-  console.log("Run `npm run 3d:gate` on the Hetzner box (google-chrome-stable present).");
-  process.exit(0); // non-blocking for CI; Hetzner runs the live check
+  process.exit(1);
 }
 
 console.log("\nGATE PASSED");
