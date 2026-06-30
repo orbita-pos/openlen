@@ -71,7 +71,11 @@ export function mount(
       opts.onReady?.();
       window.dispatchEvent(new Event("three-ready"));
     }
-    if (visible) raf = requestAnimationFrame(frame);
+    if (visible) {
+      raf = requestAnimationFrame(frame);
+    } else {
+      raf = 0; // zero the handle so the IntersectionObserver callback can re-arm the loop
+    }
   }
 
   // Pause the loop when offscreen or tab hidden (battery/thermal).
