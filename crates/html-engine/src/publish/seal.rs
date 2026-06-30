@@ -86,7 +86,8 @@ pub fn seal_release(html: &str, form_action_extra: Option<&str>) -> SealResult {
     } else if let Some(src) = unparseable {
         errors.push(format!("script src without a parseable origin: {src}"));
     } else {
-        let policy = build_policy(&script_hashes, &external_scripts, form_action_extra);
+        let has_3d = html.contains("data-ol-has-3d-block");
+        let policy = build_policy(&script_hashes, &external_scripts, form_action_extra, has_3d);
         inject_csp_meta(&doc, &policy);
         sealed = true;
     }
@@ -244,12 +245,18 @@ fn build_policy(
     hashes: &[String],
     externals: &[String],
     form_action_extra: Option<&str>,
+    has_3d: bool,
 ) -> String {
-    let script_src = if hashes.is_empty() && externals.is_empty() {
+    // Pages with a 3D block load a same-origin runtime chunk dynamically (on tap),
+    // so 'self' must be allowed in script-src for that page only.
+    let script_src = if hashes.is_empty() && externals.is_empty() && !has_3d {
         "'none'".to_string()
     } else {
         let mut sources: Vec<&str> = hashes.iter().map(String::as_str).collect();
         sources.extend(externals.iter().map(String::as_str));
+        if has_3d {
+            sources.push("'self'");
+        }
         sources.join(" ")
     };
     let form_action = match form_action_extra {
@@ -473,5 +480,44 @@ mod tests {
         let html = r#"<body><script>q()</script></body>"#;
         let r = seal_release(html, None);
         assert!(r.html.contains("content=\"script-src 'sha256-"));
+    }
+
+    /// Extract the value of the `script-src` directive from a CSP string
+    /// (everything between "script-src " and the next ";").
+    fn extract_script_src(html: &str) -> String {
+        let start = html.find("script-src").expect("should have script-src directive");
+        let rest = &html[start + "script-src".len()..];
+        let end = rest.find(';').unwrap_or(rest.len());
+        rest[..end].trim().to_string()
+    }
+
+    #[test]
+    fn adds_self_to_script_src_only_when_3d_block_present() {
+        let with_3d = "<html><head></head><body><div data-ol-has-3d-block></div><script>1</script></body></html>";
+        let plain = "<html><head></head><body><script>1</script></body></html>";
+
+        let sealed_3d = seal_release(with_3d, None);
+        let sealed_plain = seal_release(plain, None);
+
+        assert!(sealed_3d.sealed, "3D page should be sealed");
+        assert!(sealed_plain.sealed, "plain page should be sealed");
+
+        // 3D page: script-src directive must include 'self' so the same-origin
+        // runtime chunk created on tap can load. Note: form-action always has
+        // 'self' too — we must check within the script-src directive only.
+        let script_src_3d = extract_script_src(&sealed_3d.html);
+        assert!(
+            script_src_3d.contains("'self'"),
+            "3D page script-src must include 'self'; got script-src: {:?}",
+            script_src_3d
+        );
+
+        // Plain page: 'self' must NOT appear in the script-src directive.
+        let script_src_plain = extract_script_src(&sealed_plain.html);
+        assert!(
+            !script_src_plain.contains("'self'"),
+            "non-3D page must not gain 'self' in script-src; got script-src: {:?}",
+            script_src_plain
+        );
     }
 }
