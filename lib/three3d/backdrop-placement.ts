@@ -176,6 +176,7 @@ function firstBodyChild(
   if (!bodyMatch) return null;
 
   let pos = bodyMatch.index + bodyMatch[0].length;
+  let childIndex = 0;
 
   while (pos < stripped.length) {
     while (pos < stripped.length && /\s/.test(stripped[pos])) pos++;
@@ -188,6 +189,7 @@ function firstBodyChild(
     const name = tagMatch[2].toLowerCase();
 
     if (isClose) break; // </body>
+    childIndex++;
 
     const gt = stripped.indexOf(">", pos);
     if (gt === -1) break;
@@ -199,7 +201,11 @@ function firstBodyChild(
       const tagEnd = gt + 1;
       const tag = html.slice(pos, tagEnd);
       const existingId = getAttr(tag, "id");
-      const cssSelector = existingId ? `#${existingId}` : "body>*:first-child";
+      // nth-child counts ALL element siblings (incl. skipped nav/header), so the
+      // preview's <style> selector resolves to the SAME element the bake mutates.
+      const cssSelector = existingId
+        ? `#${existingId}`
+        : `body>:nth-child(${childIndex})`;
       return { tagStart: pos, tagEnd, existingId, isMarker: false, cssSelector };
     }
 

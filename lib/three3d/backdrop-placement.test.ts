@@ -200,10 +200,18 @@ describe("findBackdropTarget — priority 3: first non-skip body child", () => {
     expect(t!.cssSelector).toBe("#app");
   });
 
-  it("cssSelector uses body>*:first-child when no id", () => {
+  it("cssSelector uses body>:nth-child(N) targeting the SAME element the finder picks (skips nav)", () => {
+    // nav is child 1 (skipped), the div hero is child 2 — the selector must
+    // resolve to the div, not the nav, so preview == bake.
     const html = `<html><body><nav>nav</nav><div>content</div></body></html>`;
     const t = findBackdropTarget(html);
-    expect(t!.cssSelector).toBe("body>*:first-child");
+    expect(t!.cssSelector).toBe("body>:nth-child(2)");
+  });
+
+  it("cssSelector is body>:nth-child(1) when the hero IS the first body child", () => {
+    const html = `<html><body><div>content</div><footer>f</footer></body></html>`;
+    const t = findBackdropTarget(html);
+    expect(t!.cssSelector).toBe("body>:nth-child(1)");
   });
 });
 
