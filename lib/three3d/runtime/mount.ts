@@ -52,8 +52,16 @@ function glassMaterial(cfg: SceneConfig, faceted: boolean): MeshPhysicalMaterial
 
 function makeMaterial(kind: MaterialKind, cfg: SceneConfig, faceted = false): Material {
   if (kind === "glass" || kind === "iridescent") return glassMaterial(cfg, faceted);
-  if (kind === "chrome" || kind === "metal") {
-    return new MeshStandardMaterial({ color: new Color(cfg.accentColor), metalness: 1, roughness: kind === "chrome" ? 0.05 : 0.25, envMapIntensity: cfg.envIntensity });
+  if (kind === "chrome") {
+    return new MeshPhysicalMaterial({
+      metalness: 1.0, roughness: 0.03,
+      iridescence: 1.0, iridescenceIOR: 1.3, iridescenceThicknessRange: [100, 520],
+      clearcoat: 1.0, clearcoatRoughness: 0.04,
+      color: new Color(0xfafafa), envMapIntensity: cfg.envIntensity,
+    });
+  }
+  if (kind === "metal") {
+    return new MeshStandardMaterial({ color: new Color(cfg.accentColor), metalness: 1, roughness: 0.25, envMapIntensity: cfg.envIntensity });
   }
   // matte / gradient / emissive — env-lit standard (interim; tuned in later registers)
   return new MeshStandardMaterial({
