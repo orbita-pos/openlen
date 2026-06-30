@@ -7,12 +7,14 @@ describe("detectModuleIntent", () => {
     expect(detectModuleIntent("<section data-ol-bookings-section></section>")).toEqual({
       bookings: true,
       collections: false,
+      scene3d: false,
     });
     expect(detectModuleIntent("<div data-ol-collection-section></div>")).toEqual({
       bookings: false,
       collections: true,
+      scene3d: false,
     });
-    expect(detectModuleIntent("<p>hi</p>")).toEqual({ bookings: false, collections: false });
+    expect(detectModuleIntent("<p>hi</p>")).toEqual({ bookings: false, collections: false, scene3d: false });
   });
 });
 
@@ -50,5 +52,12 @@ describe("applyModuleIntent", () => {
 
   it("does NOT bridge comments/members/broadcast markers", () => {
     expect(applyModuleIntent(undefined, "<section data-ol-comments-section></section>").enabled).toEqual([]);
+  });
+
+  it("detects the 3D scene marker and enables scene3d", () => {
+    const html = '<section data-ol-3d-scene></section>';
+    const { settings, enabled } = applyModuleIntent(undefined, html);
+    expect(enabled).toContain("scene3d");
+    expect(settings.scene3d?.enabled).toBe(true);
   });
 });
