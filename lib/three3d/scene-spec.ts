@@ -51,7 +51,8 @@ const SceneSpecSchema = z.object({
 export type SceneSpec = z.infer<typeof SceneSpecSchema>;
 
 export function coerceSceneSpec(input: unknown): SceneSpec {
-  return SceneSpecSchema.parse(input ?? {});
+  const obj = typeof input === "object" && input !== null && !Array.isArray(input) ? input : {};
+  return SceneSpecSchema.parse(obj);
 }
 
 export const SAMPLE_SPEC: SceneSpec = {

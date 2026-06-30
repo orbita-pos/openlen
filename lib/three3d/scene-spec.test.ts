@@ -30,4 +30,13 @@ describe("coerceSceneSpec", () => {
   it("preserves a valid sample round-trip", () => {
     expect(coerceSceneSpec(SAMPLE_SPEC)).toEqual(SAMPLE_SPEC);
   });
+
+  it("never throws on non-object inputs", () => {
+    for (const bad of ["hello", 42, [], true, null, undefined]) {
+      expect(() => coerceSceneSpec(bad as unknown)).not.toThrow();
+      const s = coerceSceneSpec(bad as unknown);
+      expect(s.version).toBe(1);
+      expect(s.geometry.kind).toBe("sphere");
+    }
+  });
 });

@@ -21,6 +21,7 @@ export default defineConfig({
     environment: "jsdom",
     include: [
       "components/workspace-v2/**/*.test.ts",
+      "lib/three3d/**/*.test.ts",
       "lib/workspace-v2/**/*.test.ts",
       "lib/sections/**/*.test.ts",
       "lib/analytics/**/*.test.ts",
