@@ -18,9 +18,13 @@ export function backgroundCss(spec: SceneSpec): string | null {
     // neon/aurora glows over a dark indigo→magenta backdrop
     return `linear-gradient(125deg, #0a0a1f 0%, #1a0a2e 50%, #${accent}22 110%)`;
   }
-  // Glass/iridescent transmit the background — dark backdrops read as opaque/dull.
-  // Override dramatic→soft so glassy materials always render on a light field.
-  const glassy = spec.material.kind === "glass" || spec.material.kind === "iridescent";
+  if (spec.material.kind === "iridescent") {
+    // holographic surfaces read best over a deep navy (ref: iridescent-wave)
+    return `linear-gradient(120deg, #0a0e2a 0%, #1a0e3a 60%, #0e1a3a 100%)`;
+  }
+  // Glass transmits the background — dark backdrops read as opaque/dull.
+  // Override dramatic→soft so glass materials always render on a light field.
+  const glassy = spec.material.kind === "glass";
   const look = glassy && spec.look === "dramatic" ? "soft" : spec.look;
   const [a, b] = BASE[look];
   const accentAlpha = look === "dramatic" ? "33" : "1f";

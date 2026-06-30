@@ -7,7 +7,7 @@ describe("backgroundCss", () => {
     expect(backgroundCss({ ...SAMPLE_SPEC, background: "transparent" })).toBeNull();
   });
   it("returns a gradient incorporating the accent for a gradient background", () => {
-    const css = backgroundCss({ ...SAMPLE_SPEC, background: "gradient", material: { ...SAMPLE_SPEC.material, colors: ["#7C5CFF"] } });
+    const css = backgroundCss({ ...SAMPLE_SPEC, background: "gradient", material: { ...SAMPLE_SPEC.material, kind: "glass", colors: ["#7C5CFF"] } });
     expect(css).toContain("linear-gradient");
     expect(css!.toLowerCase()).toContain("7c5cff");
   });
@@ -34,5 +34,11 @@ describe("backgroundCss", () => {
     const css = backgroundCss({ ...SAMPLE_SPEC, material: { ...SAMPLE_SPEC.material, kind: "emissive" }, look: "soft", background: "gradient" });
     expect(css).toContain("linear-gradient");
     expect(css).toMatch(/#0a0a1f|#1a0a2e/); // dark aurora base
+  });
+  it("iridescent material yields a deep-navy gradient (not the glass light backdrop)", () => {
+    const css = backgroundCss({ ...SAMPLE_SPEC, material: { ...SAMPLE_SPEC.material, kind: "iridescent" }, look: "soft", background: "gradient" });
+    expect(css).toContain("linear-gradient");
+    expect(css).toMatch(/#0a0e2a|#1a0e3a/); // deep navy
+    expect(css).not.toMatch(/#f7|#ef/); // NOT a light glass base
   });
 });
