@@ -34,6 +34,12 @@ export const AUTOFILL_CREDIT_COST = 5;
  *  edit. */
 export const AI_IMAGE_EDIT_CREDIT_COST = 4;
 
+/** Flat charge for one 3D scene spec generation via Gemini. The Gemini call
+ *  is a short structured-JSON output (~800 tokens total) — cost is well under
+ *  1 credit, rounded up to 3 to cover variance and future model upgrades.
+ *  Debited only on a successful live (gemini) generation; mock is free. */
+export const SCENE_3D_CREDIT_COST = 3;
+
 /** Quality S2 multimodal reference — upper bound on the extra cost of the
  *  reference image attached to a generate / chat-edit call. NO separate debit
  *  is applied: the image is sent as a native `inlineData` part, so its input
