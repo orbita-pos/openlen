@@ -61,7 +61,7 @@ function off(){ev.forEach(function(e){window.removeEventListener(e,launch)});}
 function launch(){if(loaded)return;loaded=true;off();
 var s=document.createElement('script');s.src=b.getAttribute('data-ol-3d-runtime');
 s.onload=function(){canvas.hidden=false;
-window.OpenLen3D.mount(canvas,spec,{onReady:function(){poster.style.opacity='0';}});};
+window.OpenLen3D.mount(canvas,spec,{onReady:function(){canvas.style.opacity='1';poster.style.opacity='0';}});};
 s.onerror=function(){loaded=false;};
 document.head.appendChild(s);}
 ev.forEach(function(e){window.addEventListener(e,launch,{passive:true});});
@@ -100,8 +100,8 @@ function injectBackdropScene(
     : `position:fixed;inset:0;z-index:-1;pointer-events:none${bg ? `;background:${bg}` : ""}`;
 
   const block = `<div data-ol-3d-block ${MARKER} data-ol-3d-runtime="${opts.runtimeUrl}" style="${blockStyle}">
-<img data-ol-3d-poster src="${opts.posterUrl}" width="${w}" height="${h}" fetchpriority="high" decoding="async" alt="" style="width:100%;height:100%;object-fit:cover;transition:opacity .6s ease">
-<canvas data-ol-3d-canvas hidden style="position:absolute;inset:0;width:100%;height:100%"></canvas>
+<img data-ol-3d-poster src="${opts.posterUrl}" width="${w}" height="${h}" fetchpriority="high" decoding="async" alt="" style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);height:100%;width:auto;max-width:none;transition:opacity .6s ease">
+<canvas data-ol-3d-canvas hidden style="position:absolute;inset:0;width:100%;height:100%;opacity:0;transition:opacity .6s ease"></canvas>
 <script type="application/json" data-ol-3d-spec>${JSON.stringify(opts.spec).replace(/</g, "\\u003c")}</script>
 <script data-ol-3d-boot>${BACKDROP_BOOTSTRAP_JS}</script>
 </div>`;
