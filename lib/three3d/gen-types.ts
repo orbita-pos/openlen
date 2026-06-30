@@ -1,4 +1,4 @@
-import type { SceneSpec, Look } from "./scene-spec";
+import type { SceneSpec, Look, MaterialKind } from "./scene-spec";
 
 export type Provider = "gemini" | "mock";
 
@@ -8,6 +8,7 @@ export interface GenInput {
   brandMatch?: boolean;          // default true
   behavior?: "float-rotate" | "still";
   accent?: string;               // page accent hex, applied when brandMatch !== false
+  register?: MaterialKind;       // material.kind override; transmissive kinds force gradient backdrop
   devSpec?: unknown;             // mock injected-spec channel (ignored unless provider resolves to "mock")
 }
 

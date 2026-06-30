@@ -21,6 +21,16 @@ describe("applyInputOverrides", () => {
     const out = applyInputOverrides(SAMPLE_SPEC, { describe: "x", accent: "#00FF88", brandMatch: false });
     expect(out.material.colors[0]).not.toBe("#00FF88");
   });
+  it("register override sets material.kind", () => {
+    const out = applyInputOverrides(SAMPLE_SPEC, { describe: "x", register: "chrome" });
+    expect(out.material.kind).toBe("chrome");
+    expect(out.background).toBe("gradient");
+  });
+  it("register override does not force gradient for non-transmissive kinds", () => {
+    const out = applyInputOverrides({ ...SAMPLE_SPEC, background: "transparent" }, { describe: "x", register: "matte" });
+    expect(out.material.kind).toBe("matte");
+    expect(out.background).toBe("transparent");
+  });
 });
 
 describe("generateSceneSpec (mock)", () => {
@@ -39,5 +49,10 @@ describe("generateSceneSpec (mock)", () => {
   it("never throws on junk describe in mock", async () => {
     const r = await generateSceneSpec({ describe: "" }, { provider: "mock" });
     expect(r.spec.version).toBe(1);
+  });
+  it("register:iridescent yields material.kind=iridescent and background=gradient", async () => {
+    const r = await generateSceneSpec({ describe: "algo", register: "iridescent" }, { provider: "mock" });
+    expect(r.spec.material.kind).toBe("iridescent");
+    expect(r.spec.background).toBe("gradient");
   });
 });

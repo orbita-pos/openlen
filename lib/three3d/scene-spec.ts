@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 const GEOMETRY_KINDS = ["sphere", "torus", "torusKnot", "icosa", "blob", "particles", "plane"] as const;
-const MATERIAL_KINDS = ["matte", "metal", "glass", "iridescent", "gradient", "chrome", "emissive"] as const;
+export const MATERIAL_KINDS = ["matte", "metal", "glass", "iridescent", "gradient", "chrome", "emissive"] as const;
 const MOTION_KINDS = ["still", "drift", "rotate", "pulse", "parallax"] as const;
 const LOOKS = ["studio", "soft", "dramatic", "neutral"] as const;
 const FRAMINGS = ["centered", "offset", "wide"] as const;

@@ -91,6 +91,8 @@ interface PatchBody {
     quickReplies?: { q: string; a: string }[];
     theme?: "light" | "dark";
   };
+  /** 3D scene module. Merged into settings.scene3d. Takes effect next publish. */
+  scene3d?: { enabled?: boolean; spec?: unknown };
 }
 
 function clean(v: unknown, max: number): string {
@@ -270,6 +272,7 @@ export async function PATCH(
       return json({ error: "invalid_body", message: "whatsapp.side must be left|right" }, 400);
     }
   }
+  const hasScene3d = "scene3d" in body;
   const hasChat = "chat" in body;
   if (hasChat) {
     const c = body.chat;
@@ -305,6 +308,20 @@ export async function PATCH(
       }
     }
   }
+  if (hasScene3d) {
+    const s = body.scene3d;
+    if (!s || typeof s !== "object") {
+      return json({ error: "invalid_body", message: "scene3d must be an object" }, 400);
+    }
+    if ("enabled" in s && typeof s.enabled !== "boolean") {
+      return json({ error: "invalid_body", message: "scene3d.enabled must be boolean" }, 400);
+    }
+    if ("spec" in s && s.spec !== undefined) {
+      if (JSON.stringify(s.spec).includes("data-slot-path=")) {
+        return json({ error: "invalid_body", message: "scene3d.spec contains reserved marker" }, 400);
+      }
+    }
+  }
   if (
     !hasFormPatch &&
     !hasAnalyticsToggle &&
@@ -316,13 +333,14 @@ export async function PATCH(
     !hasBookings &&
     !hasCollections &&
     !hasWhatsapp &&
-    !hasChat
+    !hasChat &&
+    !hasScene3d
   ) {
     return json(
       {
         error: "invalid_body",
         message:
-          "expected formIndex+patch OR analyticsDisabled OR motion OR music OR members OR broadcast OR comments OR bookings OR collections OR whatsapp OR chat",
+          "expected formIndex+patch OR analyticsDisabled OR motion OR music OR members OR broadcast OR comments OR bookings OR collections OR whatsapp OR chat OR scene3d",
       },
       400,
     );
@@ -503,6 +521,12 @@ export async function PATCH(
           .filter((qr) => qr.q.length > 0 && qr.a.length > 0)
           .slice(0, 6),
       } : {}),
+    };
+  }
+  if (hasScene3d && body.scene3d) {
+    nextSettings.scene3d = {
+      ...(data.settings?.scene3d ?? {}),
+      ...body.scene3d,
     };
   }
   if (hasChat && body.chat?.enabled === true && data.settings?.chat?.enabled !== true) {

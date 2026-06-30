@@ -2,6 +2,7 @@ import { auth } from "@/auth";
 import { getUserPlan } from "@/lib/limits";
 import { debitCredits, SCENE_3D_CREDIT_COST, getCreditState } from "@/lib/credits";
 import { generateSceneSpec, resolveProvider } from "@/lib/three3d/generate-spec";
+import { MATERIAL_KINDS } from "@/lib/three3d/scene-spec";
 import type { GenInput } from "@/lib/three3d/gen-types";
 
 export const runtime = "nodejs";
@@ -44,12 +45,17 @@ export async function POST(req: Request): Promise<Response> {
   if (!describe) return json({ error: "describe_required" }, 400);
 
   const b = body as Record<string, unknown>;
+  const register =
+    typeof b.register === "string" && (MATERIAL_KINDS as readonly string[]).includes(b.register)
+      ? (b.register as GenInput["register"])
+      : undefined;
   const input: GenInput = {
     describe,
     look: b.look as GenInput["look"],
     brandMatch: typeof b.brandMatch === "boolean" ? b.brandMatch : undefined,
     behavior: b.behavior as GenInput["behavior"],
     accent: typeof b.accent === "string" ? b.accent : undefined,
+    ...(register !== undefined ? { register } : {}),
     // devSpec intentionally NOT read from request body — dev/test-only seam.
   };
 

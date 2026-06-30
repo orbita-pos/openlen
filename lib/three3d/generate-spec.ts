@@ -26,6 +26,12 @@ export function applyInputOverrides(spec: SceneSpec, input: GenInput): SceneSpec
   if (input.brandMatch !== false && input.accent && /^#[0-9a-fA-F]{6}$/.test(input.accent)) {
     out.material = { ...out.material, accentLinked: true, colors: [input.accent, ...out.material.colors.slice(1)] };
   }
+  if (input.register) {
+    out.material = { ...out.material, kind: input.register };
+    if (input.register === "glass" || input.register === "iridescent" || input.register === "chrome" || input.register === "metal") {
+      out.background = "gradient";
+    }
+  }
   return coerceSceneSpec(out);
 }
 
