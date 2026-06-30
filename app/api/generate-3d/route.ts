@@ -1,6 +1,6 @@
 import { auth } from "@/auth";
 import { getUserPlan } from "@/lib/limits";
-import { debitCredits, SCENE_3D_CREDIT_COST } from "@/lib/credits";
+import { debitCredits, SCENE_3D_CREDIT_COST, getCreditState } from "@/lib/credits";
 import { generateSceneSpec, resolveProvider } from "@/lib/three3d/generate-spec";
 import type { GenInput } from "@/lib/three3d/gen-types";
 
@@ -59,6 +59,12 @@ export async function POST(req: Request): Promise<Response> {
   if (provider === "gemini") {
     const plan = await getUserPlan(userId);
     if (plan !== "pro") return json({ error: "pro_required" }, 402);
+
+    // Pre-check credit balance before spending on live generation.
+    const credit = await getCreditState(userId);
+    if (credit.balance < SCENE_3D_CREDIT_COST) {
+      return json({ error: "insufficient_credits" }, 402);
+    }
   }
 
   let result;
@@ -70,12 +76,15 @@ export async function POST(req: Request): Promise<Response> {
     return json({ error: "generation_failed" }, 500);
   }
 
-  // Debit after a confirmed success so a failed call never burns credits.
+  // Best-effort charge after a confirmed success. The generation already
+  // succeeded and cost real API spend, so a rare DB hiccup must not turn
+  // into an error — log and still return the spec.
   if (provider === "gemini") {
     try {
       await debitCredits(userId, SCENE_3D_CREDIT_COST);
-    } catch {
-      return json({ error: "insufficient_credits" }, 402);
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error("[generate-3d] credit debit failed", err);
     }
   }
 
