@@ -178,6 +178,7 @@ const ALL_TABS: SidebarMode[] = [
   "library",
   "pages",
   "versions",
+  "3d",
 ];
 
 // Build the "Original" theme baseline from a page-meta payload — the resolved
@@ -2394,6 +2395,35 @@ function NewV2Inner() {
     },
     [loadedProject?.id, loadedProject?.settings?.music, toast, t],
   );
+  // 3D scene — set/replace/remove the decorative 3D layer. Optimistic like
+  // motion: updates locally (Task 3 preview consumes it) and PATCHes in the
+  // background; rolls back on failure.
+  const applyScene3d = useCallback(
+    (next: { enabled: boolean; spec: unknown } | null) => {
+      const projectId = loadedProject?.id;
+      if (!projectId) return;
+      const prev = loadedProject?.settings?.scene3d;
+      const nextSetting = next ?? undefined;
+      setLoadedProject((p) =>
+        p ? { ...p, settings: { ...p.settings, scene3d: nextSetting } } : p,
+      );
+      void fetch(`/api/projects/${projectId}/settings`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ scene3d: next }),
+      })
+        .then((r) => {
+          if (!r.ok) throw new Error(`PATCH failed (${r.status})`);
+        })
+        .catch(() => {
+          setLoadedProject((p) =>
+            p ? { ...p, settings: { ...p.settings, scene3d: prev } } : p,
+          );
+          toast.error(t("toast.saveError"));
+        });
+    },
+    [loadedProject?.id, loadedProject?.settings?.scene3d, toast, t],
+  );
   // Members module — settings switches (Módulos tab). Awaited (not optimistic)
   // so the panel's toggle reflects the server truth. First enable may also
   // auto-create the members page server-side (home shell + lock); the
@@ -3124,6 +3154,9 @@ function NewV2Inner() {
           onSwitchSitePage={switchSitePage}
           onCreateSitePage={createSitePage}
           onDeleteSitePage={deleteSitePage}
+          scene3d={loadedProject?.settings?.scene3d}
+          onApplyScene3d={loadedProject ? applyScene3d : undefined}
+          accent={originalTheme?.tokens["--ol-accent"] || undefined}
         />
         {/* One <main> landmark for the workspace center. `contents` keeps the
             flex layout byte-identical (generates no box) while giving the a11y
@@ -3373,6 +3406,7 @@ function NewV2Inner() {
                 suppressReloadNonce={suppressReload}
                 motionPreset={loadedProject.settings?.motion}
                 musicTrack={loadedProject.settings?.music ?? null}
+                scene3d={loadedProject.settings?.scene3d}
                 onIframeRef={(el) => {
                   iframeElRef.current = el;
                 }}

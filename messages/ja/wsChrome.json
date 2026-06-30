@@ -68,6 +68,10 @@
       "modulos": {
         "label": "モジュール",
         "title": "サイトモジュール"
+      },
+      "3d": {
+        "label": "3D",
+        "title": "3Dシーン"
       }
     },
     "tabLocked": "{label} — ロック中",

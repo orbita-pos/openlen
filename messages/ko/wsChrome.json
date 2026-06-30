@@ -68,6 +68,10 @@
       "modulos": {
         "label": "모듈",
         "title": "사이트 모듈"
+      },
+      "3d": {
+        "label": "3D",
+        "title": "3D 장면"
       }
     },
     "tabLocked": "{label} — 잠김",

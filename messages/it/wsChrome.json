@@ -68,6 +68,10 @@
       "modulos": {
         "label": "Moduli",
         "title": "Moduli del sito"
+      },
+      "3d": {
+        "label": "3D",
+        "title": "Scena 3D"
       }
     },
     "tabLocked": "{label} — bloccato",

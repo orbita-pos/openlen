@@ -128,6 +128,9 @@ interface PreviewAreaProps {
    *  style-bg commit so the live-DOM apply doesn't get followed by a white
    *  srcDoc reload when the Edit toggle is off. */
   suppressReloadNonce?: number;
+  /** 3D scene settings — consumed by Task 3 preview injection. Accepted here
+   *  so the parent can pass it without a TS error before Task 3 lands. */
+  scene3d?: { enabled?: boolean; spec?: unknown };
 }
 
 export function PreviewArea({

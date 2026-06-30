@@ -28,6 +28,7 @@ import {
   Package,
   PanelLeft,
   PanelRight,
+  Sparkles,
   X,
 } from "./icons";
 import type { Section } from "./mock-data";
@@ -48,6 +49,7 @@ import type { SitePageSummary } from "@/lib/projects/site-pages";
 import { SectionsPanel } from "./panels/sections-panel";
 import { TemplatesPanel } from "./panels/templates-panel";
 import { VersionsPanel } from "./panels/versions-panel";
+import { ThreePanel } from "./panels/three-panel";
 import type { SectionSpec } from "./sections-data";
 import { Tooltip } from "./ui";
 
@@ -132,7 +134,8 @@ export type SidebarMode =
   | "collections"
   | "modulos"
   | "insights"
-  | "versions";
+  | "versions"
+  | "3d";
 
 interface ModeTab {
   id: SidebarMode;
@@ -151,6 +154,7 @@ const MODE_TABS: ModeTab[] = [
   // not a canvas-side tool. Reached from the rail's views group now.
   { id: "insights", icon: BarChart3 },
   { id: "versions", icon: HistoryIcon },
+  { id: "3d", icon: Sparkles },
 ];
 
 interface LeftSidebarProps {
@@ -269,6 +273,12 @@ interface LeftSidebarProps {
   /** Members-only page toggle, used by the Site (page tree) panel. The module
    *  settings/handlers themselves now live in ModulesView (the center view). */
   onToggleMembersOnly?: (slug: string, next: boolean) => Promise<boolean>;
+  /** 3D scene settings for the active project. */
+  scene3d?: { enabled?: boolean; spec?: unknown };
+  /** Called when the user applies or removes a 3D scene. */
+  onApplyScene3d?: (next: { enabled: boolean; spec: unknown } | null) => void;
+  /** Page accent color (--ol-accent) if available — used by ThreePanel for brand-match. */
+  accent?: string;
 }
 
 export function LeftSidebar({
@@ -319,6 +329,9 @@ export function LeftSidebar({
   onCreateSitePage,
   onDeleteSitePage,
   onToggleMembersOnly,
+  scene3d,
+  onApplyScene3d,
+  accent,
 }: LeftSidebarProps) {
   const showBusinessSwitcher = businesses.length > 0 && !!onPickBusiness;
   const t = useTranslations("wsChrome");
@@ -343,7 +356,8 @@ export function LeftSidebar({
       (tab.id === "library" ||
         tab.id === "site" ||
         tab.id === "insights" ||
-        tab.id === "images")
+        tab.id === "images" ||
+        tab.id === "3d")
     )
       return false;
     return true;
@@ -592,6 +606,14 @@ export function LeftSidebar({
                 sitePages={sitePages}
                 onRestoreApplied={onRestoreApplied}
                 onPrepareSnapshot={onPrepareSnapshot}
+              />
+            )}
+            {mode === "3d" && (
+              <ThreePanel
+                currentProjectId={currentProjectId}
+                scene3d={scene3d}
+                accent={accent}
+                onApplyScene3d={onApplyScene3d ?? (() => {})}
               />
             )}
           </>
