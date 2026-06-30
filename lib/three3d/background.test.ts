@@ -30,4 +30,9 @@ describe("backgroundCss", () => {
     expect(css).toContain("linear-gradient");
     expect(css).not.toMatch(/#12|#1b/);
   });
+  it("emissive material yields a dark aurora gradient regardless of look", () => {
+    const css = backgroundCss({ ...SAMPLE_SPEC, material: { ...SAMPLE_SPEC.material, kind: "emissive" }, look: "soft", background: "gradient" });
+    expect(css).toContain("linear-gradient");
+    expect(css).toMatch(/#0a0a1f|#1a0a2e/); // dark aurora base
+  });
 });

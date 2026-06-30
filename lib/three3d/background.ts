@@ -14,6 +14,10 @@ export function backgroundCss(spec: SceneSpec): string | null {
   if (spec.background === "transparent") return null;
   const accent = (spec.material.colors[0] ?? DEFAULT_ACCENT).replace("#", "");
   if (spec.background === "color") return `#${accent}14`;
+  if (spec.material.kind === "emissive") {
+    // neon/aurora glows over a dark indigo→magenta backdrop
+    return `linear-gradient(125deg, #0a0a1f 0%, #1a0a2e 50%, #${accent}22 110%)`;
+  }
   // Glass/iridescent transmit the background — dark backdrops read as opaque/dull.
   // Override dramatic→soft so glassy materials always render on a light field.
   const glassy = spec.material.kind === "glass" || spec.material.kind === "iridescent";
