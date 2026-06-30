@@ -145,12 +145,14 @@ export function mount(canvas: HTMLCanvasElement, spec: SceneSpec, opts: { onRead
 
   let composer: EffectComposer | null = null;
   let bloomPass: UnrealBloomPass | null = null;
+  let outputPass: OutputPass | null = null;
   if (useBloom) {
     composer = new EffectComposer(renderer);
     composer.addPass(new RenderPass(scene, camera));
     bloomPass = new UnrealBloomPass(new Vector2(width, height), 0.95, 0.55, 0.0);
     composer.addPass(bloomPass);
-    composer.addPass(new OutputPass());
+    outputPass = new OutputPass();
+    composer.addPass(outputPass);
   }
 
   let raf = 0, visible = true, firstFrame = true;
@@ -192,6 +194,7 @@ export function mount(canvas: HTMLCanvasElement, spec: SceneSpec, opts: { onRead
       for (const d of disposables) d.dispose();
       composer?.dispose();
       bloomPass?.dispose();
+      outputPass?.dispose();
       envRT.dispose(); pmrem.dispose(); renderer.dispose();
     },
   };
