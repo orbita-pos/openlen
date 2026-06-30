@@ -115,7 +115,7 @@ try {
 
   // Launch Chrome via Puppeteer — lend its CDP port to Lighthouse.
   const browser = await puppeteer.launch({
-    headless: "new",
+    headless: true,
     executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined,
     args: [
       "--no-sandbox",

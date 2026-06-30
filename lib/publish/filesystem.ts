@@ -776,7 +776,8 @@ async function bakeDocument(
   // runtime (loaded ONLY on "Ver en 3D" tap + capability gates). Runs BEFORE
   // the CSP seal so the bootstrap inline script gets its hash captured.
   // OPENLEN_3D_SCENE=0 disables it.
-  if (process.env.OPENLEN_3D_SCENE !== "0" && ctx.scene3d?.enabled) {
+  if (process.env.OPENLEN_3D_SCENE !== "0" && ctx.scene3d?.enabled &&
+      (page === null || migratedHtml.includes("data-ol-3d-scene"))) {
     try {
       migratedHtml = await bake3dScene({ html: migratedHtml, subDir: ctx.subDir, spec: ctx.scene3d.spec });
     } catch (err) {

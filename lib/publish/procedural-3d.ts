@@ -54,7 +54,7 @@ export function injectSceneMarkup(html: string, opts: SceneInjectOptions): strin
 <img data-ol-3d-poster src="${opts.posterUrl}" width="${w}" height="${h}" fetchpriority="high" decoding="async" alt="" style="width:100%;height:100%;object-fit:cover;transition:opacity .6s ease">
 <canvas data-ol-3d-canvas hidden style="position:absolute;inset:0;width:100%;height:100%"></canvas>
 <button data-ol-3d-launch type="button" style="position:absolute;left:50%;bottom:16px;transform:translateX(-50%);padding:8px 16px;border-radius:9999px;border:0;background:rgba(0,0,0,.55);color:#fff;font:600 14px system-ui;cursor:pointer">Ver en 3D</button>
-<script type="application/json" data-ol-3d-spec>${JSON.stringify(opts.spec)}</script>
+<script type="application/json" data-ol-3d-spec>${JSON.stringify(opts.spec).replace(/</g, "\\u003c")}</script>
 <script data-ol-3d-boot>${BOOTSTRAP_JS}</script>
 </div>`;
 
