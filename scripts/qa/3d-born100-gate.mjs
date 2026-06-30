@@ -188,7 +188,12 @@ try {
   if (results.seo < 100) fail.push(`seo ${results.seo} < 100`);
   if (results.lcpMs > 1600) fail.push(`LCP ${results.lcpMs}ms > 1600`);
   if (results.tbtMs > 200) fail.push(`TBT ${results.tbtMs}ms > 200`);
-  if (!/data-ol-3d-poster/i.test(lcpEl)) {
+  // For background preset the block is position:fixed;inset:0 — Chrome's LCP
+  // algorithm excludes images that cover the full viewport from LCP candidates
+  // (per the LCP spec). Page content (text) correctly becomes the LCP element.
+  // For non-background presets (accent/divider) the block is inline, so the
+  // poster img must still be the LCP candidate.
+  if (SAMPLE_SPEC.preset !== "background" && !/data-ol-3d-poster/i.test(lcpEl)) {
     fail.push(`LCP element is not the poster img: ${lcpEl || "(empty)"}`);
   }
 } catch (err) {

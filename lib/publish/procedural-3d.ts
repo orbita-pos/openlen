@@ -52,11 +52,19 @@ export function injectSceneMarkup(html: string, opts: SceneInjectOptions): strin
   const w = opts.width ?? 1600;
   const h = opts.height ?? 900;
   const bg = backgroundCss(opts.spec);
-  const blockStyle = `position:relative;overflow:hidden${bg ? `;background:${bg}` : ""}`;
+  // For the background preset, become a fixed full-bleed layer behind page content.
+  // For accent/divider presets, keep the current inline-block behaviour.
+  const isBackground = opts.spec.preset === "background";
+  const blockStyle = isBackground
+    ? `position:fixed;inset:0;z-index:0;pointer-events:none${bg ? `;background:${bg}` : ""}`
+    : `position:relative;overflow:hidden${bg ? `;background:${bg}` : ""}`;
+  // pointer-events:none on the wrapper would swallow clicks on the launch button;
+  // restore per-element interactivity for the background preset.
+  const btnExtra = isBackground ? ";pointer-events:auto" : "";
   const block = `<div data-ol-3d-block ${MARKER} data-ol-3d-runtime="${opts.runtimeUrl}" style="${blockStyle}">
 <img data-ol-3d-poster src="${opts.posterUrl}" width="${w}" height="${h}" fetchpriority="high" decoding="async" alt="" style="width:100%;height:100%;object-fit:cover;transition:opacity .6s ease">
 <canvas data-ol-3d-canvas hidden style="position:absolute;inset:0;width:100%;height:100%"></canvas>
-<button data-ol-3d-launch type="button" style="position:absolute;left:50%;bottom:16px;transform:translateX(-50%);padding:8px 16px;border-radius:9999px;border:0;background:rgba(0,0,0,.55);color:#fff;font:600 14px system-ui;cursor:pointer">Ver en 3D</button>
+<button data-ol-3d-launch type="button" style="position:absolute;left:50%;bottom:16px;transform:translateX(-50%);padding:8px 16px;border-radius:9999px;border:0;background:rgba(0,0,0,.55);color:#fff;font:600 14px system-ui;cursor:pointer${btnExtra}">Ver en 3D</button>
 <script type="application/json" data-ol-3d-spec>${JSON.stringify(opts.spec).replace(/</g, "\\u003c")}</script>
 <script data-ol-3d-boot>${BOOTSTRAP_JS}</script>
 </div>`;

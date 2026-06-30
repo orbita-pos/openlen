@@ -28,6 +28,8 @@ import { injectSectionInsert } from "./use-section-insert";
 import { injectSectionReorder } from "./use-section-reorder";
 import { injectSectionSelect } from "./use-section-select";
 import { PageBuildingLoader } from "./page-building-loader";
+import { coerceSceneSpec } from "@/lib/three3d/scene-spec";
+import { backgroundCss } from "@/lib/three3d/background";
 
 type Device = "desktop" | "tablet" | "mobile";
 type Zoom = "50" | "75" | "100" | "fit";
@@ -156,6 +158,7 @@ export function PreviewArea({
   docKey,
   dropEnabled = false,
   suppressReloadNonce = 0,
+  scene3d,
 }: PreviewAreaProps) {
   const t = useTranslations("wsChrome");
   const [device, setDevice] = useState<Device>("desktop");
@@ -316,6 +319,43 @@ export function PreviewArea({
   }, [musicTrack]);
   const musicRef = useRef(musicMsg);
   musicRef.current = musicMsg;
+
+  // 3D live preview — when a scene is enabled, inject the auto-mount layer into
+  // the preview srcDoc. Mirrors the bake placement: full-bleed fixed background
+  // for preset:"background", inline block otherwise. NOT gesture-gated in the
+  // editor (auto-mounts immediately). Recomputed when scene3d changes; the iframe
+  // receives the new srcDoc and reloads automatically.
+  const finalSrcDoc = useMemo(() => {
+    if (!scene3d?.enabled || !scene3d.spec) return stableSrcDoc;
+    const spec = coerceSceneSpec(scene3d.spec);
+    const bg = backgroundCss(spec);
+    const isBackground = spec.preset === "background";
+    const specJson = JSON.stringify(spec).replace(/</g, "\\u003c");
+    const wrapperStyle = isBackground
+      ? `position:fixed;inset:0;z-index:0;pointer-events:none${bg ? `;background:${bg}` : ""}`
+      : `position:relative;width:100%${bg ? `;background:${bg}` : ""}`;
+    const canvasStyle = isBackground
+      ? `width:100%;height:100%`
+      : `display:block;width:100%;height:400px`;
+    const layer =
+      `<div id="ol-3d-preview-wrap" style="${wrapperStyle}">` +
+      `<canvas id="ol-3d-preview-canvas" style="${canvasStyle}"></canvas>` +
+      `</div>` +
+      `<script type="application/json" id="ol-3d-preview-spec">${specJson}</script>` +
+      `<script>(function(){` +
+      `var spec=JSON.parse(document.getElementById('ol-3d-preview-spec').textContent);` +
+      `if(!('WebGLRenderingContext' in window))return;` +
+      `var canvas=document.getElementById('ol-3d-preview-canvas');` +
+      `window.addEventListener('pagehide',function(){if(window.__ol3dHandle)window.__ol3dHandle.dispose();});` +
+      `var s=document.createElement('script');s.src='/api/three3d/runtime';` +
+      `s.onload=function(){window.__ol3dHandle=window.OpenLen3D.mount(canvas,spec);};` +
+      `document.head.appendChild(s);` +
+      `})();</script>`;
+    const idx = stableSrcDoc.lastIndexOf("</body>");
+    return idx === -1
+      ? stableSrcDoc + layer
+      : stableSrcDoc.slice(0, idx) + layer + stableSrcDoc.slice(idx);
+  }, [stableSrcDoc, scene3d]);
 
   // Section-insert plumbing. The fragment must land only AFTER the iframe
   // runtime is listening — on a fresh PreviewArea mount (e.g. returning from the
@@ -612,7 +652,7 @@ export function PreviewArea({
               }}
               {...(previewUrl
                 ? { src: previewUrl }
-                : { srcDoc: stableSrcDoc })}
+                : { srcDoc: finalSrcDoc })}
               title={t("preview.iframeTitle")}
               sandbox="allow-scripts allow-same-origin"
               style={{
