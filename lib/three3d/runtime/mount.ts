@@ -5,6 +5,7 @@ import {
   PlaneGeometry, CapsuleGeometry, BufferGeometry, BufferAttribute, Points,
   MeshStandardMaterial, MeshPhysicalMaterial, MeshBasicMaterial, PointsMaterial,
   PMREMGenerator, ACESFilmicToneMapping, NoToneMapping, SRGBColorSpace, DirectionalLight,
+  CanvasTexture, EquirectangularReflectionMapping,
   Vector2, type Material, type Object3D,
 } from "three";
 import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
@@ -54,8 +55,30 @@ function glassMaterial(cfg: SceneConfig, faceted: boolean): MeshPhysicalMaterial
   });
 }
 
+function rainbowEnvTexture(): CanvasTexture {
+  const c = document.createElement("canvas"); c.width = 1024; c.height = 512;
+  const ctx = c.getContext("2d")!;
+  const g = ctx.createLinearGradient(0, 0, 1024, 0);
+  g.addColorStop(0.0, "#3a1c71"); g.addColorStop(0.22, "#d76d77"); g.addColorStop(0.45, "#ffaf7b");
+  g.addColorStop(0.68, "#2bd2ff"); g.addColorStop(0.85, "#7c5cff"); g.addColorStop(1.0, "#ff3cc8");
+  ctx.fillStyle = g; ctx.fillRect(0, 0, 1024, 512);
+  const tex = new CanvasTexture(c);
+  tex.mapping = EquirectangularReflectionMapping; tex.colorSpace = SRGBColorSpace;
+  return tex;
+}
+
+function iridescentMaterial(cfg: SceneConfig): MeshPhysicalMaterial {
+  return new MeshPhysicalMaterial({
+    metalness: 0.6, roughness: 0.12,
+    iridescence: 1.0, iridescenceIOR: 1.6, iridescenceThicknessRange: [100, 900],
+    clearcoat: 1.0, clearcoatRoughness: 0.08,
+    color: new Color(0x111118), envMapIntensity: cfg.envIntensity,
+  });
+}
+
 function makeMaterial(kind: MaterialKind, cfg: SceneConfig, faceted = false): Material {
-  if (kind === "glass" || kind === "iridescent") return glassMaterial(cfg, faceted);
+  if (kind === "iridescent") return iridescentMaterial(cfg);
+  if (kind === "glass") return glassMaterial(cfg, faceted);
   if (kind === "chrome") {
     return new MeshPhysicalMaterial({
       metalness: 1.0, roughness: 0.03,
@@ -109,10 +132,17 @@ export function mount(canvas: HTMLCanvasElement, spec: SceneSpec, opts: { onRead
 
   const scene = new Scene();
   const pmrem = new PMREMGenerator(renderer);
-  const env = new RoomEnvironment();
-  const envRT = pmrem.fromScene(env, 0.04);
+  let envRT;
+  if (cfg.materialKind === "iridescent") {
+    const tex = rainbowEnvTexture();
+    envRT = pmrem.fromEquirectangular(tex);
+    tex.dispose();
+  } else {
+    const env = new RoomEnvironment();
+    envRT = pmrem.fromScene(env, 0.04);
+    env.dispose();
+  }
   scene.environment = envRT.texture;
-  env.dispose();
 
   const camera = new PerspectiveCamera(40, width / height, 0.1, 100);
   camera.position.set(0, 0, cfg.cameraZ + 2.5);
@@ -126,7 +156,7 @@ export function mount(canvas: HTMLCanvasElement, spec: SceneSpec, opts: { onRead
   const root = new Group();
   if (cfg.geometryKind === "particles") {
     root.add(track(particleField(cfg)));
-  } else if (cfg.cluster && cfg.materialKind !== "emissive") {
+  } else if (cfg.cluster && cfg.materialKind !== "emissive" && cfg.materialKind !== "iridescent") {
     const leadFaceted = cfg.geometryKind === "icosa";
     const lead = new Mesh(makeGeometry(cfg.geometryKind, cfg.radius * 0.75, cfg.segments), makeMaterial(cfg.materialKind, cfg, leadFaceted));
     lead.position.set(0.1, 0.55, 0);
