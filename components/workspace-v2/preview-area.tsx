@@ -338,11 +338,11 @@ export function PreviewArea({
       ? `width:100%;height:100%`
       : `display:block;width:100%;height:400px`;
     const layer =
-      `<div id="ol-3d-preview-wrap" style="${wrapperStyle}">` +
+      `<div id="ol-3d-preview-wrap" data-openlen-3d-preview style="${wrapperStyle}">` +
       `<canvas id="ol-3d-preview-canvas" style="${canvasStyle}"></canvas>` +
       `</div>` +
-      `<script type="application/json" id="ol-3d-preview-spec">${specJson}</script>` +
-      `<script>(function(){` +
+      `<script type="application/json" id="ol-3d-preview-spec" data-openlen-3d-preview>${specJson}</script>` +
+      `<script data-openlen-3d-preview>(function(){` +
       `var spec=JSON.parse(document.getElementById('ol-3d-preview-spec').textContent);` +
       `if(!('WebGLRenderingContext' in window))return;` +
       `var canvas=document.getElementById('ol-3d-preview-canvas');` +

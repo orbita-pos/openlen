@@ -38,7 +38,7 @@ export function stripEditorInstrumentation(html: string): string {
     // elements clears the surface.
     doc
       .querySelectorAll(
-        "[data-openlen-inline-edit],[data-openlen-reorder],[data-openlen-replace],[data-openlen-section-select],[data-openlen-inspect],[data-openlen-section-insert],[data-openlen-drop],[data-openlen-edit-overlay],[data-openlen-motion-preview],[data-openlen-music-preview],#ol-motion-preview-style,#ol-music-preview-style",
+        "[data-openlen-inline-edit],[data-openlen-reorder],[data-openlen-replace],[data-openlen-section-select],[data-openlen-inspect],[data-openlen-section-insert],[data-openlen-drop],[data-openlen-edit-overlay],[data-openlen-motion-preview],[data-openlen-music-preview],[data-openlen-3d-preview],#ol-motion-preview-style,#ol-music-preview-style",
       )
       .forEach((n) => n.remove());
     // inline-edit run-wrappers: UNWRAP (replace with children) — never delete,

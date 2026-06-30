@@ -32,7 +32,7 @@ import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { createServer } from "node:http";
 
-const { bake3dScene } = await import("../../lib/publish/procedural-3d.ts");
+const { bake3dScene, injectSceneMarkup } = await import("../../lib/publish/procedural-3d.ts");
 const { SAMPLE_SPEC } = await import("../../lib/three3d/scene-spec.ts");
 const lighthouse = (await import("lighthouse")).default;
 const puppeteer = (await import("puppeteer")).default;
@@ -79,6 +79,29 @@ if (staticFail.length) {
   process.exit(1);
 }
 console.log("Static assertion: PASSED (no eager runtime src, poster present)");
+
+// ── Inline-preset static assertion (no Chrome needed) ──────────────────────
+// SAMPLE_SPEC.preset is always "background" so the LCP-element check for inline
+// presets is untested by the Lighthouse gate. Assert here without Chrome: bake
+// an accent-preset spec and verify the block is inline (position:relative, not
+// position:fixed) and the poster is present with fetchpriority="high".
+const INLINE_SPEC = { ...SAMPLE_SPEC, preset: "accent" };
+const inlineBaked = injectSceneMarkup(
+  `<!doctype html><html><body></body></html>`,
+  { spec: INLINE_SPEC, posterUrl: "assets/scene-inline.avif", runtimeUrl: "assets/openlen-3d-test.js" },
+);
+const inlineFail = [];
+if (!inlineBaked.includes("data-ol-3d-poster") || !inlineBaked.includes('fetchpriority="high"')) {
+  inlineFail.push('inline-preset: poster img with fetchpriority="high" missing');
+}
+if (/data-ol-3d-block[^>]*style="position:fixed/.test(inlineBaked)) {
+  inlineFail.push("inline-preset: block uses position:fixed (must be position:relative for accent preset)");
+}
+if (inlineFail.length) {
+  console.error("INLINE PRESET GATE FAILED:\n - " + inlineFail.join("\n - "));
+  process.exit(1);
+}
+console.log("Inline-preset assertion: PASSED (poster present, block is inline)");
 
 // ── Chrome + Lighthouse gate ────────────────────────────────────────────────
 let chromeDeferred = false;

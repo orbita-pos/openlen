@@ -245,6 +245,7 @@ ${CORE_SRC}
   function captureClean() {
     var clone = document.documentElement.cloneNode(true);
     clone.querySelectorAll('[data-openlen-inline-edit]').forEach(function (n) { n.remove(); });
+    clone.querySelectorAll('[data-openlen-3d-preview]').forEach(function (n) { n.remove(); });
     // Subsystem B ghost clones are transient editor twins — drop them wholesale
     // (the editable span lives inside) so a capture mid-ghost can't duplicate
     // content. Normally removed on finishEdit before any capture.

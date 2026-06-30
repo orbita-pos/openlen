@@ -205,7 +205,7 @@ export function ThreePanel({
           <button
             type="button"
             onClick={() => void handleGenerate()}
-            disabled={generating || !currentProjectId}
+            disabled={generating || !currentProjectId || !describe.trim()}
             className="w-full h-8 rounded-md text-[11.5px] font-semibold text-white bg-[var(--accent-strong)] hover:brightness-105 transition disabled:opacity-50 inline-flex items-center justify-center gap-1.5"
           >
             {generating ? (

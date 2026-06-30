@@ -454,6 +454,7 @@ const INSPECT_SCRIPT = `
   function postClean() {
     var clone = document.documentElement.cloneNode(true);
     clone.querySelectorAll('[data-openlen-inspect]').forEach(function (n) { n.remove(); });
+    clone.querySelectorAll('[data-openlen-3d-preview]').forEach(function (n) { n.remove(); });
     clone.querySelectorAll('[data-openlen-inspect-hover]').forEach(function (n) {
       n.removeAttribute('data-openlen-inspect-hover');
     });
