@@ -78,6 +78,22 @@ describe("injectSceneMarkup — background preset hero-scoped backdrop (Fix 1: z
     expect(out).toContain('fetchpriority="high"');
   });
 
+  it("background backdrop has NO launch button (it would be unclickable at z-index:-1) and loads on first interaction", () => {
+    // The backdrop sits behind content; a button inside it is intercepted by the
+    // hero's content/overlays. Background scenes load on the first user gesture.
+    expect(out).not.toContain("data-ol-3d-launch");
+    expect(out).toContain("pointerdown");
+  });
+
+  it("accent/divider (inline) preset still uses the click-to-launch button", () => {
+    const accent = injectSceneMarkup(withSection, {
+      spec: { ...SAMPLE_SPEC, preset: "accent" as const },
+      posterUrl: "/assets/p.avif",
+      runtimeUrl: "/assets/r.js",
+    });
+    expect(accent).toContain("data-ol-3d-launch");
+  });
+
   it("assigns ol3d-hero id when section has no id", () => {
     const noId = '<html><head></head><body><section style="padding:2rem"><h1>Hi</h1></section></body></html>';
     const r = injectSceneMarkup(noId, { spec: BGSPEC, posterUrl: "/assets/p.avif", runtimeUrl: "/assets/r.js" });

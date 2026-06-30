@@ -37,6 +37,36 @@ document.head.appendChild(s);}
 if(btn)btn.addEventListener('click',launch);
 })();`;
 
+// Backdrop bootstrap (background preset). The block sits at z-index:-1 BEHIND the
+// hero content, so a launch button inside it is unclickable (content/overlays
+// intercept the tap). Instead the runtime loads on the FIRST user interaction
+// (pointer/touch/key/scroll) — still a genuine gesture (Born-100: nothing loads
+// during the initial trace), no visible button, no z-index trap. Reduced-motion /
+// data-saver / low-memory / no-WebGL keep the static poster.
+const BACKDROP_BOOTSTRAP_JS = `(function(){
+var b=document.currentScript.closest('[data-ol-3d-block]');if(!b)return;
+var poster=b.querySelector('[data-ol-3d-poster]');
+var canvas=b.querySelector('[data-ol-3d-canvas]');
+var spec=JSON.parse(b.querySelector('[data-ol-3d-spec]').textContent);
+function gatesOk(){try{
+if(matchMedia('(prefers-reduced-motion: reduce)').matches)return false;
+var c=navigator.connection;if(c&&c.saveData)return false;
+if((navigator.deviceMemory||8)<4)return false;
+var t=document.createElement('canvas');
+if(!(t.getContext('webgl')||t.getContext('experimental-webgl')))return false;
+return true;}catch(e){return false;}}
+if(!gatesOk())return;
+var loaded=false,ev=['pointerdown','touchstart','keydown','wheel','scroll'];
+function off(){ev.forEach(function(e){window.removeEventListener(e,launch)});}
+function launch(){if(loaded)return;loaded=true;off();
+var s=document.createElement('script');s.src=b.getAttribute('data-ol-3d-runtime');
+s.onload=function(){canvas.hidden=false;
+window.OpenLen3D.mount(canvas,spec,{onReady:function(){poster.style.opacity='0';}});};
+s.onerror=function(){loaded=false;};
+document.head.appendChild(s);}
+ev.forEach(function(e){window.addEventListener(e,launch,{passive:true});});
+})();`;
+
 const PLACEHOLDER = "data-ol-3d-scene";
 const MARKER = "data-ol-has-3d-block";
 
@@ -72,9 +102,8 @@ function injectBackdropScene(
   const block = `<div data-ol-3d-block ${MARKER} data-ol-3d-runtime="${opts.runtimeUrl}" style="${blockStyle}">
 <img data-ol-3d-poster src="${opts.posterUrl}" width="${w}" height="${h}" fetchpriority="high" decoding="async" alt="" style="width:100%;height:100%;object-fit:cover;transition:opacity .6s ease">
 <canvas data-ol-3d-canvas hidden style="position:absolute;inset:0;width:100%;height:100%"></canvas>
-<button data-ol-3d-launch type="button" style="position:absolute;left:50%;bottom:16px;transform:translateX(-50%);padding:8px 16px;border-radius:9999px;border:0;background:rgba(0,0,0,.55);color:#fff;font:600 14px system-ui;cursor:pointer;pointer-events:auto">Ver en 3D</button>
 <script type="application/json" data-ol-3d-spec>${JSON.stringify(opts.spec).replace(/</g, "\\u003c")}</script>
-<script data-ol-3d-boot>${BOOTSTRAP_JS}</script>
+<script data-ol-3d-boot>${BACKDROP_BOOTSTRAP_JS}</script>
 </div>`;
 
   if (!target) {
