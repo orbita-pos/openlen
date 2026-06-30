@@ -2,3 +2,4 @@
 # executed in this codebase, so React conventions and unescaped-entity rules
 # don't apply. The source is authored elsewhere (claude.ai artifacts).
 lib/orchestrator/few-shots/**/*.jsx
+lib/three3d/runtime/dist/**

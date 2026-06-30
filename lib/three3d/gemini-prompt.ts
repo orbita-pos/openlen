@@ -22,6 +22,7 @@ SceneSpec shape (all numeric params are 0..1):
 Behavior mapping: "float-rotate" → motion.kind "drift"; "still" → motion.kind "still".
 
 Rules: it must be ABSTRACT/decorative (no recognizable real objects — those are unsupported). Set accentLinked:true when the brand color should drive the material; otherwise pick tasteful colors. Keep it premium and varied.
+Glass/iridescent/transmissive materials MUST use background: "gradient" — they need a colored backdrop to read well and look dull on transparent/black.
 
 Examples:
 ${examples}`;
