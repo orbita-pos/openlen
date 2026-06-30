@@ -15,14 +15,12 @@ import { buildSceneConfig, type SceneConfig } from "./interpret";
 export interface MountHandle { dispose: () => void }
 
 function makeGeometry(kind: GeometryKind, radius: number, segments: number): BufferGeometry {
-  const detail = Math.max(1, Math.round(segments / 24));
   switch (kind) {
     case "torus": return new TorusGeometry(radius, radius * 0.4, 48, 128);
     case "torusKnot": return new TorusKnotGeometry(radius * 0.7, radius * 0.26, 220, 32);
     case "icosa": return new IcosahedronGeometry(radius, 0);
     case "plane": return new PlaneGeometry(radius * 2.4, radius * 1.5, 64, 64);
     case "blob": return new IcosahedronGeometry(radius, 8);
-    case "particles": return new SphereGeometry(radius, 64, 64); // replaced by Points below
     case "sphere":
     default: return new SphereGeometry(radius, 96, 96);
   }
@@ -82,8 +80,10 @@ export function mount(canvas: HTMLCanvasElement, spec: SceneSpec, opts: { onRead
 
   const scene = new Scene();
   const pmrem = new PMREMGenerator(renderer);
-  const envRT = pmrem.fromScene(new RoomEnvironment(), 0.04);
+  const env = new RoomEnvironment();
+  const envRT = pmrem.fromScene(env, 0.04);
   scene.environment = envRT.texture;
+  env.dispose();
 
   const camera = new PerspectiveCamera(40, width / height, 0.1, 100);
   camera.position.set(0, 0, cfg.cameraZ + 2.5);
@@ -120,7 +120,6 @@ export function mount(canvas: HTMLCanvasElement, spec: SceneSpec, opts: { onRead
   }
   function frame() {
     const t = (performance.now() - start) / 1000;
-    root.rotation.y += 0; // base; per-object spin below keeps the group composition stable
     root.children.forEach((c) => { c.rotation.y = t * cfg.rotationSpeed; });
     root.position.y = Math.sin(t * 0.8) * cfg.driftAmplitude;
     renderer.render(scene, camera);
