@@ -48,10 +48,12 @@ const PAGE = `<!doctype html><html lang="es"><head><meta charset="utf-8">
 <meta name="description" content="OpenLen 3D scene — Born with depth">
 <link rel="icon" href="data:,">
 <title>3D gate</title></head><body>
-<section data-ol-3d-scene style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:80px 32px;text-align:center;color:#fff">
+<main>
+<section data-ol-3d-scene style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:80px 32px;text-align:center;color:#fff;background:#0a0e2a">
   <h1 style="font-size:clamp(2rem,5vw,3.5rem);font-weight:900;line-height:1.1;margin:0 0 16px">Born with depth</h1>
   <p style="font-size:1.1rem;opacity:.75;max-width:480px;margin:0">Un fondo 3D procedural como telón del héroe.</p>
 </section>
+</main>
 </body></html>`;
 
 // ── Static assertion (no Chrome needed) ────────────────────────────────────
