@@ -3,6 +3,7 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import type { SceneSpec } from "../three3d/scene-spec";
 import { coerceSceneSpec } from "../three3d/scene-spec";
+import { backgroundCss } from "../three3d/background";
 // readRuntimeJs is native-free (pure fs.readFileSync). Imported here so this
 // module stays native-free and vitest can load it without a .node binary.
 import { readRuntimeJs } from "./scene-host";
@@ -50,7 +51,9 @@ export function injectSceneMarkup(html: string, opts: SceneInjectOptions): strin
   if (html.includes(MARKER)) return html; // idempotent
   const w = opts.width ?? 1600;
   const h = opts.height ?? 900;
-  const block = `<div data-ol-3d-block ${MARKER} data-ol-3d-runtime="${opts.runtimeUrl}" style="position:relative;overflow:hidden">
+  const bg = backgroundCss(opts.spec);
+  const blockStyle = `position:relative;overflow:hidden${bg ? `;background:${bg}` : ""}`;
+  const block = `<div data-ol-3d-block ${MARKER} data-ol-3d-runtime="${opts.runtimeUrl}" style="${blockStyle}">
 <img data-ol-3d-poster src="${opts.posterUrl}" width="${w}" height="${h}" fetchpriority="high" decoding="async" alt="" style="width:100%;height:100%;object-fit:cover;transition:opacity .6s ease">
 <canvas data-ol-3d-canvas hidden style="position:absolute;inset:0;width:100%;height:100%"></canvas>
 <button data-ol-3d-launch type="button" style="position:absolute;left:50%;bottom:16px;transform:translateX(-50%);padding:8px 16px;border-radius:9999px;border:0;background:rgba(0,0,0,.55);color:#fff;font:600 14px system-ui;cursor:pointer">Ver en 3D</button>

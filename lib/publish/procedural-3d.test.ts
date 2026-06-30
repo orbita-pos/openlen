@@ -23,6 +23,18 @@ describe("injectSceneMarkup", () => {
     const twice = injectSceneMarkup(out, { spec: SAMPLE_SPEC, posterUrl: "/assets/p.avif", runtimeUrl: "/assets/r.js" });
     expect(twice).toBe(out);
   });
+  it("puts the look gradient on the block container when not transparent", () => {
+    const out = injectSceneMarkup("<html><head></head><body></body></html>", {
+      spec: { ...SAMPLE_SPEC, background: "gradient" }, posterUrl: "/assets/p.avif", runtimeUrl: "/assets/r.js",
+    });
+    expect(out).toContain("linear-gradient");
+  });
+  it("no gradient when background is transparent", () => {
+    const out = injectSceneMarkup("<html><head></head><body></body></html>", {
+      spec: { ...SAMPLE_SPEC, background: "transparent" }, posterUrl: "/assets/p.avif", runtimeUrl: "/assets/r.js",
+    });
+    expect(out).not.toContain("linear-gradient");
+  });
 });
 
 describe("bake3dScene", () => {
