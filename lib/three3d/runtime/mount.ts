@@ -3,12 +3,16 @@ import {
   Scene, PerspectiveCamera, WebGLRenderer, Group, Mesh, Color,
   SphereGeometry, TorusGeometry, TorusKnotGeometry, IcosahedronGeometry,
   PlaneGeometry, CapsuleGeometry, BufferGeometry, BufferAttribute, Points,
-  MeshStandardMaterial, MeshPhysicalMaterial, PointsMaterial,
-  PMREMGenerator, ACESFilmicToneMapping, SRGBColorSpace, DirectionalLight,
-  type Material, type Object3D,
+  MeshStandardMaterial, MeshPhysicalMaterial, MeshBasicMaterial, PointsMaterial,
+  PMREMGenerator, ACESFilmicToneMapping, NoToneMapping, SRGBColorSpace, DirectionalLight,
+  Vector2, type Material, type Object3D,
 } from "three";
 import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
 import { RoundedBoxGeometry } from "three/examples/jsm/geometries/RoundedBoxGeometry.js";
+import { EffectComposer } from "three/examples/jsm/postprocessing/EffectComposer.js";
+import { RenderPass } from "three/examples/jsm/postprocessing/RenderPass.js";
+import { UnrealBloomPass } from "three/examples/jsm/postprocessing/UnrealBloomPass.js";
+import { OutputPass } from "three/examples/jsm/postprocessing/OutputPass.js";
 import type { SceneSpec, GeometryKind, MaterialKind } from "../scene-spec";
 import { buildSceneConfig, type SceneConfig } from "./interpret";
 
@@ -63,10 +67,13 @@ function makeMaterial(kind: MaterialKind, cfg: SceneConfig, faceted = false): Ma
   if (kind === "metal") {
     return new MeshStandardMaterial({ color: new Color(cfg.accentColor), metalness: 1, roughness: 0.25, envMapIntensity: cfg.envIntensity });
   }
-  // matte / gradient / emissive — env-lit standard (interim; tuned in later registers)
+  if (kind === "emissive") {
+    return new MeshBasicMaterial({ color: new Color(cfg.accentColor), wireframe: true });
+  }
+  // matte / gradient — env-lit standard
   return new MeshStandardMaterial({
     color: new Color(cfg.color),
-    emissive: new Color(cfg.emissive), emissiveIntensity: kind === "emissive" ? 1.2 : 0,
+    emissive: new Color(cfg.emissive), emissiveIntensity: 0,
     roughness: cfg.roughness, metalness: cfg.metalness, envMapIntensity: cfg.envIntensity,
     transparent: cfg.opacity < 1, opacity: cfg.opacity,
   });
@@ -88,6 +95,7 @@ function particleField(cfg: SceneConfig): Points {
 
 export function mount(canvas: HTMLCanvasElement, spec: SceneSpec, opts: { onReady?: () => void } = {}): MountHandle {
   const cfg = buildSceneConfig(spec);
+  const useBloom = cfg.materialKind === "emissive";
   const host = canvas.parentElement ?? canvas;
   const width = host.clientWidth || 800;
   const height = host.clientHeight || 600;
@@ -95,7 +103,7 @@ export function mount(canvas: HTMLCanvasElement, spec: SceneSpec, opts: { onRead
   const renderer = new WebGLRenderer({ canvas, antialias: true, alpha: true, powerPreference: "high-performance" });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
   renderer.setSize(width, height, false);
-  renderer.toneMapping = ACESFilmicToneMapping;
+  renderer.toneMapping = useBloom ? NoToneMapping : ACESFilmicToneMapping;
   renderer.toneMappingExposure = cfg.exposure;
   renderer.outputColorSpace = SRGBColorSpace;
 
@@ -118,7 +126,7 @@ export function mount(canvas: HTMLCanvasElement, spec: SceneSpec, opts: { onRead
   const root = new Group();
   if (cfg.geometryKind === "particles") {
     root.add(track(particleField(cfg)));
-  } else if (cfg.cluster) {
+  } else if (cfg.cluster && cfg.materialKind !== "emissive") {
     const leadFaceted = cfg.geometryKind === "icosa";
     const lead = new Mesh(makeGeometry(cfg.geometryKind, cfg.radius * 0.75, cfg.segments), makeMaterial(cfg.materialKind, cfg, leadFaceted));
     lead.position.set(0.1, 0.55, 0);
@@ -135,18 +143,29 @@ export function mount(canvas: HTMLCanvasElement, spec: SceneSpec, opts: { onRead
   }
   scene.add(root);
 
+  let composer: EffectComposer | null = null;
+  let bloomPass: UnrealBloomPass | null = null;
+  if (useBloom) {
+    composer = new EffectComposer(renderer);
+    composer.addPass(new RenderPass(scene, camera));
+    bloomPass = new UnrealBloomPass(new Vector2(width, height), 0.95, 0.55, 0.0);
+    composer.addPass(bloomPass);
+    composer.addPass(new OutputPass());
+  }
+
   let raf = 0, visible = true, firstFrame = true;
   const start = performance.now();
 
   function resize() {
     const w = host.clientWidth || width, h = host.clientHeight || height;
     renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix();
+    composer?.setSize(w, h);
   }
   function frame() {
     const t = (performance.now() - start) / 1000;
     root.children.forEach((c) => { c.rotation.y = t * cfg.rotationSpeed; });
     root.position.y = Math.sin(t * 0.8) * cfg.driftAmplitude;
-    renderer.render(scene, camera);
+    if (composer) composer.render(); else renderer.render(scene, camera);
     if (firstFrame) { firstFrame = false; opts.onReady?.(); window.dispatchEvent(new Event("three-ready")); }
     if (visible) { raf = requestAnimationFrame(frame); } else { raf = 0; }
   }
@@ -171,6 +190,8 @@ export function mount(canvas: HTMLCanvasElement, spec: SceneSpec, opts: { onRead
       document.removeEventListener("visibilitychange", onVis);
       window.removeEventListener("resize", resize);
       for (const d of disposables) d.dispose();
+      composer?.dispose();
+      bloomPass?.dispose();
       envRT.dispose(); pmrem.dispose(); renderer.dispose();
     },
   };
