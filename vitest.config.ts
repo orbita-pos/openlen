@@ -57,6 +57,7 @@ export default defineConfig({
       "lib/projects/page-edge-paths.test.ts",
       "lib/projects/preview.test.ts",
       "lib/notifications/**/*.test.ts",
+      "lib/publish/scene-host.test.ts",
     ],
     exclude: ["node_modules/**", "tests/e2e/**", ".next/**"],
   },
