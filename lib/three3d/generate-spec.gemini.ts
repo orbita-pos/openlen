@@ -22,6 +22,8 @@ async function callGemini(
     prompt: string;
     images?: InlineImage[];
     maxOutputTokens?: number;
+    responseMimeType?: string;
+    temperature?: number;
   },
 ): Promise<string> {
   const messages: { role: "system" | "user" | "assistant"; content: string }[] =
@@ -39,7 +41,8 @@ async function callGemini(
       messages,
       images: opts.images,
       maxOutputTokens: opts.maxOutputTokens ?? 1024,
-      temperature: 0.7,
+      temperature: opts.temperature ?? 0.7,
+      responseMimeType: opts.responseMimeType,
     },
     {},
   )) {
@@ -83,13 +86,13 @@ function nearestGolden(describe: string): SceneSpec {
  *  Fails open: any error → true so a critic outage never blocks generation. */
 async function critiqueScene(
   provider: GeminiProvider,
-  posterAvif: Buffer,
+  posterJpeg: Buffer,
   describe: string,
 ): Promise<boolean> {
   try {
     const image: InlineImage = {
-      mimeType: "image/avif",
-      dataBase64: posterAvif.toString("base64"),
+      mimeType: "image/jpeg",
+      dataBase64: posterJpeg.toString("base64"),
     };
     const prompt = `You are reviewing a rendered 3D abstract decorative object intended for a web page hero background.
 Brief: "${describe}"
@@ -101,7 +104,7 @@ Answer ONLY with the single word ACCEPT or REJECT — nothing else.`;
       prompt,
       images: [image],
       maxOutputTokens: 256,
-      // Lower temperature → more decisive binary answer
+      temperature: 0.2,
     });
 
     // Accept unless verdict is unambiguously REJECT (no stray ACCEPT present).
@@ -122,20 +125,21 @@ Answer ONLY with the single word ACCEPT or REJECT — nothing else.`;
 export async function runGemini(
   input: GenInput,
 ): Promise<Omit<GenResult, "provider">> {
-  const apiKey = process.env.GEMINI_API_KEY ?? "";
-  const provider = new GeminiProvider(apiKey);
+  if (!process.env.GEMINI_API_KEY) throw new Error("gemini_key_missing");
+  const provider = new GeminiProvider(process.env.GEMINI_API_KEY);
   const system = buildSystemPrompt();
   const user = buildUserPrompt(input);
 
   let rerolls = 0;
   while (rerolls <= MAX_REROLLS) {
     try {
-      const raw = await callGemini(provider, { system, prompt: user });
+      const raw = await callGemini(provider, { system, prompt: user, responseMimeType: "application/json" });
       const parsed = parseSceneSpecStrict(extractJson(raw));
       if (parsed.ok) {
         const poster = await renderScenePoster(parsed.value, {
           width: 640,
           height: 360,
+          format: "jpeg",
         });
         if (await critiqueScene(provider, poster, input.describe)) {
           return { spec: parsed.value, rerolls, fallback: false };

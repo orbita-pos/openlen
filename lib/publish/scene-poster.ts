@@ -5,7 +5,7 @@ import { processImage } from "../images";
 
 export async function renderScenePoster(
   spec: SceneSpec,
-  opts: { width?: number; height?: number } = {},
+  opts: { width?: number; height?: number; format?: "avif" | "jpeg" } = {},
 ): Promise<Buffer> {
   const w = opts.width ?? 1600;
   const h = opts.height ?? 900;
@@ -21,7 +21,7 @@ export async function renderScenePoster(
     const png = (await page.screenshot({ type: "png", clip: { x: 0, y: 0, width: w, height: h } })) as Buffer;
     const { variants } = await processImage({
       input: png,
-      variants: [{ width: 0, format: "avif", quality: 62 }],
+      variants: [{ width: 0, format: opts.format ?? "avif", quality: opts.format === "jpeg" ? 80 : 62 }],
       autoOrient: false,
       withoutEnlargement: true,
     });
