@@ -55,6 +55,42 @@ export function coerceSceneSpec(input: unknown): SceneSpec {
   return SceneSpecSchema.parse(obj);
 }
 
+const StrictSchema = z.object({
+  version: z.literal(1),
+  preset: z.enum(PRESETS),
+  geometry: z.object({
+    kind: z.enum(GEOMETRY_KINDS),
+    params: z.object({
+      scale: z.number().min(0).max(1),
+      detail: z.number().min(0).max(1),
+      distort: z.number().min(0).max(1),
+      density: z.number().min(0).max(1),
+    }),
+  }),
+  material: z.object({
+    kind: z.enum(MATERIAL_KINDS),
+    roughness: z.number().min(0).max(1),
+    metalness: z.number().min(0).max(1),
+    opacity: z.number().min(0).max(1),
+    accentLinked: z.boolean(),
+    colors: z.array(z.string().regex(/^#[0-9a-fA-F]{6}$/)),
+  }),
+  motion: z.object({
+    kind: z.enum(MOTION_KINDS),
+    speed: z.number().min(0).max(1),
+    amplitude: z.number().min(0).max(1),
+  }),
+  look: z.enum(LOOKS),
+  camera: z.object({ framing: z.enum(FRAMINGS) }),
+  background: z.enum(BACKGROUNDS),
+}).strict();
+
+export function parseSceneSpecStrict(input: unknown): { ok: true; value: SceneSpec } | { ok: false; errors: string[] } {
+  const r = StrictSchema.safeParse(input);
+  if (r.success) return { ok: true, value: r.data };
+  return { ok: false, errors: r.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`) };
+}
+
 export const SAMPLE_SPEC: SceneSpec = {
   version: 1,
   preset: "background",

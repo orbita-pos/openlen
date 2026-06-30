@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { coerceSceneSpec, SAMPLE_SPEC } from "./scene-spec";
+import { coerceSceneSpec, parseSceneSpecStrict, SAMPLE_SPEC } from "./scene-spec";
 
 describe("coerceSceneSpec", () => {
   it("returns a full valid spec from empty input", () => {
@@ -38,5 +38,25 @@ describe("coerceSceneSpec", () => {
       expect(s.version).toBe(1);
       expect(s.geometry.kind).toBe("sphere");
     }
+  });
+});
+
+describe("parseSceneSpecStrict", () => {
+  it("accepts a fully-valid spec", () => {
+    const r = parseSceneSpecStrict(SAMPLE_SPEC);
+    expect(r.ok).toBe(true);
+    if (r.ok) expect(r.value.geometry.kind).toBe("sphere");
+  });
+  it("rejects an unknown geometry kind", () => {
+    const r = parseSceneSpecStrict({ ...SAMPLE_SPEC, geometry: { kind: "dragon", params: SAMPLE_SPEC.geometry.params } });
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.errors.join(" ")).toMatch(/geometry|kind|dragon/i);
+  });
+  it("rejects a non-object", () => {
+    expect(parseSceneSpecStrict("nope").ok).toBe(false);
+  });
+  it("rejects a missing material", () => {
+    const { material, ...rest } = SAMPLE_SPEC as any;
+    expect(parseSceneSpecStrict(rest).ok).toBe(false);
   });
 });
