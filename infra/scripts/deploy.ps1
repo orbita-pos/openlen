@@ -73,6 +73,18 @@ if ($env:OPENLEN_SKIP_MIGRATE -ne "1") {
   Step 2 "Skipping billing DB migration (OPENLEN_SKIP_MIGRATE=1) -- assumed already applied"
 }
 
+# The curated-3D-models catalog table. Scoped + idempotent
+# (CREATE TABLE / INDEX IF NOT EXISTS), same rationale as billing: the shipped
+# code queries the `models` table, so it must exist before the swap or
+# GET /api/models 500s. Covered by the same OPENLEN_SKIP_MIGRATE flag.
+# NOTE: `models:seed` (uploads the starter GLBs to R2) is a ONE-TIME manual step
+# run AFTER the R2 `openlen-models` bucket + CORS exist — not automated here.
+if ($env:OPENLEN_SKIP_MIGRATE -ne "1") {
+  Step 2 "Applying models DB migration (npm run models:migrate)..."
+  npm run models:migrate
+  if ($LASTEXITCODE -ne 0) { throw "models:migrate failed (exit $LASTEXITCODE)" }
+}
+
 # --- 3. Compose standalone with static + public -----------------------
 Step 3 "Composing standalone (copying .next/static + public/)..."
 New-Item -ItemType Directory -Force -Path ".next/standalone/.next/static" | Out-Null
