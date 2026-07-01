@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { GOLDEN } from "@/lib/three3d/golden-specs";
 import type { MaterialKind, ShaderVariant } from "@/lib/three3d/scene-spec";
 import { SAMPLE_SPEC, SHADER_VARIANTS, coerceSceneSpec } from "@/lib/three3d/scene-spec";
+import { pickModelPresentation } from "@/lib/models/presentation";
 import { Loader, Sparkles } from "../icons";
 import { useToast } from "../toast";
 import { useModels } from "../use-models";
@@ -147,7 +148,13 @@ export function ThreePanel({
     } else {
       setSelectedModelUrl(model.storageUrl);
       setShaderVariant(null);
-      setDraft({ ...SAMPLE_SPEC, preset: "background", background: "gradient", modelUrl: model.storageUrl });
+      setDraft({
+        ...SAMPLE_SPEC,
+        preset: "background",
+        background: "gradient",
+        ...pickModelPresentation(model.sceneSpec),
+        modelUrl: model.storageUrl,
+      });
     }
   };
 

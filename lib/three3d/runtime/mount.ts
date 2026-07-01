@@ -17,7 +17,7 @@ import { EffectComposer } from "three/examples/jsm/postprocessing/EffectComposer
 import { RenderPass } from "three/examples/jsm/postprocessing/RenderPass.js";
 import { UnrealBloomPass } from "three/examples/jsm/postprocessing/UnrealBloomPass.js";
 import { OutputPass } from "three/examples/jsm/postprocessing/OutputPass.js";
-import type { SceneSpec, GeometryKind, MaterialKind } from "../scene-spec";
+import type { SceneSpec, GeometryKind, MaterialKind, Look } from "../scene-spec";
 import { buildSceneConfig, type SceneConfig } from "./interpret";
 
 export interface MountHandle { dispose: () => void }
@@ -241,16 +241,26 @@ function mountShader(canvas: HTMLCanvasElement, cfg: SceneConfig, opts: { onRead
   };
 }
 
+// Model-path look mapping — distinct from interpret.ts's EXPOSURE/ENV_INTENSITY
+// tables, which are tuned for the abstract geometry/shader path, not GLB PBR materials.
+const MODEL_LOOK: Record<Look, { exposure: number; key: number }> = {
+  studio: { exposure: 1.15, key: 1.9 },
+  soft: { exposure: 1.05, key: 1.6 },
+  dramatic: { exposure: 1.0, key: 2.2 },
+  neutral: { exposure: 0.95, key: 1.2 },
+};
+
 function mountModel(canvas: HTMLCanvasElement, cfg: SceneConfig, opts: { onReady?: () => void }): MountHandle {
   const host = canvas.parentElement ?? canvas;
   const width = host.clientWidth || 800;
   const height = host.clientHeight || 600;
+  const modelLook = MODEL_LOOK[cfg.look];
 
   const renderer = new WebGLRenderer({ canvas, antialias: true, alpha: true });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
   renderer.setSize(width, height, false);
   renderer.toneMapping = ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.05;
+  renderer.toneMappingExposure = modelLook.exposure;
   renderer.outputColorSpace = SRGBColorSpace;
   const detachContextGuards = attachContextGuards(canvas, {
     pause: () => { cancelAnimationFrame(raf); raf = 0; },
@@ -265,7 +275,7 @@ function mountModel(canvas: HTMLCanvasElement, cfg: SceneConfig, opts: { onReady
   scene.environment = envRT.texture;
 
   const camera = new PerspectiveCamera(40, width / height, 0.01, 1000);
-  const key = new DirectionalLight(0xffffff, 1.6); key.position.set(4, 6, 5); scene.add(key);
+  const key = new DirectionalLight(0xffffff, modelLook.key); key.position.set(4, 6, 5); scene.add(key);
   if (cfg.accentLinked) {
     // Brand accent as light, never as material tint — safe on any texture set.
     // Two opposed back rims wrap a visible halo even on glossy/env-lit models.
@@ -281,13 +291,17 @@ function mountModel(canvas: HTMLCanvasElement, cfg: SceneConfig, opts: { onReady
   let raf = 0, visible = true, firstFrame = true, modelLoaded = false;
   let disposed = false;
 
+  // cfg.rotationSpeed is exactly 0 when motion.kind === "still" (see buildSceneConfig);
+  // cfg.motionSpeed is the raw 0..1 speed, since rotationSpeed is scaled for the geometry path.
+  const rotStep = cfg.rotationSpeed === 0 ? 0 : 0.002 + cfg.motionSpeed * 0.018;
+
   function resize() {
     const w = host.clientWidth || width, h = host.clientHeight || height;
     renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix();
   }
 
   function frame() {
-    group.rotation.y += 0.006;
+    group.rotation.y += rotStep;
     renderer.render(scene, camera);
     if (firstFrame && modelLoaded) {
       firstFrame = false;
@@ -310,8 +324,12 @@ function mountModel(canvas: HTMLCanvasElement, cfg: SceneConfig, opts: { onReady
       model.position.sub(center);
       const maxDim = Math.max(size.x, size.y, size.z) || 1;
       const dist = (maxDim / 2) / Math.tan(MathUtils.degToRad(40 / 2));
-      camera.position.set(0, maxDim * 0.05, dist * 1.9);
+      camera.position.set(0, maxDim * 0.05, dist * (cfg.framing === "wide" ? 2.4 : 1.9));
       camera.lookAt(0, 0, 0);
+      if (cfg.framing === "offset") {
+        camera.position.x += maxDim * 0.35;
+        camera.lookAt(maxDim * 0.12, 0, 0);
+      }
       group.add(model);
       resize();
       modelLoaded = true;

@@ -46,6 +46,19 @@ describe("buildSceneConfig — quality fields", () => {
   });
 });
 
+describe("buildSceneConfig — model-path passthroughs", () => {
+  it("exposes raw motion speed, independent of the geometry-path rotationSpeed formula", () => {
+    const c = buildSceneConfig({ ...SAMPLE_SPEC, motion: { kind: "drift", speed: 0.9, amplitude: 0.5 } });
+    expect(c.motionSpeed).toBe(0.9);
+  });
+
+  it("exposes raw look and camera framing for paths with their own mapping", () => {
+    const c = buildSceneConfig({ ...SAMPLE_SPEC, look: "dramatic", camera: { framing: "wide" } });
+    expect(c.look).toBe("dramatic");
+    expect(c.framing).toBe("wide");
+  });
+});
+
 describe("buildSceneConfig — accentLinked", () => {
   it("carries accentLinked=true from material", () => {
     const c = buildSceneConfig({ ...SAMPLE_SPEC, material: { ...SAMPLE_SPEC.material, accentLinked: true } });

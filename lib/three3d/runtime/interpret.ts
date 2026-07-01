@@ -28,6 +28,11 @@ export interface SceneConfig {
   accentLinked: boolean;
   shader?: ShaderVariant;
   modelUrl?: string;
+  // Raw pass-throughs for the model path: its speed/look/framing curves are
+  // physically-based-material-specific and differ from the formulas above.
+  motionSpeed: number;
+  look: Look;
+  framing: SceneSpec["camera"]["framing"];
 }
 
 const DEFAULT_COLOR = "#7C5CFF";
@@ -79,5 +84,8 @@ export function buildSceneConfig(spec: SceneSpec): SceneConfig {
     accentLinked: spec.material.accentLinked,
     shader: spec.shader,
     modelUrl: spec.modelUrl,
+    motionSpeed: spec.motion.speed,
+    look: spec.look,
+    framing: spec.camera.framing,
   };
 }
