@@ -7,6 +7,8 @@
   "emptyHint": "When a visitor messages one of your published pages, the conversation shows up here.",
   "loadError": "Couldn't load messages. Try again in a moment.",
   "visitor": "Visitor",
+  "fromAssistant": "IA",
+  "fromAssistantTitle": "Transféré depuis l'assistant",
   "selectPrompt": "Select a conversation to read and reply.",
   "threadEmpty": "No messages in this conversation yet.",
   "back": "Back",

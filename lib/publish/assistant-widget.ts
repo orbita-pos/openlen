@@ -21,6 +21,11 @@ export interface AssistantWidgetConfig {
   greeting?: string;
   /** Show the "Powered by OpenLen" footer (free tier). Default true. */
   branding?: boolean;
+  /** When true (the human chat module is also enabled on this page), the widget
+   *  offers "Hablar con una persona" and, on escalation, hands the visitor +
+   *  transcript to the human chat via window.__openlenChat instead of the plain
+   *  lead form. Default false → legacy lead-capture behavior. */
+  chatHandoff?: boolean;
 }
 
 const DEFAULT_ACCENT = "#ff6b5e";
@@ -35,6 +40,7 @@ function widgetScript(cfg: Required<AssistantWidgetConfig>): string {
     accent: cfg.accent,
     greeting: cfg.greeting,
     branding: cfg.branding,
+    handoff: cfg.chatHandoff,
   });
 
   return `<script>(function(){try{
@@ -70,6 +76,8 @@ R.innerHTML=
 +'.lead{padding:10px 0 2px;display:flex;flex-direction:column;gap:8px}'
 +'.lead input{min-height:44px;border:1px solid #d8d8dc;border-radius:10px;padding:0 12px;font-size:14px}'
 +'.lead button{min-height:44px;border:0;border-radius:10px;background:'+ACC+';color:#fff;font-weight:600;cursor:pointer}'
++'.talk{width:100%;margin-top:8px;min-height:40px;border:1px solid '+ACC+';background:transparent;color:'+ACC+';font-weight:600;font-size:13px;cursor:pointer;border-radius:10px}'
++'.talk:hover{background:'+ACC+';color:#fff}'
 +'.dis{font-size:11px;color:#9a9aa0;text-align:center;padding:6px 10px 2px}'
 +'.pb{font-size:11px;color:#b3b3b9;text-align:center;padding:2px 0 8px}'
 +'.pb a{color:#9a9aa0;text-decoration:none}'
@@ -82,13 +90,14 @@ R.innerHTML=
 +'<div class="hd"><span></span><button class="x" aria-label="Cerrar chat">&times;</button></div>'
 +'<div class="log" role="log" aria-live="polite"></div>'
 +'<div class="ft"><form class="ip"><input type="text" autocomplete="off" placeholder="Escribe tu pregunta…" aria-label="Tu mensaje" maxlength="500"/><button type="submit" aria-label="Enviar">→</button></form>'
++(C.handoff?'<button type="button" class="talk">Hablar con una persona</button>':'')
 +'<div class="dis">El asistente puede equivocarse. Verifica datos importantes.</div>'
 +(C.branding?'<div class="pb">con <a href="https://openlen.com" target="_blank" rel="noopener">OpenLen</a></div>':'')
 +'</div></div>';
 
 var btn=R.querySelector(".btn"),panel=R.querySelector(".panel"),log=R.querySelector(".log"),
 form=R.querySelector(".ip"),input=R.querySelector(".ip input"),send=R.querySelector(".ip button"),
-xb=R.querySelector(".x");
+xb=R.querySelector(".x"),talk=R.querySelector(".talk");
 R.querySelector(".hd span").textContent=C.name;
 var history=[],busy=false,opened=false,leadShown=false;
 
@@ -110,6 +119,29 @@ fetch(C.api+"/api/f/"+C.sub,{method:"POST",body:fd,headers:{accept:"application/
 wrap.remove();bubble("bot","¡Gracias! Te contactaremos pronto. 🙌");});
 log.appendChild(wrap);scroll();wrap.querySelector('input[name=email]').focus()}
 
+// Escalate to a human. With the chat module enabled (C.handoff) this creates a
+// real human conversation seeded with the transcript and opens the chat widget;
+// otherwise it falls back to the legacy lead-capture form.
+function escalate(){if(C.handoff)handoffForm();else leadForm()}
+function handoffForm(){if(leadShown)return;leadShown=true;
+var wrap=document.createElement("form");wrap.className="lead";
+wrap.innerHTML='<input name="nombre" placeholder="Tu nombre" aria-label="Tu nombre" autocomplete="name" required/>'
++'<input name="email" type="email" placeholder="Tu correo (opcional)" aria-label="Tu correo" autocomplete="email"/>'
++'<button type="submit">Conectar con una persona</button>';
+var submitting=false;
+wrap.addEventListener("submit",function(e){e.preventDefault();if(submitting)return;
+var nm=(wrap.nombre.value||"").trim();if(!nm){wrap.nombre.focus();return}
+submitting=true;
+var tr=history.slice(-12).map(function(h){return (h.role==="user"?"Visitante":"Asistente")+": "+h.content}).join("\\n").slice(0,3500);
+var sb=wrap.querySelector("button");sb.disabled=true;
+fetch("/api/chat/"+C.sub+"/handoff",{method:"POST",credentials:"same-origin",headers:{"content-type":"application/json",accept:"application/json"},body:JSON.stringify({name:nm,email:(wrap.email.value||"").trim()||undefined,transcript:tr})})
+.then(function(r){return r.ok?r.json():Promise.reject(r.status)})
+.then(function(j){wrap.remove();
+if(window.__openlenChat&&window.__openlenChat.openConversation&&j&&j.conversation){close();window.__openlenChat.openConversation(j.conversation.id)}
+else{bubble("bot","¡Listo! Un miembro del equipo te escribirá pronto por aquí. 🙌")}})
+.catch(function(){submitting=false;sb.disabled=false;leadShown=false;bubble("bot","No pude conectar con una persona ahora. Intenta de nuevo.")});});
+log.appendChild(wrap);scroll();wrap.querySelector('input[name=nombre]').focus()}
+
 function ask(text){if(busy)return;busy=true;send.disabled=true;
 history.push({role:"user",content:text});bubble("user",text);
 var d=dots();
@@ -118,7 +150,7 @@ body:JSON.stringify({message:text,history:history.slice(0,-1)})})
 .then(function(r){return r.ok?r.json():Promise.reject(r.status)})
 .then(function(j){d.remove();var a=(j&&j.respuesta)||"Lo siento, no pude responder ahora.";
 history.push({role:"assistant",content:a});bubble("bot",a);
-if(j&&(j.intent==="lead"||j.intent==="handoff"))leadForm();})
+if(j&&(j.intent==="lead"||j.intent==="handoff"))escalate();})
 .catch(function(){d.remove();bubble("bot","Hubo un problema. Intenta de nuevo en un momento.")})
 .then(function(){busy=false;send.disabled=false;input.focus()})}
 
@@ -128,6 +160,7 @@ function close(){panel.classList.remove("open");btn.setAttribute("aria-expanded"
 btn.addEventListener("click",function(){panel.classList.contains("open")?close():open()});
 xb.addEventListener("click",close);
 form.addEventListener("submit",function(e){e.preventDefault();var v=input.value.trim();if(!v)return;input.value="";ask(v)});
+if(talk)talk.addEventListener("click",function(){escalate()});
 host.addEventListener("keydown",function(e){if(e.key==="Escape"&&panel.classList.contains("open"))close()});
 }catch(e){}})();</script>`;
 }
@@ -148,6 +181,7 @@ export function bakeAssistantWidget(
       cfg.greeting ||
       `¡Hola! 👋 Soy el asistente de ${cfg.businessName}. ¿En qué te ayudo?`,
     branding: cfg.branding ?? true,
+    chatHandoff: cfg.chatHandoff ?? false,
   };
   const tag = widgetScript(full).replace("<script>", `<script ${MARKER}>`);
   const idx = html.lastIndexOf("</body>");

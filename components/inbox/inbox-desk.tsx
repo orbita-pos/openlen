@@ -20,6 +20,7 @@ interface Conversation {
   assignedUserId: string | null;
   assigneeName: string | null;
   assignedAt: string | null;
+  origin: string | null;
 }
 interface ProjectGroup {
   projectId: string;
@@ -408,8 +409,18 @@ export function InboxDesk() {
                               {initial(name)}
                             </span>
                             <span className="min-w-0 flex-1">
-                              <span className="block truncate text-[14px] font-medium">
-                                {name}
+                              <span className="flex items-center gap-1.5">
+                                <span className="truncate text-[14px] font-medium">
+                                  {name}
+                                </span>
+                                {c.origin === "ai_handoff" && (
+                                  <span
+                                    title={t("fromAssistantTitle")}
+                                    className="shrink-0 rounded-full bg-violet-500/10 px-1.5 py-0.5 text-[9.5px] font-semibold text-violet-600 dark:text-violet-400"
+                                  >
+                                    ✨ {t("fromAssistant")}
+                                  </span>
+                                )}
                               </span>
                               <span className="block truncate text-[12px] text-zinc-400 dark:text-zinc-500">
                                 @{c.otherUsername}

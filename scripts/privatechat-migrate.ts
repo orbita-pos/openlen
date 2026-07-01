@@ -100,6 +100,10 @@ async function main() {
   await db.execute(sql`ALTER TABLE "chatConversations" ADD COLUMN IF NOT EXISTS "assignedUserId" text;`);
   await db.execute(sql`ALTER TABLE "chatConversations" ADD COLUMN IF NOT EXISTS "assignedAt" timestamp;`);
 
+  // AI→human handoff: tag conversations escalated from the site assistant so the
+  // owner's Desk can badge them ("Escalado desde IA").
+  await db.execute(sql`ALTER TABLE "chatConversations" ADD COLUMN IF NOT EXISTS "origin" text;`);
+
   // Unified-identity: guests + member-linked users have no password; memberId links to a site member.
   await db.execute(sql`ALTER TABLE "chatUsers" ALTER COLUMN "passwordHash" DROP NOT NULL;`);
   await db.execute(sql`ALTER TABLE "chatUsers" ADD COLUMN IF NOT EXISTS "memberId" text;`);

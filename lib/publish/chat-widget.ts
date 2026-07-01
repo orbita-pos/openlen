@@ -88,6 +88,11 @@ export interface ChatWidgetConfig {
   welcome?: string;
   quickReplies?: { q: string; a: string }[];
   theme?: "light" | "dark";
+  /** When true, this baked widget renders WITHOUT its own floating FAB and
+   *  instead exposes window.__openlenChat.{open, openConversation, close}. Used
+   *  when the site assistant is the single launcher and hands off to the human
+   *  chat (assistant + chat both enabled → one bubble, not two). */
+  chatAsHandoffTarget?: boolean;
 }
 
 const DEFAULT_ACCENT = "#ff6b5e";
@@ -114,6 +119,7 @@ function widgetScript(cfg: ChatWidgetConfig): string {
     welcome: cfg.welcome,
     quickReplies: cfg.quickReplies,
     theme: cfg.theme || "light",
+    handoff: cfg.chatAsHandoffTarget ?? false,
     S: STRINGS,
   }).replace(/</g, "\\u003c");
 
@@ -358,14 +364,22 @@ loBtn.addEventListener("click",function(){jpost("/auth/logout",{}).then(function
 function start(){jreq("/me").then(function(x){if(x.j&&x.j.user){me=x.j.user;listView()}else{authView()}}).catch(function(){authView()})}
 
 if(isFab){
-var fab=el("button","fab");fab.type="button";fab.setAttribute("aria-label",T.open);
+var fab=null;
+if(!C.handoff){
+fab=el("button","fab");fab.type="button";fab.setAttribute("aria-label",T.open);
 fab.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-8.5 8.5 8.5 8.5 0 0 1-3.9-.9L3 21l1.9-5.6A8.5 8.5 0 0 1 12.5 3 8.38 8.38 0 0 1 21 11.5z"/></svg>';
-R.appendChild(fab);R.appendChild(panel);
-function openP(){panel.classList.add("open");fab.setAttribute("aria-expanded","true");start()}
-function closeP(){panel.classList.remove("open");fab.setAttribute("aria-expanded","false");stopPoll()}
-fab.addEventListener("click",function(){panel.classList.contains("open")?closeP():openP()});
+R.appendChild(fab);
+}
+R.appendChild(panel);
+function openP(){panel.classList.add("open");if(fab)fab.setAttribute("aria-expanded","true");start()}
+function closeP(){panel.classList.remove("open");if(fab)fab.setAttribute("aria-expanded","false");stopPoll()}
+if(fab)fab.addEventListener("click",function(){panel.classList.contains("open")?closeP():openP()});
 if(xb)xb.addEventListener("click",closeP);
 host.addEventListener("keydown",function(e){if(e.key==="Escape"&&panel.classList.contains("open"))closeP()});
+// Handoff target: no FAB of our own — the site assistant is the single launcher
+// and opens us (already authed via the handoff cookie) straight into the
+// escalated conversation via window.__openlenChat.openConversation(id).
+if(C.handoff){var openConv=function(convId,who){panel.classList.add("open");jreq("/me").then(function(x){if(x.j&&x.j.user){me=x.j.user;threadView(convId,who||C.title||T.messageBusiness,true)}else{authView()}}).catch(function(){authView()})};try{window.__openlenChat={open:openP,openConversation:openConv,close:closeP}}catch(_e){}}
 }else{R.appendChild(panel);start()}
 }
 

@@ -7,6 +7,8 @@
   "emptyHint": "Cuando un visitante escriba a una de tus páginas publicadas, la conversación aparecerá aquí.",
   "loadError": "No se pudieron cargar los mensajes. Inténtalo de nuevo en un momento.",
   "visitor": "Visitante",
+  "fromAssistant": "IA",
+  "fromAssistantTitle": "Escalado desde el asistente",
   "selectPrompt": "Selecciona una conversación para leer y responder.",
   "threadEmpty": "Aún no hay mensajes en esta conversación.",
   "back": "Volver",

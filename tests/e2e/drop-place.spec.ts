@@ -892,6 +892,83 @@ test.describe("Drop engine", () => {
       .toBe(true);
   });
 
+  test("remove: a dropped video shows the trash and removes the video + its empty section", async ({
+    page,
+  }) => {
+    const frame = await setup(page);
+    await postToFrame(page, {
+      type: "openlen:set-mode",
+      editMode: true,
+      selectMode: false,
+      dropEnabled: true,
+    });
+
+    // A solo <video> section — mirrors how a Motion/video hero lands on a page.
+    await postToFrame(page, {
+      type: "openlen:section-insert",
+      html:
+        '<section id="vid-solo" style="height:200px">' +
+        '<video id="thevid" src="/hero.mp4" style="width:100%;height:200px;display:block"></video>' +
+        "</section>",
+      sectionType: "image",
+      anchorPath: "section:nth-of-type(2)",
+    });
+    await expect
+      .poll(() => frame.evaluate(() => !!document.getElementById("vid-solo")))
+      .toBe(true);
+
+    // Hover the video → the trash affordance must appear for kind:video (it was
+    // image-only before; this is the behavior the fix adds).
+    await frame.evaluate(() => {
+      const v = document.getElementById("thevid") as HTMLElement;
+      v.scrollIntoView({ block: "center" });
+      const r = v.getBoundingClientRect();
+      v.dispatchEvent(
+        new MouseEvent("mousemove", {
+          bubbles: true,
+          clientX: r.left + 20,
+          clientY: r.top + 20,
+        }),
+      );
+    });
+    await expect
+      .poll(() =>
+        frame.evaluate(
+          () =>
+            (document.querySelector(".openlen-replace-remove") as HTMLElement | null)
+              ?.style.display ?? "none",
+        ),
+      )
+      .toBe("inline-flex");
+
+    // Click the trash → posts asset-remove with kind:video.
+    await frame.evaluate(() =>
+      (document.querySelector(".openlen-replace-remove") as HTMLElement).click(),
+    );
+    await expect
+      .poll(async () =>
+        (await msgs(page)).some((m) => m.type === "openlen:asset-remove"),
+      )
+      .toBe(true);
+    const removeMsg = (await msgs(page)).find(
+      (m) => m.type === "openlen:asset-remove",
+    ) as unknown as { path: string; kind: string };
+    expect(removeMsg.kind).toBe("video");
+
+    // Forward the parent's kind-agnostic remove-image → the video AND its now
+    // empty host section are gone.
+    await postToFrame(page, {
+      type: "openlen:apply-prop",
+      scope: "remove-image",
+      path: removeMsg.path,
+    });
+    await expect
+      .poll(() =>
+        frame.evaluate(() => document.getElementById("vid-solo") === null),
+      )
+      .toBe(true);
+  });
+
   test("section toolbar: duplicate / move / delete post source + action", async ({
     page,
   }) => {

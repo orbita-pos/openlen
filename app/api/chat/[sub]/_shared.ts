@@ -24,6 +24,9 @@ export interface ChatSiteContext {
   projectId: string;
   userId: string;
   chatEnabled: boolean;
+  /** Whether the site assistant (AI) is also enabled — gates the AI→human
+   *  handoff endpoint (only the merged both-surfaces config may mint a guest). */
+  assistantEnabled: boolean;
   selfServeJoin: boolean;
   identityMode: "guest" | "account";
   locale: string;
@@ -40,10 +43,12 @@ export async function loadChatSite(sub: string): Promise<ChatSiteContext | null>
   const row = rows[0];
   if (!row) return null;
   const chat = row.data?.settings?.chat;
+  const assistant = row.data?.settings?.assistant;
   return {
     projectId: row.id,
     userId: row.userId ?? "",
     chatEnabled: chat?.enabled === true,
+    assistantEnabled: assistant?.enabled === true,
     selfServeJoin: chat?.selfServeJoin !== false, // default open
     identityMode: chat?.identityMode === "account" ? "account" : "guest", // default guest
     locale: detectLang(row.data?.html ?? ""),

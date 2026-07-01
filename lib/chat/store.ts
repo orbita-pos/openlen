@@ -35,6 +35,7 @@ export interface ConversationSummary {
   id: string; otherUserId: string; otherUsername: string;
   otherDisplayName: string | null; lastMessageAt: Date | null;
   assignedUserId: string | null; assigneeName: string | null; assignedAt: Date | null;
+  origin: string | null;
 }
 
 const USER_COLS = {
@@ -207,11 +208,13 @@ export async function searchChatUsers(projectId: string, q: string, selfId: stri
   return rows;
 }
 
-export async function getOrCreateConversation(projectId: string, u1: string, u2: string): Promise<{ id: string }> {
+export async function getOrCreateConversation(
+  projectId: string, u1: string, u2: string, opts?: { origin?: string | null },
+): Promise<{ id: string }> {
   const [aUserId, bUserId] = u1 <= u2 ? [u1, u2] : [u2, u1];
   await db
     .insert(schema.chatConversations)
-    .values({ projectId, aUserId, bUserId })
+    .values({ projectId, aUserId, bUserId, origin: opts?.origin ?? null })
     .onConflictDoNothing({ target: [schema.chatConversations.projectId, schema.chatConversations.aUserId, schema.chatConversations.bUserId] });
   const rows = await db
     .select({ id: schema.chatConversations.id })
@@ -248,6 +251,7 @@ export async function listConversations(projectId: string, userId: string): Prom
       lastMessageAt: schema.chatConversations.lastMessageAt,
       assignedUserId: schema.chatConversations.assignedUserId,
       assignedAt: schema.chatConversations.assignedAt,
+      origin: schema.chatConversations.origin,
       assigneeName: schema.users.name,
     })
     .from(schema.chatConversations)
@@ -276,6 +280,7 @@ export async function listConversations(projectId: string, userId: string): Prom
       assignedUserId: r.assignedUserId ?? null,
       assigneeName: r.assigneeName ?? null,
       assignedAt: r.assignedAt ?? null,
+      origin: r.origin ?? null,
     };
   });
 }

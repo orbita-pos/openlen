@@ -897,6 +897,9 @@ export const chatConversations = pgTable(
     // set to self; release = set to null; reassign = owner-only.
     assignedUserId: text("assignedUserId").references(() => users.id, { onDelete: "set null" }),
     assignedAt: timestamp("assignedAt", { mode: "date" }),
+    // How the conversation started. null = normal visitor-initiated chat;
+    // "ai_handoff" = escalated from the site assistant. Lets Desk badge it.
+    origin: text("origin"),
     createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
   },
   (table) => [
