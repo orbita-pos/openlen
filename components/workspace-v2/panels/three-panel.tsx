@@ -147,7 +147,7 @@ export function ThreePanel({
     } else {
       setSelectedModelUrl(model.storageUrl);
       setShaderVariant(null);
-      setDraft({ ...SAMPLE_SPEC, preset: "background", modelUrl: model.storageUrl });
+      setDraft({ ...SAMPLE_SPEC, preset: "background", background: "gradient", modelUrl: model.storageUrl });
     }
   };
 
@@ -157,6 +157,8 @@ export function ThreePanel({
   // Model section is de-emphasized when shader is active, and vice-versa for geometry.
   const modelSectionMuted = shaderVariant !== null;
   const geometrySectionMuted = shaderVariant !== null || selectedModelUrl !== null;
+  // Shader section is de-emphasized when a model is active.
+  const shaderSectionMuted = selectedModelUrl !== null;
 
   return (
     <div className="flex flex-col h-full">
@@ -196,7 +198,7 @@ export function ThreePanel({
         </div>
 
         {/* Fondo animado — shader picker */}
-        <div>
+        <div className={shaderSectionMuted ? "opacity-40 pointer-events-none" : undefined}>
           <div className="text-[11px] font-medium fg mb-1.5">Fondo animado</div>
           <div className="flex flex-wrap gap-1">
             {SHADER_CHIPS.map((c) => (

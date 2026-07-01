@@ -330,9 +330,14 @@ export async function PATCH(
             try { allowedOrigin = new URL(modelsHostEnv).origin; } catch { /* relative base — only relative modelUrls allowed */ }
             const isRelative = modelUrl.startsWith('/');
             if (!isRelative) {
+              // No absolute origin configured (relative/dev env) — reject any
+              // absolute URL; only relative modelUrls are allowed in that case.
+              if (allowedOrigin === null) {
+                return json({ error: 'invalid_body', message: 'scene3d.spec.modelUrl host not allowed' }, 400);
+              }
               try {
                 const parsed = new URL(modelUrl);
-                if (parsed.protocol !== 'https:' || (allowedOrigin !== null && parsed.origin !== allowedOrigin)) {
+                if (parsed.protocol !== 'https:' || parsed.origin !== allowedOrigin) {
                   return json({ error: 'invalid_body', message: 'scene3d.spec.modelUrl host not allowed' }, 400);
                 }
               } catch {

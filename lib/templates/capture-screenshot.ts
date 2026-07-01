@@ -39,7 +39,14 @@ export async function launchScreenshotBrowser(): Promise<Browser> {
   return puppeteer.launch({
     headless: true,
     executablePath,
-    args: ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage"],
+    args: [
+      "--no-sandbox",
+      "--disable-setuid-sandbox",
+      "--disable-dev-shm-usage",
+      // Allows the null-origin poster page to fetch cross-origin R2 GLBs for
+      // 3D model posters. Headless + internal only — no credentials at risk.
+      "--disable-web-security",
+    ],
     // Heavy full-page templates (canvas/WebGL) can blow past the default 180s
     // CDP timeout on captureScreenshot — give them room.
     protocolTimeout: 300_000,
