@@ -7,6 +7,7 @@ import {
   uploadResponsiveVariantSet,
   type ImageFormat,
 } from "@/lib/images";
+import { consumeToken, RATE_LIMITS, rateLimitedResponse } from "@/lib/rate-limit";
 import { getStorage } from "@/lib/storage";
 
 export const runtime = "nodejs";
@@ -32,8 +33,9 @@ export const dynamic = "force-dynamic";
 //     Upload the bytes as-is and respond with an empty `variants[]`.
 //
 // Auth: required. Anonymous uploads would let any visitor burn through
-// storage quota and dump arbitrary files on the public domain. No quota /
-// rate-limit yet — Session 10+ when storage costs become a real lever.
+// storage quota and dump arbitrary files on the public domain. Per-user rate
+// limit (RATE_LIMITS.upload / .uploadVideo) caps a logged-in flood; video has
+// its own lower bucket since each file is up to 50 MB.
 // ─────────────────────────────────────────────────────────────────────────────
 
 const MAX_SIZE_BYTES = 5 * 1024 * 1024; // 5MB
@@ -132,6 +134,7 @@ export async function POST(req: Request): Promise<Response> {
       415,
     );
   }
+
   const maxBytes = isVideo ? MAX_VIDEO_SIZE_BYTES : MAX_SIZE_BYTES;
   const maxLabel = isVideo ? "50 MB" : "5 MB";
 
@@ -159,6 +162,17 @@ export async function POST(req: Request): Promise<Response> {
       { error: `File too large (${formatBytes(buffer.byteLength)} > ${maxLabel} max)` },
       413,
     );
+  }
+
+  // Per-user rate limit — only well-formed, correctly-sized uploads count
+  // against the budget, so a rejected oversize/bad-type attempt doesn't burn a
+  // token. Still gates the heavy work below (decode + variant fan-out + storage
+  // writes). Video has its own, much lower bucket — 50 MB each.
+  const rate = isVideo
+    ? consumeToken(`upload-video:${session.user.id}`, RATE_LIMITS.uploadVideo)
+    : consumeToken(`upload:${session.user.id}`, RATE_LIMITS.upload);
+  if (!rate.allowed) {
+    return rateLimitedResponse(rate, isVideo ? "videos" : "imágenes");
   }
 
   const hash = randomBytes(8).toString("hex");

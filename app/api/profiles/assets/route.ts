@@ -6,6 +6,7 @@ import {
   getAssetStorage,
   MAX_UPLOAD_BYTES,
 } from "@/lib/projects/assets";
+import { consumeToken, RATE_LIMITS, rateLimitedResponse } from "@/lib/rate-limit";
 
 // POST /api/profiles/assets — upload a logo / photo for the user's business
 // profile(s). Body: multipart/form-data with a single `file` field. Response:
@@ -24,6 +25,11 @@ export async function POST(req: Request): Promise<Response> {
   const session = await auth();
   if (!session?.user?.id) return json({ error: "unauthorized" }, 401);
   const userId = session.user.id;
+
+  // Per-user upload rate limit — shared budget with the other image-upload
+  // endpoints (key `upload:<userId>`).
+  const rate = consumeToken(`upload:${userId}`, RATE_LIMITS.upload);
+  if (!rate.allowed) return rateLimitedResponse(rate, "imágenes");
 
   let form: FormData;
   try {

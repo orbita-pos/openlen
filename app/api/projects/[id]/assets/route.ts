@@ -10,6 +10,7 @@ import {
   MAX_AUDIO_UPLOAD_BYTES,
   MAX_UPLOAD_BYTES,
 } from "@/lib/projects/assets";
+import { consumeToken, RATE_LIMITS, rateLimitedResponse } from "@/lib/rate-limit";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // POST /api/projects/[id]/assets — upload an image or audio asset for a
@@ -86,6 +87,11 @@ export async function POST(
     )
     .limit(1);
   if (rows.length === 0) return json({ error: "not_found" }, 404);
+
+  // Per-user upload rate limit — shared budget with the other image-upload
+  // endpoints (key `upload:<userId>`) so abuse can't be spread across routes.
+  const rate = consumeToken(`upload:${session.user.id}`, RATE_LIMITS.upload);
+  if (!rate.allowed) return rateLimitedResponse(rate, "archivos");
 
   let form: FormData;
   try {

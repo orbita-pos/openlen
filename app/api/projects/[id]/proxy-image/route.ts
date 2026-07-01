@@ -1,6 +1,7 @@
 import { and, eq } from "drizzle-orm";
 import { auth } from "@/auth";
 import { db, schema } from "@/lib/db";
+import { consumeToken, RATE_LIMITS, rateLimitedResponse } from "@/lib/rate-limit";
 import { validateUrl } from "@/lib/style-match/scrape/validate-url";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -46,6 +47,12 @@ export async function GET(
 
   const valid = await validateUrl(target);
   if (!valid.ok) return new Response("blocked", { status: 400 });
+
+  // Per-user rate limit before the upstream fetch — caps egress amplification
+  // (each proxied image is up to 15 MB). A blocked/missing URL above never
+  // reaches here, so it doesn't burn a token.
+  const rate = consumeToken(`proxy-image:${userId}`, RATE_LIMITS.proxyImage);
+  if (!rate.allowed) return rateLimitedResponse(rate, "imágenes");
 
   let upstream: Response;
   try {
