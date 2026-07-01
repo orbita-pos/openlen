@@ -3,9 +3,11 @@
 import { useEffect, useState } from "react";
 import { GOLDEN } from "@/lib/three3d/golden-specs";
 import type { MaterialKind, ShaderVariant } from "@/lib/three3d/scene-spec";
-import { SHADER_VARIANTS } from "@/lib/three3d/scene-spec";
+import { SAMPLE_SPEC, SHADER_VARIANTS } from "@/lib/three3d/scene-spec";
 import { Loader, Sparkles } from "../icons";
 import { useToast } from "../toast";
+import { useModels } from "../use-models";
+import type { ModelItem } from "../use-models";
 
 interface Scene3d {
   enabled?: boolean;
@@ -45,6 +47,7 @@ export function ThreePanel({
   onApplyScene3d,
 }: ThreePanelProps) {
   const toast = useToast();
+  const { models, loading: modelsLoading, error: modelsError } = useModels();
 
   const [describe, setDescribe] = useState("");
   const [register, setRegister] = useState<MaterialKind>("glass");
@@ -55,6 +58,8 @@ export function ThreePanel({
   const [draft, setDraft] = useState<unknown>(null);
   const [provider, setProvider] = useState<string | null>(null);
   const [shaderVariant, setShaderVariant] = useState<ShaderVariant | null>(null);
+  // storageUrl of the currently selected model (null = none)
+  const [selectedModelUrl, setSelectedModelUrl] = useState<string | null>(null);
 
   // Seed from existing scene on mount / when scene3d changes.
   useEffect(() => {
@@ -63,6 +68,8 @@ export function ThreePanel({
       const s = scene3d.spec as Record<string, unknown>;
       if (typeof s?.shader === "string" && (SHADER_VARIANTS as readonly string[]).includes(s.shader)) {
         setShaderVariant(s.shader as ShaderVariant);
+      } else if (typeof s?.modelUrl === "string") {
+        setSelectedModelUrl(s.modelUrl);
       } else if (s?.material && typeof s.material === "object") {
         const mat = s.material as Record<string, unknown>;
         if (typeof mat.kind === "string") {
@@ -120,6 +127,7 @@ export function ThreePanel({
 
   const handleShaderSelect = (v: ShaderVariant | null) => {
     setShaderVariant(v);
+    setSelectedModelUrl(null);
     if (v === null) {
       setDraft(null);
     } else {
@@ -127,8 +135,24 @@ export function ThreePanel({
     }
   };
 
+  const handleModelSelect = (model: ModelItem) => {
+    const isDeselecting = selectedModelUrl === model.storageUrl;
+    if (isDeselecting) {
+      setSelectedModelUrl(null);
+      setDraft(null);
+    } else {
+      setSelectedModelUrl(model.storageUrl);
+      setShaderVariant(null);
+      setDraft({ ...SAMPLE_SPEC, preset: "background", modelUrl: model.storageUrl });
+    }
+  };
+
   const isMock = provider === "mock";
   const hasDraft = draft !== null;
+
+  // Model section is de-emphasized when shader is active, and vice-versa for geometry.
+  const modelSectionMuted = shaderVariant !== null;
+  const geometrySectionMuted = shaderVariant !== null || selectedModelUrl !== null;
 
   return (
     <div className="flex flex-col h-full">
@@ -153,6 +177,7 @@ export function ThreePanel({
                   const mat = g.spec.material.kind;
                   setRegister(mat);
                   setShaderVariant(null);
+                  setSelectedModelUrl(null);
                   setDraft(null);
                 }}
                 className="text-left rounded-lg ring-1 ring-[color:var(--border)] bg-[color:var(--bg)] px-2 py-1.5 hover:bg-hover transition"
@@ -190,8 +215,68 @@ export function ThreePanel({
           )}
         </div>
 
-        {/* Geometry section — de-emphasized when shader active */}
-        <div className={shaderVariant ? "opacity-40 pointer-events-none" : undefined}>
+        {/* Modelos 3D — curated GLB picker */}
+        <div className={modelSectionMuted ? "opacity-40 pointer-events-none" : undefined}>
+          <div className="text-[11px] font-medium fg mb-1.5">Modelos</div>
+          {modelsLoading ? (
+            <div className="flex items-center gap-1.5 py-2">
+              <Loader size={11} className="animate-spin fg-faint" />
+              <span className="text-[10.5px] fg-faint">Cargando modelos…</span>
+            </div>
+          ) : modelsError ? (
+            <p className="text-[10.5px] fg-faint">No se pudieron cargar los modelos.</p>
+          ) : models.length === 0 ? (
+            <p className="text-[10.5px] fg-faint">Aún no hay modelos. Ejecuta <code className="font-mono">models:seed</code> para añadir los iniciales.</p>
+          ) : (
+            <div className="grid grid-cols-2 gap-1.5">
+              {models.map((m) => {
+                const isActive = selectedModelUrl === m.storageUrl;
+                const thumb = m.thumbnailUrl ?? m.tileUrl;
+                return (
+                  <button
+                    key={m.id}
+                    type="button"
+                    onClick={() => handleModelSelect(m)}
+                    className={`text-left rounded-lg ring-1 overflow-hidden transition ${
+                      isActive
+                        ? "ring-[var(--accent-strong)]"
+                        : "ring-[color:var(--border)] hover:ring-[color:var(--border-strong)]"
+                    }`}
+                  >
+                    {/* Thumbnail or gray placeholder */}
+                    <div className="w-full aspect-square bg-[color:var(--bg-elev,#f4f4f5)] dark:bg-zinc-800 relative">
+                      {thumb ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={thumb}
+                          alt={m.name}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center">
+                          <span className="text-[9px] fg-faint uppercase tracking-wider">{m.family}</span>
+                        </div>
+                      )}
+                      {isActive && (
+                        <div className="absolute inset-0 ring-2 ring-inset ring-[var(--accent-strong)] rounded-lg pointer-events-none" />
+                      )}
+                    </div>
+                    <div className="px-1.5 py-1">
+                      <div className="text-[10.5px] fg font-medium leading-tight line-clamp-1">{m.name}</div>
+                      <div className="text-[9.5px] fg-faint capitalize">{m.family}</div>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+          {selectedModelUrl && (
+            <p className="text-[10px] fg-faint mt-1">Selecciona Aplicar para activarlo.</p>
+          )}
+        </div>
+
+        {/* Geometry section — de-emphasized when shader or model active */}
+        <div className={geometrySectionMuted ? "opacity-40 pointer-events-none" : undefined}>
           {/* Describe */}
           <div className="mb-3">
             <label className="block">
@@ -219,9 +304,13 @@ export function ThreePanel({
                       setShaderVariant(null);
                       setDraft(null);
                     }
+                    if (selectedModelUrl !== null) {
+                      setSelectedModelUrl(null);
+                      setDraft(null);
+                    }
                   }}
                   className={`h-6 px-2 rounded-md text-[10.5px] font-medium transition ring-1 ${
-                    register === c.value && !shaderVariant
+                    register === c.value && !shaderVariant && !selectedModelUrl
                       ? "bg-[var(--accent-strong)] text-white ring-transparent"
                       : "bg-elev fg-muted ring-[color:var(--border)] hover:fg"
                   }`}
@@ -259,7 +348,7 @@ export function ThreePanel({
 
         {/* Actions */}
         <div className="space-y-1.5 pt-1">
-          {!shaderVariant && (
+          {!shaderVariant && !selectedModelUrl && (
             <button
               type="button"
               onClick={() => void handleGenerate()}
