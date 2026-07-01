@@ -78,7 +78,7 @@ export function ThreePanel({
         }
       }
     }
-  }, []);
+  }, [currentProjectId]);
 
   const handleGenerate = async () => {
     if (!currentProjectId) return;

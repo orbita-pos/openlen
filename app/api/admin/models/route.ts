@@ -3,7 +3,7 @@ import {
   listAllForAdmin,
   upsertModel,
 } from "@/lib/models/store";
-import { CreateSchema } from "@/lib/models/admin-schemas";
+import { CreateSchema, MAX_GLB_BYTES } from "@/lib/models/admin-schemas";
 
 export const runtime = "nodejs";
 
@@ -26,6 +26,7 @@ export async function POST(req: Request): Promise<Response> {
     return json({ error: "missing_glb_file" }, 400);
   }
 
+  if ((glbFile as File).size > MAX_GLB_BYTES) return json({ error: "glb_too_large" }, 413);
   const glbBuf = Buffer.from(await (glbFile as File).arrayBuffer());
 
   const tagsRaw = formData.get("tags");

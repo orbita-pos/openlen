@@ -189,6 +189,7 @@ function mountModel(canvas: HTMLCanvasElement, cfg: SceneConfig, opts: { onReady
   const group = new Group(); scene.add(group);
 
   let raf = 0, visible = true, firstFrame = true, modelLoaded = false;
+  let disposed = false;
 
   function resize() {
     const w = host.clientWidth || width, h = host.clientHeight || height;
@@ -209,6 +210,7 @@ function mountModel(canvas: HTMLCanvasElement, cfg: SceneConfig, opts: { onReady
   new GLTFLoader().load(
     cfg.modelUrl!,
     (gltf) => {
+      if (disposed) { gltf.scene.traverse((node: any) => { if (node.geometry) node.geometry.dispose(); if (node.material) { const TEX_SLOTS = ['map','normalMap','roughnessMap','metalnessMap','aoMap','emissiveMap','clearcoatMap','clearcoatNormalMap','clearcoatRoughnessMap','iridescenceMap','iridescenceThicknessMap','sheenColorMap','sheenRoughnessMap','specularMap','specularIntensityMap','specularColorMap','transmissionMap','thicknessMap','envMap','lightMap','bumpMap','displacementMap','alphaMap']; const mats = Array.isArray(node.material) ? node.material : [node.material]; for (const mat of mats) { for (const k of TEX_SLOTS) { const t = (mat as any)[k]; if (t && typeof t.dispose === 'function') t.dispose(); } mat.dispose(); } } }); return; }
       const model = gltf.scene;
       const box = new Box3().setFromObject(model);
       const size = box.getSize(new Vector3());
@@ -226,6 +228,7 @@ function mountModel(canvas: HTMLCanvasElement, cfg: SceneConfig, opts: { onReady
     },
     undefined,
     (_err) => {
+      if (disposed) return;
       // Fire ready on error so the headless poster never hangs.
       opts.onReady?.();
       window.dispatchEvent(new Event("three-ready"));
@@ -248,6 +251,7 @@ function mountModel(canvas: HTMLCanvasElement, cfg: SceneConfig, opts: { onReady
 
   return {
     dispose() {
+      disposed = true;
       cancelAnimationFrame(raf);
       io.disconnect();
       document.removeEventListener("visibilitychange", onVis);
@@ -255,8 +259,9 @@ function mountModel(canvas: HTMLCanvasElement, cfg: SceneConfig, opts: { onReady
       group.traverse((node: any) => {
         if (node.geometry) node.geometry.dispose();
         if (node.material) {
-          if (Array.isArray(node.material)) node.material.forEach((m: any) => m.dispose());
-          else node.material.dispose();
+          const TEX_SLOTS = ['map','normalMap','roughnessMap','metalnessMap','aoMap','emissiveMap','clearcoatMap','clearcoatNormalMap','clearcoatRoughnessMap','iridescenceMap','iridescenceThicknessMap','sheenColorMap','sheenRoughnessMap','specularMap','specularIntensityMap','specularColorMap','transmissionMap','thicknessMap','envMap','lightMap','bumpMap','displacementMap','alphaMap'];
+          const mats = Array.isArray(node.material) ? node.material : [node.material];
+          for (const mat of mats) { for (const k of TEX_SLOTS) { const t = (mat as any)[k]; if (t && typeof t.dispose === 'function') t.dispose(); } mat.dispose(); }
         }
       });
       envRT.dispose();

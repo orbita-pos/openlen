@@ -46,15 +46,4 @@ export const STARTER_MODELS: StarterModelEntry[] = [
     fileName: "shoe.glb",
     license: "cc-by-4.0",
   },
-  {
-    id: "antique-camera",
-    name: "Antique Camera",
-    family: "prop",
-    author: "Max Limper / UX3D — Khronos glTF Sample Assets (CC-BY-4.0)",
-    pitch: "Cámara retro de fuelle que transporta a la época analógica.",
-    description:
-      "Réplica de cámara de fuelle vintage con geometría detallada y materiales metálicos oxidados. Perfecta para estudios fotográficos, agencias creativas o blogs de fotografía.",
-    fileName: "camera.glb",
-    license: "cc-by-4.0",
-  },
 ];
