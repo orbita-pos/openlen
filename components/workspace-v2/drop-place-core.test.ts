@@ -9,6 +9,7 @@ import {
   DROP_EDGE_PX,
   blockCandidates,
   buildImageSectionHtml,
+  buildMotionHeroHtml,
   buildPathFromBody,
   canSplitSection,
   dropPayloadKind,
@@ -344,6 +345,31 @@ describe("buildImageSectionHtml", () => {
     expect(html).toContain("Team &quot;A&quot; &lt;photo&gt;");
     expect(html).not.toContain("<z>");
     expect(html).not.toContain('alt="Team "');
+  });
+});
+
+describe("buildMotionHeroHtml", () => {
+  it("layers a muted looping video over the poster img, escapes urls", () => {
+    const html = buildMotionHeroHtml({
+      posterHero: '/m/p.webp?x="1"&y=<z>',
+      webm: "/m/v.webm",
+      mp4: "/m/v.mp4",
+    });
+    // Poster <img> is in-flow (LCP element); video is absolutely layered over.
+    expect(html).toContain("<img src=");
+    expect(html).toContain('alt=""');
+    expect(html).toContain("autoplay");
+    expect(html).toContain("loop");
+    expect(html).toContain("muted");
+    expect(html).toContain("playsinline");
+    expect(html).toContain('type="video/webm"');
+    expect(html).toContain('type="video/mp4"');
+    // Reduced-motion fallback baked in (no JS).
+    expect(html).toContain("prefers-reduced-motion");
+    // Hostile url is escaped, never raw.
+    expect(html).toContain("&quot;1&quot;");
+    expect(html).toContain("&lt;z&gt;");
+    expect(html).not.toContain("<z>");
   });
 });
 

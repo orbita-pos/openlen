@@ -155,9 +155,12 @@
       "openlen": "OpenLen",
       "unsplash": "Unsplash",
       "profile": "Jouw bedrijf",
-      "uploads": "Jouw uploads"
+      "uploads": "Jouw uploads",
+      "motion": "Beweging"
     },
     "profileEmpty": "Voeg een logo of foto's toe aan je bedrijfsprofiel om ze hier te zien.",
-    "uploadsEmpty": "Afbeeldingen die je naar deze pagina uploadt verschijnen hier."
+    "uploadsEmpty": "Afbeeldingen die je naar deze pagina uploadt verschijnen hier.",
+    "motionHint": "Klik op een animatie om deze als hero over de volledige breedte toe te voegen.",
+    "useMotionAria": "Voeg deze geanimeerde hero toe aan mijn pagina"
   }
 }

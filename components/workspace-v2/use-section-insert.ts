@@ -85,6 +85,16 @@ const INSERT_SCRIPT = `
   function placementAnchor(root, sectionType) {
     if (sectionType === 'navbar') return root.firstChild;
     if (sectionType === 'footer') return null;
+    // A motion/animated hero belongs at the top: just below an existing navbar,
+    // else at the very top. (Only the curated Motion source emits this type, so
+    // library 'hero' sections keep their append-at-end placement.)
+    if (sectionType === 'motion') {
+      var hk = candidates(root);
+      if (hk.length && (hk[0].tagName === 'NAV' || hk[0].tagName === 'HEADER')) {
+        return hk[1] || null;
+      }
+      return root.firstChild;
+    }
     var last = lastElement(root);
     if (last && last.tagName === 'FOOTER') return last;
     return null;

@@ -74,11 +74,13 @@ import {
 } from "@/lib/tematicas/derive-from-image";
 import {
   buildImageSectionHtml,
+  buildMotionHeroHtml,
   fileNameToAlt,
   parseDropAsset,
   sectionBgPlan,
   DROP_ASSET_MIME,
   type DropAsset,
+  type MotionAsset,
 } from "@/components/workspace-v2/drop-place-core";
 import type { DropIntent } from "@/components/workspace-v2/use-drop-place";
 import { imageFetchUrl } from "@/lib/image-fetch-url";
@@ -534,6 +536,19 @@ function NewV2Inner() {
     removeNonceRef.current += 1;
     setRemoveRequest({ nonce: removeNonceRef.current });
     setLastInserted(null);
+  };
+
+  // Insert a curated animated hero (Images → Motion source). Rides the exact
+  // section-insert + Undo path the image-drop "new-section" action uses — the
+  // loop lands as a full-bleed <video> hero (sectionType "motion" → top).
+  const handleInsertMotion = (a: MotionAsset) => {
+    insertNonceRef.current += 1;
+    setInsertRequest({
+      html: buildMotionHeroHtml(a),
+      nonce: insertNonceRef.current,
+      sectionType: "motion",
+    });
+    setLastInserted({ id: "motion", name: t("drop.sectionName") });
   };
 
   // AI generation flow — owned here so the brief survives panel switches
@@ -3048,6 +3063,7 @@ function NewV2Inner() {
           }}
           previewingTemplateId={previewingTemplate?.id ?? null}
           onPreviewSection={handlePreviewSection}
+          onInsertMotion={loadedProject ? handleInsertMotion : undefined}
           lockedTabs={lockedTabs}
           lockReason={lockReason}
           entryMode={entryMode}

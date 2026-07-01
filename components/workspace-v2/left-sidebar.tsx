@@ -41,7 +41,7 @@ import {
 } from "./panels/chat-panel";
 import { ImagesPanel } from "./panels/images-panel";
 import { InsightsPanel } from "./panels/insights-panel";
-import type { DropAsset } from "./drop-place-core";
+import type { DropAsset, MotionAsset } from "./drop-place-core";
 import { useIsMobile } from "./use-is-mobile";
 import { PastePanel } from "./panels/paste-panel";
 import { SitePagesPanel } from "./panels/site-pages-panel";
@@ -264,6 +264,8 @@ interface LeftSidebarProps {
    *  paste uses (the parent owns the lifecycle). Drag needs no callback:
    *  the cards carry their payload on the dataTransfer. */
   onPickImage?: (asset: DropAsset) => void;
+  /** Insert a curated animated hero from the Images → Motion source. */
+  onInsertMotion?: (a: MotionAsset) => void;
   /** Multi-page site tree (Site tab) — owned by the parent. */
   sitePages?: SitePageSummary[];
   activeSitePage?: string | null;
@@ -323,6 +325,7 @@ export function LeftSidebar({
   onAddBusiness,
   businessesLoading = false,
   onPickImage,
+  onInsertMotion,
   sitePages = [],
   activeSitePage = null,
   onSwitchSitePage,
@@ -594,6 +597,14 @@ export function LeftSidebar({
                   onPickImage?.(asset);
                   if (isMobileLayout) onToggleCollapse();
                 }}
+                onInsertMotion={
+                  onInsertMotion
+                    ? (a) => {
+                        onInsertMotion(a);
+                        if (isMobileLayout) onToggleCollapse();
+                      }
+                    : undefined
+                }
               />
             )}
             {mode === "library" && (

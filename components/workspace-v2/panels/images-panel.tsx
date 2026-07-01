@@ -14,13 +14,14 @@ import {
   DROP_ASSET_MIME,
   fileNameToAlt,
   type DropAsset,
+  type MotionAsset,
 } from "../drop-place-core";
 import {
   ResponsiveImage,
   type ResponsiveVariant,
 } from "../responsive-image";
 
-type SourceId = "openlen" | "unsplash" | "uploads" | "profile";
+type SourceId = "openlen" | "motion" | "unsplash" | "uploads" | "profile";
 
 export interface ImagesPanelProfile {
   name: string;
@@ -264,6 +265,116 @@ function OpenLenSource({ onPick }: { onPick: (asset: DropAsset) => void }) {
   );
 }
 
+interface OpenLenMotion {
+  id: string;
+  durationMs: number;
+  poster: { hero: string; tablet: string; thumb: string };
+  video: { webm: string; mp4: string };
+}
+
+interface OpenLenMotionManifest {
+  count: number;
+  videos: OpenLenMotion[];
+}
+
+// "By OpenLen Motion" — curated animated hero loops. Click-only (a loop
+// inserts a full-bleed animated hero via the section-insert path the parent
+// owns); no drag, since the placement is a whole section, not an <img> swap.
+function MotionSource({ onInsert }: { onInsert: (a: MotionAsset) => void }) {
+  const t = useTranslations("modalsAsset");
+  const tp = useTranslations("panelsA");
+  const [data, setData] = useState<OpenLenMotionManifest | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    void fetch("/openlen-motion/manifest.json")
+      .then(async (r) => {
+        // No manifest yet (assets not published) → clean empty state, not an
+        // error. openlen-motion:process writes it (with R2 URLs for prod).
+        if (r.status === 404) return { count: 0, videos: [] } as OpenLenMotionManifest;
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        return r.json() as Promise<OpenLenMotionManifest>;
+      })
+      .then((d) => {
+        if (!cancelled) setData(d);
+      })
+      .catch(() => {
+        if (!cancelled) setError(true);
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  return (
+    <div className="flex flex-col h-full min-h-0">
+      <div className="px-3 pt-2 pb-1.5 shrink-0">
+        <p className="text-[10.5px] fg-faint leading-snug">
+          {tp("images.motionHint")}
+        </p>
+      </div>
+      <div className="flex-1 min-h-0 overflow-y-auto nice-scroll px-3 pb-3">
+        {loading ? (
+          <div className="py-8 text-center text-[11.5px] fg-faint">
+            {t("common.loading")}
+          </div>
+        ) : error ? (
+          <div className="py-8 text-center text-[11.5px] text-red-600 dark:text-red-400">
+            {t("openlen.loadFailed")}
+          </div>
+        ) : !data || !data.videos?.length ? (
+          <div className="py-8 text-center text-[11.5px] fg-faint">
+            {t("openlen.empty")}
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 gap-1.5">
+            {data.videos.map((v) => (
+              <button
+                key={v.id}
+                type="button"
+                onClick={() =>
+                  onInsert({
+                    posterHero: v.poster.hero,
+                    webm: v.video.webm,
+                    mp4: v.video.mp4,
+                  })
+                }
+                className="group relative aspect-[16/10] rounded-md overflow-hidden ring-1 ring-[color:var(--border)] bg-app hover:ring-[color:var(--accent)]/60 transition focus:outline-none focus:ring-2 focus:ring-[color:var(--accent)] cursor-pointer"
+                aria-label={tp("images.useMotionAria")}
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={v.poster.thumb}
+                  alt=""
+                  loading="lazy"
+                  className="absolute inset-0 w-full h-full object-cover"
+                />
+                <span className="absolute bottom-1 right-1 px-1 py-0.5 rounded bg-black/70 text-white text-[8.5px] inline-flex items-center gap-0.5">
+                  <svg
+                    width="7"
+                    height="7"
+                    viewBox="0 0 10 10"
+                    fill="currentColor"
+                    aria-hidden="true"
+                  >
+                    <path d="M2 1l7 4-7 4z" />
+                  </svg>
+                  {Math.round(v.durationMs / 1000)}s
+                </span>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function UnsplashSource({ onPick }: { onPick: (asset: DropAsset) => void }) {
   const t = useTranslations("modalsAsset");
   const [query, setQuery] = useState("");
@@ -497,10 +608,14 @@ export function ImagesPanel({
   projectId,
   activeProfile,
   onPick,
+  onInsertMotion,
 }: {
   projectId?: string | null;
   activeProfile: ImagesPanelProfile | null;
   onPick: (asset: DropAsset) => void;
+  /** Insert a curated animated hero (the "Motion" source). Absent → no Motion
+   *  tab (it only works in editing, where the parent owns section-insert). */
+  onInsertMotion?: (a: MotionAsset) => void;
 }) {
   const t = useTranslations("panelsA");
   const hasProfileAssets = !!(
@@ -510,7 +625,8 @@ export function ImagesPanel({
   const [source, setSource] = useState<SourceId>("openlen");
   const shownSource: SourceId =
     (source === "profile" && !hasProfileAssets) ||
-    (source === "uploads" && !projectId)
+    (source === "uploads" && !projectId) ||
+    (source === "motion" && !onInsertMotion)
       ? "openlen"
       : source;
   // Keep the latest onPick in a ref so source components don't re-render on
@@ -521,6 +637,9 @@ export function ImagesPanel({
 
   const sources: { id: SourceId; label: string }[] = [
     { id: "openlen", label: t("images.sources.openlen") },
+    ...(onInsertMotion
+      ? [{ id: "motion" as const, label: t("images.sources.motion") }]
+      : []),
     { id: "unsplash", label: t("images.sources.unsplash") },
     ...(projectId
       ? [{ id: "uploads" as const, label: t("images.sources.uploads") }]
@@ -553,6 +672,9 @@ export function ImagesPanel({
       </div>
       <div className="flex-1 min-h-0 mt-1">
         {shownSource === "openlen" && <OpenLenSource onPick={pick} />}
+        {shownSource === "motion" && onInsertMotion && (
+          <MotionSource onInsert={onInsertMotion} />
+        )}
         {shownSource === "unsplash" && <UnsplashSource onPick={pick} />}
         {shownSource === "uploads" && projectId && (
           <UploadsSource projectId={projectId} onPick={pick} />

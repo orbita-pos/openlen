@@ -155,9 +155,12 @@
       "openlen": "OpenLen",
       "unsplash": "Unsplash",
       "profile": "Tu negocio",
-      "uploads": "Tus subidas"
+      "uploads": "Tus subidas",
+      "motion": "Movimiento"
     },
     "profileEmpty": "Agrega un logo o fotos a tu perfil de negocio para verlos aquí.",
-    "uploadsEmpty": "Las imágenes que subas a esta página aparecerán aquí."
+    "uploadsEmpty": "Las imágenes que subas a esta página aparecerán aquí.",
+    "motionHint": "Haz clic en un loop animado para insertarlo como hero a todo lo ancho.",
+    "useMotionAria": "Añadir este hero animado a mi página"
   }
 }

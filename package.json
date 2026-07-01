@@ -70,6 +70,7 @@
     "users:set-plan": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/users/set-plan.ts",
     "users:grant-credits": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/users/grant-credits.ts",
     "openlen-images:process": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/openlen-images/process.ts",
+    "openlen-motion:process": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/openlen-motion/process.ts",
     "lume:remove-bg": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/openlen-images/remove-bg-lume.ts",
     "reset-quota": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/reset-quota.ts",
     "cost:measure": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/measure-cost.ts",
