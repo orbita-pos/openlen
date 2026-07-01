@@ -247,9 +247,12 @@ function mountModel(canvas: HTMLCanvasElement, cfg: SceneConfig, opts: { onReady
   const key = new DirectionalLight(0xffffff, 1.6); key.position.set(4, 6, 5); scene.add(key);
   if (cfg.accentLinked) {
     // Brand accent as light, never as material tint — safe on any texture set.
-    const rim = new DirectionalLight(new Color(cfg.accentColor), 2.2);
+    // Two opposed back rims wrap a visible halo even on glossy/env-lit models.
+    const rim = new DirectionalLight(new Color(cfg.accentColor), 3.4);
     rim.position.set(-5, 3, -6); scene.add(rim);
-    const fill = new DirectionalLight(new Color(cfg.accentColor), 0.5);
+    const rim2 = new DirectionalLight(new Color(cfg.accentColor), 1.6);
+    rim2.position.set(5, -1, -5); scene.add(rim2);
+    const fill = new DirectionalLight(new Color(cfg.accentColor), 0.7);
     fill.position.set(3, -2, 4); scene.add(fill);
   }
   const group = new Group(); scene.add(group);
