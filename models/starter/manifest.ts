@@ -80,4 +80,26 @@ export const STARTER_MODELS: StarterModelEntry[] = [
     fileName: "deco-organic.glb",
     license: "cc0",
   },
+  {
+    id: "deco-urchin",
+    name: "Estrella de púas",
+    family: "decorative",
+    author: "OpenLen (procedural)",
+    pitch: "Estallido radial de púas cromadas con núcleo iridiscente.",
+    description:
+      "Escultura tipo erizo: núcleo iridiscente rodeado de púas metálicas que irradian en todas direcciones. Pieza decorativa llamativa para heros con carácter.",
+    fileName: "deco-urchin.glb",
+    license: "cc0",
+  },
+  {
+    id: "deco-gyre",
+    name: "Esfera armilar",
+    family: "decorative",
+    author: "OpenLen (procedural)",
+    pitch: "Anillos cromados inclinados anidados, tipo giroscopio.",
+    description:
+      "Conjunto de anillos metálicos inclinados y anidados que forman una esfera armilar. Escultura decorativa elegante e intrincada, evoca órbitas o instrumentos antiguos.",
+    fileName: "deco-gyre.glb",
+    license: "cc0",
+  },
 ];
