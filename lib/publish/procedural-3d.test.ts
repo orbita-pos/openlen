@@ -169,4 +169,45 @@ describe("bake3dScene", () => {
     expect(assets.some((f) => f.startsWith("openlen-3d-") && f.endsWith(".js"))).toBe(true);
     expect(existsSync(join(subDir, "assets"))).toBe(true);
   });
+
+  it("baked background scene wires context-loss recovery events", async () => {
+    const subDir = mkdtempSync(join(tmpdir(), "ol3d-"));
+    const html = await bake3dScene({
+      html: "<html><head></head><body></body></html>",
+      subDir,
+      spec: SAMPLE_SPEC,
+      renderPoster: async () => Buffer.from("FAKEAVIF"),
+    });
+    expect(html).toContain("three-context-lost");
+    expect(html).toContain("three-context-restored");
+  });
+});
+
+describe("injectSceneMarkup — context-loss recovery (Task 7)", () => {
+  const backgroundOut = injectSceneMarkup(
+    '<html><head></head><body><section id="hero"><h1>Hi</h1></section></body></html>',
+    { spec: SAMPLE_SPEC, posterUrl: "/assets/p.avif", runtimeUrl: "/assets/r.js" },
+  );
+  const accentOut = injectSceneMarkup("<html><head></head><body></body></html>", {
+    spec: { ...SAMPLE_SPEC, preset: "accent" as const },
+    posterUrl: "/assets/p.avif",
+    runtimeUrl: "/assets/r.js",
+  });
+
+  it("background (backdrop) bootstrap listens for context-lost/restored and re-shows the poster", () => {
+    expect(backgroundOut).toContain("three-context-lost");
+    expect(backgroundOut).toContain("three-context-restored");
+  });
+
+  it("accent (button-gated) bootstrap listens for context-lost/restored and re-shows the poster", () => {
+    expect(accentOut).toContain("three-context-lost");
+    expect(accentOut).toContain("three-context-restored");
+  });
+
+  it("accent canvas gets an opacity/transition style so the crossfade works there too", () => {
+    const canvasStart = accentOut.indexOf("<canvas data-ol-3d-canvas");
+    const canvasTag = accentOut.slice(canvasStart, accentOut.indexOf(">", canvasStart) + 1);
+    expect(canvasTag).toContain("opacity:1");
+    expect(canvasTag).toContain("transition:opacity .6s ease");
+  });
 });

@@ -158,6 +158,18 @@ void main(){
 
 const SHADER_FRAG: Record<string, string> = { gradient: GRADIENT, fluid: METABALL, aurora: AURORA, plasma: PLASMA, ember: EMBER, dots: DOTS, silk: SILK };
 
+// WebGL context can be lost (GPU reset, tab background eviction, driver crash) and later
+// restored by the browser. Pause the RAF loop while lost (rendering into a dead context
+// throws/no-ops) and resume it on restore; the published bootstrap re-shows the poster
+// in between.
+function attachContextGuards(canvas: HTMLCanvasElement, h: { pause(): void; resume(): void }): () => void {
+  const onLost = (e: Event) => { e.preventDefault(); h.pause(); window.dispatchEvent(new Event("three-context-lost")); };
+  const onRestored = () => { h.resume(); window.dispatchEvent(new Event("three-context-restored")); };
+  canvas.addEventListener("webglcontextlost", onLost);
+  canvas.addEventListener("webglcontextrestored", onRestored);
+  return () => { canvas.removeEventListener("webglcontextlost", onLost); canvas.removeEventListener("webglcontextrestored", onRestored); };
+}
+
 function mountShader(canvas: HTMLCanvasElement, cfg: SceneConfig, opts: { onReady?: () => void }): MountHandle {
   const host = canvas.parentElement ?? canvas;
   const width = host.clientWidth || 800;
@@ -166,6 +178,10 @@ function mountShader(canvas: HTMLCanvasElement, cfg: SceneConfig, opts: { onRead
   const renderer = new WebGLRenderer({ canvas, antialias: true });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
   renderer.setSize(width, height, false);
+  const detachContextGuards = attachContextGuards(canvas, {
+    pause: () => { cancelAnimationFrame(raf); raf = 0; },
+    resume: () => { if (visible && !raf) raf = requestAnimationFrame(frame); },
+  });
 
   const scene = new Scene();
   const camera = new Camera();
@@ -213,6 +229,7 @@ function mountShader(canvas: HTMLCanvasElement, cfg: SceneConfig, opts: { onRead
 
   return {
     dispose() {
+      detachContextGuards();
       cancelAnimationFrame(raf);
       io.disconnect();
       document.removeEventListener("visibilitychange", onVis);
@@ -235,6 +252,10 @@ function mountModel(canvas: HTMLCanvasElement, cfg: SceneConfig, opts: { onReady
   renderer.toneMapping = ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1.05;
   renderer.outputColorSpace = SRGBColorSpace;
+  const detachContextGuards = attachContextGuards(canvas, {
+    pause: () => { cancelAnimationFrame(raf); raf = 0; },
+    resume: () => { if (visible && !raf) raf = requestAnimationFrame(frame); },
+  });
 
   const scene = new Scene();
   const pmrem = new PMREMGenerator(renderer);
@@ -323,6 +344,7 @@ function mountModel(canvas: HTMLCanvasElement, cfg: SceneConfig, opts: { onReady
   return {
     dispose() {
       disposed = true;
+      detachContextGuards();
       cancelAnimationFrame(raf);
       io.disconnect();
       document.removeEventListener("visibilitychange", onVis);
@@ -454,6 +476,10 @@ export function mount(canvas: HTMLCanvasElement, spec: SceneSpec, opts: { onRead
   renderer.toneMapping = useBloom ? NoToneMapping : ACESFilmicToneMapping;
   renderer.toneMappingExposure = cfg.exposure;
   renderer.outputColorSpace = SRGBColorSpace;
+  const detachContextGuards = attachContextGuards(canvas, {
+    pause: () => { cancelAnimationFrame(raf); raf = 0; },
+    resume: () => { if (visible && !raf) raf = requestAnimationFrame(frame); },
+  });
 
   const scene = new Scene();
   const pmrem = new PMREMGenerator(renderer);
@@ -542,6 +568,7 @@ export function mount(canvas: HTMLCanvasElement, spec: SceneSpec, opts: { onRead
 
   return {
     dispose() {
+      detachContextGuards();
       cancelAnimationFrame(raf);
       io.disconnect();
       document.removeEventListener("visibilitychange", onVis);
