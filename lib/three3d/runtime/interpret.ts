@@ -25,6 +25,7 @@ export interface SceneConfig {
   exposure: number;
   envIntensity: number;
   accentColor: string;
+  accentLinked: boolean;
   shader?: ShaderVariant;
   modelUrl?: string;
 }
@@ -75,6 +76,7 @@ export function buildSceneConfig(spec: SceneSpec): SceneConfig {
     exposure: EXPOSURE[spec.look],
     envIntensity: ENV_INTENSITY[spec.look],
     accentColor: spec.material.colors[0] ?? DEFAULT_COLOR,
+    accentLinked: spec.material.accentLinked,
     shader: spec.shader,
     modelUrl: spec.modelUrl,
   };

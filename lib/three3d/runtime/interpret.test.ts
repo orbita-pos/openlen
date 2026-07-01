@@ -45,3 +45,14 @@ describe("buildSceneConfig — quality fields", () => {
     expect(buildSceneConfig({ ...SAMPLE_SPEC, preset: "accent" }).cluster).toBe(false);
   });
 });
+
+describe("buildSceneConfig — accentLinked", () => {
+  it("carries accentLinked=true from material", () => {
+    const c = buildSceneConfig({ ...SAMPLE_SPEC, material: { ...SAMPLE_SPEC.material, accentLinked: true } });
+    expect(c.accentLinked).toBe(true);
+  });
+  it("carries accentLinked=false from material", () => {
+    const c = buildSceneConfig({ ...SAMPLE_SPEC, material: { ...SAMPLE_SPEC.material, accentLinked: false } });
+    expect(c.accentLinked).toBe(false);
+  });
+});

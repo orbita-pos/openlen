@@ -245,6 +245,13 @@ function mountModel(canvas: HTMLCanvasElement, cfg: SceneConfig, opts: { onReady
 
   const camera = new PerspectiveCamera(40, width / height, 0.01, 1000);
   const key = new DirectionalLight(0xffffff, 1.6); key.position.set(4, 6, 5); scene.add(key);
+  if (cfg.accentLinked) {
+    // Brand accent as light, never as material tint — safe on any texture set.
+    const rim = new DirectionalLight(new Color(cfg.accentColor), 2.2);
+    rim.position.set(-5, 3, -6); scene.add(rim);
+    const fill = new DirectionalLight(new Color(cfg.accentColor), 0.5);
+    fill.position.set(3, -2, 4); scene.add(fill);
+  }
   const group = new Group(); scene.add(group);
 
   let raf = 0, visible = true, firstFrame = true, modelLoaded = false;

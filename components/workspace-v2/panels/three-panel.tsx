@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { GOLDEN } from "@/lib/three3d/golden-specs";
-import type { MaterialKind, ShaderVariant } from "@/lib/three3d/scene-spec";
+import type { MaterialKind, SceneSpec, ShaderVariant } from "@/lib/three3d/scene-spec";
 import { SAMPLE_SPEC, SHADER_VARIANTS } from "@/lib/three3d/scene-spec";
 import { Loader, Sparkles } from "../icons";
 import { useToast } from "../toast";
@@ -373,7 +373,13 @@ export function ThreePanel({
           {hasDraft && (
             <button
               type="button"
-              onClick={() => onApplyScene3d({ enabled: true, spec: draft })}
+              onClick={() => {
+                const base = draft as SceneSpec | null;
+                const spec = brandMatch && accent && base
+                  ? { ...base, material: { ...base.material, colors: [accent, ...base.material.colors.slice(1)], accentLinked: true } }
+                  : draft;
+                onApplyScene3d({ enabled: true, spec });
+              }}
               className="w-full h-8 rounded-md text-[11.5px] font-semibold fg bg-elev ring-1 ring-[color:var(--border)] hover:bg-hover transition inline-flex items-center justify-center"
             >
               Aplicar escena
