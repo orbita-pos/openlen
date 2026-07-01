@@ -192,16 +192,29 @@ export async function archiveModel(id: string): Promise<void> {
     .where(eq(schema.models.id, id));
 }
 
-/** Persist the thumbnail URL for a model. Used by the thumbnailing script
- *  after uploading the WebP to storage. */
+/** Uploads a rendered AVIF thumbnail to storage and persists its URL on the
+ *  model row. Used by the `models:thumbs` backfill script. Returns the
+ *  public URL, mirroring `upsertModel`'s storage.upload → uploaded.url
+ *  convention (same hash-keyed, content-addressed layout). */
 export async function setModelThumbnail(
   id: string,
-  thumbnailUrl: string,
-): Promise<void> {
+  avif: Buffer,
+): Promise<string> {
+  const hash = sha256Buffer(avif).slice(0, 12);
+  const key = `models/thumbs/${id}-${hash}.avif`;
+  const storage = getModelStorage();
+  const uploaded = await storage.upload({
+    key,
+    contentType: "image/avif",
+    body: avif,
+  });
+
   await db
     .update(schema.models)
-    .set({ thumbnailUrl, updatedAt: new Date() })
+    .set({ thumbnailUrl: uploaded.url, updatedAt: new Date() })
     .where(eq(schema.models.id, id));
+
+  return uploaded.url;
 }
 
 function rowToRecord(row: typeof schema.models.$inferSelect): ModelRecord {

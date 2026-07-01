@@ -90,6 +90,7 @@
     "models:add": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/models-add.ts",
     "models:seed": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/models-seed.ts",
     "models:count": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/models-count.ts",
+    "models:thumbs": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/models-thumbs.ts",
     "db:generate": "drizzle-kit generate",
     "db:push": "drizzle-kit push --force",
     "db:studio": "drizzle-kit studio"
