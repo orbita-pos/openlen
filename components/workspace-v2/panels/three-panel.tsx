@@ -35,6 +35,10 @@ const SHADER_CHIPS: { label: string; value: ShaderVariant }[] = [
   { label: "Gradiente", value: "gradient" },
   { label: "Fluido", value: "fluid" },
   { label: "Aurora", value: "aurora" },
+  { label: "Plasma", value: "plasma" },
+  { label: "Ember", value: "ember" },
+  { label: "Estrellas", value: "dots" },
+  { label: "Silk", value: "silk" },
 ];
 
 // Base spec for shader backgrounds (golden: "un fondo degradado animado")

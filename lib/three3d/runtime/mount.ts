@@ -97,7 +97,65 @@ void main(){
   gl_FragColor = vec4(col,1.0);
 }`;
 
-const SHADER_FRAG: Record<string, string> = { gradient: GRADIENT, fluid: METABALL, aurora: AURORA };
+const SILK = `precision highp float; uniform float iTime; uniform vec2 iResolution; varying vec2 vUv;
+${NOISE}
+void main(){
+  vec2 uv=vUv; float t=iTime*0.09;
+  float flow = uv.x*2.3 + uv.y*1.1 + 0.7*fbm(uv*1.7 + t) + t;
+  float bands = sin(flow*3.14159*1.5);
+  float sheen = 0.5+0.5*bands;
+  float ridge = pow(smoothstep(0.72,1.0, sheen), 3.0);
+  vec3 c1=vec3(0.09,0.06,0.22), c2=vec3(0.44,0.29,0.80), c3=vec3(0.86,0.56,0.92);
+  vec3 col = mix(c1,c2, sheen);
+  col = mix(col, c3, smoothstep(0.5,0.96,sheen)*0.7);
+  col += vec3(1.0,0.92,1.0)*ridge*0.35;
+  col *= 1.0 - 0.16*length(uv-0.5);
+  gl_FragColor=vec4(col,1.0);
+}`;
+
+const PLASMA = `precision highp float; uniform float iTime; uniform vec2 iResolution; varying vec2 vUv;
+void main(){
+  float ar = iResolution.x/iResolution.y;
+  vec2 uv=vUv*vec2(ar,1.0); float t=iTime*0.35;
+  float v = sin(uv.x*5.0+t) + sin(uv.y*5.0+t*1.1) + sin((uv.x+uv.y)*4.0+t*0.7) + sin(length(uv-vec2(0.5*ar,0.5))*8.0-t*1.2);
+  v = v*0.125+0.5;
+  vec3 a=vec3(0.15,0.08,0.35), b=vec3(0.86,0.35,0.55), c=vec3(0.20,0.70,0.96);
+  vec3 col = mix(a,b, smoothstep(0.2,0.6,v));
+  col = mix(col,c, smoothstep(0.55,0.95,v));
+  gl_FragColor=vec4(col,1.0);
+}`;
+
+const EMBER = `precision highp float; uniform float iTime; uniform vec2 iResolution; varying vec2 vUv;
+${NOISE}
+void main(){
+  vec2 uv=vUv; float t=iTime*0.16;
+  float n = fbm(vec2(uv.x*3.0, uv.y*4.0 - t*2.2));
+  float heat = smoothstep(0.0,1.0, (1.0-uv.y) + n*0.45 - 0.25);
+  vec3 col = mix(vec3(0.03,0.01,0.0), vec3(0.92,0.24,0.05), heat);
+  col = mix(col, vec3(1.0,0.76,0.22), pow(heat,3.0)*0.85);
+  col += vec3(0.04,0.008,0.0);
+  gl_FragColor=vec4(col,1.0);
+}`;
+
+const DOTS = `precision highp float; uniform float iTime; uniform vec2 iResolution; varying vec2 vUv;
+${NOISE}
+void main(){
+  float ar=iResolution.x/iResolution.y;
+  vec2 uv=vUv*vec2(ar,1.0); float t=iTime*0.03;
+  vec3 col=vec3(0.02,0.02,0.06);
+  col += vec3(0.10,0.05,0.22)*max(fbm(uv*2.0+t),0.0)*0.6;
+  for(int i=0;i<3;i++){ float fi=float(i);
+    vec2 g = (uv + vec2(t*(0.2+fi*0.1),0.0))*(22.0+fi*16.0);
+    vec2 id=floor(g); vec2 f=fract(g)-0.5;
+    float rnd=fract(sin(dot(id,vec2(12.9,78.2)))*43758.5);
+    float tw=0.5+0.5*sin(iTime*3.0+rnd*30.0);
+    float star=smoothstep(0.07,0.0,length(f))*step(0.93,rnd)*tw;
+    col += vec3(0.85,0.9,1.0)*star;
+  }
+  gl_FragColor=vec4(col,1.0);
+}`;
+
+const SHADER_FRAG: Record<string, string> = { gradient: GRADIENT, fluid: METABALL, aurora: AURORA, plasma: PLASMA, ember: EMBER, dots: DOTS, silk: SILK };
 
 function mountShader(canvas: HTMLCanvasElement, cfg: SceneConfig, opts: { onReady?: () => void }): MountHandle {
   const host = canvas.parentElement ?? canvas;

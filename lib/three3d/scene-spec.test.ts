@@ -55,8 +55,8 @@ describe("coerceSceneSpec", () => {
     expect(s.shader).toBeUndefined();
   });
 
-  it("exports SHADER_VARIANTS with the 3 expected values", () => {
-    expect(SHADER_VARIANTS).toEqual(["gradient", "fluid", "aurora"]);
+  it("exports SHADER_VARIANTS with the 7 expected values", () => {
+    expect(SHADER_VARIANTS).toEqual(["gradient", "fluid", "aurora", "plasma", "ember", "dots", "silk"]);
   });
 
   it("preserves modelUrl through coerce round-trip", () => {

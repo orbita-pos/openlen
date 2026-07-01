@@ -7,7 +7,7 @@ const LOOKS = ["studio", "soft", "dramatic", "neutral"] as const;
 const FRAMINGS = ["centered", "offset", "wide"] as const;
 const PRESETS = ["background", "accent", "divider"] as const;
 const BACKGROUNDS = ["transparent", "color", "gradient"] as const;
-export const SHADER_VARIANTS = ["gradient", "fluid", "aurora"] as const;
+export const SHADER_VARIANTS = ["gradient", "fluid", "aurora", "plasma", "ember", "dots", "silk"] as const;
 
 export type GeometryKind = (typeof GEOMETRY_KINDS)[number];
 export type MaterialKind = (typeof MATERIAL_KINDS)[number];
