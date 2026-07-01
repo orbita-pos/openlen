@@ -11,6 +11,7 @@ import {
 } from "three";
 import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
+import { MeshoptDecoder } from "three/examples/jsm/libs/meshopt_decoder.module.js";
 import { RoundedBoxGeometry } from "three/examples/jsm/geometries/RoundedBoxGeometry.js";
 import { EffectComposer } from "three/examples/jsm/postprocessing/EffectComposer.js";
 import { RenderPass } from "three/examples/jsm/postprocessing/RenderPass.js";
@@ -265,7 +266,9 @@ function mountModel(canvas: HTMLCanvasElement, cfg: SceneConfig, opts: { onReady
     if (visible) { raf = requestAnimationFrame(frame); } else { raf = 0; }
   }
 
-  new GLTFLoader().load(
+  const loader = new GLTFLoader();
+  loader.setMeshoptDecoder(MeshoptDecoder);
+  loader.load(
     cfg.modelUrl!,
     (gltf) => {
       if (disposed) { gltf.scene.traverse((node: any) => { if (node.geometry) node.geometry.dispose(); if (node.material) { const TEX_SLOTS = ['map','normalMap','roughnessMap','metalnessMap','aoMap','emissiveMap','clearcoatMap','clearcoatNormalMap','clearcoatRoughnessMap','iridescenceMap','iridescenceThicknessMap','sheenColorMap','sheenRoughnessMap','specularMap','specularIntensityMap','specularColorMap','transmissionMap','thicknessMap','envMap','lightMap','bumpMap','displacementMap','alphaMap']; const mats = Array.isArray(node.material) ? node.material : [node.material]; for (const mat of mats) { for (const k of TEX_SLOTS) { const t = (mat as any)[k]; if (t && typeof t.dispose === 'function') t.dispose(); } mat.dispose(); } } }); return; }
