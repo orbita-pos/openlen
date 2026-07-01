@@ -19,7 +19,7 @@ async function compressTextures(doc: Document): Promise<number> {
     if (!image || (mime !== "image/png" && mime !== "image/jpeg")) continue;
     const { variants } = await processImage({
       input: Buffer.from(image),
-      variants: [{ width: MAX_TEXTURE_DIM, format: "webp", quality: WEBP_QUALITY }],
+      variants: [{ width: MAX_TEXTURE_DIM, maxHeight: MAX_TEXTURE_DIM, format: "webp", quality: WEBP_QUALITY }],
       autoOrient: false,
       withoutEnlargement: true,
     });
