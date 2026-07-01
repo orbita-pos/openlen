@@ -23,6 +23,12 @@ export function InboxHub() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const tab: Tab = searchParams.get("tab") === "forms" ? "forms" : "chat";
+  // Return to the project the user came from (the workspace passes ?from=<id>),
+  // not a bare /new that drops the open project. Validated (project ids are
+  // uuid-ish) so nothing can be injected into the href.
+  const fromRaw = searchParams.get("from");
+  const from = fromRaw && /^[a-zA-Z0-9-]{1,64}$/.test(fromRaw) ? fromRaw : null;
+  const backHref = from ? `/new?project=${from}` : "/new";
 
   const selectTab = useCallback(
     (next: Tab) => {
@@ -40,7 +46,7 @@ export function InboxHub() {
       <header className="shrink-0 border-b border-zinc-200 dark:border-zinc-800">
         <div className="flex items-center gap-2 px-3 pt-3 sm:px-5">
           <Link
-            href="/new"
+            href={backHref}
             aria-label={t("backToWorkspace")}
             title={t("backToWorkspace")}
             className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-zinc-500 transition hover:bg-zinc-100 hover:text-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-900 dark:hover:text-zinc-200"

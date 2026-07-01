@@ -325,7 +325,10 @@ function NewV2Inner() {
       // The inbox (chat + form leads) is its own destination now — the unified
       // /inbox hub — not an in-workspace center view.
       if (v === "messages") {
-        router.push("/inbox");
+        // Carry the open project so the inbox's "back to workspace" returns to
+        // it instead of a bare /new that drops the project.
+        const pid = searchParams.get("project");
+        router.push(pid ? `/inbox?from=${encodeURIComponent(pid)}` : "/inbox");
         return;
       }
       const params = new URLSearchParams(searchParams.toString());
@@ -3218,7 +3221,12 @@ function NewV2Inner() {
             onUpdateChatSettings={updateChatSettings}
             onCreateModulePage={createModulePage}
             onAddWhatsappSection={insertWhatsappSection}
-            onShowLeads={() => router.push("/inbox?tab=forms")}
+            onShowLeads={() => {
+              const pid = searchParams.get("project");
+              router.push(
+                pid ? `/inbox?tab=forms&from=${encodeURIComponent(pid)}` : "/inbox?tab=forms",
+              );
+            }}
             onShowAnalytics={() => setCenterView("analytics")}
             onReturnToCanvas={() => setCenterView("page")}
           />
