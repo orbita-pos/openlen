@@ -630,11 +630,11 @@ const INSPECT_SCRIPT = `
     postClean();
   }
 
-  // Remove a dropped image — the inverse of each drop target:
-  //   split media cell → un-split (media out, copy cell unwrapped, grid off)
-  //   bg-filled div    → clear the fill + restore re-inked text
-  //   plain <img>      → remove it; a section left with no real content (the
-  //                      drop-created image section) goes with it
+  // Remove a dropped image / video — the inverse of each drop target:
+  //   split media cell   → un-split (media out, copy cell unwrapped, grid off)
+  //   bg-filled div      → clear the fill + restore re-inked text
+  //   plain <img>/<video> → remove it; a section left with no real content (the
+  //                        drop-created media section) goes with it
   function applyRemoveImage(path) {
     var el = resolvePath(path);
     if (!el) return;
@@ -656,13 +656,9 @@ const INSPECT_SCRIPT = `
       }
       container.classList.remove('ol-split');
       if (!container.getAttribute('class')) container.removeAttribute('class');
-    } else if (el.tagName !== 'IMG') {
-      el.style.removeProperty('background-image');
-      el.style.removeProperty('background-size');
-      el.style.removeProperty('background-position');
-      el.style.removeProperty('background-repeat');
-      olRestoreReinkIn(el);
-    } else {
+    } else if (el.tagName === 'IMG' || el.tagName === 'VIDEO') {
+      // Real media element (dropped <img> or a video/motion hero) → remove it,
+      // and drop the host section if that leaves it with no text or media.
       var section = el.closest ? el.closest('section, header, footer, article, aside') : null;
       if (el.parentNode) el.parentNode.removeChild(el);
       if (section && section.isConnected) {
@@ -672,6 +668,12 @@ const INSPECT_SCRIPT = `
           section.parentNode.removeChild(section);
         }
       }
+    } else {
+      el.style.removeProperty('background-image');
+      el.style.removeProperty('background-size');
+      el.style.removeProperty('background-position');
+      el.style.removeProperty('background-repeat');
+      olRestoreReinkIn(el);
     }
     if (selected && !selected.isConnected) {
       selected = null;

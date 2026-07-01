@@ -246,9 +246,9 @@ const REPLACE_SCRIPT = `
     return hoverButton;
   }
 
-  // Trash sibling of the Replace pill — removes a dropped image (the parent
-  // routes it to the inspect script's applyRemoveImage: un-split / clear bg /
-  // remove the img, plus the drop-created section when it's left empty).
+  // Trash sibling of the Replace pill — removes a dropped image or video (the
+  // parent routes it to the inspect script's applyRemoveImage: un-split / clear
+  // bg / remove the media, plus the drop-created section when it's left empty).
   function ensureRemoveButton() {
     if (removeButton) return removeButton;
     var btn = document.createElement('button');
@@ -315,10 +315,13 @@ const REPLACE_SCRIPT = `
     btn.style.top = top + 'px';
     btn.style.left = left + 'px';
     btn.style.display = 'inline-flex';
-    // The trash sibling sits just left of the pill — images only (removing
-    // an inline icon is a different, riskier edit).
+    // The trash sibling sits just left of the pill — images + video (removing
+    // an inline icon is a different, riskier edit, so icons keep no trash).
     var rm = ensureRemoveButton();
-    if (kind === 'image') {
+    if (kind === 'image' || kind === 'video') {
+      var rmLabel = kind === 'video' ? 'Remove video' : 'Remove image';
+      rm.title = rmLabel;
+      rm.setAttribute('aria-label', rmLabel);
       rm.style.top = top + 'px';
       rm.style.left = (left - 34) + 'px';
       rm.style.display = 'inline-flex';
