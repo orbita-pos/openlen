@@ -321,6 +321,26 @@ export async function PATCH(
         if (JSON.stringify(s.spec).includes("data-slot-path=")) {
           return json({ error: "invalid_body", message: "scene3d.spec contains reserved marker" }, 400);
         }
+        // SSRF guard: modelUrl must be relative OR same origin as models host
+        if (s.spec && typeof s.spec === 'object' && 'modelUrl' in (s.spec as object)) {
+          const modelUrl = (s.spec as any).modelUrl;
+          if (typeof modelUrl === 'string' && modelUrl !== '') {
+            const modelsHostEnv = process.env.R2_MODELS_PUBLIC_URL ?? process.env.MODELS_PUBLIC_URL ?? 'https://models.openlen.com';
+            let allowedOrigin: string | null = null;
+            try { allowedOrigin = new URL(modelsHostEnv).origin; } catch { /* relative base — only relative modelUrls allowed */ }
+            const isRelative = modelUrl.startsWith('/');
+            if (!isRelative) {
+              try {
+                const parsed = new URL(modelUrl);
+                if (parsed.protocol !== 'https:' || (allowedOrigin !== null && parsed.origin !== allowedOrigin)) {
+                  return json({ error: 'invalid_body', message: 'scene3d.spec.modelUrl host not allowed' }, 400);
+                }
+              } catch {
+                return json({ error: 'invalid_body', message: 'scene3d.spec.modelUrl host not allowed' }, 400);
+              }
+            }
+          }
+        }
       }
     }
   }
