@@ -19,6 +19,7 @@
 import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { upsertModel } from "../lib/models/store";
+import { prepareModelGlb } from "../lib/models/optimize";
 import { CreateSchema } from "../lib/models/admin-schemas";
 
 interface ParsedFlags {
@@ -57,7 +58,8 @@ function usage(): string {
     "    [--author=<artist name>] \\",
     "    [--tags=<comma-separated>] \\",
     "    [--license=cc0|cc-by-4.0] \\",
-    "    [--status=draft|published|archived]",
+    "    [--status=draft|published|archived] \\",
+    "    [--no-optimize]",
   ].join("\n");
 }
 
@@ -80,6 +82,9 @@ async function main() {
     process.exit(1);
   }
 
+  const { glb: prepared, report } = await prepareModelGlb(glb, { optimize: flags["no-optimize"] !== "true" });
+  if (report) console.log(`optimized ${(report.beforeBytes / 1024).toFixed(0)}KB → ${(report.afterBytes / 1024).toFixed(0)}KB (tex→webp: ${report.texturesConverted})`);
+
   const tags = flags.tags
     ? flags.tags.split(",").map((t) => t.trim()).filter(Boolean)
     : undefined;
@@ -90,7 +95,7 @@ async function main() {
     family: flags.family,
     pitch: flags.pitch,
     description: flags.description,
-    glb,
+    glb: prepared,
     ...(flags.author ? { author: flags.author } : {}),
     ...(tags ? { tags } : {}),
     ...(flags.license ? { license: flags.license } : {}),

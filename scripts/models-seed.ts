@@ -12,6 +12,7 @@ import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { STARTER_MODELS } from "../models/starter/manifest";
 import { upsertModel } from "../lib/models/store";
+import { prepareModelGlb } from "../lib/models/optimize";
 
 async function main() {
   console.log(`Seeding ${STARTER_MODELS.length} starter model(s)...`);
@@ -33,6 +34,8 @@ async function main() {
       continue;
     }
     try {
+      const noOpt = process.env.OPENLEN_SEED_NO_OPTIMIZE === "1";
+      const { glb: prepared, report } = await prepareModelGlb(glb, { optimize: !noOpt });
       const record = await upsertModel({
         id: m.id,
         name: m.name,
@@ -40,13 +43,14 @@ async function main() {
         author: m.author,
         pitch: m.pitch,
         description: m.description,
-        glb,
+        glb: prepared,
         license: m.license,
         status: "published",
       });
       console.log(
         `  ok  ${m.id.padEnd(20)} hash=${record.contentHash} size=${record.size}b`,
       );
+      if (report) console.log(`      optimized ${(report.beforeBytes / 1024).toFixed(0)}KB → ${(report.afterBytes / 1024).toFixed(0)}KB (tex→webp: ${report.texturesConverted})`);
       baked++;
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
