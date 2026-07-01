@@ -13,7 +13,7 @@ export async function renderModelThumb(params: { glb: Buffer; sceneSpec?: unknow
     ...overrides,
     preset: "background",
     background: (overrides.background as string) ?? "gradient",
-    look: "soft",
+    look: (overrides.look as string) ?? "soft",
     modelUrl: "data:model/gltf-binary;base64," + params.glb.toString("base64"),
   });
   return renderScenePoster(spec, { width: 512, height: 512 });

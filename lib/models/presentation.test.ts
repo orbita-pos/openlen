@@ -52,6 +52,7 @@ describe("pickModelPresentation — coerce round-trip", () => {
       ...SAMPLE_SPEC,
       preset: "background",
       background: "gradient",
+      look: "soft",
       ...pickModelPresentation(catalogSceneSpec),
       modelUrl: "https://cdn.openlen.com/models/real.glb",
     };
