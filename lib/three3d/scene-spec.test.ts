@@ -58,6 +58,22 @@ describe("coerceSceneSpec", () => {
   it("exports SHADER_VARIANTS with the 3 expected values", () => {
     expect(SHADER_VARIANTS).toEqual(["gradient", "fluid", "aurora"]);
   });
+
+  it("preserves modelUrl through coerce round-trip", () => {
+    const url = "http://localhost:1234/helmet.glb";
+    const s = coerceSceneSpec({ ...SAMPLE_SPEC, modelUrl: url });
+    expect(s.modelUrl).toBe(url);
+  });
+
+  it("spec without modelUrl has modelUrl === undefined", () => {
+    const s = coerceSceneSpec(SAMPLE_SPEC);
+    expect(s.modelUrl).toBeUndefined();
+  });
+
+  it("coerces a non-string modelUrl to undefined without throwing", () => {
+    const s = coerceSceneSpec({ ...SAMPLE_SPEC, modelUrl: 42 });
+    expect(s.modelUrl).toBeUndefined();
+  });
 });
 
 describe("parseSceneSpecStrict", () => {

@@ -7,9 +7,10 @@ import {
   ShaderMaterial,
   PMREMGenerator, ACESFilmicToneMapping, NoToneMapping, SRGBColorSpace, DirectionalLight,
   CanvasTexture, EquirectangularReflectionMapping,
-  Vector2, type Material, type Object3D,
+  Vector2, Vector3, Box3, MathUtils, type Material, type Object3D,
 } from "three";
 import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
+import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { RoundedBoxGeometry } from "three/examples/jsm/geometries/RoundedBoxGeometry.js";
 import { EffectComposer } from "three/examples/jsm/postprocessing/EffectComposer.js";
 import { RenderPass } from "three/examples/jsm/postprocessing/RenderPass.js";
@@ -164,6 +165,107 @@ function mountShader(canvas: HTMLCanvasElement, cfg: SceneConfig, opts: { onRead
   };
 }
 
+function mountModel(canvas: HTMLCanvasElement, cfg: SceneConfig, opts: { onReady?: () => void }): MountHandle {
+  const host = canvas.parentElement ?? canvas;
+  const width = host.clientWidth || 800;
+  const height = host.clientHeight || 600;
+
+  const renderer = new WebGLRenderer({ canvas, antialias: true, alpha: true });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+  renderer.setSize(width, height, false);
+  renderer.toneMapping = ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 1.05;
+  renderer.outputColorSpace = SRGBColorSpace;
+
+  const scene = new Scene();
+  const pmrem = new PMREMGenerator(renderer);
+  const roomEnv = new RoomEnvironment();
+  const envRT = pmrem.fromScene(roomEnv, 0.04);
+  roomEnv.dispose();
+  scene.environment = envRT.texture;
+
+  const camera = new PerspectiveCamera(40, width / height, 0.01, 1000);
+  const key = new DirectionalLight(0xffffff, 1.6); key.position.set(4, 6, 5); scene.add(key);
+  const group = new Group(); scene.add(group);
+
+  let raf = 0, visible = true, firstFrame = true, modelLoaded = false;
+
+  function resize() {
+    const w = host.clientWidth || width, h = host.clientHeight || height;
+    renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix();
+  }
+
+  function frame() {
+    group.rotation.y += 0.006;
+    renderer.render(scene, camera);
+    if (firstFrame && modelLoaded) {
+      firstFrame = false;
+      opts.onReady?.();
+      window.dispatchEvent(new Event("three-ready"));
+    }
+    if (visible) { raf = requestAnimationFrame(frame); } else { raf = 0; }
+  }
+
+  new GLTFLoader().load(
+    cfg.modelUrl!,
+    (gltf) => {
+      const model = gltf.scene;
+      const box = new Box3().setFromObject(model);
+      const size = box.getSize(new Vector3());
+      const center = box.getCenter(new Vector3());
+      model.position.sub(center);
+      const maxDim = Math.max(size.x, size.y, size.z) || 1;
+      const dist = (maxDim / 2) / Math.tan(MathUtils.degToRad(40 / 2));
+      camera.position.set(0, maxDim * 0.05, dist * 1.9);
+      camera.lookAt(0, 0, 0);
+      group.add(model);
+      resize();
+      modelLoaded = true;
+      // Start loop if not already running (IO may have already started it pre-load).
+      if (!raf) raf = requestAnimationFrame(frame);
+    },
+    undefined,
+    (_err) => {
+      // Fire ready on error so the headless poster never hangs.
+      opts.onReady?.();
+      window.dispatchEvent(new Event("three-ready"));
+    },
+  );
+
+  const io = new IntersectionObserver((entries) => {
+    visible = entries[0]?.isIntersecting ?? true;
+    if (visible && !raf) raf = requestAnimationFrame(frame);
+  });
+  io.observe(host);
+  const onVis = () => {
+    if (document.visibilityState === "hidden") { cancelAnimationFrame(raf); raf = 0; }
+    else if (visible && !raf) { raf = requestAnimationFrame(frame); }
+  };
+  document.addEventListener("visibilitychange", onVis);
+  window.addEventListener("resize", resize);
+  // Start render loop immediately so the env backdrop is visible even before load.
+  raf = requestAnimationFrame(frame);
+
+  return {
+    dispose() {
+      cancelAnimationFrame(raf);
+      io.disconnect();
+      document.removeEventListener("visibilitychange", onVis);
+      window.removeEventListener("resize", resize);
+      group.traverse((node: any) => {
+        if (node.geometry) node.geometry.dispose();
+        if (node.material) {
+          if (Array.isArray(node.material)) node.material.forEach((m: any) => m.dispose());
+          else node.material.dispose();
+        }
+      });
+      envRT.dispose();
+      pmrem.dispose();
+      renderer.dispose();
+    },
+  };
+}
+
 function makeGeometry(kind: GeometryKind, radius: number, segments: number): BufferGeometry {
   switch (kind) {
     case "torus": return new TorusGeometry(radius, radius * 0.4, 48, 128);
@@ -264,6 +366,7 @@ function particleField(cfg: SceneConfig): Points {
 export function mount(canvas: HTMLCanvasElement, spec: SceneSpec, opts: { onReady?: () => void } = {}): MountHandle {
   const cfg = buildSceneConfig(spec);
   if (cfg.shader) return mountShader(canvas, cfg, opts);
+  if (cfg.modelUrl) return mountModel(canvas, cfg, opts);
   const useBloom = cfg.materialKind === "emissive";
   const host = canvas.parentElement ?? canvas;
   const width = host.clientWidth || 800;

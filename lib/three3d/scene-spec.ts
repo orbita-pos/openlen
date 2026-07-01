@@ -49,6 +49,7 @@ const SceneSpecSchema = z.object({
   camera: z.object({ framing: enumWithDefault(FRAMINGS, "centered") }).catch({ framing: "centered" }),
   background: enumWithDefault(BACKGROUNDS, "transparent"),
   shader: z.enum(SHADER_VARIANTS).optional().catch(undefined),
+  modelUrl: z.string().optional().catch(undefined),
 });
 
 export type SceneSpec = z.infer<typeof SceneSpecSchema>;
@@ -87,6 +88,7 @@ const StrictSchema = z.object({
   camera: z.object({ framing: z.enum(FRAMINGS) }),
   background: z.enum(BACKGROUNDS),
   shader: z.enum(SHADER_VARIANTS).optional(),
+  modelUrl: z.string().optional(),
 }).strict();
 
 export function parseSceneSpecStrict(input: unknown): { ok: true; value: SceneSpec } | { ok: false; errors: string[] } {

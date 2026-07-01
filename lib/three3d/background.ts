@@ -15,6 +15,7 @@ export function backgroundCss(spec: SceneSpec): string | null {
   const accent = (spec.material.colors[0] ?? DEFAULT_ACCENT).replace("#", "");
   if (spec.background === "color") return `#${accent}14`;
   if (spec.shader) return "linear-gradient(160deg,#0a0a16,#141026 60%,#0a0a16)";
+  if (spec.modelUrl) return "linear-gradient(160deg,#0f1018,#191826 60%,#0f1018)";
   if (spec.material.kind === "emissive") {
     // neon/aurora glows over a dark indigo→magenta backdrop
     return `linear-gradient(125deg, #0a0a1f 0%, #1a0a2e 50%, #${accent}22 110%)`;

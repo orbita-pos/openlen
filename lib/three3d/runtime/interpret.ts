@@ -26,6 +26,7 @@ export interface SceneConfig {
   envIntensity: number;
   accentColor: string;
   shader?: ShaderVariant;
+  modelUrl?: string;
 }
 
 const DEFAULT_COLOR = "#7C5CFF";
@@ -75,5 +76,6 @@ export function buildSceneConfig(spec: SceneSpec): SceneConfig {
     envIntensity: ENV_INTENSITY[spec.look],
     accentColor: spec.material.colors[0] ?? DEFAULT_COLOR,
     shader: spec.shader,
+    modelUrl: spec.modelUrl,
   };
 }
