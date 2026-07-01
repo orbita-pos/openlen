@@ -442,6 +442,55 @@ export function buildImageSectionHtml(url: string, alt: string): string {
   );
 }
 
+/** A curated animated background loop from the "By OpenLen Motion" library. */
+export interface MotionAsset {
+  posterHero: string;
+  webm: string;
+  mp4: string;
+}
+
+/**
+ * Framework-agnostic full-bleed animated hero (inline styles only, like
+ * buildImageSectionHtml). The poster <img> is in-flow — it sets the section
+ * height AND is the LCP element the publish image-bake optimizes + preloads;
+ * the muted, looping <video> is layered over it (object-fit:cover). Under
+ * prefers-reduced-motion the video is hidden and the poster shows through, so
+ * the section is never blank and never auto-animates against the user's wish.
+ */
+export function buildMotionHeroHtml(a: MotionAsset): string {
+  function esc(s: string): string {
+    return ("" + s)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
+  }
+  var poster = esc(a.posterHero);
+  // aspect-ratio is a floor: the in-flow poster <img> drives height normally,
+  // but if it ever fails to load the section keeps a 16:9 box instead of
+  // collapsing to 0px (the video is absolutely positioned, so it can't set it).
+  return (
+    '<section class="ol-bgvideo" style="position:relative;margin:0;padding:0;line-height:0;overflow:hidden;aspect-ratio:16/9;">' +
+    "<style>@media (prefers-reduced-motion:reduce){.ol-bgvideo video{visibility:hidden}}</style>" +
+    '<img src="' +
+    poster +
+    '" alt="" aria-hidden="true" style="display:block;width:100%;height:auto;margin:0;" />' +
+    // No poster= on the video: the in-flow <img> above is the poster the bake
+    // optimizes + preloads as LCP — a video poster would be a second, remote,
+    // un-baked fetch competing for LCP. The img shows through until the loop
+    // paints. aria-hidden: the loop is decorative (no captions audit).
+    '<video autoplay loop muted playsinline preload="metadata" aria-hidden="true" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;margin:0;">' +
+    '<source src="' +
+    esc(a.webm) +
+    '" type="video/webm" />' +
+    '<source src="' +
+    esc(a.mp4) +
+    '" type="video/mp4" />' +
+    "</video>" +
+    "</section>"
+  );
+}
+
 /** "team-photo_v2.jpg" → "team photo v2" — a usable default alt. */
 export function fileNameToAlt(name: string): string {
   var base = ("" + (name || "")).replace(/\.[a-zA-Z0-9]+$/, "");

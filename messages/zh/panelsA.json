@@ -151,10 +151,13 @@
       "openlen": "OpenLen",
       "unsplash": "Unsplash",
       "profile": "你的业务",
-      "uploads": "我的上传"
+      "uploads": "我的上传",
+      "motion": "动态"
     },
     "profileEmpty": "在业务资料中添加logo或照片后将显示在这里。",
-    "uploadsEmpty": "上传到此页面的图片将显示在这里。"
+    "uploadsEmpty": "上传到此页面的图片将显示在这里。",
+    "motionHint": "点击动态循环，将其作为全宽主视觉插入。",
+    "useMotionAria": "将此动态主视觉添加到我的页面"
   },
   "toast": {
     "saved": "资料已保存",

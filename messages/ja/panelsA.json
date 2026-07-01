@@ -151,10 +151,13 @@
       "openlen": "OpenLen",
       "unsplash": "Unsplash",
       "profile": "あなたのビジネス",
-      "uploads": "アップロード"
+      "uploads": "アップロード",
+      "motion": "モーション"
     },
     "profileEmpty": "ビジネスプロフィールにロゴや写真を追加するとここに表示されます。",
-    "uploadsEmpty": "このページにアップロードした画像がここに表示されます。"
+    "uploadsEmpty": "このページにアップロードした画像がここに表示されます。",
+    "motionHint": "アニメーションループをクリックすると、全幅のヒーローとして挿入されます。",
+    "useMotionAria": "このアニメーションヒーローをページに追加"
   },
   "toast": {
     "saved": "プロフィールを保存しました",

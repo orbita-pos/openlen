@@ -151,10 +151,13 @@
       "openlen": "OpenLen",
       "unsplash": "Unsplash",
       "profile": "Seu negócio",
-      "uploads": "Seus uploads"
+      "uploads": "Seus uploads",
+      "motion": "Movimento"
     },
     "profileEmpty": "Adicione um logo ou fotos ao seu perfil para vê-los aqui.",
-    "uploadsEmpty": "As imagens que você enviar para esta página aparecerão aqui."
+    "uploadsEmpty": "As imagens que você enviar para esta página aparecerão aqui.",
+    "motionHint": "Clique em um loop animado para inseri-lo como hero de largura total.",
+    "useMotionAria": "Adicionar este hero animado à minha página"
   },
   "toast": {
     "saved": "Perfil salvo",

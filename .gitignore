@@ -83,6 +83,11 @@ public/template-objects/
 # when no R2 creds); only manifest.json is committed. process.ts regenerates.
 public/openlen-images/*.webp
 
+# "By OpenLen Motion" — transcoded loops + posters live in R2 (FS fallback
+# under public/openlen-images/motion/ in dev); only the manifest is committed,
+# and only with R2 URLs (run openlen-motion:process with R2_* set before deploy).
+public/openlen-images/motion/
+
 # Internal dev docs — eval reports, session notes, planning + research
 # drafts. Working artifacts; not for the public open-source repo.
 /EVAL_*.md
