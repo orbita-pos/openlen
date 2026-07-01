@@ -371,6 +371,16 @@ const REPLACE_SCRIPT = `
       document.body.removeAttribute('data-openlen-over-image');
       return;
     }
+    // Pointer over our OWN hover chrome (Replace pill / trash / resize grip /
+    // copy chip) — keep it all visible so the user can actually reach and click
+    // it. Without this the document-level mousemove reschedules the hide while
+    // the pointer is ON the button (findReplaceable ignores our UI → returns
+    // null → scheduleHide), so the buttons vanish just as the user goes to
+    // click. Mirrors the own-chrome guard in use-section-reorder.ts.
+    if (e.target && e.target.closest && e.target.closest('[data-openlen-replace]')) {
+      cancelHide();
+      return;
+    }
     var found = findReplaceable(e.target);
     if (!found) {
       scheduleHide();

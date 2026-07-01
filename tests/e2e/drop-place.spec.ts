@@ -969,6 +969,55 @@ test.describe("Drop engine", () => {
       .toBe(true);
   });
 
+  test("hover chrome stays put when the pointer moves onto the trash/Replace (no vanish-before-click)", async ({
+    page,
+  }) => {
+    const frame = await setup(page);
+    await postToFrame(page, {
+      type: "openlen:set-mode",
+      editMode: true,
+      selectMode: false,
+      dropEnabled: true,
+    });
+
+    // Hover the image → Replace pill + trash appear.
+    await frame.evaluate(() => {
+      const img = document.getElementById("pic") as HTMLElement;
+      img.scrollIntoView({ block: "center" });
+      const r = img.getBoundingClientRect();
+      img.dispatchEvent(
+        new MouseEvent("mousemove", { bubbles: true, clientX: r.left + 20, clientY: r.top + 20 }),
+      );
+    });
+    await expect
+      .poll(() =>
+        frame.evaluate(
+          () =>
+            (document.querySelector(".openlen-replace-remove") as HTMLElement | null)
+              ?.style.display ?? "none",
+        ),
+      )
+      .toBe("inline-flex");
+
+    // Move the pointer ONTO the trash (what a user does to click it). The
+    // document-level mousemove must NOT hide our own chrome.
+    await frame.evaluate(() => {
+      const rm = document.querySelector(".openlen-replace-remove") as HTMLElement;
+      const r = rm.getBoundingClientRect();
+      rm.dispatchEvent(
+        new MouseEvent("mousemove", { bubbles: true, clientX: r.left + 5, clientY: r.top + 5 }),
+      );
+    });
+    // Past the 120ms hide delay — the buttons must still be there to click.
+    await page.waitForTimeout(240);
+    const state = await frame.evaluate(() => ({
+      trash: (document.querySelector(".openlen-replace-remove") as HTMLElement | null)?.style.display ?? "none",
+      pill: (document.querySelector(".openlen-replace-button") as HTMLElement | null)?.style.display ?? "none",
+    }));
+    expect(state.trash).toBe("inline-flex");
+    expect(state.pill).toBe("inline-flex");
+  });
+
   test("section toolbar: duplicate / move / delete post source + action", async ({
     page,
   }) => {
