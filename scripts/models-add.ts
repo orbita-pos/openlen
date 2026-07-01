@@ -18,8 +18,9 @@
 
 import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
-import { upsertModel } from "../lib/models/store";
+import { upsertModel, setModelThumbnail } from "../lib/models/store";
 import { prepareModelGlb } from "../lib/models/optimize";
+import { renderModelThumb } from "../lib/models/thumbs";
 import { CreateSchema } from "../lib/models/admin-schemas";
 
 interface ParsedFlags {
@@ -59,7 +60,8 @@ function usage(): string {
     "    [--tags=<comma-separated>] \\",
     "    [--license=cc0|cc-by-4.0] \\",
     "    [--status=draft|published|archived] \\",
-    "    [--no-optimize]",
+    "    [--no-optimize] \\",
+    "    [--no-thumb]",
   ].join("\n");
 }
 
@@ -122,6 +124,18 @@ async function main() {
   console.log(`Uploading "${result.data.id}" (${result.data.glb.byteLength} bytes)...`);
   const record = await upsertModel(result.data);
   console.log("Uploaded.");
+
+  if (flags["no-thumb"] !== "true") {
+    try {
+      const thumb = await renderModelThumb({ glb: prepared });
+      const url = await setModelThumbnail(record.id, thumb);
+      console.log(`  thumb        : ${url}`);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.warn(`  thumb FAILED : ${msg}`);
+    }
+  }
+
   console.log(`  id           : ${record.id}`);
   console.log(`  family       : ${record.family}`);
   console.log(`  status       : ${record.status}`);

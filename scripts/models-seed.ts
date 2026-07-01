@@ -11,8 +11,9 @@
 import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { STARTER_MODELS } from "../models/starter/manifest";
-import { upsertModel } from "../lib/models/store";
+import { upsertModel, setModelThumbnail } from "../lib/models/store";
 import { prepareModelGlb } from "../lib/models/optimize";
+import { renderModelThumb } from "../lib/models/thumbs";
 
 async function main() {
   console.log(`Seeding ${STARTER_MODELS.length} starter model(s)...`);
@@ -60,6 +61,17 @@ async function main() {
         `  ok  ${m.id.padEnd(20)} hash=${record.contentHash} size=${record.size}b`,
       );
       baked++;
+
+      if (process.env.OPENLEN_SEED_NO_THUMBS !== "1") {
+        try {
+          const thumb = await renderModelThumb({ glb: prepared, sceneSpec: m.sceneSpec });
+          const url = await setModelThumbnail(m.id, thumb);
+          console.log(`      thumb ${url}`);
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : String(err);
+          console.warn(`      thumb FAILED ${m.id}: ${msg}`);
+        }
+      }
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       failed.push({ id: m.id, reason: `upsert: ${msg}` });

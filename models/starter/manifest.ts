@@ -22,6 +22,7 @@ export interface StarterModelEntry {
   description: string;
   fileName: string;
   license: string;
+  sceneSpec?: Record<string, unknown>;
 }
 
 export const STARTER_MODELS: StarterModelEntry[] = [

@@ -6,7 +6,7 @@
 // components can import them without dragging node:* into the browser.
 import { createHash } from "node:crypto";
 import { cache } from "react";
-import { and, count, eq } from "drizzle-orm";
+import { and, count, desc, eq } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
 import { getModelStorage } from "@/lib/storage/models";
 import {
@@ -76,7 +76,7 @@ export async function listModels(opts?: {
     .select()
     .from(schema.models)
     .where(and(...conditions))
-    .orderBy(schema.models.createdAt);
+    .orderBy(desc(schema.models.featured), schema.models.createdAt);
   return rows.map(rowToRecord);
 }
 
@@ -95,7 +95,7 @@ export async function listAllForAdmin(): Promise<ModelRecord[]> {
   const rows = await db
     .select()
     .from(schema.models)
-    .orderBy(schema.models.createdAt);
+    .orderBy(desc(schema.models.featured), schema.models.createdAt);
   return rows.map(rowToRecord);
 }
 
