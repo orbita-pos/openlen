@@ -51,6 +51,7 @@
     "projectMenu": "Menu du projet",
     "published": "Publiée",
     "unpublishedChanges": "Modifications non publiées",
+    "previewStale": "Publiez pour actualiser",
     "open": "Ouvrir",
     "editedAgo": "Modifiée {time}",
     "sections": "{count, plural, one {# section} other {# sections}}"

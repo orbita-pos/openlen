@@ -51,6 +51,7 @@
     "projectMenu": "项目菜单",
     "published": "已发布",
     "unpublishedChanges": "有未发布的更改",
+    "previewStale": "发布以更新",
     "open": "打开",
     "editedAgo": "编辑于 {time}",
     "sections": "{count, plural, one {# 个版块} other {# 个版块}}"

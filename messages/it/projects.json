@@ -51,6 +51,7 @@
     "projectMenu": "Menu progetto",
     "published": "Pubblicata",
     "unpublishedChanges": "Modifiche non pubblicate",
+    "previewStale": "Pubblica per aggiornare",
     "open": "Apri",
     "editedAgo": "Modificata {time}",
     "sections": "{count, plural, one {# sezione} other {# sezioni}}"

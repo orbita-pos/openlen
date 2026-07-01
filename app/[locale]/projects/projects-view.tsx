@@ -1084,6 +1084,18 @@ function ProjectCard({
           </div>
         )}
 
+        {/* The thumbnail is the last PUBLISHED render (refreshed on publish, not
+            on draft edits) — flag it so a just-added image that isn't in the
+            preview yet doesn't read as broken. Fades on hover so it never fights
+            the "Open" affordance. */}
+        {project.subdomain && project.hasUnpublishedChanges && (
+          <div className="absolute bottom-2 right-2 z-10 max-w-[70%] group-hover:opacity-0 transition pointer-events-none">
+            <span className="inline-flex items-center rounded-full bg-zinc-900/80 text-white/95 backdrop-blur px-2 py-0.5 text-[9.5px] font-medium leading-tight ring-1 ring-white/10">
+              {t("card.previewStale")}
+            </span>
+          </div>
+        )}
+
         <ProjectLogoBadge
           logoUrl={project.logoUrl}
           title={project.title}

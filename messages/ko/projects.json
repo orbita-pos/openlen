@@ -51,6 +51,7 @@
     "projectMenu": "프로젝트 메뉴",
     "published": "게시됨",
     "unpublishedChanges": "게시되지 않은 변경 사항",
+    "previewStale": "게시하여 업데이트",
     "open": "열기",
     "editedAgo": "{time} 수정됨",
     "sections": "{count, plural, one {섹션 #개} other {섹션 #개}}"

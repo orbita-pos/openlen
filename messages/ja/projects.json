@@ -51,6 +51,7 @@
     "projectMenu": "プロジェクトメニュー",
     "published": "公開済み",
     "unpublishedChanges": "未公開の変更",
+    "previewStale": "公開して更新",
     "open": "開く",
     "editedAgo": "{time}に更新",
     "sections": "{count, plural, one {# セクション} other {# セクション}}"

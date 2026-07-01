@@ -69,6 +69,7 @@
     "projectMenu": "Projectmenu",
     "published": "Gepubliceerd",
     "unpublishedChanges": "Niet-gepubliceerde wijzigingen",
+    "previewStale": "Publiceer om bij te werken",
     "open": "Openen",
     "editedAgo": "Bewerkt {time}",
     "sections": "{count, plural, one {# sectie} other {# secties}}"
