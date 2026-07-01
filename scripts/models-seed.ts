@@ -33,9 +33,18 @@ async function main() {
       failed.push({ id: m.id, reason: "empty file" });
       continue;
     }
+    let prepared: Buffer;
     try {
       const noOpt = process.env.OPENLEN_SEED_NO_OPTIMIZE === "1";
-      const { glb: prepared, report } = await prepareModelGlb(glb, { optimize: !noOpt });
+      const r = await prepareModelGlb(glb, { optimize: !noOpt });
+      prepared = r.glb;
+      if (r.report) console.log(`      optimized ${(r.report.beforeBytes / 1024).toFixed(0)}KB → ${(r.report.afterBytes / 1024).toFixed(0)}KB (tex→webp: ${r.report.texturesConverted})`);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      failed.push({ id: m.id, reason: `optimize: ${msg}` });
+      continue;
+    }
+    try {
       const record = await upsertModel({
         id: m.id,
         name: m.name,
@@ -50,7 +59,6 @@ async function main() {
       console.log(
         `  ok  ${m.id.padEnd(20)} hash=${record.contentHash} size=${record.size}b`,
       );
-      if (report) console.log(`      optimized ${(report.beforeBytes / 1024).toFixed(0)}KB → ${(report.afterBytes / 1024).toFixed(0)}KB (tex→webp: ${report.texturesConverted})`);
       baked++;
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
