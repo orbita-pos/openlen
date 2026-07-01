@@ -666,6 +666,20 @@ async function bakeDocument(
     }
   }
 
+  // AI→human handoff merges the two visitor bubbles into ONE launcher. Only when
+  // BOTH surfaces are on AND the chat is a guest self-serve space (handoff mints
+  // a guest — invite-only/account-mode chats keep their own bubble + legacy lead
+  // form). Single source of truth so the assistant CTA, the chat's FAB-less
+  // handoff-target bake, and the WhatsApp stacking all agree; includes both env
+  // kill switches so flipping either can't leave the chat unreachable.
+  const handoffMerged =
+    process.env.OPENLEN_ASSISTANT !== "0" &&
+    ctx.assistant?.enabled === true &&
+    process.env.OPENLEN_CHAT !== "0" &&
+    ctx.chat?.enabled === true &&
+    ctx.chat?.selfServeJoin !== false &&
+    ctx.chat?.identityMode !== "account";
+
   // Site assistant — visitor-facing AI chat widget. Last, so the IIFE sits
   // just before </body> after every other rewrite.
   if (process.env.OPENLEN_ASSISTANT !== "0" && ctx.assistant?.enabled) {
@@ -676,6 +690,10 @@ async function bakeDocument(
         businessName: ctx.assistant.businessName,
         accent: ctx.assistant.accent,
         greeting: ctx.assistant.greeting,
+        // Both surfaces on (mergeable) → the assistant is the single launcher and
+        // hands off to the human chat (window.__openlenChat) instead of a
+        // dead-end lead form.
+        chatHandoff: handoffMerged,
       });
     } catch (err) {
       // eslint-disable-next-line no-console
@@ -709,26 +727,31 @@ async function bakeDocument(
 
   // Private chat widget — AFTER bookings, BEFORE video-embed (so its sealed
   // script hash enters the CSP). Gated on OPENLEN_CHAT != "0" and chat.enabled.
-  // Corner stacking: the assistant FAB is already baked (right corner, 18 px);
-  // lift the chat FAB above it. WhatsApp is baked AFTER chat and counts both
-  // assistant + chat when computing its own bottomPx.
+  //
+  // Single-launcher rule: when the assistant is ALSO enabled, IT owns the one
+  // bubble and the chat bakes as a handoff target — no FAB of its own, exposing
+  // window.__openlenChat so the assistant can open it after an AI→human handoff.
+  // We force the FAB host to bake even for mount:"section" so the openable
+  // floating panel exists. With no assistant, the chat keeps its own FAB at the
+  // default corner (18 px); WhatsApp (baked after) stacks above it.
   if (process.env.OPENLEN_CHAT !== "0" && ctx.chat?.enabled) {
     try {
-      const chatWantsFab = ctx.chat.mount !== "section";
-      const rightBelowChat = ctx.assistant?.enabled === true ? 1 : 0;
+      const handoff = handoffMerged;
+      const chatMount =
+        handoff && ctx.chat.mount === "section" ? "both" : ctx.chat.mount;
       migratedHtml = bakeChatWidget(migratedHtml, {
         sub: ctx.sub,
         // Brand-match the widget to the page's own accent ("con el color de tu
         // página"); falls back to the widget's coral when undetectable.
         accent: ctx.chat.accent ?? detectSiteAccent(migratedHtml) ?? undefined,
-        mount: ctx.chat.mount,
+        mount: chatMount,
         selfServeJoin: ctx.chat.selfServeJoin,
         title: ctx.chat.title,
         identityMode: ctx.chat.identityMode,
         welcome: ctx.chat.welcome,
         quickReplies: ctx.chat.quickReplies,
         theme: ctx.chat.theme,
-        ...(chatWantsFab && rightBelowChat > 0 ? { bottomPx: 18 + rightBelowChat * 68 } : {}),
+        chatAsHandoffTarget: handoff,
       });
     } catch (err) {
       // eslint-disable-next-line no-console
@@ -791,11 +814,13 @@ async function bakeDocument(
   if (process.env.OPENLEN_WHATSAPP !== "0" && ctx.whatsapp?.enabled && ctx.whatsapp.number) {
     try {
       // Stack ABOVE all FABs already baked in the same corner so none are
-      // occluded. Right corner: assistant (18 px) + chat FAB (86 px when
-      // assistant present, else 18 px). Left corner: music player.
+      // occluded. Right corner: assistant (18 px) OR a standalone chat FAB
+      // (18 px). They never coexist — with both on, the chat is a FAB-less
+      // handoff target, so only the assistant occupies the corner. Left corner:
+      // music player.
       const waSide = ctx.whatsapp.side === "left" ? "left" : "right";
       const chatFabOnRight =
-        ctx.chat?.enabled === true && ctx.chat.mount !== "section";
+        ctx.chat?.enabled === true && ctx.chat.mount !== "section" && !handoffMerged;
       const priorRightFabs =
         (ctx.assistant?.enabled === true ? 1 : 0) +
         (chatFabOnRight ? 1 : 0);

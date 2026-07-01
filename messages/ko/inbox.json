@@ -7,6 +7,8 @@
   "emptyHint": "When a visitor messages one of your published pages, the conversation shows up here.",
   "loadError": "Couldn't load messages. Try again in a moment.",
   "visitor": "Visitor",
+  "fromAssistant": "AI",
+  "fromAssistantTitle": "어시스턴트에서 전환됨",
   "selectPrompt": "Select a conversation to read and reply.",
   "threadEmpty": "No messages in this conversation yet.",
   "back": "Back",
