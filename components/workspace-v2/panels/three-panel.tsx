@@ -152,6 +152,7 @@ export function ThreePanel({
         ...SAMPLE_SPEC,
         preset: "background",
         background: "gradient",
+        look: "soft",
         ...pickModelPresentation(model.sceneSpec),
         modelUrl: model.storageUrl,
       });
