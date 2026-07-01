@@ -153,6 +153,7 @@ export function ThreePanel({
                   const mat = g.spec.material.kind;
                   setRegister(mat);
                   setShaderVariant(null);
+                  setDraft(null);
                 }}
                 className="text-left rounded-lg ring-1 ring-[color:var(--border)] bg-[color:var(--bg)] px-2 py-1.5 hover:bg-hover transition"
               >
