@@ -36,6 +36,7 @@ export const STARTER_MODELS: StarterModelEntry[] = [
       "Casco de astronauta con daños de combate y materiales PBR de alta fidelidad. Referencia clásica del ecosistema glTF — ideal para páginas de tecnología, juegos o sci-fi.",
     fileName: "helmet.glb",
     license: "cc-by-4.0",
+    sceneSpec: { look: "studio", motion: { kind: "rotate", speed: 0.25, amplitude: 0.4 } },
   },
   {
     id: "materials-shoe",
@@ -47,6 +48,7 @@ export const STARTER_MODELS: StarterModelEntry[] = [
       "Tenis de alto detalle con múltiples variantes de material, ideal para hero-shots de e-commerce, páginas de moda o demostraciones de producto 3D.",
     fileName: "shoe.glb",
     license: "cc-by-4.0",
+    sceneSpec: { look: "studio", motion: { kind: "rotate", speed: 0.35, amplitude: 0.4 } },
   },
   {
     id: "deco-crystal",
@@ -58,6 +60,7 @@ export const STARTER_MODELS: StarterModelEntry[] = [
       "Formación de cristales facetados con material iridiscente-metálico, generada proceduralmente. Elemento decorativo abstracto para heros elegantes y oscuros.",
     fileName: "deco-crystal.glb",
     license: "cc0",
+    sceneSpec: { look: "dramatic", motion: { kind: "rotate", speed: 0.4, amplitude: 0.4 } },
   },
   {
     id: "deco-ribbon",
@@ -69,6 +72,7 @@ export const STARTER_MODELS: StarterModelEntry[] = [
       "Escultura de cinta metálica siguiendo una curva trefoil, en cromo pulido. Forma decorativa fluida y premium para cualquier página.",
     fileName: "deco-ribbon.glb",
     license: "cc0",
+    sceneSpec: { look: "dramatic", motion: { kind: "rotate", speed: 0.4, amplitude: 0.4 } },
   },
   {
     id: "deco-organic",
@@ -80,6 +84,7 @@ export const STARTER_MODELS: StarterModelEntry[] = [
       "Forma orgánica desplazada con material perla iridiscente y clearcoat. Escultura decorativa suave, ideal como pieza central de hero.",
     fileName: "deco-organic.glb",
     license: "cc0",
+    sceneSpec: { look: "dramatic", motion: { kind: "rotate", speed: 0.3, amplitude: 0.4 } },
   },
   {
     id: "deco-urchin",
@@ -91,6 +96,7 @@ export const STARTER_MODELS: StarterModelEntry[] = [
       "Escultura tipo erizo: núcleo iridiscente rodeado de púas metálicas que irradian en todas direcciones. Pieza decorativa llamativa para heros con carácter.",
     fileName: "deco-urchin.glb",
     license: "cc0",
+    sceneSpec: { look: "dramatic", motion: { kind: "rotate", speed: 0.45, amplitude: 0.4 } },
   },
   {
     id: "deco-gyre",
@@ -102,5 +108,6 @@ export const STARTER_MODELS: StarterModelEntry[] = [
       "Conjunto de anillos metálicos inclinados y anidados que forman una esfera armilar. Escultura decorativa elegante e intrincada, evoca órbitas o instrumentos antiguos.",
     fileName: "deco-gyre.glb",
     license: "cc0",
+    sceneSpec: { look: "dramatic", motion: { kind: "rotate", speed: 0.55, amplitude: 0.4 } },
   },
 ];
