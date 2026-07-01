@@ -1,9 +1,10 @@
 // lib/three3d/runtime/mount.ts
 import {
-  Scene, PerspectiveCamera, WebGLRenderer, Group, Mesh, Color,
+  Scene, PerspectiveCamera, Camera, WebGLRenderer, Group, Mesh, Color,
   SphereGeometry, TorusGeometry, TorusKnotGeometry, IcosahedronGeometry,
   PlaneGeometry, CapsuleGeometry, BufferGeometry, BufferAttribute, Points,
   MeshStandardMaterial, MeshPhysicalMaterial, MeshBasicMaterial, PointsMaterial,
+  ShaderMaterial,
   PMREMGenerator, ACESFilmicToneMapping, NoToneMapping, SRGBColorSpace, DirectionalLight,
   CanvasTexture, EquirectangularReflectionMapping,
   Vector2, type Material, type Object3D,
@@ -18,6 +19,150 @@ import type { SceneSpec, GeometryKind, MaterialKind } from "../scene-spec";
 import { buildSceneConfig, type SceneConfig } from "./interpret";
 
 export interface MountHandle { dispose: () => void }
+
+// ── Shader background constants ────────────────────────────────────────────
+const VERT = `varying vec2 vUv; void main(){ vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }`;
+
+const NOISE = `
+vec3 mod289(vec3 x){return x - floor(x*(1.0/289.0))*289.0;}
+vec2 mod289(vec2 x){return x - floor(x*(1.0/289.0))*289.0;}
+vec3 permute(vec3 x){return mod289(((x*34.0)+1.0)*x);}
+float snoise(vec2 v){
+  const vec4 C = vec4(0.211324865405187,0.366025403784439,-0.577350269189626,0.024390243902439);
+  vec2 i = floor(v + dot(v, C.yy));
+  vec2 x0 = v - i + dot(i, C.xx);
+  vec2 i1 = (x0.x > x0.y) ? vec2(1.0,0.0) : vec2(0.0,1.0);
+  vec4 x12 = x0.xyxy + C.xxzz; x12.xy -= i1;
+  i = mod289(i);
+  vec3 p = permute( permute( i.y + vec3(0.0, i1.y, 1.0)) + i.x + vec3(0.0, i1.x, 1.0));
+  vec3 m = max(0.5 - vec3(dot(x0,x0), dot(x12.xy,x12.xy), dot(x12.zw,x12.zw)), 0.0);
+  m = m*m; m = m*m;
+  vec3 x = 2.0 * fract(p * C.www) - 1.0;
+  vec3 h = abs(x) - 0.5;
+  vec3 ox = floor(x + 0.5);
+  vec3 a0 = x - ox;
+  m *= 1.79284291400159 - 0.85373472095314 * (a0*a0 + h*h);
+  vec3 g;
+  g.x = a0.x * x0.x + h.x * x0.y;
+  g.yz = a0.yz * x12.xz + h.yz * x12.yw;
+  return 130.0 * dot(m, g);
+}
+float fbm(vec2 p){ float s=0.0, a=0.5; for(int i=0;i<5;i++){ s += a*snoise(p); p=p*2.0; a*=0.5; } return s; }
+`;
+
+const GRADIENT = `precision highp float; uniform float iTime; uniform vec2 iResolution; varying vec2 vUv;
+${NOISE}
+void main(){
+  vec2 uv = vUv; float t = iTime*0.04;
+  vec2 q = vec2(fbm(uv*1.1 + t), fbm(uv*1.1 + vec2(3.1,1.7) - t));
+  float f = fbm(uv*1.3 + 0.9*q + t);
+  vec3 c1=vec3(0.20,0.10,0.42), c2=vec3(0.92,0.46,0.55), c3=vec3(0.20,0.75,0.98), c4=vec3(0.45,0.35,0.95);
+  vec3 col = mix(c1,c2, smoothstep(-0.6,0.8,f));
+  col = mix(col,c3, 0.55*smoothstep(-0.3,0.9, q.x));
+  col = mix(col,c4, 0.55*smoothstep(-0.3,0.9, q.y));
+  col *= 1.0 - 0.25*length(uv-0.5);
+  gl_FragColor = vec4(col, 1.0);
+}`;
+
+const METABALL = `precision highp float; uniform float iTime; uniform vec2 iResolution; varying vec2 vUv;
+void main(){
+  vec2 uv = (vUv-0.5)*vec2(iResolution.x/iResolution.y,1.0); float t=iTime*0.4; float m=0.0;
+  for(int i=0;i<5;i++){ float fi=float(i);
+    vec2 c=0.34*vec2(sin(t*0.8+fi*1.6), cos(t*0.7+fi*2.3));
+    float r=0.12+0.03*sin(t+fi);
+    m += r*r/max(dot(uv-c,uv-c),0.0008);
+  }
+  float s=smoothstep(0.75,1.35,m);
+  vec3 base=vec3(0.04,0.03,0.11);
+  vec3 col = mix(base, vec3(0.42,0.28,1.0), s);
+  col = mix(col, vec3(0.30,0.70,1.0), smoothstep(1.4,2.8,m));
+  col += vec3(1.0,0.60,0.90)*smoothstep(3.2,5.5,m)*0.6;
+  col *= 1.0 - 0.18*length(uv);
+  gl_FragColor = vec4(col,1.0);
+}`;
+
+const AURORA = `precision highp float; uniform float iTime; uniform vec2 iResolution; varying vec2 vUv;
+${NOISE}
+void main(){
+  vec2 uv = vUv; float t=iTime*0.15; vec3 col=vec3(0.02,0.03,0.08);
+  for(int i=0;i<4;i++){ float fi=float(i);
+    float band = uv.y + 0.12*sin(uv.x*3.0 + t + fi*1.7) + 0.06*fbm(vec2(uv.x*3.0 + t, fi));
+    float center = 0.32 + fi*0.16;
+    float glow = exp(-pow((band-center)*7.0,2.0));
+    vec3 c = mix(vec3(0.1,0.9,0.7), vec3(0.5,0.3,1.0), fi/3.0);
+    col += c*glow*0.6;
+  }
+  col += vec3(0.6,0.4,1.0)*pow(max(0.0,1.0-uv.y),3.0)*0.15;
+  gl_FragColor = vec4(col,1.0);
+}`;
+
+const SHADER_FRAG: Record<string, string> = { gradient: GRADIENT, fluid: METABALL, aurora: AURORA };
+
+function mountShader(canvas: HTMLCanvasElement, cfg: SceneConfig, opts: { onReady?: () => void }): MountHandle {
+  const host = canvas.parentElement ?? canvas;
+  const width = host.clientWidth || 800;
+  const height = host.clientHeight || 600;
+
+  const renderer = new WebGLRenderer({ canvas, antialias: true });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+  renderer.setSize(width, height, false);
+
+  const scene = new Scene();
+  const camera = new Camera();
+
+  const pr = renderer.getPixelRatio();
+  const mat = new ShaderMaterial({
+    vertexShader: VERT,
+    fragmentShader: SHADER_FRAG[cfg.shader!] ?? GRADIENT,
+    uniforms: {
+      iTime: { value: 6.0 },
+      iResolution: { value: new Vector2(width * pr, height * pr) },
+    },
+  });
+  const geo = new PlaneGeometry(2, 2);
+  scene.add(new Mesh(geo, mat));
+
+  let raf = 0, visible = true, firstFrame = true;
+  const start = performance.now();
+
+  function resize() {
+    const w = host.clientWidth || width, h = host.clientHeight || height;
+    renderer.setSize(w, h, false);
+    const p = renderer.getPixelRatio();
+    mat.uniforms.iResolution.value.set(w * p, h * p);
+  }
+  function frame() {
+    mat.uniforms.iTime.value = 6.0 + (performance.now() - start) / 1000;
+    renderer.render(scene, camera);
+    if (firstFrame) { firstFrame = false; opts.onReady?.(); window.dispatchEvent(new Event("three-ready")); }
+    if (visible) { raf = requestAnimationFrame(frame); } else { raf = 0; }
+  }
+
+  const io = new IntersectionObserver((entries) => {
+    visible = entries[0]?.isIntersecting ?? true;
+    if (visible && !raf) raf = requestAnimationFrame(frame);
+  });
+  io.observe(host);
+  const onVis = () => {
+    if (document.visibilityState === "hidden") { cancelAnimationFrame(raf); raf = 0; }
+    else if (visible && !raf) { raf = requestAnimationFrame(frame); }
+  };
+  document.addEventListener("visibilitychange", onVis);
+  window.addEventListener("resize", resize);
+  raf = requestAnimationFrame(frame);
+
+  return {
+    dispose() {
+      cancelAnimationFrame(raf);
+      io.disconnect();
+      document.removeEventListener("visibilitychange", onVis);
+      window.removeEventListener("resize", resize);
+      geo.dispose();
+      mat.dispose();
+      renderer.dispose();
+    },
+  };
+}
 
 function makeGeometry(kind: GeometryKind, radius: number, segments: number): BufferGeometry {
   switch (kind) {
@@ -118,6 +263,7 @@ function particleField(cfg: SceneConfig): Points {
 
 export function mount(canvas: HTMLCanvasElement, spec: SceneSpec, opts: { onReady?: () => void } = {}): MountHandle {
   const cfg = buildSceneConfig(spec);
+  if (cfg.shader) return mountShader(canvas, cfg, opts);
   const useBloom = cfg.materialKind === "emissive";
   const host = canvas.parentElement ?? canvas;
   const width = host.clientWidth || 800;
