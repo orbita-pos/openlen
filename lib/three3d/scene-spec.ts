@@ -7,11 +7,13 @@ const LOOKS = ["studio", "soft", "dramatic", "neutral"] as const;
 const FRAMINGS = ["centered", "offset", "wide"] as const;
 const PRESETS = ["background", "accent", "divider"] as const;
 const BACKGROUNDS = ["transparent", "color", "gradient"] as const;
+export const SHADER_VARIANTS = ["gradient", "fluid", "aurora"] as const;
 
 export type GeometryKind = (typeof GEOMETRY_KINDS)[number];
 export type MaterialKind = (typeof MATERIAL_KINDS)[number];
 export type MotionKind = (typeof MOTION_KINDS)[number];
 export type Look = (typeof LOOKS)[number];
+export type ShaderVariant = (typeof SHADER_VARIANTS)[number];
 
 const unit = (def: number) => z.number().catch(def).transform((n) => Math.min(1, Math.max(0, n)));
 const enumWithDefault = <T extends readonly [string, ...string[]]>(vals: T, def: T[number]) =>
@@ -46,6 +48,7 @@ const SceneSpecSchema = z.object({
   look: enumWithDefault(LOOKS, "soft"),
   camera: z.object({ framing: enumWithDefault(FRAMINGS, "centered") }).catch({ framing: "centered" }),
   background: enumWithDefault(BACKGROUNDS, "transparent"),
+  shader: z.enum(SHADER_VARIANTS).optional().catch(undefined),
 });
 
 export type SceneSpec = z.infer<typeof SceneSpecSchema>;
@@ -83,6 +86,7 @@ const StrictSchema = z.object({
   look: z.enum(LOOKS),
   camera: z.object({ framing: z.enum(FRAMINGS) }),
   background: z.enum(BACKGROUNDS),
+  shader: z.enum(SHADER_VARIANTS).optional(),
 }).strict();
 
 export function parseSceneSpecStrict(input: unknown): { ok: true; value: SceneSpec } | { ok: false; errors: string[] } {

@@ -41,4 +41,14 @@ describe("backgroundCss", () => {
     expect(css).toMatch(/#0a0e2a|#1a0e3a/); // deep navy
     expect(css).not.toMatch(/#f7|#ef/); // NOT a light glass base
   });
+  it("shader spec returns the dark base gradient (contains #0a0a16)", () => {
+    const css = backgroundCss({ ...SAMPLE_SPEC, shader: "fluid", background: "gradient" });
+    expect(css).toContain("#0a0a16");
+    expect(css).not.toMatch(/#0a0e2a|#1a0e3a/); // not iridescent navy
+    expect(css).not.toMatch(/#f7|#ef/); // not glass light base
+  });
+  it("shader spec with background:transparent still returns null (transparent wins)", () => {
+    const css = backgroundCss({ ...SAMPLE_SPEC, shader: "aurora", background: "transparent" });
+    expect(css).toBeNull();
+  });
 });

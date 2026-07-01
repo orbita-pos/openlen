@@ -1,4 +1,4 @@
-import type { SceneSpec, Look } from "../scene-spec";
+import type { SceneSpec, Look, ShaderVariant } from "../scene-spec";
 
 export interface LightSpec {
   color: string;
@@ -25,6 +25,7 @@ export interface SceneConfig {
   exposure: number;
   envIntensity: number;
   accentColor: string;
+  shader?: ShaderVariant;
 }
 
 const DEFAULT_COLOR = "#7C5CFF";
@@ -73,5 +74,6 @@ export function buildSceneConfig(spec: SceneSpec): SceneConfig {
     exposure: EXPOSURE[spec.look],
     envIntensity: ENV_INTENSITY[spec.look],
     accentColor: spec.material.colors[0] ?? DEFAULT_COLOR,
+    shader: spec.shader,
   };
 }

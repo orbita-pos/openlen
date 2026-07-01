@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { coerceSceneSpec, parseSceneSpecStrict, SAMPLE_SPEC } from "./scene-spec";
+import { coerceSceneSpec, parseSceneSpecStrict, SAMPLE_SPEC, SHADER_VARIANTS } from "./scene-spec";
 
 describe("coerceSceneSpec", () => {
   it("returns a full valid spec from empty input", () => {
@@ -38,6 +38,25 @@ describe("coerceSceneSpec", () => {
       expect(s.version).toBe(1);
       expect(s.geometry.kind).toBe("sphere");
     }
+  });
+
+  it("preserves shader:'aurora' through coerce", () => {
+    const s = coerceSceneSpec({ ...SAMPLE_SPEC, shader: "aurora" });
+    expect(s.shader).toBe("aurora");
+  });
+
+  it("spec without shader has shader === undefined", () => {
+    const s = coerceSceneSpec(SAMPLE_SPEC);
+    expect(s.shader).toBeUndefined();
+  });
+
+  it("coerces an invalid shader value to undefined without throwing", () => {
+    const s = coerceSceneSpec({ ...SAMPLE_SPEC, shader: "lava" });
+    expect(s.shader).toBeUndefined();
+  });
+
+  it("exports SHADER_VARIANTS with the 3 expected values", () => {
+    expect(SHADER_VARIANTS).toEqual(["gradient", "fluid", "aurora"]);
   });
 });
 
