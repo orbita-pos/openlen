@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { GOLDEN } from "@/lib/three3d/golden-specs";
-import type { MaterialKind } from "@/lib/three3d/scene-spec";
+import type { MaterialKind, ShaderVariant } from "@/lib/three3d/scene-spec";
+import { SHADER_VARIANTS } from "@/lib/three3d/scene-spec";
 import { Loader, Sparkles } from "../icons";
 import { useToast } from "../toast";
 
@@ -28,6 +29,15 @@ const CHIPS: { label: string; value: MaterialKind }[] = [
   { label: "Degradado", value: "gradient" },
 ];
 
+const SHADER_CHIPS: { label: string; value: ShaderVariant }[] = [
+  { label: "Gradiente", value: "gradient" },
+  { label: "Fluido", value: "fluid" },
+  { label: "Aurora", value: "aurora" },
+];
+
+// Base spec for shader backgrounds (golden: "un fondo degradado animado")
+const SHADER_BASE = GOLDEN[GOLDEN.length - 1].spec;
+
 export function ThreePanel({
   currentProjectId,
   scene3d,
@@ -44,13 +54,16 @@ export function ThreePanel({
   const [inlineError, setInlineError] = useState<string | null>(null);
   const [draft, setDraft] = useState<unknown>(null);
   const [provider, setProvider] = useState<string | null>(null);
+  const [shaderVariant, setShaderVariant] = useState<ShaderVariant | null>(null);
 
   // Seed from existing scene on mount / when scene3d changes.
   useEffect(() => {
     if (scene3d?.spec) {
       setDraft(scene3d.spec);
       const s = scene3d.spec as Record<string, unknown>;
-      if (s?.material && typeof s.material === "object") {
+      if (typeof s?.shader === "string" && (SHADER_VARIANTS as readonly string[]).includes(s.shader)) {
+        setShaderVariant(s.shader as ShaderVariant);
+      } else if (s?.material && typeof s.material === "object") {
         const mat = s.material as Record<string, unknown>;
         if (typeof mat.kind === "string") {
           const k = mat.kind as MaterialKind;
@@ -105,6 +118,15 @@ export function ThreePanel({
     }
   };
 
+  const handleShaderSelect = (v: ShaderVariant | null) => {
+    setShaderVariant(v);
+    if (v === null) {
+      setDraft(null);
+    } else {
+      setDraft({ ...SHADER_BASE, shader: v });
+    }
+  };
+
   const isMock = provider === "mock";
   const hasDraft = draft !== null;
 
@@ -130,6 +152,7 @@ export function ThreePanel({
                   setDescribe(g.brief);
                   const mat = g.spec.material.kind;
                   setRegister(mat);
+                  setShaderVariant(null);
                 }}
                 className="text-left rounded-lg ring-1 ring-[color:var(--border)] bg-[color:var(--bg)] px-2 py-1.5 hover:bg-hover transition"
               >
@@ -142,30 +165,17 @@ export function ThreePanel({
           </div>
         </div>
 
-        {/* Describe */}
+        {/* Fondo animado — shader picker */}
         <div>
-          <label className="block">
-            <span className="text-[11px] font-medium fg block mb-1">Descripción</span>
-            <textarea
-              className="w-full rounded-md px-2.5 py-2 text-[12px] bg-[color:var(--bg)] ring-1 ring-[color:var(--border)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-strong)] resize-none min-h-[60px]"
-              placeholder="una esfera holográfica que gira lento"
-              value={describe}
-              onChange={(e) => setDescribe(e.target.value)}
-            />
-          </label>
-        </div>
-
-        {/* Register chips */}
-        <div>
-          <div className="text-[11px] font-medium fg mb-1.5">Material</div>
+          <div className="text-[11px] font-medium fg mb-1.5">Fondo animado</div>
           <div className="flex flex-wrap gap-1">
-            {CHIPS.map((c) => (
+            {SHADER_CHIPS.map((c) => (
               <button
                 key={c.value}
                 type="button"
-                onClick={() => setRegister(c.value)}
+                onClick={() => handleShaderSelect(shaderVariant === c.value ? null : c.value)}
                 className={`h-6 px-2 rounded-md text-[10.5px] font-medium transition ring-1 ${
-                  register === c.value
+                  shaderVariant === c.value
                     ? "bg-[var(--accent-strong)] text-white ring-transparent"
                     : "bg-elev fg-muted ring-[color:var(--border)] hover:fg"
                 }`}
@@ -174,23 +184,69 @@ export function ThreePanel({
               </button>
             ))}
           </div>
+          {shaderVariant && (
+            <p className="text-[10px] fg-faint mt-1">Selecciona Aplicar para activarlo.</p>
+          )}
         </div>
 
-        {/* Toggles */}
-        <div className="space-y-2">
-          <Toggle
-            label="Flotar"
-            hint="La escena flota y rota suavemente"
-            value={flotar}
-            onChange={setFlotar}
-          />
-          <Toggle
-            label="Usar mi marca"
-            hint={accent ? `Aplica tu color ${accent}` : "Sin color de marca detectado"}
-            value={brandMatch}
-            onChange={setBrandMatch}
-            disabled={!accent}
-          />
+        {/* Geometry section — de-emphasized when shader active */}
+        <div className={shaderVariant ? "opacity-40 pointer-events-none" : undefined}>
+          {/* Describe */}
+          <div className="mb-3">
+            <label className="block">
+              <span className="text-[11px] font-medium fg block mb-1">Descripción</span>
+              <textarea
+                className="w-full rounded-md px-2.5 py-2 text-[12px] bg-[color:var(--bg)] ring-1 ring-[color:var(--border)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-strong)] resize-none min-h-[60px]"
+                placeholder="una esfera holográfica que gira lento"
+                value={describe}
+                onChange={(e) => setDescribe(e.target.value)}
+              />
+            </label>
+          </div>
+
+          {/* Register chips */}
+          <div className="mb-3">
+            <div className="text-[11px] font-medium fg mb-1.5">Material</div>
+            <div className="flex flex-wrap gap-1">
+              {CHIPS.map((c) => (
+                <button
+                  key={c.value}
+                  type="button"
+                  onClick={() => {
+                    setRegister(c.value);
+                    if (shaderVariant !== null) {
+                      setShaderVariant(null);
+                      setDraft(null);
+                    }
+                  }}
+                  className={`h-6 px-2 rounded-md text-[10.5px] font-medium transition ring-1 ${
+                    register === c.value && !shaderVariant
+                      ? "bg-[var(--accent-strong)] text-white ring-transparent"
+                      : "bg-elev fg-muted ring-[color:var(--border)] hover:fg"
+                  }`}
+                >
+                  {c.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Toggles */}
+          <div className="space-y-2">
+            <Toggle
+              label="Flotar"
+              hint="La escena flota y rota suavemente"
+              value={flotar}
+              onChange={setFlotar}
+            />
+            <Toggle
+              label="Usar mi marca"
+              hint={accent ? `Aplica tu color ${accent}` : "Sin color de marca detectado"}
+              value={brandMatch}
+              onChange={setBrandMatch}
+              disabled={!accent}
+            />
+          </div>
         </div>
 
         {/* Inline error */}
@@ -202,19 +258,21 @@ export function ThreePanel({
 
         {/* Actions */}
         <div className="space-y-1.5 pt-1">
-          <button
-            type="button"
-            onClick={() => void handleGenerate()}
-            disabled={generating || !currentProjectId || !describe.trim()}
-            className="w-full h-8 rounded-md text-[11.5px] font-semibold text-white bg-[var(--accent-strong)] hover:brightness-105 transition disabled:opacity-50 inline-flex items-center justify-center gap-1.5"
-          >
-            {generating ? (
-              <Loader size={12} className="animate-spin" />
-            ) : (
-              <Sparkles size={12} />
-            )}
-            {generating ? "Generando…" : isMock ? "Vista previa · gratis" : "Generar · IA · 3 cr"}
-          </button>
+          {!shaderVariant && (
+            <button
+              type="button"
+              onClick={() => void handleGenerate()}
+              disabled={generating || !currentProjectId || !describe.trim()}
+              className="w-full h-8 rounded-md text-[11.5px] font-semibold text-white bg-[var(--accent-strong)] hover:brightness-105 transition disabled:opacity-50 inline-flex items-center justify-center gap-1.5"
+            >
+              {generating ? (
+                <Loader size={12} className="animate-spin" />
+              ) : (
+                <Sparkles size={12} />
+              )}
+              {generating ? "Generando…" : isMock ? "Vista previa · gratis" : "Generar · IA · 3 cr"}
+            </button>
+          )}
 
           {hasDraft && (
             <button
