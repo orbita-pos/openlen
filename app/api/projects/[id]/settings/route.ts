@@ -325,7 +325,9 @@ export async function PATCH(
         if (s.spec && typeof s.spec === 'object' && 'modelUrl' in (s.spec as object)) {
           const modelUrl = (s.spec as any).modelUrl;
           if (typeof modelUrl === 'string' && modelUrl !== '') {
-            const modelsHostEnv = process.env.R2_MODELS_PUBLIC_URL ?? process.env.MODELS_PUBLIC_URL ?? 'https://models.openlen.com';
+            // Default matches the models storage default (Option B: reuse the
+            // curated-images bucket/domain). MUST stay in sync with lib/storage/models.ts.
+            const modelsHostEnv = process.env.R2_MODELS_PUBLIC_URL ?? process.env.MODELS_PUBLIC_URL ?? 'https://images.openlen.com';
             let allowedOrigin: string | null = null;
             try { allowedOrigin = new URL(modelsHostEnv).origin; } catch { /* relative base — only relative modelUrls allowed */ }
             const isRelative = modelUrl.startsWith('/');

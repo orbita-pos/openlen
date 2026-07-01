@@ -40,8 +40,12 @@ function buildStorage(): StorageAdapter {
       accountId: R2_ACCOUNT_ID,
       accessKey: R2_ACCESS_KEY,
       secretKey: R2_SECRET_KEY,
-      bucket: R2_MODELS_BUCKET || "openlen-models",
-      publicUrlBase: R2_MODELS_PUBLIC_URL || "https://models.openlen.com",
+      // Default to the existing curated-images bucket/domain (GLBs live under a
+      // `models/` key prefix) so no new R2 bucket/DNS is needed — only a CORS
+      // rule on it (GLTFLoader fetches the GLB cross-origin). Override with
+      // R2_MODELS_BUCKET / R2_MODELS_PUBLIC_URL for a dedicated bucket.
+      bucket: R2_MODELS_BUCKET || "openlen-images",
+      publicUrlBase: R2_MODELS_PUBLIC_URL || "https://images.openlen.com",
     });
   }
 

@@ -444,9 +444,11 @@ export const templates = pgTable(
   ],
 );
 
-// Curated GLB model catalog — 3D assets served from R2 (`openlen-models`
-// bucket). Mirrors the `templates` table structure: metadata here, binary
-// body keyed as `models/<id>-<contentHash>.glb` in object storage.
+// Curated GLB model catalog — 3D assets served from R2 (defaults to the
+// `openlen-images` bucket / images.openlen.com under a `models/` key prefix;
+// override via R2_MODELS_BUCKET / R2_MODELS_PUBLIC_URL for a dedicated bucket).
+// Mirrors the `templates` table structure: metadata here, binary body keyed as
+// `models/<id>-<contentHash>.glb` in object storage.
 //
 // The 'id' is the human-readable slug (e.g. 'glass-sphere') used as the
 // primary key and storage-key prefix. Renames require a manual SQL update.

@@ -4,18 +4,26 @@ Everything is merged into `master` and builds clean. This is what's left to make
 live. Steps marked **(you)** need Cloudflare/env access; the rest are automated or a
 single command.
 
-## A. Cloudflare / R2 — curated 3D models  **(you)**
-The model catalog stores GLBs on R2 and the runtime + poster fetch them cross-origin.
-1. **Create R2 bucket** `openlen-models` (same account as `openlen-templates`/`openlen-images`).
-2. **Public access + custom domain**: map `models.openlen.com` → the bucket (CNAME + R2 public domain), like `templates.openlen.com`.
-3. **CORS on the bucket** — allow `GET` from your published origins:
-   - `https://openlen.com`, `https://*.openlen.com` (published pages fetch the GLB live).
-   - The poster bake runs on the box with `--disable-web-security` (already wired in `capture-screenshot.ts`), so it does **not** need a `null`-origin CORS entry.
-   - Without CORS, live model scenes show only the poster (the gesture-load silently fails); shader + geometry scenes are unaffected.
+## A. Cloudflare / R2 — CORS on the images bucket  **(you)** — Option B (default)
+The model GLBs default to the **existing `openlen-images` bucket** (`images.openlen.com`)
+under a `models/` key prefix — **no new bucket or DNS needed** (R2 account + this bucket +
+DNS already exist and serve images/motion). The ONLY thing to add:
+- **CORS on the `openlen-images` bucket** — allow `GET` from `https://openlen.com` +
+  `https://*.openlen.com`. `GLTFLoader` fetches the GLB with `fetch()` (needs CORS), unlike
+  `<img>`/`<video>` which do NOT use CORS — so adding this rule does **not** affect the
+  existing images or the motion videos. Without it, live model scenes show only the poster
+  (gesture-load fails silently); shader + geometry scenes are unaffected.
+- The poster bake runs on the box with `--disable-web-security` (wired in
+  `capture-screenshot.ts`), so it does not need a `null`-origin CORS entry.
 
-## B. Env — Hetzner box + `.env.local`  **(you)**
+Alternative (dedicated bucket): create `openlen-models` + `models.openlen.com` DNS + set the
+env in B. Not required.
+
+## B. Env — Hetzner box  **(you)**
 `R2_ACCOUNT_ID` / `R2_ACCESS_KEY` / `R2_SECRET_KEY` are account-level and already set.
-Add (only if you don't use the defaults — the defaults already match `openlen-models`/`models.openlen.com`):
+**Nothing to add for Option B** — the code defaults to `openlen-images` /
+`https://images.openlen.com` (both the storage adapter AND the SSRF guard). Only set these if
+you chose the dedicated-bucket alternative:
 ```
 R2_MODELS_BUCKET=openlen-models
 R2_MODELS_PUBLIC_URL=https://models.openlen.com
