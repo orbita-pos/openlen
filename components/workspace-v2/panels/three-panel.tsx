@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { GOLDEN } from "@/lib/three3d/golden-specs";
-import type { MaterialKind, SceneSpec, ShaderVariant } from "@/lib/three3d/scene-spec";
-import { SAMPLE_SPEC, SHADER_VARIANTS } from "@/lib/three3d/scene-spec";
+import type { MaterialKind, ShaderVariant } from "@/lib/three3d/scene-spec";
+import { SAMPLE_SPEC, SHADER_VARIANTS, coerceSceneSpec } from "@/lib/three3d/scene-spec";
 import { Loader, Sparkles } from "../icons";
 import { useToast } from "../toast";
 import { useModels } from "../use-models";
@@ -374,10 +374,10 @@ export function ThreePanel({
             <button
               type="button"
               onClick={() => {
-                const base = draft as SceneSpec | null;
-                const spec = brandMatch && accent && base
-                  ? { ...base, material: { ...base.material, colors: [accent, ...base.material.colors.slice(1)], accentLinked: true } }
-                  : draft;
+                const coerced = coerceSceneSpec(draft);
+                const spec = brandMatch && accent && /^#[0-9a-fA-F]{6}$/.test(accent)
+                  ? { ...coerced, material: { ...coerced.material, colors: [accent, ...coerced.material.colors.slice(1)], accentLinked: true } }
+                  : coerced;
                 onApplyScene3d({ enabled: true, spec });
               }}
               className="w-full h-8 rounded-md text-[11.5px] font-semibold fg bg-elev ring-1 ring-[color:var(--border)] hover:bg-hover transition inline-flex items-center justify-center"
