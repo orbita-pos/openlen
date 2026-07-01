@@ -444,6 +444,61 @@ export const templates = pgTable(
   ],
 );
 
+// Curated GLB model catalog — 3D assets served from R2 (`openlen-models`
+// bucket). Mirrors the `templates` table structure: metadata here, binary
+// body keyed as `models/<id>-<contentHash>.glb` in object storage.
+//
+// The 'id' is the human-readable slug (e.g. 'glass-sphere') used as the
+// primary key and storage-key prefix. Renames require a manual SQL update.
+export const models = pgTable(
+  "models",
+  {
+    id: text("id").primaryKey(), // slug — 'glass-sphere', 'chrome-bolt', etc.
+    name: text("name").notNull(),
+    family: text("family").notNull(), // 'product' | 'decorative' | 'prop' | 'character' | 'mechanical'
+    author: text("author").notNull().default("OpenLen"),
+    pitch: text("pitch").notNull(),
+    description: text("description").notNull(),
+
+    // Reference to the GLB binary in object storage.
+    storageKey: text("storageKey").notNull(),
+    storageUrl: text("storageUrl").notNull(), // resolved public URL, cached
+    contentHash: text("contentHash").notNull(), // sha256 first 12 chars
+    size: integer("size").notNull(),
+
+    // Optional Gemini-generated scene spec (lights, camera, env, material
+    // overrides). Stored inline so the 3D runtime can load it in one DB row
+    // without a second storage fetch.
+    sceneSpec: jsonb("sceneSpec").$type<Record<string, unknown>>(),
+
+    // Searchable tags (e.g. ['glass', 'sphere', 'transparent']).
+    tags: text("tags").array().notNull().default(sqlOp`'{}'::text[]`),
+
+    // SPDX license. 'cc0' = public domain; 'cc-by-4.0' = attribution.
+    license: text("license").notNull().default("cc0"),
+
+    // Pre-rendered preview images (same bucket as GLB). Null until the
+    // thumbnailing script has run for this row.
+    thumbnailUrl: text("thumbnailUrl"), // WebP viewport card
+    tileUrl: text("tileUrl"),           // AVIF gallery tile (~600px)
+    previewImageUrl: text("previewImageUrl"), // Full-size reference render
+
+    // Marks top-tier models surfaced first in the picker. Flip via DB or CLI.
+    featured: boolean("featured").notNull().default(false),
+
+    // Lifecycle. 'published' shows in picker; 'draft' is in-progress;
+    // 'archived' is soft-deleted (R2 object still exists for rollback).
+    status: text("status").notNull().default("published"),
+
+    createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
+    updatedAt: timestamp("updatedAt", { mode: "date" }).notNull().defaultNow(),
+    publishedAt: timestamp("publishedAt", { mode: "date" }),
+  },
+  (table) => [
+    index("models_status_family_idx").on(table.status, table.family),
+  ],
+);
+
 // Section library — curated, re-themeable HTML FRAGMENTS (a single
 // <section>/<header>/<footer>) inserted into existing user pages. Mirrors the
 // `templates` storage pattern (body in object storage under a `sections/`
