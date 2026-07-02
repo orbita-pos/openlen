@@ -7,7 +7,7 @@ import { backgroundCss } from "../three3d/background";
 import { findBackdropTarget, mergeStyle, withId } from "../three3d/backdrop-placement";
 // readRuntimeJs is native-free (pure fs.readFileSync). Imported here so this
 // module stays native-free and vitest can load it without a .node binary.
-import { readRuntimeJs } from "./scene-host";
+import { readRuntimeJs, readRuntimeLiteJs } from "./scene-host";
 
 // Inline gesture bootstrap. Auto-hashed by the CSP seal (no nonce needed).
 // On the "Ver en 3D" tap (the gesture), and only if capability gates pass,
@@ -187,9 +187,13 @@ export async function bake3dScene(params: {
   const posterName = `scene-${posterHash}.avif`;
   writeFileSync(join(assetsDir, posterName), posterBytes);
 
-  const runtimeJs = readRuntimeJs();
+  // Shader-only scenes ship the raw-WebGL lite bundle (~10KB) instead of the
+  // full three.js runtime; model scenes need three, so they stay on the full
+  // bundle. Posters always render via the full runtime (buildSceneHostHtml).
+  const useLite = !!spec.shader && !spec.modelUrl && process.env.OPENLEN_3D_LITE !== "0";
+  const runtimeJs = useLite ? readRuntimeLiteJs() : readRuntimeJs();
   const runtimeHash = createHash("sha256").update(runtimeJs).digest("hex").slice(0, 12);
-  const runtimeName = `openlen-3d-${runtimeHash}.js`;
+  const runtimeName = `openlen-3d-${useLite ? "lite-" : ""}${runtimeHash}.js`;
   writeFileSync(join(assetsDir, runtimeName), runtimeJs);
 
   return injectSceneMarkup(params.html, {

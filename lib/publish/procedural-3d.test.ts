@@ -183,6 +183,54 @@ describe("bake3dScene", () => {
   });
 });
 
+describe("bake3dScene — runtime selection (lite vs full, Task 12)", () => {
+  const fakePoster = async () => Buffer.from("FAKEAVIF");
+
+  it("shader-only scene bakes the lite runtime bundle", async () => {
+    const subDir = mkdtempSync(join(tmpdir(), "ol3d-"));
+    const html = await bake3dScene({
+      html: "<html><head></head><body></body></html>",
+      subDir,
+      spec: { ...SAMPLE_SPEC, shader: "aurora" },
+      renderPoster: fakePoster,
+    });
+    expect(html).toContain("/assets/openlen-3d-lite-");
+    const assets = readdirSync(join(subDir, "assets"));
+    expect(assets.some((f) => f.startsWith("openlen-3d-lite-") && f.endsWith(".js"))).toBe(true);
+  });
+
+  it("model scene bakes the full runtime (never lite)", async () => {
+    const subDir = mkdtempSync(join(tmpdir(), "ol3d-"));
+    const html = await bake3dScene({
+      html: "<html><head></head><body></body></html>",
+      subDir,
+      spec: { ...SAMPLE_SPEC, modelUrl: "https://models.openlen.com/x.glb" },
+      renderPoster: fakePoster,
+    });
+    expect(html).toContain("/assets/openlen-3d-");
+    expect(html).not.toContain("openlen-3d-lite-");
+  });
+
+  it("OPENLEN_3D_LITE=0 forces the full runtime even for a shader-only scene", async () => {
+    const prev = process.env.OPENLEN_3D_LITE;
+    process.env.OPENLEN_3D_LITE = "0";
+    try {
+      const subDir = mkdtempSync(join(tmpdir(), "ol3d-"));
+      const html = await bake3dScene({
+        html: "<html><head></head><body></body></html>",
+        subDir,
+        spec: { ...SAMPLE_SPEC, shader: "aurora" },
+        renderPoster: fakePoster,
+      });
+      expect(html).not.toContain("openlen-3d-lite-");
+      expect(html).toContain("/assets/openlen-3d-");
+    } finally {
+      if (prev === undefined) delete process.env.OPENLEN_3D_LITE;
+      else process.env.OPENLEN_3D_LITE = prev;
+    }
+  });
+});
+
 describe("injectSceneMarkup — context-loss recovery (Task 7)", () => {
   const backgroundOut = injectSceneMarkup(
     '<html><head></head><body><section id="hero"><h1>Hi</h1></section></body></html>',

@@ -4,9 +4,16 @@ import type { SceneSpec } from "../three3d/scene-spec";
 import { backgroundCss } from "../three3d/background";
 
 const RUNTIME_PATH = join(process.cwd(), "lib/three3d/runtime/dist/openlen-3d.js");
+const RUNTIME_LITE_PATH = join(process.cwd(), "lib/three3d/runtime/dist/openlen-3d-lite.js");
 
 export function readRuntimeJs(): string {
   return readFileSync(RUNTIME_PATH, "utf8");
+}
+
+// Shader-only pages bake this raw-WebGL bundle instead of the full three.js
+// runtime (~10KB vs ~155KB-gz). Same window.OpenLen3D.mount contract.
+export function readRuntimeLiteJs(): string {
+  return readFileSync(RUNTIME_LITE_PATH, "utf8");
 }
 
 export function buildSceneHostHtml(
