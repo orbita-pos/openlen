@@ -343,14 +343,19 @@ export function ThreePanel({
               value={flotar}
               onChange={setFlotar}
             />
-            <Toggle
-              label="Usar mi marca"
-              hint={accent ? `Aplica tu color ${accent}` : "Sin color de marca detectado"}
-              value={brandMatch}
-              onChange={setBrandMatch}
-              disabled={!accent}
-            />
           </div>
+        </div>
+
+        {/* Marca — drives the model accent lights too, so it must stay
+            interactive when a model is selected (outside the muted section). */}
+        <div>
+          <Toggle
+            label="Usar mi marca"
+            hint={accent ? `Aplica tu color ${accent}` : "Sin color de marca detectado"}
+            value={brandMatch}
+            onChange={setBrandMatch}
+            disabled={!accent}
+          />
         </div>
 
         {/* Inline error */}

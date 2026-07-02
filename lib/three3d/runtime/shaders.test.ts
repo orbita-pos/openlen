@@ -1,4 +1,5 @@
 import { describe, it, expect } from "vitest";
+import { SHADER_VARIANTS } from "../scene-spec";
 import { SHADER_VERT, shaderFragment, SHADER_VARIANT_KEYS } from "./shaders";
 
 const EXPECTED_KEYS = ["gradient", "fluid", "aurora", "plasma", "ember", "dots", "silk"];
@@ -7,6 +8,9 @@ describe("SHADER_VARIANT_KEYS", () => {
   it("has all 7 shader variants", () => {
     expect(SHADER_VARIANT_KEYS.length).toBe(7);
     for (const k of EXPECTED_KEYS) expect(SHADER_VARIANT_KEYS).toContain(k);
+  });
+  it("covers every SceneSpec shader variant (no enum↔fragment drift)", () => {
+    for (const v of SHADER_VARIANTS) expect(SHADER_VARIANT_KEYS).toContain(v);
   });
 });
 
