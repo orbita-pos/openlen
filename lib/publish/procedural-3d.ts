@@ -163,7 +163,20 @@ export function injectSceneMarkup(html: string, opts: SceneInjectOptions): strin
   return idx === -1 ? html + block : html.slice(0, idx) + block + html.slice(idx);
 }
 
-export type PosterRenderer = (spec: SceneSpec) => Promise<Buffer>;
+export type PosterRenderer = (
+  spec: SceneSpec,
+  opts?: { width: number; height: number },
+) => Promise<Buffer>;
+
+// Backdrop posters render WIDER than 16:9: they are scaled by HEIGHT and
+// centered (no object-fit zoom-jump vs the live canvas), so on viewports wider
+// than the poster the sides would show a hard seam against the CSS fallback
+// background. 2464×900 (~24:9) covers ultra-wide heroes, and since the 3D
+// camera has a vertical FOV the extra lateral framing matches what the live
+// canvas shows at those aspect ratios.
+const BACKDROP_POSTER_W = 2464;
+const POSTER_H = 900;
+const INLINE_POSTER_W = 1600;
 
 export async function bake3dScene(params: {
   html: string;
@@ -180,9 +193,12 @@ export async function bake3dScene(params: {
   // without a .node binary (tests inject a fake renderPoster).
   const render =
     params.renderPoster ??
-    (async (s: SceneSpec) => (await import("./scene-poster")).renderScenePoster(s));
+    (async (s: SceneSpec, o?: { width: number; height: number }) =>
+      (await import("./scene-poster")).renderScenePoster(s, o));
 
-  const posterBytes = await render(spec);
+  const isBackdrop = spec.preset === "background";
+  const posterW = isBackdrop ? BACKDROP_POSTER_W : INLINE_POSTER_W;
+  const posterBytes = await render(spec, { width: posterW, height: POSTER_H });
   const posterHash = createHash("sha256").update(posterBytes).digest("hex").slice(0, 12);
   const posterName = `scene-${posterHash}.avif`;
   writeFileSync(join(assetsDir, posterName), posterBytes);
@@ -200,5 +216,7 @@ export async function bake3dScene(params: {
     spec,
     posterUrl: `/assets/${posterName}`,
     runtimeUrl: `/assets/${runtimeName}`,
+    width: posterW,
+    height: POSTER_H,
   });
 }
