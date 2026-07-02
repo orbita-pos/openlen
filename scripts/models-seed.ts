@@ -56,6 +56,7 @@ async function main() {
         glb: prepared,
         license: m.license,
         status: "published",
+        sceneSpec: m.sceneSpec,
       });
       console.log(
         `  ok  ${m.id.padEnd(20)} hash=${record.contentHash} size=${record.size}b`,

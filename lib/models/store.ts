@@ -47,7 +47,7 @@ export interface ModelRecord {
   tags: string[];
   license: string;
   status: ModelStatus;
-  /** Pre-rendered WebP thumbnail URL for the picker cards. Null until
+  /** Pre-rendered AVIF thumbnail URL for the picker cards. Null until
    *  the thumbnailing script has run for this row. */
   thumbnailUrl: string | null;
   /** Small AVIF tile (~600px) for gallery walls. Null until that script runs. */

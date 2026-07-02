@@ -1,5 +1,16 @@
 # Deploy checklist — 3D v2 + curated models + motion
 
+> **v2.1 addendum (2026-07-01).** The premium-polish branch adds: GLB optimization at
+> ingest (meshopt+WebP), auto-thumbnails, brand-accent lights, context-loss recovery,
+> per-model curated presentation, 3 new decoratives + crystal/gyre regens (catalog = 10),
+> and a shader-lite runtime (shader-only pages ship ~8KB instead of three.js; kill-switch
+> `OPENLEN_3D_LITE=0` on the box reverts to the full bundle). Deploy notes:
+> - Re-run `npm run models:seed` after deploying v2.1 — it re-uploads all GLBs
+>   **optimized** (-58% to -75%), generates **thumbnails**, applies curated sceneSpecs,
+>   and adds the 3 new models. Idempotent; old storage objects stay (published pages
+>   keep working).
+> - No new env vars required. No new migration (same `models` table).
+
 Everything is merged into `master` and builds clean. This is what's left to make it
 live. Steps marked **(you)** need Cloudflare/env access; the rest are automated or a
 single command.

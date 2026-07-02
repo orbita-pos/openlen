@@ -330,7 +330,8 @@ export async function PATCH(
             const modelsHostEnv = process.env.R2_MODELS_PUBLIC_URL ?? process.env.MODELS_PUBLIC_URL ?? 'https://images.openlen.com';
             let allowedOrigin: string | null = null;
             try { allowedOrigin = new URL(modelsHostEnv).origin; } catch { /* relative base — only relative modelUrls allowed */ }
-            const isRelative = modelUrl.startsWith('/');
+            // NOT startsWith('//'): protocol-relative URLs are absolute, not relative.
+            const isRelative = modelUrl.startsWith('/') && !modelUrl.startsWith('//');
             if (!isRelative) {
               // No absolute origin configured (relative/dev env) — reject any
               // absolute URL; only relative modelUrls are allowed in that case.
