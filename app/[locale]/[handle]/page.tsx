@@ -7,8 +7,16 @@ export const dynamic = "force-dynamic";
 export default async function ProfilePage({
   params,
 }: { params: Promise<{ handle: string }> }) {
-  const { handle } = await params;
-  if (!handle.startsWith("@")) notFound();
+  const { handle: rawHandle } = await params;
+  // Next serves the dynamic segment URL-encoded, so `/@name` arrives as
+  // "%40name" — decode before the "@" guard (bad %-escapes → 404, not a crash).
+  let handle: string | null;
+  try {
+    handle = decodeURIComponent(rawHandle);
+  } catch {
+    handle = null;
+  }
+  if (!handle || !handle.startsWith("@")) notFound();
   const profile = await getPublicProfile(handle.slice(1));
   if (!profile) notFound();
 
