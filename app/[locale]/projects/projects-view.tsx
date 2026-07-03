@@ -19,6 +19,7 @@ import {
   CheckCircle2,
   ChevronDown,
   ChevronRight,
+  Compass,
   Copy,
   Download,
   ExternalLink,
@@ -653,6 +654,12 @@ function Toolbar({
               </span>
             )}
           </p>
+          <Link
+            href="/explore"
+            className="mt-2 inline-flex items-center gap-1 text-[12.5px] font-medium text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 transition"
+          >
+            <Compass size={12} /> Explore
+          </Link>
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">

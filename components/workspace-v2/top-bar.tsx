@@ -39,6 +39,7 @@ import {
   VolumeX,
   X,
 } from "./icons";
+import { Compass } from "lucide-react";
 import { IconBtn, StatusDot } from "./ui";
 import { useToast } from "./toast";
 import { QRCodeSVG } from "qrcode.react";
@@ -984,6 +985,13 @@ export function TopBar({
         </div>
 
         <span className="hidden md:inline-block h-5 w-px bg-[color:var(--border)] mx-1.5" />
+        <Link
+          href="/explore"
+          className="hidden sm:inline-flex items-center gap-1.5 h-8 px-2.5 rounded-md text-[12px] font-medium fg-muted hover:fg hover:bg-hover transition"
+        >
+          <Compass size={13} />
+          Explore
+        </Link>
         <CreditPill />
         <LocaleSwitcher />
         <IconBtn
