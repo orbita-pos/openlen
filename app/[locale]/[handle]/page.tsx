@@ -34,7 +34,7 @@ export default async function ProfilePage({
 
   return (
     <main className="min-h-dvh bg-[#0a0a0b] text-neutral-100">
-      <BackNav title={displayName} icon={<User size={16} />} backHref="/explore" backLabel="Back to Explore" />
+      <BackNav title={displayName} icon={<User size={16} />} />
       <div className="mx-auto flex max-w-6xl flex-col gap-10 px-5 pb-16 pt-10 sm:pt-12 lg:flex-row lg:gap-14">
         {/* Identity sidebar */}
         <aside className="lg:w-72 lg:shrink-0">
