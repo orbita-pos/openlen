@@ -40,8 +40,13 @@ export async function setUserHandle(
       .update(schema.users)
       .set({ handle: v.handle })
       .where(eq(schema.users.id, userId));
-  } catch {
-    return { ok: false, reason: "taken" };
+  } catch (err) {
+    // Unique-index violation on users.handle → the handle is taken. Any other
+    // error is a real failure and must surface, not masquerade as "taken".
+    if (err && typeof err === "object" && "code" in err && (err as { code?: string }).code === "23505") {
+      return { ok: false, reason: "taken" };
+    }
+    throw err;
   }
   return { ok: true, handle: v.handle };
 }
