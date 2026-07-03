@@ -44,6 +44,13 @@ import { getProfile } from "@/lib/business-profiles/store";
 
 export type ProjectStatus = "draft" | "published" | "archived";
 
+/** Community listing axis (schema.projects.visibility — plain text column,
+ *  so DB reads come back as `string`; narrow with asVisibility below).
+ *  'private' = not listed anywhere; 'public' = shown in /explore + the
+ *  owner's /@handle; 'hidden' = pulled by an admin (owner keeps the
+ *  project, it just stops listing — the owner can't toggle back). */
+export type ProjectVisibility = "public" | "private" | "hidden";
+
 /** Stable fingerprint of the site pages as they'd publish (slug-sorted,
  *  empty-html pages excluded — mirrors pagesForPublish). "" = zero pages.
  *  Stored as projects.publishedPagesHash at publish; compared at read time
@@ -79,6 +86,7 @@ export interface ProjectSummary {
   id: string;
   title: string;
   status: ProjectStatus;
+  visibility: ProjectVisibility;
   tags: string[];
   deployUrl: string | null;
   thumbnailUrl: string | null;
@@ -139,6 +147,11 @@ function asStatus(raw: string): ProjectStatus {
   return "draft";
 }
 
+function asVisibility(raw: string): ProjectVisibility {
+  if (raw === "public" || raw === "hidden") return raw;
+  return "private";
+}
+
 export interface CreateProjectInput {
   /** Publish-ready HTML — the project's source of truth. */
   html: string;
@@ -195,6 +208,7 @@ export async function listProjects(userId: string): Promise<ProjectSummary[]> {
       id: schema.projects.id,
       title: schema.projects.title,
       status: schema.projects.status,
+      visibility: schema.projects.visibility,
       tags: schema.projects.tags,
       deployUrl: schema.projects.deployUrl,
       thumbnailUrl: schema.projects.thumbnailUrl,
@@ -222,6 +236,7 @@ export async function listProjects(userId: string): Promise<ProjectSummary[]> {
       id: row.id,
       title: row.title,
       status: asStatus(row.status),
+      visibility: asVisibility(row.visibility),
       tags: row.tags,
       deployUrl: derivedDeploy ?? row.deployUrl,
       thumbnailUrl: row.thumbnailUrl,
@@ -316,6 +331,7 @@ export async function getProject(
     userId: row.userId,
     title: row.title,
     status: asStatus(row.status),
+    visibility: asVisibility(row.visibility),
     tags: row.tags,
     deployUrl: derivedDeploy ?? row.deployUrl,
     brief: row.brief,

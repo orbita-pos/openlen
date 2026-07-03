@@ -44,6 +44,8 @@ import { cn } from "@/lib/cn";
 import { useToast } from "@/components/workspace-v2/toast";
 import { defaultLogoDataUrl } from "@/lib/branding/default-logo";
 import type { ProjectStatus, ProjectSummary } from "@/lib/projects";
+import VisibilityToggle from "@/components/community/visibility-toggle";
+import HandleDialog from "@/components/community/handle-dialog";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Projects page — toolbar + filters + grid/list + bulk actions.
@@ -127,6 +129,7 @@ export function ProjectsView({
   const [usageDismissed, setUsageDismissed] = useState(false);
   const [usage, setUsage] = useState<UsageInfo | null>(null);
   const [billingNotice, setBillingNotice] = useState<BillingNotice | null>(null);
+  const [handleOpen, setHandleOpen] = useState(false);
   const [_pending, startTransition] = useTransition();
 
   useEffect(() => {
@@ -452,6 +455,7 @@ export function ProjectsView({
                   selected={selected.has(p.id)}
                   onToggleSelect={() => toggleSelect(p.id)}
                   onMenu={(rect) => setMenu({ anchor: rect, project: p })}
+                  onNeedHandle={() => setHandleOpen(true)}
                 />
               ))}
             </div>
@@ -477,6 +481,7 @@ export function ProjectsView({
                     selected={selected.has(p.id)}
                     onToggleSelect={() => toggleSelect(p.id)}
                     onMenu={(rect) => setMenu({ anchor: rect, project: p })}
+                    onNeedHandle={() => setHandleOpen(true)}
                   />
                 ))}
               </div>
@@ -548,6 +553,12 @@ export function ProjectsView({
           onClose={() => setDeleteTarget(null)}
         />
       )}
+
+      <HandleDialog
+        open={handleOpen}
+        onClose={() => setHandleOpen(false)}
+        onSaved={() => setHandleOpen(false)}
+      />
     </>
   );
 }
@@ -1004,12 +1015,14 @@ function ProjectCard({
   selected,
   onToggleSelect,
   onMenu,
+  onNeedHandle,
 }: {
   project: ProjectSummary;
   q: string;
   selected: boolean;
   onToggleSelect: () => void;
   onMenu: (rect: DOMRect) => void;
+  onNeedHandle: () => void;
 }) {
   const t = useTranslations("projects");
   return (
@@ -1198,10 +1211,17 @@ function ProjectCard({
           <span className="inline-flex items-center gap-1">
             <Layers size={11} /> {t("card.sections", { count: project.sectionCount })}
           </span>
-          <ChevronRight
-            size={13}
-            className="text-zinc-300 dark:text-zinc-700 group-hover:text-zinc-500 transition"
-          />
+          <div className="flex items-center gap-2">
+            <VisibilityToggle
+              projectId={project.id}
+              initial={project.visibility ?? "private"}
+              onNeedHandle={onNeedHandle}
+            />
+            <ChevronRight
+              size={13}
+              className="text-zinc-300 dark:text-zinc-700 group-hover:text-zinc-500 transition"
+            />
+          </div>
         </div>
       </div>
     </article>
@@ -1214,12 +1234,14 @@ function ProjectRow({
   selected,
   onToggleSelect,
   onMenu,
+  onNeedHandle,
 }: {
   project: ProjectSummary;
   q: string;
   selected: boolean;
   onToggleSelect: () => void;
   onMenu: (rect: DOMRect) => void;
+  onNeedHandle: () => void;
 }) {
   const t = useTranslations("projects");
   return (
@@ -1349,6 +1371,20 @@ function ProjectRow({
         className="hidden md:block shrink-0 text-[11.5px] text-zinc-500 dark:text-zinc-400 w-24 truncate text-right"
       >
         {relativeTime(project.updatedAt, t)}
+      </div>
+
+      <div
+        onClick={(e) => {
+          e.stopPropagation();
+          e.preventDefault();
+        }}
+        className="shrink-0"
+      >
+        <VisibilityToggle
+          projectId={project.id}
+          initial={project.visibility ?? "private"}
+          onNeedHandle={onNeedHandle}
+        />
       </div>
 
       <button
