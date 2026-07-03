@@ -58,6 +58,11 @@ export const users = pgTable("users", {
   // 'canceled' | 'past_due' | … . null = never subscribed.
   subscriptionStatus: text("subscriptionStatus"),
   createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
+  // Public creator identity (community/explore). Null until the user claims a
+  // handle. Slug ^[a-z0-9_]{3,20}$, lowercase, globally unique.
+  handle: text("handle").unique(),
+  bio: text("bio"),
+  avatarUrl: text("avatarUrl"),
 });
 
 export const accounts = pgTable(
@@ -120,6 +125,16 @@ export const projects = pgTable(
     // creates a hosted page in Phase 4). 'archived' hides the project from
     // the default list view without deleting it.
     status: text("status").notNull().default("draft"),
+    // Community listing axis. 'private' (default) = not listed anywhere;
+    // 'public' = shown in /explore + owner's /@handle; 'hidden' = pulled by an
+    // admin (owner keeps the project, it just stops listing).
+    visibility: text("visibility").notNull().default("private"),
+    // Lineage when this project was created via Remix of a public page.
+    remixedFromId: text("remixedFromId"),
+    // How many times THIS project was remixed by others.
+    remixCount: integer("remixCount").notNull().default(0),
+    // When it entered the feed (feed "recent" ordering). Null = never public.
+    listedAt: timestamp("listedAt", { mode: "date" }),
     // Short labels surfaced on the list cards. Auto-populated from the
     // intent (industry + tone) when the project is created.
     tags: text("tags").array().notNull().default(sqlOp`'{}'::text[]`),
@@ -1526,3 +1541,23 @@ export const notificationJobs = pgTable("notificationJobs", {
   createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
   updatedAt: timestamp("updatedAt", { mode: "date" }).notNull().defaultNow(),
 }, (t) => [index("notificationJobs_status_runAfter_idx").on(t.status, t.runAfter)]);
+
+// Reactive moderation for the community feed. A visitor reports a public page →
+// one row here → admin reviews at /admin/reports and may set the project's
+// visibility to 'hidden'. Privacy-first: no raw IP, only a salted UA hash
+// (same posture as pageEvents).
+export const pageReports = pgTable(
+  "pageReports",
+  {
+    id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+    projectId: text("projectId")
+      .notNull()
+      .references(() => projects.id, { onDelete: "cascade" }),
+    reason: text("reason").notNull(), // 'spam' | 'adult' | 'phishing' | 'other'
+    note: text("note"),
+    reporterUaHash: text("reporterUaHash"),
+    status: text("status").notNull().default("open"), // 'open'|'actioned'|'dismissed'
+    createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
+  },
+  (t) => [index("pageReports_status_createdAt_idx").on(t.status, t.createdAt)],
+);
