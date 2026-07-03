@@ -1,5 +1,6 @@
 import { sql as sqlOp } from "drizzle-orm";
 import {
+  type AnyPgColumn,
   boolean,
   date,
   index,
@@ -130,7 +131,10 @@ export const projects = pgTable(
     // admin (owner keeps the project, it just stops listing).
     visibility: text("visibility").notNull().default("private"),
     // Lineage when this project was created via Remix of a public page.
-    remixedFromId: text("remixedFromId"),
+    remixedFromId: text("remixedFromId").references(
+      (): AnyPgColumn => projects.id,
+      { onDelete: "set null" },
+    ),
     // How many times THIS project was remixed by others.
     remixCount: integer("remixCount").notNull().default(0),
     // When it entered the feed (feed "recent" ordering). Null = never public.
@@ -200,6 +204,10 @@ export const projects = pgTable(
   (table) => [
     index("projects_userId_idx").on(table.userId, table.updatedAt),
     index("projects_userId_status_idx").on(table.userId, table.status),
+    index("projects_visibility_listedAt_idx").on(
+      table.visibility,
+      table.listedAt,
+    ),
   ],
 );
 
