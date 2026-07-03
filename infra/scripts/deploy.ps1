@@ -85,6 +85,15 @@ if ($env:OPENLEN_SKIP_MIGRATE -ne "1") {
   if ($LASTEXITCODE -ne 0) { throw "models:migrate failed (exit $LASTEXITCODE)" }
 }
 
+# The Community Explore feature (visibility/handle/reports). Scoped + idempotent,
+# same rationale as models: the shipped code selects `projects.visibility`, so
+# without this migration prod GET /api/projects 500s after the swap.
+if ($env:OPENLEN_SKIP_MIGRATE -ne "1") {
+  Step 2 "Applying community DB migration (npm run community:migrate)..."
+  npm run community:migrate
+  if ($LASTEXITCODE -ne 0) { throw "community:migrate failed (exit $LASTEXITCODE)" }
+}
+
 # --- 3. Compose standalone with static + public -----------------------
 Step 3 "Composing standalone (copying .next/static + public/)..."
 New-Item -ItemType Directory -Force -Path ".next/standalone/.next/static" | Out-Null

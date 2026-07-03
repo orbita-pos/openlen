@@ -28,7 +28,8 @@ export async function POST(
   if (!res.ok) {
     const status =
       res.reason === "not_found" ? 404 :
-      res.reason === "not_published" ? 409 : 422;
+      res.reason === "not_published" ? 409 :
+      res.reason === "moderated" ? 403 : 422;
     return json({ error: res.reason }, status);
   }
   return json({ ok: true, visibility: next }, 200);

@@ -31,8 +31,12 @@ export async function listExplore(opts: {
   const cursorDate = opts.cursor ? new Date(opts.cursor) : null;
   const where =
     cursorDate && opts.sort === "recent"
-      ? and(eq(schema.projects.visibility, "public"), lt(schema.projects.listedAt, cursorDate))
-      : eq(schema.projects.visibility, "public");
+      ? and(
+          eq(schema.projects.visibility, "public"),
+          eq(schema.projects.status, "published"),
+          lt(schema.projects.listedAt, cursorDate),
+        )
+      : and(eq(schema.projects.visibility, "public"), eq(schema.projects.status, "published"));
 
   const rows = await db
     .select({
@@ -79,7 +83,11 @@ export async function getPublicProfile(handle: string) {
     })
     .from(schema.projects)
     .where(
-      and(eq(schema.projects.userId, user.id), eq(schema.projects.visibility, "public")),
+      and(
+        eq(schema.projects.userId, user.id),
+        eq(schema.projects.visibility, "public"),
+        eq(schema.projects.status, "published"),
+      ),
     )
     .orderBy(desc(schema.projects.listedAt));
   return {
@@ -97,12 +105,13 @@ export async function getPublicProjectForRemix(
       title: schema.projects.title,
       data: schema.projects.data,
       visibility: schema.projects.visibility,
+      status: schema.projects.status,
     })
     .from(schema.projects)
     .where(eq(schema.projects.id, id))
     .limit(1);
   const r = rows[0];
-  if (!r || r.visibility !== "public") return null;
+  if (!r || r.visibility !== "public" || r.status !== "published") return null;
   return { id: r.id, title: r.title, data: r.data as ProjectData };
 }
 
@@ -110,13 +119,14 @@ export async function setVisibility(
   projectId: string,
   userId: string,
   next: "public" | "private",
-): Promise<{ ok: true } | { ok: false; reason: "not_found" | "not_published" | "blocked" | "invalid_html" }> {
+): Promise<{ ok: true } | { ok: false; reason: "not_found" | "not_published" | "blocked" | "invalid_html" | "moderated" }> {
   const rows = await db
     .select({
       id: schema.projects.id,
       title: schema.projects.title,
       status: schema.projects.status,
       data: schema.projects.data,
+      visibility: schema.projects.visibility,
     })
     .from(schema.projects)
     .where(and(eq(schema.projects.id, projectId), eq(schema.projects.userId, userId)))
@@ -131,6 +141,8 @@ export async function setVisibility(
   }
 
   // → public. Guardrails.
+  // A hidden page was pulled by an admin — the owner cannot re-list it.
+  if (p.visibility === "hidden") return { ok: false, reason: "moderated" };
   if (p.status !== "published") return { ok: false, reason: "not_published" };
   const html = (p.data as ProjectData)?.html ?? "";
   if (sanitizeForPublish(html).html === null) return { ok: false, reason: "invalid_html" };
@@ -186,6 +198,15 @@ export async function remixProject(
 export async function insertReport(input: {
   projectId: string; reason: string; note?: string; uaHash?: string;
 }): Promise<void> {
+  // Only report against projects that are actually public — don't leak the
+  // existence of a private project's id via the admin queue join.
+  const rows = await db
+    .select({ visibility: schema.projects.visibility })
+    .from(schema.projects)
+    .where(eq(schema.projects.id, input.projectId))
+    .limit(1);
+  if (rows[0]?.visibility !== "public") return;
+
   await db.insert(schema.pageReports).values({
     projectId: input.projectId,
     reason: input.reason,
@@ -213,7 +234,8 @@ export async function listOpenReports() {
 }
 
 export async function adminSetVisibility(projectId: string, next: "public" | "hidden"): Promise<void> {
-  await db.update(schema.projects).set({ visibility: next })
+  await db.update(schema.projects)
+    .set(next === "public" ? { visibility: next, listedAt: new Date() } : { visibility: next })
     .where(eq(schema.projects.id, projectId));
   if (next === "hidden") {
     await db.update(schema.pageReports).set({ status: "actioned" })
