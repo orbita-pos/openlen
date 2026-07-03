@@ -1,7 +1,9 @@
 import { notFound } from "next/navigation";
+import { User } from "lucide-react";
 import { getPublicProfile } from "@/lib/community/store";
 import ExploreCard from "@/components/community/explore-card";
 import ActivityHeatmap from "@/components/community/activity-heatmap";
+import BackNav from "@/components/community/back-nav";
 
 export const dynamic = "force-dynamic";
 
@@ -32,7 +34,8 @@ export default async function ProfilePage({
 
   return (
     <main className="min-h-dvh bg-[#0a0a0b] text-neutral-100">
-      <div className="mx-auto flex max-w-6xl flex-col gap-10 px-5 py-12 sm:py-16 lg:flex-row lg:gap-14">
+      <BackNav title={displayName} icon={<User size={16} />} backHref="/explore" backLabel="Back to Explore" />
+      <div className="mx-auto flex max-w-6xl flex-col gap-10 px-5 pb-16 pt-10 sm:pt-12 lg:flex-row lg:gap-14">
         {/* Identity sidebar */}
         <aside className="lg:w-72 lg:shrink-0">
           <div className="lg:sticky lg:top-16">

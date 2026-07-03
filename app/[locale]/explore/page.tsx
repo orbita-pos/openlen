@@ -1,6 +1,8 @@
 import Link from "next/link";
+import { Compass } from "lucide-react";
 import { listExplore } from "@/lib/community/store";
 import ExploreCard from "@/components/community/explore-card";
+import BackNav from "@/components/community/back-nav";
 
 export const dynamic = "force-dynamic";
 
@@ -29,13 +31,8 @@ export default async function ExplorePage({
 
   return (
     <main className="min-h-dvh bg-[#0a0a0b] text-neutral-100">
-      <div className="mx-auto max-w-6xl px-5 py-12 sm:py-16">
-        <p className="mb-6 text-sm text-neutral-500">
-          <span className="text-neutral-400">Community</span>
-          <span className="mx-1.5 text-neutral-700">/</span>
-          <span className="text-neutral-300">Explore</span>
-        </p>
-
+      <BackNav title="Explore" icon={<Compass size={16} />} />
+      <div className="mx-auto max-w-6xl px-5 pb-16 pt-10 sm:pt-12">
         <header className="flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <h1 className="text-4xl font-semibold tracking-tight sm:text-5xl">Explore</h1>
