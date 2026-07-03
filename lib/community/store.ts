@@ -1,4 +1,4 @@
-import { and, desc, eq, lt, sql } from "drizzle-orm";
+import { and, desc, eq, lt, or, sql } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
 import { getUserByHandle } from "./handle";
 import type { ProjectData } from "@/lib/projects/types";
@@ -27,16 +27,51 @@ export async function listExplore(opts: {
   limit?: number;
 }): Promise<{ items: ExploreCard[]; nextCursor: string | null }> {
   const limit = Math.min(opts.limit ?? PAGE, 48);
-  // Cursor is the ISO listedAt of the last row (recent sort only — keeps it simple).
-  const cursorDate = opts.cursor ? new Date(opts.cursor) : null;
-  const where =
-    cursorDate && opts.sort === "recent"
-      ? and(
-          eq(schema.projects.visibility, "public"),
-          eq(schema.projects.status, "published"),
-          lt(schema.projects.listedAt, cursorDate),
-        )
-      : and(eq(schema.projects.visibility, "public"), eq(schema.projects.status, "published"));
+  const base = and(
+    eq(schema.projects.visibility, "public"),
+    eq(schema.projects.status, "published"),
+  );
+
+  // Keyset pagination with a compound cursor "<sortValue>|<id>", so rows that
+  // share a sort value (same listedAt, or same remixCount) are never skipped at
+  // a page boundary. `recent` keys on (listedAt, id); `remixed` on (remixCount,
+  // id). id is the tie-breaker — both sorts paginate correctly.
+  let where = base;
+  if (opts.cursor) {
+    const sep = opts.cursor.lastIndexOf("|");
+    const head = sep >= 0 ? opts.cursor.slice(0, sep) : "";
+    const cid = sep >= 0 ? opts.cursor.slice(sep + 1) : "";
+    if (cid) {
+      if (opts.sort === "remixed") {
+        const c = Number(head);
+        if (Number.isFinite(c)) {
+          where = and(
+            base,
+            or(
+              lt(schema.projects.remixCount, c),
+              and(eq(schema.projects.remixCount, c), lt(schema.projects.id, cid)),
+            ),
+          );
+        }
+      } else {
+        const d = new Date(head);
+        if (!Number.isNaN(d.getTime())) {
+          where = and(
+            base,
+            or(
+              lt(schema.projects.listedAt, d),
+              and(eq(schema.projects.listedAt, d), lt(schema.projects.id, cid)),
+            ),
+          );
+        }
+      }
+    }
+  }
+
+  const orderBy =
+    opts.sort === "remixed"
+      ? [desc(schema.projects.remixCount), desc(schema.projects.id)]
+      : [desc(schema.projects.listedAt), desc(schema.projects.id)];
 
   const rows = await db
     .select({
@@ -52,20 +87,19 @@ export async function listExplore(opts: {
     .from(schema.projects)
     .innerJoin(schema.users, eq(schema.users.id, schema.projects.userId))
     .where(where)
-    .orderBy(
-      opts.sort === "remixed"
-        ? desc(schema.projects.remixCount)
-        : desc(schema.projects.listedAt),
-    )
+    .orderBy(...orderBy)
     .limit(limit + 1);
 
   const hasMore = rows.length > limit;
   const items = rows.slice(0, limit);
   const last = items[items.length - 1];
-  const nextCursor =
-    hasMore && opts.sort === "recent" && last?.listedAt
-      ? last.listedAt.toISOString()
-      : null;
+  let nextCursor: string | null = null;
+  if (hasMore && last) {
+    nextCursor =
+      opts.sort === "remixed"
+        ? `${last.remixCount}|${last.id}`
+        : `${last.listedAt ? last.listedAt.toISOString() : ""}|${last.id}`;
+  }
   return { items, nextCursor };
 }
 
@@ -144,10 +178,12 @@ export async function setVisibility(
   // A hidden page was pulled by an admin — the owner cannot re-list it.
   if (p.visibility === "hidden") return { ok: false, reason: "moderated" };
   if (p.status !== "published") return { ok: false, reason: "not_published" };
-  const html = (p.data as ProjectData)?.html ?? "";
-  if (sanitizeForPublish(html).html === null) return { ok: false, reason: "invalid_html" };
-  const hit = containsBlockedTerm(`${p.title}\n${html}`);
-  if (hit) return { ok: false, reason: "blocked" };
+  // Scan the home doc AND every subpage: a data-slot-path editor marker or a
+  // blocked term on ANY page must keep the whole project out of the feed.
+  const data = p.data as ProjectData;
+  const htmls = [data?.html ?? "", ...Object.values(data?.pages ?? {}).map((pg) => pg.html)];
+  if (htmls.some((h) => sanitizeForPublish(h).html === null)) return { ok: false, reason: "invalid_html" };
+  if (containsBlockedTerm([p.title, ...htmls].join("\n"))) return { ok: false, reason: "blocked" };
 
   await db.update(schema.projects)
     .set({ visibility: "public", listedAt: new Date() })
