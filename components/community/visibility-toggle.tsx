@@ -3,7 +3,7 @@ import { useState } from "react";
 
 export default function VisibilityToggle({
   projectId, initial, onNeedHandle,
-}: { projectId: string; initial: "public" | "private" | "hidden"; onNeedHandle: () => void }) {
+}: { projectId: string; initial: "public" | "private" | "hidden"; onNeedHandle: (retry: () => void) => void }) {
   const [vis, setVis] = useState(initial);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
@@ -18,7 +18,7 @@ export default function VisibilityToggle({
     });
     const j = await res.json().catch(() => null);
     setBusy(false);
-    if (j?.needsHandle) { onNeedHandle(); return; }
+    if (j?.needsHandle) { onNeedHandle(toggle); return; }
     if (res.ok) { setVis(next); return; }
     setMsg(
       j?.error === "not_published" ? "Publish the page first." :

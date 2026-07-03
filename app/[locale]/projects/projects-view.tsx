@@ -131,6 +131,9 @@ export function ProjectsView({
   const [usage, setUsage] = useState<UsageInfo | null>(null);
   const [billingNotice, setBillingNotice] = useState<BillingNotice | null>(null);
   const [handleOpen, setHandleOpen] = useState(false);
+  // The toggle that asked for a handle — re-fired once the handle is saved so
+  // "Make public" is one-shot instead of forcing a second click.
+  const pendingRetryRef = useRef<null | (() => void)>(null);
   const [_pending, startTransition] = useTransition();
 
   useEffect(() => {
@@ -456,7 +459,7 @@ export function ProjectsView({
                   selected={selected.has(p.id)}
                   onToggleSelect={() => toggleSelect(p.id)}
                   onMenu={(rect) => setMenu({ anchor: rect, project: p })}
-                  onNeedHandle={() => setHandleOpen(true)}
+                  onNeedHandle={(retry) => { pendingRetryRef.current = retry; setHandleOpen(true); }}
                 />
               ))}
             </div>
@@ -482,7 +485,7 @@ export function ProjectsView({
                     selected={selected.has(p.id)}
                     onToggleSelect={() => toggleSelect(p.id)}
                     onMenu={(rect) => setMenu({ anchor: rect, project: p })}
-                    onNeedHandle={() => setHandleOpen(true)}
+                    onNeedHandle={(retry) => { pendingRetryRef.current = retry; setHandleOpen(true); }}
                   />
                 ))}
               </div>
@@ -558,7 +561,12 @@ export function ProjectsView({
       <HandleDialog
         open={handleOpen}
         onClose={() => setHandleOpen(false)}
-        onSaved={() => setHandleOpen(false)}
+        onSaved={() => {
+          setHandleOpen(false);
+          const retry = pendingRetryRef.current;
+          pendingRetryRef.current = null;
+          retry?.();
+        }}
       />
     </>
   );
@@ -1029,7 +1037,7 @@ function ProjectCard({
   selected: boolean;
   onToggleSelect: () => void;
   onMenu: (rect: DOMRect) => void;
-  onNeedHandle: () => void;
+  onNeedHandle: (retry: () => void) => void;
 }) {
   const t = useTranslations("projects");
   return (
@@ -1248,7 +1256,7 @@ function ProjectRow({
   selected: boolean;
   onToggleSelect: () => void;
   onMenu: (rect: DOMRect) => void;
-  onNeedHandle: () => void;
+  onNeedHandle: (retry: () => void) => void;
 }) {
   const t = useTranslations("projects");
   return (
