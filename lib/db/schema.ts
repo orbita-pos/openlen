@@ -467,6 +467,24 @@ export const templates = pgTable(
   ],
 );
 
+// Curated social-post templates (Marketing Kit). Mirror of `templates`:
+// metadata here, HTML body in R2 under posts/<id>-<hash>.html.
+export const postTemplates = pgTable("postTemplates", {
+  id: text("id").primaryKey(), // slug — 'promo-restaurante-01'
+  name: text("name").notNull(),
+  register: text("register").notNull(), // 'restaurante' | 'belleza' | 'gym' | 'consultorio' | 'tienda' | 'oficios' | 'general'
+  format: text("format").notNull(), // 'square' (1080×1080) | 'story' (1080×1920)
+  goal: text("goal").notNull(), // 'promo' | 'anuncio' | 'testimonio' | 'info'
+  storageKey: text("storageKey").notNull(),
+  storageUrl: text("storageUrl").notNull(),
+  contentHash: text("contentHash").notNull(),
+  size: integer("size").notNull(),
+  status: text("status").notNull().default("draft"), // 'draft' | 'published' | 'archived'
+  createdAt: timestamp("createdAt").notNull().defaultNow(),
+  updatedAt: timestamp("updatedAt").notNull().defaultNow(),
+  publishedAt: timestamp("publishedAt"),
+});
+
 // Curated GLB model catalog — 3D assets served from R2 (defaults to the
 // `openlen-images` bucket / images.openlen.com under a `models/` key prefix;
 // override via R2_MODELS_BUCKET / R2_MODELS_PUBLIC_URL for a dedicated bucket).
