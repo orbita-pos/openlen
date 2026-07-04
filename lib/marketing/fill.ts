@@ -3,6 +3,8 @@ export interface PostData {
   phone?: string; whatsapp?: string; address?: string; hours?: string;
   url?: string; logoInitial?: string; photoUrl?: string;
   accent?: string; bg?: string; ink?: string;
+  // "Combinar con mi página": the page's display font, swapped into --display.
+  fontFamily?: string; fontHref?: string;
 }
 
 export function escapeHtml(s: string): string {
@@ -20,6 +22,18 @@ export function fillPostTemplate(html: string, data: PostData): string {
     if (v && HEX.test(v)) {
       out = out.replace(new RegExp(`${cssVar}\\s*:\\s*[^;}]+`), () => `${cssVar}:${v}`);
     }
+  }
+  // Swap the display font: inject the page's Google-Fonts link + override
+  // --display. Both are validated (GF host + a safe family charset) so neither
+  // the attribute nor the CSS value can be an injection vector.
+  if (
+    data.fontHref && data.fontFamily &&
+    /^https:\/\/fonts\.googleapis\.com\//.test(data.fontHref) &&
+    /^[A-Za-z0-9 ]{1,50}$/.test(data.fontFamily)
+  ) {
+    const fam = data.fontFamily;
+    out = out.replace("</head>", `<link href="${escapeHtml(data.fontHref)}" rel="stylesheet" /></head>`);
+    out = out.replace(/--display\s*:\s*[^;}]+/, () => `--display:'${fam}',sans-serif`);
   }
   // Authoring constraint: a slot element must NOT contain same-tag children — the non-greedy body + \2 backreference closes at the first matching tag. Curated post templates keep slot elements leaf-only.
   out = out.replace(

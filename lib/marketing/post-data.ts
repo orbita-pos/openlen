@@ -1,6 +1,7 @@
 import type { BusinessProfileData } from "@/lib/business-profiles/types";
 import type { PostData } from "./fill";
 import type { PostRegister } from "./post-templates/families";
+import { derivePalette, extractPageFont, normHex } from "./theme-match";
 
 export function extractRootToken(html: string, varName: string): string | null {
   const root = html.match(/:root\s*\{([^}]*)\}/);
@@ -56,18 +57,30 @@ export function buildPostData(input: {
   profile: BusinessProfileData | null;
   userOffer?: string; photoUrl?: string; pageTitle?: string;
   register?: PostRegister;
+  /** "Combinar con mi página" — derive palette + font from the page. Default on. */
+  match?: boolean;
 }): PostData {
   const p = input.profile;
   const businessName = norm(p?.business_name) ?? norm(input.pageTitle);
-  // Curated-beauty posture (2026-07-04): fill only the SAFE text. We do NOT
-  // override the design's hand-picked accent with the business's brand color
-  // (an arbitrary brand hue on a design's fixed background turns to mud — the
-  // design was color-tuned as-is), and we do NOT auto-inject the business's
-  // own page images. The photo defaults to the register's curated image; the
-  // user opts into their own from the detail strip.
+  // Photo: default = the register's curated image; the user opts into their own
+  // from the detail strip. We never auto-inject the business's own page images
+  // (they're often logos/sprites that crop ugly — the ORBITAPOS bug).
   const registerPhoto = input.register
     ? REGISTER_DEFAULT_PHOTOS[input.register]
     : null;
+
+  // "Combinar con mi página": derive a CONTRAST-SAFE palette (bg+ink+accent) and
+  // display font from the page, so the post is born matched to the brand AND
+  // beautiful. Matching one token blindly turned to mud (see theme-match.ts);
+  // deriving the whole system with guaranteed contrast does not. Needs a brand
+  // color to key off; without one we keep the design's curated look.
+  const brandAccent = normHex(p?.brand?.accent) ?? normHex(extractRootToken(input.html, "--accent"));
+  const doMatch = input.match !== false && !!brandAccent;
+  const pageBg = normHex(extractRootToken(input.html, "--bg"))
+    ?? normHex(extractRootToken(input.html, "--background"));
+  const palette = doMatch ? derivePalette(brandAccent!, pageBg) : null;
+  const font = doMatch ? extractPageFont(input.html) : null;
+
   return {
     businessName,
     tagline: norm(p?.tagline_es) ?? norm(p?.tagline_en),
@@ -78,5 +91,10 @@ export function buildPostData(input: {
     url: input.subdomain ? `${input.subdomain}.openlen.com` : undefined,
     logoInitial: businessName ? businessName[0].toUpperCase() : undefined,
     photoUrl: norm(input.photoUrl) ?? registerPhoto ?? undefined,
+    accent: palette?.accent,
+    bg: palette?.bg,
+    ink: palette?.ink,
+    fontFamily: font?.family,
+    fontHref: font?.href,
   };
 }

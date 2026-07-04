@@ -60,14 +60,27 @@ describe("buildPostData", () => {
     expect(d.phone).toBe("55 1234 5678");
     expect(d.logoInitial).toBe("T");
   });
-  it("does NOT override the design's accent with the brand color (curated-beauty posture)", () => {
-    // Even when the profile carries a brand accent AND the page has a --accent
-    // token, the post keeps its own hand-tuned accent — buildPostData emits none.
-    const d = buildPostData({
-      html: pageHtml, subdomain: null, pageTitle: "Café Terral",
-      profile: { business_name: "Terral Café", contact: { whatsapp: null, phone: null, address: null, socials: null }, brand: { logoUrl: null, accent: "#AA3311" } } as never,
-    });
+  it("MATCHES the page: derives a contrast-safe palette + font (not the raw brand color)", () => {
+    const html = `<html><head><style>:root{--accent:#AA3311;--bg:#FBF7EF;--display:'Poppins',sans-serif}</style></head><body></body></html>`;
+    const d = buildPostData({ html, subdomain: null, pageTitle: "Terral", profile: null });
+    expect(d.accent).toBeTruthy();
+    expect(d.accent).not.toBe("#AA3311"); // contrast-adjusted, never the raw brand hex
+    expect(d.bg).toBeTruthy();
+    expect(d.ink).toBeTruthy();
+    expect(d.fontFamily).toBe("Poppins");
+    expect(d.fontHref).toContain("fonts.googleapis.com");
+  });
+  it("match:false keeps the design's curated look (no palette/font override)", () => {
+    const html = `<html><head><style>:root{--accent:#AA3311;--bg:#FBF7EF;--display:'Poppins',sans-serif}</style></head></html>`;
+    const d = buildPostData({ html, subdomain: null, profile: null, match: false });
     expect(d.accent).toBeUndefined();
+    expect(d.bg).toBeUndefined();
+    expect(d.fontFamily).toBeUndefined();
+  });
+  it("no brand color anywhere → stays fully curated", () => {
+    const d = buildPostData({ html: `<html><body><h1>no tokens</h1></body></html>`, subdomain: null, profile: null });
+    expect(d.accent).toBeUndefined();
+    expect(d.fontFamily).toBeUndefined();
   });
   it("works with no profile at all (page-derived name)", () => {
     const d = buildPostData({ html: pageHtml, subdomain: null, profile: null, pageTitle: "Café Terral" });
