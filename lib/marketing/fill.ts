@@ -10,7 +10,7 @@ export function escapeHtml(s: string): string {
     .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
 }
 
-const HEX = /^#[0-9a-fA-F]{3,8}$/;
+const HEX = /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/;
 const TOKEN_KEYS = [["accent", "--accent"], ["bg", "--bg"], ["ink", "--ink"]] as const;
 
 export function fillPostTemplate(html: string, data: PostData): string {
@@ -18,9 +18,10 @@ export function fillPostTemplate(html: string, data: PostData): string {
   for (const [key, cssVar] of TOKEN_KEYS) {
     const v = data[key];
     if (v && HEX.test(v)) {
-      out = out.replace(new RegExp(`${cssVar}\\s*:\\s*[^;}]+`), `${cssVar}:${v}`);
+      out = out.replace(new RegExp(`${cssVar}\\s*:\\s*[^;}]+`), () => `${cssVar}:${v}`);
     }
   }
+  // Authoring constraint: a slot element must NOT contain same-tag children — the non-greedy body + \2 backreference closes at the first matching tag. Curated post templates keep slot elements leaf-only.
   out = out.replace(
     /(<([a-z0-9]+)([^>]*\bdata-ol-slot="([a-zA-Z]+)"[^>]*)>)([\s\S]*?)(<\/\2>)/g,
     (_m, open: string, _tag: string, attrs: string, key: string, _inner: string, close: string) => {
@@ -33,7 +34,7 @@ export function fillPostTemplate(html: string, data: PostData): string {
   );
   out = out.replace(/(<[a-z0-9]+[^>]*\bdata-ol-photo\b[^>]*>)([\s\S]*?<img[^>]*>)/, (m, open: string, rest: string) => {
     if (data.photoUrl && /^https?:\/\//.test(data.photoUrl)) {
-      return open + rest.replace(/src="[^"]*"/, `src="${escapeHtml(data.photoUrl)}"`);
+      return open + rest.replace(/src="[^"]*"/, () => `src="${escapeHtml(data.photoUrl!)}"`);
     }
     return hideElement(open) + rest;
   });

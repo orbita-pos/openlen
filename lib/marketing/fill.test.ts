@@ -29,4 +29,14 @@ describe("fillPostTemplate", () => {
     const noPhoto = fillPostTemplate(doc, {});
     expect(noPhoto).toMatch(/data-ol-photo[^>]*style="[^"]*display:none/);
   });
+  it("does not expand $-replacement patterns from data values", () => {
+    const out = fillPostTemplate(doc, { photoUrl: "https://evil.example/$&x" });
+    expect(out).toContain('src="https://evil.example/$&amp;x"');
+    const out2 = fillPostTemplate(doc, { businessName: "Tacos $' $1 $$" });
+    expect(out2).toContain("Tacos $&#39; $1 $$");
+  });
+  it("rejects invalid hex lengths (5/7 digits)", () => {
+    const out = fillPostTemplate(doc, { accent: "#12345" });
+    expect(out).toContain("--accent:#FF5A36");
+  });
 });
