@@ -15,6 +15,28 @@ describe("captions registry", () => {
     const partial = fillCaption(f, { businessName: "Brote" });
     expect(partial).not.toMatch(/\{[a-zA-Z]+\}/); // parts needing offer/url dropped, not left broken
   });
+  it("every part of every formula declares its tokens in needs and stays within limits", () => {
+    for (const r of POST_REGISTERS) for (const g of POST_GOALS) for (const lang of ["es", "en"] as const) {
+      for (const f of listCaptions(r, g, lang)) {
+        for (const p of f.parts) {
+          const tokens = [...p.text.matchAll(/\{([a-zA-Z]+)\}/g)].map((m) => m[1]);
+          for (const tk of tokens) {
+            expect(p.needs ?? [], `${f.register}·${f.goal}·${f.lang}: "{${tk}}" sin needs`).toContain(tk);
+          }
+          expect(p.text.length, `${f.register}·${f.goal}·${f.lang}: parte >120 chars`).toBeLessThanOrEqual(120);
+        }
+      }
+    }
+  });
+  it("vertical registers now resolve to their own formulas, not the general fallback", () => {
+    for (const r of POST_REGISTERS.filter((x) => x !== "general")) {
+      for (const g of POST_GOALS) for (const lang of ["es", "en"] as const) {
+        const fs = listCaptions(r, g, lang);
+        expect(fs.length).toBe(3);
+        expect(fs.every((f) => f.register === r)).toBe(true);
+      }
+    }
+  });
   it("appends language-matched hashtags", () => {
     const [es] = listCaptions("general", "promo", "es");
     const esOut = fillCaption(es, { businessName: "X" });
