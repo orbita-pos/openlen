@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;800&display=swap" rel="stylesheet" />
+<style>
+  :root { --accent:#FF5A36; --bg:#141414; --ink:#FAFAF7; --display:'Archivo',sans-serif; }
+  * { margin:0; box-sizing:border-box; }
+  body { width:1080px; height:1080px; overflow:hidden; background:var(--bg);
+         color:var(--ink); font-family:var(--display); display:flex; flex-direction:column; }
+  .photo { flex:1; min-height:0; background:var(--accent); }
+  .photo img { width:100%; height:100%; object-fit:cover; display:block; }
+  .band { padding:56px 64px; display:flex; flex-direction:column; gap:16px; }
+  .name { font-size:40px; font-weight:800; letter-spacing:.02em; color:var(--accent); text-transform:uppercase; }
+  .offer { font-size:76px; font-weight:800; line-height:1.02; }
+  .meta { display:flex; gap:24px; font-size:30px; font-weight:500; opacity:.85; }
+</style>
+</head>
+<body>
+  <div class="photo" data-ol-photo><img src="" alt="" /></div>
+  <div class="band">
+    <div class="name" data-ol-slot="businessName">Nombre del negocio</div>
+    <div class="offer" data-ol-slot="offer">Tu oferta aquí</div>
+    <div class="meta">
+      <span data-ol-slot="phone" data-ol-slot-hide-empty>555 000 0000</span>
+      <span data-ol-slot="url" data-ol-slot-hide-empty>tunegocio.openlen.com</span>
+    </div>
+  </div>
+</body>
+</html>
