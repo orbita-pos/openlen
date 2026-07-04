@@ -2828,31 +2828,23 @@ function NewV2Inner() {
     [loadedProject?.id, toast, t],
   );
   const updateMarketingSettings = useCallback(
-    (register: string) => {
+    (patch: { register?: string; match?: boolean }) => {
       const projectId = loadedProject?.id;
       if (!projectId) return;
       // Optimistic apply, revert on failure: the prop transition (old → new →
-      // old) is what lets MarketingView's resync effect roll the select back.
-      const previous = loadedProject?.settings?.marketing?.register;
-      const apply = (value: string | undefined) =>
+      // old) is what lets MarketingView's resync effects roll a control back.
+      const previous = loadedProject?.settings?.marketing;
+      const apply = (value: typeof previous) =>
         setLoadedProject((p) =>
-          p
-            ? {
-                ...p,
-                settings: {
-                  ...p.settings,
-                  marketing: { ...p.settings?.marketing, register: value },
-                },
-              }
-            : p,
+          p ? { ...p, settings: { ...p.settings, marketing: value } } : p,
         );
-      apply(register);
+      apply({ ...previous, ...patch });
       void (async () => {
         try {
           const r = await fetch(`/api/projects/${projectId}/settings`, {
             method: "PATCH",
             headers: { "content-type": "application/json" },
-            body: JSON.stringify({ marketing: { register } }),
+            body: JSON.stringify({ marketing: patch }),
           });
           if (!r.ok) {
             toast.error(t("toast.moduleError"));
@@ -2864,7 +2856,7 @@ function NewV2Inner() {
         }
       })();
     },
-    [loadedProject?.id, loadedProject?.settings?.marketing?.register, toast, t],
+    [loadedProject?.id, loadedProject?.settings?.marketing, toast, t],
   );
   const updateChatSettings = useCallback(
     async (patch: ChatSettings): Promise<boolean> => {
@@ -3275,7 +3267,9 @@ function NewV2Inner() {
           <MarketingView
             projectId={loadedProject?.id ?? null}
             initialRegister={loadedProject?.settings?.marketing?.register}
-            onSaveRegister={updateMarketingSettings}
+            initialMatch={loadedProject?.settings?.marketing?.match ?? true}
+            onSaveRegister={(r) => updateMarketingSettings({ register: r })}
+            onSaveMatch={(m) => updateMarketingSettings({ match: m })}
           />
         ) : centerView === "templates" ? (
           previewingTemplate ? (

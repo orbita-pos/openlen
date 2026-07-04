@@ -95,7 +95,7 @@ interface PatchBody {
   /** 3D scene module. Merged into settings.scene3d, or null to remove it. Takes effect next publish. */
   scene3d?: { enabled?: boolean; spec?: unknown } | null;
   /** Marketing Kit tab state. Merged into settings.marketing. */
-  marketing?: { register?: string };
+  marketing?: { register?: string; match?: boolean };
 }
 
 function clean(v: unknown, max: number): string {
@@ -319,6 +319,9 @@ export async function PATCH(
     }
     if ("register" in m && m.register !== undefined && !POST_REGISTER.safeParse(m.register).success) {
       return json({ error: "invalid_body", message: "marketing.register must be a known register" }, 400);
+    }
+    if ("match" in m && m.match !== undefined && typeof m.match !== "boolean") {
+      return json({ error: "invalid_body", message: "marketing.match must be a boolean" }, 400);
     }
   }
   if (hasScene3d) {
@@ -581,6 +584,7 @@ export async function PATCH(
     nextSettings.marketing = {
       ...(data.settings?.marketing ?? {}),
       ...("register" in body.marketing ? { register: body.marketing.register } : {}),
+      ...("match" in body.marketing ? { match: body.marketing.match } : {}),
     };
   }
   if (hasChat && body.chat?.enabled === true && data.settings?.chat?.enabled !== true) {

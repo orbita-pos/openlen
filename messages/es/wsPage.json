@@ -72,7 +72,9 @@
     "publishNudge": "Publica tu página para incluir tu link en los posts",
     "photoLabel": "Foto",
     "renderError": "No se pudo generar la imagen — intenta de nuevo",
-    "perProject": "Abre o crea una página para generar posts con tu marca."
+    "perProject": "Abre o crea una página para generar posts con tu marca.",
+    "matchPage": "Combinar con mi página",
+    "matchPageHint": "Toma colores y tipografía de tu página. Apágalo para el look curado del diseño."
   },
   "makeYours": {
     "title": "Hazla tuya",

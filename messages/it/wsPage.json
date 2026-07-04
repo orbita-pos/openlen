@@ -72,7 +72,9 @@
     "publishNudge": "Pubblica la tua pagina per includere il link nei post",
     "photoLabel": "Foto",
     "renderError": "Impossibile generare l'immagine — riprova",
-    "perProject": "Apri o crea una pagina per generare post con il tuo brand."
+    "perProject": "Apri o crea una pagina per generare post con il tuo brand.",
+    "matchPage": "Abbina alla mia pagina",
+    "matchPageHint": "Usa colori e font della tua pagina. Disattiva per il look curato."
   },
   "makeYours": {
     "title": "Rendila tua",

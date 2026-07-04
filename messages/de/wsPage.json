@@ -72,7 +72,9 @@
     "publishNudge": "Veröffentliche deine Seite, damit dein Link in den Posts erscheint",
     "photoLabel": "Foto",
     "renderError": "Das Bild konnte nicht erstellt werden — versuche es erneut",
-    "perProject": "Öffne oder erstelle eine Seite, um Posts mit deiner Marke zu erstellen."
+    "perProject": "Öffne oder erstelle eine Seite, um Posts mit deiner Marke zu erstellen.",
+    "matchPage": "An meine Seite anpassen",
+    "matchPageHint": "Übernimmt Farben und Schriften deiner Seite. Ausschalten für den kuratierten Look."
   },
   "makeYours": {
     "title": "Mach sie zu deiner",

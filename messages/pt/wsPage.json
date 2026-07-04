@@ -72,7 +72,9 @@
     "publishNudge": "Publique sua página para incluir seu link nos posts",
     "photoLabel": "Foto",
     "renderError": "Não foi possível gerar a imagem — tente novamente",
-    "perProject": "Abra ou crie uma página para gerar posts com a sua marca."
+    "perProject": "Abra ou crie uma página para gerar posts com a sua marca.",
+    "matchPage": "Combinar com minha página",
+    "matchPageHint": "Usa cores e fontes da sua página. Desligue para o visual curado."
   },
   "makeYours": {
     "title": "Torne-a sua",

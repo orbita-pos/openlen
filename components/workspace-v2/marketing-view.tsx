@@ -63,16 +63,23 @@ const fieldInputCls =
 export function MarketingView({
   projectId,
   initialRegister,
+  initialMatch,
   onSaveRegister,
+  onSaveMatch,
 }: {
   projectId: string | null;
   initialRegister?: string;
+  initialMatch?: boolean;
   onSaveRegister: (r: PostRegister) => void;
+  onSaveMatch: (m: boolean) => void;
 }) {
   const t = useTranslations("wsPage.marketing");
   const [register, setRegister] = useState<PostRegister>(
     (initialRegister as PostRegister) || "general",
   );
+  // "Combinar con mi página" — ON derives the palette+font from the page; OFF
+  // shows the design's native curated look. Default ON.
+  const [match, setMatch] = useState<boolean>(initialMatch ?? true);
   const [goal, setGoal] = useState<PostGoal>("promo");
   const [offer, setOffer] = useState("");
   const [debouncedOffer, setDebouncedOffer] = useState("");
@@ -84,12 +91,18 @@ export function MarketingView({
     () => new Set(),
   );
 
-  // Resync from the prop: the parent only persists the register on a
-  // successful PATCH (and reverts on failure), so following it here is what
-  // rolls the select back when a save fails.
+  // Resync from the props: the parent only persists on a successful PATCH (and
+  // reverts on failure), so following the props here rolls a control back when
+  // a save fails.
   useEffect(() => {
     setRegister((initialRegister as PostRegister) || "general");
   }, [initialRegister]);
+  useEffect(() => {
+    setMatch(initialMatch ?? true);
+  }, [initialMatch]);
+
+  // `&match=0` disables page-matching in the preview/render endpoints.
+  const matchParam = match ? "" : "&match=0";
 
   // Debounce the offer text → iframe src so each keystroke doesn't re-fetch
   // every card's preview (cheap server-side, but visibly janky at 60wpm).
@@ -143,8 +156,8 @@ export function MarketingView({
     () => (p: PostMeta) =>
       `/api/marketing/preview?projectId=${projectId}&postId=${p.id}${
         debouncedOffer ? `&offer=${encodeURIComponent(debouncedOffer)}` : ""
-      }`,
-    [projectId, debouncedOffer],
+      }${matchParam}`,
+    [projectId, debouncedOffer, matchParam],
   );
 
   if (!projectId) {
@@ -221,21 +234,48 @@ export function MarketingView({
             </label>
           </div>
 
-          <div className="flex flex-wrap gap-1.5 mb-6">
-            {POST_GOALS.map((g) => (
-              <button
-                key={g}
-                type="button"
-                onClick={() => setGoal(g)}
-                className={`text-[10.5px] px-2.5 py-1 rounded-md transition font-medium ${
-                  goal === g
-                    ? "bg-[var(--accent-strong)] text-white"
-                    : "fg-muted bg-hover hover:fg"
+          <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
+            <div className="flex flex-wrap gap-1.5">
+              {POST_GOALS.map((g) => (
+                <button
+                  key={g}
+                  type="button"
+                  onClick={() => setGoal(g)}
+                  className={`text-[10.5px] px-2.5 py-1 rounded-md transition font-medium ${
+                    goal === g
+                      ? "bg-[var(--accent-strong)] text-white"
+                      : "fg-muted bg-hover hover:fg"
+                  }`}
+                >
+                  {t(GOAL_KEY[g])}
+                </button>
+              ))}
+            </div>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={match}
+              onClick={() => {
+                const next = !match;
+                setMatch(next);
+                onSaveMatch(next);
+              }}
+              className="flex items-center gap-2 text-[11px] fg-muted hover:fg transition shrink-0"
+              title={t("matchPageHint")}
+            >
+              <span
+                className={`relative inline-block h-[18px] w-[32px] rounded-full transition-colors ${
+                  match ? "bg-[var(--accent-strong)]" : "bg-[var(--border)]"
                 }`}
               >
-                {t(GOAL_KEY[g])}
-              </button>
-            ))}
+                <span
+                  className={`absolute top-[2px] h-[14px] w-[14px] rounded-full bg-white shadow transition-all ${
+                    match ? "left-[16px]" : "left-[2px]"
+                  }`}
+                />
+              </span>
+              <span className="font-medium">{t("matchPage")}</span>
+            </button>
           </div>
 
           {!loading && posts.length === 0 ? (
@@ -267,6 +307,7 @@ export function MarketingView({
           post={selected}
           projectId={projectId}
           offer={debouncedOffer}
+          matchParam={matchParam}
           posts={posts}
           onSelectPost={setSelected}
           onClose={() => setSelected(null)}
@@ -344,6 +385,7 @@ function PostDetail({
   post,
   projectId,
   offer,
+  matchParam,
   posts,
   onSelectPost,
   onClose,
@@ -351,6 +393,7 @@ function PostDetail({
   post: PostMeta;
   projectId: string;
   offer: string;
+  matchParam: string;
   posts: PostMeta[];
   onSelectPost: (post: PostMeta) => void;
   onClose: () => void;
@@ -375,8 +418,8 @@ function PostDetail({
 
   const offerParam = offer ? `&offer=${encodeURIComponent(offer)}` : "";
   const photoParam = photo ? `&photo=${encodeURIComponent(photo)}` : "";
-  const previewSrc = `/api/marketing/preview?projectId=${projectId}&postId=${post.id}${offerParam}${photoParam}`;
-  const renderUrl = `/api/marketing/render?projectId=${projectId}&postId=${post.id}${offerParam}${photoParam}`;
+  const previewSrc = `/api/marketing/preview?projectId=${projectId}&postId=${post.id}${offerParam}${photoParam}${matchParam}`;
+  const renderUrl = `/api/marketing/render?projectId=${projectId}&postId=${post.id}${offerParam}${photoParam}${matchParam}`;
 
   // The other-format design that shares this one's concept, if the currently
   // loaded catalog (same register+goal filter) has one — the toggle jumps to

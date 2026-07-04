@@ -72,7 +72,9 @@
     "publishNudge": "Publiceer je pagina om je link in de posts op te nemen",
     "photoLabel": "Foto",
     "renderError": "De afbeelding kon niet worden gemaakt — probeer het opnieuw",
-    "perProject": "Open of maak een pagina om posts met jouw merk te genereren."
+    "perProject": "Open of maak een pagina om posts met jouw merk te genereren.",
+    "matchPage": "Afstemmen op mijn pagina",
+    "matchPageHint": "Gebruikt kleuren en lettertypen van je pagina. Zet uit voor de curated look."
   },
   "makeYours": {
     "title": "Maak hem van jou",

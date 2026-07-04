@@ -55,6 +55,7 @@ export async function GET(req: NextRequest): Promise<Response> {
     userOffer: sp.get("offer") ?? undefined,
     photoUrl: sp.get("photo") ?? undefined,
     register: post.register,
+    match: sp.get("match") !== "0",
   });
   const filled = fillPostTemplate(postHtml, data);
   const key = renderCacheKey(post.contentHash, filled);

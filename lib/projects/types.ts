@@ -200,7 +200,7 @@ export interface ProjectSettings {
   /** 3D scene: gesture-gated WebGL scene with AVIF poster baked at publish. Absent = off. */
   scene3d?: Scene3dSettings;
   /** Marketing Kit tab state (register = user-picked giro). */
-  marketing?: { register?: string };
+  marketing?: { register?: string; match?: boolean };
 }
 
 /** One additional page of a multi-page site. The home page stays at

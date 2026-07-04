@@ -45,6 +45,7 @@ export async function GET(req: NextRequest): Promise<Response> {
     userOffer: sp.get("offer") ?? undefined,
     photoUrl: sp.get("photo") ?? undefined,
     register: post.register,
+    match: sp.get("match") !== "0",
   });
 
   // as=json: the workspace's PostDetail wants the built data + the page's own
