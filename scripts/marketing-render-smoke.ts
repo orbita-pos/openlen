@@ -6,6 +6,7 @@
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { fillPostTemplate } from "../lib/marketing/fill";
+import { POST_FORMAT_SIZES } from "../lib/marketing/post-templates/families";
 import { renderPostPng } from "../lib/marketing/render";
 
 const PNG_MAGIC = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
@@ -33,12 +34,22 @@ async function main() {
   assert(png, "renderPostPng returned null — Chrome launch/render failed");
   assert(png!.subarray(0, 8).equals(PNG_MAGIC), "output is not a valid PNG (bad magic bytes)");
 
+  // Real dimensions from the IHDR chunk (first chunk after the 8-byte
+  // signature: 4B length + "IHDR" + 4B width + 4B height, big-endian).
+  const width = png!.readUInt32BE(16);
+  const height = png!.readUInt32BE(20);
+  const expected = POST_FORMAT_SIZES.square;
+  assert(
+    width === expected.width && height === expected.height,
+    `PNG is ${width}x${height}, expected ${expected.width}x${expected.height}`,
+  );
+
   const scratchDir = join(process.cwd(), "scratch");
   mkdirSync(scratchDir, { recursive: true });
   const outPath = join(scratchDir, "marketing-smoke.png");
   writeFileSync(outPath, png!);
 
-  console.log(`ok 1080x1080 ${png!.byteLength} bytes -> ${outPath}`);
+  console.log(`ok ${width}x${height} ${png!.byteLength} bytes -> ${outPath}`);
 }
 
 main().catch((err) => {

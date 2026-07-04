@@ -7,9 +7,29 @@
 
 import { createHash } from "node:crypto";
 import { captureException } from "@inariwatch/capture";
+import { installSubresourceSsrfGuard } from "@/lib/security/render-ssrf-guard";
 import { POST_FORMAT_SIZES, type PostFormat } from "./post-templates/families";
 
 const HARD_DEADLINE_MS = 12_000;
+
+// CX22 is 2 vCPU/4GB and also serves prod traffic — the per-minute rate limit
+// doesn't bound CONCURRENT Chromes, this does.
+const MAX_CONCURRENT_RENDERS = 2;
+let inFlight = 0;
+const waiters: Array<() => void> = [];
+
+export async function withRenderSlot<T>(fn: () => Promise<T>): Promise<T> {
+  if (inFlight >= MAX_CONCURRENT_RENDERS) {
+    await new Promise<void>((r) => waiters.push(r));
+  }
+  inFlight++;
+  try {
+    return await fn();
+  } finally {
+    inFlight--;
+    waiters.shift()?.();
+  }
+}
 
 /** Content-addressed cache key: contentHash pins the template body, the html
  *  hash pins the filled data — same post + same data always resolves to the
@@ -24,6 +44,14 @@ export function renderCacheKey(contentHash: string, filledHtml: string): string 
  *  rather than ever blocking on a hung browser. */
 export async function renderPostPng(html: string, format: PostFormat): Promise<Buffer | null> {
   const { width, height } = POST_FORMAT_SIZES[format];
+  return withRenderSlot(() => renderPostPngUnbounded(html, width, height));
+}
+
+async function renderPostPngUnbounded(
+  html: string,
+  width: number,
+  height: number,
+): Promise<Buffer | null> {
   try {
     const { default: puppeteer } = await import("puppeteer");
     const executablePath =
@@ -50,6 +78,9 @@ export async function renderPostPng(html: string, format: PostFormat): Promise<B
     }, HARD_DEADLINE_MS);
     try {
       const page = await browser.newPage();
+      // The filled HTML carries user-influenced photo URLs — block subresource
+      // fetches to loopback/LAN/metadata hosts before any of them load.
+      await installSubresourceSsrfGuard(page);
       await page.setViewport({ width, height });
       await page.setContent(html, { waitUntil: "load", timeout: HARD_DEADLINE_MS });
       await page
