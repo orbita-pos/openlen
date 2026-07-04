@@ -75,7 +75,8 @@
     "perProject": "Abra ou crie uma página para gerar posts com a sua marca.",
     "matchPage": "Combinar com minha página",
     "matchPageHint": "Usa cores e fontes da sua página. Desligue para o visual curado.",
-    "reposition": "Arraste para reposicionar a foto"
+    "reposition": "Arraste para reposicionar a foto",
+    "editHint": "Toque no texto para editar"
   },
   "makeYours": {
     "title": "Torne-a sua",

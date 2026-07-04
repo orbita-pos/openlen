@@ -415,19 +415,20 @@ function PostDetail({
   const [idx, setIdx] = useState(0);
   const [caption, setCaption] = useState("");
   const [photo, setPhoto] = useState<string | undefined>(undefined);
-  // Drag-to-reposition the photo's focal point. photoPos is committed (drives
-  // the src + export); posRef tracks the live drag so we postMessage the iframe
-  // without reloading it on every move.
+  // Photo focal point + inline text edits, both driven by the iframe editor
+  // script (drag the photo, click text to edit). Committed here for the export.
   const [photoPos, setPhotoPos] = useState({ x: 50, y: 50 });
-  const posRef = useRef({ x: 50, y: 50 });
+  const [textEdits, setTextEdits] = useState<Record<string, string>>({});
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
-  const dragRef = useRef<{ x: number; y: number; base: { x: number; y: number } } | null>(null);
 
   const offerParam = offer ? `&offer=${encodeURIComponent(offer)}` : "";
   const photoParam = photo ? `&photo=${encodeURIComponent(photo)}` : "";
   const posParam =
     photoPos.x !== 50 || photoPos.y !== 50 ? `&pos=${photoPos.x},${photoPos.y}` : "";
-  const previewSrc = `/api/marketing/preview?projectId=${projectId}&postId=${post.id}${offerParam}${photoParam}${posParam}${matchParam}`;
+  // Preview carries no pos/edits — the iframe applies them live and the parent
+  // re-applies committed state on reload (olReady). The export bakes them in:
+  // pos as a query param, text edits in the POST body.
+  const previewSrc = `/api/marketing/preview?projectId=${projectId}&postId=${post.id}${offerParam}${photoParam}${matchParam}`;
   const renderUrl = `/api/marketing/render?projectId=${projectId}&postId=${post.id}${offerParam}${photoParam}${posParam}${matchParam}`;
 
   // The other-format design that shares this one's concept, if the currently
@@ -460,7 +461,7 @@ function PostDetail({
     setPhoto(undefined);
     setIdx(0);
     setPhotoPos({ x: 50, y: 50 });
-    posRef.current = { x: 50, y: 50 };
+    setTextEdits({});
   }, [post.id]);
 
   useEffect(() => {
@@ -499,7 +500,19 @@ function PostDetail({
   }, [pagePhotos, post.register]);
 
   async function fetchRenderBlob(): Promise<Blob | null> {
-    const res = await fetch(renderUrl);
+    // With inline text edits, POST them in the body (arbitrary text, too big
+    // for the query string); without, a plain GET stays cacheable.
+    const hasEdits = Object.keys(textEdits).length > 0;
+    const res = await fetch(
+      renderUrl,
+      hasEdits
+        ? {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ edits: textEdits }),
+          }
+        : undefined,
+    );
     if (!res.ok) {
       toast.error(t("renderError"));
       return null;
@@ -551,29 +564,33 @@ function PostDetail({
   const activePhoto = photo ?? data?.photoUrl;
   const boxHeight = size.height * scale;
 
-  // Drag anywhere on the preview to move the photo (the image follows the
-  // cursor; dragging down reveals the top). We postMessage the live position to
-  // the sandboxed iframe (no reload) and commit it to state on release, which
-  // bakes it into the src + the export.
-  const clampPct = (n: number) => Math.max(0, Math.min(100, Math.round(n)));
-  function startReposition(e: React.PointerEvent) {
-    if (!activePhoto) return;
-    e.currentTarget.setPointerCapture(e.pointerId);
-    dragRef.current = { x: e.clientX, y: e.clientY, base: { ...posRef.current } };
-  }
-  function moveReposition(e: React.PointerEvent) {
-    const d = dragRef.current;
-    if (!d) return;
-    const nx = clampPct(d.base.x - ((e.clientX - d.x) / previewWidth) * 100);
-    const ny = clampPct(d.base.y - ((e.clientY - d.y) / boxHeight) * 100);
-    posRef.current = { x: nx, y: ny };
-    iframeRef.current?.contentWindow?.postMessage({ olPhotoPos: `${nx}% ${ny}%` }, "*");
-  }
-  function endReposition() {
-    if (!dragRef.current) return;
-    dragRef.current = null;
-    setPhotoPos(posRef.current);
-  }
+  // Text edits + photo position come FROM the iframe (inline editor script); the
+  // parent stores them (for export) and pushes committed state back on reload.
+  // Refs keep the message handler reading current values without re-binding.
+  const stateRef = useRef({ edits: textEdits, pos: photoPos });
+  stateRef.current = { edits: textEdits, pos: photoPos };
+  useEffect(() => {
+    function onMessage(e: MessageEvent) {
+      if (e.source !== iframeRef.current?.contentWindow) return;
+      const d = e.data;
+      if (d?.olEdits && typeof d.olEdits === "object") setTextEdits(d.olEdits);
+      else if (typeof d?.olPos === "string") {
+        const [x, y] = d.olPos.split(",").map(Number);
+        if (Number.isFinite(x) && Number.isFinite(y)) setPhotoPos({ x, y });
+      } else if (d?.olReady) {
+        const { edits, pos } = stateRef.current;
+        iframeRef.current?.contentWindow?.postMessage(
+          {
+            olApplyEdits: edits,
+            olPhotoPos: pos.x !== 50 || pos.y !== 50 ? `${pos.x}% ${pos.y}%` : undefined,
+          },
+          "*",
+        );
+      }
+    }
+    window.addEventListener("message", onMessage);
+    return () => window.removeEventListener("message", onMessage);
+  }, []);
 
   return (
     <div
@@ -638,21 +655,11 @@ function PostDetail({
                 border: 0,
               }}
             />
-            {activePhoto && (
-              <div
-                onPointerDown={startReposition}
-                onPointerMove={moveReposition}
-                onPointerUp={endReposition}
-                onPointerCancel={endReposition}
-                className="absolute inset-0 cursor-grab active:cursor-grabbing"
-                style={{ touchAction: "none" }}
-                title={t("reposition")}
-              />
-            )}
           </div>
-          {activePhoto && (
-            <p className="-mt-2 text-[10px] fg-faint text-center">{t("reposition")}</p>
-          )}
+          <p className="-mt-2 text-[10px] fg-faint text-center">
+            {t("editHint")}
+            {activePhoto ? ` · ${t("reposition")}` : ""}
+          </p>
 
           <div className="w-full">
             <span className="text-[10.5px] font-medium fg-muted block mb-1.5">

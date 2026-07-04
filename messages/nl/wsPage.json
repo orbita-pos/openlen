@@ -75,7 +75,8 @@
     "perProject": "Open of maak een pagina om posts met jouw merk te genereren.",
     "matchPage": "Afstemmen op mijn pagina",
     "matchPageHint": "Gebruikt kleuren en lettertypen van je pagina. Zet uit voor de curated look.",
-    "reposition": "Sleep om de foto te verplaatsen"
+    "reposition": "Sleep om de foto te verplaatsen",
+    "editHint": "Tik op tekst om te bewerken"
   },
   "makeYours": {
     "title": "Maak hem van jou",

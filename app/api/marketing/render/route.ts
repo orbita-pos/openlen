@@ -5,6 +5,7 @@ import { listProfiles } from "@/lib/business-profiles/store";
 import { getPostTemplate, getPostTemplateHtml } from "@/lib/marketing/post-templates/store";
 import { fillPostTemplate } from "@/lib/marketing/fill";
 import { buildPostData, parsePhotoPos } from "@/lib/marketing/post-data";
+import { applyTextEdits, tagEditableText } from "@/lib/marketing/text-edit";
 import { renderCacheKey, renderPostPng } from "@/lib/marketing/render";
 import { getOpenLenImageStorage } from "@/lib/storage/openlen-images";
 import { tryConsumeMemory } from "@/lib/rate-limit-rs";
@@ -23,7 +24,34 @@ import { tryConsumeMemory } from "@/lib/rate-limit-rs";
 
 export const runtime = "nodejs";
 
+// GET = the plain post (cacheable). POST carries inline text edits in the body
+// (arbitrary text, too big for the query string) and bakes them into the PNG.
 export async function GET(req: NextRequest): Promise<Response> {
+  return renderResponse(req, {});
+}
+
+export async function POST(req: NextRequest): Promise<Response> {
+  const body = (await req.json().catch(() => null)) as { edits?: unknown } | null;
+  return renderResponse(req, sanitizeEdits(body?.edits));
+}
+
+// Keep only `{ "<digits>": "<string>" }` entries, capped, so a malicious body
+// can't blow up memory. Values are still HTML-escaped by applyTextEdits.
+function sanitizeEdits(raw: unknown): Record<string, string> {
+  const out: Record<string, string> = {};
+  if (!raw || typeof raw !== "object") return out;
+  let n = 0;
+  for (const [k, v] of Object.entries(raw as Record<string, unknown>)) {
+    if (n >= 60) break;
+    if (/^\d{1,4}$/.test(k) && typeof v === "string") {
+      out[k] = v.slice(0, 500);
+      n++;
+    }
+  }
+  return out;
+}
+
+async function renderResponse(req: NextRequest, edits: Record<string, string>): Promise<Response> {
   const session = await auth();
   if (!session?.user?.id) return new NextResponse(null, { status: 401 });
 
@@ -58,7 +86,11 @@ export async function GET(req: NextRequest): Promise<Response> {
     register: post.register,
     match: sp.get("match") !== "0",
   });
-  const filled = fillPostTemplate(postHtml, data);
+  // No edits → byte-identical to before (same cache key). With edits, tag +
+  // override the same way the preview did (same fn on the same filled HTML →
+  // matching tids) and let the new bytes get their own cache entry.
+  let filled = fillPostTemplate(postHtml, data);
+  if (Object.keys(edits).length > 0) filled = applyTextEdits(tagEditableText(filled), edits);
   const key = renderCacheKey(post.contentHash, filled);
   const storage = getOpenLenImageStorage();
 
