@@ -9,6 +9,7 @@ import {
 } from "@/lib/projects/site-pages";
 import { reconcileModuleSettings } from "@/lib/projects/module-settings";
 import { getOrCreateOwnerChatUser } from "@/lib/chat/store";
+import { POST_REGISTER } from "@/lib/marketing/post-templates/admin-schemas";
 import type {
   FormConfig,
   MusicSettings,
@@ -93,6 +94,8 @@ interface PatchBody {
   };
   /** 3D scene module. Merged into settings.scene3d, or null to remove it. Takes effect next publish. */
   scene3d?: { enabled?: boolean; spec?: unknown } | null;
+  /** Marketing Kit tab state. Merged into settings.marketing. */
+  marketing?: { register?: string };
 }
 
 function clean(v: unknown, max: number): string {
@@ -308,6 +311,16 @@ export async function PATCH(
       }
     }
   }
+  const hasMarketing = "marketing" in body;
+  if (hasMarketing) {
+    const m = body.marketing;
+    if (!m || typeof m !== "object") {
+      return json({ error: "invalid_body", message: "marketing must be an object" }, 400);
+    }
+    if ("register" in m && m.register !== undefined && !POST_REGISTER.safeParse(m.register).success) {
+      return json({ error: "invalid_body", message: "marketing.register must be a known register" }, 400);
+    }
+  }
   if (hasScene3d) {
     const s = body.scene3d;
     if (s !== null) {
@@ -364,13 +377,14 @@ export async function PATCH(
     !hasCollections &&
     !hasWhatsapp &&
     !hasChat &&
-    !hasScene3d
+    !hasScene3d &&
+    !hasMarketing
   ) {
     return json(
       {
         error: "invalid_body",
         message:
-          "expected formIndex+patch OR analyticsDisabled OR motion OR music OR members OR broadcast OR comments OR bookings OR collections OR whatsapp OR chat OR scene3d",
+          "expected formIndex+patch OR analyticsDisabled OR motion OR music OR members OR broadcast OR comments OR bookings OR collections OR whatsapp OR chat OR scene3d OR marketing",
       },
       400,
     );
@@ -562,6 +576,12 @@ export async function PATCH(
         ...body.scene3d,
       };
     }
+  }
+  if (hasMarketing && body.marketing) {
+    nextSettings.marketing = {
+      ...(data.settings?.marketing ?? {}),
+      ...("register" in body.marketing ? { register: body.marketing.register } : {}),
+    };
   }
   if (hasChat && body.chat?.enabled === true && data.settings?.chat?.enabled !== true) {
     // Auto-provision the owner chat_user so visitors can "message the business".
