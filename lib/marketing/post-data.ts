@@ -18,6 +18,16 @@ export function extractPagePhotos(html: string): string[] {
   return out;
 }
 
+// Captions are for the page's AUDIENCE, not the editor's UI locale (spec §4)
+// — derive from the published <html lang>, not next-intl's useLocale(). Any
+// "es-*" subtag (es-MX, es-419, ...) maps to "es"; missing/unrecognized attr
+// defaults to "es" (es-MX-first product, per lib/design-guidance.ts).
+export function extractPageLang(html: string): "es" | "en" {
+  const m = /<html[^>]*\blang="([a-zA-Z-]+)"/.exec(html);
+  if (!m) return "es";
+  return m[1].toLowerCase().startsWith("es") ? "es" : "en";
+}
+
 // One curated fallback per register (spec §7), picked from the "Imágenes by
 // OpenLen" catalog (public/openlen-images/manifest.json) — verified 200 via
 // curl at implementation time. Kept on images.openlen.com so the bake
@@ -38,6 +48,7 @@ export function buildPostData(input: {
   html: string; subdomain: string | null;
   profile: BusinessProfileData | null;
   userOffer?: string; photoUrl?: string; pageTitle?: string;
+  register?: PostRegister;
 }): PostData {
   const p = input.profile;
   const businessName = norm(p?.business_name) ?? norm(input.pageTitle);
@@ -50,7 +61,10 @@ export function buildPostData(input: {
     address: norm(p?.contact?.address),
     url: input.subdomain ? `${input.subdomain}.openlen.com` : undefined,
     logoInitial: businessName ? businessName[0].toUpperCase() : undefined,
-    photoUrl: norm(input.photoUrl) ?? extractPagePhotos(input.html)[0],
+    photoUrl:
+      norm(input.photoUrl) ??
+      extractPagePhotos(input.html)[0] ??
+      (input.register ? REGISTER_FALLBACK_PHOTOS[input.register] : undefined),
     accent: norm(p?.brand?.accent) ?? extractRootToken(input.html, "--accent") ?? undefined,
   };
 }

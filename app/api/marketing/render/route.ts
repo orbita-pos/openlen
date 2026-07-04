@@ -54,6 +54,7 @@ export async function GET(req: NextRequest): Promise<Response> {
     pageTitle: project.title,
     userOffer: sp.get("offer") ?? undefined,
     photoUrl: sp.get("photo") ?? undefined,
+    register: post.register,
   });
   const filled = fillPostTemplate(postHtml, data);
   const key = renderCacheKey(post.contentHash, filled);
@@ -64,6 +65,9 @@ export async function GET(req: NextRequest): Promise<Response> {
 
   let png: Buffer;
   if (cacheHit) {
+    // Cache-hit path intentionally bypasses withRenderSlot/renderPostPng — a
+    // plain R2 fetch, not a Chrome launch, so it doesn't compete for the
+    // render concurrency cap.
     const cached = await fetch(publicUrl!);
     if (!cached.ok) return new NextResponse(null, { status: 502 });
     png = Buffer.from(await cached.arrayBuffer());

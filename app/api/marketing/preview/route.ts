@@ -4,7 +4,7 @@ import { getProject } from "@/lib/projects";
 import { listProfiles } from "@/lib/business-profiles/store";
 import { getPostTemplate, getPostTemplateHtml } from "@/lib/marketing/post-templates/store";
 import { fillPostTemplate } from "@/lib/marketing/fill";
-import { buildPostData, extractPagePhotos } from "@/lib/marketing/post-data";
+import { buildPostData, extractPagePhotos, extractPageLang } from "@/lib/marketing/post-data";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // GET /api/marketing/preview?projectId=<id>&postId=<slug>&offer=<txt>&photo=<url>
@@ -44,12 +44,22 @@ export async function GET(req: NextRequest): Promise<Response> {
     pageTitle: project.title,
     userOffer: sp.get("offer") ?? undefined,
     photoUrl: sp.get("photo") ?? undefined,
+    register: post.register,
   });
 
   // as=json: the workspace's PostDetail wants the built data + the page's own
   // photos to power captions + the photo strip — no HTML fetch/fill needed.
+  // pageLang drives caption language: captions are for the page's AUDIENCE,
+  // not the editor's UI locale (spec §4).
   if (sp.get("as") === "json") {
-    return NextResponse.json({ data, pagePhotos: extractPagePhotos(project.data.html) });
+    return NextResponse.json(
+      {
+        data,
+        pagePhotos: extractPagePhotos(project.data.html),
+        pageLang: extractPageLang(project.data.html),
+      },
+      { headers: { "Cache-Control": "no-store" } },
+    );
   }
 
   const postHtml = await getPostTemplateHtml(postId);

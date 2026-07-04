@@ -27,7 +27,7 @@ export const PostCreateSchema = z.object({
   register: POST_REGISTER,
   format: POST_FORMAT,
   goal: POST_GOAL,
-  html: z.string().min(100),
+  html: z.string().min(100).max(500_000),
   status: POST_STATUS.optional(),
 });
 export type PostCreateInput = z.infer<typeof PostCreateSchema>;

@@ -358,12 +358,17 @@ function PostDetail({
   const t = useTranslations("wsPage.marketing");
   const tCommon = useTranslations("common");
   const locale = useLocale();
-  const lang = locale.startsWith("es") ? "es" : "en";
   const toast = useToast();
   const trapRef = useFocusTrap(true);
 
   const [data, setData] = useState<PostData | null>(null);
   const [pagePhotos, setPagePhotos] = useState<string[]>([]);
+  // Captions are for the page's AUDIENCE, not the editor's UI locale (spec
+  // §4) — once the as=json fetch resolves, pageLang (derived server-side from
+  // the page's own <html lang>) takes over; the locale-derived guess only
+  // covers the brief window before that first response lands.
+  const [pageLang, setPageLang] = useState<"es" | "en" | null>(null);
+  const lang = pageLang ?? (locale.startsWith("es") ? "es" : "en");
   const [idx, setIdx] = useState(0);
   const [caption, setCaption] = useState("");
   const [photo, setPhoto] = useState<string | undefined>(undefined);
@@ -412,6 +417,7 @@ function PostDetail({
         if (!alive) return;
         setData(d.data ?? {});
         setPagePhotos(d.pagePhotos ?? []);
+        setPageLang(d.pageLang === "en" ? "en" : "es");
       })
       .catch(() => {
         if (alive) setData({});
