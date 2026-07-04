@@ -42,6 +42,7 @@ import { BusinessSection } from "../business/business-section";
 import { ProjectsSection } from "../projects/projects-section";
 import { AnalyticsSection } from "../analytics/analytics-section";
 import { ModulesView } from "@/components/workspace-v2/modules-view";
+import { MarketingView } from "@/components/workspace-v2/marketing-view";
 import { TemplatesPanel } from "@/components/workspace-v2/panels/templates-panel";
 import {
   LeftSidebar,
@@ -316,6 +317,7 @@ function NewV2Inner() {
     viewParam === "projects" ||
     viewParam === "analytics" ||
     viewParam === "modulos" ||
+    viewParam === "marketing" ||
     viewParam === "templates" ||
     viewParam === "business"
       ? viewParam
@@ -2825,6 +2827,39 @@ function NewV2Inner() {
     },
     [loadedProject?.id, toast, t],
   );
+  const updateMarketingSettings = useCallback(
+    (register: string) => {
+      const projectId = loadedProject?.id;
+      if (!projectId) return;
+      void (async () => {
+        try {
+          const r = await fetch(`/api/projects/${projectId}/settings`, {
+            method: "PATCH",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ marketing: { register } }),
+          });
+          if (!r.ok) {
+            toast.error(t("toast.moduleError"));
+            return;
+          }
+          setLoadedProject((p) =>
+            p
+              ? {
+                  ...p,
+                  settings: {
+                    ...p.settings,
+                    marketing: { ...p.settings?.marketing, register },
+                  },
+                }
+              : p,
+          );
+        } catch {
+          toast.error(t("toast.moduleError"));
+        }
+      })();
+    },
+    [loadedProject?.id, toast, t],
+  );
   const updateChatSettings = useCallback(
     async (patch: ChatSettings): Promise<boolean> => {
       const projectId = loadedProject?.id;
@@ -3229,6 +3264,12 @@ function NewV2Inner() {
             }}
             onShowAnalytics={() => setCenterView("analytics")}
             onReturnToCanvas={() => setCenterView("page")}
+          />
+        ) : centerView === "marketing" ? (
+          <MarketingView
+            projectId={loadedProject?.id ?? null}
+            initialRegister={loadedProject?.settings?.marketing?.register}
+            onSaveRegister={updateMarketingSettings}
           />
         ) : centerView === "templates" ? (
           previewingTemplate ? (

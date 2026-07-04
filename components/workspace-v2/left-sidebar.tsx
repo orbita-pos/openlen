@@ -24,6 +24,7 @@ import {
   Inbox,
   Layers,
   ListTree,
+  Megaphone,
   Monitor,
   Package,
   PanelLeft,
@@ -65,6 +66,7 @@ export type SectionView =
   | "analytics"
   | "messages"
   | "modulos"
+  | "marketing"
   | "business";
 
 const GLOBAL_SECTIONS: ReadonlyArray<{
@@ -76,6 +78,7 @@ const GLOBAL_SECTIONS: ReadonlyArray<{
   { view: "projects", icon: FileText, key: "nav.myPages" },
   { view: "templates", icon: Grid3, key: "nav.templates" },
   { view: "modulos", icon: Package, key: "nav.modulos" },
+  { view: "marketing", icon: Megaphone, key: "nav.marketing" },
   { view: "analytics", icon: BarChart3, key: "nav.analytics" },
   { view: "messages", icon: Inbox, key: "nav.messages" },
   // "business" lives in the top RailBusinessSwitcher now (avatar → "Abrir
