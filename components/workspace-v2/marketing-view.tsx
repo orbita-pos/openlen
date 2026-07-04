@@ -14,7 +14,7 @@ import {
   type PostRegister,
 } from "@/lib/marketing/post-templates/families";
 import { listCaptions, fillCaption } from "@/lib/marketing/captions";
-import { REGISTER_FALLBACK_PHOTOS } from "@/lib/marketing/post-data";
+import { REGISTER_DEFAULT_PHOTOS } from "@/lib/marketing/post-data";
 import type { PostData } from "@/lib/marketing/fill";
 import { useToast } from "./toast";
 import {
@@ -436,9 +436,12 @@ function PostDetail({
     );
   }, [data, idx, post, lang, offer]);
 
+  // Strip = the register's curated default (the current photo, shown first) +
+  // the user's own page images as opt-in swaps. oficios/general have no default.
   const photos = useMemo(() => {
-    const fallback = REGISTER_FALLBACK_PHOTOS[post.register];
-    return pagePhotos.includes(fallback) ? pagePhotos : [...pagePhotos, fallback];
+    const def = REGISTER_DEFAULT_PHOTOS[post.register];
+    const rest = pagePhotos.filter((u) => u !== def);
+    return def ? [def, ...rest] : rest;
   }, [pagePhotos, post.register]);
 
   async function fetchRenderBlob(): Promise<Blob | null> {

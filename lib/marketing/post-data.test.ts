@@ -4,7 +4,7 @@ import {
   extractPageLang,
   extractPagePhotos,
   extractRootToken,
-  REGISTER_FALLBACK_PHOTOS,
+  REGISTER_DEFAULT_PHOTOS,
 } from "./post-data";
 
 const pageHtml = `<html><head><style>:root{--accent:#2F6B3E;--bg:#FBF7EF}</style></head><body><h1>Café Terral</h1></body></html>`;
@@ -48,41 +48,48 @@ describe("extractPageLang", () => {
 });
 
 describe("buildPostData", () => {
-  it("prefers profile data, falls back to page", () => {
+  it("fills the safe text from profile, falling back to page title", () => {
     const d = buildPostData({
       html: pageHtml, subdomain: "terral", pageTitle: "Café Terral",
       profile: { business_name: "Terral Café", contact: { whatsapp: "5215512345678", phone: "55 1234 5678", address: null, socials: null }, brand: { logoUrl: null, accent: "#AA3311" } } as never,
       userOffer: "2x1 en latte",
     });
     expect(d.businessName).toBe("Terral Café");
-    expect(d.accent).toBe("#AA3311");
     expect(d.offer).toBe("2x1 en latte");
     expect(d.url).toBe("terral.openlen.com");
     expect(d.phone).toBe("55 1234 5678");
     expect(d.logoInitial).toBe("T");
   });
-  it("works with no profile at all (page-derived)", () => {
+  it("does NOT override the design's accent with the brand color (curated-beauty posture)", () => {
+    // Even when the profile carries a brand accent AND the page has a --accent
+    // token, the post keeps its own hand-tuned accent — buildPostData emits none.
+    const d = buildPostData({
+      html: pageHtml, subdomain: null, pageTitle: "Café Terral",
+      profile: { business_name: "Terral Café", contact: { whatsapp: null, phone: null, address: null, socials: null }, brand: { logoUrl: null, accent: "#AA3311" } } as never,
+    });
+    expect(d.accent).toBeUndefined();
+  });
+  it("works with no profile at all (page-derived name)", () => {
     const d = buildPostData({ html: pageHtml, subdomain: null, profile: null, pageTitle: "Café Terral" });
     expect(d.businessName).toBe("Café Terral");
-    expect(d.accent).toBe("#2F6B3E");
     expect(d.url).toBeUndefined();
   });
-  it("explicit photoUrl wins over page photos", () => {
-    const html = `<html><body><img src="https://x.test/page.webp"></body></html>`;
-    const d = buildPostData({ html, subdomain: null, profile: null, photoUrl: "https://x.test/mine.webp" });
-    expect(d.photoUrl).toBe("https://x.test/mine.webp");
+  it("never auto-injects the business's own page images", () => {
+    // A page <img> (often a logo/sprite) must not become the post photo — the
+    // real ORBITAPOS bug. With no register it stays photo-less; with a register
+    // it uses the curated default, not the page image.
+    const html = `<html><body><img src="https://x.test/page-logo.webp"></body></html>`;
+    expect(buildPostData({ html, subdomain: null, profile: null }).photoUrl).toBeUndefined();
+    expect(
+      buildPostData({ html, subdomain: null, profile: null, register: "restaurante" }).photoUrl,
+    ).toBe(REGISTER_DEFAULT_PHOTOS.restaurante);
   });
-  it("falls back to the first page photo without explicit photoUrl", () => {
-    const html = `<html><body><img src="https://x.test/page.webp"></body></html>`;
-    const d = buildPostData({ html, subdomain: null, profile: null });
-    expect(d.photoUrl).toBe("https://x.test/page.webp");
-  });
-  it("falls back to the register's curated photo when the page has none", () => {
+  it("defaults to the register's curated photo", () => {
     const html = `<html><body><h1>No photos here</h1></body></html>`;
     const d = buildPostData({ html, subdomain: null, profile: null, register: "restaurante" });
-    expect(d.photoUrl).toBe(REGISTER_FALLBACK_PHOTOS.restaurante);
+    expect(d.photoUrl).toBe(REGISTER_DEFAULT_PHOTOS.restaurante);
   });
-  it("still prefers an explicit photoUrl over the register fallback", () => {
+  it("uses an explicit user photoUrl over the register default", () => {
     const html = `<html><body><h1>No photos here</h1></body></html>`;
     const d = buildPostData({
       html, subdomain: null, profile: null,
@@ -90,14 +97,13 @@ describe("buildPostData", () => {
     });
     expect(d.photoUrl).toBe("https://x.test/mine.webp");
   });
-  it("still prefers a page photo over the register fallback", () => {
-    const html = `<html><body><img src="https://x.test/page.webp"></body></html>`;
-    const d = buildPostData({ html, subdomain: null, profile: null, register: "restaurante" });
-    expect(d.photoUrl).toBe("https://x.test/page.webp");
+  it("stays photo-less for type-first registers (oficios, general)", () => {
+    const html = `<html><body><h1>x</h1></body></html>`;
+    expect(buildPostData({ html, subdomain: null, profile: null, register: "oficios" }).photoUrl).toBeUndefined();
+    expect(buildPostData({ html, subdomain: null, profile: null, register: "general" }).photoUrl).toBeUndefined();
   });
-  it("has no photoUrl when there's no page photo and no register", () => {
+  it("has no photoUrl when there's no register", () => {
     const html = `<html><body><h1>No photos here</h1></body></html>`;
-    const d = buildPostData({ html, subdomain: null, profile: null });
-    expect(d.photoUrl).toBeUndefined();
+    expect(buildPostData({ html, subdomain: null, profile: null }).photoUrl).toBeUndefined();
   });
 });
