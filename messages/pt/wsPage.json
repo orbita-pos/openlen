@@ -74,7 +74,8 @@
     "renderError": "Não foi possível gerar a imagem — tente novamente",
     "perProject": "Abra ou crie uma página para gerar posts com a sua marca.",
     "matchPage": "Combinar com minha página",
-    "matchPageHint": "Usa cores e fontes da sua página. Desligue para o visual curado."
+    "matchPageHint": "Usa cores e fontes da sua página. Desligue para o visual curado.",
+    "reposition": "Arraste para reposicionar a foto"
   },
   "makeYours": {
     "title": "Torne-a sua",

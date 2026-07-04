@@ -74,7 +74,8 @@
     "renderError": "Das Bild konnte nicht erstellt werden — versuche es erneut",
     "perProject": "Öffne oder erstelle eine Seite, um Posts mit deiner Marke zu erstellen.",
     "matchPage": "An meine Seite anpassen",
-    "matchPageHint": "Übernimmt Farben und Schriften deiner Seite. Ausschalten für den kuratierten Look."
+    "matchPageHint": "Übernimmt Farben und Schriften deiner Seite. Ausschalten für den kuratierten Look.",
+    "reposition": "Zum Verschieben des Fotos ziehen"
   },
   "makeYours": {
     "title": "Mach sie zu deiner",

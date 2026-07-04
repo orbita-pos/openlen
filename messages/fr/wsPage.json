@@ -74,7 +74,8 @@
     "renderError": "Impossible de générer l'image — réessayez",
     "perProject": "Ouvrez ou créez une page pour générer des posts à l'image de votre marque.",
     "matchPage": "Assortir à ma page",
-    "matchPageHint": "Reprend les couleurs et polices de votre page. Désactivez pour le style curé."
+    "matchPageHint": "Reprend les couleurs et polices de votre page. Désactivez pour le style curé.",
+    "reposition": "Faites glisser pour repositionner la photo"
   },
   "makeYours": {
     "title": "Personnalisez-la",

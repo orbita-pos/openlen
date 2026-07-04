@@ -74,7 +74,8 @@
     "renderError": "De afbeelding kon niet worden gemaakt — probeer het opnieuw",
     "perProject": "Open of maak een pagina om posts met jouw merk te genereren.",
     "matchPage": "Afstemmen op mijn pagina",
-    "matchPageHint": "Gebruikt kleuren en lettertypen van je pagina. Zet uit voor de curated look."
+    "matchPageHint": "Gebruikt kleuren en lettertypen van je pagina. Zet uit voor de curated look.",
+    "reposition": "Sleep om de foto te verplaatsen"
   },
   "makeYours": {
     "title": "Maak hem van jou",

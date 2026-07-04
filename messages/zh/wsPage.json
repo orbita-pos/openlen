@@ -74,7 +74,8 @@
     "renderError": "无法生成图片——请重试",
     "perProject": "打开或创建一个页面来生成带有你品牌的帖子。",
     "matchPage": "匹配我的页面",
-    "matchPageHint": "采用你页面的颜色和字体。关闭以使用精选设计风格。"
+    "matchPageHint": "采用你页面的颜色和字体。关闭以使用精选设计风格。",
+    "reposition": "拖动以调整照片位置"
   },
   "makeYours": {
     "title": "把它变成你的",

@@ -4,7 +4,7 @@ import { getProject } from "@/lib/projects";
 import { listProfiles } from "@/lib/business-profiles/store";
 import { getPostTemplate, getPostTemplateHtml } from "@/lib/marketing/post-templates/store";
 import { fillPostTemplate } from "@/lib/marketing/fill";
-import { buildPostData } from "@/lib/marketing/post-data";
+import { buildPostData, parsePhotoPos } from "@/lib/marketing/post-data";
 import { renderCacheKey, renderPostPng } from "@/lib/marketing/render";
 import { getOpenLenImageStorage } from "@/lib/storage/openlen-images";
 import { tryConsumeMemory } from "@/lib/rate-limit-rs";
@@ -54,6 +54,7 @@ export async function GET(req: NextRequest): Promise<Response> {
     pageTitle: project.title,
     userOffer: sp.get("offer") ?? undefined,
     photoUrl: sp.get("photo") ?? undefined,
+    photoPosition: parsePhotoPos(sp.get("pos")),
     register: post.register,
     match: sp.get("match") !== "0",
   });

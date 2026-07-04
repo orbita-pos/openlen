@@ -4,7 +4,7 @@ import { getProject } from "@/lib/projects";
 import { listProfiles } from "@/lib/business-profiles/store";
 import { getPostTemplate, getPostTemplateHtml } from "@/lib/marketing/post-templates/store";
 import { fillPostTemplate } from "@/lib/marketing/fill";
-import { buildPostData, extractPagePhotos, extractPageLang } from "@/lib/marketing/post-data";
+import { buildPostData, extractPagePhotos, extractPageLang, parsePhotoPos } from "@/lib/marketing/post-data";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // GET /api/marketing/preview?projectId=<id>&postId=<slug>&offer=<txt>&photo=<url>
@@ -44,6 +44,7 @@ export async function GET(req: NextRequest): Promise<Response> {
     pageTitle: project.title,
     userOffer: sp.get("offer") ?? undefined,
     photoUrl: sp.get("photo") ?? undefined,
+    photoPosition: parsePhotoPos(sp.get("pos")),
     register: post.register,
     match: sp.get("match") !== "0",
   });
@@ -66,7 +67,19 @@ export async function GET(req: NextRequest): Promise<Response> {
   const postHtml = await getPostTemplateHtml(postId);
   if (!postHtml) return new NextResponse(null, { status: 404 });
 
-  return new NextResponse(fillPostTemplate(postHtml, data), {
+  // Live drag-to-reposition: the workspace postMessages a new object-position as
+  // the user drags; this validated listener applies it to the photo without a
+  // reload. Runs in the sandboxed iframe (allow-scripts); sets only a CSS value.
+  const REPOSITION_SCRIPT =
+    `<script>addEventListener("message",function(e){var p=e&&e.data&&e.data.olPhotoPos;` +
+    `if(typeof p==="string"&&/^\\d{1,3}% \\d{1,3}%$/.test(p)){` +
+    `var i=document.querySelector("[data-ol-photo] img");if(i)i.style.objectPosition=p;}});</script>`;
+  const filled = fillPostTemplate(postHtml, data);
+  const withScript = filled.includes("</body>")
+    ? filled.replace("</body>", REPOSITION_SCRIPT + "</body>")
+    : filled + REPOSITION_SCRIPT;
+
+  return new NextResponse(withScript, {
     headers: {
       "Content-Type": "text/html; charset=utf-8",
       "Content-Security-Policy": "sandbox allow-scripts",

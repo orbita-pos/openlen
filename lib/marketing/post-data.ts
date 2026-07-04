@@ -52,11 +52,20 @@ export const REGISTER_DEFAULT_PHOTOS: Record<PostRegister, string | null> = {
 
 const norm = (s: string | null | undefined) => (s && s.trim()) || undefined;
 
+/** The `pos` query param "50,30" → a CSS object-position "50% 30%" (clamped 0-100), else undefined. */
+export function parsePhotoPos(raw: string | null): string | undefined {
+  if (!raw || !/^\d{1,3},\d{1,3}$/.test(raw)) return undefined;
+  const [x, y] = raw.split(",").map((n) => Math.max(0, Math.min(100, Number(n))));
+  return `${x}% ${y}%`;
+}
+
 export function buildPostData(input: {
   html: string; subdomain: string | null;
   profile: BusinessProfileData | null;
   userOffer?: string; photoUrl?: string; pageTitle?: string;
   register?: PostRegister;
+  /** Focal point for the cover-cropped photo, e.g. "50% 30%" (drag-to-reposition). */
+  photoPosition?: string;
   /** "Combinar con mi página" — derive palette + font from the page. Default on. */
   match?: boolean;
 }): PostData {
@@ -91,6 +100,7 @@ export function buildPostData(input: {
     url: input.subdomain ? `${input.subdomain}.openlen.com` : undefined,
     logoInitial: businessName ? businessName[0].toUpperCase() : undefined,
     photoUrl: norm(input.photoUrl) ?? registerPhoto ?? undefined,
+    photoPosition: input.photoPosition,
     accent: palette?.accent,
     bg: palette?.bg,
     ink: palette?.ink,

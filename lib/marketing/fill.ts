@@ -2,10 +2,14 @@ export interface PostData {
   businessName?: string; tagline?: string; offer?: string; price?: string;
   phone?: string; whatsapp?: string; address?: string; hours?: string;
   url?: string; logoInitial?: string; photoUrl?: string;
+  /** Focal point for the cover-cropped photo, e.g. "50% 30%" (drag-to-reposition). */
+  photoPosition?: string;
   accent?: string; bg?: string; ink?: string;
   // "Combinar con mi página": the page's display font, swapped into --display.
   fontFamily?: string; fontHref?: string;
 }
+
+const POS = /^\d{1,3}% \d{1,3}%$/;
 
 export function escapeHtml(s: string): string {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
@@ -48,7 +52,17 @@ export function fillPostTemplate(html: string, data: PostData): string {
   );
   out = out.replace(/(<[a-z0-9]+[^>]*\bdata-ol-photo\b[^>]*>)([\s\S]*?<img[^>]*>)/, (m, open: string, rest: string) => {
     if (data.photoUrl && /^https?:\/\//.test(data.photoUrl)) {
-      return open + rest.replace(/src="[^"]*"/, () => `src="${escapeHtml(data.photoUrl!)}"`);
+      let img = rest.replace(/src="[^"]*"/, () => `src="${escapeHtml(data.photoUrl!)}"`);
+      // Reposition the cover-crop via object-position (validated → no injection).
+      if (data.photoPosition && POS.test(data.photoPosition)) {
+        const pos = data.photoPosition;
+        img = img.replace(/<img\b([^>]*)>/, (_mm, attrs: string) =>
+          /style="/.test(attrs)
+            ? `<img${attrs.replace(/style="([^"]*)"/, (_s, v: string) => `style="${v};object-position:${pos}"`)}>`
+            : `<img${attrs} style="object-position:${pos}">`,
+        );
+      }
+      return open + img;
     }
     return hideElement(open) + rest;
   });

@@ -39,4 +39,16 @@ describe("fillPostTemplate", () => {
     const out = fillPostTemplate(doc, { accent: "#12345" });
     expect(out).toContain("--accent:#FF5A36");
   });
+  it("sets object-position from a valid photoPosition", () => {
+    const out = fillPostTemplate(doc, { photoUrl: "https://x.test/a.webp", photoPosition: "50% 20%" });
+    expect(out).toMatch(/<img[^>]*style="object-position:50% 20%"/);
+  });
+  it("ignores an invalid photoPosition (no injection)", () => {
+    const out = fillPostTemplate(doc, {
+      photoUrl: "https://x.test/a.webp",
+      photoPosition: '10%"></div><script>alert(1)</script>',
+    });
+    expect(out).not.toContain("<script>alert(1)");
+    expect(out).not.toContain("object-position:");
+  });
 });

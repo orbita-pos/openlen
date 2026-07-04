@@ -4,6 +4,7 @@ import {
   extractPageLang,
   extractPagePhotos,
   extractRootToken,
+  parsePhotoPos,
   REGISTER_DEFAULT_PHOTOS,
 } from "./post-data";
 
@@ -118,5 +119,17 @@ describe("buildPostData", () => {
   it("has no photoUrl when there's no register", () => {
     const html = `<html><body><h1>No photos here</h1></body></html>`;
     expect(buildPostData({ html, subdomain: null, profile: null }).photoUrl).toBeUndefined();
+  });
+});
+
+describe("parsePhotoPos", () => {
+  it("maps x,y → object-position, clamps 0-100, rejects junk", () => {
+    expect(parsePhotoPos("50,30")).toBe("50% 30%");
+    expect(parsePhotoPos("200,300")).toBe("100% 100%");
+    expect(parsePhotoPos("0,0")).toBe("0% 0%");
+    expect(parsePhotoPos("50")).toBeUndefined();
+    expect(parsePhotoPos("-5,10")).toBeUndefined();
+    expect(parsePhotoPos("a,b")).toBeUndefined();
+    expect(parsePhotoPos(null)).toBeUndefined();
   });
 });

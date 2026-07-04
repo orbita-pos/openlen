@@ -74,7 +74,8 @@
     "renderError": "Couldn't generate the image — try again",
     "perProject": "Open or create a page to generate posts with your brand.",
     "matchPage": "Match my page",
-    "matchPageHint": "Pulls colors and fonts from your page. Turn off for the curated look."
+    "matchPageHint": "Pulls colors and fonts from your page. Turn off for the curated look.",
+    "reposition": "Drag to reposition the photo"
   },
   "makeYours": {
     "title": "Make it yours",

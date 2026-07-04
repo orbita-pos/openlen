@@ -74,7 +74,8 @@
     "renderError": "Impossibile generare l'immagine — riprova",
     "perProject": "Apri o crea una pagina per generare post con il tuo brand.",
     "matchPage": "Abbina alla mia pagina",
-    "matchPageHint": "Usa colori e font della tua pagina. Disattiva per il look curato."
+    "matchPageHint": "Usa colori e font della tua pagina. Disattiva per il look curato.",
+    "reposition": "Trascina per riposizionare la foto"
   },
   "makeYours": {
     "title": "Rendila tua",
