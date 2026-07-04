@@ -66,6 +66,13 @@ export function MarketingView({
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<PostMeta | null>(null);
 
+  // Resync from the prop: the parent only persists the register on a
+  // successful PATCH (and reverts on failure), so following it here is what
+  // rolls the select back when a save fails.
+  useEffect(() => {
+    setRegister((initialRegister as PostRegister) || "general");
+  }, [initialRegister]);
+
   // Debounce the offer text → iframe src so each keystroke doesn't re-fetch
   // every card's preview (cheap server-side, but visibly janky at 60wpm).
   useEffect(() => {

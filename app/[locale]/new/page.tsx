@@ -2831,6 +2831,22 @@ function NewV2Inner() {
     (register: string) => {
       const projectId = loadedProject?.id;
       if (!projectId) return;
+      // Optimistic apply, revert on failure: the prop transition (old → new →
+      // old) is what lets MarketingView's resync effect roll the select back.
+      const previous = loadedProject?.settings?.marketing?.register;
+      const apply = (value: string | undefined) =>
+        setLoadedProject((p) =>
+          p
+            ? {
+                ...p,
+                settings: {
+                  ...p.settings,
+                  marketing: { ...p.settings?.marketing, register: value },
+                },
+              }
+            : p,
+        );
+      apply(register);
       void (async () => {
         try {
           const r = await fetch(`/api/projects/${projectId}/settings`, {
@@ -2840,25 +2856,15 @@ function NewV2Inner() {
           });
           if (!r.ok) {
             toast.error(t("toast.moduleError"));
-            return;
+            apply(previous);
           }
-          setLoadedProject((p) =>
-            p
-              ? {
-                  ...p,
-                  settings: {
-                    ...p.settings,
-                    marketing: { ...p.settings?.marketing, register },
-                  },
-                }
-              : p,
-          );
         } catch {
           toast.error(t("toast.moduleError"));
+          apply(previous);
         }
       })();
     },
-    [loadedProject?.id, toast, t],
+    [loadedProject?.id, loadedProject?.settings?.marketing?.register, toast, t],
   );
   const updateChatSettings = useCallback(
     async (patch: ChatSettings): Promise<boolean> => {
