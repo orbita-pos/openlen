@@ -21,6 +21,7 @@
     "templates:count": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/count-templates.ts",
     "post-templates:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/post-templates-migrate.ts",
     "post-templates:add": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/post-templates-add.ts",
+    "marketing:render-smoke": "tsx --tsconfig tsconfig.eval.json scripts/marketing-render-smoke.ts",
     "assistant:evals": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/assistant-evals.ts",
     "sections:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/sections-migrate.ts",
     "integrations:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/integrations-migrate.ts",
