@@ -15,8 +15,12 @@ describe("captions registry", () => {
     const partial = fillCaption(f, { businessName: "Brote" });
     expect(partial).not.toMatch(/\{[a-zA-Z]+\}/); // parts needing offer/url dropped, not left broken
   });
-  it("appends hashtags", () => {
-    const [f] = listCaptions("general", "promo", "es");
-    expect(fillCaption(f, { businessName: "X" })).toMatch(/#\w+/);
+  it("appends language-matched hashtags", () => {
+    const [es] = listCaptions("general", "promo", "es");
+    const esOut = fillCaption(es, { businessName: "X" });
+    expect(esOut).toMatch(/#\w+/);
+    expect(esOut).toMatch(/#negociolocal|#apoyalocal/);
+    const [en] = listCaptions("general", "promo", "en");
+    expect(fillCaption(en, { businessName: "X" })).toMatch(/#shoplocal|#smallbusiness/);
   });
 });

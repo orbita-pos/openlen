@@ -6,14 +6,35 @@ export interface CaptionFormula {
   register: PostRegister; goal: PostGoal; lang: "es" | "en"; parts: CaptionPart[];
 }
 
-export const HASHTAGS: Record<PostRegister, string[]> = {
-  general: ["#negociolocal", "#hechoenmexico", "#apoyalocal", "#emprendedores"],
-  restaurante: ["#foodie", "#antojo", "#comidamexicana", "#dondecomer"],
-  belleza: ["#belleza", "#selfcare", "#salondebelleza", "#estilo"],
-  gym: ["#fitness", "#entrena", "#gym", "#nopainnogain"],
-  consultorio: ["#salud", "#bienestar", "#cita", "#especialistas"],
-  tienda: ["#compralocal", "#nuevacoleccion", "#tienda", "#envios"],
-  oficios: ["#servicios", "#adomicilio", "#urgencias", "#confianza"],
+export const HASHTAGS: Record<PostRegister, Record<"es" | "en", string[]>> = {
+  general: {
+    es: ["#negociolocal", "#hechoenmexico", "#apoyalocal", "#emprendedores"],
+    en: ["#shoplocal", "#smallbusiness", "#supportlocal", "#community"],
+  },
+  restaurante: {
+    es: ["#foodie", "#antojo", "#comidamexicana", "#dondecomer"],
+    en: ["#foodie", "#eatlocal", "#goodeats", "#foodlover"],
+  },
+  belleza: {
+    es: ["#belleza", "#selfcare", "#salondebelleza", "#estilo"],
+    en: ["#beauty", "#selfcare", "#salon", "#style"],
+  },
+  gym: {
+    es: ["#fitness", "#entrena", "#gym", "#nopainnogain"],
+    en: ["#fitness", "#training", "#gymlife", "#noexcuses"],
+  },
+  consultorio: {
+    es: ["#salud", "#bienestar", "#cita", "#especialistas"],
+    en: ["#health", "#wellness", "#booknow", "#specialists"],
+  },
+  tienda: {
+    es: ["#compralocal", "#nuevacoleccion", "#tienda", "#envios"],
+    en: ["#shoplocal", "#newarrivals", "#boutique", "#shopsmall"],
+  },
+  oficios: {
+    es: ["#servicios", "#adomicilio", "#urgencias", "#confianza"],
+    en: ["#services", "#homerepair", "#oncall", "#trusted"],
+  },
 };
 
 const FORMULAS: CaptionFormula[] = [
@@ -59,7 +80,7 @@ const FORMULAS: CaptionFormula[] = [
   ]},
   { register: "general", goal: "testimonio", lang: "es", parts: [
     { text: "Gracias por la confianza 🙏", },
-    { text: "Cada cliente que regresa a {businessName} es un motivo para seguir mejorando.", needs: ["businessName"] },
+    { text: "Cada cliente que regresa a {businessName} nos alegra el día.", needs: ["businessName"] },
     { text: "Visítanos en {url}", needs: ["url"] },
   ]},
   { register: "general", goal: "testimonio", lang: "es", parts: [
@@ -70,8 +91,8 @@ const FORMULAS: CaptionFormula[] = [
 
   // ── general · info · es ──
   { register: "general", goal: "info", lang: "es", parts: [
-    { text: "¿Sabías que…? 🤔", },
-    { text: "En {businessName} {offer}.", needs: ["businessName", "offer"] },
+    { text: "¿Sabías que…? 👀", },
+    { text: "{offer}", needs: ["offer"] },
     { text: "Más detalles en {url}", needs: ["url"] },
   ]},
   { register: "general", goal: "info", lang: "es", parts: [
@@ -80,9 +101,9 @@ const FORMULAS: CaptionFormula[] = [
     { text: "Conoce nuestro proceso en {url}", needs: ["url"] },
   ]},
   { register: "general", goal: "info", lang: "es", parts: [
-    { text: "Lo que siempre nos preguntan 📋", },
-    { text: "Sí, en {businessName} manejamos {offer}.", needs: ["businessName", "offer"] },
-    { text: "Resolvemos tus dudas al {phone}", needs: ["phone"] },
+    { text: "Lo que siempre nos preguntan 📋 Aquí va la respuesta, de una vez:", },
+    { text: "{offer}", needs: ["offer"] },
+    { text: "¿Te quedó otra duda? Márcanos al {phone}", needs: ["phone"] },
   ]},
 
   // ── general · promo · en ──
@@ -110,7 +131,7 @@ const FORMULAS: CaptionFormula[] = [
   ]},
   { register: "general", goal: "anuncio", lang: "en", parts: [
     { text: "New hours at {businessName} 📅", needs: ["businessName"] },
-    { text: "You can now find us: {hours}", needs: ["hours"] },
+    { text: "We're open: {hours}", needs: ["hours"] },
     { text: "Questions? Call or text {phone}", needs: ["phone"] },
   ]},
   { register: "general", goal: "anuncio", lang: "en", parts: [
@@ -138,8 +159,8 @@ const FORMULAS: CaptionFormula[] = [
 
   // ── general · info · en ──
   { register: "general", goal: "info", lang: "en", parts: [
-    { text: "Did you know? 🤔", },
-    { text: "At {businessName}, {offer}.", needs: ["businessName", "offer"] },
+    { text: "Here's something most people don't know about us 👀", },
+    { text: "{offer}", needs: ["offer"] },
     { text: "More details at {url}", needs: ["url"] },
   ]},
   { register: "general", goal: "info", lang: "en", parts: [
@@ -148,9 +169,9 @@ const FORMULAS: CaptionFormula[] = [
     { text: "See our process at {url}", needs: ["url"] },
   ]},
   { register: "general", goal: "info", lang: "en", parts: [
-    { text: "The question we get asked the most 📋", },
-    { text: "Yes — {businessName} does offer {offer}.", needs: ["businessName", "offer"] },
-    { text: "Ask us anything at {phone}", needs: ["phone"] },
+    { text: "The question we get asked the most 📋 Here's the answer:", },
+    { text: "{offer}", needs: ["offer"] },
+    { text: "Still curious? Ask us anything at {phone}", needs: ["phone"] },
   ]},
 ];
 
@@ -165,6 +186,6 @@ export function fillCaption(formula: CaptionFormula, data: PostData): string {
     .filter(p => (p.needs ?? []).every(k => Boolean(data[k])))
     .map(p => p.text.replace(/\{([a-zA-Z]+)\}/g, (_, k: string) => String((data as Record<string, unknown>)[k] ?? "")))
     .join("\n\n");
-  const tags = HASHTAGS[formula.register].slice(0, 6).join(" ");
+  const tags = HASHTAGS[formula.register][formula.lang].slice(0, 6).join(" ");
   return body ? `${body}\n\n${tags}` : tags;
 }
