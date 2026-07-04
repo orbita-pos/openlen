@@ -12,9 +12,13 @@ import { tryConsumeMemory } from "@/lib/rate-limit-rs";
 // ─────────────────────────────────────────────────────────────────────────────
 // GET /api/marketing/render?projectId&postId&offer&photo
 //
-// Renders a filled post template to a PNG via headless Chrome and redirects
-// to the R2-cached copy, uploading on a cache miss. A real render is a real
-// Chrome launch (unlike /preview's plain HTML) — rate-limited per user.
+// Renders a filled post template to a PNG via headless Chrome, caches it in
+// R2 by content hash, and streams the bytes back same-origin (rather than
+// redirecting to the R2 URL — images.openlen.com sends no CORS headers, and
+// the workspace's Download/Share buttons need real bytes: Share builds a File
+// for navigator.share, and Download needs a readable !res.ok to toast a real
+// error instead of a silent cross-origin "Failed to fetch"). A real render is
+// a real Chrome launch (unlike /preview's plain HTML) — rate-limited per user.
 // ─────────────────────────────────────────────────────────────────────────────
 
 export const runtime = "nodejs";
@@ -55,15 +59,28 @@ export async function GET(req: NextRequest): Promise<Response> {
   const key = renderCacheKey(post.contentHash, filled);
   const storage = getOpenLenImageStorage();
 
-  let publicUrl = r2PublicUrlFor(key);
+  const publicUrl = r2PublicUrlFor(key);
   const cacheHit = publicUrl ? await headOk(publicUrl) : false;
-  if (!cacheHit) {
-    const png = await renderPostPng(filled, post.format);
-    if (!png) return new NextResponse(null, { status: 503 });
-    const uploaded = await storage.upload({ key, contentType: "image/png", body: png });
-    publicUrl = uploaded.url;
+
+  let png: Buffer;
+  if (cacheHit) {
+    const cached = await fetch(publicUrl!);
+    if (!cached.ok) return new NextResponse(null, { status: 502 });
+    png = Buffer.from(await cached.arrayBuffer());
+  } else {
+    const rendered = await renderPostPng(filled, post.format);
+    if (!rendered) return new NextResponse(null, { status: 503 });
+    png = rendered;
+    await storage.upload({ key, contentType: "image/png", body: png });
   }
-  return NextResponse.redirect(new URL(publicUrl!, req.url), 302);
+
+  return new NextResponse(new Uint8Array(png), {
+    headers: {
+      "Content-Type": "image/png",
+      "Cache-Control": "private, max-age=300",
+      "Content-Disposition": `inline; filename="${postId}.png"`,
+    },
+  });
 }
 
 // StorageAdapter (lib/storage/types.ts) has no exists()/head() — R2's public

@@ -4,7 +4,7 @@ import { getProject } from "@/lib/projects";
 import { listProfiles } from "@/lib/business-profiles/store";
 import { getPostTemplate, getPostTemplateHtml } from "@/lib/marketing/post-templates/store";
 import { fillPostTemplate } from "@/lib/marketing/fill";
-import { buildPostData } from "@/lib/marketing/post-data";
+import { buildPostData, extractPagePhotos } from "@/lib/marketing/post-data";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // GET /api/marketing/preview?projectId=<id>&postId=<slug>&offer=<txt>&photo=<url>
@@ -36,8 +36,6 @@ export async function GET(req: NextRequest): Promise<Response> {
 
   const post = await getPostTemplate(postId);
   if (!post || post.status !== "published") return new NextResponse(null, { status: 404 });
-  const postHtml = await getPostTemplateHtml(postId);
-  if (!postHtml) return new NextResponse(null, { status: 404 });
 
   const data = buildPostData({
     html: project.data.html,
@@ -47,6 +45,15 @@ export async function GET(req: NextRequest): Promise<Response> {
     userOffer: sp.get("offer") ?? undefined,
     photoUrl: sp.get("photo") ?? undefined,
   });
+
+  // as=json: the workspace's PostDetail wants the built data + the page's own
+  // photos to power captions + the photo strip — no HTML fetch/fill needed.
+  if (sp.get("as") === "json") {
+    return NextResponse.json({ data, pagePhotos: extractPagePhotos(project.data.html) });
+  }
+
+  const postHtml = await getPostTemplateHtml(postId);
+  if (!postHtml) return new NextResponse(null, { status: 404 });
 
   return new NextResponse(fillPostTemplate(postHtml, data), {
     headers: {
