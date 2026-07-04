@@ -4,9 +4,9 @@
 //   npm run post-templates:add -- path/to/post.html \
 //     --id=<slug> \
 //     --name="<display name>" \
-//     --register=<general|community> \
-//     --format=<square|stories|reels> \
-//     --goal=<promo|announcement|poll|sale> \
+//     --register=<restaurante|belleza|gym|consultorio|tienda|oficios|general> \
+//     --format=<square|story> \
+//     --goal=<promo|anuncio|testimonio|info> \
 //     [--status=draft|published|archived]
 //
 // Validates input via the same Zod schemas as the store layer,
@@ -49,9 +49,9 @@ function usage(): string {
     "  npm run post-templates:add -- <path/to/post.html> \\",
     "    --id=<slug> \\",
     "    --name=<display name> \\",
-    "    --register=<general|community> \\",
-    "    --format=<square|stories|reels> \\",
-    "    --goal=<promo|announcement|poll|sale> \\",
+    "    --register=<restaurante|belleza|gym|consultorio|tienda|oficios|general> \\",
+    "    --format=<square|story> \\",
+    "    --goal=<promo|anuncio|testimonio|info> \\",
     "    [--status=draft|published|archived] \\",
     "    [--allow-overwrite=true]",
   ].join("\n");
@@ -64,13 +64,38 @@ async function main() {
     process.exit(1);
   }
 
-  const html = await readFile(resolve(parsed.htmlPath), "utf8");
+  const absPath = resolve(parsed.htmlPath);
+  let html: string;
+  try {
+    html = await readFile(absPath, "utf8");
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error(`Failed to read ${absPath}: ${msg}`);
+    process.exit(1);
+  }
+
   if (htmlContainsEditorMarker(html)) {
     console.error("HTML contains data-slot-path= — rejected.");
     process.exit(1);
   }
 
-  const input = PostCreateSchema.parse({ ...parsed.flags, html });
+  const result = PostCreateSchema.safeParse({ ...parsed.flags, html });
+  if (!result.success) {
+    console.error("Invalid input:");
+    const flat = result.error.flatten();
+    for (const [field, errs] of Object.entries(flat.fieldErrors)) {
+      for (const e of errs ?? []) {
+        console.error(`  --${field}: ${e}`);
+      }
+    }
+    if (flat.formErrors.length > 0) {
+      for (const e of flat.formErrors) console.error(`  (form): ${e}`);
+    }
+    console.error("");
+    console.error(usage());
+    process.exit(1);
+  }
+  const input = result.data;
 
   // Id-collision gate: publishing over an existing id is opt-in, never silent.
   const existing = await getPostTemplate(input.id);
