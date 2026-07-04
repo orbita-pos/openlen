@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildPostData, extractRootToken } from "./post-data";
+import { buildPostData, extractPagePhotos, extractRootToken } from "./post-data";
 
 const pageHtml = `<html><head><style>:root{--accent:#2F6B3E;--bg:#FBF7EF}</style></head><body><h1>Café Terral</h1></body></html>`;
 
@@ -7,6 +7,21 @@ describe("extractRootToken", () => {
   it("pulls a css var from :root", () => {
     expect(extractRootToken(pageHtml, "--accent")).toBe("#2F6B3E");
     expect(extractRootToken(pageHtml, "--missing")).toBeNull();
+  });
+});
+
+describe("extractPagePhotos", () => {
+  it("dedupes, skips relative srcs, caps at 12, keeps first-seen order", () => {
+    const imgs = Array.from({ length: 14 }, (_, i) => `<img src="https://pics.test/p${i + 1}.webp">`);
+    // duplicate of p1 after p3 + a relative src, neither may appear in output
+    imgs.splice(3, 0, `<img src="https://pics.test/p1.webp">`, `<img src="/local.png">`);
+    const photos = extractPagePhotos(`<html><body>${imgs.join("")}</body></html>`);
+    expect(photos).toHaveLength(12);
+    expect(new Set(photos).size).toBe(12);
+    expect(photos).not.toContain("/local.png");
+    expect(photos).toEqual(
+      Array.from({ length: 12 }, (_, i) => `https://pics.test/p${i + 1}.webp`),
+    );
   });
 });
 
@@ -29,5 +44,15 @@ describe("buildPostData", () => {
     expect(d.businessName).toBe("Café Terral");
     expect(d.accent).toBe("#2F6B3E");
     expect(d.url).toBeUndefined();
+  });
+  it("explicit photoUrl wins over page photos", () => {
+    const html = `<html><body><img src="https://x.test/page.webp"></body></html>`;
+    const d = buildPostData({ html, subdomain: null, profile: null, photoUrl: "https://x.test/mine.webp" });
+    expect(d.photoUrl).toBe("https://x.test/mine.webp");
+  });
+  it("falls back to the first page photo without explicit photoUrl", () => {
+    const html = `<html><body><img src="https://x.test/page.webp"></body></html>`;
+    const d = buildPostData({ html, subdomain: null, profile: null });
+    expect(d.photoUrl).toBe("https://x.test/page.webp");
   });
 });
