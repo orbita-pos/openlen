@@ -1,6 +1,6 @@
 import type { ComponentType } from "react";
 import {
-  BarChart3, ChatIcon, Compass, FileText, Grid3, HistoryIcon, ImageIcon, Inbox,
+  BarChart3, ChatIcon, Compass, FileText, HistoryIcon, ImageIcon, Inbox,
   Layers, ListTree, Megaphone, Package, Sparkles, Store,
 } from "./icons";
 
@@ -20,15 +20,18 @@ export type SidebarMode =
 export type RailMode = "navegar" | "editar";
 type Icon = ComponentType<{ size?: number }>;
 
+/** The two views the "Explorar" surface tabs between (templates = curated, explore = community). */
+export const BROWSE_VIEWS = ["templates", "explore"] as const;
+export type BrowseView = (typeof BROWSE_VIEWS)[number];
+
 // Navegar: app-level sections. Order = importance for a non-tech creator.
 export const NAVEGAR_ITEMS: ReadonlyArray<{ view: SectionView; icon: Icon; key: string }> = [
   { view: "projects", icon: FileText, key: "nav.myPages" },
-  { view: "templates", icon: Grid3, key: "nav.templates" },
+  { view: "templates", icon: Compass, key: "nav.explore" },   // "Explorar" — opens the browse surface (Plantillas tab default)
   { view: "marketing", icon: Megaphone, key: "nav.marketing" },
   { view: "modulos", icon: Package, key: "nav.modulos" },
   { view: "analytics", icon: BarChart3, key: "nav.analytics" },
   { view: "messages", icon: Inbox, key: "nav.messages" },
-  { view: "explore", icon: Compass, key: "nav.explore" },
   { view: "business", icon: Store, key: "nav.myBusiness" },
 ];
 
