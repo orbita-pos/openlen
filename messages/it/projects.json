@@ -165,7 +165,8 @@
     "myBusiness": "La mia attività",
     "messages": "Posta",
     "analytics": "Statistiche",
-    "explore": "Esplora"
+    "explore": "Esplora",
+    "community": "Community"
   },
   "deleteDialog": {
     "title": "Eliminare questa pagina?",

@@ -183,7 +183,8 @@
     "myBusiness": "Mi negocio",
     "messages": "Bandeja",
     "analytics": "Métricas",
-    "explore": "Explorar"
+    "explore": "Explorar",
+    "community": "Comunidad"
   },
   "deleteDialog": {
     "title": "¿Eliminar esta página?",

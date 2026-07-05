@@ -165,7 +165,8 @@
     "myBusiness": "マイビジネス",
     "messages": "受信箱",
     "analytics": "分析",
-    "explore": "探索"
+    "explore": "探索",
+    "community": "コミュニティ"
   },
   "deleteDialog": {
     "title": "このページを削除しますか？",

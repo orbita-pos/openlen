@@ -183,7 +183,8 @@
     "myBusiness": "Mijn bedrijf",
     "messages": "Inbox",
     "analytics": "Statistieken",
-    "explore": "Ontdekken"
+    "explore": "Ontdekken",
+    "community": "Community"
   },
   "deleteDialog": {
     "title": "Deze pagina verwijderen?",

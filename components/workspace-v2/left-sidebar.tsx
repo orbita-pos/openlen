@@ -45,6 +45,7 @@ import { Tooltip } from "./ui";
 // this file declared before.
 export type { SectionView, SidebarMode } from "./rail-model";
 import {
+  BROWSE_VIEWS,
   EDITAR_ITEMS,
   NAVEGAR_ITEMS,
   type RailMode,
@@ -71,7 +72,12 @@ function NavegarGroup({
     <>
       {NAVEGAR_ITEMS.map((s) => {
         const I = s.icon;
-        const isActive = active === s.view;
+        // The unified "Explorar" item (view: "templates") stays highlighted
+        // while on either browse tab (Plantillas or Comunidad) — see BrowseTabs.
+        const isActive =
+          s.view === "templates"
+            ? (BROWSE_VIEWS as readonly string[]).includes(active)
+            : active === s.view;
         const label = t(s.key);
         const className = `${vertical ? "h-8 w-8" : "h-7 w-8"} inline-flex items-center justify-center rounded-md transition ${
           isActive ? "bg-elev fg shadow-card border bd" : "fg-muted hover:fg hover:bg-hover"

@@ -165,7 +165,8 @@
     "myBusiness": "내 비즈니스",
     "messages": "받은편지함",
     "analytics": "분석",
-    "explore": "탐색"
+    "explore": "탐색",
+    "community": "커뮤니티"
   },
   "deleteDialog": {
     "title": "이 페이지를 삭제할까요?",

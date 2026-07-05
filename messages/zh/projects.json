@@ -165,7 +165,8 @@
     "myBusiness": "我的业务",
     "messages": "收件箱",
     "analytics": "数据分析",
-    "explore": "探索"
+    "explore": "探索",
+    "community": "社区"
   },
   "deleteDialog": {
     "title": "删除此页面？",

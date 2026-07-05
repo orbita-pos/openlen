@@ -165,7 +165,8 @@
     "myBusiness": "Mon entreprise",
     "messages": "Boîte",
     "analytics": "Statistiques",
-    "explore": "Explorer"
+    "explore": "Explorer",
+    "community": "Communauté"
   },
   "deleteDialog": {
     "title": "Supprimer cette page ?",

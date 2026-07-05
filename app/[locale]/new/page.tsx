@@ -46,12 +46,13 @@ import { AnalyticsSection } from "../analytics/analytics-section";
 import { ModulesView } from "@/components/workspace-v2/modules-view";
 import { MarketingView } from "@/components/workspace-v2/marketing-view";
 import { TemplatesPanel } from "@/components/workspace-v2/panels/templates-panel";
+import { BrowseTabs } from "@/components/workspace-v2/browse-tabs";
 import {
   LeftSidebar,
   type SidebarMode,
   type SectionView,
 } from "@/components/workspace-v2/left-sidebar";
-import { railModeFor } from "@/components/workspace-v2/rail-model";
+import { railModeFor, BROWSE_VIEWS } from "@/components/workspace-v2/rail-model";
 import { Check, Sparkles, Undo, X } from "@/components/workspace-v2/icons";
 import { SectionPreviewModal } from "@/components/workspace-v2/section-preview-modal";
 import type { SectionSpec } from "@/components/workspace-v2/sections-data";
@@ -3237,8 +3238,6 @@ function NewV2Inner() {
         <h1 className="sr-only">{t("a11y.workspaceHeading")}</h1>
         {centerView === "messages" ? (
           <InboxHub />
-        ) : centerView === "explore" ? (
-          <ExploreView />
         ) : centerView === "business" ? (
           <BusinessSection
             embedded
@@ -3297,44 +3296,54 @@ function NewV2Inner() {
             onSaveRegister={(r) => updateMarketingSettings({ register: r })}
             onSaveMatch={(m) => updateMarketingSettings({ match: m })}
           />
-        ) : centerView === "templates" ? (
-          previewingTemplate ? (
-            <div className="flex-1 min-w-0 flex flex-col">
-              {templateError && (
-                <div className="h-7 shrink-0 flex items-center justify-center gap-2 text-[11.5px] bg-red-50 dark:bg-red-500/10 text-red-700 dark:text-red-300 border-b bd">
-                  {templateError}
-                </div>
-              )}
-              <PreviewArea
-                doc=""
-                previewUrl={previewingTemplate.previewUrl}
-                templateName={previewingTemplate.name}
-                openInNewTabUrl={previewingTemplate.previewUrl}
-                templateApplyMode={!!loadedProject}
-                onUseTemplate={() => {
-                  void (loadedProject ? handleApplyTemplate() : handleUseTemplate());
-                }}
-                useTemplateLoading={loadedProject ? applyingTemplate : committingTemplate}
-                onClearTemplate={() => {
-                  setPreviewingTemplate(null);
-                  setTemplateError(null);
-                }}
+        ) : (BROWSE_VIEWS as readonly string[]).includes(centerView) ? (
+          <div className="flex-1 min-w-0 min-h-0 flex flex-col">
+            {!previewingTemplate && (
+              <BrowseTabs
+                active={centerView as "templates" | "explore"}
+                onSelect={setCenterView}
               />
-            </div>
-          ) : restyling ? null : (
-            <div className="flex-1 min-w-0 min-h-0 overflow-y-auto nice-scroll bg-app">
-              <div className="max-w-[1100px] mx-auto px-6 sm:px-8 py-8">
-                <TemplatesPanel
-                  grid
-                  onPreview={(tpl) => {
-                    setPreviewingTemplate(tpl);
+            )}
+            {centerView === "explore" ? (
+              <ExploreView />
+            ) : previewingTemplate ? (
+              <div className="flex-1 min-w-0 flex flex-col">
+                {templateError && (
+                  <div className="h-7 shrink-0 flex items-center justify-center gap-2 text-[11.5px] bg-red-50 dark:bg-red-500/10 text-red-700 dark:text-red-300 border-b bd">
+                    {templateError}
+                  </div>
+                )}
+                <PreviewArea
+                  doc=""
+                  previewUrl={previewingTemplate.previewUrl}
+                  templateName={previewingTemplate.name}
+                  openInNewTabUrl={previewingTemplate.previewUrl}
+                  templateApplyMode={!!loadedProject}
+                  onUseTemplate={() => {
+                    void (loadedProject ? handleApplyTemplate() : handleUseTemplate());
+                  }}
+                  useTemplateLoading={loadedProject ? applyingTemplate : committingTemplate}
+                  onClearTemplate={() => {
+                    setPreviewingTemplate(null);
                     setTemplateError(null);
                   }}
-                  previewingId={null}
                 />
               </div>
-            </div>
-          )
+            ) : restyling ? null : (
+              <div className="flex-1 min-w-0 min-h-0 overflow-y-auto nice-scroll bg-app">
+                <div className="max-w-[1100px] mx-auto px-6 sm:px-8 py-8">
+                  <TemplatesPanel
+                    grid
+                    onPreview={(tpl) => {
+                      setPreviewingTemplate(tpl);
+                      setTemplateError(null);
+                    }}
+                    previewingId={null}
+                  />
+                </div>
+              </div>
+            )}
+          </div>
         ) : (
           <>
         {entryMode === "template" &&

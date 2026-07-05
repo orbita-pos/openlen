@@ -165,7 +165,8 @@
     "myBusiness": "Mein Unternehmen",
     "messages": "Posteingang",
     "analytics": "Statistiken",
-    "explore": "Entdecken"
+    "explore": "Entdecken",
+    "community": "Community"
   },
   "deleteDialog": {
     "title": "Diese Seite löschen?",
