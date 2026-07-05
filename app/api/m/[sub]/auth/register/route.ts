@@ -8,9 +8,11 @@ import {
   createActiveMemberWithPassword,
   createMemberSession,
   getMemberAuthByEmail,
+  issueLoginToken,
   recordMemberAuthEvent,
 } from "@/lib/members/store";
-import { json, loadMemberSite } from "../../_shared";
+import { sendMemberLoginEmail } from "@/lib/email";
+import { json, loadMemberSite, memberLinkBase } from "../../_shared";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -72,6 +74,20 @@ export async function POST(
   const created = await createActiveMemberWithPassword(site.projectId, email, passwordHash);
   if (!created) return json({ error: "exists" }, 409); // lost a concurrent race for this email
   const memberId = created.id;
+
+  // Nudge de confirmación (fire-and-forget — NO bloquea el signup instantáneo).
+  // El link es un magic-link kind:"confirm" → al clickearlo, verify estampa
+  // verificado y CONSERVA esta contraseña (auto-confirmación).
+  void (async () => {
+    const raw = await issueLoginToken({ projectId: site.projectId, email, kind: "confirm" });
+    const base = await memberLinkBase(req, sub, site.projectId);
+    await sendMemberLoginEmail({
+      to: email,
+      siteTitle: site.title,
+      loginUrl: `${base}/api/m/${sub}/auth/verify?token=${raw}`,
+      locale: site.locale,
+    });
+  })().catch(() => {});
 
   const session = await createMemberSession(site.projectId, memberId);
   recordMemberAuthEvent({
