@@ -74,6 +74,7 @@
         "title": "3D-scène"
       }
     },
+    "appButton": "App",
     "tabLocked": "{label} — vergrendeld",
     "expandPanel": "Paneel uitvouwen",
     "collapsePanel": "Paneel inklappen"

@@ -74,6 +74,7 @@
         "title": "Scène 3D"
       }
     },
+    "appButton": "App",
     "tabLocked": "{label} — verrouillé",
     "expandPanel": "Déplier le panneau",
     "collapsePanel": "Replier le panneau"

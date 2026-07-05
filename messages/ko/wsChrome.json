@@ -74,6 +74,7 @@
         "title": "3D 장면"
       }
     },
+    "appButton": "앱",
     "tabLocked": "{label} — 잠김",
     "expandPanel": "패널 펼치기",
     "collapsePanel": "패널 접기"

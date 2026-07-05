@@ -14,24 +14,8 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import {
-  BarChart3,
-  ChatIcon,
-  FileText,
-  Grid3,
-  HistoryIcon,
-  ImageIcon,
-  Inbox,
-  Layers,
-  ListTree,
-  Megaphone,
-  Monitor,
-  Package,
-  PanelLeft,
-  PanelRight,
-  Sparkles,
-  X,
-} from "./icons";
+import { Link } from "@/i18n/navigation";
+import { Grid3, Layers, PanelLeft, PanelRight, X } from "./icons";
 import type { Section } from "./mock-data";
 import type { StoredChatTurn } from "@/lib/projects/types";
 import { RailBusinessSwitcher } from "./business-switcher";
@@ -53,39 +37,28 @@ import { VersionsPanel } from "./panels/versions-panel";
 import { ThreePanel } from "./panels/three-panel";
 import type { SectionSpec } from "./sections-data";
 import { Tooltip } from "./ui";
+// SectionView/SidebarMode are declared once in rail-model.ts (avoids a
+// circular import between the rail and this sidebar). `export type {...}`
+// only re-exports for other modules — it doesn't bind a local name — so we
+// also import them as values-of-types below for use inside this file.
+// rail-model's SectionView adds "explore" on top of what used to be declared
+// locally here; SidebarMode is otherwise identical member-for-member to what
+// this file declared before.
+export type { SectionView, SidebarMode } from "./rail-model";
+import {
+  EDITAR_ITEMS,
+  NAVEGAR_ITEMS,
+  railModeFor,
+  type RailMode,
+  type SectionView,
+  type SidebarMode,
+} from "./rail-model";
 
-import type { ComponentType } from "react";
-
-// The account-wide sections — the SAME nav as the dashboard, living inside the
-// editor's existing sidebar (not a second rail) so you can jump anywhere from
-// here. Links navigate away from the editor (the page auto-saves).
-export type SectionView =
-  | "page"
-  | "projects"
-  | "templates"
-  | "analytics"
-  | "messages"
-  | "modulos"
-  | "marketing"
-  | "business";
-
-const GLOBAL_SECTIONS: ReadonlyArray<{
-  view: SectionView;
-  icon: typeof FileText;
-  key: string;
-}> = [
-  { view: "page", icon: Monitor, key: "nav.page" },
-  { view: "projects", icon: FileText, key: "nav.myPages" },
-  { view: "templates", icon: Grid3, key: "nav.templates" },
-  { view: "modulos", icon: Package, key: "nav.modulos" },
-  { view: "marketing", icon: Megaphone, key: "nav.marketing" },
-  { view: "analytics", icon: BarChart3, key: "nav.analytics" },
-  { view: "messages", icon: Inbox, key: "nav.messages" },
-  // "business" lives in the top RailBusinessSwitcher now (avatar → "Abrir
-  // Negocio"), not as a generic section icon here.
-];
-
-function GlobalSections({
+// Navegar: the account-wide sections (same nav as the dashboard), rendered
+// full-time on bare /new and behind the "App" button while editing. Links
+// navigate away from the editor when they're a real route (Explore); every
+// other item just swaps the workspace's center view in place.
+function NavegarGroup({
   vertical,
   active,
   onSelect,
@@ -97,21 +70,34 @@ function GlobalSections({
   const t = useTranslations("projects");
   return (
     <>
-      {GLOBAL_SECTIONS.map((s) => {
+      {NAVEGAR_ITEMS.map((s) => {
         const I = s.icon;
         const isActive = active === s.view;
+        const label = t(s.key);
+        const className = `${vertical ? "h-8 w-8" : "h-7 w-8"} inline-flex items-center justify-center rounded-md transition ${
+          isActive ? "bg-elev fg shadow-card border bd" : "fg-muted hover:fg hover:bg-hover"
+        }`;
+        // Explore leaves the workspace for the community feed — a real
+        // route, not a center-view swap — so it's an i18n Link (same
+        // pattern top-bar.tsx uses for its own Explore link) instead of a
+        // button wired to onSelect.
+        if (s.view === "explore") {
+          return (
+            <Tooltip key={s.view} label={label} side={vertical ? "right" : undefined}>
+              <Link href="/explore" aria-label={label} className={className}>
+                <I size={vertical ? 14 : 13} />
+              </Link>
+            </Tooltip>
+          );
+        }
         return (
-          <Tooltip key={s.view} label={t(s.key)} side={vertical ? "right" : undefined}>
+          <Tooltip key={s.view} label={label} side={vertical ? "right" : undefined}>
             <button
               type="button"
               onClick={() => onSelect(s.view)}
-              aria-label={t(s.key)}
+              aria-label={label}
               aria-current={isActive ? "page" : undefined}
-              className={`${vertical ? "h-8 w-8" : "h-7 w-8"} inline-flex items-center justify-center rounded-md transition ${
-                isActive
-                  ? "bg-elev fg shadow-card border bd"
-                  : "fg-muted hover:fg hover:bg-hover"
-              }`}
+              className={className}
             >
               <I size={vertical ? 14 : 13} />
             </button>
@@ -122,43 +108,59 @@ function GlobalSections({
   );
 }
 
-export type SidebarMode =
-  | "site"
-  | "chat"
-  | "templates"
-  | "images"
-  | "library"
-  | "pages"
-  | "assistant"
-  | "members"
-  | "broadcast"
-  | "comments"
-  | "bookings"
-  | "collections"
-  | "modulos"
-  | "insights"
-  | "versions"
-  | "3d";
-
-interface ModeTab {
-  id: SidebarMode;
-  icon: ComponentType<{ size?: number }>;
+// Editar: tools that act on the currently loaded page. Only ever rendered
+// while editing (railMode==="editar"), so — unlike the old MODE_TABS map —
+// there's no entryMode gate here; the caller only shows this group once a
+// project is loaded.
+function EditarGroup({
+  mode,
+  onSelect,
+  lockedTabs,
+  lockReason,
+}: {
+  mode: SidebarMode;
+  onSelect: (id: SidebarMode) => void;
+  lockedTabs?: SidebarMode[];
+  lockReason?: string;
+}) {
+  const t = useTranslations("wsChrome");
+  const lockedSet = new Set(lockedTabs ?? []);
+  return (
+    <>
+      {EDITAR_ITEMS.map((tab) => {
+        const active = mode === tab.id;
+        const locked = lockedSet.has(tab.id);
+        const I = tab.icon;
+        const plainLabel = t(`sidebar.tabs.${tab.id}.label`);
+        const label = locked
+          ? (lockReason ?? t("sidebar.tabLocked", { label: plainLabel }))
+          : plainLabel;
+        return (
+          <Tooltip key={tab.id} label={label} side="right">
+            <button
+              type="button"
+              disabled={locked}
+              aria-label={label}
+              onClick={() => {
+                if (locked) return;
+                onSelect(tab.id);
+              }}
+              className={`h-8 w-8 inline-flex items-center justify-center rounded-md transition-colors duration-150 ease-out ${
+                locked
+                  ? "fg-faint opacity-50 cursor-not-allowed"
+                  : active
+                    ? "bg-elev fg shadow-card border bd"
+                    : "fg-muted hover:fg hover:bg-hover"
+              }`}
+            >
+              <I size={14} />
+            </button>
+          </Tooltip>
+        );
+      })}
+    </>
+  );
 }
-
-const MODE_TABS: ModeTab[] = [
-  { id: "site", icon: ListTree },
-  { id: "chat", icon: ChatIcon },
-  // Plantillas moved to a full-center VIEW (GLOBAL_SECTIONS) — browsing a
-  // gallery wants the width. The in-panel TemplatesPanel render stays (the
-  // bare-/new entry flow still uses it); only the editing rail tab is removed.
-  { id: "images", icon: ImageIcon },
-  { id: "library", icon: Layers },
-  // Módulos moved to a full-center VIEW (GLOBAL_SECTIONS) — it's config/mgmt,
-  // not a canvas-side tool. Reached from the rail's views group now.
-  { id: "insights", icon: BarChart3 },
-  { id: "versions", icon: HistoryIcon },
-  { id: "3d", icon: Sparkles },
-];
 
 interface LeftSidebarProps {
   collapsed: boolean;
@@ -254,6 +256,15 @@ interface LeftSidebarProps {
    *  The global-section rail icons set this; the parent renders the section. */
   activeSection?: SectionView;
   onSelectSection?: (v: SectionView) => void;
+  /** Which rail group to render — Navegar (app sections) or Editar (page
+   *  tools). Optional + defaulted from `entryMode` via `railModeFor` so this
+   *  component still renders sensibly before the caller (Task 3) computes and
+   *  passes the real value from hasProject/navigating state. */
+  railMode?: RailMode;
+  /** "App" button (only shown in the Editar group) — opens the Navegar
+   *  section list without leaving the loaded project. Wired by the parent
+   *  in Task 3; safe to omit meanwhile (no-ops). */
+  onOpenApp?: () => void;
   /** Active-business switcher (top of the rail). The active business scopes the
    *  Páginas/Analytics/Mensajes sections + is the default for new pages. */
   businesses?: BusinessProfile[];
@@ -338,36 +349,21 @@ export function LeftSidebar({
   scene3d,
   onApplyScene3d,
   accent,
+  railMode,
+  onOpenApp,
 }: LeftSidebarProps) {
   const showBusinessSwitcher = businesses.length > 0 && !!onPickBusiness;
   const t = useTranslations("wsChrome");
   const isFlatProject = flatProjectId !== undefined;
-  const lockedSet = new Set(lockedTabs ?? []);
-  const isLocked = (id: SidebarMode) => lockedSet.has(id);
-  const tabLabel = (id: SidebarMode) => t(`sidebar.tabs.${id}.label`);
   const tabTitle = (id: SidebarMode) => t(`sidebar.tabs.${id}.title`);
-  const isTabActive = (id: SidebarMode) => mode === id;
-
-  // Tab visibility rules:
-  // Templates stays visible while editing (the panel is browse-only on an
-  // existing page — you can't swap a page for a template). Library and Site
-  // (the project's page tree) are editing-only — both operate on the
-  // currently loaded project.
-  const visibleTabs = MODE_TABS.filter((tab) => {
-    // Editing-only tabs (need a loaded project): the page tree, section library,
-    // image picker, insights, and the modules hub. The individual modules live
-    // inside the hub now, so their opt-in gating moved there too.
-    if (
-      entryMode !== "editing" &&
-      (tab.id === "library" ||
-        tab.id === "site" ||
-        tab.id === "insights" ||
-        tab.id === "images" ||
-        tab.id === "3d")
-    )
-      return false;
-    return true;
-  });
+  // Defaulted (not yet passed by the caller until Task 3 wires the real
+  // hasProject/navigating state through railModeFor) so this component keeps
+  // rendering sensibly on its own — editing entryMode behaves like today's
+  // "editar" rail, every other entryMode behaves like "navegar".
+  const activeRailMode: RailMode =
+    railMode ??
+    railModeFor({ entryMode, hasProject: entryMode === "editing", navigating: false });
+  const handleOpenApp = onOpenApp ?? (() => {});
   // After a click-to-place pick on mobile the panel overlays the canvas —
   // collapse it so the user can aim the placement click.
   const isMobileLayout = useIsMobile();
@@ -384,43 +380,36 @@ export function LeftSidebar({
           onAdd={onAddBusiness}
           onSelectSection={onSelectSection}
         />
-        <GlobalSections
-          vertical
-          active={activeSection}
-          onSelect={onSelectSection ?? (() => {})}
-        />
-        <div className="my-1 h-px w-6 bg-black/10 dark:bg-white/10" />
-        {visibleTabs.map((tab) => {
-          const active = isTabActive(tab.id);
-          const locked = isLocked(tab.id);
-          const I = tab.icon;
-          const label = locked
-            ? (lockReason ?? t("sidebar.tabLocked", { label: tabLabel(tab.id) }))
-            : tabLabel(tab.id);
-          return (
-            <Tooltip key={tab.id} label={label} side="right">
+        {activeRailMode === "navegar" ? (
+          <NavegarGroup
+            vertical
+            active={activeSection}
+            onSelect={onSelectSection ?? (() => {})}
+          />
+        ) : (
+          <>
+            <Tooltip label={t("sidebar.appButton")} side="right">
               <button
                 type="button"
-                disabled={locked}
-                aria-label={label}
-                onClick={() => {
-                  if (locked) return;
-                  setMode(tab.id);
-                  onToggleCollapse();
-                }}
-                className={`h-8 w-8 inline-flex items-center justify-center rounded-md transition-colors duration-150 ease-out ${
-                  locked
-                    ? "fg-faint opacity-50 cursor-not-allowed"
-                    : active
-                      ? "bg-elev fg shadow-card border bd"
-                      : "fg-muted hover:fg hover:bg-hover"
-                }`}
+                onClick={handleOpenApp}
+                aria-label={t("sidebar.appButton")}
+                className="h-8 w-8 inline-flex items-center justify-center rounded-md fg-muted hover:fg hover:bg-hover transition"
               >
-                <I size={14} />
+                <Grid3 size={14} />
               </button>
             </Tooltip>
-          );
-        })}
+            <div className="my-1 h-px w-6 bg-black/10 dark:bg-white/10" />
+            <EditarGroup
+              mode={mode}
+              onSelect={(id) => {
+                setMode(id);
+                onToggleCollapse();
+              }}
+              lockedTabs={lockedTabs}
+              lockReason={lockReason}
+            />
+          </>
+        )}
         <Tooltip label={t("sidebar.expandPanel")} side="right">
           <button
             type="button"
@@ -452,42 +441,33 @@ export function LeftSidebar({
           onAdd={onAddBusiness}
           onSelectSection={onSelectSection}
         />
-        <GlobalSections
-          vertical
-          active={activeSection}
-          onSelect={onSelectSection ?? (() => {})}
-        />
-        <div className="my-1 h-px w-6 bg-black/10 dark:bg-white/10" />
-        {visibleTabs.map((tab) => {
-          const active = isTabActive(tab.id);
-          const locked = isLocked(tab.id);
-          const I = tab.icon;
-          const label = locked
-            ? (lockReason ?? t("sidebar.tabLocked", { label: tabLabel(tab.id) }))
-            : tabLabel(tab.id);
-          return (
-            <Tooltip key={tab.id} label={label} side="right">
+        {activeRailMode === "navegar" ? (
+          <NavegarGroup
+            vertical
+            active={activeSection}
+            onSelect={onSelectSection ?? (() => {})}
+          />
+        ) : (
+          <>
+            <Tooltip label={t("sidebar.appButton")} side="right">
               <button
                 type="button"
-                disabled={locked}
-                aria-label={label}
-                onClick={() => {
-                  if (locked) return;
-                  setMode(tab.id);
-                }}
-                className={`h-8 w-8 inline-flex items-center justify-center rounded-md transition-colors duration-150 ease-out ${
-                  locked
-                    ? "fg-faint opacity-50 cursor-not-allowed"
-                    : active
-                      ? "bg-elev fg shadow-card border bd"
-                      : "fg-muted hover:fg hover:bg-hover"
-                }`}
+                onClick={handleOpenApp}
+                aria-label={t("sidebar.appButton")}
+                className="h-8 w-8 inline-flex items-center justify-center rounded-md fg-muted hover:fg hover:bg-hover transition"
               >
-                <I size={14} />
+                <Grid3 size={14} />
               </button>
             </Tooltip>
-          );
-        })}
+            <div className="my-1 h-px w-6 bg-black/10 dark:bg-white/10" />
+            <EditarGroup
+              mode={mode}
+              onSelect={setMode}
+              lockedTabs={lockedTabs}
+              lockReason={lockReason}
+            />
+          </>
+        )}
         <Tooltip label={t("sidebar.collapsePanel")} side="right">
           <button
             type="button"
@@ -642,6 +622,19 @@ export function LeftSidebar({
 // fetching profiles, a pulsing avatar skeleton holds the slot (same h-7/w-7
 // footprint as the real avatar) so the rail doesn't jump when the switcher
 // pops in — and the slot reads as "something loads here", not an empty gap.
+//
+// WHY this stays separate from the Navegar "business" item (rail-model.ts):
+// NAVEGAR_ITEMS' `business` icon is a plain nav button — it just opens the
+// Business section view, same as every other Navegar item. This entry is a
+// SWITCHER: clicking the avatar opens a dropdown to change which business is
+// active (scoping Páginas/Analytics/Mensajes + the default for new pages),
+// add a new business, or jump to "Todos" across 2+ businesses — none of
+// which the Navegar item does. Collapsing them into one would either lose
+// the switcher (users with multiple businesses couldn't change the active
+// one from the rail) or turn every Navegar click into a dropdown (wrong for
+// the other 7 items). Kept both: this avatar is workspace chrome (always
+// visible, top of rail, in both Navegar and Editar rail modes), the Navegar
+// item is one more destination in the app-sections list.
 function BusinessRailEntry({
   loading,
   show,

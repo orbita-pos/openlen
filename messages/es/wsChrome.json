@@ -74,6 +74,7 @@
         "title": "Escena 3D"
       }
     },
+    "appButton": "App",
     "tabLocked": "{label} — bloqueado",
     "expandPanel": "Expandir panel",
     "collapsePanel": "Contraer panel"

@@ -74,6 +74,7 @@
         "title": "Cena 3D"
       }
     },
+    "appButton": "App",
     "tabLocked": "{label} — bloqueado",
     "expandPanel": "Expandir painel",
     "collapsePanel": "Recolher painel"

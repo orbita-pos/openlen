@@ -74,6 +74,7 @@
         "title": "3Dシーン"
       }
     },
+    "appButton": "アプリ",
     "tabLocked": "{label} — ロック中",
     "expandPanel": "パネルを展開",
     "collapsePanel": "パネルを折りたたむ"

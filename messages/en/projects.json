@@ -183,7 +183,8 @@
     "myBusiness": "My business",
     "messages": "Inbox",
     "analytics": "Analytics",
-    "page": "Page"
+    "page": "Page",
+    "explore": "Explore"
   },
   "deleteDialog": {
     "title": "Delete this page?",

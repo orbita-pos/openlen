@@ -74,6 +74,7 @@
         "title": "3D场景"
       }
     },
+    "appButton": "应用",
     "tabLocked": "{label} — 已锁定",
     "expandPanel": "展开面板",
     "collapsePanel": "收起面板"
