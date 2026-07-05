@@ -3251,7 +3251,10 @@ function NewV2Inner() {
             }}
           />
         ) : centerView === "projects" ? (
-          <ProjectsSection activeBusinessId={activeBusinessId} />
+          <ProjectsSection
+            activeBusinessId={activeBusinessId}
+            onOpenExplore={() => setCenterView("explore")}
+          />
         ) : centerView === "analytics" ? (
           <AnalyticsSection activeBusinessId={activeBusinessId} />
         ) : centerView === "modulos" ? (

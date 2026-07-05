@@ -42,7 +42,7 @@ export function InboxHub() {
   );
 
   return (
-    <div className="flex h-dvh flex-col bg-white text-zinc-900 dark:bg-[#0a0a0a] dark:text-zinc-100">
+    <div className="flex h-full min-w-0 flex-1 flex-col bg-white text-zinc-900 dark:bg-[#0a0a0a] dark:text-zinc-100">
       <header className="shrink-0 border-b border-zinc-200 dark:border-zinc-800">
         <div className="flex items-center gap-2 px-3 pt-3 sm:px-5">
           <Link

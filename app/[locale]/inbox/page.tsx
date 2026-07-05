@@ -25,5 +25,9 @@ export default async function InboxPage({
   setRequestLocale(locale);
   const session = await auth();
   if (!session?.user?.id) redirect({ href: "/login?next=/inbox", locale });
-  return <InboxHub />;
+  return (
+    <div className="flex h-dvh flex-col">
+      <InboxHub />
+    </div>
+  );
 }

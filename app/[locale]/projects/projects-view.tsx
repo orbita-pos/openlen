@@ -106,9 +106,11 @@ const BILLING_ERROR_CODES: BillingErrorCode[] = [
 export function ProjectsView({
   projects: initial,
   profiles,
+  onOpenExplore,
 }: {
   projects: ProjectSummary[];
   profiles: BusinessOption[];
+  onOpenExplore?: () => void;
 }) {
   const t = useTranslations("projects");
   const toast = useToast();
@@ -433,6 +435,7 @@ export function ProjectsView({
         setSort={setSort}
         view={view}
         setView={setView}
+        onOpenExplore={onOpenExplore}
       />
 
       {!usageDismissed && total > 0 && usage && (
@@ -588,6 +591,7 @@ function Toolbar({
   setSort,
   view,
   setView,
+  onOpenExplore,
 }: {
   total: number;
   published: number;
@@ -598,6 +602,7 @@ function Toolbar({
   setFilter: (v: FilterId) => void;
   sort: SortId;
   setSort: (v: SortId) => void;
+  onOpenExplore?: () => void;
   view: ViewMode;
   setView: (v: ViewMode) => void;
 }) {
@@ -662,12 +667,22 @@ function Toolbar({
               </span>
             )}
           </p>
-          <Link
-            href="/explore"
-            className="mt-2 inline-flex items-center gap-1 text-[12.5px] font-medium text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 transition"
-          >
-            <Compass size={12} /> Explore
-          </Link>
+          {onOpenExplore ? (
+            <button
+              type="button"
+              onClick={onOpenExplore}
+              className="mt-2 inline-flex items-center gap-1 text-[12.5px] font-medium text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 transition"
+            >
+              <Compass size={12} /> Explore
+            </button>
+          ) : (
+            <Link
+              href="/explore"
+              className="mt-2 inline-flex items-center gap-1 text-[12.5px] font-medium text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 transition"
+            >
+              <Compass size={12} /> Explore
+            </Link>
+          )}
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">

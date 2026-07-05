@@ -13,8 +13,10 @@ import { ProjectsView, type BusinessOption } from "./projects-view";
 
 export function ProjectsSection({
   activeBusinessId,
+  onOpenExplore,
 }: {
   activeBusinessId?: string;
+  onOpenExplore?: () => void;
 }) {
   const [state, setState] = useState<{
     projects: ProjectSummary[];
@@ -59,7 +61,11 @@ export function ProjectsSection({
   return (
     <div className="flex-1 min-w-0 overflow-y-auto flex flex-col bg-preview-a">
       {state ? (
-        <ProjectsView projects={visibleProjects} profiles={state.profiles} />
+        <ProjectsView
+          projects={visibleProjects}
+          profiles={state.profiles}
+          onOpenExplore={onOpenExplore}
+        />
       ) : (
         <div className="flex-1 flex items-center justify-center">
           <Loader2 className="h-5 w-5 animate-spin text-zinc-400" />
