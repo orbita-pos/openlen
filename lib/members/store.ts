@@ -141,17 +141,6 @@ export async function createActiveMemberWithPassword(
   return rows[0];
 }
 
-/** Set a password on an existing (invited or magic-link-only) row + activate. */
-export async function setMemberPasswordActive(
-  memberId: string,
-  passwordHash: string,
-): Promise<void> {
-  await db
-    .update(schema.siteMembers)
-    .set({ status: "active", passwordHash, lastLoginAt: new Date() })
-    .where(eq(schema.siteMembers.id, memberId));
-}
-
 export async function getMemberById(id: string): Promise<MemberItem | null> {
   const rows = await db
     .select({

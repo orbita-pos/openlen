@@ -9,7 +9,6 @@ import {
   createMemberSession,
   getMemberAuthByEmail,
   recordMemberAuthEvent,
-  setMemberPasswordActive,
 } from "@/lib/members/store";
 import { json, loadMemberSite } from "../../_shared";
 
@@ -46,30 +45,33 @@ export async function POST(
 
   const site = await loadMemberSite(sub);
   if (!site) return json({ error: "not_found" }, 404);
-  // Preset «Cuentas» apagado ⇒ 404 (no revela nada del sitio).
   if (!site.membersEnabled || !site.membersPasswordLogin) {
     return json({ error: "not_found" }, 404);
   }
 
+  // Password registration creates NEW members only. It must NEVER set a
+  // password on a pre-existing row — that would let anyone who knows a
+  // passwordless member's email (invited or magic-link-only) claim the
+  // account with no proof of email ownership. An existing member gets a
+  // generic 409 and logs in (or uses the magic link) instead. Adding a
+  // password to an EXISTING account is a Phase-2 flow, gated behind
+  // magic-link verification.
   const existing = await getMemberAuthByEmail(site.projectId, email);
-  if (existing?.passwordHash) return json({ error: "exists" }, 409);
+  if (existing) return json({ error: "exists" }, 409);
+
+  // Only open mode self-registers; invite mode admits pre-approved emails via
+  // the magic link, not public password signup. Both cheap checks run BEFORE
+  // the deliberately-expensive bcrypt hash so a 403 never burns a hash.
+  if (site.membersMode === "invite") return json({ error: "invite_only" }, 403);
+  const plan = await getUserPlan(site.userId);
+  if ((await countMembers(site.projectId)) >= MEMBER_CAPS[plan].members) {
+    return json({ error: "cap_reached" }, 403);
+  }
 
   const passwordHash = await hashPassword(password);
-  let memberId: string;
-  if (existing) {
-    // Invitado o sólo-magic-link → pon la contraseña y actívalo.
-    await setMemberPasswordActive(existing.id, passwordHash);
-    memberId = existing.id;
-  } else {
-    if (site.membersMode === "invite") return json({ error: "invite_only" }, 403);
-    const plan = await getUserPlan(site.userId);
-    if ((await countMembers(site.projectId)) >= MEMBER_CAPS[plan].members) {
-      return json({ error: "cap_reached" }, 403);
-    }
-    memberId = (
-      await createActiveMemberWithPassword(site.projectId, email, passwordHash)
-    ).id;
-  }
+  const memberId = (
+    await createActiveMemberWithPassword(site.projectId, email, passwordHash)
+  ).id;
 
   const session = await createMemberSession(site.projectId, memberId);
   recordMemberAuthEvent({
@@ -78,12 +80,8 @@ export async function POST(
     email,
     type: "password_set",
   });
-  return new Response(JSON.stringify({ ok: true }), {
-    status: 200,
-    headers: {
-      "content-type": "application/json",
-      "cache-control": "no-store",
-      "set-cookie": buildMemberCookie(session),
-    },
-  });
+
+  const res = json({ ok: true }, 200);
+  res.headers.append("set-cookie", buildMemberCookie(session));
+  return res;
 }
