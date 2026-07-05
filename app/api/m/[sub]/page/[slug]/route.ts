@@ -40,6 +40,7 @@ export async function GET(
   }
   const member = await getMemberById(session.memberId);
   if (!member || member.status !== "active") return json({ error: "auth" }, 401);
+  if (!member.emailVerifiedAt) return json({ error: "verify" }, 403);
   maybeTouchMemberSession(session);
 
   const html = await readProtectedPage(sub, slug);
