@@ -122,12 +122,14 @@ export async function getMemberAuthByEmail(
   return rows[0] ?? null;
 }
 
-/** Open-mode registration: create a fresh active member carrying a password. */
+/** Open-mode registration: create a fresh active member carrying a password.
+ *  Null = lost a concurrent race for this (projectId,email) — the caller
+ *  should treat that the same as the pre-insert existence check (409). */
 export async function createActiveMemberWithPassword(
   projectId: string,
   email: string,
   passwordHash: string,
-): Promise<{ id: string }> {
+): Promise<{ id: string } | null> {
   const rows = await db
     .insert(schema.siteMembers)
     .values({
@@ -137,8 +139,11 @@ export async function createActiveMemberWithPassword(
       passwordHash,
       lastLoginAt: new Date(),
     })
+    .onConflictDoNothing({
+      target: [schema.siteMembers.projectId, schema.siteMembers.email],
+    })
     .returning({ id: schema.siteMembers.id });
-  return rows[0];
+  return rows[0] ?? null;
 }
 
 export async function getMemberById(id: string): Promise<MemberItem | null> {
@@ -406,7 +411,8 @@ export type MemberAuthEventType =
   | "invited"
   | "removed"
   | "password_login"
-  | "password_set";
+  | "password_set"
+  | "password_register";
 
 /** Fire-and-forget — the audit trail must never block or fail an auth path.
  *  Logins also sweep events past retention for the project, best-effort. */

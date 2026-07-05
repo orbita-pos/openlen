@@ -15,7 +15,7 @@ export const dynamic = "force-dynamic";
 
 const BodySchema = z.object({
   email: z.string().email().max(254).transform((v) => v.toLowerCase().trim()),
-  password: z.string(),
+  password: z.string().max(200),
 });
 
 export async function POST(

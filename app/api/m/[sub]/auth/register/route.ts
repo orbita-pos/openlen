@@ -69,16 +69,16 @@ export async function POST(
   }
 
   const passwordHash = await hashPassword(password);
-  const memberId = (
-    await createActiveMemberWithPassword(site.projectId, email, passwordHash)
-  ).id;
+  const created = await createActiveMemberWithPassword(site.projectId, email, passwordHash);
+  if (!created) return json({ error: "exists" }, 409); // lost a concurrent race for this email
+  const memberId = created.id;
 
   const session = await createMemberSession(site.projectId, memberId);
   recordMemberAuthEvent({
     projectId: site.projectId,
     memberId,
     email,
-    type: "password_set",
+    type: "password_register",
   });
 
   const res = json({ ok: true }, 200);
