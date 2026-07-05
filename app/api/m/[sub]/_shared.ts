@@ -38,6 +38,8 @@ export interface MemberSiteContext {
   title: string;
   membersEnabled: boolean;
   membersMode: "open" | "invite";
+  /** Preset «Cuentas»: login con contraseña habilitado. */
+  membersPasswordLogin: boolean;
   /** Site language — drives the email + interstitial copy. */
   locale: string;
 }
@@ -67,6 +69,7 @@ export async function loadMemberSite(
     title: row.title?.trim() || sub,
     membersEnabled: members?.enabled === true,
     membersMode: members?.mode === "invite" ? "invite" : "open",
+    membersPasswordLogin: members?.passwordLogin === true,
     locale: detectLang(row.data?.html ?? ""),
   };
 }
