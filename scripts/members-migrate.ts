@@ -32,6 +32,11 @@ async function main() {
   );
 
   await db.execute(
+    sql`ALTER TABLE "siteMembers"
+      ADD COLUMN IF NOT EXISTS "emailVerifiedAt" timestamp;`,
+  );
+
+  await db.execute(
     sql`CREATE TABLE IF NOT EXISTS "memberLoginTokens" (
       "tokenHash" text PRIMARY KEY,
       "projectId" text NOT NULL REFERENCES "projects"("id") ON DELETE CASCADE,

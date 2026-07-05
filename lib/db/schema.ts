@@ -802,6 +802,10 @@ export const siteMembers = pgTable(
     // bcrypt hash (cost-12) cuando el miembro se registró con contraseña.
     // Null = miembro sólo-magic-link. Ver lib/auth/visitor-password.ts.
     passwordHash: text("passwordHash"),
+    // Cuándo el miembro probó propiedad del correo (magic-link o confirmación).
+    // Null = no verificado (signup casual con contraseña). Gobierna el acceso
+    // a páginas con candado. Ver lib/members/verification.ts.
+    emailVerifiedAt: timestamp("emailVerifiedAt", { mode: "date" }),
   },
   (table) => [
     uniqueIndex("siteMembers_projectId_email_uq").on(table.projectId, table.email),
