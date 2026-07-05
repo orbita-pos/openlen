@@ -30,6 +30,7 @@ export default defineConfig({
       "lib/curate/**/*.test.ts",
       "lib/business-profiles/**/*.test.ts",
       "lib/billing/**/*.test.ts",
+      "lib/auth/**/*.test.ts",
       "lib/theme-derive.test.ts",
       "lib/palette-gen-look.test.ts",
       "lib/theme-presets.test.ts",

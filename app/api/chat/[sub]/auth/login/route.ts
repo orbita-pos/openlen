@@ -2,14 +2,11 @@ import { getClientIp, ipLimitKey, checkAndConsume, IP_LIMITS } from "@/lib/limit
 import { buildChatCookie } from "@/lib/chat/session";
 import { isValidPassword, normalizeUsername, verifyPassword } from "@/lib/chat/identity";
 import { createChatSession, getChatUserByUsername, recordChatEvent } from "@/lib/chat/store";
+import { DUMMY_HASH } from "@/lib/auth/visitor-password";
 import { json, loadChatSite } from "../../_shared";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-
-// A valid cost-12 bcrypt hash compared against when the username is unknown,
-// so login always takes full bcrypt cost and can't be used to enumerate usernames.
-const DUMMY_HASH = "$2b$12$U5g.9HqlMGI8.St.ytB.UOFWQvr6z7dw7cT/wJPYNWRwoOfNzy/ua";
 
 export async function POST(req: Request, { params }: { params: Promise<{ sub: string }> }): Promise<Response> {
   const { sub } = await params;
