@@ -14,7 +14,6 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { Link } from "@/i18n/navigation";
 import { Grid3, Layers, PanelLeft, PanelRight, X } from "./icons";
 import type { Section } from "./mock-data";
 import type { StoredChatTurn } from "@/lib/projects/types";
@@ -54,9 +53,10 @@ import {
 } from "./rail-model";
 
 // Navegar: the account-wide sections (same nav as the dashboard), rendered
-// full-time on bare /new and behind the "App" button while editing. Links
-// navigate away from the editor when they're a real route (Explore); every
-// other item just swaps the workspace's center view in place.
+// full-time on bare /new and behind the "App" button while editing. Every
+// item just swaps the workspace's center view in place — including Explore,
+// which opens ExploreView in-workspace (?view=explore) rather than
+// navigating to the standalone /explore route.
 function NavegarGroup({
   vertical,
   active,
@@ -76,19 +76,6 @@ function NavegarGroup({
         const className = `${vertical ? "h-8 w-8" : "h-7 w-8"} inline-flex items-center justify-center rounded-md transition ${
           isActive ? "bg-elev fg shadow-card border bd" : "fg-muted hover:fg hover:bg-hover"
         }`;
-        // Explore leaves the workspace for the community feed — a real
-        // route, not a center-view swap — so it's an i18n Link (same
-        // pattern top-bar.tsx uses for its own Explore link) instead of a
-        // button wired to onSelect.
-        if (s.view === "explore") {
-          return (
-            <Tooltip key={s.view} label={label} side={vertical ? "right" : undefined}>
-              <Link href="/explore" aria-label={label} className={className}>
-                <I size={vertical ? 14 : 13} />
-              </Link>
-            </Tooltip>
-          );
-        }
         return (
           <Tooltip key={s.view} label={label} side={vertical ? "right" : undefined}>
             <button

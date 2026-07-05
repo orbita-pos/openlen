@@ -39,6 +39,7 @@ import { ALL_BUSINESSES } from "@/components/workspace-v2/business-switcher";
 import { CustomDomainModal } from "@/components/workspace-v2/custom-domain-modal";
 import { DeployIntegrationModal } from "@/components/workspace-v2/deploy-integration-modal";
 import { InboxHub } from "@/components/inbox/inbox-hub";
+import { ExploreView } from "@/components/community/explore-view";
 import { BusinessSection } from "../business/business-section";
 import { ProjectsSection } from "../projects/projects-section";
 import { AnalyticsSection } from "../analytics/analytics-section";
@@ -332,7 +333,8 @@ function NewV2Inner() {
     viewParam === "marketing" ||
     viewParam === "templates" ||
     viewParam === "business" ||
-    viewParam === "messages"
+    viewParam === "messages" ||
+    viewParam === "explore"
       ? viewParam
       : "page";
   const setCenterView = useCallback(
@@ -3235,6 +3237,8 @@ function NewV2Inner() {
         <h1 className="sr-only">{t("a11y.workspaceHeading")}</h1>
         {centerView === "messages" ? (
           <InboxHub />
+        ) : centerView === "explore" ? (
+          <ExploreView />
         ) : centerView === "business" ? (
           <BusinessSection
             embedded
