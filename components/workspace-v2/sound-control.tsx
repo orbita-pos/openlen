@@ -17,9 +17,11 @@ export interface SoundControlProps {
   volume: number;
   onVolume: (v: number) => void;
   onToggleMute: () => void;
+  /** Trigger button size — matches the neighboring preview-toolbar IconBtns. Defaults to "md" (prior behavior). */
+  size?: "sm" | "md";
 }
 
-export function SoundControl({ volume, onVolume, onToggleMute }: SoundControlProps) {
+export function SoundControl({ volume, onVolume, onToggleMute, size = "md" }: SoundControlProps) {
   const t = useTranslations("topbar");
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -41,6 +43,7 @@ export function SoundControl({ volume, onVolume, onToggleMute }: SoundControlPro
       <IconBtn
         label={muted ? t("sound.unmute") : t("sound.mute")}
         onClick={() => setOpen((o) => !o)}
+        size={size}
       >
         {muted ? <VolumeX size={14} /> : <Volume2 size={14} />}
       </IconBtn>

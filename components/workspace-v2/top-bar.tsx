@@ -648,7 +648,6 @@ export function TopBar({
                     setDeployOpen(false);
                     onPublish?.();
                   }}
-                  disabled={!onPublish}
                   className="flex items-center gap-3 w-full text-left px-2.5 py-2 rounded-md hover:bg-hover transition group disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md ring-1 ring-[color:var(--accent)]/30 bg-[color:var(--accent)]/10 text-[var(--accent)]">

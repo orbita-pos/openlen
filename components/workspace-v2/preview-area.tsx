@@ -621,6 +621,7 @@ export function PreviewArea({
               volume={soundVolume}
               onVolume={onSoundVolume}
               onToggleMute={onToggleSoundMute}
+              size="sm"
             />
           )}
         </div>
