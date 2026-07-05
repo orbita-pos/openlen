@@ -49,11 +49,6 @@ async function main() {
   );
 
   await db.execute(
-    sql`ALTER TABLE "memberLoginTokens"
-      ADD COLUMN IF NOT EXISTS "kind" text NOT NULL DEFAULT 'login';`,
-  );
-
-  await db.execute(
     sql`CREATE TABLE IF NOT EXISTS "memberSessions" (
       "tokenHash" text PRIMARY KEY,
       "projectId" text NOT NULL REFERENCES "projects"("id") ON DELETE CASCADE,

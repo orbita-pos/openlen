@@ -5,8 +5,10 @@ import { z } from "zod";
 import { checkAndConsume, getClientIp, ipLimitKey } from "@/lib/limits";
 import { MEMBER_LOGIN_IP_LIMITS } from "@/lib/members/limits";
 import { hashPassword, isValidPassword } from "@/lib/auth/visitor-password";
-import { readMemberCookie } from "@/lib/members/session";
+import { buildMemberCookie, readMemberCookie } from "@/lib/members/session";
 import {
+  createMemberSession,
+  deleteMemberSessions,
   getMemberSession,
   recordMemberAuthEvent,
   setMemberPassword,
@@ -54,10 +56,16 @@ export async function POST(
   }
 
   await setMemberPassword(session.memberId, await hashPassword(parsed.data.password));
+  // Password change = log out other devices: kill all sessions, then re-mint
+  // this caller's so they stay logged in with a fresh cookie.
+  await deleteMemberSessions(site.projectId, session.memberId);
+  const fresh = await createMemberSession(site.projectId, session.memberId);
   recordMemberAuthEvent({
     projectId: site.projectId,
     memberId: session.memberId,
     type: "password_set",
   });
-  return json({ ok: true }, 200);
+  const res = json({ ok: true }, 200);
+  res.headers.append("set-cookie", buildMemberCookie(fresh));
+  return res;
 }

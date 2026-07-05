@@ -1,17 +1,17 @@
 import { describe, it, expect } from "vitest";
 import { shouldClearPassword } from "@/lib/members/verification";
 
-describe("shouldClearPassword (anti-okupa reclaim rule)", () => {
-  it("clears ONLY a login-token click on an unverified row that has a password", () => {
-    expect(shouldClearPassword({ tokenKind: "login", hasPassword: true, alreadyVerified: false })).toBe(true);
-  });
-  it("keeps the password on a confirm token (self-confirmation)", () => {
-    expect(shouldClearPassword({ tokenKind: "confirm", hasPassword: true, alreadyVerified: false })).toBe(false);
-  });
-  it("keeps the password if the row was already verified", () => {
-    expect(shouldClearPassword({ tokenKind: "login", hasPassword: true, alreadyVerified: true })).toBe(false);
-  });
-  it("nothing to clear when there is no password", () => {
-    expect(shouldClearPassword({ tokenKind: "login", hasPassword: false, alreadyVerified: false })).toBe(false);
-  });
+describe("shouldClearPassword (anti-squatting reclaim rule)", () => {
+  const cases: Array<[boolean, boolean, boolean]> = [
+    [true, false, true],   // unverified row WITH a password → reclaim
+    [true, true, false],   // already verified → trusted, keep
+    [false, false, false], // no password → nothing to clear
+    [false, true, false],  // no password + verified → nothing
+  ];
+  it.each(cases)(
+    "hasPassword=%s alreadyVerified=%s → %s",
+    (hasPassword, alreadyVerified, expected) => {
+      expect(shouldClearPassword({ hasPassword, alreadyVerified })).toBe(expected);
+    },
+  );
 });

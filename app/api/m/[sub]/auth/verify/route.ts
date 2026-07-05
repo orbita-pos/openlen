@@ -122,7 +122,6 @@ export async function POST(
   if (existing) {
     if (
       shouldClearPassword({
-        tokenKind: consumed.kind,
         hasPassword: existing.passwordHash !== null,
         alreadyVerified: existing.emailVerifiedAt !== null,
       })

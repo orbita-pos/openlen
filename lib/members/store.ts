@@ -17,8 +17,6 @@ import {
 
 export const LOGIN_TOKEN_TTL_MS = 15 * 60 * 1000; // 15 minutes
 
-export type MemberTokenKind = "login" | "confirm";
-
 const MEMBER_LIST_LIMIT = 1000;
 // A member accumulating logins keeps the newest N sessions; older devices
 // just re-login. (Supabase's analog is the single-session-per-user option —
@@ -294,7 +292,6 @@ export async function issueLoginToken(params: {
   projectId: string;
   email: string;
   slug?: string | null;
-  kind?: MemberTokenKind;
 }): Promise<string> {
   const rawToken = crypto.randomBytes(32).toString("base64url");
   await db.insert(schema.memberLoginTokens).values({
@@ -302,7 +299,6 @@ export async function issueLoginToken(params: {
     projectId: params.projectId,
     email: normalizeEmail(params.email),
     slug: params.slug ?? null,
-    kind: params.kind ?? "login",
     expires: new Date(Date.now() + LOGIN_TOKEN_TTL_MS),
     used: false,
   });
@@ -315,7 +311,7 @@ export async function issueLoginToken(params: {
 export async function consumeLoginToken(
   rawToken: string,
   projectId: string,
-): Promise<{ email: string; slug: string | null; kind: MemberTokenKind } | null> {
+): Promise<{ email: string; slug: string | null } | null> {
   const rows = await db
     .update(schema.memberLoginTokens)
     .set({ used: true })
@@ -330,7 +326,6 @@ export async function consumeLoginToken(
     .returning({
       email: schema.memberLoginTokens.email,
       slug: schema.memberLoginTokens.slug,
-      kind: schema.memberLoginTokens.kind,
     });
   if (rows.length === 0) return null;
 
