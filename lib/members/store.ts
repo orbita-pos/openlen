@@ -7,7 +7,7 @@
 // to the zod transforms at the API edges.
 
 import crypto from "node:crypto";
-import { and, desc, eq, gt, lt, sql } from "drizzle-orm";
+import { and, desc, eq, gt, isNull, lt, sql } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
 import {
   SESSION_TTL_MS,
@@ -37,6 +37,7 @@ export interface MemberItem {
   status: "active" | "invited";
   createdAt: Date;
   lastLoginAt: Date | null;
+  emailVerifiedAt: Date | null;
 }
 
 function normalizeEmail(email: string): string {
@@ -57,6 +58,7 @@ export async function listMembers(projectId: string): Promise<MemberItem[]> {
       status: schema.siteMembers.status,
       createdAt: schema.siteMembers.createdAt,
       lastLoginAt: schema.siteMembers.lastLoginAt,
+      emailVerifiedAt: schema.siteMembers.emailVerifiedAt,
     })
     .from(schema.siteMembers)
     .where(eq(schema.siteMembers.projectId, projectId))
@@ -84,6 +86,7 @@ export async function getMemberByEmail(
       status: schema.siteMembers.status,
       createdAt: schema.siteMembers.createdAt,
       lastLoginAt: schema.siteMembers.lastLoginAt,
+      emailVerifiedAt: schema.siteMembers.emailVerifiedAt,
     })
     .from(schema.siteMembers)
     .where(
@@ -100,6 +103,7 @@ export interface MemberAuth {
   id: string;
   status: "active" | "invited";
   passwordHash: string | null;
+  emailVerifiedAt: Date | null;
 }
 
 /** Credential lookup for password login (no PII beyond what login needs). */
@@ -112,6 +116,7 @@ export async function getMemberAuthByEmail(
       id: schema.siteMembers.id,
       status: schema.siteMembers.status,
       passwordHash: schema.siteMembers.passwordHash,
+      emailVerifiedAt: schema.siteMembers.emailVerifiedAt,
     })
     .from(schema.siteMembers)
     .where(
@@ -148,6 +153,39 @@ export async function createActiveMemberWithPassword(
   return rows[0] ?? null;
 }
 
+/** Estampa verificado la primera vez (preserva el timestamp original). */
+export async function markMemberVerified(memberId: string): Promise<void> {
+  await db
+    .update(schema.siteMembers)
+    .set({ emailVerifiedAt: new Date() })
+    .where(
+      and(
+        eq(schema.siteMembers.id, memberId),
+        isNull(schema.siteMembers.emailVerifiedAt),
+      ),
+    );
+}
+
+/** Reclamo anti-okupa: borra la contraseña de la fila (las sesiones se matan
+ *  aparte con deleteMemberSessions). */
+export async function clearMemberPassword(memberId: string): Promise<void> {
+  await db
+    .update(schema.siteMembers)
+    .set({ passwordHash: null })
+    .where(eq(schema.siteMembers.id, memberId));
+}
+
+/** Poner/cambiar contraseña de un miembro YA autenticado (Mi cuenta). */
+export async function setMemberPassword(
+  memberId: string,
+  passwordHash: string,
+): Promise<void> {
+  await db
+    .update(schema.siteMembers)
+    .set({ passwordHash })
+    .where(eq(schema.siteMembers.id, memberId));
+}
+
 export async function getMemberById(id: string): Promise<MemberItem | null> {
   const rows = await db
     .select({
@@ -157,6 +195,7 @@ export async function getMemberById(id: string): Promise<MemberItem | null> {
       status: schema.siteMembers.status,
       createdAt: schema.siteMembers.createdAt,
       lastLoginAt: schema.siteMembers.lastLoginAt,
+      emailVerifiedAt: schema.siteMembers.emailVerifiedAt,
     })
     .from(schema.siteMembers)
     .where(eq(schema.siteMembers.id, id))
@@ -190,6 +229,7 @@ export async function upsertActiveMember(
       status: schema.siteMembers.status,
       createdAt: schema.siteMembers.createdAt,
       lastLoginAt: schema.siteMembers.lastLoginAt,
+      emailVerifiedAt: schema.siteMembers.emailVerifiedAt,
     });
   return rows[0];
 }
@@ -224,6 +264,7 @@ export async function inviteMember(
       status: schema.siteMembers.status,
       createdAt: schema.siteMembers.createdAt,
       lastLoginAt: schema.siteMembers.lastLoginAt,
+      emailVerifiedAt: schema.siteMembers.emailVerifiedAt,
     });
   if (rows.length > 0) return { created: true, member: rows[0] };
   return { created: false, member: null };
