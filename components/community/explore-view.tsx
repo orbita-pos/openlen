@@ -165,7 +165,14 @@ function ExploreItemCard({ item }: { item: ExploreItem }) {
   const router = useRouter();
   const toast = useToast();
   const [busy, setBusy] = useState(false);
-  const live = item.deployUrl ?? undefined;
+  // deployUrl is stored bare (no protocol) at publish time — prefix it so the
+  // preview link is an absolute URL instead of resolving relative to whatever
+  // page it's clicked from (e.g. `/en/new?view=explore` → broken `/en/<sub>.openlen.com`).
+  const live = item.deployUrl
+    ? /^https?:\/\//i.test(item.deployUrl)
+      ? item.deployUrl
+      : `https://${item.deployUrl}`
+    : undefined;
 
   async function remix() {
     setBusy(true);
