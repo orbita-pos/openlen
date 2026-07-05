@@ -1,0 +1,22 @@
+{
+  "title": "Ontdekken",
+  "subtitle": "Echte pagina's, openbaar gemaakt door hun makers. Open er een en remix hem tot je eigen versie.",
+  "sortRecent": "Recent",
+  "sortRemixed": "Meest geremixt",
+  "loadMore": "Meer laden",
+  "loadingMore": "Laden…",
+  "loadError": "Ontdekken kon niet worden geladen. Probeer het zo weer.",
+  "retry": "Opnieuw proberen",
+  "emptyTitle": "Hier staat nog niets",
+  "emptyHint": "Publiceer een pagina openbaar en hij verschijnt hier, klaar om door iedereen geremixt te worden.",
+  "noPreview": "Geen voorbeeld",
+  "remix": "Remix",
+  "remixing": "Bezig met remixen…",
+  "remixError": "Deze pagina kon niet worden geremixt. Probeer het opnieuw.",
+  "report": "Rapporteren",
+  "reportAria": "Pagina rapporteren",
+  "reportPrompt": "Deze pagina rapporteren voor: spam, volwassen inhoud, phishing of anders",
+  "reportThanks": "Bedankt — ons team bekijkt het.",
+  "remixesTitle": "Remixes",
+  "openAria": "{title} openen"
+}

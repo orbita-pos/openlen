@@ -1,0 +1,22 @@
+{
+  "title": "Explorar",
+  "subtitle": "Páginas reais, tornadas públicas por seus criadores. Abra qualquer uma e remixe para tornar sua.",
+  "sortRecent": "Recentes",
+  "sortRemixed": "Mais remixadas",
+  "loadMore": "Carregar mais",
+  "loadingMore": "Carregando…",
+  "loadError": "Não foi possível carregar o Explorar. Tente novamente em instantes.",
+  "retry": "Tentar novamente",
+  "emptyTitle": "Ainda não há nada aqui",
+  "emptyHint": "Publique uma página publicamente e ela aparecerá aqui para todos remixarem.",
+  "noPreview": "Sem pré-visualização",
+  "remix": "Remixar",
+  "remixing": "Remixando…",
+  "remixError": "Não foi possível remixar esta página. Tente novamente.",
+  "report": "Denunciar",
+  "reportAria": "Denunciar página",
+  "reportPrompt": "Denunciar esta página por: spam, conteúdo adulto, phishing ou outro",
+  "reportThanks": "Obrigado — nossa equipe vai analisar.",
+  "remixesTitle": "Remixes",
+  "openAria": "Abrir {title}"
+}

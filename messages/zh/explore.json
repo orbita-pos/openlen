@@ -1,0 +1,22 @@
+{
+  "title": "探索",
+  "subtitle": "由创作者公开分享的真实页面。打开任意一个，混合改编成属于你自己的项目。",
+  "sortRecent": "最新",
+  "sortRemixed": "最多混改",
+  "loadMore": "加载更多",
+  "loadingMore": "加载中…",
+  "loadError": "无法加载探索。请稍后重试。",
+  "retry": "重试",
+  "emptyTitle": "这里还没有内容",
+  "emptyHint": "公开发布一个页面，它就会出现在这里，供所有人混合改编。",
+  "noPreview": "无预览",
+  "remix": "混改",
+  "remixing": "混改中…",
+  "remixError": "无法混改此页面。请重试。",
+  "report": "举报",
+  "reportAria": "举报页面",
+  "reportPrompt": "举报此页面的原因：垃圾信息、成人内容、钓鱼或其他",
+  "reportThanks": "谢谢 — 我们的团队会进行审核。",
+  "remixesTitle": "混改次数",
+  "openAria": "打开 {title}"
+}

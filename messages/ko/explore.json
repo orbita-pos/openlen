@@ -1,0 +1,22 @@
+{
+  "title": "탐색",
+  "subtitle": "제작자가 공개한 실제 페이지입니다. 마음에 드는 페이지를 열어 리믹스해서 나만의 것으로 만들어 보세요.",
+  "sortRecent": "최신순",
+  "sortRemixed": "리믹스 많은순",
+  "loadMore": "더 불러오기",
+  "loadingMore": "불러오는 중…",
+  "loadError": "탐색을 불러오지 못했습니다. 잠시 후 다시 시도하세요.",
+  "retry": "다시 시도",
+  "emptyTitle": "아직 아무것도 없습니다",
+  "emptyHint": "페이지를 공개하면 여기에 표시되어 누구나 리믹스할 수 있습니다.",
+  "noPreview": "미리보기 없음",
+  "remix": "리믹스",
+  "remixing": "리믹스 중…",
+  "remixError": "이 페이지를 리믹스하지 못했습니다. 다시 시도하세요.",
+  "report": "신고",
+  "reportAria": "페이지 신고",
+  "reportPrompt": "이 페이지 신고 사유: 스팸, 성인 콘텐츠, 피싱 또는 기타",
+  "reportThanks": "감사합니다 — 저희 팀이 확인하겠습니다.",
+  "remixesTitle": "리믹스",
+  "openAria": "{title} 열기"
+}

@@ -1,0 +1,22 @@
+{
+  "title": "Entdecken",
+  "subtitle": "Echte Seiten, von ihren Erstellern öffentlich gemacht. Öffne eine und remixe sie zu deiner eigenen.",
+  "sortRecent": "Neueste",
+  "sortRemixed": "Meistgeremixt",
+  "loadMore": "Mehr laden",
+  "loadingMore": "Wird geladen…",
+  "loadError": "Entdecken konnte nicht geladen werden. Versuch es gleich noch einmal.",
+  "retry": "Erneut versuchen",
+  "emptyTitle": "Hier ist noch nichts",
+  "emptyHint": "Veröffentliche eine Seite öffentlich, und sie erscheint hier zum Remixen für alle.",
+  "noPreview": "Keine Vorschau",
+  "remix": "Remixen",
+  "remixing": "Remixen…",
+  "remixError": "Diese Seite konnte nicht geremixt werden. Versuch es erneut.",
+  "report": "Melden",
+  "reportAria": "Seite melden",
+  "reportPrompt": "Diese Seite melden wegen: Spam, Erwachseneninhalt, Phishing oder Sonstiges",
+  "reportThanks": "Danke — unser Team schaut sich das an.",
+  "remixesTitle": "Remixe",
+  "openAria": "{title} öffnen"
+}

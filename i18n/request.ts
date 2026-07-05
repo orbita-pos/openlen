@@ -259,6 +259,17 @@ import koInbox from "../messages/ko/inbox.json";
 import zhInbox from "../messages/zh/inbox.json";
 import nlInbox from "../messages/nl/inbox.json";
 
+import enExplore from "../messages/en/explore.json";
+import esExplore from "../messages/es/explore.json";
+import ptExplore from "../messages/pt/explore.json";
+import frExplore from "../messages/fr/explore.json";
+import deExplore from "../messages/de/explore.json";
+import itExplore from "../messages/it/explore.json";
+import jaExplore from "../messages/ja/explore.json";
+import koExplore from "../messages/ko/explore.json";
+import zhExplore from "../messages/zh/explore.json";
+import nlExplore from "../messages/nl/explore.json";
+
 const MESSAGES = {
   en: {
     common: enCommon,
@@ -285,6 +296,7 @@ const MESSAGES = {
     bookings: enBookings,
     collections: enCollections,
     inbox: enInbox,
+    explore: enExplore,
   },
   es: {
     common: esCommon,
@@ -311,6 +323,7 @@ const MESSAGES = {
     bookings: esBookings,
     collections: esCollections,
     inbox: esInbox,
+    explore: esExplore,
   },
   pt: {
     common: ptCommon,
@@ -337,6 +350,7 @@ const MESSAGES = {
     bookings: ptBookings,
     collections: ptCollections,
     inbox: ptInbox,
+    explore: ptExplore,
   },
   fr: {
     common: frCommon,
@@ -363,6 +377,7 @@ const MESSAGES = {
     bookings: frBookings,
     collections: frCollections,
     inbox: frInbox,
+    explore: frExplore,
   },
   de: {
     common: deCommon,
@@ -389,6 +404,7 @@ const MESSAGES = {
     bookings: deBookings,
     collections: deCollections,
     inbox: deInbox,
+    explore: deExplore,
   },
   it: {
     common: itCommon,
@@ -415,6 +431,7 @@ const MESSAGES = {
     bookings: itBookings,
     collections: itCollections,
     inbox: itInbox,
+    explore: itExplore,
   },
   ja: {
     common: jaCommon,
@@ -441,6 +458,7 @@ const MESSAGES = {
     bookings: jaBookings,
     collections: jaCollections,
     inbox: jaInbox,
+    explore: jaExplore,
   },
   ko: {
     common: koCommon,
@@ -467,6 +485,7 @@ const MESSAGES = {
     bookings: koBookings,
     collections: koCollections,
     inbox: koInbox,
+    explore: koExplore,
   },
   zh: {
     common: zhCommon,
@@ -493,6 +512,7 @@ const MESSAGES = {
     bookings: zhBookings,
     collections: zhCollections,
     inbox: zhInbox,
+    explore: zhExplore,
   },
   nl: {
     common: nlCommon,
@@ -519,6 +539,7 @@ const MESSAGES = {
     bookings: nlBookings,
     collections: nlCollections,
     inbox: nlInbox,
+    explore: nlExplore,
   },
 } as const;
 

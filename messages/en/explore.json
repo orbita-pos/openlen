@@ -1,0 +1,22 @@
+{
+  "title": "Explore",
+  "subtitle": "Real pages, made public by their creators. Open any one, then remix it into your own project.",
+  "sortRecent": "Recent",
+  "sortRemixed": "Most remixed",
+  "loadMore": "Load more",
+  "loadingMore": "Loading…",
+  "loadError": "Couldn't load Explore. Try again in a moment.",
+  "retry": "Retry",
+  "emptyTitle": "Nothing here yet",
+  "emptyHint": "Publish a page publicly and it lands here for everyone to remix.",
+  "noPreview": "No preview",
+  "remix": "Remix",
+  "remixing": "Remixing…",
+  "remixError": "Couldn't remix this page. Try again.",
+  "report": "Report",
+  "reportAria": "Report page",
+  "reportPrompt": "Report this page for: spam, adult, phishing, or other",
+  "reportThanks": "Thanks — our team will take a look.",
+  "remixesTitle": "Remixes",
+  "openAria": "Open {title}"
+}
