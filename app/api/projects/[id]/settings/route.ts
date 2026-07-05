@@ -59,7 +59,12 @@ interface PatchBody {
   music?: { src?: string; title?: string; cover?: string } | null;
   /** Members module switches. Merged into settings.members; gating takes
    *  effect on the next publish. */
-  members?: { enabled?: boolean; mode?: "open" | "invite" };
+  members?: {
+    enabled?: boolean;
+    mode?: "open" | "invite";
+    passwordLogin?: boolean;
+    accountArea?: boolean;
+  };
   /** Broadcast module switch. Merged into settings.broadcast. */
   broadcast?: { enabled?: boolean };
   /** Comments module switches. Merged into settings.comments. */
@@ -187,6 +192,18 @@ export async function PATCH(
     if ("mode" in m && m.mode !== "open" && m.mode !== "invite") {
       return json(
         { error: "invalid_body", message: "members.mode must be open|invite" },
+        400,
+      );
+    }
+    if ("passwordLogin" in m && typeof m.passwordLogin !== "boolean") {
+      return json(
+        { error: "invalid_body", message: "members.passwordLogin must be boolean" },
+        400,
+      );
+    }
+    if ("accountArea" in m && typeof m.accountArea !== "boolean") {
+      return json(
+        { error: "invalid_body", message: "members.accountArea must be boolean" },
         400,
       );
     }
@@ -479,6 +496,12 @@ export async function PATCH(
       ...(data.settings?.members ?? {}),
       ...("enabled" in body.members ? { enabled: body.members.enabled } : {}),
       ...("mode" in body.members ? { mode: body.members.mode } : {}),
+      ...("passwordLogin" in body.members
+        ? { passwordLogin: body.members.passwordLogin }
+        : {}),
+      ...("accountArea" in body.members
+        ? { accountArea: body.members.accountArea }
+        : {}),
     };
     // One-click promise: turning the module ON with no gated page yet also
     // births the members page (home shell + lock + logout link), atomically
