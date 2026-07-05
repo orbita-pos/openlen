@@ -52,7 +52,7 @@ import {
   type SidebarMode,
   type SectionView,
 } from "@/components/workspace-v2/left-sidebar";
-import { railModeFor, BROWSE_VIEWS } from "@/components/workspace-v2/rail-model";
+import { railModeFor, isBrowseView } from "@/components/workspace-v2/rail-model";
 import { Check, Sparkles, Undo, X } from "@/components/workspace-v2/icons";
 import { SectionPreviewModal } from "@/components/workspace-v2/section-preview-modal";
 import type { SectionSpec } from "@/components/workspace-v2/sections-data";
@@ -933,6 +933,14 @@ function NewV2Inner() {
   } | null>(null);
   const [committingTemplate, setCommittingTemplate] = useState(false);
   const [templateError, setTemplateError] = useState<string | null>(null);
+  // Clear a stale template preview when navigating away from the Plantillas tab,
+  // so returning later shows the grid + tabs, not a tab-less full-screen preview.
+  useEffect(() => {
+    if (centerView !== "templates" && entryMode !== "template") {
+      setPreviewingTemplate(null);
+      setTemplateError(null);
+    }
+  }, [centerView, entryMode]);
   // Editing-mode restyle: applying a template's design to the CURRENT page (vs
   // cloning a new project). `applyingTemplate` is true while the endpoint runs;
   // `applyNotice` is the "review example content" reminder shown after success.
@@ -3296,7 +3304,7 @@ function NewV2Inner() {
             onSaveRegister={(r) => updateMarketingSettings({ register: r })}
             onSaveMatch={(m) => updateMarketingSettings({ match: m })}
           />
-        ) : (BROWSE_VIEWS as readonly string[]).includes(centerView) ? (
+        ) : isBrowseView(centerView) ? (
           <div className="flex-1 min-w-0 min-h-0 flex flex-col">
             {!previewingTemplate && (
               <BrowseTabs

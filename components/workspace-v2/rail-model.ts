@@ -24,6 +24,10 @@ type Icon = ComponentType<{ size?: number }>;
 export const BROWSE_VIEWS = ["templates", "explore"] as const;
 export type BrowseView = (typeof BROWSE_VIEWS)[number];
 
+export function isBrowseView(v: SectionView): v is BrowseView {
+  return (BROWSE_VIEWS as readonly string[]).includes(v);
+}
+
 // Navegar: app-level sections. Order = importance for a non-tech creator.
 export const NAVEGAR_ITEMS: ReadonlyArray<{ view: SectionView; icon: Icon; key: string }> = [
   { view: "projects", icon: FileText, key: "nav.myPages" },

@@ -45,8 +45,8 @@ import { Tooltip } from "./ui";
 // this file declared before.
 export type { SectionView, SidebarMode } from "./rail-model";
 import {
-  BROWSE_VIEWS,
   EDITAR_ITEMS,
+  isBrowseView,
   NAVEGAR_ITEMS,
   type RailMode,
   type SectionView,
@@ -76,7 +76,7 @@ function NavegarGroup({
         // while on either browse tab (Plantillas or Comunidad) — see BrowseTabs.
         const isActive =
           s.view === "templates"
-            ? (BROWSE_VIEWS as readonly string[]).includes(active)
+            ? isBrowseView(active)
             : active === s.view;
         const label = t(s.key);
         const className = `${vertical ? "h-8 w-8" : "h-7 w-8"} inline-flex items-center justify-center rounded-md transition ${

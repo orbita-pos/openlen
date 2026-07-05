@@ -673,14 +673,14 @@ function Toolbar({
               onClick={onOpenExplore}
               className="mt-2 inline-flex items-center gap-1 text-[12.5px] font-medium text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 transition"
             >
-              <Compass size={12} /> Explore
+              <Compass size={12} /> {t("nav.explore")}
             </button>
           ) : (
             <Link
               href="/explore"
               className="mt-2 inline-flex items-center gap-1 text-[12.5px] font-medium text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 transition"
             >
-              <Compass size={12} /> Explore
+              <Compass size={12} /> {t("nav.explore")}
             </Link>
           )}
         </div>
