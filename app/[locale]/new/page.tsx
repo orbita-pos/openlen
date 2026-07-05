@@ -3091,9 +3091,6 @@ function NewV2Inner() {
         }
         dark={dark}
         onToggleDark={toggleDark}
-        soundVolume={soundVolume}
-        onSoundVolume={setSoundVolume}
-        onToggleSoundMute={toggleSoundMute}
       />
       <div className="flex-1 min-h-0 flex relative">
         <LeftSidebar

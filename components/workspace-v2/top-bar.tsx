@@ -35,11 +35,8 @@ import {
   Sparkles,
   Sun,
   Trash,
-  Volume2,
-  VolumeX,
   X,
 } from "./icons";
-import { Compass } from "lucide-react";
 import { IconBtn, StatusDot } from "./ui";
 import { useToast } from "./toast";
 import { QRCodeSVG } from "qrcode.react";
@@ -47,71 +44,6 @@ import { CreditPill } from "@/components/app/credit-pill";
 import { OpenLenMark } from "@/components/openlen-logo";
 import { LocaleSwitcher } from "@/components/locale-switcher";
 import { defaultLogoDataUrl } from "@/lib/branding/default-logo";
-
-// Sound control — the speaker icon opens a small popover with a mute toggle +
-// a volume slider (0–100%). Volume 0 = muted. Dragging the slider previews a
-// click at the new level so the user can dial it in by ear.
-function SoundControl({
-  volume,
-  onVolume,
-  onToggleMute,
-}: {
-  volume: number;
-  onVolume: (v: number) => void;
-  onToggleMute: () => void;
-}) {
-  const t = useTranslations("topbar");
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-  const muted = volume === 0;
-  useEffect(() => {
-    if (!open) return;
-    const onDown = (e: PointerEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
-    };
-    window.addEventListener("pointerdown", onDown);
-    return () => window.removeEventListener("pointerdown", onDown);
-  }, [open]);
-  const pct = Math.round(volume * 100);
-  return (
-    // data-no-sound: the global click listener skips this — the volume slider's
-    // own setVolume preview is the only feedback here (avoids a double-click).
-    <div className="relative" ref={ref} data-no-sound>
-
-      <IconBtn
-        label={muted ? t("sound.unmute") : t("sound.mute")}
-        onClick={() => setOpen((o) => !o)}
-      >
-        {muted ? <VolumeX size={14} /> : <Volume2 size={14} />}
-      </IconBtn>
-      {open && (
-        <div className="absolute right-0 top-full mt-1.5 z-50 flex items-center gap-2 rounded-lg border bd bg-elev shadow-card px-2.5 py-2 w-44">
-          <button
-            type="button"
-            onClick={onToggleMute}
-            aria-label={muted ? t("sound.unmute") : t("sound.mute")}
-            className="shrink-0 fg-muted hover:fg transition"
-          >
-            {muted ? <VolumeX size={14} /> : <Volume2 size={14} />}
-          </button>
-          <input
-            type="range"
-            min={0}
-            max={100}
-            step={5}
-            value={pct}
-            onChange={(e) => onVolume(Number(e.target.value) / 100)}
-            aria-label={t("sound.volume")}
-            className="flex-1 h-1 cursor-pointer accent-[color:var(--accent)]"
-          />
-          <span className="shrink-0 w-8 text-right text-[10px] fg-faint tabular-nums">
-            {pct}%
-          </span>
-        </div>
-      )}
-    </div>
-  );
-}
 
 interface ReleaseEntry {
   sha: string;
@@ -184,9 +116,6 @@ interface TopBarProps {
   onDeployGitHub?: () => void;
   dark: boolean;
   onToggleDark: () => void;
-  soundVolume: number;
-  onSoundVolume: (v: number) => void;
-  onToggleSoundMute: () => void;
 }
 
 export function TopBar({
@@ -204,9 +133,6 @@ export function TopBar({
   onDeployGitHub,
   dark,
   onToggleDark,
-  soundVolume,
-  onSoundVolume,
-  onToggleSoundMute,
 }: TopBarProps) {
   const t = useTranslations("topbar");
   const toast = useToast();
@@ -596,12 +522,14 @@ export function TopBar({
       <div className="flex items-center gap-1">
         {/* Deploy dropdown — same pattern as /new's Header. The actual
             publish is handled by PublishModal which the parent renders;
-            we only toggle it. */}
+            we only toggle it. Hidden entirely when no project is loaded
+            (onPublish is undefined) — nothing to publish yet. */}
+        {onPublish && (
+        <>
         <div className="relative ml-0.5" ref={deployRef}>
           <button
             type="button"
             onClick={() => setDeployOpen((o) => !o)}
-            disabled={!onPublish}
             aria-label={t("deploy.button")}
             className="inline-flex items-center gap-1.5 h-8 px-2.5 sm:px-3 rounded-md bg-[var(--accent-strong)] text-white text-[12px] font-medium hover:brightness-105 active:brightness-95 shadow-coral transition disabled:opacity-50 disabled:cursor-not-allowed"
           >
@@ -983,15 +911,9 @@ export function TopBar({
             </div>
           )}
         </div>
-
         <span className="hidden md:inline-block h-5 w-px bg-[color:var(--border)] mx-1.5" />
-        <Link
-          href="/explore"
-          className="hidden sm:inline-flex items-center gap-1.5 h-8 px-2.5 rounded-md text-[12px] font-medium fg-muted hover:fg hover:bg-hover transition"
-        >
-          <Compass size={13} />
-          Explore
-        </Link>
+        </>
+        )}
         <CreditPill />
         <LocaleSwitcher />
         <IconBtn
@@ -1000,11 +922,6 @@ export function TopBar({
         >
           {dark ? <Sun size={14} /> : <Moon size={14} />}
         </IconBtn>
-        <SoundControl
-          volume={soundVolume}
-          onVolume={onSoundVolume}
-          onToggleMute={onToggleSoundMute}
-        />
         <div className="relative" ref={profRef}>
           <button
             type="button"
