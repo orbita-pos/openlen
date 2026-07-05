@@ -821,6 +821,9 @@ export const memberLoginTokens = pgTable("memberLoginTokens", {
   // Gated page the visitor was trying to reach; the verify redirect is built
   // from THIS stored value (never from request input) — no open redirect.
   slug: text("slug"),
+  // 'login' (default) = link de acceso; 'confirm' = confirmación de correo tras
+  // un signup con contraseña. Distingue reclamo-de-okupa vs auto-confirmación.
+  kind: text("kind").$type<"login" | "confirm">().notNull().default("login"),
   expires: timestamp("expires", { mode: "date" }).notNull(),
   used: boolean("used").notNull().default(false),
   createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
