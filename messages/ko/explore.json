@@ -17,6 +17,7 @@
   "reportAria": "페이지 신고",
   "reportPrompt": "이 페이지 신고 사유: 스팸, 성인 콘텐츠, 피싱 또는 기타",
   "reportThanks": "감사합니다 — 저희 팀이 확인하겠습니다.",
+  "reportError": "신고를 보내지 못했습니다. 다시 시도하세요.",
   "remixesTitle": "리믹스",
   "openAria": "{title} 열기"
 }

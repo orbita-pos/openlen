@@ -17,6 +17,7 @@
   "reportAria": "Report page",
   "reportPrompt": "Report this page for: spam, adult, phishing, or other",
   "reportThanks": "Thanks — our team will take a look.",
+  "reportError": "Couldn't send the report. Try again.",
   "remixesTitle": "Remixes",
   "openAria": "Open {title}"
 }

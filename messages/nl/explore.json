@@ -17,6 +17,7 @@
   "reportAria": "Pagina rapporteren",
   "reportPrompt": "Deze pagina rapporteren voor: spam, volwassen inhoud, phishing of anders",
   "reportThanks": "Bedankt — ons team bekijkt het.",
+  "reportError": "Rapport kon niet worden verzonden. Probeer het opnieuw.",
   "remixesTitle": "Remixes",
   "openAria": "{title} openen"
 }

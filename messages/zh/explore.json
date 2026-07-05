@@ -17,6 +17,7 @@
   "reportAria": "举报页面",
   "reportPrompt": "举报此页面的原因：垃圾信息、成人内容、钓鱼或其他",
   "reportThanks": "谢谢 — 我们的团队会进行审核。",
+  "reportError": "无法发送举报。请重试。",
   "remixesTitle": "混改次数",
   "openAria": "打开 {title}"
 }

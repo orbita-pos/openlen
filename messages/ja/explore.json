@@ -17,6 +17,7 @@
   "reportAria": "ページを通報",
   "reportPrompt": "このページを通報する理由：スパム、アダルト、フィッシング、その他",
   "reportThanks": "ありがとうございます — チームが確認します。",
+  "reportError": "通報を送信できませんでした。もう一度お試しください。",
   "remixesTitle": "リミックス",
   "openAria": "{title} を開く"
 }

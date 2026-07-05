@@ -13,7 +13,7 @@
 // page background, so it stays legible in both themes without token styling
 // (same convention as any photo-card hover scrim, e.g. video thumbnails).
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { appendExplorePage, type ExploreItem } from "./explore-view-utils";
@@ -31,8 +31,13 @@ export function ExploreView() {
   const [cursor, setCursor] = useState<string | undefined>(undefined);
   const [status, setStatus] = useState<Status>("loading");
   const [loadingMore, setLoadingMore] = useState(false);
+  // Generation guard: rapid sort toggles or a load-more overlapping a sort
+  // switch can let a late fetch clobber the current list (last-resolved wins).
+  // Bump on each call, capture it, and drop any result from a superseded call.
+  const reqId = useRef(0);
 
   const load = useCallback(async (nextSort: Sort, nextCursor?: string) => {
+    const myId = ++reqId.current;
     const isMore = !!nextCursor;
     if (isMore) setLoadingMore(true);
     else setStatus("loading");
@@ -40,15 +45,17 @@ export function ExploreView() {
       const q = new URLSearchParams({ sort: nextSort });
       if (nextCursor) q.set("cursor", nextCursor);
       const res = await fetch(`/api/explore?${q}`);
+      if (myId !== reqId.current) return; // a newer load started → drop this result
       if (!res.ok) throw new Error(String(res.status));
       const data: { items?: ExploreItem[]; nextCursor?: string | null } = await res.json();
+      if (myId !== reqId.current) return; // re-check after the second await
       setItems((prev) => (isMore ? appendExplorePage(prev, data.items ?? []) : (data.items ?? [])));
       setCursor(data.nextCursor ?? undefined);
       setStatus("ready");
     } catch {
-      if (!isMore) setStatus("error");
+      if (myId === reqId.current && !isMore) setStatus("error");
     } finally {
-      setLoadingMore(false);
+      if (myId === reqId.current) setLoadingMore(false);
     }
   }, []);
 
@@ -113,19 +120,10 @@ function SkeletonGrid() {
     >
       {Array.from({ length: 6 }).map((_, i) => (
         <div key={i} className="flex flex-col">
-          <div
-            className="aspect-[16/10] rounded-xl animate-pulse"
-            style={{ background: "var(--bg-elev)" }}
-          />
+          <div className="aspect-[16/10] rounded-xl animate-pulse bg-elev" />
           <div className="mt-3 flex items-center gap-2.5">
-            <div
-              className="h-6 w-6 shrink-0 rounded-full animate-pulse"
-              style={{ background: "var(--bg-elev)" }}
-            />
-            <div
-              className="h-3 flex-1 max-w-[70%] rounded animate-pulse"
-              style={{ background: "var(--bg-elev)" }}
-            />
+            <div className="h-6 w-6 shrink-0 rounded-full animate-pulse bg-elev" />
+            <div className="h-3 flex-1 max-w-[70%] rounded animate-pulse bg-elev" />
           </div>
         </div>
       ))}
@@ -193,12 +191,17 @@ function ExploreItemCard({ item }: { item: ExploreItem }) {
   async function report() {
     const reason = window.prompt(t("reportPrompt"), "spam");
     if (!reason) return;
-    await fetch(`/api/explore/report`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ projectId: item.id, reason }),
-    });
-    toast.success(t("reportThanks"));
+    try {
+      const res = await fetch(`/api/explore/report`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ projectId: item.id, reason }),
+      });
+      if (!res.ok) throw new Error(String(res.status));
+      toast.success(t("reportThanks"));
+    } catch {
+      toast.error(t("reportError"));
+    }
   }
 
   return (
