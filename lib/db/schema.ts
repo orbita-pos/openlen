@@ -799,6 +799,9 @@ export const siteMembers = pgTable(
     status: text("status").$type<"active" | "invited">().notNull().default("active"),
     createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
     lastLoginAt: timestamp("lastLoginAt", { mode: "date" }),
+    // bcrypt hash (cost-12) cuando el miembro se registró con contraseña.
+    // Null = miembro sólo-magic-link. Ver lib/auth/visitor-password.ts.
+    passwordHash: text("passwordHash"),
   },
   (table) => [
     uniqueIndex("siteMembers_projectId_email_uq").on(table.projectId, table.email),
