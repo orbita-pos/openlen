@@ -2,12 +2,16 @@ import { gateStringsFor } from "@/lib/members/gate-stub";
 import { buildMemberCookie } from "@/lib/members/session";
 import {
   activateMember,
+  clearMemberPassword,
   consumeLoginToken,
   createMemberSession,
-  getMemberByEmail,
+  deleteMemberSessions,
+  getMemberAuthByEmail,
+  markMemberVerified,
   recordMemberAuthEvent,
   upsertActiveMember,
 } from "@/lib/members/store";
+import { shouldClearPassword } from "@/lib/members/verification";
 import { PAGE_SLUG_RE, json, loadMemberSite, seeOther } from "../../_shared";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -114,18 +118,30 @@ export async function POST(
   if (!consumed) return seeOther(errPath);
 
   let memberId: string;
-  const existing = await getMemberByEmail(site.projectId, consumed.email);
+  const existing = await getMemberAuthByEmail(site.projectId, consumed.email);
   if (existing) {
+    if (
+      shouldClearPassword({
+        tokenKind: consumed.kind,
+        hasPassword: existing.passwordHash !== null,
+        alreadyVerified: existing.emailVerifiedAt !== null,
+      })
+    ) {
+      // Reclamo: el dueño real (probado por este link) recupera; la contraseña
+      // no confirmada del okupa y sus sesiones mueren ANTES de mintear la nueva.
+      await clearMemberPassword(existing.id);
+      await deleteMemberSessions(site.projectId, existing.id);
+    }
     await activateMember(existing.id);
     memberId = existing.id;
   } else if (site.membersMode === "open") {
     memberId = (await upsertActiveMember(site.projectId, consumed.email)).id;
   } else {
-    // Invite-mode and the row vanished between request and click (owner
-    // removed it) — the door is closed.
+    // Invitación y la fila desapareció entre request y click.
     return seeOther(errPath);
   }
 
+  await markMemberVerified(memberId);
   const session = await createMemberSession(site.projectId, memberId);
   recordMemberAuthEvent({
     projectId: site.projectId,
