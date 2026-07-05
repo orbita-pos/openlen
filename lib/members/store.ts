@@ -94,6 +94,64 @@ export async function getMemberByEmail(
   return rows[0] ?? null;
 }
 
+export interface MemberAuth {
+  id: string;
+  status: "active" | "invited";
+  passwordHash: string | null;
+}
+
+/** Credential lookup for password login (no PII beyond what login needs). */
+export async function getMemberAuthByEmail(
+  projectId: string,
+  email: string,
+): Promise<MemberAuth | null> {
+  const rows = await db
+    .select({
+      id: schema.siteMembers.id,
+      status: schema.siteMembers.status,
+      passwordHash: schema.siteMembers.passwordHash,
+    })
+    .from(schema.siteMembers)
+    .where(
+      and(
+        eq(schema.siteMembers.projectId, projectId),
+        eq(schema.siteMembers.email, normalizeEmail(email)),
+      ),
+    )
+    .limit(1);
+  return rows[0] ?? null;
+}
+
+/** Open-mode registration: create a fresh active member carrying a password. */
+export async function createActiveMemberWithPassword(
+  projectId: string,
+  email: string,
+  passwordHash: string,
+): Promise<{ id: string }> {
+  const rows = await db
+    .insert(schema.siteMembers)
+    .values({
+      projectId,
+      email: normalizeEmail(email),
+      status: "active",
+      passwordHash,
+      lastLoginAt: new Date(),
+    })
+    .returning({ id: schema.siteMembers.id });
+  return rows[0];
+}
+
+/** Set a password on an existing (invited or magic-link-only) row + activate. */
+export async function setMemberPasswordActive(
+  memberId: string,
+  passwordHash: string,
+): Promise<void> {
+  await db
+    .update(schema.siteMembers)
+    .set({ status: "active", passwordHash, lastLoginAt: new Date() })
+    .where(eq(schema.siteMembers.id, memberId));
+}
+
 export async function getMemberById(id: string): Promise<MemberItem | null> {
   const rows = await db
     .select({
@@ -357,7 +415,9 @@ export type MemberAuthEventType =
   | "login"
   | "logout"
   | "invited"
-  | "removed";
+  | "removed"
+  | "password_login"
+  | "password_set";
 
 /** Fire-and-forget — the audit trail must never block or fail an auth path.
  *  Logins also sweep events past retention for the project, best-effort. */
