@@ -38,6 +38,7 @@ import { isProfileFilled } from "@/lib/business-profiles/overlay";
 import { ALL_BUSINESSES } from "@/components/workspace-v2/business-switcher";
 import { CustomDomainModal } from "@/components/workspace-v2/custom-domain-modal";
 import { DeployIntegrationModal } from "@/components/workspace-v2/deploy-integration-modal";
+import { InboxHub } from "@/components/inbox/inbox-hub";
 import { BusinessSection } from "../business/business-section";
 import { ProjectsSection } from "../projects/projects-section";
 import { AnalyticsSection } from "../analytics/analytics-section";
@@ -330,20 +331,12 @@ function NewV2Inner() {
     viewParam === "modulos" ||
     viewParam === "marketing" ||
     viewParam === "templates" ||
-    viewParam === "business"
+    viewParam === "business" ||
+    viewParam === "messages"
       ? viewParam
       : "page";
   const setCenterView = useCallback(
     (v: SectionView) => {
-      // The inbox (chat + form leads) is its own destination now — the unified
-      // /inbox hub — not an in-workspace center view.
-      if (v === "messages") {
-        // Carry the open project so the inbox's "back to workspace" returns to
-        // it instead of a bare /new that drops the project.
-        const pid = searchParams.get("project");
-        router.push(pid ? `/inbox?from=${encodeURIComponent(pid)}` : "/inbox");
-        return;
-      }
       const params = new URLSearchParams(searchParams.toString());
       if (v === "page") params.delete("view");
       else params.set("view", v);
@@ -352,10 +345,6 @@ function NewV2Inner() {
     },
     [searchParams, router],
   );
-  // Stale bookmark: the in-workspace Mensajes view moved to the /inbox hub.
-  useEffect(() => {
-    if (viewParam === "messages") router.replace("/inbox?tab=forms");
-  }, [viewParam, router]);
   const [saving, setSaving] = useState(false);
   const [loadedProject, setLoadedProject] = useState<LoadedProject | null>(null);
   // The active site page (null = home) and the document the canvas edits.
@@ -3244,7 +3233,9 @@ function NewV2Inner() {
             sr-only h1 gives every entry state a top-level heading. */}
         <main className="contents">
         <h1 className="sr-only">{t("a11y.workspaceHeading")}</h1>
-        {centerView === "business" ? (
+        {centerView === "messages" ? (
+          <InboxHub />
+        ) : centerView === "business" ? (
           <BusinessSection
             embedded
             onChanged={() => {
