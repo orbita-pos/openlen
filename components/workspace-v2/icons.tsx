@@ -101,6 +101,13 @@ export const Store = (p: IconProps) => (
   </Base>
 );
 
+export const Compass = (p: IconProps) => (
+  <Base {...p}>
+    <circle cx="12" cy="12" r="10" />
+    <path d="m16.24 7.76-1.804 5.411a2 2 0 0 1-1.265 1.265L7.76 16.24l1.804-5.411a2 2 0 0 1 1.265-1.265z" />
+  </Base>
+);
+
 export const Pencil = (p: IconProps) => (
   <Base {...p}>
     <path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z" />
