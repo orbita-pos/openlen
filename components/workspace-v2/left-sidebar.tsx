@@ -48,7 +48,6 @@ export type { SectionView, SidebarMode } from "./rail-model";
 import {
   EDITAR_ITEMS,
   NAVEGAR_ITEMS,
-  railModeFor,
   type RailMode,
   type SectionView,
   type SidebarMode,
@@ -257,14 +256,12 @@ interface LeftSidebarProps {
   activeSection?: SectionView;
   onSelectSection?: (v: SectionView) => void;
   /** Which rail group to render — Navegar (app sections) or Editar (page
-   *  tools). Optional + defaulted from `entryMode` via `railModeFor` so this
-   *  component still renders sensibly before the caller (Task 3) computes and
-   *  passes the real value from hasProject/navigating state. */
-  railMode?: RailMode;
+   *  tools). Derived by the parent from hasProject/navigating state via
+   *  `railModeFor`. */
+  railMode: RailMode;
   /** "App" button (only shown in the Editar group) — opens the Navegar
-   *  section list without leaving the loaded project. Wired by the parent
-   *  in Task 3; safe to omit meanwhile (no-ops). */
-  onOpenApp?: () => void;
+   *  section list without leaving the loaded project. */
+  onOpenApp: () => void;
   /** Active-business switcher (top of the rail). The active business scopes the
    *  Páginas/Analytics/Mensajes sections + is the default for new pages. */
   businesses?: BusinessProfile[];
@@ -356,14 +353,6 @@ export function LeftSidebar({
   const t = useTranslations("wsChrome");
   const isFlatProject = flatProjectId !== undefined;
   const tabTitle = (id: SidebarMode) => t(`sidebar.tabs.${id}.title`);
-  // Defaulted (not yet passed by the caller until Task 3 wires the real
-  // hasProject/navigating state through railModeFor) so this component keeps
-  // rendering sensibly on its own — editing entryMode behaves like today's
-  // "editar" rail, every other entryMode behaves like "navegar".
-  const activeRailMode: RailMode =
-    railMode ??
-    railModeFor({ entryMode, hasProject: entryMode === "editing", navigating: false });
-  const handleOpenApp = onOpenApp ?? (() => {});
   // After a click-to-place pick on mobile the panel overlays the canvas —
   // collapse it so the user can aim the placement click.
   const isMobileLayout = useIsMobile();
@@ -380,7 +369,7 @@ export function LeftSidebar({
           onAdd={onAddBusiness}
           onSelectSection={onSelectSection}
         />
-        {activeRailMode === "navegar" ? (
+        {railMode === "navegar" ? (
           <NavegarGroup
             vertical
             active={activeSection}
@@ -391,7 +380,7 @@ export function LeftSidebar({
             <Tooltip label={t("sidebar.appButton")} side="right">
               <button
                 type="button"
-                onClick={handleOpenApp}
+                onClick={onOpenApp}
                 aria-label={t("sidebar.appButton")}
                 className="h-8 w-8 inline-flex items-center justify-center rounded-md fg-muted hover:fg hover:bg-hover transition"
               >
@@ -441,7 +430,7 @@ export function LeftSidebar({
           onAdd={onAddBusiness}
           onSelectSection={onSelectSection}
         />
-        {activeRailMode === "navegar" ? (
+        {railMode === "navegar" ? (
           <NavegarGroup
             vertical
             active={activeSection}
@@ -452,7 +441,7 @@ export function LeftSidebar({
             <Tooltip label={t("sidebar.appButton")} side="right">
               <button
                 type="button"
-                onClick={handleOpenApp}
+                onClick={onOpenApp}
                 aria-label={t("sidebar.appButton")}
                 className="h-8 w-8 inline-flex items-center justify-center rounded-md fg-muted hover:fg hover:bg-hover transition"
               >

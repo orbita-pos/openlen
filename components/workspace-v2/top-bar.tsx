@@ -35,6 +35,8 @@ import {
   Sparkles,
   Sun,
   Trash,
+  Volume2,
+  VolumeX,
   X,
 } from "./icons";
 import { IconBtn, StatusDot } from "./ui";
@@ -116,6 +118,15 @@ interface TopBarProps {
   onDeployGitHub?: () => void;
   dark: boolean;
   onToggleDark: () => void;
+  /** Editor sound (workspace click sound + publish reward chime) — rendered
+   *  as a mute + volume row inside the account menu. This is app-level UI
+   *  sound (useEditorSound, localStorage `openlen:sound`), NOT page music —
+   *  it must stay reachable regardless of whether a project or its music is
+   *  loaded, so it lives in the always-present avatar menu rather than the
+   *  preview toolbar. Optional: omitted hides the row. */
+  soundVolume?: number;
+  onSoundVolume?: (v: number) => void;
+  onToggleSoundMute?: () => void;
 }
 
 export function TopBar({
@@ -133,6 +144,9 @@ export function TopBar({
   onDeployGitHub,
   dark,
   onToggleDark,
+  soundVolume = 0,
+  onSoundVolume,
+  onToggleSoundMute,
 }: TopBarProps) {
   const t = useTranslations("topbar");
   const toast = useToast();
@@ -947,6 +961,15 @@ export function TopBar({
                 </>
               )}
 
+              {/* Draft (unpublished) project — the release list above needs
+                  a live subdomain to fetch against, so it never renders.
+                  Without this the tab was a blank dead-end. */}
+              {deployTab === "historial" && !published && (
+                <div className="px-2.5 py-3 text-[11px] fg-faint text-center">
+                  {t("deploy.historialEmpty")}
+                </div>
+              )}
+
               {published && liveUrl && (
                 <>
                   <div className="border-t bd my-1" />
@@ -1006,6 +1029,38 @@ export function TopBar({
                   {userEmail || "—"}
                 </div>
               </div>
+              {/* Editor sound — inline row, not a nested popover (bad UX
+                  inside a dropdown). The only reachable control now that
+                  Task 5's preview-toolbar placement (gated on page music)
+                  left it dark on bare /new + music-less projects. */}
+              {onSoundVolume && onToggleSoundMute && (
+                <div
+                  className="flex items-center gap-2 px-2.5 py-2 border-b bd"
+                  data-no-sound
+                >
+                  <button
+                    type="button"
+                    onClick={onToggleSoundMute}
+                    aria-label={soundVolume === 0 ? t("sound.unmute") : t("sound.mute")}
+                    className="shrink-0 fg-muted hover:fg transition"
+                  >
+                    {soundVolume === 0 ? <VolumeX size={14} /> : <Volume2 size={14} />}
+                  </button>
+                  <span className="flex-1 min-w-0 text-[12.5px] fg truncate">
+                    {t("account.editorSound")}
+                  </span>
+                  <input
+                    type="range"
+                    min={0}
+                    max={100}
+                    step={5}
+                    value={Math.round(soundVolume * 100)}
+                    onChange={(e) => onSoundVolume(Number(e.target.value) / 100)}
+                    aria-label={t("sound.volume")}
+                    className="w-16 h-1 shrink-0 cursor-pointer accent-[color:var(--accent)]"
+                  />
+                </div>
+              )}
               <button
                 type="button"
                 onClick={() => {

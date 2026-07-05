@@ -44,7 +44,6 @@ export const EDITAR_ITEMS: ReadonlyArray<{ id: SidebarMode; icon: Icon }> = [
 ];
 
 export function railModeFor(input: {
-  entryMode: string;
   hasProject: boolean;
   navigating: boolean;
 }): RailMode {

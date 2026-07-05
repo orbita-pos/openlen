@@ -7,13 +7,13 @@ import {
 
 describe("railModeFor", () => {
   it("is navegar with no project", () => {
-    expect(railModeFor({ entryMode: "choosing", hasProject: false, navigating: false })).toBe("navegar");
+    expect(railModeFor({ hasProject: false, navigating: false })).toBe("navegar");
   });
   it("is editar when a project is loaded and not navigating", () => {
-    expect(railModeFor({ entryMode: "editing", hasProject: true, navigating: false })).toBe("editar");
+    expect(railModeFor({ hasProject: true, navigating: false })).toBe("editar");
   });
   it("is navegar when a project is loaded but the user opened a Navegar section (App)", () => {
-    expect(railModeFor({ entryMode: "editing", hasProject: true, navigating: true })).toBe("navegar");
+    expect(railModeFor({ hasProject: true, navigating: true })).toBe("navegar");
   });
 });
 

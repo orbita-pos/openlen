@@ -34,6 +34,7 @@
     },
     "previousDeploys": "历史发布记录",
     "noPriorDeploys": "暂无历史发布记录。",
+    "historialEmpty": "发布你的页面即可查看历史记录。",
     "tabs": {
       "publicar": "发布",
       "compartir": "分享",
@@ -57,6 +58,7 @@
     "fallbackName": "账户",
     "allProjects": "所有项目",
     "manageProfiles": "我的店铺",
+    "editorSound": "编辑器音效",
     "signOut": "退出登录"
   },
   "relativeTime": {

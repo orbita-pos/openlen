@@ -34,6 +34,7 @@
     },
     "previousDeploys": "Publicações anteriores",
     "noPriorDeploys": "Ainda não há publicações anteriores.",
+    "historialEmpty": "Publique sua página para ver o histórico.",
     "tabs": {
       "publicar": "Publicar",
       "compartir": "Compartilhar",
@@ -57,6 +58,7 @@
     "fallbackName": "Conta",
     "allProjects": "Todos os projetos",
     "manageProfiles": "Meu negócio",
+    "editorSound": "Som do editor",
     "signOut": "Sair"
   },
   "relativeTime": {

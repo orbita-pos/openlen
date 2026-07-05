@@ -34,6 +34,7 @@
     },
     "previousDeploys": "이전 배포",
     "noPriorDeploys": "아직 이전 배포가 없습니다.",
+    "historialEmpty": "기록을 보려면 페이지를 게시하세요.",
     "tabs": {
       "publicar": "게시",
       "compartir": "공유",
@@ -57,6 +58,7 @@
     "fallbackName": "계정",
     "allProjects": "모든 프로젝트",
     "manageProfiles": "내 비즈니스",
+    "editorSound": "에디터 소리",
     "signOut": "로그아웃"
   },
   "relativeTime": {

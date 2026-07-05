@@ -185,6 +185,13 @@ const ALL_TABS: SidebarMode[] = [
   "3d",
 ];
 
+// Account-wide sections that count as "navigating away" for railModeFor —
+// static, so hoisted out of the component instead of rebuilt every render.
+const NAVIGATING_SECTIONS = new Set<SectionView>([
+  "projects", "templates", "marketing", "modulos",
+  "analytics", "messages", "business", "explore",
+]);
+
 // Build the "Original" theme baseline from a page-meta payload — the resolved
 // --ol-* token values + mode the page loaded with. Empty string for a token
 // the page doesn't define (so the reset removes that override rather than
@@ -230,8 +237,10 @@ function NewV2Inner() {
   const locale = useLocale();
   const [dark, toggleDark] = useDarkMode();
   const toast = useToast();
-  // Editor sound (creamy click on rail switching) + the preview toolbar's
-  // volume control (moved out of TopBar in the chrome redesign, Task 5).
+  // Editor sound (creamy click on rail switching) + the mute/volume control,
+  // which lives in TopBar's avatar menu — it governs the app-wide click sound
+  // and publish chime, not page music, so it must stay reachable regardless
+  // of whether a project (or its music) is loaded.
   const {
     volume: soundVolume,
     setVolume: setSoundVolume,
@@ -3045,14 +3054,13 @@ function NewV2Inner() {
   // account-wide sections (`centerView`). "App" (onOpenApp below) flips
   // `centerView` to Navegar without touching `loadedProject`, so the project
   // stays open for re-entry — reopening the canvas is just `setCenterView("page")`.
-  const navigatingSections = new Set<SectionView>([
-    "projects", "templates", "marketing", "modulos",
-    "analytics", "messages", "business", "explore",
-  ]);
+  // hasProject also checks `projectParam` (the URL, resolved instantly) —
+  // not just `loadedProject.id` (set only once its fetch resolves) — so a
+  // cold `/new?project=x` load renders Editar immediately instead of
+  // flashing Navegar for one frame while the project fetch is in flight.
   const railMode = railModeFor({
-    entryMode,
-    hasProject: !!loadedProject?.id,
-    navigating: navigatingSections.has(centerView),
+    hasProject: !!projectParam || !!loadedProject?.id,
+    navigating: NAVIGATING_SECTIONS.has(centerView),
   });
 
   return (
@@ -3092,6 +3100,9 @@ function NewV2Inner() {
         }
         dark={dark}
         onToggleDark={toggleDark}
+        soundVolume={soundVolume}
+        onSoundVolume={setSoundVolume}
+        onToggleSoundMute={toggleSoundMute}
       />
       <div className="flex-1 min-h-0 flex relative">
         <LeftSidebar
@@ -3489,9 +3500,6 @@ function NewV2Inner() {
                 motionPreset={loadedProject.settings?.motion}
                 musicTrack={loadedProject.settings?.music ?? null}
                 scene3d={loadedProject.settings?.scene3d}
-                soundVolume={soundVolume}
-                onSoundVolume={setSoundVolume}
-                onToggleSoundMute={toggleSoundMute}
                 onIframeRef={(el) => {
                   iframeElRef.current = el;
                 }}

@@ -34,6 +34,7 @@
     },
     "previousDeploys": "Eerdere implementaties",
     "noPriorDeploys": "Nog geen eerdere implementaties.",
+    "historialEmpty": "Publiceer je pagina om de geschiedenis te zien.",
     "tabs": {
       "publicar": "Publiceren",
       "compartir": "Delen",
@@ -57,6 +58,7 @@
     "fallbackName": "Account",
     "allProjects": "Alle projecten",
     "manageProfiles": "Mijn bedrijf",
+    "editorSound": "Editorgeluid",
     "signOut": "Afmelden"
   },
   "relativeTime": {
