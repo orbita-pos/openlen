@@ -3010,11 +3010,14 @@ function NewV2Inner() {
           error?: string;
           detail?: string;
         };
-        setTemplateError(
+        const msg =
           res.status === 402
             ? t("templateApply.lowCredits")
-            : data.detail ?? data.error ?? `HTTP ${res.status}`,
-        );
+            : data.detail ?? data.error ?? `HTTP ${res.status}`;
+        setTemplateError(msg);
+        // Also surface via toast: if the user navigated off the Plantillas tab
+        // mid-apply, the inline banner (gated on previewingTemplate) is gone.
+        toast.error(msg);
         setApplyingTemplate(false);
         return;
       }
@@ -3041,9 +3044,9 @@ function NewV2Inner() {
       // back on the canvas so the user sees the result (no-op when already there).
       setCenterView("page");
     } catch (err) {
-      setTemplateError(
-        err instanceof Error ? err.message : t("template.networkError"),
-      );
+      const msg = err instanceof Error ? err.message : t("template.networkError");
+      setTemplateError(msg);
+      toast.error(msg);
       setApplyingTemplate(false);
     }
   };
@@ -3465,36 +3468,6 @@ function NewV2Inner() {
         )}
         {entryMode === "paste" && (
           <PreviewPlaceholder mode={entryMode} />
-        )}
-        {entryMode === "editing" && previewingTemplate && (
-          applyingTemplate ? (
-            <section className="flex-1 min-w-0 min-h-0 flex flex-col bg-preview-a">
-              <PageAssembling html={activeDoc} caption={t("templateApply.applying")} />
-            </section>
-          ) : (
-            <div className="flex-1 min-w-0 flex flex-col">
-              {templateError && (
-                <div className="h-7 shrink-0 flex items-center justify-center gap-2 text-[11.5px] bg-red-50 dark:bg-red-500/10 text-red-700 dark:text-red-300 border-b bd">
-                  {templateError}
-                </div>
-              )}
-              <PreviewArea
-                doc=""
-                previewUrl={previewingTemplate.previewUrl}
-                templateName={previewingTemplate.name}
-                openInNewTabUrl={previewingTemplate.previewUrl}
-                templateApplyMode
-                onUseTemplate={() => {
-                  void handleApplyTemplate();
-                }}
-                useTemplateLoading={applyingTemplate}
-                onClearTemplate={() => {
-                  setPreviewingTemplate(null);
-                  setTemplateError(null);
-                }}
-              />
-            </div>
-          )
         )}
         {entryMode === "editing" && !previewingTemplate &&
           (loadedProject && activeDoc ? (
