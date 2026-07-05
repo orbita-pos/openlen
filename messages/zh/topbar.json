@@ -33,7 +33,13 @@
       "githubSubtitle": "一个 GitHub Pages 仓库"
     },
     "previousDeploys": "历史发布记录",
-    "noPriorDeploys": "暂无历史发布记录。"
+    "noPriorDeploys": "暂无历史发布记录。",
+    "tabs": {
+      "publicar": "发布",
+      "compartir": "分享",
+      "historial": "历史",
+      "exportar": "导出"
+    }
   },
   "rollback": {
     "confirm": "要将线上站点回滚到部署 {sha} 吗？访客将在几秒内看到这个较早的版本。",

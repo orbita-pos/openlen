@@ -33,7 +33,13 @@
       "githubSubtitle": "A GitHub Pages repo"
     },
     "previousDeploys": "Previous deploys",
-    "noPriorDeploys": "No prior deploys yet."
+    "noPriorDeploys": "No prior deploys yet.",
+    "tabs": {
+      "publicar": "Publish",
+      "compartir": "Share",
+      "historial": "History",
+      "exportar": "Export"
+    }
   },
   "rollback": {
     "confirm": "Roll back the live site to deploy {sha}? Visitors will see this earlier version within seconds.",

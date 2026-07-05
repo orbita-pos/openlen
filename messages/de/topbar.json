@@ -33,7 +33,13 @@
       "githubSubtitle": "Ein GitHub-Pages-Repo"
     },
     "previousDeploys": "Frühere Deployments",
-    "noPriorDeploys": "Noch keine früheren Deployments."
+    "noPriorDeploys": "Noch keine früheren Deployments.",
+    "tabs": {
+      "publicar": "Veröffentlichen",
+      "compartir": "Teilen",
+      "historial": "Verlauf",
+      "exportar": "Exportieren"
+    }
   },
   "rollback": {
     "confirm": "Die Live-Seite auf Deployment {sha} zurücksetzen? Besucher sehen diese frühere Version innerhalb von Sekunden.",

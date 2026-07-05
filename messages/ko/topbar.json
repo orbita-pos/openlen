@@ -33,7 +33,13 @@
       "githubSubtitle": "GitHub Pages 저장소"
     },
     "previousDeploys": "이전 배포",
-    "noPriorDeploys": "아직 이전 배포가 없습니다."
+    "noPriorDeploys": "아직 이전 배포가 없습니다.",
+    "tabs": {
+      "publicar": "게시",
+      "compartir": "공유",
+      "historial": "기록",
+      "exportar": "내보내기"
+    }
   },
   "rollback": {
     "confirm": "공개된 사이트를 {sha} 배포로 되돌릴까요? 방문자에게는 몇 초 안에 이 이전 버전이 표시됩니다.",

@@ -33,7 +33,13 @@
       "githubSubtitle": "Un dépôt GitHub Pages"
     },
     "previousDeploys": "Déploiements précédents",
-    "noPriorDeploys": "Aucun déploiement précédent pour le moment."
+    "noPriorDeploys": "Aucun déploiement précédent pour le moment.",
+    "tabs": {
+      "publicar": "Publier",
+      "compartir": "Partager",
+      "historial": "Historique",
+      "exportar": "Exporter"
+    }
   },
   "rollback": {
     "confirm": "Rétablir le site en ligne sur le déploiement {sha} ? Les visiteurs verront cette version antérieure en quelques secondes.",

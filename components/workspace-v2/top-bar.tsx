@@ -158,6 +158,12 @@ export function TopBar({
     return `${parts[0]} ${parts[parts.length - 1].charAt(0).toUpperCase()}.`;
   })();
   const [deployOpen, setDeployOpen] = useState(false);
+  // Which of the 4 Deploy-panel tabs is active. Resets to "publicar" every
+  // time the dropdown opens — same as the releases/preview fetches below —
+  // so re-opening never strands the user on a stale tab from last time.
+  const [deployTab, setDeployTab] = useState<
+    "publicar" | "compartir" | "historial" | "exportar"
+  >("publicar");
   const [profileOpen, setProfileOpen] = useState(false);
   const [editingName, setEditingName] = useState(false);
   const [draft, setDraft] = useState(projectName);
@@ -203,6 +209,10 @@ export function TopBar({
     document.addEventListener("mousedown", onClick);
     return () => document.removeEventListener("mousedown", onClick);
   }, []);
+
+  useEffect(() => {
+    if (deployOpen) setDeployTab("publicar");
+  }, [deployOpen]);
 
   // Fetch the on-disk release history when the Deploy dropdown opens for a
   // published project. The list shows up to 9 prior releases below the
@@ -546,6 +556,37 @@ export function TopBar({
                 {t("deploy.shipIt")}
               </div>
 
+              {/* Tab header — groups what used to be one long stacked list
+                  (publish state, preview-link, release history, export
+                  entries) into 4 panels. Purely a visual regroup: every
+                  block below keeps its original conditionals/handlers,
+                  just gated on the active tab instead of always shown. */}
+              <div className="flex items-center gap-1 px-0.5 border-b bd mb-1.5">
+                {(
+                  [
+                    { id: "publicar", label: t("deploy.tabs.publicar") },
+                    { id: "compartir", label: t("deploy.tabs.compartir") },
+                    { id: "historial", label: t("deploy.tabs.historial") },
+                    { id: "exportar", label: t("deploy.tabs.exportar") },
+                  ] as const
+                ).map((tab) => (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    onClick={() => setDeployTab(tab.id)}
+                    className={`flex-1 min-w-0 px-1 pb-1.5 text-[10.5px] font-medium text-center truncate transition border-b-2 -mb-[1px] ${
+                      deployTab === tab.id
+                        ? "fg border-[color:var(--accent)]"
+                        : "fg-faint hover:fg border-transparent"
+                    }`}
+                  >
+                    {tab.label}
+                  </button>
+                ))}
+              </div>
+
+              {deployTab === "publicar" && (
+              <>
               {published ? (
                 <div className="rounded-md ring-1 ring-emerald-200 dark:ring-emerald-500/30 bg-emerald-50/60 dark:bg-emerald-500/5 px-2.5 py-2 mb-1">
                   <div className="flex items-center gap-2 min-w-0">
@@ -624,14 +665,15 @@ export function TopBar({
                   <ChevronRight size={12} className="fg-faint group-hover:text-[var(--accent)] transition" />
                 </button>
               )}
+              </>
+              )}
 
               {/* Share a preview — a token-gated link to the CURRENT draft so
                   someone elsewhere can see it before it's published. Shows for
                   any loaded project (draft or live). Self-contained: state is
                   fetched on open, the URL is built from window.origin. */}
-              {projectId && (
+              {deployTab === "compartir" && projectId && (
                 <>
-                  <div className="border-t bd my-1" />
                   <div className="px-2.5 pt-1.5 pb-1 text-[10px] uppercase tracking-wider fg-faint flex items-center gap-1.5">
                     <LinkIcon size={10} />
                     {t("preview.label")}
@@ -774,36 +816,41 @@ export function TopBar({
                 </>
               )}
 
-              <div className="border-t bd my-1" />
-
               {/* Custom domain — real, working entry. Opens a modal that
-                  handles the claim + DNS challenge + Caddy-issued TLS. */}
-              {onCustomDomain && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setDeployOpen(false);
-                    onCustomDomain();
-                  }}
-                  className="flex items-center gap-3 w-full text-left px-2.5 py-2 rounded-md hover:bg-hover transition group"
-                >
-                  <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md ring-1 ring-[color:var(--accent)]/30 bg-[color:var(--accent)]/10 text-[var(--accent)]">
-                    <Globe size={13} />
-                  </span>
-                  <span className="min-w-0 flex-1">
-                    <span className="block text-[13px] font-semibold tracking-tight fg">
-                      {t("deploy.customDomain.title")}
+                  handles the claim + DNS challenge + Caddy-issued TLS. Domain
+                  settings live under Publicar alongside the subdomain state —
+                  not its own tab, not Exportar (that's the Vercel/GitHub
+                  hand-off), just another way this same OpenLen deploy is
+                  reached. */}
+              {deployTab === "publicar" && onCustomDomain && (
+                <>
+                  <div className="border-t bd my-1" />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setDeployOpen(false);
+                      onCustomDomain();
+                    }}
+                    className="flex items-center gap-3 w-full text-left px-2.5 py-2 rounded-md hover:bg-hover transition group"
+                  >
+                    <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md ring-1 ring-[color:var(--accent)]/30 bg-[color:var(--accent)]/10 text-[var(--accent)]">
+                      <Globe size={13} />
                     </span>
-                    <span className="block text-[11px] fg-faint">
-                      {t("deploy.customDomain.subtitle")}
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-[13px] font-semibold tracking-tight fg">
+                        {t("deploy.customDomain.title")}
+                      </span>
+                      <span className="block text-[11px] fg-faint">
+                        {t("deploy.customDomain.subtitle")}
+                      </span>
                     </span>
-                  </span>
-                  <ChevronRight size={12} className="fg-faint group-hover:text-[var(--accent)] transition" />
-                </button>
+                    <ChevronRight size={12} className="fg-faint group-hover:text-[var(--accent)] transition" />
+                  </button>
+                </>
               )}
 
-              <div className="border-t bd my-1" />
-
+              {deployTab === "exportar" && (
+              <>
               {(
                 [
                   {
@@ -848,10 +895,11 @@ export function TopBar({
                     />
                   </button>
                 ))}
+              </>
+              )}
 
-              {published && projectId && (
+              {deployTab === "historial" && published && projectId && (
                 <>
-                  <div className="border-t bd my-1" />
                   <div className="px-2.5 pt-1.5 pb-1 text-[10px] uppercase tracking-wider fg-faint flex items-center gap-1.5">
                     <HistoryIcon size={10} />
                     {t("deploy.previousDeploys")}

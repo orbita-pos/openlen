@@ -33,7 +33,13 @@
       "githubSubtitle": "Een GitHub Pages-repo"
     },
     "previousDeploys": "Eerdere implementaties",
-    "noPriorDeploys": "Nog geen eerdere implementaties."
+    "noPriorDeploys": "Nog geen eerdere implementaties.",
+    "tabs": {
+      "publicar": "Publiceren",
+      "compartir": "Delen",
+      "historial": "Geschiedenis",
+      "exportar": "Exporteren"
+    }
   },
   "rollback": {
     "confirm": "De live site terugzetten naar implementatie {sha}? Bezoekers zien deze oudere versie binnen enkele seconden.",

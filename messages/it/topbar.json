@@ -33,7 +33,13 @@
       "githubSubtitle": "Un repository GitHub Pages"
     },
     "previousDeploys": "Pubblicazioni precedenti",
-    "noPriorDeploys": "Ancora nessuna pubblicazione precedente."
+    "noPriorDeploys": "Ancora nessuna pubblicazione precedente.",
+    "tabs": {
+      "publicar": "Pubblica",
+      "compartir": "Condividi",
+      "historial": "Cronologia",
+      "exportar": "Esporta"
+    }
   },
   "rollback": {
     "confirm": "Ripristinare il sito online alla pubblicazione {sha}? I visitatori vedranno questa versione precedente nel giro di pochi secondi.",
