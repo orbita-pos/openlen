@@ -49,6 +49,7 @@ import {
   type SidebarMode,
   type SectionView,
 } from "@/components/workspace-v2/left-sidebar";
+import { railModeFor } from "@/components/workspace-v2/rail-model";
 import { Check, Sparkles, Undo, X } from "@/components/workspace-v2/icons";
 import { SectionPreviewModal } from "@/components/workspace-v2/section-preview-modal";
 import type { SectionSpec } from "@/components/workspace-v2/sections-data";
@@ -3037,6 +3038,22 @@ function NewV2Inner() {
     }
   };
 
+  // Rail mode (Navegar app-sections vs Editar page-tools) derives from the
+  // same URL-backed state the rest of the workspace already reads: a project
+  // is loaded (`loadedProject`) and the center isn't parked on one of the
+  // account-wide sections (`centerView`). "App" (onOpenApp below) flips
+  // `centerView` to Navegar without touching `loadedProject`, so the project
+  // stays open for re-entry — reopening the canvas is just `setCenterView("page")`.
+  const navigatingSections = new Set<SectionView>([
+    "projects", "templates", "marketing", "modulos",
+    "analytics", "messages", "business", "explore",
+  ]);
+  const railMode = railModeFor({
+    entryMode,
+    hasProject: !!loadedProject?.id,
+    navigating: navigatingSections.has(centerView),
+  });
+
   return (
     <div className="workspace-v2 h-full flex flex-col">
       <TopBar
@@ -3084,6 +3101,8 @@ function NewV2Inner() {
           onToggleCollapse={() => setLeftCollapsed((c) => !c)}
           activeSection={centerView}
           onSelectSection={setCenterView}
+          railMode={railMode}
+          onOpenApp={() => setCenterView("projects")}
           mode={mode}
           setMode={handleTabSelect}
           sections={sections}
