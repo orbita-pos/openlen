@@ -230,7 +230,8 @@ function NewV2Inner() {
   const locale = useLocale();
   const [dark, toggleDark] = useDarkMode();
   const toast = useToast();
-  // Editor sound (creamy click on rail switching) + TopBar volume control.
+  // Editor sound (creamy click on rail switching) + the preview toolbar's
+  // volume control (moved out of TopBar in the chrome redesign, Task 5).
   const {
     volume: soundVolume,
     setVolume: setSoundVolume,
@@ -3488,6 +3489,9 @@ function NewV2Inner() {
                 motionPreset={loadedProject.settings?.motion}
                 musicTrack={loadedProject.settings?.music ?? null}
                 scene3d={loadedProject.settings?.scene3d}
+                soundVolume={soundVolume}
+                onSoundVolume={setSoundVolume}
+                onToggleSoundMute={toggleSoundMute}
                 onIframeRef={(el) => {
                   iframeElRef.current = el;
                 }}

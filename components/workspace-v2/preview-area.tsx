@@ -24,6 +24,7 @@ import { motionCss, isMotionPreset } from "@/lib/publish/motion-presets";
 import { injectMusicPreview } from "./use-music-preview";
 import { isMusicSettings, musicCss, musicMarkup } from "@/lib/publish/music-player";
 import type { MusicSettings } from "@/lib/projects/types";
+import { SoundControl } from "./sound-control";
 import { injectSectionInsert } from "./use-section-insert";
 import { injectSectionReorder } from "./use-section-reorder";
 import { injectSectionSelect } from "./use-section-select";
@@ -136,6 +137,14 @@ interface PreviewAreaProps {
   /** 3D scene settings — consumed by Task 3 preview injection. Accepted here
    *  so the parent can pass it without a TS error before Task 3 lands. */
   scene3d?: { enabled?: boolean; spec?: unknown };
+  /** Editor click-sound volume (0–1) — the same `useEditorSound()` state that
+   *  used to render as the speaker icon in TopBar. Moved here (Task 5): sound
+   *  is per-page playback, so its control now lives beside the preview it
+   *  affects, shown only when the page actually has music (`musicTrack?.src`
+   *  present) — omitted or absent music hides the button entirely. */
+  soundVolume?: number;
+  onSoundVolume?: (v: number) => void;
+  onToggleSoundMute?: () => void;
 }
 
 export function PreviewArea({
@@ -162,6 +171,9 @@ export function PreviewArea({
   dropEnabled = false,
   suppressReloadNonce = 0,
   scene3d,
+  soundVolume = 0,
+  onSoundVolume,
+  onToggleSoundMute,
 }: PreviewAreaProps) {
   const t = useTranslations("wsChrome");
   const [device, setDevice] = useState<Device>("desktop");
@@ -603,6 +615,13 @@ export function PreviewArea({
             >
               <ExternalLink size={12} />
             </IconBtn>
+          )}
+          {isMusicSettings(musicTrack) && onSoundVolume && onToggleSoundMute && (
+            <SoundControl
+              volume={soundVolume}
+              onVolume={onSoundVolume}
+              onToggleMute={onToggleSoundMute}
+            />
           )}
         </div>
       </div>
