@@ -81,4 +81,19 @@ describe("reconcileModuleSettings — the Members-dependency invariant", () => {
     expect(out.broadcast).toBeUndefined();
     expect(out.bookings).toBeUndefined();
   });
+
+  it("forces members.passwordLogin/accountArea off when members is disabled", () => {
+    const out = reconcileModuleSettings({
+      members: { enabled: false, passwordLogin: true, accountArea: true },
+    } as ProjectSettings);
+    expect(out.members?.passwordLogin).toBe(false);
+    expect(out.members?.accountArea).toBe(false);
+  });
+
+  it("keeps members.passwordLogin/accountArea when members is enabled (no-op ref)", () => {
+    const s = {
+      members: { enabled: true, passwordLogin: true, accountArea: true },
+    } as ProjectSettings;
+    expect(reconcileModuleSettings(s)).toBe(s);
+  });
 });

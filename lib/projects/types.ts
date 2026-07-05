@@ -70,6 +70,12 @@ export interface MembersSettings {
   /** "open" → any visitor can sign up via magic link (default).
    *  "invite" → only emails the owner pre-approved can log in. */
   mode?: "open" | "invite";
+  /** Preset «Cuentas»: permite login con email+contraseña además del magic
+   *  link (que se queda como ruta passwordless / de reset). Default off. */
+  passwordLogin?: boolean;
+  /** Preset «Cuentas»: auto-crea el área «Mi cuenta» y surfacea el sign-in
+   *  aunque no haya página con candado. Default off. (Lo consume la Fase 2.) */
+  accountArea?: boolean;
 }
 
 /** Broadcast module — email your members. Rows live in the broadcasts table;

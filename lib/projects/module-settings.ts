@@ -33,5 +33,16 @@ export function reconcileModuleSettings(
     // gate is dropped, which is what turns the dead-end into a working flow.
     next = { ...next, bookings: { ...next.bookings, requireLogin: false } };
   }
+  if (
+    next.members &&
+    (next.members.passwordLogin === true || next.members.accountArea === true)
+  ) {
+    // members off (el early-return cubre enabled===true) ⇒ estas perillas no
+    // pueden quedar encendidas.
+    next = {
+      ...next,
+      members: { ...next.members, passwordLogin: false, accountArea: false },
+    };
+  }
   return next;
 }
