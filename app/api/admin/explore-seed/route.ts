@@ -1,3 +1,4 @@
+import { timingSafeEqual } from "node:crypto";
 import { seedExplore } from "@/lib/community/seed";
 
 export const runtime = "nodejs";
@@ -11,7 +12,9 @@ export const dynamic = "force-dynamic";
 export async function POST(req: Request): Promise<Response> {
   const token = process.env.EXPLORE_SEED_TOKEN?.trim();
   if (!token) return new Response("not found", { status: 404 });
-  if (req.headers.get("x-seed-token") !== token) {
+  const provided = Buffer.from(req.headers.get("x-seed-token") ?? "");
+  const expected = Buffer.from(token);
+  if (provided.length !== expected.length || !timingSafeEqual(provided, expected)) {
     return new Response("forbidden", { status: 403 });
   }
   const result = await seedExplore();
