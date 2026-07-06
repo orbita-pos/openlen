@@ -37,6 +37,12 @@ export interface GateStubParams {
    *  button/focus so the card wears the site's color. Absent/invalid →
    *  the neutral monochrome look. */
   accent?: string | null;
+  /** Preset «Cuentas»: render the tabbed password card (register/login +
+   *  magic-link). Off/absent → the magic-link-only form (invite preset). */
+  passwordLogin?: boolean;
+  /** gate = probe the protected page, swap on 200, show verify on 403.
+   *  account = probe /me, render the dashboard (Task 3) on 200. Default gate. */
+  mode?: "gate" | "account";
 }
 
 export interface GateStrings {
@@ -50,6 +56,19 @@ export interface GateStrings {
   linkInvalid: string;
   tooMany: string;
   error: string;
+  tabIn: string;
+  tabUp: string;
+  passwordPlaceholder: string;
+  createAccount: string;
+  signIn: string;
+  orLink: string;
+  orWord: string;
+  badCred: string;
+  exists: string;
+  badPassword: string;
+  verifyTitle: string;
+  verifyIntro: string;
+  verifyBtn: string;
 }
 
 const STRINGS: Record<string, GateStrings> = {
@@ -64,6 +83,19 @@ const STRINGS: Record<string, GateStrings> = {
     linkInvalid: "That link expired or was already used. Request a new one.",
     tooMany: "Too many attempts. Try again in a little while.",
     error: "Something went wrong. Please try again.",
+    tabIn: "Sign in",
+    tabUp: "Sign up",
+    passwordPlaceholder: "Password (min 8)",
+    createAccount: "Create account",
+    signIn: "Sign in",
+    orLink: "Sign in with an email link",
+    orWord: "or",
+    badCred: "Wrong email or password.",
+    exists: "That email is already registered — sign in instead.",
+    badPassword: "Password must be at least 8 characters.",
+    verifyTitle: "Confirm your email",
+    verifyIntro: "To open this, confirm your email — we'll send you a link.",
+    verifyBtn: "Send me the link",
   },
   es: {
     enter: "Entrar",
@@ -76,6 +108,19 @@ const STRINGS: Record<string, GateStrings> = {
     linkInvalid: "Ese enlace expiró o ya se usó. Pide uno nuevo.",
     tooMany: "Demasiados intentos. Inténtalo en un rato.",
     error: "Algo salió mal. Inténtalo de nuevo.",
+    tabIn: "Entrar",
+    tabUp: "Registrarse",
+    passwordPlaceholder: "Contraseña (mín. 8)",
+    createAccount: "Crear cuenta",
+    signIn: "Entrar",
+    orLink: "Entrar con un link por correo",
+    orWord: "o",
+    badCred: "Correo o contraseña incorrectos.",
+    exists: "Ese correo ya está registrado — inicia sesión.",
+    badPassword: "La contraseña debe tener al menos 8 caracteres.",
+    verifyTitle: "Confirma tu correo",
+    verifyIntro: "Para abrir esto, confirma tu correo — te enviamos un link.",
+    verifyBtn: "Enviarme el link",
   },
   pt: {
     enter: "Entrar",
@@ -88,6 +133,19 @@ const STRINGS: Record<string, GateStrings> = {
     linkInvalid: "Esse link expirou ou já foi usado. Peça um novo.",
     tooMany: "Muitas tentativas. Tente novamente em instantes.",
     error: "Algo deu errado. Tente de novo.",
+    tabIn: "Entrar",
+    tabUp: "Cadastrar",
+    passwordPlaceholder: "Senha (mín. 8)",
+    createAccount: "Criar conta",
+    signIn: "Entrar",
+    orLink: "Entrar com um link por e-mail",
+    orWord: "ou",
+    badCred: "E-mail ou senha incorretos.",
+    exists: "Esse e-mail já está cadastrado — faça login.",
+    badPassword: "A senha deve ter pelo menos 8 caracteres.",
+    verifyTitle: "Confirme seu e-mail",
+    verifyIntro: "Para abrir isto, confirme seu e-mail — enviaremos um link.",
+    verifyBtn: "Enviar o link",
   },
   fr: {
     enter: "Continuer",
@@ -100,6 +158,19 @@ const STRINGS: Record<string, GateStrings> = {
     linkInvalid: "Ce lien a expiré ou a déjà été utilisé. Demandez-en un nouveau.",
     tooMany: "Trop de tentatives. Réessayez dans un instant.",
     error: "Une erreur s'est produite. Réessayez.",
+    tabIn: "Se connecter",
+    tabUp: "S'inscrire",
+    passwordPlaceholder: "Mot de passe (min. 8)",
+    createAccount: "Créer un compte",
+    signIn: "Se connecter",
+    orLink: "Se connecter avec un lien par e-mail",
+    orWord: "ou",
+    badCred: "E-mail ou mot de passe incorrect.",
+    exists: "Cet e-mail est déjà inscrit — connectez-vous.",
+    badPassword: "Le mot de passe doit contenir au moins 8 caractères.",
+    verifyTitle: "Confirmez votre e-mail",
+    verifyIntro: "Pour ouvrir ceci, confirmez votre e-mail — nous vous enverrons un lien.",
+    verifyBtn: "M'envoyer le lien",
   },
   de: {
     enter: "Weiter",
@@ -112,6 +183,19 @@ const STRINGS: Record<string, GateStrings> = {
     linkInvalid: "Dieser Link ist abgelaufen oder wurde schon benutzt. Fordere einen neuen an.",
     tooMany: "Zu viele Versuche. Versuche es gleich noch einmal.",
     error: "Etwas ist schiefgelaufen. Bitte erneut versuchen.",
+    tabIn: "Anmelden",
+    tabUp: "Registrieren",
+    passwordPlaceholder: "Passwort (mind. 8)",
+    createAccount: "Konto erstellen",
+    signIn: "Anmelden",
+    orLink: "Mit einem E-Mail-Link anmelden",
+    orWord: "oder",
+    badCred: "Falsche E-Mail oder falsches Passwort.",
+    exists: "Diese E-Mail ist bereits registriert — melde dich an.",
+    badPassword: "Das Passwort muss mindestens 8 Zeichen haben.",
+    verifyTitle: "Bestätige deine E-Mail",
+    verifyIntro: "Zum Öffnen bestätige deine E-Mail — wir senden dir einen Link.",
+    verifyBtn: "Link senden",
   },
   it: {
     enter: "Continua",
@@ -124,6 +208,19 @@ const STRINGS: Record<string, GateStrings> = {
     linkInvalid: "Quel link è scaduto o è già stato usato. Richiedine uno nuovo.",
     tooMany: "Troppi tentativi. Riprova tra poco.",
     error: "Qualcosa è andato storto. Riprova.",
+    tabIn: "Accedi",
+    tabUp: "Registrati",
+    passwordPlaceholder: "Password (min. 8)",
+    createAccount: "Crea account",
+    signIn: "Accedi",
+    orLink: "Accedi con un link via email",
+    orWord: "o",
+    badCred: "Email o password errati.",
+    exists: "Questa email è già registrata — accedi.",
+    badPassword: "La password deve avere almeno 8 caratteri.",
+    verifyTitle: "Conferma la tua email",
+    verifyIntro: "Per aprire questo, conferma la tua email — ti invieremo un link.",
+    verifyBtn: "Inviami il link",
   },
   ja: {
     enter: "続ける",
@@ -136,6 +233,19 @@ const STRINGS: Record<string, GateStrings> = {
     linkInvalid: "このリンクは期限切れか使用済みです。新しいリンクを請求してください。",
     tooMany: "試行回数が多すぎます。しばらくしてからお試しください。",
     error: "問題が発生しました。もう一度お試しください。",
+    tabIn: "ログイン",
+    tabUp: "新規登録",
+    passwordPlaceholder: "パスワード（8文字以上）",
+    createAccount: "アカウント作成",
+    signIn: "ログイン",
+    orLink: "メールのリンクでログイン",
+    orWord: "または",
+    badCred: "メールアドレスまたはパスワードが違います。",
+    exists: "このメールアドレスは登録済みです。ログインしてください。",
+    badPassword: "パスワードは8文字以上にしてください。",
+    verifyTitle: "メールを確認してください",
+    verifyIntro: "開くにはメールの確認が必要です。リンクをお送りします。",
+    verifyBtn: "リンクを送る",
   },
   ko: {
     enter: "계속",
@@ -148,6 +258,19 @@ const STRINGS: Record<string, GateStrings> = {
     linkInvalid: "링크가 만료되었거나 이미 사용되었습니다. 새 링크를 요청하세요.",
     tooMany: "시도 횟수가 너무 많습니다. 잠시 후 다시 시도하세요.",
     error: "문제가 발생했습니다. 다시 시도해 주세요.",
+    tabIn: "로그인",
+    tabUp: "회원가입",
+    passwordPlaceholder: "비밀번호 (8자 이상)",
+    createAccount: "계정 만들기",
+    signIn: "로그인",
+    orLink: "이메일 링크로 로그인",
+    orWord: "또는",
+    badCred: "이메일 또는 비밀번호가 올바르지 않습니다.",
+    exists: "이미 등록된 이메일입니다 — 로그인하세요.",
+    badPassword: "비밀번호는 8자 이상이어야 합니다.",
+    verifyTitle: "이메일을 확인하세요",
+    verifyIntro: "열려면 이메일을 확인하세요 — 링크를 보내드립니다.",
+    verifyBtn: "링크 보내기",
   },
   zh: {
     enter: "继续",
@@ -160,6 +283,19 @@ const STRINGS: Record<string, GateStrings> = {
     linkInvalid: "该链接已过期或已被使用。请重新获取。",
     tooMany: "尝试次数过多，请稍后再试。",
     error: "出了点问题，请重试。",
+    tabIn: "登录",
+    tabUp: "注册",
+    passwordPlaceholder: "密码（至少 8 位）",
+    createAccount: "创建账户",
+    signIn: "登录",
+    orLink: "使用邮件链接登录",
+    orWord: "或",
+    badCred: "邮箱或密码错误。",
+    exists: "该邮箱已注册 — 请登录。",
+    badPassword: "密码至少需要 8 个字符。",
+    verifyTitle: "确认你的邮箱",
+    verifyIntro: "要打开此内容，请确认你的邮箱 — 我们会给你发送链接。",
+    verifyBtn: "给我发送链接",
   },
   nl: {
     enter: "Doorgaan",
@@ -172,6 +308,19 @@ const STRINGS: Record<string, GateStrings> = {
     linkInvalid: "Die link is verlopen of al gebruikt. Vraag een nieuwe aan.",
     tooMany: "Te veel pogingen. Probeer het zo weer.",
     error: "Er ging iets mis. Probeer het opnieuw.",
+    tabIn: "Inloggen",
+    tabUp: "Registreren",
+    passwordPlaceholder: "Wachtwoord (min. 8)",
+    createAccount: "Account aanmaken",
+    signIn: "Inloggen",
+    orLink: "Inloggen met een e-maillink",
+    orWord: "of",
+    badCred: "Onjuist e-mailadres of wachtwoord.",
+    exists: "Dat e-mailadres is al geregistreerd — log in.",
+    badPassword: "Het wachtwoord moet minstens 8 tekens bevatten.",
+    verifyTitle: "Bevestig je e-mail",
+    verifyIntro: "Om dit te openen, bevestig je e-mail — we sturen je een link.",
+    verifyBtn: "Stuur mij de link",
   },
 };
 
@@ -215,6 +364,21 @@ function scriptJson(value: unknown): string {
   return JSON.stringify(value).replace(/</g, "\\u003c");
 }
 
+// Extra CSS for the passwordLogin tabbed card — appended after the base
+// style rules, only when the preset is on. Uses the file's existing tokens
+// (--field, --card, --fg, --muted, --ring, --focus); #m-btn is untouched so
+// it keeps inheriting the accent rules above.
+const PASSWORD_CSS = `
+  .tabs{display:flex;gap:4px;background:var(--field);border-radius:12px;padding:4px;margin-top:22px}
+  .tabs button{flex:1;border:0;background:transparent;color:var(--muted);font:inherit;font-weight:600;font-size:13.5px;padding:9px 0;border-radius:9px;cursor:pointer}
+  .tabs button[aria-selected="true"]{background:var(--card);color:var(--fg);box-shadow:0 2px 8px -3px rgba(0,0,0,.25)}
+  #m-pass{width:100%;margin-top:10px;padding:13px 16px;font-size:15px;color:var(--fg);background:var(--field);border:1px solid var(--ring);border-radius:12px;outline:none}
+  #m-pass:focus{border-color:var(--focus)}
+  .or{display:flex;align-items:center;gap:12px;color:var(--muted);font-size:12px;margin:16px 0 10px;text-transform:lowercase}
+  .or::before,.or::after{content:"";height:1px;flex:1;background:var(--ring)}
+  .ghost{width:100%;padding:12px;font-size:13.5px;font-weight:600;color:var(--fg);background:transparent;border:1px solid var(--ring);border-radius:12px;cursor:pointer}
+  .ghost:disabled{opacity:.5;cursor:default}`;
+
 export function buildGateStub(params: GateStubParams): string {
   const locale =
     params.locale && STRINGS[params.locale] ? params.locale : "en";
@@ -233,7 +397,10 @@ export function buildGateStub(params: GateStubParams): string {
     ? `<img class="logo" src="${escapeHtml(params.logoUrl.trim())}" alt="">`
     : `<svg class="logo lock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="11" width="16" height="9" rx="2.2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>`;
 
-  const script = `(function(){
+  const passwordLogin = params.passwordLogin === true;
+  const mode = params.mode === "account" ? "account" : "gate";
+
+  const legacyScript = `(function(){
 var SUB=${scriptJson(params.sub)},SLUG=${scriptJson(params.slug)},T=${scriptJson({
     linkInvalid: t.linkInvalid,
     tooMany: t.tooMany,
@@ -260,6 +427,110 @@ btn.disabled=false;setMsg(r.status===429?T.tooMany:T.checkInbox);
 }).catch(function(){btn.disabled=false;setMsg(T.error);});
 });
 })();`;
+
+  // Two independent state axes: MODE (gate|account, baked from params) and
+  // tab (up|in, the register/login toggle). On successful auth — register OR
+  // login — we just reload: the on-load probe re-runs and lands on the
+  // exactly-right next state (protected doc swap / verify / dashboard), so
+  // there's no register-vs-login branch to get wrong. The verify button
+  // fetches /me first because POST /auth/request requires an explicit email
+  // and never reads the session cookie — and #m-email is empty here (the
+  // member arrived already logged in, just unverified).
+  const passwordScript = `(function(){
+var SUB=${scriptJson(params.sub)},SLUG=${scriptJson(params.slug)},MODE=${scriptJson(mode)},T=${scriptJson({
+    linkInvalid: t.linkInvalid, tooMany: t.tooMany, checkInbox: t.checkInbox, error: t.error,
+    createAccount: t.createAccount, signIn: t.signIn, badCred: t.badCred, exists: t.exists, badPassword: t.badPassword,
+  })};
+var API="/api/m/"+SUB;
+var loading=document.getElementById("m-loading"),auth=document.getElementById("m-auth"),verify=document.getElementById("m-verify");
+var form=document.getElementById("m-form"),email=document.getElementById("m-email"),pass=document.getElementById("m-pass"),btn=document.getElementById("m-btn"),msg=document.getElementById("m-msg");
+var tabIn=document.getElementById("m-tab-in"),tabUp=document.getElementById("m-tab-up");
+var tab="up";
+var hadErr=/[?&]m_err=/.test(location.search);
+function setMsg(el,text){el.textContent=text;el.hidden=false;}
+function showAuth(){loading.hidden=true;auth.hidden=false;if(hadErr)setMsg(msg,T.linkInvalid);}
+function showVerify(){loading.hidden=true;auth.hidden=true;verify.hidden=false;}
+function selTab(m){tab=m;var up=m==="up";tabUp.setAttribute("aria-selected",up?"true":"false");tabIn.setAttribute("aria-selected",up?"false":"true");btn.textContent=up?T.createAccount:T.signIn;pass.setAttribute("autocomplete",up?"new-password":"current-password");msg.hidden=true;}
+tabIn.addEventListener("click",function(){selTab("in");});
+tabUp.addEventListener("click",function(){selTab("up");});
+if(MODE==="account"){
+  fetch(API+"/me",{credentials:"same-origin"}).then(function(r){
+    if(r.status===200)return r.json().then(function(d){if(window.__olRenderAccount){window.__olRenderAccount(d);}else{location.reload();}});
+    showAuth();
+  }).catch(showAuth);
+}else{
+  fetch(API+"/page/"+SLUG,{credentials:"same-origin"}).then(function(r){
+    if(r.status===200)return r.text().then(function(h){document.open();document.write(h);document.close();});
+    if(r.status===403)return showVerify();
+    showAuth();
+  }).catch(showAuth);
+}
+form.addEventListener("submit",function(e){
+  e.preventDefault();btn.disabled=true;msg.hidden=true;
+  var path=tab==="up"?"/register":"/login";
+  fetch(API+"/auth"+path,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({email:email.value,password:pass.value})}).then(function(r){
+    btn.disabled=false;
+    if(r.status===200){location.reload();return;}
+    if(r.status===429){setMsg(msg,T.tooMany);return;}
+    if(r.status===409){setMsg(msg,T.exists);return;}
+    if(r.status===400){setMsg(msg,T.badPassword);return;}
+    setMsg(msg,T.badCred);
+  }).catch(function(){btn.disabled=false;setMsg(msg,T.error);});
+});
+document.getElementById("m-link").addEventListener("click",function(){
+  var b=this,em=(email.value||"").trim();
+  if(!em){email.focus();return;}
+  b.disabled=true;msg.hidden=true;
+  fetch(API+"/auth/request",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({email:em,slug:SLUG})}).then(function(r){
+    b.disabled=false;setMsg(msg,r.status===429?T.tooMany:T.checkInbox);
+  }).catch(function(){b.disabled=false;setMsg(msg,T.error);});
+});
+var vbtn=document.getElementById("m-vbtn"),vmsg=document.getElementById("m-vmsg");
+if(vbtn)vbtn.addEventListener("click",function(){
+  vbtn.disabled=true;vmsg.hidden=true;
+  fetch(API+"/me",{credentials:"same-origin"}).then(function(r){return r.status===200?r.json():null;}).then(function(me){
+    var em=me&&me.email;
+    if(!em){vbtn.disabled=false;setMsg(vmsg,T.error);return;}
+    return fetch(API+"/auth/request",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({email:em,slug:SLUG})}).then(function(r){
+      vbtn.disabled=false;setMsg(vmsg,r.status===429?T.tooMany:T.checkInbox);
+    });
+  }).catch(function(){vbtn.disabled=false;setMsg(vmsg,T.error);});
+});
+selTab("up");
+})();`;
+
+  const script = passwordLogin ? passwordScript : legacyScript;
+
+  const legacyFormMarkup = `<form id="m-form" hidden>
+    <p class="intro">${escapeHtml(t.intro)}</p>
+    <input id="m-email" type="email" required autocomplete="email" placeholder="${escapeHtml(t.emailPlaceholder)}">
+    <button id="m-btn" type="submit">${escapeHtml(t.sendLink)}</button>
+    <p id="m-msg" hidden></p>
+  </form>`;
+
+  const passwordCardMarkup = `<div id="m-auth" hidden>
+    <div class="tabs" role="tablist">
+      <button id="m-tab-in" type="button" role="tab" aria-selected="false">${escapeHtml(t.tabIn)}</button>
+      <button id="m-tab-up" type="button" role="tab" aria-selected="true">${escapeHtml(t.tabUp)}</button>
+    </div>
+    <form id="m-form">
+      <input id="m-email" type="email" required autocomplete="email" placeholder="${escapeHtml(t.emailPlaceholder)}">
+      <input id="m-pass" type="password" required autocomplete="new-password" minlength="8" placeholder="${escapeHtml(t.passwordPlaceholder)}">
+      <button id="m-btn" type="submit">${escapeHtml(t.createAccount)}</button>
+    </form>
+    <div class="or"><span>${escapeHtml(t.orWord)}</span></div>
+    <button id="m-link" type="button" class="ghost">${escapeHtml(t.orLink)}</button>
+    <p id="m-msg" hidden></p>
+  </div>
+  <div id="m-verify" hidden>
+    <p class="intro" style="font-weight:600;color:var(--fg)">${escapeHtml(t.verifyTitle)}</p>
+    <p class="intro">${escapeHtml(t.verifyIntro)}</p>
+    <button id="m-vbtn" type="button" class="ghost" style="margin-top:16px">${escapeHtml(t.verifyBtn)}</button>
+    <p id="m-vmsg" hidden></p>
+  </div>`;
+
+  const cardBody = passwordLogin ? passwordCardMarkup : legacyFormMarkup;
+  const extraCss = passwordLogin ? PASSWORD_CSS : "";
 
   return `<!doctype html>
 <html lang="${escapeHtml(locale)}">
@@ -311,7 +582,7 @@ btn.disabled=false;setMsg(r.status===429?T.tooMany:T.checkInbox);
   #m-btn:hover{opacity:.88}
   #m-btn:active{transform:scale(.985)}
   #m-btn:disabled{opacity:.5;cursor:default}
-  #m-msg{margin-top:14px;font-size:13.5px;line-height:1.5;color:var(--muted)}${accentCss}
+  #m-msg{margin-top:14px;font-size:13.5px;line-height:1.5;color:var(--muted)}${extraCss}${accentCss}
 </style>
 </head>
 <body>
@@ -320,12 +591,7 @@ btn.disabled=false;setMsg(r.status===429?T.tooMany:T.checkInbox);
   <p class="tag">${escapeHtml(t.tag)}</p>
   <h1>${title}</h1>
   <div id="m-loading">${escapeHtml(t.checking)}</div>
-  <form id="m-form" hidden>
-    <p class="intro">${escapeHtml(t.intro)}</p>
-    <input id="m-email" type="email" required autocomplete="email" placeholder="${escapeHtml(t.emailPlaceholder)}">
-    <button id="m-btn" type="submit">${escapeHtml(t.sendLink)}</button>
-    <p id="m-msg" hidden></p>
-  </form>
+  ${cardBody}
   <noscript><p class="intro" style="margin-top:18px">${escapeHtml(t.intro)}</p></noscript>
 </main>
 <script>${script}</script>

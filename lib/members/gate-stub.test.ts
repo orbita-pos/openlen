@@ -97,6 +97,85 @@ describe("buildGateStub", () => {
   });
 });
 
+describe("buildGateStub — password card", () => {
+  it("passwordLogin:true renders the tabbed auth card and verify state", () => {
+    const html = buildGateStub({ ...BASE, passwordLogin: true });
+    expect(html).toContain('id="m-auth"');
+    expect(html).toContain('id="m-tab-in"');
+    expect(html).toContain('id="m-tab-up"');
+    expect(html).toContain('id="m-pass"');
+    expect(html).toContain('id="m-verify"');
+    expect(html).toContain('id="m-vbtn"');
+    expect(html).toContain('id="m-link"');
+  });
+
+  it("passwordLogin false/absent keeps the legacy magic-link-only form untouched", () => {
+    const html = buildGateStub(BASE);
+    expect(html).toContain('id="m-form"');
+    expect(html).toContain("Enviarme el enlace");
+    expect(html).not.toContain('id="m-pass"');
+    expect(html).not.toContain('id="m-auth"');
+  });
+
+  it("bakes MODE into the script — gate by default, account when requested", () => {
+    const gate = buildGateStub({ ...BASE, passwordLogin: true });
+    expect(gate).toContain('MODE="gate"');
+    const account = buildGateStub({ ...BASE, passwordLogin: true, mode: "account" });
+    expect(account).toContain('MODE="account"');
+  });
+
+  it("the verify handler resolves the email via /me before requesting a new link", () => {
+    const html = buildGateStub({ ...BASE, passwordLogin: true });
+    expect(html).toContain('"/me"');
+    expect(html).toContain("/auth/request");
+  });
+
+  it("renders the new es strings", () => {
+    const html = buildGateStub({ ...BASE, passwordLogin: true, locale: "es" });
+    expect(html).toContain("Crear cuenta");
+    expect(html).toContain("Entrar con un link por correo");
+    expect(html).toContain("Confirma tu correo");
+  });
+
+  it("keeps the gate invariants — no CSP, noindex, zero protected bytes", () => {
+    const html = buildGateStub({ ...BASE, passwordLogin: true });
+    expect(html).not.toContain("Content-Security-Policy");
+    expect(html).toContain('name="robots" content="noindex"');
+    expect(html).not.toContain("/c/");
+  });
+
+  it("escapes user content in the password card too", () => {
+    const html = buildGateStub({
+      ...BASE,
+      passwordLogin: true,
+      projectTitle: `<img src=x onerror=alert(1)>`,
+      logoUrl: `https://x.test/l.png" onerror="alert(1)`,
+    });
+    expect(html).not.toContain("<img src=x");
+    expect(html).toContain("&lt;img src=x");
+    expect(html).not.toContain('onerror="alert');
+    expect(html).toContain("&quot; onerror=&quot;");
+  });
+
+  it("hardens </script> breakouts in the password card script", () => {
+    const html = buildGateStub({
+      ...BASE,
+      passwordLogin: true,
+      sub: "x</script><script>evil" as string,
+    });
+    expect(html).not.toContain("</script><script>evil");
+    expect(html).toContain("\\u003c/script");
+  });
+
+  it("renders the password card for every publish locale", () => {
+    for (const l of PUBLISH_LOCALES) {
+      const html = buildGateStub({ ...BASE, passwordLogin: true, locale: l.code });
+      expect(html).toContain(`lang="${l.code}"`);
+      expect(html.length).toBeGreaterThan(1000);
+    }
+  });
+});
+
 describe("wireMemberLogout", () => {
   const DOC = (body: string) =>
     `<!doctype html><html><head></head><body>${body}</body></html>`;
