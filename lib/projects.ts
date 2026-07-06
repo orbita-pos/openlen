@@ -637,6 +637,11 @@ interface PublishParams {
    *  Deploy runs it). Bulk republishes set this so a catalog-wide sweep
    *  doesn't queue N Chrome audits against the box's single flight-check slot. */
   skipFlightCheck?: boolean;
+  /** System-only: skip the per-plan subdomain cap. Set ONLY by the Explore
+   *  seed (lib/community/seed.ts) for the first-party @openlen showcase
+   *  account, which legitimately owns more subdomains than any real tier
+   *  allows. Never wired into the public publish route body. */
+  bypassSubdomainLimit?: boolean;
 }
 interface PublishResult {
   subdomain: string;
@@ -678,7 +683,7 @@ export async function publishProject(
   const plan = await getUserPlan(params.userId);
   const cap = subdomainLimitForPlan(plan);
   const isClaimingNew = project.subdomain !== v.value;
-  if (isClaimingNew) {
+  if (isClaimingNew && !params.bypassSubdomainLimit) {
     const others = await db
       .select({ count: sqlOp<number>`count(*)::int` })
       .from(schema.projects)
