@@ -40,6 +40,8 @@ export interface MemberSiteContext {
   membersMode: "open" | "invite";
   /** Preset «Cuentas»: login con contraseña habilitado. */
   membersPasswordLogin: boolean;
+  /** Reservas module on — gates the bookings list in GET /me. */
+  bookingsEnabled: boolean;
   /** Site language — drives the email + interstitial copy. */
   locale: string;
 }
@@ -70,6 +72,7 @@ export async function loadMemberSite(
     membersEnabled: members?.enabled === true,
     membersMode: members?.mode === "invite" ? "invite" : "open",
     membersPasswordLogin: members?.passwordLogin === true,
+    bookingsEnabled: row.data?.settings?.bookings?.enabled === true,
     locale: detectLang(row.data?.html ?? ""),
   };
 }

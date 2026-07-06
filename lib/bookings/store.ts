@@ -473,6 +473,33 @@ export async function countBookingsSince(
   return rows[0]?.n ?? 0;
 }
 
+/** A member's own bookings for their account dashboard (GET /api/m/[sub]/me).
+ *  Newest first, capped — a display-only projection (service name + when + status). */
+export async function listMemberBookings(
+  projectId: string,
+  memberId: string,
+): Promise<Array<{ serviceName: string; startUtc: Date; status: BookingStatus }>> {
+  return db
+    .select({
+      serviceName: schema.bookableServices.name,
+      startUtc: schema.bookings.startUtc,
+      status: schema.bookings.status,
+    })
+    .from(schema.bookings)
+    .innerJoin(
+      schema.bookableServices,
+      eq(schema.bookings.serviceId, schema.bookableServices.id),
+    )
+    .where(
+      and(
+        eq(schema.bookings.projectId, projectId),
+        eq(schema.bookings.memberId, memberId),
+      ),
+    )
+    .orderBy(desc(schema.bookings.startUtc))
+    .limit(20);
+}
+
 // ─── Reminder sweep (systemd timer) ──────────────────────────────────────────
 
 /** Confirmed bookings starting in (now, withinUtc] that haven't been reminded
