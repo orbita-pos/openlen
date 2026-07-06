@@ -141,7 +141,7 @@
       "title": "Publiceer ook in",
       "hint": "Elke taal gaat live op /es/, /fr/… en wordt bij elke publicatie automatisch vertaald. De oorspronkelijke taal van je pagina wordt overgeslagen."
     },
-    "membersOffWarning": "{count, plural, one {# pagina is gemarkeerd als alleen-leden maar de Leden-module staat UIT — hij wordt OPENBAAR gepubliceerd. Zet hem aan in het Modules-tabblad.} other {# pagina's zijn gemarkeerd als alleen-leden maar de Leden-module staat UIT — ze worden OPENBAAR gepubliceerd. Zet hem aan in het Modules-tabblad.}}",
+    "membersOffWarning": "{count, plural, one {# pagina is gemarkeerd als alleen-leden maar de Accounts-module staat UIT — hij wordt OPENBAAR gepubliceerd. Zet hem aan in het Modules-tabblad.} other {# pagina's zijn gemarkeerd als alleen-leden maar de Accounts-module staat UIT — ze worden OPENBAAR gepubliceerd. Zet hem aan in het Modules-tabblad.}}",
     "membersGatedSummary": "{count, plural, one {# ledenpagina wordt achter de login gepubliceerd.} other {# ledenpagina's worden achter de login gepubliceerd.}}"
   },
   "inspector": {

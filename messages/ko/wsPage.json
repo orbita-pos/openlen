@@ -115,7 +115,7 @@
     "moduleEnabled": "{module}을(를) 켰습니다",
     "moduleDisabled": "{module}을(를) 껐습니다",
     "moduleError": "모듈을 업데이트하지 못했습니다.",
-    "moduleMembers": "멤버",
+    "moduleMembers": "계정",
     "moduleBroadcast": "Broadcast",
     "moduleComments": "댓글",
     "moduleBookings": "예약",

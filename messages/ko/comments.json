@@ -6,7 +6,7 @@
     "title": "댓글",
     "tagline": "페이지에 멤버 전용 댓글",
     "toggle": "댓글 켜기",
-    "needsMembers": "먼저 멤버를 켜세요 — 멤버만 댓글을 달 수 있습니다.",
+    "needsMembers": "먼저 계정을 켜세요 — 멤버만 댓글을 달 수 있습니다.",
     "modLabel": "새 댓글",
     "modModerated": "먼저 승인",
     "modAll": "즉시 게시",

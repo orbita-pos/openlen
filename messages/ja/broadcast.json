@@ -7,7 +7,7 @@
     "tagline": "メンバーにメールを送る",
     "toggle": "Broadcast を有効化",
     "enabledHint": "Broadcast タブを開いて最初のキャンペーンを書きましょう。",
-    "needsMembers": "先にメンバーを有効化してください — 配信先は彼らです。"
+    "needsMembers": "先にアカウントを有効化してください — 配信先は彼らです。"
   },
   "compose": {
     "subjectLabel": "件名",

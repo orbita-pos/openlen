@@ -115,7 +115,7 @@
     "moduleEnabled": "{module} を有効にしました",
     "moduleDisabled": "{module} を無効にしました",
     "moduleError": "モジュールを更新できませんでした。",
-    "moduleMembers": "メンバー",
+    "moduleMembers": "アカウント",
     "moduleBroadcast": "Broadcast",
     "moduleComments": "コメント",
     "moduleBookings": "予約",

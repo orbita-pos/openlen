@@ -115,7 +115,7 @@
     "moduleEnabled": "{module} ingeschakeld",
     "moduleDisabled": "{module} uitgeschakeld",
     "moduleError": "Kon de module niet bijwerken.",
-    "moduleMembers": "Leden",
+    "moduleMembers": "Accounts",
     "moduleBroadcast": "Broadcast",
     "moduleComments": "Reacties",
     "moduleBookings": "Afspraken",

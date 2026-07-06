@@ -115,7 +115,7 @@
     "moduleEnabled": "{module} activado",
     "moduleDisabled": "{module} desactivado",
     "moduleError": "No se pudo actualizar el módulo.",
-    "moduleMembers": "Miembros",
+    "moduleMembers": "Cuentas",
     "moduleBroadcast": "Difusión",
     "moduleComments": "Comentarios",
     "moduleBookings": "Reservas",

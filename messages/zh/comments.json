@@ -6,7 +6,7 @@
     "title": "评论",
     "tagline": "页面上的会员专属评论",
     "toggle": "启用评论",
-    "needsMembers": "请先启用会员 — 只有会员可以评论。",
+    "needsMembers": "请先启用账户 — 只有会员可以评论。",
     "modLabel": "新评论",
     "modModerated": "先审核",
     "modAll": "立即发布",

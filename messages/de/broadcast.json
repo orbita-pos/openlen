@@ -7,7 +7,7 @@
     "tagline": "Schreib deinen Mitgliedern",
     "toggle": "Broadcast aktivieren",
     "enabledHint": "Öffne den Broadcast-Tab, um deine erste Kampagne zu schreiben.",
-    "needsMembers": "Aktiviere zuerst Mitglieder — an sie gehen die Kampagnen."
+    "needsMembers": "Aktiviere zuerst Konten — an sie gehen die Kampagnen."
   },
   "compose": {
     "subjectLabel": "Betreff",

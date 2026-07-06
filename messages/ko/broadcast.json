@@ -7,7 +7,7 @@
     "tagline": "멤버에게 이메일 보내기",
     "toggle": "Broadcast 켜기",
     "enabledHint": "Broadcast 탭을 열어 첫 캠페인을 작성하세요.",
-    "needsMembers": "먼저 멤버를 켜세요 — 캠페인은 그들에게 갑니다."
+    "needsMembers": "먼저 계정을 켜세요 — 캠페인은 그들에게 갑니다."
   },
   "compose": {
     "subjectLabel": "제목",

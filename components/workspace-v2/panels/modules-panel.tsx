@@ -279,7 +279,7 @@ export function ModulesPanel({
 
       {/* Module grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 items-start">
-        {/* Miembros */}
+        {/* Cuentas */}
         <ModCard
           icon={<Users size={18} />}
           title={t("module.title")}

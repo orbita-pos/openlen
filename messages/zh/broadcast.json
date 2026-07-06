@@ -7,7 +7,7 @@
     "tagline": "给你的会员发邮件",
     "toggle": "启用 Broadcast",
     "enabledHint": "打开 Broadcast 标签页撰写你的第一封活动邮件。",
-    "needsMembers": "请先启用会员 — 活动邮件发给他们。"
+    "needsMembers": "请先启用账户 — 活动邮件发给他们。"
   },
   "compose": {
     "subjectLabel": "主题",

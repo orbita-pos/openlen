@@ -7,7 +7,7 @@
     "tagline": "Email your members",
     "toggle": "Enable broadcast",
     "enabledHint": "Open the Broadcast tab to write your first campaign.",
-    "needsMembers": "Turn on Members first — that's who broadcasts reach."
+    "needsMembers": "Turn on Accounts first — that's who broadcasts reach."
   },
   "compose": {
     "subjectLabel": "Subject",

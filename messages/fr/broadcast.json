@@ -7,7 +7,7 @@
     "tagline": "Écrivez à vos membres",
     "toggle": "Activer broadcast",
     "enabledHint": "Ouvrez l'onglet Broadcast pour écrire votre première campagne.",
-    "needsMembers": "Activez Membres d'abord — c'est à eux que vont les campagnes."
+    "needsMembers": "Activez Comptes d'abord — c'est à eux que vont les campagnes."
   },
   "compose": {
     "subjectLabel": "Objet",

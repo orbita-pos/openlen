@@ -141,7 +141,7 @@
       "title": "Publier aussi en",
       "hint": "Chaque langue est mise en ligne sur /es/, /en/… traduite automatiquement à chaque publication. La langue d'origine de votre page est ignorée."
     },
-    "membersOffWarning": "{count, plural, one {# page est réservée aux membres mais le module Membres est DÉSACTIVÉ — elle sera publiée PUBLIQUE. Activez-le dans l'onglet Modules.} other {# pages sont réservées aux membres mais le module Membres est DÉSACTIVÉ — elles seront publiées PUBLIQUES. Activez-le dans l'onglet Modules.}}",
+    "membersOffWarning": "{count, plural, one {# page est réservée aux membres mais le module Comptes est DÉSACTIVÉ — elle sera publiée PUBLIQUE. Activez-le dans l'onglet Modules.} other {# pages sont réservées aux membres mais le module Comptes est DÉSACTIVÉ — elles seront publiées PUBLIQUES. Activez-le dans l'onglet Modules.}}",
     "membersGatedSummary": "{count, plural, one {# page réservée sera publiée derrière la connexion.} other {# pages réservées seront publiées derrière la connexion.}}"
   },
   "inspector": {

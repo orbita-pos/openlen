@@ -115,7 +115,7 @@
     "moduleEnabled": "已启用{module}",
     "moduleDisabled": "已停用{module}",
     "moduleError": "无法更新该模块。",
-    "moduleMembers": "会员",
+    "moduleMembers": "账户",
     "moduleBroadcast": "Broadcast",
     "moduleComments": "评论",
     "moduleBookings": "预约",
