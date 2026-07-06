@@ -351,3 +351,46 @@ describe("no sign-in when the members module is off", () => {
     assert.ok(home.includes("Iniciar sesión"), "authored link left as-is");
   });
 });
+
+describe("publishToDir with the account page", () => {
+  before(async () => {
+    await publishToDir({
+      subdomain: "accttest",
+      html: DOC("home"),
+      accountArea: true,
+      memberGate: { projectTitle: "Estudio", passwordLogin: true },
+    });
+  });
+
+  const releaseDir = () => {
+    const current = path.join(root, "accttest", "current");
+    try {
+      const sha = readFileSync(current, "utf8").trim();
+      return path.join(root, "accttest", "releases", sha);
+    } catch {
+      return current;
+    }
+  };
+
+  it("publishes /cuenta as the account dashboard stub", () => {
+    const file = path.join(releaseDir(), "cuenta", "index.html");
+    assert.ok(existsSync(file), "cuenta/index.html exists in the release");
+    const stub = readFileSync(file, "utf8");
+    assert.ok(stub.includes('MODE="account"'), "baked in account mode");
+    assert.ok(stub.includes('id="m-acct"'), "carries the dashboard shell");
+    assert.ok(stub.includes('content="noindex"'), "stays noindex");
+  });
+
+  it("does not publish /cuenta when the account area is off", async () => {
+    await publishToDir({ subdomain: "noacct", html: DOC("home") });
+    const current = path.join(root, "noacct", "current");
+    let dir: string;
+    try {
+      const sha = readFileSync(current, "utf8").trim();
+      dir = path.join(root, "noacct", "releases", sha);
+    } catch {
+      dir = current;
+    }
+    assert.ok(!existsSync(path.join(dir, "cuenta", "index.html")));
+  });
+});

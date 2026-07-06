@@ -795,6 +795,11 @@ export async function publishProject(
   // off, gatedPages is empty and everything ships public as always.
   const { publicPages, gatedPages } = splitPagesForPublish(project.data);
 
+  // Preset «Cuentas»: auto-created «Mi cuenta» area — /cuenta publishes even
+  // without a gated page, as long as the module is on and the preset is set.
+  const members = project.data?.settings?.members;
+  const accountArea = members?.enabled === true && members?.accountArea === true;
+
   // Members sign-in: when a gated portal exists, every public doc links to it.
   // Prefer the canonical members page; fall back to the first gated slug.
   // splitPagesForPublish only yields gatedPages when the module is on, so a
@@ -869,12 +874,14 @@ export async function publishProject(
       gatedPages: gatedPages.length > 0 ? gatedPages : undefined,
       memberSigninPath,
       memberGate:
-        gatedPages.length > 0
+        gatedPages.length > 0 || accountArea
           ? {
               projectTitle: project.title || v.value,
               logoUrl: effectiveLogoUrl,
+              passwordLogin: members?.passwordLogin === true,
             }
           : undefined,
+      accountArea: accountArea || undefined,
       sourceLang,
       buildLocaleDocs:
         targets.length > 0

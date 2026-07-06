@@ -215,12 +215,16 @@ export interface PublishParams {
   gatedPages?: Array<{ slug: string; html: string }>;
   /** Branding for the gate stubs (site title + optional logo on the login
    *  card). Required in spirit when gatedPages is non-empty. */
-  memberGate?: { projectTitle: string; logoUrl?: string | null };
+  memberGate?: { projectTitle: string; logoUrl?: string | null; passwordLogin?: boolean };
   /** Members module: when set (module on + a gated portal exists), every
    *  PUBLIC doc gets a sign-in link to this portal slug — the page's own
    *  sign-in link is rewired to it, or a neutral one is injected. Absent →
    *  no-op (module off / no gated page). */
   memberSigninPath?: string;
+  /** Cuentas preset: also publish the account card at /cuenta (its bytes ARE
+   *  the auth card / dashboard — mode:"account" — with no protected doc behind
+   *  it). Wears the same detected accent as the gate stubs. */
+  accountArea?: boolean;
 }
 
 const ASSET_URL_RE_FOR =
@@ -1076,7 +1080,7 @@ export async function publishToDir(
   // baked home document (the brand source), computed once per publish.
   // Null degrades to the neutral card.
   let memberAccent: string | null = null;
-  if ((params.gatedPages ?? []).length > 0) {
+  if ((params.gatedPages ?? []).length > 0 || params.accountArea) {
     try {
       memberAccent = detectSiteAccent(migratedHtml);
     } catch {
@@ -1113,6 +1117,26 @@ export async function publishToDir(
       content: buildGateStub({
         sub,
         slug: page.slug,
+        projectTitle: params.memberGate?.projectTitle ?? sub,
+        locale: sourceLang,
+        logoUrl: params.memberGate?.logoUrl,
+        accent: memberAccent,
+        passwordLogin: params.memberGate?.passwordLogin,
+      }),
+    });
+  }
+
+  // The account page (/cuenta): published bytes ARE the auth card / dashboard
+  // (mode:"account"); no protected doc behind it. On when the Cuentas account
+  // area is enabled. Same detected accent as the gate stubs.
+  if (params.accountArea) {
+    stubFiles.push({
+      path: `cuenta/index.html`,
+      content: buildGateStub({
+        sub,
+        slug: "cuenta",
+        mode: "account",
+        passwordLogin: true,
         projectTitle: params.memberGate?.projectTitle ?? sub,
         locale: sourceLang,
         logoUrl: params.memberGate?.logoUrl,

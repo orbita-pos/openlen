@@ -181,6 +181,62 @@ describe("buildGateStub — password card", () => {
   });
 });
 
+describe("buildGateStub — account mode", () => {
+  it("renders the dashboard shell + hydration hook", () => {
+    const html = buildGateStub({ ...BASE, passwordLogin: true, mode: "account" });
+    expect(html).toContain('id="m-acct"');
+    expect(html).toContain('id="m-ava"');
+    expect(html).toContain('id="m-hi"');
+    expect(html).toContain('id="m-logout"');
+    expect(html).toContain('id="m-pwform"');
+    expect(html).toContain("window.__olRenderAccount");
+    expect(html).toContain('MODE="account"');
+  });
+
+  it("the account tag + strings render in Spanish", () => {
+    const html = buildGateStub({
+      ...BASE,
+      passwordLogin: true,
+      mode: "account",
+      locale: "es",
+    });
+    expect(html).toContain("Tu cuenta");
+    expect(html).toContain("Cerrar sesión");
+    expect(html).toContain("Mis reservas");
+  });
+
+  it("gate mode (default, or explicit) never renders the dashboard", () => {
+    // Task 1's shared probe (`if(MODE==="account"){…window.__olRenderAccount…}`)
+    // is baked into every passwordLogin doc regardless of mode — dead code
+    // text in gate mode. What must NOT leak into gate mode is the dashboard
+    // markup and the ACCOUNT_TAIL function DEFINITION (the actual render).
+    const gateDefault = buildGateStub({ ...BASE, passwordLogin: true });
+    expect(gateDefault).not.toContain('id="m-acct"');
+    expect(gateDefault).not.toContain("window.__olRenderAccount=function");
+    const gateExplicit = buildGateStub({ ...BASE, passwordLogin: true, mode: "gate" });
+    expect(gateExplicit).not.toContain('id="m-acct"');
+    expect(gateExplicit).not.toContain("window.__olRenderAccount=function");
+  });
+
+  it("paints member data via textContent only — never innerHTML", () => {
+    const html = buildGateStub({ ...BASE, passwordLogin: true, mode: "account" });
+    expect(html).toContain(".textContent=");
+    expect(html).not.toContain(".innerHTML=");
+  });
+
+  it("renders account mode for every publish locale", () => {
+    for (const l of PUBLISH_LOCALES) {
+      const html = buildGateStub({
+        ...BASE,
+        passwordLogin: true,
+        mode: "account",
+        locale: l.code,
+      });
+      expect(html.length).toBeGreaterThan(1000);
+    }
+  });
+});
+
 describe("wireMemberLogout", () => {
   const DOC = (body: string) =>
     `<!doctype html><html><head></head><body>${body}</body></html>`;

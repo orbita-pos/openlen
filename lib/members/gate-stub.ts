@@ -70,6 +70,18 @@ export interface GateStrings {
   verifyTitle: string;
   verifyIntro: string;
   verifyBtn: string;
+  acctTag: string;
+  acctAccount: string;
+  acctHi: string;
+  acctHiNoName: string;
+  acctPassword: string;
+  acctPasswordHint: string;
+  acctChange: string;
+  acctSave: string;
+  acctPwSaved: string;
+  acctBookings: string;
+  acctLogout: string;
+  acctUnverified: string;
 }
 
 const STRINGS: Record<string, GateStrings> = {
@@ -98,6 +110,18 @@ const STRINGS: Record<string, GateStrings> = {
     verifyTitle: "Confirm your email",
     verifyIntro: "To open this, confirm your email — we'll send you a link.",
     verifyBtn: "Send me the link",
+    acctTag: "Your account",
+    acctAccount: "Account",
+    acctHi: "Hi, %s",
+    acctHiNoName: "Your account",
+    acctPassword: "Password",
+    acctPasswordHint: "Sign in instantly next time",
+    acctChange: "Change",
+    acctSave: "Save",
+    acctPwSaved: "Password updated",
+    acctBookings: "My bookings",
+    acctLogout: "Sign out",
+    acctUnverified: "Email not confirmed",
   },
   es: {
     enter: "Entrar",
@@ -124,6 +148,18 @@ const STRINGS: Record<string, GateStrings> = {
     verifyTitle: "Confirma tu correo",
     verifyIntro: "Para abrir esto, confirma tu correo — te enviamos un link.",
     verifyBtn: "Enviarme el link",
+    acctTag: "Tu cuenta",
+    acctAccount: "Cuenta",
+    acctHi: "Hola, %s",
+    acctHiNoName: "Tu cuenta",
+    acctPassword: "Contraseña",
+    acctPasswordHint: "Entra al instante la próxima vez",
+    acctChange: "Cambiar",
+    acctSave: "Guardar",
+    acctPwSaved: "Contraseña actualizada",
+    acctBookings: "Mis reservas",
+    acctLogout: "Cerrar sesión",
+    acctUnverified: "Correo sin confirmar",
   },
   pt: {
     enter: "Entrar",
@@ -150,6 +186,18 @@ const STRINGS: Record<string, GateStrings> = {
     verifyTitle: "Confirme seu e-mail",
     verifyIntro: "Para abrir isto, confirme seu e-mail — enviaremos um link.",
     verifyBtn: "Enviar o link",
+    acctTag: "Sua conta",
+    acctAccount: "Conta",
+    acctHi: "Olá, %s",
+    acctHiNoName: "Sua conta",
+    acctPassword: "Senha",
+    acctPasswordHint: "Entre na hora da próxima vez",
+    acctChange: "Alterar",
+    acctSave: "Salvar",
+    acctPwSaved: "Senha atualizada",
+    acctBookings: "Minhas reservas",
+    acctLogout: "Sair",
+    acctUnverified: "E-mail não confirmado",
   },
   fr: {
     enter: "Continuer",
@@ -176,6 +224,18 @@ const STRINGS: Record<string, GateStrings> = {
     verifyTitle: "Confirmez votre e-mail",
     verifyIntro: "Pour ouvrir ceci, confirmez votre e-mail — nous vous enverrons un lien.",
     verifyBtn: "M'envoyer le lien",
+    acctTag: "Votre compte",
+    acctAccount: "Compte",
+    acctHi: "Bonjour, %s",
+    acctHiNoName: "Votre compte",
+    acctPassword: "Mot de passe",
+    acctPasswordHint: "Connectez-vous instantanément la prochaine fois",
+    acctChange: "Modifier",
+    acctSave: "Enregistrer",
+    acctPwSaved: "Mot de passe mis à jour",
+    acctBookings: "Mes réservations",
+    acctLogout: "Se déconnecter",
+    acctUnverified: "E-mail non confirmé",
   },
   de: {
     enter: "Weiter",
@@ -202,6 +262,18 @@ const STRINGS: Record<string, GateStrings> = {
     verifyTitle: "Bestätige deine E-Mail",
     verifyIntro: "Zum Öffnen bestätige deine E-Mail — wir senden dir einen Link.",
     verifyBtn: "Link senden",
+    acctTag: "Dein Konto",
+    acctAccount: "Konto",
+    acctHi: "Hallo, %s",
+    acctHiNoName: "Dein Konto",
+    acctPassword: "Passwort",
+    acctPasswordHint: "Beim nächsten Mal sofort anmelden",
+    acctChange: "Ändern",
+    acctSave: "Speichern",
+    acctPwSaved: "Passwort aktualisiert",
+    acctBookings: "Meine Buchungen",
+    acctLogout: "Abmelden",
+    acctUnverified: "E-Mail nicht bestätigt",
   },
   it: {
     enter: "Continua",
@@ -228,6 +300,18 @@ const STRINGS: Record<string, GateStrings> = {
     verifyTitle: "Conferma la tua email",
     verifyIntro: "Per aprire questo, conferma la tua email — ti invieremo un link.",
     verifyBtn: "Inviami il link",
+    acctTag: "Il tuo account",
+    acctAccount: "Account",
+    acctHi: "Ciao, %s",
+    acctHiNoName: "Il tuo account",
+    acctPassword: "Password",
+    acctPasswordHint: "Accedi subito la prossima volta",
+    acctChange: "Modifica",
+    acctSave: "Salva",
+    acctPwSaved: "Password aggiornata",
+    acctBookings: "Le mie prenotazioni",
+    acctLogout: "Esci",
+    acctUnverified: "Email non confermata",
   },
   ja: {
     enter: "続ける",
@@ -254,6 +338,18 @@ const STRINGS: Record<string, GateStrings> = {
     verifyTitle: "メールを確認してください",
     verifyIntro: "開くにはメールの確認が必要です。リンクをお送りします。",
     verifyBtn: "リンクを送る",
+    acctTag: "アカウント",
+    acctAccount: "アカウント",
+    acctHi: "%s さん、こんにちは",
+    acctHiNoName: "アカウント",
+    acctPassword: "パスワード",
+    acctPasswordHint: "次回はすぐにログインできます",
+    acctChange: "変更",
+    acctSave: "保存",
+    acctPwSaved: "パスワードを更新しました",
+    acctBookings: "予約一覧",
+    acctLogout: "ログアウト",
+    acctUnverified: "メール未確認",
   },
   ko: {
     enter: "계속",
@@ -280,6 +376,18 @@ const STRINGS: Record<string, GateStrings> = {
     verifyTitle: "이메일을 확인하세요",
     verifyIntro: "열려면 이메일을 확인하세요 — 링크를 보내드립니다.",
     verifyBtn: "링크 보내기",
+    acctTag: "내 계정",
+    acctAccount: "계정",
+    acctHi: "%s님, 안녕하세요",
+    acctHiNoName: "내 계정",
+    acctPassword: "비밀번호",
+    acctPasswordHint: "다음에는 바로 로그인됩니다",
+    acctChange: "변경",
+    acctSave: "저장",
+    acctPwSaved: "비밀번호가 변경되었습니다",
+    acctBookings: "내 예약",
+    acctLogout: "로그아웃",
+    acctUnverified: "이메일 미확인",
   },
   zh: {
     enter: "继续",
@@ -306,6 +414,18 @@ const STRINGS: Record<string, GateStrings> = {
     verifyTitle: "确认你的邮箱",
     verifyIntro: "要打开此内容，请确认你的邮箱 — 我们会给你发送链接。",
     verifyBtn: "给我发送链接",
+    acctTag: "我的账户",
+    acctAccount: "账户",
+    acctHi: "你好，%s",
+    acctHiNoName: "我的账户",
+    acctPassword: "密码",
+    acctPasswordHint: "下次即可直接登录",
+    acctChange: "修改",
+    acctSave: "保存",
+    acctPwSaved: "密码已更新",
+    acctBookings: "我的预约",
+    acctLogout: "退出登录",
+    acctUnverified: "邮箱未确认",
   },
   nl: {
     enter: "Doorgaan",
@@ -332,6 +452,18 @@ const STRINGS: Record<string, GateStrings> = {
     verifyTitle: "Bevestig je e-mail",
     verifyIntro: "Om dit te openen, bevestig je e-mail — we sturen je een link.",
     verifyBtn: "Stuur mij de link",
+    acctTag: "Je account",
+    acctAccount: "Account",
+    acctHi: "Hoi, %s",
+    acctHiNoName: "Je account",
+    acctPassword: "Wachtwoord",
+    acctPasswordHint: "Log de volgende keer direct in",
+    acctChange: "Wijzigen",
+    acctSave: "Opslaan",
+    acctPwSaved: "Wachtwoord bijgewerkt",
+    acctBookings: "Mijn reserveringen",
+    acctLogout: "Uitloggen",
+    acctUnverified: "E-mail niet bevestigd",
   },
 };
 
@@ -391,6 +523,29 @@ const PASSWORD_CSS = `
   .ghost:disabled{opacity:.5;cursor:default}
   #m-verify .intro{margin-top:14px;font-size:14.5px;line-height:1.55;color:var(--muted)}`;
 
+// Extra CSS for the account dashboard (mode:"account"), appended after
+// PASSWORD_CSS — account mode shows BOTH the auth card (logged out) and the
+// dashboard (logged in). The card <main> is text-align:center; the dashboard
+// needs left-aligned rows.
+const DASHBOARD_CSS = `
+  #m-acct{text-align:left}
+  .acct-head{display:flex;align-items:center;gap:13px}
+  .avatar{width:44px;height:44px;border-radius:50%;background:var(--field);display:grid;place-items:center;font-weight:700;color:var(--fg);font-size:16px;text-transform:uppercase}
+  .acct-head h3{font-size:16px;letter-spacing:-.01em;font-weight:700}
+  .acct-head .em{font-size:12.5px;color:var(--muted);margin-top:2px}
+  .chip{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:600;padding:5px 10px;border-radius:999px;margin-top:18px;background:color-mix(in srgb,var(--btn-bg) 15%,transparent);color:var(--btn-bg)}
+  .sec-label{font-size:10.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-top:20px}
+  .row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:13px 0;border-top:1px solid var(--ring)}
+  .row:first-of-type{margin-top:10px}
+  .row .k{font-size:13.5px;font-weight:600}
+  .row .s{font-size:12px;color:var(--muted);margin-top:2px}
+  .mini{border:1px solid var(--ring);background:transparent;border-radius:10px;font:inherit;font-weight:600;font-size:12.5px;color:var(--fg);padding:8px 13px;cursor:pointer;white-space:nowrap}
+  .mini:disabled{opacity:.5}
+  #m-pwform{display:flex;gap:8px;margin-top:12px}
+  #m-newpw{flex:1;padding:11px 14px;font-size:14px;color:var(--fg);background:var(--field);border:1px solid var(--ring);border-radius:10px;outline:none}
+  #m-newpw:focus{border-color:var(--focus)}
+  .logout{margin-top:20px;width:100%;text-align:center;background:transparent;border:0;color:var(--muted);font:inherit;font-size:12.5px;cursor:pointer;padding:6px}`;
+
 export function buildGateStub(params: GateStubParams): string {
   const locale =
     params.locale && STRINGS[params.locale] ? params.locale : "en";
@@ -411,6 +566,50 @@ export function buildGateStub(params: GateStubParams): string {
 
   const passwordLogin = params.passwordLogin === true;
   const mode = params.mode === "account" ? "account" : "gate";
+
+  // Spliced into passwordScript's IIFE (shares its API/T scope) only when
+  // mode==="account". Runs synchronously at IIFE-execution time — before the
+  // on-load /me fetch's `.then` (async) resolves — so window.__olRenderAccount
+  // is already defined by the time it's called. Paints every per-member value
+  // via textContent (never innerHTML); booking rows are built with
+  // document.createElement + textContent. The %s in acctHi is filled via a
+  // FUNCTION replacer so a name containing "$" can't trigger $-pattern
+  // substitution.
+  const accountTail = `
+var ACCT=${scriptJson({ hi: t.acctHi, hiNoName: t.acctHiNoName, pwSaved: t.acctPwSaved })},LOCALE=${scriptJson(locale)};
+function fmtDate(iso){try{return new Date(iso).toLocaleString(LOCALE,{weekday:"short",day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"});}catch(e){return "";}}
+window.__olRenderAccount=function(data){
+var nm=(data&&data.name)||"",em=(data&&data.email)||"";
+document.getElementById("m-ava").textContent=(nm||em||"?").trim().charAt(0).toUpperCase();
+document.getElementById("m-hi").textContent=nm?ACCT.hi.replace("%s",function(){return nm;}):ACCT.hiNoName;
+document.getElementById("m-em").textContent=em;
+document.getElementById("m-chip").hidden=!!(data&&data.verified);
+var list=(data&&data.bookings)||[],box=document.getElementById("m-bklist");
+if(list.length){
+for(var i=0;i<list.length;i++){
+var b=list[i],row=document.createElement("div");row.className="row";
+var left=document.createElement("div");
+var k=document.createElement("div");k.className="k";k.textContent=b.service||"";
+var s=document.createElement("div");s.className="s";s.textContent=fmtDate(b.startUtc);
+left.appendChild(k);left.appendChild(s);row.appendChild(left);box.appendChild(row);
+}
+document.getElementById("m-bookings").hidden=false;
+}
+document.getElementById("m-loading").hidden=true;
+document.getElementById("m-acct").hidden=false;
+};
+var chpw=document.getElementById("m-chpw"),pwform=document.getElementById("m-pwform"),newpw=document.getElementById("m-newpw"),pwmsg=document.getElementById("m-pwmsg");
+if(chpw)chpw.addEventListener("click",function(){pwform.hidden=!pwform.hidden;if(!pwform.hidden)newpw.focus();});
+if(pwform)pwform.addEventListener("submit",function(e){
+e.preventDefault();var sv=document.getElementById("m-pwsave");sv.disabled=true;pwmsg.hidden=true;
+fetch(API+"/auth/set-password",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({password:newpw.value})}).then(function(r){
+sv.disabled=false;
+if(r.status===200){pwform.hidden=true;newpw.value="";pwmsg.textContent=ACCT.pwSaved;pwmsg.hidden=false;return;}
+pwmsg.textContent=r.status===400?T.badPassword:T.error;pwmsg.hidden=false;
+}).catch(function(){sv.disabled=false;pwmsg.textContent=T.error;pwmsg.hidden=false;});
+});
+var lo=document.getElementById("m-logout");
+if(lo)lo.addEventListener("click",function(){lo.disabled=true;fetch(API+"/auth/logout",{method:"POST",credentials:"same-origin"}).then(function(){location.reload();}).catch(function(){location.reload();});});`;
 
   const legacyScript = `(function(){
 var SUB=${scriptJson(params.sub)},SLUG=${scriptJson(params.slug)},T=${scriptJson({
@@ -510,6 +709,7 @@ if(vbtn)vbtn.addEventListener("click",function(){
   }).catch(function(){vbtn.disabled=false;setMsg(vmsg,T.error);});
 });
 selTab("up");
+${mode === "account" ? accountTail : ""}
 })();`;
 
   const script = passwordLogin ? passwordScript : legacyScript;
@@ -542,8 +742,41 @@ selTab("up");
     <p id="m-vmsg" hidden></p>
   </div>`;
 
-  const cardBody = passwordLogin ? passwordCardMarkup : legacyFormMarkup;
-  const extraCss = passwordLogin ? PASSWORD_CSS : "";
+  // Static copy is escaped at build; the ONLY elements filled from /me at
+  // runtime are #m-ava, #m-hi, #m-em, and the #m-bklist rows (ACCOUNT_TAIL,
+  // via textContent — never innerHTML). The chip text is static, toggled by
+  // `hidden`.
+  const accountMarkup =
+    mode === "account"
+      ? `<div id="m-acct" hidden>
+    <div class="acct-head">
+      <div class="avatar" id="m-ava"></div>
+      <div><h3 id="m-hi"></h3><div class="em" id="m-em"></div></div>
+    </div>
+    <span class="chip" id="m-chip" hidden>${escapeHtml(t.acctUnverified)}</span>
+    <div class="sec-label">${escapeHtml(t.acctAccount)}</div>
+    <div class="row">
+      <div><div class="k">${escapeHtml(t.acctPassword)}</div><div class="s">${escapeHtml(t.acctPasswordHint)}</div></div>
+      <button type="button" class="mini" id="m-chpw">${escapeHtml(t.acctChange)}</button>
+    </div>
+    <form id="m-pwform" hidden>
+      <input id="m-newpw" type="password" autocomplete="new-password" minlength="8" placeholder="${escapeHtml(t.passwordPlaceholder)}">
+      <button type="submit" class="mini" id="m-pwsave">${escapeHtml(t.acctSave)}</button>
+    </form>
+    <p id="m-pwmsg" class="s" hidden></p>
+    <div id="m-bookings" hidden>
+      <div class="sec-label">${escapeHtml(t.acctBookings)}</div>
+      <div id="m-bklist"></div>
+    </div>
+    <button type="button" class="logout" id="m-logout">${escapeHtml(t.acctLogout)}</button>
+  </div>`
+      : "";
+  const cardBody = passwordLogin ? passwordCardMarkup + accountMarkup : legacyFormMarkup;
+  const extraCss = passwordLogin
+    ? PASSWORD_CSS + (mode === "account" ? DASHBOARD_CSS : "")
+    : "";
+  // "Members only" is wrong copy on a sign-in/account card.
+  const tagText = mode === "account" ? t.acctTag : t.tag;
 
   return `<!doctype html>
 <html lang="${escapeHtml(locale)}">
@@ -601,7 +834,7 @@ selTab("up");
 <body>
 <main>
   ${logo}
-  <p class="tag">${escapeHtml(t.tag)}</p>
+  <p class="tag">${escapeHtml(tagText)}</p>
   <h1>${title}</h1>
   <div id="m-loading">${escapeHtml(t.checking)}</div>
   ${cardBody}
