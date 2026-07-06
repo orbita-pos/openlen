@@ -803,12 +803,14 @@ export async function publishProject(
     members?.accountArea === true &&
     members?.passwordLogin === true; // — requires passwordLogin (the Cuentas preset couples them); without it register/login/set-password 404 and the /cuenta card would be a dead end.
 
-  // Members sign-in: when a gated portal exists, every public doc links to it.
-  // Prefer the canonical members page; fall back to the first gated slug.
-  // splitPagesForPublish only yields gatedPages when the module is on, so a
-  // non-empty list already means "show the sign-in".
-  const memberSigninPath =
-    gatedPages.length > 0
+  // Members sign-in: the account area wins when on — /cuenta is the account
+  // home even without a gated page. Otherwise, when a gated portal exists,
+  // every public doc links to it (canonical members page, else first gated
+  // slug). splitPagesForPublish only yields gatedPages when the module is
+  // on, so a non-empty list already means "show the sign-in".
+  const memberSigninPath = accountArea
+    ? "cuenta"
+    : gatedPages.length > 0
       ? (gatedPages.find((p) => p.slug === "miembros" || p.slug === "members")
           ?.slug ?? gatedPages[0].slug)
       : undefined;
@@ -876,6 +878,7 @@ export async function publishProject(
       pages: publicPages,
       gatedPages: gatedPages.length > 0 ? gatedPages : undefined,
       memberSigninPath,
+      memberSigninIsAccount: accountArea || undefined,
       memberGate:
         gatedPages.length > 0 || accountArea
           ? {

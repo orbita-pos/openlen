@@ -49,6 +49,17 @@ export function signinLabelFor(locale?: string | null): string {
   return (locale && LABELS[locale]) || LABELS.en;
 }
 
+const ACCOUNT_LABELS: Record<string, string> = {
+  en: "Account", es: "Mi cuenta", pt: "Minha conta", fr: "Mon compte",
+  de: "Mein Konto", it: "Il mio account", ja: "アカウント", ko: "내 계정",
+  zh: "我的账户", nl: "Mijn account",
+};
+
+/** The nav label for the account home (/cuenta) — en fallback. */
+export function accountLabelFor(locale?: string | null): string {
+  return (locale && ACCOUNT_LABELS[locale]) || ACCOUNT_LABELS.en;
+}
+
 function escAttr(s: string): string {
   return s.replace(/&/g, "&amp;").replace(/"/g, "&quot;");
 }

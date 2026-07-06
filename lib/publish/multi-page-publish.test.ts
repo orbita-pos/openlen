@@ -394,3 +394,50 @@ describe("publishToDir with the account page", () => {
     assert.ok(!existsSync(path.join(dir, "cuenta", "index.html")));
   });
 });
+
+describe("members sign-in link surfaces the account area (Part E)", () => {
+  before(async () => {
+    await publishToDir({
+      subdomain: "accttest2",
+      html: DOC("home"),
+      memberSigninPath: "cuenta",
+      memberSigninIsAccount: true,
+    });
+  });
+
+  const releaseDir = () => {
+    const current = path.join(root, "accttest2", "current");
+    try {
+      const sha = readFileSync(current, "utf8").trim();
+      return path.join(root, "accttest2", "releases", sha);
+    } catch {
+      return current;
+    }
+  };
+
+  it("injects a link to /cuenta with the account label", () => {
+    const home = readFileSync(path.join(releaseDir(), "index.html"), "utf8");
+    assert.ok(home.includes('href="/cuenta"'), "points at the account home");
+    assert.ok(home.includes("Mi cuenta"), "account label, not the generic sign-in label");
+    assert.ok(!home.includes("Iniciar sesión"), "does not carry the generic sign-in label");
+  });
+
+  it("without memberSigninIsAccount, the same /cuenta path gets the generic sign-in label", async () => {
+    await publishToDir({
+      subdomain: "accttest2b",
+      html: DOC("home"),
+      memberSigninPath: "cuenta",
+    });
+    const current = path.join(root, "accttest2b", "current");
+    let dir: string;
+    try {
+      dir = path.join(root, "accttest2b", "releases", readFileSync(current, "utf8").trim());
+    } catch {
+      dir = current;
+    }
+    const home = readFileSync(path.join(dir, "index.html"), "utf8");
+    assert.ok(home.includes('href="/cuenta"'), "still points at /cuenta");
+    assert.ok(home.includes("Iniciar sesión"), "falls back to the generic sign-in label");
+    assert.ok(!home.includes("Mi cuenta"), "not the account label without the flag");
+  });
+});

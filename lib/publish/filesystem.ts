@@ -44,7 +44,7 @@ import { injectTrackingStrip } from "@/lib/publish/tracking-strip";
 import { injectLogoIntoHtml } from "@/lib/branding/inject-logo";
 import { absolutizeSocialMeta } from "@/lib/branding/social-image";
 import { buildGateStub, wireMemberLogout } from "@/lib/members/gate-stub";
-import { applySigninLink, signinLabelFor } from "@/lib/publish/signin-link";
+import { applySigninLink, signinLabelFor, accountLabelFor } from "@/lib/publish/signin-link";
 import { detectSiteAccent } from "@/lib/members/site-accent";
 import { validatePageSlug } from "@/lib/projects/site-pages";
 import type {
@@ -221,6 +221,9 @@ export interface PublishParams {
    *  sign-in link is rewired to it, or a neutral one is injected. Absent →
    *  no-op (module off / no gated page). */
   memberSigninPath?: string;
+  /** When the signin path is the Cuentas account home (/cuenta), the injected
+   *  nav link reads as an account entry ("Mi cuenta") not "Iniciar sesión". */
+  memberSigninIsAccount?: boolean;
   /** Cuentas preset: also publish the account card at /cuenta (its bytes ARE
    *  the auth card / dashboard — mode:"account" — with no protected doc behind
    *  it). Wears the same detected accent as the gate stubs. */
@@ -971,7 +974,7 @@ export async function publishToDir(
       params.sourceLang?.trim() || detectHtmlLang(migratedHtml) || "en";
     migratedHtml = applySigninLink(migratedHtml, {
       href: `/${params.memberSigninPath}`,
-      label: signinLabelFor(lang),
+      label: params.memberSigninIsAccount ? accountLabelFor(lang) : signinLabelFor(lang),
     });
   }
 
@@ -1046,7 +1049,7 @@ export async function publishToDir(
     if (params.memberSigninPath && process.env.OPENLEN_MEMBER_SIGNIN !== "0") {
       doc = applySigninLink(doc, {
         href: `/${params.memberSigninPath}`,
-        label: signinLabelFor(sourceLang),
+        label: params.memberSigninIsAccount ? accountLabelFor(sourceLang) : signinLabelFor(sourceLang),
       });
     }
     doc = annotateLanguageCluster(doc, {
