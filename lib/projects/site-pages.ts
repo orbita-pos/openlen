@@ -25,6 +25,8 @@ const RESERVED_SLUGS = new Set<string>([
   "f",
   "sitemap.xml",
   "robots.txt",
+  "cuenta",
+  "account",
   ...PUBLISH_LOCALES.map((l) => l.code),
 ]);
 

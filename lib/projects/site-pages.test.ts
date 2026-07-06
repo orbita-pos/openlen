@@ -36,7 +36,7 @@ describe("validatePageSlug", () => {
   });
 
   it("rejects every reserved path a published sub already owns", () => {
-    for (const s of ["assets", "c", "api", "uploads", "index", "404", "es", "ja", "EN"]) {
+    for (const s of ["assets", "c", "api", "uploads", "index", "404", "es", "ja", "EN", "cuenta", "account"]) {
       const r = validatePageSlug(s);
       assert.equal(r.ok, false, s);
       if (!r.ok) assert.equal(r.reason, "reserved", s);
