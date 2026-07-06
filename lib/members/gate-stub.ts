@@ -602,7 +602,7 @@ var chpw=document.getElementById("m-chpw"),pwform=document.getElementById("m-pwf
 if(chpw)chpw.addEventListener("click",function(){pwform.hidden=!pwform.hidden;if(!pwform.hidden)newpw.focus();});
 if(pwform)pwform.addEventListener("submit",function(e){
 e.preventDefault();var sv=document.getElementById("m-pwsave");sv.disabled=true;pwmsg.hidden=true;
-fetch(API+"/auth/set-password",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({password:newpw.value})}).then(function(r){
+fetch(API+"/auth/set-password",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({password:newpw.value}),credentials:"same-origin"}).then(function(r){
 sv.disabled=false;
 if(r.status===200){pwform.hidden=true;newpw.value="";pwmsg.textContent=ACCT.pwSaved;pwmsg.hidden=false;return;}
 pwmsg.textContent=r.status===400?T.badPassword:T.error;pwmsg.hidden=false;
@@ -776,7 +776,7 @@ ${mode === "account" ? accountTail : ""}
     ? PASSWORD_CSS + (mode === "account" ? DASHBOARD_CSS : "")
     : "";
   // "Members only" is wrong copy on a sign-in/account card.
-  const tagText = mode === "account" ? t.acctTag : t.tag;
+  const tagText = mode === "account" && passwordLogin ? t.acctTag : t.tag;
 
   return `<!doctype html>
 <html lang="${escapeHtml(locale)}">

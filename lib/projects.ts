@@ -798,7 +798,10 @@ export async function publishProject(
   // Preset «Cuentas»: auto-created «Mi cuenta» area — /cuenta publishes even
   // without a gated page, as long as the module is on and the preset is set.
   const members = project.data?.settings?.members;
-  const accountArea = members?.enabled === true && members?.accountArea === true;
+  const accountArea =
+    members?.enabled === true &&
+    members?.accountArea === true &&
+    members?.passwordLogin === true; // — requires passwordLogin (the Cuentas preset couples them); without it register/login/set-password 404 and the /cuenta card would be a dead end.
 
   // Members sign-in: when a gated portal exists, every public doc links to it.
   // Prefer the canonical members page; fall back to the first gated slug.

@@ -189,7 +189,7 @@ describe("buildGateStub — account mode", () => {
     expect(html).toContain('id="m-hi"');
     expect(html).toContain('id="m-logout"');
     expect(html).toContain('id="m-pwform"');
-    expect(html).toContain("window.__olRenderAccount");
+    expect(html).toContain("window.__olRenderAccount=function");
     expect(html).toContain('MODE="account"');
   });
 
