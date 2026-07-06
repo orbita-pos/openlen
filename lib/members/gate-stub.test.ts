@@ -193,6 +193,11 @@ describe("buildGateStub — account mode", () => {
     expect(html).toContain('MODE="account"');
   });
 
+  it("keeps the change-password form hidden until Cambiar via :not([hidden]) CSS", () => {
+    const html = buildGateStub({ ...BASE, passwordLogin: true, mode: "account" });
+    expect(html).toContain("#m-pwform:not([hidden])");
+  });
+
   it("the account tag + strings render in Spanish", () => {
     const html = buildGateStub({
       ...BASE,

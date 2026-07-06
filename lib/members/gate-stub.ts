@@ -541,7 +541,7 @@ const DASHBOARD_CSS = `
   .row .s{font-size:12px;color:var(--muted);margin-top:2px}
   .mini{border:1px solid var(--ring);background:transparent;border-radius:10px;font:inherit;font-weight:600;font-size:12.5px;color:var(--fg);padding:8px 13px;cursor:pointer;white-space:nowrap}
   .mini:disabled{opacity:.5}
-  #m-pwform{display:flex;gap:8px;margin-top:12px}
+  #m-pwform:not([hidden]){display:flex;gap:8px;margin-top:12px}
   #m-newpw{flex:1;padding:11px 14px;font-size:14px;color:var(--fg);background:var(--field);border:1px solid var(--ring);border-radius:10px;outline:none}
   #m-newpw:focus{border-color:var(--focus)}
   .logout{margin-top:20px;width:100%;text-align:center;background:transparent;border:0;color:var(--muted);font:inherit;font-size:12.5px;cursor:pointer;padding:6px}`;
