@@ -92,6 +92,11 @@ export interface SigninLinkOpts {
   href: string;
   /** Visible label for an INJECTED link (ignored when rewiring). */
   label: string;
+  /** Account entry only: when the rewired anchor's inner is PLAIN TEXT (no
+   *  nested markup), replace it with this label so the nav reads "Mi cuenta"
+   *  instead of the template's "Sign in". Anchors containing icons/tags keep
+   *  their inner untouched (only the href is repointed). Absent → inner kept. */
+  rewriteText?: string;
 }
 
 /** Ensure a working sign-in entry on a public document. See file header. */
@@ -106,7 +111,11 @@ export function applySigninLink(html: string, opts: SigninLinkOpts): string {
     (full: string, attrs: string, inner: string) => {
       if (!SIGNIN_TEXTS.has(visibleText(inner))) return full;
       rewired = true;
-      return `<a${setHref(attrs, href)}>${inner}</a>`;
+      const newInner =
+        opts.rewriteText && !inner.includes("<")
+          ? escText(opts.rewriteText)
+          : inner;
+      return `<a${setHref(attrs, href)}>${newInner}</a>`;
     },
   );
   if (rewired) return out;

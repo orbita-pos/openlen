@@ -975,6 +975,7 @@ export async function publishToDir(
     migratedHtml = applySigninLink(migratedHtml, {
       href: `/${params.memberSigninPath}`,
       label: params.memberSigninIsAccount ? accountLabelFor(lang) : signinLabelFor(lang),
+      rewriteText: params.memberSigninIsAccount ? accountLabelFor(lang) : undefined,
     });
   }
 
@@ -1050,6 +1051,7 @@ export async function publishToDir(
       doc = applySigninLink(doc, {
         href: `/${params.memberSigninPath}`,
         label: params.memberSigninIsAccount ? accountLabelFor(sourceLang) : signinLabelFor(sourceLang),
+        rewriteText: params.memberSigninIsAccount ? accountLabelFor(sourceLang) : undefined,
       });
     }
     doc = annotateLanguageCluster(doc, {

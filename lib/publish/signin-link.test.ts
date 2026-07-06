@@ -45,6 +45,47 @@ describe("applySigninLink — rewire existing", () => {
     expect(out).toContain("data-ol-signin"); // injected instead
     expect(out).toContain(`href="/miembros"`);
   });
+
+  it("rewires AND swaps to the account label when the anchor's inner is plain text", () => {
+    const html = `<nav><a href="/login">Sign in</a></nav>`;
+    const out = applySigninLink(html, {
+      href: "/cuenta",
+      label: "Mi cuenta",
+      rewriteText: "Mi cuenta",
+    });
+    expect(out).toContain(`href="/cuenta"`);
+    expect(out).toContain(">Mi cuenta<");
+    expect(out).not.toContain(">Sign in<");
+  });
+
+  it("keeps an icon-bearing anchor's inner untouched (only href is repointed)", () => {
+    const html = `<nav><a href="/login"><svg></svg>Sign in</a></nav>`;
+    const out = applySigninLink(html, {
+      href: "/cuenta",
+      label: "Mi cuenta",
+      rewriteText: "Mi cuenta",
+    });
+    expect(out).toContain(`href="/cuenta"`);
+    expect(out).toContain("<svg></svg>Sign in");
+    expect(out).not.toContain("Mi cuenta");
+  });
+
+  it("keeps the inner when no rewriteText is passed (gated-portal path)", () => {
+    const html = `<nav><a href="/login">Iniciar sesión</a></nav>`;
+    const out = applySigninLink(html, { href: "/miembros", label: "Iniciar sesión" });
+    expect(out).toContain(">Iniciar sesión<");
+    expect(out).toContain(`href="/miembros"`);
+  });
+
+  it("escapes rewriteText when swapped into a plain-text anchor", () => {
+    const html = `<nav><a href="/login">Sign in</a></nav>`;
+    const out = applySigninLink(html, {
+      href: "/cuenta",
+      label: "A & B",
+      rewriteText: "A & B",
+    });
+    expect(out).toContain("A &amp; B");
+  });
 });
 
 describe("applySigninLink — inject when absent", () => {
