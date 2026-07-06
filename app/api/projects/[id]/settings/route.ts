@@ -508,7 +508,11 @@ export async function PATCH(
     // in the same write. buildAutoMembersPage null = nothing to create.
     const turningOn =
       body.members.enabled === true && data.settings?.members?.enabled !== true;
-    if (turningOn) {
+    // Option A (Cuentas): enabling the account area bakes /cuenta as the account
+    // home (publishToDir emits it) — so we do NOT also auto-create the gated
+    // /miembros landing. The per-page lock (membersOnly) stays a separate action.
+    // Legacy enable (no accountArea) keeps the auto-page.
+    if (turningOn && nextSettings.members?.accountArea !== true) {
       createdPage = buildAutoMembersPage(data);
     }
   }
