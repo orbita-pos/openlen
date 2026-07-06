@@ -3,18 +3,19 @@
   "subtitle": "Backend in un click per il tuo sito. Senza crediti, senza codice.",
   "perProject": "Apri un progetto per gestire i suoi moduli.",
   "module": {
-    "title": "Membri",
-    "tagline": "Login visitatori + pagine solo per membri",
-    "toggle": "Attiva membri",
+    "title": "Account",
+    "tagline": "Accesso + pagina «Il mio account»",
+    "toggle": "Attiva account",
     "mode": {
       "open": "Iscrizione aperta",
       "invite": "Solo su invito",
-      "openHint": "Chiunque entra con la sua email — inviamo un link di accesso.",
-      "inviteHint": "Possono accedere solo le email che aggiungi sotto."
+      "openHint": "Chiunque può creare un account con email + password (o un link via email).",
+      "inviteHint": "Solo le email che aggiungi qui sotto possono creare un account."
     },
     "gatedCount": "{count, plural, one {# pagina è solo per membri. Gestiscila nella scheda Site.} other {# pagine sono solo per membri. Gestiscile nella scheda Site.}}",
     "gatedNone": "Ancora nessuna pagina riservata — segnane una col lucchetto nella scheda Site.",
-    "autoPage": "Abbiamo creato /{slug} per te — già solo per membri, nata con lo stile del tuo sito. Modificala come qualsiasi altra pagina."
+    "autoPage": "Abbiamo creato /{slug} per te — già solo per membri, nata con lo stile del tuo sito. Modificala come qualsiasi altra pagina.",
+    "accountLive": "La tua pagina «Il mio account» sarà online su /cuenta alla pubblicazione. Blocca una pagina a parte con il 🔒 nella scheda Sito."
   },
   "included": {
     "title": "Incluso nel tuo sito",

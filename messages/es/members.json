@@ -3,18 +3,19 @@
   "subtitle": "Backend de un click para tu sitio. Sin créditos, sin código.",
   "perProject": "Abre un proyecto para gestionar sus módulos.",
   "module": {
-    "title": "Miembros",
-    "tagline": "Login de visitantes + páginas solo para miembros",
-    "toggle": "Activar miembros",
+    "title": "Cuentas",
+    "tagline": "Inicio de sesión + página «Mi cuenta»",
+    "toggle": "Activar cuentas",
     "mode": {
       "open": "Registro abierto",
       "invite": "Solo invitados",
-      "openHint": "Cualquiera entra con su email — le enviamos un enlace de acceso.",
-      "inviteHint": "Solo pueden entrar los emails que agregues abajo."
+      "openHint": "Cualquiera puede crear una cuenta con correo + contraseña (o un link por correo).",
+      "inviteHint": "Solo los correos que agregues abajo pueden crear una cuenta."
     },
     "gatedCount": "{count, plural, one {# página es solo para miembros. Gestiónalo en la pestaña Site.} other {# páginas son solo para miembros. Gestiónalo en la pestaña Site.}}",
     "gatedNone": "Aún no hay páginas solo para miembros — márcala con el candado en la pestaña Site.",
-    "autoPage": "Te creamos /{slug} — ya es solo para miembros y nació con el diseño de tu sitio. Edítala como cualquier otra página."
+    "autoPage": "Te creamos /{slug} — ya es solo para miembros y nació con el diseño de tu sitio. Edítala como cualquier otra página.",
+    "accountLive": "Tu página «Mi cuenta» estará en /cuenta al publicar. Bloquea cualquier página aparte con el 🔒 en la pestaña Sitio."
   },
   "included": {
     "title": "Incluido con tu sitio",

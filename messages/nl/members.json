@@ -3,18 +3,19 @@
   "subtitle": "Backend met één klik voor je site. Geen credits, geen code.",
   "perProject": "Open een project om de modules te beheren.",
   "module": {
-    "title": "Leden",
-    "tagline": "Bezoekerslogin + pagina's alleen voor leden",
-    "toggle": "Leden inschakelen",
+    "title": "Accounts",
+    "tagline": "Inloggen + een «Mijn account»-pagina",
+    "toggle": "Accounts inschakelen",
     "mode": {
       "open": "Open aanmelding",
       "invite": "Alleen op uitnodiging",
-      "openHint": "Iedereen kan zich aanmelden met e-mail — we sturen een inloglink.",
-      "inviteHint": "Alleen e-mails die je hieronder toevoegt kunnen inloggen."
+      "openHint": "Iedereen kan een account aanmaken met e-mail + wachtwoord (of een e-maillink).",
+      "inviteHint": "Alleen de e-mails die je hieronder toevoegt kunnen een account aanmaken."
     },
     "gatedCount": "{count, plural, one {# pagina is alleen voor leden. Beheer dit in het Site-tabblad.} other {# pagina's zijn alleen voor leden. Beheer dit in het Site-tabblad.}}",
     "gatedNone": "Nog geen ledenpagina's — markeer er één met het slot in het Site-tabblad.",
-    "autoPage": "We hebben /{slug} voor je gemaakt — al alleen voor leden, in de stijl van je site. Bewerk hem als elke andere pagina."
+    "autoPage": "We hebben /{slug} voor je gemaakt — al alleen voor leden, in de stijl van je site. Bewerk hem als elke andere pagina.",
+    "accountLive": "Je «Mijn account»-pagina staat na publiceren op /cuenta. Vergrendel losse pagina's apart met het 🔒 in het tabblad Site."
   },
   "included": {
     "title": "Inbegrepen bij je site",

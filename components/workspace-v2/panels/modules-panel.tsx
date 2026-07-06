@@ -191,10 +191,12 @@ export function ModulesPanel({
   const setEnabled = async (next: boolean) => {
     if (busy || !onUpdateMembers) return;
     setBusy(true);
-    const result = await onUpdateMembers({ enabled: next });
-    if (next && result.ok && result.createdPageSlug) {
-      setAutoPageSlug(result.createdPageSlug);
-    }
+    const result = await onUpdateMembers(
+      next
+        ? { enabled: true, mode: membersSettings?.mode ?? "open", passwordLogin: true, accountArea: true }
+        : { enabled: false },
+    );
+    if (next && result.ok) setAutoPageSlug("cuenta");
     if (!next) setAutoPageSlug(null);
     setBusy(false);
   };
@@ -290,7 +292,7 @@ export function ModulesPanel({
             <div className="space-y-2.5">
               {autoPageSlug && (
                 <p className="rounded-lg bg-emerald-500/10 ring-1 ring-emerald-500/30 px-2.5 py-2 text-[11px] leading-relaxed text-emerald-700 dark:text-emerald-400">
-                  {t("module.autoPage", { slug: autoPageSlug })}
+                  {t("module.accountLive")}
                 </p>
               )}
               <Segment

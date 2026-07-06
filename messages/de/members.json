@@ -3,18 +3,19 @@
   "subtitle": "Ein-Klick-Backend für deine Seite. Ohne Credits, ohne Code.",
   "perProject": "Öffne ein Projekt, um seine Module zu verwalten.",
   "module": {
-    "title": "Mitglieder",
-    "tagline": "Besucher-Login + Seiten nur für Mitglieder",
-    "toggle": "Mitglieder aktivieren",
+    "title": "Konten",
+    "tagline": "Anmeldung + Seite «Mein Konto»",
+    "toggle": "Konten aktivieren",
     "mode": {
       "open": "Offene Anmeldung",
       "invite": "Nur auf Einladung",
-      "openHint": "Jeder kann sich mit seiner E-Mail anmelden — wir senden einen Anmeldelink.",
-      "inviteHint": "Nur unten hinzugefügte E-Mails können sich anmelden."
+      "openHint": "Jede Person kann ein Konto mit E-Mail + Passwort erstellen (oder per E-Mail-Link).",
+      "inviteHint": "Nur die E-Mails, die du unten hinzufügst, können ein Konto erstellen."
     },
     "gatedCount": "{count, plural, one {# Seite ist nur für Mitglieder. Verwalte das im Site-Tab.} other {# Seiten sind nur für Mitglieder. Verwalte das im Site-Tab.}}",
     "gatedNone": "Noch keine Mitglieder-Seiten — markiere eine mit dem Schloss im Site-Tab.",
-    "autoPage": "Wir haben /{slug} für dich erstellt — bereits nur für Mitglieder, im Look deiner Seite. Bearbeite sie wie jede andere Seite."
+    "autoPage": "Wir haben /{slug} für dich erstellt — bereits nur für Mitglieder, im Look deiner Seite. Bearbeite sie wie jede andere Seite.",
+    "accountLive": "Deine Seite «Mein Konto» ist nach dem Veröffentlichen unter /cuenta erreichbar. Sperre einzelne Seiten separat mit dem 🔒 im Site-Tab."
   },
   "included": {
     "title": "In deiner Seite enthalten",

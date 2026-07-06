@@ -3,18 +3,19 @@
   "subtitle": "Backend en un clic pour votre site. Sans crédits, sans code.",
   "perProject": "Ouvrez un projet pour gérer ses modules.",
   "module": {
-    "title": "Membres",
-    "tagline": "Connexion visiteurs + pages réservées aux membres",
-    "toggle": "Activer les membres",
+    "title": "Comptes",
+    "tagline": "Connexion + page « Mon compte »",
+    "toggle": "Activer les comptes",
     "mode": {
       "open": "Inscription ouverte",
       "invite": "Sur invitation",
-      "openHint": "Chacun peut s'inscrire avec son e-mail — nous envoyons un lien de connexion.",
-      "inviteHint": "Seuls les e-mails ajoutés ci-dessous peuvent se connecter."
+      "openHint": "Tout le monde peut créer un compte avec e-mail + mot de passe (ou un lien par e-mail).",
+      "inviteHint": "Seuls les e-mails que vous ajoutez ci-dessous peuvent créer un compte."
     },
     "gatedCount": "{count, plural, one {# page est réservée aux membres. Gérez-le dans l'onglet Site.} other {# pages sont réservées aux membres. Gérez-le dans l'onglet Site.}}",
     "gatedNone": "Aucune page réservée pour l'instant — marquez-en une avec le cadenas dans l'onglet Site.",
-    "autoPage": "Nous avons créé /{slug} pour vous — déjà réservée aux membres, avec le style de votre site. Modifiez-la comme toute autre page."
+    "autoPage": "Nous avons créé /{slug} pour vous — déjà réservée aux membres, avec le style de votre site. Modifiez-la comme toute autre page.",
+    "accountLive": "Votre page « Mon compte » sera en ligne sur /cuenta à la publication. Verrouillez une page à part avec le 🔒 dans l'onglet Site."
   },
   "included": {
     "title": "Inclus avec votre site",
