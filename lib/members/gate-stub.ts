@@ -64,6 +64,7 @@ export interface GateStrings {
   orLink: string;
   orWord: string;
   badCred: string;
+  signupClosed: string;
   exists: string;
   badPassword: string;
   verifyTitle: string;
@@ -91,6 +92,7 @@ const STRINGS: Record<string, GateStrings> = {
     orLink: "Sign in with an email link",
     orWord: "or",
     badCred: "Wrong email or password.",
+    signupClosed: "Sign-ups are closed here right now — try signing in, or ask for access.",
     exists: "That email is already registered — sign in instead.",
     badPassword: "Password must be at least 8 characters.",
     verifyTitle: "Confirm your email",
@@ -116,6 +118,7 @@ const STRINGS: Record<string, GateStrings> = {
     orLink: "Entrar con un link por correo",
     orWord: "o",
     badCred: "Correo o contraseña incorrectos.",
+    signupClosed: "Los registros están cerrados aquí ahora mismo — inicia sesión o pide acceso.",
     exists: "Ese correo ya está registrado — inicia sesión.",
     badPassword: "La contraseña debe tener al menos 8 caracteres.",
     verifyTitle: "Confirma tu correo",
@@ -141,6 +144,7 @@ const STRINGS: Record<string, GateStrings> = {
     orLink: "Entrar com um link por e-mail",
     orWord: "ou",
     badCred: "E-mail ou senha incorretos.",
+    signupClosed: "Os cadastros estão fechados aqui no momento — faça login ou peça acesso.",
     exists: "Esse e-mail já está cadastrado — faça login.",
     badPassword: "A senha deve ter pelo menos 8 caracteres.",
     verifyTitle: "Confirme seu e-mail",
@@ -166,6 +170,7 @@ const STRINGS: Record<string, GateStrings> = {
     orLink: "Se connecter avec un lien par e-mail",
     orWord: "ou",
     badCred: "E-mail ou mot de passe incorrect.",
+    signupClosed: "Les inscriptions sont fermées ici pour le moment — connectez-vous ou demandez un accès.",
     exists: "Cet e-mail est déjà inscrit — connectez-vous.",
     badPassword: "Le mot de passe doit contenir au moins 8 caractères.",
     verifyTitle: "Confirmez votre e-mail",
@@ -191,6 +196,7 @@ const STRINGS: Record<string, GateStrings> = {
     orLink: "Mit einem E-Mail-Link anmelden",
     orWord: "oder",
     badCred: "Falsche E-Mail oder falsches Passwort.",
+    signupClosed: "Registrierungen sind hier gerade geschlossen — melde dich an oder bitte um Zugang.",
     exists: "Diese E-Mail ist bereits registriert — melde dich an.",
     badPassword: "Das Passwort muss mindestens 8 Zeichen haben.",
     verifyTitle: "Bestätige deine E-Mail",
@@ -216,6 +222,7 @@ const STRINGS: Record<string, GateStrings> = {
     orLink: "Accedi con un link via email",
     orWord: "o",
     badCred: "Email o password errati.",
+    signupClosed: "Le registrazioni sono chiuse qui al momento — accedi o chiedi l'accesso.",
     exists: "Questa email è già registrata — accedi.",
     badPassword: "La password deve avere almeno 8 caratteri.",
     verifyTitle: "Conferma la tua email",
@@ -241,6 +248,7 @@ const STRINGS: Record<string, GateStrings> = {
     orLink: "メールのリンクでログイン",
     orWord: "または",
     badCred: "メールアドレスまたはパスワードが違います。",
+    signupClosed: "現在このサイトでは新規登録を受け付けていません。ログインするか、アクセスを申請してください。",
     exists: "このメールアドレスは登録済みです。ログインしてください。",
     badPassword: "パスワードは8文字以上にしてください。",
     verifyTitle: "メールを確認してください",
@@ -266,6 +274,7 @@ const STRINGS: Record<string, GateStrings> = {
     orLink: "이메일 링크로 로그인",
     orWord: "또는",
     badCred: "이메일 또는 비밀번호가 올바르지 않습니다.",
+    signupClosed: "지금은 이 사이트에서 회원가입을 받지 않습니다 — 로그인하거나 접근을 요청하세요.",
     exists: "이미 등록된 이메일입니다 — 로그인하세요.",
     badPassword: "비밀번호는 8자 이상이어야 합니다.",
     verifyTitle: "이메일을 확인하세요",
@@ -291,6 +300,7 @@ const STRINGS: Record<string, GateStrings> = {
     orLink: "使用邮件链接登录",
     orWord: "或",
     badCred: "邮箱或密码错误。",
+    signupClosed: "此站点当前未开放注册 — 请登录或申请访问权限。",
     exists: "该邮箱已注册 — 请登录。",
     badPassword: "密码至少需要 8 个字符。",
     verifyTitle: "确认你的邮箱",
@@ -316,6 +326,7 @@ const STRINGS: Record<string, GateStrings> = {
     orLink: "Inloggen met een e-maillink",
     orWord: "of",
     badCred: "Onjuist e-mailadres of wachtwoord.",
+    signupClosed: "Registraties zijn hier momenteel gesloten — log in of vraag toegang aan.",
     exists: "Dat e-mailadres is al geregistreerd — log in.",
     badPassword: "Het wachtwoord moet minstens 8 tekens bevatten.",
     verifyTitle: "Bevestig je e-mail",
@@ -377,7 +388,8 @@ const PASSWORD_CSS = `
   .or{display:flex;align-items:center;gap:12px;color:var(--muted);font-size:12px;margin:16px 0 10px;text-transform:lowercase}
   .or::before,.or::after{content:"";height:1px;flex:1;background:var(--ring)}
   .ghost{width:100%;padding:12px;font-size:13.5px;font-weight:600;color:var(--fg);background:transparent;border:1px solid var(--ring);border-radius:12px;cursor:pointer}
-  .ghost:disabled{opacity:.5;cursor:default}`;
+  .ghost:disabled{opacity:.5;cursor:default}
+  #m-verify .intro{margin-top:14px;font-size:14.5px;line-height:1.55;color:var(--muted)}`;
 
 export function buildGateStub(params: GateStubParams): string {
   const locale =
@@ -439,7 +451,7 @@ btn.disabled=false;setMsg(r.status===429?T.tooMany:T.checkInbox);
   const passwordScript = `(function(){
 var SUB=${scriptJson(params.sub)},SLUG=${scriptJson(params.slug)},MODE=${scriptJson(mode)},T=${scriptJson({
     linkInvalid: t.linkInvalid, tooMany: t.tooMany, checkInbox: t.checkInbox, error: t.error,
-    createAccount: t.createAccount, signIn: t.signIn, badCred: t.badCred, exists: t.exists, badPassword: t.badPassword,
+    createAccount: t.createAccount, signIn: t.signIn, badCred: t.badCred, signupClosed: t.signupClosed, exists: t.exists, badPassword: t.badPassword,
   })};
 var API="/api/m/"+SUB;
 var loading=document.getElementById("m-loading"),auth=document.getElementById("m-auth"),verify=document.getElementById("m-verify");
@@ -474,6 +486,7 @@ form.addEventListener("submit",function(e){
     if(r.status===429){setMsg(msg,T.tooMany);return;}
     if(r.status===409){setMsg(msg,T.exists);return;}
     if(r.status===400){setMsg(msg,T.badPassword);return;}
+    if(r.status===403){setMsg(msg,T.signupClosed);return;}
     setMsg(msg,T.badCred);
   }).catch(function(){btn.disabled=false;setMsg(msg,T.error);});
 });

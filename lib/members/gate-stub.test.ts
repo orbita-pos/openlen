@@ -174,6 +174,11 @@ describe("buildGateStub — password card", () => {
       expect(html.length).toBeGreaterThan(1000);
     }
   });
+
+  it("includes signupClosed message in Spanish when passwordLogin is true", () => {
+    const html = buildGateStub({ ...BASE, passwordLogin: true, locale: "es" });
+    expect(html).toContain("Los registros están cerrados");
+  });
 });
 
 describe("wireMemberLogout", () => {
