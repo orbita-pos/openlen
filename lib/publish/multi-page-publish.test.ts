@@ -441,3 +441,42 @@ describe("members sign-in link surfaces the account area (Part E)", () => {
     assert.ok(!home.includes("Mi cuenta"), "not the account label without the flag");
   });
 });
+
+describe("account label rewires the page's own sign-in link (Part E rewire)", () => {
+  // Reuse the template-style home from Part D that has its own "Iniciar sesión" link.
+  const HOME_WITH_SIGNIN = `<!doctype html>
+<html lang="es"><head><meta charset="utf-8"><title>tienda</title>
+<style>:root{--ol-bg:#fff}</style></head>
+<body>
+  <header><nav><a href="#productos">Productos</a></nav>
+    <div><a href="#cta" class="text-sm">Iniciar sesión</a><a href="#cta" class="btn">Empezar</a></div>
+  </header>
+  <h1>tienda</h1>
+</body></html>`;
+
+  before(async () => {
+    await publishToDir({
+      subdomain: "accttest3",
+      html: HOME_WITH_SIGNIN,
+      memberSigninPath: "cuenta",
+      memberSigninIsAccount: true,
+    });
+  });
+
+  const releaseDir = () => {
+    const current = path.join(root, "accttest3", "current");
+    try {
+      const sha = readFileSync(current, "utf8").trim();
+      return path.join(root, "accttest3", "releases", sha);
+    } catch {
+      return current;
+    }
+  };
+
+  it("rewires an existing sign-in link to the account path with account label", () => {
+    const home = readFileSync(path.join(releaseDir(), "index.html"), "utf8");
+    assert.ok(home.includes('href="/cuenta"'), "rewired to account path");
+    assert.ok(home.includes("Mi cuenta"), "text rewired to account label");
+    assert.ok(!home.includes("Iniciar sesión"), "original text replaced");
+  });
+});

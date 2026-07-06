@@ -90,7 +90,7 @@ function visibleText(innerHtml: string): string {
 export interface SigninLinkOpts {
   /** Absolute path to the gated portal page, e.g. "/miembros". */
   href: string;
-  /** Visible label for an INJECTED link (ignored when rewiring). */
+  /** Visible label for an INJECTED link. On the rewire path the anchor keeps its own text unless `rewriteText` is set (see below). */
   label: string;
   /** Account entry only: when the rewired anchor's inner is PLAIN TEXT (no
    *  nested markup), replace it with this label so the nav reads "Mi cuenta"
