@@ -134,6 +134,8 @@ impl TryFrom<Message> for NativeMessage {
         Ok(NativeMessage {
             role,
             content: m.content,
+            function_calls: None,
+            function_responses: None,
         })
     }
 }

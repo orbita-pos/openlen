@@ -26,10 +26,18 @@ pub enum Role {
 /// multimodal support would require widening `content` to a `Vec<Content>`
 /// (image / audio parts). Doing that now would be premature — there is no
 /// caller yet.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Message {
     pub role: Role,
     pub content: String,
+    /// Assistant turn: tool calls the model emitted, as a JSON array of
+    /// `{name, args}`. Rendered as native `functionCall` parts.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub function_calls: Option<serde_json::Value>,
+    /// User turn: tool results going back, as a JSON array of
+    /// `{name, response}`. Rendered as native `functionResponse` parts.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub function_responses: Option<serde_json::Value>,
 }
 
 impl Message {
@@ -37,6 +45,8 @@ impl Message {
         Self {
             role,
             content: content.into(),
+            function_calls: None,
+            function_responses: None,
         }
     }
 
@@ -92,6 +102,15 @@ pub struct StreamRequest {
     pub response_mime_type: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub response_schema: Option<serde_json::Value>,
+    /// Native Gemini `tools` — an array of `{functionDeclarations: [...]}`.
+    /// Passed through verbatim; `None` by default so the tool-free path is
+    /// byte-for-byte unchanged.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub tools: Option<serde_json::Value>,
+    /// Native Gemini `toolConfig` (e.g. `{functionCallingConfig:{mode}}`).
+    /// Passed through verbatim.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub tool_config: Option<serde_json::Value>,
 }
 
 impl StreamRequest {
@@ -104,6 +123,8 @@ impl StreamRequest {
             images: Vec::new(),
             response_mime_type: None,
             response_schema: None,
+            tools: None,
+            tool_config: None,
         }
     }
 
@@ -129,6 +150,16 @@ impl StreamRequest {
 
     pub fn with_response_schema(mut self, schema: serde_json::Value) -> Self {
         self.response_schema = Some(schema);
+        self
+    }
+
+    pub fn with_tools(mut self, tools: serde_json::Value) -> Self {
+        self.tools = Some(tools);
+        self
+    }
+
+    pub fn with_tool_config(mut self, cfg: serde_json::Value) -> Self {
+        self.tool_config = Some(cfg);
         self
     }
 }
@@ -278,6 +309,33 @@ mod tests {
         let v: serde_json::Value = serde_json::to_value(&req).unwrap();
         assert!(v.get("response_mime_type").is_none());
         assert!(v.get("response_schema").is_none());
+    }
+
+    #[test]
+    fn stream_request_tools_default_none_and_skipped() {
+        let req = StreamRequest::new("gemini-3.5-flash", vec![Message::user("hi")]);
+        assert!(req.tools.is_none());
+        let v: serde_json::Value = serde_json::to_value(&req).unwrap();
+        assert!(v.get("tools").is_none());
+        assert!(v.get("tool_config").is_none());
+    }
+
+    #[test]
+    fn with_tools_and_tool_config_set_values() {
+        let tools = serde_json::json!([{"functionDeclarations":[{"name":"leer_estado"}]}]);
+        let cfg = serde_json::json!({"functionCallingConfig":{"mode":"AUTO"}});
+        let req = StreamRequest::new("gemini-3.5-flash", vec![Message::user("hi")])
+            .with_tools(tools.clone())
+            .with_tool_config(cfg.clone());
+        assert_eq!(req.tools.as_ref(), Some(&tools));
+        assert_eq!(req.tool_config.as_ref(), Some(&cfg));
+    }
+
+    #[test]
+    fn message_function_fields_default_none() {
+        let m = Message::user("hola");
+        assert!(m.function_calls.is_none());
+        assert!(m.function_responses.is_none());
     }
 
     #[test]

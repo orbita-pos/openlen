@@ -312,6 +312,10 @@ struct GeminiRequestBody {
     system_instruction: Option<GeminiSystemInstruction>,
     #[serde(skip_serializing_if = "Option::is_none")]
     generation_config: Option<GenerationConfig>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    tools: Option<serde_json::Value>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    tool_config: Option<serde_json::Value>,
 }
 
 #[derive(Serialize, Debug)]
@@ -330,6 +334,10 @@ struct GeminiRequestPart {
     text: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     inline_data: Option<GeminiInlineData>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    function_call: Option<serde_json::Value>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    function_response: Option<serde_json::Value>,
 }
 
 impl GeminiRequestPart {
@@ -337,6 +345,8 @@ impl GeminiRequestPart {
         Self {
             text: Some(s),
             inline_data: None,
+            function_call: None,
+            function_response: None,
         }
     }
 
@@ -344,6 +354,8 @@ impl GeminiRequestPart {
         Self {
             text: None,
             inline_data: Some(GeminiInlineData { mime_type, data }),
+            function_call: None,
+            function_response: None,
         }
     }
 }
@@ -384,14 +396,38 @@ fn build_request_body(request: &StreamRequest) -> GeminiRequestBody {
     for msg in &request.messages {
         match msg.role {
             Role::System => system_parts.push(GeminiRequestPart::text(msg.content.clone())),
-            Role::User => contents.push(GeminiRequestContent {
-                role: "user",
-                parts: vec![GeminiRequestPart::text(msg.content.clone())],
-            }),
-            Role::Assistant => contents.push(GeminiRequestContent {
-                role: "model",
-                parts: vec![GeminiRequestPart::text(msg.content.clone())],
-            }),
+            Role::User | Role::Assistant => {
+                let role = if msg.role == Role::User { "user" } else { "model" };
+                let mut parts: Vec<GeminiRequestPart> = Vec::new();
+                if !msg.content.is_empty() {
+                    parts.push(GeminiRequestPart::text(msg.content.clone()));
+                }
+                if let Some(serde_json::Value::Array(calls)) = &msg.function_calls {
+                    for c in calls {
+                        parts.push(GeminiRequestPart {
+                            text: None,
+                            inline_data: None,
+                            function_call: Some(c.clone()),
+                            function_response: None,
+                        });
+                    }
+                }
+                if let Some(serde_json::Value::Array(resps)) = &msg.function_responses {
+                    for r in resps {
+                        parts.push(GeminiRequestPart {
+                            text: None,
+                            inline_data: None,
+                            function_call: None,
+                            function_response: Some(r.clone()),
+                        });
+                    }
+                }
+                if parts.is_empty() {
+                    // Gemini rechaza contents sin parts; un turno vacío es bug del caller.
+                    parts.push(GeminiRequestPart::text(String::new()));
+                }
+                contents.push(GeminiRequestContent { role, parts });
+            }
         }
     }
 
@@ -441,6 +477,8 @@ fn build_request_body(request: &StreamRequest) -> GeminiRequestBody {
         contents,
         system_instruction,
         generation_config,
+        tools: request.tools.clone(),
+        tool_config: request.tool_config.clone(),
     }
 }
 
@@ -703,6 +741,56 @@ mod tests {
         assert_eq!(body.contents[0].role, "user");
         assert_eq!(body.contents[0].parts.len(), 1);
         assert!(body.contents[0].parts[0].inline_data.is_some());
+    }
+
+    #[test]
+    fn build_request_body_emits_tools_and_tool_config() {
+        let tools = serde_json::json!([{"functionDeclarations":[{"name":"leer_estado","description":"d","parameters":{"type":"OBJECT","properties":{}}}]}]);
+        let req = StreamRequest::new("gemini-3.5-flash", vec![Message::user("hi")])
+            .with_tools(tools)
+            .with_tool_config(serde_json::json!({"functionCallingConfig":{"mode":"AUTO"}}));
+        let body = build_request_body(&req);
+        let v: serde_json::Value = serde_json::to_value(&body).unwrap();
+        assert_eq!(v["tools"][0]["functionDeclarations"][0]["name"], "leer_estado");
+        assert_eq!(v["toolConfig"]["functionCallingConfig"]["mode"], "AUTO");
+    }
+
+    #[test]
+    fn build_request_body_renders_function_call_turn_as_model_parts() {
+        let mut fc_msg = Message::assistant("");
+        fc_msg.function_calls = Some(serde_json::json!([
+            {"name":"activar_modulo","args":{"modulo":"members"}}
+        ]));
+        let req = StreamRequest::new("gemini-3.5-flash", vec![Message::user("ponme signin"), fc_msg]);
+        let v: serde_json::Value = serde_json::to_value(&build_request_body(&req)).unwrap();
+        assert_eq!(v["contents"][1]["role"], "model");
+        assert_eq!(v["contents"][1]["parts"][0]["functionCall"]["name"], "activar_modulo");
+        assert_eq!(v["contents"][1]["parts"][0]["functionCall"]["args"]["modulo"], "members");
+    }
+
+    #[test]
+    fn build_request_body_renders_function_response_turn_as_user_parts() {
+        let mut fr_msg = Message::user("");
+        fr_msg.function_responses = Some(serde_json::json!([
+            {"name":"activar_modulo","response":{"ok":true}}
+        ]));
+        let req = StreamRequest::new("gemini-3.5-flash", vec![Message::user("hola"), fr_msg]);
+        let v: serde_json::Value = serde_json::to_value(&build_request_body(&req)).unwrap();
+        assert_eq!(v["contents"][1]["role"], "user");
+        assert_eq!(v["contents"][1]["parts"][0]["functionResponse"]["name"], "activar_modulo");
+        assert_eq!(v["contents"][1]["parts"][0]["functionResponse"]["response"]["ok"], true);
+    }
+
+    #[test]
+    fn function_message_with_text_and_calls_emits_both_parts() {
+        let mut m = Message::assistant("Voy a activar el módulo.");
+        m.function_calls = Some(serde_json::json!([{"name":"leer_estado","args":{}}]));
+        let req = StreamRequest::new("gemini-3.5-flash", vec![Message::user("hola"), m]);
+        let v: serde_json::Value = serde_json::to_value(&build_request_body(&req)).unwrap();
+        let parts = v["contents"][1]["parts"].as_array().unwrap();
+        assert_eq!(parts.len(), 2);
+        assert_eq!(parts[0]["text"], "Voy a activar el módulo.");
+        assert_eq!(parts[1]["functionCall"]["name"], "leer_estado");
     }
 
     #[test]
