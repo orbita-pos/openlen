@@ -44,6 +44,11 @@ export type Role = "system" | "user" | "assistant";
 export interface FunctionCall {
   name: string;
   args: Record<string, unknown>;
+  /** Gemini 3 thought signature attached to this call. MUST be echoed back
+   *  verbatim in the `functionCalls` entry when this assistant turn is
+   *  replayed in a later request, or the API 400s with "Function call is
+   *  missing a thought_signature". */
+  thoughtSignature?: string;
 }
 
 export interface FunctionResponse {
@@ -102,7 +107,12 @@ export type StreamEvent =
   | { type: "text_delta"; text: string }
   | { type: "usage"; inputTokens: number; outputTokens: number }
   | { type: "done"; stopReason: StopReason }
-  | { type: "function_call"; name: string; args: Record<string, unknown> };
+  | {
+      type: "function_call";
+      name: string;
+      args: Record<string, unknown>;
+      thoughtSignature?: string;
+    };
 
 export type StopReason =
   | { kind: "end_turn" }
@@ -275,7 +285,12 @@ function narrowEvent(raw: RustStreamEvent): StreamEvent {
       } catch {
         /* args malformados → objeto vacío; el tool runner responde error */
       }
-      return { type: "function_call", name: raw.name as string, args };
+      return {
+        type: "function_call",
+        name: raw.name as string,
+        args,
+        thoughtSignature: raw.thoughtSignature ?? undefined,
+      };
     }
     default:
       throw new Error(

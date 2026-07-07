@@ -229,6 +229,12 @@ pub enum StreamEvent {
     FunctionCall {
         name: String,
         args_json: String,
+        /// Gemini 3 thought signature accompanying this call (sibling of
+        /// `functionCall` on the wire). `None` when the model didn't attach
+        /// one (e.g. non-Gemini-3 models). Callers MUST echo this back
+        /// verbatim on the replayed assistant turn or the next request 400s.
+        #[serde(skip_serializing_if = "Option::is_none")]
+        thought_signature: Option<String>,
     },
 }
 
@@ -439,10 +445,33 @@ mod tests {
         let e = StreamEvent::FunctionCall {
             name: "leer_estado".into(),
             args_json: "{}".into(),
+            thought_signature: None,
         };
         let v: serde_json::Value = serde_json::to_value(&e).unwrap();
         assert_eq!(v["type"], "function_call");
         assert_eq!(v["name"], "leer_estado");
         assert_eq!(v["args_json"], "{}");
+    }
+
+    #[test]
+    fn stream_event_function_call_with_thought_signature_serializes_key() {
+        let e = StreamEvent::FunctionCall {
+            name: "leer_estado".into(),
+            args_json: "{}".into(),
+            thought_signature: Some("sig-1".into()),
+        };
+        let v: serde_json::Value = serde_json::to_value(&e).unwrap();
+        assert_eq!(v["thought_signature"], "sig-1");
+    }
+
+    #[test]
+    fn stream_event_function_call_without_thought_signature_omits_key() {
+        let e = StreamEvent::FunctionCall {
+            name: "leer_estado".into(),
+            args_json: "{}".into(),
+            thought_signature: None,
+        };
+        let v: serde_json::Value = serde_json::to_value(&e).unwrap();
+        assert!(v.get("thought_signature").is_none());
     }
 }

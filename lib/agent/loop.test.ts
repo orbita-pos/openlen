@@ -31,12 +31,17 @@ describe("runAgentLoop", () => {
   it("one tool call → functionResponse turn → final text", async () => {
     const events: AgentStreamEvent[] = [];
     const seen: string[] = [];
+    const callsSeen: Message[][] = [];
+    const scriptedStream = scripted(
+      [{ type: "function_call", name: "activar_modulo", args: { modulo: "members" }, thoughtSignature: "sig-1" }, usage(10), done],
+      [{ type: "text_delta", text: "Listo, activé cuentas." }, usage(8), done],
+    );
     const r = await runAgentLoop({
       messages: [{ role: "user", content: "ponme signin" }], tools: [],
-      openStream: scripted(
-        [{ type: "function_call", name: "activar_modulo", args: { modulo: "members" } }, usage(10), done],
-        [{ type: "text_delta", text: "Listo, activé cuentas." }, usage(8), done],
-      ),
+      openStream: (messages) => {
+        callsSeen.push([...messages]); // snapshot — `messages` is mutated in place by the loop
+        return scriptedStream(messages);
+      },
       runTool: async (name) => { seen.push(name); return { response: { ok: true }, action: { tool: name, ok: true, summary: "members" } }; },
       emit: (e) => events.push(e),
     });
@@ -45,6 +50,14 @@ describe("runAgentLoop", () => {
     expect(r.usage.outputTokens).toBe(18);
     const actions = events.filter((e) => e.type === "action");
     expect(actions.map((a: any) => a.status)).toEqual(["running", "done"]);
+
+    expect(callsSeen).toHaveLength(2);
+    const secondCallMessages = callsSeen[1];
+    expect(secondCallMessages.length).toBeGreaterThan(callsSeen[0].length);
+    const assistantTurn = secondCallMessages.find((m) => m.role === "assistant");
+    expect(assistantTurn?.functionCalls?.[0]?.thoughtSignature).toBe("sig-1");
+    const functionResponseTurn = secondCallMessages.find((m) => m.functionResponses);
+    expect(functionResponseTurn).toBeDefined();
   });
 
   it("tool failure flows back as data and the loop continues", async () => {

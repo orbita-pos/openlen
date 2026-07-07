@@ -222,6 +222,7 @@ fn process_gemini_event(
                     deltas.push(StreamEvent::FunctionCall {
                         name: fc.name,
                         args_json: args.to_string(),
+                        thought_signature: p.thought_signature,
                     });
                 }
             }
@@ -345,6 +346,13 @@ struct GeminiRequestPart {
     function_call: Option<serde_json::Value>,
     #[serde(skip_serializing_if = "Option::is_none")]
     function_response: Option<serde_json::Value>,
+    /// Sibling of `function_call` on the wire (Gemini 3 requirement) — NOT
+    /// nested inside the functionCall object. Set only when replaying a
+    /// functionCall part whose `Message.function_calls` entry carried a
+    /// `thoughtSignature` key (stripped out of the entry in
+    /// `build_request_body` and re-attached here).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    thought_signature: Option<String>,
 }
 
 impl GeminiRequestPart {
@@ -354,6 +362,7 @@ impl GeminiRequestPart {
             inline_data: None,
             function_call: None,
             function_response: None,
+            thought_signature: None,
         }
     }
 
@@ -363,6 +372,7 @@ impl GeminiRequestPart {
             inline_data: Some(GeminiInlineData { mime_type, data }),
             function_call: None,
             function_response: None,
+            thought_signature: None,
         }
     }
 }
@@ -411,11 +421,22 @@ fn build_request_body(request: &StreamRequest) -> GeminiRequestBody {
                 }
                 if let Some(serde_json::Value::Array(calls)) = &msg.function_calls {
                     for c in calls {
+                        // `thoughtSignature` (Gemini 3) travels inside the JS-side
+                        // `functionCalls` entry as a plain key, but the wire shape
+                        // wants it as a SIBLING of `functionCall` on the part, not
+                        // nested inside it. Strip it off the cloned entry and
+                        // re-attach it at the part level.
+                        let mut call_value = c.clone();
+                        let thought_signature = call_value
+                            .as_object_mut()
+                            .and_then(|obj| obj.remove("thoughtSignature"))
+                            .and_then(|v| v.as_str().map(str::to_owned));
                         parts.push(GeminiRequestPart {
                             text: None,
                             inline_data: None,
-                            function_call: Some(c.clone()),
+                            function_call: Some(call_value),
                             function_response: None,
+                            thought_signature,
                         });
                     }
                 }
@@ -426,6 +447,7 @@ fn build_request_body(request: &StreamRequest) -> GeminiRequestBody {
                             inline_data: None,
                             function_call: None,
                             function_response: Some(r.clone()),
+                            thought_signature: None,
                         });
                     }
                 }
@@ -918,10 +940,12 @@ mod tests {
                         GeminiPart {
                             text: Some("hi".into()),
                             function_call: None,
+                            thought_signature: None,
                         },
                         GeminiPart {
                             text: Some(" there".into()),
                             function_call: None,
+                            thought_signature: None,
                         },
                     ],
                 }),
@@ -993,6 +1017,7 @@ mod tests {
                             name: "activar_modulo".into(),
                             args: Some(serde_json::json!({"modulo":"members"})),
                         }),
+                        thought_signature: None,
                     }],
                 }),
                 finish_reason: Some("STOP".into()),
@@ -1004,13 +1029,82 @@ mod tests {
         let deltas = process_gemini_event(ev, &mut usage, &mut stop);
         assert_eq!(deltas.len(), 1);
         match &deltas[0] {
-            StreamEvent::FunctionCall { name, args_json } => {
+            StreamEvent::FunctionCall {
+                name,
+                args_json,
+                thought_signature,
+            } => {
                 assert_eq!(name, "activar_modulo");
                 let parsed: serde_json::Value = serde_json::from_str(args_json).unwrap();
                 assert_eq!(parsed["modulo"], "members");
+                assert!(thought_signature.is_none());
             }
             other => panic!("expected FunctionCall, got {other:?}"),
         }
         assert_eq!(stop, Some(StopReason::EndTurn));
+    }
+
+    #[test]
+    fn process_event_carries_thought_signature_when_present() {
+        use super::sse::*;
+        let ev = GeminiEvent {
+            candidates: vec![GeminiCandidate {
+                content: Some(GeminiContent {
+                    parts: vec![GeminiPart {
+                        text: None,
+                        function_call: Some(GeminiFunctionCall {
+                            name: "activar_modulo".into(),
+                            args: Some(serde_json::json!({})),
+                        }),
+                        thought_signature: Some("sig-1".into()),
+                    }],
+                }),
+                finish_reason: None,
+            }],
+            usage_metadata: None,
+            prompt_feedback: None,
+        };
+        let (mut usage, mut stop) = (None, None);
+        let deltas = process_gemini_event(ev, &mut usage, &mut stop);
+        match &deltas[0] {
+            StreamEvent::FunctionCall {
+                thought_signature, ..
+            } => assert_eq!(thought_signature.as_deref(), Some("sig-1")),
+            other => panic!("expected FunctionCall, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn build_request_body_renders_thought_signature_as_sibling_of_function_call() {
+        let mut fc_msg = Message::assistant("");
+        fc_msg.function_calls = Some(serde_json::json!([
+            {"name":"activar_modulo","args":{"modulo":"members"},"thoughtSignature":"sig-1"}
+        ]));
+        let req = StreamRequest::new(
+            "gemini-3.5-flash",
+            vec![Message::user("ponme signin"), fc_msg],
+        );
+        let v: serde_json::Value = serde_json::to_value(&build_request_body(&req)).unwrap();
+        let part = &v["contents"][1]["parts"][0];
+        assert_eq!(part["thoughtSignature"], "sig-1");
+        assert_eq!(part["functionCall"]["name"], "activar_modulo");
+        assert_eq!(part["functionCall"]["args"]["modulo"], "members");
+        assert!(
+            part["functionCall"].get("thoughtSignature").is_none(),
+            "thoughtSignature must not remain nested inside functionCall"
+        );
+    }
+
+    #[test]
+    fn build_request_body_function_call_without_thought_signature_omits_key() {
+        let mut fc_msg = Message::assistant("");
+        fc_msg.function_calls = Some(serde_json::json!([
+            {"name":"leer_estado","args":{}}
+        ]));
+        let req = StreamRequest::new("gemini-3.5-flash", vec![Message::user("hola"), fc_msg]);
+        let v: serde_json::Value = serde_json::to_value(&build_request_body(&req)).unwrap();
+        let part = &v["contents"][1]["parts"][0];
+        assert!(part.get("thoughtSignature").is_none());
+        assert_eq!(part["functionCall"]["name"], "leer_estado");
     }
 }

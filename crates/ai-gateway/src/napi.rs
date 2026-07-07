@@ -130,6 +130,10 @@ pub struct StreamEvent {
     /// Populated only for `type == "function_call"`; JSON-encoded args
     /// object as a STRING (same pattern as `response_schema_json`).
     pub args_json: Option<String>,
+    /// Populated only for `type == "function_call"`, and only when Gemini
+    /// attached one (Gemini 3). MUST be echoed back verbatim on the replayed
+    /// assistant turn's `functionCalls` entry or the next request 400s.
+    pub thought_signature: Option<String>,
 }
 
 #[napi(object)]
@@ -279,6 +283,7 @@ impl From<NativeStreamEvent> for StreamEvent {
                 stop_reason: None,
                 name: None,
                 args_json: None,
+                thought_signature: None,
             },
             NativeStreamEvent::TextDelta { text } => Self {
                 event_type: "text_delta".to_owned(),
@@ -289,6 +294,7 @@ impl From<NativeStreamEvent> for StreamEvent {
                 stop_reason: None,
                 name: None,
                 args_json: None,
+                thought_signature: None,
             },
             NativeStreamEvent::Usage {
                 input_tokens,
@@ -302,6 +308,7 @@ impl From<NativeStreamEvent> for StreamEvent {
                 stop_reason: None,
                 name: None,
                 args_json: None,
+                thought_signature: None,
             },
             NativeStreamEvent::Done { stop_reason } => Self {
                 event_type: "done".to_owned(),
@@ -312,8 +319,13 @@ impl From<NativeStreamEvent> for StreamEvent {
                 stop_reason: Some(stop_reason.into()),
                 name: None,
                 args_json: None,
+                thought_signature: None,
             },
-            NativeStreamEvent::FunctionCall { name, args_json } => Self {
+            NativeStreamEvent::FunctionCall {
+                name,
+                args_json,
+                thought_signature,
+            } => Self {
                 event_type: "function_call".to_owned(),
                 id: None,
                 text: None,
@@ -322,6 +334,7 @@ impl From<NativeStreamEvent> for StreamEvent {
                 stop_reason: None,
                 name: Some(name),
                 args_json: Some(args_json),
+                thought_signature,
             },
         }
     }
@@ -714,10 +727,29 @@ mod tests {
         let js: StreamEvent = NativeStreamEvent::FunctionCall {
             name: "leer_estado".into(),
             args_json: "{\"a\":1}".into(),
+            thought_signature: None,
         }
         .into();
         assert_eq!(js.event_type, "function_call");
         assert_eq!(js.name.as_deref(), Some("leer_estado"));
         assert_eq!(js.args_json.as_deref(), Some("{\"a\":1}"));
+        assert!(js.thought_signature.is_none());
+    }
+
+    #[test]
+    fn stream_event_function_call_into_js_carries_thought_signature() {
+        let js: StreamEvent = NativeStreamEvent::FunctionCall {
+            name: "leer_estado".into(),
+            args_json: "{}".into(),
+            thought_signature: Some("sig-1".into()),
+        }
+        .into();
+        assert_eq!(js.thought_signature.as_deref(), Some("sig-1"));
+    }
+
+    #[test]
+    fn stream_event_start_into_js_has_no_thought_signature() {
+        let js: StreamEvent = NativeStreamEvent::Start { id: "abc".into() }.into();
+        assert!(js.thought_signature.is_none());
     }
 }

@@ -153,6 +153,11 @@ pub(crate) struct GeminiContent {
 pub(crate) struct GeminiPart {
     pub(crate) text: Option<String>,
     pub(crate) function_call: Option<GeminiFunctionCall>,
+    /// Gemini 3 attaches this alongside `functionCall` (sibling field, NOT
+    /// nested inside it) on parts that carry a tool call. It MUST be echoed
+    /// back verbatim when the model-role turn is replayed in a later request,
+    /// or the API 400s with "Function call is missing a thought_signature".
+    pub(crate) thought_signature: Option<String>,
 }
 
 #[derive(Debug, Deserialize, PartialEq)]
@@ -407,5 +412,26 @@ mod tests {
             .as_ref()
             .unwrap();
         assert_eq!(fc.name, "leer_estado");
+    }
+
+    #[test]
+    fn parses_thought_signature_sibling_of_function_call() {
+        let mut p = SseParser::new();
+        let bytes = br#"data: {"candidates":[{"content":{"parts":[{"functionCall":{"name":"leer_estado","args":{}},"thoughtSignature":"c2ln"}],"role":"model"}}]}
+
+"#;
+        let events = p.feed(bytes).unwrap();
+        let part = &events[0].candidates[0].content.as_ref().unwrap().parts[0];
+        assert_eq!(part.function_call.as_ref().unwrap().name, "leer_estado");
+        assert_eq!(part.thought_signature.as_deref(), Some("c2ln"));
+    }
+
+    #[test]
+    fn thought_signature_absent_parses_as_none() {
+        let mut p = SseParser::new();
+        let events = p.feed(&single_event_bytes("hi")).unwrap();
+        assert!(events[0].candidates[0].content.as_ref().unwrap().parts[0]
+            .thought_signature
+            .is_none());
     }
 }

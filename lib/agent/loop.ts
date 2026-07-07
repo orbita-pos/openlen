@@ -44,6 +44,10 @@ const DEFAULT_MAX_TOOL_CALLS = 10;
 interface PendingCall {
   name: string;
   args: Record<string, unknown>;
+  /** Gemini 3 thought signature, echoed verbatim into the replayed
+   *  assistant turn's `functionCalls` entry — see lib/ai-gateway.ts's
+   *  `FunctionCall.thoughtSignature` doc comment. */
+  thoughtSignature?: string;
 }
 
 export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult> {
@@ -73,7 +77,11 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
         turnText += ev.text;
         args.emit({ type: "text", text: ev.text });
       } else if (ev.type === "function_call") {
-        calls.push({ name: ev.name, args: ev.args });
+        calls.push({
+          name: ev.name,
+          args: ev.args,
+          ...(ev.thoughtSignature ? { thoughtSignature: ev.thoughtSignature } : {}),
+        });
       } else if (ev.type === "usage") {
         inputTokens += ev.inputTokens;
         outputTokens += ev.outputTokens;
