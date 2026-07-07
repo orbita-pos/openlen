@@ -3,6 +3,7 @@
 // sección de conocimiento del system prompt. Módulo nuevo ⇒ una entrada aquí.
 import { DESIGN_GUIDANCE } from "@/lib/design-guidance";
 import { POST_REGISTER } from "@/lib/marketing/post-templates/admin-schemas";
+import { THEME_PRESETS } from "@/lib/theme-presets";
 
 export const AGENT_MODULES = [
   "members", "bookings", "collections", "chat", "whatsapp", "comments",
@@ -13,13 +14,15 @@ export const MOTION_LOOKS = ["calm", "editorial", "dramatic", "off"] as const;
 export type MotionLook = (typeof MOTION_LOOKS)[number];
 
 const MARKETING_REGISTERS = POST_REGISTER.options;
+const THEME_PRESET_IDS = THEME_PRESETS.map((p) => p.id);
 
-// Conocimiento de las 4 herramientas de settings F2 Task 1 (motion, música,
-// 3D, marketing) — igual que MODULE_KNOWLEDGE, va en el system prompt.
+// Conocimiento de las 5 herramientas de settings/tema F2 (motion, música,
+// 3D, marketing, tema) — igual que MODULE_KNOWLEDGE, va en el system prompt.
 const SETTINGS_TOOL_KNOWLEDGE = `- cambiar_motion: coreografía de scroll (Motion Looks) — beads sutiles en la segunda fila, puro CSS. Se HORNEA al publicar; el preview del editor no la anima en vivo. Usa look="off" para apagarla.
 - poner_musica: reproductor flotante de música. SOLO puede usar pistas YA SUBIDAS a este proyecto — jamás una URL externa (el guard del servidor la rechazaría igual). Si no hay pistas disponibles, dile al usuario que suba una en el panel Música y no insistas con asset_url inventado.
 - activar_3d: enciende o apaga la escena 3D de fondo (Born With Depth). Esto solo prende/apaga — el diseño fino (modelo, gestos, cámara) se ajusta en el panel 3D del editor, no por el agente.
-- preparar_marketing: fija el rubro (registro) del Marketing Kit — posts curados zero-AI — y si deben combinarse con la paleta/fuente de la página. Después de usarla, dirige al usuario al tab Marketing para ver y copiar los posts.`;
+- preparar_marketing: fija el rubro (registro) del Marketing Kit — posts curados zero-AI — y si deben combinarse con la paleta/fuente de la página. Después de usarla, dirige al usuario al tab Marketing para ver y copiar los posts.
+- cambiar_tema: re-tematiza la página al instante (sin llamada de IA) — igual que un click en Looks del inspector. accent (hex) deriva una paleta completa con contraste WCAG garantizado; fuente y radius toman SOLO ese rasgo del preset nombrado (ids: ${THEME_PRESET_IDS.join(", ")}), útil para combinar look a piezas. Pásalos juntos o por separado; modo elige la variante clara/oscura del accent.`;
 
 // Conocimiento por módulo: qué es + cuándo recomendarlo. Español porque el
 // usuario objetivo habla español; el modelo responde en el idioma del usuario.
@@ -126,6 +129,20 @@ export function buildFunctionDeclarations(): Record<string, unknown>[] {
       },
     },
     {
+      name: "cambiar_tema",
+      description:
+        `Re-tematiza la página al instante escribiendo los tokens --ol-* en <html> — igual que un click en Looks del inspector, sin llamada de IA. accent (hex #rgb o #rrggbb) deriva una paleta completa (fondo/superficie/texto/borde/acento) con contraste WCAG garantizado. fuente y radius toman SOLO ese rasgo del preset nombrado (ids válidos: ${THEME_PRESET_IDS.join(", ")}) sin tocar los demás tokens — para combinar look a piezas. Pasa cualquier combinación de accent/fuente/radius; al menos uno es requerido.`,
+      parameters: {
+        type: "OBJECT",
+        properties: {
+          accent: { type: "STRING" },
+          fuente: { type: "STRING", enum: [...THEME_PRESET_IDS] },
+          radius: { type: "STRING", enum: [...THEME_PRESET_IDS] },
+          modo: { type: "STRING", enum: ["light", "dark"] },
+        },
+      },
+    },
+    {
       name: "preparar_marketing",
       description:
         "Prepara el Marketing Kit: fija el rubro (registro) de posts curados zero-AI y si deben combinarse con la paleta/fuente de la página. Dirige al usuario al tab Marketing para ver y copiar los posts.",
@@ -156,7 +173,7 @@ REGLAS DURAS:
 MÓDULOS QUE PUEDES OPERAR (activar_modulo):
 ${moduleLines}
 
-HERRAMIENTAS DE SETTINGS (cambiar_motion, poner_musica, activar_3d, preparar_marketing):
+HERRAMIENTAS DE SETTINGS (cambiar_motion, poner_musica, activar_3d, preparar_marketing, cambiar_tema):
 ${SETTINGS_TOOL_KNOWLEDGE}
 
 EDICIÓN DE PÁGINA (editar_pagina):

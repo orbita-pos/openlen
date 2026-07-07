@@ -126,6 +126,26 @@ describe("editar_pagina", () => {
   });
 });
 
+describe("cambiar_tema", () => {
+  it("applies an accent bundle, persists through the sanitize pipeline, re-tags", async () => {
+    const { deps, store } = makeDeps();
+    const session = makeSession();
+    const out = await runAgentTool(session, deps, "cambiar_tema", { accent: "#e8743a" });
+    assert.equal(out.response.ok, true);
+    assert.match(store.data.html!, /--ol-accent:\s*#e8743a/i);
+    assert.ok(!store.data.html!.includes("data-op-id"));
+    assert.ok(session.taggedHtml.includes("data-op-id"));
+    assert.equal(store.versions.length, 2);
+    assert.ok(out.updatedHtml);
+  });
+  it("rejects a non-hex accent as data", async () => {
+    const { deps, store } = makeDeps();
+    const out = await runAgentTool(makeSession(), deps, "cambiar_tema", { accent: "rojo" });
+    assert.equal(out.response.ok, false);
+    assert.equal(store.saved.length, 0);
+  });
+});
+
 describe("leer_estado", () => {
   it("returns fresh module state after a mutation", async () => {
     const { deps } = makeDeps();

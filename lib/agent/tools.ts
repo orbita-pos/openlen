@@ -31,6 +31,10 @@ import type { ProjectData } from "@/lib/projects/types";
 import { createVersion, type VersionSource } from "@/lib/projects/versions";
 import { ensurePageMeta } from "@/lib/publish/ensure-page-meta";
 import { AGENT_MODULES, MOTION_LOOKS, type AgentModule } from "@/lib/agent/catalog";
+import { applyThemeTokensToHtml } from "@/lib/agent/theme-apply";
+import { lookFromAccent, type LookBase } from "@/lib/palette-gen";
+import { deriveContractColors, type BaseColors } from "@/lib/theme-derive";
+import { THEME_PRESETS } from "@/lib/theme-presets";
 
 const MAX_EDITS_PER_CALL = 8;
 const OP_TYPES: readonly OpType[] = ["replace", "insert_before", "insert_after", "delete"];
@@ -385,6 +389,70 @@ interface RawEdit {
   new_html?: unknown;
 }
 
+type PersistResult = { ok: true; finalHtml: string } | { ok: false; error: string };
+
+// Shared F1 persist pipeline — same block editar_pagina always ran:
+// editor-mode marker guard -> sanitize -> ensurePageMeta(normalizeBornCanonical)
+// -> module-intent -> snapshot pre/post -> save -> re-tag session.taggedHtml.
+// Any tool that hands the model a mutated document (editar_pagina,
+// cambiar_tema, …) funnels its candidate HTML through this so persistence
+// semantics never drift between tools.
+async function persistHtmlChange(
+  session: AgentSession,
+  deps: AgentDeps,
+  candidateHtml: string,
+  label: string,
+): Promise<PersistResult> {
+  // Editor-mode marker guard first (specific message), then the broader
+  // sanitize pass (defense in depth — mirrors ai-design route).
+  if (detectSlotPath(candidateHtml)) {
+    return { ok: false, error: "el HTML contiene un marcador reservado (data-slot-path)" };
+  }
+  const sanitized = sanitizeForPublish(candidateHtml);
+  if (sanitized.html === null) {
+    return { ok: false, error: "el HTML no pasó la sanitización" };
+  }
+
+  const finalHtml = ensurePageMeta(normalizeBornCanonical(sanitized.html));
+
+  const row = await deps.loadProject(session.projectId, session.userId);
+  if (!row) return { ok: false, error: "proyecto no encontrado" };
+
+  const moduleIntent = applyModuleIntent(row.data.settings, finalHtml);
+  const nextData: ProjectData = {
+    ...row.data,
+    html: finalHtml,
+    ...(moduleIntent.enabled.length ? { settings: moduleIntent.settings } : {}),
+  };
+
+  const preEditHtml = row.data.html;
+  if (preEditHtml && preEditHtml !== finalHtml) {
+    await deps.snapshotVersion({
+      projectId: session.projectId,
+      html: preEditHtml,
+      label: "Before AI edit",
+      source: "manual",
+      page: null,
+    });
+  }
+
+  await deps.saveProjectData(session.projectId, session.userId, nextData);
+
+  await deps.snapshotVersion({
+    projectId: session.projectId,
+    html: finalHtml,
+    label,
+    source: "chat",
+    page: null,
+  });
+
+  // Ids change after every apply — re-tag so the next editar_pagina call
+  // has fresh targets to address.
+  session.taggedHtml = tagWithOpIds(finalHtml).taggedHtml;
+
+  return { ok: true, finalHtml };
+}
+
 async function toolEditarPagina(
   session: AgentSession,
   deps: AgentDeps,
@@ -421,52 +489,15 @@ async function toolEditarPagina(
     return { response: { ok: false, error: reason } };
   }
 
-  // Editor-mode marker guard first (specific message), then the broader
-  // sanitize pass (defense in depth — mirrors ai-design route).
-  if (detectSlotPath(applied.html)) {
-    return { response: { ok: false, error: "el HTML contiene un marcador reservado (data-slot-path)" } };
+  const persisted = await persistHtmlChange(
+    session,
+    deps,
+    applied.html,
+    `Agente (${applied.appliedCount} ops): ${resumen}`,
+  );
+  if (!persisted.ok) {
+    return { response: { ok: false, error: persisted.error } };
   }
-  const sanitized = sanitizeForPublish(applied.html);
-  if (sanitized.html === null) {
-    return { response: { ok: false, error: "el HTML no pasó la sanitización" } };
-  }
-
-  const finalHtml = ensurePageMeta(normalizeBornCanonical(sanitized.html));
-
-  const row = await deps.loadProject(session.projectId, session.userId);
-  if (!row) return { response: { ok: false, error: "proyecto no encontrado" } };
-
-  const moduleIntent = applyModuleIntent(row.data.settings, finalHtml);
-  const nextData: ProjectData = {
-    ...row.data,
-    html: finalHtml,
-    ...(moduleIntent.enabled.length ? { settings: moduleIntent.settings } : {}),
-  };
-
-  const preEditHtml = row.data.html;
-  if (preEditHtml && preEditHtml !== finalHtml) {
-    await deps.snapshotVersion({
-      projectId: session.projectId,
-      html: preEditHtml,
-      label: "Before AI edit",
-      source: "manual",
-      page: null,
-    });
-  }
-
-  await deps.saveProjectData(session.projectId, session.userId, nextData);
-
-  await deps.snapshotVersion({
-    projectId: session.projectId,
-    html: finalHtml,
-    label: `Agente (${applied.appliedCount} ops): ${resumen}`,
-    source: "chat",
-    page: null,
-  });
-
-  // Ids change after every apply — re-tag so the next editar_pagina call
-  // has fresh targets to address.
-  session.taggedHtml = tagWithOpIds(finalHtml).taggedHtml;
 
   return {
     response: {
@@ -475,7 +506,110 @@ async function toolEditarPagina(
       nota: "data-op-id regenerados; usa leer_estado incluir_documento=true para editar de nuevo",
     },
     action: { tool: "editar_pagina", ok: true, summary: resumen },
-    updatedHtml: finalHtml,
+    updatedHtml: persisted.finalHtml,
+  };
+}
+
+const HEX_COLOR_RE = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i;
+
+/** LookBase keys are already --ol-*-prefixed (palette-gen's own naming);
+ *  deriveContractColors wants the plain BaseColors shape — strip the prefix
+ *  to bridge the two. */
+function toBaseColors(look: LookBase): BaseColors {
+  return {
+    bg: look["--ol-bg"],
+    surface: look["--ol-surface"],
+    fg: look["--ol-fg"],
+    border: look["--ol-border"],
+    accent: look["--ol-accent"],
+  };
+}
+
+/** The accent branch of cambiar_tema: derive the full 10-token contract
+ *  bundle (5 base + 5 derived) from one hex seed, same composition
+ *  applyLookForMode drives client-side (page.tsx:2096) — lookFromAccent for
+ *  the light/dark base palette, deriveContractColors for the relationship
+ *  tokens (surface-2, fg-muted/faint, border-strong, accent-ink). The accent
+ *  itself is kept VERBATIM (not lookFromAccent's WCAG-walked variant): a
+ *  tool call names an exact hex on purpose, unlike the picker bead's "seed a
+ *  palette" UX — accent-ink still guarantees readable text on it regardless. */
+function accentBundleTokens(accentHex: string, modo: "light" | "dark"): Record<string, string> {
+  const base: BaseColors = { ...toBaseColors(lookFromAccent(accentHex)[modo]), accent: accentHex };
+  const contract = deriveContractColors(base);
+  return {
+    "--ol-bg": contract.bg,
+    "--ol-surface": contract.surface,
+    "--ol-surface-2": contract["surface-2"],
+    "--ol-fg": contract.fg,
+    "--ol-fg-muted": contract["fg-muted"],
+    "--ol-fg-faint": contract["fg-faint"],
+    "--ol-border": contract.border,
+    "--ol-border-strong": contract["border-strong"],
+    "--ol-accent": contract.accent,
+    "--ol-accent-ink": contract["accent-ink"],
+  };
+}
+
+async function toolCambiarTema(
+  session: AgentSession,
+  deps: AgentDeps,
+  args: Record<string, unknown>,
+): Promise<ToolOutcome> {
+  const accent = typeof args.accent === "string" ? args.accent : undefined;
+  const fuente = typeof args.fuente === "string" ? args.fuente : undefined;
+  const radius = typeof args.radius === "string" ? args.radius : undefined;
+  const modo = args.modo === "dark" ? "dark" : "light";
+
+  if (!accent && !fuente && !radius) {
+    return { response: { ok: false, error: "especifica accent, fuente y/o radius" } };
+  }
+
+  const tokens: Record<string, string> = {};
+
+  if (accent !== undefined) {
+    if (!HEX_COLOR_RE.test(accent)) {
+      return { response: { ok: false, error: `accent debe ser un color hex (#rgb o #rrggbb): ${accent}` } };
+    }
+    Object.assign(tokens, accentBundleTokens(accent, modo));
+  }
+
+  if (fuente !== undefined) {
+    const preset = THEME_PRESETS.find((p) => p.id === fuente);
+    if (!preset) {
+      return { response: { ok: false, error: `preset de fuente desconocido: ${fuente}` } };
+    }
+    const fontToken = preset.tokens["--ol-font-display"];
+    if (fontToken) tokens["--ol-font-display"] = fontToken;
+  }
+
+  if (radius !== undefined) {
+    const preset = THEME_PRESETS.find((p) => p.id === radius);
+    if (!preset) {
+      return { response: { ok: false, error: `preset de radius desconocido: ${radius}` } };
+    }
+    const radiusToken = preset.tokens["--ol-r-scale"];
+    if (radiusToken) tokens["--ol-r-scale"] = radiusToken;
+  }
+
+  const row = await deps.loadProject(session.projectId, session.userId);
+  if (!row) return { response: { ok: false, error: "proyecto no encontrado" } };
+
+  const candidateHtml = applyThemeTokensToHtml(row.data.html, tokens);
+
+  const persisted = await persistHtmlChange(
+    session,
+    deps,
+    candidateHtml,
+    `Agente: cambio de tema (${Object.keys(tokens).join(", ")})`,
+  );
+  if (!persisted.ok) {
+    return { response: { ok: false, error: persisted.error } };
+  }
+
+  return {
+    response: { ok: true, tokens_aplicados: Object.keys(tokens).length },
+    action: { tool: "cambiar_tema", ok: true, summary: accent ?? fuente ?? radius ?? "" },
+    updatedHtml: persisted.finalHtml,
   };
 }
 
@@ -493,6 +627,8 @@ export async function runAgentTool(
         return await toolActivarModulo(session, deps, args);
       case "editar_pagina":
         return await toolEditarPagina(session, deps, args);
+      case "cambiar_tema":
+        return await toolCambiarTema(session, deps, args);
       case "cambiar_motion":
         return await toolCambiarMotion(session, deps, args);
       case "poner_musica":
