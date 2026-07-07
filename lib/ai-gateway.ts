@@ -41,9 +41,23 @@ import {
 
 export type Role = "system" | "user" | "assistant";
 
+export interface FunctionCall {
+  name: string;
+  args: Record<string, unknown>;
+}
+
+export interface FunctionResponse {
+  name: string;
+  response: Record<string, unknown>;
+}
+
 export interface Message {
   role: Role;
   content: string;
+  /** Assistant turn: tool calls que el modelo emitió (protocolo FC). */
+  functionCalls?: FunctionCall[];
+  /** User turn: resultados de herramientas de vuelta al modelo. */
+  functionResponses?: FunctionResponse[];
 }
 
 /** A reference image attached to a request. Rendered as a native Gemini
@@ -76,13 +90,19 @@ export interface StreamRequest {
    *  boundary; only meaningful alongside `responseMimeType:
    *  "application/json"`. */
   responseSchema?: Record<string, unknown>;
+  /** Function declarations (Gemini-subset schema, type en MAYÚSCULAS).
+   *  El wrapper las envuelve en `[{ functionDeclarations: [...] }]`. */
+  tools?: Record<string, unknown>[];
+  /** AUTO deja decidir al modelo; ANY fuerza tool call; NONE las apaga. */
+  toolMode?: "auto" | "any" | "none";
 }
 
 export type StreamEvent =
   | { type: "start"; id: string }
   | { type: "text_delta"; text: string }
   | { type: "usage"; inputTokens: number; outputTokens: number }
-  | { type: "done"; stopReason: StopReason };
+  | { type: "done"; stopReason: StopReason }
+  | { type: "function_call"; name: string; args: Record<string, unknown> };
 
 export type StopReason =
   | { kind: "end_turn" }
@@ -197,7 +217,14 @@ async function* iterate(
 // ─── Internal: shape conversions ───────────────────────────────────────────
 
 function messageToRust(m: Message): RustMessage {
-  return { role: m.role, content: m.content };
+  return {
+    role: m.role,
+    content: m.content,
+    functionCallsJson: m.functionCalls ? JSON.stringify(m.functionCalls) : undefined,
+    functionResponsesJson: m.functionResponses
+      ? JSON.stringify(m.functionResponses)
+      : undefined,
+  };
 }
 
 function streamRequestToRust(r: StreamRequest): RustStreamRequest {
@@ -212,6 +239,14 @@ function streamRequestToRust(r: StreamRequest): RustStreamRequest {
     // bridge in the crate's feature set) and parses it back to a Value.
     responseSchemaJson: r.responseSchema
       ? JSON.stringify(r.responseSchema)
+      : undefined,
+    toolsJson: r.tools
+      ? JSON.stringify([{ functionDeclarations: r.tools }])
+      : undefined,
+    toolConfigJson: r.toolMode
+      ? JSON.stringify({
+          functionCallingConfig: { mode: r.toolMode.toUpperCase() },
+        })
       : undefined,
   };
 }
@@ -233,6 +268,15 @@ function narrowEvent(raw: RustStreamEvent): StreamEvent {
         type: "done",
         stopReason: narrowStopReason(raw.stopReason as RustStopReason),
       };
+    case "function_call": {
+      let args: Record<string, unknown> = {};
+      try {
+        args = JSON.parse(raw.argsJson as string) as Record<string, unknown>;
+      } catch {
+        /* args malformados → objeto vacío; el tool runner responde error */
+      }
+      return { type: "function_call", name: raw.name as string, args };
+    }
     default:
       throw new Error(
         `@openlen/ai-gateway: unexpected stream event type "${raw.type}"`,

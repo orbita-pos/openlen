@@ -56,6 +56,14 @@ pub struct Message {
     /// method (`estimateInputTokens`, `stream`).
     pub role: String,
     pub content: String,
+    /// Assistant turn: tool calls the model emitted, JSON-encoded as a
+    /// STRING (same pattern as `response_schema_json` — no
+    /// `serde_json::Value` bridge in this crate's napi feature set). Array
+    /// of `{name, args}`.
+    pub function_calls_json: Option<String>,
+    /// User turn: tool results going back to the model, JSON-encoded as a
+    /// STRING. Array of `{name, response}`.
+    pub function_responses_json: Option<String>,
 }
 
 /// A reference image attached to a request, marshalled as JS
@@ -90,6 +98,12 @@ pub struct StreamRequest {
     /// `serde_json::Value` here. An unparseable string is a hard error so a
     /// caller bug surfaces loudly instead of silently dropping the constraint.
     pub response_schema_json: Option<String>,
+    /// Native Gemini `tools` — an array of `{functionDeclarations: [...]}`,
+    /// JSON-encoded as a STRING (same pattern as `response_schema_json`).
+    pub tools_json: Option<String>,
+    /// Native Gemini `toolConfig` (e.g. `{functionCallingConfig:{mode}}`),
+    /// JSON-encoded as a STRING.
+    pub tool_config_json: Option<String>,
 }
 
 /// Flat-tagged discriminated union. The `type` field is always present;
@@ -111,6 +125,11 @@ pub struct StreamEvent {
     pub input_tokens: Option<u32>,
     pub output_tokens: Option<u32>,
     pub stop_reason: Option<StopReason>,
+    /// Populated only for `type == "function_call"`.
+    pub name: Option<String>,
+    /// Populated only for `type == "function_call"`; JSON-encoded args
+    /// object as a STRING (same pattern as `response_schema_json`).
+    pub args_json: Option<String>,
 }
 
 #[napi(object)]
@@ -131,11 +150,29 @@ impl TryFrom<Message> for NativeMessage {
 
     fn try_from(m: Message) -> std::result::Result<Self, Self::Error> {
         let role = parse_role(&m.role)?;
+        let function_calls = m
+            .function_calls_json
+            .map(|s| {
+                serde_json::from_str::<serde_json::Value>(&s).map_err(|e| {
+                    napi::Error::from_reason(format!("functionCallsJson is not valid JSON: {e}"))
+                })
+            })
+            .transpose()?;
+        let function_responses = m
+            .function_responses_json
+            .map(|s| {
+                serde_json::from_str::<serde_json::Value>(&s).map_err(|e| {
+                    napi::Error::from_reason(format!(
+                        "functionResponsesJson is not valid JSON: {e}"
+                    ))
+                })
+            })
+            .transpose()?;
         Ok(NativeMessage {
             role,
             content: m.content,
-            function_calls: None,
-            function_responses: None,
+            function_calls,
+            function_responses,
         })
     }
 }
@@ -176,6 +213,19 @@ impl TryFrom<StreamRequest> for NativeStreamRequest {
                 napi::Error::from_reason(format!("responseSchemaJson is not valid JSON: {e}"))
             })?;
             req = req.with_response_schema(schema);
+        }
+        if let Some(tools_json) = r.tools_json {
+            let tools: serde_json::Value = serde_json::from_str(&tools_json).map_err(|e| {
+                napi::Error::from_reason(format!("toolsJson is not valid JSON: {e}"))
+            })?;
+            req = req.with_tools(tools);
+        }
+        if let Some(tool_config_json) = r.tool_config_json {
+            let tool_config: serde_json::Value =
+                serde_json::from_str(&tool_config_json).map_err(|e| {
+                    napi::Error::from_reason(format!("toolConfigJson is not valid JSON: {e}"))
+                })?;
+            req = req.with_tool_config(tool_config);
         }
         Ok(req)
     }
@@ -227,6 +277,8 @@ impl From<NativeStreamEvent> for StreamEvent {
                 input_tokens: None,
                 output_tokens: None,
                 stop_reason: None,
+                name: None,
+                args_json: None,
             },
             NativeStreamEvent::TextDelta { text } => Self {
                 event_type: "text_delta".to_owned(),
@@ -235,6 +287,8 @@ impl From<NativeStreamEvent> for StreamEvent {
                 input_tokens: None,
                 output_tokens: None,
                 stop_reason: None,
+                name: None,
+                args_json: None,
             },
             NativeStreamEvent::Usage {
                 input_tokens,
@@ -246,6 +300,8 @@ impl From<NativeStreamEvent> for StreamEvent {
                 input_tokens: Some(input_tokens),
                 output_tokens: Some(output_tokens),
                 stop_reason: None,
+                name: None,
+                args_json: None,
             },
             NativeStreamEvent::Done { stop_reason } => Self {
                 event_type: "done".to_owned(),
@@ -254,19 +310,18 @@ impl From<NativeStreamEvent> for StreamEvent {
                 input_tokens: None,
                 output_tokens: None,
                 stop_reason: Some(stop_reason.into()),
+                name: None,
+                args_json: None,
             },
-            // Minimal arm forced by adding StreamEvent::FunctionCall (Task 2,
-            // response-side). The JS-facing `StreamEvent` struct has no
-            // name/args_json fields yet — Task 3 (napi bridge) owns wiring
-            // those through properly. This arm only keeps the match
-            // exhaustive; `name`/`args_json` are dropped on the floor.
-            NativeStreamEvent::FunctionCall { .. } => Self {
+            NativeStreamEvent::FunctionCall { name, args_json } => Self {
                 event_type: "function_call".to_owned(),
                 id: None,
                 text: None,
                 input_tokens: None,
                 output_tokens: None,
                 stop_reason: None,
+                name: Some(name),
+                args_json: Some(args_json),
             },
         }
     }
@@ -377,6 +432,8 @@ mod tests {
         let m = Message {
             role: "user".to_owned(),
             content: "hi there".to_owned(),
+            function_calls_json: None,
+            function_responses_json: None,
         };
         let native: NativeMessage = m.try_into().unwrap();
         assert_eq!(native.role, NativeRole::User);
@@ -390,12 +447,16 @@ mod tests {
             messages: vec![Message {
                 role: "system".to_owned(),
                 content: "be brief".to_owned(),
+                function_calls_json: None,
+                function_responses_json: None,
             }],
             max_output_tokens: Some(256),
             temperature: Some(0.2),
             images: None,
             response_mime_type: None,
             response_schema_json: None,
+            tools_json: None,
+            tool_config_json: None,
         };
         let native: NativeStreamRequest = r.try_into().unwrap();
         assert_eq!(native.model, "gemini-2.5-flash");
@@ -413,6 +474,8 @@ mod tests {
             messages: vec![Message {
                 role: "user".to_owned(),
                 content: "hi".to_owned(),
+                function_calls_json: None,
+                function_responses_json: None,
             }],
             max_output_tokens: None,
             temperature: None,
@@ -422,6 +485,8 @@ mod tests {
             }]),
             response_mime_type: None,
             response_schema_json: None,
+            tools_json: None,
+            tool_config_json: None,
         };
         let native: NativeStreamRequest = r.try_into().unwrap();
         assert_eq!(native.images.len(), 1);
@@ -436,12 +501,16 @@ mod tests {
             messages: vec![Message {
                 role: "assistant_typo".to_owned(),
                 content: "hi".to_owned(),
+                function_calls_json: None,
+                function_responses_json: None,
             }],
             max_output_tokens: None,
             temperature: None,
             images: None,
             response_mime_type: None,
             response_schema_json: None,
+            tools_json: None,
+            tool_config_json: None,
         };
         let err = NativeStreamRequest::try_from(r).unwrap_err();
         assert!(err.to_string().contains("assistant_typo"));
@@ -454,6 +523,8 @@ mod tests {
             messages: vec![Message {
                 role: "user".to_owned(),
                 content: "hi".to_owned(),
+                function_calls_json: None,
+                function_responses_json: None,
             }],
             max_output_tokens: None,
             temperature: None,
@@ -462,6 +533,8 @@ mod tests {
             response_schema_json: Some(
                 r#"{"type":"OBJECT","properties":{"ok":{"type":"BOOLEAN"}}}"#.to_owned(),
             ),
+            tools_json: None,
+            tool_config_json: None,
         };
         let native: NativeStreamRequest = r.try_into().unwrap();
         assert_eq!(
@@ -480,12 +553,16 @@ mod tests {
             messages: vec![Message {
                 role: "user".to_owned(),
                 content: "hi".to_owned(),
+                function_calls_json: None,
+                function_responses_json: None,
             }],
             max_output_tokens: None,
             temperature: None,
             images: None,
             response_mime_type: Some("application/json".to_owned()),
             response_schema_json: Some("{not valid json".to_owned()),
+            tools_json: None,
+            tool_config_json: None,
         };
         let err = NativeStreamRequest::try_from(r).unwrap_err();
         assert!(err
@@ -592,5 +669,55 @@ mod tests {
     fn js_estimate_tokens_matches_native_estimator() {
         let s = "abcdefghijkl"; // 12 chars → 3 tokens
         assert_eq!(js_estimate_tokens(s.to_owned()), 3);
+    }
+
+    #[test]
+    fn stream_request_try_from_parses_tools_json() {
+        let r = StreamRequest {
+            model: "gemini-3.5-flash".to_owned(),
+            messages: vec![Message {
+                role: "user".to_owned(),
+                content: "hi".to_owned(),
+                function_calls_json: None,
+                function_responses_json: None,
+            }],
+            max_output_tokens: None,
+            temperature: None,
+            images: None,
+            response_mime_type: None,
+            response_schema_json: None,
+            tools_json: Some(r#"[{"functionDeclarations":[{"name":"leer_estado"}]}]"#.to_owned()),
+            tool_config_json: Some(r#"{"functionCallingConfig":{"mode":"AUTO"}}"#.to_owned()),
+        };
+        let native: NativeStreamRequest = r.try_into().unwrap();
+        assert_eq!(
+            native.tools.as_ref().unwrap()[0]["functionDeclarations"][0]["name"],
+            "leer_estado"
+        );
+        assert!(native.tool_config.is_some());
+    }
+
+    #[test]
+    fn message_try_from_parses_function_calls_json() {
+        let m = Message {
+            role: "assistant".to_owned(),
+            content: "".to_owned(),
+            function_calls_json: Some(r#"[{"name":"x","args":{}}]"#.to_owned()),
+            function_responses_json: None,
+        };
+        let native: NativeMessage = m.try_into().unwrap();
+        assert_eq!(native.function_calls.as_ref().unwrap()[0]["name"], "x");
+    }
+
+    #[test]
+    fn stream_event_function_call_into_js_carries_name_and_args() {
+        let js: StreamEvent = NativeStreamEvent::FunctionCall {
+            name: "leer_estado".into(),
+            args_json: "{\"a\":1}".into(),
+        }
+        .into();
+        assert_eq!(js.event_type, "function_call");
+        assert_eq!(js.name.as_deref(), Some("leer_estado"));
+        assert_eq!(js.args_json.as_deref(), Some("{\"a\":1}"));
     }
 }
