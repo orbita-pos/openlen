@@ -87,6 +87,47 @@ describe("runAgentLoop", () => {
     expect(events.some((e) => e.type === "error")).toBe(true);
   });
 
+  it("surfaces an error and stops the loop when a turn truncates at max_tokens", async () => {
+    const events: AgentStreamEvent[] = [];
+    let opened = 0;
+    const r = await runAgentLoop({
+      messages: [{ role: "user", content: "x" }], tools: [],
+      openStream: () => {
+        opened += 1;
+        return (async function* () {
+          yield { type: "text_delta", text: "empeza" } as StreamEvent;
+          yield { type: "usage", inputTokens: 100, outputTokens: 20 } as StreamEvent;
+          yield { type: "done", stopReason: { kind: "max_tokens" } } as StreamEvent;
+        })();
+      },
+      runTool: async () => { throw new Error("must not run"); },
+      emit: (e) => events.push(e),
+    });
+    // The truncated turn stops the loop after exactly one openStream call.
+    expect(opened).toBe(1);
+    expect(r.turns).toBe(1);
+    const err = events.find((e) => e.type === "error");
+    expect(err).toBeDefined();
+    expect((err as { message: string }).message).toContain("espacio");
+    // Accumulated usage is still returned rather than discarded.
+    expect(r.usage.outputTokens).toBe(20);
+  });
+
+  it("surfaces an error and stops the loop when a turn is cancelled", async () => {
+    const events: AgentStreamEvent[] = [];
+    const r = await runAgentLoop({
+      messages: [{ role: "user", content: "x" }], tools: [],
+      openStream: scripted([
+        { type: "text_delta", text: "..." },
+        { type: "done", stopReason: { kind: "cancelled" } },
+      ]),
+      runTool: async () => { throw new Error("must not run"); },
+      emit: (e) => events.push(e),
+    });
+    expect(r.turns).toBe(1);
+    expect(events.some((e) => e.type === "error")).toBe(true);
+  });
+
   it("emits html events when a tool updates the doc", async () => {
     const events: AgentStreamEvent[] = [];
     await runAgentLoop({

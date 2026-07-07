@@ -86,8 +86,21 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
         inputTokens += ev.inputTokens;
         outputTokens += ev.outputTokens;
       } else if (ev.type === "done") {
+        // A stream that ends on anything but a clean end_turn must NOT read
+        // as success: error (SAFETY/RECITATION/5xx), cancelled (abort), and
+        // max_tokens (truncated response) all surface as an error event and
+        // stop the loop — a truncated turn's partial text is not a real answer.
         if (ev.stopReason.kind === "error") {
           args.emit({ type: "error", message: ev.stopReason.error });
+          sawError = true;
+        } else if (ev.stopReason.kind === "cancelled") {
+          args.emit({ type: "error", message: "El agente fue cancelado." });
+          sawError = true;
+        } else if (ev.stopReason.kind === "max_tokens") {
+          args.emit({
+            type: "error",
+            message: "El agente se quedó sin espacio de respuesta — intenta un pedido más corto.",
+          });
           sawError = true;
         }
       }

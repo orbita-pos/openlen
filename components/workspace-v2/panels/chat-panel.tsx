@@ -283,6 +283,9 @@ function AIDesignChat({
   onSwitchSitePage?: (slug: string | null) => void;
 }) {
   const t = useTranslations("panelsChat");
+  // Agent-mode messages live under the wsPage namespace (shared with the
+  // AgentActionCard); pulled separately from the panelsChat translator.
+  const tAgent = useTranslations("wsPage.agent");
   // Seed from the persisted transcript so a reload / tab-switch remount
   // restores the conversation. Restored turns carry no HTML snapshot — their
   // inline Undo is hidden (the Versions tab covers older revisions).
@@ -291,6 +294,17 @@ function AIDesignChat({
   );
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
+  // Agent mode (flag-gated) — read once on mount for the UI so the composer
+  // can hide affordances the /api/agent route drops (attach-image, scope,
+  // model choice). The send() path re-reads localStorage at call time.
+  const [agentModeUI, setAgentModeUI] = useState(false);
+  useEffect(() => {
+    try {
+      setAgentModeUI(window.localStorage.getItem("ol:agent") === "1");
+    } catch {
+      /* storage blocked — leave affordances visible */
+    }
+  }, []);
   const [attachedImage, setAttachedImage] = useState<AttachedImage | null>(null);
   const [imageModalOpen, setImageModalOpen] = useState(false);
   const [model, handleModelChange] = useAIModel();
@@ -546,6 +560,15 @@ function AIDesignChat({
         /* storage blocked — stay on ai-design; must not wedge the composer */
       }
       if (agentMode) {
+        // F1 server tools ONLY edit the home document (data.html). If the
+        // canvas is on a subpage, don't fetch — settle the turn as an
+        // error-style notice (spinner off, input re-enabled, nothing
+        // persisted), same as any other pre-flight failure.
+        if (turnPage !== null) {
+          updateTurn(turnId, { status: "error", errorText: tAgent("homeOnly") });
+          setSending(false);
+          return;
+        }
         const abort = new AbortController();
         abortRef.current = abort;
         let accumulatedReasoning = "";
@@ -628,9 +651,10 @@ function AIDesignChat({
                 const html = strField(payload, "html");
                 if (html) {
                   latestAgentHtml = html;
-                  // Same channel done.html uses today — write the refreshed
-                  // document into the parent's project state + preview.
-                  onLocalUpdate(html, turnPage);
+                  // Agent turns are home-only (guarded above), so pin the html
+                  // channel to home explicitly — the refreshed document must
+                  // never land in a subpage slot.
+                  onLocalUpdate(html, null);
                 }
               } else if (evName === "done") {
                 // Terminal — always finalizes the turn, even when it trails
@@ -664,7 +688,9 @@ function AIDesignChat({
             attachedImage: img ?? undefined,
             assistantReasoning: accumulatedReasoning,
             status: "applied",
-            page: turnPage,
+            // Agent turns are home-only (guarded above) — pin to home so Undo
+            // PATCHes the home document.
+            page: null,
           });
         } catch (err) {
           if (abort.signal.aborted) {
@@ -921,6 +947,7 @@ function AIDesignChat({
       scopedSelection,
       sending,
       t,
+      tAgent,
       updateTurn,
       upsertAction,
     ],
@@ -1036,6 +1063,7 @@ function AIDesignChat({
         attachedImage={attachedImage}
         onAttachImage={() => setImageModalOpen(true)}
         onClearAttachedImage={() => setAttachedImage(null)}
+        agentMode={agentModeUI}
       />
       <ReplaceAssetModal
         open={imageModalOpen}
@@ -1311,6 +1339,7 @@ function Composer({
   onClearAttachedImage,
   model,
   onModelChange,
+  agentMode = false,
 }: {
   value: string;
   onChange: (v: string) => void;
@@ -1327,6 +1356,10 @@ function Composer({
   onClearAttachedImage?: () => void;
   model: AIModel;
   onModelChange: (m: AIModel) => void;
+  /** Agent mode drops attach-image, scoped selection, and model choice (the
+   *  /api/agent route hardcodes Flash + ignores them) — hide those
+   *  affordances rather than silently discard the input. */
+  agentMode?: boolean;
 }) {
   const t = useTranslations("panelsChat");
   return (
@@ -1395,21 +1428,23 @@ function Composer({
         />
         <div className="flex items-center justify-between px-1.5 pb-1.5 pt-0.5">
           <div className="flex items-center gap-0.5">
-            <button
-              type="button"
-              aria-label={t("composer.attachImage")}
-              title={t("composer.attachImageTitle")}
-              onClick={onAttachImage}
-              disabled={sending || !onAttachImage}
-              className={`inline-flex h-7 w-7 items-center justify-center rounded-md transition disabled:opacity-40 ${
-                attachedImage
-                  ? "bg-[var(--accent-strong)] text-white shadow-coral"
-                  : "fg-faint hover:fg hover:bg-hover"
-              }`}
-            >
-              <ImageIcon size={13} />
-            </button>
-            {onToggleSectionSelect && (
+            {!agentMode && (
+              <button
+                type="button"
+                aria-label={t("composer.attachImage")}
+                title={t("composer.attachImageTitle")}
+                onClick={onAttachImage}
+                disabled={sending || !onAttachImage}
+                className={`inline-flex h-7 w-7 items-center justify-center rounded-md transition disabled:opacity-40 ${
+                  attachedImage
+                    ? "bg-[var(--accent-strong)] text-white shadow-coral"
+                    : "fg-faint hover:fg hover:bg-hover"
+                }`}
+              >
+                <ImageIcon size={13} />
+              </button>
+            )}
+            {!agentMode && onToggleSectionSelect && (
               <button
                 type="button"
                 aria-label={
@@ -1433,12 +1468,14 @@ function Composer({
                 <Crosshair size={13} />
               </button>
             )}
-            <ModelPicker
-              model={model}
-              onChange={onModelChange}
-              disabled={sending}
-              compact
-            />
+            {!agentMode && (
+              <ModelPicker
+                model={model}
+                onChange={onModelChange}
+                disabled={sending}
+                compact
+              />
+            )}
             {onAutofill && (
               <>
                 <span

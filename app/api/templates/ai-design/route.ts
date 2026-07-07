@@ -290,6 +290,11 @@ export async function POST(req: Request): Promise<Response> {
     return errorJson(400, "currentHtml must be a full HTML document");
   }
 
+  // Map to ONLY {role, content} (the TS wrapper now serializes
+  // functionCalls/functionResponses off Message objects, so spreading a
+  // client history entry whole would be a tool-call injection vector) and cap
+  // each content at 4000 chars. Well-formed {role, content} clients are
+  // unaffected: same filter, same slice(-6).
   const history: HistoryTurn[] = Array.isArray(body.history)
     ? body.history
         .filter(
@@ -301,6 +306,7 @@ export async function POST(req: Request): Promise<Response> {
             h.content.length > 0,
         )
         .slice(-6)
+        .map((h) => ({ role: h.role, content: h.content.slice(0, 4000) }))
     : [];
 
   // Validate the scope payload (optional). The hint is a textual fallback;

@@ -50,6 +50,10 @@ export async function POST(req: Request): Promise<Response> {
   const prompt = typeof body?.prompt === "string" ? body.prompt.trim() : "";
   if (!projectId) return errorJson(400, "projectId is required");
   if (prompt.length === 0 || prompt.length > 2000) return errorJson(400, "prompt must be 1–2000 chars");
+  // History hardening: map to ONLY {role, content} (the TS wrapper serializes
+  // functionCalls/functionResponses off Message objects, so a client-supplied
+  // history entry spread whole would be a tool-call injection vector) and cap
+  // each content at 4000 chars.
   const history = Array.isArray(body?.history)
     ? body.history
         .filter(
@@ -60,6 +64,7 @@ export async function POST(req: Request): Promise<Response> {
             h.content.length > 0,
         )
         .slice(-6)
+        .map((h) => ({ role: h.role, content: h.content.slice(0, 4000) }))
     : [];
 
   const userId = session.user.id;
@@ -81,7 +86,8 @@ export async function POST(req: Request): Promise<Response> {
     publishedAt: project.publishedAt,
   });
   const contextBlock = buildAgentContext({ state, taggedHtml, userBrief: project.userBrief });
-  if (estimateContextTokens(contextBlock + prompt, systemPrompt) > MAX_PROMPT_TOKENS) {
+  const historyText = history.map((h) => h.content).join("\n");
+  if (estimateContextTokens(contextBlock + historyText + prompt, systemPrompt) > MAX_PROMPT_TOKENS) {
     return errorJson(413, "Page too large for an agent turn");
   }
 
@@ -94,7 +100,12 @@ export async function POST(req: Request): Promise<Response> {
   ];
 
   const upstreamAbort = new AbortController();
-  const agentSession: AgentSession = { projectId, userId, taggedHtml };
+  const agentSession: AgentSession = {
+    projectId,
+    userId,
+    taggedHtml,
+    ownerEmail: session.user.email ?? null,
+  };
   const provider = new GeminiProvider(PROVIDER.key as string);
   const tools = buildFunctionDeclarations();
 

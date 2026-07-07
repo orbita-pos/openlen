@@ -17,6 +17,7 @@ function makeDeps(overrides?: Partial<{ data: ProjectData }>) {
     saved: [] as ProjectData[],
     versions: [] as string[],
     provisioned: 0,
+    provisionedOpts: null as { email: string | null; displayName: string } | null,
   };
   const deps: AgentDeps = {
     async loadProject() {
@@ -24,13 +25,18 @@ function makeDeps(overrides?: Partial<{ data: ProjectData }>) {
     },
     async saveProjectData(_p, _u, data) { store.data = data; store.saved.push(data); },
     async snapshotVersion(a) { store.versions.push(a.label); },
-    async provisionOwnerChat() { store.provisioned += 1; },
+    async provisionOwnerChat(_p, _u, opts) { store.provisioned += 1; store.provisionedOpts = opts; },
   };
   return { deps, store };
 }
 
 function makeSession(): AgentSession {
-  return { projectId: "p1", userId: "u1", taggedHtml: tagWithOpIds(HTML).taggedHtml };
+  return {
+    projectId: "p1",
+    userId: "u1",
+    taggedHtml: tagWithOpIds(HTML).taggedHtml,
+    ownerEmail: "owner@example.com",
+  };
 }
 
 describe("summarizeProjectState", () => {
@@ -51,10 +57,14 @@ describe("activar_modulo", () => {
     assert.equal(out.action?.tool, "activar_modulo");
     assert.equal(store.saved.length, 1);
   });
-  it("provisions owner chat on chat enable", async () => {
+  it("provisions owner chat on chat enable, threading the session email", async () => {
     const { deps, store } = makeDeps();
     await runAgentTool(makeSession(), deps, "activar_modulo", { modulo: "chat" });
     assert.equal(store.provisioned, 1);
+    // The email must reach the dep — getOrCreateOwnerChatUser short-circuits on
+    // an existing row, so a dropped email would strand the owner forever.
+    assert.equal(store.provisionedOpts?.email, "owner@example.com");
+    assert.equal(store.provisionedOpts?.displayName, "Tacos");
   });
   it("surfaces the comments-without-members error to the model, not as a throw", async () => {
     const { deps } = makeDeps();

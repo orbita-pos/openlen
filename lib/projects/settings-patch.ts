@@ -374,6 +374,15 @@ export function validateSettingsPatch(
   return { ok: true, body };
 }
 
+/**
+ * Merge a validated settings patch into the project data.
+ *
+ * Callers MUST run `validateSettingsPatch` first and pass its `body` here —
+ * `applySettingsPatch` assumes validated input and does NOT re-check it. In
+ * particular the music own-asset guard (a page may only reference its own
+ * uploaded audio/cover) lives in validate, so an unvalidated body would let a
+ * third-party asset URL through.
+ */
 export function applySettingsPatch(
   data: ProjectData,
   body: SettingsPatchBody,

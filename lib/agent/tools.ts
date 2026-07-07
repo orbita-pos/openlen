@@ -50,7 +50,11 @@ export interface AgentDeps {
     source: string;
     page: string | null;
   }): Promise<void>;
-  provisionOwnerChat(projectId: string, userId: string, title: string): Promise<void>;
+  provisionOwnerChat(
+    projectId: string,
+    userId: string,
+    opts: { email: string | null; displayName: string },
+  ): Promise<void>;
 }
 
 export function realDeps(): AgentDeps {
@@ -89,9 +93,15 @@ export function realDeps(): AgentDeps {
         console.error("[agent] snapshot failed", err);
       });
     },
-    async provisionOwnerChat(projectId, userId, title) {
+    async provisionOwnerChat(projectId, userId, opts) {
       try {
-        await getOrCreateOwnerChatUser(projectId, userId, { displayName: title });
+        // Thread the email through so an agent-created owner chat_user carries
+        // it — getOrCreateOwnerChatUser short-circuits on an existing row, so a
+        // null here would strand the owner without an email forever.
+        await getOrCreateOwnerChatUser(projectId, userId, {
+          email: opts.email,
+          displayName: opts.displayName,
+        });
       } catch (err) {
         console.warn("[agent] owner chat provisioning failed (will retry lazily)", err);
       }
@@ -104,6 +114,10 @@ export interface AgentSession {
   userId: string;
   /** Documento home actual, etiquetado — mutado por editar_pagina. */
   taggedHtml: string;
+  /** Session email (session.user.email), threaded from the route so an
+   *  agent-provisioned owner chat_user is created WITH an email — mirrors
+   *  what the settings route passes to getOrCreateOwnerChatUser. */
+  ownerEmail: string | null;
 }
 
 export interface ToolOutcome {
@@ -195,7 +209,10 @@ async function toolActivarModulo(
   }
 
   if (outcome.chatJustEnabled) {
-    await deps.provisionOwnerChat(session.projectId, session.userId, row.title);
+    await deps.provisionOwnerChat(session.projectId, session.userId, {
+      email: session.ownerEmail,
+      displayName: row.title,
+    });
   }
   await deps.saveProjectData(session.projectId, session.userId, outcome.nextData);
 

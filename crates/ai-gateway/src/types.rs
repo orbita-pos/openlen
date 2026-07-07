@@ -22,10 +22,11 @@ pub enum Role {
     Assistant,
 }
 
-/// A single message in a streaming request. F3 S1 is text-only; future
-/// multimodal support would require widening `content` to a `Vec<Content>`
-/// (image / audio parts). Doing that now would be premature — there is no
-/// caller yet.
+/// A single message in a streaming request. `content` holds the text part;
+/// `function_calls` (assistant turns) and `function_responses` (user turns)
+/// carry the native tool-calling parts for the agentic loop. Multimodal
+/// image/audio parts would still require widening `content` to a
+/// `Vec<Content>` — no caller for that yet.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Message {
     pub role: Role,
