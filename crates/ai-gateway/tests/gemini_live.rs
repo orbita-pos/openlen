@@ -73,6 +73,12 @@ async fn live_mini_prompt_emits_expected_event_shape() {
                 last_stop = Some(stop_reason);
                 done_count += 1;
             }
+            // This test sends no `tools`/`toolConfig`, so Gemini has nothing
+            // to call — not expected here. Added only to keep the match
+            // exhaustive after Task 2 (response-side FunctionCall event).
+            StreamEvent::FunctionCall { .. } => {
+                panic!("unexpected FunctionCall event — this test configures no tools");
+            }
         }
     }
 

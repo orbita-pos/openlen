@@ -152,6 +152,15 @@ pub(crate) struct GeminiContent {
 #[serde(rename_all = "camelCase")]
 pub(crate) struct GeminiPart {
     pub(crate) text: Option<String>,
+    pub(crate) function_call: Option<GeminiFunctionCall>,
+}
+
+#[derive(Debug, Deserialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct GeminiFunctionCall {
+    pub(crate) name: String,
+    #[serde(default)]
+    pub(crate) args: Option<serde_json::Value>,
 }
 
 #[derive(Debug, Default, Deserialize, PartialEq)]
@@ -384,5 +393,19 @@ mod tests {
         let mut p = SseParser::new();
         let events = p.feed(b": keep-alive\n\n").unwrap();
         assert!(events.is_empty());
+    }
+
+    #[test]
+    fn parses_function_call_part() {
+        let mut p = SseParser::new();
+        let bytes = br#"data: {"candidates":[{"content":{"parts":[{"functionCall":{"name":"leer_estado","args":{}}}],"role":"model"}}]}
+
+"#;
+        let events = p.feed(bytes).unwrap();
+        let fc = events[0].candidates[0].content.as_ref().unwrap().parts[0]
+            .function_call
+            .as_ref()
+            .unwrap();
+        assert_eq!(fc.name, "leer_estado");
     }
 }

@@ -255,6 +255,19 @@ impl From<NativeStreamEvent> for StreamEvent {
                 output_tokens: None,
                 stop_reason: Some(stop_reason.into()),
             },
+            // Minimal arm forced by adding StreamEvent::FunctionCall (Task 2,
+            // response-side). The JS-facing `StreamEvent` struct has no
+            // name/args_json fields yet — Task 3 (napi bridge) owns wiring
+            // those through properly. This arm only keeps the match
+            // exhaustive; `name`/`args_json` are dropped on the floor.
+            NativeStreamEvent::FunctionCall { .. } => Self {
+                event_type: "function_call".to_owned(),
+                id: None,
+                text: None,
+                input_tokens: None,
+                output_tokens: None,
+                stop_reason: None,
+            },
         }
     }
 }

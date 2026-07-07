@@ -217,6 +217,13 @@ fn process_gemini_event(
                         deltas.push(StreamEvent::TextDelta { text });
                     }
                 }
+                if let Some(fc) = p.function_call {
+                    let args = fc.args.unwrap_or_else(|| serde_json::json!({}));
+                    deltas.push(StreamEvent::FunctionCall {
+                        name: fc.name,
+                        args_json: args.to_string(),
+                    });
+                }
             }
         }
         if let Some(reason) = c.finish_reason {
@@ -910,9 +917,11 @@ mod tests {
                     parts: vec![
                         GeminiPart {
                             text: Some("hi".into()),
+                            function_call: None,
                         },
                         GeminiPart {
                             text: Some(" there".into()),
+                            function_call: None,
                         },
                     ],
                 }),
@@ -970,5 +979,38 @@ mod tests {
             Some(StopReason::Error(msg)) => assert!(msg.contains("SAFETY")),
             other => panic!("expected Error, got {other:?}"),
         }
+    }
+
+    #[test]
+    fn process_event_emits_function_call_deltas() {
+        use super::sse::*;
+        let ev = GeminiEvent {
+            candidates: vec![GeminiCandidate {
+                content: Some(GeminiContent {
+                    parts: vec![GeminiPart {
+                        text: None,
+                        function_call: Some(GeminiFunctionCall {
+                            name: "activar_modulo".into(),
+                            args: Some(serde_json::json!({"modulo":"members"})),
+                        }),
+                    }],
+                }),
+                finish_reason: Some("STOP".into()),
+            }],
+            usage_metadata: None,
+            prompt_feedback: None,
+        };
+        let (mut usage, mut stop) = (None, None);
+        let deltas = process_gemini_event(ev, &mut usage, &mut stop);
+        assert_eq!(deltas.len(), 1);
+        match &deltas[0] {
+            StreamEvent::FunctionCall { name, args_json } => {
+                assert_eq!(name, "activar_modulo");
+                let parsed: serde_json::Value = serde_json::from_str(args_json).unwrap();
+                assert_eq!(parsed["modulo"], "members");
+            }
+            other => panic!("expected FunctionCall, got {other:?}"),
+        }
+        assert_eq!(stop, Some(StopReason::EndTurn));
     }
 }

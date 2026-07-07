@@ -200,7 +200,8 @@ pub enum StopReason {
 ///
 /// 1. `Start { id }` — first event, before any text. Best-effort `id` (random
 ///    UUID-ish; Gemini doesn't expose a stream id).
-/// 2. Zero or more `TextDelta { text }`.
+/// 2. Zero or more `TextDelta { text }` and `FunctionCall { name, args_json }`,
+///    interleaved in the order Gemini emitted the underlying parts.
 /// 3. Exactly one `Usage { .. }` once `usageMetadata` arrives (last data
 ///    frame).
 /// 4. Exactly one `Done { stop_reason }` as the final event.
@@ -224,6 +225,10 @@ pub enum StreamEvent {
     },
     Done {
         stop_reason: StopReason,
+    },
+    FunctionCall {
+        name: String,
+        args_json: String,
     },
 }
 
@@ -427,5 +432,17 @@ mod tests {
         let s = serde_json::to_string(&e).unwrap();
         let back: StreamEvent = serde_json::from_str(&s).unwrap();
         assert_eq!(back, e);
+    }
+
+    #[test]
+    fn stream_event_function_call_has_type_tag() {
+        let e = StreamEvent::FunctionCall {
+            name: "leer_estado".into(),
+            args_json: "{}".into(),
+        };
+        let v: serde_json::Value = serde_json::to_value(&e).unwrap();
+        assert_eq!(v["type"], "function_call");
+        assert_eq!(v["name"], "leer_estado");
+        assert_eq!(v["args_json"], "{}");
     }
 }
