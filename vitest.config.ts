@@ -31,7 +31,12 @@ export default defineConfig({
       "lib/business-profiles/**/*.test.ts",
       "lib/billing/**/*.test.ts",
       "lib/auth/**/*.test.ts",
-      "lib/agent/**/*.test.ts",
+      // NB: lib/agent mixes runners — tools.test.ts exercises the native
+      // html-engine binding and runs under node:test (`tsx --test`), so list
+      // the vitest agent tests individually (same reason as lib/projects).
+      "lib/agent/catalog.test.ts",
+      "lib/agent/loop.test.ts",
+      "lib/agent/context.test.ts",
       "lib/theme-derive.test.ts",
       "lib/palette-gen-look.test.ts",
       "lib/theme-presets.test.ts",
