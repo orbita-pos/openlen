@@ -210,6 +210,10 @@ interface DesignTurn {
    *  Empty/absent for ai-design turns. Not persisted in F1 — rebuilt live
    *  from the SSE `action` events each turn. */
   actions?: AgentAction[];
+  /** Agent-mode: the turn finished without any `html` event (answer-only or
+   *  settings-only) — no document changed, so the footer suppresses the
+   *  Applied/Undo affordances. Local-only, never persisted. */
+  noDocChange?: boolean;
   appliedAt?: number;
   /** ms-epoch when the turn started — drives the elapsed-time label
    *  shown next to "Designing your page…" so the user has signal that
@@ -533,9 +537,14 @@ function AIDesignChat({
       // Same SSE reader/line-parse shape as below, different event dispatch:
       // `text` feeds the assistant prose, `action` upserts tool cards, `html`
       // refreshes the preview via the SAME onLocalUpdate path done.html uses.
-      const agentMode =
-        typeof window !== "undefined" &&
-        window.localStorage.getItem("ol:agent") === "1";
+      let agentMode = false;
+      try {
+        agentMode =
+          typeof window !== "undefined" &&
+          window.localStorage.getItem("ol:agent") === "1";
+      } catch {
+        /* storage blocked — stay on ai-design; must not wedge the composer */
+      }
       if (agentMode) {
         const abort = new AbortController();
         abortRef.current = abort;
@@ -642,9 +651,12 @@ function AIDesignChat({
           updateTurn(turnId, {
             status: "applied",
             appliedAt: Date.now(),
-            // Undo reverts to the pre-turn document; when the agent made no
-            // edit this is a harmless no-op restore of the same html.
-            postEditHtml: latestAgentHtml ?? preEditHtml,
+            // No `html` event = no document changed (answer-only or
+            // settings-only turn) — flag it so the footer shows neither
+            // "Applied" nor a pointless Undo.
+            ...(latestAgentHtml !== null
+              ? { postEditHtml: latestAgentHtml }
+              : { noDocChange: true }),
           });
           void persistTurn({
             id: turnId,
@@ -1203,6 +1215,9 @@ function TurnFooter({
     );
   }
   if (turn.status === "applied") {
+    // Agent turn that changed no document — "Applied · Undo" would be the
+    // wrong verbs (and Undo a pointless PATCH), so the footer stays silent.
+    if (turn.noDocChange) return null;
     // No preEditHtml = a turn restored from a previous session; the inline
     // Undo can't revert it (the Versions tab does), so hide the button.
     const canUndo = turn.preEditHtml.length > 0;
