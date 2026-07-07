@@ -30,6 +30,7 @@ import {
 } from "../icons";
 import { ReplaceAssetModal } from "../replace-asset-modal";
 import { ModelPicker, useAIModel } from "../model-picker";
+import { AgentActionCard, type AgentAction } from "../agent-action-card";
 import type { StoredChatTurn } from "@/lib/projects/types";
 import type { SitePageSummary } from "@/lib/projects/site-pages";
 import type { AIModel } from "@/lib/ai-provider";
@@ -205,6 +206,10 @@ interface DesignTurn {
    *  undefined = pre-multipage turn; falls back to the current page. */
   page?: string | null;
   postEditHtml?: string;
+  /** Agent-mode tool cards for this turn (leer_estado → editar_pagina → …).
+   *  Empty/absent for ai-design turns. Not persisted in F1 — rebuilt live
+   *  from the SSE `action` events each turn. */
+  actions?: AgentAction[];
   appliedAt?: number;
   /** ms-epoch when the turn started — drives the elapsed-time label
    *  shown next to "Designing your page…" so the user has signal that
@@ -407,7 +412,10 @@ function AIDesignChat({
   const lastSig = useMemo(
     () =>
       turns
-        .map((t) => `${t.id}:${t.assistantReasoning.length}:${t.status}`)
+        .map(
+          (t) =>
+            `${t.id}:${t.assistantReasoning.length}:${t.status}:${t.actions?.length ?? 0}`,
+        )
         .join("|"),
     [turns],
   );
@@ -428,6 +436,25 @@ function AIDesignChat({
           ? { ...t, assistantReasoning: t.assistantReasoning + text }
           : t,
       ),
+    );
+  }, []);
+
+  // Agent-mode: upsert a tool card. Each tool call emits `running` then
+  // `done`/`error` — replace the trailing `running` card for that tool
+  // instead of stacking a duplicate; otherwise append a new card.
+  const upsertAction = useCallback((id: string, action: AgentAction) => {
+    setTurns((prev) =>
+      prev.map((t) => {
+        if (t.id !== id) return t;
+        const actions = t.actions ? [...t.actions] : [];
+        const last = actions[actions.length - 1];
+        if (last && last.tool === action.tool && last.status === "running") {
+          actions[actions.length - 1] = action;
+        } else {
+          actions.push(action);
+        }
+        return { ...t, actions };
+      }),
     );
   }, []);
 
@@ -501,6 +528,151 @@ function AIDesignChat({
           { role: "user" as const, content: t.userText },
           { role: "assistant" as const, content: t.assistantReasoning || "" },
         ]);
+
+      // Agent mode (flag-gated) — talk to /api/agent instead of ai-design.
+      // Same SSE reader/line-parse shape as below, different event dispatch:
+      // `text` feeds the assistant prose, `action` upserts tool cards, `html`
+      // refreshes the preview via the SAME onLocalUpdate path done.html uses.
+      const agentMode =
+        typeof window !== "undefined" &&
+        window.localStorage.getItem("ol:agent") === "1";
+      if (agentMode) {
+        const abort = new AbortController();
+        abortRef.current = abort;
+        let accumulatedReasoning = "";
+        let latestAgentHtml: string | null = null;
+        let errorMessage: string | null = null;
+        try {
+          const res = await fetch("/api/agent", {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ projectId, prompt, history }),
+            signal: abort.signal,
+          });
+
+          if (!res.ok || !res.body) {
+            const errPayload = await res
+              .json()
+              .catch(() => ({ error: `HTTP ${res.status}` }));
+            updateTurn(turnId, {
+              status: "error",
+              errorText:
+                typeof errPayload?.error === "string"
+                  ? errPayload.error
+                  : t("errors.requestFailed", { status: res.status }),
+            });
+            return;
+          }
+
+          const reader = res.body.getReader();
+          const decoder = new TextDecoder();
+          let sseBuf = "";
+
+          agentOuter: while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            sseBuf += decoder.decode(value, { stream: true });
+            let nl: number;
+            while ((nl = sseBuf.indexOf("\n\n")) >= 0) {
+              const block = sseBuf.slice(0, nl);
+              sseBuf = sseBuf.slice(nl + 2);
+              let evName = "message";
+              let dataStr = "";
+              for (const line of block.split("\n")) {
+                if (line.startsWith("event: ")) {
+                  evName = line.slice(7).trim();
+                } else if (line.startsWith("data: ")) {
+                  dataStr += line.slice(6);
+                }
+              }
+              if (!dataStr) continue;
+              let payload: unknown;
+              try {
+                payload = JSON.parse(dataStr);
+              } catch {
+                continue;
+              }
+
+              if (evName === "text") {
+                const text = strField(payload, "text");
+                if (text) {
+                  appendReasoning(turnId, text);
+                  accumulatedReasoning += text;
+                }
+              } else if (evName === "action") {
+                const p = payload as {
+                  tool?: unknown;
+                  status?: unknown;
+                  summary?: unknown;
+                };
+                const tool = typeof p.tool === "string" ? p.tool : "";
+                const status =
+                  p.status === "running" ||
+                  p.status === "done" ||
+                  p.status === "error"
+                    ? p.status
+                    : "done";
+                const summary =
+                  typeof p.summary === "string" ? p.summary : "";
+                if (tool) upsertAction(turnId, { tool, status, summary });
+              } else if (evName === "html") {
+                const html = strField(payload, "html");
+                if (html) {
+                  latestAgentHtml = html;
+                  // Same channel done.html uses today — write the refreshed
+                  // document into the parent's project state + preview.
+                  onLocalUpdate(html, turnPage);
+                }
+              } else if (evName === "done") {
+                // Terminal — always finalizes the turn, even when it trails
+                // an `error` event (the loop can emit both in one turn).
+                break agentOuter;
+              } else if (evName === "error") {
+                // Do NOT break — a `done` may still follow to close the turn.
+                errorMessage = strField(payload, "message") || t("errors.generic");
+              }
+            }
+          }
+
+          if (errorMessage) {
+            updateTurn(turnId, { status: "error", errorText: errorMessage });
+            return;
+          }
+
+          updateTurn(turnId, {
+            status: "applied",
+            appliedAt: Date.now(),
+            // Undo reverts to the pre-turn document; when the agent made no
+            // edit this is a harmless no-op restore of the same html.
+            postEditHtml: latestAgentHtml ?? preEditHtml,
+          });
+          void persistTurn({
+            id: turnId,
+            userText: prompt,
+            attachedImage: img ?? undefined,
+            assistantReasoning: accumulatedReasoning,
+            status: "applied",
+            page: turnPage,
+          });
+        } catch (err) {
+          if (abort.signal.aborted) {
+            updateTurn(turnId, {
+              status: "error",
+              errorText: t("errors.cancelled"),
+            });
+          } else {
+            updateTurn(turnId, {
+              status: "error",
+              errorText:
+                err instanceof Error ? err.message : t("errors.network"),
+            });
+          }
+        } finally {
+          if (abortRef.current === abort) abortRef.current = null;
+          setSending(false);
+        }
+        return;
+      }
 
       const htmlBuf = { value: "" };
       // Accumulated alongside the per-turn state so the final reasoning is in
@@ -738,6 +910,7 @@ function AIDesignChat({
       sending,
       t,
       updateTurn,
+      upsertAction,
     ],
   );
 
@@ -803,7 +976,8 @@ function AIDesignChat({
     sending &&
     latest &&
     latest.status === "streaming" &&
-    latest.assistantReasoning.length === 0;
+    latest.assistantReasoning.length === 0 &&
+    (latest.actions?.length ?? 0) === 0;
 
   return (
     <div className="flex flex-col h-full">
@@ -958,7 +1132,14 @@ function TurnView({
           <span className="shrink-0 inline-flex h-6 w-6 items-center justify-center rounded-full bg-[var(--accent-strong)] text-white">
             <Sparkles size={11} />
           </span>
-          <div className="min-w-0 max-w-[85%]">
+          <div className="min-w-0 max-w-[85%] space-y-1.5">
+            {turn.actions && turn.actions.length > 0 && (
+              <div className="space-y-1">
+                {turn.actions.map((a, i) => (
+                  <AgentActionCard key={`${a.tool}-${i}`} action={a} />
+                ))}
+              </div>
+            )}
             <div className="inline-block rounded-2xl px-3 py-2 text-left bg-elev border bd">
               {turn.assistantReasoning.length > 0 && (
                 <div className="text-[12.5px] fg leading-relaxed whitespace-pre-wrap">
@@ -1393,6 +1574,13 @@ function restoreTurn(s: StoredChatTurn): DesignTurn {
     appliedAt: s.appliedAt,
     page: s.page,
   };
+}
+
+// Pull a string field off an unknown SSE payload, "" when absent/non-string.
+function strField(payload: unknown, key: string): string {
+  if (!payload || typeof payload !== "object") return "";
+  const v = (payload as Record<string, unknown>)[key];
+  return typeof v === "string" ? v : "";
 }
 
 type Translator = ReturnType<typeof useTranslations<"panelsChat">>;

@@ -1,4 +1,12 @@
 {
+  "agent": {
+    "failed": "mislukt",
+    "tool": {
+      "leer_estado": "Je project lezen",
+      "editar_pagina": "De pagina bewerken",
+      "activar_modulo": "Module inschakelen"
+    }
+  },
   "defaultProjectName": "Prijzenpagina",
   "chatDraft": {
     "iconChanged": "Ik heb het icoon hier zojuist gewijzigd. Werk de bijbehorende titel en beschrijving bij zodat de betekenis overeenkomt met het nieuwe icoon.",

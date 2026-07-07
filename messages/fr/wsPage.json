@@ -1,4 +1,12 @@
 {
+  "agent": {
+    "failed": "échec",
+    "tool": {
+      "leer_estado": "Lecture de votre projet",
+      "editar_pagina": "Modification de la page",
+      "activar_modulo": "Activation du module"
+    }
+  },
   "defaultProjectName": "Page de tarifs",
   "chatDraft": {
     "iconChanged": "Je viens de changer l'icône ici. Mets à jour le titre et la description autour pour que le sens corresponde à la nouvelle icône.",

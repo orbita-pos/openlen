@@ -1,4 +1,12 @@
 {
+  "agent": {
+    "failed": "실패함",
+    "tool": {
+      "leer_estado": "프로젝트를 읽는 중",
+      "editar_pagina": "페이지를 편집하는 중",
+      "activar_modulo": "모듈을 활성화하는 중"
+    }
+  },
   "defaultProjectName": "가격 페이지",
   "chatDraft": {
     "iconChanged": "방금 여기 아이콘을 바꿨어요. 새 아이콘에 맞게 주변 제목과 설명을 업데이트해 주세요.",

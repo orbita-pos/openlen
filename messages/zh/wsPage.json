@@ -1,4 +1,12 @@
 {
+  "agent": {
+    "failed": "失败",
+    "tool": {
+      "leer_estado": "正在读取你的项目",
+      "editar_pagina": "正在编辑页面",
+      "activar_modulo": "正在启用模块"
+    }
+  },
   "defaultProjectName": "价格页面",
   "chatDraft": {
     "iconChanged": "我刚刚更换了这里的图标。请更新周围的标题和描述，让含义与新图标相符。",

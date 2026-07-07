@@ -1,4 +1,12 @@
 {
+  "agent": {
+    "failed": "falhou",
+    "tool": {
+      "leer_estado": "Lendo seu projeto",
+      "editar_pagina": "Editando a página",
+      "activar_modulo": "Ativando módulo"
+    }
+  },
   "defaultProjectName": "Página de Preços",
   "chatDraft": {
     "iconChanged": "Acabei de trocar o ícone aqui. Atualize o título e a descrição ao redor para que o sentido combine com o novo ícone.",

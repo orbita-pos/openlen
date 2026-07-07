@@ -1,4 +1,12 @@
 {
+  "agent": {
+    "failed": "失敗しました",
+    "tool": {
+      "leer_estado": "プロジェクトを読み込み中",
+      "editar_pagina": "ページを編集中",
+      "activar_modulo": "モジュールを有効化中"
+    }
+  },
   "defaultProjectName": "料金ページ",
   "chatDraft": {
     "iconChanged": "ここのアイコンを変更しました。新しいアイコンに合うように、周りのタイトルと説明を更新してください。",

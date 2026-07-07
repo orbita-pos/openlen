@@ -1,4 +1,12 @@
 {
+  "agent": {
+    "failed": "fehlgeschlagen",
+    "tool": {
+      "leer_estado": "Projekt wird gelesen",
+      "editar_pagina": "Seite wird bearbeitet",
+      "activar_modulo": "Modul wird aktiviert"
+    }
+  },
   "defaultProjectName": "Preisseite",
   "chatDraft": {
     "iconChanged": "Ich habe gerade das Icon hier geändert. Passe den umgebenden Titel und die Beschreibung an, damit die Bedeutung zum neuen Icon passt.",

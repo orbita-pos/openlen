@@ -1,4 +1,12 @@
 {
+  "agent": {
+    "failed": "failed",
+    "tool": {
+      "leer_estado": "Reading your project",
+      "editar_pagina": "Editing the page",
+      "activar_modulo": "Enabling module"
+    }
+  },
   "defaultProjectName": "Pricing Page",
   "chatDraft": {
     "iconChanged": "I just changed the icon here. Update the surrounding title and description so the meaning matches the new icon.",
