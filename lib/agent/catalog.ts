@@ -2,11 +2,24 @@
 // De aquí salen las DOS mitades: las function declarations para Gemini y la
 // sección de conocimiento del system prompt. Módulo nuevo ⇒ una entrada aquí.
 import { DESIGN_GUIDANCE } from "@/lib/design-guidance";
+import { POST_REGISTER } from "@/lib/marketing/post-templates/admin-schemas";
 
 export const AGENT_MODULES = [
   "members", "bookings", "collections", "chat", "whatsapp", "comments",
 ] as const;
 export type AgentModule = (typeof AGENT_MODULES)[number];
+
+export const MOTION_LOOKS = ["calm", "editorial", "dramatic", "off"] as const;
+export type MotionLook = (typeof MOTION_LOOKS)[number];
+
+const MARKETING_REGISTERS = POST_REGISTER.options;
+
+// Conocimiento de las 4 herramientas de settings F2 Task 1 (motion, música,
+// 3D, marketing) — igual que MODULE_KNOWLEDGE, va en el system prompt.
+const SETTINGS_TOOL_KNOWLEDGE = `- cambiar_motion: coreografía de scroll (Motion Looks) — beads sutiles en la segunda fila, puro CSS. Se HORNEA al publicar; el preview del editor no la anima en vivo. Usa look="off" para apagarla.
+- poner_musica: reproductor flotante de música. SOLO puede usar pistas YA SUBIDAS a este proyecto — jamás una URL externa (el guard del servidor la rechazaría igual). Si no hay pistas disponibles, dile al usuario que suba una en el panel Música y no insistas con asset_url inventado.
+- activar_3d: enciende o apaga la escena 3D de fondo (Born With Depth). Esto solo prende/apaga — el diseño fino (modelo, gestos, cámara) se ajusta en el panel 3D del editor, no por el agente.
+- preparar_marketing: fija el rubro (registro) del Marketing Kit — posts curados zero-AI — y si deben combinarse con la paleta/fuente de la página. Después de usarla, dirige al usuario al tab Marketing para ver y copiar los posts.`;
 
 // Conocimiento por módulo: qué es + cuándo recomendarlo. Español porque el
 // usuario objetivo habla español; el modelo responde en el idioma del usuario.
@@ -75,6 +88,56 @@ export function buildFunctionDeclarations(): Record<string, unknown>[] {
         required: ["modulo"],
       },
     },
+    {
+      name: "cambiar_motion",
+      description:
+        "Cambia la coreografía de scroll (Motion Looks) de la página — un efecto sutil y puramente CSS que se HORNEA al publicar (el preview del editor no la anima en vivo). Usa look=\"off\" para apagarla.",
+      parameters: {
+        type: "OBJECT",
+        properties: {
+          look: { type: "STRING", enum: [...MOTION_LOOKS] },
+        },
+        required: ["look"],
+      },
+    },
+    {
+      name: "poner_musica",
+      description:
+        "Pone o quita la pista del reproductor flotante de música de la página. SOLO puede usar una pista YA SUBIDA por el dueño a este proyecto — nunca una URL externa. Si accion=\"poner\" no traes un asset_url válido de las pistas subidas, la herramienta responde con la lista de pistas disponibles (o te dice que no hay ninguna).",
+      parameters: {
+        type: "OBJECT",
+        properties: {
+          accion: { type: "STRING", enum: ["poner", "quitar"] },
+          asset_url: { type: "STRING" },
+        },
+        required: ["accion"],
+      },
+    },
+    {
+      name: "activar_3d",
+      description:
+        "Enciende o apaga la escena 3D de fondo (Born With Depth). Solo prende/apaga la escena — el diseño fino (modelo, gestos, cámara) se ajusta en el panel 3D del editor, no por esta herramienta.",
+      parameters: {
+        type: "OBJECT",
+        properties: {
+          encender: { type: "BOOLEAN" },
+        },
+        required: ["encender"],
+      },
+    },
+    {
+      name: "preparar_marketing",
+      description:
+        "Prepara el Marketing Kit: fija el rubro (registro) de posts curados zero-AI y si deben combinarse con la paleta/fuente de la página. Dirige al usuario al tab Marketing para ver y copiar los posts.",
+      parameters: {
+        type: "OBJECT",
+        properties: {
+          registro: { type: "STRING", enum: [...MARKETING_REGISTERS] },
+          combinar: { type: "BOOLEAN" },
+        },
+        required: ["registro"],
+      },
+    },
   ];
 }
 
@@ -92,6 +155,9 @@ REGLAS DURAS:
 
 MÓDULOS QUE PUEDES OPERAR (activar_modulo):
 ${moduleLines}
+
+HERRAMIENTAS DE SETTINGS (cambiar_motion, poner_musica, activar_3d, preparar_marketing):
+${SETTINGS_TOOL_KNOWLEDGE}
 
 EDICIÓN DE PÁGINA (editar_pagina):
 El documento en tu contexto trae data-op-id en cada elemento. Dirige cada edit por ese id. new_html es el outerHTML nuevo SIN atributos data-op-id (el servidor los inyecta). Máximo 8 edits por llamada; los ids cambian tras aplicar.

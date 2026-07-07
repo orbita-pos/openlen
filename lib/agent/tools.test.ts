@@ -11,13 +11,16 @@ import type { ProjectData } from "@/lib/projects/types";
 
 const HTML = `<!doctype html><html><head><title>Tacos El Güero</title><meta name="description" content="Tacos"></head><body><h1 data-x="k">Tacos El Güero</h1><p>Los mejores del barrio.</p></body></html>`;
 
-function makeDeps(overrides?: Partial<{ data: ProjectData }>) {
+function makeDeps(
+  overrides?: Partial<{ data: ProjectData; audioAssets: { url: string; name: string }[] }>,
+) {
   const store = {
     data: (overrides?.data ?? { html: HTML }) as ProjectData,
     saved: [] as ProjectData[],
     versions: [] as string[],
     provisioned: 0,
     provisionedOpts: null as { email: string | null; displayName: string } | null,
+    audioAssets: overrides?.audioAssets ?? [],
   };
   const deps: AgentDeps = {
     async loadProject() {
@@ -26,6 +29,7 @@ function makeDeps(overrides?: Partial<{ data: ProjectData }>) {
     async saveProjectData(_p, _u, data) { store.data = data; store.saved.push(data); },
     async snapshotVersion(a) { store.versions.push(a.label); },
     async provisionOwnerChat(_p, _u, opts) { store.provisioned += 1; store.provisionedOpts = opts; },
+    async listAudioAssets() { return store.audioAssets; },
   };
   return { deps, store };
 }
@@ -134,6 +138,76 @@ describe("leer_estado", () => {
     const { deps } = makeDeps();
     const out = await runAgentTool(makeSession(), deps, "leer_estado", { incluir_documento: true });
     assert.ok(String(out.response.documento).includes("data-op-id"));
+  });
+});
+
+describe("cambiar_motion", () => {
+  it("sets and clears settings.motion", async () => {
+    const { deps, store } = makeDeps();
+    const on = await runAgentTool(makeSession(), deps, "cambiar_motion", { look: "dramatic" });
+    assert.equal(on.response.ok, true);
+    assert.equal(store.data.settings?.motion, "dramatic");
+    const off = await runAgentTool(makeSession(), deps, "cambiar_motion", { look: "off" });
+    assert.equal(off.response.ok, true);
+    assert.equal(store.data.settings?.motion, undefined);
+  });
+  it("rejects unknown look as data", async () => {
+    const { deps } = makeDeps();
+    const out = await runAgentTool(makeSession(), deps, "cambiar_motion", { look: "frenetic" });
+    assert.equal(out.response.ok, false);
+  });
+});
+
+describe("poner_musica", () => {
+  it("sets music only from the project's own audio assets", async () => {
+    const { deps, store } = makeDeps({
+      audioAssets: [{ url: "/api/projects/p1/assets/track1.mp3", name: "track1.mp3" }],
+    });
+    const out = await runAgentTool(makeSession(), deps, "poner_musica", {
+      accion: "poner", asset_url: "/api/projects/p1/assets/track1.mp3",
+    });
+    assert.equal(out.response.ok, true);
+    assert.equal(store.data.settings?.music?.src, "/api/projects/p1/assets/track1.mp3");
+  });
+  it("refuses external URLs and lists available assets", async () => {
+    const { deps, store } = makeDeps({ audioAssets: [{ url: "/api/projects/p1/assets/track1.mp3", name: "track1.mp3" }] });
+    const out = await runAgentTool(makeSession(), deps, "poner_musica", {
+      accion: "poner", asset_url: "https://evil.com/x.mp3",
+    });
+    assert.equal(out.response.ok, false);
+    assert.ok(String(out.response.error).includes("track1.mp3"));
+    assert.equal(store.saved.length, 0);
+  });
+  it("quitar clears music", async () => {
+    const { deps, store } = makeDeps({ data: { html: HTML, settings: { music: { src: "/api/projects/p1/assets/a.mp3" } } } });
+    const out = await runAgentTool(makeSession(), deps, "poner_musica", { accion: "quitar" });
+    assert.equal(out.response.ok, true);
+    assert.equal(store.data.settings?.music, undefined);
+  });
+});
+
+describe("activar_3d", () => {
+  it("enables and disables scene3d", async () => {
+    const { deps, store } = makeDeps();
+    await runAgentTool(makeSession(), deps, "activar_3d", { encender: true });
+    assert.equal(store.data.settings?.scene3d?.enabled, true);
+    await runAgentTool(makeSession(), deps, "activar_3d", { encender: false });
+    assert.equal(store.data.settings?.scene3d, undefined);
+  });
+});
+
+describe("preparar_marketing", () => {
+  it("sets register+match and points at the marketing tab", async () => {
+    const { deps, store } = makeDeps();
+    const out = await runAgentTool(makeSession(), deps, "preparar_marketing", { registro: "general", combinar: true });
+    assert.equal(out.response.ok, true);
+    assert.equal(store.data.settings?.marketing?.register, "general");
+    assert.equal(out.response.pestana, "marketing");
+  });
+  it("invalid register comes back as data", async () => {
+    const { deps } = makeDeps();
+    const out = await runAgentTool(makeSession(), deps, "preparar_marketing", { registro: "no-existe" });
+    assert.equal(out.response.ok, false);
   });
 });
 

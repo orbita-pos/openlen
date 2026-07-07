@@ -63,6 +63,10 @@ export interface AssetStorage {
   get(projectId: string, filename: string): Promise<AssetGetResult | null>;
   /** The project's uploaded IMAGE assets (audio excluded), newest first. */
   list(projectId: string): Promise<AssetListItem[]>;
+  /** The project's uploaded AUDIO assets (images excluded), newest first.
+   *  Feeds the agent's poner_musica tool — page music may only reference a
+   *  track the owner actually uploaded (see isOwnAssetUrl in settings-patch). */
+  listAudio(projectId: string): Promise<AssetListItem[]>;
 }
 
 const VALID_EXT = new Set([
@@ -104,12 +108,20 @@ function safeProjectId(id: string): string {
 }
 
 const IMAGE_EXT = new Set(["png", "jpg", "jpeg", "webp", "gif", "svg"]);
+const AUDIO_EXT = new Set(["mp3", "m4a", "ogg", "wav"]);
 
 function isImageFilename(filename: string): boolean {
   if (!/^[a-zA-Z0-9._-]+$/.test(filename) || filename.includes("..")) {
     return false;
   }
   return IMAGE_EXT.has(normalizeExt(filename.split(".").pop() ?? ""));
+}
+
+function isAudioFilename(filename: string): boolean {
+  if (!/^[a-zA-Z0-9._-]+$/.test(filename) || filename.includes("..")) {
+    return false;
+  }
+  return AUDIO_EXT.has(normalizeExt(filename.split(".").pop() ?? ""));
 }
 
 function mimeForExt(ext: string): string {
@@ -195,6 +207,17 @@ export class LocalFsAssetStorage implements AssetStorage {
   }
 
   async list(projectId: string): Promise<AssetListItem[]> {
+    return this.scan(projectId, isImageFilename);
+  }
+
+  async listAudio(projectId: string): Promise<AssetListItem[]> {
+    return this.scan(projectId, isAudioFilename);
+  }
+
+  private async scan(
+    projectId: string,
+    matches: (filename: string) => boolean,
+  ): Promise<AssetListItem[]> {
     const id = safeProjectId(projectId);
     const projectDir = path.join(this.rootDir, id);
     let names: string[];
@@ -205,7 +228,7 @@ export class LocalFsAssetStorage implements AssetStorage {
     }
     const out: AssetListItem[] = [];
     for (const filename of names) {
-      if (!isImageFilename(filename)) continue;
+      if (!matches(filename)) continue;
       try {
         const st = await fs.stat(path.join(projectDir, filename));
         out.push({
@@ -308,6 +331,17 @@ export class S3AssetStorage implements AssetStorage {
   }
 
   async list(projectId: string): Promise<AssetListItem[]> {
+    return this.scan(projectId, isImageFilename);
+  }
+
+  async listAudio(projectId: string): Promise<AssetListItem[]> {
+    return this.scan(projectId, isAudioFilename);
+  }
+
+  private async scan(
+    projectId: string,
+    matches: (filename: string) => boolean,
+  ): Promise<AssetListItem[]> {
     const id = safeProjectId(projectId);
     const prefix = `${id}/`;
     try {
@@ -322,7 +356,7 @@ export class S3AssetStorage implements AssetStorage {
       for (const obj of res.Contents ?? []) {
         const key = obj.Key ?? "";
         const filename = key.slice(prefix.length);
-        if (!filename || !isImageFilename(filename)) continue;
+        if (!filename || !matches(filename)) continue;
         out.push({
           filename,
           contentType: mimeForExt(filename.split(".").pop() ?? ""),

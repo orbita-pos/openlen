@@ -20,6 +20,7 @@ import { getOrCreateOwnerChatUser } from "@/lib/chat/store";
 import { detectSlotPath, sanitizeForPublish } from "@/lib/html-engine";
 import { applyOps, tagWithOpIds, type Op, type OpType } from "@/lib/html-ops";
 import { normalizeBornCanonical } from "@/lib/normalize";
+import { getAssetStorage } from "@/lib/projects/assets";
 import { applyModuleIntent } from "@/lib/projects/module-intent";
 import {
   applySettingsPatch,
@@ -29,7 +30,7 @@ import {
 import type { ProjectData } from "@/lib/projects/types";
 import { createVersion, type VersionSource } from "@/lib/projects/versions";
 import { ensurePageMeta } from "@/lib/publish/ensure-page-meta";
-import { AGENT_MODULES, type AgentModule } from "@/lib/agent/catalog";
+import { AGENT_MODULES, MOTION_LOOKS, type AgentModule } from "@/lib/agent/catalog";
 
 const MAX_EDITS_PER_CALL = 8;
 const OP_TYPES: readonly OpType[] = ["replace", "insert_before", "insert_after", "delete"];
@@ -55,6 +56,9 @@ export interface AgentDeps {
     userId: string,
     opts: { email: string | null; displayName: string },
   ): Promise<void>;
+  /** This project's uploaded audio assets — the only tracks poner_musica
+   *  may point the page music player at (never external URLs). */
+  listAudioAssets(projectId: string): Promise<{ url: string; name: string }[]>;
 }
 
 export function realDeps(): AgentDeps {
@@ -105,6 +109,10 @@ export function realDeps(): AgentDeps {
       } catch (err) {
         console.warn("[agent] owner chat provisioning failed (will retry lazily)", err);
       }
+    },
+    async listAudioAssets(projectId) {
+      const assets = await getAssetStorage().listAudio(projectId);
+      return assets.map((a) => ({ url: a.url, name: a.filename }));
     },
   };
 }
@@ -227,6 +235,150 @@ async function toolActivarModulo(
   };
 }
 
+async function toolCambiarMotion(
+  session: AgentSession,
+  deps: AgentDeps,
+  args: Record<string, unknown>,
+): Promise<ToolOutcome> {
+  const look = args.look;
+  if (typeof look !== "string" || !(MOTION_LOOKS as readonly string[]).includes(look)) {
+    return { response: { ok: false, error: "look desconocido" } };
+  }
+  const patchBody: SettingsPatchBody = { motion: look === "off" ? null : look };
+  const validation = validateSettingsPatch(patchBody, session.projectId);
+  if (!validation.ok) {
+    return { response: { ok: false, error: validation.message ?? "patch inválido" } };
+  }
+
+  const row = await deps.loadProject(session.projectId, session.userId);
+  if (!row) return { response: { ok: false, error: "proyecto no encontrado" } };
+
+  const outcome = applySettingsPatch(row.data, validation.body);
+  if ("error" in outcome) {
+    return { response: { ok: false, error: outcome.error } };
+  }
+  await deps.saveProjectData(session.projectId, session.userId, outcome.nextData);
+
+  return {
+    response: { ok: true, motion: look === "off" ? null : look },
+    action: { tool: "cambiar_motion", ok: true, summary: look },
+  };
+}
+
+async function toolPonerMusica(
+  session: AgentSession,
+  deps: AgentDeps,
+  args: Record<string, unknown>,
+): Promise<ToolOutcome> {
+  const accion = args.accion;
+  if (accion !== "poner" && accion !== "quitar") {
+    return { response: { ok: false, error: "acción desconocida (usa poner|quitar)" } };
+  }
+
+  let patchBody: SettingsPatchBody;
+  if (accion === "quitar") {
+    patchBody = { music: null };
+  } else {
+    const assetUrl = typeof args.asset_url === "string" ? args.asset_url : "";
+    const assets = await deps.listAudioAssets(session.projectId);
+    const match = assetUrl ? assets.find((a) => a.url === assetUrl) : undefined;
+    if (!match) {
+      const disponibles = assets.length
+        ? `Disponibles: ${assets.map((a) => a.name).join(", ")}`
+        : "No hay pistas subidas — pide al usuario que suba una en el panel Música.";
+      return {
+        response: {
+          ok: false,
+          error: `asset_url debe ser una de las pistas YA SUBIDAS de este proyecto. ${disponibles}`,
+        },
+      };
+    }
+    patchBody = { music: { src: match.url, title: match.name } };
+  }
+
+  const validation = validateSettingsPatch(patchBody, session.projectId);
+  if (!validation.ok) {
+    return { response: { ok: false, error: validation.message ?? "patch inválido" } };
+  }
+
+  const row = await deps.loadProject(session.projectId, session.userId);
+  if (!row) return { response: { ok: false, error: "proyecto no encontrado" } };
+
+  const outcome = applySettingsPatch(row.data, validation.body);
+  if ("error" in outcome) {
+    return { response: { ok: false, error: outcome.error } };
+  }
+  await deps.saveProjectData(session.projectId, session.userId, outcome.nextData);
+
+  return {
+    response: { ok: true, accion },
+    action: { tool: "poner_musica", ok: true, summary: accion },
+  };
+}
+
+async function toolActivar3d(
+  session: AgentSession,
+  deps: AgentDeps,
+  args: Record<string, unknown>,
+): Promise<ToolOutcome> {
+  if (typeof args.encender !== "boolean") {
+    return { response: { ok: false, error: "encender debe ser boolean" } };
+  }
+  const encender = args.encender;
+
+  const patchBody: SettingsPatchBody = { scene3d: encender ? { enabled: true } : null };
+  const validation = validateSettingsPatch(patchBody, session.projectId);
+  if (!validation.ok) {
+    return { response: { ok: false, error: validation.message ?? "patch inválido" } };
+  }
+
+  const row = await deps.loadProject(session.projectId, session.userId);
+  if (!row) return { response: { ok: false, error: "proyecto no encontrado" } };
+
+  const outcome = applySettingsPatch(row.data, validation.body);
+  if ("error" in outcome) {
+    return { response: { ok: false, error: outcome.error } };
+  }
+  await deps.saveProjectData(session.projectId, session.userId, outcome.nextData);
+
+  return {
+    response: { ok: true, encendido: encender },
+    action: { tool: "activar_3d", ok: true, summary: encender ? "encendida" : "apagada" },
+  };
+}
+
+async function toolPrepararMarketing(
+  session: AgentSession,
+  deps: AgentDeps,
+  args: Record<string, unknown>,
+): Promise<ToolOutcome> {
+  const registro = args.registro;
+  if (typeof registro !== "string" || registro.length === 0) {
+    return { response: { ok: false, error: "registro es requerido" } };
+  }
+  const combinar = args.combinar === true;
+
+  const patchBody: SettingsPatchBody = { marketing: { register: registro, match: combinar } };
+  const validation = validateSettingsPatch(patchBody, session.projectId);
+  if (!validation.ok) {
+    return { response: { ok: false, error: validation.message ?? "patch inválido" } };
+  }
+
+  const row = await deps.loadProject(session.projectId, session.userId);
+  if (!row) return { response: { ok: false, error: "proyecto no encontrado" } };
+
+  const outcome = applySettingsPatch(row.data, validation.body);
+  if ("error" in outcome) {
+    return { response: { ok: false, error: outcome.error } };
+  }
+  await deps.saveProjectData(session.projectId, session.userId, outcome.nextData);
+
+  return {
+    response: { ok: true, registro, combinar, pestana: "marketing" },
+    action: { tool: "preparar_marketing", ok: true, summary: registro },
+  };
+}
+
 interface RawEdit {
   op?: unknown;
   target?: unknown;
@@ -341,6 +493,14 @@ export async function runAgentTool(
         return await toolActivarModulo(session, deps, args);
       case "editar_pagina":
         return await toolEditarPagina(session, deps, args);
+      case "cambiar_motion":
+        return await toolCambiarMotion(session, deps, args);
+      case "poner_musica":
+        return await toolPonerMusica(session, deps, args);
+      case "activar_3d":
+        return await toolActivar3d(session, deps, args);
+      case "preparar_marketing":
+        return await toolPrepararMarketing(session, deps, args);
       default:
         return { response: { ok: false, error: "herramienta desconocida" } };
     }
