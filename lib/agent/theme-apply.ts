@@ -53,6 +53,15 @@ export function readThemeTokenFromHtml(html: string, token: string): string | nu
 
 const MODE_ATTR_RE = /\sdata-ol-mode="[^"]*"/i;
 
+/** Read the document's current mode off the root <html> tag's data-ol-mode
+ *  attribute — "dark" when set, "light" otherwise (absent = light default,
+ *  same convention as the iframe/modeRef). */
+export function readThemeModeFromHtml(html: string): "light" | "dark" {
+  const tagMatch = HTML_TAG_RE.exec(html);
+  if (!tagMatch) return "light";
+  return /\sdata-ol-mode="dark"/i.test(tagMatch[0]) ? "dark" : "light";
+}
+
 /** Merge `tokens` as inline-style custom properties onto the document's root
  *  <html> tag: creates the style attribute if missing, replaces prior values
  *  of the same token, keeps the rest of the style untouched. A null/empty

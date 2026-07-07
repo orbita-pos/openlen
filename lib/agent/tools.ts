@@ -31,7 +31,11 @@ import type { ProjectData } from "@/lib/projects/types";
 import { createVersion, type VersionSource } from "@/lib/projects/versions";
 import { ensurePageMeta } from "@/lib/publish/ensure-page-meta";
 import { AGENT_MODULES, MOTION_LOOKS, type AgentModule } from "@/lib/agent/catalog";
-import { applyThemeTokensToHtml, readThemeTokenFromHtml } from "@/lib/agent/theme-apply";
+import {
+  applyThemeTokensToHtml,
+  readThemeModeFromHtml,
+  readThemeTokenFromHtml,
+} from "@/lib/agent/theme-apply";
 import { lookFromAccent, type LookBase } from "@/lib/palette-gen";
 import { deriveContractColors, type BaseColors } from "@/lib/theme-derive";
 import { THEME_PRESETS } from "@/lib/theme-presets";
@@ -573,8 +577,9 @@ async function toolCambiarTema(
   // Colors re-derive whenever there's an accent to derive FROM: an explicit
   // hex, or (standalone modo — the button's dark/light toggle) the page's
   // current --ol-accent. Mirrors applyLookForMode: every bundle apply also
-  // stamps the mode attr (empty = light default, removes it).
-  const modo = modoArg ?? "light";
+  // stamps the mode attr (empty = light default, removes it). No modo given =
+  // the page's CURRENT mode (the button reads modeRef, never forces light).
+  const modo = modoArg ?? readThemeModeFromHtml(row.data.html);
   const accentSeed = accent ?? (modoArg ? readThemeTokenFromHtml(row.data.html, "--ol-accent") : null);
   if (accent !== undefined || modoArg !== undefined) {
     if (!accentSeed) {

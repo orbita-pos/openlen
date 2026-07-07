@@ -148,6 +148,16 @@ describe("cambiar_tema", () => {
     assert.equal(out.response.ok, false);
     assert.equal(store.saved.length, 0);
   });
+  it("accent without modo keeps the page's current dark mode (button reads modeRef)", async () => {
+    const darkDoc = HTML.replace("<html>", `<html data-ol-mode="dark">`);
+    const { deps, store } = makeDeps({ data: { html: darkDoc } });
+    const out = await runAgentTool(makeSession(), deps, "cambiar_tema", { accent: "#e8743a" });
+    assert.equal(out.response.ok, true);
+    assert.match(store.data.html!, /<html[^>]*\sdata-ol-mode="dark"/);
+    const dark = lookFromAccent("#e8743a").dark;
+    assert.ok(store.data.html!.includes(`--ol-accent: ${dark["--ol-accent"]}`));
+    assert.ok(store.data.html!.includes(`--ol-bg: ${dark["--ol-bg"]}`));
+  });
   it("standalone modo:dark re-derives the bundle from the page's current accent + stamps the attr", async () => {
     const withAccent = HTML.replace("<html>", `<html style="--ol-accent: #e8743a">`);
     const { deps, store } = makeDeps({ data: { html: withAccent } });
