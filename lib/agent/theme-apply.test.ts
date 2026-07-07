@@ -25,4 +25,12 @@ describe("applyThemeTokensToHtml", () => {
     const out = applyThemeTokensToHtml(doc, { "--ol-accent": "#222" });
     assert.ok(out.includes(`<div style="--ol-accent: #111">`));
   });
+  it("data-ol-mode is written as an attribute (empty removes it), never inline style", () => {
+    const on = applyThemeTokensToHtml(DOC, { "data-ol-mode": "dark", "--ol-accent": "#222222" });
+    assert.match(on, /<html[^>]*\sdata-ol-mode="dark"/);
+    assert.ok(!/style="[^"]*data-ol-mode/.test(on));
+    const off = applyThemeTokensToHtml(on, { "data-ol-mode": "" });
+    assert.ok(!off.includes("data-ol-mode"));
+    assert.ok(off.includes("--ol-accent: #222222"));
+  });
 });

@@ -41,12 +41,27 @@ function serializeStyleDecls(decls: Map<string, string>): string {
     .join("; ");
 }
 
+/** Read one token's current value off the root <html> inline style, or null
+ *  when the tag/attribute/token is absent. */
+export function readThemeTokenFromHtml(html: string, token: string): string | null {
+  const tagMatch = HTML_TAG_RE.exec(html);
+  if (!tagMatch) return null;
+  const styleMatch = STYLE_ATTR_RE.exec(tagMatch[0]);
+  if (!styleMatch) return null;
+  return parseStyleDecls(styleMatch[1]).get(token) ?? null;
+}
+
+const MODE_ATTR_RE = /\sdata-ol-mode="[^"]*"/i;
+
 /** Merge `tokens` as inline-style custom properties onto the document's root
  *  <html> tag: creates the style attribute if missing, replaces prior values
  *  of the same token, keeps the rest of the style untouched. A null/empty
  *  value REMOVES that token (parity with root.style.removeProperty in the
  *  iframe). Deriving --ol-accent-r (RGB triplet) when --ol-accent is set,
- *  same as applyThemeBundle. */
+ *  same as applyThemeBundle. The special "data-ol-mode" key is written as an
+ *  ATTRIBUTE on <html> (empty string = remove it), never as inline style —
+ *  ported from the iframe's applyThemeBundle special-case
+ *  (use-element-inspect.ts:738-740). */
 export function applyThemeTokensToHtml(html: string, tokens: Record<string, string>): string {
   const tagMatch = HTML_TAG_RE.exec(html);
   if (!tagMatch) return html;
@@ -57,7 +72,12 @@ export function applyThemeTokensToHtml(html: string, tokens: Record<string, stri
   const styleMatch = STYLE_ATTR_RE.exec(openTag);
   const decls = parseStyleDecls(styleMatch?.[1] ?? "");
 
+  let modeAttr: string | null | undefined;
   for (const [key, value] of Object.entries(tokens)) {
+    if (key === "data-ol-mode") {
+      modeAttr = value || null;
+      continue;
+    }
     if (value === null || value === undefined || value === "") {
       decls.delete(key);
       continue;
@@ -70,11 +90,18 @@ export function applyThemeTokensToHtml(html: string, tokens: Record<string, stri
   }
 
   const newStyleValue = serializeStyleDecls(decls);
-  const newTag = styleMatch
+  let newTag = styleMatch
     ? openTag.slice(0, styleMatch.index) +
       ` style="${newStyleValue}"` +
       openTag.slice(styleMatch.index + styleMatch[0].length)
     : openTag.replace(/^<html\b/i, (m) => `${m} style="${newStyleValue}"`);
+
+  if (modeAttr !== undefined) {
+    newTag = newTag.replace(MODE_ATTR_RE, "");
+    if (modeAttr) {
+      newTag = newTag.replace(/^<html\b/i, (m) => `${m} data-ol-mode="${modeAttr}"`);
+    }
+  }
 
   return html.slice(0, tagStart) + newTag + html.slice(tagEnd);
 }

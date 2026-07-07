@@ -6,6 +6,7 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { tagWithOpIds } from "@/lib/html-ops";
+import { lookFromAccent } from "@/lib/palette-gen";
 import { runAgentTool, summarizeProjectState, type AgentDeps, type AgentSession } from "./tools";
 import type { ProjectData } from "@/lib/projects/types";
 
@@ -132,7 +133,10 @@ describe("cambiar_tema", () => {
     const session = makeSession();
     const out = await runAgentTool(session, deps, "cambiar_tema", { accent: "#e8743a" });
     assert.equal(out.response.ok, true);
-    assert.match(store.data.html!, /--ol-accent:\s*#e8743a/i);
+    // The button path is the authority: the accent lands WCAG-nudged by
+    // lookFromAccent (contrast-walked against the derived bg), not raw.
+    const nudged = lookFromAccent("#e8743a").light["--ol-accent"];
+    assert.ok(store.data.html!.includes(`--ol-accent: ${nudged}`));
     assert.ok(!store.data.html!.includes("data-op-id"));
     assert.ok(session.taggedHtml.includes("data-op-id"));
     assert.equal(store.versions.length, 2);
@@ -143,6 +147,16 @@ describe("cambiar_tema", () => {
     const out = await runAgentTool(makeSession(), deps, "cambiar_tema", { accent: "rojo" });
     assert.equal(out.response.ok, false);
     assert.equal(store.saved.length, 0);
+  });
+  it("standalone modo:dark re-derives the bundle from the page's current accent + stamps the attr", async () => {
+    const withAccent = HTML.replace("<html>", `<html style="--ol-accent: #e8743a">`);
+    const { deps, store } = makeDeps({ data: { html: withAccent } });
+    const out = await runAgentTool(makeSession(), deps, "cambiar_tema", { modo: "dark" });
+    assert.equal(out.response.ok, true);
+    assert.match(store.data.html!, /<html[^>]*\sdata-ol-mode="dark"/);
+    const dark = lookFromAccent("#e8743a").dark;
+    assert.ok(store.data.html!.includes(`--ol-bg: ${dark["--ol-bg"]}`));
+    assert.ok(store.data.html!.includes(`--ol-accent: ${dark["--ol-accent"]}`));
   });
 });
 

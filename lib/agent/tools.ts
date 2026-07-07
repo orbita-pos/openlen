@@ -31,7 +31,7 @@ import type { ProjectData } from "@/lib/projects/types";
 import { createVersion, type VersionSource } from "@/lib/projects/versions";
 import { ensurePageMeta } from "@/lib/publish/ensure-page-meta";
 import { AGENT_MODULES, MOTION_LOOKS, type AgentModule } from "@/lib/agent/catalog";
-import { applyThemeTokensToHtml } from "@/lib/agent/theme-apply";
+import { applyThemeTokensToHtml, readThemeTokenFromHtml } from "@/lib/agent/theme-apply";
 import { lookFromAccent, type LookBase } from "@/lib/palette-gen";
 import { deriveContractColors, type BaseColors } from "@/lib/theme-derive";
 import { THEME_PRESETS } from "@/lib/theme-presets";
@@ -528,13 +528,11 @@ function toBaseColors(look: LookBase): BaseColors {
 /** The accent branch of cambiar_tema: derive the full 10-token contract
  *  bundle (5 base + 5 derived) from one hex seed, same composition
  *  applyLookForMode drives client-side (page.tsx:2096) — lookFromAccent for
- *  the light/dark base palette, deriveContractColors for the relationship
- *  tokens (surface-2, fg-muted/faint, border-strong, accent-ink). The accent
- *  itself is kept VERBATIM (not lookFromAccent's WCAG-walked variant): a
- *  tool call names an exact hex on purpose, unlike the picker bead's "seed a
- *  palette" UX — accent-ink still guarantees readable text on it regardless. */
+ *  the light/dark base palette (its WCAG-walked accent included: the button
+ *  path is the authority, zero parallel logic), deriveContractColors for the
+ *  relationship tokens (surface-2, fg-muted/faint, border-strong, accent-ink). */
 function accentBundleTokens(accentHex: string, modo: "light" | "dark"): Record<string, string> {
-  const base: BaseColors = { ...toBaseColors(lookFromAccent(accentHex)[modo]), accent: accentHex };
+  const base = toBaseColors(lookFromAccent(accentHex)[modo]);
   const contract = deriveContractColors(base);
   return {
     "--ol-bg": contract.bg,
@@ -558,19 +556,37 @@ async function toolCambiarTema(
   const accent = typeof args.accent === "string" ? args.accent : undefined;
   const fuente = typeof args.fuente === "string" ? args.fuente : undefined;
   const radius = typeof args.radius === "string" ? args.radius : undefined;
-  const modo = args.modo === "dark" ? "dark" : "light";
+  const modoArg = args.modo === "dark" || args.modo === "light" ? args.modo : undefined;
 
-  if (!accent && !fuente && !radius) {
-    return { response: { ok: false, error: "especifica accent, fuente y/o radius" } };
+  if (!accent && !fuente && !radius && !modoArg) {
+    return { response: { ok: false, error: "especifica accent, fuente, radius y/o modo" } };
   }
+  if (accent !== undefined && !HEX_COLOR_RE.test(accent)) {
+    return { response: { ok: false, error: `accent debe ser un color hex (#rgb o #rrggbb): ${accent}` } };
+  }
+
+  const row = await deps.loadProject(session.projectId, session.userId);
+  if (!row) return { response: { ok: false, error: "proyecto no encontrado" } };
 
   const tokens: Record<string, string> = {};
 
-  if (accent !== undefined) {
-    if (!HEX_COLOR_RE.test(accent)) {
-      return { response: { ok: false, error: `accent debe ser un color hex (#rgb o #rrggbb): ${accent}` } };
+  // Colors re-derive whenever there's an accent to derive FROM: an explicit
+  // hex, or (standalone modo — the button's dark/light toggle) the page's
+  // current --ol-accent. Mirrors applyLookForMode: every bundle apply also
+  // stamps the mode attr (empty = light default, removes it).
+  const modo = modoArg ?? "light";
+  const accentSeed = accent ?? (modoArg ? readThemeTokenFromHtml(row.data.html, "--ol-accent") : null);
+  if (accent !== undefined || modoArg !== undefined) {
+    if (!accentSeed) {
+      return {
+        response: {
+          ok: false,
+          error: "la página no tiene --ol-accent definido; pasa accent junto con modo",
+        },
+      };
     }
-    Object.assign(tokens, accentBundleTokens(accent, modo));
+    Object.assign(tokens, accentBundleTokens(accentSeed, modo));
+    tokens["data-ol-mode"] = modo === "dark" ? "dark" : "";
   }
 
   if (fuente !== undefined) {
@@ -591,9 +607,6 @@ async function toolCambiarTema(
     if (radiusToken) tokens["--ol-r-scale"] = radiusToken;
   }
 
-  const row = await deps.loadProject(session.projectId, session.userId);
-  if (!row) return { response: { ok: false, error: "proyecto no encontrado" } };
-
   const candidateHtml = applyThemeTokensToHtml(row.data.html, tokens);
 
   const persisted = await persistHtmlChange(
@@ -608,7 +621,7 @@ async function toolCambiarTema(
 
   return {
     response: { ok: true, tokens_aplicados: Object.keys(tokens).length },
-    action: { tool: "cambiar_tema", ok: true, summary: accent ?? fuente ?? radius ?? "" },
+    action: { tool: "cambiar_tema", ok: true, summary: accent ?? fuente ?? radius ?? modoArg ?? "" },
     updatedHtml: persisted.finalHtml,
   };
 }

@@ -22,7 +22,7 @@ const SETTINGS_TOOL_KNOWLEDGE = `- cambiar_motion: coreografía de scroll (Motio
 - poner_musica: reproductor flotante de música. SOLO puede usar pistas YA SUBIDAS a este proyecto — jamás una URL externa (el guard del servidor la rechazaría igual). Si no hay pistas disponibles, dile al usuario que suba una en el panel Música y no insistas con asset_url inventado.
 - activar_3d: enciende o apaga la escena 3D de fondo (Born With Depth). Esto solo prende/apaga — el diseño fino (modelo, gestos, cámara) se ajusta en el panel 3D del editor, no por el agente.
 - preparar_marketing: fija el rubro (registro) del Marketing Kit — posts curados zero-AI — y si deben combinarse con la paleta/fuente de la página. Después de usarla, dirige al usuario al tab Marketing para ver y copiar los posts.
-- cambiar_tema: re-tematiza la página al instante (sin llamada de IA) — igual que un click en Looks del inspector. accent (hex) deriva una paleta completa con contraste WCAG garantizado; fuente y radius toman SOLO ese rasgo del preset nombrado (ids: ${THEME_PRESET_IDS.join(", ")}), útil para combinar look a piezas. Pásalos juntos o por separado; modo elige la variante clara/oscura del accent.`;
+- cambiar_tema: re-tematiza la página al instante (sin llamada de IA) — igual que un click en Looks del inspector. accent (hex) deriva una paleta completa con contraste WCAG garantizado; fuente y radius toman SOLO ese rasgo del preset nombrado (ids: ${THEME_PRESET_IDS.join(", ")}), útil para combinar look a piezas. modo elige la variante clara/oscura — con accent, o solo (re-deriva del accent actual de la página, igual que el toggle Dark).`;
 
 // Conocimiento por módulo: qué es + cuándo recomendarlo. Español porque el
 // usuario objetivo habla español; el modelo responde en el idioma del usuario.
@@ -131,7 +131,7 @@ export function buildFunctionDeclarations(): Record<string, unknown>[] {
     {
       name: "cambiar_tema",
       description:
-        `Re-tematiza la página al instante escribiendo los tokens --ol-* en <html> — igual que un click en Looks del inspector, sin llamada de IA. accent (hex #rgb o #rrggbb) deriva una paleta completa (fondo/superficie/texto/borde/acento) con contraste WCAG garantizado. fuente y radius toman SOLO ese rasgo del preset nombrado (ids válidos: ${THEME_PRESET_IDS.join(", ")}) sin tocar los demás tokens — para combinar look a piezas. Pasa cualquier combinación de accent/fuente/radius; al menos uno es requerido.`,
+        `Re-tematiza la página al instante escribiendo los tokens --ol-* en <html> — igual que un click en Looks del inspector, sin llamada de IA. accent (hex #rgb o #rrggbb) deriva una paleta completa (fondo/superficie/texto/borde/acento) con contraste WCAG garantizado. fuente y radius toman SOLO ese rasgo del preset nombrado (ids válidos: ${THEME_PRESET_IDS.join(", ")}) sin tocar los demás tokens — para combinar look a piezas. modo (light|dark) elige la variante del accent, o solo (sin accent) re-deriva la paleta oscura/clara del accent actual de la página — el toggle Dark. Pasa cualquier combinación; al menos uno es requerido.`,
       parameters: {
         type: "OBJECT",
         properties: {
