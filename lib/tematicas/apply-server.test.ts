@@ -1,6 +1,6 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { applyTematicaToHtml, removeTematicaFromHtml } from "./apply-server";
+import { applyTematicaToHtml, injectBeforeHeadClose, removeTematicaFromHtml } from "./apply-server";
 import { TEMATICA_PRESETS } from "./presets";
 
 const DOC = `<!doctype html><html lang="es"><head><title>x</title></head><body><h1>Hola</h1></body></html>`;
@@ -57,5 +57,21 @@ describe("applyTematicaToHtml", () => {
     const r = applyTematicaToHtml(DOC, FIRST, "escena-inventada") as { html: string };
     assert.ok(r.html.includes(`data-ol-tematica-bg="${hero}"`));
     assert.ok(!r.html.includes("escena-inventada"));
+  });
+});
+
+describe("injectBeforeHeadClose", () => {
+  it("lands special replacement-pattern chars ($&, $`, $', $1) literally, not interpreted", () => {
+    const html = `<!doctype html><html><head><title>x</title></head><body></body></html>`;
+    const inject = "<style>/* $& $` $' $1 literal */</style>";
+    const out = injectBeforeHeadClose(html, inject);
+    assert.ok(out.includes(inject));
+    assert.equal(out, `<!doctype html><html><head><title>x</title>${inject}</head><body></body></html>`);
+  });
+  it("falls back to inserting a <head> when the doc has none", () => {
+    const html = `<!doctype html><html><body></body></html>`;
+    const inject = "<style>x{color:red}</style>";
+    const out = injectBeforeHeadClose(html, inject);
+    assert.ok(out.includes(`<head>${inject}</head>`));
   });
 });

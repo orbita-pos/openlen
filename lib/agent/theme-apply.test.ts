@@ -33,4 +33,25 @@ describe("applyThemeTokensToHtml", () => {
     assert.ok(!off.includes("data-ol-mode"));
     assert.ok(off.includes("--ol-accent: #222222"));
   });
+  it("reads and rewrites a SINGLE-quoted style attr as double-quoted, without duplicating it", () => {
+    const doc = `<!doctype html><html lang="es" style='--ol-accent: #111'><head><title>x</title></head><body></body></html>`;
+    const out = applyThemeTokensToHtml(doc, { "--ol-font-display": "serif" });
+    // Exactly one style attribute on <html> — the single-quoted original must
+    // not survive alongside a second, newly-created double-quoted one.
+    const htmlTag = /<html\b[^>]*>/i.exec(out)![0];
+    assert.equal((htmlTag.match(/\sstyle=/g) ?? []).length, 1);
+    assert.match(htmlTag, /\sstyle="[^"]*"/);
+    assert.ok(!htmlTag.includes("style='"));
+    // Old token preserved, new token merged in.
+    assert.ok(out.includes("--ol-accent: #111"));
+    assert.ok(out.includes("--ol-font-display: serif"));
+  });
+  it("a root style value containing url(data:...;base64,...) survives a token merge byte-intact", () => {
+    const dataUrl = "data:image/png;base64,abc123==";
+    const doc = `<!doctype html><html lang="es" style="background: url(${dataUrl}); color: red"><head><title>x</title></head><body></body></html>`;
+    const out = applyThemeTokensToHtml(doc, { "--ol-accent": "#e8743a" });
+    assert.ok(out.includes(`url(${dataUrl})`));
+    assert.ok(out.includes("color: red"));
+    assert.ok(out.includes("--ol-accent: #e8743a"));
+  });
 });

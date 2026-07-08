@@ -24,6 +24,7 @@
       "cancel": "Cancelar",
       "published": "✓ Publicada en {url}",
       "taken": "Ese subdominio ya está en uso. Prueba con otro.",
+      "reserved": "Ese subdominio está reservado — elige otro.",
       "limit": "Alcanzaste el límite de páginas publicadas de tu plan.",
       "invalid": "No se pudo publicar. Revisa el subdominio e inténtalo de nuevo.",
       "checking": "Verificando…"

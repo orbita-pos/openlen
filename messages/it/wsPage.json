@@ -24,6 +24,7 @@
       "cancel": "Annulla",
       "published": "✓ Pubblicata su {url}",
       "taken": "Questo sottodominio è già in uso. Provane un altro.",
+      "reserved": "Questo sottodominio è riservato. Scegline un altro.",
       "limit": "Hai raggiunto il limite di pagine pubblicate del tuo piano.",
       "invalid": "Impossibile pubblicare. Controlla il sottodominio e riprova.",
       "checking": "Verifica…"

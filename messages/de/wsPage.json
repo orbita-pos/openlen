@@ -24,6 +24,7 @@
       "cancel": "Abbrechen",
       "published": "✓ Veröffentlicht unter {url}",
       "taken": "Diese Subdomain ist bereits vergeben. Versuch eine andere.",
+      "reserved": "Diese Subdomain ist reserviert. Wähl eine andere.",
       "limit": "Du hast das Limit veröffentlichter Seiten deines Tarifs erreicht.",
       "invalid": "Veröffentlichen fehlgeschlagen. Prüfe die Subdomain und versuch es erneut.",
       "checking": "Prüfe…"

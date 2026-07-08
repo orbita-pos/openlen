@@ -69,7 +69,9 @@ export function AgentConfirmCard({
                 ? t("agent.confirm.taken")
                 : data.reason === "limit_reached"
                   ? t("agent.confirm.limit")
-                  : t("agent.confirm.invalid"),
+                  : data.reason === "reserved"
+                    ? t("agent.confirm.reserved")
+                    : t("agent.confirm.invalid"),
           });
           return;
         }

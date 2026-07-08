@@ -57,7 +57,12 @@ function slugFromTitle(title: string): string {
     .normalize("NFD")
     .replace(COMBINING_MARKS_RE, "")
     .toLowerCase()
-    .slice(0, SLUG_MAX_CHARS);
+    .slice(0, SLUG_MAX_CHARS)
+    // The clamp can land mid-separator — e.g. right on a literal "-" in the
+    // title, or after a run of whitespace — leaving a trailing hyphen/space
+    // that validatePageSlug's SLUG_RE then rejects (must end in [a-z0-9]).
+    // Strip any such dangling tail so a title-derived slug always validates.
+    .replace(/[-\s]+$/, "");
 }
 
 /** Inject a module section into a freshly-built page shell — before the

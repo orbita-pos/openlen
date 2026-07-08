@@ -32,6 +32,7 @@ import { normalizeBornCanonical } from "@/lib/normalize";
 import { setProjectUserBrief } from "@/lib/projects";
 import { extForMime, getAssetStorage } from "@/lib/projects/assets";
 import { validateUrl } from "@/lib/style-match/scrape/validate-url";
+import { validateSubdomain } from "@/lib/subdomain/validate";
 import { createSitePage, type CreatePageInput } from "@/lib/projects/create-page";
 import { applyModuleIntent } from "@/lib/projects/module-intent";
 import {
@@ -999,11 +1000,27 @@ async function toolPublicar(
 
   // Resolve the target subdomain. Final authority is always the endpoint (regex
   // / reserved / cap re-checked there); here we only decide republish vs claim.
+  // A shape-invalid name (accents, spaces, punctuation…) is pre-validated with
+  // the SAME rule the endpoint uses — same regex, so nothing can ride to the
+  // confirm card that would only fail later at check-time with a generic
+  // message. Invalid → ok:false as data, before any confirm is built.
   let subdominio: string;
   let republicar: boolean;
   if (raw) {
-    subdominio = raw;
-    republicar = current === raw;
+    const check = validateSubdomain(raw);
+    if (!check.ok) {
+      return {
+        response: {
+          ok: false,
+          error:
+            check.reason === "reserved"
+              ? `el subdominio "${raw}" está reservado — pide al usuario otro nombre`
+              : `el subdominio "${raw}" no es válido (usa minúsculas, números y guiones, 1-63 caracteres, sin acentos ni espacios)`,
+        },
+      };
+    }
+    subdominio = check.value;
+    republicar = current === check.value;
   } else if (current) {
     subdominio = current;
     republicar = true;

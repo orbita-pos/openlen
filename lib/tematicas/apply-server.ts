@@ -39,6 +39,17 @@ export function removeTematicaFromHtml(html: string): string {
     .replace(/\s+data-ol-tematica(?:-bg)?="[^"]*"/gi, "");
 }
 
+/** Insert `inject` right before the FIRST `</head>`, or synthesize a `<head>`
+ *  right after `<html …>` when the doc has none. Both branches use a
+ *  FUNCTION replacer (never a plain string) — a string replacement pattern
+ *  interprets `$&`/`$\``/`$'`/`$1` sequences, and kit CSS (or any caller-
+ *  supplied `inject`) is arbitrary content that must land byte-literal. */
+export function injectBeforeHeadClose(html: string, inject: string): string {
+  return HEAD_CLOSE_RE.test(html)
+    ? html.replace(HEAD_CLOSE_RE, () => `${inject}</head>`)
+    : html.replace(HTML_OPEN_TAG_RE, (tag) => `${tag}<head>${inject}</head>`);
+}
+
 /** Install a kit's full-page world. Replace-not-stack: any prior stamp is
  *  removed first, so re-applying a different kit (or the same one with a
  *  different backdrop) never leaves duplicate <style>/<link> tags behind. */
@@ -68,9 +79,7 @@ export function applyTematicaToHtml(
     ? `<link rel="stylesheet" data-ol-tematica href="${kit.fontHref}">`
     : "";
   const inject = `${fontLink}<style data-ol-tematica>${css}</style>`;
-  out = HEAD_CLOSE_RE.test(out)
-    ? out.replace(HEAD_CLOSE_RE, `${inject}</head>`)
-    : out.replace(HTML_OPEN_TAG_RE, (tag) => `${tag}<head>${inject}</head>`);
+  out = injectBeforeHeadClose(out, inject);
 
   // The kit's token bundle rides the same channel cambiar_tema uses, plus
   // its ink direction as the data-ol-mode attr — mirrors the client's

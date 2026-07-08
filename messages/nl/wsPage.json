@@ -24,6 +24,7 @@
       "cancel": "Annuleren",
       "published": "✓ Gepubliceerd op {url}",
       "taken": "Dat subdomein is al in gebruik. Probeer een ander.",
+      "reserved": "Dat subdomein is gereserveerd. Kies een ander.",
       "limit": "Je hebt de limiet voor gepubliceerde pagina's van je abonnement bereikt.",
       "invalid": "Publiceren mislukt. Controleer het subdomein en probeer opnieuw.",
       "checking": "Controleren…"

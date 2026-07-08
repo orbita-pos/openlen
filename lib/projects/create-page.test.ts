@@ -50,6 +50,19 @@ describe("createSitePage", () => {
     expect(out.slug).toBe("preguntas-frecuentes-sobre-envios-y-devo");
   });
 
+  it("a 40-char clamp landing exactly on a hyphen doesn't leave a dangling trailing hyphen", () => {
+    // Constructed so slugFromTitle's raw 40-char slice ends EXACTLY on the
+    // literal "-" between "mas" and "Devoluciones" — before the fix this
+    // slice survives into validatePageSlug as a trailing "-", which SLUG_RE
+    // rejects (must end in [a-z0-9]).
+    const title = "Preguntas Frecuentes Sobre Envios Y Mas-Devoluciones Garantizadas Ya Disponible";
+    const out = createSitePage(baseData(), { title });
+    if ("error" in out) throw new Error(`unexpected error: ${out.error} — ${out.message}`);
+    expect(out.slug.length).toBeLessThanOrEqual(40);
+    expect(out.slug).not.toMatch(/[-\s]$/);
+    expect(out.slug).toBe("preguntas-frecuentes-sobre-envios-y-mas");
+  });
+
   it("rejects a reserved slug (cuenta) as invalid_slug", () => {
     const out = createSitePage(baseData(), { slug: "cuenta" });
     if (!("error" in out) || out.error !== "invalid_slug") {

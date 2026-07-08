@@ -9,7 +9,14 @@
 // never a descendant.
 
 const HTML_TAG_RE = /<html\b[^>]*>/i;
-const STYLE_ATTR_RE = /\sstyle="([^"]*)"/i;
+// Matches BOTH quote styles a style attr can be serialized with (double is
+// this module's own output; single can arrive from hand-authored HTML or a
+// prior editor write) — group 1 is the double-quoted body, group 2 the
+// single-quoted one. Whichever matched, the full match (styleMatch[0]) is
+// always replaced wholesale with a freshly double-quoted attr, so a
+// single-quoted original never survives alongside a second, newly-created
+// one (which would silently duplicate the style attribute).
+const STYLE_ATTR_RE = /\sstyle=(?:"([^"]*)"|'([^']*)')/i;
 
 function hexToRgbTriplet(hex: string): string | null {
   const m = /^#?([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.exec(hex.trim());
@@ -22,9 +29,29 @@ function hexToRgbTriplet(hex: string): string | null {
   return `${r},${g},${b}`;
 }
 
+/** Split a style value on `;` — but only OUTSIDE parentheses, so a value like
+ *  `url(data:image/png;base64,x)` doesn't get sliced apart at the `;` inside
+ *  its data URI (a plain .split(";") would mangle it into two bogus decls). */
+function splitStyleDecls(styleValue: string): string[] {
+  const parts: string[] = [];
+  let depth = 0;
+  let start = 0;
+  for (let i = 0; i < styleValue.length; i++) {
+    const ch = styleValue[i];
+    if (ch === "(") depth++;
+    else if (ch === ")") depth = Math.max(0, depth - 1);
+    else if (ch === ";" && depth === 0) {
+      parts.push(styleValue.slice(start, i));
+      start = i + 1;
+    }
+  }
+  parts.push(styleValue.slice(start));
+  return parts;
+}
+
 function parseStyleDecls(styleValue: string): Map<string, string> {
   const decls = new Map<string, string>();
-  for (const part of styleValue.split(";")) {
+  for (const part of splitStyleDecls(styleValue)) {
     const idx = part.indexOf(":");
     if (idx === -1) continue;
     const key = part.slice(0, idx).trim();
@@ -48,7 +75,7 @@ export function readThemeTokenFromHtml(html: string, token: string): string | nu
   if (!tagMatch) return null;
   const styleMatch = STYLE_ATTR_RE.exec(tagMatch[0]);
   if (!styleMatch) return null;
-  return parseStyleDecls(styleMatch[1]).get(token) ?? null;
+  return parseStyleDecls(styleMatch[1] ?? styleMatch[2] ?? "").get(token) ?? null;
 }
 
 const MODE_ATTR_RE = /\sdata-ol-mode="[^"]*"/i;
@@ -79,7 +106,7 @@ export function applyThemeTokensToHtml(html: string, tokens: Record<string, stri
   const tagEnd = tagStart + openTag.length;
 
   const styleMatch = STYLE_ATTR_RE.exec(openTag);
-  const decls = parseStyleDecls(styleMatch?.[1] ?? "");
+  const decls = parseStyleDecls(styleMatch?.[1] ?? styleMatch?.[2] ?? "");
 
   let modeAttr: string | null | undefined;
   for (const [key, value] of Object.entries(tokens)) {
