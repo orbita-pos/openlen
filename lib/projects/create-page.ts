@@ -44,6 +44,22 @@ const MODULE_PAGE_META: Record<
   },
 };
 
+/** Case- AND accent-insensitive slug seed from a display title (same NFD idiom
+ *  as lib/agent/photo-search.ts's normalize): strip combining marks so
+ *  "Catálogo" → "catalogo", lowercase, and clamp to the slug max BEFORE
+ *  validatePageSlug (which then handles spaces→hyphens + shape/reserved). Only
+ *  the derive branch uses this — an EXPLICIT slug stays strict. */
+const COMBINING_MARKS_RE = /[̀-ͯ]/g;
+const SLUG_MAX_CHARS = 40;
+
+function slugFromTitle(title: string): string {
+  return title
+    .normalize("NFD")
+    .replace(COMBINING_MARKS_RE, "")
+    .toLowerCase()
+    .slice(0, SLUG_MAX_CHARS);
+}
+
 /** Inject a module section into a freshly-built page shell — before the
  *  footer, else before </body>. The shell's titled hero stays above it.
  *  Copied verbatim from the route (was route.ts:61-71). */
@@ -82,26 +98,26 @@ export function createSitePage(
     input.slug !== undefined &&
     (typeof input.slug !== "string" || input.slug.length < 1 || input.slug.length > 60)
   ) {
-    return { error: "invalid_input", message: "slug must be a string of 1-60 characters" };
+    return { error: "invalid_input", message: "el slug debe ser un texto de 1 a 60 caracteres" };
   }
   if (
     input.title !== undefined &&
     (typeof input.title !== "string" || input.title.length > 120)
   ) {
-    return { error: "invalid_input", message: "title must be a string of at most 120 characters" };
+    return { error: "invalid_input", message: "el título debe ser un texto de máximo 120 caracteres" };
   }
   if (
     input.module !== undefined &&
     input.module !== "bookings" &&
     input.module !== "collections"
   ) {
-    return { error: "invalid_input", message: "module must be bookings or collections" };
+    return { error: "invalid_input", message: "modulo debe ser bookings o collections" };
   }
   if (!input.slug && !input.module && !input.title) {
-    return { error: "invalid_input", message: "slug, title, or module is required" };
+    return { error: "invalid_input", message: "se requiere slug, titulo o modulo" };
   }
 
-  if (!data.html) return { error: "no_home", message: "project has no home page yet" };
+  if (!data.html) return { error: "no_home", message: "el proyecto aún no tiene página de inicio" };
 
   // Resolve slug + title + (optional) module section. A module page derives
   // its slug/title per page language; otherwise the caller's slug is used —
@@ -116,15 +132,18 @@ export function createSitePage(
     const meta = MODULE_PAGE_META[input.module][isSpanish ? "es" : "en"];
     const check = validatePageSlug(meta.slug);
     if (!check.ok) {
-      return { error: "invalid_slug", reason: check.reason, message: `slug is ${check.reason}` };
+      return { error: "invalid_slug", reason: check.reason, message: `el slug es ${check.reason === "reserved" ? "reservado" : "inválido"}` };
     }
     slug = check.slug;
     title = meta.title;
     section = buildModuleSection(input.module, { lang: isSpanish ? "es" : "en" });
   } else {
-    const check = validatePageSlug(input.slug ?? input.title ?? "");
+    // Explicit slug stays strict; a title-only call derives an accent-stripped,
+    // clamped seed so accented Spanish titles ("Catálogo") don't fail.
+    const rawSlug = input.slug ?? slugFromTitle(input.title ?? "");
+    const check = validatePageSlug(rawSlug);
     if (!check.ok) {
-      return { error: "invalid_slug", reason: check.reason, message: `slug is ${check.reason}` };
+      return { error: "invalid_slug", reason: check.reason, message: `el slug es ${check.reason === "reserved" ? "reservado" : "inválido"}` };
     }
     slug = check.slug;
     title = input.title?.trim() || undefined;
@@ -132,13 +151,13 @@ export function createSitePage(
 
   const pages = data.pages ?? {};
   if (pages[slug]) {
-    return { error: "exists", slug, message: `page "${slug}" already exists` };
+    return { error: "exists", slug, message: `la página "${slug}" ya existe` };
   }
   if (Object.keys(pages).length >= MAX_SITE_PAGES) {
     return {
       error: "limit_reached",
       limit: MAX_SITE_PAGES,
-      message: `maximum of ${MAX_SITE_PAGES} pages reached`,
+      message: `se alcanzó el máximo de ${MAX_SITE_PAGES} páginas`,
     };
   }
 

@@ -33,6 +33,23 @@ describe("createSitePage", () => {
     expect(pageHtml).toContain("Sobre Nosotros");
   });
 
+  it("derives an accent-stripped slug from an accented Spanish title", () => {
+    const out = createSitePage(baseData(), { title: "Catálogo" });
+    if ("error" in out) throw new Error(`unexpected error: ${out.error} — ${out.message}`);
+    expect(out.slug).toBe("catalogo");
+    // The display title keeps its accent; only the URL slug is folded.
+    expect(out.title).toBe("Catálogo");
+  });
+
+  it("clamps a long accented derived slug to <=40 chars and still succeeds", () => {
+    const out = createSitePage(baseData(), {
+      title: "Preguntas Frecuentes Sobre Envíos Y Devoluciones",
+    });
+    if ("error" in out) throw new Error(`unexpected error: ${out.error} — ${out.message}`);
+    expect(out.slug.length).toBeLessThanOrEqual(40);
+    expect(out.slug).toBe("preguntas-frecuentes-sobre-envios-y-devo");
+  });
+
   it("rejects a reserved slug (cuenta) as invalid_slug", () => {
     const out = createSitePage(baseData(), { slug: "cuenta" });
     if (!("error" in out) || out.error !== "invalid_slug") {

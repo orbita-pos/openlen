@@ -691,8 +691,12 @@ function AIDesignChat({
                   p.status === "error"
                     ? p.status
                     : "done";
+                // Cap to the transcript's persisted limit (chat route's
+                // ActionSchema) — a model-written editar_pagina resumen can run
+                // long, and an over-limit summary would 400 the whole
+                // persistTurn and silently drop the turn on reload.
                 const summary =
-                  typeof p.summary === "string" ? p.summary : "";
+                  typeof p.summary === "string" ? p.summary.slice(0, 200) : "";
                 if (tool) {
                   const action: AgentAction = { tool, status, summary };
                   upsertAction(turnId, action);

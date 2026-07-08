@@ -9,7 +9,7 @@ import { tagWithOpIds } from "@/lib/html-ops";
 import { lookFromAccent } from "@/lib/palette-gen";
 import { applyTematicaToHtml } from "@/lib/tematicas/apply-server";
 import { TEMATICA_PRESETS } from "@/lib/tematicas/presets";
-import { runAgentTool, summarizeProjectState, type AgentDeps, type AgentSession } from "./tools";
+import { runAgentTool, summarizeProjectState, urlIsPageImage, type AgentDeps, type AgentSession } from "./tools";
 import type { ProjectData } from "@/lib/projects/types";
 
 const HTML = `<!doctype html><html><head><title>Tacos El Güero</title><meta name="description" content="Tacos"></head><body><h1 data-x="k">Tacos El Güero</h1><p>Los mejores del barrio.</p></body></html>`;
@@ -327,14 +327,27 @@ describe("poner_musica", () => {
     assert.equal(out.response.ok, true);
     assert.equal(store.data.settings?.music?.src, "/api/projects/p1/assets/track1.mp3");
   });
-  it("refuses external URLs and lists available assets", async () => {
+  it("refuses external URLs and returns the available tracks as {nombre,url} pistas", async () => {
     const { deps, store } = makeDeps({ audioAssets: [{ url: "/api/projects/p1/assets/track1.mp3", name: "track1.mp3" }] });
     const out = await runAgentTool(makeSession(), deps, "poner_musica", {
       accion: "poner", asset_url: "https://evil.com/x.mp3",
     });
     assert.equal(out.response.ok, false);
     assert.ok(String(out.response.error).includes("track1.mp3"));
+    // The URLs are content-hash-named — the model can only retry if it gets the
+    // actual url back (the discovery dead-end fix).
+    const pistas = out.response.pistas as { nombre: string; url: string }[];
+    assert.equal(pistas.length, 1);
+    assert.equal(pistas[0].url, "/api/projects/p1/assets/track1.mp3");
+    assert.equal(pistas[0].nombre, "track1.mp3");
     assert.equal(store.saved.length, 0);
+  });
+  it("a bare accion=poner (no asset_url) returns the pistas to pick from", async () => {
+    const { deps } = makeDeps({ audioAssets: [{ url: "/api/projects/p1/assets/song.mp3", name: "song.mp3" }] });
+    const out = await runAgentTool(makeSession(), deps, "poner_musica", { accion: "poner" });
+    assert.equal(out.response.ok, false);
+    const pistas = out.response.pistas as { nombre: string; url: string }[];
+    assert.equal(pistas[0].url, "/api/projects/p1/assets/song.mp3");
   });
   it("quitar clears music", async () => {
     const { deps, store } = makeDeps({ data: { html: HTML, settings: { music: { src: "/api/projects/p1/assets/a.mp3" } } } });
@@ -462,6 +475,26 @@ describe("elegir_foto", () => {
     const out = await runAgentTool(makeSession(), deps, "elegir_foto", {});
     assert.equal(out.response.ok, true);
     assert.deepEqual(out.response.fotos, []);
+  });
+});
+
+describe("urlIsPageImage", () => {
+  const U = "https://images.openlen.com/orig-photo.webp";
+  it("rejects a url that only appears as body text (no fetch path)", () => {
+    assert.equal(urlIsPageImage(`<p>mira ${U} qué linda</p>`, U), false);
+  });
+  it("accepts a url used as an img src", () => {
+    assert.equal(urlIsPageImage(`<img src="${U}" alt="x">`, U), true);
+  });
+  it("accepts og:image content, preload href, srcset and css url()", () => {
+    assert.equal(urlIsPageImage(`<meta property="og:image" content="${U}">`, U), true);
+    assert.equal(urlIsPageImage(`<link rel="preload" as="image" href="${U}">`, U), true);
+    assert.equal(urlIsPageImage(`<img srcset="${U} 1x, https://x/y 2x">`, U), true);
+    assert.equal(urlIsPageImage(`<div style="background:url('${U}')"></div>`, U), true);
+  });
+  it("rejects a url that is only a PREFIX of a longer on-page url", () => {
+    assert.equal(urlIsPageImage(`<img src="${U}?v=2&extra=1">`, U), false);
+    assert.equal(urlIsPageImage(`<img srcset="${U}-large.webp 2x">`, U), false);
   });
 });
 

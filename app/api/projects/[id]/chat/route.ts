@@ -25,7 +25,10 @@ export const dynamic = "force-dynamic";
 const ActionSchema = z.object({
   tool: z.string().min(1).max(40),
   status: z.enum(["running", "done", "error"]),
-  summary: z.string().max(200),
+  // Truncate, don't reject: a model-written summary that runs long must not
+  // 400 the whole turn (which vanishes silently on reload). tool/actions-count
+  // stay hard structural rejects below.
+  summary: z.string().transform((s) => s.slice(0, 200)),
 });
 
 const TurnSchema = z.object({

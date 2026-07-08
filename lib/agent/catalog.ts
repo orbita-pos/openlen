@@ -134,7 +134,7 @@ export function buildFunctionDeclarations(): Record<string, unknown>[] {
     {
       name: "poner_musica",
       description:
-        "Pone o quita la pista del reproductor flotante de música de la página. SOLO puede usar una pista YA SUBIDA por el dueño a este proyecto — nunca una URL externa. Si accion=\"poner\" no traes un asset_url válido de las pistas subidas, la herramienta responde con la lista de pistas disponibles (o te dice que no hay ninguna).",
+        "Pone o quita la pista del reproductor flotante de música de la página. SOLO puede usar una pista YA SUBIDA por el dueño a este proyecto — nunca una URL externa. Si no sabes la URL, llama con accion=poner sin asset_url y recibirás las pistas disponibles (campo \"pistas\": cada una con nombre y url); elige una url y vuelve a llamar. Si la lista viene vacía, no hay pistas subidas: dile al usuario que suba una en el panel Música.",
       parameters: {
         type: "OBJECT",
         properties: {

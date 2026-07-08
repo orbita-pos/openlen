@@ -409,13 +409,18 @@ async function toolPonerMusica(
     const assets = await deps.listAudioAssets(session.projectId);
     const match = assetUrl ? assets.find((a) => a.url === assetUrl) : undefined;
     if (!match) {
+      // Asset URLs are content-hash-named — the model can't guess one. Hand it
+      // the real {nombre, url} pairs so a bare `{accion:"poner"}` (or a wrong
+      // asset_url) becomes a picker, not a dead-end retry loop.
+      const pistas = assets.map((a) => ({ nombre: a.name, url: a.url }));
       const disponibles = assets.length
-        ? `Disponibles: ${assets.map((a) => a.name).join(", ")}`
+        ? `Disponibles: ${assets.map((a) => a.name).join(", ")}. Elige un url de "pistas" y vuelve a llamar.`
         : "No hay pistas subidas — pide al usuario que suba una en el panel Música.";
       return {
         response: {
           ok: false,
           error: `asset_url debe ser una de las pistas YA SUBIDAS de este proyecto. ${disponibles}`,
+          pistas,
         },
       };
     }
@@ -853,6 +858,39 @@ async function toolElegirFoto(
   };
 }
 
+function escapeRegExp(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+/** True iff `url` appears as the VALUE of an image-bearing attribute (src /
+ *  content=og:image / href=preload), inside a CSS `url(...)`, or as a full
+ *  candidate in a `srcset` — never merely as substring text nor as a prefix of
+ *  a longer URL. editar_imagen's anti-injection gate uses this so a
+ *  prompt-injected bare URL sitting in page copy can't be fetched+edited. */
+export function urlIsPageImage(html: string, url: string): boolean {
+  if (!url) return false;
+  const u = escapeRegExp(url);
+  // Quoted attribute value, exact — the closing quote must sit right after the
+  // URL, so a prefix of a longer value can't match.
+  if (new RegExp(`(?:src|content|href)\\s*=\\s*(["'])${u}\\1`, "i").test(html)) {
+    return true;
+  }
+  // CSS url(...) in a style attribute/block — quotes optional but balanced.
+  if (new RegExp(`url\\(\\s*(["']?)${u}\\1\\s*\\)`, "i").test(html)) {
+    return true;
+  }
+  // srcset: split each candidate off its descriptor and compare exactly, so a
+  // prefix of a longer candidate is rejected.
+  const srcsetRe = /srcset\s*=\s*["']([^"']*)["']/gi;
+  let sm: RegExpExecArray | null;
+  while ((sm = srcsetRe.exec(html)) !== null) {
+    for (const cand of sm[1].split(",")) {
+      if (cand.trim().split(/\s+/)[0] === url) return true;
+    }
+  }
+  return false;
+}
+
 async function toolEditarImagen(
   session: AgentSession,
   deps: AgentDeps,
@@ -871,9 +909,10 @@ async function toolEditarImagen(
   }
 
   // Anti prompt-injection SSRF: only edit an image ALREADY on the page. The URL
-  // must appear verbatim in the current tagged document — otherwise we never
-  // even fetch it (an attacker-supplied URL can't reach fetchImage this way).
-  if (!session.taggedHtml.includes(imagenUrl)) {
+  // must appear as an image-bearing attribute value in the current tagged
+  // document — a bare URL sitting in body copy is NOT enough, so an
+  // attacker-supplied URL can't reach fetchImage this way.
+  if (!urlIsPageImage(session.taggedHtml, imagenUrl)) {
     return {
       response: {
         ok: false,
