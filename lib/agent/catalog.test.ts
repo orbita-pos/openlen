@@ -177,4 +177,9 @@ describe("buildAgentSystemPrompt", () => {
     // publish modal's job (the card omits `languages` when the list is empty).
     expect(p).toContain("QUITAR idiomas");
   });
+  it("carries the F2 Task 8 attached-image hard rule (editar_pagina, verbatim URL)", () => {
+    const p = buildAgentSystemPrompt();
+    expect(p).toContain("IMAGEN ADJUNTA");
+    expect(p).toContain("editar_pagina");
+  });
 });

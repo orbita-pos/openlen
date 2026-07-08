@@ -554,6 +554,19 @@ function AIDesignChat({
           { role: "assistant" as const, content: t.assistantReasoning || "" },
         ]);
 
+      // Snapshot the scope at send time — if the user clears or re-picks
+      // mid-stream, the in-flight request keeps the original target. Shared
+      // by both the agent and ai-design branches (F2 Task 8 parity).
+      const turnScope = scopedSelection
+        ? {
+            hint: scopedSelection.hint,
+            path: scopedSelection.path,
+          }
+        : null;
+      // Same snapshot discipline for any attached image — the in-flight
+      // request keeps the one that was set when Send fired.
+      const turnImage = img ? { url: img.url, alt: img.alt } : null;
+
       // Agent mode (flag-gated) — talk to /api/agent instead of ai-design.
       // Same SSE reader/line-parse shape as below, different event dispatch:
       // `text` feeds the assistant prose, `action` upserts tool cards, `html`
@@ -585,7 +598,13 @@ function AIDesignChat({
           const res = await fetch("/api/agent", {
             method: "POST",
             headers: { "content-type": "application/json" },
-            body: JSON.stringify({ projectId, prompt, history }),
+            body: JSON.stringify({
+              projectId,
+              prompt,
+              history,
+              ...(turnScope ? { scope: turnScope } : {}),
+              ...(turnImage ? { attachedImage: turnImage } : {}),
+            }),
             signal: abort.signal,
           });
 
@@ -772,18 +791,6 @@ function AIDesignChat({
 
       const abort = new AbortController();
       abortRef.current = abort;
-
-      // Snapshot the scope at send time — if the user clears or re-picks
-      // mid-stream, the in-flight request keeps the original target.
-      const turnScope = scopedSelection
-        ? {
-            hint: scopedSelection.hint,
-            path: scopedSelection.path,
-          }
-        : null;
-      // Same snapshot discipline for any attached image — the in-flight
-      // request keeps the one that was set when Send fired.
-      const turnImage = img ? { url: img.url, alt: img.alt } : null;
 
       try {
         const res = await fetch("/api/templates/ai-design", {
@@ -1437,9 +1444,9 @@ function Composer({
   onClearAttachedImage?: () => void;
   model: AIModel;
   onModelChange: (m: AIModel) => void;
-  /** Agent mode drops attach-image, scoped selection, and model choice (the
-   *  /api/agent route hardcodes Flash + ignores them) — hide those
-   *  affordances rather than silently discard the input. */
+  /** Agent mode hardcodes Flash (no model choice — the /api/agent route
+   *  ignores it) but has F2 Task 8 parity for attach-image + scope, so only
+   *  the ModelPicker stays hidden. */
   agentMode?: boolean;
 }) {
   const t = useTranslations("panelsChat");
@@ -1509,23 +1516,21 @@ function Composer({
         />
         <div className="flex items-center justify-between px-1.5 pb-1.5 pt-0.5">
           <div className="flex items-center gap-0.5">
-            {!agentMode && (
-              <button
-                type="button"
-                aria-label={t("composer.attachImage")}
-                title={t("composer.attachImageTitle")}
-                onClick={onAttachImage}
-                disabled={sending || !onAttachImage}
-                className={`inline-flex h-7 w-7 items-center justify-center rounded-md transition disabled:opacity-40 ${
-                  attachedImage
-                    ? "bg-[var(--accent-strong)] text-white shadow-coral"
-                    : "fg-faint hover:fg hover:bg-hover"
-                }`}
-              >
-                <ImageIcon size={13} />
-              </button>
-            )}
-            {!agentMode && onToggleSectionSelect && (
+            <button
+              type="button"
+              aria-label={t("composer.attachImage")}
+              title={t("composer.attachImageTitle")}
+              onClick={onAttachImage}
+              disabled={sending || !onAttachImage}
+              className={`inline-flex h-7 w-7 items-center justify-center rounded-md transition disabled:opacity-40 ${
+                attachedImage
+                  ? "bg-[var(--accent-strong)] text-white shadow-coral"
+                  : "fg-faint hover:fg hover:bg-hover"
+              }`}
+            >
+              <ImageIcon size={13} />
+            </button>
+            {onToggleSectionSelect && (
               <button
                 type="button"
                 aria-label={
