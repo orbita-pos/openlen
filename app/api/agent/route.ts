@@ -1,10 +1,10 @@
 import { auth } from "@/auth";
-import { GeminiProvider, type Message } from "@/lib/ai-gateway";
+import { GeminiProvider } from "@/lib/ai-gateway";
 import { resolveAIProvider } from "@/lib/ai-provider";
 import { getCreditState, debitCredits, creditsForUsage } from "@/lib/credits";
 import { resolveOpIdByPath, tagWithOpIds } from "@/lib/html-ops";
-import { buildAgentSystemPrompt, buildFunctionDeclarations } from "@/lib/agent/catalog";
-import { buildAgentContext, estimateContextTokens } from "@/lib/agent/context";
+import { buildFunctionDeclarations } from "@/lib/agent/catalog";
+import { buildAgentMessages } from "@/lib/agent/context";
 import { runAgentLoop, type AgentErrorCode } from "@/lib/agent/loop";
 import { realDeps, runAgentTool, summarizeProjectState, type AgentSession } from "@/lib/agent/tools";
 
@@ -160,33 +160,25 @@ export async function POST(req: Request): Promise<Response> {
     if (opId) scopePin = { opId, hint: scopeHint };
   }
 
-  const systemPrompt = buildAgentSystemPrompt();
   const state = summarizeProjectState({
     data: project.data,
     title: project.title,
     subdomain: project.subdomain,
     publishedAt: project.publishedAt,
   });
-  const contextBlock = buildAgentContext({
+  const built = buildAgentMessages({
     state,
     taggedHtml,
     userBrief: project.userBrief,
+    prompt,
+    history,
     attachedImage,
     scopePin,
     scopeHint,
+    maxPromptTokens: MAX_PROMPT_TOKENS,
   });
-  const historyText = history.map((h) => h.content).join("\n");
-  if (estimateContextTokens(contextBlock + historyText + prompt, systemPrompt) > MAX_PROMPT_TOKENS) {
-    return errorJson(413, "Page too large for an agent turn");
-  }
-
-  const messages: Message[] = [
-    { role: "system", content: systemPrompt },
-    { role: "user", content: contextBlock },
-    { role: "assistant", content: "Entendido. Tengo el estado y el documento. ¿Qué hacemos?" },
-    ...history,
-    { role: "user", content: prompt },
-  ];
+  if (!built.ok) return errorJson(413, "Page too large for an agent turn");
+  const messages = built.messages;
 
   const upstreamAbort = new AbortController();
   const agentSession: AgentSession = {

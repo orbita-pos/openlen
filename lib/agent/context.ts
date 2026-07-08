@@ -1,11 +1,18 @@
 // lib/agent/context.ts — builds the per-turn context block the agent route
-// injects as the first user message (state + brief + tagged document).
+// injects as the first user message (state + brief + tagged document), plus
+// buildAgentMessages, the single message-assembly path both the route AND the
+// eval harness (F3 Task 6) consume so a turn is byte-identical either way.
 //
-// Pure string building, zero I/O, zero native imports — the route feeds it
+// Pure string building, zero I/O, zero native imports — the caller feeds it
 // server-read state (summarizeProjectState) and the already-tagged HTML
 // (tagWithOpIds); this module just formats. Keeping it import-free of
 // @/lib/html-engine (native) and @/lib/db lets context.test.ts run under
-// vitest without the native bindings being loadable.
+// vitest without the native bindings being loadable. buildAgentSystemPrompt
+// (from catalog) is pure TS too — no native — so importing it here keeps that
+// invariant.
+
+import type { Message } from "@/lib/ai-gateway";
+import { buildAgentSystemPrompt } from "@/lib/agent/catalog";
 
 export function buildAgentContext(args: {
   state: Record<string, unknown>;
@@ -50,4 +57,57 @@ export function buildAgentContext(args: {
  *  used as a pre-flight size guard before the route ships a turn upstream. */
 export function estimateContextTokens(userContent: string, systemPrompt: string): number {
   return Math.ceil((userContent.length + systemPrompt.length) / 3.5);
+}
+
+export interface BuildAgentMessagesArgs {
+  /** summarizeProjectState(...) output — the caller computes it (it needs the
+   *  DB row); this module stays free of @/lib/agent/tools' native imports. */
+  state: Record<string, unknown>;
+  /** tagWithOpIds(html).taggedHtml — computed by the caller (native). */
+  taggedHtml: string;
+  userBrief: string | null;
+  /** The user's turn prompt (already trimmed/validated by the caller). */
+  prompt: string;
+  /** Prior turns, ALREADY hardened to {role, content} + capped by the caller
+   *  (the route slices to 6 + 4000 chars; the harness passes []). */
+  history: { role: "user" | "assistant"; content: string }[];
+  attachedImage?: { url: string; alt?: string } | null;
+  scopePin?: { opId: string; hint: string } | null;
+  scopeHint?: string | null;
+  /** Pre-flight size ceiling; over it → { ok:false, reason:"too_large" }. */
+  maxPromptTokens: number;
+}
+
+export type BuildAgentMessagesResult =
+  | { ok: true; messages: Message[]; systemPrompt: string; contextBlock: string }
+  | { ok: false; reason: "too_large" };
+
+/** Assemble the exact message array an agent turn ships upstream: system
+ *  prompt, the context block (state + brief + tagged doc + optional image/scope
+ *  blocks), a fixed synthetic assistant ack, the prior history, then the user
+ *  prompt. Shared by app/api/agent/route.ts and the eval harness so a turn is
+ *  byte-identical whichever entry point built it. Applies the same pre-flight
+ *  size guard the route used inline (413 on overflow). */
+export function buildAgentMessages(args: BuildAgentMessagesArgs): BuildAgentMessagesResult {
+  const systemPrompt = buildAgentSystemPrompt();
+  const contextBlock = buildAgentContext({
+    state: args.state,
+    taggedHtml: args.taggedHtml,
+    userBrief: args.userBrief,
+    attachedImage: args.attachedImage,
+    scopePin: args.scopePin,
+    scopeHint: args.scopeHint,
+  });
+  const historyText = args.history.map((h) => h.content).join("\n");
+  if (estimateContextTokens(contextBlock + historyText + args.prompt, systemPrompt) > args.maxPromptTokens) {
+    return { ok: false, reason: "too_large" };
+  }
+  const messages: Message[] = [
+    { role: "system", content: systemPrompt },
+    { role: "user", content: contextBlock },
+    { role: "assistant", content: "Entendido. Tengo el estado y el documento. ¿Qué hacemos?" },
+    ...args.history,
+    { role: "user", content: args.prompt },
+  ];
+  return { ok: true, messages, systemPrompt, contextBlock };
 }
