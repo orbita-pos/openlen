@@ -68,6 +68,7 @@ function makeDeps(
     fetchImageResult: FetchImageResult;
     editImageResult: EditImageResult;
     uploadUrl: string;
+    userBrief: string | null;
   }>,
 ) {
   const store = {
@@ -82,6 +83,8 @@ function makeDeps(
     fetches: [] as string[],
     uploads: [] as { projectId: string; mime: string; name: string; size: number }[],
     imageEdits: [] as { userId: string; prompt: string }[],
+    userBrief: (overrides?.userBrief ?? null) as string | null,
+    briefWrites: 0,
   };
   const fetchImageResult: FetchImageResult =
     overrides?.fetchImageResult ?? { ok: true, base64: "b64orig", mimeType: "image/webp" };
@@ -95,7 +98,7 @@ function makeDeps(
         title: "Tacos",
         subdomain: overrides?.subdomain ?? null,
         publishedAt: overrides?.publishedAt ?? null,
-        userBrief: null,
+        userBrief: store.userBrief,
       };
     },
     async saveProjectData(_p, _u, data) { store.data = data; store.saved.push(data); },
@@ -111,6 +114,11 @@ function makeDeps(
     async editImage(userId, input) {
       store.imageEdits.push({ userId, prompt: input.prompt });
       return editImageResult;
+    },
+    async setUserBrief(_p, _u, value) {
+      store.userBrief = value;
+      store.briefWrites += 1;
+      return true;
     },
   };
   return { deps, store };
@@ -668,6 +676,44 @@ describe("publicar", () => {
     assert.equal(out.response.ok, true);
     assert.deepEqual(out.confirm!.idiomas, []);
     assert.equal(out.response.idiomas_ignorados, undefined);
+  });
+});
+
+describe("recordar_preferencia", () => {
+  it("appends under the agent marker and reports the card", async () => {
+    const { deps, store } = makeDeps();
+    const out = await runAgentTool(makeSession(), deps, "recordar_preferencia", {
+      preferencia: "Siempre hablarle de tú al visitante",
+    });
+    assert.equal(out.response.ok, true);
+    assert.ok(store.userBrief!.includes("— Preferencias guardadas por el agente —"));
+    assert.ok(store.userBrief!.includes("• Siempre hablarle de tú al visitante"));
+    assert.equal(out.action?.tool, "recordar_preferencia");
+  });
+  it("preserves the user's own brief text above the marker", async () => {
+    const { deps, store } = makeDeps({ userBrief: "Negocio de tacos al pastor." });
+    await runAgentTool(makeSession(), deps, "recordar_preferencia", { preferencia: "Tono formal" });
+    assert.ok(store.userBrief!.startsWith("Negocio de tacos al pastor."));
+    assert.ok(store.userBrief!.indexOf("Negocio") < store.userBrief!.indexOf("— Preferencias"));
+  });
+  it("dedups case-insensitively without writing", async () => {
+    const { deps, store } = makeDeps();
+    await runAgentTool(makeSession(), deps, "recordar_preferencia", { preferencia: "Nunca usar amarillo" });
+    const writes = store.briefWrites;
+    const out = await runAgentTool(makeSession(), deps, "recordar_preferencia", { preferencia: "nunca usar AMARILLO" });
+    assert.equal(out.response.ya_existia, true);
+    assert.equal(store.briefWrites, writes);
+  });
+  it("refuses when the brief is full, as data", async () => {
+    const { deps, store } = makeDeps({ userBrief: "x".repeat(3990) });
+    const out = await runAgentTool(makeSession(), deps, "recordar_preferencia", { preferencia: "Preferencia larga que no cabe" });
+    assert.equal(out.response.ok, false);
+    assert.equal(store.userBrief!.length, 3990);
+  });
+  it("rejects out-of-range preferencia", async () => {
+    const { deps } = makeDeps();
+    const short = await runAgentTool(makeSession(), deps, "recordar_preferencia", { preferencia: "ok" });
+    assert.equal(short.response.ok, false);
   });
 });
 

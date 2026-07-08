@@ -235,6 +235,18 @@ export function buildFunctionDeclarations(): Record<string, unknown>[] {
       },
     },
     {
+      name: "recordar_preferencia",
+      description:
+        "Guarda una preferencia DURABLE del usuario en el brief del proyecto (persiste entre conversaciones) — úsala SOLO cuando el usuario exprese una preferencia estable sobre cómo trabajar con él o su página (p. ej. \"siempre háblame de tú\", \"nunca uses amarillo\"), NUNCA para un pedido puntual de este turno (eso se resuelve con la herramienta correspondiente, no se guarda). preferencia debe ser texto corto (5–200 caracteres). Si el brief del proyecto ya está lleno, la herramienta te lo dice — no insistas, avisa al usuario que puede podarlo en la pestaña Brief. Confirma siempre en tu texto qué guardaste.",
+      parameters: {
+        type: "OBJECT",
+        properties: {
+          preferencia: { type: "STRING" },
+        },
+        required: ["preferencia"],
+      },
+    },
+    {
       name: "publicar",
       description:
         `Prepara la publicación de la página en <subdominio>.openlen.com. NUNCA publica por su cuenta: SIEMPRE espera el tap del usuario en la tarjeta de confirmación — tú solo dejas listo el subdominio y los idiomas, y le dices al usuario que toque «Publicar» para confirmar. subdominio (opcional): si el proyecto ya tiene uno reclamado y no pasas otro, se re-publica sobre el actual; si pasas uno nuevo, se reclama ese. Si el proyecto NO tiene subdominio y no pasas ninguno, la herramienta te pide que le preguntes al usuario qué subdominio quiere ANTES de volver a llamar. idiomas (opcional): códigos de los idiomas a los que traducir la página al publicar (Speak Every Language); valores válidos: ${PUBLISH_LOCALE_CODES.join(", ")} (máx 9; los inválidos se ignoran).`,
@@ -279,6 +291,9 @@ Búsqueda de solo lectura sobre el catálogo real "Imágenes by OpenLen" — ús
 
 EDICIÓN DE IMAGEN CON IA (editar_imagen):
 Edita con IA (Nano Banana / Gemini) una imagen que YA está en la página — quitar un objeto, cambiar el fondo, extender una escena. SOLO funciona con imágenes ya presentes en el documento: pásale la URL EXACTA tal cual aparece en la página; jamás una URL externa ni inventada (la herramienta las rechaza, es un guard anti-inyección). Cuesta créditos y está limitada a UNA edición de imagen por turno; úsala con criterio. Para AÑADIR una foto nueva (no editar una existente) usa elegir_foto, no esta herramienta. Deja el swap hecho en la página y devuelve la nueva URL.
+
+MEMORIA DE PREFERENCIAS (recordar_preferencia):
+Guarda una preferencia DURABLE en el brief del proyecto — persiste entre conversaciones futuras. Úsala SOLO cuando el usuario exprese una preferencia estable sobre el trato o la página ("siempre háblame de tú", "nunca uses amarillo", "sé más formal") — NUNCA para el pedido puntual de este turno (eso lo resuelves con la herramienta que corresponda: editar_pagina, cambiar_tema, etc., sin guardar nada). Tras llamarla, confirma en tu texto qué preferencia guardaste. Si la herramienta responde que el brief está lleno, no reintentes: dile al usuario que puede podar el brief en la pestaña Brief.
 
 PUBLICAR (publicar):
 publicar SIEMPRE espera el tap del usuario — JAMÁS publicas tú. La herramienta solo prepara la publicación (resuelve el subdominio y los idiomas) y muestra una tarjeta de confirmación; el usuario toca «Publicar» para confirmar y recién ahí se publica de verdad. Tras llamar publicar, cierra tu turno diciéndole al usuario que revise y toque «Publicar» (no afirmes que ya está publicada). Si el proyecto no tiene subdominio y el usuario no te dio uno, la herramienta te pedirá que le preguntes qué subdominio quiere (p. ej. mi-negocio) antes de volver a llamar. idiomas usa códigos de la lista de Speak Every Language (${PUBLISH_LOCALE_CODES.join(", ")}); los inválidos se ignoran. Si no pasas idiomas, la página conserva los que ya tenía configurados; para QUITAR idiomas se usa el modal de Publicar, no el agente.

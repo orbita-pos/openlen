@@ -5,7 +5,7 @@ import { THEME_PRESETS } from "@/lib/theme-presets";
 import { PUBLISH_LOCALES } from "@/lib/publish/publish-locales";
 
 describe("buildFunctionDeclarations", () => {
-  it("declares exactly the F1 + F2 Task 1-6 tools", () => {
+  it("declares exactly the F1 + F2 + F3 Task 1 tools", () => {
     const names = buildFunctionDeclarations().map((d) => d.name);
     expect(names).toEqual([
       "leer_estado",
@@ -20,6 +20,7 @@ describe("buildFunctionDeclarations", () => {
       "crear_pagina",
       "elegir_foto",
       "editar_imagen",
+      "recordar_preferencia",
       "publicar",
     ]);
   });
@@ -106,6 +107,13 @@ describe("buildFunctionDeclarations", () => {
     // elegir_foto for brand-new photos.
     expect(String(d.description)).toContain("elegir_foto");
   });
+  it("recordar_preferencia requires preferencia as a string, and the description warns off one-off asks", () => {
+    const d = buildFunctionDeclarations().find((x) => x.name === "recordar_preferencia") as any;
+    expect(d.parameters.properties.preferencia.type).toBe("STRING");
+    expect(d.parameters.required).toEqual(["preferencia"]);
+    expect(String(d.description)).toContain("DURABLE");
+    expect(String(d.description).toLowerCase()).toContain("puntual");
+  });
   it("publicar exposes optional subdominio + idiomas(ARRAY of STRING), nothing required, enumerates PUBLISH_LOCALES", () => {
     const d = buildFunctionDeclarations().find((x) => x.name === "publicar") as any;
     expect(d.parameters.type).toBe("OBJECT");
@@ -181,5 +189,12 @@ describe("buildAgentSystemPrompt", () => {
     const p = buildAgentSystemPrompt();
     expect(p).toContain("IMAGEN ADJUNTA");
     expect(p).toContain("editar_pagina");
+  });
+  it("carries the F3 Task 1 recordar_preferencia knowledge: durable-only, never the one-off ask", () => {
+    const p = buildAgentSystemPrompt();
+    expect(p).toContain("recordar_preferencia");
+    expect(p).toContain("DURABLE");
+    expect(p.toLowerCase()).toContain("puntual");
+    expect(p).toContain("Brief");
   });
 });

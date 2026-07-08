@@ -29,6 +29,7 @@ import { debitCredits } from "@/lib/credits";
 import { detectSlotPath, sanitizeForPublish } from "@/lib/html-engine";
 import { applyOps, tagWithOpIds, type Op, type OpType } from "@/lib/html-ops";
 import { normalizeBornCanonical } from "@/lib/normalize";
+import { setProjectUserBrief } from "@/lib/projects";
 import { extForMime, getAssetStorage } from "@/lib/projects/assets";
 import { validateUrl } from "@/lib/style-match/scrape/validate-url";
 import { createSitePage, type CreatePageInput } from "@/lib/projects/create-page";
@@ -110,6 +111,10 @@ export interface AgentDeps {
   /** Run the Nano Banana instruction edit — the extracted image-edit core,
    *  bound to the given userId for the debit-on-success charge. */
   editImage(userId: string, input: ImageEditInput): Promise<ImageEditResult>;
+  /** Persist the project's userBrief verbatim (recordar_preferencia's only
+   *  write path) — realDeps wires this to setProjectUserBrief. Returns false
+   *  when the project isn't the caller's (mirrors that function's contract). */
+  setUserBrief(projectId: string, userId: string, value: string): Promise<boolean>;
 }
 
 // public/openlen-images/manifest.json is a build-committed static file (see
@@ -231,6 +236,9 @@ export function realDeps(): AgentDeps {
         callGemini: realImageEditTransport(),
         debit: (cost) => debitCredits(userId, cost),
       });
+    },
+    async setUserBrief(projectId, userId, value) {
+      return setProjectUserBrief(projectId, userId, value);
     },
   };
 }
@@ -1035,6 +1043,93 @@ async function toolPublicar(
   };
 }
 
+const PREFERENCIA_MIN = 5;
+const PREFERENCIA_MAX = 200;
+// Replicated, not imported: lib/projects.ts's USER_BRIEF_MAX is a private
+// const (setProjectUserBrief already silently truncates to it — this tool
+// needs to know the cap BEFORE writing, to refuse with a clear error instead
+// of silently losing the tail of the brief). Keep this literal in sync with
+// lib/projects.ts:452 if that value ever changes.
+const USER_BRIEF_MAX = 4000;
+// The block always lives at the END of the brief (spec) — the em-dash line is
+// the stable anchor: search/insert against it, never against leading/trailing
+// whitespace, so re-formatting elsewhere in the brief can't break detection.
+const PREFERENCIA_MARKER_LINE = "— Preferencias guardadas por el agente —";
+
+function normalizePreferencia(s: string): string {
+  return s.trim().toLowerCase().replace(/\s+/g, " ");
+}
+
+// recordar_preferencia — the ONLY tool that writes to the project's userBrief
+// (never to data.html). Spec rule (catalog knowledge, not enforced here):
+// only DURABLE user preferences ("always speak informally", "never use
+// yellow") belong here, never a one-off ask for this turn — the model is
+// trusted to make that call; this tool only owns storage mechanics: marker
+// placement, dedup, and the USER_BRIEF_MAX cap.
+async function toolRecordarPreferencia(
+  session: AgentSession,
+  deps: AgentDeps,
+  args: Record<string, unknown>,
+): Promise<ToolOutcome> {
+  const preferencia = typeof args.preferencia === "string" ? args.preferencia.trim() : "";
+  if (preferencia.length < PREFERENCIA_MIN || preferencia.length > PREFERENCIA_MAX) {
+    return {
+      response: {
+        ok: false,
+        error: `preferencia debe tener entre ${PREFERENCIA_MIN} y ${PREFERENCIA_MAX} caracteres`,
+      },
+    };
+  }
+
+  const row = await deps.loadProject(session.projectId, session.userId);
+  if (!row) return { response: { ok: false, error: "proyecto no encontrado" } };
+
+  const currentBrief = row.userBrief ?? "";
+  const markerIdx = currentBrief.indexOf(PREFERENCIA_MARKER_LINE);
+  const existingBlock = markerIdx >= 0 ? currentBrief.slice(markerIdx) : "";
+
+  // Dedup, case/whitespace-insensitive, bidirectional containment so a
+  // reworded-but-equivalent line still counts (spec: "ya contiene el texto").
+  const normalizedNew = normalizePreferencia(preferencia);
+  const yaExistia = existingBlock
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((line) => line.startsWith("• "))
+    .some((line) => {
+      const text = normalizePreferencia(line.slice(2));
+      return text.includes(normalizedNew) || normalizedNew.includes(text);
+    });
+  if (yaExistia) {
+    return { response: { ok: true, ya_existia: true } };
+  }
+
+  const trimmedBase = currentBrief.replace(/\s+$/, "");
+  const nextBrief =
+    markerIdx >= 0
+      ? `${trimmedBase}\n• ${preferencia}`
+      : trimmedBase.length > 0
+        ? `${trimmedBase}\n\n${PREFERENCIA_MARKER_LINE}\n• ${preferencia}`
+        : `${PREFERENCIA_MARKER_LINE}\n• ${preferencia}`;
+
+  if (nextBrief.length > USER_BRIEF_MAX) {
+    return {
+      response: {
+        ok: false,
+        error:
+          `el brief del proyecto ya está lleno (máx ${USER_BRIEF_MAX} caracteres) — pide al usuario que pode algo en la pestaña Brief antes de guardar otra preferencia`,
+      },
+    };
+  }
+
+  const saved = await deps.setUserBrief(session.projectId, session.userId, nextBrief);
+  if (!saved) return { response: { ok: false, error: "no se pudo guardar la preferencia" } };
+
+  return {
+    response: { ok: true },
+    action: { tool: "recordar_preferencia", ok: true, summary: preferencia.slice(0, 60) },
+  };
+}
+
 export async function runAgentTool(
   session: AgentSession,
   deps: AgentDeps,
@@ -1069,6 +1164,8 @@ export async function runAgentTool(
         return await toolEditarImagen(session, deps, args);
       case "publicar":
         return await toolPublicar(session, deps, args);
+      case "recordar_preferencia":
+        return await toolRecordarPreferencia(session, deps, args);
       default:
         return { response: { ok: false, error: "herramienta desconocida" } };
     }

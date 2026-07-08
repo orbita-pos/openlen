@@ -26,6 +26,7 @@ const KNOWN_TOOLS = new Set([
   "crear_pagina",
   "elegir_foto",
   "editar_imagen",
+  "recordar_preferencia",
   "publicar",
 ]);
 
