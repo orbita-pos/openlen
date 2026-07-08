@@ -970,12 +970,17 @@ async function toolPublicar(
     };
   }
 
-  // idiomas: keep only real PUBLISH_LOCALES codes, drop the rest (noted for the
-  // model), cap at the endpoint's max of 9.
+  // idiomas: keep only real PUBLISH_LOCALES codes, cap at the endpoint's max
+  // of 9. Everything dropped — invalid codes AND valid-but-over-cap overflow —
+  // is noted back to the model, never silently vanished.
   const rawIdiomas = Array.isArray(args.idiomas) ? args.idiomas : [];
   const strIdiomas = rawIdiomas.filter((c): c is string => typeof c === "string");
-  const idiomas = strIdiomas.filter((c) => isPublishLocale(c)).slice(0, MAX_PUBLISH_LOCALES);
-  const ignorados = strIdiomas.filter((c) => !isPublishLocale(c));
+  const validos = strIdiomas.filter((c) => isPublishLocale(c));
+  const idiomas = validos.slice(0, MAX_PUBLISH_LOCALES);
+  const ignorados = [
+    ...strIdiomas.filter((c) => !isPublishLocale(c)),
+    ...validos.slice(MAX_PUBLISH_LOCALES),
+  ];
 
   return {
     response: {

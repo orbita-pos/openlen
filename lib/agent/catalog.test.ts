@@ -173,5 +173,8 @@ describe("buildAgentSystemPrompt", () => {
     // The hard rule — the agent never publishes directly; the tap is the gate.
     expect(p).toContain("subdominio");
     expect(p.toLowerCase()).toContain("tap");
+    // The agent can add/set languages but never clear them — that's the
+    // publish modal's job (the card omits `languages` when the list is empty).
+    expect(p).toContain("QUITAR idiomas");
   });
 });

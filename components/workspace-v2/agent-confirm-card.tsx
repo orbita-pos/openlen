@@ -81,10 +81,19 @@ export function AgentConfirmCard({
 
     setState({ kind: "publishing" });
     try {
+      // `languages` is only sent when the agent actually chose some: the
+      // endpoint treats a PRESENT key as "persist this" (an [] would wipe a
+      // live site's stored translations on a plain republish), while an
+      // OMITTED key keeps the stored setting. Consequence: the agent can
+      // add/set languages but never clear them — clearing is the publish
+      // modal's job.
       const res = await fetch(`/api/projects/${projectId}/publish`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ subdomain: subdominio, languages: idiomas }),
+        body: JSON.stringify({
+          subdomain: subdominio,
+          ...(idiomas.length > 0 ? { languages: idiomas } : {}),
+        }),
       });
       if (!res.ok) {
         // The endpoint is the final authority — map its status codes to text.

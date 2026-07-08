@@ -615,13 +615,26 @@ describe("publicar", () => {
     assert.ok(out.response.idiomas_ignorados);
   });
 
-  it("more than 9 valid idiomas are capped to 9", async () => {
+  it("more than 9 valid idiomas are capped to 9, the overflow surfaces in idiomas_ignorados", async () => {
     const { deps } = makeDeps({ subdomain: "tienda" });
     const out = await runAgentTool(makeSession(), deps, "publicar", {
       idiomas: ["en", "es", "pt", "fr", "de", "it", "ja", "ko", "zh", "nl"],
     });
     assert.equal(out.response.ok, true);
     assert.equal(out.confirm!.idiomas.length, 9);
+    // The dropped-by-cap locale is reported too, not silently vanished.
+    assert.deepEqual(out.response.idiomas_ignorados, ["nl"]);
+  });
+
+  it("idiomas absent → confirm.idiomas is [] and nothing is flagged as ignored", async () => {
+    // The card omits the `languages` key entirely for an empty list, so the
+    // endpoint keeps the project's stored setting — an [] here must NEVER
+    // reach the POST body (it would wipe a live site's translations).
+    const { deps } = makeDeps({ subdomain: "tienda" });
+    const out = await runAgentTool(makeSession(), deps, "publicar", {});
+    assert.equal(out.response.ok, true);
+    assert.deepEqual(out.confirm!.idiomas, []);
+    assert.equal(out.response.idiomas_ignorados, undefined);
   });
 });
 
