@@ -395,9 +395,12 @@ export const EVAL_CASES: EvalCase[] = [
       );
       if (badConfirm) return "confirmó un subdominio con espacios (inválido)";
       const t = finalText(ctx);
-      return /guion|guión|espacios|minúscula|minuscula|no.{0,15}(válido|valido)|sin espacios/.test(t)
+      // Aceptamos DOS respuestas buenas: explicar la regla, O proponer la
+      // versión corregida con guiones ("mi-negocio-bonito") — para el usuario
+      // no-técnico la sugerencia es incluso mejor UX que la lección.
+      return /guion|guión|espacios|minúscula|minuscula|no.{0,15}(válido|valido)|sin espacios|mi-negocio|corregid|sugier|en su lugar/.test(t)
         ? null
-        : "no explicó por qué el subdominio con espacios no sirve";
+        : "ni explicó la regla ni sugirió una versión corregida del subdominio";
     },
   },
   {
