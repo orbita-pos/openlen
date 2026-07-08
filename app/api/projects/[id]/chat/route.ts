@@ -19,6 +19,15 @@ import {
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+// F2-T11: agent-mode tool card, final states only. Optional on TurnSchema —
+// old clients/rows never send this, so omission must validate identically to
+// today (backward compat is the point of this schema).
+const ActionSchema = z.object({
+  tool: z.string().min(1).max(40),
+  status: z.enum(["running", "done", "error"]),
+  summary: z.string().max(200),
+});
+
 const TurnSchema = z.object({
   id: z.string().min(1).max(100),
   userText: z.string().min(1).max(4000),
@@ -31,6 +40,11 @@ const TurnSchema = z.object({
   assistantReasoning: z.string().max(20000),
   status: z.enum(["applied", "reverted"]),
   page: z.string().max(200).nullable().optional(),
+  // F2-T11: both optional/backward-compatible — see ActionSchema comment.
+  // Confirm cards are deliberately never part of this shape (never sent by
+  // the panel) — see chat-panel.tsx's persistTurn comment for why.
+  actions: z.array(ActionSchema).max(12).optional(),
+  noDocChange: z.boolean().optional(),
 });
 
 const StatusSchema = z.object({

@@ -270,4 +270,19 @@ export interface StoredChatTurn {
   /** Site page this turn edited. null/undefined = home (data.html); a slug =
    *  data.pages[slug].html. Pre-multipage rows are NULL → home. */
   page?: string | null;
+  /** F2: agent-mode tool cards, final states only (a trailing `running` card
+   *  persists as-is). Rehydrated on restore so a reload shows the same cards
+   *  the live turn had. Absent = an ai-design turn or a pre-F2 row. Confirm
+   *  cards (`AgentConfirm`) are intentionally NOT part of this — see the
+   *  `persistTurn` comment in chat-panel.tsx for why. */
+  actions?: Array<{
+    tool: string;
+    status: "running" | "done" | "error";
+    summary: string;
+  }>;
+  /** F2: true when the turn changed no document (answer-only or
+   *  settings-only agent turn) — the restored footer must suppress
+   *  Applied/Undo exactly like the live turn does. Absent/false = a document
+   *  changed (every pre-F2 row implicitly falls here). */
+  noDocChange?: boolean;
 }

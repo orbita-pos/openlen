@@ -312,6 +312,15 @@ export const projectChatMessages = pgTable(
     // Multi-page: which document this turn edited. NULL = the home document
     // (data.html); a slug = data.pages[slug].html. Mirrors projectVersions.page.
     page: text("page"),
+    // F2: agent-mode tool cards (final states only) — NULL for ai-design
+    // turns and pre-F2 rows. Confirm cards are never stored here (see
+    // chat-panel.tsx's persistTurn comment).
+    actions: jsonb("actions").$type<
+      { tool: string; status: "running" | "done" | "error"; summary: string }[]
+    >(),
+    // F2: true when the turn changed no document (answer-only/settings-only
+    // agent turn) — NULL/false everywhere else, including every pre-F2 row.
+    noDocChange: boolean("noDocChange"),
     // 'applied' on insert; flipped to 'reverted' by Undo. 'error' turns are
     // never persisted (transient — they changed nothing).
     status: text("status").notNull(),

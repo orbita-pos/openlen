@@ -40,6 +40,8 @@ export async function appendChatMessage(
       attachedImage: turn.attachedImage ?? null,
       assistantReasoning: turn.assistantReasoning.slice(0, 20_000),
       page: turn.page ?? null,
+      actions: turn.actions ?? null,
+      noDocChange: turn.noDocChange ?? null,
       status: turn.status === "reverted" ? "reverted" : "applied",
     })
     .onConflictDoNothing();
@@ -91,5 +93,9 @@ function rowToTurn(
   };
   if (row.attachedImage) turn.attachedImage = row.attachedImage;
   if (row.page) turn.page = row.page; // NULL stays undefined = home
+  // F2-T11: NULL/absent stays undefined on both — restoreTurn (chat-panel.tsx)
+  // treats undefined exactly like a pre-F2 row (no cards, "Applied" verb ok).
+  if (row.actions && row.actions.length > 0) turn.actions = row.actions;
+  if (row.noDocChange) turn.noDocChange = true;
   return turn;
 }

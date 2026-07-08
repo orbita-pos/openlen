@@ -209,18 +209,19 @@ interface DesignTurn {
   page?: string | null;
   postEditHtml?: string;
   /** Agent-mode tool cards for this turn (leer_estado → editar_pagina → …).
-   *  Empty/absent for ai-design turns. Not persisted in F1 — rebuilt live
-   *  from the SSE `action` events each turn. */
+   *  Empty/absent for ai-design turns. F2-T11: persisted (final states only)
+   *  so a reload rehydrates the same cards the live turn had — see the
+   *  `persistTurn` comment in `send()` for the upsert-on-persist rule. */
   actions?: AgentAction[];
   /** Agent-mode publish gate (Task 7) — a `confirm` SSE event lands here and
    *  renders an interactive AgentConfirmCard. The card survives the turn's
-   *  `done` (it finalizes to applied but the card stays tappable). Local-only:
-   *  ephemeral like action cards, never persisted (the ✓ success posts its own
-   *  history turn). */
+   *  `done` (it finalizes to applied but the card stays tappable). Local-only,
+   *  never persisted (F2-T11 decision) — see the `persistTurn` comment for why. */
   confirm?: AgentConfirm;
   /** Agent-mode: the turn finished without any `html` event (answer-only or
    *  settings-only) — no document changed, so the footer suppresses the
-   *  Applied/Undo affordances. Local-only, never persisted. */
+   *  Applied/Undo affordances. F2-T11: persisted, so a restored turn suppresses
+   *  the footer exactly like the live one did. */
   noDocChange?: boolean;
   appliedAt?: number;
   /** ms-epoch when the turn started — drives the elapsed-time label
@@ -252,6 +253,26 @@ const QUICK_PROMPT_KEYS: ReadonlyArray<string> = [
 
 const FLUSH_INTERVAL_MS = 800;
 const FLUSH_CHAR_BUDGET = 2000;
+
+// Agent-mode: upsert one card into an ordered list of tool cards — replace a
+// trailing `running` card for the same tool instead of stacking a duplicate,
+// otherwise append. Pure so it's shared between the live React-state upsert
+// (`upsertAction`) and `send()`'s local accumulator, which needs the same
+// final list (independent of React's render/flush timing) to hand to
+// `persistTurn` once the turn settles.
+function upsertActionInto(
+  actions: AgentAction[] | undefined,
+  action: AgentAction,
+): AgentAction[] {
+  const next = actions ? [...actions] : [];
+  const last = next[next.length - 1];
+  if (last && last.tool === action.tool && last.status === "running") {
+    next[next.length - 1] = action;
+  } else {
+    next.push(action);
+  }
+  return next;
+}
 
 function AIDesignChat({
   page = null,
@@ -470,17 +491,11 @@ function AIDesignChat({
   // instead of stacking a duplicate; otherwise append a new card.
   const upsertAction = useCallback((id: string, action: AgentAction) => {
     setTurns((prev) =>
-      prev.map((t) => {
-        if (t.id !== id) return t;
-        const actions = t.actions ? [...t.actions] : [];
-        const last = actions[actions.length - 1];
-        if (last && last.tool === action.tool && last.status === "running") {
-          actions[actions.length - 1] = action;
-        } else {
-          actions.push(action);
-        }
-        return { ...t, actions };
-      }),
+      prev.map((t) =>
+        t.id === id
+          ? { ...t, actions: upsertActionInto(t.actions, action) }
+          : t,
+      ),
     );
   }, []);
 
@@ -595,6 +610,11 @@ function AIDesignChat({
         let accumulatedReasoning = "";
         let latestAgentHtml: string | null = null;
         let errorMessage: string | null = null;
+        // Tracked alongside `upsertAction`'s React-state upsert (same rule,
+        // via the shared `upsertActionInto` helper) so the turn's final card
+        // states are available synchronously for `persistTurn` below —
+        // reading them back off `turns` state here would race React's flush.
+        let finalActions: AgentAction[] = [];
         try {
           const res = await fetch("/api/agent", {
             method: "POST",
@@ -673,7 +693,11 @@ function AIDesignChat({
                     : "done";
                 const summary =
                   typeof p.summary === "string" ? p.summary : "";
-                if (tool) upsertAction(turnId, { tool, status, summary });
+                if (tool) {
+                  const action: AgentAction = { tool, status, summary };
+                  upsertAction(turnId, action);
+                  finalActions = upsertActionInto(finalActions, action);
+                }
               } else if (evName === "html") {
                 const html = strField(payload, "html");
                 if (html) {
@@ -686,7 +710,9 @@ function AIDesignChat({
               } else if (evName === "confirm") {
                 // The publish gate — attach a confirm card to this turn. It
                 // stays interactive after the turn's `done` finalizes it (the
-                // user's tap is the only thing that publishes).
+                // user's tap is the only thing that publishes). F2-T11:
+                // intentionally never persisted — see the `persistTurn`
+                // comment below for the decision.
                 const c = payload as {
                   action?: unknown;
                   subdominio?: unknown;
@@ -749,6 +775,16 @@ function AIDesignChat({
             // Agent turns are home-only (guarded above) — pin to home so Undo
             // PATCHes the home document.
             page: null,
+            // F2-T11: persist the turn's final card states (a trailing
+            // `running` card, if the stream ended mid-tool-call, persists
+            // as-is — matches what the live turn showed). Confirm cards are
+            // deliberately NOT included here: on restore a confirmed-publish
+            // already produced its own persisted "✓ Publicada…" turn (see
+            // handlePublished below), and an unconfirmed confirm card is
+            // stale by the time of a reload — showing it as interactive again
+            // would let a second, out-of-date publish tap fire.
+            ...(finalActions.length > 0 ? { actions: finalActions } : {}),
+            ...(latestAgentHtml === null ? { noDocChange: true } : {}),
           });
         } catch (err) {
           if (abort.signal.aborted) {
@@ -1085,6 +1121,9 @@ function AIDesignChat({
         assistantReasoning,
         status: "applied",
         page: null,
+        // F2-T11: this synthetic note never touches a document either — same
+        // suppression rule as the agent-branch persistTurn above.
+        noDocChange: true,
       });
     },
     [persistTurn, tAgent],
@@ -1718,6 +1757,13 @@ function restoreTurn(s: StoredChatTurn): DesignTurn {
     preEditHtml: "",
     appliedAt: s.appliedAt,
     page: s.page,
+    // F2-T11: both absent on pre-F2 rows and on every ai-design turn — the
+    // TurnFooter and TurnView already treat undefined exactly like "false"/
+    // "no cards", so this restores byte-for-byte identical to today for
+    // those. Agent-mode rows carrying them now rehydrate the same cards and
+    // the same "no Applied verb" suppression the live turn had.
+    actions: s.actions,
+    noDocChange: s.noDocChange,
   };
 }
 
