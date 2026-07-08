@@ -107,10 +107,12 @@ describe("runAgentLoop", () => {
 
   it("caps runaway loops at maxToolCalls", async () => {
     const events: AgentStreamEvent[] = [];
+    // editar_pagina is a budgeted (non-read-only) tool — leer_estado/elegir_foto
+    // are exempt from maxToolCalls (F3-T5) so they'd defeat this test's premise.
     const r = await runAgentLoop({
       messages: [{ role: "user", content: "x" }], tools: [], maxToolCalls: 1,
       openStream: scripted(
-        [{ type: "function_call", name: "leer_estado", args: {} }, { type: "function_call", name: "leer_estado", args: {} }, done],
+        [{ type: "function_call", name: "editar_pagina", args: {} }, { type: "function_call", name: "editar_pagina", args: {} }, done],
       ),
       runTool: async () => ({ response: { ok: true } }),
       emit: (e) => events.push(e),
@@ -122,6 +124,65 @@ describe("runAgentLoop", () => {
     const err = events.find((e) => e.type === "error") as { message: string; code?: string };
     expect(err.code).toBe("tool_limit");
     expect(err.message).toContain("límite de pasos");
+  });
+
+  it("F3-T5: read-only tools (elegir_foto) don't count toward maxToolCalls — a photo hunt doesn't burn the budget", async () => {
+    const events: AgentStreamEvent[] = [];
+    const seen: string[] = [];
+    const photoCalls: StreamEvent[] = Array.from({ length: 12 }, (): StreamEvent => ({
+      type: "function_call",
+      name: "elegir_foto",
+      args: {},
+    }));
+    const r = await runAgentLoop({
+      messages: [{ role: "user", content: "ponme fotos" }], tools: [], maxToolCalls: 10,
+      openStream: scripted(
+        [
+          ...photoCalls,
+          { type: "function_call", name: "editar_pagina", args: {} },
+          { type: "function_call", name: "activar_modulo", args: { modulo: "chat" } },
+          done,
+        ],
+        [{ type: "text_delta", text: "Listo, puse las fotos." }, done],
+      ),
+      runTool: async (name) => { seen.push(name); return { response: { ok: true } }; },
+      emit: (e) => events.push(e),
+    });
+    // All 14 calls actually ran — the 12 elegir_foto ones just didn't count
+    // against the 10-call budget, which only the 2 non-exempt calls touch.
+    expect(seen).toHaveLength(14);
+    expect(seen.filter((n) => n === "elegir_foto")).toHaveLength(12);
+    expect(r.finalText).toBe("Listo, puse las fotos.");
+    expect(events.some((e) => e.type === "error")).toBe(false);
+    expect(r.terminalError).toBe(false);
+  });
+
+  it("F3-T5: an absolute cap of 20 total tool calls still terminates a runaway loop, mixing exempt and budgeted tools", async () => {
+    const events: AgentStreamEvent[] = [];
+    const seen: string[] = [];
+    // 21 calls in one turn, alternating exempt (elegir_foto) and budgeted
+    // (editar_pagina) — 11 exempt + 10 budgeted. The 10 budgeted calls never
+    // reach maxToolCalls's own trip point on their own turn ordering here;
+    // it's the ABSOLUTE cap (20, counts everything) that must stop the 21st.
+    const calls: StreamEvent[] = Array.from({ length: 21 }, (_, i): StreamEvent => ({
+      type: "function_call",
+      name: i % 2 === 0 ? "elegir_foto" : "editar_pagina",
+      args: {},
+    }));
+    const r = await runAgentLoop({
+      messages: [{ role: "user", content: "x" }], tools: [],
+      openStream: scripted([...calls, done]),
+      runTool: async (name) => { seen.push(name); return { response: { ok: true } }; },
+      emit: (e) => events.push(e),
+    });
+    // Only 20 of the 21 scripted calls actually ran before the absolute cap
+    // stopped the loop.
+    expect(seen).toHaveLength(20);
+    expect(r.toolCalls).toBe(20);
+    expect(events.some((e) => e.type === "error")).toBe(true);
+    expect(r.terminalError).toBe(true);
+    const err = events.find((e) => e.type === "error") as { message: string; code?: string };
+    expect(err.code).toBe("tool_limit");
   });
 
   it("surfaces an error and stops the loop when a turn truncates at max_tokens", async () => {

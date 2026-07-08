@@ -197,4 +197,10 @@ describe("buildAgentSystemPrompt", () => {
     expect(p.toLowerCase()).toContain("puntual");
     expect(p).toContain("Brief");
   });
+  it("carries the F3 Task 5 knowledge that leer_estado/elegir_foto don't burn the tool budget", () => {
+    const p = buildAgentSystemPrompt();
+    expect(p).toContain("leer_estado");
+    expect(p).toContain("elegir_foto");
+    expect(p.toLowerCase()).toContain("no gastan tus pasos");
+  });
 });

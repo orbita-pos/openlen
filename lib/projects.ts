@@ -311,7 +311,16 @@ export async function getProject(
     .limit(1);
   const row = rows[0];
   if (!row) return null;
-  const chatHistory = await getChatMessages(projectId);
+  // Isolated on purpose: a chat-table schema drift must not take down the
+  // whole workspace (F2's e2e proved getChatMessages throwing here 500s
+  // every project load, chat or not). Fall back to an empty transcript and
+  // keep serving the project — never swallow silently, always log.
+  let chatHistory: StoredChatTurn[] = [];
+  try {
+    chatHistory = await getChatMessages(projectId);
+  } catch (err) {
+    console.error("[getProject] chat history failed", err);
+  }
   const derivedDeploy = deployUrlFor(row.subdomain);
   // Normalize on load — runs the born-canonical chain so legacy / pre-
   // normalizer projects expose the Theme picker contract just like new ones,

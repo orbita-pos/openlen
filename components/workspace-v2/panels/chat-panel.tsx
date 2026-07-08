@@ -1766,7 +1766,13 @@ function restoreTurn(s: StoredChatTurn): DesignTurn {
     // "no cards", so this restores byte-for-byte identical to today for
     // those. Agent-mode rows carrying them now rehydrate the same cards and
     // the same "no Applied verb" suppression the live turn had.
-    actions: s.actions,
+    // F3-T5: a persisted "running" card means the turn died mid-tool-call —
+    // nothing will ever flip it to done/error. Restoring it as "running"
+    // would show a spinner that spins forever; map it to "error" so a
+    // reload reads as the honest dead state instead.
+    actions: s.actions?.map((a) =>
+      a.status === "running" ? { ...a, status: "error" as const } : a,
+    ),
     noDocChange: s.noDocChange,
   };
 }

@@ -65,6 +65,17 @@ export interface AgentLoopResult {
 const DEFAULT_MAX_TURNS = 6;
 const DEFAULT_MAX_TOOL_CALLS = 10;
 
+// Product finding: photo hunts (elegir_foto) and mid-chain state re-reads
+// (leer_estado) are read-only — they never mutate the project — but a photo
+// search that takes a few tries was eating the same maxToolCalls budget as
+// real edits. These two are exempt from that counter. They still count
+// toward ABSOLUTE_MAX_TOOL_CALLS below, so a runaway loop can't spin forever
+// just because it's calling exempt tools.
+const READ_ONLY_TOOLS = new Set(["leer_estado", "elegir_foto"]);
+// Hard safety net independent of maxToolCalls: counts every tool call,
+// exempt or not. A model stuck in a loop must still die eventually.
+const ABSOLUTE_MAX_TOOL_CALLS = 20;
+
 interface PendingCall {
   name: string;
   args: Record<string, unknown>;
@@ -84,7 +95,8 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
   let outputTokens = 0;
   let cachedTokens = 0;
   let turns = 0;
-  let toolCalls = 0;
+  let toolCalls = 0; // total across the loop (read-only + budgeted) — what the result/done event reports
+  let budgetedToolCalls = 0; // excludes READ_ONLY_TOOLS — checked against maxToolCalls
 
   while (true) {
     if (turns >= maxTurns) {
@@ -144,9 +156,19 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
 
     const functionResponses: { name: string; response: Record<string, unknown> }[] = [];
     for (const call of calls) {
-      if (toolCalls >= maxToolCalls) {
+      // The absolute cap counts every call, exempt or not — a runaway loop
+      // must still die even if it's only calling read-only tools.
+      if (toolCalls >= ABSOLUTE_MAX_TOOL_CALLS) {
         args.emit({ type: "error", message: "El agente alcanzó su límite de pasos", code: "tool_limit" });
         return { finalText, usage: { inputTokens, outputTokens, cachedTokens }, turns, toolCalls, terminalError: true };
+      }
+      const readOnly = READ_ONLY_TOOLS.has(call.name);
+      if (!readOnly) {
+        if (budgetedToolCalls >= maxToolCalls) {
+          args.emit({ type: "error", message: "El agente alcanzó su límite de pasos", code: "tool_limit" });
+          return { finalText, usage: { inputTokens, outputTokens, cachedTokens }, turns, toolCalls, terminalError: true };
+        }
+        budgetedToolCalls += 1;
       }
       toolCalls += 1;
 
