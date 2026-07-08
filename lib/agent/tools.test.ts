@@ -14,6 +14,11 @@ import type { ProjectData } from "@/lib/projects/types";
 
 const HTML = `<!doctype html><html><head><title>Tacos El Güero</title><meta name="description" content="Tacos"></head><body><h1 data-x="k">Tacos El Güero</h1><p>Los mejores del barrio.</p></body></html>`;
 
+// Fixture with an image already on the page — editar_imagen only edits images
+// whose URL appears verbatim in the current document.
+const IMG_URL = "https://images.openlen.com/orig-photo.webp";
+const IMG_HTML = `<!doctype html><html><head><title>Estudio</title><meta name="description" content="x"></head><body><img src="${IMG_URL}" alt="foto"><h1 data-x="k">Estudio</h1></body></html>`;
+
 const DEFAULT_IMAGE_MANIFEST = {
   version: 1,
   generated: "2026-05-29T22:45:20.097Z",
@@ -46,11 +51,21 @@ const DEFAULT_IMAGE_MANIFEST = {
   ],
 };
 
+type FetchImageResult =
+  | { ok: true; base64: string; mimeType: string }
+  | { ok: false; error: string };
+type EditImageResult =
+  | { imageBase64: string; mimeType: string; cost: number }
+  | { error: string; status: number; body: Record<string, unknown> };
+
 function makeDeps(
   overrides?: Partial<{
     data: ProjectData;
     audioAssets: { url: string; name: string }[];
     imageManifest: unknown;
+    fetchImageResult: FetchImageResult;
+    editImageResult: EditImageResult;
+    uploadUrl: string;
   }>,
 ) {
   const store = {
@@ -62,7 +77,15 @@ function makeDeps(
     audioAssets: overrides?.audioAssets ?? [],
     imageManifest: overrides?.imageManifest ?? DEFAULT_IMAGE_MANIFEST,
     manifestFetches: 0,
+    fetches: [] as string[],
+    uploads: [] as { projectId: string; mime: string; name: string; size: number }[],
+    imageEdits: [] as { userId: string; prompt: string }[],
   };
+  const fetchImageResult: FetchImageResult =
+    overrides?.fetchImageResult ?? { ok: true, base64: "b64orig", mimeType: "image/webp" };
+  const editImageResult: EditImageResult =
+    overrides?.editImageResult ?? { imageBase64: "b64edited", mimeType: "image/webp", cost: 4 };
+  const uploadUrl = overrides?.uploadUrl ?? "https://images.openlen.com/edited-123.webp";
   const deps: AgentDeps = {
     async loadProject() {
       return { data: store.data, title: "Tacos", subdomain: null, publishedAt: null, userBrief: null };
@@ -72,16 +95,26 @@ function makeDeps(
     async provisionOwnerChat(_p, _u, opts) { store.provisioned += 1; store.provisionedOpts = opts; },
     async listAudioAssets() { return store.audioAssets; },
     async fetchImageManifest() { store.manifestFetches += 1; return store.imageManifest; },
+    async fetchImage(url) { store.fetches.push(url); return fetchImageResult; },
+    async uploadAsset(projectId, bytes, mime, name) {
+      store.uploads.push({ projectId, mime, name, size: bytes.length });
+      return { url: uploadUrl };
+    },
+    async editImage(userId, input) {
+      store.imageEdits.push({ userId, prompt: input.prompt });
+      return editImageResult;
+    },
   };
   return { deps, store };
 }
 
-function makeSession(): AgentSession {
+function makeSession(html: string = HTML): AgentSession {
   return {
     projectId: "p1",
     userId: "u1",
-    taggedHtml: tagWithOpIds(HTML).taggedHtml,
+    taggedHtml: tagWithOpIds(html).taggedHtml,
     ownerEmail: "owner@example.com",
+    imageEditsThisTurn: 0,
   };
 }
 
@@ -421,6 +454,107 @@ describe("elegir_foto", () => {
     const out = await runAgentTool(makeSession(), deps, "elegir_foto", {});
     assert.equal(out.response.ok, true);
     assert.deepEqual(out.response.fotos, []);
+  });
+});
+
+describe("editar_imagen", () => {
+  it("rejects a url not present in the document, without fetching or saving", async () => {
+    const { deps, store } = makeDeps({ data: { html: IMG_HTML } });
+    const session = makeSession(IMG_HTML);
+    const out = await runAgentTool(session, deps, "editar_imagen", {
+      imagen_url: "https://evil.com/not-in-doc.png",
+      instruccion: "quita el logo",
+    });
+    assert.equal(out.response.ok, false);
+    assert.equal(store.fetches.length, 0);
+    assert.equal(store.imageEdits.length, 0);
+    assert.equal(store.uploads.length, 0);
+    assert.equal(store.saved.length, 0);
+  });
+
+  it("happy path: fetch→edit→upload→swap, persists the new url, versions=2, re-tags, card present", async () => {
+    const { deps, store } = makeDeps({ data: { html: IMG_HTML } });
+    const session = makeSession(IMG_HTML);
+    const out = await runAgentTool(session, deps, "editar_imagen", {
+      imagen_url: IMG_URL,
+      instruccion: "quita el logo del fondo",
+    });
+    assert.equal(out.response.ok, true);
+    assert.equal(out.response.nueva_url, "https://images.openlen.com/edited-123.webp");
+    // The exact source URL is swapped for the new asset URL in the saved doc.
+    assert.ok(store.data.html.includes("https://images.openlen.com/edited-123.webp"));
+    assert.ok(!store.data.html.includes(IMG_URL));
+    // pre-edit + post-edit snapshots.
+    assert.equal(store.versions.length, 2);
+    // Re-tagged for the next edit.
+    assert.ok(session.taggedHtml.includes("https://images.openlen.com/edited-123.webp"));
+    assert.ok(session.taggedHtml.includes("data-op-id"));
+    assert.ok(!out.updatedHtml?.includes("data-op-id"));
+    assert.ok(out.updatedHtml?.includes("edited-123.webp"));
+    assert.equal(out.action?.tool, "editar_imagen");
+    assert.equal(out.action?.ok, true);
+    // The edit ran with the session user and the instruction as the prompt.
+    assert.equal(store.imageEdits.length, 1);
+    assert.equal(store.imageEdits[0].userId, "u1");
+    assert.equal(store.imageEdits[0].prompt, "quita el logo del fondo");
+    assert.equal(store.uploads.length, 1);
+    assert.equal(store.uploads[0].projectId, "p1");
+    assert.equal(session.imageEditsThisTurn, 1);
+  });
+
+  it("refuses a second edit in the same turn (per-turn cap), without fetching again", async () => {
+    const { deps, store } = makeDeps({ data: { html: IMG_HTML } });
+    const session = makeSession(IMG_HTML);
+    const first = await runAgentTool(session, deps, "editar_imagen", {
+      imagen_url: IMG_URL,
+      instruccion: "quita el logo",
+    });
+    assert.equal(first.response.ok, true);
+    const fetchesAfterFirst = store.fetches.length;
+    const second = await runAgentTool(session, deps, "editar_imagen", {
+      imagen_url: IMG_URL,
+      instruccion: "otra edición",
+    });
+    assert.equal(second.response.ok, false);
+    assert.ok(String(second.response.error).includes("turno"));
+    // The cap fires before any fetch/edit/upload.
+    assert.equal(store.fetches.length, fetchesAfterFirst);
+    assert.equal(store.imageEdits.length, 1);
+    assert.equal(store.uploads.length, 1);
+  });
+
+  it("a failed edit returns ok:false without uploading or saving, and does not consume the turn", async () => {
+    const { deps, store } = makeDeps({
+      data: { html: IMG_HTML },
+      editImageResult: { error: "blocked", status: 422, body: { error: "blocked", reason: "SAFETY" } },
+    });
+    const session = makeSession(IMG_HTML);
+    const out = await runAgentTool(session, deps, "editar_imagen", {
+      imagen_url: IMG_URL,
+      instruccion: "algo prohibido",
+    });
+    assert.equal(out.response.ok, false);
+    assert.equal(store.uploads.length, 0);
+    assert.equal(store.saved.length, 0);
+    // Turn allowance untouched — the model can retry with another image.
+    assert.equal(session.imageEditsThisTurn, 0);
+  });
+
+  it("a failed fetch returns ok:false without editing, uploading, or saving", async () => {
+    const { deps, store } = makeDeps({
+      data: { html: IMG_HTML },
+      fetchImageResult: { ok: false, error: "upstream_error" },
+    });
+    const session = makeSession(IMG_HTML);
+    const out = await runAgentTool(session, deps, "editar_imagen", {
+      imagen_url: IMG_URL,
+      instruccion: "algo",
+    });
+    assert.equal(out.response.ok, false);
+    assert.equal(store.imageEdits.length, 0);
+    assert.equal(store.uploads.length, 0);
+    assert.equal(store.saved.length, 0);
+    assert.equal(session.imageEditsThisTurn, 0);
   });
 });
 

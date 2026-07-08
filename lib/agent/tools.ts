@@ -18,11 +18,19 @@ import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { and, eq } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
+import {
+  editImageWithGemini,
+  realImageEditTransport,
+  type ImageEditInput,
+  type ImageEditResult,
+} from "@/lib/ai/image-edit-core";
 import { getOrCreateOwnerChatUser } from "@/lib/chat/store";
+import { debitCredits } from "@/lib/credits";
 import { detectSlotPath, sanitizeForPublish } from "@/lib/html-engine";
 import { applyOps, tagWithOpIds, type Op, type OpType } from "@/lib/html-ops";
 import { normalizeBornCanonical } from "@/lib/normalize";
-import { getAssetStorage } from "@/lib/projects/assets";
+import { extForMime, getAssetStorage } from "@/lib/projects/assets";
+import { validateUrl } from "@/lib/style-match/scrape/validate-url";
 import { createSitePage, type CreatePageInput } from "@/lib/projects/create-page";
 import { applyModuleIntent } from "@/lib/projects/module-intent";
 import {
@@ -47,6 +55,17 @@ import { THEME_PRESETS } from "@/lib/theme-presets";
 
 const MAX_EDITS_PER_CALL = 8;
 const OP_TYPES: readonly OpType[] = ["replace", "insert_before", "insert_after", "delete"];
+
+// editar_imagen: the source image must decode as one of the formats Gemini's
+// image edit accepts, and stays under the same 6MB cap the ai-edit-image route
+// enforces on its decoded source.
+const IMAGE_EDIT_ALLOWED_MIME = new Set(["image/png", "image/jpeg", "image/webp"]);
+const FETCH_IMAGE_MAX_BYTES = 6 * 1024 * 1024;
+
+/** Bytes of an on-page image, fetched SSRF-guarded, as base64. */
+export type FetchedImage =
+  | { ok: true; base64: string; mimeType: string }
+  | { ok: false; error: string };
 
 export interface AgentDeps {
   loadProject(projectId: string, userId: string): Promise<{
@@ -75,6 +94,21 @@ export interface AgentDeps {
   /** The "Imágenes by OpenLen" curated-photo catalog manifest, raw and
    *  unvalidated — elegir_foto runs it through searchCuratedPhotos. */
   fetchImageManifest(): Promise<unknown>;
+  /** Download an on-page image as base64 — SSRF-guarded (validateUrl, same as
+   *  the proxy-image route) + capped + MIME-allowlisted. editar_imagen only
+   *  ever passes a URL it already found verbatim in the current document. */
+  fetchImage(url: string): Promise<FetchedImage>;
+  /** Store edited bytes as a project asset; returns the new asset URL to swap
+   *  into the page. Reuses the same storage core as the assets upload route. */
+  uploadAsset(
+    projectId: string,
+    bytes: Buffer,
+    mime: string,
+    name: string,
+  ): Promise<{ url: string }>;
+  /** Run the Nano Banana instruction edit — the extracted image-edit core,
+   *  bound to the given userId for the debit-on-success charge. */
+  editImage(userId: string, input: ImageEditInput): Promise<ImageEditResult>;
 }
 
 // public/openlen-images/manifest.json is a build-committed static file (see
@@ -160,6 +194,43 @@ export function realDeps(): AgentDeps {
     async fetchImageManifest() {
       return readImageManifest();
     },
+    async fetchImage(url) {
+      // Same SSRF guard as GET /api/projects/[id]/proxy-image: validateUrl
+      // blocks loopback/RFC-1918/link-local + non-http(s) schemes, and a manual
+      // redirect is refused (following one would bypass the validated host).
+      const valid = await validateUrl(url);
+      if (!valid.ok) return { ok: false, error: "url_blocked" };
+      let res: Response;
+      try {
+        res = await fetch(valid.value.url, {
+          redirect: "manual",
+          headers: { accept: "image/*" },
+        });
+      } catch {
+        return { ok: false, error: "fetch_failed" };
+      }
+      if (!res.ok) return { ok: false, error: "upstream_error" };
+      const mime = (res.headers.get("content-type") || "").split(";")[0].trim().toLowerCase();
+      if (!IMAGE_EDIT_ALLOWED_MIME.has(mime)) return { ok: false, error: "unsupported_type" };
+      const declared = Number(res.headers.get("content-length") || 0);
+      if (declared && declared > FETCH_IMAGE_MAX_BYTES) return { ok: false, error: "too_large" };
+      const buf = await res.arrayBuffer();
+      if (buf.byteLength > FETCH_IMAGE_MAX_BYTES) return { ok: false, error: "too_large" };
+      return { ok: true, base64: Buffer.from(buf).toString("base64"), mimeType: mime };
+    },
+    async uploadAsset(projectId, bytes, mime, _name) {
+      // Same storage core as POST /api/projects/[id]/assets — hash-named, so
+      // the filename is derived from the bytes (the display name is unused).
+      const ext = extForMime(mime) ?? "png";
+      const meta = await getAssetStorage().put(projectId, bytes, ext, mime);
+      return { url: meta.url };
+    },
+    async editImage(userId, input) {
+      return editImageWithGemini(input, {
+        callGemini: realImageEditTransport(),
+        debit: (cost) => debitCredits(userId, cost),
+      });
+    },
   };
 }
 
@@ -172,6 +243,9 @@ export interface AgentSession {
    *  agent-provisioned owner chat_user is created WITH an email — mirrors
    *  what the settings route passes to getOrCreateOwnerChatUser. */
   ownerEmail: string | null;
+  /** Successful editar_imagen calls so far this request. The route inits it to
+   *  0; the tool caps it at 1 per turn (each edit is a paid Gemini image op). */
+  imageEditsThisTurn: number;
 }
 
 export interface ToolOutcome {
@@ -773,6 +847,86 @@ async function toolElegirFoto(
   };
 }
 
+async function toolEditarImagen(
+  session: AgentSession,
+  deps: AgentDeps,
+  args: Record<string, unknown>,
+): Promise<ToolOutcome> {
+  const imagenUrl = typeof args.imagen_url === "string" ? args.imagen_url : "";
+  const instruccion = typeof args.instruccion === "string" ? args.instruccion.trim() : "";
+  if (!imagenUrl) return { response: { ok: false, error: "imagen_url es requerida" } };
+  if (!instruccion) return { response: { ok: false, error: "instruccion es requerida" } };
+
+  // Per-turn cap FIRST — a paid Gemini image op is expensive, so a second call
+  // is refused before any fetch/edit/upload. Only successful edits count (a
+  // failed one below leaves the counter untouched so the model can retry).
+  if (session.imageEditsThisTurn >= 1) {
+    return { response: { ok: false, error: "límite de una edición de imagen por turno" } };
+  }
+
+  // Anti prompt-injection SSRF: only edit an image ALREADY on the page. The URL
+  // must appear verbatim in the current tagged document — otherwise we never
+  // even fetch it (an attacker-supplied URL can't reach fetchImage this way).
+  if (!session.taggedHtml.includes(imagenUrl)) {
+    return {
+      response: {
+        ok: false,
+        error: "imagen_url debe ser la URL exacta de una imagen que YA está en la página (no una URL externa ni inventada)",
+      },
+    };
+  }
+
+  const fetched = await deps.fetchImage(imagenUrl);
+  if (!fetched.ok) {
+    return { response: { ok: false, error: `no se pudo descargar la imagen: ${fetched.error}` } };
+  }
+
+  const edited = await deps.editImage(session.userId, {
+    imageBase64: fetched.base64,
+    mimeType: fetched.mimeType,
+    prompt: instruccion,
+  });
+  if ("error" in edited) {
+    return { response: { ok: false, error: `la edición de imagen falló: ${edited.error}` } };
+  }
+
+  // Gemini returned an image and the credit was already charged inside the
+  // core — consume the turn's single allowance now, so a later upload/persist
+  // failure can't be retried into a second charge.
+  session.imageEditsThisTurn += 1;
+
+  const bytes = Buffer.from(edited.imageBase64, "base64");
+  const uploaded = await deps.uploadAsset(
+    session.projectId,
+    bytes,
+    edited.mimeType,
+    `edit-${Date.now()}`,
+  );
+  const nuevaUrl = uploaded.url;
+
+  const row = await deps.loadProject(session.projectId, session.userId);
+  if (!row) return { response: { ok: false, error: "proyecto no encontrado" } };
+
+  // Swap every occurrence of the exact source URL for the new asset URL over
+  // the current (clean) document, then run the shared persist pipeline.
+  const swapped = (row.data.html ?? "").split(imagenUrl).join(nuevaUrl);
+  const persisted = await persistHtmlChange(
+    session,
+    deps,
+    swapped,
+    `Imagen editada: ${instruccion.slice(0, 60)}`,
+  );
+  if (!persisted.ok) {
+    return { response: { ok: false, error: persisted.error } };
+  }
+
+  return {
+    response: { ok: true, nueva_url: nuevaUrl },
+    action: { tool: "editar_imagen", ok: true, summary: instruccion.slice(0, 60) },
+    updatedHtml: persisted.finalHtml,
+  };
+}
+
 export async function runAgentTool(
   session: AgentSession,
   deps: AgentDeps,
@@ -803,6 +957,8 @@ export async function runAgentTool(
         return await toolCrearPagina(session, deps, args);
       case "elegir_foto":
         return await toolElegirFoto(session, deps, args);
+      case "editar_imagen":
+        return await toolEditarImagen(session, deps, args);
       default:
         return { response: { ok: false, error: "herramienta desconocida" } };
     }

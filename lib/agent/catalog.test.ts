@@ -4,7 +4,7 @@ import { TEMATICA_PRESETS } from "@/lib/tematicas/presets";
 import { THEME_PRESETS } from "@/lib/theme-presets";
 
 describe("buildFunctionDeclarations", () => {
-  it("declares exactly the F1 + F2 Task 1-5 tools", () => {
+  it("declares exactly the F1 + F2 Task 1-6 tools", () => {
     const names = buildFunctionDeclarations().map((d) => d.name);
     expect(names).toEqual([
       "leer_estado",
@@ -18,6 +18,7 @@ describe("buildFunctionDeclarations", () => {
       "preparar_marketing",
       "crear_pagina",
       "elegir_foto",
+      "editar_imagen",
     ]);
   });
   it("crear_pagina exposes slug/titulo/modulo, modulo enum bookings|collections, nothing required", () => {
@@ -94,6 +95,15 @@ describe("buildFunctionDeclarations", () => {
     expect(d.parameters.properties.estilo.enum).toBeUndefined();
     expect(d.parameters.required).toBeUndefined();
   });
+  it("editar_imagen requires imagen_url + instruccion as strings", () => {
+    const d = buildFunctionDeclarations().find((x) => x.name === "editar_imagen") as any;
+    expect(d.parameters.properties.imagen_url.type).toBe("STRING");
+    expect(d.parameters.properties.instruccion.type).toBe("STRING");
+    expect(d.parameters.required).toEqual(["imagen_url", "instruccion"]);
+    // The description must steer the model away from external URLs and toward
+    // elegir_foto for brand-new photos.
+    expect(String(d.description)).toContain("elegir_foto");
+  });
 });
 
 describe("buildAgentSystemPrompt", () => {
@@ -133,5 +143,11 @@ describe("buildAgentSystemPrompt", () => {
     expect(p).toContain("elegir_foto");
     expect(p).toContain("images.openlen.com");
     expect(p).toContain("editar_pagina");
+  });
+  it("carries the F2 Task 6 editar_imagen knowledge: on-page-only, per-turn, and the elegir_foto cross-ref", () => {
+    const p = buildAgentSystemPrompt();
+    expect(p).toContain("editar_imagen");
+    expect(p).toContain("turno");
+    expect(p).toContain("elegir_foto");
   });
 });

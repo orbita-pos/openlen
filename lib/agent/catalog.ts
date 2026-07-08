@@ -216,6 +216,19 @@ export function buildFunctionDeclarations(): Record<string, unknown>[] {
         },
       },
     },
+    {
+      name: "editar_imagen",
+      description:
+        "Edita con IA (Nano Banana / Gemini) una imagen que YA está en la página: quitar un objeto, cambiar el fondo, extender una escena, limpiar un producto. imagen_url DEBE ser la URL exacta de una imagen presente en el documento actual (nunca una URL externa ni inventada — si la imagen no está en la página, la herramienta la rechaza). instruccion describe el cambio en lenguaje natural. Cuesta créditos y solo se permite UNA edición de imagen por turno. Para AÑADIR una foto nueva (no editar una que ya existe) usa elegir_foto, no esta herramienta. Devuelve la nueva URL y ya deja el swap hecho en la página.",
+      parameters: {
+        type: "OBJECT",
+        properties: {
+          imagen_url: { type: "STRING" },
+          instruccion: { type: "STRING" },
+        },
+        required: ["imagen_url", "instruccion"],
+      },
+    },
   ];
 }
 
@@ -245,6 +258,9 @@ Crea una página adicional del sitio (no la Home) nacida como el shell de Home �
 
 FOTOS CURADAS (elegir_foto):
 Búsqueda de solo lectura sobre el catálogo real "Imágenes by OpenLen" — úsala para ENCONTRAR una foto antes de insertarla, nunca inventes ni alucines una URL de imagen. Las URLs que devuelve son reales y están permitidas: úsalas dentro de editar_pagina como <img src> (dominio images.openlen.com). No cambia nada por sí sola (no hay tarjeta de acción ni documento actualizado) — el cambio real ocurre en el editar_pagina que sigue.
+
+EDICIÓN DE IMAGEN CON IA (editar_imagen):
+Edita con IA (Nano Banana / Gemini) una imagen que YA está en la página — quitar un objeto, cambiar el fondo, extender una escena. SOLO funciona con imágenes ya presentes en el documento: pásale la URL EXACTA tal cual aparece en la página; jamás una URL externa ni inventada (la herramienta las rechaza, es un guard anti-inyección). Cuesta créditos y está limitada a UNA edición de imagen por turno; úsala con criterio. Para AÑADIR una foto nueva (no editar una existente) usa elegir_foto, no esta herramienta. Deja el swap hecho en la página y devuelve la nueva URL.
 
 GUÍA DE DISEÑO (para cualquier new_html que emitas):
 ${DESIGN_GUIDANCE}`;

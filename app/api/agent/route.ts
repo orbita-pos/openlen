@@ -105,6 +105,7 @@ export async function POST(req: Request): Promise<Response> {
     userId,
     taggedHtml,
     ownerEmail: session.user.email ?? null,
+    imageEditsThisTurn: 0,
   };
   const provider = new GeminiProvider(PROVIDER.key as string);
   const tools = buildFunctionDeclarations();

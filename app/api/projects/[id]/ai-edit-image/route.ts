@@ -2,6 +2,7 @@ import { and, eq } from "drizzle-orm";
 import { auth } from "@/auth";
 import { db, schema } from "@/lib/db";
 import { AI_IMAGE_EDIT_CREDIT_COST, debitCredits, getCreditState } from "@/lib/credits";
+import { editImageWithGemini, realImageEditTransport } from "@/lib/ai/image-edit-core";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // POST /api/projects/[id]/ai-edit-image — instruction-based AI image edit.
@@ -13,23 +14,19 @@ import { AI_IMAGE_EDIT_CREDIT_COST, debitCredits, getCreditState } from "@/lib/c
 //   prompt      — the natural-language edit ("remove the person on the left",
 //                 "extend the sky upward", "make the background a soft studio
 //                 gradient").
-// Response: { imageBase64, mimeType } — the edited image.
+// Response: { imageBase64, mimeType, cost } — the edited image.
 //
-// Calls Gemini 2.5 Flash Image (Nano Banana) directly over its native
-// :generateContent endpoint — the same TS-direct pattern as lib/assemble/*
-// (the Rust @openlen/ai-gateway is the STREAMING-TEXT path and has no image-
-// out). Mask-free: the instruction drives the edit. One flat credit charge,
-// debited only on success. Auth + project ownership required. The edited bytes
-// are returned to the client, which persists them through the existing
-// upload-on-apply flow — this route never touches storage.
+// This route is a SHELL over lib/ai/image-edit-core.ts (shared with the agent's
+// editar_imagen tool). It keeps auth + project ownership + MIME allowlist + the
+// 6MB cap + the credit gate here, then hands the Gemini call + debit-on-success
+// to the core and maps its result straight back to HTTP — byte-identical to the
+// pre-extraction behavior the client (replace-asset-modal) depends on. The
+// edited bytes are returned to the client, which persists them through the
+// existing upload-on-apply flow — this route never touches storage.
 // ─────────────────────────────────────────────────────────────────────────────
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-
-const GEMINI_BASE = "https://generativelanguage.googleapis.com/v1beta/models";
-// The Nano Banana image model. Overridable while the GA id settles.
-const MODEL_ID = process.env.OPENLEN_IMAGE_EDIT_MODEL || "gemini-2.5-flash-image";
 
 const ALLOWED_MIME = new Set(["image/png", "image/jpeg", "image/webp"]);
 const MAX_INPUT_BYTES = 6 * 1024 * 1024; // decoded source cap
@@ -89,73 +86,13 @@ export async function POST(
     );
   }
 
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) return json({ error: "ai_unavailable" }, 503);
-
-  const url = `${GEMINI_BASE}/${MODEL_ID}:generateContent?key=${encodeURIComponent(apiKey)}`;
-  const requestBody = {
-    contents: [
-      {
-        role: "user",
-        parts: [
-          { inlineData: { mimeType, data: imageBase64 } },
-          { text: cleanPrompt },
-        ],
-      },
-    ],
-    generationConfig: { responseModalities: ["IMAGE"] },
-  };
-
-  let res: Response;
-  try {
-    res = await fetch(url, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify(requestBody),
-    });
-  } catch (err) {
-    return json(
-      { error: "ai_request_failed", message: err instanceof Error ? err.message : String(err) },
-      502,
-    );
-  }
-  if (!res.ok) {
-    const text = await res.text().catch(() => "");
-    return json({ error: "ai_error", status: res.status, detail: text.slice(0, 400) }, 502);
-  }
-
-  const payload = (await res.json().catch(() => null)) as {
-    promptFeedback?: { blockReason?: string };
-    candidates?: Array<{
-      content?: { parts?: Array<{ text?: string; inlineData?: { mimeType?: string; data?: string } }> };
-      finishReason?: string;
-    }>;
-  } | null;
-
-  if (payload?.promptFeedback?.blockReason) {
-    return json({ error: "blocked", reason: payload.promptFeedback.blockReason }, 422);
-  }
-
-  const parts = payload?.candidates?.[0]?.content?.parts ?? [];
-  const imagePart = parts.find((p) => p.inlineData?.data);
-  if (!imagePart?.inlineData?.data) {
-    // The model can decline an edit and reply with text instead — surface it.
-    const reply = parts.map((p) => p.text ?? "").join(" ").trim();
-    return json(
-      { error: "no_image", message: reply || "The model returned no image." },
-      422,
-    );
-  }
-
-  // Charge only once we have a real result.
-  await debitCredits(userId, AI_IMAGE_EDIT_CREDIT_COST);
-
+  const result = await editImageWithGemini(
+    { imageBase64, mimeType, prompt: cleanPrompt },
+    { callGemini: realImageEditTransport(), debit: (cost) => debitCredits(userId, cost) },
+  );
+  if ("error" in result) return json(result.body, result.status);
   return json(
-    {
-      imageBase64: imagePart.inlineData.data,
-      mimeType: imagePart.inlineData.mimeType || "image/png",
-      cost: AI_IMAGE_EDIT_CREDIT_COST,
-    },
+    { imageBase64: result.imageBase64, mimeType: result.mimeType, cost: result.cost },
     200,
   );
 }
