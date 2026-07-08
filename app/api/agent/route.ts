@@ -236,8 +236,18 @@ export async function POST(req: Request): Promise<Response> {
           runTool: (name, args) => runAgentTool(agentSession, deps, name, args),
           emit: (ev) => emit(ev.type, ev),
         });
-        const credits = creditsForUsage(result.usage.inputTokens, result.usage.outputTokens, PROVIDER.rate);
-        await debitCredits(userId, Math.max(1, credits));
+        // F2-T9 billing ruling (Jesús 2026-07-07): a turn that ended on a
+        // terminal error (stopReason error/cancelled/max_tokens, or the
+        // maxTurns/maxToolCalls caps) debits 0 credits — the user got no
+        // usable output. A clean end_turn finish charges normally, even
+        // when a tool inside it returned {ok:false} as data or the turn
+        // ended waiting on a confirm card.
+        if (!result.terminalError) {
+          const credits = creditsForUsage(result.usage.inputTokens, result.usage.outputTokens, PROVIDER.rate);
+          await debitCredits(userId, Math.max(1, credits));
+        } else {
+          console.log("[agent] terminal-error turn — 0 credits");
+        }
         emit("done", { turns: result.turns, toolCalls: result.toolCalls });
         close();
       } catch (err) {

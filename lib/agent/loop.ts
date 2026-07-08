@@ -40,6 +40,12 @@ export interface AgentLoopResult {
   usage: { inputTokens: number; outputTokens: number };
   turns: number;
   toolCalls: number;
+  /** F2-T9 billing ruling: true when the turn ended via stopReason error/
+   *  cancelled/max_tokens, or the maxTurns/maxToolCalls caps — the route
+   *  debits 0 credits in that case. False for a clean end_turn finish,
+   *  INCLUDING a turn where a tool returned {ok:false} as data (the turn
+   *  still completed) and a turn that ended waiting on a confirm card. */
+  terminalError: boolean;
 }
 
 const DEFAULT_MAX_TURNS = 6;
@@ -68,7 +74,7 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
   while (true) {
     if (turns >= maxTurns) {
       args.emit({ type: "error", message: "El agente alcanzó su límite de pasos" });
-      return { finalText, usage: { inputTokens, outputTokens }, turns, toolCalls };
+      return { finalText, usage: { inputTokens, outputTokens }, turns, toolCalls, terminalError: true };
     }
     turns += 1;
 
@@ -111,19 +117,19 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
     }
 
     if (sawError) {
-      return { finalText, usage: { inputTokens, outputTokens }, turns, toolCalls };
+      return { finalText, usage: { inputTokens, outputTokens }, turns, toolCalls, terminalError: true };
     }
 
     if (calls.length === 0) {
       finalText = turnText;
-      return { finalText, usage: { inputTokens, outputTokens }, turns, toolCalls };
+      return { finalText, usage: { inputTokens, outputTokens }, turns, toolCalls, terminalError: false };
     }
 
     const functionResponses: { name: string; response: Record<string, unknown> }[] = [];
     for (const call of calls) {
       if (toolCalls >= maxToolCalls) {
         args.emit({ type: "error", message: "El agente alcanzó su límite de pasos" });
-        return { finalText, usage: { inputTokens, outputTokens }, turns, toolCalls };
+        return { finalText, usage: { inputTokens, outputTokens }, turns, toolCalls, terminalError: true };
       }
       toolCalls += 1;
 

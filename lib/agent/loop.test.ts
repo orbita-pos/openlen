@@ -48,6 +48,8 @@ describe("runAgentLoop", () => {
     expect(seen).toEqual(["activar_modulo"]);
     expect(r.finalText).toContain("Listo");
     expect(r.usage.outputTokens).toBe(18);
+    // Happy multi-turn (tool call + final text) charges credits — F2-T9.
+    expect(r.terminalError).toBe(false);
     const actions = events.filter((e) => e.type === "action");
     expect(actions.map((a: any) => a.status)).toEqual(["running", "done"]);
 
@@ -73,6 +75,9 @@ describe("runAgentLoop", () => {
     });
     expect(r.finalText).toContain("No pude");
     expect(events.some((e) => e.type === "error")).toBe(false);
+    // A tool's {ok:false} is data, not a terminal error — the turn completed
+    // cleanly and still charges credits (F2-T9 billing ruling).
+    expect(r.terminalError).toBe(false);
   });
 
   it("caps runaway loops at maxTurns", async () => {
@@ -85,6 +90,24 @@ describe("runAgentLoop", () => {
     });
     expect(r.turns).toBe(3);
     expect(events.some((e) => e.type === "error")).toBe(true);
+    // Hitting the maxTurns cap is a terminal error — 0 credits (F2-T9).
+    expect(r.terminalError).toBe(true);
+  });
+
+  it("caps runaway loops at maxToolCalls", async () => {
+    const events: AgentStreamEvent[] = [];
+    const r = await runAgentLoop({
+      messages: [{ role: "user", content: "x" }], tools: [], maxToolCalls: 1,
+      openStream: scripted(
+        [{ type: "function_call", name: "leer_estado", args: {} }, { type: "function_call", name: "leer_estado", args: {} }, done],
+      ),
+      runTool: async () => ({ response: { ok: true } }),
+      emit: (e) => events.push(e),
+    });
+    expect(r.toolCalls).toBe(1);
+    expect(events.some((e) => e.type === "error")).toBe(true);
+    // Hitting the maxToolCalls cap is also a terminal error — 0 credits.
+    expect(r.terminalError).toBe(true);
   });
 
   it("surfaces an error and stops the loop when a turn truncates at max_tokens", async () => {
@@ -111,6 +134,8 @@ describe("runAgentLoop", () => {
     expect((err as { message: string }).message).toContain("espacio");
     // Accumulated usage is still returned rather than discarded.
     expect(r.usage.outputTokens).toBe(20);
+    // A truncated (max_tokens) turn is a terminal error — 0 credits (F2-T9).
+    expect(r.terminalError).toBe(true);
   });
 
   it("surfaces an error and stops the loop when a turn is cancelled", async () => {
@@ -126,6 +151,8 @@ describe("runAgentLoop", () => {
     });
     expect(r.turns).toBe(1);
     expect(events.some((e) => e.type === "error")).toBe(true);
+    // A cancelled turn is a terminal error — 0 credits (F2-T9).
+    expect(r.terminalError).toBe(true);
   });
 
   it("a confirm outcome emits a confirm event, feeds the model esperando_confirmacion, and continues", async () => {
@@ -170,6 +197,9 @@ describe("runAgentLoop", () => {
     expect(fr.name).toBe("publicar");
     expect(fr.response.ok).toBe(true);
     expect(fr.response.estado).toBe("esperando_confirmacion_del_usuario");
+    // A turn that ends waiting on a confirm card still finishes clean —
+    // charges credits (F2-T9); it's the model's own end_turn, not an error.
+    expect(r.terminalError).toBe(false);
   });
 
   it("emits html events when a tool updates the doc", async () => {
