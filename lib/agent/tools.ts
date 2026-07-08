@@ -41,6 +41,7 @@ import {
 import type { ProjectData } from "@/lib/projects/types";
 import { createVersion, type VersionSource } from "@/lib/projects/versions";
 import { ensurePageMeta } from "@/lib/publish/ensure-page-meta";
+import { isPublishLocale } from "@/lib/publish/publish-locales";
 import { AGENT_MODULES, MOTION_LOOKS, type AgentModule } from "@/lib/agent/catalog";
 import { searchCuratedPhotos } from "@/lib/agent/photo-search";
 import {
@@ -255,6 +256,11 @@ export interface ToolOutcome {
   action?: { tool: string; ok: boolean; summary: string };
   /** HTML nuevo (sin op-ids) para refrescar el iframe. */
   updatedHtml?: string;
+  /** El gate de publicación (publicar). Presente ⇒ el loop emite un evento
+   *  `confirm` y le pasa al modelo un estado "esperando_confirmacion". La
+   *  herramienta JAMÁS publica: el tap del usuario en la tarjeta es la única
+   *  vía que llama al endpoint real (spec §4.4). */
+  confirm?: { action: "publicar"; subdominio: string; idiomas: string[]; republicar: boolean };
 }
 
 export function summarizeProjectState(row: {
@@ -927,6 +933,64 @@ async function toolEditarImagen(
   };
 }
 
+const MAX_PUBLISH_LOCALES = 9;
+
+// publicar — the publish GATE. This tool NEVER calls publishProject; it only
+// resolves which subdomain + languages a publish WOULD use and hands that back
+// as a `confirm` payload. The panel turns that into a card whose button hits
+// the real endpoint — the user's tap is the only thing that publishes.
+async function toolPublicar(
+  session: AgentSession,
+  deps: AgentDeps,
+  args: Record<string, unknown>,
+): Promise<ToolOutcome> {
+  const row = await deps.loadProject(session.projectId, session.userId);
+  if (!row) return { response: { ok: false, error: "proyecto no encontrado" } };
+
+  const current = row.subdomain; // string | null — the project's active claim
+  const raw = typeof args.subdominio === "string" ? args.subdominio.trim().toLowerCase() : "";
+
+  // Resolve the target subdomain. Final authority is always the endpoint (regex
+  // / reserved / cap re-checked there); here we only decide republish vs claim.
+  let subdominio: string;
+  let republicar: boolean;
+  if (raw) {
+    subdominio = raw;
+    republicar = current === raw;
+  } else if (current) {
+    subdominio = current;
+    republicar = true;
+  } else {
+    return {
+      response: {
+        ok: false,
+        error:
+          "este proyecto no tiene subdominio todavía. Pregúntale al usuario qué subdominio quiere (p. ej. mi-negocio) y vuelve a llamar publicar con subdominio.",
+      },
+    };
+  }
+
+  // idiomas: keep only real PUBLISH_LOCALES codes, drop the rest (noted for the
+  // model), cap at the endpoint's max of 9.
+  const rawIdiomas = Array.isArray(args.idiomas) ? args.idiomas : [];
+  const strIdiomas = rawIdiomas.filter((c): c is string => typeof c === "string");
+  const idiomas = strIdiomas.filter((c) => isPublishLocale(c)).slice(0, MAX_PUBLISH_LOCALES);
+  const ignorados = strIdiomas.filter((c) => !isPublishLocale(c));
+
+  return {
+    response: {
+      ok: true,
+      estado: "esperando_confirmacion_del_usuario",
+      subdominio,
+      idiomas,
+      republicar,
+      ...(ignorados.length ? { idiomas_ignorados: ignorados } : {}),
+    },
+    action: { tool: "publicar", ok: true, summary: subdominio },
+    confirm: { action: "publicar", subdominio, idiomas, republicar },
+  };
+}
+
 export async function runAgentTool(
   session: AgentSession,
   deps: AgentDeps,
@@ -959,6 +1023,8 @@ export async function runAgentTool(
         return await toolElegirFoto(session, deps, args);
       case "editar_imagen":
         return await toolEditarImagen(session, deps, args);
+      case "publicar":
+        return await toolPublicar(session, deps, args);
       default:
         return { response: { ok: false, error: "herramienta desconocida" } };
     }

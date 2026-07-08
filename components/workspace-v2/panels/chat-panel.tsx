@@ -31,6 +31,7 @@ import {
 import { ReplaceAssetModal } from "../replace-asset-modal";
 import { ModelPicker, useAIModel } from "../model-picker";
 import { AgentActionCard, type AgentAction } from "../agent-action-card";
+import { AgentConfirmCard, type AgentConfirm } from "../agent-confirm-card";
 import type { StoredChatTurn } from "@/lib/projects/types";
 import type { SitePageSummary } from "@/lib/projects/site-pages";
 import type { AIModel } from "@/lib/ai-provider";
@@ -210,6 +211,12 @@ interface DesignTurn {
    *  Empty/absent for ai-design turns. Not persisted in F1 — rebuilt live
    *  from the SSE `action` events each turn. */
   actions?: AgentAction[];
+  /** Agent-mode publish gate (Task 7) — a `confirm` SSE event lands here and
+   *  renders an interactive AgentConfirmCard. The card survives the turn's
+   *  `done` (it finalizes to applied but the card stays tappable). Local-only:
+   *  ephemeral like action cards, never persisted (the ✓ success posts its own
+   *  history turn). */
+  confirm?: AgentConfirm;
   /** Agent-mode: the turn finished without any `html` event (answer-only or
    *  settings-only) — no document changed, so the footer suppresses the
    *  Applied/Undo affordances. Local-only, never persisted. */
@@ -656,6 +663,31 @@ function AIDesignChat({
                   // never land in a subpage slot.
                   onLocalUpdate(html, null);
                 }
+              } else if (evName === "confirm") {
+                // The publish gate — attach a confirm card to this turn. It
+                // stays interactive after the turn's `done` finalizes it (the
+                // user's tap is the only thing that publishes).
+                const c = payload as {
+                  action?: unknown;
+                  subdominio?: unknown;
+                  idiomas?: unknown;
+                  republicar?: unknown;
+                };
+                const subdominio =
+                  typeof c.subdominio === "string" ? c.subdominio : "";
+                if (c.action === "publicar" && subdominio) {
+                  const idiomas = Array.isArray(c.idiomas)
+                    ? c.idiomas.filter((x): x is string => typeof x === "string")
+                    : [];
+                  updateTurn(turnId, {
+                    confirm: {
+                      action: "publicar",
+                      subdominio,
+                      idiomas,
+                      republicar: c.republicar === true,
+                    },
+                  });
+                }
               } else if (evName === "done") {
                 // Terminal — always finalizes the turn, even when it trails
                 // an `error` event (the loop can emit both in one turn).
@@ -1008,6 +1040,42 @@ function AIDesignChat({
     [onLocalUpdate, projectId, updateTurn],
   );
 
+  // Publish gate success — the AgentConfirmCard tapped through and the real
+  // endpoint published. Append a local assistant turn ("✓ Publicada …") AND
+  // persist it so the confirmation survives a reload (the card itself is
+  // ephemeral, rebuilt from the SSE `confirm` event and gone on reload).
+  const handlePublished = useCallback(
+    (url: string) => {
+      const noteId =
+        typeof crypto !== "undefined" && "randomUUID" in crypto
+          ? crypto.randomUUID()
+          : `pub-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+      const userText = tAgent("confirm.publish");
+      const assistantReasoning = tAgent("confirm.published", { url });
+      setTurns((prev) => [
+        ...prev,
+        {
+          id: noteId,
+          userText,
+          assistantReasoning,
+          status: "applied",
+          preEditHtml: "",
+          page: null,
+          noDocChange: true,
+          appliedAt: Date.now(),
+        },
+      ]);
+      void persistTurn({
+        id: noteId,
+        userText,
+        assistantReasoning,
+        status: "applied",
+        page: null,
+      });
+    },
+    [persistTurn, tAgent],
+  );
+
   // Latest turn is "streaming" but reasoning hasn't started — the AI bubble
   // would render empty, so swap it for the typing-dots bubble instead.
   const latest = turns[turns.length - 1];
@@ -1038,9 +1106,11 @@ function AIDesignChat({
             <TurnView
               key={t.id}
               turn={t}
+              projectId={projectId}
               onUndo={handleUndo}
               onRetry={handleRetry}
               onCancel={handleCancel}
+              onPublished={handlePublished}
               hideAIBubble={t.id === latest?.id && showThinkingDots}
             />
           ))
@@ -1127,15 +1197,19 @@ function EmptyState({
 
 function TurnView({
   turn,
+  projectId,
   onUndo,
   onRetry,
   onCancel,
+  onPublished,
   hideAIBubble,
 }: {
   turn: DesignTurn;
+  projectId: string;
   onUndo: (turn: DesignTurn) => void;
   onRetry: (turn: DesignTurn) => void;
   onCancel: () => void;
+  onPublished: (url: string) => void;
   hideAIBubble: boolean;
 }) {
   const t = useTranslations("panelsChat");
@@ -1194,6 +1268,13 @@ function TurnView({
                 hasText={turn.assistantReasoning.length > 0}
               />
             </div>
+            {turn.confirm && (
+              <AgentConfirmCard
+                projectId={projectId}
+                confirm={turn.confirm}
+                onPublished={onPublished}
+              />
+            )}
           </div>
         </div>
       )}

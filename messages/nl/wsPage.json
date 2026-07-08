@@ -6,6 +6,16 @@
       "leer_estado": "Je project lezen",
       "editar_pagina": "De pagina bewerken",
       "activar_modulo": "Module inschakelen"
+    },
+    "confirm": {
+      "publishTitle": "Je pagina publiceren",
+      "publish": "Publiceren",
+      "cancel": "Annuleren",
+      "published": "✓ Gepubliceerd op {url}",
+      "taken": "Dat subdomein is al in gebruik. Probeer een ander.",
+      "limit": "Je hebt de limiet voor gepubliceerde pagina's van je abonnement bereikt.",
+      "invalid": "Publiceren mislukt. Controleer het subdomein en probeer opnieuw.",
+      "checking": "Controleren…"
     }
   },
   "defaultProjectName": "Prijzenpagina",

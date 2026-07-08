@@ -6,6 +6,16 @@
       "leer_estado": "프로젝트를 읽는 중",
       "editar_pagina": "페이지를 편집하는 중",
       "activar_modulo": "모듈을 활성화하는 중"
+    },
+    "confirm": {
+      "publishTitle": "페이지 게시",
+      "publish": "게시",
+      "cancel": "취소",
+      "published": "✓ {url}에 게시되었습니다",
+      "taken": "이미 사용 중인 서브도메인입니다. 다른 이름을 사용해 보세요.",
+      "limit": "요금제의 게시 페이지 한도에 도달했습니다.",
+      "invalid": "게시하지 못했습니다. 서브도메인을 확인하고 다시 시도하세요.",
+      "checking": "확인 중…"
     }
   },
   "defaultProjectName": "가격 페이지",

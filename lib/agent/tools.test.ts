@@ -61,6 +61,8 @@ type EditImageResult =
 function makeDeps(
   overrides?: Partial<{
     data: ProjectData;
+    subdomain: string | null;
+    publishedAt: Date | null;
     audioAssets: { url: string; name: string }[];
     imageManifest: unknown;
     fetchImageResult: FetchImageResult;
@@ -88,7 +90,13 @@ function makeDeps(
   const uploadUrl = overrides?.uploadUrl ?? "https://images.openlen.com/edited-123.webp";
   const deps: AgentDeps = {
     async loadProject() {
-      return { data: store.data, title: "Tacos", subdomain: null, publishedAt: null, userBrief: null };
+      return {
+        data: store.data,
+        title: "Tacos",
+        subdomain: overrides?.subdomain ?? null,
+        publishedAt: overrides?.publishedAt ?? null,
+        userBrief: null,
+      };
     },
     async saveProjectData(_p, _u, data) { store.data = data; store.saved.push(data); },
     async snapshotVersion(a) { store.versions.push(a.label); },
@@ -555,6 +563,65 @@ describe("editar_imagen", () => {
     assert.equal(store.uploads.length, 0);
     assert.equal(store.saved.length, 0);
     assert.equal(session.imageEditsThisTurn, 0);
+  });
+});
+
+describe("publicar", () => {
+  it("NEVER publishes — an existing claim + no new subdominio → confirm with the current name, republicar true", async () => {
+    const { deps, store } = makeDeps({ subdomain: "tacos-guero", publishedAt: new Date() });
+    const out = await runAgentTool(makeSession(), deps, "publicar", {});
+    assert.equal(out.response.ok, true);
+    assert.ok(out.confirm);
+    assert.equal(out.confirm!.action, "publicar");
+    assert.equal(out.confirm!.subdominio, "tacos-guero");
+    assert.equal(out.confirm!.republicar, true);
+    // The tool touches NOTHING — no project save, no publish side effect.
+    assert.equal(store.saved.length, 0);
+  });
+
+  it("a new subdominio (normalized lowercase/trim) → uses it, republicar false", async () => {
+    const { deps } = makeDeps({ subdomain: "viejo-nombre" });
+    const out = await runAgentTool(makeSession(), deps, "publicar", { subdominio: "  Nuevo-Sitio  " });
+    assert.equal(out.response.ok, true);
+    assert.equal(out.confirm!.subdominio, "nuevo-sitio");
+    assert.equal(out.confirm!.republicar, false);
+  });
+
+  it("a new subdominio that equals the current claim (case-insensitive) → republicar true", async () => {
+    const { deps } = makeDeps({ subdomain: "mi-tienda" });
+    const out = await runAgentTool(makeSession(), deps, "publicar", { subdominio: "MI-TIENDA" });
+    assert.equal(out.response.ok, true);
+    assert.equal(out.confirm!.subdominio, "mi-tienda");
+    assert.equal(out.confirm!.republicar, true);
+  });
+
+  it("no claim AND no subdominio → ok:false telling the model to ask the user, no confirm, nothing saved", async () => {
+    const { deps, store } = makeDeps(); // subdomain null
+    const out = await runAgentTool(makeSession(), deps, "publicar", {});
+    assert.equal(out.response.ok, false);
+    assert.equal(out.confirm, undefined);
+    assert.ok(String(out.response.error).toLowerCase().includes("subdomin"));
+    assert.equal(store.saved.length, 0);
+  });
+
+  it("filters idiomas through isPublishLocale — invalid dropped, capped at 9", async () => {
+    const { deps } = makeDeps({ subdomain: "tienda" });
+    const out = await runAgentTool(makeSession(), deps, "publicar", {
+      idiomas: ["es", "en", "xx", "zz", "pt", 42, null],
+    });
+    assert.equal(out.response.ok, true);
+    assert.deepEqual(out.confirm!.idiomas, ["es", "en", "pt"]);
+    // The dropped ones are noted in the response for the model.
+    assert.ok(out.response.idiomas_ignorados);
+  });
+
+  it("more than 9 valid idiomas are capped to 9", async () => {
+    const { deps } = makeDeps({ subdomain: "tienda" });
+    const out = await runAgentTool(makeSession(), deps, "publicar", {
+      idiomas: ["en", "es", "pt", "fr", "de", "it", "ja", "ko", "zh", "nl"],
+    });
+    assert.equal(out.response.ok, true);
+    assert.equal(out.confirm!.idiomas.length, 9);
   });
 });
 

@@ -6,6 +6,16 @@
       "leer_estado": "正在读取你的项目",
       "editar_pagina": "正在编辑页面",
       "activar_modulo": "正在启用模块"
+    },
+    "confirm": {
+      "publishTitle": "发布你的页面",
+      "publish": "发布",
+      "cancel": "取消",
+      "published": "✓ 已发布到 {url}",
+      "taken": "该子域名已被占用。请换一个。",
+      "limit": "你已达到套餐的已发布页面上限。",
+      "invalid": "发布失败。请检查子域名后重试。",
+      "checking": "检查中…"
     }
   },
   "defaultProjectName": "价格页面",

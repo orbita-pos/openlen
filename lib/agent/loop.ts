@@ -16,6 +16,10 @@ export type AgentStreamEvent =
   | { type: "text"; text: string }
   | { type: "action"; tool: string; status: "running" | "done" | "error"; summary: string }
   | { type: "html"; html: string }
+  // The publish gate (Task 7): the model prepared a publish but MUST NOT
+  // publish itself. The panel renders a confirm card whose button hits the
+  // real publish endpoint — the user's tap is the only thing that publishes.
+  | { type: "confirm"; action: "publicar"; subdominio: string; idiomas: string[]; republicar: boolean }
   | { type: "done"; turns: number; toolCalls: number }
   | { type: "error"; message: string };
 
@@ -137,6 +141,23 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
 
       if (outcome.updatedHtml) {
         args.emit({ type: "html", html: outcome.updatedHtml });
+      }
+
+      // A confirm outcome (publicar) NEVER carries out its action. Surface the
+      // confirm card to the user and hand the model a fixed "waiting" state so
+      // it closes the turn asking for the tap — never a payload it could read
+      // as "already published".
+      if (outcome.confirm) {
+        args.emit({ type: "confirm", ...outcome.confirm });
+        functionResponses.push({
+          name: call.name,
+          response: {
+            ok: true,
+            estado: "esperando_confirmacion_del_usuario",
+            subdominio: outcome.confirm.subdominio,
+          },
+        });
+        continue;
       }
 
       functionResponses.push({ name: call.name, response: outcome.response });

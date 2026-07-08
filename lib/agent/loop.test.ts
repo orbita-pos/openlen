@@ -128,6 +128,50 @@ describe("runAgentLoop", () => {
     expect(events.some((e) => e.type === "error")).toBe(true);
   });
 
+  it("a confirm outcome emits a confirm event, feeds the model esperando_confirmacion, and continues", async () => {
+    const events: AgentStreamEvent[] = [];
+    const callsSeen: Message[][] = [];
+    const stream = scripted(
+      [{ type: "function_call", name: "publicar", args: { subdominio: "mi-negocio" } }, done],
+      [{ type: "text_delta", text: "Preparé la publicación. Toca Publicar para confirmar." }, done],
+    );
+    const r = await runAgentLoop({
+      messages: [{ role: "user", content: "publica mi-negocio" }], tools: [],
+      openStream: (messages) => {
+        callsSeen.push([...messages]);
+        return stream(messages);
+      },
+      // The tool NEVER publishes — it returns a confirm payload the user must tap.
+      runTool: async () => ({
+        response: { ok: true },
+        action: { tool: "publicar", ok: true, summary: "mi-negocio" },
+        confirm: { action: "publicar", subdominio: "mi-negocio", idiomas: ["es"], republicar: false },
+      }),
+      emit: (e) => events.push(e),
+    });
+
+    const confirmEv = events.find((e) => e.type === "confirm");
+    expect(confirmEv).toMatchObject({
+      type: "confirm",
+      action: "publicar",
+      subdominio: "mi-negocio",
+      idiomas: ["es"],
+      republicar: false,
+    });
+    // The loop keeps going after the confirm — the model closes the turn.
+    expect(r.finalText).toContain("Publicar");
+
+    // The functionResponse the model saw is the fixed waiting state, NOT the
+    // tool's raw response — so the model closes its turn asking for the tap.
+    const second = callsSeen[1];
+    const frTurn = second.find((m) => m.functionResponses);
+    const fr = (frTurn as { functionResponses: { name: string; response: Record<string, unknown> }[] })
+      .functionResponses[0];
+    expect(fr.name).toBe("publicar");
+    expect(fr.response.ok).toBe(true);
+    expect(fr.response.estado).toBe("esperando_confirmacion_del_usuario");
+  });
+
   it("emits html events when a tool updates the doc", async () => {
     const events: AgentStreamEvent[] = [];
     await runAgentLoop({

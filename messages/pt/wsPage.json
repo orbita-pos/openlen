@@ -6,6 +6,16 @@
       "leer_estado": "Lendo seu projeto",
       "editar_pagina": "Editando a página",
       "activar_modulo": "Ativando módulo"
+    },
+    "confirm": {
+      "publishTitle": "Publicar sua página",
+      "publish": "Publicar",
+      "cancel": "Cancelar",
+      "published": "✓ Publicada em {url}",
+      "taken": "Esse subdomínio já está em uso. Tente outro.",
+      "limit": "Você atingiu o limite de páginas publicadas do seu plano.",
+      "invalid": "Não foi possível publicar. Verifique o subdomínio e tente novamente.",
+      "checking": "Verificando…"
     }
   },
   "defaultProjectName": "Página de Preços",

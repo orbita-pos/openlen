@@ -3,6 +3,7 @@
 // sección de conocimiento del system prompt. Módulo nuevo ⇒ una entrada aquí.
 import { DESIGN_GUIDANCE } from "@/lib/design-guidance";
 import { POST_REGISTER } from "@/lib/marketing/post-templates/admin-schemas";
+import { PUBLISH_LOCALES } from "@/lib/publish/publish-locales";
 import { TEMATICA_PRESETS } from "@/lib/tematicas/presets";
 import { THEME_PRESETS } from "@/lib/theme-presets";
 
@@ -29,6 +30,10 @@ const OPENLEN_IMAGE_STYLES = [
 ] as const;
 
 const MARKETING_REGISTERS = POST_REGISTER.options;
+// The valid `idiomas` codes for publicar — generated from the same list the
+// publish endpoint validates against, so a new locale lands in the prompt
+// automatically (never a hardcoded copy that could drift).
+const PUBLISH_LOCALE_CODES = PUBLISH_LOCALES.map((l) => l.code);
 const THEME_PRESET_IDS = THEME_PRESETS.map((p) => p.id);
 const TEMATICA_IDS = TEMATICA_PRESETS.map((p) => p.id);
 // Every kit's scene ids, deduped — the valid values for aplicar_tematica's
@@ -229,6 +234,18 @@ export function buildFunctionDeclarations(): Record<string, unknown>[] {
         required: ["imagen_url", "instruccion"],
       },
     },
+    {
+      name: "publicar",
+      description:
+        `Prepara la publicación de la página en <subdominio>.openlen.com. NUNCA publica por su cuenta: SIEMPRE espera el tap del usuario en la tarjeta de confirmación — tú solo dejas listo el subdominio y los idiomas, y le dices al usuario que toque «Publicar» para confirmar. subdominio (opcional): si el proyecto ya tiene uno reclamado y no pasas otro, se re-publica sobre el actual; si pasas uno nuevo, se reclama ese. Si el proyecto NO tiene subdominio y no pasas ninguno, la herramienta te pide que le preguntes al usuario qué subdominio quiere ANTES de volver a llamar. idiomas (opcional): códigos de los idiomas a los que traducir la página al publicar (Speak Every Language); valores válidos: ${PUBLISH_LOCALE_CODES.join(", ")} (máx 9; los inválidos se ignoran).`,
+      parameters: {
+        type: "OBJECT",
+        properties: {
+          subdominio: { type: "STRING" },
+          idiomas: { type: "ARRAY", items: { type: "STRING" } },
+        },
+      },
+    },
   ];
 }
 
@@ -261,6 +278,9 @@ Búsqueda de solo lectura sobre el catálogo real "Imágenes by OpenLen" — ús
 
 EDICIÓN DE IMAGEN CON IA (editar_imagen):
 Edita con IA (Nano Banana / Gemini) una imagen que YA está en la página — quitar un objeto, cambiar el fondo, extender una escena. SOLO funciona con imágenes ya presentes en el documento: pásale la URL EXACTA tal cual aparece en la página; jamás una URL externa ni inventada (la herramienta las rechaza, es un guard anti-inyección). Cuesta créditos y está limitada a UNA edición de imagen por turno; úsala con criterio. Para AÑADIR una foto nueva (no editar una existente) usa elegir_foto, no esta herramienta. Deja el swap hecho en la página y devuelve la nueva URL.
+
+PUBLICAR (publicar):
+publicar SIEMPRE espera el tap del usuario — JAMÁS publicas tú. La herramienta solo prepara la publicación (resuelve el subdominio y los idiomas) y muestra una tarjeta de confirmación; el usuario toca «Publicar» para confirmar y recién ahí se publica de verdad. Tras llamar publicar, cierra tu turno diciéndole al usuario que revise y toque «Publicar» (no afirmes que ya está publicada). Si el proyecto no tiene subdominio y el usuario no te dio uno, la herramienta te pedirá que le preguntes qué subdominio quiere (p. ej. mi-negocio) antes de volver a llamar. idiomas usa códigos de la lista de Speak Every Language (${PUBLISH_LOCALE_CODES.join(", ")}); los inválidos se ignoran.
 
 GUÍA DE DISEÑO (para cualquier new_html que emitas):
 ${DESIGN_GUIDANCE}`;

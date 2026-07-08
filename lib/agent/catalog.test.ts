@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { AGENT_MODULES, MOTION_LOOKS, buildAgentSystemPrompt, buildFunctionDeclarations } from "./catalog";
 import { TEMATICA_PRESETS } from "@/lib/tematicas/presets";
 import { THEME_PRESETS } from "@/lib/theme-presets";
+import { PUBLISH_LOCALES } from "@/lib/publish/publish-locales";
 
 describe("buildFunctionDeclarations", () => {
   it("declares exactly the F1 + F2 Task 1-6 tools", () => {
@@ -19,6 +20,7 @@ describe("buildFunctionDeclarations", () => {
       "crear_pagina",
       "elegir_foto",
       "editar_imagen",
+      "publicar",
     ]);
   });
   it("crear_pagina exposes slug/titulo/modulo, modulo enum bookings|collections, nothing required", () => {
@@ -104,6 +106,21 @@ describe("buildFunctionDeclarations", () => {
     // elegir_foto for brand-new photos.
     expect(String(d.description)).toContain("elegir_foto");
   });
+  it("publicar exposes optional subdominio + idiomas(ARRAY of STRING), nothing required, enumerates PUBLISH_LOCALES", () => {
+    const d = buildFunctionDeclarations().find((x) => x.name === "publicar") as any;
+    expect(d.parameters.type).toBe("OBJECT");
+    expect(d.parameters.properties.subdominio.type).toBe("STRING");
+    expect(d.parameters.properties.idiomas.type).toBe("ARRAY");
+    expect(d.parameters.properties.idiomas.items.type).toBe("STRING");
+    // Both optional — the tool asks the user for a subdomain when there's no
+    // claim, rather than failing schema validation.
+    expect(d.parameters.required).toBeUndefined();
+    // The valid idiomas codes are enumerated in the description, generated from
+    // the PUBLISH_LOCALES import (never hardcoded).
+    for (const l of PUBLISH_LOCALES) expect(String(d.description)).toContain(l.code);
+    // The user-tap gate must be conveyed to the model.
+    expect(String(d.description).toLowerCase()).toContain("usuario");
+  });
 });
 
 describe("buildAgentSystemPrompt", () => {
@@ -149,5 +166,12 @@ describe("buildAgentSystemPrompt", () => {
     expect(p).toContain("editar_imagen");
     expect(p).toContain("turno");
     expect(p).toContain("elegir_foto");
+  });
+  it("carries the F2 Task 7 publicar knowledge: always waits for the user's tap", () => {
+    const p = buildAgentSystemPrompt();
+    expect(p).toContain("publicar");
+    // The hard rule — the agent never publishes directly; the tap is the gate.
+    expect(p).toContain("subdominio");
+    expect(p.toLowerCase()).toContain("tap");
   });
 });
