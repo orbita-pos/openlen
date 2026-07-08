@@ -37,6 +37,7 @@ import {
   readThemeTokenFromHtml,
 } from "@/lib/agent/theme-apply";
 import { lookFromAccent, type LookBase } from "@/lib/palette-gen";
+import { applyTematicaToHtml, removeTematicaFromHtml } from "@/lib/tematicas/apply-server";
 import { deriveContractColors, type BaseColors } from "@/lib/theme-derive";
 import { THEME_PRESETS } from "@/lib/theme-presets";
 
@@ -631,6 +632,48 @@ async function toolCambiarTema(
   };
 }
 
+async function toolAplicarTematica(
+  session: AgentSession,
+  deps: AgentDeps,
+  args: Record<string, unknown>,
+): Promise<ToolOutcome> {
+  const tematica = args.tematica;
+  if (typeof tematica !== "string" || tematica.length === 0) {
+    return { response: { ok: false, error: "tematica es requerida" } };
+  }
+  const fondo = typeof args.fondo === "string" && args.fondo.length > 0 ? args.fondo : undefined;
+
+  const row = await deps.loadProject(session.projectId, session.userId);
+  if (!row) return { response: { ok: false, error: "proyecto no encontrado" } };
+
+  let candidateHtml: string;
+  if (tematica === "quitar") {
+    candidateHtml = removeTematicaFromHtml(row.data.html);
+  } else {
+    const applied = applyTematicaToHtml(row.data.html, tematica, fondo);
+    if ("error" in applied) {
+      return { response: { ok: false, error: applied.error } };
+    }
+    candidateHtml = applied.html;
+  }
+
+  const persisted = await persistHtmlChange(
+    session,
+    deps,
+    candidateHtml,
+    `Agente: temática (${tematica})`,
+  );
+  if (!persisted.ok) {
+    return { response: { ok: false, error: persisted.error } };
+  }
+
+  return {
+    response: { ok: true, tematica },
+    action: { tool: "aplicar_tematica", ok: true, summary: tematica },
+    updatedHtml: persisted.finalHtml,
+  };
+}
+
 export async function runAgentTool(
   session: AgentSession,
   deps: AgentDeps,
@@ -647,6 +690,8 @@ export async function runAgentTool(
         return await toolEditarPagina(session, deps, args);
       case "cambiar_tema":
         return await toolCambiarTema(session, deps, args);
+      case "aplicar_tematica":
+        return await toolAplicarTematica(session, deps, args);
       case "cambiar_motion":
         return await toolCambiarMotion(session, deps, args);
       case "poner_musica":

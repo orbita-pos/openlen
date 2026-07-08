@@ -75,6 +75,14 @@ export default defineConfig({
       "lib/publish/scene-host.test.ts",
       "lib/publish/procedural-3d.test.ts",
     ],
-    exclude: ["node_modules/**", "tests/e2e/**", ".next/**"],
+    exclude: [
+      "node_modules/**",
+      "tests/e2e/**",
+      ".next/**",
+      // node:test file (run via `tsx --test`, part of test:node) — would
+      // otherwise get swept up by the lib/tematicas/**/*.test.ts wildcard
+      // above and fail with "No test suite found" under vitest.
+      "lib/tematicas/apply-server.test.ts",
+    ],
   },
 });

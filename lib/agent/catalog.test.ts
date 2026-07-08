@@ -1,9 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { AGENT_MODULES, MOTION_LOOKS, buildAgentSystemPrompt, buildFunctionDeclarations } from "./catalog";
+import { TEMATICA_PRESETS } from "@/lib/tematicas/presets";
 import { THEME_PRESETS } from "@/lib/theme-presets";
 
 describe("buildFunctionDeclarations", () => {
-  it("declares exactly the F1 + F2 Task 1 + F2 Task 2 tools", () => {
+  it("declares exactly the F1 + F2 Task 1 + F2 Task 2 + F2 Task 3 tools", () => {
     const names = buildFunctionDeclarations().map((d) => d.name);
     expect(names).toEqual([
       "leer_estado",
@@ -13,6 +14,7 @@ describe("buildFunctionDeclarations", () => {
       "poner_musica",
       "activar_3d",
       "cambiar_tema",
+      "aplicar_tematica",
       "preparar_marketing",
     ]);
   });
@@ -60,6 +62,13 @@ describe("buildFunctionDeclarations", () => {
     // "at least one of accent/fuente/radius" as a runtime, data-level error).
     expect(d.parameters.required).toBeUndefined();
   });
+  it("aplicar_tematica exposes tematica (kit ids + quitar) and an optional fondo", () => {
+    const d = buildFunctionDeclarations().find((x) => x.name === "aplicar_tematica") as any;
+    const kitIds = TEMATICA_PRESETS.map((p) => p.id);
+    expect(d.parameters.properties.tematica.enum).toEqual([...kitIds, "quitar"]);
+    expect(d.parameters.properties.fondo.type).toBe("STRING");
+    expect(d.parameters.required).toEqual(["tematica"]);
+  });
 });
 
 describe("buildAgentSystemPrompt", () => {
@@ -79,5 +88,14 @@ describe("buildAgentSystemPrompt", () => {
     expect(p).toContain("preparar_marketing");
     expect(p).toContain("cambiar_tema");
     for (const preset of THEME_PRESETS) expect(p).toContain(preset.id);
+  });
+  it("carries the F2 Task 3 aplicar_tematica knowledge, kit names, and the re-ink delta", () => {
+    const p = buildAgentSystemPrompt();
+    expect(p).toContain("aplicar_tematica");
+    for (const kit of TEMATICA_PRESETS) {
+      expect(p).toContain(kit.id);
+      expect(p).toContain(kit.name);
+    }
+    expect(p).toContain("reink");
   });
 });

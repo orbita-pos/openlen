@@ -7,6 +7,8 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { tagWithOpIds } from "@/lib/html-ops";
 import { lookFromAccent } from "@/lib/palette-gen";
+import { applyTematicaToHtml } from "@/lib/tematicas/apply-server";
+import { TEMATICA_PRESETS } from "@/lib/tematicas/presets";
 import { runAgentTool, summarizeProjectState, type AgentDeps, type AgentSession } from "./tools";
 import type { ProjectData } from "@/lib/projects/types";
 
@@ -167,6 +169,38 @@ describe("cambiar_tema", () => {
     const dark = lookFromAccent("#e8743a").dark;
     assert.ok(store.data.html!.includes(`--ol-bg: ${dark["--ol-bg"]}`));
     assert.ok(store.data.html!.includes(`--ol-accent: ${dark["--ol-accent"]}`));
+  });
+});
+
+describe("aplicar_tematica", () => {
+  it("stamps a kit, persists through sanitize, keeps settings intact, re-tags", async () => {
+    const kit = TEMATICA_PRESETS[0];
+    const { deps, store } = makeDeps({ data: { html: HTML, settings: { motion: "calm" } } });
+    const session = makeSession();
+    const out = await runAgentTool(session, deps, "aplicar_tematica", { tematica: kit.id });
+    assert.equal(out.response.ok, true);
+    assert.ok(store.data.html!.includes(`data-ol-tematica="${kit.id}"`));
+    assert.ok(store.data.html!.includes("<style data-ol-tematica"));
+    assert.ok(!store.data.html!.includes("data-op-id"));
+    assert.equal(store.data.settings?.motion, "calm");
+    assert.equal(store.versions.length, 2);
+    assert.ok(session.taggedHtml.includes("data-op-id"));
+    assert.ok(out.updatedHtml?.includes(`data-ol-tematica="${kit.id}"`));
+  });
+  it('tematica:"quitar" strips a previously applied kit, leaves tokens alone', async () => {
+    const kit = TEMATICA_PRESETS[0];
+    const dressed = applyTematicaToHtml(HTML, kit.id) as { html: string };
+    const { deps, store } = makeDeps({ data: { html: dressed.html } });
+    const out = await runAgentTool(makeSession(), deps, "aplicar_tematica", { tematica: "quitar" });
+    assert.equal(out.response.ok, true);
+    assert.ok(!store.data.html!.includes("data-ol-tematica"));
+    assert.ok(store.data.html!.includes(`--ol-accent: ${kit.tokens["--ol-accent"]}`));
+  });
+  it("rejects an unknown tematica id as data, without saving", async () => {
+    const { deps, store } = makeDeps();
+    const out = await runAgentTool(makeSession(), deps, "aplicar_tematica", { tematica: "no-existe" });
+    assert.equal(out.response.ok, false);
+    assert.equal(store.saved.length, 0);
   });
 });
 

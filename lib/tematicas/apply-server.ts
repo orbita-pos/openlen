@@ -1,0 +1,75 @@
+// Server-side counterpart of the iframe inspect-script's applyTematica
+// (components/workspace-v2/use-element-inspect.ts:951, wired from
+// app/[locale]/new/page.tsx:2150's applyTematica callback) — the same write
+// (a tagged <style data-ol-tematica>, the kit's font <link>, the
+// data-ol-tematica[-bg] attrs on <html>, plus the kit's token bundle + mode
+// via the theme-bundle channel) as a pure string→string transform, so an
+// agent tool can stamp a temática onto project.data.html without a browser.
+// Strip-then-stamp shape mirrors scripts/tematicas-dress.ts (the authoring
+// CLI that pre-dresses showcase templates).
+//
+// KNOWN DELTA (F2): the iframe's contrast "re-ink" pass (olReinkForWorld,
+// use-element-inspect.ts:763+) measures every text-bearing element's LIVE
+// computed color against the new world's grounds and re-inks whatever fails
+// contrast — that needs a real DOM + getComputedStyle, not a string
+// transform. The kit CSS here is var-driven and covers most cases on its
+// own; if a result still needs a touch-up, the model can chain
+// editar_pagina.
+
+import { applyThemeTokensToHtml } from "@/lib/agent/theme-apply";
+import { getTematica, tematicaCss } from "@/lib/tematicas/presets";
+
+const HTML_OPEN_TAG_RE = /<html\b[^>]*>/i;
+const HEAD_CLOSE_RE = /<\/head>/i;
+
+/** Strip a prior stamp: the tagged <style>, the tagged font <link>, and the
+ *  data-ol-tematica[-bg] attrs off <html>. Deliberately leaves the kit's
+ *  --ol-* tokens (and data-ol-mode) in place — those are generic theme
+ *  state that rides the same channel as the Looks engine, and the user may
+ *  have hand-adjusted them after applying the kit. Removing the *world*
+ *  shouldn't silently revert unrelated theme edits. */
+export function removeTematicaFromHtml(html: string): string {
+  return html
+    .replace(/<style data-ol-tematica>[\s\S]*?<\/style>/gi, "")
+    .replace(/<link[^>]*\bdata-ol-tematica\b[^>]*>/gi, "")
+    .replace(/\s+data-ol-tematica(?:-bg)?="[^"]*"/gi, "");
+}
+
+/** Install a kit's full-page world. Replace-not-stack: any prior stamp is
+ *  removed first, so re-applying a different kit (or the same one with a
+ *  different backdrop) never leaves duplicate <style>/<link> tags behind. */
+export function applyTematicaToHtml(
+  html: string,
+  tematicaId: string,
+  backdropId?: string,
+): { html: string } | { error: string } {
+  const kit = getTematica(tematicaId);
+  if (!kit) return { error: `temática desconocida: ${tematicaId}` };
+
+  let out = removeTematicaFromHtml(html);
+
+  out = out.replace(HTML_OPEN_TAG_RE, (tag) => {
+    const bgAttr = backdropId ? ` data-ol-tematica-bg="${backdropId}"` : "";
+    return tag.replace(/^<html\b/i, (open) => `${open} data-ol-tematica="${kit.id}"${bgAttr}`);
+  });
+
+  const css = tematicaCss(kit, backdropId);
+  const fontLink = kit.fontHref
+    ? `<link rel="stylesheet" data-ol-tematica href="${kit.fontHref}">`
+    : "";
+  const inject = `${fontLink}<style data-ol-tematica>${css}</style>`;
+  out = HEAD_CLOSE_RE.test(out)
+    ? out.replace(HEAD_CLOSE_RE, `${inject}</head>`)
+    : out.replace(HTML_OPEN_TAG_RE, (tag) => `${tag}<head>${inject}</head>`);
+
+  // The kit's token bundle rides the same channel cambiar_tema uses, plus
+  // its ink direction as the data-ol-mode attr — mirrors the client's
+  // separate applyThemeBundle(kit.tokens) + applyThemeMode(kit.mode) calls
+  // (app/[locale]/new/page.tsx:2169-2171) collapsed into one write.
+  out = applyThemeTokensToHtml(out, {
+    ...kit.tokens,
+    "data-ol-mode": kit.mode === "dark" ? "dark" : "",
+  });
+
+  return { html: out };
+}
