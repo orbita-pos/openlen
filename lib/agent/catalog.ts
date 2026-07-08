@@ -14,6 +14,20 @@ export type AgentModule = (typeof AGENT_MODULES)[number];
 export const MOTION_LOOKS = ["calm", "editorial", "dramatic", "off"] as const;
 export type MotionLook = (typeof MOTION_LOOKS)[number];
 
+// The OpenLenStyle union from components/workspace-v2/replace-asset-modal.tsx
+// (the "Imágenes by OpenLen" picker) — that type isn't exported (client
+// component), so this list is duplicated here deliberately, purely as prompt
+// guidance: elegir_foto's `estilo` param stays a free STRING (a typo just
+// yields zero matches, never an error), the model just needs to know which
+// values are worth trying.
+const OPENLEN_IMAGE_STYLES = [
+  "3d-abstract", "claymorph", "fashion-editorial", "device-mockup",
+  "product-still-life", "food-editorial", "interior-editorial",
+  "nature-editorial", "architecture-editorial", "lifestyle-editorial",
+  "gradient-bg", "pet-editorial", "creator-mockup", "sports-editorial",
+  "travel-editorial", "wedding-editorial", "music-editorial", "gaming-editorial",
+] as const;
+
 const MARKETING_REGISTERS = POST_REGISTER.options;
 const THEME_PRESET_IDS = THEME_PRESETS.map((p) => p.id);
 const TEMATICA_IDS = TEMATICA_PRESETS.map((p) => p.id);
@@ -190,6 +204,18 @@ export function buildFunctionDeclarations(): Record<string, unknown>[] {
         },
       },
     },
+    {
+      name: "elegir_foto",
+      description:
+        `Busca fotos REALES del catálogo curado "Imágenes by OpenLen" (mismo picker del tab Contenido) — úsala antes de poner una foto nueva con editar_pagina, nunca inventes una URL de imagen. Devuelve hasta 6 candidatas con url/alt/estilo; si no hay resultados, responde ok:true con fotos:[] y una nota — no es un error, prueba otro término o quita el filtro de estilo. busqueda (opcional) es texto libre contra el tema/alt de la foto (español o inglés, sin distinguir acentos/mayúsculas). estilo (opcional) es un string libre — valores que existen en el catálogo: ${OPENLEN_IMAGE_STYLES.join(", ")}; un valor que no exista simplemente no encuentra nada, no falla.`,
+      parameters: {
+        type: "OBJECT",
+        properties: {
+          busqueda: { type: "STRING" },
+          estilo: { type: "STRING" },
+        },
+      },
+    },
   ];
 }
 
@@ -216,6 +242,9 @@ El documento en tu contexto trae data-op-id en cada elemento. Dirige cada edit p
 
 PÁGINAS NUEVAS (crear_pagina):
 Crea una página adicional del sitio (no la Home) nacida como el shell de Home — mismo look/nav/footer, contenido en blanco que luego editas con editar_pagina. Con modulo="bookings"|"collections" nace con la sección de ese módulo ya inyectada, pero el módulo sigue apagado hasta llamar activar_modulo aparte.
+
+FOTOS CURADAS (elegir_foto):
+Búsqueda de solo lectura sobre el catálogo real "Imágenes by OpenLen" — úsala para ENCONTRAR una foto antes de insertarla, nunca inventes ni alucines una URL de imagen. Las URLs que devuelve son reales y están permitidas: úsalas dentro de editar_pagina como <img src> (dominio images.openlen.com). No cambia nada por sí sola (no hay tarjeta de acción ni documento actualizado) — el cambio real ocurre en el editar_pagina que sigue.
 
 GUÍA DE DISEÑO (para cualquier new_html que emitas):
 ${DESIGN_GUIDANCE}`;

@@ -37,6 +37,7 @@ export default defineConfig({
       "lib/agent/catalog.test.ts",
       "lib/agent/loop.test.ts",
       "lib/agent/context.test.ts",
+      "lib/agent/photo-search.test.ts",
       "lib/theme-derive.test.ts",
       "lib/palette-gen-look.test.ts",
       "lib/theme-presets.test.ts",

@@ -14,8 +14,44 @@ import type { ProjectData } from "@/lib/projects/types";
 
 const HTML = `<!doctype html><html><head><title>Tacos El Güero</title><meta name="description" content="Tacos"></head><body><h1 data-x="k">Tacos El Güero</h1><p>Los mejores del barrio.</p></body></html>`;
 
+const DEFAULT_IMAGE_MANIFEST = {
+  version: 1,
+  generated: "2026-05-29T22:45:20.097Z",
+  count: 2,
+  images: [
+    {
+      id: "01-warm-glassy",
+      promptNum: 1,
+      style: "3d-abstract",
+      family: ["saas", "portfolio"],
+      alt: "Three floating frosted glass forms in warm peach gradient",
+      src: {
+        hero: "https://images.openlen.com/01-warm-glassy-1920.webp",
+        tablet: "https://images.openlen.com/01-warm-glassy-800.webp",
+        thumb: "https://images.openlen.com/01-warm-glassy-400.webp",
+      },
+    },
+    {
+      id: "04-clay-primitives",
+      promptNum: 4,
+      style: "claymorph",
+      family: ["agency"],
+      alt: "Soft clay primitive shapes in pastel studio light",
+      src: {
+        hero: "https://images.openlen.com/04-clay-primitives-1920.webp",
+        tablet: "https://images.openlen.com/04-clay-primitives-800.webp",
+        thumb: "https://images.openlen.com/04-clay-primitives-400.webp",
+      },
+    },
+  ],
+};
+
 function makeDeps(
-  overrides?: Partial<{ data: ProjectData; audioAssets: { url: string; name: string }[] }>,
+  overrides?: Partial<{
+    data: ProjectData;
+    audioAssets: { url: string; name: string }[];
+    imageManifest: unknown;
+  }>,
 ) {
   const store = {
     data: (overrides?.data ?? { html: HTML }) as ProjectData,
@@ -24,6 +60,8 @@ function makeDeps(
     provisioned: 0,
     provisionedOpts: null as { email: string | null; displayName: string } | null,
     audioAssets: overrides?.audioAssets ?? [],
+    imageManifest: overrides?.imageManifest ?? DEFAULT_IMAGE_MANIFEST,
+    manifestFetches: 0,
   };
   const deps: AgentDeps = {
     async loadProject() {
@@ -33,6 +71,7 @@ function makeDeps(
     async snapshotVersion(a) { store.versions.push(a.label); },
     async provisionOwnerChat(_p, _u, opts) { store.provisioned += 1; store.provisionedOpts = opts; },
     async listAudioAssets() { return store.audioAssets; },
+    async fetchImageManifest() { store.manifestFetches += 1; return store.imageManifest; },
   };
   return { deps, store };
 }
@@ -332,6 +371,56 @@ describe("crear_pagina", () => {
     const { deps } = makeDeps({ data: { html: "" } });
     const out = await runAgentTool(makeSession(), deps, "crear_pagina", { slug: "menu" });
     assert.equal(out.response.ok, false);
+  });
+});
+
+describe("elegir_foto", () => {
+  it("returns up to 6 fotos with absolute urls, no action card, no persistence", async () => {
+    const { deps, store } = makeDeps();
+    const out = await runAgentTool(makeSession(), deps, "elegir_foto", {});
+    assert.equal(out.response.ok, true);
+    const fotos = out.response.fotos as { url: string; alt: string; estilo: string }[];
+    assert.ok(fotos.length > 0);
+    assert.ok(fotos.length <= 6);
+    assert.ok(fotos[0].url.startsWith("https://images.openlen.com/"));
+    assert.ok(fotos[0].estilo);
+    assert.equal(out.action, undefined);
+    assert.equal(out.updatedHtml, undefined);
+    assert.equal(store.saved.length, 0);
+    assert.equal(store.manifestFetches, 1);
+  });
+
+  it("filters by estilo through deps.fetchImageManifest", async () => {
+    const { deps } = makeDeps();
+    const out = await runAgentTool(makeSession(), deps, "elegir_foto", { estilo: "claymorph" });
+    assert.equal(out.response.ok, true);
+    const fotos = out.response.fotos as { estilo: string }[];
+    assert.ok(fotos.length >= 1);
+    assert.ok(fotos.every((f) => f.estilo === "claymorph"));
+  });
+
+  it("filters by busqueda against alt/id/family", async () => {
+    const { deps } = makeDeps();
+    const out = await runAgentTool(makeSession(), deps, "elegir_foto", { busqueda: "portfolio" });
+    assert.equal(out.response.ok, true);
+    const fotos = out.response.fotos as { url: string }[];
+    assert.equal(fotos.length, 1);
+    assert.ok(fotos[0].url.includes("warm-glassy"));
+  });
+
+  it("empty results come back ok:true with an empty list and a helpful nota", async () => {
+    const { deps } = makeDeps();
+    const out = await runAgentTool(makeSession(), deps, "elegir_foto", { busqueda: "esto-no-existe-en-el-catalogo" });
+    assert.equal(out.response.ok, true);
+    assert.deepEqual(out.response.fotos, []);
+    assert.ok(typeof out.response.nota === "string" && (out.response.nota as string).length > 0);
+  });
+
+  it("a malformed manifest comes back as an empty list, not a throw", async () => {
+    const { deps } = makeDeps({ imageManifest: { images: "not-an-array" } });
+    const out = await runAgentTool(makeSession(), deps, "elegir_foto", {});
+    assert.equal(out.response.ok, true);
+    assert.deepEqual(out.response.fotos, []);
   });
 });
 

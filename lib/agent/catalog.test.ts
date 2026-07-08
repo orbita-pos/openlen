@@ -4,7 +4,7 @@ import { TEMATICA_PRESETS } from "@/lib/tematicas/presets";
 import { THEME_PRESETS } from "@/lib/theme-presets";
 
 describe("buildFunctionDeclarations", () => {
-  it("declares exactly the F1 + F2 Task 1 + F2 Task 2 + F2 Task 3 + F2 Task 4 tools", () => {
+  it("declares exactly the F1 + F2 Task 1-5 tools", () => {
     const names = buildFunctionDeclarations().map((d) => d.name);
     expect(names).toEqual([
       "leer_estado",
@@ -17,6 +17,7 @@ describe("buildFunctionDeclarations", () => {
       "aplicar_tematica",
       "preparar_marketing",
       "crear_pagina",
+      "elegir_foto",
     ]);
   });
   it("crear_pagina exposes slug/titulo/modulo, modulo enum bookings|collections, nothing required", () => {
@@ -84,6 +85,15 @@ describe("buildFunctionDeclarations", () => {
     expect(sceneIds.length).toBeGreaterThan(0);
     expect(d.parameters.required).toEqual(["tematica"]);
   });
+  it("elegir_foto exposes busqueda + estilo as optional strings, nothing required", () => {
+    const d = buildFunctionDeclarations().find((x) => x.name === "elegir_foto") as any;
+    expect(d.parameters.properties.busqueda.type).toBe("STRING");
+    expect(d.parameters.properties.estilo.type).toBe("STRING");
+    // estilo is a free string (typos just yield zero matches, not an error) —
+    // no enum constraint, so the model can't get stuck on an out-of-date list.
+    expect(d.parameters.properties.estilo.enum).toBeUndefined();
+    expect(d.parameters.required).toBeUndefined();
+  });
 });
 
 describe("buildAgentSystemPrompt", () => {
@@ -117,5 +127,11 @@ describe("buildAgentSystemPrompt", () => {
     const p = buildAgentSystemPrompt();
     expect(p).toContain("crear_pagina");
     expect(p).toContain("activar_modulo");
+  });
+  it("carries the F2 Task 5 elegir_foto knowledge and the images.openlen.com permission note", () => {
+    const p = buildAgentSystemPrompt();
+    expect(p).toContain("elegir_foto");
+    expect(p).toContain("images.openlen.com");
+    expect(p).toContain("editar_pagina");
   });
 });

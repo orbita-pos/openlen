@@ -14,6 +14,8 @@
 // dispatch in try/catch so a bug in one tool can never crash the agent
 // loop mid-conversation.
 
+import { readFile } from "node:fs/promises";
+import { join } from "node:path";
 import { and, eq } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
 import { getOrCreateOwnerChatUser } from "@/lib/chat/store";
@@ -32,6 +34,7 @@ import type { ProjectData } from "@/lib/projects/types";
 import { createVersion, type VersionSource } from "@/lib/projects/versions";
 import { ensurePageMeta } from "@/lib/publish/ensure-page-meta";
 import { AGENT_MODULES, MOTION_LOOKS, type AgentModule } from "@/lib/agent/catalog";
+import { searchCuratedPhotos } from "@/lib/agent/photo-search";
 import {
   applyThemeTokensToHtml,
   readThemeModeFromHtml,
@@ -69,6 +72,36 @@ export interface AgentDeps {
   /** This project's uploaded audio assets — the only tracks poner_musica
    *  may point the page music player at (never external URLs). */
   listAudioAssets(projectId: string): Promise<{ url: string; name: string }[]>;
+  /** The "Imágenes by OpenLen" curated-photo catalog manifest, raw and
+   *  unvalidated — elegir_foto runs it through searchCuratedPhotos. */
+  fetchImageManifest(): Promise<unknown>;
+}
+
+// public/openlen-images/manifest.json is a build-committed static file (see
+// scripts/openlen-images/process.ts) — its src.* URLs already point at R2
+// (images.openlen.com), only the manifest JSON itself ships locally. deploy.ps1
+// copies public/ into .next/standalone/public/ for the self-hosted runtime
+// (infra/scripts/deploy.ps1 step 3), so process.cwd()-relative disk read
+// resolves correctly in both dev and prod without an app base-URL env var —
+// same pattern as app/api/three3d/runtime/route.ts. A network self-fetch would
+// need one more moving part (the app's own origin) for zero benefit, since the
+// file never changes per-request. Cached in-process for 10 min so a burst of
+// elegir_foto calls in one chat turn doesn't re-read+re-parse the JSON.
+const IMAGE_MANIFEST_TTL_MS = 10 * 60 * 1000;
+let imageManifestCache: { data: unknown; expiresAt: number } | null = null;
+
+async function readImageManifest(): Promise<unknown> {
+  const now = Date.now();
+  if (imageManifestCache && imageManifestCache.expiresAt > now) {
+    return imageManifestCache.data;
+  }
+  const raw = await readFile(
+    join(process.cwd(), "public", "openlen-images", "manifest.json"),
+    "utf8",
+  );
+  const data = JSON.parse(raw) as unknown;
+  imageManifestCache = { data, expiresAt: now + IMAGE_MANIFEST_TTL_MS };
+  return data;
 }
 
 export function realDeps(): AgentDeps {
@@ -123,6 +156,9 @@ export function realDeps(): AgentDeps {
     async listAudioAssets(projectId) {
       const assets = await getAssetStorage().listAudio(projectId);
       return assets.map((a) => ({ url: a.url, name: a.filename }));
+    },
+    async fetchImageManifest() {
+      return readImageManifest();
     },
   };
 }
@@ -705,6 +741,38 @@ async function toolAplicarTematica(
   };
 }
 
+async function toolElegirFoto(
+  _session: AgentSession,
+  deps: AgentDeps,
+  args: Record<string, unknown>,
+): Promise<ToolOutcome> {
+  const busqueda = typeof args.busqueda === "string" ? args.busqueda : undefined;
+  const estilo = typeof args.estilo === "string" ? args.estilo : undefined;
+
+  const manifest = await deps.fetchImageManifest();
+  const fotos = searchCuratedPhotos(manifest, { busqueda, estilo });
+
+  if (fotos.length === 0) {
+    return {
+      response: {
+        ok: true,
+        fotos: [],
+        nota: "sin resultados para esa búsqueda — prueba otro término, quita el filtro de estilo, o usa una palabra más general",
+      },
+    };
+  }
+
+  // Read-only: no action card (nothing changed on the page) and no
+  // updatedHtml — the model still has to call editar_pagina to actually use
+  // one of these URLs as an <img src>.
+  return {
+    response: {
+      ok: true,
+      fotos: fotos.map((f) => ({ url: f.url, alt: f.alt, estilo: f.style })),
+    },
+  };
+}
+
 export async function runAgentTool(
   session: AgentSession,
   deps: AgentDeps,
@@ -733,6 +801,8 @@ export async function runAgentTool(
         return await toolPrepararMarketing(session, deps, args);
       case "crear_pagina":
         return await toolCrearPagina(session, deps, args);
+      case "elegir_foto":
+        return await toolElegirFoto(session, deps, args);
       default:
         return { response: { ok: false, error: "herramienta desconocida" } };
     }
