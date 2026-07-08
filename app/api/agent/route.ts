@@ -250,7 +250,16 @@ export async function POST(req: Request): Promise<Response> {
         // when a tool inside it returned {ok:false} as data or the turn
         // ended waiting on a confirm card.
         if (!result.terminalError) {
-          const credits = creditsForUsage(result.usage.inputTokens, result.usage.outputTokens, PROVIDER.rate);
+          const { inputTokens, outputTokens, cachedTokens } = result.usage;
+          const credits = creditsForUsage(inputTokens, outputTokens, PROVIDER.rate);
+          // F3: Gemini's implicit-cache discount (90% off cached input
+          // tokens) is automatic on Google's own invoice — creditsForUsage
+          // still prices off raw input/output, so OpenLen's product credits
+          // are UNCHANGED by cachedTokens; this is visibility only.
+          const cachedPct = inputTokens > 0 ? Math.round((cachedTokens / inputTokens) * 100) : 0;
+          console.log(
+            `[agent] tokens — in ${inputTokens} (cached ${cachedTokens}, ${cachedPct}%) / out ${outputTokens}`,
+          );
           await debitCredits(userId, Math.max(1, credits));
         } else {
           console.log("[agent] terminal-error turn — 0 credits");

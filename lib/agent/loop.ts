@@ -51,7 +51,7 @@ export interface AgentLoopArgs {
 
 export interface AgentLoopResult {
   finalText: string;
-  usage: { inputTokens: number; outputTokens: number };
+  usage: { inputTokens: number; outputTokens: number; cachedTokens: number };
   turns: number;
   toolCalls: number;
   /** F2-T9 billing ruling: true when the turn ended via stopReason error/
@@ -82,13 +82,14 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
   let finalText = "";
   let inputTokens = 0;
   let outputTokens = 0;
+  let cachedTokens = 0;
   let turns = 0;
   let toolCalls = 0;
 
   while (true) {
     if (turns >= maxTurns) {
       args.emit({ type: "error", message: "El agente alcanzó su límite de pasos", code: "turn_limit" });
-      return { finalText, usage: { inputTokens, outputTokens }, turns, toolCalls, terminalError: true };
+      return { finalText, usage: { inputTokens, outputTokens, cachedTokens }, turns, toolCalls, terminalError: true };
     }
     turns += 1;
 
@@ -109,6 +110,7 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
       } else if (ev.type === "usage") {
         inputTokens += ev.inputTokens;
         outputTokens += ev.outputTokens;
+        cachedTokens += ev.cachedTokens;
       } else if (ev.type === "done") {
         // A stream that ends on anything but a clean end_turn must NOT read
         // as success: error (SAFETY/RECITATION/5xx), cancelled (abort), and
@@ -132,19 +134,19 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
     }
 
     if (sawError) {
-      return { finalText, usage: { inputTokens, outputTokens }, turns, toolCalls, terminalError: true };
+      return { finalText, usage: { inputTokens, outputTokens, cachedTokens }, turns, toolCalls, terminalError: true };
     }
 
     if (calls.length === 0) {
       finalText = turnText;
-      return { finalText, usage: { inputTokens, outputTokens }, turns, toolCalls, terminalError: false };
+      return { finalText, usage: { inputTokens, outputTokens, cachedTokens }, turns, toolCalls, terminalError: false };
     }
 
     const functionResponses: { name: string; response: Record<string, unknown> }[] = [];
     for (const call of calls) {
       if (toolCalls >= maxToolCalls) {
         args.emit({ type: "error", message: "El agente alcanzó su límite de pasos", code: "tool_limit" });
-        return { finalText, usage: { inputTokens, outputTokens }, turns, toolCalls, terminalError: true };
+        return { finalText, usage: { inputTokens, outputTokens, cachedTokens }, turns, toolCalls, terminalError: true };
       }
       toolCalls += 1;
 

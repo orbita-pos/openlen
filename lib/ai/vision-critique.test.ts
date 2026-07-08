@@ -92,7 +92,7 @@ test("parses a clean JSON verdict correctly", async () => {
       // Split across two deltas to prove accumulation.
       { type: "text_delta", text: json.slice(0, 12) },
       { type: "text_delta", text: json.slice(12) },
-      { type: "usage", inputTokens: 100, outputTokens: 20 },
+      { type: "usage", inputTokens: 100, outputTokens: 20, cachedTokens: 0 },
       { type: "done", stopReason: { kind: "end_turn" } },
     ],
     (r) => {

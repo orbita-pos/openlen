@@ -124,6 +124,10 @@ pub struct StreamEvent {
     pub text: Option<String>,
     pub input_tokens: Option<u32>,
     pub output_tokens: Option<u32>,
+    /// Populated only for `type == "usage"`. Gemini 2.5+ implicit-cache
+    /// discount count (`cachedContentTokenCount`) — `Some(0)` when the
+    /// provider reported no cache hit, `None` on every non-usage variant.
+    pub cached_tokens: Option<u32>,
     pub stop_reason: Option<StopReason>,
     /// Populated only for `type == "function_call"`.
     pub name: Option<String>,
@@ -280,6 +284,7 @@ impl From<NativeStreamEvent> for StreamEvent {
                 text: None,
                 input_tokens: None,
                 output_tokens: None,
+                cached_tokens: None,
                 stop_reason: None,
                 name: None,
                 args_json: None,
@@ -291,6 +296,7 @@ impl From<NativeStreamEvent> for StreamEvent {
                 text: Some(text),
                 input_tokens: None,
                 output_tokens: None,
+                cached_tokens: None,
                 stop_reason: None,
                 name: None,
                 args_json: None,
@@ -299,12 +305,14 @@ impl From<NativeStreamEvent> for StreamEvent {
             NativeStreamEvent::Usage {
                 input_tokens,
                 output_tokens,
+                cached_tokens,
             } => Self {
                 event_type: "usage".to_owned(),
                 id: None,
                 text: None,
                 input_tokens: Some(input_tokens),
                 output_tokens: Some(output_tokens),
+                cached_tokens: Some(cached_tokens),
                 stop_reason: None,
                 name: None,
                 args_json: None,
@@ -316,6 +324,7 @@ impl From<NativeStreamEvent> for StreamEvent {
                 text: None,
                 input_tokens: None,
                 output_tokens: None,
+                cached_tokens: None,
                 stop_reason: Some(stop_reason.into()),
                 name: None,
                 args_json: None,
@@ -331,6 +340,7 @@ impl From<NativeStreamEvent> for StreamEvent {
                 text: None,
                 input_tokens: None,
                 output_tokens: None,
+                cached_tokens: None,
                 stop_reason: None,
                 name: Some(name),
                 args_json: Some(args_json),
@@ -624,11 +634,44 @@ mod tests {
         let js: StreamEvent = NativeStreamEvent::Usage {
             input_tokens: 12,
             output_tokens: 34,
+            cached_tokens: 0,
         }
         .into();
         assert_eq!(js.event_type, "usage");
         assert_eq!(js.input_tokens, Some(12));
         assert_eq!(js.output_tokens, Some(34));
+        assert_eq!(js.cached_tokens, Some(0));
+    }
+
+    #[test]
+    fn stream_event_usage_into_js_carries_cached_tokens() {
+        let js: StreamEvent = NativeStreamEvent::Usage {
+            input_tokens: 120,
+            output_tokens: 30,
+            cached_tokens: 100,
+        }
+        .into();
+        assert_eq!(js.cached_tokens, Some(100));
+    }
+
+    #[test]
+    fn stream_event_non_usage_variants_carry_no_cached_tokens() {
+        let start: StreamEvent = NativeStreamEvent::Start { id: "abc".into() }.into();
+        assert!(start.cached_tokens.is_none());
+        let delta: StreamEvent = NativeStreamEvent::TextDelta { text: "hi".into() }.into();
+        assert!(delta.cached_tokens.is_none());
+        let done: StreamEvent = NativeStreamEvent::Done {
+            stop_reason: NativeStopReason::EndTurn,
+        }
+        .into();
+        assert!(done.cached_tokens.is_none());
+        let fc: StreamEvent = NativeStreamEvent::FunctionCall {
+            name: "leer_estado".into(),
+            args_json: "{}".into(),
+            thought_signature: None,
+        }
+        .into();
+        assert!(fc.cached_tokens.is_none());
     }
 
     #[test]

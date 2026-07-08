@@ -136,7 +136,7 @@ where
         yield Ok(StreamEvent::Start { id });
 
         let mut parser = SseParser::new();
-        let mut pending_usage: Option<(u32, u32)> = None;
+        let mut pending_usage: Option<(u32, u32, u32)> = None;
         let mut pending_stop: Option<StopReason> = None;
         let mut bytes_stream = Box::pin(bytes_stream);
 
@@ -177,10 +177,11 @@ where
                             return;
                         }
                         None => {
-                            if let Some((input_tokens, output_tokens)) = pending_usage {
+                            if let Some((input_tokens, output_tokens, cached_tokens)) = pending_usage {
                                 yield Ok(StreamEvent::Usage {
                                     input_tokens,
                                     output_tokens,
+                                    cached_tokens,
                                 });
                             }
                             yield Ok(StreamEvent::Done {
@@ -197,7 +198,7 @@ where
 
 fn process_gemini_event(
     ev: GeminiEvent,
-    pending_usage: &mut Option<(u32, u32)>,
+    pending_usage: &mut Option<(u32, u32, u32)>,
     pending_stop: &mut Option<StopReason>,
 ) -> Vec<StreamEvent> {
     let mut deltas: Vec<StreamEvent> = Vec::new();
@@ -240,8 +241,9 @@ fn process_gemini_event(
     if let Some(um) = ev.usage_metadata {
         let it = um.prompt_token_count.unwrap_or(0);
         let ot = um.candidates_token_count.unwrap_or(0);
+        let ct = um.cached_content_token_count.unwrap_or(0);
         if it != 0 || ot != 0 {
-            *pending_usage = Some((it, ot));
+            *pending_usage = Some((it, ot, ct));
         }
     }
 
@@ -976,14 +978,37 @@ mod tests {
             usage_metadata: Some(GeminiUsageMetadata {
                 prompt_token_count: Some(10),
                 candidates_token_count: Some(20),
+                cached_content_token_count: None,
             }),
             prompt_feedback: None,
         };
         let mut usage = None;
         let mut stop = None;
         let _ = process_gemini_event(ev, &mut usage, &mut stop);
-        assert_eq!(usage, Some((10, 20)));
+        // No cache hit reported → cached defaults to 0, not dropped.
+        assert_eq!(usage, Some((10, 20, 0)));
         assert_eq!(stop, Some(StopReason::EndTurn));
+    }
+
+    #[test]
+    fn process_event_extracts_cached_content_token_count() {
+        use super::sse::*;
+        let ev = GeminiEvent {
+            candidates: vec![GeminiCandidate {
+                content: None,
+                finish_reason: Some("STOP".into()),
+            }],
+            usage_metadata: Some(GeminiUsageMetadata {
+                prompt_token_count: Some(120),
+                candidates_token_count: Some(30),
+                cached_content_token_count: Some(100),
+            }),
+            prompt_feedback: None,
+        };
+        let mut usage = None;
+        let mut stop = None;
+        let _ = process_gemini_event(ev, &mut usage, &mut stop);
+        assert_eq!(usage, Some((120, 30, 100)));
     }
 
     #[test]

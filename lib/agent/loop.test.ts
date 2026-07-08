@@ -12,7 +12,12 @@ function scripted(...turns: StreamEvent[][]): (messages: Message[]) => AsyncIter
 }
 
 const done: StreamEvent = { type: "done", stopReason: { kind: "end_turn" } };
-const usage = (o: number): StreamEvent => ({ type: "usage", inputTokens: 100, outputTokens: o });
+const usage = (o: number, cached = 0): StreamEvent => ({
+  type: "usage",
+  inputTokens: 100,
+  outputTokens: o,
+  cachedTokens: cached,
+});
 
 describe("runAgentLoop", () => {
   it("text-only turn finishes without tools", async () => {
@@ -33,8 +38,8 @@ describe("runAgentLoop", () => {
     const seen: string[] = [];
     const callsSeen: Message[][] = [];
     const scriptedStream = scripted(
-      [{ type: "function_call", name: "activar_modulo", args: { modulo: "members" }, thoughtSignature: "sig-1" }, usage(10), done],
-      [{ type: "text_delta", text: "Listo, activé cuentas." }, usage(8), done],
+      [{ type: "function_call", name: "activar_modulo", args: { modulo: "members" }, thoughtSignature: "sig-1" }, usage(10, 30), done],
+      [{ type: "text_delta", text: "Listo, activé cuentas." }, usage(8, 20), done],
     );
     const r = await runAgentLoop({
       messages: [{ role: "user", content: "ponme signin" }], tools: [],
@@ -48,6 +53,8 @@ describe("runAgentLoop", () => {
     expect(seen).toEqual(["activar_modulo"]);
     expect(r.finalText).toContain("Listo");
     expect(r.usage.outputTokens).toBe(18);
+    // Cached tokens sum across turns just like input/output — F3-T2.
+    expect(r.usage.cachedTokens).toBe(50);
     // Happy multi-turn (tool call + final text) charges credits — F2-T9.
     expect(r.terminalError).toBe(false);
     const actions = events.filter((e) => e.type === "action");
@@ -126,7 +133,7 @@ describe("runAgentLoop", () => {
         opened += 1;
         return (async function* () {
           yield { type: "text_delta", text: "empeza" } as StreamEvent;
-          yield { type: "usage", inputTokens: 100, outputTokens: 20 } as StreamEvent;
+          yield { type: "usage", inputTokens: 100, outputTokens: 20, cachedTokens: 0 } as StreamEvent;
           yield { type: "done", stopReason: { kind: "max_tokens" } } as StreamEvent;
         })();
       },

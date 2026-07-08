@@ -64,9 +64,14 @@ async fn live_mini_prompt_emits_expected_event_shape() {
             StreamEvent::Usage {
                 input_tokens,
                 output_tokens,
+                cached_tokens,
             } => {
                 assert!(input_tokens > 0, "expected non-zero input_tokens");
                 assert!(output_tokens > 0, "expected non-zero output_tokens");
+                // A one-word prompt with no shared prefix has nothing to hit
+                // the cache — just assert the field is wired, not a specific
+                // value. F3-T3 owns actually forcing/measuring a cache hit.
+                assert!(cached_tokens < input_tokens, "cached_tokens: {cached_tokens}");
                 usage_count += 1;
             }
             StreamEvent::Done { stop_reason } => {

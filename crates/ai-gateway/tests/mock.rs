@@ -199,7 +199,8 @@ async fn happy_path_emits_start_deltas_usage_done_in_order() {
             events[4],
             StreamEvent::Usage {
                 input_tokens: 3,
-                output_tokens: 4
+                output_tokens: 4,
+                cached_tokens: 0
             }
         ),
         "got {:?}",
@@ -215,6 +216,41 @@ async fn happy_path_emits_start_deltas_usage_done_in_order() {
         "got {:?}",
         events[5]
     );
+}
+
+#[tokio::test]
+async fn cached_content_token_count_surfaces_on_the_usage_event() {
+    // Gemini 2.5+ implicit caching (on by default): a cache hit reports
+    // cachedContentTokenCount alongside prompt/candidates counts. End-to-end
+    // through the SSE parser → process_gemini_event → StreamEvent::Usage.
+    let body = "data: {\"candidates\":[{\"content\":{\"parts\":[{\"text\":\"hi\"}],\"role\":\"model\"},\"finishReason\":\"STOP\"}],\"usageMetadata\":{\"promptTokenCount\":120,\"candidatesTokenCount\":30,\"cachedContentTokenCount\":100,\"totalTokenCount\":150}}\n\n";
+    let url = serve_one(sse_envelope(body), Duration::ZERO).await;
+    let provider = GeminiProvider::with_base_url("k", url);
+
+    let mut stream = provider
+        .stream(small_request(), CancellationToken::new())
+        .await
+        .unwrap();
+
+    let mut usage_event = None;
+    while let Some(item) = stream.next().await {
+        if let StreamEvent::Usage { .. } = item.as_ref().unwrap() {
+            usage_event = Some(item.unwrap());
+        }
+    }
+
+    match usage_event {
+        Some(StreamEvent::Usage {
+            input_tokens,
+            output_tokens,
+            cached_tokens,
+        }) => {
+            assert_eq!(input_tokens, 120);
+            assert_eq!(output_tokens, 30);
+            assert_eq!(cached_tokens, 100);
+        }
+        other => panic!("expected Usage event, got {other:?}"),
+    }
 }
 
 #[tokio::test]

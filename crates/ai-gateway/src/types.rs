@@ -223,6 +223,11 @@ pub enum StreamEvent {
     Usage {
         input_tokens: u32,
         output_tokens: u32,
+        /// Gemini 2.5+ implicit caching: the subset of `input_tokens` that
+        /// hit the cache this turn (90% discount, automatic on Google's
+        /// invoice — not reflected in OpenLen's own credit pricing as of
+        /// F3). `0` when the provider reported no cache hit, never absent.
+        cached_tokens: u32,
     },
     Done {
         stop_reason: StopReason,
@@ -379,11 +384,26 @@ mod tests {
         let e = StreamEvent::Usage {
             input_tokens: 12,
             output_tokens: 34,
+            cached_tokens: 0,
         };
         let v: serde_json::Value = serde_json::to_value(&e).unwrap();
         assert_eq!(v["type"], "usage");
         assert_eq!(v["input_tokens"], 12);
         assert_eq!(v["output_tokens"], 34);
+        assert_eq!(v["cached_tokens"], 0);
+    }
+
+    #[test]
+    fn stream_event_usage_serializes_nonzero_cached_tokens() {
+        // Gemini 2.5+ implicit caching: a cache hit reports a non-zero
+        // cachedContentTokenCount (90% discount, automatic on Google's side).
+        let e = StreamEvent::Usage {
+            input_tokens: 120,
+            output_tokens: 30,
+            cached_tokens: 100,
+        };
+        let v: serde_json::Value = serde_json::to_value(&e).unwrap();
+        assert_eq!(v["cached_tokens"], 100);
     }
 
     #[test]

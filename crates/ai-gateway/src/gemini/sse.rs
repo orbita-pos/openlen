@@ -173,6 +173,11 @@ pub(crate) struct GeminiFunctionCall {
 pub(crate) struct GeminiUsageMetadata {
     pub(crate) prompt_token_count: Option<u32>,
     pub(crate) candidates_token_count: Option<u32>,
+    /// Gemini 2.5+ implicit caching (on by default, no opt-in): tokens in
+    /// this turn's prompt that hit the cache, billed at a 90% discount
+    /// automatically on Google's side. Absent when the turn had no cache
+    /// hit (short prompts, or the model/context isn't cache-eligible yet).
+    pub(crate) cached_content_token_count: Option<u32>,
 }
 
 #[derive(Debug, Default, Deserialize, PartialEq)]
@@ -355,6 +360,20 @@ mod tests {
         let um = ev.usage_metadata.as_ref().unwrap();
         assert_eq!(um.prompt_token_count, Some(12));
         assert_eq!(um.candidates_token_count, Some(5));
+        // Gemini 2.5+ implicit caching: absent when the turn had no cache hit.
+        assert_eq!(um.cached_content_token_count, None);
+    }
+
+    #[test]
+    fn parses_cached_content_token_count_when_present() {
+        let mut p = SseParser::new();
+        let bytes = b"data: {\"candidates\":[{\"finishReason\":\"STOP\"}],\"usageMetadata\":{\"promptTokenCount\":120,\"candidatesTokenCount\":30,\"cachedContentTokenCount\":100,\"totalTokenCount\":150}}\n\n";
+        let events = p.feed(bytes).unwrap();
+        assert_eq!(events.len(), 1);
+        let um = events[0].usage_metadata.as_ref().unwrap();
+        assert_eq!(um.prompt_token_count, Some(120));
+        assert_eq!(um.candidates_token_count, Some(30));
+        assert_eq!(um.cached_content_token_count, Some(100));
     }
 
     #[test]

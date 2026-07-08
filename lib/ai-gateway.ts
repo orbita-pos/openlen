@@ -105,7 +105,16 @@ export interface StreamRequest {
 export type StreamEvent =
   | { type: "start"; id: string }
   | { type: "text_delta"; text: string }
-  | { type: "usage"; inputTokens: number; outputTokens: number }
+  | {
+      type: "usage";
+      inputTokens: number;
+      outputTokens: number;
+      /** Gemini 2.5+ implicit caching (on by default): the subset of
+       *  `inputTokens` that hit the cache this turn, billed at a 90%
+       *  discount automatically on Google's invoice. `0` when the turn
+       *  had no cache hit. */
+      cachedTokens: number;
+    }
   | { type: "done"; stopReason: StopReason }
   | {
       type: "function_call";
@@ -272,6 +281,7 @@ function narrowEvent(raw: RustStreamEvent): StreamEvent {
         type: "usage",
         inputTokens: raw.inputTokens as number,
         outputTokens: raw.outputTokens as number,
+        cachedTokens: raw.cachedTokens ?? 0,
       };
     case "done":
       return {
