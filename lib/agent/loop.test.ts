@@ -92,6 +92,10 @@ describe("runAgentLoop", () => {
     expect(events.some((e) => e.type === "error")).toBe(true);
     // Hitting the maxTurns cap is a terminal error — 0 credits (F2-T9).
     expect(r.terminalError).toBe(true);
+    // F2-T10: coded so the panel can localize instead of showing raw Spanish.
+    const err = events.find((e) => e.type === "error") as { message: string; code?: string };
+    expect(err.code).toBe("turn_limit");
+    expect(err.message).toContain("límite de pasos");
   });
 
   it("caps runaway loops at maxToolCalls", async () => {
@@ -108,6 +112,9 @@ describe("runAgentLoop", () => {
     expect(events.some((e) => e.type === "error")).toBe(true);
     // Hitting the maxToolCalls cap is also a terminal error — 0 credits.
     expect(r.terminalError).toBe(true);
+    const err = events.find((e) => e.type === "error") as { message: string; code?: string };
+    expect(err.code).toBe("tool_limit");
+    expect(err.message).toContain("límite de pasos");
   });
 
   it("surfaces an error and stops the loop when a turn truncates at max_tokens", async () => {
@@ -136,6 +143,7 @@ describe("runAgentLoop", () => {
     expect(r.usage.outputTokens).toBe(20);
     // A truncated (max_tokens) turn is a terminal error — 0 credits (F2-T9).
     expect(r.terminalError).toBe(true);
+    expect((err as { code?: string }).code).toBe("truncated");
   });
 
   it("surfaces an error and stops the loop when a turn is cancelled", async () => {
@@ -153,6 +161,27 @@ describe("runAgentLoop", () => {
     expect(events.some((e) => e.type === "error")).toBe(true);
     // A cancelled turn is a terminal error — 0 credits (F2-T9).
     expect(r.terminalError).toBe(true);
+    const err = events.find((e) => e.type === "error") as { message: string; code?: string };
+    expect(err.code).toBe("cancelled");
+    expect(err.message.length).toBeGreaterThan(0);
+  });
+
+  it("surfaces an error and stops the loop when a turn's stopReason is an upstream error", async () => {
+    const events: AgentStreamEvent[] = [];
+    const r = await runAgentLoop({
+      messages: [{ role: "user", content: "x" }], tools: [],
+      openStream: scripted([
+        { type: "text_delta", text: "..." },
+        { type: "done", stopReason: { kind: "error", error: "upstream 503" } },
+      ]),
+      runTool: async () => { throw new Error("must not run"); },
+      emit: (e) => events.push(e),
+    });
+    expect(r.turns).toBe(1);
+    expect(r.terminalError).toBe(true);
+    const err = events.find((e) => e.type === "error") as { message: string; code?: string };
+    expect(err.code).toBe("upstream");
+    expect(err.message).toBe("upstream 503");
   });
 
   it("a confirm outcome emits a confirm event, feeds the model esperando_confirmacion, and continues", async () => {

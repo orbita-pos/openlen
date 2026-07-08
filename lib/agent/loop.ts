@@ -12,6 +12,20 @@
 import type { Message, StreamEvent } from "@/lib/ai-gateway";
 import type { ToolOutcome } from "@/lib/agent/tools";
 
+// F2 Task 10: a coded error lets the panel show a localized message instead
+// of the raw Spanish `message` (which stays as the server-side/fallback
+// string — never removed, just no longer the only source of truth). Only
+// `no_credits` is never emitted from this file (route.ts's credit gate owns
+// it) — it lives in the shared union so the route can type its own error
+// payload against the same contract the panel switches on.
+export type AgentErrorCode =
+  | "turn_limit"
+  | "tool_limit"
+  | "cancelled"
+  | "truncated"
+  | "upstream"
+  | "no_credits";
+
 export type AgentStreamEvent =
   | { type: "text"; text: string }
   | { type: "action"; tool: string; status: "running" | "done" | "error"; summary: string }
@@ -21,7 +35,7 @@ export type AgentStreamEvent =
   // real publish endpoint — the user's tap is the only thing that publishes.
   | { type: "confirm"; action: "publicar"; subdominio: string; idiomas: string[]; republicar: boolean }
   | { type: "done"; turns: number; toolCalls: number }
-  | { type: "error"; message: string };
+  | { type: "error"; message: string; code?: AgentErrorCode };
 
 export interface AgentLoopArgs {
   messages: Message[]; // system + contexto + history + user prompt (ya armados)
@@ -73,7 +87,7 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
 
   while (true) {
     if (turns >= maxTurns) {
-      args.emit({ type: "error", message: "El agente alcanzó su límite de pasos" });
+      args.emit({ type: "error", message: "El agente alcanzó su límite de pasos", code: "turn_limit" });
       return { finalText, usage: { inputTokens, outputTokens }, turns, toolCalls, terminalError: true };
     }
     turns += 1;
@@ -101,15 +115,16 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
         // max_tokens (truncated response) all surface as an error event and
         // stop the loop — a truncated turn's partial text is not a real answer.
         if (ev.stopReason.kind === "error") {
-          args.emit({ type: "error", message: ev.stopReason.error });
+          args.emit({ type: "error", message: ev.stopReason.error, code: "upstream" });
           sawError = true;
         } else if (ev.stopReason.kind === "cancelled") {
-          args.emit({ type: "error", message: "El agente fue cancelado." });
+          args.emit({ type: "error", message: "El agente fue cancelado.", code: "cancelled" });
           sawError = true;
         } else if (ev.stopReason.kind === "max_tokens") {
           args.emit({
             type: "error",
             message: "El agente se quedó sin espacio de respuesta — intenta un pedido más corto.",
+            code: "truncated",
           });
           sawError = true;
         }
@@ -128,7 +143,7 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
     const functionResponses: { name: string; response: Record<string, unknown> }[] = [];
     for (const call of calls) {
       if (toolCalls >= maxToolCalls) {
-        args.emit({ type: "error", message: "El agente alcanzó su límite de pasos" });
+        args.emit({ type: "error", message: "El agente alcanzó su límite de pasos", code: "tool_limit" });
         return { finalText, usage: { inputTokens, outputTokens }, turns, toolCalls, terminalError: true };
       }
       toolCalls += 1;

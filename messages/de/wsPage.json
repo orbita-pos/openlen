@@ -26,6 +26,14 @@
       "limit": "Du hast das Limit veröffentlichter Seiten deines Tarifs erreicht.",
       "invalid": "Veröffentlichen fehlgeschlagen. Prüfe die Subdomain und versuch es erneut.",
       "checking": "Prüfe…"
+    },
+    "errors": {
+      "turn_limit": "Der Agent hat sein Schritte-Limit pro Zug erreicht.",
+      "tool_limit": "Der Agent hat sein Aktionslimit pro Zug erreicht.",
+      "cancelled": "Der Zug wurde abgebrochen.",
+      "truncated": "Die Antwort ist ausgegangen – versuche eine kürzere Anfrage.",
+      "upstream": "Beim Modell ist ein Problem aufgetreten – versuche es erneut.",
+      "no_credits": "Du hast diesen Monat keine Guthaben mehr. Warte auf die monatliche Zurücksetzung oder wechsle zu Pro."
     }
   },
   "defaultProjectName": "Preisseite",

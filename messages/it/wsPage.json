@@ -26,6 +26,14 @@
       "limit": "Hai raggiunto il limite di pagine pubblicate del tuo piano.",
       "invalid": "Impossibile pubblicare. Controlla il sottodominio e riprova.",
       "checking": "Verifica…"
+    },
+    "errors": {
+      "turn_limit": "L'agente ha raggiunto il limite di passaggi per turno.",
+      "tool_limit": "L'agente ha raggiunto il limite di azioni per turno.",
+      "cancelled": "Il turno è stato annullato.",
+      "truncated": "La risposta ha esaurito lo spazio — prova una richiesta più breve.",
+      "upstream": "Il modello ha avuto un problema — riprova.",
+      "no_credits": "Hai esaurito i crediti di questo mese. Attendi il reset mensile o passa a Pro."
     }
   },
   "defaultProjectName": "Pagina prezzi",

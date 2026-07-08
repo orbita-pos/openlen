@@ -26,6 +26,14 @@
       "limit": "Vous avez atteint la limite de pages publiées de votre offre.",
       "invalid": "Impossible de publier. Vérifiez le sous-domaine et réessayez.",
       "checking": "Vérification…"
+    },
+    "errors": {
+      "turn_limit": "L'agent a atteint sa limite d'étapes par tour.",
+      "tool_limit": "L'agent a atteint sa limite d'actions par tour.",
+      "cancelled": "Le tour a été annulé.",
+      "truncated": "La réponse a manqué d'espace — essayez une demande plus courte.",
+      "upstream": "Le modèle a rencontré un problème — réessayez.",
+      "no_credits": "Vous n'avez plus de crédits ce mois-ci. Attendez la réinitialisation mensuelle ou passez à Pro."
     }
   },
   "defaultProjectName": "Page de tarifs",

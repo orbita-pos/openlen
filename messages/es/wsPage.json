@@ -26,6 +26,14 @@
       "limit": "Alcanzaste el límite de páginas publicadas de tu plan.",
       "invalid": "No se pudo publicar. Revisa el subdominio e inténtalo de nuevo.",
       "checking": "Verificando…"
+    },
+    "errors": {
+      "turn_limit": "El agente alcanzó su límite de pasos por turno.",
+      "tool_limit": "El agente alcanzó su límite de acciones por turno.",
+      "cancelled": "El turno fue cancelado.",
+      "truncated": "La respuesta se quedó sin espacio — intenta un pedido más corto.",
+      "upstream": "El modelo tuvo un problema — inténtalo de nuevo.",
+      "no_credits": "Te quedaste sin créditos este mes. Espera al reset mensual o pasa a Pro."
     }
   },
   "defaultProjectName": "Página de precios",

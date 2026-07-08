@@ -5,7 +5,7 @@ import { getCreditState, debitCredits, creditsForUsage } from "@/lib/credits";
 import { resolveOpIdByPath, tagWithOpIds } from "@/lib/html-ops";
 import { buildAgentSystemPrompt, buildFunctionDeclarations } from "@/lib/agent/catalog";
 import { buildAgentContext, estimateContextTokens } from "@/lib/agent/context";
-import { runAgentLoop } from "@/lib/agent/loop";
+import { runAgentLoop, type AgentErrorCode } from "@/lib/agent/loop";
 import { realDeps, runAgentTool, summarizeProjectState, type AgentSession } from "@/lib/agent/tools";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -23,7 +23,10 @@ import { realDeps, runAgentTool, summarizeProjectState, type AgentSession } from
 //   - done   { turns, toolCalls }                      — terminal, synthesized by
 //                                                        THIS route (runAgentLoop
 //                                                        never emits its own `done`)
-//   - error  { message }
+//   - error  { message, code? }                        — code (F2-T10) lets
+//                                                        the panel localize;
+//                                                        message stays as the
+//                                                        Spanish fallback.
 //
 // Provider: Gemini Flash only — the agent's tool calls (leer_estado /
 // editar_pagina / activar_modulo) do the heavy lifting; the model itself
@@ -221,7 +224,11 @@ export async function POST(req: Request): Promise<Response> {
       try {
         const { balance } = await getCreditState(userId);
         if (balance < 1) {
-          emit("error", { message: "Te quedaste sin créditos este mes. Esperá al reset mensual o pasá a Pro." });
+          const code: AgentErrorCode = "no_credits";
+          emit("error", {
+            message: "Te quedaste sin créditos este mes. Esperá al reset mensual o pasá a Pro.",
+            code,
+          });
           close();
           return;
         }
@@ -252,7 +259,8 @@ export async function POST(req: Request): Promise<Response> {
         close();
       } catch (err) {
         console.error("[agent] stream failed", err);
-        emit("error", { message: err instanceof Error ? err.message : "Unknown error" });
+        const code: AgentErrorCode = "upstream";
+        emit("error", { message: err instanceof Error ? err.message : "Unknown error", code });
         close();
       } finally {
         clearTimeout(timeout);

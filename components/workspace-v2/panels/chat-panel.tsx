@@ -35,6 +35,7 @@ import { AgentConfirmCard, type AgentConfirm } from "../agent-confirm-card";
 import type { StoredChatTurn } from "@/lib/projects/types";
 import type { SitePageSummary } from "@/lib/projects/site-pages";
 import type { AIModel } from "@/lib/ai-provider";
+import type { AgentErrorCode } from "@/lib/agent/loop";
 
 export interface ScopedSelection {
   hint: string;
@@ -713,7 +714,13 @@ function AIDesignChat({
                 break agentOuter;
               } else if (evName === "error") {
                 // Do NOT break — a `done` may still follow to close the turn.
-                errorMessage = strField(payload, "message") || t("errors.generic");
+                // F2-T10: prefer the localized string for a known `code`;
+                // fall back to the server's Spanish `message` (exact prior
+                // behavior) when the code is absent or unrecognized.
+                const code = (payload as { code?: unknown } | null)?.code;
+                errorMessage = isAgentErrorCode(code)
+                  ? tAgent(`errors.${code}`)
+                  : strField(payload, "message") || t("errors.generic");
               }
             }
           }
@@ -1719,6 +1726,24 @@ function strField(payload: unknown, key: string): string {
   if (!payload || typeof payload !== "object") return "";
   const v = (payload as Record<string, unknown>)[key];
   return typeof v === "string" ? v : "";
+}
+
+// F2-T10: the agent's `error` events carry an optional `code` the panel can
+// localize (`wsPage.agent.errors.<code>`) instead of showing the server's
+// Spanish `message` verbatim. This Record<AgentErrorCode, true> is the
+// type-level exhaustiveness check — if the union in lib/agent/loop.ts gains
+// a member without a matching entry here, this literal fails to typecheck.
+const AGENT_ERROR_CODE_KEYS: Record<AgentErrorCode, true> = {
+  turn_limit: true,
+  tool_limit: true,
+  cancelled: true,
+  truncated: true,
+  upstream: true,
+  no_credits: true,
+};
+
+function isAgentErrorCode(value: unknown): value is AgentErrorCode {
+  return typeof value === "string" && value in AGENT_ERROR_CODE_KEYS;
 }
 
 type Translator = ReturnType<typeof useTranslations<"panelsChat">>;

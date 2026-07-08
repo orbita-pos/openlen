@@ -26,6 +26,14 @@
       "limit": "你已达到套餐的已发布页面上限。",
       "invalid": "发布失败。请检查子域名后重试。",
       "checking": "检查中…"
+    },
+    "errors": {
+      "turn_limit": "智能体已达到每轮步骤上限。",
+      "tool_limit": "智能体已达到每轮操作上限。",
+      "cancelled": "该轮已被取消。",
+      "truncated": "回复内容超出空间限制，请尝试更简短的请求。",
+      "upstream": "模型出现问题，请重试。",
+      "no_credits": "你本月的额度已用完。请等待每月重置，或升级到 Pro。"
     }
   },
   "defaultProjectName": "价格页面",

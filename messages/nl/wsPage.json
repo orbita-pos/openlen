@@ -26,6 +26,14 @@
       "limit": "Je hebt de limiet voor gepubliceerde pagina's van je abonnement bereikt.",
       "invalid": "Publiceren mislukt. Controleer het subdomein en probeer opnieuw.",
       "checking": "Controleren…"
+    },
+    "errors": {
+      "turn_limit": "De agent heeft de limiet van stappen per beurt bereikt.",
+      "tool_limit": "De agent heeft de limiet van acties per beurt bereikt.",
+      "cancelled": "De beurt is geannuleerd.",
+      "truncated": "Het antwoord had geen ruimte meer — probeer een kortere aanvraag.",
+      "upstream": "Het model had een probleem — probeer het opnieuw.",
+      "no_credits": "Je hebt deze maand geen credits meer. Wacht op de maandelijkse reset of upgrade naar Pro."
     }
   },
   "defaultProjectName": "Prijzenpagina",

@@ -26,6 +26,14 @@
       "limit": "You've hit your plan's published-pages limit.",
       "invalid": "Couldn't publish. Check the subdomain and try again.",
       "checking": "Checking…"
+    },
+    "errors": {
+      "turn_limit": "The agent hit its per-turn step limit.",
+      "tool_limit": "The agent hit its per-turn action limit.",
+      "cancelled": "The turn was cancelled.",
+      "truncated": "The response ran out of room — try a shorter request.",
+      "upstream": "The model had a problem — try again.",
+      "no_credits": "You're out of credits this month. Wait for the monthly reset or upgrade to Pro."
     }
   },
   "defaultProjectName": "Pricing Page",
