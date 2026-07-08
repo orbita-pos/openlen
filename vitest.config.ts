@@ -71,6 +71,7 @@ export default defineConfig({
       "lib/projects/page-edge-paths.test.ts",
       "lib/projects/preview.test.ts",
       "lib/projects/settings-patch.test.ts",
+      "lib/projects/create-page.test.ts",
       "lib/notifications/**/*.test.ts",
       "lib/publish/scene-host.test.ts",
       "lib/publish/procedural-3d.test.ts",

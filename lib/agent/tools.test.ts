@@ -289,6 +289,52 @@ describe("preparar_marketing", () => {
   });
 });
 
+describe("crear_pagina", () => {
+  it("creates a page from the home shell and saves, deriving the slug from titulo when absent", async () => {
+    const { deps, store } = makeDeps();
+    const out = await runAgentTool(makeSession(), deps, "crear_pagina", { titulo: "Sobre Nosotros" });
+    assert.equal(out.response.ok, true);
+    assert.equal(out.response.slug, "sobre-nosotros");
+    assert.equal(out.action?.tool, "crear_pagina");
+    assert.ok(store.data.pages?.["sobre-nosotros"]);
+    assert.equal(store.saved.length, 1);
+  });
+
+  it("modulo=bookings injects the module section and does not touch settings.bookings", async () => {
+    const { deps, store } = makeDeps();
+    const out = await runAgentTool(makeSession(), deps, "crear_pagina", { modulo: "bookings" });
+    assert.equal(out.response.ok, true);
+    // The fixture HTML carries no lang="es" attribute, so the module's
+    // language resolution (isSpanish test in create-page.ts) falls to English.
+    assert.equal(out.response.slug, "booking");
+    assert.ok(store.data.pages?.["booking"]?.html.includes("data-ol-bookings-section"));
+    assert.equal(store.data.settings?.bookings?.enabled, undefined);
+  });
+
+  it("surfaces exists/limit/reserved-slug errors as data, without saving", async () => {
+    const { deps: depsExists } = makeDeps({ data: { html: HTML, pages: { menu: { html: "<html>x</html>" } } } });
+    const exists = await runAgentTool(makeSession(), depsExists, "crear_pagina", { slug: "menu" });
+    assert.equal(exists.response.ok, false);
+
+    const { deps: depsReserved, store: storeReserved } = makeDeps();
+    const reserved = await runAgentTool(makeSession(), depsReserved, "crear_pagina", { slug: "cuenta" });
+    assert.equal(reserved.response.ok, false);
+    assert.equal(storeReserved.saved.length, 0);
+
+    const pages: Record<string, { html: string }> = {};
+    for (let i = 0; i < 20; i++) pages[`p${i}`] = { html: "<html>x</html>" };
+    const { deps: depsLimit } = makeDeps({ data: { html: HTML, pages } });
+    const limit = await runAgentTool(makeSession(), depsLimit, "crear_pagina", { slug: "one-more" });
+    assert.equal(limit.response.ok, false);
+  });
+
+  it("no home html comes back as data, not a throw", async () => {
+    const { deps } = makeDeps({ data: { html: "" } });
+    const out = await runAgentTool(makeSession(), deps, "crear_pagina", { slug: "menu" });
+    assert.equal(out.response.ok, false);
+  });
+});
+
 describe("runAgentTool", () => {
   it("returns ok:false for an unknown tool name instead of throwing", async () => {
     const { deps } = makeDeps();

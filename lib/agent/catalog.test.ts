@@ -4,7 +4,7 @@ import { TEMATICA_PRESETS } from "@/lib/tematicas/presets";
 import { THEME_PRESETS } from "@/lib/theme-presets";
 
 describe("buildFunctionDeclarations", () => {
-  it("declares exactly the F1 + F2 Task 1 + F2 Task 2 + F2 Task 3 tools", () => {
+  it("declares exactly the F1 + F2 Task 1 + F2 Task 2 + F2 Task 3 + F2 Task 4 tools", () => {
     const names = buildFunctionDeclarations().map((d) => d.name);
     expect(names).toEqual([
       "leer_estado",
@@ -16,7 +16,15 @@ describe("buildFunctionDeclarations", () => {
       "cambiar_tema",
       "aplicar_tematica",
       "preparar_marketing",
+      "crear_pagina",
     ]);
+  });
+  it("crear_pagina exposes slug/titulo/modulo, modulo enum bookings|collections, nothing required", () => {
+    const d = buildFunctionDeclarations().find((x) => x.name === "crear_pagina") as any;
+    expect(d.parameters.properties.slug.type).toBe("STRING");
+    expect(d.parameters.properties.titulo.type).toBe("STRING");
+    expect(d.parameters.properties.modulo.enum).toEqual(["bookings", "collections"]);
+    expect(d.parameters.required).toBeUndefined();
   });
   it("activar_modulo enum matches AGENT_MODULES", () => {
     const d = buildFunctionDeclarations().find((x) => x.name === "activar_modulo") as any;
@@ -104,5 +112,10 @@ describe("buildAgentSystemPrompt", () => {
       expect(p).toContain(kit.name);
     }
     expect(p).toContain("reink");
+  });
+  it("carries the F2 Task 4 crear_pagina knowledge", () => {
+    const p = buildAgentSystemPrompt();
+    expect(p).toContain("crear_pagina");
+    expect(p).toContain("activar_modulo");
   });
 });

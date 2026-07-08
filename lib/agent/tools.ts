@@ -21,6 +21,7 @@ import { detectSlotPath, sanitizeForPublish } from "@/lib/html-engine";
 import { applyOps, tagWithOpIds, type Op, type OpType } from "@/lib/html-ops";
 import { normalizeBornCanonical } from "@/lib/normalize";
 import { getAssetStorage } from "@/lib/projects/assets";
+import { createSitePage, type CreatePageInput } from "@/lib/projects/create-page";
 import { applyModuleIntent } from "@/lib/projects/module-intent";
 import {
   applySettingsPatch,
@@ -388,6 +389,36 @@ async function toolPrepararMarketing(
   };
 }
 
+async function toolCrearPagina(
+  session: AgentSession,
+  deps: AgentDeps,
+  args: Record<string, unknown>,
+): Promise<ToolOutcome> {
+  const input: CreatePageInput = {
+    slug: typeof args.slug === "string" ? args.slug : undefined,
+    title: typeof args.titulo === "string" ? args.titulo : undefined,
+    module:
+      args.modulo === "bookings" || args.modulo === "collections"
+        ? args.modulo
+        : undefined,
+  };
+
+  const row = await deps.loadProject(session.projectId, session.userId);
+  if (!row) return { response: { ok: false, error: "proyecto no encontrado" } };
+
+  const outcome = createSitePage(row.data, input);
+  if ("error" in outcome) {
+    return { response: { ok: false, error: outcome.message } };
+  }
+
+  await deps.saveProjectData(session.projectId, session.userId, outcome.nextData);
+
+  return {
+    response: { ok: true, slug: outcome.slug, titulo: outcome.title },
+    action: { tool: "crear_pagina", ok: true, summary: outcome.slug },
+  };
+}
+
 interface RawEdit {
   op?: unknown;
   target?: unknown;
@@ -700,6 +731,8 @@ export async function runAgentTool(
         return await toolActivar3d(session, deps, args);
       case "preparar_marketing":
         return await toolPrepararMarketing(session, deps, args);
+      case "crear_pagina":
+        return await toolCrearPagina(session, deps, args);
       default:
         return { response: { ok: false, error: "herramienta desconocida" } };
     }

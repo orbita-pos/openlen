@@ -2,15 +2,9 @@ import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 import { auth } from "@/auth";
 import { db, schema } from "@/lib/db";
+import { createSitePage } from "@/lib/projects/create-page";
 import type { ProjectData } from "@/lib/projects/types";
-import {
-  buildPageShell,
-  listSitePages,
-  MAX_SITE_PAGES,
-  pageTitle,
-  validatePageSlug,
-} from "@/lib/projects/site-pages";
-import { buildModuleSection } from "@/lib/publish/module-sections";
+import { listSitePages } from "@/lib/projects/site-pages";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -26,6 +20,12 @@ export const dynamic = "force-dynamic";
 //      PLUS a designed, brand-matched module section (lib/publish/module-
 //      sections) — slug/title are derived per module + page language; the
 //      module's publish placeholder rides inside so the bake wires the widget.
+//
+//      Validation + slug resolution + shell/section building live in
+//      lib/projects/create-page.ts (shared with the agent's crear_pagina
+//      tool) — this handler is just auth -> Zod parse -> load -> createSitePage
+//      -> map its error to the SAME status/payload this route has always
+//      returned -> write.
 // ─────────────────────────────────────────────────────────────────────────────
 
 const MODULE_PAGE = z.enum(["bookings", "collections"]);
@@ -39,36 +39,6 @@ const CreateSchema = z
   .refine((d) => !!d.slug || !!d.module, {
     message: "slug or module is required",
   });
-
-// Per-module page slug + title, by page language (matches buildAutoMembersPage's
-// es/en split; other locales fall back to English).
-const MODULE_PAGE_META: Record<
-  z.infer<typeof MODULE_PAGE>,
-  { es: { slug: string; title: string }; en: { slug: string; title: string } }
-> = {
-  bookings: {
-    es: { slug: "reservas", title: "Reservas" },
-    en: { slug: "booking", title: "Booking" },
-  },
-  collections: {
-    es: { slug: "catalogo", title: "Catálogo" },
-    en: { slug: "catalog", title: "Catalog" },
-  },
-};
-
-/** Inject a module section into a freshly-built page shell — before the footer,
- *  else before </body>. The shell's titled hero stays above it. */
-function injectIntoShell(shell: string, section: string): string {
-  if (!section) return shell;
-  const footerIdx = shell.search(/<footer[\s>]/i);
-  if (footerIdx !== -1) {
-    return shell.slice(0, footerIdx) + section + shell.slice(footerIdx);
-  }
-  const bodyClose = shell.lastIndexOf("</body>");
-  return bodyClose !== -1
-    ? shell.slice(0, bodyClose) + section + shell.slice(bodyClose)
-    : shell + section;
-}
 
 async function loadRow(projectId: string, userId: string) {
   const rows = await db
@@ -109,57 +79,34 @@ export async function POST(
   const row = await loadRow(id, session.user.id);
   if (!row) return json({ error: "not_found" }, 404);
   const data: ProjectData = row.data ?? { html: "" };
-  if (!data.html) return json({ error: "no_home_html" }, 409);
 
-  // Resolve slug + title + (optional) module section. A module page derives its
-  // slug/title per page language; otherwise the user-supplied slug is used.
-  const isSpanish = /<html[^>]*\blang=["']?es/i.test(data.html);
-  let slug: string;
-  let title: string | undefined;
-  let section = "";
-  if (parsed.data.module) {
-    const meta = MODULE_PAGE_META[parsed.data.module][isSpanish ? "es" : "en"];
-    const check = validatePageSlug(meta.slug);
-    if (!check.ok) return json({ error: check.reason }, 400);
-    slug = check.slug;
-    title = meta.title;
-    section = buildModuleSection(parsed.data.module, {
-      lang: isSpanish ? "es" : "en",
-    });
-  } else {
-    const check = validatePageSlug(parsed.data.slug as string);
-    if (!check.ok) return json({ error: check.reason }, 400);
-    slug = check.slug;
-    title = parsed.data.title?.trim() || undefined;
+  const outcome = createSitePage(data, parsed.data);
+  if ("error" in outcome) {
+    switch (outcome.error) {
+      case "no_home":
+        return json({ error: "no_home_html" }, 409);
+      case "invalid_slug":
+        return json({ error: outcome.reason }, 400);
+      case "exists":
+        return json({ error: "exists", slug: outcome.slug }, 409);
+      case "limit_reached":
+        return json({ error: "limit_reached", limit: outcome.limit }, 402);
+      case "invalid_input":
+        // Unreachable in practice — CreateSchema above already validated an
+        // equivalent shape. Kept as a safety net, same envelope as the Zod
+        // parse failure above.
+        return json({ error: "invalid", message: outcome.message }, 400);
+    }
   }
 
-  const pages = data.pages ?? {};
-  if (pages[slug]) return json({ error: "exists", slug }, 409);
-  if (Object.keys(pages).length >= MAX_SITE_PAGES) {
-    return json({ error: "limit_reached", limit: MAX_SITE_PAGES }, 402);
-  }
-
-  // New pages are born as the home page's SHELL (head + nav + footer, blank
-  // titled canvas) so they wear the look without dragging Home's content along.
-  // A module page then gets its designed section injected before the footer.
-  const displayTitle = pageTitle(slug, title ? { html: "", title } : undefined);
-  let pageHtml = buildPageShell(data.html, displayTitle) ?? data.html;
-  pageHtml = injectIntoShell(pageHtml, section);
-  const nextData: ProjectData = {
-    ...data,
-    pages: { ...pages, [slug]: { html: pageHtml, ...(title ? { title } : {}) } },
-  };
   await db
     .update(schema.projects)
-    .set({ data: nextData, updatedAt: new Date() })
+    .set({ data: outcome.nextData, updatedAt: new Date() })
     .where(
       and(eq(schema.projects.id, id), eq(schema.projects.userId, session.user.id)),
     );
 
-  return json(
-    { ok: true, page: { slug, title: pageTitle(slug, nextData.pages?.[slug]) } },
-    200,
-  );
+  return json({ ok: true, page: { slug: outcome.slug, title: outcome.title } }, 200);
 }
 
 function json(body: unknown, status: number): Response {

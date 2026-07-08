@@ -177,6 +177,19 @@ export function buildFunctionDeclarations(): Record<string, unknown>[] {
         required: ["registro"],
       },
     },
+    {
+      name: "crear_pagina",
+      description:
+        "Crea una página NUEVA del sitio (multi-página) — nace como el shell de Home (mismo look/nav/footer, lienzo en blanco titulado), nunca copia el contenido de Home. Pasa slug (URL) y/o titulo (nombre visible) — si solo sabes el nombre, manda solo titulo y el slug se deriva automáticamente. Con modulo=\"bookings\"|\"collections\" la página nace YA con la sección diseñada de ese módulo inyectada; en ese caso el módulo define su propio slug/título (ignora cualquier slug/titulo que mandes junto con modulo) — pero el módulo en sí sigue apagado hasta que uses activar_modulo.",
+      parameters: {
+        type: "OBJECT",
+        properties: {
+          slug: { type: "STRING" },
+          titulo: { type: "STRING" },
+          modulo: { type: "STRING", enum: ["bookings", "collections"] },
+        },
+      },
+    },
   ];
 }
 
@@ -200,6 +213,9 @@ ${SETTINGS_TOOL_KNOWLEDGE}
 
 EDICIÓN DE PÁGINA (editar_pagina):
 El documento en tu contexto trae data-op-id en cada elemento. Dirige cada edit por ese id. new_html es el outerHTML nuevo SIN atributos data-op-id (el servidor los inyecta). Máximo 8 edits por llamada; los ids cambian tras aplicar.
+
+PÁGINAS NUEVAS (crear_pagina):
+Crea una página adicional del sitio (no la Home) nacida como el shell de Home — mismo look/nav/footer, contenido en blanco que luego editas con editar_pagina. Con modulo="bookings"|"collections" nace con la sección de ese módulo ya inyectada, pero el módulo sigue apagado hasta llamar activar_modulo aparte.
 
 GUÍA DE DISEÑO (para cualquier new_html que emitas):
 ${DESIGN_GUIDANCE}`;
