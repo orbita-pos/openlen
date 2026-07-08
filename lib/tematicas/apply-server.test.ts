@@ -32,4 +32,30 @@ describe("applyTematicaToHtml", () => {
     assert.ok(!clean.includes("data-ol-tematica"));
     assert.ok(!clean.includes("<style data-ol-tematica"));
   });
+  it('remove also strips the editor-serialized stamp (data-ol-tematica="")', () => {
+    // The iframe's setAttribute('data-ol-tematica','') saves as ="" — a doc
+    // themed IN THE EDITOR must strip just as cleanly as one stamped here.
+    const editorDoc =
+      `<!doctype html><html lang="es" data-ol-tematica="${FIRST}" data-ol-tematica-bg="petals">` +
+      `<head><title>x</title>` +
+      `<link rel="stylesheet" data-ol-tematica="" href="https://fonts.example/x.css">` +
+      `<style data-ol-tematica="">html{color:red}</style>` +
+      `</head><body><h1>Hola</h1></body></html>`;
+    const clean = removeTematicaFromHtml(editorDoc);
+    assert.ok(!clean.includes("data-ol-tematica"));
+    assert.ok(!clean.includes("<style"));
+    assert.ok(!clean.includes("<link"));
+    assert.ok(clean.includes("<h1>Hola</h1>"));
+  });
+  it("a valid fondo stamps that scene id", () => {
+    const scene = TEMATICA_PRESETS[0].backdrops[1].id;
+    const r = applyTematicaToHtml(DOC, FIRST, scene) as { html: string };
+    assert.ok(r.html.includes(`data-ol-tematica-bg="${scene}"`));
+  });
+  it("an unknown fondo resolves to the kit's hero scene — the raw string never lands", () => {
+    const hero = TEMATICA_PRESETS[0].backdrops[0].id;
+    const r = applyTematicaToHtml(DOC, FIRST, "escena-inventada") as { html: string };
+    assert.ok(r.html.includes(`data-ol-tematica-bg="${hero}"`));
+    assert.ok(!r.html.includes("escena-inventada"));
+  });
 });

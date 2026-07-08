@@ -17,7 +17,7 @@
 // editar_pagina.
 
 import { applyThemeTokensToHtml } from "@/lib/agent/theme-apply";
-import { getTematica, tematicaCss } from "@/lib/tematicas/presets";
+import { getTematica, resolveBackdrop, tematicaCss } from "@/lib/tematicas/presets";
 
 const HTML_OPEN_TAG_RE = /<html\b[^>]*>/i;
 const HEAD_CLOSE_RE = /<\/head>/i;
@@ -29,8 +29,12 @@ const HEAD_CLOSE_RE = /<\/head>/i;
  *  have hand-adjusted them after applying the kit. Removing the *world*
  *  shouldn't silently revert unrelated theme edits. */
 export function removeTematicaFromHtml(html: string): string {
+  // The style regex must tolerate attribute serialization: this module emits
+  // the bare `<style data-ol-tematica>`, but the editor iframe's
+  // setAttribute('data-ol-tematica','') saves as `<style data-ol-tematica="">`
+  // — both shapes reach project.data.html.
   return html
-    .replace(/<style data-ol-tematica>[\s\S]*?<\/style>/gi, "")
+    .replace(/<style[^>]*\bdata-ol-tematica\b[^>]*>[\s\S]*?<\/style>/gi, "")
     .replace(/<link[^>]*\bdata-ol-tematica\b[^>]*>/gi, "")
     .replace(/\s+data-ol-tematica(?:-bg)?="[^"]*"/gi, "");
 }
@@ -48,12 +52,18 @@ export function applyTematicaToHtml(
 
   let out = removeTematicaFromHtml(html);
 
+  // Resolve the variant ONCE and stamp the resolved scene id — an unknown
+  // backdropId falls back to the kit's hero scene (resolveBackdrop's own
+  // rule), so the attr always matches what the kit CSS actually paints
+  // (never a raw unvalidated string that would drift the editor's picker).
+  const resolvedBg = backdropId ? resolveBackdrop(kit, backdropId).id : undefined;
+
   out = out.replace(HTML_OPEN_TAG_RE, (tag) => {
-    const bgAttr = backdropId ? ` data-ol-tematica-bg="${backdropId}"` : "";
+    const bgAttr = resolvedBg ? ` data-ol-tematica-bg="${resolvedBg}"` : "";
     return tag.replace(/^<html\b/i, (open) => `${open} data-ol-tematica="${kit.id}"${bgAttr}`);
   });
 
-  const css = tematicaCss(kit, backdropId);
+  const css = tematicaCss(kit, resolvedBg);
   const fontLink = kit.fontHref
     ? `<link rel="stylesheet" data-ol-tematica href="${kit.fontHref}">`
     : "";

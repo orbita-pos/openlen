@@ -17,6 +17,12 @@ export type MotionLook = (typeof MOTION_LOOKS)[number];
 const MARKETING_REGISTERS = POST_REGISTER.options;
 const THEME_PRESET_IDS = THEME_PRESETS.map((p) => p.id);
 const TEMATICA_IDS = TEMATICA_PRESETS.map((p) => p.id);
+// Every kit's scene ids, deduped — the valid values for aplicar_tematica's
+// fondo. Generated from the presets' backdrop tables (the same source
+// resolveBackdrop reads) so a new scene lands in the enum automatically.
+const TEMATICA_FONDO_IDS = Array.from(
+  new Set(TEMATICA_PRESETS.flatMap((p) => p.backdrops.map((b) => b.id))),
+);
 
 // Conocimiento de las 5 herramientas de settings/tema F2 (motion, música,
 // 3D, marketing, tema) — igual que MODULE_KNOWLEDGE, va en el system prompt.
@@ -25,7 +31,7 @@ const SETTINGS_TOOL_KNOWLEDGE = `- cambiar_motion: coreografía de scroll (Motio
 - activar_3d: enciende o apaga la escena 3D de fondo (Born With Depth). Esto solo prende/apaga — el diseño fino (modelo, gestos, cámara) se ajusta en el panel 3D del editor, no por el agente.
 - preparar_marketing: fija el rubro (registro) del Marketing Kit — posts curados zero-AI — y si deben combinarse con la paleta/fuente de la página. Después de usarla, dirige al usuario al tab Marketing para ver y copiar los posts.
 - cambiar_tema: re-tematiza la página al instante (sin llamada de IA) — igual que un click en Looks del inspector. accent (hex) deriva una paleta completa con contraste WCAG garantizado; fuente y radius toman SOLO ese rasgo del preset nombrado (ids: ${THEME_PRESET_IDS.join(", ")}), útil para combinar look a piezas. modo elige la variante clara/oscura — con accent, o solo (re-deriva del accent actual de la página, igual que el toggle Dark).
-- aplicar_tematica: instala o quita un MUNDO de página completa (fondo a pantalla completa + vidrio en tarjetas/nav + paleta y fuente del kit) — el look guns.lol/Carrd, igual que un click en Temáticas del inspector, sin llamada de IA. tematica="quitar" remueve el mundo activo; los tokens --ol-* que haya dejado NO se tocan (son estado de tema genérico, no del kit). fondo (opcional) elige la variante de escena del kit. DELTA: el reink de contraste interactivo del iframe no corre aquí — el CSS del kit ya cubre casi todo; si algo queda ilegible, encadena editar_pagina. Kits disponibles: ${TEMATICA_PRESETS.map((p) => `${p.id} (${p.name}: ${p.hint})`).join(" · ")}.`;
+- aplicar_tematica: instala o quita un MUNDO de página completa (fondo a pantalla completa + vidrio en tarjetas/nav + paleta y fuente del kit) — el look guns.lol/Carrd, igual que un click en Temáticas del inspector, sin llamada de IA. tematica="quitar" remueve el mundo activo; los tokens --ol-* que haya dejado NO se tocan (son estado de tema genérico, no del kit). fondo (opcional) elige la variante de escena — usa SOLO escenas del kit elegido; una escena de otro kit cae a la escena hero. DELTA: el reink de contraste interactivo del iframe no corre aquí — el CSS del kit ya cubre casi todo; si algo queda ilegible, encadena editar_pagina. Kits disponibles: ${TEMATICA_PRESETS.map((p) => `${p.id} (${p.name}: ${p.hint}; escenas: ${p.backdrops.map((b) => b.id).join("/")})`).join(" · ")}.`;
 
 // Conocimiento por módulo: qué es + cuándo recomendarlo. Español porque el
 // usuario objetivo habla español; el modelo responde en el idioma del usuario.
@@ -148,12 +154,12 @@ export function buildFunctionDeclarations(): Record<string, unknown>[] {
     {
       name: "aplicar_tematica",
       description:
-        `Instala o quita un MUNDO de página completa (temática) — imagen de fondo a pantalla completa con scrim de legibilidad, vidrio en tarjetas/nav, y la paleta/fuente del kit — todo en un click, sin llamada de IA (el look guns.lol/Carrd). tematica="quitar" remueve el mundo activo (el <style>/<link>/atributos del kit); los tokens --ol-* que haya dejado NO se tocan, son estado de tema genérico que el usuario pudo haber ajustado después. fondo (opcional) elige la variante de escena del kit (por defecto la escena hero). DELTA CONOCIDO: el reink de contraste interactivo del iframe no corre aquí — el CSS del kit ya cubre casi todo; si algo queda ilegible, encadena editar_pagina. Kits (id — nombre: vibe): ${TEMATICA_PRESETS.map((p) => `${p.id} — ${p.name}: ${p.hint}`).join(" · ")}.`,
+        `Instala o quita un MUNDO de página completa (temática) — imagen de fondo a pantalla completa con scrim de legibilidad, vidrio en tarjetas/nav, y la paleta/fuente del kit — todo en un click, sin llamada de IA (el look guns.lol/Carrd). tematica="quitar" remueve el mundo activo (el <style>/<link>/atributos del kit); los tokens --ol-* que haya dejado NO se tocan, son estado de tema genérico que el usuario pudo haber ajustado después. fondo (opcional) elige la variante de escena del kit — usa SOLO una escena del kit elegido (por defecto, o con una escena de otro kit, cae a la escena hero). DELTA CONOCIDO: el reink de contraste interactivo del iframe no corre aquí — el CSS del kit ya cubre casi todo; si algo queda ilegible, encadena editar_pagina. Kits (id — nombre: vibe [escenas]): ${TEMATICA_PRESETS.map((p) => `${p.id} — ${p.name}: ${p.hint} [${p.backdrops.map((b) => b.id).join("/")}]`).join(" · ")}.`,
       parameters: {
         type: "OBJECT",
         properties: {
           tematica: { type: "STRING", enum: [...TEMATICA_IDS, "quitar"] },
-          fondo: { type: "STRING" },
+          fondo: { type: "STRING", enum: [...TEMATICA_FONDO_IDS] },
         },
         required: ["tematica"],
       },

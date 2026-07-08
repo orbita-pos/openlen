@@ -67,6 +67,13 @@ describe("buildFunctionDeclarations", () => {
     const kitIds = TEMATICA_PRESETS.map((p) => p.id);
     expect(d.parameters.properties.tematica.enum).toEqual([...kitIds, "quitar"]);
     expect(d.parameters.properties.fondo.type).toBe("STRING");
+    // fondo enum = every kit's scene ids (deduped, preset order) — generated
+    // from the same backdrop tables resolveBackdrop reads, never hardcoded.
+    const sceneIds = Array.from(
+      new Set(TEMATICA_PRESETS.flatMap((p) => p.backdrops.map((b) => b.id))),
+    );
+    expect(d.parameters.properties.fondo.enum).toEqual(sceneIds);
+    expect(sceneIds.length).toBeGreaterThan(0);
     expect(d.parameters.required).toEqual(["tematica"]);
   });
 });
