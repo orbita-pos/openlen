@@ -203,4 +203,10 @@ describe("buildAgentSystemPrompt", () => {
     expect(p).toContain("elegir_foto");
     expect(p.toLowerCase()).toContain("no gastan tus pasos");
   });
+  it("carries the F3 Task 7 backend-honesty rule — no fake static mockups for missing backend features", () => {
+    const p = buildAgentSystemPrompt();
+    expect(p).toContain("carrito");
+    expect(p).toContain("HONESTAMENTE");
+    expect(p).toContain("Collections");
+  });
 });

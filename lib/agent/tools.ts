@@ -1015,7 +1015,7 @@ async function toolPublicar(
           error:
             check.reason === "reserved"
               ? `el subdominio "${raw}" está reservado — pide al usuario otro nombre`
-              : `el subdominio "${raw}" no es válido (usa minúsculas, números y guiones, 1-63 caracteres, sin acentos ni espacios)`,
+              : `el subdominio "${raw}" no es válido: la regla es solo minúsculas, números y guiones, 1-63 caracteres, sin espacios ni acentos. Explícasela al usuario y sugiérele una versión corregida (p. ej. quitando espacios/acentos y usando guiones).`,
         },
       };
     }

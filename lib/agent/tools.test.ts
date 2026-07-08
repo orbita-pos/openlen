@@ -643,6 +643,19 @@ describe("publicar", () => {
     assert.equal(out.confirm, undefined);
     assert.equal(out.action, undefined);
     assert.equal(store.saved.length, 0);
+    // The message must carry the actual rule, not just "invalid" — the model
+    // needs it to explain the shape rule AND suggest a corrected name.
+    assert.ok(String(out.response.error).includes("minúsculas"));
+  });
+
+  it("a reserved subdominio (cuenta) → ok:false BEFORE any confirm card, nothing saved", async () => {
+    const { deps, store } = makeDeps({ subdomain: "tienda-vieja" });
+    const out = await runAgentTool(makeSession(), deps, "publicar", { subdominio: "cuenta" });
+    assert.equal(out.response.ok, false);
+    assert.equal(out.confirm, undefined);
+    assert.equal(out.action, undefined);
+    assert.equal(store.saved.length, 0);
+    assert.ok(String(out.response.error).toLowerCase().includes("reservad"));
   });
 
   it("no claim AND no subdominio → ok:false telling the model to ask the user, no confirm, nothing saved", async () => {

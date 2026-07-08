@@ -44,6 +44,12 @@ export const RESERVED_SUBDOMAINS: ReadonlySet<string> = new Set([
   "status",
   "support",
   "help",
+  // Product-adjacent (ES/EN) — collides with the platform's own account
+  // concept ("Mi cuenta" / Members sign-in), same reasoning as app/dashboard.
+  // Mirrors lib/projects/site-pages.ts's RESERVED_SLUGS (a per-project page
+  // path list, not this one) which already reserves both spellings.
+  "cuenta",
+  "account",
   // Infra / fallbacks
   "_default",
   "root",
