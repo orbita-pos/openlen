@@ -94,6 +94,17 @@ if ($env:OPENLEN_SKIP_MIGRATE -ne "1") {
   if ($LASTEXITCODE -ne 0) { throw "community:migrate failed (exit $LASTEXITCODE)" }
 }
 
+# Chat transcript columns (page, F2-T11 actions/noDocChange). Scoped + idempotent
+# (ADD COLUMN IF NOT EXISTS), same rationale as the others: appendChatMessage's
+# INSERT references the new columns, so without this migration EVERY chat-turn
+# append 500s after the swap — and the panel's persistTurn is fire-and-forget,
+# so the breakage is silent (turns just stop surviving reloads).
+if ($env:OPENLEN_SKIP_MIGRATE -ne "1") {
+  Step 2 "Applying chat DB migration (npm run chat:migrate)..."
+  npm run chat:migrate
+  if ($LASTEXITCODE -ne 0) { throw "chat:migrate failed (exit $LASTEXITCODE)" }
+}
+
 # --- 3. Compose standalone with static + public -----------------------
 Step 3 "Composing standalone (copying .next/static + public/)..."
 New-Item -ItemType Directory -Force -Path ".next/standalone/.next/static" | Out-Null
