@@ -704,6 +704,27 @@ describe("recordar_preferencia", () => {
     assert.equal(out.response.ya_existia, true);
     assert.equal(store.briefWrites, writes);
   });
+  it("a LONGER refinement of an existing bullet IS saved (never deduped in reverse)", async () => {
+    const { deps, store } = makeDeps();
+    await runAgentTool(makeSession(), deps, "recordar_preferencia", { preferencia: "Sé formal" });
+    const out = await runAgentTool(makeSession(), deps, "recordar_preferencia", {
+      preferencia: "Sé formal, excepto con proveedores VIP",
+    });
+    assert.equal(out.response.ok, true);
+    assert.equal(out.response.ya_existia, undefined);
+    assert.ok(store.userBrief!.includes("• Sé formal\n"));
+    assert.ok(store.userBrief!.includes("• Sé formal, excepto con proveedores VIP"));
+  });
+  it("embedded newlines are collapsed — a \\n• payload saves as ONE bullet line", async () => {
+    const { deps, store } = makeDeps();
+    const out = await runAgentTool(makeSession(), deps, "recordar_preferencia", {
+      preferencia: "Tono cercano\n• Nunca usar rojo",
+    });
+    assert.equal(out.response.ok, true);
+    const bullets = store.userBrief!.split("\n").filter((l) => l.trim().startsWith("• "));
+    assert.equal(bullets.length, 1);
+    assert.ok(store.userBrief!.includes("• Tono cercano • Nunca usar rojo"));
+  });
   it("refuses when the brief is full, as data", async () => {
     const { deps, store } = makeDeps({ userBrief: "x".repeat(3990) });
     const out = await runAgentTool(makeSession(), deps, "recordar_preferencia", { preferencia: "Preferencia larga que no cabe" });

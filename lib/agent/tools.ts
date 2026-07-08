@@ -1071,7 +1071,12 @@ async function toolRecordarPreferencia(
   deps: AgentDeps,
   args: Record<string, unknown>,
 ): Promise<ToolOutcome> {
-  const preferencia = typeof args.preferencia === "string" ? args.preferencia.trim() : "";
+  // Collapse embedded newlines — the block is line-based, so a "\n• " inside
+  // the text would inject pseudo-bullets that later dedup/parse as real ones.
+  const preferencia =
+    typeof args.preferencia === "string"
+      ? args.preferencia.trim().replace(/\s*\n+\s*/g, " ")
+      : "";
   if (preferencia.length < PREFERENCIA_MIN || preferencia.length > PREFERENCIA_MAX) {
     return {
       response: {
@@ -1088,17 +1093,16 @@ async function toolRecordarPreferencia(
   const markerIdx = currentBrief.indexOf(PREFERENCIA_MARKER_LINE);
   const existingBlock = markerIdx >= 0 ? currentBrief.slice(markerIdx) : "";
 
-  // Dedup, case/whitespace-insensitive, bidirectional containment so a
-  // reworded-but-equivalent line still counts (spec: "ya contiene el texto").
+  // Dedup, case/whitespace-insensitive, one direction only (spec: an EXISTING
+  // line "ya contiene el texto" nuevo). Never the reverse — a longer refinement
+  // of an existing bullet ("Sé formal, excepto con proveedores VIP" over
+  // "Sé formal") must still be saved, not silently dropped as a duplicate.
   const normalizedNew = normalizePreferencia(preferencia);
   const yaExistia = existingBlock
     .split("\n")
     .map((line) => line.trim())
     .filter((line) => line.startsWith("• "))
-    .some((line) => {
-      const text = normalizePreferencia(line.slice(2));
-      return text.includes(normalizedNew) || normalizedNew.includes(text);
-    });
+    .some((line) => normalizePreferencia(line.slice(2)).includes(normalizedNew));
   if (yaExistia) {
     return { response: { ok: true, ya_existia: true } };
   }
