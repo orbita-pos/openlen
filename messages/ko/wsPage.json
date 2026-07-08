@@ -5,7 +5,17 @@
     "tool": {
       "leer_estado": "프로젝트를 읽는 중",
       "editar_pagina": "페이지를 편집하는 중",
-      "activar_modulo": "모듈을 활성화하는 중"
+      "activar_modulo": "모듈을 활성화하는 중",
+      "cambiar_motion": "모션을 조정하는 중",
+      "poner_musica": "음악을 설정하는 중",
+      "activar_3d": "3D를 전환하는 중",
+      "preparar_marketing": "마케팅을 준비하는 중",
+      "cambiar_tema": "테마를 변경하는 중",
+      "aplicar_tematica": "월드를 적용하는 중",
+      "crear_pagina": "페이지를 만드는 중",
+      "elegir_foto": "사진을 찾는 중",
+      "editar_imagen": "이미지를 편집하는 중",
+      "publicar": "게시를 준비하는 중"
     },
     "confirm": {
       "publishTitle": "페이지 게시",

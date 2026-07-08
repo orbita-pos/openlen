@@ -5,7 +5,17 @@
     "tool": {
       "leer_estado": "正在读取你的项目",
       "editar_pagina": "正在编辑页面",
-      "activar_modulo": "正在启用模块"
+      "activar_modulo": "正在启用模块",
+      "cambiar_motion": "正在调整动效",
+      "poner_musica": "正在设置音乐",
+      "activar_3d": "正在切换 3D",
+      "preparar_marketing": "正在准备营销内容",
+      "cambiar_tema": "正在更换主题",
+      "aplicar_tematica": "正在应用世界",
+      "crear_pagina": "正在创建页面",
+      "elegir_foto": "正在查找照片",
+      "editar_imagen": "正在编辑图片",
+      "publicar": "正在准备发布"
     },
     "confirm": {
       "publishTitle": "发布你的页面",

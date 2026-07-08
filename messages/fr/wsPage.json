@@ -5,7 +5,17 @@
     "tool": {
       "leer_estado": "Lecture de votre projet",
       "editar_pagina": "Modification de la page",
-      "activar_modulo": "Activation du module"
+      "activar_modulo": "Activation du module",
+      "cambiar_motion": "Réglage du mouvement",
+      "poner_musica": "Ajout de la musique",
+      "activar_3d": "Activation de la 3D",
+      "preparar_marketing": "Préparation du marketing",
+      "cambiar_tema": "Changement du thème",
+      "aplicar_tematica": "Application de l'univers",
+      "crear_pagina": "Création de la page",
+      "elegir_foto": "Recherche de photos",
+      "editar_imagen": "Modification de l'image",
+      "publicar": "Préparation de la publication"
     },
     "confirm": {
       "publishTitle": "Publier votre page",

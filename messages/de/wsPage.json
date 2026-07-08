@@ -5,7 +5,17 @@
     "tool": {
       "leer_estado": "Projekt wird gelesen",
       "editar_pagina": "Seite wird bearbeitet",
-      "activar_modulo": "Modul wird aktiviert"
+      "activar_modulo": "Modul wird aktiviert",
+      "cambiar_motion": "Bewegung wird angepasst",
+      "poner_musica": "Musik wird eingerichtet",
+      "activar_3d": "3D wird umgeschaltet",
+      "preparar_marketing": "Marketing wird vorbereitet",
+      "cambiar_tema": "Design wird geändert",
+      "aplicar_tematica": "Welt wird angewendet",
+      "crear_pagina": "Seite wird erstellt",
+      "elegir_foto": "Fotos werden gesucht",
+      "editar_imagen": "Bild wird bearbeitet",
+      "publicar": "Veröffentlichung wird vorbereitet"
     },
     "confirm": {
       "publishTitle": "Deine Seite veröffentlichen",

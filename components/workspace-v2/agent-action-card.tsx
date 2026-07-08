@@ -9,10 +9,25 @@ export interface AgentAction {
   summary: string;
 }
 
-// Tools the catalog exposes — only these have an i18n label. Anything else
-// (shouldn't happen) falls back to the raw tool name so a stray card never
-// throws a missing-key at render.
-const KNOWN_TOOLS = new Set(["leer_estado", "editar_pagina", "activar_modulo"]);
+// Tools the catalog exposes — only these have an i18n label (wsPage
+// agent.tool.*, all 10 locales). Anything else (shouldn't happen) falls back
+// to the raw tool name so a stray card never throws a missing-key at render.
+// Keep in sync with lib/agent/catalog.ts buildFunctionDeclarations().
+const KNOWN_TOOLS = new Set([
+  "leer_estado",
+  "editar_pagina",
+  "activar_modulo",
+  "cambiar_motion",
+  "poner_musica",
+  "activar_3d",
+  "cambiar_tema",
+  "aplicar_tematica",
+  "preparar_marketing",
+  "crear_pagina",
+  "elegir_foto",
+  "editar_imagen",
+  "publicar",
+]);
 
 export function AgentActionCard({ action }: { action: AgentAction }) {
   const t = useTranslations("wsPage");

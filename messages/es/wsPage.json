@@ -5,7 +5,17 @@
     "tool": {
       "leer_estado": "Leyendo tu proyecto",
       "editar_pagina": "Editando la página",
-      "activar_modulo": "Activando módulo"
+      "activar_modulo": "Activando módulo",
+      "cambiar_motion": "Ajustando el movimiento",
+      "poner_musica": "Poniendo música",
+      "activar_3d": "Activando 3D",
+      "preparar_marketing": "Preparando marketing",
+      "cambiar_tema": "Cambiando el tema",
+      "aplicar_tematica": "Aplicando temática",
+      "crear_pagina": "Creando página",
+      "elegir_foto": "Buscando fotos",
+      "editar_imagen": "Editando imagen",
+      "publicar": "Preparando publicación"
     },
     "confirm": {
       "publishTitle": "Publicar tu página",

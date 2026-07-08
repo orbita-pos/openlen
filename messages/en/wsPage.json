@@ -5,7 +5,17 @@
     "tool": {
       "leer_estado": "Reading your project",
       "editar_pagina": "Editing the page",
-      "activar_modulo": "Enabling module"
+      "activar_modulo": "Enabling module",
+      "cambiar_motion": "Adjusting motion",
+      "poner_musica": "Setting music",
+      "activar_3d": "Toggling 3D",
+      "preparar_marketing": "Preparing marketing",
+      "cambiar_tema": "Changing the theme",
+      "aplicar_tematica": "Applying a world",
+      "crear_pagina": "Creating page",
+      "elegir_foto": "Finding photos",
+      "editar_imagen": "Editing image",
+      "publicar": "Preparing to publish"
     },
     "confirm": {
       "publishTitle": "Publish your page",

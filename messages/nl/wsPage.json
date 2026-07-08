@@ -5,7 +5,17 @@
     "tool": {
       "leer_estado": "Je project lezen",
       "editar_pagina": "De pagina bewerken",
-      "activar_modulo": "Module inschakelen"
+      "activar_modulo": "Module inschakelen",
+      "cambiar_motion": "Beweging aanpassen",
+      "poner_musica": "Muziek instellen",
+      "activar_3d": "3D schakelen",
+      "preparar_marketing": "Marketing voorbereiden",
+      "cambiar_tema": "Thema wijzigen",
+      "aplicar_tematica": "Wereld toepassen",
+      "crear_pagina": "Pagina aanmaken",
+      "elegir_foto": "Foto's zoeken",
+      "editar_imagen": "Afbeelding bewerken",
+      "publicar": "Publicatie voorbereiden"
     },
     "confirm": {
       "publishTitle": "Je pagina publiceren",
