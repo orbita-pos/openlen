@@ -17,14 +17,19 @@ import type { ToolOutcome } from "@/lib/agent/tools";
 // string — never removed, just no longer the only source of truth). Only
 // `no_credits` is never emitted from this file (route.ts's credit gate owns
 // it) — it lives in the shared union so the route can type its own error
-// payload against the same contract the panel switches on.
+// payload against the same contract the panel switches on. F4 Task 7:
+// `agent_off` is the same story — the route's OPENLEN_AGENT=0 kill-switch
+// emits it before this loop ever runs. Unlike the others it's never shown
+// to the user: the panel intercepts it and falls back to classic ai-design
+// silently, so it has no `wsPage.agent.errors.agent_off` translation.
 export type AgentErrorCode =
   | "turn_limit"
   | "tool_limit"
   | "cancelled"
   | "truncated"
   | "upstream"
-  | "no_credits";
+  | "no_credits"
+  | "agent_off";
 
 export type AgentStreamEvent =
   | { type: "text"; text: string }

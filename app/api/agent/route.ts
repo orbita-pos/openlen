@@ -66,6 +66,28 @@ const ATTACHED_URL_MAX = 2_000;
 const ATTACHED_ALT_MAX = 300;
 
 export async function POST(req: Request): Promise<Response> {
+  // F4 Task 7 — emergency kill-switch: OPENLEN_AGENT=0 refuses BEFORE any
+  // auth/credit/stream work, in the SAME coded-SSE-error shape (F2-T10)
+  // every other agent error uses — a 200 stream with a single `error`
+  // event — so the panel's existing SSE reader picks it up without a
+  // special-cased non-2xx path. The panel (chat-panel.tsx) intercepts
+  // `code: "agent_off"` and silently re-sends the same turn through
+  // classic ai-design instead of showing an error.
+  if (process.env.OPENLEN_AGENT === "0") {
+    const code: AgentErrorCode = "agent_off";
+    const sse = `event: error\ndata: ${JSON.stringify({
+      message: "El Agente está desactivado temporalmente.",
+      code,
+    })}\n\n`;
+    return new Response(ENCODER.encode(sse), {
+      headers: {
+        "content-type": "text/event-stream",
+        "cache-control": "no-cache, no-transform",
+        "x-accel-buffering": "no",
+      },
+    });
+  }
+
   const session = await auth();
   if (!session?.user?.id) return errorJson(401, "unauthorized");
 

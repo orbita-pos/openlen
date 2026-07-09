@@ -254,6 +254,15 @@ const QUICK_PROMPT_KEYS: ReadonlyArray<string> = [
 const FLUSH_INTERVAL_MS = 800;
 const FLUSH_CHAR_BUDGET = 2000;
 
+// F4 Task 7 — kill-switch fallback: flips true the first time /api/agent
+// reports `code: "agent_off"` (server env OPENLEN_AGENT=0). Module state
+// (not component state) so it survives an AIDesignChat remount — switching
+// pages remounts the chat via the `key` in ChatPanel above — while still
+// resetting on a hard reload, which is what "rest of the browser session"
+// means here. Once true, `send()` skips the agent branch outright and goes
+// straight to classic ai-design for every later turn in this session.
+let agentKilledThisSession = false;
+
 // Agent-mode: upsert one card into an ordered list of tool cards — replace a
 // trailing `running` card for the same tool instead of stacking a duplicate,
 // otherwise append. Pure so it's shared between the live React-state upsert
@@ -519,319 +528,26 @@ function AIDesignChat({
     [projectId],
   );
 
-  const send = useCallback(
-    async (rawPrompt: string, imageOverride?: AttachedImage | null) => {
-      const prompt = rawPrompt.trim();
-      if (!prompt || sending) return;
-      if (prompt.length > 2000) return;
-
-      // imageOverride lets Retry re-send the failed turn's original image;
-      // undefined = use the live composer image, null = explicitly none.
-      const img = imageOverride !== undefined ? imageOverride : attachedImage;
-      // Snapshot the page scope at send time — preEditHtml is THIS page's
-      // document, and the drip / apply / revert / undo legs must all write
-      // back to the same slot even if the user switches pages mid-stream.
-      // (Retry intentionally re-targets whatever page is active when it
-      // fires: it snapshots fresh preEditHtml + page, same as a new send.)
-      const turnPage = pageRef.current;
-      const preEditHtml = projectHtmlRef.current;
-      const turnId =
-        typeof crypto !== "undefined" && "randomUUID" in crypto
-          ? crypto.randomUUID()
-          : `t-${Date.now()}-${Math.random().toString(36).slice(2)}`;
-
-      const newTurn: DesignTurn = {
-        id: turnId,
-        userText: prompt,
-        attachedImage: img ?? undefined,
-        assistantReasoning: "",
-        status: "streaming",
-        preEditHtml,
-        page: turnPage,
-        startedAt: Date.now(),
-        streamedChars: 0,
-      };
-
-      setTurns((prev) => [...prev, newTurn]);
-      setDraft("");
-      // The attached image flows into this request via turnImage; clearing
-      // here means the next prompt starts fresh. Users can re-attach if they
-      // want the same image again.
-      setAttachedImage(null);
-      setSending(true);
-
-      const history = turnsRef.current
-        .filter(
-          (t) =>
-            (t.status === "applied" || t.status === "reverted") &&
-            samePage(t.page, turnPage),
-        )
-        .slice(-6)
-        .flatMap((t) => [
-          { role: "user" as const, content: t.userText },
-          { role: "assistant" as const, content: t.assistantReasoning || "" },
-        ]);
-
-      // Snapshot the scope at send time — if the user clears or re-picks
-      // mid-stream, the in-flight request keeps the original target. Shared
-      // by both the agent and ai-design branches (F2 Task 8 parity).
-      const turnScope = scopedSelection
-        ? {
-            hint: scopedSelection.hint,
-            path: scopedSelection.path,
-          }
-        : null;
-      // Same snapshot discipline for any attached image — the in-flight
-      // request keeps the one that was set when Send fired.
-      const turnImage = img ? { url: img.url, alt: img.alt } : null;
-
-      // Agent mode (flag-gated) — talk to /api/agent instead of ai-design.
-      // Same SSE reader/line-parse shape as below, different event dispatch:
-      // `text` feeds the assistant prose, `action` upserts tool cards, `html`
-      // refreshes the preview via the SAME onLocalUpdate path done.html uses.
-      // Default ON post-graduation; "0" opts a browser back to classic
-      // ai-design. On blocked storage we also default to the agent — it is
-      // the product now; ai-design remains the explicit opt-out path.
-      let agentMode = true;
-      try {
-        agentMode =
-          typeof window === "undefined" ||
-          window.localStorage.getItem("ol:agent") !== "0";
-      } catch {
-        /* storage blocked — default stays agent; must not wedge the composer */
-      }
-      if (agentMode) {
-        // F4: the agent is multi-page now (route validates `page` against
-        // data.pages, tools write the active slot with W1 pins) — the
-        // pre-flight home-only block that used to live here is gone.
-        const abort = new AbortController();
-        abortRef.current = abort;
-        let accumulatedReasoning = "";
-        let latestAgentHtml: string | null = null;
-        let errorMessage: string | null = null;
-        // Tracked alongside `upsertAction`'s React-state upsert (same rule,
-        // via the shared `upsertActionInto` helper) so the turn's final card
-        // states are available synchronously for `persistTurn` below —
-        // reading them back off `turns` state here would race React's flush.
-        let finalActions: AgentAction[] = [];
-        try {
-          const res = await fetch("/api/agent", {
-            method: "POST",
-            headers: { "content-type": "application/json" },
-            body: JSON.stringify({
-              projectId,
-              prompt,
-              history,
-              // Same value + same conditional shape ai-design sends below —
-              // absent/empty means home, cloned for parity.
-              ...(turnPage ? { page: turnPage } : {}),
-              ...(turnScope ? { scope: turnScope } : {}),
-              ...(turnImage ? { attachedImage: turnImage } : {}),
-            }),
-            signal: abort.signal,
-          });
-
-          if (!res.ok || !res.body) {
-            const errPayload = await res
-              .json()
-              .catch(() => ({ error: `HTTP ${res.status}` }));
-            updateTurn(turnId, {
-              status: "error",
-              errorText:
-                typeof errPayload?.error === "string"
-                  ? errPayload.error
-                  : t("errors.requestFailed", { status: res.status }),
-            });
-            return;
-          }
-
-          const reader = res.body.getReader();
-          const decoder = new TextDecoder();
-          let sseBuf = "";
-
-          agentOuter: while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
-            sseBuf += decoder.decode(value, { stream: true });
-            let nl: number;
-            while ((nl = sseBuf.indexOf("\n\n")) >= 0) {
-              const block = sseBuf.slice(0, nl);
-              sseBuf = sseBuf.slice(nl + 2);
-              let evName = "message";
-              let dataStr = "";
-              for (const line of block.split("\n")) {
-                if (line.startsWith("event: ")) {
-                  evName = line.slice(7).trim();
-                } else if (line.startsWith("data: ")) {
-                  dataStr += line.slice(6);
-                }
-              }
-              if (!dataStr) continue;
-              let payload: unknown;
-              try {
-                payload = JSON.parse(dataStr);
-              } catch {
-                continue;
-              }
-
-              if (evName === "text") {
-                const text = strField(payload, "text");
-                if (text) {
-                  appendReasoning(turnId, text);
-                  accumulatedReasoning += text;
-                }
-              } else if (evName === "action") {
-                const p = payload as {
-                  tool?: unknown;
-                  status?: unknown;
-                  summary?: unknown;
-                };
-                const tool = typeof p.tool === "string" ? p.tool : "";
-                const status =
-                  p.status === "running" ||
-                  p.status === "done" ||
-                  p.status === "error"
-                    ? p.status
-                    : "done";
-                // Cap to the transcript's persisted limit (chat route's
-                // ActionSchema) — a model-written editar_pagina resumen can run
-                // long, and an over-limit summary would 400 the whole
-                // persistTurn and silently drop the turn on reload.
-                const summary =
-                  typeof p.summary === "string" ? p.summary.slice(0, 200) : "";
-                if (tool) {
-                  const action: AgentAction = { tool, status, summary };
-                  upsertAction(turnId, action);
-                  finalActions = upsertActionInto(finalActions, action);
-                }
-              } else if (evName === "html") {
-                const html = strField(payload, "html");
-                if (html) {
-                  latestAgentHtml = html;
-                  // F4-T4: the html event carries its OWN page (loop.ts —
-                  // outcome.page from session.page at write time), because
-                  // trabajar_en_pagina can move the active document mid-turn:
-                  // a later html event in the same turn may target a
-                  // different page than the one the turn started on. Paint
-                  // whichever slot the server says, not turnPage — any
-                  // non-string payload.page (shouldn't happen; loop.ts always
-                  // sends null or a string) falls back to home rather than
-                  // silently dropping the paint.
-                  const evPage =
-                    payload &&
-                    typeof payload === "object" &&
-                    typeof (payload as { page?: unknown }).page === "string"
-                      ? (payload as { page: string }).page
-                      : null;
-                  onLocalUpdate(html, evPage);
-                }
-              } else if (evName === "confirm") {
-                // The publish gate — attach a confirm card to this turn. It
-                // stays interactive after the turn's `done` finalizes it (the
-                // user's tap is the only thing that publishes). F2-T11:
-                // intentionally never persisted — see the `persistTurn`
-                // comment below for the decision.
-                const c = payload as {
-                  action?: unknown;
-                  subdominio?: unknown;
-                  idiomas?: unknown;
-                  republicar?: unknown;
-                };
-                const subdominio =
-                  typeof c.subdominio === "string" ? c.subdominio : "";
-                if (c.action === "publicar" && subdominio) {
-                  const idiomas = Array.isArray(c.idiomas)
-                    ? c.idiomas.filter((x): x is string => typeof x === "string")
-                    : [];
-                  updateTurn(turnId, {
-                    confirm: {
-                      action: "publicar",
-                      subdominio,
-                      idiomas,
-                      republicar: c.republicar === true,
-                    },
-                  });
-                }
-              } else if (evName === "done") {
-                // Terminal — always finalizes the turn, even when it trails
-                // an `error` event (the loop can emit both in one turn).
-                break agentOuter;
-              } else if (evName === "error") {
-                // Do NOT break — a `done` may still follow to close the turn.
-                // F2-T10: prefer the localized string for a known `code`;
-                // fall back to the server's Spanish `message` (exact prior
-                // behavior) when the code is absent or unrecognized.
-                const code = (payload as { code?: unknown } | null)?.code;
-                errorMessage = isAgentErrorCode(code)
-                  ? tAgent(`errors.${code}`)
-                  : strField(payload, "message") || t("errors.generic");
-              }
-            }
-          }
-
-          if (errorMessage) {
-            updateTurn(turnId, { status: "error", errorText: errorMessage });
-            return;
-          }
-
-          updateTurn(turnId, {
-            status: "applied",
-            appliedAt: Date.now(),
-            // No `html` event = no document changed (answer-only or
-            // settings-only turn) — flag it so the footer shows neither
-            // "Applied" nor a pointless Undo.
-            ...(latestAgentHtml !== null
-              ? { postEditHtml: latestAgentHtml }
-              : { noDocChange: true }),
-          });
-          void persistTurn({
-            id: turnId,
-            userText: prompt,
-            attachedImage: img ?? undefined,
-            assistantReasoning: accumulatedReasoning,
-            status: "applied",
-            // F4-T4: parity with the ai-design branch below — pin to the
-            // page the turn STARTED on (snapshotted at send time, same as
-            // preEditHtml) so Undo PATCHes the same slot preEditHtml came
-            // from. A mid-turn trabajar_en_pagina switch can make a later
-            // `html` event target a different page (painted live via its own
-            // `page` above); this turn-level bookkeeping intentionally still
-            // anchors to turnPage, exactly like ai-design's single-page turns.
-            page: turnPage,
-            // F2-T11: persist the turn's final card states (a trailing
-            // `running` card, if the stream ended mid-tool-call, persists
-            // as-is — matches what the live turn showed). Confirm cards are
-            // deliberately NOT included here: on restore a confirmed-publish
-            // already produced its own persisted "✓ Publicada…" turn (see
-            // handlePublished below), and an unconfirmed confirm card is
-            // stale by the time of a reload — showing it as interactive again
-            // would let a second, out-of-date publish tap fire.
-            ...(finalActions.length > 0 ? { actions: finalActions } : {}),
-            ...(latestAgentHtml === null ? { noDocChange: true } : {}),
-          });
-        } catch (err) {
-          if (abort.signal.aborted) {
-            updateTurn(turnId, {
-              status: "error",
-              errorText: t("errors.cancelled"),
-            });
-          } else {
-            updateTurn(turnId, {
-              status: "error",
-              errorText:
-                err instanceof Error ? err.message : t("errors.network"),
-            });
-          }
-        } finally {
-          if (abortRef.current === abort) abortRef.current = null;
-          setSending(false);
-        }
-        return;
-      }
-
+  // Classic ai-design network+SSE leg — extracted out of `send()` so it has
+  // TWO callers: the normal (non-agent) path below, and the agent branch's
+  // F4 Task 7 kill-switch fallback (agent reports `code: "agent_off"` →
+  // silently re-run THIS SAME turn through here instead of showing an
+  // error). Callers own `sending`/`abortRef` lifecycle (their own
+  // try/finally) — this function only ever resolves, never throws, so a
+  // caller's own catch never fires because of it.
+  const runAiDesignTurn = useCallback(
+    async (opts: {
+      turnId: string;
+      prompt: string;
+      preEditHtml: string;
+      turnPage: string | null;
+      history: { role: "user" | "assistant"; content: string }[];
+      turnScope: { hint: string; path: string } | null;
+      turnImage: { url: string; alt?: string } | null;
+      abort: AbortController;
+    }) => {
+      const { turnId, prompt, preEditHtml, turnPage, history, turnScope, turnImage, abort } = opts;
       const htmlBuf = { value: "" };
-      // Accumulated alongside the per-turn state so the final reasoning is in
-      // scope when we append the settled turn to the transcript.
       let accumulatedReasoning = "";
       let lastFlushedLen = 0;
       let flushTimer: number | null = null;
@@ -854,9 +570,6 @@ function AIDesignChat({
           flushTimer = null;
         }
       };
-
-      const abort = new AbortController();
-      abortRef.current = abort;
 
       try {
         const res = await fetch("/api/templates/ai-design", {
@@ -1037,6 +750,369 @@ function AIDesignChat({
               err instanceof Error ? err.message : t("errors.network"),
           });
         }
+      }
+    },
+    [appendReasoning, model, onLocalUpdate, persistTurn, projectId, t, updateTurn],
+  );
+
+  const send = useCallback(
+    async (rawPrompt: string, imageOverride?: AttachedImage | null) => {
+      const prompt = rawPrompt.trim();
+      if (!prompt || sending) return;
+      if (prompt.length > 2000) return;
+
+      // imageOverride lets Retry re-send the failed turn's original image;
+      // undefined = use the live composer image, null = explicitly none.
+      const img = imageOverride !== undefined ? imageOverride : attachedImage;
+      // Snapshot the page scope at send time — preEditHtml is THIS page's
+      // document, and the drip / apply / revert / undo legs must all write
+      // back to the same slot even if the user switches pages mid-stream.
+      // (Retry intentionally re-targets whatever page is active when it
+      // fires: it snapshots fresh preEditHtml + page, same as a new send.)
+      const turnPage = pageRef.current;
+      const preEditHtml = projectHtmlRef.current;
+      const turnId =
+        typeof crypto !== "undefined" && "randomUUID" in crypto
+          ? crypto.randomUUID()
+          : `t-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+
+      const newTurn: DesignTurn = {
+        id: turnId,
+        userText: prompt,
+        attachedImage: img ?? undefined,
+        assistantReasoning: "",
+        status: "streaming",
+        preEditHtml,
+        page: turnPage,
+        startedAt: Date.now(),
+        streamedChars: 0,
+      };
+
+      setTurns((prev) => [...prev, newTurn]);
+      setDraft("");
+      // The attached image flows into this request via turnImage; clearing
+      // here means the next prompt starts fresh. Users can re-attach if they
+      // want the same image again.
+      setAttachedImage(null);
+      setSending(true);
+
+      const history = turnsRef.current
+        .filter(
+          (t) =>
+            (t.status === "applied" || t.status === "reverted") &&
+            samePage(t.page, turnPage),
+        )
+        .slice(-6)
+        .flatMap((t) => [
+          { role: "user" as const, content: t.userText },
+          { role: "assistant" as const, content: t.assistantReasoning || "" },
+        ]);
+
+      // Snapshot the scope at send time — if the user clears or re-picks
+      // mid-stream, the in-flight request keeps the original target. Shared
+      // by both the agent and ai-design branches (F2 Task 8 parity).
+      const turnScope = scopedSelection
+        ? {
+            hint: scopedSelection.hint,
+            path: scopedSelection.path,
+          }
+        : null;
+      // Same snapshot discipline for any attached image — the in-flight
+      // request keeps the one that was set when Send fired.
+      const turnImage = img ? { url: img.url, alt: img.alt } : null;
+
+      // Agent mode (flag-gated) — talk to /api/agent instead of ai-design.
+      // Same SSE reader/line-parse shape as below, different event dispatch:
+      // `text` feeds the assistant prose, `action` upserts tool cards, `html`
+      // refreshes the preview via the SAME onLocalUpdate path done.html uses.
+      // Default ON post-graduation; "0" opts a browser back to classic
+      // ai-design. On blocked storage we also default to the agent — it is
+      // the product now; ai-design remains the explicit opt-out path.
+      // F4 Task 7: `agentKilledThisSession` short-circuits this to false the
+      // moment the server has told us (once) OPENLEN_AGENT=0 — every later
+      // send in this browser session skips straight to ai-design, no repeat
+      // round-trip to a route we already know refuses.
+      let agentMode = !agentKilledThisSession;
+      try {
+        agentMode =
+          agentMode &&
+          (typeof window === "undefined" ||
+            window.localStorage.getItem("ol:agent") !== "0");
+      } catch {
+        /* storage blocked — default stays agent; must not wedge the composer */
+      }
+      if (agentMode) {
+        // F4: the agent is multi-page now (route validates `page` against
+        // data.pages, tools write the active slot with W1 pins) — the
+        // pre-flight home-only block that used to live here is gone.
+        const abort = new AbortController();
+        abortRef.current = abort;
+        let accumulatedReasoning = "";
+        let latestAgentHtml: string | null = null;
+        let errorMessage: string | null = null;
+        // F4 Task 7 — set when the route's kill-switch fires (`code:
+        // "agent_off"`): NOT an error to show the user, a signal to
+        // silently re-run this exact turn through classic ai-design below.
+        let fellBackToAiDesign = false;
+        // Tracked alongside `upsertAction`'s React-state upsert (same rule,
+        // via the shared `upsertActionInto` helper) so the turn's final card
+        // states are available synchronously for `persistTurn` below —
+        // reading them back off `turns` state here would race React's flush.
+        let finalActions: AgentAction[] = [];
+        try {
+          const res = await fetch("/api/agent", {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({
+              projectId,
+              prompt,
+              history,
+              // Same value + same conditional shape ai-design sends below —
+              // absent/empty means home, cloned for parity.
+              ...(turnPage ? { page: turnPage } : {}),
+              ...(turnScope ? { scope: turnScope } : {}),
+              ...(turnImage ? { attachedImage: turnImage } : {}),
+            }),
+            signal: abort.signal,
+          });
+
+          if (!res.ok || !res.body) {
+            const errPayload = await res
+              .json()
+              .catch(() => ({ error: `HTTP ${res.status}` }));
+            updateTurn(turnId, {
+              status: "error",
+              errorText:
+                typeof errPayload?.error === "string"
+                  ? errPayload.error
+                  : t("errors.requestFailed", { status: res.status }),
+            });
+            return;
+          }
+
+          const reader = res.body.getReader();
+          const decoder = new TextDecoder();
+          let sseBuf = "";
+
+          agentOuter: while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            sseBuf += decoder.decode(value, { stream: true });
+            let nl: number;
+            while ((nl = sseBuf.indexOf("\n\n")) >= 0) {
+              const block = sseBuf.slice(0, nl);
+              sseBuf = sseBuf.slice(nl + 2);
+              let evName = "message";
+              let dataStr = "";
+              for (const line of block.split("\n")) {
+                if (line.startsWith("event: ")) {
+                  evName = line.slice(7).trim();
+                } else if (line.startsWith("data: ")) {
+                  dataStr += line.slice(6);
+                }
+              }
+              if (!dataStr) continue;
+              let payload: unknown;
+              try {
+                payload = JSON.parse(dataStr);
+              } catch {
+                continue;
+              }
+
+              if (evName === "text") {
+                const text = strField(payload, "text");
+                if (text) {
+                  appendReasoning(turnId, text);
+                  accumulatedReasoning += text;
+                }
+              } else if (evName === "action") {
+                const p = payload as {
+                  tool?: unknown;
+                  status?: unknown;
+                  summary?: unknown;
+                };
+                const tool = typeof p.tool === "string" ? p.tool : "";
+                const status =
+                  p.status === "running" ||
+                  p.status === "done" ||
+                  p.status === "error"
+                    ? p.status
+                    : "done";
+                // Cap to the transcript's persisted limit (chat route's
+                // ActionSchema) — a model-written editar_pagina resumen can run
+                // long, and an over-limit summary would 400 the whole
+                // persistTurn and silently drop the turn on reload.
+                const summary =
+                  typeof p.summary === "string" ? p.summary.slice(0, 200) : "";
+                if (tool) {
+                  const action: AgentAction = { tool, status, summary };
+                  upsertAction(turnId, action);
+                  finalActions = upsertActionInto(finalActions, action);
+                }
+              } else if (evName === "html") {
+                const html = strField(payload, "html");
+                if (html) {
+                  latestAgentHtml = html;
+                  // F4-T4: the html event carries its OWN page (loop.ts —
+                  // outcome.page from session.page at write time), because
+                  // trabajar_en_pagina can move the active document mid-turn:
+                  // a later html event in the same turn may target a
+                  // different page than the one the turn started on. Paint
+                  // whichever slot the server says, not turnPage — any
+                  // non-string payload.page (shouldn't happen; loop.ts always
+                  // sends null or a string) falls back to home rather than
+                  // silently dropping the paint.
+                  const evPage =
+                    payload &&
+                    typeof payload === "object" &&
+                    typeof (payload as { page?: unknown }).page === "string"
+                      ? (payload as { page: string }).page
+                      : null;
+                  onLocalUpdate(html, evPage);
+                }
+              } else if (evName === "confirm") {
+                // The publish gate — attach a confirm card to this turn. It
+                // stays interactive after the turn's `done` finalizes it (the
+                // user's tap is the only thing that publishes). F2-T11:
+                // intentionally never persisted — see the `persistTurn`
+                // comment below for the decision.
+                const c = payload as {
+                  action?: unknown;
+                  subdominio?: unknown;
+                  idiomas?: unknown;
+                  republicar?: unknown;
+                };
+                const subdominio =
+                  typeof c.subdominio === "string" ? c.subdominio : "";
+                if (c.action === "publicar" && subdominio) {
+                  const idiomas = Array.isArray(c.idiomas)
+                    ? c.idiomas.filter((x): x is string => typeof x === "string")
+                    : [];
+                  updateTurn(turnId, {
+                    confirm: {
+                      action: "publicar",
+                      subdominio,
+                      idiomas,
+                      republicar: c.republicar === true,
+                    },
+                  });
+                }
+              } else if (evName === "done") {
+                // Terminal — always finalizes the turn, even when it trails
+                // an `error` event (the loop can emit both in one turn).
+                break agentOuter;
+              } else if (evName === "error") {
+                const code = (payload as { code?: unknown } | null)?.code;
+                if (code === "agent_off") {
+                  // F4 Task 7 — kill-switch: the route refused before doing
+                  // any work and this is its only event (no `done` follows).
+                  // Never show this to the user — flag it and stop reading;
+                  // the fallback runs once the loop below exits.
+                  fellBackToAiDesign = true;
+                  agentKilledThisSession = true;
+                  break agentOuter;
+                }
+                // Do NOT break — a `done` may still follow to close the turn.
+                // F2-T10: prefer the localized string for a known `code`;
+                // fall back to the server's Spanish `message` (exact prior
+                // behavior) when the code is absent or unrecognized.
+                errorMessage = isAgentErrorCode(code)
+                  ? tAgent(`errors.${code}`)
+                  : strField(payload, "message") || t("errors.generic");
+              }
+            }
+          }
+
+          if (fellBackToAiDesign) {
+            // F4 Task 7 — the SAME turn, the SAME abort controller, routed
+            // through classic ai-design instead. No error surfaces; the
+            // outer try/finally below still owns abortRef/sending cleanup.
+            await runAiDesignTurn({
+              turnId,
+              prompt,
+              preEditHtml,
+              turnPage,
+              history,
+              turnScope,
+              turnImage,
+              abort,
+            });
+            return;
+          }
+
+          if (errorMessage) {
+            updateTurn(turnId, { status: "error", errorText: errorMessage });
+            return;
+          }
+
+          updateTurn(turnId, {
+            status: "applied",
+            appliedAt: Date.now(),
+            // No `html` event = no document changed (answer-only or
+            // settings-only turn) — flag it so the footer shows neither
+            // "Applied" nor a pointless Undo.
+            ...(latestAgentHtml !== null
+              ? { postEditHtml: latestAgentHtml }
+              : { noDocChange: true }),
+          });
+          void persistTurn({
+            id: turnId,
+            userText: prompt,
+            attachedImage: img ?? undefined,
+            assistantReasoning: accumulatedReasoning,
+            status: "applied",
+            // F4-T4: parity with the ai-design branch below — pin to the
+            // page the turn STARTED on (snapshotted at send time, same as
+            // preEditHtml) so Undo PATCHes the same slot preEditHtml came
+            // from. A mid-turn trabajar_en_pagina switch can make a later
+            // `html` event target a different page (painted live via its own
+            // `page` above); this turn-level bookkeeping intentionally still
+            // anchors to turnPage, exactly like ai-design's single-page turns.
+            page: turnPage,
+            // F2-T11: persist the turn's final card states (a trailing
+            // `running` card, if the stream ended mid-tool-call, persists
+            // as-is — matches what the live turn showed). Confirm cards are
+            // deliberately NOT included here: on restore a confirmed-publish
+            // already produced its own persisted "✓ Publicada…" turn (see
+            // handlePublished below), and an unconfirmed confirm card is
+            // stale by the time of a reload — showing it as interactive again
+            // would let a second, out-of-date publish tap fire.
+            ...(finalActions.length > 0 ? { actions: finalActions } : {}),
+            ...(latestAgentHtml === null ? { noDocChange: true } : {}),
+          });
+        } catch (err) {
+          if (abort.signal.aborted) {
+            updateTurn(turnId, {
+              status: "error",
+              errorText: t("errors.cancelled"),
+            });
+          } else {
+            updateTurn(turnId, {
+              status: "error",
+              errorText:
+                err instanceof Error ? err.message : t("errors.network"),
+            });
+          }
+        } finally {
+          if (abortRef.current === abort) abortRef.current = null;
+          setSending(false);
+        }
+        return;
+      }
+
+      const abort = new AbortController();
+      abortRef.current = abort;
+      try {
+        await runAiDesignTurn({
+          turnId,
+          prompt,
+          preEditHtml,
+          turnPage,
+          history,
+          turnScope,
+          turnImage,
+          abort,
+        });
       } finally {
         if (abortRef.current === abort) abortRef.current = null;
         setSending(false);
@@ -1045,10 +1121,10 @@ function AIDesignChat({
     [
       appendReasoning,
       attachedImage,
-      model,
       onLocalUpdate,
       persistTurn,
       projectId,
+      runAiDesignTurn,
       scopedSelection,
       sending,
       t,
@@ -1808,6 +1884,11 @@ function strField(payload: unknown, key: string): string {
 // Spanish `message` verbatim. This Record<AgentErrorCode, true> is the
 // type-level exhaustiveness check — if the union in lib/agent/loop.ts gains
 // a member without a matching entry here, this literal fails to typecheck.
+// F4 Task 7: `agent_off` is a member of the union purely for this
+// exhaustiveness check — the SSE loop above intercepts it BEFORE calling
+// isAgentErrorCode (it triggers the silent ai-design fallback instead), so
+// `tAgent("errors.agent_off")` is never actually called and no matching key
+// exists in wsPage.json.
 const AGENT_ERROR_CODE_KEYS: Record<AgentErrorCode, true> = {
   turn_limit: true,
   tool_limit: true,
@@ -1815,6 +1896,7 @@ const AGENT_ERROR_CODE_KEYS: Record<AgentErrorCode, true> = {
   truncated: true,
   upstream: true,
   no_credits: true,
+  agent_off: true,
 };
 
 function isAgentErrorCode(value: unknown): value is AgentErrorCode {
