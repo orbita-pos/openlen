@@ -201,7 +201,7 @@ describe("buildAgentSystemPrompt", () => {
     const p = buildAgentSystemPrompt();
     expect(p).toContain("leer_estado");
     expect(p).toContain("elegir_foto");
-    expect(p.toLowerCase()).toContain("no gastan tus pasos");
+    expect(p.toLowerCase()).toContain("no gastan tu presupuesto de acciones");
   });
   it("carries the F3 Task 7 backend-honesty rule — no fake static mockups for missing backend features", () => {
     const p = buildAgentSystemPrompt();
