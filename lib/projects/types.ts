@@ -166,6 +166,31 @@ export interface WhatsAppSettings {
   side?: "left" | "right";
 }
 
+/** A manually-set counter shown on the streamer overlay (e.g. "Meta de subs":
+ *  340/500). The creator edits `current` by hand — no platform integration. */
+export interface OverlayGoal {
+  label: string;
+  current: number;
+  target: number;
+}
+
+/** Streamer overlay module — the OBS/browser-source page at /ov that mirrors
+ *  live state (goal progress, full-screen state) so a streamer can drop one
+ *  URL into a Browser Source. `token` gates that URL; it is server-minted by
+ *  applySettingsPatch (OFF→ON edge, or on `regenerateToken`) and is NEVER
+ *  accepted from a client patch — validateSettingsPatch rejects any patch
+ *  that carries this key. */
+export interface OverlaySettings {
+  /** Master switch. Absent/false → nothing baked; /ov refuses without a live token anyway. */
+  enabled?: boolean;
+  /** Opaque token for the /ov URL. Server-minted only — see module doc above. */
+  token?: string;
+  /** Manually-set progress counter, or absent = no goal shown. */
+  goal?: OverlayGoal;
+  /** Full-screen overlay state. null clears it (same as absent). */
+  screen?: "brb" | "start" | "end" | null;
+}
+
 /** Project-level settings that aren't part of the HTML document. */
 export interface ProjectSettings {
   /** Per-form config, keyed by the form's index — its position among all
@@ -205,6 +230,8 @@ export interface ProjectSettings {
   whatsapp?: WhatsAppSettings;
   /** 3D scene: gesture-gated WebGL scene with AVIF poster baked at publish. Absent = off. */
   scene3d?: Scene3dSettings;
+  /** Streamer overlay: /ov browser-source page (goal + screen state). Absent = off. */
+  overlay?: OverlaySettings;
   /** Marketing Kit tab state (register = user-picked giro). */
   marketing?: { register?: string; match?: boolean };
 }

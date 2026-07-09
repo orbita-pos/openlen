@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { isKnownTimeZone } from "@/lib/bookings/tz";
 import {
   buildAutoMembersPage,
@@ -9,6 +10,8 @@ import { POST_REGISTER } from "@/lib/marketing/post-templates/admin-schemas";
 import type {
   FormConfig,
   MusicSettings,
+  OverlayGoal,
+  OverlaySettings,
   ProjectData,
   ProjectSettings,
 } from "@/lib/projects/types";
@@ -90,6 +93,16 @@ interface PatchBody {
   scene3d?: { enabled?: boolean; spec?: unknown } | null;
   /** Marketing Kit tab state. Merged into settings.marketing. */
   marketing?: { register?: string; match?: boolean };
+  /** Streamer overlay module. Merged into settings.overlay. `token` is
+   *  server-minted — never accepted from the client; a patch carrying a
+   *  `token` key is rejected in validate. `regenerateToken: true` mints a
+   *  fresh token regardless of the enabled edge. */
+  overlay?: {
+    enabled?: boolean;
+    goal?: OverlayGoal;
+    screen?: "brb" | "start" | "end" | null;
+    regenerateToken?: boolean;
+  };
 }
 
 export type SettingsPatchBody = PatchBody;
@@ -250,6 +263,52 @@ export function validateSettingsPatch(
       return { ok: false, message: "whatsapp.side must be left|right" };
     }
   }
+  const hasOverlay = "overlay" in body;
+  if (hasOverlay) {
+    const o = body.overlay;
+    if (!o || typeof o !== "object") {
+      return { ok: false, message: "overlay must be an object" };
+    }
+    if ("token" in o) {
+      return { ok: false, message: "overlay.token cannot be set by the client" };
+    }
+    if ("enabled" in o && typeof o.enabled !== "boolean") {
+      return { ok: false, message: "overlay.enabled must be boolean" };
+    }
+    if ("regenerateToken" in o && typeof o.regenerateToken !== "boolean") {
+      return { ok: false, message: "overlay.regenerateToken must be boolean" };
+    }
+    if ("goal" in o && o.goal !== undefined) {
+      const g = o.goal as Partial<OverlayGoal> | null;
+      if (!g || typeof g !== "object") {
+        return { ok: false, message: "overlay.goal must be an object" };
+      }
+      if (typeof g.label !== "string" || g.label.length < 1 || g.label.length > 60) {
+        return { ok: false, message: "overlay.goal.label must be a string 1-60 chars" };
+      }
+      if (
+        typeof g.current !== "number" ||
+        !Number.isInteger(g.current) ||
+        g.current < 0 ||
+        g.current > 10_000_000
+      ) {
+        return { ok: false, message: "overlay.goal.current must be an integer 0-10000000" };
+      }
+      if (
+        typeof g.target !== "number" ||
+        !Number.isInteger(g.target) ||
+        g.target < 1 ||
+        g.target > 10_000_000
+      ) {
+        return { ok: false, message: "overlay.goal.target must be an integer 1-10000000" };
+      }
+    }
+    if ("screen" in o && o.screen !== null && o.screen !== undefined) {
+      if (!["brb", "start", "end"].includes(o.screen)) {
+        return { ok: false, message: "overlay.screen must be brb|start|end or null" };
+      }
+    }
+  }
   const hasScene3d = "scene3d" in body;
   const hasChat = "chat" in body;
   if (hasChat) {
@@ -356,12 +415,13 @@ export function validateSettingsPatch(
     !hasWhatsapp &&
     !hasChat &&
     !hasScene3d &&
+    !hasOverlay &&
     !hasMarketing
   ) {
     return {
       ok: false,
       message:
-        "expected formIndex+patch OR analyticsDisabled OR motion OR music OR members OR broadcast OR comments OR bookings OR collections OR whatsapp OR chat OR scene3d OR marketing",
+        "expected formIndex+patch OR analyticsDisabled OR motion OR music OR members OR broadcast OR comments OR bookings OR collections OR whatsapp OR chat OR scene3d OR overlay OR marketing",
     };
   }
   if (hasFormPatch) {
@@ -404,6 +464,7 @@ export function applySettingsPatch(
   const hasWhatsapp = "whatsapp" in body;
   const hasScene3d = "scene3d" in body;
   const hasChat = "chat" in body;
+  const hasOverlay = "overlay" in body;
   const hasMarketing = "marketing" in body;
 
   let musicValue: MusicSettings | null = null;
@@ -585,6 +646,28 @@ export function applySettingsPatch(
         ...body.scene3d,
       };
     }
+  }
+  if (hasOverlay && body.overlay) {
+    const o = body.overlay;
+    const prevOverlay = data.settings?.overlay;
+    // Token is minted server-side only: on the OFF→ON edge (first enable) or
+    // whenever the caller asks for a fresh one. A plain re-enable or an
+    // unrelated field edit keeps whatever token already exists.
+    const turningOn = o.enabled === true && prevOverlay?.enabled !== true;
+    const wantsRegen = o.regenerateToken === true;
+    const token =
+      wantsRegen || (turningOn && !prevOverlay?.token)
+        ? randomUUID().replace(/-/g, "")
+        : prevOverlay?.token;
+    const nextOverlay: OverlaySettings = { ...(prevOverlay ?? {}) };
+    if (token) nextOverlay.token = token;
+    if ("enabled" in o) nextOverlay.enabled = o.enabled;
+    if ("goal" in o && o.goal) nextOverlay.goal = o.goal;
+    if ("screen" in o) {
+      if (o.screen === null) delete nextOverlay.screen;
+      else nextOverlay.screen = o.screen;
+    }
+    nextSettings.overlay = nextOverlay;
   }
   if (hasMarketing && body.marketing) {
     nextSettings.marketing = {

@@ -74,3 +74,43 @@ describe("applySettingsPatch", () => {
     expect(out.settings.comments?.enabled).toBe(false);
   });
 });
+
+describe("overlay settings", () => {
+  it("first enable mints a server-side token", () => {
+    const out = applySettingsPatch(baseData(), { overlay: { enabled: true } });
+    if ("error" in out) throw new Error(out.error);
+    expect(out.settings.overlay?.enabled).toBe(true);
+    expect(out.settings.overlay?.token).toMatch(/^[a-f0-9]{32}$/);
+  });
+  it("re-enable keeps the existing token; regenerateToken mints a new one", () => {
+    const first = applySettingsPatch(baseData(), { overlay: { enabled: true } });
+    if ("error" in first) throw new Error(first.error);
+    const tok = first.settings.overlay!.token!;
+    const again = applySettingsPatch(first.nextData, { overlay: { enabled: true } });
+    if ("error" in again) throw new Error(again.error);
+    expect(again.settings.overlay?.token).toBe(tok);
+    const regen = applySettingsPatch(first.nextData, { overlay: { regenerateToken: true } });
+    if ("error" in regen) throw new Error(regen.error);
+    expect(regen.settings.overlay?.token).not.toBe(tok);
+  });
+  it("client-supplied token is ignored", () => {
+    const v = validateSettingsPatch({ overlay: { enabled: true, token: "hax" } }, "p1");
+    expect(v.ok).toBe(false); // token no es key aceptada del patch
+  });
+  it("validates goal ranges and label length", () => {
+    expect(validateSettingsPatch({ overlay: { goal: { label: "Subs", current: -1, target: 500 } } }, "p1").ok).toBe(false);
+    expect(validateSettingsPatch({ overlay: { goal: { label: "", current: 0, target: 500 } } }, "p1").ok).toBe(false);
+    expect(validateSettingsPatch({ overlay: { goal: { label: "Subs", current: 10, target: 0 } } }, "p1").ok).toBe(false);
+    const ok = validateSettingsPatch({ overlay: { goal: { label: "Meta de subs", current: 340, target: 500 } } }, "p1");
+    expect(ok.ok).toBe(true);
+  });
+  it("screen enum + null clears", () => {
+    expect(validateSettingsPatch({ overlay: { screen: "fiesta" } }, "p1").ok).toBe(false);
+    const on = applySettingsPatch(baseData(), { overlay: { enabled: true, screen: "brb" } });
+    if ("error" in on) throw new Error(on.error);
+    expect(on.settings.overlay?.screen).toBe("brb");
+    const off = applySettingsPatch(on.nextData, { overlay: { screen: null } });
+    if ("error" in off) throw new Error(off.error);
+    expect(off.settings.overlay?.screen).toBeUndefined();
+  });
+});
