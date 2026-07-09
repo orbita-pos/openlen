@@ -59,6 +59,7 @@ export default defineConfig({
       "lib/publish/module-sections.test.ts",
       "lib/publish/whatsapp-button.test.ts",
       "lib/publish/chat-widget.test.ts",
+      "lib/publish/orders-price.test.ts",
       "lib/members/**/*.test.ts",
       "lib/chat/**/*.test.ts",
       "lib/broadcast/**/*.test.ts",
