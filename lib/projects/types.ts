@@ -191,6 +191,18 @@ export interface OverlaySettings {
   screen?: "brb" | "start" | "end" | null;
 }
 
+/** Client PATCH shape for the overlay module — mirrors `PatchBody["overlay"]`
+ *  in lib/projects/settings-patch.ts exactly (goal/screen `null` clears;
+ *  `token` is never client-supplied; `regenerateToken` mints a fresh one).
+ *  Distinct from `OverlaySettings` (the stored/mirrored shape) because the
+ *  patch allows nulls that the stored shape doesn't. */
+export interface OverlayPatch {
+  enabled?: boolean;
+  goal?: OverlayGoal | null;
+  screen?: "brb" | "start" | "end" | null;
+  regenerateToken?: boolean;
+}
+
 /** Project-level settings that aren't part of the HTML document. */
 export interface ProjectSettings {
   /** Per-form config, keyed by the form's index — its position among all
