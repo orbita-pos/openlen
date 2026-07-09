@@ -18,6 +18,11 @@
       "publicar": "Preparando publicación",
       "trabajar_en_pagina": "Cambiando de página"
     },
+    "action": {
+      "on": "Encendido",
+      "off": "Apagado",
+      "home": "Inicio"
+    },
     "confirm": {
       "publishTitle": "Publicar tu página",
       "publish": "Publicar",

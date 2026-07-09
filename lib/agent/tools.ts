@@ -469,7 +469,12 @@ async function toolPonerMusica(
 
   return {
     response: { ok: true, accion },
-    action: { tool: "poner_musica", ok: true, summary: accion },
+    // F4-T8 i18n sweep: `accion` ("poner"/"quitar") is a fixed Spanish enum
+    // value from the tool schema — fine for the model (response.accion,
+    // unchanged), but the action card renders `summary` directly with no
+    // i18n. Send a stable English code instead; agent-action-card.tsx maps
+    // it to a localized "On"/"Off" label (×10).
+    action: { tool: "poner_musica", ok: true, summary: accion === "poner" ? "on" : "off" },
   };
 }
 
@@ -500,7 +505,11 @@ async function toolActivar3d(
 
   return {
     response: { ok: true, encendido: encender },
-    action: { tool: "activar_3d", ok: true, summary: encender ? "encendida" : "apagada" },
+    // F4-T8 i18n sweep: "encendida"/"apagada" was a bare Spanish literal with
+    // no i18n path — the action card renders `summary` verbatim. Send a
+    // stable English code; agent-action-card.tsx maps it to a localized
+    // "On"/"Off" label (×10), same convention as poner_musica above.
+    action: { tool: "activar_3d", ok: true, summary: encender ? "on" : "off" },
   };
 }
 
@@ -1246,7 +1255,16 @@ async function toolTrabajarEnPagina(
       pagina_activa: paginaActiva,
       nota: "documento cargado — los data-op-id son de ESTA página",
     },
-    action: { tool: "trabajar_en_pagina", ok: true, summary: paginaActiva },
+    // F4-T8 i18n sweep: `paginaActiva` (response.pagina_activa, above) is
+    // model-facing text and correctly stays "principal" — the model reads
+    // it, not the user. But the action card's `summary` IS user-visible and
+    // rendered verbatim with no i18n, so a bare "principal" leaked untranslated
+    // Spanish for a "home" switch. Use "" as an unambiguous home sentinel
+    // (page slugs are always non-empty — see the not-found branch above) so
+    // agent-action-card.tsx can render a localized "Home" label (×10); any
+    // real slug (including one literally named "principal", the shadowing
+    // case pinned in tools.test.ts) still shows verbatim, same as before.
+    action: { tool: "trabajar_en_pagina", ok: true, summary: resolved ?? "" },
   };
 }
 

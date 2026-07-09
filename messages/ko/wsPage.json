@@ -18,6 +18,11 @@
       "publicar": "게시를 준비하는 중",
       "trabajar_en_pagina": "페이지를 전환하는 중"
     },
+    "action": {
+      "on": "켜짐",
+      "off": "꺼짐",
+      "home": "홈"
+    },
     "confirm": {
       "publishTitle": "페이지 게시",
       "publish": "게시",

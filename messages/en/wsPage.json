@@ -18,6 +18,11 @@
       "publicar": "Preparing to publish",
       "trabajar_en_pagina": "Switching page"
     },
+    "action": {
+      "on": "On",
+      "off": "Off",
+      "home": "Home"
+    },
     "confirm": {
       "publishTitle": "Publish your page",
       "publish": "Publish",

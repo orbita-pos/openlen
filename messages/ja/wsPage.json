@@ -18,6 +18,11 @@
       "publicar": "公開を準備中",
       "trabajar_en_pagina": "ページを切り替え中"
     },
+    "action": {
+      "on": "オン",
+      "off": "オフ",
+      "home": "ホーム"
+    },
     "confirm": {
       "publishTitle": "ページを公開",
       "publish": "公開",

@@ -366,6 +366,9 @@ describe("poner_musica", () => {
     });
     assert.equal(out.response.ok, true);
     assert.equal(store.data.settings?.music?.src, "/api/projects/p1/assets/track1.mp3");
+    // F4-T8: action.summary is the stable "on"/"off" code, not the raw
+    // Spanish "poner" enum value — agent-action-card.tsx localizes it.
+    assert.equal(out.action?.summary, "on");
   });
   it("refuses external URLs and returns the available tracks as {nombre,url} pistas", async () => {
     const { deps, store } = makeDeps({ audioAssets: [{ url: "/api/projects/p1/assets/track1.mp3", name: "track1.mp3" }] });
@@ -394,16 +397,21 @@ describe("poner_musica", () => {
     const out = await runAgentTool(makeSession(), deps, "poner_musica", { accion: "quitar" });
     assert.equal(out.response.ok, true);
     assert.equal(store.data.settings?.music, undefined);
+    assert.equal(out.action?.summary, "off");
   });
 });
 
 describe("activar_3d", () => {
   it("enables and disables scene3d", async () => {
     const { deps, store } = makeDeps();
-    await runAgentTool(makeSession(), deps, "activar_3d", { encender: true });
+    const onOut = await runAgentTool(makeSession(), deps, "activar_3d", { encender: true });
     assert.equal(store.data.settings?.scene3d?.enabled, true);
-    await runAgentTool(makeSession(), deps, "activar_3d", { encender: false });
+    // F4-T8: action.summary is the stable "on"/"off" code — the old
+    // "encendida"/"apagada" literals reached the panel with no i18n path.
+    assert.equal(onOut.action?.summary, "on");
+    const offOut = await runAgentTool(makeSession(), deps, "activar_3d", { encender: false });
     assert.equal(store.data.settings?.scene3d, undefined);
+    assert.equal(offOut.action?.summary, "off");
   });
 });
 
@@ -952,6 +960,11 @@ describe("trabajar_en_pagina", () => {
     const out = await runAgentTool(session, deps, "trabajar_en_pagina", { pagina: "principal" });
     assert.equal(out.response.ok, true);
     assert.equal(out.response.pagina_activa, "principal");
+    // F4-T8: response.pagina_activa stays "principal" (model-facing), but
+    // action.summary — the user-visible field agent-action-card.tsx renders
+    // — is the "" home sentinel so the panel can localize it instead of
+    // showing a bare Spanish word.
+    assert.equal(out.action?.summary, "");
     assert.equal(session.page, null);
     assert.ok(session.taggedHtml.includes("Tacos El Güero"));
     assert.ok(!session.taggedHtml.includes("Nuestro Menú"));
@@ -973,6 +986,10 @@ describe("trabajar_en_pagina", () => {
     assert.equal(out.response.ok, true);
     assert.equal(out.response.pagina_activa, "principal");
     assert.equal(session.page, "principal"); // the SLUG, not home (null)
+    // F4-T8: action.summary shows the real slug verbatim here — NOT the ""
+    // home sentinel — so this case stays distinguishable from an actual
+    // home switch (see the test above).
+    assert.equal(out.action?.summary, "principal");
     assert.ok(session.taggedHtml.includes("Subpágina Principal"));
     assert.ok(!session.taggedHtml.includes("Tacos El Güero")); // NOT the home doc
   });

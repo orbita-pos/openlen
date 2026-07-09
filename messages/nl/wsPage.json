@@ -18,6 +18,11 @@
       "publicar": "Publicatie voorbereiden",
       "trabajar_en_pagina": "Pagina wisselen"
     },
+    "action": {
+      "on": "Aan",
+      "off": "Uit",
+      "home": "Home"
+    },
     "confirm": {
       "publishTitle": "Je pagina publiceren",
       "publish": "Publiceren",

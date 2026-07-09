@@ -18,6 +18,11 @@
       "publicar": "正在准备发布",
       "trabajar_en_pagina": "正在切换页面"
     },
+    "action": {
+      "on": "开启",
+      "off": "关闭",
+      "home": "首页"
+    },
     "confirm": {
       "publishTitle": "发布你的页面",
       "publish": "发布",

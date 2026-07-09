@@ -18,6 +18,11 @@
       "publicar": "Veröffentlichung wird vorbereitet",
       "trabajar_en_pagina": "Seite wird gewechselt"
     },
+    "action": {
+      "on": "Ein",
+      "off": "Aus",
+      "home": "Startseite"
+    },
     "confirm": {
       "publishTitle": "Deine Seite veröffentlichen",
       "publish": "Veröffentlichen",
