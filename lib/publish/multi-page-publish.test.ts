@@ -7,6 +7,7 @@ import assert from "node:assert/strict";
 import { mkdtempSync, rmSync, readFileSync, existsSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
+import type { ItemRow } from "@/lib/collections/store";
 
 // Network-touching bakes off; CSP seal stays on (pure Rust, no network) so
 // the test proves pages survive the real seal.
@@ -478,5 +479,69 @@ describe("account label rewires the page's own sign-in link (Part E rewire)", ()
     assert.ok(home.includes('href="/cuenta"'), "rewired to account path");
     assert.ok(home.includes("Mi cuenta"), "text rewired to account label");
     assert.ok(!home.includes("Iniciar sesión"), "original text replaced");
+  });
+});
+
+describe("publishToDir wires Pedidos por WhatsApp (orders) over Collections", () => {
+  const orderItem: ItemRow = {
+    id: "it-1",
+    projectId: "p1",
+    collectionId: "c1",
+    title: "Tacos al pastor",
+    subtitle: null,
+    description: null,
+    imageUrl: null,
+    priceDisplay: "$90",
+    badge: null,
+    ctaLabel: null,
+    ctaUrl: null,
+    tags: [],
+    attrs: {},
+    status: "published",
+    sortOrder: 0,
+    createdAt: new Date(0),
+    updatedAt: new Date(0),
+  };
+
+  const MENU_DOC = `<!doctype html>
+<html lang="es"><head><meta charset="utf-8"><title>menu</title></head>
+<body><h1>menu</h1><section data-ol-collection-section></section></body></html>`;
+
+  async function publishBoth(opts: { ordersOff?: boolean; sub: string }) {
+    await publishToDir({
+      subdomain: opts.sub,
+      html: DOC("home"),
+      pages: [{ slug: "menu", html: MENU_DOC }],
+      projectId: "p1",
+      collections: { enabled: true, items: [orderItem], layout: "grid" },
+      orders: opts.ordersOff ? undefined : { enabled: true, number: "5512345678" },
+    });
+    const current = path.join(root, opts.sub, "current");
+    let dir: string;
+    try {
+      dir = path.join(root, opts.sub, "releases", readFileSync(current, "utf8").trim());
+    } catch {
+      dir = current;
+    }
+    const home = readFileSync(path.join(dir, "index.html"), "utf8");
+    const menuDoc = readFileSync(path.join(dir, "menu", "index.html"), "utf8");
+    return { home, menuDoc };
+  }
+
+  it("cart runtime + buttons ride the collections grid, sealed", async () => {
+    const { home, menuDoc } = await publishBoth({ sub: "orderstest" });
+
+    for (const doc of [home, menuDoc]) {
+      assert.ok(doc.includes("data-ol-order-add"), "add buttons baked");
+      assert.ok(doc.includes('data-ol-order-cents="9000"'), "server-parsed cents");
+      assert.ok(doc.includes("data-ol-orders-widget"), "cart runtime injected");
+      assert.ok(doc.includes("https://wa.me/525512345678"), "+52 normalized target");
+      assert.ok(doc.includes("Content-Security-Policy"), "seal survived the new inline script");
+    }
+  });
+
+  it("orders OFF keeps the published collections doc byte-free of order markup", async () => {
+    const { home } = await publishBoth({ sub: "orderstestoff", ordersOff: true });
+    assert.ok(!home.includes("data-ol-order"), "no order markup when module off");
   });
 });

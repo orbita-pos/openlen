@@ -877,6 +877,10 @@ export async function publishProject(
       whatsapp: project.data?.settings?.whatsapp?.enabled
         ? project.data.settings.whatsapp
         : undefined,
+      orders:
+        project.data?.settings?.orders?.enabled && project.data.settings.orders.number
+          ? { enabled: true, number: project.data.settings.orders.number }
+          : undefined,
       chat: project.data?.settings?.chat?.enabled
         ? {
             enabled: true,

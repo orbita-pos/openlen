@@ -25,6 +25,7 @@ import { bakeComments } from "@/lib/publish/comments-widget";
 import { bakeBookings } from "@/lib/publish/bookings-widget";
 import { bakeCollections } from "@/lib/publish/collections-block";
 import { bakeWhatsAppButton } from "@/lib/publish/whatsapp-button";
+import { injectOrdersCart } from "@/lib/publish/orders-cart";
 import { bakeChatWidget } from "@/lib/publish/chat-widget";
 import { bakeVideoEmbeds, bakeMediaPreconnect } from "@/lib/publish/video-embed";
 import { bakeCarousels } from "@/lib/publish/carousel";
@@ -201,6 +202,10 @@ export interface PublishParams {
    *  variant — suppressed if the page already carries the profile contact
    *  widget (no double FAB). */
   whatsapp?: WhatsAppSettings;
+  /** Pedidos por WhatsApp (settings.orders). When enabled with a usable number,
+   *  collection cards bake «Agregar» buttons and the cart runtime is injected
+   *  into every document that carries them. */
+  orders?: { enabled: boolean; number: string };
   /** 3D scene (settings.scene3d). When enabled, a gesture-gated WebGL block
    *  with AVIF poster (LCP) and deferred runtime is baked into the root doc. */
   scene3d?: { enabled: boolean; spec?: unknown };
@@ -494,6 +499,8 @@ interface BakeDocumentCtx {
   /** WhatsApp button. When enabled with a usable number, a floating FAB is baked
    *  (suppressed if the profile contact widget is already present). */
   whatsapp?: WhatsAppSettings;
+  /** Pedidos por WhatsApp — cart over the collections buttons. */
+  orders?: { enabled: boolean; number: string };
   /** 3D scene. When enabled, a gesture-gated WebGL block with AVIF poster is baked. */
   scene3d?: { enabled: boolean; spec?: unknown };
   /** Private chat module. When enabled, the 1:1 messaging widget is baked. */
@@ -555,8 +562,12 @@ async function bakeDocument(
   // (page === null) auto-appends the grid when there's no placeholder.
   if (process.env.OPENLEN_COLLECTION !== "0") {
     try {
+      const ordersCfg =
+        process.env.OPENLEN_ORDERS !== "0" && ctx.orders?.enabled && ctx.orders.number
+          ? { number: ctx.orders.number }
+          : null;
       const colCfg = ctx.collections?.enabled
-        ? { items: ctx.collections.items, layout: ctx.collections.layout }
+        ? { items: ctx.collections.items, layout: ctx.collections.layout, orders: ordersCfg }
         : { items: [], layout: "grid" as const };
       migratedHtml = bakeCollections(migratedHtml, colCfg, page === null);
     } catch (err) {
@@ -845,6 +856,22 @@ async function bakeDocument(
     }
   }
 
+  // Pedidos por WhatsApp — cart runtime over the collections «Agregar»
+  // buttons baked above. injectOrdersCart self-gates on the buttons being
+  // present in THIS document, so subpages without the grid stay untouched.
+  if (process.env.OPENLEN_ORDERS !== "0" && ctx.orders?.enabled && ctx.orders.number) {
+    try {
+      migratedHtml = injectOrdersCart(migratedHtml, {
+        number: ctx.orders.number,
+        projectId: ctx.projectId,
+        page,
+      });
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.warn("[publishToDir] orders cart inject failed; publishing without it", err);
+    }
+  }
+
   // Social meta must be ABSOLUTE for crawlers — re-absolutize any og:image /
   // twitter:image / og:url that an asset migration above relativized (e.g. an
   // Unsplash hero og:image → /assets/<hash>.webp). No-op for the hosted-PNG
@@ -960,6 +987,7 @@ export async function publishToDir(
     bookings: params.bookings,
     collections: params.collections,
     whatsapp: params.whatsapp,
+    orders: params.orders,
     scene3d: params.scene3d,
     chat: params.chat,
   };
