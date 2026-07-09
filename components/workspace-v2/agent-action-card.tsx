@@ -28,6 +28,7 @@ const KNOWN_TOOLS = new Set([
   "editar_imagen",
   "recordar_preferencia",
   "publicar",
+  "trabajar_en_pagina",
 ]);
 
 export function AgentActionCard({ action }: { action: AgentAction }) {

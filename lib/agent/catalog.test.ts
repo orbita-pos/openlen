@@ -22,6 +22,7 @@ describe("buildFunctionDeclarations", () => {
       "editar_imagen",
       "recordar_preferencia",
       "publicar",
+      "trabajar_en_pagina",
     ]);
   });
   it("crear_pagina exposes slug/titulo/modulo, modulo enum bookings|collections, nothing required", () => {
@@ -129,6 +130,12 @@ describe("buildFunctionDeclarations", () => {
     // The user-tap gate must be conveyed to the model.
     expect(String(d.description).toLowerCase()).toContain("usuario");
   });
+  it("trabajar_en_pagina requires pagina as a string", () => {
+    const d = buildFunctionDeclarations().find((x) => x.name === "trabajar_en_pagina") as any;
+    expect(d.parameters.type).toBe("OBJECT");
+    expect(d.parameters.properties.pagina.type).toBe("STRING");
+    expect(d.parameters.required).toEqual(["pagina"]);
+  });
 });
 
 describe("buildAgentSystemPrompt", () => {
@@ -208,5 +215,13 @@ describe("buildAgentSystemPrompt", () => {
     expect(p).toContain("carrito");
     expect(p).toContain("HONESTAMENTE");
     expect(p).toContain("Collections");
+  });
+  it("carries the F4 Task 3 trabajar_en_pagina knowledge: switch-before-edit, chained multi-page requests", () => {
+    const p = buildAgentSystemPrompt();
+    expect(p).toContain("trabajar_en_pagina");
+    // Tight pins on the NEW knowledge specifically (not the T1 hard-rule line
+    // or unrelated pre-existing uses of "cadena"/"página activa" elsewhere).
+    expect(p).toContain("pagina_activa");
+    expect(p.toLowerCase()).toContain("en cadena");
   });
 });

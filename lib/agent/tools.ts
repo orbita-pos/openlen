@@ -1187,6 +1187,54 @@ async function toolRecordarPreferencia(
   };
 }
 
+const PAGINA_HOME_ALIASES = new Set(["", "principal", "home"]);
+
+// F4 Task 3 — trabajar_en_pagina: words-as-selector. This is the ONLY tool
+// that moves session.page mid-conversation; it never writes to the project
+// (no saveProjectData/snapshotVersion call), it only re-points the session at
+// a different document and re-tags it fresh. Re-loads via deps.loadProject
+// rather than trusting any stale row an earlier tool call in this same turn
+// may have read, so a page created moments ago (crear_pagina) is reachable
+// immediately, and validation reflects the REAL current data.pages, not a
+// cached view — same reasoning as leer_estado's re-tag.
+async function toolTrabajarEnPagina(
+  session: AgentSession,
+  deps: AgentDeps,
+  args: Record<string, unknown>,
+): Promise<ToolOutcome> {
+  const raw = typeof args.pagina === "string" ? args.pagina.trim() : "";
+  const row = await deps.loadProject(session.projectId, session.userId);
+  if (!row) return { response: { ok: false, error: "proyecto no encontrado" } };
+
+  let resolved: string | null;
+  if (PAGINA_HOME_ALIASES.has(raw.toLowerCase())) {
+    resolved = null;
+  } else if (row.data.pages?.[raw]) {
+    resolved = raw;
+  } else {
+    const disponibles = ["principal", ...Object.keys(row.data.pages ?? {})];
+    return {
+      response: {
+        ok: false,
+        error: `la página "${raw}" no existe. Páginas disponibles: ${disponibles.join(", ")}.`,
+      },
+    };
+  }
+
+  session.page = resolved;
+  session.taggedHtml = tagWithOpIds(activeHtml(row.data, resolved) ?? "").taggedHtml;
+  const paginaActiva = resolved ?? "principal";
+
+  return {
+    response: {
+      ok: true,
+      pagina_activa: paginaActiva,
+      nota: "documento cargado — los data-op-id son de ESTA página",
+    },
+    action: { tool: "trabajar_en_pagina", ok: true, summary: paginaActiva },
+  };
+}
+
 export async function runAgentTool(
   session: AgentSession,
   deps: AgentDeps,
@@ -1223,6 +1271,8 @@ export async function runAgentTool(
         return await toolPublicar(session, deps, args);
       case "recordar_preferencia":
         return await toolRecordarPreferencia(session, deps, args);
+      case "trabajar_en_pagina":
+        return await toolTrabajarEnPagina(session, deps, args);
       default:
         return { response: { ok: false, error: "herramienta desconocida" } };
     }

@@ -258,6 +258,18 @@ export function buildFunctionDeclarations(): Record<string, unknown>[] {
         },
       },
     },
+    {
+      name: "trabajar_en_pagina",
+      description:
+        "Cambia el DOCUMENTO activo a otra página del sitio (multi-página) — después de llamarla, editar_pagina/cambiar_tema/aplicar_tematica/editar_imagen actúan sobre ESA página, no sobre la anterior; los data-op-id que tenías quedan obsoletos, usa los nuevos que trae la respuesta. pagina: el slug de la página (p. ej. \"menu\"), o \"principal\"/\"home\"/vacío para volver a la Home. Si la página no existe, la herramienta te lo dice y lista las páginas disponibles — no inventes un slug. Para un pedido que toca varias páginas, encadena: trabajar_en_pagina → editar_pagina → trabajar_en_pagina → editar_pagina.",
+      parameters: {
+        type: "OBJECT",
+        properties: {
+          pagina: { type: "STRING" },
+        },
+        required: ["pagina"],
+      },
+    },
   ];
 }
 
@@ -300,6 +312,9 @@ Guarda una preferencia DURABLE en el brief del proyecto — persiste entre conve
 
 PUBLICAR (publicar):
 publicar SIEMPRE espera el tap del usuario — JAMÁS publicas tú. La herramienta solo prepara la publicación (resuelve el subdominio y los idiomas) y muestra una tarjeta de confirmación; el usuario toca «Publicar» para confirmar y recién ahí se publica de verdad. Tras llamar publicar, cierra tu turno diciéndole al usuario que revise y toque «Publicar» (no afirmes que ya está publicada). Si el proyecto no tiene subdominio y el usuario no te dio uno, la herramienta te pedirá que le preguntes qué subdominio quiere (p. ej. mi-negocio) antes de volver a llamar. idiomas usa códigos de la lista de Speak Every Language (${PUBLISH_LOCALE_CODES.join(", ")}); los inválidos se ignoran. Si no pasas idiomas, la página conserva los que ya tenía configurados; para QUITAR idiomas se usa el modal de Publicar, no el agente.
+
+CAMBIAR DE DOCUMENTO (trabajar_en_pagina):
+Este sitio puede tener varias páginas (ver "paginas" en el estado). Tú SIEMPRE trabajas sobre la página activa — la que trae leer_estado.pagina_activa — y editar_pagina/cambiar_tema/aplicar_tematica/editar_imagen SOLO tocan ESA página, nunca otra. Para editar OTRA página del sitio, primero llama trabajar_en_pagina con su slug (o "principal"/"home" para volver a la Home); la respuesta trae el documento fresco de esa página con data-op-id nuevos — los que tenías antes ya no sirven. Un pedido que toca varias páginas se resuelve en cadena, una página a la vez: trabajar_en_pagina → editar_pagina → trabajar_en_pagina → editar_pagina. trabajar_en_pagina en sí no cambia nada de la página, solo mueve el foco — no genera una edición.
 
 GUÍA DE DISEÑO (para cualquier new_html que emitas):
 ${DESIGN_GUIDANCE}`;

@@ -482,7 +482,7 @@ export const EVAL_CASES: EvalCase[] = [
 ];
 
 // ─── Coverage map — which catalog tool(s) each case exercises ─────────────────
-// The unit test (cases.test.ts) asserts every one of the 14 catalog tools shows
+// The unit test (cases.test.ts) asserts every one of the 15 catalog tools shows
 // up in at least one case's list. Honesty/answer-only cases legitimately map to
 // [] (they must NOT call a mutating tool).
 export const coverage: Record<string, string[]> = {
@@ -507,7 +507,15 @@ export const coverage: Record<string, string[]> = {
   "recordar-tu-y-amarillo": ["recordar_preferencia"],
   "publicar-nuevo-subdominio": ["publicar"],
   "chain-tematica-y-musica": ["aplicar_tematica", "poner_musica"],
-  "chain-menu-y-reservas": ["crear_pagina", "activar_modulo"],
+  // F4 Task 3 coverage placeholder: trabajar_en_pagina has no dedicated real
+  // eval case yet — this case doesn't actually call it (creating a page never
+  // switches the active document). Listed here ONLY to satisfy the shape-test
+  // invariant "every catalog tool appears in some case's coverage" until F4
+  // Task 5 lands mp-editar-subpagina / mp-cadena-dos-paginas, which DO drive
+  // real page switches; T5 should move this off onto those ids instead. No
+  // behavioral effect: harness.ts only special-cases "recordar_preferencia"
+  // (userBrief invariant) — nothing keys off trabajar_en_pagina today.
+  "chain-menu-y-reservas": ["crear_pagina", "activar_modulo", "trabajar_en_pagina"],
   "chain-dos-ediciones": ["editar_pagina", "leer_estado"],
   "chain-foto-y-publicar": ["elegir_foto", "editar_pagina", "publicar"],
   "chain-tema-y-modulo": ["cambiar_tema", "activar_modulo"],

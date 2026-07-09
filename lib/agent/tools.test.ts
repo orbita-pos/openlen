@@ -918,3 +918,95 @@ describe("W1 regression pins (multi-página)", () => {
     assert.equal(store.data.html, HOME_HTML); // byte-intacto — home untouched
   });
 });
+
+// F4 Task 3 — trabajar_en_pagina: words-as-selector document switch. Never
+// persists (no saveProjectData/snapshotVersion call ever) — it only moves
+// session.page + re-tags session.taggedHtml against the FRESHLY loaded doc.
+describe("trabajar_en_pagina", () => {
+  const HOME_HTML = `<!doctype html><html><head><title>Tacos El Güero</title><meta name="description" content="Tacos"></head><body><h1 data-x="k">Tacos El Güero</h1><p>Los mejores del barrio.</p></body></html>`;
+  const MENU_HTML = `<!doctype html><html><head><title>Menú</title><meta name="description" content="Menú"></head><body><h1 data-x="k">Nuestro Menú</h1><p>Estas son nuestras opciones.</p></body></html>`;
+  const DATA_MP: ProjectData = {
+    html: HOME_HTML,
+    pages: { menu: { html: MENU_HTML, title: "Menú" } },
+  };
+
+  it("switches to an existing subpage: session.page set, taggedHtml re-tagged with THAT page's content", async () => {
+    const { deps, store } = makeDeps({ data: DATA_MP });
+    const session = makeSession({ page: null, html: HOME_HTML });
+    const out = await runAgentTool(session, deps, "trabajar_en_pagina", { pagina: "menu" });
+    assert.equal(out.response.ok, true);
+    assert.equal(out.response.pagina_activa, "menu");
+    assert.equal(session.page, "menu");
+    assert.ok(session.taggedHtml.includes("Nuestro Menú"));
+    assert.ok(!session.taggedHtml.includes("Tacos El Güero"));
+    assert.ok(session.taggedHtml.includes("data-op-id"));
+    assert.equal(out.action?.tool, "trabajar_en_pagina");
+    // NO persistence — the switch alone never writes or snapshots anything.
+    assert.equal(store.saved.length, 0);
+    assert.equal(store.versions.length, 0);
+  });
+
+  it('"principal" switches back to home from an active subpage', async () => {
+    const { deps, store } = makeDeps({ data: DATA_MP });
+    const session = makeSession({ page: "menu", html: MENU_HTML });
+    const out = await runAgentTool(session, deps, "trabajar_en_pagina", { pagina: "principal" });
+    assert.equal(out.response.ok, true);
+    assert.equal(out.response.pagina_activa, "principal");
+    assert.equal(session.page, null);
+    assert.ok(session.taggedHtml.includes("Tacos El Güero"));
+    assert.ok(!session.taggedHtml.includes("Nuestro Menú"));
+    assert.equal(store.saved.length, 0);
+  });
+
+  it('"home" and "" are equivalent aliases for principal', async () => {
+    const { deps } = makeDeps({ data: DATA_MP });
+    const s1 = makeSession({ page: "menu", html: MENU_HTML });
+    const out1 = await runAgentTool(s1, deps, "trabajar_en_pagina", { pagina: "home" });
+    assert.equal(out1.response.ok, true);
+    assert.equal(s1.page, null);
+
+    const s2 = makeSession({ page: "menu", html: MENU_HTML });
+    const out2 = await runAgentTool(s2, deps, "trabajar_en_pagina", { pagina: "" });
+    assert.equal(out2.response.ok, true);
+    assert.equal(s2.page, null);
+  });
+
+  it("a nonexistent page comes back ok:false, listing available pages, without touching session.page", async () => {
+    const { deps } = makeDeps({ data: DATA_MP });
+    const session = makeSession({ page: null, html: HOME_HTML });
+    const out = await runAgentTool(session, deps, "trabajar_en_pagina", { pagina: "contacto" });
+    assert.equal(out.response.ok, false);
+    assert.ok(String(out.response.error).includes("principal"));
+    assert.ok(String(out.response.error).includes("menu"));
+    // Session untouched on failure — still on home, still the home doc.
+    assert.equal(session.page, null);
+    assert.ok(session.taggedHtml.includes("Tacos El Güero"));
+  });
+
+  it("re-loads pages fresh — a page created earlier THIS turn (not in the session's stale view) is reachable", async () => {
+    const { deps, store } = makeDeps({ data: { html: HOME_HTML } });
+    const session = makeSession({ page: null, html: HOME_HTML });
+    // Simulate crear_pagina having run earlier in the same turn: the DB row
+    // now has a "menu" page, but session.page/taggedHtml still reflect home.
+    store.data = { ...store.data, pages: { menu: { html: MENU_HTML, title: "Menú" } } };
+    const out = await runAgentTool(session, deps, "trabajar_en_pagina", { pagina: "menu" });
+    assert.equal(out.response.ok, true);
+    assert.equal(session.page, "menu");
+    assert.ok(session.taggedHtml.includes("Nuestro Menú"));
+  });
+
+  it("chained: trabajar_en_pagina(menu) then editar_pagina writes pages.menu, not data.html (W1 via the switch)", async () => {
+    const { deps, store } = makeDeps({ data: DATA_MP });
+    const session = makeSession({ page: null, html: HOME_HTML });
+    const switched = await runAgentTool(session, deps, "trabajar_en_pagina", { pagina: "menu" });
+    assert.equal(switched.response.ok, true);
+    const target = firstOpId(session.taggedHtml);
+    const edited = await runAgentTool(session, deps, "editar_pagina", {
+      edits: [{ op: "replace", target, new_html: "<h1>Tacos al pastor</h1>" }],
+      resumen: "titular menú",
+    });
+    assert.equal(edited.response.ok, true);
+    assert.ok(store.data.pages!.menu.html.includes("Tacos al pastor"));
+    assert.equal(store.data.html, HOME_HTML); // byte-intacto — the switch, not editar_pagina, moved the slot
+  });
+});
