@@ -75,6 +75,9 @@ function makeDeps(
     data: (overrides?.data ?? { html: HTML }) as ProjectData,
     saved: [] as ProjectData[],
     versions: [] as string[],
+    // F4 Task 2 pin: which page each snapshot carried (parallel to
+    // `versions`, one entry per snapshotVersion call, same order).
+    versionPages: [] as (string | null)[],
     provisioned: 0,
     provisionedOpts: null as { email: string | null; displayName: string } | null,
     audioAssets: overrides?.audioAssets ?? [],
@@ -102,7 +105,7 @@ function makeDeps(
       };
     },
     async saveProjectData(_p, _u, data) { store.data = data; store.saved.push(data); },
-    async snapshotVersion(a) { store.versions.push(a.label); },
+    async snapshotVersion(a) { store.versions.push(a.label); store.versionPages.push(a.page); },
     async provisionOwnerChat(_p, _u, opts) { store.provisioned += 1; store.provisionedOpts = opts; },
     async listAudioAssets() { return store.audioAssets; },
     async fetchImageManifest() { store.manifestFetches += 1; return store.imageManifest; },
@@ -124,15 +127,29 @@ function makeDeps(
   return { deps, store };
 }
 
-function makeSession(html: string = HTML): AgentSession {
+// Legacy call shape `makeSession(html?)` stays page: null (home) — every
+// pre-F4 test keeps working unchanged. F4 Task 2 pins use the object shape
+// `makeSession({ page, html })` to put a session on an active subpage.
+function makeSession(arg?: string | { page?: string | null; html?: string }): AgentSession {
+  const opts = typeof arg === "object" && arg !== null ? arg : { html: arg };
+  const html = opts.html ?? HTML;
   return {
     projectId: "p1",
     userId: "u1",
     taggedHtml: tagWithOpIds(html).taggedHtml,
-    page: null,
+    page: opts.page ?? null,
     ownerEmail: "owner@example.com",
     imageEditsThisTurn: 0,
   };
+}
+
+/** First `data-op-id` in document order — head/script/style are never
+ *  tagged (see html-ops.test.ts), so for these body-first fixtures this is
+ *  always the opening <h1>. */
+function firstOpId(taggedHtml: string): string {
+  const m = /data-op-id="([^"]+)"/.exec(taggedHtml);
+  if (!m) throw new Error("no data-op-id found in taggedHtml");
+  return m[1];
 }
 
 describe("summarizeProjectState", () => {
@@ -305,6 +322,20 @@ describe("leer_estado", () => {
     const { deps } = makeDeps();
     const out = await runAgentTool(makeSession(), deps, "leer_estado", { incluir_documento: true });
     assert.ok(String(out.response.documento).includes("data-op-id"));
+  });
+  it("pagina_activa is 'principal' on home", async () => {
+    const { deps } = makeDeps();
+    const out = await runAgentTool(makeSession(), deps, "leer_estado", {});
+    assert.equal(out.response.pagina_activa, "principal");
+  });
+  it("pagina_activa is the slug on a subpage, and incluir_documento re-tags THAT subpage's html", async () => {
+    const data: ProjectData = { html: HTML, pages: { menu: { html: "<html><body><h1>Menú</h1></body></html>" } } };
+    const { deps } = makeDeps({ data });
+    const session = makeSession({ page: "menu", html: data.pages!.menu.html });
+    const out = await runAgentTool(session, deps, "leer_estado", { incluir_documento: true });
+    assert.equal(out.response.pagina_activa, "menu");
+    assert.ok(String(out.response.documento).includes("Menú"));
+    assert.ok(!String(out.response.documento).includes("Tacos El Güero"));
   });
 });
 
@@ -767,5 +798,105 @@ describe("runAgentTool", () => {
     const out = await runAgentTool(makeSession(), deps, "no_existe", {});
     assert.equal(out.response.ok, false);
     assert.equal(out.response.error, "herramienta desconocida");
+  });
+});
+
+// F4 Task 2 — THE W1 PIN (wrong-slot writes). Fixtures per this describe
+// block: HOME_HTML carries an on-page image (for the editar_imagen
+// membership pin) and no --ol-accent; MENU_HTML carries its OWN --ol-accent
+// (for the cambiar_tema seed pin) and no image. Every pin asserts the
+// UNTOUCHED slot byte-for-byte, not merely that the touched slot changed.
+describe("W1 regression pins (multi-página)", () => {
+  const HOME_IMG_URL = "https://images.openlen.com/home-hero.webp";
+  const HOME_HTML = `<!doctype html><html><head><title>Tacos El Güero</title><meta name="description" content="Tacos"></head><body><img src="${HOME_IMG_URL}" alt="foto"><h1 data-x="k">Tacos El Güero</h1><p>Los mejores del barrio.</p></body></html>`;
+  const MENU_ACCENT = "#2266aa";
+  const MENU_HTML = `<!doctype html><html style="--ol-accent: ${MENU_ACCENT}"><head><title>Menú</title><meta name="description" content="Menú"></head><body><h1 data-x="k">Menú</h1><p>Estas son nuestras opciones.</p></body></html>`;
+  const DATA_MP: ProjectData = {
+    html: HOME_HTML,
+    pages: { menu: { html: MENU_HTML, title: "Menú" } },
+  };
+
+  it("PIN: session.page='menu' → editar_pagina escribe SOLO pages.menu.html; data.html byte-intacto", async () => {
+    const { deps, store } = makeDeps({ data: DATA_MP });
+    const session = makeSession({ page: "menu", html: MENU_HTML });
+    const target = firstOpId(session.taggedHtml);
+    await runAgentTool(session, deps, "editar_pagina", {
+      edits: [{ op: "replace", target, new_html: "<h1>Tacos al pastor</h1>" }],
+      resumen: "titular menú",
+    });
+    assert.ok(store.data.pages!.menu.html.includes("Tacos al pastor"));
+    assert.equal(store.data.html, HOME_HTML); // byte-intacto
+  });
+
+  it("PIN: session.page=null → escribe SOLO data.html; pages byte-intactas", async () => {
+    const { deps, store } = makeDeps({ data: DATA_MP });
+    const session = makeSession({ page: null, html: HOME_HTML });
+    const target = firstOpId(session.taggedHtml);
+    await runAgentTool(session, deps, "editar_pagina", {
+      edits: [{ op: "replace", target, new_html: "<h1>Bienvenidos</h1>" }],
+      resumen: "titular home",
+    });
+    assert.ok(store.data.html!.includes("Bienvenidos"));
+    assert.equal(store.data.pages!.menu.html, MENU_HTML); // byte-intacta
+  });
+
+  it("PIN: snapshots llevan page=session.page (pre y post)", async () => {
+    const { deps, store } = makeDeps({ data: DATA_MP });
+    const session = makeSession({ page: "menu", html: MENU_HTML });
+    const target = firstOpId(session.taggedHtml);
+    await runAgentTool(session, deps, "editar_pagina", {
+      edits: [{ op: "replace", target, new_html: "<h1>Nuevo titular</h1>" }],
+      resumen: "x",
+    });
+    // Pre-edit ("Before AI edit") + post-edit snapshot, both tagged "menu".
+    assert.equal(store.versionPages.length, 2);
+    assert.deepEqual(store.versionPages, ["menu", "menu"]);
+  });
+
+  it("cambiar_tema sobre subpágina siembra accent/modo DEL doc de la subpágina y persiste ahí", async () => {
+    const { deps, store } = makeDeps({ data: DATA_MP });
+    const session = makeSession({ page: "menu", html: MENU_HTML });
+    const out = await runAgentTool(session, deps, "cambiar_tema", { modo: "dark" });
+    assert.equal(out.response.ok, true);
+    // Seeded from MENU's own --ol-accent, NOT home's (home has none — if this
+    // tool mis-read row.data.html the seed would be missing and ok would be
+    // false, failing this assert first).
+    const dark = lookFromAccent(MENU_ACCENT).dark;
+    assert.ok(store.data.pages!.menu.html.includes(`--ol-accent: ${dark["--ol-accent"]}`));
+    assert.match(store.data.pages!.menu.html, /<html[^>]*\sdata-ol-mode="dark"/);
+    assert.equal(store.data.html, HOME_HTML); // byte-intacto — home untouched
+  });
+
+  it("editar_imagen: membership contra el doc ACTIVO — URL que solo está en home, con page='menu' → ok:false sin fetch", async () => {
+    const { deps, store } = makeDeps({ data: DATA_MP });
+    const session = makeSession({ page: "menu", html: MENU_HTML });
+    const out = await runAgentTool(session, deps, "editar_imagen", {
+      imagen_url: HOME_IMG_URL,
+      instruccion: "quita el fondo",
+    });
+    assert.equal(out.response.ok, false);
+    assert.equal(store.fetches.length, 0);
+    assert.equal(store.saved.length, 0);
+  });
+
+  // Beyond the 5 named pins: closes the "swap" half of the editar_imagen
+  // interface clause (membership above only proves the READ side) — a
+  // successful subpage image edit must write ONLY that subpage's slot.
+  it("editar_imagen happy path on a subpage writes ONLY pages.menu.html; data.html byte-intacto", async () => {
+    const menuWithImg = MENU_HTML.replace(
+      "<body>",
+      `<body><img src="${HOME_IMG_URL.replace("home-hero", "menu-photo")}" alt="menu">`,
+    );
+    const menuImgUrl = HOME_IMG_URL.replace("home-hero", "menu-photo");
+    const { deps, store } = makeDeps({ data: { html: HOME_HTML, pages: { menu: { html: menuWithImg } } } });
+    const session = makeSession({ page: "menu", html: menuWithImg });
+    const out = await runAgentTool(session, deps, "editar_imagen", {
+      imagen_url: menuImgUrl,
+      instruccion: "hazla más cálida",
+    });
+    assert.equal(out.response.ok, true);
+    assert.ok(store.data.pages!.menu.html.includes("edited-123.webp"));
+    assert.ok(!store.data.pages!.menu.html.includes(menuImgUrl));
+    assert.equal(store.data.html, HOME_HTML); // byte-intacto — home untouched
   });
 });

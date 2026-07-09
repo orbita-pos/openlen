@@ -307,8 +307,12 @@ async function toolLeerEstado(
   if (!row) return { response: { ok: false, error: "proyecto no encontrado" } };
 
   const response = summarizeProjectState(row);
+  // F4 Task 2 — explicit home signal (the T1 reviewer's flagged gap): home
+  // reads "principal" here rather than being silently absent, unlike the
+  // ESTADO block's context string (which omits it to hold F3 byte-identity).
+  response.pagina_activa = session.page ?? "principal";
   if (args.incluir_documento === true) {
-    session.taggedHtml = tagWithOpIds(row.data.html).taggedHtml;
+    session.taggedHtml = tagWithOpIds(activeHtml(row.data, session.page) ?? "").taggedHtml;
     response.documento = session.taggedHtml;
   }
   return { response };
@@ -564,12 +568,27 @@ interface RawEdit {
 
 type PersistResult = { ok: true; finalHtml: string } | { ok: false; error: string };
 
+// F4 Task 2 — every read of "the document" must resolve through the
+// session's active slot, not always data.html: page=null → home (data.html),
+// page="<slug>" → that subpage's own document (data.pages[slug].html).
+// This is the single choke point the W1 pin depends on for READS; writes go
+// through the mirrored branch inside persistHtmlChange below.
+function activeHtml(data: ProjectData, page: string | null): string | null {
+  return page ? data.pages?.[page]?.html ?? null : data.html ?? null;
+}
+
 // Shared F1 persist pipeline — same block editar_pagina always ran:
 // editor-mode marker guard -> sanitize -> ensurePageMeta(normalizeBornCanonical)
 // -> module-intent -> snapshot pre/post -> save -> re-tag session.taggedHtml.
 // Any tool that hands the model a mutated document (editar_pagina,
 // cambiar_tema, …) funnels its candidate HTML through this so persistence
 // semantics never drift between tools.
+//
+// F4 Task 2 — THE W1 PIN: which slot gets written is keyed off
+// session.page, cloned from ai-design's own page-branch (route.ts, the
+// `nextData = pageSlug ? {...pages spread...} : {...home...}` shape) — an
+// immutable spread so writing a subpage NEVER touches data.html or any
+// sibling page, and writing home NEVER touches data.pages.
 async function persistHtmlChange(
   session: AgentSession,
   deps: AgentDeps,
@@ -592,20 +611,26 @@ async function persistHtmlChange(
   if (!row) return { ok: false, error: "proyecto no encontrado" };
 
   const moduleIntent = applyModuleIntent(row.data.settings, finalHtml);
-  const nextData: ProjectData = {
-    ...row.data,
-    html: finalHtml,
-    ...(moduleIntent.enabled.length ? { settings: moduleIntent.settings } : {}),
-  };
+  const withSettings = moduleIntent.enabled.length ? { settings: moduleIntent.settings } : {};
+  const nextData: ProjectData = session.page
+    ? {
+        ...row.data,
+        ...withSettings,
+        pages: {
+          ...row.data.pages,
+          [session.page]: { ...row.data.pages?.[session.page], html: finalHtml },
+        },
+      }
+    : { ...row.data, html: finalHtml, ...withSettings };
 
-  const preEditHtml = row.data.html;
+  const preEditHtml = activeHtml(row.data, session.page);
   if (preEditHtml && preEditHtml !== finalHtml) {
     await deps.snapshotVersion({
       projectId: session.projectId,
       html: preEditHtml,
       label: "Before AI edit",
       source: "manual",
-      page: null,
+      page: session.page,
     });
   }
 
@@ -616,7 +641,7 @@ async function persistHtmlChange(
     html: finalHtml,
     label,
     source: "chat",
-    page: null,
+    page: session.page,
   });
 
   // Ids change after every apply — re-tag so the next editar_pagina call
@@ -743,13 +768,17 @@ async function toolCambiarTema(
 
   const tokens: Record<string, string> = {};
 
+  // F4 Task 2: seed from the ACTIVE document — a subpage's own accent/mode,
+  // never home's, when session.page is set (the W1 pin's read side).
+  const activeDoc = activeHtml(row.data, session.page) ?? "";
+
   // Colors re-derive whenever there's an accent to derive FROM: an explicit
   // hex, or (standalone modo — the button's dark/light toggle) the page's
   // current --ol-accent. Mirrors applyLookForMode: every bundle apply also
   // stamps the mode attr (empty = light default, removes it). No modo given =
   // the page's CURRENT mode (the button reads modeRef, never forces light).
-  const modo = modoArg ?? readThemeModeFromHtml(row.data.html);
-  const accentSeed = accent ?? (modoArg ? readThemeTokenFromHtml(row.data.html, "--ol-accent") : null);
+  const modo = modoArg ?? readThemeModeFromHtml(activeDoc);
+  const accentSeed = accent ?? (modoArg ? readThemeTokenFromHtml(activeDoc, "--ol-accent") : null);
   if (accent !== undefined || modoArg !== undefined) {
     if (!accentSeed) {
       return {
@@ -781,7 +810,7 @@ async function toolCambiarTema(
     if (radiusToken) tokens["--ol-r-scale"] = radiusToken;
   }
 
-  const candidateHtml = applyThemeTokensToHtml(row.data.html, tokens);
+  const candidateHtml = applyThemeTokensToHtml(activeDoc, tokens);
 
   const persisted = await persistHtmlChange(
     session,
@@ -814,11 +843,12 @@ async function toolAplicarTematica(
   const row = await deps.loadProject(session.projectId, session.userId);
   if (!row) return { response: { ok: false, error: "proyecto no encontrado" } };
 
+  const activeDoc = activeHtml(row.data, session.page) ?? "";
   let candidateHtml: string;
   if (tematica === "quitar") {
-    candidateHtml = removeTematicaFromHtml(row.data.html);
+    candidateHtml = removeTematicaFromHtml(activeDoc);
   } else {
-    const applied = applyTematicaToHtml(row.data.html, tematica, fondo);
+    const applied = applyTematicaToHtml(activeDoc, tematica, fondo);
     if ("error" in applied) {
       return { response: { ok: false, error: applied.error } };
     }
@@ -927,7 +957,11 @@ async function toolEditarImagen(
   // Anti prompt-injection SSRF: only edit an image ALREADY on the page. The URL
   // must appear as an image-bearing attribute value in the current tagged
   // document — a bare URL sitting in body copy is NOT enough, so an
-  // attacker-supplied URL can't reach fetchImage this way.
+  // attacker-supplied URL can't reach fetchImage this way. session.taggedHtml
+  // is always the ACTIVE document (home or the active subpage) — set at
+  // session init from session.page and kept in sync by persistHtmlChange /
+  // leer_estado's re-tag, so this check is a W1 read-side guard for free: a
+  // URL that only lives on home can never pass membership while page="menu".
   if (!urlIsPageImage(session.taggedHtml, imagenUrl)) {
     return {
       response: {
@@ -969,8 +1003,9 @@ async function toolEditarImagen(
   if (!row) return { response: { ok: false, error: "proyecto no encontrado" } };
 
   // Swap every occurrence of the exact source URL for the new asset URL over
-  // the current (clean) document, then run the shared persist pipeline.
-  const swapped = (row.data.html ?? "").split(imagenUrl).join(nuevaUrl);
+  // the current (clean) ACTIVE document — home or the active subpage, per
+  // session.page — then run the shared persist pipeline.
+  const swapped = (activeHtml(row.data, session.page) ?? "").split(imagenUrl).join(nuevaUrl);
   const persisted = await persistHtmlChange(
     session,
     deps,
