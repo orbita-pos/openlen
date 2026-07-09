@@ -601,15 +601,9 @@ function AIDesignChat({
         /* storage blocked — default stays agent; must not wedge the composer */
       }
       if (agentMode) {
-        // F1 server tools ONLY edit the home document (data.html). If the
-        // canvas is on a subpage, don't fetch — settle the turn as an
-        // error-style notice (spinner off, input re-enabled, nothing
-        // persisted), same as any other pre-flight failure.
-        if (turnPage !== null) {
-          updateTurn(turnId, { status: "error", errorText: tAgent("homeOnly") });
-          setSending(false);
-          return;
-        }
+        // F4: the agent is multi-page now (route validates `page` against
+        // data.pages, tools write the active slot with W1 pins) — the
+        // pre-flight home-only block that used to live here is gone.
         const abort = new AbortController();
         abortRef.current = abort;
         let accumulatedReasoning = "";
@@ -628,6 +622,9 @@ function AIDesignChat({
               projectId,
               prompt,
               history,
+              // Same value + same conditional shape ai-design sends below —
+              // absent/empty means home, cloned for parity.
+              ...(turnPage ? { page: turnPage } : {}),
               ...(turnScope ? { scope: turnScope } : {}),
               ...(turnImage ? { attachedImage: turnImage } : {}),
             }),
@@ -711,10 +708,22 @@ function AIDesignChat({
                 const html = strField(payload, "html");
                 if (html) {
                   latestAgentHtml = html;
-                  // Agent turns are home-only (guarded above), so pin the html
-                  // channel to home explicitly — the refreshed document must
-                  // never land in a subpage slot.
-                  onLocalUpdate(html, null);
+                  // F4-T4: the html event carries its OWN page (loop.ts —
+                  // outcome.page from session.page at write time), because
+                  // trabajar_en_pagina can move the active document mid-turn:
+                  // a later html event in the same turn may target a
+                  // different page than the one the turn started on. Paint
+                  // whichever slot the server says, not turnPage — any
+                  // non-string payload.page (shouldn't happen; loop.ts always
+                  // sends null or a string) falls back to home rather than
+                  // silently dropping the paint.
+                  const evPage =
+                    payload &&
+                    typeof payload === "object" &&
+                    typeof (payload as { page?: unknown }).page === "string"
+                      ? (payload as { page: string }).page
+                      : null;
+                  onLocalUpdate(html, evPage);
                 }
               } else if (evName === "confirm") {
                 // The publish gate — attach a confirm card to this turn. It
@@ -781,9 +790,14 @@ function AIDesignChat({
             attachedImage: img ?? undefined,
             assistantReasoning: accumulatedReasoning,
             status: "applied",
-            // Agent turns are home-only (guarded above) — pin to home so Undo
-            // PATCHes the home document.
-            page: null,
+            // F4-T4: parity with the ai-design branch below — pin to the
+            // page the turn STARTED on (snapshotted at send time, same as
+            // preEditHtml) so Undo PATCHes the same slot preEditHtml came
+            // from. A mid-turn trabajar_en_pagina switch can make a later
+            // `html` event target a different page (painted live via its own
+            // `page` above); this turn-level bookkeeping intentionally still
+            // anchors to turnPage, exactly like ai-design's single-page turns.
+            page: turnPage,
             // F2-T11: persist the turn's final card states (a trailing
             // `running` card, if the stream ended mid-tool-call, persists
             // as-is — matches what the live turn showed). Confirm cards are

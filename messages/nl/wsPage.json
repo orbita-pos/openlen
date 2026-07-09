@@ -1,6 +1,5 @@
 {
   "agent": {
-    "homeOnly": "De agent werkt voorlopig alleen op je hoofdpagina. Ga naar de hoofdpagina en probeer het opnieuw.",
     "failed": "mislukt",
     "tool": {
       "leer_estado": "Je project lezen",

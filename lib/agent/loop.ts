@@ -29,7 +29,13 @@ export type AgentErrorCode =
 export type AgentStreamEvent =
   | { type: "text"; text: string }
   | { type: "action"; tool: string; status: "running" | "done" | "error"; summary: string }
-  | { type: "html"; html: string }
+  // F4 Task 4 — the ONLY SSE protocol change this task makes: `html` gains
+  // `page` (the slot this document belongs to — null for home). Needed
+  // because `trabajar_en_pagina` can move the active document mid-turn, so a
+  // later `html` event in the same turn may target a different page than the
+  // one the turn started on; the panel paints whichever slot `page` names,
+  // never assuming it's still the page the canvas is showing.
+  | { type: "html"; html: string; page: string | null }
   // The publish gate (Task 7): the model prepared a publish but MUST NOT
   // publish itself. The panel renders a confirm card whose button hits the
   // real publish endpoint — the user's tap is the only thing that publishes.
@@ -185,7 +191,7 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
       });
 
       if (outcome.updatedHtml) {
-        args.emit({ type: "html", html: outcome.updatedHtml });
+        args.emit({ type: "html", html: outcome.updatedHtml, page: outcome.page ?? null });
       }
 
       // A confirm outcome (publicar) NEVER carries out its action. Surface the

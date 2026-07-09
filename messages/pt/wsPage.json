@@ -1,6 +1,5 @@
 {
   "agent": {
-    "homeOnly": "Por enquanto, o agente trabalha na sua página principal. Volte para a página principal e tente novamente.",
     "failed": "falhou",
     "tool": {
       "leer_estado": "Lendo seu projeto",

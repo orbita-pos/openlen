@@ -312,4 +312,70 @@ describe("runAgentLoop", () => {
     });
     expect(events.some((e) => e.type === "html")).toBe(true);
   });
+
+  // F4-T4: html gains `page` — the ONLY SSE protocol change this task makes.
+  // A tool outcome with no `page` (e.g. a fixture that predates F4) defaults
+  // to home (null) rather than surfacing `undefined` to the panel.
+  it("F4-T4: html event with an explicit page (subpage write) carries it verbatim", async () => {
+    const events: AgentStreamEvent[] = [];
+    await runAgentLoop({
+      messages: [{ role: "user", content: "x" }], tools: [],
+      openStream: scripted(
+        [{ type: "function_call", name: "editar_pagina", args: {} }, done],
+        [{ type: "text_delta", text: "Hecho." }, done],
+      ),
+      runTool: async () => ({
+        response: { ok: true },
+        updatedHtml: "<!doctype html><html><body>menu</body></html>",
+        page: "menu",
+      }),
+      emit: (e) => events.push(e),
+    });
+    const html = events.find((e) => e.type === "html") as { html: string; page: string | null };
+    expect(html.page).toBe("menu");
+  });
+
+  it("F4-T4: html event with no page on the outcome defaults to home (null), not undefined", async () => {
+    const events: AgentStreamEvent[] = [];
+    await runAgentLoop({
+      messages: [{ role: "user", content: "x" }], tools: [],
+      openStream: scripted(
+        [{ type: "function_call", name: "editar_pagina", args: {} }, done],
+        [{ type: "text_delta", text: "Hecho." }, done],
+      ),
+      runTool: async () => ({ response: { ok: true }, updatedHtml: "<!doctype html><html><body>home</body></html>" }),
+      emit: (e) => events.push(e),
+    });
+    const html = events.find((e) => e.type === "html") as { html: string; page: string | null };
+    expect(html.page).toBeNull();
+  });
+
+  it("F4-T4: a mid-turn trabajar_en_pagina switch means later html events carry the NEW page, not the turn's starting one", async () => {
+    const events: AgentStreamEvent[] = [];
+    await runAgentLoop({
+      messages: [{ role: "user", content: "x" }], tools: [],
+      openStream: scripted(
+        [
+          { type: "function_call", name: "editar_pagina", args: {} },
+          { type: "function_call", name: "trabajar_en_pagina", args: { pagina: "menu" } },
+          { type: "function_call", name: "editar_pagina", args: {} },
+          done,
+        ],
+        [{ type: "text_delta", text: "Listo, cambié ambos." }, done],
+      ),
+      runTool: async (name) => {
+        if (name === "trabajar_en_pagina") return { response: { ok: true, pagina_activa: "menu" } };
+        // First editar_pagina call writes home (page: null); the second — after
+        // the switch — writes menu. A real runAgentTool derives this from
+        // session.page; the script just plays back what that would produce.
+        const page = name === "editar_pagina" && events.some((e) => e.type === "html") ? "menu" : null;
+        return { response: { ok: true }, updatedHtml: `<!doctype html><html><body>${page ?? "home"}</body></html>`, page };
+      },
+      emit: (e) => events.push(e),
+    });
+    const htmlEvents = events.filter((e) => e.type === "html") as { html: string; page: string | null }[];
+    expect(htmlEvents).toHaveLength(2);
+    expect(htmlEvents[0].page).toBeNull();
+    expect(htmlEvents[1].page).toBe("menu");
+  });
 });

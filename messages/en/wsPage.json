@@ -1,6 +1,5 @@
 {
   "agent": {
-    "homeOnly": "For now the agent works on your main page. Switch to the main page and try again.",
     "failed": "failed",
     "tool": {
       "leer_estado": "Reading your project",

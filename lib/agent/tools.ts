@@ -272,6 +272,12 @@ export interface ToolOutcome {
   action?: { tool: string; ok: boolean; summary: string };
   /** HTML nuevo (sin op-ids) para refrescar el iframe. */
   updatedHtml?: string;
+  /** F4 Task 4 — which slot `updatedHtml` belongs to (session.page at the
+   *  moment of the write), null for home. Required whenever `updatedHtml` is
+   *  set: `trabajar_en_pagina` can move `session.page` mid-turn, so the html
+   *  the loop is about to emit may target a DIFFERENT page than the one the
+   *  turn started on — the panel needs this to paint the right canvas slot. */
+  page?: string | null;
   /** El gate de publicación (publicar). Presente ⇒ el loop emite un evento
    *  `confirm` y le pasa al modelo un estado "esperando_confirmacion". La
    *  herramienta JAMÁS publica: el tap del usuario en la tarjeta es la única
@@ -705,6 +711,7 @@ async function toolEditarPagina(
     },
     action: { tool: "editar_pagina", ok: true, summary: resumen },
     updatedHtml: persisted.finalHtml,
+    page: session.page,
   };
 }
 
@@ -826,6 +833,7 @@ async function toolCambiarTema(
     response: { ok: true, tokens_aplicados: Object.keys(tokens).length },
     action: { tool: "cambiar_tema", ok: true, summary: accent ?? fuente ?? radius ?? modoArg ?? "" },
     updatedHtml: persisted.finalHtml,
+    page: session.page,
   };
 }
 
@@ -869,6 +877,7 @@ async function toolAplicarTematica(
     response: { ok: true, tematica },
     action: { tool: "aplicar_tematica", ok: true, summary: tematica },
     updatedHtml: persisted.finalHtml,
+    page: session.page,
   };
 }
 
@@ -1020,6 +1029,7 @@ async function toolEditarImagen(
     response: { ok: true, nueva_url: nuevaUrl },
     action: { tool: "editar_imagen", ok: true, summary: instruccion.slice(0, 60) },
     updatedHtml: persisted.finalHtml,
+    page: session.page,
   };
 }
 
