@@ -72,6 +72,7 @@ export async function POST(req: Request): Promise<Response> {
   const body = (await req.json().catch(() => null)) as {
     projectId?: string;
     prompt?: string;
+    page?: string;
     history?: { role: "user" | "assistant"; content: string }[];
     scope?: ScopeBody;
     attachedImage?: AttachedImageBody;
@@ -81,6 +82,11 @@ export async function POST(req: Request): Promise<Response> {
   const prompt = typeof body?.prompt === "string" ? body.prompt.trim() : "";
   if (!projectId) return errorJson(400, "projectId is required");
   if (prompt.length === 0 || prompt.length > 2000) return errorJson(400, "prompt must be 1–2000 chars");
+  // F4 Task 1 — multi-page base: page slug, validated CLONED from
+  // app/api/templates/ai-design/route.ts (read that file first if editing
+  // this block). Absent/empty ⇒ home; a non-empty slug MUST already exist in
+  // data.pages or the turn 404s rather than silently falling back to home.
+  const pageSlugRaw = typeof body?.page === "string" ? body.page.trim() : "";
   // History hardening: map to ONLY {role, content} (the TS wrapper serializes
   // functionCalls/functionResponses off Message objects, so a client-supplied
   // history entry spread whole would be a tool-call injection vector) and cap
@@ -145,10 +151,21 @@ export async function POST(req: Request): Promise<Response> {
   const project = await deps.loadProject(projectId, userId);
   if (!project) return errorJson(404, "project not found");
 
+  // Same validation ai-design applies to body.page: a non-empty slug that
+  // doesn't resolve against this project's data.pages is a 404, never a
+  // silent fallback to home.
+  const pageSlug =
+    pageSlugRaw && project.data?.pages?.[pageSlugRaw] ? pageSlugRaw : null;
+  if (pageSlugRaw && !pageSlug) return errorJson(404, "page not found");
+
   const PROVIDER = resolveAIProvider("gemini-flash");
   if (!PROVIDER.key) return errorJson(500, `${PROVIDER.label} API key missing`);
 
-  const { taggedHtml, taggedCount } = tagWithOpIds(project.data.html ?? "");
+  // The ACTIVE document — home's data.html or the validated subpage's html.
+  // Same no-taggable-elements 400 as before, now checked against whichever
+  // document is actually active this turn.
+  const activeHtml = pageSlug ? project.data.pages?.[pageSlug]?.html ?? "" : project.data.html ?? "";
+  const { taggedHtml, taggedCount } = tagWithOpIds(activeHtml);
   if (taggedCount === 0) return errorJson(400, "project html has no taggable elements");
 
   // Hard-pin: only when the client sent BOTH a path and a hint (mirrors
@@ -175,6 +192,7 @@ export async function POST(req: Request): Promise<Response> {
     attachedImage,
     scopePin,
     scopeHint,
+    activePage: pageSlug,
     maxPromptTokens: MAX_PROMPT_TOKENS,
   });
   if (!built.ok) return errorJson(413, "Page too large for an agent turn");
@@ -185,6 +203,7 @@ export async function POST(req: Request): Promise<Response> {
     projectId,
     userId,
     taggedHtml,
+    page: pageSlug,
     ownerEmail: session.user.email ?? null,
     imageEditsThisTurn: 0,
   };

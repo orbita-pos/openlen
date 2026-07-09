@@ -87,6 +87,33 @@ describe("buildAgentContext", () => {
     const args = { state, taggedHtml, userBrief };
     expect(buildAgentContext(args)).toBe(f1(args));
   });
+
+  // F4 Task 1 — multi-page base: buildAgentContext gains activePage.
+  it("names the active page in ESTADO and the DOCUMENTO header when activePage is a slug", () => {
+    const s = buildAgentContext({
+      state: { publicado: false },
+      taggedHtml: `<html data-op-id="m1"></html>`,
+      userBrief: null,
+      activePage: "menu",
+    });
+    expect(s).toContain('"pagina_activa": "menu"');
+    expect(s).toMatch(/DOCUMENTO ACTUAL[^\n]*"menu"/);
+  });
+
+  it("byte-identical to the F3 fixture when activePage is explicitly null (pin, matches F1 pattern)", () => {
+    const state = { publicado: true };
+    const taggedHtml = `<html data-op-id="z9"></html>`;
+    const userBrief = "Panadería artesanal";
+    const f3 = (a: { state: Record<string, unknown>; taggedHtml: string; userBrief: string | null }) => {
+      const brief = (a.userBrief ?? "").trim();
+      const briefBlock = brief
+        ? `PROJECT BRIEF (persistente — aplica a toda petición):\n${brief}\n\n`
+        : "";
+      return `ESTADO DEL PROYECTO (real, leído del servidor ahora mismo):\n${JSON.stringify(a.state, null, 2)}\n\n${briefBlock}DOCUMENTO ACTUAL (cada elemento trae data-op-id inyectado por el servidor — usa esos ids en editar_pagina):\n\n${a.taggedHtml}`;
+    };
+    const args = { state, taggedHtml, userBrief };
+    expect(buildAgentContext({ ...args, activePage: null })).toBe(f3(args));
+  });
 });
 
 describe("estimateContextTokens", () => {

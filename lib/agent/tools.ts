@@ -247,8 +247,15 @@ export function realDeps(): AgentDeps {
 export interface AgentSession {
   projectId: string;
   userId: string;
-  /** Documento home actual, etiquetado — mutado por editar_pagina. */
+  /** Documento ACTIVO actual, etiquetado — mutado por editar_pagina. Home o
+   *  subpágina según `page`; F4 Task 2 makes every tool read/write through
+   *  this session's active slot instead of always data.html. */
   taggedHtml: string;
+  /** F4 Task 1 — the slug of the page this turn is active on (route-validated
+   *  against data.pages), or null for the home document (data.html). Threaded
+   *  from the route's own validation, cloned from ai-design's page handling.
+   *  Read-only in T1 — T2 makes tool writes respect it (the W1 pin). */
+  page: string | null;
   /** Session email (session.user.email), threaded from the route so an
    *  agent-provisioned owner chat_user is created WITH an email — mirrors
    *  what the settings route passes to getOrCreateOwnerChatUser. */

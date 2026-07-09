@@ -31,6 +31,12 @@ export function buildAgentContext(args: {
   /** F2 Task 8 — a soft textual scope hint (scope.hint with no resolvable
    *  path). Ignored when scopePin is set. */
   scopeHint?: string | null;
+  /** F4 Task 1 — the slug of the page this turn is active on (route-validated
+   *  against data.pages), or null/omitted for the home document. Non-null ⇒
+   *  the ESTADO block gains a `pagina_activa` field and the DOCUMENTO header
+   *  names the page. null/omitted ⇒ output is byte-identical to F3 (pinned in
+   *  context.test.ts) — most turns today are still home-only. */
+  activePage?: string | null;
 }): string {
   const brief = (args.userBrief ?? "").trim();
   const briefBlock = brief
@@ -50,7 +56,18 @@ export function buildAgentContext(args: {
     imageBlock = `IMAGEN ADJUNTA DEL USUARIO: ${args.attachedImage.url}${altLine}\nEsta es una URL de imagen REAL que el usuario adjuntó explícitamente — colócala con editar_pagina usando esta URL EXACTA (verbatim) como src de un <img> (o como CSS background-image). NUNCA inventes ni cambies la URL. Si la página ya tiene un placeholder para esta imagen (un <div> con gradiente, una caja vacía con borde), REEMPLAZA ese elemento completo por el <img> — no lo anides adentro. Incluye siempre texto alt (usa el del usuario si lo dio; si no, infiérelo del contexto).\n\n`;
   }
 
-  return `ESTADO DEL PROYECTO (real, leído del servidor ahora mismo):\n${JSON.stringify(args.state, null, 2)}\n\n${briefBlock}${focusBlock}${imageBlock}DOCUMENTO ACTUAL (cada elemento trae data-op-id inyectado por el servidor — usa esos ids en editar_pagina):\n\n${args.taggedHtml}`;
+  // Non-null activePage merges into the ESTADO JSON (never mutates args.state)
+  // and renames the DOCUMENTO header. When it's null/omitted, stateForPrompt
+  // is the same reference as args.state and docHeader is the F3 literal — the
+  // whole return is byte-identical to F3 (pinned in context.test.ts).
+  const stateForPrompt = args.activePage
+    ? { ...args.state, pagina_activa: args.activePage }
+    : args.state;
+  const docHeader = args.activePage
+    ? `DOCUMENTO ACTUAL — página "${args.activePage}" (cada elemento trae data-op-id inyectado por el servidor — usa esos ids en editar_pagina):`
+    : `DOCUMENTO ACTUAL (cada elemento trae data-op-id inyectado por el servidor — usa esos ids en editar_pagina):`;
+
+  return `ESTADO DEL PROYECTO (real, leído del servidor ahora mismo):\n${JSON.stringify(stateForPrompt, null, 2)}\n\n${briefBlock}${focusBlock}${imageBlock}${docHeader}\n\n${args.taggedHtml}`;
 }
 
 /** Rough chars→tokens estimate (~3.5 chars/token on tag-dense HTML + JSON),
@@ -74,6 +91,10 @@ export interface BuildAgentMessagesArgs {
   attachedImage?: { url: string; alt?: string } | null;
   scopePin?: { opId: string; hint: string } | null;
   scopeHint?: string | null;
+  /** F4 Task 1 — threaded straight to buildAgentContext's activePage. See its
+   *  doc: non-null names the page in ESTADO/DOCUMENTO; null/omitted keeps the
+   *  turn byte-identical to F3. */
+  activePage?: string | null;
   /** Pre-flight size ceiling; over it → { ok:false, reason:"too_large" }. */
   maxPromptTokens: number;
 }
@@ -97,6 +118,7 @@ export function buildAgentMessages(args: BuildAgentMessagesArgs): BuildAgentMess
     attachedImage: args.attachedImage,
     scopePin: args.scopePin,
     scopeHint: args.scopeHint,
+    activePage: args.activePage,
   });
   const historyText = args.history.map((h) => h.content).join("\n");
   if (estimateContextTokens(contextBlock + historyText + args.prompt, systemPrompt) > args.maxPromptTokens) {

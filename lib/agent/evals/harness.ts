@@ -180,6 +180,9 @@ async function runLoopWithRetry(
         projectId,
         userId: opts.userId,
         taggedHtml,
+        // F4 Task 1: eval fixtures are home-only until F4 Task 5 adds
+        // multi-page cases via createSitePage.
+        page: null,
         ownerEmail: opts.ownerEmail,
         imageEditsThisTurn: 0,
       };

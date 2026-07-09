@@ -129,6 +129,7 @@ function makeSession(html: string = HTML): AgentSession {
     projectId: "p1",
     userId: "u1",
     taggedHtml: tagWithOpIds(html).taggedHtml,
+    page: null,
     ownerEmail: "owner@example.com",
     imageEditsThisTurn: 0,
   };
