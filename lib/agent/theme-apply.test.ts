@@ -54,4 +54,21 @@ describe("applyThemeTokensToHtml", () => {
     assert.ok(out.includes("color: red"));
     assert.ok(out.includes("--ol-accent: #e8743a"));
   });
+  it("escapes inner double quotes when re-serializing a single-quoted style value with url(\"...\")", () => {
+    const doc = `<!doctype html><html lang="es" style='background: url("x.png")'><head><title>x</title></head><body></body></html>`;
+    const out = applyThemeTokensToHtml(doc, { "--ol-accent": "#e8743a" });
+    const htmlTag = /<html\b[^>]*>/i.exec(out)![0];
+    // Well-formed: exactly one double-quoted style attr, no unescaped inner ".
+    assert.match(htmlTag, /^<html [^>]*style="[^"]*"[^>]*>$/);
+    assert.ok(htmlTag.includes(`url('x.png')`));
+    assert.ok(htmlTag.includes("--ol-accent: #e8743a"));
+  });
+  it("preserves a quoted font-family list as single-quoted when re-serializing", () => {
+    const doc = `<!doctype html><html lang="es" style='font-family: "Inter", serif'><head><title>x</title></head><body></body></html>`;
+    const out = applyThemeTokensToHtml(doc, { "--ol-accent": "#e8743a" });
+    const htmlTag = /<html\b[^>]*>/i.exec(out)![0];
+    assert.match(htmlTag, /^<html [^>]*style="[^"]*"[^>]*>$/);
+    assert.ok(htmlTag.includes(`font-family: 'Inter', serif`));
+    assert.ok(htmlTag.includes("--ol-accent: #e8743a"));
+  });
 });

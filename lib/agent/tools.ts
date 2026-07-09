@@ -29,7 +29,7 @@ import { debitCredits } from "@/lib/credits";
 import { detectSlotPath, sanitizeForPublish } from "@/lib/html-engine";
 import { applyOps, tagWithOpIds, type Op, type OpType } from "@/lib/html-ops";
 import { normalizeBornCanonical } from "@/lib/normalize";
-import { setProjectUserBrief } from "@/lib/projects";
+import { setProjectUserBrief, USER_BRIEF_MAX } from "@/lib/projects";
 import { extForMime, getAssetStorage } from "@/lib/projects/assets";
 import { validateUrl } from "@/lib/style-match/scrape/validate-url";
 import { validateSubdomain } from "@/lib/subdomain/validate";
@@ -1062,12 +1062,6 @@ async function toolPublicar(
 
 const PREFERENCIA_MIN = 5;
 const PREFERENCIA_MAX = 200;
-// Replicated, not imported: lib/projects.ts's USER_BRIEF_MAX is a private
-// const (setProjectUserBrief already silently truncates to it — this tool
-// needs to know the cap BEFORE writing, to refuse with a clear error instead
-// of silently losing the tail of the brief). Keep this literal in sync with
-// lib/projects.ts:452 if that value ever changes.
-const USER_BRIEF_MAX = 4000;
 // The block always lives at the END of the brief (spec) — the em-dash line is
 // the stable anchor: search/insert against it, never against leading/trailing
 // whitespace, so re-formatting elsewhere in the brief can't break detection.

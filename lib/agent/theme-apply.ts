@@ -68,6 +68,19 @@ function serializeStyleDecls(decls: Map<string, string>): string {
     .join("; ");
 }
 
+/** CSS treats `'` and `"` as interchangeable quote delimiters (url(...),
+ *  font-family lists, etc.), but the HTML attribute this value is about to be
+ *  written into is ALWAYS double-quoted (see applyThemeTokensToHtml below) —
+ *  so any inner `"` surviving from a single-quoted original (or any token
+ *  value) would break the attribute into junk. Convert wholesale to `'`
+ *  rather than HTML-escaping, so the value stays valid, readable CSS instead
+ *  of turning into `&quot;`. Applied to the WHOLE serialized value, not just
+ *  known-quoted tokens like font-family/url, so any other token carrying a
+ *  literal `"` is covered too. */
+function escapeForDoubleQuotedAttr(value: string): string {
+  return value.replace(/"/g, "'");
+}
+
 /** Read one token's current value off the root <html> inline style, or null
  *  when the tag/attribute/token is absent. */
 export function readThemeTokenFromHtml(html: string, token: string): string | null {
@@ -125,7 +138,7 @@ export function applyThemeTokensToHtml(html: string, tokens: Record<string, stri
     }
   }
 
-  const newStyleValue = serializeStyleDecls(decls);
+  const newStyleValue = escapeForDoubleQuotedAttr(serializeStyleDecls(decls));
   let newTag = styleMatch
     ? openTag.slice(0, styleMatch.index) +
       ` style="${newStyleValue}"` +
