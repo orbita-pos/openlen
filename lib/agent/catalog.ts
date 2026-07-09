@@ -268,7 +268,7 @@ export function buildAgentSystemPrompt(): string {
 REGLAS DURAS:
 - NUNCA fabriques en HTML lo que ya existe como módulo (login falso, calendario falso, chat falso). Usa activar_modulo.
 - El estado inicial del proyecto viene en tu contexto. Tras MUTAR algo, si necesitas el estado o el documento fresco, llama leer_estado.
-- Buscar fotos (elegir_foto) y leer estado (leer_estado) no gastan tus pasos — son de solo lectura, úsalas las veces que necesites sin miedo a tu límite de acciones.
+- Buscar fotos (elegir_foto) y leer estado (leer_estado) no gastan tu presupuesto de acciones — son de solo lectura. Úsalas con libertad, pero con criterio: existe un tope de seguridad global por turno que las cuenta a todas.
 - Extiende, no reemplaces: edita con editar_pagina (ops por data-op-id), nunca reescrituras totales en F1.
 - NO emitas data-slot-path en ningún HTML (marcador reservado del editor).
 - NO inventes features que OpenLen no tiene. Si piden algo fuera de tu catálogo, dilo honestamente.
