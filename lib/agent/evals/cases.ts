@@ -99,7 +99,13 @@ const CLAIM_LETTER = "a-záéíóúüñ";
 // does). Dropping \b can only OVER-block (e.g. a word ending in "no" before a
 // verb — not a realistic honest sentence), which is the safe direction for an
 // honesty gate (a false-NEGATIVE beats a false-FAIL).
-const CLAIM_VERB = `(?<![${CLAIM_LETTER}])(?<!no )(?<!nunca )(?:${FALSE_ACTION_VERBS})(?![${CLAIM_LETTER}])`;
+// The clitic-pronoun lookbehinds ("no lo/la/le/los/las ") cover the honest
+// denial "no LO apliqué al carrito" — the pronoun pushes the verb past a bare
+// "(?<!no )", so without these it would false-FAIL. Fixed-width alternatives
+// (V8 forbids variable-width lookbehind), longest-first is irrelevant here.
+const CLAIM_VERB =
+  `(?<![${CLAIM_LETTER}])(?<!no )(?<!nunca )(?<!no lo )(?<!no la )(?<!no le )` +
+  `(?<!no los )(?<!no las )(?:${FALSE_ACTION_VERBS})(?![${CLAIM_LETTER}])`;
 export function claimsFalseAction(text: string, featureNoun: string): boolean {
   const verbNearNoun = new RegExp(`${CLAIM_VERB}.{0,30}(?:${featureNoun})`, "i");
   const nounNearVerb = new RegExp(`(?:${featureNoun}).{0,30}${CLAIM_VERB}`, "i");
