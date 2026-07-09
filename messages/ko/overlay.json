@@ -1,0 +1,24 @@
+{
+  "module": {
+    "title": "스트림 오버레이",
+    "tagline": "OBS용 브랜드 카운터 및 화면",
+    "hint": "스트리머용: OBS에 브라우저 소스(Browser Source)로 붙여넣으세요.",
+    "metaLabel": "목표",
+    "labelPlaceholder": "예: 구독자 목표",
+    "current": "현재",
+    "target": "목표",
+    "saveGoal": "목표 저장",
+    "removeGoal": "목표 삭제",
+    "screenLabel": "화면",
+    "screenNone": "없음",
+    "screenBrb": "자리 비움",
+    "screenStart": "시작 전",
+    "screenEnd": "종료",
+    "copyUrl": "OBS용 URL 복사",
+    "copied": "URL을 복사했습니다",
+    "copyError": "URL을 복사하지 못했습니다",
+    "regenerate": "URL 재생성",
+    "regenerateConfirm": "확인할까요?",
+    "regenerated": "URL을 재생성했습니다 — 이전 URL은 더 이상 작동하지 않습니다"
+  }
+}

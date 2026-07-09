@@ -1,0 +1,24 @@
+{
+  "module": {
+    "title": "Overlay de stream",
+    "tagline": "Compteurs et écrans à votre marque pour OBS",
+    "hint": "Pour les streamers : collez-la dans OBS comme source navigateur (Browser Source).",
+    "metaLabel": "Objectif",
+    "labelPlaceholder": "ex. Objectif d'abonnés",
+    "current": "Actuel",
+    "target": "Objectif",
+    "saveGoal": "Enregistrer l'objectif",
+    "removeGoal": "Retirer l'objectif",
+    "screenLabel": "Écran",
+    "screenNone": "Aucun",
+    "screenBrb": "BRB",
+    "screenStart": "Début",
+    "screenEnd": "Fin",
+    "copyUrl": "Copier l'URL pour OBS",
+    "copied": "URL copiée",
+    "copyError": "Impossible de copier l'URL",
+    "regenerate": "Régénérer l'URL",
+    "regenerateConfirm": "Confirmer ?",
+    "regenerated": "URL régénérée — l'ancienne ne fonctionne plus"
+  }
+}

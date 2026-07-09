@@ -1,0 +1,24 @@
+{
+  "module": {
+    "title": "Overlay para live",
+    "tagline": "Contadores e telas com sua marca para o OBS",
+    "hint": "Para streamers: cole no OBS como fonte de navegador (Browser Source).",
+    "metaLabel": "Meta",
+    "labelPlaceholder": "ex. Meta de subs",
+    "current": "Atual",
+    "target": "Meta",
+    "saveGoal": "Salvar meta",
+    "removeGoal": "Remover meta",
+    "screenLabel": "Tela",
+    "screenNone": "Nenhuma",
+    "screenBrb": "BRB",
+    "screenStart": "Início",
+    "screenEnd": "Final",
+    "copyUrl": "Copiar URL para o OBS",
+    "copied": "URL copiada",
+    "copyError": "Não foi possível copiar a URL",
+    "regenerate": "Gerar nova URL",
+    "regenerateConfirm": "Confirmar?",
+    "regenerated": "URL gerada de novo — a anterior parou de funcionar"
+  }
+}

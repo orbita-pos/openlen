@@ -1,0 +1,24 @@
+{
+  "module": {
+    "title": "Stream-overlay",
+    "tagline": "Tellers en schermen in jouw merk voor OBS",
+    "hint": "Voor streamers: plak dit in OBS als browserbron (Browser Source).",
+    "metaLabel": "Doel",
+    "labelPlaceholder": "bijv. Abonneedoel",
+    "current": "Huidig",
+    "target": "Doel",
+    "saveGoal": "Doel opslaan",
+    "removeGoal": "Doel verwijderen",
+    "screenLabel": "Scherm",
+    "screenNone": "Geen",
+    "screenBrb": "Zo terug",
+    "screenStart": "Begin",
+    "screenEnd": "Einde",
+    "copyUrl": "URL voor OBS kopiëren",
+    "copied": "URL gekopieerd",
+    "copyError": "Kon de URL niet kopiëren",
+    "regenerate": "URL opnieuw genereren",
+    "regenerateConfirm": "Bevestigen?",
+    "regenerated": "Nieuwe URL gegenereerd — de oude werkt niet meer"
+  }
+}

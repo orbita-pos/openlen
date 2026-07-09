@@ -1,0 +1,24 @@
+{
+  "module": {
+    "title": "Stream-Overlay",
+    "tagline": "Zähler und Bildschirme in deiner Marke für OBS",
+    "hint": "Für Streamer: in OBS als Browser-Quelle (Browser Source) einfügen.",
+    "metaLabel": "Ziel",
+    "labelPlaceholder": "z. B. Abo-Ziel",
+    "current": "Aktuell",
+    "target": "Ziel",
+    "saveGoal": "Ziel speichern",
+    "removeGoal": "Ziel entfernen",
+    "screenLabel": "Bildschirm",
+    "screenNone": "Keiner",
+    "screenBrb": "BRB",
+    "screenStart": "Start",
+    "screenEnd": "Ende",
+    "copyUrl": "URL für OBS kopieren",
+    "copied": "URL kopiert",
+    "copyError": "URL konnte nicht kopiert werden",
+    "regenerate": "URL neu erzeugen",
+    "regenerateConfirm": "Bestätigen?",
+    "regenerated": "URL neu erzeugt — die alte funktioniert nicht mehr"
+  }
+}

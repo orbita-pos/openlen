@@ -1,0 +1,24 @@
+{
+  "module": {
+    "title": "Overlay per lo stream",
+    "tagline": "Contatori e schermate con il tuo brand per OBS",
+    "hint": "Per streamer: incollala in OBS come sorgente browser (Browser Source).",
+    "metaLabel": "Obiettivo",
+    "labelPlaceholder": "es. Obiettivo iscritti",
+    "current": "Attuale",
+    "target": "Obiettivo",
+    "saveGoal": "Salva obiettivo",
+    "removeGoal": "Rimuovi obiettivo",
+    "screenLabel": "Schermata",
+    "screenNone": "Nessuna",
+    "screenBrb": "BRB",
+    "screenStart": "Inizio",
+    "screenEnd": "Fine",
+    "copyUrl": "Copia URL per OBS",
+    "copied": "URL copiato",
+    "copyError": "Impossibile copiare l'URL",
+    "regenerate": "Rigenera URL",
+    "regenerateConfirm": "Confermi?",
+    "regenerated": "URL rigenerato — quello vecchio ha smesso di funzionare"
+  }
+}

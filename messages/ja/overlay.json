@@ -1,0 +1,24 @@
+{
+  "module": {
+    "title": "配信オーバーレイ",
+    "tagline": "OBS用のブランドカウンター＆画面",
+    "hint": "配信者向け：OBSにブラウザソース（Browser Source）として貼り付けます。",
+    "metaLabel": "目標",
+    "labelPlaceholder": "例：登録者数の目標",
+    "current": "現在",
+    "target": "目標",
+    "saveGoal": "目標を保存",
+    "removeGoal": "目標を削除",
+    "screenLabel": "画面",
+    "screenNone": "なし",
+    "screenBrb": "離席中",
+    "screenStart": "開始前",
+    "screenEnd": "終了",
+    "copyUrl": "OBS用URLをコピー",
+    "copied": "URLをコピーしました",
+    "copyError": "URLをコピーできませんでした",
+    "regenerate": "URLを再生成",
+    "regenerateConfirm": "確定しますか？",
+    "regenerated": "URLを再生成しました — 以前のURLは使えなくなりました"
+  }
+}

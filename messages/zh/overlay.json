@@ -1,0 +1,24 @@
+{
+  "module": {
+    "title": "直播叠层",
+    "tagline": "带品牌样式的计数器和画面，适用于 OBS",
+    "hint": "适合主播：在 OBS 中作为浏览器源（Browser Source）粘贴使用。",
+    "metaLabel": "目标",
+    "labelPlaceholder": "例如：订阅目标",
+    "current": "当前",
+    "target": "目标",
+    "saveGoal": "保存目标",
+    "removeGoal": "移除目标",
+    "screenLabel": "画面",
+    "screenNone": "无",
+    "screenBrb": "暂离",
+    "screenStart": "即将开始",
+    "screenEnd": "感谢观看",
+    "copyUrl": "复制 OBS 用 URL",
+    "copied": "已复制 URL",
+    "copyError": "无法复制 URL",
+    "regenerate": "重新生成 URL",
+    "regenerateConfirm": "确认？",
+    "regenerated": "已重新生成 URL — 旧链接已失效"
+  }
+}

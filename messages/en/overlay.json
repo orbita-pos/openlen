@@ -1,0 +1,24 @@
+{
+  "module": {
+    "title": "Stream overlay",
+    "tagline": "Branded counters and screens for OBS",
+    "hint": "For streamers: paste it in OBS as a Browser Source.",
+    "metaLabel": "Goal",
+    "labelPlaceholder": "e.g. Sub goal",
+    "current": "Current",
+    "target": "Target",
+    "saveGoal": "Save goal",
+    "removeGoal": "Remove goal",
+    "screenLabel": "Screen",
+    "screenNone": "None",
+    "screenBrb": "BRB",
+    "screenStart": "Starting",
+    "screenEnd": "Ending",
+    "copyUrl": "Copy URL for OBS",
+    "copied": "URL copied",
+    "copyError": "Couldn't copy the URL",
+    "regenerate": "Regenerate URL",
+    "regenerateConfirm": "Confirm?",
+    "regenerated": "URL regenerated — the old one stopped working"
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "module": {
+    "title": "Overlay para stream",
+    "tagline": "Contadores y pantallas con tu marca para OBS",
+    "hint": "Para streamers: pégala en OBS como fuente de navegador (Browser Source).",
+    "metaLabel": "Meta",
+    "labelPlaceholder": "p. ej. Meta de subs",
+    "current": "Actual",
+    "target": "Meta",
+    "saveGoal": "Guardar meta",
+    "removeGoal": "Quitar meta",
+    "screenLabel": "Pantalla",
+    "screenNone": "Ninguna",
+    "screenBrb": "BRB",
+    "screenStart": "Inicio",
+    "screenEnd": "Final",
+    "copyUrl": "Copiar URL para OBS",
+    "copied": "URL copiada",
+    "copyError": "No se pudo copiar la URL",
+    "regenerate": "Regenerar URL",
+    "regenerateConfirm": "¿Confirmar?",
+    "regenerated": "URL regenerada — la anterior dejó de funcionar"
+  }
+}
