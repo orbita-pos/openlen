@@ -60,6 +60,7 @@ export default defineConfig({
       "lib/publish/whatsapp-button.test.ts",
       "lib/publish/chat-widget.test.ts",
       "lib/publish/orders-price.test.ts",
+      "lib/publish/orders-cart.test.ts",
       "lib/members/**/*.test.ts",
       "lib/chat/**/*.test.ts",
       "lib/broadcast/**/*.test.ts",
