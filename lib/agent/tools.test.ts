@@ -840,6 +840,24 @@ describe("W1 regression pins (multi-página)", () => {
     assert.equal(store.data.pages!.menu.html, MENU_HTML); // byte-intacta
   });
 
+  it("PIN: entre VARIAS subpáginas, editar_pagina toca SOLO la activa; la hermana y home byte-intactas", async () => {
+    const ABOUT_HTML = `<!doctype html><html><head><title>Nosotros</title><meta name="description" content="Nosotros"></head><body><h1 data-x="k">Quiénes somos</h1><p>Desde 1998.</p></body></html>`;
+    const dataMulti: ProjectData = {
+      html: HOME_HTML,
+      pages: { menu: { html: MENU_HTML, title: "Menú" }, about: { html: ABOUT_HTML, title: "Nosotros" } },
+    };
+    const { deps, store } = makeDeps({ data: dataMulti });
+    const session = makeSession({ page: "menu", html: MENU_HTML });
+    const target = firstOpId(session.taggedHtml);
+    await runAgentTool(session, deps, "editar_pagina", {
+      edits: [{ op: "replace", target, new_html: "<h1>Tacos al pastor</h1>" }],
+      resumen: "titular menú",
+    });
+    assert.ok(store.data.pages!.menu.html.includes("Tacos al pastor"));
+    assert.equal(store.data.pages!.about.html, ABOUT_HTML); // hermana byte-intacta
+    assert.equal(store.data.html, HOME_HTML); // home byte-intacto
+  });
+
   it("PIN: snapshots llevan page=session.page (pre y post)", async () => {
     const { deps, store } = makeDeps({ data: DATA_MP });
     const session = makeSession({ page: "menu", html: MENU_HTML });
