@@ -15,6 +15,7 @@
 
 import { detectSiteAccent } from "@/lib/members/site-accent";
 import type { ItemRow } from "@/lib/collections/store";
+import { parsePriceCents } from "@/lib/publish/orders-price";
 
 const WIDGET_MARKER = "data-ol-collection-widget";
 const SECTION_MARKER = "data-ol-collection-section";
@@ -27,6 +28,10 @@ const MUTED = "#6b7280";
 export interface CollectionsBakeConfig {
   items: ItemRow[];
   layout: "grid" | "list";
+  /** Pedidos por WhatsApp: cuando viene con número, cada tarjeta hornea el
+   *  botón «Agregar» (data-ol-order-add) que el runtime del carrito opera.
+   *  null/ausente = off → salida byte-idéntica a la histórica. */
+  orders?: { number: string } | null;
 }
 
 function esc(s: string): string {
@@ -70,28 +75,43 @@ function ctaHtml(item: ItemRow, accent: string): string {
   return `<a href="${esc(href)}" style="margin-top:auto;align-self:flex-start;display:inline-block;text-decoration:none;font-size:13px;font-weight:600;padding:9px 16px;border-radius:10px;background:${accent};color:${inkOn(accent)};">${esc(item.ctaLabel)}</a>`;
 }
 
-function gridCard(item: ItemRow, accent: string): string {
+function orderButtonHtml(item: ItemRow, accent: string, label: string, hasCta: boolean): string {
+  const cents = parsePriceCents(item.priceDisplay);
+  return `<button type="button" data-ol-order-add data-ol-order-id="${esc(item.id)}" data-ol-order-title="${esc(item.title)}" data-ol-order-price="${esc(item.priceDisplay ?? "")}" data-ol-order-cents="${cents ?? ""}" style="${hasCta ? "margin-top:8px" : "margin-top:auto"};align-self:flex-start;display:inline-block;cursor:pointer;font-size:13px;font-weight:600;padding:8px 15px;border-radius:10px;border:1.5px solid ${accent};background:transparent;color:${accent};">${esc(label)}</button>`;
+}
+
+function gridCard(
+  item: ItemRow,
+  accent: string,
+  orders: { number: string } | null | undefined,
+  addLabel: string,
+): string {
   const src = safeImg(item.imageUrl);
   const img = src
     ? `<img src="${esc(src)}" alt="${esc(item.title)}" loading="lazy" style="width:100%;aspect-ratio:4/3;object-fit:cover;display:block;background:#f4f4f6;">`
     : "";
-  return `<article style="border:1px solid ${CARD_BORDER};border-radius:14px;overflow:hidden;background:#fff;display:flex;flex-direction:column;">${img}<div style="padding:16px;display:flex;flex-direction:column;gap:7px;flex:1;">${badgeHtml(item.badge, accent)}<h3 style="margin:0;font-size:16px;font-weight:700;line-height:1.3;color:${INK};">${esc(item.title)}</h3>${item.subtitle ? `<div style="font-size:13px;color:${MUTED};">${esc(item.subtitle)}</div>` : ""}${item.priceDisplay ? `<div style="font-size:15px;font-weight:700;color:${accent};">${esc(item.priceDisplay)}</div>` : ""}${item.description ? `<p style="margin:0;font-size:13.5px;line-height:1.55;color:#52525b;">${esc(item.description)}</p>` : ""}${ctaHtml(item, accent)}</div></article>`;
+  return `<article style="border:1px solid ${CARD_BORDER};border-radius:14px;overflow:hidden;background:#fff;display:flex;flex-direction:column;">${img}<div style="padding:16px;display:flex;flex-direction:column;gap:7px;flex:1;">${badgeHtml(item.badge, accent)}<h3 style="margin:0;font-size:16px;font-weight:700;line-height:1.3;color:${INK};">${esc(item.title)}</h3>${item.subtitle ? `<div style="font-size:13px;color:${MUTED};">${esc(item.subtitle)}</div>` : ""}${item.priceDisplay ? `<div style="font-size:15px;font-weight:700;color:${accent};">${esc(item.priceDisplay)}</div>` : ""}${item.description ? `<p style="margin:0;font-size:13.5px;line-height:1.55;color:#52525b;">${esc(item.description)}</p>` : ""}${ctaHtml(item, accent)}${orders ? orderButtonHtml(item, accent, addLabel, Boolean(item.ctaLabel && safeHref(item.ctaUrl))) : ""}</div></article>`;
 }
 
-function listRow(item: ItemRow, accent: string): string {
+function listRow(
+  item: ItemRow,
+  accent: string,
+  orders: { number: string } | null | undefined,
+  addLabel: string,
+): string {
   const src = safeImg(item.imageUrl);
   const thumb = src
     ? `<img src="${esc(src)}" alt="${esc(item.title)}" loading="lazy" style="width:84px;height:84px;flex:0 0 auto;object-fit:cover;border-radius:10px;background:#f4f4f6;">`
     : "";
-  return `<div style="display:flex;gap:16px;padding:16px 0;border-bottom:1px solid ${CARD_BORDER};align-items:flex-start;">${thumb}<div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:5px;"><div style="display:flex;justify-content:space-between;gap:14px;align-items:baseline;"><h3 style="margin:0;font-size:16px;font-weight:700;line-height:1.3;color:${INK};">${esc(item.title)}</h3>${item.priceDisplay ? `<span style="flex:0 0 auto;font-size:15px;font-weight:700;color:${accent};">${esc(item.priceDisplay)}</span>` : ""}</div>${badgeHtml(item.badge, accent)}${item.subtitle ? `<div style="font-size:13px;color:${MUTED};">${esc(item.subtitle)}</div>` : ""}${item.description ? `<p style="margin:0;font-size:13.5px;line-height:1.55;color:#52525b;">${esc(item.description)}</p>` : ""}${ctaHtml(item, accent)}</div></div>`;
+  return `<div style="display:flex;gap:16px;padding:16px 0;border-bottom:1px solid ${CARD_BORDER};align-items:flex-start;">${thumb}<div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:5px;"><div style="display:flex;justify-content:space-between;gap:14px;align-items:baseline;"><h3 style="margin:0;font-size:16px;font-weight:700;line-height:1.3;color:${INK};">${esc(item.title)}</h3>${item.priceDisplay ? `<span style="flex:0 0 auto;font-size:15px;font-weight:700;color:${accent};">${esc(item.priceDisplay)}</span>` : ""}</div>${badgeHtml(item.badge, accent)}${item.subtitle ? `<div style="font-size:13px;color:${MUTED};">${esc(item.subtitle)}</div>` : ""}${item.description ? `<p style="margin:0;font-size:13.5px;line-height:1.55;color:#52525b;">${esc(item.description)}</p>` : ""}${ctaHtml(item, accent)}${orders ? orderButtonHtml(item, accent, addLabel, Boolean(item.ctaLabel && safeHref(item.ctaUrl))) : ""}</div></div>`;
 }
 
-function container(cfg: CollectionsBakeConfig, accent: string): string {
+function container(cfg: CollectionsBakeConfig, accent: string, addLabel: string): string {
   if (cfg.layout === "list") {
-    const rows = cfg.items.map((it) => listRow(it, accent)).join("");
+    const rows = cfg.items.map((it) => listRow(it, accent, cfg.orders, addLabel)).join("");
     return `<div ${WIDGET_MARKER} style="max-width:680px;margin:32px auto;padding:0 16px;">${rows}</div>`;
   }
-  const cards = cfg.items.map((it) => gridCard(it, accent)).join("");
+  const cards = cfg.items.map((it) => gridCard(it, accent, cfg.orders, addLabel)).join("");
   return `<div ${WIDGET_MARKER} style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:20px;max-width:1100px;margin:32px auto;padding:0 16px;">${cards}</div>`;
 }
 
@@ -106,7 +126,8 @@ export function bakeCollections(
   if (html.includes(WIDGET_MARKER)) return html;
 
   const accent = detectSiteAccent(html) ?? FALLBACK_ACCENT;
-  const block = cfg.items.length ? container(cfg, accent) : `<div ${WIDGET_MARKER}></div>`;
+  const addLabel = /<html[^>]*\blang=["']?en/i.test(html) ? "Add" : "Agregar";
+  const block = cfg.items.length ? container(cfg, accent, addLabel) : `<div ${WIDGET_MARKER}></div>`;
 
   // Replace the editor placeholder wherever it sits (any page). With no items
   // the block is an empty widget div, so the dashed editor box never ships —
