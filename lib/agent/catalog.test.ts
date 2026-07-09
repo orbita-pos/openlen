@@ -224,4 +224,13 @@ describe("buildAgentSystemPrompt", () => {
     expect(p).toContain("pagina_activa");
     expect(p.toLowerCase()).toContain("en cadena");
   });
+  it("knows Pedidos exists and no longer lists carrito as nonexistent", () => {
+    const p = buildAgentSystemPrompt();
+    expect(p).toContain("pedidos");
+    expect(p).toContain("Pedidos por WhatsApp");
+    // La regla de honestidad conserva pasarela de pagos como inexistente…
+    expect(p).toContain("pasarela de pagos");
+    // …pero ya NO puede negar el carrito (existe vía Pedidos).
+    expect(p).not.toMatch(/NO la tiene[^.]*carrito/);
+  });
 });

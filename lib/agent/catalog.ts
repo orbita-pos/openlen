@@ -8,7 +8,7 @@ import { TEMATICA_PRESETS } from "@/lib/tematicas/presets";
 import { THEME_PRESETS } from "@/lib/theme-presets";
 
 export const AGENT_MODULES = [
-  "members", "bookings", "collections", "chat", "whatsapp", "comments",
+  "members", "bookings", "collections", "chat", "whatsapp", "comments", "pedidos",
 ] as const;
 export type AgentModule = (typeof AGENT_MODULES)[number];
 
@@ -67,6 +67,8 @@ const MODULE_KNOWLEDGE: Record<AgentModule, string> = {
     "Botón flotante de WhatsApp. Actívalo cuando pidan contacto por WhatsApp. Necesita el número del negocio (si no lo sabes, actívalo y avisa que lo configuren en Módulos).",
   comments:
     "Comentarios de miembros en la página. REQUIERE members activo — si members está apagado, activa members primero o explica la dependencia.",
+  pedidos:
+    "Pedidos por WhatsApp: carrito sobre el Catálogo (collections) — cada item gana botón «Agregar» y el pedido armado (cantidades, total, nota) sale al WhatsApp del negocio en la página publicada. Actívalo cuando pidan 'carrito', 'pedidos', 'ordenar', 'que me compren por WhatsApp'. REQUIERE collections activo con items — si falta, activa collections primero (o explica la dependencia). Necesita número de WhatsApp (se configura en Módulos; si el módulo whatsapp ya tiene número, se pre-llena solo). NO es pago en línea: el cobro se acuerda en el chat de WhatsApp.",
 };
 
 export function buildFunctionDeclarations(): Record<string, unknown>[] {
@@ -285,7 +287,7 @@ REGLAS DURAS:
 - Extiende, no reemplaces: edita con editar_pagina (ops por data-op-id), nunca reescrituras totales en F1.
 - NO emitas data-slot-path en ningún HTML (marcador reservado del editor).
 - NO inventes features que OpenLen no tiene. Si piden algo fuera de tu catálogo, dilo honestamente.
-- Si piden funcionalidad que necesita backend y OpenLen NO la tiene (carrito de compras, pasarela de pagos, blog dinámico, buscador interno), dilo HONESTAMENTE antes de tocar la página: no la construyas como maqueta estática sin avisar. Ofrece las alternativas reales (Collections para catálogo, botón de WhatsApp para pedidos, Reservas para citas).
+- Si piden funcionalidad que necesita backend y OpenLen NO la tiene (pasarela de pagos en línea, blog dinámico, buscador interno), dilo HONESTAMENTE antes de tocar la página: no la construyas como maqueta estática sin avisar. Ofrece las alternativas reales (Collections para catálogo, Pedidos por WhatsApp para carrito/pedidos, Reservas para citas).
 - Si tu contexto trae un bloque "IMAGEN ADJUNTA DEL USUARIO", esa URL es REAL — colócala con editar_pagina usando esa URL EXACTA (verbatim) como <img src>, nunca inventes ni cambies la URL. Si hay un placeholder para ella (div con gradiente, caja vacía con borde), reemplázalo entero por el <img>.
 - Responde SIEMPRE en el idioma del usuario (usuario típico: español). Tono claro, cero jerga técnica: di "activé el módulo de cuentas", no "muté settings.members.enabled".
 

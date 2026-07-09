@@ -285,6 +285,23 @@ export interface ToolOutcome {
   confirm?: { action: "publicar"; subdominio: string; idiomas: string[]; republicar: boolean };
 }
 
+// AgentModule name -> the settings key it actually lives under. Identity for
+// every module except "pedidos", whose settings live at settings.orders (the
+// activar_modulo enum value stays "pedidos" — user-facing Spanish — while the
+// persisted patch/read key matches the OrdersSettings field name).
+const MODULE_SETTINGS_KEY: Record<
+  AgentModule,
+  "members" | "bookings" | "collections" | "chat" | "whatsapp" | "comments" | "orders"
+> = {
+  members: "members",
+  bookings: "bookings",
+  collections: "collections",
+  chat: "chat",
+  whatsapp: "whatsapp",
+  comments: "comments",
+  pedidos: "orders",
+};
+
 export function summarizeProjectState(row: {
   data: ProjectData;
   title: string;
@@ -293,7 +310,7 @@ export function summarizeProjectState(row: {
 }): Record<string, unknown> {
   const modulos = {} as Record<AgentModule, boolean>;
   for (const m of AGENT_MODULES) {
-    modulos[m] = row.data.settings?.[m]?.enabled === true;
+    modulos[m] = row.data.settings?.[MODULE_SETTINGS_KEY[m]]?.enabled === true;
   }
   return {
     titulo: row.title,
@@ -340,6 +357,8 @@ function buildModulePatch(modulo: AgentModule, encender: boolean): SettingsPatch
       return { whatsapp: { enabled: encender } };
     case "comments":
       return { comments: { enabled: encender } };
+    case "pedidos":
+      return { orders: { enabled: encender } };
   }
 }
 
