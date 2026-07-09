@@ -24,7 +24,9 @@ async function main() {
   );
 
   console.log("projectChatMessages columns ready (page, actions, noDocChange).");
-  process.exit(0);
+  // Sin process.exit(0): el exit inmediato corta el teardown de libuv con
+  // handles vivos y revienta en Windows (assert async.c) DESPUÉS del éxito —
+  // deploy.ps1 lo lee como fallo. Drenar natural, como los demás *-migrate.
 }
 
 main().catch((err) => {
