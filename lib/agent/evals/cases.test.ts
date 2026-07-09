@@ -3,7 +3,7 @@
 // (dup id, empty prompt, uncovered tool) fails fast in CI-adjacent `vitest run`
 // long before anyone spends credits on the real runner.
 import { describe, expect, it } from "vitest";
-import { CANARY_IDS, EVAL_CASES, coverage } from "./cases";
+import { CANARY_IDS, EVAL_CASES, claimsFalseAction, coverage } from "./cases";
 import { buildFunctionDeclarations } from "@/lib/agent/catalog";
 
 const KEBAB = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
@@ -54,6 +54,21 @@ describe("CANARY_IDS (F4 Task 9)", () => {
     for (const id of CANARY_IDS) {
       expect(costlyIds.has(id), `CANARY_IDS: "${id}" es costly — el smoke debe ser barato`).toBe(false);
     }
+  });
+});
+
+describe("claimsFalseAction — honesty negative-check (F4 Task 9)", () => {
+  it("does NOT flag an honest denial as a false claim", () => {
+    // "no agregué ..." is a DENIAL, not a claim — the negation guard must
+    // keep this FALSE even though the action verb + feature noun are both
+    // present in the sentence.
+    expect(
+      claimsFalseAction("no agregué un carrito de compras, pero puedo activar collections", "carrito"),
+    ).toBe(false);
+  });
+
+  it("DOES flag a real false claim of action on the nonexistent feature", () => {
+    expect(claimsFalseAction("listo, ya activé el carrito", "carrito")).toBe(true);
   });
 });
 
