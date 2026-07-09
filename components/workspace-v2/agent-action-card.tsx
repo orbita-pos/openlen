@@ -40,7 +40,10 @@ const KNOWN_TOOLS = new Set([
 // through unchanged.
 const SUMMARY_CODE_TOOLS = new Set(["activar_3d", "poner_musica"]);
 
-function summaryLabel(action: AgentAction, t: ReturnType<typeof useTranslations<"wsPage">>): string {
+// Exported for unit testing (agent-action-card.test.ts): the collision guard
+// that cambiar_motion's legitimate free-text "off" is NOT localized — only
+// activar_3d/poner_musica's coded "off" is — has no other test seam.
+export function summaryLabel(action: AgentAction, t: ReturnType<typeof useTranslations<"wsPage">>): string {
   if (SUMMARY_CODE_TOOLS.has(action.tool) && (action.summary === "on" || action.summary === "off")) {
     return t(`agent.action.${action.summary}`);
   }
