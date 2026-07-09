@@ -543,7 +543,7 @@ export function ModulesPanel({
           onToggle={() =>
             void updateOrders({
               enabled: !ordersOn,
-              ...(ordNumber.trim() ? { number: ordNumber.trim() } : {}),
+              ...(!ordersOn && ordNumber.trim() ? { number: ordNumber.trim() } : {}),
             })
           }
         >
