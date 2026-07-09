@@ -15,6 +15,7 @@
 
 import type { ProjectData } from "@/lib/projects/types";
 import type { AgentStreamEvent, AgentLoopResult } from "@/lib/agent/loop";
+import { createSitePage } from "@/lib/projects/create-page";
 
 export interface EvalCase {
   /** kebab-case, unique. */
@@ -67,6 +68,21 @@ function completedCleanly(ctx: Ctx): string | null {
   if (ctx.result.terminalError) return "el turno terminó en error terminal";
   if (ctx.events.some((e) => e.type === "error")) return "el loop emitió un evento error";
   return null;
+}
+
+// F4 Task 5: setup for the multi-page cases — a real "menu" subpage built
+// through the SAME core the crear_pagina tool and the pages route use
+// (createSitePage), not an inline data.pages literal, so the fixture's shape
+// (shell head/nav/footer + titled hero with the page's title as its <h1>) is
+// byte-for-byte what a real project would have. Throws on setup failure
+// (never expected — a controlled fixture) rather than silently running the
+// case against a project with no "menu" page.
+function withMenuPage(data: ProjectData): ProjectData {
+  const outcome = createSitePage(data, { slug: "menu", title: "Menú" });
+  if (!("nextData" in outcome)) {
+    throw new Error(`fixture setup: no se pudo crear la página "menu" (${outcome.error})`);
+  }
+  return outcome.nextData;
 }
 
 // NB on publish safety + memory: the verbatim `assert` ctx carries only
@@ -310,6 +326,41 @@ export const EVAL_CASES: EvalCase[] = [
     },
   },
 
+  // ── Multi-página (F4 T5) — trabajar_en_pagina in-vivo, PIN W1 live ─────────
+  {
+    id: "mp-editar-subpagina",
+    prompt: "en la página de menú cambia el titular a 'Nuestros tacos'",
+    setup: withMenuPage,
+    assert: (ctx) => {
+      const clean = completedCleanly(ctx);
+      if (clean) return clean;
+      const menuHtml = ctx.data.pages?.menu?.html ?? "";
+      if (!menuHtml.includes("Nuestros tacos")) return "pages.menu.html no trae el titular nuevo";
+      // PIN W1 en vivo: escribir la subpágina NUNCA debe tocar data.html.
+      if (ctx.data.html.includes("Nuestros tacos")) {
+        return "el titular se coló en data.html (home) — violación del pin W1";
+      }
+      if (!actionFired(ctx.events, "trabajar_en_pagina")) {
+        return "no llamó trabajar_en_pagina para moverse a la subpágina";
+      }
+      return null;
+    },
+  },
+  {
+    id: "mp-cadena-dos-paginas",
+    prompt: "ponle 'Bienvenidos' al titular del home y en la página de menú pon 'La carta'",
+    setup: withMenuPage,
+    assert: (ctx) => {
+      const clean = completedCleanly(ctx);
+      if (clean) return clean;
+      const okHome = ctx.data.html.includes("Bienvenidos");
+      const okMenu = (ctx.data.pages?.menu?.html ?? "").includes("La carta");
+      return okHome && okMenu
+        ? null
+        : `faltó ${!okHome ? "titular home" : ""} ${!okMenu ? "titular menu" : ""}`.trim();
+    },
+  },
+
   // ── Honestidad — NO inventar features inexistentes ──────────────────────────
   {
     id: "honesto-carrito",
@@ -507,18 +558,16 @@ export const coverage: Record<string, string[]> = {
   "recordar-tu-y-amarillo": ["recordar_preferencia"],
   "publicar-nuevo-subdominio": ["publicar"],
   "chain-tematica-y-musica": ["aplicar_tematica", "poner_musica"],
-  // F4 Task 3 coverage placeholder: trabajar_en_pagina has no dedicated real
-  // eval case yet — this case doesn't actually call it (creating a page never
-  // switches the active document). Listed here ONLY to satisfy the shape-test
-  // invariant "every catalog tool appears in some case's coverage" until F4
-  // Task 5 lands mp-editar-subpagina / mp-cadena-dos-paginas, which DO drive
-  // real page switches; T5 should move this off onto those ids instead. No
-  // behavioral effect: harness.ts only special-cases "recordar_preferencia"
-  // (userBrief invariant) — nothing keys off trabajar_en_pagina today.
-  "chain-menu-y-reservas": ["crear_pagina", "activar_modulo", "trabajar_en_pagina"],
+  "chain-menu-y-reservas": ["crear_pagina", "activar_modulo"],
   "chain-dos-ediciones": ["editar_pagina", "leer_estado"],
   "chain-foto-y-publicar": ["elegir_foto", "editar_pagina", "publicar"],
   "chain-tema-y-modulo": ["cambiar_tema", "activar_modulo"],
+  // F4 Task 5: the real trabajar_en_pagina coverage — both cases drive an
+  // actual page switch (setup creates "menu", the prompt names it by word),
+  // unlike chain-menu-y-reservas above (which only creates a page, never
+  // switches the active document).
+  "mp-editar-subpagina": ["trabajar_en_pagina", "editar_pagina"],
+  "mp-cadena-dos-paginas": ["trabajar_en_pagina", "editar_pagina"],
   "honesto-carrito": [],
   "honesto-navidena": [],
   "honesto-blog-backend": [],

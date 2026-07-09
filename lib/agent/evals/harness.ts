@@ -180,8 +180,13 @@ async function runLoopWithRetry(
         projectId,
         userId: opts.userId,
         taggedHtml,
-        // F4 Task 1: eval fixtures are home-only until F4 Task 5 adds
-        // multi-page cases via createSitePage.
+        // The turn always STARTS on the home document (mirrors a canvas that
+        // hasn't been pointed at a subpage yet) — a case that needs a
+        // subpage (F4 Task 5's mp-* cases, whose `setup` adds one via
+        // createSitePage) relies on the model calling trabajar_en_pagina
+        // itself mid-turn, exactly like a real user asking to edit "la
+        // página de menú" while looking at Home. That's the in-vivo
+        // exercise of the tool, not a harness shortcut.
         page: null,
         ownerEmail: opts.ownerEmail,
         imageEditsThisTurn: 0,
