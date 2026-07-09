@@ -17,18 +17,24 @@ import type {
   CollectionsSettings,
   CommentsSettings,
   MembersSettings,
+  OverlayPatch,
+  OverlaySettings,
   WhatsAppSettings,
 } from "@/lib/projects/types";
+import { useToast } from "../toast";
 import {
   BarChart3,
   Calendar,
   ChatIcon,
+  Copy,
   Grid3,
   Inbox,
   Loader,
   LockIcon,
   Megaphone,
   MessageSq,
+  Monitor,
+  RefreshCw,
   Sparkles,
   Trash,
   Users,
@@ -76,6 +82,9 @@ interface ModulesPanelProps {
   /** WhatsApp button module — toggle + number + prefilled message. */
   whatsappSettings?: WhatsAppSettings;
   onUpdateWhatsapp?: (patch: WhatsAppSettings) => Promise<boolean>;
+  /** Streamer overlay module — toggle + goal + screen + OBS URL. */
+  overlaySettings?: OverlaySettings;
+  onUpdateOverlay?: (patch: OverlayPatch) => Promise<boolean>;
   /** Private chat module — toggle + mount + self-serve. */
   chatSettings?: ChatSettings;
   onUpdateChat?: (patch: ChatSettings) => Promise<boolean>;
@@ -110,6 +119,8 @@ export function ModulesPanel({
   onShowCollections,
   whatsappSettings,
   onUpdateWhatsapp,
+  overlaySettings,
+  onUpdateOverlay,
   chatSettings,
   onUpdateChat,
   onCreateModulePage,
@@ -123,7 +134,9 @@ export function ModulesPanel({
   const tc = useTranslations("comments");
   const tbk = useTranslations("bookings");
   const tcol = useTranslations("collections");
+  const to = useTranslations("overlay");
   const tw = useTranslations("wsPage");
+  const toast = useToast();
   const enabled = membersSettings?.enabled === true;
   const mode = membersSettings?.mode === "invite" ? "invite" : "open";
   const broadcastOn = broadcastSettings?.enabled === true;
@@ -135,6 +148,9 @@ export function ModulesPanel({
   const bookingsReminders = bookingsSettings?.sendReminders !== false;
   const collectionsOn = collectionsSettings?.enabled === true;
   const whatsappOn = whatsappSettings?.enabled === true;
+  const overlayOn = overlaySettings?.enabled === true;
+  const overlayToken = overlaySettings?.token;
+  const overlayScreen = overlaySettings?.screen ?? "none";
   const chatOn = chatSettings?.enabled === true;
   const chatMount = chatSettings?.mount ?? "both";
   const chatSelfServe = chatSettings?.selfServeJoin !== false;
@@ -143,6 +159,11 @@ export function ModulesPanel({
   const [waBusy, setWaBusy] = useState(false);
   const [waNumber, setWaNumber] = useState(whatsappSettings?.number ?? "");
   const [waMessage, setWaMessage] = useState(whatsappSettings?.message ?? "");
+  const [ovBusy, setOvBusy] = useState(false);
+  const [ovLabel, setOvLabel] = useState(overlaySettings?.goal?.label ?? "");
+  const [ovCurrent, setOvCurrent] = useState(overlaySettings?.goal?.current ?? 0);
+  const [ovTarget, setOvTarget] = useState(overlaySettings?.goal?.target ?? 100);
+  const [ovRegenConfirm, setOvRegenConfirm] = useState(false);
   const [chatBusy, setChatBusy] = useState(false);
   const [chatWelcomeLocal, setChatWelcomeLocal] = useState(chatSettings?.welcome ?? "");
   const [chatQRs, setChatQRs] = useState<{ _key: string; q: string; a: string }[]>(
@@ -155,6 +176,16 @@ export function ModulesPanel({
   useEffect(() => {
     setChatWelcomeLocal(chatSettings?.welcome ?? "");
     setChatQRs((chatSettings?.quickReplies ?? []).map(r => ({ _key: crypto.randomUUID(), q: r.q, a: r.a })));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentProjectId]);
+
+  // Same fix as chat above — the overlay meta editor mirrors whatever goal is
+  // already saved, and must not carry a stale draft across project switches.
+  useEffect(() => {
+    setOvLabel(overlaySettings?.goal?.label ?? "");
+    setOvCurrent(overlaySettings?.goal?.current ?? 0);
+    setOvTarget(overlaySettings?.goal?.target ?? 100);
+    setOvRegenConfirm(false);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentProjectId]);
   const [cmtBusy, setCmtBusy] = useState(false);
@@ -172,6 +203,7 @@ export function ModulesPanel({
     commentsOn,
     collectionsOn,
     whatsappOn,
+    overlayOn,
     chatOn,
   ].filter(Boolean).length;
 
@@ -253,6 +285,50 @@ export function ModulesPanel({
   };
   const commitWhatsapp = () => {
     void updateWhatsapp({ number: waNumber.trim(), message: waMessage.trim() });
+  };
+  const updateOverlay = async (patch: OverlayPatch): Promise<boolean> => {
+    if (ovBusy || !onUpdateOverlay) return false;
+    setOvBusy(true);
+    const ok = await onUpdateOverlay(patch);
+    setOvBusy(false);
+    return ok;
+  };
+  const saveOverlayGoal = () => {
+    const label = ovLabel.trim();
+    if (!label) return;
+    const target = Math.max(1, Math.round(ovTarget) || 1);
+    const current = Math.max(0, Math.round(ovCurrent) || 0);
+    void updateOverlay({ goal: { label, current, target } });
+  };
+  const removeOverlayGoal = () => {
+    setOvLabel("");
+    setOvCurrent(0);
+    setOvTarget(100);
+    void updateOverlay({ goal: null });
+  };
+  const setOverlayScreen = (next: "brb" | "start" | "end" | "none") => {
+    void updateOverlay({ screen: next === "none" ? null : next });
+  };
+  const copyOverlayUrl = async () => {
+    if (!currentProjectId || !overlayToken) return;
+    const url = `${window.location.origin}/ov/${currentProjectId}?t=${overlayToken}`;
+    try {
+      await navigator.clipboard.writeText(url);
+      toast.success(to("module.copied"));
+    } catch {
+      toast.error(to("module.copyError"));
+    }
+  };
+  const regenerateOverlayUrl = () => {
+    if (ovBusy) return;
+    if (!ovRegenConfirm) {
+      setOvRegenConfirm(true);
+      return;
+    }
+    setOvRegenConfirm(false);
+    void updateOverlay({ regenerateToken: true }).then((ok) => {
+      if (ok) toast.success(to("module.regenerated"));
+    });
   };
   const updateChat = async (patch: ChatSettings) => {
     if (chatBusy || !onUpdateChat) return;
@@ -511,6 +587,119 @@ export function ModulesPanel({
           )}
         </ModCard>
 
+        {/* Overlay para stream (OBS) */}
+        <ModCard
+          icon={<Monitor size={18} />}
+          title={to("module.title")}
+          tagline={to("module.tagline")}
+          on={overlayOn}
+          busy={ovBusy}
+          onToggle={() => void updateOverlay({ enabled: !overlayOn })}
+        >
+          {overlayOn && (
+            <div className="space-y-3">
+              <p className="text-[11.5px] fg-faint leading-relaxed">{to("module.hint")}</p>
+
+              <div className="space-y-1.5">
+                <div className="text-[12px] font-medium fg-muted">{to("module.metaLabel")}</div>
+                <input
+                  value={ovLabel}
+                  onChange={(e) => setOvLabel(e.target.value)}
+                  disabled={ovBusy}
+                  maxLength={60}
+                  placeholder={to("module.labelPlaceholder")}
+                  className="w-full bg-app ring-1 ring-[color:var(--border)] rounded-lg px-3 h-9 text-[13px] fg outline-none focus:ring-[color:var(--accent)] transition disabled:opacity-50"
+                />
+                <div className="flex items-center gap-1.5">
+                  <Stepper label="-10" disabled={ovBusy} onClick={() => setOvCurrent((c) => Math.max(0, c - 10))} />
+                  <Stepper label="-1" disabled={ovBusy} onClick={() => setOvCurrent((c) => Math.max(0, c - 1))} />
+                  <input
+                    type="number"
+                    inputMode="numeric"
+                    value={ovCurrent}
+                    onChange={(e) => setOvCurrent(Math.max(0, Math.round(Number(e.target.value)) || 0))}
+                    disabled={ovBusy}
+                    aria-label={to("module.current")}
+                    className="w-16 shrink-0 text-center bg-app ring-1 ring-[color:var(--border)] rounded-lg h-8 text-[12.5px] fg outline-none focus:ring-[color:var(--accent)] transition disabled:opacity-50 tabular"
+                  />
+                  <Stepper label="+1" disabled={ovBusy} onClick={() => setOvCurrent((c) => c + 1)} />
+                  <Stepper label="+10" disabled={ovBusy} onClick={() => setOvCurrent((c) => c + 10)} />
+                  <span className="fg-faint text-[12px] px-0.5">/</span>
+                  <input
+                    type="number"
+                    inputMode="numeric"
+                    value={ovTarget}
+                    onChange={(e) => setOvTarget(Math.max(1, Math.round(Number(e.target.value)) || 1))}
+                    disabled={ovBusy}
+                    aria-label={to("module.target")}
+                    className="w-16 shrink-0 text-center bg-app ring-1 ring-[color:var(--border)] rounded-lg h-8 text-[12.5px] fg outline-none focus:ring-[color:var(--accent)] transition disabled:opacity-50 tabular"
+                  />
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    disabled={ovBusy || !ovLabel.trim()}
+                    onClick={saveOverlayGoal}
+                    className="flex-1 h-8 rounded-lg text-[12px] font-medium text-white bg-[var(--accent-strong)] hover:brightness-105 transition disabled:opacity-50"
+                  >
+                    {to("module.saveGoal")}
+                  </button>
+                  {overlaySettings?.goal && (
+                    <button
+                      type="button"
+                      disabled={ovBusy}
+                      onClick={removeOverlayGoal}
+                      className="flex-1 inline-flex items-center justify-center h-8 rounded-lg text-[12px] font-medium fg-muted hover:fg bg-app ring-1 ring-[color:var(--border)] hover:bg-hover transition disabled:opacity-50"
+                    >
+                      {to("module.removeGoal")}
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <div className="text-[12px] font-medium fg-muted">{to("module.screenLabel")}</div>
+                <Segment
+                  value={overlayScreen}
+                  options={[
+                    { id: "none", label: to("module.screenNone") },
+                    { id: "brb", label: to("module.screenBrb") },
+                    { id: "start", label: to("module.screenStart") },
+                    { id: "end", label: to("module.screenEnd") },
+                  ]}
+                  disabled={ovBusy}
+                  onPick={(v) => setOverlayScreen(v as "brb" | "start" | "end" | "none")}
+                />
+              </div>
+
+              <div className="space-y-1.5 pt-1">
+                <button
+                  type="button"
+                  disabled={!overlayToken}
+                  onClick={() => void copyOverlayUrl()}
+                  className="w-full inline-flex items-center justify-center gap-1.5 h-8 rounded-lg text-[12px] font-medium text-white bg-[var(--accent-strong)] hover:brightness-105 transition disabled:opacity-50"
+                >
+                  <Copy size={12} />
+                  {to("module.copyUrl")}
+                </button>
+                <button
+                  type="button"
+                  disabled={ovBusy || !overlayToken}
+                  onClick={regenerateOverlayUrl}
+                  className={`w-full inline-flex items-center justify-center gap-1.5 h-7 rounded-lg text-[11px] font-medium transition disabled:opacity-40 ${
+                    ovRegenConfirm
+                      ? "text-white bg-red-500 hover:brightness-105"
+                      : "fg-faint hover:fg bg-app ring-1 ring-[color:var(--border)] hover:bg-hover"
+                  }`}
+                >
+                  <RefreshCw size={11} />
+                  {ovRegenConfirm ? to("module.regenerateConfirm") : to("module.regenerate")}
+                </button>
+              </div>
+            </div>
+          )}
+        </ModCard>
+
         {/* Chat */}
         <ModCard
           icon={<ChatIcon size={18} />}
@@ -698,6 +887,28 @@ function ModCard({
       </div>
       {children && <div className="mt-3.5 pt-3.5 border-t bd">{children}</div>}
     </div>
+  );
+}
+
+// A compact +/- step button for the overlay goal's `current` counter.
+function Stepper({
+  label,
+  disabled,
+  onClick,
+}: {
+  label: string;
+  disabled?: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      disabled={disabled}
+      onClick={onClick}
+      className="shrink-0 h-8 px-2 rounded-lg text-[11px] font-medium fg-muted hover:fg bg-app ring-1 ring-[color:var(--border)] hover:bg-hover transition disabled:opacity-40"
+    >
+      {label}
+    </button>
   );
 }
 

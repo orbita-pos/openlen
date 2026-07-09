@@ -171,6 +171,7 @@
     "analyticsDisabled": "已停用分析",
     "saveError": "无法保存更改。",
     "moduleWhatsapp": "WhatsApp",
+    "moduleOverlay": "叠层",
     "whatsappNeedNumber": "请先填写 WhatsApp 号码",
     "modulePageCreated": "页面已创建",
     "modulePageExists": "已打开现有页面"

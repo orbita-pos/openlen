@@ -220,33 +220,43 @@ import nlBroadcast from "../messages/nl/broadcast.json";
 import enComments from "../messages/en/comments.json";
 import enBookings from "../messages/en/bookings.json";
 import enCollections from "../messages/en/collections.json";
+import enOverlay from "../messages/en/overlay.json";
 import esComments from "../messages/es/comments.json";
 import esBookings from "../messages/es/bookings.json";
 import esCollections from "../messages/es/collections.json";
+import esOverlay from "../messages/es/overlay.json";
 import ptComments from "../messages/pt/comments.json";
 import ptBookings from "../messages/pt/bookings.json";
 import ptCollections from "../messages/pt/collections.json";
+import ptOverlay from "../messages/pt/overlay.json";
 import frComments from "../messages/fr/comments.json";
 import frBookings from "../messages/fr/bookings.json";
 import frCollections from "../messages/fr/collections.json";
+import frOverlay from "../messages/fr/overlay.json";
 import deComments from "../messages/de/comments.json";
 import deBookings from "../messages/de/bookings.json";
 import deCollections from "../messages/de/collections.json";
+import deOverlay from "../messages/de/overlay.json";
 import itComments from "../messages/it/comments.json";
 import itBookings from "../messages/it/bookings.json";
 import itCollections from "../messages/it/collections.json";
+import itOverlay from "../messages/it/overlay.json";
 import jaComments from "../messages/ja/comments.json";
 import jaBookings from "../messages/ja/bookings.json";
 import jaCollections from "../messages/ja/collections.json";
+import jaOverlay from "../messages/ja/overlay.json";
 import koComments from "../messages/ko/comments.json";
 import koBookings from "../messages/ko/bookings.json";
 import koCollections from "../messages/ko/collections.json";
+import koOverlay from "../messages/ko/overlay.json";
 import zhComments from "../messages/zh/comments.json";
 import zhBookings from "../messages/zh/bookings.json";
 import zhCollections from "../messages/zh/collections.json";
+import zhOverlay from "../messages/zh/overlay.json";
 import nlComments from "../messages/nl/comments.json";
 import nlBookings from "../messages/nl/bookings.json";
 import nlCollections from "../messages/nl/collections.json";
+import nlOverlay from "../messages/nl/overlay.json";
 
 import enInbox from "../messages/en/inbox.json";
 import esInbox from "../messages/es/inbox.json";
@@ -295,6 +305,7 @@ const MESSAGES = {
     comments: enComments,
     bookings: enBookings,
     collections: enCollections,
+    overlay: enOverlay,
     inbox: enInbox,
     explore: enExplore,
   },
@@ -322,6 +333,7 @@ const MESSAGES = {
     comments: esComments,
     bookings: esBookings,
     collections: esCollections,
+    overlay: esOverlay,
     inbox: esInbox,
     explore: esExplore,
   },
@@ -349,6 +361,7 @@ const MESSAGES = {
     comments: ptComments,
     bookings: ptBookings,
     collections: ptCollections,
+    overlay: ptOverlay,
     inbox: ptInbox,
     explore: ptExplore,
   },
@@ -376,6 +389,7 @@ const MESSAGES = {
     comments: frComments,
     bookings: frBookings,
     collections: frCollections,
+    overlay: frOverlay,
     inbox: frInbox,
     explore: frExplore,
   },
@@ -403,6 +417,7 @@ const MESSAGES = {
     comments: deComments,
     bookings: deBookings,
     collections: deCollections,
+    overlay: deOverlay,
     inbox: deInbox,
     explore: deExplore,
   },
@@ -430,6 +445,7 @@ const MESSAGES = {
     comments: itComments,
     bookings: itBookings,
     collections: itCollections,
+    overlay: itOverlay,
     inbox: itInbox,
     explore: itExplore,
   },
@@ -457,6 +473,7 @@ const MESSAGES = {
     comments: jaComments,
     bookings: jaBookings,
     collections: jaCollections,
+    overlay: jaOverlay,
     inbox: jaInbox,
     explore: jaExplore,
   },
@@ -484,6 +501,7 @@ const MESSAGES = {
     comments: koComments,
     bookings: koBookings,
     collections: koCollections,
+    overlay: koOverlay,
     inbox: koInbox,
     explore: koExplore,
   },
@@ -511,6 +529,7 @@ const MESSAGES = {
     comments: zhComments,
     bookings: zhBookings,
     collections: zhCollections,
+    overlay: zhOverlay,
     inbox: zhInbox,
     explore: zhExplore,
   },
@@ -538,6 +557,7 @@ const MESSAGES = {
     comments: nlComments,
     bookings: nlBookings,
     collections: nlCollections,
+    overlay: nlOverlay,
     inbox: nlInbox,
     explore: nlExplore,
   },

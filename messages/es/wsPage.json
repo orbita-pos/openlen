@@ -171,6 +171,7 @@
     "analyticsDisabled": "Analíticas desactivadas",
     "saveError": "No se pudo guardar el cambio.",
     "moduleWhatsapp": "WhatsApp",
+    "moduleOverlay": "Overlay",
     "whatsappNeedNumber": "Primero pon un número de WhatsApp",
     "modulePageCreated": "Página creada",
     "modulePageExists": "Abrí la página que ya existía"

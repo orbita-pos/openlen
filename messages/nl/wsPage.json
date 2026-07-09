@@ -171,6 +171,7 @@
     "analyticsDisabled": "Analytics uitgeschakeld",
     "saveError": "Kon de wijziging niet opslaan.",
     "moduleWhatsapp": "WhatsApp",
+    "moduleOverlay": "Overlay",
     "whatsappNeedNumber": "Voeg eerst een WhatsApp-nummer toe",
     "modulePageCreated": "Pagina gemaakt",
     "modulePageExists": "Bestaande pagina geopend"

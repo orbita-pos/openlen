@@ -28,6 +28,8 @@ import type {
   FormConfig,
   MembersSettings,
   MusicSettings,
+  OverlayPatch,
+  OverlaySettings,
   ProjectSettings,
   StoredChatTurn,
   WhatsAppSettings,
@@ -2838,6 +2840,55 @@ function NewV2Inner() {
     },
     [loadedProject?.id, toast, t],
   );
+  const updateOverlaySettings = useCallback(
+    async (patch: OverlayPatch): Promise<boolean> => {
+      const projectId = loadedProject?.id;
+      if (!projectId) return false;
+      try {
+        const r = await fetch(`/api/projects/${projectId}/settings`, {
+          method: "PATCH",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ overlay: patch }),
+        });
+        if (!r.ok) {
+          toast.error(t("toast.moduleError"));
+          return false;
+        }
+        // The token is server-minted — read the merged settings back from the
+        // response instead of echoing the local patch, so the mirror always
+        // carries the real token (never client-guessed). r.ok guarantees the
+        // route's 200 body, which always includes `settings` — fall back to
+        // the previous mirror (not a hand-merged guess) only if parsing failed.
+        const body = (await r.json().catch(() => null)) as
+          | { settings?: { overlay?: OverlaySettings } }
+          | null;
+        setLoadedProject((p) =>
+          p
+            ? {
+                ...p,
+                settings: {
+                  ...p.settings,
+                  overlay: body?.settings?.overlay ?? p.settings?.overlay,
+                },
+              }
+            : p,
+        );
+        if (typeof patch.enabled === "boolean") {
+          const moduleName = t("toast.moduleOverlay");
+          toast.success(
+            t(patch.enabled ? "toast.moduleEnabled" : "toast.moduleDisabled", {
+              module: moduleName,
+            }),
+          );
+        }
+        return true;
+      } catch {
+        toast.error(t("toast.moduleError"));
+        return false;
+      }
+    },
+    [loadedProject?.id, toast, t],
+  );
   const updateMarketingSettings = useCallback(
     (patch: { register?: string; match?: boolean }) => {
       const projectId = loadedProject?.id;
@@ -3286,6 +3337,8 @@ function NewV2Inner() {
             onInsertCollectionsSection={insertCollectionsSection}
             whatsappSettings={loadedProject?.settings?.whatsapp}
             onUpdateWhatsappSettings={updateWhatsappSettings}
+            overlaySettings={loadedProject?.settings?.overlay}
+            onUpdateOverlaySettings={updateOverlaySettings}
             chatSettings={loadedProject?.settings?.chat}
             onUpdateChatSettings={updateChatSettings}
             onCreateModulePage={createModulePage}
