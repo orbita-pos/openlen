@@ -177,6 +177,7 @@
     "saveError": "No se pudo guardar el cambio.",
     "moduleWhatsapp": "WhatsApp",
     "whatsappNeedNumber": "Primero pon un número de WhatsApp",
+    "moduleOrders": "Pedidos",
     "modulePageCreated": "Página creada",
     "modulePageExists": "Abrí la página que ya existía"
   },
@@ -186,6 +187,13 @@
     "numberPlaceholder": "Número (ej. 5512345678)",
     "messagePlaceholder": "Mensaje pre-escrito (opcional)",
     "note": "Aparece abajo-derecha al publicar. Un número de 10 dígitos se toma como México (+52)."
+  },
+  "orders": {
+    "title": "Pedidos por WhatsApp",
+    "tagline": "Carrito sobre tu Catálogo: el pedido armado le llega a tu WhatsApp",
+    "numberPlaceholder": "Número de WhatsApp (ej. 5512345678)",
+    "note": "Funciona con los items de tu Catálogo. El visitante agrega productos y el mensaje sale con cantidades y total.",
+    "needsCatalog": "Activa el módulo Catálogo y agrega items para que aparezcan los botones."
   },
   "moduleSurface": {
     "createBookingPage": "Crear página de reservas",

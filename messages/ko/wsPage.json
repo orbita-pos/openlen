@@ -176,6 +176,7 @@
     "analyticsDisabled": "분석을 껐습니다",
     "saveError": "변경 사항을 저장하지 못했습니다.",
     "moduleWhatsapp": "WhatsApp",
+    "moduleOrders": "주문",
     "whatsappNeedNumber": "먼저 WhatsApp 번호를 추가하세요",
     "modulePageCreated": "페이지를 만들었습니다",
     "modulePageExists": "기존 페이지를 열었습니다"
@@ -186,6 +187,13 @@
     "numberPlaceholder": "전화번호 (예: 5512345678)",
     "messagePlaceholder": "미리 입력된 메시지 (선택)",
     "note": "게시된 페이지 오른쪽 아래에 표시됩니다. 10자리 번호는 멕시코(+52)로 인식됩니다."
+  },
+  "orders": {
+    "title": "WhatsApp 주문",
+    "tagline": "카탈로그 위의 장바구니: 완성된 주문이 WhatsApp으로 전달됩니다",
+    "numberPlaceholder": "WhatsApp 번호 (예: 5512345678)",
+    "note": "카탈로그 항목과 연동됩니다. 방문자가 상품을 담으면 수량과 합계가 포함된 메시지가 전송됩니다.",
+    "needsCatalog": "카탈로그 모듈을 켜고 항목을 추가하면 버튼이 나타납니다."
   },
   "moduleSurface": {
     "createBookingPage": "예약 페이지 만들기",

@@ -17,6 +17,7 @@ import type {
   CollectionsSettings,
   CommentsSettings,
   MembersSettings,
+  OrdersSettings,
   WhatsAppSettings,
 } from "@/lib/projects/types";
 import {
@@ -29,6 +30,7 @@ import {
   LockIcon,
   Megaphone,
   MessageSq,
+  Package,
   Sparkles,
   Trash,
   Users,
@@ -76,6 +78,9 @@ interface ModulesPanelProps {
   /** WhatsApp button module — toggle + number + prefilled message. */
   whatsappSettings?: WhatsAppSettings;
   onUpdateWhatsapp?: (patch: WhatsAppSettings) => Promise<boolean>;
+  /** Pedidos por WhatsApp module — toggle + destination number. */
+  ordersSettings?: OrdersSettings;
+  onUpdateOrders?: (patch: OrdersSettings) => Promise<boolean>;
   /** Private chat module — toggle + mount + self-serve. */
   chatSettings?: ChatSettings;
   onUpdateChat?: (patch: ChatSettings) => Promise<boolean>;
@@ -110,6 +115,8 @@ export function ModulesPanel({
   onShowCollections,
   whatsappSettings,
   onUpdateWhatsapp,
+  ordersSettings,
+  onUpdateOrders,
   chatSettings,
   onUpdateChat,
   onCreateModulePage,
@@ -135,6 +142,7 @@ export function ModulesPanel({
   const bookingsReminders = bookingsSettings?.sendReminders !== false;
   const collectionsOn = collectionsSettings?.enabled === true;
   const whatsappOn = whatsappSettings?.enabled === true;
+  const ordersOn = ordersSettings?.enabled === true;
   const chatOn = chatSettings?.enabled === true;
   const chatMount = chatSettings?.mount ?? "both";
   const chatSelfServe = chatSettings?.selfServeJoin !== false;
@@ -143,6 +151,10 @@ export function ModulesPanel({
   const [waBusy, setWaBusy] = useState(false);
   const [waNumber, setWaNumber] = useState(whatsappSettings?.number ?? "");
   const [waMessage, setWaMessage] = useState(whatsappSettings?.message ?? "");
+  const [ordBusy, setOrdBusy] = useState(false);
+  const [ordNumber, setOrdNumber] = useState(
+    ordersSettings?.number ?? whatsappSettings?.number ?? "",
+  );
   const [chatBusy, setChatBusy] = useState(false);
   const [chatWelcomeLocal, setChatWelcomeLocal] = useState(chatSettings?.welcome ?? "");
   const [chatQRs, setChatQRs] = useState<{ _key: string; q: string; a: string }[]>(
@@ -172,6 +184,7 @@ export function ModulesPanel({
     commentsOn,
     collectionsOn,
     whatsappOn,
+    ordersOn,
     chatOn,
   ].filter(Boolean).length;
 
@@ -253,6 +266,15 @@ export function ModulesPanel({
   };
   const commitWhatsapp = () => {
     void updateWhatsapp({ number: waNumber.trim(), message: waMessage.trim() });
+  };
+  const updateOrders = async (patch: OrdersSettings) => {
+    if (ordBusy || !onUpdateOrders) return;
+    setOrdBusy(true);
+    await onUpdateOrders(patch);
+    setOrdBusy(false);
+  };
+  const commitOrders = () => {
+    void updateOrders({ number: ordNumber.trim() });
   };
   const updateChat = async (patch: ChatSettings) => {
     if (chatBusy || !onUpdateChat) return;
@@ -506,6 +528,44 @@ export function ModulesPanel({
                   label={tw("moduleSurface.addWhatsappSection")}
                   onClick={onAddWhatsappSection}
                 />
+              )}
+            </div>
+          )}
+        </ModCard>
+
+        {/* Pedidos por WhatsApp */}
+        <ModCard
+          icon={<Package size={18} />}
+          title={tw("orders.title")}
+          tagline={tw("orders.tagline")}
+          on={ordersOn}
+          busy={ordBusy}
+          onToggle={() =>
+            void updateOrders({
+              enabled: !ordersOn,
+              ...(ordNumber.trim() ? { number: ordNumber.trim() } : {}),
+            })
+          }
+        >
+          {ordersOn && (
+            <div className="space-y-2">
+              <input
+                value={ordNumber}
+                onChange={(e) => setOrdNumber(e.target.value)}
+                onBlur={commitOrders}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") (e.target as HTMLInputElement).blur();
+                }}
+                inputMode="tel"
+                maxLength={32}
+                placeholder={tw("orders.numberPlaceholder")}
+                className="w-full bg-app ring-1 ring-[color:var(--border)] rounded-lg px-3 h-9 text-[13px] fg outline-none focus:ring-[color:var(--accent)] transition"
+              />
+              <p className="text-[10.5px] fg-faint leading-relaxed">{tw("orders.note")}</p>
+              {collectionsSettings?.enabled !== true && (
+                <p className="text-[10.5px] fg-faint leading-relaxed">
+                  {tw("orders.needsCatalog")}
+                </p>
               )}
             </div>
           )}

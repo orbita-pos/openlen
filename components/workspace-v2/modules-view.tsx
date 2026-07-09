@@ -18,6 +18,7 @@ import type {
   CollectionsSettings,
   CommentsSettings,
   MembersSettings,
+  OrdersSettings,
   WhatsAppSettings,
 } from "@/lib/projects/types";
 import { ModulesPanel } from "./panels/modules-panel";
@@ -50,6 +51,8 @@ export interface ModulesViewProps {
   onInsertCollectionsSection?: () => void;
   whatsappSettings?: WhatsAppSettings;
   onUpdateWhatsappSettings?: (patch: WhatsAppSettings) => Promise<boolean>;
+  ordersSettings?: OrdersSettings;
+  onUpdateOrdersSettings?: (patch: OrdersSettings) => Promise<boolean>;
   chatSettings?: ChatSettings;
   onUpdateChatSettings?: (patch: ChatSettings) => Promise<boolean>;
   /** Create a dedicated, brand-matched page for a module (bookings/collections). */
@@ -100,6 +103,8 @@ export function ModulesView(props: ModulesViewProps) {
               onShowCollections={() => setSub("collections")}
               whatsappSettings={props.whatsappSettings}
               onUpdateWhatsapp={props.onUpdateWhatsappSettings}
+              ordersSettings={props.ordersSettings}
+              onUpdateOrders={props.onUpdateOrdersSettings}
               chatSettings={props.chatSettings}
               onUpdateChat={props.onUpdateChatSettings}
               onCreateModulePage={async (m) => {

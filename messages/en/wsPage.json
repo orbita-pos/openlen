@@ -176,6 +176,7 @@
     "analyticsDisabled": "Analytics disabled",
     "saveError": "Couldn't save the change.",
     "moduleWhatsapp": "WhatsApp",
+    "moduleOrders": "Orders",
     "whatsappNeedNumber": "Add a WhatsApp number first",
     "modulePageCreated": "Page created",
     "modulePageExists": "Opened the existing page"
@@ -186,6 +187,13 @@
     "numberPlaceholder": "Phone number (e.g. 5512345678)",
     "messagePlaceholder": "Prefilled message (optional)",
     "note": "Shows bottom-right on your published page. A 10-digit number is read as Mexico (+52)."
+  },
+  "orders": {
+    "title": "WhatsApp Orders",
+    "tagline": "A cart over your Catalog: the composed order lands on your WhatsApp",
+    "numberPlaceholder": "WhatsApp number (e.g. 5512345678)",
+    "note": "Works with your Catalog items. Visitors add products and the message goes out with quantities and total.",
+    "needsCatalog": "Turn on the Catalog module and add items so the buttons appear."
   },
   "moduleSurface": {
     "createBookingPage": "Create booking page",

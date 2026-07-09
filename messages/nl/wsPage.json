@@ -176,6 +176,7 @@
     "analyticsDisabled": "Analytics uitgeschakeld",
     "saveError": "Kon de wijziging niet opslaan.",
     "moduleWhatsapp": "WhatsApp",
+    "moduleOrders": "Bestellingen",
     "whatsappNeedNumber": "Voeg eerst een WhatsApp-nummer toe",
     "modulePageCreated": "Pagina gemaakt",
     "modulePageExists": "Bestaande pagina geopend"
@@ -186,6 +187,13 @@
     "numberPlaceholder": "Nummer (bijv. 5512345678)",
     "messagePlaceholder": "Vooraf ingevuld bericht (optioneel)",
     "note": "Verschijnt rechtsonder op je gepubliceerde pagina. Een 10-cijferig nummer wordt gelezen als Mexico (+52)."
+  },
+  "orders": {
+    "title": "WhatsApp-bestellingen",
+    "tagline": "Een winkelwagen boven je Catalogus: de samengestelde bestelling komt aan op je WhatsApp",
+    "numberPlaceholder": "WhatsApp-nummer (bijv. 5512345678)",
+    "note": "Werkt met de items uit je Catalogus. Bezoekers voegen producten toe en het bericht gaat uit met aantallen en totaal.",
+    "needsCatalog": "Zet de Catalogus-module aan en voeg items toe zodat de knoppen verschijnen."
   },
   "moduleSurface": {
     "createBookingPage": "Boekingspagina maken",

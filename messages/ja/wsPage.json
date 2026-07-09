@@ -176,6 +176,7 @@
     "analyticsDisabled": "アナリティクスを無効にしました",
     "saveError": "変更を保存できませんでした。",
     "moduleWhatsapp": "WhatsApp",
+    "moduleOrders": "注文",
     "whatsappNeedNumber": "先にWhatsApp番号を追加してください",
     "modulePageCreated": "ページを作成しました",
     "modulePageExists": "既存のページを開きました"
@@ -186,6 +187,13 @@
     "numberPlaceholder": "電話番号（例: 5512345678）",
     "messagePlaceholder": "定型メッセージ（任意）",
     "note": "公開ページの右下に表示されます。10桁の番号はメキシコ（+52）として扱われます。"
+  },
+  "orders": {
+    "title": "WhatsAppで注文",
+    "tagline": "カタログの上にカートを追加。組み立てた注文がWhatsAppに届きます",
+    "numberPlaceholder": "WhatsApp番号（例: 5512345678）",
+    "note": "カタログの商品と連動します。訪問者が商品を追加すると、数量と合計金額つきのメッセージが送信されます。",
+    "needsCatalog": "カタログモジュールを有効にして商品を追加すると、ボタンが表示されます。"
   },
   "moduleSurface": {
     "createBookingPage": "予約ページを作成",

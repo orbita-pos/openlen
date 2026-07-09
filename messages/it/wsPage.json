@@ -176,6 +176,7 @@
     "analyticsDisabled": "Statistiche disattivate",
     "saveError": "Impossibile salvare la modifica.",
     "moduleWhatsapp": "WhatsApp",
+    "moduleOrders": "Ordini",
     "whatsappNeedNumber": "Aggiungi prima un numero WhatsApp",
     "modulePageCreated": "Pagina creata",
     "modulePageExists": "Pagina esistente aperta"
@@ -186,6 +187,13 @@
     "numberPlaceholder": "Numero (es. 5512345678)",
     "messagePlaceholder": "Messaggio precompilato (facoltativo)",
     "note": "Appare in basso a destra sulla pagina pubblicata. Un numero di 10 cifre è letto come Messico (+52)."
+  },
+  "orders": {
+    "title": "Ordini via WhatsApp",
+    "tagline": "Un carrello sopra il tuo Catalogo: l'ordine composto arriva sul tuo WhatsApp",
+    "numberPlaceholder": "Numero WhatsApp (es. 5512345678)",
+    "note": "Funziona con gli articoli del tuo Catalogo. Il visitatore aggiunge prodotti e il messaggio parte con quantità e totale.",
+    "needsCatalog": "Attiva il modulo Catalogo e aggiungi articoli perché i pulsanti appaiano."
   },
   "moduleSurface": {
     "createBookingPage": "Crea pagina prenotazioni",

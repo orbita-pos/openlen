@@ -176,6 +176,7 @@
     "analyticsDisabled": "Statistiques désactivées",
     "saveError": "Impossible d'enregistrer la modification.",
     "moduleWhatsapp": "WhatsApp",
+    "moduleOrders": "Commandes",
     "whatsappNeedNumber": "Ajoutez d'abord un numéro WhatsApp",
     "modulePageCreated": "Page créée",
     "modulePageExists": "Page existante ouverte"
@@ -186,6 +187,13 @@
     "numberPlaceholder": "Numéro (ex. 5512345678)",
     "messagePlaceholder": "Message pré-rempli (facultatif)",
     "note": "S'affiche en bas à droite sur votre page publiée. Un numéro à 10 chiffres est lu comme le Mexique (+52)."
+  },
+  "orders": {
+    "title": "Commandes WhatsApp",
+    "tagline": "Un panier sur votre Catalogue : la commande composée arrive sur votre WhatsApp",
+    "numberPlaceholder": "Numéro WhatsApp (ex. 5512345678)",
+    "note": "Fonctionne avec les articles de votre Catalogue. Le visiteur ajoute des produits et le message part avec les quantités et le total.",
+    "needsCatalog": "Activez le module Catalogue et ajoutez des articles pour que les boutons apparaissent."
   },
   "moduleSurface": {
     "createBookingPage": "Créer une page de réservation",

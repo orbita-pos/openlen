@@ -28,6 +28,7 @@ import type {
   FormConfig,
   MembersSettings,
   MusicSettings,
+  OrdersSettings,
   ProjectSettings,
   StoredChatTurn,
   WhatsAppSettings,
@@ -2838,6 +2839,47 @@ function NewV2Inner() {
     },
     [loadedProject?.id, toast, t],
   );
+  const updateOrdersSettings = useCallback(
+    async (patch: OrdersSettings): Promise<boolean> => {
+      const projectId = loadedProject?.id;
+      if (!projectId) return false;
+      try {
+        const r = await fetch(`/api/projects/${projectId}/settings`, {
+          method: "PATCH",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ orders: patch }),
+        });
+        if (!r.ok) {
+          toast.error(t("toast.moduleError"));
+          return false;
+        }
+        setLoadedProject((p) =>
+          p
+            ? {
+                ...p,
+                settings: {
+                  ...p.settings,
+                  orders: { ...p.settings?.orders, ...patch },
+                },
+              }
+            : p,
+        );
+        if (typeof patch.enabled === "boolean") {
+          const moduleName = t("toast.moduleOrders");
+          toast.success(
+            t(patch.enabled ? "toast.moduleEnabled" : "toast.moduleDisabled", {
+              module: moduleName,
+            }),
+          );
+        }
+        return true;
+      } catch {
+        toast.error(t("toast.moduleError"));
+        return false;
+      }
+    },
+    [loadedProject?.id, toast, t],
+  );
   const updateMarketingSettings = useCallback(
     (patch: { register?: string; match?: boolean }) => {
       const projectId = loadedProject?.id;
@@ -3286,6 +3328,8 @@ function NewV2Inner() {
             onInsertCollectionsSection={insertCollectionsSection}
             whatsappSettings={loadedProject?.settings?.whatsapp}
             onUpdateWhatsappSettings={updateWhatsappSettings}
+            ordersSettings={loadedProject?.settings?.orders}
+            onUpdateOrdersSettings={updateOrdersSettings}
             chatSettings={loadedProject?.settings?.chat}
             onUpdateChatSettings={updateChatSettings}
             onCreateModulePage={createModulePage}

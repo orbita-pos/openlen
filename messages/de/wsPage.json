@@ -176,6 +176,7 @@
     "analyticsDisabled": "Analytics deaktiviert",
     "saveError": "Die Änderung konnte nicht gespeichert werden.",
     "moduleWhatsapp": "WhatsApp",
+    "moduleOrders": "Bestellungen",
     "whatsappNeedNumber": "Füge zuerst eine WhatsApp-Nummer hinzu",
     "modulePageCreated": "Seite erstellt",
     "modulePageExists": "Vorhandene Seite geöffnet"
@@ -186,6 +187,13 @@
     "numberPlaceholder": "Nummer (z. B. 5512345678)",
     "messagePlaceholder": "Vorausgefüllte Nachricht (optional)",
     "note": "Erscheint unten rechts auf der veröffentlichten Seite. Eine 10-stellige Nummer wird als Mexiko (+52) gelesen."
+  },
+  "orders": {
+    "title": "WhatsApp-Bestellungen",
+    "tagline": "Ein Warenkorb über deinem Katalog: die fertige Bestellung landet auf deinem WhatsApp",
+    "numberPlaceholder": "WhatsApp-Nummer (z. B. 5512345678)",
+    "note": "Funktioniert mit den Artikeln deines Katalogs. Besucher fügen Produkte hinzu, und die Nachricht enthält Mengen und Gesamtsumme.",
+    "needsCatalog": "Aktiviere das Katalog-Modul und füge Artikel hinzu, damit die Buttons erscheinen."
   },
   "moduleSurface": {
     "createBookingPage": "Buchungsseite erstellen",
