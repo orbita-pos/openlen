@@ -166,6 +166,16 @@ export interface WhatsAppSettings {
   side?: "left" | "right";
 }
 
+/** Pedidos por WhatsApp: carrito sobre los items de Collections, horneado al
+ *  publicar. Ausente = off. Requiere Collections ON con items publicados. */
+export interface OrdersSettings {
+  /** Master switch. Ausente/false → nada se hornea. */
+  enabled?: boolean;
+  /** Número WhatsApp destino — misma semántica que WhatsAppSettings.number
+   *  (formato libre; 10 dígitos → +52 México). Ausente/vacío → nada se hornea. */
+  number?: string;
+}
+
 /** Project-level settings that aren't part of the HTML document. */
 export interface ProjectSettings {
   /** Per-form config, keyed by the form's index — its position among all
@@ -203,6 +213,8 @@ export interface ProjectSettings {
   collections?: CollectionsSettings;
   /** WhatsApp button: a floating tap-to-chat FAB baked at publish. Absent = off. */
   whatsapp?: WhatsAppSettings;
+  /** Pedidos por WhatsApp: carrito sobre Collections baked at publish. Absent = off. */
+  orders?: OrdersSettings;
   /** 3D scene: gesture-gated WebGL scene with AVIF poster baked at publish. Absent = off. */
   scene3d?: Scene3dSettings;
   /** Marketing Kit tab state (register = user-picked giro). */

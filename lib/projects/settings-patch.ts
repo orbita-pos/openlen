@@ -76,6 +76,8 @@ interface PatchBody {
     message?: string;
     side?: "left" | "right";
   };
+  /** Pedidos por WhatsApp. Merged into settings.orders. Takes effect next publish. */
+  orders?: { enabled?: boolean; number?: string };
   /** Private chat module. Merged into settings.chat. Takes effect next publish. */
   chat?: {
     enabled?: boolean;
@@ -250,6 +252,19 @@ export function validateSettingsPatch(
       return { ok: false, message: "whatsapp.side must be left|right" };
     }
   }
+  const hasOrders = "orders" in body;
+  if (hasOrders) {
+    const o = body.orders;
+    if (!o || typeof o !== "object") {
+      return { ok: false, message: "orders must be an object" };
+    }
+    if ("enabled" in o && typeof o.enabled !== "boolean") {
+      return { ok: false, message: "orders.enabled must be boolean" };
+    }
+    if ("number" in o && !(typeof o.number === "string" && o.number.length <= 32)) {
+      return { ok: false, message: "orders.number must be a string ≤32 chars" };
+    }
+  }
   const hasScene3d = "scene3d" in body;
   const hasChat = "chat" in body;
   if (hasChat) {
@@ -354,6 +369,7 @@ export function validateSettingsPatch(
     !hasBookings &&
     !hasCollections &&
     !hasWhatsapp &&
+    !hasOrders &&
     !hasChat &&
     !hasScene3d &&
     !hasMarketing
@@ -361,7 +377,7 @@ export function validateSettingsPatch(
     return {
       ok: false,
       message:
-        "expected formIndex+patch OR analyticsDisabled OR motion OR music OR members OR broadcast OR comments OR bookings OR collections OR whatsapp OR chat OR scene3d OR marketing",
+        "expected formIndex+patch OR analyticsDisabled OR motion OR music OR members OR broadcast OR comments OR bookings OR collections OR whatsapp OR orders OR chat OR scene3d OR marketing",
     };
   }
   if (hasFormPatch) {
@@ -402,6 +418,7 @@ export function applySettingsPatch(
   const hasBookings = "bookings" in body;
   const hasCollections = "collections" in body;
   const hasWhatsapp = "whatsapp" in body;
+  const hasOrders = "orders" in body;
   const hasScene3d = "scene3d" in body;
   const hasChat = "chat" in body;
   const hasMarketing = "marketing" in body;
@@ -556,6 +573,14 @@ export function applySettingsPatch(
       ...("number" in w ? { number: (w.number ?? "").trim() } : {}),
       ...("message" in w ? { message: (w.message ?? "").trim() } : {}),
       ...("side" in w ? { side: w.side } : {}),
+    };
+  }
+  if (hasOrders && body.orders) {
+    const o = body.orders;
+    nextSettings.orders = {
+      ...(data.settings?.orders ?? {}),
+      ...("enabled" in o ? { enabled: o.enabled } : {}),
+      ...("number" in o ? { number: clean(o.number, 32) } : {}),
     };
   }
   if (hasChat && body.chat) {

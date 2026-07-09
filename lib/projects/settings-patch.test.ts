@@ -31,6 +31,18 @@ describe("validateSettingsPatch", () => {
     const v = validateSettingsPatch({ motion: "frenetic" }, "p1");
     expect(v.ok).toBe(false);
   });
+  it("accepts an orders enable with number", () => {
+    const v = validateSettingsPatch({ orders: { enabled: true, number: "5512345678" } }, "p1");
+    expect(v.ok).toBe(true);
+  });
+  it("rejects orders with a non-object body", () => {
+    const v = validateSettingsPatch({ orders: "yes" }, "p1");
+    expect(v.ok).toBe(false);
+  });
+  it("rejects orders.number over 32 chars", () => {
+    const v = validateSettingsPatch({ orders: { number: "x".repeat(33) } }, "p1");
+    expect(v.ok).toBe(false);
+  });
 });
 
 describe("applySettingsPatch", () => {
@@ -72,5 +84,15 @@ describe("applySettingsPatch", () => {
     );
     if ("error" in out) throw new Error(out.error);
     expect(out.settings.comments?.enabled).toBe(false);
+  });
+  it("merges orders preserving prior fields", () => {
+    const data: ProjectData = {
+      ...baseData(),
+      settings: { orders: { number: "5512345678" } },
+    };
+    const out = applySettingsPatch(data, { orders: { enabled: true } });
+    if ("error" in out) throw new Error(out.error);
+    expect(out.settings.orders?.enabled).toBe(true);
+    expect(out.settings.orders?.number).toBe("5512345678");
   });
 });
