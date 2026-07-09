@@ -323,15 +323,17 @@ function AIDesignChat({
   );
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
-  // Agent mode (flag-gated) — read once on mount for the UI so the composer
-  // can hide affordances the /api/agent route drops (attach-image, scope,
-  // model choice). The send() path re-reads localStorage at call time.
-  const [agentModeUI, setAgentModeUI] = useState(false);
+  // Agent mode — DEFAULT ON since graduation (alpha ruling 2026-07-08):
+  // el Agente OpenLen es el chat. `ol:agent = "0"` is the per-browser
+  // opt-out back to classic ai-design (testing/emergencies). Read once on
+  // mount for the UI (hides the ModelPicker the agent route ignores); the
+  // send() path re-reads localStorage at call time.
+  const [agentModeUI, setAgentModeUI] = useState(true);
   useEffect(() => {
     try {
-      setAgentModeUI(window.localStorage.getItem("ol:agent") === "1");
+      setAgentModeUI(window.localStorage.getItem("ol:agent") !== "0");
     } catch {
-      /* storage blocked — leave affordances visible */
+      /* storage blocked — default stays agent */
     }
   }, []);
   const [attachedImage, setAttachedImage] = useState<AttachedImage | null>(null);
@@ -587,13 +589,16 @@ function AIDesignChat({
       // Same SSE reader/line-parse shape as below, different event dispatch:
       // `text` feeds the assistant prose, `action` upserts tool cards, `html`
       // refreshes the preview via the SAME onLocalUpdate path done.html uses.
-      let agentMode = false;
+      // Default ON post-graduation; "0" opts a browser back to classic
+      // ai-design. On blocked storage we also default to the agent — it is
+      // the product now; ai-design remains the explicit opt-out path.
+      let agentMode = true;
       try {
         agentMode =
-          typeof window !== "undefined" &&
-          window.localStorage.getItem("ol:agent") === "1";
+          typeof window === "undefined" ||
+          window.localStorage.getItem("ol:agent") !== "0";
       } catch {
-        /* storage blocked — stay on ai-design; must not wedge the composer */
+        /* storage blocked — default stays agent; must not wedge the composer */
       }
       if (agentMode) {
         // F1 server tools ONLY edit the home document (data.html). If the
