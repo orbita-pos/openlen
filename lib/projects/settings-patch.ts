@@ -96,10 +96,10 @@ interface PatchBody {
   /** Streamer overlay module. Merged into settings.overlay. `token` is
    *  server-minted — never accepted from the client; a patch carrying a
    *  `token` key is rejected in validate. `regenerateToken: true` mints a
-   *  fresh token regardless of the enabled edge. */
+   *  fresh token regardless of the enabled edge. `goal`/`screen`: null clears. */
   overlay?: {
     enabled?: boolean;
-    goal?: OverlayGoal;
+    goal?: OverlayGoal | null;
     screen?: "brb" | "start" | "end" | null;
     regenerateToken?: boolean;
   };
@@ -278,8 +278,8 @@ export function validateSettingsPatch(
     if ("regenerateToken" in o && typeof o.regenerateToken !== "boolean") {
       return { ok: false, message: "overlay.regenerateToken must be boolean" };
     }
-    if ("goal" in o && o.goal !== undefined) {
-      const g = o.goal as Partial<OverlayGoal> | null;
+    if ("goal" in o && o.goal !== undefined && o.goal !== null) {
+      const g = o.goal as Partial<OverlayGoal>;
       if (!g || typeof g !== "object") {
         return { ok: false, message: "overlay.goal must be an object" };
       }
@@ -662,7 +662,10 @@ export function applySettingsPatch(
     const nextOverlay: OverlaySettings = { ...(prevOverlay ?? {}) };
     if (token) nextOverlay.token = token;
     if ("enabled" in o) nextOverlay.enabled = o.enabled;
-    if ("goal" in o && o.goal) nextOverlay.goal = o.goal;
+    if ("goal" in o) {
+      if (o.goal === null) delete nextOverlay.goal;
+      else if (o.goal !== undefined) nextOverlay.goal = o.goal;
+    }
     if ("screen" in o) {
       if (o.screen === null) delete nextOverlay.screen;
       else nextOverlay.screen = o.screen;

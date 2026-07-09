@@ -104,6 +104,19 @@ describe("overlay settings", () => {
     const ok = validateSettingsPatch({ overlay: { goal: { label: "Meta de subs", current: 340, target: 500 } } }, "p1");
     expect(ok.ok).toBe(true);
   });
+  it("goal: null clears an existing goal, keeping enabled/token intact", () => {
+    const on = applySettingsPatch(baseData(), {
+      overlay: { enabled: true, goal: { label: "Subs", current: 10, target: 500 } },
+    });
+    if ("error" in on) throw new Error(on.error);
+    const tok = on.settings.overlay!.token!;
+    expect(validateSettingsPatch({ overlay: { goal: null } }, "p1").ok).toBe(true);
+    const cleared = applySettingsPatch(on.nextData, { overlay: { goal: null } });
+    if ("error" in cleared) throw new Error(cleared.error);
+    expect(cleared.settings.overlay?.goal).toBeUndefined();
+    expect(cleared.settings.overlay?.enabled).toBe(true);
+    expect(cleared.settings.overlay?.token).toBe(tok);
+  });
   it("screen enum + null clears", () => {
     expect(validateSettingsPatch({ overlay: { screen: "fiesta" } }, "p1").ok).toBe(false);
     const on = applySettingsPatch(baseData(), { overlay: { enabled: true, screen: "brb" } });
