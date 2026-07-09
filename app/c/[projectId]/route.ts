@@ -21,6 +21,7 @@ export const dynamic = "force-dynamic";
 // Body shape (JSON):
 //   { t: "v", r?: string, p?: string }                          -- pageview
 //   { t: "c", h: string, l?: string, r?: string, p?: string }   -- outbound click
+//   { t: "o", l?: string, p?: string }                          -- whatsapp order
 //
 // `p` is the site-page slug baked into the snippet at publish time; absent
 // or anything that isn't a valid slug stores as null (= home).
@@ -93,7 +94,8 @@ export async function POST(
     cid?: unknown;
     s?: unknown;
   };
-  const type = data.t === "v" ? "view" : data.t === "c" ? "click" : null;
+  const type =
+    data.t === "v" ? "view" : data.t === "c" ? "click" : data.t === "o" ? "order" : null;
   if (!type) return new Response(null, { status: 204 });
 
   const ua = req.headers.get("user-agent") ?? "";
@@ -113,7 +115,8 @@ export async function POST(
       projectId,
       type,
       href: type === "click" ? truncateString(data.h, MAX_HREF) : null,
-      linkLabel: type === "click" ? truncateString(data.l, MAX_LABEL) : null,
+      linkLabel:
+        type === "click" || type === "order" ? truncateString(data.l, MAX_LABEL) : null,
       referrer: truncateString(data.r, MAX_REFERRER),
       country,
       device,
