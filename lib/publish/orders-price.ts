@@ -15,6 +15,9 @@ export function parsePriceCents(display: string | null | undefined): number | nu
   if (!display) return null;
   const s = display.trim();
   if (!s || UNCERTAIN_RE.test(s) || RANGE_RE.test(s)) return null;
+  // Reject any dash not part of a valid range (already caught above).
+  // Leading/trailing/adjacent dashes are suspicious and unparseable.
+  if (/[-–—]/.test(s)) return null;
   const tokens = s.match(NUMBER_RE);
   if (!tokens || tokens.length !== 1) return null;
   const raw = tokens[0].replace(/[.,]$/, "");

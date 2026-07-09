@@ -33,6 +33,11 @@ describe("parsePriceCents — conservative single-price parser", () => {
     ["gratis"],
     ["consultar"],
     ["$0"],
+    ["-$90"],
+    ["$-90"],
+    ["- $50"],
+    ["-90"],
+    ["$90-"],
   ])("returns null for %s (ambiguous / no honest single price)", (display) => {
     expect(parsePriceCents(display as string | null | undefined)).toBeNull();
   });
