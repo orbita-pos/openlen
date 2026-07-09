@@ -1206,11 +1206,16 @@ async function toolTrabajarEnPagina(
   const row = await deps.loadProject(session.projectId, session.userId);
   if (!row) return { response: { ok: false, error: "proyecto no encontrado" } };
 
+  // Resolution order — a REAL page slug wins over the home alias: a creator
+  // may legally name a subpage "principal" (it isn't reserved), so match
+  // data.pages FIRST (case-sensitive, same convention as the route's
+  // pageSlugRaw) before falling back to "home"/"principal"/"" → home. Only
+  // when no such page exists does "principal" mean the home document.
   let resolved: string | null;
-  if (PAGINA_HOME_ALIASES.has(raw.toLowerCase())) {
-    resolved = null;
-  } else if (row.data.pages?.[raw]) {
+  if (row.data.pages?.[raw]) {
     resolved = raw;
+  } else if (PAGINA_HOME_ALIASES.has(raw.toLowerCase())) {
+    resolved = null;
   } else {
     const disponibles = ["principal", ...Object.keys(row.data.pages ?? {})];
     return {

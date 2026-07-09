@@ -958,6 +958,25 @@ describe("trabajar_en_pagina", () => {
     assert.equal(store.saved.length, 0);
   });
 
+  it('a REAL page slugged "principal" wins over the home alias (reachable, not shadowed)', async () => {
+    // "principal" is NOT reserved, so a creator may legally name a subpage
+    // that. Resolution must match the real page FIRST — otherwise
+    // trabajar_en_pagina("principal") silently opens home → wrong-doc edits.
+    const PRINCIPAL_PAGE = `<!doctype html><html><head><title>Principal Sub</title><meta name="description" content="x"></head><body><h1 data-x="k">Subpágina Principal</h1></body></html>`;
+    const data: ProjectData = {
+      html: HOME_HTML,
+      pages: { principal: { html: PRINCIPAL_PAGE, title: "Principal" } },
+    };
+    const { deps } = makeDeps({ data });
+    const session = makeSession({ page: null, html: HOME_HTML });
+    const out = await runAgentTool(session, deps, "trabajar_en_pagina", { pagina: "principal" });
+    assert.equal(out.response.ok, true);
+    assert.equal(out.response.pagina_activa, "principal");
+    assert.equal(session.page, "principal"); // the SLUG, not home (null)
+    assert.ok(session.taggedHtml.includes("Subpágina Principal"));
+    assert.ok(!session.taggedHtml.includes("Tacos El Güero")); // NOT the home doc
+  });
+
   it('"home" and "" are equivalent aliases for principal', async () => {
     const { deps } = makeDeps({ data: DATA_MP });
     const s1 = makeSession({ page: "menu", html: MENU_HTML });
