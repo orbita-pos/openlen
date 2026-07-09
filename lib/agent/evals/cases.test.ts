@@ -3,7 +3,7 @@
 // (dup id, empty prompt, uncovered tool) fails fast in CI-adjacent `vitest run`
 // long before anyone spends credits on the real runner.
 import { describe, expect, it } from "vitest";
-import { EVAL_CASES, coverage } from "./cases";
+import { CANARY_IDS, EVAL_CASES, coverage } from "./cases";
 import { buildFunctionDeclarations } from "@/lib/agent/catalog";
 
 const KEBAB = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
@@ -36,6 +36,24 @@ describe("EVAL_CASES shape", () => {
   it("costly flag, where set, is exactly the paid image-edit case", () => {
     const costly = EVAL_CASES.filter((c) => c.costly).map((c) => c.id);
     expect(costly).toEqual(["editar-imagen-fondo"]);
+  });
+});
+
+describe("CANARY_IDS (F4 Task 9)", () => {
+  it("is exactly 6 ids, all real EVAL_CASES ids, no duplicates", () => {
+    expect(CANARY_IDS.length).toBe(6);
+    expect(new Set(CANARY_IDS).size).toBe(CANARY_IDS.length);
+    const caseIds = new Set(EVAL_CASES.map((c) => c.id));
+    for (const id of CANARY_IDS) {
+      expect(caseIds.has(id), `CANARY_IDS: id desconocido "${id}"`).toBe(true);
+    }
+  });
+
+  it("excludes the costly case", () => {
+    const costlyIds = new Set(EVAL_CASES.filter((c) => c.costly).map((c) => c.id));
+    for (const id of CANARY_IDS) {
+      expect(costlyIds.has(id), `CANARY_IDS: "${id}" es costly — el smoke debe ser barato`).toBe(false);
+    }
   });
 });
 
