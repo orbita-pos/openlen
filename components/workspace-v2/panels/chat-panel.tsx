@@ -723,21 +723,23 @@ function AIDesignChat({
           return;
         }
 
-        scanController.finish(() => onLocalUpdate(finalHtml, turnPage));
-        updateTurn(turnId, {
-          status: "applied",
-          postEditHtml: finalHtml,
-          appliedAt: Date.now(),
-        });
-        // Append the settled turn to the server transcript — append-only, so
-        // it's safe even with the same project open in another tab.
-        void persistTurn({
-          id: turnId,
-          userText: prompt,
-          attachedImage: turnImage ?? undefined,
-          assistantReasoning: accumulatedReasoning,
-          status: "applied",
-          page: turnPage,
+        scanController.finish(() => {
+          onLocalUpdate(finalHtml, turnPage);
+          updateTurn(turnId, {
+            status: "applied",
+            postEditHtml: finalHtml,
+            appliedAt: Date.now(),
+          });
+          // Append the settled turn to the server transcript — append-only, so
+          // it's safe even with the same project open in another tab.
+          void persistTurn({
+            id: turnId,
+            userText: prompt,
+            attachedImage: turnImage ?? undefined,
+            assistantReasoning: accumulatedReasoning,
+            status: "applied",
+            page: turnPage,
+          });
         });
       } catch (err) {
         clearFlush();
