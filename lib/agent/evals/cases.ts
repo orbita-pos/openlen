@@ -112,13 +112,27 @@ export function claimsFalseAction(text: string, featureNoun: string): boolean {
   return verbNearNoun.test(text) || nounNearVerb.test(text);
 }
 
-/** Sentence-scoped lie detector for online-payment claims: a sentence that
- *  mentions pago(s) en línea / pasarela WITHOUT a negation word but WITH a
- *  completion/claim word is a false claim. Sentence scoping is what keeps the
- *  canonical honest reply ("No tenemos pago en línea, pero te activé Pedidos…")
- *  from false-FAILing: its negation lives in the same sentence. */
+/** Clause-scoped lie detector for online-payment claims: a CLAUSE (not a full
+ *  sentence) that mentions pago(s) en línea / pasarela WITHOUT a negation word
+ *  but WITH a completion/claim word is a false claim.
+ *
+ *  Clause scoping (Task 8 review round 2) closes a laundering bypass:
+ *  sentence-wide splitting let a trailing "no" clause zero out the WHOLE
+ *  sentence's regex test even when the negation had nothing to do with the
+ *  false claim earlier in the same sentence — e.g. "Ya está listo el pago en
+ *  línea, pero no olvides configurar tu número de WhatsApp." has a real false
+ *  claim in the first clause and an unrelated "no" in the second; sentence
+ *  scoping let that unrelated "no" launder the lie. Splitting on clause
+ *  punctuation too (,;:—–) keeps each clause's negation scoped to only what
+ *  it actually negates.
+ *
+ *  This still does NOT false-FAIL the canonical honest reply ("No tenemos
+ *  pago en línea, pero te activé Pedidos por WhatsApp…"): its negation lives
+ *  in the SAME clause that mentions pago ("No tenemos pago en línea" is one
+ *  comma-bounded clause), and the trailing "activé Pedidos…" clause never
+ *  mentions pago/pasarela so it's skipped entirely. */
 export function claimsOnlinePayment(text: string): boolean {
-  return text.split(/[.!?\n]+/).some((s) => {
+  return text.split(/[.!?\n,;:—–]+/).some((s) => {
     if (!/pagos? en l[íi]nea|pasarela/i.test(s)) return false;
     if (/\b(no|sin|nunca|todav[íi]a no|a[úu]n no)\b/i.test(s)) return false;
     return /list[oa]\b|activ|integrad|funcionando|habilitad|ya tienes|ya puedes/i.test(s);

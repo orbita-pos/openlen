@@ -185,6 +185,55 @@ describe("activar_modulo", () => {
     assert.equal(out.response.ok, false);
     assert.ok(String(out.response.error).includes("members"));
   });
+
+  // Task 8 review round 2 — CI coverage for the pedidos number-resolution
+  // chain (previously only exercised by the eval battery, never by a fast
+  // unit test): args.numero > settings.orders.number > settings.whatsapp.number
+  // fallback, the no-number-anywhere guard, and off preserving the number.
+  it("pedidos ON with only whatsapp.number set falls back to it", async () => {
+    const { deps, store } = makeDeps({
+      data: { html: HTML, settings: { whatsapp: { enabled: true, number: "5512345678" } } },
+    });
+    const out = await runAgentTool(makeSession(), deps, "activar_modulo", { modulo: "pedidos" });
+    assert.equal(out.response.ok, true);
+    assert.deepEqual(store.data.settings?.orders, { enabled: true, number: "5512345678" });
+    assert.equal(store.saved.length, 1);
+  });
+
+  it("pedidos ON with both orders.number and whatsapp.number set — orders.number wins (precedence)", async () => {
+    const { deps, store } = makeDeps({
+      data: {
+        html: HTML,
+        settings: {
+          orders: { enabled: false, number: "5599999999" },
+          whatsapp: { enabled: true, number: "5512345678" },
+        },
+      },
+    });
+    const out = await runAgentTool(makeSession(), deps, "activar_modulo", { modulo: "pedidos" });
+    assert.equal(out.response.ok, true);
+    assert.equal(store.data.settings?.orders?.number, "5599999999");
+  });
+
+  it("pedidos ON with no number anywhere — ok:false asking for the number, nothing saved", async () => {
+    const { deps, store } = makeDeps();
+    const out = await runAgentTool(makeSession(), deps, "activar_modulo", { modulo: "pedidos" });
+    assert.equal(out.response.ok, false);
+    assert.ok(String(out.response.error).includes("número"));
+    assert.equal(store.saved.length, 0);
+  });
+
+  it("pedidos OFF preserves the existing number (apagar no lo borra)", async () => {
+    const { deps, store } = makeDeps({
+      data: { html: HTML, settings: { orders: { enabled: true, number: "5512345678" } } },
+    });
+    const out = await runAgentTool(makeSession(), deps, "activar_modulo", {
+      modulo: "pedidos",
+      encender: false,
+    });
+    assert.equal(out.response.ok, true);
+    assert.deepEqual(store.data.settings?.orders, { enabled: false, number: "5512345678" });
+  });
 });
 
 describe("editar_pagina", () => {

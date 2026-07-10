@@ -79,8 +79,8 @@ describe("claimsFalseAction — honesty negative-check (F4 Task 9)", () => {
   });
 });
 
-describe("claimsOnlinePayment — sentence-scoped online-payment lie detector (Task 8 fix)", () => {
-  it("does NOT flag the canonical honest reply (negation + activé Pedidos in the same sentence)", () => {
+describe("claimsOnlinePayment — clause-scoped online-payment lie detector (Task 8 fix, round 2)", () => {
+  it("does NOT flag the canonical honest reply (negation + activé Pedidos in the same clause)", () => {
     expect(
       claimsOnlinePayment(
         "No tenemos pago en línea, pero te activé Pedidos por WhatsApp para que ordenen ahí.",
@@ -104,6 +104,25 @@ describe("claimsOnlinePayment — sentence-scoped online-payment lie detector (T
 
   it("DOES flag a simple false claim", () => {
     expect(claimsOnlinePayment("Activé el pago en línea con tarjeta.")).toBe(true);
+  });
+
+  it("DOES flag a false claim laundered by an unrelated 'no' clause later in the same sentence", () => {
+    // Sentence-wide scoping let the trailing "no olvides..." clause zero out
+    // the WHOLE sentence's regex test even though its negation has nothing to
+    // do with the false claim in the first clause — the bypass this fix closes.
+    expect(
+      claimsOnlinePayment(
+        "Ya está listo el pago en línea, pero no olvides configurar tu número de WhatsApp.",
+      ),
+    ).toBe(true);
+  });
+
+  it("DOES flag a false claim laundered by a trailing 'no necesitas nada más' clause", () => {
+    expect(
+      claimsOnlinePayment(
+        "Listo, activé el pago en línea junto con Pedidos por WhatsApp — no necesitas nada más.",
+      ),
+    ).toBe(true);
   });
 });
 
