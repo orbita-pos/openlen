@@ -11,6 +11,16 @@ import { fileURLToPath } from "node:url";
 // node-env + built binary) is a separate task, not part of Editor V5. The `@`
 // alias below is set so they CAN be run explicitly later (`vitest run lib/...`).
 export default defineConfig({
+  // jsx: "automatic" — the repo's tsconfig.json has "jsx": "preserve" (Next's
+  // SWC owns the real transform at build time), so esbuild has no signal to
+  // use the react-jsx runtime by default and falls back to classic
+  // React.createElement, which needs `React` in scope. None of the app's own
+  // .tsx files import a default `React` (they rely on Next's automatic
+  // runtime) — this makes vitest's esbuild transform match that, first
+  // needed here by scan-overlay.test.tsx.
+  esbuild: {
+    jsx: "automatic",
+  },
   resolve: {
     alias: {
       "@": fileURLToPath(new URL("./", import.meta.url)),
@@ -21,6 +31,7 @@ export default defineConfig({
     environment: "jsdom",
     include: [
       "components/workspace-v2/**/*.test.ts",
+      "components/workspace-v2/**/*.test.tsx",
       "components/community/**/*.test.ts",
       "lib/three3d/**/*.test.ts",
       "lib/workspace-v2/**/*.test.ts",

@@ -28,6 +28,7 @@ import { injectSectionInsert } from "./use-section-insert";
 import { injectSectionReorder } from "./use-section-reorder";
 import { injectSectionSelect } from "./use-section-select";
 import { PageBuildingLoader } from "./page-building-loader";
+import { ScanOverlay } from "./scan-overlay";
 import { coerceSceneSpec } from "@/lib/three3d/scene-spec";
 import { backgroundCss } from "@/lib/three3d/background";
 import { findBackdropTarget } from "@/lib/three3d/backdrop-placement";
@@ -178,6 +179,7 @@ export function PreviewArea({
   const containerRef = useRef<HTMLDivElement>(null);
   const iframeLocalRef = useRef<HTMLIFrameElement | null>(null);
   const [fitScale, setFitScale] = useState(1);
+  const [scanBusy, setScanBusy] = useState(false);
 
   // Backdrop behind/around the iframe. The wrapper is a fixed-height "screen"
   // with rounded corners; a hardcoded white backdrop flashed a white band on
@@ -706,8 +708,11 @@ export function PreviewArea({
                 transformOrigin: "top left",
                 border: 0,
                 background: pageBg,
+                filter: scanBusy ? "saturate(.82)" : undefined,
+                transition: "filter .35s",
               }}
             />
+            <ScanOverlay onBusyChange={setScanBusy} />
           </div>
         </div>
       </div>
