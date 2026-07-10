@@ -36,6 +36,7 @@ import type { StoredChatTurn } from "@/lib/projects/types";
 import type { SitePageSummary } from "@/lib/projects/site-pages";
 import type { AIModel } from "@/lib/ai-provider";
 import type { AgentErrorCode } from "@/lib/agent/loop";
+import { scanController } from "@/lib/workspace-v2/scan-controller";
 
 export interface ScopedSelection {
   hint: string;
@@ -547,6 +548,9 @@ function AIDesignChat({
       abort: AbortController;
     }) => {
       const { turnId, prompt, preEditHtml, turnPage, history, turnScope, turnImage, abort } = opts;
+      // Rayo X — idempotent: a no-op if the agent branch already started the
+      // loop before falling back here (F4 Task 7 kill-switch replay).
+      scanController.start();
       const htmlBuf = { value: "" };
       let accumulatedReasoning = "";
       let lastFlushedLen = 0;
@@ -592,6 +596,7 @@ function AIDesignChat({
           const errPayload = await res
             .json()
             .catch(() => ({ error: `HTTP ${res.status}` }));
+          scanController.cancel();
           updateTurn(turnId, {
             status: "error",
             errorText:
@@ -702,12 +707,14 @@ function AIDesignChat({
         clearFlush();
 
         if (errorMessage) {
+          scanController.cancel();
           if (lastFlushedLen > 0) onLocalUpdate(preEditHtml, turnPage);
           updateTurn(turnId, { status: "error", errorText: errorMessage });
           return;
         }
 
         if (!finalHtml) {
+          scanController.cancel();
           if (lastFlushedLen > 0) onLocalUpdate(preEditHtml, turnPage);
           updateTurn(turnId, {
             status: "error",
@@ -716,7 +723,7 @@ function AIDesignChat({
           return;
         }
 
-        onLocalUpdate(finalHtml, turnPage);
+        scanController.finish(() => onLocalUpdate(finalHtml, turnPage));
         updateTurn(turnId, {
           status: "applied",
           postEditHtml: finalHtml,
@@ -734,6 +741,7 @@ function AIDesignChat({
         });
       } catch (err) {
         clearFlush();
+        scanController.cancel();
         // Roll the iframe back to the pre-edit page — a cancel/abort lands here
         // mid Mode-B drip and would otherwise leave a truncated document onscreen
         // (the error/noFinalHtml branches above already revert; this one didn't).
@@ -860,6 +868,7 @@ function AIDesignChat({
         // reading them back off `turns` state here would race React's flush.
         let finalActions: AgentAction[] = [];
         try {
+          scanController.start();
           const res = await fetch("/api/agent", {
             method: "POST",
             headers: { "content-type": "application/json" },
@@ -880,6 +889,7 @@ function AIDesignChat({
             const errPayload = await res
               .json()
               .catch(() => ({ error: `HTTP ${res.status}` }));
+            scanController.cancel();
             updateTurn(turnId, {
               status: "error",
               errorText:
@@ -968,7 +978,7 @@ function AIDesignChat({
                     typeof (payload as { page?: unknown }).page === "string"
                       ? (payload as { page: string }).page
                       : null;
-                  onLocalUpdate(html, evPage);
+                  scanController.applyDuring(() => onLocalUpdate(html, evPage));
                 }
               } else if (evName === "confirm") {
                 // The publish gate — attach a confirm card to this turn. It
@@ -1041,10 +1051,18 @@ function AIDesignChat({
           }
 
           if (errorMessage) {
+            scanController.cancel();
             updateTurn(turnId, { status: "error", errorText: errorMessage });
             return;
           }
 
+          // Turn concluded well — the `done` event closed the SSE loop above
+          // without a kill-switch or in-band error. Any still-pending
+          // applyDuring() paint from the last `html` event (Rule 2) runs
+          // immediately inside finish(); a turn with no `html` event at all
+          // (leer_estado/charla) has no pending paint, so this is the bare
+          // "close the busy state" pass the brief calls for.
+          scanController.finish();
           updateTurn(turnId, {
             status: "applied",
             appliedAt: Date.now(),
@@ -1081,6 +1099,7 @@ function AIDesignChat({
             ...(latestAgentHtml === null ? { noDocChange: true } : {}),
           });
         } catch (err) {
+          scanController.cancel();
           if (abort.signal.aborted) {
             updateTurn(turnId, {
               status: "error",
