@@ -24,7 +24,7 @@ import { bakeAssistantWidget } from "@/lib/publish/assistant-widget";
 import { bakeComments } from "@/lib/publish/comments-widget";
 import { bakeBookings } from "@/lib/publish/bookings-widget";
 import { bakeCollections } from "@/lib/publish/collections-block";
-import { bakeWhatsAppButton } from "@/lib/publish/whatsapp-button";
+import { bakeWhatsAppButton, waHref } from "@/lib/publish/whatsapp-button";
 import { injectOrdersCart } from "@/lib/publish/orders-cart";
 import { bakeChatWidget } from "@/lib/publish/chat-widget";
 import { bakeVideoEmbeds, bakeMediaPreconnect } from "@/lib/publish/video-embed";
@@ -562,9 +562,14 @@ async function bakeDocument(
   // (page === null) auto-appends the grid when there's no placeholder.
   if (process.env.OPENLEN_COLLECTION !== "0") {
     try {
+      // Same "usable number" predicate the runtime enforces (waHref -> null
+      // below 8 digits) — a merely non-empty, invalid number must NOT bake
+      // buttons the runtime will then no-op on (dead «Agregar»).
+      const ordersNumberUsable =
+        ctx.orders?.enabled === true && waHref(ctx.orders.number) !== null;
       const ordersCfg =
-        process.env.OPENLEN_ORDERS !== "0" && ctx.orders?.enabled && ctx.orders.number
-          ? { number: ctx.orders.number }
+        process.env.OPENLEN_ORDERS !== "0" && ordersNumberUsable
+          ? { number: ctx.orders!.number }
           : null;
       const colCfg = ctx.collections?.enabled
         ? { items: ctx.collections.items, layout: ctx.collections.layout, orders: ordersCfg }
@@ -859,10 +864,15 @@ async function bakeDocument(
   // Pedidos por WhatsApp — cart runtime over the collections «Agregar»
   // buttons baked above. injectOrdersCart self-gates on the buttons being
   // present in THIS document, so subpages without the grid stay untouched.
-  if (process.env.OPENLEN_ORDERS !== "0" && ctx.orders?.enabled && ctx.orders.number) {
+  // Same usable-number predicate as the bake gate above (waHref -> null
+  // below 8 digits), so this can never inject a cart over buttons that were
+  // correctly skipped upstream, and never diverge from the runtime's own check.
+  const ordersInjectNumberUsable =
+    ctx.orders?.enabled === true && waHref(ctx.orders.number) !== null;
+  if (process.env.OPENLEN_ORDERS !== "0" && ordersInjectNumberUsable) {
     try {
       migratedHtml = injectOrdersCart(migratedHtml, {
-        number: ctx.orders.number,
+        number: ctx.orders!.number,
         projectId: ctx.projectId,
         page,
       });

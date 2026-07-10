@@ -507,14 +507,14 @@ describe("publishToDir wires Pedidos por WhatsApp (orders) over Collections", ()
 <html lang="es"><head><meta charset="utf-8"><title>menu</title></head>
 <body><h1>menu</h1><section data-ol-collection-section></section></body></html>`;
 
-  async function publishBoth(opts: { ordersOff?: boolean; sub: string }) {
+  async function publishBoth(opts: { ordersOff?: boolean; sub: string; number?: string }) {
     await publishToDir({
       subdomain: opts.sub,
       html: DOC("home"),
       pages: [{ slug: "menu", html: MENU_DOC }],
       projectId: "p1",
       collections: { enabled: true, items: [orderItem], layout: "grid" },
-      orders: opts.ordersOff ? undefined : { enabled: true, number: "5512345678" },
+      orders: opts.ordersOff ? undefined : { enabled: true, number: opts.number ?? "5512345678" },
     });
     const current = path.join(root, opts.sub, "current");
     let dir: string;
@@ -543,5 +543,15 @@ describe("publishToDir wires Pedidos por WhatsApp (orders) over Collections", ()
   it("orders OFF keeps the published collections doc byte-free of order markup", async () => {
     const { home } = await publishBoth({ sub: "orderstestoff", ordersOff: true });
     assert.ok(!home.includes("data-ol-order"), "no order markup when module off");
+  });
+
+  it("orders ON with an unusable number (waHref -> null) stays byte-free — bake gate must agree with the runtime, no dead buttons", async () => {
+    const { home, menuDoc } = await publishBoth({ sub: "orderstestbadnum", number: "1234567" });
+    for (const doc of [home, menuDoc]) {
+      assert.ok(
+        !doc.includes("data-ol-order"),
+        "no order markup (buttons or runtime) when the number has < 8 digits, same threshold as the runtime's waHref",
+      );
+    }
   });
 });
