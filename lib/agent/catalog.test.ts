@@ -233,4 +233,9 @@ describe("buildAgentSystemPrompt", () => {
     // …pero ya NO puede negar el carrito (existe vía Pedidos).
     expect(p).not.toMatch(/NO la tiene[^.]*carrito/);
   });
+  it("carries the scope guard: not a general-purpose chatbot, never invent real-world data", () => {
+    const p = buildAgentSystemPrompt();
+    expect(p).toContain("chatbot de propósito general");
+    expect(p).toContain("no tienes acceso a internet");
+  });
 });
