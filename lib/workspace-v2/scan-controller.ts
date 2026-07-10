@@ -86,71 +86,94 @@ export function createScanController(opts?: {
     later(toIdle, SWEEP_MS + RING_HOLD_MS);
   }
 
-  return {
-    getState: () => state,
-    subscribe(fn) { listeners.add(fn); return () => listeners.delete(fn); },
+  function getState() { return state; }
+  function subscribe(fn: (s: ScanState) => void) { listeners.add(fn); return () => listeners.delete(fn); }
 
-    start() {
-      if (killed()) return;
-      if (state.phase !== "idle") return;
-      emit({ phase: "scanning", busy: true, ring: false });
-    },
+  function start() {
+    if (killed()) return;
+    if (state.phase !== "idle") return;
+    emit({ phase: "scanning", busy: true, ring: false });
+  }
 
-    applyDuring(fn) {
-      if (killed() || state.phase !== "scanning") { fn(); return; }
-      if (immediate()) { fn(); return; }
-      if (pending) runPending();
-      pending = { fn, final: false, ran: false };
-      armWatchdog(pending);
-    },
+  // M2: runPending() below doesn't clearAll() — a stale watchdog for the
+  // drained Pending can stay in `timers` until it fires. It's a harmless
+  // no-op when it does: armWatchdog's guard (`pending !== p || p.ran`) is
+  // already true by then (runPending sets p.ran = true before clearing
+  // `pending`), so the stray timer just returns. Not worth a clearAll()
+  // here — that would also wipe the *other* live timers (finalPass's
+  // fn/ring/toIdle) that belong to the phase currently in flight.
+  function applyDuring(fn: () => void) {
+    if (killed() || state.phase !== "scanning") { fn(); return; }
+    if (immediate()) { fn(); return; }
+    if (pending) runPending();
+    pending = { fn, final: false, ran: false };
+    armWatchdog(pending);
+  }
 
-    finish(fn) {
-      const f = fn ?? (() => {});
-      if (killed()) { f(); return; }
-      if (state.phase === "idle") { this.pulse(f); return; }
-      if (state.phase !== "scanning") { f(); return; }
-      if (immediate()) {
-        f();
-        clearAll();
-        emit({ phase: "finalizing", busy: false, ring: true });
-        later(toIdle, IMMEDIATE_FINAL_MS);
-        return;
-      }
-      if (pending) runPending();
-      pending = { fn: f, final: true, ran: false };
-      armWatchdog(pending);
-    },
+  function finish(fn?: () => void) {
+    const f = fn ?? (() => {});
+    if (killed()) { f(); return; }
+    if (state.phase === "idle") { pulse(f); return; }
+    if (state.phase !== "scanning") { f(); return; }
+    if (immediate()) {
+      // C2: drain any applyDuring() Pending BEFORE clearAll() wipes its
+      // watchdog — otherwise a pending fnA is lost when immediate() flips
+      // true mid-scan and finish(fnB) arrives.
+      runPending();
+      f();
+      clearAll();
+      emit({ phase: "finalizing", busy: false, ring: true });
+      later(toIdle, IMMEDIATE_FINAL_MS);
+      return;
+    }
+    if (pending) runPending();
+    pending = { fn: f, final: true, ran: false };
+    armWatchdog(pending);
+  }
 
-    pulse(fn) {
-      if (killed()) { fn(); return; }
-      if (state.phase === "scanning") { this.applyDuring(fn); return; }
-      if (state.phase !== "idle") { fn(); return; }
-      if (immediate()) {
-        fn();
-        emit({ phase: "finalizing", busy: false, ring: true });
-        later(toIdle, IMMEDIATE_FINAL_MS);
-        return;
-      }
-      emit({ busy: true });
-      finalPass({ fn, final: true, ran: false });
-    },
+  function pulse(fn: () => void) {
+    if (killed()) { fn(); return; }
+    if (state.phase === "scanning") { applyDuring(fn); return; }
+    if (state.phase !== "idle") { fn(); return; }
+    if (immediate()) {
+      fn();
+      emit({ phase: "finalizing", busy: false, ring: true });
+      later(toIdle, IMMEDIATE_FINAL_MS);
+      return;
+    }
+    emit({ busy: true });
+    // C1: assign to the module-level `pending` BEFORE finalPass runs — a
+    // cancel() that lands mid-finalizing (before the 45% timer) must be
+    // able to find this Pending via runPending(), or its fn is lost.
+    // finalPass() already does `if (pending === p) pending = null` once
+    // it executes the fn, so this is safe to pair with it.
+    const p: Pending = { fn, final: true, ran: false };
+    pending = p;
+    finalPass(p);
+  }
 
-    cancel() {
-      if (state.phase === "scanning" || state.phase === "finalizing") dissolve();
-    },
+  function cancel() {
+    // M1: "dissolving" isn't in this guard on purpose — by the time we're
+    // in that phase, an earlier dissolve() already ran runPending(), so
+    // there's nothing left to drain. Re-entering here is a plain no-op
+    // (matches this function's existing behavior for any other phase not
+    // listed), not a special case that needs its own branch.
+    if (state.phase === "scanning" || state.phase === "finalizing") dissolve();
+  }
 
-    onIteration() {
-      if (state.phase !== "scanning" || !pending || immediate()) return;
-      const p = pending;
-      if (p.final) { clearAll(); pending = p; finalPass(p); }
-      else {
-        later(() => {
-          if (!p.ran) { p.ran = true; p.fn(); }
-          if (pending === p) pending = null;
-        }, SWEEP_MS * APPLY_AT);
-      }
-    },
-  };
+  function onIteration() {
+    if (state.phase !== "scanning" || !pending || immediate()) return;
+    const p = pending;
+    if (p.final) { clearAll(); pending = p; finalPass(p); }
+    else {
+      later(() => {
+        if (!p.ran) { p.ran = true; p.fn(); }
+        if (pending === p) pending = null;
+      }, SWEEP_MS * APPLY_AT);
+    }
+  }
+
+  return { getState, subscribe, start, applyDuring, finish, cancel, pulse, onIteration };
 }
 
 export const scanController: ScanController = createScanController();

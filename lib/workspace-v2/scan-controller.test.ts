@@ -125,4 +125,33 @@ describe("scan-controller — fases", () => {
     c.cancel();
     expect(seen.filter((p) => p === "dissolving")).toHaveLength(0);
   });
+
+  it("cancel durante un pulse en vuelo ejecuta el fn (jamás se pierde)", () => {
+    const c = make(); const fn = vi.fn();
+    c.pulse(fn);
+    vi.advanceTimersByTime(600); // antes del 45% (720ms)
+    c.cancel();
+    vi.advanceTimersByTime(10000);
+    expect(fn).toHaveBeenCalledTimes(1);
+  });
+
+  it("finish inmediato drena un applyDuring pendiente (fnA jamás se pierde)", () => {
+    let imm = false;
+    const c = createScanController({ killSwitch: () => false, immediate: () => imm });
+    const fnA = vi.fn(); const fnB = vi.fn();
+    c.start(); c.applyDuring(fnA);
+    imm = true;
+    c.finish(fnB);
+    expect(fnA).toHaveBeenCalledTimes(1);
+    expect(fnB).toHaveBeenCalledTimes(1);
+  });
+
+  it("los métodos sobreviven el destructuring (sin this)", () => {
+    const c = make(); const fn = vi.fn();
+    const { start, finish } = c;
+    start(); finish(fn);
+    c.onIteration();
+    vi.advanceTimersByTime(SWEEP_MS * APPLY_AT + 1);
+    expect(fn).toHaveBeenCalledTimes(1);
+  });
 });
