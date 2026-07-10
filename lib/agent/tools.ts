@@ -341,7 +341,7 @@ async function toolLeerEstado(
   return { response };
 }
 
-function buildModulePatch(modulo: AgentModule, encender: boolean): SettingsPatchBody {
+function buildModulePatch(modulo: AgentModule, encender: boolean, numero?: string): SettingsPatchBody {
   switch (modulo) {
     case "members":
       return encender
@@ -358,7 +358,7 @@ function buildModulePatch(modulo: AgentModule, encender: boolean): SettingsPatch
     case "comments":
       return { comments: { enabled: encender } };
     case "pedidos":
-      return { orders: { enabled: encender } };
+      return encender ? { orders: { enabled: true, number: numero } } : { orders: { enabled: false } };
   }
 }
 
@@ -373,14 +373,36 @@ async function toolActivarModulo(
   }
   const encender = args.encender !== false;
 
-  const patchBody = buildModulePatch(modulo as AgentModule, encender);
+  // Loaded up-front (moved ahead of buildModulePatch) so the "pedidos" case can
+  // resolve its number-fallback chain from the existing row before the patch
+  // is built — never a silent-dark { enabled: true } with no number to bake.
+  const row = await deps.loadProject(session.projectId, session.userId);
+  if (!row) return { response: { ok: false, error: "proyecto no encontrado" } };
+
+  let numero: string | undefined;
+  if (modulo === "pedidos" && encender) {
+    const resuelto =
+      (typeof args.numero === "string" && args.numero.trim()) ||
+      row.data.settings?.orders?.number ||
+      row.data.settings?.whatsapp?.number ||
+      null;
+    if (!resuelto) {
+      return {
+        response: {
+          ok: false,
+          error:
+            'pedidos necesita el número de WhatsApp del negocio y no hay ninguno guardado — pregúntale al usuario su número (10 dígitos MX) y vuelve a llamar activar_modulo con modulo="pedidos" y numero',
+        },
+      };
+    }
+    numero = resuelto;
+  }
+
+  const patchBody = buildModulePatch(modulo as AgentModule, encender, numero);
   const validation = validateSettingsPatch(patchBody, session.projectId);
   if (!validation.ok) {
     return { response: { ok: false, error: validation.message ?? "patch inválido" } };
   }
-
-  const row = await deps.loadProject(session.projectId, session.userId);
-  if (!row) return { response: { ok: false, error: "proyecto no encontrado" } };
 
   const outcome = applySettingsPatch(row.data, validation.body);
   if ("error" in outcome) {

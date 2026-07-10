@@ -68,7 +68,7 @@ const MODULE_KNOWLEDGE: Record<AgentModule, string> = {
   comments:
     "Comentarios de miembros en la página. REQUIERE members activo — si members está apagado, activa members primero o explica la dependencia.",
   pedidos:
-    "Pedidos por WhatsApp: carrito sobre el Catálogo (collections) — cada item gana botón «Agregar» y el pedido armado (cantidades, total, nota) sale al WhatsApp del negocio en la página publicada. Actívalo cuando pidan 'carrito', 'pedidos', 'ordenar', 'que me compren por WhatsApp'. REQUIERE collections activo con items — si falta, activa collections primero (o explica la dependencia). Necesita número de WhatsApp (se configura en Módulos; si el módulo whatsapp ya tiene número, se pre-llena solo). NO es pago en línea: el cobro se acuerda en el chat de WhatsApp.",
+    "Pedidos por WhatsApp: carrito sobre el Catálogo (collections) — cada item gana botón «Agregar» y el pedido armado (cantidades, total, nota) sale al WhatsApp del negocio en la página publicada. Actívalo cuando pidan 'carrito', 'pedidos', 'ordenar', 'que me compren por WhatsApp'. REQUIERE collections activo con items — si falta, activa collections primero (o explica la dependencia). Al activarlo reusa el número de WhatsApp ya guardado (de pedidos o del módulo whatsapp) — si no hay ninguno, la herramienta te lo dirá: pregúntale al usuario su número de WhatsApp (10 dígitos MX) y vuelve a llamar activar_modulo con numero. NUNCA inventes un número. NO es pago en línea: el cobro se acuerda en el chat de WhatsApp.",
 };
 
 export function buildFunctionDeclarations(): Record<string, unknown>[] {
@@ -111,12 +111,13 @@ export function buildFunctionDeclarations(): Record<string, unknown>[] {
     {
       name: "activar_modulo",
       description:
-        "Enciende (o apaga) un MÓDULO REAL de OpenLen en este proyecto — la misma acción que el botón del panel Módulos. NUNCA fabriques en HTML lo que un módulo ya resuelve.",
+        "Enciende (o apaga) un MÓDULO REAL de OpenLen en este proyecto — la misma acción que el botón del panel Módulos. NUNCA fabriques en HTML lo que un módulo ya resuelve. numero (opcional) es el número de WhatsApp del negocio — solo lo usa el módulo pedidos al encender; si pedidos no tiene número propio ni el módulo whatsapp uno guardado, la herramienta responde ok:false pidiéndolo — pregúntaselo al usuario y vuelve a llamar con numero. NUNCA inventes un número.",
       parameters: {
         type: "OBJECT",
         properties: {
           modulo: { type: "STRING", enum: [...AGENT_MODULES] },
           encender: { type: "BOOLEAN" },
+          numero: { type: "STRING" },
         },
         required: ["modulo"],
       },
