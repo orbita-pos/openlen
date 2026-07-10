@@ -1,7 +1,7 @@
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
-import { createScanController, SWEEP_MS, APPLY_AT } from "@/lib/workspace-v2/scan-controller";
+import { createScanController, SWEEP_MS } from "@/lib/workspace-v2/scan-controller";
 import { ScanOverlay } from "./scan-overlay";
 
 // Tells React's act() this environment supports it (no testing-library here

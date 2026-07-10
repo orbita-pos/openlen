@@ -112,7 +112,7 @@ export function ScanOverlay({
 
   const cls = [
     "olscan-root",
-    active ? "scanning" : "",
+    active && !state.ring ? "scanning" : "",
     state.phase === "scanning" ? "loop" : "",
     state.phase === "finalizing" ? "final" : "",
   ].join(" ").trim();

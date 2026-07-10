@@ -529,13 +529,18 @@ function NewV2Inner() {
       insertNonceRef.current += 1;
       const nonce = insertNonceRef.current;
       const html = data.html;
-      scanController.finish(() =>
+      scanController.finish(() => {
+        // The reveal is deferred (~2.5s) past this point — re-check the same
+        // staleness guards above, since the user can switch project/page during it.
+        if (loadedIdRef.current !== proj.id || activeSitePageRef.current !== page) {
+          return;
+        }
         setInsertRequest({
           html,
           nonce,
           sectionType: spec.type,
-        }),
-      );
+        });
+      });
       setLastInserted({ id: spec.id, name: spec.name });
       setPreviewSection(null);
     } catch {
