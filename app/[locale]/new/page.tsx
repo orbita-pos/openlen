@@ -17,6 +17,7 @@ import { PublishModal } from "@/components/workspace/publish-modal";
 import { useCuration } from "@/lib/use-curation";
 import { useGeneration } from "@/lib/use-generation";
 import { setGenerationBusy } from "@/lib/generation-busy";
+import { scanController } from "@/lib/workspace-v2/scan-controller";
 import { useAIModel } from "@/components/workspace-v2/model-picker";
 import { buildModuleSection } from "@/lib/publish/module-sections";
 import type {
@@ -489,6 +490,7 @@ function NewV2Inner() {
     // and the themed fragment must not land on a page switched to mid-flight.
     const page = activeSitePageRef.current;
     setUsingSection(true);
+    scanController.start();
     setUseError(null);
     try {
       const res = await fetch("/api/sections/prepare", {
@@ -507,9 +509,16 @@ function NewV2Inner() {
       // flight? The fragment is themed for that document, so dropping it into
       // the now-current one would inject the wrong palette. Abort silently
       // (the credit for the call still applies).
-      if (loadedIdRef.current !== proj.id) return;
-      if (activeSitePageRef.current !== page) return;
+      if (loadedIdRef.current !== proj.id) {
+        scanController.cancel();
+        return;
+      }
+      if (activeSitePageRef.current !== page) {
+        scanController.cancel();
+        return;
+      }
       if (!res.ok || !data?.html) {
+        scanController.cancel();
         setUseError(
           data?.error === "no_credits"
             ? tSections("sections.errNoCredits")
@@ -518,14 +527,19 @@ function NewV2Inner() {
         return;
       }
       insertNonceRef.current += 1;
-      setInsertRequest({
-        html: data.html,
-        nonce: insertNonceRef.current,
-        sectionType: spec.type,
-      });
+      const nonce = insertNonceRef.current;
+      const html = data.html;
+      scanController.finish(() =>
+        setInsertRequest({
+          html,
+          nonce,
+          sectionType: spec.type,
+        }),
+      );
       setLastInserted({ id: spec.id, name: spec.name });
       setPreviewSection(null);
     } catch {
+      scanController.cancel();
       setUseError(tSections("sections.errGeneric"));
     } finally {
       setUsingSection(false);
@@ -2111,18 +2125,19 @@ function NewV2Inner() {
     [originalTheme, applyThemeBundle, applyThemeMode],
   );
   // Apply a Look (preset or generated) in the current mode, and remember it so
-  // a later dark/light toggle re-derives the right colors.
+  // a later dark/light toggle re-derives the right colors. setActiveLook is
+  // bookkeeping only; the pulse wraps just the in-iframe dispatch.
   const applyLook = useCallback(
     (lightBundle: Record<string, string>) => {
       setActiveLook(lightBundle);
-      applyLookForMode(lightBundle, modeRef.current);
+      scanController.pulse(() => applyLookForMode(lightBundle, modeRef.current));
     },
     [applyLookForMode],
   );
   // Dark/light toggle — re-applies the active Look's colors for the new mode.
   const toggleThemeMode = useCallback(
     (mode: "light" | "dark") => {
-      applyLookForMode(activeLook, mode);
+      scanController.pulse(() => applyLookForMode(activeLook, mode));
     },
     [applyLookForMode, activeLook],
   );
@@ -2131,14 +2146,14 @@ function NewV2Inner() {
   // would break canonize's force-CSS on legacy pages).
   const resetTheme = useCallback(() => {
     setActiveLook(null);
-    applyLookForMode(null, modeRef.current);
+    scanController.pulse(() => applyLookForMode(null, modeRef.current));
   }, [applyLookForMode]);
   // "De tu logo" — apply a Look in an EXPLICIT ink direction (the logo's),
   // remembering the light bundle so the existing Dark toggle keeps working.
   const applyLookWithMode = useCallback(
     (lightBundle: Record<string, string>, mode: "light" | "dark") => {
       setActiveLook(lightBundle);
-      applyLookForMode(lightBundle, mode);
+      scanController.pulse(() => applyLookForMode(lightBundle, mode));
     },
     [applyLookForMode],
   );
@@ -2153,29 +2168,39 @@ function NewV2Inner() {
       const win = iframeElRef.current?.contentWindow;
       if (!win) return;
       if (kit) {
-        win.postMessage(
-          {
-            type: "openlen:apply-prop",
-            scope: "tematica",
-            id: kit.id,
-            css: tematicaCss(kit, backdropId),
-            fontHref: kit.fontHref ?? "",
-            bg: backdropId ?? "",
-            // The kit grounds, for the contrast re-ink pass (the iframe
-            // measures old text colors against the NEW world).
-            tokens: kit.tokens,
-          },
-          "*",
-        );
         setActiveLook(kit.tokens);
-        applyThemeBundle(kit.tokens);
-        applyThemeMode(kit.mode);
+        // Single pulse over the full visual dispatch — the world CSS/font,
+        // then the derived theme bundle, land together as one pass.
+        scanController.pulse(() => {
+          win.postMessage(
+            {
+              type: "openlen:apply-prop",
+              scope: "tematica",
+              id: kit.id,
+              css: tematicaCss(kit, backdropId),
+              fontHref: kit.fontHref ?? "",
+              bg: backdropId ?? "",
+              // The kit grounds, for the contrast re-ink pass (the iframe
+              // measures old text colors against the NEW world).
+              tokens: kit.tokens,
+            },
+            "*",
+          );
+          applyThemeBundle(kit.tokens);
+          applyThemeMode(kit.mode);
+        });
       } else {
-        win.postMessage(
-          { type: "openlen:apply-prop", scope: "tematica", id: "", css: "", fontHref: "", bg: "" },
-          "*",
-        );
-        resetTheme();
+        // resetTheme() pulses internally too; nested while this one's fn is
+        // already mid-flight is safe (pulse degrades to a direct call once
+        // phase isn't idle — see scan-controller.ts) and keeps the world-off
+        // postMessage and the baseline restore in the same visual pass.
+        scanController.pulse(() => {
+          win.postMessage(
+            { type: "openlen:apply-prop", scope: "tematica", id: "", css: "", fontHref: "", bg: "" },
+            "*",
+          );
+          resetTheme();
+        });
       }
     },
     [applyThemeBundle, applyThemeMode, resetTheme],
@@ -2377,9 +2402,14 @@ function NewV2Inner() {
       if (!projectId) return;
       const prev = loadedProject?.settings?.motion;
       const next = preset || undefined;
-      setLoadedProject((p) =>
-        p ? { ...p, settings: { ...p.settings, motion: next } } : p,
-      );
+      // The optimistic setState is the step that actually repaints the iframe
+      // (via the motionPreset prop) — that's what the pulse wraps. The PATCH
+      // below is background persistence, no visual effect of its own.
+      scanController.pulse(() => {
+        setLoadedProject((p) =>
+          p ? { ...p, settings: { ...p.settings, motion: next } } : p,
+        );
+      });
       void fetch(`/api/projects/${projectId}/settings`, {
         method: "PATCH",
         headers: { "content-type": "application/json" },
