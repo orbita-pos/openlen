@@ -35,8 +35,8 @@ export default async function DocsPage({
       title={es ? "Documentación" : "Documentation"}
       updated={
         es
-          ? "Última actualización: 30 de mayo de 2026"
-          : "Last updated: May 30, 2026"
+          ? "Última actualización: 10 de julio de 2026"
+          : "Last updated: July 10, 2026"
       }
     >
       {es ? (
@@ -95,6 +95,10 @@ export default async function DocsPage({
               controles globales de tema como radio de bordes, tipografía y color
               de acento.
             </li>
+            <li>
+              <strong>Editor de imágenes</strong> — recorta, ajusta y quita el
+              fondo de tus fotos sin salir de OpenLen.
+            </li>
           </ul>
 
           <h2>3. Publica en un subdominio gratuito</h2>
@@ -122,7 +126,58 @@ export default async function DocsPage({
             conexión; puedes desconectarla cuando quieras y el token se elimina.
           </p>
 
-          <h2>6. Créditos de IA y el plan Pro</h2>
+          <h2>6. Activa módulos: reservas, pedidos y más</h2>
+          <p>
+            Tu página puede hacer más que informar. Desde el espacio de trabajo
+            activa módulos y cada uno se convierte en una sección o página a
+            juego con tu marca:
+          </p>
+          <ul>
+            <li>
+              <strong>Reservas</strong> — agenda de citas en tu página, con
+              recordatorios por correo.
+            </li>
+            <li>
+              <strong>Pedidos por WhatsApp</strong> — catálogo con carrito; el
+              pedido te llega directo a WhatsApp, sin pasarela de pago.
+            </li>
+            <li>
+              <strong>Miembros y cuentas</strong> — área privada para tu
+              comunidad, con inicio de sesión para tus visitantes.
+            </li>
+            <li>
+              <strong>Comentarios y chat</strong> — comentarios en tu página y
+              mensajería privada con tus visitantes.
+            </li>
+          </ul>
+
+          <h2>7. Haz crecer tu página</h2>
+          <ul>
+            <li>
+              <strong>Analíticas y leads</strong> — cada página publicada
+              incluye analíticas respetuosas con la privacidad y formularios
+              cuyos envíos se guardan y te llegan por correo al instante.
+            </li>
+            <li>
+              <strong>Page Coach</strong> — lee tu embudo (visitas → clics →
+              leads) y te sugiere qué mejorar para convertir más.
+            </li>
+            <li>
+              <strong>Marketing Kit</strong> — publicaciones listas para redes
+              sociales, a juego con tu página: misma paleta, misma tipografía.
+            </li>
+            <li>
+              <strong>Publica en varios idiomas</strong> — traduce tu página con
+              un clic; cada idioma se publica con su propia URL y las etiquetas
+              correctas para los buscadores.
+            </li>
+            <li>
+              <strong>Varias páginas</strong> — añade páginas internas (menú,
+              catálogo, contacto) bajo el mismo sitio.
+            </li>
+          </ul>
+
+          <h2>8. Créditos de IA y el plan Pro</h2>
           <p>
             Las funciones de IA (generar y rediseñar páginas) se miden en
             créditos:
@@ -227,6 +282,10 @@ export default async function DocsPage({
               per-element details (links, alt text, SEO) and global theme
               controls like border radius, typography, and accent color.
             </li>
+            <li>
+              <strong>Image editor</strong> — crop, adjust, and remove the
+              background from your photos without leaving OpenLen.
+            </li>
           </ul>
 
           <h2>3. Publish to a free subdomain</h2>
@@ -253,7 +312,57 @@ export default async function DocsPage({
             disconnect it any time and the token is deleted.
           </p>
 
-          <h2>6. AI credits and the Pro plan</h2>
+          <h2>6. Turn on modules: bookings, orders, and more</h2>
+          <p>
+            Your page can do more than inform. From the workspace, switch on
+            modules and each becomes a section or page matched to your brand:
+          </p>
+          <ul>
+            <li>
+              <strong>Bookings</strong> — appointment scheduling on your page,
+              with email reminders.
+            </li>
+            <li>
+              <strong>WhatsApp orders</strong> — a catalog with a cart; orders
+              land directly in your WhatsApp, no payment gateway needed.
+            </li>
+            <li>
+              <strong>Members and accounts</strong> — a private area for your
+              community, with visitor sign-in.
+            </li>
+            <li>
+              <strong>Comments and chat</strong> — comments on your page and
+              private messaging with your visitors.
+            </li>
+          </ul>
+
+          <h2>7. Grow your page</h2>
+          <ul>
+            <li>
+              <strong>Analytics and leads</strong> — every published page
+              includes privacy-first analytics and lead forms whose submissions
+              are stored and emailed to you instantly.
+            </li>
+            <li>
+              <strong>Page Coach</strong> — reads your funnel (visits → clicks
+              → leads) and suggests what to improve to convert more.
+            </li>
+            <li>
+              <strong>Marketing Kit</strong> — ready-to-post social graphics
+              matched to your page: same palette, same typography.
+            </li>
+            <li>
+              <strong>Publish in multiple languages</strong> — translate your
+              page in one click; each language gets its own URL with the right
+              tags for search engines.
+            </li>
+            <li>
+              <strong>Multiple pages</strong> — add inner pages (menu, catalog,
+              contact) under the same site.
+            </li>
+          </ul>
+
+          <h2>8. AI credits and the Pro plan</h2>
           <p>
             AI features (generating and redesigning pages) are metered in
             credits:
