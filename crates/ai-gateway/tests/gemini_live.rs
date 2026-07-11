@@ -71,7 +71,10 @@ async fn live_mini_prompt_emits_expected_event_shape() {
                 // A one-word prompt with no shared prefix has nothing to hit
                 // the cache — just assert the field is wired, not a specific
                 // value. F3-T3 owns actually forcing/measuring a cache hit.
-                assert!(cached_tokens < input_tokens, "cached_tokens: {cached_tokens}");
+                assert!(
+                    cached_tokens < input_tokens,
+                    "cached_tokens: {cached_tokens}"
+                );
                 usage_count += 1;
             }
             StreamEvent::Done { stop_reason } => {

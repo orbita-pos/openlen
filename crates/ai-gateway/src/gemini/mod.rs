@@ -416,7 +416,11 @@ fn build_request_body(request: &StreamRequest) -> GeminiRequestBody {
         match msg.role {
             Role::System => system_parts.push(GeminiRequestPart::text(msg.content.clone())),
             Role::User | Role::Assistant => {
-                let role = if msg.role == Role::User { "user" } else { "model" };
+                let role = if msg.role == Role::User {
+                    "user"
+                } else {
+                    "model"
+                };
                 let mut parts: Vec<GeminiRequestPart> = Vec::new();
                 if !msg.content.is_empty() {
                     parts.push(GeminiRequestPart::text(msg.content.clone()));
@@ -782,7 +786,10 @@ mod tests {
             .with_tool_config(serde_json::json!({"functionCallingConfig":{"mode":"AUTO"}}));
         let body = build_request_body(&req);
         let v: serde_json::Value = serde_json::to_value(&body).unwrap();
-        assert_eq!(v["tools"][0]["functionDeclarations"][0]["name"], "leer_estado");
+        assert_eq!(
+            v["tools"][0]["functionDeclarations"][0]["name"],
+            "leer_estado"
+        );
         assert_eq!(v["toolConfig"]["functionCallingConfig"]["mode"], "AUTO");
     }
 
@@ -792,11 +799,20 @@ mod tests {
         fc_msg.function_calls = Some(serde_json::json!([
             {"name":"activar_modulo","args":{"modulo":"members"}}
         ]));
-        let req = StreamRequest::new("gemini-3.5-flash", vec![Message::user("ponme signin"), fc_msg]);
+        let req = StreamRequest::new(
+            "gemini-3.5-flash",
+            vec![Message::user("ponme signin"), fc_msg],
+        );
         let v: serde_json::Value = serde_json::to_value(&build_request_body(&req)).unwrap();
         assert_eq!(v["contents"][1]["role"], "model");
-        assert_eq!(v["contents"][1]["parts"][0]["functionCall"]["name"], "activar_modulo");
-        assert_eq!(v["contents"][1]["parts"][0]["functionCall"]["args"]["modulo"], "members");
+        assert_eq!(
+            v["contents"][1]["parts"][0]["functionCall"]["name"],
+            "activar_modulo"
+        );
+        assert_eq!(
+            v["contents"][1]["parts"][0]["functionCall"]["args"]["modulo"],
+            "members"
+        );
     }
 
     #[test]
@@ -808,8 +824,14 @@ mod tests {
         let req = StreamRequest::new("gemini-3.5-flash", vec![Message::user("hola"), fr_msg]);
         let v: serde_json::Value = serde_json::to_value(&build_request_body(&req)).unwrap();
         assert_eq!(v["contents"][1]["role"], "user");
-        assert_eq!(v["contents"][1]["parts"][0]["functionResponse"]["name"], "activar_modulo");
-        assert_eq!(v["contents"][1]["parts"][0]["functionResponse"]["response"]["ok"], true);
+        assert_eq!(
+            v["contents"][1]["parts"][0]["functionResponse"]["name"],
+            "activar_modulo"
+        );
+        assert_eq!(
+            v["contents"][1]["parts"][0]["functionResponse"]["response"]["ok"],
+            true
+        );
     }
 
     #[test]
