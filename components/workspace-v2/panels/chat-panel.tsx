@@ -36,7 +36,7 @@ import type { StoredChatTurn } from "@/lib/projects/types";
 import type { SitePageSummary } from "@/lib/projects/site-pages";
 import type { AIModel } from "@/lib/ai-provider";
 import type { AgentErrorCode } from "@/lib/agent/loop";
-import { scanController } from "@/lib/workspace-v2/scan-controller";
+import { scanController, scanFxUnavailable } from "@/lib/workspace-v2/scan-controller";
 
 export interface ScopedSelection {
   hint: string;
@@ -398,10 +398,13 @@ function AIDesignChat({
   }, []);
 
   // Mirror streaming state to the parent so the preview can overlay the
-  // page-building loader while the model redesigns. Cleanup forces it off
-  // if the chat unmounts mid-stream (a tab switch aborts the request).
+  // page-building loader while the model redesigns — but ONLY when the scan
+  // effect can't render (kill switch / reduced motion). Otherwise the loader
+  // would sit at z-40 over the iframe and hide the scan sweep entirely.
+  // Cleanup forces it off if the chat unmounts mid-stream (a tab switch
+  // aborts the request).
   useEffect(() => {
-    onRedesigningChangeRef.current?.(sending);
+    onRedesigningChangeRef.current?.(sending && scanFxUnavailable());
     return () => onRedesigningChangeRef.current?.(false);
   }, [sending]);
 

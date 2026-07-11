@@ -177,3 +177,18 @@ export function createScanController(opts?: {
 }
 
 export const scanController: ScanController = createScanController();
+
+/** True when the scan effect won't render a visible sweep (kill switch or
+ *  reduced motion) — callers can fall back to a plain busy overlay. */
+export function scanFxUnavailable(): boolean {
+  try {
+    if (globalThis.localStorage?.getItem("ol:scanfx") === "0") return true;
+  } catch {
+    /* SSR / storage blocked — assume available */
+  }
+  try {
+    return globalThis.matchMedia?.("(prefers-reduced-motion: reduce)").matches === true;
+  } catch {
+    return false;
+  }
+}
