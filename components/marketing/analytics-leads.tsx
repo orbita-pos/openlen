@@ -1,10 +1,13 @@
 import { getTranslations } from "next-intl/server";
 import {
   BarChart3,
+  CalendarCheck,
   Eye,
   Inbox,
-  MousePointerClick,
-  ShieldCheck,
+  Languages,
+  MessageCircle,
+  MessagesSquare,
+  ShoppingBag,
   Users,
   type LucideIcon,
 } from "lucide-react";
@@ -65,28 +68,19 @@ const LEADS: { name: string; email: string; initials: string; tint: string }[] =
   { name: "Devon Carter", email: "devon@boltworks.co", initials: "DC", tint: "#0ea5e9" },
 ];
 
-interface Perk {
-  icon: LucideIcon;
-  titleKey: string;
-  bodyKey: string;
-}
-const PERKS: Perk[] = [
-  {
-    icon: ShieldCheck,
-    titleKey: "analyticsLeads.perks.privacy.title",
-    bodyKey: "analyticsLeads.perks.privacy.body",
-  },
-  {
-    icon: MousePointerClick,
-    titleKey: "analyticsLeads.perks.perLink.title",
-    bodyKey: "analyticsLeads.perks.perLink.body",
-  },
-  {
-    icon: Inbox,
-    titleKey: "analyticsLeads.perks.inbox.title",
-    bodyKey: "analyticsLeads.perks.inbox.body",
-  },
+// Module chips for the "one switch away" card — each is a real, shipped
+// OpenLen module (bookings, WhatsApp orders, members, comments, chat, i18n).
+const MODULE_CHIPS: { icon: LucideIcon; labelKey: string }[] = [
+  { icon: CalendarCheck, labelKey: "analyticsLeads.extras.modules.items.bookings" },
+  { icon: ShoppingBag, labelKey: "analyticsLeads.extras.modules.items.orders" },
+  { icon: Users, labelKey: "analyticsLeads.extras.modules.items.members" },
+  { icon: MessagesSquare, labelKey: "analyticsLeads.extras.modules.items.comments" },
+  { icon: MessageCircle, labelKey: "analyticsLeads.extras.modules.items.chat" },
+  { icon: Languages, labelKey: "analyticsLeads.extras.modules.items.multilingual" },
 ];
+
+const CELL =
+  "group relative overflow-hidden rounded-3xl bg-white/70 dark:bg-white/[0.04] ring-1 ring-zinc-200/70 dark:ring-white/10 backdrop-blur-sm p-6 sm:p-7 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-coral-950/[0.07] dark:hover:shadow-black/30";
 
 export async function AnalyticsLeads() {
   const t = await getTranslations("marketing");
@@ -98,10 +92,12 @@ export async function AnalyticsLeads() {
           <Badge tone="coral">
             <BarChart3 size={11} /> {t("analyticsLeads.badge")}
           </Badge>
-          <h2 className="mt-4 text-3xl sm:text-5xl font-semibold tracking-tightest leading-[1.05]">
+          <h2 className="mt-4 text-3xl sm:text-5xl font-semibold tracking-tightest leading-[1.08]">
             {t.rich("analyticsLeads.title", {
               muted: (chunks) => (
-                <span className="text-zinc-500 dark:text-zinc-400">{chunks}</span>
+                <span className="serif-accent bg-gradient-to-br from-coral-500 via-coral-600 to-rose-500 bg-clip-text text-transparent pr-[0.04em]">
+                  {chunks}
+                </span>
               ),
             })}
           </h2>
@@ -115,26 +111,108 @@ export async function AnalyticsLeads() {
           <LeadsMock />
         </div>
 
-        <div className="mt-6 grid grid-cols-1 sm:grid-cols-3 gap-px bg-zinc-200 dark:bg-zinc-800 ring-1 ring-zinc-200 dark:ring-zinc-800 rounded-2xl overflow-hidden">
-          {PERKS.map((p) => {
-            const Icon = p.icon;
-            return (
-              <div
-                key={p.titleKey}
-                className="bg-white dark:bg-[#0a0a0a] p-6 sm:p-7"
-              >
-                <div className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-coral-50 text-coral-600 dark:bg-coral-500/10 dark:text-coral-400 ring-1 ring-coral-200/60 dark:ring-coral-500/20">
-                  <Icon size={16} strokeWidth={2} />
+        {/* The rest of the results loop — real shipped features, drawn as
+            product artifacts instead of icon cards. */}
+        <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-5">
+          {/* Marketing Kit — two mini social posts in the page's palette. */}
+          <div className={CELL}>
+            <div className="flex gap-3" aria-hidden>
+              <div className="relative h-28 flex-1 overflow-hidden rounded-xl bg-gradient-to-br from-coral-500 via-coral-600 to-rose-600 p-3 rotate-[-1.2deg] transition-transform duration-300 group-hover:rotate-0">
+                <div className="h-1.5 w-14 rounded-full bg-white/85" />
+                <div className="mt-1.5 h-1.5 w-20 rounded-full bg-white/50" />
+                <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between">
+                  <span className="serif-accent text-[15px] text-white/95">Margot Rey</span>
+                  <span className="h-3 w-3 rounded-full bg-white/80" />
                 </div>
-                <h3 className="mt-4 text-[14px] font-semibold tracking-tight">
-                  {t(p.titleKey)}
-                </h3>
-                <p className="mt-1.5 text-[13px] text-zinc-600 dark:text-zinc-400 leading-relaxed">
-                  {t(p.bodyKey)}
-                </p>
               </div>
-            );
-          })}
+              <div className="relative h-28 flex-1 overflow-hidden rounded-xl bg-white dark:bg-zinc-950/60 ring-1 ring-zinc-200/80 dark:ring-white/10 p-3 rotate-[1.2deg] transition-transform duration-300 group-hover:rotate-0">
+                <div className="flex gap-1">
+                  {["#FF5A36", "#f43f5e", "#a78bfa", "#2a2140"].map((c) => (
+                    <span key={c} className="h-3.5 w-3.5 rounded-full ring-2 ring-white dark:ring-zinc-900" style={{ background: c }} />
+                  ))}
+                </div>
+                <div className="mt-2.5 h-1.5 w-16 rounded-full bg-zinc-200 dark:bg-zinc-700" />
+                <div className="mt-1.5 h-1.5 w-12 rounded-full bg-zinc-100 dark:bg-zinc-800" />
+                <span className="absolute bottom-3 left-3 inline-flex rounded-full bg-coral-500/10 px-2 py-0.5 text-[9px] font-semibold text-coral-700 dark:text-coral-300">
+                  {t("analyticsLeads.extras.kit.chip")}
+                </span>
+              </div>
+            </div>
+            <h3 className="mt-5 text-[15px] font-semibold tracking-tight">
+              {t("analyticsLeads.extras.kit.title")}
+            </h3>
+            <p className="mt-1.5 text-[13px] text-zinc-600 dark:text-zinc-400 leading-relaxed">
+              {t("analyticsLeads.extras.kit.body")}
+            </p>
+          </div>
+
+          {/* Page Coach — the funnel it reads + the advice it gives. */}
+          <div className={CELL}>
+            <div className="space-y-1.5" aria-hidden>
+              {[
+                [t("analyticsLeads.extras.coach.funnel.visits"), 100, "2,341"],
+                [t("analyticsLeads.extras.coach.funnel.clicks"), 38, "894"],
+                [t("analyticsLeads.extras.coach.funnel.leads"), 9, "212"],
+              ].map(([label, pct, n]) => (
+                <div key={String(label)} className="flex items-center gap-2">
+                  <span className="w-14 truncate text-[10px] font-medium text-zinc-500 dark:text-zinc-400">
+                    {label}
+                  </span>
+                  <div className="h-4 flex-1 overflow-hidden rounded-md bg-zinc-100 dark:bg-zinc-800/70">
+                    <div
+                      className="h-full rounded-md bg-gradient-to-r from-coral-500/80 to-coral-400/60"
+                      style={{ width: `${pct}%` }}
+                    />
+                  </div>
+                  <span className="w-10 text-right text-[10px] tabular-nums text-zinc-400">
+                    {n}
+                  </span>
+                </div>
+              ))}
+            </div>
+            <div className="mt-3 rounded-xl border-l-2 border-coral-500 bg-coral-50/70 dark:bg-coral-500/[0.08] px-3 py-2.5">
+              <p className="text-[12px] leading-snug text-zinc-700 dark:text-zinc-300">
+                <span className="mr-1" aria-hidden>✦</span>
+                {t("analyticsLeads.extras.coach.tip")}
+              </p>
+            </div>
+            <h3 className="mt-5 text-[15px] font-semibold tracking-tight">
+              {t("analyticsLeads.extras.coach.title")}
+            </h3>
+            <p className="mt-1.5 text-[13px] text-zinc-600 dark:text-zinc-400 leading-relaxed">
+              {t("analyticsLeads.extras.coach.body")}
+            </p>
+          </div>
+
+          {/* Modules — the real switches, as chips. */}
+          <div className={CELL}>
+            <div className="flex flex-wrap gap-2">
+              {MODULE_CHIPS.map((m) => {
+                const Icon = m.icon;
+                return (
+                  <span
+                    key={m.labelKey}
+                    className="inline-flex items-center gap-1.5 rounded-full bg-white dark:bg-zinc-950/60 ring-1 ring-zinc-200/80 dark:ring-white/10 px-2.5 py-1.5 text-[11px] font-medium text-zinc-700 dark:text-zinc-300"
+                  >
+                    <Icon size={11} className="text-coral-600 dark:text-coral-400" />
+                    {t(m.labelKey)}
+                  </span>
+                );
+              })}
+              <span
+                className="inline-flex items-center rounded-full px-2.5 py-1.5 text-[11px] font-medium text-zinc-400 dark:text-zinc-500"
+                aria-hidden
+              >
+                +
+              </span>
+            </div>
+            <h3 className="mt-5 text-[15px] font-semibold tracking-tight">
+              {t("analyticsLeads.extras.modules.title")}
+            </h3>
+            <p className="mt-1.5 text-[13px] text-zinc-600 dark:text-zinc-400 leading-relaxed">
+              {t("analyticsLeads.extras.modules.body")}
+            </p>
+          </div>
         </div>
       </div>
     </section>
@@ -145,7 +223,7 @@ export async function AnalyticsLeads() {
 async function DashboardMock() {
   const t = await getTranslations("marketing");
   return (
-    <div className="lg:col-span-7 relative overflow-hidden rounded-2xl ring-1 ring-zinc-200 dark:ring-white/[0.08] bg-white dark:bg-[#0c0c0d] shadow-sm">
+    <div className="lg:col-span-7 relative overflow-hidden rounded-3xl ring-1 ring-zinc-200/70 dark:ring-white/[0.08] bg-white/80 dark:bg-[#0c0c0d] backdrop-blur-sm shadow-sm">
       {/* subtle top glow */}
       <div
         aria-hidden
@@ -317,7 +395,7 @@ async function LeadsMock() {
   ] as const;
   const times = ["2m", "1h", "3h"];
   return (
-    <div className="lg:col-span-5 flex flex-col rounded-2xl ring-1 ring-zinc-200 dark:ring-white/[0.08] bg-white dark:bg-[#0c0c0d] shadow-sm overflow-hidden">
+    <div className="lg:col-span-5 flex flex-col rounded-3xl ring-1 ring-zinc-200/70 dark:ring-white/[0.08] bg-white/80 dark:bg-[#0c0c0d] backdrop-blur-sm shadow-sm overflow-hidden">
       <div className="flex items-center justify-between px-5 pt-5 pb-3 border-b border-zinc-200/70 dark:border-white/[0.06]">
         <div className="flex items-center gap-2">
           <Inbox size={15} className="text-coral-600 dark:text-coral-400" />

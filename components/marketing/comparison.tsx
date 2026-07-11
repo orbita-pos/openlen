@@ -119,7 +119,7 @@ export async function Comparison() {
   ];
 
   return (
-    <section className="relative border-y border-zinc-200 dark:border-zinc-800 bg-zinc-50/60 dark:bg-zinc-950">
+    <section className="relative bg-gradient-to-b from-rose-50/60 via-orange-50/30 to-transparent dark:from-zinc-950 dark:via-zinc-950/60 dark:to-transparent">
       <div className="mx-auto max-w-6xl px-6 py-24">
         <div className="text-center max-w-2xl mx-auto">
           <Badge tone="zinc">
@@ -133,7 +133,7 @@ export async function Comparison() {
           </p>
         </div>
 
-        <div className="mt-14 rounded-2xl ring-1 ring-zinc-200 dark:ring-zinc-800 bg-white dark:bg-[#0a0a0a] overflow-hidden">
+        <div className="mt-14 rounded-3xl ring-1 ring-zinc-200/70 dark:ring-white/10 bg-white/80 dark:bg-[#0a0a0a] backdrop-blur-sm shadow-sm overflow-hidden">
           <div
             className="overflow-x-auto"
             tabIndex={0}

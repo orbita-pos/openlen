@@ -1,68 +1,26 @@
 import { getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
-import { ArrowRight, Star } from "lucide-react";
-import { GithubIcon } from "@/components/ui/brand-icons";
-import { countProjectsSince } from "@/lib/projects";
+import { ArrowRight } from "lucide-react";
+import { countLiveProjects } from "@/lib/projects";
 import { countTemplates } from "@/lib/templates/store";
 import { HeroProduct } from "./hero-product";
 
-const avatarColors = ["#FF5A36", "#22d3ee", "#a78bfa", "#facc15", "#34d399"];
-
-const REPO_URL = "https://github.com/orbita-pos/openlen";
-
-// Live GitHub star count, cached for an hour. Returns null on any failure
-// (rate limit, network) — the caller then omits the count chip entirely.
-async function getRepoStars(): Promise<number | null> {
-  try {
-    const res = await fetch("https://api.github.com/repos/orbita-pos/openlen", {
-      headers: {
-        Accept: "application/vnd.github+json",
-        "User-Agent": "openlen-site",
-      },
-      // Cap the wait so a slow/unreachable GitHub can't stall the home SSR —
-      // the chip just hides (caught below → null) instead of hanging the page.
-      signal: AbortSignal.timeout(2500),
-      next: { revalidate: 3600 },
-    });
-    if (!res.ok) return null;
-    const data = (await res.json()) as { stargazers_count?: unknown };
-    return typeof data.stargazers_count === "number"
-      ? data.stargazers_count
-      : null;
-  } catch {
-    return null;
-  }
-}
-
-function formatStars(n: number): string {
-  return n < 1000 ? String(n) : `${(n / 1000).toFixed(1).replace(/\.0$/, "")}k`;
-}
-
 export async function Hero() {
   const t = await getTranslations("marketing");
-  // Real numbers for the trust row. Each chip hides itself when there is
-  // nothing real to show yet (pre-launch): a 0 page count and a 0 / failed
-  // star fetch each drop their chip instead of rendering a sad "0".
-  const [pagesThisWeek, stars, templateCount] = await Promise.all([
-    countProjectsSince(7).catch(() => 0),
-    getRepoStars(),
+  // Real numbers only: the live-pages chip hides itself at 0 instead of
+  // rendering a sad empty brag.
+  const [pagesLive, templateCount] = await Promise.all([
+    countLiveProjects().catch(() => 0),
     countTemplates().catch(() => 0),
   ]);
 
   return (
     <section className="relative overflow-hidden">
-      <div className="absolute inset-0 grid-bg opacity-60" aria-hidden />
-      <div className="absolute inset-x-0 top-0 h-[640px] hero-glow" aria-hidden />
-      <div
-        className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-coral-500/60 to-transparent"
-        aria-hidden
-      />
-
-      <div className="relative mx-auto max-w-7xl px-6 pt-14 sm:pt-20">
-        <div className="flex flex-col items-start text-left">
+      <div className="relative mx-auto max-w-7xl px-6 pt-16 sm:pt-24">
+        <div className="flex flex-col items-center text-center">
           <Link
             href="/templates"
-            className="group inline-flex items-center gap-2 rounded-full bg-white dark:bg-zinc-950 ring-1 ring-zinc-200 dark:ring-zinc-800 px-3 py-1 text-xs font-medium text-zinc-700 dark:text-zinc-300 shadow-sm hover:ring-zinc-300 dark:hover:ring-zinc-700 transition"
+            className="group inline-flex items-center gap-2 rounded-full bg-white/70 dark:bg-white/[0.06] backdrop-blur ring-1 ring-white/80 dark:ring-white/10 px-3 py-1 text-xs font-medium text-zinc-700 dark:text-zinc-300 shadow-sm hover:ring-coral-300/70 dark:hover:ring-coral-400/30 transition"
           >
             <span className="inline-flex items-center gap-1 rounded-full bg-coral-500/10 text-coral-700 dark:text-coral-300 px-2 py-0.5 text-[10px] font-semibold tracking-wide uppercase">
               {t("hero.alphaBadge")}
@@ -74,21 +32,21 @@ export async function Hero() {
             />
           </Link>
 
-          <h1 className="mt-6 max-w-4xl text-pretty text-5xl sm:text-6xl md:text-7xl lg:text-[76px] font-semibold tracking-tightest leading-[1.01]">
+          <h1 className="mt-8 max-w-5xl text-pretty text-5xl sm:text-6xl md:text-7xl lg:text-[86px] font-semibold tracking-tightest leading-[1.02]">
             {t.rich("hero.title", {
               br: () => <br />,
               muted: (chunks) => (
-                <span className="text-zinc-500 dark:text-zinc-400">{chunks}</span>
+                <span className="text-zinc-400 dark:text-zinc-500 font-medium">{chunks}</span>
               ),
               gradient: (chunks) => (
-                <span className="bg-gradient-to-br from-coral-500 to-coral-700 bg-clip-text text-transparent">
+                <span className="serif-accent bg-gradient-to-br from-coral-500 via-coral-600 to-rose-500 bg-clip-text text-transparent pr-[0.06em]">
                   {chunks}
                 </span>
               ),
             })}
           </h1>
 
-          <p className="mt-6 max-w-xl text-pretty text-lg text-zinc-600 dark:text-zinc-400">
+          <p className="mt-7 max-w-xl text-pretty text-lg text-zinc-600 dark:text-zinc-400">
             {t.rich("hero.subtitle", {
               count: templateCount,
               strong: (chunks) => (
@@ -99,59 +57,37 @@ export async function Hero() {
             })}
           </p>
 
-          <div className="mt-8 flex flex-wrap items-center justify-start gap-x-4 gap-y-2 text-xs text-zinc-500 dark:text-zinc-400">
-            {pagesThisWeek > 0 && (
-              <>
-                <div className="flex items-center gap-2">
-                  <div className="flex -space-x-1.5">
-                    {avatarColors.map((c, i) => (
-                      <span
-                        key={i}
-                        className="h-5 w-5 rounded-full ring-2 ring-white dark:ring-[#0a0a0a]"
-                        style={{ background: c }}
-                      />
-                    ))}
-                  </div>
-                  <span>
-                    {t.rich("hero.pagesThisWeek", {
-                      count: pagesThisWeek,
-                      strong: (chunks) => (
-                        <span className="font-medium text-zinc-700 dark:text-zinc-300">
-                          {chunks}
-                        </span>
-                      ),
-                    })}
+          {pagesLive > 0 && (
+            <div className="mt-8 inline-flex items-center gap-2.5 rounded-full bg-white/70 dark:bg-white/[0.06] backdrop-blur ring-1 ring-white/80 dark:ring-white/10 px-4 py-1.5 text-[13px] text-zinc-600 dark:text-zinc-300 shadow-sm">
+              <span className="relative flex h-2 w-2" aria-hidden>
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-60" />
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
+              </span>
+              {t.rich("hero.pagesLive", {
+                count: pagesLive,
+                strong: (chunks) => (
+                  <span className="font-semibold tabular-nums text-zinc-900 dark:text-zinc-100">
+                    {chunks}
                   </span>
-                </div>
-                <span className="hidden sm:inline text-zinc-300 dark:text-zinc-800">
-                  ·
-                </span>
-              </>
-            )}
-            <a
-              href={REPO_URL}
-              target="_blank"
-              rel="noreferrer"
-              className="inline-flex items-center gap-1.5 hover:text-zinc-900 dark:hover:text-zinc-100 transition"
-            >
-              <GithubIcon size={12} />
-              <span>{t("hero.starOnGithub")}</span>
-              {stars != null && stars > 0 && (
-                <span className="inline-flex items-center gap-1 rounded-full bg-zinc-100 dark:bg-zinc-900 px-1.5 py-0.5 text-[10.5px] font-medium tabular-nums text-zinc-600 dark:text-zinc-400">
-                  <Star size={9} className="text-amber-500" />
-                  {formatStars(stars)}
-                </span>
-              )}
-            </a>
-          </div>
+                ),
+              })}
+            </div>
+          )}
 
         </div>
       </div>
 
       {/* Product mock — wider than the copy column, anchored below it so its top
           peeks into the fold (Framer/Linear style) and bleeds off the bottom. */}
-      <div className="relative mx-auto max-w-[88rem] px-6 mt-10 pb-20 sm:mt-14 sm:pb-24">
-        <HeroProduct />
+      <div className="relative mx-auto max-w-[88rem] px-6 mt-12 pb-20 sm:mt-16 sm:pb-24">
+        {/* Dawn bloom under the mock — soft coral→rose→violet halo. */}
+        <div
+          className="absolute -inset-x-4 -top-8 bottom-10 rounded-[48px] bg-gradient-to-r from-coral-400/25 via-rose-300/20 to-violet-300/25 dark:from-coral-500/15 dark:via-rose-400/10 dark:to-violet-400/15 blur-3xl"
+          aria-hidden
+        />
+        <div className="relative">
+          <HeroProduct />
+        </div>
       </div>
 
       <div

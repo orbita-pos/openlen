@@ -26,9 +26,12 @@ export async function generateMetadata({
   const { locale } = await params;
   const es = locale === "es";
   const count = await countTemplates().catch(() => 0);
+  // Brand name leads the title — the strongest on-page signal for the
+  // branded query "openlen" (the layout's title.template doesn't apply
+  // to its own segment, so it must be inline here).
   const title = es
-    ? "Landing pages que son tuyas. Hechas con IA. Código abierto."
-    : "Landing pages you own. AI-built. Open source.";
+    ? "OpenLen — Landing pages que son tuyas. Hechas con IA. Código abierto."
+    : "OpenLen — Landing pages you own. AI-built. Open source.";
   const description = es
     ? `Una mirada abierta a tus landing pages. Creador de código abierto con generación por IA, ${count} plantillas (incluidas 30 link-in-bio para creadores), analítica respetuosa con la privacidad y tu HTML — AGPLv3.`
     : `An open lens on your landing pages. Open-source builder with AI generation, ${count} templates including 30 link-in-bio creator hubs, privacy-first analytics, your HTML — AGPLv3.`;
@@ -41,13 +44,13 @@ export async function generateMetadata({
       locale: es ? "es_ES" : "en_US",
       url: `${SITE_URL}/${locale}`,
       siteName: "OpenLen",
-      title: `${title} | OpenLen`,
+      title,
       description,
       images: ["/og.png"],
     },
     twitter: {
       card: "summary_large_image",
-      title: `${title} | OpenLen`,
+      title,
       description,
       images: ["/og.png"],
     },
@@ -56,7 +59,13 @@ export async function generateMetadata({
 
 export default function HomePage() {
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="relative min-h-screen flex flex-col">
+      {/* Dawn atmosphere from the very first pixel — sits behind the sticky
+          glass nav so there is no white band above the hero. */}
+      <div
+        className="pointer-events-none absolute inset-x-0 top-0 h-[900px] aurora-dawn"
+        aria-hidden
+      />
       <MarketingChrome>
         <Hero />
         <MosaicWall />

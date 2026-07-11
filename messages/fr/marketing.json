@@ -19,7 +19,8 @@
     "subtitle": "Générez depuis un prompt, choisissez un modèle ou collez votre HTML. Publiez sur <strong>votre sous-domaine</strong>.",
     "pagesThisWeek": "<strong>{count, number}</strong> pages générées cette semaine",
     "githubAria": "OpenLen sur GitHub",
-    "starOnGithub": "Mettre une étoile sur GitHub"
+    "starOnGithub": "Mettre une étoile sur GitHub",
+    "pagesLive": "<strong>{count}</strong> pages en ligne sur leur propre sous-domaine ou domaine"
   },
   "heroPrompt": {
     "placeholder": "Une landing page pour mon SaaS qui…",
@@ -105,6 +106,35 @@
         "title": "Les leads arrivent dans votre boîte mail",
         "body": "Ajoutez un formulaire à n'importe quelle page. Les soumissions sont enregistrées et vous sont envoyées par e-mail dès leur arrivée."
       }
+    },
+    "extras": {
+      "kit": {
+        "title": "Marketing Kit",
+        "chip": "56 posts · 312 légendes",
+        "body": "Des visuels prêts à publier, assortis à votre page — même palette, même typo, contraste garanti. Choisissez, ajustez la légende, publiez."
+      },
+      "coach": {
+        "title": "Page Coach",
+        "tip": "Remontez le bouton WhatsApp au-dessus de la ligne de flottaison — 62 % des visiteurs ne dépassent jamais le hero.",
+        "body": "Il lit votre funnel et vous dit quoi corriger : où les visiteurs décrochent et quel changement les ramène.",
+        "funnel": {
+          "visits": "Visites",
+          "clicks": "Clics",
+          "leads": "Leads"
+        }
+      },
+      "modules": {
+        "title": "Des modules en un clic",
+        "body": "Réservations, commandes WhatsApp, membres, commentaires, chat — activez-en un et il devient une section de votre page, assortie à votre marque.",
+        "items": {
+          "bookings": "Réservations",
+          "orders": "Commandes WhatsApp",
+          "members": "Membres",
+          "comments": "Commentaires",
+          "chat": "Chat",
+          "multilingual": "Multilingue"
+        }
+      }
     }
   },
   "comparison": {
@@ -181,6 +211,10 @@
         "3": "Sous-domaine wildcard via Caddy",
         "4": "Aucune facture, aucune limite de débit, aucune surveillance"
       }
+    },
+    "custom": {
+      "title": "Besoin de plus qu’une page ?",
+      "body": "Un point de vente, un système de réservation, une application complète — nous développons aussi du sur-mesure. Dites-nous ce qu’il vous faut."
     }
   },
   "finalCta": {

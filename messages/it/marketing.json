@@ -19,7 +19,8 @@
     "subtitle": "Genera da un prompt, scegli un modello o incolla il tuo HTML. Pubblica sul <strong>tuo sottodominio</strong>.",
     "pagesThisWeek": "<strong>{count, number}</strong> pagine generate questa settimana",
     "githubAria": "OpenLen su GitHub",
-    "starOnGithub": "Lascia una stella su GitHub"
+    "starOnGithub": "Lascia una stella su GitHub",
+    "pagesLive": "<strong>{count}</strong> pagine online con il proprio sottodominio o dominio"
   },
   "heroPrompt": {
     "placeholder": "Una landing page per il mio SaaS che…",
@@ -105,6 +106,35 @@
         "title": "I lead arrivano nella tua casella",
         "body": "Aggiungi un modulo a qualsiasi pagina. Gli invii vengono salvati e inoltrati via email nel momento in cui arrivano."
       }
+    },
+    "extras": {
+      "kit": {
+        "title": "Marketing Kit",
+        "chip": "56 post · 312 caption",
+        "body": "Post pronti per i social, abbinati alla tua pagina — stessa palette, stesso font, contrasto garantito. Scegli, ritocca la caption, pubblica."
+      },
+      "coach": {
+        "title": "Page Coach",
+        "tip": "Sposta il bottone WhatsApp sopra la piega — il 62% dei visitatori non supera mai l’hero.",
+        "body": "Legge il tuo funnel e ti dice esattamente cosa sistemare: dove i visitatori si perdono e quale modifica li recupera.",
+        "funnel": {
+          "visits": "Visite",
+          "clicks": "Clic",
+          "leads": "Lead"
+        }
+      },
+      "modules": {
+        "title": "Moduli con un clic",
+        "body": "Prenotazioni, ordini WhatsApp, membri, commenti, chat — ne attivi uno e diventa una sezione della tua pagina, in linea col tuo brand.",
+        "items": {
+          "bookings": "Prenotazioni",
+          "orders": "Ordini WhatsApp",
+          "members": "Membri",
+          "comments": "Commenti",
+          "chat": "Chat",
+          "multilingual": "Multilingue"
+        }
+      }
     }
   },
   "comparison": {
@@ -181,6 +211,10 @@
         "3": "Sottodominio wildcard tramite Caddy",
         "4": "Nessuna fattura, nessun limite di richieste, nessun controllo esterno"
       }
+    },
+    "custom": {
+      "title": "Serve più di una pagina?",
+      "body": "Un punto vendita, un sistema di prenotazioni, un’app completa — sviluppiamo anche software su misura. Raccontaci cosa ti serve."
     }
   },
   "finalCta": {

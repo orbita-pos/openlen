@@ -3,7 +3,7 @@
 import { FileCode, ShieldCheck } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
-import { GithubIcon, TwitterIcon } from "@/components/ui/brand-icons";
+import { GithubIcon } from "@/components/ui/brand-icons";
 import { OpenLenMark } from "@/components/openlen-logo";
 
 const REPO = "https://github.com/orbita-pos/openlen";
@@ -83,13 +83,6 @@ export function Footer() {
                 className={iconClass}
               >
                 <GithubIcon size={15} />
-              </a>
-              <a
-                href="https://twitter.com"
-                aria-label={t("footer.twitterAria")}
-                className={iconClass}
-              >
-                <TwitterIcon size={15} />
               </a>
               <Link href="/docs" aria-label={t("footer.docsAria")} className={iconClass}>
                 <FileCode size={15} />

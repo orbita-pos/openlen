@@ -2,35 +2,19 @@ import { getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
 import { ArrowRight } from "lucide-react";
 import { listTemplates, type TemplateRecord } from "@/lib/templates/store";
+import { WallTile } from "./wall-tile";
 
-// Framer-style edge-to-edge template wall: a dense column-masonry of real
-// template previews, full-bleed under the hero. Reuses the `demoStrip.*` i18n
-// keys (eyebrow / title / browseAll) → zero translation churn.
+// Edge-to-edge template wall: real template previews, full-bleed under the
+// hero. Reuses the `demoStrip.*` i18n keys (eyebrow / title / browseAll) →
+// zero translation churn.
 //
-// Source = `thumbnailUrl`: the crisp 1280×800 fold AVIF (~80KB). Sharp on
-// retina and light enough that a wall of ~21 scrolls smoothly. We crop it only
-// to LANDSCAPE/SQUARE windows (16:9 → 1:1, object-top): cropping the fold to a
-// tall portrait would sliver it (there's only 800px of captured height), and
-// the full-page `tileUrl` that *could* do portrait is too low-res (~600px) and
-// renders blurry. So size variety comes from wide-vs-square tiles, all showing
-// a sharp hero. (A true tall-portrait wall would need hi-res full-page tiles.)
+// Every tile is the COMPLETE 16:10 fold (`thumbnailUrl` is captured at
+// 1280×800, so aspect-[16/10] shows it uncropped and sharp). On hover the
+// crisp fold cross-fades into the full-page `tileUrl` underneath, whose
+// object-position animates top → bottom: the card slow-scrolls through the
+// whole page without JS. Reduced motion keeps the static fold.
 
-const MAX_TILES = 21;
-
-// Landscape → square only (all ≥ 1:1). Rotated so heights vary tile-to-tile
-// for the masonry rhythm without ever slivering the 16:10 fold.
-const ASPECTS = [
-  "16 / 10",
-  "1 / 1",
-  "16 / 9",
-  "4 / 3",
-  "3 / 2",
-  "1 / 1",
-  "16 / 10",
-  "5 / 4",
-  "16 / 9",
-  "4 / 3",
-] as const;
+const MAX_TILES = 20;
 
 function selectTiles(all: TemplateRecord[], max: number): TemplateRecord[] {
   const pool = all.filter((t) => t.thumbnailUrl);
@@ -86,7 +70,9 @@ export async function MosaicWall() {
               {t.rich("demoStrip.title", {
                 br: () => <br className="sm:hidden" />,
                 muted: (chunks) => (
-                  <span className="text-zinc-500 dark:text-zinc-400">{chunks}</span>
+                  <span className="serif-accent bg-gradient-to-br from-coral-500 via-coral-600 to-rose-500 bg-clip-text text-transparent pr-[0.04em]">
+                    {chunks}
+                  </span>
                 ),
               })}
             </h2>
@@ -97,45 +83,22 @@ export async function MosaicWall() {
         </div>
       </div>
 
-      {/* Full-bleed masonry — only thin side gutters, not the max-w container. */}
+      {/* Full-bleed wall — only thin side gutters, not the max-w container. */}
       <div className="relative px-3 sm:px-4">
-        <div className="gap-3 sm:gap-4 [column-fill:balance] columns-2 sm:columns-3 lg:columns-4 xl:columns-5">
-          {tiles.map((tpl, i) => {
-            const src = tpl.thumbnailUrl;
-            if (!src) return null;
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
+          {tiles.map((tpl) => {
+            if (!tpl.thumbnailUrl) return null;
             return (
-              <Link
+              <WallTile
                 key={tpl.id}
-                href={`/templates/${tpl.id}`}
-                className="group relative mb-3 sm:mb-4 block break-inside-avoid overflow-hidden rounded-lg sm:rounded-xl ring-1 ring-zinc-200/80 dark:ring-white/[0.08] bg-zinc-100 dark:bg-zinc-900 transition-[box-shadow,border-color] duration-200 hover:ring-coral-400/70 dark:hover:ring-coral-500/40 hover:shadow-lg"
-                style={{ aspectRatio: ASPECTS[i % ASPECTS.length] }}
-              >
-                <div
-                  aria-hidden
-                  className="absolute inset-0 bg-gradient-to-br from-zinc-200 to-zinc-100 dark:from-zinc-800 dark:to-zinc-900"
-                />
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={src}
-                  alt={t("templateCard.previewAlt", { name: tpl.name })}
-                  loading="lazy"
-                  decoding="async"
-                  className="absolute inset-0 h-full w-full object-cover object-top"
-                />
-                {tpl.featured && (
-                  <span className="absolute left-2 top-2 z-10 inline-flex items-center gap-1 rounded-full bg-coral-700 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-white shadow-md">
-                    ★ {t("templateCard.featured")}
-                  </span>
-                )}
-                <div className="absolute inset-x-0 bottom-0 z-10 bg-gradient-to-t from-black/80 via-black/30 to-transparent p-2.5 opacity-0 transition-opacity duration-200 group-hover:opacity-100">
-                  <div className="truncate text-[11.5px] font-semibold text-white">
-                    {tpl.name}
-                  </div>
-                  <div className="truncate text-[9px] font-medium uppercase tracking-wider text-white/70">
-                    {tf(`${tpl.family}.label`)}
-                  </div>
-                </div>
-              </Link>
+                id={tpl.id}
+                name={tpl.name}
+                familyLabel={tf(`${tpl.family}.label`)}
+                previewAlt={t("templateCard.previewAlt", { name: tpl.name })}
+                featuredLabel={tpl.featured ? t("templateCard.featured") : null}
+                thumbnailUrl={tpl.thumbnailUrl}
+                tileUrl={tpl.tileUrl}
+              />
             );
           })}
         </div>

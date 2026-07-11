@@ -3,6 +3,7 @@ import { Link } from "@/i18n/navigation";
 import {
   ArrowRight,
   Check,
+  Mail,
   Sparkles,
   Wallet,
   type LucideIcon,
@@ -82,16 +83,18 @@ export async function Pricing() {
   ];
 
   return (
-    <section id="pricing" className="relative">
+    <section id="pricing" className="relative scroll-mt-20">
       <div className="mx-auto max-w-6xl px-6 py-24 sm:py-28">
         <div className="text-center max-w-2xl mx-auto">
           <Badge tone="zinc">
             <Wallet size={11} /> {t("pricing.badge")}
           </Badge>
-          <h2 className="mt-4 text-3xl sm:text-5xl font-semibold tracking-tightest leading-[1.05]">
+          <h2 className="mt-4 text-3xl sm:text-5xl font-semibold tracking-tightest leading-[1.08]">
             {t.rich("pricing.title", {
               muted: (chunks) => (
-                <span className="text-zinc-500 dark:text-zinc-400">{chunks}</span>
+                <span className="serif-accent bg-gradient-to-br from-coral-500 via-coral-600 to-rose-500 bg-clip-text text-transparent pr-[0.04em]">
+                  {chunks}
+                </span>
               ),
             })}
           </h2>
@@ -117,10 +120,10 @@ export async function Pricing() {
               <div
                 key={tier.name}
                 className={cn(
-                  "relative rounded-2xl bg-white dark:bg-[#0a0a0a] p-7 sm:p-8 flex flex-col",
+                  "relative rounded-3xl bg-white/80 dark:bg-white/[0.04] backdrop-blur-sm p-7 sm:p-8 flex flex-col transition-shadow duration-300 hover:shadow-xl hover:shadow-coral-950/[0.06] dark:hover:shadow-black/30",
                   tier.featured
-                    ? "ring-coral lg:scale-[1.02] lg:-my-2"
-                    : "ring-1 ring-zinc-200 dark:ring-zinc-800",
+                    ? "ring-coral lg:scale-[1.02] lg:-my-2 shadow-lg shadow-coral-500/10"
+                    : "ring-1 ring-zinc-200/70 dark:ring-white/10",
                 )}
               >
                 {tier.featured && (
@@ -195,6 +198,28 @@ export async function Pricing() {
               </div>
             );
           })}
+        </div>
+
+        {/* Custom work — beyond a landing page (POS, bookings, full apps).
+            A quiet banner, not a tier: this has no fixed price. */}
+        <div className="mt-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-5 rounded-3xl bg-white/70 dark:bg-white/[0.04] ring-1 ring-zinc-200/70 dark:ring-white/10 backdrop-blur-sm px-7 sm:px-8 py-6">
+          <div>
+            <h3 className="text-[17px] font-semibold tracking-tight">
+              <span className="serif-accent bg-gradient-to-br from-coral-500 via-coral-600 to-rose-500 bg-clip-text text-transparent pr-[0.04em]">
+                {t("pricing.custom.title")}
+              </span>
+            </h3>
+            <p className="mt-1 max-w-xl text-sm text-zinc-600 dark:text-zinc-400 leading-relaxed">
+              {t("pricing.custom.body")}
+            </p>
+          </div>
+          <a
+            href="mailto:info@jesusbr.com"
+            className="shrink-0 inline-flex items-center gap-2 rounded-full bg-zinc-900 dark:bg-white px-5 py-2.5 text-[13.5px] font-medium text-white dark:text-zinc-900 shadow-sm transition-transform hover:-translate-y-0.5"
+          >
+            <Mail size={14} />
+            info@jesusbr.com
+          </a>
         </div>
 
         <div className="mt-10 text-center text-xs text-zinc-500 dark:text-zinc-400">

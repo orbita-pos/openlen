@@ -10,14 +10,16 @@ export async function FinalCta() {
   return (
     <section className="relative overflow-hidden">
       <div className="mx-auto max-w-6xl px-6 py-24">
-        <div className="relative rounded-3xl bg-zinc-950 dark:bg-zinc-900 px-8 sm:px-16 py-20 overflow-hidden ring-1 ring-zinc-800">
-          <div className="absolute inset-0 grid-bg opacity-[0.08]" aria-hidden />
+        {/* Dusk card — the page opens at dawn (hero aurora) and closes here at
+            nightfall: warm violet twilight, faint stars, coral horizon. */}
+        <div className="relative rounded-[2.5rem] bg-[linear-gradient(180deg,#3a2a55_0%,#241a3e_42%,#161028_100%)] px-8 sm:px-16 py-20 overflow-hidden ring-1 ring-white/10">
+          <div className="absolute inset-0 stars-dusk opacity-80" aria-hidden />
           <div
-            className="absolute -inset-x-20 -top-32 h-80 bg-[radial-gradient(50%_60%_at_50%_50%,rgba(255,90,54,0.45)_0%,rgba(255,90,54,0)_70%)]"
+            className="absolute -inset-x-20 -top-32 h-80 bg-[radial-gradient(50%_60%_at_50%_50%,rgba(255,110,64,0.4)_0%,rgba(255,110,64,0)_70%)]"
             aria-hidden
           />
           <div
-            className="absolute bottom-0 right-0 w-[480px] h-[480px] bg-[radial-gradient(50%_60%_at_50%_50%,rgba(255,170,90,0.16)_0%,rgba(255,170,90,0)_70%)]"
+            className="absolute inset-x-0 bottom-0 h-56 bg-[radial-gradient(60%_140px_at_50%_100%,rgba(238,148,205,0.22)_0%,transparent_70%)]"
             aria-hidden
           />
 
@@ -28,10 +30,12 @@ export async function FinalCta() {
             >
               <Unlock size={11} /> {t("finalCta.badge")}
             </Badge>
-            <h2 className="mt-5 text-4xl sm:text-6xl font-semibold tracking-tightest text-white leading-[1.02]">
+            <h2 className="mt-5 text-4xl sm:text-6xl font-semibold tracking-tightest text-white leading-[1.06]">
               {t.rich("finalCta.title", {
                 br: () => <br />,
-                muted: (chunks) => <span className="text-zinc-500">{chunks}</span>,
+                muted: (chunks) => (
+                  <span className="serif-accent text-rose-200/95 pr-[0.04em]">{chunks}</span>
+                ),
               })}
             </h2>
             <p className="mt-6 text-lg text-zinc-300 max-w-xl">

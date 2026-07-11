@@ -66,6 +66,45 @@
 }
 
 @layer components {
+  /* Marketing home — dawn atmosphere. Coral sun low-left, rose mid, a whisper
+     of violet high-right; the page opens luminous instead of near-black. */
+  .aurora-dawn {
+    background:
+      radial-gradient(52% 44% at 50% -8%, rgba(255, 116, 74, 0.2) 0%, transparent 62%),
+      radial-gradient(40% 36% at 14% 6%, rgba(255, 178, 118, 0.18) 0%, transparent 60%),
+      radial-gradient(46% 40% at 86% 10%, rgba(238, 148, 205, 0.16) 0%, transparent 62%),
+      radial-gradient(64% 52% at 62% 34%, rgba(167, 139, 250, 0.1) 0%, transparent 66%);
+  }
+  .dark .aurora-dawn {
+    background:
+      radial-gradient(52% 44% at 50% -8%, rgba(255, 96, 56, 0.26) 0%, transparent 62%),
+      radial-gradient(40% 36% at 14% 6%, rgba(255, 150, 90, 0.12) 0%, transparent 60%),
+      radial-gradient(46% 40% at 86% 10%, rgba(216, 110, 185, 0.13) 0%, transparent 62%),
+      radial-gradient(64% 52% at 62% 34%, rgba(139, 108, 216, 0.12) 0%, transparent 66%);
+  }
+
+  .serif-accent {
+    font-family: var(--font-instrument), Georgia, serif;
+    font-style: italic;
+    font-weight: 400;
+    letter-spacing: -0.01em;
+  }
+
+  /* Final CTA — faint star field for the dusk card that closes the page's
+     dawn → dusk arc. */
+  .stars-dusk {
+    background-image:
+      radial-gradient(1.3px 1.3px at 12% 24%, rgba(255, 255, 255, 0.7), transparent 50%),
+      radial-gradient(1px 1px at 32% 62%, rgba(255, 255, 255, 0.4), transparent 50%),
+      radial-gradient(1.4px 1.4px at 54% 16%, rgba(255, 214, 236, 0.6), transparent 50%),
+      radial-gradient(1px 1px at 70% 44%, rgba(255, 255, 255, 0.38), transparent 50%),
+      radial-gradient(1.2px 1.2px at 87% 22%, rgba(255, 255, 255, 0.55), transparent 50%),
+      radial-gradient(1px 1px at 22% 82%, rgba(255, 214, 236, 0.32), transparent 50%),
+      radial-gradient(1.1px 1.1px at 64% 76%, rgba(255, 255, 255, 0.36), transparent 50%),
+      radial-gradient(1.5px 1.5px at 44% 38%, rgba(255, 255, 255, 0.5), transparent 50%),
+      radial-gradient(1px 1px at 92% 64%, rgba(255, 255, 255, 0.3), transparent 50%);
+  }
+
   .grid-bg {
     background-image:
       linear-gradient(to right, rgba(0, 0, 0, 0.04) 1px, transparent 1px),

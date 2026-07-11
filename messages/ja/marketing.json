@@ -19,7 +19,8 @@
     "subtitle": "プロンプトから生成、テンプレートを選択、または自分のHTMLを貼り付け。<strong>あなたのサブドメイン</strong>に公開。",
     "pagesThisWeek": "今週生成されたページ数は <strong>{count, number}</strong>",
     "githubAria": "GitHub の OpenLen",
-    "starOnGithub": "GitHub でスターを付ける"
+    "starOnGithub": "GitHub でスターを付ける",
+    "pagesLive": "独自サブドメイン・ドメインで公開中のページ <strong>{count}</strong> 件"
   },
   "heroPrompt": {
     "placeholder": "私の SaaS のためのランディングページで…",
@@ -105,6 +106,35 @@
         "title": "リードはあなたの受信トレイへ",
         "body": "どのページにもフォームを追加。送信があれば保存され、その瞬間にメールでお届けします。"
       }
+    },
+    "extras": {
+      "kit": {
+        "title": "Marketing Kit",
+        "chip": "投稿56種 · キャプション312種",
+        "body": "ページに合わせたSNS投稿画像をすぐ使える形で — 同じパレット、同じフォント、読みやすさも保証。選んで、キャプションを整えて、投稿するだけ。"
+      },
+      "coach": {
+        "title": "Page Coach",
+        "tip": "WhatsAppボタンをファーストビューへ — 訪問者の62%はヒーローから先へスクロールしません。",
+        "body": "ファネルを読み取り、直すべき点を具体的に提案 — 訪問者がどこで離脱し、どの変更で戻ってくるかまで。",
+        "funnel": {
+          "visits": "訪問",
+          "clicks": "クリック",
+          "leads": "リード"
+        }
+      },
+      "modules": {
+        "title": "モジュールはスイッチひとつ",
+        "body": "予約、WhatsApp注文、メンバー、コメント、チャット — オンにすれば、ブランドに合ったセクションとしてページに加わります。",
+        "items": {
+          "bookings": "予約",
+          "orders": "WhatsApp注文",
+          "members": "メンバー",
+          "comments": "コメント",
+          "chat": "チャット",
+          "multilingual": "多言語"
+        }
+      }
     }
   },
   "comparison": {
@@ -181,6 +211,10 @@
         "3": "Caddy でワイルドカードサブドメイン",
         "4": "請求なし、レート制限なし、監視なし"
       }
+    },
+    "custom": {
+      "title": "ページ以上のものが必要ですか？",
+      "body": "POSレジ、予約システム、フルアプリ — オーダーメイドの開発も承ります。必要なものをお聞かせください。"
     }
   },
   "finalCta": {

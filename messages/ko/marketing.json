@@ -19,7 +19,8 @@
     "subtitle": "프롬프트로 생성하거나, 템플릿을 고르거나, 직접 만든 HTML을 붙여넣으세요. <strong>나만의 서브도메인</strong>에 게시하세요.",
     "pagesThisWeek": "이번 주 생성된 페이지 <strong>{count, number}</strong>개",
     "githubAria": "GitHub의 OpenLen",
-    "starOnGithub": "GitHub에서 Star 누르기"
+    "starOnGithub": "GitHub에서 Star 누르기",
+    "pagesLive": "자체 서브도메인·도메인으로 공개된 페이지 <strong>{count}</strong>개"
   },
   "heroPrompt": {
     "placeholder": "내 SaaS를 위한 랜딩 페이지인데…",
@@ -105,6 +106,35 @@
         "title": "리드가 받은편지함에 도착",
         "body": "어떤 페이지에든 양식을 추가하세요. 제출 내용은 저장되며 도착하는 즉시 이메일로 전송됩니다."
       }
+    },
+    "extras": {
+      "kit": {
+        "title": "Marketing Kit",
+        "chip": "게시물 56개 · 캡션 312개",
+        "body": "페이지에 맞춘 SNS 게시물 — 같은 팔레트, 같은 폰트, 대비까지 보장. 고르고, 캡션만 다듬어 바로 올리세요."
+      },
+      "coach": {
+        "title": "Page Coach",
+        "tip": "WhatsApp 버튼을 첫 화면으로 올리세요 — 방문자의 62%는 히어로 아래로 스크롤하지 않습니다.",
+        "body": "퍼널을 읽고 고칠 부분을 정확히 알려줍니다 — 방문자가 어디서 이탈하고 어떤 변화로 돌아오는지까지.",
+        "funnel": {
+          "visits": "방문",
+          "clicks": "클릭",
+          "leads": "리드"
+        }
+      },
+      "modules": {
+        "title": "모듈은 스위치 하나로",
+        "body": "예약, WhatsApp 주문, 멤버, 댓글, 채팅 — 켜기만 하면 브랜드에 맞는 섹션이 페이지에 추가됩니다.",
+        "items": {
+          "bookings": "예약",
+          "orders": "WhatsApp 주문",
+          "members": "멤버",
+          "comments": "댓글",
+          "chat": "채팅",
+          "multilingual": "다국어"
+        }
+      }
     }
   },
   "comparison": {
@@ -181,6 +211,10 @@
         "3": "Caddy를 통한 와일드카드 서브도메인",
         "4": "청구서도, 사용 제한도, 감시도 없음"
       }
+    },
+    "custom": {
+      "title": "페이지 그 이상이 필요하신가요?",
+      "body": "POS, 예약 시스템, 완전한 앱 — 맞춤 소프트웨어도 만들어 드립니다. 필요한 것을 알려주세요."
     }
   },
   "finalCta": {

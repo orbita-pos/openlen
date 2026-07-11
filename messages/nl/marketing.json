@@ -19,7 +19,8 @@
     "subtitle": "Genereer vanuit een prompt, kies een template of plak je eigen HTML. Publiceer op <strong>je subdomein</strong>.",
     "pagesThisWeek": "<strong>{count, number}</strong> pagina's deze week gegenereerd",
     "githubAria": "OpenLen op GitHub",
-    "starOnGithub": "Geef een ster op GitHub"
+    "starOnGithub": "Geef een ster op GitHub",
+    "pagesLive": "<strong>{count}</strong> pagina’s live op een eigen subdomein of domein"
   },
   "heroPrompt": {
     "placeholder": "Een landingspagina voor mijn SaaS die…",
@@ -105,6 +106,35 @@
         "title": "Leads komen binnen in je inbox",
         "body": "Voeg een formulier toe aan elke pagina. Inzendingen worden bewaard en naar je gemaild zodra ze binnenkomen."
       }
+    },
+    "extras": {
+      "kit": {
+        "title": "Marketing Kit",
+        "chip": "56 posts · 312 captions",
+        "body": "Kant-en-klare social posts die bij je pagina passen — zelfde palet, zelfde letter, gegarandeerd contrast. Kies er een, pas de caption aan en post."
+      },
+      "coach": {
+        "title": "Page Coach",
+        "tip": "Zet de WhatsApp-knop boven de vouw — 62% van de bezoekers scrolt nooit voorbij de hero.",
+        "body": "Leest je funnel en vertelt precies wat je moet aanpassen: waar bezoekers afhaken en welke wijziging ze terugwint.",
+        "funnel": {
+          "visits": "Bezoeken",
+          "clicks": "Klikken",
+          "leads": "Leads"
+        }
+      },
+      "modules": {
+        "title": "Modules met één schakelaar",
+        "body": "Boekingen, WhatsApp-bestellingen, leden, reacties, chat — zet er een aan en het wordt een sectie in jouw huisstijl.",
+        "items": {
+          "bookings": "Boekingen",
+          "orders": "WhatsApp-bestellingen",
+          "members": "Leden",
+          "comments": "Reacties",
+          "chat": "Chat",
+          "multilingual": "Meertalig"
+        }
+      }
     }
   },
   "comparison": {
@@ -181,6 +211,10 @@
         "3": "Wildcard-subdomein via Caddy",
         "4": "Geen rekening, geen ratelimiet, geen toezicht"
       }
+    },
+    "custom": {
+      "title": "Meer nodig dan een pagina?",
+      "body": "Een kassasysteem, een boekingssysteem, een volledige app — we bouwen ook maatwerk. Vertel ons wat je nodig hebt."
     }
   },
   "finalCta": {

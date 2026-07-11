@@ -19,7 +19,8 @@
     "subtitle": "Aus einem Prompt generieren, eine Vorlage wählen oder eigenes HTML einfügen. Auf <strong>deiner Subdomain</strong> veröffentlichen.",
     "pagesThisWeek": "<strong>{count, number}</strong> Seiten diese Woche erstellt",
     "githubAria": "OpenLen auf GitHub",
-    "starOnGithub": "Auf GitHub mit Stern markieren"
+    "starOnGithub": "Auf GitHub mit Stern markieren",
+    "pagesLive": "<strong>{count}</strong> Seiten live auf eigener Subdomain oder Domain"
   },
   "heroPrompt": {
     "placeholder": "Eine Landingpage für mein SaaS, die …",
@@ -105,6 +106,35 @@
         "title": "Leads landen in deinem Postfach",
         "body": "Füge jeder Seite ein Formular hinzu. Einsendungen werden gespeichert und dir sofort per E-Mail zugeschickt."
       }
+    },
+    "extras": {
+      "kit": {
+        "title": "Marketing Kit",
+        "chip": "56 Posts · 312 Captions",
+        "body": "Fertige Social-Posts, passend zu deiner Seite — gleiche Palette, gleiche Schrift, garantierter Kontrast. Auswählen, Caption anpassen, posten."
+      },
+      "coach": {
+        "title": "Page Coach",
+        "tip": "Zieh den WhatsApp-Button über die Falz — 62 % der Besucher scrollen nie am Hero vorbei.",
+        "body": "Liest deinen Funnel und sagt dir genau, was zu tun ist: wo Besucher abspringen und welche Änderung sie zurückholt.",
+        "funnel": {
+          "visits": "Besuche",
+          "clicks": "Klicks",
+          "leads": "Leads"
+        }
+      },
+      "modules": {
+        "title": "Module per Schalter",
+        "body": "Buchungen, WhatsApp-Bestellungen, Mitglieder, Kommentare, Chat — einschalten, und es wird eine markengerechte Sektion deiner Seite.",
+        "items": {
+          "bookings": "Buchungen",
+          "orders": "WhatsApp-Bestellungen",
+          "members": "Mitglieder",
+          "comments": "Kommentare",
+          "chat": "Chat",
+          "multilingual": "Mehrsprachig"
+        }
+      }
     }
   },
   "comparison": {
@@ -181,6 +211,10 @@
         "3": "Wildcard-Subdomain über Caddy",
         "4": "Keine Rechnung, kein Rate-Limit, keine Kontrolle von außen"
       }
+    },
+    "custom": {
+      "title": "Mehr als eine Seite gebraucht?",
+      "body": "Ein Kassensystem, ein Buchungssystem, eine komplette App — wir bauen auch Individualsoftware. Sag uns, was du brauchst."
     }
   },
   "finalCta": {

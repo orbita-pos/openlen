@@ -19,7 +19,8 @@
     "subtitle": "Generate from a prompt, pick a template, or paste your own HTML. Publish to <strong>your subdomain</strong>.",
     "pagesThisWeek": "<strong>{count, number}</strong> pages generated this week",
     "githubAria": "OpenLen on GitHub",
-    "starOnGithub": "Star on GitHub"
+    "starOnGithub": "Star on GitHub",
+    "pagesLive": "<strong>{count}</strong> pages live on their own subdomain or domain"
   },
   "heroPrompt": {
     "placeholder": "A landing page for my SaaS that…",
@@ -105,6 +106,35 @@
         "title": "Leads land in your inbox",
         "body": "Add a form to any page. Submissions are saved and emailed to you the moment they arrive."
       }
+    },
+    "extras": {
+      "kit": {
+        "title": "Marketing Kit",
+        "chip": "56 posts · 312 captions",
+        "body": "Ready-to-post social graphics matched to your page — same palette, same font, contrast-safe. Pick one, tweak the caption, post."
+      },
+      "coach": {
+        "title": "Page Coach",
+        "tip": "Move the WhatsApp button above the fold — 62% of visitors never scroll past the hero.",
+        "body": "Reads your funnel and tells you exactly what to fix — where visitors drop off and which change wins them back.",
+        "funnel": {
+          "visits": "Visits",
+          "clicks": "Clicks",
+          "leads": "Leads"
+        }
+      },
+      "modules": {
+        "title": "Modules, one switch away",
+        "body": "Bookings, WhatsApp orders, members, comments, chat — flip one on and it becomes a brand-matched section of your page.",
+        "items": {
+          "bookings": "Bookings",
+          "orders": "WhatsApp orders",
+          "members": "Members",
+          "comments": "Comments",
+          "chat": "Chat",
+          "multilingual": "Multilingual"
+        }
+      }
     }
   },
   "comparison": {
@@ -181,6 +211,10 @@
         "3": "Wildcard subdomain via Caddy",
         "4": "No bill, no rate limit, no oversight"
       }
+    },
+    "custom": {
+      "title": "Need more than a page?",
+      "body": "A point of sale, a booking system, a full app — we build custom software too. Tell us what you need."
     }
   },
   "finalCta": {

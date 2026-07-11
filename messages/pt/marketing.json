@@ -19,7 +19,8 @@
     "subtitle": "Gere a partir de um prompt, escolha um modelo ou cole seu HTML. Publique no <strong>seu subdomínio</strong>.",
     "pagesThisWeek": "<strong>{count, number}</strong> páginas geradas esta semana",
     "githubAria": "OpenLen no GitHub",
-    "starOnGithub": "Dar estrela no GitHub"
+    "starOnGithub": "Dar estrela no GitHub",
+    "pagesLive": "<strong>{count}</strong> páginas no ar com seu próprio subdomínio ou domínio"
   },
   "heroPrompt": {
     "placeholder": "Uma landing page para o meu SaaS que…",
@@ -105,6 +106,35 @@
         "title": "Os leads chegam na sua caixa de entrada",
         "body": "Adicione um formulário a qualquer página. Os envios são salvos e enviados para o seu e-mail assim que chegam."
       }
+    },
+    "extras": {
+      "kit": {
+        "title": "Marketing Kit",
+        "chip": "56 posts · 312 legendas",
+        "body": "Posts prontos para as redes, combinando com a sua página — mesma paleta, mesma fonte, contraste garantido. Escolha um, ajuste a legenda e publique."
+      },
+      "coach": {
+        "title": "Page Coach",
+        "tip": "Suba o botão do WhatsApp para antes da dobra — 62% dos visitantes nunca passam do hero.",
+        "body": "Lê o seu funil e diz exatamente o que corrigir: onde os visitantes desistem e qual mudança os recupera.",
+        "funnel": {
+          "visits": "Visitas",
+          "clicks": "Cliques",
+          "leads": "Leads"
+        }
+      },
+      "modules": {
+        "title": "Módulos em um clique",
+        "body": "Reservas, pedidos por WhatsApp, membros, comentários, chat — ative um e ele vira uma seção da sua página, combinando com a sua marca.",
+        "items": {
+          "bookings": "Reservas",
+          "orders": "Pedidos WhatsApp",
+          "members": "Membros",
+          "comments": "Comentários",
+          "chat": "Chat",
+          "multilingual": "Multilíngue"
+        }
+      }
     }
   },
   "comparison": {
@@ -181,6 +211,10 @@
         "3": "Subdomínio curinga via Caddy",
         "4": "Sem conta, sem limite de uso, sem supervisão"
       }
+    },
+    "custom": {
+      "title": "Precisa de mais que uma página?",
+      "body": "Um ponto de venda, um sistema de reservas, um app completo — também construímos software sob medida. Conte o que você precisa."
     }
   },
   "finalCta": {

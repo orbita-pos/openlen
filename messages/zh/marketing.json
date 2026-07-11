@@ -19,7 +19,8 @@
     "subtitle": "从提示生成、挑选模板，或粘贴你自己的 HTML。发布到<strong>你的子域名</strong>。",
     "pagesThisWeek": "本周已生成 <strong>{count, number}</strong> 个页面",
     "githubAria": "OpenLen on GitHub",
-    "starOnGithub": "在 GitHub 上 Star"
+    "starOnGithub": "在 GitHub 上 Star",
+    "pagesLive": "<strong>{count}</strong> 个页面已在自己的子域名或域名上线"
   },
   "heroPrompt": {
     "placeholder": "为我的 SaaS 做一个着陆页，主打……",
@@ -105,6 +106,35 @@
         "title": "潜客直达你的收件箱",
         "body": "为任意页面添加表单。提交内容会被保存，并在送达的那一刻邮件通知你。"
       }
+    },
+    "extras": {
+      "kit": {
+        "title": "Marketing Kit",
+        "chip": "56 张海报 · 312 条文案",
+        "body": "与页面同款的社交海报，即选即用 — 同一配色、同一字体、对比度有保证。选一张，改改文案，直接发布。"
+      },
+      "coach": {
+        "title": "Page Coach",
+        "tip": "把 WhatsApp 按钮移到首屏 — 62% 的访客从不滚动到英雄区以下。",
+        "body": "读懂你的转化漏斗，告诉你该改什么：访客在哪里流失、哪个改动能赢回他们。",
+        "funnel": {
+          "visits": "访问",
+          "clicks": "点击",
+          "leads": "线索"
+        }
+      },
+      "modules": {
+        "title": "模块，一键开启",
+        "body": "预订、WhatsApp 下单、会员、评论、聊天 — 打开开关，它就成为页面上与品牌匹配的一个版块。",
+        "items": {
+          "bookings": "预订",
+          "orders": "WhatsApp 下单",
+          "members": "会员",
+          "comments": "评论",
+          "chat": "聊天",
+          "multilingual": "多语言"
+        }
+      }
     }
   },
   "comparison": {
@@ -181,6 +211,10 @@
         "3": "通过 Caddy 实现泛子域名",
         "4": "无账单、无限速、无监管"
       }
+    },
+    "custom": {
+      "title": "需要的不止一个页面？",
+      "body": "POS 收银、预订系统、完整应用 — 我们也承接定制开发。告诉我们你的需求。"
     }
   },
   "finalCta": {
