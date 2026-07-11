@@ -49,14 +49,9 @@ pub fn build_scoped_view(tagged_html: &str, pinned_op_id: &str) -> Option<Scoped
         Some((n, is_pin)) => (n, is_pin),
         None => {
             // Find direct body-child ancestor (or use the pin itself).
-            let direct = nearest_body_direct_child(&pin_node, &body_node);
-            match direct {
-                Some(n) => {
-                    let is_pin = node_op_id(&n).as_deref() == Some(pinned_op_id);
-                    (n, is_pin)
-                }
-                None => return None,
-            }
+            let n = nearest_body_direct_child(&pin_node, &body_node)?;
+            let is_pin = node_op_id(&n).as_deref() == Some(pinned_op_id);
+            (n, is_pin)
         }
     };
 

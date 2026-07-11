@@ -228,10 +228,9 @@ fn collect_scripts(doc: &NodeRef) -> (Vec<String>, Vec<String>, Option<String>) 
 fn script_origin(src: &str) -> Option<String> {
     let (scheme, rest) = if let Some(r) = src.strip_prefix("https://") {
         ("https://", r)
-    } else if let Some(r) = src.strip_prefix("http://") {
-        ("http://", r)
     } else {
-        return None;
+        let r = src.strip_prefix("http://")?;
+        ("http://", r)
     };
     let host_end = rest.find(['/', '?', '#']).unwrap_or(rest.len());
     let host = &rest[..host_end];
