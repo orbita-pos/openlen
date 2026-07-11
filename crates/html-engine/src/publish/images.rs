@@ -429,7 +429,10 @@ mod tests {
         let img_start = r.html.find("<img").unwrap();
         let img_end = img_start + r.html[img_start..].find('>').unwrap();
         let img_tag = &r.html[img_start..=img_end];
-        assert!(!img_tag.contains("srcset"), "img must not carry srcset: {img_tag}");
+        assert!(
+            !img_tag.contains("srcset"),
+            "img must not carry srcset: {img_tag}"
+        );
         // Hero preload is AVIF-typed.
         assert!(r.html.contains(
             r#"<link rel="preload" as="image" type="image/avif" imagesrcset="/assets/hash-400w.avif 400w, /assets/hash-1600w.avif 1600w""#

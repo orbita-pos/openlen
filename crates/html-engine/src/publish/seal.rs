@@ -326,7 +326,9 @@ mod tests {
         assert!(r.html.contains("object-src 'none'"));
         assert!(r.html.contains("base-uri 'none'"));
         assert!(r.html.contains("form-action 'self'"));
-        assert!(r.html.contains("frame-src https://www.youtube-nocookie.com https://player.vimeo.com"));
+        assert!(r
+            .html
+            .contains("frame-src https://www.youtube-nocookie.com https://player.vimeo.com"));
         assert!(r.html.contains("data-ol-csp"));
     }
 
@@ -336,7 +338,9 @@ mod tests {
         // sanitizer strips user iframes, so nothing else should ever be framed.
         let html = r#"<html><head></head><body><p>x</p></body></html>"#;
         let r = seal_release(html, None);
-        assert!(r.html.contains("frame-src https://www.youtube-nocookie.com https://player.vimeo.com"));
+        assert!(r
+            .html
+            .contains("frame-src https://www.youtube-nocookie.com https://player.vimeo.com"));
         assert!(!r.html.contains("frame-src 'self'"));
         assert!(!r.html.contains("frame-src *"));
     }
@@ -485,7 +489,9 @@ mod tests {
     /// Extract the value of the `script-src` directive from a CSP string
     /// (everything between "script-src " and the next ";").
     fn extract_script_src(html: &str) -> String {
-        let start = html.find("script-src").expect("should have script-src directive");
+        let start = html
+            .find("script-src")
+            .expect("should have script-src directive");
         let rest = &html[start + "script-src".len()..];
         let end = rest.find(';').unwrap_or(rest.len());
         rest[..end].trim().to_string()
