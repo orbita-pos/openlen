@@ -263,6 +263,13 @@ export interface AgentSession {
   /** Successful editar_imagen calls so far this request. The route inits it to
    *  0; the tool caps it at 1 per turn (each edit is a paid Gemini image op). */
   imageEditsThisTurn: number;
+  /** elegir_foto calls so far this request. Read-only + exempt from the action
+   *  budget, but the curated catalog is finite: after the 2nd empty result the
+   *  tool tells the model to pivot instead of retrying variants, and a hard
+   *  per-turn ceiling refuses further searches — so a hunt for a genre the
+   *  catalog lacks (e.g. terror/gore) can't loop until the turn cap. Route
+   *  inits it to 0. */
+  photoSearchesThisTurn: number;
 }
 
 export interface ToolOutcome {
@@ -931,11 +938,39 @@ async function toolAplicarTematica(
   };
 }
 
+// Runaway backstop for a read-only tool: the loop exempts elegir_foto from the
+// action budget AND (now) from the turn cap, so the ONLY thing bounding a
+// search-only chain is ABSOLUTE_MAX_TOOL_CALLS — which surfaces a red error.
+// This ceiling stops the tool returning fresh results well before that, so the
+// model hits a wall (and pivots) instead of a crash.
+const MAX_PHOTO_SEARCHES_PER_TURN = 6;
+
+// Steer the model off a dead-end photo hunt (the terror-hero bug): once the
+// curated catalog clearly doesn't carry a genre, stop retrying variants and
+// change approach. Named tools so the model has a concrete next move.
+const PHOTO_PIVOT_NOTE =
+  "El catálogo curado «Imágenes by OpenLen» es acotado y no tiene fotos de esto. NO sigas buscando variantes. Cambia de enfoque: usa cambiar_tema o aplicar_tematica para dar el ambiente pedido (p. ej. una paleta oscura y envolvente), reescribe el hero con editar_pagina, o dile al usuario con honestidad que el catálogo no tiene ese tipo de imagen y ofrécele esas alternativas.";
+
 async function toolElegirFoto(
-  _session: AgentSession,
+  session: AgentSession,
   deps: AgentDeps,
   args: Record<string, unknown>,
 ): Promise<ToolOutcome> {
+  session.photoSearchesThisTurn += 1;
+
+  // Past the ceiling: stop handing back results (even for a matching query) so
+  // a stubborn model can't spin toward the loop's absolute cap. Read-only, so
+  // still no action card / no updatedHtml.
+  if (session.photoSearchesThisTurn > MAX_PHOTO_SEARCHES_PER_TURN) {
+    return {
+      response: {
+        ok: true,
+        fotos: [],
+        nota: `Ya hiciste demasiadas búsquedas de fotos en este turno. Deja de buscar: usa las que ya encontraste o pivotea. ${PHOTO_PIVOT_NOTE}`,
+      },
+    };
+  }
+
   const busqueda = typeof args.busqueda === "string" ? args.busqueda : undefined;
   const estilo = typeof args.estilo === "string" ? args.estilo : undefined;
 
@@ -943,11 +978,17 @@ async function toolElegirFoto(
   const fotos = searchCuratedPhotos(manifest, { busqueda, estilo });
 
   if (fotos.length === 0) {
+    // First empty search: fine to try one more term. Second+ empty: the
+    // catalog genuinely lacks it — pivot rather than burn turns hunting a
+    // genre the curated set doesn't carry.
+    const pivot = session.photoSearchesThisTurn >= 2;
     return {
       response: {
         ok: true,
         fotos: [],
-        nota: "sin resultados para esa búsqueda — prueba otro término, quita el filtro de estilo, o usa una palabra más general",
+        nota: pivot
+          ? PHOTO_PIVOT_NOTE
+          : "sin resultados para esa búsqueda — prueba UNA vez más con otro término o quita el filtro de estilo. Si tampoco hay, no insistas: el catálogo es curado y acotado.",
       },
     };
   }

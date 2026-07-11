@@ -50,6 +50,7 @@ export default defineConfig({
       // the vitest agent tests individually (same reason as lib/projects).
       "lib/agent/catalog.test.ts",
       "lib/agent/loop.test.ts",
+      "lib/agent/retry.test.ts",
       "lib/agent/context.test.ts",
       "lib/agent/photo-search.test.ts",
       // Shape-only eval-battery test — no Gemini, no DB (the harness/runner are

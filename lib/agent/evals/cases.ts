@@ -554,6 +554,31 @@ export const EVAL_CASES: EvalCase[] = [
     },
   },
 
+  // ── Resiliencia — pedido que el catálogo NO puede satisfacer (bug terror-hero) ─
+  {
+    id: "hero-terror-sin-fotos",
+    prompt:
+      "cambiame el hero de la pagina, quiero que se vea como juego de terror indie tipo fears to fathom, nada de estilo gamer ni lol",
+    assert: (ctx) => {
+      // El catálogo curado NO tiene fotos de terror. Regresión del bug
+      // terror-hero: el agente NO debe morir en el tope de pasos buscando en
+      // círculos. Debe cerrar LIMPIO (sin error terminal ni evento error) y o
+      // bien pivotar a un cambio real (tema/temática/edición) o explicar con
+      // honestidad que no hay esas fotos — nunca dejar al usuario con un error.
+      const clean = completedCleanly(ctx);
+      if (clean) return clean;
+      const pivoto =
+        actionDone(ctx.events, "cambiar_tema") ||
+        actionDone(ctx.events, "aplicar_tematica") ||
+        actionDone(ctx.events, "editar_pagina");
+      const t = finalText(ctx);
+      const honesto = /oscur|paleta|tem[áa]tica|cat[áa]logo|no tengo|no hay|no cuento/.test(t);
+      return pivoto || honesto
+        ? null
+        : "ni pivotó a un cambio real ni explicó la limitación del catálogo de fotos";
+    },
+  },
+
   // ── Errores-como-datos (slug reservado / inválido / faltante) ───────────────
   {
     id: "slug-reservado-cuenta",
@@ -724,6 +749,7 @@ export const coverage: Record<string, string[]> = {
   "honesto-fuera-de-tema": [],
   "honesto-blog-backend": [],
   "honesto-pasarela-pago": [],
+  "hero-terror-sin-fotos": ["elegir_foto", "cambiar_tema"],
   "slug-reservado-cuenta": ["publicar"],
   "slug-con-espacios": ["publicar"],
   "publicar-sin-subdominio": ["publicar"],

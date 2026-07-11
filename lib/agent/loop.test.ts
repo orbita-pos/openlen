@@ -89,9 +89,11 @@ describe("runAgentLoop", () => {
 
   it("caps runaway loops at maxTurns", async () => {
     const events: AgentStreamEvent[] = [];
+    // editar_pagina is a mutating tool — leer_estado/elegir_foto are read-only
+    // and exempt from maxTurns, so they'd defeat this test's premise.
     const r = await runAgentLoop({
       messages: [{ role: "user", content: "x" }], tools: [], maxTurns: 3,
-      openStream: scripted([{ type: "function_call", name: "leer_estado", args: {} }, done]),
+      openStream: scripted([{ type: "function_call", name: "editar_pagina", args: {} }, done]),
       runTool: async () => ({ response: { ok: true } }),
       emit: (e) => events.push(e),
     });
@@ -103,6 +105,50 @@ describe("runAgentLoop", () => {
     const err = events.find((e) => e.type === "error") as { message: string; code?: string };
     expect(err.code).toBe("turn_limit");
     expect(err.message).toContain("límite de pasos");
+  });
+
+  it("read-only-only turns (photo hunts / state reads) don't count toward maxTurns", async () => {
+    // Repro of the terror-hero bug: the model spent every turn calling the
+    // read-only elegir_foto and died on turn_limit before it ever edited.
+    // Read-only tools are exempt from maxToolCalls (F3-T5) — they must be
+    // exempt from maxTurns too, or the turn cap defeats that exemption. Only
+    // ABSOLUTE_MAX_TOOL_CALLS bounds a pure read-only chain.
+    const events: AgentStreamEvent[] = [];
+    const r = await runAgentLoop({
+      messages: [{ role: "user", content: "hero de terror" }], tools: [], maxTurns: 2,
+      openStream: scripted(
+        [{ type: "function_call", name: "elegir_foto", args: {} }, done],
+        [{ type: "function_call", name: "elegir_foto", args: {} }, done],
+        [{ type: "function_call", name: "leer_estado", args: {} }, done],
+        [{ type: "text_delta", text: "No hay fotos de terror; oscurecí el tema." }, done],
+      ),
+      runTool: async () => ({ response: { ok: true } }),
+      emit: (e) => events.push(e),
+    });
+    // Three read-only turns with maxTurns:2 — the old code died with a
+    // turn_limit error on turn 3; now it runs to the closing text turn.
+    expect(events.some((e) => e.type === "error")).toBe(false);
+    expect(r.finalText).toContain("oscurecí");
+    expect(r.terminalError).toBe(false);
+  });
+
+  it("a turn that mixes read-only and mutating calls still counts toward maxTurns", async () => {
+    // The exemption is only for turns that did NOTHING but read — a turn that
+    // also mutated (editar_pagina) is a real step and must be counted.
+    const events: AgentStreamEvent[] = [];
+    const r = await runAgentLoop({
+      messages: [{ role: "user", content: "x" }], tools: [], maxTurns: 2,
+      openStream: scripted([
+        { type: "function_call", name: "elegir_foto", args: {} },
+        { type: "function_call", name: "editar_pagina", args: {} },
+        done,
+      ]),
+      runTool: async () => ({ response: { ok: true } }),
+      emit: (e) => events.push(e),
+    });
+    const err = events.find((e) => e.type === "error") as { code?: string } | undefined;
+    expect(err?.code).toBe("turn_limit");
+    expect(r.terminalError).toBe(true);
   });
 
   it("caps runaway loops at maxToolCalls", async () => {
@@ -183,6 +229,92 @@ describe("runAgentLoop", () => {
     expect(r.terminalError).toBe(true);
     const err = events.find((e) => e.type === "error") as { message: string; code?: string };
     expect(err.code).toBe("tool_limit");
+  });
+
+  it("A: hitting a cap with a closeOut streams a graceful summary instead of a red error", async () => {
+    // Graceful termination: when the step budget runs out, the turn should end
+    // with a "here's what I did / what's pending" message (emitted as normal
+    // text so the panel renders a normal assistant turn), NOT a red error card.
+    const events: AgentStreamEvent[] = [];
+    const r = await runAgentLoop({
+      messages: [{ role: "user", content: "haz muchas cosas" }], tools: [], maxTurns: 1,
+      openStream: scripted([{ type: "function_call", name: "editar_pagina", args: {} }, done]),
+      closeOut: scripted([
+        { type: "text_delta", text: "Llegué a mi límite de pasos. Cambié el título; me faltó el resto — pídemelo de nuevo." },
+        usage(12),
+        done,
+      ]),
+      runTool: async () => ({ response: { ok: true } }),
+      emit: (e) => events.push(e),
+    });
+    // No red error — the cap produced a closing message instead.
+    expect(events.some((e) => e.type === "error")).toBe(false);
+    expect(events.some((e) => e.type === "text")).toBe(true);
+    expect(r.finalText).toContain("límite de pasos");
+    // Still a terminal (0-credit) turn for billing — just gracefully closed.
+    expect(r.terminalError).toBe(true);
+  });
+
+  it("A: a closeOut that yields no text falls back to the coded error", async () => {
+    const events: AgentStreamEvent[] = [];
+    const r = await runAgentLoop({
+      messages: [{ role: "user", content: "x" }], tools: [], maxTurns: 1,
+      openStream: scripted([{ type: "function_call", name: "editar_pagina", args: {} }, done]),
+      closeOut: scripted([done]), // no text_delta
+      runTool: async () => ({ response: { ok: true } }),
+      emit: (e) => events.push(e),
+    });
+    const err = events.find((e) => e.type === "error") as { code?: string } | undefined;
+    expect(err?.code).toBe("turn_limit");
+    expect(r.terminalError).toBe(true);
+  });
+
+  it("B: refuses an identical MUTATING call that keeps failing, instead of looping on it", async () => {
+    // No-progress guard: the same editar_pagina (identical args) that returns
+    // ok:false twice is refused the 3rd time — the model gets a nudge to change
+    // approach rather than burning the budget repeating a dead action.
+    const events: AgentStreamEvent[] = [];
+    const seen: string[] = [];
+    const failArgs = { edits: [{ op: "replace", target: "op-stale", new_html: "<p>x</p>" }], resumen: "z" };
+    const r = await runAgentLoop({
+      messages: [{ role: "user", content: "x" }], tools: [],
+      openStream: scripted(
+        [
+          { type: "function_call", name: "editar_pagina", args: failArgs },
+          { type: "function_call", name: "editar_pagina", args: failArgs },
+          { type: "function_call", name: "editar_pagina", args: failArgs },
+          { type: "function_call", name: "editar_pagina", args: failArgs },
+          done,
+        ],
+        [{ type: "text_delta", text: "Cambio de enfoque." }, done],
+      ),
+      runTool: async (name) => { seen.push(name); return { response: { ok: false, error: "target missing" } }; },
+      emit: (e) => events.push(e),
+    });
+    // Only 2 identical failing calls actually ran; the 3rd and 4th were refused.
+    expect(seen).toEqual(["editar_pagina", "editar_pagina"]);
+    expect(r.finalText).toContain("enfoque");
+  });
+
+  it("B: does NOT block an identical call that SUCCEEDS (only failing repeats are guarded)", async () => {
+    const seen: string[] = [];
+    const okArgs = { edits: [{ op: "replace", target: "op-1", new_html: "<p>y</p>" }], resumen: "z" };
+    await runAgentLoop({
+      messages: [{ role: "user", content: "x" }], tools: [],
+      openStream: scripted(
+        [
+          { type: "function_call", name: "editar_pagina", args: okArgs },
+          { type: "function_call", name: "editar_pagina", args: okArgs },
+          { type: "function_call", name: "editar_pagina", args: okArgs },
+          done,
+        ],
+        [{ type: "text_delta", text: "Listo." }, done],
+      ),
+      runTool: async (name) => { seen.push(name); return { response: { ok: true } }; },
+      emit: () => {},
+    });
+    // All 3 ran — a succeeding call is never treated as a no-progress loop.
+    expect(seen).toEqual(["editar_pagina", "editar_pagina", "editar_pagina"]);
   });
 
   it("surfaces an error and stops the loop when a turn truncates at max_tokens", async () => {

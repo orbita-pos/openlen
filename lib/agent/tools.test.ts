@@ -140,6 +140,7 @@ function makeSession(arg?: string | { page?: string | null; html?: string }): Ag
     page: opts.page ?? null,
     ownerEmail: "owner@example.com",
     imageEditsThisTurn: 0,
+    photoSearchesThisTurn: 0,
   };
 }
 
@@ -565,6 +566,38 @@ describe("elegir_foto", () => {
     assert.equal(out.response.ok, true);
     assert.deepEqual(out.response.fotos, []);
     assert.ok(typeof out.response.nota === "string" && (out.response.nota as string).length > 0);
+  });
+
+  it("2nd empty search pivots the model off the hunt toward a real fallback", async () => {
+    // The terror-hero bug: repeated empty searches for a genre the catalog
+    // lacks used to keep saying "try another term" until the turn cap. Now the
+    // first empty is still exploratory, but the second flips to a pivot note
+    // that names concrete alternatives so the model stops hunting.
+    const { deps } = makeDeps();
+    const session = makeSession(); // shared across calls — the per-turn counter accumulates
+    const first = await runAgentTool(session, deps, "elegir_foto", { busqueda: "terror-que-no-existe" });
+    const second = await runAgentTool(session, deps, "elegir_foto", { busqueda: "horror-tampoco" });
+    assert.deepEqual(first.response.fotos, []);
+    assert.deepEqual(second.response.fotos, []);
+    assert.equal(session.photoSearchesThisTurn, 2);
+    // First: exploratory (no fallback tools named). Second: pivot.
+    assert.ok(!/cambiar_tema|aplicar_tematica/.test(String(first.response.nota)));
+    assert.match(String(second.response.nota), /cambiar_tema|aplicar_tematica|editar_pagina/);
+  });
+
+  it("hard-stops photo searches past the per-turn ceiling", async () => {
+    // Backstop so a search-only chain can't spin toward the loop's absolute
+    // cap (which would surface a red error): past the ceiling elegir_foto stops
+    // returning fresh results even for a query that WOULD match.
+    const { deps } = makeDeps();
+    const session = makeSession();
+    let last: Awaited<ReturnType<typeof runAgentTool>> | undefined;
+    for (let i = 0; i < 8; i++) {
+      last = await runAgentTool(session, deps, "elegir_foto", { estilo: "claymorph" });
+    }
+    assert.equal(last!.response.ok, true);
+    assert.deepEqual(last!.response.fotos, []);
+    assert.match(String(last!.response.nota), /demasiadas|deja de buscar/i);
   });
 
   it("a malformed manifest comes back as an empty list, not a throw", async () => {

@@ -190,6 +190,7 @@ async function runLoopWithRetry(
         page: null,
         ownerEmail: opts.ownerEmail,
         imageEditsThisTurn: 0,
+        photoSearchesThisTurn: 0,
       };
 
       const result = await runAgentLoop({

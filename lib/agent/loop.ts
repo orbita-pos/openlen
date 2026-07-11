@@ -54,6 +54,12 @@ export interface AgentLoopArgs {
   /** Abre un stream de modelo para un set de mensajes. El route inyecta el
    *  GeminiProvider real; los tests inyectan streams guionados. */
   openStream(messages: Message[]): AsyncIterable<StreamEvent>;
+  /** Stream con herramientas DESACTIVADAS (toolMode "none"), usado SOLO para
+   *  redactar un cierre cuando se agota un tope de presupuesto — así el turno
+   *  termina con un resumen útil ("hice X, faltó Y", en el idioma del usuario)
+   *  en vez de un error rojo. Si se omite (o no produce texto), agotar un tope
+   *  emite el error codificado como antes. El route lo enlaza al mismo provider. */
+  closeOut?(messages: Message[]): AsyncIterable<StreamEvent>;
   runTool(name: string, args: Record<string, unknown>): Promise<ToolOutcome>;
   emit(ev: AgentStreamEvent): void;
   maxTurns?: number; // default 6
@@ -75,6 +81,30 @@ export interface AgentLoopResult {
 
 const DEFAULT_MAX_TURNS = 6;
 const DEFAULT_MAX_TOOL_CALLS = 10;
+
+// No-progress guard: the SAME tool call (name + identical args) that has already
+// returned ok:false this many times is refused the next time instead of run
+// again — the model gets a nudge to change approach rather than looping on a
+// dead action (e.g. retrying editar_pagina against a stale op-id). Only FAILING
+// repeats are guarded; a call that succeeds is never blocked.
+const FAIL_REPEAT_LIMIT = 2;
+
+// Injected as a final user turn when a cap is hit and a closeOut stream exists —
+// asks the (tools-disabled) model to close gracefully in the user's language.
+const WRAP_UP_INSTRUCTION =
+  "SISTEMA: Alcanzaste el límite de pasos para este turno y ya no puedes usar herramientas. Cierra hablándole al usuario en SU idioma: resume brevemente qué alcanzaste a hacer y qué quedó pendiente, y dile que te lo pida de nuevo para continuar. No afirmes haber hecho lo que no se aplicó.";
+
+/** Order-stable JSON of a tool call's args, so a repeat with the same values
+ *  keys identically regardless of property order (the no-progress guard's key). */
+function stableStringify(v: unknown): string {
+  if (v === null || typeof v !== "object") return JSON.stringify(v) ?? "null";
+  if (Array.isArray(v)) return `[${v.map(stableStringify).join(",")}]`;
+  const obj = v as Record<string, unknown>;
+  return `{${Object.keys(obj)
+    .sort()
+    .map((k) => `${JSON.stringify(k)}:${stableStringify(obj[k])}`)
+    .join(",")}}`;
+}
 
 // Product finding: photo hunts (elegir_foto) and mid-chain state re-reads
 // (leer_estado) are read-only — they never mutate the project — but a photo
@@ -106,13 +136,63 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
   let outputTokens = 0;
   let cachedTokens = 0;
   let turns = 0;
+  // Only turns that MUTATE count toward maxTurns. A turn whose calls were all
+  // read-only (elegir_foto photo hunts, leer_estado re-reads) is exempt —
+  // otherwise the turn cap silently defeats the same read-only exemption
+  // maxToolCalls already grants (READ_ONLY_TOOLS), and a photo hunt for a genre
+  // the curated catalog lacks dies on turn_limit before the model ever edits
+  // (the terror-hero bug). ABSOLUTE_MAX_TOOL_CALLS still bounds a read-only
+  // chain so it can't spin forever.
+  let mutatingTurns = 0;
   let toolCalls = 0; // total across the loop (read-only + budgeted) — what the result/done event reports
   let budgetedToolCalls = 0; // excludes READ_ONLY_TOOLS — checked against maxToolCalls
+  // No-progress guard state (spans turns within this request): signature -> how
+  // many times that exact call has returned ok:false.
+  const failedSignatures = new Map<string, number>();
+
+  const buildResult = (terminalError: boolean): AgentLoopResult => ({
+    finalText,
+    usage: { inputTokens, outputTokens, cachedTokens },
+    turns,
+    toolCalls,
+    terminalError,
+  });
+
+  // A budget cap was hit. If a tools-disabled closeOut stream is available, let
+  // the model compose a graceful closing message — emitted as normal `text`, so
+  // the panel renders a normal assistant turn, NOT a red error card (chat-panel
+  // shows the red card only when an `error` event arrives). Ends as a 0-credit
+  // terminal either way. If closeOut is absent or yields no text, emit the coded
+  // error as before so the user is never left with nothing.
+  const finishOnCap = async (code: AgentErrorCode): Promise<AgentLoopResult> => {
+    if (args.closeOut) {
+      let wrapText = "";
+      for await (const ev of args.closeOut([
+        ...messages,
+        { role: "user", content: WRAP_UP_INSTRUCTION },
+      ])) {
+        if (ev.type === "text_delta") {
+          wrapText += ev.text;
+          args.emit({ type: "text", text: ev.text });
+        } else if (ev.type === "usage") {
+          inputTokens += ev.inputTokens;
+          outputTokens += ev.outputTokens;
+          cachedTokens += ev.cachedTokens;
+        }
+        // function_call / done ignored — tools are off on this stream.
+      }
+      if (wrapText.trim().length > 0) {
+        finalText = wrapText;
+        return buildResult(true);
+      }
+    }
+    args.emit({ type: "error", message: "El agente alcanzó su límite de pasos", code });
+    return buildResult(true);
+  };
 
   while (true) {
-    if (turns >= maxTurns) {
-      args.emit({ type: "error", message: "El agente alcanzó su límite de pasos", code: "turn_limit" });
-      return { finalText, usage: { inputTokens, outputTokens, cachedTokens }, turns, toolCalls, terminalError: true };
+    if (mutatingTurns >= maxTurns) {
+      return await finishOnCap("turn_limit");
     }
     turns += 1;
 
@@ -165,19 +245,41 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
       return { finalText, usage: { inputTokens, outputTokens, cachedTokens }, turns, toolCalls, terminalError: false };
     }
 
+    // A turn counts toward maxTurns only if it did something other than
+    // read-only lookups — a hunt/read-only-only turn is "free" (see mutatingTurns).
+    if (calls.some((c) => !READ_ONLY_TOOLS.has(c.name))) {
+      mutatingTurns += 1;
+    }
+
     const functionResponses: { name: string; response: Record<string, unknown> }[] = [];
     for (const call of calls) {
+      // No-progress guard: this exact call already failed FAIL_REPEAT_LIMIT
+      // times — don't run it again. Feed the model a nudge (as a functionResponse
+      // so the FC protocol stays balanced) to change approach. A refused call
+      // doesn't run, so it doesn't touch the caps; termination is still
+      // guaranteed because a mutating turn advances maxTurns → finishOnCap.
+      const sig = `${call.name} ${stableStringify(call.args)}`;
+      if ((failedSignatures.get(sig) ?? 0) >= FAIL_REPEAT_LIMIT) {
+        functionResponses.push({
+          name: call.name,
+          response: {
+            ok: false,
+            error:
+              "Ya intentaste esta misma acción con los mismos parámetros y falló varias veces. NO la repitas: cambia de enfoque (otra herramienta o parámetros distintos), o dile al usuario qué pudiste hacer y qué no.",
+          },
+        });
+        continue;
+      }
+
       // The absolute cap counts every call, exempt or not — a runaway loop
       // must still die even if it's only calling read-only tools.
       if (toolCalls >= ABSOLUTE_MAX_TOOL_CALLS) {
-        args.emit({ type: "error", message: "El agente alcanzó su límite de pasos", code: "tool_limit" });
-        return { finalText, usage: { inputTokens, outputTokens, cachedTokens }, turns, toolCalls, terminalError: true };
+        return await finishOnCap("tool_limit");
       }
       const readOnly = READ_ONLY_TOOLS.has(call.name);
       if (!readOnly) {
         if (budgetedToolCalls >= maxToolCalls) {
-          args.emit({ type: "error", message: "El agente alcanzó su límite de pasos", code: "tool_limit" });
-          return { finalText, usage: { inputTokens, outputTokens, cachedTokens }, turns, toolCalls, terminalError: true };
+          return await finishOnCap("tool_limit");
         }
         budgetedToolCalls += 1;
       }
@@ -188,6 +290,7 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
 
       const outcome = await args.runTool(call.name, call.args);
       const ok = outcome.response.ok !== false;
+      if (!ok) failedSignatures.set(sig, (failedSignatures.get(sig) ?? 0) + 1);
       args.emit({
         type: "action",
         tool: call.name,

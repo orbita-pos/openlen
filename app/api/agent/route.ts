@@ -6,6 +6,7 @@ import { resolveOpIdByPath, tagWithOpIds } from "@/lib/html-ops";
 import { buildFunctionDeclarations } from "@/lib/agent/catalog";
 import { buildAgentMessages } from "@/lib/agent/context";
 import { runAgentLoop, type AgentErrorCode } from "@/lib/agent/loop";
+import { streamWithRetry } from "@/lib/agent/retry";
 import { realDeps, runAgentTool, summarizeProjectState, type AgentSession } from "@/lib/agent/tools";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -228,6 +229,7 @@ export async function POST(req: Request): Promise<Response> {
     page: pageSlug,
     ownerEmail: session.user.email ?? null,
     imageEditsThisTurn: 0,
+    photoSearchesThisTurn: 0,
   };
   const provider = new GeminiProvider(PROVIDER.key as string);
   const tools = buildFunctionDeclarations();
@@ -268,9 +270,30 @@ export async function POST(req: Request): Promise<Response> {
         const result = await runAgentLoop({
           messages,
           tools,
+          // streamWithRetry rides out transient Gemini 503 spikes: it re-opens
+          // the stream on a retryable error thrown BEFORE any event (safe — the
+          // model produced nothing yet), and honors upstreamAbort so retries can
+          // never outlive the STREAM_TIMEOUT_MS ceiling. A mid-stream failure
+          // still propagates (no double-applied tool calls).
           openStream: (msgs) =>
-            provider.stream(
-              { model: PROVIDER.model, messages: msgs, tools, toolMode: "auto", maxOutputTokens: 16_384, temperature: 0.7 },
+            streamWithRetry(
+              () =>
+                provider.stream(
+                  { model: PROVIDER.model, messages: msgs, tools, toolMode: "auto", maxOutputTokens: 16_384, temperature: 0.7 },
+                  { signal: upstreamAbort.signal },
+                ),
+              { signal: upstreamAbort.signal },
+            ),
+          // Graceful termination: a tools-OFF stream the loop uses only to
+          // compose a closing summary when a step-budget cap is hit, so the turn
+          // ends with "here's what I did / what's pending" instead of a red error.
+          closeOut: (msgs) =>
+            streamWithRetry(
+              () =>
+                provider.stream(
+                  { model: PROVIDER.model, messages: msgs, tools: [], toolMode: "none", maxOutputTokens: 2_048, temperature: 0.7 },
+                  { signal: upstreamAbort.signal },
+                ),
               { signal: upstreamAbort.signal },
             ),
           runTool: (name, args) => runAgentTool(agentSession, deps, name, args),
