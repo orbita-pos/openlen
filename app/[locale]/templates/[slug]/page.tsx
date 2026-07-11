@@ -76,10 +76,19 @@ export default async function TemplateDetailPage({ params }: PageProps) {
     .slice(0, 3);
 
   return (
-    <div className="min-h-screen flex flex-col bg-white dark:bg-zinc-950">
+    <div className="relative min-h-screen flex flex-col bg-white dark:bg-zinc-950">
+      {/* The page dresses in the template's own accent — a soft ambient glow
+          derived from its brand color instead of a generic backdrop. */}
+      <div
+        className="pointer-events-none absolute inset-x-0 top-0 h-[520px]"
+        style={{
+          background: `radial-gradient(60% 75% at 50% -12%, ${template.accent}24, transparent 65%)`,
+        }}
+        aria-hidden
+      />
       <MarketingChrome>
         {/* Breadcrumb + back link */}
-        <div className="mx-auto max-w-6xl px-6 pt-6 sm:pt-8">
+        <div className="mx-auto w-full max-w-6xl px-6 pt-6 sm:pt-8">
           <Link
             href="/templates"
             className="inline-flex items-center gap-1.5 text-xs text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 transition"
@@ -90,30 +99,35 @@ export default async function TemplateDetailPage({ params }: PageProps) {
         </div>
 
         {/* Hero */}
-        <section className="mx-auto max-w-6xl px-6 py-6 sm:py-8">
-          <div className="grid grid-cols-1 lg:grid-cols-[1fr_1.4fr] gap-6 lg:gap-10 items-start">
+        <section className="mx-auto w-full max-w-6xl px-6 py-6 sm:py-8">
+          <div className="grid grid-cols-1 lg:grid-cols-[1fr_1.4fr] gap-8 lg:gap-12 items-start">
             <div>
-              <div className="flex items-center gap-2 mb-2">
+              <span
+                className="inline-flex items-center gap-2 rounded-full bg-white/70 dark:bg-white/[0.06] backdrop-blur ring-1 ring-zinc-200/70 dark:ring-white/10 px-3 py-1 text-[10.5px] uppercase tracking-wider text-zinc-600 dark:text-zinc-300 font-semibold"
+              >
                 <span
                   className="inline-block w-2 h-2 rounded-full"
                   style={{ background: template.accent }}
                   aria-hidden
                 />
-                <span className="text-[10.5px] uppercase tracking-wider text-zinc-500 dark:text-zinc-400 font-medium">
-                  {tf(`${template.family}.label`)}
-                </span>
-              </div>
-              <h1 className="text-3xl sm:text-4xl font-semibold tracking-tight">
+                {tf(`${template.family}.label`)}
+              </span>
+              <h1 className="mt-4 text-4xl sm:text-5xl font-semibold tracking-tightest leading-[1.04]">
                 {template.name}
               </h1>
-              <p className="mt-2 text-base sm:text-lg text-zinc-700 dark:text-zinc-300 leading-snug">
+              <span
+                className="mt-4 block h-1 w-14 rounded-full"
+                style={{ background: template.accent }}
+                aria-hidden
+              />
+              <p className="mt-4 serif-accent text-xl sm:text-2xl text-zinc-700 dark:text-zinc-300 leading-snug">
                 {template.pitch}
               </p>
-              <p className="mt-2 text-sm text-zinc-500 dark:text-zinc-400 leading-relaxed">
+              <p className="mt-3 text-sm text-zinc-500 dark:text-zinc-400 leading-relaxed">
                 {template.description}
               </p>
 
-              <div className="mt-5 flex flex-col sm:flex-row gap-3">
+              <div className="mt-6 flex flex-col sm:flex-row gap-3">
                 <UseTemplateButton templateId={template.id} />
                 <a
                   href={template.storageUrl}
@@ -125,50 +139,70 @@ export default async function TemplateDetailPage({ params }: PageProps) {
                 </a>
               </div>
 
-              <dl className="mt-6 grid grid-cols-2 gap-x-6 gap-y-3 text-sm">
-                <div>
-                  <dt className="text-[10.5px] uppercase tracking-wider text-zinc-500 dark:text-zinc-400 font-medium mb-1">
-                    {t("templateDetail.meta.family")}
-                  </dt>
-                  <dd className="text-zinc-900 dark:text-zinc-100">
-                    {tf(`${template.family}.label`)}
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-[10.5px] uppercase tracking-wider text-zinc-500 dark:text-zinc-400 font-medium mb-1">
-                    {t("templateDetail.meta.mode")}
-                  </dt>
-                  <dd className="text-zinc-900 dark:text-zinc-100 capitalize">
-                    {template.mode}
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-[10.5px] uppercase tracking-wider text-zinc-500 dark:text-zinc-400 font-medium mb-1">
-                    {t("templateDetail.meta.accent")}
-                  </dt>
-                  <dd className="text-zinc-900 dark:text-zinc-100 inline-flex items-center gap-1.5">
-                    <span
-                      className="inline-block w-3 h-3 rounded-sm ring-1 ring-zinc-300 dark:ring-zinc-700"
-                      style={{ background: template.accent }}
-                      aria-hidden
-                    />
-                    <code className="text-xs">{template.accent}</code>
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-[10.5px] uppercase tracking-wider text-zinc-500 dark:text-zinc-400 font-medium mb-1">
-                    {t("templateDetail.meta.format")}
-                  </dt>
-                  <dd className="text-zinc-900 dark:text-zinc-100">
-                    {t("templateDetail.meta.formatValue")}
-                  </dd>
-                </div>
+              <dl className="mt-7 grid grid-cols-2 gap-3 text-sm">
+                {[
+                  [t("templateDetail.meta.family"), tf(`${template.family}.label`), null],
+                  [t("templateDetail.meta.mode"), template.mode, "capitalize"],
+                  [t("templateDetail.meta.accent"), template.accent, "accent"],
+                  [t("templateDetail.meta.format"), t("templateDetail.meta.formatValue"), null],
+                ].map(([label, value, kind]) => (
+                  <div
+                    key={String(label)}
+                    className="rounded-2xl bg-white/70 dark:bg-white/[0.04] ring-1 ring-zinc-200/70 dark:ring-white/10 backdrop-blur-sm px-4 py-3"
+                  >
+                    <dt className="text-[10px] uppercase tracking-wider text-zinc-500 dark:text-zinc-400 font-medium mb-1">
+                      {label}
+                    </dt>
+                    <dd
+                      className={`text-zinc-900 dark:text-zinc-100 ${
+                        kind === "capitalize" ? "capitalize" : ""
+                      } ${kind === "accent" ? "inline-flex items-center gap-1.5" : ""}`}
+                    >
+                      {kind === "accent" ? (
+                        <>
+                          <span
+                            className="inline-block w-3 h-3 rounded-full ring-1 ring-zinc-300 dark:ring-zinc-700"
+                            style={{ background: template.accent }}
+                            aria-hidden
+                          />
+                          <code className="text-xs">{template.accent}</code>
+                        </>
+                      ) : (
+                        value
+                      )}
+                    </dd>
+                  </div>
+                ))}
               </dl>
             </div>
 
-            {/* Preview */}
+            {/* Preview — browser-framed, scrollable through the FULL page when
+                the reference screenshot exists (fallback: the live card). */}
             <div className="lg:sticky lg:top-24">
-              <TemplateCard template={template} compact />
+              <div className="overflow-hidden rounded-2xl ring-1 ring-zinc-200/70 dark:ring-white/10 bg-white dark:bg-zinc-900 shadow-xl shadow-zinc-950/[0.07]">
+                <div className="flex items-center gap-1.5 h-8 px-3 border-b border-zinc-200/60 dark:border-zinc-800/60 bg-zinc-50/70 dark:bg-zinc-900/70 backdrop-blur-sm">
+                  <span className="w-2.5 h-2.5 rounded-full bg-[#FF5F57]" aria-hidden />
+                  <span className="w-2.5 h-2.5 rounded-full bg-[#FEBC2E]" aria-hidden />
+                  <span className="w-2.5 h-2.5 rounded-full bg-[#28C840]" aria-hidden />
+                  <span className="mx-auto inline-flex items-center rounded-full bg-white dark:bg-zinc-950 ring-1 ring-zinc-200/70 dark:ring-white/10 px-3 py-0.5 text-[11px] text-zinc-500 dark:text-zinc-400 font-medium">
+                    {template.id}
+                    <span style={{ color: template.accent }}>.openlen.com</span>
+                  </span>
+                </div>
+                {template.screenshotUrl ? (
+                  <div className="h-[540px] overflow-y-auto overscroll-contain">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={template.screenshotUrl}
+                      alt={template.name}
+                      className="w-full h-auto"
+                      decoding="async"
+                    />
+                  </div>
+                ) : (
+                  <TemplateCard template={template} compact />
+                )}
+              </div>
             </div>
           </div>
         </section>

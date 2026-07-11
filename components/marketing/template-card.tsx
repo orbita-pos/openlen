@@ -57,8 +57,20 @@ export function TemplateCard({
   const [loaded, setLoaded] = useState(false);
   const [scale, setScale] = useState(0);
   const [imgFailed, setImgFailed] = useState(false);
+  const [scrollDur, setScrollDur] = useState(7);
   const nativeWidth = 1280;
   const nativeHeight = 800;
+
+  // Hover scroll speed: constant ~1.6s per 16:10 fold of page height, so
+  // long templates don't fly and short ones don't crawl (mirrors WallTile).
+  // Measured in the ref callback too — cached images finish before React
+  // attaches onLoad.
+  const measureTile = (img: HTMLImageElement | null) => {
+    if (img && img.complete && img.naturalWidth > 0) {
+      const folds = (img.naturalHeight / img.naturalWidth) * (16 / 10);
+      setScrollDur(Math.max(2.5, Math.min(20, (folds - 1) * 1.6)));
+    }
+  };
 
   // Prefer the small right-sized tile; fall back to the larger thumbnail.
   // When either exists the iframe path is skipped entirely — the <img>
@@ -177,29 +189,44 @@ export function TemplateCard({
           }}
         />
         {hasThumbnail ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            ref={imgRef}
-            src={previewSrc ?? ""}
-            alt={t("templateCard.previewAlt", { name: template.name })}
-            width={nativeWidth}
-            height={nativeHeight}
-            loading={priority ? "eager" : "lazy"}
-            fetchPriority={priority ? "high" : "auto"}
-            decoding="async"
-            onLoad={() => setLoaded(true)}
-            onError={() => setImgFailed(true)}
-            style={{
-              position: "absolute",
-              inset: 0,
-              width: "100%",
-              height: "100%",
-              objectFit: "cover",
-              objectPosition: "top left",
-              opacity: loaded ? 1 : 0,
-              transition: "opacity 380ms cubic-bezier(.2,.7,.2,1)",
-            }}
-          />
+          <>
+            {/* Full page underneath — its crop window slides top → bottom on
+                hover, scrolling the whole template inside the card. */}
+            {template.tileUrl && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                ref={measureTile}
+                src={template.tileUrl}
+                alt=""
+                aria-hidden
+                loading="lazy"
+                decoding="async"
+                onLoad={(e) => measureTile(e.currentTarget)}
+                style={{ "--tpl-dur": `${scrollDur.toFixed(1)}s` } as React.CSSProperties}
+                className="absolute inset-0 h-full w-full object-cover object-top [transition:object-position_1s_ease] group-hover:[transition:object-position_var(--tpl-dur,7s)_linear_180ms] group-hover:[object-position:bottom] motion-reduce:!transition-none motion-reduce:group-hover:[object-position:top]"
+              />
+            )}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              ref={imgRef}
+              src={previewSrc ?? ""}
+              alt={t("templateCard.previewAlt", { name: template.name })}
+              width={nativeWidth}
+              height={nativeHeight}
+              loading={priority ? "eager" : "lazy"}
+              fetchPriority={priority ? "high" : "auto"}
+              decoding="async"
+              onLoad={() => setLoaded(true)}
+              onError={() => setImgFailed(true)}
+              className={`absolute inset-0 h-full w-full object-cover [object-position:top_left] transition-opacity duration-300 ${
+                loaded ? "opacity-100" : "opacity-0"
+              } ${
+                template.tileUrl
+                  ? "group-hover:opacity-0 group-hover:duration-150 motion-reduce:group-hover:opacity-100"
+                  : ""
+              }`}
+            />
+          </>
         ) : (
           mounted &&
           scale > 0 && (

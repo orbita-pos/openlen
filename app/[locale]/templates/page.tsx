@@ -55,22 +55,28 @@ export default async function TemplatesPage() {
   }));
 
   return (
-    <div className="min-h-screen flex flex-col bg-white dark:bg-zinc-950">
+    <div className="relative min-h-screen flex flex-col bg-white dark:bg-zinc-950">
+      {/* Dawn atmosphere behind the glass pill nav + hero — same language as
+          the home, so the gallery stops feeling like a plain admin list. */}
+      <div
+        className="pointer-events-none absolute inset-x-0 top-0 h-[420px] aurora-dawn"
+        aria-hidden
+      />
       <MarketingChrome>
-        {/* Hero — compact: small eyebrow + tight headline + 1-line lede */}
-        <section className="border-b border-zinc-200 dark:border-zinc-800">
-          <div className="mx-auto max-w-6xl px-6 py-8 sm:py-10">
-            <div className="inline-flex items-center gap-2 text-[11px] font-medium text-coral-700 dark:text-coral-400 mb-2">
+        {/* Hero */}
+        <section className="relative">
+          <div className="mx-auto max-w-6xl px-6 pt-10 pb-8 sm:pt-14 sm:pb-10">
+            <div className="inline-flex items-center gap-2 rounded-full bg-white/70 dark:bg-white/[0.06] backdrop-blur ring-1 ring-white/80 dark:ring-white/10 px-3 py-1 text-[11.5px] font-medium text-coral-700 dark:text-coral-300 shadow-sm mb-4">
               <span className="relative flex h-1.5 w-1.5">
                 <span className="absolute inline-flex h-full w-full rounded-full bg-coral-500 opacity-75 animate-ping" />
                 <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-coral-500" />
               </span>
               {t("templatesIndex.hero.eyebrow", { count: all.length })}
             </div>
-            <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight max-w-3xl">
+            <h1 className="text-3xl sm:text-5xl font-semibold tracking-tightest leading-[1.06] max-w-3xl">
               {t("templatesIndex.hero.title")}
             </h1>
-            <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400 max-w-2xl">
+            <p className="mt-3 text-base text-zinc-600 dark:text-zinc-400 max-w-2xl">
               {t("templatesIndex.hero.lede")}
             </p>
           </div>
