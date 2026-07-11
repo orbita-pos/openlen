@@ -129,5 +129,12 @@
     "confirmLabel": "Typ {name} om te bevestigen",
     "cancel": "Annuleren",
     "confirm": "Bedrijf verwijderen"
+  },
+  "apply": {
+    "button": "Toepassen op mijn pagina’s",
+    "done": "{updated} pagina’s bijgewerkt",
+    "doneLive": "{updated} pagina’s bijgewerkt · {republished} opnieuw gepubliceerd",
+    "none": "Dit bedrijf heeft nog geen gekoppelde pagina’s",
+    "error": "Wijzigingen konden niet worden toegepast"
   }
 }

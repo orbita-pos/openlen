@@ -129,5 +129,12 @@
     "photosError": "无法上传照片，请重试。",
     "defaultSet": "已设为默认",
     "defaultError": "无法设为默认，请重试。"
+  },
+  "apply": {
+    "button": "应用到我的页面",
+    "done": "已更新 {updated} 个页面",
+    "doneLive": "已更新 {updated} 个页面 · {republished} 个已重新发布",
+    "none": "该业务还没有关联的页面",
+    "error": "无法应用更改"
   }
 }

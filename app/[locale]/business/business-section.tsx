@@ -58,6 +58,7 @@ const Trash = (p: IconProps) => <Icon {...p}><path d="M3 6h18" /><path d="M19 6v
 const Sparkles = (p: IconProps) => <Icon {...p}><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z" /></Icon>;
 const Star = (p: IconProps) => <Icon {...p}><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" /></Icon>;
 const Loader = (p: IconProps) => <Icon {...p}><path d="M21 12a9 9 0 1 1-6.219-8.56" /></Icon>;
+const Refresh = (p: IconProps) => <Icon {...p}><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" /><path d="M21 3v5h-5" /><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" /><path d="M3 21v-5h5" /></Icon>;
 const Alert = (p: IconProps) => <Icon {...p}><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z" /><path d="M12 9v4" /><path d="M12 17h.01" /></Icon>;
 
 /* ───────── Link presets (label resolved via i18n at render) ───────── */
@@ -218,6 +219,7 @@ export function BusinessSection({
   const photosRef = useRef<HTMLInputElement>(null);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [applying, setApplying] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -348,6 +350,36 @@ export function BusinessSection({
       setTimeout(() => setSaved(false), 2200);
     } finally {
       setSaving(false);
+    }
+  };
+
+  // Push the saved profile into every linked page (and republish the live
+  // ones) — the "edit once, every page catches up" action.
+  const applyToPages = async () => {
+    if (!active || active.isNew) return;
+    setApplying(true);
+    try {
+      const res = await fetch(`/api/profiles/${active.id}/apply`, { method: "POST" });
+      const j = (await res.json().catch(() => ({}))) as {
+        total?: number;
+        updated?: number;
+        republished?: number;
+      };
+      if (!res.ok) {
+        toast.error(t("apply.error"));
+        return;
+      }
+      if (!j.total) {
+        toast.info(t("apply.none"));
+      } else if (j.republished && j.republished > 0) {
+        toast.success(t("apply.doneLive", { updated: j.updated ?? 0, republished: j.republished }));
+      } else {
+        toast.success(t("apply.done", { updated: j.updated ?? 0 }));
+      }
+    } catch {
+      toast.error(t("apply.error"));
+    } finally {
+      setApplying(false);
     }
   };
 
@@ -605,10 +637,16 @@ export function BusinessSection({
               </Card>
 
               <div className="flex items-center justify-between px-1">
-                <button onClick={() => void makeDefault()} disabled={active.isDefault || active.isNew}
-                  className="inline-flex items-center gap-1.5 text-[12.5px] font-medium text-[#6B6967] dark:text-[#9B9897] hover:text-coral-700 dark:hover:text-coral-300 transition disabled:opacity-40">
-                  <Star size={13} /> {active.isDefault ? t("isDefault") : t("makeDefault")}
-                </button>
+                <div className="flex items-center gap-4">
+                  <button onClick={() => void makeDefault()} disabled={active.isDefault || active.isNew}
+                    className="inline-flex items-center gap-1.5 text-[12.5px] font-medium text-[#6B6967] dark:text-[#9B9897] hover:text-coral-700 dark:hover:text-coral-300 transition disabled:opacity-40">
+                    <Star size={13} /> {active.isDefault ? t("isDefault") : t("makeDefault")}
+                  </button>
+                  <button onClick={() => void applyToPages()} disabled={active.isNew || applying}
+                    className="inline-flex items-center gap-1.5 text-[12.5px] font-medium text-[#6B6967] dark:text-[#9B9897] hover:text-coral-700 dark:hover:text-coral-300 transition disabled:opacity-40">
+                    {applying ? <Loader size={13} className="animate-spin" /> : <Refresh size={13} />} {t("apply.button")}
+                  </button>
+                </div>
                 <button onClick={onDeleteClick}
                   className="inline-flex items-center gap-1.5 text-[12.5px] font-medium text-[#A8A5A2] hover:text-red-600 transition">
                   <Trash size={13} /> {t("delete")}

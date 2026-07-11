@@ -1249,6 +1249,16 @@ export async function countUserSubdomains(userId: string): Promise<number> {
 
 /** Count of projects created within the last `days` days. Powers the
  *  "pages generated this week" stat on the marketing hero. */
+/** Pages currently live — projects holding a claimed subdomain (their custom
+ *  domains ride on the same claim, so this covers both). */
+export async function countLiveProjects(): Promise<number> {
+  const rows = await db
+    .select({ count: sqlOp<number>`count(*)::int` })
+    .from(schema.projects)
+    .where(isNotNull(schema.projects.subdomain));
+  return rows[0]?.count ?? 0;
+}
+
 export async function countProjectsSince(days: number): Promise<number> {
   const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
   const rows = await db

@@ -129,5 +129,12 @@
     "photosError": "Die Fotos konnten nicht hochgeladen werden. Versuch es erneut.",
     "defaultSet": "Als Standard festgelegt",
     "defaultError": "Konnte nicht als Standard festgelegt werden. Versuch es erneut."
+  },
+  "apply": {
+    "button": "Auf meine Seiten anwenden",
+    "done": "{updated} Seiten aktualisiert",
+    "doneLive": "{updated} Seiten aktualisiert · {republished} neu veröffentlicht",
+    "none": "Dieses Unternehmen hat noch keine verknüpften Seiten",
+    "error": "Änderungen konnten nicht angewendet werden"
   }
 }

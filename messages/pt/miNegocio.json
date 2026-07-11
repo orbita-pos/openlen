@@ -129,5 +129,12 @@
     "photosError": "Não foi possível enviar as fotos. Tente novamente.",
     "defaultSet": "Definido como padrão",
     "defaultError": "Não foi possível definir como padrão. Tente novamente."
+  },
+  "apply": {
+    "button": "Aplicar às minhas páginas",
+    "done": "{updated} páginas atualizadas",
+    "doneLive": "{updated} páginas atualizadas · {republished} republicadas",
+    "none": "Este negócio ainda não tem páginas vinculadas",
+    "error": "Não foi possível aplicar as alterações"
   }
 }

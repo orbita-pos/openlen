@@ -129,5 +129,12 @@
     "confirmLabel": "{name} 을(를) 입력하여 확인",
     "cancel": "취소",
     "confirm": "비즈니스 삭제"
+  },
+  "apply": {
+    "button": "내 페이지에 적용",
+    "done": "페이지 {updated}개 업데이트됨",
+    "doneLive": "페이지 {updated}개 업데이트 · {republished}개 재게시됨",
+    "none": "이 비즈니스에 연결된 페이지가 아직 없습니다",
+    "error": "변경 사항을 적용할 수 없습니다"
   }
 }

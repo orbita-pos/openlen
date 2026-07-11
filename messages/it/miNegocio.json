@@ -129,5 +129,12 @@
     "photosError": "Impossibile caricare le foto. Riprova.",
     "defaultSet": "Impostata come predefinita",
     "defaultError": "Impossibile impostarla come predefinita. Riprova."
+  },
+  "apply": {
+    "button": "Applica alle mie pagine",
+    "done": "{updated} pagine aggiornate",
+    "doneLive": "{updated} pagine aggiornate · {republished} ripubblicate",
+    "none": "Questa attività non ha ancora pagine collegate",
+    "error": "Impossibile applicare le modifiche"
   }
 }

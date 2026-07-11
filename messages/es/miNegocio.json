@@ -129,5 +129,12 @@
     "confirmLabel": "Escribe {name} para confirmar",
     "cancel": "Cancelar",
     "confirm": "Eliminar negocio"
+  },
+  "apply": {
+    "button": "Aplicar a mis páginas",
+    "done": "{updated} páginas actualizadas",
+    "doneLive": "{updated} páginas actualizadas · {republished} republicadas",
+    "none": "Este negocio aún no tiene páginas vinculadas",
+    "error": "No se pudieron aplicar los cambios"
   }
 }

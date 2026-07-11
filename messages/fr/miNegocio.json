@@ -129,5 +129,12 @@
     "photosError": "Import des photos impossible. Réessayez.",
     "defaultSet": "Définie par défaut",
     "defaultError": "Impossible de définir par défaut. Réessayez."
+  },
+  "apply": {
+    "button": "Appliquer à mes pages",
+    "done": "{updated} pages mises à jour",
+    "doneLive": "{updated} pages mises à jour · {republished} republiées",
+    "none": "Cette entreprise n’a pas encore de pages liées",
+    "error": "Impossible d’appliquer les changements"
   }
 }

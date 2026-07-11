@@ -129,5 +129,12 @@
     "confirmLabel": "Type {name} to confirm",
     "cancel": "Cancel",
     "confirm": "Delete business"
+  },
+  "apply": {
+    "button": "Apply to my pages",
+    "done": "{updated} pages updated",
+    "doneLive": "{updated} pages updated · {republished} republished",
+    "none": "This business has no linked pages yet",
+    "error": "Could not apply changes"
   }
 }
