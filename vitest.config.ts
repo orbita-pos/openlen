@@ -38,6 +38,7 @@ export default defineConfig({
       "lib/sections/**/*.test.ts",
       "lib/analytics/**/*.test.ts",
       "lib/assemble/**/*.test.ts",
+      "lib/behaviors/**/*.test.ts",
       "lib/curate/**/*.test.ts",
       // lib/ai mixes runners — vision-critique.test.ts is node:test (in
       // test:node), so list the vitest ai tests individually.
