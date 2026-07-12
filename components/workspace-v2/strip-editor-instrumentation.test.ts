@@ -7,6 +7,8 @@
 
 import { describe, it, expect } from "vitest";
 import { stripEditorInstrumentation } from "./strip-editor-instrumentation";
+import { bakeBehaviors, BEHAVIORS_MARKER } from "@/lib/behaviors/build";
+import type { Behavior, BehaviorName } from "@/lib/behaviors/types";
 
 const DOC = (body: string) =>
   `<!doctype html><html><head></head><body>${body}</body></html>`;
@@ -162,5 +164,75 @@ describe("stripEditorInstrumentation — Editor V5 markers", () => {
     }
     expect(out).toContain("Hero");
     expect(out).toContain("run"); // unwrapped run text survives
+  });
+});
+
+describe("stripEditorInstrumentation — behaviors runtime scripts", () => {
+  // Same fake-registry pattern as lib/behaviors/build.test.ts and
+  // use-behaviors-preview.test.ts — the real registry (lib/behaviors/registry.ts)
+  // is still empty in F1, so testing against it wouldn't prove anything.
+  const fake = (name: string, marker: string, js: string, headJs?: string): Behavior =>
+    ({
+      name: name as BehaviorName, marker, js, headJs, budgetBytes: 700,
+      schema: { root: { kind: "flag" } },
+      degradation: "content-intact", a11y: [], status: "stable",
+      doc: { when: "", whenNot: "", example: "" },
+    }) as Behavior;
+
+  const REG = {
+    countdown: fake("countdown", "data-ol-countdown", "/*CD*/"),
+  } as Partial<Record<BehaviorName, Behavior>>;
+  const ORDER: BehaviorName[] = ["countdown"];
+
+  it("removes the body behaviors script and keeps real content intact", () => {
+    const out = stripEditorInstrumentation(
+      DOC(`<h1>Hello</h1><script ${BEHAVIORS_MARKER}>void 0</script>`),
+    );
+    expect(out).not.toContain(BEHAVIORS_MARKER);
+    expect(out).toContain("<h1>Hello</h1>");
+  });
+
+  it("removes the head behaviors script", () => {
+    const out = stripEditorInstrumentation(
+      `<!doctype html><html><head><script ${BEHAVIORS_MARKER}-head>void 0</script></head>` +
+        `<body><h1>Hello</h1></body></html>`,
+    );
+    expect(out).not.toContain(`${BEHAVIORS_MARKER}-head`);
+    expect(out).toContain("<h1>Hello</h1>");
+  });
+
+  it("removes both the head and body scripts when present together", () => {
+    const out = stripEditorInstrumentation(
+      `<!doctype html><html><head><script ${BEHAVIORS_MARKER}-head>void 0</script></head>` +
+        `<body><h1>Hello</h1><script ${BEHAVIORS_MARKER}>void 0</script></body></html>`,
+    );
+    expect(out).not.toContain(BEHAVIORS_MARKER);
+    expect(out).toContain("<h1>Hello</h1>");
+  });
+
+  it("lets bakeBehaviors re-inject after the strip — closes the idempotency-guard divergence bug", () => {
+    const withBehavior = DOC(`<div data-ol-countdown="2026-08-15T20:00Z"></div>`);
+    const baked = bakeBehaviors(withBehavior, REG, ORDER);
+    expect(baked).toContain(BEHAVIORS_MARKER); // sanity: the bake actually fired
+
+    const stripped = stripEditorInstrumentation(baked);
+    expect(stripped).not.toContain(BEHAVIORS_MARKER);
+
+    // Before the fix, bakeBehaviors' own guard —
+    // `if (html.includes(BEHAVIORS_MARKER)) return html;` — would see the
+    // leftover marker on a re-save and no-op forever. This proves it doesn't.
+    const rebaked = bakeBehaviors(stripped, REG, ORDER);
+    expect(rebaked).not.toBe(stripped);
+    expect(rebaked).toContain(BEHAVIORS_MARKER);
+  });
+
+  it("a document without behaviors scripts passes through the parse path undamaged", () => {
+    const out = stripEditorInstrumentation(
+      DOC(`<h1 data-openlen-editable>Hello</h1><p>World</p>`),
+    );
+    expect(out).not.toContain(BEHAVIORS_MARKER);
+    expect(out).not.toContain("data-openlen-editable");
+    expect(out).toContain("Hello");
+    expect(out).toContain("World");
   });
 });

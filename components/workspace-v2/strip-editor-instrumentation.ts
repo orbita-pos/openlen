@@ -17,6 +17,8 @@
 // shared live DOM while those markers are present — so this backstop must
 // remove/unwrap them too, or they reach the published static page.
 //
+import { BEHAVIORS_MARKER } from "@/lib/behaviors/build";
+
 // Fast path skips the parse when there's nothing to strip.
 export function stripEditorInstrumentation(html: string): string {
   if (!html) return html;
@@ -24,7 +26,8 @@ export function stripEditorInstrumentation(html: string): string {
     !html.includes("data-openlen-") &&
     !html.includes("contenteditable") &&
     !html.includes("data-ol-motion") &&
-    !html.includes("data-ol-counted")
+    !html.includes("data-ol-counted") &&
+    !html.includes(BEHAVIORS_MARKER)
   ) {
     return html;
   }
@@ -40,6 +43,15 @@ export function stripEditorInstrumentation(html: string): string {
       .querySelectorAll(
         "[data-openlen-inline-edit],[data-openlen-reorder],[data-openlen-replace],[data-openlen-section-select],[data-openlen-inspect],[data-openlen-section-insert],[data-openlen-drop],[data-openlen-edit-overlay],[data-openlen-motion-preview],[data-openlen-music-preview],[data-openlen-3d-preview],#ol-motion-preview-style,#ol-music-preview-style",
       )
+      .forEach((n) => n.remove());
+    // The behaviors preview injector (use-behaviors-preview.ts) bakes the same
+    // <script data-ol-behaviors[-head]> that publish does. bakeBehaviors guards
+    // on BEHAVIORS_MARKER's mere presence in the string — so if a save ever
+    // persisted this script, that guard would permanently no-op the preview
+    // injector on this document (stuck on whatever runtime got baked in). Strip
+    // both the body and head script on every save so the guard never sees them.
+    doc
+      .querySelectorAll(`script[${BEHAVIORS_MARKER}],script[${BEHAVIORS_MARKER}-head]`)
       .forEach((n) => n.remove());
     // inline-edit run-wrappers: UNWRAP (replace with children) — never delete,
     // or the run's text would be lost. Mirrors use-inline-edit captureClean.
