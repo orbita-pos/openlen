@@ -33,8 +33,16 @@ import type { Behavior } from "../types";
 // contexto no seguro), .then(k,f) cae al mismo fallback.
 //
 // k() (swap+restore) es un no-op si el autor no puso data-ol-copied — nada
-// que sustituir, nada que temporizar.
-const JS = `document.addEventListener('click',function(e){if(olEditing())return;var b=e.target.closest('[data-ol-copy]');if(!b)return;var d=document;var s=d.getElementById(b.getAttribute('data-ol-copy'));if(!s)return;var v=s.textContent;function k(){var m=b.getAttribute('data-ol-copied');if(!m)return;var o=b.textContent;b.textContent=m;setTimeout(function(){b.textContent=o},2000)}function f(){var t=d.createElement('textarea');t.style.cssText='position:fixed;opacity:0';t.value=v;d.body.appendChild(t);t.select();try{d.execCommand('copy')}catch(x){}t.remove();k()}var cl=navigator.clipboard;cl&&cl.writeText?cl.writeText(v).then(k,f):f()});`;
+// que sustituir, nada que temporizar. TAMBIÉN es un no-op si el botón YA
+// muestra el texto de confirmación: sin ese segundo guard, un doble click
+// rompe la promesa de "o" (la variable que se restaura al final) — el 2º
+// click lee b.textContent DESPUÉS de que el 1er click ya lo cambió, así que
+// captura "¡Copiado!" creyendo que es el texto original, y su timer (que
+// dispara 2s más tarde) pisa al del 1er click con ese valor incorrecto,
+// dejando el botón atascado en el texto de confirmación para siempre. El
+// guard compara b.textContent (no un id ni un flag global), así que dos
+// botones de copy distintos en la misma página nunca se pisan entre sí.
+const JS = `document.addEventListener('click',function(e){if(olEditing())return;var b=e.target.closest('[data-ol-copy]');if(!b)return;var d=document;var s=d.getElementById(b.getAttribute('data-ol-copy'));if(!s)return;var v=s.textContent;function k(){var m=b.getAttribute('data-ol-copied');if(!m||b.textContent===m)return;var o=b.textContent;b.textContent=m;setTimeout(function(){b.textContent=o},2000)}function f(){var t=d.createElement('textarea');t.style.cssText='position:fixed;opacity:0';t.value=v;d.body.appendChild(t);t.select();try{d.execCommand('copy')}catch{}t.remove();k()}var cl=navigator.clipboard;cl&&cl.writeText?cl.writeText(v).then(k,f):f()});`;
 
 export const copy: Behavior = {
   name: "copy",

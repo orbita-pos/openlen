@@ -86,14 +86,48 @@ describe("copy", () => {
     expect(btn.textContent).toBe(original);
   });
 
-  it("fallback: si navigator.clipboard no existe, usa el textarea + execCommand, y lo limpia del DOM", () => {
+  it("doble click no deja el botón atascado: el 2º click no debe leer '¡Copiado!' como si fuera el texto original", async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    stubClipboard(writeText);
+    mount(MARKUP);
+    const btn = document.querySelector<HTMLButtonElement>("[data-ol-copy]")!;
+    const original = btn.textContent;
+
+    btn.click();
+    await Promise.resolve(); // microtask de writeText() — ver comentario más arriba
+    expect(btn.textContent).toBe("¡Copiado!");
+
+    vi.advanceTimersByTime(1000); // a medio camino del restore de 2s del 1er click
+    btn.click();
+    await Promise.resolve();
+
+    // El timer del 1er click restaura en t=2000 (1000ms desde aquí). Si el 2º
+    // click reprogramó un timer propio con el "original" mal capturado
+    // ("¡Copiado!"), ese timer dispara en t=3000 y pisa el restore correcto.
+    vi.advanceTimersByTime(2000);
+    expect(btn.textContent).toBe(original);
+  });
+
+  // Este es EL test del guard try/catch de la receta (ver comentario en
+  // copy.ts): un vi.fn() que nunca lanza — como usaban los dos tests de
+  // fallback antes de este cambio — prueba que el mecanismo de fallback SE
+  // INVOCA, pero no prueba que el try/catch haga falta: quitar el
+  // try/catch de copy.ts deja esta suite en verde igual, porque
+  // execCommand nunca lanza en el stub. Aquí el stub SÍ lanza (imita un
+  // entorno real sin esa API legacy, como jsdom mismo) — así el textarea
+  // huérfano y el texto de confirmación sin aplicar solo se evitan si el
+  // try/catch de verdad está ahí.
+  it("fallback: si navigator.clipboard no existe Y execCommand LANZA (entorno sin esa API legacy), el try/catch igual limpia el textarea y aplica la confirmación", () => {
     stubClipboard(undefined);
-    const execCommand = vi.fn();
+    const execCommand = vi.fn(() => {
+      throw new Error("execCommand no implementado");
+    });
     stubExecCommand(execCommand);
     mount(MARKUP);
     document.querySelector<HTMLButtonElement>("[data-ol-copy]")!.click();
     expect(execCommand).toHaveBeenCalledWith("copy");
     expect(document.querySelector("textarea")).toBeNull();
+    expect(document.querySelector<HTMLButtonElement>("[data-ol-copy]")!.textContent).toBe("¡Copiado!");
   });
 
   it("fallback: si navigator.clipboard.writeText rechaza, cae al textarea + execCommand, y lo limpia del DOM", async () => {
