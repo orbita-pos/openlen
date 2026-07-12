@@ -4,6 +4,7 @@ import "server-only";
 // eso NO puede vivir en el mismo archivo que build.ts, que sí es puro y lo
 // importa el preview (client component).
 import { parse } from "node-html-parser";
+import type { HTMLElement as NHPElement } from "node-html-parser"; // aliased: no pisar el HTMLElement global del DOM
 
 import { BEHAVIORS, BEHAVIOR_ORDER } from "./registry";
 import type { AttrSpec, Behavior, BehaviorIssue, BehaviorName } from "./types";
@@ -48,11 +49,22 @@ function CSS_ESCAPE(id: string): string {
 
 /** node-html-parser expone `matches`, pero solo con selectores simples. Nuestros
  *  `requiresHost` son siempre de la forma `[data-ol-x]`, así que lo resolvemos
- *  leyendo el atributo: es exacto y no depende del motor de selectores. */
-function matchesHost(el: { getAttribute(n: string): string | undefined | null }, host: string): boolean {
+ *  leyendo el atributo: es exacto y no depende del motor de selectores.
+ *
+ *  Camina ancestro-o-sí-mismo (como `Element.closest`) porque `requiresHost`
+ *  cubre DOS formas según la receta: el atributo COEXISTE en el MISMO
+ *  elemento (autoplay ⇒ `<div data-ol-row data-ol-autoplay>`, ver
+ *  validate.test.ts) o vive en un ANCESTRO (filter ⇒ el botón
+ *  `[data-ol-filter]` dentro de `<div data-ol-filter-group>`, ver
+ *  recipes/filter.ts). Un elemento es el primer paso de su propia caminata,
+ *  así que el caso mismo-elemento sigue funcionando sin rama aparte. */
+function matchesHost(el: NHPElement, host: string): boolean {
   const m = /^\[([a-z0-9-]+)\]$/i.exec(host.trim());
   if (!m) throw new Error(`requiresHost debe ser de la forma [data-ol-x], no "${host}"`);
-  return el.getAttribute(m[1]) !== undefined && el.getAttribute(m[1]) !== null;
+  for (let cur: NHPElement | null = el; cur; cur = cur.parentNode) {
+    if (cur.getAttribute(m[1]) !== undefined && cur.getAttribute(m[1]) !== null) return true;
+  }
+  return false;
 }
 
 export function validateBehaviors(html: string, reg: Reg = BEHAVIORS): BehaviorIssue[] {
