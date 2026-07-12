@@ -29,6 +29,7 @@ import { injectOrdersCart } from "@/lib/publish/orders-cart";
 import { bakeChatWidget } from "@/lib/publish/chat-widget";
 import { bakeVideoEmbeds, bakeMediaPreconnect } from "@/lib/publish/video-embed";
 import { bakeCarousels } from "@/lib/publish/carousel";
+import { bakeBehaviors } from "@/lib/behaviors/build";
 import { bake3dScene } from "./procedural-3d";
 import type { ItemRow } from "@/lib/collections/store";
 import {
@@ -815,6 +816,20 @@ async function bakeDocument(
     } catch (err) {
       // eslint-disable-next-line no-console
       console.warn("[publishToDir] carousel bake failed; publishing without it", err);
+    }
+  }
+
+  // Conductas — runtime sellado de las recetas que la página realmente usa
+  // (contador, filtro, lightbox, copiar, autoplay, tema, sticky). Corre DESPUÉS
+  // del sanitizer (que borraría el script) y ANTES del sello, que lo hashea en
+  // script-src. El mismo módulo lo consume el preview del editor, así que
+  // editor y publicado no pueden divergir. OPENLEN_BEHAVIORS=0 lo desactiva.
+  if (process.env.OPENLEN_BEHAVIORS !== "0") {
+    try {
+      migratedHtml = bakeBehaviors(migratedHtml);
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.warn("[publishToDir] behaviors bake failed; publishing without it", err);
     }
   }
 
