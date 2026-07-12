@@ -5,7 +5,8 @@ import { describe, it, expect } from "vitest";
 import { BEHAVIORS, BEHAVIOR_ORDER } from "./registry";
 import { buildBehaviorsScript } from "./build";
 import { validateBehaviors } from "./validate";
-import type { Behavior } from "./types";
+import { trackDocumentListeners } from "./recipes/test-helpers";
+import type { Behavior, BehaviorName } from "./types";
 
 // BEHAVIORS[n] is `Behavior | undefined` (Partial record) — a bare
 // `.filter(Boolean)` calls the ambient `Boolean` global, whose lib.d.ts
@@ -16,6 +17,18 @@ import type { Behavior } from "./types";
 const entries = BEHAVIOR_ORDER.map((n) => BEHAVIORS[n]).filter((b): b is Behavior => b !== undefined);
 const TOTAL_BUDGET = 4096;
 
+/** Registro falso mínimo — no hace falta una segunda receta real para probar
+ *  que el arnés compone y aísla correctamente. Mismo patrón que
+ *  build.test.ts::fake() y use-behaviors-preview.test.ts::fake(). */
+function fakeBehavior(name: BehaviorName, marker: string, js: string): Behavior {
+  return {
+    name, marker, js, budgetBytes: 4096,
+    schema: { root: { kind: "flag" } },
+    degradation: "content-intact", a11y: [], status: "stable",
+    doc: { when: "", whenNot: "", example: "" },
+  } as Behavior;
+}
+
 describe("conformidad del registro", () => {
   it("toda receta registrada está en BEHAVIOR_ORDER (si no, nunca se emitiría)", () => {
     // Subconjunto, no igualdad: durante la Fase 2 el registro se llena receta a
@@ -25,16 +38,92 @@ describe("conformidad del registro", () => {
     }
   });
 
-  it("la suma de todos los runtimes cabe en el presupuesto global", () => {
-    const total = entries.reduce((n, b) => n + b.js.length + (b.css?.length ?? 0), 0);
-    expect(total, `runtime total ${total}B > ${TOTAL_BUDGET}B — Born-100 no se negocia`)
+  it("el script COMPUESTO real (guard + estilos + wrappers) cabe en el presupuesto global", () => {
+    // Sumar los `b.js` sueltos (como hacía esta prueba antes) no mide lo que
+    // de verdad pesa la página: se salta EDIT_GUARD_JS, el inyector de
+    // estilos y el wrapper de aislamiento por receta (build.ts, Fallo 1)
+    // — ninguno de esos bytes es cero. Se compone el script REAL con
+    // buildBehaviorsScript sobre un HTML que trae el ejemplo de TODAS las
+    // recetas registradas a la vez (el peor caso: una página que usa las 7),
+    // y se mide ESE string — es el único número que corresponde a lo que
+    // llega al navegador.
+    const html = `<!doctype html><html><body>${entries.map((b) => b.doc.example).join("")}</body></html>`;
+    const script = buildBehaviorsScript(html);
+    expect(script).not.toBeNull();
+    // Buffer.byteLength (bytes UTF-8), no .length (unidades UTF-16): da igual
+    // hoy porque todo es ASCII, pero una comilla tipográfica o un emoji en
+    // una receta futura haría que este número mintiera más barato de lo que
+    // realmente pesa.
+    const bytes = Buffer.byteLength(script!, "utf8");
+    const margin = TOTAL_BUDGET - bytes;
+    expect(bytes, `script compuesto real: ${bytes}B de ${TOTAL_BUDGET}B — margen ${margin}B`)
       .toBeLessThanOrEqual(TOTAL_BUDGET);
+  });
+});
+
+// Fallo 1 (aislamiento por receta) es invisible para CI si nada COMPONE y
+// EJECUTA un script con 2+ recetas — un `.toContain()` (como usan los tests
+// de arriba) no lo cazaría: un `var x` pisado sigue apareciendo íntegro en el
+// substring, el bug solo se manifiesta al CORRER el script compuesto. No hace
+// falta esperar a que exista una segunda receta real: un registro FALSO con
+// dos que colisionarían sin aislamiento basta, y de paso queda como guard
+// permanente contra que alguien revierta el wrapper de build.ts.
+describe("aislamiento entre recetas (Fallo 1)", () => {
+  trackDocumentListeners();
+
+  it("dos recetas con `var` a nivel superior conservan CADA UNA su propio valor", () => {
+    // Cada fake declara `var x` a nivel superior — como haría cualquier
+    // receta descuidada — y solo LEE `x` dentro de un listener que se
+    // dispara DESPUÉS de que el script compuesto entero terminó de correr.
+    // Sin aislamiento, las dos `var x` comparten UN binding (mismo scope de
+    // función: todas las recetas se concatenaban dentro de la misma IIFE
+    // exterior), así que al momento del evento AMBOS listeners verían el
+    // valor de la ÚLTIMA receta que corrió (2), nunca el de la primera. Con
+    // cada receta en su propia IIFE interior (build.ts), cada listener
+    // cierra sobre SU `x` — exactamente lo que este test comprueba.
+    const collideA = fakeBehavior(
+      "countdown",
+      "data-ol-test-collide-a",
+      `var x=1;document.addEventListener('ol-test-collide',function(){document.body.setAttribute('data-x-a',String(x))});`,
+    );
+    const collideB = fakeBehavior(
+      "filter",
+      "data-ol-test-collide-b",
+      `var x=2;document.addEventListener('ol-test-collide',function(){document.body.setAttribute('data-x-b',String(x))});`,
+    );
+    const reg = { countdown: collideA, filter: collideB } as Partial<Record<BehaviorName, Behavior>>;
+    const order: BehaviorName[] = ["countdown", "filter"];
+    const html = `<div data-ol-test-collide-a></div><div data-ol-test-collide-b></div>`;
+
+    const script = buildBehaviorsScript(html, reg, order);
+    expect(script).not.toBeNull();
+
+    document.body.innerHTML = "";
+    try {
+      // eslint-disable-next-line no-new-func
+      new Function(script!)();   // solo en el TEST — igual que recipes/test-helpers.ts::mount()
+      document.dispatchEvent(new Event("ol-test-collide"));
+
+      expect(
+        document.body.getAttribute("data-x-a"),
+        "receta A perdió su propio `x` — el aislamiento del Fallo 1 se rompió",
+      ).toBe("1");
+      expect(
+        document.body.getAttribute("data-x-b"),
+        "receta B perdió su propio `x` — el aislamiento del Fallo 1 se rompió",
+      ).toBe("2");
+    } finally {
+      document.body.innerHTML = "";
+    }
   });
 });
 
 describe.each(entries.map((b) => [b.name, b] as const))("conducta: %s", (_name, b) => {
   it("respeta su presupuesto de bytes", () => {
-    expect(b.js.length, `${b.name}: ${b.js.length}B > ${b.budgetBytes}B`)
+    // Buffer.byteLength (bytes UTF-8), no .length (unidades UTF-16) — misma
+    // razón que el presupuesto global, ver más abajo.
+    const bytes = Buffer.byteLength(b.js, "utf8");
+    expect(bytes, `${b.name}: ${bytes}B > ${b.budgetBytes}B`)
       .toBeLessThanOrEqual(b.budgetBytes);
   });
 
@@ -103,5 +192,23 @@ describe.each(entries.map((b) => [b.name, b] as const))("conducta: %s", (_name, 
   it("documenta cuándo NO usarse (una receta sin whenNot invita a usarla mal)", () => {
     expect(b.doc.when.length).toBeGreaterThan(10);
     expect(b.doc.whenNot.length).toBeGreaterThan(10);
+  });
+
+  it("si declara `untrusted`, su runtime revalida el esquema en el sink", () => {
+    // El spec exige que un atributo `untrusted` (su valor acaba en un sink
+    // del DOM — el href del lightbox en un img.src) se revalide en el
+    // RUNTIME, porque el sanitizer es una capa y no la única. Sin esta
+    // aserción nada estructural lo obliga: una receta futura podría declarar
+    // `untrusted` y olvidar la comprobación, y el arnés no se enteraría hasta
+    // que alguien lo explotara en producción. La regex es deliberadamente
+    // débil (busca el fragmento `https?`, no reimplementa un parser) porque
+    // el objetivo es obligar a que EXISTA alguna validación de esquema en el
+    // js — que sea correcta ya lo cubre el test de seguridad propio de cada
+    // receta (ver lightbox.test.ts, caso "SEGURIDAD").
+    if (!b.schema.untrusted || b.schema.untrusted.length === 0) return;
+    expect(
+      b.js,
+      `${b.name}: declara untrusted:[${b.schema.untrusted.join(",")}] pero su js no revalida el esquema (falta el fragmento "https?") — el sanitizer es una capa, no la única`,
+    ).toMatch(/https?/);
   });
 });

@@ -1,43 +1,15 @@
-import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, beforeEach } from "vitest";
 import { lightbox } from "./lightbox";
-import { buildBehaviorsScript } from "../build";
-
-function mount(body: string) {
-  document.body.innerHTML = body;
-  const script = buildBehaviorsScript(`<html><body>${body}</body></html>`)!;
-  // eslint-disable-next-line no-new-func
-  new Function(script)();   // solo en el TEST; el runtime nunca hace esto
-}
-
-// mount() delega vía document.addEventListener('click', ...), y jsdom/vitest
-// reutilizan el MISMO `document` para todo el archivo — solo body.innerHTML se
-// resetea entre tests, los listeners puestos sobre `document` NO. Sin este
-// tracking, cada it() acumula otro listener de los tests anteriores: un solo
-// click dispara N handlers y crea N modales, así que un test que cierra
-// clickeando UN modal deja vivos los N-1 restantes (falso rojo). En una página
-// publicada esto no ocurre nunca — bakeBehaviors es idempotente vía
-// BEHAVIORS_MARKER, un único <script> por página — es higiene de ESTE archivo.
-let tracked: Array<[string, EventListenerOrEventListenerObject]>;
-let origAddEventListener: typeof document.addEventListener;
+import { mount, trackDocumentListeners } from "./test-helpers";
 
 describe("lightbox", () => {
+  // Por qué el tracking de listeners es obligatorio aquí (y no un extra):
+  // ver el comentario en test-helpers.ts — mount() delega vía
+  // document.addEventListener('click', ...) y jsdom/vitest reutilizan el
+  // MISMO `document` para todo este archivo.
+  trackDocumentListeners();
   beforeEach(() => {
     document.body.innerHTML = "";
-    tracked = [];
-    origAddEventListener = document.addEventListener.bind(document);
-    document.addEventListener = ((
-      type: string,
-      listener: EventListenerOrEventListenerObject,
-      opts?: boolean | AddEventListenerOptions,
-    ) => {
-      tracked.push([type, listener]);
-      origAddEventListener(type, listener, opts);
-    }) as typeof document.addEventListener;
-  });
-
-  afterEach(() => {
-    document.addEventListener = origAddEventListener;
-    for (const [type, listener] of tracked) document.removeEventListener(type, listener);
   });
 
   it("abre un overlay con la imagen del href al hacer click", () => {

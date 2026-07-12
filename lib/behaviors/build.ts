@@ -37,7 +37,13 @@ export function buildBehaviorsScript(
   const styleInject = css
     ? `var s=document.createElement('style');s.textContent=${JSON.stringify(css)};document.head.appendChild(s);`
     : "";
-  return `(function(){${EDIT_GUARD_JS}${styleInject}${hits.map((b) => b.js).join("")}})();`;
+  // Cada receta en SU PROPIA IIFE: todas comparten una sola IIFE exterior, así
+  // que un `var x` a nivel superior de una receta pisaría silenciosamente el
+  // de otra (mismo scope de función). Envolver aísla cada receta por
+  // construcción — olEditing sigue visible dentro por closure (lo define
+  // EDIT_GUARD_JS en el scope exterior), así que nada se rompe.
+  const body = hits.map((b) => `(function(){${b.js}})();`).join("");
+  return `(function(){${EDIT_GUARD_JS}${styleInject}${body}})();`;
 }
 
 /** El pre-paint del <head> (solo `theme` lo necesita), o null. */
