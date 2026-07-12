@@ -100,18 +100,13 @@ describe("theme", () => {
     });
 
     // Por qué esto NO se prueba con btn.click() + expect(...).not.toThrow():
-    // dispatchEvent sigue el spec de "reportar la excepción" sin relanzarla
-    // al llamador — jsdom no revienta el test aunque el listener explote (se
-    // ve en el stderr de lightbox.test.ts, "Not implemented: window.alert",
-    // sin que ese test falle) — así que ese assert pasaría en verde CON o
-    // SIN el try/catch. Y classList.toggle('dark') corre ANTES del throw en
-    // AMBOS casos (con o sin guard, ver el comentario en theme.ts), así que
-    // tampoco distinguiría por sí solo — es la misma trampa "prueba el
-    // efecto, no la causa" que este task existe para cerrar, aplicada a este
-    // guard en concreto. La única forma fiable de observar si la excepción
-    // escapa sin manejar es invocar el listener como función PLANA (no vía
-    // dispatchEvent); vi.spyOn deja capturar la referencia real que mount()
-    // registró, sin reinventar el monkey-patch de trackDocumentListeners.
+    // ver el gotcha documentado en test-helpers.ts (jsdom no relanza la
+    // excepción de un listener — ese assert pasaría en verde CON o SIN el
+    // try/catch). Aquí además classList.toggle('dark') corre ANTES del throw
+    // en AMBOS casos (con o sin guard, ver el comentario en theme.ts), así
+    // que tampoco distinguiría por sí solo — la única forma fiable de
+    // observar si la excepción escapa sin manejar es invocar el listener
+    // como función PLANA (no vía dispatchEvent), como hace test-helpers.ts.
     const addSpy = vi.spyOn(document, "addEventListener");
     mount(MARKUP);
     const call = addSpy.mock.calls.find(([type]) => type === "click")!;
