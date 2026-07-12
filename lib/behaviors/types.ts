@@ -57,7 +57,16 @@ export interface Behavior {
     parts?: PartSpec[];
     /** Selector CSS que el marcador DEBE habitar. autoplay ⇒ "[data-ol-row]"
      *  (la estructura del carrusel, que NO es una conducta de este registro:
-     *  vive en lib/publish/carousel.ts y ya está desplegada). */
+     *  vive en lib/publish/carousel.ts y ya está desplegada).
+     *
+     *  INVARIANTE (fijado en el Task 11, autoplay): `requiresHost` significa
+     *  que el marcador, o uno de sus ANCESTROS, matchea el selector —
+     *  validate.ts camina ancestro-o-sí-mismo (estilo `closest()`), no exige
+     *  que coexistan en el mismo elemento. El runtime de la receta DEBE
+     *  resolver su host con `closest()` para ser coherente con esta
+     *  validación: si el runtime asumiera "mismo elemento" (ej. leyendo un
+     *  atributo hermano en vez de subir el árbol), un marcador válido según
+     *  el validador podría no encontrar su host en tiempo de ejecución. */
     requiresHost?: string;
     /** Atributos que DEBEN existir en el elemento raíz. `untrusted` solo
      *  revalida el valor cuando el atributo está presente; esto exige que esté.

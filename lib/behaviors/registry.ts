@@ -5,6 +5,7 @@ import { countdown } from "./recipes/countdown";
 import { filter } from "./recipes/filter";
 import { lightbox } from "./recipes/lightbox";
 import { copy } from "./recipes/copy";
+import { autoplay } from "./recipes/autoplay";
 import type { Behavior, BehaviorName } from "./types";
 
 // Partial mientras la Fase 2 está en curso; el Task 13 (última receta) lo cierra
@@ -14,6 +15,7 @@ export const BEHAVIORS: Partial<Record<BehaviorName, Behavior>> = {
   filter,
   lightbox,
   copy,
+  autoplay,
 };
 
 /** Orden determinista de emisión. NUNCA el orden de aparición en el HTML: un
