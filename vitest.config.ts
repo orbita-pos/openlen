@@ -24,6 +24,16 @@ export default defineConfig({
   resolve: {
     alias: {
       "@": fileURLToPath(new URL("./", import.meta.url)),
+      // lib/behaviors/validate.ts (and any future server-only module) imports
+      // "server-only" as a marker. Next resolves it to empty.js in production
+      // via the `react-server` exports condition; vitest doesn't set that
+      // condition, so it falls through to index.js, which throws "This module
+      // cannot be imported from a Client Component module". Point the bare
+      // specifier straight at the same empty.js Next would pick — this is an
+      // alias for ONE package, not `resolve.conditions: ["react-server"]`,
+      // which would repoint conditional exports for the entire dependency
+      // tree (React itself included) and is a much bigger blast radius.
+      "server-only": fileURLToPath(new URL("./node_modules/server-only/empty.js", import.meta.url)),
     },
   },
   test: {

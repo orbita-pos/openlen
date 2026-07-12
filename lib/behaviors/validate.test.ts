@@ -1,12 +1,6 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect } from "vitest";
 import { validateBehaviors } from "./validate";
 import type { Behavior, BehaviorName } from "./types";
-
-// validate.ts importa "server-only" (Hallazgo 5 de la revisión). Vitest no fija
-// la condición `react-server` que Next usa para resolver ese paquete al
-// no-op; sin este mock resuelve a la build que TIRA (piensa que está en un
-// client bundle) y la suite entera falla al cargar ./validate.
-vi.mock("server-only", () => ({}));
 
 const REG = {
   countdown: {
