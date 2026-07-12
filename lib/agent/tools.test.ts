@@ -283,6 +283,69 @@ describe("editar_pagina", () => {
     assert.equal(out.response.ok, false);
     assert.equal(store.saved.length, 0);
   });
+
+  // The edit SUCCEEDS (sanitize strips silently, it never blocks) — which is
+  // exactly why the model has to be told. Without the aviso the agent closes
+  // the turn with "listo, ya te puse el mapa" over a document that has no
+  // iframe in it: a false claim its honesty rule can't catch.
+  it("surfaces an aviso when the model's html carried an iframe (map/embed)", async () => {
+    const { deps, store } = makeDeps();
+    const session = makeSession();
+    const target = /<h1[^>]*\bdata-op-id="([^"]+)"/.exec(session.taggedHtml)![1];
+    const out = await runAgentTool(session, deps, "editar_pagina", {
+      edits: [
+        {
+          op: "replace",
+          target,
+          new_html: `<h1>Visítanos</h1><iframe src="https://maps.google.com/x"></iframe>`,
+        },
+      ],
+      resumen: "mapa",
+    });
+    assert.equal(out.response.ok, true);
+    assert.ok(!store.data.html.includes("<iframe"), "the iframe must be gone from the saved doc");
+    const aviso = (out.response as { aviso?: string }).aviso ?? "";
+    assert.match(aviso, /iframe/i);
+    // It must also hand the model the real alternative, not just a refusal.
+    assert.match(aviso, /YouTube|reproductor/i);
+    assert.match(aviso, /jamás afirmes|DÍSELO/i);
+  });
+
+  it("surfaces an aviso when the model's html carried a <script> (dead control)", async () => {
+    const { deps } = makeDeps();
+    const session = makeSession();
+    const target = /<h1[^>]*\bdata-op-id="([^"]+)"/.exec(session.taggedHtml)![1];
+    const out = await runAgentTool(session, deps, "editar_pagina", {
+      edits: [
+        {
+          op: "replace",
+          target,
+          new_html: `<h1>Menú</h1><button onclick="open()">Abrir</button><script>wire()</script>`,
+        },
+      ],
+      resumen: "menú",
+    });
+    assert.equal(out.response.ok, true);
+    const aviso = (out.response as { aviso?: string }).aviso ?? "";
+    assert.match(aviso, /JavaScript/i);
+    // Both counters must be live — a snake_case key on the camelCase napi
+    // surface reads undefined and the whole guard silently never fires.
+    assert.match(aviso, /1 <script>/);
+    assert.match(aviso, /1 atributos on\*/);
+    assert.match(aviso, /CSS puro|<details>/i);
+  });
+
+  it("stays quiet on a clean edit (no aviso to cry wolf with)", async () => {
+    const { deps } = makeDeps();
+    const session = makeSession();
+    const target = /<h1[^>]*\bdata-op-id="([^"]+)"/.exec(session.taggedHtml)![1];
+    const out = await runAgentTool(session, deps, "editar_pagina", {
+      edits: [{ op: "replace", target, new_html: `<h1>Tacos</h1>` }],
+      resumen: "titular",
+    });
+    assert.equal(out.response.ok, true);
+    assert.equal((out.response as { aviso?: string }).aviso, undefined);
+  });
 });
 
 describe("cambiar_tema", () => {

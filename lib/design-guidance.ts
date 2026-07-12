@@ -37,9 +37,35 @@ OUTPUT FORMAT — strict rules (instant failure if violated)
   Fraunces / JetBrains Mono / etc — see FAMILY AESTHETIC in the reference).
 • All custom CSS inline in \`<style>\` inside <head> — keyframes, gradients,
   custom utility classes (pulse-dot, marquee, hairline borders, etc).
-• NO React, NO Babel, NO \`<script type="text/babel">\`, NO \`window.X\`
-  globals. Procedural <script> at end-of-body for SVG path computation IS
-  OK, but only vanilla JS, no frameworks.
+• NO JAVASCRIPT — it does not survive. Every \`<script>\` (inline or remote,
+  the Tailwind CDN tag being the one exception) and every \`on*\` attribute is
+  STRIPPED before the page is ever saved. So no React, no Babel, no
+  \`window.X\` globals — and no "procedural script" to draw an SVG path or wire
+  up a control either: the script is deleted and what's left is an empty
+  \`<path>\` and a dead button. Anything that must MOVE or RESPOND is CSS-only:
+    – accordion / FAQ      → \`<details><summary>\`
+    – mobile nav, toggles  → hidden checkbox + \`peer-checked:\` (or \`:target\`)
+    – tabs                 → radio inputs + \`peer-checked:\`
+    – carousel / rail      → the CAROUSEL contract below (real arrows, no JS from you)
+    – entrances, hovers, marquees → \`@keyframes\` / \`transition\`
+  A \`<button>\` that is not a form submit can do NOTHING. Use an \`<a>\` with a
+  real destination, or one of the CSS patterns above. Never ship a control
+  that only a script could have made work.
+• NO \`<iframe>\` — stripped as well. No embedded map, no Spotify, no Calendly.
+  Video is the exception and needs no iframe: a plain \`<a href>\` pointing at a
+  YouTube or Vimeo URL is turned into an in-page player automatically at
+  publish time. For anything else, do not fake an embed.
+• CAROUSEL — a horizontal rail WITH working arrows is a real OpenLen power:
+  emit the contract and the runtime is baked in for you at publish time. Per row:
+    \`<div data-ol-row class="relative">\`          ← wrapper; must NOT scroll
+      \`<button data-ol-scroll="prev">…</button>\`  ← arrows OUTSIDE the scroller,
+      \`<button data-ol-scroll="next">…</button>\`     so they pin to the edge
+      \`<div data-ol-scroller class="overflow-x-auto flex gap-4 snap-x">\` …cards… \`</div>\`
+    \`</div>\`
+  Swipe and trackpad scroll the rail with no script at all; the arrows get wired
+  at publish (smooth, ~80% of the visible width). Do NOT write your own slider
+  script — it will be deleted — and do NOT wire the arrows with \`:target\`
+  anchors: those scroll the whole document vertically instead of the rail.
 • NO \`data-slot-path=\` attribute anywhere (reserved for editor pipeline).
 • NO login / signup / sign-out / "my account" / dashboard UI of any kind,
   and NO "Sign in" / "Log in" link in the nav. These are PUBLIC informational
@@ -70,6 +96,16 @@ OUTPUT FORMAT — strict rules (instant failure if violated)
   swapped in after generation, so be specific and concrete about the subject.
   Only mark boxes that are PURE image areas (no text/buttons inside them) —
   put captions/headlines as siblings, NOT inside the photo box.
+• LINKS (\`<a href>\`): any URL the brief gives you — the owner's Instagram,
+  shop, booking page, email — is REAL data. Copy it into the href VERBATIM,
+  character for character (query string and letter case included): never
+  "clean" it, shorten it, or change the domain. It must be ABSOLUTE, with a
+  scheme: a brief that says "instagram.com/juan" becomes
+  \`https://instagram.com/juan\`, an email becomes \`mailto:…\`. A scheme-less
+  href is a RELATIVE path, and a published page answers an unknown relative
+  path with the HOME page and a 200 — never a 404 — so the link breaks in
+  total silence. If the brief gives you NO destination, use \`href="#"\`:
+  NEVER invent a handle, a URL, an email or a phone number.
 • Mobile-responsive at 360px minimum width — test mental: the page must
   not break on iPhone SE.
 • Lift-on-hover transitions for buttons and cards (50-150ms ease).

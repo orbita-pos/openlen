@@ -238,4 +238,42 @@ describe("buildAgentSystemPrompt", () => {
     expect(p).toContain("chatbot de propósito general");
     expect(p).toContain("no tienes acceso a internet");
   });
+  it("tells the truth about JS: none survives, interactivity is CSS-only, and an aviso must be confessed", () => {
+    const p = buildAgentSystemPrompt();
+    // The old lie ("procedural <script> … IS OK") is gone from the embedded
+    // design guidance — every <script> is stripped before the page is saved.
+    expect(p).not.toMatch(/Procedural <script>[\s\S]{0,40}IS\s*\n?\s*OK/);
+    expect(p).toContain("NO JAVASCRIPT");
+    // The positive replacement matters more than the ban: without a CSS
+    // toolkit the model just ships the same dead <button> minus the script.
+    expect(p).toContain("<details><summary>");
+    expect(p).toContain("peer-checked:");
+    // A <button> that isn't a form submit is inert — say so.
+    expect(p.toLowerCase()).toContain("no hace nada");
+    // Video is the one embed that works, and it needs a plain <a>, not an iframe.
+    expect(p).toContain("`<iframe>` — stripped as well");
+    expect(p).toContain("YouTube");
+    // The carousel is a REAL baked power (lib/publish/carousel.ts). Left
+    // undocumented, the model writes its own slider script, the sanitizer
+    // deletes it, and the arrows ship dead — so the contract must be in here.
+    expect(p).toContain("data-ol-row");
+    expect(p).toContain('data-ol-scroll="prev"');
+    expect(p).toContain("data-ol-scroller");
+    // The honesty hook on the sanitizer's removal signal.
+    expect(p).toContain("aviso");
+    expect(p).toContain("JAMÁS afirmes que pusiste algo que fue removido");
+  });
+  it("carries the link rule: user URLs verbatim, absolute, never invented, /<slug> for internal pages", () => {
+    const p = buildAgentSystemPrompt();
+    expect(p).toContain("ENLACES");
+    expect(p).toContain("VERBATIM");
+    // The empty-destination fallback — an invented link is worse than none.
+    expect(p).toContain('href="#"');
+    // The why that makes the rule load-bearing: a scheme-less (or .html)
+    // href is a relative path, and Caddy's `try_files … /index.html` serves
+    // the HOME with 200 instead of 404ing — the break is invisible.
+    expect(p).toContain("SILENCIOSO");
+    expect(p).toContain("menu.html");
+    expect(p).toContain("/<slug>");
+  });
 });

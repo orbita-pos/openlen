@@ -46,6 +46,7 @@ import {
 import { imageFetchUrl } from "@/lib/image-fetch-url";
 import { lookFromAccent } from "@/lib/palette-gen";
 import { useToast } from "../toast";
+import { normalizeHref } from "../normalize-href";
 import { ReplaceAssetModal, type ImageTab } from "../replace-asset-modal";
 import {
   ColorField,
@@ -374,7 +375,7 @@ function ElementView({
             value={props.href ?? ""}
             placeholder={t("link.destinationPlaceholder")}
             mono
-            onCommit={(v) => onApply(path, "href", v)}
+            onCommit={(v) => onApply(path, "href", normalizeHref(v))}
           />
           <Toggle
             label={t("link.openInNewTab")}

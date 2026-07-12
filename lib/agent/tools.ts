@@ -629,7 +629,37 @@ interface RawEdit {
   new_html?: unknown;
 }
 
-type PersistResult = { ok: true; finalHtml: string } | { ok: false; error: string };
+type PersistResult =
+  | { ok: true; finalHtml: string; aviso?: string }
+  | { ok: false; error: string };
+
+// The sanitizer silently deletes <script>, on* handlers and <iframe> from any
+// HTML the model writes. Silently, to the MODEL too — which is how the agent
+// ends a turn saying "listo, ya te puse el mapa" over a document where the
+// iframe no longer exists. That's not a bad edit, it's a false claim, and the
+// honesty rule can't fire on a signal the model never receives. So: turn the
+// removal into a fact the model must answer for, phrased as what it now has to
+// DO. NB the napi surface is camelCase (eventHandlers, not event_handlers) — a
+// snake_case key reads undefined and this whole guard silently never fires.
+function sanitizeAviso(removed: {
+  scripts: number;
+  eventHandlers: number;
+  iframes: number;
+}): string | undefined {
+  const parts: string[] = [];
+  if (removed.scripts > 0 || removed.eventHandlers > 0) {
+    parts.push(
+      `Se BORRÓ el JavaScript que escribiste (${removed.scripts} <script>, ${removed.eventHandlers} atributos on*): OpenLen nunca ejecuta JS de la página. Si eso cableaba algo (tabs, acordeón, menú móvil, un botón), ese control quedó MUERTO: rehazlo con CSS puro (<details>/<summary>, checkbox + peer-checked, :target) o dile al usuario que no se puede.`,
+    );
+  }
+  if (removed.iframes > 0) {
+    parts.push(
+      `Se BORRARON ${removed.iframes} <iframe>: no se pueden embeber (ni mapas, ni Spotify, ni Calendly). Si era un video de YouTube/Vimeo, NO necesitas iframe: pon un <a href> normal al video y al publicar se convierte solo en reproductor. Si era otra cosa, no existe — dilo con honestidad.`,
+    );
+  }
+  if (parts.length === 0) return undefined;
+  return `${parts.join(" ")} DÍSELO al usuario en tu respuesta; jamás afirmes que pusiste lo que fue removido.`;
+}
 
 // F4 Task 2 — every read of "the document" must resolve through the
 // session's active slot, not always data.html: page=null → home (data.html),
@@ -667,6 +697,7 @@ async function persistHtmlChange(
   if (sanitized.html === null) {
     return { ok: false, error: "el HTML no pasó la sanitización" };
   }
+  const aviso = sanitizeAviso(sanitized.removed);
 
   const finalHtml = ensurePageMeta(normalizeBornCanonical(sanitized.html));
 
@@ -711,7 +742,7 @@ async function persistHtmlChange(
   // has fresh targets to address.
   session.taggedHtml = tagWithOpIds(finalHtml).taggedHtml;
 
-  return { ok: true, finalHtml };
+  return { ok: true, finalHtml, ...(aviso ? { aviso } : {}) };
 }
 
 async function toolEditarPagina(
@@ -765,6 +796,7 @@ async function toolEditarPagina(
       ok: true,
       edits_aplicados: applied.appliedCount,
       nota: "data-op-id regenerados; usa leer_estado incluir_documento=true para editar de nuevo",
+      ...(persisted.aviso ? { aviso: persisted.aviso } : {}),
     },
     action: { tool: "editar_pagina", ok: true, summary: resumen },
     updatedHtml: persisted.finalHtml,

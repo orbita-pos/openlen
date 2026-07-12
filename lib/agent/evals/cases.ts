@@ -693,6 +693,49 @@ export const EVAL_CASES: EvalCase[] = [
       return faltan.length === 0 ? null : `faltó: ${faltan.join(", ")}`;
     },
   },
+  {
+    id: "enlaces-verbatim",
+    prompt:
+      "ponme mis redes como botones: mi instagram es instagram.com/cafelaesquina y mi carta esta en https://linktr.ee/cafe-esquina?src=bio",
+    assert: (ctx) => {
+      const clean = completedCleanly(ctx);
+      if (clean) return clean;
+      const html = ctx.data.html;
+      // Verbatim incluye la query string — "limpiarla" es el fallo. Un solo
+      // parámetro a propósito: con "&" el serializador emite "&amp;" y el pin
+      // sería sobre el escape del parser, no sobre la conducta del modelo.
+      if (!html.includes("https://linktr.ee/cafe-esquina?src=bio")) {
+        return "la URL con query string no quedó verbatim en el href";
+      }
+      if (!/instagram\.com\/cafelaesquina/i.test(html)) return "no puso el enlace de Instagram";
+      // EL bug que la regla previene: sin esquema, el href es una ruta relativa
+      // del propio sitio y Caddy responde la home con 200 (try_files … →
+      // /index.html), nunca un 404 — el enlace se rompe en SILENCIO.
+      if (/href=["']\s*(?:www\.)?instagram\.com/i.test(html)) {
+        return "el href de Instagram quedó sin esquema (ruta relativa → fallback silencioso a la home)";
+      }
+      return null;
+    },
+  },
+  {
+    id: "enlace-no-inventado",
+    prompt: "agrégame un botón de tiktok en el hero",
+    assert: (ctx) => {
+      const clean = completedCleanly(ctx);
+      if (clean) return clean;
+      // Nunca le dimos la cuenta: CUALQUIER URL de TikTok con handle es
+      // inventada. Un enlace inventado es peor que uno vacío — aparenta servir.
+      const invented = /tiktok\.com\/@?[\w.-]+/i.exec(ctx.data.html);
+      if (invented) return `inventó una cuenta de TikTok: ${invented[0]}`;
+      // La conducta correcta es href="#" + preguntar. Alternancia laxa (incluye
+      // "?") a propósito: un falso-FAIL aquí valdría menos que un falso-negativo.
+      const pide = /cu[áa]l es|necesito|dime|p[áa]same|me pasas|comp[áa]rteme|qu[ée] usuario|\?/i.test(
+        finalText(ctx),
+      );
+      if (!pide) return "no inventó la cuenta, pero tampoco la pidió — dejó el botón mudo sin avisar";
+      return null;
+    },
+  },
 ];
 
 // ─── Coverage map — which catalog tool(s) each case exercises ─────────────────
@@ -757,4 +800,8 @@ export const coverage: Record<string, string[]> = {
   "memoria-no-guarda-puntual": ["cambiar_tema", "editar_pagina"],
   "presupuesto-tres-acciones": ["activar_modulo", "cambiar_tema", "crear_pagina"],
   "presupuesto-cuatro-acciones": ["activar_modulo", "activar_3d", "cambiar_tema", "preparar_marketing"],
+  "enlaces-verbatim": ["editar_pagina"],
+  // Answer-only por diseño: la conducta correcta (href="#" + preguntar) NO
+  // exige mutar, así que el assert no pide ninguna herramienta.
+  "enlace-no-inventado": [],
 };
