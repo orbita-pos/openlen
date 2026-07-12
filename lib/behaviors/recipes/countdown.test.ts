@@ -78,6 +78,14 @@ describe("countdown", () => {
     secsEl.textContent = "CENTINELA";
     vi.advanceTimersByTime(10_000);
     expect(secsEl.textContent).toBe("CENTINELA");
+
+    // El centinela de arriba prueba el efecto ("no reescribe"), pero no la
+    // causa: si alguien borrara el clearInterval(iv) en un refactor futuro,
+    // la rama d<=0 retornaría ANTES de tocar los spans, y el centinela
+    // seguiría intacto con el setInterval igual vivo — un tick por segundo
+    // para siempre en una página publicada que puede quedar abierta horas.
+    // vi.getTimerCount() caza la fuga directamente, sin pasar por el DOM.
+    expect(vi.getTimerCount()).toBe(0);
   });
 
   it("se calla en modo edición: avanzar el reloj no cambia el DOM (no le corrompe el cursor al creador)", () => {
