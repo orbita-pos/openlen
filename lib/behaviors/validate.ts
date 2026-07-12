@@ -1,3 +1,5 @@
+import "server-only";
+
 // SOLO SERVIDOR (lo llama lib/agent/tools.ts). Necesita un árbol real, y por
 // eso NO puede vivir en el mismo archivo que build.ts, que sí es puro y lo
 // importa el preview (client component).
@@ -95,13 +97,20 @@ export function validateBehaviors(html: string, reg: Reg = BEHAVIORS): BehaviorI
         }
       }
 
-      for (const attr of b.schema.untrusted ?? []) {
-        const v = root.getAttribute(attr);
-        if (v !== undefined && !/^https?:\/\//i.test(v.trim())) {
+      for (const attr of b.schema.requiredAttrs ?? []) {
+        if (root.getAttribute(attr) === undefined) {
           issues.push({
             behavior: b.name,
-            message: `${b.marker}: el atributo ${attr} debe ser una URL http(s) — "${v}" no lo es`,
+            message: `${b.marker}: falta el atributo ${attr} — sin él el control nacería muerto`,
           });
+        }
+      }
+
+      for (const attr of b.schema.untrusted ?? []) {
+        const v = root.getAttribute(attr);
+        if (v !== undefined && v !== null) {
+          const err = checkValue({ kind: "httpUrl" }, v);
+          if (err) issues.push({ behavior: b.name, message: `${b.marker}: ${err}` });
         }
       }
     }

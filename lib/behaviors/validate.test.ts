@@ -1,6 +1,12 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { validateBehaviors } from "./validate";
 import type { Behavior, BehaviorName } from "./types";
+
+// validate.ts importa "server-only" (Hallazgo 5 de la revisión). Vitest no fija
+// la condición `react-server` que Next usa para resolver ese paquete al
+// no-op; sin este mock resuelve a la build que TIRA (piensa que está en un
+// client bundle) y la suite entera falla al cargar ./validate.
+vi.mock("server-only", () => ({}));
 
 const REG = {
   countdown: {
@@ -27,6 +33,19 @@ const REG = {
 } as unknown as Partial<Record<BehaviorName, Behavior>>;
 
 const doc = (body: string) => `<!doctype html><html><body>${body}</body></html>`;
+
+// Fixture del futuro `lightbox` (Hallazgo 1 de la revisión): el caso real que
+// motiva requiredAttrs. Sin él, un <a data-ol-lightbox> sin href pasaba el
+// validador y nacía muerto — la degradación declarada de lightbox es "sin
+// runtime, el <a> abre la foto por sí solo", y un <a> sin href no abre nada.
+const LIGHTBOX_REG = {
+  lightbox: {
+    name: "lightbox", marker: "data-ol-lightbox", js: "", budgetBytes: 700,
+    schema: { root: { kind: "flag" }, requiredAttrs: ["href"], untrusted: ["href"] },
+    degradation: "content-intact", a11y: [], status: "stable",
+    doc: { when: "", whenNot: "", example: "" },
+  },
+} as unknown as Partial<Record<BehaviorName, Behavior>>;
 
 describe("validateBehaviors — el valor del atributo raíz", () => {
   it("acepta una fecha ISO", () => {
@@ -74,5 +93,30 @@ describe("validateBehaviors — la estructura", () => {
 describe("validateBehaviors — silencio cuando no hay conductas", () => {
   it("una pagina sin marcadores no produce ningun issue", () => {
     expect(validateBehaviors(doc(`<p>hola</p>`), REG)).toEqual([]);
+  });
+});
+
+describe("validateBehaviors — requiredAttrs + la rama untrusted (href de un <a data-ol-lightbox>)", () => {
+  it("caza un href ausente por completo — Hallazgo 1: hoy esto NO se caza (issues: [])", () => {
+    const html = doc(`<a data-ol-lightbox>foto</a>`);
+    const issues = validateBehaviors(html, LIGHTBOX_REG);
+    expect(issues).toHaveLength(1);
+    expect(issues[0].message).toMatch(/falta el atributo href/);
+  });
+  it("caza un href presente pero vacío (falla el regex http(s))", () => {
+    const html = doc(`<a data-ol-lightbox href="">foto</a>`);
+    const issues = validateBehaviors(html, LIGHTBOX_REG);
+    expect(issues).toHaveLength(1);
+    expect(issues[0].message).toMatch(/https?:\/\//);
+  });
+  it("caza un href javascript: (no http/https)", () => {
+    const html = doc(`<a data-ol-lightbox href="javascript:alert(1)">foto</a>`);
+    const issues = validateBehaviors(html, LIGHTBOX_REG);
+    expect(issues).toHaveLength(1);
+    expect(issues[0].message).toMatch(/javascript:alert\(1\)/);
+  });
+  it("acepta un href https válido — cero issues", () => {
+    const html = doc(`<a data-ol-lightbox href="https://images.openlen.com/x.jpg">foto</a>`);
+    expect(validateBehaviors(html, LIGHTBOX_REG)).toEqual([]);
   });
 });

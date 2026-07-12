@@ -59,6 +59,11 @@ export interface Behavior {
      *  (la estructura del carrusel, que NO es una conducta de este registro:
      *  vive en lib/publish/carousel.ts y ya está desplegada). */
     requiresHost?: string;
+    /** Atributos que DEBEN existir en el elemento raíz. `untrusted` solo
+     *  revalida el valor cuando el atributo está presente; esto exige que esté.
+     *  Sin él, un <a data-ol-lightbox> sin href pasaría el validador y nacería
+     *  muerto — justo lo que este sistema existe para impedir. */
+    requiredAttrs?: string[];
     /** Atributos cuyo valor acaba en un sink del DOM (href → img.src). El
      *  runtime DEBE revalidarlos en el punto de uso: el sanitizer es una capa,
      *  no la única. */
