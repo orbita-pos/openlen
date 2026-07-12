@@ -15,7 +15,27 @@ import type { Behavior, BehaviorName } from "./types";
 // type (not just the runtime array), which strict mode requires downstream
 // in every describe.each case below.
 const entries = BEHAVIOR_ORDER.map((n) => BEHAVIORS[n]).filter((b): b is Behavior => b !== undefined);
-const TOTAL_BUDGET = 4096;
+// 4096 (el valor original) era incoherente con el propio contrato: el
+// presupuesto POR RECETA es 700B (ver budgetBytes en cada recipes/*.ts) y
+// BEHAVIOR_ORDER tiene 7 recetas, así que el peor caso legítimo por JS solo
+// ya es 7×700=4900B — MÁS que el techo global, antes de sumar un solo byte
+// de overhead. El techo nunca fue alcanzable con las 7 recetas usando el
+// presupuesto que su propio contrato les concede; los dos números se
+// contradecían entre sí, no es que nos estuviéramos apretando a propósito.
+// Cota superior real hoy (medida, no adivinada): 7×700B (recetas) + ~145B
+// (EDIT_GUARD_JS) + ~82B (el inyector de <style> fijo, sin contar el CSS que
+// inyecta) + 8×17B (wrappers IIFE: 1 exterior + 1 por receta, build.ts) +
+// el CSS de las recetas (280B ya en filter+lightbox, más lo que aporten
+// autoplay/theme/sticky) ≈ 5.4KB. 6144B (6KB) lo cubre con margen y SIGUE
+// siendo un techo real, no una barra libre.
+// El gate de verdad no es este número: es Lighthouse 100 sobre una página
+// publicada con las 7 recetas (Task 14, E2E). 6KB de JS inline no mueve la
+// aguja de Lighthouse — el techo existe para que el bloat no crezca EN
+// SILENCIO, no porque 4096 (ni 6144) fueran un límite físico.
+// El presupuesto POR RECETA (700B) NO se toca aquí: ese es el verdadero
+// mecanismo de disciplina, y las 4 recetas ya enviadas (631-685B) prueban
+// que es alcanzable sin sacrificar comportamiento.
+const TOTAL_BUDGET = 6144;
 
 /** Registro falso mínimo — no hace falta una segunda receta real para probar
  *  que el arnés compone y aísla correctamente. Mismo patrón que
