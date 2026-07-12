@@ -50,6 +50,22 @@ export function buildBehaviorsHead(
   return js ? `(function(){${js}})();` : null;
 }
 
+// Sin `</head>` NUNCA se antepone el script al documento: un token que no sea
+// whitespace ANTES del <!DOCTYPE> mete al navegador en quirks mode, y eso le
+// cambia el box model a la página entera. Se inserta tras el doctype — el
+// parser eleva ese <script> al <head> implícito — y solo si no hay doctype es
+// seguro anteponer.
+function injectIntoHead(html: string, tag: string): string {
+  const hIdx = html.indexOf("</head>");
+  if (hIdx !== -1) return html.slice(0, hIdx) + tag + html.slice(hIdx);
+  const dt = /<!doctype[^>]*>/i.exec(html);
+  if (dt) {
+    const at = dt.index + dt[0].length;
+    return html.slice(0, at) + tag + html.slice(at);
+  }
+  return tag + html;
+}
+
 /** Inyecta el runtime antes de </body> (y el pre-paint antes de </head>).
  *  Idempotente vía BEHAVIORS_MARKER — mismo patrón que injectTrackingStrip. */
 export function bakeBehaviors(
@@ -64,9 +80,7 @@ export function bakeBehaviors(
   let out = html;
   const head = buildBehaviorsHead(html, reg, order);
   if (head) {
-    const hIdx = out.indexOf("</head>");
-    const headTag = `<script ${BEHAVIORS_MARKER}-head>${head}</script>`;
-    out = hIdx === -1 ? headTag + out : out.slice(0, hIdx) + headTag + out.slice(hIdx);
+    out = injectIntoHead(out, `<script ${BEHAVIORS_MARKER}-head>${head}</script>`);
   }
   const tag = `<script ${BEHAVIORS_MARKER}>${body}</script>`;
   const idx = out.lastIndexOf("</body>");

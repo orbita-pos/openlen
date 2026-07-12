@@ -1,10 +1,10 @@
 import { describe, it, expect } from "vitest";
-import { buildBehaviorsScript, bakeBehaviors, BEHAVIORS_MARKER } from "./build";
+import { buildBehaviorsScript, buildBehaviorsHead, bakeBehaviors, BEHAVIORS_MARKER } from "./build";
 import type { Behavior, BehaviorName } from "./types";
 
-const fake = (name: string, marker: string, js: string): Behavior =>
+const fake = (name: string, marker: string, js: string, headJs?: string): Behavior =>
   ({
-    name: name as BehaviorName, marker, js, budgetBytes: 700,
+    name: name as BehaviorName, marker, js, headJs, budgetBytes: 700,
     schema: { root: { kind: "flag" } },
     degradation: "content-intact", a11y: [], status: "stable",
     doc: { when: "", whenNot: "", example: "" },
@@ -47,5 +47,32 @@ describe("bakeBehaviors", () => {
   it("no toca una página sin conductas", () => {
     const html = `<html><body><p>hola</p></body></html>`;
     expect(bakeBehaviors(html, REG, ORDER)).toBe(html);
+  });
+});
+
+describe("inyección en <head> (headJs)", () => {
+  const REG_HEAD = {
+    theme: fake("theme", "data-ol-theme", "/*BODY*/", "/*HEAD*/"),
+  } as Partial<Record<BehaviorName, Behavior>>;
+  const ORDER_HEAD: BehaviorName[] = ["theme"];
+
+  it("con </head> presente, el script del head va antes de </head>", () => {
+    const html = `<!DOCTYPE html><html><head></head><body><div data-ol-theme="x"></div></body></html>`;
+    const out = bakeBehaviors(html, REG_HEAD, ORDER_HEAD);
+    expect(out).toContain("/*HEAD*/");
+    expect(out.indexOf("/*HEAD*/")).toBeLessThan(out.indexOf("</head>"));
+  });
+
+  it("sin </head> pero con <!DOCTYPE html>, el doctype sigue siendo lo primero del documento", () => {
+    const html = `<!DOCTYPE html><html><body><div data-ol-theme="x"></div></body></html>`;
+    const out = bakeBehaviors(html, REG_HEAD, ORDER_HEAD);
+    expect(out.trimStart().startsWith("<!DOCTYPE")).toBe(true);
+    expect(out).toContain("/*HEAD*/");
+  });
+
+  it("buildBehaviorsHead: IIFE envuelto si hay headJs, null si ninguna conducta lo tiene", () => {
+    const html = `<div data-ol-theme="x"></div>`;
+    expect(buildBehaviorsHead(html, REG_HEAD, ORDER_HEAD)).toBe("(function(){/*HEAD*/})();");
+    expect(buildBehaviorsHead(`<div data-ol-countdown="x"></div>`, REG, ORDER)).toBeNull();
   });
 });
