@@ -67,14 +67,31 @@ describe.each(entries.map((b) => [b.name, b] as const))("conducta: %s", (_name, 
     }
   });
 
-  it("si promete content-intact, su ejemplo NO oculta contenido sin runtime", () => {
+  it("si promete content-intact, montado con su css y SIN ejecutar su runtime, ningún elemento del ejemplo nace oculto", () => {
     if (b.degradation !== "content-intact") return;
-    // Sin el runtime, ningun elemento del ejemplo puede nacer oculto: ese es
-    // exactamente el bug que mato a las plantillas (opacity:0 esperando un JS
-    // que nunca llega).
-    expect(b.doc.example).not.toMatch(/style="[^"]*display:\s*none/i);
-    expect(b.doc.example).not.toMatch(/\bhidden\b(?!-)/);
-    expect(b.doc.example).not.toMatch(/opacity:\s*0/i);
+    // Invariante COMPUTADO, no textual: escanear el string del ejemplo (como
+    // hacía esta prueba antes) se salta cualquier ocultamiento que llegue vía
+    // b.css — ej. ".ol-cd-init{opacity:0}" sobre una clase que el ejemplo usa
+    // pasaba en verde. Montamos ejemplo+css en el DOM, SIN correr b.js (el
+    // runtime está apagado a propósito — eso es lo que "sin runtime" simula),
+    // y leemos el estilo YA calculado. Esto es lo que deja pasar a `filter`
+    // legítimamente: su css es "[data-ol-hidden]{display:none!important}",
+    // pero ningún elemento del ejemplo lleva ese atributo — solo el runtime
+    // lo pone, tras un click — así que no oculta a nadie.
+    document.head.innerHTML = `<style>${b.css ?? ""}</style>`;
+    document.body.innerHTML = b.doc.example;
+    try {
+      for (const el of Array.from(document.body.querySelectorAll<HTMLElement>("*"))) {
+        const style = getComputedStyle(el);
+        const culprit = `${b.name}: ${el.outerHTML.slice(0, 120)}`;
+        expect(style.display, `${culprit} — nace con display:none sin runtime`).not.toBe("none");
+        expect(style.opacity, `${culprit} — nace con opacity:0 sin runtime`).not.toBe("0");
+        expect(el.hasAttribute("hidden"), `${culprit} — nace con [hidden] sin runtime`).toBe(false);
+      }
+    } finally {
+      document.head.innerHTML = "";
+      document.body.innerHTML = "";
+    }
   });
 
   it("no usa eval, new Function ni innerHTML con datos de atributos", () => {
