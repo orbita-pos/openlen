@@ -209,6 +209,27 @@ describe.each(entries.map((b) => [b.name, b] as const))("conducta: %s", (_name, 
     expect(b.js).not.toMatch(/\.innerHTML\s*=/);
   });
 
+  // Guard estático y débil (busca el fragmento, no ejecuta nada) — a propósito:
+  // caza exactamente la regresión que ya se coló CUATRO veces (clearInterval de
+  // countdown, try/catch de execCommand en copy, el arnés de degradación que
+  // escaneaba texto en vez de computar estilo, y el clearInterval de autoplay
+  // — ver progress.md, "LECCIÓN ESTRUCTURAL"). Un test que solo comprueba el
+  // EFECTO (ej. "scrollBy no se llamó") pasa en verde si alguien muta el
+  // mecanismo de parada a un simple flag que hace que el tick retorne
+  // temprano — el setInterval sigue vivo, gastando un tick por intervalo para
+  // siempre en una página publicada que el visitante puede dejar abierta
+  // horas. Un flag que finge parar NO es limpiar. Esta prueba vive en el
+  // ARNÉS (no en cada recipes/*.test.ts) para que la próxima receta con
+  // setInterval la herede gratis, sin depender de que su implementer recuerde
+  // escribirla a mano.
+  it("si su runtime usa setInterval, TAMBIÉN usa clearInterval (un flag que finge parar no es limpiar)", () => {
+    if (!b.js.includes("setInterval")) return;
+    expect(
+      b.js,
+      `${b.name}: usa setInterval pero su js no contiene "clearInterval" — un intervalo que nunca se limpia es una fuga real en una página que puede quedar abierta horas; un flag que hace que el tick retorne temprano no cuenta como limpiar`,
+    ).toMatch(/clearInterval/);
+  });
+
   it("documenta cuándo NO usarse (una receta sin whenNot invita a usarla mal)", () => {
     expect(b.doc.when.length).toBeGreaterThan(10);
     expect(b.doc.whenNot.length).toBeGreaterThan(10);

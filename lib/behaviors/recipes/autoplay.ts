@@ -99,7 +99,7 @@ import type { Behavior } from "../types";
 // en filter: el validador es una capa, no la única: si algo se cuela sin
 // [data-ol-scroller] o con un ms inválido (0/NaN), el runtime se apaga en
 // silencio — ni instala un setInterval en modo runaway, ni truena.
-const JS = `var q=window.matchMedia;if(q&&q('(prefers-reduced-motion: reduce)').matches)return;document.querySelectorAll('[data-ol-autoplay]').forEach(function(m){var r=m.closest('[data-ol-row]'),s=r&&r.querySelector('[data-ol-scroller]'),ms=+m.getAttribute('data-ol-autoplay');if(!s||!ms)return;var o=0;r.onmouseenter=function(){o=1};r.onmouseleave=function(){o=0};var iv=setInterval(tick,ms);function k(){clearInterval(iv)}r.addEventListener('pointerdown',k);r.addEventListener('keydown',k);function tick(){if(olEditing()||o||r.contains(document.activeElement))return;s.scrollBy({left:s.scrollLeft+s.clientWidth>=s.scrollWidth?-s.scrollLeft:Math.max(240,s.clientWidth*.8),behavior:'smooth'})}});`;
+const JS = `var q=window.matchMedia;if(q&&q('(prefers-reduced-motion: reduce)').matches)return;document.querySelectorAll('[data-ol-autoplay]').forEach(function(m){var r=m.closest('[data-ol-row]'),s=r&&r.querySelector('[data-ol-scroller]'),ms=+m.getAttribute('data-ol-autoplay');if(!s||!ms)return;var o=0;r.onmouseenter=function(){o=1};r.onmouseleave=function(){o=0};var iv=setInterval(tick,ms);function k(){clearInterval(iv)}r.addEventListener('pointerdown',k);r.addEventListener('keydown',k);function tick(){if(olEditing()||o||r.contains(document.activeElement))return;s.scrollBy({left:s.scrollLeft+s.clientWidth>=s.scrollWidth?-s.scrollLeft:Math.max(240,Math.round(s.clientWidth*.8)),behavior:'smooth'})}});`;
 
 export const autoplay: Behavior = {
   name: "autoplay",

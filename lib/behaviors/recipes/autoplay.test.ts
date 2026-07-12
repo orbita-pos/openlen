@@ -149,6 +149,16 @@ describe("autoplay", () => {
     vi.advanceTimersByTime(2000 * 5);
 
     expect(scrollBy).not.toHaveBeenCalled();
+    // El assert de arriba prueba el EFECTO (scrollBy no se llama), no la
+    // CAUSA: un mutante que cambia `function k(){clearInterval(iv)}` por un
+    // flag (`stopped=true`, comprobado al inicio de tick) deja el tick
+    // retornando temprano — ese assert seguiría en verde — pero el
+    // setInterval JAMÁS se limpia: un tick cada `ms` para siempre en una
+    // página publicada que el visitante puede dejar abierta horas.
+    // vi.getTimerCount() caza la fuga directamente, sin pasar por scrollBy —
+    // exactamente el mutante que coló los 11 tests de esta suite en verde
+    // (ver progress.md, Task 11/12).
+    expect(vi.getTimerCount()).toBe(0);
   });
 
   it("para definitivamente al interactuar: un keydown dentro del row también detiene el avance para siempre", () => {
@@ -161,6 +171,11 @@ describe("autoplay", () => {
     vi.advanceTimersByTime(2000 * 5);
 
     expect(scrollBy).not.toHaveBeenCalled();
+    // Mismo razonamiento que en la variante pointerdown de arriba: el mismo
+    // `k()` compartido limpia el mismo `iv`, así que la misma fuga (flag en
+    // vez de clearInterval) amenaza esta rama también — necesita su propia
+    // red, no basta con que la otra variante la tenga.
+    expect(vi.getTimerCount()).toBe(0);
   });
 
   it("wraparound: con el scroller al final, el siguiente tick vuelve al principio (left negativo)", () => {
