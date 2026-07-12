@@ -7,17 +7,24 @@ import { lightbox } from "./recipes/lightbox";
 import { copy } from "./recipes/copy";
 import { autoplay } from "./recipes/autoplay";
 import { theme } from "./recipes/theme";
+import { sticky } from "./recipes/sticky";
 import type { Behavior, BehaviorName } from "./types";
 
-// Partial mientras la Fase 2 está en curso; el Task 13 (última receta) lo cierra
-// y la suite de conformidad exige entonces que estén las 7.
-export const BEHAVIORS: Partial<Record<BehaviorName, Behavior>> = {
+// Record completo desde el Task 13 (última receta, séptima y cierre del
+// catálogo): las 7 conductas de BEHAVIOR_ORDER existen. La suite de
+// conformidad (conformance.test.ts) exige igualdad estricta entre las claves
+// de aquí y BEHAVIOR_ORDER — registrar una conducta sin ponerla en el orden
+// (o al revés) es CI rojo a partir de ahora, y `Record` (ya no `Partial`)
+// hace que TypeScript mismo rechace un catálogo incompleto en tiempo de
+// compilación, antes de llegar siquiera al test.
+export const BEHAVIORS: Record<BehaviorName, Behavior> = {
   countdown,
   filter,
   lightbox,
   copy,
   autoplay,
   theme,
+  sticky,
 };
 
 /** Orden determinista de emisión. NUNCA el orden de aparición en el HTML: un

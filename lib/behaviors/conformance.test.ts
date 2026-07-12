@@ -50,12 +50,19 @@ function fakeBehavior(name: BehaviorName, marker: string, js: string): Behavior 
 }
 
 describe("conformidad del registro", () => {
-  it("toda receta registrada está en BEHAVIOR_ORDER (si no, nunca se emitiría)", () => {
-    // Subconjunto, no igualdad: durante la Fase 2 el registro se llena receta a
-    // receta. El Task 13 (última receta) añade la comprobación de completitud.
-    for (const k of Object.keys(BEHAVIORS)) {
-      expect(BEHAVIOR_ORDER, `"${k}" está en BEHAVIORS pero no en BEHAVIOR_ORDER`).toContain(k);
-    }
+  it("BEHAVIORS y BEHAVIOR_ORDER son EXACTAMENTE el mismo conjunto (catálogo cerrado desde el Task 13)", () => {
+    // Igualdad estricta, no subconjunto: la Fase 2 (registro llenándose
+    // receta a receta) terminó con `sticky`, la séptima y última. De aquí en
+    // adelante registrar una conducta sin ponerla en BEHAVIOR_ORDER (nunca se
+    // emitiría — el filtro de `present()` en build.ts recorre `order`, no
+    // `Object.keys(reg)`) o al revés (un nombre en BEHAVIOR_ORDER sin receta
+    // — `present()` lo saltaría en silencio, pero el `Record` de BEHAVIORS ya
+    // ni compila con un hueco) es CI rojo. .sort() antes de comparar: importa
+    // que sean el MISMO conjunto, no el mismo orden — BEHAVIOR_ORDER es
+    // deliberadamente el orden de EMISIÓN (estabilidad del hash del script,
+    // ver el comentario ahí), no tiene por qué coincidir con el de
+    // Object.keys.
+    expect(Object.keys(BEHAVIORS).sort()).toEqual([...BEHAVIOR_ORDER].sort());
   });
 
   it("el script COMPUESTO real (guard + estilos + wrappers) cabe en el presupuesto global", () => {
