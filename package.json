@@ -38,6 +38,7 @@
     "3d:build": "node scripts/build-3d-runtime.mjs",
     "3d:gate": "tsx scripts/qa/3d-born100-gate.mjs",
     "3d:generate-smoke": "tsx scripts/qa/3d-generate-smoke.mjs",
+    "behaviors:gate": "tsx scripts/qa/behaviors-born100-gate.mjs",
     "cron:bundle": "node scripts/build-cron.mjs",
     "versions:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/versions-migrate.ts",
     "chat:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/chat-migrate.ts",
