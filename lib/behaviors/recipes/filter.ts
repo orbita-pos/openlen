@@ -26,7 +26,14 @@ import type { Behavior } from "../types";
 // resto de botones del grupo). Sin el `&&` defensivo de lightbox antes de
 // `.closest`: aquí `e.target` es SIEMPRE el objetivo de un click real
 // (delegado en document), nunca algo sin prototipo de Element.
-const JS = `document.addEventListener('click',function(e){if(olEditing())return;var F='[data-ol-filter]';var b=e.target.closest(F);if(!b)return;var g=b.closest('[data-ol-filter-group]');if(!g)return;var n=g.getAttribute('data-ol-filter-group');var t=document.querySelector('[data-ol-filter-target="'+n+'"]');if(!t)return;var v=b.getAttribute('data-ol-filter');var el=t.querySelectorAll('[data-ol-tag]');for(var i=0;i<el.length;i++){var x=el[i],tg=x.getAttribute('data-ol-tag').split(' ');x.toggleAttribute('data-ol-hidden',v!=='*'&&!~tg.indexOf(v))}var bs=g.querySelectorAll(F);for(var j=0;j<bs.length;j++)bs[j].setAttribute('aria-pressed',bs[j]===b)});`;
+// t=…querySelector wrapped in try/catch: `n` is data-ol-filter-group's VALUE,
+// a host attribute the validator never schema-checks (only the marker's own
+// value is). A creator/AI value like `x"]),[data-ol-tag` turns the
+// constructed `[data-ol-filter-target="…"]` string into an invalid selector,
+// and querySelector throws SyntaxError, uncaught, mid-listener — same
+// try/catch contract theme.ts/copy.ts already honor for their own fallible
+// calls. Degrades to `t` staying undefined, so `if(!t)return` still applies.
+const JS = `document.addEventListener('click',function(e){if(olEditing())return;var F='[data-ol-filter]';var b=e.target.closest(F);if(!b)return;var g=b.closest('[data-ol-filter-group]');if(!g)return;var n=g.getAttribute('data-ol-filter-group'),t;try{t=document.querySelector('[data-ol-filter-target="'+n+'"]')}catch{}if(!t)return;var v=b.getAttribute('data-ol-filter');var el=t.querySelectorAll('[data-ol-tag]');for(var i=0;i<el.length;i++){var x=el[i],tg=x.getAttribute('data-ol-tag').split(' ');x.toggleAttribute('data-ol-hidden',v!=='*'&&!~tg.indexOf(v))}var bs=g.querySelectorAll(F);for(var j=0;j<bs.length;j++)bs[j].setAttribute('aria-pressed',bs[j]===b)});`;
 
 const CSS = `[data-ol-hidden]{display:none!important}`;
 
