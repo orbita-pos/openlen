@@ -4,7 +4,7 @@ import type { Behavior, BehaviorName } from "./types";
 
 const fake = (name: string, marker: string, js: string, headJs?: string): Behavior =>
   ({
-    name: name as BehaviorName, marker, js, headJs, budgetBytes: 700,
+    name: name as BehaviorName, marker, js, headJs, budgetBytes: 700, docBudgetChars: 1200,
     schema: { root: { kind: "flag" } },
     degradation: "content-intact", a11y: [], status: "stable",
     doc: { when: "", whenNot: "", example: "" },

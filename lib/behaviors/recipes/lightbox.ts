@@ -39,6 +39,7 @@ export const lightbox: Behavior = {
   js: JS,
   css: CSS,
   budgetBytes: 700,
+  docBudgetChars: 1200,
   degradation: "content-intact",
   // Los ARIA (role=dialog, aria-modal=true) los pone el runtime en el MODAL
   // que crea — el modal no existe en doc.example, así que no hay nada que

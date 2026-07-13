@@ -48,6 +48,7 @@ export const theme: Behavior = {
   js: JS,
   headJs: HEAD_JS,
   budgetBytes: 700,
+  docBudgetChars: 1200,
   // control-inert, no content-intact: sin runtime el botón no hace nada —
   // pero es un CONTROL (el toggle de tema), nunca contenido, así que la
   // promesa de este sistema no se rompe. Aceptado por escrito en el spec §13

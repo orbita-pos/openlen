@@ -115,6 +115,7 @@ export const autoplay: Behavior = {
   },
   js: JS,
   budgetBytes: 700,
+  docBudgetChars: 1200,
   // Sin runtime, carousel.ts ya cablea las flechas y el scroller acepta
   // swipe/wheel nativo — el visitante pierde el avance automático, nada
   // más. No hay nada que este runtime posea que no exista ya sin él.

@@ -6,12 +6,14 @@ import { CAROUSEL_JS } from "@/lib/publish/carousel";
 
 const doc = (body: string) => `<!doctype html><html><head></head><body>${body}</body></html>`;
 
-// Registro falso — el real (lib/behaviors/registry.ts) sigue vacío en F1 (las
-// recetas llegan en F2), así que probar contra él no afirmaría nada. Mismo
-// patrón exacto que lib/behaviors/build.test.ts.
+// Registro falso — no el real (lib/behaviors/registry.ts, con las 7 recetas
+// desde el Task 13): este archivo prueba paridad byte-a-byte de MECANISMO
+// (aislamiento, wrapping, marcador) contra un registro controlado, no el
+// contenido de cada receta real. Mismo patrón exacto que
+// lib/behaviors/build.test.ts.
 const fake = (name: string, marker: string, js: string, headJs?: string): Behavior =>
   ({
-    name: name as BehaviorName, marker, js, headJs, budgetBytes: 700,
+    name: name as BehaviorName, marker, js, headJs, budgetBytes: 700, docBudgetChars: 1200,
     schema: { root: { kind: "flag" } },
     degradation: "content-intact", a11y: [], status: "stable",
     doc: { when: "", whenNot: "", example: "" },

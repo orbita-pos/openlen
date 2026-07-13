@@ -173,11 +173,12 @@ describe("stripEditorInstrumentation — Editor V5 markers", () => {
 
 describe("stripEditorInstrumentation — behaviors runtime scripts", () => {
   // Same fake-registry pattern as lib/behaviors/build.test.ts and
-  // use-behaviors-preview.test.ts — the real registry (lib/behaviors/registry.ts)
-  // is still empty in F1, so testing against it wouldn't prove anything.
+  // use-behaviors-preview.test.ts — this file tests the STRIPPING mechanism
+  // against a controlled registry, independent of what the real registry
+  // (lib/behaviors/registry.ts, all 7 recipes since Task 13) happens to contain.
   const fake = (name: string, marker: string, js: string, headJs?: string): Behavior =>
     ({
-      name: name as BehaviorName, marker, js, headJs, budgetBytes: 700,
+      name: name as BehaviorName, marker, js, headJs, budgetBytes: 700, docBudgetChars: 1200,
       schema: { root: { kind: "flag" } },
       degradation: "content-intact", a11y: [], status: "stable",
       doc: { when: "", whenNot: "", example: "" },

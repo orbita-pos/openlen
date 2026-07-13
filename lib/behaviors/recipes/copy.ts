@@ -52,6 +52,7 @@ export const copy: Behavior = {
   },
   js: JS,
   budgetBytes: 700,
+  docBudgetChars: 1200,
   degradation: "content-intact",
   a11y: [{ selector: ":root", attr: "aria-label" }],
   doc: {

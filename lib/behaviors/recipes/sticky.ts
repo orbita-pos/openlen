@@ -70,6 +70,7 @@ export const sticky: Behavior = {
   },
   js: JS,
   budgetBytes: 700,
+  docBudgetChars: 1200,
   // El nav sin runtime se queda en su estado inicial (el que la IA le dio en
   // `class`) — ya es un nav perfectamente usable, solo no gana el aspecto
   // "sólido" al bajar. Nada se pierde, es pura mejora progresiva: por eso

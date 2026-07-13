@@ -42,7 +42,7 @@ const TOTAL_BUDGET = 6144;
  *  build.test.ts::fake() y use-behaviors-preview.test.ts::fake(). */
 function fakeBehavior(name: BehaviorName, marker: string, js: string): Behavior {
   return {
-    name, marker, js, budgetBytes: 4096,
+    name, marker, js, budgetBytes: 4096, docBudgetChars: 4096,
     schema: { root: { kind: "flag" } },
     degradation: "content-intact", a11y: [], status: "stable",
     doc: { when: "", whenNot: "", example: "" },
@@ -152,6 +152,24 @@ describe.each(entries.map((b) => [b.name, b] as const))("conducta: %s", (_name, 
     const bytes = Buffer.byteLength(b.js, "utf8");
     expect(bytes, `${b.name}: ${bytes}B > ${b.budgetBytes}B`)
       .toBeLessThanOrEqual(b.budgetBytes);
+  });
+
+  it("su documentación (when+whenNot+example) respeta su presupuesto de caracteres", () => {
+    // Mismo mecanismo que budgetBytes de arriba, pero para la sección
+    // CONDUCTAS de DESIGN_GUIDANCE en vez del runtime — es la razón por la
+    // que ese techo es real y no una convención de estilo: sin este harness,
+    // un `whenNot` como el de `theme` (830 chars — más largo que el example
+    // COMPLETO de lightbox, 375 chars) podría crecer sin límite en cada
+    // receta nueva, y la sección CONDUCTAS (ya el 25% de todo DESIGN_GUIDANCE
+    // hoy) se comería el presupuesto de tokens de cada generación sin que
+    // nada lo notara. El mensaje de fallo reporta cuánto mide y cuánto sobra
+    // (o falta) — igual que el de budgetBytes.
+    const chars = b.doc.when.length + b.doc.whenNot.length + b.doc.example.length;
+    const margin = b.docBudgetChars - chars;
+    expect(
+      chars,
+      `${b.name}: ${chars} chars de ${b.docBudgetChars} — margen ${margin} chars`,
+    ).toBeLessThanOrEqual(b.docBudgetChars);
   });
 
   it("el marcador coincide con el que el ejemplo usa", () => {

@@ -91,6 +91,15 @@ export interface Behavior {
   /** De aquí se GENERA la documentación que lee la IA. No se escribe aparte. */
   doc: { when: string; whenNot: string; example: string };
 
+  /** Techo de caracteres para `doc.when + doc.whenNot + doc.example` juntos,
+   *  el mismo mecanismo que `budgetBytes` pero para la sección CONDUCTAS de
+   *  DESIGN_GUIDANCE en vez del runtime — es la razón por la que los runtimes
+   *  miden 640-700B y no 3KB: un techo real, exigido por conformance.test.ts,
+   *  no una convención de estilo. 1200 es el valor de las 7 recetas actuales
+   *  (theme, la más verbosa, está en ~1136 — pasa raspando a propósito: es el
+   *  techo real que la próxima receta también tiene que respetar). */
+  docBudgetChars: number;
+
   status: "stable" | "experimental" | "deprecated";
 }
 

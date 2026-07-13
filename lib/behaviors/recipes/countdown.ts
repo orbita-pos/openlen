@@ -39,6 +39,7 @@ export const countdown: Behavior = {
   },
   js: JS,
   budgetBytes: 700,
+  docBudgetChars: 1200,
   // control-inert, no content-intact: sin runtime se ven los ceros que
   // escribió la IA en el ejemplo (feo, pero no roto) — y por eso el arnés
   // permite que [data-ol-cd-ended] nazca con style="display:none": su estado

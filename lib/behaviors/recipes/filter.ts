@@ -45,6 +45,7 @@ export const filter: Behavior = {
   js: JS,
   css: CSS,
   budgetBytes: 700,
+  docBudgetChars: 1200,
   degradation: "content-intact",
   a11y: [{ selector: ":root", attr: "aria-pressed" }],
   doc: {
