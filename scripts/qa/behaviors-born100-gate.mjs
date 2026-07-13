@@ -56,6 +56,61 @@ import { mkdtempSync, writeFileSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { createServer } from "node:http";
+import { BEHAVIORS, BEHAVIOR_ORDER } from "../../lib/behaviors/registry.ts";
+
+// ── Catalog-coverage self-check — runs BEFORE Chrome/publish/network ───────
+// MARKERS (used further down by the static substring checks) is DERIVED from
+// the registry, not hand-copied, so a new recipe's marker is automatically
+// picked up. That is NOT enough on its own: this gate's actual reason to
+// exist is the 8 hand-written Puppeteer interactions below (real clicks /
+// scrolls / computed-style reads through the real seal) — a marker merely
+// showing up in a substring check proves nothing about whether the recipe
+// works. Those interactions can't be generated generically (a generic "does
+// the marker's element exist" loop would not have caught a single one of the
+// regressions logged in lib/behaviors/conformance.test.ts's "aislamiento
+// entre recetas" comment), so they stay hand-written, one safeAssert per
+// behavior — which means nothing FORCES a new one to get written when
+// behavior #8 is registered. BEHAVIOR_GATE_ASSERTIONS is that missing force:
+// the manually-maintained ledger of which behavior has a numbered safeAssert
+// below (see the numbered safeAssert/record calls further down). If the
+// registry grows and this ledger doesn't move with it, the gate fails here,
+// loudly, before touching Chrome — never silently green.
+const BEHAVIOR_GATE_ASSERTIONS = {
+  countdown: 2,
+  filter: 3,
+  lightbox: 4,
+  copy: 5,
+  autoplay: 6,
+  theme: 7,
+  sticky: 8,
+};
+const MARKERS = BEHAVIOR_ORDER.map((name) => BEHAVIORS[name].marker);
+{
+  const registered = [...BEHAVIOR_ORDER].sort();
+  const asserted = Object.keys(BEHAVIOR_GATE_ASSERTIONS).sort();
+  const uncovered = registered.filter((n) => !asserted.includes(n));
+  const stale = asserted.filter((n) => !registered.includes(n));
+  if (uncovered.length || stale.length) {
+    const lines = ["GATE FAILED — el catalogo de conductas crecio pero este gate no lo siguio:"];
+    for (const name of uncovered) {
+      lines.push(
+        `  - se anadio "${name}" al registro (lib/behaviors/registry.ts / BEHAVIOR_ORDER) pero nadie escribio ` +
+          `su asercion de navegador en scripts/qa/behaviors-born100-gate.mjs. Que hacer: (1) agrega el marcador ` +
+          `de ejemplo de "${name}" a buildPage() en este archivo, (2) escribe un safeAssert(...) que la ejercite ` +
+          `con Puppeteer real (click / scroll / leer estilo computado — nunca jsdom), (3) registra su numero de ` +
+          `asercion en BEHAVIOR_GATE_ASSERTIONS arriba.`,
+      );
+    }
+    for (const name of stale) {
+      lines.push(
+        `  - BEHAVIOR_GATE_ASSERTIONS tiene una entrada para "${name}" que ya no existe en BEHAVIOR_ORDER — ` +
+          `borrala (la conducta fue removida del registro).`,
+      );
+    }
+    console.error("\n" + lines.join("\n"));
+    process.exit(1);
+  }
+}
 
 const lighthouse = (await import("lighthouse")).default;
 const puppeteer = (await import("puppeteer")).default;
@@ -307,15 +362,6 @@ console.log(`Published ${SUB} -> ${releaseDir} (sha ${publishResult.sha})`);
 const servedHtml = readFileSync(join(releaseDir, "index.html"), "utf8");
 const staticFail = [];
 
-const MARKERS = [
-  "data-ol-countdown",
-  "data-ol-filter",
-  "data-ol-lightbox",
-  "data-ol-copy",
-  "data-ol-autoplay",
-  "data-ol-theme",
-  "data-ol-sticky",
-];
 for (const m of MARKERS) {
   if (!servedHtml.includes(m)) staticFail.push(`marker ${m} missing from the served HTML`);
 }
