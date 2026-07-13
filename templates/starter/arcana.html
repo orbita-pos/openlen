@@ -131,6 +131,10 @@
   /* Mobile menu — CSS-only (checkbox hack): scripts are stripped on publish */
   .mobile-menu{transition:opacity .18s ease, transform .18s ease}
   #ol-nav:checked ~ #mobileMenu{display:block}
+  /* Explicit closed state: don't rely on Tailwind's .hidden utility (CDN-only,
+     may not have loaded yet in the creator's preview) — without this, a CDN
+     hiccup makes the mobile menu render open on first paint. */
+  #ol-nav:not(:checked) ~ #mobileMenu{display:none}
 </style>
 </head>
 <body>

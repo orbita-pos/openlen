@@ -72,18 +72,18 @@
 
   /* Nav */
   .nav{transition:background-color .2s ease, border-color .2s ease, box-shadow .2s ease}
-  .nav-solid{background:rgba(255,255,255,0.92);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);box-shadow:0 1px 0 rgba(0,0,0,0.02)}
+  .nav[data-ol-stuck]{background:rgba(255,255,255,0.92);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);box-shadow:0 1px 0 rgba(0,0,0,0.02)}
   .nav-link{color:#fff;font-size:.9375rem;font-weight:500;text-decoration:none;padding:.4rem .2rem;transition:color .16s ease, opacity .16s ease;opacity:.92}
   .nav-link:hover{opacity:1}
-  .nav-solid .nav-link{color:var(--fg)}
+  .nav[data-ol-stuck] .nav-link{color:var(--fg)}
   .nav-icon{color:#fff;transition:color .16s ease, opacity .16s ease;opacity:.92;display:inline-flex}
   .nav-icon:hover{opacity:1}
-  .nav-solid .nav-icon{color:var(--fg)}
-  .nav-solid .wordmark-nav{color:var(--fg)}
-  .nav-solid .hamburger span{background:var(--fg)}
+  .nav[data-ol-stuck] .nav-icon{color:var(--fg)}
+  .nav[data-ol-stuck] .wordmark-nav{color:var(--fg)}
+  .nav[data-ol-stuck] .hamburger span{background:var(--fg)}
   .wordmark-nav{color:#fff;transition:color .2s ease}
   .hamburger span{background:#fff}
-  .nav-solid .nav-cta{background:var(--accent);color:#fff;border-color:transparent}
+  .nav[data-ol-stuck] .nav-cta{background:var(--accent);color:#fff;border-color:transparent}
 
   /* Carousel */
   .rail{
@@ -112,7 +112,7 @@
 <body>
 
 <!-- ============ NAV ============ -->
-<nav id="nav" class="nav fixed top-0 inset-x-0 z-50">
+<nav id="nav" class="nav fixed top-0 inset-x-0 z-50" data-ol-sticky>
   <input type="checkbox" id="ol-nav" class="sr-only peer">
   <div class="max-w-[1400px] mx-auto px-5 sm:px-8 h-[68px] flex items-center justify-between">
     <a href="#top" class="wordmark wordmark-nav text-[1.05rem] sm:text-[1.15rem] select-none" aria-label="AVENIR — Inicio">AVENIR</a>
@@ -432,15 +432,6 @@
   // <script>). What's left below only ever executes in the un-cloned
   // template preview, for the scroll/carousel effects.
   var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-
-  /* ---- Nav solidify on scroll ---- */
-  var nav = document.getElementById('nav');
-  function onScroll(){
-    if(window.scrollY > 40){ nav.classList.add('nav-solid'); }
-    else{ nav.classList.remove('nav-solid'); }
-  }
-  onScroll();
-  window.addEventListener('scroll', onScroll, {passive:true});
 
   /* ---- Carousels ---- */
   function slideWidth(rail){

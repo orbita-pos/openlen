@@ -1,0 +1,319 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Altanube — Residencias sobre el mar de nubes</title>
+<meta name="description" content="Casa Cielo: doce residencias privadas suspendidas a 2.400 m sobre el mar de nubes. Elegancia sobre el horizonte. Visitas privadas, solo con cita." />
+<meta property="og:title" content="Altanube — Casa Cielo" />
+<meta property="og:description" content="Doce residencias privadas sobre el mar de nubes. Tu residencia entre nubes comienza aquí." />
+<meta property="og:image" content="https://images.openlen.com/altanube/hero.webp" />
+<meta name="theme-color" content="#241a3e" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='9' fill='%23241a3e'/%3E%3Cpath d='M8 20c0-2.5 2-4.5 4.5-4.5.4-2.8 2.8-5 5.7-5 3.2 0 5.8 2.6 5.8 5.8 0 .2 0 .5-.1.7 1.3.5 2.1 1.7 2.1 3'  fill='none' stroke='%23e9b7d4' stroke-width='2.2' stroke-linecap='round'/%3E%3Ccircle cx='11' cy='11' r='2.2' fill='%23f7b98b'/%3E%3C/svg%3E" />
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@200;300;400;500;600&family=Instrument+Serif:ital@0;1&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#f7eef5; --surface:#fdf6fa; --fg:#2a2140; --accent:#8d6cd8; --radius:26px;
+    --font-display:'Sora',ui-sans-serif,system-ui,sans-serif;
+    --font-body:'Manrope',ui-sans-serif,system-ui,sans-serif;
+    --alba:var(--bg); --rosa:#e9b7d4; --violeta:var(--accent); --sol:#f7b98b;
+    --crepusculo:#241a3e; --noche:#130d26;
+    --ink:var(--fg); --muted:#6d6394; --ink-inv:#f3edfa; --muted-inv:#b4a7d6;
+    --line:rgba(93,66,150,.14); --line-inv:rgba(233,183,212,.16);
+    --display:var(--font-display);
+    --serif:'Instrument Serif',Georgia,serif;
+    --body:var(--font-body);
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;background:var(--alba);color:var(--ink);font-family:var(--body);font-size:16.5px;line-height:1.65;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;overflow-x:hidden}
+  h1,h2,h3{font-family:var(--display);font-weight:300;letter-spacing:-0.03em;line-height:1.04;margin:0}
+  .serif-i{font-family:var(--serif);font-style:italic;font-weight:400;letter-spacing:0}
+  .eyebrow{font-family:var(--display);font-size:12px;letter-spacing:.3em;text-transform:uppercase;font-weight:500}
+  .wrap{max-width:1180px;margin:0 auto;padding:0 24px}
+  a{color:inherit}
+  :focus-visible{outline:2px solid var(--violeta);outline-offset:3px;border-radius:4px}
+
+  /* ── Nav: píldora de cristal ─────────────────────────── */
+  .nav{position:fixed;top:18px;left:50%;transform:translateX(-50%);z-index:50;
+    display:flex;align-items:center;gap:26px;height:56px;padding:0 10px 0 22px;border-radius:999px;
+    background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.3);
+    backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);
+    box-shadow:0 10px 40px -18px rgba(36,26,62,.5);
+    transition:background .4s,box-shadow .4s;white-space:nowrap}
+  .nav[data-ol-stuck]{background:rgba(28,20,50,.72);border-color:rgba(233,183,212,.18)}
+  .nav .brand{display:flex;align-items:center;gap:9px;font-family:var(--display);font-weight:500;font-size:15.5px;color:#fff;text-decoration:none;letter-spacing:.01em}
+  .nav .links{display:flex;gap:22px}
+  .nav .links a{font-size:13.5px;font-weight:500;color:rgba(255,255,255,.82);text-decoration:none;transition:color .25s}
+  .nav .links a:hover{color:#fff}
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:.5rem;height:44px;padding:0 22px;border-radius:999px;font-family:var(--display);font-weight:500;font-size:13.5px;letter-spacing:.02em;text-decoration:none;transition:transform .25s,box-shadow .25s,background .25s}
+  .btn-glass{background:rgba(255,255,255,.92);color:var(--crepusculo)}
+  .btn-glass:hover{transform:translateY(-1px);background:#fff;box-shadow:0 12px 30px -12px rgba(255,255,255,.6)}
+  .btn-night{background:linear-gradient(135deg,var(--rosa),#d9a5e8);color:var(--noche);box-shadow:0 14px 44px -14px rgba(233,183,212,.55)}
+  .btn-night:hover{transform:translateY(-2px);box-shadow:0 20px 54px -16px rgba(233,183,212,.75)}
+
+  /* ── Hero ────────────────────────────────────────────── */
+  .hero{position:relative;min-height:100svh;display:flex;flex-direction:column;justify-content:center;overflow:hidden}
+  .hero img.bg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center 30%}
+  .hero .veil{position:absolute;inset:0;background:linear-gradient(180deg,rgba(36,26,62,.18) 0%,transparent 26%,transparent 62%,rgba(247,238,245,.55) 92%,var(--alba) 100%)}
+  .hero-inner{position:relative;z-index:2;text-align:center;padding:0 20px;margin-top:-4vh}
+  .hero h1{font-size:clamp(4.2rem,13.5vw,11.5rem);font-weight:200;color:rgba(255,255,255,.95);
+    text-shadow:0 2px 60px rgba(120,70,160,.45),0 0 120px rgba(255,190,225,.35)}
+  .hero h1 .serif-i{font-size:1.02em}
+  .hero .taglines{display:flex;justify-content:space-between;max-width:1080px;margin:1.6rem auto 0;padding:0 8px;
+    font-size:13.5px;letter-spacing:.22em;text-transform:uppercase;color:rgba(255,255,255,.85);font-weight:500}
+  .hero .cue{position:absolute;left:50%;bottom:34px;transform:translateX(-50%);z-index:2;display:flex;flex-direction:column;align-items:center;gap:10px;color:rgba(255,255,255,.9)}
+  .hero .cue .line{width:1px;height:44px;background:linear-gradient(180deg,transparent,rgba(255,255,255,.9));animation:cae 2.6s ease-in-out infinite}
+  .hero .cue span{font-size:11px;letter-spacing:.3em;text-transform:uppercase}
+  .chip-alt{position:absolute;z-index:2;bottom:34px;right:36px;display:inline-flex;align-items:center;gap:8px;height:34px;padding:0 16px;border-radius:999px;
+    background:rgba(255,255,255,.13);border:1px solid rgba(255,255,255,.3);backdrop-filter:blur(12px);
+    color:#fff;font-size:12px;letter-spacing:.12em;font-weight:500}
+  @keyframes cae{0%,100%{transform:scaleY(.4);transform-origin:top;opacity:.4}50%{transform:scaleY(1);opacity:1}}
+
+  /* ── Descenso del atardecer: banda día → crepúsculo ──── */
+  .sec-alba{background:linear-gradient(180deg,var(--alba) 0%,#f2e4f0 100%)}
+  .sec-bruma{background:linear-gradient(180deg,#f2e4f0 0%,#e0cbe9 45%,#b394d3 100%)}
+  .sec-crepusculo{background:linear-gradient(180deg,#54407e 0%,#3b2b60 16%,var(--crepusculo) 42%,var(--crepusculo) 100%);position:relative}
+  .sec-crepusculo::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;
+    background:linear-gradient(90deg,transparent,rgba(247,185,139,.7),transparent)}
+  .sec-noche{background:linear-gradient(180deg,var(--crepusculo) 0%,var(--noche) 26%,var(--noche) 100%);position:relative;overflow:hidden}
+
+  .stat b{display:block;font-family:var(--display);font-weight:300;font-size:clamp(2rem,3.4vw,2.9rem);letter-spacing:-.02em;color:var(--ink);line-height:1.1}
+  .stat span{font-size:13px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);font-weight:500}
+
+  /* ── Residencias ─────────────────────────────────────── */
+  .res-card{border-radius:var(--radius);overflow:hidden;background:rgba(255,255,255,.5);border:1px solid rgba(255,255,255,.65);
+    box-shadow:0 24px 60px -30px rgba(80,50,130,.35);transition:transform .5s cubic-bezier(.2,.7,.2,1),box-shadow .5s}
+  .res-card:hover{transform:translateY(-6px);box-shadow:0 34px 80px -32px rgba(80,50,130,.5)}
+  .res-card .ph{height:250px;overflow:hidden}
+  .res-card .ph img{width:100%;height:100%;object-fit:cover;transition:transform 1.2s cubic-bezier(.2,.7,.2,1)}
+  .res-card:hover .ph img{transform:scale(1.06)}
+  .res-card .meta{padding:22px 24px 24px}
+  .res-card h3{font-size:1.5rem;font-weight:400}
+  .res-card .specs{display:flex;gap:14px;margin-top:8px;font-size:13px;color:var(--muted);letter-spacing:.04em}
+  .res-card .price{margin-top:14px;font-family:var(--display);font-weight:500;font-size:14.5px;color:var(--violeta)}
+
+  /* ── Experiencia (crepúsculo) ────────────────────────── */
+  .exp-card{border-radius:22px;padding:26px 26px 28px;background:rgba(233,183,212,.07);border:1px solid var(--line-inv);
+    backdrop-filter:blur(6px);transition:background .4s,transform .4s}
+  .exp-card:hover{background:rgba(233,183,212,.12);transform:translateY(-4px)}
+  .exp-card h3{font-size:1.18rem;font-weight:400;color:var(--ink-inv)}
+  .exp-card p{font-size:14.5px;color:var(--muted-inv);margin:.5rem 0 0;line-height:1.6}
+  .exp-ico{width:42px;height:42px;border-radius:12px;display:flex;align-items:center;justify-content:center;
+    background:linear-gradient(135deg,rgba(233,183,212,.18),rgba(141,108,216,.18));margin-bottom:16px}
+
+  /* ── Noche estrellada ────────────────────────────────── */
+  .stars,.stars-2{position:absolute;inset:0;pointer-events:none}
+  .stars{background-image:
+    radial-gradient(1.2px 1.2px at 12% 22%,rgba(255,255,255,.8),transparent 50%),
+    radial-gradient(1px 1px at 34% 64%,rgba(255,255,255,.55),transparent 50%),
+    radial-gradient(1.4px 1.4px at 55% 18%,rgba(255,220,240,.75),transparent 50%),
+    radial-gradient(1px 1px at 72% 48%,rgba(255,255,255,.5),transparent 50%),
+    radial-gradient(1.3px 1.3px at 88% 26%,rgba(255,255,255,.7),transparent 50%),
+    radial-gradient(1px 1px at 20% 82%,rgba(255,220,240,.45),transparent 50%),
+    radial-gradient(1.1px 1.1px at 64% 78%,rgba(255,255,255,.5),transparent 50%),
+    radial-gradient(1.5px 1.5px at 44% 38%,rgba(255,255,255,.65),transparent 50%),
+    radial-gradient(1px 1px at 80% 88%,rgba(255,255,255,.4),transparent 50%),
+    radial-gradient(1.2px 1.2px at 6% 52%,rgba(255,255,255,.55),transparent 50%)}
+  .stars-2{background-image:
+    radial-gradient(1px 1px at 28% 34%,rgba(255,255,255,.4),transparent 50%),
+    radial-gradient(1px 1px at 48% 70%,rgba(255,255,255,.35),transparent 50%),
+    radial-gradient(1px 1px at 68% 12%,rgba(255,255,255,.4),transparent 50%),
+    radial-gradient(1px 1px at 92% 58%,rgba(255,255,255,.3),transparent 50%),
+    radial-gradient(1px 1px at 16% 68%,rgba(255,255,255,.3),transparent 50%);
+    animation:parpadeo 5s ease-in-out infinite alternate}
+  @keyframes parpadeo{from{opacity:.35}to{opacity:1}}
+  .horizonte{position:absolute;left:0;right:0;bottom:0;height:220px;pointer-events:none;
+    background:radial-gradient(70% 200px at 50% 100%,rgba(141,108,216,.28),transparent 70%)}
+
+  /* ── Reveals ─────────────────────────────────────────── */
+  .rv{opacity:0;transform:translateY(26px);transition:opacity .9s cubic-bezier(.2,.7,.2,1),transform .9s cubic-bezier(.2,.7,.2,1)}
+  .rv.in{opacity:1;transform:none}
+  .hero .rv{transition-duration:1.3s}
+
+  @media (prefers-reduced-motion:reduce){
+    *,*::before,*::after{animation:none!important;transition:none!important}
+    .rv{opacity:1;transform:none}
+    html{scroll-behavior:auto}
+  }
+  @media (max-width:860px){
+    .nav{gap:14px;padding:0 8px 0 18px}
+    .nav .links{display:none}
+    .hero img.bg{object-position:66% 30%}
+    .hero .taglines{flex-direction:column;gap:8px;align-items:center;text-align:center}
+    .chip-alt{display:none}
+  }
+</style>
+</head>
+<body>
+
+<!-- Nav -->
+<nav class="nav" id="nav" data-ol-sticky aria-label="Principal">
+  <a class="brand" href="#inicio">
+    <svg width="20" height="20" viewBox="0 0 32 32" fill="none" aria-hidden="true"><path d="M8 20c0-2.5 2-4.5 4.5-4.5.4-2.8 2.8-5 5.7-5 3.2 0 5.8 2.6 5.8 5.8 0 .2 0 .5-.1.7 1.3.5 2.1 1.7 2.1 3" stroke="#fff" stroke-width="2.4" stroke-linecap="round"/><circle cx="11" cy="11" r="2.4" fill="#f7b98b"/></svg>
+    Altanube
+  </a>
+  <div class="links">
+    <a href="#residencias">Residencias</a>
+    <a href="#experiencia">Experiencia</a>
+    <a href="#contacto">Contacto</a>
+  </div>
+  <a class="btn btn-glass" href="#contacto">Agenda tu visita</a>
+</nav>
+
+<!-- Hero -->
+<header class="hero" id="inicio">
+  <img class="bg" src="https://images.openlen.com/altanube/hero.webp" alt="Casa Cielo: villa moderna sobre un pináculo rocoso, por encima de un mar de nubes rosadas al atardecer" />
+  <div class="veil" aria-hidden="true"></div>
+  <div class="hero-inner">
+    <h1 class="rv">Casa <span class="serif-i">Cielo</span></h1>
+    <div class="taglines rv" style="transition-delay:.25s">
+      <span>Elegancia sobre el horizonte</span>
+      <span>Tu residencia entre nubes</span>
+    </div>
+  </div>
+  <div class="cue" aria-hidden="true">
+    <span>Desciende</span>
+    <div class="line"></div>
+  </div>
+  <div class="chip-alt">☁ 2.400 m sobre el mar de nubes</div>
+</header>
+
+<!-- La promesa -->
+<section class="sec-alba" style="padding:110px 0 96px">
+  <div class="wrap" style="max-width:920px;text-align:center">
+    <p class="eyebrow rv" style="color:var(--violeta)">La promesa</p>
+    <h2 class="rv" style="font-size:clamp(1.9rem,4vw,3rem);margin-top:18px;font-weight:300">
+      Hay direcciones que no aparecen en ningún mapa. Doce residencias suspendidas
+      sobre el mar de nubes, donde el atardecer no termina: <span class="serif-i" style="color:var(--violeta)">se habita</span>.
+    </h2>
+    <div class="rv" style="display:flex;justify-content:center;gap:clamp(30px,7vw,90px);margin-top:64px;flex-wrap:wrap">
+      <div class="stat"><b>12</b><span>Residencias privadas</span></div>
+      <div class="stat"><b>2.400 m</b><span>De altitud</span></div>
+      <div class="stat"><b>360°</b><span>De horizonte</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- Residencias -->
+<section class="sec-bruma" id="residencias" style="padding:96px 0 120px">
+  <div class="wrap">
+    <div style="display:flex;align-items:end;justify-content:space-between;gap:24px;flex-wrap:wrap;margin-bottom:44px">
+      <div>
+        <p class="eyebrow rv" style="color:var(--violeta)">Residencias</p>
+        <h2 class="rv" style="font-size:clamp(1.9rem,3.6vw,2.8rem);margin-top:14px">Tres alturas, <span class="serif-i">un solo cielo</span></h2>
+      </div>
+      <p class="rv" style="max-width:360px;color:var(--muted);font-size:15px;margin:0">Cada residencia ocupa su propia cota del pináculo. Ninguna comparte vista; todas comparten el atardecer.</p>
+    </div>
+    <div class="grid md:grid-cols-3 gap-6" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:26px">
+      <article class="res-card rv">
+        <div class="ph"><img src="https://images.openlen.com/altanube/alba.webp" alt="Terraza al poniente con alberca infinita frente al sol sobre el mar de nubes"></div>
+        <div class="meta">
+          <h3>Mirador Alba</h3>
+          <div class="specs"><span>320 m²</span><span>·</span><span>3 recámaras</span><span>·</span><span>Cota 2.310</span></div>
+          <p style="font-size:14.5px;color:var(--muted);margin:10px 0 0">Orientada al poniente. El sol se despide frente a la terraza, todos los días, sin excepción.</p>
+          <div class="price">Desde $2.4 M USD</div>
+        </div>
+      </article>
+      <article class="res-card rv" style="transition-delay:.12s">
+        <div class="ph"><img src="https://images.openlen.com/altanube/vela.webp" alt="La villa de cristal de tres niveles coronando el pináculo"></div>
+        <div class="meta">
+          <h3>Cumbre Vela</h3>
+          <div class="specs"><span>480 m²</span><span>·</span><span>4 recámaras</span><span>·</span><span>Cota 2.400</span></div>
+          <p style="font-size:14.5px;color:var(--muted);margin:10px 0 0">La corona del pináculo. Cristal de piso a techo y el cielo entero como único vecino.</p>
+          <div class="price">Desde $4.1 M USD</div>
+        </div>
+      </article>
+      <article class="res-card rv" style="transition-delay:.24s">
+        <div class="ph"><img src="https://images.openlen.com/altanube/bruma.webp" alt="Jardín entre la bruma con senderos de piedra, faroles y pinos"></div>
+        <div class="meta">
+          <h3>Terraza Bruma</h3>
+          <div class="specs"><span>290 m²</span><span>·</span><span>2 recámaras</span><span>·</span><span>Cota 2.250</span></div>
+          <p style="font-size:14.5px;color:var(--muted);margin:10px 0 0">Al nivel de la bruma. Las nubes entran al jardín cada mañana y se retiran al mediodía.</p>
+          <div class="price">Desde $1.8 M USD</div>
+        </div>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- Experiencia (crepúsculo) -->
+<section class="sec-crepusculo" id="experiencia" style="padding:110px 0 110px">
+  <div class="wrap">
+    <div style="text-align:center;max-width:760px;margin:0 auto 60px">
+      <p class="eyebrow rv" style="color:var(--rosa)">La experiencia</p>
+      <h2 class="rv" style="font-size:clamp(1.9rem,3.6vw,2.8rem);margin-top:14px;color:var(--ink-inv)">Vivir <span class="serif-i" style="color:var(--rosa)">por encima</span> del ruido</h2>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:20px">
+      <div class="exp-card rv">
+        <div class="exp-ico"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#e9b7d4" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M19.1 4.9 17 7M7 17l-2.1 2.1"/></svg></div>
+        <h3>Amanecer a 2.400 m</h3>
+        <p>El primer rayo llega antes que a ningún otro lugar del valle. El café sabe distinto aquí arriba.</p>
+      </div>
+      <div class="exp-card rv" style="transition-delay:.1s">
+        <div class="exp-ico"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#e9b7d4" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg></div>
+        <h3>Silencio de altura</h3>
+        <p>Por encima de la nube no hay tráfico, ni prisa, ni señal que interrumpa sin permiso.</p>
+      </div>
+      <div class="exp-card rv" style="transition-delay:.2s">
+        <div class="exp-ico"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#e9b7d4" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="M8 12h8M12 8v8"/></svg></div>
+        <h3>Domótica serena</h3>
+        <p>Luz, clima y persianas aprenden tu ritmo. La casa se adelanta; tú solo llegas.</p>
+      </div>
+      <div class="exp-card rv" style="transition-delay:.3s">
+        <div class="exp-ico"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#e9b7d4" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20c4-1 6-3 7-7 1 4 3 6 7 7M12 13V4"/><path d="m9 7 3-3 3 3"/></svg></div>
+        <h3>Sendero iluminado</h3>
+        <p>Escaleras talladas en la roca, encendidas al anochecer, unen cada cota con la cumbre.</p>
+      </div>
+    </div>
+    <figure class="rv" style="max-width:680px;margin:80px auto 0;text-align:center">
+      <blockquote style="margin:0;font-family:var(--serif);font-style:italic;font-size:clamp(1.4rem,2.6vw,1.9rem);line-height:1.4;color:var(--ink-inv)">
+        “No compramos una casa. Nos quedamos con el cielo.”
+      </blockquote>
+      <figcaption style="margin-top:18px;font-size:13px;letter-spacing:.18em;text-transform:uppercase;color:var(--muted-inv)">Familia Ibarra · Residencia 07</figcaption>
+    </figure>
+  </div>
+</section>
+
+<!-- CTA noche -->
+<section class="sec-noche" id="contacto" style="padding:130px 0 120px">
+  <div class="stars" aria-hidden="true"></div>
+  <div class="stars-2" aria-hidden="true"></div>
+  <div class="horizonte" aria-hidden="true"></div>
+  <div class="wrap" style="position:relative;text-align:center;max-width:720px">
+    <p class="eyebrow rv" style="color:var(--rosa)">Visitas privadas</p>
+    <h2 class="rv" style="font-size:clamp(2.2rem,5vw,3.6rem);margin-top:16px;color:var(--ink-inv)">El cielo tiene <span class="serif-i" style="color:var(--rosa)">doce llaves</span>.</h2>
+    <p class="rv" style="color:var(--muted-inv);margin:22px auto 0;max-width:460px;font-size:16px">Recorridos al atardecer, solo con cita. Un asesor te acompaña desde la base hasta la cota de tu residencia.</p>
+    <div class="rv" style="margin-top:40px;display:flex;gap:14px;justify-content:center;flex-wrap:wrap">
+      <a class="btn btn-night" href="#" style="height:52px;padding:0 30px;font-size:14.5px">Agenda tu visita</a>
+      <a class="btn" href="mailto:hola@altanube.mx" style="height:52px;padding:0 26px;border:1px solid var(--line-inv);color:var(--ink-inv)">hola@altanube.mx</a>
+    </div>
+  </div>
+</section>
+
+<!-- Footer -->
+<footer style="background:var(--noche);border-top:1px solid rgba(233,183,212,.08);padding:30px 0">
+  <div class="wrap" style="display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap">
+    <span style="display:flex;align-items:center;gap:8px;font-family:var(--display);font-weight:500;font-size:14px;color:var(--ink-inv)">
+      <svg width="17" height="17" viewBox="0 0 32 32" fill="none" aria-hidden="true"><path d="M8 20c0-2.5 2-4.5 4.5-4.5.4-2.8 2.8-5 5.7-5 3.2 0 5.8 2.6 5.8 5.8 0 .2 0 .5-.1.7 1.3.5 2.1 1.7 2.1 3" stroke="#e9b7d4" stroke-width="2.4" stroke-linecap="round"/><circle cx="11" cy="11" r="2.4" fill="#f7b98b"/></svg>
+      Altanube
+    </span>
+    <span style="font-size:13px;color:var(--muted-inv)">© 2026 Altanube · Residencias sobre el mar de nubes</span>
+    <div style="display:flex;gap:18px;font-size:13px">
+      <a href="#" style="color:var(--muted-inv);text-decoration:none">Aviso de privacidad</a>
+      <a href="#" style="color:var(--muted-inv);text-decoration:none">Brochure</a>
+    </div>
+  </div>
+</footer>
+
+<script>
+  const io = new IntersectionObserver(es => es.forEach(e => {
+    if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); }
+  }), {threshold:.12});
+  document.querySelectorAll('.rv').forEach(el => io.observe(el));
+</script>
+</body>
+</html>
