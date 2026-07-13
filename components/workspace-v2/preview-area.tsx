@@ -15,7 +15,7 @@ import {
   X,
 } from "./icons";
 import { IconBtn, Segmented } from "./ui";
-import { injectBehaviorsPreview } from "./use-behaviors-preview";
+import { injectBehaviorsPreview, stashBehaviorsPristineState } from "./use-behaviors-preview";
 import { injectDropPlace } from "./use-drop-place";
 import { injectElementInspect } from "./use-element-inspect";
 import { injectImageReplace } from "./use-image-replace";
@@ -220,6 +220,7 @@ export function PreviewArea({
     html = injectMotionPreview(html);
     html = injectMusicPreview(html);
     html = injectBehaviorsPreview(html);
+    html = stashBehaviorsPristineState(html);
     html = injectDropPlace(html, dropLabels);
     return html;
   };

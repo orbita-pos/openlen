@@ -23,6 +23,7 @@
 // MISMO runtime (CAROUSEL_JS) y su MISMO marcador (MARKER) — nunca una copia —
 // y repite únicamente el envoltorio idempotente que bakeCarousels ya usa.
 import { bakeBehaviors } from "@/lib/behaviors/build";
+import { BEHAVIORS } from "@/lib/behaviors/registry";
 import type { Behavior, BehaviorName } from "@/lib/behaviors/types";
 import { CAROUSEL_JS, MARKER as CAROUSEL_MARKER } from "@/lib/publish/carousel";
 
@@ -44,4 +45,87 @@ function injectCarouselPreview(html: string): string {
   const script = `<script ${CAROUSEL_MARKER}>${CAROUSEL_JS}</script>`;
   const idx = html.lastIndexOf("</body>");
   return idx === -1 ? html + script : html.slice(0, idx) + script + html.slice(idx);
+}
+
+// Preview-only stash attributes — read + consumed by
+// stripEditorInstrumentation.ts on save. Exported so that file never
+// duplicates these names as magic strings (single source of truth, same
+// reasoning as BEHAVIORS_MARKER in lib/behaviors/build.ts).
+export const PREVIEW_HTML_CLASS_STASH = "data-openlen-html-class";
+export const PREVIEW_CD_TEXT_STASH = "data-openlen-cd-text";
+export const PREVIEW_CD_STYLE_STASH = "data-openlen-cd-style";
+
+/** Preview-only pristine-state snapshot for the two behaviors whose runtime
+ *  mutation is otherwise indistinguishable, once the live DOM is captured,
+ *  from a value the creator or the AI actually authored — theme's
+ *  `<html class="dark">` toggle, and countdown's frozen digits (plus the
+ *  `style="display:none"` it can bake onto its own root, and clear on
+ *  `[data-ol-cd-ended]`, once expired).
+ *
+ *  Unlike motion's `data-ol-orig` (written by the PUBLISHED runtime itself —
+ *  see lib/publish/motion-presets.ts, which needs it for its own reset
+ *  logic), these three attributes must add ZERO bytes to production: this
+ *  function is called ONLY from preview-area.tsx's `derive()`, never from
+ *  `bakeBehaviors` (the publish path). stripEditorInstrumentation reads +
+ *  removes them on save (see its "ambiguous runtime state" section).
+ *
+ *  Deliberately a SEPARATE step from injectBehaviorsPreview, not folded into
+ *  it — injectBehaviorsPreview must stay byte-identical to bakeBehaviors
+ *  (see the "garantía de fuente única" test in use-behaviors-preview.test.ts);
+ *  stamping preview-only attributes inside it would break that guarantee.
+ *
+ *  Must run before the browser ever executes the injected runtime — at that
+ *  point `html` is still exactly the authored string, so whatever it
+ *  contains right now IS the pristine value, by construction. Idempotent:
+ *  skips anything that already carries its stash attribute, so calling this
+ *  twice (e.g. derive() re-running on its own prior output) never overwrites
+ *  a stash with an already-mutated live value. */
+export function stashBehaviorsPristineState(
+  html: string,
+  reg: Partial<Record<BehaviorName, Behavior>> = BEHAVIORS,
+): string {
+  const themeMarker = reg.theme?.marker;
+  const cdMarker = reg.countdown?.marker;
+  const needsTheme = !!themeMarker && html.includes(themeMarker);
+  const needsCountdown = !!cdMarker && html.includes(cdMarker);
+  if (!needsTheme && !needsCountdown) return html;
+  if (typeof DOMParser === "undefined") return html;
+  try {
+    const doc = new DOMParser().parseFromString(html, "text/html");
+    let changed = false;
+
+    if (needsTheme && !doc.documentElement.hasAttribute(PREVIEW_HTML_CLASS_STASH)) {
+      doc.documentElement.setAttribute(
+        PREVIEW_HTML_CLASS_STASH,
+        doc.documentElement.getAttribute("class") ?? "",
+      );
+      changed = true;
+    }
+
+    if (needsCountdown) {
+      // data-ol-cd / data-ol-cd-ended are countdown's own CHILD selectors
+      // (lib/behaviors/recipes/countdown.ts) — only its ROOT marker
+      // (data-ol-countdown) is exposed on the Behavior contract, so these two
+      // literals have to be kept in sync BY HAND if that recipe ever renames
+      // them. The audit-canary test in strip-editor-instrumentation.test.ts
+      // would go red if countdown (or any future recipe) started leaving some
+      // OTHER data-ol-* mutation behind that neither this file nor the strip
+      // knows about.
+      doc.querySelectorAll("[data-ol-cd]").forEach((n) => {
+        if (n.hasAttribute(PREVIEW_CD_TEXT_STASH)) return;
+        n.setAttribute(PREVIEW_CD_TEXT_STASH, n.textContent ?? "");
+        changed = true;
+      });
+      doc.querySelectorAll(`[${cdMarker}],[data-ol-cd-ended]`).forEach((n) => {
+        if (n.hasAttribute(PREVIEW_CD_STYLE_STASH)) return;
+        n.setAttribute(PREVIEW_CD_STYLE_STASH, n.getAttribute("style") ?? "");
+        changed = true;
+      });
+    }
+
+    if (!changed) return html;
+    return "<!doctype html>\n" + doc.documentElement.outerHTML;
+  } catch {
+    return html;
+  }
 }

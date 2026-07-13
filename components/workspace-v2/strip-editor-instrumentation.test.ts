@@ -5,10 +5,12 @@
 // editor surface (props/reorder/replace/insert) never ships them to the
 // published page. jsdom provides DOMParser.
 
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, beforeEach, vi } from "vitest";
 import { stripEditorInstrumentation } from "./strip-editor-instrumentation";
-import { injectBehaviorsPreview } from "./use-behaviors-preview";
-import { bakeBehaviors, BEHAVIORS_MARKER } from "@/lib/behaviors/build";
+import { injectBehaviorsPreview, stashBehaviorsPristineState } from "./use-behaviors-preview";
+import { bakeBehaviors, buildBehaviorsScript, BEHAVIORS_MARKER } from "@/lib/behaviors/build";
+import { BEHAVIORS, BEHAVIOR_ORDER } from "@/lib/behaviors/registry";
+import { mount, trackDocumentListeners } from "@/lib/behaviors/recipes/test-helpers";
 import type { Behavior, BehaviorName } from "@/lib/behaviors/types";
 import { CAROUSEL_JS, MARKER as CAROUSEL_MARKER } from "@/lib/publish/carousel";
 
@@ -272,5 +274,252 @@ describe("stripEditorInstrumentation — carousel runtime script (Task 14b)", ()
     const reinjected = injectBehaviorsPreview(stripped);
     expect(reinjected).not.toBe(stripped);
     expect(reinjected).toContain(CAROUSEL_JS);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// CRITICAL — the preview runtime (lib/behaviors/recipes/*.ts, injected live
+// into the editor iframe for editor↔published parity) MUTATES THE LIVE DOM.
+// The save funnel clones that live DOM (same principle as
+// use-inline-edit.ts::captureClean) — every test above only proves the
+// runtime SCRIPTS get removed on save, never that their MUTATIONS get undone.
+// A creator who merely LOOKS at their own page in the preview (clicks a
+// filter chip, opens a lightbox photo, tries the theme toggle) and then edits
+// unrelated text ships the dirty live state: data-ol-hidden bakes into the
+// publish CSS ([data-ol-hidden]{display:none!important}) as silent content
+// loss, the lightbox modal ships with no working close listener (a dead
+// black overlay), theme's on-page test leaks into the shipped default, and
+// countdown ships whatever digits/visibility happened to be on screen.
+//
+// mount() from recipes/test-helpers.ts only sets body.innerHTML — this
+// reproduction also needs control over <html>'s own class (theme's mutation
+// target), so it uses its own fuller mount below.
+
+/** Mounts a FULL document — runs `html` through stashBehaviorsPristineState
+ *  (the same preview-only step preview-area.tsx's derive() applies before a
+ *  browser ever sees the srcDoc) and transplants the result onto the GLOBAL
+ *  document, since the composed runtime references bare `document.*` and
+ *  must run against the same `document` the test queries afterwards. */
+function mountFullDocument(html: string) {
+  const withStash = stashBehaviorsPristineState(html);
+  const parsed = new DOMParser().parseFromString(withStash, "text/html");
+  for (const attr of Array.from(document.documentElement.attributes)) {
+    document.documentElement.removeAttribute(attr.name);
+  }
+  for (const attr of Array.from(parsed.documentElement.attributes)) {
+    document.documentElement.setAttribute(attr.name, attr.value);
+  }
+  document.head.innerHTML = parsed.head.innerHTML;
+  document.body.innerHTML = parsed.body.innerHTML;
+  const script = buildBehaviorsScript(withStash);
+  if (script) {
+    // eslint-disable-next-line no-new-func
+    new Function(script)();
+  }
+}
+
+const REPRO_MARKUP = `<!doctype html><html><head></head><body>
+  <div data-ol-filter-group="menu">
+    <button data-ol-filter="*" aria-pressed="true">Todo</button>
+    <button data-ol-filter="tacos" aria-pressed="false">Tacos</button>
+  </div>
+  <div data-ol-filter-target="menu">
+    <article data-ol-tag="tacos" id="a-tacos">Tacos al pastor</article>
+    <article data-ol-tag="bebidas" id="a-bebidas">Agua de horchata</article>
+  </div>
+  <a data-ol-lightbox href="https://images.openlen.com/plato-grande.jpg" id="foto">
+    <img src="https://images.openlen.com/plato-thumb.jpg" alt="Plato">
+  </a>
+  <button data-ol-theme aria-label="Cambiar tema">Tema</button>
+  <div data-ol-countdown="2099-01-01T00:00:00Z" id="cd">
+    <span data-ol-cd="days">00</span>
+    <span data-ol-cd="hours">00</span>
+    <span data-ol-cd="mins">00</span>
+    <span data-ol-cd="secs">00</span>
+  </div>
+</body></html>`;
+
+describe("stripEditorInstrumentation — CRITICAL: preview mutations must not reach the saved document", () => {
+  trackDocumentListeners();
+
+  beforeEach(() => {
+    document.body.innerHTML = "";
+    document.head.innerHTML = "";
+    for (const attr of Array.from(document.documentElement.attributes)) {
+      document.documentElement.removeAttribute(attr.name);
+    }
+  });
+
+  it("un chip de filtro + una foto de lightbox + el toggle de tema, guardados, ensucian el HTML publicado", () => {
+    mountFullDocument(REPRO_MARKUP);
+
+    // El creador mira su propia página en el preview.
+    document.querySelector<HTMLButtonElement>('[data-ol-filter="tacos"]')!.click();
+    document.querySelector<HTMLAnchorElement>("#foto")!.click();
+    document.querySelector<HTMLButtonElement>("[data-ol-theme]")!.click();
+
+    // El funnel de guardado clona el DOM VIVO — mismo principio que
+    // use-inline-edit.ts::captureClean().
+    const dirty = "<!doctype html>\n" + document.documentElement.outerHTML;
+    const saved = stripEditorInstrumentation(dirty);
+    // DOM real, no substring crudo del HTML: filter/lightbox tienen `css`, y
+    // el propio runtime lo inyecta en vivo como <style> SIN marcador — su
+    // TEXTO de selector contiene literalmente "[data-ol-hidden]" /
+    // "[data-ol-lb-modal]" aunque NINGÚN elemento lleve ya el atributo. Un
+    // .toContain() de string confundiría ese CSS inerte con el bug real.
+    const reparsed = new DOMParser().parseFromString(saved, "text/html");
+
+    expect(
+      reparsed.querySelectorAll("[data-ol-hidden]").length,
+      "filter: data-ol-hidden llegó al HTML publicado (contenido oculto en producción)",
+    ).toBe(0);
+    expect(
+      reparsed.querySelectorAll("[data-ol-lb-modal]").length,
+      "lightbox: el modal (sin listener funcional) llegó al HTML publicado",
+    ).toBe(0);
+    expect(
+      reparsed.documentElement.classList.contains("dark"),
+      "theme: el toggle de PRUEBA del creador en el preview se filtró como default de <html>",
+    ).toBe(false);
+    expect(
+      reparsed.querySelector('[data-ol-cd="days"]')!.textContent,
+      "countdown: los dígitos que el runtime congeló llegaron al HTML publicado",
+    ).toBe("00");
+  });
+
+  it('PRESERVA un <html class="dark"> que el creador escribió a propósito, aunque el runtime lo apague durante la prueba', () => {
+    const authoredDark = REPRO_MARKUP.replace("<html><head>", '<html class="dark"><head>');
+    mountFullDocument(authoredDark);
+
+    // El creador prueba el toggle un número IMPAR de veces (termina en modo
+    // claro) — el caso más adverso: si el strip solo "conservara lo que hay
+    // ahora", esto fallaría; debe conservar lo que el AUTOR escribió, no lo
+    // que el runtime dejó tras la última prueba.
+    document.querySelector<HTMLButtonElement>("[data-ol-theme]")!.click();
+
+    const dirty = "<!doctype html>\n" + document.documentElement.outerHTML;
+    const saved = stripEditorInstrumentation(dirty);
+    expect(
+      new DOMParser().parseFromString(saved, "text/html").documentElement.classList.contains("dark"),
+    ).toBe(true);
+  });
+
+  it('countdown expirado: el style="display:none" horneado sobre su raíz no sobrevive al guardado (si no, pérdida de contenido permanente)', () => {
+    const expiredMarkup = REPRO_MARKUP.replace(
+      'data-ol-countdown="2099-01-01T00:00:00Z"',
+      'data-ol-countdown="2020-01-01T00:00:00Z"',
+    ).replace(
+      '<span data-ol-cd="secs">00</span>',
+      '<span data-ol-cd="secs">00</span><p data-ol-cd-ended style="display:none">¡Terminó!</p>',
+    );
+    mountFullDocument(expiredMarkup);
+    expect(
+      document.getElementById("cd")!.style.display,
+      "sanity: el runtime SÍ lo ocultó al montar (la fecha ya expiró)",
+    ).toBe("none");
+
+    const dirty = "<!doctype html>\n" + document.documentElement.outerHTML;
+    const saved = stripEditorInstrumentation(dirty);
+    const reparsed = new DOMParser().parseFromString(saved, "text/html");
+    expect(
+      reparsed.getElementById("cd")!.style.display,
+      "el bloque del countdown no debe publicarse oculto para siempre",
+    ).not.toBe("none");
+    expect(
+      reparsed.querySelector<HTMLElement>("[data-ol-cd-ended]")!.style.display,
+      "el mensaje de fin no debe publicarse visible por defecto",
+    ).toBe("none");
+  });
+});
+
+// Genérico — ninguna receta nombrada a mano. Si una FUTURA 8ª receta empieza a
+// escribir un data-ol-* nuevo sobre el DOM vivo (al estilo filter/sticky/
+// lightbox) y el strip no sabe limpiarlo, este test se pone rojo, porque la
+// aserción se DERIVA del registro real + un diff antes/después — nunca de una
+// lista fija de nombres de receta.
+//
+// Hueco de cobertura, a propósito: solo ejercita mutaciones alcanzables (a)
+// ejecutando el runtime una vez al montar (el tick inmediato de countdown) y
+// (b) haciendo click en cada elemento que lleve el MARCADOR PROPIO de una
+// conducta (cubre filter/lightbox/theme/copy, cuyo marcador vive sobre el
+// elemento clickeable exacto en su propio doc.example — ver cada recipes/*.ts).
+// Una receta hipotética cuya mutación dependiera de un SCROLL (sticky) tiene
+// su propio test dedicado abajo, con la misma técnica que
+// recipes/sticky.test.ts. autoplay no necesita ningún trato especial: su
+// única mutación (scrollLeft) ya es inmune por construcción (no se
+// serializa) — fake timers alcanzan para que su setInterval no quede como un
+// timer real colgado tras el test.
+describe("stripEditorInstrumentation — audit canary (protege a la receta #8+)", () => {
+  trackDocumentListeners();
+
+  beforeEach(() => {
+    document.body.innerHTML = "";
+    document.head.innerHTML = "";
+  });
+
+  it("ninguna receta deja un data-ol-* NUEVO (ausente de su doc.example) vivo tras el strip", () => {
+    vi.useFakeTimers();
+    try {
+      const entries = BEHAVIOR_ORDER.map((n) => BEHAVIORS[n]).filter((b): b is Behavior => !!b);
+      const pristineHtml = `<!doctype html><html><head></head><body>${entries.map((b) => b.doc.example).join("")}</body></html>`;
+      const attrNames = (html: string) =>
+        new Set(
+          Array.from(new DOMParser().parseFromString(html, "text/html").querySelectorAll("*"))
+            .flatMap((el) => Array.from(el.attributes).map((a) => a.name))
+            .filter((name) => name.startsWith("data-ol-")),
+        );
+      const pristineAttrs = attrNames(pristineHtml);
+
+      mountFullDocument(pristineHtml);
+      for (const b of entries) {
+        document.querySelectorAll<HTMLElement>(`[${b.marker}]`).forEach((el) => el.click());
+      }
+
+      const dirty = "<!doctype html>\n" + document.documentElement.outerHTML;
+      const runtimeIntroduced = [...attrNames(dirty)].filter((name) => !pristineAttrs.has(name));
+
+      // Auto-chequeo: si esta lista sale vacía, el mount/click de arriba dejó
+      // de disparar algo y el resto del test no estaría probando nada — más
+      // vale un rojo aquí que un verde falso.
+      expect(runtimeIntroduced, "el harness no disparó ninguna mutación real — este test no prueba nada").not.toHaveLength(0);
+      expect(runtimeIntroduced).toEqual(expect.arrayContaining(["data-ol-hidden", "data-ol-lb-modal"]));
+
+      const saved = stripEditorInstrumentation(dirty);
+      // attrNames (DOM real), no saved.includes(attr): filter/lightbox tienen
+      // `css`, y el propio runtime lo inyecta en vivo como <style> SIN
+      // marcador — su texto de selector contiene literalmente
+      // "[data-ol-hidden]" aunque ningún elemento ya lleve el atributo. Un
+      // .toContain() de string confundiría ese CSS inerte con una receta sin
+      // cubrir de verdad.
+      const savedAttrs = attrNames(saved);
+      for (const attr of runtimeIntroduced) {
+        expect(
+          savedAttrs.has(attr),
+          `${attr}: lo introdujo el runtime en vivo y el strip NO lo limpió — receta nueva sin cubrir (ver strip-editor-instrumentation.ts)`,
+        ).toBe(false);
+      }
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+});
+
+describe("stripEditorInstrumentation — sticky's data-ol-stuck (runtime-owned, siempre se limpia)", () => {
+  trackDocumentListeners();
+
+  beforeEach(() => {
+    document.body.innerHTML = "";
+    Object.defineProperty(window, "scrollY", { value: 0, configurable: true });
+  });
+
+  it("un nav con data-ol-stuck (puesto por scroll en el preview) no sobrevive al guardado", () => {
+    Object.defineProperty(window, "scrollY", { value: 100, configurable: true });
+    mount(`<nav data-ol-sticky class="fixed top-0 w-full"><a href="/">Mi negocio</a></nav>`);
+    const nav = document.querySelector("[data-ol-sticky]")!;
+    expect(nav.hasAttribute("data-ol-stuck"), "sanity: sticky se aplica de inmediato al montar").toBe(true);
+
+    const dirty = "<!doctype html>\n" + document.documentElement.outerHTML;
+    const saved = stripEditorInstrumentation(dirty);
+    expect(saved).not.toContain("data-ol-stuck");
   });
 });
