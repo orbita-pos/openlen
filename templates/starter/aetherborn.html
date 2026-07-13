@@ -150,9 +150,10 @@
   .eyebrow { font-family:var(--font-display); font-weight:700; text-transform:uppercase; letter-spacing:0.34em; font-size:14px; }
   .display-italic { font-family:var(--font-italic); font-style:italic; font-weight:800; line-height:0.92; }
 
-  /* ---- mobile menu ---- */
+  /* ---- mobile menu — CSS-only (checkbox hack): scripts are stripped on publish ---- */
   #mobile-menu { transition:opacity .2s ease, visibility .2s ease; }
   #mobile-menu.hidden-menu { opacity:0; visibility:hidden; pointer-events:none; }
+  #ol-nav:checked ~ #mobile-menu { opacity:1; visibility:visible; pointer-events:auto; }
 
   @media (max-width: 1023px) { .btn { height:46px; } }
 </style>
@@ -161,6 +162,7 @@
 
 <!-- ============================ TOP NAV ============================ -->
 <header class="sticky top-0 z-50" style="background:var(--bg);border-bottom:1px solid rgba(255,255,255,.06)">
+  <input type="checkbox" id="ol-nav" class="sr-only peer">
   <div class="max-w-[1480px] mx-auto px-4 sm:px-6 h-[68px] flex items-center justify-between gap-4">
     <div class="flex items-center gap-3 lg:gap-8 min-w-0">
       <a href="#" class="flex items-center gap-3 shrink-0">
@@ -201,9 +203,9 @@
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.6 2.5 15.4 0 18M12 3c-2.5 2.6-2.5 15.4 0 18"/></svg>
       </button>
       <a href="#" class="btn btn-cyan ml-1 hidden sm:inline-flex">Jugar Ahora</a>
-      <button id="menu-btn" class="nav-icon-btn xl:hidden" aria-label="Menú" aria-expanded="false" aria-controls="mobile-menu">
+      <label for="ol-nav" id="menu-btn" class="nav-icon-btn xl:hidden cursor-pointer" aria-label="Abrir menú">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M3 12h18M3 18h18" stroke-linecap="round"/></svg>
-      </button>
+      </label>
     </div>
   </div>
 
@@ -494,21 +496,9 @@
 
 <script>
 (function () {
-  // ---- mobile menu ----
-  var menuBtn = document.getElementById('menu-btn');
-  var mobile = document.getElementById('mobile-menu');
-  if (menuBtn && mobile) {
-    menuBtn.addEventListener('click', function () {
-      var open = !mobile.classList.toggle('hidden-menu');
-      menuBtn.setAttribute('aria-expanded', String(open));
-    });
-    mobile.querySelectorAll('a').forEach(function (a) {
-      a.addEventListener('click', function () {
-        mobile.classList.add('hidden-menu');
-        menuBtn.setAttribute('aria-expanded', 'false');
-      });
-    });
-  }
+  // Mobile menu is CSS-only now (checkbox #ol-nav). This whole script never
+  // runs on a published/cloned page anyway (OpenLen strips every <script>) —
+  // what's left below only ever executes in the un-cloned template preview.
 
   // ---- champion class selector ----
   // When you wire real renders, add an `img:'<url>'` to each entry and set the

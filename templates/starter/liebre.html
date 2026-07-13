@@ -113,9 +113,9 @@
   .footlink{color:var(--fg-muted);text-decoration:none;font-size:14px;transition:color .12s ease;}
   .footlink:hover{color:var(--fg);}
 
-  /* Menú móvil */
+  /* Menú móvil — solo CSS (checkbox): los scripts se borran al publicar */
   .mobile-panel{overflow:hidden;max-height:0;opacity:0;transition:max-height .26s ease, opacity .2s ease;}
-  .mobile-panel.open{max-height:340px;opacity:1;}
+  #ol-nav:checked ~ #mobileMenu{max-height:340px;opacity:1;}
 
   @keyframes floatY{0%,100%{transform:translateY(0)}50%{transform:translateY(-16px)}}
   @keyframes floatYsm{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
@@ -144,6 +144,7 @@
 </head>
 
 <body id="top">
+  <input type="checkbox" id="ol-nav" class="sr-only peer">
 
   <!-- NAV -->
   <nav class="sticky top-0 z-50 flex items-center justify-between gap-4"
@@ -170,10 +171,10 @@
       </button>
     </div>
 
-    <button id="burger" class="nav-burger place-items-center" aria-label="Abrir menú" aria-expanded="false" aria-controls="mobileMenu"
+    <label for="ol-nav" id="burger" class="nav-burger place-items-center" aria-label="Abrir menú"
             style="width:44px;height:44px;border-radius:999px;background:var(--accent);border:none;cursor:pointer;color:var(--accent-ink);">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"></path></svg>
-    </button>
+    </label>
   </nav>
 
   <!-- MENÚ MÓVIL -->
@@ -414,18 +415,10 @@
     syncBenefits();
   });
 
-  /* ---------- MENÚ MÓVIL ---------- */
-  var burger = document.getElementById("burger");
-  var menu = document.getElementById("mobileMenu");
-  function closeMenu(){ menu.classList.remove("open"); menu.setAttribute("inert",""); burger.setAttribute("aria-expanded","false"); }
-  menu.setAttribute("inert","");
-  burger.addEventListener("click", function(){
-    var open = menu.classList.toggle("open");
-    if(open){ menu.removeAttribute("inert"); } else { menu.setAttribute("inert",""); }
-    burger.setAttribute("aria-expanded", open ? "true" : "false");
-  });
-  menu.querySelectorAll(".mlink").forEach(function(a){ a.addEventListener("click", closeMenu); });
-  window.addEventListener("resize", function(){ if(window.innerWidth > 820) closeMenu(); });
+  // Menú móvil: solo CSS (checkbox #ol-nav). Este script entero nunca corre
+  // en una página clonada/publicada (OpenLen borra todo <script>) — lo que
+  // sigue (productos/beneficios/newsletter) solo se ejecuta en la vista
+  // previa de la plantilla sin clonar.
 
   /* ---------- NEWSLETTER (sin backend) ---------- */
   var form = document.getElementById("newsletter");

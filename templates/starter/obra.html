@@ -105,14 +105,17 @@
   .sketch { background:var(--bg); border:1px solid var(--border); border-radius:var(--radius); overflow:hidden; }
   .sketch img { width:100%; height:auto; display:block; }
 
+  /* Mobile menu — CSS-only (checkbox hack): scripts are stripped on publish */
   #mobile-menu { transition:opacity .2s ease, visibility .2s ease; }
   #mobile-menu.hidden-menu { opacity:0; visibility:hidden; pointer-events:none; }
+  #ol-nav:checked ~ #mobile-menu { opacity:1; visibility:visible; pointer-events:auto; }
 </style>
 </head>
 <body class="min-h-screen antialiased">
 
 <!-- ============================ NAV ============================ -->
 <header class="sticky top-0 z-50" style="background:color-mix(in srgb, var(--bg) 88%, transparent); backdrop-filter:blur(8px); border-bottom:1px solid var(--border)">
+  <input type="checkbox" id="ol-nav" class="sr-only peer">
   <div class="max-w-[1320px] mx-auto px-5 sm:px-8 h-16 flex items-center justify-between">
     <a href="#" class="display font-extrabold text-[19px] tracking-tight">OBRA</a>
     <nav class="hidden md:flex items-center gap-9">
@@ -123,9 +126,9 @@
     </nav>
     <div class="flex items-center gap-3">
       <a href="#contact" class="pill hidden sm:inline-flex">Contact</a>
-      <button id="menu-btn" class="md:hidden w-10 h-10 -mr-2 inline-flex items-center justify-center" aria-label="Menu" aria-expanded="false" aria-controls="mobile-menu">
+      <label for="ol-nav" id="menu-btn" class="md:hidden w-10 h-10 -mr-2 inline-flex items-center justify-center cursor-pointer" aria-label="Open menu">
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" stroke-linecap="round"/></svg>
-      </button>
+      </label>
     </div>
   </div>
   <div id="mobile-menu" class="hidden-menu md:hidden absolute top-16 left-0 right-0 bg-[color:var(--bg)] border-b border-[color:var(--border)] px-6 py-4">
@@ -317,21 +320,8 @@
   </div>
 </footer>
 
-<script>
-(function () {
-  var btn = document.getElementById('menu-btn');
-  var menu = document.getElementById('mobile-menu');
-  if (btn && menu) {
-    btn.addEventListener('click', function () {
-      var open = !menu.classList.toggle('hidden-menu');
-      btn.setAttribute('aria-expanded', String(open));
-    });
-    menu.querySelectorAll('a').forEach(function (a) {
-      a.addEventListener('click', function () { menu.classList.add('hidden-menu'); btn.setAttribute('aria-expanded', 'false'); });
-    });
-  }
-})();
-</script>
+<!-- Mobile menu is CSS-only (checkbox #ol-nav in the header above) — no
+     script needed. OpenLen strips every script tag on clone/publish anyway. -->
 
 </body>
 </html>

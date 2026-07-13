@@ -102,9 +102,9 @@
   .arrow.on-dark{background:rgba(255,255,255,0.08);border-color:rgba(255,255,255,0.28);color:#fff}
   .arrow.on-dark:hover{background:rgba(255,255,255,0.16)}
 
-  /* Mobile menu */
+  /* Mobile menu — CSS-only (checkbox hack): scripts are stripped on publish. */
   .mobile-menu{max-height:0;overflow:hidden;transition:max-height .26s ease}
-  .mobile-menu.open{max-height:420px}
+  #ol-nav:checked ~ #mobileMenu{max-height:420px}
 
   .stat-num{font-family:var(--font-display);font-weight:600;letter-spacing:-0.02em;line-height:1}
 </style>
@@ -113,6 +113,7 @@
 
 <!-- ============ NAV ============ -->
 <nav id="nav" class="nav fixed top-0 inset-x-0 z-50">
+  <input type="checkbox" id="ol-nav" class="sr-only peer">
   <div class="max-w-[1400px] mx-auto px-5 sm:px-8 h-[68px] flex items-center justify-between">
     <a href="#top" class="wordmark wordmark-nav text-[1.05rem] sm:text-[1.15rem] select-none" aria-label="AVENIR — Inicio">AVENIR</a>
 
@@ -136,11 +137,11 @@
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.6"/><path d="M5 19.5a7 7 0 0 1 14 0"/></svg>
         </button>
       </div>
-      <button id="hamburger" class="hamburger lg:hidden flex flex-col justify-center gap-[5px] w-9 h-9 items-center" aria-label="Menú" aria-expanded="false" aria-controls="mobileMenu">
+      <label for="ol-nav" id="hamburger" class="hamburger lg:hidden flex flex-col justify-center gap-[5px] w-9 h-9 items-center cursor-pointer" aria-label="Abrir menú">
         <span class="block w-5 h-[2px] rounded transition-all"></span>
         <span class="block w-5 h-[2px] rounded transition-all"></span>
         <span class="block w-5 h-[2px] rounded transition-all"></span>
-      </button>
+      </label>
     </div>
   </div>
 
@@ -426,21 +427,11 @@
 
 <script>
 (function(){
+  // Mobile menu is CSS-only now (checkbox #ol-nav) — and this whole script
+  // never runs on a published/cloned page anyway (OpenLen strips every
+  // <script>). What's left below only ever executes in the un-cloned
+  // template preview, for the scroll/carousel effects.
   var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-
-  /* ---- Mobile menu ---- */
-  var hb = document.getElementById('hamburger');
-  var mm = document.getElementById('mobileMenu');
-  hb.addEventListener('click', function(){
-    var open = mm.classList.toggle('open');
-    hb.setAttribute('aria-expanded', open ? 'true' : 'false');
-  });
-  mm.querySelectorAll('a').forEach(function(a){
-    a.addEventListener('click', function(){
-      mm.classList.remove('open');
-      hb.setAttribute('aria-expanded','false');
-    });
-  });
 
   /* ---- Nav solidify on scroll ---- */
   var nav = document.getElementById('nav');

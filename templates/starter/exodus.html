@@ -110,8 +110,10 @@
 
   .rocket-ph { position:absolute; left:50%; bottom:0; transform:translateX(-50%); width:clamp(60px,7vw,110px); height:62%; opacity:.92; }
 
+  /* Mobile menu — CSS-only (checkbox hack): scripts are stripped on publish */
   #mnav { transition:opacity .2s ease, visibility .2s ease; }
   #mnav.closed { opacity:0; visibility:hidden; pointer-events:none; }
+  #ol-nav:checked ~ #mnav { opacity:1; visibility:visible; pointer-events:auto; }
 
   /* mobile: SpaceX-style stack — full photo on top, text below on black */
   @media (max-width:1023px){
@@ -126,6 +128,7 @@
 
 <!-- ============================ NAV ============================ -->
 <header class="fixed top-0 left-0 right-0 z-50">
+  <input type="checkbox" id="ol-nav" class="sr-only peer">
   <div class="nav-scrim absolute inset-0 -z-10"></div>
   <div class="max-w-[1560px] mx-auto px-5 sm:px-8 h-[72px] flex items-center justify-between gap-6">
     <a href="#" class="wordmark shrink-0">EXODUS</a>
@@ -142,9 +145,9 @@
         Upcoming Launches
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </button>
-      <button id="mbtn" class="xl:hidden w-10 h-10 -mr-2 inline-flex items-center justify-center text-[color:var(--fg)]" aria-label="Menu" aria-expanded="false" aria-controls="mnav">
+      <label for="ol-nav" id="mbtn" class="xl:hidden w-10 h-10 -mr-2 inline-flex items-center justify-center text-[color:var(--fg)] cursor-pointer" aria-label="Open menu">
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" stroke-linecap="round"/></svg>
-      </button>
+      </label>
     </div>
   </div>
   <div id="mnav" class="closed xl:hidden absolute top-[72px] left-0 right-0 bg-black/95 border-t border-white/10 px-6 py-4">
@@ -268,21 +271,8 @@
   </div>
 </section>
 
-<script>
-(function () {
-  var b = document.getElementById('mbtn');
-  var m = document.getElementById('mnav');
-  if (b && m) {
-    b.addEventListener('click', function () {
-      var open = m.classList.toggle('closed') === false;
-      b.setAttribute('aria-expanded', String(open));
-    });
-    m.querySelectorAll('a').forEach(function (a) {
-      a.addEventListener('click', function () { m.classList.add('closed'); b.setAttribute('aria-expanded', 'false'); });
-    });
-  }
-})();
-</script>
+<!-- Mobile menu is CSS-only (checkbox #ol-nav in the header above) — no
+     script needed. OpenLen strips every script tag on clone/publish anyway. -->
 
 </body>
 </html>
