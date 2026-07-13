@@ -84,12 +84,12 @@
   /* Tarjetas */
   .lift{transition:transform .14s ease, box-shadow .14s ease, border-color .14s ease;}
   .lift:hover{transform:translateY(-6px);}
-  .benefit{transition:transform .14s ease, box-shadow .14s ease;}
+  .benefit{display:block;transition:transform .14s ease, box-shadow .14s ease;}
   .benefit:hover{transform:translateY(-3px);box-shadow:0 16px 34px rgba(0,0,0,.28);}
+  .benefit>summary{list-style:none;cursor:pointer;}
+  .benefit>summary::-webkit-details-marker{display:none;}
   .benefit .sign{transition:transform .18s ease;}
-  .benefit[aria-expanded="true"] .sign{transform:rotate(45deg);}
-  .benefit .panel{overflow:hidden;max-height:0;opacity:0;transition:max-height .28s ease, opacity .22s ease;}
-  .benefit[aria-expanded="true"] .panel{max-height:160px;opacity:1;}
+  .benefit[open] .sign{transform:rotate(45deg);}
 
   /* Producto */
   .prod{transition:transform .14s ease, box-shadow .14s ease, border-color .14s ease;}
@@ -238,7 +238,7 @@
       <div class="flex flex-col" style="gap:14px;">
         <span style="font-family:var(--font-display);font-weight:600;font-size:12.5px;letter-spacing:.18em;color:var(--accent);">POR QUÉ LIEBRE</span>
         <h2 style="margin:0 0 8px;font-family:var(--font-display);font-weight:700;font-size:clamp(28px,4.4vw,44px);line-height:1.02;letter-spacing:-.03em;color:var(--fg);">Membresía con beneficios reales.</h2>
-        <div id="benefits" class="flex flex-col" style="gap:14px;"></div>
+        <div id="benefits" class="flex flex-col" style="gap:14px;"><details class="benefit" open name="liebre-benefits" style="background:#fff;border:none;border-radius:var(--radius);box-shadow:0 1px 0 rgba(0,0,0,.04);width:100%;"><summary class="flex items-center" style="padding:20px 22px;gap:14px;"><span class="sign grid place-items-center flex-none" style="width:30px;height:30px;border-radius:999px;background:rgba(var(--accent-r),.12);color:var(--accent);font-family:var(--font-display);font-weight:700;font-size:18px;">+</span><h3 style="margin:0;font-family:var(--font-display);font-weight:600;font-size:clamp(16px,2.4vw,19px);color:#16110F;line-height:1.15;flex:1;">Drops semanales en cantidad limitada</h3></summary><p style="margin:0;padding:14px 22px 20px 66px;color:#4F4750;font-size:14.5px;line-height:1.5;">Cada semana una cápsula nueva, numerada y sin restock.</p></details><details class="benefit" name="liebre-benefits" style="background:#fff;border:none;border-radius:var(--radius);box-shadow:0 1px 0 rgba(0,0,0,.04);width:100%;"><summary class="flex items-center" style="padding:20px 22px;gap:14px;"><span class="sign grid place-items-center flex-none" style="width:30px;height:30px;border-radius:999px;background:rgba(var(--accent-r),.12);color:var(--accent);font-family:var(--font-display);font-weight:700;font-size:18px;">+</span><h3 style="margin:0;font-family:var(--font-display);font-weight:600;font-size:clamp(16px,2.4vw,19px);color:#16110F;line-height:1.15;flex:1;">Acceso anticipado para miembros</h3></summary><p style="margin:0;padding:14px 22px 20px 66px;color:#4F4750;font-size:14.5px;line-height:1.5;">Únete al Círculo y compra 24h antes que nadie.</p></details><details class="benefit" name="liebre-benefits" style="background:#fff;border:none;border-radius:var(--radius);box-shadow:0 1px 0 rgba(0,0,0,.04);width:100%;"><summary class="flex items-center" style="padding:20px 22px;gap:14px;"><span class="sign grid place-items-center flex-none" style="width:30px;height:30px;border-radius:999px;background:rgba(var(--accent-r),.12);color:var(--accent);font-family:var(--font-display);font-weight:700;font-size:18px;">+</span><h3 style="margin:0;font-family:var(--font-display);font-weight:600;font-size:clamp(16px,2.4vw,19px);color:#16110F;line-height:1.15;flex:1;">Envío gratis + cambios fáciles</h3></summary><p style="margin:0;padding:14px 22px 20px 66px;color:#4F4750;font-size:14.5px;line-height:1.5;">Envío gratis desde 50€ y 30 días para cambios.</p></details></div>
       </div>
     </div>
   </section>
@@ -253,7 +253,7 @@
         </div>
         <p style="max-width:360px;margin:0;color:var(--fg-muted);font-size:14.5px;line-height:1.5;">El look completo de la mascota. Cuatro piezas numeradas, disponibles esta semana.</p>
       </div>
-      <div id="products" class="grid" style="grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:clamp(14px,2.5vw,22px);"></div>
+      <div id="products" class="grid" style="grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:clamp(14px,2.5vw,22px);"><div class="prod flex flex-col" style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;"><div class="relative grid place-items-center" style="aspect-ratio:1/1;background:radial-gradient(circle at 50% 36%,#F8EFF3 0%,#E9DCE2 100%);"><span class="absolute" style="top:12px;left:12px;padding:5px 11px;border-radius:999px;background:rgba(26,4,16,.72);color:#fff;font-family:var(--font-display);font-weight:600;font-size:10.5px;letter-spacing:.1em;">DROP 07</span><img src="https://images.openlen.com/liebre/prod-tee.webp" alt="Camiseta Calavera" onerror="this.style.opacity=0" style="width:84%;height:84%;object-fit:contain;filter:drop-shadow(0 14px 18px rgba(0,0,0,.22));"></div><div class="flex flex-col" style="gap:12px;padding:16px;"><div class="flex items-baseline justify-between" style="gap:10px;"><h3 style="margin:0;font-family:var(--font-display);font-weight:600;font-size:15.5px;color:var(--fg);line-height:1.15;">Camiseta Calavera</h3><span style="font-family:var(--font-display);font-weight:700;font-size:16px;color:var(--fg);white-space:nowrap;">34€</span></div><button class="add" aria-label="Añadir Camiseta Calavera al carrito" style="width:100%;padding:11px 14px;border-radius:999px;border:1px solid var(--border-strong);background:transparent;color:var(--fg);font-family:var(--font-display);font-weight:600;font-size:14px;cursor:pointer;">Añadir</button></div></div><div class="prod flex flex-col" style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;"><div class="relative grid place-items-center" style="aspect-ratio:1/1;background:radial-gradient(circle at 50% 36%,#F8EFF3 0%,#E9DCE2 100%);"><span class="absolute" style="top:12px;left:12px;padding:5px 11px;border-radius:999px;background:rgba(26,4,16,.72);color:#fff;font-family:var(--font-display);font-weight:600;font-size:10.5px;letter-spacing:.1em;">NUEVO</span><img src="https://images.openlen.com/liebre/prod-hoodie.webp" alt="Hoodie Madriguera" onerror="this.style.opacity=0" style="width:84%;height:84%;object-fit:contain;filter:drop-shadow(0 14px 18px rgba(0,0,0,.22));"></div><div class="flex flex-col" style="gap:12px;padding:16px;"><div class="flex items-baseline justify-between" style="gap:10px;"><h3 style="margin:0;font-family:var(--font-display);font-weight:600;font-size:15.5px;color:var(--fg);line-height:1.15;">Hoodie Madriguera</h3><span style="font-family:var(--font-display);font-weight:700;font-size:16px;color:var(--fg);white-space:nowrap;">79€</span></div><button class="add" aria-label="Añadir Hoodie Madriguera al carrito" style="width:100%;padding:11px 14px;border-radius:999px;border:1px solid var(--border-strong);background:transparent;color:var(--fg);font-family:var(--font-display);font-weight:600;font-size:14px;cursor:pointer;">Añadir</button></div></div><div class="prod flex flex-col" style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;"><div class="relative grid place-items-center" style="aspect-ratio:1/1;background:radial-gradient(circle at 50% 36%,#F8EFF3 0%,#E9DCE2 100%);"><span class="absolute" style="top:12px;left:12px;padding:5px 11px;border-radius:999px;background:var(--accent);color:var(--accent-ink);font-family:var(--font-display);font-weight:600;font-size:10.5px;letter-spacing:.1em;">ÚLTIMAS</span><img src="https://images.openlen.com/liebre/prod-cap.webp" alt="Gorra Oreja Larga" onerror="this.style.opacity=0" style="width:84%;height:84%;object-fit:contain;filter:drop-shadow(0 14px 18px rgba(0,0,0,.22));"></div><div class="flex flex-col" style="gap:12px;padding:16px;"><div class="flex items-baseline justify-between" style="gap:10px;"><h3 style="margin:0;font-family:var(--font-display);font-weight:600;font-size:15.5px;color:var(--fg);line-height:1.15;">Gorra Oreja Larga</h3><span style="font-family:var(--font-display);font-weight:700;font-size:16px;color:var(--fg);white-space:nowrap;">29€</span></div><button class="add" aria-label="Añadir Gorra Oreja Larga al carrito" style="width:100%;padding:11px 14px;border-radius:999px;border:1px solid var(--border-strong);background:transparent;color:var(--fg);font-family:var(--font-display);font-weight:600;font-size:14px;cursor:pointer;">Añadir</button></div></div><div class="prod flex flex-col" style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;"><div class="relative grid place-items-center" style="aspect-ratio:1/1;background:radial-gradient(circle at 50% 36%,#F8EFF3 0%,#E9DCE2 100%);"><span class="absolute" style="top:12px;left:12px;padding:5px 11px;border-radius:999px;background:rgba(26,4,16,.72);color:#fff;font-family:var(--font-display);font-weight:600;font-size:10.5px;letter-spacing:.1em;">DROP 07</span><img src="https://images.openlen.com/liebre/prod-kicks.webp" alt="Zapatillas Brinco" onerror="this.style.opacity=0" style="width:84%;height:84%;object-fit:contain;filter:drop-shadow(0 14px 18px rgba(0,0,0,.22));"></div><div class="flex flex-col" style="gap:12px;padding:16px;"><div class="flex items-baseline justify-between" style="gap:10px;"><h3 style="margin:0;font-family:var(--font-display);font-weight:600;font-size:15.5px;color:var(--fg);line-height:1.15;">Zapatillas Brinco</h3><span style="font-family:var(--font-display);font-weight:700;font-size:16px;color:var(--fg);white-space:nowrap;">120€</span></div><button class="add" aria-label="Añadir Zapatillas Brinco al carrito" style="width:100%;padding:11px 14px;border-radius:999px;border:1px solid var(--border-strong);background:transparent;color:var(--fg);font-family:var(--font-display);font-weight:600;font-size:14px;cursor:pointer;">Añadir</button></div></div></div>
     </div>
   </section>
 
@@ -343,82 +343,12 @@
 (function(){
   "use strict";
 
-  /* ---------- DATOS ---------- */
-  var PRODUCTS = [
-    { slug:"prod-tee",    nombre:"Camiseta Calavera", precio:"34€",  tag:"DROP 07" },
-    { slug:"prod-hoodie", nombre:"Hoodie Madriguera", precio:"79€",  tag:"NUEVO"   },
-    { slug:"prod-cap",    nombre:"Gorra Oreja Larga", precio:"29€",  tag:"ÚLTIMAS" },
-    { slug:"prod-kicks",  nombre:"Zapatillas Brinco", precio:"120€", tag:"DROP 07" }
-  ];
-
-  var BENEFITS = [
-    { title:"Drops semanales en cantidad limitada", body:"Cada semana una cápsula nueva, numerada y sin restock." },
-    { title:"Acceso anticipado para miembros",      body:"Únete al Círculo y compra 24h antes que nadie." },
-    { title:"Envío gratis + cambios fáciles",       body:"Envío gratis desde 50€ y 30 días para cambios." }
-  ];
-
-  function esc(s){ return String(s).replace(/[&<>"]/g, function(c){
-    return {"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[c];
-  }); }
-
-  /* ---------- RENDER PRODUCTOS ---------- */
-  var grid = document.getElementById("products");
-  grid.innerHTML = PRODUCTS.map(function(p){
-    var ultimas = p.tag === "ÚLTIMAS";
-    var tagBg = ultimas ? "var(--accent)" : "rgba(26,4,16,.72)";
-    var tagColor = ultimas ? "var(--accent-ink)" : "#fff";
-    return ''
-    + '<div class="prod flex flex-col" style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;">'
-    +   '<div class="relative grid place-items-center" style="aspect-ratio:1/1;background:radial-gradient(circle at 50% 36%,#F8EFF3 0%,#E9DCE2 100%);">'
-    +     '<span class="absolute" style="top:12px;left:12px;padding:5px 11px;border-radius:999px;background:'+tagBg+';color:'+tagColor+';font-family:var(--font-display);font-weight:600;font-size:10.5px;letter-spacing:.1em;">'+esc(p.tag)+'</span>'
-    +     '<img src="https://images.openlen.com/liebre/'+p.slug+'.webp" alt="'+esc(p.nombre)+'" onerror="this.style.opacity=0" style="width:84%;height:84%;object-fit:contain;filter:drop-shadow(0 14px 18px rgba(0,0,0,.22));">'
-    +   '</div>'
-    +   '<div class="flex flex-col" style="gap:12px;padding:16px;">'
-    +     '<div class="flex items-baseline justify-between" style="gap:10px;">'
-    +       '<h3 style="margin:0;font-family:var(--font-display);font-weight:600;font-size:15.5px;color:var(--fg);line-height:1.15;">'+esc(p.nombre)+'</h3>'
-    +       '<span style="font-family:var(--font-display);font-weight:700;font-size:16px;color:var(--fg);white-space:nowrap;">'+esc(p.precio)+'</span>'
-    +     '</div>'
-    +     '<button class="add" aria-label="Añadir '+esc(p.nombre)+' al carrito" style="width:100%;padding:11px 14px;border-radius:999px;border:1px solid var(--border-strong);background:transparent;color:var(--fg);font-family:var(--font-display);font-weight:600;font-size:14px;cursor:pointer;">Añadir</button>'
-    +   '</div>'
-    + '</div>';
-  }).join("");
-
-  /* ---------- RENDER BENEFICIOS (acordeón accesible) ---------- */
-  var benefitsEl = document.getElementById("benefits");
-  benefitsEl.innerHTML = BENEFITS.map(function(b, i){
-    return ''
-    + '<button class="benefit text-left" type="button" aria-expanded="'+(i===0?"true":"false")+'" aria-controls="benefit-panel-'+i+'" '
-    +   'style="background:#fff;border:none;border-radius:var(--radius);padding:20px 22px;cursor:pointer;box-shadow:0 1px 0 rgba(0,0,0,.04);width:100%;display:block;">'
-    +   '<div class="flex items-center" style="gap:14px;">'
-    +     '<span class="sign grid place-items-center flex-none" style="width:30px;height:30px;border-radius:999px;background:rgba(var(--accent-r),.12);color:var(--accent);font-family:var(--font-display);font-weight:700;font-size:18px;">+</span>'
-    +     '<h3 style="margin:0;font-family:var(--font-display);font-weight:600;font-size:clamp(16px,2.4vw,19px);color:#16110F;line-height:1.15;flex:1;">'+esc(b.title)+'</h3>'
-    +   '</div>'
-    +   '<div class="panel" id="benefit-panel-'+i+'"><p style="margin:14px 0 0;padding-left:44px;color:#4F4750;font-size:14.5px;line-height:1.5;">'+esc(b.body)+'</p></div>'
-    + '</button>';
-  }).join("");
-
-  function syncBenefits(){
-    benefitsEl.querySelectorAll(".benefit").forEach(function(c){
-      var open = c.getAttribute("aria-expanded") === "true";
-      var panel = c.querySelector(".panel");
-      if(panel){ if(open){ panel.removeAttribute("inert"); } else { panel.setAttribute("inert",""); } }
-    });
-  }
-  syncBenefits();
-  benefitsEl.addEventListener("click", function(e){
-    var card = e.target.closest(".benefit");
-    if(!card) return;
-    var open = card.getAttribute("aria-expanded") === "true";
-    // Cierra el resto (acordeón). Cambia a no-cierre si prefieres multi-abierto.
-    benefitsEl.querySelectorAll(".benefit").forEach(function(c){ c.setAttribute("aria-expanded","false"); });
-    card.setAttribute("aria-expanded", open ? "false" : "true");
-    syncBenefits();
-  });
-
-  // Menú móvil: solo CSS (checkbox #ol-nav). Este script entero nunca corre
-  // en una página clonada/publicada (OpenLen borra todo <script>) — lo que
-  // sigue (productos/beneficios/newsletter) solo se ejecuta en la vista
-  // previa de la plantilla sin clonar.
+  // Products and benefits are static HTML now (Task 21) -- the benefits
+  // accordion is native <details>/<summary> (name= groups them so
+  // opening one closes the rest, zero JS). This <script> still never
+  // runs on a published/cloned page anyway (OpenLen strips every
+  // <script>) -- what remains below is only the newsletter form's
+  // preventDefault, a preview-only nicety.
 
   /* ---------- NEWSLETTER (sin backend) ---------- */
   var form = document.getElementById("newsletter");
