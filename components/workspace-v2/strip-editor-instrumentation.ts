@@ -18,6 +18,7 @@
 // remove/unwrap them too, or they reach the published static page.
 //
 import { BEHAVIORS_MARKER } from "@/lib/behaviors/build";
+import { MARKER as CAROUSEL_MARKER } from "@/lib/publish/carousel";
 
 // Fast path skips the parse when there's nothing to strip.
 export function stripEditorInstrumentation(html: string): string {
@@ -27,7 +28,8 @@ export function stripEditorInstrumentation(html: string): string {
     !html.includes("contenteditable") &&
     !html.includes("data-ol-motion") &&
     !html.includes("data-ol-counted") &&
-    !html.includes(BEHAVIORS_MARKER)
+    !html.includes(BEHAVIORS_MARKER) &&
+    !html.includes(CAROUSEL_MARKER)
   ) {
     return html;
   }
@@ -50,8 +52,10 @@ export function stripEditorInstrumentation(html: string): string {
     // persisted this script, that guard would permanently no-op the preview
     // injector on this document (stuck on whatever runtime got baked in). Strip
     // both the body and head script on every save so the guard never sees them.
+    // Same reasoning for the carousel script (Task 14b): its preview injector
+    // (also use-behaviors-preview.ts) guards on CAROUSEL_MARKER the same way.
     doc
-      .querySelectorAll(`script[${BEHAVIORS_MARKER}],script[${BEHAVIORS_MARKER}-head]`)
+      .querySelectorAll(`script[${BEHAVIORS_MARKER}],script[${BEHAVIORS_MARKER}-head],script[${CAROUSEL_MARKER}]`)
       .forEach((n) => n.remove());
     // inline-edit run-wrappers: UNWRAP (replace with children) — never delete,
     // or the run's text would be lost. Mirrors use-inline-edit captureClean.

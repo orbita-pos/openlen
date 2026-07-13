@@ -14,13 +14,21 @@
 // navigation scrolls the whole document vertically (the page-jump bug). The
 // buttons only enhance: native swipe/wheel still scrolls with JS off.
 
-const MARKER = "data-ol-carousel";
+// Exported (Task 14b) so the editor preview injector
+// (components/workspace-v2/use-behaviors-preview.ts) can import this EXACT
+// marker/runtime pair instead of carrying a second copy. bakeCarousels below
+// is deployed and untouched by that task — these two consts are the only
+// change here.
+export const MARKER = "data-ol-carousel";
 
-// Static runtime — KEEP IN SYNC with the inline preview copy in the cinema
-// templates. Delegated click on [data-ol-scroll] → find its row ([data-ol-row])
-// and scroll that row's [data-ol-scroller] by ~80% of its visible width
+// Static runtime — now imported byte-for-byte by the editor preview instead
+// of hand-copied, closing the "KEEP IN SYNC with the inline preview copy in
+// the cinema templates" plea this comment used to make (a plea already
+// broken once — the preview had no carousel runtime at all until Task 14b).
+// Delegated click on [data-ol-scroll] → find its row ([data-ol-row]) and
+// scroll that row's [data-ol-scroller] by ~80% of its visible width
 // (min 240px), smoothly.
-const CAROUSEL_JS = `(function(){var amt=function(s){return Math.max(240,Math.round(s.clientWidth*0.8))};document.addEventListener("click",function(e){var t=e.target;if(!t||!t.closest)return;var b=t.closest("[data-ol-scroll]");if(!b)return;var row=b.closest("[data-ol-row]");var s=row?row.querySelector("[data-ol-scroller]"):null;if(!s)return;e.preventDefault();s.scrollBy({left:(b.getAttribute("data-ol-scroll")==="next"?1:-1)*amt(s),behavior:"smooth"})});})();`;
+export const CAROUSEL_JS = `(function(){var amt=function(s){return Math.max(240,Math.round(s.clientWidth*0.8))};document.addEventListener("click",function(e){var t=e.target;if(!t||!t.closest)return;var b=t.closest("[data-ol-scroll]");if(!b)return;var row=b.closest("[data-ol-row]");var s=row?row.querySelector("[data-ol-scroller]"):null;if(!s)return;e.preventDefault();s.scrollBy({left:(b.getAttribute("data-ol-scroll")==="next"?1:-1)*amt(s),behavior:"smooth"})});})();`;
 
 /** Inject the carousel-arrow runtime when the page has [data-ol-scroll] buttons.
  *  No-op when there are none, or when already processed (idempotent). */

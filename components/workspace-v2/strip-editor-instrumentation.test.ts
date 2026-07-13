@@ -7,8 +7,10 @@
 
 import { describe, it, expect } from "vitest";
 import { stripEditorInstrumentation } from "./strip-editor-instrumentation";
+import { injectBehaviorsPreview } from "./use-behaviors-preview";
 import { bakeBehaviors, BEHAVIORS_MARKER } from "@/lib/behaviors/build";
 import type { Behavior, BehaviorName } from "@/lib/behaviors/types";
+import { CAROUSEL_JS, MARKER as CAROUSEL_MARKER } from "@/lib/publish/carousel";
 
 const DOC = (body: string) =>
   `<!doctype html><html><head></head><body>${body}</body></html>`;
@@ -234,5 +236,41 @@ describe("stripEditorInstrumentation — behaviors runtime scripts", () => {
     expect(out).not.toContain("data-openlen-editable");
     expect(out).toContain("Hello");
     expect(out).toContain("World");
+  });
+});
+
+// Task 14b — the carousel preview injector (use-behaviors-preview.ts) bakes
+// the SAME <script data-ol-carousel> that publish's bakeCarousels does, and
+// guards on CAROUSEL_MARKER's mere presence the same way BEHAVIORS_MARKER is
+// guarded — so it is exposed to the EXACT divergence bug the tests above
+// already closed for behaviors (commit 90f85c0). Same fix, same proof.
+describe("stripEditorInstrumentation — carousel runtime script (Task 14b)", () => {
+  it("removes the carousel script and keeps real content intact", () => {
+    const out = stripEditorInstrumentation(
+      DOC(`<h1>Hello</h1><script ${CAROUSEL_MARKER}>void 0</script>`),
+    );
+    expect(out).not.toContain(CAROUSEL_MARKER);
+    expect(out).toContain("<h1>Hello</h1>");
+  });
+
+  it("lets the carousel preview injector re-inject after the strip — closes the idempotency-guard divergence bug for carousel too", () => {
+    const withCarousel = DOC(
+      `<div data-ol-row><button data-ol-scroll="prev">‹</button><button data-ol-scroll="next">›</button>` +
+        `<div data-ol-scroller><article>1</article></div></div>`,
+    );
+    const injected = injectBehaviorsPreview(withCarousel);
+    expect(injected).toContain(CAROUSEL_JS); // sanity: the injector actually fired
+
+    const stripped = stripEditorInstrumentation(injected);
+    expect(stripped).not.toContain(CAROUSEL_MARKER);
+
+    // Before this fix, a leaked <script data-ol-carousel> surviving a save
+    // would make the preview injector's own marker guard —
+    // `if (html.includes(CAROUSEL_MARKER)) return html;` — no-op forever on
+    // this document. This proves a re-save (strip) followed by a re-render
+    // (inject) still produces a live runtime.
+    const reinjected = injectBehaviorsPreview(stripped);
+    expect(reinjected).not.toBe(stripped);
+    expect(reinjected).toContain(CAROUSEL_JS);
   });
 });

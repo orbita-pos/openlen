@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import { injectBehaviorsPreview } from "./use-behaviors-preview";
 import { bakeBehaviors } from "@/lib/behaviors/build";
 import type { Behavior, BehaviorName } from "@/lib/behaviors/types";
+import { CAROUSEL_JS } from "@/lib/publish/carousel";
 
 const doc = (body: string) => `<!doctype html><html><head></head><body>${body}</body></html>`;
 
@@ -44,5 +45,46 @@ describe("injectBehaviorsPreview", () => {
     const html = doc(`<div data-ol-countdown="2026-08-15T20:00Z"></div>`);
     const once = injectBehaviorsPreview(html, REG, ORDER);
     expect(injectBehaviorsPreview(once, REG, ORDER)).toBe(once);
+  });
+});
+
+// Task 14b — el carrusel (lib/publish/carousel.ts) es la MISMA deuda que el
+// comentario de use-behaviors-preview.ts describe, ya vencida una vez: el
+// preview no inyectaba su runtime en absoluto (flechas muertas mientras
+// editas, vivas al publicar). CAROUSEL_JS se importa aquí — no se copia — así
+// que si alguien alguna vez reintroduce una copia divergente (a mano, por
+// ejemplo dentro de injectBehaviorsPreview), este `toContain(CAROUSEL_JS)`
+// deja de matchear y el test lo caza.
+describe("injectBehaviorsPreview — carrusel (Task 14b)", () => {
+  const carouselMarkup = `<div data-ol-row>
+    <button data-ol-scroll="prev">‹</button>
+    <button data-ol-scroll="next">›</button>
+    <div data-ol-scroller><article>1</article><article>2</article></div>
+  </div>`;
+
+  it("un srcDoc con data-ol-scroll= recibe el runtime EXACTO que exporta carousel.ts", () => {
+    const html = doc(carouselMarkup);
+    const out = injectBehaviorsPreview(html);
+    expect(out).toContain(CAROUSEL_JS);
+  });
+
+  it("un srcDoc sin data-ol-scroll= no lo inyecta", () => {
+    const html = doc(`<div data-ol-countdown="2026-08-15T20:00Z"></div>`);
+    const out = injectBehaviorsPreview(html);
+    expect(out).not.toContain(CAROUSEL_JS);
+  });
+
+  it("es idempotente: inyectar dos veces no lo duplica", () => {
+    const html = doc(carouselMarkup);
+    const once = injectBehaviorsPreview(html);
+    const twice = injectBehaviorsPreview(once);
+    expect(twice).toBe(once);
+  });
+
+  it("la paridad no se rompe: un documento con conductas + carrusel recibe AMBOS runtimes", () => {
+    const html = doc(`<div data-ol-countdown="2026-08-15T20:00Z"></div>${carouselMarkup}`);
+    const out = injectBehaviorsPreview(html, REG, ORDER);
+    expect(out).toContain("/*CD*/"); // la conducta (registro falso de este archivo)
+    expect(out).toContain(CAROUSEL_JS); // el carrusel (fuente real, importada)
   });
 });
