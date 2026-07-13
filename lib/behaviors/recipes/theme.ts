@@ -63,8 +63,20 @@ export const theme: Behavior = {
     // validador no puede juzgar el rubro de una página (spec §13, limitación
     // conocida #2): la guarda vive enteramente en este texto, que es lo único
     // que lee el modelo antes de decidir dónde poner el marcador.
+    //
+    // SEGUNDA GUARDA, añadida en el Task 15 (auditoría de los docs que lee la
+    // IA): esta receta NO trae `css` (a propósito, igual que sticky) — el
+    // toggle solo tiene efecto si la página YA define el flip `:root.dark`
+    // con valores REALMENTE distintos a los de `:root`. Ese flip es mandato
+    // de la guía de diseño para TODA página ("Declare this canonical
+    // vocabulary on :root ... plus a :root.dark flip"), así que en teoría
+    // "ya está" — pero el propio producto NO lo asume garantizado: el toggle
+    // manual del inspector (properties-panel.tsx, prop `hasDark`) solo se
+    // muestra cuando existe un `:root.dark` real y coherente, precisamente
+    // porque puede faltar u olvidarse. Sin el recordatorio explícito abajo,
+    // esta conducta corre el mismo riesgo que sticky sin CSS: nace muerta.
     whenNot:
-      "NUNCA en la página de un negocio local (una taquería, un salón de belleza, un fotógrafo): ningún visitante espera un botón de tema ahí, y romper la modalidad única de la página sin motivo confunde más de lo que ayuda. NUNCA tampoco sobre una temática activa (Temáticas ya fija toda la paleta del kit visual; el toggle se la rompe). Resérvalo para landings de producto, portafolios y páginas de documentación — ahí sí es una convención que el visitante reconoce y espera poder usar.",
+      "NUNCA en la página de un negocio local (una taquería, un salón de belleza, un fotógrafo): ningún visitante espera un botón de tema ahí, y romper la modalidad única de la página sin motivo confunde más de lo que ayuda. NUNCA tampoco sobre una temática activa (Temáticas ya fija toda la paleta del kit visual; el toggle se la rompe). Resérvalo para landings de producto, portafolios y páginas de documentación — ahí sí es una convención que el visitante reconoce y espera poder usar. Y recuerda: el marcador por sí solo NO CAMBIA NADA si la página no define ya el flip `:root.dark` con valores REALMENTE distintos a los de `:root` — es el mismo flip que la guía de diseño exige para TODA página, no algo nuevo que inventar aquí; sin él, o si sus valores repiten los de `:root`, este botón conmuta una clase que ningún color escucha.",
     example: `<button data-ol-theme aria-label="Cambiar entre modo claro y oscuro">Tema</button>`,
   },
   status: "stable",

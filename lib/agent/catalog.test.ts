@@ -238,7 +238,7 @@ describe("buildAgentSystemPrompt", () => {
     expect(p).toContain("chatbot de propósito general");
     expect(p).toContain("no tienes acceso a internet");
   });
-  it("tells the truth about JS: none survives, interactivity is CSS-only, and an aviso must be confessed", () => {
+  it("tells the truth about JS: none survives, interactivity is CSS-only or a named CONDUCTA (never your own script), and an aviso must be confessed", () => {
     const p = buildAgentSystemPrompt();
     // The old lie ("procedural <script> … IS OK") is gone from the embedded
     // design guidance — every <script> is stripped before the page is saved.

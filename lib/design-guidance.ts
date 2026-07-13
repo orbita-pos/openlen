@@ -22,6 +22,17 @@
 // reference. With ~10K of CSS recipes + brand names in `system`, Gemini
 // would over-weight them as instructions; in `user` (tagged `<reference>`)
 // it weighs them as material to draw from.
+//
+// The CONDUCTAS section (right after • CAROUSEL below) is NOT hand-written:
+// it's buildBehaviorsDoc() interpolated at module load, generated straight
+// from lib/behaviors/registry.ts. This is the fix for the bug that started
+// this whole effort — this file once promised a <script> the sanitizer had
+// been deleting for months, because the promise and the engine lived in two
+// places that silently drifted apart. Now they're the same object: a recipe
+// this file doesn't know about cannot exist, and a recipe registered in the
+// engine cannot go undocumented here.
+
+import { buildBehaviorsDoc } from "./behaviors/doc";
 
 export const DESIGN_GUIDANCE = `
 ═══════════════════════════════════════════════════════════════════════════
@@ -42,15 +53,28 @@ OUTPUT FORMAT — strict rules (instant failure if violated)
   STRIPPED before the page is ever saved. So no React, no Babel, no
   \`window.X\` globals — and no "procedural script" to draw an SVG path or wire
   up a control either: the script is deleted and what's left is an empty
-  \`<path>\` and a dead button. Anything that must MOVE or RESPOND is CSS-only:
-    – accordion / FAQ      → \`<details><summary>\`
-    – mobile nav, toggles  → hidden checkbox + \`peer-checked:\` (or \`:target\`)
-    – tabs                 → radio inputs + \`peer-checked:\`
-    – carousel / rail      → the CAROUSEL contract below (real arrows, no JS from you)
-    – entrances, hovers, marquees → \`@keyframes\` / \`transition\`
-  A \`<button>\` that is not a form submit can do NOTHING. Use an \`<a>\` with a
-  real destination, or one of the CSS patterns above. Never ship a control
-  that only a script could have made work.
+  \`<path>\` and a dead button. Anything that must MOVE or RESPOND is exactly
+  one of three things:
+    1. CSS-only, when plain CSS already does the job:
+         – accordion / FAQ      → \`<details><summary>\`
+         – mobile nav, toggles  → hidden checkbox + \`peer-checked:\` (or \`:target\`)
+         – tabs                 → radio inputs + \`peer-checked:\`
+         – entrances, hovers, marquees → \`@keyframes\` / \`transition\`
+       (the CAROUSEL contract below is the same "you write no runtime" idea,
+       for a horizontal rail with working arrows — it's its own contract,
+       not CSS and not a CONDUCTA.)
+    2. A CONDUCTA, for the seven things CSS genuinely cannot do alone —
+       countdown, filter, lightbox, copy, autoplay, theme, sticky. Emit
+       ONLY the declarative \`data-ol-*\` marker; OpenLen bakes the real
+       runtime for you at publish time. Full contract — when to use each,
+       when NOT to, exact markup — in the CONDUCTAS section below.
+    3. NEVER your own JavaScript. Not one line, not "just this once" — it
+       is deleted with zero exceptions, every single time, no matter how
+       small.
+  A \`<button>\` that is not a form submit and carries none of the above can
+  do NOTHING. Use an \`<a>\` with a real destination, a CSS-only pattern, or
+  a CONDUCTA marker. Never ship a control that only a script could have
+  made work.
 • NO \`<iframe>\` — stripped as well. No embedded map, no Spotify, no Calendly.
   Video is the exception and needs no iframe: a plain \`<a href>\` pointing at a
   YouTube or Vimeo URL is turned into an in-page player automatically at
@@ -66,6 +90,7 @@ OUTPUT FORMAT — strict rules (instant failure if violated)
   at publish (smooth, ~80% of the visible width). Do NOT write your own slider
   script — it will be deleted — and do NOT wire the arrows with \`:target\`
   anchors: those scroll the whole document vertically instead of the rail.
+${buildBehaviorsDoc()}
 • NO \`data-slot-path=\` attribute anywhere (reserved for editor pipeline).
 • NO login / signup / sign-out / "my account" / dashboard UI of any kind,
   and NO "Sign in" / "Log in" link in the nav. These are PUBLIC informational
