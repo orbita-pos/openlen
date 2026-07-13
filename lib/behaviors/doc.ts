@@ -1,5 +1,18 @@
 import { BEHAVIORS, BEHAVIOR_ORDER } from "./registry";
 
+// La nómina en prosa (nombre + número) que leen los otros TRES sitios que
+// mencionan las conductas por fuera del catálogo generado — design-guidance.ts,
+// agent/catalog.ts y agent/tools.ts (el aviso `sanitizeAviso`) — se DERIVA de
+// aquí, nunca se escribe a mano en esos archivos. Es la imagen especular del
+// bug fundacional: la lista y el número vivían escritos SUELTOS en cuatro
+// sitios en prosa (dos de ellos con "siete" hardcodeado), así que una 8ª
+// receta nacería con runtime + validador + entrada generada aquí, pero
+// AUSENTE de esas cuatro frases. `BEHAVIOR_ORDER.join`/`.length` sobre el
+// mismo array que ya gobierna el orden de emisión (build.ts) y el catálogo
+// cerrado (registry.ts) — nunca una segunda lista.
+export const BEHAVIOR_NAMES = BEHAVIOR_ORDER.join(", ");
+export const BEHAVIOR_COUNT = BEHAVIOR_ORDER.length;
+
 // La documentación que lee la IA se GENERA de aquí — nunca se escribe aparte.
 // Es la razón de ser de este archivo: el bug que originó el proyecto entero
 // (DESIGN_GUIDANCE prometía un <script> que el sanitizer llevaba MESES
@@ -32,8 +45,7 @@ ${b.doc.example}`,
     .join("\n\n");
 
   return `• CONDUCTAS — interactividad real que el CSS no puede lograr por sí
-  solo (contador en vivo, filtro, lightbox, copiar al portapapeles, autoplay,
-  tema claro/oscuro, barra pegajosa al bajar). El runtime lo HORNEA OpenLen a
+  solo (${BEHAVIOR_COUNT}: ${BEHAVIOR_NAMES}). El runtime lo HORNEA OpenLen a
   partir del marcador declarativo (el atributo \`data-ol-*\`) que emitas — tú
   SOLO escribes el markup de cada receta, nunca un \`<script>\`, nunca un
   atributo \`on*\`: eso se borra igual que cualquier otro. Usa el nombre y el

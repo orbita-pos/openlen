@@ -32,7 +32,7 @@
 // this file doesn't know about cannot exist, and a recipe registered in the
 // engine cannot go undocumented here.
 
-import { buildBehaviorsDoc } from "./behaviors/doc";
+import { buildBehaviorsDoc, BEHAVIOR_NAMES, BEHAVIOR_COUNT } from "./behaviors/doc";
 
 export const DESIGN_GUIDANCE = `
 ═══════════════════════════════════════════════════════════════════════════
@@ -63,11 +63,11 @@ OUTPUT FORMAT — strict rules (instant failure if violated)
        (the CAROUSEL contract below is the same "you write no runtime" idea,
        for a horizontal rail with working arrows — it's its own contract,
        not CSS and not a CONDUCTA.)
-    2. A CONDUCTA, for the seven things CSS genuinely cannot do alone —
-       countdown, filter, lightbox, copy, autoplay, theme, sticky. Emit
-       ONLY the declarative \`data-ol-*\` marker; OpenLen bakes the real
-       runtime for you at publish time. Full contract — when to use each,
-       when NOT to, exact markup — in the CONDUCTAS section below.
+    2. A CONDUCTA, for the ${BEHAVIOR_COUNT} things CSS genuinely cannot do
+       alone — ${BEHAVIOR_NAMES}. Emit ONLY the declarative \`data-ol-*\`
+       marker; OpenLen bakes the real runtime for you at publish time. Full
+       contract — when to use each, when NOT to, exact markup — in the
+       CONDUCTAS section below.
     3. NEVER your own JavaScript. Not one line, not "just this once" — it
        is deleted with zero exceptions, every single time, no matter how
        small.

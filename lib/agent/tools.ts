@@ -24,7 +24,8 @@ import {
   type ImageEditInput,
   type ImageEditResult,
 } from "@/lib/ai/image-edit-core";
-import { validateBehaviors } from "@/lib/behaviors/validate";
+import { describeBehaviorIssues, validateBehaviors } from "@/lib/behaviors/validate";
+import { BEHAVIOR_NAMES } from "@/lib/behaviors/doc";
 import { getOrCreateOwnerChatUser } from "@/lib/chat/store";
 import { debitCredits } from "@/lib/credits";
 import { detectSlotPath, sanitizeForPublish } from "@/lib/html-engine";
@@ -642,15 +643,25 @@ type PersistResult =
 // removal into a fact the model must answer for, phrased as what it now has to
 // DO. NB the napi surface is camelCase (eventHandlers, not event_handlers) — a
 // snake_case key reads undefined and this whole guard silently never fires.
-function sanitizeAviso(removed: {
-  scripts: number;
-  eventHandlers: number;
-  iframes: number;
-}): string | undefined {
+//
+// `names` is injectable (defaults to the real BEHAVIOR_NAMES, derived from
+// BEHAVIOR_ORDER — see lib/behaviors/doc.ts) SOLO para el test de conformidad
+// que blinda esto: prueba que esta función interpola lo que se le pase (nunca
+// una lista propia hardcodeada) y que la llamada real más abajo usa la
+// constante compartida — ver lib/agent/tools.test.ts, "Arreglo 1". El único
+// call site de producción nunca pasa un segundo argumento.
+export function sanitizeAviso(
+  removed: {
+    scripts: number;
+    eventHandlers: number;
+    iframes: number;
+  },
+  names: string = BEHAVIOR_NAMES,
+): string | undefined {
   const parts: string[] = [];
   if (removed.scripts > 0 || removed.eventHandlers > 0) {
     parts.push(
-      `Se BORRÓ el JavaScript que escribiste (${removed.scripts} <script>, ${removed.eventHandlers} atributos on*): OpenLen nunca ejecuta JS de la página. Si eso cableaba algo (un contador, un filtro, una caja de luz, un botón de copiar, tabs, un acordeón, un menú móvil), ese control quedó MUERTO. Arréglalo en este orden: (1) ¿hay una CONDUCTA para esto? — countdown, filter, lightbox, copy, autoplay, theme, sticky: emite SOLO su marcador data-ol-* y OpenLen hornea el runtime real; (2) si ninguna aplica, ¿lo resuelve CSS puro? (<details>/<summary>, checkbox + peer-checked, :target); (3) si tampoco, dile al usuario con honestidad que no se puede.`,
+      `Se BORRÓ el JavaScript que escribiste (${removed.scripts} <script>, ${removed.eventHandlers} atributos on*): OpenLen nunca ejecuta JS de la página. Si eso cableaba algo (un contador, un filtro, una caja de luz, un botón de copiar, tabs, un acordeón, un menú móvil), ese control quedó MUERTO. Arréglalo en este orden: (1) ¿hay una CONDUCTA para esto? — ${names}: emite SOLO su marcador data-ol-* y OpenLen hornea el runtime real; (2) si ninguna aplica, ¿lo resuelve CSS puro? (<details>/<summary>, checkbox + peer-checked, :target); (3) si tampoco, dile al usuario con honestidad que no se puede.`,
     );
   }
   if (removed.iframes > 0) {
