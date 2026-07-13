@@ -24,6 +24,7 @@ import {
   type ImageEditInput,
   type ImageEditResult,
 } from "@/lib/ai/image-edit-core";
+import { validateBehaviors } from "@/lib/behaviors/validate";
 import { getOrCreateOwnerChatUser } from "@/lib/chat/store";
 import { debitCredits } from "@/lib/credits";
 import { detectSlotPath, sanitizeForPublish } from "@/lib/html-engine";
@@ -649,7 +650,7 @@ function sanitizeAviso(removed: {
   const parts: string[] = [];
   if (removed.scripts > 0 || removed.eventHandlers > 0) {
     parts.push(
-      `Se BORRÓ el JavaScript que escribiste (${removed.scripts} <script>, ${removed.eventHandlers} atributos on*): OpenLen nunca ejecuta JS de la página. Si eso cableaba algo (tabs, acordeón, menú móvil, un botón), ese control quedó MUERTO: rehazlo con CSS puro (<details>/<summary>, checkbox + peer-checked, :target) o dile al usuario que no se puede.`,
+      `Se BORRÓ el JavaScript que escribiste (${removed.scripts} <script>, ${removed.eventHandlers} atributos on*): OpenLen nunca ejecuta JS de la página. Si eso cableaba algo (un contador, un filtro, una caja de luz, un botón de copiar, tabs, un acordeón, un menú móvil), ese control quedó MUERTO. Arréglalo en este orden: (1) ¿hay una CONDUCTA para esto? — countdown, filter, lightbox, copy, autoplay, theme, sticky: emite SOLO su marcador data-ol-* y OpenLen hornea el runtime real; (2) si ninguna aplica, ¿lo resuelve CSS puro? (<details>/<summary>, checkbox + peer-checked, :target); (3) si tampoco, dile al usuario con honestidad que no se puede.`,
     );
   }
   if (removed.iframes > 0) {
@@ -697,9 +698,26 @@ async function persistHtmlChange(
   if (sanitized.html === null) {
     return { ok: false, error: "el HTML no pasó la sanitización" };
   }
-  const aviso = sanitizeAviso(sanitized.removed);
+  const sanitizeMsg = sanitizeAviso(sanitized.removed);
 
   const finalHtml = ensurePageMeta(normalizeBornCanonical(sanitized.html));
+
+  // Task 16 — un data-ol-* mal cableado que llega a la página del usuario es
+  // otra vez un control muerto, solo que nunca pasó por el sanitizer: nació
+  // mal escrito. Corre DESPUÉS del sanitizer, sobre finalHtml (el documento
+  // real que se guarda), y se CONCATENA al aviso de arriba en vez de
+  // reemplazarlo — un turno puede a la vez perder un <script> Y traer una
+  // conducta mal cableada, y el modelo necesita ver los dos problemas para
+  // arreglar los dos en este mismo turno.
+  const behaviorIssues = validateBehaviors(finalHtml);
+  const behaviorMsg = behaviorIssues.length
+    ? `Hay conductas mal cableadas que nacerían MUERTAS en la página: ${behaviorIssues
+        .map((i) => i.message)
+        .join(" · ")}. Arréglalas con editar_pagina en este mismo turno, no las des por buenas.`
+    : undefined;
+
+  const aviso =
+    [sanitizeMsg, behaviorMsg].filter((m): m is string => Boolean(m)).join(" ") || undefined;
 
   const row = await deps.loadProject(session.projectId, session.userId);
   if (!row) return { ok: false, error: "proyecto no encontrado" };

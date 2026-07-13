@@ -333,6 +333,17 @@ describe("editar_pagina", () => {
     assert.match(aviso, /1 <script>/);
     assert.match(aviso, /1 atributos on\*/);
     assert.match(aviso, /CSS puro|<details>/i);
+    // Task 16 — CONDUCTAS must be the FIRST option offered, not an
+    // afterthought: most real dead-JS cases (a countdown, a filter, a
+    // lightbox, a copy button) are solved by a recipe, not by CSS and
+    // definitely not by giving up.
+    assert.match(aviso, /CONDUCTA/i);
+    const conductaIdx = aviso.search(/CONDUCTA/i);
+    const cssIdx = aviso.search(/CSS puro/i);
+    assert.ok(
+      conductaIdx >= 0 && cssIdx >= 0 && conductaIdx < cssIdx,
+      "CONDUCTAS debe ofrecerse antes que CSS puro (orden: conducta, css, honestidad)",
+    );
   });
 
   it("stays quiet on a clean edit (no aviso to cry wolf with)", async () => {
@@ -345,6 +356,87 @@ describe("editar_pagina", () => {
     });
     assert.equal(out.response.ok, true);
     assert.equal((out.response as { aviso?: string }).aviso, undefined);
+  });
+
+  // Task 16 — validateBehaviors wired into the SAME `aviso` channel a control
+  // mal cableado que llega al documento guardado es otra vez un control
+  // muerto, y el modelo debe enterarse en ESTE turno, no el visitante en la
+  // página publicada.
+  it("surfaces an aviso when a data-ol-copy points at a missing id (dead at birth)", async () => {
+    const { deps, store } = makeDeps();
+    const session = makeSession();
+    const target = /<h1[^>]*\bdata-op-id="([^"]+)"/.exec(session.taggedHtml)![1];
+    const out = await runAgentTool(session, deps, "editar_pagina", {
+      edits: [
+        { op: "replace", target, new_html: `<h1>Menú</h1><button data-ol-copy="cupon">Copiar</button>` },
+      ],
+      resumen: "boton copiar",
+    });
+    assert.equal(out.response.ok, true);
+    // The edit SUCCEEDS and saves — validateBehaviors doesn't block, it
+    // warns, same contract as the sanitizer's aviso above.
+    assert.ok(store.data.html.includes('data-ol-copy="cupon"'));
+    const aviso = (out.response as { aviso?: string }).aviso ?? "";
+    assert.match(aviso, /cupon/);
+    assert.match(aviso, /nacería muerto/i);
+  });
+
+  it("surfaces an aviso when a data-ol-countdown value isn't a valid ISO date", async () => {
+    const { deps } = makeDeps();
+    const session = makeSession();
+    const target = /<h1[^>]*\bdata-op-id="([^"]+)"/.exec(session.taggedHtml)![1];
+    const out = await runAgentTool(session, deps, "editar_pagina", {
+      edits: [
+        {
+          op: "replace",
+          target,
+          new_html: `<h1>Oferta</h1><div data-ol-countdown="15 de agosto"><span data-ol-cd="days">00</span></div>`,
+        },
+      ],
+      resumen: "countdown",
+    });
+    assert.equal(out.response.ok, true);
+    const aviso = (out.response as { aviso?: string }).aviso ?? "";
+    assert.match(aviso, /fecha ISO válida/i);
+  });
+
+  it("stays quiet when a behavior is wired correctly (no crying wolf)", async () => {
+    const { deps } = makeDeps();
+    const session = makeSession();
+    const target = /<h1[^>]*\bdata-op-id="([^"]+)"/.exec(session.taggedHtml)![1];
+    const out = await runAgentTool(session, deps, "editar_pagina", {
+      edits: [
+        {
+          op: "replace",
+          target,
+          new_html: `<h1>Tacos</h1><code id="cupon-verano">TACOS20</code><button data-ol-copy="cupon-verano" aria-label="Copiar cupón">Copiar</button>`,
+        },
+      ],
+      resumen: "cupon correcto",
+    });
+    assert.equal(out.response.ok, true);
+    assert.equal((out.response as { aviso?: string }).aviso, undefined);
+  });
+
+  it("composes both avisos when a turn strips a <script> AND mis-wires a behavior", async () => {
+    const { deps } = makeDeps();
+    const session = makeSession();
+    const target = /<h1[^>]*\bdata-op-id="([^"]+)"/.exec(session.taggedHtml)![1];
+    const out = await runAgentTool(session, deps, "editar_pagina", {
+      edits: [
+        {
+          op: "replace",
+          target,
+          new_html: `<h1>Menú</h1><script>wire()</script><button data-ol-copy="ghost">Copiar</button>`,
+        },
+      ],
+      resumen: "compuesto",
+    });
+    assert.equal(out.response.ok, true);
+    const aviso = (out.response as { aviso?: string }).aviso ?? "";
+    assert.match(aviso, /JavaScript/i);
+    assert.match(aviso, /ghost/);
+    assert.match(aviso, /nacería muerto/i);
   });
 });
 
