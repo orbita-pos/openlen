@@ -11,9 +11,9 @@
 //
 // reg/order son inyectables SOLO para tests (ver use-behaviors-preview.test.ts,
 // que prueba paridad byte-a-byte contra bakeBehaviors con un registro falso —
-// el real, lib/behaviors/registry.ts, sigue vacío en F1). El único call site
-// real (preview-area.tsx) llama con solo `html`, heredando los defaults de
-// bakeBehaviors (BEHAVIORS/BEHAVIOR_ORDER).
+// el real, lib/behaviors/registry.ts, tiene las 7 conductas desde el Task 13).
+// El único call site real (preview-area.tsx) llama con solo `html`, heredando
+// los defaults de bakeBehaviors (BEHAVIORS/BEHAVIOR_ORDER).
 //
 // Task 14b — el carrusel (lib/publish/carousel.ts) es EXACTAMENTE la misma
 // deuda que el párrafo de arriba describe, ya vencida una vez: el preview no
