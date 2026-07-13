@@ -721,10 +721,9 @@ async function persistHtmlChange(
   // conducta mal cableada, y el modelo necesita ver los dos problemas para
   // arreglar los dos en este mismo turno.
   const behaviorIssues = validateBehaviors(finalHtml);
-  const behaviorMsg = behaviorIssues.length
-    ? `Hay conductas mal cableadas que nacerían MUERTAS en la página: ${behaviorIssues
-        .map((i) => i.message)
-        .join(" · ")}. Arréglalas con editar_pagina en este mismo turno, no las des por buenas.`
+  const behaviorList = describeBehaviorIssues(behaviorIssues);
+  const behaviorMsg = behaviorList
+    ? `Hay conductas mal cableadas que nacerían MUERTAS en la página: ${behaviorList}. Arréglalas con editar_pagina en este mismo turno, no las des por buenas.`
     : undefined;
 
   const aviso =

@@ -67,6 +67,18 @@ function matchesHost(el: NHPElement, host: string): boolean {
   return false;
 }
 
+/** Une los `issue.message` en UNA línea, o `undefined` si no hay nada que
+ *  decir. Única fuente de este "join" — lib/agent/tools.ts (canal `aviso` del
+ *  agente) y app/api/templates/ai-design/route.ts (Chat, Arreglo 2 de la
+ *  revisión final) lo comparten en vez de cada uno concatenar los mensajes a
+ *  su manera; cada caller sigue envolviendo el resultado con SU PROPIA frase
+ *  (el agente dice "arréglalas con editar_pagina", ai-design no tiene esa
+ *  herramienta), así que solo el "qué issues hay" se comparte, no el "qué
+ *  hacer con ellos". */
+export function describeBehaviorIssues(issues: BehaviorIssue[]): string | undefined {
+  return issues.length ? issues.map((i) => i.message).join(" · ") : undefined;
+}
+
 export function validateBehaviors(html: string, reg: Reg = BEHAVIORS): BehaviorIssue[] {
   const dom = parse(html);
   const issues: BehaviorIssue[] = [];

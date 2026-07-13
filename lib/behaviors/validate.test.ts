@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { validateBehaviors } from "./validate";
-import type { Behavior, BehaviorName } from "./types";
+import { describeBehaviorIssues, validateBehaviors } from "./validate";
+import type { Behavior, BehaviorName, BehaviorIssue } from "./types";
 
 const REG = {
   countdown: {
@@ -112,5 +112,27 @@ describe("validateBehaviors — requiredAttrs + la rama untrusted (href de un <a
   it("acepta un href https válido — cero issues", () => {
     const html = doc(`<a data-ol-lightbox href="https://images.openlen.com/x.jpg">foto</a>`);
     expect(validateBehaviors(html, LIGHTBOX_REG)).toEqual([]);
+  });
+});
+
+// Arreglo 2 (revisión final de rama) — describeBehaviorIssues es el "join"
+// compartido entre lib/agent/tools.ts (canal `aviso` del agente) y
+// app/api/templates/ai-design/route.ts (Chat), para que un tercer sitio
+// nunca reimplemente su propia concatenación de mensajes.
+describe("describeBehaviorIssues", () => {
+  it("sin issues, devuelve undefined (nada que decir)", () => {
+    expect(describeBehaviorIssues([])).toBeUndefined();
+  });
+
+  it("une los mensajes de varios issues con ' · ', en orden", () => {
+    const issues: BehaviorIssue[] = [
+      { behavior: "copy", message: "primero" },
+      { behavior: "countdown", message: "segundo" },
+    ];
+    expect(describeBehaviorIssues(issues)).toBe("primero · segundo");
+  });
+
+  it("un solo issue no lleva separador", () => {
+    expect(describeBehaviorIssues([{ behavior: "copy", message: "único" }])).toBe("único");
   });
 });

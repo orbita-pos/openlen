@@ -49,6 +49,11 @@ export default defineConfig({
       "lib/analytics/**/*.test.ts",
       "lib/assemble/**/*.test.ts",
       "lib/behaviors/**/*.test.ts",
+      // Arreglo 3 seam guard — imports app/api/**/system-prompt.ts (plain
+      // modules, no native/DB/auth) + lib/agent/catalog.ts (already vitest-
+      // safe, see the NB below). Lives at lib/ root, not under
+      // lib/behaviors/, so it needs its own entry.
+      "lib/design-guidance-seam.test.ts",
       "lib/curate/**/*.test.ts",
       // lib/ai mixes runners — vision-critique.test.ts is node:test (in
       // test:node), so list the vitest ai tests individually.

@@ -6,9 +6,11 @@ import { seedBrandIntoHtml, profileMeta } from "@/lib/business-profiles/seed-htm
 import type { BusinessProfile, BusinessProfileData } from "@/lib/business-profiles/types";
 import { createVersion } from "@/lib/projects/versions";
 import { getCreditState } from "@/lib/credits";
-import { DESIGN_GUIDANCE, DESIGN_REFERENCE } from "@/lib/design-guidance";
+import { DESIGN_REFERENCE } from "@/lib/design-guidance";
+import { SYSTEM_PROMPT } from "./system-prompt";
 import { detectSlotPath } from "@/lib/html-engine";
 import { ensurePageMeta } from "@/lib/publish/ensure-page-meta";
+import { validateBehaviors } from "@/lib/behaviors/validate";
 import { resolveAIProvider, type AIModel } from "@/lib/ai-provider";
 import { generateHtmlStream } from "@/lib/ai-stream/generate";
 import { selectReferenceTemplate } from "@/lib/templates/select-reference";
@@ -49,36 +51,6 @@ export const dynamic = "force-dynamic";
 // ─────────────────────────────────────────────────────────────────────────────
 
 const ENCODER = new TextEncoder();
-
-const SYSTEM_PROMPT = `You are a senior product designer-engineer hybrid with the eye of Linear, Vercel, Stripe, and Resend. You generate complete, production-grade landing pages from a short brief.
-
-The user gives you a brief — sometimes specific, often vague or generic. Design and build the entire landing page yourself. You have FULL CREATIVE FREEDOM and the user trusts your taste. A vague or generic brief is your cue to apply judgment and taste, NOT to ask questions or fall back on something safe and forgettable.
-
-${DESIGN_GUIDANCE}
-
-OUTPUT EFFICIENCY (critical — long documents truncate against the response cap):
-- No HTML comments (<!-- ... -->) anywhere in the output.
-- No multi-line whitespace inside elements. Single-line each element when reasonable.
-- Reuse Tailwind classes — if a card pattern repeats across siblings, give it one class in <style> and apply it instead of pasting the long class string.
-- Collapse redundant CSS rules. No "/* Pricing */"-style section dividers in <style>.
-- Inline <svg>: only emit what's needed; skip xmlns when duplicated across many siblings.
-- Skip blank lines between sections of the document. Compact.
-- Goal: same visual quality, fewer tokens.
-
-NON-NEGOTIABLE CONSTRAINTS:
-- Output a COMPLETE, self-contained HTML document: starts with <!doctype html>, ends with </html>.
-- Include a descriptive <title> in <head> that names the product.
-- Tailwind CSS via CDN: <script src="https://cdn.tailwindcss.com"></script>
-- Google Fonts via <link> in <head>. Allowed families: Inter, Geist, Fraunces, Source Serif 4, Crimson Pro, JetBrains Mono.
-- All custom CSS inline in a <style> block in <head>. Use CSS custom properties on :root for design tokens (--accent, --accent-r as an RGB triplet, --bg, --surface, --fg, --border, --font-display, --font-body, --radius). Reference them via var() throughout — never hardcode the same color in many places. Also emit a \`:root.dark { … }\` block that redefines --bg, --surface, --fg, --border and --accent with hand-designed dark-theme values (a real dark palette — not a mechanical inversion); every text and heading color MUST resolve from a var() token so the whole page flips cleanly.
-- NO React, NO Babel, NO JSX, NO <script type="text/babel">, NO window.X globals, NO import statements anywhere.
-- NO data-slot-path= attribute anywhere — that is a reserved editor-mode marker.
-- NO login / signup / "my account" / dashboard UI. Public marketing pages only.
-- Inline SVG for logos / icons / illustrations. NO external image URLs. For hero / product / gallery PHOTO imagery use a <div> with a tasteful bg-gradient-to-br placeholder AND a \`data-ol-photo="<2-4 word subject>"\` attribute naming what the photo shows (a real curated photo is swapped in after generation). Mark only pure image boxes — no text/buttons inside them.
-- Mobile-responsive down to 360px width.
-
-OUTPUT FORMAT — follow exactly:
-Emit the complete HTML document directly, starting with <!doctype html> and ending with </html>. No preamble, no design notes, no markdown code fences — the first character of your response is <.`;
 
 // CSS recipes, micro-snippets, and brand catalogs ship as a separate
 // user-tagged reference block. Gemini 3.x treats long system prompts as
@@ -545,6 +517,32 @@ ${brief}`;
           });
           closeStream();
           return;
+        }
+
+        // Arreglo 2 (revisión final de rama) — DESIGN_GUIDANCE animates the
+        // model to emit data-ol-* markers, but this route is a ONE-SHOT
+        // stream: there is no next turn to hand a fix-it note back to (unlike
+        // ai-design/the agent, which reuse this same validateBehaviors call
+        // via their `aviso` channel). The only honest option here is validate
+        // + LOG — never strip the marker: a <button data-ol-copy="x"> whose
+        // id doesn't exist is still a dead button whether or not the
+        // attribute survives, and removing it would only destroy the one
+        // signal that tells us how often this actually happens. One
+        // structured log line, same `[name] ` + one-line-JSON convention
+        // publishToDir already uses for behaviors telemetry (see
+        // lib/publish/filesystem.ts) — no aggregator, no table.
+        try {
+          const behaviorIssues = validateBehaviors(html);
+          if (behaviorIssues.length > 0) {
+            // eslint-disable-next-line no-console
+            console.warn(
+              "[generate] behavior issues " +
+                JSON.stringify({ projectId, issues: behaviorIssues }),
+            );
+          }
+        } catch (err) {
+          // eslint-disable-next-line no-console
+          console.warn("[generate] behavior validation failed", err);
         }
 
         await createVersion({

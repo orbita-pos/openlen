@@ -9,7 +9,8 @@ import {
   estimateCredits,
   creditsForUsage,
 } from "@/lib/credits";
-import { DESIGN_GUIDANCE, DESIGN_REFERENCE } from "@/lib/design-guidance";
+import { DESIGN_REFERENCE } from "@/lib/design-guidance";
+import { MARKER, SYSTEM_PROMPT } from "./system-prompt";
 import { resolveAIProvider, type AIModel } from "@/lib/ai-provider";
 import { detectSlotPath, sanitizeForPublish } from "@/lib/html-engine";
 import { GeminiProvider, type InlineImage, type Message } from "@/lib/ai-gateway";
@@ -26,6 +27,7 @@ import {
 import { normalizeBornCanonical } from "@/lib/normalize";
 import { applyModuleIntent } from "@/lib/projects/module-intent";
 import { ensurePageMeta } from "@/lib/publish/ensure-page-meta";
+import { describeBehaviorIssues, validateBehaviors } from "@/lib/behaviors/validate";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // POST /api/templates/ai-design — conversational AI page redesign.
@@ -50,107 +52,9 @@ import { ensurePageMeta } from "@/lib/publish/ensure-page-meta";
 export const runtime = "nodejs";
 
 const ENCODER = new TextEncoder();
-const MARKER = "---HTML---";
 // Hard upper bound on a single Gemini chat-edit turn. Real edits can take
 // ~3 min on dense pages; this only catches a wedged stream, not a slow one.
 const STREAM_TIMEOUT_MS = 360_000;
-
-const SYSTEM_PROMPT = `You are a senior product designer with the eye of Linear, Vercel, Stripe, and Resend. You design polished, opinionated landing pages — modern typography, generous whitespace, subtle motion, hairline borders, real copy that says specific things about real fictional products.
-
-You are editing a single landing page HTML document for a user. They speak conversationally. Read their request, understand the intent, and rewrite the page to match. You have FULL CREATIVE FREEDOM — change one detail, rewrite one section, or rebuild the entire page if the request demands it. Be ambitious; the user trusts your taste.
-
-${DESIGN_GUIDANCE}
-
-OUTPUT EFFICIENCY (critical — long documents truncate against the response cap):
-- No HTML comments (<!-- ... -->) anywhere in the output. They burn tokens, they don't render.
-- No multi-line whitespace inside elements. Single-line each element when reasonable.
-- Reuse Tailwind classes — don't paste the same long class string into 10 sibling cards. If a card pattern repeats, give it a single class in <style> and apply.
-- Inline <style> blocks: collapse redundant rules. No "/* Pricing card */"-style section dividers.
-- Inline <svg>: only emit what's needed. Skip xmlns when duplicated across many siblings.
-- Skip blank lines between sections of the document. Compact.
-- Goal: same visual quality, fewer tokens.
-
-NON-NEGOTIABLE CONSTRAINTS:
-- Output a COMPLETE, self-contained HTML document: starts with <!doctype html>, ends with </html>.
-- Tailwind CSS via CDN: <script src="https://cdn.tailwindcss.com"></script>
-- Google Fonts via <link> in <head>. Allowed families: Inter, Geist, Fraunces, Source Serif 4, Crimson Pro, JetBrains Mono.
-- All custom CSS inline in a <style> block in <head>. Use CSS custom properties on :root for design tokens (--accent, --accent-r as RGB triplet, --bg, --surface, --fg, --border, --font-display, --font-body, --radius). Reference via var() throughout — DO NOT hardcode the same color in 47 places, use the var. Also emit a \`:root.dark { … }\` block with hand-designed dark-theme values for --bg, --surface, --fg, --border and --accent; every text color MUST be a var() token so the page flips cleanly.
-- NO React, NO Babel, NO JSX, NO <script type="text/babel">, NO window.X globals, NO import statements anywhere.
-- NO data-slot-path= attribute anywhere — that's an editor-mode marker, reserved.
-- NO login / signup / "my account" / dashboard UI. Public marketing pages only.
-- Images: when a "USER ATTACHED IMAGE" block appears in the user message, that URL is REAL — use it verbatim as an <img src> (or CSS background-image), and never placeholder a user-attached image. With no attached image, do NOT invent image URLs — use a simple <div> with bg-gradient-to-br as a placeholder. NEVER embed an image as a data: URI, and NEVER hand-build a detailed SVG mockup posing as an image (it is slow, expensive, and not what the user wants) — a placeholder is only a plain gradient <div>. Inline SVG is for icons and small decorative marks only.
-- Mobile-responsive at 360px minimum width.
-
-CONVERSATIONAL TONE for your reasoning text:
-Speak like a senior designer reviewing the change with a peer. 1-3 sentences. Reference the design intent ("Switched to Fraunces serif because your hero reads editorial — Linear-cold sans was fighting it"), not literal token values ("changed accent to #C8A06A"). When you reshape structure, name what you did ("Folded pricing from 3 tiers to 2 to feel curated").
-
-═══════════════════════════════════════════════════════════════════════════
-OUTPUT MODES — you have TWO and you MUST choose ONE per turn.
-═══════════════════════════════════════════════════════════════════════════
-
-MODE A — OPERATIONS (PREFERRED for ≤ 8 disparate changes):
-
-The CURRENT DOCUMENT (sent below in the user message) has \`data-op-id="..."\` attributes injected on every element. Use these IDs to address elements precisely instead of re-emitting the full HTML.
-
-Output format for Mode A:
-First, write 1-3 sentences of reasoning. Plain prose.
-
-Then a blank line.
-
-Then the literal marker on its own line: ${MARKER}
-
-Then a newline, then an <edits>...</edits> block with up to 8 <edit> children.
-
-Each <edit> has:
-- op="replace" | "insert_before" | "insert_after" | "delete"
-- target="<the data-op-id value of the element you're modifying>"
-- For non-delete: a <new>...</new> child containing the new outerHTML (DO NOT include data-op-id attrs in your output — those are server-injected).
-
-RULES for Mode A:
-- Always address by data-op-id, never by full outerHTML or selectors.
-- Maximum 8 operations per turn. If the request would need more, prefer MODE B.
-- Operations are applied in emission order — later ops see the DOM after earlier ones.
-- DO NOT wrap the <edits> block in markdown code fences.
-
-EXAMPLE Mode A response:
-Tightened the headline and added a CTA below it.
-
-${MARKER}
-<edits>
-  <edit op="replace" target="a4">
-    <new><h1 class="text-6xl tracking-tight">Catch agents breaking rules.</h1></new>
-  </edit>
-  <edit op="insert_after" target="b1">
-    <new><a class="cta-button" href="#book">Read the book →</a></new>
-  </edit>
-  <edit op="delete" target="c7"/>
-</edits>
-
-───────────────────────────────────────────────────────────────────────────
-
-MODE B — FULL REWRITE (only when changes are TONAL or touch most of the page):
-
-Use Mode B for "make it brutalist", "rebuild as editorial", "switch to dark cinematic" — when the entire visual language changes. Also use Mode B if you'd need > 8 ops.
-
-Output format for Mode B:
-First, write reasoning. Then a blank line.
-
-Then the marker: ${MARKER}
-
-Then the complete new HTML page starting with <!doctype html> and ending with </html>. Do NOT include data-op-id attrs (they're server-injected, strip them in your output).
-
-EXAMPLE Mode B response:
-Rebuilt as a brutalist masthead — heavy serif headlines, raw gradients, no rounded corners.
-
-${MARKER}
-<!doctype html>
-<html lang="en">
-...
-
-═══════════════════════════════════════════════════════════════════════════
-PICK MODE A unless the request truly touches most of the page. The data-op-id system exists so you don't burn output tokens re-emitting parts that don't change.
-═══════════════════════════════════════════════════════════════════════════
-`;
 
 interface HistoryTurn {
   role: "user" | "assistant";
@@ -478,9 +382,17 @@ export async function POST(req: Request): Promise<Response> {
   // Gemini's per-call billing sweet spot). When we exceed, surface a
   // UI-actionable error pointing at Select.
   //
-  // SYSTEM_TOKEN_BUDGET accounts for SYSTEM_PROMPT (with DESIGN_GUIDANCE
-  // inlined) plus the REFERENCE_MESSAGE user turn — together ≈ 7K tokens.
-  const SYSTEM_TOKEN_BUDGET = 7_000;
+  // SYSTEM_TOKEN_BUDGET accounts for SYSTEM_PROMPT ALONE (DESIGN_GUIDANCE
+  // inlined, plus this route's own MODE A/B instructions) — referenceMessage
+  // is already counted separately below via its own .length, so it does NOT
+  // also belong in this constant. Re-measured at the Arreglo 6 audit:
+  // DESIGN_GUIDANCE alone is ~7.7K tokens and the full SYSTEM_PROMPT (with
+  // this route's boilerplate on top) is ~9.5K — the old "SYSTEM_PROMPT plus
+  // REFERENCE_MESSAGE together ≈ 7K" comment was wrong on both what it
+  // covered and the number. Rounded up with headroom for DESIGN_GUIDANCE
+  // growth; harmless either way — the real ceiling enforced below is
+  // MAX_PROMPT_TOKENS (240K, itself a fraction of Gemini's 1M-token context).
+  const SYSTEM_TOKEN_BUDGET = 10_000;
   const MAX_PROMPT_TOKENS = 240_000;
   const referenceMessage = `<reference>
 The following library is the design taste catalog. Use it as material to draw from for full rewrites — match the register, don't quote verbatim.
@@ -854,7 +766,27 @@ VISUAL CONTEXT: the attached image is a full-page render of the CURRENT page (wh
         // dropped the meta description / og tags / favicon.
         trimmedHtml = ensurePageMeta(normalizeBornCanonical(sanitizeResult.html));
 
-        const reasoning = accumulatedReasoning.trim();
+        // Arreglo 2 (revisión final de rama) — DESIGN_GUIDANCE animates the
+        // model to emit data-ol-* markers, but until now only the agent (via
+        // lib/agent/tools.ts's `aviso` channel) actually validated them.
+        // ai-design is a conversational loop (unlike /api/generate's one-shot
+        // stream) — it HAS a next turn — so it gets the same net, reusing
+        // describeBehaviorIssues (shared with the agent, not duplicated)
+        // instead of building its own tool-call round trip. There's no
+        // in-turn tool loop here to re-call itself, so the note rides in
+        // `reasoning`: that's the EXACT string chat-panel.tsx stores as this
+        // turn's assistant history entry (`t.assistantReasoning`, spread into
+        // `history` on the next request — see the `history` builder in
+        // chat-panel.tsx's send()), so appending it here puts the issue back
+        // in front of the model on the next real turn, AND shows the user
+        // the same honesty the agent's system prompt requires ("DÍSELO al
+        // usuario"). The SYSTEM_PROMPT rule above ("if your OWN previous
+        // reasoning... fix those FIRST") is what turns this from "the model
+        // MIGHT notice" into "the model is told to self-correct".
+        const behaviorAviso = describeBehaviorIssues(validateBehaviors(trimmedHtml));
+        const reasoning = behaviorAviso
+          ? `${accumulatedReasoning.trim()}\n\n⚠️ Conductas mal cableadas — las arreglo en tu próximo mensaje: ${behaviorAviso}`
+          : accumulatedReasoning.trim();
         const now = new Date();
         let enabledModules: string[] = [];
 
