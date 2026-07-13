@@ -1,0 +1,449 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>GREMIO — El framework open-source para construir apps · Instala en un comando</title>
+<meta name="description" content="GREMIO es el framework open-source para construir aplicaciones web de verdad: instala en un comando, escribe menos código y despliega donde quieras. Respaldado por miles de desarrolladores y una comunidad que lo mantiene vivo." />
+<meta property="og:title" content="GREMIO — El framework open-source para construir apps" />
+<meta property="og:description" content="Instala en un comando, escribe menos código, despliega donde quieras. Open-source, MIT y respaldado por su comunidad." />
+<meta name="theme-color" content="#0A0B08" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230A0B08'/%3E%3Cpath d='M16 6 L25 11 L25 21 L16 26 L7 21 L7 11 Z' fill='none' stroke='%2384E04A' stroke-width='2.2' stroke-linejoin='round'/%3E%3Ccircle cx='16' cy='16' r='3.4' fill='%2384E04A'/%3E%3C/svg%3E" />
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&family=Inter:wght@400;450;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0A0B08; --bg-2:#0D0F0A; --surface:#121510; --surface-2:#181C13;
+    --ink:#ECF2E4; --ink-soft:#C5CDB6; --muted:#8B947B; --faint:#5E664F;
+    --line:rgba(132,224,74,0.12); --line-strong:rgba(132,224,74,0.24);
+    --accent:#84E04A; --accent-2:#A9F472; --amber:#F2B441; --lime-deep:#5BB22E;
+    --on-accent:#0A0B08;
+    --radius:10px; --radius-lg:20px;
+    --display:'Sora',ui-sans-serif,system-ui,sans-serif;
+    --body:'Inter',ui-sans-serif,system-ui,sans-serif;
+    --mono:'JetBrains Mono',ui-monospace,'SF Mono',Menlo,monospace;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.6;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;overflow-x:hidden}
+  h1,h2,h3,.display{font-family:var(--display);font-weight:600;letter-spacing:-0.02em;line-height:1.04}
+  .eyebrow{font-size:11px;letter-spacing:.26em;text-transform:uppercase;color:var(--accent);font-weight:600}
+  .wrap{max-width:1200px;margin:0 auto;padding:0 24px}
+  .mono{font-family:var(--mono)}
+  /* OSS mesh backdrop — layered radial glows, pure CSS, fixed behind everything */
+  .mesh{position:fixed;inset:0;z-index:-2;pointer-events:none;
+    background:
+      radial-gradient(56vw 46vw at 16% -8%, rgba(132,224,74,.22), transparent 60%),
+      radial-gradient(48vw 42vw at 90% 2%, rgba(242,180,65,.12), transparent 58%),
+      radial-gradient(58vw 50vw at 80% 92%, rgba(91,178,46,.18), transparent 60%),
+      radial-gradient(44vw 38vw at 6% 98%, rgba(132,224,74,.12), transparent 60%);
+  }
+  .grid-fade{position:fixed;inset:0;z-index:-1;pointer-events:none;opacity:.55;
+    background-image:linear-gradient(rgba(132,224,74,.05) 1px,transparent 1px),linear-gradient(90deg,rgba(132,224,74,.05) 1px,transparent 1px);
+    background-size:56px 56px;
+    -webkit-mask-image:radial-gradient(120vw 90vh at 50% 0%, #000 16%, transparent 78%);
+    mask-image:radial-gradient(120vw 90vh at 50% 0%, #000 16%, transparent 78%);
+  }
+  .glow{position:absolute;border-radius:50%;filter:blur(72px);pointer-events:none;z-index:0}
+  .lift{transition:transform .5s cubic-bezier(.2,.7,.2,1),box-shadow .5s,border-color .5s}
+  .lift:hover{transform:translateY(-5px);border-color:var(--line-strong)}
+  .card{background:linear-gradient(180deg,rgba(24,28,19,.7),rgba(18,21,16,.5));border:1px solid var(--line);border-radius:var(--radius-lg);backdrop-filter:blur(8px)}
+  .btn{display:inline-flex;align-items:center;gap:.55rem;height:50px;padding:0 26px;border-radius:12px;font-weight:600;font-size:14.5px;letter-spacing:.01em;transition:transform .25s,box-shadow .25s,background .25s,border-color .25s;text-decoration:none;font-family:var(--display)}
+  .btn-primary{background:linear-gradient(135deg,var(--accent),var(--lime-deep));color:#08130A;box-shadow:0 10px 30px -10px rgba(132,224,74,.6),inset 0 1px 0 rgba(255,255,255,.28)}
+  .btn-primary:hover{transform:translateY(-2px);box-shadow:0 16px 40px -12px rgba(132,224,74,.78),inset 0 1px 0 rgba(255,255,255,.28)}
+  .btn-ghost{border:1px solid var(--line-strong);color:var(--ink);background:rgba(255,255,255,.02)}
+  .btn-ghost:hover{border-color:var(--accent);color:#fff;background:rgba(132,224,74,.08)}
+  .chip{display:inline-flex;align-items:center;gap:.45rem;height:30px;padding:0 13px;border-radius:999px;border:1px solid var(--line-strong);font-size:12.5px;color:var(--ink-soft);font-weight:500;background:rgba(255,255,255,.02)}
+  .dot{width:7px;height:7px;border-radius:50%;background:var(--accent);box-shadow:0 0 10px var(--accent)}
+  .rule{height:1px;background:var(--line)}
+  .grad-text{background:linear-gradient(120deg,var(--accent-2),var(--amber));-webkit-background-clip:text;background-clip:text;color:transparent}
+  /* Faux icon tiles — pure CSS shapes */
+  .ico{width:46px;height:46px;border-radius:13px;display:grid;place-items:center;border:1px solid var(--line-strong);background:radial-gradient(120% 120% at 30% 20%,rgba(132,224,74,.24),rgba(18,21,16,.4));position:relative}
+  /* Copy-style install pill */
+  .install{display:inline-flex;align-items:center;gap:0;border:1px solid var(--line-strong);border-radius:14px;background:rgba(10,11,8,.7);overflow:hidden;backdrop-filter:blur(8px);max-width:100%}
+  .install .cmd{font-family:var(--mono);font-size:14.5px;padding:0 18px;height:54px;display:flex;align-items:center;gap:10px;color:var(--ink);white-space:nowrap;overflow:auto}
+  .install .copy{height:54px;min-width:54px;display:grid;place-items:center;border-left:1px solid var(--line);background:rgba(132,224,74,.08);color:var(--accent);cursor:pointer}
+  .install .copy:hover{background:rgba(132,224,74,.16)}
+  /* Content visible by default; JS hides only to play the scroll-in entrance.
+     No JS / crawlers / static preview → always visible. */
+  .js .reveal{opacity:0;transform:translateY(18px);transition:opacity .85s ease,transform .85s cubic-bezier(.2,.7,.2,1)}
+  .js .reveal.in{opacity:1;transform:none}
+  @media(prefers-reduced-motion:reduce){.js .reveal{opacity:1;transform:none;transition:none}.lift:hover{transform:none}.blink{animation:none}}
+  .blink{animation:blink 1.1s step-end infinite}
+  @keyframes blink{50%{opacity:0}}
+  .scroll-mask{-webkit-mask-image:linear-gradient(90deg,transparent,#000 8%,#000 92%,transparent);mask-image:linear-gradient(90deg,transparent,#000 8%,#000 92%,transparent)}
+  .star{color:var(--amber)}
+</style>
+<script>document.documentElement.classList.add('js')</script>
+</head>
+<body>
+  <div class="mesh"></div>
+  <div class="grid-fade"></div>
+
+  <!-- NAV -->
+  <header class="sticky top-0 z-40" style="background:rgba(10,11,8,.74);backdrop-filter:blur(16px);border-bottom:1px solid var(--line)">
+    <div class="wrap flex items-center justify-between" style="height:72px">
+      <a href="#top" class="display flex items-center gap-2.5" style="font-size:21px;letter-spacing:.02em;font-weight:600">
+        <span style="position:relative;width:24px;height:24px;display:inline-grid;place-items:center">
+          <span style="position:absolute;inset:0;clip-path:polygon(50% 0,93% 25%,93% 75%,50% 100%,7% 75%,7% 25%);background:linear-gradient(135deg,var(--accent),var(--lime-deep))"></span>
+          <span style="position:absolute;inset:2px;clip-path:polygon(50% 0,93% 25%,93% 75%,50% 100%,7% 75%,7% 25%);background:var(--bg)"></span>
+          <span style="width:7px;height:7px;border-radius:50%;background:var(--accent);box-shadow:0 0 12px var(--accent);position:relative"></span>
+        </span>GREMIO
+      </a>
+      <nav class="hidden md:flex items-center gap-9 text-[14px]" style="color:var(--ink-soft)">
+        <a href="#por-que" class="hover:text-white transition">Por qué</a>
+        <a href="#codigo" class="hover:text-white transition">Código</a>
+        <a href="#ecosistema" class="hover:text-white transition">Ecosistema</a>
+        <a href="#comunidad" class="hover:text-white transition">Comunidad</a>
+      </nav>
+      <div class="flex items-center gap-3">
+        <a href="#comunidad" class="hidden sm:inline-flex items-center gap-2 text-[14px] hover:text-white transition" style="color:var(--ink-soft)">
+          <span class="star">★</span> <span class="mono">18.4k</span>
+        </a>
+        <a href="#empieza" class="btn btn-primary" style="height:42px;padding:0 20px;font-size:13.5px">Empezar</a>
+      </div>
+    </div>
+  </header>
+
+  <!-- HERO -->
+  <section id="top" class="relative" style="padding:80px 0 44px">
+    <div class="glow" style="width:440px;height:440px;top:-90px;left:6%;background:rgba(132,224,74,.34)"></div>
+    <div class="glow" style="width:340px;height:340px;top:40px;right:4%;background:rgba(242,180,65,.18)"></div>
+    <div class="wrap relative" style="z-index:1;text-align:center">
+      <div class="reveal" style="display:flex;justify-content:center;margin-bottom:24px">
+        <span class="chip"><span class="dot"></span>v4.2 · Licencia MIT · 100% open-source</span>
+      </div>
+      <h1 class="reveal" style="font-size:clamp(46px,8vw,90px);margin:0;max-width:16ch;margin-inline:auto">
+        Construye apps,<br><span class="grad-text">no infraestructura.</span>
+      </h1>
+      <p class="reveal" style="font-size:19px;color:var(--muted);max-width:54ch;margin:26px auto 0">
+        GREMIO es el framework open-source para construir aplicaciones web de verdad. Instala en un comando, escribe menos código y despliega donde quieras. Lo mantiene su comunidad, no una junta directiva.
+      </p>
+
+      <!-- INSTALL PILL + actions -->
+      <div class="reveal" style="margin-top:34px;display:flex;flex-direction:column;align-items:center;gap:16px">
+        <div class="install">
+          <span class="cmd"><span style="color:var(--accent)">$</span> <span id="gremio-cmd-hero">npm create gremio@latest</span></span>
+          <button class="copy" aria-label="Copiar comando" data-ol-copy="gremio-cmd-hero" data-ol-copied="✓">
+            <span class="mono" style="font-size:16px">⧉</span>
+          </button>
+        </div>
+        <div class="flex flex-wrap gap-3 justify-center">
+          <a href="#empieza" class="btn btn-primary">Empezar ahora<span style="font-size:17px;line-height:1">→</span></a>
+          <a href="#comunidad" class="btn btn-ghost"><span class="star">★</span> Estrella en GitHub <span class="mono" style="color:var(--muted)">18.4k</span></a>
+        </div>
+      </div>
+
+      <div class="flex flex-wrap items-center justify-center gap-x-7 gap-y-3 mt-9 text-[13px] reveal" style="color:var(--faint)">
+        <span class="flex items-center gap-2"><span style="color:var(--accent)">●</span>Cero config para empezar</span>
+        <span class="flex items-center gap-2"><span style="color:var(--accent)">●</span>TypeScript de primera clase</span>
+        <span class="flex items-center gap-2"><span style="color:var(--accent)">●</span>Despliega en cualquier sitio</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- USED BY / TRUST (text) -->
+  <section class="wrap" style="padding:24px 24px 8px">
+    <p class="text-center text-[12px] reveal" style="color:var(--faint);letter-spacing:.18em;text-transform:uppercase;margin-bottom:24px">Equipos que ya construyen con GREMIO en producción</p>
+    <div class="scroll-mask reveal">
+      <div class="flex flex-wrap items-center justify-center gap-x-12 gap-y-6 display" style="color:var(--muted);font-weight:600;font-size:clamp(17px,2.4vw,23px);letter-spacing:.02em;opacity:.78">
+        <span>Northwind</span><span>Solvio</span><span>Kestrel</span><span>Granito</span><span>Lumen&nbsp;Labs</span><span>Aerial</span><span>Forma</span>
+      </div>
+    </div>
+    <div class="rule" style="margin-top:32px"></div>
+  </section>
+
+  <!-- POR QUÉ — feature grid -->
+  <section id="por-que" class="wrap" style="padding:76px 24px 24px">
+    <div class="max-w-2xl reveal mb-14">
+      <span class="eyebrow">Por qué GREMIO</span>
+      <h2 style="font-size:clamp(32px,5vw,54px);margin-top:14px">Menos andamiaje,<br>más <span class="grad-text">producto enviado</span></h2>
+      <p style="color:var(--muted);font-size:17.5px;margin-top:18px">Un router que se entiende solo, datos tipados de extremo a extremo y un build instantáneo. Todo lo aburrido, resuelto — para que tú escribas la parte que importa.</p>
+    </div>
+    <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
+      <!-- card 1 -->
+      <article class="card lift reveal" style="padding:28px">
+        <div class="ico"><span style="width:18px;height:18px;border:2px solid var(--accent-2);border-radius:5px;transform:rotate(45deg)"></span></div>
+        <h3 style="font-size:21px;margin:18px 0 8px">Un comando y listo</h3>
+        <p class="text-[14.5px]" style="color:var(--muted)">Sin generadores eternos ni config críptica. <span class="mono" style="color:var(--ink-soft)">create gremio</span> te deja con un proyecto que arranca, compila y se despliega de fábrica.</p>
+      </article>
+      <!-- card 2 -->
+      <article class="card lift reveal" style="padding:28px">
+        <div class="ico">
+          <span style="position:relative;width:20px;height:14px">
+            <span style="position:absolute;inset:0;border:2px solid var(--accent);border-radius:4px"></span>
+            <span style="position:absolute;left:3px;top:3px;width:5px;height:5px;border-radius:50%;background:var(--accent)"></span>
+          </span>
+        </div>
+        <h3 style="font-size:21px;margin:18px 0 8px">Tipado de extremo a extremo</h3>
+        <p class="text-[14.5px]" style="color:var(--muted)">El tipo de tu base de datos llega hasta tu componente sin que escribas una sola interfaz a mano. Si compila, funciona.</p>
+      </article>
+      <!-- card 3 -->
+      <article class="card lift reveal" style="padding:28px">
+        <div class="ico">
+          <span style="display:flex;align-items:flex-end;gap:3px;height:18px">
+            <span style="width:4px;height:8px;background:var(--accent-2);border-radius:2px"></span>
+            <span style="width:4px;height:14px;background:var(--accent);border-radius:2px"></span>
+            <span style="width:4px;height:18px;background:var(--amber);border-radius:2px"></span>
+          </span>
+        </div>
+        <h3 style="font-size:21px;margin:18px 0 8px">Build instantáneo</h3>
+        <p class="text-[14.5px]" style="color:var(--muted)">HMR por debajo de 50 ms y builds de producción en segundos. El compilador en Rust hace el trabajo pesado por ti.</p>
+      </article>
+      <!-- card 4 -->
+      <article class="card lift reveal" style="padding:28px">
+        <div class="ico">
+          <span style="position:relative;width:18px;height:18px">
+            <span style="position:absolute;inset:0;border:2px solid var(--accent);border-radius:50%"></span>
+            <span style="position:absolute;left:7px;top:-2px;width:4px;height:4px;border-radius:50%;background:var(--amber)"></span>
+          </span>
+        </div>
+        <h3 style="font-size:21px;margin:18px 0 8px">Despliega donde quieras</h3>
+        <p class="text-[14.5px]" style="color:var(--muted)">Salida estática, servidor Node o edge — la misma base de código. Sin vendor lock-in: tu app es tuya, no del proveedor.</p>
+      </article>
+      <!-- card 5 -->
+      <article class="card lift reveal" style="padding:28px">
+        <div class="ico"><span style="width:16px;height:18px;border:2px solid var(--accent-2);border-radius:4px 4px 6px 6px;border-top-width:5px;border-top-left-radius:9px;border-top-right-radius:9px"></span></div>
+        <h3 style="font-size:21px;margin:18px 0 8px">Abierto de raíz</h3>
+        <p class="text-[14.5px]" style="color:var(--muted)">Licencia MIT, RFCs públicas y gobernanza transparente. Cada decisión se discute en abierto y cualquiera puede proponer un cambio.</p>
+      </article>
+      <!-- card 6 -->
+      <article class="card lift reveal" style="padding:28px">
+        <div class="ico">
+          <span style="display:grid;grid-template-columns:1fr 1fr;gap:3px">
+            <span style="width:6px;height:6px;background:var(--accent);border-radius:2px"></span>
+            <span style="width:6px;height:6px;background:var(--amber);border-radius:2px"></span>
+            <span style="width:6px;height:6px;background:var(--amber);border-radius:2px"></span>
+            <span style="width:6px;height:6px;background:var(--accent-2);border-radius:2px"></span>
+          </span>
+        </div>
+        <h3 style="font-size:21px;margin:18px 0 8px">Plugins para todo</h3>
+        <p class="text-[14.5px]" style="color:var(--muted)">Auth, pagos, i18n, analítica — más de 200 plugins mantenidos por la comunidad, listos con una línea en tu config.</p>
+      </article>
+    </div>
+  </section>
+
+  <!-- CÓDIGO / EJEMPLO -->
+  <section id="codigo" class="wrap" style="padding:84px 24px 24px">
+    <div class="grid lg:grid-cols-12 gap-12 items-center">
+      <div class="lg:col-span-5 reveal">
+        <span class="eyebrow">Cómo se siente</span>
+        <h2 style="font-size:clamp(30px,4.6vw,50px);margin:14px 0 0">Lee como pseudocódigo,<br>corre como <span class="grad-text">producción</span></h2>
+        <p style="color:var(--muted);font-size:17.5px;margin-top:20px;max-width:46ch">Define una ruta, pide tus datos, devuelve la vista. GREMIO se encarga del enrutado, la carga de datos y el caché — sin boilerplate, sin sorpresas.</p>
+        <div class="flex flex-wrap items-center gap-3 mt-8">
+          <span class="chip"><span class="mono">npm create gremio</span></span>
+          <span class="chip"><span class="mono">pnpm dlx gremio</span></span>
+          <span class="chip">Bun · Deno</span>
+        </div>
+      </div>
+      <div class="lg:col-span-7 reveal">
+        <div class="card lift" style="overflow:hidden;box-shadow:0 40px 90px -50px rgba(10,30,5,.9)">
+          <div class="flex items-center gap-2" style="padding:13px 18px;border-bottom:1px solid var(--line);background:rgba(8,10,6,.5)">
+            <span style="width:11px;height:11px;border-radius:50%;background:#FF5F57"></span>
+            <span style="width:11px;height:11px;border-radius:50%;background:#FEBC2E"></span>
+            <span style="width:11px;height:11px;border-radius:50%;background:#28C840"></span>
+            <span class="mono ml-3 text-[12px]" style="color:var(--faint)">routes/posts.gremio.ts</span>
+            <span class="chip ml-auto" style="height:24px;font-size:11px">TypeScript</span>
+          </div>
+          <pre class="mono" style="margin:0;padding:22px 22px 24px;font-size:13.5px;line-height:1.85;overflow-x:auto;color:var(--ink-soft)"><span style="color:var(--faint)">// una ruta tipada, datos incluidos</span>
+<span style="color:var(--amber)">import</span> { route, db } <span style="color:var(--amber)">from</span> <span style="color:var(--accent)">"gremio"</span>
+
+<span style="color:var(--amber)">export default</span> <span style="color:var(--accent-2)">route</span>(<span style="color:var(--accent)">"/blog/:slug"</span>, {
+  <span style="color:var(--accent-2)">load</span>: <span style="color:var(--amber)">async</span> ({ params }) => {
+    <span style="color:var(--amber)">return</span> db.posts.<span style="color:var(--accent-2)">find</span>({ slug: params.slug })
+  },
+  <span style="color:var(--accent-2)">view</span>: ({ data }) => (
+    <span style="color:var(--faint)">&lt;article&gt;</span>
+      <span style="color:var(--faint)">&lt;h1&gt;</span>{ data.title }<span style="color:var(--faint)">&lt;/h1&gt;</span>
+      { data.body }
+    <span style="color:var(--faint)">&lt;/article&gt;</span>
+  ),
+})
+<span style="color:var(--faint)">// → tipado, cacheado y desplegado<span class="blink" style="color:var(--accent)">▋</span></span></pre>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- MÉTRICAS — estrellas / contribuidores / descargas -->
+  <section id="metricas" class="wrap" style="padding:80px 24px">
+    <div class="card reveal" style="padding:0;overflow:hidden">
+      <div class="grid grid-cols-2 md:grid-cols-4" style="text-align:center">
+        <div style="padding:42px 20px;border-right:1px solid var(--line);border-bottom:1px solid var(--line)">
+          <div class="display grad-text" style="font-size:clamp(38px,6vw,58px);line-height:1">18.4k</div>
+          <div class="text-[13.5px] mt-2" style="color:var(--muted)">estrellas en GitHub</div>
+        </div>
+        <div style="padding:42px 20px;border-right:1px solid var(--line);border-bottom:1px solid var(--line)">
+          <div class="display grad-text" style="font-size:clamp(38px,6vw,58px);line-height:1">740+</div>
+          <div class="text-[13.5px] mt-2" style="color:var(--muted)">contribuidores</div>
+        </div>
+        <div style="padding:42px 20px;border-right:1px solid var(--line);border-bottom:1px solid var(--line)">
+          <div class="display grad-text" style="font-size:clamp(38px,6vw,58px);line-height:1">3.1M</div>
+          <div class="text-[13.5px] mt-2" style="color:var(--muted)">descargas al mes</div>
+        </div>
+        <div style="padding:42px 20px;border-bottom:1px solid var(--line)">
+          <div class="display grad-text" style="font-size:clamp(38px,6vw,58px);line-height:1">200+</div>
+          <div class="text-[13.5px] mt-2" style="color:var(--muted)">plugins de la comunidad</div>
+        </div>
+      </div>
+      <div class="flex flex-col sm:flex-row items-center justify-between gap-4" style="padding:24px 28px">
+        <p class="text-[14px] reveal" style="color:var(--ink-soft);max-width:60ch">
+          <span style="color:var(--accent)">“</span>Migramos un monorepo de 40 paquetes a GREMIO en un fin de semana. El build pasó de 9 minutos a 11 segundos. La comunidad respondió cada duda en horas.<span style="color:var(--accent)">”</span>
+        </p>
+        <div class="flex items-center gap-3 reveal" style="min-width:200px">
+          <span style="width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--amber));display:inline-block"></span>
+          <div class="text-[13px]"><div style="color:var(--ink);font-weight:600">Iván Méndez</div><div style="color:var(--faint)">Staff Engineer · Kestrel</div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ECOSISTEMA / PLUGINS -->
+  <section id="ecosistema" style="border-top:1px solid var(--line);border-bottom:1px solid var(--line);background:linear-gradient(180deg,rgba(13,15,10,.6),transparent)">
+    <div class="wrap" style="padding:84px 24px">
+      <div class="max-w-2xl reveal mb-12">
+        <span class="eyebrow">Ecosistema</span>
+        <h2 style="font-size:clamp(30px,4.6vw,48px);margin-top:14px">Conecta una pieza,<br>no reinventes la <span class="grad-text">rueda</span></h2>
+        <p style="color:var(--muted);font-size:17px;margin-top:18px;max-width:52ch">Cada plugin es un paquete pequeño, tipado y mantenido en abierto. Añade lo que necesitas con una línea en <span class="mono" style="color:var(--ink-soft)">gremio.config.ts</span>.</p>
+      </div>
+      <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div class="card lift reveal" style="padding:20px 22px;display:flex;align-items:center;gap:14px">
+          <span style="width:40px;height:40px;border-radius:11px;display:grid;place-items:center;border:1px solid var(--line-strong);background:rgba(132,224,74,.1)"><span style="width:14px;height:18px;border:2px solid var(--accent);border-radius:3px 3px 7px 7px"></span></span>
+          <div><div class="mono text-[13.5px]" style="color:var(--ink)">@gremio/auth</div><div class="text-[12.5px]" style="color:var(--muted)">Sesiones, OAuth y passkeys</div></div>
+        </div>
+        <div class="card lift reveal" style="padding:20px 22px;display:flex;align-items:center;gap:14px">
+          <span style="width:40px;height:40px;border-radius:11px;display:grid;place-items:center;border:1px solid var(--line-strong);background:rgba(242,180,65,.1)"><span style="width:16px;height:12px;border:2px solid var(--amber);border-radius:3px"></span></span>
+          <div><div class="mono text-[13.5px]" style="color:var(--ink)">@gremio/pay</div><div class="text-[12.5px]" style="color:var(--muted)">Pagos y suscripciones</div></div>
+        </div>
+        <div class="card lift reveal" style="padding:20px 22px;display:flex;align-items:center;gap:14px">
+          <span style="width:40px;height:40px;border-radius:11px;display:grid;place-items:center;border:1px solid var(--line-strong);background:rgba(132,224,74,.1)"><span style="width:18px;height:18px;border:2px solid var(--accent-2);border-radius:50%"></span></span>
+          <div><div class="mono text-[13.5px]" style="color:var(--ink)">@gremio/i18n</div><div class="text-[12.5px]" style="color:var(--muted)">Traducciones tipadas</div></div>
+        </div>
+        <div class="card lift reveal" style="padding:20px 22px;display:flex;align-items:center;gap:14px">
+          <span style="width:40px;height:40px;border-radius:11px;display:grid;place-items:center;border:1px solid var(--line-strong);background:rgba(242,180,65,.1)"><span style="display:flex;gap:2px;align-items:flex-end;height:16px"><span style="width:3px;height:7px;background:var(--amber);border-radius:1px"></span><span style="width:3px;height:12px;background:var(--accent);border-radius:1px"></span><span style="width:3px;height:16px;background:var(--accent-2);border-radius:1px"></span></span></span>
+          <div><div class="mono text-[13.5px]" style="color:var(--ink)">@gremio/analytics</div><div class="text-[12.5px]" style="color:var(--muted)">Métricas sin cookies</div></div>
+        </div>
+        <div class="card lift reveal" style="padding:20px 22px;display:flex;align-items:center;gap:14px">
+          <span style="width:40px;height:40px;border-radius:11px;display:grid;place-items:center;border:1px solid var(--line-strong);background:rgba(132,224,74,.1)"><span style="width:16px;height:16px;border:2px solid var(--accent);border-radius:4px;transform:rotate(45deg)"></span></span>
+          <div><div class="mono text-[13.5px]" style="color:var(--ink)">@gremio/db</div><div class="text-[12.5px]" style="color:var(--muted)">ORM tipado y migraciones</div></div>
+        </div>
+        <div class="card lift reveal" style="padding:20px 22px;display:flex;align-items:center;gap:14px">
+          <span style="width:40px;height:40px;border-radius:11px;display:grid;place-items:center;border:1px solid var(--line-strong);background:rgba(242,180,65,.1)"><span style="width:18px;height:14px;border:2px solid var(--amber);border-radius:3px;position:relative"><span style="position:absolute;left:3px;top:3px;width:4px;height:4px;border-radius:50%;background:var(--amber)"></span></span></span>
+          <div><div class="mono text-[13.5px]" style="color:var(--ink)">@gremio/cms</div><div class="text-[12.5px]" style="color:var(--muted)">Contenido en Markdown</div></div>
+        </div>
+      </div>
+      <div class="reveal" style="margin-top:28px">
+        <a href="#empieza" class="btn btn-ghost">Explorar los 200+ plugins<span style="font-size:17px;line-height:1">→</span></a>
+      </div>
+    </div>
+  </section>
+
+  <!-- COMUNIDAD -->
+  <section id="comunidad" class="wrap" style="padding:84px 24px 24px">
+    <div class="max-w-2xl reveal mb-12">
+      <span class="eyebrow">Comunidad</span>
+      <h2 style="font-size:clamp(30px,4.6vw,48px);margin-top:14px">Lo construye <span class="grad-text">gente como tú</span></h2>
+      <p style="color:var(--muted);font-size:17px;margin-top:18px;max-width:52ch">Ningún CEO decide la hoja de ruta. Las propuestas se discuten en RFCs públicas, se votan y las envía cualquiera. Entra, pregunta, contribuye.</p>
+    </div>
+    <div class="grid md:grid-cols-3 gap-5">
+      <article class="card lift reveal" style="padding:30px 28px">
+        <div class="ico"><span style="display:flex;gap:3px"><span style="width:5px;height:14px;background:var(--accent);border-radius:2px"></span><span style="width:5px;height:14px;background:var(--accent-2);border-radius:2px"></span><span style="width:5px;height:14px;background:var(--amber);border-radius:2px"></span></span></div>
+        <h3 style="font-size:20px;margin:18px 0 8px">Discord</h3>
+        <p class="text-[14.5px]" style="color:var(--muted)">Más de 24.000 desarrolladores resolviendo dudas en tiempo real. Canales por plugin, por idioma y por proyecto.</p>
+        <div class="mono text-[13px] mt-4" style="color:var(--accent)">discord.gg/gremio</div>
+      </article>
+      <article class="card lift reveal" style="padding:30px 28px">
+        <div class="ico"><span style="width:18px;height:18px;border:2px solid var(--accent-2);border-radius:50%;position:relative"><span style="position:absolute;left:5px;top:5px;width:6px;height:6px;border-radius:50%;background:var(--accent-2)"></span></span></div>
+        <h3 style="font-size:20px;margin:18px 0 8px">GitHub</h3>
+        <p class="text-[14.5px]" style="color:var(--muted)">Issues abiertas, RFCs públicas y un <span class="mono" style="color:var(--ink-soft)">good first issue</span> esperándote. 740+ personas ya han hecho su primer PR aquí.</p>
+        <div class="mono text-[13px] mt-4" style="color:var(--accent)">github.com/gremio/gremio</div>
+      </article>
+      <article class="card lift reveal" style="padding:30px 28px">
+        <div class="ico"><span style="width:16px;height:18px;border:2px solid var(--amber);border-radius:3px;position:relative"><span style="position:absolute;left:3px;top:4px;right:3px;height:2px;background:var(--amber)"></span><span style="position:absolute;left:3px;top:8px;right:6px;height:2px;background:var(--amber)"></span></span></div>
+        <h3 style="font-size:20px;margin:18px 0 8px">Docs & guías</h3>
+        <p class="text-[14.5px]" style="color:var(--muted)">Documentación escrita por la comunidad, ejemplos reales y un tutorial de 15 minutos para enviar tu primera app.</p>
+        <div class="mono text-[13px] mt-4" style="color:var(--accent)">docs.gremio.dev</div>
+      </article>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section id="empieza" class="wrap" style="padding:48px 24px 96px">
+    <div class="card reveal" style="position:relative;overflow:hidden;text-align:center;padding:80px 28px">
+      <div class="glow" style="width:480px;height:340px;top:-120px;left:50%;transform:translateX(-50%);background:rgba(132,224,74,.4)"></div>
+      <div class="glow" style="width:300px;height:300px;bottom:-140px;right:-40px;background:rgba(242,180,65,.22)"></div>
+      <div class="relative" style="z-index:1">
+        <span class="eyebrow">Empieza ahora</span>
+        <h2 style="font-size:clamp(34px,6vw,64px);margin:16px auto 0;max-width:18ch">Tu primera app GREMIO,<br><span class="grad-text">en los próximos 5 minutos</span></h2>
+        <p style="color:var(--muted);font-size:18px;margin:20px auto 30px;max-width:50ch">Copia el comando, pégalo en tu terminal y empieza a construir. Gratis para siempre, open-source de verdad.</p>
+        <div style="display:flex;justify-content:center;margin-bottom:26px">
+          <div class="install">
+            <span class="cmd"><span style="color:var(--accent)">$</span> <span id="gremio-cmd-footer">npm create gremio@latest</span></span>
+            <button class="copy" aria-label="Copiar comando" data-ol-copy="gremio-cmd-footer" data-ol-copied="✓">
+              <span class="mono" style="font-size:16px">⧉</span>
+            </button>
+          </div>
+        </div>
+        <div class="flex flex-wrap gap-3 justify-center">
+          <a href="#top" class="btn btn-primary" style="height:54px;padding:0 30px;font-size:15px">Leer la guía de inicio<span style="font-size:18px;line-height:1">→</span></a>
+          <a href="#comunidad" class="btn btn-ghost" style="height:54px;padding:0 30px;font-size:15px"><span class="star">★</span> Dar estrella</a>
+        </div>
+        <div class="flex flex-wrap items-center justify-center gap-x-7 gap-y-2 mt-9 text-[13px]" style="color:var(--faint)">
+          <span>Licencia MIT</span><span>·</span><span>sin telemetría oculta</span><span>·</span><span>sin vendor lock-in</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer class="wrap" style="padding:40px 24px 48px">
+    <div class="rule" style="margin-bottom:40px"></div>
+    <div class="grid md:grid-cols-5 gap-8">
+      <div class="md:col-span-2">
+        <div class="display flex items-center gap-2.5" style="font-size:21px;letter-spacing:.02em;font-weight:600">
+          <span style="position:relative;width:24px;height:24px;display:inline-grid;place-items:center">
+            <span style="position:absolute;inset:0;clip-path:polygon(50% 0,93% 25%,93% 75%,50% 100%,7% 75%,7% 25%);background:linear-gradient(135deg,var(--accent),var(--lime-deep))"></span>
+            <span style="position:absolute;inset:2px;clip-path:polygon(50% 0,93% 25%,93% 75%,50% 100%,7% 75%,7% 25%);background:var(--bg)"></span>
+            <span style="width:7px;height:7px;border-radius:50%;background:var(--accent);box-shadow:0 0 12px var(--accent);position:relative"></span>
+          </span>GREMIO
+        </div>
+        <p class="text-[14px] mt-4" style="color:var(--muted);max-width:34ch">El framework open-source para construir apps. Instala en un comando, mantenido por su comunidad.</p>
+        <div class="flex items-center gap-3 mt-5">
+          <span class="chip" style="height:28px"><span class="star">★</span> 18.4k</span>
+          <span class="chip" style="height:28px">Licencia MIT</span>
+        </div>
+      </div>
+      <div>
+        <div class="text-[12px] uppercase tracking-widest" style="color:var(--faint);margin-bottom:14px">Producto</div>
+        <p class="text-[14px]" style="color:var(--ink-soft);line-height:2"><a href="#por-que" class="hover:text-white transition">Por qué GREMIO</a><br><a href="#codigo" class="hover:text-white transition">Código</a><br><a href="#ecosistema" class="hover:text-white transition">Plugins</a><br><a href="#empieza" class="hover:text-white transition">Empezar</a></p>
+      </div>
+      <div>
+        <div class="text-[12px] uppercase tracking-widest" style="color:var(--faint);margin-bottom:14px">Comunidad</div>
+        <p class="text-[14px]" style="color:var(--ink-soft);line-height:2"><a href="#comunidad" class="hover:text-white transition">Discord</a><br><a href="#comunidad" class="hover:text-white transition">GitHub</a><br><a href="#comunidad" class="hover:text-white transition">RFCs</a><br><a href="#comunidad" class="hover:text-white transition">Contribuir</a></p>
+      </div>
+      <div>
+        <div class="text-[12px] uppercase tracking-widest" style="color:var(--faint);margin-bottom:14px">Recursos</div>
+        <p class="text-[14px]" style="color:var(--ink-soft);line-height:2"><a href="#" class="hover:text-white transition">Documentación</a><br><a href="#" class="hover:text-white transition">Tutorial</a><br><a href="#" class="hover:text-white transition">Changelog</a><br><a href="#" class="hover:text-white transition">Blog</a></p>
+      </div>
+    </div>
+    <div class="rule" style="margin:40px 0 18px"></div>
+    <div class="flex flex-col sm:flex-row justify-between gap-3 text-[12.5px]" style="color:var(--faint)">
+      <span>© GREMIO · Open-source bajo licencia MIT</span>
+      <span>Hecho con OpenLen</span>
+    </div>
+  </footer>
+
+  <script>
+    (function(){
+      var els=document.querySelectorAll('.reveal');
+      var io=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target)}})},{threshold:.12,rootMargin:'0px 0px -8% 0px'});
+      els.forEach(function(el){io.observe(el)});
+      // Safety net: reveal everything after a beat in case the observer never
+      // fires (no scroll, short viewport, static preview).
+      setTimeout(function(){els.forEach(function(el){el.classList.add('in')})},1600);
+    })();
+  </script>
+</body>
+</html>

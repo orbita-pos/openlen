@@ -223,20 +223,20 @@
 
 <!-- ============ INTERIOR DE OTRO NIVEL (carrusel) ============ -->
 <section class="bg-white py-20 sm:py-28">
-  <div class="max-w-[1400px] mx-auto px-5 sm:px-8">
+  <div class="max-w-[1400px] mx-auto px-5 sm:px-8" data-ol-row>
     <div class="flex items-end justify-between gap-6 mb-8">
       <h2 class="font-display font-medium tracking-[-0.02em]" style="font-size:clamp(1.875rem,4vw,3rem)">Interior de otro nivel</h2>
-      <div class="hidden sm:flex items-center gap-3" data-arrows="rail1">
-        <button class="arrow" data-dir="-1" data-target="rail1" aria-label="Anterior">
+      <div class="hidden sm:flex items-center gap-3">
+        <button class="arrow" data-ol-scroll="prev" aria-label="Anterior">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
         </button>
-        <button class="arrow" data-dir="1" data-target="rail1" aria-label="Siguiente">
+        <button class="arrow" data-ol-scroll="next" aria-label="Siguiente">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
         </button>
       </div>
     </div>
 
-    <div id="rail1" class="rail" role="region" tabindex="0" aria-label="Galería del interior (desplázate con las flechas del teclado)">
+    <div id="rail1" class="rail" data-ol-scroller role="region" tabindex="0" aria-label="Galería del interior (desplázate con las flechas del teclado)">
       <figure class="w-[80vw] sm:w-[520px] max-w-[560px]">
         <div class="img-fill rounded-[var(--radius)] overflow-hidden" style="aspect-ratio:4/3">
           <img src="https://images.openlen.com/avenir/cockpit.webp" alt="Puesto de conducción del Aurora con volante y panel minimalista" class="w-full h-full object-cover" onerror="this.style.opacity=0">
@@ -267,20 +267,20 @@
 
 <!-- ============ CARRUSEL DE CARACTERÍSTICAS ============ -->
 <section id="modelos" class="pb-20 sm:pb-28 pt-16 sm:pt-24" style="background:var(--surface)">
-  <div class="max-w-[1400px] mx-auto px-5 sm:px-8">
+  <div class="max-w-[1400px] mx-auto px-5 sm:px-8" data-ol-row>
     <div class="flex items-end justify-between gap-6 mb-8">
       <h2 class="font-display font-medium tracking-[-0.02em]" style="font-size:clamp(1.875rem,4vw,3rem)">Pensado para la vida real</h2>
       <div class="hidden sm:flex items-center gap-3">
-        <button class="arrow" data-dir="-1" data-target="rail2" aria-label="Anterior">
+        <button class="arrow" data-ol-scroll="prev" aria-label="Anterior">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
         </button>
-        <button class="arrow" data-dir="1" data-target="rail2" aria-label="Siguiente">
+        <button class="arrow" data-ol-scroll="next" aria-label="Siguiente">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
         </button>
       </div>
     </div>
 
-    <div id="rail2" class="rail" role="region" tabindex="0" aria-label="Características destacadas (desplázate con las flechas del teclado)">
+    <div id="rail2" class="rail" data-ol-scroller role="region" tabindex="0" aria-label="Características destacadas (desplázate con las flechas del teclado)">
       <article class="w-[85vw] sm:w-[600px] max-w-[640px]">
         <div class="img-fill rounded-[var(--radius)] overflow-hidden" style="aspect-ratio:3/2">
           <img src="https://images.openlen.com/avenir/trunk.webp" alt="Portón trasero abierto del Aurora con maletero amplio" class="w-full h-full object-cover" onerror="this.style.opacity=0">
@@ -425,44 +425,10 @@
   </div>
 </footer>
 
-<script>
-(function(){
-  // Mobile menu is CSS-only now (checkbox #ol-nav) — and this whole script
-  // never runs on a published/cloned page anyway (OpenLen strips every
-  // <script>). What's left below only ever executes in the un-cloned
-  // template preview, for the scroll/carousel effects.
-  var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-
-  /* ---- Carousels ---- */
-  function slideWidth(rail){
-    var first = rail.querySelector(':scope > *');
-    if(!first) return rail.clientWidth;
-    var style = getComputedStyle(rail);
-    var gap = parseFloat(style.columnGap || style.gap || '16') || 16;
-    return first.getBoundingClientRect().width + gap;
-  }
-  function updateArrows(rail){
-    var btns = document.querySelectorAll('[data-target="'+rail.id+'"]');
-    var maxScroll = rail.scrollWidth - rail.clientWidth - 2;
-    btns.forEach(function(b){
-      var dir = parseInt(b.getAttribute('data-dir'),10);
-      if(dir < 0){ b.disabled = rail.scrollLeft <= 2; }
-      else { b.disabled = rail.scrollLeft >= maxScroll; }
-    });
-  }
-  document.querySelectorAll('[data-dir][data-target]').forEach(function(btn){
-    btn.addEventListener('click', function(){
-      var rail = document.getElementById(btn.getAttribute('data-target'));
-      var dir = parseInt(btn.getAttribute('data-dir'),10);
-      rail.scrollBy({ left: dir * slideWidth(rail), behavior: reduceMotion ? 'auto' : 'smooth' });
-    });
-  });
-  document.querySelectorAll('.rail').forEach(function(rail){
-    updateArrows(rail);
-    rail.addEventListener('scroll', function(){ updateArrows(rail); }, {passive:true});
-    window.addEventListener('resize', function(){ updateArrows(rail); });
-  });
-})();
-</script>
+<!-- Mobile menu is CSS-only (checkbox #ol-nav in the header above). The two
+     carousels above (#rail1/#rail2) use OpenLen's CAROUSEL contract
+     (data-ol-row/data-ol-scroll/data-ol-scroller) -- the arrow-scrolling
+     runtime is baked in at publish time. No script needed; OpenLen strips
+     every script tag on clone/publish anyway. -->
 </body>
 </html>

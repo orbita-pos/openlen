@@ -80,7 +80,7 @@
   .btn-outline-gold { background:transparent; color:var(--gold-1); border:2px solid var(--gold-2); }
   .btn-outline-gold:hover { background:rgba(200,170,110,.12); color:var(--gold-bright); border-color:var(--gold-1); }
   .btn-pill { border-radius:999px; height:40px; padding:0 22px; font-size:12px; }
-  .btn:focus-visible, .ctab:focus-visible, .nav-icon-btn:focus-visible, .nav-link:focus-visible { outline:2px solid var(--cyan); outline-offset:2px; border-radius:1px; }
+  .btn:focus-visible, .champ-radio:focus-visible + .ctab, .nav-icon-btn:focus-visible, .nav-link:focus-visible { outline:2px solid var(--cyan); outline-offset:2px; border-radius:1px; }
 
   /* ---- top nav ---- */
   .nav-link { font-size:13px; font-weight:600; text-transform:uppercase; letter-spacing:0.04em;
@@ -94,12 +94,10 @@
   .champ-render { position:absolute; left:50%; top:50%; width:96%; height:122%;
     object-fit:contain; object-position:center bottom;
     transform:translate(-50%,-50%) scale(1.02);
-    filter:drop-shadow(0 26px 42px rgba(10,20,40,.45));
-    transition:opacity .3s ease, transform .9s ease; }
-  .champ-render.swapping { opacity:0; transform:translate(-50%,-50%) scale(1.06); }
+    filter:drop-shadow(0 26px 42px rgba(10,20,40,.45)); }
   .champ-disc { position:absolute; inset:9%; border-radius:999px;
     background:radial-gradient(circle at 50% 44%, var(--glow,rgba(200,170,110,.5)), transparent 64%);
-    filter:blur(8px); transition:background .4s ease; }
+    filter:blur(8px); }
 
   /* ---- hero arcane backdrop (drop your key art in via --hero-art) ---- */
   .hero-arcane { background:
@@ -114,15 +112,25 @@
   .watermark-v svg { width:min(86%,1100px); opacity:.06; }
   .champ-stage { position:relative; width:min(78vw,520px); aspect-ratio:1/1; }
   .champ-arc { position:absolute; inset:0; }
-  /* champion render (.champ-render) + class aura (.champ-disc) defined above */
+  /* champion render (.champ-render) + class aura (.champ-disc) defined above.
+     Both are pre-rendered ONCE per role (.champ-state) and stacked; the
+     CSS-only tab switch below shows only the state matching the checked
+     radio -- nothing swaps a src/textContent at click time anymore. */
+  .champ-state { display:none; }
+  #champ-widget:has(#champ-role-asesinos:checked) [data-role="asesinos"].champ-state { display:block; }
+  #champ-widget:has(#champ-role-luchadores:checked) [data-role="luchadores"].champ-state { display:block; }
+  #champ-widget:has(#champ-role-magos:checked) [data-role="magos"].champ-state { display:block; }
+  #champ-widget:has(#champ-role-tiradores:checked) [data-role="tiradores"].champ-state { display:block; }
+  #champ-widget:has(#champ-role-soportes:checked) [data-role="soportes"].champ-state { display:block; }
+  #champ-widget:has(#champ-role-tanques:checked) [data-role="tanques"].champ-state { display:block; }
   .ctab { display:flex; flex-direction:column; align-items:center; gap:9px; opacity:.5;
     transition:opacity .18s ease; background:transparent; border:0; cursor:pointer; padding:4px 2px; min-width:64px; }
   .ctab:hover { opacity:.85; }
-  .ctab.active { opacity:1; }
+  .champ-radio:checked + .ctab { opacity:1; }
   .ctab svg { width:34px; height:34px; }
   .ctab .label { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.05em; color:var(--grey-label); transition:color .18s ease; }
-  .ctab.active .label { color:var(--fg-dark); }
-  .ctab.active svg { filter:drop-shadow(0 0 8px rgba(var(--accent-r),.55)); }
+  .champ-radio:checked + .ctab .label { color:var(--fg-dark); }
+  .champ-radio:checked + .ctab svg { filter:drop-shadow(0 0 8px rgba(var(--accent-r),.55)); }
 
   /* ---- "domina con estilo" cinematic ---- */
   .cine { position:relative; overflow:hidden; background:var(--surface-2); }
@@ -257,7 +265,7 @@
     </svg>
   </div>
 
-  <div class="relative max-w-[1340px] mx-auto px-6 lg:px-10 py-20 lg:py-28
+  <div id="champ-widget" class="relative max-w-[1340px] mx-auto px-6 lg:px-10 py-20 lg:py-28
               grid lg:grid-cols-2 gap-12 lg:gap-8 items-center">
     <div class="order-2 lg:order-1 max-w-xl">
       <p class="eyebrow text-[color:var(--fg-dark)]/70">Elige tu</p>
@@ -271,45 +279,66 @@
         <a href="#" class="btn btn-cyan">Juega Ahora</a>
       </div>
 
-      <div class="mt-14 flex flex-wrap gap-x-7 gap-y-6" id="champ-tabs" role="tablist" aria-label="Clases de campeón">
-        <button class="ctab active" data-role="asesinos" role="tab" aria-selected="true" aria-controls="champ-panel" aria-label="Asesinos">
+      <div class="mt-14 flex flex-wrap gap-x-7 gap-y-6" id="champ-tabs" role="radiogroup" aria-label="Clases de campeón">
+        <input type="radio" name="champ-role" id="champ-role-asesinos" class="sr-only champ-radio" checked>
+        <label for="champ-role-asesinos" class="ctab" data-role="asesinos" aria-label="Asesinos">
           <svg viewBox="0 0 32 32" fill="none" stroke="#C89B3C" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 3l3 9 6 2-6 2-3 12-3-12-6-2 6-2z"/><path d="M16 3v26" stroke-width="1"/></svg>
           <span class="label">Asesinos</span>
-        </button>
-        <button class="ctab" data-role="luchadores" role="tab" aria-selected="false" aria-controls="champ-panel" aria-label="Luchadores">
+        </label>
+        <input type="radio" name="champ-role" id="champ-role-luchadores" class="sr-only champ-radio">
+        <label for="champ-role-luchadores" class="ctab" data-role="luchadores" aria-label="Luchadores">
           <svg viewBox="0 0 32 32" fill="none" stroke="#C89B3C" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 28L22 10"/><path d="M28 28L10 10"/><path d="M22 6h4v4"/><path d="M10 6H6v4"/><path d="M4 24v4h4"/><path d="M28 24v4h-4"/></svg>
           <span class="label">Luchadores</span>
-        </button>
-        <button class="ctab" data-role="magos" role="tab" aria-selected="false" aria-controls="champ-panel" aria-label="Magos">
+        </label>
+        <input type="radio" name="champ-role" id="champ-role-magos" class="sr-only champ-radio">
+        <label for="champ-role-magos" class="ctab" data-role="magos" aria-label="Magos">
           <svg viewBox="0 0 32 32" fill="none" stroke="#C89B3C" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 4v8M16 12l-3 16M16 12l3 16"/><path d="M16 4l2.5 2.5L16 9l-2.5-2.5z" fill="#C89B3C"/><circle cx="16" cy="12" r="2.4" fill="#C89B3C"/></svg>
           <span class="label">Magos</span>
-        </button>
-        <button class="ctab" data-role="tiradores" role="tab" aria-selected="false" aria-controls="champ-panel" aria-label="Tiradores">
+        </label>
+        <input type="radio" name="champ-role" id="champ-role-tiradores" class="sr-only champ-radio">
+        <label for="champ-role-tiradores" class="ctab" data-role="tiradores" aria-label="Tiradores">
           <svg viewBox="0 0 32 32" fill="none" stroke="#C89B3C" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 5a15 15 0 0 0 0 22"/><path d="M11 5v22" stroke-width="1.2"/><path d="M7 16h20"/><path d="M23 12l5 4-5 4"/></svg>
           <span class="label">Tiradores</span>
-        </button>
-        <button class="ctab" data-role="soportes" role="tab" aria-selected="false" aria-controls="champ-panel" aria-label="Soportes">
+        </label>
+        <input type="radio" name="champ-role" id="champ-role-soportes" class="sr-only champ-radio">
+        <label for="champ-role-soportes" class="ctab" data-role="soportes" aria-label="Soportes">
           <svg viewBox="0 0 32 32" fill="none" stroke="#C89B3C" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 28c-7-4-11-9-11-15 6-1 9 2 11 5 2-3 5-6 11-5 0 6-4 11-11 15z"/><path d="M16 13v9M12 17h8"/></svg>
           <span class="label">Soportes</span>
-        </button>
-        <button class="ctab" data-role="tanques" role="tab" aria-selected="false" aria-controls="champ-panel" aria-label="Tanques">
+        </label>
+        <input type="radio" name="champ-role" id="champ-role-tanques" class="sr-only champ-radio">
+        <label for="champ-role-tanques" class="ctab" data-role="tanques" aria-label="Tanques">
           <svg viewBox="0 0 32 32" fill="none" stroke="#C89B3C" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 3l11 4v9c0 7-5 11-11 13C10 27 5 23 5 16V7z"/><path d="M16 3v26" stroke-width="1"/></svg>
           <span class="label">Tanques</span>
-        </button>
+        </label>
       </div>
     </div>
 
     <div class="order-1 lg:order-2 flex justify-center lg:justify-end">
-      <div class="champ-stage" id="champ-panel" role="tabpanel" tabindex="-1" aria-live="polite">
-        <div class="champ-disc" id="champ-glow" style="--glow:rgba(150,90,220,.55)"></div>
+      <div class="champ-stage" id="champ-panel" aria-live="polite">
+        <div class="champ-disc champ-state" data-role="asesinos" style="--glow:rgba(150,90,220,.55)"></div>
+        <div class="champ-disc champ-state" data-role="luchadores" style="--glow:rgba(206,86,58,.55)"></div>
+        <div class="champ-disc champ-state" data-role="magos" style="--glow:rgba(70,140,230,.55)"></div>
+        <div class="champ-disc champ-state" data-role="tiradores" style="--glow:rgba(80,200,140,.55)"></div>
+        <div class="champ-disc champ-state" data-role="soportes" style="--glow:rgba(60,200,220,.5)"></div>
+        <div class="champ-disc champ-state" data-role="tanques" style="--glow:rgba(210,165,80,.55)"></div>
         <svg class="champ-arc" viewBox="0 0 100 100" fill="none" aria-hidden="true">
           <path d="M50 4 a46 46 0 0 1 0 92" stroke="#C8AA6E" stroke-width="0.7" stroke-linecap="round"/>
           <path d="M50 96 a46 46 0 0 1 -32 -12" stroke="#785A28" stroke-width="0.7" stroke-linecap="round" opacity=".7"/>
           <path d="M50 4 a46 46 0 0 0 -34 14" stroke="#785A28" stroke-width="0.7" stroke-linecap="round" opacity=".7"/>
         </svg>
-        <img id="champ-img" class="champ-render" src="https://images.openlen.com/aetherborn/nyx-nobg.webp" alt="Campeón Nyx" />
+        <img class="champ-render champ-state" data-role="asesinos" src="https://images.openlen.com/aetherborn/nyx-nobg.webp" alt="Campeón Nyx" />
+        <img class="champ-render champ-state" data-role="luchadores" src="https://images.openlen.com/aetherborn/gromm-nobg.webp" alt="Campeón Gromm" />
+        <img class="champ-render champ-state" data-role="magos" src="https://images.openlen.com/aetherborn/lyra-nobg.webp" alt="Campeón Lyra" />
+        <img class="champ-render champ-state" data-role="tiradores" src="https://images.openlen.com/aetherborn/vex-nobg.webp" alt="Campeón Vex" />
+        <img class="champ-render champ-state" data-role="soportes" src="https://images.openlen.com/aetherborn/sera-nobg.webp" alt="Campeón Sera" />
+        <img class="champ-render champ-state" data-role="tanques" src="https://images.openlen.com/aetherborn/thorne-nobg.webp" alt="Campeón Thorne" />
         <div class="absolute bottom-2 left-1/2 -translate-x-1/2 text-center" style="z-index:5">
-          <span id="champ-name" class="cinzel text-[color:var(--gold-bright)] text-[17px] font-bold tracking-[0.2em] uppercase" style="text-shadow:0 0 5px rgba(0,0,0,.7), 0 1px 2px rgba(0,0,0,.9), 0 0 2px rgba(0,0,0,.95)">Nyx</span>
+          <span class="cinzel text-[color:var(--gold-bright)] text-[17px] font-bold tracking-[0.2em] uppercase champ-state" data-role="asesinos" style="text-shadow:0 0 5px rgba(0,0,0,.7), 0 1px 2px rgba(0,0,0,.9), 0 0 2px rgba(0,0,0,.95)">Nyx</span>
+          <span class="cinzel text-[color:var(--gold-bright)] text-[17px] font-bold tracking-[0.2em] uppercase champ-state" data-role="luchadores" style="text-shadow:0 0 5px rgba(0,0,0,.7), 0 1px 2px rgba(0,0,0,.9), 0 0 2px rgba(0,0,0,.95)">Gromm</span>
+          <span class="cinzel text-[color:var(--gold-bright)] text-[17px] font-bold tracking-[0.2em] uppercase champ-state" data-role="magos" style="text-shadow:0 0 5px rgba(0,0,0,.7), 0 1px 2px rgba(0,0,0,.9), 0 0 2px rgba(0,0,0,.95)">Lyra</span>
+          <span class="cinzel text-[color:var(--gold-bright)] text-[17px] font-bold tracking-[0.2em] uppercase champ-state" data-role="tiradores" style="text-shadow:0 0 5px rgba(0,0,0,.7), 0 1px 2px rgba(0,0,0,.9), 0 0 2px rgba(0,0,0,.95)">Vex</span>
+          <span class="cinzel text-[color:var(--gold-bright)] text-[17px] font-bold tracking-[0.2em] uppercase champ-state" data-role="soportes" style="text-shadow:0 0 5px rgba(0,0,0,.7), 0 1px 2px rgba(0,0,0,.9), 0 0 2px rgba(0,0,0,.95)">Sera</span>
+          <span class="cinzel text-[color:var(--gold-bright)] text-[17px] font-bold tracking-[0.2em] uppercase champ-state" data-role="tanques" style="text-shadow:0 0 5px rgba(0,0,0,.7), 0 1px 2px rgba(0,0,0,.9), 0 0 2px rgba(0,0,0,.95)">Thorne</span>
         </div>
       </div>
     </div>
@@ -494,52 +523,11 @@
   </div>
 </footer>
 
-<script>
-(function () {
-  // Mobile menu is CSS-only now (checkbox #ol-nav). This whole script never
-  // runs on a published/cloned page anyway (OpenLen strips every <script>) —
-  // what's left below only ever executes in the un-cloned template preview.
-
-  // ---- champion class selector ----
-  // When you wire real renders, add an `img:'<url>'` to each entry and set the
-  // portrait <img>.src inside the swap below (see comment).
-  var BASE = 'https://images.openlen.com/aetherborn/';
-  var CHAMPS = {
-    asesinos:   { name: 'Nyx',    img: 'nyx-nobg.webp',    glow: 'rgba(150,90,220,.55)' },
-    luchadores: { name: 'Gromm',  img: 'gromm-nobg.webp',  glow: 'rgba(206,86,58,.55)'  },
-    magos:      { name: 'Lyra',   img: 'lyra-nobg.webp',   glow: 'rgba(70,140,230,.55)' },
-    tiradores:  { name: 'Vex',    img: 'vex-nobg.webp',    glow: 'rgba(80,200,140,.55)' },
-    soportes:   { name: 'Sera',   img: 'sera-nobg.webp',   glow: 'rgba(60,200,220,.5)'  },
-    tanques:    { name: 'Thorne', img: 'thorne-nobg.webp', glow: 'rgba(210,165,80,.55)' }
-  };
-  Object.keys(CHAMPS).forEach(function (k) { var i = new Image(); i.src = BASE + CHAMPS[k].img; });
-
-  var img = document.getElementById('champ-img');
-  var glow = document.getElementById('champ-glow');
-  var nameEl = document.getElementById('champ-name');
-  var tabs = document.querySelectorAll('#champ-tabs .ctab');
-
-  tabs.forEach(function (tab) {
-    tab.addEventListener('click', function () {
-      var role = tab.getAttribute('data-role');
-      var data = CHAMPS[role];
-      if (!data || !img) return;
-      tabs.forEach(function (t) { t.classList.remove('active'); t.setAttribute('aria-selected', 'false'); });
-      tab.classList.add('active');
-      tab.setAttribute('aria-selected', 'true');
-      function reveal() { window.requestAnimationFrame(function () { img.classList.remove('swapping'); }); }
-      img.classList.add('swapping');
-      window.setTimeout(function () {
-        img.src = BASE + data.img;
-        img.alt = 'Campeón ' + data.name;
-        if (glow) glow.style.setProperty('--glow', data.glow);
-        if (nameEl) nameEl.textContent = data.name;
-        if (img.decode) { img.decode().then(reveal).catch(reveal); } else { reveal(); }
-      }, 300);
-    });
-  });
-})();
-</script>
+<!-- Mobile menu is CSS-only (checkbox #ol-nav in the header above). The
+     champion selector above (#champ-tabs) is CSS-only too now: radio inputs
+     + :has() show the pre-rendered .champ-state matching the checked role
+     -- no script needed. OpenLen strips every script tag on clone/publish
+     anyway. -->
 
 </body>
 </html>

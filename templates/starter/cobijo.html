@@ -1,0 +1,354 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>COBIJO — Refugio y santuario de animales</title>
+<meta name="description" content="COBIJO rescata, cuida y busca hogar para animales abandonados. Adopta, acoge o dona y dale a un animal una segunda oportunidad. Refugio sin ánimo de lucro, con cuentas claras." />
+<meta property="og:title" content="COBIJO — Un refugio para empezar de nuevo" />
+<meta property="og:description" content="Rescatamos, cuidamos y buscamos hogar. Adopta, acoge o dona — cada gesto les cambia la vida." />
+<meta property="og:image" content="https://images.openlen.com/326-dog-paw-on-hand-1920.webp" />
+<meta name="theme-color" content="#FBF5EC" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%232E3A2C'/%3E%3Cg fill='%23E8915C'%3E%3Ccircle cx='16' cy='19' r='5'/%3E%3Ccircle cx='9.5' cy='13' r='2.3'/%3E%3Ccircle cx='14' cy='10' r='2.3'/%3E%3Ccircle cx='18.5' cy='10' r='2.3'/%3E%3Ccircle cx='23' cy='13' r='2.3'/%3E%3C/g%3E%3C/svg%3E" />
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,400;1,9..144,500&family=Nunito+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#FBF5EC; --surface:#F3E9D9; --surface-2:#ECDFC9;
+    --ink:#2B2A24; --ink-soft:#41403A; --muted:#6B675C; --faint:#8C887C;
+    --line:rgba(43,42,36,0.12); --line-strong:rgba(43,42,36,0.22);
+    --accent:#E0824A; --accent-deep:#C0602B; --leaf:#3E5A3A; --leaf-soft:#5C7A56; --on-accent:#FFF7EF;
+    --radius:10px; --radius-lg:22px;
+    --display:'Fraunces',Georgia,'Times New Roman',serif;
+    --body:'Nunito Sans',ui-sans-serif,system-ui,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.62;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+  h1,h2,h3,.serif{font-family:var(--display);font-weight:500;letter-spacing:-0.012em;line-height:1.04}
+  .eyebrow{font-size:11px;letter-spacing:.26em;text-transform:uppercase;color:var(--accent);font-weight:700}
+  .wrap{max-width:1180px;margin:0 auto;padding:0 24px}
+  .lift{transition:transform .5s cubic-bezier(.2,.7,.2,1),box-shadow .5s}
+  .lift:hover{transform:translateY(-4px)}
+  .img-cover{width:100%;height:100%;object-fit:cover;display:block}
+  .btn{display:inline-flex;align-items:center;gap:.5rem;height:50px;padding:0 26px;border-radius:999px;font-weight:700;font-size:14.5px;letter-spacing:.01em;transition:transform .25s,background .25s,color .25s,border-color .25s;text-decoration:none;cursor:pointer}
+  .btn-primary{background:var(--accent);color:var(--on-accent)}
+  .btn-primary:hover{background:var(--accent-deep);transform:translateY(-2px)}
+  .btn-ghost{border:1px solid var(--line-strong);color:var(--ink);background:transparent}
+  .btn-ghost:hover{border-color:var(--accent);color:var(--accent)}
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-lg)}
+  .rule{height:1px;background:var(--line)}
+  .pill{display:inline-flex;align-items:center;gap:.4rem;height:30px;padding:0 13px;border-radius:999px;font-size:12.5px;font-weight:700;letter-spacing:.02em}
+  .amt{cursor:pointer;border:1px solid var(--line-strong);border-radius:14px;background:var(--bg);font-weight:700;font-size:18px;color:var(--ink);height:62px;display:flex;flex-direction:column;align-items:center;justify-content:center;transition:border-color .2s,background .2s,color .2s}
+  .amt small{font-weight:600;font-size:11px;color:var(--faint);letter-spacing:.02em}
+  .amt:hover{border-color:var(--accent);color:var(--accent)}
+  .amt-radio:checked + .amt{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+  .amt-radio:checked + .amt small{color:rgba(255,247,239,.85)}
+  .amt-radio:focus-visible + .amt{outline:2px solid var(--accent);outline-offset:2px}
+  /* Content is visible by default; only JS hides it to play the scroll-in
+     entrance. No JS / crawlers / static preview → always visible. */
+  .js .reveal{opacity:0;transform:translateY(18px);transition:opacity .8s ease,transform .8s cubic-bezier(.2,.7,.2,1)}
+  .js .reveal.in{opacity:1;transform:none}
+  @media(prefers-reduced-motion:reduce){.js .reveal{opacity:1;transform:none;transition:none}.lift:hover{transform:none}}
+  .grain{background-image:radial-gradient(rgba(43,42,36,.045) 1px,transparent 1px);background-size:4px 4px}
+</style>
+<script>document.documentElement.classList.add('js')</script>
+</head>
+<body class="grain">
+
+  <!-- NAV -->
+  <header class="sticky top-0 z-40" style="background:rgba(251,245,236,.82);backdrop-filter:blur(12px);border-bottom:1px solid var(--line)">
+    <div class="wrap flex items-center justify-between" style="height:72px">
+      <a href="#top" class="flex items-center gap-2.5">
+        <span aria-hidden="true" style="width:30px;height:30px;border-radius:9px;background:var(--leaf);display:inline-flex;align-items:center;justify-content:center">
+          <svg width="19" height="19" viewBox="0 0 32 32"><g fill="#E8915C"><circle cx="16" cy="19" r="5"/><circle cx="9.5" cy="13" r="2.3"/><circle cx="14" cy="10" r="2.3"/><circle cx="18.5" cy="10" r="2.3"/><circle cx="23" cy="13" r="2.3"/></g></svg>
+        </span>
+        <span class="serif" style="font-size:22px;letter-spacing:.14em;font-weight:600">COBIJO</span>
+      </a>
+      <nav class="hidden md:flex items-center gap-9 text-[14px]" style="color:var(--ink-soft)">
+        <a href="#ayudar" class="hover:opacity-60 transition">Cómo ayudar</a>
+        <a href="#adopcion" class="hover:opacity-60 transition">En adopción</a>
+        <a href="#transparencia" class="hover:opacity-60 transition">Transparencia</a>
+        <a href="#donar" class="hover:opacity-60 transition">Donar</a>
+      </nav>
+      <a href="#donar" class="btn btn-primary" style="height:42px;padding:0 20px;font-size:13.5px">Dona ahora</a>
+    </div>
+  </header>
+
+  <!-- HERO -->
+  <section id="top" class="wrap" style="padding:60px 24px 24px">
+    <div class="grid lg:grid-cols-12 gap-9 items-center">
+      <div class="lg:col-span-6 reveal">
+        <span class="eyebrow">Refugio sin ánimo de lucro · desde 2011</span>
+        <h1 style="font-size:clamp(44px,7.6vw,86px);margin:18px 0 0">
+          Un lugar<br>donde empezar<br><em style="font-style:italic;color:var(--accent)">de nuevo.</em>
+        </h1>
+        <p style="font-size:18px;color:var(--muted);max-width:38ch;margin:24px 0 30px">
+          Rescatamos animales abandonados, los cuidamos como se merecen y les buscamos un hogar para siempre. Tú puedes ser ese hogar.
+        </p>
+        <div class="flex flex-wrap gap-3">
+          <a href="#adopcion" class="btn btn-primary">Conoce a quien busca casa</a>
+          <a href="#ayudar" class="btn btn-ghost">Quiero ayudar</a>
+        </div>
+        <div class="flex items-center gap-5 mt-9 text-[13px]" style="color:var(--faint)">
+          <span style="display:inline-flex;align-items:center;gap:.4rem"><span style="width:8px;height:8px;border-radius:50%;background:var(--leaf-soft)"></span>Santuario abierto Sáb–Dom</span>
+          <span class="rule" style="width:1px;height:16px;background:var(--line-strong)"></span>
+          <span>Cuentas públicas cada año</span>
+        </div>
+      </div>
+      <div class="lg:col-span-6 reveal">
+        <div class="relative">
+          <div class="lift overflow-hidden" style="border-radius:var(--radius-lg);aspect-ratio:4/5;box-shadow:0 30px 60px -30px rgba(43,42,36,.45)">
+            <img class="img-cover" src="https://images.openlen.com/326-dog-paw-on-hand-1920.webp" alt="Editorial pet photograph of a dog paw resting gently on a human hand" loading="eager" width="1080" height="1350">
+          </div>
+          <div class="card hidden sm:block" style="position:absolute;left:-18px;bottom:24px;padding:16px 20px;box-shadow:0 18px 40px -22px rgba(43,42,36,.5);background:var(--bg)">
+            <div class="serif" style="font-size:30px;color:var(--leaf)">3.800<span style="font-size:18px;color:var(--accent)">+</span></div>
+            <div class="text-[12px]" style="color:var(--muted)">segundas oportunidades</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- IMPACTO / métricas -->
+  <section class="wrap" style="padding:40px 24px 16px">
+    <div class="rule"></div>
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-y-8 gap-x-6 py-12 reveal">
+      <div>
+        <div class="serif" style="font-size:clamp(34px,5vw,46px);color:var(--accent)">3.800+</div>
+        <div class="text-[13.5px] mt-1" style="color:var(--muted)">animales rescatados</div>
+      </div>
+      <div>
+        <div class="serif" style="font-size:clamp(34px,5vw,46px);color:var(--accent)">2.640</div>
+        <div class="text-[13.5px] mt-1" style="color:var(--muted)">adopciones felices</div>
+      </div>
+      <div>
+        <div class="serif" style="font-size:clamp(34px,5vw,46px);color:var(--accent)">180</div>
+        <div class="text-[13.5px] mt-1" style="color:var(--muted)">voluntarios activos</div>
+      </div>
+      <div>
+        <div class="serif" style="font-size:clamp(34px,5vw,46px);color:var(--accent)">14</div>
+        <div class="text-[13.5px] mt-1" style="color:var(--muted)">años cuidando</div>
+      </div>
+    </div>
+    <div class="rule"></div>
+  </section>
+
+  <!-- CÓMO AYUDAR -->
+  <section id="ayudar" class="wrap" style="padding:56px 24px 24px">
+    <div class="flex items-end justify-between mb-10 reveal">
+      <div>
+        <span class="eyebrow">Cómo ayudar</span>
+        <h2 style="font-size:clamp(32px,5vw,52px);margin-top:12px">Tres formas<br>de cambiar una vida</h2>
+      </div>
+      <p class="hidden md:block text-[14px]" style="color:var(--muted);max-width:30ch">No hace falta hacerlo todo. Cualquiera de estos tres gestos deja huella.</p>
+    </div>
+    <div class="grid md:grid-cols-3 gap-6">
+      <article class="card lift reveal" style="padding:30px">
+        <span class="pill" style="background:var(--surface-2);color:var(--leaf)">🐾 Compromiso</span>
+        <h3 style="font-size:24px;margin-top:18px">Adopta</h3>
+        <p class="text-[15px] mt-3" style="color:var(--muted)">Dale un hogar para siempre. Te acompañamos antes, durante y después para que la convivencia salga bien.</p>
+        <a href="#adopcion" class="inline-flex items-center gap-1.5 mt-6 text-[14px] font-bold" style="color:var(--accent)">Ver en adopción →</a>
+      </article>
+      <article class="card lift reveal" style="padding:30px">
+        <span class="pill" style="background:var(--surface-2);color:var(--leaf)">🏡 Temporal</span>
+        <h3 style="font-size:24px;margin-top:18px">Acoge</h3>
+        <p class="text-[15px] mt-3" style="color:var(--muted)">Una casa de acogida salva dos vidas: la del animal que cuidas y la del que ocupa su sitio en el refugio.</p>
+        <a href="#donar" class="inline-flex items-center gap-1.5 mt-6 text-[14px] font-bold" style="color:var(--accent)">Hazte familia de acogida →</a>
+      </article>
+      <article class="card lift reveal" style="padding:30px;background:var(--leaf);border-color:var(--leaf)">
+        <span class="pill" style="background:rgba(255,247,239,.16);color:var(--on-accent)">💛 Ahora mismo</span>
+        <h3 style="font-size:24px;margin-top:18px;color:var(--on-accent)">Dona</h3>
+        <p class="text-[15px] mt-3" style="color:rgba(255,247,239,.82)">Pienso, vacunas, esterilizaciones y urgencias veterinarias. Cada euro va directo a sus cuidados.</p>
+        <a href="#donar" class="inline-flex items-center gap-1.5 mt-6 text-[14px] font-bold" style="color:var(--accent)">Donar ahora →</a>
+      </article>
+    </div>
+  </section>
+
+  <!-- EN ADOPCIÓN / grid de animales -->
+  <section id="adopcion" style="background:var(--surface);margin-top:48px">
+    <div class="wrap" style="padding:72px 24px">
+      <div class="max-w-xl reveal">
+        <span class="eyebrow">Buscan hogar</span>
+        <h2 style="font-size:clamp(30px,4.5vw,46px);margin-top:12px">Están listos<br>para conocerte.</h2>
+        <p style="color:var(--muted);font-size:17px;margin-top:18px">Todos vacunados, desparasitados y con muchas ganas de querer. ¿Te suena alguno?</p>
+      </div>
+      <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 mt-12">
+        <article class="card lift overflow-hidden reveal" style="background:var(--bg)">
+          <div class="overflow-hidden" style="aspect-ratio:4/3"><img class="img-cover" src="https://images.openlen.com/311-kittens-cuddling-1920.webp" alt="Editorial pet photograph of two small kittens curled up together asleep" loading="lazy" width="1000" height="750"></div>
+          <div style="padding:20px">
+            <div class="flex items-center justify-between">
+              <h3 style="font-size:21px">Lino y Brisa</h3>
+              <span class="pill" style="background:var(--surface-2);color:var(--leaf)">En pareja</span>
+            </div>
+            <p class="text-[14px] mt-2" style="color:var(--muted)">Dos gatitos inseparables. Buscan un hogar tranquilo donde crecer juntos.</p>
+          </div>
+        </article>
+        <article class="card lift overflow-hidden reveal" style="background:var(--bg)">
+          <div class="overflow-hidden" style="aspect-ratio:4/3"><img class="img-cover" src="https://images.openlen.com/317-rabbit-closeup-1920.webp" alt="Editorial pet photograph of a small rabbit in soft natural surroundings" loading="lazy" width="1000" height="750"></div>
+          <div style="padding:20px">
+            <div class="flex items-center justify-between">
+              <h3 style="font-size:21px">Trébol</h3>
+              <span class="pill" style="background:var(--surface-2);color:var(--leaf)">Tranquilo</span>
+            </div>
+            <p class="text-[14px] mt-2" style="color:var(--muted)">Un conejo curioso y dócil. Ideal para una familia paciente y con mimos de sobra.</p>
+          </div>
+        </article>
+        <article class="card lift overflow-hidden reveal" style="background:var(--bg)">
+          <div class="overflow-hidden" style="aspect-ratio:4/3"><img class="img-cover" src="https://images.openlen.com/321-sea-otter-1920.webp" alt="Editorial wildlife photograph of a sea otter floating on its back on calm water" loading="lazy" width="1000" height="750"></div>
+          <div style="padding:20px">
+            <div class="flex items-center justify-between">
+              <h3 style="font-size:21px">Nutria rescatada</h3>
+              <span class="pill" style="background:var(--surface-2);color:var(--leaf)">Santuario</span>
+            </div>
+            <p class="text-[14px] mt-2" style="color:var(--muted)">No todos se adoptan: algunos se quedan con nosotros. Apadrínala y cubre sus cuidados.</p>
+          </div>
+        </article>
+      </div>
+      <div class="text-center mt-12 reveal"><a href="#donar" class="btn btn-ghost">Ver todos los que buscan hogar</a></div>
+    </div>
+  </section>
+
+  <!-- DONAR — widget visual -->
+  <section id="donar" style="background:var(--ink);color:var(--bg)">
+    <div class="wrap" style="padding:84px 24px">
+      <div class="grid lg:grid-cols-12 gap-10 items-center">
+        <div class="lg:col-span-5 reveal">
+          <span class="eyebrow" style="color:var(--accent)">Dona ahora</span>
+          <h2 class="serif" style="font-size:clamp(34px,5vw,56px);color:var(--bg);margin:14px 0 0;font-weight:500">Tu ayuda<br>se nota hoy.</h2>
+          <p style="color:rgba(251,245,236,.74);font-size:17.5px;margin-top:20px;max-width:42ch">Una donación al mes mantiene a un animal alimentado, vacunado y a salvo. Puedes cancelar cuando quieras.</p>
+          <div class="flex flex-col gap-3 mt-8 text-[14.5px]" style="color:rgba(251,245,236,.82)">
+            <div class="flex items-center gap-3"><span style="color:var(--accent);font-weight:700">€12</span> un mes de pienso para un perro mediano</div>
+            <div class="flex items-center gap-3"><span style="color:var(--accent);font-weight:700">€30</span> una esterilización que evita más abandono</div>
+            <div class="flex items-center gap-3"><span style="color:var(--accent);font-weight:700">€60</span> una urgencia veterinaria cubierta</div>
+          </div>
+        </div>
+        <div class="lg:col-span-7 reveal">
+          <div style="background:var(--bg);color:var(--ink);border-radius:var(--radius-lg);padding:30px;box-shadow:0 30px 60px -30px rgba(0,0,0,.5)">
+            <div class="flex items-center justify-between">
+              <div class="serif" style="font-size:21px">Quiero donar</div>
+              <div class="flex gap-1.5 text-[12.5px]">
+                <span class="pill" style="background:var(--accent);color:var(--on-accent)">Mensual</span>
+                <span class="pill" style="background:var(--surface);color:var(--muted)">Una vez</span>
+              </div>
+            </div>
+            <p class="text-[13.5px]" style="color:var(--muted);margin:8px 0 20px">Elige un importe. El 100% va directo a sus cuidados — los gastos de gestión los cubren nuestros socios.</p>
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <input type="radio" name="cobijo-amt" id="cobijo-amt-10" class="sr-only amt-radio">
+              <label for="cobijo-amt-10" class="amt">€10<small>al mes</small></label>
+              <input type="radio" name="cobijo-amt" id="cobijo-amt-20" class="sr-only amt-radio" checked>
+              <label for="cobijo-amt-20" class="amt">€20<small>al mes</small></label>
+              <input type="radio" name="cobijo-amt" id="cobijo-amt-40" class="sr-only amt-radio">
+              <label for="cobijo-amt-40" class="amt">€40<small>al mes</small></label>
+              <input type="radio" name="cobijo-amt" id="cobijo-amt-other" class="sr-only amt-radio">
+              <label for="cobijo-amt-other" class="amt">Otro<small>importe</small></label>
+            </div>
+            <div class="mt-4" style="background:var(--surface);border-radius:14px;padding:14px 16px;display:flex;align-items:center;gap:12px">
+              <span aria-hidden="true" style="width:34px;height:34px;border-radius:9px;background:var(--leaf);display:inline-flex;align-items:center;justify-content:center;flex:none">
+                <svg width="18" height="18" viewBox="0 0 32 32"><g fill="#E8915C"><circle cx="16" cy="19" r="5"/><circle cx="9.5" cy="13" r="2.3"/><circle cx="14" cy="10" r="2.3"/><circle cx="18.5" cy="10" r="2.3"/><circle cx="23" cy="13" r="2.3"/></g></svg>
+              </span>
+              <div class="text-[13px]" style="color:var(--ink-soft)"><strong>€20 al mes</strong> cuidan a un animal entero — pienso, vacunas y revisión.</div>
+            </div>
+            <a href="#donar" class="btn btn-primary w-full mt-4" style="justify-content:center">Donar €20 al mes</a>
+            <p class="text-[12px] text-center mt-3" style="color:var(--faint)">Pago seguro · puedes cancelar cuando quieras · recibo deducible</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- TRANSPARENCIA -->
+  <section id="transparencia" class="wrap" style="padding:80px 24px">
+    <div class="grid lg:grid-cols-12 gap-10 items-center">
+      <div class="lg:col-span-6 reveal">
+        <span class="eyebrow">Transparencia</span>
+        <h2 style="font-size:clamp(30px,4.5vw,48px);margin:14px 0 0">Cuentas claras,<br>sin letra pequeña.</h2>
+        <p style="color:var(--muted);font-size:17.5px;margin-top:22px;max-width:52ch">Publicamos cada año a dónde va tu donación. Somos una entidad sin ánimo de lucro y cualquiera puede pedirnos las cuentas. Sin sorpresas, sin intermediarios.</p>
+        <a href="#donar" class="inline-flex items-center gap-1.5 mt-7 text-[15px] font-bold" style="color:var(--accent)">Descargar la memoria anual →</a>
+      </div>
+      <div class="lg:col-span-6 reveal">
+        <div class="card" style="padding:30px;background:var(--surface)">
+          <div class="text-[13px] uppercase tracking-widest" style="color:var(--faint);margin-bottom:18px">A dónde va cada euro</div>
+          <div class="flex flex-col gap-5">
+            <div>
+              <div class="flex items-baseline justify-between text-[14.5px] font-bold" style="color:var(--ink-soft)"><span>Cuidados veterinarios</span><span style="color:var(--accent)">58%</span></div>
+              <div style="height:9px;border-radius:999px;background:var(--surface-2);margin-top:7px;overflow:hidden"><div style="height:100%;width:58%;background:var(--accent);border-radius:999px"></div></div>
+            </div>
+            <div>
+              <div class="flex items-baseline justify-between text-[14.5px] font-bold" style="color:var(--ink-soft)"><span>Alimentación y refugio</span><span style="color:var(--accent)">29%</span></div>
+              <div style="height:9px;border-radius:999px;background:var(--surface-2);margin-top:7px;overflow:hidden"><div style="height:100%;width:29%;background:var(--leaf-soft);border-radius:999px"></div></div>
+            </div>
+            <div>
+              <div class="flex items-baseline justify-between text-[14.5px] font-bold" style="color:var(--ink-soft)"><span>Rescates y traslados</span><span style="color:var(--accent)">9%</span></div>
+              <div style="height:9px;border-radius:999px;background:var(--surface-2);margin-top:7px;overflow:hidden"><div style="height:100%;width:9%;background:var(--leaf);border-radius:999px"></div></div>
+            </div>
+            <div>
+              <div class="flex items-baseline justify-between text-[14.5px] font-bold" style="color:var(--ink-soft)"><span>Gestión</span><span style="color:var(--accent)">4%</span></div>
+              <div style="height:9px;border-radius:999px;background:var(--surface-2);margin-top:7px;overflow:hidden"><div style="height:100%;width:4%;background:var(--faint);border-radius:999px"></div></div>
+            </div>
+          </div>
+          <div class="rule" style="margin:22px 0 16px"></div>
+          <p class="text-[12.5px]" style="color:var(--muted)">Datos de la memoria del último ejercicio cerrado. Auditoría externa disponible bajo petición.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA FINAL -->
+  <section class="wrap" style="padding:0 24px 80px">
+    <div class="card reveal" style="background:var(--leaf);border-color:var(--leaf);padding:clamp(40px,6vw,64px);text-align:center">
+      <h2 class="serif" style="font-size:clamp(30px,4.6vw,50px);color:var(--on-accent);font-weight:500">Hoy alguien espera<br>que te decidas.</h2>
+      <p style="color:rgba(255,247,239,.8);font-size:17px;margin:18px auto 30px;max-width:46ch">Adopta, acoge o dona. Sea cual sea tu gesto, para ellos lo es todo.</p>
+      <div class="flex flex-wrap gap-3 justify-center">
+        <a href="#donar" class="btn btn-primary">Dona ahora</a>
+        <a href="#adopcion" class="btn btn-ghost" style="border-color:rgba(255,247,239,.4);color:var(--on-accent)">Quiero adoptar</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer class="wrap" style="padding:24px 24px 40px">
+    <div class="grid md:grid-cols-4 gap-8">
+      <div class="md:col-span-2">
+        <div class="flex items-center gap-2.5">
+          <span aria-hidden="true" style="width:28px;height:28px;border-radius:8px;background:var(--leaf);display:inline-flex;align-items:center;justify-content:center">
+            <svg width="17" height="17" viewBox="0 0 32 32"><g fill="#E8915C"><circle cx="16" cy="19" r="5"/><circle cx="9.5" cy="13" r="2.3"/><circle cx="14" cy="10" r="2.3"/><circle cx="18.5" cy="10" r="2.3"/><circle cx="23" cy="13" r="2.3"/></g></svg>
+          </span>
+          <span class="serif" style="font-size:23px;letter-spacing:.12em;font-weight:600">COBIJO</span>
+        </div>
+        <p class="text-[14px] mt-3" style="color:var(--muted);max-width:34ch">Refugio y santuario de animales. Rescatamos, cuidamos y buscamos hogar — desde 2011.</p>
+      </div>
+      <div>
+        <div class="text-[12px] uppercase tracking-widest" style="color:var(--faint);margin-bottom:12px">Visítanos</div>
+        <p class="text-[14px]" style="color:var(--ink-soft);line-height:1.9">Camino del Soto 4, El Vergel<br>Sáb–Dom · 10:00–18:00<br>hola@cobijo.example</p>
+      </div>
+      <div>
+        <div class="text-[12px] uppercase tracking-widest" style="color:var(--faint);margin-bottom:12px">Implícate</div>
+        <p class="text-[14px]" style="color:var(--ink-soft);line-height:1.9"><a href="#adopcion" class="hover:opacity-60">Adoptar</a><br><a href="#ayudar" class="hover:opacity-60">Ser voluntario</a><br><a href="#transparencia" class="hover:opacity-60">Memoria anual</a></p>
+      </div>
+    </div>
+    <div class="rule" style="margin:36px 0 18px"></div>
+    <div class="flex flex-col sm:flex-row justify-between gap-3 text-[12.5px]" style="color:var(--faint)">
+      <span>© COBIJO · Asociación protectora sin ánimo de lucro</span>
+      <span>Hecho con OpenLen</span>
+    </div>
+  </footer>
+
+  <script>
+    (function(){
+      // Amount picker is CSS-only now (radio + .amt-radio:checked + label)
+      // -- this whole script never runs on a published/cloned page anyway
+      // (OpenLen strips every <script>). What's left below only ever
+      // executes in the un-cloned template preview.
+      var els=document.querySelectorAll('.reveal');
+      var io=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target)}})},{threshold:.12,rootMargin:'0px 0px -8% 0px'});
+      els.forEach(function(el){io.observe(el)});
+      // Safety net: reveal everything after a beat in case the observer never
+      // fires (no scroll, short viewport, gallery preview).
+      setTimeout(function(){els.forEach(function(el){el.classList.add('in')})},1600);
+    })();
+  </script>
+</body>
+</html>
