@@ -92,3 +92,14 @@ export function bakeBehaviors(
   const idx = out.lastIndexOf("</body>");
   return idx === -1 ? out + tag : out.slice(0, idx) + tag + out.slice(idx);
 }
+
+/** Qué conductas usa REALMENTE esta página. Alimenta la telemetría de publish:
+ *  junto con los issues del canal `aviso` (lo que piden y no existe), da la
+ *  lista ordenada por demanda real de qué construir después. */
+export function usedBehaviors(
+  html: string,
+  reg: Reg = BEHAVIORS,
+  order: BehaviorName[] = BEHAVIOR_ORDER,
+): BehaviorName[] {
+  return present(html, reg, order).map((b) => b.name);
+}

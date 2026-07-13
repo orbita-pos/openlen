@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { buildBehaviorsScript, buildBehaviorsHead, bakeBehaviors, BEHAVIORS_MARKER } from "./build";
+import { buildBehaviorsScript, buildBehaviorsHead, bakeBehaviors, BEHAVIORS_MARKER, usedBehaviors } from "./build";
 import type { Behavior, BehaviorName } from "./types";
 
 const fake = (name: string, marker: string, js: string, headJs?: string): Behavior =>
@@ -74,5 +74,38 @@ describe("inyección en <head> (headJs)", () => {
     const html = `<div data-ol-theme="x"></div>`;
     expect(buildBehaviorsHead(html, REG_HEAD, ORDER_HEAD)).toBe("(function(){/*HEAD*/})();");
     expect(buildBehaviorsHead(`<div data-ol-countdown="x"></div>`, REG, ORDER)).toBeNull();
+  });
+});
+
+describe("usedBehaviors", () => {
+  it("devuelve los nombres en orden de REGISTRO, no de aparición en el HTML", () => {
+    const reg = {
+      countdown: fake("countdown", "data-ol-countdown", "/*CD*/"),
+      copy: fake("copy", "data-ol-copy", "/*CP*/"),
+    } as Partial<Record<BehaviorName, Behavior>>;
+    const order: BehaviorName[] = ["countdown", "copy"];
+    // El marcador de "copy" aparece ANTES que el de "countdown" en el HTML —
+    // si usedBehaviors escaneara por orden de aparición devolvería
+    // ["copy", "countdown"]. present() itera BEHAVIOR_ORDER, así que debe
+    // devolver ["countdown", "copy"] pase lo que pase en el string.
+    const html = `<button data-ol-copy="x"></button><div data-ol-countdown="y"></div>`;
+    expect(usedBehaviors(html, reg, order)).toEqual(["countdown", "copy"]);
+  });
+
+  it("devuelve [] cuando la página no usa ninguna conducta", () => {
+    const reg = {
+      countdown: fake("countdown", "data-ol-countdown", "/*CD*/"),
+      copy: fake("copy", "data-ol-copy", "/*CP*/"),
+    } as Partial<Record<BehaviorName, Behavior>>;
+    expect(usedBehaviors("<p>hola, nada aquí</p>", reg, ["countdown", "copy"])).toEqual([]);
+  });
+
+  it("una receta status: \"deprecated\" no aparece — usedBehaviors hereda el filtro de present()", () => {
+    const reg = {
+      countdown: fake("countdown", "data-ol-countdown", "/*CD*/"),
+      filter: { ...fake("filter", "data-ol-filter", "/*FI*/"), status: "deprecated" as const },
+    } as Partial<Record<BehaviorName, Behavior>>;
+    const html = `<div data-ol-countdown="x"></div><div data-ol-filter="y"></div>`;
+    expect(usedBehaviors(html, reg, ["countdown", "filter"])).toEqual(["countdown"]);
   });
 });

@@ -29,7 +29,7 @@ import { injectOrdersCart } from "@/lib/publish/orders-cart";
 import { bakeChatWidget } from "@/lib/publish/chat-widget";
 import { bakeVideoEmbeds, bakeMediaPreconnect } from "@/lib/publish/video-embed";
 import { bakeCarousels } from "@/lib/publish/carousel";
-import { bakeBehaviors } from "@/lib/behaviors/build";
+import { bakeBehaviors, usedBehaviors } from "@/lib/behaviors/build";
 import { bake3dScene } from "./procedural-3d";
 import type { ItemRow } from "@/lib/collections/store";
 import {
@@ -827,6 +827,21 @@ async function bakeDocument(
   if (process.env.OPENLEN_BEHAVIORS !== "0") {
     try {
       migratedHtml = bakeBehaviors(migratedHtml);
+      // Telemetría de demanda real: junto con los issues del canal `aviso`
+      // (lib/agent/tools.ts — lo que la IA intentó cablear con JS y el
+      // sanitizer se lo borró), esto da la lista ordenada por USO real de
+      // qué conducta construir después. Sin tabla nueva, sin red — una línea
+      // de log estructurado (mismo patrón que lib/shadow-soak.ts) que se
+      // agrega después si hace falta. Silencioso cuando la página no usa
+      // ninguna conducta — es el caso mayoritario hoy.
+      const used = usedBehaviors(migratedHtml);
+      if (used.length > 0) {
+        // eslint-disable-next-line no-console
+        console.warn(
+          "[publishToDir] behaviors used " +
+            JSON.stringify({ sub: ctx.sub, page, behaviors: used }),
+        );
+      }
     } catch (err) {
       // eslint-disable-next-line no-console
       console.warn("[publishToDir] behaviors bake failed; publishing without it", err);
