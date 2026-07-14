@@ -214,9 +214,8 @@ fn optimize_preserves_inline_script() {
     // must also come out unmangled. (The curated starters now ship no
     // runtime JS, so this guards the invariant with a synthetic input;
     // it would catch an accidental minify_js = true or a strip regression.)
-    let src =
-        "<!doctype html><html><body><p>hi</p><script>window.__spark=1</script></body></html>";
-    let r = optimize_for_publish(&src.to_string());
+    let src = "<!doctype html><html><body><p>hi</p><script>window.__spark=1</script></body></html>";
+    let r = optimize_for_publish(src);
     let out = r.html.unwrap();
     assert!(
         out.contains("window.__spark"),
