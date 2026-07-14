@@ -3,6 +3,7 @@ import { db, schema } from "@/lib/db";
 import { createVersion } from "@/lib/projects/versions";
 import { sanitizeForPublish } from "@/lib/html-engine";
 import { normalizeBornCanonical } from "@/lib/normalize";
+import { transformIngestedHtml } from "@/lib/transform";
 import { ensurePageMeta } from "@/lib/publish/ensure-page-meta";
 import { resolveProfileForCreation } from "@/lib/business-profiles/store";
 import { seedBrandIntoHtml, profileMeta } from "@/lib/business-profiles/seed-html";
@@ -50,7 +51,19 @@ export async function POST(req: Request): Promise<Response> {
   if (Buffer.byteLength(html, "utf8") > MAX_HTML_BYTES) {
     return json({ error: "too_large", message: "HTML must be under 8 MB" }, 413);
   }
-  const sanitized = sanitizeForPublish(html);
+
+  // Transform de ingestión (lib/transform, spec 2026-07-14) — ANTES del
+  // sanitize porque lee los <script> que aquel borra: el HTML pegado tiene el
+  // MISMO bug que las plantillas (contenido JS-generado nace vacío, botones
+  // muertos). Chrome con red TOTALMENTE bloqueada + 5s de presupuesto; ante
+  // cualquier fallo devuelve el html original — la ruta queda exactamente
+  // como hoy, jamás peor. Sin cache: contenido de un solo uso.
+  const transformed = await transformIngestedHtml(html, {
+    timeoutMs: 5000,
+    source: "from-html",
+  });
+
+  const sanitized = sanitizeForPublish(transformed.html);
   if (sanitized.html === null) {
     return json(
       {
