@@ -4,6 +4,7 @@ import { getTemplate, getTemplateHtml } from "@/lib/templates/store";
 import { createVersion } from "@/lib/projects/versions";
 import { sanitizeForPublish } from "@/lib/html-engine";
 import { normalizeBornCanonical } from "@/lib/normalize";
+import { transformTemplateCached } from "@/lib/transform/template-cache";
 import { ensurePageMeta } from "@/lib/publish/ensure-page-meta";
 import { resolveProfileForCreation } from "@/lib/business-profiles/store";
 import { seedBrandIntoHtml, profileMeta } from "@/lib/business-profiles/seed-html";
@@ -51,10 +52,19 @@ export async function POST(req: Request): Promise<Response> {
     return json({ error: "template_body_unavailable" }, 500);
   }
 
+  // Transform de ingestión (lib/transform, spec 2026-07-14) — ANTES del
+  // sanitize de abajo, porque necesita leer los <script> que el sanitize
+  // borra: hornea el contenido que esos scripts generaban (45 plantillas del
+  // catálogo publican secciones VACÍAS sin esto — medido) y traduce patrones
+  // conocidos a conductas. Cacheado por sha256: corre una vez por versión de
+  // plantilla, no por clon. Fallback interno = html original (jamás peor).
+  // OPENLEN_TRANSFORM=0 lo apaga.
+  const transformedHtml = await transformTemplateCached(entry.id, html);
+
   // Defense in depth: sanitize the curated body (strips any stray
   // scripts/handlers/iframes; clean templates pass through byte-identical) and
   // reject the data-slot-path editor marker the publish flow also rejects.
-  const sanitized = sanitizeForPublish(html);
+  const sanitized = sanitizeForPublish(transformedHtml);
   if (sanitized.html === null) {
     return json(
       {
@@ -90,7 +100,10 @@ export async function POST(req: Request): Promise<Response> {
   // cloned site is multi-page from birth (e.g. Home + Tienda + product fichas).
   const clonedPages: Record<string, { html: string }> = {};
   for (const pg of entry.pages ?? []) {
-    const ps = sanitizeForPublish(pg.html);
+    // Mismo transform que la Home, clave propia por página (el hash del
+    // contenido distingue versiones; el sufijo evita colisión de claves).
+    const pgTransformed = await transformTemplateCached(`${entry.id}--${pg.slug}`, pg.html);
+    const ps = sanitizeForPublish(pgTransformed);
     if (ps.html === null) continue; // defensive: skip a page carrying editor markers
     clonedPages[pg.slug] = {
       html: ensurePageMeta(normalizeBornCanonical(ps.html), { title: entry.name }),
