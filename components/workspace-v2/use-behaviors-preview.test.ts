@@ -155,3 +155,28 @@ describe("bakeCarousels (lib/publish/carousel.ts) — mismo fix de guard que bak
     expect(rebaked, "el guard tolerante al round-trip debe devolver el html sin tocar").toBe(roundTripped);
   });
 });
+
+// Hallazgo Fable (2026-07-13): el kill-switch era medio kill-switch — solo
+// alcanzaba el bake de publish. Con `flags` el preview obedece la MISMA
+// palanca (vía /api/flags → lib/publish/kill-switches.ts, el predicado único
+// que filesystem.ts también consume): bajarla apaga las DOS mitades y editor
+// y publicado no divergen por la propia palanca de rollback.
+describe("injectBehaviorsPreview — flags (kill-switch alcanza al preview)", () => {
+  it("behaviors:false NO inyecta el runtime de conductas aunque haya marcadores", () => {
+    const html = `<!doctype html><html><body><div data-ol-countdown="2099-01-01T00:00Z"></div></body></html>`;
+    const out = injectBehaviorsPreview(html, undefined, undefined, { behaviors: false, carousel: true });
+    expect(out).toBe(html);
+  });
+  it("carousel:false NO inyecta el runtime del carrusel aunque haya data-ol-scroll", () => {
+    const html = `<!doctype html><html><body><div data-ol-row><button data-ol-scroll="next">›</button><div data-ol-scroller></div></div></body></html>`;
+    const out = injectBehaviorsPreview(html, undefined, undefined, { behaviors: true, carousel: false });
+    expect(out).not.toContain(CAROUSEL_JS);
+  });
+  it("ambos apagados devuelve el html byte-idéntico; ausentes = ambos encendidos (default ON)", () => {
+    const html = `<!doctype html><html><body><div data-ol-countdown="2099-01-01T00:00Z"></div><div data-ol-row><button data-ol-scroll="next">›</button><div data-ol-scroller></div></div></body></html>`;
+    expect(injectBehaviorsPreview(html, undefined, undefined, { behaviors: false, carousel: false })).toBe(html);
+    const on = injectBehaviorsPreview(html);
+    expect(on).not.toBe(html);
+    expect(on).toContain(CAROUSEL_JS);
+  });
+});

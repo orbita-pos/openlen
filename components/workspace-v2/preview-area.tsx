@@ -16,6 +16,7 @@ import {
 } from "./icons";
 import { IconBtn, Segmented } from "./ui";
 import { injectBehaviorsPreview, stashBehaviorsPristineState } from "./use-behaviors-preview";
+import { useKillSwitches } from "./use-kill-switches";
 import { injectDropPlace } from "./use-drop-place";
 import { injectElementInspect } from "./use-element-inspect";
 import { injectImageReplace } from "./use-image-replace";
@@ -191,6 +192,13 @@ export function PreviewArea({
     [doc],
   );
 
+  // Kill-switches (hallazgo Fable, 2026-07-13): el preview obedece la MISMA
+  // palanca OPENLEN_BEHAVIORS/CAROUSEL que el bake de publish, vía /api/flags
+  // (fail-open — ver use-kill-switches.ts). Sin esto, bajar la palanca en un
+  // incidente apagaba solo la mitad de publish y el editor divergía del
+  // publicado a través del propio mecanismo de rollback.
+  const killFlags = useKillSwitches();
+
   // Editor V3 — persistent iframe pattern. All 5 editor scripts are ALWAYS
   // injected into the srcDoc regardless of mode flags; each script gates its
   // interaction handlers + UI visibility on body[data-openlen-edit-mode] (or
@@ -219,8 +227,9 @@ export function PreviewArea({
     html = injectSectionInsert(html);
     html = injectMotionPreview(html);
     html = injectMusicPreview(html);
-    html = injectBehaviorsPreview(html);
-    html = stashBehaviorsPristineState(html);
+    html = injectBehaviorsPreview(html, undefined, undefined, killFlags);
+    // El stash solo tiene sentido si el runtime que muta el DOM se inyectó.
+    if (killFlags.behaviors) html = stashBehaviorsPristineState(html);
     html = injectDropPlace(html, dropLabels);
     return html;
   };
@@ -277,7 +286,10 @@ export function PreviewArea({
       return;
     }
     setStableSrcDoc(derive(doc));
-  }, [doc, editingActive]);
+    // killFlags solo cambia de identidad cuando /api/flags trae un valor
+    // DISTINTO al actual (ver use-kill-switches.ts) — en el caso normal
+    // (todo encendido) este effect no se re-dispara por su culpa.
+  }, [doc, editingActive, killFlags]);
 
   // Mode sync — every flag change becomes a postMessage to the iframe. The
   // iframe's bootstrap (in use-inline-edit.ts) translates this into body

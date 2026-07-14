@@ -27,12 +27,26 @@ import { BEHAVIORS } from "@/lib/behaviors/registry";
 import type { Behavior, BehaviorName } from "@/lib/behaviors/types";
 import { CAROUSEL_JS, MARKER as CAROUSEL_MARKER } from "@/lib/publish/carousel";
 
+/** Flags de kill-switch (hallazgo Fable, 2026-07-13): el preview obedece la
+ *  MISMA palanca que el bake de publish — servida por /api/flags, cuyo
+ *  predicado (lib/publish/kill-switches.ts) es el mismo que consume
+ *  filesystem.ts. Ausente = ambos encendidos (default ON, igual que el env
+ *  ausente en el servidor): así ningún test ni call site viejo cambia de
+ *  comportamiento, y el fail-open del fetch (use-kill-switches.ts) coincide
+ *  con el default del servidor. */
+export interface BehaviorsPreviewFlags {
+  behaviors: boolean;
+  carousel: boolean;
+}
+
 export function injectBehaviorsPreview(
   html: string,
   reg?: Partial<Record<BehaviorName, Behavior>>,
   order?: BehaviorName[],
+  flags?: BehaviorsPreviewFlags,
 ): string {
-  return injectCarouselPreview(bakeBehaviors(html, reg, order));
+  const out = flags?.behaviors === false ? html : bakeBehaviors(html, reg, order);
+  return flags?.carousel === false ? out : injectCarouselPreview(out);
 }
 
 /** Mismo patrón idempotente que bakeCarousels: comprobar marcador, comprobar

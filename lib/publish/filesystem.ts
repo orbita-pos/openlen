@@ -30,6 +30,7 @@ import { bakeChatWidget } from "@/lib/publish/chat-widget";
 import { bakeVideoEmbeds, bakeMediaPreconnect } from "@/lib/publish/video-embed";
 import { bakeCarousels } from "@/lib/publish/carousel";
 import { bakeBehaviors, usedBehaviors } from "@/lib/behaviors/build";
+import { behaviorsBakeEnabled, carouselBakeEnabled } from "@/lib/publish/kill-switches";
 import { bake3dScene } from "./procedural-3d";
 import type { ItemRow } from "@/lib/collections/store";
 import {
@@ -809,8 +810,9 @@ async function bakeDocument(
   // Carousel arrows — wire <button data-ol-scroll> to scroll the closest
   // [data-ol-scroller] row. Sealed inline runtime (templates ship buttons; the
   // script is stripped by sanitize and re-injected here). OPENLEN_CAROUSEL=0
-  // disables it.
-  if (process.env.OPENLEN_CAROUSEL !== "0") {
+  // disables it — via the SHARED predicate (lib/publish/kill-switches.ts) the
+  // preview's /api/flags also reads, so the lever kills both halves at once.
+  if (carouselBakeEnabled()) {
     try {
       migratedHtml = bakeCarousels(migratedHtml);
     } catch (err) {
@@ -823,8 +825,10 @@ async function bakeDocument(
   // (contador, filtro, lightbox, copiar, autoplay, tema, sticky). Corre DESPUÉS
   // del sanitizer (que borraría el script) y ANTES del sello, que lo hashea en
   // script-src. El mismo módulo lo consume el preview del editor, así que
-  // editor y publicado no pueden divergir. OPENLEN_BEHAVIORS=0 lo desactiva.
-  if (process.env.OPENLEN_BEHAVIORS !== "0") {
+  // editor y publicado no pueden divergir. OPENLEN_BEHAVIORS=0 lo desactiva —
+  // por el predicado COMPARTIDO (lib/publish/kill-switches.ts) que el preview
+  // también consume vía /api/flags: la palanca apaga las dos mitades.
+  if (behaviorsBakeEnabled()) {
     try {
       migratedHtml = bakeBehaviors(migratedHtml);
       // Telemetría de demanda real: junto con los issues del canal `aviso`

@@ -86,6 +86,7 @@ export default defineConfig({
       "lib/publish/signin-link.test.ts",
       "lib/publish/module-sections.test.ts",
       "lib/publish/whatsapp-button.test.ts",
+      "lib/publish/kill-switches.test.ts",
       "lib/publish/chat-widget.test.ts",
       "lib/publish/orders-price.test.ts",
       "lib/publish/orders-cart.test.ts",
