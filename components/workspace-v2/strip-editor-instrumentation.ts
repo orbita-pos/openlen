@@ -21,6 +21,7 @@ import { BEHAVIORS_MARKER } from "@/lib/behaviors/build";
 import {
   PREVIEW_CD_STYLE_STASH,
   PREVIEW_CD_TEXT_STASH,
+  PREVIEW_COPY_TEXT_STASH,
   PREVIEW_FILTER_PRESSED_STASH,
   PREVIEW_HTML_CLASS_STASH,
 } from "./use-behaviors-preview";
@@ -271,6 +272,21 @@ export function stripEditorInstrumentation(html: string): string {
     doc.querySelectorAll(`[${PREVIEW_FILTER_PRESSED_STASH}]`).forEach((n) => {
       n.setAttribute("aria-pressed", n.getAttribute(PREVIEW_FILTER_PRESSED_STASH) ?? "");
       n.removeAttribute(PREVIEW_FILTER_PRESSED_STASH);
+    });
+    // copy: the button label mid-confirmation ("¡Copiado!") — restored ONLY
+    // when the live text is exactly the data-ol-copied value, the one string
+    // copy's runtime can ever write (its own double-click guard proves it
+    // never writes anything else). Unconditional restore — the countdown
+    // pattern above — would revert a label the creator deliberately edited
+    // after the stash ran; countdown's digits don't have that problem (the
+    // runtime rewrites them every second, so the creator's edit there is
+    // ephemeral either way). If the 2s timer already restored the label, the
+    // condition is false and only the stash attribute is consumed.
+    doc.querySelectorAll(`[${PREVIEW_COPY_TEXT_STASH}]`).forEach((n) => {
+      if (n.textContent === n.getAttribute("data-ol-copied")) {
+        n.textContent = n.getAttribute(PREVIEW_COPY_TEXT_STASH) ?? "";
+      }
+      n.removeAttribute(PREVIEW_COPY_TEXT_STASH);
     });
 
     return "<!doctype html>\n" + doc.documentElement.outerHTML;

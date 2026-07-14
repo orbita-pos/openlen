@@ -576,6 +576,34 @@ describe("stripEditorInstrumentation — data-ol-hidden pertenece al inspector, 
   });
 });
 
+// El restore de copy es CONDICIONAL (solo deshace el único string que su
+// runtime puede escribir: el valor de data-ol-copied). Este candado protege la
+// otra mitad de esa decisión: una edición DELIBERADA del creador al label del
+// botón, hecha después del stash, jamás se revierte al guardar. Con un restore
+// incondicional (el patrón de countdown) este test se pone rojo.
+describe("stripEditorInstrumentation — copy stash condicional", () => {
+  it("restaura '¡Copiado!' al label original, pero NUNCA revierte un label que el creador editó", () => {
+    const stashed = stashBehaviorsPristineState(
+      DOC(
+        `<code id="cup">TACOS20</code>` +
+          `<button id="b1" data-ol-copy="cup" data-ol-copied="¡Copiado!">Copiar</button>` +
+          `<button id="b2" data-ol-copy="cup" data-ol-copied="¡Copiado!">Copiar</button>`,
+      ),
+    );
+    const live = new DOMParser().parseFromString(stashed, "text/html");
+    // b1: el creador lo probó — el runtime dejó el texto de confirmación.
+    live.getElementById("b1")!.textContent = "¡Copiado!";
+    // b2: el creador EDITÓ el label a propósito después del stash.
+    live.getElementById("b2")!.textContent = "Copia mi cupón";
+
+    const saved = stripEditorInstrumentation("<!doctype html>\n" + live.documentElement.outerHTML);
+    const out = new DOMParser().parseFromString(saved, "text/html");
+    expect(out.getElementById("b1")!.textContent).toBe("Copiar");
+    expect(out.getElementById("b2")!.textContent).toBe("Copia mi cupón");
+    expect(saved).not.toContain("data-openlen-copy-text");
+  });
+});
+
 // Genérico — ninguna receta nombrada a mano. Si una FUTURA 8ª receta empieza a
 // escribir un data-ol-* nuevo sobre el DOM vivo (al estilo filter/sticky/
 // lightbox) y el strip no sabe limpiarlo, este test se pone rojo, porque la
@@ -664,15 +692,13 @@ describe("stripEditorInstrumentation — audit canary (protege a la receta #8+)"
       for (const b of entries) {
         document.querySelectorAll<HTMLElement>(`[${b.marker}]`).forEach((el) => el.click());
       }
-      // countdown's tick() already mutates synchronously on mount (its first
-      // call happens inline, not on a timer) — but copy's click ALSO starts
-      // its own real `setTimeout(2000)` that swaps the button back to its
-      // original text. That's an existing, separate preview-only quirk this
-      // test isn't about (copy's button text isn't stashed/restored at all
-      // today) — advancing past it lets copy self-heal before we snapshot, so
-      // this canary stays focused on what it's meant to catch instead of
-      // tripping on that unrelated timing window.
-      vi.advanceTimersByTime(2100);
+      // La foto se toma A PROPÓSITO dentro de la ventana de confirmación de
+      // copy (su setTimeout(2000) de swap/restore sigue pendiente): un
+      // guardado real puede caer exactamente ahí — el creador prueba su botón
+      // y guarda — y eso es lo que este canary existe para cazar. NUNCA
+      // adelantar el reloj aquí para "dejar que copy se auto-cure": eso fue
+      // exactamente cómo este test estuvo doblado (revisión Fable, 2026-07-13)
+      // mientras copy publicaba "¡Copiado!" como texto permanente del botón.
 
       const dirty = "<!doctype html>\n" + document.documentElement.outerHTML;
       const runtimeIntroduced = [...attrNames(dirty)].filter((name) => !pristineAttrs.has(name));

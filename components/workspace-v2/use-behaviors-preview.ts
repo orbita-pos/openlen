@@ -61,6 +61,7 @@ export const PREVIEW_HTML_CLASS_STASH = "data-openlen-html-class";
 export const PREVIEW_CD_TEXT_STASH = "data-openlen-cd-text";
 export const PREVIEW_CD_STYLE_STASH = "data-openlen-cd-style";
 export const PREVIEW_FILTER_PRESSED_STASH = "data-openlen-filter-pressed";
+export const PREVIEW_COPY_TEXT_STASH = "data-openlen-copy-text";
 
 /** Preview-only pristine-state snapshot for the behaviors whose runtime
  *  mutation is otherwise indistinguishable, once the live DOM is captured,
@@ -98,10 +99,12 @@ export function stashBehaviorsPristineState(
   const themeMarker = reg.theme?.marker;
   const cdMarker = reg.countdown?.marker;
   const filterMarker = reg.filter?.marker;
+  const copyMarker = reg.copy?.marker;
   const needsTheme = !!themeMarker && html.includes(themeMarker);
   const needsCountdown = !!cdMarker && html.includes(cdMarker);
   const needsFilter = !!filterMarker && html.includes(filterMarker);
-  if (!needsTheme && !needsCountdown && !needsFilter) return html;
+  const needsCopy = !!copyMarker && html.includes(copyMarker);
+  if (!needsTheme && !needsCountdown && !needsFilter && !needsCopy) return html;
   if (typeof DOMParser === "undefined") return html;
   try {
     const doc = new DOMParser().parseFromString(html, "text/html");
@@ -159,6 +162,23 @@ export function stashBehaviorsPristineState(
       doc.querySelectorAll(`[${filterMarker}]`).forEach((n) => {
         if (n.hasAttribute(PREVIEW_FILTER_PRESSED_STASH)) return;
         n.setAttribute(PREVIEW_FILTER_PRESSED_STASH, n.getAttribute("aria-pressed") ?? "");
+        changed = true;
+      });
+    }
+
+    if (needsCopy) {
+      // copy's runtime swaps the BUTTON's textContent to its data-ol-copied
+      // value for 2s on each click (recipes/copy.ts::k). A save captured
+      // inside that window used to ship "¡Copiado!" as the button's permanent
+      // label (revisión Fable, 2026-07-13 — the audit canary was bent around
+      // it with an advanceTimersByTime). Stash the pristine label; the strip's
+      // restore is CONDITIONAL (only when the live text equals data-ol-copied,
+      // the one string the runtime can ever write) so a label the creator
+      // deliberately edited post-stash is never reverted — see the matching
+      // restore in strip-editor-instrumentation.ts.
+      doc.querySelectorAll(`[${copyMarker}]`).forEach((n) => {
+        if (n.hasAttribute(PREVIEW_COPY_TEXT_STASH)) return;
+        n.setAttribute(PREVIEW_COPY_TEXT_STASH, n.textContent ?? "");
         changed = true;
       });
     }
