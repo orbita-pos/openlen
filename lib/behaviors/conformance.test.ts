@@ -318,20 +318,32 @@ describe.each(entries.map((b) => [b.name, b] as const))("conducta: %s", (_name, 
 //
 // readFileSync sobre una lista acotada de directorios, no un `grep` de shell
 // (más portable entre entornos de CI/local, sin depender de que `rg` esté
-// instalado en la máquina que corre vitest). Alcance del grep: exactamente lo
-// que pidió la revisión — components/workspace-v2/** y lib/** salvo
-// lib/behaviors/** — buscando `setAttribute("<attr>"` / `setAttribute('<attr>'`
-// literal (la forma en que TODO el código no-runtime de este repo escribe
-// atributos; ver use-element-inspect.ts). No pretende ser un parser de JS —
-// una receta futura que ofusque su propio `setAttribute` para evadir este
-// grep se estaría saboteando a sí misma, no a este test.
+// instalado en la máquina que corre vitest).
+//
+// Alcance (ampliado, IMPORTANT de la revisión final de rama — el alcance
+// anterior, solo components/workspace-v2/** + lib/**, se demostró poroso de
+// TRES formas a la vez): app/**, components/** (todo, no solo workspace-v2/) y
+// lib/** salvo lib/behaviors/** — buscando `setAttribute("<attr>"`/
+// `toggleAttribute("<attr>"` (comillas simples o dobles; el regex viejo solo
+// miraba setAttribute, pero filter/sticky escriben SU PROPIO runtimeAttr con
+// toggleAttribute) O `dataset.<camelCase>` (la forma que usa lightbox:
+// `m.dataset.olLbModal=''` — un writer que use esta forma para OTRO nombre no
+// aparecía como substring `data-ol-*` en absoluto). Esto NO es "la forma en
+// que TODO el código no-runtime de este repo escribe atributos": no cubre
+// scripts/ ni crates/ (Rust — ni siquiera son .ts/.tsx), asignación indirecta
+// vía una variable que contenga el nombre del atributo, ni JSX spread de
+// props. Cubre las tres formas que de hecho existen HOY en el código de
+// producto (app/components/lib) que toca el DOM del editor o de la página
+// publicada — no es un parser de JS ni una garantía universal. Una receta
+// futura que ofusque su propia escritura para evadir este grep se estaría
+// saboteando a sí misma, no a este test.
 // process.cwd(), no fileURLToPath(import.meta.url): bajo la transformación
 // de Vitest, import.meta.url de un archivo de test no siempre es un file://
 // URL limpio (fileURLToPath truena con "must be of scheme file" aquí) —
 // process.cwd() es la raíz del repo mientras el comando de verificación real
 // (`npx vitest run`, obligatorio en este proyecto) se invoque desde ahí.
 const REPO_ROOT = process.cwd();
-const COLLISION_SCAN_ROOTS = ["components/workspace-v2", "lib"];
+const COLLISION_SCAN_ROOTS = ["app", "components", "lib"];
 const COLLISION_EXCLUDE = ["lib/behaviors", "node_modules", ".next"];
 
 function toPosix(p: string): string {
@@ -359,12 +371,27 @@ function collectSourceFiles(absDir: string): string[] {
   return out;
 }
 
-/** Archivos ya escritos con setAttribute("<attr>"…) / setAttribute('<attr>'…)
- *  fuera de lib/behaviors/, como rutas relativas al repo (para el mensaje de
- *  fallo). [] si nadie más que el propio runtime escribe ese nombre. */
+/** El nombre `dataset` (camelCase) de un atributo `data-*` — la misma
+ *  derivación que hace el propio DOM (DOMStringMap): quita el prefijo
+ *  `data-` y sube a mayúscula la letra que sigue a cada guion
+ *  (`data-ol-lb-modal` → `olLbModal`). `null` si `attr` no empieza con
+ *  `data-` (no pasa hoy — los tres runtimeAttrs reales sí — pero el guard no
+ *  debe asumirlo). */
+function toDatasetCamel(attr: string): string | null {
+  const m = /^data-(.+)$/.exec(attr);
+  return m ? m[1].replace(/-([a-z0-9])/g, (_, c: string) => c.toUpperCase()) : null;
+}
+
+/** Archivos ya escritos con (set|toggle)Attribute("<attr>"…) — comillas
+ *  simples o dobles — o con `dataset.<camelCase>`, fuera de lib/behaviors/,
+ *  como rutas relativas al repo (para el mensaje de fallo). [] si nadie más
+ *  que el propio runtime escribe ese nombre. */
 function findSetAttributeCollisions(attr: string): string[] {
   const files = COLLISION_SCAN_ROOTS.flatMap((root) => collectSourceFiles(join(REPO_ROOT, root)));
-  const pattern = new RegExp(`setAttribute\\(\\s*["']${attr}["']`);
+  const camel = toDatasetCamel(attr);
+  const alternatives = [`(?:set|toggle)Attribute\\(\\s*["']${attr}["']`];
+  if (camel) alternatives.push(`dataset\\.${camel}\\b`);
+  const pattern = new RegExp(alternatives.join("|"));
   const offenders: string[] = [];
   for (const file of files) {
     let content: string;
@@ -386,12 +413,12 @@ describe("colisión de namespace — runtimeAttrs no puede pertenecer a otro sub
   });
 
   it.each(withRuntimeAttrs.flatMap((b) => (b.runtimeAttrs ?? []).map((attr) => [b.name, attr] as const)))(
-    "%s: %s no aparece escrito con setAttribute fuera de lib/behaviors/",
+    "%s: %s no aparece escrito con (set|toggle)Attribute ni dataset.<camelCase> fuera de lib/behaviors/",
     (name, attr) => {
       const offenders = findSetAttributeCollisions(attr);
       expect(
         offenders,
-        `"${attr}" (runtimeAttrs de "${name}") aparece escrito con setAttribute FUERA de lib/behaviors/ en: ${offenders.join(", ")} — ` +
+        `"${attr}" (runtimeAttrs de "${name}") aparece escrito con setAttribute/toggleAttribute/dataset FUERA de lib/behaviors/ en: ${offenders.join(", ")} — ` +
           `el funnel de guardado (strip-editor-instrumentation.ts) trata los runtimeAttrs de esta receta como "sin dueño legítimo ` +
           `fuera del runtime" y los borra incondicionalmente en cada guardado. Si otro subsistema TAMBIÉN escribe este nombre para su ` +
           `propio propósito legítimo y persistido, el strip destruye ese trabajo en silencio — esto es EXACTAMENTE el bug CRITICAL de ` +
