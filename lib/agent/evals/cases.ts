@@ -64,10 +64,17 @@ function moduleOn(data: ProjectData, key: keyof NonNullable<ProjectData["setting
   const s = data.settings as Record<string, { enabled?: boolean } | undefined> | undefined;
   return s?.[key as string]?.enabled === true;
 }
-/** A turn that ended cleanly and never tripped a loop-level error event. */
+/** A turn that ended cleanly and never tripped a loop-level error event.
+ *  The failure reason CARRIES the first error event's code+message — a bare
+ *  "error terminal" cost three paid re-runs to even see what broke
+ *  (chain-menu-y-reservas, 2026-07-14). */
 function completedCleanly(ctx: Ctx): string | null {
-  if (ctx.result.terminalError) return "el turno terminó en error terminal";
-  if (ctx.events.some((e) => e.type === "error")) return "el loop emitió un evento error";
+  const err = ctx.events.find((e) => e.type === "error") as
+    | { code?: string; message?: string }
+    | undefined;
+  const detail = err ? ` [${err.code ?? "?"}: ${(err.message ?? "").slice(0, 140)}]` : "";
+  if (ctx.result.terminalError) return `el turno terminó en error terminal${detail}`;
+  if (err) return `el loop emitió un evento error${detail}`;
   return null;
 }
 
