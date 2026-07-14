@@ -2,9 +2,13 @@
 //
 //   npm run evals:agent -- --limit=3 --yes
 //   npm run evals:agent -- --only=activar-reservas,honesto-carrito --yes
-//   npm run evals:agent -- --all --yes            (the full battery — T7)
-//   npm run evals:agent -- --all --yes --costly   (include the paid image edit)
+//   npm run evals:agent -- --all --yes --budget-usd=1.50   (la batería completa DECLARA su costo)
+//   npm run evals:agent -- --all --yes --costly --budget-usd=2   (incluye la edición de imagen pagada)
 //   npm run evals:agent -- --canary --yes         (the 6 CANARY_IDS — fast smoke, ~18¢)
+//
+// TOPE DURO: sin --budget-usd, nada cuyo estimado supere $0.30 arranca (ni
+// con --yes), y el gasto REAL acumulado detiene la batería a media corrida si
+// toca el techo. Ver DEFAULT_BUDGET_USD abajo.
 //
 // Each case spends real Gemini credits, so the runner PRINTS a cost estimate
 // first and REFUSES to run without --yes. Concurrency is 1 (shared prod Neon +
@@ -15,6 +19,31 @@ import { CANARY_IDS, EVAL_CASES, type EvalCase } from "@/lib/agent/evals/cases";
 import { resolveEvalUser, runEvalCase, type EvalRunResult } from "@/lib/agent/evals/harness";
 
 const COST_PER_CASE_USD = 0.03; // ~3¢/case (a costly image-edit case runs more)
+
+// TOPE DURO DE GASTO (2026-07-14: una batería + re-runs vació el saldo
+// prepagado de la cuenta — ~200 MXN — con un estimado citado de $0.42).
+// Sin --budget-usd explícito, NADA cuyo estimado supere DEFAULT_BUDGET_USD
+// arranca — ni con --yes: --yes confirma "esto gasta dinero", el budget es
+// el TECHO de cuánto. Y durante la corrida, el gasto REAL acumulado
+// (calculado de los tokens medidos, no del estimado) se comprueba tras cada
+// caso: si toca el techo, la batería se detiene ahí mismo con los casos
+// restantes sin correr. Preferimos una batería incompleta a una cuenta vacía.
+const DEFAULT_BUDGET_USD = 0.3;
+// Precios de gemini-2.5-flash por millón de tokens (aprox — actualizar si
+// cambia el pricing; mejor sobreestimar que drenar).
+const USD_PER_M_INPUT = 0.3;
+const USD_PER_M_CACHED = 0.075;
+const USD_PER_M_OUTPUT = 2.5;
+
+function realCostUsd(rs: EvalRunResult[]): number {
+  let inTok = 0, cached = 0, outTok = 0;
+  for (const r of rs) {
+    inTok += r.inputTokens;
+    cached += r.cachedTokens;
+    outTok += r.outputTokens;
+  }
+  return (inTok * USD_PER_M_INPUT + cached * USD_PER_M_CACHED + outTok * USD_PER_M_OUTPUT) / 1e6;
+}
 
 function fail(msg: string): never {
   console.error(msg);
@@ -36,6 +65,7 @@ function parseArgs(argv: string[]) {
     only: val("--only"),
     yes: !!get("--yes"),
     costly: !!get("--costly"),
+    budgetUsd: val("--budget-usd"),
   };
 }
 
@@ -132,10 +162,24 @@ async function main(): Promise<void> {
   const cases = selectCases(args);
   if (cases.length === 0) fail("No quedó ningún caso por correr.");
 
-  const estUsd = (cases.length * COST_PER_CASE_USD).toFixed(2);
+  const est = cases.length * COST_PER_CASE_USD;
+  const budget = args.budgetUsd !== undefined ? Number(args.budgetUsd) : DEFAULT_BUDGET_USD;
+  if (!Number.isFinite(budget) || budget <= 0) {
+    fail(`--budget-usd debe ser un número > 0 (recibí "${args.budgetUsd}")`);
+  }
   console.log(`\nCasos seleccionados: ${cases.length}`);
-  console.log(`Costo estimado: ~$${estUsd} USD (${cases.length} × ~${(COST_PER_CASE_USD * 100).toFixed(0)}¢/caso)`);
+  console.log(`Costo estimado: ~$${est.toFixed(2)} USD (${cases.length} × ~${(COST_PER_CASE_USD * 100).toFixed(0)}¢/caso)`);
+  console.log(`Tope de gasto: $${budget.toFixed(2)} USD${args.budgetUsd === undefined ? " (default — sube el techo con --budget-usd=N)" : ""}`);
   if (args.costly) console.log("⚠ --costly: incluye ediciones de imagen pagadas (~4 créditos cada una).");
+
+  // El techo se aplica ANTES que --yes y no se puede saltar con él: --yes
+  // confirma que esto gasta dinero; --budget-usd dice CUÁNTO como máximo.
+  if (est > budget) {
+    fail(
+      `RECHAZADO: el estimado ($${est.toFixed(2)}) excede el tope ($${budget.toFixed(2)}).\n` +
+        `Si de verdad quieres gastar eso, decláralo explícito: --budget-usd=${est.toFixed(2)}`,
+    );
+  }
 
   if (!args.yes) {
     console.log("\nEsto GASTA créditos reales de Gemini. Vuelve a correr con --yes para confirmar.");
@@ -170,13 +214,29 @@ async function main(): Promise<void> {
     }
     results.push(r);
     console.log(`${r.pass ? "PASS" : "FAIL"} (${r.seconds.toFixed(1)}s)${r.pass ? "" : ` — ${r.reason}`}`);
+
+    // Vigilancia del gasto REAL (tokens medidos, no el estimado): al tocar el
+    // techo, la batería se detiene aquí — casos restantes SIN correr. Una
+    // batería incompleta se re-corre; una cuenta vaciada se paga.
+    const spent = realCostUsd(results);
+    if (spent >= budget) {
+      const remaining = cases.length - results.length;
+      console.log(
+        `\n⛔ TOPE ALCANZADO: gasto real acumulado $${spent.toFixed(2)} ≥ tope $${budget.toFixed(2)} — ` +
+          `deteniendo la batería (${remaining} caso(s) sin correr).`,
+      );
+      break;
+    }
   }
 
   printTable(results);
 
   const passed = results.filter((r) => r.pass).length;
-  console.log(`\n${passed}/${results.length} PASS`);
-  if (passed < results.length) process.exit(1);
+  console.log(`\n${passed}/${results.length} PASS (de ${cases.length} seleccionados)`);
+  console.log(
+    `Costo real de esta corrida: ~$${realCostUsd(results).toFixed(3)} USD (tokens medidos × precios de gemini-2.5-flash)`,
+  );
+  if (passed < results.length || results.length < cases.length) process.exit(1);
 }
 
 main().catch((err: unknown) => {
