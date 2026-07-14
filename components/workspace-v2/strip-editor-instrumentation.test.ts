@@ -386,6 +386,19 @@ describe("stripEditorInstrumentation — CRITICAL: preview mutations must not re
       reparsed.querySelector('[data-ol-cd="days"]')!.textContent,
       "countdown: los dígitos que el runtime congeló llegaron al HTML publicado",
     ).toBe("00");
+    // Arreglo 1 (revisión final de rama): data-ol-filtered ya se limpia
+    // arriba, pero eso NO restaura aria-pressed — el click en "tacos" puso
+    // aria-pressed="false" en "Todo" y "true" en "Tacos"; sin la restauración
+    // esos valores (el estado del click, no el que escribió la IA) llegarían
+    // permanentes a la página publicada, sobre una lista ya sin filtrar.
+    expect(
+      reparsed.querySelector('[data-ol-filter="*"]')!.getAttribute("aria-pressed"),
+      "filter: aria-pressed del chip 'Todo' quedó en el valor que dejó el click del creador, no en el que escribió la IA",
+    ).toBe("true");
+    expect(
+      reparsed.querySelector('[data-ol-filter="tacos"]')!.getAttribute("aria-pressed"),
+      "filter: aria-pressed del chip 'Tacos' quedó en el valor que dejó el click del creador, no en el que escribió la IA",
+    ).toBe("false");
   });
 
   it('PRESERVA un <html class="dark"> que el creador escribió a propósito, aunque el runtime lo apague durante la prueba', () => {

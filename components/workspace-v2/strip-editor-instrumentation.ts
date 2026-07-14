@@ -21,6 +21,7 @@ import { BEHAVIORS_MARKER } from "@/lib/behaviors/build";
 import {
   PREVIEW_CD_STYLE_STASH,
   PREVIEW_CD_TEXT_STASH,
+  PREVIEW_FILTER_PRESSED_STASH,
   PREVIEW_HTML_CLASS_STASH,
 } from "./use-behaviors-preview";
 import { MARKER as CAROUSEL_MARKER } from "@/lib/publish/carousel";
@@ -258,6 +259,18 @@ export function stripEditorInstrumentation(html: string): string {
       el.style.display = el.getAttribute(PREVIEW_CD_STYLE_STASH) ?? "";
       el.removeAttribute(PREVIEW_CD_STYLE_STASH);
       if (!el.getAttribute("style")) el.removeAttribute("style");
+    });
+    // filter: aria-pressed on each chip, restored to whatever the AI actually
+    // authored — a click the creator tried in the preview is real interaction,
+    // not a shipped default (Arreglo 1, revisión final de rama). Before this
+    // restore, aria-pressed was collateral damage of the runtime-owned
+    // data-ol-filtered cleanup above: that unhides the items again (correct),
+    // but left the LAST-CLICKED chip's aria-pressed on the published page —
+    // a chip stuck "pressed" over an unfiltered list, and a screen reader
+    // announcing a selection that no longer matches what's shown.
+    doc.querySelectorAll(`[${PREVIEW_FILTER_PRESSED_STASH}]`).forEach((n) => {
+      n.setAttribute("aria-pressed", n.getAttribute(PREVIEW_FILTER_PRESSED_STASH) ?? "");
+      n.removeAttribute(PREVIEW_FILTER_PRESSED_STASH);
     });
 
     return "<!doctype html>\n" + doc.documentElement.outerHTML;

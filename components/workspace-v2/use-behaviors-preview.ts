@@ -60,13 +60,18 @@ function injectCarouselPreview(html: string): string {
 export const PREVIEW_HTML_CLASS_STASH = "data-openlen-html-class";
 export const PREVIEW_CD_TEXT_STASH = "data-openlen-cd-text";
 export const PREVIEW_CD_STYLE_STASH = "data-openlen-cd-style";
+export const PREVIEW_FILTER_PRESSED_STASH = "data-openlen-filter-pressed";
 
-/** Preview-only pristine-state snapshot for the two behaviors whose runtime
+/** Preview-only pristine-state snapshot for the behaviors whose runtime
  *  mutation is otherwise indistinguishable, once the live DOM is captured,
  *  from a value the creator or the AI actually authored — theme's
- *  `<html class="dark">` toggle, and countdown's frozen digits (plus the
+ *  `<html class="dark">` toggle, countdown's frozen digits (plus the
  *  `style="display:none"` it can bake onto its own root, and clear on
- *  `[data-ol-cd-ended]`, once expired).
+ *  `[data-ol-cd-ended]`, once expired), and filter's `aria-pressed` (Arreglo
+ *  1, revisión final de rama: rewritten on EVERY chip in the group on each
+ *  click — see lib/behaviors/recipes/filter.ts — so a creator trying the
+ *  filter in preview leaves that click's value on the live DOM, otherwise
+ *  indistinguishable from what the AI authored).
  *
  *  Unlike motion's `data-ol-orig` (written by the PUBLISHED runtime itself —
  *  see lib/publish/motion-presets.ts, which needs it for its own reset
@@ -92,9 +97,11 @@ export function stashBehaviorsPristineState(
 ): string {
   const themeMarker = reg.theme?.marker;
   const cdMarker = reg.countdown?.marker;
+  const filterMarker = reg.filter?.marker;
   const needsTheme = !!themeMarker && html.includes(themeMarker);
   const needsCountdown = !!cdMarker && html.includes(cdMarker);
-  if (!needsTheme && !needsCountdown) return html;
+  const needsFilter = !!filterMarker && html.includes(filterMarker);
+  if (!needsTheme && !needsCountdown && !needsFilter) return html;
   if (typeof DOMParser === "undefined") return html;
   try {
     const doc = new DOMParser().parseFromString(html, "text/html");
@@ -142,6 +149,16 @@ export function stashBehaviorsPristineState(
       doc.querySelectorAll(`[${cdMarker}],[data-ol-cd-ended]`).forEach((n) => {
         if (n.hasAttribute(PREVIEW_CD_STYLE_STASH)) return;
         n.setAttribute(PREVIEW_CD_STYLE_STASH, (n as HTMLElement).style.display);
+        changed = true;
+      });
+    }
+
+    if (needsFilter) {
+      // Same stash-before/restore-after pattern as countdown's text above —
+      // see the matching restore in strip-editor-instrumentation.ts.
+      doc.querySelectorAll(`[${filterMarker}]`).forEach((n) => {
+        if (n.hasAttribute(PREVIEW_FILTER_PRESSED_STASH)) return;
+        n.setAttribute(PREVIEW_FILTER_PRESSED_STASH, n.getAttribute("aria-pressed") ?? "");
         changed = true;
       });
     }
