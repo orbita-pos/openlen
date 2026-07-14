@@ -3,6 +3,16 @@ import type { Behavior, BehaviorName } from "./types";
 
 export const BEHAVIORS_MARKER = "data-ol-behaviors";
 
+/** Techo real del script COMPUESTO (guard + inyector de estilos + wrappers +
+ *  las 7 recetas), en bytes UTF-8. Fuente única para dos consumidores que
+ *  antes podían divergir (Arreglo 6, revisión final de rama): el test
+ *  unitario en jsdom (lib/behaviors/conformance.test.ts) y el gate end-to-end
+ *  que lo mide sobre una página PUBLICADA de verdad
+ *  (scripts/qa/behaviors-born100-gate.mjs) — este último solo IMPRIMÍA el
+ *  peso antes de este fix, nunca lo afirmaba. Ver conformance.test.ts para el
+ *  razonamiento completo de por qué 6144 y no otro número. */
+export const BEHAVIORS_SCRIPT_BUDGET_BYTES = 6144;
+
 // El guard de modo edición. En el preview el tab Contenido pone
 // contentEditable sobre el documento; un contador que reescribe su texto cada
 // segundo pelearía con el cursor del creador (saltos, texto corrupto). Los

@@ -57,6 +57,7 @@ import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { createServer } from "node:http";
 import { BEHAVIORS, BEHAVIOR_ORDER } from "../../lib/behaviors/registry.ts";
+import { BEHAVIORS_SCRIPT_BUDGET_BYTES } from "../../lib/behaviors/build.ts";
 
 // ── Catalog-coverage self-check — runs BEFORE Chrome/publish/network ───────
 // MARKERS (used further down by the static substring checks) is DERIVED from
@@ -393,19 +394,32 @@ if (/id="creator-onclick-btn"[^>]*onclick=/i.test(servedHtml)) {
 // — harmless (identical for hasAttribute/getAttribute/CSS selectors/substring
 // checks), but it means the tag is NOT byte-identical to bakeBehaviors' own
 // `<script data-ol-behaviors>` output. `(?!-)` excludes the sibling
-// `data-ol-behaviors-head` tag (theme's pre-paint script, measured separately
-// by the 4497B ledger figure this compares against).
+// `data-ol-behaviors-head` tag (theme's pre-paint script, measured separately,
+// against BEHAVIORS_SCRIPT_BUDGET_BYTES below).
 const behaviorsScriptMatch = /<script\s+data-ol-behaviors(?!-)[^>]*>([\s\S]*?)<\/script>/.exec(servedHtml);
 const behaviorsScriptBytes = behaviorsScriptMatch ? Buffer.byteLength(behaviorsScriptMatch[1], "utf8") : null;
 if (behaviorsScriptBytes === null) {
   staticFail.push("could not locate the <script data-ol-behaviors> tag to measure its byte weight");
 }
 
+// Arreglo 6 (revisión final de rama): this used to only PRINT the weight —
+// a number nobody asserts is not a gate. BEHAVIORS_SCRIPT_BUDGET_BYTES is
+// imported from lib/behaviors/build.ts, the SAME constant
+// lib/behaviors/conformance.test.ts asserts against in jsdom, so the ceiling
+// can never diverge between the unit test and this end-to-end measurement
+// on a REAL published artifact.
+if (behaviorsScriptBytes !== null && behaviorsScriptBytes > BEHAVIORS_SCRIPT_BUDGET_BYTES) {
+  staticFail.push(
+    `behaviors script weight ${behaviorsScriptBytes}B exceeds the ${BEHAVIORS_SCRIPT_BUDGET_BYTES}B ceiling ` +
+      `(BEHAVIORS_SCRIPT_BUDGET_BYTES, lib/behaviors/build.ts — same ceiling conformance.test.ts asserts in jsdom)`,
+  );
+}
+
 console.log(`\nStatic checks: ${staticFail.length === 0 ? "PASSED" : "FAILED"}`);
 for (const f of staticFail) console.log(`  - ${f}`);
 console.log(
-  `Behaviors script weight: ${behaviorsScriptBytes ?? "?"}B` +
-    (behaviorsScriptBytes === 4497 ? " (matches the ledger's 7-recipe figure exactly)" : " (ledger's 7-recipe figure: 4497B)"),
+  `Behaviors script weight: ${behaviorsScriptBytes ?? "?"}B of ${BEHAVIORS_SCRIPT_BUDGET_BYTES}B ceiling` +
+    (behaviorsScriptBytes !== null ? ` (margin ${BEHAVIORS_SCRIPT_BUDGET_BYTES - behaviorsScriptBytes}B)` : ""),
 );
 
 // ── Chrome: functional assertions (Puppeteer) + Lighthouse ─────────────

@@ -3,7 +3,7 @@
 // dentro de presupuesto y que degrada sin romper — o el CI falla.
 import { describe, it, expect } from "vitest";
 import { BEHAVIORS, BEHAVIOR_ORDER } from "./registry";
-import { buildBehaviorsScript } from "./build";
+import { buildBehaviorsScript, BEHAVIORS_SCRIPT_BUDGET_BYTES } from "./build";
 import { validateBehaviors } from "./validate";
 import { trackDocumentListeners } from "./recipes/test-helpers";
 import type { Behavior, BehaviorName } from "./types";
@@ -35,7 +35,13 @@ const entries = BEHAVIOR_ORDER.map((n) => BEHAVIORS[n]).filter((b): b is Behavio
 // El presupuesto POR RECETA (700B) NO se toca aquí: ese es el verdadero
 // mecanismo de disciplina, y las 4 recetas ya enviadas (631-685B) prueban
 // que es alcanzable sin sacrificar comportamiento.
-const TOTAL_BUDGET = 6144;
+//
+// Arreglo 6 (revisión final de rama): el número en sí ahora vive en
+// lib/behaviors/build.ts (BEHAVIORS_SCRIPT_BUDGET_BYTES) — scripts/qa/
+// behaviors-born100-gate.mjs importa el MISMO valor y lo afirma contra el
+// peso medido en una página publicada real (antes solo lo imprimía), así que
+// el techo no puede divergir entre este test en jsdom y el gate E2E.
+const TOTAL_BUDGET = BEHAVIORS_SCRIPT_BUDGET_BYTES;
 
 /** Registro falso mínimo — no hace falta una segunda receta real para probar
  *  que el arnés compone y aísla correctamente. Mismo patrón que
