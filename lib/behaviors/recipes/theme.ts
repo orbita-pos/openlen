@@ -78,8 +78,14 @@ export const theme: Behavior = {
     // porque puede faltar u olvidarse. Sin el recordatorio explícito abajo,
     // esta conducta corre el mismo riesgo que sticky sin CSS: nace muerta.
     whenNot:
-      "NUNCA en la página de un negocio local (una taquería, un salón de belleza, un fotógrafo): ningún visitante espera un botón de tema ahí, y romper la modalidad única de la página sin motivo confunde más de lo que ayuda. NUNCA tampoco sobre una temática activa (Temáticas ya fija toda la paleta del kit visual; el toggle se la rompe). Resérvalo para landings de producto, portafolios y páginas de documentación — ahí sí es una convención que el visitante reconoce y espera poder usar. Y recuerda: el marcador por sí solo NO CAMBIA NADA si la página no define ya el flip `:root.dark` con valores REALMENTE distintos a los de `:root` — es el mismo flip que la guía de diseño exige para TODA página, no algo nuevo que inventar aquí; sin él, o si sus valores repiten los de `:root`, este botón conmuta una clase que ningún color escucha.",
-    example: `<button data-ol-theme aria-label="Cambiar entre modo claro y oscuro">Tema</button>`,
+      "NUNCA en la página de un negocio local (una taquería, un salón de belleza, un fotógrafo): ningún visitante espera un botón de tema ahí, y romper la modalidad única de la página sin motivo confunde más de lo que ayuda. NUNCA tampoco sobre una temática activa (Temáticas ya fija toda la paleta del kit visual; el toggle se la rompe). Resérvalo para landings de producto, portafolios y páginas de documentación. Y al ponerlo VERIFICA el flip: si la página aún no define `:root.dark{…}` con valores realmente distintos a los de `:root`, escríbelo TÚ en el mismo turno (como en el ejemplo) — sin él este botón conmuta una clase que ningún color escucha.",
+    // El <style> del flip va EN el ejemplo a propósito (hallazgo del eval
+    // conducta-theme, 2026-07-14: el modelo puso el marcador sin ningún CSS
+    // que reaccionara a .dark — la advertencia en prosa no bastó; los modelos
+    // copian ejemplos con mucha más fidelidad que prosa). Tokens del contrato
+    // de diseño (--bg/--surface/--fg), no inventados.
+    example: `<style>:root.dark{--bg:#0f1115;--surface:#171a21;--fg:#e8eaf0}</style>
+<button data-ol-theme aria-label="Cambiar entre modo claro y oscuro">Tema</button>`,
   },
   status: "stable",
 };
