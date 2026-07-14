@@ -21,6 +21,18 @@ describe("translateKnownPatterns — copy (data-copy literal → data-ol-copy po
     expect(out.html).toMatch(/data-ol-copied="¡Copiado!"/);
     expect(out.html).not.toMatch(/\sdata-copy=/);
   });
+  it("heron real: el prompt decorativo ($ en un span) se MUEVE fuera del <code> — visible igual, portapapeles limpio", () => {
+    const html = doc(
+      `<div><code class="font-mono"><span class="tok-prompt">$ </span>npm install heron</code>` +
+        `<button class="copy-btn" data-copy="npm install heron">⧉</button></div>`,
+    );
+    const out = translateKnownPatterns(html);
+    expect(out.html).toMatch(/data-ol-copy="ol-copy-0"/);
+    // El prompt sigue en la página (el texto visible no encoge)…
+    expect(out.html).toContain('<span class="tok-prompt">$ </span><code');
+    // …pero fuera del target: lo copiado será exactamente el comando.
+    expect(out.html).toMatch(/<code[^>]*id="ol-copy-0"[^>]*>npm install heron<\/code>/);
+  });
   it("respeta un id existente del target en vez de inventar uno", () => {
     const html = doc(
       `<div><code id="cmd">npx openlen</code><button data-copy="npx openlen">⧉</button></div>`,

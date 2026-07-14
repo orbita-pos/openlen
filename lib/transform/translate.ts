@@ -50,6 +50,15 @@ function copyMapper(html: string): { html: string; applied: boolean } {
     return id;
   };
 
+  // El catálogo real (heron) decora el <code> con un prompt `$ ` en un span
+  // (tok-prompt) que NO forma parte del valor a copiar — se normaliza SOLO
+  // ese prefijo; cualquier otra diferencia sigue siendo un no-match (lista
+  // blanca estricta). NB: la conducta copy usa innerText en runtime, así que
+  // el visitante copia el texto VISIBLE del target — con prompt incluido si
+  // el autor lo puso; por eso el prompt-span también se elimina abajo al
+  // traducir, para que lo copiado sea exactamente el comando.
+  const norm = (s: string) => s.trim().replace(/^\$\s+/, "");
+
   for (const btn of buttons) {
     const wanted = (btn.getAttribute("data-copy") ?? "").trim();
     if (!wanted) continue;
@@ -58,9 +67,23 @@ function copyMapper(html: string): { html: string; applied: boolean } {
     for (let depth = 0; depth < 3 && scope && !target; depth++, scope = scope.parentNode) {
       for (const cand of scope.querySelectorAll("code,pre,kbd,samp")) {
         if (cand === btn || btn.querySelectorAll("*").includes(cand)) continue;
-        if (cand.text.trim() === wanted) {
+        if (norm(cand.text) === norm(wanted)) {
           target = cand;
           break;
+        }
+      }
+    }
+    // Si el match dependió del prompt decorativo, MOVERLO fuera del target
+    // (nunca borrarlo: la aserción reina del gate — "el texto visible no
+    // encoge" — cazó a la primera versión quitándolo, 2026-07-14). Sigue
+    // viéndose "$ npm install …", pero el runtime de copy lee innerText del
+    // target y el portapapeles recibe solo el comando.
+    if (target && norm(target.text) !== target.text.trim()) {
+      for (const sp of target.querySelectorAll("span")) {
+        if (sp.text.trim() === "$") {
+          const moved = sp.toString();
+          sp.remove();
+          target.insertAdjacentHTML("beforebegin", moved);
         }
       }
     }

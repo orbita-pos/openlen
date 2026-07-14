@@ -24,6 +24,7 @@
     "post-templates:add": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/post-templates-add.ts",
     "marketing:render-smoke": "tsx --tsconfig tsconfig.eval.json scripts/marketing-render-smoke.ts",
     "assistant:evals": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/assistant-evals.ts",
+    "transform:gate": "tsx --tsconfig tsconfig.eval.json --env-file=.env.local --require ./scripts/test-node-server-only-shim.cjs scripts/qa/transform-gate.mts",
     "evals:agent": "tsx --tsconfig tsconfig.eval.json --env-file=.env.local --require ./scripts/test-node-server-only-shim.cjs scripts/agent-eval.ts",
     "sections:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/sections-migrate.ts",
     "integrations:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/integrations-migrate.ts",
