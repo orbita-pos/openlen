@@ -1,4 +1,5 @@
-// Preloaded via `tsx --require` in package.json's test:node script (see NB
+// Preloaded via `tsx --require` in package.json's test:node AND evals:agent
+// scripts (see NB
 // below the require line for why this file has to exist at all).
 //
 // "server-only" (node_modules/server-only) only resolves to its harmless
