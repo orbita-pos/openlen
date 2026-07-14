@@ -59,6 +59,16 @@ export const filter: Behavior = {
     // cubrir ambos casos. Fuera del grupo no hay de dónde leer el nombre: el
     // runtime se calla en vez de tronar.
     requiresHost: "[data-ol-filter-group]",
+    // La otra mitad del cableado (hallazgo Fable, 2026-07-13): el grupo debe
+    // apuntar a una rejilla que EXISTA — sin ella, el runtime hace
+    // `if(!t)return` y todos los botones nacen muertos en silencio. Es el
+    // ejemplo literal de la cabecera de validate.ts, que hasta este campo no
+    // se cazaba. Ver el comentario de `crossRefs` en types.ts.
+    crossRefs: [{
+      via: "data-ol-filter-group",
+      target: "data-ol-filter-target",
+      why: "sin esa rejilla, los botones no filtran nada",
+    }],
   },
   js: JS,
   css: CSS,

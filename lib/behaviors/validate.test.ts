@@ -136,3 +136,61 @@ describe("describeBehaviorIssues", () => {
     expect(describeBehaviorIssues([{ behavior: "copy", message: "único" }])).toBe("único");
   });
 });
+
+// Hallazgo Fable (2026-07-13): la cabecera de ESTE archivo promete cazar "un
+// filtro que apunta a una rejilla inexistente" — su ejemplo literal — y no
+// existía ningún check que cruzara el nombre del grupo con su target: un
+// grupo entero de botones nacía muerto, en silencio. `crossRefs` es el
+// vocabulario genérico que lo cubre (y que tabs, la receta #8, va a
+// necesitar exactamente igual: grupo de pestañas ↔ sus paneles).
+const FILTER_REG = {
+  filter: {
+    name: "filter", marker: "data-ol-filter", js: "", budgetBytes: 700,
+    schema: {
+      root: { kind: "tagList" },
+      requiresHost: "[data-ol-filter-group]",
+      crossRefs: [{
+        via: "data-ol-filter-group",
+        target: "data-ol-filter-target",
+        why: "sin esa rejilla, los botones no filtran nada",
+      }],
+    },
+    degradation: "content-intact", a11y: [], status: "stable",
+    doc: { when: "", whenNot: "", example: "" },
+  },
+} as unknown as Partial<Record<BehaviorName, Behavior>>;
+
+describe("validateBehaviors — crossRefs (grupo ↔ target en otra parte del documento)", () => {
+  it("caza un grupo de filtros SIN su [data-ol-filter-target] — todos sus botones nacerían muertos", () => {
+    const html = doc(
+      `<div data-ol-filter-group="menu"><button data-ol-filter="*">Todo</button><button data-ol-filter="tacos">Tacos</button></div>`,
+    );
+    const issues = validateBehaviors(html, FILTER_REG);
+    expect(issues, "UN issue por grupo — no uno por botón").toHaveLength(1);
+    expect(issues[0].behavior).toBe("filter");
+    expect(issues[0].message).toMatch(/data-ol-filter-target="menu"/);
+  });
+  it("acepta el grupo cuando su target existe", () => {
+    const html = doc(
+      `<div data-ol-filter-group="menu"><button data-ol-filter="*">Todo</button></div>` +
+        `<div data-ol-filter-target="menu"><article data-ol-tag="tacos">x</article></div>`,
+    );
+    expect(validateBehaviors(html, FILTER_REG)).toEqual([]);
+  });
+  it("un botón fuera de todo grupo reporta requiresHost, no crossRefs (no hay valor que cruzar)", () => {
+    const html = doc(`<button data-ol-filter="tacos">Tacos</button>`);
+    const issues = validateBehaviors(html, FILTER_REG);
+    expect(issues).toHaveLength(1);
+    expect(issues[0].message).toMatch(/data-ol-filter-group/);
+  });
+  it("dos grupos, uno con target y otro sin: solo el huérfano reporta", () => {
+    const html = doc(
+      `<div data-ol-filter-group="menu"><button data-ol-filter="*">Todo</button></div>` +
+        `<div data-ol-filter-target="menu"></div>` +
+        `<div data-ol-filter-group="galeria"><button data-ol-filter="*">Todo</button></div>`,
+    );
+    const issues = validateBehaviors(html, FILTER_REG);
+    expect(issues).toHaveLength(1);
+    expect(issues[0].message).toMatch(/galeria/);
+  });
+});

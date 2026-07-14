@@ -77,6 +77,20 @@ export interface Behavior {
      *  runtime DEBE revalidarlos en el punto de uso: el sanitizer es una capa,
      *  no la única. */
     untrusted?: string[];
+    /** Referencia cruzada a OTRA parte del documento (hallazgo Fable,
+     *  2026-07-13): el valor del atributo `via` — leído del propio elemento
+     *  raíz o de su ancestro más cercano que lo tenga, el mismo caminado
+     *  ancestro-o-sí-mismo de `requiresHost` — debe existir como valor EXACTO
+     *  del atributo `target` en algún elemento del documento. Es la mitad que
+     *  a `requiresHost` le faltaba: aquel garantiza que el botón vive en su
+     *  grupo; este, que el grupo apunta a algo que existe. Sin él, un
+     *  [data-ol-filter-group="menu"] sin su [data-ol-filter-target="menu"]
+     *  pasaba el validador y el grupo entero de botones nacía muerto — el
+     *  ejemplo LITERAL de la cabecera de validate.ts, que no se cazaba.
+     *  Si el `via` no aparece en la caminata, este check se calla:
+     *  `requiresHost` ya reporta la falta del host, y un segundo issue por el
+     *  mismo hueco sería ruido. tabs (#8) lo necesitará igual. */
+    crossRefs?: { via: string; target: string; why: string }[];
   };
 
   js: string;
