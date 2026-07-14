@@ -50,6 +50,58 @@ describe("bakeBehaviors", () => {
   });
 });
 
+// IMPORTANT (revisión final de rama) — el guard viejo era
+// `html.includes(BEHAVIORS_MARKER)`: un substring SUELTO sobre TODO el
+// documento, no "¿existe ya el <script> real?". Probado con el sanitizer
+// real, los 4 vectores de abajo sobreviven y en los 4 el guard viejo daba
+// `true` sin que ningún <script data-ol-behaviors> existiera — bakeBehaviors
+// hacía bail-out creyendo que ya estaba horneado, PARA SIEMPRE (ninguna
+// receta con marcador legítimo volvía a inyectarse en esa página), mientras
+// usedBehaviors() (que mira el marcador de CADA receta, no BEHAVIORS_MARKER)
+// seguía reportando la conducta como "usada" — la telemetría mentía. El fix
+// es mirar el TAG literal (`<script ${BEHAVIORS_MARKER}>`).
+describe("bakeBehaviors — el guard no confunde el marcador SUELTO con el <script> real (4 vectores)", () => {
+  const withCountdown = (extra: string) =>
+    `<!doctype html><html><head></head><body>${extra}<div data-ol-countdown="x"></div></body></html>`;
+
+  it("(A) un <style data-ol-behaviors> residual (sin el <script>) no bloquea un bake nuevo", () => {
+    const html = withCountdown(`<style ${BEHAVIORS_MARKER}>.leftover{}</style>`);
+    const out = bakeBehaviors(html, REG, ORDER);
+    expect(out).toContain(`<script ${BEHAVIORS_MARKER}>`);
+    expect(out).toContain("/*CD*/");
+  });
+
+  it("(B) la cadena dentro de un comentario HTML no bloquea un bake nuevo", () => {
+    const html = withCountdown(`<!-- nota interna: ${BEHAVIORS_MARKER} -->`);
+    const out = bakeBehaviors(html, REG, ORDER);
+    expect(out).toContain(`<script ${BEHAVIORS_MARKER}>`);
+  });
+
+  it("(C) la cadena en texto visible (una página que habla del propio marcador) no bloquea un bake nuevo", () => {
+    const html = withCountdown(`<p>Esta demo usa el atributo ${BEHAVIORS_MARKER} para su runtime.</p>`);
+    const out = bakeBehaviors(html, REG, ORDER);
+    expect(out).toContain(`<script ${BEHAVIORS_MARKER}>`);
+  });
+
+  it("(D) una regla CSS del autor [data-ol-behaviors]{} no bloquea un bake nuevo", () => {
+    const html = withCountdown(`<style>[${BEHAVIORS_MARKER}]{outline:1px solid red}</style>`);
+    const out = bakeBehaviors(html, REG, ORDER);
+    expect(out).toContain(`<script ${BEHAVIORS_MARKER}>`);
+  });
+
+  it("usedBehaviors() y el bake real quedan de acuerdo — ya no hay telemetría mentirosa", () => {
+    const html = withCountdown(`<!-- ${BEHAVIORS_MARKER} -->`);
+    expect(usedBehaviors(html, REG, ORDER)).toEqual(["countdown"]);
+    expect(bakeBehaviors(html, REG, ORDER)).toContain(`<script ${BEHAVIORS_MARKER}>`);
+  });
+
+  it("sigue siendo idempotente sobre un documento YA horneado de verdad", () => {
+    const html = withCountdown("");
+    const once = bakeBehaviors(html, REG, ORDER);
+    expect(bakeBehaviors(once, REG, ORDER)).toBe(once);
+  });
+});
+
 describe("inyección en <head> (headJs)", () => {
   const REG_HEAD = {
     theme: fake("theme", "data-ol-theme", "/*BODY*/", "/*HEAD*/"),

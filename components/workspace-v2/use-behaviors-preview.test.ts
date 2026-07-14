@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import { injectBehaviorsPreview } from "./use-behaviors-preview";
 import { bakeBehaviors } from "@/lib/behaviors/build";
 import type { Behavior, BehaviorName } from "@/lib/behaviors/types";
-import { CAROUSEL_JS } from "@/lib/publish/carousel";
+import { CAROUSEL_JS, MARKER as CAROUSEL_MARKER, bakeCarousels } from "@/lib/publish/carousel";
 
 const doc = (body: string) => `<!doctype html><html><head></head><body>${body}</body></html>`;
 
@@ -88,5 +88,41 @@ describe("injectBehaviorsPreview — carrusel (Task 14b)", () => {
     const out = injectBehaviorsPreview(html, REG, ORDER);
     expect(out).toContain("/*CD*/"); // la conducta (registro falso de este archivo)
     expect(out).toContain(CAROUSEL_JS); // el carrusel (fuente real, importada)
+  });
+
+  // IMPORTANT (revisión final de rama) — mismo bug de guard que bakeBehaviors
+  // (lib/behaviors/build.ts, ver su propio test de los 4 vectores en
+  // build.test.ts): injectCarouselPreview usaba
+  // `html.includes(CAROUSEL_MARKER)` como substring SUELTO, que también da
+  // `true` sin ningún <script> real detrás (aquí: un comentario HTML que
+  // menciona el marcador) — apagaría este runtime para siempre, en silencio.
+  it("una cadena suelta con el marcador (comentario HTML, sin <script> real) no bloquea la inyección", () => {
+    const html = doc(`<!-- ${CAROUSEL_MARKER} -->${carouselMarkup}`);
+    const out = injectBehaviorsPreview(html);
+    expect(out).toContain(CAROUSEL_JS);
+  });
+});
+
+// IMPORTANT (revisión final de rama) — bakeCarousels (lib/publish/carousel.ts)
+// es el runtime de PUBLICACIÓN (no el del preview de arriba) y tenía el
+// MISMO guard vulnerable: `html.includes(MARKER)` como substring suelto.
+// Ningún archivo de test dedicado existe para lib/publish/carousel.ts (no
+// está en el include de vitest.config.ts como glob — solo listado
+// archivo-por-archivo — así que un `carousel.test.ts` nuevo se quedaría
+// silenciosamente sin correr); se prueba aquí, que ya importa esa misma
+// fuente para la paridad de arriba.
+describe("bakeCarousels (lib/publish/carousel.ts) — mismo fix de guard que bakeBehaviors", () => {
+  const carouselMarkup = `<div data-ol-row><button data-ol-scroll="prev">‹</button><button data-ol-scroll="next">›</button><div data-ol-scroller><article>1</article></div></div>`;
+
+  it("un comentario HTML con el marcador (sin <script> real) no bloquea el bake de publicación", () => {
+    const html = doc(`<!-- ${CAROUSEL_MARKER} -->${carouselMarkup}`);
+    const out = bakeCarousels(html);
+    expect(out).toContain(`<script ${CAROUSEL_MARKER}>`);
+  });
+
+  it("sigue siendo idempotente sobre un documento YA horneado de verdad", () => {
+    const html = doc(carouselMarkup);
+    const once = bakeCarousels(html);
+    expect(bakeCarousels(once)).toBe(once);
   });
 });

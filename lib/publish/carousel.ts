@@ -33,7 +33,14 @@ export const CAROUSEL_JS = `(function(){var amt=function(s){return Math.max(240,
 /** Inject the carousel-arrow runtime when the page has [data-ol-scroll] buttons.
  *  No-op when there are none, or when already processed (idempotent). */
 export function bakeCarousels(html: string): string {
-  if (html.includes(MARKER)) return html;
+  // Mismo fix (IMPORTANT, revisión final de rama) que bakeBehaviors
+  // (lib/behaviors/build.ts): el guard mira el TAG real
+  // (`<script data-ol-carousel>`), no el marcador como substring suelto sobre
+  // TODO el documento — ese substring también es `true` sin ningún <script>
+  // real detrás (un <style> residual, un comentario HTML, texto visible, una
+  // regla CSS del autor), y en los 4 casos apagaría este runtime para
+  // siempre, en silencio.
+  if (html.includes(`<script ${MARKER}>`)) return html;
   if (!html.includes("data-ol-scroll=")) return html;
 
   const script = `<script ${MARKER}>${CAROUSEL_JS}</script>`;

@@ -40,7 +40,13 @@ export function injectBehaviorsPreview(
  *  RUNTIME (CAROUSEL_JS es importado) — solo repite el envoltorio, porque
  *  bakeCarousels en sí está congelado (desplegado en producción). */
 function injectCarouselPreview(html: string): string {
-  if (html.includes(CAROUSEL_MARKER)) return html;
+  // Mismo fix (IMPORTANT, revisión final de rama) que bakeBehaviors
+  // (lib/behaviors/build.ts): el guard mira el TAG real, no el marcador como
+  // substring suelto sobre TODO el documento — ese substring también es
+  // `true` sin ningún <script> real detrás (un <style> residual, un
+  // comentario HTML, texto visible, una regla CSS del autor), y en los 4
+  // casos apagaría este runtime para siempre, en silencio.
+  if (html.includes(`<script ${CAROUSEL_MARKER}>`)) return html;
   if (!html.includes("data-ol-scroll=")) return html;
   const script = `<script ${CAROUSEL_MARKER}>${CAROUSEL_JS}</script>`;
   const idx = html.lastIndexOf("</body>");

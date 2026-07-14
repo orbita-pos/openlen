@@ -93,13 +93,27 @@ function injectIntoHead(html: string, tag: string): string {
 }
 
 /** Inyecta el runtime antes de </body> (y el pre-paint antes de </head>).
- *  Idempotente vía BEHAVIORS_MARKER — mismo patrón que injectTrackingStrip. */
+ *  Idempotente — mismo patrón que injectTrackingStrip, pero el guard mira el
+ *  TAG real (`<script data-ol-behaviors>`), no BEHAVIORS_MARKER como
+ *  substring suelto sobre TODO el documento.
+ *
+ *  IMPORTANT (revisión final de rama): un `html.includes(BEHAVIORS_MARKER)`
+ *  también da `true` sin que exista ningún <script> real — probado con el
+ *  sanitizer real, los 4 sobreviven: (A) un <style data-ol-behaviors>
+ *  residual, (B) la cadena dentro de un comentario HTML, (C) la cadena en
+ *  TEXTO VISIBLE (una página que hable del propio marcador), (D) una regla
+ *  CSS del autor `[data-ol-behaviors]{}`. En los 4 casos el guard viejo hacía
+ *  bail-out PARA SIEMPRE: el runtime nunca se inyecta, en silencio, y
+ *  usedBehaviors() (que sí mira el marcador de CADA receta, no este) seguía
+ *  reportando la conducta como "usada" — la telemetría mentía. Ver el test
+ *  de los 4 vectores en build.test.ts. Sigue siendo idempotente sobre un
+ *  documento YA horneado de verdad: ese SÍ contiene el tag literal. */
 export function bakeBehaviors(
   html: string,
   reg: Reg = BEHAVIORS,
   order: BehaviorName[] = BEHAVIOR_ORDER,
 ): string {
-  if (html.includes(BEHAVIORS_MARKER)) return html;
+  if (html.includes(`<script ${BEHAVIORS_MARKER}>`)) return html;
   const body = buildBehaviorsScript(html, reg, order);
   if (!body) return html;
 
