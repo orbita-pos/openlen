@@ -25,12 +25,23 @@ const EVIL = `<!doctype html><html><head></head><body>
 <div id="out" data-ol-bake-c="0"></div>
 <script>
   const U = ${JSON.stringify(CANARY)};
+  // El marcador va PRIMERO: el intento de navegación de abajo borra el
+  // documento (Chrome no puede cargar nada con el proxy muerto), y sin esto
+  // la captura saldría vacía y el smoke dejaría de probar que el script corrió.
+  document.getElementById("out").textContent = "corrio";
   try { fetch(U + "?v=fetch"); } catch(e) {}
   try { const i = new Image(); i.src = U + "?v=img"; } catch(e) {}
   try { window.open(U + "?v=open"); } catch(e) {}
   try { const f = document.createElement("iframe"); f.src = U + "?v=iframe"; document.body.appendChild(f); } catch(e) {}
   try { navigator.sendBeacon && navigator.sendBeacon(U + "?v=beacon", "x"); } catch(e) {}
-  document.getElementById("out").textContent = "corrio";
+  // WebSocket: Chrome lo enruta por el proxy (CONNECT) — el proxy muerto lo mata.
+  try { new WebSocket(U.replace("http://", "ws://") + "?v=ws"); } catch(e) {}
+  // Navegación top-level del propio frame (otra vía de request que la
+  // interception por página sí cubre, pero que el proxy muerto debe cubrir
+  // aunque alguien quite la interception mañana).
+  try { const a = document.createElement("a"); a.href = U + "?v=nav"; a.click(); } catch(e) {}
+  // XHR síncrono legacy.
+  try { const x = new XMLHttpRequest(); x.open("GET", U + "?v=xhr", true); x.send(); } catch(e) {}
 </script>
 </body></html>`;
 
@@ -45,5 +56,7 @@ if (hits > 0) {
   console.error(`SECURITY FAIL — el canario recibió ${hits} conexión(es): hay egreso de red`);
   process.exit(1);
 }
-console.log("SECURITY SMOKE PASS — cero egreso de red (fetch/img/window.open/iframe/beacon)");
+console.log(
+  "SECURITY GATE PASS — cero egreso (fetch · Image · window.open · iframe · sendBeacon · WebSocket · navegación · XHR)",
+);
 process.exit(0);
