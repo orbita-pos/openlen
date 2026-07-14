@@ -236,12 +236,13 @@ export function stripEditorInstrumentation(html: string): string {
       n.textContent = n.getAttribute(PREVIEW_CD_TEXT_STASH) ?? "";
       n.removeAttribute(PREVIEW_CD_TEXT_STASH);
     });
-    // countdown's style restore matters just as much as the text: the
-    // runtime only ever sets display:none on its own root once expired
-    // (never clears it back), so a countdown that happened to be expired
-    // while the creator was mid-edit would publish permanently invisible —
-    // surviving even a LATER edit that pushes the deadline back out — if
-    // this didn't revert that.
+    // countdown's style restore matters just as much as the text: once
+    // expired, the runtime clears the display:none on [data-ol-cd-ended]
+    // (its ONLY style mutation — since the revisión Fable fix it never
+    // touches the root's display), so an expired countdown captured mid-edit
+    // would publish its "terminó" message VISIBLE by default — pre-revealing
+    // the ending on a page whose deadline the creator may be about to push
+    // back out — if this didn't revert it to the authored hidden state.
     //
     // Arreglo 1 (final branch review) — this used to restore the WHOLE
     // `style` attribute (`n.setAttribute("style", orig)`), which silently

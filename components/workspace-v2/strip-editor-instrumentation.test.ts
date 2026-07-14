@@ -418,7 +418,7 @@ describe("stripEditorInstrumentation — CRITICAL: preview mutations must not re
     ).toBe(true);
   });
 
-  it('countdown expirado: el style="display:none" horneado sobre su raíz no sobrevive al guardado (si no, pérdida de contenido permanente)', () => {
+  it("countdown expirado: la raíz NUNCA se esconde (el mensaje de fin vive dentro) y el mensaje revelado vuelve a nacer oculto al guardar", () => {
     const expiredMarkup = REPRO_MARKUP.replace(
       'data-ol-countdown="2099-01-01T00:00:00Z"',
       'data-ol-countdown="2020-01-01T00:00:00Z"',
@@ -427,17 +427,24 @@ describe("stripEditorInstrumentation — CRITICAL: preview mutations must not re
       '<span data-ol-cd="secs">00</span><p data-ol-cd-ended style="display:none">¡Terminó!</p>',
     );
     mountFullDocument(expiredMarkup);
+    // Contrato nuevo (revisión Fable, 2026-07-13): al expirar, el runtime
+    // congela los dígitos en 00 y revela el mensaje — la raíz queda visible,
+    // porque esconderla haría invisible al propio mensaje que revela.
     expect(
       document.getElementById("cd")!.style.display,
-      "sanity: el runtime SÍ lo ocultó al montar (la fecha ya expiró)",
-    ).toBe("none");
+      "sanity: el runtime NO esconde la raíz al expirar",
+    ).not.toBe("none");
+    expect(
+      document.querySelector<HTMLElement>("[data-ol-cd-ended]")!.style.display,
+      "sanity: el runtime SÍ reveló el mensaje al montar (la fecha ya expiró)",
+    ).toBe("");
 
     const dirty = "<!doctype html>\n" + document.documentElement.outerHTML;
     const saved = stripEditorInstrumentation(dirty);
     const reparsed = new DOMParser().parseFromString(saved, "text/html");
     expect(
       reparsed.getElementById("cd")!.style.display,
-      "el bloque del countdown no debe publicarse oculto para siempre",
+      "el bloque del countdown no debe publicarse oculto",
     ).not.toBe("none");
     expect(
       reparsed.querySelector<HTMLElement>("[data-ol-cd-ended]")!.style.display,
@@ -452,14 +459,14 @@ describe("stripEditorInstrumentation — CRITICAL: preview mutations must not re
   // runtime corriera. Es la imagen especular: aquél metía estado del runtime
   // en el documento, éste borraba estado del creador. Las dos pruebas de
   // abajo reproducen los dos vectores reales que lo disparan.
-  it("countdown expirado + el creador le da padding/fondo en el inspector DESPUÉS — su estilo sobrevive al guardado y el display del runtime se revierte", () => {
+  it("countdown expirado + el creador le da padding/fondo en el inspector DESPUÉS — su estilo sobrevive al guardado intacto", () => {
     const expiredMarkup = REPRO_MARKUP.replace(
       'data-ol-countdown="2099-01-01T00:00:00Z"',
       'data-ol-countdown="2020-01-01T00:00:00Z"',
     );
     mountFullDocument(expiredMarkup);
     const root = document.getElementById("cd")!;
-    expect(root.style.display, "sanity: el runtime SÍ lo ocultó al montar").toBe("none");
+    expect(root.style.display, "sanity: el runtime ya no toca el display de la raíz").not.toBe("none");
 
     // El inspector (use-element-inspect.ts::applyStyle) hace exactamente
     // esto: el.style.setProperty(prop, value) — el creador estiliza el

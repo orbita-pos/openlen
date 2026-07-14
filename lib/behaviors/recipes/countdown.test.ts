@@ -56,7 +56,7 @@ describe("countdown", () => {
     expect(document.querySelector('[data-ol-cd="secs"]')!.textContent).toBe("05");
   });
 
-  it("al expirar: oculta la raíz, muestra [data-ol-cd-ended], y limpia el intervalo (avanzar más no reescribe)", () => {
+  it("al expirar: congela los dígitos en 00, revela [data-ol-cd-ended] SIN esconder la raíz, y limpia el intervalo", () => {
     mount(`<div data-ol-countdown="${iso(2000)}" id="cd">
       <span data-ol-cd="secs">00</span>
       <p data-ol-cd-ended style="display:none">¡Terminó!</p>
@@ -66,8 +66,19 @@ describe("countdown", () => {
 
     const root = document.getElementById("cd")!;
     const ended = document.querySelector<HTMLElement>("[data-ol-cd-ended]")!;
-    expect(root.style.display).toBe("none");
-    expect(ended.style.display).toBe("");
+    // La raíz JAMÁS se esconde: [data-ol-cd-ended] vive DENTRO de ella, así
+    // que un display:none en la raíz haría el mensaje invisible en un
+    // navegador real aunque su propio display quede limpio. El test viejo
+    // afirmaba exactamente eso mirando atributos en vez de visibilidad —
+    // 5ª instancia del patrón efecto-no-causa (revisión Fable, 2026-07-13).
+    expect(root.style.display, "la raíz nunca se esconde — el mensaje de fin vive dentro").not.toBe("none");
+    expect(ended.style.display, "el mensaje de fin se revela").toBe("");
+    // Y ningún elemento entre el mensaje y la raíz lo esconde.
+    for (let el: HTMLElement | null = ended; el && el !== root.parentElement; el = el.parentElement) {
+      expect(el.style.display, `un ancestro (${el.tagName}) esconde el mensaje de fin`).not.toBe("none");
+    }
+    // Los dígitos se congelan en 00 — no se quedan en el último valor visto.
+    expect(document.querySelector('[data-ol-cd="secs"]')!.textContent).toBe("00");
 
     // Prueba de que el intervalo de verdad se limpió, no solo que el estado
     // "se ve" estable: plantamos un centinela después de expirar y avanzamos

@@ -24,11 +24,21 @@ import type { Behavior } from "../types";
 // todavía `undefined`, dejaría el setInterval vivo, y haría falta un segundo
 // tick (1s más tarde) para limpiarlo.
 //
+// EXPIRACIÓN — la raíz JAMÁS se esconde (revisión Fable, 2026-07-13): la
+// versión anterior hacía r.style.display='none' + e.style.display='' — pero
+// [data-ol-cd-ended] es DESCENDIENTE de r (así lo busca `e`, así lo escribe
+// doc.example), y un display:none en el ancestro hace el mensaje invisible
+// en un navegador real aunque su propio display quede limpio. El test lo
+// "verificaba" mirando atributos, no visibilidad — efecto, no causa. El
+// contrato correcto: clearInterval + revelar `e` + clamp d=0 y CAER al loop
+// de abajo, que congela todos los dígitos en 00. El visitante ve
+// 00:00:00 + "¡La oferta terminó!" — nunca un hueco donde estaba la oferta.
+//
 // El ternario de `v` cae en -1 (nunca se escribe: `v>=0` lo filtra) si un
 // [data-ol-cd] trae un valor fuera de days/hours/mins/secs — degrada
 // callándose en vez de escribir el número equivocado en el bucket que no le
 // toca.
-const JS = `var L=document.querySelectorAll('[data-ol-countdown]');for(var i=0;i<L.length;i++)(function(r){var t=Date.parse(r.getAttribute('data-ol-countdown')),p=r.querySelectorAll('[data-ol-cd]'),e=r.querySelector('[data-ol-cd-ended]'),iv=setInterval(tick,1000);function tick(){if(olEditing())return;var d=t-Date.now();if(d<=0){clearInterval(iv);r.style.display='none';if(e)e.style.display='';return}var s=Math.floor(d/1000),D=Math.floor(s/86400),h=Math.floor(s/3600)%24,m=Math.floor(s/60)%60,c=s%60;for(var j=0;j<p.length;j++){var k=p[j].getAttribute('data-ol-cd'),v=k==='days'?D:k==='hours'?h:k==='mins'?m:k==='secs'?c:-1;if(v>=0)p[j].textContent=(v<10?'0':'')+v}}tick()})(L[i]);`;
+const JS = `var L=document.querySelectorAll('[data-ol-countdown]');for(var i=0;i<L.length;i++)(function(r){var t=Date.parse(r.getAttribute('data-ol-countdown')),p=r.querySelectorAll('[data-ol-cd]'),e=r.querySelector('[data-ol-cd-ended]'),iv=setInterval(tick,1000);function tick(){if(olEditing())return;var d=t-Date.now();if(d<=0){clearInterval(iv);if(e)e.style.display='';d=0}var s=Math.floor(d/1000),D=Math.floor(s/86400),h=Math.floor(s/3600)%24,m=Math.floor(s/60)%60,c=s%60;for(var j=0;j<p.length;j++){var k=p[j].getAttribute('data-ol-cd'),v=k==='days'?D:k==='hours'?h:k==='mins'?m:k==='secs'?c:-1;if(v>=0)p[j].textContent=(v<10?'0':'')+v}}tick()})(L[i]);`;
 
 export const countdown: Behavior = {
   name: "countdown",
