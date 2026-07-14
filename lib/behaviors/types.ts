@@ -91,6 +91,18 @@ export interface Behavior {
      *  `requiresHost` ya reporta la falta del host, y un segundo issue por el
      *  mismo hueco sería ruido. tabs (#8) lo necesitará igual. */
     crossRefs?: { via: string; target: string; why: string }[];
+    /** El documento DEBE contener CSS que reaccione al efecto del runtime
+     *  (hallazgo del eval conducta-theme, 2026-07-14: Gemini escribió el
+     *  marcador de theme sin ningún `.dark` que lo escuchara — la advertencia
+     *  en prosa del doc no bastó, y el eval era "la ÚNICA red"). `pattern` es
+     *  un regex (fuente, se compila case-insensitive) que se prueba contra el
+     *  HTML COMPLETO cuando al menos un marcador de la receta existe; si no
+     *  matchea, UN issue por receta viaja por el canal aviso y el agente lo
+     *  arregla en el mismo turno. Es la clase de conducta cuyo runtime solo
+     *  conmuta una clase/atributo A PROPÓSITO (theme, sticky — el LOOK lo
+     *  decide la página): este campo convierte "ojalá el modelo escriba el
+     *  CSS" en una garantía mecánica, verificable sin gastar un token. */
+    requiresCss?: { pattern: string; why: string };
   };
 
   js: string;

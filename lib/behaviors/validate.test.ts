@@ -194,3 +194,50 @@ describe("validateBehaviors — crossRefs (grupo ↔ target en otra parte del do
     expect(issues[0].message).toMatch(/galeria/);
   });
 });
+
+// Hallazgo del eval conducta-theme (2026-07-14, corrida real): Gemini puso
+// data-ol-theme SIN ningún CSS que reaccionara a .dark — la advertencia en
+// prosa no bastó, y el propio código admitía "el validador no tiene
+// vocabulario para esto; el eval es la ÚNICA red". requiresCss ES ese
+// vocabulario: la garantía deja de depender de que el modelo obedezca al
+// prompt y pasa a ser mecánica (canal aviso → se arregla en el mismo turno).
+const THEME_CSS_REG = {
+  theme: {
+    name: "theme", marker: "data-ol-theme", js: "", budgetBytes: 700,
+    schema: {
+      root: { kind: "flag" },
+      requiresCss: {
+        pattern: "\\.dark\\b|:root\\.dark|(?:^|[\\s\"'`])dark:",
+        why: "el botón conmuta la clase dark pero ningún CSS la escucha — define :root.dark{…} con valores realmente distintos",
+      },
+    },
+    degradation: "control-inert", a11y: [], status: "stable",
+    doc: { when: "", whenNot: "", example: "" },
+  },
+} as unknown as Partial<Record<BehaviorName, Behavior>>;
+
+describe("validateBehaviors — requiresCss (el documento debe traer CSS que escuche al marcador)", () => {
+  it("caza un data-ol-theme sin NINGÚN CSS que reaccione a .dark — nacería muerto", () => {
+    const html = doc(`<button data-ol-theme>Tema</button>`);
+    const issues = validateBehaviors(html, THEME_CSS_REG);
+    expect(issues).toHaveLength(1);
+    expect(issues[0].behavior).toBe("theme");
+    expect(issues[0].message).toMatch(/dark/);
+  });
+  it("acepta el flip :root.dark en un <style>", () => {
+    const html = doc(`<style>:root.dark{--bg:#0f1115}</style><button data-ol-theme>Tema</button>`);
+    expect(validateBehaviors(html, THEME_CSS_REG)).toEqual([]);
+  });
+  it("acepta variantes dark: de Tailwind", () => {
+    const html = doc(`<body class="bg-white dark:bg-zinc-950"><button data-ol-theme>Tema</button></body>`);
+    expect(validateBehaviors(html, THEME_CSS_REG)).toEqual([]);
+  });
+  it("página SIN el marcador: cero issues (la regla solo aplica si la conducta se usa)", () => {
+    const html = doc(`<h1>Sin theme</h1>`);
+    expect(validateBehaviors(html, THEME_CSS_REG)).toEqual([]);
+  });
+  it("dos botones de theme sin CSS: UN issue, no dos (dedupe por receta)", () => {
+    const html = doc(`<button data-ol-theme>A</button><button data-ol-theme>B</button>`);
+    expect(validateBehaviors(html, THEME_CSS_REG)).toHaveLength(1);
+  });
+});

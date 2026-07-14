@@ -241,6 +241,13 @@ describe.each(entries.map((b) => [b.name, b] as const))("conducta: %s", (_name, 
     document.body.innerHTML = b.doc.example;
     try {
       for (const el of Array.from(document.body.querySelectorAll<HTMLElement>("*"))) {
+        // Elementos que NUNCA se renderizan por naturaleza (display:none del
+        // user-agent, no del autor): un <style> dentro del ejemplo — sticky y
+        // theme lo llevan a propósito desde requiresCss (2026-07-14), para
+        // enseñar POR EJEMPLO la regla que reacciona a su marcador — contaría
+        // como "contenido oculto" siendo metadata. El invariante protege
+        // CONTENIDO visible, no el head-material del ejemplo.
+        if (/^(STYLE|SCRIPT|TEMPLATE|LINK|META|TITLE)$/.test(el.tagName)) continue;
         const style = getComputedStyle(el);
         const culprit = `${b.name}: ${el.outerHTML.slice(0, 120)}`;
         expect(style.display, `${culprit} — nace con display:none sin runtime`).not.toBe("none");

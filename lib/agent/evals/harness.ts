@@ -141,6 +141,30 @@ function isRetryable(err: unknown): boolean {
   );
 }
 
+function errMessage(err: unknown): string {
+  return err instanceof GatewayError
+    ? err.message
+    : String((err as { message?: unknown })?.message ?? err);
+}
+
+/** 429/TPM — la ventana de tokens-por-minuto se resetea por MINUTO, así que
+ *  el backoff exponencial corto de isRetryable es inútil aquí (2026-07-14:
+ *  chain-menu-y-reservas "falló" 3 veces seguidas por esto — cayó justo
+ *  después de los casos más pesados de la batería — y costó 3 re-runs
+ *  pagados adjudicarlo). Se espera la ventana completa. */
+function isRateLimited(err: unknown): boolean {
+  return /rate.?limit|(?:^|\D)429(?:\D|$)|resource.?exhausted|quota/i.test(errMessage(err));
+}
+
+/** Saldo prepagado AGOTADO — también llega como 429, pero re-intentarlo es
+ *  quemar tiempo: la única cura es recargar en ai.studio (memoria
+ *  gemini-key-prepaid-depletes). Fail-fast con mensaje accionable. */
+function isDepleted(err: unknown): boolean {
+  return /prepay|depleted|billing|saldo/i.test(errMessage(err));
+}
+
+const RATE_LIMIT_BACKOFF_MS = 65_000;
+
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 /** Run the agentic loop once, rebuilding the turn from the CURRENT row each
@@ -206,16 +230,32 @@ async function runLoopWithRetry(
       });
 
       // A 503 that surfaced as a terminal upstream error event (not a throw)
-      // is also worth a bounded retry.
+      // is also worth a bounded retry — and a rate-limit event needs the LONG
+      // backoff (misma razón que isRateLimited abajo: la ventana es por
+      // minuto; el exponencial corto re-toca la misma ventana agotada).
       const upstream = events.find((e) => e.type === "error" && e.code === "upstream");
       if (upstream && attempt < RETRY_ATTEMPTS) {
-        lastErr = new Error(`upstream error event: ${(upstream as { message?: string }).message ?? ""}`);
-        await sleep(RETRY_BASE_MS * 2 ** (attempt - 1) + Math.random() * 500);
+        const msg = (upstream as { message?: string }).message ?? "";
+        lastErr = new Error(`upstream error event: ${msg}`);
+        await sleep(
+          /rate.?limit|429|resource.?exhausted|quota/i.test(msg)
+            ? RATE_LIMIT_BACKOFF_MS + Math.random() * 1000
+            : RETRY_BASE_MS * 2 ** (attempt - 1) + Math.random() * 500,
+        );
         continue;
       }
       return { events, result };
     } catch (err) {
       lastErr = err;
+      if (isDepleted(err)) {
+        throw new Error(
+          `SALDO GEMINI AGOTADO — recarga en https://ai.studio/projects; re-intentar no sirve. (${errMessage(err).slice(0, 120)})`,
+        );
+      }
+      if (attempt < RETRY_ATTEMPTS && isRateLimited(err)) {
+        await sleep(RATE_LIMIT_BACKOFF_MS + Math.random() * 1000);
+        continue;
+      }
       if (attempt < RETRY_ATTEMPTS && isRetryable(err)) {
         await sleep(RETRY_BASE_MS * 2 ** (attempt - 1) + Math.random() * 500);
         continue;

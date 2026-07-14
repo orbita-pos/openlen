@@ -44,6 +44,15 @@ export const theme: Behavior = {
   marker: "data-ol-theme",
   schema: {
     root: { kind: "flag" },
+    // La red mecánica del hallazgo del eval conducta-theme (2026-07-14):
+    // Gemini escribió este marcador sin ningún CSS que reaccionara a .dark —
+    // la advertencia en prosa no bastó y el eval era la única red. Acepta CSS
+    // crudo (.dark / :root.dark) y variantes dark: de Tailwind — el mismo
+    // trío que el assert del eval. Ver requiresCss en types.ts.
+    requiresCss: {
+      pattern: "\\.dark\\b|:root\\.dark|(?:^|[\\s\"'`])dark:",
+      why: "el botón conmuta la clase dark pero ningún CSS de la página la escucha — define el flip :root.dark{…} con valores realmente distintos (como en el ejemplo)",
+    },
   },
   js: JS,
   headJs: HEAD_JS,

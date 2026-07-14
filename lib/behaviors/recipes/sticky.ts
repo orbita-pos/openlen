@@ -67,6 +67,15 @@ export const sticky: Behavior = {
   marker: "data-ol-sticky",
   schema: {
     root: { kind: "flag" },
+    // Mismo hueco que theme (la clase de recetas cuyo runtime solo conmuta un
+    // atributo y el LOOK lo decide la página): sin una regla que reaccione a
+    // [data-ol-stuck], el nav jamás se ve sólido al bajar — nace muerto en
+    // silencio y el eval conducta-sticky era la única red. Acepta CSS crudo
+    // ([data-ol-stuck]) y las variantes de Tailwind (data-[ol-stuck]).
+    requiresCss: {
+      pattern: "\\[data-ol-stuck\\]|data-\\[ol-stuck\\]",
+      why: "nada en el CSS reacciona a [data-ol-stuck] — escribe la regla del estado sólido (como en el ejemplo)",
+    },
   },
   js: JS,
   // El único atributo que este runtime posee — ver runtimeAttrs en types.ts
@@ -96,7 +105,8 @@ export const sticky: Behavior = {
     label: "barra pegajosa al bajar",
     when: "Un <nav> fijo (position:fixed o sticky) que arranca transparente o mezclado con el hero, y que necesita ganar fondo sólido, sombra o un tamaño más compacto en cuanto el visitante empieza a bajar — para seguir siendo legible sobre cualquier contenido que pase debajo.",
     whenNot: "No lo actives sobre un nav que YA nace sólido (fondo opaco desde el primer pixel): no hay nada que ganar al bajar, el atributo se pondría pero ningún CSS lo estaría esperando. Y recuerda: el marcador por sí solo NO CAMBIA NADA VISUAL — el estilo de [data-ol-stuck] hay que escribirlo a mano (Tailwind o CSS propio) junto al nav; sin esa clase, esta receta conmuta un atributo que nadie mira.",
-    example: `<nav data-ol-sticky class="fixed top-0 w-full transition-colors">
+    example: `<style>nav[data-ol-stuck]{background:var(--bg);box-shadow:0 1px 0 var(--border)}</style>
+<nav data-ol-sticky class="fixed top-0 w-full transition-colors">
   <a href="/">Mi negocio</a>
   <a href="/menu">Menú</a>
 </nav>`,
