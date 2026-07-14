@@ -1,6 +1,7 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, beforeEach, afterEach, vi } from "vitest";
 import { buildBehaviorsDoc } from "./doc";
 import { BEHAVIORS, BEHAVIOR_ORDER } from "./registry";
+import type { Behavior, BehaviorName } from "./types";
 
 // Prueba la propiedad ESTRUCTURAL, no el texto: recorre BEHAVIOR_ORDER (la
 // fuente real del registro, no una lista copiada a mano aquí) y afirma que
@@ -40,4 +41,55 @@ describe("buildBehaviorsDoc", () => {
       });
     },
   );
+});
+
+// MINOR (revisión final de rama) — BEHAVIOR_NAMES/BEHAVIOR_COUNT/BEHAVIOR_LABELS
+// derivaban de BEHAVIOR_ORDER en crudo, sin el mismo filtro `status !==
+// "deprecated"` que present() (build.ts) y buildBehaviorsDoc() (arriba) ya
+// aplican — una receta deprecada saldría en la glosa/número/lista de la
+// CABECERA de CONDUCTAS sin tener entrada ni runtime en el CUERPO de esa
+// misma sección. Se prueba mockeando ./registry (mismo patrón que
+// prose-derivation.test.ts, "Arreglo 1") porque los tres son consts de
+// MÓDULO calculadas una sola vez al importar — no funciones parametrizables
+// — así que la única forma de variar el registro que ven es re-importar el
+// módulo fresco contra un registro mockeado.
+describe("BEHAVIOR_NAMES / BEHAVIOR_COUNT / BEHAVIOR_LABELS excluyen las recetas deprecated", () => {
+  beforeEach(() => {
+    vi.resetModules();
+  });
+
+  afterEach(() => {
+    vi.doUnmock("./registry");
+    vi.resetModules();
+  });
+
+  it("una receta deprecated desaparece del conteo, la lista de nombres y las glosas — igual que ya desaparece del cuerpo de buildBehaviorsDoc()", async () => {
+    vi.doMock("./registry", async () => {
+      const real = await vi.importActual<{
+        BEHAVIORS: Record<BehaviorName, Behavior>;
+        BEHAVIOR_ORDER: BehaviorName[];
+      }>("./registry");
+      return {
+        BEHAVIORS: {
+          ...real.BEHAVIORS,
+          filter: { ...real.BEHAVIORS.filter, status: "deprecated" as const },
+        },
+        BEHAVIOR_ORDER: real.BEHAVIOR_ORDER,
+      };
+    });
+
+    const {
+      BEHAVIOR_NAMES: names,
+      BEHAVIOR_COUNT: count,
+      BEHAVIOR_LABELS: labels,
+      buildBehaviorsDoc: buildDocFresh,
+    } = await import("./doc");
+
+    expect(count, "filter (deprecated) sigue contando en BEHAVIOR_COUNT").toBe(6);
+    expect(names.split(", "), "filter (deprecated) sigue en BEHAVIOR_NAMES").not.toContain("filter");
+    expect(labels, "filter (deprecated) sigue en BEHAVIOR_LABELS ('filtro')").not.toContain("filtro");
+    // Cabecera Y cuerpo de la MISMA sección ahora coinciden: ninguno de los
+    // dos menciona ya a filter.
+    expect(buildDocFresh()).not.toContain("`data-ol-filter`");
+  });
 });

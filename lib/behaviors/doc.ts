@@ -10,8 +10,21 @@ import { BEHAVIORS, BEHAVIOR_ORDER } from "./registry";
 // AUSENTE de esas cuatro frases. `BEHAVIOR_ORDER.join`/`.length` sobre el
 // mismo array que ya gobierna el orden de emisión (build.ts) y el catálogo
 // cerrado (registry.ts) — nunca una segunda lista.
-export const BEHAVIOR_NAMES = BEHAVIOR_ORDER.join(", ");
-export const BEHAVIOR_COUNT = BEHAVIOR_ORDER.length;
+//
+// ACTIVE_ORDER filtra `deprecated` UNA vez, compartido por los tres derivados
+// de abajo Y por buildBehaviorsDoc(): antes cada uno aplicaba (o no) su
+// propio filtro por separado, y estos tres NO lo aplicaban en absoluto
+// (MINOR, revisión final de rama) — una receta deprecada seguiría saliendo en
+// la glosa/lista/número de la CABECERA de la sección CONDUCTAS aunque
+// buildBehaviorsDoc() ya no la itemizara en el CUERPO de esa misma sección:
+// cabecera y cuerpo divergiendo. `deprecated` sigue viva para páginas
+// publicadas que ya la usan (el motor aún la hornea si el marcador aparece —
+// ver present() en build.ts), pero deja de OFRECERSE para HTML nuevo: no
+// tiene sentido que la IA la elija, ni en la lista ni en el conteo.
+const ACTIVE_ORDER = BEHAVIOR_ORDER.filter((name) => BEHAVIORS[name].status !== "deprecated");
+
+export const BEHAVIOR_NAMES = ACTIVE_ORDER.join(", ");
+export const BEHAVIOR_COUNT = ACTIVE_ORDER.length;
 
 // La glosa en ESPAÑOL de cada conducta ("contador en vivo", "tema
 // claro/oscuro"...) — un concepto DISTINTO de BEHAVIOR_NAMES de arriba (los
@@ -29,7 +42,7 @@ export const BEHAVIOR_COUNT = BEHAVIOR_ORDER.length;
 // BEHAVIOR_ORDER exactamente igual que BEHAVIOR_NAMES, así que una 8ª receta
 // aporta su propia glosa sola, sin tocar este archivo — nunca más una lista
 // de glosas escrita a mano.
-export const BEHAVIOR_LABELS = BEHAVIOR_ORDER.map((name) => BEHAVIORS[name].doc.label).join(", ");
+export const BEHAVIOR_LABELS = ACTIVE_ORDER.map((name) => BEHAVIORS[name].doc.label).join(", ");
 
 // La documentación que lee la IA se GENERA de aquí — nunca se escribe aparte.
 // Es la razón de ser de este archivo: el bug que originó el proyecto entero
@@ -38,21 +51,18 @@ export const BEHAVIOR_LABELS = BEHAVIOR_ORDER.map((name) => BEHAVIORS[name].doc.
 // leen el MISMO objeto (BEHAVIORS/BEHAVIOR_ORDER) — nunca dos copias que
 // puedan divergir.
 //
-// Recorre BEHAVIOR_ORDER (el orden real de emisión), NUNCA una lista escrita
-// a mano: una receta nueva entra sola en la guía sin tocar este archivo, y
-// una receta que falte del registro es imposible de expresar (BEHAVIORS es
-// un Record completo desde el Task 13 — TypeScript rechaza el hueco).
+// Recorre ACTIVE_ORDER (el orden real de emisión, ya sin `deprecated` — ver
+// el comentario junto a su definición arriba), NUNCA una lista escrita a
+// mano: una receta nueva entra sola en la guía sin tocar este archivo, y una
+// receta que falte del registro es imposible de expresar (BEHAVIORS es un
+// Record completo desde el Task 13 — TypeScript rechaza el hueco).
 //
 // PURO a propósito (cero node:/DOM/process.env), como registry.ts y
 // recipes/*.ts: lo importa design-guidance.ts, que a su vez importa medio
 // repo — rutas de servidor Y el preview del editor, que es componente
 // cliente.
 export function buildBehaviorsDoc(): string {
-  const recipes = BEHAVIOR_ORDER.map((name) => BEHAVIORS[name])
-    // `deprecated` sigue viva para páginas publicadas que ya la usan (el
-    // motor aún la hornea si el marcador aparece), pero deja de OFRECERSE
-    // para HTML nuevo: no tiene sentido que la IA la elija a propósito.
-    .filter((b) => b.status !== "deprecated")
+  const recipes = ACTIVE_ORDER.map((name) => BEHAVIORS[name])
     .map(
       (b) => `  – ${b.name} (\`${b.marker}\`)
     Cuándo usarla: ${b.doc.when}
