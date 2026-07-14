@@ -69,6 +69,9 @@ export const sticky: Behavior = {
     root: { kind: "flag" },
   },
   js: JS,
+  // El único atributo que este runtime posee — ver runtimeAttrs en types.ts
+  // y el test de colisión de namespace en conformance.test.ts.
+  runtimeAttrs: ["data-ol-stuck"],
   budgetBytes: 700,
   docBudgetChars: 1200,
   // El nav sin runtime se queda en su estado inicial (el que la IA le dio en

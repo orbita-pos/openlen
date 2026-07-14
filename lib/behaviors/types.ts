@@ -83,6 +83,20 @@ export interface Behavior {
   css?: string;
   /** Pre-paint, va al <head>. SOLO `theme` lo usa (evitar el fogonazo blanco). */
   headJs?: string;
+  /** Atributos que el RUNTIME de esta receta escribe en el DOM vivo y que el
+   *  funnel de guardado (components/workspace-v2/strip-editor-instrumentation.ts)
+   *  tiene licencia para borrar incondicionalmente. NINGÚN otro subsistema del
+   *  producto puede escribirlos: si colisionan, el strip destruiría trabajo
+   *  del creador (esto pasó de verdad — filter.ts reclamaba `data-ol-hidden`,
+   *  ya dueño de la acción "Ocultar elemento" del inspector). Enumerar aquí
+   *  NO deriva mecánicamente la lista del strip (esa sigue escrita a mano,
+   *  a propósito — "enumerar no es interpretar"): este campo existe para que
+   *  el test de colisión de namespace (lib/behaviors/conformance.test.ts)
+   *  pueda auditar, receta por receta, que el nombre sigue siendo suyo en
+   *  TODO el repo. Solo para atributos SIEMPRE removibles sin preguntar
+   *  (categoría A del strip) — un mutation ambiguo como el `dark` de theme
+   *  (que SÍ puede ser un valor autorado legítimo) no pertenece aquí. */
+  runtimeAttrs?: string[];
   budgetBytes: number;
 
   degradation: Degradation;

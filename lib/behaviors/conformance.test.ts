@@ -2,6 +2,8 @@
 // entrada; ESTE archivo demuestra que es correcta, documentada, accesible,
 // dentro de presupuesto y que degrada sin romper — o el CI falla.
 import { describe, it, expect } from "vitest";
+import { readFileSync, readdirSync } from "node:fs";
+import { join, relative, sep } from "node:path";
 import { BEHAVIORS, BEHAVIOR_ORDER } from "./registry";
 import { buildBehaviorsScript, BEHAVIORS_SCRIPT_BUDGET_BYTES } from "./build";
 import { validateBehaviors } from "./validate";
@@ -232,7 +234,7 @@ describe.each(entries.map((b) => [b.name, b] as const))("conducta: %s", (_name, 
     // pasaba en verde. Montamos ejemplo+css en el DOM, SIN correr b.js (el
     // runtime está apagado a propósito — eso es lo que "sin runtime" simula),
     // y leemos el estilo YA calculado. Esto es lo que deja pasar a `filter`
-    // legítimamente: su css es "[data-ol-hidden]{display:none!important}",
+    // legítimamente: su css es "[data-ol-filtered]{display:none!important}",
     // pero ningún elemento del ejemplo lleva ese atributo — solo el runtime
     // lo pone, tras un click — así que no oculta a nadie.
     document.head.innerHTML = `<style>${b.css ?? ""}</style>`;
@@ -300,4 +302,102 @@ describe.each(entries.map((b) => [b.name, b] as const))("conducta: %s", (_name, 
       `${b.name}: declara untrusted:[${b.schema.untrusted.join(",")}] pero su js no revalida el esquema (falta el fragmento "https?") — el sanitizer es una capa, no la única`,
     ).toMatch(/https?/);
   });
+});
+
+// GUARDIA ESTRUCTURAL (revisión final de rama) — el bug CRITICAL de esta
+// misma revisión (filter.ts reclamaba `data-ol-hidden`, YA dueño de la acción
+// "Ocultar elemento" de use-element-inspect.ts) no era un accidente puntual:
+// era la clase de bug que un `runtimeAttrs` DECLARADO por receta (types.ts)
+// vuelve auditable. "Enumerar no es interpretar": el campo no deriva
+// mecánicamente el strip (strip-editor-instrumentation.ts sigue escrito a
+// mano — sus mecánicas de borrado difieren por atributo), pero sí permite
+// preguntar, para cada nombre que una receta reclama: ¿lo escribe también
+// OTRO subsistema del producto? Si sí, el strip (que trata runtimeAttrs como
+// "sin dueño legítimo fuera del runtime") destruiría ese trabajo ajeno en
+// cada guardado.
+//
+// readFileSync sobre una lista acotada de directorios, no un `grep` de shell
+// (más portable entre entornos de CI/local, sin depender de que `rg` esté
+// instalado en la máquina que corre vitest). Alcance del grep: exactamente lo
+// que pidió la revisión — components/workspace-v2/** y lib/** salvo
+// lib/behaviors/** — buscando `setAttribute("<attr>"` / `setAttribute('<attr>'`
+// literal (la forma en que TODO el código no-runtime de este repo escribe
+// atributos; ver use-element-inspect.ts). No pretende ser un parser de JS —
+// una receta futura que ofusque su propio `setAttribute` para evadir este
+// grep se estaría saboteando a sí misma, no a este test.
+// process.cwd(), no fileURLToPath(import.meta.url): bajo la transformación
+// de Vitest, import.meta.url de un archivo de test no siempre es un file://
+// URL limpio (fileURLToPath truena con "must be of scheme file" aquí) —
+// process.cwd() es la raíz del repo mientras el comando de verificación real
+// (`npx vitest run`, obligatorio en este proyecto) se invoque desde ahí.
+const REPO_ROOT = process.cwd();
+const COLLISION_SCAN_ROOTS = ["components/workspace-v2", "lib"];
+const COLLISION_EXCLUDE = ["lib/behaviors", "node_modules", ".next"];
+
+function toPosix(p: string): string {
+  return p.split(sep).join("/");
+}
+
+function collectSourceFiles(absDir: string): string[] {
+  let out: string[] = [];
+  let entries: import("node:fs").Dirent[];
+  try {
+    entries = readdirSync(absDir, { withFileTypes: true });
+  } catch {
+    return out;
+  }
+  for (const entry of entries) {
+    const abs = join(absDir, entry.name);
+    const rel = toPosix(relative(REPO_ROOT, abs));
+    if (COLLISION_EXCLUDE.some((ex) => rel === ex || rel.startsWith(`${ex}/`))) continue;
+    if (entry.isDirectory()) {
+      out = out.concat(collectSourceFiles(abs));
+    } else if (/\.(ts|tsx)$/.test(entry.name)) {
+      out.push(abs);
+    }
+  }
+  return out;
+}
+
+/** Archivos ya escritos con setAttribute("<attr>"…) / setAttribute('<attr>'…)
+ *  fuera de lib/behaviors/, como rutas relativas al repo (para el mensaje de
+ *  fallo). [] si nadie más que el propio runtime escribe ese nombre. */
+function findSetAttributeCollisions(attr: string): string[] {
+  const files = COLLISION_SCAN_ROOTS.flatMap((root) => collectSourceFiles(join(REPO_ROOT, root)));
+  const pattern = new RegExp(`setAttribute\\(\\s*["']${attr}["']`);
+  const offenders: string[] = [];
+  for (const file of files) {
+    let content: string;
+    try {
+      content = readFileSync(file, "utf8");
+    } catch {
+      continue;
+    }
+    if (pattern.test(content)) offenders.push(toPosix(relative(REPO_ROOT, file)));
+  }
+  return offenders;
+}
+
+describe("colisión de namespace — runtimeAttrs no puede pertenecer a otro subsistema", () => {
+  const withRuntimeAttrs = entries.filter((b) => b.runtimeAttrs && b.runtimeAttrs.length > 0);
+
+  it("auto-chequeo: al menos una receta real declara runtimeAttrs — si esto da vacío, el resto de este describe no prueba nada", () => {
+    expect(withRuntimeAttrs.length).toBeGreaterThan(0);
+  });
+
+  it.each(withRuntimeAttrs.flatMap((b) => (b.runtimeAttrs ?? []).map((attr) => [b.name, attr] as const)))(
+    "%s: %s no aparece escrito con setAttribute fuera de lib/behaviors/",
+    (name, attr) => {
+      const offenders = findSetAttributeCollisions(attr);
+      expect(
+        offenders,
+        `"${attr}" (runtimeAttrs de "${name}") aparece escrito con setAttribute FUERA de lib/behaviors/ en: ${offenders.join(", ")} — ` +
+          `el funnel de guardado (strip-editor-instrumentation.ts) trata los runtimeAttrs de esta receta como "sin dueño legítimo ` +
+          `fuera del runtime" y los borra incondicionalmente en cada guardado. Si otro subsistema TAMBIÉN escribe este nombre para su ` +
+          `propio propósito legítimo y persistido, el strip destruye ese trabajo en silencio — esto es EXACTAMENTE el bug CRITICAL de ` +
+          `la revisión final de rama (filter.ts declaraba "data-ol-hidden", ya dueño de use-element-inspect.ts's applyHide, la acción ` +
+          `"Ocultar elemento" del inspector). Renombra el atributo de la receta a algo que no colisione.`,
+      ).toEqual([]);
+    },
+  );
 });

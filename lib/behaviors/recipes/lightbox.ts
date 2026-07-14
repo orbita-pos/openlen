@@ -38,6 +38,12 @@ export const lightbox: Behavior = {
   },
   js: JS,
   css: CSS,
+  // El modal sintetizado carga este atributo — ver runtimeAttrs en types.ts
+  // y el test de colisión de namespace en conformance.test.ts. El strip
+  // (strip-editor-instrumentation.ts) borra el elemento ENTERO que lo lleva,
+  // no solo el atributo (el modal no puede cerrarse fuera de la sesión que
+  // lo creó), pero sigue siendo el mismo namespace a auditar.
+  runtimeAttrs: ["data-ol-lb-modal"],
   budgetBytes: 700,
   docBudgetChars: 1200,
   degradation: "content-intact",

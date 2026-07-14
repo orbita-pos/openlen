@@ -371,8 +371,8 @@ describe("stripEditorInstrumentation — CRITICAL: preview mutations must not re
     const reparsed = new DOMParser().parseFromString(saved, "text/html");
 
     expect(
-      reparsed.querySelectorAll("[data-ol-hidden]").length,
-      "filter: data-ol-hidden llegó al HTML publicado (contenido oculto en producción)",
+      reparsed.querySelectorAll("[data-ol-filtered]").length,
+      "filter: data-ol-filtered llegó al HTML publicado (contenido oculto en producción)",
     ).toBe(0);
     expect(
       reparsed.querySelectorAll("[data-ol-lb-modal]").length,
@@ -521,6 +521,48 @@ describe("stripEditorInstrumentation — CRITICAL: preview mutations must not re
   });
 });
 
+// CRITICAL (revisión final de rama) — data-ol-hidden NO es un marker
+// runtime-owned de NINGUNA receta: es el atributo de use-element-inspect.ts's
+// applyHide(), la acción deliberada del creador "Ocultar elemento" (toggle en
+// properties-panel.tsx), persistida a propósito en el HTML guardado — ver su
+// propio ensureHiddenStyle() ahí, que inyecta la regla CSS persistente
+// `body:not([data-openlen-edit-mode]) [data-ol-hidden]{display:none!important}`.
+// filter.ts solía reclamar ESE MISMO nombre para su propio estado de runtime
+// (ahora `data-ol-filtered`, ver lib/behaviors/recipes/filter.ts) y la lista
+// runtime-owned de arriba lo borraba incondicionalmente en cada guardado —
+// des-ocultando en silencio cualquier elemento que un creador hubiera
+// ocultado a propósito, con o sin la receta filter en la página. Este test
+// reproduce exactamente lo que applyHide() deja en el documento (el atributo
+// + su <style> persistente, SIN ningún inspect-marker — postClean ya los
+// limpió) y prueba, con DOM real (no substring crudo: "data-ol-hidden-style"
+// contiene "data-ol-hidden" como substring, así que un .toContain() de string
+// pasaría en falso-verde incluso con el bug presente), que sobrevive.
+describe("stripEditorInstrumentation — data-ol-hidden pertenece al inspector, no a ninguna receta (CRITICAL)", () => {
+  it("un elemento oculto con la acción 'Ocultar elemento' del inspector sobrevive al guardado, con su regla CSS persistente intacta", () => {
+    const dirty =
+      `<!doctype html><html><head>` +
+      `<style data-ol-hidden-style>body:not([data-openlen-edit-mode]) [data-ol-hidden]{display:none !important;}</style>` +
+      `</head><body>` +
+      `<section data-ol-hidden id="oculta"><h2>Seccion oculta a proposito por el creador</h2></section>` +
+      `<h1>Visible</h1>` +
+      `</body></html>`;
+
+    const out = stripEditorInstrumentation(dirty);
+    const reparsed = new DOMParser().parseFromString(out, "text/html");
+
+    expect(
+      reparsed.getElementById("oculta")?.hasAttribute("data-ol-hidden"),
+      "data-ol-hidden es del INSPECTOR (acción 'Ocultar elemento', use-element-inspect.ts::applyHide) — una acción deliberada y PERSISTIDA del creador, nunca un marker runtime-owned de ninguna receta. Si esto es false, alguien re-agregó data-ol-hidden a la lista runtime-owned del strip (o una receta volvió a reclamar ese nombre) y este test debe recordar por qué eso rompe producción.",
+    ).toBe(true);
+    expect(
+      reparsed.querySelector("style[data-ol-hidden-style]"),
+      "la regla CSS persistente que oculta [data-ol-hidden] debe sobrevivir junto con el atributo — de lo contrario el elemento queda marcado como oculto pero sin CSS que lo oculte",
+    ).not.toBeNull();
+    expect(reparsed.body.textContent).toContain("Seccion oculta a proposito por el creador");
+    expect(reparsed.body.textContent).toContain("Visible");
+  });
+});
+
 // Genérico — ninguna receta nombrada a mano. Si una FUTURA 8ª receta empieza a
 // escribir un data-ol-* nuevo sobre el DOM vivo (al estilo filter/sticky/
 // lightbox) y el strip no sabe limpiarlo, este test se pone rojo, porque la
@@ -627,7 +669,7 @@ describe("stripEditorInstrumentation — audit canary (protege a la receta #8+)"
       // de arriba dejó de disparar algo y el resto del test no estaría
       // probando nada — más vale un rojo aquí que un verde falso.
       expect(runtimeIntroduced, "el harness no disparó ninguna mutación real de ATRIBUTOS — este test no prueba nada").not.toHaveLength(0);
-      expect(runtimeIntroduced).toEqual(expect.arrayContaining(["data-ol-hidden", "data-ol-lb-modal"]));
+      expect(runtimeIntroduced).toEqual(expect.arrayContaining(["data-ol-filtered", "data-ol-lb-modal"]));
       expect(dirtyTexts, "el harness no disparó ninguna mutación real de TEXTO — este test no prueba nada").not.toEqual(pristineTexts);
 
       const saved = stripEditorInstrumentation(dirty);

@@ -6,10 +6,21 @@ import type { Behavior } from "../types";
 // click resuelve su propio [data-ol-filter-group] y su propio
 // [data-ol-filter-target], nunca toca el ajeno.
 //
-// data-ol-hidden, NO `hidden` nativo: un item con display:flex de Tailwind le
-// gana al display:none del user-agent para [hidden], y el filtro
+// data-ol-filtered, NO `hidden` nativo: un item con display:flex de Tailwind
+// le gana al display:none del user-agent para [hidden], y el filtro
 // "funcionaría" sin ocultar nada. Por eso trae su propio atributo + su propio
 // CSS con !important (abajo).
+//
+// NO data-ol-hidden (nombre usado hasta el bug CRITICAL de la revisión final
+// de rama): ese nombre YA es de use-element-inspect.ts's applyHide(), la
+// acción deliberada del creador "Ocultar elemento" — persistida a propósito
+// en el HTML guardado. El funnel de guardado (strip-editor-instrumentation.ts)
+// trata el atributo de ESTA receta como "sin dueño legítimo fuera del
+// runtime" y lo borra incondicionalmente en cada guardado; con el nombre
+// compartido, cualquier elemento que el creador hubiera ocultado a propósito
+// se des-ocultaba en el primer guardado tras publicarse esta receta. El
+// nombre nuevo (`data-ol-filtered`) no colisiona con nada — ver `runtimeAttrs`
+// abajo y el test de colisión de namespace en conformance.test.ts.
 //
 // data-ol-tag admite varias etiquetas separadas por espacio ("tacos
 // vegano"); se matchea con split(' ').indexOf(valor). '*' se compara ANTES
@@ -17,7 +28,7 @@ import type { Behavior } from "../types";
 // Dos coerciones implícitas hacen el loop más corto y no son evidentes al
 // leerlas frío: toggleAttribute(name, force) castea `force` a booleano (así
 // que `v!=='*'&&!~tg.indexOf(v)` sirve directo, sin if/else ni una segunda
-// aparición del string 'data-ol-hidden'); setAttribute(name, value) castea
+// aparición del string 'data-ol-filtered'); setAttribute(name, value) castea
 // `value` a string (así que pasar el booleano `bs[j]===b` ya produce
 // "true"/"false" sin ternario). `~tg.indexOf(v)` es 0 (falsy) solo cuando
 // indexOf da -1. El `||''` de getAttribute('data-ol-tag') no hace falta: el
@@ -33,9 +44,9 @@ import type { Behavior } from "../types";
 // and querySelector throws SyntaxError, uncaught, mid-listener — same
 // try/catch contract theme.ts/copy.ts already honor for their own fallible
 // calls. Degrades to `t` staying undefined, so `if(!t)return` still applies.
-const JS = `document.addEventListener('click',function(e){if(olEditing())return;var F='[data-ol-filter]';var b=e.target.closest(F);if(!b)return;var g=b.closest('[data-ol-filter-group]');if(!g)return;var n=g.getAttribute('data-ol-filter-group'),t;try{t=document.querySelector('[data-ol-filter-target="'+n+'"]')}catch{}if(!t)return;var v=b.getAttribute('data-ol-filter');var el=t.querySelectorAll('[data-ol-tag]');for(var i=0;i<el.length;i++){var x=el[i],tg=x.getAttribute('data-ol-tag').split(' ');x.toggleAttribute('data-ol-hidden',v!=='*'&&!~tg.indexOf(v))}var bs=g.querySelectorAll(F);for(var j=0;j<bs.length;j++)bs[j].setAttribute('aria-pressed',bs[j]===b)});`;
+const JS = `document.addEventListener('click',function(e){if(olEditing())return;var F='[data-ol-filter]';var b=e.target.closest(F);if(!b)return;var g=b.closest('[data-ol-filter-group]');if(!g)return;var n=g.getAttribute('data-ol-filter-group'),t;try{t=document.querySelector('[data-ol-filter-target="'+n+'"]')}catch{}if(!t)return;var v=b.getAttribute('data-ol-filter');var el=t.querySelectorAll('[data-ol-tag]');for(var i=0;i<el.length;i++){var x=el[i],tg=x.getAttribute('data-ol-tag').split(' ');x.toggleAttribute('data-ol-filtered',v!=='*'&&!~tg.indexOf(v))}var bs=g.querySelectorAll(F);for(var j=0;j<bs.length;j++)bs[j].setAttribute('aria-pressed',bs[j]===b)});`;
 
-const CSS = `[data-ol-hidden]{display:none!important}`;
+const CSS = `[data-ol-filtered]{display:none!important}`;
 
 export const filter: Behavior = {
   name: "filter",
@@ -51,6 +62,9 @@ export const filter: Behavior = {
   },
   js: JS,
   css: CSS,
+  // Ver el comentario largo arriba (bug CRITICAL, revisión final de rama):
+  // este es el único atributo que el runtime de ESTA receta posee.
+  runtimeAttrs: ["data-ol-filtered"],
   budgetBytes: 700,
   docBudgetChars: 1200,
   degradation: "content-intact",

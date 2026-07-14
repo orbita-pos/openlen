@@ -33,7 +33,7 @@ export function stripEditorInstrumentation(html: string): string {
     !html.includes("contenteditable") &&
     !html.includes("data-ol-motion") &&
     !html.includes("data-ol-counted") &&
-    !html.includes("data-ol-hidden") &&
+    !html.includes("data-ol-filtered") &&
     !html.includes("data-ol-stuck") &&
     !html.includes("data-ol-lb-modal") &&
     !html.includes(BEHAVIORS_MARKER) &&
@@ -155,16 +155,43 @@ export function stripEditorInstrumentation(html: string): string {
     // it mutates the SAME live DOM this function is cleaning. Two kinds of
     // leftover, two treatments:
     //
-    // (A) Runtime-OWNED markers — no author or the AI ever writes these; only
-    // the live runtime does, while the creator pokes at their own page in the
+    // (A) Runtime-OWNED markers — attributes that ONLY one recipe's own live
+    // runtime writes, while the creator pokes at their own page in the
     // preview (click a filter chip, scroll past the sticky threshold).
-    // Stripping is ALWAYS correct: there is no legitimate authored value to
-    // preserve. Each is sourced to the recipe that writes it; if a future
-    // recipe (#8+) introduces a NEW runtime-owned marker and it's missing
-    // here, the audit-canary test in strip-editor-instrumentation.test.ts
-    // goes red.
+    // Unconditional removal is correct ONLY as long as that "only" actually
+    // holds — this is NOT "no author or the AI ever writes these" (that
+    // premise used to live here, and it was FALSE: it's what caused the bug
+    // below). If any OTHER subsystem in the product also writes the exact
+    // same attribute name for its own legitimate, PERSISTED purpose, this
+    // loop destroys that subsystem's work on every save — silently, because
+    // nothing here can tell "runtime side-effect" apart from "deliberate
+    // creator state" by looking at the attribute alone.
+    //
+    // THIS ALREADY HAPPENED (CRITICAL, revisión final de rama): filter.ts
+    // used to claim `data-ol-hidden` for the item it hides on click — but
+    // that name was ALREADY owned by use-element-inspect.ts's applyHide(),
+    // the inspector's "Ocultar elemento" toggle (a deliberate, PERSISTED
+    // creator action — see its own ensureHiddenStyle() there, and
+    // properties-panel.tsx's Hide toggle that drives it). This loop stripped
+    // it unconditionally on every save, silently un-hiding every element any
+    // creator had ever hidden — with or without the filter recipe anywhere on
+    // the page. filter.ts's runtime attribute is now `data-ol-filtered`;
+    // `data-ol-hidden` must NEVER be added back to this list.
+    //
+    // The structural guard against a repeat: every recipe declares its own
+    // runtime-owned attribute names in `runtimeAttrs` (lib/behaviors/types.ts)
+    // — a single enumerable claim on a namespace — and the "colisión de
+    // namespace" suite in lib/behaviors/conformance.test.ts greps the rest of
+    // the product for any OTHER `setAttribute` writer of the same name.
+    // `runtimeAttrs` does NOT mechanically drive this list (enumerating is
+    // not the same as interpreting — the removal mechanics below differ per
+    // attribute, e.g. lightbox's is a whole-element removal), so keep the two
+    // in sync by hand; each entry below is sourced to the recipe that writes
+    // it, and if a future recipe (#8+) introduces a NEW runtime-owned marker
+    // and it's missing here, the audit-canary test in
+    // strip-editor-instrumentation.test.ts goes red.
     for (const attr of [
-      "data-ol-hidden", // filter.ts: toggled on each [data-ol-tag] item it hides
+      "data-ol-filtered", // filter.ts: toggled on each [data-ol-tag] item it hides. NOT data-ol-hidden — see the long comment above.
       "data-ol-stuck", // sticky.ts: toggled on the [data-ol-sticky] nav past scrollY 24
     ]) {
       doc.querySelectorAll(`[${attr}]`).forEach((n) => n.removeAttribute(attr));
