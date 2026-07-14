@@ -88,16 +88,27 @@ export interface Behavior {
   degradation: Degradation;
   a11y: AriaRequirement[];
 
-  /** De aquí se GENERA la documentación que lee la IA. No se escribe aparte. */
-  doc: { when: string; whenNot: string; example: string };
+  /** De aquí se GENERA la documentación que lee la IA. No se escribe aparte.
+   *  `label` es la glosa en ESPAÑOL de una a pocas palabras (p. ej. "contador
+   *  en vivo" para countdown, "tema claro/oscuro" para theme) — el puente
+   *  semántico que un modelo en español necesita para mapear "quiero un
+   *  contador" al marcador `countdown`. Se usa SOLO en la cabecera de la
+   *  sección CONDUCTAS (buildBehaviorsDoc, en doc.ts, que la deriva de
+   *  BEHAVIOR_ORDER — nunca escrita a mano ahí); `name`/`marker` (arriba) son
+   *  los identificadores de MÁQUINA, un concepto distinto que design-
+   *  guidance.ts usa por su cuenta y que nunca debe fusionarse con este.
+   *  Obligatorio: el arnés de conformidad (conformance.test.ts) exige que
+   *  toda receta lo declare — una receta sin glosa es CI rojo. */
+  doc: { label: string; when: string; whenNot: string; example: string };
 
-  /** Techo de caracteres para `doc.when + doc.whenNot + doc.example` juntos,
-   *  el mismo mecanismo que `budgetBytes` pero para la sección CONDUCTAS de
-   *  DESIGN_GUIDANCE en vez del runtime — es la razón por la que los runtimes
-   *  miden 640-700B y no 3KB: un techo real, exigido por conformance.test.ts,
-   *  no una convención de estilo. 1200 es el valor de las 7 recetas actuales
-   *  (theme, la más verbosa, está en ~1136 — pasa raspando a propósito: es el
-   *  techo real que la próxima receta también tiene que respetar). */
+  /** Techo de caracteres para `doc.label + doc.when + doc.whenNot +
+   *  doc.example` juntos, el mismo mecanismo que `budgetBytes` pero para la
+   *  sección CONDUCTAS de DESIGN_GUIDANCE en vez del runtime — es la razón
+   *  por la que los runtimes miden 640-700B y no 3KB: un techo real, exigido
+   *  por conformance.test.ts, no una convención de estilo. 1200 es el valor
+   *  de las 7 recetas actuales (theme, la más verbosa, está en ~1136 sin
+   *  contar `label` — pasa raspando a propósito: es el techo real que la
+   *  próxima receta también tiene que respetar). */
   docBudgetChars: number;
 
   status: "stable" | "experimental" | "deprecated";

@@ -57,6 +57,7 @@ export const theme: Behavior = {
   degradation: "control-inert",
   a11y: [{ selector: ":root", attr: "aria-label" }],
   doc: {
+    label: "tema claro/oscuro",
     when: "Un landing de producto, un portafolio (personal o de developer) o una página de documentación, donde el visitante espera —y valora— poder elegir entre modo claro y oscuro, y quieres que su elección se recuerde entre visitas.",
     // LA GUARDA DE PRODUCTO. Este toggle deroga la regla de la guía de
     // diseño de OpenLen ("una modalidad por página, sin botón de tema") — una

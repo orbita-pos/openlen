@@ -90,6 +90,7 @@ export const sticky: Behavior = {
   // esta capa (mismo argumento que ya usa theme.ts: el motor termina en el
   // atributo/clase, nunca en el look).
   doc: {
+    label: "barra pegajosa al bajar",
     when: "Un <nav> fijo (position:fixed o sticky) que arranca transparente o mezclado con el hero, y que necesita ganar fondo sólido, sombra o un tamaño más compacto en cuanto el visitante empieza a bajar — para seguir siendo legible sobre cualquier contenido que pase debajo.",
     whenNot: "No lo actives sobre un nav que YA nace sólido (fondo opaco desde el primer pixel): no hay nada que ganar al bajar, el atributo se pondría pero ningún CSS lo estaría esperando. Y recuerda: el marcador por sí solo NO CAMBIA NADA VISUAL — el estilo de [data-ol-stuck] hay que escribirlo a mano (Tailwind o CSS propio) junto al nav; sin esa clase, esta receta conmuta un atributo que nadie mira.",
     example: `<nav data-ol-sticky class="fixed top-0 w-full transition-colors">

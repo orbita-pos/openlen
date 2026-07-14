@@ -125,6 +125,7 @@ export const autoplay: Behavior = {
   // declarar su propio requisito de accesibilidad aquí.
   a11y: [],
   doc: {
+    label: "autoplay",
     when: "Un carrusel de fotos, platillos, testimonios o productos que quieres que avance solo para darle vida a la página sin que el visitante tenga que tocar nada — el menú de una taquería, una galería de trabajos, un carrusel de reseñas.",
     whenNot: "No lo actives sobre un carrusel con pocas tarjetas que ya se ven completas sin scroll — avanzar solo no aporta nada ahí y solo compite por la atención del visitante. El marcador va sobre [data-ol-row] o un descendiente suyo (nunca fuera de esa estructura), y el intervalo nunca baja de 1.5s: menos que eso es mareante.",
     example: `<div data-ol-row data-ol-autoplay="5000" class="relative">

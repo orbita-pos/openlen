@@ -75,6 +75,7 @@ export const copy: Behavior = {
   degradation: "content-intact",
   a11y: [{ selector: ":root", attr: "aria-label" }],
   doc: {
+    label: "copiar al portapapeles",
     when: "Un cupón, código de descuento, número de cuenta o cualquier texto corto que el visitante necesita copiar exacto — sin errores de tipeo — para pegarlo en otro lugar (checkout, WhatsApp, una app bancaria).",
     whenNot: "No lo uses para copiar párrafos largos o contenido que el visitante debería leer ahí mismo: es para un valor corto que se pega en otro sitio. Y el botón necesita apuntar a un id que exista en la página — sin uno, no hay qué copiar.",
     example: `<code id="cupon-verano">TACOS20</code>

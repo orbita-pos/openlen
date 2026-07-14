@@ -56,6 +56,7 @@ export const filter: Behavior = {
   degradation: "content-intact",
   a11y: [{ selector: ":root", attr: "aria-pressed" }],
   doc: {
+    label: "filtro",
     when: "Una colección homogénea de tarjetas (menú, catálogo, portafolio) que el visitante quiere acotar por categoría con un click, sin recargar la página — el 'Todo / Tacos / Bebidas' de un menú de taquería.",
     whenNot: "No lo uses para alternar bloques de página no relacionados (hero, footer): es para acotar UNA colección por etiqueta, no para esconder secciones sueltas. Y el botón debe vivir dentro de [data-ol-filter-group] — fuera de él no hace nada.",
     example: `<div data-ol-filter-group="menu">

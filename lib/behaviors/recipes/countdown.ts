@@ -51,6 +51,7 @@ export const countdown: Behavior = {
   // con aria-live le gritaría al lector de pantalla 60 veces por minuto.
   a11y: [],
   doc: {
+    label: "contador en vivo",
     when: "Una oferta, lanzamiento o evento con fecha y hora límite REAL (cierre de una promoción, inicio de un webinar, fin de una preventa) donde el visitante necesita ver el tiempo restante corriendo en vivo.",
     whenNot: "No la actives sin una fecha real detrás — al expirar sin que nada cambie, el visitante se queda viendo 'terminó' o ceros congelados para siempre. Y si el ISO no lleva offset de zona horaria (-06:00, +01:00…), el instante es LOCAL AL VISITANTE: una oferta que 'cierra a las 20:00' terminaría a horas distintas en México y en España — usa un offset explícito cuando la fecha límite deba ser la misma para todos.",
     example: `<div data-ol-countdown="2026-08-15T20:00-06:00">

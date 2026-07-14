@@ -47,6 +47,7 @@ export const lightbox: Behavior = {
   // en lightbox.test.ts, montando y verificando el DOM real tras el click.
   a11y: [],
   doc: {
+    label: "lightbox",
     when: "Una galería de fotos donde el visitante quiere ver la imagen en grande sin salir de la página.",
     whenNot: "Nunca sobre un enlace de navegación: esto secuestra el click. Solo sobre <a> que apuntan a una IMAGEN.",
     example: `<a data-ol-lightbox href="https://images.openlen.com/plato-grande.jpg"><img src="https://images.openlen.com/plato-thumb.jpg" alt="Plato de tacos al pastor" class="rounded-xl"></a>`,

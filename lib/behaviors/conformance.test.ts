@@ -45,7 +45,7 @@ function fakeBehavior(name: BehaviorName, marker: string, js: string): Behavior 
     name, marker, js, budgetBytes: 4096, docBudgetChars: 4096,
     schema: { root: { kind: "flag" } },
     degradation: "content-intact", a11y: [], status: "stable",
-    doc: { when: "", whenNot: "", example: "" },
+    doc: { label: "", when: "", whenNot: "", example: "" },
   } as Behavior;
 }
 
@@ -154,7 +154,7 @@ describe.each(entries.map((b) => [b.name, b] as const))("conducta: %s", (_name, 
       .toBeLessThanOrEqual(b.budgetBytes);
   });
 
-  it("su documentación (when+whenNot+example) respeta su presupuesto de caracteres", () => {
+  it("su documentación (label+when+whenNot+example) respeta su presupuesto de caracteres", () => {
     // Mismo mecanismo que budgetBytes de arriba, pero para la sección
     // CONDUCTAS de DESIGN_GUIDANCE en vez del runtime — es la razón por la
     // que ese techo es real y no una convención de estilo: sin este harness,
@@ -163,13 +163,30 @@ describe.each(entries.map((b) => [b.name, b] as const))("conducta: %s", (_name, 
     // receta nueva, y la sección CONDUCTAS (ya el 25% de todo DESIGN_GUIDANCE
     // hoy) se comería el presupuesto de tokens de cada generación sin que
     // nada lo notara. El mensaje de fallo reporta cuánto mide y cuánto sobra
-    // (o falta) — igual que el de budgetBytes.
-    const chars = b.doc.when.length + b.doc.whenNot.length + b.doc.example.length;
+    // (o falta) — igual que el de budgetBytes. `label` (Arreglo 3, revisión
+    // final de rama) cuenta también: aunque no vive en el bloque POR RECETA
+    // (va una sola vez, en la cabecera compartida — ver buildBehaviorsDoc en
+    // doc.ts), sigue siendo texto que ESTA receta aporta a la sección
+    // CONDUCTAS, y el presupuesto existe para acotar el costo total de esa
+    // sección, no solo el del bloque itemizado.
+    const chars = b.doc.label.length + b.doc.when.length + b.doc.whenNot.length + b.doc.example.length;
     const margin = b.docBudgetChars - chars;
     expect(
       chars,
       `${b.name}: ${chars} chars de ${b.docBudgetChars} — margen ${margin} chars`,
     ).toBeLessThanOrEqual(b.docBudgetChars);
+  });
+
+  it("declara doc.label — la glosa en español que el modelo mapea a este marcador (Arreglo 3, revisión final de rama)", () => {
+    // Sin esta glosa, la cabecera de CONDUCTAS (buildBehaviorsDoc en doc.ts)
+    // no tiene de dónde derivar el puente semántico que un modelo en español
+    // necesita para mapear "quiero un contador" al marcador `countdown` — la
+    // receta #8 que no la declare es CI rojo aquí, no un hueco silencioso en
+    // el prompt de la IA. El tipo (Behavior.doc.label, types.ts) ya lo exige
+    // en compilación para toda receta REGISTRADA con su tipo completo; esta
+    // aserción en tiempo de ejecución es el cinturón y tirantes para
+    // cualquier entrada que llegue vía un `as`/cast que se lo salte.
+    expect(b.doc.label, `${b.name}: falta doc.label`).toBeTruthy();
   });
 
   it("el marcador coincide con el que el ejemplo usa", () => {

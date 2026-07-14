@@ -61,6 +61,7 @@ describe("Arreglo 1 — los sitios en prosa DERIVAN de BEHAVIOR_ORDER, no lo cop
         degradation: "content-intact",
         a11y: [],
         doc: {
+          label: "efecto de confeti",
           when: "cuando quieras celebrar algo en la página — un lanzamiento, una meta cumplida.",
           whenNot: "nunca en una página de negocio serio (una notaría, un despacho legal).",
           example: `<div ${FAKE_MARKER}></div>`,
@@ -80,22 +81,33 @@ describe("Arreglo 1 — los sitios en prosa DERIVAN de BEHAVIOR_ORDER, no lo cop
     // catalog.ts todos importan (transitivamente) "./registry" con el mismo
     // specifier resuelto (lib/behaviors/registry.ts), así que los tres ven
     // el registro mockeado una vez reimportados frescos.
-    const { BEHAVIOR_NAMES: fakeNames, BEHAVIOR_COUNT: fakeCount, buildBehaviorsDoc } =
-      await import("./doc");
+    const {
+      BEHAVIOR_NAMES: fakeNames,
+      BEHAVIOR_COUNT: fakeCount,
+      BEHAVIOR_LABELS: fakeLabels,
+      buildBehaviorsDoc,
+    } = await import("./doc");
     const { DESIGN_GUIDANCE } = await import("../design-guidance");
     const { buildAgentSystemPrompt } = await import("../agent/catalog");
 
     expect(fakeCount, "el registro mockeado debe tener 8 conductas (7 reales + 1 falsa)").toBe(8);
     expect(fakeNames).toContain(FAKE_NAME);
+    expect(fakeLabels).toContain("efecto de confeti");
 
     // Sitio 1 — lib/behaviors/doc.ts, la cabecera del propio generador.
-    // Frase ÚNICA de este sitio: "solo (N: nombres)" con el número PEGADO a
-    // los dos-puntos DENTRO del paréntesis — ni design-guidance.ts ni
-    // catalog.ts producen ese formato exacto.
+    // Frase ÚNICA de este sitio: "solo (glosas en español)" — deriva de
+    // doc.label de cada receta, NUNCA de BEHAVIOR_NAMES (los nombres de
+    // MÁQUINA que usan design-guidance.ts/catalog.ts en sus propias frases,
+    // comprobadas más abajo). Arreglo 3 (revisión final de rama): esta
+    // cabecera decía las glosas en español ANTES de que la derivación de
+    // BEHAVIOR_NAMES/BEHAVIOR_COUNT (arriba) la hiciera decir los nombres de
+    // máquina en su lugar — perdiendo el puente semántico que un modelo en
+    // español necesita para mapear "quiero un contador" a `countdown`.
+    // doc.label lo recupera, derivado: una 8ª receta aporta la suya sola.
     expect(
       buildBehaviorsDoc(),
-      "doc.ts: la cabecera de buildBehaviorsDoc() no deriva el número+lista",
-    ).toContain(`solo (${fakeCount}: ${fakeNames})`);
+      "doc.ts: la cabecera de buildBehaviorsDoc() no deriva la glosa en español (doc.label) de la receta nueva",
+    ).toContain(`solo (${fakeLabels})`);
 
     // Sitio 2 — lib/design-guidance.ts. Frase ÚNICA de este sitio (inglés,
     // "for the N things CSS genuinely cannot do" — ni doc.ts ni catalog.ts
