@@ -18,8 +18,7 @@ fn starter(template: &str) -> String {
 
 // Byte-equal on the starters that are sanitize-clean (no inline scripts,
 // no dangerous elements). The Tailwind CDN script in each starter is
-// whitelisted and survives. Mirror has an additional inline sparkline
-// script and is tested separately below.
+// whitelisted and survives.
 fn byte_equal_clean_starter(template: &str) {
     let src = starter(template);
     let r = sanitize_for_publish(&src);
@@ -63,62 +62,13 @@ fn byte_equal_manuscript() {
     byte_equal_clean_starter("manuscript.html");
 }
 
+// mirror.html now ships static sparkline paths (no runtime <script>), so it
+// is sanitize-clean like the other starters. (It previously carried an inline
+// procedural-sparkline script; that was removed once we learned publish strips
+// all JS, leaving the runtime-drawn paths empty.)
 #[test]
-fn mirror_inline_sparkline_script_stripped_idempotently() {
-    // mirror.html ships an inline `<script>` (procedural sparklines) that is
-    // NOT on the whitelist. The sanitizer strips it. Byte-equal against src
-    // therefore can't hold; what MUST hold is: (a) the strip is acknowledged
-    // in `removed.scripts`, (b) the Tailwind CDN script survives, (c) running
-    // sanitize again on the output is a no-op (idempotence + clean output).
-    let src = starter("mirror.html");
-    let r1 = sanitize_for_publish(&src);
-    assert!(
-        r1.errors.is_empty(),
-        "mirror sanitize errors: {:?}",
-        r1.errors
-    );
-    let s1 = r1.html.expect("mirror must not be hard-rejected");
-    assert!(
-        r1.removed.scripts >= 1,
-        "expected the inline sparkline script to be stripped"
-    );
-    assert!(
-        s1.contains("https://cdn.tailwindcss.com"),
-        "Tailwind CDN script must be preserved"
-    );
-    assert!(
-        !contains_inline_script(&s1),
-        "no inline scripts should remain"
-    );
-
-    let r2 = sanitize_for_publish(&s1);
-    let s2 = r2.html.expect("second pass must succeed");
-    assert_eq!(s1, s2, "sanitize must be idempotent on mirror");
-    assert_eq!(r2.removed.scripts, 0, "no scripts to strip on second pass");
-}
-
-// True iff `out` contains a <script> tag whose src isn't the whitelisted
-// Tailwind CDN. Crude scan — sufficient for the post-sanitize invariant.
-fn contains_inline_script(out: &str) -> bool {
-    let lower = out.to_ascii_lowercase();
-    let mut cursor = 0;
-    while let Some(rel) = lower[cursor..].find("<script") {
-        let start = cursor + rel;
-        // Find the end of the opening tag.
-        let tag_end = lower[start..]
-            .find('>')
-            .map(|e| start + e + 1)
-            .unwrap_or(out.len());
-        let tag = &lower[start..tag_end];
-        if tag.contains("src=\"https://cdn.tailwindcss.com")
-            || tag.contains("src='https://cdn.tailwindcss.com")
-        {
-            cursor = tag_end;
-            continue;
-        }
-        return true;
-    }
-    false
+fn byte_equal_mirror() {
+    byte_equal_clean_starter("mirror.html");
 }
 
 #[test]

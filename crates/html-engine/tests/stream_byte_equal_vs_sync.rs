@@ -127,13 +127,18 @@ fn mirror_byte_equal_under_64_chunks() {
 }
 
 #[test]
-fn mirror_inline_sparkline_script_stripped_in_streaming() {
-    let src = starter("mirror.html");
-    let r = run_stream(&[src.as_str()], true, true, true, false).unwrap();
-    // The sparkline `<script>` body (inline, no allowed src) is gone.
-    // The Tailwind CDN `<script src="https://cdn.tailwindcss.com">` survives.
+fn streaming_strips_inline_script_keeps_cdn() {
+    // Streaming sanitize must strip inline JS just like the sync path.
+    // The starters ship no runtime JS anymore, so this uses a synthetic
+    // input: an inline `<script>` (no allowed src) is gone, while the
+    // Tailwind CDN `<script src="https://cdn.tailwindcss.com">` survives.
+    let src = "<!doctype html><html><head>\
+               <script src=\"https://cdn.tailwindcss.com\"></script>\
+               <script>window.evil=1</script></head><body>x</body></html>";
+    let r = run_stream(&[src], true, true, true, false).unwrap();
     assert!(r.sanitize_removed.scripts >= 1);
     assert!(r.final_html.contains("cdn.tailwindcss.com"));
+    assert!(!r.final_html.contains("window.evil"));
 }
 
 #[test]

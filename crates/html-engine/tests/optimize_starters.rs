@@ -7,8 +7,9 @@
 //     crate::minify module-level docs)
 //   - Visual fidelity: doctype, class strings with arbitrary values
 //     like `bg-[rgba(15,15,15,0.72)]`, meta charset/viewport survive
-//   - mirror.html: inline sparkline JS survives unchanged (minify_js
-//     off — we don't touch script bodies)
+//   - inline <script> bodies survive unchanged (minify_js off — we
+//     don't touch script bodies; guarded synthetically since the
+//     starters now ship no runtime JS)
 
 use std::fs;
 use std::path::PathBuf;
@@ -106,11 +107,12 @@ fn assert_visual_fidelity(template: &str) {
 // inline CSS which Tailwind's runtime can then mass-emit — the bigger
 // win there is Lighthouse-paint, not byte count).
 //
-// What we DO guard here is the achievable floor: ≥15% on the two
-// whitespace-rich starters (mirror, counter), ≥12% on the dense one
-// (manuscript). These thresholds are deliberately conservative against
-// the measured 16.1 / 16.3 / 13.0% from this session, so a future
-// minify-html version that loosens a heuristic doesn't break CI.
+// What we DO guard here is the achievable floor: ≥15% on counter,
+// ≥12% on the denser mirror + manuscript. These thresholds are
+// deliberately conservative against the measured 14.7 / 16.3 / 13.0%
+// (mirror dropped from 16.1% once its runtime sparkline <script> was
+// removed — static paths, less minifiable JS), so a future minify-html
+// version that loosens a heuristic doesn't break CI.
 //
 // The 20% acceptance is documented in the session-4 handoff as a
 // partial Sem 8 deliverable, completing alongside the deferred CDN
@@ -118,7 +120,7 @@ fn assert_visual_fidelity(template: &str) {
 
 #[test]
 fn reduction_mirror() {
-    assert_reduction("mirror.html", 15.0);
+    assert_reduction("mirror.html", 12.0);
 }
 
 #[test]
@@ -203,47 +205,21 @@ fn counter_arbitrary_value_classes_preserved() {
     }
 }
 
-// ─── mirror.html inline sparkline script survives (minify_js off) ───
+// ─── optimize preserves inline <script> bodies (minify_js off) ───
 
 #[test]
-fn mirror_inline_script_survives() {
-    // mirror.html ships an inline `<script>` block of procedural
-    // sparkline rendering. minify_js is intentionally off — the script
-    // must come out unmangled (this test would catch an accidental
-    // minify_js = true regression).
-    let src = starter("mirror.html");
-    let r = optimize_for_publish(&src);
+fn optimize_preserves_inline_script() {
+    // optimize must never delete or empty inline JS — that is sanitize's
+    // job, at publish time. minify_js is intentionally off, so the body
+    // must also come out unmangled. (The curated starters now ship no
+    // runtime JS, so this guards the invariant with a synthetic input;
+    // it would catch an accidental minify_js = true or a strip regression.)
+    let src = "<!doctype html><html><body><p>hi</p><script>window.__spark=1</script></body></html>";
+    let r = optimize_for_publish(src);
     let out = r.html.unwrap();
-    // Crude but sufficient: at least one `<script>...</script>` body
-    // that isn't the CDN script must survive in the output.
-    let cdn = "https://cdn.tailwindcss.com";
-    let lower = out.to_ascii_lowercase();
-    let mut cursor = 0;
-    let mut inline_survived = false;
-    while let Some(rel) = lower[cursor..].find("<script") {
-        let start = cursor + rel;
-        let open_end = lower[start..]
-            .find('>')
-            .map(|e| start + e + 1)
-            .unwrap_or(out.len());
-        let opening = &lower[start..open_end];
-        if !opening.contains(cdn) {
-            // Find the matching </script>.
-            if let Some(close_rel) = lower[open_end..].find("</script>") {
-                let close = open_end + close_rel;
-                let body = &out[open_end..close];
-                if !body.trim().is_empty() {
-                    inline_survived = true;
-                    break;
-                }
-            }
-        }
-        cursor = open_end;
-    }
     assert!(
-        inline_survived,
-        "mirror.html inline <script> body was stripped or emptied — \
-         minify_js is supposed to be off"
+        out.contains("window.__spark"),
+        "inline <script> body was stripped or emptied — minify_js is supposed to be off"
     );
 }
 
