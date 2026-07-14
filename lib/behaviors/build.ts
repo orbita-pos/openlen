@@ -92,6 +92,22 @@ function injectIntoHead(html: string, tag: string): string {
   return tag + html;
 }
 
+/** Idempotencia del guard de arriba: matchea el tag real, en CUALQUIERA de
+ *  sus dos serializaciones válidas — `<script data-ol-behaviors>` (como lo
+ *  escribe esta misma función, abajo) y `<script data-ol-behaviors="">` (la
+ *  forma en que ESE MISMO tag vuelve tras un round-trip por `DOMParser` +
+ *  `outerHTML`: un atributo sin valor se parsea como `""`, y el serializador
+ *  SIEMPRE escribe `nombre=""`, nunca el nombre pelado). Un `.includes` de
+ *  substring exacto (IMPORTANT, revisión final de rama — Arreglo 3) no
+ *  matchea la segunda forma → doble inyección. No alcanzable HOY (se trazaron
+ *  todas las rutas), pero `stashBehaviorsPristineState`
+ *  (components/workspace-v2/use-behaviors-preview.ts) hace exactamente ese
+ *  round-trip una línea después de invocar el inyector del preview, dentro de
+ *  `derive()` (components/workspace-v2/preview-area.tsx) — un refactor que
+ *  reordene o reutilice ese HTML ya horneado alcanzaría el bug. Ver el test
+ *  de round-trip en build.test.ts. */
+const BAKED_TAG_RE = new RegExp(`<script\\s+${BEHAVIORS_MARKER}(?:="")?>`);
+
 /** Inyecta el runtime antes de </body> (y el pre-paint antes de </head>).
  *  Idempotente — mismo patrón que injectTrackingStrip, pero el guard mira el
  *  TAG real (`<script data-ol-behaviors>`), no BEHAVIORS_MARKER como
@@ -107,13 +123,14 @@ function injectIntoHead(html: string, tag: string): string {
  *  usedBehaviors() (que sí mira el marcador de CADA receta, no este) seguía
  *  reportando la conducta como "usada" — la telemetría mentía. Ver el test
  *  de los 4 vectores en build.test.ts. Sigue siendo idempotente sobre un
- *  documento YA horneado de verdad: ese SÍ contiene el tag literal. */
+ *  documento YA horneado de verdad: ese SÍ contiene el tag literal, en
+ *  cualquiera de sus dos serializaciones — ver BAKED_TAG_RE arriba. */
 export function bakeBehaviors(
   html: string,
   reg: Reg = BEHAVIORS,
   order: BehaviorName[] = BEHAVIOR_ORDER,
 ): string {
-  if (html.includes(`<script ${BEHAVIORS_MARKER}>`)) return html;
+  if (BAKED_TAG_RE.test(html)) return html;
   const body = buildBehaviorsScript(html, reg, order);
   if (!body) return html;
 

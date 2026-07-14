@@ -102,6 +102,42 @@ describe("bakeBehaviors — el guard no confunde el marcador SUELTO con el <scri
   });
 });
 
+// Arreglo 3 (revisión final de rama) — el guard de arriba mira el TAG real,
+// pero como substring EXACTO (`<script data-ol-behaviors>`). Ese mismo tag,
+// pasado por un round-trip de DOMParser + outerHTML (exactamente lo que
+// stashBehaviorsPristineState hace una línea después de invocar el inyector
+// del preview, dentro de derive() en preview-area.tsx), vuelve serializado
+// como `<script data-ol-behaviors="">` — un atributo sin valor se parsea como
+// "" y el serializador SIEMPRE escribe `nombre=""`, nunca el nombre pelado.
+// Un `.includes` de substring exacto no matchea esa segunda forma, así que un
+// re-bake sobre HTML que pasó por ese round-trip duplicaría el <script>.
+describe("bakeBehaviors — idempotente tras un round-trip de DOMParser (Arreglo 3, revisión final de rama)", () => {
+  it("un documento ya horneado, serializado como data-ol-behaviors=\"\" (round-trip DOMParser+outerHTML), no se vuelve a hornear", () => {
+    const html = `<!doctype html><html><head></head><body><div data-ol-countdown="x"></div></body></html>`;
+    const baked = bakeBehaviors(html, REG, ORDER);
+    const roundTripped =
+      "<!doctype html>\n" + new DOMParser().parseFromString(baked, "text/html").documentElement.outerHTML;
+
+    // Sanity: el round-trip de verdad cambió la serialización que le
+    // importaba al guard viejo — si esto fallara, el resto del test no
+    // probaría nada (el bug requiere justo este cambio de forma).
+    expect(roundTripped, "sanity: el round-trip debe DEJAR de traer el tag pelado").not.toContain(
+      `<script ${BEHAVIORS_MARKER}>`,
+    );
+    expect(roundTripped, "sanity: el round-trip debe producir la forma con =\"\"").toContain(
+      `<script ${BEHAVIORS_MARKER}="">`,
+    );
+
+    const rebaked = bakeBehaviors(roundTripped, REG, ORDER);
+    const scriptCount = (rebaked.match(new RegExp(`<script ${BEHAVIORS_MARKER}`, "g")) ?? []).length;
+    expect(
+      scriptCount,
+      `el round-trip de DOMParser no debe producir un segundo <script> de runtime (encontrados: ${scriptCount})`,
+    ).toBe(1);
+    expect(rebaked, "el guard tolerante al round-trip debe devolver el html sin tocar").toBe(roundTripped);
+  });
+});
+
 describe("inyección en <head> (headJs)", () => {
   const REG_HEAD = {
     theme: fake("theme", "data-ol-theme", "/*BODY*/", "/*HEAD*/"),

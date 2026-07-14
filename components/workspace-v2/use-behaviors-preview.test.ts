@@ -125,4 +125,33 @@ describe("bakeCarousels (lib/publish/carousel.ts) — mismo fix de guard que bak
     const once = bakeCarousels(html);
     expect(bakeCarousels(once)).toBe(once);
   });
+
+  // Arreglo 3 (revisión final de rama) — mismo bug de round-trip que
+  // lib/behaviors/build.ts (ver su propio test en build.test.ts): el guard
+  // miraba el TAG real pero como substring EXACTO
+  // (`<script data-ol-carousel>`), que un round-trip de DOMParser+outerHTML
+  // serializa como `<script data-ol-carousel="">` — un `.includes` de
+  // substring exacto no matchea esa segunda forma, así que un re-bake sobre
+  // HTML que pasó por ese round-trip duplicaría el <script>.
+  it('un documento ya horneado, serializado como data-ol-carousel="" (round-trip DOMParser+outerHTML), no se vuelve a hornear', () => {
+    const html = doc(carouselMarkup);
+    const baked = bakeCarousels(html);
+    const roundTripped =
+      "<!doctype html>\n" + new DOMParser().parseFromString(baked, "text/html").documentElement.outerHTML;
+
+    expect(roundTripped, "sanity: el round-trip debe DEJAR de traer el tag pelado").not.toContain(
+      `<script ${CAROUSEL_MARKER}>`,
+    );
+    expect(roundTripped, "sanity: el round-trip debe producir la forma con =\"\"").toContain(
+      `<script ${CAROUSEL_MARKER}="">`,
+    );
+
+    const rebaked = bakeCarousels(roundTripped);
+    const scriptCount = (rebaked.match(new RegExp(`<script ${CAROUSEL_MARKER}`, "g")) ?? []).length;
+    expect(
+      scriptCount,
+      `el round-trip de DOMParser no debe producir un segundo <script> de runtime (encontrados: ${scriptCount})`,
+    ).toBe(1);
+    expect(rebaked, "el guard tolerante al round-trip debe devolver el html sin tocar").toBe(roundTripped);
+  });
 });

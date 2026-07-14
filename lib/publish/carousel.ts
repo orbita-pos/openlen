@@ -30,6 +30,13 @@ export const MARKER = "data-ol-carousel";
 // (min 240px), smoothly.
 export const CAROUSEL_JS = `(function(){var amt=function(s){return Math.max(240,Math.round(s.clientWidth*0.8))};document.addEventListener("click",function(e){var t=e.target;if(!t||!t.closest)return;var b=t.closest("[data-ol-scroll]");if(!b)return;var row=b.closest("[data-ol-row]");var s=row?row.querySelector("[data-ol-scroller]"):null;if(!s)return;e.preventDefault();s.scrollBy({left:(b.getAttribute("data-ol-scroll")==="next"?1:-1)*amt(s),behavior:"smooth"})});})();`;
 
+// Idempotencia tolerante a un round-trip DOMParser+outerHTML — mismo arreglo,
+// mismo motivo, que BAKED_TAG_RE en lib/behaviors/build.ts (Arreglo 3,
+// revisión final de rama): `<script data-ol-carousel>` vuelve como
+// `<script data-ol-carousel="">` tras ese round-trip, y un `.includes` de
+// substring exacto no lo matchea → doble inyección.
+const BAKED_TAG_RE = new RegExp(`<script\\s+${MARKER}(?:="")?>`);
+
 /** Inject the carousel-arrow runtime when the page has [data-ol-scroll] buttons.
  *  No-op when there are none, or when already processed (idempotent). */
 export function bakeCarousels(html: string): string {
@@ -40,7 +47,7 @@ export function bakeCarousels(html: string): string {
   // real detrás (un <style> residual, un comentario HTML, texto visible, una
   // regla CSS del autor), y en los 4 casos apagaría este runtime para
   // siempre, en silencio.
-  if (html.includes(`<script ${MARKER}>`)) return html;
+  if (BAKED_TAG_RE.test(html)) return html;
   if (!html.includes("data-ol-scroll=")) return html;
 
   const script = `<script ${MARKER}>${CAROUSEL_JS}</script>`;
