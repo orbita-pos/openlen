@@ -188,6 +188,38 @@ describe("usedBehaviors", () => {
     expect(usedBehaviors("<p>hola, nada aquí</p>", reg, ["countdown", "copy"])).toEqual([]);
   });
 
+  // El sensor de demanda (deuda anotada en la revisión Fable): present()
+  // matcheaba el marcador como SUBSTRING, y `data-ol-copy` ⊂ `data-ol-copied`,
+  // `data-ol-filter` ⊂ `data-ol-filter-group`/`-target`. Una página con SOLO
+  // el atributo hermano (que NO es el marcador de la receta) contaba la
+  // conducta como "usada" — la telemetría que decide qué construir después
+  // MENTÍA. El marcador debe matchear como NOMBRE DE ATRIBUTO completo
+  // (terminado en `=`, espacio, `/` o `>`), nunca como trozo suelto.
+  it("NO cuenta copy por un data-ol-copied hermano, ni filter por data-ol-filter-group/target", () => {
+    const reg = {
+      copy: fake("copy", "data-ol-copy", "/*CP*/"),
+      filter: fake("filter", "data-ol-filter", "/*FI*/"),
+    } as Partial<Record<BehaviorName, Behavior>>;
+    const order: BehaviorName[] = ["copy", "filter"];
+    // Solo los atributos HERMANOS, nunca el marcador real:
+    const html =
+      `<button data-ol-copied="¡Copiado!">x</button>` +
+      `<div data-ol-filter-group="m"></div><div data-ol-filter-target="m"></div>`;
+    expect(usedBehaviors(html, reg, order)).toEqual([]);
+  });
+
+  it("SÍ cuenta cuando el marcador real está presente como atributo (=, espacio, >)", () => {
+    const reg = {
+      copy: fake("copy", "data-ol-copy", "/*CP*/"),
+      filter: fake("filter", "data-ol-filter", "/*FI*/"),
+    } as Partial<Record<BehaviorName, Behavior>>;
+    const order: BehaviorName[] = ["copy", "filter"];
+    expect(usedBehaviors(`<button data-ol-copy="cup"></button>`, reg, order)).toEqual(["copy"]);
+    expect(usedBehaviors(`<button data-ol-filter="*"></button>`, reg, order)).toEqual(["filter"]);
+    // marcador flag (sin valor): `data-ol-x>` o `data-ol-x ` también cuentan
+    expect(usedBehaviors(`<button data-ol-copy >`, reg, order)).toEqual(["copy"]);
+  });
+
   // Hallazgo Fable (2026-07-13): un marcador publicado en documentos de
   // usuarios es un CONTRATO PARA SIEMPRE. La semántica anterior filtraba
   // deprecated de la EMISIÓN — deprecar una receta mataba el runtime de toda

@@ -41,7 +41,20 @@ function present(html: string, reg: Reg, order: BehaviorName[]): Behavior[] {
   // puede retirarse de verdad. Ver build.test.ts, "SIGUE emitiendo".
   return order
     .map((n) => reg[n])
-    .filter((b): b is Behavior => !!b && html.includes(b.marker));
+    .filter((b): b is Behavior => !!b && hasMarkerAttr(html, b.marker));
+}
+
+/** El marcador debe aparecer como NOMBRE DE ATRIBUTO completo, no como
+ *  substring suelto (deuda de la revisión Fable, cerrada 2026-07-14). Un
+ *  `html.includes("data-ol-copy")` daba true por `data-ol-copied`, y
+ *  `data-ol-filter` por `data-ol-filter-group`/`-target` — la telemetría de
+ *  demanda (usedBehaviors, el sensor que decide qué conducta construir
+ *  después) contaba conductas que la página NO usa. Un nombre de atributo en
+ *  HTML termina en `=`, whitespace, `/` o `>`; se exige ese lindero. Los
+ *  marcadores son `data-ol-[a-z-]+`, sin metacaracteres de regex salvo `-`
+ *  (literal fuera de clase), así que no hace falta escapar. */
+function hasMarkerAttr(html: string, marker: string): boolean {
+  return new RegExp(marker + "(?=[\\s=/>])").test(html);
 }
 
 /** El runtime compuesto (sin la etiqueta <script>), o null si la página no usa
