@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { behaviorsBakeEnabled, carouselBakeEnabled } from "./kill-switches";
+import { behaviorsBakeEnabled, carouselBakeEnabled, transformEnabled } from "./kill-switches";
 
 // Hallazgo Fable (2026-07-13): OPENLEN_BEHAVIORS=0 solo se leía en
 // lib/publish/filesystem.ts — el inyector del preview (client component) no
@@ -19,5 +19,15 @@ describe("kill-switches — el predicado único de OPENLEN_BEHAVIORS/CAROUSEL", 
     expect(carouselBakeEnabled({})).toBe(true);
     expect(carouselBakeEnabled({ OPENLEN_CAROUSEL: "0" })).toBe(false);
     expect(carouselBakeEnabled({ OPENLEN_CAROUSEL: "off" })).toBe(true);
+  });
+});
+
+// Transform de ingestión (spec 2026-07-14): mismo contrato que los dos de
+// arriba — "0" apaga, todo lo demás enciende.
+describe("kill-switches — OPENLEN_TRANSFORM", () => {
+  it('"0" apaga; ausente o cualquier otro valor enciende', () => {
+    expect(transformEnabled({})).toBe(true);
+    expect(transformEnabled({ OPENLEN_TRANSFORM: "0" })).toBe(false);
+    expect(transformEnabled({ OPENLEN_TRANSFORM: "1" })).toBe(true);
   });
 });

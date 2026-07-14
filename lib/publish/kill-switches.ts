@@ -22,3 +22,10 @@ export function behaviorsBakeEnabled(env: EnvLike = process.env): boolean {
 export function carouselBakeEnabled(env: EnvLike = process.env): boolean {
   return env.OPENLEN_CAROUSEL !== "0";
 }
+
+/** Transform de ingestión (spec 2026-07-14) — bake quirúrgico + translate en
+ *  from-template/from-html. Corre en INGESTIÓN (antes de guardar), no toca
+ *  preview ni publish, así que este es su único consumidor de palanca. */
+export function transformEnabled(env: EnvLike = process.env): boolean {
+  return env.OPENLEN_TRANSFORM !== "0";
+}
