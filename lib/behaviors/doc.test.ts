@@ -44,9 +44,11 @@ describe("buildBehaviorsDoc", () => {
 });
 
 // MINOR (revisión final de rama) — BEHAVIOR_NAMES/BEHAVIOR_COUNT/BEHAVIOR_LABELS
-// derivaban de BEHAVIOR_ORDER en crudo, sin el mismo filtro `status !==
-// "deprecated"` que present() (build.ts) y buildBehaviorsDoc() (arriba) ya
-// aplican — una receta deprecada saldría en la glosa/número/lista de la
+// derivaban de BEHAVIOR_ORDER en crudo, sin el filtro `status !== "deprecated"`
+// que buildBehaviorsDoc() (arriba) ya aplica — present() (build.ts) NO filtra
+// a propósito: deprecated se oculta de la IA pero SIGUE emitiendo para las
+// páginas existentes (hallazgo Fable 2026-07-13; ver build.test.ts, "SIGUE
+// emitiendo"). Sin este filtro, una receta deprecada saldría en la glosa/número/lista de la
 // CABECERA de CONDUCTAS sin tener entrada ni runtime en el CUERPO de esa
 // misma sección. Se prueba mockeando ./registry (mismo patrón que
 // prose-derivation.test.ts, "Arreglo 1") porque los tres son consts de

@@ -29,9 +29,19 @@ type Reg = Partial<Record<BehaviorName, Behavior>>;
 function present(html: string, reg: Reg, order: BehaviorName[]): Behavior[] {
   // Orden del REGISTRO, no de aparición: mantiene estable el hash del script
   // inline y con él la idempotencia del sello CSP.
+  //
+  // SIN filtro de `status` a propósito (hallazgo Fable, 2026-07-13): un
+  // marcador publicado en documentos de usuarios es un contrato PARA
+  // SIEMPRE. Aquí se filtraba `deprecated`, y deprecar una receta mataba el
+  // runtime de toda página existente en su siguiente republicación. La
+  // política vive partida en dos mitades: doc.ts OCULTA la receta deprecada
+  // de la IA (ninguna página nueva la adquiere) y este módulo la SIGUE
+  // SIRVIENDO a las que ya la usan — usedBehaviors() incluida, porque contar
+  // cuántas páginas vivas aún la llevan es el dato que decide si algún día
+  // puede retirarse de verdad. Ver build.test.ts, "SIGUE emitiendo".
   return order
     .map((n) => reg[n])
-    .filter((b): b is Behavior => !!b && b.status !== "deprecated" && html.includes(b.marker));
+    .filter((b): b is Behavior => !!b && html.includes(b.marker));
 }
 
 /** El runtime compuesto (sin la etiqueta <script>), o null si la página no usa

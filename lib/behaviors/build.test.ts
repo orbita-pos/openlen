@@ -188,12 +188,23 @@ describe("usedBehaviors", () => {
     expect(usedBehaviors("<p>hola, nada aquí</p>", reg, ["countdown", "copy"])).toEqual([]);
   });
 
-  it("una receta status: \"deprecated\" no aparece — usedBehaviors hereda el filtro de present()", () => {
+  // Hallazgo Fable (2026-07-13): un marcador publicado en documentos de
+  // usuarios es un CONTRATO PARA SIEMPRE. La semántica anterior filtraba
+  // deprecated de la EMISIÓN — deprecar una receta mataba el runtime de toda
+  // página existente en su siguiente republicación, sin que el usuario
+  // hubiera tocado nada. La política correcta parte la palabra en dos:
+  // deprecated = OCULTA para la IA (doc.ts la excluye de docs/nombres/glosas
+  // — ninguna página NUEVA la adquiere) pero SIGUE EMITIENDO para las
+  // páginas que ya la usan. La telemetría (usedBehaviors) también la sigue
+  // contando: saber cuántas páginas vivas aún la usan es exactamente el dato
+  // que decide cuándo (si alguna vez) se puede retirar de verdad.
+  it('una receta "deprecated" SIGUE emitiendo runtime y contando en usedBehaviors — las páginas existentes no pierden su conducta', () => {
     const reg = {
       countdown: fake("countdown", "data-ol-countdown", "/*CD*/"),
       filter: { ...fake("filter", "data-ol-filter", "/*FI*/"), status: "deprecated" as const },
     } as Partial<Record<BehaviorName, Behavior>>;
     const html = `<div data-ol-countdown="x"></div><div data-ol-filter="y"></div>`;
-    expect(usedBehaviors(html, reg, ["countdown", "filter"])).toEqual(["countdown"]);
+    expect(usedBehaviors(html, reg, ["countdown", "filter"])).toEqual(["countdown", "filter"]);
+    expect(buildBehaviorsScript(html, reg, ["countdown", "filter"])).toContain("/*FI*/");
   });
 });
