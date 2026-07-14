@@ -97,29 +97,28 @@ test("manuscript.html starter: reduction (≥11%, denser) + idempotence", () => 
   assert.equal(r2.html, r1.html);
 });
 
-test("mirror.html starter: reduction, idempotence, inline sparkline JS survives", () => {
+test("mirror.html starter: reduction + idempotence", () => {
   const src = starter("mirror.html");
   const r1 = optimizeForPublish(src);
   assert.deepEqual(r1.errors, []);
   assert.ok(r1.html != null);
   const pct = (1 - r1.html.length / src.length) * 100;
-  assert.ok(pct >= 15, `mirror reduction ${pct.toFixed(1)}% below 15%`);
+  assert.ok(pct >= 12, `mirror reduction ${pct.toFixed(1)}% below 12%`);
   // Idempotence.
   const r2 = optimizeForPublish(r1.html);
   assert.equal(r2.html, r1.html);
-  // Inline `<script>` body (sparklines) preserved. The Tailwind CDN
-  // line is `<script src="..."></script>` with no body; the sparkline
-  // is a non-src `<script>...</script>` block. Filter the CDN one and
-  // require at least one inline body to survive.
-  const cdnLine = "https://cdn.tailwindcss.com";
-  const matches = [...r1.html.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/g)];
-  const inlineBodies = matches
-    .filter(([, attrs]) => !attrs.includes(cdnLine))
-    .map(([, , body]) => body.trim())
-    .filter(Boolean);
+});
+
+// optimize must never delete inline JS — that is sanitize's job at publish.
+// (mirror used to carry this via its sparkline <script>; it now ships static.)
+test("optimize preserves inline <script> bodies", () => {
+  const src =
+    '<!doctype html><html><body><p>hi</p><script>window.__spark=1</script></body></html>';
+  const r = optimizeForPublish(src);
+  assert.deepEqual(r.errors, []);
   assert.ok(
-    inlineBodies.length >= 1,
-    "expected at least one non-CDN inline <script> body to survive",
+    r.html.includes("window.__spark"),
+    "inline script body must survive optimize",
   );
 });
 

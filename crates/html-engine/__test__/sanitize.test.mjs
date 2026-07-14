@@ -113,10 +113,9 @@ test("manuscript.html starter is byte-equal (sanitize-clean)", () => {
   assert.equal(r.removed.scripts, 0);
 });
 
-test("mirror.html starter inline sparkline script stripped", () => {
+test("mirror.html starter is byte-equal (sanitize-clean)", () => {
   const src = starter("mirror.html");
   const r = sanitizeForPublish(src);
-  assert.ok(r.html != null);
-  assert.ok(r.removed.scripts >= 1);
-  assert.ok(r.html.includes("cdn.tailwindcss.com"));
+  assert.equal(r.html, src);
+  assert.equal(r.removed.scripts, 0);
 });
