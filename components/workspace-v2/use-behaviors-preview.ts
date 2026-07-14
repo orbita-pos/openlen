@@ -116,9 +116,26 @@ export function stashBehaviorsPristineState(
         n.setAttribute(PREVIEW_CD_TEXT_STASH, n.textContent ?? "");
         changed = true;
       });
+      // Stash ONLY the pristine `display` value — never the whole `style`
+      // attribute (this was Arreglo 1 of the final branch review: the strip
+      // used to restore the FULL attribute, which clobbered any OTHER style
+      // property written after this stash ran). countdown.ts's runtime
+      // touches exactly one CSS property on these two elements
+      // (`r.style.display='none'` on its own root once expired,
+      // `e.style.display=''` on [data-ol-cd-ended] to reveal it) and nothing
+      // else, ever — so `display` is the only thing that ever needs undoing.
+      // The FULL style attribute, in contrast, can carry properties written
+      // by the creator or the AI — including AFTER this stash runs: the
+      // inspector's own style editor (use-element-inspect.ts's applyStyle,
+      // e.g. padding/background on the countdown box) and Temáticas' re-ink
+      // pass (olReinkScoped, which walks every text-bearing element and can
+      // recolor [data-ol-cd-ended]) both write to `style` post-stash.
+      // Restoring the whole attribute would silently discard those on save —
+      // the mirror image of the bug this stash/strip machinery exists to
+      // prevent. See the matching restore in strip-editor-instrumentation.ts.
       doc.querySelectorAll(`[${cdMarker}],[data-ol-cd-ended]`).forEach((n) => {
         if (n.hasAttribute(PREVIEW_CD_STYLE_STASH)) return;
-        n.setAttribute(PREVIEW_CD_STYLE_STASH, n.getAttribute("style") ?? "");
+        n.setAttribute(PREVIEW_CD_STYLE_STASH, (n as HTMLElement).style.display);
         changed = true;
       });
     }

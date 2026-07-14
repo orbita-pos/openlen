@@ -431,6 +431,94 @@ describe("stripEditorInstrumentation — CRITICAL: preview mutations must not re
       "el mensaje de fin no debe publicarse visible por defecto",
     ).toBe("none");
   });
+
+  // Arreglo 1 (revisión final de rama): el bug que ESTA rama vino a arreglar
+  // (el preview ensuciando el documento guardado) se arregló restaurando el
+  // style COMPLETO de countdown desde el stash — pero eso mismo BORRABA
+  // cualquier estilo legítimo que el creador escribiera DESPUÉS de que el
+  // runtime corriera. Es la imagen especular: aquél metía estado del runtime
+  // en el documento, éste borraba estado del creador. Las dos pruebas de
+  // abajo reproducen los dos vectores reales que lo disparan.
+  it("countdown expirado + el creador le da padding/fondo en el inspector DESPUÉS — su estilo sobrevive al guardado y el display del runtime se revierte", () => {
+    const expiredMarkup = REPRO_MARKUP.replace(
+      'data-ol-countdown="2099-01-01T00:00:00Z"',
+      'data-ol-countdown="2020-01-01T00:00:00Z"',
+    );
+    mountFullDocument(expiredMarkup);
+    const root = document.getElementById("cd")!;
+    expect(root.style.display, "sanity: el runtime SÍ lo ocultó al montar").toBe("none");
+
+    // El inspector (use-element-inspect.ts::applyStyle) hace exactamente
+    // esto: el.style.setProperty(prop, value) — el creador estiliza el
+    // bloque del countdown DESPUÉS de que el runtime ya lo ocultó.
+    root.style.setProperty("padding", "40px");
+    root.style.setProperty("background", "rgb(17, 24, 39)");
+
+    const dirty = "<!doctype html>\n" + document.documentElement.outerHTML;
+    const saved = stripEditorInstrumentation(dirty);
+    const savedRoot = new DOMParser().parseFromString(saved, "text/html").getElementById("cd")!;
+
+    expect(savedRoot.style.display, "el countdown expirado no debe publicarse oculto para siempre").not.toBe("none");
+    expect(savedRoot.style.padding, "el padding que el creador escribió DESPUÉS del runtime se descartó").toBe("40px");
+    expect(
+      savedRoot.style.background,
+      "el fondo que el creador escribió DESPUÉS del runtime se descartó",
+    ).toBe("rgb(17, 24, 39)");
+  });
+
+  it("countdown expirado + el re-ink de Temáticas colorea [data-ol-cd-ended] DESPUÉS — su color sobrevive al guardado y sigue oculto por defecto", () => {
+    const expiredMarkup = REPRO_MARKUP.replace(
+      'data-ol-countdown="2099-01-01T00:00:00Z"',
+      'data-ol-countdown="2020-01-01T00:00:00Z"',
+    ).replace(
+      '<span data-ol-cd="secs">00</span>',
+      '<span data-ol-cd="secs">00</span><p data-ol-cd-ended style="display:none">¡Terminó!</p>',
+    );
+    mountFullDocument(expiredMarkup);
+    const ended = document.querySelector<HTMLElement>("[data-ol-cd-ended]")!;
+    expect(ended.style.display, "sanity: el runtime lo reveló al expirar").not.toBe("none");
+
+    // El re-ink de Temáticas (use-element-inspect.ts::olReinkScoped) recorre
+    // TODO elemento con texto directo y le fuerza un color — la raíz del
+    // countdown incluida — DESPUÉS de que el runtime ya corrió.
+    ended.style.setProperty("color", "rgb(255, 0, 0)", "important");
+
+    const dirty = "<!doctype html>\n" + document.documentElement.outerHTML;
+    const saved = stripEditorInstrumentation(dirty);
+    const savedEnded = new DOMParser().parseFromString(saved, "text/html").querySelector<HTMLElement>(
+      "[data-ol-cd-ended]",
+    )!;
+
+    expect(
+      savedEnded.style.color,
+      "el color que el re-ink escribió DESPUÉS del runtime se descartó",
+    ).toBe("rgb(255, 0, 0)");
+    expect(
+      savedEnded.style.display,
+      "el mensaje de fin debe seguir oculto por defecto (estado pre-runtime)",
+    ).toBe("none");
+  });
+
+  // Arreglo 2 (revisión final de rama): el <style> que el propio runtime
+  // compuesto crea en vivo (build.ts's styleInject, cuando alguna receta en
+  // juego trae `css` — filter/lightbox aquí) no llevaba marcador, así que el
+  // strip no podía distinguirlo de un <style> del documento y lo dejaba
+  // pasar. Medido por el revisor: 1 → 2 → 3 → 4 tags en 3 ciclos
+  // derive→guardar — crecimiento monótono de project.data.html que además
+  // llega a la página publicada.
+  it("acumulación: N ciclos derive→guardar nunca acumulan el <style> del runtime", () => {
+    let html = REPRO_MARKUP; // trae filter + lightbox (ambas con `css`) + countdown + theme
+    for (let cycle = 1; cycle <= 4; cycle++) {
+      mountFullDocument(html);
+      const dirty = "<!doctype html>\n" + document.documentElement.outerHTML;
+      html = stripEditorInstrumentation(dirty);
+      const styleCount = new DOMParser().parseFromString(html, "text/html").querySelectorAll("style").length;
+      expect(
+        styleCount,
+        `ciclo ${cycle}: ${styleCount} <style> del runtime tras el guardado — se acumula en vez de limpiarse (project.data.html crecería sin límite, y llega a la página publicada)`,
+      ).toBeLessThanOrEqual(1);
+    }
+  });
 });
 
 // Genérico — ninguna receta nombrada a mano. Si una FUTURA 8ª receta empieza a
@@ -438,6 +526,39 @@ describe("stripEditorInstrumentation — CRITICAL: preview mutations must not re
 // lightbox) y el strip no sabe limpiarlo, este test se pone rojo, porque la
 // aserción se DERIVA del registro real + un diff antes/después — nunca de una
 // lista fija de nombres de receta.
+//
+// Arreglo 5 (revisión final de rama): extendido para cubrir TAMBIÉN el stash
+// de TEXTO (stashBehaviorsPristineState's data-ol-cd / countdown), no solo
+// atributos. Antes, un rename de `data-ol-cd` (el selector hijo de countdown,
+// hardcodeado a mano en use-behaviors-preview.ts — ver su propio comentario
+// "have to be kept in sync BY HAND") podía romper el stash de texto sin que
+// NINGÚN test se pusiera rojo: el canary de atributos de abajo no mira
+// textContent en absoluto, y el único test que sí lo hace (más arriba, "el
+// creador mira su propia página...") usa un fixture escrito a mano
+// (REPRO_MARKUP) que no se entera si `countdown.ts` y `use-behaviors-
+// preview.ts` divergen entre sí — solo si AMBOS divergen del fixture a la
+// vez. Este test, en cambio, deriva su fixture de doc.example (igual que el
+// canary de atributos), así que un rename real del selector se refleja aquí
+// automáticamente.
+//
+// Nota de alcance (Arreglo 5 lo pide explícito si no se deriva del todo): NO
+// se declaró un contrato `mutates?: { attrs?: string[]; textOf?: string }`
+// por receta para derivar el stash/strip en sí (la opción "mejor" que el
+// propio Arreglo 5 ofrece) — esta rama existe PORQUE el intento anterior de
+// eliminar una duplicación parecida (derivar BEHAVIOR_NAMES/BEHAVIOR_COUNT,
+// Arreglo 3 de esta misma revisión) introdujo una regresión nueva. Las
+// mutaciones reales no son uniformes: (A) unas se limpian incondicionalmente,
+// sin stash (data-ol-hidden, data-ol-stuck, el modal de lightbox); (B) otras
+// necesitan una danza stash-antes/restaura-después con formas DISTINTAS entre
+// sí (un TOKEN de clase en <html> para theme, una propiedad de estilo en DOS
+// selectores para countdown, textContent en un TERCER selector también para
+// countdown). Unificar eso seguiría necesitando un intérprete genérico no
+// trivial en dos archivos distintos (el stash y el strip) — un rediseño real,
+// no una línea nueva en un contrato, y mejor emprendido en su propia sesión
+// con su propio plan test-first que como un extra dentro de un lote de 6
+// fixes ya grande. El canary extendido de abajo es el mínimo aceptable que sí
+// se implementó, y cubre el caso concreto que preocupa (un rename silencioso
+// del selector de texto de countdown).
 //
 // Hueco de cobertura, a propósito: solo ejercita mutaciones alcanzables (a)
 // ejecutando el runtime una vez al montar (el tick inmediato de countdown) y
@@ -458,7 +579,7 @@ describe("stripEditorInstrumentation — audit canary (protege a la receta #8+)"
     document.head.innerHTML = "";
   });
 
-  it("ninguna receta deja un data-ol-* NUEVO (ausente de su doc.example) vivo tras el strip", () => {
+  it("ninguna receta deja un data-ol-* NUEVO o un TEXTO mutado (ausentes de su doc.example) vivos tras el strip", () => {
     vi.useFakeTimers();
     try {
       const entries = BEHAVIOR_ORDER.map((n) => BEHAVIORS[n]).filter((b): b is Behavior => !!b);
@@ -469,26 +590,51 @@ describe("stripEditorInstrumentation — audit canary (protege a la receta #8+)"
             .flatMap((el) => Array.from(el.attributes).map((a) => a.name))
             .filter((name) => name.startsWith("data-ol-")),
         );
+      // Texto DIRECTO de cada elemento (sus propios nodos de texto, NUNCA los
+      // de sus descendientes) — así el dígito que countdown congela se
+      // detecta en el elemento exacto que lo lleva, sin que un ancestro entero
+      // tenga que compararse por su textContent agregado (que además cambiaría
+      // de longitud cuando lightbox inserta su modal, algo que attrNames ya
+      // maneja pero que textContent agregado confundiría con una fuga real).
+      const ownTexts = (html: string) =>
+        Array.from(new DOMParser().parseFromString(html, "text/html").body.querySelectorAll("*")).map((el) => {
+          let t = "";
+          for (const n of Array.from(el.childNodes)) if (n.nodeType === 3) t += n.nodeValue;
+          return t;
+        });
       const pristineAttrs = attrNames(pristineHtml);
+      const pristineTexts = ownTexts(pristineHtml);
 
       mountFullDocument(pristineHtml);
       for (const b of entries) {
         document.querySelectorAll<HTMLElement>(`[${b.marker}]`).forEach((el) => el.click());
       }
+      // countdown's tick() already mutates synchronously on mount (its first
+      // call happens inline, not on a timer) — but copy's click ALSO starts
+      // its own real `setTimeout(2000)` that swaps the button back to its
+      // original text. That's an existing, separate preview-only quirk this
+      // test isn't about (copy's button text isn't stashed/restored at all
+      // today) — advancing past it lets copy self-heal before we snapshot, so
+      // this canary stays focused on what it's meant to catch instead of
+      // tripping on that unrelated timing window.
+      vi.advanceTimersByTime(2100);
 
       const dirty = "<!doctype html>\n" + document.documentElement.outerHTML;
       const runtimeIntroduced = [...attrNames(dirty)].filter((name) => !pristineAttrs.has(name));
+      const dirtyTexts = ownTexts(dirty);
 
-      // Auto-chequeo: si esta lista sale vacía, el mount/click de arriba dejó
-      // de disparar algo y el resto del test no estaría probando nada — más
-      // vale un rojo aquí que un verde falso.
-      expect(runtimeIntroduced, "el harness no disparó ninguna mutación real — este test no prueba nada").not.toHaveLength(0);
+      // Auto-chequeo: si estas listas salen vacías/sin cambios, el mount/click
+      // de arriba dejó de disparar algo y el resto del test no estaría
+      // probando nada — más vale un rojo aquí que un verde falso.
+      expect(runtimeIntroduced, "el harness no disparó ninguna mutación real de ATRIBUTOS — este test no prueba nada").not.toHaveLength(0);
       expect(runtimeIntroduced).toEqual(expect.arrayContaining(["data-ol-hidden", "data-ol-lb-modal"]));
+      expect(dirtyTexts, "el harness no disparó ninguna mutación real de TEXTO — este test no prueba nada").not.toEqual(pristineTexts);
 
       const saved = stripEditorInstrumentation(dirty);
       // attrNames (DOM real), no saved.includes(attr): filter/lightbox tienen
-      // `css`, y el propio runtime lo inyecta en vivo como <style> SIN
-      // marcador — su texto de selector contiene literalmente
+      // `css`, y el propio runtime lo inyecta en vivo como <style
+      // data-ol-behaviors> (con marcador desde el Arreglo 2 de esta misma
+      // revisión) — su texto de selector contiene literalmente
       // "[data-ol-hidden]" aunque ningún elemento ya lleve el atributo. Un
       // .toContain() de string confundiría ese CSS inerte con una receta sin
       // cubrir de verdad.
@@ -499,6 +645,10 @@ describe("stripEditorInstrumentation — audit canary (protege a la receta #8+)"
           `${attr}: lo introdujo el runtime en vivo y el strip NO lo limpió — receta nueva sin cubrir (ver strip-editor-instrumentation.ts)`,
         ).toBe(false);
       }
+      expect(
+        ownTexts(saved),
+        "un texto que el runtime mutó en vivo sobrevivió al guardado — receta nueva (o renombrada) sin cubrir por el stash/strip de TEXTO (ver stashBehaviorsPristineState en use-behaviors-preview.ts)",
+      ).toEqual(pristineTexts);
     } finally {
       vi.useRealTimers();
     }

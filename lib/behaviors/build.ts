@@ -34,8 +34,18 @@ export function buildBehaviorsScript(
   const hits = present(html, reg, order);
   if (hits.length === 0) return null;
   const css = hits.map((b) => b.css).filter(Boolean).join("");
+  // Marcado con BEHAVIORS_MARKER (mismo atributo que el <script> compuesto,
+  // sobre un tag distinto) para que stripEditorInstrumentation.ts pueda
+  // distinguir y borrar ESTE <style> — creado en VIVO por el propio runtime
+  // cada vez que corre, nunca escrito por el HTML autorado — de cualquier
+  // <style> que sí pertenezca al documento. Sin marcador (Arreglo 2, revisión
+  // final de rama), un save que capturase el DOM del preview a media edición
+  // (mismo principio que use-inline-edit.ts::captureClean) dejaría este
+  // <style> en project.data.html para siempre, y cada ciclo derive→guardar
+  // añadiría uno más encima: crecimiento monótono y silencioso que además
+  // llega a la página publicada.
   const styleInject = css
-    ? `var s=document.createElement('style');s.textContent=${JSON.stringify(css)};document.head.appendChild(s);`
+    ? `var s=document.createElement('style');s.setAttribute(${JSON.stringify(BEHAVIORS_MARKER)},'');s.textContent=${JSON.stringify(css)};document.head.appendChild(s);`
     : "";
   // Cada receta en SU PROPIA IIFE: todas comparten una sola IIFE exterior, así
   // que un `var x` a nivel superior de una receta pisaría silenciosamente el

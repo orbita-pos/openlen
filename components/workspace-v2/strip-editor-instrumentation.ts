@@ -55,15 +55,26 @@ export function stripEditorInstrumentation(html: string): string {
       )
       .forEach((n) => n.remove());
     // The behaviors preview injector (use-behaviors-preview.ts) bakes the same
-    // <script data-ol-behaviors[-head]> that publish does. bakeBehaviors guards
-    // on BEHAVIORS_MARKER's mere presence in the string — so if a save ever
-    // persisted this script, that guard would permanently no-op the preview
-    // injector on this document (stuck on whatever runtime got baked in). Strip
-    // both the body and head script on every save so the guard never sees them.
-    // Same reasoning for the carousel script (Task 14b): its preview injector
-    // (also use-behaviors-preview.ts) guards on CAROUSEL_MARKER the same way.
+    // <script data-ol-behaviors[-head]> that publish does, and — when any
+    // recipe in play declares `css` (filter/lightbox today) — the composed
+    // script ALSO creates a <style data-ol-behaviors> live, in document.head,
+    // every time it runs (build.ts's styleInject). bakeBehaviors guards on
+    // BEHAVIORS_MARKER's mere presence in the string — so if a save ever
+    // persisted the script OR that style tag, that guard would permanently
+    // no-op the preview injector on this document (stuck on whatever
+    // runtime/CSS got baked in). Worse for the style tag specifically
+    // (Arreglo 2, final branch review): a persisted one wouldn't just sit
+    // there — the NEXT derive→save cycle would inject and persist ANOTHER
+    // one on top of it, unbounded growth of project.data.html that also
+    // reaches the published page. Strip the body script, the head script,
+    // AND the style tag on every save so neither the guard nor the growth
+    // can happen. Same reasoning for the carousel script (Task 14b): its
+    // preview injector (also use-behaviors-preview.ts) guards on
+    // CAROUSEL_MARKER the same way.
     doc
-      .querySelectorAll(`script[${BEHAVIORS_MARKER}],script[${BEHAVIORS_MARKER}-head],script[${CAROUSEL_MARKER}]`)
+      .querySelectorAll(
+        `script[${BEHAVIORS_MARKER}],script[${BEHAVIORS_MARKER}-head],style[${BEHAVIORS_MARKER}],script[${CAROUSEL_MARKER}]`,
+      )
       .forEach((n) => n.remove());
     // inline-edit run-wrappers: UNWRAP (replace with children) — never delete,
     // or the run's text would be lost. Mirrors use-inline-edit captureClean.
@@ -190,21 +201,36 @@ export function stripEditorInstrumentation(html: string): string {
       if (!root.getAttribute("class")) root.removeAttribute("class");
     }
     // countdown: digits frozen mid-count, restored to whatever placeholder
-    // the AI actually wrote. The style restore matters just as much as the
-    // text: the runtime only ever SETS display:none on its own root once
-    // expired, it never clears it back — so a countdown that happened to be
-    // expired while the creator was mid-edit would publish permanently
-    // invisible, surviving even a LATER edit that pushes the deadline back
-    // out, if this didn't restore the pre-runtime style too.
+    // the AI actually wrote — touches ONLY textContent, nothing else on the
+    // element, so any other attribute survives untouched.
     doc.querySelectorAll(`[${PREVIEW_CD_TEXT_STASH}]`).forEach((n) => {
       n.textContent = n.getAttribute(PREVIEW_CD_TEXT_STASH) ?? "";
       n.removeAttribute(PREVIEW_CD_TEXT_STASH);
     });
+    // countdown's style restore matters just as much as the text: the
+    // runtime only ever sets display:none on its own root once expired
+    // (never clears it back), so a countdown that happened to be expired
+    // while the creator was mid-edit would publish permanently invisible —
+    // surviving even a LATER edit that pushes the deadline back out — if
+    // this didn't revert that.
+    //
+    // Arreglo 1 (final branch review) — this used to restore the WHOLE
+    // `style` attribute (`n.setAttribute("style", orig)`), which silently
+    // discarded any OTHER style property written on this element AFTER
+    // stashBehaviorsPristineState() snapshotted it: the inspector's own style
+    // editor (padding/background on the countdown box) and Temáticas'
+    // re-ink pass (color on [data-ol-cd-ended]) both write to `style` post-
+    // stash, and both got wiped on save. The stash (use-behaviors-preview.ts)
+    // now carries just the pristine `display` value for exactly this reason
+    // — restore ONLY that one property, via the CSSOM setter, and leave
+    // every other property on the element alone. Same pattern as the
+    // data-openlen-just-inserted cleanup above: clear the property, then
+    // drop the attribute only if nothing else is left in it.
     doc.querySelectorAll(`[${PREVIEW_CD_STYLE_STASH}]`).forEach((n) => {
-      const orig = n.getAttribute(PREVIEW_CD_STYLE_STASH) ?? "";
-      if (orig) n.setAttribute("style", orig);
-      else n.removeAttribute("style");
-      n.removeAttribute(PREVIEW_CD_STYLE_STASH);
+      const el = n as HTMLElement;
+      el.style.display = el.getAttribute(PREVIEW_CD_STYLE_STASH) ?? "";
+      el.removeAttribute(PREVIEW_CD_STYLE_STASH);
+      if (!el.getAttribute("style")) el.removeAttribute("style");
     });
 
     return "<!doctype html>\n" + doc.documentElement.outerHTML;
