@@ -68,6 +68,19 @@ describe("bakeGeneratedContent", () => {
     expect(out.html).toContain("<b>vivo</b>");
   });
 
+  it("un fragmento capturado NO puede contrabandear data-ol-bake-* al resultado (hallazgo publish-safety, 2026-07-14)", async () => {
+    // Vector adversarial de from-html: el script del desconocido escribe
+    // innerHTML que CONTIENE nuestros marcadores temporales — sin el barrido
+    // final llegarían al HTML guardado (el sanitizer conserva data-*).
+    const fake: RunPage = async () => ({
+      containers: { "0": `<div data-ol-bake-c="0">contrabando</div><i data-ol-bake-g="7">x</i>` },
+      geoms: {},
+    });
+    const out = await bakeGeneratedContent(GRID_PAGE, fake);
+    expect(out.html).toContain("contrabando");
+    expect(out.html).not.toContain("data-ol-bake-");
+  });
+
   it("idempotencia: bake(bake(x)) === bake(x)", async () => {
     const fake: RunPage = async () => ({ containers: { "0": "<b>x</b>" }, geoms: { "0": "M1 1" } });
     const once = (await bakeGeneratedContent(GRID_PAGE, fake)).html;

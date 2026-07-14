@@ -78,5 +78,16 @@ export async function bakeGeneratedContent(
     bakedGeoms++;
   }
 
+  // BARRIDO FINAL (hallazgo publish-safety, 2026-07-14): un fragmento
+  // capturado puede CONTENER nuestros marcadores temporales — el script de un
+  // desconocido (from-html) los escribe a propósito, y el sanitizer posterior
+  // conserva data-*. Los loops de arriba iteran un snapshot pre-inserción,
+  // así que lo inyectado por set_content jamás pasó por ellos. Nada con
+  // data-ol-bake-* sale de esta función, punto.
+  for (const el of dom.querySelectorAll("[data-ol-bake-c],[data-ol-bake-g]")) {
+    el.removeAttribute("data-ol-bake-c");
+    el.removeAttribute("data-ol-bake-g");
+  }
+
   return { html: dom.toString(), bakedContainers, bakedGeoms };
 }

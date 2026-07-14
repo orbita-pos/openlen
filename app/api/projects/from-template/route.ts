@@ -59,7 +59,23 @@ export async function POST(req: Request): Promise<Response> {
   // conocidos a conductas. Cacheado por sha256: corre una vez por versión de
   // plantilla, no por clon. Fallback interno = html original (jamás peor).
   // OPENLEN_TRANSFORM=0 lo apaga.
-  const transformedHtml = await transformTemplateCached(entry.id, html);
+  // Presupuesto TOTAL del request (hallazgo publish-safety #3): un template
+  // multi-página con cache frío lanzaba un Chrome POR PÁGINA en serie — un
+  // sitio de 5 páginas podía colgar el clon ~40s. Con el deadline compartido,
+  // el primer clon transforma lo que quepa en 12s y el resto queda statu quo
+  // SIN cachear — cada clon siguiente avanza más hasta converger (los éxitos
+  // sí se cachean).
+  const transformStarted = Date.now();
+  const TRANSFORM_TOTAL_BUDGET_MS = 12_000;
+  const remainingBudget = () =>
+    Math.max(0, TRANSFORM_TOTAL_BUDGET_MS - (Date.now() - transformStarted));
+
+  const transformedHtml =
+    remainingBudget() > 500
+      ? await transformTemplateCached(entry.id, html, {
+          timeoutMs: Math.min(8000, remainingBudget()),
+        })
+      : html;
 
   // Defense in depth: sanitize the curated body (strips any stray
   // scripts/handlers/iframes; clean templates pass through byte-identical) and
@@ -101,8 +117,14 @@ export async function POST(req: Request): Promise<Response> {
   const clonedPages: Record<string, { html: string }> = {};
   for (const pg of entry.pages ?? []) {
     // Mismo transform que la Home, clave propia por página (el hash del
-    // contenido distingue versiones; el sufijo evita colisión de claves).
-    const pgTransformed = await transformTemplateCached(`${entry.id}--${pg.slug}`, pg.html);
+    // contenido distingue versiones; el sufijo evita colisión de claves) y
+    // mismo deadline compartido del request.
+    const pgTransformed =
+      remainingBudget() > 500
+        ? await transformTemplateCached(`${entry.id}--${pg.slug}`, pg.html, {
+            timeoutMs: Math.min(8000, remainingBudget()),
+          })
+        : pg.html;
     const ps = sanitizeForPublish(pgTransformed);
     if (ps.html === null) continue; // defensive: skip a page carrying editor markers
     clonedPages[pg.slug] = {

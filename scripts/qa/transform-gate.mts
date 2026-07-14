@@ -112,6 +112,37 @@ for (const id of FIXTURES) {
   }
 }
 
+// Fixture ADVERSARIAL (hueco que marcó publish-safety-reviewer, 2026-07-14:
+// ninguna aserción automatizada ejercitaba un from-html HOSTIL). Tres
+// vectores en una sola página: contrabando de nuestros marcadores temporales
+// dentro del fragmento capturado, innerHTML gigante (OOM), y contenido
+// legítimo que debe sobrevivir a todo lo anterior. El egreso de red tiene su
+// propio gate con servidor canario: npm run transform:security.
+console.log("\n=== adversarial (from-html hostil) ===");
+const EVIL = [
+  "<!doctype html><html><head></head><body>",
+  '<div id="legit"></div><div id="huge"></div>',
+  "<script>",
+  'document.getElementById("legit").innerHTML =',
+  '  \'<p data-ol-bake-c="0">contrabando</p><b>contenido bueno</b>\';',
+  'document.getElementById("huge").innerHTML = "<i>" + "A".repeat(2000000) + "</i>";',
+  "</script>",
+  "</body></html>",
+].join("\n");
+
+const evil = await transformIngestedHtml(EVIL, { timeoutMs: 15_000, source: "gate:adversarial" });
+// Las aserciones van contra lo que DE VERDAD se guarda (post-sanitize): en el
+// pre-sanitize, el <script> del atacante todavía contiene sus propias
+// cadenas ("data-ol-bake-c", "contenido bueno") como TEXTO — un .includes()
+// ahí se engaña solo en las dos direcciones (falso positivo de fuga, falso
+// negativo de contenido). Esto lo enseñó la primera corrida de este bloque.
+const evilShipped = sanitizeForPublish(evil.html).html ?? "";
+check("adversarial", "sin fallback (la página hostil no tumba el transform)", evil.report.fallback === undefined, evil.report.fallback);
+check("adversarial", "sanitize acepta y mata todo script", evilShipped.length > 0 && !/<script(?![^>]*cdn\.tailwindcss)/i.test(evilShipped));
+check("adversarial", "CERO data-ol-bake-* en lo guardado (contrabando barrido)", !evilShipped.includes("data-ol-bake-"));
+check("adversarial", "el contenido legítimo sobrevive al secuestro de slot", evilShipped.includes("contenido bueno"));
+check("adversarial", "el innerHTML gigante NO se hornea (tope de captura)", !evilShipped.includes("A".repeat(1000)));
+
 await browser.close();
 
 console.log(failures === 0 ? "\nGATE PASSED" : `\nGATE FAILED — ${failures} aserciones rojas`);

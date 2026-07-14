@@ -34,7 +34,11 @@ export async function putCachedTransform(
 ): Promise<void> {
   try {
     const file = keyFile(templateId, contentHash);
-    await mkdir(cacheDir(), { recursive: true });
+    // 0700: el default vive bajo tmpdir compartido — que nadie más que el
+    // app-user pueda pre-plantar archivos (defensa en profundidad; el
+    // resultado igual pasa por sanitizeForPublish en cada clon). En Windows
+    // el mode se ignora — inofensivo.
+    await mkdir(cacheDir(), { recursive: true, mode: 0o700 });
     // Escritura atómica: tmp+rename — un clon concurrente jamás lee un half-write.
     const tmp = `${file}.${process.pid}.${Date.now()}.tmp`;
     await writeFile(tmp, html, "utf8");
