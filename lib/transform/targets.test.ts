@@ -18,6 +18,14 @@ describe("findBakeTargets — contenedores", () => {
     expect(t.containers).toBe(1);
     expect(t.taggedHtml).toMatch(/<div id="grid" data-ol-bake-c="0">/);
   });
+  it("sink DIRECTO encadenado (sin variable): document.getElementById('x').innerHTML=", () => {
+    // La sonda original solo veía la forma con binding (var g = ...; g.innerHTML=)
+    // — el test de la trampa de bake.test.ts cazó este hueco (2026-07-14).
+    const html = doc(
+      `<div id="grid"></div><script>document.getElementById("grid").innerHTML="x";</script>`,
+    );
+    expect(findBakeTargets(html).containers).toBe(1);
+  });
   it("querySelector('#id') también resuelve como binding", () => {
     const html = doc(
       `<section id="team"></section><script>var s=document.querySelector("#team");s.appendChild(document.createElement("p"));</script>`,

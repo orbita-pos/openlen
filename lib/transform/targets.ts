@@ -29,6 +29,11 @@ const CONTENT_GEN_RE =
   /([A-Za-z_$][\w$.]*)\s*\.\s*(?:innerHTML|outerHTML)\s*=(?!=)|([A-Za-z_$][\w$.]*)\s*\.\s*insertAdjacentHTML\s*\(|([A-Za-z_$][\w$.]*)\s*\.\s*(?:appendChild|append|prepend|replaceChildren|insertBefore)\s*\(/g;
 const BINDING_RE =
   /([A-Za-z_$][\w$]*)\s*=\s*document\.(?:getElementById\(\s*['"]([^'"]+)['"]\s*\)|querySelector\(\s*['"]#([^'"]+)['"]\s*\))/g;
+// Sink DIRECTO encadenado, sin variable intermedia — invisible para el par
+// binding+sink de arriba (hueco cazado por el test de la trampa de bake,
+// 2026-07-14): document.getElementById("x").innerHTML = …
+const DIRECT_SINK_RE =
+  /document\.(?:getElementById\(\s*['"]([^'"]+)['"]\s*\)|querySelector\(\s*['"]#([^'"]+)['"]\s*\))\s*\.\s*(?:innerHTML|outerHTML)\s*=(?!=)|document\.(?:getElementById\(\s*['"]([^'"]+)['"]\s*\)|querySelector\(\s*['"]#([^'"]+)['"]\s*\))\s*\.\s*(?:insertAdjacentHTML|appendChild|append|prepend|replaceChildren|insertBefore)\s*\(/g;
 const INLINE_SCRIPT_RE = /<script\b(?![^>]*\ssrc=)[^>]*>([\s\S]*?)<\/script>/gi;
 
 export function findBakeTargets(html: string): BakeTargets {
@@ -41,6 +46,10 @@ export function findBakeTargets(html: string): BakeTargets {
     for (const cm of body.matchAll(CONTENT_GEN_RE)) {
       const ident = (cm[1] ?? cm[2] ?? cm[3] ?? "").split(".")[0];
       const id = bindings.get(ident);
+      if (id) filledIds.add(id);
+    }
+    for (const dm of body.matchAll(DIRECT_SINK_RE)) {
+      const id = dm[1] ?? dm[2] ?? dm[3] ?? dm[4];
       if (id) filledIds.add(id);
     }
   }
