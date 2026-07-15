@@ -1,7 +1,13 @@
 import { and, eq } from "drizzle-orm";
 import { auth } from "@/auth";
 import { db, schema } from "@/lib/db";
-import { createItem, getOrCreateDefaultCollection, listItems } from "@/lib/collections/store";
+import {
+  createItem,
+  getOrCreateDefaultCollection,
+  listItems,
+  SheetBackedReadOnlyError,
+  sheetBackedReadOnlyResponse,
+} from "@/lib/collections/store";
 import { itemInputSchema } from "@/lib/collections/item-input";
 
 // GET  /api/projects/[id]/collections/items — owner: full item list (incl. archived).
@@ -53,20 +59,26 @@ export async function POST(
   if (live.length >= MAX_ITEMS) return json({ error: "too_many_items" }, 403);
 
   const v = parsed.data;
-  const item = await createItem(id, collection.id, {
-    title: v.title,
-    subtitle: v.subtitle ?? null,
-    description: v.description ?? null,
-    imageUrl: v.imageUrl ?? null,
-    priceDisplay: v.priceDisplay ?? null,
-    badge: v.badge ?? null,
-    ctaLabel: v.ctaLabel ?? null,
-    ctaUrl: v.ctaUrl ?? null,
-    tags: v.tags,
-    attrs: v.attrs,
-    status: v.status,
-    sortOrder: v.sortOrder ?? live.length,
-  });
+  let item;
+  try {
+    item = await createItem(id, collection.id, {
+      title: v.title,
+      subtitle: v.subtitle ?? null,
+      description: v.description ?? null,
+      imageUrl: v.imageUrl ?? null,
+      priceDisplay: v.priceDisplay ?? null,
+      badge: v.badge ?? null,
+      ctaLabel: v.ctaLabel ?? null,
+      ctaUrl: v.ctaUrl ?? null,
+      tags: v.tags,
+      attrs: v.attrs,
+      status: v.status,
+      sortOrder: v.sortOrder ?? live.length,
+    });
+  } catch (e) {
+    if (e instanceof SheetBackedReadOnlyError) return sheetBackedReadOnlyResponse();
+    throw e;
+  }
   return json({ item }, 201);
 }
 

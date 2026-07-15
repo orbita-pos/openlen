@@ -1,7 +1,13 @@
 import { and, eq } from "drizzle-orm";
 import { auth } from "@/auth";
 import { db, schema } from "@/lib/db";
-import { archiveItem, getItem, updateItem } from "@/lib/collections/store";
+import {
+  archiveItem,
+  getItem,
+  SheetBackedReadOnlyError,
+  sheetBackedReadOnlyResponse,
+  updateItem,
+} from "@/lib/collections/store";
 import { itemUpdateSchema } from "@/lib/collections/item-input";
 
 // PATCH  /api/projects/[id]/collections/items/[itemId] — owner: update.
@@ -34,20 +40,26 @@ export async function PATCH(
   }
   const v = parsed.data;
 
-  const item = await updateItem(id, itemId, {
-    ...(v.title !== undefined ? { title: v.title } : {}),
-    ...(v.subtitle !== undefined ? { subtitle: v.subtitle } : {}),
-    ...(v.description !== undefined ? { description: v.description } : {}),
-    ...(v.imageUrl !== undefined ? { imageUrl: v.imageUrl } : {}),
-    ...(v.priceDisplay !== undefined ? { priceDisplay: v.priceDisplay } : {}),
-    ...(v.badge !== undefined ? { badge: v.badge } : {}),
-    ...(v.ctaLabel !== undefined ? { ctaLabel: v.ctaLabel } : {}),
-    ...(v.ctaUrl !== undefined ? { ctaUrl: v.ctaUrl } : {}),
-    ...(v.tags !== undefined ? { tags: v.tags } : {}),
-    ...(v.attrs !== undefined ? { attrs: v.attrs } : {}),
-    ...(v.status !== undefined ? { status: v.status } : {}),
-    ...(v.sortOrder !== undefined ? { sortOrder: v.sortOrder } : {}),
-  });
+  let item;
+  try {
+    item = await updateItem(id, itemId, {
+      ...(v.title !== undefined ? { title: v.title } : {}),
+      ...(v.subtitle !== undefined ? { subtitle: v.subtitle } : {}),
+      ...(v.description !== undefined ? { description: v.description } : {}),
+      ...(v.imageUrl !== undefined ? { imageUrl: v.imageUrl } : {}),
+      ...(v.priceDisplay !== undefined ? { priceDisplay: v.priceDisplay } : {}),
+      ...(v.badge !== undefined ? { badge: v.badge } : {}),
+      ...(v.ctaLabel !== undefined ? { ctaLabel: v.ctaLabel } : {}),
+      ...(v.ctaUrl !== undefined ? { ctaUrl: v.ctaUrl } : {}),
+      ...(v.tags !== undefined ? { tags: v.tags } : {}),
+      ...(v.attrs !== undefined ? { attrs: v.attrs } : {}),
+      ...(v.status !== undefined ? { status: v.status } : {}),
+      ...(v.sortOrder !== undefined ? { sortOrder: v.sortOrder } : {}),
+    });
+  } catch (e) {
+    if (e instanceof SheetBackedReadOnlyError) return sheetBackedReadOnlyResponse();
+    throw e;
+  }
   if (!item) return json({ error: "not_found" }, 404);
   return json({ item }, 200);
 }
@@ -63,7 +75,12 @@ export async function DELETE(
 
   const found = await getItem(id, itemId);
   if (!found) return json({ error: "not_found" }, 404);
-  await archiveItem(id, itemId);
+  try {
+    await archiveItem(id, itemId);
+  } catch (e) {
+    if (e instanceof SheetBackedReadOnlyError) return sheetBackedReadOnlyResponse();
+    throw e;
+  }
   return json({ ok: true }, 200);
 }
 

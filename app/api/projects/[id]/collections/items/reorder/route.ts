@@ -2,7 +2,12 @@ import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 import { auth } from "@/auth";
 import { db, schema } from "@/lib/db";
-import { getDefaultCollection, reorderItems } from "@/lib/collections/store";
+import {
+  getDefaultCollection,
+  reorderItems,
+  SheetBackedReadOnlyError,
+  sheetBackedReadOnlyResponse,
+} from "@/lib/collections/store";
 
 // PATCH /api/projects/[id]/collections/items/reorder — owner: apply drag order.
 // Body: { order: string[] } — item ids in their new top-to-bottom order.
@@ -37,7 +42,12 @@ export async function PATCH(
 
   const collection = await getDefaultCollection(id);
   if (!collection) return json({ error: "not_found" }, 404);
-  await reorderItems(id, collection.id, parsed.data.order);
+  try {
+    await reorderItems(id, collection.id, parsed.data.order);
+  } catch (e) {
+    if (e instanceof SheetBackedReadOnlyError) return sheetBackedReadOnlyResponse();
+    throw e;
+  }
   return json({ ok: true }, 200);
 }
 

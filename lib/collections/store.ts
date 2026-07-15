@@ -77,6 +77,17 @@ export class SheetBackedReadOnlyError extends Error {
   }
 }
 
+/** Standard 409 for a manual mutation blocked by the read-only Sheet guard.
+ *  Shared by the HTTP routes that call createItem/updateItem/archiveItem/
+ *  reorderItems (3 call sites) so the response shape lives in one place —
+ *  each route still does its own `instanceof SheetBackedReadOnlyError` catch. */
+export function sheetBackedReadOnlyResponse(): Response {
+  return new Response(JSON.stringify({ error: "sheet_backed_read_only" }), {
+    status: 409,
+    headers: { "content-type": "application/json" },
+  });
+}
+
 function rowToCollection(r: typeof schema.collections.$inferSelect): CollectionRow {
   return r;
 }
