@@ -4,8 +4,7 @@ import { db, schema } from "@/lib/db";
 import {
   archiveItem,
   getItem,
-  SheetBackedReadOnlyError,
-  sheetBackedReadOnlyResponse,
+  guardSheetBacked,
   updateItem,
 } from "@/lib/collections/store";
 import { itemUpdateSchema } from "@/lib/collections/item-input";
@@ -40,9 +39,8 @@ export async function PATCH(
   }
   const v = parsed.data;
 
-  let item;
-  try {
-    item = await updateItem(id, itemId, {
+  const item = await guardSheetBacked(() =>
+    updateItem(id, itemId, {
       ...(v.title !== undefined ? { title: v.title } : {}),
       ...(v.subtitle !== undefined ? { subtitle: v.subtitle } : {}),
       ...(v.description !== undefined ? { description: v.description } : {}),
@@ -55,11 +53,9 @@ export async function PATCH(
       ...(v.attrs !== undefined ? { attrs: v.attrs } : {}),
       ...(v.status !== undefined ? { status: v.status } : {}),
       ...(v.sortOrder !== undefined ? { sortOrder: v.sortOrder } : {}),
-    });
-  } catch (e) {
-    if (e instanceof SheetBackedReadOnlyError) return sheetBackedReadOnlyResponse();
-    throw e;
-  }
+    }),
+  );
+  if (item instanceof Response) return item;
   if (!item) return json({ error: "not_found" }, 404);
   return json({ item }, 200);
 }
@@ -75,12 +71,8 @@ export async function DELETE(
 
   const found = await getItem(id, itemId);
   if (!found) return json({ error: "not_found" }, 404);
-  try {
-    await archiveItem(id, itemId);
-  } catch (e) {
-    if (e instanceof SheetBackedReadOnlyError) return sheetBackedReadOnlyResponse();
-    throw e;
-  }
+  const blocked = await guardSheetBacked(() => archiveItem(id, itemId));
+  if (blocked instanceof Response) return blocked;
   return json({ ok: true }, 200);
 }
 

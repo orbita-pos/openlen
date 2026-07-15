@@ -143,6 +143,10 @@ export interface AgentDeps {
     collectionId: string,
     rows: Record<string, string>[],
   ): Promise<{ upserted: number; archived: number }>;
+  /** Rollback del candado si el sync inicial falla tras fijar la fuente —
+   *  la colección vuelve a ser editable (source null). Solo se usa en ese
+   *  camino de error. */
+  clearCollectionSource(projectId: string): Promise<void>;
 }
 
 // public/openlen-images/manifest.json is a build-committed static file (see
@@ -279,6 +283,9 @@ export function realDeps(): AgentDeps {
     },
     async syncCollection(projectId, collectionId, rows) {
       return syncCollectionFromSheet(projectId, collectionId, rows);
+    },
+    async clearCollectionSource(projectId) {
+      await setCollectionSource(projectId, null);
     },
   };
 }
@@ -1485,7 +1492,22 @@ async function toolConectarDatosVivos(
     }
 
     const collectionId = await deps.setCollectionSheetSource(session.projectId, sheetUrl);
-    const result = await deps.syncCollection(session.projectId, collectionId, rows);
+    let result: { upserted: number; archived: number };
+    try {
+      result = await deps.syncCollection(session.projectId, collectionId, rows);
+    } catch (err) {
+      // Rollback del candado (Minor de la revisión Task 17): si el sync inicial
+      // truena DESPUÉS de fijar la fuente, la colección quedaría solo-lectura
+      // y vacía — bloqueada sin contenido. Soltamos la fuente para que el
+      // dueño conserve su colección editable y pueda reintentar.
+      await deps.clearCollectionSource(session.projectId).catch(() => {});
+      return {
+        response: {
+          ok: false,
+          error: `el Sheet se leyó pero la sincronización falló (${String((err as Error)?.message ?? err).slice(0, 100)}); tu lista quedó como estaba — intenta de nuevo`,
+        },
+      };
+    }
     const archivadoNota = result.archived > 0 ? ` (${result.archived} archivado(s), ya no están en el Sheet)` : "";
     return {
       response: {

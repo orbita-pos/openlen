@@ -10,16 +10,38 @@
 // stand-in.
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-const { scheduleNotification } = vi.hoisted(() => ({
+const mocks = vi.hoisted(() => ({
   scheduleNotification: vi.fn(async () => {}),
+  publishProject: vi.fn(async () => ({})),
+  collectLiveTargets: vi.fn(async () => []),
+  fetchSheet: vi.fn(async () => ({ values: new Map(), rows: [{ nombre: "X" }] })),
+  putCachedSheet: vi.fn(async () => {}),
+  syncCollectionFromSheet: vi.fn(async () => ({ upserted: 1, archived: 0 })),
 }));
+const { scheduleNotification } = mocks;
 
 vi.mock("@/lib/projects", () => ({
-  publishProject: vi.fn(async () => ({})),
+  publishProject: mocks.publishProject,
 }));
 
 vi.mock("@/lib/notifications/dispatch", () => ({
-  scheduleNotification,
+  scheduleNotification: mocks.scheduleNotification,
+}));
+
+vi.mock("./collect-targets", () => ({
+  collectLiveTargets: mocks.collectLiveTargets,
+}));
+
+vi.mock("./sheet-source", () => ({
+  fetchSheet: mocks.fetchSheet,
+}));
+
+vi.mock("./cache", () => ({
+  putCachedSheet: mocks.putCachedSheet,
+}));
+
+vi.mock("@/lib/collections/sheet-sync", () => ({
+  syncCollectionFromSheet: mocks.syncCollectionFromSheet,
 }));
 
 import { liveRepublishDeps } from "./deps";
@@ -54,5 +76,48 @@ describe("liveRepublishDeps().notifyBroken", () => {
       missingCount: 0,
     });
     expect(dedupeKey).toBe("live-broken:p1:https://docs.google.com/x");
+  });
+});
+
+// Minor de la revisión Task 12 (cerrado 2026-07-15): las otras 5 conexiones
+// del objeto también quedan verificadas directamente — cada una es un
+// pass-through, pero un typo en el nombre importado o un arg olvidado
+// (p.ej. skipFlightCheck) pasaría tsc y solo se notaría en prod.
+describe("liveRepublishDeps() — el resto del cableado", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("listTargets es collectLiveTargets", async () => {
+    await liveRepublishDeps().listTargets();
+    expect(mocks.collectLiveTargets).toHaveBeenCalledTimes(1);
+  });
+
+  it("fetchSheet pasa la URL y devuelve el SheetData del módulo real", async () => {
+    const out = await liveRepublishDeps().fetchSheet("https://docs.google.com/y");
+    expect(mocks.fetchSheet).toHaveBeenCalledWith("https://docs.google.com/y");
+    expect(out.rows).toEqual([{ nombre: "X" }]);
+  });
+
+  it("syncCollection reenvía (projectId, collectionId, rows) en orden", async () => {
+    const rows = [{ nombre: "Café" }];
+    await liveRepublishDeps().syncCollection("p1", "c1", rows);
+    expect(mocks.syncCollectionFromSheet).toHaveBeenCalledWith("p1", "c1", rows);
+  });
+
+  it("warmCache reenvía (url, data) a putCachedSheet", async () => {
+    const data = { values: new Map([["k", "v"]]), rows: [] };
+    await liveRepublishDeps().warmCache!("https://docs.google.com/z", data);
+    expect(mocks.putCachedSheet).toHaveBeenCalledWith("https://docs.google.com/z", data);
+  });
+
+  it("republish publica con skipFlightCheck:true y el trío exacto del target", async () => {
+    await liveRepublishDeps().republish(target);
+    expect(mocks.publishProject).toHaveBeenCalledWith({
+      projectId: "p1",
+      userId: "u1",
+      subdomain: "s1",
+      skipFlightCheck: true,
+    });
   });
 });

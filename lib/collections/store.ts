@@ -77,15 +77,25 @@ export class SheetBackedReadOnlyError extends Error {
   }
 }
 
-/** Standard 409 for a manual mutation blocked by the read-only Sheet guard.
- *  Shared by the HTTP routes that call createItem/updateItem/archiveItem/
- *  reorderItems (3 call sites) so the response shape lives in one place —
- *  each route still does its own `instanceof SheetBackedReadOnlyError` catch. */
+/** Standard 409 for a manual mutation blocked by the read-only Sheet guard. */
 export function sheetBackedReadOnlyResponse(): Response {
   return new Response(JSON.stringify({ error: "sheet_backed_read_only" }), {
     status: 409,
     headers: { "content-type": "application/json" },
   });
+}
+
+/** Corre una mutación de items atrapando SOLO el candado de solo-lectura →
+ *  409; cualquier otro error se propaga intacto (mismo 500 que siempre). Las
+ *  4 rutas de items comparten este envoltorio en vez de copiar el try/catch
+ *  (Minor de la revisión Task 15, cerrado 2026-07-15). */
+export async function guardSheetBacked<T>(fn: () => Promise<T>): Promise<T | Response> {
+  try {
+    return await fn();
+  } catch (e) {
+    if (e instanceof SheetBackedReadOnlyError) return sheetBackedReadOnlyResponse();
+    throw e;
+  }
 }
 
 function rowToCollection(r: typeof schema.collections.$inferSelect): CollectionRow {

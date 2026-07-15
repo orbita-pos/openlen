@@ -7,8 +7,7 @@ import {
   getOrCreateDefaultCollection,
   isSheetBacked,
   listItems,
-  SheetBackedReadOnlyError,
-  sheetBackedReadOnlyResponse,
+  guardSheetBacked,
 } from "@/lib/collections/store";
 import { itemInputSchema } from "@/lib/collections/item-input";
 
@@ -68,9 +67,8 @@ export async function POST(
   if (live.length >= MAX_ITEMS) return json({ error: "too_many_items" }, 403);
 
   const v = parsed.data;
-  let item;
-  try {
-    item = await createItem(id, collection.id, {
+  const item = await guardSheetBacked(() =>
+    createItem(id, collection.id, {
       title: v.title,
       subtitle: v.subtitle ?? null,
       description: v.description ?? null,
@@ -83,11 +81,9 @@ export async function POST(
       attrs: v.attrs,
       status: v.status,
       sortOrder: v.sortOrder ?? live.length,
-    });
-  } catch (e) {
-    if (e instanceof SheetBackedReadOnlyError) return sheetBackedReadOnlyResponse();
-    throw e;
-  }
+    }),
+  );
+  if (item instanceof Response) return item;
   return json({ item }, 201);
 }
 

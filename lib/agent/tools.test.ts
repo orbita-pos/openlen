@@ -137,6 +137,9 @@ function makeDeps(
     async syncCollection() {
       throw new Error("syncCollection not stubbed in this test");
     },
+    async clearCollectionSource() {
+      throw new Error("clearCollectionSource not stubbed in this test");
+    },
   };
   return { deps, store };
 }

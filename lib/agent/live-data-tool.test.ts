@@ -36,6 +36,7 @@ function makeDeps(
     sheetRows: Record<string, string>[];
     syncResult: { upserted: number; archived: number };
     collectionId: string;
+    syncThrows: Error;
   }>,
 ) {
   const store = {
@@ -48,6 +49,7 @@ function makeDeps(
       collectionId: string;
       rows: Record<string, string>[];
     }[],
+    clearCollectionSourceCalls: [] as string[],
   };
   const sheetRows =
     overrides?.sheetRows ??
@@ -103,7 +105,11 @@ function makeDeps(
     },
     async syncCollection(projectId, collectionIdArg, rows) {
       store.syncCollectionCalls.push({ projectId, collectionId: collectionIdArg, rows });
+      if (overrides?.syncThrows) throw overrides.syncThrows;
       return syncResult;
+    },
+    async clearCollectionSource(projectId) {
+      store.clearCollectionSourceCalls.push(projectId);
     },
   };
   return { deps, store };
@@ -246,6 +252,42 @@ describe("conectar_datos_vivos", () => {
       if (prev === undefined) delete process.env.OPENLEN_LIVE_DATA;
       else process.env.OPENLEN_LIVE_DATA = prev;
     }
+  });
+
+  // Minor de la revisión Task 17 (cerrado 2026-07-15): el gate comparte código
+  // entre intents, pero este test lo PINA para "valores" — una regresión que
+  // moviera el chequeo adentro de la rama "lista" pasaría el test de arriba.
+  it("kill-switch OFF also blocks intent=valores (no settings write)", async () => {
+    const prev = process.env.OPENLEN_LIVE_DATA;
+    process.env.OPENLEN_LIVE_DATA = "0";
+    try {
+      const { deps, store } = makeDeps();
+      const out = await runAgentTool(makeSession(), deps, "conectar_datos_vivos", {
+        sheet_url: GOOD_SHEET_URL,
+        intent: "valores",
+      });
+      assert.equal(out.response.ok, false);
+      assert.equal(store.fetchSheetRowsCalls.length, 0);
+      assert.equal(store.saved.length, 0);
+    } finally {
+      if (prev === undefined) delete process.env.OPENLEN_LIVE_DATA;
+      else process.env.OPENLEN_LIVE_DATA = prev;
+    }
+  });
+
+  // Minor de la revisión Task 17 (cerrado 2026-07-15): sync que truena tras
+  // fijar la fuente NO deja la colección bloqueada+vacía — el candado se
+  // revierte y el dueño puede reintentar.
+  it("sync failure after locking rolls the source back (no read-only+empty trap)", async () => {
+    const { deps, store } = makeDeps({ syncThrows: new Error("neon hiccup") });
+    const out = await runAgentTool(makeSession(), deps, "conectar_datos_vivos", {
+      sheet_url: GOOD_SHEET_URL,
+      intent: "lista",
+    });
+    assert.equal(out.response.ok, false);
+    assert.match(String(out.response.error), /quedó como estaba|intenta de nuevo/);
+    assert.equal(store.setCollectionSheetSourceCalls.length, 1);
+    assert.deepEqual(store.clearCollectionSourceCalls, ["p1"]);
   });
 
   it("rejects an unknown intent without touching any dep", async () => {

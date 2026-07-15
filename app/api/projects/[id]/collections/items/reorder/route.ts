@@ -5,8 +5,7 @@ import { db, schema } from "@/lib/db";
 import {
   getDefaultCollection,
   reorderItems,
-  SheetBackedReadOnlyError,
-  sheetBackedReadOnlyResponse,
+  guardSheetBacked,
 } from "@/lib/collections/store";
 
 // PATCH /api/projects/[id]/collections/items/reorder — owner: apply drag order.
@@ -42,12 +41,8 @@ export async function PATCH(
 
   const collection = await getDefaultCollection(id);
   if (!collection) return json({ error: "not_found" }, 404);
-  try {
-    await reorderItems(id, collection.id, parsed.data.order);
-  } catch (e) {
-    if (e instanceof SheetBackedReadOnlyError) return sheetBackedReadOnlyResponse();
-    throw e;
-  }
+  const blocked = await guardSheetBacked(() => reorderItems(id, collection.id, parsed.data.order));
+  if (blocked instanceof Response) return blocked;
   return json({ ok: true }, 200);
 }
 

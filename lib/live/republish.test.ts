@@ -168,6 +168,10 @@ describe("runLiveRepublish", () => {
     });
     await runLiveRepublish(d);
     expect(d.fetchSheet).toHaveBeenCalledTimes(1);
+    // El fetch compartido no debe COSTAR funcionalidad: la colección se
+    // sincroniza igual y el proyecto se republica.
+    expect(d.syncCollection).toHaveBeenCalledWith("p1", "c1", expect.any(Array));
+    expect(d.republish).toHaveBeenCalledTimes(1);
   });
 
   it("falta notifyBroken en deps → el probe roto solo loguea, sigue republicando", async () => {
