@@ -54,6 +54,15 @@ describe("POST /api/internal/live-republish", () => {
     expect(liveRepublishDeps).not.toHaveBeenCalled();
   });
 
+  // Secreto del MISMO largo pero distinto contenido: prueba que timingSafeEqual
+  // sí rechaza (no solo el corto-circuito de longitud). Sin esto, una regresión
+  // que quitara timingSafeEqual y dejara solo el chequeo de largo pasaría verde.
+  it("401 con secreto del mismo largo pero equivocado", async () => {
+    process.env.OPENLEN_INTERNAL_SECRET = "s3cr3t";
+    const res = await post({ "x-internal-secret": "s3cr4t" }); // 6 chars, !=
+    expect(res.status).toBe(401);
+  });
+
   it("503 cuando el kill-switch de datos vivos está apagado", async () => {
     process.env.OPENLEN_INTERNAL_SECRET = "s3cr3t";
     process.env.OPENLEN_LIVE_DATA = "0";
