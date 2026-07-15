@@ -7,14 +7,19 @@ import "server-only";
 // un aviso de ESTE sheet siga pendiente, re-agendar es un no-op — no se
 // spamea cada hora.
 //
-// NB (follow-up, deliberado): el EVENTO `live_sheet_broken` y su render en los
-// canales (webpush/email) NO se cablean aquí — extender la unión de
-// NotificationEvent toca lib/notifications/channels/*, que sirve al chat VIVO
-// en producción, y no se rusha. Esta función construye el evento + la dedupe
-// key correctos y los entrega al `schedule` inyectado; el render del canal es
-// una tarea aparte en el módulo de notificaciones. El `schedule` real
-// (scheduleNotification) ya persiste el evento; hasta que el canal lo sepa
-// renderizar, se registra pero no se entrega — nunca peor que hoy.
+// ⚠️ NO CABLEADA A scheduleNotification TODAVÍA (hallazgo de la revisión
+// final, 2026-07-14). Este es el UNIT preparado (evento + dedupeKey +
+// never-throw), TESTEADO, para cuando el canal aprenda a renderizar el evento
+// `live_sheet_broken`. Pero NO debe enchufarse a scheduleNotification tal
+// cual: la unión NotificationEvent solo conoce `chat_message`, y los canales
+// (lib/notifications/channels/webpush.ts, email.ts) leen event.senderName/
+// preview/conversationId SIN ramificar por type — un evento live_sheet_broken
+// produciría un push vacío ("/inbox?conv=undefined") y un TypeError en el
+// email (.slice sobre undefined) → 2h de reintentos por cada Sheet roto. El
+// follow-up (b) debe: (1) hacer NotificationEvent una unión discriminada, (2)
+// ramificar por type en runJob + ambos canales, (3) recién ahí cablear el
+// `schedule`. Mientras tanto, el cron registra los Sheets rotos por
+// console.warn (lib/live/republish.ts) — señal en logs, sin entrega al dueño.
 
 /** Evento del aviso — forma que el canal renderizará cuando se extienda la
  *  unión de NotificationEvent (follow-up). Se mantiene aquí para no acoplar

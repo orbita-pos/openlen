@@ -69,6 +69,13 @@ export interface SheetSyncResult {
  *  sheet. Rows with no title-mapped column are skipped entirely — they
  *  neither create/update an item nor count toward "still present" for the
  *  archive pass. */
+// Mismo tope que el path manual (app/api/.../collections/items MAX_ITEMS): un
+// Sheet con miles de filas no debe crear miles de items (grid gigante + sync
+// lento sin transacción en Neon HTTP; hallazgo de la revisión final,
+// 2026-07-14). Se procesan las primeras MAX_SYNC_ITEMS filas; el resto se
+// ignora — nunca peor que hoy.
+const MAX_SYNC_ITEMS = 60;
+
 export async function syncCollectionFromSheet(
   projectId: string,
   collectionId: string,
@@ -80,7 +87,7 @@ export async function syncCollectionFromSheet(
   const seenTitles = new Set<string>();
   let upserted = 0;
 
-  for (const row of rows) {
+  for (const row of rows.slice(0, MAX_SYNC_ITEMS)) {
     const mapped = mapRow(row);
     if (!mapped.title) continue;
 

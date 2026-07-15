@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { describe, it, expect, beforeAll, beforeEach } from "vitest";
+import { describe, it, expect, beforeAll, beforeEach, afterEach, vi } from "vitest";
 import { eq } from "drizzle-orm";
 import { db, schema } from "../db";
 import {
@@ -175,4 +175,33 @@ describe("read-only guard on a sheet-backed collection", () => {
     const items = await listItems(PID, collectionId);
     expect(items.some((i) => i.title === "Synced Item")).toBe(true);
   });
+});
+
+describe("kill-switch reverts the read-only lock (OPENLEN_LIVE_DATA=0)", () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  // Sin la reversión, apagar la feature dejaría colecciones eternamente
+  // solo-lectura (el motor no corre pero la guarda seguiría rechazando).
+  it("isSheetBacked returns false and a manual edit is allowed again", async () => {
+    await setCollectionSource(PID, { sheet: FAKE_SHEET });
+    expect(await isSheetBacked(PID, collectionId)).toBe(true);
+
+    vi.stubEnv("OPENLEN_LIVE_DATA", "0");
+    expect(await isSheetBacked(PID, collectionId)).toBe(false);
+    await expect(createItem(PID, collectionId, { title: "Manual again" })).resolves.toBeTruthy();
+  });
+});
+
+describe("item-count cap (MAX_SYNC_ITEMS = 60)", () => {
+  // Un Sheet con miles de filas no debe crear miles de items.
+  // 60 inserts secuenciales contra Neon HTTP → timeout holgado (no es lentitud
+  // del código, son 60 round-trips reales de red).
+  it("processes at most 60 rows and ignores the rest", async () => {
+    const rows = Array.from({ length: 70 }, (_, i) => ({ nombre: `Fila ${i}` }));
+    const result = await syncCollectionFromSheet(PID, collectionId, rows);
+    expect(result.upserted).toBe(60);
+    expect(await listItems(PID, collectionId)).toHaveLength(60);
+  }, 60000);
 });

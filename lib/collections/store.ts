@@ -7,6 +7,7 @@
 
 import { and, asc, eq } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
+import { liveDataEnabled } from "@/lib/publish/kill-switches";
 
 export interface CollectionRow {
   id: string;
@@ -184,6 +185,12 @@ export async function setCollectionSource(
  *  `collectionId` is accepted for call-site symmetry with the item functions
  *  and future multi-collection support; unused while v1 stays single-collection. */
 export async function isSheetBacked(projectId: string, _collectionId?: string): Promise<boolean> {
+  // El kill-switch REVIERTE a comportamiento normal (hallazgo de la revisión
+  // final, 2026-07-14): con OPENLEN_LIVE_DATA=0 el cron deja de sincronizar,
+  // así que si además dejáramos la colección de solo-lectura el dueño quedaría
+  // encerrado sin arreglo automático. Apagar datos vivos ⇒ la colección vuelve
+  // a ser editable a mano.
+  if (!liveDataEnabled()) return false;
   const source = await getCollectionSource(projectId);
   return Boolean(source?.sheet);
 }
