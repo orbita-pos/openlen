@@ -23,6 +23,7 @@ describe("buildFunctionDeclarations", () => {
       "recordar_preferencia",
       "publicar",
       "trabajar_en_pagina",
+      "conectar_datos_vivos",
     ]);
   });
   it("crear_pagina exposes slug/titulo/modulo, modulo enum bookings|collections, nothing required", () => {
@@ -135,6 +136,17 @@ describe("buildFunctionDeclarations", () => {
     expect(d.parameters.type).toBe("OBJECT");
     expect(d.parameters.properties.pagina.type).toBe("STRING");
     expect(d.parameters.required).toEqual(["pagina"]);
+  });
+  it("conectar_datos_vivos requires sheet_url + intent, intent enum is lista|valores", () => {
+    const d = buildFunctionDeclarations().find((x) => x.name === "conectar_datos_vivos") as any;
+    expect(d.parameters.type).toBe("OBJECT");
+    expect(d.parameters.properties.sheet_url.type).toBe("STRING");
+    expect(d.parameters.properties.intent.enum).toEqual(["lista", "valores"]);
+    expect(d.parameters.required).toEqual(["sheet_url", "intent"]);
+    // The SSRF allowlist + read-only-Collection consequence must be conveyed
+    // to the model, not just enforced silently.
+    expect(String(d.description)).toContain("docs.google.com");
+    expect(String(d.description).toLowerCase()).toContain("solo lectura");
   });
 });
 
@@ -262,6 +274,15 @@ describe("buildAgentSystemPrompt", () => {
     // The honesty hook on the sanitizer's removal signal.
     expect(p).toContain("aviso");
     expect(p).toContain("JAMÁS afirmes que pusiste algo que fue removido");
+  });
+  it("carries the Task 17 conectar_datos_vivos knowledge: SSRF allowlist, both intents, read-only Collection", () => {
+    const p = buildAgentSystemPrompt();
+    expect(p).toContain("conectar_datos_vivos");
+    expect(p).toContain("docs.google.com");
+    expect(p).toContain("data-ol-live");
+    expect(p.toLowerCase()).toContain("solo lectura");
+    expect(p).toContain('intent="lista"');
+    expect(p).toContain('intent="valores"');
   });
   it("carries the link rule: user URLs verbatim, absolute, never invented, /<slug> for internal pages", () => {
     const p = buildAgentSystemPrompt();

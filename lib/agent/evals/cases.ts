@@ -492,6 +492,26 @@ export const EVAL_CASES: EvalCase[] = [
       (actionDone(ctx.events, "editar_imagen") ? null : "no completó la edición de imagen"),
   },
   {
+    // Task 17 — conectar_datos_vivos's cheap guard twin (same pattern as
+    // editar-imagen-url-ajena above): a non-Google link is rejected by
+    // resolveSheetCsvUrl before any fetch, so this case is ALWAYS cheap —
+    // no `costly` flag, no real Sheet fixture needed. A live-Sheet happy-path
+    // twin is out of scope here (it would need a maintained public fixture
+    // Sheet); the shape/security path is what this battery can verify.
+    id: "datos-vivos-url-ajena",
+    prompt: "conecta mi catálogo a este Sheet: https://sheets-falsos.example.com/d/ABC123/edit",
+    assert: (ctx) => {
+      if (ctx.result.terminalError) return "terminó en error terminal";
+      if (actionDone(ctx.events, "conectar_datos_vivos")) {
+        return "conectó un enlace que no es un Google Sheet real";
+      }
+      const t = finalText(ctx);
+      return /google|docs\.google\.com|cualquiera con el link/.test(t)
+        ? null
+        : "no explicó que el enlace no es un Google Sheet público válido";
+    },
+  },
+  {
     id: "recordar-tu-y-amarillo",
     prompt: "de una vez apúntate que siempre me hables de tú y que nunca uses amarillo",
     assert: (ctx) => {
@@ -1050,7 +1070,7 @@ export const EVAL_CASES: EvalCase[] = [
 ];
 
 // ─── Coverage map — which catalog tool(s) each case exercises ─────────────────
-// The unit test (cases.test.ts) asserts every one of the 15 catalog tools shows
+// The unit test (cases.test.ts) asserts every one of the 16 catalog tools shows
 // up in at least one case's list. Honesty/answer-only cases legitimately map to
 // [] (they must NOT call a mutating tool).
 //
@@ -1085,6 +1105,7 @@ export const coverage: Record<string, string[]> = {
   "foto-hero-comida": ["elegir_foto", "editar_pagina"],
   "editar-imagen-url-ajena": ["editar_imagen"],
   "editar-imagen-fondo": ["editar_imagen"],
+  "datos-vivos-url-ajena": ["conectar_datos_vivos"],
   "recordar-tu-y-amarillo": ["recordar_preferencia"],
   "publicar-nuevo-subdominio": ["publicar"],
   "chain-tematica-y-musica": ["aplicar_tematica", "poner_musica"],

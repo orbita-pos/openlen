@@ -124,6 +124,19 @@ function makeDeps(
       store.briefWrites += 1;
       return true;
     },
+    // Task 17 (conectar_datos_vivos) — unused by this file's tests (see
+    // live-data-tool.test.ts), stubbed only so the AgentDeps shape is
+    // satisfied; a call here means a test is missing coverage, not that
+    // these are meant to do anything real.
+    async fetchSheetRows() {
+      throw new Error("fetchSheetRows not stubbed in this test");
+    },
+    async setCollectionSheetSource() {
+      throw new Error("setCollectionSheetSource not stubbed in this test");
+    },
+    async syncCollection() {
+      throw new Error("syncCollection not stubbed in this test");
+    },
   };
   return { deps, store };
 }

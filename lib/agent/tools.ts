@@ -27,9 +27,12 @@ import {
 import { describeBehaviorIssues, validateBehaviors } from "@/lib/behaviors/validate";
 import { BEHAVIOR_NAMES } from "@/lib/behaviors/doc";
 import { getOrCreateOwnerChatUser } from "@/lib/chat/store";
+import { getOrCreateDefaultCollection, setCollectionSource } from "@/lib/collections/store";
+import { syncCollectionFromSheet } from "@/lib/collections/sheet-sync";
 import { debitCredits } from "@/lib/credits";
 import { detectSlotPath, sanitizeForPublish } from "@/lib/html-engine";
 import { applyOps, tagWithOpIds, type Op, type OpType } from "@/lib/html-ops";
+import { fetchSheet, resolveSheetCsvUrl } from "@/lib/live/sheet-source";
 import { normalizeBornCanonical } from "@/lib/normalize";
 import { setProjectUserBrief, USER_BRIEF_MAX } from "@/lib/projects";
 import { extForMime, getAssetStorage } from "@/lib/projects/assets";
@@ -45,6 +48,7 @@ import {
 import type { ProjectData } from "@/lib/projects/types";
 import { createVersion, type VersionSource } from "@/lib/projects/versions";
 import { ensurePageMeta } from "@/lib/publish/ensure-page-meta";
+import { liveDataEnabled } from "@/lib/publish/kill-switches";
 import { isPublishLocale } from "@/lib/publish/publish-locales";
 import { AGENT_MODULES, MOTION_LOOKS, type AgentModule } from "@/lib/agent/catalog";
 import { searchCuratedPhotos } from "@/lib/agent/photo-search";
@@ -118,6 +122,26 @@ export interface AgentDeps {
    *  write path) — realDeps wires this to setProjectUserBrief. Returns false
    *  when the project isn't the caller's (mirrors that function's contract). */
   setUserBrief(projectId: string, userId: string, value: string): Promise<boolean>;
+  /** conectar_datos_vivos — reads a Google Sheet's rows from its
+   *  ALREADY-RESOLVED export CSV URL (resolveSheetCsvUrl's output). The tool
+   *  calls resolveSheetCsvUrl itself FIRST and only ever passes this dep the
+   *  resolved URL — never the raw user-supplied one — so the SSRF allowlist
+   *  (docs.google.com only) can't be bypassed by an injected fake in tests.
+   *  realDeps wires this to fetchSheet(csvUrl).then(d => d.rows). */
+  fetchSheetRows(csvUrl: string): Promise<Record<string, string>[]>;
+  /** conectar_datos_vivos intent="lista" — get-or-create the project's
+   *  default Collection and point its source at this Sheet, which makes the
+   *  collection read-only from then on (lib/collections/store.ts's
+   *  SheetBackedReadOnlyError). Returns the collection id for the
+   *  syncCollection call that follows. */
+  setCollectionSheetSource(projectId: string, sheetUrl: string): Promise<string>;
+  /** conectar_datos_vivos intent="lista" — initial fill of the collection
+   *  from the fetched rows. realDeps wires this to syncCollectionFromSheet. */
+  syncCollection(
+    projectId: string,
+    collectionId: string,
+    rows: Record<string, string>[],
+  ): Promise<{ upserted: number; archived: number }>;
 }
 
 // public/openlen-images/manifest.json is a build-committed static file (see
@@ -242,6 +266,18 @@ export function realDeps(): AgentDeps {
     },
     async setUserBrief(projectId, userId, value) {
       return setProjectUserBrief(projectId, userId, value);
+    },
+    async fetchSheetRows(csvUrl) {
+      const data = await fetchSheet(csvUrl);
+      return data.rows;
+    },
+    async setCollectionSheetSource(projectId, sheetUrl) {
+      const col = await getOrCreateDefaultCollection(projectId);
+      await setCollectionSource(projectId, { sheet: sheetUrl });
+      return col.id;
+    },
+    async syncCollection(projectId, collectionId, rows) {
+      return syncCollectionFromSheet(projectId, collectionId, rows);
     },
   };
 }
@@ -1348,6 +1384,115 @@ async function toolRecordarPreferencia(
   };
 }
 
+// conectar_datos_vivos — Task 17, the owner-facing volante for "datos vivos":
+// this is the ONLY way a non-technical owner turns the feature on. Everything
+// else (bake, cron, cache, read-only Collection guard) is already built and
+// dormant without this tool.
+//
+// SECURITY (non-negotiable): resolveSheetCsvUrl runs FIRST, before touching
+// any dep. It is the sole SSRF allowlist (docs.google.com only, see
+// lib/live/sheet-source.ts) — a null result means the tool does ZERO fetch
+// and ZERO mutation, always, regardless of intent. deps.fetchSheetRows is
+// only ever called with the ALREADY-RESOLVED csvUrl, never the raw
+// sheet_url the model/user supplied.
+async function toolConectarDatosVivos(
+  session: AgentSession,
+  deps: AgentDeps,
+  args: Record<string, unknown>,
+): Promise<ToolOutcome> {
+  const sheetUrl = typeof args.sheet_url === "string" ? args.sheet_url.trim() : "";
+  const intent = args.intent;
+  if (!sheetUrl) {
+    return { response: { ok: false, error: "sheet_url es requerida" } };
+  }
+  if (intent !== "lista" && intent !== "valores") {
+    return { response: { ok: false, error: 'intent debe ser "lista" o "valores"' } };
+  }
+
+  // SSRF gate FIRST — see the function's header comment. A hostile host
+  // (loopback, metadata, a lookalike subdomain) never produces a csvUrl, so
+  // it can never reach fetchSheetRows below.
+  const csvUrl = resolveSheetCsvUrl(sheetUrl);
+  if (!csvUrl) {
+    return {
+      response: {
+        ok: false,
+        error:
+          'Ese enlace no es un Google Sheet público — compártelo como "cualquiera con el link" y pásame la URL.',
+      },
+    };
+  }
+
+  if (!liveDataEnabled()) {
+    return {
+      response: {
+        ok: false,
+        error: "Datos vivos está apagado en este momento — no puedo conectar un Sheet ahora mismo.",
+      },
+    };
+  }
+
+  let rows: Record<string, string>[];
+  try {
+    rows = await deps.fetchSheetRows(csvUrl);
+  } catch (err) {
+    return { response: { ok: false, error: `no se pudo leer el Sheet: ${String(err)}` } };
+  }
+
+  if (intent === "lista") {
+    const collectionId = await deps.setCollectionSheetSource(session.projectId, sheetUrl);
+    const result = await deps.syncCollection(session.projectId, collectionId, rows);
+    const archivadoNota = result.archived > 0 ? ` (${result.archived} archivado(s), ya no están en el Sheet)` : "";
+    return {
+      response: {
+        ok: true,
+        elementos_sincronizados: result.upserted,
+        archivados: result.archived,
+        nota:
+          `Conecté tu Sheet: ${result.upserted} elemento(s) sincronizado(s)${archivadoNota}; edítalos en tu Sheet y tu página se actualiza sola cada hora.`,
+      },
+      action: { tool: "conectar_datos_vivos", ok: true, summary: `lista: ${result.upserted}` },
+    };
+  }
+
+  // intent === "valores": persist settings.liveData.sheetUrl directly — the
+  // publish baker (applyLiveData) hydrates every data-ol-live marker from it
+  // on the next publish/republish. MVP scope (spec Task 17): this tool does
+  // NOT insert the markers into the HTML itself — that's editar_pagina,
+  // chained by the model in the same turn once it knows the detected keys.
+  const row = await deps.loadProject(session.projectId, session.userId);
+  if (!row) return { response: { ok: false, error: "proyecto no encontrado" } };
+
+  // The "clave" a data-ol-live marker addresses is column A of a 2-column
+  // Sheet (see lib/live/sheet-source.ts's `values` Map + bake-values.ts) —
+  // i.e. the FIRST value of each mapped row, not the header names.
+  const claves = Array.from(
+    new Set(
+      rows
+        .map((r) => Object.values(r)[0])
+        .filter((v): v is string => typeof v === "string" && v.trim().length > 0),
+    ),
+  );
+
+  const nextData: ProjectData = {
+    ...row.data,
+    settings: { ...(row.data.settings ?? {}), liveData: { sheetUrl } },
+  };
+  await deps.saveProjectData(session.projectId, session.userId, nextData);
+
+  return {
+    response: {
+      ok: true,
+      claves_detectadas: claves,
+      nota:
+        claves.length > 0
+          ? `Conecté tu Sheet de valores. Detecté estas claves: ${claves.join(", ")}. Ahora dime en qué parte de la página va cada una y cablea cada una con editar_pagina usando <span data-ol-live="clave">texto de respaldo</span> — la clave debe coincidir EXACTO con la columna A del Sheet.`
+          : 'Conecté tu Sheet, pero no detecté ninguna clave — revisa que la primera columna tenga el nombre de cada dato (p. ej. "precio_taco") y la segunda su valor.',
+    },
+    action: { tool: "conectar_datos_vivos", ok: true, summary: "valores" },
+  };
+}
+
 const PAGINA_HOME_ALIASES = new Set(["", "principal", "home"]);
 
 // F4 Task 3 — trabajar_en_pagina: words-as-selector. This is the ONLY tool
@@ -1448,6 +1593,8 @@ export async function runAgentTool(
         return await toolRecordarPreferencia(session, deps, args);
       case "trabajar_en_pagina":
         return await toolTrabajarEnPagina(session, deps, args);
+      case "conectar_datos_vivos":
+        return await toolConectarDatosVivos(session, deps, args);
       default:
         return { response: { ok: false, error: "herramienta desconocida" } };
     }
