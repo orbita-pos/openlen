@@ -108,6 +108,10 @@ export default defineConfig({
       // Route guard for the one-time Explore seed trigger. Mocks the seed core,
       // so it never loads the native html-engine binding.
       "app/api/admin/explore-seed/route.test.ts",
+      // Route guard for the internal live-republish trigger (Task 12). Mocks
+      // lib/live/deps for the same reason — its import chain reaches the
+      // native html-engine binding via lib/projects.ts.
+      "app/api/internal/live-republish/route.test.ts",
       // NB: lib/projects/site-pages.test.ts is a node:test file (run via
       // `tsx --test`), so include the vitest project tests explicitly.
       "lib/projects/module-settings.test.ts",

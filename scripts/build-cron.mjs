@@ -24,15 +24,16 @@ const targets = [
   { entry: "scripts/bookings-remind.ts", out: ".next/standalone/cron/bookings-remind.mjs" },
   { entry: "scripts/analytics/rollup-daily.ts", out: ".next/standalone/cron/analytics-rollup.mjs" },
   { entry: "scripts/notifications-drain.ts", out: ".next/standalone/cron/notifications-drain.mjs" },
-  // NB (datos vivos): scripts/live-republish.ts NO se bundlea aquí a
+  // NB (datos vivos, Task 12): scripts/live-republish.ts NO se bundlea aquí a
   // propósito — importa publishProject, que arrastra los crates nativos
   // (.node) cuyo `require` relativo esbuild no puede empaquetar en un .mjs
-  // standalone. La entrega en prod (cómo lo dispara systemd) es una decisión
-  // de deploy pendiente: (a) un endpoint interno POST /api/internal que la
-  // app —con natives— ejecute, disparado por un cron ligero; (b) correrlo en
-  // proceso con la app; o (c) un runner que sí tolere tsx. El núcleo
-  // (lib/live/republish.ts) está probado; el script (scripts/live-republish.ts)
-  // corre vía `npm run live:republish` (tsx) para dev/prueba manual.
+  // standalone. La entrega en prod usa la opción (a): systemd
+  // (infra/app/openlen-live-republish.timer) hace curl a
+  // POST /api/internal/live-republish (app/api/internal/live-republish/route.ts),
+  // que corre EN PROCESO con la app — los crates nativos ya están cargados, sin
+  // bundling. El núcleo (lib/live/republish.ts) está probado; el script
+  // (scripts/live-republish.ts) corre vía `npm run live:republish` (tsx) solo
+  // para dev/prueba manual, nunca en prod.
 ];
 
 for (const t of targets) {

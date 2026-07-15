@@ -1,0 +1,35 @@
+[Unit]
+Description=OpenLen — live data republish trigger
+After=network.target openlen-app.service
+Wants=openlen-app.service
+
+[Service]
+Type=oneshot
+User=openlen-deploy
+Group=www-data
+WorkingDirectory=/opt/openlen-app
+
+# SAME secrets file as openlen-app.service (/etc/openlen/openlen.env, 640
+# root:openlen-deploy, populated by install-app.sh) — needs
+# OPENLEN_INTERNAL_SECRET set to the SAME value the app process reads, so this
+# curl's header matches what app/api/internal/live-republish/route.ts expects.
+EnvironmentFile=/etc/openlen/openlen.env
+
+# Hits the running app in-process (localhost:3000, never public) instead of a
+# bundled cron script — that app process already has the native @openlen/*
+# .node crates loaded, which scripts/build-cron.mjs's esbuild bundler cannot
+# package for a standalone .mjs (see the NB there). The route itself is the
+# fail-closed guard: no/blank OPENLEN_INTERNAL_SECRET on either side means the
+# route 401s and this unit's `-f` makes curl (and the systemd run) fail loudly
+# instead of silently.
+ExecStart=/usr/bin/curl -sf -X POST -H "x-internal-secret=${OPENLEN_INTERNAL_SECRET}" http://127.0.0.1:3000/api/internal/live-republish
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=openlen-live-republish
+
+# Only talks to localhost:3000; no filesystem writes outside its logs.
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=read-only

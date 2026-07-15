@@ -1,0 +1,14 @@
+[Unit]
+Description=OpenLen — live data republish timer
+Requires=openlen-live-republish.service
+
+[Timer]
+# Hourly — matches the 55-min cache TTL in lib/live/index.ts (the cache always
+# expires before the next tick, so every run sees a real miss and re-fetches
+# the Sheet). Persistent=true catches up a missed window (e.g. after a reboot).
+OnCalendar=hourly
+Persistent=true
+RandomizedDelaySec=5m
+
+[Install]
+WantedBy=timers.target
