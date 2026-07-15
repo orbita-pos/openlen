@@ -87,7 +87,7 @@ describe("BEHAVIOR_NAMES / BEHAVIOR_COUNT / BEHAVIOR_LABELS excluyen las recetas
       buildBehaviorsDoc: buildDocFresh,
     } = await import("./doc");
 
-    expect(count, "filter (deprecated) sigue contando en BEHAVIOR_COUNT").toBe(6);
+    expect(count, "filter (deprecated) sigue contando en BEHAVIOR_COUNT").toBe(7);
     expect(names.split(", "), "filter (deprecated) sigue en BEHAVIOR_NAMES").not.toContain("filter");
     expect(labels, "filter (deprecated) sigue en BEHAVIOR_LABELS ('filtro')").not.toContain("filtro");
     // Cabecera Y cuerpo de la MISMA sección ahora coinciden: ninguno de los

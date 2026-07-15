@@ -68,9 +68,9 @@ describe("Arreglo 1 — los sitios en prosa DERIVAN de BEHAVIOR_ORDER, no lo cop
         },
         status: "stable",
       };
-      // Spread del registro REAL (7 recetas de verdad) + la 8ª falsa — nunca
-      // un registro inventado desde cero, para que la prueba sea sobre "una
-      // más" y no sobre un catálogo distinto.
+      // Spread del registro REAL (8 recetas de verdad, tabs incluida) + una
+      // FALSA extra — nunca un registro inventado desde cero, para que la
+      // prueba sea sobre "una más" y no sobre un catálogo distinto.
       return {
         BEHAVIORS: { ...real.BEHAVIORS, [FAKE_NAME]: fake },
         BEHAVIOR_ORDER: [...real.BEHAVIOR_ORDER, FAKE_NAME],
@@ -90,7 +90,7 @@ describe("Arreglo 1 — los sitios en prosa DERIVAN de BEHAVIOR_ORDER, no lo cop
     const { DESIGN_GUIDANCE } = await import("../design-guidance");
     const { buildAgentSystemPrompt } = await import("../agent/catalog");
 
-    expect(fakeCount, "el registro mockeado debe tener 8 conductas (7 reales + 1 falsa)").toBe(8);
+    expect(fakeCount, "el registro mockeado debe tener 9 conductas (8 reales + 1 falsa)").toBe(9);
     expect(fakeNames).toContain(FAKE_NAME);
     expect(fakeLabels).toContain("efecto de confeti");
 

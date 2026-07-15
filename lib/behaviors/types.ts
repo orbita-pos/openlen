@@ -45,7 +45,7 @@ export type Degradation =
   | "control-inert";
 
 export type BehaviorName =
-  | "countdown" | "filter" | "lightbox" | "copy" | "autoplay" | "theme" | "sticky";
+  | "countdown" | "filter" | "lightbox" | "copy" | "autoplay" | "theme" | "sticky" | "tabs";
 
 export interface Behavior {
   name: BehaviorName;
