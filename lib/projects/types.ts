@@ -225,6 +225,11 @@ export interface ProjectSettings {
   orders?: OrdersSettings;
   /** 3D scene: gesture-gated WebGL scene with AVIF poster baked at publish. Absent = off. */
   scene3d?: Scene3dSettings;
+  /** Datos vivos: la página se rellena desde un Google Sheet público del dueño
+   *  en cada publicación/republicación programada. `sheetUrl` es la URL normal
+   *  del Sheet (compartido como "cualquiera con el link"); OpenLen lee su
+   *  export CSV público. Absent = sin datos vivos. Ver lib/live/. */
+  liveData?: { sheetUrl: string };
   /** Marketing Kit tab state (register = user-picked giro). */
   marketing?: { register?: string; match?: boolean };
 }

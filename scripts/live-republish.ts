@@ -32,8 +32,7 @@ async function listTargets(): Promise<RepublishTarget[]> {
   for (const row of rows) {
     if (!row.subdomain) continue;
     const data = row.data as ProjectData;
-    const valueSheetUrl =
-      (data.settings as { liveData?: { sheetUrl?: string } } | undefined)?.liveData?.sheetUrl ?? null;
+    const valueSheetUrl = data.settings?.liveData?.sheetUrl ?? null;
 
     const collections: RepublishTarget["collections"] = [];
     const source = await getCollectionSource(row.id);
