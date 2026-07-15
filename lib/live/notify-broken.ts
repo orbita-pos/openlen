@@ -12,17 +12,13 @@ import type { LiveSheetBrokenEvent } from "@/lib/notifications/types";
 // live_sheet_broken) y ramificó ambos canales por event.type — el evento que
 // este módulo agenda ahora usa el tipo canónico de lib/notifications/types.
 //
-// ⚠️ NO CABLEADA A scheduleNotification TODAVÍA. `reason` sigue siendo un
-// input de este módulo (para logging del caller, p.ej. lib/live/republish.ts
-// via console.warn) pero NO viaja en el evento — el tipo canónico solo tiene
-// `missingCount`. Cablear notifyBrokenSheet al cron real es Task 14.
+// Cableado a scheduleNotification vía lib/live/deps.ts (Task 14) — el cron
+// real llama notifyBrokenSheet cuando el fetch de un Sheet falla por completo.
 
 export interface NotifyBrokenInput {
   projectId: string;
   ownerUserId: string;
   sheetUrl: string;
-  /** Detalle legible para logs del caller — no viaja en el evento agendado. */
-  reason: string;
   /** 0 = el sheet dejó de leerse por completo. */
   missingCount: number;
 }

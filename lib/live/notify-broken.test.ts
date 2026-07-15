@@ -5,7 +5,7 @@ describe("notifyBrokenSheet", () => {
   it("dispara UNA notificación con una dedupeKey estable por (proyecto, sheet)", async () => {
     const schedule = vi.fn(async () => {});
     await notifyBrokenSheet(
-      { projectId: "p1", ownerUserId: "u1", sheetUrl: "https://s/1", reason: "timeout", missingCount: 4 },
+      { projectId: "p1", ownerUserId: "u1", sheetUrl: "https://s/1", missingCount: 4 },
       { schedule },
     );
     expect(schedule).toHaveBeenCalledTimes(1);
@@ -28,7 +28,7 @@ describe("notifyBrokenSheet", () => {
     });
     await expect(
       notifyBrokenSheet(
-        { projectId: "p1", ownerUserId: "u1", sheetUrl: "x", reason: "y", missingCount: 0 },
+        { projectId: "p1", ownerUserId: "u1", sheetUrl: "x", missingCount: 0 },
         { schedule },
       ),
     ).resolves.toBeUndefined();
