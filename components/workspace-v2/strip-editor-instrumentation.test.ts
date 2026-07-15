@@ -401,6 +401,32 @@ describe("stripEditorInstrumentation — CRITICAL: preview mutations must not re
     ).toBe("false");
   });
 
+  it("tabs: el creador prueba una pestaña y guarda — ni data-ol-tab-ready/-active persisten (pérdida de contenido) ni aria-selected queda pegado al click", () => {
+    const TABS = `<!doctype html><html><head></head><body>
+      <div data-ol-tabs="inst"><button data-ol-tab="npm" aria-selected="true">npm</button><button data-ol-tab="pnpm" aria-selected="false">pnpm</button></div>
+      <div data-ol-tab-panels="inst"><pre data-ol-tab-panel="npm">npm i</pre><pre data-ol-tab-panel="pnpm">pnpm add</pre></div>
+      </body></html>`;
+    mountFullDocument(TABS);
+    // Sanity: el runtime corrió (init marcó el contenedor + el 1er panel).
+    expect(document.querySelector('[data-ol-tab-panels="inst"]')!.hasAttribute("data-ol-tab-ready")).toBe(true);
+    // El creador prueba la 2ª pestaña.
+    document.querySelector<HTMLElement>('[data-ol-tab="pnpm"]')!.click();
+    expect(document.querySelector('[data-ol-tab-panel="pnpm"]')!.hasAttribute("data-ol-tab-active")).toBe(true);
+
+    const saved = stripEditorInstrumentation("<!doctype html>\n" + document.documentElement.outerHTML);
+    const out = new DOMParser().parseFromString(saved, "text/html");
+    // CRÍTICO: sin esto, la página publicada nacería con ready + active y el
+    // CSS ready-gate ocultaría el resto de paneles sin runtime para cambiar.
+    expect(saved).not.toContain("data-ol-tab-ready");
+    expect(saved).not.toContain("data-ol-tab-active");
+    // Y aria-selected vuelve al estado AUTORADO (npm=true), no al del click.
+    expect(out.querySelector('[data-ol-tab="npm"]')!.getAttribute("aria-selected")).toBe("true");
+    expect(out.querySelector('[data-ol-tab="pnpm"]')!.getAttribute("aria-selected")).toBe("false");
+    // El contenido de ambos paneles sigue entero.
+    expect(out.body.textContent).toContain("npm i");
+    expect(out.body.textContent).toContain("pnpm add");
+  });
+
   it('PRESERVA un <html class="dark"> que el creador escribió a propósito, aunque el runtime lo apague durante la prueba', () => {
     const authoredDark = REPRO_MARKUP.replace("<html><head>", '<html class="dark"><head>');
     mountFullDocument(authoredDark);
