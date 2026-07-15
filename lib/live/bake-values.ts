@@ -31,9 +31,9 @@ export function bakeLiveValues(
   html: string,
   values: Map<string, string>,
 ): { html: string; baked: number } {
-  // Cero marcadores → el string ORIGINAL, byte a byte (mismo razonamiento que
-  // bake.ts: un round-trip parse→toString no es identidad, así que ni
-  // siquiera vale la pena parsear si no hay nada que hornear).
+  // Fast-path: si la cadena ni aparece, ni parseamos (mismo razonamiento que
+  // bake.ts — el round-trip parse→toString NO es identidad: node-html-parser
+  // pierde comentarios y normaliza `/>`).
   if (!html.includes("data-ol-live")) {
     return { html, baked: 0 };
   }
@@ -48,6 +48,13 @@ export function bakeLiveValues(
     el.set_content(escapeHtml(values.get(key) ?? ""));
     baked++;
   }
+
+  // baked === 0 → devuelve el ORIGINAL byte a byte, jamás dom.toString(). El
+  // substring de arriba puede dar falso positivo ("data-ol-live" como texto
+  // incidental, o un [data-ol-live] real cuya clave no está en el Map): en
+  // ambos casos no horneamos nada, así que la página debe salir idéntica —
+  // no degradada por el round-trip del parser.
+  if (baked === 0) return { html, baked: 0 };
 
   return { html: dom.toString(), baked };
 }

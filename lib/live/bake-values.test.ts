@@ -56,6 +56,29 @@ describe("bakeLiveValues", () => {
     expect(out.baked).toBe(2);
   });
 
+  it("falso positivo del substring: 'data-ol-live' solo como TEXTO/comentario incidental → byte-idéntico", () => {
+    // La cadena aparece pero NO como atributo real → cero horneado → la página
+    // sale idéntica, sin degradarse por el round-trip del parser (que borraría
+    // el comentario y normalizaría el <br/>).
+    const html =
+      "<!doctype html><html><body>" +
+      "<!-- usa data-ol-live para valores vivos -->" +
+      "<p>Escribe data-ol-live en tu span.</p><br/>" +
+      "</body></html>";
+    const out = bakeLiveValues(html, new Map([["x", "1"]]));
+    expect(out.html).toBe(html);
+    expect(out.baked).toBe(0);
+  });
+
+  it("marcador REAL pero su clave no está en el Map (baked===0) + comentario → byte-idéntico", () => {
+    const html =
+      "<!-- precios -->" +
+      '<span data-ol-live="sin-dato">$45</span><br/>';
+    const out = bakeLiveValues(html, new Map([["otra-clave", "$99"]]));
+    expect(out.html).toBe(html);
+    expect(out.baked).toBe(0);
+  });
+
   it("no muta el Map de entrada (llamador puede reusarlo)", () => {
     const values = new Map([["x", "1"]]);
     const spy = vi.fn(values.get.bind(values));
