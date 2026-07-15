@@ -22,7 +22,7 @@ EnvironmentFile=/etc/openlen/openlen.env
 # fail-closed guard: no/blank OPENLEN_INTERNAL_SECRET on either side means the
 # route 401s and this unit's `-f` makes curl (and the systemd run) fail loudly
 # instead of silently.
-ExecStart=/usr/bin/curl -sf -X POST -H "x-internal-secret=${OPENLEN_INTERNAL_SECRET}" http://127.0.0.1:3000/api/internal/live-republish
+ExecStart=/usr/bin/curl -sf -X POST -H "x-internal-secret: ${OPENLEN_INTERNAL_SECRET}" http://127.0.0.1:3000/api/internal/live-republish
 
 StandardOutput=journal
 StandardError=journal

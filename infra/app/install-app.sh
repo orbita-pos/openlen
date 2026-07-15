@@ -60,6 +60,10 @@ install -m 644 "${SCRIPT_DIR}/openlen-analytics-rollup.service"  /etc/systemd/sy
 install -m 644 "${SCRIPT_DIR}/openlen-analytics-rollup.timer"    /etc/systemd/system/openlen-analytics-rollup.timer   2>/dev/null || true
 install -m 644 "${SCRIPT_DIR}/openlen-bookings-remind.service"   /etc/systemd/system/openlen-bookings-remind.service  2>/dev/null || true
 install -m 644 "${SCRIPT_DIR}/openlen-bookings-remind.timer"     /etc/systemd/system/openlen-bookings-remind.timer    2>/dev/null || true
+# Datos vivos — hourly self-refresh: curls the internal republish endpoint so
+# pages bound to a Google Sheet pick up cell edits (needs OPENLEN_INTERNAL_SECRET).
+install -m 644 "${SCRIPT_DIR}/openlen-live-republish.service"    /etc/systemd/system/openlen-live-republish.service   2>/dev/null || true
+install -m 644 "${SCRIPT_DIR}/openlen-live-republish.timer"      /etc/systemd/system/openlen-live-republish.timer     2>/dev/null || true
 systemctl daemon-reload
 systemctl enable openlen-app.service
 # Backup timer stays disabled until /etc/openlen/rclone.conf is populated.
@@ -67,6 +71,7 @@ systemctl enable openlen-app.service
 # Rollup + booking-reminder timers are safe to enable once the app env is set:
 #   systemctl enable --now openlen-analytics-rollup.timer
 #   systemctl enable --now openlen-bookings-remind.timer   # needs RESEND_API_KEY to email
+#   systemctl enable --now openlen-live-republish.timer     # needs OPENLEN_INTERNAL_SECRET set
 
 echo
 echo "✓ App scaffolding installed."

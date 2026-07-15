@@ -34,6 +34,14 @@ Edit, then `systemctl restart openlen-app`. Full reference: `infra/app/env.examp
 - **`BROADCAST_POSTAL_ADDRESS`** — CAN-SPAM postal address stamped into every
   Broadcast email. The Send route returns 503 until this is set (required only
   to use the Broadcast module).
+- **`OPENLEN_INTERNAL_SECRET`** — machine-to-machine secret for the datos-vivos
+  hourly refresh (`POST /api/internal/live-republish`, localhost-only). Generate
+  with `openssl rand -base64 32`. The route is **fail-closed**: unset ⇒ every
+  call 401s and the hourly Sheet refresh never runs (pages freeze at
+  last-publish values). After setting it, install + enable the timer (bundled by
+  `install-app.sh`): `systemctl enable --now openlen-live-republish.timer`.
+  Without both, `conectar_datos_vivos` still bakes current Sheet values at
+  publish, but the "se actualiza sola cada hora" promise is dark.
 
 The billing schema migration is already applied to Neon and `deploy.ps1` re-runs
 `billing:migrate` (idempotent) as a gate before the swap — no manual step.
