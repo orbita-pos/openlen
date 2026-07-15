@@ -29,3 +29,9 @@ export function carouselBakeEnabled(env: EnvLike = process.env): boolean {
 export function transformEnabled(env: EnvLike = process.env): boolean {
   return env.OPENLEN_TRANSFORM !== "0";
 }
+
+/** Datos vivos (spec 2026-07-14) — página publicada mostrando datos de un
+ *  Google Sheet público, refrescados en horario. */
+export function liveDataEnabled(env: EnvLike = process.env): boolean {
+  return env.OPENLEN_LIVE_DATA !== "0";
+}

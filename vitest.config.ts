@@ -88,6 +88,11 @@ export default defineConfig({
       "lib/publish/whatsapp-button.test.ts",
       "lib/publish/kill-switches.test.ts",
       "lib/transform/**/*.test.ts",
+      // Datos vivos (spec 2026-07-14) — el directorio aún no existe (Task 1
+      // solo prepara el terreno). Listado por adelantado porque el include
+      // de este repo es per-file: sin esta entrada, los tests que Task 2+
+      // agreguen bajo lib/live/ correrían silenciosamente en ningún lado.
+      "lib/live/**/*.test.ts",
       "lib/publish/chat-widget.test.ts",
       "lib/publish/orders-price.test.ts",
       "lib/publish/orders-cart.test.ts",
