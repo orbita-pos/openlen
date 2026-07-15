@@ -39,7 +39,18 @@ const NETWORK_KILL_ARGS = [
 
 async function launch(): Promise<Browser> {
   const executablePath = process.env.PUPPETEER_EXECUTABLE_PATH?.trim() || undefined;
-  const base = { headless: true as const, executablePath, protocolTimeout: 30_000 };
+  // ProtectHome=read-only en el box → Chrome exige un HOME escribible; /tmp es
+  // PrivateTmp del service. MISMO tratamiento que og-card.ts (memoria
+  // puppeteer-hetzner-chrome) — sin esto, AMBOS launches fallan y el transform
+  // cae a fallback silencioso en prod (cazado por el backfill 2026-07-15:
+  // liebre re-seedeado quedó byte-idéntico).
+  const launchEnv = process.platform === "linux" ? { ...process.env, HOME: "/tmp" } : undefined;
+  const base = {
+    headless: true as const,
+    executablePath,
+    protocolTimeout: 30_000,
+    ...(launchEnv ? { env: launchEnv } : {}),
+  };
   try {
     return await puppeteer.launch({ ...base, args: ["--disable-dev-shm-usage", ...NETWORK_KILL_ARGS] });
   } catch {
@@ -47,7 +58,13 @@ async function launch(): Promise<Browser> {
     console.warn("[transform] Chrome sandbox unavailable; relaunching with --no-sandbox (network stays fully blocked)");
     return puppeteer.launch({
       ...base,
-      args: ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage", ...NETWORK_KILL_ARGS],
+      args: [
+        "--no-sandbox",
+        "--disable-setuid-sandbox",
+        "--disable-crash-reporter",
+        "--disable-dev-shm-usage",
+        ...NETWORK_KILL_ARGS,
+      ],
     });
   }
 }

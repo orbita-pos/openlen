@@ -76,6 +76,11 @@ export async function transformIngestedHtml(
     return { html: t.html, report };
   } catch (err) {
     const reason = String((err as { message?: unknown })?.message ?? err).slice(0, 160);
+    // Un fallback NUNCA rompe el clon, pero tampoco debe ser invisible: el
+    // HOME read-only del box tumbó Chrome en prod durante días y nadie lo vio
+    // porque este catch callaba (incidente del backfill, 2026-07-15).
+    // eslint-disable-next-line no-console
+    console.warn(`[transform] fallback ${JSON.stringify({ source: opts.source ?? "?", reason })}`);
     return done({ bakedContainers: 0, bakedGeoms: 0, translated: [], tabsFound: 0, fallback: reason });
   }
 }
