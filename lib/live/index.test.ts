@@ -12,7 +12,11 @@ function sheetData(): SheetData {
 
 afterEach(() => {
   vi.unstubAllEnvs();
+  vi.restoreAllMocks();
 });
+
+const liveLines = (warn: ReturnType<typeof vi.spyOn>) =>
+  warn.mock.calls.filter((c) => String(c[0]).includes("[live]"));
 
 describe("applyLiveData — orquestador never-throw", () => {
   it("kill-switch apagado → html intacto, fallback='disabled', nada se llama", async () => {
@@ -83,6 +87,64 @@ describe("applyLiveData — orquestador never-throw", () => {
     expect(fetchSheet).not.toHaveBeenCalled();
     expect(putCachedSheet).not.toHaveBeenCalled();
     expect(getCachedSheet).toHaveBeenCalledWith(URL, expect.any(Number));
+  });
+
+  it("telemetría: UNA línea [live] cuando horneó (el sensor de demanda)", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const fetchSheet = vi.fn(async () => sheetData());
+    const getCachedSheet = vi.fn(async () => null);
+    const putCachedSheet = vi.fn(async () => {});
+
+    await applyLiveData(PAGE, URL, { deps: { fetchSheet, getCachedSheet, putCachedSheet } });
+
+    const lines = liveLines(warn);
+    expect(lines).toHaveLength(1);
+    expect(String(lines[0][0])).toContain(URL);
+    expect(String(lines[0][0])).toContain('"baked":1');
+  });
+
+  it("telemetría: UNA línea [live] cuando el fetch falla (la señal de Sheet-roto)", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const fetchSheet = vi.fn(async () => {
+      throw new Error("Sheet fetch falló: HTTP 404");
+    });
+    const getCachedSheet = vi.fn(async () => null);
+    const putCachedSheet = vi.fn(async () => {});
+
+    await applyLiveData(PAGE, URL, { deps: { fetchSheet, getCachedSheet, putCachedSheet } });
+
+    const lines = liveLines(warn);
+    expect(lines).toHaveLength(1);
+    expect(String(lines[0][0])).toContain("HTTP 404");
+  });
+
+  it("telemetría: CERO líneas cuando kill-switch off o sheetUrl null (silencio, como el transform)", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const deps = {
+      fetchSheet: vi.fn(async () => sheetData()),
+      getCachedSheet: vi.fn(async () => null),
+      putCachedSheet: vi.fn(async () => {}),
+    };
+
+    vi.stubEnv("OPENLEN_LIVE_DATA", "0");
+    await applyLiveData(PAGE, URL, { deps });
+    expect(liveLines(warn)).toHaveLength(0);
+
+    vi.unstubAllEnvs();
+    await applyLiveData(PAGE, null, { deps });
+    expect(liveLines(warn)).toHaveLength(0);
+  });
+
+  it("telemetría: CERO líneas cuando horneó 0 sin fallo (clave del Sheet no presente en la página)", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const fetchSheet = vi.fn(async () => ({ values: new Map([["otra-clave", "x"]]), rows: [] }));
+    const getCachedSheet = vi.fn(async () => null);
+    const putCachedSheet = vi.fn(async () => {});
+
+    const out = await applyLiveData(PAGE, URL, { deps: { fetchSheet, getCachedSheet, putCachedSheet } });
+
+    expect(out.report).toEqual({ baked: 0 });
+    expect(liveLines(warn)).toHaveLength(0);
   });
 
   it("bake LANZA (parser roto) → html ORIGINAL intacto, never-throw también aguas abajo", async () => {

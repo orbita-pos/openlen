@@ -68,9 +68,26 @@ export async function applyLiveData(
     }
 
     const baked = bakeLiveValues(html, data.values);
-    return { html: baked.html, report: { baked: baked.baked } };
+    const report: LiveReport = { baked: baked.baked };
+    logNotable(sheetUrl, report);
+    return { html: baked.html, report };
   } catch (err) {
     const reason = String((err as { message?: unknown })?.message ?? err).slice(0, 160);
-    return { html, report: { baked: 0, fallback: reason } };
+    const report: LiveReport = { baked: 0, fallback: reason };
+    logNotable(sheetUrl, report);
+    return { html, report };
+  }
+}
+
+// El sensor de demanda + la señal de Sheet-roto (spec §9): UNA línea
+// estructurada solo cuando pasó algo que valga registrar — se horneó un
+// valor, o un fetch/parse falló de verdad (ese fallback además alimenta el
+// aviso al dueño). El caso común (kill-switch off, o página sin Sheet) sale
+// por los returns tempranos y jamás llega aquí: silencio, igual que el
+// transform cuando no hay nada que hacer.
+function logNotable(sheetUrl: string, report: LiveReport): void {
+  if (report.baked > 0 || report.fallback) {
+    // eslint-disable-next-line no-console
+    console.warn(`[live] ${JSON.stringify({ sheetUrl, baked: report.baked, fallback: report.fallback })}`);
   }
 }
