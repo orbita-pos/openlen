@@ -330,6 +330,10 @@ export async function reorderItems(
   collectionId: string,
   orderedIds: string[],
 ): Promise<void> {
+  // A drag-reorder is a real mutation reachable from an owner route — a
+  // sheet-backed collection is READ-ONLY, and sync never re-writes sortOrder,
+  // so a manual reorder would persist. Guard it like create/update/archive.
+  if (await isSheetBacked(projectId, collectionId)) throw new SheetBackedReadOnlyError();
   for (let i = 0; i < orderedIds.length; i++) {
     await db
       .update(schema.collectionItems)

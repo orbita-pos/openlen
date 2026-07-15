@@ -8,6 +8,7 @@ import {
   getOrCreateDefaultCollection,
   isSheetBacked,
   listItems,
+  reorderItems,
   setCollectionSource,
   SheetBackedReadOnlyError,
   updateItem,
@@ -109,6 +110,31 @@ describe("syncCollectionFromSheet", () => {
     expect(items[0].title).toBe("Agua");
     expect(items[0].priceDisplay).toBeNull();
   });
+
+  it("collapses two rows with the same (new) title into ONE item — no orphan duplicate", async () => {
+    // Both rows share a title that does NOT pre-exist. Without the in-loop
+    // byTitle update, both miss the map and create → two rows, one of which
+    // orphans on the next sync (last-wins Map collapse).
+    const result = await syncCollectionFromSheet(PID, collectionId, [
+      { nombre: "Café", precio: "$40" },
+      { nombre: "café", precio: "$45" }, // same title, case-insensitive
+    ]);
+    const items = await listItems(PID, collectionId);
+    expect(items).toHaveLength(1);
+    expect(items[0].priceDisplay).toBe("$45"); // second row won the update
+    expect(result.archived).toBe(0);
+
+    // A third sync must leave NO orphan: the single item updates cleanly, and
+    // dropping it entirely archives exactly one (proving there was never a
+    // hidden duplicate that survived unarchived).
+    await syncCollectionFromSheet(PID, collectionId, [{ nombre: "Café", precio: "$50" }]);
+    expect(await listItems(PID, collectionId)).toHaveLength(1);
+
+    const drop = await syncCollectionFromSheet(PID, collectionId, [{ nombre: "Otra Cosa" }]);
+    expect(drop.archived).toBe(1);
+    const published = await listItems(PID, collectionId);
+    expect(published.map((i) => i.title)).toEqual(["Otra Cosa"]);
+  });
 });
 
 describe("read-only guard on a sheet-backed collection", () => {
@@ -127,6 +153,13 @@ describe("read-only guard on a sheet-backed collection", () => {
     const item = await createItem(PID, collectionId, { title: "Pre-existing 2" });
     await setCollectionSource(PID, { sheet: FAKE_SHEET });
     await expect(archiveItem(PID, item.id)).rejects.toThrow(SheetBackedReadOnlyError);
+  });
+
+  it("rejects a manual reorderItems (drag-reorder is a real mutation)", async () => {
+    const a = await createItem(PID, collectionId, { title: "Reorder A" });
+    const b = await createItem(PID, collectionId, { title: "Reorder B" });
+    await setCollectionSource(PID, { sheet: FAKE_SHEET });
+    await expect(reorderItems(PID, collectionId, [b.id, a.id])).rejects.toThrow(SheetBackedReadOnlyError);
   });
 
   it("isSheetBacked reflects the source field", async () => {

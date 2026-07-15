@@ -96,7 +96,14 @@ export async function syncCollectionFromSheet(
     if (existingItem) {
       await updateItemUnguarded(projectId, existingItem.id, patch);
     } else {
-      await createItemUnguarded(projectId, collectionId, patch);
+      // Add the fresh row to byTitle right away: a SECOND row with the same
+      // title later in this same batch must fall into the UPDATE path above,
+      // not create a duplicate. Two rows sharing a title that didn't pre-exist
+      // would otherwise both miss the map → two rows with one title → on the
+      // next sync new Map(...) collapses them (last-wins) and orphans the
+      // other forever.
+      const created = await createItemUnguarded(projectId, collectionId, patch);
+      byTitle.set(key, created);
     }
     upserted++;
   }
