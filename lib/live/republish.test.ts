@@ -73,6 +73,26 @@ describe("runLiveRepublish", () => {
     expect(d.republish).toHaveBeenCalledTimes(2);
   });
 
+  it("Sheet de colección roto → avisa al dueño y republica IGUAL (no cuenta como failure del proyecto)", async () => {
+    const notifyBroken = vi.fn(async () => {});
+    const d = deps({
+      listTargets: vi.fn(async () => [
+        target({ projectId: "p1", collections: [{ collectionId: "c1", sheetUrl: "https://roto" }] }),
+      ]),
+      fetchSheet: vi.fn(async () => {
+        throw new Error("timeout");
+      }),
+      notifyBroken,
+    });
+    const r = await runLiveRepublish(d);
+    expect(notifyBroken).toHaveBeenCalledTimes(1);
+    expect((notifyBroken.mock.calls[0] as unknown as [unknown, string, string])[1]).toBe("https://roto");
+    expect(d.republish).toHaveBeenCalledTimes(1); // republica igual
+    expect(r.processed).toBe(1);
+    expect(r.synced).toBe(0);
+    expect(r.failures).toBe(0); // el Sheet roto NO es un failure del proyecto
+  });
+
   it("dedup: dos proyectos que comparten la MISMA URL de Sheet la fetchean una vez", async () => {
     const d = deps({
       listTargets: vi.fn(async () => [

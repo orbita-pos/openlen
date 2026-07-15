@@ -11,6 +11,9 @@ import { syncCollectionFromSheet } from "@/lib/collections/sheet-sync";
 import { getCollectionSource, getDefaultCollection } from "@/lib/collections/store";
 import { publishProject } from "@/lib/projects";
 import type { ProjectData } from "@/lib/projects/types";
+import { notifyBrokenSheet, type LiveSheetBrokenEvent } from "@/lib/live/notify-broken";
+import { scheduleNotification } from "@/lib/notifications/dispatch";
+import type { NotificationEvent } from "@/lib/notifications/types";
 
 /** Escanea los proyectos PUBLICADOS y arma la lista de los que tienen datos
  *  vivos. Volumen v1 minúsculo → escaneo completo, sin índice. */
@@ -56,6 +59,19 @@ async function main() {
     // masivo de Business).
     republish: (t) =>
       publishProject({ projectId: t.projectId, userId: t.userId, subdomain: t.subdomain, skipFlightCheck: true }),
+    // El aviso al dueño de un Sheet roto se PERSISTE vía scheduleNotification
+    // (dedup por su dedupeKey). El cast es el puente documentado en
+    // notify-broken.ts: el evento `live_sheet_broken` aún no está en la unión
+    // NotificationEvent (extender los canales de chat vivos es un follow-up),
+    // así que se guarda pero no se entrega hasta entonces — nunca peor que hoy.
+    notifyBroken: (t, sheetUrl, reason) =>
+      notifyBrokenSheet(
+        { projectId: t.projectId, ownerUserId: t.userId, sheetUrl, reason },
+        {
+          schedule: (event: LiveSheetBrokenEvent, dedupeKey: string) =>
+            scheduleNotification(event as unknown as NotificationEvent, dedupeKey),
+        },
+      ),
   });
   // eslint-disable-next-line no-console
   console.log("[live-republish] " + JSON.stringify(summary));

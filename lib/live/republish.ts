@@ -27,6 +27,9 @@ export interface RepublishDeps {
   syncCollection: (projectId: string, collectionId: string, rows: Record<string, string>[]) => Promise<unknown>;
   /** Envuelve publishProject — re-hornea el value-binding con datos frescos. */
   republish: (t: RepublishTarget) => Promise<unknown>;
+  /** Aviso al dueño cuando el Sheet de una colección no se pudo leer (spec §7).
+   *  Opcional: sin él, el fallo del Sheet solo se registra. */
+  notifyBroken?: (t: RepublishTarget, sheetUrl: string, reason: string) => Promise<void>;
   /** Tope de proyectos por corrida (acota la carga del box). Default 200. */
   maxPerRun?: number;
 }
@@ -54,13 +57,25 @@ export async function runLiveRepublish(deps: RepublishDeps): Promise<RepublishSu
   for (const t of targets) {
     try {
       for (const col of t.collections) {
-        let data = sheetCache.get(col.sheetUrl);
-        if (!data) {
-          data = await deps.fetchSheet(col.sheetUrl);
-          sheetCache.set(col.sheetUrl, data);
+        // El fallo de UN Sheet de colección no aborta el proyecto: se avisa al
+        // dueño (spec §7), se salta esa colección y se republica igual (la
+        // colección conserva sus items previos, los value-bindings caen a su
+        // fallback). Solo un fallo de publish (el catch de afuera) cuenta como
+        // failure del proyecto.
+        try {
+          let data = sheetCache.get(col.sheetUrl);
+          if (!data) {
+            data = await deps.fetchSheet(col.sheetUrl);
+            sheetCache.set(col.sheetUrl, data);
+          }
+          await deps.syncCollection(t.projectId, col.collectionId, data.rows);
+          synced++;
+        } catch (colErr) {
+          const reason = String((colErr as { message?: unknown })?.message ?? colErr).slice(0, 120);
+          if (deps.notifyBroken) await deps.notifyBroken(t, col.sheetUrl, reason).catch(() => {});
+          // eslint-disable-next-line no-console
+          console.warn("[live-republish] sheet failed " + JSON.stringify({ projectId: t.projectId, sheetUrl: col.sheetUrl, reason }));
         }
-        await deps.syncCollection(t.projectId, col.collectionId, data.rows);
-        synced++;
       }
       await deps.republish(t);
       processed++;
