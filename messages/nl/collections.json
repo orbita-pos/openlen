@@ -6,6 +6,10 @@
     "archived": "Item verwijderd",
     "archiveError": "Kon het item niet verwijderen. Probeer het opnieuw."
   },
+  "sheetBacked": {
+    "banner": "Deze lijst synchroniseert vanuit je Google Sheet. Bewerk hem daar en je pagina werkt zichzelf bij.",
+    "openSheet": "Sheet openen"
+  },
   "module": {
     "title": "Collecties",
     "tagline": "Een raster van producten, menu, advertenties…",

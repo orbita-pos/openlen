@@ -63,5 +63,9 @@
   "toast": {
     "archived": "Item removido",
     "archiveError": "Não foi possível remover o item. Tente novamente."
+  },
+  "sheetBacked": {
+    "banner": "Esta lista sincroniza a partir do seu Google Sheet. Edite-a lá e a sua página atualiza-se sozinha.",
+    "openSheet": "Abrir Sheet"
   }
 }

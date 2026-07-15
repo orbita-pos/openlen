@@ -63,5 +63,9 @@
   "toast": {
     "archived": "Eintrag entfernt",
     "archiveError": "Der Eintrag konnte nicht entfernt werden. Versuch es erneut."
+  },
+  "sheetBacked": {
+    "banner": "Diese Liste wird aus deinem Google Sheet synchronisiert. Bearbeite sie dort, und deine Seite aktualisiert sich von selbst.",
+    "openSheet": "Sheet öffnen"
   }
 }

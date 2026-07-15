@@ -63,5 +63,9 @@
   "toast": {
     "archived": "Elemento quitado",
     "archiveError": "No se pudo quitar el elemento. Inténtalo de nuevo."
+  },
+  "sheetBacked": {
+    "banner": "Esta lista se sincroniza desde tu Google Sheet. Edítala en el Sheet y tu página se actualiza sola.",
+    "openSheet": "Abrir Sheet"
   }
 }

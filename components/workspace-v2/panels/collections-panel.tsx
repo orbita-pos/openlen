@@ -10,7 +10,7 @@
 
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
-import { ChevronLeft, Grid3, ImageIcon, Loader, Pencil, Plus, Trash } from "../icons";
+import { ChevronLeft, ExternalLink, Grid3, ImageIcon, Loader, Pencil, Plus, Trash } from "../icons";
 import { ReplaceAssetModal } from "../replace-asset-modal";
 import { useToast } from "../toast";
 
@@ -46,14 +46,22 @@ export function CollectionsPanel({ currentProjectId }: { currentProjectId?: stri
   const [editing, setEditing] = useState<Item | "new" | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
+  // "Datos vivos" (Task 16): true when this collection's items come from a
+  // Google Sheet — the API 409s manual mutations (Task 15), so the panel
+  // must say so up front and disable editing rather than let the owner hit a
+  // silent 409 on their first click.
+  const [sheetBacked, setSheetBacked] = useState(false);
+  const [sheetUrl, setSheetUrl] = useState<string | null>(null);
 
   const load = (pid: string) => {
     setError(null);
     void fetch(`/api/projects/${pid}/collections/items`)
       .then((r) => (r.ok ? r.json() : Promise.reject(r.status)))
-      .then((d: { collection: Collection; items: Item[] }) => {
+      .then((d: { collection: Collection; items: Item[]; sheetBacked?: boolean; sheetUrl?: string | null }) => {
         setCollection(d.collection);
         setItems(d.items);
+        setSheetBacked(Boolean(d.sheetBacked));
+        setSheetUrl(d.sheetUrl ?? null);
       })
       .catch(() => {
         setError(t("items.loadError"));
@@ -68,6 +76,8 @@ export function CollectionsPanel({ currentProjectId }: { currentProjectId?: stri
     }
     setItems(null);
     setCollection(null);
+    setSheetBacked(false);
+    setSheetUrl(null);
     load(currentProjectId);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentProjectId]);
@@ -90,6 +100,7 @@ export function CollectionsPanel({ currentProjectId }: { currentProjectId?: stri
       <ItemEditor
         projectId={currentProjectId}
         item={editing === "new" ? null : editing}
+        sheetBacked={sheetBacked}
         onClose={() => setEditing(null)}
         onSaved={() => {
           setEditing(null);
@@ -151,6 +162,22 @@ export function CollectionsPanel({ currentProjectId }: { currentProjectId?: stri
         <div className="text-[11px] fg-faint mt-0.5">{t("subtitle")}</div>
       </div>
 
+      {sheetBacked && (
+        <div className="mx-3 mb-2 shrink-0 rounded-md ring-1 ring-[color:var(--border)] bg-hover px-2.5 py-2 text-[11px] fg-muted leading-relaxed">
+          <p>{t("sheetBacked.banner")}</p>
+          {sheetUrl && (
+            <a
+              href={sheetUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="mt-1 inline-flex items-center gap-1 font-medium text-[var(--accent)] hover:underline underline-offset-2"
+            >
+              {t("sheetBacked.openSheet")} <ExternalLink size={10} />
+            </a>
+          )}
+        </div>
+      )}
+
       {collection && (
         <div className="px-3 pb-2 shrink-0 space-y-2">
           <label className="block">
@@ -194,7 +221,7 @@ export function CollectionsPanel({ currentProjectId }: { currentProjectId?: stri
         <button
           type="button"
           onClick={() => setEditing("new")}
-          disabled={live.length >= MAX_ITEMS}
+          disabled={live.length >= MAX_ITEMS || sheetBacked}
           className="w-full h-8 rounded-md text-[11.5px] font-semibold text-white bg-[var(--accent-strong)] hover:brightness-105 transition disabled:opacity-50 inline-flex items-center justify-center gap-1.5"
         >
           <Plus size={13} /> {t("items.add")}
@@ -233,7 +260,7 @@ export function CollectionsPanel({ currentProjectId }: { currentProjectId?: stri
                   <button
                     type="button"
                     onClick={() => void move(idx, -1)}
-                    disabled={idx === 0}
+                    disabled={idx === 0 || sheetBacked}
                     aria-label={t("reorder.up")}
                     className="h-6 w-5 inline-flex items-center justify-center rounded fg-faint hover:fg hover:bg-hover transition disabled:opacity-30"
                   >
@@ -242,7 +269,7 @@ export function CollectionsPanel({ currentProjectId }: { currentProjectId?: stri
                   <button
                     type="button"
                     onClick={() => void move(idx, 1)}
-                    disabled={idx === live.length - 1}
+                    disabled={idx === live.length - 1 || sheetBacked}
                     aria-label={t("reorder.down")}
                     className="h-6 w-5 inline-flex items-center justify-center rounded fg-faint hover:fg hover:bg-hover transition disabled:opacity-30"
                   >
@@ -251,15 +278,16 @@ export function CollectionsPanel({ currentProjectId }: { currentProjectId?: stri
                   <button
                     type="button"
                     onClick={() => setEditing(it)}
+                    disabled={sheetBacked}
                     aria-label={t("items.edit")}
-                    className="h-6 w-6 inline-flex items-center justify-center rounded fg-faint hover:fg hover:bg-hover transition"
+                    className="h-6 w-6 inline-flex items-center justify-center rounded fg-faint hover:fg hover:bg-hover transition disabled:opacity-30"
                   >
                     <Pencil size={12} />
                   </button>
                   <button
                     type="button"
                     onClick={() => void archive(it.id)}
-                    disabled={busyId === it.id}
+                    disabled={busyId === it.id || sheetBacked}
                     aria-label={t("items.archive")}
                     className="h-6 w-6 inline-flex items-center justify-center rounded fg-faint hover:text-red-500 hover:bg-hover transition disabled:opacity-50"
                   >
@@ -284,11 +312,16 @@ export function CollectionsPanel({ currentProjectId }: { currentProjectId?: stri
 function ItemEditor({
   projectId,
   item,
+  sheetBacked,
   onClose,
   onSaved,
 }: {
   projectId: string;
   item: Item | null;
+  /** Task 16: defense-in-depth — the panel already blocks entry to this
+   *  screen (add/edit buttons disabled) when sheet-backed, but Save stays
+   *  guarded too so a stale open editor can't slip a write past the 409. */
+  sheetBacked: boolean;
   onClose: () => void;
   onSaved: () => void;
 }) {
@@ -428,7 +461,7 @@ function ItemEditor({
         <button
           type="button"
           onClick={() => void save()}
-          disabled={saving || !title.trim()}
+          disabled={saving || !title.trim() || sheetBacked}
           className="flex-1 h-8 rounded-md text-[11.5px] font-semibold text-white bg-[var(--accent-strong)] hover:brightness-105 transition disabled:opacity-50 inline-flex items-center justify-center gap-1.5"
         >
           {saving ? <Loader size={12} className="animate-spin" /> : null}

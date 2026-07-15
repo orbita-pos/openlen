@@ -63,5 +63,9 @@
   "toast": {
     "archived": "项目已移除",
     "archiveError": "无法移除该项目，请重试。"
+  },
+  "sheetBacked": {
+    "banner": "此列表与你的 Google 表格同步。请在表格中编辑，你的页面会自动更新。",
+    "openSheet": "打开表格"
   }
 }

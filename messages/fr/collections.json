@@ -63,5 +63,9 @@
   "toast": {
     "archived": "Élément retiré",
     "archiveError": "Impossible de retirer l'élément. Réessayez."
+  },
+  "sheetBacked": {
+    "banner": "Cette liste se synchronise depuis votre Google Sheet. Modifiez-la là-bas et votre page se met à jour toute seule.",
+    "openSheet": "Ouvrir la feuille"
   }
 }

@@ -63,5 +63,9 @@
   "toast": {
     "archived": "항목을 삭제했습니다",
     "archiveError": "항목을 삭제하지 못했습니다. 다시 시도하세요."
+  },
+  "sheetBacked": {
+    "banner": "이 목록은 Google 시트에서 동기화됩니다. 시트에서 수정하면 페이지가 자동으로 업데이트됩니다.",
+    "openSheet": "시트 열기"
   }
 }

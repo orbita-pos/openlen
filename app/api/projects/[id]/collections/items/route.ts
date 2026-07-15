@@ -3,7 +3,9 @@ import { auth } from "@/auth";
 import { db, schema } from "@/lib/db";
 import {
   createItem,
+  getCollectionSource,
   getOrCreateDefaultCollection,
+  isSheetBacked,
   listItems,
   SheetBackedReadOnlyError,
   sheetBackedReadOnlyResponse,
@@ -37,7 +39,14 @@ export async function GET(
   if (!(await owns(id, session.user.id))) return json({ error: "not_found" }, 404);
   const collection = await getOrCreateDefaultCollection(id);
   const items = await listItems(id, collection.id, { includeArchived: true });
-  return json({ collection, items }, 200);
+  // Task 16: tell the editor when this collection is Sheet-sourced so it can
+  // show a read-only banner instead of the owner discovering it via a silent
+  // 409 (Task 15) on their first edit attempt.
+  const [sheetBacked, source] = await Promise.all([
+    isSheetBacked(id, collection.id),
+    getCollectionSource(id),
+  ]);
+  return json({ collection, items, sheetBacked, sheetUrl: source?.sheet ?? null }, 200);
 }
 
 export async function POST(
