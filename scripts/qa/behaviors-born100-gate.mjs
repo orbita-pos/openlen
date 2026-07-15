@@ -84,6 +84,7 @@ const BEHAVIOR_GATE_ASSERTIONS = {
   autoplay: 6,
   theme: 7,
   sticky: 8,
+  tabs: 10,
 };
 const MARKERS = BEHAVIOR_ORDER.map((name) => BEHAVIORS[name].marker);
 {
@@ -186,6 +187,10 @@ function buildPage(origin) {
   [data-ol-scroll="next"]{right:0}
   [data-ol-theme]{padding:8px 16px;border-radius:999px;border:1.5px solid #111827;background:#fff;color:#111827}
   html.dark [data-ol-theme]{border-color:#f3f4f6;background:#0b0d12;color:#f3f4f6}
+  .tablist{display:flex;gap:8px;margin-bottom:12px}
+  .tablist button{padding:8px 16px;border-radius:8px;border:1.5px solid #111827;background:#fff;color:#111827}
+  .tablist button[aria-selected="true"]{background:#111827;color:#fff}
+  [data-ol-tab-panels] pre{background:#f3f4f6;color:#111827;padding:16px;border-radius:8px;margin:0}
   footer{padding:32px 24px;text-align:center;color:#374151;font-size:.875rem}
   #creator-onclick-btn{padding:8px 16px;border-radius:8px;border:1.5px solid #111827;background:#fff;color:#111827;margin-top:12px}
 </style>
@@ -253,6 +258,18 @@ function buildPage(origin) {
         <article>Plato 4 — Agua de horchata</article>
         <article>Plato 5 — Churros</article>
       </div>
+    </div>
+  </section>
+
+  <section id="tabs">
+    <h2>Tabs</h2>
+    <div data-ol-tabs="instalar" role="tablist" class="tablist">
+      <button data-ol-tab="npm" role="tab" aria-selected="true">npm</button>
+      <button data-ol-tab="pnpm" role="tab" aria-selected="false">pnpm</button>
+    </div>
+    <div data-ol-tab-panels="instalar">
+      <pre data-ol-tab-panel="npm" role="tabpanel">npm i openlen</pre>
+      <pre data-ol-tab-panel="pnpm" role="tabpanel">pnpm add openlen</pre>
     </div>
   </section>
 
@@ -571,6 +588,27 @@ try {
       .catch(() => {});
     const stuckUp = await page.evaluate(() => document.querySelector("[data-ol-sticky]")?.hasAttribute("data-ol-stuck"));
     return { pass: stuckDown === true && stuckUp === false, detail: `down=${stuckDown} up=${stuckUp}` };
+  });
+
+  await safeAssert(10, "tabs: init muestra el 1er panel; click cambia de panel (computed style, sello real)", async () => {
+    // Estilo COMPUTADO tras el sello CSP real — el ready-gate del css horneado
+    // debe ocultar el panel inactivo y mostrar el activo, no solo togglear un
+    // atributo que nada escucha.
+    const disp = (sel) => page.$eval(sel, (el) => getComputedStyle(el).display);
+    const npmInit = await disp('[data-ol-tab-panel="npm"]');
+    const pnpmInit = await disp('[data-ol-tab-panel="pnpm"]');
+    await page.click('[data-ol-tab="pnpm"]');
+    await wait(80);
+    const npmAfter = await disp('[data-ol-tab-panel="npm"]');
+    const pnpmAfter = await disp('[data-ol-tab-panel="pnpm"]');
+    const ariaAfter = await page.$eval('[data-ol-tab="pnpm"]', (el) => el.getAttribute("aria-selected"));
+    return {
+      pass:
+        npmInit !== "none" && pnpmInit === "none" && // init: solo npm visible
+        npmAfter === "none" && pnpmAfter !== "none" && // click: cambió a pnpm
+        ariaAfter === "true",
+      detail: `init(npm=${npmInit},pnpm=${pnpmInit}) click(npm=${npmAfter},pnpm=${pnpmAfter}) aria=${ariaAfter}`,
+    };
   });
 
   // Assertion 1 (the titular one) is evaluated LAST, over everything the

@@ -164,9 +164,17 @@ function filterMapper(html: string): { html: string; applied: boolean } {
 }
 
 /** choir-shape: botones [data-tab] + paneles id="tab-<val>" (o panel-<val>)
- *  ocultos con la clase `hidden`. SIN conducta que marcar (tabs es la #8
- *  pendiente): aquí solo degradación honesta — si TODOS los paneles nacen
- *  ocultos, se destapa el primero — e inventario para la telemetría. */
+ *  ocultos con la clase `hidden`. La conducta tabs YA existe (#8, 2026-07-14),
+ *  PERO la traducción NO se automatiza aquí a propósito: la conducta exige un
+ *  contenedor de paneles único ([data-ol-tab-panels]) y en el catálogo los
+ *  paneles suelen estar DISPERSOS (ids sueltos, sin contenedor común).
+ *  Envolverlos = reescribir estructura por heurística, justo lo que el spec
+ *  prohíbe ("rompe diseños en silencio"). Así que aquí solo degradación
+ *  honesta — si TODOS los paneles nacen ocultos, se destapa el primero, cero
+ *  sección en blanco — e inventario para la telemetría. Las páginas NUEVAS sí
+ *  nacen con tabs funcional (la IA conoce el marcador vía design-guidance); la
+ *  traducción de tabs legacy se hará en el backfill, plantilla por plantilla,
+ *  con prueba visual. */
 function tabsHonesty(html: string): { html: string; tabsFound: number } {
   const dom = parse(html);
   const buttons = dom.querySelectorAll("button[data-tab]");
