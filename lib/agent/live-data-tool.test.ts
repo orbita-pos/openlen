@@ -154,8 +154,49 @@ describe("conectar_datos_vivos", () => {
       assert.equal(store.fetchSheetRowsCalls.length, 0, `fetch happened for ${bad}`);
       assert.equal(store.setCollectionSheetSourceCalls.length, 0, `collection source set for ${bad}`);
       assert.equal(store.syncCollectionCalls.length, 0, `sync happened for ${bad}`);
+      // store.saved is the ONLY place a Collections-module activation write
+      // (settings.collections.enabled) could land — zero here means the
+      // hostile URL triggered zero activation too, not just zero sync.
       assert.equal(store.saved.length, 0, `project saved for ${bad}`);
     }
+  });
+
+  it("intent=lista from collections-NOT-enabled activates the Collections module as part of the connect (enable + source + sync, one call)", async () => {
+    const { deps, store } = makeDeps(); // default data = {html: HTML}, no settings at all
+    assert.equal(store.data.settings?.collections?.enabled, undefined);
+    const out = await runAgentTool(makeSession(), deps, "conectar_datos_vivos", {
+      sheet_url: GOOD_SHEET_URL,
+      intent: "lista",
+    });
+    assert.equal(out.response.ok, true);
+    // The activation write: settings.collections.enabled must be TRUE in what
+    // was saved — otherwise the published grid stays gated shut
+    // (lib/publish/filesystem.ts:586-588) even though the chat says success.
+    assert.equal(store.saved.length, 1);
+    assert.equal(store.saved[0].settings?.collections?.enabled, true);
+    assert.equal(store.data.settings?.collections?.enabled, true);
+    // ...AND the source got set AND the sync ran, same call.
+    assert.deepEqual(store.setCollectionSheetSourceCalls, [
+      { projectId: "p1", sheetUrl: GOOD_SHEET_URL },
+    ]);
+    assert.equal(store.syncCollectionCalls.length, 1);
+    assert.match(String(out.response.nota), /sincroniz/);
+  });
+
+  it("intent=lista when Collections is ALREADY enabled does NOT double-activate", async () => {
+    const { deps, store } = makeDeps({
+      data: { html: HTML, settings: { collections: { enabled: true } } },
+    });
+    const out = await runAgentTool(makeSession(), deps, "conectar_datos_vivos", {
+      sheet_url: GOOD_SHEET_URL,
+      intent: "lista",
+    });
+    assert.equal(out.response.ok, true);
+    // No activation write at all — the module was already on, so no
+    // saveProjectData call (and no re-fired chat-provisioning side effect).
+    assert.equal(store.saved.length, 0);
+    assert.equal(store.setCollectionSheetSourceCalls.length, 1);
+    assert.equal(store.syncCollectionCalls.length, 1);
   });
 
   it("a HOSTILE url with intent=valores is also rejected with zero fetch/mutation", async () => {

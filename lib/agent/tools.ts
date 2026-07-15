@@ -44,6 +44,7 @@ import {
   applySettingsPatch,
   validateSettingsPatch,
   type SettingsPatchBody,
+  type SettingsPatchOutcome,
 } from "@/lib/projects/settings-patch";
 import type { ProjectData } from "@/lib/projects/types";
 import { createVersion, type VersionSource } from "@/lib/projects/versions";
@@ -407,6 +408,41 @@ function buildModulePatch(modulo: AgentModule, encender: boolean, numero?: strin
   }
 }
 
+// Shared by activar_modulo and conectar_datos_vivos (intent="lista", which
+// must silently ensure the Collections module is on before a Sheet connect —
+// cero-fricción means the owner never has to know "activar módulo" is a
+// separate step). validate -> apply -> chat-provision-if-needed -> save, the
+// SAME pipeline the button/route path uses (applySettingsPatch may do more
+// than flip a boolean — e.g. members' auto-page birth, reconcileModuleSettings'
+// cross-module cascade — so every settings write funnels through here rather
+// than each caller re-deriving nextData by hand).
+async function activateModulePatch(
+  session: AgentSession,
+  deps: AgentDeps,
+  row: { data: ProjectData; title: string },
+  patchBody: SettingsPatchBody,
+): Promise<{ ok: true; outcome: SettingsPatchOutcome } | { ok: false; error: string }> {
+  const validation = validateSettingsPatch(patchBody, session.projectId);
+  if (!validation.ok) {
+    return { ok: false, error: validation.message ?? "patch inválido" };
+  }
+
+  const outcome = applySettingsPatch(row.data, validation.body);
+  if ("error" in outcome) {
+    return { ok: false, error: outcome.error };
+  }
+
+  if (outcome.chatJustEnabled) {
+    await deps.provisionOwnerChat(session.projectId, session.userId, {
+      email: session.ownerEmail,
+      displayName: row.title,
+    });
+  }
+  await deps.saveProjectData(session.projectId, session.userId, outcome.nextData);
+
+  return { ok: true, outcome };
+}
+
 async function toolActivarModulo(
   session: AgentSession,
   deps: AgentDeps,
@@ -444,30 +480,17 @@ async function toolActivarModulo(
   }
 
   const patchBody = buildModulePatch(modulo as AgentModule, encender, numero);
-  const validation = validateSettingsPatch(patchBody, session.projectId);
-  if (!validation.ok) {
-    return { response: { ok: false, error: validation.message ?? "patch inválido" } };
+  const activated = await activateModulePatch(session, deps, row, patchBody);
+  if (!activated.ok) {
+    return { response: { ok: false, error: activated.error } };
   }
-
-  const outcome = applySettingsPatch(row.data, validation.body);
-  if ("error" in outcome) {
-    return { response: { ok: false, error: outcome.error } };
-  }
-
-  if (outcome.chatJustEnabled) {
-    await deps.provisionOwnerChat(session.projectId, session.userId, {
-      email: session.ownerEmail,
-      displayName: row.title,
-    });
-  }
-  await deps.saveProjectData(session.projectId, session.userId, outcome.nextData);
 
   return {
     response: {
       ok: true,
       modulo,
       encendido: encender,
-      ...(outcome.createdPage ? { paginaCreada: outcome.createdPage.slug } : {}),
+      ...(activated.outcome.createdPage ? { paginaCreada: activated.outcome.createdPage.slug } : {}),
     },
     action: { tool: "activar_modulo", ok: true, summary: modulo },
   };
@@ -1440,6 +1463,27 @@ async function toolConectarDatosVivos(
   }
 
   if (intent === "lista") {
+    // Cero-fricción: the published grid is gated on settings.collections.enabled
+    // (lib/publish/filesystem.ts) — an owner who only ever ran this tool must
+    // not end up with a synced-but-invisible collection, so the module gets
+    // turned on here as part of the connect, through the SAME activation
+    // pipeline activar_modulo uses (never a blind boolean flip). Skipped when
+    // already on, so a re-connect never double-activates or re-fires
+    // chat-provisioning side effects.
+    const row = await deps.loadProject(session.projectId, session.userId);
+    if (!row) return { response: { ok: false, error: "proyecto no encontrado" } };
+    if (row.data.settings?.collections?.enabled !== true) {
+      const activated = await activateModulePatch(session, deps, row, { collections: { enabled: true } });
+      if (!activated.ok) {
+        return {
+          response: {
+            ok: false,
+            error: `no se pudo activar el módulo Colecciones para publicar la lista: ${activated.error}`,
+          },
+        };
+      }
+    }
+
     const collectionId = await deps.setCollectionSheetSource(session.projectId, sheetUrl);
     const result = await deps.syncCollection(session.projectId, collectionId, rows);
     const archivadoNota = result.archived > 0 ? ` (${result.archived} archivado(s), ya no están en el Sheet)` : "";

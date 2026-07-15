@@ -8,6 +8,7 @@ import "server-only";
 import type { RepublishDeps } from "./republish";
 import { collectLiveTargets } from "./collect-targets";
 import { fetchSheet } from "./sheet-source";
+import { putCachedSheet } from "./cache";
 import { syncCollectionFromSheet } from "@/lib/collections/sheet-sync";
 import { publishProject } from "@/lib/projects";
 import { notifyBrokenSheet } from "./notify-broken";
@@ -19,6 +20,10 @@ export function liveRepublishDeps(): RepublishDeps {
     fetchSheet: (url) => fetchSheet(url),
     syncCollection: (projectId, collectionId, sheetRows) =>
       syncCollectionFromSheet(projectId, collectionId, sheetRows),
+    // Warms applyLiveData's 55-min FS cache (lib/live/cache.ts) with the
+    // value-sheet probe's own fetch result, so the publishProject() call
+    // below doesn't re-fetch the same URL a second time.
+    warmCache: (url, data) => putCachedSheet(url, data),
     // skipFlightCheck: un barrido de N páginas no debe encolar N auditorías
     // Lighthouse contra el único slot del box (mismo criterio que el republish
     // masivo de Business).

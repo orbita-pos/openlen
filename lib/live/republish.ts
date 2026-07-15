@@ -27,9 +27,17 @@ export interface RepublishDeps {
   syncCollection: (projectId: string, collectionId: string, rows: Record<string, string>[]) => Promise<unknown>;
   /** Envuelve publishProject — re-hornea el value-binding con datos frescos. */
   republish: (t: RepublishTarget) => Promise<unknown>;
-  /** Aviso al dueño cuando el Sheet de una colección no se pudo leer (spec §7).
-   *  Opcional: sin él, el fallo del Sheet solo se registra. */
+  /** Aviso al dueño cuando el Sheet de una colección o de un value-binding no
+   *  se pudo leer (spec §7). Opcional: sin él, el fallo del Sheet solo se
+   *  registra. */
   notifyBroken?: (t: RepublishTarget, sheetUrl: string, reason: string) => Promise<void>;
+  /** Tras un fetch exitoso del Sheet de value-bindings, calienta el cache FS
+   *  de 55 min que applyLiveData lee (lib/live/cache.ts) — así el
+   *  `republish(t)` que sigue en este mismo target no vuelve a pegarle a la
+   *  red por la misma URL. Opcional y best-effort: sin él (o si falla), el
+   *  probe igual notifica/loguea correctamente; solo se pierde la
+   *  optimización, republish() simplemente hace su propio fetch. */
+  warmCache?: (url: string, data: SheetData) => Promise<void>;
   /** Tope de proyectos por corrida (acota la carga del box). Default 200. */
   maxPerRun?: number;
 }
@@ -77,6 +85,34 @@ export async function runLiveRepublish(deps: RepublishDeps): Promise<RepublishSu
           console.warn("[live-republish] sheet failed " + JSON.stringify({ projectId: t.projectId, sheetUrl: col.sheetUrl, reason }));
         }
       }
+
+      // Value-binding probe — symmetric with the collection loop above, for
+      // the OTHER half of "datos vivos" (data-ol-live markers, applied inside
+      // applyLiveData during republish() below, never-throw there so a broken
+      // Sheet silently keeps the page's last-known value). Without this probe
+      // that silent fallback had NO path to notifyBroken — a page using only
+      // intent="valores" never told its owner the Sheet broke. Doesn't count
+      // toward `synced` (nothing is written to a DB table here, unlike a
+      // collection sync) — only logged/notified.
+      if (t.valueSheetUrl) {
+        try {
+          let data = sheetCache.get(t.valueSheetUrl);
+          if (!data) {
+            data = await deps.fetchSheet(t.valueSheetUrl);
+            sheetCache.set(t.valueSheetUrl, data);
+          }
+          if (deps.warmCache) await deps.warmCache(t.valueSheetUrl, data).catch(() => {});
+        } catch (valErr) {
+          const reason = String((valErr as { message?: unknown })?.message ?? valErr).slice(0, 120);
+          if (deps.notifyBroken) await deps.notifyBroken(t, t.valueSheetUrl, reason).catch(() => {});
+          // eslint-disable-next-line no-console
+          console.warn("[live-republish] value sheet failed " + JSON.stringify({ projectId: t.projectId, sheetUrl: t.valueSheetUrl, reason }));
+          // Never-worse-than-today: the probe failing does NOT abort this
+          // target — republish() still runs below and the page keeps its
+          // last-known baked value via applyLiveData's own never-throw fallback.
+        }
+      }
+
       await deps.republish(t);
       processed++;
     } catch (err) {
