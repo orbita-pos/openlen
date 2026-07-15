@@ -56,6 +56,26 @@ export interface ItemInput {
   sortOrder?: number;
 }
 
+/** "Datos vivos": a collection sourced from a Google Sheet. Lives in
+ *  project.data.settings.collections.source (JSONB, no migration) rather than
+ *  a column on the collection row — v1 is one collection per project, and
+ *  that JSON settings blob already holds the module's other per-site config
+ *  (CollectionsSettings.enabled). See lib/projects/types.ts. */
+export interface CollectionSource {
+  sheet: string;
+}
+
+/** A manual write (createItem/updateItem/archiveItem) hit a sheet-backed
+ *  collection. The Sheet is the single source of truth for that collection;
+ *  only syncCollectionFromSheet (lib/collections/sheet-sync.ts) may write its
+ *  items — a manual edit here would be silently overwritten by the next sync. */
+export class SheetBackedReadOnlyError extends Error {
+  constructor() {
+    super("this collection is sourced from a Google Sheet and is read-only in OpenLen — edit the Sheet instead");
+    this.name = "SheetBackedReadOnlyError";
+  }
+}
+
 function rowToCollection(r: typeof schema.collections.$inferSelect): CollectionRow {
   return r;
 }
@@ -123,6 +143,51 @@ export async function updateDefaultCollection(
   return rows[0] ? rowToCollection(rows[0]) : null;
 }
 
+// ─── Sheet source (read-only guard) ──────────────────────────────────────────
+
+/** Reads project.data.settings.collections.source. v1 is one collection per
+ *  project, so this is project-scoped rather than joined through collectionId. */
+export async function getCollectionSource(projectId: string): Promise<CollectionSource | null> {
+  const rows = await db
+    .select({ data: schema.projects.data })
+    .from(schema.projects)
+    .where(eq(schema.projects.id, projectId))
+    .limit(1);
+  return rows[0]?.data?.settings?.collections?.source ?? null;
+}
+
+/** Sets (or clears, with null) the project's collection source. The only
+ *  caller in v1 is the future settings route that saves the owner-pasted
+ *  Sheet URL, plus tests — sync itself never touches this. */
+export async function setCollectionSource(
+  projectId: string,
+  source: CollectionSource | null,
+): Promise<void> {
+  const rows = await db
+    .select({ data: schema.projects.data })
+    .from(schema.projects)
+    .where(eq(schema.projects.id, projectId))
+    .limit(1);
+  const data = rows[0]?.data;
+  if (!data) throw new Error(`setCollectionSource: project ${projectId} not found`);
+  const collectionsSettings = { ...(data.settings?.collections ?? {}) };
+  if (source) collectionsSettings.source = source;
+  else delete collectionsSettings.source;
+  await db
+    .update(schema.projects)
+    .set({ data: { ...data, settings: { ...(data.settings ?? {}), collections: collectionsSettings } } })
+    .where(eq(schema.projects.id, projectId));
+}
+
+/** True when the project's collection is sheet-backed — createItem/updateItem/
+ *  archiveItem reject with SheetBackedReadOnlyError in that case.
+ *  `collectionId` is accepted for call-site symmetry with the item functions
+ *  and future multi-collection support; unused while v1 stays single-collection. */
+export async function isSheetBacked(projectId: string, _collectionId?: string): Promise<boolean> {
+  const source = await getCollectionSource(projectId);
+  return Boolean(source?.sheet);
+}
+
 // ─── Items (owner CRUD + publish read) ───────────────────────────────────────
 
 export async function listItems(
@@ -167,6 +232,19 @@ export async function createItem(
   collectionId: string,
   input: ItemInput,
 ): Promise<ItemRow> {
+  if (await isSheetBacked(projectId, collectionId)) throw new SheetBackedReadOnlyError();
+  return createItemUnguarded(projectId, collectionId, input);
+}
+
+/** The actual write, with NO read-only check — reserved for
+ *  syncCollectionFromSheet (lib/collections/sheet-sync.ts), the one writer
+ *  allowed to touch a sheet-backed collection's items. Do not call this from
+ *  owner-facing routes; call createItem, which guards it. */
+export async function createItemUnguarded(
+  projectId: string,
+  collectionId: string,
+  input: ItemInput,
+): Promise<ItemRow> {
   const rows = await db
     .insert(schema.collectionItems)
     .values({
@@ -190,6 +268,16 @@ export async function createItem(
 }
 
 export async function updateItem(
+  projectId: string,
+  itemId: string,
+  patch: Partial<ItemInput>,
+): Promise<ItemRow | null> {
+  if (await isSheetBacked(projectId)) throw new SheetBackedReadOnlyError();
+  return updateItemUnguarded(projectId, itemId, patch);
+}
+
+/** The actual write, with NO read-only check — see createItemUnguarded. */
+export async function updateItemUnguarded(
   projectId: string,
   itemId: string,
   patch: Partial<ItemInput>,
@@ -221,6 +309,12 @@ export async function updateItem(
 
 /** Archive (soft-delete) — drops it from the published grid, keeps the row. */
 export async function archiveItem(projectId: string, itemId: string): Promise<boolean> {
+  if (await isSheetBacked(projectId)) throw new SheetBackedReadOnlyError();
+  return archiveItemUnguarded(projectId, itemId);
+}
+
+/** The actual write, with NO read-only check — see createItemUnguarded. */
+export async function archiveItemUnguarded(projectId: string, itemId: string): Promise<boolean> {
   const rows = await db
     .update(schema.collectionItems)
     .set({ status: "archived", updatedAt: new Date() })

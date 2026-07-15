@@ -136,6 +136,14 @@ export interface CollectionsSettings {
   /** Master switch. Absent/false → the Collections tab stays hidden and the
    *  grid is not baked. Enabled from a card in the Módulos panel. */
   enabled?: boolean;
+  /** "Datos vivos" (2026-07-14): when set, this collection is SOURCED from a
+   *  Google Sheet — the Sheet is the single source of truth. `sheet` is the
+   *  owner-pasted Sheet URL (validated/resolved by lib/live/sheet-source.ts
+   *  at sync time, not here). Sheet-backed makes the collection READ-ONLY in
+   *  OpenLen (lib/collections/store.ts rejects manual item mutations); only
+   *  lib/collections/sheet-sync.ts's syncCollectionFromSheet may write its
+   *  items. Absent = a normal, manually-edited collection. */
+  source?: { sheet: string };
 }
 
 /** 3D scene module — a gesture-gated WebGL scene baked at publish time.
