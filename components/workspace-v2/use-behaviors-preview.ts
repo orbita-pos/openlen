@@ -76,6 +76,7 @@ export const PREVIEW_CD_TEXT_STASH = "data-openlen-cd-text";
 export const PREVIEW_CD_STYLE_STASH = "data-openlen-cd-style";
 export const PREVIEW_FILTER_PRESSED_STASH = "data-openlen-filter-pressed";
 export const PREVIEW_COPY_TEXT_STASH = "data-openlen-copy-text";
+export const PREVIEW_TABS_SELECTED_STASH = "data-openlen-tab-selected";
 
 /** Preview-only pristine-state snapshot for the behaviors whose runtime
  *  mutation is otherwise indistinguishable, once the live DOM is captured,
@@ -114,11 +115,13 @@ export function stashBehaviorsPristineState(
   const cdMarker = reg.countdown?.marker;
   const filterMarker = reg.filter?.marker;
   const copyMarker = reg.copy?.marker;
+  const tabsMarker = reg.tabs?.marker;
   const needsTheme = !!themeMarker && html.includes(themeMarker);
   const needsCountdown = !!cdMarker && html.includes(cdMarker);
   const needsFilter = !!filterMarker && html.includes(filterMarker);
   const needsCopy = !!copyMarker && html.includes(copyMarker);
-  if (!needsTheme && !needsCountdown && !needsFilter && !needsCopy) return html;
+  const needsTabs = !!tabsMarker && html.includes(tabsMarker);
+  if (!needsTheme && !needsCountdown && !needsFilter && !needsCopy && !needsTabs) return html;
   if (typeof DOMParser === "undefined") return html;
   try {
     const doc = new DOMParser().parseFromString(html, "text/html");
@@ -193,6 +196,18 @@ export function stashBehaviorsPristineState(
       doc.querySelectorAll(`[${copyMarker}]`).forEach((n) => {
         if (n.hasAttribute(PREVIEW_COPY_TEXT_STASH)) return;
         n.setAttribute(PREVIEW_COPY_TEXT_STASH, n.textContent ?? "");
+        changed = true;
+      });
+    }
+
+    if (needsTabs) {
+      // Mismo patrón que el aria-pressed de filter: el runtime de tabs
+      // reescribe aria-selected en cada init/click; se snapshotea el valor
+      // autorado para restaurarlo al guardar. (data-ol-tab-ready/-active son
+      // estado puro y los borra el strip sin stash — categoría A.)
+      doc.querySelectorAll(`[${tabsMarker}]`).forEach((n) => {
+        if (n.hasAttribute(PREVIEW_TABS_SELECTED_STASH)) return;
+        n.setAttribute(PREVIEW_TABS_SELECTED_STASH, n.getAttribute("aria-selected") ?? "");
         changed = true;
       });
     }

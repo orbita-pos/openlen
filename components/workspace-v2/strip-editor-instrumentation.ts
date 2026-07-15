@@ -23,6 +23,7 @@ import {
   PREVIEW_CD_TEXT_STASH,
   PREVIEW_COPY_TEXT_STASH,
   PREVIEW_FILTER_PRESSED_STASH,
+  PREVIEW_TABS_SELECTED_STASH,
   PREVIEW_HTML_CLASS_STASH,
 } from "./use-behaviors-preview";
 import { MARKER as CAROUSEL_MARKER } from "@/lib/publish/carousel";
@@ -37,6 +38,8 @@ export function stripEditorInstrumentation(html: string): string {
     !html.includes("data-ol-counted") &&
     !html.includes("data-ol-filtered") &&
     !html.includes("data-ol-stuck") &&
+    !html.includes("data-ol-tab-ready") &&
+    !html.includes("data-ol-tab-active") &&
     !html.includes("data-ol-lb-modal") &&
     !html.includes(BEHAVIORS_MARKER) &&
     !html.includes(CAROUSEL_MARKER)
@@ -195,6 +198,8 @@ export function stripEditorInstrumentation(html: string): string {
     for (const attr of [
       "data-ol-filtered", // filter.ts: toggled on each [data-ol-tag] item it hides. NOT data-ol-hidden — see the long comment above.
       "data-ol-stuck", // sticky.ts: toggled on the [data-ol-sticky] nav past scrollY 24
+      "data-ol-tab-ready", // tabs.ts: set on the [data-ol-tab-panels] container once the runtime inits.
+      "data-ol-tab-active", // tabs.ts: toggled on the active [data-ol-tab-panel]. CRITICAL to strip: if it persisted with data-ol-tab-ready, the CSS ready-gate would hide every OTHER panel on the published page with no runtime to switch (kill-switch off) — silent content loss.
     ]) {
       doc.querySelectorAll(`[${attr}]`).forEach((n) => n.removeAttribute(attr));
     }
@@ -273,6 +278,17 @@ export function stripEditorInstrumentation(html: string): string {
     doc.querySelectorAll(`[${PREVIEW_FILTER_PRESSED_STASH}]`).forEach((n) => {
       n.setAttribute("aria-pressed", n.getAttribute(PREVIEW_FILTER_PRESSED_STASH) ?? "");
       n.removeAttribute(PREVIEW_FILTER_PRESSED_STASH);
+    });
+    // tabs: aria-selected on each [data-ol-tab] — mismo caso que el
+    // aria-pressed de filter. El runtime lo reescribe en cada init Y en cada
+    // click; una pestaña que el creador probó en el preview dejaría su
+    // aria-selected sobre la página guardada. Se restaura al valor autorado
+    // (el runtime publicado lo re-inicializa al cargar de todos modos, pero el
+    // estado guardado debe ser el que la IA escribió, no el que el creador
+    // tocó — coherente en el estado degradado sin JS).
+    doc.querySelectorAll(`[${PREVIEW_TABS_SELECTED_STASH}]`).forEach((n) => {
+      n.setAttribute("aria-selected", n.getAttribute(PREVIEW_TABS_SELECTED_STASH) ?? "");
+      n.removeAttribute(PREVIEW_TABS_SELECTED_STASH);
     });
     // copy: the button label mid-confirmation ("¡Copiado!") — restored ONLY
     // when the live text is exactly the data-ol-copied value, the one string
