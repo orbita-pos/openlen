@@ -43,6 +43,7 @@
     "behaviors:gate": "tsx scripts/qa/behaviors-born100-gate.mjs",
     "live:ssrf": "tsx --tsconfig tsconfig.eval.json --require ./scripts/test-node-server-only-shim.cjs scripts/qa/live-data-ssrf-gate.mts",
     "live:republish": "tsx --env-file-if-exists=.env.local --tsconfig tsconfig.eval.json scripts/live-republish.ts",
+    "transform:backfill": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json --require ./scripts/test-node-server-only-shim.cjs scripts/transform-backfill.ts",
     "cron:bundle": "node scripts/build-cron.mjs",
     "versions:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/versions-migrate.ts",
     "chat:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/chat-migrate.ts",

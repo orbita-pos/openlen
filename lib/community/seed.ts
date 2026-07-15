@@ -5,6 +5,7 @@ import { getTemplate, getTemplateHtml } from "@/lib/templates/store";
 import { sanitizeForPublish } from "@/lib/html-engine";
 import { normalizeBornCanonical } from "@/lib/normalize";
 import { ensurePageMeta } from "@/lib/publish/ensure-page-meta";
+import { transformTemplateCached } from "@/lib/transform/template-cache";
 import { setVisibility } from "./store";
 import { SHOWCASE, SEED_ENTRIES, type SeedEntry } from "./explore-seed.config";
 
@@ -77,7 +78,28 @@ export async function seedExplore(
       failed.push({ id: e.templateId, reason: "no_html" });
       continue;
     }
-    const data = buildShowcaseProjectData(tpl.name, html, tpl.pages ?? []);
+
+    // Transform de ingestión (mismas claves de cache que from-template:
+    // `<id>` / `<id>--<slug>`) — sin él, los demos del Explore nacen con las
+    // secciones JS-generadas VACÍAS y sin conductas. Batch admin sin usuario
+    // esperando → presupuesto por-documento, no el deadline de 12s del clon.
+    // Fallback interno = html original (jamás peor).
+    const homeHtml = await transformTemplateCached(e.templateId, html, {
+      timeoutMs: 8000,
+      source: `explore-seed:${e.templateId}`,
+    });
+    const pages: { slug: string; html: string }[] = [];
+    for (const pg of tpl.pages ?? []) {
+      pages.push({
+        slug: pg.slug,
+        html: await transformTemplateCached(`${e.templateId}--${pg.slug}`, pg.html, {
+          timeoutMs: 8000,
+          source: `explore-seed:${e.templateId}--${pg.slug}`,
+        }),
+      });
+    }
+
+    const data = buildShowcaseProjectData(tpl.name, homeHtml, pages);
     if (!data) {
       failed.push({ id: e.templateId, reason: "invalid_html" });
       continue;

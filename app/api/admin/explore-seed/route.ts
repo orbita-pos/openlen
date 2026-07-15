@@ -1,5 +1,6 @@
 import { timingSafeEqual } from "node:crypto";
 import { seedExplore } from "@/lib/community/seed";
+import { SEED_ENTRIES } from "@/lib/community/explore-seed.config";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -17,7 +18,21 @@ export async function POST(req: Request): Promise<Response> {
   if (provided.length !== expected.length || !timingSafeEqual(provided, expected)) {
     return new Response("forbidden", { status: 403 });
   }
-  const result = await seedExplore();
+  // ?only=<templateId,...> — subset para pilotos (p.ej. re-seed de UN demo
+  // para medir costo/fidelidad antes de correr los 24). Sin el param: todos.
+  const onlyParam = new URL(req.url).searchParams.get("only");
+  const only = onlyParam
+    ? new Set(
+        onlyParam
+          .split(",")
+          .map((s) => s.trim())
+          .filter(Boolean),
+      )
+    : null;
+  const entries = only ? SEED_ENTRIES.filter((e) => only.has(e.templateId)) : SEED_ENTRIES;
+  if (entries.length === 0) return new Response(JSON.stringify({ error: "no_matching_entries" }), { status: 400 });
+
+  const result = await seedExplore(entries);
   return new Response(JSON.stringify(result), {
     status: 200,
     headers: { "content-type": "application/json" },

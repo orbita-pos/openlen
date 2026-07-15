@@ -7,6 +7,7 @@ vi.mock("@/lib/community/seed", () => ({
 }));
 
 import { POST } from "./route";
+import { seedExplore } from "@/lib/community/seed";
 
 const post = (headers: Record<string, string> = {}) =>
   POST(new Request("http://x/api/admin/explore-seed", { method: "POST", headers }));
@@ -35,5 +36,27 @@ describe("POST /api/admin/explore-seed", () => {
     const res = await post({ "x-seed-token": "secret" });
     expect(res.status).toBe(200);
     expect((await res.json()).ok).toEqual(["showcase-x"]);
+  });
+
+  it("?only= filtra las entries que llegan a seedExplore; sin match → 400", async () => {
+    process.env.EXPLORE_SEED_TOKEN = "secret";
+    const { SEED_ENTRIES } = await import("@/lib/community/explore-seed.config");
+    const first = SEED_ENTRIES[0].templateId;
+    const res = await POST(
+      new Request(`http://x/api/admin/explore-seed?only=${first}`, {
+        method: "POST",
+        headers: { "x-seed-token": "secret" },
+      }),
+    );
+    expect(res.status).toBe(200);
+    expect(seedExplore).toHaveBeenLastCalledWith([SEED_ENTRIES[0]]);
+
+    const none = await POST(
+      new Request("http://x/api/admin/explore-seed?only=no-such-template", {
+        method: "POST",
+        headers: { "x-seed-token": "secret" },
+      }),
+    );
+    expect(none.status).toBe(400);
   });
 });
