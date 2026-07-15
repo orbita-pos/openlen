@@ -845,6 +845,14 @@ export async function publishProject(
     }
   }
 
+  // Datos vivos: ProjectSettings todavía no declara `liveData` (task de
+  // schema/UI pendiente en la spec) — leído sin tipar estricto hasta que se
+  // agregue el campo formal. Ausente/null = sin Sheet configurado, y
+  // applyLiveData ya trata eso como no-op.
+  const liveDataCfg =
+    (project.data?.settings as { liveData?: { sheetUrl: string } | null } | undefined)
+      ?.liveData ?? null;
+
   let publishResult: {
     sha: string;
     html: string;
@@ -871,6 +879,7 @@ export async function publishProject(
         ? { enabled: true }
         : undefined,
       collections: collectionsBake,
+      liveData: liveDataCfg,
       scene3d: project.data?.settings?.scene3d?.enabled
         ? { enabled: true, spec: project.data.settings.scene3d.spec }
         : undefined,

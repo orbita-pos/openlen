@@ -24,6 +24,7 @@ import { bakeAssistantWidget } from "@/lib/publish/assistant-widget";
 import { bakeComments } from "@/lib/publish/comments-widget";
 import { bakeBookings } from "@/lib/publish/bookings-widget";
 import { bakeCollections } from "@/lib/publish/collections-block";
+import { applyLiveData } from "@/lib/live";
 import { bakeWhatsAppButton, waHref } from "@/lib/publish/whatsapp-button";
 import { injectOrdersCart } from "@/lib/publish/orders-cart";
 import { bakeChatWidget } from "@/lib/publish/chat-widget";
@@ -199,6 +200,12 @@ export interface PublishParams {
    *  data-ol-collection-section placeholder, or appended before </body>. No
    *  runtime API — re-baked from the DB on every publish. */
   collections?: { enabled: boolean; items: ItemRow[]; layout: "grid" | "list" };
+  /** Datos vivos (settings.liveData). When set, every publish rebakes the
+   *  page's `data-ol-live` markers from the owner's Google Sheet (cached,
+   *  never-throw — a stale/unreachable Sheet just leaves the HTML
+   *  unchanged). Absent/null → the markers are left as-is (no Sheet
+   *  configured). */
+  liveData?: { sheetUrl: string } | null;
   /** WhatsApp button (settings.whatsapp). When enabled with a usable number, a
    *  floating tap-to-chat FAB is baked on the root doc + every page/locale
    *  variant — suppressed if the page already carries the profile contact
@@ -498,6 +505,9 @@ interface BakeDocumentCtx {
   /** Collections module. When enabled, the owner's item list is baked as STATIC
    *  HTML (grid/list of cards) at the placeholder, or appended. */
   collections?: { enabled: boolean; items: ItemRow[]; layout: "grid" | "list" };
+  /** Datos vivos. When set, every `data-ol-live` marker is rebaked from the
+   *  owner's Google Sheet (cached, never-throw). */
+  liveData?: { sheetUrl: string } | null;
   /** WhatsApp button. When enabled with a usable number, a floating FAB is baked
    *  (suppressed if the profile contact widget is already present). */
   whatsapp?: WhatsAppSettings;
@@ -581,6 +591,18 @@ async function bakeDocument(
       // eslint-disable-next-line no-console
       console.warn("[publishToDir] collections bake failed; publishing without it", err);
     }
+  }
+
+  // Datos vivos — rellena los marcadores data-ol-live desde el Google Sheet
+  // del dueño en cada publicación (applyLiveData es never-throw + kill-switch
+  // interno OPENLEN_LIVE_DATA). El valor va como texto ESCAPADO, así que es
+  // seguro tras el sanitizer. Fallback interno → migratedHtml sin cambios.
+  try {
+    const live = await applyLiveData(migratedHtml, ctx.liveData?.sheetUrl ?? null);
+    migratedHtml = live.html;
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.warn("[publishToDir] live data bake failed; publishing without it", err);
   }
 
   // Move LocalFs uploads to the subdomain's shared assets dir and rewrite
@@ -1030,6 +1052,7 @@ export async function publishToDir(
     comments: params.comments,
     bookings: params.bookings,
     collections: params.collections,
+    liveData: params.liveData,
     whatsapp: params.whatsapp,
     orders: params.orders,
     scene3d: params.scene3d,
