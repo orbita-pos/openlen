@@ -41,12 +41,12 @@ export async function GET(
   const items = await listItems(id, collection.id, { includeArchived: true });
   // Task 16: tell the editor when this collection is Sheet-sourced so it can
   // show a read-only banner instead of the owner discovering it via a silent
-  // 409 (Task 15) on their first edit attempt.
-  const [sheetBacked, source] = await Promise.all([
-    isSheetBacked(id, collection.id),
-    getCollectionSource(id),
-  ]);
-  return json({ collection, items, sheetBacked, sheetUrl: source?.sheet ?? null }, 200);
+  // 409 (Task 15) on their first edit attempt. isSheetBacked ya respeta el
+  // kill-switch (false con OPENLEN_LIVE_DATA=0); sheetUrl se apaga con él para
+  // que la respuesta sea consistente (nada de datos-vivos cuando está off).
+  const sheetBacked = await isSheetBacked(id, collection.id);
+  const sheetUrl = sheetBacked ? (await getCollectionSource(id))?.sheet ?? null : null;
+  return json({ collection, items, sheetBacked, sheetUrl }, 200);
 }
 
 export async function POST(
