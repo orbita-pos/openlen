@@ -1,4 +1,5 @@
 import "server-only";
+import type { LiveSheetBrokenEvent } from "@/lib/notifications/types";
 
 // Aviso al dueño cuando su Google Sheet dejó de leerse (spec §7): la página
 // NUNCA se rompe (conserva el último valor), pero el dueño debe enterarse de
@@ -7,36 +8,23 @@ import "server-only";
 // un aviso de ESTE sheet siga pendiente, re-agendar es un no-op — no se
 // spamea cada hora.
 //
-// ⚠️ NO CABLEADA A scheduleNotification TODAVÍA (hallazgo de la revisión
-// final, 2026-07-14). Este es el UNIT preparado (evento + dedupeKey +
-// never-throw), TESTEADO, para cuando el canal aprenda a renderizar el evento
-// `live_sheet_broken`. Pero NO debe enchufarse a scheduleNotification tal
-// cual: la unión NotificationEvent solo conoce `chat_message`, y los canales
-// (lib/notifications/channels/webpush.ts, email.ts) leen event.senderName/
-// preview/conversationId SIN ramificar por type — un evento live_sheet_broken
-// produciría un push vacío ("/inbox?conv=undefined") y un TypeError en el
-// email (.slice sobre undefined) → 2h de reintentos por cada Sheet roto. El
-// follow-up (b) debe: (1) hacer NotificationEvent una unión discriminada, (2)
-// ramificar por type en runJob + ambos canales, (3) recién ahí cablear el
-// `schedule`. Mientras tanto, el cron registra los Sheets rotos por
-// console.warn (lib/live/republish.ts) — señal en logs, sin entrega al dueño.
-
-/** Evento del aviso — forma que el canal renderizará cuando se extienda la
- *  unión de NotificationEvent (follow-up). Se mantiene aquí para no acoplar
- *  esta función a un cambio en el sistema de notificaciones vivo. */
-export interface LiveSheetBrokenEvent {
-  type: "live_sheet_broken";
-  projectId: string;
-  recipientUserId: string;
-  sheetUrl: string;
-  reason: string;
-}
+// Task 13 hizo NotificationEvent una unión discriminada (chat_message |
+// live_sheet_broken) y ramificó ambos canales por event.type — el evento que
+// este módulo agenda ahora usa el tipo canónico de lib/notifications/types.
+//
+// ⚠️ NO CABLEADA A scheduleNotification TODAVÍA. `reason` sigue siendo un
+// input de este módulo (para logging del caller, p.ej. lib/live/republish.ts
+// via console.warn) pero NO viaja en el evento — el tipo canónico solo tiene
+// `missingCount`. Cablear notifyBrokenSheet al cron real es Task 14.
 
 export interface NotifyBrokenInput {
   projectId: string;
   ownerUserId: string;
   sheetUrl: string;
+  /** Detalle legible para logs del caller — no viaja en el evento agendado. */
   reason: string;
+  /** 0 = el sheet dejó de leerse por completo. */
+  missingCount: number;
 }
 
 export interface NotifyBrokenDeps {
@@ -56,7 +44,7 @@ export async function notifyBrokenSheet(input: NotifyBrokenInput, deps: NotifyBr
     projectId: input.projectId,
     recipientUserId: input.ownerUserId,
     sheetUrl: input.sheetUrl,
-    reason: input.reason,
+    missingCount: input.missingCount,
   };
   try {
     await deps.schedule(event, brokenSheetDedupeKey(input.projectId, input.sheetUrl));

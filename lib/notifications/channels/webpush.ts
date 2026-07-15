@@ -78,11 +78,21 @@ export const webPushChannel: NotificationChannel = {
   isEnabled: (prefs) => prefs.webPushEnabled,
 
   async send(event: NotificationEvent) {
-    const payload = {
-      title: event.senderName,
-      body: event.preview,
-      url: "/inbox?conv=" + event.conversationId,
-    };
+    const payload =
+      event.type === "chat_message"
+        ? {
+            title: event.senderName,
+            body: event.preview,
+            url: "/inbox?conv=" + event.conversationId,
+          }
+        : {
+            title: "Tu Sheet dejó de leerse",
+            body:
+              event.missingCount > 0
+                ? `${event.missingCount} datos de tu Sheet ya no se encuentran`
+                : "Tu página conservó el último valor",
+            url: `/new?project=${event.projectId}`,
+          };
 
     const { sent, failed } = await sendPushToUser(event.recipientUserId, payload);
 

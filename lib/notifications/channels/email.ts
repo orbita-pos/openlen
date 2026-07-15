@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
-import { sendChatNotificationEmail } from "@/lib/email";
+import { sendChatNotificationEmail, sendLiveSheetBrokenEmail } from "@/lib/email";
 import type { NotificationChannel, NotificationEvent, DeliveryResult } from "../types";
 
 export const emailChannel: NotificationChannel = {
@@ -29,17 +29,26 @@ export const emailChannel: NotificationChannel = {
       .limit(1);
 
     const projectTitle = projectRows[0]?.title ?? event.projectId;
-    const deskUrl = `${process.env.NEXT_PUBLIC_SITE_URL ?? "https://openlen.com"}/inbox`;
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://openlen.com";
 
-    // Throws on Resend error → caller can retry
-    await sendChatNotificationEmail({
-      to: email,
-      ownerName,
-      senderName: event.senderName,
-      messageBody: event.preview,
-      deskUrl,
-      projectTitle,
-    });
+    // Throws on Resend error → caller can retry (both branches)
+    if (event.type === "chat_message") {
+      await sendChatNotificationEmail({
+        to: email,
+        ownerName,
+        senderName: event.senderName,
+        messageBody: event.preview,
+        deskUrl: `${siteUrl}/inbox`,
+        projectTitle,
+      });
+    } else {
+      await sendLiveSheetBrokenEmail({
+        to: email,
+        projectTitle,
+        missingCount: event.missingCount,
+        editorUrl: `${siteUrl}/new?project=${event.projectId}`,
+      });
+    }
 
     return "sent";
   },

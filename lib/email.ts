@@ -641,6 +641,75 @@ export async function sendChatNotificationEmail(input: {
   });
 }
 
+// ─── Live Sheet — owner notification when a connected Google Sheet breaks ────
+
+export async function sendLiveSheetBrokenEmail(input: {
+  to: string;
+  projectTitle: string;
+  missingCount: number;
+  editorUrl: string;
+}): Promise<void> {
+  const summary =
+    input.missingCount > 0
+      ? `${input.missingCount} datos de tu Sheet ya no se encuentran`
+      : "Tu página conservó el último valor mientras tanto";
+
+  const live = liveClientOrWarn("live sheet broken email");
+  if (!live) {
+    if (process.env.NODE_ENV !== "production") {
+      // eslint-disable-next-line no-console
+      console.log(`[DEV] live sheet broken notice to ${input.to}: ${input.projectTitle} — ${summary}`);
+    }
+    return;
+  }
+
+  const text = [
+    "Hi,",
+    "",
+    `Tu Google Sheet conectado a "${input.projectTitle}" dejó de leerse.`,
+    "",
+    summary,
+    "",
+    `Revisa tu página: ${input.editorUrl}`,
+  ].join("\n");
+
+  await live.emails.send({
+    from,
+    to: input.to,
+    subject: `Tu Sheet dejó de leerse — ${input.projectTitle}`,
+    text,
+    html: buildLiveSheetBrokenHtml({ ...input, summary }),
+  });
+}
+
+function buildLiveSheetBrokenHtml(input: {
+  projectTitle: string;
+  editorUrl: string;
+  summary: string;
+}): string {
+  return `<!doctype html>
+<html>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, sans-serif; background:#fafafa; margin:0; padding:32px; color:#0a0a0a;">
+  <table align="center" style="max-width:480px; width:100%; background:#fff; border-radius:16px; padding:32px; border:1px solid #e5e5e5;">
+    <tr><td>
+      <div style="display:flex; align-items:center; gap:8px; margin-bottom:24px;">
+        <span style="display:inline-block; width:24px; height:24px; background:#FF5A36; border-radius:6px; color:#fff; font-weight:700; text-align:center; line-height:24px; font-size:15px;">O</span>
+        <span style="font-weight:600; font-size:14px;">OpenLen</span>
+      </div>
+      <h1 style="font-size:20px; margin:0 0 4px; letter-spacing:-0.02em;">Tu Sheet dejó de leerse</h1>
+      <p style="font-size:14px; line-height:1.5; color:#525252; margin:0 0 14px;">
+        Tu Google Sheet conectado a <strong>${escape(input.projectTitle)}</strong> dejó de leerse.
+      </p>
+      <blockquote style="margin:0 0 24px; padding:12px 16px; background:#f5f5f5; border-left:3px solid #e5e5e5; border-radius:0 8px 8px 0; font-size:13.5px; color:#374151; line-height:1.6;">${escape(input.summary)}</blockquote>
+      <p style="margin:0;">
+        <a href="${escape(input.editorUrl)}" style="display:inline-block; background:#FF5A36; color:#fff; padding:11px 18px; border-radius:8px; text-decoration:none; font-weight:500; font-size:14px;">Revisar mi página</a>
+      </p>
+    </td></tr>
+  </table>
+</body>
+</html>`;
+}
+
 function buildChatNotificationHtml(input: {
   ownerName: string | null;
   senderName: string;

@@ -195,22 +195,26 @@ export async function runJob(jobId: string): Promise<void> {
   const { attempts, payload } = claimRows[0];
   const event = payload as unknown as NotificationEvent;
 
-  // 1. Presence re-check — if staff is live on the Desk, skip silently
-  const agentIds = await listAgentUserIds(event.projectId);
-  if (hub.isProjectStaffOnline(event.projectId, event.recipientUserId, agentIds)) {
-    await db
-      .update(schema.notificationJobs)
-      .set({ status: "done", updatedAt: new Date() })
-      .where(eq(schema.notificationJobs.id, jobId));
-    await logDelivery({
-      userId: event.recipientUserId,
-      channel: "presence",
-      status: "skipped",
-      eventType: event.type,
-      conversationId: event.conversationId,
-      detail: "staff online",
-    });
-    return;
+  // 1. Presence re-check — if staff is live on the Desk, skip silently. This
+  //    is a CHAT-ONLY optimization: for live_sheet_broken the owner must hear
+  //    about a broken data source even if staff happens to be online.
+  if (event.type === "chat_message") {
+    const agentIds = await listAgentUserIds(event.projectId);
+    if (hub.isProjectStaffOnline(event.projectId, event.recipientUserId, agentIds)) {
+      await db
+        .update(schema.notificationJobs)
+        .set({ status: "done", updatedAt: new Date() })
+        .where(eq(schema.notificationJobs.id, jobId));
+      await logDelivery({
+        userId: event.recipientUserId,
+        channel: "presence",
+        status: "skipped",
+        eventType: event.type,
+        conversationId: event.type === "chat_message" ? event.conversationId : null,
+        detail: "staff online",
+      });
+      return;
+    }
   }
 
   // 2. Load preferences + quiet-hours gate
@@ -258,7 +262,7 @@ export async function runJob(jobId: string): Promise<void> {
         channel: "webpush",
         status: r,
         eventType: event.type,
-        conversationId: event.conversationId,
+        conversationId: event.type === "chat_message" ? event.conversationId : null,
       });
     } catch (err) {
       webpushResult = "error";
@@ -269,7 +273,7 @@ export async function runJob(jobId: string): Promise<void> {
         channel: "webpush",
         status: "failed",
         eventType: event.type,
-        conversationId: event.conversationId,
+        conversationId: event.type === "chat_message" ? event.conversationId : null,
         detail: lastError,
       });
     }
@@ -284,7 +288,7 @@ export async function runJob(jobId: string): Promise<void> {
         channel: "email",
         status: "skipped",
         eventType: event.type,
-        conversationId: event.conversationId,
+        conversationId: event.type === "chat_message" ? event.conversationId : null,
         detail: "push succeeded",
       });
     } else {
@@ -297,7 +301,7 @@ export async function runJob(jobId: string): Promise<void> {
           channel: "email",
           status: r,
           eventType: event.type,
-          conversationId: event.conversationId,
+          conversationId: event.type === "chat_message" ? event.conversationId : null,
         });
       } catch (err) {
         retryNeeded = true;
@@ -308,7 +312,7 @@ export async function runJob(jobId: string): Promise<void> {
           channel: "email",
           status: "failed",
           eventType: event.type,
-          conversationId: event.conversationId,
+          conversationId: event.type === "chat_message" ? event.conversationId : null,
           detail: msg,
         });
       }
@@ -339,7 +343,7 @@ export async function runJob(jobId: string): Promise<void> {
       channel: "dlq",
       status: "dlq",
       eventType: event.type,
-      conversationId: event.conversationId,
+      conversationId: event.type === "chat_message" ? event.conversationId : null,
       detail: lastError ?? "max attempts reached",
     });
   } else {

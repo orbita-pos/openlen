@@ -1,4 +1,4 @@
-export interface NotificationEvent {
+export interface ChatMessageEvent {
   type: "chat_message";
   projectId: string;
   conversationId: string;
@@ -6,6 +6,17 @@ export interface NotificationEvent {
   senderName: string;
   preview: string;
 }
+
+export interface LiveSheetBrokenEvent {
+  type: "live_sheet_broken";
+  projectId: string;
+  recipientUserId: string;
+  sheetUrl: string;
+  /** 0 = the sheet stopped returning rows entirely ("dejó de leerse"). */
+  missingCount: number;
+}
+
+export type NotificationEvent = ChatMessageEvent | LiveSheetBrokenEvent;
 
 export interface NotificationPrefs {
   webPushEnabled: boolean;
