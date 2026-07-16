@@ -54,6 +54,8 @@ export function useInboxBadge(): {
     setCounts((c) => (c ? { ...c, leads: 0 } : c));
     try {
       await fetch("/api/inbox/badge/seen", { method: "POST" });
+    } catch {
+      // Badge failures never surface; the next poll reconciles.
     } finally {
       window.dispatchEvent(new Event(SYNC_EVENT));
     }

@@ -6,7 +6,7 @@
 // Tab lives in the URL (?tab=forms; absent = chat) so push/PWA cold-opens land
 // on Chat and the Módulos "Formularios" card can deep-link to ?tab=forms.
 
-import { useCallback } from "react";
+import { useCallback, useEffect } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { ArrowLeft, FileText, Inbox, MessageSquare } from "lucide-react";
@@ -14,6 +14,8 @@ import { Link } from "@/i18n/navigation";
 import { InboxDesk } from "./inbox-desk";
 import { InboxForms } from "./inbox-forms";
 import { PushActivation } from "./push-activation";
+import { useInboxBadge } from "./use-inbox-badge";
+import { formatBadge } from "./badge-format";
 
 type Tab = "chat" | "forms";
 
@@ -29,6 +31,13 @@ export function InboxHub() {
   const fromRaw = searchParams.get("from");
   const from = fromRaw && /^[a-zA-Z0-9-]{1,64}$/.test(fromRaw) ? fromRaw : null;
   const backHref = from ? `/new?project=${from}` : "/new";
+
+  const { counts, markLeadsSeen } = useInboxBadge();
+  // Opening the Formularios tab IS the "seen" action (spec: timestamp
+  // semantics — everything up to now counts as seen).
+  useEffect(() => {
+    if (tab === "forms") void markLeadsSeen();
+  }, [tab, markLeadsSeen]);
 
   const selectTab = useCallback(
     (next: Tab) => {
@@ -64,12 +73,14 @@ export function InboxHub() {
             onClick={() => selectTab("chat")}
             icon={<MessageSquare size={14} />}
             label={t("tabs.chat")}
+            count={formatBadge(counts?.chat ?? 0)}
           />
           <TabButton
             active={tab === "forms"}
             onClick={() => selectTab("forms")}
             icon={<FileText size={14} />}
             label={t("tabs.forms")}
+            count={formatBadge(counts?.leads ?? 0)}
           />
         </div>
       </header>
@@ -91,11 +102,13 @@ function TabButton({
   onClick,
   icon,
   label,
+  count = null,
 }: {
   active: boolean;
   onClick: () => void;
   icon: React.ReactNode;
   label: string;
+  count?: string | null;
 }) {
   return (
     <button
@@ -111,6 +124,14 @@ function TabButton({
     >
       {icon}
       {label}
+      {count !== null && (
+        <span
+          aria-hidden
+          className="min-w-4 h-4 px-1 rounded-full bg-coral-500 text-white text-[10px] font-semibold leading-4 text-center"
+        >
+          {count}
+        </span>
+      )}
     </button>
   );
 }
