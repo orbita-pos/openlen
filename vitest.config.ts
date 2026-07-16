@@ -105,6 +105,9 @@ export default defineConfig({
       "lib/models/**/*.test.ts",
       "lib/community/**/*.test.ts",
       "lib/marketing/**/*.test.ts",
+      // Inbox badge (Results loop P2) — prevents silent skip on new test files
+      "lib/inbox/**/*.test.ts",
+      "components/inbox/**/*.test.ts",
       // Route guard for the one-time Explore seed trigger. Mocks the seed core,
       // so it never loads the native html-engine binding.
       "app/api/admin/explore-seed/route.test.ts",
