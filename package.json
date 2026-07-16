@@ -48,6 +48,7 @@
     "versions:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/versions-migrate.ts",
     "chat:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/chat-migrate.ts",
     "privatechat:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/privatechat-migrate.ts",
+    "inbox:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/inbox-migrate.ts",
     "notifications:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/notifications-migrate.ts",
     "notifications:drain": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/notifications-drain.ts",
     "privatechat:smoke": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/privatechat-smoke.ts",

@@ -36,6 +36,9 @@ export const users = pgTable("users", {
   name: text("name"),
   email: text("email").notNull().unique(),
   emailVerified: timestamp("emailVerified", { mode: "date" }),
+  // Leads-inbox "seen" watermark — the inbox badge counts submissions newer
+  // than this. Null = never opened the Formularios tab (everything counts).
+  lastSeenLeadsAt: timestamp("lastSeenLeadsAt", { mode: "date" }),
   image: text("image"),
   passwordHash: text("passwordHash"),
   // Subscription tier. The Polar billing webhook (app/api/billing/webhook)

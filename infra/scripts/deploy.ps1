@@ -103,6 +103,10 @@ if ($env:OPENLEN_SKIP_MIGRATE -ne "1") {
   Step 2 "Applying chat DB migration (npm run chat:migrate)..."
   npm run chat:migrate
   if ($LASTEXITCODE -ne 0) { throw "chat:migrate failed (exit $LASTEXITCODE)" }
+
+  Step 2 "Applying inbox DB migration (npm run inbox:migrate)..."
+  npm run inbox:migrate
+  if ($LASTEXITCODE -ne 0) { throw "inbox:migrate failed (exit $LASTEXITCODE)" }
 }
 
 # --- 3. Compose standalone with static + public -----------------------
