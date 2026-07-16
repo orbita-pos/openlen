@@ -30,6 +30,41 @@ const PLACEHOLDER = `<section data-ol-collection-section style="border:1px dashe
 const PAGE = (inner: string) => `<html><body>${inner}</body></html>`;
 
 describe("bakeCollections", () => {
+  // Restyle 2026-07-15: tarjetas con sombra + placeholder de inicial
+  it("sin imageUrl la tarjeta trae el placeholder con la inicial del título (no caja vacía)", () => {
+    const out = bakeCollections(PAGE(PLACEHOLDER), {
+      items: [item({ title: "cheesecake" })],
+      layout: "grid",
+    });
+    expect(out).toContain(">C</div>");
+    expect(out).toContain("linear-gradient");
+  });
+
+  it("la inicial del placeholder se escapa (título hostil)", () => {
+    const out = bakeCollections(PAGE(PLACEHOLDER), {
+      items: [item({ title: "<script>alert(1)</script>" })],
+      layout: "grid",
+    });
+    expect(out).not.toContain("<script>alert");
+    expect(out).toContain("&lt;"); // la inicial "<" viaja escapada
+  });
+
+  it("el grid trae el <style> del hover scoped al marker (sin JS, CSP-clean)", () => {
+    const out = bakeCollections(PAGE(PLACEHOLDER), { items: [item({})], layout: "grid" });
+    expect(out).toContain(".olc-card:hover");
+    expect(out).toContain("prefers-reduced-motion");
+    expect(out).not.toContain("<script");
+  });
+
+  it("el badge va sobre la foto (absolute) en el grid", () => {
+    const out = bakeCollections(PAGE(PLACEHOLDER), {
+      items: [item({ badge: "Popular", imageUrl: "https://img.x/a.jpg" })],
+      layout: "grid",
+    });
+    expect(out).toContain("position:absolute");
+    expect(out).toContain("Popular");
+  });
+
   it("replaces the placeholder with a static grid (no dashed box ships)", () => {
     const out = bakeCollections(PAGE(PLACEHOLDER), { items: [item({ title: "Espresso" })], layout: "grid" });
     expect(out).toContain("data-ol-collection-widget");
@@ -146,7 +181,7 @@ describe("orders buttons (Pedidos por WhatsApp)", () => {
     expect(out).toContain('data-ol-order-id="it-1"');
     expect(out).toContain('data-ol-order-title="Tacos al pastor"');
     expect(out).toContain('data-ol-order-cents="9000"');
-    expect(out).toContain(">Agregar<");
+    expect(out).toContain(">+ Agregar<");
   });
 
   it("unparseable price bakes an EMPTY cents attr (cart shows 'a confirmar')", () => {
@@ -182,6 +217,6 @@ describe("orders buttons (Pedidos por WhatsApp)", () => {
       '<!doctype html><html lang="en"><head></head><body></body></html>',
       { items: [orderItem()], layout: "grid", orders: { number: "5512345678" } },
     );
-    expect(out).toContain(">Add<");
+    expect(out).toContain(">+ Add<");
   });
 });

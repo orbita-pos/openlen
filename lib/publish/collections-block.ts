@@ -21,7 +21,6 @@ const WIDGET_MARKER = "data-ol-collection-widget";
 const SECTION_MARKER = "data-ol-collection-section";
 
 const FALLBACK_ACCENT = "#16181d";
-const CARD_BORDER = "#ececf0";
 const INK = "#16181d";
 const MUTED = "#6b7280";
 
@@ -64,20 +63,47 @@ function inkOn(accent: string): string {
   return lum > 0.62 ? "#16181d" : "#ffffff";
 }
 
-function badgeHtml(badge: string | null, accent: string): string {
+function badgeHtml(badge: string | null, accent: string, overImage: boolean): string {
   if (!badge) return "";
+  if (overImage) {
+    return `<span style="position:absolute;top:10px;left:10px;font-size:11px;font-weight:700;letter-spacing:.02em;padding:4px 10px;border-radius:999px;background:#fff;color:${accent};box-shadow:0 2px 8px rgba(0,0,0,.12);">${esc(badge)}</span>`;
+  }
   return `<span style="align-self:flex-start;font-size:11px;font-weight:600;letter-spacing:.02em;padding:3px 9px;border-radius:999px;background:#f3f3f6;color:${accent};">${esc(badge)}</span>`;
 }
 
-function ctaHtml(item: ItemRow, accent: string): string {
+function ctaHtml(item: ItemRow, accent: string, fullWidth: boolean): string {
   const href = safeHref(item.ctaUrl);
   if (!item.ctaLabel || !href) return "";
-  return `<a href="${esc(href)}" style="margin-top:auto;align-self:flex-start;display:inline-block;text-decoration:none;font-size:13px;font-weight:600;padding:9px 16px;border-radius:10px;background:${accent};color:${inkOn(accent)};">${esc(item.ctaLabel)}</a>`;
+  if (fullWidth) {
+    return `<a href="${esc(href)}" style="margin-top:12px;display:block;text-align:center;text-decoration:none;font-size:14px;font-weight:700;padding:11px 0;border-radius:999px;border:1.5px solid ${accent};background:transparent;color:${accent};">${esc(item.ctaLabel)}</a>`;
+  }
+  return `<a href="${esc(href)}" style="margin-top:auto;align-self:flex-start;display:inline-block;text-decoration:none;font-size:13px;font-weight:600;padding:9px 16px;border-radius:999px;background:${accent};color:${inkOn(accent)};">${esc(item.ctaLabel)}</a>`;
 }
 
-function orderButtonHtml(item: ItemRow, accent: string, label: string, hasCta: boolean): string {
+function orderButtonHtml(
+  item: ItemRow,
+  accent: string,
+  label: string,
+  hasCta: boolean,
+  fullWidth: boolean,
+): string {
   const cents = parsePriceCents(item.priceDisplay);
-  return `<button type="button" data-ol-order-add data-ol-order-id="${esc(item.id)}" data-ol-order-title="${esc(item.title)}" data-ol-order-price="${esc(item.priceDisplay ?? "")}" data-ol-order-cents="${cents ?? ""}" style="${hasCta ? "margin-top:8px" : "margin-top:auto"};align-self:flex-start;display:inline-block;cursor:pointer;font-size:13px;font-weight:600;padding:8px 15px;border-radius:10px;border:1.5px solid ${accent};background:transparent;color:${accent};">${esc(label)}</button>`;
+  const attrs = `type="button" data-ol-order-add data-ol-order-id="${esc(item.id)}" data-ol-order-title="${esc(item.title)}" data-ol-order-price="${esc(item.priceDisplay ?? "")}" data-ol-order-cents="${cents ?? ""}"`;
+  if (fullWidth) {
+    return `<button ${attrs} style="margin-top:${hasCta ? "8px" : "12px"};width:100%;cursor:pointer;font-size:14px;font-weight:700;padding:12px 0;border-radius:999px;border:0;background:${accent};color:${inkOn(accent)};box-shadow:0 2px 10px rgba(0,0,0,.16);">+ ${esc(label)}</button>`;
+  }
+  return `<button ${attrs} style="${hasCta ? "margin-top:8px" : "margin-top:auto"};align-self:flex-start;display:inline-block;cursor:pointer;font-size:13px;font-weight:600;padding:8px 15px;border-radius:999px;border:1.5px solid ${accent};background:transparent;color:${accent};">+ ${esc(label)}</button>`;
+}
+
+/** Foto 4:3, o —clave para catálogos nacidos de un Sheet sin fotos— un
+ *  placeholder con gradiente del acento + la inicial del item, para que una
+ *  tarjeta sin imagen se vea intencional y no como caja de texto vacía. */
+function mediaHtml(item: ItemRow, accent: string): string {
+  const src = safeImg(item.imageUrl);
+  const media = src
+    ? `<img src="${esc(src)}" alt="${esc(item.title)}" loading="lazy" style="width:100%;aspect-ratio:4/3;object-fit:cover;display:block;background:#f4f4f6;">`
+    : `<div aria-hidden="true" style="width:100%;aspect-ratio:4/3;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,${accent}1f,${accent}40);color:${accent};font-size:54px;font-weight:800;font-family:Georgia,'Times New Roman',serif;">${esc((item.title.trim().charAt(0) || "•").toUpperCase())}</div>`;
+  return `<div style="position:relative;">${media}${badgeHtml(item.badge, accent, true)}</div>`;
 }
 
 function gridCard(
@@ -86,11 +112,11 @@ function gridCard(
   orders: { number: string } | null | undefined,
   addLabel: string,
 ): string {
-  const src = safeImg(item.imageUrl);
-  const img = src
-    ? `<img src="${esc(src)}" alt="${esc(item.title)}" loading="lazy" style="width:100%;aspect-ratio:4/3;object-fit:cover;display:block;background:#f4f4f6;">`
+  const hasCta = Boolean(item.ctaLabel && safeHref(item.ctaUrl));
+  const price = item.priceDisplay
+    ? `<div style="flex:0 0 auto;font-size:17px;font-weight:800;letter-spacing:-.01em;color:${accent};">${esc(item.priceDisplay)}</div>`
     : "";
-  return `<article style="border:1px solid ${CARD_BORDER};border-radius:14px;overflow:hidden;background:#fff;display:flex;flex-direction:column;">${img}<div style="padding:16px;display:flex;flex-direction:column;gap:7px;flex:1;">${badgeHtml(item.badge, accent)}<h3 style="margin:0;font-size:16px;font-weight:700;line-height:1.3;color:${INK};">${esc(item.title)}</h3>${item.subtitle ? `<div style="font-size:13px;color:${MUTED};">${esc(item.subtitle)}</div>` : ""}${item.priceDisplay ? `<div style="font-size:15px;font-weight:700;color:${accent};">${esc(item.priceDisplay)}</div>` : ""}${item.description ? `<p style="margin:0;font-size:13.5px;line-height:1.55;color:#52525b;">${esc(item.description)}</p>` : ""}${ctaHtml(item, accent)}${orders ? orderButtonHtml(item, accent, addLabel, Boolean(item.ctaLabel && safeHref(item.ctaUrl))) : ""}</div></article>`;
+  return `<article class="olc-card" style="border:0;border-radius:18px;overflow:hidden;background:#fff;display:flex;flex-direction:column;box-shadow:0 2px 6px rgba(23,18,14,.06),0 12px 28px rgba(23,18,14,.07);">${mediaHtml(item, accent)}<div style="padding:15px 16px 16px;display:flex;flex-direction:column;gap:6px;flex:1;"><div style="display:flex;justify-content:space-between;gap:10px;align-items:baseline;"><h3 style="margin:0;font-size:16.5px;font-weight:700;line-height:1.25;color:${INK};">${esc(item.title)}</h3>${price}</div>${item.subtitle ? `<div style="font-size:12.5px;color:${MUTED};">${esc(item.subtitle)}</div>` : ""}${item.description ? `<p style="margin:0;font-size:13.5px;line-height:1.5;color:#52525b;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">${esc(item.description)}</p>` : ""}${ctaHtml(item, accent, true)}${orders ? orderButtonHtml(item, accent, addLabel, hasCta, true) : ""}</div></article>`;
 }
 
 function listRow(
@@ -101,9 +127,9 @@ function listRow(
 ): string {
   const src = safeImg(item.imageUrl);
   const thumb = src
-    ? `<img src="${esc(src)}" alt="${esc(item.title)}" loading="lazy" style="width:84px;height:84px;flex:0 0 auto;object-fit:cover;border-radius:10px;background:#f4f4f6;">`
-    : "";
-  return `<div style="display:flex;gap:16px;padding:16px 0;border-bottom:1px solid ${CARD_BORDER};align-items:flex-start;">${thumb}<div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:5px;"><div style="display:flex;justify-content:space-between;gap:14px;align-items:baseline;"><h3 style="margin:0;font-size:16px;font-weight:700;line-height:1.3;color:${INK};">${esc(item.title)}</h3>${item.priceDisplay ? `<span style="flex:0 0 auto;font-size:15px;font-weight:700;color:${accent};">${esc(item.priceDisplay)}</span>` : ""}</div>${badgeHtml(item.badge, accent)}${item.subtitle ? `<div style="font-size:13px;color:${MUTED};">${esc(item.subtitle)}</div>` : ""}${item.description ? `<p style="margin:0;font-size:13.5px;line-height:1.55;color:#52525b;">${esc(item.description)}</p>` : ""}${ctaHtml(item, accent)}${orders ? orderButtonHtml(item, accent, addLabel, Boolean(item.ctaLabel && safeHref(item.ctaUrl))) : ""}</div></div>`;
+    ? `<img src="${esc(src)}" alt="${esc(item.title)}" loading="lazy" style="width:84px;height:84px;flex:0 0 auto;object-fit:cover;border-radius:14px;background:#f4f4f6;">`
+    : `<div aria-hidden="true" style="width:84px;height:84px;flex:0 0 auto;border-radius:14px;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,${accent}1f,${accent}40);color:${accent};font-size:26px;font-weight:800;font-family:Georgia,'Times New Roman',serif;">${esc((item.title.trim().charAt(0) || "•").toUpperCase())}</div>`;
+  return `<div style="display:flex;gap:16px;padding:16px 0;border-bottom:1px solid rgba(0,0,0,.06);align-items:flex-start;">${thumb}<div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:5px;"><div style="display:flex;justify-content:space-between;gap:14px;align-items:baseline;"><h3 style="margin:0;font-size:16px;font-weight:700;line-height:1.3;color:${INK};">${esc(item.title)}</h3>${item.priceDisplay ? `<span style="flex:0 0 auto;font-size:16px;font-weight:800;letter-spacing:-.01em;color:${accent};">${esc(item.priceDisplay)}</span>` : ""}</div>${badgeHtml(item.badge, accent, false)}${item.subtitle ? `<div style="font-size:13px;color:${MUTED};">${esc(item.subtitle)}</div>` : ""}${item.description ? `<p style="margin:0;font-size:13.5px;line-height:1.55;color:#52525b;">${esc(item.description)}</p>` : ""}${ctaHtml(item, accent, false)}${orders ? orderButtonHtml(item, accent, addLabel, Boolean(item.ctaLabel && safeHref(item.ctaUrl)), false) : ""}</div></div>`;
 }
 
 function container(cfg: CollectionsBakeConfig, accent: string, addLabel: string): string {
@@ -112,7 +138,12 @@ function container(cfg: CollectionsBakeConfig, accent: string, addLabel: string)
     return `<div ${WIDGET_MARKER} style="max-width:680px;margin:32px auto;padding:0 16px;">${rows}</div>`;
   }
   const cards = cfg.items.map((it) => gridCard(it, accent, cfg.orders, addLabel)).join("");
-  return `<div ${WIDGET_MARKER} style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:20px;max-width:1100px;margin:32px auto;padding:0 16px;">${cards}</div>`;
+  // El hover (lift) no puede ser inline — va en un <style> mínimo, scoped al
+  // marker (CSP-clean: style-src no se toca; cero JS). Los estilos de las
+  // tarjetas siguen INLINE a propósito: ganan en especificidad a cualquier
+  // regla global de la página del usuario (article{...}, img{...}).
+  const hover = `<style>[${WIDGET_MARKER}] .olc-card{transition:transform .18s ease,box-shadow .18s ease}[${WIDGET_MARKER}] .olc-card:hover{transform:translateY(-3px);box-shadow:0 4px 10px rgba(23,18,14,.08),0 20px 44px rgba(23,18,14,.12)}@media (prefers-reduced-motion:reduce){[${WIDGET_MARKER}] .olc-card,[${WIDGET_MARKER}] .olc-card:hover{transition:none;transform:none}}</style>`;
+  return `<div ${WIDGET_MARKER} style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:20px;max-width:1100px;margin:32px auto;padding:0 16px;">${hover}${cards}</div>`;
 }
 
 /** Bake the collection grid/list into the page. Idempotent. Replaces the
