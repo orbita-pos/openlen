@@ -23,4 +23,20 @@ describe("bakeChatWidget", () => {
     expect(out).not.toContain("</script><");
     expect(out).toContain("#7C3AED");
   });
+
+  // Restyle WhatsApp 2026-07-15
+  it("sin acento configurado cae al coral OpenLen (#FF5A36), no a un color inventado", () => {
+    const out = bakeChatWidget(BASE, { sub: "demo", mount: "fab", selfServeJoin: true });
+    expect(out).toContain("#FF5A36");
+  });
+
+  it("el script trae la piel WhatsApp: avatar del header, papel tapiz y timestamps", () => {
+    const out = bakeChatWidget(BASE, cfg);
+    expect(out).toContain('"ava"'); // avatar circle en el header
+    expect(out).toContain("radial-gradient"); // papel tapiz
+    expect(out).toContain("fmtT"); // formateador de hora de burbuja
+    expect(out).toContain('"hello"'); // saludo como burbuja en el form
+    // el acento configurado sigue mandando sobre el default
+    expect(out).toContain("#7C3AED");
+  });
 });

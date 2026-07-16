@@ -15,12 +15,30 @@ import {
 const COLOR_TOKEN_RE =
   /#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})\b|rgba?\([^)]{3,40}\)|hsla?\([^)]{3,40}\)/g;
 
+// El acento DECLARADO de una página born-canonical (lib/normalize escribe
+// `--ol-accent:` en :root). `--ol-accent-r:` (el triplete rgb) no matchea:
+// tras "accent" viene "-r", no ":".
+const DECLARED_ACCENT_RE = /--ol-accent\s*:\s*([^;}]{3,40})/;
+
 // Generated pages repeat their palette constantly; sampling this many tokens
 // is plenty and bounds the publish-time cost on pathological documents.
 const MAX_TOKENS = 4000;
 const CLUSTER_DELTA_E = 4;
 
 export function detectSiteAccent(html: string): string | null {
+  // El token oficial MANDA (bug te2 2026-07-15: un verde regado por el HTML
+  // le ganaba por frecuencia al acento declarado — el chat y el catálogo
+  // salían de un color que el dueño nunca eligió). El escaneo estadístico
+  // queda como fallback para HTML sin token (importado/legacy). Un token
+  // ilegible o casi-blanco/negro (chrome, no marca) también cae al escaneo.
+  const declared = DECLARED_ACCENT_RE.exec(html)?.[1]?.trim();
+  if (declared) {
+    const color = parseColor(declared);
+    if (color && color.alpha >= 0.9 && color.oklch.l >= 0.25 && color.oklch.l <= 0.92) {
+      return color.hex;
+    }
+  }
+
   const clusters: Array<{ rep: ParsedColor; count: number }> = [];
   COLOR_TOKEN_RE.lastIndex = 0;
   let match: RegExpExecArray | null;

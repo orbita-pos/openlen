@@ -7,6 +7,35 @@ const page = (body: string) =>
   `<!doctype html><html><head><style>${body}</style></head><body></body></html>`;
 
 describe("detectSiteAccent", () => {
+  // Bug cazado en prod (te2, 2026-07-15): la página declaraba
+  // --ol-accent:#e05a2b pero un verde regado en el HTML le ganó por
+  // frecuencia×chroma al acento OFICIAL. El token declarado MANDA; el
+  // escaneo estadístico es solo para HTML sin token (importado/legacy).
+  it("the declared --ol-accent token WINS over a more frequent vivid color", () => {
+    const html = page(`
+      :root{--ol-accent:#e05a2b;--ol-accent-r:224,90,43}
+      .a{color:#3ecf8e}.b{background:#3ecf8e}.c{border-color:#3ecf8e}
+      .d{color:#3ecf8e}.e{background:#3ecf8e}.f{color:#3ecf8e}
+    `);
+    expect(detectSiteAccent(html)).toBe("#e05a2b");
+  });
+
+  it("an unparseable --ol-accent falls back to the statistical scan", () => {
+    const html = page(`
+      :root{--ol-accent:var(--broken)}
+      .a{color:#3ecf8e}.b{background:#3ecf8e}.c{border-color:#3ecf8e}
+    `);
+    expect(detectSiteAccent(html)).toBe("#3ecf8e");
+  });
+
+  it("a near-white --ol-accent (chrome, not brand) falls back to the scan", () => {
+    const html = page(`
+      :root{--ol-accent:#fafafa}
+      .a{color:#2563eb}.b{background:#2563eb}.c{border-color:#2563eb}
+    `);
+    expect(detectSiteAccent(html)).toBe("#2563eb");
+  });
+
   it("picks the frequent vivid color over chrome neutrals", () => {
     const html = page(`
       body{background:#ffffff;color:#111111}
