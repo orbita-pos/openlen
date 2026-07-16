@@ -99,6 +99,19 @@ const STRINGS: Record<string, BookingsStrings> = { en: EN, es: ES };
 
 export interface BookingsWidgetConfig {
   sub: string;
+  /** Acento de la página (detectSiteAccent en el call site). Solo un hex se
+   *  interpola al CSS del script (mismo guard que chat-widget); sin acento el
+   *  widget cae al tinta neutra de siempre. */
+  accent?: string;
+}
+
+/** Texto legible sobre el acento (mismo umbral que collections-block). */
+function inkOn(accent: string): string {
+  const m = /^#?([0-9a-f]{6})$/i.exec(accent.trim());
+  if (!m) return "#ffffff";
+  const n = parseInt(m[1], 16);
+  const lum = (0.299 * ((n >> 16) & 255) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255)) / 255;
+  return lum > 0.62 ? "#16181d" : "#ffffff";
 }
 
 const WIDGET_MARKER = "data-ol-bookings-widget";
@@ -106,6 +119,8 @@ const SECTION_MARKER = "data-ol-bookings-section";
 const HOST_MARKER = "data-ol-bookings-host";
 
 function widgetScript(cfg: BookingsWidgetConfig): string {
+  const ACC = /^#[0-9a-fA-F]{6}$/.test(cfg.accent ?? "") ? cfg.accent! : "#16181d";
+  const INK = inkOn(ACC);
   const C = JSON.stringify({ sub: cfg.sub, S: STRINGS }).replace(/</g, "\\u003c");
 
   return `<script ${WIDGET_MARKER}>(function(){try{
@@ -123,25 +138,25 @@ R.innerHTML='<style>'
 +'.w{max-width:560px;margin:32px auto;padding:0 16px;color:#1a1a1a}'
 +'.h{font-size:20px;font-weight:700;margin:0 0 4px}'
 +'.tz{font-size:12px;color:#9a9aa0;margin:0 0 16px}'
-+'.svc{border:1px solid #e4e4e7;border-radius:12px;padding:14px;margin-bottom:8px;cursor:pointer;background:#fff;width:100%;text-align:left;display:block}'
-+'.svc:hover{border-color:#16181d}.svc:focus-visible{outline:2px solid #16181d}'
-+'.svc .n{font-weight:600;font-size:15px}'
++'.svc{border:0;border-radius:16px;padding:15px 16px;margin-bottom:10px;cursor:pointer;background:#fff;width:100%;text-align:left;display:block;box-shadow:0 1px 4px rgba(23,18,14,.06),0 8px 20px rgba(23,18,14,.06);transition:transform .15s ease,box-shadow .15s ease}'
++'.svc:hover{transform:translateY(-2px);box-shadow:0 2px 6px rgba(23,18,14,.08),0 14px 30px rgba(23,18,14,.1)}.svc:focus-visible{outline:2px solid ${ACC}}'
++'.svc .n{font-weight:700;font-size:15px}'
 +'.svc .d{font-size:13px;color:#71717a;margin-top:2px}'
-+'.svc .m{font-size:12px;color:#9a9aa0;margin-top:6px}'
-+'.lbl{font-size:13px;font-weight:600;margin:16px 0 8px}'
++'.svc .m{font-size:12px;color:${ACC};font-weight:600;margin-top:6px}'
++'.lbl{font-size:13px;font-weight:700;margin:16px 0 8px}'
 +'.grid{display:flex;flex-wrap:wrap;gap:8px}'
-+'.chip{min-height:40px;padding:0 14px;border:1px solid #d8d8dc;border-radius:10px;background:#fff;font-size:13.5px;font-weight:600;cursor:pointer}'
-+'.chip:hover{border-color:#16181d}.chip:focus-visible{outline:2px solid #16181d}'
-+'.chip[aria-pressed="true"]{background:#16181d;color:#fff;border-color:#16181d}'
-+'.f input,.f textarea{width:100%;min-height:42px;border:1px solid #d8d8dc;border-radius:10px;padding:10px 12px;font-size:14px;margin-top:8px;font-family:inherit}'
-+'.f textarea{min-height:72px;resize:vertical}'
-+'.f input:focus,.f textarea:focus{outline:2px solid #16181d;border-color:#16181d}'
-+'.pri{min-height:44px;margin-top:12px;padding:0 20px;border:0;border-radius:10px;background:#16181d;color:#fff;font-weight:600;font-size:14px;cursor:pointer}'
++'.chip{min-height:40px;padding:0 16px;border:1.5px solid #e2e2e6;border-radius:999px;background:#fff;font-size:13.5px;font-weight:600;cursor:pointer;transition:border-color .12s}'
++'.chip:hover{border-color:${ACC}}.chip:focus-visible{outline:2px solid ${ACC}}'
++'.chip[aria-pressed="true"]{background:${ACC};color:${INK};border-color:${ACC};box-shadow:0 2px 8px rgba(0,0,0,.14)}'
++'.f input,.f textarea{width:100%;min-height:44px;border:1px solid #e2e2e6;border-radius:999px;padding:10px 16px;font-size:14px;margin-top:8px;font-family:inherit;box-shadow:0 1px 2px rgba(0,0,0,.04)}'
++'.f textarea{min-height:72px;resize:vertical;border-radius:16px}'
++'.f input:focus,.f textarea:focus{outline:2px solid ${ACC};border-color:${ACC}}'
++'.pri{width:100%;min-height:48px;margin-top:14px;padding:0 20px;border:0;border-radius:999px;background:${ACC};color:${INK};font-weight:700;font-size:14.5px;cursor:pointer;box-shadow:0 2px 10px rgba(0,0,0,.16)}'
 +'.pri:disabled{opacity:.5;cursor:default}'
 +'.lnk{background:none;border:0;color:#6b7280;font-size:13px;cursor:pointer;padding:8px 0;text-decoration:underline}'
 +'.msg{font-size:13px;color:#6b7280;margin-top:10px}'
-+'.ok{text-align:center;padding:24px 0}.ok .t{font-size:18px;font-weight:700}.ok .b{font-size:14px;color:#71717a;margin-top:6px}'
-+'.mlink{display:inline-block;margin-top:14px;font-size:13px;color:#16181d}'
++'.ok{text-align:center;padding:28px 0}.ok .t{font-size:19px;font-weight:800;color:${ACC}}.ok .b{font-size:14px;color:#71717a;margin-top:6px}'
++'.mlink{display:inline-block;margin-top:14px;font-size:13px;font-weight:600;color:${ACC}}'
 +'</style><div class="w" role="group"><div class="h"></div><div class="tz"></div><div class="body" aria-live="polite"></div></div>';
 var hEl=R.querySelector(".h"),tzEl=R.querySelector(".tz"),body=R.querySelector(".body");
 hEl.textContent=T.title;tzEl.textContent=T.tzNote+(TZ?" ("+TZ+")":"");

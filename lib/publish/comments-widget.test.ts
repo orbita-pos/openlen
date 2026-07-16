@@ -7,6 +7,15 @@ const CFG = { sub: "mysite", apiBase: "https://openlen.com", page: null };
 const DOC = (body: string) => `<!doctype html><html lang="es"><head></head><body>${body}</body></html>`;
 
 describe("bakeComments", () => {
+  // Restyle 2026-07-15: acento de la página + guard hex
+  it("interpola el acento hex al CSS; un acento hostil cae a la tinta neutra", () => {
+    const ok = bakeComments(DOC(""), { ...CFG, accent: "#e05a2b" });
+    expect(ok).toContain("#e05a2b");
+    const bad = bakeComments(DOC(""), { ...CFG, accent: "red}body{background:url(//evil)" });
+    expect(bad).not.toContain("evil");
+    expect(bad).toContain("#16181d");
+  });
+
   it("appends the widget before </body> when there's no placeholder", () => {
     const out = bakeComments(DOC("<h1>hi</h1>"), CFG);
     expect(out).toContain("data-ol-comments-widget");

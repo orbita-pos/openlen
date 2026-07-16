@@ -755,6 +755,7 @@ async function bakeDocument(
       migratedHtml = bakeComments(migratedHtml, {
         sub: ctx.sub,
         page,
+        accent: detectSiteAccent(migratedHtml) ?? undefined,
       });
     } catch (err) {
       // eslint-disable-next-line no-console
@@ -765,7 +766,10 @@ async function bakeDocument(
   // Bookings widget — same window (before the seal so its inline hash is sealed).
   if (process.env.OPENLEN_BOOKINGS !== "0" && ctx.bookings?.enabled) {
     try {
-      migratedHtml = bakeBookings(migratedHtml, { sub: ctx.sub });
+      migratedHtml = bakeBookings(migratedHtml, {
+        sub: ctx.sub,
+        accent: detectSiteAccent(migratedHtml) ?? undefined,
+      });
     } catch (err) {
       // eslint-disable-next-line no-console
       console.warn("[publishToDir] bookings widget inject failed; publishing without it", err);
