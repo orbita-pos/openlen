@@ -22,5 +22,8 @@
     "blocked": "Notifications are blocked — enable them in your browser settings.",
     "iosInstall": "On iPhone: tap Share → Add to Home Screen, then open the app from the icon and activate notifications.",
     "unsupported": "Your browser doesn't support notifications; we'll notify you by email instead."
+  },
+  "badge": {
+    "count": "{count, plural, one {# nieuw} other {# nieuw}}"
   }
 }

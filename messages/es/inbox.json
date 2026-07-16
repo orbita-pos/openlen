@@ -22,5 +22,8 @@
     "blocked": "Están bloqueadas — actívalas en Ajustes del navegador.",
     "iosInstall": "En iPhone: Compartir → Agregar a inicio, luego abre desde el ícono y activa.",
     "unsupported": "Tu navegador no soporta notificaciones; te avisamos por email."
+  },
+  "badge": {
+    "count": "{count, plural, one {# nuevo} other {# nuevos}}"
   }
 }

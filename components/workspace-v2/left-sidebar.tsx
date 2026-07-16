@@ -36,6 +36,8 @@ import { VersionsPanel } from "./panels/versions-panel";
 import { ThreePanel } from "./panels/three-panel";
 import type { SectionSpec } from "./sections-data";
 import { Tooltip } from "./ui";
+import { useInboxBadge } from "@/components/inbox/use-inbox-badge";
+import { formatBadge } from "@/components/inbox/badge-format";
 // SectionView/SidebarMode are declared once in rail-model.ts (avoids a
 // circular import between the rail and this sidebar). `export type {...}`
 // only re-exports for other modules — it doesn't bind a local name — so we
@@ -62,12 +64,15 @@ function NavegarGroup({
   vertical,
   active,
   onSelect,
+  inboxBadge = 0,
 }: {
   vertical: boolean;
   active: SectionView;
   onSelect: (v: SectionView) => void;
+  inboxBadge?: number;
 }) {
   const t = useTranslations("projects");
+  const tInbox = useTranslations("inbox");
   return (
     <>
       {NAVEGAR_ITEMS.map((s) => {
@@ -78,8 +83,13 @@ function NavegarGroup({
           s.view === "templates"
             ? isBrowseView(active)
             : active === s.view;
-        const label = t(s.key);
-        const className = `${vertical ? "h-8 w-8" : "h-7 w-8"} inline-flex items-center justify-center rounded-md transition ${
+        const badgeLabel =
+          s.view === "messages" ? formatBadge(inboxBadge) : null;
+        const label =
+          badgeLabel !== null
+            ? `${t(s.key)} — ${tInbox("badge.count", { count: inboxBadge })}`
+            : t(s.key);
+        const className = `${vertical ? "h-8 w-8" : "h-7 w-8"} relative inline-flex items-center justify-center rounded-md transition ${
           isActive ? "bg-elev fg shadow-card border bd" : "fg-muted hover:fg hover:bg-hover"
         }`;
         return (
@@ -92,6 +102,15 @@ function NavegarGroup({
               className={className}
             >
               <I size={vertical ? 14 : 13} />
+              {badgeLabel !== null && (
+                <span
+                  aria-hidden
+                  data-testid="inbox-badge"
+                  className="absolute -top-0.5 -right-0.5 min-w-4 h-4 px-1 rounded-full bg-coral-500 text-white text-[10px] font-semibold leading-4 text-center"
+                >
+                  {badgeLabel}
+                </span>
+              )}
             </button>
           </Tooltip>
         );
@@ -344,6 +363,8 @@ export function LeftSidebar({
 }: LeftSidebarProps) {
   const showBusinessSwitcher = businesses.length > 0 && !!onPickBusiness;
   const t = useTranslations("wsChrome");
+  const { counts: inboxCounts } = useInboxBadge();
+  const inboxBadge = inboxCounts ? inboxCounts.chat + inboxCounts.leads : 0;
   const isFlatProject = flatProjectId !== undefined;
   const tabTitle = (id: SidebarMode) => t(`sidebar.tabs.${id}.title`);
   // After a click-to-place pick on mobile the panel overlays the canvas —
@@ -367,6 +388,7 @@ export function LeftSidebar({
             vertical
             active={activeSection}
             onSelect={onSelectSection ?? (() => {})}
+            inboxBadge={inboxBadge}
           />
         ) : (
           <>
@@ -428,6 +450,7 @@ export function LeftSidebar({
             vertical
             active={activeSection}
             onSelect={onSelectSection ?? (() => {})}
+            inboxBadge={inboxBadge}
           />
         ) : (
           <>
