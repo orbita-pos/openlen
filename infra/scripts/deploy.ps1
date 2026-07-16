@@ -104,6 +104,9 @@ if ($env:OPENLEN_SKIP_MIGRATE -ne "1") {
   npm run chat:migrate
   if ($LASTEXITCODE -ne 0) { throw "chat:migrate failed (exit $LASTEXITCODE)" }
 
+  # Inbox-badge watermark column (users.lastSeenLeadsAt). Idempotent; without
+  # it GET /api/inbox/badge 500s after the swap and the client hides the
+  # failure silently (the badge just never appears).
   Step 2 "Applying inbox DB migration (npm run inbox:migrate)..."
   npm run inbox:migrate
   if ($LASTEXITCODE -ne 0) { throw "inbox:migrate failed (exit $LASTEXITCODE)" }

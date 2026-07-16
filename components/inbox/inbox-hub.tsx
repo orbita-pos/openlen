@@ -74,6 +74,11 @@ export function InboxHub() {
             icon={<MessageSquare size={14} />}
             label={t("tabs.chat")}
             count={formatBadge(counts?.chat ?? 0)}
+            ariaLabel={
+              (counts?.chat ?? 0) > 0
+                ? `${t("tabs.chat")} — ${t("badge.count", { count: counts?.chat ?? 0 })}`
+                : undefined
+            }
           />
           <TabButton
             active={tab === "forms"}
@@ -81,6 +86,11 @@ export function InboxHub() {
             icon={<FileText size={14} />}
             label={t("tabs.forms")}
             count={formatBadge(counts?.leads ?? 0)}
+            ariaLabel={
+              (counts?.leads ?? 0) > 0
+                ? `${t("tabs.forms")} — ${t("badge.count", { count: counts?.leads ?? 0 })}`
+                : undefined
+            }
           />
         </div>
       </header>
@@ -103,18 +113,22 @@ function TabButton({
   icon,
   label,
   count = null,
+  ariaLabel,
 }: {
   active: boolean;
   onClick: () => void;
   icon: React.ReactNode;
   label: string;
   count?: string | null;
+  /** Accessible name including the count — the pill itself is aria-hidden. */
+  ariaLabel?: string;
 }) {
   return (
     <button
       type="button"
       role="tab"
       aria-selected={active}
+      aria-label={ariaLabel}
       onClick={onClick}
       className={`-mb-px inline-flex items-center gap-1.5 border-b-2 px-3 py-2.5 text-[13px] font-medium transition ${
         active

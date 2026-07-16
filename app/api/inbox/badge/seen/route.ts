@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { auth } from "@/auth";
 import { db, schema } from "@/lib/db";
 import { json } from "../../_shared";
@@ -14,7 +14,10 @@ export async function POST(): Promise<Response> {
   if (!session?.user?.id) return json({ error: "unauthorized" }, 401);
   await db
     .update(schema.users)
-    .set({ lastSeenLeadsAt: new Date() })
+    // DB clock, not the app server's — the count compares this watermark
+    // against formSubmissions.createdAt (defaultNow), so both sides must
+    // come from the same clock or skew re-opens the seen-vs-new race.
+    .set({ lastSeenLeadsAt: sql`now()` })
     .where(eq(schema.users.id, session.user.id));
   return json({ ok: true }, 200);
 }
