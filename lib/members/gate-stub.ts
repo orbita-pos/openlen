@@ -515,11 +515,11 @@ const PASSWORD_CSS = `
   .tabs{display:flex;gap:4px;background:var(--field);border-radius:12px;padding:4px;margin-top:22px}
   .tabs button{flex:1;border:0;background:transparent;color:var(--muted);font:inherit;font-weight:600;font-size:13.5px;padding:9px 0;border-radius:9px;cursor:pointer}
   .tabs button[aria-selected="true"]{background:var(--card);color:var(--fg);box-shadow:0 2px 8px -3px rgba(0,0,0,.25)}
-  #m-pass{width:100%;margin-top:10px;padding:13px 16px;font-size:15px;color:var(--fg);background:var(--field);border:1px solid var(--ring);border-radius:12px;outline:none}
+  #m-pass{width:100%;margin-top:10px;padding:13px 18px;font-size:15px;color:var(--fg);background:var(--field);border:1px solid var(--ring);border-radius:999px;outline:none}
   #m-pass:focus{border-color:var(--focus)}
   .or{display:flex;align-items:center;gap:12px;color:var(--muted);font-size:12px;margin:16px 0 10px;text-transform:lowercase}
   .or::before,.or::after{content:"";height:1px;flex:1;background:var(--ring)}
-  .ghost{width:100%;padding:12px;font-size:13.5px;font-weight:600;color:var(--fg);background:transparent;border:1px solid var(--ring);border-radius:12px;cursor:pointer}
+  .ghost{width:100%;padding:12px;font-size:13.5px;font-weight:600;color:var(--fg);background:transparent;border:1px solid var(--ring);border-radius:999px;cursor:pointer}
   .ghost:disabled{opacity:.5;cursor:default}
   #m-verify .intro{margin-top:14px;font-size:14.5px;line-height:1.55;color:var(--muted)}`;
 
@@ -542,7 +542,7 @@ const DASHBOARD_CSS = `
   .mini{border:1px solid var(--ring);background:transparent;border-radius:10px;font:inherit;font-weight:600;font-size:12.5px;color:var(--fg);padding:8px 13px;cursor:pointer;white-space:nowrap}
   .mini:disabled{opacity:.5}
   #m-pwform:not([hidden]){display:flex;gap:8px;margin-top:12px}
-  #m-newpw{flex:1;padding:11px 14px;font-size:14px;color:var(--fg);background:var(--field);border:1px solid var(--ring);border-radius:10px;outline:none}
+  #m-newpw{flex:1;padding:11px 16px;font-size:14px;color:var(--fg);background:var(--field);border:1px solid var(--ring);border-radius:999px;outline:none}
   #m-newpw:focus{border-color:var(--focus)}
   .logout{margin-top:20px;width:100%;text-align:center;background:transparent;border:0;color:var(--muted);font:inherit;font-size:12.5px;cursor:pointer;padding:6px}`;
 
@@ -817,12 +817,12 @@ ${mode === "account" ? accountTail : ""}
   #m-form p.intro{margin-top:14px;font-size:14.5px;line-height:1.55;color:var(--muted)}
   #m-email{
     width:100%;margin-top:20px;padding:13px 16px;font-size:15px;color:var(--fg);
-    background:var(--field);border:1px solid var(--ring);border-radius:12px;outline:none;
+    background:var(--field);border:1px solid var(--ring);border-radius:999px;outline:none;
   }
   #m-email:focus{border-color:var(--focus)}
   #m-btn{
     width:100%;margin-top:10px;padding:13px 16px;font-size:14.5px;font-weight:600;
-    color:var(--btn-fg);background:var(--btn-bg);border:0;border-radius:12px;cursor:pointer;
+    color:var(--btn-fg);background:var(--btn-bg);border:0;border-radius:999px;cursor:pointer;
     transition:opacity .15s,transform .15s;
   }
   #m-btn:hover{opacity:.88}

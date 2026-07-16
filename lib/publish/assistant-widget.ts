@@ -28,7 +28,9 @@ export interface AssistantWidgetConfig {
   chatHandoff?: boolean;
 }
 
-const DEFAULT_ACCENT = "#ff6b5e";
+// Coral OpenLen — mismo default e higiene que chat-widget (guard hex antes de
+// interpolar al CSS; review e56321c).
+const DEFAULT_ACCENT = "#FF5A36";
 
 function widgetScript(cfg: Required<AssistantWidgetConfig>): string {
   // Config is JSON-injected; everything else is static runtime JS. Kept terse
@@ -37,7 +39,7 @@ function widgetScript(cfg: Required<AssistantWidgetConfig>): string {
     sub: cfg.sub,
     api: cfg.apiBase,
     name: cfg.businessName,
-    accent: cfg.accent,
+    accent: /^#[0-9a-fA-F]{3,8}$/.test(cfg.accent ?? "") ? cfg.accent : DEFAULT_ACCENT,
     greeting: cfg.greeting,
     branding: cfg.branding,
     handoff: cfg.chatHandoff,
@@ -56,27 +58,30 @@ R.innerHTML=
 +'.btn{position:fixed;right:18px;bottom:18px;width:56px;height:56px;border-radius:50%;border:0;background:'+ACC+';color:#fff;cursor:pointer;box-shadow:0 6px 22px rgba(0,0,0,.22);z-index:2147483646;display:flex;align-items:center;justify-content:center;padding:0}'
 +'.btn svg{width:26px;height:26px}'
 +'.btn:focus-visible{outline:3px solid #000;outline-offset:2px}'
-+'.panel{position:fixed;right:18px;bottom:84px;width:360px;max-width:calc(100vw - 24px);height:520px;max-height:calc(100vh - 110px);background:#fff;border-radius:16px;box-shadow:0 12px 48px rgba(0,0,0,.28);z-index:2147483647;display:none;flex-direction:column;overflow:hidden}'
++'.panel{position:fixed;right:18px;bottom:84px;width:360px;max-width:calc(100vw - 24px);height:520px;max-height:calc(100vh - 110px);background:#fff;border-radius:18px;box-shadow:0 16px 56px rgba(0,0,0,.24);z-index:2147483647;display:none;flex-direction:column;overflow:hidden}'
 +'.panel.open{display:flex}'
-+'.hd{background:'+ACC+';color:#fff;padding:14px 16px;font-weight:600;display:flex;justify-content:space-between;align-items:center}'
-+'.hd button{background:transparent;border:0;color:#fff;font-size:22px;cursor:pointer;line-height:1;padding:4px;border-radius:6px}'
-+'.log{flex:1;overflow-y:auto;padding:14px;background:#f7f7f8}'
-+'.row{display:flex;margin:6px 0}'
++'.hd{background:'+ACC+';background:color-mix(in srgb,'+ACC+' 76%,#170a05);color:#fff;padding:10px 14px;font-weight:600;display:flex;align-items:center;gap:11px}'
++'.hd .ava{width:38px;height:38px;border-radius:50%;background:rgba(255,255,255,.22);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:16px;flex:none}'
++'.hd span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:15px}'
++'.hd button{background:transparent;border:0;color:#fff;font-size:22px;cursor:pointer;line-height:1;padding:4px;border-radius:6px;opacity:.9}'
++'.log{flex:1;overflow-y:auto;padding:12px 14px;background:#f4ede8;background:radial-gradient(circle at 20% 30%,color-mix(in srgb,'+ACC+' 6%,transparent) 0 14px,transparent 15px),radial-gradient(circle at 70% 60%,color-mix(in srgb,'+ACC+' 6%,transparent) 0 10px,transparent 11px),#f4ede8}'
++'.row{display:flex;margin:5px 0}'
 +'.row.u{justify-content:flex-end}'
-+'.bub{max-width:80%;padding:9px 12px;border-radius:14px;font-size:14px;line-height:1.4;white-space:pre-wrap;word-wrap:break-word}'
-+'.row.b .bub{background:#fff;color:#1a1a1a;border:1px solid #e8e8ea;border-bottom-left-radius:4px}'
-+'.row.u .bub{background:'+ACC+';color:#fff;border-bottom-right-radius:4px}'
++'.bub{max-width:80%;padding:8px 11px;border-radius:10px;font-size:14px;line-height:1.4;white-space:pre-wrap;word-wrap:break-word;box-shadow:0 1px 1px rgba(0,0,0,.08)}'
++'.row.b .bub{background:#fff;color:#1a1a1a;border-top-left-radius:2px}'
++'.row.u .bub{background:#ffe9e2;background:color-mix(in srgb,'+ACC+' 14%,#fff);color:#221b17;border-top-right-radius:2px}'
 +'.dots .bub{color:#888}'
-+'.ft{border-top:1px solid #ececef;padding:10px;background:#fff}'
-+'.ip{display:flex;gap:8px}'
-+'.ip input{flex:1;min-height:44px;border:1px solid #d8d8dc;border-radius:10px;padding:0 12px;font-size:14px}'
-+'.ip input:focus{outline:2px solid '+ACC+';border-color:'+ACC+'}'
-+'.ip button{min-width:44px;min-height:44px;border:0;border-radius:10px;background:'+ACC+';color:#fff;cursor:pointer;font-weight:600}'
++'.ft{padding:8px 10px;background:#f4ede8}'
++'.ip{display:flex;gap:8px;align-items:center}'
++'.ip input{flex:1;min-height:44px;border:0;border-radius:999px;padding:0 18px;font-size:14px;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.08)}'
++'.ip input:focus{outline:2px solid '+ACC+'}'
++'.ip button{width:44px;min-width:44px;height:44px;border:0;border-radius:50%;background:'+ACC+';color:#fff;cursor:pointer;font-weight:600;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,.2)}'
 +'.ip button:disabled{opacity:.5;cursor:default}'
 +'.lead{padding:10px 0 2px;display:flex;flex-direction:column;gap:8px}'
-+'.lead input{min-height:44px;border:1px solid #d8d8dc;border-radius:10px;padding:0 12px;font-size:14px}'
-+'.lead button{min-height:44px;border:0;border-radius:10px;background:'+ACC+';color:#fff;font-weight:600;cursor:pointer}'
-+'.talk{width:100%;margin-top:8px;min-height:40px;border:1px solid '+ACC+';background:transparent;color:'+ACC+';font-weight:600;font-size:13px;cursor:pointer;border-radius:10px}'
++'.lead input{min-height:44px;border:1px solid #e2e6e4;border-radius:999px;padding:0 16px;font-size:14px;background:#fff}'
++'.lead input:focus{outline:2px solid '+ACC+'}'
++'.lead button{min-height:46px;border:0;border-radius:999px;background:'+ACC+';color:#fff;font-weight:700;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.16)}'
++'.talk{width:100%;margin-top:8px;min-height:42px;border:1.5px solid '+ACC+';background:transparent;color:'+ACC+';font-weight:700;font-size:13px;cursor:pointer;border-radius:999px}'
 +'.talk:hover{background:'+ACC+';color:#fff}'
 +'.dis{font-size:11px;color:#9a9aa0;text-align:center;padding:6px 10px 2px}'
 +'.pb{font-size:11px;color:#b3b3b9;text-align:center;padding:2px 0 8px}'
@@ -87,7 +92,7 @@ R.innerHTML=
 +'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-8.5 8.5 8.5 8.5 0 0 1-3.9-.9L3 21l1.9-5.6A8.5 8.5 0 0 1 12.5 3 8.38 8.38 0 0 1 21 11.5z"/></svg>'
 +'</button>'
 +'<div class="panel" role="dialog" aria-label="Chat de ayuda">'
-+'<div class="hd"><span></span><button class="x" aria-label="Cerrar chat">&times;</button></div>'
++'<div class="hd"><div class="ava"></div><span></span><button class="x" aria-label="Cerrar chat">&times;</button></div>'
 +'<div class="log" role="log" aria-live="polite"></div>'
 +'<div class="ft"><form class="ip"><input type="text" autocomplete="off" placeholder="Escribe tu pregunta…" aria-label="Tu mensaje" maxlength="500"/><button type="submit" aria-label="Enviar">→</button></form>'
 +(C.handoff?'<button type="button" class="talk">Hablar con una persona</button>':'')
@@ -99,6 +104,7 @@ var btn=R.querySelector(".btn"),panel=R.querySelector(".panel"),log=R.querySelec
 form=R.querySelector(".ip"),input=R.querySelector(".ip input"),send=R.querySelector(".ip button"),
 xb=R.querySelector(".x"),talk=R.querySelector(".talk");
 R.querySelector(".hd span").textContent=C.name;
+R.querySelector(".hd .ava").textContent=(C.name||"A").charAt(0).toUpperCase();
 var history=[],busy=false,opened=false,leadShown=false;
 
 function scroll(){log.scrollTop=log.scrollHeight}
