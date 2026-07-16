@@ -104,6 +104,9 @@ export interface BookingsWidgetConfig {
    *  interpola al CSS del script (mismo guard que chat-widget); sin acento el
    *  widget cae al tinta neutra de siempre. */
   accent?: string;
+  /** settings.bookings.theme — "dark" para páginas de fondo oscuro (los
+   *  títulos tinta-oscura eran ilegibles ahí). Mismo patrón que chat.theme. */
+  theme?: "light" | "dark";
 }
 
 
@@ -112,8 +115,18 @@ const SECTION_MARKER = "data-ol-bookings-section";
 const HOST_MARKER = "data-ol-bookings-host";
 
 function widgetScript(cfg: BookingsWidgetConfig): string {
-  const ACC = /^#[0-9a-fA-F]{6}$/.test(cfg.accent ?? "") ? cfg.accent! : "#16181d";
+  const DK = cfg.theme === "dark";
+  const ACC = /^#[0-9a-fA-F]{6}$/.test(cfg.accent ?? "") ? cfg.accent! : DK ? "#e8e8ea" : "#16181d";
   const INK = inkOn(ACC);
+  // Paleta light/dark (calculada al hornear — el CSS de abajo interpola estas
+  // constantes TS): TX texto, MUT secundario, FNT terciario, CARD tarjetas,
+  // BRD bordes, FLD campos.
+  const TX = DK ? "#e8e8ea" : "#1a1a1a";
+  const MUT = DK ? "#9aa0a8" : "#71717a";
+  const FNT = DK ? "#8b929c" : "#9a9aa0";
+  const CARD = DK ? "#1c1f24" : "#fff";
+  const BRD = DK ? "#33363c" : "#e2e2e6";
+  const FLD = DK ? "#16181d" : "#fff";
   const C = JSON.stringify({ sub: cfg.sub, S: STRINGS }).replace(/</g, "\\u003c");
 
   return `<script ${WIDGET_MARKER}>(function(){try{
@@ -128,27 +141,27 @@ var api=function(u,o){return fetch("/api/bk/"+C.sub+u,o||{})};
 R.innerHTML='<style>'
 +':host{all:initial;display:block}'
 +'*{box-sizing:border-box;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}'
-+'.w{max-width:560px;margin:32px auto;padding:0 16px;color:#1a1a1a}'
++'.w{max-width:560px;margin:32px auto;padding:0 16px;color:${TX}}'
 +'.h{font-size:20px;font-weight:700;margin:0 0 4px}'
-+'.tz{font-size:12px;color:#9a9aa0;margin:0 0 16px}'
-+'.svc{border:0;border-radius:16px;padding:15px 16px;margin-bottom:10px;cursor:pointer;background:#fff;width:100%;text-align:left;display:block;box-shadow:0 1px 4px rgba(23,18,14,.06),0 8px 20px rgba(23,18,14,.06);transition:transform .15s ease,box-shadow .15s ease}'
-+'.svc:hover{transform:translateY(-2px);box-shadow:0 2px 6px rgba(23,18,14,.08),0 14px 30px rgba(23,18,14,.1)}.svc:focus-visible{outline:2px solid ${ACC}}'
++'.tz{font-size:12px;color:${FNT};margin:0 0 16px}'
++'.svc{border:0;border-radius:16px;padding:15px 16px;margin-bottom:10px;cursor:pointer;background:${CARD};color:${TX};width:100%;text-align:left;display:block;box-shadow:0 1px 4px rgba(0,0,0,.08),0 8px 20px rgba(0,0,0,.08);transition:transform .15s ease,box-shadow .15s ease}'
++'.svc:hover{transform:translateY(-2px);box-shadow:0 2px 6px rgba(0,0,0,.1),0 14px 30px rgba(0,0,0,.12)}.svc:focus-visible{outline:2px solid ${ACC}}'
 +'.svc .n{font-weight:700;font-size:15px}'
-+'.svc .d{font-size:13px;color:#71717a;margin-top:2px}'
++'.svc .d{font-size:13px;color:${MUT};margin-top:2px}'
 +'.svc .m{font-size:12px;color:${ACC};font-weight:600;margin-top:6px}'
 +'.lbl{font-size:13px;font-weight:700;margin:16px 0 8px}'
 +'.grid{display:flex;flex-wrap:wrap;gap:8px}'
-+'.chip{min-height:40px;padding:0 16px;border:1.5px solid #e2e2e6;border-radius:999px;background:#fff;font-size:13.5px;font-weight:600;cursor:pointer;transition:border-color .12s}'
++'.chip{min-height:40px;padding:0 16px;border:1.5px solid ${BRD};border-radius:999px;background:${CARD};color:${TX};font-size:13.5px;font-weight:600;cursor:pointer;transition:border-color .12s}'
 +'.chip:hover{border-color:${ACC}}.chip:focus-visible{outline:2px solid ${ACC}}'
 +'.chip[aria-pressed="true"]{background:${ACC};color:${INK};border-color:${ACC};box-shadow:0 2px 8px rgba(0,0,0,.14)}'
-+'.f input,.f textarea{width:100%;min-height:44px;border:1px solid #e2e2e6;border-radius:999px;padding:10px 16px;font-size:14px;margin-top:8px;font-family:inherit;box-shadow:0 1px 2px rgba(0,0,0,.04)}'
++'.f input,.f textarea{width:100%;min-height:44px;border:1px solid ${BRD};border-radius:999px;padding:10px 16px;font-size:14px;margin-top:8px;font-family:inherit;background:${FLD};color:${TX};box-shadow:0 1px 2px rgba(0,0,0,.04)}'
 +'.f textarea{min-height:72px;resize:vertical;border-radius:16px}'
 +'.f input:focus,.f textarea:focus{outline:2px solid ${ACC};border-color:${ACC}}'
 +'.pri{width:100%;min-height:48px;margin-top:14px;padding:0 20px;border:0;border-radius:999px;background:${ACC};color:${INK};font-weight:700;font-size:14.5px;cursor:pointer;box-shadow:0 2px 10px rgba(0,0,0,.16)}'
 +'.pri:disabled{opacity:.5;cursor:default}'
-+'.lnk{background:none;border:0;color:#6b7280;font-size:13px;cursor:pointer;padding:8px 0;text-decoration:underline}'
-+'.msg{font-size:13px;color:#6b7280;margin-top:10px}'
-+'.ok{text-align:center;padding:28px 0}.ok .t{font-size:19px;font-weight:800;color:${ACC}}.ok .b{font-size:14px;color:#71717a;margin-top:6px}'
++'.lnk{background:none;border:0;color:${MUT};font-size:13px;cursor:pointer;padding:8px 0;text-decoration:underline}'
++'.msg{font-size:13px;color:${MUT};margin-top:10px}'
++'.ok{text-align:center;padding:28px 0}.ok .t{font-size:19px;font-weight:800;color:${ACC}}.ok .b{font-size:14px;color:${MUT};margin-top:6px}'
 +'.mlink{display:inline-block;margin-top:14px;font-size:13px;font-weight:600;color:${ACC}}'
 +'</style><div class="w" role="group"><div class="h"></div><div class="tz"></div><div class="body" aria-live="polite"></div></div>';
 var hEl=R.querySelector(".h"),tzEl=R.querySelector(".tz"),body=R.querySelector(".body");

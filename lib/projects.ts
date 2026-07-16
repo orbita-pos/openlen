@@ -870,10 +870,10 @@ export async function publishProject(
         ? { enabled: true, businessName: project.title || v.value }
         : undefined,
       comments: project.data?.settings?.comments?.enabled
-        ? { enabled: true }
+        ? { enabled: true, theme: project.data?.settings?.comments?.theme }
         : undefined,
       bookings: project.data?.settings?.bookings?.enabled
-        ? { enabled: true }
+        ? { enabled: true, theme: project.data?.settings?.bookings?.theme }
         : undefined,
       collections: collectionsBake,
       liveData: liveDataCfg,

@@ -189,12 +189,12 @@ export interface PublishParams {
    *  comments widget is injected on the root doc + every page/locale variant
    *  (at the data-ol-comments-section placeholder, or appended before
    *  </body>). The thread is fetched live from /api/cm/<sub>/*. */
-  comments?: { enabled: boolean };
+  comments?: { enabled: boolean; theme?: "light" | "dark" };
   /** Bookings module (settings.bookings). When enabled, the appointment-booking
    *  widget is injected on the root doc + every page/locale variant (at the
    *  data-ol-bookings-section placeholder, or appended before </body>). Slots
    *  are fetched live from /api/bk/<sub>/*. */
-  bookings?: { enabled: boolean };
+  bookings?: { enabled: boolean; theme?: "light" | "dark" };
   /** Collections module (settings.collections). When enabled, the owner's item
    *  list is baked as STATIC HTML (a grid/list of cards) at the
    *  data-ol-collection-section placeholder, or appended before </body>. No
@@ -498,10 +498,10 @@ interface BakeDocumentCtx {
   assistant?: AssistantBake;
   /** Comments module. When enabled, the members-only comments widget is
    *  injected (at the placeholder, or appended) on every document. */
-  comments?: { enabled: boolean };
+  comments?: { enabled: boolean; theme?: "light" | "dark" };
   /** Bookings module. When enabled, the appointment-booking widget is injected
    *  (at the placeholder, or appended) on every document. */
-  bookings?: { enabled: boolean };
+  bookings?: { enabled: boolean; theme?: "light" | "dark" };
   /** Collections module. When enabled, the owner's item list is baked as STATIC
    *  HTML (grid/list of cards) at the placeholder, or appended. */
   collections?: { enabled: boolean; items: ItemRow[]; layout: "grid" | "list" };
@@ -761,6 +761,7 @@ async function bakeDocument(
         sub: ctx.sub,
         page,
         accent: siteAccent,
+        theme: ctx.comments.theme,
       });
     } catch (err) {
       // eslint-disable-next-line no-console
@@ -774,6 +775,7 @@ async function bakeDocument(
       migratedHtml = bakeBookings(migratedHtml, {
         sub: ctx.sub,
         accent: siteAccent,
+        theme: ctx.bookings.theme,
       });
     } catch (err) {
       // eslint-disable-next-line no-console

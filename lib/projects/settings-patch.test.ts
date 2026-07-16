@@ -35,6 +35,13 @@ describe("validateSettingsPatch", () => {
     const v = validateSettingsPatch({ orders: { enabled: true, number: "5512345678" } }, "p1");
     expect(v.ok).toBe(true);
   });
+  it("accepts theme light|dark en bookings/comments y rechaza otros valores", () => {
+    expect(validateSettingsPatch({ bookings: { theme: "dark" } }, "p1").ok).toBe(true);
+    expect(validateSettingsPatch({ comments: { theme: "light" } }, "p1").ok).toBe(true);
+    expect(validateSettingsPatch({ bookings: { theme: "neon" } }, "p1").ok).toBe(false);
+    expect(validateSettingsPatch({ comments: { theme: "neon" } }, "p1").ok).toBe(false);
+  });
+
   it("rejects orders with a non-object body", () => {
     const v = validateSettingsPatch({ orders: "yes" }, "p1");
     expect(v.ok).toBe(false);

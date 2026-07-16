@@ -95,6 +95,9 @@ export interface CommentsSettings {
   /** "moderated" (default) → comments are hidden until the owner approves.
    *  "all" → visible immediately, owner hides/deletes after. */
   moderation?: "all" | "moderated";
+  /** Paleta del widget en la página publicada (mismo patrón que chat.theme):
+   *  "dark" para páginas de fondo oscuro. Default "light". */
+  theme?: "light" | "dark";
 }
 
 /** Bookings module — appointment scheduling on the published site. Services +
@@ -122,6 +125,9 @@ export interface BookingsSettings {
   /** GDPR retention: a past booking older than this many days is swept by the
    *  reminder timer's housekeeping pass. Default 365; 0 → never. */
   retentionDays?: number;
+  /** Paleta del widget en la página publicada (mismo patrón que chat.theme):
+   *  "dark" para páginas de fondo oscuro. Default "light". */
+  theme?: "light" | "dark";
 }
 
 /** Collections module — owner-managed item lists (products / menu / listings /

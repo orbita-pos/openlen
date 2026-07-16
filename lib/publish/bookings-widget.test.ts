@@ -7,6 +7,16 @@ const CFG = { sub: "mysite" };
 const DOC = (body: string) => `<!doctype html><html lang="es"><head></head><body>${body}</body></html>`;
 
 describe("bakeBookings", () => {
+  // Tema por módulo (settings.bookings.theme, mismo patrón que chat.theme)
+  it("theme dark hornea la paleta oscura (texto claro, tarjetas oscuras)", () => {
+    const out = bakeBookings(DOC(""), { ...CFG, theme: "dark" });
+    expect(out).toContain("color:#e8e8ea"); // .w texto claro
+    expect(out).toContain("background:#1c1f24"); // tarjetas oscuras
+    const light = bakeBookings(DOC(""), CFG);
+    expect(light).toContain("color:#1a1a1a");
+    expect(light).not.toContain("#1c1f24");
+  });
+
   // Restyle 2026-07-15: acento de la página + guard hex
   it("interpola el acento hex al CSS; un acento hostil cae a la tinta neutra", () => {
     const ok = bakeBookings(DOC(""), { ...CFG, accent: "#e05a2b" });

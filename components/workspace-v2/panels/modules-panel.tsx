@@ -136,8 +136,10 @@ export function ModulesPanel({
   const broadcastOn = broadcastSettings?.enabled === true;
   const commentsOn = commentsSettings?.enabled === true;
   const commentsMod = commentsSettings?.moderation === "all" ? "all" : "moderated";
+  const commentsTheme = commentsSettings?.theme ?? "light";
   const bookingsOn = bookingsSettings?.enabled === true;
   const bookingsRequireLogin = bookingsSettings?.requireLogin === true;
+  const bookingsTheme = bookingsSettings?.theme ?? "light";
   const bookingsAutoConfirm = bookingsSettings?.autoConfirm !== false;
   const bookingsReminders = bookingsSettings?.sendReminders !== false;
   const collectionsOn = collectionsSettings?.enabled === true;
@@ -235,6 +237,12 @@ export function ModulesPanel({
     if (cmtBusy || !onUpdateComments || next === commentsMod) return;
     setCmtBusy(true);
     await onUpdateComments({ moderation: next });
+    setCmtBusy(false);
+  };
+  const setCommentsTheme = async (next: "light" | "dark") => {
+    if (cmtBusy || !onUpdateComments || next === commentsTheme) return;
+    setCmtBusy(true);
+    await onUpdateComments({ theme: next });
     setCmtBusy(false);
   };
   const updateBookings = async (patch: BookingsSettings) => {
@@ -375,6 +383,20 @@ export function ModulesPanel({
                 disabled={bkBusy}
                 onChange={(v) => void updateBookings({ sendReminders: v })}
               />
+              {/* Tema del widget en la página publicada (misma clave i18n que
+                  el chat: es la misma dupla Claro/Oscuro). */}
+              <div className="space-y-1">
+                <div className="text-[12px] font-medium fg-muted">{tw("chat.theme")}</div>
+                <Segment
+                  value={bookingsTheme}
+                  options={[
+                    { id: "light", label: tw("chat.themeLight") },
+                    { id: "dark", label: tw("chat.themeDark") },
+                  ]}
+                  disabled={bkBusy}
+                  onPick={(v) => void updateBookings({ theme: v as "light" | "dark" })}
+                />
+              </div>
               <CardActions
                 onInsert={onInsertBookingsSection ? () => { onInsertBookingsSection(); setBkInserted(true); } : undefined}
                 insertLabel={tbk("module.insert")}
@@ -448,6 +470,19 @@ export function ModulesPanel({
                 <p className="text-[11.5px] fg-faint leading-relaxed">
                   {tc(commentsMod === "moderated" ? "module.modModeratedHint" : "module.modAllHint")}
                 </p>
+                {/* Tema del widget (misma dupla i18n Claro/Oscuro que el chat). */}
+                <div className="space-y-1">
+                  <div className="text-[12px] font-medium fg-muted">{tw("chat.theme")}</div>
+                  <Segment
+                    value={commentsTheme}
+                    options={[
+                      { id: "light", label: tw("chat.themeLight") },
+                      { id: "dark", label: tw("chat.themeDark") },
+                    ]}
+                    disabled={cmtBusy}
+                    onPick={(v) => void setCommentsTheme(v as "light" | "dark")}
+                  />
+                </div>
                 <CardActions
                   onInsert={onInsertCommentsSection ? () => { onInsertCommentsSection(); setInserted(true); } : undefined}
                   insertLabel={tc("module.insert")}

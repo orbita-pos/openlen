@@ -57,7 +57,7 @@ interface PatchBody {
   /** Broadcast module switch. Merged into settings.broadcast. */
   broadcast?: { enabled?: boolean };
   /** Comments module switches. Merged into settings.comments. */
-  comments?: { enabled?: boolean; moderation?: "all" | "moderated" };
+  comments?: { enabled?: boolean; moderation?: "all" | "moderated"; theme?: "light" | "dark" };
   /** Bookings module switches. Merged into settings.bookings. */
   bookings?: {
     enabled?: boolean;
@@ -66,6 +66,7 @@ interface PatchBody {
     autoConfirm?: boolean;
     sendReminders?: boolean;
     retentionDays?: number;
+    theme?: "light" | "dark";
   };
   /** Collections module switch. Merged into settings.collections. */
   collections?: { enabled?: boolean };
@@ -199,6 +200,9 @@ export function validateSettingsPatch(
     if ("moderation" in c && c.moderation !== "all" && c.moderation !== "moderated") {
       return { ok: false, message: "comments.moderation must be all|moderated" };
     }
+    if ("theme" in c && c.theme !== undefined && c.theme !== "light" && c.theme !== "dark") {
+      return { ok: false, message: "comments.theme must be light|dark" };
+    }
   }
   const hasBookings = "bookings" in body;
   if (hasBookings) {
@@ -221,6 +225,9 @@ export function validateSettingsPatch(
       if (typeof r !== "number" || !Number.isInteger(r) || r < 0 || r > 3650) {
         return { ok: false, message: "bookings.retentionDays must be an integer 0-3650" };
       }
+    }
+    if ("theme" in b && b.theme !== undefined && b.theme !== "light" && b.theme !== "dark") {
+      return { ok: false, message: "bookings.theme must be light|dark" };
     }
   }
   const hasCollections = "collections" in body;
@@ -536,6 +543,7 @@ export function applySettingsPatch(
       ...(data.settings?.comments ?? {}),
       ...("enabled" in body.comments ? { enabled: body.comments.enabled } : {}),
       ...("moderation" in body.comments ? { moderation: body.comments.moderation } : {}),
+      ...("theme" in body.comments ? { theme: body.comments.theme } : {}),
       // Make the write self-documenting: default to the safe posture on first
       // enable when no moderation is set (don't lean on the read-path default).
       ...(firstEnable &&
@@ -557,6 +565,7 @@ export function applySettingsPatch(
       ...("retentionDays" in b && b.retentionDays !== undefined
         ? { retentionDays: b.retentionDays }
         : {}),
+      ...("theme" in b ? { theme: b.theme } : {}),
     };
   }
   if (hasCollections && body.collections) {

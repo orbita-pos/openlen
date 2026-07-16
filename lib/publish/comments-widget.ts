@@ -52,6 +52,9 @@ export interface CommentsWidgetConfig {
    *  interpola al CSS (mismo guard que chat/bookings); sin acento, tinta
    *  neutra como siempre. */
   accent?: string;
+  /** settings.comments.theme — "dark" para páginas de fondo oscuro (los
+   *  títulos tinta-oscura eran ilegibles ahí). Mismo patrón que chat.theme. */
+  theme?: "light" | "dark";
 }
 
 
@@ -69,8 +72,15 @@ function widgetScript(cfg: CommentsWidgetConfig): string {
   // is baked once and copied verbatim into translated locale variants (the
   // bake is idempotent), so a build-time locale would freeze the root language
   // onto every variant. Reading the page's own lang fixes that. (~1KB; stable.)
-  const ACC = /^#[0-9a-fA-F]{6}$/.test(cfg.accent ?? "") ? cfg.accent! : "#16181d";
+  const DK = cfg.theme === "dark";
+  const ACC = /^#[0-9a-fA-F]{6}$/.test(cfg.accent ?? "") ? cfg.accent! : DK ? "#e8e8ea" : "#16181d";
   const INK = inkOn(ACC);
+  const TX = DK ? "#e8e8ea" : "#1a1a1a";
+  const MUT = DK ? "#9aa0a8" : "#6b7280";
+  const FNT = DK ? "#8b929c" : "#9a9aa0";
+  const CARD = DK ? "#1c1f24" : "#fff";
+  const BRD = DK ? "#33363c" : "#e2e2e6";
+  const FLD = DK ? "#16181d" : "#fff";
   const C = JSON.stringify({
     sub: cfg.sub,
     slug: cfg.page,
@@ -88,22 +98,22 @@ var q=function(u,o){return fetch("/api/cm/"+C.sub+u,o||{})};
 R.innerHTML='<style>'
 +':host{all:initial;display:block}'
 +'*{box-sizing:border-box;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}'
-+'.w{max-width:680px;margin:32px auto;padding:0 16px;color:#1a1a1a}'
++'.w{max-width:680px;margin:32px auto;padding:0 16px;color:${TX}}'
 +'.h{font-size:18px;font-weight:700;margin:0 0 16px}'
-+'.li{padding:12px 14px;border-radius:14px;background:#fff;box-shadow:0 1px 3px rgba(23,18,14,.05);margin-top:8px}'
++'.li{padding:12px 14px;border-radius:14px;background:${CARD};box-shadow:0 1px 3px rgba(0,0,0,.07);margin-top:8px}'
 +'.nm{font-weight:700;font-size:13.5px}'
-+'.dt{color:#9a9aa0;font-size:11.5px;margin-left:8px}'
++'.dt{color:${FNT};font-size:11.5px;margin-left:8px}'
 +'.bd{font-size:14px;line-height:1.5;margin-top:4px;white-space:pre-wrap;word-wrap:break-word}'
-+'.em{color:#9a9aa0;font-size:13.5px;padding:12px 0}'
++'.em{color:${FNT};font-size:13.5px;padding:12px 0}'
 +'.cp{margin-top:16px}'
-+'.cp textarea{width:100%;min-height:80px;border:1px solid #e2e2e6;border-radius:16px;padding:12px 14px;font-size:14px;resize:vertical;box-shadow:0 1px 2px rgba(0,0,0,.04)}'
++'.cp textarea{width:100%;min-height:80px;border:1px solid ${BRD};border-radius:16px;padding:12px 14px;font-size:14px;resize:vertical;background:${FLD};color:${TX};box-shadow:0 1px 2px rgba(0,0,0,.04)}'
 +'.cp textarea:focus{outline:2px solid ${ACC};border-color:${ACC}}'
 +'.cp button{margin-top:10px;min-height:42px;padding:0 22px;border:0;border-radius:999px;background:${ACC};color:${INK};font-weight:700;font-size:13.5px;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.14)}'
 +'.cp button:disabled{opacity:.5;cursor:default}'
-+'.lg button{min-height:42px;padding:0 18px;border:1.5px solid ${ACC};border-radius:999px;background:#fff;color:${ACC};font-weight:700;font-size:13.5px;cursor:pointer}'
-+'.lg input{width:100%;min-height:42px;border:1px solid #e2e2e6;border-radius:999px;padding:0 16px;font-size:14px;margin-top:8px}'
++'.lg button{min-height:42px;padding:0 18px;border:1.5px solid ${ACC};border-radius:999px;background:${FLD};color:${ACC};font-weight:700;font-size:13.5px;cursor:pointer}'
++'.lg input{width:100%;min-height:42px;border:1px solid ${BRD};border-radius:999px;padding:0 16px;font-size:14px;margin-top:8px;background:${FLD};color:${TX}}'
 +'.lg input:focus{outline:2px solid ${ACC};border-color:${ACC}}'
-+'.msg{font-size:12.5px;color:#6b7280;margin-top:8px}'
++'.msg{font-size:12.5px;color:${MUT};margin-top:8px}'
 +'</style><div class="w"><div class="h"></div><div class="ls"></div><div class="ft"></div></div>';
 var hEl=R.querySelector(".h"),ls=R.querySelector(".ls"),ft=R.querySelector(".ft");
 hEl.textContent=T.title;
