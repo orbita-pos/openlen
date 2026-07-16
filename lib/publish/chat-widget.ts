@@ -112,7 +112,11 @@ function widgetScript(cfg: ChatWidgetConfig): string {
   // <script> element.
   const C = JSON.stringify({
     sub: cfg.sub,
-    accent: cfg.accent || DEFAULT_ACCENT,
+    // Solo un hex se interpola en el CSS del script (ACC aparece en ~14
+    // reglas). Hoy todo caller pasa salida de detectSiteAccent (siempre
+    // #rrggbb) — este guard evita que un futuro "color custom del widget"
+    // reabra una inyección CSS sin que nadie lo note (review e56321c).
+    accent: /^#[0-9a-fA-F]{3,8}$/.test(cfg.accent ?? "") ? cfg.accent : DEFAULT_ACCENT,
     mount: cfg.mount,
     selfServeJoin: cfg.selfServeJoin,
     branding: cfg.branding ?? true,

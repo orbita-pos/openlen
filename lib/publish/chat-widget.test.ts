@@ -25,6 +25,12 @@ describe("bakeChatWidget", () => {
   });
 
   // Restyle WhatsApp 2026-07-15
+  it("un acento que no es hex NO se interpola al CSS (guard anti-inyección)", () => {
+    const out = bakeChatWidget(BASE, { ...cfg, accent: "red}body{background:url(//evil)" });
+    expect(out).not.toContain("evil");
+    expect(out).toContain("#FF5A36"); // cae al default
+  });
+
   it("sin acento configurado cae al coral OpenLen (#FF5A36), no a un color inventado", () => {
     const out = bakeChatWidget(BASE, { sub: "demo", mount: "fab", selfServeJoin: true });
     expect(out).toContain("#FF5A36");
