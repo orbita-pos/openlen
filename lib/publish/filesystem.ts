@@ -748,6 +748,11 @@ async function bakeDocument(
     }
   }
 
+  // Acento del sitio para los widgets brand-matched (comments/bookings/chat):
+  // UN escaneo compartido — ningún bake entre estos tres toca --ol-accent
+  // (Minor de la revisión del pase de superficies, 2026-07-15).
+  const siteAccent = detectSiteAccent(migratedHtml) ?? undefined;
+
   // Comments widget — AFTER the assistant, still BEFORE the seal (so its inline
   // script hash enters the CSP). Renders at the placeholder or appends.
   if (process.env.OPENLEN_COMMENTS !== "0" && ctx.comments?.enabled) {
@@ -755,7 +760,7 @@ async function bakeDocument(
       migratedHtml = bakeComments(migratedHtml, {
         sub: ctx.sub,
         page,
-        accent: detectSiteAccent(migratedHtml) ?? undefined,
+        accent: siteAccent,
       });
     } catch (err) {
       // eslint-disable-next-line no-console
@@ -768,7 +773,7 @@ async function bakeDocument(
     try {
       migratedHtml = bakeBookings(migratedHtml, {
         sub: ctx.sub,
-        accent: detectSiteAccent(migratedHtml) ?? undefined,
+        accent: siteAccent,
       });
     } catch (err) {
       // eslint-disable-next-line no-console
@@ -794,7 +799,7 @@ async function bakeDocument(
         sub: ctx.sub,
         // Brand-match the widget to the page's own accent ("con el color de tu
         // página"); falls back to the widget's coral when undetectable.
-        accent: ctx.chat.accent ?? detectSiteAccent(migratedHtml) ?? undefined,
+        accent: ctx.chat.accent ?? siteAccent,
         mount: chatMount,
         selfServeJoin: ctx.chat.selfServeJoin,
         title: ctx.chat.title,

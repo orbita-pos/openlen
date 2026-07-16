@@ -15,6 +15,8 @@
 // XSS: every author name + body renders via textContent / createElement —
 // never innerHTML. Bodies are stored plain-text server-side.
 
+import { inkOn } from "@/lib/publish/color-utils";
+
 interface CommentsStrings {
   title: string;
   empty: string;
@@ -52,14 +54,6 @@ export interface CommentsWidgetConfig {
   accent?: string;
 }
 
-/** Texto legible sobre el acento (mismo umbral que collections-block). */
-function inkOn(accent: string): string {
-  const m = /^#?([0-9a-f]{6})$/i.exec(accent.trim());
-  if (!m) return "#ffffff";
-  const n = parseInt(m[1], 16);
-  const lum = (0.299 * ((n >> 16) & 255) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255)) / 255;
-  return lum > 0.62 ? "#16181d" : "#ffffff";
-}
 
 const WIDGET_MARKER = "data-ol-comments-widget";
 const SECTION_MARKER = "data-ol-comments-section";

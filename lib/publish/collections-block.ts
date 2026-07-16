@@ -16,6 +16,7 @@
 import { detectSiteAccent } from "@/lib/members/site-accent";
 import type { ItemRow } from "@/lib/collections/store";
 import { parsePriceCents } from "@/lib/publish/orders-price";
+import { inkOn } from "@/lib/publish/color-utils";
 
 const WIDGET_MARKER = "data-ol-collection-widget";
 const SECTION_MARKER = "data-ol-collection-section";
@@ -54,14 +55,6 @@ function safeImg(s: string | null): string | null {
   return s && SAFE_IMG_RE.test(s.trim()) ? s : null;
 }
 
-/** Readable text color on an accent background (luminance threshold). */
-function inkOn(accent: string): string {
-  const m = /^#?([0-9a-f]{6})$/i.exec(accent.trim());
-  if (!m) return "#ffffff";
-  const n = parseInt(m[1], 16);
-  const lum = (0.299 * ((n >> 16) & 255) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255)) / 255;
-  return lum > 0.62 ? "#16181d" : "#ffffff";
-}
 
 function badgeHtml(badge: string | null, accent: string, overImage: boolean): string {
   if (!badge) return "";
