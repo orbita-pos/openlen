@@ -117,6 +117,11 @@ export default {
   async fetch(req: Request, env: Env): Promise<Response> {
     const url = new URL(req.url);
     if (url.hostname !== "status.openlen.com") return new Response("Not found", { status: 404 });
+    if (url.pathname === "/robots.txt") {
+      return new Response("User-agent: *\nAllow: /\n", {
+        headers: { "content-type": "text/plain; charset=utf-8", "cache-control": "public, max-age=86400" },
+      });
+    }
     const now = Date.now();
     if (url.pathname === "/api/summary") {
       const data = await gatherData(env, now);

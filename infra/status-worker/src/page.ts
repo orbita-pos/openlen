@@ -33,6 +33,8 @@ const STR = {
     updated: "Actualizado",
     refresh: "se verifica cada 5 minutos",
     openSource: "código abierto",
+    description:
+      "Estado en vivo de OpenLen: aplicación, páginas publicadas y API, verificado cada 5 minutos desde fuera de nuestra infraestructura.",
     labels: TARGET_LABEL,
   },
   en: {
@@ -46,6 +48,8 @@ const STR = {
     updated: "Updated",
     refresh: "checked every 5 minutes",
     openSource: "open source",
+    description:
+      "Live status of OpenLen: application, published pages and API, checked every 5 minutes from outside our infrastructure.",
     labels: { app: "Application", pages: "Published pages", api: "API & data" } as Record<Target, string>,
   },
 };
@@ -105,12 +109,17 @@ export function renderHtml(data: PageData, lang: "es" | "en"): string {
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="${s.description}">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='32' cy='32' r='22' fill='none' stroke='%23FF5A36' stroke-width='14'/%3E%3C/svg%3E">
 <title>${s.title}</title>
 <style>
   :root {
     color-scheme: light dark;
     --coral: #ff5a36;
-    --fg: #18181b; --bg: #ffffff; --card: #ffffff; --muted: #74747f; --line: #e9e9ee;
+    /* Texto acento: el coral puro falla AA sobre blanco; el stop oscuro del
+       gradiente del logo sí pasa. En dark se aclara. */
+    --coral-text: #d13416;
+    --fg: #18181b; --bg: #ffffff; --card: #ffffff; --muted: #6b6b76; --line: #e9e9ee;
     --soft: #f7f7f9;
     --ok: #10b981; --warn: #f59e0b; --bad: #ef4444; --empty: #e4e4ea;
     --halo-a: rgba(255,126,85,.26); --halo-b: rgba(253,164,175,.20); --halo-c: rgba(196,181,253,.24);
@@ -118,6 +127,7 @@ export function renderHtml(data: PageData, lang: "es" | "en"): string {
   }
   @media (prefers-color-scheme: dark) {
     :root {
+      --coral-text: #ff8a63;
       --fg: #f4f4f5; --bg: #0a0a0a; --card: #131315; --muted: #9d9da8; --line: #232329;
       --soft: #18181b;
       --ok: #2dd48f; --warn: #fbbf24; --bad: #f87171; --empty: #232329;
@@ -153,7 +163,7 @@ export function renderHtml(data: PageData, lang: "es" | "en"): string {
     text-transform: uppercase; color: var(--muted);
   }
   .eyebrow em { font-family: Georgia, "Times New Roman", serif; font-style: italic; text-transform: none;
-    letter-spacing: 0; font-size: 14px; color: var(--coral); }
+    letter-spacing: 0; font-size: 14px; color: var(--coral-text); }
   h1 {
     margin-top: 10px; font-size: clamp(26px, 5.4vw, 34px); font-weight: 700;
     letter-spacing: -0.035em; line-height: 1.12; text-wrap: balance;
@@ -213,18 +223,20 @@ export function renderHtml(data: PageData, lang: "es" | "en"): string {
     color: var(--muted); font-size: 12.5px;
   }
   .foot svg { width: 14px; height: 14px; }
-  .foot a { color: var(--coral); text-decoration: none; }
+  .foot a { color: var(--coral-text); text-decoration: none; }
   .foot a:hover { text-decoration: underline; }
 
-  /* ── entrada orquestada, respetando reduced-motion ── */
+  /* ── entrada orquestada, respetando reduced-motion ──
+     Solo transform: animar opacity desde 0 en toda la página corre en el
+     compositor sin paints contentful y Lighthouse reporta NO_FCP. */
   @media (prefers-reduced-motion: no-preference) {
     .hero, .panel, h3, .empty, .timeline, .foot {
       animation: rise .5s cubic-bezier(.2,.7,.2,1) both;
     }
-    .panel { animation-delay: .08s; }
-    h3, .empty, .timeline { animation-delay: .16s; }
-    .foot { animation-delay: .22s; }
-    @keyframes rise { from { opacity: 0; transform: translateY(10px); } }
+    .panel { animation-delay: .06s; }
+    h3, .empty, .timeline { animation-delay: .12s; }
+    .foot { animation-delay: .18s; }
+    @keyframes rise { from { transform: translateY(12px); } }
   }
 </style>
 </head>
