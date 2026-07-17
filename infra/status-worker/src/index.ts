@@ -1,4 +1,4 @@
-import { RUN_MS, TARGETS, dayCells, incidentsFromFailures, nextState, uptimePct, type Incident, type Target, type TargetState } from "./logic";
+import { TARGETS, dayCells, incidentsFromFailures, nextState, uptimePct, type Incident, type Target, type TargetState } from "./logic";
 import { runAllChecks } from "./checks";
 import { sendAlert } from "./email";
 import { pickLang, renderHtml, summaryJson, type PageData, type TargetView } from "./page";
@@ -81,28 +81,37 @@ export default {
   async scheduled(_event: ScheduledController, env: Env, ctx: ExecutionContext): Promise<void> {
     const now = Date.now();
     const results = await runAllChecks(env.CANARY_HOST);
+    // Isolate target-level DB failures: one failure must not silence the others' state transitions
     for (const r of results) {
-      await env.DB.prepare(
-        `INSERT INTO checks (ts, target, ok, status, latency_ms) VALUES (?1, ?2, ?3, ?4, ?5)`,
-      )
-        .bind(now, r.target, r.ok ? 1 : 0, r.status, r.latencyMs)
-        .run();
+      try {
+        await env.DB.prepare(
+          `INSERT INTO checks (ts, target, ok, status, latency_ms) VALUES (?1, ?2, ?3, ?4, ?5)`,
+        )
+          .bind(now, r.target, r.ok ? 1 : 0, r.status, r.latencyMs)
+          .run();
 
-      const prev = await readState(env.DB, r.target);
-      const { state, transition } = nextState(prev, r.ok, now);
-      await env.DB.prepare(
-        `INSERT INTO state (target, status, since, fails) VALUES (?1, ?2, ?3, ?4)
-         ON CONFLICT(target) DO UPDATE SET status = excluded.status, since = excluded.since, fails = excluded.fails`,
-      )
-        .bind(r.target, state.status, state.since, state.fails)
-        .run();
+        const prev = await readState(env.DB, r.target);
+        const { state, transition } = nextState(prev, r.ok, now);
+        await env.DB.prepare(
+          `INSERT INTO state (target, status, since, fails) VALUES (?1, ?2, ?3, ?4)
+           ON CONFLICT(target) DO UPDATE SET status = excluded.status, since = excluded.since, fails = excluded.fails`,
+        )
+          .bind(r.target, state.status, state.since, state.fails)
+          .run();
 
-      if (transition) {
-        const downSince = transition === "recovered" ? (prev?.since ?? now) : now;
-        ctx.waitUntil(sendAlert(transition, r.target, env, now, downSince));
+        if (transition) {
+          const downSince = transition === "recovered" ? (prev?.since ?? now) : now;
+          ctx.waitUntil(sendAlert(transition, r.target, env, now, downSince));
+        }
+      } catch (err) {
+        console.error("check persist failed", r.target, err);
       }
     }
-    await env.DB.prepare(`DELETE FROM checks WHERE ts < ?1`).bind(now - RETENTION_MS).run();
+    try {
+      await env.DB.prepare(`DELETE FROM checks WHERE ts < ?1`).bind(now - RETENTION_MS).run();
+    } catch (err) {
+      console.error("retention prune failed", err);
+    }
   },
 
   async fetch(req: Request, env: Env): Promise<Response> {
