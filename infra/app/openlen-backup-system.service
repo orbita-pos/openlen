@@ -5,14 +5,19 @@ Wants=network-online.target
 
 [Service]
 Type=oneshot
-User=openlen-deploy
-Group=www-data
+# Runs as root — UNLIKE the pages backup (openlen-deploy). This one tars
+# /etc/openlen, which holds files owned by other roots/groups (e.g. edge.env
+# is 640 root:openlen-edge; openlen.env is root:root). openlen-deploy can't
+# read those, so tar would exit non-zero and sink the whole /etc upload. Root
+# reads them all, and the archive is encrypted before it leaves the box.
+User=root
 
-# Same perms model as openlen-backup.service: config under /etc/openlen is
-# 640 root:openlen-deploy, so the service user can read env + rclone + pass.
 Environment=RCLONE_CONF=/etc/openlen/rclone.conf
 
-ExecStart=/bin/bash /opt/openlen-app/infra/scripts/backup-system-to-r2.sh
+# Installed out-of-band to a deploy-independent path (Gate B / DR_RUNBOOK):
+# /opt/openlen-app is wiped by every atomic-swap deploy, so the backup scripts
+# live under /opt/openlen-backup instead.
+ExecStart=/bin/bash /opt/openlen-backup/backup-system-to-r2.sh
 
 StandardOutput=journal
 StandardError=journal

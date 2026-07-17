@@ -14,7 +14,9 @@ Environment=RCLONE_CONF=/etc/openlen/rclone.conf
 Environment=PUBLISH_ROOT=/var/www/openlen
 Environment=OPENLEN_BACKUP_REMOTE=r2-published:openlen-published
 
-ExecStart=/bin/bash /opt/openlen-app/infra/scripts/backup-published-to-r2.sh
+# /opt/openlen-app is wiped by every atomic-swap deploy; the backup scripts
+# live under the deploy-independent /opt/openlen-backup (installed in Gate B).
+ExecStart=/bin/bash /opt/openlen-backup/backup-published-to-r2.sh
 
 StandardOutput=journal
 StandardError=journal
