@@ -24,4 +24,7 @@ NoNewPrivileges=true
 PrivateTmp=true
 ProtectSystem=full
 ProtectHome=read-only
-ReadOnlyPaths=/var/openlen/uploads
+# El "-" es load-bearing: sin él, un box sin dir de uploads mata el unit en el
+# setup del namespace ANTES de correr el script — que ya maneja ese caso con
+# un skip. El backup de DB/etc/manifiesto debe correr igual.
+ReadOnlyPaths=-/var/openlen/uploads

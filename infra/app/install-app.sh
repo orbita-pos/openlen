@@ -93,4 +93,4 @@ echo
 echo "Scheduled jobs (enable once the app env is populated):"
 echo "  systemctl enable --now openlen-analytics-rollup.timer"
 echo "  systemctl enable --now openlen-bookings-remind.timer   # booking reminders + retention"
-echo "  systemctl enable --now openlen-backup-system.timer   # needs /etc/openlen/backup.pass + pg_dump installed"
+echo "  systemctl enable --now openlen-backup-system.timer   # needs rclone.conf + /etc/openlen/backup.pass + pg_dump installed"
