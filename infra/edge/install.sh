@@ -89,14 +89,25 @@ fi
 # ─── 5. certbot deploy hook ──────────────────────────────────────────────
 echo "[install] writing certbot renewal hook → $RENEWAL_HOOK"
 install -d -m 0755 /etc/letsencrypt/renewal-hooks/deploy
+# Shared cert-readers group: caddy's install already uses ssl-cert; the edge
+# joins it instead of competing with its own group (see hook comment).
+getent group ssl-cert >/dev/null || groupadd ssl-cert
+usermod -aG ssl-cert openlen-edge
 cat >"$RENEWAL_HOOK" <<'HOOK'
 #!/usr/bin/env bash
-# Re-grant the openlen-edge user read access after every cert rotation.
-# certbot recreates the symlinks under live/ pointing at fresh files in
-# archive/, so the previous chgrp/chmod doesn't survive — re-apply here.
+# Re-grant cert read access after every rotation. certbot recreates the
+# files under archive/ with root-only perms, so the previous chgrp/chmod
+# doesn't survive — re-apply here.
+#
+# GROUP is ssl-cert, NOT openlen-edge: caddy reads these same files (its
+# Caddyfile pins them) and only belongs to ssl-cert. Chgrp'ing to a group
+# caddy isn't in broke every Caddy reload after a renewal — served stale
+# certs and one restart away from failing to boot (cazado en el ensayo DR
+# 2026-07-17). Both consumers are members of ssl-cert; the install below
+# guarantees it.
 set -euo pipefail
 
-GROUP=openlen-edge
+GROUP=ssl-cert
 
 # Cert dirs may have a different ownership/mode in the operator-managed
 # install; only touch the files we care about and ignore those that don't
