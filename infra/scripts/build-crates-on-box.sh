@@ -17,6 +17,13 @@
 
 set -e
 set -o pipefail
+# Un box recién resucitado no trae Rust (ni setup-hetzner ni setup-node lo
+# instalan) y el primer deploy moría aquí — cazado en el ensayo DR 2026-07-17.
+# Auto-bootstrap: rustup minimal, idempotente.
+if [[ ! -f ~/.cargo/env ]]; then
+  echo "rustup no encontrado — instalando toolchain minimal..."
+  curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal
+fi
 source ~/.cargo/env
 
 TARGET_DIR="${1:-/opt/openlen-app}"
