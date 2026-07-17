@@ -5,8 +5,7 @@
 # everything else a dead box would lose —
 #   uploads/   /var/openlen/uploads (skipped if prod stores uploads in R2)
 #   db/        encrypted pg_dump of Neon, newest 7 kept
-#   etc/       encrypted tar of /etc/openlen + /etc/letsencrypt (token DNS-01
-#              + certs, when present), minus backup.pass, newest 7 kept
+#   etc/       encrypted tar of /etc/openlen (minus backup.pass), newest 7 kept
 #   manifest/  which openlen units/timers are enabled + tool versions
 #
 # Triggered by openlen-backup-system.timer. Manual run:
@@ -103,19 +102,19 @@ if [[ -n "$DB_URL" ]]; then
   fi
 fi
 
-# ── 3. /etc/openlen + /etc/letsencrypt (minus the passphrase) ───────────────
+# ── 3. /etc/openlen (minus the passphrase that encrypts it) ─────────────────
+# NOT /etc/letsencrypt: this backup runs as openlen-deploy, which can't read
+# certbot's root-only cloudflare.ini (600 root:root) or the ssl-cert-group
+# private keys — tar would exit non-zero and sink the whole /etc upload with
+# it. The certs are disposable anyway (certbot re-issues on a fresh box via
+# DNS-01); the token is an off-box secret in the operator's password manager,
+# recreated during recovery (see infra/DR_RUNBOOK.md §0/§3), same treatment
+# as rclone.conf.
 echo "== etc: /etc/openlen"
-# /etc/letsencrypt holds the Cloudflare DNS-01 token (cloudflare.ini) + the
-# issued certs — lives outside /etc/openlen, and a dead box takes it with it.
-# Members list, not a second tar call, so both land in one archive/one prune
-# lineage. Unquoted on purpose: word-splits into separate tar args ("openlen"
-# vs "openlen letsencrypt"); both come from fixed literals, never user input.
-members="openlen"
-[[ -d /etc/letsencrypt ]] && members="$members letsencrypt"
 # --exclude is relative to tar's -C start dir (/etc); stripping the /etc/
 # prefix from PASS_FILE keeps this correct for nested overrides of
 # OPENLEN_BACKUP_PASS, and is a no-op for the default backup.pass path.
-if tar -C /etc -czf "$WORK/etc.tar.gz" --exclude "${PASS_FILE#/etc/}" $members \
+if tar -C /etc -czf "$WORK/etc.tar.gz" --exclude "${PASS_FILE#/etc/}" openlen \
     && encrypt "$WORK/etc.tar.gz" "$WORK/etc-$STAMP.tar.gz.enc"; then
   rc copyto "$WORK/etc-$STAMP.tar.gz.enc" "$REMOTE/etc/etc-$STAMP.tar.gz.enc" || warn "etc: subida falló"
   prune etc || warn "etc: prune falló"
