@@ -35,6 +35,14 @@ rebuild_symlink() {
   if [[ -z "$newest" ]]; then
     return 0
   fi
+  # El backup sube con --copy-links, así que `current` baja del restore como
+  # DIRECTORIO real (no symlink). mv -T no puede pisar un dir no vacío — y
+  # peor: el siguiente publish del sub fallaría igual en publishToDir.
+  # Degradarlo a symlink (releases/ ya tiene el mismo contenido). Cazado en
+  # el ensayo DR 2026-07-17.
+  if [[ -d "$sub_dir/current" ]]; then
+    rm -rf "$sub_dir/current"
+  fi
   local tmp_link="$sub_dir/.current-$RANDOM.new"
   ln -s "releases/$newest" "$tmp_link"
   mv -T "$tmp_link" "$sub_dir/current"

@@ -67,6 +67,15 @@ install -m 644 "${SCRIPT_DIR}/openlen-live-republish.timer"      /etc/systemd/sy
 # DR frío — nightly system backup (uploads + DB + /etc/openlen + manifest).
 install -m 644 "${SCRIPT_DIR}/openlen-backup-system.service"    /etc/systemd/system/openlen-backup-system.service    2>/dev/null || true
 install -m 644 "${SCRIPT_DIR}/openlen-backup-system.timer"      /etc/systemd/system/openlen-backup-system.timer      2>/dev/null || true
+# Chat push notifications drain (nunca estuvo registrado aquí — instalado a
+# mano en prod; cazado en el ensayo DR cuando el box resucitado no lo tenía).
+install -m 644 "${SCRIPT_DIR}/openlen-notifications-drain.service" /etc/systemd/system/openlen-notifications-drain.service 2>/dev/null || true
+install -m 644 "${SCRIPT_DIR}/openlen-notifications-drain.timer"   /etc/systemd/system/openlen-notifications-drain.timer   2>/dev/null || true
+# Los timers de backup ejecutan desde /opt/openlen-backup (el swap del deploy
+# borra /opt/openlen-app); dejar los scripts instalados ahí.
+install -d -m 755 /opt/openlen-backup
+install -m 755 "${SCRIPT_DIR}/../scripts/backup-published-to-r2.sh" /opt/openlen-backup/backup-published-to-r2.sh 2>/dev/null || true
+install -m 755 "${SCRIPT_DIR}/../scripts/backup-system-to-r2.sh"    /opt/openlen-backup/backup-system-to-r2.sh    2>/dev/null || true
 systemctl daemon-reload
 systemctl enable openlen-app.service
 # Backup timer stays disabled until /etc/openlen/rclone.conf is populated.

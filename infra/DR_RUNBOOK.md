@@ -144,7 +144,15 @@ En el box:
 
 ## 8 · Re-activar timers según manifiesto
 
-En el box. El manifiesto es la fuente de verdad de qué estaba activo:
+En el box. Primero los scripts de backup en su ruta deploy-independiente (los
+ExecStart de los timers apuntan ahí; install-app.sh ya lo hace, esto es el
+respaldo por si corriste una copia vieja):
+
+    install -d -m 755 /opt/openlen-backup
+    install -m 755 /root/infra/scripts/backup-published-to-r2.sh /opt/openlen-backup/
+    install -m 755 /root/infra/scripts/backup-system-to-r2.sh    /opt/openlen-backup/
+
+El manifiesto es la fuente de verdad de qué estaba activo:
 
     rclone --config /etc/openlen/rclone.conf cat r2-published:openlen-backup/manifest/manifest.txt
     # Actívalos según lo que liste, p.ej.:
