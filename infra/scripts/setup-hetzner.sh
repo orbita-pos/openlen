@@ -106,7 +106,13 @@ ufw status verbose
 log "[5/8] Enabling fail2ban (default sshd jail)..."
 systemctl enable fail2ban
 systemctl restart fail2ban
-fail2ban-client status
+# El status es informativo; justo tras el restart el socket puede tardar unos
+# segundos y con set -e un fallo aquí mataba TODO el script (cazado en el
+# ensayo de DR 2026-07-17). Retry corto y nunca fatal.
+for _i in 1 2 3 4 5; do
+  if fail2ban-client status 2>/dev/null; then break; fi
+  sleep 2
+done || true
 
 # ─── 6. nginx baseline ────────────────────────────────────────────────────────
 
