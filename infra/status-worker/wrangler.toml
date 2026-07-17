@@ -13,8 +13,8 @@ crons = ["*/5 * * * *"]
 [[d1_databases]]
 binding = "DB"
 database_name = "openlen-status"
-database_id = "FILL_AT_SETUP"
+database_id = "31a195a1-d7bd-4cda-8bb3-2bd5a4afff04"
 
 [vars]
-CANARY_HOST = "FILL_AT_SETUP"
+CANARY_HOST = "headwaters-demo.openlen.com"
 ALERT_FROM = "OpenLen Status <alerts@openlen.com>"
