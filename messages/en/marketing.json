@@ -159,6 +159,32 @@
     "footnote": "Pricing reflects public plans as of May 2026. Linktree included because our 30 link-in-bio creator templates target the same audience — difference is you own the HTML and the subdomain.",
     "featureColumn": "Feature"
   },
+  "trust": {
+    "badge": "Verify it",
+    "title": "Trust you can <muted>verify</muted>",
+    "subtitle": "No promises — every claim has a button to check it.",
+    "uptime": {
+      "title": "Live uptime",
+      "live": "<b>{pct}</b> uptime — {window}, measured from the outside every 5 minutes",
+      "fallback": "Public 24/7 monitoring — measured from the outside every 5 minutes",
+      "windows": { "d90": "last 90 days", "d7": "last 7 days", "d1": "last 24 hours" },
+      "cta": "See live status"
+    },
+    "speed": {
+      "title": "Verifiable speed",
+      "body": "Born to score 100 on Lighthouse — delivered from 330+ cities, 95% of the planet under 50 ms.",
+      "cta": "Check it on PageSpeed"
+    },
+    "yours": {
+      "title": "Truly yours",
+      "body": "Export your page to ZIP, GitHub or Vercel anytime — no lock-in. Encrypted nightly backups and a rehearsed recovery."
+    },
+    "open": {
+      "title": "Open source",
+      "body": "All of OpenLen's code is public (AGPL) — audit us.",
+      "cta": "View the code"
+    }
+  },
   "creatorShowcase": {
     "badge": "For creators",
     "title": "Link pages you <muted>actually own.</muted>",

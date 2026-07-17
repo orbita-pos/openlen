@@ -159,6 +159,32 @@
     "footnote": "Die Preise spiegeln die öffentlichen Tarife mit Stand Mai 2026 wider. Linktree ist enthalten, weil unsere 30 Link-in-Bio-Creator-Vorlagen dieselbe Zielgruppe ansprechen — der Unterschied: Dir gehören das HTML und die Subdomain.",
     "featureColumn": "Funktion"
   },
+  "trust": {
+    "badge": "Prüf es",
+    "title": "Vertrauen, das du <muted>überprüfen</muted> kannst",
+    "subtitle": "Keine Versprechen — jede Aussage hat einen Button zum Nachprüfen.",
+    "uptime": {
+      "title": "Live-Uptime",
+      "live": "<b>{pct}</b> Uptime — {window}, alle 5 Minuten von außen gemessen",
+      "fallback": "Öffentliches 24/7-Monitoring — alle 5 Minuten von außen gemessen",
+      "windows": { "d90": "letzte 90 Tage", "d7": "letzte 7 Tage", "d1": "letzte 24 Stunden" },
+      "cta": "Live-Status ansehen"
+    },
+    "speed": {
+      "title": "Nachprüfbare Geschwindigkeit",
+      "body": "Geboren für die 100 bei Lighthouse — ausgeliefert aus 330+ Städten, 95 % des Planeten unter 50 ms.",
+      "cta": "Prüf es mit PageSpeed"
+    },
+    "yours": {
+      "title": "Wirklich deine",
+      "body": "Exportiere deine Seite jederzeit als ZIP, zu GitHub oder Vercel — kein Lock-in. Verschlüsselte nächtliche Backups und geprobte Wiederherstellung."
+    },
+    "open": {
+      "title": "Open Source",
+      "body": "Der gesamte OpenLen-Code ist öffentlich (AGPL) — prüf uns.",
+      "cta": "Code ansehen"
+    }
+  },
   "creatorShowcase": {
     "badge": "Für Creator",
     "title": "Link-Seiten, die dir <muted>wirklich gehören.</muted>",

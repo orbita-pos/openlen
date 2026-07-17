@@ -159,6 +159,32 @@
     "footnote": "Prijzen weerspiegelen de openbare abonnementen van mei 2026. Linktree is opgenomen omdat onze 30 link-in-bio creatortemplates op hetzelfde publiek mikken — het verschil is dat jij de HTML en het subdomein bezit.",
     "featureColumn": "Functie"
   },
+  "trust": {
+    "badge": "Controleer het",
+    "title": "Vertrouwen dat je kunt <muted>controleren</muted>",
+    "subtitle": "Geen beloftes — elke bewering heeft een knop om het te checken.",
+    "uptime": {
+      "title": "Live uptime",
+      "live": "<b>{pct}</b> uptime — {window}, elke 5 minuten van buitenaf gemeten",
+      "fallback": "Publieke 24/7-monitoring — elke 5 minuten van buitenaf gemeten",
+      "windows": { "d90": "laatste 90 dagen", "d7": "laatste 7 dagen", "d1": "laatste 24 uur" },
+      "cta": "Bekijk de live status"
+    },
+    "speed": {
+      "title": "Controleerbare snelheid",
+      "body": "Geboren voor de 100 in Lighthouse — geleverd vanuit 330+ steden, 95% van de planeet binnen 50 ms.",
+      "cta": "Check het op PageSpeed"
+    },
+    "yours": {
+      "title": "Echt van jou",
+      "body": "Exporteer je pagina wanneer je wilt naar ZIP, GitHub of Vercel — geen lock-in. Versleutelde nachtelijke back-ups en een geoefend herstel."
+    },
+    "open": {
+      "title": "Open source",
+      "body": "Alle code van OpenLen is openbaar (AGPL) — controleer ons.",
+      "cta": "Bekijk de code"
+    }
+  },
   "creatorShowcase": {
     "badge": "Voor creators",
     "title": "Linkpagina's die je <muted>echt bezit.</muted>",

@@ -159,6 +159,32 @@
     "footnote": "Los precios reflejan los planes públicos a mayo de 2026. Incluimos a Linktree porque nuestras 30 plantillas link-in-bio para creadores apuntan al mismo público — la diferencia es que tú eres dueño del HTML y del subdominio.",
     "featureColumn": "Característica"
   },
+  "trust": {
+    "badge": "Verifícalo",
+    "title": "Confianza que puedes <muted>verificar</muted>",
+    "subtitle": "Nada de promesas — cada afirmación tiene un botón para comprobarla.",
+    "uptime": {
+      "title": "Uptime vivo",
+      "live": "<b>{pct}</b> de uptime — {window}, medido desde fuera cada 5 minutos",
+      "fallback": "Monitoreo público 24/7 — medido desde fuera cada 5 minutos",
+      "windows": { "d90": "últimos 90 días", "d7": "últimos 7 días", "d1": "últimas 24 horas" },
+      "cta": "Ver el estado en vivo"
+    },
+    "speed": {
+      "title": "Velocidad verificable",
+      "body": "Nacen para el 100 de Lighthouse — entregadas desde 330+ ciudades, el 95% del planeta a menos de 50 ms.",
+      "cta": "Compruébalo en PageSpeed"
+    },
+    "yours": {
+      "title": "Tuya de verdad",
+      "body": "Exporta tu página a ZIP, GitHub o Vercel cuando quieras — sin candados. Respaldos cifrados cada noche y recuperación ensayada."
+    },
+    "open": {
+      "title": "Código abierto",
+      "body": "Todo el código de OpenLen es público (AGPL) — audítanos.",
+      "cta": "Ver el código"
+    }
+  },
   "creatorShowcase": {
     "badge": "Para creadores",
     "title": "Páginas de enlaces que <muted>de verdad son tuyas.</muted>",
