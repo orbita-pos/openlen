@@ -36,7 +36,10 @@ UPLOADS_DIR="${UPLOADS_DIR:-/var/openlen/uploads}"
 KEEP=7
 
 STAMP="$(date -u +%Y%m%d)"
-WORK="$(mktemp -d)"
+# Hard exit: sin -e global, un mktemp fallido dejaría WORK="" y los artefactos
+# (incluido el dump SIN cifrar) caerían en / — preflight, igual que los checks
+# de rclone.conf y backup.pass.
+WORK="$(mktemp -d)" || { echo "error: mktemp failed" >&2; exit 1; }
 trap 'rm -rf "$WORK"' EXIT
 
 [[ -f "$RCLONE_CONF" ]] || { echo "error: no rclone config at $RCLONE_CONF" >&2; exit 1; }
@@ -55,10 +58,13 @@ encrypt() { # encrypt SRC DST
 # so lexicographic sort == chronological). List-based on purpose: an age-based
 # prune could delete every copy if the backup had been failing for a week.
 prune() { # prune PREFIX
-  local fail=0
+  local fail=0 listing
+  # lsf capturado aparte: con el process substitution su exit status se
+  # descartaba y un fallo real de listado parecía "sin candidatos".
+  listing="$(rc lsf "$REMOTE/$1/" | sort | head -n "-$KEEP")" || return 1
   while read -r f; do
     [[ -n "$f" ]] && { rc deletefile "$REMOTE/$1/$f" && echo "  pruned $1/$f" || fail=1; }
-  done < <(rc lsf "$REMOTE/$1/" | sort | head -n "-$KEEP")
+  done <<< "$listing"
   return "$fail"
 }
 
