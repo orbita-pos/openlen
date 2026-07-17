@@ -10,6 +10,7 @@
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
+    "status:typecheck": "tsc -p infra/status-worker --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:node": "tsx --require ./scripts/test-node-server-only-shim.cjs --test lib/agent/tools.test.ts lib/agent/live-data-tool.test.ts lib/agent/theme-apply.test.ts lib/tematicas/apply-server.test.ts lib/projects/site-pages.test.ts lib/publish/multi-page-publish.test.ts lib/branding/social-image.test.ts lib/publish/ensure-page-meta.test.ts lib/branding/og-card.test.ts lib/publish/image-bake.test.ts lib/publish/font-bake.test.ts lib/publish/tracking-strip.test.ts lib/publish/not-found-page.test.ts lib/publish/music.test.ts lib/imagery/photograph.test.ts lib/publish/motion.test.ts lib/publish/language-cluster.test.ts lib/publish/flight-check.test.ts lib/publish/optimize-html.test.ts lib/ai/vision-critique.test.ts lib/ai-stream/generate.test.ts lib/style-match/autofill/sanitize.test.ts lib/normalize.test.ts lib/html-ops.test.ts lib/shadow-soak.test.ts lib/html-engine.test.ts lib/publish/behaviors-sanitize-order.test.ts",
@@ -149,6 +150,7 @@
     "zod": "^3.24.1"
   },
   "devDependencies": {
+    "@cloudflare/workers-types": "^4.20260702.1",
     "@gltf-transform/core": "^4.4.0",
     "@gltf-transform/extensions": "^4.4.0",
     "@gltf-transform/functions": "^4.4.0",
