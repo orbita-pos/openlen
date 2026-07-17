@@ -1,7 +1,13 @@
 # DR runbook — resurrección del box de OpenLen
 
-> **Último ensayo: NUNCA — RTO medido: n/a.**
-> Un runbook sin fecha de ensayo es ficción. Actualiza esta línea en cada ensayo.
+> **Último ensayo: 2026-07-17 — RTO medido: 3 h 0 min** (box CX22-clase en
+> Ashburn, smoke 4/4: app 200, API+Neon, subdominio publicado, TLS propio).
+> El grueso fueron 10 hallazgos cazados y corregidos EN el ensayo (token CF de
+> prod expirado 💣, hook de certs rompiendo reloads de Caddy, box sin
+> Rust/cc, symlinks del restore, units nunca registrados…) — todos ya
+> arreglados en repo/prod, así que una corrida limpia de este runbook hoy
+> proyecta **~60-75 min** (dominada por el build de crates ~25 min y el
+> restore de 90 MiB). Actualiza esta línea en cada ensayo.
 
 Escenario principal: el box de Hetzner (Ashburn) murió o es irrecuperable.
 Objetivo: prod sirviendo de nuevo en ≤ 90 min, sin pérdida de datos más allá
