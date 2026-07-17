@@ -5,8 +5,11 @@ Wants=network-online.target
 
 [Service]
 Type=oneshot
+# Sin Group=: forzar www-data como primario hace que initgroups DESCARTE el
+# gid propio openlen-deploy (la membresía primaria no está en /etc/group) y el
+# proceso no puede leer los 640 root:openlen-deploy de /etc/openlen. Con el
+# default, el usuario trae openlen-deploy (primario) + www-data (suplementario).
 User=openlen-deploy
-Group=www-data
 
 # rclone config lives in /etc/openlen/ alongside the app env file (same
 # perms model: 640 root:openlen-deploy).
