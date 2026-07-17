@@ -43,6 +43,14 @@ if [[ -f /etc/caddy/Caddyfile && ! -L /etc/caddy/Caddyfile ]]; then
   mv /etc/caddy/Caddyfile /etc/caddy/Caddyfile.package-default.bak
 fi
 ln -sfn "${CADDYFILE_SRC}" /etc/caddy/Caddyfile
+# El symlink solo sirve si el usuario caddy puede ATRAVESAR el path origen.
+# Corriendo desde /root/infra (el flujo del DR runbook) /root es 700 y caddy
+# no llega — cazado en el ensayo DR 2026-07-17. Fallback: copia real.
+if ! sudo -u caddy cat /etc/caddy/Caddyfile >/dev/null 2>&1; then
+  echo "──> caddy can't traverse ${CADDYFILE_SRC}; installing a real copy instead"
+  rm /etc/caddy/Caddyfile
+  install -m 644 "${CADDYFILE_SRC}" /etc/caddy/Caddyfile
+fi
 
 echo "──> granting caddy user read access to Let's Encrypt certs"
 # certbot stores keys with 600 root:root by default; relax to 640 root:ssl-cert
