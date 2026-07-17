@@ -30,7 +30,10 @@ del último backup nightly (03:17/03:47 UTC).
 ## 1 · Crear el box nuevo
 
 Consola Hetzner → Add Server: Ashburn (ash), Ubuntu 24.04 (misma major que el
-box muerto — ver `manifest.txt` en R2), plan equivalente al actual. Anota la IP
+box muerto — ver `manifest.txt` en R2), plan equivalente al actual. En "SSH
+keys" **selecciona `openlen-admin`** (la clave pública que corresponde a tu
+`~/.ssh/openlen-admin`) — todo este runbook entra por ella; un box que arranca
+sin la clave inyectada no tiene arreglo fácil (rescate o recrear). Anota la IP
 nueva. **NO toques DNS todavía.**
 
 ## 2 · Bootstrap del sistema

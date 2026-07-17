@@ -16,6 +16,7 @@ Companion docs:
 - [`app/install-app.sh`](./app/install-app.sh) — Next.js scaffolding (dirs, env, systemd unit)
 - [`app/openlen-app.service`](./app/openlen-app.service) — systemd unit for the Node process
 - [`scripts/deploy.sh`](./scripts/deploy.sh) — local build + rsync + service restart
+- [`DR_RUNBOOK.md`](./DR_RUNBOOK.md) — **disaster recovery** — rebuild a dead box from R2 backups
 
 ---
 
@@ -352,27 +353,16 @@ After all steps, this checklist should be entirely ticked:
 
 ## Disaster recovery
 
-If the Hetzner box dies (hardware failure, accidental destroy, etc.):
+**The full, current procedure lives in [`DR_RUNBOOK.md`](./DR_RUNBOOK.md)** —
+follow that, not a summary here. It rebuilds a dead box from the R2 backups
+(`backup-published-to-r2.sh` + `backup-system-to-r2.sh`): bootstrap → restore
+secrets + re-issue the cert → Caddy → app → restore content → smoke → and only
+then flip DNS. It is ordering-sensitive (cert before Caddy, install-app before
+deploy) and DNS is touched **last**, so don't improvise from the old nginx-era
+steps that used to live here.
 
-1. Provision a new box (Step 0) — note the new IP
-2. Update Cloudflare DNS:
-   - Edit the `*`, apex (`@`), and `www` A records → new `<HETZNER_IP>`
-   - All three now point at Hetzner (no Vercel fallback)
-3. Run the box setup script (Step 3) — `cloudflare.ini` re-creation is
-   in [`dns/CLOUDFLARE_TOKEN.md`](./dns/CLOUDFLARE_TOKEN.md)
-4. Install nginx config (Step 4)
-5. Re-add deploy user public key (Step 5) — same key, just a fresh
-   `authorized_keys`
-6. Install Node + Chromium + scaffold (Section 10.5 Steps 1–2)
-7. Restore `/etc/openlen/openlen.env` from secrets vault (Step 3 of 10.5)
-8. Deploy the app (`bash infra/scripts/deploy.sh`) — Step 5 of 10.5
-9. Re-sync deployed subdomain content. Session 11+ stores
-   `<subdomain> → <user_id>` in Postgres, so the Next.js app can
-   re-push every active subdomain from the DB. Until then, the box is
-   functional but empty until each user clicks "Deploy" again.
-
-DR drill recommendation: spin up a second box once, run through these
-steps, confirm < 90 min recovery time end-to-end. Then destroy the drill box.
+DR drill: spin up a temporary box once, run `DR_RUNBOOK.md` §1–§9 against it
+(never §10 — that's the prod DNS flip), confirm < 90 min RTO, destroy the box.
 
 ---
 
