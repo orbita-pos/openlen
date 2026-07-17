@@ -31,7 +31,7 @@ const STR = {
     noIncidents: "Sin incidentes en los últimos 90 días",
     minutes: "min",
     updated: "Actualizado",
-    labels: { app: "Aplicación", pages: "Páginas publicadas", api: "API y datos" } as Record<Target, string>,
+    labels: TARGET_LABEL,
   },
   en: {
     title: "OpenLen Status",

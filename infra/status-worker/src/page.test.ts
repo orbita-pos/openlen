@@ -34,7 +34,7 @@ describe("renderHtml", () => {
     expect((html.match(/class="status-dot/g) ?? []).length).toBe(3);
     expect(html).toContain("Interrupción parcial"); // un target down
     expect(html).toContain("99.95%");
-    expect(html).toContain("—"); // uptime d90 null de app → sin dato
+    expect(html).toContain("90 días · —"); // uptime d90 null de app → sin dato
   });
 
   test("todo up → encabezado verde; en inglés", () => {
