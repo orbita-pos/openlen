@@ -24,6 +24,12 @@ if [[ ! -f ~/.cargo/env ]]; then
   echo "rustup no encontrado — instalando toolchain minimal..."
   curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal
 fi
+# rustc sin linker no compila nada ("linker cc not found" — segundo hallazgo
+# del mismo ensayo): un Ubuntu fresco tampoco trae build-essential.
+if ! command -v cc >/dev/null 2>&1; then
+  echo "cc no encontrado — instalando build-essential..."
+  DEBIAN_FRONTEND=noninteractive apt-get install -y build-essential pkg-config libssl-dev
+fi
 source ~/.cargo/env
 
 TARGET_DIR="${1:-/opt/openlen-app}"
