@@ -135,6 +135,9 @@ export default {
         headers: {
           "content-type": "text/html; charset=utf-8",
           "cache-control": "public, max-age=60",
+          // The body varies by Accept-Language; without this a shared cache
+          // could serve the ES render to an EN client.
+          vary: "accept-language",
         },
       });
     }
