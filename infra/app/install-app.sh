@@ -64,6 +64,9 @@ install -m 644 "${SCRIPT_DIR}/openlen-bookings-remind.timer"     /etc/systemd/sy
 # pages bound to a Google Sheet pick up cell edits (needs OPENLEN_INTERNAL_SECRET).
 install -m 644 "${SCRIPT_DIR}/openlen-live-republish.service"    /etc/systemd/system/openlen-live-republish.service   2>/dev/null || true
 install -m 644 "${SCRIPT_DIR}/openlen-live-republish.timer"      /etc/systemd/system/openlen-live-republish.timer     2>/dev/null || true
+# DR frío — nightly system backup (uploads + DB + /etc/openlen + manifest).
+install -m 644 "${SCRIPT_DIR}/openlen-backup-system.service"    /etc/systemd/system/openlen-backup-system.service    2>/dev/null || true
+install -m 644 "${SCRIPT_DIR}/openlen-backup-system.timer"      /etc/systemd/system/openlen-backup-system.timer      2>/dev/null || true
 systemctl daemon-reload
 systemctl enable openlen-app.service
 # Backup timer stays disabled until /etc/openlen/rclone.conf is populated.
@@ -90,3 +93,4 @@ echo
 echo "Scheduled jobs (enable once the app env is populated):"
 echo "  systemctl enable --now openlen-analytics-rollup.timer"
 echo "  systemctl enable --now openlen-bookings-remind.timer   # booking reminders + retention"
+echo "  systemctl enable --now openlen-backup-system.timer   # needs /etc/openlen/backup.pass + pg_dump installed"

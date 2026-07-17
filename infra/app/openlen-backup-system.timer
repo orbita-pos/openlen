@@ -1,0 +1,13 @@
+[Unit]
+Description=OpenLen — nightly system backup timer
+Requires=openlen-backup-system.service
+
+[Timer]
+# 03:47 UTC — offset from the published-pages backup (03:17) so the two rclone
+# runs don't compete. Persistent=true catches up a run missed during downtime.
+OnCalendar=*-*-* 03:47:00
+Persistent=true
+RandomizedDelaySec=10m
+
+[Install]
+WantedBy=timers.target

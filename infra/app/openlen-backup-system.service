@@ -1,0 +1,27 @@
+[Unit]
+Description=OpenLen — nightly system backup to R2 (uploads + DB dump + /etc/openlen + manifest)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=openlen-deploy
+Group=www-data
+
+# Same perms model as openlen-backup.service: config under /etc/openlen is
+# 640 root:openlen-deploy, so the service user can read env + rclone + pass.
+Environment=RCLONE_CONF=/etc/openlen/rclone.conf
+
+ExecStart=/bin/bash /opt/openlen-app/infra/scripts/backup-system-to-r2.sh
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=openlen-backup-system
+
+# Defensive — same posture as openlen-backup.service. pg_dump + tar write
+# only to the private /tmp; nothing under /var is written.
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=read-only
+ReadOnlyPaths=/var/openlen/uploads
