@@ -4,6 +4,7 @@ import { MosaicWall } from "@/components/marketing/mosaic-wall";
 import { Features } from "@/components/marketing/features";
 import { AnalyticsLeads } from "@/components/marketing/analytics-leads";
 import { Comparison } from "@/components/marketing/comparison";
+import { Trust } from "@/components/marketing/trust";
 import { Pricing } from "@/components/marketing/pricing";
 import { FinalCta } from "@/components/marketing/final-cta";
 import { MarketingChrome } from "@/components/marketing/marketing-chrome";
@@ -72,6 +73,7 @@ export default function HomePage() {
         <Features />
         <AnalyticsLeads />
         <Comparison />
+        <Trust />
         <Pricing />
         <FinalCta />
       </MarketingChrome>
