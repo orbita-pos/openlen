@@ -63,6 +63,10 @@ function absolutize(href: string, baseUrl: string): string | null {
 export function pageTitle(html: string): string {
   try {
     const root = parse(html);
+    // .text de node-html-parser INCLUYE cuerpos de <script>/<style> — un h1
+    // con un script hijo (p.ej. el carrier data-ol-tw) contaminaría el
+    // título. Fuera antes de extraer.
+    root.querySelectorAll("script,style").forEach((n) => n.remove());
     const title = textOf(root.querySelector("title")).replace(BRAND_SUFFIX_RE, "").trim();
     if (title) return title;
     return textOf(root.querySelector("h1"));
@@ -76,11 +80,16 @@ export function buildLlmsTxt(input: LlmsTxtInput): string {
   let root: HTMLElement | null = null;
   try {
     root = parse(html);
+    // Mismo motivo que en pageTitle: .text incluye cuerpos de script/style —
+    // el carrier data-ol-tw dentro de un <p>/<h*> se colaría al contenido.
+    root.querySelectorAll("script,style").forEach((n) => n.remove());
   } catch {
     root = null;
   }
 
-  const title = (pageTitle(html) || hostOf(baseUrl)).slice(0, 120);
+  // clean() también aquí: el fallback hostOf() no pasa por textOf y el
+  // título es la única línea garantizada del archivo — jamás con estructura.
+  const title = (clean(pageTitle(html) || hostOf(baseUrl)) || "página").slice(0, 120);
   const parts: string[] = [`# ${title}\n`];
 
   // El traverse de node-html-parser (querySelector/.text) es RECURSIVO y
