@@ -165,8 +165,8 @@
     "subtitle": "Niente promesse — ogni affermazione ha un pulsante per verificarla.",
     "uptime": {
       "title": "Uptime dal vivo",
-      "live": "<b>{pct}</b> di uptime — {window}, misurato dall'esterno ogni 5 minuti",
-      "fallback": "Monitoraggio pubblico 24/7 — misurato dall'esterno ogni 5 minuti",
+      "live": "<b>{pct}</b> di uptime — {window}, misurato dall’esterno ogni 5 minuti",
+      "fallback": "Monitoraggio pubblico 24/7 — misurato dall’esterno ogni 5 minuti",
       "windows": { "d90": "ultimi 90 giorni", "d7": "ultimi 7 giorni", "d1": "ultime 24 ore" },
       "cta": "Vedi lo stato dal vivo"
     },

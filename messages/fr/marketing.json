@@ -165,10 +165,10 @@
     "subtitle": "Pas de promesses — chaque affirmation a un bouton pour la vérifier.",
     "uptime": {
       "title": "Uptime en direct",
-      "live": "<b>{pct}</b> d'uptime — {window}, mesuré de l'extérieur toutes les 5 minutes",
-      "fallback": "Surveillance publique 24/7 — mesurée de l'extérieur toutes les 5 minutes",
+      "live": "<b>{pct}</b> d’uptime — {window}, mesuré de l’extérieur toutes les 5 minutes",
+      "fallback": "Surveillance publique 24/7 — mesurée de l’extérieur toutes les 5 minutes",
       "windows": { "d90": "90 derniers jours", "d7": "7 derniers jours", "d1": "dernières 24 heures" },
-      "cta": "Voir l'état en direct"
+      "cta": "Voir l’état en direct"
     },
     "speed": {
       "title": "Vitesse vérifiable",
@@ -181,7 +181,7 @@
     },
     "open": {
       "title": "Open source",
-      "body": "Tout le code d'OpenLen est public (AGPL) — auditez-nous.",
+      "body": "Tout le code d’OpenLen est public (AGPL) — auditez-nous.",
       "cta": "Voir le code"
     }
   },
