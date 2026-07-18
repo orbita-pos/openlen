@@ -41,6 +41,8 @@ import {
   wirePublishedForms as rustWirePublishedForms,
 } from "@openlen/html-engine";
 
+import { extractTwConfig, injectTwCarrier } from "@/lib/publish/tw-config";
+
 import type {
   ApplyError as RustApplyError,
   ApplyResult as RustApplyResult,
@@ -172,9 +174,17 @@ export function parseOps(rawHtml: string): ParseResult {
 // not behavioral — values that are present pass through verbatim.
 
 export function sanitizeForPublish(html: string): SanitizeResult {
-  const r = rustSanitizeForPublish(html) as RustSanitizeResult;
+  // La paleta del tailwind.config viaja como DATOS, no como JS: se extrae y
+  // valida ANTES del sanitize de Rust (que mataría el script) y se re-inyecta
+  // como carrier generado por nosotros DESPUÉS. Sin esto, 53/450 templates
+  // (y las generaciones donde el modelo emite config) pierden sus colores al
+  // clonar — fondos desaparecidos, blanco-sobre-blanco, hovers rotos
+  // (cazado 2026-07-17). Ver lib/publish/tw-config.ts.
+  const { html: pre, extend } = extractTwConfig(html);
+  const r = rustSanitizeForPublish(pre) as RustSanitizeResult;
+  const clean = r.html ?? null;
   return {
-    html: r.html ?? null,
+    html: clean !== null && extend !== null ? injectTwCarrier(clean, extend) : clean,
     errors: r.errors,
     removed: r.removed,
   };

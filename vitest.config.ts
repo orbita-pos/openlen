@@ -87,6 +87,7 @@ export default defineConfig({
       "lib/publish/module-sections.test.ts",
       "lib/publish/whatsapp-button.test.ts",
       "lib/publish/kill-switches.test.ts",
+      "lib/publish/tw-config.test.ts",
       "lib/transform/**/*.test.ts",
       // Datos vivos (spec 2026-07-14) — el directorio aún no existe (Task 1
       // solo prepara el terreno). Listado por adelantado porque el include

@@ -15,14 +15,15 @@
 //   3. Hand off to the Rust `optimize_for_publish` pass (S4 Option C) which
 //      minifies the HTML + minifies the inline CSS we just injected.
 //
-// Why baking with Tailwind's DEFAULT theme is correct here: `sanitizeForPublish`
-// runs BEFORE this step and strips every inline <script> except the CDN src
-// (crates/html-engine/.../sanitize/scripts.rs), so any inline `tailwind.config`
-// is already gone by publish time — the CDN itself would have rendered without
-// it too. Plain `<style>` blocks (`:root` vars, keyframes, custom classes) are
-// not Tailwind and pass through untouched. Templates use no `@apply` and no
-// `?plugins=` CDN variant on the live surface (verified), so default-theme +
-// preflight reproduces exactly what the CDN would paint.
+// Theme: `sanitizeForPublish` extrae el `tailwind.config` inline del template
+// y lo re-inyecta como carrier de datos `<script data-ol-tw>` (validado, bytes
+// nuestros — lib/publish/tw-config.ts). El bake LEE ese carrier y compila con
+// el `theme.extend` REAL del template; sin carrier compila default-theme como
+// siempre. (Antes de 2026-07-17 la config simplemente se perdía y bg-ink /
+// text-lime de 53 templates compilaban a nada — el bug lume/hovers.) Plain
+// `<style>` blocks (`:root` vars, keyframes, custom classes) are not Tailwind
+// and pass through untouched. Templates use no `@apply`; `?plugins=` keeps
+// the CDN (y su carrier, que el CDN sí lee en runtime).
 //
 // Safety: the bake never blocks a publish. If no plain CDN script is present
 // it's a no-op (idempotent — safe on already-baked HTML); if the CDN uses the
@@ -47,6 +48,7 @@ import postcss from "postcss";
 import tailwindcss from "tailwindcss";
 
 import { optimizeForPublish as rustOptimizeForPublish } from "@/lib/html-engine";
+import { readTwCarrier, stripTwCarrier } from "./tw-config";
 
 const TAILWIND_INPUT = "@tailwind base;\n@tailwind components;\n@tailwind utilities;\n";
 
@@ -97,7 +99,10 @@ export async function bakeTailwind(html: string): Promise<OptimizeResult> {
 
   let css: string;
   try {
-    css = await generateTailwindCss(html);
+    // El carrier data-ol-tw (lib/publish/tw-config.ts) trae el theme.extend
+    // validado del tailwind.config original del template — sin él, bg-ink /
+    // text-lime y compañía compilan a NADA (el bug lume/hovers).
+    css = await generateTailwindCss(html, readTwCarrier(html) ?? {});
   } catch (err) {
     // eslint-disable-next-line no-console
     console.warn(
@@ -116,19 +121,24 @@ export async function bakeTailwind(html: string): Promise<OptimizeResult> {
   // and diverge from what the author saw. Function-form replacements so `$`
   // sequences in the CSS aren't read as regex backreferences.
   const styleTag = `<style data-tw-baked>\n${css}\n</style>`;
-  const withoutCdn = html.replace(CDN_SCRIPT_RE, "");
+  // El carrier ya cumplió (su extend está compilado en el CSS) — fuera del
+  // HTML final, igual que el CDN.
+  const withoutCdn = stripTwCarrier(html.replace(CDN_SCRIPT_RE, ""));
   const headClose = /<\/head\s*>/i;
   const out = headClose.test(withoutCdn)
     ? withoutCdn.replace(headClose, (close) => `${styleTag}${close}`)
-    : html.replace(CDN_SCRIPT_RE, () => styleTag); // no </head>: fall back in-place
+    : stripTwCarrier(html).replace(CDN_SCRIPT_RE, () => styleTag); // no </head>: fall back in-place
   return { html: out, baked: true, cssBytes: css.length };
 }
 
-async function generateTailwindCss(html: string): Promise<string> {
+async function generateTailwindCss(
+  html: string,
+  extend: Record<string, unknown> = {},
+): Promise<string> {
   const result = await postcss([
     tailwindcss({
       content: [{ raw: html, extension: "html" }],
-      theme: { extend: {} },
+      theme: { extend },
       plugins: [],
       corePlugins: { preflight: true },
     } as Parameters<typeof tailwindcss>[0]),
