@@ -69,7 +69,10 @@ export function dayCells(
 
 export function uptimePct(total: number, okCount: number): number | null {
   if (total === 0) return null;
-  return Math.round((okCount / total) * 10000) / 100;
+  // Floor, no round: un solo check fallido en 90 días es 99.9961% y con
+  // round se mostraba "100%" — el claim conservador exige truncar. La
+  // sección de confianza del home hereda este número tal cual.
+  return Math.floor((okCount / total) * 10000) / 100;
 }
 
 export interface Incident {

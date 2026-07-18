@@ -80,10 +80,12 @@ describe("dayCells", () => {
 });
 
 describe("uptimePct", () => {
-  test("sin datos → null; 2 decimales", () => {
+  test("sin datos → null; floor a 2 decimales — jamás redondear hacia arriba", () => {
     expect(uptimePct(0, 0)).toBeNull();
-    expect(uptimePct(288, 285)).toBe(98.96);
+    expect(uptimePct(288, 285)).toBe(98.95); // 98.9583… trunca, no redondea
     expect(uptimePct(288, 288)).toBe(100);
+    // 1 fallo en 90 días (25920 checks) = 99.9961% — con round mentía "100".
+    expect(uptimePct(25920, 25919)).toBe(99.99);
   });
 });
 

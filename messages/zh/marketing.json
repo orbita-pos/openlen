@@ -165,19 +165,19 @@
     "subtitle": "不许诺——每个说法都有一个可供验证的按钮。",
     "uptime": {
       "title": "实时在线率",
-      "live": "<b>{pct}</b> 在线率 — {window},每 5 分钟从外部测量",
+      "live": "<b>{pct}</b> 在线率 — {window}，每 5 分钟从外部测量",
       "fallback": "公开监控 24/7 — 每 5 分钟从外部测量",
       "windows": { "d90": "过去 90 天", "d7": "过去 7 天", "d1": "过去 24 小时" },
       "cta": "查看实时状态"
     },
     "speed": {
       "title": "可验证的速度",
-      "body": "为 Lighthouse 100 分而生 — 由 330+ 个城市分发,覆盖全球 95% 的人口(50ms 内)。",
+      "body": "为 Lighthouse 100 分而生 — 由 330+ 个城市分发，覆盖全球 95% 的人口(50ms 内)。",
       "cta": "在 PageSpeed 上验证"
     },
     "yours": {
       "title": "真正属于你",
-      "body": "随时导出到 ZIP、GitHub 或 Vercel — 没有锁定。每晚加密备份,恢复流程已演练。"
+      "body": "随时导出到 ZIP、GitHub 或 Vercel — 没有锁定。每晚加密备份，恢复流程已演练。"
     },
     "open": {
       "title": "开源",
