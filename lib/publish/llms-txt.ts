@@ -90,90 +90,93 @@ export function buildLlmsTxt(input: LlmsTxtInput): string {
   // clean() también aquí: el fallback hostOf() no pasa por textOf y el
   // título es la única línea garantizada del archivo — jamás con estructura.
   const title = (clean(pageTitle(html) || hostOf(baseUrl)) || "página").slice(0, 120);
-  const parts: string[] = [`# ${title}\n`];
+
+  // Formato del spec de llms.txt (que valida el audit de Lighthouse "Agentic
+  // Browsing"): H1, blockquote, secciones de DETALLE (párrafos/prosa, sin
+  // headings), y secciones H2 cuyos items DEBEN ser hiperenlaces [nombre](url).
+  // Reglas que hacían fallar el audit y que aquí se cumplen:
+  //   • Los "## Secciones" iban como bullets de TEXTO plano → prohibido.
+  //     Ahora las secciones son una línea de prosa (detalle), no una lista H2.
+  //   • El archivo DEBE contener ≥1 link markdown → hay fallback a la home.
+  const detail: string[] = [];
+  const links: string[] = [];
+  const seenL = new Set<string>();
+  const addLink = (label: string, url: string | null) => {
+    if (!url || seenL.has(url) || links.length >= MAX_LINKS) return;
+    seenL.add(url);
+    const text = (clean(label) || url.replace(/^https?:\/\//, "")).slice(0, 60);
+    links.push(`- [${text}](${url})`);
+  };
 
   // El traverse de node-html-parser (querySelector/.text) es RECURSIVO y
   // desborda el stack con HTML muy anidado (from-html acepta HTML crudo).
-  // Todo el bloque va en try/catch: cualquier fallo degrada a solo-título,
-  // jamás lanza (invariante de totalidad; cazado en el review 2026-07-17).
+  // Todo el bloque va en try/catch: cualquier fallo degrada a solo-título +
+  // enlaces, jamás lanza (invariante de totalidad; cazado en review 2026-07-17).
   try {
-  if (root) {
-    const scope = root.querySelector("main") ?? root.querySelector("body") ?? root;
+    if (root) {
+      const scope = root.querySelector("main") ?? root.querySelector("body") ?? root;
 
-    // Resumen (blockquote) — meta description.
-    const desc = clean(
-      root.querySelector('meta[name="description"]')?.getAttribute("content") ?? "",
-    ).slice(0, 300);
-    if (desc) parts.push(`> ${desc}\n`);
+      // Resumen (blockquote) — meta description.
+      const desc = clean(
+        root.querySelector('meta[name="description"]')?.getAttribute("content") ?? "",
+      ).slice(0, 300);
+      if (desc) detail.push(`> ${desc}`);
 
-    // Párrafo de contexto — primer <p> sustancioso del scope. Es la ÚNICA
-    // línea sin prefijo de marcador, así que se neutraliza cualquier char que
-    // arranque un bloque markdown (#, >, -, *, |, =) para que no forje un
-    // heading/blockquote falso.
-    const p = scope
-      .querySelectorAll("p")
-      .map((n) => clean(n.text).replace(/^[#>\-*|=\s]+/, ""))
-      .find((t) => t.length >= 40);
-    if (p) parts.push(`${p.slice(0, 200).replace(/\s+\S*$/, "")}…\n`);
+      // Párrafo de contexto — primer <p> sustancioso. Se neutraliza cualquier
+      // char que arranque un bloque markdown (#, >, -, *, |, =).
+      const p = scope
+        .querySelectorAll("p")
+        .map((n) => clean(n.text).replace(/^[#>\-*|=\s]+/, ""))
+        .find((t) => t.length >= 40);
+      if (p) detail.push(`${p.slice(0, 200).replace(/\s+\S*$/, "")}…`);
 
-    // Secciones — h2 (+ h3 si hay pocos h2), dedup, tope.
-    const h2 = scope.querySelectorAll("h2").map((n) => clean(n.text)).filter(Boolean);
-    const pool = h2.length >= 3 ? h2 : [...h2, ...scope.querySelectorAll("h3").map((n) => clean(n.text)).filter(Boolean)];
-    const seenS = new Set<string>();
-    const sections: string[] = [];
-    for (const s of pool) {
-      const v = s.slice(0, 80);
-      if (v && !seenS.has(v.toLowerCase())) {
-        seenS.add(v.toLowerCase());
-        sections.push(v);
-        if (sections.length >= MAX_SECTIONS) break;
+      // Secciones — como PROSA (detalle), no como lista H2 de texto (el spec
+      // exige que los items de un H2 sean links).
+      const h2 = scope.querySelectorAll("h2").map((n) => clean(n.text)).filter(Boolean);
+      const pool = h2.length >= 3 ? h2 : [...h2, ...scope.querySelectorAll("h3").map((n) => clean(n.text)).filter(Boolean)];
+      const seenS = new Set<string>();
+      const sections: string[] = [];
+      for (const s of pool) {
+        const v = s.slice(0, 80);
+        if (v && !seenS.has(v.toLowerCase())) {
+          seenS.add(v.toLowerCase());
+          sections.push(v);
+          if (sections.length >= MAX_SECTIONS) break;
+        }
+      }
+      if (sections.length) detail.push(`Secciones: ${sections.join(" · ")}.`);
+
+      // Links de nav/header + contacto (wa.me/mailto/tel).
+      for (const a of [
+        ...root.querySelectorAll("nav a"),
+        ...root.querySelectorAll("header a"),
+        ...root.querySelectorAll('a[href*="wa.me"], a[href^="mailto:"], a[href^="tel:"]'),
+      ]) {
+        addLink(a.text, absolutize(a.getAttribute("href") ?? "", baseUrl));
       }
     }
-    if (sections.length) parts.push(`## Secciones\n\n${sections.map((s) => `- ${s}`).join("\n")}\n`);
-
-    // Enlaces — nav/header + contacto (wa.me/mailto/tel), dedup por URL, tope.
-    const anchors = [
-      ...root.querySelectorAll("nav a"),
-      ...root.querySelectorAll("header a"),
-      ...root.querySelectorAll('a[href*="wa.me"], a[href^="mailto:"], a[href^="tel:"]'),
-    ];
-    const seenL = new Set<string>();
-    const links: string[] = [];
-    for (const a of anchors) {
-      const url = absolutize(a.getAttribute("href") ?? "", baseUrl);
-      if (!url || seenL.has(url)) continue;
-      const label = clean(a.text) || url.replace(/^https?:\/\//, "");
-      seenL.add(url);
-      links.push(`- [${label.slice(0, 60)}](${url})`);
-      if (links.length >= MAX_LINKS) break;
-    }
-    if (links.length) parts.push(`## Enlaces\n\n${links.join("\n")}\n`);
-  }
   } catch {
-    /* traverse falló (p.ej. stack overflow por anidamiento extremo) →
-       degradamos a lo que se haya acumulado (mínimo el título). */
+    /* traverse falló (anidamiento extremo) → degradamos a título + enlaces. */
   }
 
-  // Páginas — subpáginas publicadas.
-  const pages = (input.pages ?? []).filter((p) => p.slug);
-  if (pages.length) {
-    const rows = pages.map(
-      (p) => `- [${clean(p.title) || p.slug}](${baseUrl}/${p.slug}/)`,
-    );
-    parts.push(`## Páginas\n\n${rows.join("\n")}\n`);
+  // Subpáginas publicadas → links.
+  for (const pg of input.pages ?? []) {
+    if (pg.slug) addLink(pg.title, `${baseUrl}/${pg.slug}/`);
   }
+  // El archivo DEBE tener ≥1 link markdown (regla del audit). La propia página
+  // siempre sirve como fallback.
+  if (links.length === 0) addLink(title, `${baseUrl}/`);
 
-  // Ensamble con recorte por prioridad (parts ya está en orden de prioridad:
-  // título, resumen, contexto, secciones, enlaces, páginas). Quita bloques
-  // desde el final hasta caber en MAX_BYTES; el título (parts[0]) siempre queda.
-  let out = parts.join("\n");
-  while (Buffer.byteLength(out, "utf8") > MAX_BYTES && parts.length > 1) {
-    parts.pop();
-    out = parts.join("\n");
+  const enlaces = `## Enlaces\n\n${links.join("\n")}`;
+
+  // Ensamble en orden del spec: título → detalle → ## Enlaces. Bajo 8 KB se
+  // recorta SOLO el detalle (secciones primero, luego contexto, luego resumen);
+  // el título y ## Enlaces (requerido por el audit) siempre quedan.
+  const build = (d: string[]) => `${[`# ${title}`, ...d, enlaces].join("\n\n")}\n`;
+  let out = build(detail);
+  while (Buffer.byteLength(out, "utf8") > MAX_BYTES && detail.length > 0) {
+    detail.pop();
+    out = build(detail);
   }
-  // Si aún excede (un solo título gigante), recorta el título mismo.
-  if (Buffer.byteLength(out, "utf8") > MAX_BYTES) {
-    out = `# ${title.slice(0, MAX_BYTES - 8)}\n`;
-  }
-  return out.endsWith("\n") ? out : `${out}\n`;
+  return out;
 }
