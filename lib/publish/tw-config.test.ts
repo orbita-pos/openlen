@@ -174,3 +174,21 @@ describe("seguridad (hallazgos del security review 2026-07-17)", () => {
     expect(() => extractTwConfig(src)).not.toThrow();
   });
 });
+
+describe("el carrier es una config VÁLIDA de Tailwind para el CDN (bug del preview 2026-07-18)", () => {
+  test("inject emite tailwind.config={theme:{extend:{...}}}, no el extend plano", () => {
+    const html = injectTwCarrier("<head></head>", { colors: { ink: "#0A0A0A" } });
+    const body = html.match(/data-ol-tw="1">tailwind\.config=([\s\S]*?)<\/script>/)![1];
+    const cfg = JSON.parse(body);
+    // Lo que el CDN de Tailwind consume: theme.extend.colors
+    expect(cfg.theme.extend.colors.ink).toBe("#0A0A0A");
+    expect(cfg.colors).toBeUndefined(); // NO plano
+    // …y el bake lo vuelve a extraer igual
+    expect(readTwCarrier(html)).toEqual({ colors: { ink: "#0A0A0A" } });
+  });
+
+  test("compat hacia atrás: un carrier del formato viejo (plano) todavía se lee", () => {
+    const oldFormat = `<script data-ol-tw="1">tailwind.config={"colors":{"lime":"#A8E40B"}}</script>`;
+    expect(readTwCarrier(oldFormat)).toEqual({ colors: { lime: "#A8E40B" } });
+  });
+})

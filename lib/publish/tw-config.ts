@@ -226,7 +226,12 @@ function readCarrierBody(body: string): TwExtend | null {
   const eq = body.indexOf("=");
   if (eq === -1) return null;
   try {
-    return validateExtend(JSON.parse(body.slice(eq + 1).trim()));
+    const parsed = JSON.parse(body.slice(eq + 1).trim()) as {
+      theme?: { extend?: unknown };
+    };
+    // Formato válido de config (theme.extend) — el que el CDN lee. Fallback al
+    // objeto plano por si sobrevive un carrier del formato transitorio viejo.
+    return validateExtend(parsed?.theme?.extend ?? parsed);
   } catch {
     return null;
   }
@@ -287,9 +292,13 @@ const CDN_TAG_RE =
   /<script\b[^>]*\bsrc\s*=\s*"https:\/\/cdn\.tailwindcss\.com[^"]*"[^>]*>\s*<\/script\s*>/i;
 
 /** Inyecta el carrier (bytes nuestros desde JSON validado). Tras el CDN si
- *  existe — el patrón oficial del Play CDN — o antes de </head>. */
+ *  existe — el patrón oficial del Play CDN — o antes de </head>. El JSON es una
+ *  config VÁLIDA de Tailwind ({theme:{extend}}) para que el CDN del preview la
+ *  lea tal cual; el bake la vuelve a extraer con readTwCarrier. Sin el wrapper
+ *  theme.extend el CDN ignora los colores (preview blanco-sobre-blanco aunque
+ *  el bake funcione — cazado por Jesús 2026-07-18). */
 export function injectTwCarrier(html: string, extend: TwExtend): string {
-  const json = JSON.stringify(extend).replace(/</g, "\\u003C");
+  const json = JSON.stringify({ theme: { extend } }).replace(/</g, "\\u003C");
   const tag = `<script data-ol-tw="1">tailwind.config=${json}</script>`;
   const cdn = CDN_TAG_RE.exec(html);
   if (cdn) {
