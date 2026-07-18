@@ -49,6 +49,7 @@ import { injectLogoIntoHtml } from "@/lib/branding/inject-logo";
 import { absolutizeSocialMeta } from "@/lib/branding/social-image";
 import { buildGateStub, wireMemberLogout } from "@/lib/members/gate-stub";
 import { applySigninLink, signinLabelFor, accountLabelFor } from "@/lib/publish/signin-link";
+import { buildLlmsTxt, pageTitle } from "@/lib/publish/llms-txt";
 import { detectSiteAccent } from "@/lib/members/site-accent";
 import { validatePageSlug } from "@/lib/projects/site-pages";
 import type {
@@ -1280,6 +1281,14 @@ export async function publishToDir(
     ...stubFiles,
     { path: "sitemap.xml", content: sitemap },
     { path: "robots.txt", content: buildRobots(baseUrl) },
+    {
+      path: "llms.txt",
+      content: buildLlmsTxt({
+        html: migratedHtml,
+        baseUrl,
+        pages: pageDocs.map((p) => ({ slug: p.slug, title: pageTitle(p.html) })),
+      }),
+    },
   ];
 
   // Protected docs shape the sha (an edit to a gated page must mint a new
