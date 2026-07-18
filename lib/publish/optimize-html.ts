@@ -89,7 +89,13 @@ export async function optimizeHtmlForProduction(
  */
 export async function bakeTailwind(html: string): Promise<OptimizeResult> {
   const m = CDN_SCRIPT_RE.exec(html);
-  if (!m) return { html, baked: false, cssBytes: 0 };
+  if (!m) {
+    // Sin CDN, el carrier no tiene quién lo lea y en runtime lanzaría
+    // ReferenceError (tailwind indefinido). Retirarlo (invariante #3: no
+    // shippear scripts inertes). Solo ocurre con input malformado — un
+    // template legítimo empareja config con el CDN.
+    return { html: stripTwCarrier(html), baked: false, cssBytes: 0 };
+  }
   // The `?plugins=forms,typography,…` variant pulls in official plugins whose
   // utilities we don't have installed — baking would silently drop them, so
   // keep the CDN for those pages.

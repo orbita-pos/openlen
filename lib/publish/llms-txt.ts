@@ -34,28 +34,41 @@ function hostOf(baseUrl: string): string {
 }
 
 function absolutize(href: string, baseUrl: string): string | null {
-  const h = href.trim();
+  // Strip control chars (newline/tab/etc.) ANTES de cualquier rama — un href
+  // con \n forjaría líneas markdown (## falso, prompt injection) dentro del
+  // archivo que leen los agentes. Cazado en el review 2026-07-17.
+  // eslint-disable-next-line no-control-regex
+  const h = href.replace(/[\u0000-\u001f]/g, "").trim();
   if (!h || h.startsWith("#") || /^(javascript|data):/i.test(h)) return null;
-  if (/^(https?:|mailto:|tel:)/i.test(h)) return h;
-  if (h.startsWith("//")) return `https:${h}`;
-  try {
-    return new URL(h, `${baseUrl}/`).toString();
-  } catch {
-    return null;
+  let url: string | null = null;
+  if (/^(mailto:|tel:)/i.test(h)) url = h;
+  else if (/^https?:/i.test(h)) url = h;
+  else if (h.startsWith("//")) url = `https:${h}`;
+  else {
+    try {
+      url = new URL(h, `${baseUrl}/`).toString();
+    } catch {
+      return null;
+    }
   }
+  // Un URL que contenga los chars que rompen el contexto `(url)` de un link
+  // markdown (paréntesis, corchetes, espacio, backtick) es malformado o
+  // hostil → se descarta.
+  if (/[()[\]`\s]/.test(url)) return null;
+  return url;
 }
 
-/** Título limpio: <title> sin sufijo de marca → primer <h1> → "". Total. */
+/** Título limpio: <title> sin sufijo de marca → primer <h1> → "". Total —
+ *  ni parse ni el traverse recursivo pueden lanzar hacia afuera. */
 export function pageTitle(html: string): string {
-  let root: HTMLElement;
   try {
-    root = parse(html);
+    const root = parse(html);
+    const title = textOf(root.querySelector("title")).replace(BRAND_SUFFIX_RE, "").trim();
+    if (title) return title;
+    return textOf(root.querySelector("h1"));
   } catch {
     return "";
   }
-  const title = textOf(root.querySelector("title")).replace(BRAND_SUFFIX_RE, "").trim();
-  if (title) return title;
-  return textOf(root.querySelector("h1"));
 }
 
 export function buildLlmsTxt(input: LlmsTxtInput): string {
@@ -70,6 +83,11 @@ export function buildLlmsTxt(input: LlmsTxtInput): string {
   const title = (pageTitle(html) || hostOf(baseUrl)).slice(0, 120);
   const parts: string[] = [`# ${title}\n`];
 
+  // El traverse de node-html-parser (querySelector/.text) es RECURSIVO y
+  // desborda el stack con HTML muy anidado (from-html acepta HTML crudo).
+  // Todo el bloque va en try/catch: cualquier fallo degrada a solo-título,
+  // jamás lanza (invariante de totalidad; cazado en el review 2026-07-17).
+  try {
   if (root) {
     const scope = root.querySelector("main") ?? root.querySelector("body") ?? root;
 
@@ -79,10 +97,13 @@ export function buildLlmsTxt(input: LlmsTxtInput): string {
     ).slice(0, 300);
     if (desc) parts.push(`> ${desc}\n`);
 
-    // Párrafo de contexto — primer <p> sustancioso del scope.
+    // Párrafo de contexto — primer <p> sustancioso del scope. Es la ÚNICA
+    // línea sin prefijo de marcador, así que se neutraliza cualquier char que
+    // arranque un bloque markdown (#, >, -, *, |, =) para que no forje un
+    // heading/blockquote falso.
     const p = scope
       .querySelectorAll("p")
-      .map((n) => clean(n.text))
+      .map((n) => clean(n.text).replace(/^[#>\-*|=\s]+/, ""))
       .find((t) => t.length >= 40);
     if (p) parts.push(`${p.slice(0, 200).replace(/\s+\S*$/, "")}…\n`);
 
@@ -118,6 +139,10 @@ export function buildLlmsTxt(input: LlmsTxtInput): string {
       if (links.length >= MAX_LINKS) break;
     }
     if (links.length) parts.push(`## Enlaces\n\n${links.join("\n")}\n`);
+  }
+  } catch {
+    /* traverse falló (p.ej. stack overflow por anidamiento extremo) →
+       degradamos a lo que se haya acumulado (mínimo el título). */
   }
 
   // Páginas — subpáginas publicadas.

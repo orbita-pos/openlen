@@ -77,3 +77,25 @@ describe("bakeTailwind honra el carrier (publish con paleta real)", () => {
     assert.match(baked.html, /\.text-red-500/);
   });
 });
+
+describe("seguridad end-to-end (security review)", () => {
+  it("data-slot-path colado en un color → sanitizeForPublish RECHAZA (html null, no llega a la DB)", () => {
+    const evil = `<!doctype html><html><head><script src="https://cdn.tailwindcss.com"></script>
+<script>tailwind.config = { theme: { extend: { colors: { note: "data-slot-path=hero.title" } } } }</script>
+</head><body><p class="text-note">x</p></body></html>`;
+    const out = sanitizeForPublish(evil);
+    // El marcador NO sobrevive: o extend rechazado (sin carrier, html limpio sin
+    // el marcador) o el guard final devuelve null. En ningún caso el output lo trae.
+    if (out.html !== null) {
+      assert.ok(!out.html.includes("data-slot-path="), "el marcador jamás en el output");
+    }
+    assert.equal(readTwCarrier(out.html ?? "")?.colors?.note, undefined);
+  });
+
+  it("ReDoS: from-html-style payload gigante sanitiza en tiempo lineal", () => {
+    const payload = "<script>tailwind.config=".repeat(60_000);
+    const t0 = Date.now();
+    sanitizeForPublish(payload);
+    assert.ok(Date.now() - t0 < 2000, "sanitize lineal, no cuadrático");
+  });
+});

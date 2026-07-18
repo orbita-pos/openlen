@@ -135,3 +135,42 @@ describe("carrier", () => {
     expect(extractTwConfig(src).extend).toBeNull();
   });
 });
+
+describe("seguridad (hallazgos del security review 2026-07-17)", () => {
+  test("ReDoS: 80k <script sin cerrar se procesa en < 1s (era O(n²), ~59s)", () => {
+    const payload = "<script>tailwind.config=".repeat(80_000);
+    const t0 = Date.now();
+    const r = extractTwConfig(payload);
+    const ms = Date.now() - t0;
+    expect(r.extend).toBeNull(); // ninguna config válida
+    expect(ms).toBeLessThan(1000); // lineal, no cuadrático
+  });
+
+  test("slot-path: data-slot-path en un valor → extend RECHAZADO (no llega al carrier)", () => {
+    const src = `<script>tailwind.config = { theme: { extend: { colors: { note: "data-slot-path=hero.title" } } } }</script>`;
+    expect(extractTwConfig(src).extend).toBeNull();
+  });
+
+  test("slot-path: un carrier forjado con el marcador → readTwCarrier null", () => {
+    const forged = `<script data-ol-tw="1">tailwind.config={"colors":{"n":"data-slot-path=x"}}</script>`;
+    expect(readTwCarrier(forged)).toBeNull();
+  });
+
+  test("stripTwCarrier quita SOLO el carrier y preserva el CDN + otros scripts", () => {
+    const html =
+      `<head><script src="https://cdn.tailwindcss.com"></script>` +
+      `<script data-ol-tw="1">tailwind.config={"colors":{"a":"#000"}}</script>` +
+      `<script>console.log(1)</script></head>`;
+    const out = stripTwCarrier(html);
+    expect(out).not.toContain("data-ol-tw");
+    expect(out).toContain("cdn.tailwindcss.com");
+    expect(out).toContain("console.log(1)");
+  });
+
+  test("un <script sin </script> no cuelga ni rompe el resto", () => {
+    const src = `<p>a</p><script>tailwind.config = { theme: { extend: { colors: { a: '#000' } } } }`;
+    const r = extractTwConfig(src);
+    expect(r.html).toContain("<p>a</p>");
+    expect(() => extractTwConfig(src)).not.toThrow();
+  });
+});

@@ -183,11 +183,17 @@ export function sanitizeForPublish(html: string): SanitizeResult {
   const { html: pre, extend } = extractTwConfig(html);
   const r = rustSanitizeForPublish(pre) as RustSanitizeResult;
   const clean = r.html ?? null;
-  return {
-    html: clean !== null && extend !== null ? injectTwCarrier(clean, extend) : clean,
-    errors: r.errors,
-    removed: r.removed,
-  };
+  const out =
+    clean !== null && extend !== null ? injectTwCarrier(clean, extend) : clean;
+  // Defensa en profundidad del invariante slot-path: como el config script se
+  // extrajo ANTES del gate de Rust, el marcador no pasó por él. El validador
+  // del extend ya rechaza data-slot-path en claves y valores; este guard final
+  // es el cinturón: si por lo que sea el marcador aparece en la salida, se
+  // rechaza el documento entero (jamás llega a disco NI a la DB).
+  if (out !== null && out.includes("data-slot-path=")) {
+    return { html: null, errors: [...r.errors, "slot-path marker in output"], removed: r.removed };
+  }
+  return { html: out, errors: r.errors, removed: r.removed };
 }
 
 export function optimizeForPublish(html: string): OptimizeResult {
