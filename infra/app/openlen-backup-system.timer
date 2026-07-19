@@ -1,13 +1,16 @@
 [Unit]
-Description=OpenLen — nightly system backup timer
+Description=OpenLen — system backup timer (DB dump + /etc + manifest), every 4h
 Requires=openlen-backup-system.service
 
 [Timer]
-# 03:47 UTC — offset from the published-pages backup (03:17) so the two rclone
-# runs don't compete. Persistent=true catches up a run missed during downtime.
-OnCalendar=*-*-* 03:47:00
+# Every 4h at :47 UTC (00,04,08,12,16,20) — shrinks the DB data-loss window
+# from ~24h to ~4h. :47 keeps it clear of the published-pages backup (03:17).
+# The dump name is date-only, so each run REFRESHES today's artifact (no
+# storage growth); prune still keeps 7 daily snapshots. Persistent catches up
+# a run missed during downtime.
+OnCalendar=*-*-* 00/4:47:00
 Persistent=true
-RandomizedDelaySec=10m
+RandomizedDelaySec=5m
 
 [Install]
 WantedBy=timers.target
