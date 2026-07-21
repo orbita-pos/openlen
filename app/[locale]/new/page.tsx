@@ -3538,6 +3538,12 @@ function NewV2Inner() {
             }}
             onShowAnalytics={() => setCenterView("analytics")}
             onReturnToCanvas={() => setCenterView("page")}
+            placements={
+              loadedProject
+                ? modulePlacements({ html: loadedProject.html, pages: loadedProject.pages })
+                : undefined
+            }
+            onOpenLibrary={() => { setCenterView("page"); setMode("library"); }}
           />
         ) : centerView === "marketing" ? (
           <MarketingView

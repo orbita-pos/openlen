@@ -20,6 +20,7 @@ import type {
   OrdersSettings,
   WhatsAppSettings,
 } from "@/lib/projects/types";
+import type { PlacedModule } from "@/lib/projects/module-placements";
 import {
   BarChart3,
   Calendar,
@@ -91,6 +92,11 @@ interface ModulesPanelProps {
   onShowLeads?: () => void;
   onShowAnalytics?: () => void;
   onShowAssistant?: () => void;
+  /** Where each content module's band already lives across the site —
+   *  drives the hub's "En: inicio, /catalogo" state line. */
+  placements?: Record<PlacedModule, string[]>;
+  /** Jump to the Library so the user can drop a module section onto another page. */
+  onOpenLibrary?: () => void;
 }
 
 export function ModulesPanel({
@@ -124,6 +130,8 @@ export function ModulesPanel({
   onShowLeads,
   onShowAnalytics,
   onShowAssistant,
+  placements,
+  onOpenLibrary,
 }: ModulesPanelProps) {
   const t = useTranslations("members");
   const tb = useTranslations("broadcast");
@@ -315,13 +323,17 @@ export function ModulesPanel({
         )}
       </header>
 
-      {/* Module grid */}
+      {/* Módulos del sitio (Cuentas/Broadcast/WhatsApp/Chat) */}
+      <div className="text-[10.5px] uppercase tracking-[0.18em] fg font-semibold ui-small mb-2.5">
+        {tw("modulesHub.siteGroup")}
+      </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 items-start">
         {/* Cuentas */}
         <ModCard
           icon={<Users size={18} />}
           title={t("module.title")}
           tagline={t("module.tagline")}
+          scope={tw("modulesHub.scopeSite")}
           on={enabled}
           busy={busy}
           onToggle={() => void setEnabled(!enabled)}
@@ -353,73 +365,7 @@ export function ModulesPanel({
                     : t("module.gatedNone")}
                 </span>
               </p>
-            </div>
-          )}
-        </ModCard>
-
-        {/* Reservas */}
-        <ModCard
-          icon={<Calendar size={18} />}
-          title={tbk("module.title")}
-          tagline={tbk("module.tagline")}
-          on={bookingsOn}
-          busy={bkBusy}
-          onToggle={() => void updateBookings({ enabled: !bookingsOn })}
-        >
-          {bookingsOn && (
-            <div className="space-y-2">
-              {enabled && (
-                <ToggleRow
-                  label={tbk("module.requireLogin")}
-                  hint={bookingsRequireLogin ? tbk("module.requireLoginHint") : tbk("module.guestHint")}
-                  checked={bookingsRequireLogin}
-                  disabled={bkBusy}
-                  onChange={(v) => void updateBookings({ requireLogin: v })}
-                />
-              )}
-              <ToggleRow
-                label={tbk("module.autoConfirm")}
-                hint={bookingsAutoConfirm ? tbk("module.autoConfirmHint") : tbk("module.approveHint")}
-                checked={bookingsAutoConfirm}
-                disabled={bkBusy}
-                onChange={(v) => void updateBookings({ autoConfirm: v })}
-              />
-              <ToggleRow
-                label={tbk("module.reminders")}
-                hint={tbk("module.remindersHint")}
-                checked={bookingsReminders}
-                disabled={bkBusy}
-                onChange={(v) => void updateBookings({ sendReminders: v })}
-              />
-              {/* Tema del widget en la página publicada (misma clave i18n que
-                  el chat: es la misma dupla Claro/Oscuro). */}
-              <div className="space-y-1">
-                <div className="text-[12px] font-medium fg-muted">{tw("chat.theme")}</div>
-                <Segment
-                  value={bookingsTheme}
-                  options={[
-                    { id: "light", label: tw("chat.themeLight") },
-                    { id: "dark", label: tw("chat.themeDark") },
-                  ]}
-                  disabled={bkBusy}
-                  onPick={(v) => void updateBookings({ theme: v as "light" | "dark" })}
-                />
-              </div>
-              <CardActions
-                onInsert={onInsertBookingsSection ? () => { onInsertBookingsSection(); setBkInserted(true); } : undefined}
-                insertLabel={tbk("module.insert")}
-                inserted={bkInserted}
-                insertedLabel={tbk("module.inserted")}
-                onManage={onShowBookings}
-                manageLabel={tbk("module.manage")}
-                note={tbk("module.noCharge")}
-              />
-              {onCreateModulePage && (
-                <SurfaceButton
-                  label={tw("moduleSurface.createBookingPage")}
-                  onClick={() => void onCreateModulePage("bookings")}
-                />
-              )}
+              <p className="text-[10.5px] fg-faint leading-relaxed">{tw("modulesHub.seePreview")}</p>
             </div>
           )}
         </ModCard>
@@ -429,6 +375,7 @@ export function ModulesPanel({
           icon={<Megaphone size={18} />}
           title={tb("module.title")}
           tagline={tb("module.tagline")}
+          scope={tw("modulesHub.scopeSite")}
           on={broadcastOn}
           busy={bcastBusy || !enabled}
           onToggle={() => void setBroadcastEnabled(!broadcastOn)}
@@ -450,95 +397,12 @@ export function ModulesPanel({
           )}
         </ModCard>
 
-        {/* Comentarios */}
-        <ModCard
-          icon={<MessageSq size={18} />}
-          title={tc("module.title")}
-          tagline={tc("module.tagline")}
-          on={commentsOn}
-          busy={cmtBusy || !enabled}
-          onToggle={() => void setCommentsEnabled(!commentsOn)}
-        >
-          {(commentsOn || !enabled) && (
-            !enabled ? (
-              <p className="text-[11.5px] leading-relaxed text-amber-700 dark:text-amber-400">
-                {tc("module.needsMembers")}
-              </p>
-            ) : (
-              <div className="space-y-2">
-                <Segment
-                  value={commentsMod}
-                  options={[
-                    { id: "moderated", label: tc("module.modModerated") },
-                    { id: "all", label: tc("module.modAll") },
-                  ]}
-                  disabled={cmtBusy}
-                  onPick={(v) => void setCommentsMod(v as "all" | "moderated")}
-                />
-                <p className="text-[11.5px] fg-faint leading-relaxed">
-                  {tc(commentsMod === "moderated" ? "module.modModeratedHint" : "module.modAllHint")}
-                </p>
-                {/* Tema del widget (misma dupla i18n Claro/Oscuro que el chat). */}
-                <div className="space-y-1">
-                  <div className="text-[12px] font-medium fg-muted">{tw("chat.theme")}</div>
-                  <Segment
-                    value={commentsTheme}
-                    options={[
-                      { id: "light", label: tw("chat.themeLight") },
-                      { id: "dark", label: tw("chat.themeDark") },
-                    ]}
-                    disabled={cmtBusy}
-                    onPick={(v) => void setCommentsTheme(v as "light" | "dark")}
-                  />
-                </div>
-                <CardActions
-                  onInsert={onInsertCommentsSection ? () => { onInsertCommentsSection(); setInserted(true); } : undefined}
-                  insertLabel={tc("module.insert")}
-                  inserted={inserted}
-                  insertedLabel={tc("module.inserted")}
-                  onManage={onShowComments}
-                  manageLabel={tc("title")}
-                />
-              </div>
-            )
-          )}
-        </ModCard>
-
-        {/* Colecciones */}
-        <ModCard
-          icon={<Grid3 size={18} />}
-          title={tcol("module.title")}
-          tagline={tcol("module.tagline")}
-          on={collectionsOn}
-          busy={colBusy}
-          onToggle={() => void updateCollections({ enabled: !collectionsOn })}
-        >
-          {collectionsOn && (
-            <div className="space-y-2">
-              <CardActions
-                onInsert={onInsertCollectionsSection ? () => { onInsertCollectionsSection(); setColInserted(true); } : undefined}
-                insertLabel={tcol("module.insert")}
-                inserted={colInserted}
-                insertedLabel={tcol("module.inserted")}
-                onManage={onShowCollections}
-                manageLabel={tcol("module.manage")}
-                note={tcol("module.noCharge")}
-              />
-              {onCreateModulePage && (
-                <SurfaceButton
-                  label={tw("moduleSurface.createCatalogPage")}
-                  onClick={() => void onCreateModulePage("collections")}
-                />
-              )}
-            </div>
-          )}
-        </ModCard>
-
         {/* WhatsApp */}
         <ModCard
           icon={<MessageSq size={18} />}
           title={tw("whatsapp.title")}
           tagline={tw("whatsapp.tagline")}
+          scope={tw("modulesHub.scopeSite")}
           on={whatsappOn}
           busy={waBusy}
           onToggle={() => void updateWhatsapp({ enabled: !whatsappOn })}
@@ -581,49 +445,12 @@ export function ModulesPanel({
           )}
         </ModCard>
 
-        {/* Pedidos por WhatsApp */}
-        <ModCard
-          icon={<Package size={18} />}
-          title={tw("orders.title")}
-          tagline={tw("orders.tagline")}
-          on={ordersOn}
-          busy={ordBusy}
-          onToggle={() =>
-            void updateOrders({
-              enabled: !ordersOn,
-              ...(!ordersOn && ordNumber.trim() ? { number: ordNumber.trim() } : {}),
-            })
-          }
-        >
-          {ordersOn && (
-            <div className="space-y-2">
-              <input
-                value={ordNumber}
-                onChange={(e) => setOrdNumber(e.target.value)}
-                onBlur={commitOrders}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") (e.target as HTMLInputElement).blur();
-                }}
-                inputMode="tel"
-                maxLength={32}
-                placeholder={tw("orders.numberPlaceholder")}
-                className="w-full bg-app ring-1 ring-[color:var(--border)] rounded-lg px-3 h-9 text-[13px] fg outline-none focus:ring-[color:var(--accent)] transition"
-              />
-              <p className="text-[10.5px] fg-faint leading-relaxed">{tw("orders.note")}</p>
-              {collectionsSettings?.enabled !== true && (
-                <p className="text-[10.5px] fg-faint leading-relaxed">
-                  {tw("orders.needsCatalog")}
-                </p>
-              )}
-            </div>
-          )}
-        </ModCard>
-
         {/* Chat */}
         <ModCard
           icon={<ChatIcon size={18} />}
           title={tw("chat.title")}
           tagline={tw("chat.tagline")}
+          scope={tw("modulesHub.scopeSite")}
           on={chatOn}
           busy={chatBusy}
           onToggle={() => void updateChat({ enabled: !chatOn })}
@@ -739,6 +566,242 @@ export function ModulesPanel({
               {currentProjectId && (
                 <AgentsList projectId={currentProjectId} tw={tw} />
               )}
+              <p className="text-[10.5px] fg-faint leading-relaxed">{tw("modulesHub.seePreview")}</p>
+            </div>
+          )}
+        </ModCard>
+      </div>
+
+      {/* Módulos de contenido (Reservas/Colecciones/Comentarios/Pedidos) */}
+      <div className="text-[10.5px] uppercase tracking-[0.18em] fg font-semibold ui-small mt-6 mb-2.5">
+        {tw("modulesHub.contentGroup")}
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 items-start">
+        {/* Reservas */}
+        <ModCard
+          icon={<Calendar size={18} />}
+          title={tbk("module.title")}
+          tagline={tbk("module.tagline")}
+          scope={tw("modulesHub.scopePage")}
+          on={bookingsOn}
+          busy={bkBusy}
+          onToggle={() => void updateBookings({ enabled: !bookingsOn })}
+        >
+          {bookingsOn && (
+            <div className="space-y-2">
+              {enabled && (
+                <ToggleRow
+                  label={tbk("module.requireLogin")}
+                  hint={bookingsRequireLogin ? tbk("module.requireLoginHint") : tbk("module.guestHint")}
+                  checked={bookingsRequireLogin}
+                  disabled={bkBusy}
+                  onChange={(v) => void updateBookings({ requireLogin: v })}
+                />
+              )}
+              <ToggleRow
+                label={tbk("module.autoConfirm")}
+                hint={bookingsAutoConfirm ? tbk("module.autoConfirmHint") : tbk("module.approveHint")}
+                checked={bookingsAutoConfirm}
+                disabled={bkBusy}
+                onChange={(v) => void updateBookings({ autoConfirm: v })}
+              />
+              <ToggleRow
+                label={tbk("module.reminders")}
+                hint={tbk("module.remindersHint")}
+                checked={bookingsReminders}
+                disabled={bkBusy}
+                onChange={(v) => void updateBookings({ sendReminders: v })}
+              />
+              {/* Tema del widget en la página publicada (misma clave i18n que
+                  el chat: es la misma dupla Claro/Oscuro). */}
+              <div className="space-y-1">
+                <div className="text-[12px] font-medium fg-muted">{tw("chat.theme")}</div>
+                <Segment
+                  value={bookingsTheme}
+                  options={[
+                    { id: "light", label: tw("chat.themeLight") },
+                    { id: "dark", label: tw("chat.themeDark") },
+                  ]}
+                  disabled={bkBusy}
+                  onPick={(v) => void updateBookings({ theme: v as "light" | "dark" })}
+                />
+              </div>
+              <CardActions
+                onInsert={onInsertBookingsSection ? () => { onInsertBookingsSection(); setBkInserted(true); } : undefined}
+                insertLabel={tbk("module.insert")}
+                inserted={bkInserted}
+                insertedLabel={tbk("module.inserted")}
+                onManage={onShowBookings}
+                manageLabel={tbk("module.manage")}
+                note={tbk("module.noCharge")}
+              />
+              {onCreateModulePage && (
+                <SurfaceButton
+                  label={tw("moduleSurface.createBookingPage")}
+                  onClick={() => void onCreateModulePage("bookings")}
+                />
+              )}
+              <p className="text-[10.5px] fg-faint leading-relaxed">
+                {placements && placements.bookings.length > 0
+                  ? tw("modulesHub.placedIn", {
+                      pages: placements.bookings
+                        .map((s) => (s === "" ? tw("modulesHub.home") : `/${s}`))
+                        .join(", "),
+                    })
+                  : tw("modulesHub.placedNowhere")}
+              </p>
+              {onOpenLibrary && (
+                <SurfaceButton label={tw("modulesHub.addToPage")} onClick={onOpenLibrary} />
+              )}
+            </div>
+          )}
+        </ModCard>
+
+        {/* Colecciones */}
+        <ModCard
+          icon={<Grid3 size={18} />}
+          title={tcol("module.title")}
+          tagline={tcol("module.tagline")}
+          scope={tw("modulesHub.scopePage")}
+          on={collectionsOn}
+          busy={colBusy}
+          onToggle={() => void updateCollections({ enabled: !collectionsOn })}
+        >
+          {collectionsOn && (
+            <div className="space-y-2">
+              <CardActions
+                onInsert={onInsertCollectionsSection ? () => { onInsertCollectionsSection(); setColInserted(true); } : undefined}
+                insertLabel={tcol("module.insert")}
+                inserted={colInserted}
+                insertedLabel={tcol("module.inserted")}
+                onManage={onShowCollections}
+                manageLabel={tcol("module.manage")}
+                note={tcol("module.noCharge")}
+              />
+              {onCreateModulePage && (
+                <SurfaceButton
+                  label={tw("moduleSurface.createCatalogPage")}
+                  onClick={() => void onCreateModulePage("collections")}
+                />
+              )}
+              <p className="text-[10.5px] fg-faint leading-relaxed">
+                {placements && placements.collections.length > 0
+                  ? tw("modulesHub.placedIn", {
+                      pages: placements.collections
+                        .map((s) => (s === "" ? tw("modulesHub.home") : `/${s}`))
+                        .join(", "),
+                    })
+                  : tw("modulesHub.placedNowhere")}
+              </p>
+              {onOpenLibrary && (
+                <SurfaceButton label={tw("modulesHub.addToPage")} onClick={onOpenLibrary} />
+              )}
+            </div>
+          )}
+        </ModCard>
+
+        {/* Comentarios */}
+        <ModCard
+          icon={<MessageSq size={18} />}
+          title={tc("module.title")}
+          tagline={tc("module.tagline")}
+          scope={tw("modulesHub.scopePage")}
+          on={commentsOn}
+          busy={cmtBusy || !enabled}
+          onToggle={() => void setCommentsEnabled(!commentsOn)}
+        >
+          {(commentsOn || !enabled) && (
+            !enabled ? (
+              <p className="text-[11.5px] leading-relaxed text-amber-700 dark:text-amber-400">
+                {tc("module.needsMembers")}
+              </p>
+            ) : (
+              <div className="space-y-2">
+                <Segment
+                  value={commentsMod}
+                  options={[
+                    { id: "moderated", label: tc("module.modModerated") },
+                    { id: "all", label: tc("module.modAll") },
+                  ]}
+                  disabled={cmtBusy}
+                  onPick={(v) => void setCommentsMod(v as "all" | "moderated")}
+                />
+                <p className="text-[11.5px] fg-faint leading-relaxed">
+                  {tc(commentsMod === "moderated" ? "module.modModeratedHint" : "module.modAllHint")}
+                </p>
+                {/* Tema del widget (misma dupla i18n Claro/Oscuro que el chat). */}
+                <div className="space-y-1">
+                  <div className="text-[12px] font-medium fg-muted">{tw("chat.theme")}</div>
+                  <Segment
+                    value={commentsTheme}
+                    options={[
+                      { id: "light", label: tw("chat.themeLight") },
+                      { id: "dark", label: tw("chat.themeDark") },
+                    ]}
+                    disabled={cmtBusy}
+                    onPick={(v) => void setCommentsTheme(v as "light" | "dark")}
+                  />
+                </div>
+                <CardActions
+                  onInsert={onInsertCommentsSection ? () => { onInsertCommentsSection(); setInserted(true); } : undefined}
+                  insertLabel={tc("module.insert")}
+                  inserted={inserted}
+                  insertedLabel={tc("module.inserted")}
+                  onManage={onShowComments}
+                  manageLabel={tc("title")}
+                />
+                <p className="text-[10.5px] fg-faint leading-relaxed">
+                  {placements && placements.comments.length > 0
+                    ? tw("modulesHub.placedIn", {
+                        pages: placements.comments
+                          .map((s) => (s === "" ? tw("modulesHub.home") : `/${s}`))
+                          .join(", "),
+                      })
+                    : tw("modulesHub.placedNowhere")}
+                </p>
+                {onOpenLibrary && (
+                  <SurfaceButton label={tw("modulesHub.addToPage")} onClick={onOpenLibrary} />
+                )}
+              </div>
+            )
+          )}
+        </ModCard>
+
+        {/* Pedidos por WhatsApp */}
+        <ModCard
+          icon={<Package size={18} />}
+          title={tw("orders.title")}
+          tagline={tw("orders.tagline")}
+          scope={tw("modulesHub.scopePage")}
+          on={ordersOn}
+          busy={ordBusy}
+          onToggle={() =>
+            void updateOrders({
+              enabled: !ordersOn,
+              ...(!ordersOn && ordNumber.trim() ? { number: ordNumber.trim() } : {}),
+            })
+          }
+        >
+          {ordersOn && (
+            <div className="space-y-2">
+              <input
+                value={ordNumber}
+                onChange={(e) => setOrdNumber(e.target.value)}
+                onBlur={commitOrders}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") (e.target as HTMLInputElement).blur();
+                }}
+                inputMode="tel"
+                maxLength={32}
+                placeholder={tw("orders.numberPlaceholder")}
+                className="w-full bg-app ring-1 ring-[color:var(--border)] rounded-lg px-3 h-9 text-[13px] fg outline-none focus:ring-[color:var(--accent)] transition"
+              />
+              <p className="text-[10.5px] fg-faint leading-relaxed">{tw("orders.note")}</p>
+              {collectionsSettings?.enabled !== true && (
+                <p className="text-[10.5px] fg-faint leading-relaxed">
+                  {tw("orders.needsCatalog")}
+                </p>
+              )}
             </div>
           )}
         </ModCard>
@@ -773,6 +836,7 @@ function ModCard({
   icon,
   title,
   tagline,
+  scope,
   on,
   busy,
   onToggle,
@@ -781,6 +845,8 @@ function ModCard({
   icon: ReactNode;
   title: string;
   tagline: string;
+  /** "Whole site" / "Per page" chip next to the title (Task 6). */
+  scope?: string;
   on: boolean;
   busy?: boolean;
   onToggle: () => void;
@@ -799,7 +865,14 @@ function ModCard({
           {icon}
         </span>
         <div className="min-w-0 flex-1">
-          <div className="text-[15px] font-semibold fg leading-tight tracking-[-0.01em]">{title}</div>
+          <div className="flex items-center gap-1.5">
+            <div className="text-[15px] font-semibold fg leading-tight tracking-[-0.01em] truncate">{title}</div>
+            {scope && (
+              <span className="ml-auto shrink-0 text-[8.5px] uppercase tracking-[0.12em] px-1 py-0.5 rounded fg-faint bg-hover font-semibold">
+                {scope}
+              </span>
+            )}
+          </div>
           <div className="text-[12.5px] fg-muted leading-snug mt-1">{tagline}</div>
         </div>
         <Switch on={on} disabled={busy} label={title} onClick={onToggle} />

@@ -21,6 +21,7 @@ import type {
   OrdersSettings,
   WhatsAppSettings,
 } from "@/lib/projects/types";
+import type { PlacedModule } from "@/lib/projects/module-placements";
 import { ModulesPanel } from "./panels/modules-panel";
 import { BroadcastPanel } from "./panels/broadcast-panel";
 import { CommentsPanel } from "./panels/comments-panel";
@@ -64,6 +65,11 @@ export interface ModulesViewProps {
   onShowAnalytics?: () => void;
   /** Called after an insert so the parent can land the canvas back in view. */
   onReturnToCanvas?: () => void;
+  /** Where each content module's band already lives across the site —
+   *  drives the hub's placement line + "Add to a page" deep-link. */
+  placements?: Record<PlacedModule, string[]>;
+  /** Jump to the Library so the user can drop a module section onto another page. */
+  onOpenLibrary?: () => void;
 }
 
 export function ModulesView(props: ModulesViewProps) {
@@ -115,6 +121,8 @@ export function ModulesView(props: ModulesViewProps) {
               onShowLeads={props.onShowLeads}
               onShowAnalytics={props.onShowAnalytics}
               onShowAssistant={() => setSub("assistant")}
+              placements={props.placements}
+              onOpenLibrary={props.onOpenLibrary}
             />
           </div>
         </div>
