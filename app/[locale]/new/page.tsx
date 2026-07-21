@@ -20,6 +20,17 @@ import { setGenerationBusy } from "@/lib/generation-busy";
 import { scanController } from "@/lib/workspace-v2/scan-controller";
 import { useAIModel } from "@/components/workspace-v2/model-picker";
 import { buildModuleSection } from "@/lib/publish/module-sections";
+import {
+  planModuleAdd,
+  type ContentModule,
+  type ModuleDestination,
+} from "@/lib/workspace-v2/module-add-plan";
+import {
+  modulePlacements,
+  pageHasModule,
+  PLACED_MODULE_MARKERS,
+} from "@/lib/projects/module-placements";
+import type { ModuleCardState } from "@/components/workspace-v2/panels/sections-panel";
 import type {
   BookingsSettings,
   ChatSettings,
@@ -3079,6 +3090,78 @@ function NewV2Inner() {
       sectionType: "bookings",
     });
   }, [tBookings]);
+  // Library "Módulos": activar (con cadena Cuentas si aplica) + colocar. Los
+  // pasos vienen del plan puro; aquí solo se ejecutan con los handlers de
+  // siempre. Singleton: banda ya presente → scroll a ella, nunca duplicar.
+  //
+  // Vive aquí (no junto a modulesPreview, ~línea 422) porque su deps array
+  // referencia updateBookingsSettings/updateCollectionsSettings/insertCollections-
+  // Section/insertBookingsSection, todos const declarados más abajo en el
+  // cuerpo del componente — moverlo arriba reintroduce el TDZ que esto evita.
+  const addModuleFromLibrary = useCallback(
+    async (module: ContentModule, destination: ModuleDestination): Promise<void> => {
+      const steps = planModuleAdd({
+        module,
+        destination,
+        moduleEnabled: loadedProject?.settings?.[module]?.enabled === true,
+        membersEnabled: loadedProject?.settings?.members?.enabled === true,
+        activePageHasBand: pageHasModule(activeDoc, module),
+      });
+      for (const step of steps) {
+        switch (step.kind) {
+          case "enableMembers": {
+            const { ok } = await updateMembersSettings({
+              enabled: true, mode: "open", passwordLogin: true, accountArea: true,
+            });
+            if (!ok) return;
+            break;
+          }
+          case "enableModule": {
+            const ok =
+              step.module === "collections" ? await updateCollectionsSettings({ enabled: true })
+              : step.module === "bookings" ? await updateBookingsSettings({ enabled: true })
+              : await updateCommentsSettings({ enabled: true });
+            if (!ok) return;
+            break;
+          }
+          case "insertSection":
+            (step.module === "collections" ? insertCollectionsSection
+              : step.module === "bookings" ? insertBookingsSection
+              : insertCommentsSection)();
+            break;
+          case "createPage":
+            await createModulePage(step.module);
+            break;
+          case "scrollToExisting": {
+            const marker = iframeElRef.current?.contentDocument?.querySelector(
+              `[${PLACED_MODULE_MARKERS[step.module]}]`,
+            );
+            // Markers live on (or inside) a <section> by construction; fall
+            // back to the marker element itself if no ancestor is found.
+            (marker?.closest("section") ?? marker)?.scrollIntoView({
+              behavior: "smooth",
+              block: "center",
+            });
+            toast.info(t("toast.moduleAlreadyOnPage"));
+            break;
+          }
+        }
+      }
+    },
+    [loadedProject?.settings, activeDoc, updateMembersSettings, updateCollectionsSettings,
+     updateBookingsSettings, updateCommentsSettings, insertCollectionsSection,
+     insertBookingsSection, insertCommentsSection, createModulePage, toast, t],
+  );
+  const moduleCards = useMemo<ModuleCardState[]>(() => {
+    if (!loadedProject) return [];
+    const s = loadedProject.settings;
+    return (["collections", "bookings", "comments"] as const).map((module) => ({
+      module,
+      enabled: s?.[module]?.enabled === true,
+      alreadyOnPage: pageHasModule(activeDoc, module),
+      needsMembers: module === "comments" && s?.members?.enabled !== true,
+    }));
+  }, [loadedProject, activeDoc]);
   const toggleInspect = useCallback(() => {
     setInspectMode((m) => !m);
     setInspectSelection(null);
@@ -3392,6 +3475,9 @@ function NewV2Inner() {
           scene3d={loadedProject?.settings?.scene3d}
           onApplyScene3d={loadedProject ? applyScene3d : undefined}
           accent={originalTheme?.tokens["--ol-accent"] || undefined}
+          moduleCards={moduleCards}
+          onAddModule={(m, d) => void addModuleFromLibrary(m, d)}
+          activePageLabel={activeSitePage ? `/${activeSitePage}` : t("modulesHub.home")}
         />
         {/* One <main> landmark for the workspace center. `contents` keeps the
             flex layout byte-identical (generates no box) while giving the a11y
