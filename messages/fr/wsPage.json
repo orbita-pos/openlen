@@ -186,7 +186,8 @@
     "tagline": "Un bouton WhatsApp flottant sur votre page",
     "numberPlaceholder": "Numéro (ex. 5512345678)",
     "messagePlaceholder": "Message pré-rempli (facultatif)",
-    "note": "S'affiche en bas à droite sur votre page publiée. Un numéro à 10 chiffres est lu comme le Mexique (+52)."
+    "note": "S'affiche en bas à droite sur votre page publiée. Un numéro à 10 chiffres est lu comme le Mexique (+52).",
+    "missingNumber": "Ajoutez votre numéro — sans lui, le bouton n’apparaîtra pas sur votre page."
   },
   "orders": {
     "title": "Commandes WhatsApp",

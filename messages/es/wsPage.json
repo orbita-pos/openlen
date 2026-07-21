@@ -186,7 +186,8 @@
     "tagline": "Un botón flotante de WhatsApp en tu página",
     "numberPlaceholder": "Número (ej. 5512345678)",
     "messagePlaceholder": "Mensaje pre-escrito (opcional)",
-    "note": "Aparece abajo-derecha al publicar. Un número de 10 dígitos se toma como México (+52)."
+    "note": "Aparece abajo-derecha al publicar. Un número de 10 dígitos se toma como México (+52).",
+    "missingNumber": "Falta tu número — sin él, el botón no aparecerá en tu página."
   },
   "orders": {
     "title": "Pedidos por WhatsApp",

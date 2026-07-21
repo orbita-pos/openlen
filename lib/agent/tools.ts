@@ -48,6 +48,7 @@ import {
 } from "@/lib/projects/settings-patch";
 import type { ProjectData } from "@/lib/projects/types";
 import { createVersion, type VersionSource } from "@/lib/projects/versions";
+import { projectWhatsappDefault } from "@/lib/business-profiles/whatsapp-default";
 import { ensurePageMeta } from "@/lib/publish/ensure-page-meta";
 import { liveDataEnabled } from "@/lib/publish/kill-switches";
 import { isPublishLocale } from "@/lib/publish/publish-locales";
@@ -86,6 +87,10 @@ export interface AgentDeps {
     userBrief: string | null;
   } | null>;
   saveProjectData(projectId: string, userId: string, data: ProjectData): Promise<void>;
+  /** The business profile's contact.whatsapp for this project (linked profile,
+   *  else the user's default) — the number fallback activar_modulo uses so
+   *  whatsapp/pedidos never enable silent-dark without a number to bake. */
+  profileWhatsappNumber(projectId: string, userId: string): Promise<string | null>;
   snapshotVersion(args: {
     projectId: string;
     html: string;
@@ -197,6 +202,9 @@ export function realDeps(): AgentDeps {
         .update(schema.projects)
         .set({ data, updatedAt: new Date() })
         .where(and(eq(schema.projects.id, projectId), eq(schema.projects.userId, userId)));
+    },
+    async profileWhatsappNumber(projectId, userId) {
+      return projectWhatsappDefault(projectId, userId);
     },
     async snapshotVersion(args) {
       // Best-effort, same as the ai-design route: a snapshot failure must
@@ -407,7 +415,9 @@ function buildModulePatch(modulo: AgentModule, encender: boolean, numero?: strin
     case "chat":
       return { chat: { enabled: encender } };
     case "whatsapp":
-      return { whatsapp: { enabled: encender } };
+      return encender
+        ? { whatsapp: { enabled: true, ...(numero ? { number: numero } : {}) } }
+        : { whatsapp: { enabled: false } };
     case "comments":
       return { comments: { enabled: encender } };
     case "pedidos":
@@ -473,6 +483,7 @@ async function toolActivarModulo(
       (typeof args.numero === "string" && args.numero.trim()) ||
       row.data.settings?.orders?.number ||
       row.data.settings?.whatsapp?.number ||
+      (await deps.profileWhatsappNumber(session.projectId, session.userId)) ||
       null;
     if (!resuelto) {
       return {
@@ -480,6 +491,26 @@ async function toolActivarModulo(
           ok: false,
           error:
             'pedidos necesita el número de WhatsApp del negocio y no hay ninguno guardado — pregúntale al usuario su número (10 dígitos MX) y vuelve a llamar activar_modulo con modulo="pedidos" y numero',
+        },
+      };
+    }
+    numero = resuelto;
+  }
+  // WhatsApp mirrors pedidos: enabling without a number would bake nothing
+  // (silent-dark FAB). Chain: explicit arg > the module's saved number > the
+  // business profile's contact.whatsapp; none → ask the user for it.
+  if (modulo === "whatsapp" && encender) {
+    const resuelto =
+      (typeof args.numero === "string" && args.numero.trim()) ||
+      row.data.settings?.whatsapp?.number ||
+      (await deps.profileWhatsappNumber(session.projectId, session.userId)) ||
+      null;
+    if (!resuelto) {
+      return {
+        response: {
+          ok: false,
+          error:
+            'whatsapp necesita el número del negocio y no hay ninguno guardado (ni en el módulo ni en «Mi negocio») — pregúntale al usuario su número (10 dígitos MX) y vuelve a llamar activar_modulo con modulo="whatsapp" y numero',
         },
       };
     }

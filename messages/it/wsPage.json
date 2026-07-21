@@ -186,7 +186,8 @@
     "tagline": "Un pulsante WhatsApp fluttuante sulla tua pagina",
     "numberPlaceholder": "Numero (es. 5512345678)",
     "messagePlaceholder": "Messaggio precompilato (facoltativo)",
-    "note": "Appare in basso a destra sulla pagina pubblicata. Un numero di 10 cifre è letto come Messico (+52)."
+    "note": "Appare in basso a destra sulla pagina pubblicata. Un numero di 10 cifre è letto come Messico (+52).",
+    "missingNumber": "Manca il tuo numero — senza, il pulsante non apparirà sulla tua pagina."
   },
   "orders": {
     "title": "Ordini via WhatsApp",

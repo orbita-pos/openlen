@@ -44,9 +44,27 @@ describe("bakeWhatsAppButton", () => {
     expect(bakeWhatsAppButton(once, { number: "5512345678" })).toBe(once);
   });
 
-  it("DEDUP: suppressed when the profile contact widget is already present", () => {
-    const withWidget = DOC('<h1>Hi</h1><div data-ol-contact-widget>…</div>');
+  it("DEDUP: suppressed when the profile contact widget ALREADY has WhatsApp", () => {
+    const withWidget = DOC(
+      '<h1>Hi</h1><div data-ol-contact-widget><a href="https://wa.me/5215512345678">wa</a><a href="mailto:a@b.c">mail</a></div>',
+    );
     expect(bakeWhatsAppButton(withWidget, { number: "5512345678" })).toBe(withWidget);
+  });
+
+  it("DEDUP: a contact widget WITHOUT WhatsApp (email/socials only) does not suppress the FAB", () => {
+    const withWidget = DOC(
+      '<h1>Hi</h1><div data-ol-contact-widget><a href="mailto:a@b.c">mail</a><a href="https://instagram.com/x">ig</a></div>',
+    );
+    const out = bakeWhatsAppButton(withWidget, { number: "5512345678" });
+    expect(out).toContain("data-ol-wa-button");
+  });
+
+  it("DEDUP: a wa.me link in page CONTENT (outside the widget) does not suppress the FAB", () => {
+    const doc = DOC(
+      '<h1>Hi</h1><p><a href="https://wa.me/5215599999999">escríbeme</a></p><div data-ol-contact-widget><a href="mailto:a@b.c">mail</a></div>',
+    );
+    const out = bakeWhatsAppButton(doc, { number: "5512345678" });
+    expect(out).toContain("data-ol-wa-button");
   });
 
   it("defaults the bottom offset to 18px", () => {

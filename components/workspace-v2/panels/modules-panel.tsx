@@ -153,6 +153,14 @@ export function ModulesPanel({
   const [waBusy, setWaBusy] = useState(false);
   const [waNumber, setWaNumber] = useState(whatsappSettings?.number ?? "");
   const [waMessage, setWaMessage] = useState(whatsappSettings?.message ?? "");
+  // Enabling with an empty number gets the business-profile default filled
+  // server-side; it arrives via the settings sync. Only fill an EMPTY field —
+  // never clobber what the user is typing.
+  useEffect(() => {
+    const n = whatsappSettings?.number ?? "";
+    if (n) setWaNumber((cur) => (cur.trim() ? cur : n));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [whatsappSettings?.number]);
   const [ordBusy, setOrdBusy] = useState(false);
   const [ordNumber, setOrdNumber] = useState(
     ordersSettings?.number ?? whatsappSettings?.number ?? "",
@@ -557,6 +565,11 @@ export function ModulesPanel({
                 placeholder={tw("whatsapp.messagePlaceholder")}
                 className="w-full bg-app ring-1 ring-[color:var(--border)] rounded-lg px-3 h-9 text-[13px] fg outline-none focus:ring-[color:var(--accent)] transition"
               />
+              {!waNumber.trim() && (
+                <p className="text-[11px] leading-relaxed text-amber-600 dark:text-amber-500">
+                  {tw("whatsapp.missingNumber")}
+                </p>
+              )}
               <p className="text-[10.5px] fg-faint leading-relaxed">{tw("whatsapp.note")}</p>
               {!!whatsappSettings?.number?.trim() && onAddWhatsappSection && (
                 <SurfaceButton

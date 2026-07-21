@@ -75,6 +75,7 @@ function makeDeps(
       store.data = data;
       store.saved.push(data);
     },
+    async profileWhatsappNumber() { return null; },
     async snapshotVersion() {},
     async provisionOwnerChat() {},
     async listAudioAssets() {

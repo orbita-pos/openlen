@@ -186,7 +186,8 @@
     "tagline": "在你发布的页面上浮动的 WhatsApp 按钮",
     "numberPlaceholder": "电话号码（例如 5512345678）",
     "messagePlaceholder": "预填消息（可选）",
-    "note": "显示在已发布页面的右下角。10 位号码会被识别为墨西哥（+52）。"
+    "note": "显示在已发布页面的右下角。10 位号码会被识别为墨西哥（+52）。",
+    "missingNumber": "还没有填写号码——不填写，按钮不会显示在页面上。"
   },
   "orders": {
     "title": "WhatsApp 订单",

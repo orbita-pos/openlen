@@ -186,7 +186,8 @@
     "tagline": "Een zwevende WhatsApp-knop op je pagina",
     "numberPlaceholder": "Nummer (bijv. 5512345678)",
     "messagePlaceholder": "Vooraf ingevuld bericht (optioneel)",
-    "note": "Verschijnt rechtsonder op je gepubliceerde pagina. Een 10-cijferig nummer wordt gelezen als Mexico (+52)."
+    "note": "Verschijnt rechtsonder op je gepubliceerde pagina. Een 10-cijferig nummer wordt gelezen als Mexico (+52).",
+    "missingNumber": "Je nummer ontbreekt — zonder nummer verschijnt de knop niet op je pagina."
   },
   "orders": {
     "title": "WhatsApp-bestellingen",

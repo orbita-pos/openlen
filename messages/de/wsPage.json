@@ -186,7 +186,8 @@
     "tagline": "Ein schwebender WhatsApp-Button auf deiner Seite",
     "numberPlaceholder": "Nummer (z. B. 5512345678)",
     "messagePlaceholder": "Vorausgefüllte Nachricht (optional)",
-    "note": "Erscheint unten rechts auf der veröffentlichten Seite. Eine 10-stellige Nummer wird als Mexiko (+52) gelesen."
+    "note": "Erscheint unten rechts auf der veröffentlichten Seite. Eine 10-stellige Nummer wird als Mexiko (+52) gelesen.",
+    "missingNumber": "Deine Nummer fehlt — ohne sie erscheint der Button nicht auf der Seite."
   },
   "orders": {
     "title": "WhatsApp-Bestellungen",
