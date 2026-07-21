@@ -1,6 +1,7 @@
 import { and, eq } from "drizzle-orm";
 import { auth } from "@/auth";
 import { db, schema } from "@/lib/db";
+import { bakeModulesForPreview } from "@/lib/publish/preview-bake";
 
 export const runtime = "nodejs";
 
@@ -20,7 +21,11 @@ export async function GET(
   if (!id) return text("missing id", 400);
 
   const rows = await db
-    .select({ data: schema.projects.data })
+    .select({
+      data: schema.projects.data,
+      title: schema.projects.title,
+      subdomain: schema.projects.subdomain,
+    })
     .from(schema.projects)
     .where(
       and(eq(schema.projects.id, id), eq(schema.projects.userId, session.user.id)),
@@ -29,13 +34,34 @@ export async function GET(
   const row = rows[0];
   if (!row) return text("not found", 404);
 
+  const url = new URL(req.url);
+  // ?bake=1 — the editor's "open in new tab" for unpublished drafts: bake the
+  // active modules in (FAB, catalog, widgets) so the tab shows what publish
+  // will produce. Thumbnail embeds skip it (no param) — they don't need
+  // widgets and shouldn't pay the collections read per scroll.
+  const wantBake = url.searchParams.get("bake") === "1";
+  const bake = async (html: string, page: string | null): Promise<string> => {
+    if (!wantBake) return html;
+    try {
+      return await bakeModulesForPreview(html, {
+        projectId: id,
+        title: row.title ?? null,
+        sub: row.subdomain ?? null,
+        page,
+        data: row.data,
+      });
+    } catch {
+      return html;
+    }
+  };
+
   // Multi-page: ?page=<slug> serves that site page's document instead of
   // home — the editor's "open in new tab" for an unpublished subpage.
-  const pageSlug = new URL(req.url).searchParams.get("page");
+  const pageSlug = url.searchParams.get("page");
   if (pageSlug) {
     const page = row.data?.pages?.[pageSlug];
     if (!page) return text("page not found", 404);
-    return new Response(page.html, {
+    return new Response(await bake(page.html, pageSlug), {
       status: 200,
       headers: {
         "content-type": "text/html; charset=utf-8",
@@ -45,7 +71,7 @@ export async function GET(
     });
   }
 
-  const html = row.data?.html ?? "";
+  const html = await bake(row.data?.html ?? "", null);
   return new Response(html, {
     status: 200,
     headers: {

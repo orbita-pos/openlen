@@ -10,6 +10,7 @@ import {
   verifyUnlockToken,
 } from "@/lib/projects/preview";
 import type { ProjectData } from "@/lib/projects/types";
+import { bakeModulesForPreview } from "@/lib/publish/preview-bake";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -51,8 +52,9 @@ export async function GET(
   const token = url.searchParams.get("t");
   if (!id || !token) return notFound();
 
-  const data = await loadPreviewData(id);
-  if (!data) return notFound();
+  const meta = await loadPreviewData(id);
+  if (!meta) return notFound();
+  const data = meta.data;
   if (!previewTokenMatches(data.preview?.token, token)) return notFound();
   if (isPreviewExpired(data.preview?.expiresAt, Date.now())) return notFound();
 
@@ -79,6 +81,22 @@ export async function GET(
     html = data.html ?? "";
   }
 
+  // Active modules bake into the preview the same way they bake at publish —
+  // a shared draft must show the site the owner configured, not a version
+  // with the WhatsApp FAB / catalog / widgets missing. Soft-fail to the raw
+  // draft: the preview link must never 404 over module data.
+  try {
+    html = await bakeModulesForPreview(html, {
+      projectId: id,
+      title: meta?.title ?? null,
+      sub: meta?.subdomain ?? null,
+      page: pageSlug ?? null,
+      data,
+    });
+  } catch {
+    /* raw draft is still a valid preview */
+  }
+
   return draftResponse(html);
 }
 
@@ -94,8 +112,9 @@ export async function POST(
   const token = url.searchParams.get("t");
   if (!id || !token) return notFound();
 
-  const data = await loadPreviewData(id);
-  if (!data) return notFound();
+  const meta = await loadPreviewData(id);
+  if (!meta) return notFound();
+  const data = meta.data;
   if (!previewTokenMatches(data.preview?.token, token)) return notFound();
   if (isPreviewExpired(data.preview?.expiresAt, Date.now())) return notFound();
 
@@ -125,13 +144,21 @@ export async function POST(
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
-async function loadPreviewData(id: string): Promise<ProjectData | null> {
+async function loadPreviewData(
+  id: string,
+): Promise<{ data: ProjectData; title: string | null; subdomain: string | null } | null> {
   const rows = await db
-    .select({ data: schema.projects.data })
+    .select({
+      data: schema.projects.data,
+      title: schema.projects.title,
+      subdomain: schema.projects.subdomain,
+    })
     .from(schema.projects)
     .where(eq(schema.projects.id, id))
     .limit(1);
-  return rows[0]?.data ?? null;
+  const row = rows[0];
+  if (!row?.data) return null;
+  return { data: row.data, title: row.title ?? null, subdomain: row.subdomain ?? null };
 }
 
 function unlockCookieName(id: string): string {

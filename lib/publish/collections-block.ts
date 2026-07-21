@@ -139,6 +139,16 @@ function container(cfg: CollectionsBakeConfig, accent: string, addLabel: string)
   return `<div ${WIDGET_MARKER} style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:20px;max-width:1100px;margin:32px auto;padding:0 16px;">${hover}${cards}</div>`;
 }
 
+/** The widget markup alone, WITHOUT touching the document — the editor-canvas
+ *  preview places it inside the band itself (replacing the persisted band, as
+ *  bakeCollections does, would delete it from data.html on the next save). */
+export function renderCollectionsWidget(html: string, cfg: CollectionsBakeConfig): string {
+  if (!cfg.items.length) return "";
+  const accent = detectSiteAccent(html) ?? FALLBACK_ACCENT;
+  const addLabel = /<html[^>]*\blang=["']?en/i.test(html) ? "Add" : "Agregar";
+  return container(cfg, accent, addLabel);
+}
+
 /** Bake the collection grid/list into the page. Idempotent. Replaces the
  *  data-ol-collection-section placeholder, else appends before </body>. With no
  *  items it just clears the placeholder (so the dashed editor box never ships). */

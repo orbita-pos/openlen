@@ -62,6 +62,8 @@ import { PreviewPlaceholder } from "@/components/workspace-v2/preview-placeholde
 import { StartLanding } from "@/components/workspace-v2/start-landing";
 import { SECTIONS, type Section } from "@/components/workspace-v2/mock-data";
 import { PreviewArea } from "@/components/workspace-v2/preview-area";
+import type { EditorModulesPreviewCfg } from "@/components/workspace-v2/module-preview";
+import type { ItemRow } from "@/lib/collections/store";
 import {
   PropertiesPanel,
   type InspectSelection,
@@ -366,6 +368,74 @@ function NewV2Inner() {
     () => listSitePages({ html: "", pages: loadedProject?.pages }),
     [loadedProject?.pages],
   );
+  // Canvas module preview (WhatsApp FAB + catalog grid). Items come from the
+  // collections API once per project/toggle; the memo below is keyed on the
+  // module-relevant settings SLICES (stringified), so keystroke saves that
+  // churn object identities never re-derive the iframe.
+  const collectionsPreviewOn =
+    loadedProject?.settings?.collections?.enabled === true;
+  const [previewCollections, setPreviewCollections] = useState<{
+    items: ItemRow[];
+    layout: "grid" | "list";
+  } | null>(null);
+  useEffect(() => {
+    if (!loadedProject?.id || !collectionsPreviewOn) {
+      setPreviewCollections(null);
+      return;
+    }
+    let alive = true;
+    fetch(`/api/projects/${loadedProject.id}/collections/items`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((j) => {
+        if (!alive || !j) return;
+        const items = ((j.items ?? []) as ItemRow[]).filter(
+          (it) => it.status === "published",
+        );
+        setPreviewCollections({
+          items,
+          layout: j.collection?.layout === "list" ? "list" : "grid",
+        });
+      })
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, [loadedProject?.id, collectionsPreviewOn]);
+  const modulesPreviewKey = JSON.stringify([
+    loadedProject?.settings?.whatsapp,
+    loadedProject?.settings?.assistant?.enabled,
+    loadedProject?.settings?.chat,
+    loadedProject?.settings?.orders,
+    loadedProject?.settings?.music?.src,
+  ]);
+  const modulesPreview = useMemo<EditorModulesPreviewCfg | null>(() => {
+    const st = loadedProject?.settings;
+    const wa = st?.whatsapp?.enabled && st.whatsapp.number ? st.whatsapp : null;
+    const colPayload = previewCollections?.items.length ? previewCollections : null;
+    if (!wa && !colPayload) return null;
+    const assistantOn = st?.assistant?.enabled === true;
+    const handoffMerged =
+      assistantOn &&
+      st?.chat?.enabled === true &&
+      st?.chat?.selfServeJoin !== false &&
+      st?.chat?.identityMode !== "account";
+    return {
+      whatsapp: wa,
+      assistantOn,
+      chatFabOn:
+        st?.chat?.enabled === true && st.chat.mount !== "section" && !handoffMerged,
+      musicOn: !!st?.music?.src,
+      collections: colPayload
+        ? {
+            items: colPayload.items,
+            layout: colPayload.layout,
+            ordersNumber:
+              st?.orders?.enabled && st.orders.number ? st.orders.number : null,
+          }
+        : null,
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [modulesPreviewKey, previewCollections]);
   // Strip a stale ?page= once the project has loaded without that slug
   // (deleted page, mistyped share link).
   useEffect(() => {
@@ -2847,13 +2917,18 @@ function NewV2Inner() {
           toast.error(t("toast.moduleError"));
           return false;
         }
+        // Prefer the server's merged whatsapp settings: enabling with no
+        // number gets the business-profile default filled in server-side,
+        // and only the response carries it.
+        const serverWhatsapp = (await r.json().catch(() => null))?.settings
+          ?.whatsapp as WhatsAppSettings | undefined;
         setLoadedProject((p) =>
           p
             ? {
                 ...p,
                 settings: {
                   ...p.settings,
-                  whatsapp: { ...p.settings?.whatsapp, ...patch },
+                  whatsapp: serverWhatsapp ?? { ...p.settings?.whatsapp, ...patch },
                 },
               }
             : p,
@@ -3567,6 +3642,7 @@ function NewV2Inner() {
                 motionPreset={loadedProject.settings?.motion}
                 musicTrack={loadedProject.settings?.music ?? null}
                 scene3d={loadedProject.settings?.scene3d}
+                modulesPreview={modulesPreview}
                 onIframeRef={(el) => {
                   iframeElRef.current = el;
                 }}
@@ -3575,8 +3651,8 @@ function NewV2Inner() {
                     ? `https://${loadedProject.subdomain}.openlen.com${
                         activeSitePage ? `/${activeSitePage}` : ""
                       }`
-                    : `/api/projects/${loadedProject.id}/raw${
-                        activeSitePage ? `?page=${activeSitePage}` : ""
+                    : `/api/projects/${loadedProject.id}/raw?bake=1${
+                        activeSitePage ? `&page=${activeSitePage}` : ""
                       }`
                 }
               />

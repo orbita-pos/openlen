@@ -44,7 +44,8 @@ const INSERT_SCRIPT = `
       (el.hasAttribute('data-openlen-edit-overlay') ||
         el.hasAttribute('data-openlen-edit-ghost') ||
         el.hasAttribute('data-openlen-replace') ||
-        el.hasAttribute('data-openlen-reorder'))
+        el.hasAttribute('data-openlen-reorder') ||
+        el.hasAttribute('data-openlen-modules-preview'))
     );
   }
 

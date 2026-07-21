@@ -29,6 +29,10 @@ import type { MusicSettings } from "@/lib/projects/types";
 import { injectSectionInsert } from "./use-section-insert";
 import { injectSectionReorder } from "./use-section-reorder";
 import { injectSectionSelect } from "./use-section-select";
+import {
+  injectEditorModulesPreview,
+  type EditorModulesPreviewCfg,
+} from "./module-preview";
 import { PageBuildingLoader } from "./page-building-loader";
 import { ScanOverlay } from "./scan-overlay";
 import { coerceSceneSpec } from "@/lib/three3d/scene-spec";
@@ -139,6 +143,12 @@ interface PreviewAreaProps {
   /** 3D scene settings — consumed by Task 3 preview injection. Accepted here
    *  so the parent can pass it without a TS error before Task 3 lands. */
   scene3d?: { enabled?: boolean; spec?: unknown };
+  /** Active-modules canvas preview (WhatsApp FAB + collections grid, the
+   *  scriptless subset). Applied inside derive() so the injected markup rides
+   *  every srcDoc; stripEditorInstrumentation removes it on every save. Keep
+   *  the object identity stable across keystrokes — a new identity re-derives
+   *  the srcDoc (that reload is the DESIRED feedback on a module toggle). */
+  modulesPreview?: EditorModulesPreviewCfg | null;
 }
 
 export function PreviewArea({
@@ -165,6 +175,7 @@ export function PreviewArea({
   dropEnabled = false,
   suppressReloadNonce = 0,
   scene3d,
+  modulesPreview = null,
 }: PreviewAreaProps) {
   const t = useTranslations("wsChrome");
   const [device, setDevice] = useState<Device>("desktop");
@@ -215,11 +226,16 @@ export function PreviewArea({
     swap: t("preview.drop.swap"),
   };
   const derive = (rawDoc: string): string => {
+    // Active modules FIRST — the edit injectors then instrument the same doc
+    // the user will actually see (the injected preview is marked no-edit).
+    let html = modulesPreview
+      ? injectEditorModulesPreview(rawDoc, modulesPreview)
+      : rawDoc;
     // Replace BEFORE Reorder so Replace's mousemove listener registers
     // first → fires first on each event → sets the `over-image` body
     // attribute before Reorder's listener reads it. Avoids a one-frame
     // flicker where the drag handle briefly appears over an image.
-    let html = injectImageReplace(rawDoc);
+    html = injectImageReplace(html);
     html = injectSectionReorder(html);
     html = injectElementInspect(html);
     html = injectInlineEdit(html);
@@ -289,7 +305,9 @@ export function PreviewArea({
     // killFlags solo cambia de identidad cuando /api/flags trae un valor
     // DISTINTO al actual (ver use-kill-switches.ts) — en el caso normal
     // (todo encendido) este effect no se re-dispara por su culpa.
-  }, [doc, editingActive, killFlags]);
+    // modulesPreview cambia de identidad solo con settings/items de módulos
+    // (useMemo en el padre) — su re-derive es el feedback del toggle.
+  }, [doc, editingActive, killFlags, modulesPreview]);
 
   // Mode sync — every flag change becomes a postMessage to the iframe. The
   // iframe's bootstrap (in use-inline-edit.ts) translates this into body
