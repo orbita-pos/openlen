@@ -69,7 +69,7 @@
     "moduleInsertHere": "Auf dieser Seite",
     "moduleAsPage": "Als neue Seite",
     "moduleAlreadyHere": "Bereits auf dieser Seite",
-    "moduleNeedsMembers": "Aktiviere auch Konten (erforderlich)",
+    "moduleNeedsMembers": "Schaltet auch Konten ein (erforderlich)",
     "modulesTarget": "Einfügen in: {page}"
   },
   "paste": {
