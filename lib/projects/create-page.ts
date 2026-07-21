@@ -65,11 +65,23 @@ function slugFromTitle(title: string): string {
     .replace(/[-\s]+$/, "");
 }
 
-/** Inject a module section into a freshly-built page shell — before the
- *  footer, else before </body>. The shell's titled hero stays above it.
- *  Copied verbatim from the route (was route.ts:61-71). */
+/** Inject a module section into a freshly-built page shell, right after the
+ *  shell's titled hero (anchored on its signature style, the same anchor
+ *  buildAutoMembersPage uses). Anchoring on "first <footer" broke once the
+ *  shell's footer became a styled wrapper (<div><footer>… put the section
+ *  INSIDE the wrapper) or a ©-div with no <footer> tag at all (section fell
+ *  below the footer). Fallbacks for a full-home copy: before the footer,
+ *  else before </body>. */
 function injectIntoShell(shell: string, section: string): string {
   if (!section) return shell;
+  const heroIdx = shell.indexOf("min-height:55vh");
+  if (heroIdx !== -1) {
+    const heroClose = shell.indexOf("</section>", heroIdx);
+    if (heroClose !== -1) {
+      const after = heroClose + "</section>".length;
+      return shell.slice(0, after) + section + shell.slice(after);
+    }
+  }
   const footerIdx = shell.search(/<footer[\s>]/i);
   if (footerIdx !== -1) {
     return shell.slice(0, footerIdx) + section + shell.slice(footerIdx);

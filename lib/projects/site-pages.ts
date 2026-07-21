@@ -8,6 +8,7 @@
 // variant dirs (/es/index.html etc.).
 
 import { PUBLISH_LOCALES } from "@/lib/publish/publish-locales";
+import { extractChrome } from "./page-chrome";
 import type { ProjectData, SitePage } from "./types";
 
 export const MAX_SITE_PAGES = 20;
@@ -215,17 +216,10 @@ export function buildPageShell(homeHtml: string, title: string): string | null {
     `<title>${safeTitle}</title>`,
   );
 
-  // Keep the chrome the visitor expects on every page: the first
-  // header/nav and the last footer. Everything in between becomes a
-  // titled blank canvas.
-  const header =
-    /<header[\s\S]*?<\/header>/i.exec(bodyInner)?.[0] ??
-    /<nav[\s\S]*?<\/nav>/i.exec(bodyInner)?.[0] ??
-    "";
-  let footer = "";
-  for (const m of bodyInner.matchAll(/<footer[\s\S]*?<\/footer>/gi)) {
-    footer = m[0];
-  }
+  // Keep the chrome the visitor expects on every page: the home's real
+  // navbar (styled wrapper included) and footer. Everything in between
+  // becomes a titled blank canvas.
+  const { header, footer } = extractChrome(bodyInner);
 
   const isSpanish = /<html[^>]*\blang=["']?es/i.test(homeHtml);
   const placeholder = isSpanish

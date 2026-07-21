@@ -276,3 +276,186 @@ describe("buildPageShell", () => {
     assert.equal(buildPageShell("<html><head></head></html>", "x"), null);
   });
 });
+
+describe("buildPageShell — chrome extraction on real-world markup", () => {
+  // Foundry/Manuscript shape: the real navbar is a styled DIV capsule (fixed,
+  // rounded) with an inner <nav>, and the hero carries a second decorative
+  // <header> (logo + links, no h1). The capsule must win, whole wrapper included.
+  const capsuleHome = `<!doctype html><html lang="en"><head><title>Foundry</title></head>
+<body class="min-h-screen">
+<div class="fixed top-4 left-1/2 z-50 max-w-[680px]">
+  <div class="tabbar border rounded-full flex items-center">
+    <span class="serif">Foundry</span>
+    <nav class="ml-auto flex gap-4">
+      <a href="#issues">Issues</a><a href="#letter">Letter</a>
+      <a href="#join" class="btn-primary rounded-full">Subscribe</a>
+    </nav>
+  </div>
+</div>
+<section class="hero mesh">
+  <header class="flex justify-between"><span>Foundry</span><span>Est. MMXX</span>
+    <nav class="hidden md:flex"><a href="#archive">Archive</a></nav>
+  </header>
+  <h1>Engineering, written like it matters.</h1>
+  <p>Four issues a year.</p>
+</section>
+<section id="content"><p>middle content</p></section>
+<footer class="border-t"><small>© Foundry</small></footer>
+</body></html>`;
+
+  it("captures the styled DIV capsule around the nav, not the bare inner <nav>", () => {
+    const shell = buildPageShell(capsuleHome, "Catalog")!;
+    assert.ok(shell.includes('class="fixed top-4'), "capsule wrapper kept");
+    assert.ok(shell.includes("tabbar"), "capsule styling kept");
+    assert.ok(shell.includes("Subscribe"), "capsule CTA kept");
+  });
+
+  it("drops the hero's decorative header instead of promoting it to navbar", () => {
+    const shell = buildPageShell(capsuleHome, "Catalog")!;
+    assert.ok(!shell.includes("Est. MMXX"), "hero header not promoted");
+    assert.ok(!shell.includes("Engineering, written"), "hero content dropped");
+  });
+
+  it("skips a hero <header> that carries the h1 and finds the real navbar below", () => {
+    const home = `<html lang="en"><head><title>x</title></head><body>
+<section class="hero"><header class="hero-head"><h1>Big Title</h1><p>tag</p></header></section>
+<header class="site-nav"><nav><a href="/a">A</a><a href="/b">B</a></nav></header>
+<section><p>content</p></section>
+<footer><small>fin</small></footer>
+</body></html>`;
+    const shell = buildPageShell(home, "Nueva")!;
+    assert.ok(!shell.includes("Big Title"), "h1 header rejected as navbar");
+    assert.ok(shell.includes('class="site-nav"'), "real navbar captured");
+  });
+
+  it("inherits a div-based footer via the © heuristic", () => {
+    const home = `<html lang="en"><head><title>x</title></head><body>
+<header><nav><a href="/">Home</a></nav></header>
+<section><p>content that goes on for a while in the middle of the page</p></section>
+<div class="foot dark"><p>© Acme Studio</p><a href="/privacy">Privacy</a></div>
+</body></html>`;
+    const shell = buildPageShell(home, "Nueva")!;
+    assert.ok(shell.includes("© Acme Studio"), "div footer inherited");
+    assert.ok(shell.includes('class="foot dark"'), "footer wrapper kept");
+  });
+
+  it("expands a semantic footer to its styled wrapper div", () => {
+    const home = `<html lang="en"><head><title>x</title></head><body>
+<header><nav><a href="/">Home</a></nav></header>
+<section><p>middle middle middle middle middle middle middle</p></section>
+<div class="footer-band bg-black"><footer><small>© Wrap Co</small></footer></div>
+</body></html>`;
+    const shell = buildPageShell(home, "Nueva")!;
+    assert.ok(shell.includes('class="footer-band bg-black"'), "wrapper captured");
+    assert.ok(shell.includes("© Wrap Co"));
+  });
+
+  it("does not duplicate a footer-only nav as a top navbar", () => {
+    const home = `<html lang="en"><head><title>x</title></head><body>
+<section><h1>Landing</h1><p>content</p></section>
+<footer><nav><a href="/x">FootLink</a></nav><small>©</small></footer>
+</body></html>`;
+    const shell = buildPageShell(home, "Nueva")!;
+    const hits = shell.split("FootLink").length - 1;
+    assert.equal(hits, 1, "footer nav appears exactly once");
+  });
+});
+
+describe("buildPageShell — adversarial edges", () => {
+  it("survives multi-byte lowering (İ) without losing the footer wrapper", () => {
+    const home = `<html lang="tr"><head><title>x</title></head><body>
+<header class="site"><nav><a href="/">Ana</a></nav></header>
+<section><h1>İstanbul İçin İyi İş — İletişim, İnceleme, İzmir, İçel, İdeal</h1></section>
+<style>.brand{color:red}</style>
+<footer class="real"><small>© Marka</small></footer>
+</body></html>`;
+    const shell = buildPageShell(home, "Nueva")!;
+    assert.ok(shell.includes('class="real"'), "footer wrapper kept despite İ");
+    assert.ok(shell.includes("© Marka"));
+  });
+
+  it("ignores markup inside <pre> code samples", () => {
+    const home = `<html lang="en"><head><title>x</title></head><body>
+<section><h1>How to build a nav</h1>
+<pre><code><nav class="from-code-sample"><a href="#">x</a></nav>
+<footer class="from-code-sample"><small>© Example</small></footer></code></pre></section>
+<header class="site-real"><nav><a href="/">Home</a></nav></header>
+<section><p>content</p></section>
+<footer class="real"><small>© Real</small></footer>
+</body></html>`;
+    const shell = buildPageShell(home, "Nueva")!;
+    assert.ok(!shell.includes("from-code-sample"), "code sample not promoted");
+    assert.ok(shell.includes('class="site-real"'), "real navbar captured");
+    assert.ok(shell.includes("© Real"));
+  });
+
+  it("does not absorb an h2 CTA band into the footer wrapper", () => {
+    const copy = "<p>Marketing copy paragraph with plenty of words in it. </p>".repeat(20);
+    const home = `<html lang="en"><head><title>x</title></head><body>
+<header><nav><a href="/">Home</a></nav></header>
+<section><h1>Hero</h1>${copy}</section>
+<div class="end-band"><div class="cta"><h2>Ready to start?</h2><a href="/go">Go</a></div>
+<footer><small>© Acme</small></footer></div>
+</body></html>`;
+    const shell = buildPageShell(home, "Nueva")!;
+    assert.ok(!shell.includes("Ready to start?"), "CTA band left behind");
+    assert.ok(shell.includes("© Acme"), "semantic footer kept");
+  });
+
+  it("does not promote a mid-page photo credit © as the footer", () => {
+    const copy = "<p>Long portfolio copy paragraph with plenty of text. </p>".repeat(20);
+    const home = `<html lang="en"><head><title>x</title></head><body>
+<header><nav><a href="/">Home</a></nav></header>
+<section><h1>Gallery</h1>${copy}
+<figure><img src="a.jpg"><figcaption>© Estudio Luz</figcaption></figure></section>
+<section class="cta-final"><h2>Book a session</h2>${copy}<a href="/book">Book</a></section>
+</body></html>`;
+    const shell = buildPageShell(home, "Nueva")!;
+    assert.ok(!shell.includes("© Estudio Luz"), "photo credit not promoted");
+  });
+
+  it("rejects a whole-body wrapper as the © footer", () => {
+    const home = `<html lang="en"><head><title>x</title></head><body>
+<div id="app"><header><nav><a href="/">Home</a></nav></header>
+<div class="hero"><h2>Big claim</h2><p>MIDDLE-CONTENT-MARKER and lots of copy here to give the page some body length</p></div>
+© MegaWrap Inc</div>
+</body></html>`;
+    const shell = buildPageShell(home, "Nueva")!;
+    assert.ok(!shell.includes("MIDDLE-CONTENT-MARKER"), "body not captured as footer");
+  });
+
+  it("legacy fallback (unclosed style) does not duplicate footer-nested chrome", () => {
+    const home = `<html lang="en"><head><title>x</title></head><body>
+<style>.oops{color:red}
+<section><h1>Landing</h1></section>
+<footer><header>ACME</header><small>©</small></footer>
+</body></html>`;
+    const shell = buildPageShell(home, "Nueva")!;
+    const hits = shell.split("ACME").length - 1;
+    assert.equal(hits, 1, "brand appears exactly once");
+  });
+
+  it("never emits a malformed fragment from a crossed close (implicitly closed nav)", () => {
+    const home = `<html lang="en"><head><title>x</title></head><body>
+<div class="wrap"><nav><a href="/">A</a></div>
+<section><h1>Landing</h1></section>
+<footer><small>© F</small></footer>
+</body></html>`;
+    const shell = buildPageShell(home, "Nueva")!;
+    const opens = shell.split("<div").length - 1;
+    const closes = shell.split("</div").length - 1;
+    assert.equal(opens, closes, "no stray </div> from a crossed slice");
+    assert.ok(shell.includes("© F"), "footer intact");
+  });
+
+  it("an unquoted attribute apostrophe does not swallow the navbar", () => {
+    const home = `<html lang="en"><head><title>x</title></head><body>
+<section><img src="a.jpg" alt=chef's-special><h1>Menu</h1></section>
+<header class="site"><nav><a href="/">Home</a></nav></header>
+<section><p>that's all folks</p></section>
+<footer><small>© Chef</small></footer>
+</body></html>`;
+    const shell = buildPageShell(home, "Nueva")!;
+    assert.ok(shell.includes('class="site"'), "navbar captured despite apostrophe");
+  });
+});

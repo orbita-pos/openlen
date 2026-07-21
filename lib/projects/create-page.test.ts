@@ -124,6 +124,42 @@ describe("createSitePage", () => {
     expect(out.error).toBe("invalid_input");
   });
 
+  it("places the module section between hero and a wrapper-expanded footer, not inside it", () => {
+    const home = `<!doctype html><html lang="es">
+<head><meta charset="utf-8"><title>Mi Negocio</title></head>
+<body>
+<header><nav><a href="/">Inicio</a></nav></header>
+<section id="hero"><h1>Bienvenido</h1><p>mucho contenido intermedio aquí</p></section>
+<div class="footer-band bg-black"><footer><small>© Wrap Co</small></footer></div>
+</body></html>`;
+    const out = createSitePage({ html: home }, { module: "collections" });
+    if ("error" in out) throw new Error(`unexpected error: ${out.error} — ${out.message}`);
+    const pageHtml = out.nextData.pages!["catalogo"]!.html;
+    const band = pageHtml.indexOf("data-ol-collection-section");
+    const wrapper = pageHtml.indexOf('class="footer-band bg-black"');
+    expect(band).toBeGreaterThan(-1);
+    expect(wrapper).toBeGreaterThan(-1);
+    expect(band).toBeLessThan(wrapper);
+  });
+
+  it("places the module section above a ©-div footer (no semantic <footer>)", () => {
+    const home = `<!doctype html><html lang="es">
+<head><meta charset="utf-8"><title>Mi Negocio</title></head>
+<body>
+<header><nav><a href="/">Inicio</a></nav></header>
+<section id="hero"><h1>Bienvenido</h1><p>contenido intermedio que da algo de largo al documento</p></section>
+<div class="foot dark"><p>© Acme Studio</p><a href="/privacy">Privacidad</a></div>
+</body></html>`;
+    const out = createSitePage({ html: home }, { module: "collections" });
+    if ("error" in out) throw new Error(`unexpected error: ${out.error} — ${out.message}`);
+    const pageHtml = out.nextData.pages!["catalogo"]!.html;
+    const band = pageHtml.indexOf("data-ol-collection-section");
+    const foot = pageHtml.indexOf('class="foot dark"');
+    expect(band).toBeGreaterThan(-1);
+    expect(foot).toBeGreaterThan(-1);
+    expect(band).toBeLessThan(foot);
+  });
+
   it("rejects an out-of-range slug/title as invalid_input (agent path has no Zod)", () => {
     const tooLongSlug = createSitePage(baseData(), { slug: "a".repeat(61) });
     if (!("error" in tooLongSlug)) throw new Error("expected an error");
