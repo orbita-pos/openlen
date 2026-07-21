@@ -56,7 +56,21 @@
     "viewMobile": "Vista mobile",
     "close": "Chiudi",
     "errNoCredits": "Hai esaurito i crediti questo mese.",
-    "errGeneric": "Impossibile aggiungere la sezione. Riprova."
+    "errGeneric": "Impossibile aggiungere la sezione. Riprova.",
+    "modulesHeading": "Moduli",
+    "modulesIntro": "Blocchi con superpoteri: catalogo, prenotazioni e commenti. Si attivano da soli quando li inserisci.",
+    "moduleCatalogTitle": "Catalogo",
+    "moduleCatalogDesc": "I tuoi prodotti o servizi, con carrello facoltativo",
+    "moduleBookingsTitle": "Prenotazioni",
+    "moduleBookingsDesc": "Prenotazione appuntamenti con conferma",
+    "moduleCommentsTitle": "Commenti",
+    "moduleCommentsDesc": "Opinioni dei tuoi visitatori sulla pagina",
+    "moduleScopePage": "Per pagina",
+    "moduleInsertHere": "In questa pagina",
+    "moduleAsPage": "Come nuova pagina",
+    "moduleAlreadyHere": "Già in questa pagina",
+    "moduleNeedsMembers": "Attiva anche Account (obbligatorio)",
+    "modulesTarget": "Inserimento in: {page}"
   },
   "paste": {
     "heading": "Incolla HTML",

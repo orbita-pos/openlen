@@ -179,7 +179,8 @@
     "moduleOrders": "주문",
     "whatsappNeedNumber": "먼저 WhatsApp 번호를 추가하세요",
     "modulePageCreated": "페이지를 만들었습니다",
-    "modulePageExists": "기존 페이지를 열었습니다"
+    "modulePageExists": "기존 페이지를 열었습니다",
+    "moduleAlreadyOnPage": "이 모듈은 이미 이 페이지에 있어요"
   },
   "whatsapp": {
     "title": "WhatsApp 버튼",
@@ -239,5 +240,16 @@
       "statusActive": "Active",
       "empty": "No agents yet — invite a teammate to help handle chats."
     }
+  },
+  "modulesHub": {
+    "siteGroup": "전체 사이트",
+    "contentGroup": "콘텐츠",
+    "scopeSite": "전체 사이트",
+    "scopePage": "페이지별",
+    "placedIn": "위치: {pages}",
+    "placedNowhere": "아직 어느 페이지에도 없어요",
+    "addToPage": "페이지에 추가",
+    "home": "홈",
+    "seePreview": "미리보기에서 확인"
   }
 }

@@ -179,7 +179,8 @@
     "moduleOrders": "Pedidos",
     "whatsappNeedNumber": "Primeiro adicione um número de WhatsApp",
     "modulePageCreated": "Página criada",
-    "modulePageExists": "Abri a página existente"
+    "modulePageExists": "Abri a página existente",
+    "moduleAlreadyOnPage": "Este módulo já está nesta página"
   },
   "whatsapp": {
     "title": "Botão de WhatsApp",
@@ -239,5 +240,16 @@
       "statusActive": "Active",
       "empty": "No agents yet — invite a teammate to help handle chats."
     }
+  },
+  "modulesHub": {
+    "siteGroup": "Todo o site",
+    "contentGroup": "Conteúdo",
+    "scopeSite": "Todo o site",
+    "scopePage": "Por página",
+    "placedIn": "Em: {pages}",
+    "placedNowhere": "Ainda não está em nenhuma página",
+    "addToPage": "Adicionar a uma página",
+    "home": "início",
+    "seePreview": "Veja na pré-visualização"
   }
 }

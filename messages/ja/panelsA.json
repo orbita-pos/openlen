@@ -56,7 +56,21 @@
     "viewMobile": "モバイル表示",
     "close": "閉じる",
     "errNoCredits": "今月のクレジットを使い切りました。",
-    "errGeneric": "セクションを追加できませんでした。もう一度お試しください。"
+    "errGeneric": "セクションを追加できませんでした。もう一度お試しください。",
+    "modulesHeading": "モジュール",
+    "modulesIntro": "カタログ、予約、コメントなど、超能力付きのブロックです。挿入すると自動で有効になります。",
+    "moduleCatalogTitle": "カタログ",
+    "moduleCatalogDesc": "商品やサービスを掲載。カートはオプションです",
+    "moduleBookingsTitle": "予約",
+    "moduleBookingsDesc": "確認付きの予約受付",
+    "moduleCommentsTitle": "コメント",
+    "moduleCommentsDesc": "訪問者からのコメントをページに表示",
+    "moduleScopePage": "ページごと",
+    "moduleInsertHere": "このページに",
+    "moduleAsPage": "新しいページとして",
+    "moduleAlreadyHere": "すでにこのページにあります",
+    "moduleNeedsMembers": "アカウントも有効になります（必須）",
+    "modulesTarget": "挿入先: {page}"
   },
   "paste": {
     "heading": "HTMLを貼り付け",

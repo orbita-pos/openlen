@@ -179,7 +179,8 @@
     "moduleOrders": "注文",
     "whatsappNeedNumber": "先にWhatsApp番号を追加してください",
     "modulePageCreated": "ページを作成しました",
-    "modulePageExists": "既存のページを開きました"
+    "modulePageExists": "既存のページを開きました",
+    "moduleAlreadyOnPage": "このモジュールはすでにこのページにあります"
   },
   "whatsapp": {
     "title": "WhatsAppボタン",
@@ -239,5 +240,16 @@
       "statusActive": "Active",
       "empty": "No agents yet — invite a teammate to help handle chats."
     }
+  },
+  "modulesHub": {
+    "siteGroup": "サイト全体",
+    "contentGroup": "コンテンツ",
+    "scopeSite": "サイト全体",
+    "scopePage": "ページごと",
+    "placedIn": "掲載先: {pages}",
+    "placedNowhere": "まだどのページにもありません",
+    "addToPage": "ページに追加",
+    "home": "ホーム",
+    "seePreview": "プレビューで確認"
   }
 }

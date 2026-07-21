@@ -56,7 +56,21 @@
     "viewMobile": "모바일 보기",
     "close": "닫기",
     "errNoCredits": "이번 달 크레딧을 모두 사용했습니다.",
-    "errGeneric": "섹션을 추가하지 못했습니다. 다시 시도하세요."
+    "errGeneric": "섹션을 추가하지 못했습니다. 다시 시도하세요.",
+    "modulesHeading": "모듈",
+    "modulesIntro": "카탈로그, 예약, 댓글처럼 초능력을 가진 블록이에요. 삽입하면 저절로 켜져요.",
+    "moduleCatalogTitle": "카탈로그",
+    "moduleCatalogDesc": "상품이나 서비스를 소개하고, 장바구니는 선택사항이에요",
+    "moduleBookingsTitle": "예약",
+    "moduleBookingsDesc": "확인 절차가 있는 예약 접수",
+    "moduleCommentsTitle": "댓글",
+    "moduleCommentsDesc": "방문자가 페이지에 남기는 댓글",
+    "moduleScopePage": "페이지별",
+    "moduleInsertHere": "이 페이지에",
+    "moduleAsPage": "새 페이지로",
+    "moduleAlreadyHere": "이미 이 페이지에 있어요",
+    "moduleNeedsMembers": "계정도 함께 켜져요 (필수)",
+    "modulesTarget": "삽입 위치: {page}"
   },
   "paste": {
     "heading": "HTML 붙여넣기",

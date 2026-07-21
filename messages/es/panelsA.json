@@ -60,7 +60,21 @@
     "viewMobile": "Vista móvil",
     "close": "Cerrar",
     "errNoCredits": "Te quedaste sin créditos este mes.",
-    "errGeneric": "No se pudo agregar la sección. Inténtalo de nuevo."
+    "errGeneric": "No se pudo agregar la sección. Inténtalo de nuevo.",
+    "modulesHeading": "Módulos",
+    "modulesIntro": "Bloques con superpoderes: catálogo, reservas y comentarios. Se activan solos al insertarlos.",
+    "moduleCatalogTitle": "Catálogo",
+    "moduleCatalogDesc": "Tus productos o servicios, con carrito opcional",
+    "moduleBookingsTitle": "Reservas",
+    "moduleBookingsDesc": "Agenda de citas con confirmación",
+    "moduleCommentsTitle": "Comentarios",
+    "moduleCommentsDesc": "Opiniones de tus visitantes en la página",
+    "moduleScopePage": "Por página",
+    "moduleInsertHere": "En esta página",
+    "moduleAsPage": "Como página nueva",
+    "moduleAlreadyHere": "Ya está en esta página",
+    "moduleNeedsMembers": "Enciende Cuentas también (requisito)",
+    "modulesTarget": "Insertando en: {page}"
   },
   "paste": {
     "heading": "Pegar HTML",

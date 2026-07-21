@@ -56,7 +56,21 @@
     "viewMobile": "Vue mobile",
     "close": "Fermer",
     "errNoCredits": "Vous n'avez plus de crédits ce mois-ci.",
-    "errGeneric": "Impossible d'ajouter la section. Réessayez."
+    "errGeneric": "Impossible d'ajouter la section. Réessayez.",
+    "modulesHeading": "Modules",
+    "modulesIntro": "Des blocs avec des superpouvoirs : catalogue, réservations et commentaires. Ils s’activent tout seuls dès l’insertion.",
+    "moduleCatalogTitle": "Catalogue",
+    "moduleCatalogDesc": "Vos produits ou services, avec panier facultatif",
+    "moduleBookingsTitle": "Réservations",
+    "moduleBookingsDesc": "Prise de rendez-vous avec confirmation",
+    "moduleCommentsTitle": "Commentaires",
+    "moduleCommentsDesc": "Avis de vos visiteurs sur la page",
+    "moduleScopePage": "Par page",
+    "moduleInsertHere": "Sur cette page",
+    "moduleAsPage": "Comme nouvelle page",
+    "moduleAlreadyHere": "Déjà sur cette page",
+    "moduleNeedsMembers": "Activez aussi Comptes (requis)",
+    "modulesTarget": "Insertion dans : {page}"
   },
   "paste": {
     "heading": "Coller du HTML",

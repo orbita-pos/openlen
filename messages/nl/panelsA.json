@@ -60,7 +60,21 @@
     "viewMobile": "Mobiele weergave",
     "close": "Sluiten",
     "errNoCredits": "Je credits voor deze maand zijn op.",
-    "errGeneric": "Kon de sectie niet toevoegen. Probeer opnieuw."
+    "errGeneric": "Kon de sectie niet toevoegen. Probeer opnieuw.",
+    "modulesHeading": "Modules",
+    "modulesIntro": "Blokken met superkrachten: catalogus, afspraken en reacties. Ze schakelen zichzelf in zodra je ze invoegt.",
+    "moduleCatalogTitle": "Catalogus",
+    "moduleCatalogDesc": "Je producten of diensten, met optioneel winkelwagentje",
+    "moduleBookingsTitle": "Afspraken",
+    "moduleBookingsDesc": "Afspraken boeken met bevestiging",
+    "moduleCommentsTitle": "Reacties",
+    "moduleCommentsDesc": "Reacties van je bezoekers op de pagina",
+    "moduleScopePage": "Per pagina",
+    "moduleInsertHere": "Op deze pagina",
+    "moduleAsPage": "Als nieuwe pagina",
+    "moduleAlreadyHere": "Al op deze pagina",
+    "moduleNeedsMembers": "Zet ook Accounts aan (vereist)",
+    "modulesTarget": "Invoegen in: {page}"
   },
   "paste": {
     "heading": "HTML plakken",

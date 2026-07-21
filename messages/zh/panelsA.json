@@ -56,7 +56,21 @@
     "viewMobile": "移动视图",
     "close": "关闭",
     "errNoCredits": "本月的额度已用完。",
-    "errGeneric": "无法添加该版块，请重试。"
+    "errGeneric": "无法添加该版块，请重试。",
+    "modulesHeading": "模块",
+    "modulesIntro": "自带超能力的版块：产品目录、预约和评论。插入后会自动开启。",
+    "moduleCatalogTitle": "产品目录",
+    "moduleCatalogDesc": "展示你的产品或服务，购物车可选",
+    "moduleBookingsTitle": "预约",
+    "moduleBookingsDesc": "带确认功能的预约",
+    "moduleCommentsTitle": "评论",
+    "moduleCommentsDesc": "访客在页面上留下的评论",
+    "moduleScopePage": "按页面",
+    "moduleInsertHere": "插入到此页面",
+    "moduleAsPage": "作为新页面",
+    "moduleAlreadyHere": "已经在此页面",
+    "moduleNeedsMembers": "同时开启账户（必需）",
+    "modulesTarget": "插入到：{page}"
   },
   "paste": {
     "heading": "粘贴 HTML",

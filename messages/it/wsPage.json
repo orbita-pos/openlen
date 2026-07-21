@@ -179,7 +179,8 @@
     "moduleOrders": "Ordini",
     "whatsappNeedNumber": "Aggiungi prima un numero WhatsApp",
     "modulePageCreated": "Pagina creata",
-    "modulePageExists": "Pagina esistente aperta"
+    "modulePageExists": "Pagina esistente aperta",
+    "moduleAlreadyOnPage": "Questo modulo è già in questa pagina"
   },
   "whatsapp": {
     "title": "Pulsante WhatsApp",
@@ -239,5 +240,16 @@
       "statusActive": "Active",
       "empty": "No agents yet — invite a teammate to help handle chats."
     }
+  },
+  "modulesHub": {
+    "siteGroup": "Tutto il sito",
+    "contentGroup": "Contenuto",
+    "scopeSite": "Tutto il sito",
+    "scopePage": "Per pagina",
+    "placedIn": "In: {pages}",
+    "placedNowhere": "Non è ancora in nessuna pagina",
+    "addToPage": "Aggiungi a una pagina",
+    "home": "home",
+    "seePreview": "Guardalo nell’anteprima"
   }
 }

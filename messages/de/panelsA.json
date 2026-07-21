@@ -56,7 +56,21 @@
     "viewMobile": "Mobile Ansicht",
     "close": "Schließen",
     "errNoCredits": "Deine Credits sind diesen Monat aufgebraucht.",
-    "errGeneric": "Abschnitt konnte nicht hinzugefügt werden. Versuch es erneut."
+    "errGeneric": "Abschnitt konnte nicht hinzugefügt werden. Versuch es erneut.",
+    "modulesHeading": "Module",
+    "modulesIntro": "Blöcke mit Superkräften: Katalog, Buchungen und Kommentare. Sie schalten sich beim Einfügen von selbst ein.",
+    "moduleCatalogTitle": "Katalog",
+    "moduleCatalogDesc": "Deine Produkte oder Dienstleistungen, mit optionalem Warenkorb",
+    "moduleBookingsTitle": "Buchungen",
+    "moduleBookingsDesc": "Terminbuchung mit Bestätigung",
+    "moduleCommentsTitle": "Kommentare",
+    "moduleCommentsDesc": "Kommentare deiner Besucher auf der Seite",
+    "moduleScopePage": "Pro Seite",
+    "moduleInsertHere": "Auf dieser Seite",
+    "moduleAsPage": "Als neue Seite",
+    "moduleAlreadyHere": "Bereits auf dieser Seite",
+    "moduleNeedsMembers": "Aktiviere auch Konten (erforderlich)",
+    "modulesTarget": "Einfügen in: {page}"
   },
   "paste": {
     "heading": "HTML einfügen",

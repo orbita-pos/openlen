@@ -60,7 +60,21 @@
     "viewMobile": "Mobile view",
     "close": "Close",
     "errNoCredits": "You're out of credits this month.",
-    "errGeneric": "Couldn't add the section. Try again."
+    "errGeneric": "Couldn't add the section. Try again.",
+    "modulesHeading": "Modules",
+    "modulesIntro": "Blocks with superpowers: catalog, bookings and comments. They turn on by themselves when inserted.",
+    "moduleCatalogTitle": "Catalog",
+    "moduleCatalogDesc": "Your products or services, with an optional cart",
+    "moduleBookingsTitle": "Bookings",
+    "moduleBookingsDesc": "Appointment booking with confirmation",
+    "moduleCommentsTitle": "Comments",
+    "moduleCommentsDesc": "Visitor comments on your page",
+    "moduleScopePage": "Per page",
+    "moduleInsertHere": "On this page",
+    "moduleAsPage": "As a new page",
+    "moduleAlreadyHere": "Already on this page",
+    "moduleNeedsMembers": "Also turns on Accounts (required)",
+    "modulesTarget": "Inserting into: {page}"
   },
   "paste": {
     "heading": "Paste HTML",

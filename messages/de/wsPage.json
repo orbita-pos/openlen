@@ -179,7 +179,8 @@
     "moduleOrders": "Bestellungen",
     "whatsappNeedNumber": "Füge zuerst eine WhatsApp-Nummer hinzu",
     "modulePageCreated": "Seite erstellt",
-    "modulePageExists": "Vorhandene Seite geöffnet"
+    "modulePageExists": "Vorhandene Seite geöffnet",
+    "moduleAlreadyOnPage": "Dieses Modul ist bereits auf dieser Seite"
   },
   "whatsapp": {
     "title": "WhatsApp-Button",
@@ -239,5 +240,16 @@
       "statusActive": "Active",
       "empty": "No agents yet — invite a teammate to help handle chats."
     }
+  },
+  "modulesHub": {
+    "siteGroup": "Ganze Website",
+    "contentGroup": "Inhalt",
+    "scopeSite": "Ganze Website",
+    "scopePage": "Pro Seite",
+    "placedIn": "Auf: {pages}",
+    "placedNowhere": "Noch auf keiner Seite",
+    "addToPage": "Zu einer Seite hinzufügen",
+    "home": "Startseite",
+    "seePreview": "In der Vorschau ansehen"
   }
 }

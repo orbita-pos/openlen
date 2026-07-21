@@ -179,7 +179,8 @@
     "moduleOrders": "订单",
     "whatsappNeedNumber": "请先填写 WhatsApp 号码",
     "modulePageCreated": "页面已创建",
-    "modulePageExists": "已打开现有页面"
+    "modulePageExists": "已打开现有页面",
+    "moduleAlreadyOnPage": "此模块已经在此页面"
   },
   "whatsapp": {
     "title": "WhatsApp 按钮",
@@ -239,5 +240,16 @@
       "statusActive": "Active",
       "empty": "No agents yet — invite a teammate to help handle chats."
     }
+  },
+  "modulesHub": {
+    "siteGroup": "整个网站",
+    "contentGroup": "内容",
+    "scopeSite": "整个网站",
+    "scopePage": "按页面",
+    "placedIn": "位置：{pages}",
+    "placedNowhere": "还没有添加到任何页面",
+    "addToPage": "添加到页面",
+    "home": "首页",
+    "seePreview": "在预览中查看"
   }
 }

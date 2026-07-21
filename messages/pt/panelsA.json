@@ -56,7 +56,21 @@
     "viewMobile": "Visualização móvel",
     "close": "Fechar",
     "errNoCredits": "Você ficou sem créditos este mês.",
-    "errGeneric": "Não foi possível adicionar a seção. Tente de novo."
+    "errGeneric": "Não foi possível adicionar a seção. Tente de novo.",
+    "modulesHeading": "Módulos",
+    "modulesIntro": "Blocos com superpoderes: catálogo, reservas e comentários. Eles se ativam sozinhos ao serem inseridos.",
+    "moduleCatalogTitle": "Catálogo",
+    "moduleCatalogDesc": "Seus produtos ou serviços, com carrinho opcional",
+    "moduleBookingsTitle": "Reservas",
+    "moduleBookingsDesc": "Agenda de compromissos com confirmação",
+    "moduleCommentsTitle": "Comentários",
+    "moduleCommentsDesc": "Opiniões dos seus visitantes na página",
+    "moduleScopePage": "Por página",
+    "moduleInsertHere": "Nesta página",
+    "moduleAsPage": "Como página nova",
+    "moduleAlreadyHere": "Já está nesta página",
+    "moduleNeedsMembers": "Ative Contas também (obrigatório)",
+    "modulesTarget": "Inserindo em: {page}"
   },
   "paste": {
     "heading": "Colar HTML",

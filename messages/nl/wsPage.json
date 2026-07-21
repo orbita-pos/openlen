@@ -179,7 +179,8 @@
     "moduleOrders": "Bestellingen",
     "whatsappNeedNumber": "Voeg eerst een WhatsApp-nummer toe",
     "modulePageCreated": "Pagina gemaakt",
-    "modulePageExists": "Bestaande pagina geopend"
+    "modulePageExists": "Bestaande pagina geopend",
+    "moduleAlreadyOnPage": "Deze module staat al op deze pagina"
   },
   "whatsapp": {
     "title": "WhatsApp-knop",
@@ -239,5 +240,16 @@
       "statusActive": "Active",
       "empty": "No agents yet — invite a teammate to help handle chats."
     }
+  },
+  "modulesHub": {
+    "siteGroup": "Hele site",
+    "contentGroup": "Inhoud",
+    "scopeSite": "Hele site",
+    "scopePage": "Per pagina",
+    "placedIn": "Op: {pages}",
+    "placedNowhere": "Nog op geen enkele pagina",
+    "addToPage": "Toevoegen aan een pagina",
+    "home": "home",
+    "seePreview": "Bekijk het in de voorbeeldweergave"
   }
 }
