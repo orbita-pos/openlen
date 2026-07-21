@@ -6,9 +6,9 @@
 
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { useTranslations } from "next-intl";
-import { Eye, Sparkles } from "../icons";
+import { Calendar, Eye, Grid3, MessageSq, Sparkles } from "../icons";
 import { TemplatePreviewFrame } from "../template-preview-frame";
 import {
   SECTION_TYPES_ORDERED,
@@ -16,11 +16,90 @@ import {
   type SectionType,
 } from "../sections-data";
 import { useSections } from "../use-sections";
+import type {
+  ContentModule,
+  ModuleDestination,
+} from "@/lib/workspace-v2/module-add-plan";
+
+export interface ModuleCardState {
+  module: ContentModule;
+  enabled: boolean;
+  alreadyOnPage: boolean;
+  needsMembers: boolean;
+}
 
 interface SectionsPanelProps {
   /** Open the preview dialog for this section. The match-then-insert commit
    *  happens from inside the dialog ("Use on my page"). */
   onPreview: (s: SectionSpec) => void;
+  /** Module cards shown above the section filters (collections/bookings/
+   *  comments) — omitted entirely when the caller doesn't pass them. */
+  moduleCards?: ModuleCardState[];
+  /** Fired when a module card's action button is clicked. */
+  onAddModule?: (module: ContentModule, destination: ModuleDestination) => void;
+  /** Readable name of the destination page ("inicio" or "/<slug>") — names
+   *  where a module lands so the user never has to guess. */
+  activePageLabel?: string;
+}
+
+const MODULE_ICON: Record<ContentModule, (p: { size?: number }) => ReactNode> = {
+  collections: (p) => <Grid3 size={p.size ?? 15} />,
+  bookings: (p) => <Calendar size={p.size ?? 15} />,
+  comments: (p) => <MessageSq size={p.size ?? 15} />,
+};
+
+function ModuleCard({
+  card,
+  onAddModule,
+}: {
+  card: ModuleCardState;
+  onAddModule: (module: ContentModule, destination: ModuleDestination) => void;
+}) {
+  const t = useTranslations("panelsA");
+  const key = card.module === "collections" ? "Catalog" : card.module === "bookings" ? "Bookings" : "Comments";
+  return (
+    <div className="rounded-lg ring-1 ring-[color:var(--border)] px-3 py-2.5" style={{ background: "var(--bg)" }}>
+      <div className="flex items-center gap-2 mb-0.5">
+        <span className="text-accent">{MODULE_ICON[card.module]({})}</span>
+        <h4 className="text-[12.5px] font-semibold fg leading-tight">{t(`sections.module${key}Title`)}</h4>
+        <span className="ml-auto text-[8.5px] uppercase tracking-[0.12em] px-1 py-0.5 rounded fg-faint bg-hover font-semibold">
+          {t("sections.moduleScopePage")}
+        </span>
+      </div>
+      <p className="text-[10.5px] fg-muted leading-snug mb-2">{t(`sections.module${key}Desc`)}</p>
+      {card.alreadyOnPage ? (
+        <button
+          type="button"
+          onClick={() => onAddModule(card.module, "section")}
+          className="w-full inline-flex items-center justify-center text-[11px] font-medium h-7 rounded-md fg-muted bg-hover hover:fg transition"
+        >
+          {t("sections.moduleAlreadyHere")}
+        </button>
+      ) : (
+        <div className="flex gap-1.5">
+          <button
+            type="button"
+            onClick={() => onAddModule(card.module, "section")}
+            className="flex-1 inline-flex items-center justify-center text-[11px] font-medium h-7 rounded-md text-white bg-[var(--accent-strong)] hover:opacity-90 transition"
+          >
+            {t("sections.moduleInsertHere")}
+          </button>
+          {card.module !== "comments" && (
+            <button
+              type="button"
+              onClick={() => onAddModule(card.module, "page")}
+              className="flex-1 inline-flex items-center justify-center text-[11px] font-medium h-7 rounded-md fg bg-hover hover:bg-app transition"
+            >
+              {t("sections.moduleAsPage")}
+            </button>
+          )}
+        </div>
+      )}
+      {card.needsMembers && !card.alreadyOnPage && (
+        <p className="mt-1.5 text-[10px] fg-faint leading-snug">{t("sections.moduleNeedsMembers")}</p>
+      )}
+    </div>
+  );
 }
 
 function SectionCard({
@@ -81,7 +160,12 @@ function SectionCard({
   );
 }
 
-export function SectionsPanel({ onPreview }: SectionsPanelProps) {
+export function SectionsPanel({
+  onPreview,
+  moduleCards,
+  onAddModule,
+  activePageLabel,
+}: SectionsPanelProps) {
   const t = useTranslations("panelsA");
   const ts = useTranslations("sections");
   const [typeFilter, setTypeFilter] = useState<SectionType | "all">("all");
@@ -102,6 +186,27 @@ export function SectionsPanel({ onPreview }: SectionsPanelProps) {
       <p className="text-[11px] fg-muted leading-snug mb-3">
         {t("sections.intro")}
       </p>
+
+      {moduleCards && moduleCards.length > 0 && onAddModule && (
+        <section className="mb-5">
+          <div className="mb-2 flex items-baseline justify-between gap-2">
+            <h3 className="text-[10.5px] uppercase tracking-[0.18em] fg font-semibold ui-small">
+              {t("sections.modulesHeading")}
+            </h3>
+          </div>
+          <p className="text-[11px] fg-muted leading-snug mb-1.5">{t("sections.modulesIntro")}</p>
+          {activePageLabel && (
+            <p className="text-[10px] fg-faint mb-3">
+              {t("sections.modulesTarget", { page: activePageLabel })}
+            </p>
+          )}
+          <div className="grid grid-cols-1 gap-2">
+            {moduleCards.map((card) => (
+              <ModuleCard key={card.module} card={card} onAddModule={onAddModule} />
+            ))}
+          </div>
+        </section>
+      )}
 
       <div className="flex flex-wrap gap-1 mb-4">
         <button

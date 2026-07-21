@@ -30,11 +30,15 @@ import { useIsMobile } from "./use-is-mobile";
 import { PastePanel } from "./panels/paste-panel";
 import { SitePagesPanel } from "./panels/site-pages-panel";
 import type { SitePageSummary } from "@/lib/projects/site-pages";
-import { SectionsPanel } from "./panels/sections-panel";
+import { SectionsPanel, type ModuleCardState } from "./panels/sections-panel";
 import { TemplatesPanel } from "./panels/templates-panel";
 import { VersionsPanel } from "./panels/versions-panel";
 import { ThreePanel } from "./panels/three-panel";
 import type { SectionSpec } from "./sections-data";
+import type {
+  ContentModule,
+  ModuleDestination,
+} from "@/lib/workspace-v2/module-add-plan";
 import { Tooltip } from "./ui";
 import { useInboxBadge } from "@/components/inbox/use-inbox-badge";
 import { formatBadge } from "@/components/inbox/badge-format";
@@ -194,6 +198,14 @@ interface LeftSidebarProps {
   /** Open the preview dialog for a library section (Library tab). The actual
    *  match-then-insert happens from the dialog's "Use on my page" action. */
   onPreviewSection?: (s: SectionSpec) => void;
+  /** Module cards (collections/bookings/comments) shown atop the Library
+   *  panel's section filters. Omitted entirely when not passed. */
+  moduleCards?: ModuleCardState[];
+  /** Fired when a Library module card's action button is clicked. */
+  onAddModule?: (module: ContentModule, destination: ModuleDestination) => void;
+  /** Readable name of the destination page ("inicio" or "/<slug>") for the
+   *  Library module cards — forwarded to SectionsPanel unchanged. */
+  activePageLabel?: string;
   /** Tabs that are visually locked + non-interactive. Used when the
    *  workspace is in a guided entry flow (e.g. user picked "AI" — only
    *  the chat tab is active until the page has been generated). */
@@ -318,6 +330,9 @@ export function LeftSidebar({
   onPreviewTemplate,
   previewingTemplateId,
   onPreviewSection,
+  moduleCards,
+  onAddModule,
+  activePageLabel,
   lockedTabs,
   lockReason,
   entryMode = "editing",
@@ -596,7 +611,12 @@ export function LeftSidebar({
               />
             )}
             {mode === "library" && (
-              <SectionsPanel onPreview={onPreviewSection ?? (() => {})} />
+              <SectionsPanel
+                onPreview={onPreviewSection ?? (() => {})}
+                moduleCards={moduleCards}
+                onAddModule={onAddModule}
+                activePageLabel={activePageLabel}
+              />
             )}
             {mode === "versions" && (
               <VersionsPanel
