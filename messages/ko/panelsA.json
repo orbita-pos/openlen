@@ -72,7 +72,8 @@
     "moduleNeedsMembers": "계정도 함께 켜져요 (필수)",
     "modulesTarget": "삽입 위치: {page}",
     "sectionsTab": "섹션",
-    "manageProducts": "상품 관리"
+    "manageProducts": "상품 관리",
+    "modulesTargetLabel": "추가 위치"
   },
   "paste": {
     "heading": "HTML 붙여넣기",

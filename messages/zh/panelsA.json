@@ -72,7 +72,8 @@
     "moduleNeedsMembers": "同时开启账户（必需）",
     "modulesTarget": "插入到：{page}",
     "sectionsTab": "区块",
-    "manageProducts": "管理产品"
+    "manageProducts": "管理产品",
+    "modulesTargetLabel": "将添加到"
   },
   "paste": {
     "heading": "粘贴 HTML",

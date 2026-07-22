@@ -72,7 +72,8 @@
     "moduleNeedsMembers": "Les Comptes s’activent aussi (requis)",
     "modulesTarget": "Insertion dans : {page}",
     "sectionsTab": "Sections",
-    "manageProducts": "Gérer les produits"
+    "manageProducts": "Gérer les produits",
+    "modulesTargetLabel": "Sera ajouté à"
   },
   "paste": {
     "heading": "Coller du HTML",

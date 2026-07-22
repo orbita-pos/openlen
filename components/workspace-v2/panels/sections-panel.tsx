@@ -48,6 +48,13 @@ interface SectionsPanelProps {
   /** Open the Colecciones manager (add/edit products) — the answer to
    *  "¿y de dónde salen los productos?" is one click away, never a hunt. */
   onManageCollections?: () => void;
+  /** Destination-page SELECTOR (Business-style): a visible control beats a
+   *  faint text line for non-technical creators. Switching also switches the
+   *  canvas page, so what you see is where it lands. */
+  sitePages?: { slug: string; title: string }[];
+  activeSitePage?: string | null;
+  onSwitchPage?: (slug: string | null) => void;
+  homeLabel?: string;
 }
 
 const MODULE_ICON: Record<ContentModule, (p: { size?: number }) => ReactNode> = {
@@ -187,6 +194,10 @@ export function SectionsPanel({
   openModulesView,
   onModulesViewConsumed,
   onManageCollections,
+  sitePages,
+  activeSitePage,
+  onSwitchPage,
+  homeLabel,
 }: SectionsPanelProps) {
   const t = useTranslations("panelsA");
   const ts = useTranslations("sections");
@@ -246,11 +257,29 @@ export function SectionsPanel({
       {showModules && moduleCards && onAddModule && (
         <section className="mb-5">
           <p className="text-[11px] fg-muted leading-snug mb-1.5">{t("sections.modulesIntro")}</p>
-          {activePageLabel && (
+          {onSwitchPage ? (
+            <div className="mb-3">
+              <label className="block text-[10px] uppercase tracking-[0.12em] fg-faint font-semibold mb-1">
+                {t("sections.modulesTargetLabel")}
+              </label>
+              <select
+                value={activeSitePage ?? ""}
+                onChange={(e) => onSwitchPage(e.target.value || null)}
+                className="w-full bg-app ring-1 ring-[color:var(--border)] rounded-lg px-2.5 h-8 text-[12px] fg outline-none focus:ring-[color:var(--accent)] transition"
+              >
+                <option value="">{homeLabel ?? "inicio"}</option>
+                {(sitePages ?? []).map((p) => (
+                  <option key={p.slug} value={p.slug}>
+                    /{p.slug} — {p.title}
+                  </option>
+                ))}
+              </select>
+            </div>
+          ) : activePageLabel ? (
             <p className="text-[10px] fg-faint mb-3">
               {t("sections.modulesTarget", { page: activePageLabel })}
             </p>
-          )}
+          ) : null}
           <div className="grid grid-cols-1 gap-2">
             {moduleCards.map((card) => (
               <ModuleCard

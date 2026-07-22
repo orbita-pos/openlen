@@ -76,7 +76,8 @@
     "moduleNeedsMembers": "Enciende Cuentas también (requisito)",
     "modulesTarget": "Insertando en: {page}",
     "sectionsTab": "Secciones",
-    "manageProducts": "Administrar productos"
+    "manageProducts": "Administrar productos",
+    "modulesTargetLabel": "Se agregará a"
   },
   "paste": {
     "heading": "Pegar HTML",

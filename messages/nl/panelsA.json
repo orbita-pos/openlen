@@ -76,7 +76,8 @@
     "moduleNeedsMembers": "Schakelt ook Accounts in (vereist)",
     "modulesTarget": "Invoegen in: {page}",
     "sectionsTab": "Secties",
-    "manageProducts": "Producten beheren"
+    "manageProducts": "Producten beheren",
+    "modulesTargetLabel": "Wordt toegevoegd aan"
   },
   "paste": {
     "heading": "HTML plakken",

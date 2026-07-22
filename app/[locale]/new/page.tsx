@@ -3535,6 +3535,7 @@ function NewV2Inner() {
           moduleCards={moduleCards}
           onAddModule={(m, d) => void addModuleFromLibrary(m, d)}
           activePageLabel={activeSitePage ? `/${activeSitePage}` : t("modulesHub.home")}
+          homePageLabel={t("modulesHub.home")}
           openModulesView={libraryOpenModules}
           onModulesViewConsumed={() => setLibraryOpenModules(false)}
           onManageCollections={() => {

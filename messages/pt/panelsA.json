@@ -72,7 +72,8 @@
     "moduleNeedsMembers": "Também ativa Contas (obrigatório)",
     "modulesTarget": "Inserindo em: {page}",
     "sectionsTab": "Seções",
-    "manageProducts": "Gerenciar produtos"
+    "manageProducts": "Gerenciar produtos",
+    "modulesTargetLabel": "Será adicionado a"
   },
   "paste": {
     "heading": "Colar HTML",

@@ -72,7 +72,8 @@
     "moduleNeedsMembers": "Si attiva anche Account (obbligatorio)",
     "modulesTarget": "Inserimento in: {page}",
     "sectionsTab": "Sezioni",
-    "manageProducts": "Gestisci i prodotti"
+    "manageProducts": "Gestisci i prodotti",
+    "modulesTargetLabel": "Verrà aggiunto a"
   },
   "paste": {
     "heading": "Incolla HTML",

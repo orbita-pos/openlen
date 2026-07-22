@@ -72,7 +72,8 @@
     "moduleNeedsMembers": "Schaltet auch Konten ein (erforderlich)",
     "modulesTarget": "Einfügen in: {page}",
     "sectionsTab": "Abschnitte",
-    "manageProducts": "Produkte verwalten"
+    "manageProducts": "Produkte verwalten",
+    "modulesTargetLabel": "Wird hinzugefügt zu"
   },
   "paste": {
     "heading": "HTML einfügen",

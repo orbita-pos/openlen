@@ -72,7 +72,8 @@
     "moduleNeedsMembers": "アカウントも有効になります（必須）",
     "modulesTarget": "挿入先: {page}",
     "sectionsTab": "セクション",
-    "manageProducts": "商品を管理"
+    "manageProducts": "商品を管理",
+    "modulesTargetLabel": "追加先"
   },
   "paste": {
     "heading": "HTMLを貼り付け",

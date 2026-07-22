@@ -76,7 +76,8 @@
     "moduleNeedsMembers": "Also turns on Accounts (required)",
     "modulesTarget": "Inserting into: {page}",
     "sectionsTab": "Sections",
-    "manageProducts": "Manage products"
+    "manageProducts": "Manage products",
+    "modulesTargetLabel": "Will be added to"
   },
   "paste": {
     "heading": "Paste HTML",
