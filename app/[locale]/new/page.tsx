@@ -401,6 +401,11 @@ function NewV2Inner() {
       setPreviewCollections(null);
       return;
     }
+    // Refetch on every return to the canvas (centerView dep): products added
+    // in the Colecciones panel must show up in the grid without a full
+    // project reload. The identity guard keeps an unchanged list from
+    // re-deriving (and flashing) the iframe.
+    if (centerView !== "page") return;
     let alive = true;
     fetch(`/api/projects/${loadedProject.id}/collections/items`)
       .then((r) => (r.ok ? r.json() : null))
@@ -409,16 +414,19 @@ function NewV2Inner() {
         const items = ((j.items ?? []) as ItemRow[]).filter(
           (it) => it.status === "published",
         );
-        setPreviewCollections({
+        const next = {
           items,
-          layout: j.collection?.layout === "list" ? "list" : "grid",
-        });
+          layout: (j.collection?.layout === "list" ? "list" : "grid") as "grid" | "list",
+        };
+        setPreviewCollections((cur) =>
+          JSON.stringify(cur) === JSON.stringify(next) ? cur : next,
+        );
       })
       .catch(() => {});
     return () => {
       alive = false;
     };
-  }, [loadedProject?.id, collectionsPreviewOn]);
+  }, [loadedProject?.id, collectionsPreviewOn, centerView]);
   const modulesPreviewKey = JSON.stringify([
     loadedProject?.settings?.whatsapp,
     loadedProject?.settings?.assistant?.enabled,
