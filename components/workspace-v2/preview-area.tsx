@@ -151,6 +151,19 @@ interface PreviewAreaProps {
   modulesPreview?: EditorModulesPreviewCfg | null;
 }
 
+// The page scrolls INSIDE the iframe "screen", so it gets its own scrollbar —
+// and Chrome on Windows draws the classic LIGHT one, a white 14px column down
+// a dark page that reads as "the editor added a border" (Jesús, clon de Kiri).
+// A neutral translucent thumb over no track sits quietly on any page bg.
+// Editor-only — stripped on save (strip-editor-instrumentation.ts).
+const CANVAS_SCROLLBAR_STYLE = `<style data-openlen-scheme>:root{scrollbar-color:rgba(128,128,128,.55) transparent}</style>`;
+function injectCanvasScrollbar(html: string): string {
+  if (!html) return html;
+  const idx = html.lastIndexOf("</body>");
+  if (idx === -1) return html + CANVAS_SCROLLBAR_STYLE;
+  return html.slice(0, idx) + CANVAS_SCROLLBAR_STYLE + html.slice(idx);
+}
+
 export function PreviewArea({
   doc,
   previewUrl,
@@ -192,6 +205,7 @@ export function PreviewArea({
   const containerRef = useRef<HTMLDivElement>(null);
   const iframeLocalRef = useRef<HTMLIFrameElement | null>(null);
   const [fitScale, setFitScale] = useState(1);
+  const [availH, setAvailH] = useState(800);
   const [scanBusy, setScanBusy] = useState(false);
 
   // Backdrop behind/around the iframe. The wrapper is a fixed-height "screen"
@@ -240,6 +254,7 @@ export function PreviewArea({
     let html = modulesPreview
       ? injectEditorModulesPreview(rawDoc, modulesPreview)
       : rawDoc;
+    html = injectCanvasScrollbar(html);
     // Replace BEFORE Reorder so Replace's mousemove listener registers
     // first → fires first on each event → sets the `over-image` body
     // attribute before Reorder's listener reads it. Avoids a one-frame
@@ -545,12 +560,18 @@ export function PreviewArea({
         rafId = null;
         const cw = el.clientWidth;
         const ch = el.clientHeight;
-        const availW = cw - 24;
-        const availH = ch - 24;
-        const sW = availW / deviceWidth;
-        const sH = availH / 800;
-        const next = Math.min(1, sW, sH);
+        // Desktop is edge-to-edge (no canvas padding) — the screen IS the
+        // canvas, like the page in a real browser window. Tablet/mobile float
+        // as a framed device, so they keep the padding.
+        const pad = deviceWidth === 1280 ? 0 : 24;
+        const availW = cw - pad;
+        const ah = ch - pad;
+        // Fit = fit WIDTH. Height no longer shrinks the page into a floating
+        // miniature — the viewport height follows the canvas instead (below),
+        // so there is no dead band of canvas under a short window.
+        const next = Math.min(1, availW / deviceWidth);
         setFitScale((prev) => (Math.abs(next - prev) < 0.005 ? prev : next));
+        setAvailH((prev) => (Math.abs(ah - prev) < 2 ? prev : ah));
       });
     };
     compute();
@@ -572,6 +593,13 @@ export function PreviewArea({
           : zoom === "50"
             ? 0.5
             : 1;
+  // The iframe viewport is as tall as the canvas allows at this scale — the
+  // screen always fills the canvas vertically (browser-window model), instead
+  // of a fixed 800px design frame floating over dead canvas.
+  // floor, not round — viewportH*scale must never exceed availH, or the
+  // canvas grows a scrollbar over a sub-pixel and re-enters the resize loop
+  // the ResizeObserver guard above exists for.
+  const viewportH = Math.max(320, Math.floor(availH / scale));
 
   return (
     <section className="relative flex flex-col flex-1 min-w-0 bg-preview-a">
@@ -607,7 +635,7 @@ export function PreviewArea({
         <div className="hidden lg:inline-flex items-center gap-1.5 text-[10.5px] fg-faint tabular ui-small px-1">
           <span className="fg-muted font-medium">{deviceWidth}</span>
           <span>×</span>
-          <span>800</span>
+          <span>{viewportH}</span>
           <span className="fg-faint">·</span>
           <span>{Math.round(scale * 100)}%</span>
         </div>
@@ -722,7 +750,9 @@ export function PreviewArea({
       )}
       <div
         ref={containerRef}
-        className="relative flex-1 overflow-auto nice-scroll p-3 sm:p-4"
+        className={`relative flex-1 overflow-auto nice-scroll ${
+          device === "desktop" ? "" : "p-3 sm:p-4"
+        }`}
         style={declaredBg ? { background: declaredBg } : undefined}
       >
         <div
@@ -730,8 +760,12 @@ export function PreviewArea({
           style={{ width: deviceWidth * scale }}
         >
           <div
-            className="rounded-xl ring-1 ring-[color:var(--border)] overflow-hidden shadow-card relative"
-            style={{ height: 800 * scale, background: pageBg }}
+            className={`overflow-hidden relative ${
+              device === "desktop"
+                ? ""
+                : "rounded-xl ring-1 ring-[color:var(--border)] shadow-card"
+            }`}
+            style={{ height: viewportH * scale, background: pageBg }}
           >
             <iframe
               key={`${previewUrl ?? docKey ?? doc.slice(0, 120)}:${refreshTick}`}
@@ -746,7 +780,7 @@ export function PreviewArea({
               sandbox="allow-scripts allow-same-origin"
               style={{
                 width: deviceWidth,
-                height: 800,
+                height: viewportH,
                 transform: `scale(${scale})`,
                 transformOrigin: "top left",
                 border: 0,
