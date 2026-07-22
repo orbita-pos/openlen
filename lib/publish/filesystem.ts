@@ -24,6 +24,7 @@ import { bakeAssistantWidget } from "@/lib/publish/assistant-widget";
 import { bakeComments } from "@/lib/publish/comments-widget";
 import { bakeBookings } from "@/lib/publish/bookings-widget";
 import { bakeCollections } from "@/lib/publish/collections-block";
+import { stripDisabledModuleBands } from "@/lib/publish/strip-disabled-bands";
 import { applyLiveData } from "@/lib/live";
 import { bakeWhatsAppButton, waHref } from "@/lib/publish/whatsapp-button";
 import { injectOrdersCart } from "@/lib/publish/orders-cart";
@@ -566,6 +567,24 @@ async function bakeDocument(
   } catch (err) {
     // eslint-disable-next-line no-console
     console.warn("[publishToDir] credit consolidation failed; using uncredited HTML", err);
+  }
+
+  // Bands of DISABLED modules never ship: a persisted band whose module is
+  // off has no widget to wire, so the published page showed a heading over
+  // nothing (or a legacy dashed box). Runs BEFORE the module bakes; strips
+  // per-publish output only — data.html keeps the band, so re-enabling the
+  // module restores it on the next publish. Gates mirror the bake gates
+  // (env kill-switch AND settings) so this never disagrees with what bakes.
+  try {
+    migratedHtml = stripDisabledModuleBands(migratedHtml, {
+      bookings: process.env.OPENLEN_BOOKINGS !== "0" && ctx.bookings?.enabled === true,
+      collections: process.env.OPENLEN_COLLECTION !== "0" && ctx.collections?.enabled === true,
+      comments: process.env.OPENLEN_COMMENTS !== "0" && ctx.comments?.enabled === true,
+      chat: process.env.OPENLEN_CHAT !== "0" && ctx.chat?.enabled === true,
+    });
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.warn("[publishToDir] disabled-band strip failed; publishing as-is", err);
   }
 
   // Collections — bake the owner's item list as STATIC HTML. Runs BEFORE the
