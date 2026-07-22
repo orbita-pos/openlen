@@ -8,6 +8,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import type { ReactNode } from "react";
 import { useTranslations } from "next-intl";
 import type {
@@ -36,7 +37,36 @@ import {
   Sparkles,
   Trash,
   Users,
+  X,
 } from "../icons";
+
+// The 8 modules the hub can show — drives which one the drawer has open.
+type ModuleKey =
+  | "members"
+  | "broadcast"
+  | "whatsapp"
+  | "chat"
+  | "bookings"
+  | "collections"
+  | "comments"
+  | "orders";
+
+interface ModuleEntry {
+  key: ModuleKey;
+  icon: ReactNode;
+  title: string;
+  tagline: string;
+  scope: string;
+  on: boolean;
+  busy?: boolean;
+  onToggle: () => void;
+  /** One live-state line shown on the ACTIVE card (mode/number/mount/placement). */
+  status?: string;
+  /** Overrides `tagline` on the AVAILABLE card only (e.g. Broadcast's needsMembers hint). */
+  availableHint?: string;
+  /** Full settings JSX — identical to what used to render inline in ModCard's children. */
+  body: ReactNode;
+}
 
 interface MemberItem {
   id: string;
@@ -211,6 +241,7 @@ export function ModulesPanel({
   const [colInserted, setColInserted] = useState(false);
   const [inserted, setInserted] = useState(false);
   const [autoPageSlug, setAutoPageSlug] = useState<string | null>(null);
+  const [openKey, setOpenKey] = useState<ModuleKey | null>(null);
 
   const activeCount = [
     enabled,
@@ -354,65 +385,89 @@ export function ModulesPanel({
         )}
       </header>
 
-      {/* Módulos del sitio (Cuentas/Broadcast/WhatsApp/Chat) */}
-      <div className="text-[10.5px] uppercase tracking-[0.18em] fg font-semibold ui-small mb-2.5">
-        {tw("modulesHub.siteGroup")}
-      </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 items-start">
-        {/* Cuentas */}
-        <ModCard
-          icon={<Users size={18} />}
-          title={t("module.title")}
-          tagline={t("module.tagline")}
-          scope={tw("modulesHub.scopeSite")}
-          on={enabled}
-          busy={busy}
-          onToggle={() => void setEnabled(!enabled)}
-        >
-          {enabled && (
-            <div className="space-y-2.5">
-              {autoPageSlug && (
-                <p className="rounded-lg bg-emerald-500/10 ring-1 ring-emerald-500/30 px-2.5 py-2 text-[11px] leading-relaxed text-emerald-700 dark:text-emerald-400">
-                  {t("module.accountLive")}
-                </p>
-              )}
-              <Segment
-                value={mode}
-                options={[
-                  { id: "open", label: t("module.mode.open") },
-                  { id: "invite", label: t("module.mode.invite") },
-                ]}
-                disabled={busy}
-                onPick={(v) => void setMode(v as "open" | "invite")}
-              />
-              <p className="text-[11.5px] fg-faint leading-relaxed">
-                {t(`module.mode.${mode}Hint`)}
-              </p>
-              <p className="text-[11.5px] leading-relaxed fg-muted inline-flex items-start gap-1.5">
-                <LockIcon size={12} className="mt-[1px] shrink-0" />
-                <span>
-                  {gatedCount > 0
-                    ? t("module.gatedCount", { count: gatedCount })
-                    : t("module.gatedNone")}
-                </span>
-              </p>
-              <p className="text-[10.5px] fg-faint leading-relaxed">{tw("modulesHub.seePreview")}</p>
-            </div>
-          )}
-        </ModCard>
+      {/* Estado en vivo por módulo — reusado por la tarjeta activa Y el drawer. */}
+      {(() => {
+        const bookingsPlacement =
+          placements && placements.bookings.length > 0
+            ? tw("modulesHub.placedIn", {
+                pages: placements.bookings
+                  .map((s) => (s === "" ? tw("modulesHub.home") : `/${s}`))
+                  .join(", "),
+              })
+            : tw("modulesHub.placedNowhere");
+        const collectionsPlacement =
+          placements && placements.collections.length > 0
+            ? tw("modulesHub.placedIn", {
+                pages: placements.collections
+                  .map((s) => (s === "" ? tw("modulesHub.home") : `/${s}`))
+                  .join(", "),
+              })
+            : tw("modulesHub.placedNowhere");
+        const commentsPlacement =
+          placements && placements.comments.length > 0
+            ? tw("modulesHub.placedIn", {
+                pages: placements.comments
+                  .map((s) => (s === "" ? tw("modulesHub.home") : `/${s}`))
+                  .join(", "),
+              })
+            : tw("modulesHub.placedNowhere");
+        const scopeSiteText = tw("modulesHub.scopeSite");
+        const scopePageText = tw("modulesHub.scopePage");
 
-        {/* Broadcast */}
-        <ModCard
-          icon={<Megaphone size={18} />}
-          title={tb("module.title")}
-          tagline={tb("module.tagline")}
-          scope={tw("modulesHub.scopeSite")}
-          on={broadcastOn}
-          busy={bcastBusy || !enabled}
-          onToggle={() => void setBroadcastEnabled(!broadcastOn)}
-        >
-          {(broadcastOn || !enabled) && (
-            !enabled ? (
+        const modules: ModuleEntry[] = [
+          {
+            key: "members",
+            icon: <Users size={18} />,
+            title: t("module.title"),
+            tagline: t("module.tagline"),
+            scope: scopeSiteText,
+            on: enabled,
+            busy,
+            onToggle: () => void setEnabled(!enabled),
+            status: t(`module.mode.${mode}`),
+            body: (
+              <div className="space-y-2.5">
+                {autoPageSlug && (
+                  <p className="rounded-lg bg-emerald-500/10 ring-1 ring-emerald-500/30 px-2.5 py-2 text-[11px] leading-relaxed text-emerald-700 dark:text-emerald-400">
+                    {t("module.accountLive")}
+                  </p>
+                )}
+                <Segment
+                  value={mode}
+                  options={[
+                    { id: "open", label: t("module.mode.open") },
+                    { id: "invite", label: t("module.mode.invite") },
+                  ]}
+                  disabled={busy}
+                  onPick={(v) => void setMode(v as "open" | "invite")}
+                />
+                <p className="text-[11.5px] fg-faint leading-relaxed">
+                  {t(`module.mode.${mode}Hint`)}
+                </p>
+                <p className="text-[11.5px] leading-relaxed fg-muted inline-flex items-start gap-1.5">
+                  <LockIcon size={12} className="mt-[1px] shrink-0" />
+                  <span>
+                    {gatedCount > 0
+                      ? t("module.gatedCount", { count: gatedCount })
+                      : t("module.gatedNone")}
+                  </span>
+                </p>
+                <p className="text-[10.5px] fg-faint leading-relaxed">{tw("modulesHub.seePreview")}</p>
+              </div>
+            ),
+          },
+          {
+            key: "broadcast",
+            icon: <Megaphone size={18} />,
+            title: tb("module.title"),
+            tagline: tb("module.tagline"),
+            scope: scopeSiteText,
+            on: broadcastOn,
+            busy: bcastBusy || !enabled,
+            onToggle: () => void setBroadcastEnabled(!broadcastOn),
+            status: tb("module.enabledHint"),
+            availableHint: !enabled ? tb("module.needsMembers") : undefined,
+            body: !enabled ? (
               <p className="text-[11.5px] leading-relaxed text-amber-700 dark:text-amber-400">
                 {tb("module.needsMembers")}
               </p>
@@ -424,344 +479,314 @@ export function ModulesPanel({
               >
                 {tb("module.enabledHint")}
               </button>
-            )
-          )}
-        </ModCard>
-
-        {/* WhatsApp */}
-        <ModCard
-          icon={<MessageSq size={18} />}
-          title={tw("whatsapp.title")}
-          tagline={tw("whatsapp.tagline")}
-          scope={tw("modulesHub.scopeSite")}
-          on={whatsappOn}
-          busy={waBusy}
-          onToggle={() => void updateWhatsapp({ enabled: !whatsappOn })}
-        >
-          {whatsappOn && (
-            <div className="space-y-2">
-              <input
-                value={waNumber}
-                onChange={(e) => setWaNumber(e.target.value)}
-                onBlur={commitWhatsapp}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") (e.target as HTMLInputElement).blur();
-                }}
-                inputMode="tel"
-                maxLength={32}
-                placeholder={tw("whatsapp.numberPlaceholder")}
-                className="w-full bg-app ring-1 ring-[color:var(--border)] rounded-lg px-3 h-9 text-[13px] fg outline-none focus:ring-[color:var(--accent)] transition"
-              />
-              <input
-                value={waMessage}
-                onChange={(e) => setWaMessage(e.target.value)}
-                onBlur={commitWhatsapp}
-                maxLength={300}
-                placeholder={tw("whatsapp.messagePlaceholder")}
-                className="w-full bg-app ring-1 ring-[color:var(--border)] rounded-lg px-3 h-9 text-[13px] fg outline-none focus:ring-[color:var(--accent)] transition"
-              />
-              {!waNumber.trim() && (
-                <p className="text-[11px] leading-relaxed text-amber-600 dark:text-amber-500">
-                  {tw("whatsapp.missingNumber")}
-                </p>
-              )}
-              <p className="text-[10.5px] fg-faint leading-relaxed">{tw("whatsapp.note")}</p>
-              {!!whatsappSettings?.number?.trim() && onAddWhatsappSection && (
-                <SurfaceButton
-                  label={tw("moduleSurface.addWhatsappSection")}
-                  onClick={onAddWhatsappSection}
-                />
-              )}
-            </div>
-          )}
-        </ModCard>
-
-        {/* Chat */}
-        <ModCard
-          icon={<ChatIcon size={18} />}
-          title={tw("chat.title")}
-          tagline={tw("chat.tagline")}
-          scope={tw("modulesHub.scopeSite")}
-          on={chatOn}
-          busy={chatBusy}
-          onToggle={() => void updateChat({ enabled: !chatOn })}
-        >
-          {chatOn && (
-            <div className="space-y-2">
-              <Segment
-                value={chatMount}
-                options={[
-                  { id: "fab", label: tw("chat.mount.fab") },
-                  { id: "section", label: tw("chat.mount.section") },
-                  { id: "both", label: tw("chat.mount.both") },
-                ]}
-                disabled={chatBusy}
-                onPick={(v) => void updateChat({ mount: v as "fab" | "section" | "both" })}
-              />
-              <p className="text-[11.5px] fg-faint leading-relaxed">
-                {tw(`chat.mount.${chatMount}Hint`)}
-              </p>
-              <ToggleRow
-                label={tw("chat.selfServeJoin")}
-                hint={tw("chat.selfServeJoinHint")}
-                checked={chatSelfServe}
-                disabled={chatBusy}
-                onChange={(v) => void updateChat({ selfServeJoin: v })}
-              />
-              <ToggleRow
-                label={tw("chat.requireAccount")}
-                hint={tw("chat.requireAccountHint")}
-                checked={chatIdentityMode === "account"}
-                disabled={chatBusy}
-                onChange={(v) => void updateChat({ identityMode: v ? "account" : "guest" })}
-              />
-              <div className="space-y-1">
-                <div className="text-[12px] font-medium fg-muted">{tw("chat.welcome")}</div>
+            ),
+          },
+          {
+            key: "whatsapp",
+            icon: <MessageSq size={18} />,
+            title: tw("whatsapp.title"),
+            tagline: tw("whatsapp.tagline"),
+            scope: scopeSiteText,
+            on: whatsappOn,
+            busy: waBusy,
+            onToggle: () => void updateWhatsapp({ enabled: !whatsappOn }),
+            status: `${waNumber.trim() || tw("whatsapp.missingNumber")} · ${scopeSiteText}`,
+            body: (
+              <div className="space-y-2">
                 <input
-                  value={chatWelcomeLocal}
-                  disabled={chatBusy}
-                  onChange={(e) => setChatWelcomeLocal(e.target.value)}
-                  onBlur={(e) => void updateChat({ welcome: e.target.value })}
-                  onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }}
-                  maxLength={200}
-                  placeholder={tw("chat.welcomePlaceholder")}
-                  className="w-full bg-app ring-1 ring-[color:var(--border)] rounded-lg px-3 h-9 text-[13px] fg outline-none focus:ring-[color:var(--accent)] transition disabled:opacity-50"
-                />
-              </div>
-              <div className="space-y-1">
-                <div className="text-[12px] font-medium fg-muted">{tw("chat.theme")}</div>
-                <Segment
-                  value={chatTheme}
-                  options={[
-                    { id: "light", label: tw("chat.themeLight") },
-                    { id: "dark", label: tw("chat.themeDark") },
-                  ]}
-                  disabled={chatBusy}
-                  onPick={(v) => void updateChat({ theme: v as "light" | "dark" })}
-                />
-              </div>
-              <div className="space-y-1.5">
-                <div className="text-[12px] font-medium fg-muted">{tw("chat.quickReplies")}</div>
-                {chatQRs.map((qr, i) => (
-                  <div key={qr._key} className="flex items-center gap-1.5">
-                    <input
-                      value={qr.q}
-                      onChange={(e) => {
-                        const next = chatQRs.map((r, j) => j === i ? { ...r, q: e.target.value } : r);
-                        setChatQRs(next);
-                      }}
-                      onBlur={() => void updateChat({ quickReplies: chatQRs.map(({ q, a }) => ({ q, a })) })}
-                      placeholder={tw("chat.qrQ")}
-                      maxLength={40}
-                      className="flex-1 min-w-0 bg-app ring-1 ring-[color:var(--border)] rounded-lg px-2.5 h-8 text-[12px] fg outline-none focus:ring-[color:var(--accent)] transition"
-                    />
-                    <input
-                      value={qr.a}
-                      onChange={(e) => {
-                        const next = chatQRs.map((r, j) => j === i ? { ...r, a: e.target.value } : r);
-                        setChatQRs(next);
-                      }}
-                      onBlur={() => void updateChat({ quickReplies: chatQRs.map(({ q, a }) => ({ q, a })) })}
-                      placeholder={tw("chat.qrA")}
-                      maxLength={500}
-                      className="flex-1 min-w-0 bg-app ring-1 ring-[color:var(--border)] rounded-lg px-2.5 h-8 text-[12px] fg outline-none focus:ring-[color:var(--accent)] transition"
-                    />
-                    <button
-                      type="button"
-                      aria-label="Remove"
-                      disabled={chatBusy}
-                      onClick={() => {
-                        const next = chatQRs.filter((_, j) => j !== i);
-                        setChatQRs(next);
-                        void updateChat({ quickReplies: next.map(({ q, a }) => ({ q, a })) });
-                      }}
-                      className="shrink-0 h-8 w-8 inline-flex items-center justify-center rounded-lg fg-faint hover:text-red-500 hover:bg-hover transition disabled:opacity-40"
-                    >
-                      <Trash size={12} />
-                    </button>
-                  </div>
-                ))}
-                <button
-                  type="button"
-                  disabled={chatBusy || chatQRs.length >= 6}
-                  onClick={() => {
-                    if (chatQRs.length >= 6) return;
-                    setChatQRs([...chatQRs, { _key: crypto.randomUUID(), q: "", a: "" }]);
+                  value={waNumber}
+                  onChange={(e) => setWaNumber(e.target.value)}
+                  onBlur={commitWhatsapp}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") (e.target as HTMLInputElement).blur();
                   }}
-                  className="h-7 px-3 rounded-lg text-[12px] font-medium fg-muted hover:fg bg-app ring-1 ring-[color:var(--border)] hover:bg-hover transition disabled:opacity-40"
-                >
-                  + {tw("chat.qrAdd")}
-                </button>
-                <p className="text-[10.5px] fg-faint leading-relaxed">{tw("chat.qrHint")}</p>
-              </div>
-              {currentProjectId && (
-                <AgentsList projectId={currentProjectId} tw={tw} />
-              )}
-              <p className="text-[10.5px] fg-faint leading-relaxed">{tw("modulesHub.seePreview")}</p>
-            </div>
-          )}
-        </ModCard>
-      </div>
-
-      {/* Módulos de contenido (Reservas/Colecciones/Comentarios/Pedidos) */}
-      <div className="text-[10.5px] uppercase tracking-[0.18em] fg font-semibold ui-small mt-6 mb-2.5">
-        {tw("modulesHub.contentGroup")}
-      </div>
-      {onSwitchPage && (
-        <div className="mb-3.5 max-w-xs">
-          <label className="block text-[10px] uppercase tracking-[0.12em] fg-faint font-semibold mb-1">
-            {tw("modulesHub.targetLabel")}
-          </label>
-          <select
-            value={activeSitePage ?? ""}
-            onChange={(e) => onSwitchPage(e.target.value || null)}
-            className="w-full bg-app ring-1 ring-[color:var(--border)] rounded-lg px-2.5 h-8 text-[12px] fg outline-none focus:ring-[color:var(--accent)] transition"
-          >
-            <option value="">{homePageLabel ?? "inicio"}</option>
-            {(sitePages ?? []).map((p) => (
-              <option key={p.slug} value={p.slug}>
-                /{p.slug} — {p.title}
-              </option>
-            ))}
-          </select>
-        </div>
-      )}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 items-start">
-        {/* Reservas */}
-        <ModCard
-          icon={<Calendar size={18} />}
-          title={tbk("module.title")}
-          tagline={tbk("module.tagline")}
-          scope={tw("modulesHub.scopePage")}
-          on={bookingsOn}
-          busy={bkBusy}
-          onToggle={() => void updateBookings({ enabled: !bookingsOn })}
-        >
-          {bookingsOn && (
-            <div className="space-y-2">
-              {enabled && (
-                <ToggleRow
-                  label={tbk("module.requireLogin")}
-                  hint={bookingsRequireLogin ? tbk("module.requireLoginHint") : tbk("module.guestHint")}
-                  checked={bookingsRequireLogin}
-                  disabled={bkBusy}
-                  onChange={(v) => void updateBookings({ requireLogin: v })}
+                  inputMode="tel"
+                  maxLength={32}
+                  placeholder={tw("whatsapp.numberPlaceholder")}
+                  className="w-full bg-app ring-1 ring-[color:var(--border)] rounded-lg px-3 h-9 text-[13px] fg outline-none focus:ring-[color:var(--accent)] transition"
                 />
-              )}
-              <ToggleRow
-                label={tbk("module.autoConfirm")}
-                hint={bookingsAutoConfirm ? tbk("module.autoConfirmHint") : tbk("module.approveHint")}
-                checked={bookingsAutoConfirm}
-                disabled={bkBusy}
-                onChange={(v) => void updateBookings({ autoConfirm: v })}
-              />
-              <ToggleRow
-                label={tbk("module.reminders")}
-                hint={tbk("module.remindersHint")}
-                checked={bookingsReminders}
-                disabled={bkBusy}
-                onChange={(v) => void updateBookings({ sendReminders: v })}
-              />
-              {/* Tema del widget en la página publicada (los VALORES Claro/
-                  Oscuro sí se reusan del chat; la etiqueta es neutra). */}
-              <div className="space-y-1">
-                <div className="text-[12px] font-medium fg-muted">{tw("modulesHub.theme")}</div>
+                <input
+                  value={waMessage}
+                  onChange={(e) => setWaMessage(e.target.value)}
+                  onBlur={commitWhatsapp}
+                  maxLength={300}
+                  placeholder={tw("whatsapp.messagePlaceholder")}
+                  className="w-full bg-app ring-1 ring-[color:var(--border)] rounded-lg px-3 h-9 text-[13px] fg outline-none focus:ring-[color:var(--accent)] transition"
+                />
+                {!waNumber.trim() && (
+                  <p className="text-[11px] leading-relaxed text-amber-600 dark:text-amber-500">
+                    {tw("whatsapp.missingNumber")}
+                  </p>
+                )}
+                <p className="text-[10.5px] fg-faint leading-relaxed">{tw("whatsapp.note")}</p>
+                {!!whatsappSettings?.number?.trim() && onAddWhatsappSection && (
+                  <SurfaceButton
+                    label={tw("moduleSurface.addWhatsappSection")}
+                    onClick={onAddWhatsappSection}
+                  />
+                )}
+              </div>
+            ),
+          },
+          {
+            key: "chat",
+            icon: <ChatIcon size={18} />,
+            title: tw("chat.title"),
+            tagline: tw("chat.tagline"),
+            scope: scopeSiteText,
+            on: chatOn,
+            busy: chatBusy,
+            onToggle: () => void updateChat({ enabled: !chatOn }),
+            status: tw(`chat.mount.${chatMount}`),
+            body: (
+              <div className="space-y-2">
                 <Segment
-                  value={bookingsTheme}
+                  value={chatMount}
                   options={[
-                    { id: "light", label: tw("chat.themeLight") },
-                    { id: "dark", label: tw("chat.themeDark") },
+                    { id: "fab", label: tw("chat.mount.fab") },
+                    { id: "section", label: tw("chat.mount.section") },
+                    { id: "both", label: tw("chat.mount.both") },
                   ]}
-                  disabled={bkBusy}
-                  onPick={(v) => void updateBookings({ theme: v as "light" | "dark" })}
+                  disabled={chatBusy}
+                  onPick={(v) => void updateChat({ mount: v as "fab" | "section" | "both" })}
                 />
+                <p className="text-[11.5px] fg-faint leading-relaxed">
+                  {tw(`chat.mount.${chatMount}Hint`)}
+                </p>
+                <ToggleRow
+                  label={tw("chat.selfServeJoin")}
+                  hint={tw("chat.selfServeJoinHint")}
+                  checked={chatSelfServe}
+                  disabled={chatBusy}
+                  onChange={(v) => void updateChat({ selfServeJoin: v })}
+                />
+                <ToggleRow
+                  label={tw("chat.requireAccount")}
+                  hint={tw("chat.requireAccountHint")}
+                  checked={chatIdentityMode === "account"}
+                  disabled={chatBusy}
+                  onChange={(v) => void updateChat({ identityMode: v ? "account" : "guest" })}
+                />
+                <div className="space-y-1">
+                  <div className="text-[12px] font-medium fg-muted">{tw("chat.welcome")}</div>
+                  <input
+                    value={chatWelcomeLocal}
+                    disabled={chatBusy}
+                    onChange={(e) => setChatWelcomeLocal(e.target.value)}
+                    onBlur={(e) => void updateChat({ welcome: e.target.value })}
+                    onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }}
+                    maxLength={200}
+                    placeholder={tw("chat.welcomePlaceholder")}
+                    className="w-full bg-app ring-1 ring-[color:var(--border)] rounded-lg px-3 h-9 text-[13px] fg outline-none focus:ring-[color:var(--accent)] transition disabled:opacity-50"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <div className="text-[12px] font-medium fg-muted">{tw("chat.theme")}</div>
+                  <Segment
+                    value={chatTheme}
+                    options={[
+                      { id: "light", label: tw("chat.themeLight") },
+                      { id: "dark", label: tw("chat.themeDark") },
+                    ]}
+                    disabled={chatBusy}
+                    onPick={(v) => void updateChat({ theme: v as "light" | "dark" })}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <div className="text-[12px] font-medium fg-muted">{tw("chat.quickReplies")}</div>
+                  {chatQRs.map((qr, i) => (
+                    <div key={qr._key} className="flex items-center gap-1.5">
+                      <input
+                        value={qr.q}
+                        onChange={(e) => {
+                          const next = chatQRs.map((r, j) => j === i ? { ...r, q: e.target.value } : r);
+                          setChatQRs(next);
+                        }}
+                        onBlur={() => void updateChat({ quickReplies: chatQRs.map(({ q, a }) => ({ q, a })) })}
+                        placeholder={tw("chat.qrQ")}
+                        maxLength={40}
+                        className="flex-1 min-w-0 bg-app ring-1 ring-[color:var(--border)] rounded-lg px-2.5 h-8 text-[12px] fg outline-none focus:ring-[color:var(--accent)] transition"
+                      />
+                      <input
+                        value={qr.a}
+                        onChange={(e) => {
+                          const next = chatQRs.map((r, j) => j === i ? { ...r, a: e.target.value } : r);
+                          setChatQRs(next);
+                        }}
+                        onBlur={() => void updateChat({ quickReplies: chatQRs.map(({ q, a }) => ({ q, a })) })}
+                        placeholder={tw("chat.qrA")}
+                        maxLength={500}
+                        className="flex-1 min-w-0 bg-app ring-1 ring-[color:var(--border)] rounded-lg px-2.5 h-8 text-[12px] fg outline-none focus:ring-[color:var(--accent)] transition"
+                      />
+                      <button
+                        type="button"
+                        aria-label="Remove"
+                        disabled={chatBusy}
+                        onClick={() => {
+                          const next = chatQRs.filter((_, j) => j !== i);
+                          setChatQRs(next);
+                          void updateChat({ quickReplies: next.map(({ q, a }) => ({ q, a })) });
+                        }}
+                        className="shrink-0 h-8 w-8 inline-flex items-center justify-center rounded-lg fg-faint hover:text-red-500 hover:bg-hover transition disabled:opacity-40"
+                      >
+                        <Trash size={12} />
+                      </button>
+                    </div>
+                  ))}
+                  <button
+                    type="button"
+                    disabled={chatBusy || chatQRs.length >= 6}
+                    onClick={() => {
+                      if (chatQRs.length >= 6) return;
+                      setChatQRs([...chatQRs, { _key: crypto.randomUUID(), q: "", a: "" }]);
+                    }}
+                    className="h-7 px-3 rounded-lg text-[12px] font-medium fg-muted hover:fg bg-app ring-1 ring-[color:var(--border)] hover:bg-hover transition disabled:opacity-40"
+                  >
+                    + {tw("chat.qrAdd")}
+                  </button>
+                  <p className="text-[10.5px] fg-faint leading-relaxed">{tw("chat.qrHint")}</p>
+                </div>
+                {currentProjectId && (
+                  <AgentsList projectId={currentProjectId} tw={tw} />
+                )}
+                <p className="text-[10.5px] fg-faint leading-relaxed">{tw("modulesHub.seePreview")}</p>
               </div>
-              <CardActions
-                onInsert={onInsertBookingsSection ? () => { onInsertBookingsSection(); setBkInserted(true); } : undefined}
-                insertLabel={tbk("module.insert")}
-                inserted={bkInserted}
-                insertedLabel={tbk("module.inserted")}
-                onManage={onShowBookings}
-                manageLabel={tbk("module.manage")}
-                note={tbk("module.noCharge")}
-              />
-              {onCreateModulePage && (
-                <SurfaceButton
-                  label={tw("moduleSurface.createBookingPage")}
-                  onClick={() => void onCreateModulePage("bookings")}
+            ),
+          },
+          {
+            key: "bookings",
+            icon: <Calendar size={18} />,
+            title: tbk("module.title"),
+            tagline: tbk("module.tagline"),
+            scope: scopePageText,
+            on: bookingsOn,
+            busy: bkBusy,
+            onToggle: () => void updateBookings({ enabled: !bookingsOn }),
+            status: bookingsPlacement,
+            body: (
+              <div className="space-y-2">
+                {enabled && (
+                  <ToggleRow
+                    label={tbk("module.requireLogin")}
+                    hint={bookingsRequireLogin ? tbk("module.requireLoginHint") : tbk("module.guestHint")}
+                    checked={bookingsRequireLogin}
+                    disabled={bkBusy}
+                    onChange={(v) => void updateBookings({ requireLogin: v })}
+                  />
+                )}
+                <ToggleRow
+                  label={tbk("module.autoConfirm")}
+                  hint={bookingsAutoConfirm ? tbk("module.autoConfirmHint") : tbk("module.approveHint")}
+                  checked={bookingsAutoConfirm}
+                  disabled={bkBusy}
+                  onChange={(v) => void updateBookings({ autoConfirm: v })}
                 />
-              )}
-              <p className="text-[10.5px] fg-faint leading-relaxed">
-                {placements && placements.bookings.length > 0
-                  ? tw("modulesHub.placedIn", {
-                      pages: placements.bookings
-                        .map((s) => (s === "" ? tw("modulesHub.home") : `/${s}`))
-                        .join(", "),
-                    })
-                  : tw("modulesHub.placedNowhere")}
-              </p>
-              {onOpenLibrary && (
-                <SurfaceButton label={tw("modulesHub.addToPage")} onClick={onOpenLibrary} />
-              )}
-            </div>
-          )}
-        </ModCard>
-
-        {/* Colecciones */}
-        <ModCard
-          icon={<Grid3 size={18} />}
-          title={tcol("module.title")}
-          tagline={tcol("module.tagline")}
-          scope={tw("modulesHub.scopePage")}
-          on={collectionsOn}
-          busy={colBusy}
-          onToggle={() => void updateCollections({ enabled: !collectionsOn })}
-        >
-          {collectionsOn && (
-            <div className="space-y-2">
-              <CardActions
-                onInsert={onInsertCollectionsSection ? () => { onInsertCollectionsSection(); setColInserted(true); } : undefined}
-                insertLabel={tcol("module.insert")}
-                inserted={colInserted}
-                insertedLabel={tcol("module.inserted")}
-                onManage={onShowCollections}
-                manageLabel={tcol("module.manage")}
-                note={tcol("module.noCharge")}
-              />
-              {onCreateModulePage && (
-                <SurfaceButton
-                  label={tw("moduleSurface.createCatalogPage")}
-                  onClick={() => void onCreateModulePage("collections")}
+                <ToggleRow
+                  label={tbk("module.reminders")}
+                  hint={tbk("module.remindersHint")}
+                  checked={bookingsReminders}
+                  disabled={bkBusy}
+                  onChange={(v) => void updateBookings({ sendReminders: v })}
                 />
-              )}
-              <p className="text-[10.5px] fg-faint leading-relaxed">
-                {placements && placements.collections.length > 0
-                  ? tw("modulesHub.placedIn", {
-                      pages: placements.collections
-                        .map((s) => (s === "" ? tw("modulesHub.home") : `/${s}`))
-                        .join(", "),
-                    })
-                  : tw("modulesHub.placedNowhere")}
-              </p>
-              {onOpenLibrary && (
-                <SurfaceButton label={tw("modulesHub.addToPage")} onClick={onOpenLibrary} />
-              )}
-            </div>
-          )}
-        </ModCard>
-
-        {/* Comentarios */}
-        <ModCard
-          icon={<MessageSq size={18} />}
-          title={tc("module.title")}
-          tagline={tc("module.tagline")}
-          scope={tw("modulesHub.scopePage")}
-          on={commentsOn}
-          busy={cmtBusy || !enabled}
-          onToggle={() => void setCommentsEnabled(!commentsOn)}
-        >
-          {(commentsOn || !enabled) && (
-            !enabled ? (
+                {/* Tema del widget en la página publicada (los VALORES Claro/
+                    Oscuro sí se reusan del chat; la etiqueta es neutra). */}
+                <div className="space-y-1">
+                  <div className="text-[12px] font-medium fg-muted">{tw("modulesHub.theme")}</div>
+                  <Segment
+                    value={bookingsTheme}
+                    options={[
+                      { id: "light", label: tw("chat.themeLight") },
+                      { id: "dark", label: tw("chat.themeDark") },
+                    ]}
+                    disabled={bkBusy}
+                    onPick={(v) => void updateBookings({ theme: v as "light" | "dark" })}
+                  />
+                </div>
+                <CardActions
+                  onInsert={onInsertBookingsSection ? () => { onInsertBookingsSection(); setBkInserted(true); } : undefined}
+                  insertLabel={tbk("module.insert")}
+                  inserted={bkInserted}
+                  insertedLabel={tbk("module.inserted")}
+                  onManage={onShowBookings}
+                  manageLabel={tbk("module.manage")}
+                  note={tbk("module.noCharge")}
+                />
+                {onCreateModulePage && (
+                  <SurfaceButton
+                    label={tw("moduleSurface.createBookingPage")}
+                    onClick={() => void onCreateModulePage("bookings")}
+                  />
+                )}
+                <p className="text-[10.5px] fg-faint leading-relaxed">{bookingsPlacement}</p>
+                {onOpenLibrary && (
+                  <SurfaceButton label={tw("modulesHub.addToPage")} onClick={onOpenLibrary} />
+                )}
+                {onSwitchPage && (
+                  <TargetPageSelector
+                    activeSitePage={activeSitePage}
+                    sitePages={sitePages}
+                    homePageLabel={homePageLabel}
+                    onSwitchPage={onSwitchPage}
+                    label={tw("modulesHub.targetLabel")}
+                  />
+                )}
+              </div>
+            ),
+          },
+          {
+            key: "collections",
+            icon: <Grid3 size={18} />,
+            title: tcol("module.title"),
+            tagline: tcol("module.tagline"),
+            scope: scopePageText,
+            on: collectionsOn,
+            busy: colBusy,
+            onToggle: () => void updateCollections({ enabled: !collectionsOn }),
+            status: collectionsPlacement,
+            body: (
+              <div className="space-y-2">
+                <CardActions
+                  onInsert={onInsertCollectionsSection ? () => { onInsertCollectionsSection(); setColInserted(true); } : undefined}
+                  insertLabel={tcol("module.insert")}
+                  inserted={colInserted}
+                  insertedLabel={tcol("module.inserted")}
+                  onManage={onShowCollections}
+                  manageLabel={tcol("module.manage")}
+                  note={tcol("module.noCharge")}
+                />
+                {onCreateModulePage && (
+                  <SurfaceButton
+                    label={tw("moduleSurface.createCatalogPage")}
+                    onClick={() => void onCreateModulePage("collections")}
+                  />
+                )}
+                <p className="text-[10.5px] fg-faint leading-relaxed">{collectionsPlacement}</p>
+                {onOpenLibrary && (
+                  <SurfaceButton label={tw("modulesHub.addToPage")} onClick={onOpenLibrary} />
+                )}
+                {onSwitchPage && (
+                  <TargetPageSelector
+                    activeSitePage={activeSitePage}
+                    sitePages={sitePages}
+                    homePageLabel={homePageLabel}
+                    onSwitchPage={onSwitchPage}
+                    label={tw("modulesHub.targetLabel")}
+                  />
+                )}
+              </div>
+            ),
+          },
+          {
+            key: "comments",
+            icon: <MessageSq size={18} />,
+            title: tc("module.title"),
+            tagline: tc("module.tagline"),
+            scope: scopePageText,
+            on: commentsOn,
+            busy: cmtBusy || !enabled,
+            onToggle: () => void setCommentsEnabled(!commentsOn),
+            status: commentsPlacement,
+            body: !enabled ? (
               <p className="text-[11.5px] leading-relaxed text-amber-700 dark:text-amber-400">
                 {tc("module.needsMembers")}
               </p>
@@ -800,62 +825,111 @@ export function ModulesPanel({
                   onManage={onShowComments}
                   manageLabel={tc("title")}
                 />
-                <p className="text-[10.5px] fg-faint leading-relaxed">
-                  {placements && placements.comments.length > 0
-                    ? tw("modulesHub.placedIn", {
-                        pages: placements.comments
-                          .map((s) => (s === "" ? tw("modulesHub.home") : `/${s}`))
-                          .join(", "),
-                      })
-                    : tw("modulesHub.placedNowhere")}
-                </p>
+                <p className="text-[10.5px] fg-faint leading-relaxed">{commentsPlacement}</p>
                 {onOpenLibrary && (
                   <SurfaceButton label={tw("modulesHub.addToPage")} onClick={onOpenLibrary} />
                 )}
+                {onSwitchPage && (
+                  <TargetPageSelector
+                    activeSitePage={activeSitePage}
+                    sitePages={sitePages}
+                    homePageLabel={homePageLabel}
+                    onSwitchPage={onSwitchPage}
+                    label={tw("modulesHub.targetLabel")}
+                  />
+                )}
               </div>
-            )
-          )}
-        </ModCard>
+            ),
+          },
+          {
+            key: "orders",
+            icon: <Package size={18} />,
+            title: tw("orders.title"),
+            tagline: tw("orders.tagline"),
+            scope: scopePageText,
+            on: ordersOn,
+            busy: ordBusy,
+            onToggle: () =>
+              void updateOrders({
+                enabled: !ordersOn,
+                ...(!ordersOn && ordNumber.trim() ? { number: ordNumber.trim() } : {}),
+              }),
+            status: `${ordNumber.trim() || tw("orders.numberPlaceholder")} · ${scopePageText}`,
+            body: (
+              <div className="space-y-2">
+                <input
+                  value={ordNumber}
+                  onChange={(e) => setOrdNumber(e.target.value)}
+                  onBlur={commitOrders}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") (e.target as HTMLInputElement).blur();
+                  }}
+                  inputMode="tel"
+                  maxLength={32}
+                  placeholder={tw("orders.numberPlaceholder")}
+                  className="w-full bg-app ring-1 ring-[color:var(--border)] rounded-lg px-3 h-9 text-[13px] fg outline-none focus:ring-[color:var(--accent)] transition"
+                />
+                <p className="text-[10.5px] fg-faint leading-relaxed">{tw("orders.note")}</p>
+                {collectionsSettings?.enabled !== true && (
+                  <p className="text-[10.5px] fg-faint leading-relaxed">
+                    {tw("orders.needsCatalog")}
+                  </p>
+                )}
+              </div>
+            ),
+          },
+        ];
 
-        {/* Pedidos por WhatsApp */}
-        <ModCard
-          icon={<Package size={18} />}
-          title={tw("orders.title")}
-          tagline={tw("orders.tagline")}
-          scope={tw("modulesHub.scopePage")}
-          on={ordersOn}
-          busy={ordBusy}
-          onToggle={() =>
-            void updateOrders({
-              enabled: !ordersOn,
-              ...(!ordersOn && ordNumber.trim() ? { number: ordNumber.trim() } : {}),
-            })
-          }
-        >
-          {ordersOn && (
-            <div className="space-y-2">
-              <input
-                value={ordNumber}
-                onChange={(e) => setOrdNumber(e.target.value)}
-                onBlur={commitOrders}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") (e.target as HTMLInputElement).blur();
-                }}
-                inputMode="tel"
-                maxLength={32}
-                placeholder={tw("orders.numberPlaceholder")}
-                className="w-full bg-app ring-1 ring-[color:var(--border)] rounded-lg px-3 h-9 text-[13px] fg outline-none focus:ring-[color:var(--accent)] transition"
-              />
-              <p className="text-[10.5px] fg-faint leading-relaxed">{tw("orders.note")}</p>
-              {collectionsSettings?.enabled !== true && (
-                <p className="text-[10.5px] fg-faint leading-relaxed">
-                  {tw("orders.needsCatalog")}
-                </p>
-              )}
-            </div>
-          )}
-        </ModCard>
-      </div>
+        const activeModules = modules.filter((m) => m.on);
+        const availableModules = modules.filter((m) => !m.on);
+        const openModule = modules.find((m) => m.key === openKey) ?? null;
+
+        return (
+          <>
+            {activeModules.length > 0 && (
+              <>
+                <div className="text-[10.5px] uppercase tracking-[0.18em] fg font-semibold ui-small mb-2.5">
+                  {tw("modulesHub.activeGroup")}
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 items-start">
+                  {activeModules.map((m) => (
+                    <ActiveModuleCard
+                      key={m.key}
+                      mod={m}
+                      openLabel={tw("modulesHub.open")}
+                      onOpen={() => setOpenKey(m.key)}
+                    />
+                  ))}
+                </div>
+              </>
+            )}
+
+            {availableModules.length > 0 && (
+              <>
+                <div className={`text-[10.5px] uppercase tracking-[0.18em] fg font-semibold ui-small mb-2.5 ${activeModules.length > 0 ? "mt-6" : ""}`}>
+                  {tw("modulesHub.availableGroup")}
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 items-start">
+                  {availableModules.map((m) => (
+                    <AvailableModuleCard
+                      key={m.key}
+                      mod={m}
+                      activateLabel={tw("modulesHub.activate")}
+                      onOpen={() => setOpenKey(m.key)}
+                    />
+                  ))}
+                </div>
+              </>
+            )}
+
+            <ModuleDrawer
+              module={openModule}
+              onClose={() => setOpenKey(null)}
+              closeLabel={tw("modulesHub.drawerClose")}
+            />
+          </>
+        );
+      })()}
 
       {/* Members section — the live list, full width. */}
       {enabled && (
@@ -879,56 +953,224 @@ export function ModulesPanel({
   );
 }
 
-// A module tile: icon, title, tagline, toggle. When `on`, the children
-// (settings / actions) render under a hairline divider. Active tiles get an
-// accent ring so the page reads at a glance.
-function ModCard({
-  icon,
-  title,
-  tagline,
-  scope,
-  on,
-  busy,
-  onToggle,
-  children,
+// ACTIVE-group card — icon tile, name, one live status line, scope tag
+// top-right, "Abrir ›" footer. The whole card is one button: clicking
+// anywhere opens the drawer (no separate hit target to keep track of).
+function ActiveModuleCard({
+  mod,
+  onOpen,
+  openLabel,
 }: {
-  icon: ReactNode;
-  title: string;
-  tagline: string;
-  /** "Whole site" / "Per page" chip next to the title (Task 6). */
-  scope?: string;
-  on: boolean;
-  busy?: boolean;
-  onToggle: () => void;
-  children?: ReactNode;
+  mod: ModuleEntry;
+  onOpen: () => void;
+  openLabel: string;
 }) {
   return (
-    <div
-      className={`rounded-2xl bg-elev shadow-card p-[18px] ring-1 transition duration-150 hover:-translate-y-0.5 hover:shadow-elev ${
-        on
-          ? "ring-[color:color-mix(in_oklch,var(--accent)_45%,var(--border))]"
-          : "ring-[color:var(--border)]"
-      }`}
+    <button
+      type="button"
+      onClick={onOpen}
+      className="group text-left w-full rounded-2xl bg-elev shadow-card p-[18px] ring-1 ring-[color:var(--accent)]/40 transition duration-150 hover:-translate-y-0.5 hover:shadow-elev hover:ring-[color:var(--accent)]/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)]"
     >
-      <div className="flex items-start gap-3">
-        <span className="h-10 w-10 shrink-0 grid place-items-center rounded-xl bg-accent-soft text-accent">
-          {icon}
-        </span>
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-1.5">
-            <div className="text-[15px] font-semibold fg leading-tight tracking-[-0.01em] truncate">{title}</div>
-            {scope && (
-              <span className="ml-auto shrink-0 text-[8.5px] uppercase tracking-[0.12em] px-1 py-0.5 rounded fg-faint bg-hover font-semibold">
-                {scope}
-              </span>
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex items-start gap-3 min-w-0">
+          <span className="h-10 w-10 shrink-0 grid place-items-center rounded-xl bg-accent-soft text-accent">
+            {mod.icon}
+          </span>
+          <div className="min-w-0">
+            <div className="text-[14px] font-semibold fg leading-tight tracking-[-0.01em] truncate">{mod.title}</div>
+            {mod.status && (
+              <div className="text-[11.5px] fg-muted leading-snug mt-1 truncate">{mod.status}</div>
             )}
           </div>
-          <div className="text-[12.5px] fg-muted leading-snug mt-1">{tagline}</div>
         </div>
-        <Switch on={on} disabled={busy} label={title} onClick={onToggle} />
+        <span className="shrink-0 text-[8.5px] uppercase tracking-[0.12em] px-1 py-0.5 rounded fg-faint bg-hover font-semibold">
+          {mod.scope}
+        </span>
       </div>
-      {children && <div className="mt-3.5 pt-3.5 border-t bd">{children}</div>}
+      <div className="mt-3 flex justify-end">
+        <span className="text-[11px] fg-muted group-hover:fg transition">{openLabel} ›</span>
+      </div>
+    </button>
+  );
+}
+
+// AVAILABLE-group card — same skeleton, muted tile, tagline (or a special
+// hint, e.g. Broadcast's "turn on Accounts first"), primary "Activar" pill.
+// Clicking anywhere (card or the pill) opens the drawer without toggling the
+// module — flipping it on happens from inside the drawer.
+function AvailableModuleCard({
+  mod,
+  onOpen,
+  activateLabel,
+}: {
+  mod: ModuleEntry;
+  onOpen: () => void;
+  activateLabel: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onOpen}
+      className="group text-left w-full rounded-2xl bg-elev shadow-card p-[18px] ring-1 ring-[color:var(--border)] transition duration-150 hover:-translate-y-0.5 hover:shadow-elev focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)]"
+    >
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex items-start gap-3 min-w-0">
+          <span className="h-10 w-10 shrink-0 grid place-items-center rounded-xl bg-hover fg-muted">
+            {mod.icon}
+          </span>
+          <div className="min-w-0">
+            <div className="text-[14px] font-semibold fg leading-tight tracking-[-0.01em] truncate">{mod.title}</div>
+            <div className="text-[11.5px] fg-muted leading-snug mt-1 truncate">
+              {mod.availableHint ?? mod.tagline}
+            </div>
+          </div>
+        </div>
+        <span className="shrink-0 text-[8.5px] uppercase tracking-[0.12em] px-1 py-0.5 rounded fg-faint bg-hover font-semibold">
+          {mod.scope}
+        </span>
+      </div>
+      <div className="mt-3 flex justify-end">
+        <span className="h-7 px-3 inline-flex items-center justify-center rounded-md text-[11.5px] font-medium text-white bg-[var(--accent-strong)] group-hover:brightness-105 transition">
+          {activateLabel}
+        </span>
+      </div>
+    </button>
+  );
+}
+
+// The "Se agregará a" page-target selector — was one shared block above the
+// old Content grid; now duplicated into each content module's drawer body
+// (bookings/collections/comments) since the drawer only shows one module at
+// a time. Same onSwitchPage/activeSitePage props, no logic change.
+function TargetPageSelector({
+  activeSitePage,
+  sitePages,
+  homePageLabel,
+  onSwitchPage,
+  label,
+}: {
+  activeSitePage?: string | null;
+  sitePages?: { slug: string; title: string }[];
+  homePageLabel?: string;
+  onSwitchPage: (slug: string | null) => void;
+  label: string;
+}) {
+  return (
+    <div>
+      <label className="block text-[10px] uppercase tracking-[0.12em] fg-faint font-semibold mb-1">
+        {label}
+      </label>
+      <select
+        value={activeSitePage ?? ""}
+        onChange={(e) => onSwitchPage(e.target.value || null)}
+        className="w-full bg-app ring-1 ring-[color:var(--border)] rounded-lg px-2.5 h-8 text-[12px] fg outline-none focus:ring-[color:var(--accent)] transition"
+      >
+        <option value="">{homePageLabel ?? "inicio"}</option>
+        {(sitePages ?? []).map((p) => (
+          <option key={p.slug} value={p.slug}>
+            /{p.slug} — {p.title}
+          </option>
+        ))}
+      </select>
     </div>
+  );
+}
+
+// The right-side config drawer — one module at a time. Header carries the
+// icon tile, name, scope tag, the module's own enable Switch, and a close
+// X; body is the full settings JSX moved verbatim from the old inline
+// ModCard children. `content` remembers the last non-null module so the
+// sheet keeps showing it while sliding out (avoids a blank flash on close).
+//
+// Portaled to the `.workspace-v2` root: the workspace shell locks
+// `body { overflow: hidden; height: 100dvh }` (app/globals.css) so the
+// layout never collapses — but that traps this drawer's `position: fixed`
+// stacking BELOW the TopBar's own `relative z-30` header instead of above
+// it, even at z-50. Rendering as a sibling of the header (still inside
+// `.workspace-v2` so the scoped design tokens/utility classes keep
+// resolving) sidesteps the nested stacking context entirely.
+function ModuleDrawer({
+  module,
+  onClose,
+  closeLabel,
+}: {
+  module: ModuleEntry | null;
+  onClose: () => void;
+  closeLabel: string;
+}) {
+  const [content, setContent] = useState<ModuleEntry | null>(null);
+  useEffect(() => {
+    if (module) setContent(module);
+  }, [module]);
+
+  useEffect(() => {
+    if (!module) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [module, onClose]);
+
+  const [portalRoot, setPortalRoot] = useState<HTMLElement | null>(null);
+  useEffect(() => {
+    setPortalRoot(document.querySelector<HTMLElement>(".workspace-v2") ?? document.body);
+  }, []);
+
+  const isOpen = !!module;
+
+  if (!portalRoot) return null;
+
+  return createPortal(
+    <>
+      <div
+        aria-hidden="true"
+        onClick={onClose}
+        className={`fixed inset-0 z-40 bg-black/40 transition-opacity duration-200 motion-reduce:transition-none ${
+          isOpen ? "opacity-100" : "opacity-0 pointer-events-none"
+        }`}
+      />
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-hidden={!isOpen}
+        className={`fixed right-0 top-0 z-50 h-full w-[400px] max-w-[92vw] bg-app border-l bd shadow-2xl overflow-y-auto nice-scroll transition-transform duration-200 motion-reduce:transition-none ${
+          isOpen ? "translate-x-0" : "translate-x-full"
+        }`}
+      >
+        {content && (
+          <div className="p-5">
+            <div className="flex items-start gap-3">
+              <span className="h-10 w-10 shrink-0 grid place-items-center rounded-xl bg-accent-soft text-accent">
+                {content.icon}
+              </span>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-1.5">
+                  <div className="text-[16px] font-semibold fg leading-tight tracking-[-0.01em] truncate">
+                    {content.title}
+                  </div>
+                  <span className="ml-auto shrink-0 text-[8.5px] uppercase tracking-[0.12em] px-1 py-0.5 rounded fg-faint bg-hover font-semibold">
+                    {content.scope}
+                  </span>
+                </div>
+                <div className="text-[12.5px] fg-muted leading-snug mt-1">{content.tagline}</div>
+              </div>
+              <Switch on={content.on} disabled={content.busy} label={content.title} onClick={content.onToggle} />
+              <button
+                type="button"
+                aria-label={closeLabel}
+                onClick={onClose}
+                className="shrink-0 -mt-0.5 -mr-1 h-7 w-7 inline-flex items-center justify-center rounded-lg fg-faint hover:fg hover:bg-hover transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)]"
+              >
+                <X size={14} />
+              </button>
+            </div>
+            <div className="mt-4">{content.body}</div>
+          </div>
+        )}
+      </div>
+    </>,
+    portalRoot,
   );
 }
 
@@ -999,15 +1241,22 @@ function Segment({
 function SurfaceButton({
   label,
   onClick,
+  primary = false,
 }: {
   label: string;
   onClick: () => void;
+  /** One accent CTA per drawer — everything else stays quiet. */
+  primary?: boolean;
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
-      className="w-full inline-flex items-center justify-center h-8 rounded-lg text-[12px] font-medium text-white bg-[var(--accent-strong)] hover:brightness-105 transition"
+      className={`w-full inline-flex items-center justify-center h-8 rounded-lg text-[12px] font-medium transition ${
+        primary
+          ? "text-white bg-[var(--accent-strong)] hover:brightness-105"
+          : "fg bg-hover hover:bg-app ring-1 ring-[color:var(--border)]"
+      }`}
     >
       {label}
     </button>

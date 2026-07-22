@@ -253,6 +253,11 @@
     "seePreview": "在预览中查看",
     "theme": "主题",
     "targetLabel": "将添加到",
-    "siteLabel": "网站"
+    "siteLabel": "网站",
+    "activeGroup": "已启用",
+    "availableGroup": "可用",
+    "open": "打开",
+    "activate": "开启",
+    "drawerClose": "关闭"
   }
 }

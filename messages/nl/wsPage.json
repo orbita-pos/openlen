@@ -253,6 +253,11 @@
     "seePreview": "Bekijk het in de voorbeeldweergave",
     "theme": "Thema",
     "targetLabel": "Wordt toegevoegd aan",
-    "siteLabel": "Site"
+    "siteLabel": "Site",
+    "activeGroup": "Actief",
+    "availableGroup": "Beschikbaar",
+    "open": "Openen",
+    "activate": "Inschakelen",
+    "drawerClose": "Sluiten"
   }
 }

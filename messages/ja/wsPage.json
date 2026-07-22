@@ -253,6 +253,11 @@
     "seePreview": "プレビューで確認",
     "theme": "テーマ",
     "targetLabel": "追加先",
-    "siteLabel": "サイト"
+    "siteLabel": "サイト",
+    "activeGroup": "有効",
+    "availableGroup": "利用可能",
+    "open": "開く",
+    "activate": "オンにする",
+    "drawerClose": "閉じる"
   }
 }

@@ -253,6 +253,11 @@
     "seePreview": "In der Vorschau ansehen",
     "theme": "Thema",
     "targetLabel": "Wird hinzugefügt zu",
-    "siteLabel": "Website"
+    "siteLabel": "Website",
+    "activeGroup": "Aktiv",
+    "availableGroup": "Verfügbar",
+    "open": "Öffnen",
+    "activate": "Aktivieren",
+    "drawerClose": "Schließen"
   }
 }

@@ -253,6 +253,11 @@
     "seePreview": "미리보기에서 확인",
     "theme": "테마",
     "targetLabel": "추가 위치",
-    "siteLabel": "사이트"
+    "siteLabel": "사이트",
+    "activeGroup": "활성",
+    "availableGroup": "사용 가능",
+    "open": "열기",
+    "activate": "켜기",
+    "drawerClose": "닫기"
   }
 }

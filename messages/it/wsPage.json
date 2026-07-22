@@ -253,6 +253,11 @@
     "seePreview": "Guardalo nell’anteprima",
     "theme": "Tema",
     "targetLabel": "Verrà aggiunto a",
-    "siteLabel": "Sito"
+    "siteLabel": "Sito",
+    "activeGroup": "Attivi",
+    "availableGroup": "Disponibili",
+    "open": "Apri",
+    "activate": "Attiva",
+    "drawerClose": "Chiudi"
   }
 }
