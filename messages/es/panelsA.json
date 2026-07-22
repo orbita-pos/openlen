@@ -75,7 +75,8 @@
     "moduleAlreadyHere": "Ya está en esta página",
     "moduleNeedsMembers": "Enciende Cuentas también (requisito)",
     "modulesTarget": "Insertando en: {page}",
-    "sectionsTab": "Secciones"
+    "sectionsTab": "Secciones",
+    "manageProducts": "Administrar productos"
   },
   "paste": {
     "heading": "Pegar HTML",

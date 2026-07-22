@@ -9,7 +9,7 @@
 
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import type {
   BookingsSettings,
@@ -70,11 +70,21 @@ export interface ModulesViewProps {
   placements?: Record<PlacedModule, string[]>;
   /** Jump to the Library so the user can drop a module section onto another page. */
   onOpenLibrary?: () => void;
+  /** Bump to land directly on the Colecciones sub-panel (the "Administrar
+   *  productos" deep-link from the Library's Catálogo card). */
+  focusCollectionsNonce?: number;
 }
 
 export function ModulesView(props: ModulesViewProps) {
   const t = useTranslations("members");
   const [sub, setSub] = useState<Sub>("hub");
+  const lastCollectionsFocus = useRef(props.focusCollectionsNonce ?? 0);
+  useEffect(() => {
+    if ((props.focusCollectionsNonce ?? 0) !== lastCollectionsFocus.current) {
+      lastCollectionsFocus.current = props.focusCollectionsNonce ?? 0;
+      setSub("collections");
+    }
+  }, [props.focusCollectionsNonce]);
 
   // Insert into the page, then drop the user back on the canvas to see it.
   const afterInsert = (fn?: () => void) => {

@@ -42,6 +42,9 @@ interface SectionsPanelProps {
   activePageLabel?: string;
   /** Bump to switch the panel to the Módulos view (hub deep-link). */
   focusModulesNonce?: number;
+  /** Open the Colecciones manager (add/edit products) — the answer to
+   *  "¿y de dónde salen los productos?" is one click away, never a hunt. */
+  onManageCollections?: () => void;
 }
 
 const MODULE_ICON: Record<ContentModule, (p: { size?: number }) => ReactNode> = {
@@ -53,9 +56,11 @@ const MODULE_ICON: Record<ContentModule, (p: { size?: number }) => ReactNode> = 
 function ModuleCard({
   card,
   onAddModule,
+  onManageCollections,
 }: {
   card: ModuleCardState;
   onAddModule: (module: ContentModule, destination: ModuleDestination) => void;
+  onManageCollections?: () => void;
 }) {
   const t = useTranslations("panelsA");
   const key = card.module === "collections" ? "Catalog" : card.module === "bookings" ? "Bookings" : "Comments";
@@ -99,6 +104,15 @@ function ModuleCard({
       )}
       {card.needsMembers && !card.alreadyOnPage && (
         <p className="mt-1.5 text-[10px] fg-faint leading-snug">{t("sections.moduleNeedsMembers")}</p>
+      )}
+      {card.module === "collections" && card.enabled && onManageCollections && (
+        <button
+          type="button"
+          onClick={onManageCollections}
+          className="mt-1.5 w-full inline-flex items-center justify-center text-[11px] font-medium h-7 rounded-md fg-muted bg-hover hover:fg transition"
+        >
+          {t("sections.manageProducts")}
+        </button>
       )}
     </div>
   );
@@ -168,6 +182,7 @@ export function SectionsPanel({
   onAddModule,
   activePageLabel,
   focusModulesNonce,
+  onManageCollections,
 }: SectionsPanelProps) {
   const t = useTranslations("panelsA");
   const ts = useTranslations("sections");
@@ -234,7 +249,12 @@ export function SectionsPanel({
           )}
           <div className="grid grid-cols-1 gap-2">
             {moduleCards.map((card) => (
-              <ModuleCard key={card.module} card={card} onAddModule={onAddModule} />
+              <ModuleCard
+                key={card.module}
+                card={card}
+                onAddModule={onAddModule}
+                onManageCollections={onManageCollections}
+              />
             ))}
           </div>
         </section>

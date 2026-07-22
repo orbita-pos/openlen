@@ -75,7 +75,8 @@
     "moduleAlreadyHere": "Al op deze pagina",
     "moduleNeedsMembers": "Schakelt ook Accounts in (vereist)",
     "modulesTarget": "Invoegen in: {page}",
-    "sectionsTab": "Secties"
+    "sectionsTab": "Secties",
+    "manageProducts": "Producten beheren"
   },
   "paste": {
     "heading": "HTML plakken",

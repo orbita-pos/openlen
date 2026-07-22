@@ -71,7 +71,8 @@
     "moduleAlreadyHere": "Já está nesta página",
     "moduleNeedsMembers": "Também ativa Contas (obrigatório)",
     "modulesTarget": "Inserindo em: {page}",
-    "sectionsTab": "Seções"
+    "sectionsTab": "Seções",
+    "manageProducts": "Gerenciar produtos"
   },
   "paste": {
     "heading": "Colar HTML",

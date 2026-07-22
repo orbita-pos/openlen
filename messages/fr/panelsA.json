@@ -71,7 +71,8 @@
     "moduleAlreadyHere": "Déjà sur cette page",
     "moduleNeedsMembers": "Les Comptes s’activent aussi (requis)",
     "modulesTarget": "Insertion dans : {page}",
-    "sectionsTab": "Sections"
+    "sectionsTab": "Sections",
+    "manageProducts": "Gérer les produits"
   },
   "paste": {
     "heading": "Coller du HTML",

@@ -307,6 +307,9 @@ function NewV2Inner() {
   const [projectName, setProjectName] = useState(t("defaultProjectName"));
   // Hub deep-link: bump to land the Library on its Módulos view.
   const [libraryModulesFocus, setLibraryModulesFocus] = useState(0);
+  // Library deep-link: bump to land the hub on its Colecciones sub-panel
+  // ("Administrar productos" — where the user adds their own products).
+  const [hubCollectionsFocus, setHubCollectionsFocus] = useState(0);
   const [mode, setMode] = useState<SidebarMode>(
     entryMode === "template" || entryMode === "ai" ? "templates" : "chat",
   );
@@ -3510,6 +3513,10 @@ function NewV2Inner() {
           onAddModule={(m, d) => void addModuleFromLibrary(m, d)}
           activePageLabel={activeSitePage ? `/${activeSitePage}` : t("modulesHub.home")}
           focusModulesNonce={libraryModulesFocus}
+          onManageCollections={() => {
+            setCenterView("modulos");
+            setHubCollectionsFocus((n) => n + 1);
+          }}
         />
         {/* One <main> landmark for the workspace center. `contents` keeps the
             flex layout byte-identical (generates no box) while giving the a11y
@@ -3580,6 +3587,7 @@ function NewV2Inner() {
               setMode("library");
               setLibraryModulesFocus((n) => n + 1);
             }}
+            focusCollectionsNonce={hubCollectionsFocus}
           />
         ) : centerView === "marketing" ? (
           <MarketingView

@@ -71,7 +71,8 @@
     "moduleAlreadyHere": "Bereits auf dieser Seite",
     "moduleNeedsMembers": "Schaltet auch Konten ein (erforderlich)",
     "modulesTarget": "Einfügen in: {page}",
-    "sectionsTab": "Abschnitte"
+    "sectionsTab": "Abschnitte",
+    "manageProducts": "Produkte verwalten"
   },
   "paste": {
     "heading": "HTML einfügen",

@@ -71,7 +71,8 @@
     "moduleAlreadyHere": "Già in questa pagina",
     "moduleNeedsMembers": "Si attiva anche Account (obbligatorio)",
     "modulesTarget": "Inserimento in: {page}",
-    "sectionsTab": "Sezioni"
+    "sectionsTab": "Sezioni",
+    "manageProducts": "Gestisci i prodotti"
   },
   "paste": {
     "heading": "Incolla HTML",

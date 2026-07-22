@@ -71,7 +71,8 @@
     "moduleAlreadyHere": "すでにこのページにあります",
     "moduleNeedsMembers": "アカウントも有効になります（必須）",
     "modulesTarget": "挿入先: {page}",
-    "sectionsTab": "セクション"
+    "sectionsTab": "セクション",
+    "manageProducts": "商品を管理"
   },
   "paste": {
     "heading": "HTMLを貼り付け",

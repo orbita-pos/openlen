@@ -75,7 +75,8 @@
     "moduleAlreadyHere": "Already on this page",
     "moduleNeedsMembers": "Also turns on Accounts (required)",
     "modulesTarget": "Inserting into: {page}",
-    "sectionsTab": "Sections"
+    "sectionsTab": "Sections",
+    "manageProducts": "Manage products"
   },
   "paste": {
     "heading": "Paste HTML",
