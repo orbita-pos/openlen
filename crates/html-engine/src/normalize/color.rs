@@ -39,6 +39,10 @@ static ROOT_DECL_RE: Lazy<Regex> =
 static HEX_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"(?i)^#([0-9a-f]{3}|[0-9a-f]{6})$").unwrap());
 static RGB_RE: Lazy<Regex> =
     Lazy::new(|| Regex::new(r"(?i)^rgba?\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})").unwrap());
+static RGBA_ALPHA_RE: Lazy<Regex> = Lazy::new(|| {
+    Regex::new(r"(?i)^rgba\(\s*\d{1,3}\s*,\s*\d{1,3}\s*,\s*\d{1,3}\s*,\s*([0-9]*\.?[0-9]+)\s*\)$")
+        .unwrap()
+});
 static BODY_BLOCK_RE: Lazy<Regex> =
     Lazy::new(|| Regex::new(r"(?is)(?:^|[\s,{}>])(body\s*\{[^}]*\})").unwrap());
 static BG_DECL_RE: Lazy<Regex> =
@@ -48,6 +52,16 @@ static HEAD_CLOSE_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"(?i)</head>").unwr
 
 fn to_hex(value: &str) -> Option<String> {
     let v = value.trim();
+    // A translucent color keeps its alpha verbatim — hexifying
+    // rgba(255,255,255,0.06) flattens a 6% hairline into a solid white line
+    // on every dark clone (bug Kiri, 2026-07-22). Opaque rgba (alpha = 1)
+    // still canonicalizes to hex below.
+    if let Some(caps) = RGBA_ALPHA_RE.captures(v) {
+        let alpha = caps[1].parse::<f32>().unwrap_or(1.0);
+        if alpha < 1.0 {
+            return Some(v.to_string());
+        }
+    }
     if let Some(caps) = HEX_RE.captures(v) {
         let h = caps.get(1).unwrap().as_str();
         let expanded = if h.len() == 3 {

@@ -121,3 +121,32 @@ fn body_fallback_skips_border_color() {
     // border-color stays intact.
     assert!(out.contains("border-color:#abcdef"));
 }
+
+#[test]
+fn translucent_border_token_keeps_alpha() {
+    // Kiri bug (Jesús, 2026-07-22): a template hairline like
+    // rgba(255,255,255,0.06) must reach --ol-border WITH its alpha —
+    // hexifying it flattens a 6% hair into a solid white line on every
+    // dark clone.
+    let html = "<head><style>:root{--bg:#000000;--hairline: rgba(255,255,255,0.06);}</style></head><body></body>";
+    let out = normalize_color(html);
+    assert!(
+        out.contains("--hairline: var(--ol-border)"),
+        "hairline should be bound: {out}"
+    );
+    assert!(
+        out.contains("--ol-border:rgba(255,255,255,0.06);"),
+        "token must keep its alpha: {out}"
+    );
+    assert!(
+        !out.contains("--ol-border:#ffffff"),
+        "must not flatten to solid white: {out}"
+    );
+}
+
+#[test]
+fn opaque_rgba_still_canonicalizes_to_hex() {
+    let html = "<head><style>:root{--border: rgba(20,20,20,1);}</style></head><body></body>";
+    let out = normalize_color(html);
+    assert!(out.contains("--ol-border:#141414;"), "alpha=1 hexes: {out}");
+}
