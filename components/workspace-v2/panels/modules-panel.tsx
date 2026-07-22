@@ -97,6 +97,12 @@ interface ModulesPanelProps {
   placements?: Record<PlacedModule, string[]>;
   /** Jump to the Library so the user can drop a module section onto another page. */
   onOpenLibrary?: () => void;
+  /** Destination-page selector for the content group — the hub hides the
+   *  canvas, so "a esta página" is invisible without naming it here. */
+  sitePages?: { slug: string; title: string }[];
+  activeSitePage?: string | null;
+  onSwitchPage?: (slug: string | null) => void;
+  homePageLabel?: string;
 }
 
 export function ModulesPanel({
@@ -132,6 +138,10 @@ export function ModulesPanel({
   onShowAssistant,
   placements,
   onOpenLibrary,
+  sitePages,
+  activeSitePage,
+  onSwitchPage,
+  homePageLabel,
 }: ModulesPanelProps) {
   const t = useTranslations("members");
   const tb = useTranslations("broadcast");
@@ -576,6 +586,25 @@ export function ModulesPanel({
       <div className="text-[10.5px] uppercase tracking-[0.18em] fg font-semibold ui-small mt-6 mb-2.5">
         {tw("modulesHub.contentGroup")}
       </div>
+      {onSwitchPage && (
+        <div className="mb-3.5 max-w-xs">
+          <label className="block text-[10px] uppercase tracking-[0.12em] fg-faint font-semibold mb-1">
+            {tw("modulesHub.targetLabel")}
+          </label>
+          <select
+            value={activeSitePage ?? ""}
+            onChange={(e) => onSwitchPage(e.target.value || null)}
+            className="w-full bg-app ring-1 ring-[color:var(--border)] rounded-lg px-2.5 h-8 text-[12px] fg outline-none focus:ring-[color:var(--accent)] transition"
+          >
+            <option value="">{homePageLabel ?? "inicio"}</option>
+            {(sitePages ?? []).map((p) => (
+              <option key={p.slug} value={p.slug}>
+                /{p.slug} — {p.title}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 items-start">
         {/* Reservas */}
         <ModCard

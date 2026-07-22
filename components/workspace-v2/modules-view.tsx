@@ -75,6 +75,10 @@ export interface ModulesViewProps {
    *  misfires when the view mounts AFTER the click (needed two clicks). */
   initialSub?: "collections" | null;
   onInitialSubConsumed?: () => void;
+  sitePages?: { slug: string; title: string }[];
+  activeSitePage?: string | null;
+  onSwitchPage?: (slug: string | null) => void;
+  homePageLabel?: string;
 }
 
 export function ModulesView(props: ModulesViewProps) {
@@ -135,6 +139,10 @@ export function ModulesView(props: ModulesViewProps) {
               onShowAssistant={() => setSub("assistant")}
               placements={props.placements}
               onOpenLibrary={props.onOpenLibrary}
+              sitePages={props.sitePages}
+              activeSitePage={props.activeSitePage}
+              onSwitchPage={props.onSwitchPage}
+              homePageLabel={props.homePageLabel}
             />
           </div>
         </div>

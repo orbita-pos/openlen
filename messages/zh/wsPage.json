@@ -251,6 +251,7 @@
     "addToPage": "添加到页面",
     "home": "首页",
     "seePreview": "在预览中查看",
-    "theme": "主题"
+    "theme": "主题",
+    "targetLabel": "将添加到"
   }
 }

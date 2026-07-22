@@ -251,6 +251,7 @@
     "addToPage": "페이지에 추가",
     "home": "홈",
     "seePreview": "미리보기에서 확인",
-    "theme": "테마"
+    "theme": "테마",
+    "targetLabel": "추가 위치"
   }
 }

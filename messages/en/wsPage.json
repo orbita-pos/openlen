@@ -251,6 +251,7 @@
     "addToPage": "Add to a page",
     "home": "home",
     "seePreview": "See it in the preview",
-    "theme": "Theme"
+    "theme": "Theme",
+    "targetLabel": "Will be added to"
   }
 }

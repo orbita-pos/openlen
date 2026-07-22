@@ -251,6 +251,7 @@
     "addToPage": "ページに追加",
     "home": "ホーム",
     "seePreview": "プレビューで確認",
-    "theme": "テーマ"
+    "theme": "テーマ",
+    "targetLabel": "追加先"
   }
 }

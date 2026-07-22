@@ -3614,6 +3614,10 @@ function NewV2Inner() {
             }}
             initialSub={hubInitialSub}
             onInitialSubConsumed={() => setHubInitialSub(null)}
+            sitePages={sitePages}
+            activeSitePage={activeSitePage}
+            onSwitchPage={switchSitePage}
+            homePageLabel={t("modulesHub.home")}
           />
         ) : centerView === "marketing" ? (
           <MarketingView

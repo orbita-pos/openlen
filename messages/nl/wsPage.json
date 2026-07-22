@@ -251,6 +251,7 @@
     "addToPage": "Toevoegen aan een pagina",
     "home": "home",
     "seePreview": "Bekijk het in de voorbeeldweergave",
-    "theme": "Thema"
+    "theme": "Thema",
+    "targetLabel": "Wordt toegevoegd aan"
   }
 }
