@@ -252,6 +252,7 @@
     "home": "home",
     "seePreview": "Bekijk het in de voorbeeldweergave",
     "theme": "Thema",
-    "targetLabel": "Wordt toegevoegd aan"
+    "targetLabel": "Wordt toegevoegd aan",
+    "siteLabel": "Site"
   }
 }

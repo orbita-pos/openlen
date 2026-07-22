@@ -79,6 +79,8 @@ export interface ModulesViewProps {
   activeSitePage?: string | null;
   onSwitchPage?: (slug: string | null) => void;
   homePageLabel?: string;
+  projectTitle?: string | null;
+  projectSubdomain?: string | null;
 }
 
 export function ModulesView(props: ModulesViewProps) {
@@ -143,6 +145,8 @@ export function ModulesView(props: ModulesViewProps) {
               activeSitePage={props.activeSitePage}
               onSwitchPage={props.onSwitchPage}
               homePageLabel={props.homePageLabel}
+              projectTitle={props.projectTitle}
+              projectSubdomain={props.projectSubdomain}
             />
           </div>
         </div>

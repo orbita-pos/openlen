@@ -77,7 +77,8 @@
     "modulesTarget": "Insertando en: {page}",
     "sectionsTab": "Secciones",
     "manageProducts": "Administrar productos",
-    "modulesTargetLabel": "Se agregará a"
+    "modulesTargetLabel": "Se agregará a",
+    "siteLabel": "Sitio"
   },
   "paste": {
     "heading": "Pegar HTML",

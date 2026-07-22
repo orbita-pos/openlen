@@ -73,7 +73,8 @@
     "modulesTarget": "Inserindo em: {page}",
     "sectionsTab": "Seções",
     "manageProducts": "Gerenciar produtos",
-    "modulesTargetLabel": "Será adicionado a"
+    "modulesTargetLabel": "Será adicionado a",
+    "siteLabel": "Site"
   },
   "paste": {
     "heading": "Colar HTML",

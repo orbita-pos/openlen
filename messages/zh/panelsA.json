@@ -73,7 +73,8 @@
     "modulesTarget": "插入到：{page}",
     "sectionsTab": "区块",
     "manageProducts": "管理产品",
-    "modulesTargetLabel": "将添加到"
+    "modulesTargetLabel": "将添加到",
+    "siteLabel": "网站"
   },
   "paste": {
     "heading": "粘贴 HTML",

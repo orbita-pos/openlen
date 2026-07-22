@@ -212,6 +212,7 @@ interface LeftSidebarProps {
   onManageCollections?: () => void;
   /** Home label for the Módulos destination selector ("inicio"). */
   homePageLabel?: string;
+  siteName?: string | null;
   /** Tabs that are visually locked + non-interactive. Used when the
    *  workspace is in a guided entry flow (e.g. user picked "AI" — only
    *  the chat tab is active until the page has been generated). */
@@ -343,6 +344,7 @@ export function LeftSidebar({
   onModulesViewConsumed,
   onManageCollections,
   homePageLabel,
+  siteName,
   lockedTabs,
   lockReason,
   entryMode = "editing",
@@ -633,6 +635,7 @@ export function LeftSidebar({
                 activeSitePage={activeSitePage}
                 onSwitchPage={onSwitchSitePage}
                 homeLabel={homePageLabel}
+                siteName={siteName}
               />
             )}
             {mode === "versions" && (

@@ -25,6 +25,7 @@ import {
   BarChart3,
   Calendar,
   ChatIcon,
+  Globe,
   Grid3,
   Inbox,
   Loader,
@@ -103,6 +104,10 @@ interface ModulesPanelProps {
   activeSitePage?: string | null;
   onSwitchPage?: (slug: string | null) => void;
   homePageLabel?: string;
+  /** WHICH SITE these modules belong to — users own several sites, so the
+   *  hub must name it (título + subdominio publicado si existe). */
+  projectTitle?: string | null;
+  projectSubdomain?: string | null;
 }
 
 export function ModulesPanel({
@@ -142,6 +147,8 @@ export function ModulesPanel({
   activeSitePage,
   onSwitchPage,
   homePageLabel,
+  projectTitle,
+  projectSubdomain,
 }: ModulesPanelProps) {
   const t = useTranslations("members");
   const tb = useTranslations("broadcast");
@@ -324,6 +331,20 @@ export function ModulesPanel({
         <div className="min-w-0">
           <h1 className="text-[26px] font-display fg leading-tight">{t("title")}</h1>
           <p className="text-[13.5px] fg-muted mt-1.5 leading-snug">{t("subtitle")}</p>
+          {projectTitle && (
+            <div className="mt-3 inline-flex items-center gap-2 rounded-full ring-1 ring-[color:var(--border)] bg-elev px-3 py-1.5 max-w-full">
+              <Globe size={13} className="text-accent shrink-0" />
+              <span className="text-[10px] uppercase tracking-[0.12em] fg-faint font-semibold shrink-0">
+                {tw("modulesHub.siteLabel")}
+              </span>
+              <span className="text-[12.5px] font-semibold fg truncate">{projectTitle}</span>
+              {projectSubdomain && (
+                <span className="text-[11px] fg-faint truncate">
+                  {projectSubdomain}.openlen.com
+                </span>
+              )}
+            </div>
+          )}
         </div>
         {activeCount > 0 && (
           <span className="shrink-0 inline-flex items-center gap-1.5 text-[11px] font-semibold text-accent bg-accent-soft px-2.5 py-1.5 rounded-full tabular">

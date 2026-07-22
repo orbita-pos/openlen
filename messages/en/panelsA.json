@@ -77,7 +77,8 @@
     "modulesTarget": "Inserting into: {page}",
     "sectionsTab": "Sections",
     "manageProducts": "Manage products",
-    "modulesTargetLabel": "Will be added to"
+    "modulesTargetLabel": "Will be added to",
+    "siteLabel": "Site"
   },
   "paste": {
     "heading": "Paste HTML",

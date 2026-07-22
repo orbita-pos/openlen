@@ -252,6 +252,7 @@
     "home": "inicio",
     "seePreview": "Míralo en la vista previa",
     "theme": "Tema",
-    "targetLabel": "Se agregará a"
+    "targetLabel": "Se agregará a",
+    "siteLabel": "Sitio"
   }
 }

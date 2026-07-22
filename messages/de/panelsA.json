@@ -73,7 +73,8 @@
     "modulesTarget": "Einfügen in: {page}",
     "sectionsTab": "Abschnitte",
     "manageProducts": "Produkte verwalten",
-    "modulesTargetLabel": "Wird hinzugefügt zu"
+    "modulesTargetLabel": "Wird hinzugefügt zu",
+    "siteLabel": "Website"
   },
   "paste": {
     "heading": "HTML einfügen",

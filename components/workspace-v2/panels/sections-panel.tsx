@@ -55,6 +55,8 @@ interface SectionsPanelProps {
   activeSitePage?: string | null;
   onSwitchPage?: (slug: string | null) => void;
   homeLabel?: string;
+  /** WHICH SITE the module lands on — users own several sites. */
+  siteName?: string | null;
 }
 
 const MODULE_ICON: Record<ContentModule, (p: { size?: number }) => ReactNode> = {
@@ -198,6 +200,7 @@ export function SectionsPanel({
   activeSitePage,
   onSwitchPage,
   homeLabel,
+  siteName,
 }: SectionsPanelProps) {
   const t = useTranslations("panelsA");
   const ts = useTranslations("sections");
@@ -257,6 +260,12 @@ export function SectionsPanel({
       {showModules && moduleCards && onAddModule && (
         <section className="mb-5">
           <p className="text-[11px] fg-muted leading-snug mb-1.5">{t("sections.modulesIntro")}</p>
+          {siteName && (
+            <p className="text-[10px] fg-faint mb-1.5">
+              <span className="uppercase tracking-[0.12em] font-semibold">{t("sections.siteLabel")}</span>{" "}
+              <span className="fg-muted font-medium">{siteName}</span>
+            </p>
+          )}
           {onSwitchPage ? (
             <div className="mb-3">
               <label className="block text-[10px] uppercase tracking-[0.12em] fg-faint font-semibold mb-1">

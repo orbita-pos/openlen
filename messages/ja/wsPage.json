@@ -252,6 +252,7 @@
     "home": "ホーム",
     "seePreview": "プレビューで確認",
     "theme": "テーマ",
-    "targetLabel": "追加先"
+    "targetLabel": "追加先",
+    "siteLabel": "サイト"
   }
 }

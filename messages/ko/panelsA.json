@@ -73,7 +73,8 @@
     "modulesTarget": "삽입 위치: {page}",
     "sectionsTab": "섹션",
     "manageProducts": "상품 관리",
-    "modulesTargetLabel": "추가 위치"
+    "modulesTargetLabel": "추가 위치",
+    "siteLabel": "사이트"
   },
   "paste": {
     "heading": "HTML 붙여넣기",

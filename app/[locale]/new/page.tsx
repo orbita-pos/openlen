@@ -3536,6 +3536,7 @@ function NewV2Inner() {
           onAddModule={(m, d) => void addModuleFromLibrary(m, d)}
           activePageLabel={activeSitePage ? `/${activeSitePage}` : t("modulesHub.home")}
           homePageLabel={t("modulesHub.home")}
+          siteName={loadedProject?.title ?? null}
           openModulesView={libraryOpenModules}
           onModulesViewConsumed={() => setLibraryOpenModules(false)}
           onManageCollections={() => {
@@ -3618,6 +3619,8 @@ function NewV2Inner() {
             activeSitePage={activeSitePage}
             onSwitchPage={switchSitePage}
             homePageLabel={t("modulesHub.home")}
+            projectTitle={loadedProject?.title ?? null}
+            projectSubdomain={loadedProject?.subdomain ?? null}
           />
         ) : centerView === "marketing" ? (
           <MarketingView

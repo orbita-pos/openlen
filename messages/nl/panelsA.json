@@ -77,7 +77,8 @@
     "modulesTarget": "Invoegen in: {page}",
     "sectionsTab": "Secties",
     "manageProducts": "Producten beheren",
-    "modulesTargetLabel": "Wordt toegevoegd aan"
+    "modulesTargetLabel": "Wordt toegevoegd aan",
+    "siteLabel": "Site"
   },
   "paste": {
     "heading": "HTML plakken",

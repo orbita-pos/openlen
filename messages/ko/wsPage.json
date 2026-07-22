@@ -252,6 +252,7 @@
     "home": "홈",
     "seePreview": "미리보기에서 확인",
     "theme": "테마",
-    "targetLabel": "추가 위치"
+    "targetLabel": "추가 위치",
+    "siteLabel": "사이트"
   }
 }

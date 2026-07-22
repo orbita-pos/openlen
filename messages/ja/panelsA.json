@@ -73,7 +73,8 @@
     "modulesTarget": "挿入先: {page}",
     "sectionsTab": "セクション",
     "manageProducts": "商品を管理",
-    "modulesTargetLabel": "追加先"
+    "modulesTargetLabel": "追加先",
+    "siteLabel": "サイト"
   },
   "paste": {
     "heading": "HTMLを貼り付け",
