@@ -612,10 +612,10 @@ export function ModulesPanel({
                 disabled={bkBusy}
                 onChange={(v) => void updateBookings({ sendReminders: v })}
               />
-              {/* Tema del widget en la página publicada (misma clave i18n que
-                  el chat: es la misma dupla Claro/Oscuro). */}
+              {/* Tema del widget en la página publicada (los VALORES Claro/
+                  Oscuro sí se reusan del chat; la etiqueta es neutra). */}
               <div className="space-y-1">
-                <div className="text-[12px] font-medium fg-muted">{tw("chat.theme")}</div>
+                <div className="text-[12px] font-medium fg-muted">{tw("modulesHub.theme")}</div>
                 <Segment
                   value={bookingsTheme}
                   options={[
@@ -729,9 +729,9 @@ export function ModulesPanel({
                 <p className="text-[11.5px] fg-faint leading-relaxed">
                   {tc(commentsMod === "moderated" ? "module.modModeratedHint" : "module.modAllHint")}
                 </p>
-                {/* Tema del widget (misma dupla i18n Claro/Oscuro que el chat). */}
+                {/* Tema del widget (valores Claro/Oscuro del chat; etiqueta neutra). */}
                 <div className="space-y-1">
-                  <div className="text-[12px] font-medium fg-muted">{tw("chat.theme")}</div>
+                  <div className="text-[12px] font-medium fg-muted">{tw("modulesHub.theme")}</div>
                   <Segment
                     value={commentsTheme}
                     options={[

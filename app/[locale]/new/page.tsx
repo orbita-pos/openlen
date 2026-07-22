@@ -253,6 +253,7 @@ function NewV2Inner() {
   const t = useTranslations("wsPage");
   const tSections = useTranslations("panelsA");
   const tBookings = useTranslations("bookings");
+  const tMembers = useTranslations("members");
   const tCollections = useTranslations("collections");
   const tAsset = useTranslations("modalsAsset");
   const locale = useLocale();
@@ -3155,6 +3156,9 @@ function NewV2Inner() {
               enabled: true, mode: "open", passwordLogin: true, accountArea: true,
             });
             if (!ok) return;
+            // Cuentas se encendió como efecto de Comentarios — avisa lo que
+            // existirá (/cuenta al publicar); el hint del hub no cubre este camino.
+            toast.info(tMembers("accountLive"));
             break;
           }
           case "enableModule": {
@@ -3165,11 +3169,22 @@ function NewV2Inner() {
             if (!ok) return;
             break;
           }
-          case "insertSection":
+          case "insertSection": {
             (step.module === "collections" ? insertCollectionsSection
               : step.module === "bookings" ? insertBookingsSection
               : insertCommentsSection)();
+            // Same Deshacer pill curated sections get — a mis-clicked module
+            // band must not need manual deletion via the reorder toolbar.
+            const nameKey =
+              step.module === "collections" ? "Catalog"
+              : step.module === "bookings" ? "Bookings"
+              : "Comments";
+            setLastInserted({
+              id: `module-${step.module}`,
+              name: tSections(`sections.module${nameKey}Title`),
+            });
             break;
+          }
           case "createPage":
             await createModulePage(step.module);
             break;
@@ -3191,7 +3206,8 @@ function NewV2Inner() {
     },
     [loadedProject?.settings, activeDoc, updateMembersSettings, updateCollectionsSettings,
      updateBookingsSettings, updateCommentsSettings, insertCollectionsSection,
-     insertBookingsSection, insertCommentsSection, createModulePage, toast, t],
+     insertBookingsSection, insertCommentsSection, createModulePage, toast, t,
+     tMembers, tSections],
   );
   const moduleCards = useMemo<ModuleCardState[]>(() => {
     if (!loadedProject) return [];
@@ -3562,13 +3578,13 @@ function NewV2Inner() {
             onUpdateBroadcastSettings={updateBroadcastSettings}
             commentsSettings={loadedProject?.settings?.comments}
             onUpdateCommentsSettings={updateCommentsSettings}
-            onInsertCommentsSection={insertCommentsSection}
+            onInsertCommentsSection={() => void addModuleFromLibrary("comments", "section")}
             bookingsSettings={loadedProject?.settings?.bookings}
             onUpdateBookingsSettings={updateBookingsSettings}
-            onInsertBookingsSection={insertBookingsSection}
+            onInsertBookingsSection={() => void addModuleFromLibrary("bookings", "section")}
             collectionsSettings={loadedProject?.settings?.collections}
             onUpdateCollectionsSettings={updateCollectionsSettings}
-            onInsertCollectionsSection={insertCollectionsSection}
+            onInsertCollectionsSection={() => void addModuleFromLibrary("collections", "section")}
             whatsappSettings={loadedProject?.settings?.whatsapp}
             onUpdateWhatsappSettings={updateWhatsappSettings}
             ordersSettings={loadedProject?.settings?.orders}
