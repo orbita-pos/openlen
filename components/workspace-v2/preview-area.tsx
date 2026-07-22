@@ -202,6 +202,15 @@ export function PreviewArea({
     () => /--ol-bg\s*:\s*([^;"}]+)/i.exec(doc)?.[1]?.trim() || "#ffffff",
     [doc],
   );
+  // The canvas SURROUND follows the page's own declared background too — a
+  // dark full-bleed page inside the near-white theme panel read as "the
+  // clone added a border to my page" (it hadn't; the published page is
+  // full-bleed). Only when the page declares --ol-bg; gallery previews keep
+  // the theme panel.
+  const declaredBg = useMemo(
+    () => /--ol-bg\s*:\s*([^;"}]+)/i.exec(doc)?.[1]?.trim() || null,
+    [doc],
+  );
 
   // Kill-switches (hallazgo Fable, 2026-07-13): el preview obedece la MISMA
   // palanca OPENLEN_BEHAVIORS/CAROUSEL que el bake de publish, vía /api/flags
@@ -714,6 +723,7 @@ export function PreviewArea({
       <div
         ref={containerRef}
         className="relative flex-1 overflow-auto nice-scroll p-3 sm:p-4"
+        style={declaredBg ? { background: declaredBg } : undefined}
       >
         <div
           className="mx-auto relative"
