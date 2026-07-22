@@ -6,7 +6,7 @@
 
 "use client";
 
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { useTranslations } from "next-intl";
 import { Calendar, Eye, Grid3, MessageSq, Sparkles } from "../icons";
 import { TemplatePreviewFrame } from "../template-preview-frame";
@@ -40,8 +40,11 @@ interface SectionsPanelProps {
   /** Readable name of the destination page ("inicio" or "/<slug>") — names
    *  where a module lands so the user never has to guess. */
   activePageLabel?: string;
-  /** Bump to switch the panel to the Módulos view (hub deep-link). */
-  focusModulesNonce?: number;
+  /** One-shot: open on the Módulos view (hub deep-link). Consumed via
+   *  onModulesViewConsumed — the panel mounts AFTER the click when the
+   *  sidebar wasn't on the Library tab, so a nonce-ref misfires. */
+  openModulesView?: boolean;
+  onModulesViewConsumed?: () => void;
   /** Open the Colecciones manager (add/edit products) — the answer to
    *  "¿y de dónde salen los productos?" is one click away, never a hunt. */
   onManageCollections?: () => void;
@@ -181,7 +184,8 @@ export function SectionsPanel({
   moduleCards,
   onAddModule,
   activePageLabel,
-  focusModulesNonce,
+  openModulesView,
+  onModulesViewConsumed,
   onManageCollections,
 }: SectionsPanelProps) {
   const t = useTranslations("panelsA");
@@ -194,13 +198,13 @@ export function SectionsPanel({
   // on the Módulos view.
   const hasModules = !!(moduleCards && moduleCards.length > 0 && onAddModule);
   const [view, setView] = useState<"sections" | "modules">("sections");
-  const lastFocusRef = useRef(focusModulesNonce ?? 0);
   useEffect(() => {
-    if ((focusModulesNonce ?? 0) !== lastFocusRef.current) {
-      lastFocusRef.current = focusModulesNonce ?? 0;
+    if (openModulesView) {
       setView("modules");
+      onModulesViewConsumed?.();
     }
-  }, [focusModulesNonce]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [openModulesView]);
   const showModules = hasModules && view === "modules";
 
   const visibleTypes = SECTION_TYPES_ORDERED.filter(

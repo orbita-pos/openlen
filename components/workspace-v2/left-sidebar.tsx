@@ -206,8 +206,9 @@ interface LeftSidebarProps {
   /** Readable name of the destination page ("inicio" or "/<slug>") for the
    *  Library module cards — forwarded to SectionsPanel unchanged. */
   activePageLabel?: string;
-  /** Bump to open the Library on the Módulos view (hub deep-link). */
-  focusModulesNonce?: number;
+  /** One-shot: open the Library on its Módulos view (hub deep-link). */
+  openModulesView?: boolean;
+  onModulesViewConsumed?: () => void;
   onManageCollections?: () => void;
   /** Tabs that are visually locked + non-interactive. Used when the
    *  workspace is in a guided entry flow (e.g. user picked "AI" — only
@@ -336,7 +337,8 @@ export function LeftSidebar({
   moduleCards,
   onAddModule,
   activePageLabel,
-  focusModulesNonce,
+  openModulesView,
+  onModulesViewConsumed,
   onManageCollections,
   lockedTabs,
   lockReason,
@@ -621,7 +623,8 @@ export function LeftSidebar({
                 moduleCards={moduleCards}
                 onAddModule={onAddModule}
                 activePageLabel={activePageLabel}
-                focusModulesNonce={focusModulesNonce}
+                openModulesView={openModulesView}
+                onModulesViewConsumed={onModulesViewConsumed}
                 onManageCollections={onManageCollections}
               />
             )}

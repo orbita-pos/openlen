@@ -305,11 +305,10 @@ function NewV2Inner() {
       : "ai";
 
   const [projectName, setProjectName] = useState(t("defaultProjectName"));
-  // Hub deep-link: bump to land the Library on its Módulos view.
-  const [libraryModulesFocus, setLibraryModulesFocus] = useState(0);
-  // Library deep-link: bump to land the hub on its Colecciones sub-panel
-  // ("Administrar productos" — where the user adds their own products).
-  const [hubCollectionsFocus, setHubCollectionsFocus] = useState(0);
+  // One-shot deep-links (consumed by the child once applied — nonce refs
+  // misfire when the target mounts AFTER the click: took two clicks).
+  const [libraryOpenModules, setLibraryOpenModules] = useState(false);
+  const [hubInitialSub, setHubInitialSub] = useState<"collections" | null>(null);
   const [mode, setMode] = useState<SidebarMode>(
     entryMode === "template" || entryMode === "ai" ? "templates" : "chat",
   );
@@ -3512,10 +3511,11 @@ function NewV2Inner() {
           moduleCards={moduleCards}
           onAddModule={(m, d) => void addModuleFromLibrary(m, d)}
           activePageLabel={activeSitePage ? `/${activeSitePage}` : t("modulesHub.home")}
-          focusModulesNonce={libraryModulesFocus}
+          openModulesView={libraryOpenModules}
+          onModulesViewConsumed={() => setLibraryOpenModules(false)}
           onManageCollections={() => {
             setCenterView("modulos");
-            setHubCollectionsFocus((n) => n + 1);
+            setHubInitialSub("collections");
           }}
         />
         {/* One <main> landmark for the workspace center. `contents` keeps the
@@ -3585,9 +3585,10 @@ function NewV2Inner() {
             onOpenLibrary={() => {
               setCenterView("page");
               setMode("library");
-              setLibraryModulesFocus((n) => n + 1);
+              setLibraryOpenModules(true);
             }}
-            focusCollectionsNonce={hubCollectionsFocus}
+            initialSub={hubInitialSub}
+            onInitialSubConsumed={() => setHubInitialSub(null)}
           />
         ) : centerView === "marketing" ? (
           <MarketingView
