@@ -11,6 +11,7 @@
 
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
+import { Globe } from "./icons";
 import type {
   BookingsSettings,
   BroadcastSettings,
@@ -85,6 +86,7 @@ export interface ModulesViewProps {
 
 export function ModulesView(props: ModulesViewProps) {
   const t = useTranslations("members");
+  const tw = useTranslations("wsPage");
   const [sub, setSub] = useState<Sub>("hub");
   useEffect(() => {
     if (props.initialSub) {
@@ -152,7 +154,7 @@ export function ModulesView(props: ModulesViewProps) {
         </div>
       ) : (
         <>
-          <div className="shrink-0 w-full max-w-2xl mx-auto px-5 pt-4">
+          <div className="shrink-0 w-full max-w-2xl mx-auto px-5 pt-4 flex items-center justify-between gap-3">
             <button
               type="button"
               onClick={() => setSub("hub")}
@@ -161,6 +163,20 @@ export function ModulesView(props: ModulesViewProps) {
               <span aria-hidden>‹</span>
               <span>{t("title")}</span>
             </button>
+            {props.projectTitle && (
+              <span className="inline-flex items-center gap-1.5 rounded-full ring-1 ring-[color:var(--border)] bg-elev px-2.5 py-1 min-w-0">
+                <Globe size={11} className="text-accent shrink-0" />
+                <span className="text-[9.5px] uppercase tracking-[0.12em] fg-faint font-semibold shrink-0">
+                  {tw("modulesHub.siteLabel")}
+                </span>
+                <span className="text-[11.5px] font-semibold fg truncate">{props.projectTitle}</span>
+                {props.projectSubdomain && (
+                  <span className="text-[10.5px] fg-faint truncate">
+                    {props.projectSubdomain}.openlen.com
+                  </span>
+                )}
+              </span>
+            )}
           </div>
           <div className="flex-1 min-h-0 w-full max-w-2xl mx-auto flex flex-col">
             {sub === "broadcast" && (
