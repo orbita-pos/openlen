@@ -65,17 +65,43 @@ const INSERT_SCRIPT = `
   function findContentRoot() {
     var body = document.body;
     if (!body) return body;
-    var top = candidates(body);
-    if (top.length === 1) {
-      var deeper = candidates(top[0]);
-      if (deeper.length >= 2) return top[0];
+    // Descend single-wrapper chains (body > div.min-h-screen > main > …): a
+    // section appended to <body> when the page paints inside ONE wrapper div
+    // lands on the unpainted body BELOW the min-h-screen wrapper — the
+    // "banda tras el footer + vacío negro gigante" bug. Only DIV/MAIN count
+    // as wrappers so a single-<section> page never becomes its own root.
+    var root = body;
+    for (var i = 0; i < 4; i++) {
+      var kids = candidates(root);
+      if (kids.length === 1 && (kids[0].tagName === 'DIV' || kids[0].tagName === 'MAIN')) {
+        root = kids[0];
+        continue;
+      }
+      break;
     }
-    return body;
+    return root;
   }
 
   function lastElement(parent) {
     var kids = candidates(parent);
     return kids.length ? kids[kids.length - 1] : null;
+  }
+
+  // The page's trailing footer BLOCK, wrapped or not: a bare <footer>, a
+  // styled wrapper containing one (<div class="footer-band"><footer>…), or a
+  // ©-looking last div. Chrome test (no h1, no <section>) keeps a
+  // page-wrapper-of-everything from matching. Mirrors the server-side rule
+  // in create-page.ts/injectIntoShell — the naive tagName === 'FOOTER'
+  // check dropped bands BELOW wrapped/©-div footers.
+  function trailingFooterBlock(root) {
+    var last = lastElement(root);
+    if (!last) return null;
+    if (last.tagName === 'FOOTER') return last;
+    if (last.querySelector && last.querySelector('h1, section')) return null;
+    if (last.querySelector && last.querySelector('footer')) return last;
+    var txt = (last.textContent || '');
+    if (txt.length < 800 && /©|todos los derechos|all rights reserved/i.test(txt)) return last;
+    return null;
   }
 
   // Where a section of this type should land. Returns the node to insert
@@ -96,9 +122,7 @@ const INSERT_SCRIPT = `
       }
       return root.firstChild;
     }
-    var last = lastElement(root);
-    if (last && last.tagName === 'FOOTER') return last;
-    return null;
+    return trailingFooterBlock(root);
   }
 
   // Navbars and footers are page singletons — replace an existing one instead
