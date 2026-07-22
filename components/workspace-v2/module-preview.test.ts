@@ -2,7 +2,12 @@
 // (a) render the module UI, (b) never survive a save: every injected node
 // carries the preview marker and stripEditorInstrumentation removes it.
 import { describe, expect, it } from "vitest";
-import { injectEditorModulesPreview, type EditorModulesPreviewCfg } from "./module-preview";
+import {
+  bandWithPreview,
+  injectEditorModulesPreview,
+  type EditorModulesPreviewCfg,
+} from "./module-preview";
+import { buildModuleSection } from "@/lib/publish/module-sections";
 import { stripEditorInstrumentation } from "./strip-editor-instrumentation";
 import type { ItemRow } from "@/lib/collections/store";
 
@@ -91,11 +96,12 @@ describe("injectEditorModulesPreview", () => {
     expect(gridTag).toContain("data-openlen-modules-preview");
   });
 
-  it("does nothing for collections without items (keeps the dashed box)", () => {
-    const out = injectEditorModulesPreview(HOME, cfg({
+  it("collections without items only ghosts when the band exists (no band → untouched)", () => {
+    const noBand = HOME.replace('<section data-ol-collection-section style="padding:32px"><div></div></section>\n', "");
+    const out = injectEditorModulesPreview(noBand, cfg({
       collections: { items: [], layout: "grid", ordersNumber: null },
     }));
-    expect(out).toBe(HOME);
+    expect(out).toBe(noBand);
   });
 
   it("stacks the FAB above an assistant bubble", () => {
@@ -104,6 +110,82 @@ describe("injectEditorModulesPreview", () => {
       assistantOn: true,
     }));
     expect(out).toContain("bottom:86px");
+  });
+
+  it("bookings band gets a static skeleton when the module is on", () => {
+    const withBand = HOME.replace(
+      "<footer",
+      '<section><div data-ol-bookings-section></div></section><footer',
+    );
+    const out = injectEditorModulesPreview(withBand, cfg({ bookingsOn: true }));
+    const tag = /<div[^>]*data-ol-bookings-skeleton[^>]*>/.exec(out)?.[0] ?? "";
+    expect(tag).toContain("data-openlen-modules-preview");
+    expect(out).toContain("Vista previa");
+  });
+
+  it("no bookings skeleton without the band, or with the module off", () => {
+    expect(injectEditorModulesPreview(HOME, cfg({ bookingsOn: true }))).toBe(HOME);
+    const withBand = HOME.replace(
+      "<footer",
+      '<section><div data-ol-bookings-section></div></section><footer',
+    );
+    expect(injectEditorModulesPreview(withBand, cfg())).toBe(withBand);
+  });
+
+  it("comments band gets sample-comment skeleton when on", () => {
+    const withBand = HOME.replace(
+      "<footer",
+      '<section><div data-ol-comments-section></div></section><footer',
+    );
+    const out = injectEditorModulesPreview(withBand, cfg({ commentsOn: true }));
+    const tag = /<div[^>]*data-ol-comments-skeleton[^>]*>/.exec(out)?.[0] ?? "";
+    expect(tag).toContain("data-openlen-modules-preview");
+  });
+
+  it("collections band with ZERO items gets ghost product cards", () => {
+    const withPlaceholder = HOME.replace(
+      "<footer",
+      '<div data-ol-collection-section></div><footer',
+    );
+    const out = injectEditorModulesPreview(withPlaceholder, cfg({
+      collections: { items: [], layout: "grid", ordersNumber: null },
+    }));
+    const tag = /<div[^>]*data-ol-collection-ghosts[^>]*>/.exec(out)?.[0] ?? "";
+    expect(tag).toContain("data-openlen-modules-preview");
+  });
+
+  it("skeletons strip clean on save", () => {
+    const withBands = HOME.replace(
+      "<footer",
+      '<section><div data-ol-bookings-section></div></section><section><div data-ol-comments-section></div></section><footer',
+    );
+    const injected = injectEditorModulesPreview(withBands, cfg({
+      bookingsOn: true,
+      commentsOn: true,
+      collections: { items: [], layout: "grid", ordersNumber: null },
+    }));
+    const norm = (h: string) =>
+      new DOMParser().parseFromString(h, "text/html").documentElement.outerHTML;
+    expect(norm(stripEditorInstrumentation(injected))).toBe(norm(withBands));
+  });
+
+  it("bandWithPreview: the insert payload carries the marked skeleton inside the band", () => {
+    const band = buildModuleSection("bookings", { lang: "es" });
+    const out = bandWithPreview("bookings", band, { docHtml: HOME });
+    expect(out).toContain("data-ol-bookings-skeleton");
+    const skel = /<div[^>]*data-ol-bookings-skeleton[^>]*>/.exec(out)?.[0] ?? "";
+    expect(skel).toContain("data-openlen-modules-preview");
+    // Skeleton sits INSIDE the band's marker element.
+    expect(out.indexOf("data-ol-bookings-skeleton")).toBeGreaterThan(
+      out.indexOf("data-ol-bookings-section"),
+    );
+    // Stripping the payload (as the save serialization does) restores the bare band.
+    const doc = HOME.replace("</body>", out + "</body>");
+    const norm = (h: string) =>
+      new DOMParser().parseFromString(h, "text/html").documentElement.outerHTML;
+    expect(norm(stripEditorInstrumentation(doc))).toBe(
+      norm(HOME.replace("</body>", band + "</body>")),
+    );
   });
 
   it("round-trips clean: strip(inject(x)) equals x", () => {

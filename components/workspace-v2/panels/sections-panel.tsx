@@ -6,7 +6,7 @@
 
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useTranslations } from "next-intl";
 import { Calendar, Eye, Grid3, MessageSq, Sparkles } from "../icons";
 import { TemplatePreviewFrame } from "../template-preview-frame";
@@ -40,6 +40,8 @@ interface SectionsPanelProps {
   /** Readable name of the destination page ("inicio" or "/<slug>") — names
    *  where a module lands so the user never has to guess. */
   activePageLabel?: string;
+  /** Bump to switch the panel to the Módulos view (hub deep-link). */
+  focusModulesNonce?: number;
 }
 
 const MODULE_ICON: Record<ContentModule, (p: { size?: number }) => ReactNode> = {
@@ -165,11 +167,26 @@ export function SectionsPanel({
   moduleCards,
   onAddModule,
   activePageLabel,
+  focusModulesNonce,
 }: SectionsPanelProps) {
   const t = useTranslations("panelsA");
   const ts = useTranslations("sections");
   const [typeFilter, setTypeFilter] = useState<SectionType | "all">("all");
   const { sections, byType, isLoading, error } = useSections();
+  // Secciones | Módulos live as two segmented views — mixing module cards into
+  // the section gallery read as clutter ("se ve todo revoltoso"). The hub's
+  // "Agregar a una página" deep-link bumps focusModulesNonce to land directly
+  // on the Módulos view.
+  const hasModules = !!(moduleCards && moduleCards.length > 0 && onAddModule);
+  const [view, setView] = useState<"sections" | "modules">("sections");
+  const lastFocusRef = useRef(focusModulesNonce ?? 0);
+  useEffect(() => {
+    if ((focusModulesNonce ?? 0) !== lastFocusRef.current) {
+      lastFocusRef.current = focusModulesNonce ?? 0;
+      setView("modules");
+    }
+  }, [focusModulesNonce]);
+  const showModules = hasModules && view === "modules";
 
   const visibleTypes = SECTION_TYPES_ORDERED.filter(
     (t) => typeFilter === "all" || typeFilter === t,
@@ -183,17 +200,32 @@ export function SectionsPanel({
           {t("sections.heading")}
         </h2>
       </div>
-      <p className="text-[11px] fg-muted leading-snug mb-3">
-        {t("sections.intro")}
-      </p>
 
-      {moduleCards && moduleCards.length > 0 && onAddModule && (
+      {hasModules && (
+        <div className="flex gap-1 mb-3 p-0.5 rounded-lg bg-hover">
+          <button
+            type="button"
+            onClick={() => setView("sections")}
+            className={`flex-1 h-7 text-[11px] rounded-md transition font-medium ${
+              !showModules ? "bg-[var(--accent-strong)] text-white" : "fg-muted hover:fg"
+            }`}
+          >
+            {t("sections.sectionsTab")}
+          </button>
+          <button
+            type="button"
+            onClick={() => setView("modules")}
+            className={`flex-1 h-7 text-[11px] rounded-md transition font-medium ${
+              showModules ? "bg-[var(--accent-strong)] text-white" : "fg-muted hover:fg"
+            }`}
+          >
+            {t("sections.modulesHeading")}
+          </button>
+        </div>
+      )}
+
+      {showModules && moduleCards && onAddModule && (
         <section className="mb-5">
-          <div className="mb-2 flex items-baseline justify-between gap-2">
-            <h3 className="text-[10.5px] uppercase tracking-[0.18em] fg font-semibold ui-small">
-              {t("sections.modulesHeading")}
-            </h3>
-          </div>
           <p className="text-[11px] fg-muted leading-snug mb-1.5">{t("sections.modulesIntro")}</p>
           {activePageLabel && (
             <p className="text-[10px] fg-faint mb-3">
@@ -207,6 +239,12 @@ export function SectionsPanel({
           </div>
         </section>
       )}
+
+      {!showModules && (
+      <>
+      <p className="text-[11px] fg-muted leading-snug mb-3">
+        {t("sections.intro")}
+      </p>
 
       <div className="flex flex-wrap gap-1 mb-4">
         <button
@@ -278,6 +316,8 @@ export function SectionsPanel({
       <div className="mt-4 px-1 text-[10px] fg-faint leading-relaxed">
         {t("sections.footer")}
       </div>
+      </>
+      )}
     </div>
   );
 }

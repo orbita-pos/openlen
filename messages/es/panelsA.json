@@ -74,7 +74,8 @@
     "moduleAsPage": "Como página nueva",
     "moduleAlreadyHere": "Ya está en esta página",
     "moduleNeedsMembers": "Enciende Cuentas también (requisito)",
-    "modulesTarget": "Insertando en: {page}"
+    "modulesTarget": "Insertando en: {page}",
+    "sectionsTab": "Secciones"
   },
   "paste": {
     "heading": "Pegar HTML",

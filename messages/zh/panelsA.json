@@ -70,7 +70,8 @@
     "moduleAsPage": "作为新页面",
     "moduleAlreadyHere": "已经在此页面",
     "moduleNeedsMembers": "同时开启账户（必需）",
-    "modulesTarget": "插入到：{page}"
+    "modulesTarget": "插入到：{page}",
+    "sectionsTab": "区块"
   },
   "paste": {
     "heading": "粘贴 HTML",

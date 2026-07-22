@@ -74,7 +74,8 @@
     "moduleAsPage": "As a new page",
     "moduleAlreadyHere": "Already on this page",
     "moduleNeedsMembers": "Also turns on Accounts (required)",
-    "modulesTarget": "Inserting into: {page}"
+    "modulesTarget": "Inserting into: {page}",
+    "sectionsTab": "Sections"
   },
   "paste": {
     "heading": "Paste HTML",

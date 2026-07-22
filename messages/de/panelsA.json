@@ -70,7 +70,8 @@
     "moduleAsPage": "Als neue Seite",
     "moduleAlreadyHere": "Bereits auf dieser Seite",
     "moduleNeedsMembers": "Schaltet auch Konten ein (erforderlich)",
-    "modulesTarget": "Einfügen in: {page}"
+    "modulesTarget": "Einfügen in: {page}",
+    "sectionsTab": "Abschnitte"
   },
   "paste": {
     "heading": "HTML einfügen",

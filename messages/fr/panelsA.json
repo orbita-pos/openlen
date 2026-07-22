@@ -70,7 +70,8 @@
     "moduleAsPage": "Comme nouvelle page",
     "moduleAlreadyHere": "Déjà sur cette page",
     "moduleNeedsMembers": "Les Comptes s’activent aussi (requis)",
-    "modulesTarget": "Insertion dans : {page}"
+    "modulesTarget": "Insertion dans : {page}",
+    "sectionsTab": "Sections"
   },
   "paste": {
     "heading": "Coller du HTML",

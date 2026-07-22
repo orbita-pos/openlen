@@ -74,7 +74,8 @@
     "moduleAsPage": "Als nieuwe pagina",
     "moduleAlreadyHere": "Al op deze pagina",
     "moduleNeedsMembers": "Schakelt ook Accounts in (vereist)",
-    "modulesTarget": "Invoegen in: {page}"
+    "modulesTarget": "Invoegen in: {page}",
+    "sectionsTab": "Secties"
   },
   "paste": {
     "heading": "HTML plakken",

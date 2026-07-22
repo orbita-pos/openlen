@@ -73,7 +73,10 @@ import { PreviewPlaceholder } from "@/components/workspace-v2/preview-placeholde
 import { StartLanding } from "@/components/workspace-v2/start-landing";
 import { SECTIONS, type Section } from "@/components/workspace-v2/mock-data";
 import { PreviewArea } from "@/components/workspace-v2/preview-area";
-import type { EditorModulesPreviewCfg } from "@/components/workspace-v2/module-preview";
+import {
+  bandWithPreview,
+  type EditorModulesPreviewCfg,
+} from "@/components/workspace-v2/module-preview";
 import type { ItemRow } from "@/lib/collections/store";
 import {
   PropertiesPanel,
@@ -302,6 +305,8 @@ function NewV2Inner() {
       : "ai";
 
   const [projectName, setProjectName] = useState(t("defaultProjectName"));
+  // Hub deep-link: bump to land the Library on its Módulos view.
+  const [libraryModulesFocus, setLibraryModulesFocus] = useState(0);
   const [mode, setMode] = useState<SidebarMode>(
     entryMode === "template" || entryMode === "ai" ? "templates" : "chat",
   );
@@ -418,12 +423,17 @@ function NewV2Inner() {
     loadedProject?.settings?.chat,
     loadedProject?.settings?.orders,
     loadedProject?.settings?.music?.src,
+    loadedProject?.settings?.bookings?.enabled,
+    loadedProject?.settings?.comments?.enabled,
   ]);
   const modulesPreview = useMemo<EditorModulesPreviewCfg | null>(() => {
     const st = loadedProject?.settings;
     const wa = st?.whatsapp?.enabled && st.whatsapp.number ? st.whatsapp : null;
-    const colPayload = previewCollections?.items.length ? previewCollections : null;
-    if (!wa && !colPayload) return null;
+    // With the module ON, zero items still previews (ghost product cards).
+    const colPayload = previewCollections;
+    const bookingsOn = st?.bookings?.enabled === true;
+    const commentsOn = st?.comments?.enabled === true;
+    if (!wa && !colPayload && !bookingsOn && !commentsOn) return null;
     const assistantOn = st?.assistant?.enabled === true;
     const handoffMerged =
       assistantOn &&
@@ -444,6 +454,8 @@ function NewV2Inner() {
               st?.orders?.enabled && st.orders.number ? st.orders.number : null,
           }
         : null,
+      bookingsOn,
+      commentsOn,
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [modulesPreviewKey, previewCollections]);
@@ -2784,7 +2796,9 @@ function NewV2Inner() {
     const lang = /<html[^>]*\blang=["']?es/i.test(loadedProject?.html ?? "") ? "es" : "en";
     insertNonceRef.current += 1;
     setInsertRequest({
-      html: buildModuleSection("comments", { lang }),
+      html: bandWithPreview("comments", buildModuleSection("comments", { lang }), {
+        docHtml: loadedProject?.html ?? "",
+      }),
       nonce: insertNonceRef.current,
       sectionType: "comments",
     });
@@ -3072,24 +3086,41 @@ function NewV2Inner() {
     },
     [loadedProject?.id, toast, t],
   );
+  // Both insert the DESIGNED band (same buildModuleSection surface the pages
+  // API uses) — the old dashed caption boxes read as broken ("¿qué es esto?");
+  // the canvas preview then fills the band with the real grid / a skeleton.
   const insertCollectionsSection = useCallback(() => {
+    const lang = /<html[^>]*\blang=["']?es/i.test(loadedProject?.html ?? "") ? "es" : "en";
     insertNonceRef.current += 1;
-    const caption = tCollections("module.placeholderCaption");
     setInsertRequest({
-      html: `<section data-ol-collection-section style="max-width:1100px;margin:40px auto;padding:28px 24px;border:1px dashed #c9c9d0;border-radius:14px;text-align:center;color:#9a9aa0;font-size:14px;">${caption}</section>`,
+      html: bandWithPreview("collections", buildModuleSection("collections", { lang }), {
+        docHtml: loadedProject?.html ?? "",
+        collections: previewCollections
+          ? {
+              items: previewCollections.items,
+              layout: previewCollections.layout,
+              ordersNumber:
+                loadedProject?.settings?.orders?.enabled && loadedProject.settings.orders.number
+                  ? loadedProject.settings.orders.number
+                  : null,
+            }
+          : null,
+      }),
       nonce: insertNonceRef.current,
       sectionType: "collection",
     });
-  }, [tCollections]);
+  }, [loadedProject?.html, loadedProject?.settings?.orders, previewCollections]);
   const insertBookingsSection = useCallback(() => {
+    const lang = /<html[^>]*\blang=["']?es/i.test(loadedProject?.html ?? "") ? "es" : "en";
     insertNonceRef.current += 1;
-    const caption = tBookings("module.placeholderCaption");
     setInsertRequest({
-      html: `<section data-ol-bookings-section style="max-width:560px;margin:40px auto;padding:28px 24px;border:1px dashed #c9c9d0;border-radius:14px;text-align:center;color:#9a9aa0;font-size:14px;">${caption}</section>`,
+      html: bandWithPreview("bookings", buildModuleSection("bookings", { lang }), {
+        docHtml: loadedProject?.html ?? "",
+      }),
       nonce: insertNonceRef.current,
       sectionType: "bookings",
     });
-  }, [tBookings]);
+  }, [loadedProject?.html]);
   // Library "Módulos": activar (con cadena Cuentas si aplica) + colocar. Los
   // pasos vienen del plan puro; aquí solo se ejecutan con los handlers de
   // siempre. Singleton: banda ya presente → scroll a ella, nunca duplicar.
@@ -3478,6 +3509,7 @@ function NewV2Inner() {
           moduleCards={moduleCards}
           onAddModule={(m, d) => void addModuleFromLibrary(m, d)}
           activePageLabel={activeSitePage ? `/${activeSitePage}` : t("modulesHub.home")}
+          focusModulesNonce={libraryModulesFocus}
         />
         {/* One <main> landmark for the workspace center. `contents` keeps the
             flex layout byte-identical (generates no box) while giving the a11y
@@ -3543,7 +3575,11 @@ function NewV2Inner() {
                 ? modulePlacements({ html: loadedProject.html, pages: loadedProject.pages })
                 : undefined
             }
-            onOpenLibrary={() => { setCenterView("page"); setMode("library"); }}
+            onOpenLibrary={() => {
+              setCenterView("page");
+              setMode("library");
+              setLibraryModulesFocus((n) => n + 1);
+            }}
           />
         ) : centerView === "marketing" ? (
           <MarketingView

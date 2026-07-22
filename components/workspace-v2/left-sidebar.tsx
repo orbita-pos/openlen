@@ -206,6 +206,8 @@ interface LeftSidebarProps {
   /** Readable name of the destination page ("inicio" or "/<slug>") for the
    *  Library module cards — forwarded to SectionsPanel unchanged. */
   activePageLabel?: string;
+  /** Bump to open the Library on the Módulos view (hub deep-link). */
+  focusModulesNonce?: number;
   /** Tabs that are visually locked + non-interactive. Used when the
    *  workspace is in a guided entry flow (e.g. user picked "AI" — only
    *  the chat tab is active until the page has been generated). */
@@ -333,6 +335,7 @@ export function LeftSidebar({
   moduleCards,
   onAddModule,
   activePageLabel,
+  focusModulesNonce,
   lockedTabs,
   lockReason,
   entryMode = "editing",
@@ -616,6 +619,7 @@ export function LeftSidebar({
                 moduleCards={moduleCards}
                 onAddModule={onAddModule}
                 activePageLabel={activePageLabel}
+                focusModulesNonce={focusModulesNonce}
               />
             )}
             {mode === "versions" && (

@@ -70,7 +70,8 @@
     "moduleAsPage": "새 페이지로",
     "moduleAlreadyHere": "이미 이 페이지에 있어요",
     "moduleNeedsMembers": "계정도 함께 켜져요 (필수)",
-    "modulesTarget": "삽입 위치: {page}"
+    "modulesTarget": "삽입 위치: {page}",
+    "sectionsTab": "섹션"
   },
   "paste": {
     "heading": "HTML 붙여넣기",

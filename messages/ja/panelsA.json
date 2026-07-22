@@ -70,7 +70,8 @@
     "moduleAsPage": "新しいページとして",
     "moduleAlreadyHere": "すでにこのページにあります",
     "moduleNeedsMembers": "アカウントも有効になります（必須）",
-    "modulesTarget": "挿入先: {page}"
+    "modulesTarget": "挿入先: {page}",
+    "sectionsTab": "セクション"
   },
   "paste": {
     "heading": "HTMLを貼り付け",

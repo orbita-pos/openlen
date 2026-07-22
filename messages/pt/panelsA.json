@@ -70,7 +70,8 @@
     "moduleAsPage": "Como página nova",
     "moduleAlreadyHere": "Já está nesta página",
     "moduleNeedsMembers": "Também ativa Contas (obrigatório)",
-    "modulesTarget": "Inserindo em: {page}"
+    "modulesTarget": "Inserindo em: {page}",
+    "sectionsTab": "Seções"
   },
   "paste": {
     "heading": "Colar HTML",
