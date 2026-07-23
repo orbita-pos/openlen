@@ -267,5 +267,10 @@
     "crear": "作成",
     "mispaginas": "マイページ",
     "comunidad": "コミュニティ"
+  },
+  "resultadosTabs": {
+    "page": "ページ",
+    "site": "サイト",
+    "leads": "リード"
   }
 }

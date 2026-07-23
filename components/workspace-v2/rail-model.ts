@@ -15,7 +15,7 @@ export type SectionView =
 export type SidebarMode =
   | "site" | "chat" | "templates" | "images" | "library" | "pages"
   | "assistant" | "members" | "broadcast" | "comments" | "bookings"
-  | "collections" | "modulos" | "insights" | "versions" | "3d";
+  | "collections" | "modulos" | "versions" | "3d";
 
 type Icon = ComponentType<{ size?: number }>;
 

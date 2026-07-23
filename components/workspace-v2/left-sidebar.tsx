@@ -24,7 +24,6 @@ import {
   type ScopedSelection,
 } from "./panels/chat-panel";
 import { ImagesPanel } from "./panels/images-panel";
-import { InsightsPanel } from "./panels/insights-panel";
 import type { DropAsset, MotionAsset } from "./drop-place-core";
 import { useIsMobile } from "./use-is-mobile";
 import { PastePanel } from "./panels/paste-panel";
@@ -243,9 +242,6 @@ interface LeftSidebarProps {
    *  `onPendingDraftConsumed` so the same draft isn't reapplied. */
   pendingDraft?: string | null;
   onPendingDraftConsumed?: () => void;
-  /** Page Coach "Apply with AI" (Insights tab) — the parent loads the
-   *  instruction into the Chat composer and switches to the Chat tab. */
-  onApplyCoachTip?: (instruction: string) => void;
   /** The account section shown in the workspace CENTER ("page" = the canvas).
    *  The global-section rail icons set this; the parent renders the section. */
   activeSection?: SectionView;
@@ -327,7 +323,6 @@ export function LeftSidebar({
   onClearScope,
   pendingDraft = null,
   onPendingDraftConsumed,
-  onApplyCoachTip,
   businesses = [],
   activeBusinessId = "",
   onPickBusiness,
@@ -501,12 +496,6 @@ export function LeftSidebar({
                 onPendingDraftConsumed={onPendingDraftConsumed}
                 sitePages={sitePages}
                 onSwitchSitePage={onSwitchSitePage}
-              />
-            )}
-            {mode === "insights" && (
-              <InsightsPanel
-                currentProjectId={currentProjectId}
-                onApplyTip={onApplyCoachTip}
               />
             )}
             {mode === "templates" && (

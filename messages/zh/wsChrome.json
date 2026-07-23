@@ -267,5 +267,10 @@
     "crear": "创建",
     "mispaginas": "我的页面",
     "comunidad": "社区"
+  },
+  "resultadosTabs": {
+    "page": "页面",
+    "site": "站点",
+    "leads": "线索"
   }
 }

@@ -58,6 +58,7 @@ import { ProjectsSection } from "../projects/projects-section";
 import { AnalyticsSection } from "../analytics/analytics-section";
 import { ModulesView } from "@/components/workspace-v2/modules-view";
 import { MarketingView } from "@/components/workspace-v2/marketing-view";
+import { ResultadosView } from "@/components/workspace-v2/resultados-view";
 import {
   LeftSidebar,
   type SidebarMode,
@@ -3517,13 +3518,6 @@ function NewV2Inner() {
           onClearScope={() => setScopedSelection(null)}
           pendingDraft={pendingChatDraft}
           onPendingDraftConsumed={() => setPendingChatDraft(null)}
-          onApplyCoachTip={(instruction) => {
-            // Page Coach → reuse the Chat: load the instruction into the
-            // composer and switch to the Chat tab (same flow as the post-swap
-            // chip). The user reviews and hits Send → ai-design applies it.
-            setPendingChatDraft(instruction);
-            setMode("chat");
-          }}
           businesses={profiles}
           businessesLoading={!profilesLoaded}
           activeBusinessId={activeBusinessId}
@@ -3575,7 +3569,19 @@ function NewV2Inner() {
             }}
           />
         ) : normalizedCenterView === "resultados" ? (
-          <AnalyticsSection activeBusinessId={activeBusinessId} />
+          <ResultadosView
+            currentProjectId={loadedProject?.id ?? null}
+            onApplyTip={(instruction) => {
+              // Page Coach → reuse the Chat: load the instruction into the
+              // composer and switch to the Chat tab (same flow as the
+              // post-swap chip). The user reviews and hits Send → ai-design
+              // applies it.
+              setCenterView("page");
+              setPendingChatDraft(instruction);
+              setMode("chat");
+            }}
+            siteSlot={<AnalyticsSection activeBusinessId={activeBusinessId} />}
+          />
         ) : normalizedCenterView === "modulos" ? (
           <ModulesView
             currentProjectId={loadedProject?.id ?? null}

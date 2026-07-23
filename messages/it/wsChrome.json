@@ -267,5 +267,10 @@
     "crear": "Crea",
     "mispaginas": "Le mie pagine",
     "comunidad": "Community"
+  },
+  "resultadosTabs": {
+    "page": "Pagina",
+    "site": "Sito",
+    "leads": "Lead"
   }
 }

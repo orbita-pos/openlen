@@ -267,5 +267,10 @@
     "crear": "만들기",
     "mispaginas": "내 페이지",
     "comunidad": "커뮤니티"
+  },
+  "resultadosTabs": {
+    "page": "페이지",
+    "site": "사이트",
+    "leads": "리드"
   }
 }
