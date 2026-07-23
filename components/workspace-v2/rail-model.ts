@@ -19,14 +19,6 @@ export type SidebarMode =
 
 type Icon = ComponentType<{ size?: number }>;
 
-/** The two views the "Explorar" surface tabs between (templates = curated, explore = community). */
-export const BROWSE_VIEWS = ["templates", "explore"] as const;
-export type BrowseView = (typeof BROWSE_VIEWS)[number];
-
-export function isBrowseView(v: SectionView): v is BrowseView {
-  return (BROWSE_VIEWS as readonly string[]).includes(v);
-}
-
 // ── Rail único (2026-07-22, spec un-rail-navegacion-unificada) ──────────────
 // One permanent, site-scoped rail. Two groups: CREAR (tools that edit the
 // page) and OPERAR (the site's operations). "Página" is an action that

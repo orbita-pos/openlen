@@ -262,5 +262,10 @@
     "marketing": "マーケティング",
     "business": "マイビジネス",
     "versions": "バージョン"
+  },
+  "startTabs": {
+    "crear": "作成",
+    "mispaginas": "マイページ",
+    "comunidad": "コミュニティ"
   }
 }

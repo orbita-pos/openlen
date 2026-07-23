@@ -262,5 +262,10 @@
     "marketing": "마케팅",
     "business": "내 비즈니스",
     "versions": "버전"
+  },
+  "startTabs": {
+    "crear": "만들기",
+    "mispaginas": "내 페이지",
+    "comunidad": "커뮤니티"
   }
 }

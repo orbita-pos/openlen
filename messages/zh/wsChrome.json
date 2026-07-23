@@ -262,5 +262,10 @@
     "marketing": "营销",
     "business": "我的业务",
     "versions": "版本"
+  },
+  "startTabs": {
+    "crear": "创建",
+    "mispaginas": "我的页面",
+    "comunidad": "社区"
   }
 }

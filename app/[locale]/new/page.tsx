@@ -58,14 +58,11 @@ import { ProjectsSection } from "../projects/projects-section";
 import { AnalyticsSection } from "../analytics/analytics-section";
 import { ModulesView } from "@/components/workspace-v2/modules-view";
 import { MarketingView } from "@/components/workspace-v2/marketing-view";
-import { TemplatesPanel } from "@/components/workspace-v2/panels/templates-panel";
-import { BrowseTabs } from "@/components/workspace-v2/browse-tabs";
 import {
   LeftSidebar,
   type SidebarMode,
   type SectionView,
 } from "@/components/workspace-v2/left-sidebar";
-import { isBrowseView } from "@/components/workspace-v2/rail-model";
 import { Check, Sparkles, Undo, X } from "@/components/workspace-v2/icons";
 import { SectionPreviewModal } from "@/components/workspace-v2/section-preview-modal";
 import type { SectionSpec } from "@/components/workspace-v2/sections-data";
@@ -206,13 +203,6 @@ const ALL_TABS: SidebarMode[] = [
   "3d",
 ];
 
-// Account-wide sections (vs. "page", the canvas). Static, so hoisted out of
-// the component instead of rebuilt every render.
-const NAVIGATING_SECTIONS = new Set<SectionView>([
-  "projects", "templates", "marketing", "modulos",
-  "analytics", "resultados", "messages", "business", "explore",
-]);
-
 // Build the "Original" theme baseline from a page-meta payload — the resolved
 // --ol-* token values + mode the page loaded with. Empty string for a token
 // the page doesn't define (so the reset removes that override rather than
@@ -256,6 +246,7 @@ function NewV2Inner() {
   const tMembers = useTranslations("members");
   const tCollections = useTranslations("collections");
   const tAsset = useTranslations("modalsAsset");
+  const tws = useTranslations("wsChrome");
   const locale = useLocale();
   const [dark, toggleDark] = useDarkMode();
   const toast = useToast();
@@ -292,6 +283,12 @@ function NewV2Inner() {
   const projectParam = searchParams.get("project");
   const modeParam = searchParams.get("mode");
   const profileParam = searchParams.get("profile");
+  // Read inside refetchProject's async continuation — a fetch started for the
+  // project that was open when the request fired can resolve AFTER a redirect
+  // (e.g. the global-surfaces bounce-out) has already moved the URL past it;
+  // without this the stale response would repopulate loadedProject.
+  const projectParamRef = useRef(projectParam);
+  projectParamRef.current = projectParam;
 
   // Derive the entry mode from URL state. ?project=<id> → editing;
   // ?mode=template|paste → that guided flow; everything else (?mode=ai or no
@@ -367,6 +364,23 @@ function NewV2Inner() {
   // on the normalized value.
   const normalizedCenterView: SectionView =
     centerView === "analytics" ? "resultados" : centerView;
+  // The start page (no project loaded) tabs between three surfaces, driven by
+  // the same ?view= param the in-editor sections used to read.
+  const startSurface: "crear" | "mispaginas" | "comunidad" =
+    !searchParams.get("project") && viewParam === "projects"
+      ? "mispaginas"
+      : !searchParams.get("project") && viewParam === "explore"
+        ? "comunidad"
+        : "crear";
+  // Global surfaces live on the start page — a project-loaded URL pointing at
+  // them leaves the editor (drops ?project) instead of rendering them inside.
+  useEffect(() => {
+    const pid = searchParams.get("project");
+    if (!pid) return;
+    if (centerView === "projects" || centerView === "explore" || centerView === "templates") {
+      router.replace(centerView === "templates" ? "/new" : `/new?view=${centerView}`);
+    }
+  }, [centerView, searchParams, router]);
   const setCenterView = useCallback(
     (v: SectionView) => {
       const params = new URLSearchParams(searchParams.toString());
@@ -1149,6 +1163,10 @@ function NewV2Inner() {
         | null;
       const p = data?.project;
       if (!p) return;
+      // Superseded: the URL moved on (e.g. redirected out to a global surface)
+      // while this request was in flight — applying it now would resurrect a
+      // project the user already left.
+      if (projectParamRef.current !== id) return;
       const filledCount = Array.isArray(p.data?.filledBlocks)
         ? p.data.filledBlocks.length
         : 0;
@@ -3556,11 +3574,6 @@ function NewV2Inner() {
               void reseedCurrentPage();
             }}
           />
-        ) : normalizedCenterView === "projects" ? (
-          <ProjectsSection
-            activeBusinessId={activeBusinessId}
-            onOpenExplore={() => setCenterView("explore")}
-          />
         ) : normalizedCenterView === "resultados" ? (
           <AnalyticsSection activeBusinessId={activeBusinessId} />
         ) : normalizedCenterView === "modulos" ? (
@@ -3623,54 +3636,6 @@ function NewV2Inner() {
             onSaveRegister={(r) => updateMarketingSettings({ register: r })}
             onSaveMatch={(m) => updateMarketingSettings({ match: m })}
           />
-        ) : isBrowseView(normalizedCenterView) ? (
-          <div className="flex-1 min-w-0 min-h-0 flex flex-col">
-            {!previewingTemplate && (
-              <BrowseTabs
-                active={normalizedCenterView as "templates" | "explore"}
-                onSelect={setCenterView}
-              />
-            )}
-            {normalizedCenterView === "explore" ? (
-              <ExploreView />
-            ) : previewingTemplate ? (
-              <div className="flex-1 min-w-0 flex flex-col">
-                {templateError && (
-                  <div className="h-7 shrink-0 flex items-center justify-center gap-2 text-[11.5px] bg-red-50 dark:bg-red-500/10 text-red-700 dark:text-red-300 border-b bd">
-                    {templateError}
-                  </div>
-                )}
-                <PreviewArea
-                  doc=""
-                  previewUrl={previewingTemplate.previewUrl}
-                  templateName={previewingTemplate.name}
-                  openInNewTabUrl={previewingTemplate.previewUrl}
-                  templateApplyMode={!!loadedProject}
-                  onUseTemplate={() => {
-                    void (loadedProject ? handleApplyTemplate() : handleUseTemplate());
-                  }}
-                  useTemplateLoading={loadedProject ? applyingTemplate : committingTemplate}
-                  onClearTemplate={() => {
-                    setPreviewingTemplate(null);
-                    setTemplateError(null);
-                  }}
-                />
-              </div>
-            ) : restyling ? null : (
-              <div className="flex-1 min-w-0 min-h-0 overflow-y-auto nice-scroll bg-app">
-                <div className="max-w-[1100px] mx-auto px-6 sm:px-8 py-8">
-                  <TemplatesPanel
-                    grid
-                    onPreview={(tpl) => {
-                      setPreviewingTemplate(tpl);
-                      setTemplateError(null);
-                    }}
-                    previewingId={null}
-                  />
-                </div>
-              </div>
-            )}
-          </div>
         ) : (
           <>
         {entryMode === "template" &&
@@ -3768,18 +3733,48 @@ function NewV2Inner() {
               />
             </div>
           ) : (
-            <StartLanding
-              aiState={aiBriefFormState}
-              onGenerate={handleAiGenerate}
-              generating={aiGenerating}
-              aiMode={aiMode}
-              onModeChange={setAiMode}
-              onPreviewTemplate={(tpl) => {
-                setPreviewingTemplate(tpl);
-                setTemplateError(null);
-              }}
-              onPaste={() => router.push("/new?mode=paste")}
-            />
+            <div className="flex-1 min-w-0 min-h-0 flex flex-col">
+              <div className="shrink-0 flex items-center justify-center gap-1 pt-3">
+                {(["crear", "mispaginas", "comunidad"] as const).map((s) => (
+                  <button
+                    key={s}
+                    type="button"
+                    onClick={() =>
+                      router.replace(
+                        s === "crear" ? "/new" : `/new?view=${s === "mispaginas" ? "projects" : "explore"}`,
+                      )
+                    }
+                    aria-current={startSurface === s ? "page" : undefined}
+                    className={`h-8 px-3.5 rounded-full text-[12.5px] font-medium transition ${
+                      startSurface === s ? "bg-elev fg shadow-card border bd" : "fg-muted hover:fg hover:bg-hover"
+                    }`}
+                  >
+                    {tws(`startTabs.${s}`)}
+                  </button>
+                ))}
+              </div>
+              {startSurface === "mispaginas" ? (
+                <ProjectsSection
+                  activeBusinessId={activeBusinessId}
+                  onOpenExplore={() => router.replace("/new?view=explore")}
+                />
+              ) : startSurface === "comunidad" ? (
+                <ExploreView />
+              ) : (
+                <StartLanding
+                  aiState={aiBriefFormState}
+                  onGenerate={handleAiGenerate}
+                  generating={aiGenerating}
+                  aiMode={aiMode}
+                  onModeChange={setAiMode}
+                  onPreviewTemplate={(tpl) => {
+                    setPreviewingTemplate(tpl);
+                    setTemplateError(null);
+                  }}
+                  onPaste={() => router.push("/new?mode=paste")}
+                />
+              )}
+            </div>
           )
         )}
         {entryMode === "paste" && (

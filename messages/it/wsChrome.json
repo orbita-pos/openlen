@@ -262,5 +262,10 @@
     "marketing": "Marketing",
     "business": "La mia attività",
     "versions": "Versioni"
+  },
+  "startTabs": {
+    "crear": "Crea",
+    "mispaginas": "Le mie pagine",
+    "comunidad": "Community"
   }
 }
