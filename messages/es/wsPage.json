@@ -145,11 +145,6 @@
     "resized": "Imagen redimensionada",
     "blockMoved": "Bloque movido"
   },
-  "templateApply": {
-    "applying": "Aplicando la plantilla a tu página…",
-    "notice": "Página reestilizada. Revisa el contenido de ejemplo (testimonios, precios) antes de publicar.",
-    "lowCredits": "No tienes créditos suficientes para reestilizar esta página."
-  },
   "toast": {
     "publishedTitle": "Publicada",
     "publishedBody": "Tu página está en vivo en {subdomain}.openlen.com",

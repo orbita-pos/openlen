@@ -1086,27 +1086,6 @@ function NewV2Inner() {
       setTemplateError(null);
     }
   }, [centerView, entryMode]);
-  // Editing-mode restyle: applying a template's design to the CURRENT page (vs
-  // cloning a new project). `applyingTemplate` is true while the endpoint runs;
-  // `applyNotice` is the "review example content" reminder shown after success.
-  const [applyingTemplate, setApplyingTemplate] = useState(false);
-  const [applyNotice, setApplyNotice] = useState<string | null>(null);
-  // Plantillas VIEW restyle bridges the async setCenterView("page") so the
-  // gallery doesn't flash for one frame between clearing the preview and the
-  // canvas mounting. Cleared once the apply settles (success → center left the
-  // view; error → the preview is still shown).
-  const [restyling, setRestyling] = useState(false);
-  useEffect(() => {
-    if (!applyingTemplate && (centerView !== "templates" || previewingTemplate)) {
-      setRestyling(false);
-    }
-  }, [applyingTemplate, centerView, previewingTemplate]);
-  useEffect(() => {
-    if (!applyNotice) return;
-    const id = setTimeout(() => setApplyNotice(null), 9000);
-    return () => clearTimeout(id);
-  }, [applyNotice]);
-
   // Light-up "Saving…" pill for 700ms whenever a section field mutates.
   const updateSection = useCallback(
     (id: string, fields: Section["fields"]) => {
@@ -3257,17 +3236,10 @@ function NewV2Inner() {
   // panel + canvas are entryMode-gated). In editing every tab just switches the
   // panel. Paste has no tab — it's reachable via ?mode=paste.
   const handleTabSelect = (m: SidebarMode) => {
-    if (entryMode !== "editing") {
-      if (m === "chat") {
-        router.push("/new?mode=ai");
-        setMode("chat");
-        return;
-      }
-      if (m === "templates") {
-        router.push("/new?mode=template");
-        setMode("templates");
-        return;
-      }
+    if (entryMode !== "editing" && m === "chat") {
+      router.push("/new?mode=ai");
+      setMode("chat");
+      return;
     }
     setMode(m);
   };
@@ -3304,70 +3276,6 @@ function NewV2Inner() {
         err instanceof Error ? err.message : t("template.networkError"),
       );
       setCommittingTemplate(false);
-    }
-  };
-
-  // Editing mode: pour the current page's content into the previewed template's
-  // design (POST /apply-template), then feed the result into the live editor via
-  // the same setLoadedProject path the Chat tab uses. Saved + versioned server-side.
-  const handleApplyTemplate = async () => {
-    if (!previewingTemplate || !loadedProject || applyingTemplate) return;
-    setApplyingTemplate(true);
-    setRestyling(centerView === "templates");
-    setTemplateError(null);
-    try {
-      const res = await fetch(`/api/projects/${loadedProject.id}/apply-template`, {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          templateId: previewingTemplate.id,
-          page: activeSitePage ?? undefined,
-          currentHtml: activeDoc,
-        }),
-      });
-      if (!res.ok) {
-        const data = (await res.json().catch(() => ({}))) as {
-          error?: string;
-          detail?: string;
-        };
-        const msg =
-          res.status === 402
-            ? t("templateApply.lowCredits")
-            : data.detail ?? data.error ?? `HTTP ${res.status}`;
-        setTemplateError(msg);
-        // Also surface via toast: if the user navigated off the Plantillas tab
-        // mid-apply, the inline banner (gated on previewingTemplate) is gone.
-        toast.error(msg);
-        setApplyingTemplate(false);
-        return;
-      }
-      const data = (await res.json()) as { html: string };
-      const page = activeSitePage;
-      setLoadedProject((prev) => {
-        if (!prev) return prev;
-        if (page) {
-          if (!prev.pages[page]) return prev;
-          return {
-            ...prev,
-            pages: {
-              ...prev.pages,
-              [page]: { ...prev.pages[page], html: data.html },
-            },
-          };
-        }
-        return { ...prev, html: data.html };
-      });
-      setApplyingTemplate(false);
-      setPreviewingTemplate(null);
-      setApplyNotice(t("templateApply.notice"));
-      // Restyle from the Plantillas VIEW happens over the center gallery — land
-      // back on the canvas so the user sees the result (no-op when already there).
-      setCenterView("page");
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : t("template.networkError");
-      setTemplateError(msg);
-      toast.error(msg);
-      setApplyingTemplate(false);
     }
   };
 
@@ -3822,21 +3730,6 @@ function NewV2Inner() {
                       }`
                 }
               />
-              {applyNotice && (
-                <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-30 flex items-start gap-2 max-w-sm pl-3.5 pr-1.5 py-2 rounded-2xl bg-elev border bd shadow-card fade-in">
-                  <Check size={15} className="text-accent shrink-0 mt-0.5" />
-                  <span className="text-[12px] fg-muted leading-snug">{applyNotice}</span>
-                  <button
-                    type="button"
-                    onClick={() => setApplyNotice(null)}
-                    aria-label={t("inserted.dismiss")}
-                    title={t("inserted.dismiss")}
-                    className="inline-flex items-center justify-center h-7 w-7 rounded-full fg-faint hover:fg hover:bg-hover transition shrink-0"
-                  >
-                    <X size={13} />
-                  </button>
-                </div>
-              )}
               {lastInserted && (
                 <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-30 flex items-center gap-1.5 pl-3.5 pr-1.5 py-1.5 rounded-full bg-elev border bd shadow-card fade-in">
                   <span className="inline-flex items-center gap-1.5 text-[12px] fg-muted whitespace-nowrap">

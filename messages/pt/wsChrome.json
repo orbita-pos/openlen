@@ -104,9 +104,7 @@
       "readOnly": "Somente leitura — nada é salvo até você confirmar",
       "cloning": "Clonando…",
       "use": "Usar este template →",
-      "clear": "Limpar",
-      "apply": "Apply to my page",
-      "applying": "Applying…"
+      "clear": "Limpar"
     },
     "iframeTitle": "Pré-visualização do espaço de trabalho do OpenLen",
     "redesigning": "Redesenhando sua página…",

@@ -96,9 +96,7 @@
       "readOnly": "只读 — 在你确认前不会保存任何内容",
       "cloning": "正在克隆…",
       "use": "使用此模板 →",
-      "clear": "清除",
-      "apply": "Apply to my page",
-      "applying": "Applying…"
+      "clear": "清除"
     },
     "iframeTitle": "OpenLen 工作区预览",
     "redesigning": "正在重新设计你的页面…",

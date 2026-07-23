@@ -145,11 +145,6 @@
     "resized": "画像のサイズを変更しました",
     "blockMoved": "ブロックを移動しました"
   },
-  "templateApply": {
-    "applying": "Applying the template to your page…",
-    "notice": "Page restyled. Review the example content (testimonials, prices) before publishing.",
-    "lowCredits": "Not enough credits to restyle this page."
-  },
   "toast": {
     "publishedTitle": "公開しました",
     "publishedBody": "ページは {subdomain}.openlen.com で公開中です",

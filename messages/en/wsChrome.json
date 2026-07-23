@@ -96,9 +96,7 @@
       "readOnly": "Read-only — nothing saved until you commit",
       "cloning": "Cloning…",
       "use": "Use this template →",
-      "clear": "Clear",
-      "apply": "Apply to my page",
-      "applying": "Applying…"
+      "clear": "Clear"
     },
     "iframeTitle": "OpenLen workspace preview",
     "redesigning": "Redesigning your page…",

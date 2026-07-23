@@ -96,9 +96,7 @@
       "readOnly": "Schreibgeschützt — nichts wird gespeichert, bis du übernimmst",
       "cloning": "Wird geklont…",
       "use": "Diese Vorlage verwenden →",
-      "clear": "Zurücksetzen",
-      "apply": "Apply to my page",
-      "applying": "Applying…"
+      "clear": "Zurücksetzen"
     },
     "iframeTitle": "OpenLen Workspace-Vorschau",
     "redesigning": "Deine Seite wird neu gestaltet…",

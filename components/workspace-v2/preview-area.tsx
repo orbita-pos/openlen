@@ -57,9 +57,6 @@ interface PreviewAreaProps {
    *  project. Shown as the primary action button in the template banner. */
   onUseTemplate?: () => void;
   useTemplateLoading?: boolean;
-  /** Apply-to-current-page mode (vs clone-into-new) — swaps the commit button
-   *  label from "Use this template" to "Apply to my page". */
-  templateApplyMode?: boolean;
   /** When true, srcDoc is run through the inline-edit injector (see
    *  use-inline-edit.ts) and the "Click any text…" hint banner is shown.
    *  Active when the parent has the Content sidebar tab open on a flat
@@ -173,7 +170,6 @@ export function PreviewArea({
   onClearTemplate,
   onUseTemplate,
   useTemplateLoading = false,
-  templateApplyMode = false,
   editableInjection = false,
   openInNewTabUrl = null,
   sectionSelectMode = false,
@@ -707,10 +703,10 @@ export function PreviewArea({
                 {useTemplateLoading ? (
                   <>
                     <span className="inline-block w-1.5 h-1.5 rounded-full bg-white/80 animate-pulse" />
-                    {t(templateApplyMode ? "preview.templateBanner.applying" : "preview.templateBanner.cloning")}
+                    {t("preview.templateBanner.cloning")}
                   </>
                 ) : (
-                  <>{t(templateApplyMode ? "preview.templateBanner.apply" : "preview.templateBanner.use")}</>
+                  <>{t("preview.templateBanner.use")}</>
                 )}
               </button>
             )}

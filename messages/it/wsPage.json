@@ -145,11 +145,6 @@
     "resized": "Immagine ridimensionata",
     "blockMoved": "Blocco spostato"
   },
-  "templateApply": {
-    "applying": "Applying the template to your page…",
-    "notice": "Page restyled. Review the example content (testimonials, prices) before publishing.",
-    "lowCredits": "Not enough credits to restyle this page."
-  },
   "toast": {
     "publishedTitle": "Pubblicata",
     "publishedBody": "La tua pagina è online su {subdomain}.openlen.com",

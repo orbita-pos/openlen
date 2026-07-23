@@ -145,11 +145,6 @@
     "resized": "已调整图片大小",
     "blockMoved": "已移动块"
   },
-  "templateApply": {
-    "applying": "Applying the template to your page…",
-    "notice": "Page restyled. Review the example content (testimonials, prices) before publishing.",
-    "lowCredits": "Not enough credits to restyle this page."
-  },
   "toast": {
     "publishedTitle": "已发布",
     "publishedBody": "你的页面已上线：{subdomain}.openlen.com",

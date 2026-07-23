@@ -96,9 +96,7 @@
       "readOnly": "Lecture seule — rien n'est enregistré tant que vous ne validez pas",
       "cloning": "Clonage…",
       "use": "Utiliser ce modèle →",
-      "clear": "Effacer",
-      "apply": "Apply to my page",
-      "applying": "Applying…"
+      "clear": "Effacer"
     },
     "iframeTitle": "Aperçu de l'espace de travail OpenLen",
     "redesigning": "Refonte de votre page…",

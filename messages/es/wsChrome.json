@@ -96,9 +96,7 @@
       "readOnly": "Solo lectura — no se guarda nada hasta que confirmes",
       "cloning": "Clonando…",
       "use": "Usar esta plantilla →",
-      "clear": "Quitar",
-      "apply": "Aplicar a mi página",
-      "applying": "Aplicando…"
+      "clear": "Quitar"
     },
     "iframeTitle": "Vista previa del workspace de OpenLen",
     "redesigning": "Rediseñando tu página…",

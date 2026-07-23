@@ -145,11 +145,6 @@
     "resized": "Image resized",
     "blockMoved": "Block moved"
   },
-  "templateApply": {
-    "applying": "Applying the template to your page…",
-    "notice": "Page restyled. Review the example content (testimonials, prices) before publishing.",
-    "lowCredits": "Not enough credits to restyle this page."
-  },
   "toast": {
     "publishedTitle": "Published",
     "publishedBody": "Your page is live at {subdomain}.openlen.com",

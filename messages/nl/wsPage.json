@@ -145,11 +145,6 @@
     "resized": "Afbeeldingsgrootte aangepast",
     "blockMoved": "Blok verplaatst"
   },
-  "templateApply": {
-    "applying": "Applying the template to your page…",
-    "notice": "Page restyled. Review the example content (testimonials, prices) before publishing.",
-    "lowCredits": "Not enough credits to restyle this page."
-  },
   "toast": {
     "publishedTitle": "Gepubliceerd",
     "publishedBody": "Je pagina is live op {subdomain}.openlen.com",

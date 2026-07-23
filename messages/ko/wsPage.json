@@ -145,11 +145,6 @@
     "resized": "이미지 크기 조정됨",
     "blockMoved": "블록 이동됨"
   },
-  "templateApply": {
-    "applying": "Applying the template to your page…",
-    "notice": "Page restyled. Review the example content (testimonials, prices) before publishing.",
-    "lowCredits": "Not enough credits to restyle this page."
-  },
   "toast": {
     "publishedTitle": "게시됨",
     "publishedBody": "{subdomain}.openlen.com 에서 페이지가 공개되었습니다",
