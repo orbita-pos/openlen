@@ -196,10 +196,10 @@ type DropSrc = {
 };
 
 const ALL_TABS: SidebarMode[] = [
+  "site",
   "chat",
   "images",
   "library",
-  "pages",
   "versions",
   "3d",
 ];
@@ -1287,8 +1287,11 @@ function NewV2Inner() {
     // Entry flows: on the AI landing the brief lives in the center
     // (StartLanding), so the sidebar Chat tab is locked there too — only
     // Template/Paste entries still expose Chat as a "switch to AI start"
-    // shortcut. Everything else unlocks once a project exists. (Plantillas is a
-    // center VIEW now, not a sidebar tab — it isn't part of this lock set.)
+    // shortcut. Everything else (including Sitio — the pages tree needs a
+    // loaded project) unlocks once a project exists. Templates browsing lives
+    // on the start page now; the editing-mode Templates panel is currently
+    // unreachable pending a product decision, so it isn't part of this lock
+    // set either.
     const locked = ALL_TABS.filter((t) => t !== "chat");
     return entryMode === "ai" ? [...locked, "chat"] : locked;
   }, [entryMode]);
@@ -3613,7 +3616,7 @@ function NewV2Inner() {
                 pid ? `/inbox?tab=forms&from=${encodeURIComponent(pid)}` : "/inbox?tab=forms",
               );
             }}
-            onShowAnalytics={() => setCenterView("analytics")}
+            onShowAnalytics={() => setCenterView("resultados")}
             onReturnToCanvas={() => setCenterView("page")}
             placements={
               loadedProject

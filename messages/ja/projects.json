@@ -158,15 +158,11 @@
     "cancel": "キャンセル"
   },
   "nav": {
-    "templates": "テンプレート",
-    "modulos": "モジュール",
-    "marketing": "マーケティング",
     "myPages": "マイページ",
     "myBusiness": "マイビジネス",
     "messages": "受信箱",
     "analytics": "分析",
-    "explore": "探索",
-    "community": "コミュニティ"
+    "explore": "探索"
   },
   "deleteDialog": {
     "title": "このページを削除しますか？",

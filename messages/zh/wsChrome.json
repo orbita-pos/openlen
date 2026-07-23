@@ -74,7 +74,6 @@
         "title": "3D场景"
       }
     },
-    "appButton": "应用",
     "tabLocked": "{label} — 已锁定",
     "expandPanel": "展开面板",
     "collapsePanel": "收起面板"
@@ -145,7 +144,6 @@
     "heading": "你想从什么开始？",
     "subheading": "通往已发布落地页的三条路径。选择一条，我们就为你在 <domain>openlen.com</domain> 上配好一个真实的子域名。",
     "pickThis": "选择此项",
-    "browseProjects": "或<link>浏览你的项目 →</link>",
     "cards": {
       "ai": {
         "title": "用 AI 生成",

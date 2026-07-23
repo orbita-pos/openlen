@@ -176,15 +176,11 @@
     "cancel": "Cancel"
   },
   "nav": {
-    "templates": "Templates",
-    "modulos": "Modules",
-    "marketing": "Marketing",
     "myPages": "My pages",
     "myBusiness": "My business",
     "messages": "Inbox",
     "analytics": "Analytics",
-    "explore": "Explore",
-    "community": "Community"
+    "explore": "Explore"
   },
   "deleteDialog": {
     "title": "Delete this page?",

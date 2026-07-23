@@ -74,7 +74,6 @@
         "title": "3D scene"
       }
     },
-    "appButton": "App",
     "tabLocked": "{label} — locked",
     "expandPanel": "Expand panel",
     "collapsePanel": "Collapse panel"
@@ -145,7 +144,6 @@
     "heading": "What do you want to start with?",
     "subheading": "Three paths to a published landing page. Pick one and we'll get you a real subdomain on <domain>openlen.com</domain>.",
     "pickThis": "Pick this",
-    "browseProjects": "or <link>browse your projects →</link>",
     "cards": {
       "ai": {
         "title": "Generate with AI",

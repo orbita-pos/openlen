@@ -74,7 +74,6 @@
         "title": "Escena 3D"
       }
     },
-    "appButton": "App",
     "tabLocked": "{label} — bloqueado",
     "expandPanel": "Expandir panel",
     "collapsePanel": "Contraer panel"
@@ -145,7 +144,6 @@
     "heading": "¿Con qué quieres empezar?",
     "subheading": "Tres caminos hacia una landing page publicada. Elige uno y te conseguimos un subdominio real en <domain>openlen.com</domain>.",
     "pickThis": "Elegir esto",
-    "browseProjects": "o <link>explora tus proyectos →</link>",
     "cards": {
       "ai": {
         "title": "Generar con IA",

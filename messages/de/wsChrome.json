@@ -74,7 +74,6 @@
         "title": "3D-Szene"
       }
     },
-    "appButton": "App",
     "tabLocked": "{label} — gesperrt",
     "expandPanel": "Panel ausklappen",
     "collapsePanel": "Panel einklappen"
@@ -145,7 +144,6 @@
     "heading": "Womit möchtest du starten?",
     "subheading": "Drei Wege zu einer veröffentlichten Landingpage. Wähle einen und wir richten dir eine echte Subdomain unter <domain>openlen.com</domain> ein.",
     "pickThis": "Das auswählen",
-    "browseProjects": "oder <link>deine Projekte durchsuchen →</link>",
     "cards": {
       "ai": {
         "title": "Mit KI generieren",

@@ -176,15 +176,11 @@
     "cancel": "Cancelar"
   },
   "nav": {
-    "templates": "Plantillas",
-    "modulos": "Módulos",
-    "marketing": "Marketing",
     "myPages": "Mis páginas",
     "myBusiness": "Mi negocio",
     "messages": "Bandeja",
     "analytics": "Métricas",
-    "explore": "Explorar",
-    "community": "Comunidad"
+    "explore": "Explorar"
   },
   "deleteDialog": {
     "title": "¿Eliminar esta página?",

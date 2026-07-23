@@ -74,7 +74,6 @@
         "title": "Cena 3D"
       }
     },
-    "appButton": "App",
     "tabLocked": "{label} — bloqueado",
     "expandPanel": "Expandir painel",
     "collapsePanel": "Recolher painel"
@@ -153,7 +152,6 @@
     "heading": "Por onde você quer começar?",
     "subheading": "Três caminhos para uma landing page publicada. Escolha um e você terá um subdomínio de verdade em <domain>openlen.com</domain>.",
     "pickThis": "Escolher este",
-    "browseProjects": "ou <link>veja seus projetos →</link>",
     "cards": {
       "ai": {
         "title": "Gerar com IA",

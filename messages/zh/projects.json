@@ -158,15 +158,11 @@
     "cancel": "取消"
   },
   "nav": {
-    "templates": "模板",
-    "modulos": "模块",
-    "marketing": "营销",
     "myPages": "我的页面",
     "myBusiness": "我的业务",
     "messages": "收件箱",
     "analytics": "数据分析",
-    "explore": "探索",
-    "community": "社区"
+    "explore": "探索"
   },
   "deleteDialog": {
     "title": "删除此页面？",

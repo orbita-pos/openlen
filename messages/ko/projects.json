@@ -158,15 +158,11 @@
     "cancel": "취소"
   },
   "nav": {
-    "templates": "템플릿",
-    "modulos": "모듈",
-    "marketing": "마케팅",
     "myPages": "내 페이지",
     "myBusiness": "내 비즈니스",
     "messages": "받은편지함",
     "analytics": "분석",
-    "explore": "탐색",
-    "community": "커뮤니티"
+    "explore": "탐색"
   },
   "deleteDialog": {
     "title": "이 페이지를 삭제할까요?",

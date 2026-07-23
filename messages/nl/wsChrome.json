@@ -74,7 +74,6 @@
         "title": "3D-scène"
       }
     },
-    "appButton": "App",
     "tabLocked": "{label} — vergrendeld",
     "expandPanel": "Paneel uitvouwen",
     "collapsePanel": "Paneel inklappen"
@@ -153,7 +152,6 @@
     "heading": "Waarmee wil je beginnen?",
     "subheading": "Drie wegen naar een gepubliceerde landingspagina. Kies er één en wij regelen een echt subdomein op <domain>openlen.com</domain>.",
     "pickThis": "Dit kiezen",
-    "browseProjects": "of <link>blader door je projecten →</link>",
     "cards": {
       "ai": {
         "title": "Genereren met AI",

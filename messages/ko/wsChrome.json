@@ -74,7 +74,6 @@
         "title": "3D 장면"
       }
     },
-    "appButton": "앱",
     "tabLocked": "{label} — 잠김",
     "expandPanel": "패널 펼치기",
     "collapsePanel": "패널 접기"
@@ -145,7 +144,6 @@
     "heading": "무엇으로 시작하시겠어요?",
     "subheading": "게시된 랜딩 페이지로 가는 세 가지 길. 하나를 선택하면 <domain>openlen.com</domain>의 실제 서브도메인을 드립니다.",
     "pickThis": "이것 선택",
-    "browseProjects": "또는 <link>내 프로젝트 둘러보기 →</link>",
     "cards": {
       "ai": {
         "title": "AI로 생성",

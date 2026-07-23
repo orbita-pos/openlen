@@ -158,15 +158,11 @@
     "cancel": "Annulla"
   },
   "nav": {
-    "templates": "Modelli",
-    "modulos": "Moduli",
-    "marketing": "Marketing",
     "myPages": "Le mie pagine",
     "myBusiness": "La mia attività",
     "messages": "Posta",
     "analytics": "Statistiche",
-    "explore": "Esplora",
-    "community": "Community"
+    "explore": "Esplora"
   },
   "deleteDialog": {
     "title": "Eliminare questa pagina?",

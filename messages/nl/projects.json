@@ -176,15 +176,11 @@
     "cancel": "Annuleren"
   },
   "nav": {
-    "templates": "Sjablonen",
-    "modulos": "Modules",
-    "marketing": "Marketing",
     "myPages": "Mijn pagina's",
     "myBusiness": "Mijn bedrijf",
     "messages": "Inbox",
     "analytics": "Statistieken",
-    "explore": "Ontdekken",
-    "community": "Community"
+    "explore": "Ontdekken"
   },
   "deleteDialog": {
     "title": "Deze pagina verwijderen?",

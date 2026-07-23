@@ -74,7 +74,6 @@
         "title": "3Dシーン"
       }
     },
-    "appButton": "アプリ",
     "tabLocked": "{label} — ロック中",
     "expandPanel": "パネルを展開",
     "collapsePanel": "パネルを折りたたむ"
@@ -145,7 +144,6 @@
     "heading": "何から始めますか？",
     "subheading": "公開ランディングページへの道は 3 つ。1 つ選べば、<domain>openlen.com</domain> に本物のサブドメインを用意します。",
     "pickThis": "これを選ぶ",
-    "browseProjects": "または <link>プロジェクトを見る →</link>",
     "cards": {
       "ai": {
         "title": "AI で生成",
