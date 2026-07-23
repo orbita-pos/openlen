@@ -7,11 +7,15 @@ import {
   Coins,
   ListTree,
   MessageSquare,
-  LayoutGrid,
   Image as ImageIcon,
   Layers,
-  Users,
   History,
+  House,
+  Package,
+  BarChart3,
+  Inbox,
+  Megaphone,
+  Store,
   Monitor,
   Tablet,
   Smartphone,
@@ -38,14 +42,22 @@ function orb(color: string): CSSProperties {
   };
 }
 
-const RAIL_TABS = [
-  { Icon: ListTree, on: false },
+// Mirrors the REAL unified rail (rail-model.ts): Crear | divider | Operar.
+const RAIL_CREAR_MOCK = [
+  { Icon: House, on: false }, // Página
+  { Icon: ListTree, on: false }, // Sitio
   { Icon: MessageSquare, on: true }, // Chat (Len) — active
-  { Icon: LayoutGrid, on: false },
-  { Icon: ImageIcon, on: false },
-  { Icon: Layers, on: false },
-  { Icon: Users, on: false },
-  { Icon: History, on: false },
+  { Icon: ImageIcon, on: false }, // Imágenes
+  { Icon: Layers, on: false }, // Library
+  { Icon: Sparkles, on: false }, // 3D
+];
+const RAIL_OPERAR_MOCK = [
+  { Icon: Package, on: false }, // Módulos
+  { Icon: BarChart3, on: false }, // Resultados
+  { Icon: Inbox, on: false }, // Bandeja
+  { Icon: Megaphone, on: false }, // Marketing
+  { Icon: Store, on: false }, // Mi negocio
+  { Icon: History, on: false }, // Versiones
 ];
 
 export function HeroProduct() {
@@ -113,10 +125,22 @@ export function HeroProduct() {
             <span className="grid h-8 w-8 place-items-center rounded-md bg-gradient-to-br from-[#FF7E55] to-[#C72E10] text-white text-[11px] font-semibold">
               M
             </span>
-            <span className="my-1 h-px w-6 bg-black/10 dark:bg-white/10" />
-            {RAIL_TABS.map(({ Icon, on }, i) => (
+            {RAIL_CREAR_MOCK.map(({ Icon, on }, i) => (
               <span
-                key={i}
+                key={`c${i}`}
+                className={`grid h-8 w-8 place-items-center rounded-md ${
+                  on
+                    ? "bg-[var(--bg-elev)] text-[var(--fg)] border border-[var(--border)] shadow-[0_1px_2px_0_rgba(0,0,0,0.3)]"
+                    : "text-[var(--fg-muted)]"
+                }`}
+              >
+                <Icon size={14} />
+              </span>
+            ))}
+            <span className="my-1 h-px w-6 bg-black/10 dark:bg-white/10" />
+            {RAIL_OPERAR_MOCK.map(({ Icon, on }, i) => (
+              <span
+                key={`o${i}`}
                 className={`grid h-8 w-8 place-items-center rounded-md ${
                   on
                     ? "bg-[var(--bg-elev)] text-[var(--fg)] border border-[var(--border)] shadow-[0_1px_2px_0_rgba(0,0,0,0.3)]"
