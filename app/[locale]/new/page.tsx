@@ -3650,7 +3650,7 @@ function NewV2Inner() {
               />
             </div>
           ) : (
-            <div className="flex-1 min-w-0 min-h-0 flex flex-col">
+            <div className="flex-1 min-w-0 min-h-0 flex flex-col bg-app">
               <div className="shrink-0 flex items-center justify-center gap-1 pt-3">
                 {(["crear", "mispaginas", "comunidad"] as const).map((s) => (
                   <button

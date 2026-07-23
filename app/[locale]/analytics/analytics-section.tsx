@@ -51,7 +51,7 @@ export function AnalyticsSection({
   }, [activeBusinessId]);
 
   return (
-    <div className="flex-1 min-w-0 overflow-y-auto flex flex-col bg-preview-a">
+    <div className="flex-1 min-w-0 overflow-y-auto flex flex-col bg-app">
       {state ? (
         <AnalyticsView totals={state.totals} perPage={state.perPage} />
       ) : (

@@ -85,7 +85,7 @@ export function StartLanding({
   }, [templates, familyFilter, query]);
 
   return (
-    <section className="flex-1 min-w-0 min-h-0 overflow-y-auto nice-scroll bg-preview-a">
+    <section className="flex-1 min-w-0 min-h-0 overflow-y-auto nice-scroll bg-app">
       <div className="mx-auto max-w-5xl px-6 py-10 sm:py-12">
         {/* Hero copy */}
         <div className="text-center mb-6">

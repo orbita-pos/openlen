@@ -444,7 +444,7 @@ export function BusinessSection({
       className={`flex-1 min-w-0 overflow-y-auto antialiased text-[#1A1A1A] dark:text-[#F4F4F3] ${
         // In the workspace center, match the editor's black canvas; on the
         // /business route keep the warm dashboard surface.
-        embedded ? "bg-preview-a" : "bg-[#FAFAF9] dark:bg-[#0E0E10]"
+        embedded ? "bg-app" : "bg-[#FAFAF9] dark:bg-[#0E0E10]"
       }`}
     >
 
