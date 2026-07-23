@@ -14,7 +14,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { Grid3, Layers, PanelLeft, PanelRight, X } from "./icons";
+import { Layers, PanelLeft, PanelRight, X } from "./icons";
 import type { Section } from "./mock-data";
 import type { StoredChatTurn } from "@/lib/projects/types";
 import { RailBusinessSwitcher } from "./business-switcher";
@@ -51,128 +51,92 @@ import { formatBadge } from "@/components/inbox/badge-format";
 // this file declared before.
 export type { SectionView, SidebarMode } from "./rail-model";
 import {
-  EDITAR_ITEMS,
-  isBrowseView,
-  NAVEGAR_ITEMS,
-  type RailMode,
+  RAIL_CREAR,
+  RAIL_OPERAR,
+  railActiveKey,
+  railItemKey,
+  type RailItemDef,
   type SectionView,
   type SidebarMode,
 } from "./rail-model";
 
-// Navegar: the account-wide sections (same nav as the dashboard), rendered
-// full-time on bare /new and behind the "App" button while editing. Every
-// item just swaps the workspace's center view in place — including Explore,
-// which opens ExploreView in-workspace (?view=explore) rather than
-// navigating to the standalone /explore route.
-function NavegarGroup({
-  vertical,
-  active,
-  onSelect,
-  inboxBadge = 0,
-}: {
-  vertical: boolean;
-  active: SectionView;
-  onSelect: (v: SectionView) => void;
-  inboxBadge?: number;
-}) {
-  const t = useTranslations("projects");
-  const tInbox = useTranslations("inbox");
-  return (
-    <>
-      {NAVEGAR_ITEMS.map((s) => {
-        const I = s.icon;
-        // The unified "Explorar" item (view: "templates") stays highlighted
-        // while on either browse tab (Plantillas or Comunidad) — see BrowseTabs.
-        const isActive =
-          s.view === "templates"
-            ? isBrowseView(active)
-            : active === s.view;
-        const badgeLabel =
-          s.view === "messages" ? formatBadge(inboxBadge) : null;
-        const label =
-          badgeLabel !== null
-            ? `${t(s.key)} — ${tInbox("badge.count", { count: inboxBadge })}`
-            : t(s.key);
-        const className = `${vertical ? "h-8 w-8" : "h-7 w-8"} relative inline-flex items-center justify-center rounded-md transition ${
-          isActive ? "bg-elev fg shadow-card border bd" : "fg-muted hover:fg hover:bg-hover"
-        }`;
-        return (
-          <Tooltip key={s.view} label={label} side={vertical ? "right" : undefined}>
-            <button
-              type="button"
-              onClick={() => onSelect(s.view)}
-              aria-label={label}
-              aria-current={isActive ? "page" : undefined}
-              className={className}
-            >
-              <I size={vertical ? 14 : 13} />
-              {badgeLabel !== null && (
-                <span
-                  aria-hidden
-                  data-testid="inbox-badge"
-                  className="absolute -top-0.5 -right-0.5 min-w-4 h-4 px-1 rounded-full bg-coral-500 text-white text-[10px] font-semibold leading-4 text-center"
-                >
-                  {badgeLabel}
-                </span>
-              )}
-            </button>
-          </Tooltip>
-        );
-      })}
-    </>
-  );
-}
-
-// Editar: tools that act on the currently loaded page. Only ever rendered
-// while editing (railMode==="editar"), so — unlike the old MODE_TABS map —
-// there's no entryMode gate here; the caller only shows this group once a
-// project is loaded.
-function EditarGroup({
-  mode,
-  onSelect,
+// Rail único: one permanent, site-scoped icon rail — CREAR (page-editing
+// tools) then a divider then OPERAR (site-level sections). Replaces the old
+// NavegarGroup/EditarGroup swap + the "App" button (spec
+// un-rail-navegacion-unificada, 2026-07-22).
+function UnifiedRail({
+  activeKey,
+  onPagina,
+  onPanel,
+  onView,
   lockedTabs,
   lockReason,
+  badges,
 }: {
-  mode: SidebarMode;
-  onSelect: (id: SidebarMode) => void;
+  activeKey: string;
+  onPagina: () => void;
+  onPanel: (id: SidebarMode) => void;
+  onView: (v: SectionView) => void;
   lockedTabs?: SidebarMode[];
   lockReason?: string;
+  badges: { leads: number; chat: number };
 }) {
   const t = useTranslations("wsChrome");
+  const tInbox = useTranslations("inbox");
   const lockedSet = new Set(lockedTabs ?? []);
+  const render = (item: RailItemDef) => {
+    const key = railItemKey(item);
+    const active = key === activeKey;
+    const locked = item.kind === "panel" && lockedSet.has(item.id);
+    const badgeCount =
+      item.kind === "view" && item.badge ? badges[item.badge] : 0;
+    const plainLabel = t(`rail.${key}`);
+    const label = locked
+      ? (lockReason ?? t("sidebar.tabLocked", { label: plainLabel }))
+      : badgeCount > 0
+        ? `${plainLabel} — ${tInbox("badge.count", { count: badgeCount })}`
+        : plainLabel;
+    const I = item.icon;
+    return (
+      <Tooltip key={key} label={label} side="right">
+        <button
+          type="button"
+          disabled={locked}
+          aria-label={label}
+          aria-current={active ? "page" : undefined}
+          onClick={() => {
+            if (locked) return;
+            if (item.kind === "action") onPagina();
+            else if (item.kind === "panel") onPanel(item.id);
+            else onView(item.view);
+          }}
+          className={`h-8 w-8 relative inline-flex items-center justify-center rounded-md transition ${
+            locked
+              ? "fg-faint opacity-50 cursor-not-allowed"
+              : active
+                ? "bg-elev fg shadow-card border bd"
+                : "fg-muted hover:fg hover:bg-hover"
+          }`}
+        >
+          <I size={14} />
+          {badgeCount > 0 && (
+            <span
+              aria-hidden
+              data-testid={`rail-badge-${key}`}
+              className="absolute -top-0.5 -right-0.5 min-w-4 h-4 px-1 rounded-full bg-coral-500 text-white text-[10px] font-semibold leading-4 text-center"
+            >
+              {formatBadge(badgeCount)}
+            </span>
+          )}
+        </button>
+      </Tooltip>
+    );
+  };
   return (
     <>
-      {EDITAR_ITEMS.map((tab) => {
-        const active = mode === tab.id;
-        const locked = lockedSet.has(tab.id);
-        const I = tab.icon;
-        const plainLabel = t(`sidebar.tabs.${tab.id}.label`);
-        const label = locked
-          ? (lockReason ?? t("sidebar.tabLocked", { label: plainLabel }))
-          : plainLabel;
-        return (
-          <Tooltip key={tab.id} label={label} side="right">
-            <button
-              type="button"
-              disabled={locked}
-              aria-label={label}
-              onClick={() => {
-                if (locked) return;
-                onSelect(tab.id);
-              }}
-              className={`h-8 w-8 inline-flex items-center justify-center rounded-md transition-colors duration-150 ease-out ${
-                locked
-                  ? "fg-faint opacity-50 cursor-not-allowed"
-                  : active
-                    ? "bg-elev fg shadow-card border bd"
-                    : "fg-muted hover:fg hover:bg-hover"
-              }`}
-            >
-              <I size={14} />
-            </button>
-          </Tooltip>
-        );
-      })}
+      {RAIL_CREAR.map(render)}
+      <div className="my-1 h-px w-6 bg-black/10 dark:bg-white/10" />
+      {RAIL_OPERAR.map(render)}
     </>
   );
 }
@@ -286,13 +250,6 @@ interface LeftSidebarProps {
    *  The global-section rail icons set this; the parent renders the section. */
   activeSection?: SectionView;
   onSelectSection?: (v: SectionView) => void;
-  /** Which rail group to render — Navegar (app sections) or Editar (page
-   *  tools). Derived by the parent from hasProject/navigating state via
-   *  `railModeFor`. */
-  railMode: RailMode;
-  /** "App" button (only shown in the Editar group) — opens the Navegar
-   *  section list without leaving the loaded project. */
-  onOpenApp: () => void;
   /** Active-business switcher (top of the rail). The active business scopes the
    *  Páginas/Analytics/Mensajes sections + is the default for new pages. */
   businesses?: BusinessProfile[];
@@ -388,13 +345,10 @@ export function LeftSidebar({
   scene3d,
   onApplyScene3d,
   accent,
-  railMode,
-  onOpenApp,
 }: LeftSidebarProps) {
   const showBusinessSwitcher = businesses.length > 0 && !!onPickBusiness;
   const t = useTranslations("wsChrome");
   const { counts: inboxCounts } = useInboxBadge();
-  const inboxBadge = inboxCounts ? inboxCounts.chat + inboxCounts.leads : 0;
   const isFlatProject = flatProjectId !== undefined;
   const tabTitle = (id: SidebarMode) => t(`sidebar.tabs.${id}.title`);
   // After a click-to-place pick on mobile the panel overlays the canvas —
@@ -413,37 +367,21 @@ export function LeftSidebar({
           onAdd={onAddBusiness}
           onSelectSection={onSelectSection}
         />
-        {railMode === "navegar" ? (
-          <NavegarGroup
-            vertical
-            active={activeSection}
-            onSelect={onSelectSection ?? (() => {})}
-            inboxBadge={inboxBadge}
-          />
-        ) : (
-          <>
-            <Tooltip label={t("sidebar.appButton")} side="right">
-              <button
-                type="button"
-                onClick={onOpenApp}
-                aria-label={t("sidebar.appButton")}
-                className="h-8 w-8 inline-flex items-center justify-center rounded-md fg-muted hover:fg hover:bg-hover transition"
-              >
-                <Grid3 size={14} />
-              </button>
-            </Tooltip>
-            <div className="my-1 h-px w-6 bg-black/10 dark:bg-white/10" />
-            <EditarGroup
-              mode={mode}
-              onSelect={(id) => {
-                setMode(id);
-                onToggleCollapse();
-              }}
-              lockedTabs={lockedTabs}
-              lockReason={lockReason}
-            />
-          </>
-        )}
+        <UnifiedRail
+          activeKey={railActiveKey(activeSection, mode)}
+          onPagina={() => onSelectSection?.("page")}
+          onPanel={(id) => {
+            setMode(id);
+            if (collapsed) onToggleCollapse();
+          }}
+          onView={(v) => onSelectSection?.(v)}
+          lockedTabs={lockedTabs}
+          lockReason={lockReason}
+          badges={{
+            leads: inboxCounts?.leads ?? 0,
+            chat: inboxCounts?.chat ?? 0,
+          }}
+        />
         <Tooltip label={t("sidebar.expandPanel")} side="right">
           <button
             type="button"
@@ -475,34 +413,21 @@ export function LeftSidebar({
           onAdd={onAddBusiness}
           onSelectSection={onSelectSection}
         />
-        {railMode === "navegar" ? (
-          <NavegarGroup
-            vertical
-            active={activeSection}
-            onSelect={onSelectSection ?? (() => {})}
-            inboxBadge={inboxBadge}
-          />
-        ) : (
-          <>
-            <Tooltip label={t("sidebar.appButton")} side="right">
-              <button
-                type="button"
-                onClick={onOpenApp}
-                aria-label={t("sidebar.appButton")}
-                className="h-8 w-8 inline-flex items-center justify-center rounded-md fg-muted hover:fg hover:bg-hover transition"
-              >
-                <Grid3 size={14} />
-              </button>
-            </Tooltip>
-            <div className="my-1 h-px w-6 bg-black/10 dark:bg-white/10" />
-            <EditarGroup
-              mode={mode}
-              onSelect={setMode}
-              lockedTabs={lockedTabs}
-              lockReason={lockReason}
-            />
-          </>
-        )}
+        <UnifiedRail
+          activeKey={railActiveKey(activeSection, mode)}
+          onPagina={() => onSelectSection?.("page")}
+          onPanel={(id) => {
+            setMode(id);
+            if (collapsed) onToggleCollapse();
+          }}
+          onView={(v) => onSelectSection?.(v)}
+          lockedTabs={lockedTabs}
+          lockReason={lockReason}
+          badges={{
+            leads: inboxCounts?.leads ?? 0,
+            chat: inboxCounts?.chat ?? 0,
+          }}
+        />
         <Tooltip label={t("sidebar.collapsePanel")} side="right">
           <button
             type="button"
@@ -672,18 +597,17 @@ export function LeftSidebar({
 // footprint as the real avatar) so the rail doesn't jump when the switcher
 // pops in — and the slot reads as "something loads here", not an empty gap.
 //
-// WHY this stays separate from the Navegar "business" item (rail-model.ts):
-// NAVEGAR_ITEMS' `business` icon is a plain nav button — it just opens the
-// Business section view, same as every other Navegar item. This entry is a
-// SWITCHER: clicking the avatar opens a dropdown to change which business is
-// active (scoping Páginas/Analytics/Mensajes + the default for new pages),
-// add a new business, or jump to "Todos" across 2+ businesses — none of
-// which the Navegar item does. Collapsing them into one would either lose
-// the switcher (users with multiple businesses couldn't change the active
-// one from the rail) or turn every Navegar click into a dropdown (wrong for
-// the other 7 items). Kept both: this avatar is workspace chrome (always
-// visible, top of rail, in both Navegar and Editar rail modes), the Navegar
-// item is one more destination in the app-sections list.
+// WHY this stays separate from the rail's "business" item (rail-model.ts,
+// RAIL_OPERAR): that icon is a plain nav button — it just opens the Business
+// section view, same as every other rail item. This entry is a SWITCHER:
+// clicking the avatar opens a dropdown to change which business is active
+// (scoping Páginas/Analytics/Mensajes + the default for new pages), add a
+// new business, or jump to "Todos" across 2+ businesses — none of which the
+// rail item does. Collapsing them into one would either lose the switcher
+// (users with multiple businesses couldn't change the active one from the
+// rail) or turn every rail click into a dropdown (wrong for the other 11
+// items). Kept both: this avatar is workspace chrome (always visible, top
+// of rail), the rail item is one more destination in RAIL_OPERAR.
 function BusinessRailEntry({
   loading,
   show,

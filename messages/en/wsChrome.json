@@ -248,5 +248,19 @@
     "deleteFailed": {
       "title": "Couldn’t delete the page."
     }
+  },
+  "rail": {
+    "pagina": "Page",
+    "site": "Site",
+    "chat": "AI Chat",
+    "images": "Images",
+    "library": "Library",
+    "3d": "3D",
+    "modulos": "Modules",
+    "resultados": "Results",
+    "messages": "Inbox",
+    "marketing": "Marketing",
+    "business": "My business",
+    "versions": "Versions"
   }
 }

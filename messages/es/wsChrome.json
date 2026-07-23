@@ -248,5 +248,19 @@
     "deleteFailed": {
       "title": "No se pudo borrar la página."
     }
+  },
+  "rail": {
+    "pagina": "Página",
+    "site": "Sitio",
+    "chat": "Chat IA",
+    "images": "Imágenes",
+    "library": "Library",
+    "3d": "3D",
+    "modulos": "Módulos",
+    "resultados": "Resultados",
+    "messages": "Bandeja",
+    "marketing": "Marketing",
+    "business": "Mi negocio",
+    "versions": "Versiones"
   }
 }

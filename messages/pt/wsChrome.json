@@ -248,5 +248,19 @@
     "membersOnlyOff": "Tornar /{slug} pública",
     "doorTitle": "Página de acesso criada pelo módulo Membros — login, registro e Minha conta. /login e /register levam aqui. Publica-se junto com o seu site.",
     "doorBadge": "auto"
+  },
+  "rail": {
+    "pagina": "Página",
+    "site": "Site",
+    "chat": "Chat IA",
+    "images": "Imagens",
+    "library": "Biblioteca",
+    "3d": "3D",
+    "modulos": "Módulos",
+    "resultados": "Resultados",
+    "messages": "Caixa de entrada",
+    "marketing": "Marketing",
+    "business": "Meu negócio",
+    "versions": "Versões"
   }
 }

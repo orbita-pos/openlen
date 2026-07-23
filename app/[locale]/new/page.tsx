@@ -65,7 +65,7 @@ import {
   type SidebarMode,
   type SectionView,
 } from "@/components/workspace-v2/left-sidebar";
-import { railModeFor, isBrowseView } from "@/components/workspace-v2/rail-model";
+import { isBrowseView } from "@/components/workspace-v2/rail-model";
 import { Check, Sparkles, Undo, X } from "@/components/workspace-v2/icons";
 import { SectionPreviewModal } from "@/components/workspace-v2/section-preview-modal";
 import type { SectionSpec } from "@/components/workspace-v2/sections-data";
@@ -206,11 +206,11 @@ const ALL_TABS: SidebarMode[] = [
   "3d",
 ];
 
-// Account-wide sections that count as "navigating away" for railModeFor —
-// static, so hoisted out of the component instead of rebuilt every render.
+// Account-wide sections (vs. "page", the canvas). Static, so hoisted out of
+// the component instead of rebuilt every render.
 const NAVIGATING_SECTIONS = new Set<SectionView>([
   "projects", "templates", "marketing", "modulos",
-  "analytics", "messages", "business", "explore",
+  "analytics", "resultados", "messages", "business", "explore",
 ]);
 
 // Build the "Original" theme baseline from a page-meta payload — the resolved
@@ -353,6 +353,7 @@ function NewV2Inner() {
   const centerView: SectionView =
     viewParam === "projects" ||
     viewParam === "analytics" ||
+    viewParam === "resultados" ||
     viewParam === "modulos" ||
     viewParam === "marketing" ||
     viewParam === "templates" ||
@@ -361,6 +362,11 @@ function NewV2Inner() {
     viewParam === "explore"
       ? viewParam
       : "page";
+  // "analytics" is the pre-rail-unification URL alias for "resultados" —
+  // ?view=analytics keeps working, but the render below only ever branches
+  // on the normalized value.
+  const normalizedCenterView: SectionView =
+    centerView === "analytics" ? "resultados" : centerView;
   const setCenterView = useCallback(
     (v: SectionView) => {
       const params = new URLSearchParams(searchParams.toString());
@@ -3343,21 +3349,6 @@ function NewV2Inner() {
     }
   };
 
-  // Rail mode (Navegar app-sections vs Editar page-tools) derives from the
-  // same URL-backed state the rest of the workspace already reads: a project
-  // is loaded (`loadedProject`) and the center isn't parked on one of the
-  // account-wide sections (`centerView`). "App" (onOpenApp below) flips
-  // `centerView` to Navegar without touching `loadedProject`, so the project
-  // stays open for re-entry — reopening the canvas is just `setCenterView("page")`.
-  // hasProject also checks `projectParam` (the URL, resolved instantly) —
-  // not just `loadedProject.id` (set only once its fetch resolves) — so a
-  // cold `/new?project=x` load renders Editar immediately instead of
-  // flashing Navegar for one frame while the project fetch is in flight.
-  const railMode = railModeFor({
-    hasProject: !!projectParam || !!loadedProject?.id,
-    navigating: NAVIGATING_SECTIONS.has(centerView),
-  });
-
   return (
     <div className="workspace-v2 h-full flex flex-col">
       <TopBar
@@ -3403,10 +3394,8 @@ function NewV2Inner() {
         <LeftSidebar
           collapsed={leftCollapsed}
           onToggleCollapse={() => setLeftCollapsed((c) => !c)}
-          activeSection={centerView}
+          activeSection={normalizedCenterView}
           onSelectSection={setCenterView}
-          railMode={railMode}
-          onOpenApp={() => setCenterView("projects")}
           mode={mode}
           setMode={handleTabSelect}
           sections={sections}
@@ -3554,9 +3543,9 @@ function NewV2Inner() {
             sr-only h1 gives every entry state a top-level heading. */}
         <main className="contents">
         <h1 className="sr-only">{t("a11y.workspaceHeading")}</h1>
-        {centerView === "messages" ? (
+        {normalizedCenterView === "messages" ? (
           <InboxHub />
-        ) : centerView === "business" ? (
+        ) : normalizedCenterView === "business" ? (
           <BusinessSection
             embedded
             onChanged={() => {
@@ -3567,14 +3556,14 @@ function NewV2Inner() {
               void reseedCurrentPage();
             }}
           />
-        ) : centerView === "projects" ? (
+        ) : normalizedCenterView === "projects" ? (
           <ProjectsSection
             activeBusinessId={activeBusinessId}
             onOpenExplore={() => setCenterView("explore")}
           />
-        ) : centerView === "analytics" ? (
+        ) : normalizedCenterView === "resultados" ? (
           <AnalyticsSection activeBusinessId={activeBusinessId} />
-        ) : centerView === "modulos" ? (
+        ) : normalizedCenterView === "modulos" ? (
           <ModulesView
             currentProjectId={loadedProject?.id ?? null}
             gatedCount={sitePages.filter((p) => p.membersOnly).length}
@@ -3626,7 +3615,7 @@ function NewV2Inner() {
             projectTitle={loadedProject?.title ?? null}
             projectSubdomain={loadedProject?.subdomain ?? null}
           />
-        ) : centerView === "marketing" ? (
+        ) : normalizedCenterView === "marketing" ? (
           <MarketingView
             projectId={loadedProject?.id ?? null}
             initialRegister={loadedProject?.settings?.marketing?.register}
@@ -3634,15 +3623,15 @@ function NewV2Inner() {
             onSaveRegister={(r) => updateMarketingSettings({ register: r })}
             onSaveMatch={(m) => updateMarketingSettings({ match: m })}
           />
-        ) : isBrowseView(centerView) ? (
+        ) : isBrowseView(normalizedCenterView) ? (
           <div className="flex-1 min-w-0 min-h-0 flex flex-col">
             {!previewingTemplate && (
               <BrowseTabs
-                active={centerView as "templates" | "explore"}
+                active={normalizedCenterView as "templates" | "explore"}
                 onSelect={setCenterView}
               />
             )}
-            {centerView === "explore" ? (
+            {normalizedCenterView === "explore" ? (
               <ExploreView />
             ) : previewingTemplate ? (
               <div className="flex-1 min-w-0 flex flex-col">

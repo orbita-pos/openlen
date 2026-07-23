@@ -248,5 +248,19 @@
     "deleteFailed": {
       "title": "Impossibile eliminare la pagina."
     }
+  },
+  "rail": {
+    "pagina": "Pagina",
+    "site": "Sito",
+    "chat": "Chat IA",
+    "images": "Immagini",
+    "library": "Libreria",
+    "3d": "3D",
+    "modulos": "Moduli",
+    "resultados": "Risultati",
+    "messages": "Posta in arrivo",
+    "marketing": "Marketing",
+    "business": "La mia attività",
+    "versions": "Versioni"
   }
 }

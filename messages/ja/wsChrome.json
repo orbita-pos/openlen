@@ -248,5 +248,19 @@
     "deleteFailed": {
       "title": "ページを削除できませんでした。"
     }
+  },
+  "rail": {
+    "pagina": "ページ",
+    "site": "サイト",
+    "chat": "AIチャット",
+    "images": "画像",
+    "library": "ライブラリ",
+    "3d": "3D",
+    "modulos": "モジュール",
+    "resultados": "成果",
+    "messages": "受信箱",
+    "marketing": "マーケティング",
+    "business": "マイビジネス",
+    "versions": "バージョン"
   }
 }

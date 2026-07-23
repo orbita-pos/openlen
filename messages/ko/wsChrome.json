@@ -248,5 +248,19 @@
     "deleteFailed": {
       "title": "페이지를 삭제하지 못했습니다."
     }
+  },
+  "rail": {
+    "pagina": "페이지",
+    "site": "사이트",
+    "chat": "AI 채팅",
+    "images": "이미지",
+    "library": "라이브러리",
+    "3d": "3D",
+    "modulos": "모듈",
+    "resultados": "성과",
+    "messages": "받은편지함",
+    "marketing": "마케팅",
+    "business": "내 비즈니스",
+    "versions": "버전"
   }
 }

@@ -248,5 +248,19 @@
     "deleteFailed": {
       "title": "Suppression de la page impossible."
     }
+  },
+  "rail": {
+    "pagina": "Page",
+    "site": "Site",
+    "chat": "Chat IA",
+    "images": "Images",
+    "library": "Bibliothèque",
+    "3d": "3D",
+    "modulos": "Modules",
+    "resultados": "Résultats",
+    "messages": "Boîte de réception",
+    "marketing": "Marketing",
+    "business": "Mon entreprise",
+    "versions": "Versions"
   }
 }

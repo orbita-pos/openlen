@@ -248,5 +248,19 @@
     "membersOnlyOff": "将 /{slug} 设为公开",
     "doorTitle": "由会员模块创建的访问页面 — 登录、注册和我的账户。/login 和 /register 都指向这里。随站点一起发布。",
     "doorBadge": "自动"
+  },
+  "rail": {
+    "pagina": "页面",
+    "site": "站点",
+    "chat": "AI 聊天",
+    "images": "图片",
+    "library": "素材库",
+    "3d": "3D",
+    "modulos": "模块",
+    "resultados": "成果",
+    "messages": "收件箱",
+    "marketing": "营销",
+    "business": "我的业务",
+    "versions": "版本"
   }
 }

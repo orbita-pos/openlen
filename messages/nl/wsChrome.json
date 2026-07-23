@@ -248,5 +248,19 @@
     "membersOnlyOff": "/{slug} openbaar maken",
     "doorTitle": "Toegangspagina van de Leden-module — inloggen, registreren en Mijn account. /login en /register leiden hierheen. Gepubliceerd met je site.",
     "doorBadge": "auto"
+  },
+  "rail": {
+    "pagina": "Pagina",
+    "site": "Site",
+    "chat": "AI-chat",
+    "images": "Afbeeldingen",
+    "library": "Bibliotheek",
+    "3d": "3D",
+    "modulos": "Modules",
+    "resultados": "Resultaten",
+    "messages": "Inbox",
+    "marketing": "Marketing",
+    "business": "Mijn bedrijf",
+    "versions": "Versies"
   }
 }
