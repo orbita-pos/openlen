@@ -15,7 +15,8 @@
     "gatedCount": "{count, plural, one {# Seite ist nur für Mitglieder. Verwalte das im Site-Tab.} other {# Seiten sind nur für Mitglieder. Verwalte das im Site-Tab.}}",
     "gatedNone": "Noch keine Mitglieder-Seiten — markiere eine mit dem Schloss im Site-Tab.",
     "autoPage": "Wir haben /{slug} für dich erstellt — bereits nur für Mitglieder, im Look deiner Seite. Bearbeite sie wie jede andere Seite.",
-    "accountLive": "Deine Seite «Mein Konto» ist nach dem Veröffentlichen unter /cuenta erreichbar. Sperre einzelne Seiten separat mit dem 🔒 im Site-Tab."
+    "accountLive": "Deine Seite «Mein Konto» ist nach dem Veröffentlichen unter /cuenta erreichbar. Sperre einzelne Seiten separat mit dem 🔒 im Site-Tab.",
+    "doorPages": "Deine Website veröffentlicht /cuenta — Login, Registrierung und „Mein Konto“. /login und /register leiten dorthin weiter."
   },
   "included": {
     "title": "In deiner Seite enthalten",

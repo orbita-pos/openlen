@@ -1261,19 +1261,44 @@ export async function publishToDir(
   // (mode:"account"); no protected doc behind it. On when the Cuentas account
   // area is enabled. Same detected accent as the gate stubs.
   if (params.accountArea) {
-    stubFiles.push({
-      path: `cuenta/index.html`,
-      content: buildGateStub({
-        sub,
-        slug: "cuenta",
-        mode: "account",
-        passwordLogin: true,
-        projectTitle: params.memberGate?.projectTitle ?? sub,
-        locale: sourceLang,
-        logoUrl: params.memberGate?.logoUrl,
-        accent: memberAccent,
-      }),
-    });
+    // A USER page already occupying a door slug wins (legacy sites predating
+    // the reserved slugs) — a stub must never silently replace an owner's
+    // content page.
+    const occupied = new Set(
+      [...(params.pages ?? []), ...(params.gatedPages ?? [])].map((p) => p.slug),
+    );
+    if (!occupied.has("cuenta")) {
+      stubFiles.push({
+        path: `cuenta/index.html`,
+        content: buildGateStub({
+          sub,
+          slug: "cuenta",
+          mode: "account",
+          passwordLogin: params.memberGate?.passwordLogin ?? true,
+          projectTitle: params.memberGate?.projectTitle ?? sub,
+          locale: sourceLang,
+          logoUrl: params.memberGate?.logoUrl,
+          accent: memberAccent,
+        }),
+      });
+    }
+    // /login and /register answer at the URLs visitors actually type — both
+    // are the same /cuenta card (tabs), so they redirect. Static meta-refresh,
+    // no script → nothing for the CSP seal to care about. The lang
+    // interpolates only when it's shaped like a lang tag — the stub bypasses
+    // sanitizeForPublish, so it must be safe by CONSTRUCTION for any caller.
+    const stubLang = /^[a-z]{2,5}$/i.test(sourceLang ?? "") ? sourceLang : "en";
+    for (const alias of ["login", "register"]) {
+      if (occupied.has(alias)) continue;
+      stubFiles.push({
+        path: `${alias}/index.html`,
+        content:
+          `<!doctype html><html lang="${stubLang}"><head><meta charset="utf-8">` +
+          `<meta http-equiv="refresh" content="0;url=/cuenta/">` +
+          `<link rel="canonical" href="/cuenta/"><meta name="robots" content="noindex">` +
+          `<title>/cuenta</title></head><body></body></html>`,
+      });
+    }
   }
 
   // Site pages enter the sitemap as plain entries — they are NOT language

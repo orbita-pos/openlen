@@ -452,6 +452,11 @@ export function ModulesPanel({
                       : t("module.gatedNone")}
                   </span>
                 </p>
+                {enabled && (
+                  <p className="text-[11.5px] fg-muted leading-relaxed">
+                    {t("module.doorPages")}
+                  </p>
+                )}
                 <p className="text-[10.5px] fg-faint leading-relaxed">{tw("modulesHub.seePreview")}</p>
               </div>
             ),

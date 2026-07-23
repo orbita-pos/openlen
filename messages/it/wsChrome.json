@@ -237,7 +237,9 @@
     "confirmBtn": "Elimina pagina",
     "membersOnlyBadge": "Solo membri",
     "membersOnlyOn": "Rendi /{slug} solo per membri",
-    "membersOnlyOff": "Rendi /{slug} pubblica"
+    "membersOnlyOff": "Rendi /{slug} pubblica",
+    "doorTitle": "Pagina di accesso creata dal modulo Membri — login, registrazione e Il mio account. /login e /register portano qui. Pubblicata con il tuo sito.",
+    "doorBadge": "auto"
   },
   "toast": {
     "deleted": {

@@ -18,6 +18,7 @@ import { getDefaultCollection, listItems, type ItemRow } from "@/lib/collections
 import { createVersion } from "@/lib/projects/versions";
 import { getChatMessages } from "@/lib/projects/chat";
 import {
+  memberDoorPlan,
   pageEdgePaths,
   pagesForPublish,
   sitePagesFingerprintInput,
@@ -809,25 +810,16 @@ export async function publishProject(
   // off, gatedPages is empty and everything ships public as always.
   const { publicPages, gatedPages } = splitPagesForPublish(project.data);
 
-  // Preset «Cuentas»: auto-created «Mi cuenta» area — /cuenta publishes even
-  // without a gated page, as long as the module is on and the preset is set.
-  const members = project.data?.settings?.members;
-  const accountArea =
-    members?.enabled === true &&
-    members?.accountArea === true &&
-    members?.passwordLogin === true; // — requires passwordLogin (the Cuentas preset couples them); without it register/login/set-password 404 and the /cuenta card would be a dead end.
-
-  // Members sign-in: the account area wins when on — /cuenta is the account
-  // home even without a gated page. Otherwise, when a gated portal exists,
-  // every public doc links to it (canonical members page, else first gated
-  // slug). splitPagesForPublish only yields gatedPages when the module is
-  // on, so a non-empty list already means "show the sign-in".
-  const memberSigninPath = accountArea
-    ? "cuenta"
-    : gatedPages.length > 0
-      ? (gatedPages.find((p) => p.slug === "miembros" || p.slug === "members")
-          ?.slug ?? gatedPages[0].slug)
-      : undefined;
+  // The member door — module ON means /cuenta + /login + /register publish and
+  // the nav gains its entry, no preset flags required (they remain opt-outs).
+  // Decision + defaults live in memberDoorPlan; app/api/m/[sub]/_shared.ts
+  // mirrors the same passwordLogin default so the card's endpoints never 404.
+  const door = memberDoorPlan(
+    project.data,
+    gatedPages.map((p) => p.slug),
+  );
+  const accountArea = door.accountArea;
+  const memberSigninPath = door.signinPath;
 
   // Collections module: read the published items + layout at publish time so
   // the bake renders them as STATIC HTML (no runtime API). Off → undefined.
@@ -902,13 +894,13 @@ export async function publishProject(
       pages: publicPages,
       gatedPages: gatedPages.length > 0 ? gatedPages : undefined,
       memberSigninPath,
-      memberSigninIsAccount: accountArea || undefined,
+      memberSigninIsAccount: door.signinIsAccount || undefined,
       memberGate:
         gatedPages.length > 0 || accountArea
           ? {
               projectTitle: project.title || v.value,
               logoUrl: effectiveLogoUrl,
-              passwordLogin: members?.passwordLogin === true,
+              passwordLogin: door.passwordLogin,
             }
           : undefined,
       accountArea: accountArea || undefined,

@@ -245,6 +245,8 @@
     "confirmBtn": "Pagina verwijderen",
     "membersOnlyBadge": "Alleen leden",
     "membersOnlyOn": "/{slug} alleen voor leden maken",
-    "membersOnlyOff": "/{slug} openbaar maken"
+    "membersOnlyOff": "/{slug} openbaar maken",
+    "doorTitle": "Toegangspagina van de Leden-module — inloggen, registreren en Mijn account. /login en /register leiden hierheen. Gepubliceerd met je site.",
+    "doorBadge": "auto"
   }
 }

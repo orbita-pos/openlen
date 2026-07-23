@@ -15,7 +15,8 @@
     "gatedCount": "{count, plural, one {# page est réservée aux membres. Gérez-le dans l'onglet Site.} other {# pages sont réservées aux membres. Gérez-le dans l'onglet Site.}}",
     "gatedNone": "Aucune page réservée pour l'instant — marquez-en une avec le cadenas dans l'onglet Site.",
     "autoPage": "Nous avons créé /{slug} pour vous — déjà réservée aux membres, avec le style de votre site. Modifiez-la comme toute autre page.",
-    "accountLive": "Votre page « Mon compte » sera en ligne sur /cuenta à la publication. Verrouillez une page à part avec le 🔒 dans l'onglet Site."
+    "accountLive": "Votre page « Mon compte » sera en ligne sur /cuenta à la publication. Verrouillez une page à part avec le 🔒 dans l'onglet Site.",
+    "doorPages": "Votre site publie /cuenta — connexion, inscription et « Mon compte ». /login et /register y redirigent."
   },
   "included": {
     "title": "Inclus avec votre site",

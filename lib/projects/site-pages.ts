@@ -28,6 +28,8 @@ const RESERVED_SLUGS = new Set<string>([
   "robots.txt",
   "cuenta",
   "account",
+  "login",
+  "register",
   ...PUBLISH_LOCALES.map((l) => l.code),
 ]);
 
@@ -107,7 +109,15 @@ export function pagesForPublish(
  *  slugs — gated stubs sit at the same public paths. Used by publish, unpublish,
  *  rollback and rename so a subpage is never left stale at the edge. */
 export function pageEdgePaths(data: ProjectData | null | undefined): string[] {
-  return pagesForPublish(data).flatMap((pg) => [`/${pg.slug}`, `/${pg.slug}/`]);
+  // The member-door paths purge UNCONDITIONALLY — the door may have existed in
+  // the PREVIOUS release (owner opting out / unpublishing is exactly when a
+  // cached login card must not outlive the site). Purging absent paths is a
+  // no-op at the edge.
+  const door = ["cuenta", "login", "register"].flatMap((s) => [`/${s}`, `/${s}/`]);
+  return [
+    ...pagesForPublish(data).flatMap((pg) => [`/${pg.slug}`, `/${pg.slug}/`]),
+    ...door,
+  ];
 }
 
 /** Whether members gating is live for this project — the per-page flags only
@@ -133,6 +143,43 @@ export function splitPagesForPublish(data: ProjectData | null | undefined): {
     (gated ? gatedPages : publicPages).push(pg);
   }
   return { publicPages, gatedPages };
+}
+
+/** The member "door" a publish must materialize — where visitors log in,
+ *  register and manage their account. Jesús's rule (2026-07-22): turning the
+ *  Members module ON means the door EXISTS — /cuenta publishes (register/login
+ *  tabs + account dashboard) and the nav gains its entry — without requiring
+ *  the «Cuentas» preset flags. The flags stay as explicit OPT-OUTS
+ *  (`false` disables), so the defaults here are `!== false`, not `=== true`;
+ *  sites that enabled the module bare (like his Kiri test) get the full door
+ *  with no settings migration. */
+export interface MemberDoorPlan {
+  /** Publish /cuenta (account card) + /login + /register aliases. */
+  accountArea: boolean;
+  /** Password tabs on the card; the /api/m password endpoints mirror this
+   *  same default server-side (app/api/m/[sub]/_shared.ts). */
+  passwordLogin: boolean;
+  /** Public sign-in entry: slug every public doc links to. undefined → none. */
+  signinPath?: string;
+  /** The entry reads as "Mi cuenta" (account home) instead of "Sign in". */
+  signinIsAccount: boolean;
+}
+
+export function memberDoorPlan(
+  data: ProjectData | null | undefined,
+  gatedSlugs: string[] = [],
+): MemberDoorPlan {
+  const members = data?.settings?.members;
+  const enabled = members?.enabled === true;
+  const accountArea = enabled && members?.accountArea !== false;
+  const passwordLogin = enabled && members?.passwordLogin !== false;
+  const signinPath = accountArea
+    ? "cuenta"
+    : gatedSlugs.length > 0
+      ? (gatedSlugs.find((s) => s === "miembros" || s === "members") ??
+        gatedSlugs[0])
+      : undefined;
+  return { accountArea, passwordLogin, signinPath, signinIsAccount: accountArea };
 }
 
 /** Per-page strings hashSitePages digests. BACKWARD-COMPAT IS LOAD-BEARING:

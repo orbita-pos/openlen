@@ -3,6 +3,7 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import {
   buildAutoMembersPage,
+  memberDoorPlan,
   buildPageShell,
   listSitePages,
   MAX_SITE_PAGES,
@@ -457,5 +458,50 @@ describe("buildPageShell — adversarial edges", () => {
 </body></html>`;
     const shell = buildPageShell(home, "Nueva")!;
     assert.ok(shell.includes('class="site"'), "navbar captured despite apostrophe");
+  });
+});
+
+describe("memberDoorPlan", () => {
+  const data = (members: Record<string, unknown> | undefined): ProjectData =>
+    ({ html: "<html></html>", settings: members ? { members } : {} }) as ProjectData;
+
+  it("module off → no door at all", () => {
+    for (const d of [data(undefined), data({ enabled: false })]) {
+      const plan = memberDoorPlan(d, []);
+      assert.equal(plan.accountArea, false);
+      assert.equal(plan.passwordLogin, false);
+      assert.equal(plan.signinPath, undefined);
+    }
+  });
+
+  it("enabled BARE opens the full door — the Jesús case (2026-07-22)", () => {
+    // Turning the module on via ANY path (agent, chain, old settings) must
+    // publish /cuenta + wire the nav, with no preset flags required.
+    const plan = memberDoorPlan(data({ enabled: true }), []);
+    assert.equal(plan.accountArea, true);
+    assert.equal(plan.passwordLogin, true);
+    assert.equal(plan.signinPath, "cuenta");
+    assert.equal(plan.signinIsAccount, true);
+  });
+
+  it("flags stay explicit opt-outs", () => {
+    const plan = memberDoorPlan(
+      data({ enabled: true, accountArea: false, passwordLogin: false }),
+      [],
+    );
+    assert.equal(plan.accountArea, false);
+    assert.equal(plan.passwordLogin, false);
+    assert.equal(plan.signinPath, undefined);
+  });
+
+  it("accountArea opted out + gated pages → sign-in points at the portal", () => {
+    const plan = memberDoorPlan(data({ enabled: true, accountArea: false }), [
+      "blog",
+      "members",
+    ]);
+    assert.equal(plan.signinPath, "members");
+    assert.equal(plan.signinIsAccount, false);
+    const first = memberDoorPlan(data({ enabled: true, accountArea: false }), ["vip"]);
+    assert.equal(first.signinPath, "vip");
   });
 });

@@ -15,7 +15,8 @@
     "gatedCount": "{count, plural, one {# página es solo para miembros. Gestiónalo en la pestaña Site.} other {# páginas son solo para miembros. Gestiónalo en la pestaña Site.}}",
     "gatedNone": "Aún no hay páginas solo para miembros — márcala con el candado en la pestaña Site.",
     "autoPage": "Te creamos /{slug} — ya es solo para miembros y nació con el diseño de tu sitio. Edítala como cualquier otra página.",
-    "accountLive": "Tu página «Mi cuenta» estará en /cuenta al publicar. Bloquea cualquier página aparte con el 🔒 en la pestaña Sitio."
+    "accountLive": "Tu página «Mi cuenta» estará en /cuenta al publicar. Bloquea cualquier página aparte con el 🔒 en la pestaña Sitio.",
+    "doorPages": "Tu sitio publica /cuenta — login, registro y «Mi cuenta». /login y /register redirigen ahí."
   },
   "included": {
     "title": "Incluido con tu sitio",

@@ -3525,6 +3525,10 @@ function NewV2Inner() {
           onPickImage={startPlacementAsset}
           sitePages={sitePages}
           onToggleMembersOnly={toggleMembersOnly}
+          membersDoorOn={
+            loadedProject?.settings?.members?.enabled === true &&
+            loadedProject?.settings?.members?.accountArea !== false
+          }
           activeSitePage={activeSitePage}
           onSwitchSitePage={switchSitePage}
           onCreateSitePage={createSitePage}

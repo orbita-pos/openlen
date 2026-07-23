@@ -237,7 +237,9 @@
     "confirmBtn": "Supprimer la page",
     "membersOnlyBadge": "Réservé aux membres",
     "membersOnlyOn": "Réserver /{slug} aux membres",
-    "membersOnlyOff": "Rendre /{slug} publique"
+    "membersOnlyOff": "Rendre /{slug} publique",
+    "doorTitle": "Page d’accès créée par le module Membres — connexion, inscription et Mon compte. /login et /register mènent ici. Publiée avec votre site.",
+    "doorBadge": "auto"
   },
   "toast": {
     "deleted": {

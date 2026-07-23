@@ -245,6 +245,8 @@
     "confirmBtn": "Excluir página",
     "membersOnlyBadge": "Apenas membros",
     "membersOnlyOn": "Tornar /{slug} apenas para membros",
-    "membersOnlyOff": "Tornar /{slug} pública"
+    "membersOnlyOff": "Tornar /{slug} pública",
+    "doorTitle": "Página de acesso criada pelo módulo Membros — login, registro e Minha conta. /login e /register levam aqui. Publica-se junto com o seu site.",
+    "doorBadge": "auto"
   }
 }

@@ -237,7 +237,9 @@
     "confirmBtn": "ページを削除",
     "membersOnlyBadge": "メンバー限定",
     "membersOnlyOn": "/{slug} をメンバー限定にする",
-    "membersOnlyOff": "/{slug} を公開にする"
+    "membersOnlyOff": "/{slug} を公開にする",
+    "doorTitle": "メンバーモジュールが作成するアクセスページ — ログイン、登録、アカウント。/login と /register はここに移動します。サイトと一緒に公開されます。",
+    "doorBadge": "自動"
   },
   "toast": {
     "deleted": {

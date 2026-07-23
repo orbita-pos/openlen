@@ -237,7 +237,9 @@
     "confirmBtn": "Delete page",
     "membersOnlyBadge": "Members only",
     "membersOnlyOn": "Make /{slug} members-only",
-    "membersOnlyOff": "Make /{slug} public"
+    "membersOnlyOff": "Make /{slug} public",
+    "doorTitle": "Access page created by the Members module — login, register and My account. /login and /register lead here. Published with your site.",
+    "doorBadge": "auto"
   },
   "toast": {
     "deleted": {

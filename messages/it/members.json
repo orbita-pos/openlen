@@ -15,7 +15,8 @@
     "gatedCount": "{count, plural, one {# pagina è solo per membri. Gestiscila nella scheda Site.} other {# pagine sono solo per membri. Gestiscile nella scheda Site.}}",
     "gatedNone": "Ancora nessuna pagina riservata — segnane una col lucchetto nella scheda Site.",
     "autoPage": "Abbiamo creato /{slug} per te — già solo per membri, nata con lo stile del tuo sito. Modificala come qualsiasi altra pagina.",
-    "accountLive": "La tua pagina «Il mio account» sarà online su /cuenta alla pubblicazione. Blocca una pagina a parte con il 🔒 nella scheda Sito."
+    "accountLive": "La tua pagina «Il mio account» sarà online su /cuenta alla pubblicazione. Blocca una pagina a parte con il 🔒 nella scheda Sito.",
+    "doorPages": "Il tuo sito pubblica /cuenta — login, registrazione e “Il mio account”. /login e /register reindirizzano lì."
   },
   "included": {
     "title": "Incluso nel tuo sito",

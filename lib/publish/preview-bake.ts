@@ -19,6 +19,12 @@ import { bakeWhatsAppButton, waHref } from "@/lib/publish/whatsapp-button";
 import { injectOrdersCart } from "@/lib/publish/orders-cart";
 import { bakeChatWidget } from "@/lib/publish/chat-widget";
 import { detectSiteAccent } from "@/lib/members/site-accent";
+import {
+  applySigninLink,
+  accountLabelFor,
+  signinLabelFor,
+} from "@/lib/publish/signin-link";
+import { memberDoorPlan, splitPagesForPublish } from "@/lib/projects/site-pages";
 import type { ItemRow } from "@/lib/collections/store";
 import type { ProjectData } from "@/lib/projects/types";
 
@@ -33,6 +39,9 @@ export interface PreviewBakeCtx {
   settings: ProjectData["settings"] | undefined;
   /** Pre-loaded collections payload (DB read happens in the async wrapper). */
   collectionsItems?: { items: ItemRow[]; layout: "grid" | "list" } | null;
+  /** Members door (memberDoorPlan) — mirrors publish's sign-in entry so the
+   *  preview shows the same wired nav link the published site will have. */
+  memberSignin?: { path: string; isAccount: boolean } | null;
 }
 
 export function bakeModulesForPreviewHtml(html: string, ctx: PreviewBakeCtx): string {
@@ -163,6 +172,27 @@ export function bakeModulesForPreviewHtml(html: string, ctx: PreviewBakeCtx): st
     }
   }
 
+  // Members sign-in entry — same rewire/inject publish does, same kill-switch,
+  // so the preview never under-promises the door the published site gets.
+  if (ctx.memberSignin && process.env.OPENLEN_MEMBER_SIGNIN !== "0") {
+    try {
+      const lang =
+        /<html[^>]*\blang=["']?([a-zA-Z]{2})/.exec(out)?.[1]?.toLowerCase() ||
+        "en";
+      out = applySigninLink(out, {
+        href: `/${ctx.memberSignin.path}`,
+        label: ctx.memberSignin.isAccount
+          ? accountLabelFor(lang)
+          : signinLabelFor(lang),
+        rewriteText: ctx.memberSignin.isAccount
+          ? accountLabelFor(lang)
+          : undefined,
+      });
+    } catch {
+      /* soft-fail */
+    }
+  }
+
   return out;
 }
 
@@ -201,6 +231,10 @@ export async function bakeModulesForPreview(
       collectionsItems = null;
     }
   }
+  const door = memberDoorPlan(
+    opts.data,
+    splitPagesForPublish(opts.data).gatedPages.map((p) => p.slug),
+  );
   return bakeModulesForPreviewHtml(html, {
     projectId: opts.projectId,
     title: opts.title,
@@ -208,5 +242,8 @@ export async function bakeModulesForPreview(
     page: opts.page,
     settings: opts.data?.settings,
     collectionsItems,
+    memberSignin: door.signinPath
+      ? { path: door.signinPath, isAccount: door.signinIsAccount }
+      : null,
   });
 }

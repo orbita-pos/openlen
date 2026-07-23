@@ -35,6 +35,9 @@ interface SitePagesPanelProps {
   /** Members module: flip a subpage's members-only flag. Resolves false on
    *  failure (the row reverts). Absent → no lock affordance rendered. */
   onToggleMembersOnly?: (slug: string, next: boolean) => Promise<boolean>;
+  /** Members door on → show the auto /cuenta access page as a system row, so
+   *  the owner SEES the login/register page exists (Jesús, 2026-07-22). */
+  membersDoorOn?: boolean;
 }
 
 export function SitePagesPanel({
@@ -44,6 +47,7 @@ export function SitePagesPanel({
   onCreate,
   onDelete,
   onToggleMembersOnly,
+  membersDoorOn = false,
 }: SitePagesPanelProps) {
   const t = useTranslations("wsChrome");
   const toast = useToast();
@@ -167,6 +171,19 @@ export function SitePagesPanel({
             </div>
           );
         })}
+
+        {membersDoorOn && (
+          <div
+            className="flex items-center gap-2 w-full h-8 px-2 rounded-md fg-muted cursor-default"
+            title={t("sitePages.doorTitle")}
+          >
+            <LockOpen size={13} className="shrink-0" />
+            <span className="text-[12px] truncate tabular">/cuenta</span>
+            <span className="ml-auto shrink-0 text-[10px] uppercase tracking-wide fg-faint rounded px-1 py-0.5 ring-1 ring-[color:var(--border)]">
+              {t("sitePages.doorBadge")}
+            </span>
+          </div>
+        )}
 
         {adding ? (
           <div className="mt-2 rounded-md border bd bg-elev p-2 space-y-2 fade-in">

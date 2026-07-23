@@ -237,7 +237,9 @@
     "confirmBtn": "Seite löschen",
     "membersOnlyBadge": "Nur Mitglieder",
     "membersOnlyOn": "/{slug} nur für Mitglieder machen",
-    "membersOnlyOff": "/{slug} öffentlich machen"
+    "membersOnlyOff": "/{slug} öffentlich machen",
+    "doorTitle": "Zugangsseite des Mitglieder-Moduls — Login, Registrierung und Mein Konto. /login und /register führen hierher. Wird mit deiner Website veröffentlicht.",
+    "doorBadge": "auto"
   },
   "toast": {
     "deleted": {

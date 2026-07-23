@@ -71,7 +71,12 @@ export async function loadMemberSite(
     title: row.title?.trim() || sub,
     membersEnabled: members?.enabled === true,
     membersMode: members?.mode === "invite" ? "invite" : "open",
-    membersPasswordLogin: members?.passwordLogin === true,
+    // Default ON with the module — mirrors memberDoorPlan (site-pages.ts):
+    // the published /cuenta card shows password tabs whenever Members is on,
+    // so the endpoints behind those tabs must accept under the same default
+    // or the card is a dead end. `false` remains an explicit opt-out.
+    membersPasswordLogin:
+      members?.enabled === true && members?.passwordLogin !== false,
     bookingsEnabled: row.data?.settings?.bookings?.enabled === true,
     locale: detectLang(row.data?.html ?? ""),
   };

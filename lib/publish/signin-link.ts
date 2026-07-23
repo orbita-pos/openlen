@@ -102,6 +102,10 @@ export interface SigninLinkOpts {
 /** Ensure a working sign-in entry on a public document. See file header. */
 export function applySigninLink(html: string, opts: SigninLinkOpts): string {
   if (!html) return html;
+  // Idempotent: an earlier pass already placed the entry (its injected label —
+  // "Account"/"Mi cuenta" — is deliberately NOT in SIGNIN_TEXTS, so a second
+  // pass would DUPLICATE it instead of rewiring it).
+  if (html.includes("data-ol-signin")) return html;
   const href = escAttr(opts.href);
 
   // 1) Rewire every existing sign-in anchor to the portal.
