@@ -509,16 +509,14 @@ export function applySettingsPatch(
         ? { accountArea: body.members.accountArea }
         : {}),
     };
-    // One-click promise: turning the module ON with no gated page yet also
-    // births the members page (home shell + lock + logout link), atomically
-    // in the same write. buildAutoMembersPage null = nothing to create.
+    // ONE member surface, never two. Turning the module on materializes the
+    // door at /cuenta (memberDoorPlan defaults accountArea to on — it's an
+    // opt-out since 2026-07-22), so the gated /miembros landing is only born
+    // for the opt-out case, where the site would otherwise have no member
+    // surface at all. buildAutoMembersPage null = nothing to create.
     const turningOn =
       body.members.enabled === true && data.settings?.members?.enabled !== true;
-    // Option A (Cuentas): enabling the account area bakes /cuenta as the account
-    // home (publishToDir emits it) — so we do NOT also auto-create the gated
-    // /miembros landing. The per-page lock (membersOnly) stays a separate action.
-    // Legacy enable (no accountArea) keeps the auto-page.
-    if (turningOn && nextSettings.members?.accountArea !== true) {
+    if (turningOn && nextSettings.members?.accountArea === false) {
       createdPage = buildAutoMembersPage(data);
     }
   }

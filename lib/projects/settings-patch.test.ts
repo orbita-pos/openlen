@@ -53,10 +53,18 @@ describe("validateSettingsPatch", () => {
 });
 
 describe("applySettingsPatch", () => {
-  it("enables members and births the auto members page (legacy, no accountArea)", () => {
+  it("a bare enable creates NO page — the door at /cuenta is the surface", () => {
     const out = applySettingsPatch(baseData(), { members: { enabled: true } });
     if ("error" in out) throw new Error(out.error);
     expect(out.settings.members?.enabled).toBe(true);
+    expect(out.createdPage).toBeNull();
+    expect(out.nextData.pages).toBeUndefined();
+  });
+  it("opting OUT of the door births the gated members page instead", () => {
+    const out = applySettingsPatch(baseData(), {
+      members: { enabled: true, accountArea: false },
+    });
+    if ("error" in out) throw new Error(out.error);
     expect(out.createdPage).not.toBeNull();
     expect(out.nextData.pages?.[out.createdPage!.slug]?.membersOnly).toBe(true);
   });
