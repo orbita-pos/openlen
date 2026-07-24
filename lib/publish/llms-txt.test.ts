@@ -93,6 +93,23 @@ describe("buildLlmsTxt", () => {
     expect(out).toContain("Secciones: Sección uno · Sección dos");
   });
 
+  it("el chrome de los módulos (FAB de WhatsApp, widget de contacto, switcher de idioma) NO entra en Enlaces", () => {
+    const html = `<h1>T</h1><nav><a href="/tienda/">Tienda</a></nav>` +
+      `<a data-ol-wa-button href="https://wa.me/5215555555555">WhatsApp</a>` +
+      `<div data-ol-contact-widget><a href="mailto:hola@x.com">Mail</a><a href="tel:+52155">Tel</a></div>` +
+      `<nav data-ol-lang-switcher><a href="/es/">ES</a></nav>`;
+    const out = buildLlmsTxt({ html, baseUrl: "https://m.openlen.com" });
+    expect(out).toContain("[Tienda](https://m.openlen.com/tienda/)");
+    expect(out).not.toContain("wa.me/5215555555555");
+    expect(out).not.toContain("mailto:hola@x.com");
+    expect(out).not.toContain("tel:+52155");
+    expect(out).not.toContain("/es/");
+    // Un wa.me escrito por el autor DENTRO del contenido sí se conserva.
+    expect(buildLlmsTxt({ html: FULL, baseUrl: "https://aurora.openlen.com" })).toContain(
+      "wa.me/523312345678",
+    );
+  });
+
   it("nunca excede 8 KB; el título y ## Enlaces siempre sobreviven el recorte", () => {
     const big = `<h1>Big</h1><meta name="description" content="${"x".repeat(280)}">` +
       Array.from({ length: 400 }, (_, i) => `<h2>Encabezado larguísimo número ${i} de relleno</h2>`).join("");

@@ -329,24 +329,38 @@ async function doFlightCheck(params: FlightCheckParams): Promise<void> {
 
   const s = await measureRelease(subDir, releaseSha);
   if (!s) return;
-  await db
-    .insert(schema.flightReports)
-    .values({
-      projectId,
-      subdomain,
-      releaseSha,
-      perfScore: s.perfScore,
-      a11yScore: s.a11yScore,
-      bpScore: s.bpScore,
-      seoScore: s.seoScore,
-      lcpMs: s.lcpMs,
-      cls: s.cls,
-      tbtMs: s.tbtMs,
-      fcpMs: s.fcpMs,
-      speedIndexMs: s.speedIndexMs,
-      totalBytes: s.totalBytes,
-      requestCount: s.requestCount,
-      details: { opportunities: s.opportunities },
-    })
-    .onConflictDoNothing();
+  try {
+    await db
+      .insert(schema.flightReports)
+      .values({
+        projectId,
+        subdomain,
+        releaseSha,
+        perfScore: s.perfScore,
+        a11yScore: s.a11yScore,
+        bpScore: s.bpScore,
+        seoScore: s.seoScore,
+        lcpMs: s.lcpMs,
+        cls: s.cls,
+        tbtMs: s.tbtMs,
+        fcpMs: s.fcpMs,
+        speedIndexMs: s.speedIndexMs,
+        totalBytes: s.totalBytes,
+        requestCount: s.requestCount,
+        details: { opportunities: s.opportunities },
+      })
+      .onConflictDoNothing();
+  } catch (err) {
+    // El proyecto se borró mientras corría la auditoría (fire-and-forget):
+    // la FK ya no resuelve. Secuencia normal de usuario, no un fallo.
+    if (!isForeignKeyViolation(err)) throw err;
+  }
+}
+
+/** SQLSTATE 23503 — foreign_key_violation. node-postgres lo expone en
+ *  err.code; err.cause cubre el wrapper de drizzle. */
+export function isForeignKeyViolation(err: unknown): boolean {
+  if (!err || typeof err !== "object") return false;
+  const e = err as { code?: unknown; cause?: { code?: unknown } };
+  return e.code === "23503" || e.cause?.code === "23503";
 }

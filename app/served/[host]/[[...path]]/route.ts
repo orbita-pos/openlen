@@ -103,12 +103,31 @@ interface ResolvedFile {
   cacheControl: string;
 }
 
+/** Segments that stand in for the live release. Normally `current` is a
+ *  symlink to `releases/<sha>` and resolves on its own. Where symlinks need
+ *  privileges (Windows dev), publishToDir falls back to writing the sha into
+ *  `current` as a regular FILE — read it so local dev serves the release
+ *  instead of 404ing on a path that isn't a directory. */
+async function currentSegments(subDir: string): Promise<string[]> {
+  try {
+    const s = await stat(path.join(subDir, "current"));
+    if (s.isDirectory()) return ["current"];
+    const sha = (await readFile(path.join(subDir, "current"), "utf8")).trim();
+    // Our own file, but it composes a path — keep it to a bare hex token.
+    if (!/^[a-f0-9]{6,64}$/i.test(sha)) return ["current"];
+    return ["releases", sha];
+  } catch {
+    return ["current"];
+  }
+}
+
 /** Mirror the nginx wildcard root layout: requests to / return index.html,
  *  paths under /assets/ resolve to the shared assets dir (sibling of
  *  `current/`), and everything else lives under the current release. */
 function resolveFile(
   subdomain: string,
   pathParts: string[],
+  releaseSegments: string[],
 ): ResolvedFile | null {
   if (!isPathSafe(pathParts)) return null;
   const subDir = path.join(PUBLISH_ROOT, subdomain);
@@ -129,7 +148,7 @@ function resolveFile(
   if (pathParts.length === 0 || pathParts[pathParts.length - 1] === "") {
     const indexParts =
       pathParts.length === 0 ? ["index.html"] : [...pathParts, "index.html"];
-    const absolutePath = path.join(subDir, "current", ...indexParts);
+    const absolutePath = path.join(subDir, ...releaseSegments, ...indexParts);
     return {
       absolutePath,
       contentType: "text/html; charset=utf-8",
@@ -138,7 +157,7 @@ function resolveFile(
   }
 
   // Specific file under the current release.
-  const absolutePath = path.join(subDir, "current", ...pathParts);
+  const absolutePath = path.join(subDir, ...releaseSegments, ...pathParts);
   return {
     absolutePath,
     contentType: contentTypeFor(absolutePath),
@@ -156,7 +175,14 @@ async function serve(
     return notFound(includeBody);
   }
 
-  const resolved = resolveFile(found.subdomain, params.path ?? []);
+  const releaseSegments = await currentSegments(
+    path.join(PUBLISH_ROOT, found.subdomain),
+  );
+  const resolved = resolveFile(
+    found.subdomain,
+    params.path ?? [],
+    releaseSegments,
+  );
   if (!resolved) return notFound(includeBody);
 
   // Containment check — never let a constructed path escape the publish root.

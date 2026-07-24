@@ -3,12 +3,12 @@
 // measureRelease against a real publish — see the verification notes in
 // the feature memory; it needs a local Chrome so it stays out of CI.
 //
-// Run via: npx tsx --test lib/publish/flight-check.test.ts
+// Run via: npm run test:node (tsx --test con el shim de "server-only").
 
 import { test } from "node:test";
 import { strict as assert } from "node:assert";
 
-import { extractFlightSummary, type LhrLike } from "./flight-check";
+import { extractFlightSummary, isForeignKeyViolation, type LhrLike } from "./flight-check";
 
 function fixture(): LhrLike {
   return {
@@ -83,4 +83,15 @@ test("empty lhr degrades to all-null summary", () => {
   assert.equal(s.lcpMs, null);
   assert.equal(s.requestCount, null);
   assert.deepEqual(s.opportunities, []);
+});
+
+test("FK violation (proyecto borrado a mitad de la auditoría) se reconoce; otros errores no", () => {
+  assert.equal(isForeignKeyViolation(Object.assign(new Error("insert"), { code: "23503" })), true);
+  assert.equal(
+    isForeignKeyViolation(Object.assign(new Error("wrapped"), { cause: { code: "23503" } })),
+    true,
+  );
+  assert.equal(isForeignKeyViolation(Object.assign(new Error("dup"), { code: "23505" })), false);
+  assert.equal(isForeignKeyViolation(new Error("boom")), false);
+  assert.equal(isForeignKeyViolation(null), false);
 });

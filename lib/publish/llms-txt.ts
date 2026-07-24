@@ -11,6 +11,20 @@ const MAX_SECTIONS = 12;
 const MAX_LINKS = 15;
 const BRAND_SUFFIX_RE = /\s*[—·|-]\s*OpenLen\s*$/i;
 
+// Chrome horneado por los módulos: FAB de WhatsApp, widget de contacto,
+// switcher de idioma y las bandas de módulo. Sus enlaces son CONTROLES de la
+// página (abrir un chat, cambiar de idioma), no páginas del sitio — y llms.txt
+// indexa páginas.
+const MODULE_CHROME_SEL = [
+  "[data-ol-wa-button]",
+  "[data-ol-contact-widget]",
+  "[data-ol-lang-switcher]",
+  "[data-ol-collection-section]",
+  "[data-ol-bookings-section]",
+  "[data-ol-comments-section]",
+  "[data-ol-chat-section]",
+].join(",");
+
 // Colapsa whitespace y neutraliza los caracteres que romperían el markdown
 // del archivo (corchetes de link, backticks, saltos de línea). Total.
 function clean(s: string): string {
@@ -146,12 +160,19 @@ export function buildLlmsTxt(input: LlmsTxtInput): string {
       }
       if (sections.length) detail.push(`Secciones: ${sections.join(" · ")}.`);
 
-      // Links de nav/header + contacto (wa.me/mailto/tel).
+      // Links de nav/header + contacto (wa.me/mailto/tel), menos los que
+      // pertenecen al chrome de los módulos.
+      const chrome = new Set<HTMLElement>();
+      for (const el of root.querySelectorAll(MODULE_CHROME_SEL)) {
+        if (el.tagName === "A") chrome.add(el);
+        for (const a of el.querySelectorAll("a")) chrome.add(a);
+      }
       for (const a of [
         ...root.querySelectorAll("nav a"),
         ...root.querySelectorAll("header a"),
         ...root.querySelectorAll('a[href*="wa.me"], a[href^="mailto:"], a[href^="tel:"]'),
       ]) {
+        if (chrome.has(a)) continue;
         addLink(a.text, absolutize(a.getAttribute("href") ?? "", baseUrl));
       }
     }
