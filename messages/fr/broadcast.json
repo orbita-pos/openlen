@@ -30,7 +30,8 @@
     "capBlocked": "Cette campagne nécessite {needed} e-mails ; il vous en reste {remaining} ce mois-ci.",
     "inProgress": "Un envoi est déjà en cours.",
     "notPublished": "Publiez votre site d'abord.",
-    "error": "Échec de l'envoi. Réessayez."
+    "error": "Échec de l'envoi. Réessayez.",
+    "paused": "Broadcast est en pause pour le moment, rien n’a été envoyé. Votre campagne reste enregistrée comme brouillon."
   },
   "history": {
     "title": "Campagnes",

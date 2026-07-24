@@ -34,7 +34,8 @@
     "capBlocked": "Deze campagne heeft {needed} e-mails nodig; je hebt er deze maand nog {remaining}.",
     "inProgress": "Er loopt al een verzending.",
     "notPublished": "Publiceer eerst je site.",
-    "error": "Verzenden mislukt. Probeer opnieuw."
+    "error": "Verzenden mislukt. Probeer opnieuw.",
+    "paused": "Broadcast staat momenteel op pauze, er is niets verzonden. Je campagne blijft opgeslagen als concept."
   },
   "history": {
     "title": "Campagnes",

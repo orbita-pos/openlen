@@ -30,7 +30,8 @@
     "capBlocked": "Questa campagna richiede {needed} email; te ne restano {remaining} questo mese.",
     "inProgress": "C'è già un invio in corso.",
     "notPublished": "Pubblica prima il tuo sito.",
-    "error": "Invio non riuscito. Riprova."
+    "error": "Invio non riuscito. Riprova.",
+    "paused": "Broadcast è in pausa al momento, non è stato inviato nulla. La tua campagna resta salvata come bozza."
   },
   "history": {
     "title": "Campagne",

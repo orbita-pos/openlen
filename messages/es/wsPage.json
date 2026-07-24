@@ -175,7 +175,8 @@
     "moduleOrders": "Pedidos",
     "modulePageCreated": "Página creada",
     "modulePageExists": "Abrí la página que ya existía",
-    "moduleAlreadyOnPage": "Este módulo ya está en esta página"
+    "moduleAlreadyOnPage": "Este módulo ya está en esta página",
+    "moduleNeedsAccounts": "Activa Cuentas primero — este módulo lo necesita."
   },
   "whatsapp": {
     "title": "Botón de WhatsApp",

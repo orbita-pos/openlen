@@ -7,10 +7,11 @@
 
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import type { ReactNode } from "react";
 import { useTranslations } from "next-intl";
+import { useFocusTrap } from "../use-focus-trap";
 import type {
   BookingsSettings,
   BroadcastSettings,
@@ -235,7 +236,12 @@ export function ModulesPanel({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentProjectId]);
   const [cmtBusy, setCmtBusy] = useState(false);
-  const [bkBusy, setBkBusy] = useState(false);
+  // Bookings: el lock es POR PERILLA (una perilla en vuelo no congela las
+  // otras) y los PATCH se encolan — el settings del proyecto se reescribe
+  // entero en cada uno, así que en paralelo se pisarían.
+  const [bkBusyKeys, setBkBusyKeys] = useState<(keyof BookingsSettings)[]>([]);
+  const bkQueue = useRef<Promise<void>>(Promise.resolve());
+  const bkBusy = (key: keyof BookingsSettings) => bkBusyKeys.includes(key);
   const [bkInserted, setBkInserted] = useState(false);
   const [colBusy, setColBusy] = useState(false);
   const [colInserted, setColInserted] = useState(false);
@@ -309,20 +315,28 @@ export function ModulesPanel({
     await onUpdateComments({ theme: next });
     setCmtBusy(false);
   };
-  const updateBookings = async (patch: BookingsSettings) => {
-    if (bkBusy || !onUpdateBookings) return;
-    setBkBusy(true);
-    // Seed the creator tz from the browser on first enable so new services
-    // default to the right zone without the owner typing it.
-    if (patch.enabled === true && !bookingsSettings?.creatorTz) {
+  const updateBookings = (patch: BookingsSettings) => {
+    if (!onUpdateBookings) return;
+    const keys = Object.keys(patch) as (keyof BookingsSettings)[];
+    if (keys.some((k) => bkBusyKeys.includes(k))) return;
+    setBkBusyKeys((cur) => [...cur, ...keys]);
+    const run = async () => {
       try {
-        patch.creatorTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
-      } catch {
-        /* leave unset; the editor defaults it */
+        // Seed the creator tz from the browser on first enable so new services
+        // default to the right zone without the owner typing it.
+        if (patch.enabled === true && !bookingsSettings?.creatorTz) {
+          try {
+            patch.creatorTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+          } catch {
+            /* leave unset; the editor defaults it */
+          }
+        }
+        await onUpdateBookings(patch);
+      } finally {
+        setBkBusyKeys((cur) => cur.filter((k) => !keys.includes(k)));
       }
-    }
-    await onUpdateBookings(patch);
-    setBkBusy(false);
+    };
+    bkQueue.current = bkQueue.current.then(run, run).catch(() => {});
   };
   const updateCollections = async (patch: CollectionsSettings) => {
     if (colBusy || !onUpdateCollections) return;
@@ -665,7 +679,7 @@ export function ModulesPanel({
             tagline: tbk("module.tagline"),
             scope: scopePageText,
             on: bookingsOn,
-            busy: bkBusy,
+            busy: bkBusy("enabled"),
             onToggle: () => void updateBookings({ enabled: !bookingsOn }),
             status: bookingsPlacement,
             body: (
@@ -675,7 +689,7 @@ export function ModulesPanel({
                     label={tbk("module.requireLogin")}
                     hint={bookingsRequireLogin ? tbk("module.requireLoginHint") : tbk("module.guestHint")}
                     checked={bookingsRequireLogin}
-                    disabled={bkBusy}
+                    disabled={bkBusy("requireLogin")}
                     onChange={(v) => void updateBookings({ requireLogin: v })}
                   />
                 )}
@@ -683,14 +697,14 @@ export function ModulesPanel({
                   label={tbk("module.autoConfirm")}
                   hint={bookingsAutoConfirm ? tbk("module.autoConfirmHint") : tbk("module.approveHint")}
                   checked={bookingsAutoConfirm}
-                  disabled={bkBusy}
+                  disabled={bkBusy("autoConfirm")}
                   onChange={(v) => void updateBookings({ autoConfirm: v })}
                 />
                 <ToggleRow
                   label={tbk("module.reminders")}
                   hint={tbk("module.remindersHint")}
                   checked={bookingsReminders}
-                  disabled={bkBusy}
+                  disabled={bkBusy("sendReminders")}
                   onChange={(v) => void updateBookings({ sendReminders: v })}
                 />
                 {/* Tema del widget en la página publicada (los VALORES Claro/
@@ -703,7 +717,7 @@ export function ModulesPanel({
                       { id: "light", label: tw("chat.themeLight") },
                       { id: "dark", label: tw("chat.themeDark") },
                     ]}
-                    disabled={bkBusy}
+                    disabled={bkBusy("theme")}
                     onPick={(v) => void updateBookings({ theme: v as "light" | "dark" })}
                   />
                 </div>
@@ -1123,6 +1137,7 @@ function ModuleDrawer({
   }, []);
 
   const isOpen = !!module;
+  const trapRef = useFocusTrap(isOpen);
 
   if (!portalRoot) return null;
 
@@ -1136,9 +1151,14 @@ function ModuleDrawer({
         }`}
       />
       <div
+        ref={trapRef}
         role="dialog"
         aria-modal="true"
         aria-hidden={!isOpen}
+        tabIndex={-1}
+        // El cajón queda montado tras cerrarse (animación de salida): sin
+        // inert sus controles siguen siendo tabulables fuera de pantalla.
+        inert={!isOpen}
         className={`fixed right-0 top-0 z-50 h-full w-[400px] max-w-[92vw] bg-app border-l bd shadow-2xl overflow-y-auto nice-scroll transition-transform duration-200 motion-reduce:transition-none ${
           isOpen ? "translate-x-0" : "translate-x-full"
         }`}

@@ -30,7 +30,8 @@
     "capBlocked": "这封活动邮件需要 {needed} 封；本月你还剩 {remaining} 封。",
     "inProgress": "已有一次发送正在进行。",
     "notPublished": "请先发布你的网站。",
-    "error": "发送失败，请重试。"
+    "error": "发送失败，请重试。",
+    "paused": "群发目前处于暂停状态，未发送任何内容。你的活动仍保存为草稿。"
   },
   "history": {
     "title": "活动",

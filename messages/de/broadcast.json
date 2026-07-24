@@ -30,7 +30,8 @@
     "capBlocked": "Diese Kampagne braucht {needed} E-Mails; du hast diesen Monat noch {remaining}.",
     "inProgress": "Es läuft bereits ein Versand.",
     "notPublished": "Veröffentliche zuerst deine Seite.",
-    "error": "Senden fehlgeschlagen. Versuch es erneut."
+    "error": "Senden fehlgeschlagen. Versuch es erneut.",
+    "paused": "Broadcast pausiert derzeit, es wurde nichts gesendet. Deine Kampagne bleibt als Entwurf gespeichert."
   },
   "history": {
     "title": "Kampagnen",

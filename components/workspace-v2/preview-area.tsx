@@ -110,7 +110,10 @@ interface PreviewAreaProps {
   /** A pending Undo-of-insert. When `nonce` changes, the iframe is posted
    *  `openlen:section-remove`; it pulls the last-inserted nodes back out and
    *  re-serializes through the same save path — no reload (the live DOM is
-   *  already correct, so we suppress the srcDoc re-derive like insert does). */
+   *  already correct, so we suppress the srcDoc re-derive like insert does).
+   *  Only sent while those nodes are still in the live document (the parent
+   *  probes for `data-openlen-just-inserted`); past a re-derive the parent
+   *  undoes from its own pre-insert snapshot instead. */
   removeRequest?: { nonce: number } | null;
   /** Motion Looks preset to preview live ("calm" | "editorial" | "dramatic").
    *  The iframe applies it via the motion-preview injector; re-posted on every
@@ -281,16 +284,19 @@ export function PreviewArea({
   // changes, the editing-session skip below must not apply — the iframe is
   // remounting anyway (its key), and serving it the stale stableSrcDoc would
   // time-travel the canvas (an Undo or a page switch while the Edit toggle is
-  // on). Re-derive unconditionally.
+  // on). Re-derive unconditionally — and DURING RENDER, not in an effect: the
+  // key change remounts the iframe in the same commit, so an effect-derived
+  // srcDoc arrives only after that fresh iframe already started loading the
+  // PREVIOUS document, and a srcdoc swapped mid-load is dropped by the browser
+  // — the canvas then stays on the pre-undo page for good (measured: the undo
+  // persisted, the preview kept showing the removed section).
   const lastDocKeyRef = useRef(docKey);
-  useEffect(() => {
-    if (docKey === lastDocKeyRef.current) return;
+  if (docKey !== lastDocKeyRef.current) {
     lastDocKeyRef.current = docKey;
     skipInsertReloadRef.current = false;
     wasEditingRef.current = false;
     setStableSrcDoc(derive(doc));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [docKey]);
+  }
   useEffect(() => {
     if (skipInsertReloadRef.current) {
       skipInsertReloadRef.current = false;

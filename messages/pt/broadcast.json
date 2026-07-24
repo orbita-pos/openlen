@@ -30,7 +30,8 @@
     "capBlocked": "Esta campanha precisa de {needed} e-mails; você tem {remaining} este mês.",
     "inProgress": "Já há um envio em andamento.",
     "notPublished": "Publique seu site primeiro.",
-    "error": "Não foi possível enviar. Tente de novo."
+    "error": "Não foi possível enviar. Tente de novo.",
+    "paused": "O Broadcast está em pausa no momento, nada foi enviado. Sua campanha fica salva como rascunho."
   },
   "history": {
     "title": "Campanhas",

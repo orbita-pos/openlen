@@ -175,7 +175,8 @@
     "whatsappNeedNumber": "请先填写 WhatsApp 号码",
     "modulePageCreated": "页面已创建",
     "modulePageExists": "已打开现有页面",
-    "moduleAlreadyOnPage": "此模块已经在此页面"
+    "moduleAlreadyOnPage": "此模块已经在此页面",
+    "moduleNeedsAccounts": "请先开启账户 — 此模块需要它。"
   },
   "whatsapp": {
     "title": "WhatsApp 按钮",

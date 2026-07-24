@@ -15,7 +15,10 @@
 // the bottom, everything else at the end (above a trailing footer if present).
 // "Undo" posts `openlen:section-remove`; the script pulls the exact nodes it
 // last inserted back out and re-serializes — no reload, so the preview never
-// blanks to white.
+// blanks to white. Those node refs live only as long as THIS document, so the
+// parent only sends the message while the inserted band still carries its
+// `data-openlen-just-inserted` marker; past a srcDoc re-derive it undoes from
+// its own pre-insert snapshot instead (app/[locale]/new/page.tsx).
 //
 // Parent → iframe:  { type: "openlen:section-insert", html: "<fragment>", sectionType, anchorPath? }
 // Parent → iframe:  { type: "openlen:section-remove" }
@@ -224,6 +227,12 @@ const INSERT_SCRIPT = `
     }
     if (main) {
       try { main.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch (_) {}
+      // The highlight is transient; the MARKER stays for the life of this
+      // document. The parent probes for it before offering Undo: present ⇒ the
+      // node refs below still address live nodes ⇒ the no-reload remove works;
+      // absent ⇒ the srcDoc was re-derived and the parent falls back to its
+      // pre-insert snapshot. Never persisted — postClean below and
+      // stripEditorInstrumentation both drop it from every captured HTML.
       main.setAttribute('data-openlen-just-inserted', '');
       main.style.outline = '2px solid rgba(255,90,54,0.65)';
       main.style.outlineOffset = '3px';
@@ -231,7 +240,6 @@ const INSERT_SCRIPT = `
         if (!main.isConnected) return;
         main.style.outline = '';
         main.style.outlineOffset = '';
-        main.removeAttribute('data-openlen-just-inserted');
       }, 1500);
     }
     return main;

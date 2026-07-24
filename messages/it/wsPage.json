@@ -175,7 +175,8 @@
     "whatsappNeedNumber": "Aggiungi prima un numero WhatsApp",
     "modulePageCreated": "Pagina creata",
     "modulePageExists": "Pagina esistente aperta",
-    "moduleAlreadyOnPage": "Questo modulo è già in questa pagina"
+    "moduleAlreadyOnPage": "Questo modulo è già in questa pagina",
+    "moduleNeedsAccounts": "Attiva prima gli Account — questo modulo ne ha bisogno."
   },
   "whatsapp": {
     "title": "Pulsante WhatsApp",

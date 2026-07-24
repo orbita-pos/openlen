@@ -153,6 +153,10 @@ export function BroadcastPanel({
         setMsg(t("module.needsMembers"));
       } else if (r.status === 409) {
         setMsg(t("send.notPublished"));
+      } else if (r.status === 503) {
+        // Broadcast está en pausa a propósito: decirlo, en vez de invitar a
+        // reintentar para siempre con el mensaje transitorio.
+        setMsg(t("send.paused"));
       } else if (!r.ok) {
         setMsg(t("send.error"));
       } else {

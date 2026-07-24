@@ -30,7 +30,8 @@
     "capBlocked": "This campaign needs {needed} emails; you have {remaining} left this month.",
     "inProgress": "A send is already in progress.",
     "notPublished": "Publish your site first.",
-    "error": "Couldn't send. Try again."
+    "error": "Couldn't send. Try again.",
+    "paused": "Broadcast is paused right now, so nothing was sent. Your campaign stays saved as a draft."
   },
   "history": {
     "title": "Campaigns",

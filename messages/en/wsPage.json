@@ -175,7 +175,8 @@
     "whatsappNeedNumber": "Add a WhatsApp number first",
     "modulePageCreated": "Page created",
     "modulePageExists": "Opened the existing page",
-    "moduleAlreadyOnPage": "This module is already on this page"
+    "moduleAlreadyOnPage": "This module is already on this page",
+    "moduleNeedsAccounts": "Turn on Accounts first — this module needs it."
   },
   "whatsapp": {
     "title": "WhatsApp button",

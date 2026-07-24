@@ -599,6 +599,11 @@ function NewV2Inner() {
     id: string;
     name: string;
   } | null>(null);
+  // Staged until the band actually LANDS (the html-changed the insert posts
+  // back): offering Undo before that would point at a page the insert hasn't
+  // touched yet — the curated flow defers the drop past the scan reveal — and
+  // the snapshot the Undo falls back to is only stashed by that same message.
+  const pendingInsertRef = useRef<{ id: string; name: string } | null>(null);
 
   const handlePreviewSection = (spec: SectionSpec) => {
     setUseError(null);
@@ -666,7 +671,7 @@ function NewV2Inner() {
           sectionType: spec.type,
         });
       });
-      setLastInserted({ id: spec.id, name: spec.name });
+      pendingInsertRef.current = { id: spec.id, name: spec.name };
       setPreviewSection(null);
     } catch {
       scanController.cancel();
@@ -676,19 +681,32 @@ function NewV2Inner() {
     }
   };
 
-  // Undo the most recent insert. PreviewArea posts `openlen:section-remove`,
-  // which pulls the just-added nodes out of the live DOM (and restores any
-  // replaced navbar/footer) and re-serializes through the html-changed funnel —
-  // scheduling a save with the section gone, replacing any pending insert
-  // autosave (so no double PATCH).
+  // Undo the most recent insert. Two paths, because the iframe script's node
+  // refs die with the document it inserted into (any srcDoc re-derive — the
+  // autosave round-trip, a module toggle — reloads it), and a pill that quietly
+  // stops working is worse than no pill:
+  //  • band still live (its data-openlen-just-inserted marker is in the iframe
+  //    DOM) → `openlen:section-remove` pulls exactly those nodes out and
+  //    restores any replaced navbar/footer, with no reload;
+  //  • otherwise → the one-step snapshot doUndo restores (the html as it was
+  //    BEFORE the insert), which the pill's own html-changed stashed. Safe
+  //    because the pill retires the moment anything else edits the document.
   const handleUndoInsert = () => {
+    setLastInserted(null);
+    const live = iframeElRef.current?.contentDocument?.querySelector(
+      "[data-openlen-just-inserted]",
+    );
+    if (!live) {
+      doUndoRef.current();
+      return;
+    }
+    // Replaces the insert's own pending autosave, so no double PATCH.
     if (saveTimerRef.current !== null) {
       window.clearTimeout(saveTimerRef.current);
       saveTimerRef.current = null;
     }
     removeNonceRef.current += 1;
     setRemoveRequest({ nonce: removeNonceRef.current });
-    setLastInserted(null);
   };
 
   // Insert a curated animated hero (Images → Motion source). Rides the exact
@@ -701,7 +719,7 @@ function NewV2Inner() {
       nonce: insertNonceRef.current,
       sectionType: "motion",
     });
-    setLastInserted({ id: "motion", name: t("drop.sectionName") });
+    pendingInsertRef.current = { id: "motion", name: t("drop.sectionName") };
   };
 
   // AI generation flow — owned here so the brief survives panel switches
@@ -1556,7 +1574,10 @@ function NewV2Inner() {
             anchorPath: intent.anchorPath ?? undefined,
           });
           // Rides the section-insert flash so the Undo pill works for free.
-          setLastInserted({ id: "drop-image", name: t("drop.sectionName") });
+          pendingInsertRef.current = {
+            id: "drop-image",
+            name: t("drop.sectionName"),
+          };
         }
         // Unsplash compliance: ping download_location when the photo is USED.
         if (src.asset?.downloadLocation) {
@@ -1911,6 +1932,23 @@ function NewV2Inner() {
       if (source === "reorder" || source === "section-insert") {
         setInspectSelection(null);
       }
+      // The insert pill is a one-step undo of the LAST change: it appears when
+      // its band lands and retires the moment anything else edits the document
+      // — which is what keeps its snapshot fallback (undoRef, taken over by
+      // that other edit) safe to restore.
+      if (rawSource === "section-insert") {
+        setLastInserted(pendingInsertRef.current);
+        pendingInsertRef.current = null;
+        // Consumed: the fragment is in the document now. PreviewArea re-flushes
+        // any still-pending request from its iframe-ready handler (that's how a
+        // hub insert reaches a canvas that wasn't mounted yet) and its
+        // already-sent nonce resets with the component — so a request left
+        // standing here lands a SECOND copy of the band every time the user
+        // comes back to the canvas.
+        setInsertRequest(null);
+      } else {
+        setLastInserted(null);
+      }
       // The Deshacer pill — drop-pipeline commits pre-set their label; the
       // section toolbar carries its action in the message.
       const pillText =
@@ -2062,6 +2100,7 @@ function NewV2Inner() {
       setPreviewSection(null);
       setUseError(null);
       setLastInserted(null);
+      pendingInsertRef.current = null;
       setInsertRequest(null);
     }
     prevLoadedIdRef.current = newId;
@@ -2086,6 +2125,7 @@ function NewV2Inner() {
       setActiveLook(null);
       setPageMeta(null);
       setLastInserted(null);
+      pendingInsertRef.current = null;
       setDropNotice(null);
       undoRef.current = null;
       pendingPillRef.current = null;
@@ -2734,17 +2774,26 @@ function NewV2Inner() {
           toast.error(t("toast.moduleError"));
           return false;
         }
+        // Trust the SERVER's reconciled settings over our own patch:
+        // reconcileModuleSettings forces broadcast off while Accounts is off,
+        // so echoing the patch made the card claim it was on until a reload.
+        const serverBroadcast = (await r.json().catch(() => null))?.settings
+          ?.broadcast as BroadcastSettings | undefined;
         setLoadedProject((p) =>
           p
             ? {
                 ...p,
                 settings: {
                   ...p.settings,
-                  broadcast: { ...p.settings?.broadcast, ...patch },
+                  broadcast: serverBroadcast ?? { ...p.settings?.broadcast, ...patch },
                 },
               }
             : p,
         );
+        if (patch.enabled === true && serverBroadcast?.enabled === false) {
+          toast.error(t("toast.moduleNeedsAccounts"));
+          return false;
+        }
         if (typeof patch.enabled === "boolean") {
           const moduleName = t("toast.moduleBroadcast");
           toast.success(
@@ -2777,17 +2826,25 @@ function NewV2Inner() {
           toast.error(t("toast.moduleError"));
           return false;
         }
+        // Same as broadcast: the server may reconcile comments off (Accounts
+        // is the anti-spam basis), so its settings win over the patch.
+        const serverComments = (await r.json().catch(() => null))?.settings
+          ?.comments as CommentsSettings | undefined;
         setLoadedProject((p) =>
           p
             ? {
                 ...p,
                 settings: {
                   ...p.settings,
-                  comments: { ...p.settings?.comments, ...patch },
+                  comments: serverComments ?? { ...p.settings?.comments, ...patch },
                 },
               }
             : p,
         );
+        if (patch.enabled === true && serverComments?.enabled === false) {
+          toast.error(t("toast.moduleNeedsAccounts"));
+          return false;
+        }
         if (typeof patch.enabled === "boolean") {
           const moduleName = t("toast.moduleComments");
           toast.success(
@@ -2878,17 +2935,26 @@ function NewV2Inner() {
           toast.error(t("toast.moduleError"));
           return false;
         }
+        // Server settings win: reconcileModuleSettings neutralizes
+        // requireLogin while Accounts is off (a members-only booking site with
+        // no way to log in is unbookable), and the patch alone hid that.
+        const serverBookings = (await r.json().catch(() => null))?.settings
+          ?.bookings as BookingsSettings | undefined;
         setLoadedProject((p) =>
           p
             ? {
                 ...p,
                 settings: {
                   ...p.settings,
-                  bookings: { ...p.settings?.bookings, ...patch },
+                  bookings: serverBookings ?? { ...p.settings?.bookings, ...patch },
                 },
               }
             : p,
         );
+        if (patch.requireLogin === true && serverBookings?.requireLogin === false) {
+          toast.error(t("toast.moduleNeedsAccounts"));
+          return false;
+        }
         if (typeof patch.enabled === "boolean") {
           const moduleName = t("toast.moduleBookings");
           toast.success(
@@ -3186,10 +3252,10 @@ function NewV2Inner() {
               step.module === "collections" ? "Catalog"
               : step.module === "bookings" ? "Bookings"
               : "Comments";
-            setLastInserted({
+            pendingInsertRef.current = {
               id: `module-${step.module}`,
               name: tSections(`sections.module${nameKey}Title`),
-            });
+            };
             break;
           }
           case "createPage":

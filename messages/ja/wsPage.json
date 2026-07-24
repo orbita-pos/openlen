@@ -175,7 +175,8 @@
     "whatsappNeedNumber": "先にWhatsApp番号を追加してください",
     "modulePageCreated": "ページを作成しました",
     "modulePageExists": "既存のページを開きました",
-    "moduleAlreadyOnPage": "このモジュールはすでにこのページにあります"
+    "moduleAlreadyOnPage": "このモジュールはすでにこのページにあります",
+    "moduleNeedsAccounts": "先にアカウントをオンにしてください — このモジュールに必要です。"
   },
   "whatsapp": {
     "title": "WhatsAppボタン",

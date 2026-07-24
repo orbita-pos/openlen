@@ -175,7 +175,8 @@
     "whatsappNeedNumber": "먼저 WhatsApp 번호를 추가하세요",
     "modulePageCreated": "페이지를 만들었습니다",
     "modulePageExists": "기존 페이지를 열었습니다",
-    "moduleAlreadyOnPage": "이 모듈은 이미 이 페이지에 있어요"
+    "moduleAlreadyOnPage": "이 모듈은 이미 이 페이지에 있어요",
+    "moduleNeedsAccounts": "먼저 계정을 켜세요 — 이 모듈에 필요합니다."
   },
   "whatsapp": {
     "title": "WhatsApp 버튼",

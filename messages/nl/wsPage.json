@@ -175,7 +175,8 @@
     "whatsappNeedNumber": "Voeg eerst een WhatsApp-nummer toe",
     "modulePageCreated": "Pagina gemaakt",
     "modulePageExists": "Bestaande pagina geopend",
-    "moduleAlreadyOnPage": "Deze module staat al op deze pagina"
+    "moduleAlreadyOnPage": "Deze module staat al op deze pagina",
+    "moduleNeedsAccounts": "Zet eerst Accounts aan — deze module heeft ze nodig."
   },
   "whatsapp": {
     "title": "WhatsApp-knop",
