@@ -1,7 +1,7 @@
 // @vitest-environment node
 
 import { describe, expect, it } from "vitest";
-import { bakeBookings } from "./bookings-widget";
+import { bakeBookings, hasBookingsSection } from "./bookings-widget";
 
 const CFG = { sub: "mysite" };
 const DOC = (body: string) => `<!doctype html><html lang="es"><head></head><body>${body}</body></html>`;
@@ -74,6 +74,22 @@ describe("bakeBookings", () => {
     const out = bakeBookings(DOC("x"), { sub: "x</script><script>evil" });
     expect(out).not.toContain("</script><script>evil");
     expect(out).toContain("\\u003c/script");
+  });
+
+  // Preview de borrador sin subdominio: /api/bk//services era una ruta rota.
+  it("skips the API calls when there is no sub (draft preview shell only)", () => {
+    const out = bakeBookings(DOC("x"), { sub: "" });
+    expect(out).toContain("if(C.sub){api(");
+    expect(out).toContain("else{setMsg(T.noSlots)}");
+  });
+
+  it("agrees with the bake about which documents carry a band", () => {
+    expect(hasBookingsSection(DOC("<div data-ol-bookings-section></div>"))).toBe(true);
+    expect(hasBookingsSection(DOC("<h1>sin banda</h1>"))).toBe(false);
+    const notAPlaceholder = DOC("<p>data-ol-bookings-section</p>");
+    expect(hasBookingsSection(notAPlaceholder)).toBe(false);
+    const baked = bakeBookings(notAPlaceholder, CFG);
+    expect(baked.indexOf("data-ol-bookings-host")).toBeGreaterThan(baked.indexOf("<p>"));
   });
 
   it("embeds locale strings and picks by <html lang> at runtime", () => {

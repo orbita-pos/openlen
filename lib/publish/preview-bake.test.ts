@@ -113,3 +113,68 @@ describe("bakeModulesForPreviewHtml", () => {
     assert.ok(out.includes("Producto Uno"), "item rendered");
   });
 });
+
+describe("preview mirrors publish's FAB stacking", () => {
+  it("lifts an unmergeable chat one slot above the assistant", () => {
+    const out = bakeModulesForPreviewHtml(HOME, {
+      ...baseCtx,
+      settings: {
+        assistant: { enabled: true },
+        chat: { enabled: true, mount: "fab", identityMode: "account" },
+        whatsapp: { enabled: true, number: "5512345678" },
+      },
+    });
+    assert.ok(out.includes('"bottom":86'), "chat above the assistant");
+    assert.ok(out.includes("bottom:154px"), "WhatsApp above both, no empty slot");
+  });
+
+  it("keeps ONE bubble when the chat merges into the assistant (handoff)", () => {
+    const out = bakeModulesForPreviewHtml(HOME, {
+      ...baseCtx,
+      settings: {
+        assistant: { enabled: true },
+        chat: { enabled: true, mount: "fab" },
+        whatsapp: { enabled: true, number: "5512345678" },
+      },
+    });
+    assert.ok(out.includes('"handoff":true'));
+    assert.ok(!out.includes('"bottom":86'));
+    assert.ok(out.includes("bottom:86px"), "WhatsApp above the single bubble");
+  });
+});
+
+describe("preview scopes section modules to their band", () => {
+  const bands = { bookings: true, comments: true };
+
+  it("skips the widget on a document without the band when the site has one", () => {
+    const out = bakeModulesForPreviewHtml(HOME, {
+      ...baseCtx,
+      settings: { bookings: { enabled: true }, comments: { enabled: true } },
+      sectionBands: bands,
+    });
+    assert.ok(!out.includes("data-ol-bookings-widget"));
+    assert.ok(!out.includes("data-ol-comments-widget"));
+  });
+
+  it("renders it on the document that carries the band", () => {
+    const withBand = HOME.replace(
+      "<footer",
+      '<section data-ol-bookings-section></section><footer',
+    );
+    const out = bakeModulesForPreviewHtml(withBand, {
+      ...baseCtx,
+      settings: { bookings: { enabled: true } },
+      sectionBands: bands,
+    });
+    assert.ok(out.includes("data-ol-bookings-widget"));
+  });
+
+  it("no band anywhere keeps the append-everywhere fallback", () => {
+    const out = bakeModulesForPreviewHtml(HOME, {
+      ...baseCtx,
+      settings: { bookings: { enabled: true } },
+      sectionBands: { bookings: false, comments: false },
+    });
+    assert.ok(out.includes("data-ol-bookings-widget"));
+  });
+});

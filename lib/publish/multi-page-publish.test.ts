@@ -555,3 +555,116 @@ describe("publishToDir wires Pedidos por WhatsApp (orders) over Collections", ()
     }
   });
 });
+
+// «La banda manda» (2026-07-23): un módulo de SECCIÓN que el creador ya colocó
+// en algún documento se publica SOLO donde está su banda. Sin banda en ninguna
+// parte se conserva el respaldo histórico (encender el módulo publica algo).
+describe("section modules ship where their band is", () => {
+  const BAND_DOC = (label: string, marker: string) => `<!doctype html>
+<html lang="es"><head><meta charset="utf-8"><title>${label}</title></head>
+<body><h1>${label}</h1><section ${marker}></section></body></html>`;
+
+  const readDocs = (sub: string, slugs: string[]) => {
+    const current = path.join(root, sub, "current");
+    let dir: string;
+    try {
+      dir = path.join(root, sub, "releases", readFileSync(current, "utf8").trim());
+    } catch {
+      dir = current;
+    }
+    const out: Record<string, string> = {
+      home: readFileSync(path.join(dir, "index.html"), "utf8"),
+    };
+    for (const slug of slugs) {
+      out[slug] = readFileSync(path.join(dir, slug, "index.html"), "utf8");
+    }
+    return out;
+  };
+
+  it("bookings ship ONLY on the page carrying the band", async () => {
+    await publishToDir({
+      subdomain: "bandbookings",
+      html: DOC("home"),
+      pages: [
+        { slug: "menu", html: DOC("menu") },
+        { slug: "citas", html: BAND_DOC("citas", "data-ol-bookings-section") },
+      ],
+      bookings: { enabled: true },
+    });
+    const docs = readDocs("bandbookings", ["menu", "citas"]);
+    assert.ok(docs.citas.includes("data-ol-bookings-widget"), "widget on the page with the band");
+    assert.ok(!docs.home.includes("data-ol-bookings-widget"), "home stays clean");
+    assert.ok(!docs.menu.includes("data-ol-bookings-widget"), "/menu stays clean");
+  });
+
+  it("comments band on home only → the subpages stay clean", async () => {
+    await publishToDir({
+      subdomain: "bandcomments",
+      html: BAND_DOC("home", "data-ol-comments-section"),
+      pages: [{ slug: "menu", html: DOC("menu") }],
+      comments: { enabled: true },
+    });
+    const docs = readDocs("bandcomments", ["menu"]);
+    assert.ok(docs.home.includes("data-ol-comments-widget"));
+    assert.ok(!docs.menu.includes("data-ol-comments-widget"));
+  });
+
+  it("no band anywhere → the fallback still publishes the widget on every doc", async () => {
+    await publishToDir({
+      subdomain: "bandnone",
+      html: DOC("home"),
+      pages: [{ slug: "menu", html: DOC("menu") }],
+      bookings: { enabled: true },
+      comments: { enabled: true },
+    });
+    const docs = readDocs("bandnone", ["menu"]);
+    for (const doc of [docs.home, docs.menu]) {
+      assert.ok(doc.includes("data-ol-bookings-widget"), "bookings fallback intact");
+      assert.ok(doc.includes("data-ol-comments-widget"), "comments fallback intact");
+    }
+  });
+});
+
+// Apilamiento de burbujas: el asistente vive en los 18 px de la esquina. Un
+// chat que NO se fusiona con él (cuenta / solo por invitación) tenía el mismo
+// bottom + el mismo z-index y lo tapaba entero (QA 2026-07-23).
+describe("visitor FABs never land on the same pixel", () => {
+  const readHome = (sub: string) => {
+    const current = path.join(root, sub, "current");
+    try {
+      return readFileSync(
+        path.join(root, sub, "releases", readFileSync(current, "utf8").trim(), "index.html"),
+        "utf8",
+      );
+    } catch {
+      return readFileSync(path.join(current, "index.html"), "utf8");
+    }
+  };
+
+  it("an account-mode chat sits one slot above the assistant, WhatsApp above both", async () => {
+    await publishToDir({
+      subdomain: "fabstack",
+      html: DOC("home"),
+      assistant: { enabled: true, businessName: "Mi Negocio" },
+      chat: { enabled: true, mount: "fab", selfServeJoin: true, identityMode: "account" },
+      whatsapp: { enabled: true, number: "5512345678" },
+    });
+    const home = readHome("fabstack");
+    assert.ok(home.includes('"bottom":86'), "chat FAB lifted above the assistant");
+    assert.ok(home.includes("bottom:154px"), "WhatsApp above both — no empty slot");
+  });
+
+  it("a mergeable guest chat keeps ONE bubble (handoff), so WhatsApp only skips one slot", async () => {
+    await publishToDir({
+      subdomain: "fabmerged",
+      html: DOC("home"),
+      assistant: { enabled: true, businessName: "Mi Negocio" },
+      chat: { enabled: true, mount: "fab", selfServeJoin: true },
+      whatsapp: { enabled: true, number: "5512345678" },
+    });
+    const home = readHome("fabmerged");
+    assert.ok(home.includes('"handoff":true'), "chat baked as the assistant's handoff target");
+    assert.ok(!home.includes('"bottom":86'), "no second bubble to lift");
+    assert.ok(home.includes("bottom:86px"), "WhatsApp sits above the single bubble");
+  });
+});

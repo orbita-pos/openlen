@@ -114,6 +114,18 @@ const WIDGET_MARKER = "data-ol-bookings-widget";
 const SECTION_MARKER = "data-ol-bookings-section";
 const HOST_MARKER = "data-ol-bookings-host";
 
+const SECTION_RE = new RegExp(
+  `<(section|div)([^>]*\\b${SECTION_MARKER}\\b[^>]*)>[\\s\\S]*?<\\/\\1>`,
+  "i",
+);
+
+/** Does THIS document carry a bookings band? Publish scopes the bake to the
+ *  documents that have one ("la banda manda"), so the predicate must agree
+ *  byte-for-byte with what bakeBookings would actually fill. */
+export function hasBookingsSection(html: string): boolean {
+  return SECTION_RE.test(html);
+}
+
 function widgetScript(cfg: BookingsWidgetConfig): string {
   const DK = cfg.theme === "dark";
   const ACC = /^#[0-9a-fA-F]{6}$/.test(cfg.accent ?? "") ? cfg.accent! : DK ? "#e8e8ea" : "#16181d";
@@ -256,7 +268,10 @@ ok.appendChild(t);ok.appendChild(b);
 if(j.bookingId&&j.manageToken){var a=document.createElement("a");a.className="mlink";a.href="/api/bk/"+C.sub+"/manage?b="+encodeURIComponent(j.bookingId)+"&t="+encodeURIComponent(j.manageToken);a.textContent=T.manage;ok.appendChild(a)}
 body.appendChild(ok)}
 
-api("/me",{credentials:"same-origin"}).then(function(r){return r.json()}).then(function(j){if(j&&j.member){state.member=true;state.memberName=j.name}}).catch(function(){}).then(loadServices);
+// Draft preview of a page with no subdomain yet: every path would be malformed
+// (/api/bk//services), so render the empty shell instead of calling.
+if(C.sub){api("/me",{credentials:"same-origin"}).then(function(r){return r.json()}).then(function(j){if(j&&j.member){state.member=true;state.memberName=j.name}}).catch(function(){}).then(loadServices)}
+else{setMsg(T.noSlots)}
 }catch(e){}})();</script>`;
 }
 
@@ -268,12 +283,8 @@ export function bakeBookings(html: string, cfg: BookingsWidgetConfig): string {
   if (html.includes(WIDGET_MARKER)) return html;
   const block = `<div ${HOST_MARKER}></div>${widgetScript(cfg)}`;
 
-  const markerRe = new RegExp(
-    `<(section|div)([^>]*\\b${SECTION_MARKER}\\b[^>]*)>[\\s\\S]*?<\\/\\1>`,
-    "i",
-  );
-  if (markerRe.test(html)) {
-    return html.replace(markerRe, (_m, tag, attrs) => `<${tag}${attrs}>${block}</${tag}>`);
+  if (SECTION_RE.test(html)) {
+    return html.replace(SECTION_RE, (_m, tag, attrs) => `<${tag}${attrs}>${block}</${tag}>`);
   }
 
   const idx = html.lastIndexOf("</body>");

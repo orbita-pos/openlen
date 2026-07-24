@@ -61,6 +61,20 @@ export interface CommentsWidgetConfig {
 const WIDGET_MARKER = "data-ol-comments-widget";
 const SECTION_MARKER = "data-ol-comments-section";
 
+// Placement: the placeholder element's CONTENT is replaced in place. Matches a
+// <section|div> carrying the section marker (the Section-Library block).
+const SECTION_RE = new RegExp(
+  `<(section|div)([^>]*\\b${SECTION_MARKER}\\b[^>]*)>[\\s\\S]*?<\\/\\1>`,
+  "i",
+);
+
+/** Does THIS document carry a comments band? Publish scopes the bake to the
+ *  documents that have one ("la banda manda"), so the predicate must agree
+ *  byte-for-byte with what bakeComments would actually fill. */
+export function hasCommentsSection(html: string): boolean {
+  return SECTION_RE.test(html);
+}
+
 function widgetScript(cfg: CommentsWidgetConfig): string {
   // RELATIVE API paths — load-bearing: the ol_member session cookie is
   // host-only (first-party on the published site's host). A cross-host call to
@@ -145,8 +159,10 @@ sb.addEventListener("click",function(){var em=inp.value.trim();if(!em)return;sb.
 fetch("/api/m/"+C.sub+"/auth/request",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({email:em,slug:C.slug})})
 .then(function(){box.innerHTML="";msg(box,T.checkInbox)}).catch(function(){sb.disabled=false;msg(box,T.error)})})})}
 function load(){q("/comments?slug="+(C.slug||"")).then(function(r){return r.json()}).then(function(j){render(j.comments)}).catch(function(){})}
-load();
-q("/me",{credentials:"same-origin"}).then(function(r){return r.json()}).then(function(j){j&&j.member?composer():login()}).catch(login);
+// Draft preview of a page with no subdomain yet: every path would be malformed
+// (/api/cm//comments), so render the empty shell instead of calling.
+if(C.sub){load();q("/me",{credentials:"same-origin"}).then(function(r){return r.json()}).then(function(j){j&&j.member?composer():login()}).catch(login)}
+else{render([]);login()}
 }catch(e){}})();</script>`;
 }
 
@@ -159,14 +175,8 @@ export function bakeComments(html: string, cfg: CommentsWidgetConfig): string {
   if (html.includes(WIDGET_MARKER)) return html;
   const block = `<div data-ol-comments-host></div>${widgetScript(cfg)}`;
 
-  // Placement: replace the placeholder element's CONTENT in place. Matches a
-  // <section|div> carrying the section marker (the Section-Library block).
-  const markerRe = new RegExp(
-    `<(section|div)([^>]*\\b${SECTION_MARKER}\\b[^>]*)>[\\s\\S]*?<\\/\\1>`,
-    "i",
-  );
-  if (markerRe.test(html)) {
-    return html.replace(markerRe, (_m, tag, attrs) => `<${tag}${attrs}>${block}</${tag}>`);
+  if (SECTION_RE.test(html)) {
+    return html.replace(SECTION_RE, (_m, tag, attrs) => `<${tag}${attrs}>${block}</${tag}>`);
   }
 
   const idx = html.lastIndexOf("</body>");

@@ -36,6 +36,20 @@ describe("bakeChatWidget", () => {
     expect(out).toContain("#FF5A36");
   });
 
+  // Apilamiento de burbujas: el asistente ocupa los 18 px de la esquina, así
+  // que un chat que NO se fusiona con él se hornea una ranura arriba.
+  it("bakes the caller's bottom offset into the FAB and the panel", () => {
+    const out = bakeChatWidget(BASE, { ...cfg, bottomPx: 86 });
+    expect(out).toContain('"bottom":86');
+    const own = bakeChatWidget(BASE, cfg);
+    expect(own).not.toContain('"bottom"'); // sin offset = 18 px por default
+  });
+
+  it("skips the API calls when there is no sub (draft preview shell only)", () => {
+    const out = bakeChatWidget(BASE, { ...cfg, sub: "" });
+    expect(out).toContain("if(!C.sub){authView();return}");
+  });
+
   it("el script trae la piel WhatsApp: avatar del header, papel tapiz y timestamps", () => {
     const out = bakeChatWidget(BASE, cfg);
     expect(out).toContain('"ava"'); // avatar circle en el header

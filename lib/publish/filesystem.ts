@@ -21,8 +21,8 @@ import { bakeGoogleFonts } from "@/lib/publish/font-bake";
 import { bakeMotion } from "@/lib/publish/motion";
 import { bakeMusic } from "@/lib/publish/music";
 import { bakeAssistantWidget } from "@/lib/publish/assistant-widget";
-import { bakeComments } from "@/lib/publish/comments-widget";
-import { bakeBookings } from "@/lib/publish/bookings-widget";
+import { bakeComments, hasCommentsSection } from "@/lib/publish/comments-widget";
+import { bakeBookings, hasBookingsSection } from "@/lib/publish/bookings-widget";
 import { bakeCollections } from "@/lib/publish/collections-block";
 import { stripDisabledModuleBands } from "@/lib/publish/strip-disabled-bands";
 import { applyLiveData } from "@/lib/live";
@@ -519,6 +519,11 @@ interface BakeDocumentCtx {
   scene3d?: { enabled: boolean; spec?: unknown };
   /** Private chat module. When enabled, the 1:1 messaging widget is baked. */
   chat?: ChatBake;
+  /** Per SECTION module: does the site declare its band in at least ONE
+   *  document? True → the widget bakes ONLY in the documents that carry the
+   *  band. False → the historical fallback (append before </body> everywhere)
+   *  so "turn the module on and something shows up" keeps working. */
+  sectionBands: { bookings: boolean; comments: boolean };
 }
 
 interface AssistantBake {
@@ -554,6 +559,15 @@ async function bakeDocument(
   // uses it for page-scoped config + lead attribution.
   page: string | null = null,
 ): Promise<string> {
+  // «La banda manda»: a SECTION module the creator placed somewhere on the site
+  // ships ONLY where its band is — inserting Reservas on /citas must not also
+  // publish it on home and /menu. Read off the incoming document (the same
+  // source the site-wide scan used), so both halves of the rule always agree.
+  const bakeCommentsHere =
+    !ctx.sectionBands.comments || hasCommentsSection(html);
+  const bakeBookingsHere =
+    !ctx.sectionBands.bookings || hasBookingsSection(html);
+
   const optimized = await optimizeHtmlForProduction(html);
 
   // Consolidate Unsplash credits BEFORE the asset migrations below. We need
@@ -733,6 +747,13 @@ async function bakeDocument(
     }
   }
 
+  // Non-null exactly when the assistant bakes its bubble — the anchor of the
+  // right-corner FAB stack (18 px), so the chat and WhatsApp offsets below can
+  // never disagree with what actually shipped.
+  const assistantFab =
+    process.env.OPENLEN_ASSISTANT !== "0" && ctx.assistant?.enabled === true
+      ? ctx.assistant
+      : null;
   // AI→human handoff merges the two visitor bubbles into ONE launcher. Only when
   // BOTH surfaces are on AND the chat is a guest self-serve space (handoff mints
   // a guest — invite-only/account-mode chats keep their own bubble + legacy lead
@@ -740,8 +761,7 @@ async function bakeDocument(
   // handoff-target bake, and the WhatsApp stacking all agree; includes both env
   // kill switches so flipping either can't leave the chat unreachable.
   const handoffMerged =
-    process.env.OPENLEN_ASSISTANT !== "0" &&
-    ctx.assistant?.enabled === true &&
+    assistantFab !== null &&
     process.env.OPENLEN_CHAT !== "0" &&
     ctx.chat?.enabled === true &&
     ctx.chat?.selfServeJoin !== false &&
@@ -749,14 +769,14 @@ async function bakeDocument(
 
   // Site assistant — visitor-facing AI chat widget. Last, so the IIFE sits
   // just before </body> after every other rewrite.
-  if (process.env.OPENLEN_ASSISTANT !== "0" && ctx.assistant?.enabled) {
+  if (assistantFab) {
     try {
       migratedHtml = bakeAssistantWidget(migratedHtml, {
         sub: ctx.sub,
         apiBase: assistantApiBase(),
-        businessName: ctx.assistant.businessName,
-        accent: ctx.assistant.accent,
-        greeting: ctx.assistant.greeting,
+        businessName: assistantFab.businessName,
+        accent: assistantFab.accent,
+        greeting: assistantFab.greeting,
         // Both surfaces on (mergeable) → the assistant is the single launcher and
         // hands off to the human chat (window.__openlenChat) instead of a
         // dead-end lead form.
@@ -775,7 +795,7 @@ async function bakeDocument(
 
   // Comments widget — AFTER the assistant, still BEFORE the seal (so its inline
   // script hash enters the CSP). Renders at the placeholder or appends.
-  if (process.env.OPENLEN_COMMENTS !== "0" && ctx.comments?.enabled) {
+  if (process.env.OPENLEN_COMMENTS !== "0" && ctx.comments?.enabled && bakeCommentsHere) {
     try {
       migratedHtml = bakeComments(migratedHtml, {
         sub: ctx.sub,
@@ -790,7 +810,7 @@ async function bakeDocument(
   }
 
   // Bookings widget — same window (before the seal so its inline hash is sealed).
-  if (process.env.OPENLEN_BOOKINGS !== "0" && ctx.bookings?.enabled) {
+  if (process.env.OPENLEN_BOOKINGS !== "0" && ctx.bookings?.enabled && bakeBookingsHere) {
     try {
       migratedHtml = bakeBookings(migratedHtml, {
         sub: ctx.sub,
@@ -806,12 +826,13 @@ async function bakeDocument(
   // Private chat widget — AFTER bookings, BEFORE video-embed (so its sealed
   // script hash enters the CSP). Gated on OPENLEN_CHAT != "0" and chat.enabled.
   //
-  // Single-launcher rule: when the assistant is ALSO enabled, IT owns the one
-  // bubble and the chat bakes as a handoff target — no FAB of its own, exposing
-  // window.__openlenChat so the assistant can open it after an AI→human handoff.
-  // We force the FAB host to bake even for mount:"section" so the openable
-  // floating panel exists. With no assistant, the chat keeps its own FAB at the
-  // default corner (18 px); WhatsApp (baked after) stacks above it.
+  // Single-launcher rule: when the assistant is ALSO enabled AND the chat can
+  // merge into it, IT owns the one bubble and the chat bakes as a handoff
+  // target — no FAB of its own, exposing window.__openlenChat so the assistant
+  // can open it after an AI→human handoff. We force the FAB host to bake even
+  // for mount:"section" so the openable floating panel exists. With no
+  // assistant, the chat keeps its own FAB at the default corner (18 px);
+  // WhatsApp (baked after) stacks above it.
   if (process.env.OPENLEN_CHAT !== "0" && ctx.chat?.enabled) {
     try {
       const handoff = handoffMerged;
@@ -819,6 +840,13 @@ async function bakeDocument(
         handoff && ctx.chat.mount === "section" ? "both" : ctx.chat.mount;
       migratedHtml = bakeChatWidget(migratedHtml, {
         sub: ctx.sub,
+        // Two bubbles when the assistant is on but this chat can NOT merge into
+        // it (account / invite-only spaces keep their own launcher): take the
+        // slot above the assistant. Without this both FABs land on the same
+        // pixel at the same z-index and the assistant — baked first — ends up
+        // completely covered and unclickable. 68 px is the step the WhatsApp
+        // stacking below already assumes for each prior FAB.
+        bottomPx: !handoff && assistantFab ? 18 + 68 : 18,
         // Brand-match the widget to the page's own accent ("con el color de tu
         // página"); falls back to the widget's coral when undetectable.
         accent: ctx.chat.accent ?? siteAccent,
@@ -924,16 +952,17 @@ async function bakeDocument(
   if (process.env.OPENLEN_WHATSAPP !== "0" && ctx.whatsapp?.enabled && ctx.whatsapp.number) {
     try {
       // Stack ABOVE all FABs already baked in the same corner so none are
-      // occluded. Right corner: assistant (18 px) OR a standalone chat FAB
-      // (18 px). They never coexist — with both on, the chat is a FAB-less
-      // handoff target, so only the assistant occupies the corner. Left corner:
-      // music player.
+      // occluded. Right corner: the assistant (18 px) and/or a standalone chat
+      // FAB (86 px when both, 18 px alone). With a mergeable chat there is only
+      // one bubble (the chat is a FAB-less handoff target). Left corner: music
+      // player.
       const waSide = ctx.whatsapp.side === "left" ? "left" : "right";
       const chatFabOnRight =
-        ctx.chat?.enabled === true && ctx.chat.mount !== "section" && !handoffMerged;
-      const priorRightFabs =
-        (ctx.assistant?.enabled === true ? 1 : 0) +
-        (chatFabOnRight ? 1 : 0);
+        process.env.OPENLEN_CHAT !== "0" &&
+        ctx.chat?.enabled === true &&
+        ctx.chat.mount !== "section" &&
+        !handoffMerged;
+      const priorRightFabs = (assistantFab ? 1 : 0) + (chatFabOnRight ? 1 : 0);
       const leftOccupied = waSide === "left" && !!ctx.music?.src;
       migratedHtml = bakeWhatsAppButton(migratedHtml, {
         number: ctx.whatsapp.number,
@@ -1066,6 +1095,20 @@ export async function publishToDir(
     }
   }
 
+  // Where the SECTION modules are allowed to land. A band anywhere on the site
+  // scopes the bake to the documents that carry one; no band anywhere keeps the
+  // append-everywhere fallback. Scanned over the raw documents — the same
+  // strings bakeDocument re-checks per page.
+  const siteDocs = [
+    params.html,
+    ...(params.pages ?? []).map((p) => p.html),
+    ...(params.gatedPages ?? []).map((p) => p.html),
+  ];
+  const sectionBands = {
+    bookings: siteDocs.some(hasBookingsSection),
+    comments: siteDocs.some(hasCommentsSection),
+  };
+
   // The full per-document bake (optimize → assets → images → fonts →
   // unsplash → forms → logo → analytics → motion → music). SHA is computed
   // AFTER these rewrites so a republish with identical content still
@@ -1088,6 +1131,7 @@ export async function publishToDir(
     orders: params.orders,
     scene3d: params.scene3d,
     chat: params.chat,
+    sectionBands,
   };
   let migratedHtml = await bakeDocument(publishHtml, bakeCtx);
 

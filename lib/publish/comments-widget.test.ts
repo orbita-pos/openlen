@@ -1,7 +1,7 @@
 // @vitest-environment node
 
 import { describe, expect, it } from "vitest";
-import { bakeComments } from "./comments-widget";
+import { bakeComments, hasCommentsSection } from "./comments-widget";
 
 const CFG = { sub: "mysite", apiBase: "https://openlen.com", page: null };
 const DOC = (body: string) => `<!doctype html><html lang="es"><head></head><body>${body}</body></html>`;
@@ -72,6 +72,24 @@ describe("bakeComments", () => {
     const out = bakeComments(DOC("x"), { ...CFG, sub: "x</script><script>evil" });
     expect(out).not.toContain("</script><script>evil");
     expect(out).toContain("\\u003c/script");
+  });
+
+  // Preview de borrador sin subdominio: /api/cm//comments era una ruta rota.
+  it("skips the API calls when there is no sub (draft preview shell only)", () => {
+    const out = bakeComments(DOC("x"), { ...CFG, sub: "" });
+    expect(out).toContain("if(C.sub){load()");
+    expect(out).toContain("else{render([]);login()}");
+  });
+
+  it("agrees with the bake about which documents carry a band", () => {
+    expect(hasCommentsSection(DOC("<div data-ol-comments-section></div>"))).toBe(true);
+    expect(hasCommentsSection(DOC("<h1>sin banda</h1>"))).toBe(false);
+    // The predicate gates the publish scope, so it must not fire on a document
+    // the bake would NOT treat as a placeholder.
+    const notAPlaceholder = DOC("<p>data-ol-comments-section</p>");
+    expect(hasCommentsSection(notAPlaceholder)).toBe(false);
+    const baked = bakeComments(notAPlaceholder, CFG);
+    expect(baked.indexOf("data-ol-comments-host")).toBeGreaterThan(baked.indexOf("<p>"));
   });
 
   it("embeds ALL locale strings and picks by <html lang> at runtime", () => {

@@ -387,7 +387,9 @@ jpost("/messages",{conversationId:convId,body:v}).then(function(x){cb.disabled=f
 
 loBtn.addEventListener("click",function(){jpost("/auth/logout",{}).then(function(){me=null;authView()}).catch(function(){me=null;authView()})});
 
-function start(){jreq("/me").then(function(x){if(x.j&&x.j.user){me=x.j.user;listView()}else{authView()}}).catch(function(){authView()})}
+// C.sub is empty only on a draft preview (no subdomain yet) — every path would
+// be malformed (/api/chat//me), so go straight to the shell.
+function start(){if(!C.sub){authView();return}jreq("/me").then(function(x){if(x.j&&x.j.user){me=x.j.user;listView()}else{authView()}}).catch(function(){authView()})}
 
 if(isFab){
 var fab=null;

@@ -12,8 +12,8 @@
 // renders its static shell, which is what a preview needs.
 
 import { bakeAssistantWidget } from "@/lib/publish/assistant-widget";
-import { bakeComments } from "@/lib/publish/comments-widget";
-import { bakeBookings } from "@/lib/publish/bookings-widget";
+import { bakeComments, hasCommentsSection } from "@/lib/publish/comments-widget";
+import { bakeBookings, hasBookingsSection } from "@/lib/publish/bookings-widget";
 import { bakeCollections } from "@/lib/publish/collections-block";
 import { bakeWhatsAppButton, waHref } from "@/lib/publish/whatsapp-button";
 import { injectOrdersCart } from "@/lib/publish/orders-cart";
@@ -42,6 +42,11 @@ export interface PreviewBakeCtx {
   /** Members door (memberDoorPlan) — mirrors publish's sign-in entry so the
    *  preview shows the same wired nav link the published site will have. */
   memberSignin?: { path: string; isAccount: boolean } | null;
+  /** Per SECTION module: does the SITE declare its band in at least one
+   *  document? Mirrors publish's "la banda manda" scoping — with a band
+   *  somewhere, only the documents that carry it get the widget. Absent =
+   *  no band known = the append-everywhere fallback. */
+  sectionBands?: { bookings: boolean; comments: boolean };
 }
 
 export function bakeModulesForPreviewHtml(html: string, ctx: PreviewBakeCtx): string {
@@ -69,15 +74,16 @@ export function bakeModulesForPreviewHtml(html: string, ctx: PreviewBakeCtx): st
   }
 
   // AI→human handoff — same single-source-of-truth rule as publishToDir.
+  const assistantOn =
+    process.env.OPENLEN_ASSISTANT !== "0" && s.assistant?.enabled === true;
   const handoffMerged =
-    process.env.OPENLEN_ASSISTANT !== "0" &&
-    s.assistant?.enabled === true &&
+    assistantOn &&
     process.env.OPENLEN_CHAT !== "0" &&
     s.chat?.enabled === true &&
     s.chat?.selfServeJoin !== false &&
     s.chat?.identityMode !== "account";
 
-  if (process.env.OPENLEN_ASSISTANT !== "0" && s.assistant?.enabled === true) {
+  if (assistantOn) {
     try {
       out = bakeAssistantWidget(out, {
         sub,
@@ -92,7 +98,15 @@ export function bakeModulesForPreviewHtml(html: string, ctx: PreviewBakeCtx): st
 
   const siteAccent = detectSiteAccent(out) ?? undefined;
 
-  if (process.env.OPENLEN_COMMENTS !== "0" && s.comments?.enabled === true) {
+  // "La banda manda", same rule as publish: a section module the creator placed
+  // somewhere on the site previews ONLY where its band is.
+  const bandRules = ctx.sectionBands ?? { bookings: false, comments: false };
+
+  if (
+    process.env.OPENLEN_COMMENTS !== "0" &&
+    s.comments?.enabled === true &&
+    (!bandRules.comments || hasCommentsSection(html))
+  ) {
     try {
       out = bakeComments(out, {
         sub,
@@ -105,7 +119,11 @@ export function bakeModulesForPreviewHtml(html: string, ctx: PreviewBakeCtx): st
     }
   }
 
-  if (process.env.OPENLEN_BOOKINGS !== "0" && s.bookings?.enabled === true) {
+  if (
+    process.env.OPENLEN_BOOKINGS !== "0" &&
+    s.bookings?.enabled === true &&
+    (!bandRules.bookings || hasBookingsSection(html))
+  ) {
     try {
       out = bakeBookings(out, { sub, accent: siteAccent, theme: s.bookings.theme });
     } catch {
@@ -121,6 +139,9 @@ export function bakeModulesForPreviewHtml(html: string, ctx: PreviewBakeCtx): st
         sub,
         accent: siteAccent,
         mount: chatMount,
+        // Same anti-overlap step as publish: an unmergeable chat (account /
+        // invite-only) keeps its own bubble, one slot above the assistant's.
+        bottomPx: !handoffMerged && assistantOn ? 18 + 68 : 18,
         selfServeJoin: s.chat.selfServeJoin !== false,
         title: ctx.title ?? undefined,
         identityMode: s.chat.identityMode,
@@ -136,17 +157,15 @@ export function bakeModulesForPreviewHtml(html: string, ctx: PreviewBakeCtx): st
 
   if (process.env.OPENLEN_WHATSAPP !== "0" && s.whatsapp?.enabled && s.whatsapp.number) {
     try {
-      // Same FAB stacking as publish: assistant OR a standalone chat FAB owns
-      // the right corner's first slot; music occupies the left.
+      // Same FAB stacking as publish: the assistant takes the right corner's
+      // first slot, an unmerged chat FAB the second; music occupies the left.
       const waSide = s.whatsapp.side === "left" ? "left" : "right";
       const chatFabOnRight =
         process.env.OPENLEN_CHAT !== "0" &&
         s.chat?.enabled === true &&
         s.chat.mount !== "section" &&
         !handoffMerged;
-      const priorRightFabs =
-        (process.env.OPENLEN_ASSISTANT !== "0" && s.assistant?.enabled === true ? 1 : 0) +
-        (chatFabOnRight ? 1 : 0);
+      const priorRightFabs = (assistantOn ? 1 : 0) + (chatFabOnRight ? 1 : 0);
       const leftOccupied = waSide === "left" && !!s.music?.src;
       out = bakeWhatsAppButton(out, {
         number: s.whatsapp.number,
@@ -231,10 +250,18 @@ export async function bakeModulesForPreview(
       collectionsItems = null;
     }
   }
+  const split = splitPagesForPublish(opts.data);
   const door = memberDoorPlan(
     opts.data,
-    splitPagesForPublish(opts.data).gatedPages.map((p) => p.slug),
+    split.gatedPages.map((p) => p.slug),
   );
+  // Same site-wide band scan publishToDir runs, over the same documents, so a
+  // section module previews exactly where it will publish.
+  const siteDocs = [
+    opts.data?.html ?? "",
+    ...split.publicPages.map((p) => p.html),
+    ...split.gatedPages.map((p) => p.html),
+  ];
   return bakeModulesForPreviewHtml(html, {
     projectId: opts.projectId,
     title: opts.title,
@@ -245,5 +272,9 @@ export async function bakeModulesForPreview(
     memberSignin: door.signinPath
       ? { path: door.signinPath, isAccount: door.signinIsAccount }
       : null,
+    sectionBands: {
+      bookings: siteDocs.some(hasBookingsSection),
+      comments: siteDocs.some(hasCommentsSection),
+    },
   });
 }
