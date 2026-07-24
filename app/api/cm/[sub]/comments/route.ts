@@ -41,7 +41,9 @@ export async function GET(
 }
 
 const PostSchema = z.object({
-  slug: z.string().regex(PAGE_SLUG_RE).optional(),
+  // nullish, not optional: the baked widget sends slug:null on the HOME thread
+  // (cfg.page is null there), and .optional() rejected it with a 400.
+  slug: z.string().regex(PAGE_SLUG_RE).nullish(),
   body: z.string().trim().min(1).max(2000),
 });
 

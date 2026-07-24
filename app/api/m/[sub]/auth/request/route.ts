@@ -35,7 +35,10 @@ const BodySchema = z.object({
     .email()
     .max(254)
     .transform((v) => v.toLowerCase().trim()),
-  slug: z.string().regex(PAGE_SLUG_RE).optional(),
+  // nullish, not optional: the comments widget requests the magic link with
+  // slug:null from the HOME thread — .optional() 400'd it, so a visitor on a
+  // single-page site could not even ask for a login link.
+  slug: z.string().regex(PAGE_SLUG_RE).nullish(),
 });
 
 export async function POST(
