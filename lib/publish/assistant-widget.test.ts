@@ -40,6 +40,28 @@ describe("bakeAssistantWidget", () => {
     expect(out).toContain("openlen.com");
   });
 
+  it("ships the 10 locales and picks one from <html lang> at runtime", () => {
+    const out = bakeAssistantWidget(DOC, CFG);
+    for (const l of ["en", "es", "pt", "fr", "de", "it", "ja", "ko", "zh", "nl"]) {
+      expect(out).toContain(`"${l}":{"open":`);
+    }
+    expect(out).toContain("document.documentElement.lang");
+    expect(out).toContain("C.S.en"); // unknown lang falls back to English
+  });
+
+  it("bakes no UI text into the markup — labels come from the locale table", () => {
+    const out = bakeAssistantWidget(DOC, { ...CFG, chatHandoff: true });
+    expect(out).not.toContain('aria-label="Abrir chat de ayuda"');
+    expect(out).not.toContain(">Hablar con una persona<");
+    expect(out).toContain('"greeting":null');
+    expect(out).toContain('T.greeting.split("{name}")');
+  });
+
+  it("keeps a configured greeting verbatim", () => {
+    const out = bakeAssistantWidget(DOC, { ...CFG, greeting: "Buenas 🌮" });
+    expect(out).toContain('"greeting":"Buenas 🌮"');
+  });
+
   it("drives the branding footer from config (runtime-gated)", () => {
     expect(bakeAssistantWidget(DOC, CFG)).toContain('"branding":true');
     expect(
@@ -57,9 +79,9 @@ describe("bakeAssistantWidget", () => {
       ...CFG,
       businessName: 'Bob"s </script> Tacos',
     });
-    // The business name is JSON-encoded inside the config blob; the literal
-    // </script> survives as escaped text, never as a real closing tag inside
-    // the JSON string.
+    // The business name is JSON-encoded inside the config blob and every "<" is
+    // \u003c-escaped, so the literal </script> can never close the tag early.
     expect(out).toContain('Bob\\"s');
+    expect(out).toContain("\\u003c/script>");
   });
 });
