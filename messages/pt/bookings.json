@@ -91,7 +91,13 @@
     "statusCancelled": "Cancelado",
     "statusCompleted": "Concluído",
     "statusNoShow": "Não compareceu",
-    "cancelConfirm": "Cancelar este agendamento? O visitante será avisado."
+    "cancelConfirm": "Cancelar este agendamento? O visitante será avisado.",
+    "reschedule": "Reagendar",
+    "pickNewTime": "Escolha um novo horário",
+    "moveHere": "Mover para cá",
+    "noSlots": "Nenhum horário livre no momento.",
+    "slotsError": "Não foi possível carregar os horários.",
+    "slotTaken": "Esse horário acabou de ser ocupado. Escolha outro."
   },
   "toast": {
     "archived": "Serviço arquivado",
@@ -100,6 +106,8 @@
     "cancel": "Agendamento cancelado",
     "complete": "Agendamento concluído",
     "no_show": "Marcado como não compareceu",
-    "actionError": "Não foi possível atualizar o agendamento."
+    "actionError": "Não foi possível atualizar o agendamento.",
+    "rescheduled": "Agendamento remarcado",
+    "rescheduleError": "Não foi possível remarcar o agendamento."
   }
 }

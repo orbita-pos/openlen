@@ -91,7 +91,13 @@
     "statusCancelled": "Annulée",
     "statusCompleted": "Terminée",
     "statusNoShow": "Absence",
-    "cancelConfirm": "Annuler cette réservation ? Le visiteur est prévenu."
+    "cancelConfirm": "Annuler cette réservation ? Le visiteur est prévenu.",
+    "reschedule": "Reprogrammer",
+    "pickNewTime": "Choisissez un nouveau créneau",
+    "moveHere": "Déplacer ici",
+    "noSlots": "Aucun créneau libre pour l’instant.",
+    "slotsError": "Impossible de charger les créneaux.",
+    "slotTaken": "Ce créneau vient d’être pris. Choisissez-en un autre."
   },
   "toast": {
     "archived": "Service archivé",
@@ -100,6 +106,8 @@
     "cancel": "Réservation annulée",
     "complete": "Réservation terminée",
     "no_show": "Marquée comme absence",
-    "actionError": "Mise à jour de la réservation impossible."
+    "actionError": "Mise à jour de la réservation impossible.",
+    "rescheduled": "Réservation déplacée",
+    "rescheduleError": "Déplacement de la réservation impossible."
   }
 }

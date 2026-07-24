@@ -91,7 +91,13 @@
     "statusCancelled": "취소됨",
     "statusCompleted": "완료됨",
     "statusNoShow": "노쇼",
-    "cancelConfirm": "이 예약을 취소할까요? 방문자에게 알림이 갑니다."
+    "cancelConfirm": "이 예약을 취소할까요? 방문자에게 알림이 갑니다.",
+    "reschedule": "일정 변경",
+    "pickNewTime": "새 시간 선택",
+    "moveHere": "여기로 옮기기",
+    "noSlots": "지금은 가능한 시간이 없습니다.",
+    "slotsError": "가능한 시간을 불러오지 못했습니다.",
+    "slotTaken": "방금 그 시간이 예약되었습니다. 다른 시간을 선택하세요."
   },
   "toast": {
     "archived": "서비스를 보관했습니다",
@@ -100,6 +106,8 @@
     "cancel": "예약을 취소했습니다",
     "complete": "예약을 완료 처리했습니다",
     "no_show": "노쇼로 표시했습니다",
-    "actionError": "예약을 업데이트하지 못했습니다."
+    "actionError": "예약을 업데이트하지 못했습니다.",
+    "rescheduled": "예약을 옮겼습니다",
+    "rescheduleError": "예약을 옮기지 못했습니다."
   }
 }

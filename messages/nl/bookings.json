@@ -9,7 +9,9 @@
     "cancel": "Afspraak geannuleerd",
     "complete": "Afspraak voltooid",
     "no_show": "Gemarkeerd als niet verschenen",
-    "actionError": "Kon de afspraak niet bijwerken."
+    "actionError": "Kon de afspraak niet bijwerken.",
+    "rescheduled": "Afspraak verzet",
+    "rescheduleError": "Kon de afspraak niet verzetten."
   },
   "module": {
     "title": "Afspraken",
@@ -100,6 +102,12 @@
     "statusCancelled": "Geannuleerd",
     "statusCompleted": "Voltooid",
     "statusNoShow": "Niet verschenen",
-    "cancelConfirm": "Deze afspraak annuleren? De bezoeker krijgt bericht."
+    "cancelConfirm": "Deze afspraak annuleren? De bezoeker krijgt bericht.",
+    "reschedule": "Verzetten",
+    "pickNewTime": "Kies een nieuw tijdstip",
+    "moveHere": "Hierheen verplaatsen",
+    "noSlots": "Op dit moment geen vrije tijden.",
+    "slotsError": "Kon de beschikbare tijden niet laden.",
+    "slotTaken": "Dat tijdstip is net bezet. Kies een ander."
   }
 }

@@ -91,7 +91,13 @@
     "statusCancelled": "Storniert",
     "statusCompleted": "Abgeschlossen",
     "statusNoShow": "Nicht erschienen",
-    "cancelConfirm": "Diese Buchung stornieren? Der Besucher wird benachrichtigt."
+    "cancelConfirm": "Diese Buchung stornieren? Der Besucher wird benachrichtigt.",
+    "reschedule": "Verschieben",
+    "pickNewTime": "Neue Zeit wählen",
+    "moveHere": "Hierher verschieben",
+    "noSlots": "Derzeit keine freien Zeiten.",
+    "slotsError": "Freie Zeiten konnten nicht geladen werden.",
+    "slotTaken": "Diese Zeit wurde gerade vergeben. Wähle eine andere."
   },
   "toast": {
     "archived": "Leistung archiviert",
@@ -100,6 +106,8 @@
     "cancel": "Buchung storniert",
     "complete": "Buchung abgeschlossen",
     "no_show": "Als nicht erschienen markiert",
-    "actionError": "Die Buchung konnte nicht aktualisiert werden."
+    "actionError": "Die Buchung konnte nicht aktualisiert werden.",
+    "rescheduled": "Buchung verschoben",
+    "rescheduleError": "Die Buchung konnte nicht verschoben werden."
   }
 }

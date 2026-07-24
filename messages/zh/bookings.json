@@ -91,7 +91,13 @@
     "statusCancelled": "已取消",
     "statusCompleted": "已完成",
     "statusNoShow": "未到",
-    "cancelConfirm": "取消这个预约吗？访客会收到通知。"
+    "cancelConfirm": "取消这个预约吗？访客会收到通知。",
+    "reschedule": "改期",
+    "pickNewTime": "选择新的时间",
+    "moveHere": "改到这里",
+    "noSlots": "目前没有可用时间。",
+    "slotsError": "无法加载可用时间。",
+    "slotTaken": "该时间刚刚被占用，请选择其他时间。"
   },
   "toast": {
     "archived": "服务已归档",
@@ -100,6 +106,8 @@
     "cancel": "预约已取消",
     "complete": "预约已完成",
     "no_show": "已标记为未到",
-    "actionError": "无法更新该预约。"
+    "actionError": "无法更新该预约。",
+    "rescheduled": "预约已改期",
+    "rescheduleError": "无法改期该预约。"
   }
 }

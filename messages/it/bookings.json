@@ -91,7 +91,13 @@
     "statusCancelled": "Annullata",
     "statusCompleted": "Completata",
     "statusNoShow": "Assente",
-    "cancelConfirm": "Annullare questa prenotazione? Il visitatore verrà avvisato."
+    "cancelConfirm": "Annullare questa prenotazione? Il visitatore verrà avvisato.",
+    "reschedule": "Riprogramma",
+    "pickNewTime": "Scegli un nuovo orario",
+    "moveHere": "Sposta qui",
+    "noSlots": "Nessun orario libero al momento.",
+    "slotsError": "Impossibile caricare gli orari.",
+    "slotTaken": "Quell’orario è appena stato occupato. Scegline un altro."
   },
   "toast": {
     "archived": "Servizio archiviato",
@@ -100,6 +106,8 @@
     "cancel": "Prenotazione annullata",
     "complete": "Prenotazione completata",
     "no_show": "Segnata come assente",
-    "actionError": "Impossibile aggiornare la prenotazione."
+    "actionError": "Impossibile aggiornare la prenotazione.",
+    "rescheduled": "Prenotazione spostata",
+    "rescheduleError": "Impossibile spostare la prenotazione."
   }
 }

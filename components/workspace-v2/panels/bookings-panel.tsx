@@ -8,7 +8,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
-import { Calendar, Check, ChevronLeft, Loader, Pencil, Plus, Trash, X } from "../icons";
+import { Calendar, Check, ChevronLeft, Loader, Pencil, Plus, RefreshCw, Trash, X } from "../icons";
 import { useToast } from "../toast";
 
 type Weekday = 0 | 1 | 2 | 3 | 4 | 5 | 6;
@@ -197,6 +197,8 @@ export function BookingsPanel({
           <BookingsView
             bookings={bookings}
             services={services ?? []}
+            projectId={currentProjectId}
+            onRescheduled={() => loadBookings(currentProjectId)}
             onAction={async (id, action) => {
               try {
                 const r = await fetch(`/api/projects/${currentProjectId}/bookings/${id}`, {
@@ -302,15 +304,20 @@ function ServicesView({
 function BookingsView({
   bookings,
   services,
+  projectId,
   onAction,
+  onRescheduled,
 }: {
   bookings: Booking[] | null;
   services: Service[];
+  projectId: string;
   onAction: (id: string, action: "confirm" | "cancel" | "complete" | "no_show") => void | Promise<void>;
+  onRescheduled: () => void;
 }) {
   const t = useTranslations("bookings");
   const [filter, setFilter] = useState<"upcoming" | "past" | "all">("upcoming");
   const [confirmCancel, setConfirmCancel] = useState<string | null>(null);
+  const [rescheduling, setRescheduling] = useState<string | null>(null);
   const svcName = useMemo(() => {
     const m = new Map(services.map((s) => [s.id, s.name]));
     return (id: string) => m.get(id) ?? "—";
@@ -418,6 +425,14 @@ function BookingsView({
                     </ActBtn>
                   </>
                 )}
+                {(b.status === "pending" || b.status === "confirmed") && b.end >= now && (
+                  <ActBtn
+                    label={t("list.reschedule")}
+                    onClick={() => setRescheduling((id) => (id === b.id ? null : b.id))}
+                  >
+                    <RefreshCw size={11} />
+                  </ActBtn>
+                )}
                 {(b.status === "pending" || b.status === "confirmed") &&
                   (confirmCancel === b.id ? (
                     <button
@@ -436,11 +451,196 @@ function BookingsView({
                     </ActBtn>
                   ))}
               </div>
+
+              {rescheduling === b.id && (
+                <RescheduleBox
+                  projectId={projectId}
+                  bookingId={b.id}
+                  onDone={() => {
+                    setRescheduling(null);
+                    onRescheduled();
+                  }}
+                />
+              )}
             </li>
           ))}
         </ul>
       )}
     </div>
+  );
+}
+
+interface Slot {
+  start: number;
+  label: string;
+  date: string;
+}
+
+/** Inline slot picker for moving one booking — same engine the visitor sees,
+ *  read through the owner endpoint so it works before the site is published. */
+function RescheduleBox({
+  projectId,
+  bookingId,
+  onDone,
+}: {
+  projectId: string;
+  bookingId: string;
+  onDone: () => void;
+}) {
+  const t = useTranslations("bookings");
+  const toast = useToast();
+  const url = `/api/projects/${projectId}/bookings/${bookingId}/reschedule`;
+  const [slots, setSlots] = useState<Slot[] | null>(null);
+  const [tz, setTz] = useState<string>("UTC");
+  const [date, setDate] = useState<string | null>(null);
+  const [picked, setPicked] = useState<number | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  const load = () => {
+    setSlots(null);
+    setDate(null);
+    setPicked(null);
+    void fetch(url)
+      .then((r) => (r.ok ? r.json() : Promise.reject(r.status)))
+      .then((d: { tz: string; slots: Slot[] }) => {
+        setTz(d.tz);
+        setSlots(d.slots);
+      })
+      .catch(() => {
+        setErr(t("list.slotsError"));
+        setSlots([]);
+      });
+  };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(load, [url]);
+
+  const byDate = useMemo(() => {
+    const m = new Map<string, Slot[]>();
+    for (const s of slots ?? []) {
+      const list = m.get(s.date);
+      if (list) list.push(s);
+      else m.set(s.date, [s]);
+    }
+    return m;
+  }, [slots]);
+
+  const dayLabel = (s: Slot) => {
+    try {
+      return new Date(s.start).toLocaleDateString(undefined, {
+        timeZone: tz,
+        weekday: "short",
+        day: "numeric",
+        month: "short",
+      });
+    } catch {
+      return s.date;
+    }
+  };
+
+  const move = async () => {
+    if (picked === null) return;
+    setSaving(true);
+    setErr(null);
+    try {
+      const r = await fetch(url, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ startUtcMs: picked }),
+      });
+      if (!r.ok) {
+        setSaving(false);
+        if (r.status === 409) {
+          setErr(t("list.slotTaken"));
+          load();
+        } else {
+          setErr(t("toast.rescheduleError"));
+        }
+        return;
+      }
+      toast.success(t("toast.rescheduled"));
+      onDone();
+    } catch {
+      setSaving(false);
+      setErr(t("toast.rescheduleError"));
+    }
+  };
+
+  if (slots === null) {
+    return <div className="mt-1.5 h-12 rounded-md bg-zinc-200/60 dark:bg-zinc-800/50 animate-pulse" />;
+  }
+
+  const dates = [...byDate.keys()].sort();
+  return (
+    <div className="mt-1.5 rounded-md ring-1 ring-[color:var(--border)] bg-elev px-2 py-2">
+      <div className="text-[10.5px] font-semibold fg mb-1.5">{t("list.pickNewTime")}</div>
+      {err && <div className="text-[10.5px] text-red-600 dark:text-red-400 mb-1.5">{err}</div>}
+      {dates.length === 0 ? (
+        <p className="text-[10.5px] fg-faint">{t("list.noSlots")}</p>
+      ) : (
+        <>
+          <div className="flex flex-wrap gap-1">
+            {dates.map((d) => (
+              <Chip
+                key={d}
+                on={date === d}
+                onClick={() => {
+                  setDate(d);
+                  setPicked(null);
+                }}
+              >
+                {dayLabel(byDate.get(d)![0])}
+              </Chip>
+            ))}
+          </div>
+          {date && (
+            <div className="flex flex-wrap gap-1 mt-1.5 pt-1.5 border-t border-[color:var(--border)]">
+              {(byDate.get(date) ?? []).map((s) => (
+                <Chip key={s.start} on={picked === s.start} onClick={() => setPicked(s.start)}>
+                  {s.label}
+                </Chip>
+              ))}
+            </div>
+          )}
+          {picked !== null && (
+            <button
+              type="button"
+              onClick={() => void move()}
+              disabled={saving}
+              className="mt-2 w-full h-7 rounded-md text-[11px] font-semibold text-white bg-[var(--accent-strong)] hover:brightness-105 transition disabled:opacity-50 inline-flex items-center justify-center gap-1.5"
+            >
+              {saving ? <Loader size={11} className="animate-spin" /> : null}
+              {t("list.moveHere")}
+            </button>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
+function Chip({
+  on,
+  onClick,
+  children,
+}: {
+  on: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={on}
+      className={`h-6 px-2 rounded-full text-[10.5px] font-medium ring-1 transition ${
+        on
+          ? "bg-[var(--accent-strong)] text-white ring-transparent"
+          : "bg-[color:var(--bg)] fg-muted ring-[color:var(--border)] hover:fg"
+      }`}
+    >
+      {children}
+    </button>
   );
 }
 

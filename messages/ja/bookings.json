@@ -91,7 +91,13 @@
     "statusCancelled": "キャンセル済み",
     "statusCompleted": "完了",
     "statusNoShow": "無断キャンセル",
-    "cancelConfirm": "この予約をキャンセルしますか？訪問者に通知されます。"
+    "cancelConfirm": "この予約をキャンセルしますか？訪問者に通知されます。",
+    "reschedule": "予約を変更",
+    "pickNewTime": "新しい時間を選ぶ",
+    "moveHere": "ここに移動",
+    "noSlots": "今は空いている時間がありません。",
+    "slotsError": "空き時間を読み込めませんでした。",
+    "slotTaken": "その時間はちょうど埋まりました。別の時間を選んでください。"
   },
   "toast": {
     "archived": "サービスをアーカイブしました",
@@ -100,6 +106,8 @@
     "cancel": "予約をキャンセルしました",
     "complete": "予約を完了しました",
     "no_show": "無断キャンセルとして記録しました",
-    "actionError": "予約を更新できませんでした。"
+    "actionError": "予約を更新できませんでした。",
+    "rescheduled": "予約を変更しました",
+    "rescheduleError": "予約を変更できませんでした。"
   }
 }
