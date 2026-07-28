@@ -48,7 +48,9 @@ import {
 } from "@/lib/projects/settings-patch";
 import type { ProjectData } from "@/lib/projects/types";
 import { createVersion, type VersionSource } from "@/lib/projects/versions";
-import { projectWhatsappDefault } from "@/lib/business-profiles/whatsapp-default";
+import { projectBusinessProfile, projectWhatsappDefault } from "@/lib/business-profiles/whatsapp-default";
+import type { BusinessProfileData } from "@/lib/business-profiles/types";
+import { summarizeBusinessForAgent } from "@/lib/agent/business";
 import { ensurePageMeta } from "@/lib/publish/ensure-page-meta";
 import { liveDataEnabled } from "@/lib/publish/kill-switches";
 import { isPublishLocale } from "@/lib/publish/publish-locales";
@@ -91,6 +93,11 @@ export interface AgentDeps {
    *  else the user's default) — the number fallback activar_modulo uses so
    *  whatsapp/pedidos never enable silent-dark without a number to bake. */
   profileWhatsappNumber(projectId: string, userId: string): Promise<string | null>;
+  /** P2 — the project's FULL effective business profile (same resolution as
+   *  profileWhatsappNumber: linked profile, else user default). Feeds the
+   *  ESTADO `negocio` block so the agent knows the owner's real name / rubro /
+   *  contact / links instead of asking or inventing. Null when no profile. */
+  loadBusinessProfile(projectId: string, userId: string): Promise<BusinessProfileData | null>;
   snapshotVersion(args: {
     projectId: string;
     html: string;
@@ -205,6 +212,9 @@ export function realDeps(): AgentDeps {
     },
     async profileWhatsappNumber(projectId, userId) {
       return projectWhatsappDefault(projectId, userId);
+    },
+    async loadBusinessProfile(projectId, userId) {
+      return projectBusinessProfile(projectId, userId);
     },
     async snapshotVersion(args) {
       // Best-effort, same as the ai-design route: a snapshot failure must
@@ -395,6 +405,12 @@ async function toolLeerEstado(
   // reads "principal" here rather than being silently absent, unlike the
   // ESTADO block's context string (which omits it to hold F3 byte-identity).
   response.pagina_activa = session.page ?? "principal";
+  // P2 — the owner's real business data rides every state read, same as the
+  // initial ESTADO block. Absent (not null) when there's no filled profile.
+  const negocio = summarizeBusinessForAgent(
+    await deps.loadBusinessProfile(session.projectId, session.userId),
+  );
+  if (negocio) response.negocio = negocio;
   if (args.incluir_documento === true) {
     session.taggedHtml = tagWithOpIds(activeHtml(row.data, session.page) ?? "").taggedHtml;
     response.documento = session.taggedHtml;

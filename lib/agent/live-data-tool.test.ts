@@ -76,6 +76,7 @@ function makeDeps(
       store.saved.push(data);
     },
     async profileWhatsappNumber() { return null; },
+    async loadBusinessProfile() { return null; },
     async snapshotVersion() {},
     async provisionOwnerChat() {},
     async listAudioAssets() {

@@ -10,6 +10,7 @@ import { buildAgentMessages } from "@/lib/agent/context";
 import { runAgentLoop, type AgentErrorCode } from "@/lib/agent/loop";
 import { streamWithRetry } from "@/lib/agent/retry";
 import { realDeps, runAgentTool, summarizeProjectState, type AgentSession } from "@/lib/agent/tools";
+import { summarizeBusinessForAgent } from "@/lib/agent/business";
 import { verifyEditedPage } from "@/lib/agent/verify";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -224,6 +225,13 @@ export async function POST(req: Request): Promise<Response> {
     subdomain: project.subdomain,
     publishedAt: project.publishedAt,
   });
+  // P2 — el agente sabe quién es el dueño: el perfil efectivo del proyecto
+  // (vinculado, si no el default del usuario) entra al ESTADO como `negocio`.
+  // Sin perfil lleno, el ESTADO queda idéntico al de antes.
+  const negocio = summarizeBusinessForAgent(
+    await deps.loadBusinessProfile(projectId, userId),
+  );
+  if (negocio) state.negocio = negocio;
   const built = buildAgentMessages({
     state,
     taggedHtml,

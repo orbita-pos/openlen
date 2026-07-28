@@ -69,6 +69,9 @@ export default defineConfig({
       "lib/agent/retry.test.ts",
       "lib/agent/context.test.ts",
       "lib/agent/photo-search.test.ts",
+      // P2 — pure summarizer (no native/DB); verify.test.ts is NOT here (it
+      // value-imports the ai-gateway binding → node:test, in test:node).
+      "lib/agent/business.test.ts",
       // Shape-only eval-battery test — no Gemini, no DB (the harness/runner are
       // what spend credits and are NEVER in the test suite / CI).
       "lib/agent/evals/cases.test.ts",

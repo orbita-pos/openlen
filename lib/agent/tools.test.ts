@@ -71,6 +71,7 @@ function makeDeps(
     uploadUrl: string;
     userBrief: string | null;
     profileNumber: string | null;
+    businessProfile: import("@/lib/business-profiles/types").BusinessProfileData | null;
   }>,
 ) {
   const store = {
@@ -108,6 +109,7 @@ function makeDeps(
     },
     async saveProjectData(_p, _u, data) { store.data = data; store.saved.push(data); },
     async profileWhatsappNumber() { return overrides?.profileNumber ?? null; },
+    async loadBusinessProfile() { return overrides?.businessProfile ?? null; },
     async snapshotVersion(a) { store.versions.push(a.label); store.versionPages.push(a.page); },
     async provisionOwnerChat(_p, _u, opts) { store.provisioned += 1; store.provisionedOpts = opts; },
     async listAudioAssets() { return store.audioAssets; },
@@ -622,6 +624,33 @@ describe("leer_estado", () => {
     const { deps } = makeDeps();
     const out = await runAgentTool(makeSession(), deps, "leer_estado", {});
     assert.equal(out.response.pagina_activa, "principal");
+  });
+  // P2 — el bloque negocio viaja en cada leer_estado cuando hay perfil real.
+  it("negocio rides leer_estado when the project has a filled profile", async () => {
+    const { deps } = makeDeps({
+      businessProfile: {
+        business_name: "Tacos El Güero",
+        industry: "taquería",
+        tagline_es: null, tagline_en: null, pitch: null, hero_keyword: null,
+        features: [], pricing: [], testimonials: [],
+        cta_primary: null, cta_secondary: null, faq_questions: [],
+        language_detected: null,
+        contact: {
+          whatsapp: "6671234567", phone: null, email: null, address: null,
+          socials: { instagram: "https://instagram.com/elguero", facebook: null, tiktok: null, website: null },
+        },
+      },
+    });
+    const out = await runAgentTool(makeSession(), deps, "leer_estado", {});
+    const negocio = out.response.negocio as Record<string, unknown>;
+    assert.equal(negocio.nombre, "Tacos El Güero");
+    assert.equal((negocio.contacto as Record<string, string>).whatsapp, "6671234567");
+    assert.equal((negocio.redes as Record<string, string>).instagram, "https://instagram.com/elguero");
+  });
+  it("negocio is ABSENT (not null) when there is no profile", async () => {
+    const { deps } = makeDeps();
+    const out = await runAgentTool(makeSession(), deps, "leer_estado", {});
+    assert.ok(!("negocio" in out.response));
   });
   it("pagina_activa is the slug on a subpage, and incluir_documento re-tags THAT subpage's html", async () => {
     const data: ProjectData = { html: HTML, pages: { menu: { html: "<html><body><h1>Menú</h1></body></html>" } } };
