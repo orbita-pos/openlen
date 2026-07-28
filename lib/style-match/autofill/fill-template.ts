@@ -124,8 +124,10 @@ Output ONLY the <edits>...</edits> block. No preamble. No markdown fences. No co
 export function buildFillUserMessage(
   data: unknown,
   taggedHtml: string,
+  opts: { clonedTemplate?: boolean } = {},
 ): string {
   return `Fill this landing page template with the business data below.
+${opts.clonedTemplate ? CLONED_TEMPLATE_ADDENDUM : ""}
 
 ═══════════════════════════════════════════
 BUSINESS DATA (JSON):
@@ -144,9 +146,45 @@ ${taggedHtml}
 Emit your <edits>...</edits> block now. Replace ONLY the template's generic copy with this business's actual data. For any user-data field that's null or empty, leave the template's original copy intact. Preserve the design 100% — only swap visible text on LEAF elements. Match the business's language throughout.`;
 }
 
+// Autofill's sparse-data rule ("no data for this slot → leave the template's
+// copy") is right when the user is matching their OWN site: inventing facts
+// would be worse than a generic line. It is wrong when the document is a clone
+// of someone else's page, because "leave it" then means shipping the previous
+// business's identity — measured in the wild as "¿Por qué MORADA?" on a
+// different agency's page and "© VITRINA · Punto de venta" in a game store's
+// footer. This addendum splits the two: facts still may not be invented, but
+// the previous brand may not survive.
+const CLONED_TEMPLATE_ADDENDUM = `
+═══════════════════════════════════════════
+CLONED-TEMPLATE MODE — read before the rules below
+═══════════════════════════════════════════
+
+This document is a CLONE of a template that belongs to a DIFFERENT business.
+Every visible string still describing that other business is WRONG on this page.
+
+This OVERRIDES the sparse-data rule for IDENTITY (not for facts):
+
+- The previous business's NAME must not survive anywhere — headings, nav,
+  footer copyright, section eyebrows, image alts, button labels.
+- Claims that only make sense for the previous business must go (its pricing
+  model, its industry jargon, its process steps, its "why us" copy).
+- A slot with NO matching field in the business data must still be rewritten —
+  generically, for THIS business's industry, in THIS business's language.
+  Leaving the previous brand's sentence there is never acceptable.
+
+Still forbidden, exactly as before: inventing FACTS you were not given —
+prices, addresses, phone numbers, emails, testimonials, customer counts,
+years in business, certifications. When you have no fact for a slot, write a
+short truthful line about the industry instead, or reuse copy from the pitch.
+Structure stays sacred: no deletes, leaf text only, same length budget.
+`;
+
 export interface FillTemplateInput {
   /** The HTML to fill. Will be tagged with data-op-id internally; do NOT pre-tag. */
   sourceHtml: string;
+  /** The document is a clone of ANOTHER business's page (curate / assemble),
+   *  so the previous brand's identity must not survive. See the addendum. */
+  clonedTemplate?: boolean;
   /** Business data (extracted from image or provided directly). */
   data: ExtractedBusinessData | Record<string, unknown>;
   /** Optional progress callback (fires once on completion — non-streaming). */

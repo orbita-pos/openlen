@@ -17,6 +17,34 @@ const MODEL_ID = process.env.ASSEMBLE_FILL_MODEL || process.env.STYLE_MATCH_TEXT
 const MAX_TOKENS = 16_000;
 const SUCCESS_THRESHOLD = 0.8;
 
+/** One-shot text call on the same model — used by the leak patch, whose prompt
+ *  carries only the leaked elements (so it is a fraction of a full fill). */
+export async function callFillModel(prompt: string): Promise<string> {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) throw new Error("GEMINI_API_KEY not set");
+  const res = await fetch(
+    `${GEMINI_BASE}/${MODEL_ID}:generateContent?key=${encodeURIComponent(apiKey)}`,
+    {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        systemInstruction: { parts: [{ text: FILL_SYSTEM_PROMPT }] },
+        contents: [{ role: "user", parts: [{ text: prompt }] }],
+        generationConfig: {
+          temperature: 0.4,
+          maxOutputTokens: 4_000,
+          thinkingConfig: { thinkingBudget: 0 },
+        },
+      }),
+    },
+  );
+  if (!res.ok) throw new Error(`Gemini ${res.status}`);
+  const payload = (await res.json()) as {
+    candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
+  };
+  return payload.candidates?.[0]?.content?.parts?.map((p) => p.text ?? "").join("") ?? "";
+}
+
 /** Drop-in replacement for fillTemplate, on Gemini Flash. */
 export async function fillWithGemini(input: FillTemplateInput): Promise<FillTemplateResult> {
   const t0 = Date.now();
@@ -38,7 +66,18 @@ export async function fillWithGemini(input: FillTemplateInput): Promise<FillTemp
   const url = `${GEMINI_BASE}/${MODEL_ID}:generateContent?key=${encodeURIComponent(apiKey)}`;
   const reqBody = {
     systemInstruction: { parts: [{ text: FILL_SYSTEM_PROMPT }] },
-    contents: [{ role: "user", parts: [{ text: buildFillUserMessage(input.data, taggedHtml) }] }],
+    contents: [
+      {
+        role: "user",
+        parts: [
+          {
+            text: buildFillUserMessage(input.data, taggedHtml, {
+              clonedTemplate: input.clonedTemplate,
+            }),
+          },
+        ],
+      },
+    ],
     generationConfig: { temperature: 0.5, maxOutputTokens: MAX_TOKENS, thinkingConfig: { thinkingBudget: 0 } },
   };
 

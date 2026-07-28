@@ -33,6 +33,10 @@ export interface FillAssembledResult {
   reason?: string;
   usage?: { inputTokens: number; outputTokens: number };
   durationMs: number;
+  /** Bloques de copy de la plantilla que sobrevivieron al primer relleno. */
+  leaksBefore?: number;
+  /** …y los que quedaron tras la pasada de barrido. */
+  leaksAfter?: number;
 }
 
 /** Is there any copy worth a fill pass? An all-null recipe copy → skip (the
@@ -61,6 +65,8 @@ export interface FillAssembledOpts {
   onStage?: FillTemplateInput["onStage"];
   /** Inject the fill engine (default: the real fillTemplate, loaded lazily). */
   fillFn?: FillFn;
+  /** Inject the one-shot model call the leak patch uses (default: Gemini). */
+  patchFn?: (prompt: string) => Promise<string>;
 }
 
 /** Fill the stitched+bound document with the recipe's invented copy. Never
@@ -70,6 +76,7 @@ export async function fillAssembled(
   copy: ExtractedBusinessData,
   opts?: FillAssembledOpts,
 ): Promise<FillAssembledResult> {
+  const t0 = Date.now();
   if (!hasFillableCopy(copy)) {
     return { html: stitchedHtml, filled: false, appliedOps: 0, reason: "no copy to fill", durationMs: 0 };
   }
@@ -80,15 +87,21 @@ export async function fillAssembled(
     data: copy,
     signal: opts?.signal,
     onStage: opts?.onStage,
+    // Curate/assemble always start from someone else's page, so the previous
+    // brand must not survive a "no data for this slot" decision.
+    clonedTemplate: true,
   });
 
   if (r.ok) {
+    const swept = await sweepTemplateLeaks(stitchedHtml, r, copy, opts);
     return {
-      html: r.filledHtml,
+      html: swept.html,
       filled: true,
-      appliedOps: r.appliedOps,
+      appliedOps: r.appliedOps + swept.extraOps,
       usage: r.usage,
-      durationMs: r.durationMs,
+      durationMs: Date.now() - t0,
+      leaksBefore: swept.before,
+      leaksAfter: swept.after,
     };
   }
   // Degrade: keep the coherent stitched page; surface why for telemetry.
@@ -99,4 +112,45 @@ export async function fillAssembled(
     reason: r.error.message,
     durationMs: r.durationMs,
   };
+}
+
+/** Red de seguridad tras el primer relleno: parchea SOLO los elementos que
+ *  siguen hablando del negocio de la plantilla.
+ *
+ *  El modo clonado del prompt ataca la causa; esto recoge lo que se le escape.
+ *  Cuesta una llamada extra únicamente cuando hay fuga real, con un prompt que
+ *  lleva solo los bloques señalados (una fracción de un relleno completo), y el
+ *  resultado se acepta solo si REDUCE las fugas. Cualquier fallo conserva la
+ *  primera pasada: esta etapa no puede empeorar la página. */
+async function sweepTemplateLeaks(
+  stitchedHtml: string,
+  first: Extract<FillTemplateResult, { ok: true }>,
+  copy: ExtractedBusinessData,
+  opts?: FillAssembledOpts,
+): Promise<{ html: string; extraOps: number; before: number; after: number }> {
+  const { detectTemplateLeaks } = await import("./leaks");
+  const before = detectTemplateLeaks(stitchedHtml, first.filledHtml).damaging;
+  if (before.length === 0) {
+    return { html: first.filledHtml, extraOps: 0, before: 0, after: 0 };
+  }
+
+  const { patchTemplateLeaks } = await import("./patch-leaks");
+  const callModel =
+    opts?.patchFn ?? (await import("./fill-gemini")).callFillModel;
+
+  let patched: Awaited<ReturnType<typeof patchTemplateLeaks>>;
+  try {
+    patched = await patchTemplateLeaks(first.filledHtml, before, copy, callModel);
+  } catch {
+    return { html: first.filledHtml, extraOps: 0, before: before.length, after: before.length };
+  }
+  if (patched.patched === 0) {
+    return { html: first.filledHtml, extraOps: 0, before: before.length, after: before.length };
+  }
+
+  const after = detectTemplateLeaks(stitchedHtml, patched.html).damaging.length;
+  if (after >= before.length) {
+    return { html: first.filledHtml, extraOps: 0, before: before.length, after: before.length };
+  }
+  return { html: patched.html, extraOps: patched.patched, before: before.length, after };
 }

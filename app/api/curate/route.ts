@@ -154,6 +154,14 @@ export async function POST(req: Request): Promise<Response> {
         const fill = await fillAssembled(templateHtml, copy, {
           onStage: (stage) => emit("progress", { stage }),
         });
+        // Visible por diseño: una fuga que no deja rastro es la que se queda
+        // meses en producción (ver el hueco de foto que nunca logueó nada).
+        if (fill.leaksBefore) {
+          // eslint-disable-next-line no-console
+          console.log(
+            `[curate] copy de plantilla heredado: ${fill.leaksBefore} bloque(s) tras el relleno, ${fill.leaksAfter} tras el parche (plantilla ${chosenId})`,
+          );
+        }
 
         // 4. Born-canonical + brand seed (accent + contact widget — both no-op
         // for an empty profile) + SEO head: the same ingestion every creation
