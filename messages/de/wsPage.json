@@ -16,12 +16,15 @@
       "editar_imagen": "Bild wird bearbeitet",
       "recordar_preferencia": "Präferenz wird gespeichert",
       "publicar": "Veröffentlichung wird vorbereitet",
-      "trabajar_en_pagina": "Seite wird gewechselt"
+      "trabajar_en_pagina": "Seite wird gewechselt",
+      "verificar_diseno": "Ergebnis wird geprüft"
     },
     "action": {
       "on": "Ein",
       "off": "Aus",
-      "home": "Startseite"
+      "home": "Startseite",
+      "visualOk": "keine Probleme",
+      "visualIssues": "wird korrigiert…"
     },
     "confirm": {
       "publishTitle": "Deine Seite veröffentlichen",

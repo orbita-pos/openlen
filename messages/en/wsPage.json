@@ -16,12 +16,15 @@
       "editar_imagen": "Editing image",
       "recordar_preferencia": "Saving preference",
       "publicar": "Preparing to publish",
-      "trabajar_en_pagina": "Switching page"
+      "trabajar_en_pagina": "Switching page",
+      "verificar_diseno": "Reviewing the result"
     },
     "action": {
       "on": "On",
       "off": "Off",
-      "home": "Home"
+      "home": "Home",
+      "visualOk": "no issues",
+      "visualIssues": "fixing…"
     },
     "confirm": {
       "publishTitle": "Publish your page",

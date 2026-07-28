@@ -16,12 +16,15 @@
       "editar_imagen": "Editando imagem",
       "recordar_preferencia": "Salvando preferência",
       "publicar": "Preparando publicação",
-      "trabajar_en_pagina": "Trocando de página"
+      "trabajar_en_pagina": "Trocando de página",
+      "verificar_diseno": "Revisando o resultado"
     },
     "action": {
       "on": "Ativado",
       "off": "Desativado",
-      "home": "Início"
+      "home": "Início",
+      "visualOk": "sem problemas",
+      "visualIssues": "corrigindo…"
     },
     "confirm": {
       "publishTitle": "Publicar sua página",

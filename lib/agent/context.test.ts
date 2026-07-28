@@ -38,6 +38,26 @@ describe("buildAgentContext", () => {
     expect(s).not.toContain("IMAGEN ADJUNTA");
   });
 
+  // F5 — los píxeles viajan adjuntos: el bloque lo dice SOLO con visible=true.
+  it("visible=true adds the PUEDES VERLA line; without it the text is the F2 shape", () => {
+    const base = {
+      state: {},
+      taggedHtml: "<html></html>",
+      userBrief: null,
+    };
+    const seen = buildAgentContext({
+      ...base,
+      attachedImage: { url: "https://images.openlen.com/foo.webp", visible: true },
+    });
+    expect(seen).toContain("PUEDES VERLA");
+    const blind = buildAgentContext({
+      ...base,
+      attachedImage: { url: "https://images.openlen.com/foo.webp" },
+    });
+    expect(blind).not.toContain("PUEDES VERLA");
+    expect(blind).toContain("IMAGEN ADJUNTA");
+  });
+
   it("adds a hard-pin focus block with the op-id and hint when scopePin is set", () => {
     const s = buildAgentContext({
       state: {},

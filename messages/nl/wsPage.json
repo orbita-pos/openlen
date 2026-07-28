@@ -16,12 +16,15 @@
       "editar_imagen": "Afbeelding bewerken",
       "recordar_preferencia": "Voorkeur opslaan",
       "publicar": "Publicatie voorbereiden",
-      "trabajar_en_pagina": "Pagina wisselen"
+      "trabajar_en_pagina": "Pagina wisselen",
+      "verificar_diseno": "Resultaat controleren"
     },
     "action": {
       "on": "Aan",
       "off": "Uit",
-      "home": "Home"
+      "home": "Home",
+      "visualOk": "geen problemen",
+      "visualIssues": "wordt hersteld…"
     },
     "confirm": {
       "publishTitle": "Je pagina publiceren",

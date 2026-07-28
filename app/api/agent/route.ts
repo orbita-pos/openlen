@@ -1,13 +1,16 @@
 import { auth } from "@/auth";
-import { GeminiProvider } from "@/lib/ai-gateway";
+import { GeminiProvider, type InlineImage } from "@/lib/ai-gateway";
 import { resolveAIProvider } from "@/lib/ai-provider";
 import { getCreditState, debitCredits, creditsForUsage } from "@/lib/credits";
 import { resolveOpIdByPath, tagWithOpIds } from "@/lib/html-ops";
+import { fetchImageAsInlineData } from "@/lib/ai/inline-image";
+import { validateUrl } from "@/lib/style-match/scrape/validate-url";
 import { buildFunctionDeclarations } from "@/lib/agent/catalog";
 import { buildAgentMessages } from "@/lib/agent/context";
 import { runAgentLoop, type AgentErrorCode } from "@/lib/agent/loop";
 import { streamWithRetry } from "@/lib/agent/retry";
 import { realDeps, runAgentTool, summarizeProjectState, type AgentSession } from "@/lib/agent/tools";
+import { verifyEditedPage } from "@/lib/agent/verify";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // POST /api/agent — the OpenLen Agent's agentic loop (F1 Task 9).
@@ -200,6 +203,21 @@ export async function POST(req: Request): Promise<Response> {
     if (opId) scopePin = { opId, hint: scopeHint };
   }
 
+  // F5 — los píxeles de la imagen adjunta. Hasta ahora el modelo recibía la
+  // URL como TEXTO y colocaba la imagen a ciegas; aquí se fetchea y viaja como
+  // inlineData en el primer turno, así el modelo la VE (colores, orientación,
+  // contenido). SSRF: validateUrl bloquea loopback/RFC-1918/link-local ANTES
+  // del fetch, y redirect:"error" impide que un host público rebote la
+  // petición a uno interno después de validar. Best-effort: si falla, el turno
+  // sigue texto-solo exactamente como antes.
+  let attachedInline: InlineImage | null = null;
+  if (attachedImage) {
+    const valid = await validateUrl(attachedImage.url);
+    if (valid.ok) {
+      attachedInline = await fetchImageAsInlineData(attachedImage.url, { redirect: "error" });
+    }
+  }
+
   const state = summarizeProjectState({
     data: project.data,
     title: project.title,
@@ -212,7 +230,9 @@ export async function POST(req: Request): Promise<Response> {
     userBrief: project.userBrief,
     prompt,
     history,
-    attachedImage,
+    attachedImage: attachedImage
+      ? { ...attachedImage, ...(attachedInline ? { visible: true } : {}) }
+      : null,
     scopePin,
     scopeHint,
     activePage: pageSlug,
@@ -220,6 +240,11 @@ export async function POST(req: Request): Promise<Response> {
   });
   if (!built.ok) return errorJson(413, "Page too large for an agent turn");
   const messages = built.messages;
+  // El mensaje del prompt del usuario — la referencia exacta contra la que
+  // openStream decide adjuntar los píxeles (el gateway ancla images al ÚLTIMO
+  // mensaje user, y solo el primer turno termina en el prompt; los turnos
+  // posteriores terminan en functionResponses y el closeOut en su instrucción).
+  const promptMessage = messages[messages.length - 1];
 
   const upstreamAbort = new AbortController();
   const agentSession: AgentSession = {
@@ -275,15 +300,32 @@ export async function POST(req: Request): Promise<Response> {
           // model produced nothing yet), and honors upstreamAbort so retries can
           // never outlive the STREAM_TIMEOUT_MS ceiling. A mid-stream failure
           // still propagates (no double-applied tool calls).
-          openStream: (msgs) =>
-            streamWithRetry(
+          openStream: (msgs) => {
+            // F5: los píxeles adjuntos van SOLO en el turno cuyo último
+            // mensaje es el prompt del usuario (el gateway los ancla ahí);
+            // mezclarlos con un mensaje de functionResponses rompería el
+            // protocolo FC de Gemini.
+            const withImage =
+              attachedInline && msgs[msgs.length - 1] === promptMessage
+                ? [attachedInline]
+                : undefined;
+            return streamWithRetry(
               () =>
                 provider.stream(
-                  { model: PROVIDER.model, messages: msgs, tools, toolMode: "auto", maxOutputTokens: 16_384, temperature: 0.7 },
+                  {
+                    model: PROVIDER.model,
+                    messages: msgs,
+                    tools,
+                    toolMode: "auto",
+                    maxOutputTokens: 16_384,
+                    temperature: 0.7,
+                    ...(withImage ? { images: withImage } : {}),
+                  },
                   { signal: upstreamAbort.signal },
                 ),
               { signal: upstreamAbort.signal },
-            ),
+            );
+          },
           // Graceful termination: a tools-OFF stream the loop uses only to
           // compose a closing summary when a step-budget cap is hit, so the turn
           // ends with "here's what I did / what's pending" instead of a red error.
@@ -297,6 +339,37 @@ export async function POST(req: Request): Promise<Response> {
               { signal: upstreamAbort.signal },
             ),
           runTool: (name, args) => runAgentTool(agentSession, deps, name, args),
+          // F5 — los ojos: tras un turno que mutó el documento, renderiza y
+          // verifica rotura visual objetiva; si la hay, el loop inyecta la
+          // crítica y el modelo recibe UN ciclo de arreglo. El costo del
+          // render+visión corre por la casa (no entra en result.usage — el
+          // usuario no paga la QA). Kill-switch: OPENLEN_AGENT_VISION=0.
+          verifyTurn:
+            process.env.OPENLEN_AGENT_VISION === "0"
+              ? undefined
+              : async ({ html }) => {
+                  const verdict = await verifyEditedPage({
+                    html,
+                    userPrompt: prompt,
+                    // 2.5-flash, NO el modelo del loop: el veredicto es una
+                    // tarea auxiliar chica con schema, y 3.5-flash gasta
+                    // thinking + sufre picos de latencia que aquí vencen el
+                    // deadline UX-visible (medido en vivo: 3.5 timeout, 2.5
+                    // responde). Mismo patrón que style-match/vision y
+                    // pick-template, que ya fijan 2.5-flash.
+                    model:
+                      process.env.OPENLEN_AGENT_VISION_MODEL?.trim() ||
+                      "gemini-2.5-flash",
+                    apiKey: PROVIDER.key as string,
+                  });
+                  if (verdict.broken) {
+                    return {
+                      ok: false,
+                      critique: verdict.issues.map((i) => `- ${i}`).join("\n"),
+                    };
+                  }
+                  return { ok: true };
+                },
           emit: (ev) => emit(ev.type, ev),
         });
         // F2-T9 billing ruling (Jesús 2026-07-07): a turn that ended on a

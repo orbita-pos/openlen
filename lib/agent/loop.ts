@@ -48,12 +48,30 @@ export type AgentStreamEvent =
   | { type: "done"; turns: number; toolCalls: number }
   | { type: "error"; message: string; code?: AgentErrorCode };
 
+/** Resultado del hook de verificación visual (F5 — "los ojos"). */
+export interface VerifyOutcome {
+  ok: boolean;
+  /** Cuando !ok: los problemas encontrados, ya redactados para inyectarse en
+   *  el mensaje de crítica (una línea por problema). */
+  critique?: string;
+}
+
+// El nombre de "herramienta" bajo el que la verificación visual aparece en el
+// panel (una action card normal — el panel la localiza via agent.tool.*).
+export const VERIFY_TOOL = "verificar_diseno";
+
 export interface AgentLoopArgs {
   messages: Message[]; // system + contexto + history + user prompt (ya armados)
   tools: Record<string, unknown>[];
   /** Abre un stream de modelo para un set de mensajes. El route inyecta el
    *  GeminiProvider real; los tests inyectan streams guionados. */
   openStream(messages: Message[]): AsyncIterable<StreamEvent>;
+  /** F5 — los ojos del agente. Cuando está presente y el turno MUTÓ el
+   *  documento, se llama UNA vez justo antes de cerrar (con el último HTML
+   *  emitido); si devuelve !ok, la crítica se inyecta como mensaje de sistema
+   *  y el modelo recibe UN ciclo de arreglo dentro de los mismos topes. Debe
+   *  ser fail-open: cualquier throw se trata como ok. */
+  verifyTurn?(info: { html: string; page: string | null }): Promise<VerifyOutcome>;
   /** Stream con herramientas DESACTIVADAS (toolMode "none"), usado SOLO para
    *  redactar un cierre cuando se agota un tope de presupuesto — así el turno
    *  termina con un resumen útil ("hice X, faltó Y", en el idioma del usuario)
@@ -93,6 +111,13 @@ const FAIL_REPEAT_LIMIT = 2;
 // asks the (tools-disabled) model to close gracefully in the user's language.
 const WRAP_UP_INSTRUCTION =
   "SISTEMA: Alcanzaste el límite de pasos para este turno y ya no puedes usar herramientas. Cierra hablándole al usuario en SU idioma: resume brevemente qué alcanzaste a hacer y qué quedó pendiente, y dile que te lo pida de nuevo para continuar. No afirmes haber hecho lo que no se aplicó.";
+
+// F5 — el mensaje que abre el ciclo de arreglo cuando la verificación visual
+// encontró rotura. Deja claro que (a) no lo escribió el usuario, (b) los ids
+// viejos ya no sirven, y (c) negar el problema no es una opción.
+function buildVisualFixInstruction(critique: string): string {
+  return `SISTEMA (verificación visual automática — el usuario NO escribió esto): Se tomó una captura de la página después de tus cambios y un revisor visual encontró rotura objetiva:\n${critique}\n\nCorrígela AHORA: llama leer_estado con incluir_documento=true para obtener el documento con data-op-id frescos y aplica los arreglos con editar_pagina. Si un problema no lo causaron tus cambios o no puedes arreglarlo con tus herramientas, dilo con honestidad en tu cierre — no lo niegues ni afirmes que quedó arreglado sin arreglarlo.`;
+}
 
 /** Order-stable JSON of a tool call's args, so a repeat with the same values
  *  keys identically regardless of property order (the no-progress guard's key). */
@@ -149,6 +174,12 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
   // No-progress guard state (spans turns within this request): signature -> how
   // many times that exact call has returned ok:false.
   const failedSignatures = new Map<string, number>();
+  // F5 — verificación visual: el último documento emitido por un tool este
+  // request (lo que el usuario está viendo en el canvas) y si el ciclo de
+  // verificación ya corrió (corre a lo sumo UNA vez por request — un segundo
+  // ciclo podría oscilar entre dos arreglos y quemar presupuesto sin fin).
+  let lastMutation: { html: string; page: string | null } | null = null;
+  let verifiedOnce = false;
 
   const buildResult = (terminalError: boolean): AgentLoopResult => ({
     finalText,
@@ -241,6 +272,35 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
     }
 
     if (calls.length === 0) {
+      // F5 — los ojos: el modelo quiere cerrar y este request mutó el
+      // documento. Antes de dejarlo ir, UNA verificación visual — solo si
+      // queda presupuesto para un ciclo de arreglo real (un turno mutante +
+      // al menos una llamada presupuestada); sin presupuesto, verificar sería
+      // encontrar un problema que ya no se puede arreglar.
+      if (
+        args.verifyTurn &&
+        lastMutation &&
+        !verifiedOnce &&
+        mutatingTurns < maxTurns &&
+        budgetedToolCalls < maxToolCalls &&
+        toolCalls < ABSOLUTE_MAX_TOOL_CALLS
+      ) {
+        verifiedOnce = true;
+        args.emit({ type: "action", tool: VERIFY_TOOL, status: "running", summary: "" });
+        let verdict: VerifyOutcome;
+        try {
+          verdict = await args.verifyTurn(lastMutation);
+        } catch {
+          verdict = { ok: true }; // fail-open: los ojos jamás rompen un turno
+        }
+        if (!verdict.ok && verdict.critique) {
+          args.emit({ type: "action", tool: VERIFY_TOOL, status: "done", summary: "issues" });
+          messages.push({ role: "assistant", content: turnText });
+          messages.push({ role: "user", content: buildVisualFixInstruction(verdict.critique) });
+          continue; // un ciclo de arreglo, dentro de los mismos topes
+        }
+        args.emit({ type: "action", tool: VERIFY_TOOL, status: "done", summary: "ok" });
+      }
       finalText = turnText;
       return { finalText, usage: { inputTokens, outputTokens, cachedTokens }, turns, toolCalls, terminalError: false };
     }
@@ -300,6 +360,7 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
 
       if (outcome.updatedHtml) {
         args.emit({ type: "html", html: outcome.updatedHtml, page: outcome.page ?? null });
+        lastMutation = { html: outcome.updatedHtml, page: outcome.page ?? null };
       }
 
       // A confirm outcome (publicar) NEVER carries out its action. Surface the

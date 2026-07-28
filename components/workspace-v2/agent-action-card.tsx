@@ -29,6 +29,7 @@ const KNOWN_TOOLS = new Set([
   "recordar_preferencia",
   "publicar",
   "trabajar_en_pagina",
+  "verificar_diseno",
 ]);
 
 // F4-T8 i18n sweep: `summary` is otherwise an opaque identifier (a module
@@ -49,6 +50,13 @@ export function summaryLabel(action: AgentAction, t: ReturnType<typeof useTransl
   }
   if (action.tool === "trabajar_en_pagina" && action.summary === "") {
     return t("agent.action.home");
+  }
+  // F5 — verificación visual: el loop manda códigos estables ("" mientras
+  // corre, "ok"/"issues" al cerrar) para que la card se localice, nunca texto.
+  if (action.tool === "verificar_diseno") {
+    if (action.summary === "ok") return t("agent.action.visualOk");
+    if (action.summary === "issues") return t("agent.action.visualIssues");
+    return "";
   }
   return action.summary;
 }

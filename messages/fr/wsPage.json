@@ -16,12 +16,15 @@
       "editar_imagen": "Modification de l'image",
       "recordar_preferencia": "Enregistrement de la préférence",
       "publicar": "Préparation de la publication",
-      "trabajar_en_pagina": "Changement de page"
+      "trabajar_en_pagina": "Changement de page",
+      "verificar_diseno": "Vérification du résultat"
     },
     "action": {
       "on": "Activé",
       "off": "Désactivé",
-      "home": "Accueil"
+      "home": "Accueil",
+      "visualOk": "aucun problème",
+      "visualIssues": "correction…"
     },
     "confirm": {
       "publishTitle": "Publier votre page",

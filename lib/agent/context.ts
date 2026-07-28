@@ -22,8 +22,11 @@ export function buildAgentContext(args: {
    *  validates in ai-design: real http(s) URL, optional alt). Present ⇒ the
    *  model is told to place it via editar_pagina using the URL verbatim,
    *  replacing a placeholder if one exists. Absent/omitted ⇒ output is
-   *  byte-identical to F1 (pinned by context.test.ts). */
-  attachedImage?: { url: string; alt?: string } | null;
+   *  byte-identical to F1 (pinned by context.test.ts).
+   *  F5 — `visible: true` means the route ALSO attached the image's pixels to
+   *  the first model turn (inlineData), so the block tells the model it can
+   *  actually SEE the image, not just its URL. */
+  attachedImage?: { url: string; alt?: string; visible?: boolean } | null;
   /** F2 Task 8 — a hard-pinned target op-id (scope.path resolved against the
    *  tagged document by the route via resolveOpIdByPath), same semantics as
    *  ai-design's scopePin. Takes priority over scopeHint when both are set. */
@@ -53,7 +56,13 @@ export function buildAgentContext(args: {
   let imageBlock = "";
   if (args.attachedImage) {
     const altLine = args.attachedImage.alt ? `\nTexto alt: ${args.attachedImage.alt}` : "";
-    imageBlock = `IMAGEN ADJUNTA DEL USUARIO: ${args.attachedImage.url}${altLine}\nEsta es una URL de imagen REAL que el usuario adjuntó explícitamente — colócala con editar_pagina usando esta URL EXACTA (verbatim) como src de un <img> (o como CSS background-image). NUNCA inventes ni cambies la URL. Si la página ya tiene un placeholder para esta imagen (un <div> con gradiente, una caja vacía con borde), REEMPLAZA ese elemento completo por el <img> — no lo anides adentro. Incluye siempre texto alt (usa el del usuario si lo dio; si no, infiérelo del contexto).\n\n`;
+    // F5: cuando los píxeles viajan adjuntos al turno, díselo — puede diseñar
+    // CON la imagen (colores, orientación, contenido) en vez de colocarla a
+    // ciegas. Sin visible, el texto queda byte-idéntico a F2 (pinned).
+    const seeLine = args.attachedImage.visible
+      ? `\nLa imagen viene ADJUNTA a este turno y PUEDES VERLA: úsala para decidir dónde y cómo colocarla — combina la paleta y el layout con sus colores, orientación y contenido, y escribe un alt fiel a lo que muestra.`
+      : "";
+    imageBlock = `IMAGEN ADJUNTA DEL USUARIO: ${args.attachedImage.url}${altLine}${seeLine}\nEsta es una URL de imagen REAL que el usuario adjuntó explícitamente — colócala con editar_pagina usando esta URL EXACTA (verbatim) como src de un <img> (o como CSS background-image). NUNCA inventes ni cambies la URL. Si la página ya tiene un placeholder para esta imagen (un <div> con gradiente, una caja vacía con borde), REEMPLAZA ese elemento completo por el <img> — no lo anides adentro. Incluye siempre texto alt (usa el del usuario si lo dio; si no, infiérelo del contexto).\n\n`;
   }
 
   // Non-null activePage merges into the ESTADO JSON (never mutates args.state)

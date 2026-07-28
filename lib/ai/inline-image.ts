@@ -33,11 +33,18 @@ function pickImageMime(contentType: string, url: string): string | null {
  *  failure (non-200, non-image, empty, or over the size cap). */
 export async function fetchImageAsInlineData(
   url: string,
-  opts: { maxBytes?: number; signal?: AbortSignal } = {},
+  opts: { maxBytes?: number; signal?: AbortSignal; redirect?: RequestRedirect } = {},
 ): Promise<InlineImage | null> {
   const maxBytes = opts.maxBytes ?? FETCH_MAX_BYTES;
   try {
-    const res = await fetch(url, { signal: opts.signal, cache: "no-store" });
+    // redirect:"error" is for USER-SUPPLIED urls (agent attached images): the
+    // caller validates the host first, and following a redirect would let a
+    // public host bounce the fetch to an internal one past that check.
+    const res = await fetch(url, {
+      signal: opts.signal,
+      cache: "no-store",
+      redirect: opts.redirect ?? "follow",
+    });
     if (!res.ok) {
       // eslint-disable-next-line no-console
       console.warn(`[inline-image] fetch ${url} → ${res.status}`);

@@ -511,3 +511,115 @@ describe("runAgentLoop", () => {
     expect(htmlEvents[1].page).toBe("menu");
   });
 });
+
+// ── F5 — verificación visual (los ojos del agente) ─────────────────────────
+describe("runAgentLoop — verifyTurn", () => {
+  const editThenClose = () =>
+    scripted(
+      [{ type: "function_call", name: "editar_pagina", args: { resumen: "hero" } }, done],
+      [{ type: "text_delta", text: "Listo, cambié el hero." }, done],
+      [{ type: "text_delta", text: "Arreglado el contraste." }, done],
+    );
+  const okEdit = async () => ({
+    response: { ok: true },
+    updatedHtml: "<!doctype html><html><body>v2</body></html>",
+  });
+
+  it("NO verifica un turno sin mutaciones", async () => {
+    let verifies = 0;
+    const r = await runAgentLoop({
+      messages: [{ role: "user", content: "hola" }], tools: [],
+      openStream: scripted([{ type: "text_delta", text: "¡Hola!" }, done]),
+      runTool: async () => { throw new Error("no tools"); },
+      verifyTurn: async () => { verifies++; return { ok: true }; },
+      emit: () => {},
+    });
+    expect(verifies).toBe(0);
+    expect(r.finalText).toBe("¡Hola!");
+  });
+
+  it("verifica tras mutar; ok → cierra con la card en 'ok'", async () => {
+    const events: AgentStreamEvent[] = [];
+    let sawHtml: string | null = null;
+    const r = await runAgentLoop({
+      messages: [{ role: "user", content: "cambia el hero" }], tools: [],
+      openStream: editThenClose(),
+      runTool: okEdit,
+      verifyTurn: async ({ html }) => { sawHtml = html; return { ok: true }; },
+      emit: (e) => events.push(e),
+    });
+    expect(sawHtml).toContain("v2"); // verifica el HTML MUTADO, no el original
+    expect(r.finalText).toContain("Listo");
+    const verify = events.filter((e) => e.type === "action" && (e as any).tool === "verificar_diseno");
+    expect(verify.map((v: any) => [v.status, v.summary])).toEqual([["running", ""], ["done", "ok"]]);
+  });
+
+  it("rotura → inyecta la crítica y el modelo recibe UN ciclo de arreglo", async () => {
+    const events: AgentStreamEvent[] = [];
+    const streams: Message[][] = [];
+    let verifies = 0;
+    const stream = editThenClose();
+    const r = await runAgentLoop({
+      messages: [{ role: "user", content: "cambia el hero" }], tools: [],
+      openStream: (msgs) => { streams.push([...msgs]); return stream(msgs); },
+      runTool: okEdit,
+      verifyTurn: async () => {
+        verifies++;
+        return { ok: false, critique: "- el hero quedó con texto encimado" };
+      },
+      emit: (e) => events.push(e),
+    });
+    // Una sola verificación por request, aunque el ciclo de arreglo vuelva a cerrar.
+    expect(verifies).toBe(1);
+    // El tercer stream vio la instrucción de arreglo como último mensaje user.
+    const fixMessages = streams[2];
+    const lastUser = [...fixMessages].reverse().find((m) => m.role === "user");
+    expect(lastUser?.content).toContain("verificación visual automática");
+    expect(lastUser?.content).toContain("texto encimado");
+    // El cierre final es el texto del ciclo de arreglo.
+    expect(r.finalText).toContain("Arreglado");
+    expect(r.terminalError).toBe(false);
+    const verify = events.filter((e) => e.type === "action" && (e as any).tool === "verificar_diseno");
+    expect(verify.map((v: any) => v.summary)).toEqual(["", "issues"]);
+  });
+
+  it("sin presupuesto para arreglar, NO verifica (encontrar sin poder arreglar no sirve)", async () => {
+    let verifies = 0;
+    await runAgentLoop({
+      messages: [{ role: "user", content: "x" }], tools: [],
+      openStream: scripted(
+        [{ type: "function_call", name: "editar_pagina", args: {} }, done],
+        [{ type: "text_delta", text: "Listo." }, done],
+      ),
+      runTool: okEdit,
+      verifyTurn: async () => { verifies++; return { ok: false, critique: "- roto" }; },
+      maxTurns: 1, // el único turno mutante agotó el tope
+      emit: () => {},
+    });
+    expect(verifies).toBe(0);
+  });
+
+  it("un verifyTurn que revienta es fail-open — el turno cierra normal", async () => {
+    const r = await runAgentLoop({
+      messages: [{ role: "user", content: "x" }], tools: [],
+      openStream: editThenClose(),
+      runTool: okEdit,
+      verifyTurn: async () => { throw new Error("chrome murió"); },
+      emit: () => {},
+    });
+    expect(r.finalText).toContain("Listo");
+    expect(r.terminalError).toBe(false);
+  });
+
+  it("sin verifyTurn el comportamiento es idéntico al de antes", async () => {
+    const events: AgentStreamEvent[] = [];
+    const r = await runAgentLoop({
+      messages: [{ role: "user", content: "x" }], tools: [],
+      openStream: editThenClose(),
+      runTool: okEdit,
+      emit: (e) => events.push(e),
+    });
+    expect(r.finalText).toContain("Listo");
+    expect(events.some((e) => e.type === "action" && (e as any).tool === "verificar_diseno")).toBe(false);
+  });
+});

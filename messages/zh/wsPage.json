@@ -16,12 +16,15 @@
       "editar_imagen": "正在编辑图片",
       "recordar_preferencia": "正在保存偏好",
       "publicar": "正在准备发布",
-      "trabajar_en_pagina": "正在切换页面"
+      "trabajar_en_pagina": "正在切换页面",
+      "verificar_diseno": "正在检查结果"
     },
     "action": {
       "on": "开启",
       "off": "关闭",
-      "home": "首页"
+      "home": "首页",
+      "visualOk": "没有问题",
+      "visualIssues": "正在修正…"
     },
     "confirm": {
       "publishTitle": "发布你的页面",
