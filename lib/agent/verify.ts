@@ -26,6 +26,9 @@ export interface VisualVerdict {
   /** true cuando esto es el fallback (render/API/parse/timeout falló) — el
    *  caller lo trata como "no hay nada que arreglar". */
   fallback: boolean;
+  /** Tokens de la llamada de visión — para contabilidad (el eval runner los
+   *  suma a su costo real). Ausente en fallbacks que nunca llamaron al modelo. */
+  usage?: { inputTokens: number; outputTokens: number; cachedTokens: number };
 }
 
 export interface VerifyParams {
@@ -159,6 +162,7 @@ async function runVerify(
   const provider: VerifyProviderLike = internals.provider ?? new GeminiProvider(apiKey);
 
   let raw = "";
+  const usage = { inputTokens: 0, outputTokens: 0, cachedTokens: 0 };
   // streamWithRetry: los picos 503 de Gemini son transitorios y el resto del
   // agente ya los cabalga — sin esto, cada pico convierte la verificación en
   // fallback (observado en vivo el 2026-07-28).
@@ -182,6 +186,10 @@ async function runVerify(
   )) {
     if (ev.type === "text_delta") {
       raw += ev.text;
+    } else if (ev.type === "usage") {
+      usage.inputTokens += ev.inputTokens;
+      usage.outputTokens += ev.outputTokens;
+      usage.cachedTokens += ev.cachedTokens;
     } else if (ev.type === "done" && ev.stopReason.kind === "error") {
       logFallback(`gemini error: ${ev.stopReason.error}`);
       return fallbackVerdict();
@@ -193,6 +201,7 @@ async function runVerify(
     logFallback("malformed JSON verdict");
     return fallbackVerdict();
   }
+  verdict.usage = usage;
   // eslint-disable-next-line no-console
   console.log(
     `[agent-verify] broken=${verdict.broken} issues=${JSON.stringify(verdict.issues.join("; "))}`,

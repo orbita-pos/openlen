@@ -19,7 +19,8 @@ import { resolveAIProvider } from "@/lib/ai-provider";
 import { tagWithOpIds } from "@/lib/html-ops";
 import { buildFunctionDeclarations } from "@/lib/agent/catalog";
 import { buildAgentMessages } from "@/lib/agent/context";
-import { runAgentLoop, type AgentStreamEvent } from "@/lib/agent/loop";
+import { runAgentLoop, type AgentLoopArgs, type AgentStreamEvent } from "@/lib/agent/loop";
+import { verifyEditedPage, type VisualVerdict } from "@/lib/agent/verify";
 import {
   realDeps,
   runAgentTool,
@@ -73,6 +74,27 @@ export interface RunEvalOptions {
   userId: string;
   ownerEmail: string;
   apiKey: string;
+  /** P3 — eje visual: enciende los ojos del agente (verifyTurn, paridad con
+   *  producción) y emite un veredicto visual del estado FINAL de los casos
+   *  que mutaron el documento. Cuesta 1 llamada de visión por caso mutante
+   *  (2 si el ciclo de auto-arreglo se disparó). */
+  visual?: boolean;
+}
+
+/** P3 — el veredicto visual de un caso que mutó el documento. */
+export interface EvalVisualResult {
+  /** El estado FINAL quedó con rotura visual objetiva. */
+  broken: boolean;
+  issues: string[];
+  /** El ciclo de auto-arreglo in-loop se disparó (los ojos vieron rotura). */
+  selfFixAttempted: boolean;
+  /** Se disparó Y el estado final quedó limpio — los ojos hicieron su trabajo. */
+  fixedBySelf: boolean;
+  /** Algún veredicto cayó en fallback (render/API/timeout) — sin juicio real. */
+  fallback: boolean;
+  /** Tokens de visión gastados por este caso (se suman al costo real). */
+  visionInputTokens: number;
+  visionOutputTokens: number;
 }
 
 export interface EvalRunResult {
@@ -83,6 +105,8 @@ export interface EvalRunResult {
   cachedTokens: number;
   outputTokens: number;
   seconds: number;
+  /** Presente solo en modo visual Y cuando el caso mutó el documento. */
+  visual?: EvalVisualResult;
 }
 
 /** Resolve the eval owner strictly from EVAL_USER_EMAIL — no default, so a
@@ -176,6 +200,7 @@ async function runLoopWithRetry(
   opts: RunEvalOptions,
   projectId: string,
   prompt: string,
+  verifyTurn?: AgentLoopArgs["verifyTurn"],
 ): Promise<{ events: AgentStreamEvent[]; result: Awaited<ReturnType<typeof runAgentLoop>> }> {
   const deps = realDeps();
   const tools = buildFunctionDeclarations();
@@ -226,6 +251,9 @@ async function runLoopWithRetry(
             { signal: abort.signal },
           ),
         runTool: (name, args) => runAgentTool(session, deps, name, args),
+        // P3 visual: los ojos encendidos, paridad con producción — el
+        // auto-arreglo in-loop cuenta como parte del comportamiento medido.
+        ...(verifyTurn ? { verifyTurn } : {}),
         emit: (ev) => events.push(ev),
       });
 
@@ -280,8 +308,36 @@ export async function runEvalCase(evalCase: EvalCase, opts: RunEvalOptions): Pro
   const projectId = await createThrowawayProject(opts.userId, evalCase.id, data);
   const started = Date.now();
 
+  // P3 — eje visual: el recorder captura el veredicto in-loop (los ojos) y su
+  // gasto; tras el loop, el estado FINAL se juzga (reusando el veredicto
+  // in-loop cuando ya juzgó exactamente ese estado).
+  const visionModel = process.env.OPENLEN_AGENT_VISION_MODEL?.trim() || "gemini-2.5-flash";
+  let inLoopVerdict: VisualVerdict | null = null;
+  let visionIn = 0;
+  let visionOut = 0;
+  const judge = async (html: string): Promise<VisualVerdict> => {
+    const v = await verifyEditedPage({
+      html,
+      userPrompt: evalCase.prompt,
+      model: visionModel,
+      apiKey: opts.apiKey,
+    });
+    visionIn += v.usage?.inputTokens ?? 0;
+    visionOut += v.usage?.outputTokens ?? 0;
+    return v;
+  };
+  const verifyTurn: AgentLoopArgs["verifyTurn"] | undefined = opts.visual
+    ? async ({ html }) => {
+        const v = await judge(html);
+        inLoopVerdict = v;
+        return v.broken
+          ? { ok: false, critique: v.issues.map((i) => `- ${i}`).join("\n") }
+          : { ok: true };
+      }
+    : undefined;
+
   try {
-    const { events, result } = await runLoopWithRetry(provider, model, opts, projectId, evalCase.prompt);
+    const { events, result } = await runLoopWithRetry(provider, model, opts, projectId, evalCase.prompt, verifyTurn);
 
     // Re-read the FULL row: the case assert only sees ProjectData, so the
     // publishedAt + userBrief COLUMN invariants are enforced here.
@@ -314,6 +370,36 @@ export async function runEvalCase(evalCase: EvalCase, opts: RunEvalOptions): Pro
       reason = "userBrief quedó vacío tras cubrir recordar_preferencia";
     }
 
+    // P3 — veredicto visual del estado final, solo para casos que mutaron.
+    let visual: EvalVisualResult | undefined;
+    if (opts.visual) {
+      const htmlEvents = events.filter(
+        (e): e is Extract<AgentStreamEvent, { type: "html" }> => e.type === "html",
+      );
+      if (htmlEvents.length > 0) {
+        const lastHtml = htmlEvents[htmlEvents.length - 1].html;
+        // Cast: TS no ve la asignación dentro del closure verifyTurn y
+        // estrecha inLoopVerdict a null (never al leer campos).
+        const first = inLoopVerdict as VisualVerdict | null;
+        // Si los ojos in-loop juzgaron LIMPIO, juzgaron exactamente el estado
+        // final (verifican al cierre) — reusar, no pagar otra llamada. Si
+        // vieron rotura (hubo ciclo de arreglo) o nunca corrieron (presupuesto
+        // agotado), el estado final aún no tiene juicio: una llamada más.
+        const final =
+          first && !first.broken && !first.fallback ? first : await judge(lastHtml);
+        const selfFixAttempted = first?.broken === true;
+        visual = {
+          broken: final.broken,
+          issues: final.issues,
+          selfFixAttempted,
+          fixedBySelf: selfFixAttempted && !final.broken,
+          fallback: final.fallback || (first?.fallback ?? false),
+          visionInputTokens: visionIn,
+          visionOutputTokens: visionOut,
+        };
+      }
+    }
+
     return {
       id: evalCase.id,
       pass: reason === null,
@@ -322,6 +408,7 @@ export async function runEvalCase(evalCase: EvalCase, opts: RunEvalOptions): Pro
       cachedTokens: result.usage.cachedTokens,
       outputTokens: result.usage.outputTokens,
       seconds: (Date.now() - started) / 1000,
+      ...(visual ? { visual } : {}),
     };
   } catch (err) {
     return {

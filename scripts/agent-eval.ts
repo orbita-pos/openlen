@@ -19,6 +19,9 @@ import { CANARY_IDS, EVAL_CASES, type EvalCase } from "@/lib/agent/evals/cases";
 import { resolveEvalUser, runEvalCase, type EvalRunResult } from "@/lib/agent/evals/harness";
 
 const COST_PER_CASE_USD = 0.03; // ~3¢/case (a costly image-edit case runs more)
+// P3 — eje visual: render local (gratis) + 1-2 llamadas de visión chicas por
+// caso mutante. Sobreestimado a propósito (mejor sobrar que drenar).
+const COST_PER_CASE_VISUAL_USD = 0.01;
 
 // TOPE DURO DE GASTO (2026-07-14: una batería + re-runs vació el saldo
 // prepagado de la cuenta — ~200 MXN — con un estimado citado de $0.42).
@@ -41,6 +44,9 @@ function realCostUsd(rs: EvalRunResult[]): number {
     inTok += r.inputTokens;
     cached += r.cachedTokens;
     outTok += r.outputTokens;
+    // P3 — las llamadas de visión del eje visual también son gasto real.
+    inTok += r.visual?.visionInputTokens ?? 0;
+    outTok += r.visual?.visionOutputTokens ?? 0;
   }
   return (inTok * USD_PER_M_INPUT + cached * USD_PER_M_CACHED + outTok * USD_PER_M_OUTPUT) / 1e6;
 }
@@ -65,6 +71,7 @@ function parseArgs(argv: string[]) {
     only: val("--only"),
     yes: !!get("--yes"),
     costly: !!get("--costly"),
+    visual: !!get("--visual"),
     budgetUsd: val("--budget-usd"),
   };
 }
@@ -118,10 +125,21 @@ function truncate(s: string, n: number): string {
   return s.length <= n ? s : `${s.slice(0, n - 1)}…`;
 }
 
-function printTable(results: EvalRunResult[]): void {
+/** La celda del eje visual: "-" no mutó, "ok" limpio, "fix→ok" los ojos
+ *  arreglaron, "ROTA" el estado final quedó con rotura, "s/j" sin juicio
+ *  (fallback del crítico). */
+function visualCell(r: EvalRunResult): string {
+  if (!r.visual) return "-";
+  if (r.visual.fallback && !r.visual.broken) return "s/j";
+  if (r.visual.broken) return "ROTA";
+  return r.visual.fixedBySelf ? "fix→ok" : "ok";
+}
+
+function printTable(results: EvalRunResult[], visual: boolean): void {
   const rows = results.map((r) => ({
     id: r.id,
     verdict: r.pass ? "PASS" : "FAIL",
+    vis: visual ? visualCell(r) : "",
     reason: r.reason ? truncate(r.reason, 52) : "",
     tokens: `${r.inputTokens}/${r.cachedTokens}/${r.outputTokens}`,
     s: r.seconds.toFixed(1),
@@ -129,28 +147,33 @@ function printTable(results: EvalRunResult[]): void {
   const widths = {
     id: Math.max(2, ...rows.map((r) => r.id.length)),
     verdict: 4,
+    vis: visual ? Math.max(6, ...rows.map((r) => r.vis.length)) : 0,
     reason: Math.max(6, ...rows.map((r) => r.reason.length)),
     tokens: Math.max(14, ...rows.map((r) => r.tokens.length)),
     s: Math.max(4, ...rows.map((r) => r.s.length)),
   };
   const pad = (s: string, w: number) => s.padEnd(w);
   const line = (r: (typeof rows)[number]) =>
-    `${pad(r.id, widths.id)}  ${pad(r.verdict, widths.verdict)}  ${pad(r.reason, widths.reason)}  ${pad(
-      r.tokens,
-      widths.tokens,
-    )}  ${pad(r.s, widths.s)}`;
+    `${pad(r.id, widths.id)}  ${pad(r.verdict, widths.verdict)}  ${
+      visual ? `${pad(r.vis, widths.vis)}  ` : ""
+    }${pad(r.reason, widths.reason)}  ${pad(r.tokens, widths.tokens)}  ${pad(r.s, widths.s)}`;
 
   console.log("");
   console.log(
     line({
       id: "id",
       verdict: "res.",
+      vis: visual ? "visual" : "",
       reason: "razón",
       tokens: "in/cached/out",
       s: "seg",
     }),
   );
-  console.log("-".repeat(widths.id + widths.verdict + widths.reason + widths.tokens + widths.s + 8));
+  console.log(
+    "-".repeat(
+      widths.id + widths.verdict + (visual ? widths.vis + 2 : 0) + widths.reason + widths.tokens + widths.s + 8,
+    ),
+  );
   for (const r of rows) console.log(line(r));
 }
 
@@ -162,7 +185,7 @@ async function main(): Promise<void> {
   const cases = selectCases(args);
   if (cases.length === 0) fail("No quedó ningún caso por correr.");
 
-  const est = cases.length * COST_PER_CASE_USD;
+  const est = cases.length * (COST_PER_CASE_USD + (args.visual ? COST_PER_CASE_VISUAL_USD : 0));
   const budget = args.budgetUsd !== undefined ? Number(args.budgetUsd) : DEFAULT_BUDGET_USD;
   if (!Number.isFinite(budget) || budget <= 0) {
     fail(`--budget-usd debe ser un número > 0 (recibí "${args.budgetUsd}")`);
@@ -195,7 +218,12 @@ async function main(): Promise<void> {
     const started = Date.now();
     let r: EvalRunResult;
     try {
-      r = await runEvalCase(c, { userId: owner.id, ownerEmail: owner.email, apiKey: key });
+      r = await runEvalCase(c, {
+        userId: owner.id,
+        ownerEmail: owner.email,
+        apiKey: key,
+        visual: args.visual,
+      });
     } catch (err) {
       // runEvalCase's internal try/catch (harness.ts) wraps the loop run +
       // re-read, but the fixture `setup` mutator and createThrowawayProject
@@ -229,10 +257,20 @@ async function main(): Promise<void> {
     }
   }
 
-  printTable(results);
+  printTable(results, args.visual);
 
   const passed = results.filter((r) => r.pass).length;
   console.log(`\n${passed}/${results.length} PASS (de ${cases.length} seleccionados)`);
+  if (args.visual) {
+    const judged = results.filter((r) => r.visual);
+    const clean = judged.filter((r) => r.visual && !r.visual.broken && !r.visual.fallback).length;
+    const fixed = judged.filter((r) => r.visual?.fixedBySelf).length;
+    const broken = judged.filter((r) => r.visual?.broken).length;
+    const noJudge = judged.filter((r) => r.visual?.fallback && !r.visual.broken).length;
+    console.log(
+      `Eje visual: ${judged.length} caso(s) mutaron el documento — ${clean} limpios (${fixed} auto-arreglados por los ojos), ${broken} ROTOS, ${noJudge} sin juicio (fallback).`,
+    );
+  }
   console.log(
     `Costo real de esta corrida: ~$${realCostUsd(results).toFixed(3)} USD (tokens medidos × precios de gemini-2.5-flash)`,
   );
