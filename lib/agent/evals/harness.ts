@@ -300,7 +300,16 @@ async function runLoopWithRetry(
  *  throwaway row (finally), even on assert failure or a thrown loop error. */
 export async function runEvalCase(evalCase: EvalCase, opts: RunEvalOptions): Promise<EvalRunResult> {
   const provider = new GeminiProvider(opts.apiKey);
-  const model = resolveAIProvider("gemini-flash").model;
+  // EVAL_AGENT_MODEL: override SOLO del harness (producción no lo lee) — para
+  // correr la batería cuando el modelo de producción está caído (2026-07-28:
+  // 3.5-flash pasó el día en 503 sostenido y tumbó 8/10 casos de la muestra).
+  // Una corrida con override NO es línea base de paridad: anótalo al reportar.
+  // ⚠ gemini-2.5-flash NO sirve como override del loop: con el system prompt
+  // del agente (~14k tokens) + las 16 tool declarations devuelve turnos
+  // VACÍOS (end_turn, 0 output, 0 calls) — aislado determinísticamente el
+  // 2026-07-28 (scratch/probe-25-matrix.mjs): tools+system-corto funciona,
+  // system-grande-sin-tools funciona, la combinación enmudece al modelo.
+  const model = process.env.EVAL_AGENT_MODEL?.trim() || resolveAIProvider("gemini-flash").model;
 
   let data: ProjectData = { html: FIXTURE_HTML };
   if (evalCase.setup) data = evalCase.setup(data);
