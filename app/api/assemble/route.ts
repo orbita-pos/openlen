@@ -133,7 +133,12 @@ export async function POST(req: Request): Promise<Response> {
 
         // 5. Born-canonical + SEO head, same ingestion as every other project.
         const title = recipe.copy.business_name?.trim() || "Untitled page";
-        const finalHtml = ensurePageMeta(normalizeBornCanonical(fill.html), { title });
+        // Stitched from library sections, so the <head> can carry a section's
+        // own demo metadata — same takeover as the curate path.
+        const finalHtml = ensurePageMeta(normalizeBornCanonical(fill.html), {
+          title,
+          replaceStaleMeta: true,
+        });
 
         // 6. Reserved-marker guard + sanitize (defense in depth, like from-html).
         const sanitized = sanitizeForPublish(finalHtml);

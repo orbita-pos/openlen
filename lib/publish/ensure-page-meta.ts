@@ -29,6 +29,17 @@ export interface EnsurePageMetaOptions {
   /** Preferred og:image fallback (e.g. a profile photo) when the page itself
    *  carries no absolute hero image. */
   ogImage?: string;
+  /** Treat `title` (and this page's own copy) as authoritative and REPLACE the
+   *  title / description / og:title / og:description the document arrived with,
+   *  instead of preserving them.
+   *
+   *  Only the paths that mint a page by cloning one of OUR templates set this.
+   *  A cloned template ships the TEMPLATE's marketing metadata, and rule 1
+   *  above would faithfully preserve it — so a user's page published another
+   *  brand's name into the browser tab, the Google result and the WhatsApp
+   *  card. Leave it off anywhere a human may have authored the metadata
+   *  (pasted HTML, free-form generation, the editor). */
+  replaceStaleMeta?: boolean;
 }
 
 function isMediaUrl(u?: string): u is string {
@@ -46,18 +57,41 @@ export function ensurePageMeta(
   if (!/<\/head\s*>/i.test(html)) return html; // no head to complete — no-op
 
   const existingTitle = readTitle(html);
-  const effectiveTitle =
-    existingTitle ||
-    (opts.title ?? "").trim() ||
-    readFirstText(html, "h1") ||
-    "Untitled page";
+  const preferredTitle = (opts.title ?? "").trim();
+  const takeover = opts.replaceStaleMeta === true && preferredTitle.length > 0;
+
+  const effectiveTitle = takeover
+    ? preferredTitle
+    : existingTitle ||
+      preferredTitle ||
+      readFirstText(html, "h1") ||
+      "Untitled page";
 
   let out = html;
 
   // <title> — add (or fill an empty one) before anything else so the
   // insertion offsets below stay valid.
-  if (!existingTitle) {
+  if (takeover || !existingTitle) {
     out = upsertTitle(out, effectiveTitle);
+  }
+
+  // On a takeover the cloned template's social copy is rewritten from THIS
+  // page's content. Rewritten IN PLACE (not dropped and re-appended) so rule 2
+  // holds: a second pass produces byte-identical output. og:image is only
+  // re-pointed when the page owns a real image — never downgrade a live URL to
+  // the generated placeholder card.
+  if (takeover) {
+    out = replaceMetaContent(out, "property", "og:title", effectiveTitle);
+    const desc = deriveDescription(out, effectiveTitle);
+    if (desc) {
+      out = replaceMetaContent(out, "name", "description", desc);
+      out = replaceMetaContent(out, "property", "og:description", desc);
+    } else {
+      out = removeMeta(out, "name", "description");
+      out = removeMeta(out, "property", "og:description");
+    }
+    const hero = firstAbsoluteImage(out);
+    if (hero) out = replaceMetaContent(out, "property", "og:image", hero);
   }
 
   const additions: string[] = [];
@@ -73,6 +107,17 @@ export function ensurePageMeta(
     additions.push(
       `<meta property="og:title" content="${escAttr(effectiveTitle)}" />`,
     );
+  }
+
+  // og:description is what WhatsApp / X print under the title. Without it the
+  // card falls back to the plain description (or nothing).
+  if (!hasMeta(out, "property", "og:description")) {
+    const desc = deriveDescription(out, effectiveTitle);
+    if (desc) {
+      additions.push(
+        `<meta property="og:description" content="${escAttr(desc)}" />`,
+      );
+    }
   }
 
   if (!hasMeta(out, "property", "og:image")) {
@@ -196,6 +241,37 @@ function readFirstText(html: string, tag: string, minLen = 0): string {
     if (text.length >= minLen && text.length > 0) return text;
   }
   return "";
+}
+
+/** Rewrite the `content` of an existing `<meta {attr}="{value}">` where it
+ *  already sits. A document without that meta is returned untouched — the
+ *  caller's `hasMeta` block then appends a fresh one. Takeover path only. */
+function replaceMetaContent(
+  html: string,
+  attr: "name" | "property",
+  value: string,
+  content: string,
+): string {
+  return html.replace(/<meta\b[^>]*>/gi, (tag) => {
+    if (getAttr(tag, attr)?.toLowerCase() !== value.toLowerCase()) return tag;
+    const next = `content="${escAttr(content)}"`;
+    if (/\bcontent\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/i.test(tag)) {
+      return tag.replace(/\bcontent\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/i, next);
+    }
+    return tag.replace(/\s*\/?>\s*$/, ` ${next} />`);
+  });
+}
+
+/** Drop every `<meta {attr}="{value}">` from the document. Used only by the
+ *  takeover path — the non-destructive default never calls it. */
+function removeMeta(
+  html: string,
+  attr: "name" | "property",
+  value: string,
+): string {
+  return html.replace(/<meta\b[^>]*>/gi, (tag) =>
+    getAttr(tag, attr)?.toLowerCase() === value.toLowerCase() ? "" : tag,
+  );
 }
 
 function getAttr(tag: string, name: string): string | null {

@@ -161,9 +161,14 @@ export async function POST(req: Request): Promise<Response> {
         const title = copy.business_name?.trim() || chosen?.name || "Untitled page";
         const normalized = normalizeBornCanonical(fill.html);
         const themed = seedBrandIntoHtml(normalized, profile.data);
+        // replaceStaleMeta: this page is a CLONE of `chosenId`, so its <head>
+        // is still the template's (title / description / og:*). Without the
+        // takeover the user's page ships the template's brand into the tab,
+        // Google and the WhatsApp card.
         const finalHtml = ensurePageMeta(themed, {
           title,
           ...profileMeta(profile.data),
+          replaceStaleMeta: true,
         });
 
         // 5. Reserved-marker guard + sanitize (defense in depth, like from-html).

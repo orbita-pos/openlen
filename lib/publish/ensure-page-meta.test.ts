@@ -145,6 +145,103 @@ test("an existing empty <title> gets filled", () => {
   assert.ok(!/<title>\s*<\/title>/.test(out), "no empty title left behind");
 });
 
+// ── replaceStaleMeta — the cloned-template takeover ────────────────────────
+// Regression: a page minted from a template kept the TEMPLATE's <head>, so the
+// user's page published another brand's name into the tab, Google and the
+// WhatsApp card (real case: "Furia Eterna" shipped <title>FRAGOR — …</title>).
+
+const TEMPLATE_HEAD = [
+  "<title>FRAGOR — Roguelike de acción · Lánzate al estruendo</title>",
+  '<meta name="description" content="FRAGOR es un roguelike de acción frenético: muere, aprende, vuelve más fuerte.">',
+  '<meta property="og:title" content="FRAGOR — Roguelike de acción">',
+  '<meta property="og:description" content="Muere, aprende, vuelve más fuerte.">',
+].join("");
+
+const FILLED_BODY =
+  "<h1>El MOBA de peleas 5v5 que esperabas</h1><p>Furia Eterna es un juego de lucha donde la estrategia y la acción se combinan en batallas épicas.</p>";
+
+test("replaceStaleMeta overwrites the cloned template's title + social copy", () => {
+  const out = ensurePageMeta(DOC(TEMPLATE_HEAD, FILLED_BODY), {
+    title: "Furia Eterna",
+    replaceStaleMeta: true,
+  });
+  assert.ok(out.includes("<title>Furia Eterna</title>"), "title replaced");
+  assert.ok(!/FRAGOR/.test(out), "no trace of the template's brand left");
+  assert.equal(metaContent(out, "property", "og:title"), "Furia Eterna");
+  assert.match(String(metaContent(out, "name", "description")), /Furia Eterna/);
+  assert.match(
+    String(metaContent(out, "property", "og:description")),
+    /Furia Eterna/,
+  );
+});
+
+test("replaceStaleMeta leaves exactly one of each meta (no duplicates)", () => {
+  const out = ensurePageMeta(DOC(TEMPLATE_HEAD, FILLED_BODY), {
+    title: "Furia Eterna",
+    replaceStaleMeta: true,
+  });
+  const count = (re: RegExp) => (out.match(re) ?? []).length;
+  assert.equal(count(/<title[^>]*>/gi), 1);
+  assert.equal(count(/<meta[^>]*name="description"/gi), 1);
+  assert.equal(count(/<meta[^>]*property="og:title"/gi), 1);
+  assert.equal(count(/<meta[^>]*property="og:description"/gi), 1);
+});
+
+test("replaceStaleMeta is still idempotent", () => {
+  const once = ensurePageMeta(DOC(TEMPLATE_HEAD, FILLED_BODY), {
+    title: "Furia Eterna",
+    replaceStaleMeta: true,
+  });
+  const twice = ensurePageMeta(once, {
+    title: "Furia Eterna",
+    replaceStaleMeta: true,
+  });
+  assert.equal(twice, once);
+});
+
+test("replaceStaleMeta without a title is a no-op — never blanks a page", () => {
+  const doc = DOC(TEMPLATE_HEAD, FILLED_BODY);
+  const out = ensurePageMeta(doc, { replaceStaleMeta: true });
+  assert.ok(
+    out.includes("<title>FRAGOR — Roguelike de acción · Lánzate al estruendo</title>"),
+    "no authoritative title → nothing is destroyed",
+  );
+});
+
+test("default stays non-destructive — a human's <head> survives", () => {
+  const out = ensurePageMeta(DOC(TEMPLATE_HEAD, FILLED_BODY), {
+    title: "Furia Eterna",
+  });
+  assert.ok(out.includes("<title>FRAGOR — Roguelike de acción · Lánzate al estruendo</title>"));
+  assert.equal(metaContent(out, "property", "og:title"), "FRAGOR — Roguelike de acción");
+});
+
+test("replaceStaleMeta keeps a live og:image when the page has no image of its own", () => {
+  const head = TEMPLATE_HEAD + '<meta property="og:image" content="https://images.openlen.com/486-curved-monitor-game-1920.webp">';
+  const out = ensurePageMeta(DOC(head, FILLED_BODY), {
+    title: "Furia Eterna",
+    replaceStaleMeta: true,
+  });
+  assert.equal(
+    metaContent(out, "property", "og:image"),
+    "https://images.openlen.com/486-curved-monitor-game-1920.webp",
+    "never downgrade a real image to the placeholder card",
+  );
+});
+
+test("replaceStaleMeta re-points og:image at the page's own image", () => {
+  const head = TEMPLATE_HEAD + '<meta property="og:image" content="https://images.openlen.com/old-template-shot.webp">';
+  const body = FILLED_BODY + '<img src="https://images.openlen.com/498-esports-arena-crowd-1920.webp" alt="">';
+  const out = ensurePageMeta(DOC(head, body), {
+    title: "Furia Eterna",
+    replaceStaleMeta: true,
+  });
+  assert.equal(
+    metaContent(out, "property", "og:image"),
+    "https://images.openlen.com/498-esports-arena-crowd-1920.webp",
+  );
+});
+
 test("attribute values are escaped", () => {
   const out = ensurePageMeta(DOC("", '<h1>A & B</h1><p>Copy with <em>tags</em> & ampersands inside it here.</p>'), {
     title: 'Tom & "Jerry"',
