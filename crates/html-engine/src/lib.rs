@@ -26,6 +26,14 @@ pub fn normalize_born_canonical(html: String) -> String {
     normalize::normalize_born_canonical(&html)
 }
 
+/// Reparación post-sanitize: re-inyecta los scripts de tema (data-ol-radius/
+/// space/type) que el sanitizer mató cuando su <style> hermano sobrevive.
+/// No-op en documentos sin marcadores. Ver normalize::ensure_theme_scripts.
+#[napi]
+pub fn ensure_theme_scripts(html: String) -> String {
+    normalize::ensure_theme_scripts(&html)
+}
+
 #[napi(object, js_name = "SanitizeRemovedCounts")]
 pub struct JsSanitizeRemovedCounts {
     pub scripts: u32,

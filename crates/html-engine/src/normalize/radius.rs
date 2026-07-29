@@ -7,9 +7,10 @@
 use once_cell::sync::Lazy;
 use regex::Regex;
 
-const RADIUS_MARKER: &str = "data-ol-radius";
+const SCRIPT_TAG: &str = "<script data-ol-radius";
+const STYLE_TAG: &str = "<style data-ol-radius";
 
-const CONFIG_SCRIPT: &str = concat!(
+pub(crate) const CONFIG_SCRIPT: &str = concat!(
     "<script data-ol-radius>(function(){",
     "var w=window;w.tailwind=w.tailwind||{};",
     "var c=w.tailwind.config||{};var t=c.theme||{};var e=t.extend||{};",
@@ -104,16 +105,36 @@ fn scale_literal_radii(html: &str) -> String {
 }
 
 /// Port of `normalizeRadius` in lib/normalize-radius.ts. Output is byte-equal
-/// to the TS reference on the starter templates; idempotent on the marker.
+/// to the TS reference on the starter templates.
+///
+/// Idempotencia por PIEZA, no por marcador a secas (bug 2026-07-29): el
+/// sanitizer mata el <script data-ol-radius> pero el <style data-ol-radius>
+/// sobrevive, y el chequeo viejo (`contains("data-ol-radius")`) veía el style
+/// y creía "ya normalizado" — el script jamás volvía y los sliders Tier-3
+/// dejaban de mover las utilities. Script y style se comprueban por separado
+/// y solo se inyecta lo que falta; el rewrite de literales corre únicamente
+/// en la primera normalización (cuando no hay style).
 pub fn normalize_radius(html: &str) -> String {
     if html.is_empty() {
         return String::new();
     }
-    if html.contains(RADIUS_MARKER) {
+    let has_script = html.contains(SCRIPT_TAG);
+    let has_style = html.contains(STYLE_TAG);
+    if has_script && has_style {
         return html.to_string();
     }
-    let scaled = scale_literal_radii(html);
-    let injection = String::from(CONFIG_SCRIPT) + TOKENS_STYLE;
+    let scaled = if has_style {
+        html.to_string()
+    } else {
+        scale_literal_radii(html)
+    };
+    let mut injection = String::new();
+    if !has_script {
+        injection.push_str(CONFIG_SCRIPT);
+    }
+    if !has_style {
+        injection.push_str(TOKENS_STYLE);
+    }
     match HEAD_CLOSE_RE.find(&scaled) {
         Some(m) => {
             let mut out = String::with_capacity(scaled.len() + injection.len());
@@ -123,5 +144,50 @@ pub fn normalize_radius(html: &str) -> String {
             out
         }
         None => scaled + &injection,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    const DOC: &str = "<html><head><script src=\"https://cdn.tailwindcss.com\"></script><style>.card{border-radius:12px}</style></head><body><div class=\"rounded-lg\"></div></body></html>";
+
+    #[test]
+    fn full_pass_injects_script_and_style() {
+        let out = normalize_radius(DOC);
+        assert!(out.contains("<script data-ol-radius>"));
+        assert!(out.contains("<style data-ol-radius>"));
+        assert!(out.contains("calc(12px * var(--ol-r-scale))"));
+    }
+
+    #[test]
+    fn idempotent_when_both_present() {
+        let once = normalize_radius(DOC);
+        assert_eq!(normalize_radius(&once), once);
+    }
+
+    // Bug 2026-07-29: el sanitizer mata el <script data-ol-radius> pero el
+    // <style> sobrevive; el chequeo por marcador único creía "ya normalizado"
+    // y el script jamás volvía.
+    #[test]
+    fn reinjects_script_when_only_style_survives() {
+        let once = normalize_radius(DOC);
+        let stripped = once.replace(CONFIG_SCRIPT, "");
+        assert!(!stripped.contains("<script data-ol-radius"));
+        let healed = normalize_radius(&stripped);
+        assert!(healed.contains("<script data-ol-radius>"));
+        // exactamente el script de vuelta — sin duplicar el style ni tocar nada más
+        assert_eq!(healed.replace(CONFIG_SCRIPT, ""), stripped);
+        assert_eq!(healed.matches("<style data-ol-radius").count(), 1);
+    }
+
+    #[test]
+    fn repair_is_idempotent() {
+        let once = normalize_radius(DOC);
+        let stripped = once.replace(CONFIG_SCRIPT, "");
+        let healed = normalize_radius(&stripped);
+        assert_eq!(normalize_radius(&healed), healed);
+        assert_eq!(healed.matches("<script data-ol-radius").count(), 1);
     }
 }

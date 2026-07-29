@@ -221,3 +221,57 @@ test("detectSlotPath: marker buried inside a larger document → true", () => {
     "</body></html>";
   assert.equal(detectSlotPath(html), true);
 });
+
+// ── Reparación de scripts de tema (bug 2026-07-29) ──────────────────────────
+// El strip de Rust mata <script data-ol-{radius,space,type}> pero sus <style>
+// sobreviven; el wrapper debe re-inyectar los scripts canónicos para que el
+// editor no pierda el mapeo var() de las utilities en cada save/publish.
+
+test("sanitizeForPublish repara los scripts de tema que el strip mató", () => {
+  const doc =
+    '<html><head><script src="https://cdn.tailwindcss.com"></script></head><body><div class="rounded-lg p-4 text-xl">x</div></body></html>';
+  const normalized = normalizeBornCanonical(doc);
+  const r = sanitizeForPublish(normalized);
+  assert.ok(r.html !== null);
+  assert.ok(r.html!.includes("<script data-ol-radius>"), "radius script de vuelta");
+  assert.ok(r.html!.includes("<script data-ol-space>"), "space script de vuelta");
+  assert.ok(r.html!.includes("<script data-ol-type>"), "type script de vuelta");
+});
+
+test("sanitizeForPublish: la reparación es idempotente entre saves consecutivos", () => {
+  const doc =
+    '<html><head><script src="https://cdn.tailwindcss.com"></script></head><body><div class="rounded-lg">x</div></body></html>';
+  let html = normalizeBornCanonical(doc);
+  for (let i = 0; i < 3; i++) {
+    const r = sanitizeForPublish(html);
+    assert.ok(r.html !== null, `save ${i + 1}`);
+    html = r.html!;
+    assert.equal((html.match(/<script data-ol-radius>/g) ?? []).length, 1, `save ${i + 1}: sin duplicados`);
+    assert.equal((html.match(/<style data-ol-radius/g) ?? []).length, 1, `save ${i + 1}: style único`);
+  }
+});
+
+test("sanitizeForPublish NO inyecta tema en documentos vírgenes (scrape/autofill)", () => {
+  const virgin = "<html><head></head><body><p>externo</p></body></html>";
+  const r = sanitizeForPublish(virgin);
+  assert.ok(r.html !== null);
+  assert.ok(!r.html!.includes("data-ol-radius"), "sin tokens regalados");
+  assert.ok(!r.html!.includes("data-ol-space"));
+  assert.ok(!r.html!.includes("data-ol-type"));
+});
+
+test("sanitizeForPublish: un script de tema FORJADO muere y vuelve el canónico", () => {
+  const doc =
+    '<html><head><script src="https://cdn.tailwindcss.com"></script></head><body><div class="rounded-lg">x</div></body></html>';
+  const normalized = normalizeBornCanonical(doc);
+  // El atacante reemplaza el script canónico por uno malicioso con el mismo attr
+  const forged = normalized.replace(
+    /<script data-ol-radius>[\s\S]*?<\/script>/,
+    '<script data-ol-radius>evil()</script>',
+  );
+  const r = sanitizeForPublish(forged);
+  assert.ok(r.html !== null);
+  assert.ok(!r.html!.includes("evil()"), "el script forjado NO sobrevive");
+  assert.ok(r.html!.includes("<script data-ol-radius>"), "el canónico vuelve");
+  assert.ok(r.html!.includes("var(--ol-r-sm)"), "con el contenido nuestro");
+});

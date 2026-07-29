@@ -180,3 +180,70 @@ test("bake: idempotent — baking already-baked HTML is a no-op", async () => {
   assert.equal(twice.baked, false);
   assert.equal(twice.html, once.html);
 });
+
+// ── Extends del normalizador en el bake (bug 2026-07-29) ────────────────────
+// Los <style data-ol-*> sobreviven al publish; el bake debe compilar las
+// utilities contra los tokens var(--ol-*) para que los sliders Tier-3
+// (radius/densidad/tipografía) afecten la página publicada.
+
+const THEMED_DOC =
+  '<!doctype html><html><head><script src="https://cdn.tailwindcss.com"></script>' +
+  '<script data-ol-radius>(function(){})();</script>' +
+  "<style data-ol-radius>:root{--ol-r-scale:1;--ol-r-sm:calc(0.125rem*var(--ol-r-scale));--ol-r:calc(0.25rem*var(--ol-r-scale));--ol-r-md:calc(0.375rem*var(--ol-r-scale));--ol-r-lg:calc(0.5rem*var(--ol-r-scale));--ol-r-xl:calc(0.75rem*var(--ol-r-scale));--ol-r-2xl:calc(1rem*var(--ol-r-scale));--ol-r-3xl:calc(1.5rem*var(--ol-r-scale));}</style>" +
+  "<style data-ol-space>:root{--ol-space-scale:1;--ol-space-2:calc(0.5rem*var(--ol-space-scale));--ol-space-4:calc(1rem*var(--ol-space-scale));--ol-space-0_5:calc(0.125rem*var(--ol-space-scale));--ol-space-px:calc(1px*var(--ol-space-scale));}</style>" +
+  "<style data-ol-type>:root{--ol-text-scale:1;--ol-text-xl:calc(1.25rem*var(--ol-text-scale));--ol-lh-xl:calc(1.75rem*var(--ol-text-scale));}</style>" +
+  '</head><body><div class="rounded-lg rounded-2xl p-4 p-0.5 m-2 gap-2 text-xl">x</div></body></html>';
+
+test("bake temático: utilities compilan a var(--ol-*) cuando los styles data-ol-* están", async () => {
+  const r = await bakeTailwind(THEMED_DOC);
+  assert.equal(r.baked, true);
+  assert.match(r.html, /\.rounded-lg\s*\{[^}]*var\(--ol-r-lg\)/, "rounded-lg → var");
+  assert.match(r.html, /\.rounded-2xl\s*\{[^}]*var\(--ol-r-2xl\)/, "rounded-2xl → var");
+  assert.match(r.html, /\.p-4\s*\{[^}]*var\(--ol-space-4\)/, "p-4 → var");
+  assert.match(r.html, /\.p-0\\.5\s*\{[^}]*var\(--ol-space-0_5\)/, "p-0.5 → var con _→.");
+  assert.match(r.html, /\.m-2\s*\{[^}]*var\(--ol-space-2\)/, "m-2 → var");
+  assert.match(r.html, /\.gap-2\s*\{[^}]*var\(--ol-space-2\)/, "gap-2 → var");
+  assert.match(r.html, /\.text-xl\s*\{[^}]*var\(--ol-text-xl\)/, "text-xl → var tamaño");
+  assert.match(r.html, /\.text-xl\s*\{[^}]*var\(--ol-lh-xl\)/, "text-xl → var line-height");
+});
+
+test("bake temático: los <script data-ol-*> se retiran al hornear (como el carrier); los styles quedan", async () => {
+  const r = await bakeTailwind(THEMED_DOC);
+  assert.equal(r.baked, true);
+  assert.ok(!r.html.includes("<script data-ol-radius"), "script radius fuera");
+  assert.ok(r.html.includes("<style data-ol-radius"), "style radius queda");
+  assert.ok(r.html.includes("<style data-ol-space"), "style space queda");
+});
+
+test("bake temático: sin styles data-ol-* las utilities compilan valores stock (sin var indefinida)", async () => {
+  const r = await bakeTailwind(DOC_WITH_CDN);
+  assert.equal(r.baked, true);
+  assert.match(r.html, /\.p-4\s*\{[^}]*padding:\s*1rem/, "p-4 stock");
+  assert.ok(!r.html.includes("var(--ol-"), "cero referencias a tokens inexistentes");
+});
+
+test("bake temático: el mapeo del normalizador GANA sobre el carrier en sus claves (semántica del editor)", async () => {
+  const withCarrier = THEMED_DOC.replace(
+    "</head>",
+    '<script data-ol-tw="1">tailwind.config={"theme":{"extend":{"borderRadius":{"lg":"99px","4xl":"3rem"}}}}</script></head>',
+  ).replace('class="rounded-lg', 'class="rounded-4xl rounded-lg');
+  const r = await bakeTailwind(withCarrier);
+  assert.equal(r.baked, true);
+  assert.match(r.html, /\.rounded-lg\s*\{[^}]*var\(--ol-r-lg\)/, "normalizador gana en lg");
+  assert.match(r.html, /\.rounded-4xl\s*\{[^}]*3rem/, "clave propia del template sobrevive");
+});
+
+test("bake temático: tolera la forma serializada por DOM (data-ol-radius=\"\") — páginas reales la llevan", async () => {
+  // Una pasada por el editor re-serializa <script data-ol-radius> como
+  // <script data-ol-radius=""> (visto en prod, proyecto Brewlytics).
+  const serialized = THEMED_DOC
+    .replace("<script data-ol-radius>", '<script data-ol-radius="">')
+    .replace("<style data-ol-radius>", '<style data-ol-radius="">')
+    .replace("<style data-ol-space>", '<style data-ol-space="">')
+    .replace("<style data-ol-type>", '<style data-ol-type="">');
+  const r = await bakeTailwind(serialized);
+  assert.equal(r.baked, true);
+  assert.match(r.html, /\.rounded-lg\s*\{[^}]*var\(--ol-r-lg\)/, "tokens derivados pese al =\"\"");
+  assert.match(r.html, /\.p-4\s*\{[^}]*var\(--ol-space-4\)/, "space derivado pese al =\"\"");
+  assert.ok(!/<script data-ol-radius/.test(r.html), "script serializado también se retira");
+});

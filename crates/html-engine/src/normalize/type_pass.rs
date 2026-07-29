@@ -6,7 +6,8 @@
 use once_cell::sync::Lazy;
 use regex::Regex;
 
-const TYPE_MARKER: &str = "data-ol-type";
+const SCRIPT_TAG: &str = "<script data-ol-type";
+const STYLE_TAG: &str = "<style data-ol-type";
 
 // (key, size, line-height) — mirrors the TS array.
 const SIZES: &[(&str, &str, &str)] = &[
@@ -25,12 +26,12 @@ const SIZES: &[(&str, &str, &str)] = &[
     ("9xl", "8rem", "1"),
 ];
 
-static INJECTION: Lazy<String> = Lazy::new(|| {
+pub(crate) static CONFIG_SCRIPT: Lazy<String> = Lazy::new(|| {
     let size_entries: Vec<String> = SIZES
         .iter()
         .map(|(k, _, _)| format!("'{}':['var(--ol-text-{})','var(--ol-lh-{})']", k, k, k))
         .collect();
-    let config_script = format!(
+    format!(
         concat!(
             "<script data-ol-type>(function(){{",
             "var w=window;w.tailwind=w.tailwind||{{}};",
@@ -41,8 +42,10 @@ static INJECTION: Lazy<String> = Lazy::new(|| {
             "}})();</script>"
         ),
         size_entries.join(",")
-    );
+    )
+});
 
+static TOKENS_STYLE: Lazy<String> = Lazy::new(|| {
     let tokens_body: String = SIZES
         .iter()
         .map(|(k, s, lh)| {
@@ -52,12 +55,10 @@ static INJECTION: Lazy<String> = Lazy::new(|| {
             )
         })
         .collect();
-    let tokens_style = format!(
+    format!(
         "<style data-ol-type>:root{{--ol-text-scale:1;{}}}</style>",
         tokens_body
-    );
-
-    config_script + &tokens_style
+    )
 });
 
 static STYLE_BLOCK_RE: Lazy<Regex> =
@@ -125,24 +126,72 @@ fn scale_literal_font_sizes(html: &str) -> String {
     out
 }
 
-/// Port of `normalizeType` in lib/normalize-type.ts.
+/// Port of `normalizeType` in lib/normalize-type.ts. Idempotencia por PIEZA
+/// (script/style separados) — ver el comentario en radius.rs (bug 2026-07-29).
+/// El rewrite de font-size literal corre solo en la primera normalización.
 pub fn normalize_type(html: &str) -> String {
     if html.is_empty() {
         return String::new();
     }
-    if html.contains(TYPE_MARKER) {
+    let has_script = html.contains(SCRIPT_TAG);
+    let has_style = html.contains(STYLE_TAG);
+    if has_script && has_style {
         return html.to_string();
     }
-    let scaled = scale_literal_font_sizes(html);
-    let injection: &str = &INJECTION;
+    let scaled = if has_style {
+        html.to_string()
+    } else {
+        scale_literal_font_sizes(html)
+    };
+    let mut injection = String::new();
+    if !has_script {
+        injection.push_str(&CONFIG_SCRIPT);
+    }
+    if !has_style {
+        injection.push_str(&TOKENS_STYLE);
+    }
     match HEAD_CLOSE_RE.find(&scaled) {
         Some(m) => {
             let mut out = String::with_capacity(scaled.len() + injection.len());
             out.push_str(&scaled[..m.start()]);
-            out.push_str(injection);
+            out.push_str(&injection);
             out.push_str(&scaled[m.start()..]);
             out
         }
-        None => scaled + injection,
+        None => scaled + &injection,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    const DOC: &str = "<html><head><script src=\"https://cdn.tailwindcss.com\"></script><style>h1{font-size:40px}</style></head><body><p class=\"text-xl\"></p></body></html>";
+
+    fn strip_tag(html: &str, open: &str) -> String {
+        let start = html.find(open).expect("open tag");
+        let end = html[start..].find("</script>").expect("close tag") + start + "</script>".len();
+        format!("{}{}", &html[..start], &html[end..])
+    }
+
+    #[test]
+    fn reinjects_script_when_only_style_survives() {
+        let once = normalize_type(DOC);
+        let stripped = strip_tag(&once, "<script data-ol-type>");
+        assert!(!stripped.contains("<script data-ol-type"));
+        let healed = normalize_type(&stripped);
+        assert!(healed.contains("<script data-ol-type>"));
+        assert_eq!(healed.matches("<style data-ol-type").count(), 1);
+        // el rewrite de font-size literal NO se re-corre: bytes idénticos + script
+        assert_eq!(strip_tag(&healed, "<script data-ol-type>"), stripped);
+    }
+
+    #[test]
+    fn repair_is_idempotent() {
+        let once = normalize_type(DOC);
+        let stripped = strip_tag(&once, "<script data-ol-type>");
+        let healed = normalize_type(&stripped);
+        assert_eq!(normalize_type(&healed), healed);
+        assert_eq!(healed.matches("<script data-ol-type").count(), 1);
     }
 }

@@ -22,6 +22,7 @@ import {
   buildScopedView as rustBuildScopedView,
   applyPhotoSlots as rustApplyPhotoSlots,
   consolidateUnsplashCredits as rustConsolidateUnsplashCredits,
+  ensureThemeScripts as rustEnsureThemeScripts,
   extractLogo as rustExtractLogo,
   extractPhotoSlots as rustExtractPhotoSlots,
   extractTranslatables as rustExtractTranslatables,
@@ -183,8 +184,16 @@ export function sanitizeForPublish(html: string): SanitizeResult {
   const { html: pre, extend } = extractTwConfig(html);
   const r = rustSanitizeForPublish(pre) as RustSanitizeResult;
   const clean = r.html ?? null;
+  // Reparación de tema (bug 2026-07-29): el strip de Rust mata los
+  // <script data-ol-{radius,space,type}> pero sus <style> hermanos sobreviven
+  // — sin esto cada save/publish dejaba las utilities del editor sin mapeo
+  // var() y los sliders Tier-3 morían en silencio. Repair-only con bytes
+  // canónicos del crate: nunca inyecta en documentos sin marcadores (el
+  // scrape de autofill pasa por aquí), y un script forjado con el mismo
+  // atributo ya murió en el strip de arriba — el sanitizer no se relajó.
+  const healed = clean !== null ? rustEnsureThemeScripts(clean) : null;
   const out =
-    clean !== null && extend !== null ? injectTwCarrier(clean, extend) : clean;
+    healed !== null && extend !== null ? injectTwCarrier(healed, extend) : healed;
   // Defensa en profundidad del invariante slot-path: como el config script se
   // extrajo ANTES del gate de Rust, el marcador no pasó por él. El validador
   // del extend ya rechaza data-slot-path en claves y valores; este guard final

@@ -52,6 +52,90 @@ import { readTwCarrier, stripTwCarrier } from "./tw-config";
 
 const TAILWIND_INPUT = "@tailwind base;\n@tailwind components;\n@tailwind utilities;\n";
 
+// ─── Extends del normalizador born-canonical (bug 2026-07-29) ────────────────
+// Los <style data-ol-{radius,space,type}> sobreviven al sanitizer y llevan los
+// tokens --ol-*; los <script data-ol-*> que mapean utilities→tokens existen
+// solo para el Play CDN del editor (y el sanitizer los mata en cada
+// round-trip). Al hornear, ese mapeo se compila AQUÍ, derivado de los vars
+// realmente presentes en los styles — no hay tabla TS que pueda driftear del
+// crate de Rust, y una página sin marcadores compila valores stock (jamás
+// referencias a vars indefinidas). Sin esto, los sliders Tier-3
+// (radius/densidad/tipografía) no afectaban la página publicada.
+// `[^>]*>` y no `>`: una pasada por el editor re-serializa los atributos
+// booleanos como data-ol-radius="" (visto en prod) y la forma exacta dejaría
+// de matchear. Solo se usa para RETIRAR — sobre-matchear un tag forjado con
+// más atributos solo significa retirar más, nunca ejecutar nada.
+const THEME_SCRIPT_RE =
+  /<script data-ol-(?:radius|space|type)\b[^>]*>[\s\S]*?<\/script>/gi;
+
+function themeStyleBody(html: string, name: string): string | null {
+  const m = new RegExp(
+    `<style data-ol-${name}\\b[^>]*>([\\s\\S]*?)</style>`,
+    "i",
+  ).exec(html);
+  return m?.[1] ?? null;
+}
+
+function normalizerExtends(html: string): Record<string, Record<string, unknown>> {
+  const out: Record<string, Record<string, unknown>> = {};
+  const radius = themeStyleBody(html, "radius");
+  if (radius) {
+    const borderRadius: Record<string, string> = {};
+    for (const m of radius.matchAll(/--ol-r(?:-(\w+))?\s*:/g)) {
+      const key = m[1];
+      if (key === "scale") continue;
+      borderRadius[key ?? "DEFAULT"] = key ? `var(--ol-r-${key})` : "var(--ol-r)";
+    }
+    if (Object.keys(borderRadius).length > 0) out.borderRadius = borderRadius;
+  }
+  const space = themeStyleBody(html, "space");
+  if (space) {
+    const map: Record<string, string> = {};
+    for (const m of space.matchAll(/--ol-space-(\w+)\s*:/g)) {
+      const raw = m[1];
+      if (raw === "scale") continue;
+      // var_name() de Rust codifica "0.5" como "0_5" (CSS no permite "." en
+      // nombres de custom property) — el REVERSO va aquí.
+      map[raw.replace(/_/g, ".")] = `var(--ol-space-${raw})`;
+    }
+    if (Object.keys(map).length > 0) {
+      out.padding = map;
+      out.margin = map;
+      out.gap = map;
+    }
+  }
+  const type = themeStyleBody(html, "type");
+  if (type) {
+    const fontSize: Record<string, [string, string]> = {};
+    for (const m of type.matchAll(/--ol-text-(\w+)\s*:/g)) {
+      const key = m[1];
+      if (key === "scale") continue;
+      fontSize[key] = [`var(--ol-text-${key})`, `var(--ol-lh-${key})`];
+    }
+    if (Object.keys(fontSize).length > 0) out.fontSize = fontSize;
+  }
+  return out;
+}
+
+/** Misma semántica que los scripts del editor (`Object.assign({}, template,
+ *  normalizador)`): el normalizador gana en SUS claves, el resto del extend
+ *  del template (via carrier) sobrevive intacto. */
+function mergeThemeExtends(
+  carrier: Record<string, unknown>,
+  html: string,
+): Record<string, unknown> {
+  const norm = normalizerExtends(html);
+  const merged: Record<string, unknown> = { ...carrier };
+  for (const [section, map] of Object.entries(norm)) {
+    const prior = merged[section];
+    merged[section] = {
+      ...(typeof prior === "object" && prior !== null ? (prior as object) : {}),
+      ...map,
+    };
+  }
+  return merged;
+}
+
 // Match the Tailwind Play CDN <script> in <head>. Group 1 captures everything
 // after `.com` up to the closing quote — used to detect the `?plugins=` variant.
 const CDN_SCRIPT_RE =
@@ -90,11 +174,15 @@ export async function optimizeHtmlForProduction(
 export async function bakeTailwind(html: string): Promise<OptimizeResult> {
   const m = CDN_SCRIPT_RE.exec(html);
   if (!m) {
-    // Sin CDN, el carrier no tiene quién lo lea y en runtime lanzaría
-    // ReferenceError (tailwind indefinido). Retirarlo (invariante #3: no
-    // shippear scripts inertes). Solo ocurre con input malformado — un
-    // template legítimo empareja config con el CDN.
-    return { html: stripTwCarrier(html), baked: false, cssBytes: 0 };
+    // Sin CDN, ni el carrier ni los scripts de tema tienen quién los lea (en
+    // runtime serían inertes). Retirarlos (invariante #3: no shippear scripts
+    // inertes). Solo ocurre con input malformado o ya horneado — un template
+    // legítimo empareja config con el CDN.
+    return {
+      html: stripTwCarrier(html).replace(THEME_SCRIPT_RE, ""),
+      baked: false,
+      cssBytes: 0,
+    };
   }
   // The `?plugins=forms,typography,…` variant pulls in official plugins whose
   // utilities we don't have installed — baking would silently drop them, so
@@ -107,8 +195,13 @@ export async function bakeTailwind(html: string): Promise<OptimizeResult> {
   try {
     // El carrier data-ol-tw (lib/publish/tw-config.ts) trae el theme.extend
     // validado del tailwind.config original del template — sin él, bg-ink /
-    // text-lime y compañía compilan a NADA (el bug lume/hovers).
-    css = await generateTailwindCss(html, readTwCarrier(html) ?? {});
+    // text-lime y compañía compilan a NADA (el bug lume/hovers). Encima va el
+    // mapeo utilities→tokens del normalizador (derivado de los <style
+    // data-ol-*>), para que los sliders Tier-3 vivan en la publicada.
+    css = await generateTailwindCss(
+      html,
+      mergeThemeExtends(readTwCarrier(html) ?? {}, html),
+    );
   } catch (err) {
     // eslint-disable-next-line no-console
     console.warn(
@@ -127,13 +220,19 @@ export async function bakeTailwind(html: string): Promise<OptimizeResult> {
   // and diverge from what the author saw. Function-form replacements so `$`
   // sequences in the CSS aren't read as regex backreferences.
   const styleTag = `<style data-tw-baked>\n${css}\n</style>`;
-  // El carrier ya cumplió (su extend está compilado en el CSS) — fuera del
-  // HTML final, igual que el CDN.
-  const withoutCdn = stripTwCarrier(html.replace(CDN_SCRIPT_RE, ""));
+  // El carrier y los scripts de tema ya cumplieron (su extend está compilado
+  // en el CSS) — fuera del HTML final, igual que el CDN. Los <style data-ol-*>
+  // se quedan: definen los tokens que el CSS horneado referencia.
+  const withoutCdn = stripTwCarrier(html.replace(CDN_SCRIPT_RE, "")).replace(
+    THEME_SCRIPT_RE,
+    "",
+  );
   const headClose = /<\/head\s*>/i;
   const out = headClose.test(withoutCdn)
     ? withoutCdn.replace(headClose, (close) => `${styleTag}${close}`)
-    : stripTwCarrier(html).replace(CDN_SCRIPT_RE, () => styleTag); // no </head>: fall back in-place
+    : stripTwCarrier(html)
+        .replace(THEME_SCRIPT_RE, "")
+        .replace(CDN_SCRIPT_RE, () => styleTag); // no </head>: fall back in-place
   return { html: out, baked: true, cssBytes: css.length };
 }
 
