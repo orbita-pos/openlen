@@ -17,7 +17,8 @@
       "recordar_preferencia": "好みを保存中",
       "publicar": "公開を準備中",
       "trabajar_en_pagina": "ページを切り替え中",
-      "verificar_diseno": "結果を確認中"
+      "verificar_diseno": "結果を確認中",
+      "redisenar_pagina": "ページを再デザイン中"
     },
     "action": {
       "on": "オン",

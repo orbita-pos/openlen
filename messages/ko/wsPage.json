@@ -17,7 +17,8 @@
       "recordar_preferencia": "선호 사항을 저장하는 중",
       "publicar": "게시를 준비하는 중",
       "trabajar_en_pagina": "페이지를 전환하는 중",
-      "verificar_diseno": "결과 확인 중"
+      "verificar_diseno": "결과 확인 중",
+      "redisenar_pagina": "페이지 재디자인 중"
     },
     "action": {
       "on": "켜짐",

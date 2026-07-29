@@ -134,9 +134,9 @@ describe("coverage map", () => {
     for (const id of covIds) expect(caseIds.has(id), `coverage sobra para ${id}`).toBe(true);
   });
 
-  it("covers all 16 catalog tools across the battery", () => {
+  it("covers all 17 catalog tools across the battery", () => {
     const toolNames = buildFunctionDeclarations().map((d) => d.name as string);
-    expect(toolNames.length).toBe(16);
+    expect(toolNames.length).toBe(17);
     const covered = new Set<string>(Object.values(coverage).flat());
     for (const tool of toolNames) {
       expect(covered.has(tool), `ninguna caso cubre "${tool}"`).toBe(true);

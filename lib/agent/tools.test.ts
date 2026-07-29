@@ -72,6 +72,7 @@ function makeDeps(
     userBrief: string | null;
     profileNumber: string | null;
     businessProfile: import("@/lib/business-profiles/types").BusinessProfileData | null;
+    redesignResult: import("@/lib/agent/redesign").RedesignOutcome;
   }>,
 ) {
   const store = {
@@ -89,6 +90,7 @@ function makeDeps(
     fetches: [] as string[],
     uploads: [] as { projectId: string; mime: string; name: string; size: number }[],
     imageEdits: [] as { userId: string; prompt: string }[],
+    redesigns: [] as import("@/lib/agent/redesign").RedesignInput[],
     userBrief: (overrides?.userBrief ?? null) as string | null,
     briefWrites: 0,
   };
@@ -110,6 +112,14 @@ function makeDeps(
     async saveProjectData(_p, _u, data) { store.data = data; store.saved.push(data); },
     async profileWhatsappNumber() { return overrides?.profileNumber ?? null; },
     async loadBusinessProfile() { return overrides?.businessProfile ?? null; },
+    async redesignDocument(_u, input) {
+      store.redesigns.push(input);
+      return overrides?.redesignResult ?? {
+        ok: true,
+        html: `<!doctype html><html lang="es"><head><title>Rediseñada</title></head><body><h1>Nuevo diseño</h1></body></html>`,
+        usage: { inputTokens: 10_000, outputTokens: 8_000, cachedTokens: 0 },
+      };
+    },
     async snapshotVersion(a) { store.versions.push(a.label); store.versionPages.push(a.page); },
     async provisionOwnerChat(_p, _u, opts) { store.provisioned += 1; store.provisionedOpts = opts; },
     async listAudioAssets() { return store.audioAssets; },
@@ -296,6 +306,84 @@ describe("activar_modulo", () => {
     });
     assert.equal(out.response.ok, true);
     assert.deepEqual(store.data.settings?.orders, { enabled: false, number: "5512345678" });
+  });
+});
+
+// P4 — rediseño total: el tool delega el modelo a deps.redesignDocument y el
+// resultado pasa por el MISMO embudo de persistencia que editar_pagina.
+describe("redisenar_pagina", () => {
+  const CALL = { direccion: "más moderna y oscura", resumen: "rediseño moderno" };
+
+  it("rediseña, persiste por el embudo y deja el Undo (Before AI edit)", async () => {
+    const { deps, store } = makeDeps();
+    const session = makeSession();
+    const out = await runAgentTool(session, deps, "redisenar_pagina", CALL);
+    assert.equal(out.response.ok, true);
+    assert.ok(out.updatedHtml?.includes("Nuevo diseño"));
+    assert.equal(out.action?.tool, "redisenar_pagina");
+    // el embudo corrió: se guardó data y hay snapshot previo + etiquetado
+    assert.equal(store.saved.length, 1);
+    assert.ok(store.versions.some((v) => v === "Before AI edit"));
+    assert.ok(store.versions.some((v) => v.startsWith("Rediseño:")));
+    // el motor recibió el documento ACTUAL (no el etiquetado con op-ids)
+    assert.equal(store.redesigns.length, 1);
+    assert.ok(store.redesigns[0].html.includes("Tacos El Güero") || store.redesigns[0].html.includes("<h1"));
+    assert.ok(!store.redesigns[0].html.includes("data-op-id"));
+    // session re-etiquetada para retoques posteriores
+    assert.ok(session.taggedHtml.includes("Nuevo diseño"));
+  });
+
+  it("UNA por turno — la segunda se rechaza con guía", async () => {
+    const { deps } = makeDeps();
+    const session = makeSession();
+    await runAgentTool(session, deps, "redisenar_pagina", CALL);
+    const out = await runAgentTool(session, deps, "redisenar_pagina", CALL);
+    assert.equal(out.response.ok, false);
+    assert.match(String(out.response.error), /ya rediseñaste/);
+  });
+
+  it("si el modelo falla, no se guarda NADA", async () => {
+    const { deps, store } = makeDeps({ redesignResult: { ok: false, error: "Gemini 503" } });
+    const out = await runAgentTool(makeSession(), deps, "redisenar_pagina", CALL);
+    assert.equal(out.response.ok, false);
+    assert.equal(store.saved.length, 0);
+    assert.equal(store.versions.length, 0);
+  });
+
+  it("un rediseño con data-slot-path se rechaza y no persiste (guard del embudo)", async () => {
+    const { deps, store } = makeDeps({
+      redesignResult: {
+        ok: true,
+        html: '<!doctype html><html><body><div data-slot-path="x">hola</div>' + "x".repeat(2000) + "</body></html>",
+        usage: { inputTokens: 1, outputTokens: 1, cachedTokens: 0 },
+      },
+    });
+    const out = await runAgentTool(makeSession(), deps, "redisenar_pagina", CALL);
+    assert.equal(out.response.ok, false);
+    assert.match(String(out.response.error), /marcador reservado/);
+    assert.equal(store.saved.length, 0);
+  });
+
+  it("sin direccion → error accionable", async () => {
+    const { deps } = makeDeps();
+    const out = await runAgentTool(makeSession(), deps, "redisenar_pagina", { resumen: "x" });
+    assert.equal(out.response.ok, false);
+    assert.match(String(out.response.error), /direccion/);
+  });
+
+  it("el motor recibe el negocio del perfil (hechos reales para el rediseño)", async () => {
+    const { deps, store } = makeDeps({
+      businessProfile: {
+        business_name: "Tacos El Güero", industry: "taquería",
+        tagline_es: null, tagline_en: null, pitch: null, hero_keyword: null,
+        features: [], pricing: [], testimonials: [], cta_primary: null,
+        cta_secondary: null, faq_questions: [], language_detected: null,
+        contact: { whatsapp: "6671234567", phone: null, email: null, address: null, socials: null },
+      },
+    });
+    await runAgentTool(makeSession(), deps, "redisenar_pagina", CALL);
+    const negocio = store.redesigns[0].negocio as Record<string, unknown>;
+    assert.equal(negocio?.nombre, "Tacos El Güero");
   });
 });
 

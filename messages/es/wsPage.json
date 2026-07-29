@@ -17,7 +17,8 @@
       "recordar_preferencia": "Guardando preferencia",
       "publicar": "Preparando publicación",
       "trabajar_en_pagina": "Cambiando de página",
-      "verificar_diseno": "Revisando el resultado"
+      "verificar_diseno": "Revisando el resultado",
+      "redisenar_pagina": "Rediseñando la página"
     },
     "action": {
       "on": "Encendido",

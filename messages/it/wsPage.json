@@ -17,7 +17,8 @@
       "recordar_preferencia": "Salvataggio della preferenza",
       "publicar": "Preparazione della pubblicazione",
       "trabajar_en_pagina": "Cambio di pagina",
-      "verificar_diseno": "Verifica del risultato"
+      "verificar_diseno": "Verifica del risultato",
+      "redisenar_pagina": "Riprogettazione della pagina"
     },
     "action": {
       "on": "Attivo",

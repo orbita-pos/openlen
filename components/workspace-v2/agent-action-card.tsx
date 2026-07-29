@@ -30,6 +30,7 @@ const KNOWN_TOOLS = new Set([
   "publicar",
   "trabajar_en_pagina",
   "verificar_diseno",
+  "redisenar_pagina",
 ]);
 
 // F4-T8 i18n sweep: `summary` is otherwise an opaque identifier (a module

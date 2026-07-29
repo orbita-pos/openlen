@@ -51,6 +51,8 @@ import { createVersion, type VersionSource } from "@/lib/projects/versions";
 import { projectBusinessProfile, projectWhatsappDefault } from "@/lib/business-profiles/whatsapp-default";
 import type { BusinessProfileData } from "@/lib/business-profiles/types";
 import { summarizeBusinessForAgent } from "@/lib/agent/business";
+import { redesignWithGemini, type RedesignInput, type RedesignOutcome } from "@/lib/agent/redesign";
+import { resolveAIProvider } from "@/lib/ai-provider";
 import { ensurePageMeta } from "@/lib/publish/ensure-page-meta";
 import { liveDataEnabled } from "@/lib/publish/kill-switches";
 import { isPublishLocale } from "@/lib/publish/publish-locales";
@@ -98,6 +100,10 @@ export interface AgentDeps {
    *  ESTADO `negocio` block so the agent knows the owner's real name / rubro /
    *  contact / links instead of asking or inventing. Null when no profile. */
   loadBusinessProfile(projectId: string, userId: string): Promise<BusinessProfileData | null>;
+  /** P4 — full-document redesign (one big Gemini call, charged by measured
+   *  tokens like editImage). Injected so tools.test.ts fakes it without the
+   *  network; realDeps wires redesignWithGemini. */
+  redesignDocument(userId: string, input: RedesignInput): Promise<RedesignOutcome>;
   snapshotVersion(args: {
     projectId: string;
     html: string;
@@ -216,6 +222,13 @@ export function realDeps(): AgentDeps {
     async loadBusinessProfile(projectId, userId) {
       return projectBusinessProfile(projectId, userId);
     },
+    async redesignDocument(userId, input) {
+      const p = resolveAIProvider("gemini-flash");
+      if (!p.key) return { ok: false, error: "GEMINI_API_KEY no configurada" };
+      return redesignWithGemini(input, p.model, p.key, {
+        debit: (cost) => debitCredits(userId, cost),
+      });
+    },
     async snapshotVersion(args) {
       // Best-effort, same as the ai-design route: a snapshot failure must
       // never break the tool call that produced real, saved output.
@@ -327,6 +340,11 @@ export interface AgentSession {
   /** Successful editar_imagen calls so far this request. The route inits it to
    *  0; the tool caps it at 1 per turn (each edit is a paid Gemini image op). */
   imageEditsThisTurn: number;
+  /** P4 — successful redisenar_pagina calls this request. Optional so existing
+   *  session constructors keep working; the tool treats absent as 0 and caps
+   *  at 1 (a redesign is one big paid call AND a whole-document rewrite —
+   *  two in one turn means the model is flailing, not designing). */
+  redesignsThisTurn?: number;
   /** elegir_foto calls so far this request. Read-only + exempt from the action
    *  budget, but the curated catalog is finite: after the 2nd empty result the
    *  tool tells the model to pivot instead of retrying variants, and a hard
@@ -884,6 +902,74 @@ async function persistHtmlChange(
   session.taggedHtml = tagWithOpIds(finalHtml).taggedHtml;
 
   return { ok: true, finalHtml, ...(aviso ? { aviso } : {}) };
+}
+
+// P4 — rediseño total del documento activo. Una llamada grande de modelo
+// (deps.redesignDocument) + el MISMO embudo de persistencia de toda edición:
+// persistHtmlChange da el guard de marcadores, sanitize, normalize,
+// ensurePageMeta, los DOS snapshots (el "Before AI edit" es el Undo del
+// usuario) y el aviso de conductas. Los ojos (verifyTurn) juzgan el resultado
+// al cierre del turno como con cualquier mutación.
+async function toolRedisenarPagina(
+  session: AgentSession,
+  deps: AgentDeps,
+  args: Record<string, unknown>,
+): Promise<ToolOutcome> {
+  const direccion = typeof args.direccion === "string" ? args.direccion.trim() : "";
+  const resumen = typeof args.resumen === "string" ? args.resumen : direccion.slice(0, 60);
+  if (!direccion) {
+    return { response: { ok: false, error: "falta direccion — describe el rediseño que pidió el usuario" } };
+  }
+  if ((session.redesignsThisTurn ?? 0) >= 1) {
+    return {
+      response: {
+        ok: false,
+        error:
+          "ya rediseñaste la página este turno. Ajusta lo que falte con editar_pagina (leer_estado incluir_documento=true para ids frescos), o dile al usuario que pida otro rediseño en un mensaje nuevo.",
+      },
+    };
+  }
+
+  const row = await deps.loadProject(session.projectId, session.userId);
+  if (!row) return { response: { ok: false, error: "proyecto no encontrado" } };
+  const current = activeHtml(row.data, session.page);
+  if (!current) return { response: { ok: false, error: "el documento activo está vacío" } };
+
+  const negocio = summarizeBusinessForAgent(
+    await deps.loadBusinessProfile(session.projectId, session.userId),
+  );
+
+  const redesigned = await deps.redesignDocument(session.userId, {
+    html: current,
+    direccion,
+    negocio,
+    brief: row.userBrief,
+  });
+  if (!redesigned.ok) {
+    return { response: { ok: false, error: redesigned.error } };
+  }
+
+  const persisted = await persistHtmlChange(
+    session,
+    deps,
+    redesigned.html,
+    `Rediseño: ${direccion.slice(0, 60)}`,
+  );
+  if (!persisted.ok) {
+    return { response: { ok: false, error: persisted.error } };
+  }
+
+  session.redesignsThisTurn = (session.redesignsThisTurn ?? 0) + 1;
+  return {
+    response: {
+      ok: true,
+      nota: "rediseño aplicado; los data-op-id cambiaron — usa leer_estado incluir_documento=true antes de editar encima",
+      ...(persisted.aviso ? { aviso: persisted.aviso } : {}),
+    },
+    action: { tool: "redisenar_pagina", ok: true, summary: resumen },
+    updatedHtml: persisted.finalHtml,
+    page: session.page,
+  };
 }
 
 async function toolEditarPagina(
@@ -1682,6 +1768,8 @@ export async function runAgentTool(
         return await toolActivarModulo(session, deps, args);
       case "editar_pagina":
         return await toolEditarPagina(session, deps, args);
+      case "redisenar_pagina":
+        return await toolRedisenarPagina(session, deps, args);
       case "cambiar_tema":
         return await toolCambiarTema(session, deps, args);
       case "aplicar_tematica":

@@ -77,6 +77,7 @@ function makeDeps(
     },
     async profileWhatsappNumber() { return null; },
     async loadBusinessProfile() { return null; },
+    async redesignDocument() { return { ok: false, error: "no usado en estos tests" }; },
     async snapshotVersion() {},
     async provisionOwnerChat() {},
     async listAudioAssets() {

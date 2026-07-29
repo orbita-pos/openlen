@@ -428,6 +428,28 @@ export const EVAL_CASES: EvalCase[] = [
       (Object.keys(ctx.data.pages ?? {}).length >= 1 ? null : "no se creó la página de reservas"),
   },
   {
+    // P4 — el rediseño total tiene su propia herramienta: el pedido de
+    // "cámbiale todo el estilo" debe ir a redisenar_pagina (no a un tema ni a
+    // una cadena de editar_pagina), el documento debe cambiar de verdad, y el
+    // hecho clave del fixture (el nombre del negocio en el h1) sobrevive.
+    id: "rediseno-total",
+    prompt:
+      "rediséñame la página completa: quiero un estilo mucho más moderno y minimalista, cámbiale todo el layout",
+    assert: (ctx) => {
+      const clean = completedCleanly(ctx);
+      if (clean) return clean;
+      if (!actionDone(ctx.events, "redisenar_pagina")) {
+        return "no usó redisenar_pagina para un pedido de rediseño total";
+      }
+      if (!ctx.data.html || ctx.data.html.length < 2000) {
+        return "el documento rediseñado quedó vacío o diminuto";
+      }
+      return /mi negocio/i.test(ctx.data.html)
+        ? null
+        : "el nombre del negocio (Mi Negocio) no sobrevivió al rediseño";
+    },
+  },
+  {
     id: "editar-titular-exacto",
     prompt: 'cambia el título principal a exactamente esto: «Zorros Naranjas 1998»',
     assert: (ctx) =>
@@ -1086,6 +1108,7 @@ export const EVAL_CASES: EvalCase[] = [
 // It's listed here solely so the "leer_estado is covered" box in the shape
 // test is checked truthfully rather than by omission elsewhere.
 export const coverage: Record<string, string[]> = {
+  "rediseno-total": ["redisenar_pagina"],
   "activar-reservas": ["activar_modulo"],
   "activar-pedidos": ["activar_modulo"],
   "activar-whatsapp": ["activar_modulo"],

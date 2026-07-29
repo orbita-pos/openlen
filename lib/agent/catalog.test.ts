@@ -10,6 +10,7 @@ describe("buildFunctionDeclarations", () => {
     expect(names).toEqual([
       "leer_estado",
       "editar_pagina",
+      "redisenar_pagina",
       "activar_modulo",
       "cambiar_motion",
       "poner_musica",

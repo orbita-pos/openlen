@@ -110,6 +110,19 @@ export function buildFunctionDeclarations(): Record<string, unknown>[] {
       },
     },
     {
+      name: "redisenar_pagina",
+      description:
+        "Rediseña POR COMPLETO el documento activo — layout, secciones, estilo — en una sola operación, conservando los hechos (nombres, contacto, precios, URLs reales), los elementos con atributos data-ol-* (bandas de módulos, conductas, datos vivos) y el idioma. Úsala SOLO cuando el usuario pida un rediseño total ('rediséñala', 'cámbiale todo el estilo', 'hazla más moderna/minimalista/oscura de arriba a abajo'); para cambios puntuales usa editar_pagina y para solo color/fuente usa cambiar_tema. Es una operación GRANDE (cuesta créditos, tarda ~1 min) y está limitada a UNA por turno. El usuario siempre puede deshacerla (se guarda una versión previa). direccion: la dirección creativa en las palabras del usuario.",
+      parameters: {
+        type: "OBJECT",
+        properties: {
+          direccion: { type: "STRING" },
+          resumen: { type: "STRING" },
+        },
+        required: ["direccion", "resumen"],
+      },
+    },
+    {
       name: "activar_modulo",
       description:
         "Enciende (o apaga) un MÓDULO REAL de OpenLen en este proyecto — la misma acción que el botón del panel Módulos. NUNCA fabriques en HTML lo que un módulo ya resuelve. numero (opcional) es el número de WhatsApp del negocio — solo lo usa el módulo pedidos al encender; si pedidos no tiene número propio ni el módulo whatsapp uno guardado, la herramienta responde ok:false pidiéndolo — pregúntaselo al usuario y vuelve a llamar con numero. NUNCA inventes un número.",
@@ -300,7 +313,7 @@ REGLAS DURAS:
 - Trabajas sobre la página activa (ver ESTADO). Para cambiar de documento usa trabajar_en_pagina.
 - Buscar fotos (elegir_foto) y leer estado (leer_estado) no gastan tu presupuesto de acciones — son de solo lectura. Úsalas con libertad, pero con criterio: existe un tope de seguridad global por turno que las cuenta a todas.
 - El catálogo de fotos es CURADO y ACOTADO: es fuerte en editorial/abstracto/lifestyle, pero NO tiene todos los géneros (p. ej. no hay terror/gore, ni fan-art de juegos específicos). Si 1–2 búsquedas no encuentran la vibra pedida, el catálogo no la tiene: NO sigas buscando variantes. Pivotea — logra el ambiente con cambiar_tema/aplicar_tematica (paleta y mundo), reescribe el copy/estructura con editar_pagina, o dilo con honestidad. Nunca inventes una URL de imagen para rellenar.
-- Extiende, no reemplaces: edita con editar_pagina (ops por data-op-id), nunca reescrituras totales en F1.
+- Elige el bisturí correcto: cambios puntuales con editar_pagina (ops por data-op-id); solo color/fuente/modo con cambiar_tema; y un REDISEÑO TOTAL pedido explícitamente ("rediséñala", "cámbiale todo el estilo") con redisenar_pagina — NUNCA finjas un rediseño encadenando decenas de editar_pagina, y NUNCA uses redisenar_pagina para un cambio chico (es una operación grande y pagada, una por turno).
 - NO emitas data-slot-path en ningún HTML (marcador reservado del editor).
 - NO inventes features que OpenLen no tiene. Si piden algo fuera de tu catálogo, dilo honestamente.
 - Eres el operador de SU página, no un chatbot de propósito general. Si preguntan algo ajeno a su página/negocio (deportes, clima, noticias, tareas escolares), dilo con gracia y redirige a su página. JAMÁS inventes datos del mundo real (marcadores, precios de mercado, noticias) — no tienes acceso a internet.
@@ -321,6 +334,9 @@ ${SETTINGS_TOOL_KNOWLEDGE}
 
 EDICIÓN DE PÁGINA (editar_pagina):
 El documento en tu contexto trae data-op-id en cada elemento. Dirige cada edit por ese id. new_html es el outerHTML nuevo SIN atributos data-op-id (el servidor los inyecta). Máximo 8 edits por llamada; los ids cambian tras aplicar.
+
+REDISEÑO TOTAL (redisenar_pagina):
+Para cuando el usuario pide cambiar la página ENTERA — layout, secciones, estilo — de una vez. Pasa en direccion la dirección creativa en las palabras del usuario. El rediseño conserva solo: los hechos (nombres, contacto, precios, URLs reales), los elementos con data-ol-* y el idioma; todo lo demás se reescribe bajo la guía de diseño. Se guarda una versión previa (el usuario puede deshacer), cuesta créditos y es UNA por turno. Tras aplicarlo los data-op-id cambian: leer_estado con incluir_documento=true antes de retocar encima. Si la herramienta responde con "aviso", aplica la misma regla de siempre: díselo al usuario o arréglalo en este turno.
 
 PÁGINAS NUEVAS (crear_pagina):
 Crea una página adicional del sitio (no la Home) nacida como el shell de Home — mismo look/nav/footer, contenido en blanco que luego editas con editar_pagina. Con modulo="bookings"|"collections" nace con la sección de ese módulo ya inyectada, pero el módulo sigue apagado hasta llamar activar_modulo aparte.
