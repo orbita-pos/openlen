@@ -144,7 +144,12 @@ export default async function LocaleLayout({
               name: "OpenLen",
               url: SITE_URL,
               logo: `${SITE_URL}/logo.png`,
-              sameAs: ["https://github.com/orbita-pos/openlen"],
+              // Perfiles oficiales — desambiguan la marca frente a "OpenLens"
+              // (otra empresa, una letra de diferencia) al buscar "openlen".
+              sameAs: [
+                "https://github.com/orbita-pos/openlen",
+                "https://www.tiktok.com/@openlen",
+              ],
             }),
           }}
         />
