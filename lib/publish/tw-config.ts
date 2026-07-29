@@ -157,6 +157,65 @@ function scanObjectLiteral(src: string, start: number): string | null {
   return null;
 }
 
+// JSON5 solo acepta IdentifierName o string como clave — {400:'#f87171'} es
+// JS válido pero JSON5 inválido, y TODA escala Tailwind real se escribe así
+// (bug 2026-07-29: la paleta se perdía en silencio; los tests solo cubrían
+// claves planas tipo ink/lime). Este pase entrecomilla claves numéricas
+// desnudas con los MISMOS modos de string/comentario que scanObjectLiteral,
+// para no tocar números en posición de valor ni dentro de strings. Solo se
+// citan formas cuyo ToString de JS es identidad (400, 1.5, 0.5 — sin ceros a
+// la izquierda, sin .5, sin hex/exponente: esas divergen y quedan fuera).
+const NUMERIC_KEY_RE = /^(?:0|[1-9]\d*)(?:\.\d+)?$/;
+
+function quoteNumericKeys(src: string): string {
+  let out = "";
+  let i = 0;
+  type Mode = "code" | "squote" | "dquote" | "line" | "block";
+  let mode: Mode = "code";
+  let prevCode = ""; // último char significativo visto en modo code
+  while (i < src.length) {
+    const c = src[i];
+    const next = src[i + 1];
+    if (mode === "code") {
+      if (c === "'") { mode = "squote"; out += c; i++; continue; }
+      if (c === '"') { mode = "dquote"; out += c; i++; continue; }
+      if (c === "/" && next === "/") { mode = "line"; out += "//"; i += 2; continue; }
+      if (c === "/" && next === "*") { mode = "block"; out += "/*"; i += 2; continue; }
+      if (/\d/.test(c) && (prevCode === "{" || prevCode === ",")) {
+        let j = i;
+        while (j < src.length && /[\d.]/.test(src[j])) j++;
+        const num = src.slice(i, j);
+        let k = j;
+        while (k < src.length && /\s/.test(src[k])) k++;
+        if (src[k] === ":" && NUMERIC_KEY_RE.test(num)) {
+          out += `"${num}"`;
+          prevCode = '"';
+          i = j;
+          continue;
+        }
+      }
+      out += c;
+      if (!/\s/.test(c)) prevCode = c;
+      i++;
+      continue;
+    }
+    out += c;
+    if (mode === "squote") {
+      if (c === "\\") { out += next ?? ""; i++; }
+      else if (c === "'") mode = "code";
+    } else if (mode === "dquote") {
+      if (c === "\\") { out += next ?? ""; i++; }
+      else if (c === '"') mode = "code";
+    } else if (mode === "line") {
+      if (c === "\n") mode = "code";
+    } else if (mode === "block") {
+      if (c === "*" && next === "/") { out += "/"; i++; mode = "code"; }
+    }
+    i++;
+  }
+  return out;
+}
+
 const CONFIG_ASSIGN_RE = /(?:^|[\s;])tailwind\.config\s*=/;
 // Carrier reconocible sobre un openTag ya aislado (no sobre el HTML entero:
 // un `([\s\S]*?)</script>` global retrocede O(n²) con muchos <script sin
@@ -237,27 +296,48 @@ function readCarrierBody(body: string): TwExtend | null {
   }
 }
 
-function parseConfigScript(body: string): TwExtend | null {
+// Por qué se descartó una config presente — va al warn de telemetría. La
+// pérdida silenciosa es lo que dejó vivir el bug de claves numéricas meses.
+type ParseFail =
+  | "sin-objeto-literal"
+  | "codigo-alrededor-de-la-asignacion"
+  | "json5-imparseable"
+  | "extend-invalido";
+
+function parseConfigScript(body: string): {
+  extend: TwExtend | null;
+  fail: ParseFail | null;
+} {
   const assign = CONFIG_ASSIGN_RE.exec(body);
-  if (!assign) return null;
+  if (!assign) return { extend: null, fail: null };
   const braceStart = body.indexOf("{", assign.index + assign[0].length);
-  if (braceStart === -1) return null;
+  if (braceStart === -1) return { extend: null, fail: "sin-objeto-literal" };
   const literal = scanObjectLiteral(body, braceStart);
-  if (literal === null) return null;
+  if (literal === null) return { extend: null, fail: "sin-objeto-literal" };
   // Si tras el objeto hay más código que un cierre trivial, la config hace
   // algo más que declarar datos → inválida (p.ej. `tailwind.config={…}; hack()`).
   const tail = body.slice(braceStart + literal.length).replace(/[\s;]/g, "");
-  if (tail.length > 0) return null;
+  if (tail.length > 0) return { extend: null, fail: "codigo-alrededor-de-la-asignacion" };
   const head = body.slice(0, assign.index).replace(/[\s;]/g, "");
-  if (head.length > 0) return null;
+  if (head.length > 0) return { extend: null, fail: "codigo-alrededor-de-la-asignacion" };
   let parsed: unknown;
   try {
     parsed = JSON5.parse(literal);
   } catch {
-    return null;
+    // Reintento con claves numéricas citadas ({400:…} → {"400":…}). Solo toca
+    // inputs que YA fallaron el parse directo, así que un literal que hoy
+    // funciona no puede regresionar por este camino.
+    try {
+      parsed = JSON5.parse(quoteNumericKeys(literal));
+    } catch {
+      return { extend: null, fail: "json5-imparseable" };
+    }
   }
   const theme = (parsed as { theme?: { extend?: unknown } })?.theme;
-  return validateExtend(theme?.extend);
+  const extend = validateExtend(theme?.extend);
+  return extend === null
+    ? { extend: null, fail: "extend-invalido" }
+    : { extend, fail: null };
 }
 
 /**
@@ -269,6 +349,10 @@ function parseConfigScript(body: string): TwExtend | null {
  */
 export function extractTwConfig(html: string): ExtractResult {
   let extend: TwExtend | null = null;
+  // Telemetría: una config PRESENTE que se descarta es una paleta perdida sin
+  // rastro (así duró meses el bug de claves numéricas). Un solo warn por
+  // documento — un doc hostil con miles de scripts no debe spamear el log.
+  let discarded: ParseFail | null = null;
 
   const { out, touched } = rewriteInlineScripts(html, (openTag, body) => {
     // Solo tocamos el carrier propio y los scripts de config del template;
@@ -279,11 +363,24 @@ export function extractTwConfig(html: string): ExtractResult {
       return "";
     }
     if (CONFIG_ASSIGN_RE.test(body)) {
-      if (extend === null) extend = parseConfigScript(body);
+      if (extend === null) {
+        const r = parseConfigScript(body);
+        extend = r.extend;
+        if (r.extend === null && r.fail !== null && discarded === null) {
+          discarded = r.fail;
+        }
+      }
       return "";
     }
     return null; // no es config → preservar byte-exacto
   });
+
+  if (extend === null && discarded !== null) {
+    // eslint-disable-next-line no-console
+    console.warn(
+      `[tw-config] tailwind.config presente pero descartado (${discarded}) — la paleta del documento se pierde`,
+    );
+  }
 
   return { html: touched ? out : html, extend };
 }

@@ -1,4 +1,4 @@
-import { describe, expect, test } from "vitest";
+import { describe, expect, test, vi } from "vitest";
 import {
   extractTwConfig,
   injectTwCarrier,
@@ -172,6 +172,85 @@ describe("seguridad (hallazgos del security review 2026-07-17)", () => {
     const r = extractTwConfig(src);
     expect(r.html).toContain("<p>a</p>");
     expect(() => extractTwConfig(src)).not.toThrow();
+  });
+});
+
+describe("claves numéricas sin comillas (bug 2026-07-29: JSON5 las rechaza)", () => {
+  test("escala numérica sin comillas ({400:...}) — la forma de TODA paleta real", () => {
+    const src = `<script>tailwind.config = { theme: { extend: { colors: { blood: { 400: '#f87171', 500: '#ef4444', 600: '#dc2626' } } } } }</script>`;
+    const r = extractTwConfig(src);
+    expect(r.extend).not.toBeNull();
+    const blood = (r.extend!.colors as Record<string, Record<string, string>>).blood;
+    expect(blood["400"]).toBe("#f87171");
+    expect(blood["500"]).toBe("#ef4444");
+    expect(blood["600"]).toBe("#dc2626");
+    expect(r.html).not.toContain("tailwind.config");
+  });
+
+  test("mezcla de claves planas y numéricas (+ decimales tipo spacing) en el mismo objeto", () => {
+    const src = `<script>tailwind.config = { theme: { extend: { colors: { ink: '#0a0a0a', blood: { 500: '#ef4444' } }, spacing: { 1.5: '0.375rem', 18: '4.5rem' } } } }</script>`;
+    const r = extractTwConfig(src);
+    expect(r.extend).not.toBeNull();
+    expect((r.extend!.colors as Record<string, unknown>).ink).toBe("#0a0a0a");
+    expect((r.extend!.colors as Record<string, Record<string, string>>).blood["500"]).toBe("#ef4444");
+    expect((r.extend!.spacing as Record<string, unknown>)["1.5"]).toBe("0.375rem");
+    expect((r.extend!.spacing as Record<string, unknown>)["18"]).toBe("4.5rem");
+  });
+
+  test("una entrada mala NO tumba el config: hermanas planas y numéricas sobreviven", () => {
+    const src = `<script>tailwind.config = { theme: { extend: { colors: { good: '#123456', evil: 'javascript:alert(1)', blood: { 400: '#f87171' } } } } }</script>`;
+    const r = extractTwConfig(src);
+    expect(r.extend).not.toBeNull();
+    const colors = r.extend!.colors as Record<string, unknown>;
+    expect(colors.good).toBe("#123456");
+    expect(colors.evil).toBeUndefined();
+    expect((colors.blood as Record<string, string>)["400"]).toBe("#f87171");
+  });
+
+  test("números en posición de VALOR o dentro de strings NO se tocan", () => {
+    const src = `<script>tailwind.config = { theme: { extend: { zIndex: { modal: 400 }, fontFamily: { display: ['A 400, "B"', 'sans-serif'] }, colors: { blood: { 400: '#f87171' }, note: 'usa {400: x} literal' } } } }</script>`;
+    const r = extractTwConfig(src);
+    expect(r.extend).not.toBeNull();
+    expect((r.extend!.zIndex as Record<string, unknown>).modal).toBe(400);
+    expect((r.extend!.fontFamily as Record<string, unknown>).display).toEqual(['A 400, "B"', "sans-serif"]);
+    expect((r.extend!.colors as Record<string, unknown>).note).toBe("usa {400: x} literal");
+    expect((r.extend!.colors as Record<string, Record<string, string>>).blood["400"]).toBe("#f87171");
+  });
+});
+
+describe("telemetría de la pérdida silenciosa (config presente pero descartado)", () => {
+  test("config imparseable → console.warn con tag [tw-config]", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      const src = `<script>const c={ink:'#0a0a0a'};tailwind.config={theme:{extend:{colors:c}}}</script>`;
+      expect(extractTwConfig(src).extend).toBeNull();
+      expect(warn).toHaveBeenCalledTimes(1);
+      expect(String(warn.mock.calls[0]?.[0])).toContain("[tw-config]");
+    } finally {
+      warn.mockRestore();
+    }
+  });
+
+  test("config válida (incluida numérica) NO loguea", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      const src = `<script>tailwind.config={theme:{extend:{colors:{blood:{400:'#f87171'}}}}}</script>`;
+      expect(extractTwConfig(src).extend).not.toBeNull();
+      expect(warn).not.toHaveBeenCalled();
+    } finally {
+      warn.mockRestore();
+    }
+  });
+
+  test("se loguea UNA vez por documento aunque fallen varios scripts", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      const bad = `<script>const a=1;tailwind.config={theme:{}}</script>`;
+      expect(extractTwConfig(bad + bad + bad).extend).toBeNull();
+      expect(warn).toHaveBeenCalledTimes(1);
+    } finally {
+      warn.mockRestore();
+    }
   });
 });
 
