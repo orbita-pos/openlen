@@ -35,6 +35,7 @@ export interface EditorModulesPreviewCfg {
     items: ItemRow[];
     layout: "grid" | "list";
     ordersNumber?: string | null;
+    theme?: "light" | "dark";
   } | null;
   /** Script-driven widgets can't run in the canvas — with the module on and
    *  its band present, a static SKELETON previews the shape instead, so a
@@ -124,7 +125,7 @@ export function bandWithPreview(
   bandHtml: string,
   opts: {
     docHtml: string;
-    collections?: { items: ItemRow[]; layout: "grid" | "list"; ordersNumber?: string | null } | null;
+    collections?: { items: ItemRow[]; layout: "grid" | "list"; ordersNumber?: string | null; theme?: "light" | "dark" } | null;
   },
 ): string {
   const es = !/<html[^>]*\blang=["']?en/i.test(opts.docHtml);
@@ -140,6 +141,7 @@ export function bandWithPreview(
       items: col.items,
       layout: col.layout,
       orders: col.ordersNumber ? { number: col.ordersNumber } : null,
+      theme: col.theme,
     });
     const stamped = widget.replace(
       "data-ol-collection-widget",
@@ -164,6 +166,7 @@ export function injectEditorModulesPreview(
         items: col.items,
         layout: col.layout,
         orders: col.ordersNumber ? { number: col.ordersNumber } : null,
+        theme: col.theme,
       });
       const bandOpen = /<(section|div)[^>]*\bdata-ol-collection-section\b[^>]*>/i.exec(out);
       if (widget && bandOpen) {

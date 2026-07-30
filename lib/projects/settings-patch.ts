@@ -69,7 +69,7 @@ interface PatchBody {
     theme?: "light" | "dark";
   };
   /** Collections module switch. Merged into settings.collections. */
-  collections?: { enabled?: boolean };
+  collections?: { enabled?: boolean; theme?: "light" | "dark" };
   /** WhatsApp button. Merged into settings.whatsapp. Takes effect next publish. */
   whatsapp?: {
     enabled?: boolean;
@@ -238,6 +238,9 @@ export function validateSettingsPatch(
     }
     if ("enabled" in c && typeof c.enabled !== "boolean") {
       return { ok: false, message: "collections.enabled must be boolean" };
+    }
+    if ("theme" in c && c.theme !== undefined && c.theme !== "light" && c.theme !== "dark") {
+      return { ok: false, message: "collections.theme must be light|dark" };
     }
   }
   const hasWhatsapp = "whatsapp" in body;
@@ -570,6 +573,7 @@ export function applySettingsPatch(
     nextSettings.collections = {
       ...(data.settings?.collections ?? {}),
       ...("enabled" in body.collections ? { enabled: body.collections.enabled } : {}),
+      ...("theme" in body.collections ? { theme: body.collections.theme } : {}),
     };
   }
   if (hasWhatsapp && body.whatsapp) {

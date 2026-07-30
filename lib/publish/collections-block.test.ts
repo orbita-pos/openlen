@@ -220,3 +220,75 @@ describe("orders buttons (Pedidos por WhatsApp)", () => {
     expect(out).toContain(">+ Add<");
   });
 });
+
+// Tema de la cuadrícula (2026-07-30). Colecciones era el ÚNICO módulo con banda
+// sin noción de tema: sobre una página oscura las tarjetas salían blancas. El
+// acento siempre se detectó — lo que faltaba eran las SUPERFICIES.
+describe("collections theme", () => {
+  const RICH = () =>
+    item({ title: "Playera", subtitle: "Negro", description: "Algodón", badge: "Nueva" });
+
+  it("sin theme la salida es BYTE-IDÉNTICA a pedir light (nada churnea al republicar)", () => {
+    const base = bakeCollections(PAGE(PLACEHOLDER), { items: [RICH()], layout: "grid" });
+    const light = bakeCollections(PAGE(PLACEHOLDER), {
+      items: [RICH()],
+      layout: "grid",
+      theme: "light",
+    });
+    expect(light).toBe(base);
+  });
+
+  it("light conserva las superficies claras históricas", () => {
+    const out = bakeCollections(PAGE(PLACEHOLDER), { items: [RICH()], layout: "grid" });
+    expect(out).toContain("background:#fff;display:flex");
+    expect(out).toContain("color:#16181d;");
+    expect(out).toContain("rgba(23,18,14,.06)");
+  });
+
+  it("dark oscurece tarjeta, tinta y sombra — y NO deja la tarjeta blanca", () => {
+    const out = bakeCollections(PAGE(PLACEHOLDER), {
+      items: [RICH()],
+      layout: "grid",
+      theme: "dark",
+    });
+    expect(out).toContain("background:#1c1f24;display:flex"); // tarjeta
+    expect(out).toContain("color:#e8e8ea;"); // título
+    expect(out).toContain("color:#9aa0a8;"); // subtítulo
+    expect(out).toContain("color:#b3b9c1;"); // descripción
+    expect(out).toContain("0 0 0 1px #33363c"); // anillo en vez de sombra difusa
+    expect(out).not.toContain("background:#fff;display:flex");
+  });
+
+  it("dark también viste el hover del <style> (si no, la tarjeta parpadea a claro)", () => {
+    const out = bakeCollections(PAGE(PLACEHOLDER), {
+      items: [RICH()],
+      layout: "grid",
+      theme: "dark",
+    });
+    expect(out).toContain(".olc-card:hover{transform:translateY(-3px);box-shadow:0 0 0 1px #3d4148");
+    expect(out).not.toContain("rgba(23,18,14,.12)");
+  });
+
+  it("dark en list: el separador de filas se invierte a blanco translúcido", () => {
+    const out = bakeCollections(PAGE(PLACEHOLDER), {
+      items: [RICH(), RICH()],
+      layout: "list",
+      theme: "dark",
+    });
+    expect(out).toContain("border-bottom:1px solid rgba(255,255,255,.09)");
+    expect(out).not.toContain("border-bottom:1px solid rgba(0,0,0,.06)");
+  });
+
+  it("el acento de la página manda en AMBOS temas (el tema solo toca superficies)", () => {
+    const page = (inner: string) =>
+      `<html><head><style>:root{--ol-accent:#e8192c}</style></head><body>${inner}</body></html>`;
+    for (const theme of ["light", "dark"] as const) {
+      const out = bakeCollections(page(PLACEHOLDER), {
+        items: [RICH()],
+        layout: "grid",
+        theme,
+      });
+      expect(out).toContain("#e8192c");
+    }
+  });
+});

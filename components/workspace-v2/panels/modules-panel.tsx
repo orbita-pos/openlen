@@ -199,6 +199,7 @@ export function ModulesPanel({
   const bookingsAutoConfirm = bookingsSettings?.autoConfirm !== false;
   const bookingsReminders = bookingsSettings?.sendReminders !== false;
   const collectionsOn = collectionsSettings?.enabled === true;
+  const collectionsTheme = collectionsSettings?.theme ?? "light";
   const whatsappOn = whatsappSettings?.enabled === true;
   const ordersOn = ordersSettings?.enabled === true;
   const chatOn = chatSettings?.enabled === true;
@@ -764,6 +765,21 @@ export function ModulesPanel({
             status: collectionsPlacement,
             body: (
               <div className="space-y-2">
+                {/* Tema de la cuadrícula — mismas etiquetas que comments/bookings.
+                    Sin él, un catálogo sobre página oscura salía en tarjetas
+                    blancas (el acento sí se detecta; la superficie no). */}
+                <div className="space-y-1">
+                  <div className="text-[12px] font-medium fg-muted">{tw("modulesHub.theme")}</div>
+                  <Segment
+                    value={collectionsTheme}
+                    options={[
+                      { id: "light", label: tw("chat.themeLight") },
+                      { id: "dark", label: tw("chat.themeDark") },
+                    ]}
+                    disabled={colBusy}
+                    onPick={(v) => void updateCollections({ theme: v as "light" | "dark" })}
+                  />
+                </div>
                 <CardActions
                   onInsert={onInsertCollectionsSection ? () => { onInsertCollectionsSection(); setColInserted(true); } : undefined}
                   insertLabel={tcol("module.insert")}

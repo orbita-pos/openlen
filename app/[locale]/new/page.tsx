@@ -458,6 +458,7 @@ function NewV2Inner() {
     loadedProject?.settings?.music?.src,
     loadedProject?.settings?.bookings?.enabled,
     loadedProject?.settings?.comments?.enabled,
+    loadedProject?.settings?.collections?.theme,
   ]);
   const modulesPreview = useMemo<EditorModulesPreviewCfg | null>(() => {
     const st = loadedProject?.settings;
@@ -485,6 +486,7 @@ function NewV2Inner() {
             layout: colPayload.layout,
             ordersNumber:
               st?.orders?.enabled && st.orders.number ? st.orders.number : null,
+            theme: st?.collections?.theme,
           }
         : null,
       bookingsOn,
@@ -3191,13 +3193,19 @@ function NewV2Inner() {
                 loadedProject?.settings?.orders?.enabled && loadedProject.settings.orders.number
                   ? loadedProject.settings.orders.number
                   : null,
+              theme: loadedProject?.settings?.collections?.theme,
             }
           : null,
       }),
       nonce: insertNonceRef.current,
       sectionType: "collection",
     });
-  }, [loadedProject?.html, loadedProject?.settings?.orders, previewCollections]);
+  }, [
+    loadedProject?.html,
+    loadedProject?.settings?.orders,
+    loadedProject?.settings?.collections?.theme,
+    previewCollections,
+  ]);
   const insertBookingsSection = useCallback(() => {
     const lang = /<html[^>]*\blang=["']?es/i.test(loadedProject?.html ?? "") ? "es" : "en";
     insertNonceRef.current += 1;

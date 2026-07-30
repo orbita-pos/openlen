@@ -824,7 +824,7 @@ export async function publishProject(
   // Collections module: read the published items + layout at publish time so
   // the bake renders them as STATIC HTML (no runtime API). Off → undefined.
   let collectionsBake:
-    | { enabled: true; items: ItemRow[]; layout: "grid" | "list" }
+    | { enabled: true; items: ItemRow[]; layout: "grid" | "list"; theme?: "light" | "dark" }
     | undefined;
   if (project.data?.settings?.collections?.enabled) {
     const col = await getDefaultCollection(params.projectId);
@@ -833,6 +833,7 @@ export async function publishProject(
         enabled: true,
         items: await listItems(params.projectId, col.id, { includeArchived: false }),
         layout: col.layout,
+        theme: project.data.settings.collections.theme,
       };
     }
   }

@@ -22,8 +22,57 @@ const WIDGET_MARKER = "data-ol-collection-widget";
 const SECTION_MARKER = "data-ol-collection-section";
 
 const FALLBACK_ACCENT = "#16181d";
-const INK = "#16181d";
-const MUTED = "#6b7280";
+
+// Paleta de SUPERFICIE. El acento se detecta de la página (detectSiteAccent) y
+// siempre se respetó; lo que faltaba era esto: las superficies estaban escritas
+// a mano en claro, así que un catálogo sobre una página oscura salía en tarjetas
+// blancas — el único módulo con banda sin noción de tema (chat/comments/bookings
+// ya lo tenían). Los valores oscuros son los MISMOS de comments-widget.ts para
+// que dos módulos en la misma página no se vean de dos sitios distintos.
+interface Palette {
+  ink: string;
+  muted: string;
+  desc: string;
+  card: string;
+  cardShadow: string;
+  hoverShadow: string;
+  badgeOver: string;
+  badgeFlat: string;
+  imgBg: string;
+  rowBorder: string;
+}
+
+const LIGHT: Palette = {
+  ink: "#16181d",
+  muted: "#6b7280",
+  desc: "#52525b",
+  card: "#fff",
+  cardShadow: "0 2px 6px rgba(23,18,14,.06),0 12px 28px rgba(23,18,14,.07)",
+  hoverShadow: "0 4px 10px rgba(23,18,14,.08),0 20px 44px rgba(23,18,14,.12)",
+  badgeOver: "#fff",
+  badgeFlat: "#f3f3f6",
+  imgBg: "#f4f4f6",
+  rowBorder: "rgba(0,0,0,.06)",
+};
+
+// En oscuro la sombra difusa no se ve: el borde lo da un anillo con box-shadow
+// (no `border`, que sí movería el layout y rompería la paridad con el claro).
+const DARK: Palette = {
+  ink: "#e8e8ea",
+  muted: "#9aa0a8",
+  desc: "#b3b9c1",
+  card: "#1c1f24",
+  cardShadow: "0 0 0 1px #33363c,0 12px 28px rgba(0,0,0,.45)",
+  hoverShadow: "0 0 0 1px #3d4148,0 20px 44px rgba(0,0,0,.55)",
+  badgeOver: "#1c1f24",
+  badgeFlat: "#26292f",
+  imgBg: "#1c1f24",
+  rowBorder: "rgba(255,255,255,.09)",
+};
+
+function paletteFor(theme: "light" | "dark" | undefined): Palette {
+  return theme === "dark" ? DARK : LIGHT;
+}
 
 export interface CollectionsBakeConfig {
   items: ItemRow[];
@@ -32,6 +81,9 @@ export interface CollectionsBakeConfig {
    *  botón «Agregar» (data-ol-order-add) que el runtime del carrito opera.
    *  null/ausente = off → salida byte-idéntica a la histórica. */
   orders?: { number: string } | null;
+  /** settings.collections.theme — mismo patrón que comments/bookings/chat.
+   *  Ausente o "light" → salida byte-idéntica a la histórica. */
+  theme?: "light" | "dark";
 }
 
 function esc(s: string): string {
@@ -56,12 +108,12 @@ function safeImg(s: string | null): string | null {
 }
 
 
-function badgeHtml(badge: string | null, accent: string, overImage: boolean): string {
+function badgeHtml(badge: string | null, accent: string, overImage: boolean, p: Palette): string {
   if (!badge) return "";
   if (overImage) {
-    return `<span style="position:absolute;top:10px;left:10px;font-size:11px;font-weight:700;letter-spacing:.02em;padding:4px 10px;border-radius:999px;background:#fff;color:${accent};box-shadow:0 2px 8px rgba(0,0,0,.12);">${esc(badge)}</span>`;
+    return `<span style="position:absolute;top:10px;left:10px;font-size:11px;font-weight:700;letter-spacing:.02em;padding:4px 10px;border-radius:999px;background:${p.badgeOver};color:${accent};box-shadow:0 2px 8px rgba(0,0,0,.12);">${esc(badge)}</span>`;
   }
-  return `<span style="align-self:flex-start;font-size:11px;font-weight:600;letter-spacing:.02em;padding:3px 9px;border-radius:999px;background:#f3f3f6;color:${accent};">${esc(badge)}</span>`;
+  return `<span style="align-self:flex-start;font-size:11px;font-weight:600;letter-spacing:.02em;padding:3px 9px;border-radius:999px;background:${p.badgeFlat};color:${accent};">${esc(badge)}</span>`;
 }
 
 function ctaHtml(item: ItemRow, accent: string, fullWidth: boolean): string {
@@ -91,12 +143,15 @@ function orderButtonHtml(
 /** Foto 4:3, o —clave para catálogos nacidos de un Sheet sin fotos— un
  *  placeholder con gradiente del acento + la inicial del item, para que una
  *  tarjeta sin imagen se vea intencional y no como caja de texto vacía. */
-function mediaHtml(item: ItemRow, accent: string): string {
+function mediaHtml(item: ItemRow, accent: string, p: Palette): string {
   const src = safeImg(item.imageUrl);
+  // El gradiente del placeholder es el acento con ALFA (1f/40), así que compone
+  // sobre la tarjeta: en claro daba rosa pálido sobre #fff y en oscuro da el
+  // mismo acento apagado sobre #1c1f24. Por eso no lleva rama de tema.
   const media = src
-    ? `<img src="${esc(src)}" alt="${esc(item.title)}" loading="lazy" style="width:100%;aspect-ratio:4/3;object-fit:cover;display:block;background:#f4f4f6;">`
+    ? `<img src="${esc(src)}" alt="${esc(item.title)}" loading="lazy" style="width:100%;aspect-ratio:4/3;object-fit:cover;display:block;background:${p.imgBg};">`
     : `<div aria-hidden="true" style="width:100%;aspect-ratio:4/3;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,${accent}1f,${accent}40);color:${accent};font-size:54px;font-weight:800;font-family:Georgia,'Times New Roman',serif;">${esc((item.title.trim().charAt(0) || "•").toUpperCase())}</div>`;
-  return `<div style="position:relative;">${media}${badgeHtml(item.badge, accent, true)}</div>`;
+  return `<div style="position:relative;">${media}${badgeHtml(item.badge, accent, true, p)}</div>`;
 }
 
 function gridCard(
@@ -104,12 +159,13 @@ function gridCard(
   accent: string,
   orders: { number: string } | null | undefined,
   addLabel: string,
+  p: Palette,
 ): string {
   const hasCta = Boolean(item.ctaLabel && safeHref(item.ctaUrl));
   const price = item.priceDisplay
     ? `<div style="flex:0 0 auto;font-size:17px;font-weight:800;letter-spacing:-.01em;color:${accent};">${esc(item.priceDisplay)}</div>`
     : "";
-  return `<article class="olc-card" style="border:0;border-radius:18px;overflow:hidden;background:#fff;display:flex;flex-direction:column;box-shadow:0 2px 6px rgba(23,18,14,.06),0 12px 28px rgba(23,18,14,.07);">${mediaHtml(item, accent)}<div style="padding:15px 16px 16px;display:flex;flex-direction:column;gap:6px;flex:1;"><div style="display:flex;justify-content:space-between;gap:10px;align-items:baseline;"><h3 style="margin:0;font-size:16.5px;font-weight:700;line-height:1.25;color:${INK};">${esc(item.title)}</h3>${price}</div>${item.subtitle ? `<div style="font-size:12.5px;color:${MUTED};">${esc(item.subtitle)}</div>` : ""}${item.description ? `<p style="margin:0;font-size:13.5px;line-height:1.5;color:#52525b;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">${esc(item.description)}</p>` : ""}${ctaHtml(item, accent, true)}${orders ? orderButtonHtml(item, accent, addLabel, hasCta, true) : ""}</div></article>`;
+  return `<article class="olc-card" style="border:0;border-radius:18px;overflow:hidden;background:${p.card};display:flex;flex-direction:column;box-shadow:${p.cardShadow};">${mediaHtml(item, accent, p)}<div style="padding:15px 16px 16px;display:flex;flex-direction:column;gap:6px;flex:1;"><div style="display:flex;justify-content:space-between;gap:10px;align-items:baseline;"><h3 style="margin:0;font-size:16.5px;font-weight:700;line-height:1.25;color:${p.ink};">${esc(item.title)}</h3>${price}</div>${item.subtitle ? `<div style="font-size:12.5px;color:${p.muted};">${esc(item.subtitle)}</div>` : ""}${item.description ? `<p style="margin:0;font-size:13.5px;line-height:1.5;color:${p.desc};display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">${esc(item.description)}</p>` : ""}${ctaHtml(item, accent, true)}${orders ? orderButtonHtml(item, accent, addLabel, hasCta, true) : ""}</div></article>`;
 }
 
 function listRow(
@@ -117,25 +173,27 @@ function listRow(
   accent: string,
   orders: { number: string } | null | undefined,
   addLabel: string,
+  p: Palette,
 ): string {
   const src = safeImg(item.imageUrl);
   const thumb = src
-    ? `<img src="${esc(src)}" alt="${esc(item.title)}" loading="lazy" style="width:84px;height:84px;flex:0 0 auto;object-fit:cover;border-radius:14px;background:#f4f4f6;">`
+    ? `<img src="${esc(src)}" alt="${esc(item.title)}" loading="lazy" style="width:84px;height:84px;flex:0 0 auto;object-fit:cover;border-radius:14px;background:${p.imgBg};">`
     : `<div aria-hidden="true" style="width:84px;height:84px;flex:0 0 auto;border-radius:14px;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,${accent}1f,${accent}40);color:${accent};font-size:26px;font-weight:800;font-family:Georgia,'Times New Roman',serif;">${esc((item.title.trim().charAt(0) || "•").toUpperCase())}</div>`;
-  return `<div style="display:flex;gap:16px;padding:16px 0;border-bottom:1px solid rgba(0,0,0,.06);align-items:flex-start;">${thumb}<div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:5px;"><div style="display:flex;justify-content:space-between;gap:14px;align-items:baseline;"><h3 style="margin:0;font-size:16px;font-weight:700;line-height:1.3;color:${INK};">${esc(item.title)}</h3>${item.priceDisplay ? `<span style="flex:0 0 auto;font-size:16px;font-weight:800;letter-spacing:-.01em;color:${accent};">${esc(item.priceDisplay)}</span>` : ""}</div>${badgeHtml(item.badge, accent, false)}${item.subtitle ? `<div style="font-size:13px;color:${MUTED};">${esc(item.subtitle)}</div>` : ""}${item.description ? `<p style="margin:0;font-size:13.5px;line-height:1.55;color:#52525b;">${esc(item.description)}</p>` : ""}${ctaHtml(item, accent, false)}${orders ? orderButtonHtml(item, accent, addLabel, Boolean(item.ctaLabel && safeHref(item.ctaUrl)), false) : ""}</div></div>`;
+  return `<div style="display:flex;gap:16px;padding:16px 0;border-bottom:1px solid ${p.rowBorder};align-items:flex-start;">${thumb}<div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:5px;"><div style="display:flex;justify-content:space-between;gap:14px;align-items:baseline;"><h3 style="margin:0;font-size:16px;font-weight:700;line-height:1.3;color:${p.ink};">${esc(item.title)}</h3>${item.priceDisplay ? `<span style="flex:0 0 auto;font-size:16px;font-weight:800;letter-spacing:-.01em;color:${accent};">${esc(item.priceDisplay)}</span>` : ""}</div>${badgeHtml(item.badge, accent, false, p)}${item.subtitle ? `<div style="font-size:13px;color:${p.muted};">${esc(item.subtitle)}</div>` : ""}${item.description ? `<p style="margin:0;font-size:13.5px;line-height:1.55;color:${p.desc};">${esc(item.description)}</p>` : ""}${ctaHtml(item, accent, false)}${orders ? orderButtonHtml(item, accent, addLabel, Boolean(item.ctaLabel && safeHref(item.ctaUrl)), false) : ""}</div></div>`;
 }
 
 function container(cfg: CollectionsBakeConfig, accent: string, addLabel: string): string {
+  const p = paletteFor(cfg.theme);
   if (cfg.layout === "list") {
-    const rows = cfg.items.map((it) => listRow(it, accent, cfg.orders, addLabel)).join("");
+    const rows = cfg.items.map((it) => listRow(it, accent, cfg.orders, addLabel, p)).join("");
     return `<div ${WIDGET_MARKER} style="max-width:680px;margin:32px auto;padding:0 16px;">${rows}</div>`;
   }
-  const cards = cfg.items.map((it) => gridCard(it, accent, cfg.orders, addLabel)).join("");
+  const cards = cfg.items.map((it) => gridCard(it, accent, cfg.orders, addLabel, p)).join("");
   // El hover (lift) no puede ser inline — va en un <style> mínimo, scoped al
   // marker (CSP-clean: style-src no se toca; cero JS). Los estilos de las
   // tarjetas siguen INLINE a propósito: ganan en especificidad a cualquier
   // regla global de la página del usuario (article{...}, img{...}).
-  const hover = `<style>[${WIDGET_MARKER}] .olc-card{transition:transform .18s ease,box-shadow .18s ease}[${WIDGET_MARKER}] .olc-card:hover{transform:translateY(-3px);box-shadow:0 4px 10px rgba(23,18,14,.08),0 20px 44px rgba(23,18,14,.12)}@media (prefers-reduced-motion:reduce){[${WIDGET_MARKER}] .olc-card,[${WIDGET_MARKER}] .olc-card:hover{transition:none;transform:none}}</style>`;
+  const hover = `<style>[${WIDGET_MARKER}] .olc-card{transition:transform .18s ease,box-shadow .18s ease}[${WIDGET_MARKER}] .olc-card:hover{transform:translateY(-3px);box-shadow:${p.hoverShadow}}@media (prefers-reduced-motion:reduce){[${WIDGET_MARKER}] .olc-card,[${WIDGET_MARKER}] .olc-card:hover{transition:none;transform:none}}</style>`;
   return `<div ${WIDGET_MARKER} style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:20px;max-width:1100px;margin:32px auto;padding:0 16px;">${hover}${cards}</div>`;
 }
 

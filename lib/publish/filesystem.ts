@@ -201,7 +201,7 @@ export interface PublishParams {
    *  list is baked as STATIC HTML (a grid/list of cards) at the
    *  data-ol-collection-section placeholder, or appended before </body>. No
    *  runtime API — re-baked from the DB on every publish. */
-  collections?: { enabled: boolean; items: ItemRow[]; layout: "grid" | "list" };
+  collections?: { enabled: boolean; items: ItemRow[]; layout: "grid" | "list"; theme?: "light" | "dark" };
   /** Datos vivos (settings.liveData). When set, every publish rebakes the
    *  page's `data-ol-live` markers from the owner's Google Sheet (cached,
    *  never-throw — a stale/unreachable Sheet just leaves the HTML
@@ -506,7 +506,7 @@ interface BakeDocumentCtx {
   bookings?: { enabled: boolean; theme?: "light" | "dark" };
   /** Collections module. When enabled, the owner's item list is baked as STATIC
    *  HTML (grid/list of cards) at the placeholder, or appended. */
-  collections?: { enabled: boolean; items: ItemRow[]; layout: "grid" | "list" };
+  collections?: { enabled: boolean; items: ItemRow[]; layout: "grid" | "list"; theme?: "light" | "dark" };
   /** Datos vivos. When set, every `data-ol-live` marker is rebaked from the
    *  owner's Google Sheet (cached, never-throw). */
   liveData?: { sheetUrl: string } | null;
@@ -618,7 +618,12 @@ async function bakeDocument(
           ? { number: ctx.orders!.number }
           : null;
       const colCfg = ctx.collections?.enabled
-        ? { items: ctx.collections.items, layout: ctx.collections.layout, orders: ordersCfg }
+        ? {
+            items: ctx.collections.items,
+            layout: ctx.collections.layout,
+            orders: ordersCfg,
+            theme: ctx.collections.theme,
+          }
         : { items: [], layout: "grid" as const };
       migratedHtml = bakeCollections(migratedHtml, colCfg, page === null);
     } catch (err) {

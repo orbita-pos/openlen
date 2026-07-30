@@ -150,6 +150,10 @@ export interface CollectionsSettings {
    *  lib/collections/sheet-sync.ts's syncCollectionFromSheet may write its
    *  items. Absent = a normal, manually-edited collection. */
   source?: { sheet: string };
+  /** Paleta de la cuadrícula en la página publicada (mismo patrón que
+   *  comments/bookings/chat.theme): "dark" para páginas de fondo oscuro, donde
+   *  las tarjetas blancas se veían pegadas de otro sitio. Default "light". */
+  theme?: "light" | "dark";
 }
 
 /** 3D scene module — a gesture-gated WebGL scene baked at publish time.

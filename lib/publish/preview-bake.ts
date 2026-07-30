@@ -65,7 +65,12 @@ export function bakeModulesForPreviewHtml(html: string, ctx: PreviewBakeCtx): st
     try {
       out = bakeCollections(
         out,
-        { items: ctx.collectionsItems.items, layout: ctx.collectionsItems.layout, orders: ordersCfg },
+        {
+          items: ctx.collectionsItems.items,
+          layout: ctx.collectionsItems.layout,
+          orders: ordersCfg,
+          theme: s.collections?.theme,
+        },
         ctx.page === null,
       );
     } catch {
