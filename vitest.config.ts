@@ -90,6 +90,7 @@ export default defineConfig({
       "lib/publish/signin-link.test.ts",
       "lib/publish/module-sections.test.ts",
       "lib/publish/whatsapp-button.test.ts",
+      "lib/publish/module-markup-tailwind.test.ts",
       "lib/publish/kill-switches.test.ts",
       "lib/publish/tw-config.test.ts",
       "lib/transform/**/*.test.ts",
