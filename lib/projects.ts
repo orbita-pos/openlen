@@ -67,10 +67,40 @@ export function hashSitePages(data: ProjectData | null | undefined): string {
   return h.digest("hex").slice(0, 16);
 }
 
+/** JSON con las claves ORDENADAS. settings-patch construye sus objetos con
+ *  spreads, así que el orden de inserción varía entre escrituras; sin ordenar,
+ *  un patch que no cambia nada movería la huella y encendería la píldora sin
+ *  motivo. */
+function stableStringify(v: unknown): string {
+  if (v === null || typeof v !== "object") return JSON.stringify(v) ?? "null";
+  if (Array.isArray(v)) return `[${v.map(stableStringify).join(",")}]`;
+  const o = v as Record<string, unknown>;
+  return `{${Object.keys(o)
+    .sort()
+    .map((k) => `${JSON.stringify(k)}:${stableStringify(o[k])}`)
+    .join(",")}}`;
+}
+
 /** Stable fingerprint of the home document AS AUTHORED — the counterpart to
- *  hashSitePages for `data.html`. Stored as projects.publishedHomeHash. */
-export function hashHomeDoc(html: string): string {
-  return createHash("sha256").update(html, "utf8").digest("hex").slice(0, 16);
+ *  hashSitePages for `data.html`. Stored as projects.publishedHomeHash.
+ *
+ *  Incluye los AJUSTES además del html: el bake los lee (el tema de Colecciones,
+ *  la moderación de Comentarios, el número de WhatsApp…), así que cambiarlos
+ *  altera la página publicada aunque el html no se mueva un byte. Con la
+ *  comparación vieja esto quedaba tapado —la píldora estaba encendida siempre—;
+ *  al volverse exacta para el html, un cambio de ajuste sin esto sería un FALSO
+ *  NEGATIVO: «no tienes cambios» sobre una página que sí los tiene. Se meten
+ *  TODOS los ajustes, incluso los que no hornean: sobre-reportar es el fallo
+ *  seguro. */
+export function hashHomeDoc(html: string, settings?: ProjectSettings | null): string {
+  return createHash("sha256")
+    .update(html, "utf8")
+    // Separador NUL: no puede aparecer en el html ni en el JSON, así que
+    // ningún par (html, ajustes) distinto puede colisionar por concatenación.
+    .update("\u0000", "utf8")
+    .update(stableStringify(settings ?? {}), "utf8")
+    .digest("hex")
+    .slice(0, 16);
 }
 
 /** The drift comparison both read paths share: the home fingerprint, plus the
@@ -94,7 +124,7 @@ export function computeUnpublishedChanges(row: {
 }): boolean {
   if (row.subdomain === null || row.publishedHtml === null) return false;
   if (row.publishedHomeHash !== null) {
-    if (hashHomeDoc(row.currentHtml) !== row.publishedHomeHash) return true;
+    if (hashHomeDoc(row.currentHtml, row.data?.settings) !== row.publishedHomeHash) return true;
   } else if (row.publishedHtml !== row.currentHtml) {
     return true;
   }
@@ -785,7 +815,7 @@ export async function publishProject(
         subdomain: v.value,
         publishedAt: now,
         publishedHtml: html,
-        publishedHomeHash: hashHomeDoc(project.data?.html ?? ""),
+        publishedHomeHash: hashHomeDoc(project.data?.html ?? "", project.data?.settings),
         publishedPagesHash: hashSitePages(project.data),
         status: "published",
         deployUrl: `${v.value}.${publishBaseHost()}`,

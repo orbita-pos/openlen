@@ -53,68 +53,19 @@ if ($env:OPENLEN_SKIP_BUILD -ne "1") {
   Step 1 "Skipping build (OPENLEN_SKIP_BUILD=1) -- reusing .next/standalone"
 }
 
-# --- 2. Apply DB migrations -------------------------------------------
-# Runs locally against the cloud DB (Neon) using DATABASE_URL from
-# .env.local — the same way every other tsx script in package.json reads
-# secrets. MUST run BEFORE the atomic swap: the new code shipped below
-# reads billing columns + the webhook table, so without this migration
-# the freshly-swapped service breaks signup. billing:migrate is idempotent
-# (ADD COLUMN / CREATE TABLE IF NOT EXISTS), so re-running a deploy is safe.
-# OPENLEN_SKIP_MIGRATE=1 skips this — set ONLY when the migration was already
-# applied this session. (billing-migrate's tsx process can crash with a libuv
-# UV_HANDLE_CLOSING assertion at process.exit on Windows AFTER the SQL ran
-# successfully; the SQL is idempotent so the DB is fine, but the non-zero exit
-# would abort the deploy. Skip to get past that once it's confirmed applied.)
-if ($env:OPENLEN_SKIP_MIGRATE -ne "1") {
-  Step 2 "Applying billing DB migration (npm run billing:migrate)..."
-  npm run billing:migrate
-  if ($LASTEXITCODE -ne 0) { throw "billing:migrate failed (exit $LASTEXITCODE)" }
-} else {
-  Step 2 "Skipping billing DB migration (OPENLEN_SKIP_MIGRATE=1) -- assumed already applied"
-}
-
-# The curated-3D-models catalog table. Scoped + idempotent
-# (CREATE TABLE / INDEX IF NOT EXISTS), same rationale as billing: the shipped
-# code queries the `models` table, so it must exist before the swap or
-# GET /api/models 500s. Covered by the same OPENLEN_SKIP_MIGRATE flag.
-# NOTE: `models:seed` (uploads the starter GLBs to R2) is a ONE-TIME manual step
-# run AFTER the R2 `openlen-models` bucket + CORS exist — not automated here.
-if ($env:OPENLEN_SKIP_MIGRATE -ne "1") {
-  Step 2 "Applying models DB migration (npm run models:migrate)..."
-  npm run models:migrate
-  if ($LASTEXITCODE -ne 0) { throw "models:migrate failed (exit $LASTEXITCODE)" }
-}
-
-# The Community Explore feature (visibility/handle/reports). Scoped + idempotent,
-# same rationale as models: the shipped code selects `projects.visibility`, so
-# without this migration prod GET /api/projects 500s after the swap.
-if ($env:OPENLEN_SKIP_MIGRATE -ne "1") {
-  Step 2 "Applying community DB migration (npm run community:migrate)..."
-  npm run community:migrate
-  if ($LASTEXITCODE -ne 0) { throw "community:migrate failed (exit $LASTEXITCODE)" }
-}
-
-# Chat transcript columns (page, F2-T11 actions/noDocChange). Scoped + idempotent
-# (ADD COLUMN IF NOT EXISTS), same rationale as the others: appendChatMessage's
-# INSERT references the new columns, so without this migration EVERY chat-turn
-# append 500s after the swap — and the panel's persistTurn is fire-and-forget,
-# so the breakage is silent (turns just stop surviving reloads).
-if ($env:OPENLEN_SKIP_MIGRATE -ne "1") {
-  Step 2 "Applying chat DB migration (npm run chat:migrate)..."
-  npm run chat:migrate
-  if ($LASTEXITCODE -ne 0) { throw "chat:migrate failed (exit $LASTEXITCODE)" }
-
-  # Inbox-badge watermark column (users.lastSeenLeadsAt). Idempotent; without
-  # it GET /api/inbox/badge 500s after the swap and the client hides the
-  # failure silently (the badge just never appears).
-  Step 2 "Applying inbox DB migration (npm run inbox:migrate)..."
-  npm run inbox:migrate
-  if ($LASTEXITCODE -ne 0) { throw "inbox:migrate failed (exit $LASTEXITCODE)" }
-
-  Step 2 "Applying publish-hash DB migration (npm run publish-hash:migrate)..."
-  npm run publish-hash:migrate
-  if ($LASTEXITCODE -ne 0) { throw "publish-hash:migrate failed (exit $LASTEXITCODE)" }
-}
+# --- 2. (Las migraciones se movieron al paso 6.2) ---------------------
+# Las migraciones YA NO corren aquí. Corrían con `npm run <x>:migrate`, que lee
+# .env.local — o sea la base de DESARROLLO desde que dev y prod se separaron
+# (2026-07-20). Cada paso de migración del deploy llevaba meses siendo un no-op
+# contra producción; solo no se notó porque esas columnas ya existían allá. La
+# primera columna realmente nueva (publishedHomeHash, 2026-07-30) tiró prod: el
+# código desplegado seleccionaba una columna que la migración había añadido
+# "con éxito" a la base equivocada.
+#
+# Ahora corren EN EL BOX (paso 6.2), contra DATABASE_URL_DIRECT, que apunta al
+# rol dueño de las tablas. Siguen ejecutándose ANTES del swap atómico, que es
+# la invariante que importa: el código nuevo no debe arrancar contra un esquema
+# viejo. OPENLEN_SKIP_MIGRATE=1 sigue saltándoselas.
 
 # --- 3. Compose standalone with static + public -----------------------
 Step 3 "Composing standalone (copying .next/static + public/)..."
@@ -133,6 +84,10 @@ if (Test-Path "public") {
 Step 3 "Bundling cron entrypoints (esbuild) for systemd timers..."
 npm run cron:bundle
 if ($LASTEXITCODE -ne 0) { throw "cron:bundle failed (exit $LASTEXITCODE)" }
+
+Step 3 "Bundling DB migrations (esbuild) to run on the box..."
+npm run migrations:bundle
+if ($LASTEXITCODE -ne 0) { throw "migrations:bundle failed (exit $LASTEXITCODE)" }
 
 $size = (Get-ChildItem -Recurse ".next/standalone" | Measure-Object -Property Length -Sum).Sum
 Write-Host ("    standalone: {0} MB" -f [math]::Round($size/1MB, 1))
@@ -180,6 +135,28 @@ chown -R openlen-deploy:www-data $stagingDir
 "@
 & ssh $host_ $extractCmd
 if ($LASTEXITCODE -ne 0) { throw "Remote extract failed (exit $LASTEXITCODE)" }
+
+# --- 6.2. Apply DB migrations ON THE BOX ------------------------------
+# Contra la base de PRODUCCIÓN, no la de dev, y con el rol que puede alterar
+# el esquema. Dos cosas que el paso local nunca tuvo:
+#   - DATABASE_URL_DIRECT apunta a openlen_migrate, DUEÑO de las tablas.
+#     openlen_app (el DATABASE_URL de la app) no lo es y un ALTER le rebota
+#     con "must be owner of table" — a propósito: la app no cambia esquema.
+#   - corre desde dentro del box, donde 127.0.0.1:5432 sí existe.
+# Va DESPUÉS del extract (necesita los .mjs recién subidos) y ANTES del swap,
+# que es la invariante: el código nuevo nunca arranca contra un esquema viejo.
+# Si algo falla, el deploy aborta aquí y /opt/openlen-app sigue intacto.
+if ($env:OPENLEN_SKIP_MIGRATE -ne "1") {
+  Step 6 "Applying DB migrations on the box (production database)..."
+  # El runner viaja en el tarball (scripts/build-migrations.mjs lo escribe con
+  # saltos LF). Pasarlo como string a `& ssh` NO funciona: PowerShell le come
+  # las comillas y le mete CRLF, y bash aborta con "set: -: invalid option" —
+  # probado. Asi el deploy solo manda un comando corto y sin escapado.
+  & ssh $host_ "bash $stagingDir/migrations/run.sh"
+  if ($LASTEXITCODE -ne 0) { throw "Remote DB migrations failed (exit $LASTEXITCODE)" }
+} else {
+  Step 6 "Skipping DB migrations (OPENLEN_SKIP_MIGRATE=1)"
+}
 
 # --- 6.5. Rebuild Rust crates on box (default ON) --------------------
 # The atomic swap in step 7 wipes /opt/openlen-app/node_modules/@openlen/*

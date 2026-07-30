@@ -51,6 +51,7 @@
     "privatechat:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/privatechat-migrate.ts",
     "inbox:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/inbox-migrate.ts",
     "publish-hash:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/publish-hash-migrate.ts",
+    "migrations:bundle": "node scripts/build-migrations.mjs",
     "notifications:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/notifications-migrate.ts",
     "notifications:drain": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/notifications-drain.ts",
     "privatechat:smoke": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/privatechat-smoke.ts",

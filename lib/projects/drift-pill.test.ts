@@ -98,4 +98,43 @@ describe("computeUnpublishedChanges", () => {
     expect(hashHomeDoc(SOURCE)).toMatch(/^[0-9a-f]{16}$/);
     expect(hashHomeDoc(SOURCE)).not.toBe(hashHomeDoc(SOURCE + "x"));
   });
+
+  describe("los AJUSTES cuentan (el bake los lee, así que cambian la publicada)", () => {
+    const conAjustes = (settings: unknown) => ({
+      ...row(),
+      data: { html: SOURCE, settings } as never,
+      publishedHomeHash: hashHomeDoc(SOURCE, { collections: { theme: "dark" } } as never),
+    });
+
+    it("EL FALSO NEGATIVO: cambiar el tema del catálogo enciende la píldora", () => {
+      // Medido en prod antes de esto: theme dark->light dejaba la píldora en
+      // false mientras la página publicada seguía con el tema viejo.
+      expect(
+        computeUnpublishedChanges(conAjustes({ collections: { theme: "light" } })),
+      ).toBe(true);
+    });
+
+    it("con los mismos ajustes NO se enciende", () => {
+      expect(
+        computeUnpublishedChanges(conAjustes({ collections: { theme: "dark" } })),
+      ).toBe(false);
+    });
+
+    it("el ORDEN de las claves no cuenta (los patches usan spreads)", () => {
+      const a = { comments: { theme: "dark", moderation: "all" }, members: { enabled: true } };
+      const b = { members: { enabled: true }, comments: { moderation: "all", theme: "dark" } };
+      expect(hashHomeDoc(SOURCE, a as never)).toBe(hashHomeDoc(SOURCE, b as never));
+    });
+
+    it("sin ajustes y con ajustes vacíos hashean igual (nada churnea al migrar)", () => {
+      expect(hashHomeDoc(SOURCE)).toBe(hashHomeDoc(SOURCE, {} as never));
+      expect(hashHomeDoc(SOURCE)).toBe(hashHomeDoc(SOURCE, null));
+    });
+
+    it("un ajuste anidado distinto cambia la huella", () => {
+      expect(hashHomeDoc(SOURCE, { comments: { theme: "dark" } } as never)).not.toBe(
+        hashHomeDoc(SOURCE, { comments: { theme: "light" } } as never),
+      );
+    });
+  });
 });
