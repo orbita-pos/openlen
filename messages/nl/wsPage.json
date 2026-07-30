@@ -75,7 +75,13 @@
   "aiError": {
     "title": "Genereren mislukt",
     "tweak": "Pas je briefing in de zijbalk aan en probeer het opnieuw.",
-    "retry": "Opnieuw"
+    "retry": "Opnieuw",
+    "reason": {
+      "saturated": "De AI-dienst is momenteel overbelast. Probeer het over een minuut opnieuw.",
+      "quota": "De gebruikslimiet van de AI-dienst is bereikt. Probeer het later.",
+      "timeout": "Het genereren duurde te lang en is geannuleerd. Probeer het opnieuw.",
+      "unknown": "Er ging iets mis bij het genereren van je pagina. Probeer het opnieuw."
+    }
   },
   "inserted": {
     "label": "<b>{name}</b> toegevoegd",

@@ -75,7 +75,13 @@
   "aiError": {
     "title": "Falló la generación",
     "tweak": "Ajusta tu brief en la barra lateral e inténtalo de nuevo.",
-    "retry": "Reintentar"
+    "retry": "Reintentar",
+    "reason": {
+      "saturated": "El servicio de IA está saturado en este momento. Vuelve a intentarlo en un minuto.",
+      "quota": "Se alcanzó el límite de uso del servicio de IA. Inténtalo más tarde.",
+      "timeout": "La generación tardó demasiado y se canceló. Vuelve a intentarlo.",
+      "unknown": "Algo salió mal al generar tu página. Vuelve a intentarlo."
+    }
   },
   "inserted": {
     "label": "Añadiste <b>{name}</b>",

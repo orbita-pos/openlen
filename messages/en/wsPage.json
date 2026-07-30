@@ -75,7 +75,13 @@
   "aiError": {
     "title": "Generation failed",
     "tweak": "Tweak your brief in the sidebar and try again.",
-    "retry": "Try again"
+    "retry": "Try again",
+    "reason": {
+      "saturated": "The AI service is overloaded right now. Try again in a minute.",
+      "quota": "The AI service usage limit was reached. Try again later.",
+      "timeout": "Generation took too long and was cancelled. Try again.",
+      "unknown": "Something went wrong while generating your page. Try again."
+    }
   },
   "inserted": {
     "label": "Added <b>{name}</b>",

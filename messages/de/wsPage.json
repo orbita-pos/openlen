@@ -75,7 +75,13 @@
   "aiError": {
     "title": "Generierung fehlgeschlagen",
     "tweak": "Passe dein Briefing in der Seitenleiste an und versuche es erneut.",
-    "retry": "Erneut versuchen"
+    "retry": "Erneut versuchen",
+    "reason": {
+      "saturated": "Der KI-Dienst ist gerade überlastet. Versuche es in einer Minute erneut.",
+      "quota": "Das Nutzungslimit des KI-Dienstes wurde erreicht. Versuche es später.",
+      "timeout": "Die Generierung hat zu lange gedauert und wurde abgebrochen. Versuche es erneut.",
+      "unknown": "Beim Erstellen deiner Seite ist etwas schiefgelaufen. Versuche es erneut."
+    }
   },
   "inserted": {
     "label": "<b>{name}</b> hinzugefügt",

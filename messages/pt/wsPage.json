@@ -75,7 +75,13 @@
   "aiError": {
     "title": "Falha na geração",
     "tweak": "Ajuste seu briefing na barra lateral e tente novamente.",
-    "retry": "Tentar de novo"
+    "retry": "Tentar de novo",
+    "reason": {
+      "saturated": "O serviço de IA está sobrecarregado agora. Tente de novo em um minuto.",
+      "quota": "O limite de uso do serviço de IA foi atingido. Tente mais tarde.",
+      "timeout": "A geração demorou demais e foi cancelada. Tente de novo.",
+      "unknown": "Algo deu errado ao gerar sua página. Tente de novo."
+    }
   },
   "inserted": {
     "label": "<b>{name}</b> adicionada",

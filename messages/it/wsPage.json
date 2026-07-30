@@ -75,7 +75,13 @@
   "aiError": {
     "title": "Generazione non riuscita",
     "tweak": "Modifica il brief nella barra laterale e riprova.",
-    "retry": "Riprova"
+    "retry": "Riprova",
+    "reason": {
+      "saturated": "Il servizio di IA è sovraccarico in questo momento. Riprova tra un minuto.",
+      "quota": "È stato raggiunto il limite di utilizzo del servizio di IA. Riprova più tardi.",
+      "timeout": "La generazione ha impiegato troppo tempo ed è stata annullata. Riprova.",
+      "unknown": "Qualcosa è andato storto durante la generazione. Riprova."
+    }
   },
   "inserted": {
     "label": "<b>{name}</b> aggiunta",

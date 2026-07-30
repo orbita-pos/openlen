@@ -19,6 +19,7 @@ import { useGeneration } from "@/lib/use-generation";
 import { setGenerationBusy } from "@/lib/generation-busy";
 import { scanController } from "@/lib/workspace-v2/scan-controller";
 import { useAIModel } from "@/components/workspace-v2/model-picker";
+import { classifyAiError } from "@/components/workspace-v2/ai-error-message";
 import { buildModuleSection } from "@/lib/publish/module-sections";
 import {
   planModuleAdd,
@@ -3677,8 +3678,10 @@ function NewV2Inner() {
                   <div className="text-[13px] text-red-600 dark:text-red-400 mb-1">
                     {t("aiError.title")}
                   </div>
-                  <div className="text-[12px] fg-muted">
-                    {aiGenState.message}
+                  {/* El detalle técnico no se pierde: queda en el title para
+                      depurar sin asustar a quien no programa. */}
+                  <div className="text-[12px] fg-muted" title={aiGenState.message}>
+                    {t(`aiError.reason.${classifyAiError(aiGenState.message)}`)}
                   </div>
                   <div className="mt-3 text-[11px] fg-faint">
                     {t("aiError.tweak")}

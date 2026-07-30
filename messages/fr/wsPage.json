@@ -75,7 +75,13 @@
   "aiError": {
     "title": "Échec de la génération",
     "tweak": "Ajustez votre brief dans la barre latérale et réessayez.",
-    "retry": "Réessayer"
+    "retry": "Réessayer",
+    "reason": {
+      "saturated": "Le service d'IA est saturé pour le moment. Réessayez dans une minute.",
+      "quota": "La limite d'utilisation du service d'IA a été atteinte. Réessayez plus tard.",
+      "timeout": "La génération a pris trop de temps et a été annulée. Réessayez.",
+      "unknown": "Un problème est survenu lors de la génération. Réessayez."
+    }
   },
   "inserted": {
     "label": "<b>{name}</b> ajoutée",
