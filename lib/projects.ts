@@ -67,18 +67,37 @@ export function hashSitePages(data: ProjectData | null | undefined): string {
   return h.digest("hex").slice(0, 16);
 }
 
-/** The drift comparison both read paths share: home html byte-diff, plus the
+/** Stable fingerprint of the home document AS AUTHORED — the counterpart to
+ *  hashSitePages for `data.html`. Stored as projects.publishedHomeHash. */
+export function hashHomeDoc(html: string): string {
+  return createHash("sha256").update(html, "utf8").digest("hex").slice(0, 16);
+}
+
+/** The drift comparison both read paths share: the home fingerprint, plus the
  *  pages fingerprint when the publish recorded one (NULL = legacy publish or
- *  post-rollback — pages are skipped, so old rows can't false-positive). */
-function computeUnpublishedChanges(row: {
+ *  post-rollback — pages are skipped, so old rows can't false-positive).
+ *
+ *  The home check used to be `publishedHtml !== currentHtml`, which compared
+ *  the SERVED bytes against the AUTHORED source — publish runs ensurePageMeta
+ *  + ensureSocialOgImage before storing, so the two never matched and the pill
+ *  was lit on every published page forever. publishedHomeHash fixes that by
+ *  fingerprinting the source. Rows published before it exists keep the legacy
+ *  comparison: it over-reports (the old bug), but never UNDER-reports, so a
+ *  real edit can't hide. Their next publish writes the hash and heals them. */
+export function computeUnpublishedChanges(row: {
   subdomain: string | null;
   publishedHtml: string | null;
+  publishedHomeHash: string | null;
   publishedPagesHash: string | null;
   data: ProjectData | null;
   currentHtml: string;
 }): boolean {
   if (row.subdomain === null || row.publishedHtml === null) return false;
-  if (row.publishedHtml !== row.currentHtml) return true;
+  if (row.publishedHomeHash !== null) {
+    if (hashHomeDoc(row.currentHtml) !== row.publishedHomeHash) return true;
+  } else if (row.publishedHtml !== row.currentHtml) {
+    return true;
+  }
   if (row.publishedPagesHash === null) return false;
   return hashSitePages(row.data) !== row.publishedPagesHash;
 }
@@ -218,6 +237,7 @@ export async function listProjects(userId: string): Promise<ProjectSummary[]> {
       subdomain: schema.projects.subdomain,
       publishedAt: schema.projects.publishedAt,
       publishedHtml: schema.projects.publishedHtml,
+      publishedHomeHash: schema.projects.publishedHomeHash,
       publishedPagesHash: schema.projects.publishedPagesHash,
       data: schema.projects.data,
       createdAt: schema.projects.createdAt,
@@ -351,7 +371,13 @@ export async function getProject(
     profileId: row.profileId,
     subdomain: row.subdomain,
     publishedAt: row.publishedAt,
-    hasUnpublishedChanges: computeUnpublishedChanges({ ...row, currentHtml }),
+    // La deriva se mide contra el html CRUDO, no contra `currentHtml`: la
+    // normalización de arriba es para servirle al cliente un documento
+    // canónico, pero publishProject hashea `data.html` tal cual sale de la
+    // BD. Comparar el normalizado dejaría la píldora encendida siempre —
+    // justo el bug que publishedHomeHash vino a arreglar, reintroducido en
+    // la única vista donde el usuario la ve.
+    hasUnpublishedChanges: computeUnpublishedChanges({ ...row, currentHtml: rawHtml }),
     sectionCount: countSections(currentHtml),
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
@@ -742,6 +768,7 @@ export async function publishProject(
     .select({
       publishedAt: schema.projects.publishedAt,
       publishedHtml: schema.projects.publishedHtml,
+      publishedHomeHash: schema.projects.publishedHomeHash,
       publishedPagesHash: schema.projects.publishedPagesHash,
       publishedReleaseSha: schema.projects.publishedReleaseSha,
       status: schema.projects.status,
@@ -758,6 +785,7 @@ export async function publishProject(
         subdomain: v.value,
         publishedAt: now,
         publishedHtml: html,
+        publishedHomeHash: hashHomeDoc(project.data?.html ?? ""),
         publishedPagesHash: hashSitePages(project.data),
         status: "published",
         deployUrl: `${v.value}.${publishBaseHost()}`,
@@ -1186,9 +1214,11 @@ export async function rollbackProject(
     .set({
       publishedAt: now,
       publishedHtml: html,
-      // The rolled-back release's page set isn't recorded anywhere, so the
-      // live pages are unknown — NULL makes the drift pill skip pages until
-      // the next real publish records a fresh fingerprint.
+      // The rolled-back release's SOURCE isn't recorded anywhere (we only read
+      // the optimized bytes back off disk), so both fingerprints go NULL and
+      // the pill falls back to the legacy comparison until the next real
+      // publish records fresh ones.
+      publishedHomeHash: null,
       publishedPagesHash: null,
       publishedReleaseSha: params.sha,
       updatedAt: now,

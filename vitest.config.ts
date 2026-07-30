@@ -132,6 +132,7 @@ export default defineConfig({
       "lib/projects/preview.test.ts",
       "lib/projects/settings-patch.test.ts",
       "lib/projects/create-page.test.ts",
+      "lib/projects/drift-pill.test.ts",
       "lib/notifications/**/*.test.ts",
       "lib/publish/scene-host.test.ts",
       "lib/publish/procedural-3d.test.ts",

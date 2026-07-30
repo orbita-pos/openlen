@@ -184,10 +184,22 @@ export const projects = pgTable(
     // Timestamp of the most-recent successful publish. Null = not
     // currently published. Republish overwrites this.
     publishedAt: timestamp("publishedAt", { mode: "date" }),
-    // Snapshot of `data.html` at the moment it was published. Drift
-    // detection in the UI compares this against current `data.html`
-    // to surface an "unpublished changes" pill.
+    // The BYTES that went live. Despite the name this is NOT a copy of
+    // `data.html`: publish stores the ensurePageMeta + ensureSocialOgImage
+    // output, and rollback stores the fully-optimized release read back off
+    // disk (readRelease). scripts/analytics/republish-with-snippet.ts ships
+    // this straight to /var/www, so it must keep meaning "what we served".
+    // Drift detection does NOT use it any more — see publishedHomeHash.
     publishedHtml: text("publishedHtml"),
+    // Fingerprint of `data.html` (the SOURCE) at the moment of publish —
+    // hashHomeDoc in lib/projects.ts. Exists because publishedHtml drifted
+    // into meaning "served bytes": comparing it against data.html was
+    // transformed-vs-raw, so the "unpublished changes" pill was lit on every
+    // published page, always. Same shape and same NULL semantics as
+    // publishedPagesHash: NULL = published before this column (or after a
+    // rollback, where the live source is unknown), and those rows fall back
+    // to the legacy comparison until their next publish heals them.
+    publishedHomeHash: text("publishedHomeHash"),
     // Fingerprint of data.pages at the moment of publish (hashSitePages in
     // lib/projects.ts; "" = published with zero pages). Lets the drift pill
     // light up on subpage edits without storing every page's html twice.
