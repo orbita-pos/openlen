@@ -148,20 +148,20 @@ impl Pipeline {
                     // op-id tagger (script is in SKIP_TAGS anyway).
                     return Ok(());
                 }
-                // OpenLen normalize-chain markers. `normalize/{radius,space,
-                // type,font}.rs` emit `<script data-ol-*>` blocks that
-                // configure Tailwind to use the OL CSS variables. They're
-                // first-party and trusted; without this whitelist, re-running
-                // streaming on already-normalized HTML would strip them and
-                // break idempotence. Same shape as the Tailwind CDN allow:
-                // the marker is in our control, no user-injectable surface.
-                let has_ol_marker = el
-                    .attributes()
-                    .iter()
-                    .any(|a| a.name().starts_with("data-ol-"));
-                if has_ol_marker {
-                    return Ok(());
-                }
+                // Aquí hubo un whitelist por PREFIJO de atributo
+                // (`data-ol-*`) para no romper la idempotencia sobre HTML ya
+                // normalizado. Se quitó (auditoría 2026-07-29): un atributo no
+                // autentica nada — el HTML que entra lo escribe un LLM sobre
+                // un brief del usuario, así que `<script data-ol-loquesea>`
+                // pasaba igual, y de ahí llegaba a la DB y al iframe del
+                // editor (que corre allow-same-origin).
+                //
+                // La idempotencia no lo necesitaba: HtmlStream::end() llama a
+                // normalize_born_canonical DESPUÉS de pipeline.end()
+                // (stream/mod.rs:198), así que los scripts de tema se
+                // re-inyectan sobre el documento ya limpio; y el wrapper de TS
+                // los repara otra vez con ensure_theme_scripts. Cubierto por
+                // los tests de stream::theme_survival_tests.
                 el.remove();
                 scripts.set(scripts.get() + 1);
                 return Ok(());
@@ -392,5 +392,49 @@ mod tests {
         p.write(b"<div>x</div>").unwrap();
         p.end().unwrap();
         assert!(p.write(b"more").is_err());
+    }
+
+
+    const SANITIZE: PipelineOpts = PipelineOpts {
+        inject_op_ids: false,
+        sanitize: true,
+    };
+
+    // El whitelist por PREFIJO de atributo no autenticaba nada: el HTML que
+    // entra al stream lo escribe un LLM sobre un brief del usuario, así que
+    // cualquiera podía emitir <script data-ol-loquesea> y sobrevivir. Los
+    // scripts de tema legítimos NO dependen de esto: normalize_born_canonical
+    // corre en HtmlStream::end() DESPUÉS del sanitizado (stream/mod.rs:198) y
+    // los vuelve a poner; el wrapper de TS los repara otra vez con
+    // ensure_theme_scripts. Auditoría 2026-07-29.
+    #[test]
+    fn forged_data_ol_script_is_stripped() {
+        let (out, removed, _) = stream(
+            "<p>x</p><script data-ol-radius>evil()</script>",
+            SANITIZE,
+        );
+        assert!(!out.contains("evil()"), "el script forjado sobrevivió: {out}");
+        assert!(!out.contains("<script"));
+        assert_eq!(removed.scripts, 1);
+    }
+
+    #[test]
+    fn forged_arbitrary_ol_attribute_is_stripped() {
+        let (out, removed, _) = stream(
+            "<script data-ol-pwn>steal(document.cookie)</script>",
+            SANITIZE,
+        );
+        assert!(!out.contains("steal("));
+        assert_eq!(removed.scripts, 1);
+    }
+
+    #[test]
+    fn tailwind_cdn_still_survives() {
+        let (out, removed, _) = stream(
+            "<script src=\"https://cdn.tailwindcss.com\"></script><p>x</p>",
+            SANITIZE,
+        );
+        assert!(out.contains("cdn.tailwindcss.com"));
+        assert_eq!(removed.scripts, 0);
     }
 }

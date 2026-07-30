@@ -269,3 +269,55 @@ pub fn run_stream(
     }
     s.end().map_err(|e| e.to_string())
 }
+
+#[cfg(test)]
+mod theme_survival_tests {
+    use super::run_stream;
+
+    const DOC: &str = "<!doctype html><html><head><script src=\"https://cdn.tailwindcss.com\"></script></head><body><div class=\"rounded-lg p-4 text-xl\">x</div></body></html>";
+
+    // Los scripts de tema NO dependen del sanitizado del stream: end() corre
+    // normalize_born_canonical DESPUÉS de pipeline.end(), así que los inyecta
+    // sobre el documento ya limpio. Este test es la red de af394eb.
+    #[test]
+    fn theme_scripts_present_after_full_stream() {
+        let r = run_stream(&[DOC], false, true, true, false).unwrap();
+        let html = r.final_html;
+        for tag in [
+            "<script data-ol-radius>",
+            "<script data-ol-space>",
+            "<script data-ol-type>",
+            "<style data-ol-radius>",
+        ] {
+            assert!(html.contains(tag), "falta {tag} en la salida del stream");
+        }
+    }
+
+    // Idempotencia: la razón que justificaba el whitelist. Volver a pasar un
+    // documento YA normalizado por el stream no debe perder los tokens —
+    // normalize_born_canonical los repone en end() aunque el sanitizado
+    // los haya quitado por el camino.
+    #[test]
+    fn theme_scripts_survive_a_second_pass() {
+        let once = run_stream(&[DOC], false, true, true, false).unwrap().final_html;
+        let twice = run_stream(&[&once], false, true, true, false).unwrap().final_html;
+        for tag in ["<script data-ol-radius>", "<script data-ol-space>", "<script data-ol-type>"] {
+            assert!(twice.contains(tag), "segunda pasada perdió {tag}");
+        }
+        // Y sin duplicarlos.
+        assert_eq!(twice.matches("<style data-ol-radius").count(), 1);
+        assert_eq!(twice.matches("<script data-ol-radius").count(), 1);
+    }
+
+    #[test]
+    fn forged_theme_script_dies_but_canonical_one_returns() {
+        let hostile = DOC.replace(
+            "</head>",
+            "<script data-ol-radius>window.__pwn=1</script></head>",
+        );
+        let html = run_stream(&[&hostile], false, true, true, false).unwrap().final_html;
+        assert!(!html.contains("__pwn"), "el forjado sobrevivió");
+        assert!(html.contains("<script data-ol-radius>"), "no volvió el canónico");
+        assert!(html.contains("var(--ol-r-sm)"), "el canónico no trae su contenido");
+    }
+}
