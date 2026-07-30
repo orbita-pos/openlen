@@ -10,6 +10,29 @@ const withNextIntl = createNextIntlPlugin("./i18n/request.ts");
 // letting TS infer from the literal keeps both happy.
 const nextConfig = {
   reactStrictMode: true,
+  // Self-host SIN R2: lib/storage/templates.ts cae a servir el HTML crudo de
+  // las plantillas desde /template-objects, o sea el MISMO origen que la app —
+  // y ese HTML no pasa por sanitizeForPublish (se guarda crudo a propósito,
+  // se sanitiza al clonar). En esa configuración un script dentro de una
+  // plantilla corría con el origen de la app. La CSP `sandbox` sin
+  // allow-same-origin le da origen opaco: sigue pintando (el CDN de Tailwind
+  // es externo) pero ya no alcanza cookies, storage ni la API con la sesión.
+  //
+  // No afecta a producción: con R2 configurado las plantillas se sirven desde
+  // templates.openlen.com y esta ruta ni se usa. Medido sobre las 178
+  // plantillas del catálogo: ninguna usa Babel, fetch/XHR ni type=module, así
+  // que nada depende de conservar el origen.
+  async headers() {
+    return [
+      {
+        source: "/template-objects/:path*",
+        headers: [
+          { key: "Content-Security-Policy", value: "sandbox allow-scripts" },
+          { key: "X-Content-Type-Options", value: "nosniff" },
+        ],
+      },
+    ];
+  },
   outputFileTracingRoot: path.resolve(__dirname),
   // Force the standalone tracer to copy tailwindcss's package-relative CSS
   // assets (preflight.css, stubs) into the standalone tree alongside the

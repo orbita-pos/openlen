@@ -233,7 +233,11 @@ export function TemplateCard({
             <iframe
               src={template.storageUrl}
               title={t("templateCard.livePreview", { name: template.name })}
-              sandbox="allow-scripts allow-same-origin"
+              // Sin allow-same-origin: esta tarjeta solo mira (usa onLoad, no
+              // lee contentDocument ni hace postMessage). En self-host sin R2
+              // la plantilla se sirve desde nuestro propio origen, y con la
+              // bandera un script suyo lo heredaba.
+              sandbox="allow-scripts"
               loading="lazy"
               referrerPolicy="no-referrer"
               onLoad={() => setLoaded(true)}
