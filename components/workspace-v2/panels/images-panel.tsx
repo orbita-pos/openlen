@@ -185,7 +185,11 @@ function OpenLenSource({ onPick }: { onPick: (asset: DropAsset) => void }) {
     return data.images.filter((img) => {
       if (styleFilter !== "all" && img.style !== styleFilter) return false;
       if (q) {
-        const hay = `${img.alt} ${img.id} ${img.family.join(" ")}`.toLowerCase();
+        // `style` va en el saco: es el único campo que nombra el GÉNERO de la
+        // foto (gaming-editorial, music-editorial…) y la mitad de los estilos
+        // no tienen chip, así que sin esto sus fotos solo aparecen si el alt
+        // —que está en inglés— casualmente trae la palabra buscada.
+        const hay = `${img.alt} ${img.id} ${img.style} ${img.family.join(" ")}`.toLowerCase();
         if (!hay.includes(q)) return false;
       }
       return true;
