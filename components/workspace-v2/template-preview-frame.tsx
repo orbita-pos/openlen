@@ -16,6 +16,25 @@
 //   * `sandbox="allow-scripts allow-same-origin"`: Babel-standalone fetches
 //     sibling `<script type="text/babel" src>` via XHR; without same-origin
 //     those fail CORS. The template HTML is curated content we ship.
+//
+//     Revisado en la auditoría de aislamiento (2026-07-29) y SE QUEDA, pero no
+//     por el motivo de arriba: hoy ninguna de las 178 plantillas del catálogo
+//     usa Babel, fetch/XHR ni type=module, así que esa justificación no está
+//     ejercida por nada. Se queda porque quitarlo NO COMPRA NADA — medido en
+//     navegador sobre las 3 fuentes que este componente pinta, todas con esta
+//     misma bandera puesta:
+//       · plantilla en R2 (prod)   → otro host: ya no alcanza cookies ni DOM
+//       · self-host /template-objects → cubierto por la CSP de next.config
+//       · /api/sections/<id>/preview  → cubierto por la CSP de esa ruta
+//     Un header CSP `sandbox` gana sobre este atributo (se intersectan hacia
+//     lo más restrictivo), así que el aislamiento ya está y quitar la bandera
+//     solo agregaría riesgo para una plantilla futura que sí necesite mismo
+//     origen — el registro acepta scripts inline a propósito (89% del corpus
+//     los trae), o sea que ese camino existe.
+//
+//     Si algún día se quita: verificar que ninguna fuente quede sin CSP.
+//     Nadie lee su contentDocument ni le hace postMessage (0 ocurrencias),
+//     así que por ese lado no ata nada. Sonda: scratch/template-frame-decision.mts
 //   * The chrome strip (3 traffic-light dots + a faint URL pill) is decorative.
 
 "use client";
