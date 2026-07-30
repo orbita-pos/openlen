@@ -198,7 +198,11 @@ interface LeftSidebarProps {
   /** Write a document's html into the parent's project state. `page` pins
    *  the slot (null = home); undefined = whatever page is active (legacy
    *  single-arg callers). */
-  onFlatHtmlUpdate?: (html: string, page?: string | null) => void;
+  onFlatHtmlUpdate?: (
+    html: string,
+    page?: string | null,
+    untrusted?: boolean,
+  ) => void;
   /** Persisted Chat-tab transcript — seeds the chat so a reload / tab
    *  switch restores the conversation instead of an empty composer. */
   flatProjectChat?: StoredChatTurn[];

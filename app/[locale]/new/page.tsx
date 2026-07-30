@@ -561,6 +561,9 @@ function NewV2Inner() {
     null,
   );
   const [chatRedesigning, setChatRedesigning] = useState(false);
+  // True mientras el chat dripea HTML crudo del modelo (ai-design Modo B, aún
+  // sin sanitizar). Ver buildUntrustedSrcDoc en preview-prelude.ts.
+  const [chatUntrustedDoc, setChatUntrustedDoc] = useState(false);
   const iframeElRef = useRef<HTMLIFrameElement | null>(null);
   // Optimistic-concurrency base — the project's updatedAt this tab last
   // wrote. Sent with every HTML save; the server snapshots the current state
@@ -3415,7 +3418,11 @@ function NewV2Inner() {
           flatProjectHtml={loadedProject ? activeDoc : undefined}
           flatProjectPage={activeSitePage}
           flatProjectId={loadedProject?.id}
-          onFlatHtmlUpdate={(newHtml, pageOverride) => {
+          onFlatHtmlUpdate={(newHtml, pageOverride, untrusted) => {
+            // Va en el MISMO handler que el html para que no puedan
+            // desincronizarse: un drip crudo del chat marca el documento como
+            // no confiable, y el `done` ya sanitizado lo devuelve a normal.
+            setChatUntrustedDoc(untrusted === true);
             // Chat pins its turn's page so mid-stream page switches (or a
             // cross-page Undo) can't write the wrong slot; single-arg
             // callers keep targeting whatever page is active.
@@ -3773,6 +3780,7 @@ function NewV2Inner() {
                 doc={activeDoc}
                 docKey={`${loadedProject.id}:${activeSitePage ?? ""}:u${undoEpoch}`}
                 redesigning={chatRedesigning}
+                untrustedDoc={chatUntrustedDoc}
                 editableInjection={editableInjection}
                 sectionSelectMode={sectionSelectMode}
                 editingActive={editingActive}

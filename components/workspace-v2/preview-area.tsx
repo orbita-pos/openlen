@@ -33,6 +33,7 @@ import {
   injectEditorModulesPreview,
   type EditorModulesPreviewCfg,
 } from "./module-preview";
+import { buildUntrustedSrcDoc } from "./preview-prelude";
 import { PageBuildingLoader } from "./page-building-loader";
 import { ScanOverlay } from "./scan-overlay";
 import { coerceSceneSpec } from "@/lib/three3d/scene-spec";
@@ -143,6 +144,10 @@ interface PreviewAreaProps {
   /** 3D scene settings — consumed by Task 3 preview injection. Accepted here
    *  so the parent can pass it without a TS error before Task 3 lands. */
   scene3d?: { enabled?: boolean; spec?: unknown };
+  /** True mientras el chat dripea la salida CRUDA del modelo (ai-design Modo
+   *  B), que todavía no pasó por el sanitizador del servidor. Pinta el
+   *  documento bajo la CSP del prólogo y sin los inyectores del editor. */
+  untrustedDoc?: boolean;
   /** Active-modules canvas preview (WhatsApp FAB + collections grid, the
    *  scriptless subset). Applied inside derive() so the injected markup rides
    *  every srcDoc; stripEditorInstrumentation removes it on every save. Keep
@@ -189,6 +194,7 @@ export function PreviewArea({
   dropEnabled = false,
   suppressReloadNonce = 0,
   scene3d,
+  untrustedDoc = false,
   modulesPreview = null,
 }: PreviewAreaProps) {
   const t = useTranslations("wsChrome");
@@ -240,6 +246,13 @@ export function PreviewArea({
     swap: t("preview.drop.swap"),
   };
   const derive = (rawDoc: string): string => {
+    // `untrustedDoc`: el chat está dripeando la salida CRUDA del modelo, que
+    // aún no pasó por sanitizeForPublish (corre al final, sobre el `done`).
+    // Se pinta bajo la CSP del prólogo y SIN instrumentar: el usuario mira la
+    // reescritura, no edita, y los inyectores vuelven con el `done` limpio.
+    // Sin esto un <script> del modelo ejecutaba con el origen de openlen.com
+    // — este iframe corre allow-same-origin (auditoría 2026-07-29).
+    if (untrustedDoc) return buildUntrustedSrcDoc(rawDoc);
     // Active modules FIRST — the edit injectors then instrument the same doc
     // the user will actually see (the injected preview is marked no-edit).
     let html = modulesPreview
@@ -325,7 +338,10 @@ export function PreviewArea({
     // (todo encendido) este effect no se re-dispara por su culpa.
     // modulesPreview cambia de identidad solo con settings/items de módulos
     // (useMemo en el padre) — su re-derive es el feedback del toggle.
-  }, [doc, editingActive, killFlags, modulesPreview]);
+    // untrustedDoc entra en las deps: al abrirse la ventana hay que re-derivar
+    // para que el prólogo cubra el drip, y al cerrarse para que el `done`
+    // sanitizado recupere la instrumentación del editor.
+  }, [doc, editingActive, killFlags, modulesPreview, untrustedDoc]);
 
   // Mode sync — every flag change becomes a postMessage to the iframe. The
   // iframe's bootstrap (in use-inline-edit.ts) translates this into body
@@ -385,6 +401,9 @@ export function PreviewArea({
   // For other presets: append before </body> as an inline block.
   // NOT gesture-gated in the editor (auto-mounts immediately).
   const finalSrcDoc = useMemo(() => {
+    // Ventana no confiable: ni escena 3D ni nada nuestro se monta encima del
+    // HTML crudo del modelo (buildUntrustedSrcDoc ya lo dejó bajo la CSP).
+    if (untrustedDoc) return stableSrcDoc;
     if (!scene3d?.enabled || !scene3d.spec) return stableSrcDoc;
     const spec = coerceSceneSpec(scene3d.spec);
     const bg = backgroundCss(spec);

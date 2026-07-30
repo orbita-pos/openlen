@@ -43,6 +43,24 @@ function buildPrelude(csp: string): string {
   return `<!doctype html><meta http-equiv="Content-Security-Policy" content="${csp}">`;
 }
 
+/** srcDoc para una ventana en que el documento NO es de fiar todavía.
+ *
+ *  El chat (ai-design Modo B) dripea al iframe del EDITOR la salida CRUDA del
+ *  modelo mientras llega: su `sanitizeForPublish` corre al final, sobre el
+ *  `done` (ai-design/route.ts:754), pero los chunks salen antes
+ *  (:524/:531/:634) y el cliente los pinta (chat-panel.tsx:679 → :564). Ese
+ *  iframe corre con allow-same-origin y sin CSP, así que un <script> del
+ *  modelo ejecutaba con el origen de openlen.com: leía cookies, escribía en el
+ *  DOM del editor y hacía fetch autenticado. Que el `done` sanitizado lo
+ *  reemplace segundos después da igual — ya ejecutó al pintarse.
+ *
+ *  Durante esa ventana el documento se pinta con el prólogo y SIN los
+ *  inyectores del editor: el usuario está mirando la reescritura, no editando,
+ *  y la instrumentación vuelve sola cuando aterriza el `done` sanitizado. */
+export function buildUntrustedSrcDoc(html: string): string {
+  return PREVIEW_PRELUDE + html;
+}
+
 // ── Snapshot de curación ────────────────────────────────────────────────────
 //
 // La ruta gratis (/api/curate) pinta plantillas curadas, y esas SÍ declaran su

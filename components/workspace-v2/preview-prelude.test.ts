@@ -2,6 +2,7 @@ import { describe, expect, test } from "vitest";
 import {
   PREVIEW_CSP,
   PREVIEW_PRELUDE,
+  buildUntrustedSrcDoc,
   preparePreviewSnapshot,
 } from "./preview-prelude";
 
@@ -124,5 +125,39 @@ describe("snapshot de curación: recuperar la paleta sin abrir la puerta", () =>
     const r = preparePreviewSnapshot(html, "N1");
     expect(r.html).toContain("<script data-ol-pwn>evil()</script>");
     expect(/nonce="N1"[^>]*>\s*evil/.test(r.html)).toBe(false);
+  });
+});
+
+// El chat (ai-design Modo B) dripea al iframe del EDITOR la salida CRUDA del
+// modelo, chunk a chunk, antes de que el servidor la sanitice (el sanitize de
+// esa ruta corre al final, sobre el `done`). Ese iframe corre con
+// allow-same-origin y sin CSP, así que un <script> del modelo ejecutaba con el
+// origen de openlen.com. Durante esa ventana el documento se pinta SIN los
+// inyectores del editor y CON el prólogo: el usuario mira, no edita.
+
+describe("srcDoc de una ventana no confiable (drip del chat)", () => {
+  const MODEL = '<!doctype html><html><head><title>t</title></head><body><p>x</p></body></html>';
+
+  test("antepone el prólogo con CSP al HTML del modelo", () => {
+    const out = buildUntrustedSrcDoc(MODEL);
+    expect(out.startsWith(PREVIEW_PRELUDE)).toBe(true);
+    expect(out).toContain(PREVIEW_CSP);
+    expect(out.endsWith(MODEL)).toBe(true);
+  });
+
+  test("la CSP va ANTES del primer byte del modelo — si no, no rige", () => {
+    const hostile = MODEL.replace("<body>", "<body><script>evil()</script>");
+    const out = buildUntrustedSrcDoc(hostile);
+    expect(out.indexOf("Content-Security-Policy")).toBeLessThan(out.indexOf("<script>evil()"));
+  });
+
+  test("no inyecta scripts propios: en esa ventana no hay edición que instrumentar", () => {
+    const out = buildUntrustedSrcDoc(MODEL);
+    expect(out).not.toMatch(/<script(?![^>]*src=)/i);
+  });
+
+  test("no altera el HTML del modelo (se pinta lo que el modelo va emitiendo)", () => {
+    const partial = '<!doctype html><html><head><title>a medias';
+    expect(buildUntrustedSrcDoc(partial).slice(PREVIEW_PRELUDE.length)).toBe(partial);
   });
 });

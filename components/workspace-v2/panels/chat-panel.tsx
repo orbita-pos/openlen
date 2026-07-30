@@ -60,7 +60,11 @@ interface ChatPanelProps {
    *  home). Forwarded to ai-design + the undo PATCH so chat edits land in
    *  the right document slot. */
   flatProjectPage?: string | null;
-  onFlatHtmlUpdate?: (newHtml: string) => void;
+  onFlatHtmlUpdate?: (
+    newHtml: string,
+    page?: string | null,
+    untrusted?: boolean,
+  ) => void;
   /** Persisted transcript — seeds the chat so a reload / tab switch
    *  restores the conversation. */
   flatProjectChat?: StoredChatTurn[];
@@ -307,7 +311,15 @@ function AIDesignChat({
   page?: string | null;
   /** Write a document's html into the parent's project state. `page`
    *  pins the slot (null = home); undefined = whatever page is active. */
-  onLocalUpdate: (newHtml: string, page?: string | null) => void;
+  /** `untrusted` marca el HTML que todavía NO pasó por el sanitizador del
+   *  servidor: el drip crudo de un rewrite Modo B. Viaja junto al html (y no
+   *  como señal aparte) para que no puedan desincronizarse — el preview lo
+   *  usa para pintar bajo CSP y sin instrumentar. */
+  onLocalUpdate: (
+    newHtml: string,
+    page?: string | null,
+    untrusted?: boolean,
+  ) => void;
   initialChat?: StoredChatTurn[];
   onChatChange?: () => void;
   onRedesigningChange?: (active: boolean) => void;
@@ -561,7 +573,9 @@ function AIDesignChat({
       const flushHtml = () => {
         if (htmlBuf.value.length > lastFlushedLen) {
           lastFlushedLen = htmlBuf.value.length;
-          onLocalUpdate(htmlBuf.value, turnPage);
+          // Salida CRUDA del modelo: ai-design sanitiza al final, sobre el
+          // `done`, así que esto va marcado como no confiable.
+          onLocalUpdate(htmlBuf.value, turnPage, true);
         }
       };
       const scheduleFlush = () => {
