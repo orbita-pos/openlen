@@ -131,7 +131,10 @@ export function SectionPreviewModal({
               key={`${section.id}:${device}`}
               src={section.previewUrl}
               title={section.variantLabel}
-              sandbox="allow-scripts allow-same-origin"
+              // Solo pinta /api/sections/<id>/preview, que ya se sirve con
+              // CSP sandbox; sin allow-same-origin aquí tampoco, para no
+              // depender de un único control.
+              sandbox="allow-scripts"
               style={{
                 width: deviceWidth,
                 height: stageHeight,

@@ -1,5 +1,6 @@
 import { auth } from "@/auth";
 import { getVersionHtml } from "@/lib/projects/versions";
+import { embedSandboxHeaders } from "@/lib/publish/embed-sandbox";
 
 export const runtime = "nodejs";
 
@@ -10,7 +11,7 @@ export const runtime = "nodejs";
 // for a few minutes inside the tab — saves re-fetching the same HTML
 // when the user scrolls the timeline.
 export async function GET(
-  _req: Request,
+  req: Request,
   ctx: { params: Promise<{ id: string; vid: string }> },
 ): Promise<Response> {
   const session = await auth();
@@ -32,6 +33,9 @@ export async function GET(
       "content-type": "text/html; charset=utf-8",
       "cache-control": "private, max-age=300",
       "x-frame-options": "SAMEORIGIN",
+      // Miniatura de una versión: incrustada va con origen opaco.
+      // Ver lib/publish/embed-sandbox.ts.
+      ...embedSandboxHeaders(req),
     },
   });
 }

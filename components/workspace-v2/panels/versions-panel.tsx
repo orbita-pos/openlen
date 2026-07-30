@@ -779,7 +779,9 @@ function VersionThumb({
           <iframe
             src={`/api/projects/${projectId}/versions/${versionId}/raw`}
             title={t("versions.thumbnailTitle", { label })}
-            sandbox="allow-scripts allow-same-origin"
+            // Miniatura de versión: sin allow-same-origin (nadie lee su
+            // contentDocument) para que un script no herede nuestro origen.
+            sandbox="allow-scripts"
             loading="lazy"
             referrerPolicy="no-referrer"
             onLoad={() => setLoaded(true)}
@@ -929,7 +931,9 @@ function VersionPreviewModal({
           <iframe
             src={`/api/projects/${item.projectId}/versions/${item.id}/raw`}
             title={item.label}
-            sandbox="allow-scripts allow-same-origin"
+            // Miniatura de versión: sin allow-same-origin (nadie lee su
+            // contentDocument) para que un script no herede nuestro origen.
+            sandbox="allow-scripts"
             referrerPolicy="no-referrer"
             onLoad={() => setFrameLoaded(true)}
             className="w-full h-full"

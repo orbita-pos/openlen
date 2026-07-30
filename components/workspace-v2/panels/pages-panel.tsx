@@ -305,7 +305,10 @@ function ProjectThumb({
           <iframe
             src={`/api/projects/${projectId}/raw`}
             title={t("pages.thumbnailTitle", { title })}
-            sandbox="allow-scripts allow-same-origin"
+            // Sin allow-same-origin: es una miniatura, nadie le lee el
+            // contentDocument ni le hace postMessage. Con la bandera, un
+            // script dentro correría con el origen de openlen.com.
+            sandbox="allow-scripts"
             loading="lazy"
             referrerPolicy="no-referrer"
             onLoad={() => setLoaded(true)}

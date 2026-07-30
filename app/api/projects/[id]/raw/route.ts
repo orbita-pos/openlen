@@ -2,6 +2,7 @@ import { and, eq } from "drizzle-orm";
 import { auth } from "@/auth";
 import { db, schema } from "@/lib/db";
 import { bakeModulesForPreview } from "@/lib/publish/preview-bake";
+import { embedSandboxHeaders } from "@/lib/publish/embed-sandbox";
 
 export const runtime = "nodejs";
 
@@ -67,6 +68,7 @@ export async function GET(
         "content-type": "text/html; charset=utf-8",
         "cache-control": "private, no-cache, must-revalidate",
         "x-frame-options": "SAMEORIGIN",
+        ...embedSandboxHeaders(req),
       },
     });
   }
@@ -81,12 +83,13 @@ export async function GET(
       // response for a few seconds inside the same tab, but no shared
       // / CDN caching.
       "cache-control": "private, no-cache, must-revalidate",
-      // Iframe is sized + transformed by the parent; the embedded
-      // document itself must allow same-origin so the parent could
-      // postMessage if we ever wire that back. Today the iframe is
-      // pointer-events-none, but the same-origin posture is consistent
-      // with TemplatePreviewFrame.
       "x-frame-options": "SAMEORIGIN",
+      // Incrustado (miniatura) → origen opaco vía CSP sandbox; en pestaña
+      // propia se sirve sin ella para que los enlaces del usuario sigan
+      // funcionando. Ver lib/publish/embed-sandbox.ts. Nada le hace
+      // postMessage a este iframe (el padre solo lo dimensiona), así que
+      // perder el mismo origen no cuesta nada aquí.
+      ...embedSandboxHeaders(req),
     },
   });
 }

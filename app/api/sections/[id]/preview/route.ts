@@ -1,4 +1,5 @@
 import { getSection, getSectionHtml } from "@/lib/sections/store";
+import { EMBED_SANDBOX_CSP } from "@/lib/publish/embed-sandbox";
 
 // Renderable preview doc for a section. The stored fragment is just
 // <link> + scoped <style> + the section element — it has no <html>/<head> and
@@ -28,6 +29,13 @@ export async function GET(
     headers: {
       "Content-Type": "text/html; charset=utf-8",
       "Cache-Control": "public, s-maxage=300, stale-while-revalidate=3600",
+      // Incondicional, a diferencia de /raw: esto solo existe para verse
+      // incrustado (nunca es una página navegable del producto) y encima es
+      // PÚBLICO sin auth. Origen opaco: el fragmento se sirve desde nuestro
+      // origen y no pasa por sanitizeForPublish — se siembra por CLI, así que
+      // esta es su única línea de defensa. Ver lib/publish/embed-sandbox.ts.
+      "Content-Security-Policy": EMBED_SANDBOX_CSP,
+      "X-Content-Type-Options": "nosniff",
     },
   });
 }
