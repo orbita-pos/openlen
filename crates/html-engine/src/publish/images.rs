@@ -28,6 +28,72 @@ use super::{escape_attr, parse_fragment_children, serialize_doc};
 /// avatars) — it still gets srcset + dimensions, just not the preload.
 const HERO_MIN_WIDTH: u32 = 800;
 
+/// Tolerancia antes de declarar que una caja recorta "más alto" que la foto.
+/// Un 16:10 dentro de 16:9 no amerita renunciar al ahorro de `sizes="auto"`.
+const COVER_ASPECT_SLACK: f64 = 1.15;
+
+/// `sizes="auto"` elige la variante por el ANCHO pintado del <img>. Con
+/// `object-cover` dentro de una caja más ALTA que la foto (tarjeta 3:4 sobre
+/// foto 16:9 — el patrón de toda galería vertical), la imagen se escala por
+/// ALTURA: el ancho fuente que de verdad se usa es alto × aspecto intrínseco,
+/// y el navegador — ciego al recorte — elige corto. Medido en prod: fotos
+/// pintadas al 42% de su resolución. Estas funciones detectan ese caso desde
+/// el markup (utilidades `aspect-*` de Tailwind o `aspect-ratio:` inline, en
+/// el <img> o un ancestro cercano) para degradar a `100vw` — el mismo sizes
+/// de los eager, nítido a cambio de sobre-descargar. Solo se renuncia a
+/// `auto` cuando el recorte es DEMOSTRABLE; sin señal, el ahorro se queda.
+fn parse_ratio(s: &str) -> Option<f64> {
+    let s = s.trim();
+    if let Some((a, b)) = s.split_once('/') {
+        let a: f64 = a.trim().parse().ok()?;
+        let b: f64 = b.trim().parse().ok()?;
+        return (a > 0.0 && b > 0.0).then(|| a / b);
+    }
+    let v: f64 = s.parse().ok()?;
+    (v > 0.0).then_some(v)
+}
+
+fn parse_aspect_token(tok: &str) -> Option<f64> {
+    // `lg:aspect-[3/4]` — el prefijo de breakpoint no importa: si ALGÚN
+    // breakpoint recorta más alto, elegir corto arruina ese breakpoint, y el
+    // costo de acertar de más es solo bytes.
+    let tok = tok.rsplit(':').next().unwrap_or(tok);
+    let rest = tok.strip_prefix("aspect-")?;
+    match rest {
+        "square" => Some(1.0),
+        "video" => Some(16.0 / 9.0),
+        "auto" => None,
+        _ => parse_ratio(rest.strip_prefix('[')?.strip_suffix(']')?),
+    }
+}
+
+fn element_aspect(attrs: &kuchikiki::Attributes) -> Option<f64> {
+    if let Some(class) = attrs.get("class") {
+        if let Some(r) = class.split_whitespace().find_map(parse_aspect_token) {
+            return Some(r);
+        }
+    }
+    let style = attrs.get("style")?;
+    let lower = style.to_ascii_lowercase();
+    let i = lower.find("aspect-ratio")?;
+    let after = lower[i + "aspect-ratio".len()..].trim_start();
+    let val: String = after.strip_prefix(':')?.chars().take_while(|c| *c != ';').collect();
+    parse_ratio(&val)
+}
+
+/// Aspecto de la caja que recorta: el del propio <img>, o el del ancestro con
+/// aspecto declarado más cercano (el patrón real es el wrapper inmediato —
+/// `<div class="aspect-[3/4]"><img object-cover>` — 4 niveles bastan).
+fn cover_box_aspect(node: &kuchikiki::NodeRef, own: &kuchikiki::Attributes) -> Option<f64> {
+    if let Some(r) = element_aspect(own) {
+        return Some(r);
+    }
+    node.ancestors().take(4).find_map(|anc| match anc.data() {
+        NodeData::Element(d) => element_aspect(&d.attributes.borrow()),
+        _ => None,
+    })
+}
+
 #[derive(Debug, Clone)]
 pub struct ResponsiveImage {
     /// Entity-decoded `src` attribute value this entry applies to.
@@ -115,8 +181,20 @@ pub fn rewrite_responsive_images(html: &str, images: &[ResponsiveImage]) -> Rewr
             .unwrap_or(false);
         let is_hero = !hero_seen && entry.width >= HERO_MIN_WIDTH && !author_lazy;
 
+        // object-cover en caja demostrablemente más alta que la foto: el ancho
+        // pintado (lo único que `auto` mira) subestima la fuente necesaria.
+        let cropped_taller = attrs
+            .get("class")
+            .map(|c| c.split_whitespace().any(|t| t == "object-cover"))
+            .unwrap_or(false)
+            && cover_box_aspect(&node, &attrs)
+                .map(|box_ar| {
+                    entry.width as f64 / entry.height.max(1) as f64 > box_ar * COVER_ASPECT_SLACK
+                })
+                .unwrap_or(false);
+
         // Hero + anything above it (eager) renders at most viewport-wide.
-        let sizes = if is_hero || (!hero_seen && !author_lazy) {
+        let sizes = if is_hero || (!hero_seen && !author_lazy) || cropped_taller {
             "100vw"
         } else {
             "auto, 100vw"
@@ -449,4 +527,108 @@ mod tests {
         assert_eq!(once.html, twice.html);
         assert_eq!(twice.rewritten, 0);
     }
+
+    // ── Recorte cover en caja más alta (el bug de las galerías borrosas) ────
+    // Un lazy post-hero normalmente lleva sizes="auto, 100vw"; estos casos
+    // fijan cuándo se degrada a "100vw" y cuándo NO se pierde el ahorro.
+
+    /// Documento con hero previo, para que la img bajo prueba sea lazy.
+    fn doc_with(hero_then: &str) -> String {
+        format!(
+            r#"<body><img src="/hero.jpg">{}</body>"#,
+            hero_then
+        )
+    }
+
+    fn entries_hero_and(second: ResponsiveImage) -> Vec<ResponsiveImage> {
+        vec![entry("/hero.jpg", 1600, 900), second]
+    }
+
+    #[test]
+    fn cover_in_taller_box_drops_auto() {
+        // El caso Kira medido en prod: tarjeta 3:4, foto 16:9, cover → 42% res.
+        let html = doc_with(
+            r#"<div class="aspect-[3/4] rounded-xl"><img src="/a.jpg" class="w-full h-full object-cover"></div>"#,
+        );
+        let r = rewrite_responsive_images(&html, &entries_hero_and(entry("/a.jpg", 1600, 900)));
+        let after_hero = &r.html[r.html.find("aspect-").unwrap()..];
+        assert!(after_hero.contains(r#"sizes="100vw""#));
+        assert!(!after_hero.contains("auto, 100vw"));
+    }
+
+    #[test]
+    fn cover_matching_aspect_keeps_auto() {
+        // Caja 16:9 sobre foto 16:9: el ancho pintado sí manda — ahorro intacto.
+        let html = doc_with(
+            r#"<div class="aspect-video"><img src="/a.jpg" class="object-cover"></div>"#,
+        );
+        let r = rewrite_responsive_images(&html, &entries_hero_and(entry("/a.jpg", 1600, 900)));
+        assert!(r.html.contains("auto, 100vw"));
+    }
+
+    #[test]
+    fn taller_box_without_cover_keeps_auto() {
+        // Sin object-cover no hay recorte: contain/fill pintan por ancho.
+        let html = doc_with(
+            r#"<div class="aspect-[3/4]"><img src="/a.jpg" class="w-full"></div>"#,
+        );
+        let r = rewrite_responsive_images(&html, &entries_hero_and(entry("/a.jpg", 1600, 900)));
+        assert!(r.html.contains("auto, 100vw"));
+    }
+
+    #[test]
+    fn aspect_on_img_itself_and_breakpoint_prefix_count() {
+        // lg:aspect-[9/16] en el propio <img>: si un breakpoint recorta más
+        // alto, elegir corto arruina ese breakpoint — se degrada.
+        let html = doc_with(
+            r#"<img src="/a.jpg" class="lg:aspect-[9/16] object-cover">"#,
+        );
+        let r = rewrite_responsive_images(&html, &entries_hero_and(entry("/a.jpg", 1600, 900)));
+        let after_hero = &r.html[r.html.find("lg:aspect").unwrap()..];
+        assert!(!after_hero.contains("auto, 100vw"));
+    }
+
+    #[test]
+    fn inline_aspect_ratio_style_counts() {
+        let html = doc_with(
+            r#"<div style="aspect-ratio: 3 / 4"><img src="/a.jpg" class="object-cover"></div>"#,
+        );
+        let r = rewrite_responsive_images(&html, &entries_hero_and(entry("/a.jpg", 1600, 900)));
+        let after_hero = &r.html[r.html.find("aspect-ratio").unwrap()..];
+        assert!(!after_hero.contains("auto, 100vw"));
+    }
+
+    #[test]
+    fn cover_without_any_aspect_signal_keeps_auto() {
+        // Sin señal del aspecto de la caja no se especula: el ahorro se queda.
+        let html = doc_with(r#"<img src="/a.jpg" class="object-cover w-full">"#);
+        let r = rewrite_responsive_images(&html, &entries_hero_and(entry("/a.jpg", 1600, 900)));
+        assert!(r.html.contains("auto, 100vw"));
+    }
+
+    #[test]
+    fn slack_tolerates_near_matches() {
+        // 16:10 dentro de 16:9 (7% de diferencia): dentro de la tolerancia.
+        let html = doc_with(
+            r#"<div class="aspect-[16/10]"><img src="/a.jpg" class="object-cover"></div>"#,
+        );
+        let r = rewrite_responsive_images(&html, &entries_hero_and(entry("/a.jpg", 1600, 900)));
+        assert!(r.html.contains("auto, 100vw"));
+    }
+
+    #[test]
+    fn avif_picture_sources_inherit_degraded_sizes() {
+        // La ruta <picture> (AVIF) lleva sizes en los <source>: mismo criterio.
+        let html = doc_with(
+            r#"<div class="aspect-[3/4]"><img src="/a.jpg" class="object-cover"></div>"#,
+        );
+        let r = rewrite_responsive_images(
+            &html,
+            &entries_hero_and(entry_avif("/a.jpg", 1600, 900)),
+        );
+        let after_hero = &r.html[r.html.find("aspect-").unwrap()..];
+        assert!(after_hero.contains(r#"<source type="image/avif""#));
+        assert!(!after_hero.contains("auto, 100vw"));
+    }
+
 }
