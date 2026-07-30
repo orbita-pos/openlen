@@ -42,11 +42,10 @@ function Step($n, $msg) {
 }
 
 # Los here-strings heredan los saltos de linea del ARCHIVO. Si deploy.ps1 queda
-# en CRLF (un editor de Windows, una herramienta que escribe 
-), cada linea
+# en CRLF (un editor de Windows, una herramienta que escribe CRLF), cada linea
 # que viaja por ssh llega a bash con un CR pegado: `set -e` muere con
 # "set: -: invalid option" -- o sea que la guarda de errores se apaga en
-# silencio -- y las rutas se convierten en 'nombre'$''. .gitattributes fuerza
+# silencio -- y las rutas se convierten en 'nombre' + CR. .gitattributes fuerza
 # eol=lf, asi que el repo esta bien; esto protege la COPIA DE TRABAJO. Paso por
 # aqui todo script remoto. (Reproducido el 2026-07-30: un deploy abortado en el
 # paso 6 con exactamente esos sintomas.)
