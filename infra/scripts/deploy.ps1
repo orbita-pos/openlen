@@ -41,6 +41,17 @@ function Step($n, $msg) {
   Write-Host "[$n/7] $msg" -ForegroundColor Cyan
 }
 
+# Los here-strings heredan los saltos de linea del ARCHIVO. Si deploy.ps1 queda
+# en CRLF (un editor de Windows, una herramienta que escribe 
+), cada linea
+# que viaja por ssh llega a bash con un CR pegado: `set -e` muere con
+# "set: -: invalid option" -- o sea que la guarda de errores se apaga en
+# silencio -- y las rutas se convierten en 'nombre'$''. .gitattributes fuerza
+# eol=lf, asi que el repo esta bien; esto protege la COPIA DE TRABAJO. Paso por
+# aqui todo script remoto. (Reproducido el 2026-07-30: un deploy abortado en el
+# paso 6 con exactamente esos sintomas.)
+function Sh($cmd) { $cmd -replace "`r`n", "`n" }
+
 # --- 1. Build ----------------------------------------------------------
 if ($env:OPENLEN_SKIP_BUILD -ne "1") {
   Step 1 "Building Next.js standalone..."
@@ -133,7 +144,7 @@ cd $stagingDir
 PUPPETEER_SKIP_DOWNLOAD=1 npm install --no-save --include=optional --os=linux --cpu=x64 "@img/sharp-linux-x64" "@img/sharp-libvips-linux-x64" --silent 2>&1 | tail -3
 chown -R openlen-deploy:www-data $stagingDir
 "@
-& ssh $host_ $extractCmd
+& ssh $host_ (Sh $extractCmd)
 if ($LASTEXITCODE -ne 0) { throw "Remote extract failed (exit $LASTEXITCODE)" }
 
 # --- 6.2. Apply DB migrations ON THE BOX ------------------------------
@@ -215,7 +226,7 @@ rm /root/$cratesTarball
 chmod +x /root/build-crates-on-box.sh
 bash /root/build-crates-on-box.sh $stagingDir
 "@
-  & ssh $host_ $cratesCmd
+  & ssh $host_ (Sh $cratesCmd)
   if ($LASTEXITCODE -ne 0) { throw "Crate rebuild failed (exit $LASTEXITCODE)" }
   Remove-Item -Force $cratesTarball
   $sw.Stop()
@@ -241,7 +252,7 @@ sleep 2
 systemctl is-active openlen-app
 curl -sI -o /dev/null -w '  smoke: HTTP %{http_code} (%{time_total}s)' http://127.0.0.1:3000/
 "@
-& ssh $host_ $swapCmd
+& ssh $host_ (Sh $swapCmd)
 if ($LASTEXITCODE -ne 0) { throw "Swap or restart failed (exit $LASTEXITCODE)" }
 
 # --- Cleanup local tarball --------------------------------------------
