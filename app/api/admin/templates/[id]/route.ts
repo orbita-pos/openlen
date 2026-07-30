@@ -6,7 +6,7 @@ import {
 } from "@/lib/templates/store";
 import {
   UpdateSchema,
-  htmlContainsEditorMarker,
+  findTemplateHtmlIssue,
 } from "@/lib/templates/admin-schemas";
 
 export const runtime = "nodejs";
@@ -44,15 +44,12 @@ export async function PUT(
     );
   }
 
-  const hasMarker =
-    (parsed.data.html != null && htmlContainsEditorMarker(parsed.data.html)) ||
-    (parsed.data.pages ?? []).some((p) => htmlContainsEditorMarker(p.html));
-  if (hasMarker) {
+  // Mismo validador que el POST y el CLI (ver admin-schemas.ts): rechaza,
+  // nunca sanitiza — la copia cruda en R2 es la que se puede re-derivar.
+  const issue = findTemplateHtmlIssue(parsed.data);
+  if (issue) {
     return json(
-      {
-        error: "invalid_html",
-        reason: "html contains data-slot-path marker (editor-mode leak)",
-      },
+      { error: "invalid_html", where: issue.where, reason: issue.reason },
       400,
     );
   }

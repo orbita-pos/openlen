@@ -5,7 +5,7 @@ import {
 } from "@/lib/templates/store";
 import {
   CreateSchema,
-  htmlContainsEditorMarker,
+  findTemplateHtmlIssue,
 } from "@/lib/templates/admin-schemas";
 
 export const runtime = "nodejs";
@@ -32,12 +32,14 @@ export async function POST(req: Request): Promise<Response> {
     );
   }
 
-  if (htmlContainsEditorMarker(parsed.data.html)) {
+  // Se RECHAZA, no se sanitiza: la copia cruda en R2 es la que permite
+  // re-derivar paletas más adelante (ver admin-schemas.ts). Cubre el
+  // documento principal Y las páginas extra — antes solo miraba el primero,
+  // mientras el PUT y el CLI ya revisaban ambas.
+  const issue = findTemplateHtmlIssue(parsed.data);
+  if (issue) {
     return json(
-      {
-        error: "invalid_html",
-        reason: "html contains data-slot-path marker (editor-mode leak)",
-      },
+      { error: "invalid_html", where: issue.where, reason: issue.reason },
       400,
     );
   }

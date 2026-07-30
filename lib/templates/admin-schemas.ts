@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { detectSlotPath } from "@/lib/html-engine";
+import { sanitizeForPublish } from "@/lib/html-engine";
 import { validatePageSlug } from "@/lib/projects/site-pages";
 
 // Shared Zod schemas + invariant helpers for the admin template endpoints.
@@ -136,10 +136,78 @@ export const UpdateSchema = z
   });
 export type UpdateTemplateInput = z.infer<typeof UpdateSchema>;
 
-// Same defense-in-depth check publishToDir() does: editor-mode markers
-// from the workspace must never reach storage. Routed through the Rust-
-// backed `detectSlotPath` so we catch mixed-case / entity-encoded /
-// whitespace-around-equals variants the inline `String.includes` missed.
-export function htmlContainsEditorMarker(html: string): boolean {
-  return detectSlotPath(html);
+// ── Validación de contenido al REGISTRAR una plantilla ──────────────────────
+//
+// Aquí se VALIDA Y RECHAZA; deliberadamente NO se sanitiza. Las plantillas se
+// guardan CRUDAS en R2 a propósito y se sanitizan al CLONAR: esa copia cruda es
+// la que permitió que el fix del carrier (977e325) reparara los clones futuros
+// sin tocar nada. Sanitizar al registrar destruiría la única copia cruda de
+// esas paletas — la misma pérdida irreversible que acabamos de arreglar. Y
+// quien registra es admin por CLI: un error claro es mejor que una limpieza
+// callada que nadie ve.
+//
+// El criterio salió de MEDIR el corpus real (178 plantillas en
+// templates/starter, con el propio sanitizador como oráculo —
+// scratch/template-corpus-scan.mts):
+//
+//   scripts inline .... 89% de las plantillas → norma establecida, se acepta
+//   handlers on* ...... 13%                   → norma establecida, se acepta
+//   javascript: URLs ... 0%                   → anomalía, se rechaza
+//   iframes/embeds ..... 0%                   → anomalía, se rechaza
+//   meta refresh ....... 0%                   → anomalía, se rechaza
+//
+// Los dos primeros los borra el sanitizador al clonar (doctrina "OpenLen borra
+// todo el JS") y son el pan de cada día de un artefacto de claude.ai; los tres
+// últimos no tienen un solo precedente legítimo, y como el clon también los
+// borraría, una plantilla que los traiga está rota de nacimiento: mejor
+// enterarse al registrarla que descubrir el video ausente en cada clon.
+//
+// El oráculo es el sanitizador REAL (no una lista de regexes propia): lo que él
+// contaría como retirado es exactamente lo que aquí se juzga, así que las dos
+// puertas no pueden driftear.
+
+/** Dónde está el problema y por qué se rechaza. */
+export interface TemplateHtmlIssue {
+  /** `"html"` o `pages["<slug>"]`. */
+  where: string;
+  reason: string;
+}
+
+function htmlIssue(html: string): string | null {
+  const r = sanitizeForPublish(html);
+  if (r.html === null) {
+    return "contiene el marcador data-slot-path (fuga de modo-editor)";
+  }
+  const bad: string[] = [];
+  if (r.removed.dangerousUrls > 0) {
+    bad.push(`${r.removed.dangerousUrls} URL(s) con esquema peligroso (javascript:/vbscript:)`);
+  }
+  if (r.removed.iframes > 0) {
+    bad.push(`${r.removed.iframes} elemento(s) incrustado(s) (iframe/object/embed)`);
+  }
+  if (r.removed.metaRefresh > 0) {
+    bad.push(`${r.removed.metaRefresh} meta refresh`);
+  }
+  // scripts + on* NO entran: son la norma del corpus (89% / 13%) y el clon los
+  // retira. Ver la tabla de arriba antes de agregarlos.
+  return bad.length > 0
+    ? `${bad.join("; ")} — el clon los borraría, así que la plantilla nacería rota`
+    : null;
+}
+
+/** Revisa el documento principal Y cada página extra. Devuelve el primer
+ *  problema (nombrando la página culpable) o null si todo pasa. */
+export function findTemplateHtmlIssue(input: {
+  html?: string | null;
+  pages?: { slug: string; html: string }[] | null;
+}): TemplateHtmlIssue | null {
+  if (typeof input.html === "string") {
+    const reason = htmlIssue(input.html);
+    if (reason) return { where: "html", reason };
+  }
+  for (const p of input.pages ?? []) {
+    const reason = htmlIssue(p.html);
+    if (reason) return { where: `pages["${p.slug}"]`, reason };
+  }
+  return null;
 }

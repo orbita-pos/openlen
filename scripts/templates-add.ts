@@ -22,7 +22,7 @@ import { upsertTemplate } from "../lib/templates/store";
 import { captureScreenshotForTemplate } from "../lib/templates/capture-screenshot";
 import {
   CreateSchema,
-  htmlContainsEditorMarker,
+  findTemplateHtmlIssue,
 } from "../lib/templates/admin-schemas";
 import { lintContract } from "../lib/contract/lint";
 
@@ -145,13 +145,15 @@ async function main() {
     process.exit(2);
   }
 
-  const markerOffender = htmlContainsEditorMarker(result.data.html)
-    ? "home"
-    : (result.data.pages ?? []).find((p) => htmlContainsEditorMarker(p.html))?.slug;
-  if (markerOffender) {
-    console.error(
-      `HTML (${markerOffender}) contains \`data-slot-path=\` — that marker is only valid in editor-mode workspace output, not in a curated template. Re-export without it.`,
-    );
+  // Mismo validador que las dos rutas de admin (lib/templates/admin-schemas.ts):
+  // RECHAZA en vez de sanitizar, porque la copia cruda en R2 es la que después
+  // se puede re-derivar. Acepta scripts inline y handlers on* (89% y 13% del
+  // corpus curado los traen; el clon los quita) y corta con javascript:,
+  // iframes, meta refresh y el marcador de modo-editor.
+  const issue = findTemplateHtmlIssue(result.data);
+  if (issue) {
+    console.error(`HTML rechazado en ${issue.where}: ${issue.reason}`);
+    console.error("Corrige el archivo fuente y vuelve a registrarlo — aquí no se limpia nada por ti.");
     process.exit(1);
   }
 
