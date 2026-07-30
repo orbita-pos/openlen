@@ -650,3 +650,91 @@ test("done promise resolves (never rejects) even on errors", async () => {
   assert.equal(summary.stopKind, "error");
   assert.equal(summary.error?.message, "boom");
 });
+
+// ── Bypass de /api/generate (bug 2026-07-29) ────────────────────────────────
+// El pipeline de streaming sanitiza para el PREVIEW con dos huecos frente a
+// la puerta síncrona: borra el <script>tailwind.config…</script> del modelo
+// (la paleta muere antes de extractTwConfig) y whitelistea CUALQUIER
+// <script data-ol-*> por prefijo (prompt-injection → DB → iframe del editor).
+// done.finalHtml debe salir con el MISMO contrato que las demás puertas.
+// Estos tests usan el HtmlStream REAL (binding napi); solo provider y debit
+// son fakes.
+
+const REAL_DOC_OPEN =
+  '<!doctype html><html><head><meta charset="utf-8"><title>t</title><script src="https://cdn.tailwindcss.com"></script>';
+
+test("bypass: la paleta emitida por el modelo sobrevive como carrier data-ol-tw", async () => {
+  const debit = spyDebit();
+  const provider = scriptedProvider([
+    { type: "text_delta", text: REAL_DOC_OPEN },
+    {
+      type: "text_delta",
+      text: "<script>tailwind.config = {theme:{extend:{colors:{blood:{400:'#f87171',500:'#ef4444'}}}}}</script>",
+    },
+    {
+      type: "text_delta",
+      text: '</head><body><span class="text-blood-500">x</span></body></html>',
+    },
+    { type: "usage", inputTokens: 10, outputTokens: 20, cachedTokens: 0 },
+    { type: "done", stopReason: { kind: "end_turn" } },
+  ]);
+  const { stream, done } = generateHtmlStream(
+    { apiKey: "k", messages: [{ role: "user", content: "b" }], userId: "u" },
+    { provider, debit: debit.fn },
+  );
+  await readAll(stream);
+  const summary = await done;
+  assert.equal(summary.stopKind, "end_turn");
+  assert.ok(summary.finalHtml, "finalHtml presente");
+  assert.ok(summary.finalHtml!.includes("data-ol-tw"), "carrier presente");
+  assert.ok(summary.finalHtml!.includes("blood"), "la paleta viaja dentro del carrier");
+  assert.ok(
+    !/<script>\s*tailwind\.config/.test(summary.finalHtml!),
+    "el script crudo del modelo NO queda",
+  );
+});
+
+test("bypass: un <script data-ol-*> forjado por el modelo NO llega al finalHtml", async () => {
+  const debit = spyDebit();
+  const provider = scriptedProvider([
+    { type: "text_delta", text: REAL_DOC_OPEN },
+    {
+      type: "text_delta",
+      text: '<script data-ol-pwn>window.__pwn=1</script></head><body><p class="p-4">x</p></body></html>',
+    },
+    { type: "usage", inputTokens: 10, outputTokens: 20, cachedTokens: 0 },
+    { type: "done", stopReason: { kind: "end_turn" } },
+  ]);
+  const { stream, done } = generateHtmlStream(
+    { apiKey: "k", messages: [{ role: "user", content: "b" }], userId: "u" },
+    { provider, debit: debit.fn },
+  );
+  await readAll(stream);
+  const summary = await done;
+  assert.equal(summary.stopKind, "end_turn");
+  assert.ok(summary.finalHtml);
+  assert.ok(!summary.finalHtml!.includes("__pwn"), "script forjado muerto");
+  assert.ok(
+    summary.finalHtml!.includes("<script data-ol-radius>"),
+    "los scripts CANÓNICOS del tema siguen (reparados por el wrapper)",
+  );
+  assert.ok(summary.finalHtml!.includes("cdn.tailwindcss.com"), "CDN intacto");
+});
+
+test("bypass: sin config del modelo no se inventa carrier y el doc queda canónico", async () => {
+  const debit = spyDebit();
+  const provider = scriptedProvider([
+    { type: "text_delta", text: REAL_DOC_OPEN },
+    { type: "text_delta", text: '</head><body><p class="p-4">x</p></body></html>' },
+    { type: "usage", inputTokens: 5, outputTokens: 5, cachedTokens: 0 },
+    { type: "done", stopReason: { kind: "end_turn" } },
+  ]);
+  const { stream, done } = generateHtmlStream(
+    { apiKey: "k", messages: [{ role: "user", content: "b" }], userId: "u" },
+    { provider, debit: debit.fn },
+  );
+  await readAll(stream);
+  const summary = await done;
+  assert.ok(summary.finalHtml);
+  assert.ok(!summary.finalHtml!.includes("data-ol-tw"), "sin carrier fantasma");
+});

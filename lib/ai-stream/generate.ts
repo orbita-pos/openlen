@@ -45,9 +45,11 @@ import {
 } from "@/lib/ai-gateway";
 import {
   HtmlStream as RealHtmlStream,
+  sanitizeForPublish,
   type HtmlStreamOpts,
   type HtmlStreamResult,
 } from "@/lib/html-engine";
+import { extractTwConfig, injectTwCarrier } from "@/lib/publish/tw-config";
 import { hardenVisualQuality } from "@/lib/harden";
 import { creditsForUsage, debitCredits as realDebitCredits } from "@/lib/credits";
 import { resolveAIProvider, type AIModel } from "@/lib/ai-provider";
@@ -95,6 +97,41 @@ function applyHardening(html: string | null): string | null {
     console.error("[generate] hardenVisualQuality threw — using raw HTML", err);
     return html;
   }
+}
+
+// ── Contrato de ingestión (bug bypass, 2026-07-29) ──────────────────────────
+// El pipeline de streaming sanitiza para el PREVIEW, con dos huecos frente a
+// la puerta síncrona que usan las demás rutas: (1) borra el
+// <script>tailwind.config…</script> del modelo ANTES de que extractTwConfig
+// pueda leerlo — la paleta se perdía en silencio; y (2) whitelistea CUALQUIER
+// <script data-ol-*> por prefijo, así que un modelo bajo prompt-injection
+// podía colar un script con ese atributo hasta la DB y el iframe del editor
+// (que corre allow-same-origin). Antes de resolver `done`, el HTML canónico
+// pasa por sanitizeForPublish — el MISMO contrato que from-html /
+// from-template / ai-design — y la paleta se rescata del texto CRUDO del
+// modelo (el único lugar donde el script de config todavía existe).
+const CARRIER_MARK_RE = /\bdata-ol-tw\b/;
+
+function canonicalizeFinalHtml(
+  html: string | null,
+  rawText: string,
+): string | null {
+  if (html === null || html.length === 0) return html;
+  const sanitized = sanitizeForPublish(html);
+  if (sanitized.html === null) {
+    // Solo el gate slot-path produce null, y el stream ya lo mata chunk a
+    // chunk — si dispara aquí el documento está envenenado: mejor fallar la
+    // generación que persistirlo.
+    throw new Error(
+      `generate: sanitize gate (${sanitized.errors.join("; ")})`,
+    );
+  }
+  let out = sanitized.html;
+  if (!CARRIER_MARK_RE.test(out)) {
+    const { extend } = extractTwConfig(rawText);
+    if (extend !== null) out = injectTwCarrier(out, extend);
+  }
+  return out;
 }
 
 // ─── Public types ──────────────────────────────────────────────────────────
@@ -235,6 +272,42 @@ export function generateHtmlStream(
   const encoder = new TextEncoder();
   let usage: GenerateHtmlStreamUsage | null = null;
   let creditsDebited = 0;
+  // Texto CRUDO del modelo — el pipeline borra el script de tailwind.config
+  // al vuelo, así que la paleta solo puede rescatarse de aquí (acotado por
+  // maxOutputTokens; se descarta al resolver `done`).
+  let rawText = "";
+
+  // Arma el summary de éxito: harden + contrato de ingestión. Si el gate del
+  // sanitize dispara (documento envenenado), la generación falla como error —
+  // jamás se entrega HTML sin puerta.
+  const finishSummary = (
+    endResult: HtmlStreamResult,
+    stopKind: "end_turn" | "max_tokens",
+  ): GenerateHtmlStreamSummary => {
+    try {
+      return {
+        finalHtml: canonicalizeFinalHtml(
+          applyHardening(endResult.finalHtml),
+          rawText,
+        ),
+        result: endResult,
+        usage,
+        creditsDebited,
+        stopKind,
+        error: null,
+      };
+    } catch (err) {
+      const e = err instanceof Error ? err : new Error(String(err));
+      return {
+        finalHtml: null,
+        result: null,
+        usage,
+        creditsDebited,
+        stopKind: "error",
+        error: e,
+      };
+    }
+  };
 
   const stream = new ReadableStream<Uint8Array>({
     async start(controller) {
@@ -297,6 +370,7 @@ export function generateHtmlStream(
       try {
         for await (const event of events) {
           if (event.type === "text_delta") {
+            rawText += event.text;
             let processed: string;
             try {
               processed = htmlStream.write(event.text);
@@ -370,14 +444,7 @@ export function generateHtmlStream(
                   return;
                 }
                 safeClose();
-                resolveDone({
-                  finalHtml: applyHardening(endResult.finalHtml),
-                  result: endResult,
-                  usage,
-                  creditsDebited,
-                  stopKind: event.stopReason.kind,
-                  error: null,
-                });
+                resolveDone(finishSummary(endResult, event.stopReason.kind));
                 return;
               }
               case "cancelled": {
@@ -431,14 +498,7 @@ export function generateHtmlStream(
           return;
         }
         safeClose();
-        resolveDone({
-          finalHtml: applyHardening(endResult.finalHtml),
-          result: endResult,
-          usage,
-          creditsDebited,
-          stopKind: "end_turn",
-          error: null,
-        });
+        resolveDone(finishSummary(endResult, "end_turn"));
       } catch (loopErr) {
         // Provider-level throw (auth error, network drop, malformed SSE).
         const err =
