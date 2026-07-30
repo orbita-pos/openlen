@@ -260,4 +260,19 @@ describe("wireMemberLogout", () => {
     const doc = DOC("<p>nada</p>");
     expect(wireMemberLogout(doc, "mi-negocio")).toBe(doc);
   });
+
+  // Nombre al registrarse (2026-07-30): sin esto todo miembro por contraseña
+  // firmaba sus comentarios como «—».
+  describe("campo de nombre en el registro", () => {
+    it("la tarjeta con contraseña trae #m-name requerido, y viaja en el POST de /register", () => {
+      const html = buildGateStub({ ...BASE, passwordLogin: true });
+      expect(html).toContain('id="m-name"');
+      expect(html).toContain('autocomplete="name"');
+      expect(html).toContain("payload.name=nm.value");
+      // solo en la pestaña de registro: al cambiar a Entrar se oculta y deja de ser required
+      expect(html).toContain("nm.hidden=!up;nm.required=up;");
+      // localizado (es por defecto en BASE o en)
+      expect(/Tu nombre|Your name/.test(html)).toBe(true);
+    });
+  });
 });

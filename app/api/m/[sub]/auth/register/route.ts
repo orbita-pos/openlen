@@ -18,6 +18,15 @@ export const dynamic = "force-dynamic";
 const BodySchema = z.object({
   email: z.string().email().max(254).transform((v) => v.toLowerCase().trim()),
   password: z.string(),
+  // Nombre público del miembro (firma sus comentarios). Opcional en la API —
+  // el formulario del stub lo exige, pero un cliente viejo (página publicada
+  // antes de este campo) sigue registrando sin él y el widget de comentarios
+  // lo pide en el primer comentario.
+  name: z
+    .string()
+    .max(80)
+    .transform((v) => v.trim() || null)
+    .nullish(),
 });
 
 export async function POST(
@@ -40,7 +49,7 @@ export async function POST(
   }
   const parsed = BodySchema.safeParse(body);
   if (!parsed.success) return json({ error: "invalid" }, 400);
-  const { email, password } = parsed.data;
+  const { email, password, name } = parsed.data;
   if (!isValidPassword(password)) return json({ error: "bad_password" }, 400);
 
   const site = await loadMemberSite(sub);
@@ -69,7 +78,7 @@ export async function POST(
   }
 
   const passwordHash = await hashPassword(password);
-  const created = await createActiveMemberWithPassword(site.projectId, email, passwordHash);
+  const created = await createActiveMemberWithPassword(site.projectId, email, passwordHash, name);
   if (!created) return json({ error: "exists" }, 409); // lost a concurrent race for this email
   const memberId = created.id;
 

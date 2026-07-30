@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { checkAndConsume, getClientIp, ipLimitKey } from "@/lib/limits";
 import { readMemberCookie } from "@/lib/members/session";
-import { getMemberById, getMemberSession } from "@/lib/members/store";
+import { getMemberById, getMemberSession, setMemberNameIfEmpty } from "@/lib/members/store";
 import { COMMENT_POST_LIMITS, commentPostKey } from "@/lib/comments/limits";
 import { insertComment, listVisibleComments } from "@/lib/comments/store";
 import { PAGE_SLUG_RE, json, loadCommentsSite } from "../_shared";
@@ -45,6 +45,10 @@ const PostSchema = z.object({
   // (cfg.page is null there), and .optional() rejected it with a 400.
   slug: z.string().regex(PAGE_SLUG_RE).nullish(),
   body: z.string().trim().min(1).max(2000),
+  // Primer comentario de un miembro sin nombre: el widget pregunta el nombre
+  // y lo manda aqui. Solo RELLENA una fila con name NULL (setMemberNameIfEmpty)
+  // — jamas renombra una cuenta que ya firma. Ausente = flujo historico.
+  name: z.string().max(80).transform((v) => v.trim() || null).nullish(),
 });
 
 export async function POST(
@@ -84,12 +88,19 @@ export async function POST(
   );
   if (!ipDecision.ok) return json({ error: "rate_limited" }, 429);
 
+  // El nombre que firma: el de la cuenta, o el recien capturado en el primer
+  // comentario (que ademas queda guardado en la cuenta para los siguientes).
+  let authorName = member.name;
+  if (!authorName && parsed.data.name) {
+    authorName = await setMemberNameIfEmpty(member.id, parsed.data.name);
+  }
+
   const status = site.moderation === "all" ? "visible" : "hidden";
   const created = await insertComment({
     projectId: site.projectId,
     page: pageFromSlug(parsed.data.slug ?? null),
     memberId: member.id,
-    authorName: member.name,
+    authorName,
     authorEmail: member.email,
     body: parsed.data.body,
     status,
@@ -101,7 +112,7 @@ export async function POST(
       status: created.status,
       createdAt: created.createdAt,
       // The widget shows "awaiting approval" when hidden.
-      authorName: member.name,
+      authorName,
     },
     201,
   );

@@ -134,12 +134,14 @@ export async function createActiveMemberWithPassword(
   projectId: string,
   email: string,
   passwordHash: string,
+  name?: string | null,
 ): Promise<{ id: string } | null> {
   const rows = await db
     .insert(schema.siteMembers)
     .values({
       projectId,
       email: normalizeEmail(email),
+      name: name?.trim() || null,
       status: "active",
       passwordHash,
       lastLoginAt: new Date(),
@@ -149,6 +151,30 @@ export async function createActiveMemberWithPassword(
     })
     .returning({ id: schema.siteMembers.id });
   return rows[0] ?? null;
+}
+
+/** Rellena el nombre SOLO si la fila no tiene uno (WHERE name IS NULL) — el
+ *  camino «tu primer comentario te pregunta el nombre» no debe poder renombrar
+ *  una cuenta que ya lo tiene. Devuelve el nombre que quedó vigente. */
+export async function setMemberNameIfEmpty(
+  memberId: string,
+  name: string,
+): Promise<string | null> {
+  const clean = name.trim();
+  if (!clean) return null;
+  const rows = await db
+    .update(schema.siteMembers)
+    .set({ name: clean })
+    .where(and(eq(schema.siteMembers.id, memberId), isNull(schema.siteMembers.name)))
+    .returning({ name: schema.siteMembers.name });
+  if (rows[0]) return rows[0].name;
+  // Ya tenía nombre: se respeta el existente.
+  const cur = await db
+    .select({ name: schema.siteMembers.name })
+    .from(schema.siteMembers)
+    .where(eq(schema.siteMembers.id, memberId))
+    .limit(1);
+  return cur[0]?.name ?? null;
 }
 
 /** Estampa verificado la primera vez (preserva el timestamp original). */

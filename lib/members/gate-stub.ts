@@ -59,6 +59,7 @@ export interface GateStrings {
   tabIn: string;
   tabUp: string;
   passwordPlaceholder: string;
+  namePlaceholder: string;
   createAccount: string;
   signIn: string;
   orLink: string;
@@ -99,6 +100,7 @@ const STRINGS: Record<string, GateStrings> = {
     tabIn: "Sign in",
     tabUp: "Sign up",
     passwordPlaceholder: "Password (min 8)",
+    namePlaceholder: "Your name",
     createAccount: "Create account",
     signIn: "Sign in",
     orLink: "Sign in with an email link",
@@ -137,6 +139,7 @@ const STRINGS: Record<string, GateStrings> = {
     tabIn: "Entrar",
     tabUp: "Registrarse",
     passwordPlaceholder: "Contraseña (mín. 8)",
+    namePlaceholder: "Tu nombre",
     createAccount: "Crear cuenta",
     signIn: "Entrar",
     orLink: "Entrar con un link por correo",
@@ -175,6 +178,7 @@ const STRINGS: Record<string, GateStrings> = {
     tabIn: "Entrar",
     tabUp: "Cadastrar",
     passwordPlaceholder: "Senha (mín. 8)",
+    namePlaceholder: "Seu nome",
     createAccount: "Criar conta",
     signIn: "Entrar",
     orLink: "Entrar com um link por e-mail",
@@ -213,6 +217,7 @@ const STRINGS: Record<string, GateStrings> = {
     tabIn: "Se connecter",
     tabUp: "S'inscrire",
     passwordPlaceholder: "Mot de passe (min. 8)",
+    namePlaceholder: "Votre nom",
     createAccount: "Créer un compte",
     signIn: "Se connecter",
     orLink: "Se connecter avec un lien par e-mail",
@@ -251,6 +256,7 @@ const STRINGS: Record<string, GateStrings> = {
     tabIn: "Anmelden",
     tabUp: "Registrieren",
     passwordPlaceholder: "Passwort (mind. 8)",
+    namePlaceholder: "Dein Name",
     createAccount: "Konto erstellen",
     signIn: "Anmelden",
     orLink: "Mit einem E-Mail-Link anmelden",
@@ -289,6 +295,7 @@ const STRINGS: Record<string, GateStrings> = {
     tabIn: "Accedi",
     tabUp: "Registrati",
     passwordPlaceholder: "Password (min. 8)",
+    namePlaceholder: "Il tuo nome",
     createAccount: "Crea account",
     signIn: "Accedi",
     orLink: "Accedi con un link via email",
@@ -327,6 +334,7 @@ const STRINGS: Record<string, GateStrings> = {
     tabIn: "ログイン",
     tabUp: "新規登録",
     passwordPlaceholder: "パスワード（8文字以上）",
+    namePlaceholder: "お名前",
     createAccount: "アカウント作成",
     signIn: "ログイン",
     orLink: "メールのリンクでログイン",
@@ -365,6 +373,7 @@ const STRINGS: Record<string, GateStrings> = {
     tabIn: "로그인",
     tabUp: "회원가입",
     passwordPlaceholder: "비밀번호 (8자 이상)",
+    namePlaceholder: "이름",
     createAccount: "계정 만들기",
     signIn: "로그인",
     orLink: "이메일 링크로 로그인",
@@ -403,6 +412,7 @@ const STRINGS: Record<string, GateStrings> = {
     tabIn: "登录",
     tabUp: "注册",
     passwordPlaceholder: "密码（至少 8 位）",
+    namePlaceholder: "你的名字",
     createAccount: "创建账户",
     signIn: "登录",
     orLink: "使用邮件链接登录",
@@ -441,6 +451,7 @@ const STRINGS: Record<string, GateStrings> = {
     tabIn: "Inloggen",
     tabUp: "Registreren",
     passwordPlaceholder: "Wachtwoord (min. 8)",
+    namePlaceholder: "Je naam",
     createAccount: "Account aanmaken",
     signIn: "Inloggen",
     orLink: "Inloggen met een e-maillink",
@@ -515,8 +526,8 @@ const PASSWORD_CSS = `
   .tabs{display:flex;gap:4px;background:var(--field);border-radius:12px;padding:4px;margin-top:22px}
   .tabs button{flex:1;border:0;background:transparent;color:var(--muted);font:inherit;font-weight:600;font-size:13.5px;padding:9px 0;border-radius:9px;cursor:pointer}
   .tabs button[aria-selected="true"]{background:var(--card);color:var(--fg);box-shadow:0 2px 8px -3px rgba(0,0,0,.25)}
-  #m-pass{width:100%;margin-top:10px;padding:13px 18px;font-size:15px;color:var(--fg);background:var(--field);border:1px solid var(--ring);border-radius:999px;outline:none}
-  #m-pass:focus{border-color:var(--focus)}
+  #m-name,#m-pass{width:100%;margin-top:10px;padding:13px 18px;font-size:15px;color:var(--fg);background:var(--field);border:1px solid var(--ring);border-radius:999px;outline:none}
+  #m-name:focus,#m-pass:focus{border-color:var(--focus)}
   .or{display:flex;align-items:center;gap:12px;color:var(--muted);font-size:12px;margin:16px 0 10px;text-transform:lowercase}
   .or::before,.or::after{content:"";height:1px;flex:1;background:var(--ring)}
   .ghost{width:100%;padding:12px;font-size:13.5px;font-weight:600;color:var(--fg);background:transparent;border:1px solid var(--ring);border-radius:999px;cursor:pointer}
@@ -655,13 +666,14 @@ var SUB=${scriptJson(params.sub)},SLUG=${scriptJson(params.slug)},MODE=${scriptJ
 var API="/api/m/"+SUB;
 var loading=document.getElementById("m-loading"),auth=document.getElementById("m-auth"),verify=document.getElementById("m-verify");
 var form=document.getElementById("m-form"),email=document.getElementById("m-email"),pass=document.getElementById("m-pass"),btn=document.getElementById("m-btn"),msg=document.getElementById("m-msg");
+var nm=document.getElementById("m-name");
 var tabIn=document.getElementById("m-tab-in"),tabUp=document.getElementById("m-tab-up");
 var tab="up";
 var hadErr=/[?&]m_err=/.test(location.search);
 function setMsg(el,text){el.textContent=text;el.hidden=false;}
 function showAuth(){loading.hidden=true;auth.hidden=false;if(hadErr)setMsg(msg,T.linkInvalid);}
 function showVerify(){loading.hidden=true;auth.hidden=true;verify.hidden=false;}
-function selTab(m){tab=m;var up=m==="up";tabUp.setAttribute("aria-selected",up?"true":"false");tabIn.setAttribute("aria-selected",up?"false":"true");btn.textContent=up?T.createAccount:T.signIn;pass.setAttribute("autocomplete",up?"new-password":"current-password");msg.hidden=true;}
+function selTab(m){tab=m;var up=m==="up";tabUp.setAttribute("aria-selected",up?"true":"false");tabIn.setAttribute("aria-selected",up?"false":"true");btn.textContent=up?T.createAccount:T.signIn;pass.setAttribute("autocomplete",up?"new-password":"current-password");nm.hidden=!up;nm.required=up;msg.hidden=true;}
 tabIn.addEventListener("click",function(){selTab("in");});
 tabUp.addEventListener("click",function(){selTab("up");});
 if(MODE==="account"){
@@ -679,7 +691,9 @@ if(MODE==="account"){
 form.addEventListener("submit",function(e){
   e.preventDefault();btn.disabled=true;msg.hidden=true;
   var path=tab==="up"?"/register":"/login";
-  fetch(API+"/auth"+path,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({email:email.value,password:pass.value})}).then(function(r){
+  var payload={email:email.value,password:pass.value};
+  if(tab==="up")payload.name=nm.value;
+  fetch(API+"/auth"+path,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(payload)}).then(function(r){
     btn.disabled=false;
     if(r.status===200){location.reload();return;}
     if(r.status===429){setMsg(msg,T.tooMany);return;}
@@ -727,6 +741,7 @@ ${mode === "account" ? accountTail : ""}
       <button id="m-tab-up" type="button" role="tab" aria-selected="true">${escapeHtml(t.tabUp)}</button>
     </div>
     <form id="m-form">
+      <input id="m-name" type="text" required autocomplete="name" maxlength="80" placeholder="${escapeHtml(t.namePlaceholder)}">
       <input id="m-email" type="email" required autocomplete="email" placeholder="${escapeHtml(t.emailPlaceholder)}">
       <input id="m-pass" type="password" required autocomplete="new-password" minlength="8" placeholder="${escapeHtml(t.passwordPlaceholder)}">
       <button id="m-btn" type="submit">${escapeHtml(t.createAccount)}</button>

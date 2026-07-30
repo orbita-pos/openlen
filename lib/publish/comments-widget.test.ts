@@ -102,4 +102,33 @@ describe("bakeComments", () => {
     expect(out).toContain("document.documentElement.lang");
     expect(out).toContain("C.S[L]||C.S.en"); // runtime fallback to en
   });
+
+  // Nombre en los comentarios (2026-07-30). El registro nunca pedía nombre, así
+  // que todo miembro por contraseña firmaba «—». El widget ahora pide el nombre
+  // en el PRIMER comentario cuando /me dice que la cuenta no lo tiene.
+  describe("captura de nombre en el composer", () => {
+    it("el widget lleva el input de nombre, sus estilos y su cadena en los 10 idiomas", () => {
+      const out = bakeComments(DOC("x"), CFG);
+      expect(out).toContain(".nmi"); // estilos del input
+      expect(out).toContain('"namePlaceholder":"Tu nombre"'); // es
+      expect(out).toContain('"namePlaceholder":"Your name"'); // en
+      expect(out).toContain('"namePlaceholder":"お名前"'); // ja
+    });
+
+    it("el POST incluye name SOLO cuando la cuenta no firma (composer(named))", () => {
+      const out = bakeComments(DOC("x"), CFG);
+      // /me pasa si ya hay nombre — con nombre no se pinta el input
+      expect(out).toContain("composer(!!j.name)");
+      expect(out).toContain("if(!named)");
+      // el payload lleva el nombre capturado
+      expect(out).toContain("pl.name=ni.value.trim()");
+      // sin nombre tecleado no se publica: enfoca el input en vez de mandar
+      expect(out).toContain("if(ni&&!ni.value.trim()){ni.focus();return;}");
+    });
+
+    it("tras publicar con nombre, el composer deja de pedirlo", () => {
+      const out = bakeComments(DOC("x"), CFG);
+      expect(out).toContain("if(ni&&j.authorName){composer(true)}");
+    });
+  });
 });

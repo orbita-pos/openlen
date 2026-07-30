@@ -26,22 +26,23 @@ interface CommentsStrings {
   awaiting: string;
   loginCta: string;
   emailPlaceholder: string;
+  namePlaceholder: string;
   sendLink: string;
   checkInbox: string;
   error: string;
 }
 
 const STRINGS: Record<string, CommentsStrings> = {
-  en: { title: "Comments", empty: "No comments yet. Be the first.", placeholder: "Write a comment…", post: "Post", posting: "Posting…", awaiting: "Sent — awaiting approval.", loginCta: "Log in to comment", emailPlaceholder: "you@email.com", sendLink: "Send me a link", checkInbox: "Check your inbox to finish signing in.", error: "Something went wrong. Try again." },
-  es: { title: "Comentarios", empty: "Aún no hay comentarios. Sé el primero.", placeholder: "Escribe un comentario…", post: "Publicar", posting: "Publicando…", awaiting: "Enviado — pendiente de aprobación.", loginCta: "Inicia sesión para comentar", emailPlaceholder: "tu@email.com", sendLink: "Enviarme un enlace", checkInbox: "Revisa tu correo para terminar de entrar.", error: "Algo salió mal. Inténtalo de nuevo." },
-  pt: { title: "Comentários", empty: "Ainda não há comentários. Seja o primeiro.", placeholder: "Escreva um comentário…", post: "Publicar", posting: "Publicando…", awaiting: "Enviado — aguardando aprovação.", loginCta: "Entre para comentar", emailPlaceholder: "voce@email.com", sendLink: "Enviar um link", checkInbox: "Confira sua caixa de entrada para entrar.", error: "Algo deu errado. Tente de novo." },
-  fr: { title: "Commentaires", empty: "Aucun commentaire. Soyez le premier.", placeholder: "Écrire un commentaire…", post: "Publier", posting: "Publication…", awaiting: "Envoyé — en attente de validation.", loginCta: "Connectez-vous pour commenter", emailPlaceholder: "vous@email.com", sendLink: "M'envoyer un lien", checkInbox: "Vérifiez votre boîte mail pour vous connecter.", error: "Une erreur s'est produite. Réessayez." },
-  de: { title: "Kommentare", empty: "Noch keine Kommentare. Sei der Erste.", placeholder: "Kommentar schreiben…", post: "Senden", posting: "Senden…", awaiting: "Gesendet — wartet auf Freigabe.", loginCta: "Zum Kommentieren anmelden", emailPlaceholder: "du@email.com", sendLink: "Link senden", checkInbox: "Sieh in dein Postfach, um dich anzumelden.", error: "Etwas ist schiefgelaufen. Versuch es erneut." },
-  it: { title: "Commenti", empty: "Ancora nessun commento. Sii il primo.", placeholder: "Scrivi un commento…", post: "Pubblica", posting: "Pubblicazione…", awaiting: "Inviato — in attesa di approvazione.", loginCta: "Accedi per commentare", emailPlaceholder: "tu@email.com", sendLink: "Inviami un link", checkInbox: "Controlla la tua casella per accedere.", error: "Qualcosa è andato storto. Riprova." },
-  ja: { title: "コメント", empty: "まだコメントはありません。最初の一人になりましょう。", placeholder: "コメントを書く…", post: "投稿", posting: "投稿中…", awaiting: "送信しました — 承認待ちです。", loginCta: "ログインしてコメント", emailPlaceholder: "you@email.com", sendLink: "リンクを送る", checkInbox: "受信箱を確認してログインを完了してください。", error: "問題が発生しました。もう一度お試しください。" },
-  ko: { title: "댓글", empty: "아직 댓글이 없습니다. 첫 댓글을 남겨보세요.", placeholder: "댓글 작성…", post: "게시", posting: "게시 중…", awaiting: "전송됨 — 승인 대기 중입니다.", loginCta: "로그인하고 댓글", emailPlaceholder: "you@email.com", sendLink: "링크 보내기", checkInbox: "받은편지함을 확인해 로그인을 완료하세요.", error: "문제가 발생했습니다. 다시 시도하세요." },
-  zh: { title: "评论", empty: "还没有评论，来抢沙发吧。", placeholder: "写下评论…", post: "发布", posting: "发布中…", awaiting: "已发送 — 等待审核。", loginCta: "登录后评论", emailPlaceholder: "you@email.com", sendLink: "给我发链接", checkInbox: "请查收邮箱以完成登录。", error: "出了点问题，请重试。" },
-  nl: { title: "Reacties", empty: "Nog geen reacties. Wees de eerste.", placeholder: "Schrijf een reactie…", post: "Plaatsen", posting: "Plaatsen…", awaiting: "Verzonden — wacht op goedkeuring.", loginCta: "Log in om te reageren", emailPlaceholder: "jij@email.com", sendLink: "Stuur mij een link", checkInbox: "Check je inbox om in te loggen.", error: "Er ging iets mis. Probeer opnieuw." },
+  en: { title: "Comments", empty: "No comments yet. Be the first.", placeholder: "Write a comment…", post: "Post", posting: "Posting…", awaiting: "Sent — awaiting approval.", loginCta: "Log in to comment", emailPlaceholder: "you@email.com", namePlaceholder: "Your name", sendLink: "Send me a link", checkInbox: "Check your inbox to finish signing in.", error: "Something went wrong. Try again." },
+  es: { title: "Comentarios", empty: "Aún no hay comentarios. Sé el primero.", placeholder: "Escribe un comentario…", post: "Publicar", posting: "Publicando…", awaiting: "Enviado — pendiente de aprobación.", loginCta: "Inicia sesión para comentar", emailPlaceholder: "tu@email.com", namePlaceholder: "Tu nombre", sendLink: "Enviarme un enlace", checkInbox: "Revisa tu correo para terminar de entrar.", error: "Algo salió mal. Inténtalo de nuevo." },
+  pt: { title: "Comentários", empty: "Ainda não há comentários. Seja o primeiro.", placeholder: "Escreva um comentário…", post: "Publicar", posting: "Publicando…", awaiting: "Enviado — aguardando aprovação.", loginCta: "Entre para comentar", emailPlaceholder: "voce@email.com", namePlaceholder: "Seu nome", sendLink: "Enviar um link", checkInbox: "Confira sua caixa de entrada para entrar.", error: "Algo deu errado. Tente de novo." },
+  fr: { title: "Commentaires", empty: "Aucun commentaire. Soyez le premier.", placeholder: "Écrire un commentaire…", post: "Publier", posting: "Publication…", awaiting: "Envoyé — en attente de validation.", loginCta: "Connectez-vous pour commenter", emailPlaceholder: "vous@email.com", namePlaceholder: "Votre nom", sendLink: "M'envoyer un lien", checkInbox: "Vérifiez votre boîte mail pour vous connecter.", error: "Une erreur s'est produite. Réessayez." },
+  de: { title: "Kommentare", empty: "Noch keine Kommentare. Sei der Erste.", placeholder: "Kommentar schreiben…", post: "Senden", posting: "Senden…", awaiting: "Gesendet — wartet auf Freigabe.", loginCta: "Zum Kommentieren anmelden", emailPlaceholder: "du@email.com", namePlaceholder: "Dein Name", sendLink: "Link senden", checkInbox: "Sieh in dein Postfach, um dich anzumelden.", error: "Etwas ist schiefgelaufen. Versuch es erneut." },
+  it: { title: "Commenti", empty: "Ancora nessun commento. Sii il primo.", placeholder: "Scrivi un commento…", post: "Pubblica", posting: "Pubblicazione…", awaiting: "Inviato — in attesa di approvazione.", loginCta: "Accedi per commentare", emailPlaceholder: "tu@email.com", namePlaceholder: "Il tuo nome", sendLink: "Inviami un link", checkInbox: "Controlla la tua casella per accedere.", error: "Qualcosa è andato storto. Riprova." },
+  ja: { title: "コメント", empty: "まだコメントはありません。最初の一人になりましょう。", placeholder: "コメントを書く…", post: "投稿", posting: "投稿中…", awaiting: "送信しました — 承認待ちです。", loginCta: "ログインしてコメント", emailPlaceholder: "you@email.com", namePlaceholder: "お名前", sendLink: "リンクを送る", checkInbox: "受信箱を確認してログインを完了してください。", error: "問題が発生しました。もう一度お試しください。" },
+  ko: { title: "댓글", empty: "아직 댓글이 없습니다. 첫 댓글을 남겨보세요.", placeholder: "댓글 작성…", post: "게시", posting: "게시 중…", awaiting: "전송됨 — 승인 대기 중입니다.", loginCta: "로그인하고 댓글", emailPlaceholder: "you@email.com", namePlaceholder: "이름", sendLink: "링크 보내기", checkInbox: "받은편지함을 확인해 로그인을 완료하세요.", error: "문제가 발생했습니다. 다시 시도하세요." },
+  zh: { title: "评论", empty: "还没有评论，来抢沙发吧。", placeholder: "写下评论…", post: "发布", posting: "发布中…", awaiting: "已发送 — 等待审核。", loginCta: "登录后评论", emailPlaceholder: "you@email.com", namePlaceholder: "你的名字", sendLink: "给我发链接", checkInbox: "请查收邮箱以完成登录。", error: "出了点问题，请重试。" },
+  nl: { title: "Reacties", empty: "Nog geen reacties. Wees de eerste.", placeholder: "Schrijf een reactie…", post: "Plaatsen", posting: "Plaatsen…", awaiting: "Verzonden — wacht op goedkeuring.", loginCta: "Log in om te reageren", emailPlaceholder: "jij@email.com", namePlaceholder: "Je naam", sendLink: "Stuur mij een link", checkInbox: "Check je inbox om in te loggen.", error: "Er ging iets mis. Probeer opnieuw." },
 };
 
 export interface CommentsWidgetConfig {
@@ -122,6 +123,8 @@ R.innerHTML='<style>'
 +'.cp{margin-top:16px}'
 +'.cp textarea{width:100%;min-height:80px;border:1px solid ${BRD};border-radius:16px;padding:12px 14px;font-size:14px;resize:vertical;background:${FLD};color:${TX};box-shadow:0 1px 2px rgba(0,0,0,.04)}'
 +'.cp textarea:focus{outline:2px solid ${ACC};border-color:${ACC}}'
++'.cp .nmi{width:100%;min-height:40px;border:1px solid ${BRD};border-radius:999px;padding:0 16px;font-size:13.5px;margin-bottom:8px;background:${FLD};color:${TX}}'
++'.cp .nmi:focus{outline:2px solid ${ACC};border-color:${ACC}}'
 +'.cp button{margin-top:10px;min-height:42px;padding:0 22px;border:0;border-radius:999px;background:${ACC};color:${INK};font-weight:700;font-size:13.5px;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.14)}'
 +'.cp button:disabled{opacity:.5;cursor:default}'
 +'.lg button{min-height:42px;padding:0 18px;border:1.5px solid ${ACC};border-radius:999px;background:${FLD};color:${ACC};font-weight:700;font-size:13.5px;cursor:pointer}'
@@ -140,15 +143,20 @@ var hd=document.createElement("div");hd.appendChild(nm);hd.appendChild(dt);
 var bd=document.createElement("div");bd.className="bd";bd.textContent=c.body;
 li.appendChild(hd);li.appendChild(bd);ls.appendChild(li)})}
 function msg(parent,text){var m=document.createElement("div");m.className="msg";m.textContent=text;parent.appendChild(m)}
-function composer(){ft.innerHTML="";var box=document.createElement("div");box.className="cp";
+function composer(named){ft.innerHTML="";var box=document.createElement("div");box.className="cp";
+var ni=null;
+if(!named){ni=document.createElement("input");ni.type="text";ni.className="nmi";ni.maxLength=80;ni.placeholder=T.namePlaceholder;box.appendChild(ni);}
 var ta=document.createElement("textarea");ta.placeholder=T.placeholder;ta.maxLength=2000;
 var btn=document.createElement("button");btn.type="button";btn.textContent=T.post;
 box.appendChild(ta);box.appendChild(btn);ft.appendChild(box);
-btn.addEventListener("click",function(){var v=ta.value.trim();if(!v)return;btn.disabled=true;btn.textContent=T.posting;
-q("/comments",{method:"POST",credentials:"same-origin",headers:{"content-type":"application/json"},body:JSON.stringify({slug:C.slug,body:v})})
+btn.addEventListener("click",function(){var v=ta.value.trim();if(!v)return;
+if(ni&&!ni.value.trim()){ni.focus();return;}
+btn.disabled=true;btn.textContent=T.posting;
+var pl={slug:C.slug,body:v};if(ni)pl.name=ni.value.trim();
+q("/comments",{method:"POST",credentials:"same-origin",headers:{"content-type":"application/json"},body:JSON.stringify(pl)})
 .then(function(r){return r.ok?r.json():Promise.reject(r.status)})
 .then(function(j){ta.value="";btn.disabled=false;btn.textContent=T.post;
-if(j.status==="visible"){load()}else{msg(box,T.awaiting)}})
+if(ni&&j.authorName){composer(true)}if(j.status==="visible"){load()}else{msg(box,T.awaiting)}})
 .catch(function(s){btn.disabled=false;btn.textContent=T.post;if(s===401){login()}else{msg(box,T.error)}})})}
 function login(){ft.innerHTML="";var box=document.createElement("div");box.className="lg";
 var btn=document.createElement("button");btn.type="button";btn.textContent=T.loginCta;box.appendChild(btn);ft.appendChild(box);
@@ -161,7 +169,7 @@ fetch("/api/m/"+C.sub+"/auth/request",{method:"POST",headers:{"content-type":"ap
 function load(){q("/comments?slug="+(C.slug||"")).then(function(r){return r.json()}).then(function(j){render(j.comments)}).catch(function(){})}
 // Draft preview of a page with no subdomain yet: every path would be malformed
 // (/api/cm//comments), so render the empty shell instead of calling.
-if(C.sub){load();q("/me",{credentials:"same-origin"}).then(function(r){return r.json()}).then(function(j){j&&j.member?composer():login()}).catch(login)}
+if(C.sub){load();q("/me",{credentials:"same-origin"}).then(function(r){return r.json()}).then(function(j){j&&j.member?composer(!!j.name):login()}).catch(login)}
 else{render([]);login()}
 }catch(e){}})();</script>`;
 }
