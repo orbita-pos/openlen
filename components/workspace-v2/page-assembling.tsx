@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Check } from "./icons";
+import { PREVIEW_PRELUDE, preparePreviewSnapshot } from "./preview-prelude";
 
 // PageAssembling — the "watch your page being built" surface for the /new AI
 // flow. A premium browser-chrome frame on a soft stage; inside, a live iframe
@@ -90,7 +91,10 @@ export function PageAssembling({
     return () => ro.disconnect();
   }, []);
 
-  // Write HTML into the iframe.
+  // Write HTML into the iframe. Every doc.open() writes PREVIEW_PRELUDE first
+  // — la CSP tiene que regir ANTES del primer byte del modelo (ver
+  // preview-prelude.ts). `writtenRef` sigue midiendo SOLO el HTML del modelo,
+  // así que la lógica de prefijo del streaming no cambia.
   useEffect(() => {
     const iframe = iframeRef.current;
     const doc = iframe?.contentDocument;
@@ -101,6 +105,7 @@ export function PageAssembling({
           doc.write(html.slice(writtenRef.current.length)); // append the new chunk
         } else {
           doc.open();
+          doc.write(PREVIEW_PRELUDE);
           doc.write(html); // (re)start the stream
         }
         writtenRef.current = html;
@@ -108,8 +113,12 @@ export function PageAssembling({
           iframe.contentWindow?.scrollTo(0, doc.documentElement.scrollHeight);
         }
       } else if (html !== writtenRef.current) {
+        // Snapshot (curación): documento completo, así que el carrier de la
+        // plantilla puede re-emitirse con nonce y conservar su paleta.
+        const snap = preparePreviewSnapshot(html);
         doc.open();
-        doc.write(html);
+        doc.write(snap.prelude);
+        doc.write(snap.html);
         doc.close();
         writtenRef.current = html;
         iframe.contentWindow?.scrollTo(0, 0);
@@ -174,6 +183,12 @@ export function PageAssembling({
             ref={iframeRef}
             title={t("aiStatus.assembling")}
             className="pa-iframe"
+            // allow-same-origin es OBLIGATORIO: doc.write() sobre
+            // contentDocument no existe sin él, y ese write ES el streaming
+            // progresivo. Lo que de verdad frena la ejecución es la CSP del
+            // prólogo; el sandbox suma lo que antes no había NINGUNO —
+            // sin allow-top-navigation, popups, forms, modals ni descargas.
+            sandbox="allow-scripts allow-same-origin"
             style={{
               width: DESKTOP_W,
               height: frameH || "100%",
