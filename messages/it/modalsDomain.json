@@ -142,7 +142,13 @@
       "hint": "Ogni lingua va online su /es/, /fr/… tradotta automaticamente a ogni pubblicazione. La lingua originale della tua pagina viene saltata."
     },
     "membersOffWarning": "{count, plural, one {# pagina è segnata solo-membri ma il modulo Account è SPENTO — verrà pubblicata PUBBLICA. Attivalo nella scheda Moduli.} other {# pagine sono segnate solo-membri ma il modulo Account è SPENTO — verranno pubblicate PUBBLICHE. Attivalo nella scheda Moduli.}}",
-    "membersGatedSummary": "{count, plural, one {# pagina solo-membri verrà pubblicata dietro il login.} other {# pagine solo-membri verranno pubblicate dietro il login.}}"
+    "membersGatedSummary": "{count, plural, one {# pagina solo-membri verrà pubblicata dietro il login.} other {# pagine solo-membri verranno pubblicate dietro il login.}}",
+    "bandsOffWarning": "La pagina contiene una sezione {modules}, ma quel modulo è SPENTO — pubblicando, quella sezione NON uscirà. Attivalo nella scheda Moduli.",
+    "bandModule": {
+      "collections": "Catalogo",
+      "bookings": "Prenotazioni",
+      "comments": "Commenti"
+    }
   },
   "inspector": {
     "radius": "Raggio",

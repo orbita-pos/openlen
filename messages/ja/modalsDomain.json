@@ -142,7 +142,13 @@
       "hint": "各言語は /es/、/fr/ などで公開され、公開のたびに自動翻訳されます。ページの元の言語はスキップされます。"
     },
     "membersOffWarning": "{count} ページがメンバー限定に設定されていますが、アカウントモジュールがオフのため公開されます。モジュールタブでオンにしてください。",
-    "membersGatedSummary": "{count} ページのメンバー限定ページがログインの背後に公開されます。"
+    "membersGatedSummary": "{count} ページのメンバー限定ページがログインの背後に公開されます。",
+    "bandsOffWarning": "このページには{modules}のセクションがありますが、モジュールがオフです — 公開するとそのセクションは削除されます。「モジュール」タブで有効にしてください。",
+    "bandModule": {
+      "collections": "カタログ",
+      "bookings": "予約",
+      "comments": "コメント"
+    }
   },
   "inspector": {
     "radius": "角丸",

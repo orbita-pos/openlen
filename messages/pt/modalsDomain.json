@@ -142,7 +142,13 @@
       "hint": "Cada idioma vai ao ar em /es/, /fr/… traduzido automaticamente a cada publicação. O idioma original da sua página é ignorado."
     },
     "membersOffWarning": "{count, plural, one {# página está marcada só-membros mas o módulo Contas está DESLIGADO — será publicada PÚBLICA. Ative-o na aba Módulos.} other {# páginas estão marcadas só-membros mas o módulo Contas está DESLIGADO — serão publicadas PÚBLICAS. Ative-o na aba Módulos.}}",
-    "membersGatedSummary": "{count, plural, one {# página só-membros será publicada atrás do login.} other {# páginas só-membros serão publicadas atrás do login.}}"
+    "membersGatedSummary": "{count, plural, one {# página só-membros será publicada atrás do login.} other {# páginas só-membros serão publicadas atrás do login.}}",
+    "bandsOffWarning": "A página traz a seção de {modules}, mas esse módulo está DESLIGADO — ao publicar, essa seção NÃO sairá. Ative-o na aba Módulos.",
+    "bandModule": {
+      "collections": "Catálogo",
+      "bookings": "Reservas",
+      "comments": "Comentários"
+    }
   },
   "inspector": {
     "radius": "Raio",

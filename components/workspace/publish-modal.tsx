@@ -44,6 +44,11 @@ export interface PublishModalProject {
   gatedFlagsWithModuleOff?: number;
   /** Members module ON: count of pages that will publish gated. */
   gatedPagesCount?: number;
+  /** Módulos por-página cuya BANDA está en el documento pero el módulo está
+   *  apagado. El publish la RECORTA en silencio (stripDisabledModuleBands) —
+   *  incluida la sección diseñada alrededor, como en las 16 plantillas que
+   *  traen Reservas. Este aviso es la única señal antes de perderla. */
+  bandsWithModuleOff?: ("collections" | "bookings" | "comments")[];
 }
 
 export interface PublishModalProps {
@@ -419,6 +424,18 @@ export function PublishModal({
             </div>
           </div>
 
+          {(project.bandsWithModuleOff?.length ?? 0) > 0 && (
+            <div className="flex items-start gap-2 rounded-lg bg-amber-50 dark:bg-amber-500/10 ring-1 ring-amber-200 dark:ring-amber-500/30 px-3 py-2 text-[12px] text-amber-800 dark:text-amber-300">
+              <AlertCircle size={13} className="mt-0.5 shrink-0" />
+              <span>
+                {t("publish.bandsOffWarning", {
+                  modules: (project.bandsWithModuleOff ?? [])
+                    .map((k) => t(`publish.bandModule.${k}`))
+                    .join(", "),
+                })}
+              </span>
+            </div>
+          )}
           {(project.gatedFlagsWithModuleOff ?? 0) > 0 && (
             <div className="flex items-start gap-2 rounded-lg bg-amber-50 dark:bg-amber-500/10 ring-1 ring-amber-200 dark:ring-amber-500/30 px-3 py-2 text-[12px] text-amber-800 dark:text-amber-300">
               <AlertCircle size={13} className="mt-0.5 shrink-0" />

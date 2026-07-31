@@ -4057,6 +4057,24 @@ function NewV2Inner() {
             publishedAt: loadedProject.publishedAt,
             hasUnpublishedChanges: loadedProject.hasUnpublishedChanges,
             languages: loadedProject.settings?.languages,
+            // Bandas presentes con su módulo APAGADO: el publish las recorta
+            // en silencio — este es el único aviso antes de perder la sección.
+            bandsWithModuleOff: (() => {
+              const p = modulePlacements({
+                html: loadedProject.html,
+                pages: loadedProject.pages,
+              });
+              const s = loadedProject.settings;
+              return (
+                [
+                  ["collections", s?.collections?.enabled],
+                  ["bookings", s?.bookings?.enabled],
+                  ["comments", s?.comments?.enabled],
+                ] as const
+              )
+                .filter(([mod, on]) => p[mod].length > 0 && on !== true)
+                .map(([mod]) => mod);
+            })(),
             ...(() => {
               const flagged = Object.values(loadedProject.pages ?? {}).filter(
                 (p) => p.membersOnly,

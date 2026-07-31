@@ -142,7 +142,13 @@
       "hint": "각 언어는 /es/, /fr/ 등에 게시되며 배포할 때마다 자동 번역됩니다. 페이지의 원래 언어는 건너뜁니다."
     },
     "membersOffWarning": "{count}개 페이지가 멤버 전용으로 표시되어 있지만 계정 모듈이 꺼져 있어 공개로 게시됩니다. 모듈 탭에서 켜세요.",
-    "membersGatedSummary": "{count}개의 멤버 전용 페이지가 로그인 뒤에 게시됩니다."
+    "membersGatedSummary": "{count}개의 멤버 전용 페이지가 로그인 뒤에 게시됩니다.",
+    "bandsOffWarning": "이 페이지에는 {modules} 섹션이 있지만 해당 모듈이 꺼져 있습니다 — 게시하면 그 섹션이 제거됩니다. 모듈 탭에서 켜세요.",
+    "bandModule": {
+      "collections": "카탈로그",
+      "bookings": "예약",
+      "comments": "댓글"
+    }
   },
   "inspector": {
     "radius": "반경",
