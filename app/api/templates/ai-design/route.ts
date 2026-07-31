@@ -864,6 +864,9 @@ VISUAL CONTEXT: the attached image is a full-page render of the CURRENT page (wh
           label: versionLabel,
           source: "chat",
           page: pageSlug,
+          // Un rewrite completo redefine el diseño → nuevo baseline del reset.
+          // Las ops quirúrgicas son ediciones, no rediseños: no lo mueven.
+          isBaseline: outputMode !== "ops",
         }).catch((err: unknown) => {
           // eslint-disable-next-line no-console
           console.error("[ai-design] version snapshot failed", err);

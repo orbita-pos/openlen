@@ -110,6 +110,7 @@ export interface AgentDeps {
     label: string;
     source: string;
     page: string | null;
+    isBaseline?: boolean;
   }): Promise<void>;
   provisionOwnerChat(
     projectId: string,
@@ -238,6 +239,7 @@ export function realDeps(): AgentDeps {
         label: args.label,
         source: args.source as VersionSource,
         page: args.page,
+        isBaseline: args.isBaseline,
       }).catch((err: unknown) => {
         // eslint-disable-next-line no-console
         console.error("[agent] snapshot failed", err);
@@ -830,6 +832,7 @@ async function persistHtmlChange(
   deps: AgentDeps,
   candidateHtml: string,
   label: string,
+  opts: { isBaseline?: boolean } = {},
 ): Promise<PersistResult> {
   // Editor-mode marker guard first (specific message), then the broader
   // sanitize pass (defense in depth — mirrors ai-design route).
@@ -895,6 +898,7 @@ async function persistHtmlChange(
     label,
     source: "chat",
     page: session.page,
+    isBaseline: opts.isBaseline,
   });
 
   // Ids change after every apply — re-tag so the next editar_pagina call
@@ -954,6 +958,7 @@ async function toolRedisenarPagina(
     deps,
     redesigned.html,
     `Rediseño: ${direccion.slice(0, 60)}`,
+    { isBaseline: true },
   );
   if (!persisted.ok) {
     return { response: { ok: false, error: persisted.error } };
