@@ -21,7 +21,7 @@ import {
   type CSSProperties,
 } from "react";
 import { useTranslations } from "next-intl";
-import { RotateCcw, Type as TypeIcon } from "lucide-react";
+import { MoveVertical, RotateCcw, Type as TypeIcon } from "lucide-react";
 import type { FormConfig, MusicSettings } from "@/lib/projects/types";
 import { checkSeo, type SeoIssue, type SeoFixField } from "@/lib/seo-check";
 import { defaultLogoDataUrl } from "@/lib/branding/default-logo";
@@ -56,6 +56,11 @@ import {
   WEIGHT_STEPS,
   LINE_HEIGHT_STEPS,
   COLOR_ROLES,
+  PAD_STEPS,
+  GAP_STEPS,
+  DENSITY_STEPS,
+  RADIUS_STEPS,
+  nearestStep,
 } from "../curated-steps";
 import {
   ColorField,
@@ -471,6 +476,16 @@ function ElementView({
           onResetProps={onResetProps}
         />
       )}
+      {style && tag !== "img" && (
+        <SpacingSection
+          path={path}
+          tag={tag}
+          style={style}
+          wasProps={selection.wasProps ?? []}
+          onApplyStyle={onApplyStyle}
+          onResetProps={onResetProps}
+        />
+      )}
       <StyleSection
         path={path}
         style={style}
@@ -608,6 +623,88 @@ function TextSection({
         onCommit={(v) => onApplyStyle(path, "color", v)}
         reset={resetOf(["color"])}
       />
+    </Section>
+  );
+}
+
+// SpacingSection — curated padding/gap/density steps. Bands (section/header/
+// footer) get a density control that writes padding-top + padding-bottom
+// together (the visual "how much air around the whole band" knob); other
+// elements get the padding shorthand instead — never both, they'd fight over
+// the same box model. Gap only shows when the element is flex/grid (a gap on
+// a block element is inert).
+function SpacingSection({
+  path,
+  tag,
+  style,
+  wasProps,
+  onApplyStyle,
+  onResetProps,
+}: {
+  path: string;
+  tag: string;
+  style: NonNullable<InspectSelection["style"]>;
+  wasProps: string[];
+  onApplyStyle: (path: string, prop: string, value: string) => void;
+  onResetProps: (path: string, props: string[]) => void;
+}) {
+  const t = useTranslations("panelsProps");
+  const dirty = (p: string) => wasProps.includes(p);
+  const resetOf = (props: string[]) => ({
+    dirty: props.some(dirty),
+    title: t("was.resetControl"),
+    onReset: () => onResetProps(path, props),
+  });
+  const isBand = tag === "section" || tag === "header" || tag === "footer";
+  const spacingDirty = (FACET_PROPS.espaciado as readonly string[]).some(dirty);
+  const padActive = PAD_STEPS.indexOf(nearestStep(style.paddingTopPx ?? 0, PAD_STEPS));
+  const gapActive = GAP_STEPS.indexOf(nearestStep(style.gapPx ?? 0, GAP_STEPS));
+  const densityActive = DENSITY_STEPS.indexOf(nearestStep(style.paddingTopPx ?? 0, DENSITY_STEPS));
+  return (
+    <Section
+      label={t("spacing.title")}
+      icon={<MoveVertical size={11} />}
+      action={
+        spacingDirty ? (
+          <button
+            type="button"
+            onClick={() => onResetProps(path, wasProps.filter((p) => (FACET_PROPS.espaciado as readonly string[]).includes(p)))}
+            className="text-[10px] fg-faint hover:fg underline-offset-2 hover:underline transition normal-case tracking-normal"
+          >
+            ↺ {t("was.resetSpacing")}
+          </button>
+        ) : null
+      }
+    >
+      {isBand ? (
+        <StepRow
+          label={t("spacing.density")}
+          options={DENSITY_STEPS.map((s) => t(`spacing.densities.${s.label}`))}
+          activeIndex={densityActive}
+          onPick={(i) => {
+            onApplyStyle(path, "padding-top", DENSITY_STEPS[i].value);
+            onApplyStyle(path, "padding-bottom", DENSITY_STEPS[i].value);
+          }}
+          reset={resetOf(["padding-top", "padding-bottom"])}
+        />
+      ) : (
+        <StepRow
+          label={t("spacing.padding")}
+          options={PAD_STEPS.map((s) => s.label)}
+          activeIndex={padActive}
+          onPick={(i) => onApplyStyle(path, "padding", PAD_STEPS[i].value)}
+          reset={resetOf(["padding"])}
+        />
+      )}
+      {style.isFlexOrGrid && (
+        <StepRow
+          label={t("spacing.gap")}
+          options={GAP_STEPS.map((s) => s.label)}
+          activeIndex={gapActive}
+          onPick={(i) => onApplyStyle(path, "gap", GAP_STEPS[i].value)}
+          reset={resetOf(["gap"])}
+        />
+      )}
     </Section>
   );
 }
@@ -798,9 +895,15 @@ function StyleSection({
         reset={resetOf("border")}
         onApply={(border) => onApply(path, "border", border)}
       />
+      <StepRow
+        label={t("style.corners")}
+        options={RADIUS_STEPS.map((step) => t(`style.cornersSteps.${step.label}`))}
+        activeIndex={RADIUS_STEPS.indexOf(nearestStep(parseInt(s.borderRadius || "0", 10) || 0, RADIUS_STEPS))}
+        onPick={(i) => onApply(path, "border-radius", RADIUS_STEPS[i].value)}
+        reset={resetOf("border-radius")}
+      />
       <RadiusField
         value={s.borderRadius ?? ""}
-        reset={resetOf("border-radius")}
         onCommit={(v) => onApply(path, "border-radius", v)}
       />
       <div className="pt-0.5">

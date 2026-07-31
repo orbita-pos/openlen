@@ -126,3 +126,32 @@ test("element-selected reporta wasProps", async ({ page }) => {
   });
   expect((sel as { wasProps?: string[] }).wasProps).toEqual(["color"]);
 });
+
+test("padding en pasos escribe var(--ol-space-*) y el stash sobrevive un reorder", async ({ page }) => {
+  const frame = await loadInto(page, NORMALIZED);
+  const path = await pathOf(frame, "section");
+  await applyStyleMsg(frame, path, "padding", "var(--ol-space-6, 1.5rem)");
+  await expect
+    .poll(() => frame.evaluate(() => document.querySelector("section")!.getAttribute("style")))
+    .toContain("var(--ol-space-6");
+
+  // Simular un reorder real: mover la sección al final del body.
+  await frame.evaluate(() => {
+    const sec = document.querySelector("section")!;
+    sec.parentElement!.appendChild(sec);
+  });
+  // El atributo viaja con el elemento: su identidad posicional se rompió
+  // (ya no es la primera <section> — un querySelector("section") plano
+  // ahora resolvería a una sección DISTINTA), pero es literalmente el
+  // último nodo <section> en orden de documento, así que lo re-localizamos
+  // por ahí y confirmamos que el stash sigue en el nodo real que se movió.
+  const stash = await frame.evaluate(() => document.querySelector("section:last-of-type")!.getAttribute("data-ol-was"));
+  expect(JSON.parse(stash!)).toHaveProperty("padding");
+
+  // Reset con el path NUEVO del elemento movido.
+  const newPath = await pathOf(frame, "section:last-of-type");
+  await applyResetMsg(frame, newPath, ["padding"]);
+  await expect
+    .poll(() => frame.evaluate(() => document.querySelector("section:last-of-type")!.getAttribute("data-ol-was")))
+    .toBeNull();
+});

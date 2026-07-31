@@ -30,6 +30,12 @@
     "border": "테두리",
     "borderColor": "테두리 색상",
     "borderWidth": "테두리 두께",
+    "corners": "모서리",
+    "cornersSteps": {
+      "square": "각지게",
+      "soft": "부드럽게",
+      "round": "둥글게"
+    },
     "text": "텍스트",
     "bold": "굵게",
     "italic": "기울임",
@@ -83,6 +89,17 @@
       "body": "본문"
     },
     "customColor": "맞춤 색상"
+  },
+  "spacing": {
+    "title": "간격",
+    "padding": "안쪽 여백",
+    "gap": "사이 간격",
+    "density": "밀도",
+    "densities": {
+      "compact": "좁게",
+      "normal": "보통",
+      "airy": "넓게"
+    }
   },
   "form": {
     "title": "양식",

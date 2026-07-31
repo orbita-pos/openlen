@@ -30,6 +30,12 @@
     "border": "Border",
     "borderColor": "Border color",
     "borderWidth": "Border width",
+    "corners": "Corners",
+    "cornersSteps": {
+      "square": "Square",
+      "soft": "Soft",
+      "round": "Round"
+    },
     "text": "Text",
     "bold": "Bold",
     "italic": "Italic",
@@ -83,6 +89,17 @@
       "body": "Body"
     },
     "customColor": "Custom color"
+  },
+  "spacing": {
+    "title": "Spacing",
+    "padding": "Inner padding",
+    "gap": "Gap",
+    "density": "Density",
+    "densities": {
+      "compact": "Compact",
+      "normal": "Normal",
+      "airy": "Airy"
+    }
   },
   "form": {
     "title": "Form",

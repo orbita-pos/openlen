@@ -30,6 +30,12 @@
     "border": "枠線",
     "borderColor": "枠線の色",
     "borderWidth": "枠線の太さ",
+    "corners": "角",
+    "cornersSteps": {
+      "square": "直角",
+      "soft": "やわらか",
+      "round": "丸み"
+    },
     "text": "テキスト",
     "bold": "太字",
     "italic": "斜体",
@@ -83,6 +89,17 @@
       "body": "本文"
     },
     "customColor": "カスタムカラー"
+  },
+  "spacing": {
+    "title": "余白",
+    "padding": "内側の余白",
+    "gap": "間隔",
+    "density": "密度",
+    "densities": {
+      "compact": "コンパクト",
+      "normal": "標準",
+      "airy": "ゆったり"
+    }
   },
   "form": {
     "title": "フォーム",

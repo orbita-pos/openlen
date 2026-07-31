@@ -30,6 +30,12 @@
     "border": "Borde",
     "borderColor": "Color del borde",
     "borderWidth": "Grosor del borde",
+    "corners": "Esquinas",
+    "cornersSteps": {
+      "square": "Recto",
+      "soft": "Suave",
+      "round": "Redondo"
+    },
     "text": "Texto",
     "bold": "Negrita",
     "italic": "Itálica",
@@ -83,6 +89,17 @@
       "body": "Texto"
     },
     "customColor": "Color personalizado"
+  },
+  "spacing": {
+    "title": "Espaciado",
+    "padding": "Aire interior",
+    "gap": "Separación",
+    "density": "Densidad",
+    "densities": {
+      "compact": "Compacta",
+      "normal": "Normal",
+      "airy": "Aireada"
+    }
   },
   "form": {
     "title": "Formulario",

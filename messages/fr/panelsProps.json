@@ -30,6 +30,12 @@
     "border": "Bordure",
     "borderColor": "Couleur de bordure",
     "borderWidth": "Épaisseur de bordure",
+    "corners": "Coins",
+    "cornersSteps": {
+      "square": "Carré",
+      "soft": "Doux",
+      "round": "Rond"
+    },
     "text": "Texte",
     "bold": "Gras",
     "italic": "Italique",
@@ -83,6 +89,17 @@
       "body": "Texte"
     },
     "customColor": "Couleur personnalisée"
+  },
+  "spacing": {
+    "title": "Espacement",
+    "padding": "Marge intérieure",
+    "gap": "Espace",
+    "density": "Densité",
+    "densities": {
+      "compact": "Compact",
+      "normal": "Normal",
+      "airy": "Aéré"
+    }
   },
   "form": {
     "title": "Formulaire",

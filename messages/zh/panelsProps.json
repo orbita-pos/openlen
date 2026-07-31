@@ -30,6 +30,12 @@
     "border": "边框",
     "borderColor": "边框颜色",
     "borderWidth": "边框粗细",
+    "corners": "圆角",
+    "cornersSteps": {
+      "square": "直角",
+      "soft": "小圆角",
+      "round": "大圆角"
+    },
     "text": "文字",
     "bold": "加粗",
     "italic": "斜体",
@@ -83,6 +89,17 @@
       "body": "正文"
     },
     "customColor": "自定义颜色"
+  },
+  "spacing": {
+    "title": "间距",
+    "padding": "内边距",
+    "gap": "间隙",
+    "density": "密度",
+    "densities": {
+      "compact": "紧凑",
+      "normal": "常规",
+      "airy": "宽松"
+    }
   },
   "form": {
     "title": "表单",

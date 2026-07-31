@@ -36,6 +36,12 @@
     "border": "Rand",
     "borderColor": "Randkleur",
     "borderWidth": "Randdikte",
+    "corners": "Hoeken",
+    "cornersSteps": {
+      "square": "Recht",
+      "soft": "Zacht",
+      "round": "Rond"
+    },
     "text": "Tekst",
     "bold": "Vet",
     "italic": "Cursief",
@@ -89,6 +95,17 @@
       "body": "Tekst"
     },
     "customColor": "Eigen kleur"
+  },
+  "spacing": {
+    "title": "Witruimte",
+    "padding": "Binnenruimte",
+    "gap": "Tussenruimte",
+    "density": "Dichtheid",
+    "densities": {
+      "compact": "Compact",
+      "normal": "Normaal",
+      "airy": "Luchtig"
+    }
   },
   "form": {
     "title": "Formulier",

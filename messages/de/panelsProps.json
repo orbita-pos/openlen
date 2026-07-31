@@ -30,6 +30,12 @@
     "border": "Rahmen",
     "borderColor": "Rahmenfarbe",
     "borderWidth": "Rahmenbreite",
+    "corners": "Ecken",
+    "cornersSteps": {
+      "square": "Eckig",
+      "soft": "Weich",
+      "round": "Rund"
+    },
     "text": "Text",
     "bold": "Fett",
     "italic": "Kursiv",
@@ -83,6 +89,17 @@
       "body": "Text"
     },
     "customColor": "Eigene Farbe"
+  },
+  "spacing": {
+    "title": "Abstände",
+    "padding": "Innenabstand",
+    "gap": "Lücke",
+    "density": "Dichte",
+    "densities": {
+      "compact": "Kompakt",
+      "normal": "Normal",
+      "airy": "Luftig"
+    }
   },
   "form": {
     "title": "Formular",

@@ -30,6 +30,12 @@
     "border": "Bordo",
     "borderColor": "Colore bordo",
     "borderWidth": "Spessore bordo",
+    "corners": "Angoli",
+    "cornersSteps": {
+      "square": "Squadrati",
+      "soft": "Morbidi",
+      "round": "Arrotondati"
+    },
     "text": "Testo",
     "bold": "Grassetto",
     "italic": "Corsivo",
@@ -83,6 +89,17 @@
       "body": "Testo"
     },
     "customColor": "Colore personalizzato"
+  },
+  "spacing": {
+    "title": "Spaziatura",
+    "padding": "Spazio interno",
+    "gap": "Spazio",
+    "density": "Densità",
+    "densities": {
+      "compact": "Compatta",
+      "normal": "Normale",
+      "airy": "Ariosa"
+    }
   },
   "form": {
     "title": "Modulo",
