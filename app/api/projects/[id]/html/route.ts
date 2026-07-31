@@ -179,6 +179,29 @@ export async function PATCH(
   }
 
   try {
+    const idleCheckpoint = async (label: string) => {
+      // Idle-checkpoint por documento — una racha de edición no debe crear
+      // una versión por interacción (con controles de pasos serían docenas),
+      // y el churn de home no debe suprimir el checkpoint de una subpágina.
+      const latest = await db
+        .select({ createdAt: schema.projectVersions.createdAt })
+        .from(schema.projectVersions)
+        .where(
+          and(
+            eq(schema.projectVersions.projectId, id),
+            page === null
+              ? isNull(schema.projectVersions.page)
+              : eq(schema.projectVersions.page, page),
+          ),
+        )
+        .orderBy(desc(schema.projectVersions.createdAt))
+        .limit(1);
+      const lastAt = latest[0]?.createdAt;
+      const elapsed = lastAt ? now.getTime() - lastAt.getTime() : Infinity;
+      if (elapsed >= IDLE_CHECKPOINT_MS) {
+        await createVersion({ projectId: id, html, label, source: "manual", page });
+      }
+    };
     if (body.source === "reorder") {
       // Reorders are structural — snapshot every time (createVersion's
       // own dedupe handles consecutive byte-identical posts).
@@ -200,15 +223,7 @@ export async function PATCH(
         page,
       });
     } else if (body.source === "props") {
-      // Inspector edits (link target, alt text, SEO) are discrete,
-      // intentional actions — snapshot each as its own undo point.
-      await createVersion({
-        projectId: id,
-        html,
-        label: "Edited properties",
-        source: "manual",
-        page,
-      });
+      await idleCheckpoint("Edited properties");
     } else if (body.source === "section-insert") {
       // Inserting a library section is a discrete structural action —
       // snapshot it so the user has a clean undo point before/after.
@@ -220,32 +235,7 @@ export async function PATCH(
         page,
       });
     } else {
-      // Inline-edit autosave: idle-checkpoint as before, per document —
-      // home churn must not suppress a subpage's checkpoint (or vice versa).
-      const latest = await db
-        .select({ createdAt: schema.projectVersions.createdAt })
-        .from(schema.projectVersions)
-        .where(
-          and(
-            eq(schema.projectVersions.projectId, id),
-            page === null
-              ? isNull(schema.projectVersions.page)
-              : eq(schema.projectVersions.page, page),
-          ),
-        )
-        .orderBy(desc(schema.projectVersions.createdAt))
-        .limit(1);
-      const lastAt = latest[0]?.createdAt;
-      const elapsed = lastAt ? now.getTime() - lastAt.getTime() : Infinity;
-      if (elapsed >= IDLE_CHECKPOINT_MS) {
-        await createVersion({
-          projectId: id,
-          html,
-          label: "Edited content",
-          source: "manual",
-          page,
-        });
-      }
+      await idleCheckpoint("Edited content");
     }
   } catch (err) {
     // eslint-disable-next-line no-console

@@ -48,6 +48,7 @@
     "cron:bundle": "node scripts/build-cron.mjs",
     "versions:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/versions-migrate.ts",
     "versions:baseline:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/versions-baseline-migrate.ts",
+    "versions:baseline:backfill": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/versions-baseline-backfill.ts",
     "chat:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/chat-migrate.ts",
     "privatechat:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/privatechat-migrate.ts",
     "inbox:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/inbox-migrate.ts",
