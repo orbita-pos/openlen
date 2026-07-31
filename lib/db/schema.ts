@@ -290,6 +290,11 @@ export const projectVersions = pgTable(
     page: text("page"),
     // Pinned versions survive eviction (and show a pin in the timeline).
     pinned: boolean("pinned").notNull().default(false),
+    // Baseline: el "original" al que regresa «Volver al original». La versión
+    // initial nace baseline; un rediseño IA completo aplicado se vuelve el
+    // nuevo baseline (gana la fila isBaseline más reciente del scope).
+    // Exenta de evicción — el original nunca se autoborra.
+    isBaseline: boolean("isBaseline").notNull().default(false),
     createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
   },
   (table) => [

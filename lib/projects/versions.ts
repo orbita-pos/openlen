@@ -37,6 +37,7 @@ export interface VersionSummary {
   source: VersionSource;
   page: string | null;
   pinned: boolean;
+  isBaseline: boolean;
   createdAt: Date;
 }
 
@@ -52,6 +53,9 @@ interface CreateVersionParams {
    *  user-typed name lands on the checkpoint even when the content already
    *  matches the newest snapshot. */
   relabelDedup?: boolean;
+  /** Marca esta versión como baseline (el "original"). Default: true cuando
+   *  source === "initial". Un rediseño IA completo pasa true explícito. */
+  isBaseline?: boolean;
 }
 
 function scopeCondition(projectId: string, page: string | null) {
@@ -80,16 +84,21 @@ export async function createVersion(
       id: schema.projectVersions.id,
       html: schema.projectVersions.html,
       label: schema.projectVersions.label,
+      isBaseline: schema.projectVersions.isBaseline,
     })
     .from(schema.projectVersions)
     .where(scopeCondition(params.projectId, page))
     .orderBy(desc(schema.projectVersions.createdAt))
     .limit(1);
+  const isBaseline = params.isBaseline ?? params.source === "initial";
   if (recent[0]?.html === params.html) {
-    if (params.relabelDedup && recent[0].label !== label) {
+    const patch: { label?: string; isBaseline?: boolean } = {};
+    if (params.relabelDedup && recent[0].label !== label) patch.label = label;
+    if (isBaseline && !recent[0].isBaseline) patch.isBaseline = true;
+    if (Object.keys(patch).length > 0) {
       await db
         .update(schema.projectVersions)
-        .set({ label })
+        .set(patch)
         .where(eq(schema.projectVersions.id, recent[0].id));
     }
     return recent[0].id;
@@ -103,6 +112,7 @@ export async function createVersion(
     label,
     html: params.html,
     page,
+    isBaseline,
   });
 
   // Evict the oldest unpinned beyond the cap, within this scope only.
@@ -113,6 +123,7 @@ export async function createVersion(
       and(
         scopeCondition(params.projectId, page),
         eq(schema.projectVersions.pinned, false),
+        eq(schema.projectVersions.isBaseline, false),
       ),
     )
     .orderBy(desc(schema.projectVersions.createdAt));
@@ -161,6 +172,7 @@ export async function listVersions(
       source: schema.projectVersions.source,
       page: schema.projectVersions.page,
       pinned: schema.projectVersions.pinned,
+      isBaseline: schema.projectVersions.isBaseline,
       createdAt: schema.projectVersions.createdAt,
     })
     .from(schema.projectVersions)
@@ -175,6 +187,7 @@ export async function listVersions(
     source: asSource(r.source),
     page: r.page,
     pinned: r.pinned,
+    isBaseline: r.isBaseline,
     createdAt: r.createdAt,
   }));
 }
