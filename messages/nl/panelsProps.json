@@ -56,6 +56,35 @@
     "gradientPresets": "Voorinstellingen",
     "gradientRemove": "Verwijderen"
   },
+  "text": {
+    "title": "Tekst",
+    "size": "Grootte",
+    "weight": "Gewicht",
+    "weights": {
+      "normal": "Normaal",
+      "medium": "Middel",
+      "bold": "Vet"
+    },
+    "lineHeight": "Regelhoogte",
+    "lh": {
+      "compact": "Compact",
+      "normal": "Normaal",
+      "airy": "Luchtig"
+    },
+    "align": "Uitlijning",
+    "color": "Kleur",
+    "roles": {
+      "ink": "Inkt",
+      "soft": "Zacht",
+      "accent": "Accent"
+    },
+    "font": "Lettertype",
+    "fonts": {
+      "display": "Titel",
+      "body": "Tekst"
+    },
+    "customColor": "Eigen kleur"
+  },
   "form": {
     "title": "Formulier",
     "notifyEmail": "Meldingsmail",

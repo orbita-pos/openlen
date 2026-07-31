@@ -504,3 +504,72 @@ export function Toggle({
   );
 }
 
+// StepRow — fila de pasos discretos (el sustituto curado de un slider).
+export function StepRow({
+  label,
+  options,
+  activeIndex,
+  onPick,
+  reset,
+}: {
+  label: string;
+  options: readonly string[];
+  activeIndex: number;
+  onPick: (index: number) => void;
+  reset?: ResetAffordance;
+}) {
+  return (
+    <div className="flex items-center gap-2">
+      <span className="text-[10.5px] fg-faint flex-1">{label}</span>
+      {reset && <ProvenanceReset dirty={reset.dirty} title={reset.title} onReset={reset.onReset} />}
+      <div className="flex items-center gap-0.5 rounded-md border bd bg-app p-0.5">
+        {options.map((opt, i) => (
+          <button
+            key={opt}
+            type="button"
+            aria-pressed={i === activeIndex}
+            onClick={() => onPick(i)}
+            className={`px-1.5 py-0.5 rounded text-[10.5px] transition ${
+              i === activeIndex ? "bg-elev fg shadow-card" : "fg-muted hover:fg hover:bg-hover"
+            }`}
+          >
+            {opt}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// SizeStepper — A− / A+ caminando la escalera tipográfica relativa al tamaño
+// actual (nunca saltos absolutos: un H1 baja un peldaño, no se vuelve body).
+export function SizeStepper({
+  label,
+  valueLabel,
+  onSmaller,
+  onLarger,
+  reset,
+}: {
+  label: string;
+  valueLabel: string;
+  onSmaller: () => void;
+  onLarger: () => void;
+  reset?: ResetAffordance;
+}) {
+  const btn =
+    "h-6 w-7 inline-flex items-center justify-center rounded border bd bg-app fg-muted hover:fg hover:bg-hover transition text-[11px]";
+  return (
+    <div className="flex items-center gap-2">
+      <span className="text-[10.5px] fg-faint flex-1">{label}</span>
+      {reset && <ProvenanceReset dirty={reset.dirty} title={reset.title} onReset={reset.onReset} />}
+      <button type="button" aria-label={`${label} −`} onClick={onSmaller} className={btn}>
+        A−
+      </button>
+      <span className="w-9 text-center text-[10px] font-mono fg-muted">{valueLabel}</span>
+      <button type="button" aria-label={`${label} +`} onClick={onLarger} className={btn}>
+        A+
+      </button>
+    </div>
+  );
+}
+

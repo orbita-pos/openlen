@@ -50,6 +50,35 @@
     "gradientPresets": "Presets",
     "gradientRemove": "Remove"
   },
+  "text": {
+    "title": "Text",
+    "size": "Size",
+    "weight": "Weight",
+    "weights": {
+      "normal": "Normal",
+      "medium": "Medium",
+      "bold": "Bold"
+    },
+    "lineHeight": "Line height",
+    "lh": {
+      "compact": "Compact",
+      "normal": "Normal",
+      "airy": "Airy"
+    },
+    "align": "Alignment",
+    "color": "Color",
+    "roles": {
+      "ink": "Ink",
+      "soft": "Soft",
+      "accent": "Accent"
+    },
+    "font": "Font",
+    "fonts": {
+      "display": "Display",
+      "body": "Body"
+    },
+    "customColor": "Custom color"
+  },
   "form": {
     "title": "Form",
     "notifyEmail": "Notify email",

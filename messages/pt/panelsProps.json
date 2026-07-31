@@ -50,6 +50,35 @@
     "gradientPresets": "Predefinições",
     "gradientRemove": "Remover"
   },
+  "text": {
+    "title": "Texto",
+    "size": "Tamanho",
+    "weight": "Peso",
+    "weights": {
+      "normal": "Normal",
+      "medium": "Médio",
+      "bold": "Negrito"
+    },
+    "lineHeight": "Altura da linha",
+    "lh": {
+      "compact": "Compacto",
+      "normal": "Normal",
+      "airy": "Arejado"
+    },
+    "align": "Alinhamento",
+    "color": "Cor",
+    "roles": {
+      "ink": "Tinta",
+      "soft": "Suave",
+      "accent": "Destaque"
+    },
+    "font": "Fonte",
+    "fonts": {
+      "display": "Título",
+      "body": "Texto"
+    },
+    "customColor": "Cor personalizada"
+  },
   "form": {
     "title": "Formulário",
     "notifyEmail": "E-mail de notificação",

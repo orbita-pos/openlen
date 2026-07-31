@@ -50,6 +50,35 @@
     "gradientPresets": "Préréglages",
     "gradientRemove": "Retirer"
   },
+  "text": {
+    "title": "Texte",
+    "size": "Taille",
+    "weight": "Graisse",
+    "weights": {
+      "normal": "Normal",
+      "medium": "Moyen",
+      "bold": "Gras"
+    },
+    "lineHeight": "Interligne",
+    "lh": {
+      "compact": "Compact",
+      "normal": "Normal",
+      "airy": "Aéré"
+    },
+    "align": "Alignement",
+    "color": "Couleur",
+    "roles": {
+      "ink": "Encre",
+      "soft": "Doux",
+      "accent": "Accent"
+    },
+    "font": "Police",
+    "fonts": {
+      "display": "Titre",
+      "body": "Texte"
+    },
+    "customColor": "Couleur personnalisée"
+  },
   "form": {
     "title": "Formulaire",
     "notifyEmail": "E-mail de notification",

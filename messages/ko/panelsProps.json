@@ -50,6 +50,35 @@
     "gradientPresets": "프리셋",
     "gradientRemove": "제거"
   },
+  "text": {
+    "title": "텍스트",
+    "size": "크기",
+    "weight": "굵기",
+    "weights": {
+      "normal": "보통",
+      "medium": "중간",
+      "bold": "굵게"
+    },
+    "lineHeight": "줄 간격",
+    "lh": {
+      "compact": "좁게",
+      "normal": "보통",
+      "airy": "넓게"
+    },
+    "align": "정렬",
+    "color": "색상",
+    "roles": {
+      "ink": "잉크",
+      "soft": "부드럽게",
+      "accent": "강조"
+    },
+    "font": "폰트",
+    "fonts": {
+      "display": "제목",
+      "body": "본문"
+    },
+    "customColor": "맞춤 색상"
+  },
   "form": {
     "title": "양식",
     "notifyEmail": "알림 이메일",

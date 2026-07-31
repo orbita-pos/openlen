@@ -50,6 +50,35 @@
     "gradientPresets": "プリセット",
     "gradientRemove": "削除"
   },
+  "text": {
+    "title": "テキスト",
+    "size": "サイズ",
+    "weight": "太さ",
+    "weights": {
+      "normal": "標準",
+      "medium": "中太",
+      "bold": "太字"
+    },
+    "lineHeight": "行間",
+    "lh": {
+      "compact": "コンパクト",
+      "normal": "標準",
+      "airy": "ゆったり"
+    },
+    "align": "配置",
+    "color": "色",
+    "roles": {
+      "ink": "インク",
+      "soft": "ソフト",
+      "accent": "アクセント"
+    },
+    "font": "フォント",
+    "fonts": {
+      "display": "見出し",
+      "body": "本文"
+    },
+    "customColor": "カスタムカラー"
+  },
   "form": {
     "title": "フォーム",
     "notifyEmail": "通知先メールアドレス",

@@ -50,6 +50,35 @@
     "gradientPresets": "预设",
     "gradientRemove": "移除"
   },
+  "text": {
+    "title": "文字",
+    "size": "字号",
+    "weight": "字重",
+    "weights": {
+      "normal": "常规",
+      "medium": "中等",
+      "bold": "加粗"
+    },
+    "lineHeight": "行高",
+    "lh": {
+      "compact": "紧凑",
+      "normal": "常规",
+      "airy": "宽松"
+    },
+    "align": "对齐",
+    "color": "颜色",
+    "roles": {
+      "ink": "墨色",
+      "soft": "柔和",
+      "accent": "强调色"
+    },
+    "font": "字体",
+    "fonts": {
+      "display": "标题",
+      "body": "正文"
+    },
+    "customColor": "自定义颜色"
+  },
   "form": {
     "title": "表单",
     "notifyEmail": "通知邮箱",

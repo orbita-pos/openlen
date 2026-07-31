@@ -50,6 +50,35 @@
     "gradientPresets": "Vorlagen",
     "gradientRemove": "Entfernen"
   },
+  "text": {
+    "title": "Text",
+    "size": "Größe",
+    "weight": "Stärke",
+    "weights": {
+      "normal": "Normal",
+      "medium": "Mittel",
+      "bold": "Fett"
+    },
+    "lineHeight": "Zeilenhöhe",
+    "lh": {
+      "compact": "Kompakt",
+      "normal": "Normal",
+      "airy": "Luftig"
+    },
+    "align": "Ausrichtung",
+    "color": "Farbe",
+    "roles": {
+      "ink": "Tinte",
+      "soft": "Sanft",
+      "accent": "Akzent"
+    },
+    "font": "Schriftart",
+    "fonts": {
+      "display": "Überschrift",
+      "body": "Text"
+    },
+    "customColor": "Eigene Farbe"
+  },
   "form": {
     "title": "Formular",
     "notifyEmail": "Benachrichtigungs-E-Mail",

@@ -19,10 +19,9 @@ import {
   useRef,
   useState,
   type CSSProperties,
-  type ReactNode,
 } from "react";
 import { useTranslations } from "next-intl";
-import { RotateCcw } from "lucide-react";
+import { RotateCcw, Type as TypeIcon } from "lucide-react";
 import type { FormConfig, MusicSettings } from "@/lib/projects/types";
 import { checkSeo, type SeoIssue, type SeoFixField } from "@/lib/seo-check";
 import { defaultLogoDataUrl } from "@/lib/branding/default-logo";
@@ -51,11 +50,21 @@ import { useToast } from "../toast";
 import { normalizeHref } from "../normalize-href";
 import { ReplaceAssetModal, type ImageTab } from "../replace-asset-modal";
 import {
+  TYPE_LADDER,
+  nearestTypeIndex,
+  typeStepValue,
+  WEIGHT_STEPS,
+  LINE_HEIGHT_STEPS,
+  COLOR_ROLES,
+} from "../curated-steps";
+import {
   ColorField,
   GradientControl,
   ProvenanceReset,
   RadiusField,
   Section,
+  SizeStepper,
+  StepRow,
   TextField,
   Toggle,
 } from "../inspector-fields";
@@ -453,6 +462,15 @@ function ElementView({
           onSendTestEmail={onSendTestFormEmail}
         />
       )}
+      {style && style.hasText && (
+        <TextSection
+          path={path}
+          style={style}
+          wasProps={selection.wasProps ?? []}
+          onApplyStyle={onApplyStyle}
+          onResetProps={onResetProps}
+        />
+      )}
       <StyleSection
         path={path}
         style={style}
@@ -468,45 +486,122 @@ function ElementView({
   );
 }
 
-// A square active-state icon button (bold / italic / align toggles).
-function ToggleBtn({
-  on,
-  label,
-  onClick,
-  children,
+// TextSection — grupo curado de texto: tamaño (escalera relativa), peso,
+// interlineado, alineación, color por rol (conectado al tema) + un color
+// libre como camino secundario, y fuente por rol (display/body).
+function TextSection({
+  path,
+  style,
+  wasProps,
+  onApplyStyle,
+  onResetProps,
 }: {
-  on: boolean;
-  label: string;
-  onClick: () => void;
-  children: ReactNode;
+  path: string;
+  style: NonNullable<InspectSelection["style"]>;
+  wasProps: string[];
+  onApplyStyle: (path: string, prop: string, value: string) => void;
+  onResetProps: (path: string, props: string[]) => void;
 }) {
+  const t = useTranslations("panelsProps");
+  const dirty = (p: string) => wasProps.includes(p);
+  const resetOf = (props: string[]) => ({
+    dirty: props.some(dirty),
+    title: t("was.resetControl"),
+    onReset: () => onResetProps(path, props),
+  });
+  const sizeIdx = nearestTypeIndex(style.fontSizePx ?? 16);
+  const applySize = (i: number) => {
+    const v = typeStepValue(i);
+    onApplyStyle(path, "font-size", v.fontSize);
+    onApplyStyle(path, "line-height", v.lineHeight);
+  };
+  const weightIdx = Math.max(0, WEIGHT_STEPS.findIndex((w) => w.value === (style.fontWeight ?? "400")));
+  const lhLabels = LINE_HEIGHT_STEPS.map((s) => t(`text.lh.${s.label}`));
+  const textDirty = (FACET_PROPS.texto as readonly string[]).some(dirty);
   return (
-    <button
-      type="button"
-      aria-pressed={on}
-      aria-label={label}
-      title={label}
-      onClick={onClick}
-      className={`inline-flex h-7 w-7 items-center justify-center rounded-md border transition ${
-        on
-          ? "bg-[var(--accent-strong)] text-white border-transparent"
-          : "bd bg-app fg-muted hover:fg hover:bg-hover"
-      }`}
+    <Section
+      label={t("text.title")}
+      icon={<TypeIcon size={11} />}
+      action={
+        textDirty ? (
+          <button
+            type="button"
+            onClick={() => onResetProps(path, wasProps.filter((p) => (FACET_PROPS.texto as readonly string[]).includes(p)))}
+            className="text-[10px] fg-faint hover:fg underline-offset-2 hover:underline transition normal-case tracking-normal"
+          >
+            ↺ {t("was.resetText")}
+          </button>
+        ) : null
+      }
     >
-      {children}
-    </button>
-  );
-}
-
-// Three-line align glyph; the middle line shifts to indicate the direction.
-function AlignIcon({ dir }: { dir: "left" | "center" | "right" }) {
-  const midX = dir === "left" ? 1 : dir === "right" ? 5 : 3;
-  return (
-    <svg width="13" height="13" viewBox="0 0 14 14" fill="currentColor" aria-hidden>
-      <rect x="1" y="2" width="12" height="1.6" rx="0.8" />
-      <rect x={midX} y="6.2" width="8" height="1.6" rx="0.8" />
-      <rect x="1" y="10.4" width="12" height="1.6" rx="0.8" />
-    </svg>
+      <SizeStepper
+        label={t("text.size")}
+        valueLabel={TYPE_LADDER[sizeIdx].key}
+        onSmaller={() => applySize(sizeIdx - 1)}
+        onLarger={() => applySize(sizeIdx + 1)}
+        reset={resetOf(["font-size", "line-height"])}
+      />
+      <StepRow
+        label={t("text.weight")}
+        options={WEIGHT_STEPS.map((w) => t(`text.weights.${w.label}`))}
+        activeIndex={weightIdx}
+        onPick={(i) => onApplyStyle(path, "font-weight", WEIGHT_STEPS[i].value)}
+        reset={resetOf(["font-weight"])}
+      />
+      <StepRow
+        label={t("text.lineHeight")}
+        options={lhLabels}
+        activeIndex={(() => {
+          const r = style.lineHeightRatio ?? 1.5;
+          let best = 0;
+          LINE_HEIGHT_STEPS.forEach((s, i) => {
+            if (Math.abs(parseFloat(s.value) - r) < Math.abs(parseFloat(LINE_HEIGHT_STEPS[best].value) - r)) best = i;
+          });
+          return best;
+        })()}
+        onPick={(i) => onApplyStyle(path, "line-height", LINE_HEIGHT_STEPS[i].value)}
+        reset={resetOf(["line-height"])}
+      />
+      <StepRow
+        label={t("text.align")}
+        options={["←", "↔", "→"]}
+        activeIndex={style.textAlign === "center" ? 1 : style.textAlign === "right" ? 2 : 0}
+        onPick={(i) => onApplyStyle(path, "text-align", i === 1 ? "center" : i === 2 ? "right" : "left")}
+        reset={resetOf(["text-align"])}
+      />
+      <div className="flex items-center gap-2">
+        <span className="text-[10.5px] fg-faint flex-1">{t("text.color")}</span>
+        <ProvenanceReset dirty={dirty("color")} title={t("was.resetControl")} onReset={() => onResetProps(path, ["color"])} />
+        {COLOR_ROLES.map((r) => (
+          <button
+            key={r.id}
+            type="button"
+            title={t(`text.roles.${r.id}`)}
+            aria-label={t(`text.roles.${r.id}`)}
+            onClick={() => onApplyStyle(path, "color", r.value)}
+            className="h-5 w-5 rounded-full border bd hover:ring-1 hover:ring-[color:var(--accent)]/60 transition"
+            style={{ background: r.id === "accent" ? "var(--accent)" : r.id === "ink" ? "currentColor" : "color-mix(in srgb, currentColor 55%, transparent)" }}
+          />
+        ))}
+      </div>
+      <StepRow
+        label={t("text.font")}
+        options={[t("text.fonts.display"), t("text.fonts.body")]}
+        activeIndex={0}
+        onPick={(i) =>
+          onApplyStyle(path, "font-family", i === 0 ? "var(--ol-font-display, inherit)" : "var(--ol-font-body, inherit)")
+        }
+        reset={resetOf(["font-family"])}
+      />
+      {/* Camino secundario (spec §6): el picker libre sigue disponible bajo
+          los chips de rol — los roles son el camino primario. */}
+      <ColorField
+        label={t("text.customColor")}
+        value={style.color ?? ""}
+        onCommit={(v) => onApplyStyle(path, "color", v)}
+        reset={resetOf(["color"])}
+      />
+    </Section>
   );
 }
 
@@ -564,60 +659,6 @@ function BorderControl({
       />
       <span className="text-[10px] fg-faint">px</span>
     </label>
-  );
-}
-
-// Text — bold / italic / alignment, cascade-safe inline edits.
-function TextStyleControl({
-  fontWeight,
-  fontStyle,
-  textAlign,
-  onApply,
-}: {
-  fontWeight: string;
-  fontStyle: string;
-  textAlign: string;
-  onApply: (prop: string, value: string) => void;
-}) {
-  const t = useTranslations("panelsProps");
-  const bold = parseInt(fontWeight || "400", 10) >= 600;
-  const italic = fontStyle === "italic";
-  const align =
-    textAlign === "center" || textAlign === "right" ? textAlign : "left";
-  const aligns: Array<"left" | "center" | "right"> = ["left", "center", "right"];
-  return (
-    <div className="flex flex-col gap-1.5">
-      <span className="text-[10.5px] fg-faint">{t("style.text")}</span>
-      <div className="flex items-center gap-1">
-        <ToggleBtn
-          on={bold}
-          label={t("style.bold")}
-          onClick={() => onApply("font-weight", bold ? "400" : "700")}
-        >
-          <span className="text-[12px] font-bold">B</span>
-        </ToggleBtn>
-        <ToggleBtn
-          on={italic}
-          label={t("style.italic")}
-          onClick={() => onApply("font-style", italic ? "normal" : "italic")}
-        >
-          <span className="text-[12px] italic" style={{ fontFamily: "Georgia, serif" }}>
-            I
-          </span>
-        </ToggleBtn>
-        <span aria-hidden className="mx-0.5 h-5 w-px bg-[color:var(--border)]" />
-        {aligns.map((a) => (
-          <ToggleBtn
-            key={a}
-            on={align === a}
-            label={t(`style.align.${a}`)}
-            onClick={() => onApply("text-align", a)}
-          >
-            <AlignIcon dir={a} />
-          </ToggleBtn>
-        ))}
-      </div>
-    </div>
   );
 }
 
@@ -688,12 +729,6 @@ function StyleSection({
         ) : null
       }
     >
-      <ColorField
-        label={t("style.textColor")}
-        value={s.color ?? ""}
-        reset={resetOf("color")}
-        onCommit={(v) => onApply(path, "color", v)}
-      />
       {/* Background — a solid colour REPLACES any gradient/image so the change
           is actually visible, or fill the element's box with an image. */}
       <ColorField
@@ -760,12 +795,6 @@ function StyleSection({
         value={s.borderRadius ?? ""}
         reset={resetOf("border-radius")}
         onCommit={(v) => onApply(path, "border-radius", v)}
-      />
-      <TextStyleControl
-        fontWeight={s.fontWeight ?? ""}
-        fontStyle={s.fontStyle ?? ""}
-        textAlign={s.textAlign ?? ""}
-        onApply={(prop, value) => onApply(path, prop, value)}
       />
       <div className="pt-0.5">
         <Toggle
