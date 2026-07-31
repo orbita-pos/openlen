@@ -788,3 +788,15 @@ describe("stripEditorInstrumentation — sticky's data-ol-stuck (runtime-owned, 
     expect(saved).not.toContain("data-ol-stuck");
   });
 });
+
+describe("stripEditorInstrumentation — data-ol-was (stash de originales del inspector)", () => {
+  it("preserva data-ol-was — la memoria de originales del inspector es estado del documento, no instrumentación", () => {
+    const html =
+      "<!doctype html>\n<html><head></head><body>" +
+      '<section data-ol-was="{&quot;color&quot;:&quot;&quot;}" style="color:red" data-openlen-inspect-hover><p>Hola</p></section>' +
+      "</body></html>";
+    const out = stripEditorInstrumentation(html);
+    expect(out).toContain("data-ol-was=");
+    expect(out).not.toContain("data-openlen-inspect-hover");
+  });
+});

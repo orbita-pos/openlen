@@ -43,6 +43,7 @@ import {
   type ClusterMember,
 } from "@/lib/publish/language-cluster";
 import { consolidateUnsplashCredits } from "@/lib/publish/credits";
+import { stripDesignStash } from "@/lib/publish/design-stash-strip";
 import { wirePublishedForms } from "@/lib/publish/forms";
 import { injectAnalyticsSnippet } from "@/lib/analytics/snippet";
 import { injectTrackingStrip } from "@/lib/publish/tracking-strip";
@@ -582,6 +583,10 @@ async function bakeDocument(
     // eslint-disable-next-line no-console
     console.warn("[publishToDir] credit consolidation failed; using uncredited HTML", err);
   }
+
+  // La memoria de originales del inspector es estado del editor — nunca se
+  // publica (persiste solo en data.html para que el reset sobreviva sesiones).
+  migratedHtml = stripDesignStash(migratedHtml);
 
   // Bands of DISABLED modules never ship: a persisted band whose module is
   // off has no widget to wire, so the published page showed a heading over
