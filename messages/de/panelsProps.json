@@ -180,5 +180,12 @@
     "themeFromLogoError": "Das Logo konnte nicht gelesen werden — lade es erneut hoch.",
     "worldApplied": "Welt angewendet",
     "worldError": "Upload fehlgeschlagen — versuche ein anderes Bild."
+  },
+  "was": {
+    "resetControl": "Zum Design zurück",
+    "resetElement": "Element zurücksetzen",
+    "resetStyle": "Stil zurücksetzen",
+    "resetText": "Text zurücksetzen",
+    "resetSpacing": "Abstände zurücksetzen"
   }
 }

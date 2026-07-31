@@ -180,5 +180,12 @@
     "themeFromLogoError": "ロゴを読み取れませんでした — もう一度アップロードしてみてください。",
     "worldApplied": "ワールドを適用しました",
     "worldError": "アップロードに失敗しました — 別の画像をお試しください。"
+  },
+  "was": {
+    "resetControl": "デザインに戻す",
+    "resetElement": "要素をリセット",
+    "resetStyle": "スタイルをリセット",
+    "resetText": "テキストをリセット",
+    "resetSpacing": "余白をリセット"
   }
 }

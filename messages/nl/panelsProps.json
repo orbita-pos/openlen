@@ -180,5 +180,12 @@
     "uploadError": "Uploaden mislukt — probeer een andere afbeelding.",
     "light": "Licht",
     "dark": "Donker"
+  },
+  "was": {
+    "resetControl": "Terug naar ontwerp",
+    "resetElement": "Element herstellen",
+    "resetStyle": "Stijl herstellen",
+    "resetText": "Tekst herstellen",
+    "resetSpacing": "Witruimte herstellen"
   }
 }

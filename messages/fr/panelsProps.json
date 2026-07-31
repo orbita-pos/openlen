@@ -180,5 +180,12 @@
     "themeFromLogoError": "Impossible de lire le logo — essayez de le réimporter.",
     "worldApplied": "Univers appliqué",
     "worldError": "Échec de l'import — essayez une autre image."
+  },
+  "was": {
+    "resetControl": "Revenir au design",
+    "resetElement": "Réinitialiser l'élément",
+    "resetStyle": "Réinitialiser le style",
+    "resetText": "Réinitialiser le texte",
+    "resetSpacing": "Réinitialiser l'espacement"
   }
 }

@@ -180,5 +180,12 @@
     "themeFromLogoError": "Couldn't read the logo — try re-uploading it.",
     "worldApplied": "World applied",
     "worldError": "Upload failed — try a different image."
+  },
+  "was": {
+    "resetControl": "Back to design",
+    "resetElement": "Reset element",
+    "resetStyle": "Reset style",
+    "resetText": "Reset text",
+    "resetSpacing": "Reset spacing"
   }
 }

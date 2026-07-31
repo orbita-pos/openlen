@@ -180,5 +180,12 @@
     "themeFromLogoError": "로고를 읽지 못했습니다 — 다시 업로드해 보세요.",
     "worldApplied": "월드를 적용했습니다",
     "worldError": "업로드에 실패했습니다 — 다른 이미지로 시도해 보세요."
+  },
+  "was": {
+    "resetControl": "디자인으로 되돌리기",
+    "resetElement": "요소 초기화",
+    "resetStyle": "스타일 초기화",
+    "resetText": "텍스트 초기화",
+    "resetSpacing": "간격 초기화"
   }
 }

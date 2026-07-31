@@ -180,5 +180,12 @@
     "themeFromLogoError": "无法读取标志——请尝试重新上传。",
     "worldApplied": "世界已应用",
     "worldError": "上传失败——请换一张图片试试。"
+  },
+  "was": {
+    "resetControl": "恢复设计",
+    "resetElement": "重置元素",
+    "resetStyle": "重置样式",
+    "resetText": "重置文本",
+    "resetSpacing": "重置间距"
   }
 }

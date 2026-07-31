@@ -45,12 +45,14 @@ import {
 } from "@/lib/tematicas/derive-from-image";
 import { imageFetchUrl } from "@/lib/image-fetch-url";
 import { lookFromAccent } from "@/lib/palette-gen";
+import { FACET_PROPS } from "../design-stash";
 import { useToast } from "../toast";
 import { normalizeHref } from "../normalize-href";
 import { ReplaceAssetModal, type ImageTab } from "../replace-asset-modal";
 import {
   ColorField,
   GradientControl,
+  ProvenanceReset,
   RadiusField,
   Section,
   TextField,
@@ -379,6 +381,15 @@ function ElementView({
         </span>
         <span className="text-[11.5px] fg-muted truncate">{hint}</span>
       </div>
+      {(selection.wasProps ?? []).length > 0 && (
+        <button
+          type="button"
+          onClick={() => onResetProps(path, selection.wasProps ?? [])}
+          className="mx-3 mt-2 inline-flex items-center gap-1.5 h-7 px-2 self-start rounded-md border bd bg-app fg-muted hover:fg hover:bg-hover transition text-[11px]"
+        >
+          ↺ {t("was.resetElement")}
+        </button>
+      )}
       {tag === "a" && (
         <Section label={t("link.title")} icon={<ExternalLink size={11} />}>
           <TextField
@@ -426,11 +437,13 @@ function ElementView({
       <StyleSection
         path={path}
         style={style}
+        wasProps={selection.wasProps ?? []}
         projectId={projectId}
         accent={accent}
         onApply={onApplyStyle}
         onApplyBg={onApplyBg}
         onApplyHide={onApplyHide}
+        onResetProps={onResetProps}
       />
     </div>
   );
@@ -483,10 +496,12 @@ function AlignIcon({ dir }: { dir: "left" | "center" | "right" }) {
 function BorderControl({
   width,
   color,
+  reset,
   onApply,
 }: {
   width: string;
   color: string;
+  reset?: { dirty: boolean; title: string; onReset: () => void };
   onApply: (border: string) => void;
 }) {
   const t = useTranslations("panelsProps");
@@ -504,6 +519,7 @@ function BorderControl({
   return (
     <label className="flex items-center gap-2">
       <span className="text-[10.5px] fg-faint flex-1">{t("style.border")}</span>
+      {reset && <ProvenanceReset dirty={reset.dirty} title={reset.title} onReset={reset.onReset} />}
       <input
         type="color"
         value={safeC}
@@ -589,14 +605,19 @@ function TextStyleControl({
 function StyleSection({
   path,
   style,
+  wasProps,
   projectId,
   accent,
   onApply,
   onApplyBg,
   onApplyHide,
+  onResetProps,
 }: {
   path: string;
   style: InspectSelection["style"];
+  /** CSS properties currently stashed (data-ol-was) on this element — drives
+   *  the provenance dots + resets below. */
+  wasProps: string[];
   projectId?: string;
   accent?: string;
   onApply: (path: string, prop: string, value: string) => void;
@@ -606,6 +627,7 @@ function StyleSection({
     value: string,
   ) => void;
   onApplyHide: (path: string, on: boolean) => void;
+  onResetProps: (path: string, props: string[]) => void;
 }) {
   const t = useTranslations("panelsProps");
   const s = style ?? {};
@@ -618,11 +640,39 @@ function StyleSection({
     setPickerTab(tab);
     setPicker(true);
   };
+  const dirty = (prop: string) => wasProps.includes(prop);
+  const resetOf = (prop: string) => ({
+    dirty: dirty(prop),
+    title: t("was.resetControl"),
+    onReset: () => onResetProps(path, [prop]),
+  });
   return (
-    <Section label={t("style.title")} icon={<PaletteIcon size={11} />}>
+    <Section
+      label={t("style.title")}
+      icon={<PaletteIcon size={11} />}
+      action={
+        FACET_PROPS.estilo.some((p) => wasProps.includes(p)) ? (
+          <button
+            type="button"
+            onClick={() =>
+              onResetProps(
+                path,
+                wasProps.filter((p) =>
+                  (FACET_PROPS.estilo as readonly string[]).includes(p),
+                ),
+              )
+            }
+            className="text-[10px] fg-faint hover:fg underline-offset-2 hover:underline transition normal-case tracking-normal"
+          >
+            ↺ {t("was.resetStyle")}
+          </button>
+        ) : null
+      }
+    >
       <ColorField
         label={t("style.textColor")}
         value={s.color ?? ""}
+        reset={resetOf("color")}
         onCommit={(v) => onApply(path, "color", v)}
       />
       {/* Background — a solid colour REPLACES any gradient/image so the change
@@ -630,6 +680,18 @@ function StyleSection({
       <ColorField
         label={t("style.background")}
         value={s.backgroundColor ?? ""}
+        reset={{
+          dirty: dirty("background-color") || dirty("background-image"),
+          title: t("was.resetControl"),
+          onReset: () =>
+            onResetProps(path, [
+              "background-color",
+              "background-image",
+              "background-size",
+              "background-position",
+              "background-repeat",
+            ]),
+        }}
         onCommit={(v) => onApplyBg(path, "color", v)}
       />
       <div className="flex items-center gap-2 flex-wrap">
@@ -672,10 +734,12 @@ function StyleSection({
       <BorderControl
         width={s.borderWidth ?? ""}
         color={s.borderColor ?? ""}
+        reset={resetOf("border")}
         onApply={(border) => onApply(path, "border", border)}
       />
       <RadiusField
         value={s.borderRadius ?? ""}
+        reset={resetOf("border-radius")}
         onCommit={(v) => onApply(path, "border-radius", v)}
       />
       <TextStyleControl

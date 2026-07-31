@@ -180,5 +180,12 @@
     "themeFromLogoError": "Impossibile leggere il logo — prova a ricaricarlo.",
     "worldApplied": "Mondo applicato",
     "worldError": "Caricamento non riuscito — prova con un'altra immagine."
+  },
+  "was": {
+    "resetControl": "Torna al design",
+    "resetElement": "Ripristina elemento",
+    "resetStyle": "Ripristina stile",
+    "resetText": "Ripristina testo",
+    "resetSpacing": "Ripristina spaziatura"
   }
 }

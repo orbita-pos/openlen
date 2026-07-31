@@ -13,22 +13,57 @@ import {
 export function Section({
   label,
   icon,
+  action,
   children,
 }: {
   label: string;
   icon?: ReactNode;
+  /** Rendered to the right of the label — e.g. a facet-level "Reset style". */
+  action?: ReactNode;
   children: ReactNode;
 }) {
   return (
     <div className="border-b bd last:border-b-0 px-3 py-3">
       <div className="flex items-center gap-1.5 mb-2 text-[10px] uppercase tracking-[0.16em] fg-faint font-semibold ui-small">
         {icon}
-        <span>{label}</span>
+        <span className="flex-1">{label}</span>
+        {action}
       </div>
       <div className="flex flex-col gap-2">{children}</div>
     </div>
   );
 }
+
+// Dot de procedencia + reset — el patrón Webflow: sin dot = valor del diseño;
+// dot ámbar = "tú cambiaste esto"; hover/focus revela el ↺ que lo restaura.
+export function ProvenanceReset({
+  dirty,
+  title,
+  onReset,
+}: {
+  dirty: boolean;
+  title: string;
+  onReset: () => void;
+}) {
+  if (!dirty) return null;
+  return (
+    <button
+      type="button"
+      title={title}
+      aria-label={title}
+      onClick={onReset}
+      className="group/dot relative inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full"
+    >
+      <span className="h-1.5 w-1.5 rounded-full bg-amber-500 transition group-hover/dot:opacity-0 group-focus-visible/dot:opacity-0" />
+      <span className="absolute inset-0 hidden items-center justify-center text-[10px] fg-muted group-hover/dot:flex group-focus-visible/dot:flex">
+        ↺
+      </span>
+    </button>
+  );
+}
+
+/** Shared shape for the optional reset affordance a label-row field can take. */
+type ResetAffordance = { dirty: boolean; title: string; onReset: () => void };
 
 // TextField — labeled input with onCommit on blur or Enter. Optional
 // commit-time validation keeps an invalid value in the field (shown inline)
@@ -41,6 +76,7 @@ export function TextField({
   multiline,
   validate,
   dataField,
+  reset,
   onCommit,
 }: {
   label: string;
@@ -53,6 +89,9 @@ export function TextField({
   /** Stamped as data-meta-field so the SEO health report can focus this
    *  field when an issue is clicked. */
   dataField?: string;
+  /** Provenance-reset affordance — an amber dot next to the label when this
+   *  field's CSS prop was edited away from the design's original value. */
+  reset?: ResetAffordance;
   onCommit: (value: string) => void;
 }) {
   const [draft, setDraft] = useState(value);
@@ -82,7 +121,10 @@ export function TextField({
   } ${mono ? "font-mono text-[11.5px]" : ""}`;
   return (
     <label className="flex flex-col gap-1">
-      <span className="text-[10.5px] fg-faint">{label}</span>
+      <span className="flex items-center gap-1.5">
+        <span className="text-[10.5px] fg-faint flex-1">{label}</span>
+        {reset && <ProvenanceReset dirty={reset.dirty} title={reset.title} onReset={reset.onReset} />}
+      </span>
       {multiline ? (
         <textarea
           value={draft}
@@ -130,10 +172,14 @@ export function TextField({
 export function ColorField({
   label,
   value,
+  reset,
   onCommit,
 }: {
   label: string;
   value: string;
+  /** Provenance-reset affordance — an amber dot next to the label when this
+   *  field's CSS prop was edited away from the design's original value. */
+  reset?: ResetAffordance;
   onCommit: (value: string) => void;
 }) {
   const t = useTranslations("modalsDomain");
@@ -150,6 +196,7 @@ export function ColorField({
   return (
     <label className="flex items-center gap-2">
       <span className="text-[10.5px] fg-faint flex-1">{label}</span>
+      {reset && <ProvenanceReset dirty={reset.dirty} title={reset.title} onReset={reset.onReset} />}
       <input
         type="color"
         value={safe}
@@ -380,9 +427,13 @@ export function GradientControl({
 // RadiusField — single px input for border-radius.
 export function RadiusField({
   value,
+  reset,
   onCommit,
 }: {
   value: string;
+  /** Provenance-reset affordance — an amber dot next to the label when this
+   *  field's CSS prop was edited away from the design's original value. */
+  reset?: ResetAffordance;
   onCommit: (value: string) => void;
 }) {
   const t = useTranslations("modalsDomain");
@@ -393,6 +444,7 @@ export function RadiusField({
       <span className="text-[10.5px] fg-faint flex-1">
         {t("inspector.radius")}
       </span>
+      {reset && <ProvenanceReset dirty={reset.dirty} title={reset.title} onReset={reset.onReset} />}
       <input
         type="text"
         value={draft}
@@ -417,15 +469,22 @@ export function RadiusField({
 export function Toggle({
   label,
   on,
+  reset,
   onChange,
 }: {
   label: string;
   on: boolean;
+  /** Provenance-reset affordance — an amber dot next to the label when this
+   *  field's CSS prop was edited away from the design's original value. */
+  reset?: ResetAffordance;
   onChange: (on: boolean) => void;
 }) {
   return (
     <label className="flex items-center justify-between gap-2 cursor-pointer select-none">
-      <span className="text-[11.5px] fg">{label}</span>
+      <span className="flex items-center gap-1.5 flex-1">
+        <span className="text-[11.5px] fg">{label}</span>
+        {reset && <ProvenanceReset dirty={reset.dirty} title={reset.title} onReset={reset.onReset} />}
+      </span>
       <button
         type="button"
         role="switch"
