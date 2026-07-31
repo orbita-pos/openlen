@@ -112,6 +112,9 @@ export interface InspectSelection {
      *  published; shown dimmed + selectable while editing). */
     hidden?: boolean;
   };
+  /** CSS properties currently stashed (data-ol-was) on this element — each
+   *  entry has a pre-edit design value the reset affordance can restore. */
+  wasProps?: string[];
 }
 
 export interface PageMeta {
@@ -158,6 +161,10 @@ interface PropertiesPanelProps {
   /** Set one inline-style property on the selected element (a CSS prop name
    *  + value; empty value removes it). */
   onApplyStyle: (path: string, prop: string, value: string) => void;
+  /** Restore one or more CSS properties on the selected element from the
+   *  data-ol-was stash (the pre-edit design value). No UI consumes this yet
+   *  (Task 7 adds the reset affordance) — plumbing only. */
+  onResetProps: (path: string, props: string[]) => void;
   /** Set the selected element's background: a solid color (replaces any
    *  gradient/image fill), an image fill (background-image, any element), a
    *  CSS gradient string, or clear the fill. */
@@ -235,6 +242,7 @@ export function PropertiesPanel({
   onApplyPageMeta,
   onApplyFormConfig,
   onApplyStyle,
+  onResetProps,
   onApplyBg,
   onApplyHide,
   onToggleAnalytics,
@@ -284,6 +292,7 @@ export function PropertiesPanel({
             onApply={onApplyElementProp}
             onApplyFormConfig={onApplyFormConfig}
             onApplyStyle={onApplyStyle}
+            onResetProps={onResetProps}
             onApplyBg={onApplyBg}
             onApplyHide={onApplyHide}
             onSendTestFormEmail={onSendTestFormEmail}
@@ -327,6 +336,7 @@ function ElementView({
   onApply,
   onApplyFormConfig,
   onApplyStyle,
+  onResetProps,
   onApplyBg,
   onApplyHide,
   onSendTestFormEmail,
@@ -340,6 +350,7 @@ function ElementView({
   onApply: (path: string, name: string, value: string | null) => void;
   onApplyFormConfig: (formIndex: number, patch: Partial<FormConfig>) => void;
   onApplyStyle: (path: string, prop: string, value: string) => void;
+  onResetProps: (path: string, props: string[]) => void;
   onApplyBg: (
     path: string,
     kind: "color" | "image" | "clear" | "gradient",

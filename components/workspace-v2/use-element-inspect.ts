@@ -19,6 +19,7 @@
 // existing openlen:html-changed → PATCH /html path (spike-verified byte-safe).
 
 import { splitContainer } from "./drop-place-core";
+import { DESIGN_STASH_ATTR, parseStash, serializeStash } from "./design-stash";
 
 const INSPECT_STYLE = `
 [data-openlen-inspect-hover] {
@@ -55,6 +56,43 @@ const INSPECT_SCRIPT = `
   // Shared with the drop engine (drop-place-core.ts) — the SAME tested
   // function decides splittability there and picks the transform target here.
   var splitContainer = ${splitContainer.toString()};
+  var STASH_ATTR = ${JSON.stringify(DESIGN_STASH_ATTR)};
+  var parseStash = ${parseStash.toString()};
+  var serializeStash = ${serializeStash.toString()};
+
+  // Primer toque gana: guarda el valor inline PREVIO antes de que un control
+  // escriba — el stash siempre contiene el valor de diseño, nunca uno
+  // intermedio del usuario.
+  function stashProp(el, prop) {
+    var map = parseStash(el.getAttribute(STASH_ATTR));
+    if (Object.prototype.hasOwnProperty.call(map, prop)) return;
+    map[prop] = el.style.getPropertyValue(prop) || '';
+    var s = serializeStash(map);
+    if (s !== null) el.setAttribute(STASH_ATTR, s);
+  }
+
+  function restoreProps(el, props) {
+    var map = parseStash(el.getAttribute(STASH_ATTR));
+    for (var i = 0; i < props.length; i++) {
+      var prop = props[i];
+      if (!Object.prototype.hasOwnProperty.call(map, prop)) continue;
+      if (map[prop]) el.style.setProperty(prop, map[prop]);
+      else el.style.removeProperty(prop);
+      delete map[prop];
+    }
+    var s = serializeStash(map);
+    if (s === null) el.removeAttribute(STASH_ATTR);
+    else el.setAttribute(STASH_ATTR, s);
+  }
+
+  function applyReset(path, props) {
+    var el = resolvePath(path);
+    if (!el || !props.length) return;
+    restoreProps(el, props);
+    postClean();
+    if (selected === el) postSelected(el);
+  }
+
   var SKIP = {HTML:1,HEAD:1,BODY:1,SCRIPT:1,STYLE:1,LINK:1,META:1,TITLE:1,NOSCRIPT:1,TEMPLATE:1};
   var hovered = null;
   var selected = null;
@@ -422,6 +460,7 @@ const INSPECT_SCRIPT = `
       props: readProps(el),
       formIndex: formIndexOf(el),
       style: readStyle(el),
+      wasProps: Object.keys(parseStash(el.getAttribute(STASH_ATTR))),
     });
   }
 
@@ -548,6 +587,7 @@ const INSPECT_SCRIPT = `
   function applyStyle(path, prop, value) {
     var el = resolvePath(path);
     if (!el) return;
+    stashProp(el, prop);
     if (value) el.style.setProperty(prop, value);
     else el.style.removeProperty(prop);
     postClean();
@@ -566,6 +606,10 @@ const INSPECT_SCRIPT = `
   function applyBg(path, kind, value, leg) {
     var el = resolvePath(path);
     if (!el) return;
+    var bgProps = kind === 'color'
+      ? ['background-color', 'background-image']
+      : ['background-image', 'background-size', 'background-position', 'background-repeat'];
+    for (var bi = 0; bi < bgProps.length; bi++) stashProp(el, bgProps[bi]);
     if (kind === 'color') {
       if (value) {
         el.style.setProperty('background-color', value);
@@ -1084,6 +1128,8 @@ const INSPECT_SCRIPT = `
         typeof d.bg === 'string' ? d.bg : '',
         d.tokens && typeof d.tokens === 'object' ? d.tokens : null,
       );
+    } else if (d.scope === 'reset' && typeof d.path === 'string' && Array.isArray(d.props)) {
+      applyReset(d.path, d.props.filter(function (p) { return typeof p === 'string'; }));
     }
   });
 

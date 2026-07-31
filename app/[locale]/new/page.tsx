@@ -1057,6 +1057,9 @@ function NewV2Inner() {
               data.style && typeof data.style === "object"
                 ? data.style
                 : undefined,
+            wasProps: Array.isArray(data.wasProps)
+              ? (data.wasProps as string[]).filter((p) => typeof p === "string")
+              : [],
           });
         }
       } else if (data.type === "openlen:element-deselected") {
@@ -2205,6 +2208,13 @@ function NewV2Inner() {
     },
     [],
   );
+  // Reset por control/faceta/elemento — restaura desde el stash data-ol-was.
+  const applyResetProps = useCallback((path: string, props: string[]) => {
+    iframeElRef.current?.contentWindow?.postMessage(
+      { type: "openlen:apply-prop", scope: "reset", path, props },
+      "*",
+    );
+  }, []);
   // Smart background — a solid color that replaces any gradient/image, an
   // image fill (background-image), a CSS gradient string, or clearing the
   // fill. Gradients ship a legibility plan (avg stop luminance → ink) so the
@@ -3961,6 +3971,7 @@ function NewV2Inner() {
                     onApplyPageMeta={applyPageMeta}
                     onApplyFormConfig={applyFormConfig}
                     onApplyStyle={applyStyle}
+                    onResetProps={applyResetProps}
                     onApplyBg={applyBg}
                     onApplyHide={applyHide}
                     onToggleAnalytics={applyAnalyticsDisabled}
