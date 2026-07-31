@@ -187,5 +187,13 @@
     "resetStyle": "Reset style",
     "resetText": "Reset text",
     "resetSpacing": "Reset spacing"
+  },
+  "original": {
+    "title": "Original",
+    "hint": "Return the page to how it was born (or your last applied AI redesign).",
+    "button": "Back to original",
+    "note": "Your current version is saved first — you can undo from Versions.",
+    "confirm": "Restore",
+    "cancel": "Cancel"
   }
 }

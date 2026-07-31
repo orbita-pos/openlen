@@ -187,5 +187,13 @@
     "resetStyle": "Restaurar estilo",
     "resetText": "Restaurar texto",
     "resetSpacing": "Restaurar espaciado"
+  },
+  "original": {
+    "title": "Original",
+    "hint": "Regresa la página al estado en que nació (o al último rediseño de IA que aplicaste).",
+    "button": "Volver al original",
+    "note": "Tu versión actual se guarda antes — puedes deshacer el regreso desde Versiones.",
+    "confirm": "Restaurar",
+    "cancel": "Cancelar"
   }
 }

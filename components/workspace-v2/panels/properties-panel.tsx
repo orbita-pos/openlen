@@ -22,6 +22,7 @@ import {
   type ReactNode,
 } from "react";
 import { useTranslations } from "next-intl";
+import { RotateCcw } from "lucide-react";
 import type { FormConfig, MusicSettings } from "@/lib/projects/types";
 import { checkSeo, type SeoIssue, type SeoFixField } from "@/lib/seo-check";
 import { defaultLogoDataUrl } from "@/lib/branding/default-logo";
@@ -198,6 +199,10 @@ interface PropertiesPanelProps {
   /** Reset the page's theme to its original (as-loaded) tokens + mode.
    *  Omit to hide the reset affordance (no baseline captured yet). */
   onResetTheme?: () => void;
+  /** Open the «Volver al original» confirm modal — resets the WHOLE
+   *  document to its baseline version (not just the theme). Omit to hide
+   *  the section (no project loaded yet). */
+  onRestoreOriginal?: () => void;
   /** The page's original accent hex — renders the "Original" bead's color. */
   originalAccent?: string;
   /** Motion Looks: the active preset ("calm" | "editorial" | "dramatic"),
@@ -253,6 +258,7 @@ export function PropertiesPanel({
   onApplyLookForMode,
   onApplyThemeMode,
   onResetTheme,
+  onRestoreOriginal,
   originalAccent,
   motion,
   onApplyMotion,
@@ -315,6 +321,7 @@ export function PropertiesPanel({
             onApplyLookForMode={onApplyLookForMode}
             onApplyThemeMode={onApplyThemeMode}
             onResetTheme={onResetTheme}
+            onRestoreOriginal={onRestoreOriginal}
             originalAccent={originalAccent}
             motion={motion}
             onApplyMotion={onApplyMotion}
@@ -914,6 +921,7 @@ function PageView({
   onApplyLookForMode,
   onApplyThemeMode,
   onResetTheme,
+  onRestoreOriginal,
   originalAccent,
   motion,
   onApplyMotion,
@@ -939,6 +947,7 @@ function PageView({
   ) => void;
   onApplyThemeMode?: (mode: "light" | "dark") => void;
   onResetTheme?: () => void;
+  onRestoreOriginal?: () => void;
   originalAccent?: string;
   motion?: string;
   onApplyMotion?: (preset: string) => void;
@@ -1043,6 +1052,18 @@ function PageView({
           onCommit={(v) => onApply("favicon", v)}
         />
       </Section>
+      {onRestoreOriginal && (
+        <Section label={t("original.title")} icon={<RotateCcw size={11} />}>
+          <p className="text-[10.5px] fg-faint leading-snug">{t("original.hint")}</p>
+          <button
+            type="button"
+            onClick={onRestoreOriginal}
+            className="self-start inline-flex items-center gap-1.5 h-7 px-2 rounded-md border bd bg-app fg-muted hover:fg hover:bg-hover transition text-[11px]"
+          >
+            ↺ {t("original.button")}
+          </button>
+        </Section>
+      )}
       {onToggleAnalytics && (
         <Section label={t("privacy.title")} icon={<Activity size={11} />}>
           <Toggle

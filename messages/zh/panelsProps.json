@@ -187,5 +187,13 @@
     "resetStyle": "重置样式",
     "resetText": "重置文本",
     "resetSpacing": "重置间距"
+  },
+  "original": {
+    "title": "原始版本",
+    "hint": "将页面恢复到诞生时的状态（或你最后应用的 AI 改版）。",
+    "button": "恢复到原始版本",
+    "note": "系统会先保存你当前的版本——你可以在「版本」中撤销此次恢复。",
+    "confirm": "恢复",
+    "cancel": "取消"
   }
 }

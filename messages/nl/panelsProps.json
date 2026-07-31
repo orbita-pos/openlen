@@ -187,5 +187,13 @@
     "resetStyle": "Stijl herstellen",
     "resetText": "Tekst herstellen",
     "resetSpacing": "Witruimte herstellen"
+  },
+  "original": {
+    "title": "Origineel",
+    "hint": "Zet de pagina terug naar hoe ze ontstaan is (of naar je laatst toegepaste AI-redesign).",
+    "button": "Terug naar origineel",
+    "note": "Je huidige versie wordt eerst opgeslagen — je kunt het terugzetten ongedaan maken via Versies.",
+    "confirm": "Herstellen",
+    "cancel": "Annuleren"
   }
 }

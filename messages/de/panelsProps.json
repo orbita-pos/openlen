@@ -187,5 +187,13 @@
     "resetStyle": "Stil zurücksetzen",
     "resetText": "Text zurücksetzen",
     "resetSpacing": "Abstände zurücksetzen"
+  },
+  "original": {
+    "title": "Original",
+    "hint": "Setzt die Seite auf den Zustand zurück, in dem sie entstanden ist (oder auf dein zuletzt angewendetes KI-Redesign).",
+    "button": "Zum Original zurück",
+    "note": "Deine aktuelle Version wird vorher gespeichert — du kannst die Rückkehr in Versionen rückgängig machen.",
+    "confirm": "Wiederherstellen",
+    "cancel": "Abbrechen"
   }
 }

@@ -113,6 +113,7 @@ import {
   type ReplaceKind,
   type ReplacePayload,
 } from "@/components/workspace-v2/replace-asset-modal";
+import { OriginalRestoreModal } from "@/components/workspace-v2/original-restore-modal";
 import { StatusBar } from "@/components/workspace-v2/status-bar";
 import { TopBar } from "@/components/workspace-v2/top-bar";
 import { useToast } from "@/components/workspace-v2/toast";
@@ -249,6 +250,7 @@ function NewV2Inner() {
   const tCollections = useTranslations("collections");
   const tAsset = useTranslations("modalsAsset");
   const tws = useTranslations("wsChrome");
+  const tVersions = useTranslations("panelsB");
   const locale = useLocale();
   const [dark, toggleDark] = useDarkMode();
   const toast = useToast();
@@ -549,6 +551,12 @@ function NewV2Inner() {
     currentSvg: string | null;
     currentSrc: string | null;
   } | null>(null);
+  // «Volver al original» — the resolved baseline version to preview/restore,
+  // and whether the restore POST is currently in flight.
+  const [originalModal, setOriginalModal] = useState<{
+    versionId: string;
+  } | null>(null);
+  const [originalRestoring, setOriginalRestoring] = useState(false);
   const [pendingChatDraft, setPendingChatDraft] = useState<string | null>(null);
   // The page's theme tokens as first observed this project load — drives the
   // inspector's "Original" reset (re-applies these resolved values).
@@ -2086,6 +2094,110 @@ function NewV2Inner() {
     [loadedProject?.id, refetchProject, switchSitePage, flushPendingSave],
   );
 
+  // Land a restored document into the workspace — shared by the Versions
+  // panel's own restore flow (any version) and «Volver al original» (the
+  // baseline). Same mechanism either way: advance the concurrency base,
+  // patch the right document slot, and land the canvas on it.
+  const applyRestoredVersion = useCallback(
+    (html: string, page: string | null, updatedAtMs?: number) => {
+      if (typeof updatedAtMs === "number" && Number.isFinite(updatedAtMs)) {
+        projectUpdatedAtRef.current = updatedAtMs;
+      }
+      if (page) {
+        if (!loadedProject) return;
+        if (loadedProject.pages[page]) {
+          setLoadedProject((prev) =>
+            prev && prev.pages[page]
+              ? {
+                  ...prev,
+                  pages: {
+                    ...prev.pages,
+                    [page]: { ...prev.pages[page], html },
+                  },
+                }
+              : prev,
+          );
+          // Land the canvas on the restored page so the effect is visible.
+          if (activeSitePageRef.current !== page) switchSitePage(page);
+        } else {
+          // The restore recreated a since-deleted page — refetch the
+          // authoritative pages map, then land the canvas on it.
+          void refetchProject(loadedProject.id).then(() =>
+            switchSitePage(page),
+          );
+        }
+        return;
+      }
+      // Home snapshot — land the canvas there before applying it.
+      if (activeSitePageRef.current) switchSitePage(null);
+      setLoadedProject((prev) => (prev ? { ...prev, html } : prev));
+    },
+    [loadedProject, refetchProject, switchSitePage],
+  );
+
+  // «Volver al original» — find the newest baseline snapshot scoped to the
+  // document on the canvas and open the confirm modal with its preview. No
+  // baseline for this page (shouldn't happen — every document gets one on
+  // creation) → the button silently no-ops, same as versions-panel would
+  // show nothing to restore.
+  const openRestoreOriginal = useCallback(async () => {
+    const pid = loadedIdRef.current;
+    if (!pid) return;
+    const res = await fetch(`/api/projects/${pid}/versions`);
+    if (!res.ok) return;
+    // Parse idéntico al de versions-panel.tsx:95-120.
+    const list = (await res.json().catch(() => null)) as
+      | { versions?: Array<{ id: string; page: string | null; isBaseline?: boolean; createdAt: string }> }
+      | null;
+    const page = activeSitePageRef.current ?? null;
+    const base = (list?.versions ?? [])
+      .filter((v) => v.isBaseline && (v.page ?? null) === page)
+      .sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt))[0];
+    if (base) setOriginalModal({ versionId: base.id });
+  }, []);
+
+  // Confirm restore: POST the existing (non-destructive) restore endpoint,
+  // then run the exact same post-restore sequence versions-panel.tsx runs
+  // after its own restore fetch — apply the html + toast — and close.
+  const confirmRestoreOriginal = useCallback(async () => {
+    const pid = loadedIdRef.current;
+    if (!pid || !originalModal) return;
+    setOriginalRestoring(true);
+    try {
+      const res = await fetch(
+        `/api/projects/${pid}/versions/${originalModal.versionId}/restore`,
+        { method: "POST" },
+      );
+      if (!res.ok) {
+        const body = (await res.json().catch(() => ({}))) as {
+          error?: string;
+        };
+        throw new Error(body.error ?? `HTTP ${res.status}`);
+      }
+      const data = (await res.json()) as {
+        html: string;
+        label: string;
+        page: string | null;
+        updatedAt?: string;
+      };
+      const updatedAtMs = data.updatedAt
+        ? new Date(data.updatedAt).getTime()
+        : undefined;
+      applyRestoredVersion(data.html, data.page ?? null, updatedAtMs);
+      const label = data.label?.trim();
+      toast.success(
+        label
+          ? tVersions("toast.restored", { label })
+          : tVersions("toast.restoredNoLabel"),
+      );
+      setOriginalModal(null);
+    } catch {
+      toast.error(tVersions("toast.restoreError"));
+    } finally {
+      setOriginalRestoring(false);
+    }
+  }, [originalModal, applyRestoredVersion, toast, tVersions]);
+
   // Reset transient interaction modes whenever the loaded project changes
   // (cross-project switches inside /new). Without this, the iframe
   // derive effect would refuse to refresh srcDoc while reorder or inline-
@@ -2097,6 +2209,7 @@ function NewV2Inner() {
       setSectionSelectMode(false);
       setScopedSelection(null);
       setAssetModal(null);
+      setOriginalModal(null);
       setPendingChatDraft(null);
       setInspectMode(false);
       setInspectSelection(null);
@@ -2133,6 +2246,7 @@ function NewV2Inner() {
       setOriginalTheme(null);
       setActiveLook(null);
       setPageMeta(null);
+      setOriginalModal(null);
       setLastInserted(null);
       pendingInsertRef.current = null;
       setDropNotice(null);
@@ -2157,7 +2271,7 @@ function NewV2Inner() {
         return;
       }
       if (e.key === "Escape") {
-        if (publishModalOpen || assetModal) return;
+        if (publishModalOpen || assetModal || originalModal) return;
         if (sectionSelectMode) {
           e.preventDefault();
           setSectionSelectMode(false);
@@ -2179,6 +2293,7 @@ function NewV2Inner() {
     sectionSelectMode,
     publishModalOpen,
     assetModal,
+    originalModal,
   ]);
 
   // Inspector — post a property edit into the preview iframe; the inspect
@@ -3477,43 +3592,7 @@ function NewV2Inner() {
           projectLoading={!!projectParam && !loadedProject}
           savingStatus={savingStatus}
           currentProjectId={loadedProject?.id ?? null}
-          onRestoreApplied={(newHtml, page, updatedAtMs) => {
-            // Advance the concurrency base to the restore's write so this
-            // tab's next autosave isn't read as a clobber.
-            if (typeof updatedAtMs === "number" && Number.isFinite(updatedAtMs)) {
-              projectUpdatedAtRef.current = updatedAtMs;
-            }
-            if (page) {
-              if (!loadedProject) return;
-              if (loadedProject.pages[page]) {
-                setLoadedProject((prev) =>
-                  prev && prev.pages[page]
-                    ? {
-                        ...prev,
-                        pages: {
-                          ...prev.pages,
-                          [page]: { ...prev.pages[page], html: newHtml },
-                        },
-                      }
-                    : prev,
-                );
-                // Land the canvas on the restored page so the effect is visible.
-                if (activeSitePageRef.current !== page) switchSitePage(page);
-              } else {
-                // The restore recreated a since-deleted page — refetch the
-                // authoritative pages map, then land the canvas on it.
-                void refetchProject(loadedProject.id).then(() =>
-                  switchSitePage(page),
-                );
-              }
-              return;
-            }
-            // Home snapshot — land the canvas there before applying it.
-            if (activeSitePageRef.current) switchSitePage(null);
-            setLoadedProject((prev) =>
-              prev ? { ...prev, html: newHtml } : prev,
-            );
-          }}
+          onRestoreApplied={applyRestoredVersion}
           onPrepareSnapshot={flushPendingSave}
           sectionSelectMode={sectionSelectMode}
           onToggleSectionSelect={(active) => setSectionSelectMode(active)}
@@ -3982,6 +4061,9 @@ function NewV2Inner() {
                     onResetTheme={
                       loadedProject && originalTheme ? resetTheme : undefined
                     }
+                    onRestoreOriginal={
+                      loadedProject ? openRestoreOriginal : undefined
+                    }
                     originalAccent={originalTheme?.tokens["--ol-accent"] || undefined}
                     motion={loadedProject?.settings?.motion}
                     onApplyMotion={loadedProject ? applyMotion : undefined}
@@ -4122,6 +4204,18 @@ function NewV2Inner() {
                 : prev,
             );
           }}
+        />
+      )}
+      {loadedProject && originalModal && (
+        <OriginalRestoreModal
+          open
+          projectId={loadedProject.id}
+          versionId={originalModal.versionId}
+          restoring={originalRestoring}
+          onCancel={() => {
+            if (!originalRestoring) setOriginalModal(null);
+          }}
+          onConfirm={() => void confirmRestoreOriginal()}
         />
       )}
       <BusinessProfileModal
