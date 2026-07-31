@@ -66,6 +66,33 @@ const STYLE_FILTERS = [
   "fashion-editorial",
 ] as const;
 
+// Términos de búsqueda en ESPAÑOL por género de foto. Los 563 alt del
+// manifiesto están en inglés y el producto habla español: «juego», «boda»,
+// «comida», «mascota», «viaje», «deporte» y «moda» devolvían CERO resultados
+// (medido 2026-07-30). El género vive en `style`, así que un mapa por estilo
+// recupera todas esas búsquedas sin traducir los 563 registros — la
+// traducción fina por foto queda como trabajo de datos aparte.
+const STYLE_TERMS_ES: Record<string, string> = {
+  "3d-abstract": "abstracto formas fondo render",
+  "gradient-bg": "degradado gradiente fondo colores",
+  "device-mockup": "pantalla dispositivo laptop celular telefono computadora app",
+  "creator-mockup": "creador stream directo redes video canal contenido",
+  "product-still-life": "producto objeto bodegon articulo",
+  claymorph: "ilustracion personaje plastilina caricatura",
+  "interior-editorial": "interior oficina espacio salon estudio local",
+  "architecture-editorial": "arquitectura edificio casa fachada construccion",
+  "nature-editorial": "naturaleza paisaje montaña bosque campo flores",
+  "travel-editorial": "viaje viajar destino turismo playa ciudad",
+  "wedding-editorial": "boda novia novio pareja evento celebracion",
+  "music-editorial": "musica concierto banda instrumento escenario dj",
+  "gaming-editorial": "juego videojuego gamer consola control arcade esports partida",
+  "food-editorial": "comida restaurante platillo cocina cafe postre bebida",
+  "lifestyle-editorial": "estilo de vida cotidiano hogar persona rutina",
+  "sports-editorial": "deporte ejercicio gimnasio entrenamiento atleta futbol",
+  "pet-editorial": "mascota perro gato animal cachorro",
+  "fashion-editorial": "moda ropa playera modelo prenda outfit vestido",
+};
+
 interface UnsplashPhoto {
   id: string;
   alt: string;
@@ -189,7 +216,11 @@ function OpenLenSource({ onPick }: { onPick: (asset: DropAsset) => void }) {
         // foto (gaming-editorial, music-editorial…) y la mitad de los estilos
         // no tienen chip, así que sin esto sus fotos solo aparecen si el alt
         // —que está en inglés— casualmente trae la palabra buscada.
-        const hay = `${img.alt} ${img.id} ${img.style} ${img.family.join(" ")}`.toLowerCase();
+        // STYLE_TERMS_ES: los 563 alt están en inglés y el producto habla
+        // español — medido: «juego», «boda», «comida», «mascota», «viaje»,
+        // «deporte», «moda» devolvían CERO. Los términos por género recuperan
+        // esas búsquedas sin traducir registro por registro.
+        const hay = `${img.alt} ${img.id} ${img.style} ${STYLE_TERMS_ES[img.style] ?? ""} ${img.family.join(" ")}`.toLowerCase();
         if (!hay.includes(q)) return false;
       }
       return true;
