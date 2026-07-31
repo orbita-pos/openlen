@@ -211,6 +211,22 @@ const INSPECT_SCRIPT = `
       fontStyle: cs.fontStyle || '',
       textAlign: cs.textAlign || '',
       hidden: !!(el.hasAttribute && el.hasAttribute('data-ol-hidden')),
+      fontSizePx: (function () { var n = parseFloat(cs.fontSize); return isNaN(n) ? 0 : Math.round(n); })(),
+      hasText: (function () {
+        for (var n = el.firstChild; n; n = n.nextSibling) {
+          if (n.nodeType === 3 && /\\S/.test(n.nodeValue)) return true;
+        }
+        return false;
+      })(),
+      lineHeightRatio: (function () {
+        var fs = parseFloat(cs.fontSize);
+        var lh = parseFloat(cs.lineHeight);
+        if (isNaN(fs) || isNaN(lh) || fs <= 0) return 0;
+        return Math.round((lh / fs) * 100) / 100;
+      })(),
+      paddingTopPx: (function () { var n = parseFloat(cs.paddingTop); return isNaN(n) ? 0 : Math.round(n); })(),
+      gapPx: (function () { var n = parseFloat(cs.gap || cs.columnGap || ''); return isNaN(n) ? 0 : Math.round(n); })(),
+      isFlexOrGrid: cs.display === 'flex' || cs.display === 'grid' || cs.display === 'inline-flex' || cs.display === 'inline-grid',
     };
   }
 

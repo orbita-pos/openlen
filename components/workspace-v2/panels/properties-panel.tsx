@@ -114,6 +114,18 @@ export interface InspectSelection {
     /** True when the element carries data-ol-hidden (hidden in preview +
      *  published; shown dimmed + selectable while editing). */
     hidden?: boolean;
+    /** Computed font size in pixels (rounded). */
+    fontSizePx?: number;
+    /** True when the element has direct text node children with non-whitespace content. */
+    hasText?: boolean;
+    /** Line height as a ratio relative to font size (rounded to 2 decimals). */
+    lineHeightRatio?: number;
+    /** Computed padding-top in pixels (rounded). */
+    paddingTopPx?: number;
+    /** Computed gap in pixels (rounded); uses gap or column-gap. */
+    gapPx?: number;
+    /** True when the element's display is flex, grid, inline-flex, or inline-grid. */
+    isFlexOrGrid?: boolean;
   };
   /** CSS properties currently stashed (data-ol-was) on this element — each
    *  entry has a pre-edit design value the reset affordance can restore. */
