@@ -59,6 +59,11 @@
       "medium": "Médio",
       "bold": "Negrito"
     },
+    "italic": "Itálico",
+    "styles": {
+      "normal": "Normal",
+      "italic": "Itálico"
+    },
     "lineHeight": "Altura da linha",
     "lh": {
       "compact": "Compacto",

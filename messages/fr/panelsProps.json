@@ -59,6 +59,11 @@
       "medium": "Moyen",
       "bold": "Gras"
     },
+    "italic": "Italique",
+    "styles": {
+      "normal": "Normal",
+      "italic": "Italique"
+    },
     "lineHeight": "Interligne",
     "lh": {
       "compact": "Compact",

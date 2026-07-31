@@ -59,6 +59,11 @@
       "medium": "中太",
       "bold": "太字"
     },
+    "italic": "斜体",
+    "styles": {
+      "normal": "標準",
+      "italic": "斜体"
+    },
     "lineHeight": "行間",
     "lh": {
       "compact": "コンパクト",

@@ -59,6 +59,11 @@
       "medium": "Medium",
       "bold": "Bold"
     },
+    "italic": "Italic",
+    "styles": {
+      "normal": "Normal",
+      "italic": "Italic"
+    },
     "lineHeight": "Line height",
     "lh": {
       "compact": "Compact",

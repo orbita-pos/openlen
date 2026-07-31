@@ -59,6 +59,11 @@
       "medium": "중간",
       "bold": "굵게"
     },
+    "italic": "기울임",
+    "styles": {
+      "normal": "일반",
+      "italic": "기울임"
+    },
     "lineHeight": "줄 간격",
     "lh": {
       "compact": "좁게",

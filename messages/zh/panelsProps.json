@@ -59,6 +59,11 @@
       "medium": "中等",
       "bold": "加粗"
     },
+    "italic": "斜体",
+    "styles": {
+      "normal": "常规",
+      "italic": "斜体"
+    },
     "lineHeight": "行高",
     "lh": {
       "compact": "紧凑",

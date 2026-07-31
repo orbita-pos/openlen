@@ -59,6 +59,11 @@
       "medium": "Mittel",
       "bold": "Fett"
     },
+    "italic": "Kursiv",
+    "styles": {
+      "normal": "Normal",
+      "italic": "Kursiv"
+    },
     "lineHeight": "Zeilenhöhe",
     "lh": {
       "compact": "Kompakt",

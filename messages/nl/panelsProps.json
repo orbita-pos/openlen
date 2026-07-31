@@ -65,6 +65,11 @@
       "medium": "Middel",
       "bold": "Vet"
     },
+    "italic": "Cursief",
+    "styles": {
+      "normal": "Normaal",
+      "italic": "Cursief"
+    },
     "lineHeight": "Regelhoogte",
     "lh": {
       "compact": "Compact",

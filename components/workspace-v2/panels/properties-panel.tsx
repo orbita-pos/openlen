@@ -549,6 +549,13 @@ function TextSection({
         reset={resetOf(["font-weight"])}
       />
       <StepRow
+        label={t("text.italic")}
+        options={[t("text.styles.normal"), t("text.styles.italic")]}
+        activeIndex={style.fontStyle === "italic" ? 1 : 0}
+        onPick={(i) => onApplyStyle(path, "font-style", i === 1 ? "italic" : "normal")}
+        reset={resetOf(["font-style"])}
+      />
+      <StepRow
         label={t("text.lineHeight")}
         options={lhLabels}
         activeIndex={(() => {
