@@ -206,3 +206,65 @@ test("breadcrumb: element-selected trae ancestros y scope select re-selecciona",
   );
   expect((sel2 as { tag?: string }).tag).toBe(ancestors[0].tag);
 });
+
+// hasText — el grupo «Texto» del inspector se ofrece por igual cuando el texto
+// es directo (<h2>Hola</h2>) y cuando va envuelto en inline (<h2><span>Hola
+// </span></h2>). Un contenedor de BLOQUE (una sección con heading + párrafo)
+// debe seguir SIN ofrecerlo, o el grupo aparecería en cada tarjeta de la página.
+test("hasText cubre texto envuelto en inline, no contenedores de bloque", async ({ page }) => {
+  const frame = await loadInto(page, NORMALIZED);
+  await frame.evaluate(() => {
+    const host = document.createElement("div");
+    host.innerHTML =
+      '<h2 id="t-wrapped"><span>Envuelto</span></h2>' +
+      '<h2 id="t-direct">Directo</h2>' +
+      '<h2 id="t-mixed">Mixto <em>con énfasis</em></h2>' +
+      '<section id="t-block"><h3>Título</h3><p>Párrafo</p></section>' +
+      '<div id="t-empty"><svg width="8" height="8"></svg></div>';
+    document.body.appendChild(host);
+  });
+
+  const hasTextOf = async (selector: string) => {
+    await frame.evaluate((sel) => {
+      const el = document.querySelector(sel)!;
+      const segs: string[] = [];
+      let cur: Element | null = el;
+      while (cur && cur.tagName !== "BODY" && cur.tagName !== "HTML" && cur.parentElement) {
+        let nth = 1;
+        let sib = cur.previousElementSibling;
+        while (sib) {
+          if (sib.tagName === cur.tagName) nth += 1;
+          sib = sib.previousElementSibling;
+        }
+        segs.unshift(`${cur.tagName.toLowerCase()}:nth-of-type(${nth})`);
+        cur = cur.parentElement;
+      }
+      window.postMessage(
+        { type: "openlen:apply-prop", scope: "select", path: segs.join(" > ") },
+        "*",
+      );
+    }, selector);
+    await expect
+      .poll(() =>
+        page.evaluate(
+          () =>
+            (((window as Win).__msgs ?? [])
+              .filter((m) => m.type === "openlen:element-selected")
+              .pop() as { style?: { hasText?: boolean } } | undefined)?.style?.hasText,
+        ),
+      )
+      .toBeDefined();
+    return page.evaluate(
+      () =>
+        (((window as Win).__msgs ?? [])
+          .filter((m) => m.type === "openlen:element-selected")
+          .pop() as { style?: { hasText?: boolean } }).style?.hasText,
+    );
+  };
+
+  expect(await hasTextOf("#t-wrapped")).toBe(true);
+  expect(await hasTextOf("#t-direct")).toBe(true);
+  expect(await hasTextOf("#t-mixed")).toBe(true);
+  expect(await hasTextOf("#t-block")).toBe(false);
+  expect(await hasTextOf("#t-empty")).toBe(false);
+});

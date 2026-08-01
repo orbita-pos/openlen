@@ -234,10 +234,25 @@ const INSPECT_SCRIPT = `
       hidden: !!(el.hasAttribute && el.hasAttribute('data-ol-hidden')),
       fontSizePx: (function () { var n = parseFloat(cs.fontSize); return isNaN(n) ? 0 : Math.round(n); })(),
       hasText: (function () {
+        // Texto DIRECTO — el caso normal (<h1>Hola</h1>).
         for (var n = el.firstChild; n; n = n.nextSibling) {
           if (n.nodeType === 3 && /\\S/.test(n.nodeValue)) return true;
         }
-        return false;
+        // Texto envuelto en inline (<h1><span>Hola</span></h1>): antes el grupo
+        // Texto DESAPARECÍA al seleccionar el heading — el usuario tenía que
+        // cazar el span, e inconsistente además, porque clickear sobre la letra
+        // sí lo mostraba (selecciona el span). Cualquier hijo de BLOQUE lo
+        // descarta, para que secciones y tarjetas (que contienen headings y
+        // párrafos) sigan sin ofrecer controles de texto.
+        if (!/\\S/.test(el.textContent || '')) return false;
+        var kids = el.children;
+        if (!kids || kids.length === 0) return false;
+        for (var i = 0; i < kids.length; i++) {
+          var d = '';
+          try { d = getComputedStyle(kids[i]).display; } catch (_) { return false; }
+          if (d.indexOf('inline') !== 0 && d !== 'contents') return false;
+        }
+        return true;
       })(),
       lineHeightRatio: (function () {
         var fs = parseFloat(cs.fontSize);
