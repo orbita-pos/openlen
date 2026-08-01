@@ -131,6 +131,12 @@
     "fieldFavicon": "ファビコン",
     "clickHint": "ページ上の任意の要素をクリックすると編集できます。"
   },
+  "design": {
+    "title": "デザイン",
+    "typeScale": "文字サイズ",
+    "density": "密度",
+    "corners": "角"
+  },
   "privacy": {
     "title": "プライバシー",
     "enableAnalytics": "アナリティクスを有効にする",

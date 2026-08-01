@@ -131,6 +131,12 @@
     "fieldFavicon": "Favicon",
     "clickHint": "Click any element on the page to edit it."
   },
+  "design": {
+    "title": "Design",
+    "typeScale": "Type size",
+    "density": "Density",
+    "corners": "Corners"
+  },
   "privacy": {
     "title": "Privacy",
     "enableAnalytics": "Enable analytics",

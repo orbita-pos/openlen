@@ -131,6 +131,12 @@
     "fieldFavicon": "파비콘",
     "clickHint": "페이지의 아무 요소나 클릭하면 편집할 수 있습니다."
   },
+  "design": {
+    "title": "디자인",
+    "typeScale": "글자 크기",
+    "density": "밀도",
+    "corners": "모서리"
+  },
   "privacy": {
     "title": "개인정보 보호",
     "enableAnalytics": "분석 사용",

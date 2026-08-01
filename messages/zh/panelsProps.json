@@ -131,6 +131,12 @@
     "fieldFavicon": "网站图标",
     "clickHint": "点击页面上的任意元素即可编辑。"
   },
+  "design": {
+    "title": "设计",
+    "typeScale": "字号",
+    "density": "密度",
+    "corners": "圆角"
+  },
   "privacy": {
     "title": "隐私",
     "enableAnalytics": "启用分析",

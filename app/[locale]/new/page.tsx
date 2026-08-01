@@ -1082,6 +1082,9 @@ function NewV2Inner() {
             favicon: typeof m.favicon === "string" ? m.favicon : "",
             mode: m.mode === "dark" ? "dark" : "light",
             hasDark: !!m.hasDark,
+            typeScale: typeof m.typeScale === "number" ? m.typeScale : null,
+            spaceScale: typeof m.spaceScale === "number" ? m.spaceScale : null,
+            radiusScale: typeof m.radiusScale === "number" ? m.radiusScale : null,
           });
           // Snapshot the page's original theme tokens from the FIRST meta of
           // this project load — the "Original" reset re-applies these resolved
@@ -2383,6 +2386,13 @@ function NewV2Inner() {
         prop: "data-ol-mode",
         value: nextMode === "dark" ? "dark" : "",
       },
+      "*",
+    );
+  }, []);
+  // Dial global — un token de tema individual (inline var en <html>).
+  const applyThemeToken = useCallback((prop: string, value: string) => {
+    iframeElRef.current?.contentWindow?.postMessage(
+      { type: "openlen:apply-prop", scope: "theme", prop, value },
       "*",
     );
   }, []);
@@ -4065,6 +4075,18 @@ function NewV2Inner() {
                       loadedProject ? openRestoreOriginal : undefined
                     }
                     originalAccent={originalTheme?.tokens["--ol-accent"] || undefined}
+                    onApplyThemeToken={
+                      loadedProject ? applyThemeToken : undefined
+                    }
+                    authoredScales={
+                      originalTheme
+                        ? {
+                            typeScale: originalTheme.tokens["--ol-text-scale"],
+                            spaceScale: originalTheme.tokens["--ol-space-scale"],
+                            radiusScale: originalTheme.tokens["--ol-r-scale"],
+                          }
+                        : undefined
+                    }
                     motion={loadedProject?.settings?.motion}
                     onApplyMotion={loadedProject ? applyMotion : undefined}
                     music={loadedProject?.settings?.music}

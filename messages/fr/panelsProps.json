@@ -131,6 +131,12 @@
     "fieldFavicon": "Favicon",
     "clickHint": "Cliquez sur n'importe quel élément de la page pour le modifier."
   },
+  "design": {
+    "title": "Design",
+    "typeScale": "Taille du texte",
+    "density": "Densité",
+    "corners": "Coins"
+  },
   "privacy": {
     "title": "Confidentialité",
     "enableAnalytics": "Activer les statistiques",

@@ -137,6 +137,12 @@
     "fieldFavicon": "Favicon",
     "clickHint": "Klik op een element op de pagina om het te bewerken."
   },
+  "design": {
+    "title": "Ontwerp",
+    "typeScale": "Tekstgrootte",
+    "density": "Dichtheid",
+    "corners": "Hoeken"
+  },
   "privacy": {
     "title": "Privacy",
     "enableAnalytics": "Analytics inschakelen",

@@ -21,7 +21,12 @@ import {
   type CSSProperties,
 } from "react";
 import { useTranslations } from "next-intl";
-import { MoveVertical, RotateCcw, Type as TypeIcon } from "lucide-react";
+import {
+  MoveVertical,
+  RotateCcw,
+  SlidersHorizontal,
+  Type as TypeIcon,
+} from "lucide-react";
 import type { FormConfig, MusicSettings } from "@/lib/projects/types";
 import { checkSeo, type SeoIssue, type SeoFixField } from "@/lib/seo-check";
 import { defaultLogoDataUrl } from "@/lib/branding/default-logo";
@@ -158,6 +163,12 @@ export interface PageMeta {
    *  palette — the only case where flipping to dark stays coherent, so the
    *  deterministic Dark toggle is gated on it. */
   hasDark?: boolean;
+  /** Live global token scales (Tier 4 dials) — the resolved --ol-text-scale /
+   *  --ol-space-scale / --ol-r-scale on <html>. Null when the live document
+   *  doesn't resolve a numeric value (the dial then shows its "1" default). */
+  typeScale?: number | null;
+  spaceScale?: number | null;
+  radiusScale?: number | null;
 }
 
 interface PropertiesPanelProps {
@@ -231,6 +242,18 @@ interface PropertiesPanelProps {
   onRestoreOriginal?: () => void;
   /** The page's original accent hex — renders the "Original" bead's color. */
   originalAccent?: string;
+  /** Write a single global theme token (scope "theme" — an inline var on
+   *  <html>). Drives the Design section's type/density/corners dials. Omit
+   *  to hide the Design section (entry-mode panels with no real project). */
+  onApplyThemeToken?: (prop: string, value: string) => void;
+  /** The page's AUTHORED (:root-declared) scale tokens as strings — "" when
+   *  the page doesn't declare one. Each Design dial's ↺ resets to this
+   *  (or removes the inline override when empty). */
+  authoredScales?: {
+    typeScale: string;
+    spaceScale: string;
+    radiusScale: string;
+  };
   /** Motion Looks: the active preset ("calm" | "editorial" | "dramatic"),
    *  or undefined for none. Drives the Motion bead row's selected state. */
   motion?: string;
@@ -286,6 +309,8 @@ export function PropertiesPanel({
   onResetTheme,
   onRestoreOriginal,
   originalAccent,
+  onApplyThemeToken,
+  authoredScales,
   motion,
   onApplyMotion,
   music,
@@ -349,6 +374,8 @@ export function PropertiesPanel({
             onResetTheme={onResetTheme}
             onRestoreOriginal={onRestoreOriginal}
             originalAccent={originalAccent}
+            onApplyThemeToken={onApplyThemeToken}
+            authoredScales={authoredScales}
             motion={motion}
             onApplyMotion={onApplyMotion}
             music={music}
@@ -1074,6 +1101,8 @@ function PageView({
   onResetTheme,
   onRestoreOriginal,
   originalAccent,
+  onApplyThemeToken,
+  authoredScales,
   motion,
   onApplyMotion,
   music,
@@ -1100,6 +1129,12 @@ function PageView({
   onResetTheme?: () => void;
   onRestoreOriginal?: () => void;
   originalAccent?: string;
+  onApplyThemeToken?: (prop: string, value: string) => void;
+  authoredScales?: {
+    typeScale: string;
+    spaceScale: string;
+    radiusScale: string;
+  };
   motion?: string;
   onApplyMotion?: (preset: string) => void;
   music?: MusicSettings;
@@ -1142,6 +1177,13 @@ function PageView({
           projectId={projectId}
           html={html}
           mode={pageMeta?.mode ?? "light"}
+        />
+      )}
+      {onApplyThemeToken && (
+        <DesignSection
+          pageMeta={pageMeta}
+          authoredScales={authoredScales}
+          onApplyThemeToken={onApplyThemeToken}
         />
       )}
       {onApplyLook && (
@@ -1394,6 +1436,80 @@ function LookGenerator({ onApply }: { onApply: (accent: string) => void }) {
         </p>
       </div>
     </div>
+  );
+}
+
+// Design — the three global scale dials (Tier 4 tokens): type scale, space
+// (density) scale, corner-radius scale. Each writes a single --ol-* var
+// inline on <html> via the existing scope:"theme" transport (the same one
+// the mode toggle uses) — a whole-page multiplier, not a per-element style.
+const TYPE_SCALE_STEPS = [
+  { label: "S", value: 0.92 },
+  { label: "M", value: 1 },
+  { label: "L", value: 1.08 },
+  { label: "XL", value: 1.16 },
+];
+const SPACE_SCALE_STEPS = [
+  { label: "compact", value: 0.85 },
+  { label: "normal", value: 1 },
+  { label: "airy", value: 1.15 },
+];
+const RADIUS_SCALE_STEPS = [
+  { label: "square", value: 0 },
+  { label: "soft", value: 1 },
+  { label: "round", value: 1.75 },
+];
+
+function nearestScaleIndex(v: number | null | undefined, steps: { value: number }[]): number {
+  const cur = typeof v === "number" ? v : 1;
+  let best = 0;
+  for (let i = 1; i < steps.length; i++) {
+    if (Math.abs(steps[i].value - cur) < Math.abs(steps[best].value - cur)) best = i;
+  }
+  return best;
+}
+
+function DesignSection({
+  pageMeta,
+  authoredScales,
+  onApplyThemeToken,
+}: {
+  pageMeta: PageMeta | null;
+  authoredScales?: { typeScale: string; spaceScale: string; radiusScale: string };
+  onApplyThemeToken: (prop: string, value: string) => void;
+}) {
+  const t = useTranslations("panelsProps");
+  const dialReset = (prop: string, authored: string | undefined, live: number | null | undefined) => ({
+    // Dirty = el valor vivo difiere del autorado (o de 1, el default del motor).
+    dirty: typeof live === "number" && Math.abs(live - (authored ? parseFloat(authored) : 1)) > 0.001,
+    title: t("was.resetControl"),
+    // "" quita el override inline → la cascada del :root autorado vuelve.
+    onReset: () => onApplyThemeToken(prop, authored ?? ""),
+  });
+  return (
+    <Section label={t("design.title")} icon={<SlidersHorizontal size={11} />}>
+      <StepRow
+        label={t("design.typeScale")}
+        options={TYPE_SCALE_STEPS.map((s) => s.label)}
+        activeIndex={nearestScaleIndex(pageMeta?.typeScale, TYPE_SCALE_STEPS)}
+        onPick={(i) => onApplyThemeToken("--ol-text-scale", String(TYPE_SCALE_STEPS[i].value))}
+        reset={dialReset("--ol-text-scale", authoredScales?.typeScale, pageMeta?.typeScale)}
+      />
+      <StepRow
+        label={t("design.density")}
+        options={SPACE_SCALE_STEPS.map((s) => t(`spacing.densities.${s.label}`))}
+        activeIndex={nearestScaleIndex(pageMeta?.spaceScale, SPACE_SCALE_STEPS)}
+        onPick={(i) => onApplyThemeToken("--ol-space-scale", String(SPACE_SCALE_STEPS[i].value))}
+        reset={dialReset("--ol-space-scale", authoredScales?.spaceScale, pageMeta?.spaceScale)}
+      />
+      <StepRow
+        label={t("design.corners")}
+        options={RADIUS_SCALE_STEPS.map((s) => t(`style.cornersSteps.${s.label}`))}
+        activeIndex={nearestScaleIndex(pageMeta?.radiusScale, RADIUS_SCALE_STEPS)}
+        onPick={(i) => onApplyThemeToken("--ol-r-scale", String(RADIUS_SCALE_STEPS[i].value))}
+        reset={dialReset("--ol-r-scale", authoredScales?.radiusScale, pageMeta?.radiusScale)}
+      />
+    </Section>
   );
 }
 

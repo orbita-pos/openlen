@@ -131,6 +131,12 @@
     "fieldFavicon": "Favicon",
     "clickHint": "Haz clic en cualquier elemento de la página para editarlo."
   },
+  "design": {
+    "title": "Diseño",
+    "typeScale": "Letra",
+    "density": "Densidad",
+    "corners": "Esquinas"
+  },
   "privacy": {
     "title": "Privacidad",
     "enableAnalytics": "Activar analíticas",
