@@ -151,6 +151,10 @@ export interface InspectSelection {
   /** CSS properties currently stashed (data-ol-was) on this element — each
    *  entry has a pre-edit design value the reset affordance can restore. */
   wasProps?: string[];
+  /** Breadcrumb up the DOM from this element's parent — closest first,
+   *  max 4, stopping at BODY/HTML. Lets the panel offer "escape to the
+   *  container" chips above the tag/hint row. */
+  ancestors?: Array<{ path: string; tag: string; hint: string }>;
 }
 
 export interface PageMeta {
@@ -211,6 +215,9 @@ interface PropertiesPanelProps {
    *  data-ol-was stash (the pre-edit design value). No UI consumes this yet
    *  (Task 7 adds the reset affordance) — plumbing only. */
   onResetProps: (path: string, props: string[]) => void;
+  /** Re-select an ancestor by path — the breadcrumb chips' "escape to
+   *  container" gesture. */
+  onSelectPath: (path: string) => void;
   /** Set the selected element's background: a solid color (replaces any
    *  gradient/image fill), an image fill (background-image, any element), a
    *  CSS gradient string, or clear the fill. */
@@ -310,6 +317,7 @@ export function PropertiesPanel({
   onApplyFormConfig,
   onApplyStyle,
   onResetProps,
+  onSelectPath,
   onApplyBg,
   onApplyHide,
   onToggleAnalytics,
@@ -364,6 +372,7 @@ export function PropertiesPanel({
             onApplyFormConfig={onApplyFormConfig}
             onApplyStyle={onApplyStyle}
             onResetProps={onResetProps}
+            onSelectPath={onSelectPath}
             onApplyBg={onApplyBg}
             onApplyHide={onApplyHide}
             onSendTestFormEmail={onSendTestFormEmail}
@@ -412,6 +421,7 @@ function ElementView({
   onApplyFormConfig,
   onApplyStyle,
   onResetProps,
+  onSelectPath,
   onApplyBg,
   onApplyHide,
   onSendTestFormEmail,
@@ -426,6 +436,7 @@ function ElementView({
   onApplyFormConfig: (formIndex: number, patch: Partial<FormConfig>) => void;
   onApplyStyle: (path: string, prop: string, value: string) => void;
   onResetProps: (path: string, props: string[]) => void;
+  onSelectPath: (path: string) => void;
   onApplyBg: (
     path: string,
     kind: "color" | "image" | "clear" | "gradient",
@@ -448,6 +459,24 @@ function ElementView({
       >
         <Globe size={11} /> {t("element.pageSettings")}
       </button>
+      {(selection.ancestors ?? []).length > 0 && (
+        <div className="px-3 pt-2 flex items-center gap-1 flex-wrap text-[10px] fg-faint">
+          {[...(selection.ancestors ?? [])].reverse().map((a) => (
+            <span key={a.path} className="inline-flex items-center gap-1">
+              <button
+                type="button"
+                onClick={() => onSelectPath(a.path)}
+                className="hover:fg underline-offset-2 hover:underline transition font-mono uppercase text-[9.5px]"
+                title={a.hint}
+              >
+                {a.tag}
+              </button>
+              <span aria-hidden>›</span>
+            </span>
+          ))}
+          <span className="font-mono uppercase text-[9.5px] fg-muted">{selection.tag}</span>
+        </div>
+      )}
       <div className="px-3 py-2.5 border-b bd flex items-center gap-1.5">
         <span className="inline-flex items-center h-4 px-1.5 rounded bg-elev border bd text-[9.5px] font-mono fg-muted uppercase">
           {tag}

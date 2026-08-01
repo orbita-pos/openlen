@@ -141,6 +141,22 @@ const INSPECT_SCRIPT = `
     return el.tagName.toLowerCase();
   }
 
+  // Breadcrumb up the DOM from the selected element's parent — closest first,
+  // capped at 4, stopping at BODY/HTML. Only selectable ancestors are
+  // included (mirrors the click picker's own filter), so the trail never
+  // offers a hop to <script>/<style>/etc.
+  function buildAncestors(el) {
+    var out = [];
+    var cur = el.parentElement;
+    while (cur && cur.tagName !== 'BODY' && cur.tagName !== 'HTML' && out.length < 4) {
+      if (selectable(cur)) {
+        out.push({ path: buildPath(cur), tag: cur.tagName.toLowerCase(), hint: buildHint(cur) });
+      }
+      cur = cur.parentElement;
+    }
+    return out;
+  }
+
   function readProps(el) {
     var tag = el.tagName.toLowerCase();
     var props = {};
@@ -477,6 +493,7 @@ const INSPECT_SCRIPT = `
       formIndex: formIndexOf(el),
       style: readStyle(el),
       wasProps: Object.keys(parseStash(el.getAttribute(STASH_ATTR))),
+      ancestors: buildAncestors(el),
     });
   }
 
@@ -1174,6 +1191,9 @@ const INSPECT_SCRIPT = `
       );
     } else if (d.scope === 'reset' && typeof d.path === 'string' && Array.isArray(d.props)) {
       applyReset(d.path, d.props.filter(function (p) { return typeof p === 'string'; }));
+    } else if (d.scope === 'select' && typeof d.path === 'string') {
+      var selEl = resolvePath(d.path);
+      if (selEl) { setSelected(selEl); postSelected(selEl); }
     }
   });
 

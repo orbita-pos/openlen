@@ -1068,6 +1068,16 @@ function NewV2Inner() {
             wasProps: Array.isArray(data.wasProps)
               ? (data.wasProps as string[]).filter((p) => typeof p === "string")
               : [],
+            ancestors: Array.isArray(data.ancestors)
+              ? (data.ancestors as unknown[]).filter(
+                  (a): a is { path: string; tag: string; hint: string } =>
+                    !!a &&
+                    typeof a === "object" &&
+                    typeof (a as Record<string, unknown>).path === "string" &&
+                    typeof (a as Record<string, unknown>).tag === "string" &&
+                    typeof (a as Record<string, unknown>).hint === "string",
+                )
+              : [],
           });
         }
       } else if (data.type === "openlen:element-deselected") {
@@ -2331,6 +2341,13 @@ function NewV2Inner() {
   const applyResetProps = useCallback((path: string, props: string[]) => {
     iframeElRef.current?.contentWindow?.postMessage(
       { type: "openlen:apply-prop", scope: "reset", path, props },
+      "*",
+    );
+  }, []);
+  // Breadcrumb — re-selecciona un ancestro (escapar del hijo al contenedor).
+  const selectPath = useCallback((path: string) => {
+    iframeElRef.current?.contentWindow?.postMessage(
+      { type: "openlen:apply-prop", scope: "select", path },
       "*",
     );
   }, []);
@@ -4080,6 +4097,7 @@ function NewV2Inner() {
                     onApplyFormConfig={applyFormConfig}
                     onApplyStyle={applyStyle}
                     onResetProps={applyResetProps}
+                    onSelectPath={selectPath}
                     onApplyBg={applyBg}
                     onApplyHide={applyHide}
                     onToggleAnalytics={applyAnalyticsDisabled}

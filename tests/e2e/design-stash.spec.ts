@@ -155,3 +155,38 @@ test("padding en pasos escribe var(--ol-space-*) y el stash sobrevive un reorder
     .poll(() => frame.evaluate(() => document.querySelector("section:last-of-type")!.getAttribute("data-ol-was")))
     .toBeNull();
 });
+
+test("breadcrumb: element-selected trae ancestros y scope select re-selecciona", async ({ page }) => {
+  const frame = await loadInto(page, NORMALIZED);
+  await frame.evaluate(() => document.body.setAttribute("data-openlen-edit-mode", ""));
+  await frame.locator("h1").first().click();
+  // Task 11 gotcha: reading __msgs right after a click can race the postMessage
+  // delivery — poll instead of a single synchronous read.
+  await expect
+    .poll(() =>
+      page.evaluate(() =>
+        ((window as Win).__msgs ?? []).some((m) => m.type === "openlen:element-selected"),
+      ),
+    )
+    .toBe(true);
+  const sel = await page.evaluate(() =>
+    ((window as Win).__msgs ?? []).filter((m) => m.type === "openlen:element-selected").pop(),
+  );
+  const ancestors = (sel as { ancestors?: Array<{ path: string; tag: string }> }).ancestors ?? [];
+  expect(ancestors.length).toBeGreaterThan(0);
+  await frame.evaluate(
+    (p) => window.postMessage({ type: "openlen:apply-prop", scope: "select", path: p }, "*"),
+    ancestors[0].path,
+  );
+  await expect
+    .poll(() =>
+      page.evaluate(() =>
+        ((window as Win).__msgs ?? []).filter((m) => m.type === "openlen:element-selected").length,
+      ),
+    )
+    .toBeGreaterThan(1);
+  const sel2 = await page.evaluate(() =>
+    ((window as Win).__msgs ?? []).filter((m) => m.type === "openlen:element-selected").pop(),
+  );
+  expect((sel2 as { tag?: string }).tag).toBe(ancestors[0].tag);
+});
