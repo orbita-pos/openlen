@@ -141,7 +141,8 @@
     "title": "Ontwerp",
     "typeScale": "Tekstgrootte",
     "density": "Dichtheid",
-    "corners": "Hoeken"
+    "corners": "Hoeken",
+    "fonts": "Lettertypen"
   },
   "privacy": {
     "title": "Privacy",

@@ -135,7 +135,8 @@
     "title": "Design",
     "typeScale": "Dimensione testo",
     "density": "Densità",
-    "corners": "Angoli"
+    "corners": "Angoli",
+    "fonts": "Font"
   },
   "privacy": {
     "title": "Privacy",

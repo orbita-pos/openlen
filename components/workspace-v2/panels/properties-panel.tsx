@@ -66,6 +66,7 @@ import {
   DENSITY_STEPS,
   RADIUS_STEPS,
   nearestStep,
+  FONT_PAIRS,
 } from "../curated-steps";
 import {
   ColorField,
@@ -169,6 +170,10 @@ export interface PageMeta {
   typeScale?: number | null;
   spaceScale?: number | null;
   radiusScale?: number | null;
+  /** Live global display-font family (Tier 3) — the resolved
+   *  --ol-font-display on <html>, first family name de-quoted. Null when the
+   *  live document doesn't resolve one. Drives the Fuentes row's dirty ↺. */
+  displayFont?: string | null;
 }
 
 interface PropertiesPanelProps {
@@ -253,7 +258,12 @@ interface PropertiesPanelProps {
     typeScale: string;
     spaceScale: string;
     radiusScale: string;
+    displayFont: string;
   };
+  /** Apply a curated font pair (null = remove the pair; the page's authored
+   *  display font returns via the :root cascade). Omit to hide the Fuentes
+   *  row (entry-mode panels with no real project). */
+  onApplyFontPair?: (pair: (typeof FONT_PAIRS)[number] | null) => void;
   /** Motion Looks: the active preset ("calm" | "editorial" | "dramatic"),
    *  or undefined for none. Drives the Motion bead row's selected state. */
   motion?: string;
@@ -311,6 +321,7 @@ export function PropertiesPanel({
   originalAccent,
   onApplyThemeToken,
   authoredScales,
+  onApplyFontPair,
   motion,
   onApplyMotion,
   music,
@@ -376,6 +387,7 @@ export function PropertiesPanel({
             originalAccent={originalAccent}
             onApplyThemeToken={onApplyThemeToken}
             authoredScales={authoredScales}
+            onApplyFontPair={onApplyFontPair}
             motion={motion}
             onApplyMotion={onApplyMotion}
             music={music}
@@ -1103,6 +1115,7 @@ function PageView({
   originalAccent,
   onApplyThemeToken,
   authoredScales,
+  onApplyFontPair,
   motion,
   onApplyMotion,
   music,
@@ -1134,7 +1147,9 @@ function PageView({
     typeScale: string;
     spaceScale: string;
     radiusScale: string;
+    displayFont: string;
   };
+  onApplyFontPair?: (pair: (typeof FONT_PAIRS)[number] | null) => void;
   motion?: string;
   onApplyMotion?: (preset: string) => void;
   music?: MusicSettings;
@@ -1184,6 +1199,7 @@ function PageView({
           pageMeta={pageMeta}
           authoredScales={authoredScales}
           onApplyThemeToken={onApplyThemeToken}
+          onApplyFontPair={onApplyFontPair}
         />
       )}
       {onApplyLook && (
@@ -1473,10 +1489,12 @@ function DesignSection({
   pageMeta,
   authoredScales,
   onApplyThemeToken,
+  onApplyFontPair,
 }: {
   pageMeta: PageMeta | null;
-  authoredScales?: { typeScale: string; spaceScale: string; radiusScale: string };
+  authoredScales?: { typeScale: string; spaceScale: string; radiusScale: string; displayFont: string };
   onApplyThemeToken: (prop: string, value: string) => void;
+  onApplyFontPair?: (pair: (typeof FONT_PAIRS)[number] | null) => void;
 }) {
   const t = useTranslations("panelsProps");
   const dialReset = (prop: string, authored: string | undefined, live: number | null | undefined) => ({
@@ -1509,6 +1527,30 @@ function DesignSection({
         onPick={(i) => onApplyThemeToken("--ol-r-scale", String(RADIUS_SCALE_STEPS[i].value))}
         reset={dialReset("--ol-r-scale", authoredScales?.radiusScale, pageMeta?.radiusScale)}
       />
+      <div>
+        <div className="flex items-center gap-2 mb-1">
+          <span className="text-[10.5px] fg-faint flex-1">{t("design.fonts")}</span>
+          <ProvenanceReset
+            dirty={!!pageMeta?.displayFont && pageMeta.displayFont !== (authoredScales?.displayFont || pageMeta.displayFont)}
+            title={t("was.resetControl")}
+            onReset={() => onApplyFontPair?.(null)}
+          />
+        </div>
+        <div className="flex flex-wrap gap-1.5">
+          {FONT_PAIRS.map((p) => (
+            <button
+              key={p.id}
+              type="button"
+              title={p.name}
+              onClick={() => onApplyFontPair?.(p)}
+              className="h-8 px-2 rounded-md border bd bg-app hover:bg-hover transition text-[11px] fg-muted hover:fg"
+              style={{ fontFamily: p.displayCss }}
+            >
+              Aa <span className="text-[9.5px] fg-faint">{p.name}</span>
+            </button>
+          ))}
+        </div>
+      </div>
     </Section>
   );
 }

@@ -127,6 +127,22 @@ describe("stripEditorInstrumentation — Editor V5 markers", () => {
     expect(out).not.toContain("data-openlen-edit-mode");
   });
 
+  it("PRESERVES the curated font-pair link (data-ol-fonts, Task 13)", () => {
+    // Same model as temáticas' font link: applyFonts() (use-element-inspect.ts)
+    // stamps <link data-ol-fonts> IN the document by design — the backstop
+    // must never confuse it with editor chrome and strip it.
+    const out = stripEditorInstrumentation(
+      `<!doctype html><html style="--ol-font-display:&quot;Playfair Display&quot;, Georgia, serif"><head>` +
+        `<link rel="stylesheet" data-ol-fonts href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;700&family=Source+Sans+3:wght@400;600&display=swap">` +
+        `</head><body data-openlen-edit-mode><h1 data-openlen-editable>Hero</h1></body></html>`,
+    );
+    expect(out).toContain('<link rel="stylesheet" data-ol-fonts');
+    expect(out).toContain("fonts.googleapis.com");
+    expect(out).toContain("--ol-font-display");
+    expect(out).not.toContain("data-openlen-editable");
+    expect(out).not.toContain("data-openlen-edit-mode");
+  });
+
   it("removes drop-engine + section-insert markers (incl. the just-inserted highlight)", () => {
     const out = stripEditorInstrumentation(
       `<!doctype html><html><head><style data-openlen-drop>.x{}</style></head>` +

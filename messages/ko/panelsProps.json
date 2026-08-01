@@ -135,7 +135,8 @@
     "title": "디자인",
     "typeScale": "글자 크기",
     "density": "밀도",
-    "corners": "모서리"
+    "corners": "모서리",
+    "fonts": "글꼴"
   },
   "privacy": {
     "title": "개인정보 보호",

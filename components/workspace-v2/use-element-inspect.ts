@@ -1042,6 +1042,28 @@ const INSPECT_SCRIPT = `
     postPageMeta();
   }
 
+  // Par de fuentes curado — el <link> persiste EN el documento (data-ol-fonts,
+  // mismo modelo que el font-link de temáticas) y las familias aterrizan como
+  // inline vars en <html>. Strings vacíos = quitar el par (vuelve el autorado).
+  function applyFonts(displayCss, bodyCss, href) {
+    var root = document.documentElement;
+    var old = document.querySelectorAll('link[data-ol-fonts]');
+    for (var i = 0; i < old.length; i++) old[i].remove();
+    if (href) {
+      var l = document.createElement('link');
+      l.rel = 'stylesheet';
+      l.href = href;
+      l.setAttribute('data-ol-fonts', '');
+      (document.head || document.documentElement).appendChild(l);
+    }
+    if (displayCss) root.style.setProperty('--ol-font-display', displayCss);
+    else root.style.removeProperty('--ol-font-display');
+    if (bodyCss) root.style.setProperty('--ol-font-body', bodyCss);
+    else root.style.removeProperty('--ol-font-body');
+    postClean();
+    postPageMeta();
+  }
+
   function applyTheme(prop, value) {
     var root = document.documentElement;
     // The light/dark toggle is an attribute on <html>, not a CSS variable.
@@ -1143,6 +1165,12 @@ const INSPECT_SCRIPT = `
         typeof d.fontHref === 'string' ? d.fontHref : '',
         typeof d.bg === 'string' ? d.bg : '',
         d.tokens && typeof d.tokens === 'object' ? d.tokens : null,
+      );
+    } else if (d.scope === 'fonts') {
+      applyFonts(
+        typeof d.displayCss === 'string' ? d.displayCss : '',
+        typeof d.bodyCss === 'string' ? d.bodyCss : '',
+        typeof d.href === 'string' ? d.href : '',
       );
     } else if (d.scope === 'reset' && typeof d.path === 'string' && Array.isArray(d.props)) {
       applyReset(d.path, d.props.filter(function (p) { return typeof p === 'string'; }));

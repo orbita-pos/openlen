@@ -135,7 +135,8 @@
     "title": "Design",
     "typeScale": "Taille du texte",
     "density": "Densité",
-    "corners": "Coins"
+    "corners": "Coins",
+    "fonts": "Polices"
   },
   "privacy": {
     "title": "Confidentialité",

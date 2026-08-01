@@ -135,7 +135,8 @@
     "title": "设计",
     "typeScale": "字号",
     "density": "密度",
-    "corners": "圆角"
+    "corners": "圆角",
+    "fonts": "字体"
   },
   "privacy": {
     "title": "隐私",

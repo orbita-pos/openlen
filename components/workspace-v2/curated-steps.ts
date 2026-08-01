@@ -91,3 +91,17 @@ export function nearestStep(px: number, steps: Step[]): Step {
   for (const s of steps) if (Math.abs(s.px - px) < Math.abs(best.px - px)) best = s;
   return best;
 }
+
+// Pares de fuentes curados — display+body diseñados juntos (jamás una lista
+// cruda). El <link> viaja en el documento con data-ol-fonts (mismo patrón que
+// el font-link de temáticas), así la página publicada carga sus fuentes.
+export const FONT_PAIRS = [
+  { id: "inter", name: "Inter", displayCss: '"Inter", ui-sans-serif, sans-serif', bodyCss: '"Inter", ui-sans-serif, sans-serif', href: "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;800&display=swap" },
+  { id: "playfair", name: "Playfair", displayCss: '"Playfair Display", Georgia, serif', bodyCss: '"Source Sans 3", ui-sans-serif, sans-serif', href: "https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;700&family=Source+Sans+3:wght@400;600&display=swap" },
+  { id: "space", name: "Space", displayCss: '"Space Grotesk", ui-sans-serif, sans-serif', bodyCss: '"Inter", ui-sans-serif, sans-serif', href: "https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500&display=swap" },
+  { id: "dm", name: "DM Serif", displayCss: '"DM Serif Display", Georgia, serif', bodyCss: '"DM Sans", ui-sans-serif, sans-serif', href: "https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@400;500&display=swap" },
+  { id: "fraunces", name: "Fraunces", displayCss: '"Fraunces", Georgia, serif', bodyCss: '"Inter", ui-sans-serif, sans-serif', href: "https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=Inter:wght@400;500&display=swap" },
+  { id: "outfit", name: "Outfit", displayCss: '"Outfit", ui-sans-serif, sans-serif', bodyCss: '"Outfit", ui-sans-serif, sans-serif', href: "https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;700&display=swap" },
+  { id: "lora", name: "Lora", displayCss: '"Lora", Georgia, serif', bodyCss: '"Karla", ui-sans-serif, sans-serif', href: "https://fonts.googleapis.com/css2?family=Lora:wght@500;700&family=Karla:wght@400;600&display=swap" },
+  { id: "bricolage", name: "Bricolage", displayCss: '"Bricolage Grotesque", ui-sans-serif, sans-serif', bodyCss: '"Inter", ui-sans-serif, sans-serif', href: "https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;800&family=Inter:wght@400;500&display=swap" },
+] as const;

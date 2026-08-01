@@ -1085,6 +1085,7 @@ function NewV2Inner() {
             typeScale: typeof m.typeScale === "number" ? m.typeScale : null,
             spaceScale: typeof m.spaceScale === "number" ? m.spaceScale : null,
             radiusScale: typeof m.radiusScale === "number" ? m.radiusScale : null,
+            displayFont: typeof m.displayFont === "string" ? m.displayFont : null,
           });
           // Snapshot the page's original theme tokens from the FIRST meta of
           // this project load — the "Original" reset re-applies these resolved
@@ -2396,6 +2397,24 @@ function NewV2Inner() {
       "*",
     );
   }, []);
+  // Par de fuentes curado — el <link> persiste en el documento (data-ol-fonts)
+  // y las familias display/body aterrizan como inline vars en <html>. null =
+  // quitar el par (vuelve la fuente autorada).
+  const applyFontPair = useCallback(
+    (pair: { displayCss: string; bodyCss: string; href: string } | null) => {
+      iframeElRef.current?.contentWindow?.postMessage(
+        {
+          type: "openlen:apply-prop",
+          scope: "fonts",
+          displayCss: pair?.displayCss ?? "",
+          bodyCss: pair?.bodyCss ?? "",
+          href: pair?.href ?? "",
+        },
+        "*",
+      );
+    },
+    [],
+  );
   // "Custom look" bola — route to the Chat surface and auto-fire a curated
   // restyle prompt (the ai-design endpoint snapshots a version itself, so the
   // look is reachable again for free via the chat Undo / Versions tab).
@@ -4084,9 +4103,11 @@ function NewV2Inner() {
                             typeScale: originalTheme.tokens["--ol-text-scale"],
                             spaceScale: originalTheme.tokens["--ol-space-scale"],
                             radiusScale: originalTheme.tokens["--ol-r-scale"],
+                            displayFont: originalTheme.tokens["--ol-font-display"],
                           }
                         : undefined
                     }
+                    onApplyFontPair={loadedProject ? applyFontPair : undefined}
                     motion={loadedProject?.settings?.motion}
                     onApplyMotion={loadedProject ? applyMotion : undefined}
                     music={loadedProject?.settings?.music}
