@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { and, eq } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
 import { optimizeHtmlForProduction } from "@/lib/publish/optimize-html";
+import { stripDesignStash } from "@/lib/publish/design-stash-strip";
 import { injectTrackingStrip } from "@/lib/publish/tracking-strip";
 import { splitPagesForPublish } from "@/lib/projects/site-pages";
 import type { ProjectData } from "@/lib/projects/types";
@@ -177,15 +178,20 @@ export async function getExportHtml(
   // so it's baked into the export. No seal/CSP on external hosts, so the plain
   // inline script just runs. Injected before hashing so the drift sha matches
   // the bytes actually deployed.
+  // This path bypasses bakeDocument, so the inspector's design-stash memory
+  // (data-ol-was) must be stripped here too — it's editor state, never meant
+  // to leak into an exported site.
   const optimizedHtml = injectTrackingStrip(
-    (await optimizeHtmlForProduction(data?.html ?? "")).html,
+    stripDesignStash((await optimizeHtmlForProduction(data?.html ?? "")).html),
   );
   // External hosts (GitHub Pages / Vercel) have no member gate — exporting a
   // gated page there would publish it wide open. Public pages only.
   const pages = await Promise.all(
     splitPagesForPublish(data).publicPages.map(async (pg) => ({
       slug: pg.slug,
-      html: injectTrackingStrip((await optimizeHtmlForProduction(pg.html)).html),
+      html: injectTrackingStrip(
+        stripDesignStash((await optimizeHtmlForProduction(pg.html)).html),
+      ),
     })),
   );
   const hash = createHash("sha256").update(optimizedHtml, "utf8");

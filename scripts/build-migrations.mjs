@@ -43,6 +43,7 @@ const targets = [
   "chat-migrate",
   "inbox-migrate",
   "publish-hash-migrate",
+  "versions-baseline-migrate",
 ];
 
 for (const [i, name] of targets.entries()) {

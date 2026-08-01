@@ -120,6 +120,18 @@ test("element-selected reporta wasProps", async ({ page }) => {
   // Selección programática vía click en edit mode:
   await frame.evaluate(() => document.body.setAttribute("data-openlen-edit-mode", ""));
   await frame.locator("h1").first().click();
+  // Reading __msgs right after a click can race the postMessage delivery —
+  // poll for the element-selected message carrying wasProps instead of a
+  // single synchronous read (documented flaky).
+  await expect
+    .poll(() =>
+      page.evaluate(() =>
+        ((window as Win).__msgs ?? []).some(
+          (m) => m.type === "openlen:element-selected" && "wasProps" in m,
+        ),
+      ),
+    )
+    .toBe(true);
   const sel = await page.evaluate(() => {
     const msgs = (window as Win).__msgs ?? [];
     return msgs.filter((m) => m.type === "openlen:element-selected").pop();

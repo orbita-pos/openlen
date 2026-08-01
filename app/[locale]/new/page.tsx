@@ -2157,17 +2157,21 @@ function NewV2Inner() {
   const openRestoreOriginal = useCallback(async () => {
     const pid = loadedIdRef.current;
     if (!pid) return;
-    const res = await fetch(`/api/projects/${pid}/versions`);
-    if (!res.ok) return;
-    // Parse idéntico al de versions-panel.tsx:95-120.
-    const list = (await res.json().catch(() => null)) as
-      | { versions?: Array<{ id: string; page: string | null; isBaseline?: boolean; createdAt: string }> }
-      | null;
-    const page = activeSitePageRef.current ?? null;
-    const base = (list?.versions ?? [])
-      .filter((v) => v.isBaseline && (v.page ?? null) === page)
-      .sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt))[0];
-    if (base) setOriginalModal({ versionId: base.id });
+    try {
+      const res = await fetch(`/api/projects/${pid}/versions`);
+      if (!res.ok) return;
+      // Parse idéntico al de versions-panel.tsx:95-120.
+      const list = (await res.json().catch(() => null)) as
+        | { versions?: Array<{ id: string; page: string | null; isBaseline?: boolean; createdAt: string }> }
+        | null;
+      const page = activeSitePageRef.current ?? null;
+      const base = (list?.versions ?? [])
+        .filter((v) => v.isBaseline && (v.page ?? null) === page)
+        .sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt))[0];
+      if (base) setOriginalModal({ versionId: base.id });
+    } catch {
+      // Network failure — silent no-op, same as "no baseline found".
+    }
   }, []);
 
   // Confirm restore: POST the existing (non-destructive) restore endpoint,
@@ -2194,6 +2198,10 @@ function NewV2Inner() {
         page: string | null;
         updatedAt?: string;
       };
+      // The loaded project may have changed while the restore fetch was in
+      // flight — landing the old project's baseline into another project's
+      // state would autosave into the wrong DB row.
+      if (loadedIdRef.current !== pid) return;
       const updatedAtMs = data.updatedAt
         ? new Date(data.updatedAt).getTime()
         : undefined;
@@ -2224,6 +2232,7 @@ function NewV2Inner() {
       setScopedSelection(null);
       setAssetModal(null);
       setOriginalModal(null);
+      setOriginalRestoring(false);
       setPendingChatDraft(null);
       setInspectMode(false);
       setInspectSelection(null);
@@ -2261,6 +2270,7 @@ function NewV2Inner() {
       setActiveLook(null);
       setPageMeta(null);
       setOriginalModal(null);
+      setOriginalRestoring(false);
       setLastInserted(null);
       pendingInsertRef.current = null;
       setDropNotice(null);

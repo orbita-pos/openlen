@@ -89,6 +89,11 @@ const INSPECT_SCRIPT = `
     var el = resolvePath(path);
     if (!el || !props.length) return;
     restoreProps(el, props);
+    // The reset may drop a bg the re-ink pass compensated for — put the
+    // original colors back or light text strands on a restored light bg.
+    for (var ri = 0; ri < props.length; ri++) {
+      if (props[ri].indexOf('background') === 0) { olRestoreReinkIn(el); break; }
+    }
     postClean();
     if (selected === el) postSelected(el);
   }
