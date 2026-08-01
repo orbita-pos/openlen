@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { TYPE_LADDER, nearestTypeIndex, typeStepValue, PAD_STEPS, nearestStep } from "./curated-steps";
+import { TYPE_LADDER, nearestTypeIndex, typeStepValue, PAD_STEPS, nearestStep, firstFontFamily } from "./curated-steps";
 
 describe("curated-steps", () => {
   it("la escalera tipográfica va de xs a 7xl y crece monotónicamente", () => {
@@ -19,5 +19,10 @@ describe("curated-steps", () => {
   });
   it("nearestStep clasifica un padding computado en su paso", () => {
     expect(nearestStep(26, PAD_STEPS).label).toBe("M");
+  });
+  it("firstFontFamily de-quotea la primera familia — mismo formato que readDisplayFont en vivo", () => {
+    expect(firstFontFamily("'Fraunces',serif")).toBe("Fraunces");
+    expect(firstFontFamily('"DM Serif Display", Georgia, serif')).toBe("DM Serif Display");
+    expect(firstFontFamily("Inter")).toBe("Inter");
   });
 });

@@ -67,6 +67,7 @@ import {
   RADIUS_STEPS,
   nearestStep,
   FONT_PAIRS,
+  firstFontFamily,
 } from "../curated-steps";
 import {
   ColorField,
@@ -1531,7 +1532,11 @@ function DesignSection({
         <div className="flex items-center gap-2 mb-1">
           <span className="text-[10.5px] fg-faint flex-1">{t("design.fonts")}</span>
           <ProvenanceReset
-            dirty={!!pageMeta?.displayFont && pageMeta.displayFont !== (authoredScales?.displayFont || pageMeta.displayFont)}
+            dirty={
+              !!pageMeta?.displayFont &&
+              !!authoredScales?.displayFont &&
+              pageMeta.displayFont !== firstFontFamily(authoredScales.displayFont)
+            }
             title={t("was.resetControl")}
             onReset={() => onApplyFontPair?.(null)}
           />

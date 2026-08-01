@@ -105,3 +105,9 @@ export const FONT_PAIRS = [
   { id: "lora", name: "Lora", displayCss: '"Lora", Georgia, serif', bodyCss: '"Karla", ui-sans-serif, sans-serif', href: "https://fonts.googleapis.com/css2?family=Lora:wght@500;700&family=Karla:wght@400;600&display=swap" },
   { id: "bricolage", name: "Bricolage", displayCss: '"Bricolage Grotesque", ui-sans-serif, sans-serif', bodyCss: '"Inter", ui-sans-serif, sans-serif', href: "https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;800&family=Inter:wght@400;500&display=swap" },
 ] as const;
+
+// Primer nombre de familia, de-quoteado — el mismo formato que readDisplayFont
+// reporta en vivo, para que autorado y vivo sean comparables.
+export function firstFontFamily(v: string): string {
+  return v.split(",")[0].trim().replace(/^['"]|['"]$/g, "");
+}
