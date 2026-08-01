@@ -20,7 +20,6 @@
   },
   "style": {
     "title": "Style",
-    "textColor": "Text color",
     "background": "Background",
     "editImage": "Edit",
     "fillImage": "Fill with image",
@@ -35,14 +34,6 @@
       "square": "Square",
       "soft": "Soft",
       "round": "Round"
-    },
-    "text": "Text",
-    "bold": "Bold",
-    "italic": "Italic",
-    "align": {
-      "left": "Align left",
-      "center": "Align center",
-      "right": "Align right"
     },
     "hide": "Hide element",
     "hideHint": "Hidden on the published page — shown dimmed here so you can restore it",
@@ -252,6 +243,7 @@
     "button": "Back to original",
     "note": "Your current version is saved first — you can undo from Versions.",
     "confirm": "Restore",
-    "cancel": "Cancel"
+    "cancel": "Cancel",
+    "none": "This page has no recorded original"
   }
 }

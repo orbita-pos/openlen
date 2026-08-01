@@ -74,6 +74,7 @@ import {
   GradientControl,
   ProvenanceReset,
   RadiusField,
+  type ResetAffordance,
   Section,
   SizeStepper,
   StepRow,
@@ -179,6 +180,11 @@ export interface PageMeta {
    *  --ol-font-display on <html>, first family name de-quoted. Null when the
    *  live document doesn't resolve one. Drives the Fuentes row's dirty ↺. */
   displayFont?: string | null;
+  /** True when the page has an applied curated font pair (a <link
+   *  data-ol-fonts> in <head>). Drives the Fuentes row's dirty ↺ on legacy
+   *  pages that never authored a --ol-font-display token — without this,
+   *  those pages could never show the pair as removable. */
+  hasFontPair?: boolean;
 }
 
 interface PropertiesPanelProps {
@@ -450,6 +456,7 @@ function ElementView({
 }) {
   const t = useTranslations("panelsProps");
   const { path, tag, hint, props, formIndex, style } = selection;
+  const ancestors = selection.ancestors ?? [];
   return (
     <div className="fade-in">
       <button
@@ -459,9 +466,9 @@ function ElementView({
       >
         <Globe size={11} /> {t("element.pageSettings")}
       </button>
-      {(selection.ancestors ?? []).length > 0 && (
+      {ancestors.length > 0 && (
         <div className="px-3 pt-2 flex items-center gap-1 flex-wrap text-[10px] fg-faint">
-          {[...(selection.ancestors ?? [])].reverse().map((a) => (
+          {[...ancestors].reverse().map((a) => (
             <span key={a.path} className="inline-flex items-center gap-1">
               <button
                 type="button"
@@ -487,7 +494,7 @@ function ElementView({
         <button
           type="button"
           onClick={() => onResetProps(path, selection.wasProps ?? [])}
-          className="mx-3 mt-2 inline-flex items-center gap-1.5 h-7 px-2 self-start rounded-md border bd bg-app fg-muted hover:fg hover:bg-hover transition text-[11px]"
+          className="mx-3 mt-2 inline-flex items-center gap-1.5 h-7 px-2 rounded-md border bd bg-app fg-muted hover:fg hover:bg-hover transition text-[11px]"
         >
           ↺ {t("was.resetElement")}
         </button>
@@ -678,19 +685,19 @@ function TextSection({
       <StepRow
         label={t("text.font")}
         options={[t("text.fonts.display"), t("text.fonts.body")]}
-        activeIndex={0}
+        activeIndex={-1}
         onPick={(i) =>
           onApplyStyle(path, "font-family", i === 0 ? "var(--ol-font-display, inherit)" : "var(--ol-font-body, inherit)")
         }
         reset={resetOf(["font-family"])}
       />
       {/* Camino secundario (spec §6): el picker libre sigue disponible bajo
-          los chips de rol — los roles son el camino primario. */}
+          los chips de rol — los roles son el camino primario. El reset de
+          "color" vive en los chips de arriba (ProvenanceReset); no duplicarlo aquí. */}
       <ColorField
         label={t("text.customColor")}
         value={style.color ?? ""}
         onCommit={(v) => onApplyStyle(path, "color", v)}
-        reset={resetOf(["color"])}
       />
     </Section>
   );
@@ -726,9 +733,6 @@ function SpacingSection({
   });
   const isBand = tag === "section" || tag === "header" || tag === "footer";
   const spacingDirty = (FACET_PROPS.espaciado as readonly string[]).some(dirty);
-  const padActive = PAD_STEPS.indexOf(nearestStep(style.paddingTopPx ?? 0, PAD_STEPS));
-  const gapActive = GAP_STEPS.indexOf(nearestStep(style.gapPx ?? 0, GAP_STEPS));
-  const densityActive = DENSITY_STEPS.indexOf(nearestStep(style.paddingTopPx ?? 0, DENSITY_STEPS));
   return (
     <Section
       label={t("spacing.title")}
@@ -749,7 +753,7 @@ function SpacingSection({
         <StepRow
           label={t("spacing.density")}
           options={DENSITY_STEPS.map((s) => t(`spacing.densities.${s.label}`))}
-          activeIndex={densityActive}
+          activeIndex={DENSITY_STEPS.indexOf(nearestStep(style.paddingTopPx ?? 0, DENSITY_STEPS))}
           onPick={(i) => {
             onApplyStyle(path, "padding-top", DENSITY_STEPS[i].value);
             onApplyStyle(path, "padding-bottom", DENSITY_STEPS[i].value);
@@ -760,7 +764,7 @@ function SpacingSection({
         <StepRow
           label={t("spacing.padding")}
           options={PAD_STEPS.map((s) => s.label)}
-          activeIndex={padActive}
+          activeIndex={PAD_STEPS.indexOf(nearestStep(style.paddingTopPx ?? 0, PAD_STEPS))}
           onPick={(i) => onApplyStyle(path, "padding", PAD_STEPS[i].value)}
           reset={resetOf(["padding"])}
         />
@@ -769,7 +773,7 @@ function SpacingSection({
         <StepRow
           label={t("spacing.gap")}
           options={GAP_STEPS.map((s) => s.label)}
-          activeIndex={gapActive}
+          activeIndex={GAP_STEPS.indexOf(nearestStep(style.gapPx ?? 0, GAP_STEPS))}
           onPick={(i) => onApplyStyle(path, "gap", GAP_STEPS[i].value)}
           reset={resetOf(["gap"])}
         />
@@ -788,7 +792,7 @@ function BorderControl({
 }: {
   width: string;
   color: string;
-  reset?: { dirty: boolean; title: string; onReset: () => void };
+  reset?: ResetAffordance;
   onApply: (border: string) => void;
 }) {
   const t = useTranslations("panelsProps");
@@ -1299,7 +1303,7 @@ function PageView({
             onClick={onRestoreOriginal}
             className="self-start inline-flex items-center gap-1.5 h-7 px-2 rounded-md border bd bg-app fg-muted hover:fg hover:bg-hover transition text-[11px]"
           >
-            ↺ {t("original.button")}
+            {t("original.button")}
           </button>
         </Section>
       )}
@@ -1521,7 +1525,9 @@ function DesignSection({
   onApplyThemeToken,
   onApplyFontPair,
 }: {
-  pageMeta: PageMeta | null;
+  // The only caller (PageView) renders this after its own `if (!pageMeta)
+  // return` early-out, so pageMeta is always resolved here.
+  pageMeta: PageMeta;
   authoredScales?: { typeScale: string; spaceScale: string; radiusScale: string; displayFont: string };
   onApplyThemeToken: (prop: string, value: string) => void;
   onApplyFontPair?: (pair: (typeof FONT_PAIRS)[number] | null) => void;
@@ -1539,32 +1545,33 @@ function DesignSection({
       <StepRow
         label={t("design.typeScale")}
         options={TYPE_SCALE_STEPS.map((s) => s.label)}
-        activeIndex={nearestScaleIndex(pageMeta?.typeScale, TYPE_SCALE_STEPS)}
+        activeIndex={nearestScaleIndex(pageMeta.typeScale, TYPE_SCALE_STEPS)}
         onPick={(i) => onApplyThemeToken("--ol-text-scale", String(TYPE_SCALE_STEPS[i].value))}
-        reset={dialReset("--ol-text-scale", authoredScales?.typeScale, pageMeta?.typeScale)}
+        reset={dialReset("--ol-text-scale", authoredScales?.typeScale, pageMeta.typeScale)}
       />
       <StepRow
         label={t("design.density")}
         options={SPACE_SCALE_STEPS.map((s) => t(`spacing.densities.${s.label}`))}
-        activeIndex={nearestScaleIndex(pageMeta?.spaceScale, SPACE_SCALE_STEPS)}
+        activeIndex={nearestScaleIndex(pageMeta.spaceScale, SPACE_SCALE_STEPS)}
         onPick={(i) => onApplyThemeToken("--ol-space-scale", String(SPACE_SCALE_STEPS[i].value))}
-        reset={dialReset("--ol-space-scale", authoredScales?.spaceScale, pageMeta?.spaceScale)}
+        reset={dialReset("--ol-space-scale", authoredScales?.spaceScale, pageMeta.spaceScale)}
       />
       <StepRow
         label={t("design.corners")}
         options={RADIUS_SCALE_STEPS.map((s) => t(`style.cornersSteps.${s.label}`))}
-        activeIndex={nearestScaleIndex(pageMeta?.radiusScale, RADIUS_SCALE_STEPS)}
+        activeIndex={nearestScaleIndex(pageMeta.radiusScale, RADIUS_SCALE_STEPS)}
         onPick={(i) => onApplyThemeToken("--ol-r-scale", String(RADIUS_SCALE_STEPS[i].value))}
-        reset={dialReset("--ol-r-scale", authoredScales?.radiusScale, pageMeta?.radiusScale)}
+        reset={dialReset("--ol-r-scale", authoredScales?.radiusScale, pageMeta.radiusScale)}
       />
       <div>
         <div className="flex items-center gap-2 mb-1">
           <span className="text-[10.5px] fg-faint flex-1">{t("design.fonts")}</span>
           <ProvenanceReset
             dirty={
-              !!pageMeta?.displayFont &&
-              !!authoredScales?.displayFont &&
-              pageMeta.displayFont !== firstFontFamily(authoredScales.displayFont)
+              (pageMeta.hasFontPair ?? false) ||
+              (!!pageMeta.displayFont &&
+                !!authoredScales?.displayFont &&
+                pageMeta.displayFont !== firstFontFamily(authoredScales.displayFont))
             }
             title={t("was.resetControl")}
             onReset={() => onApplyFontPair?.(null)}

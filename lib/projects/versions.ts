@@ -12,7 +12,7 @@
 // `createVersion` does NOT (the call sites are always inside
 // already-authorized flows).
 
-import { and, desc, eq, isNull, inArray } from "drizzle-orm";
+import { and, desc, eq, isNull, inArray, ne } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
 import type { ProjectData } from "@/lib/projects/types";
 
@@ -67,6 +67,27 @@ function scopeCondition(projectId: string, page: string | null) {
   );
 }
 
+/** Exactly one row per (project, page) scope stays isBaseline — the newest
+ *  one. Without this, every AI rewrite that sets isBaseline (each one
+ *  eviction-exempt, full HTML) piles up forever; demoting the losers lets
+ *  old baselines re-enter normal eviction once a newer one takes over. */
+async function demoteOtherBaselines(
+  projectId: string,
+  page: string | null,
+  winnerId: string,
+): Promise<void> {
+  await db
+    .update(schema.projectVersions)
+    .set({ isBaseline: false })
+    .where(
+      and(
+        scopeCondition(projectId, page),
+        eq(schema.projectVersions.isBaseline, true),
+        ne(schema.projectVersions.id, winnerId),
+      ),
+    );
+}
+
 /** Insert a snapshot row, then evict the oldest unpinned rows beyond
  *  VERSION_LIMIT within the same (project, page) scope. Returns the row's id.
  *  Skips if the most-recent version in the scope has identical HTML (no-op
@@ -94,13 +115,15 @@ export async function createVersion(
   if (recent[0]?.html === params.html) {
     const patch: { label?: string; isBaseline?: boolean } = {};
     if (params.relabelDedup && recent[0].label !== label) patch.label = label;
-    if (isBaseline && !recent[0].isBaseline) patch.isBaseline = true;
+    const promoted = isBaseline && !recent[0].isBaseline;
+    if (promoted) patch.isBaseline = true;
     if (Object.keys(patch).length > 0) {
       await db
         .update(schema.projectVersions)
         .set(patch)
         .where(eq(schema.projectVersions.id, recent[0].id));
     }
+    if (promoted) await demoteOtherBaselines(params.projectId, page, recent[0].id);
     return recent[0].id;
   }
 
@@ -114,6 +137,7 @@ export async function createVersion(
     page,
     isBaseline,
   });
+  if (isBaseline) await demoteOtherBaselines(params.projectId, page, id);
 
   // Evict the oldest unpinned beyond the cap, within this scope only.
   const rows = await db
@@ -190,6 +214,66 @@ export async function listVersions(
     isBaseline: r.isBaseline,
     createdAt: r.createdAt,
   }));
+}
+
+interface BaselineParams extends ScopedParams {
+  /** Document scope: null = home, slug = that site page. */
+  page: string | null;
+}
+
+/** Verify ownership, then look up the newest baseline row within one
+ *  (project, page) scope — the "Original" the restore-confirm modal offers.
+ *  A direct scoped query instead of filtering listVersions' (capped)
+ *  LIST_LIMIT result client-side, which can miss the baseline entirely on
+ *  many-page projects once it falls off the list. */
+export async function getBaselineVersion(
+  params: BaselineParams,
+): Promise<VersionSummary | null> {
+  const owner = await db
+    .select({ id: schema.projects.id })
+    .from(schema.projects)
+    .where(
+      and(
+        eq(schema.projects.id, params.projectId),
+        eq(schema.projects.userId, params.userId),
+      ),
+    )
+    .limit(1);
+  if (owner.length === 0) return null;
+
+  const rows = await db
+    .select({
+      id: schema.projectVersions.id,
+      projectId: schema.projectVersions.projectId,
+      label: schema.projectVersions.label,
+      source: schema.projectVersions.source,
+      page: schema.projectVersions.page,
+      pinned: schema.projectVersions.pinned,
+      isBaseline: schema.projectVersions.isBaseline,
+      createdAt: schema.projectVersions.createdAt,
+    })
+    .from(schema.projectVersions)
+    .where(
+      and(
+        scopeCondition(params.projectId, params.page),
+        eq(schema.projectVersions.isBaseline, true),
+      ),
+    )
+    .orderBy(desc(schema.projectVersions.createdAt))
+    .limit(1);
+
+  const r = rows[0];
+  if (!r) return null;
+  return {
+    id: r.id,
+    projectId: r.projectId,
+    label: r.label,
+    source: asSource(r.source),
+    page: r.page,
+    pinned: r.pinned,
+    isBaseline: r.isBaseline,
+    createdAt: r.createdAt,
+  };
 }
 
 interface VersionScopedParams extends ScopedParams {

@@ -20,7 +20,6 @@
   },
   "style": {
     "title": "Style",
-    "textColor": "Couleur du texte",
     "background": "Arrière-plan",
     "editImage": "Modifier",
     "fillImage": "Remplir d'une image",
@@ -35,14 +34,6 @@
       "square": "Carré",
       "soft": "Doux",
       "round": "Rond"
-    },
-    "text": "Texte",
-    "bold": "Gras",
-    "italic": "Italique",
-    "align": {
-      "left": "Aligner à gauche",
-      "center": "Centrer",
-      "right": "Aligner à droite"
     },
     "hide": "Masquer l'élément",
     "hideHint": "Masqué sur la page publiée — affiché en grisé ici pour pouvoir le restaurer",
@@ -252,6 +243,7 @@
     "button": "Revenir à l'original",
     "note": "Votre version actuelle est d'abord enregistrée — vous pouvez annuler le retour depuis Versions.",
     "confirm": "Restaurer",
-    "cancel": "Annuler"
+    "cancel": "Annuler",
+    "none": "Cette page n'a pas d'original enregistré"
   }
 }

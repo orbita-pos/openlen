@@ -63,7 +63,7 @@ export function ProvenanceReset({
 }
 
 /** Shared shape for the optional reset affordance a label-row field can take. */
-type ResetAffordance = { dirty: boolean; title: string; onReset: () => void };
+export type ResetAffordance = { dirty: boolean; title: string; onReset: () => void };
 
 // TextField — labeled input with onCommit on blur or Enter. Optional
 // commit-time validation keeps an invalid value in the field (shown inline)
@@ -514,6 +514,9 @@ export function StepRow({
 }: {
   label: string;
   options: readonly string[];
+  /** -1 is valid and means "no active option" — every button renders
+   *  unpressed (aria-pressed=false), which is the correct read for a
+   *  row of actions rather than a state toggle. */
   activeIndex: number;
   onPick: (index: number) => void;
   reset?: ResetAffordance;

@@ -26,7 +26,6 @@
   },
   "style": {
     "title": "Stijl",
-    "textColor": "Tekstkleur",
     "background": "Achtergrond",
     "editImage": "Bewerken",
     "fillImage": "Vullen met afbeelding",
@@ -41,14 +40,6 @@
       "square": "Recht",
       "soft": "Zacht",
       "round": "Rond"
-    },
-    "text": "Tekst",
-    "bold": "Vet",
-    "italic": "Cursief",
-    "align": {
-      "left": "Links uitlijnen",
-      "center": "Centreren",
-      "right": "Rechts uitlijnen"
     },
     "hide": "Element verbergen",
     "hideHint": "Verborgen op de gepubliceerde pagina — hier gedimd zodat je het kunt herstellen",
@@ -252,6 +243,7 @@
     "button": "Terug naar origineel",
     "note": "Je huidige versie wordt eerst opgeslagen — je kunt het terugzetten ongedaan maken via Versies.",
     "confirm": "Herstellen",
-    "cancel": "Annuleren"
+    "cancel": "Annuleren",
+    "none": "Deze pagina heeft geen vastgelegd origineel"
   }
 }

@@ -92,6 +92,13 @@ function applyResetMsg(frame: Frame, path: string, props: string[]) {
   );
 }
 
+function applySelectMsg(frame: Frame, path: string) {
+  return frame.evaluate(
+    (p) => window.postMessage({ type: "openlen:apply-prop", scope: "select", path: p }, "*"),
+    path,
+  );
+}
+
 test("stash de primer toque + reset restaura el valor de diseño", async ({ page }) => {
   const frame = await loadInto(page, NORMALIZED);
   const path = await pathOf(frame, "h1");
@@ -186,10 +193,7 @@ test("breadcrumb: element-selected trae ancestros y scope select re-selecciona",
   );
   const ancestors = (sel as { ancestors?: Array<{ path: string; tag: string }> }).ancestors ?? [];
   expect(ancestors.length).toBeGreaterThan(0);
-  await frame.evaluate(
-    (p) => window.postMessage({ type: "openlen:apply-prop", scope: "select", path: p }, "*"),
-    ancestors[0].path,
-  );
+  await applySelectMsg(frame, ancestors[0].path);
   await expect
     .poll(() =>
       page.evaluate(() =>

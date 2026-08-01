@@ -26,11 +26,12 @@ import { sanitizeForPublish } from "@/lib/html-engine";
 export const runtime = "nodejs";
 
 const MAX_HTML_BYTES = 8 * 1024 * 1024;
-// Idle-based checkpoint cadence for inline content edits — if it's been
-// at least this long since the document's most-recent version of any kind,
-// the next PATCH writes a "manual" snapshot so the user has natural undo
-// points across long editing sessions. Short bursts of edits share a
-// single snapshot; sustained editing produces one checkpoint per window.
+// Idle-based checkpoint cadence for inline content edits and inspector
+// `props` edits — if it's been at least this long since the document's
+// most-recent version of any kind, the next PATCH writes a "manual"
+// snapshot so the user has natural undo points across long editing
+// sessions. Short bursts of edits share a single snapshot; sustained
+// editing produces one checkpoint per window.
 const IDLE_CHECKPOINT_MS = 5 * 60 * 1000;
 
 interface PatchBody {

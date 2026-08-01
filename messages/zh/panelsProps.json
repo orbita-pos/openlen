@@ -20,7 +20,6 @@
   },
   "style": {
     "title": "样式",
-    "textColor": "文字颜色",
     "background": "背景",
     "editImage": "编辑",
     "fillImage": "用图片填充",
@@ -35,14 +34,6 @@
       "square": "直角",
       "soft": "小圆角",
       "round": "大圆角"
-    },
-    "text": "文字",
-    "bold": "加粗",
-    "italic": "斜体",
-    "align": {
-      "left": "左对齐",
-      "center": "居中",
-      "right": "右对齐"
     },
     "hide": "隐藏元素",
     "hideHint": "在已发布页面隐藏 — 这里以淡显显示，便于恢复",
@@ -252,6 +243,7 @@
     "button": "恢复到原始版本",
     "note": "系统会先保存你当前的版本——你可以在「版本」中撤销此次恢复。",
     "confirm": "恢复",
-    "cancel": "取消"
+    "cancel": "取消",
+    "none": "此页面没有记录的原始版本"
   }
 }

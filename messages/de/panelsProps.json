@@ -20,7 +20,6 @@
   },
   "style": {
     "title": "Stil",
-    "textColor": "Textfarbe",
     "background": "Hintergrund",
     "editImage": "Bearbeiten",
     "fillImage": "Mit Bild füllen",
@@ -35,14 +34,6 @@
       "square": "Eckig",
       "soft": "Weich",
       "round": "Rund"
-    },
-    "text": "Text",
-    "bold": "Fett",
-    "italic": "Kursiv",
-    "align": {
-      "left": "Linksbündig",
-      "center": "Zentriert",
-      "right": "Rechtsbündig"
     },
     "hide": "Element ausblenden",
     "hideHint": "Auf der veröffentlichten Seite ausgeblendet — hier abgedunkelt, damit du es wiederherstellen kannst",
@@ -252,6 +243,7 @@
     "button": "Zum Original zurück",
     "note": "Deine aktuelle Version wird vorher gespeichert — du kannst die Rückkehr in Versionen rückgängig machen.",
     "confirm": "Wiederherstellen",
-    "cancel": "Abbrechen"
+    "cancel": "Abbrechen",
+    "none": "Diese Seite hat kein gespeichertes Original"
   }
 }

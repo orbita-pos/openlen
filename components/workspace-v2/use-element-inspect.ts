@@ -66,7 +66,7 @@ const INSPECT_SCRIPT = `
   function stashProp(el, prop) {
     var map = parseStash(el.getAttribute(STASH_ATTR));
     if (Object.prototype.hasOwnProperty.call(map, prop)) return;
-    map[prop] = el.style.getPropertyValue(prop) || '';
+    map[prop] = el.style.getPropertyValue(prop);
     var s = serializeStash(map);
     if (s !== null) el.setAttribute(STASH_ATTR, s);
   }
@@ -474,6 +474,7 @@ const INSPECT_SCRIPT = `
       border: readBorder(),
       mode: readMode(),
       hasDark: !!document.querySelector('style[data-ol-modes]'),
+      hasFontPair: !!document.querySelector('link[data-ol-fonts]'),
       // The page's authored theme — the "Original" reset baseline. Distinct
       // from the live tokens above (which reflect any applied Look).
       authored: readAuthored(),

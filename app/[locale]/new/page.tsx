@@ -251,6 +251,7 @@ function NewV2Inner() {
   const tAsset = useTranslations("modalsAsset");
   const tws = useTranslations("wsChrome");
   const tVersions = useTranslations("panelsB");
+  const tProps = useTranslations("panelsProps");
   const locale = useLocale();
   const [dark, toggleDark] = useDarkMode();
   const toast = useToast();
@@ -608,6 +609,10 @@ function NewV2Inner() {
   // Gemini round-trip, and the user can navigate to another project (back/forward)
   // mid-flight — we must not drop a fragment themed for the OLD project into the new.
   const loadedIdRef = useRef<string | null>(null);
+  // Doble-click guard for openRestoreOriginal — the baseline lookup is an
+  // async fetch; a second click before it resolves must not race a second
+  // in-flight lookup (and, worse, pop the confirm modal twice).
+  const openingOriginalRef = useRef(false);
   // The section just added (drives the Undo pill). Cleared on undo or dismiss.
   const [lastInserted, setLastInserted] = useState<{
     id: string;
@@ -1096,6 +1101,7 @@ function NewV2Inner() {
             spaceScale: typeof m.spaceScale === "number" ? m.spaceScale : null,
             radiusScale: typeof m.radiusScale === "number" ? m.radiusScale : null,
             displayFont: typeof m.displayFont === "string" ? m.displayFont : null,
+            hasFontPair: !!m.hasFontPair,
           });
           // Snapshot the page's original theme tokens from the FIRST meta of
           // this project load — the "Original" reset re-applies these resolved
@@ -2149,30 +2155,37 @@ function NewV2Inner() {
     [loadedProject, refetchProject, switchSitePage],
   );
 
-  // «Volver al original» — find the newest baseline snapshot scoped to the
-  // document on the canvas and open the confirm modal with its preview. No
-  // baseline for this page (shouldn't happen — every document gets one on
-  // creation) → the button silently no-ops, same as versions-panel would
-  // show nothing to restore.
+  // «Volver al original» — look up the newest baseline snapshot scoped to
+  // the document on the canvas (server-side, via ?baseline=1 — avoids
+  // filtering the capped /versions list, which can miss the baseline on
+  // many-page projects) and open the confirm modal with its preview. No
+  // baseline for this page → toast instead of a silent no-op.
   const openRestoreOriginal = useCallback(async () => {
-    const pid = loadedIdRef.current;
-    if (!pid) return;
+    if (openingOriginalRef.current) return;
+    openingOriginalRef.current = true;
     try {
-      const res = await fetch(`/api/projects/${pid}/versions`);
-      if (!res.ok) return;
-      // Parse idéntico al de versions-panel.tsx:95-120.
-      const list = (await res.json().catch(() => null)) as
-        | { versions?: Array<{ id: string; page: string | null; isBaseline?: boolean; createdAt: string }> }
-        | null;
+      const pid = loadedIdRef.current;
+      if (!pid) return;
       const page = activeSitePageRef.current ?? null;
-      const base = (list?.versions ?? [])
-        .filter((v) => v.isBaseline && (v.page ?? null) === page)
-        .sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt))[0];
-      if (base) setOriginalModal({ versionId: base.id });
+      const qs = page
+        ? `?baseline=1&page=${encodeURIComponent(page)}`
+        : "?baseline=1";
+      const res = await fetch(`/api/projects/${pid}/versions${qs}`);
+      if (!res.ok) return;
+      const data = (await res.json().catch(() => null)) as
+        | { baseline?: { id: string } | null }
+        | null;
+      if (data?.baseline) {
+        setOriginalModal({ versionId: data.baseline.id });
+      } else {
+        toast.info(tProps("original.none"));
+      }
     } catch {
-      // Network failure — silent no-op, same as "no baseline found".
+      // Network failure — silent no-op, same as before this endpoint existed.
+    } finally {
+      openingOriginalRef.current = false;
     }
-  }, []);
+  }, [toast, tProps]);
 
   // Confirm restore: POST the existing (non-destructive) restore endpoint,
   // then run the exact same post-restore sequence versions-panel.tsx runs

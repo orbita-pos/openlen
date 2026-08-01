@@ -2,14 +2,21 @@ import { and, eq } from "drizzle-orm";
 import { auth } from "@/auth";
 import { db, schema } from "@/lib/db";
 import { validatePageSlug } from "@/lib/projects/site-pages";
-import { createVersion, listVersions } from "@/lib/projects/versions";
+import {
+  createVersion,
+  getBaselineVersion,
+  listVersions,
+} from "@/lib/projects/versions";
 
 export const runtime = "nodejs";
 
 // GET /api/projects/<id>/versions — returns the user's version history for
 // this project, newest-first, across all page scopes (the panel filters).
+// With ?baseline=1[&page=<slug>], instead returns { baseline } — the newest
+// baseline row scoped to that document (absent page = home) — so "Volver al
+// original" can look it up directly instead of filtering the capped list.
 export async function GET(
-  _req: Request,
+  req: Request,
   ctx: { params: Promise<{ id: string }> },
 ): Promise<Response> {
   const session = await auth();
@@ -17,6 +24,23 @@ export async function GET(
 
   const { id } = await ctx.params;
   if (!id) return json({ error: "missing id" }, 400);
+
+  const url = new URL(req.url);
+  if (url.searchParams.get("baseline") === "1") {
+    const rawPage = url.searchParams.get("page");
+    let page: string | null = null;
+    if (rawPage) {
+      const check = validatePageSlug(rawPage);
+      if (!check.ok) return json({ error: "invalid_page" }, 400);
+      page = check.slug;
+    }
+    const baseline = await getBaselineVersion({
+      projectId: id,
+      userId: session.user.id,
+      page,
+    });
+    return json({ baseline }, 200);
+  }
 
   const versions = await listVersions({
     projectId: id,

@@ -20,7 +20,6 @@
   },
   "style": {
     "title": "Stile",
-    "textColor": "Colore del testo",
     "background": "Sfondo",
     "editImage": "Modifica",
     "fillImage": "Riempi con immagine",
@@ -35,14 +34,6 @@
       "square": "Squadrati",
       "soft": "Morbidi",
       "round": "Arrotondati"
-    },
-    "text": "Testo",
-    "bold": "Grassetto",
-    "italic": "Corsivo",
-    "align": {
-      "left": "Allinea a sinistra",
-      "center": "Centra",
-      "right": "Allinea a destra"
     },
     "hide": "Nascondi elemento",
     "hideHint": "Nascosto nella pagina pubblicata — qui appare attenuato così puoi ripristinarlo",
@@ -252,6 +243,7 @@
     "button": "Torna all'originale",
     "note": "La tua versione attuale viene salvata prima — puoi annullare il ripristino da Versioni.",
     "confirm": "Ripristina",
-    "cancel": "Annulla"
+    "cancel": "Annulla",
+    "none": "Questa pagina non ha un originale registrato"
   }
 }

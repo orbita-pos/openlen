@@ -20,7 +20,6 @@
   },
   "style": {
     "title": "Estilo",
-    "textColor": "Color del texto",
     "background": "Fondo",
     "editImage": "Editar",
     "fillImage": "Rellenar con imagen",
@@ -35,14 +34,6 @@
       "square": "Recto",
       "soft": "Suave",
       "round": "Redondo"
-    },
-    "text": "Texto",
-    "bold": "Negrita",
-    "italic": "Itálica",
-    "align": {
-      "left": "Alinear izquierda",
-      "center": "Centrar",
-      "right": "Alinear derecha"
     },
     "hide": "Ocultar elemento",
     "hideHint": "Oculto en la página publicada — aquí se ve atenuado para que puedas restaurarlo",
@@ -252,6 +243,7 @@
     "button": "Volver al original",
     "note": "Tu versión actual se guarda antes — puedes deshacer el regreso desde Versiones.",
     "confirm": "Restaurar",
-    "cancel": "Cancelar"
+    "cancel": "Cancelar",
+    "none": "Esta página no tiene un original registrado"
   }
 }

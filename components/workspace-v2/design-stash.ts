@@ -15,9 +15,10 @@ export function parseStash(raw: string | null): Record<string, string> {
   try {
     const v: unknown = JSON.parse(raw);
     if (!v || typeof v !== "object" || Array.isArray(v)) return {};
+    const obj = v as Record<string, unknown>;
     const out: Record<string, string> = {};
-    for (const k of Object.keys(v as Record<string, unknown>)) {
-      const val = (v as Record<string, unknown>)[k];
+    for (const k of Object.keys(obj)) {
+      const val = obj[k];
       if (typeof val === "string") out[k] = val;
     }
     return out;
