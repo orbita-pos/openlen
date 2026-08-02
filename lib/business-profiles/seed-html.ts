@@ -13,6 +13,8 @@
 import type { BusinessProfileData } from "./types";
 import { applyAccentToHtml } from "./apply-accent";
 import { injectContactWidget } from "./contact-widget";
+import { renderPlatformsBand, PLATFORMS_BAND_MARKER } from "./platforms-band";
+import { stripBandByMarker } from "@/lib/publish/strip-disabled-bands";
 
 const DEFAULT_ACCENT = "#FF5A36";
 
@@ -42,6 +44,7 @@ export function seedBrandIntoHtml(
   const accent = data.brand?.accent ?? null;
   let out = stripPriorSeed(html);
   if (recolor && accent) out = applyAccentToHtml(out, accent);
+  out = fillPlatformsBand(out, data);
   out = injectContactWidget(out, data, accent ?? DEFAULT_ACCENT);
   return out;
 }
@@ -55,4 +58,44 @@ export function profileMeta(data: BusinessProfileData): {
     logoUrl: data.brand?.logoUrl ?? undefined,
     ogImage: data.photos?.[0] ?? undefined,
   };
+}
+
+// Depth-aware match for the marker element's OWN close tag, starting just
+// after its open tag. buildModuleSection wraps the marker in a plain <div>,
+// and renderPlatformsBand's grid is itself a <div> — a naive first-`</div>`
+// search would land on the grid's own close on re-seed, leaving a stray
+// unmatched </div> behind. Same linear single-pass technique as elementEnd
+// in strip-disabled-bands.ts.
+function matchingCloseStart(html: string, contentStart: number, tag: string): number {
+  const scan = new RegExp(`<${tag}\\b|</${tag}>`, "gi");
+  scan.lastIndex = contentStart;
+  let depth = 1;
+  let m: RegExpExecArray | null;
+  while ((m = scan.exec(html))) {
+    if (m[0][1] === "/") {
+      depth -= 1;
+      if (depth === 0) return m.index;
+    } else {
+      depth += 1;
+    }
+  }
+  return -1;
+}
+
+/** Rellena el placeholder de la banda con la rejilla de tarjetas. Sin ninguna
+ *  plataforma armable borra la banda ENTERA — un encabezado "Encuéntrame en"
+ *  sobre un hueco vacío rompería Born-100. Idempotente: reemplaza el CONTENIDO
+ *  del elemento marcado, así que re-sembrar no duplica. */
+export function fillPlatformsBand(html: string, data: BusinessProfileData): string {
+  const open = new RegExp(`<(section|div)[^>]*\\b${PLATFORMS_BAND_MARKER}\\b[^>]*>`, "i").exec(html);
+  if (!open) return html;
+
+  const grid = renderPlatformsBand(data);
+  if (!grid) return stripBandByMarker(html, PLATFORMS_BAND_MARKER);
+
+  const tag = open[1];
+  const at = open.index + open[0].length;
+  const closeStart = matchingCloseStart(html, at, tag);
+  if (closeStart === -1) return html;
+  return html.slice(0, at) + grid + html.slice(closeStart);
 }

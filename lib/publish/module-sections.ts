@@ -15,7 +15,7 @@
 
 import { waHref } from "./whatsapp-button";
 
-export type ModuleSurface = "bookings" | "collections" | "comments" | "whatsapp" | "chat";
+export type ModuleSurface = "bookings" | "collections" | "comments" | "whatsapp" | "chat" | "platforms";
 
 export interface ModuleSectionOpts {
   /** Page language; Spanish copy when it starts with "es", else English. */
@@ -53,6 +53,10 @@ const COPY = {
     es: { eyebrow: "Chat privado", heading: "Habla directamente con nosotros", body: "Inicia sesión y envíanos un mensaje — te respondemos al momento." },
     en: { eyebrow: "Private chat", heading: "Talk directly with us", body: "Sign in and send us a message — we reply right away." },
   },
+  platforms: {
+    es: { eyebrow: "Plataformas", heading: "Encuéntrame en", body: "Sígueme donde prefieras." },
+    en: { eyebrow: "Platforms", heading: "Find me on", body: "Follow along wherever you like." },
+  },
 } as const;
 
 const SECTION_MARKER: Record<Exclude<ModuleSurface, "whatsapp">, string> = {
@@ -60,6 +64,7 @@ const SECTION_MARKER: Record<Exclude<ModuleSurface, "whatsapp">, string> = {
   collections: "data-ol-collection-section",
   comments: "data-ol-comments-section",
   chat: "data-ol-chat-section",
+  platforms: "data-ol-platforms-section",
 };
 
 const WA_ICON =
@@ -103,5 +108,5 @@ export function buildModuleSection(
 
   const c = COPY[module][lang];
   const inner = `<div ${SECTION_MARKER[module]}></div>`;
-  return band(module === "collections" ? 1100 : 720, c, inner);
+  return band(module === "collections" ? 1100 : module === "platforms" ? 900 : 720, c, inner);
 }

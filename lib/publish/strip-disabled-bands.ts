@@ -43,7 +43,8 @@ function elementEnd(html: string, open: number, tag: string): number {
   return -1;
 }
 
-function stripOne(html: string, marker: string): string {
+/** Borra la banda entera que contiene `marker`. Escaneo lineal, idempotente. */
+export function stripBandByMarker(html: string, marker: string): string {
   let out = html;
   let from = 0;
   for (let guard = 0; guard < 200; guard++) {
@@ -109,7 +110,7 @@ export function stripDisabledModuleBands(
   for (const mod of Object.keys(MARKERS) as StrippableModule[]) {
     if (enabled[mod]) continue;
     if (!out.includes(MARKERS[mod])) continue;
-    out = stripOne(out, MARKERS[mod]);
+    out = stripBandByMarker(out, MARKERS[mod]);
   }
   return out;
 }
