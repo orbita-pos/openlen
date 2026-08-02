@@ -178,3 +178,59 @@ describe("preview scopes section modules to their band", () => {
     assert.ok(out.includes("data-ol-bookings-widget"));
   });
 });
+
+describe("preview plays video links the same way publish does", () => {
+  const withVideo = HOME.replace(
+    "<footer",
+    '<a href="https://www.youtube.com/watch?v=dQw4w9WgXcQ">Ver el video</a><footer',
+  );
+
+  it("tags a YouTube link and injects the lightbox runtime", () => {
+    const out = bakeModulesForPreviewHtml(withVideo, { ...baseCtx });
+    assert.ok(out.includes('data-ol-video="yt:dQw4w9WgXcQ"'), "anchor tagged");
+    assert.ok(out.includes("data-ol-video-lightbox"), "runtime injected");
+    assert.ok(
+      out.includes("https://www.youtube.com/watch?v=dQw4w9WgXcQ"),
+      "href kept — JS off still links out",
+    );
+  });
+
+  it("leaves a document with no video links untouched", () => {
+    assert.equal(bakeModulesForPreviewHtml(HOME, { ...baseCtx }), HOME);
+  });
+
+  it("honours the OPENLEN_VIDEO_EMBED kill switch", () => {
+    const prev = process.env.OPENLEN_VIDEO_EMBED;
+    process.env.OPENLEN_VIDEO_EMBED = "0";
+    try {
+      assert.equal(bakeModulesForPreviewHtml(withVideo, { ...baseCtx }), withVideo);
+    } finally {
+      if (prev === undefined) delete process.env.OPENLEN_VIDEO_EMBED;
+      else process.env.OPENLEN_VIDEO_EMBED = prev;
+    }
+  });
+
+  it("is idempotent — a second pass adds no second runtime", () => {
+    const once = bakeModulesForPreviewHtml(withVideo, { ...baseCtx });
+    const twice = bakeModulesForPreviewHtml(once, { ...baseCtx });
+    assert.equal(twice, once);
+  });
+
+  // Medido en navegador: bajo `sandbox allow-scripts` (sin allow-same-origin)
+  // el player de YouTube lanza jserror y deja un rectángulo negro. Ahí el
+  // enlace crudo — que navega a YouTube — es la mejor experiencia posible.
+  it("skips the lightbox on a sandboxed surface (opaque origin)", () => {
+    const out = bakeModulesForPreviewHtml(withVideo, { ...baseCtx, sandboxed: true });
+    assert.equal(out, withVideo);
+  });
+
+  it("still bakes the other modules on a sandboxed surface", () => {
+    const out = bakeModulesForPreviewHtml(withVideo, {
+      ...baseCtx,
+      sandboxed: true,
+      settings: { whatsapp: { enabled: true, number: "5215512345678" } },
+    });
+    assert.ok(out.includes("data-ol-wa-button"), "FAB still baked");
+    assert.ok(!out.includes("data-ol-video-lightbox"), "video still skipped");
+  });
+});

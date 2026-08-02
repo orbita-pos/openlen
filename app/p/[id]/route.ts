@@ -92,6 +92,9 @@ export async function GET(
       sub: meta?.subdomain ?? null,
       page: pageSlug ?? null,
       data,
+      // PREVIEW_CSP es sandbox SIN allow-same-origin, y esa bandera la heredan
+      // los iframes anidados: los players de terceros no montan aquí.
+      sandboxed: true,
     });
   } catch {
     /* raw draft is still a valid preview */

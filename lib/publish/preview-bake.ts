@@ -4,12 +4,12 @@
 // anywhere until the next publish, which reads as "the module is broken".
 //
 // Scope: exactly the module UI bakes (collections grid, assistant, comments,
-// bookings, chat, WhatsApp FAB, orders cart) with the SAME gates, ordering and
-// stacking as publishToDir — deliberately excluding the impure/publish-only
-// steps (asset/font migration, live-data fetch, analytics, canonical/SEO, CSP
-// seal, sign-in link wiring). Widget runtimes fetch their APIs from the
-// visitor's browser; on an unpublished draft those calls no-op and the widget
-// renders its static shell, which is what a preview needs.
+// bookings, chat, video lightbox, WhatsApp FAB, orders cart) with the SAME
+// gates, ordering and stacking as publishToDir — deliberately excluding the
+// impure/publish-only steps (asset/font migration, live-data fetch, analytics,
+// canonical/SEO, CSP seal, sign-in link wiring). Widget runtimes fetch their
+// APIs from the visitor's browser; on an unpublished draft those calls no-op
+// and the widget renders its static shell, which is what a preview needs.
 
 import { bakeAssistantWidget } from "@/lib/publish/assistant-widget";
 import { bakeComments, hasCommentsSection } from "@/lib/publish/comments-widget";
@@ -18,6 +18,7 @@ import { bakeCollections } from "@/lib/publish/collections-block";
 import { bakeWhatsAppButton, waHref } from "@/lib/publish/whatsapp-button";
 import { injectOrdersCart } from "@/lib/publish/orders-cart";
 import { bakeChatWidget } from "@/lib/publish/chat-widget";
+import { bakeVideoEmbeds } from "@/lib/publish/video-embed";
 import { detectSiteAccent } from "@/lib/members/site-accent";
 import {
   applySigninLink,
@@ -47,6 +48,12 @@ export interface PreviewBakeCtx {
    *  somewhere, only the documents that carry it get the widget. Absent =
    *  no band known = the append-everywhere fallback. */
   sectionBands?: { bookings: boolean; comments: boolean };
+  /** ¿El documento se sirve con CSP `sandbox` (sin allow-same-origin)? El
+   *  origen opaco que eso da se HEREDA a los iframes anidados, y el player de
+   *  YouTube revienta ahí — medido: lanza jserror y deja un rectángulo negro.
+   *  Con esto en true el lightbox no se inyecta y el enlace sigue navegando
+   *  fuera, que es lo correcto en esa superficie. */
+  sandboxed?: boolean;
 }
 
 export function bakeModulesForPreviewHtml(html: string, ctx: PreviewBakeCtx): string {
@@ -160,6 +167,18 @@ export function bakeModulesForPreviewHtml(html: string, ctx: PreviewBakeCtx): st
     }
   }
 
+  // In-page video playback. Universal (no module flag), same position in the
+  // chain as publishToDir. Without it a creator's YouTube/Vimeo links only
+  // become playable at publish, so the preview under-promises the page.
+  // Skipped on sandboxed surfaces — see PreviewBakeCtx.sandboxed.
+  if (process.env.OPENLEN_VIDEO_EMBED !== "0" && !ctx.sandboxed) {
+    try {
+      out = bakeVideoEmbeds(out);
+    } catch {
+      /* soft-fail */
+    }
+  }
+
   if (process.env.OPENLEN_WHATSAPP !== "0" && s.whatsapp?.enabled && s.whatsapp.number) {
     try {
       // Same FAB stacking as publish: the assistant takes the right corner's
@@ -238,6 +257,8 @@ export async function bakeModulesForPreview(
     sub?: string | null;
     page: string | null;
     data: ProjectData | null | undefined;
+    /** Ver PreviewBakeCtx.sandboxed — lo decide la ruta que sirve el HTML. */
+    sandboxed?: boolean;
   },
 ): Promise<string> {
   let collectionsItems: PreviewBakeCtx["collectionsItems"] = null;
@@ -273,6 +294,7 @@ export async function bakeModulesForPreview(
     sub: opts.sub,
     page: opts.page,
     settings: opts.data?.settings,
+    sandboxed: opts.sandboxed,
     collectionsItems,
     memberSignin: door.signinPath
       ? { path: door.signinPath, isAccount: door.signinIsAccount }

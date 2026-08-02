@@ -1,11 +1,12 @@
 // Publish-time in-page video playback for YouTube/Vimeo links.
 //
 // SECURITY MODEL (why this is safe without touching the Rust sanitizer/seal):
-// the published page's CSP only locks script-src/object-src/base-uri/form-action
-// — it sets no frame-src/default-src, so frames are unrestricted. The sanitizer
-// strips iframes from USER html, but this bake runs AFTER sanitize / BEFORE seal
-// (like bakeMusic/bakeComments), and the seal never strips iframes — so the
-// lightbox we inject survives + loads. We NEVER put a creator-supplied URL into
+// the published page's CSP pins frame-src to exactly the two embed origins this
+// file builds (seal.rs) — any other iframe is blocked by the page's own policy.
+// The sanitizer strips iframes from USER html, but this bake runs AFTER sanitize
+// / BEFORE seal (like bakeMusic/bakeComments), and the seal never strips
+// iframes — so the lightbox we inject survives + loads. We NEVER put a
+// creator-supplied URL into
 // an iframe src: we extract a canonical video ID server-side (strict host
 // allowlist + ID-format check) and the runtime builds the embed from a FIXED
 // origin + that validated id. The id is [A-Za-z0-9_-] / digits only — it cannot

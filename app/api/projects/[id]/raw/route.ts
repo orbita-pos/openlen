@@ -2,7 +2,7 @@ import { and, eq } from "drizzle-orm";
 import { auth } from "@/auth";
 import { db, schema } from "@/lib/db";
 import { bakeModulesForPreview } from "@/lib/publish/preview-bake";
-import { embedSandboxHeaders } from "@/lib/publish/embed-sandbox";
+import { embedSandboxHeaders, isFramedRequest } from "@/lib/publish/embed-sandbox";
 
 export const runtime = "nodejs";
 
@@ -50,6 +50,9 @@ export async function GET(
         sub: row.subdomain ?? null,
         page,
         data: row.data,
+        // Mismo criterio que embedSandboxHeaders abajo: incrustado ⇒ origen
+        // opaco ⇒ nada de players de terceros (no montan y quedan en negro).
+        sandboxed: isFramedRequest(req),
       });
     } catch {
       return html;

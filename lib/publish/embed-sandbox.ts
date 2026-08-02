@@ -33,9 +33,16 @@ export const EMBED_SANDBOX_CSP = "sandbox allow-scripts";
 /** Destinos en los que el documento se pinta DENTRO de otra página. */
 const FRAMED = new Set(["iframe", "frame", "embed", "object"]);
 
+/** ¿Esta respuesta va a salir sandboxeada? Mismo criterio que
+ *  embedSandboxHeaders, expuesto aparte porque el bake necesita saberlo ANTES
+ *  de decidir qué inyecta: un origen opaco rompe los players de terceros. */
+export function isFramedRequest(req: Request): boolean {
+  const dest = req.headers.get("sec-fetch-dest")?.trim().toLowerCase() ?? "";
+  return FRAMED.has(dest);
+}
+
 /** Headers a mezclar en la respuesta: la CSP solo cuando el documento va
  *  incrustado. Devuelve {} en navegación de primer nivel. */
 export function embedSandboxHeaders(req: Request): Record<string, string> {
-  const dest = req.headers.get("sec-fetch-dest")?.trim().toLowerCase() ?? "";
-  return FRAMED.has(dest) ? { "content-security-policy": EMBED_SANDBOX_CSP } : {};
+  return isFramedRequest(req) ? { "content-security-policy": EMBED_SANDBOX_CSP } : {};
 }
