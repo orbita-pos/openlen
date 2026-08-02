@@ -5,6 +5,7 @@
 // template's own footer. Only emitted when the profile has something to show.
 
 import type { BusinessProfileData } from "./types";
+import { PLATFORMS, PLATFORM_ICON_PATHS, platformHref } from "./platforms";
 
 function esc(s: string): string {
   return s
@@ -22,13 +23,6 @@ function waHref(num: string): string {
   let d = digits(num);
   if (d.length === 10) d = "52" + d; // MX local → international (primary market)
   return `https://wa.me/${d}`;
-}
-
-function urlHref(raw: string): string {
-  const v = raw.trim();
-  if (/^https?:\/\//i.test(v)) return v;
-  if (/^@/.test(v)) return v; // handled by the social builders
-  return `https://${v.replace(/^\/+/, "")}`;
 }
 
 function handle(v: string): string {
@@ -50,8 +44,12 @@ const ICONS: Record<string, string> = {
   close: '<path d="M18 6 6 18"/><path d="m6 6 12 12"/>',
 };
 
+// Los iconos de plataforma viven en el registry (fuente única, compartida con
+// la UI de Mi negocio y la banda). Los locales de contacto ganan por si acaso.
+const ALL_ICONS: Record<string, string> = { ...PLATFORM_ICON_PATHS, ...ICONS };
+
 function svg(icon: string, size: number): string {
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[icon] ?? ICONS.link}</svg>`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ALL_ICONS[icon] ?? ALL_ICONS.link}</svg>`;
 }
 
 interface Action {
@@ -71,8 +69,10 @@ function buildActions(data: BusinessProfileData): Action[] {
   if (s?.tiktok?.trim()) a.push({ href: `https://tiktok.com/@${handle(s.tiktok)}`, icon: "tiktok", label: "TikTok" });
   for (const l of data.links ?? []) {
     if (!l.url?.trim()) continue;
-    const icon = l.type === "youtube" ? "youtube" : l.type === "tiktok" ? "tiktok" : l.type === "website" ? "globe" : "link";
-    a.push({ href: urlHref(l.url), icon, label: l.type });
+    const href = platformHref(l.type, l.url);
+    if (!href) continue; // handle inarmable → mejor nada que un enlace roto
+    const p = PLATFORMS[l.type];
+    a.push({ href, icon: p?.icon ?? "link", label: p?.label ?? l.type });
   }
   if (c?.phone?.trim()) a.push({ href: `tel:${digits(c.phone)}`, icon: "phone", label: "Teléfono" });
   if (c?.email?.trim()) a.push({ href: `mailto:${c.email.trim()}`, icon: "mail", label: "Email" });
