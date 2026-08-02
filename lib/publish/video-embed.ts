@@ -20,6 +20,7 @@
 const YT_HOSTS = new Set([
   "youtube.com", "www.youtube.com", "m.youtube.com",
   "youtu.be", "youtube-nocookie.com", "www.youtube-nocookie.com",
+  "music.youtube.com",
 ]);
 const VIMEO_HOSTS = new Set(["vimeo.com", "www.vimeo.com", "player.vimeo.com"]);
 const YT_ID = /^[A-Za-z0-9_-]{11}$/;

@@ -15,6 +15,10 @@ describe("extractVideoId — valid", () => {
   it("watch with extra params keeps only the id", () => {
     expect(extractVideoId("https://www.youtube.com/watch?v=dQw4w9WgXcQ&t=42s&list=PLx")).toEqual({ provider: "youtube", id: "dQw4w9WgXcQ" });
   });
+  it("reconoce un track de YouTube Music", () => {
+    expect(extractVideoId("https://music.youtube.com/watch?v=dQw4w9WgXcQ"))
+      .toEqual({ provider: "youtube", id: "dQw4w9WgXcQ" });
+  });
   it("vimeo plain + player", () => {
     expect(extractVideoId("https://vimeo.com/123456789")).toEqual({ provider: "vimeo", id: "123456789" });
     expect(extractVideoId("https://player.vimeo.com/video/123456789")).toEqual({ provider: "vimeo", id: "123456789" });
