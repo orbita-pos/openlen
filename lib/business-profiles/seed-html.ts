@@ -82,20 +82,90 @@ function matchingCloseStart(html: string, contentStart: number, tag: string): nu
   return -1;
 }
 
-/** Rellena el placeholder de la banda con la rejilla de tarjetas. Sin ninguna
- *  plataforma armable borra la banda ENTERA — un encabezado "Encuéntrame en"
- *  sobre un hueco vacío rompería Born-100. Idempotente: reemplaza el CONTENIDO
- *  del elemento marcado, así que re-sembrar no duplica. */
+// Index of the ">" that closes the tag starting at `open`, skipping any ">"
+// inside a quoted attribute value. Mirrors strip-disabled-bands.ts.
+function openTagEnd(html: string, open: number): number {
+  let quote: string | null = null;
+  for (let i = open; i < html.length; i++) {
+    const ch = html[i];
+    if (quote) {
+      if (ch === quote) quote = null;
+    } else if (ch === '"' || ch === "'") {
+      quote = ch;
+    } else if (ch === ">") {
+      return i;
+    }
+  }
+  return -1;
+}
+
+const ATTR_TOKEN_RE = /([a-zA-Z_:][-a-zA-Z0-9_:.]*)(?:\s*=\s*(?:"[^"]*"|'[^']*'|[^\s"'=<>`]+))?/g;
+
+// Is `name` a genuine attribute in `tagText` — not merely a substring inside
+// another attribute's quoted value (e.g. title="see data-ol-platforms-section
+// docs")? Walks attribute TOKENS instead of a raw substring search.
+function hasAttr(tagText: string, name: string): boolean {
+  ATTR_TOKEN_RE.lastIndex = 0;
+  let m: RegExpExecArray | null;
+  while ((m = ATTR_TOKEN_RE.exec(tagText))) {
+    if (m[1] === name) return true;
+    if (m.index === ATTR_TOKEN_RE.lastIndex) ATTR_TOKEN_RE.lastIndex++;
+  }
+  return false;
+}
+
+// Every <section|div> genuinely carrying `marker` as an attribute (open-tag
+// end index, so the caller can start filling right after it). Linear,
+// guarded like stripBandByMarker so adversarial repeats of the marker text
+// can't spin — and skips past a false hit (marker text sitting inside an
+// unrelated attribute's quoted value) instead of stopping.
+function findMarkerBands(html: string, marker: string): Array<{ tag: string; openEnd: number }> {
+  const hits: Array<{ tag: string; openEnd: number }> = [];
+  let from = 0;
+  for (let guard = 0; guard < 200; guard++) {
+    const idx = html.indexOf(marker, from);
+    if (idx === -1) break;
+    const tagStart = html.lastIndexOf("<", idx);
+    if (tagStart === -1) {
+      from = idx + marker.length;
+      continue;
+    }
+    const tagMatch = /^<(section|div)\b/i.exec(html.slice(tagStart, tagStart + 9));
+    if (!tagMatch) {
+      from = idx + marker.length;
+      continue;
+    }
+    const tagEnd = openTagEnd(html, tagStart);
+    if (tagEnd === -1) {
+      from = idx + marker.length;
+      continue;
+    }
+    if (hasAttr(html.slice(tagStart, tagEnd), marker)) {
+      hits.push({ tag: tagMatch[1].toLowerCase(), openEnd: tagEnd + 1 });
+    }
+    from = tagEnd + 1;
+  }
+  return hits;
+}
+
+/** Rellena el placeholder de la banda con la rejilla de tarjetas — en TODAS
+ *  las bandas del documento, no solo la primera. Sin ninguna plataforma
+ *  armable borra la banda ENTERA — un encabezado "Encuéntrame en" sobre un
+ *  hueco vacío rompería Born-100. Idempotente: reemplaza el CONTENIDO de
+ *  cada elemento marcado, así que re-sembrar no duplica. */
 export function fillPlatformsBand(html: string, data: BusinessProfileData): string {
-  const open = new RegExp(`<(section|div)[^>]*\\b${PLATFORMS_BAND_MARKER}\\b[^>]*>`, "i").exec(html);
-  if (!open) return html;
+  const hits = findMarkerBands(html, PLATFORMS_BAND_MARKER);
+  if (hits.length === 0) return html;
 
   const grid = renderPlatformsBand(data);
   if (!grid) return stripBandByMarker(html, PLATFORMS_BAND_MARKER);
 
-  const tag = open[1];
-  const at = open.index + open[0].length;
-  const closeStart = matchingCloseStart(html, at, tag);
-  if (closeStart === -1) return html;
-  return html.slice(0, at) + grid + html.slice(closeStart);
+  let out = html;
+  for (let i = hits.length - 1; i >= 0; i--) {
+    const { tag, openEnd } = hits[i];
+    const closeStart = matchingCloseStart(out, openEnd, tag);
+    if (closeStart === -1) continue;
+    out = out.slice(0, openEnd) + grid + out.slice(closeStart);
+  }
+  return out;
 }

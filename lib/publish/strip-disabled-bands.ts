@@ -43,6 +43,39 @@ function elementEnd(html: string, open: number, tag: string): number {
   return -1;
 }
 
+/** Index of the ">" that closes the tag starting at `open`, skipping any
+ *  ">" that appears inside a quoted attribute value. -1 if it never closes. */
+function openTagEnd(html: string, open: number): number {
+  let quote: string | null = null;
+  for (let i = open; i < html.length; i++) {
+    const ch = html[i];
+    if (quote) {
+      if (ch === quote) quote = null;
+    } else if (ch === '"' || ch === "'") {
+      quote = ch;
+    } else if (ch === ">") {
+      return i;
+    }
+  }
+  return -1;
+}
+
+const ATTR_TOKEN_RE = /([a-zA-Z_:][-a-zA-Z0-9_:.]*)(?:\s*=\s*(?:"[^"]*"|'[^']*'|[^\s"'=<>`]+))?/g;
+
+/** Is `name` a genuine attribute in `tagText` — not merely a substring that
+ *  happens to sit inside another attribute's quoted value (e.g.
+ *  title="see data-ol-platforms-section docs")? Walks attribute TOKENS
+ *  instead of doing a raw substring search. */
+function hasAttr(tagText: string, name: string): boolean {
+  ATTR_TOKEN_RE.lastIndex = 0;
+  let m: RegExpExecArray | null;
+  while ((m = ATTR_TOKEN_RE.exec(tagText))) {
+    if (m[1] === name) return true;
+    if (m.index === ATTR_TOKEN_RE.lastIndex) ATTR_TOKEN_RE.lastIndex++;
+  }
+  return false;
+}
+
 /** Borra la banda entera que contiene `marker`. Escaneo lineal, idempotente. */
 export function stripBandByMarker(html: string, marker: string): string {
   let out = html;
@@ -60,6 +93,17 @@ export function stripBandByMarker(html: string, marker: string): string {
     const tagMatch = /^<(section|div)\b/i.exec(out.slice(tagStart, tagStart + 9));
     if (!tagMatch) {
       from = idx + marker.length;
+      continue;
+    }
+    const openEnd = openTagEnd(out, tagStart);
+    if (openEnd === -1) {
+      from = idx + marker.length;
+      continue;
+    }
+    if (!hasAttr(out.slice(tagStart, openEnd), marker)) {
+      // The marker text is only inside an unrelated attribute's quoted
+      // value on THIS tag — skip past it and keep scanning.
+      from = openEnd + 1;
       continue;
     }
     const tagName = tagMatch[1].toLowerCase();

@@ -231,6 +231,36 @@ describe("fillPlatformsBand", () => {
     const closes = (twice.match(/<\/div>/g) ?? []).length;
     expect(closes).toBe(opens);
   });
+
+  it("el marcador dentro de un atributo ajeno NO cuenta — el elemento queda intacto", () => {
+    const html = '<div title="see data-ol-platforms-section docs">unrelated</div>';
+    const data = { links: [{ type: "twitch", url: "kira" }] } as BusinessProfileData;
+    expect(fillPlatformsBand(html, data)).toBe(html);
+    const empty = { links: [] } as unknown as BusinessProfileData;
+    expect(fillPlatformsBand(html, empty)).toBe(html);
+  });
+
+  it("dos bandas en el mismo documento: ambas se rellenan", () => {
+    const html =
+      "<div data-ol-platforms-section></div>" +
+      "<p>en medio</p>" +
+      "<section data-ol-platforms-section></section>";
+    const data = { links: [{ type: "twitch", url: "kira" }] } as BusinessProfileData;
+    const out = fillPlatformsBand(html, data);
+    expect(out.match(/href="https:\/\/twitch\.tv\/kira"/g)?.length).toBe(2);
+    expect(out).toContain("<p>en medio</p>");
+  });
+
+  it("dos bandas en el mismo documento sin plataformas: ambas se borran", () => {
+    const html =
+      "<div data-ol-platforms-section></div>" +
+      "<p>en medio</p>" +
+      "<section data-ol-platforms-section></section>";
+    const empty = { links: [] } as unknown as BusinessProfileData;
+    const out = fillPlatformsBand(html, empty);
+    expect(out).not.toContain("data-ol-platforms-section");
+    expect(out).toContain("<p>en medio</p>");
+  });
 });
 
 describe("profileMeta", () => {
