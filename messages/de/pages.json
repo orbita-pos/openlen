@@ -34,7 +34,7 @@
     "metaDescription": "Diese URL passt zu keiner OpenLen-Seite.",
     "badge": "Fehler 404",
     "title": "Diese Seite <accent>existiert nicht.</accent>",
-    "lede": "Diese URL passt zu keiner Vorlage und keinem Projekt. Geh zurück zur Startseite oder wähle eine der 15 kuratierten Vorlagen.",
+    "lede": "Diese URL passt zu keiner Vorlage und keinem Projekt. Geh zurück zur Startseite oder stöbere in der Vorlagengalerie.",
     "backHome": "Zurück zur Startseite",
     "viewTemplates": "Vorlagen ansehen"
   },

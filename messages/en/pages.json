@@ -34,7 +34,7 @@
     "metaDescription": "This URL doesn't match any OpenLen page.",
     "badge": "Error 404",
     "title": "This page <accent>doesn't exist.</accent>",
-    "lede": "This URL doesn't match any template or project. Head back home or pick one of the 15 curated templates.",
+    "lede": "This URL doesn't match any template or project. Head back home or browse the template gallery.",
     "backHome": "Back to home",
     "viewTemplates": "View templates"
   },

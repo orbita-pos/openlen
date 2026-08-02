@@ -34,7 +34,7 @@
     "metaDescription": "此网址不对应任何 OpenLen 页面。",
     "badge": "错误 404",
     "title": "此页面<accent>不存在。</accent>",
-    "lede": "此网址不对应任何模板或项目。返回首页，或从 15 个精选模板中挑一个。",
+    "lede": "此网址不对应任何模板或项目。返回首页，或浏览模板库。",
     "backHome": "返回首页",
     "viewTemplates": "查看模板"
   },

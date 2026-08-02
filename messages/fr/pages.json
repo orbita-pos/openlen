@@ -34,7 +34,7 @@
     "metaDescription": "Cette URL ne correspond à aucune page OpenLen.",
     "badge": "Erreur 404",
     "title": "Cette page <accent>n'existe pas.</accent>",
-    "lede": "Cette URL ne correspond à aucun modèle ni projet. Revenez à l'accueil ou choisissez l'un des 15 modèles sélectionnés.",
+    "lede": "Cette URL ne correspond à aucun modèle ni projet. Revenez à l'accueil ou parcourez la galerie de modèles.",
     "backHome": "Retour à l'accueil",
     "viewTemplates": "Voir les modèles"
   },

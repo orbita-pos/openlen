@@ -32,6 +32,14 @@ describe("NOT_FOUND_HTML", () => {
     assert.ok(!NOT_FOUND_HTML.includes("@import"));
   });
 
+  // El deploy paso este HTML por la salida de texto de PowerShell (CP850) y
+  // los acentos llegaron a produccion como basura de box-drawing. El transporte
+  // ya esta arreglado en apply-404.ps1; esto ancla el lado del documento.
+  it("keeps its Spanish accents (mojibake canary)", () => {
+    assert.ok(NOT_FOUND_HTML.includes("Esta página no existe… todavía."));
+    assert.doesNotMatch(NOT_FOUND_HTML, /[─-╿]/); // box-drawing = CP850 mangling
+  });
+
   it("never carries editor markers and stays tiny", () => {
     assert.ok(!NOT_FOUND_HTML.includes("data-slot-path="));
     assert.ok(Buffer.byteLength(NOT_FOUND_HTML, "utf8") < 16_384);

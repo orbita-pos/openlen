@@ -34,7 +34,7 @@
     "metaDescription": "La URL no corresponde a ninguna página de OpenLen.",
     "badge": "Error 404",
     "title": "Esta página <accent>no existe.</accent>",
-    "lede": "Esta URL no corresponde a ninguna plantilla ni proyecto. Vuelve al inicio o elige una de las 15 plantillas curadas.",
+    "lede": "Esta URL no corresponde a ninguna plantilla ni proyecto. Vuelve al inicio o explora la galería de plantillas.",
     "backHome": "Volver al inicio",
     "viewTemplates": "Ver plantillas"
   },
