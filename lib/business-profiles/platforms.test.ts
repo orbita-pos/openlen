@@ -39,10 +39,15 @@ describe("platformHref — entradas basura", () => {
   it("cadena vacía", () => expect(platformHref("twitch", "")).toBeNull());
   it("solo espacios", () => expect(platformHref("twitch", "   ")).toBeNull());
   it("solo arroba", () => expect(platformHref("twitch", "@")).toBeNull());
-  it("tipo desconocido cae a URL genérica", () => expect(platformHref("otro", "midominio.com")).toBe("https://midominio.com"));
-  it("tipo desconocido con handle pelado es null", () => expect(platformHref("otro", "kira")).toBeNull());
+  it("plataforma 'otro' cae a URL genérica", () => expect(platformHref("otro", "midominio.com")).toBe("https://midominio.com"));
+  it("plataforma 'otro' con handle pelado es null", () => expect(platformHref("otro", "kira")).toBeNull());
   it("rechaza javascript:", () => expect(platformHref("otro", "javascript:alert(1)")).toBeNull());
   it("rechaza data:", () => expect(platformHref("otro", "data:text/html,<script>")).toBeNull());
+});
+
+describe("platformHref — fallback con type inexistente", () => {
+  it("type inexistente con dominio cae a URL genérica", () => expect(platformHref("plataforma-inexistente", "midominio.com")).toBe("https://midominio.com"));
+  it("type inexistente con handle pelado es null", () => expect(platformHref("plataforma-inexistente", "kira")).toBeNull());
 });
 
 describe("registry", () => {
