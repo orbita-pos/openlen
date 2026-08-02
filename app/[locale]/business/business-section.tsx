@@ -15,6 +15,7 @@ import type {
 } from "@/lib/business-profiles/types";
 import { BizAvatar } from "@/components/workspace-v2/business-switcher";
 import { useToast } from "@/components/workspace-v2/toast";
+import { PLATFORMS, PLATFORM_ORDER, PLATFORM_ICON_PATHS } from "@/lib/business-profiles/platforms";
 
 /* ───────── Icons (lucide-style) ───────── */
 type IconProps = { size?: number; className?: string; stroke?: number };
@@ -51,9 +52,7 @@ const Whats = (p: IconProps) => <Icon {...p}><path d="M3 21l1.65-3.8a9 9 0 1 1 3
 const Insta = (p: IconProps) => <Icon {...p}><rect width="20" height="20" x="2" y="2" rx="5" /><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" /><line x1="17.5" x2="17.51" y1="6.5" y2="6.5" /></Icon>;
 const Facebook = (p: IconProps) => <Icon {...p}><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z" /></Icon>;
 const Tiktok = (p: IconProps) => <Icon {...p}><path d="M9 12a4 4 0 1 0 4 4V4a5 5 0 0 0 5 5" /></Icon>;
-const Globe = (p: IconProps) => <Icon {...p}><circle cx="12" cy="12" r="10" /><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20" /><path d="M2 12h20" /></Icon>;
 const Link2 = (p: IconProps) => <Icon {...p}><path d="M9 17H7A5 5 0 0 1 7 7h2" /><path d="M15 7h2a5 5 0 1 1 0 10h-2" /><line x1="8" x2="16" y1="12" y2="12" /></Icon>;
-const Youtube = (p: IconProps) => <Icon {...p}><path d="M2.5 17a24.12 24.12 0 0 1 0-10 2 2 0 0 1 1.4-1.4 49.56 49.56 0 0 1 16.2 0A2 2 0 0 1 21.5 7a24.12 24.12 0 0 1 0 10 2 2 0 0 1-1.4 1.4 49.55 49.55 0 0 1-16.2 0A2 2 0 0 1 2.5 17" /><path d="m10 15 5-3-5-3z" /></Icon>;
 const Trash = (p: IconProps) => <Icon {...p}><path d="M3 6h18" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" /><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /></Icon>;
 const Sparkles = (p: IconProps) => <Icon {...p}><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z" /></Icon>;
 const Star = (p: IconProps) => <Icon {...p}><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" /></Icon>;
@@ -61,18 +60,31 @@ const Loader = (p: IconProps) => <Icon {...p}><path d="M21 12a9 9 0 1 1-6.219-8.
 const Refresh = (p: IconProps) => <Icon {...p}><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" /><path d="M21 3v5h-5" /><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" /><path d="M3 21v-5h5" /></Icon>;
 const Alert = (p: IconProps) => <Icon {...p}><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z" /><path d="M12 9v4" /><path d="M12 17h.01" /></Icon>;
 
-/* ───────── Link presets (label resolved via i18n at render) ───────── */
+/* ───────── Link presets — derivados del registry compartido ───────── */
+const PlatIcon = (id: string) => {
+  const paths = PLATFORM_ICON_PATHS[PLATFORMS[id]?.icon ?? "link"] ?? PLATFORM_ICON_PATHS.link;
+  const C = (p: IconProps) => (
+    <svg
+      xmlns="http://www.w3.org/2000/svg" width={p.size ?? 20} height={p.size ?? 20}
+      viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}
+      strokeLinecap="round" strokeLinejoin="round" className={p.className}
+      dangerouslySetInnerHTML={{ __html: paths }}
+    />
+  );
+  C.displayName = `PlatIcon(${id})`;
+  return C;
+};
+
 const TIPOS_ENLACE: Record<
   string,
   { labelKey: string; icon: (p: IconProps) => React.ReactElement; placeholder: string }
-> = {
-  website: { labelKey: "links.website", icon: Globe, placeholder: "tunegocio.mx" },
-  menu: { labelKey: "links.menu", icon: Link2, placeholder: "linktr.ee/tunegocio" },
-  youtube: { labelKey: "links.youtube", icon: Youtube, placeholder: "youtube.com/@tunegocio" },
-  tiktok: { labelKey: "links.tiktok", icon: Tiktok, placeholder: "@tunegocio" },
-  otro: { labelKey: "links.otro", icon: Link2, placeholder: "pega-tu-link.com" },
-};
-const ORDEN_TIPOS = ["website", "menu", "youtube", "tiktok", "otro"];
+> = Object.fromEntries(
+  PLATFORM_ORDER.map((id) => [
+    id,
+    { labelKey: `links.${id}`, icon: PlatIcon(id), placeholder: PLATFORMS[id].placeholder },
+  ]),
+);
+const ORDEN_TIPOS = PLATFORM_ORDER;
 const COLORES = ["#FF5A36", "#C2410C", "#DB2777", "#2563EB", "#0F766E", "#7C3AED", "#CA8A04", "#1A1A1A"];
 
 /* ───────── Local profile model ───────── */
