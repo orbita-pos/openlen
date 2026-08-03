@@ -133,6 +133,7 @@ public/openlen-images/motion/
 # Scratch / regenerable working dirs — kept on disk, not in the repo.
 # .photo-export = photo-migration revert net (regen via `templates:export`).
 # spike = Phase-0 assembly experiments.
+/.worktrees/
 /.photo-export/
 /.photo-batch*/
 /spike/
