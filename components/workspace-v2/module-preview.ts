@@ -15,7 +15,9 @@
 
 import { bakeWhatsAppButton } from "@/lib/publish/whatsapp-button";
 import { renderCollectionsWidget } from "@/lib/publish/collections-block";
+import { renderPlatformsBand } from "@/lib/business-profiles/platforms-band";
 import type { ItemRow } from "@/lib/collections/store";
+import type { BusinessProfileData } from "@/lib/business-profiles/types";
 
 export const MODULES_PREVIEW_MARKER = "data-openlen-modules-preview";
 const STAMP = `${MODULES_PREVIEW_MARKER} data-openlen-no-edit`;
@@ -37,6 +39,9 @@ export interface EditorModulesPreviewCfg {
     ordersNumber?: string | null;
     theme?: "light" | "dark";
   } | null;
+  /** Links del perfil de negocio; pintan la banda de plataformas si la página
+   *  lleva su marcador. Scriptless, así que sí puede vivir en el canvas. */
+  platforms?: BusinessProfileData["links"] | null;
   /** Script-driven widgets can't run in the canvas — with the module on and
    *  its band present, a static SKELETON previews the shape instead, so a
    *  module page never reads as "just text". */
@@ -113,6 +118,21 @@ function injectIntoBand(html: string, marker: string, chunk: string): string {
   if (!open) return html;
   const at = open.index + open[0].length;
   return html.slice(0, at) + chunk + html.slice(at);
+}
+
+/** Does the band's marker element have no content yet? Every OTHER module
+ *  surface's marker persists EMPTY in data.html (its widget only ever
+ *  renders live, at bake time) — but platforms is filled directly into
+ *  data.html at seed time (seedBrandIntoHtml/fillPlatformsBand, project
+ *  creation / "Aplicar a mis páginas"). injectIntoBand APPENDS rather than
+ *  replaces, so calling it on an already-seeded band would stack a second,
+ *  duplicate grid right beside the real one — this guard keeps the canvas
+ *  preview scoped to the one case it's actually for: a band inserted after
+ *  creation that hasn't been through a seed/fill pass yet. */
+function bandIsEmpty(html: string, marker: string): boolean {
+  const open = new RegExp(`<(section|div)[^>]*\\b${marker}\\b[^>]*>`, "i").exec(html);
+  if (!open) return false;
+  return html.slice(open.index + open[0].length).trimStart().startsWith("</");
 }
 
 /** A freshly-inserted band, with its preview (grid / skeleton) ALREADY
@@ -194,6 +214,17 @@ export function injectEditorModulesPreview(
   }
   if (cfg.commentsOn) {
     out = injectIntoBand(out, "data-ol-comments-section", commentsSkeleton(es));
+  }
+
+  if (cfg.platforms?.length && bandIsEmpty(out, "data-ol-platforms-section")) {
+    const banda = renderPlatformsBand({ links: cfg.platforms } as BusinessProfileData);
+    if (banda) {
+      out = injectIntoBand(
+        out,
+        "data-ol-platforms-section",
+        `<div ${MODULES_PREVIEW_MARKER} data-openlen-no-edit>${banda}</div>`,
+      );
+    }
   }
 
   const wa = cfg.whatsapp;

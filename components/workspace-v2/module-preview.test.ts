@@ -5,6 +5,7 @@ import { describe, expect, it } from "vitest";
 import {
   bandWithPreview,
   injectEditorModulesPreview,
+  MODULES_PREVIEW_MARKER,
   type EditorModulesPreviewCfg,
 } from "./module-preview";
 import { buildModuleSection } from "@/lib/publish/module-sections";
@@ -48,6 +49,8 @@ const cfg = (over?: Partial<EditorModulesPreviewCfg>): EditorModulesPreviewCfg =
   collections: null,
   ...over,
 });
+
+const PLATFORMS_HTML = '<html lang="es"><body><section data-ol-platforms-section></section></body></html>';
 
 describe("injectEditorModulesPreview", () => {
   it("is a no-op with no modules configured", () => {
@@ -199,5 +202,53 @@ describe("injectEditorModulesPreview", () => {
     const norm = (h: string) =>
       new DOMParser().parseFromString(h, "text/html").documentElement.outerHTML;
     expect(norm(stripEditorInstrumentation(injected))).toBe(norm(HOME));
+  });
+});
+
+describe("banda de plataformas en el canvas", () => {
+  it("pinta la banda dentro del marcador", () => {
+    const out = injectEditorModulesPreview(PLATFORMS_HTML, {
+      platforms: [{ type: "twitch", url: "kira" }],
+    });
+    expect(out).toContain('href="https://twitch.tv/kira"');
+  });
+
+  it("estampa el marcador de preview para que el guardado la borre", () => {
+    const out = injectEditorModulesPreview(PLATFORMS_HTML, {
+      platforms: [{ type: "twitch", url: "kira" }],
+    });
+    expect(out).toContain(MODULES_PREVIEW_MARKER);
+    expect(out).toContain("data-openlen-no-edit");
+  });
+
+  it("sin plataformas no toca el documento", () => {
+    expect(injectEditorModulesPreview(PLATFORMS_HTML, { platforms: [] })).toBe(
+      PLATFORMS_HTML,
+    );
+  });
+
+  it("strip(inject(x)) equals x", () => {
+    const injected = injectEditorModulesPreview(PLATFORMS_HTML, {
+      platforms: [{ type: "twitch", url: "kira" }],
+    });
+    const norm = (h: string) =>
+      new DOMParser().parseFromString(h, "text/html").documentElement.outerHTML;
+    expect(norm(stripEditorInstrumentation(injected))).toBe(norm(PLATFORMS_HTML));
+  });
+
+  it("does not double-render a band already seeded by fillPlatformsBand", () => {
+    // seedBrandIntoHtml fills the band's real content directly into data.html
+    // at project creation — unlike collections/bookings/comments, whose
+    // markers always persist empty. The canvas must not stack a second grid
+    // on top of the one already there.
+    const seeded = PLATFORMS_HTML.replace(
+      "<section data-ol-platforms-section></section>",
+      '<section data-ol-platforms-section><a href="https://twitch.tv/kira">Twitch</a></section>',
+    );
+    const out = injectEditorModulesPreview(seeded, {
+      platforms: [{ type: "twitch", url: "kira" }],
+    });
+    expect(out).toBe(seeded);
+    expect(out.match(/href="https:\/\/twitch\.tv\/kira"/g)?.length).toBe(1);
   });
 });

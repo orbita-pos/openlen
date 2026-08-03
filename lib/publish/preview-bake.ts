@@ -11,6 +11,8 @@
 // APIs from the visitor's browser; on an unpublished draft those calls no-op
 // and the widget renders its static shell, which is what a preview needs.
 
+import { fillPlatformsBand } from "@/lib/business-profiles/seed-html";
+import type { BusinessProfileData } from "@/lib/business-profiles/types";
 import { bakeAssistantWidget } from "@/lib/publish/assistant-widget";
 import { bakeComments, hasCommentsSection } from "@/lib/publish/comments-widget";
 import { bakeBookings, hasBookingsSection } from "@/lib/publish/bookings-widget";
@@ -48,6 +50,9 @@ export interface PreviewBakeCtx {
    *  somewhere, only the documents that carry it get the widget. Absent =
    *  no band known = the append-everywhere fallback. */
   sectionBands?: { bookings: boolean; comments: boolean };
+  /** Links del perfil de negocio del dueño. Rellenan la banda si el documento
+   *  lleva su marcador. HTML puro: NO se salta cuando ctx.sandboxed. */
+  platforms?: BusinessProfileData["links"] | null;
   /** ¿El documento se sirve con CSP `sandbox` (sin allow-same-origin)? El
    *  origen opaco que eso da se HEREDA a los iframes anidados, y el player de
    *  YouTube revienta ahí — medido: lanza jserror y deja un rectángulo negro.
@@ -167,6 +172,14 @@ export function bakeModulesForPreviewHtml(html: string, ctx: PreviewBakeCtx): st
     }
   }
 
+  if (ctx.platforms?.length) {
+    try {
+      out = fillPlatformsBand(out, { links: ctx.platforms } as BusinessProfileData);
+    } catch {
+      /* soft-fail */
+    }
+  }
+
   // In-page video playback. Universal (no module flag), same position in the
   // chain as publishToDir. Without it a creator's YouTube/Vimeo links only
   // become playable at publish, so the preview under-promises the page.
@@ -276,6 +289,23 @@ export async function bakeModulesForPreview(
       collectionsItems = null;
     }
   }
+  let platforms: PreviewBakeCtx["platforms"] = null;
+  try {
+    const { db, schema } = await import("@/lib/db");
+    const { eq } = await import("drizzle-orm");
+    const rows = await db
+      .select({ data: schema.businessProfiles.data })
+      .from(schema.projects)
+      .innerJoin(
+        schema.businessProfiles,
+        eq(schema.projects.profileId, schema.businessProfiles.id),
+      )
+      .where(eq(schema.projects.id, opts.projectId))
+      .limit(1);
+    platforms = rows[0]?.data.links ?? null;
+  } catch {
+    platforms = null;
+  }
   const split = splitPagesForPublish(opts.data);
   const door = memberDoorPlan(
     opts.data,
@@ -296,6 +326,7 @@ export async function bakeModulesForPreview(
     settings: opts.data?.settings,
     sandboxed: opts.sandboxed,
     collectionsItems,
+    platforms,
     memberSignin: door.signinPath
       ? { path: door.signinPath, isAccount: door.signinIsAccount }
       : null,
