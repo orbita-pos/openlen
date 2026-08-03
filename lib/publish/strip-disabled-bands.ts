@@ -9,11 +9,7 @@
 //     margin:64px auto;…"> enclosing the marker with no </section> in
 //     between) → remove the WHOLE band, heading — and any user content the
 //     AI nested inside it — included (documented rule: customized band goes
-//     whole; never a partial cut with orphan closers). La huella se compara
-//     SIN espacios: una banda que pasó por el DOM del editor vuelve con el
-//     style re-serializado por el navegador ("margin: 64px auto;"), y la
-//     comparación byte a byte fallaba en silencio → encabezado huérfano sobre
-//     un hueco en la página publicada (task-11-browser-report-2).
+//     whole; never a partial cut with orphan closers).
 //   • Otherwise → remove ONLY the marker element (depth-aware close, so
 //     nested same-tag children go with it and siblings survive).
 // Linear index scanning throughout — the first cut used regexes whose
@@ -32,32 +28,8 @@ const MARKERS = {
 
 export type StrippableModule = keyof typeof MARKERS;
 
-const SECTION_OPEN = "<section";
-
-/** Copia sin espacios en blanco. `buildModuleSection` emite el style compacto
- *  (`max-width:900px;margin:64px auto;`), pero en cuanto la banda pasa por el
- *  DOM del iframe del editor el navegador re-serializa ese style con un espacio
- *  tras cada ":" y ";" (`max-width: 900px; margin: 64px auto;`) — evidencia real
- *  en task-11-browser-evidence-2. Comparar las formas exprimidas reconoce las
- *  dos sin tener que adivinar cuál de los dos formatos trae el documento.
- *  Bucle de un solo paso: lineal, sin regex. */
-function squeeze(s: string): string {
-  let out = "";
-  for (let i = 0; i < s.length; i++) {
-    const ch = s[i];
-    if (ch !== " " && ch !== "\t" && ch !== "\n" && ch !== "\r" && ch !== "\f") out += ch;
-  }
-  return out;
-}
-
-// Huella de band(): el style abre con max-width y lleva el margin de la banda.
-// Se exige que `max-width` sea la PRIMERA declaración (así la emite band() y así
-// la conserva la re-serialización del DOM, que respeta el orden) — dos
-// `includes` sueltos sobre el tag entero admitirían la huella repartida entre
-// atributos ajenos. El nombre del atributo `style` ya no tiene que ser el
-// primero del tag: el editor le añade atributos a la sección.
-const BAND_STYLE_HEAD = squeeze('style="max-width:');
-const BAND_STYLE_MARGIN = squeeze("margin:64px auto;");
+const BAND_OPEN_PREFIX = '<section style="max-width:';
+const BAND_OPEN_SIGNATURE = "margin:64px auto;";
 
 /** End index (exclusive) of the element whose open tag starts at `open`,
  *  matching nested same-name tags; -1 when the close is missing. Linear. */
@@ -110,26 +82,19 @@ export function stripBandByMarker(html: string, marker: string): string {
       continue;
     }
 
-    // Enclosing designed band? Nearest <section> opener BEFORE the element, if
-    // it carries band()'s style huella and nothing reopens/closes a section in
-    // between. ONE candidate, never a rescan: adversarial opener spam degrades
-    // to "no band" (marker-only cut), which is the safe direction.
+    // Enclosing designed band? Nearest band-opener BEFORE the element whose
+    // section hasn't closed in between. One candidate check — adversarial
+    // opener spam degrades to "no band", never to a rescan.
     let removeStart = tagStart;
     let removeEnd = elEnd;
     if (tagName !== "section") {
-      const bandOpen = out.lastIndexOf(SECTION_OPEN, tagStart);
-      // Frontera del nombre del tag: "<sections…" no es una <section>. Se
-      // rechaza en vez de seguir buscando hacia atrás — un bucle de retroceso
-      // sobre "<sectionz" repetido sería cuadrático.
-      const after = bandOpen === -1 ? "" : out[bandOpen + SECTION_OPEN.length];
-      if (bandOpen !== -1 && (after === undefined || after === ">" || after === "/" || after <= " ")) {
-        const bandTagEnd = openTagEnd(out, bandOpen);
+      const bandOpen = out.lastIndexOf(BAND_OPEN_PREFIX, tagStart);
+      if (bandOpen !== -1) {
+        const bandTagEnd = out.indexOf(">", bandOpen);
         const between = out.slice(bandOpen, tagStart);
         const openTag = bandTagEnd === -1 ? "" : out.slice(bandOpen, bandTagEnd + 1);
-        const canon = squeeze(openTag);
         if (
-          canon.includes(BAND_STYLE_HEAD) &&
-          canon.includes(BAND_STYLE_MARGIN) &&
+          openTag.includes(BAND_OPEN_SIGNATURE) &&
           !between.slice(openTag.length).toLowerCase().includes("</section>") &&
           !between.slice(openTag.length).toLowerCase().includes("<section")
         ) {
