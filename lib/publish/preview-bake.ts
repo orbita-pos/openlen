@@ -12,6 +12,7 @@
 // and the widget renders its static shell, which is what a preview needs.
 
 import { fillPlatformsBand } from "@/lib/business-profiles/seed-html";
+import { PLATFORMS_BAND_MARKER } from "@/lib/business-profiles/platforms-band";
 import type { BusinessProfileData } from "@/lib/business-profiles/types";
 import { bakeAssistantWidget } from "@/lib/publish/assistant-widget";
 import { bakeComments, hasCommentsSection } from "@/lib/publish/comments-widget";
@@ -289,23 +290,6 @@ export async function bakeModulesForPreview(
       collectionsItems = null;
     }
   }
-  let platforms: PreviewBakeCtx["platforms"] = null;
-  try {
-    const { db, schema } = await import("@/lib/db");
-    const { eq } = await import("drizzle-orm");
-    const rows = await db
-      .select({ data: schema.businessProfiles.data })
-      .from(schema.projects)
-      .innerJoin(
-        schema.businessProfiles,
-        eq(schema.projects.profileId, schema.businessProfiles.id),
-      )
-      .where(eq(schema.projects.id, opts.projectId))
-      .limit(1);
-    platforms = rows[0]?.data.links ?? null;
-  } catch {
-    platforms = null;
-  }
   const split = splitPagesForPublish(opts.data);
   const door = memberDoorPlan(
     opts.data,
@@ -318,6 +302,38 @@ export async function bakeModulesForPreview(
     ...split.publicPages.map((p) => p.html),
     ...split.gatedPages.map((p) => p.html),
   ];
+  // Gated on the band actually being present — same shape as the collections
+  // gate above (settings.collections.enabled) — so a site with no platforms
+  // band never pays for the profile lookup.
+  let platforms: PreviewBakeCtx["platforms"] = null;
+  if (siteDocs.some((doc) => doc.includes(PLATFORMS_BAND_MARKER))) {
+    try {
+      const { db, schema } = await import("@/lib/db");
+      const { eq } = await import("drizzle-orm");
+      const { projectBusinessProfile } = await import(
+        "@/lib/business-profiles/whatsapp-default"
+      );
+      // projectBusinessProfile resolves linked-profile-first-else-default (the
+      // one canonical resolution — lib/business-profiles/whatsapp-default.ts),
+      // but it's an ownership-scoped lookup (projectId + userId). Callers here
+      // don't necessarily have a session (the public /p/[id] draft link has
+      // none), so resolve the project's own owner first — this is a read of
+      // the project's OWN business profile for ITS OWN preview surface, not an
+      // access-control decision on behalf of the requester.
+      const rows = await db
+        .select({ userId: schema.projects.userId })
+        .from(schema.projects)
+        .where(eq(schema.projects.id, opts.projectId))
+        .limit(1);
+      const ownerId = rows[0]?.userId;
+      if (ownerId) {
+        const profile = await projectBusinessProfile(opts.projectId, ownerId);
+        platforms = profile?.links ?? null;
+      }
+    } catch {
+      platforms = null;
+    }
+  }
   return bakeModulesForPreviewHtml(html, {
     projectId: opts.projectId,
     title: opts.title,

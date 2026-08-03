@@ -89,6 +89,10 @@ export default defineConfig({
       "lib/publish/video-embed.test.ts",
       "lib/publish/signin-link.test.ts",
       "lib/publish/module-sections.test.ts",
+      // DB-integration test (real Postgres via .env.local, same pattern as
+      // lib/chat/identity-bridge.test.ts) — preview-bake.test.ts itself stays
+      // on node:test (no DB env there), so this lives as its own file.
+      "lib/publish/preview-bake-platforms-resolver.test.ts",
       "lib/publish/whatsapp-button.test.ts",
       "lib/publish/module-markup-tailwind.test.ts",
       "lib/publish/embed-sandbox.test.ts",

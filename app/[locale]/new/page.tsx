@@ -177,6 +177,12 @@ interface LoadedProject {
   /** Non-HTML project settings (Phase 2 form config). Loaded with the
    *  project; updated in place when the inspector edits a form. */
   settings: ProjectSettings | undefined;
+  /** The business this page is linked to (FK → businessProfiles), same field
+   *  GET /api/projects/[id] already returns on `project`. Null = no explicit
+   *  link, resolve to the user's default business (mirrors
+   *  projectBusinessProfile's linked-first-else-default). Drives the
+   *  platforms band preview in the canvas. */
+  profileId: string | null;
 }
 
 // stripEditorInstrumentation moved to
@@ -398,6 +404,11 @@ function NewV2Inner() {
   );
   const [saving, setSaving] = useState(false);
   const [loadedProject, setLoadedProject] = useState<LoadedProject | null>(null);
+  // Saved business profiles ("Mi negocio") — hoisted above modulesPreview
+  // (below), which resolves the canvas's platforms-band preview from this
+  // list + loadedProject.profileId. Fetched on mount via refreshProfiles,
+  // declared further down alongside the rest of the profiles UI state.
+  const [profiles, setProfiles] = useState<BusinessProfile[]>([]);
   // The active site page (null = home) and the document the canvas edits.
   // Everything that used to read loadedProject.html for DISPLAY reads
   // activeDoc; saves route into the matching slot via activeSitePageRef.
@@ -470,7 +481,16 @@ function NewV2Inner() {
     const colPayload = previewCollections;
     const bookingsOn = st?.bookings?.enabled === true;
     const commentsOn = st?.comments?.enabled === true;
-    if (!wa && !colPayload && !bookingsOn && !commentsOn) return null;
+    // Linked profile first, else the user's default — same resolution as
+    // projectBusinessProfile (lib/business-profiles/whatsapp-default.ts),
+    // done here from data the workspace already has loaded: the project's
+    // profileId (GET /api/projects/[id]) and the profile list (GET
+    // /api/profiles, `profiles` state) — no extra fetch.
+    const profile = loadedProject?.profileId
+      ? profiles.find((p) => p.id === loadedProject.profileId)
+      : profiles.find((p) => p.isDefault);
+    const platforms = profile?.data.links?.length ? profile.data.links : null;
+    if (!wa && !colPayload && !bookingsOn && !commentsOn && !platforms) return null;
     const assistantOn = st?.assistant?.enabled === true;
     const handoffMerged =
       assistantOn &&
@@ -492,11 +512,12 @@ function NewV2Inner() {
             theme: st?.collections?.theme,
           }
         : null,
+      platforms,
       bookingsOn,
       commentsOn,
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [modulesPreviewKey, previewCollections]);
+  }, [modulesPreviewKey, previewCollections, profiles, loadedProject?.profileId]);
   // Strip a stale ?page= once the project has loaded without that slug
   // (deleted page, mistyped share link).
   useEffect(() => {
@@ -754,7 +775,7 @@ function NewV2Inner() {
   const aiGenState = aiMode === "scratch" ? bespoke.state : curation.state;
   // Saved business profiles ("Mi negocio") — seed the curation flow. Fetched on
   // mount; the default profile auto-selects (the user can switch or pick none).
-  const [profiles, setProfiles] = useState<BusinessProfile[]>([]);
+  // (state declaration hoisted above loadedProject — see the comment there.)
   // False until the first /api/profiles fetch settles — the rail shows a
   // business-avatar skeleton while it's true so the switcher doesn't pop in.
   const [profilesLoaded, setProfilesLoaded] = useState(false);
@@ -1187,6 +1208,7 @@ function NewV2Inner() {
               tags?: string[];
               userBrief?: string | null;
               chatHistory?: StoredChatTurn[];
+              profileId?: string | null;
               data: {
                 html?: string;
                 filledBlocks?: unknown[];
@@ -1227,6 +1249,7 @@ function NewV2Inner() {
         userBrief: p.userBrief ?? "",
         chatHistory: p.chatHistory ?? [],
         settings: p.data?.settings,
+        profileId: p.profileId ?? null,
       });
       setProjectName(p.title);
     },
