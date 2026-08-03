@@ -3,7 +3,7 @@
 // el sanitizador y la CSP sellada. Una plataforma sin URL armable no se
 // renderiza — nunca hay tarjeta rota, así que Born-100 se cumple solo.
 
-import type { BusinessProfileData } from "./types";
+import type { BusinessProfileData, BusinessProfileLink } from "./types";
 import { PLATFORMS, PLATFORM_ICON_PATHS, platformHref, platformLabel } from "./platforms";
 
 export const PLATFORMS_BAND_MARKER = "data-ol-platforms-section";
@@ -27,6 +27,14 @@ export interface PlatformsBandOpts {
   lang?: string;
 }
 
+/** ¿Este enlace llega a ser tarjeta? ÚNICA definición de "esto pinta algo":
+ *  la afordancia de inserción tiene que gatear con el mismo predicado que la
+ *  rejilla, o el creador inserta una banda que el publish le borra en
+ *  silencio (`micafe` como Sitio web pasa un `url.trim()` pero no arma href). */
+export function platformLinkRenders(l: BusinessProfileLink): boolean {
+  return !!l.url?.trim() && !!platformHref(l.type, l.url);
+}
+
 /** SOLO la rejilla de tarjetas, o "" si no hay nada que mostrar. El encabezado
  *  lo pone el envoltorio de buildModuleSection — emitirlo aquí lo duplicaría. */
 export function renderPlatformsBand(
@@ -35,9 +43,8 @@ export function renderPlatformsBand(
 ): string {
   const cards: string[] = [];
   for (const l of data.links ?? []) {
-    if (!l.url?.trim()) continue;
-    const href = platformHref(l.type, l.url);
-    if (!href) continue;
+    if (!platformLinkRenders(l)) continue;
+    const href = platformHref(l.type, l.url)!;
     const label = platformLabel(l.type, opts.lang);
     cards.push(
       `<a href="${esc(href)}" target="_blank" rel="noopener noreferrer" ` +

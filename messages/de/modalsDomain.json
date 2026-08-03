@@ -148,7 +148,8 @@
       "collections": "Katalog",
       "bookings": "Buchungen",
       "comments": "Kommentare"
-    }
+    },
+    "platformsNoLinksWarning": "Die Seite enthält das Band Meine Plattformen, aber dein Unternehmen hat keine gültigen Links mehr — beim Veröffentlichen fällt das Band weg. Füge sie in Mein Unternehmen hinzu."
   },
   "inspector": {
     "radius": "Radius",

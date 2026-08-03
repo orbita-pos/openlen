@@ -148,7 +148,8 @@
       "collections": "Catalogo",
       "bookings": "Prenotazioni",
       "comments": "Commenti"
-    }
+    },
+    "platformsNoLinksWarning": "La pagina contiene la fascia Le mie piattaforme, ma la tua attività non ha più link validi — pubblicando, quella fascia NON comparirà. Aggiungili in La mia attività."
   },
   "inspector": {
     "radius": "Raggio",

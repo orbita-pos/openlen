@@ -1,8 +1,48 @@
 import { describe, it, expect } from "vitest";
-import { renderPlatformsBand, PLATFORMS_BAND_MARKER } from "./platforms-band";
+import { platformLinkRenders, renderPlatformsBand, PLATFORMS_BAND_MARKER } from "./platforms-band";
 import type { BusinessProfileData } from "./types";
 
 const d = (links: { type: string; url: string }[]) => ({ links }) as BusinessProfileData;
+
+// El gate de la afordancia de inserción (page.tsx) y el de la rejilla TIENEN
+// que ser el mismo predicado. Cuando divergían, un "Sitio web: micafe" hacía
+// que la tarjeta dijera "En esta página", se insertara una banda pelada
+// (encabezado + hueco) y el publish la borrara entera sin avisar.
+describe("platformLinkRenders — el único gate de «esto pinta algo»", () => {
+  it("un link cuyo href NO resuelve no cuenta como link", () => {
+    expect(platformLinkRenders({ type: "website", url: "micafe" })).toBe(false);
+    expect(platformLinkRenders({ type: "spotify", url: "mibanda" })).toBe(false);
+    expect(platformLinkRenders({ type: "otro", url: "tienda" })).toBe(false);
+  });
+
+  it("URL en blanco tampoco cuenta", () => {
+    expect(platformLinkRenders({ type: "twitch", url: "" })).toBe(false);
+    expect(platformLinkRenders({ type: "twitch", url: "   " })).toBe(false);
+  });
+
+  it("un link armable sí cuenta", () => {
+    expect(platformLinkRenders({ type: "twitch", url: "kira" })).toBe(true);
+    expect(platformLinkRenders({ type: "website", url: "micafe.mx" })).toBe(true);
+  });
+
+  it("coincide exactamente con lo que la rejilla decide pintar", () => {
+    const links = [
+      { type: "website", url: "micafe" },
+      { type: "spotify", url: "mibanda" },
+      { type: "twitch", url: "kira" },
+    ];
+    const contados = links.filter(platformLinkRenders).length;
+    const pintadas = (renderPlatformsBand(d(links)).match(/<a /g) ?? []).length;
+    expect(contados).toBe(1);
+    expect(pintadas).toBe(contados);
+  });
+
+  it("cero armables ⇒ el gate dice 0 y la rejilla sale vacía (nunca banda pelada)", () => {
+    const links = [{ type: "website", url: "micafe" }, { type: "otro", url: "tienda" }];
+    expect(links.filter(platformLinkRenders)).toHaveLength(0);
+    expect(renderPlatformsBand(d(links))).toBe("");
+  });
+});
 
 describe("renderPlatformsBand", () => {
   it("devuelve vacío sin plataformas", () => {

@@ -49,6 +49,11 @@ export interface PublishModalProject {
    *  incluida la sección diseñada alrededor, como en las 16 plantillas que
    *  traen Reservas. Este aviso es la única señal antes de perderla. */
   bandsWithModuleOff?: ("collections" | "bookings" | "comments")[];
+  /** La banda "Mis plataformas" está en el documento pero el perfil se quedó
+   *  sin enlaces armables: fillPlatformsBand la borra ENTERA al publicar. Va
+   *  aparte de bandsWithModuleOff porque no hay módulo que encender — el
+   *  arreglo está en Mi negocio. */
+  platformsBandWithoutLinks?: boolean;
 }
 
 export interface PublishModalProps {
@@ -434,6 +439,12 @@ export function PublishModal({
                     .join(", "),
                 })}
               </span>
+            </div>
+          )}
+          {project.platformsBandWithoutLinks && (
+            <div className="flex items-start gap-2 rounded-lg bg-amber-50 dark:bg-amber-500/10 ring-1 ring-amber-200 dark:ring-amber-500/30 px-3 py-2 text-[12px] text-amber-800 dark:text-amber-300">
+              <AlertCircle size={13} className="mt-0.5 shrink-0" />
+              <span>{t("publish.platformsNoLinksWarning")}</span>
             </div>
           )}
           {(project.gatedFlagsWithModuleOff ?? 0) > 0 && (

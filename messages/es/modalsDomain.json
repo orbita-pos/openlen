@@ -148,7 +148,8 @@
       "collections": "Catálogo",
       "bookings": "Reservas",
       "comments": "Comentarios"
-    }
+    },
+    "platformsNoLinksWarning": "La página trae la banda Mis plataformas, pero tu negocio se quedó sin enlaces válidos — al publicar, esa banda NO saldrá. Agrégalos en Mi negocio."
   },
   "inspector": {
     "radius": "Radio",

@@ -148,7 +148,8 @@
       "collections": "カタログ",
       "bookings": "予約",
       "comments": "コメント"
-    }
+    },
+    "platformsNoLinksWarning": "このページには「あなたのプラットフォーム」の帯がありますが、有効なリンクが残っていません。公開すると帯は表示されません。マイビジネスで追加してください。"
   },
   "inspector": {
     "radius": "角丸",

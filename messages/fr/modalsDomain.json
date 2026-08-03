@@ -148,7 +148,8 @@
       "collections": "Catalogue",
       "bookings": "Réservations",
       "comments": "Commentaires"
-    }
+    },
+    "platformsNoLinksWarning": "La page contient la bande Mes plateformes, mais votre entreprise n'a plus de liens valides — la publication supprimera cette bande. Ajoutez-les dans Mon entreprise."
   },
   "inspector": {
     "radius": "Rayon",

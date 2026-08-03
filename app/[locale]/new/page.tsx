@@ -49,6 +49,7 @@ import type {
 import { BusinessProfileModal } from "@/components/workspace-v2/business-profile-modal";
 import type { BusinessProfile } from "@/lib/business-profiles/types";
 import { isProfileFilled } from "@/lib/business-profiles/overlay";
+import { platformLinkRenders } from "@/lib/business-profiles/platforms-band";
 import { ALL_BUSINESSES } from "@/components/workspace-v2/business-switcher";
 import { CustomDomainModal } from "@/components/workspace-v2/custom-domain-modal";
 import { DeployIntegrationModal } from "@/components/workspace-v2/deploy-integration-modal";
@@ -475,9 +476,10 @@ function NewV2Inner() {
     const profile = loadedProject?.profileId
       ? profiles.find((p) => p.id === loadedProject.profileId)
       : profiles.find((p) => p.isDefault);
-    // Filas con URL en blanco no arman tarjeta (renderPlatformsBand las salta),
-    // así que tampoco deben hacer creer que la banda ya tiene con qué nacer.
-    const links = (profile?.data.links ?? []).filter((l) => l.url?.trim());
+    // MISMO predicado que la rejilla (platforms-band.ts), no uno parecido: un
+    // "Sitio web: micafe" pasa cualquier filtro de no-vacío pero no arma href,
+    // y la banda insertada nacería pelada para morir borrada al publicar.
+    const links = (profile?.data.links ?? []).filter(platformLinkRenders);
     return links.length ? links : null;
   }, [profiles, loadedProject?.profileId]);
   const modulesPreviewKey = JSON.stringify([
@@ -4300,21 +4302,27 @@ function NewV2Inner() {
             languages: loadedProject.settings?.languages,
             // Bandas presentes con su módulo APAGADO: el publish las recorta
             // en silencio — este es el único aviso antes de perder la sección.
-            bandsWithModuleOff: (() => {
+            // Plataformas se pierde por lo mismo pero por otra causa (se quedó
+            // sin enlaces armables, no hay toggle), así que avisa aparte: el
+            // arreglo está en Mi negocio, no en la pestaña Módulos.
+            ...(() => {
               const p = modulePlacements({
                 html: loadedProject.html,
                 pages: loadedProject.pages,
               });
               const s = loadedProject.settings;
-              return (
-                [
-                  ["collections", s?.collections?.enabled],
-                  ["bookings", s?.bookings?.enabled],
-                  ["comments", s?.comments?.enabled],
-                ] as const
-              )
-                .filter(([mod, on]) => p[mod].length > 0 && on !== true)
-                .map(([mod]) => mod);
+              return {
+                bandsWithModuleOff: (
+                  [
+                    ["collections", s?.collections?.enabled],
+                    ["bookings", s?.bookings?.enabled],
+                    ["comments", s?.comments?.enabled],
+                  ] as const
+                )
+                  .filter(([mod, on]) => p[mod].length > 0 && on !== true)
+                  .map(([mod]) => mod),
+                platformsBandWithoutLinks: p.platforms.length > 0 && !platformLinks,
+              };
             })(),
             ...(() => {
               const flagged = Object.values(loadedProject.pages ?? {}).filter(

@@ -148,7 +148,8 @@
       "collections": "Catalogus",
       "bookings": "Reserveringen",
       "comments": "Reacties"
-    }
+    },
+    "platformsNoLinksWarning": "De pagina bevat de band Mijn platforms, maar je bedrijf heeft geen geldige links meer — bij publiceren verdwijnt die band. Voeg ze toe in Mijn bedrijf."
   },
   "inspector": {
     "radius": "Straal",

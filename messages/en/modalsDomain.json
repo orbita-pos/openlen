@@ -148,7 +148,8 @@
       "collections": "Catalog",
       "bookings": "Bookings",
       "comments": "Comments"
-    }
+    },
+    "platformsNoLinksWarning": "This page carries the My platforms band, but your business has no valid links left — publishing will drop the band. Add them in My business."
   },
   "inspector": {
     "radius": "Radius",

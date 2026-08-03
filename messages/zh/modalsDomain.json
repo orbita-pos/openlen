@@ -148,7 +148,8 @@
       "collections": "目录",
       "bookings": "预约",
       "comments": "评论"
-    }
+    },
+    "platformsNoLinksWarning": "页面里有“我的平台”区块，但你的业务已经没有可用的链接了 —— 发布时这个区块不会出现。请在“我的业务”里添加。"
   },
   "inspector": {
     "radius": "圆角",

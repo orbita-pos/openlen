@@ -148,7 +148,8 @@
       "collections": "Catálogo",
       "bookings": "Reservas",
       "comments": "Comentários"
-    }
+    },
+    "platformsNoLinksWarning": "A página traz a faixa Minhas plataformas, mas seu negócio ficou sem links válidos — ao publicar, essa faixa NÃO vai aparecer. Adicione-os em Meu negócio."
   },
   "inspector": {
     "radius": "Raio",
