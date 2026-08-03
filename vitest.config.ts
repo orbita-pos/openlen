@@ -57,6 +57,7 @@ export default defineConfig({
       "lib/curate/**/*.test.ts",
       "lib/generation/**/*.test.ts",
       "lib/templates/visual-metadata.test.ts",
+      "lib/templates/store-visual-metadata.test.ts",
       "lib/templates/suggest-visual-metadata.test.ts",
       // lib/ai mixes runners — vision-critique.test.ts is node:test (in
       // test:node), so list the vitest ai tests individually.
@@ -127,6 +128,7 @@ export default defineConfig({
       // Route guard for the one-time Explore seed trigger. Mocks the seed core,
       // so it never loads the native html-engine binding.
       "app/api/admin/explore-seed/route.test.ts",
+      "app/api/admin/templates/[id]/route.test.ts",
       // Route guard for the internal live-republish trigger (Task 12). Mocks
       // lib/live/deps for the same reason — its import chain reaches the
       // native html-engine binding via lib/projects.ts.
