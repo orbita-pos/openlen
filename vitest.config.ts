@@ -55,6 +55,7 @@ export default defineConfig({
       // lib/behaviors/, so it needs its own entry.
       "lib/design-guidance-seam.test.ts",
       "lib/curate/**/*.test.ts",
+      "lib/generation/**/*.test.ts",
       // lib/ai mixes runners — vision-critique.test.ts is node:test (in
       // test:node), so list the vitest ai tests individually.
       "lib/ai/image-edit-core.test.ts",
