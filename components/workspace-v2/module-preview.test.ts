@@ -264,6 +264,34 @@ describe("banda de plataformas en el canvas", () => {
     ).toBe(html);
   });
 
+  it("bandWithPreview: la banda insertada llega YA con las tarjetas reales", () => {
+    const band = buildModuleSection("platforms", { lang: "es" });
+    const out = bandWithPreview("platforms", band, {
+      docHtml: PLATFORMS_HTML,
+      platforms: [{ type: "twitch", url: "kira" }],
+    });
+    expect(out).toContain('href="https://twitch.tv/kira"');
+    expect(out).toContain(MODULES_PREVIEW_MARKER);
+    // Las tarjetas van DENTRO del marcador, no antes de él.
+    expect(out.indexOf("twitch.tv/kira")).toBeGreaterThan(
+      out.indexOf("data-ol-platforms-section"),
+    );
+    // Al guardar, el marcador vuelve a quedar vacío: fillPlatformsBand lo
+    // rellena con links frescos al publicar.
+    const doc = PLATFORMS_HTML.replace("</body>", out + "</body>");
+    const norm = (h: string) =>
+      new DOMParser().parseFromString(h, "text/html").documentElement.outerHTML;
+    expect(norm(stripEditorInstrumentation(doc))).toBe(
+      norm(PLATFORMS_HTML.replace("</body>", band + "</body>")),
+    );
+  });
+
+  it("bandWithPreview sin links devuelve la banda tal cual", () => {
+    const band = buildModuleSection("platforms", { lang: "es" });
+    expect(bandWithPreview("platforms", band, { docHtml: PLATFORMS_HTML, platforms: [] })).toBe(band);
+    expect(bandWithPreview("platforms", band, { docHtml: PLATFORMS_HTML })).toBe(band);
+  });
+
   it("los genéricos del preview siguen el idioma del documento", () => {
     const en = injectEditorModulesPreview(
       '<html lang="en"><body><section data-ol-platforms-section></section></body></html>',

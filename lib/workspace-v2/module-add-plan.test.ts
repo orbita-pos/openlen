@@ -34,3 +34,34 @@ describe("planModuleAdd", () => {
     expect(() => planModuleAdd({ module: "comments", destination: "page", moduleEnabled: true, membersEnabled: true, activePageHasBand: false })).toThrow();
   });
 });
+
+describe("planModuleAdd — plataformas (prerequisito = datos, no toggle)", () => {
+  const base = { module: "platforms", destination: "section", moduleEnabled: false, membersEnabled: false, activePageHasBand: false } as const;
+
+  it("con links → insert directo, SIN enableModule (no hay settings.enabled)", () => {
+    expect(planModuleAdd({ ...base, hasPlatformLinks: true }))
+      .toEqual([{ kind: "insertSection", module: "platforms" }]);
+  });
+  it("sin links → dirige a Mi negocio y NO inserta", () => {
+    expect(planModuleAdd({ ...base, hasPlatformLinks: false }))
+      .toEqual([{ kind: "openBusinessProfile" }]);
+  });
+  it("hasPlatformLinks ausente cuenta como sin links", () => {
+    expect(planModuleAdd(base)).toEqual([{ kind: "openBusinessProfile" }]);
+  });
+  it("singleton: la banda ya está en la página activa → solo scroll", () => {
+    expect(planModuleAdd({ ...base, hasPlatformLinks: true, activePageHasBand: true }))
+      .toEqual([{ kind: "scrollToExisting", module: "platforms" }]);
+  });
+  it("el singleton gana incluso sin links (la banda ya existe, no hay nada que capturar)", () => {
+    expect(planModuleAdd({ ...base, activePageHasBand: true }))
+      .toEqual([{ kind: "scrollToExisting", module: "platforms" }]);
+  });
+  it("moduleEnabled NO influye — el estado son los links", () => {
+    expect(planModuleAdd({ ...base, moduleEnabled: true, hasPlatformLinks: false }))
+      .toEqual([{ kind: "openBusinessProfile" }]);
+  });
+  it("platforms + destino página lanza (no habrá página de plataformas)", () => {
+    expect(() => planModuleAdd({ ...base, destination: "page", hasPlatformLinks: true })).toThrow();
+  });
+});

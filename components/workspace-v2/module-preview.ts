@@ -145,11 +145,12 @@ function bandIsEmpty(html: string, marker: string): boolean {
  *  payload carries the marked preview, the save serialization strips it, and
  *  derive() re-adds it on future loads. `docHtml` supplies lang + accent. */
 export function bandWithPreview(
-  module: "collections" | "bookings" | "comments",
+  module: "collections" | "bookings" | "comments" | "platforms",
   bandHtml: string,
   opts: {
     docHtml: string;
     collections?: { items: ItemRow[]; layout: "grid" | "list"; ordersNumber?: string | null; theme?: "light" | "dark" } | null;
+    platforms?: BusinessProfileData["links"] | null;
   },
 ): string {
   const es = !/<html[^>]*\blang=["']?en/i.test(opts.docHtml);
@@ -158,6 +159,23 @@ export function bandWithPreview(
   }
   if (module === "comments") {
     return injectIntoBand(bandHtml, "data-ol-comments-section", commentsSkeleton(es));
+  }
+  if (module === "platforms") {
+    // Not a skeleton: the real cards render scriptless, so the band lands
+    // already looking like what publish will bake. Stamped like every other
+    // preview, so the save strips it and data.html keeps the empty marker
+    // that fillPlatformsBand fills with fresh links at publish time.
+    const grid = opts.platforms?.length
+      ? renderPlatformsBand({ links: opts.platforms } as BusinessProfileData, {
+          lang: detectHtmlLang(opts.docHtml) ?? "",
+        })
+      : "";
+    if (!grid) return bandHtml;
+    return injectIntoBand(
+      bandHtml,
+      "data-ol-platforms-section",
+      `<div ${MODULES_PREVIEW_MARKER} data-openlen-no-edit>${grid}</div>`,
+    );
   }
   const col = opts.collections;
   if (col?.items.length) {
