@@ -1,6 +1,9 @@
 import { describe, it, expect } from "vitest";
 import { seedBrandIntoHtml, fillPlatformsBand, profileMeta } from "./seed-html";
+import { platformLinkRenders } from "./platforms-band";
 import { coerceBusinessData } from "@/lib/style-match/autofill/types";
+import { buildModuleSection } from "@/lib/publish/module-sections";
+import { modulePlacements } from "@/lib/projects/module-placements";
 import type { BusinessProfileData } from "./types";
 
 const HTML =
@@ -202,9 +205,13 @@ describe("seedBrandIntoHtml", () => {
     expect(seedBrandIntoHtml(once, data)).toBe(once);
   });
 
-  it("sin plataformas BORRA la banda entera, no deja un encabezado huérfano", () => {
+  // Este test afirmaba lo contrario y por eso el defecto pasó cinco revisiones:
+  // sembrar corre en CADA guardado de Mi negocio, así que borrar ahí le comía
+  // al creador una sección que insertó a propósito, en silencio. El encabezado
+  // huérfano se evita donde importa —publicar y /p/—, no sobre data.html.
+  it("sin plataformas PRESERVA la banda (borrarla es cosa de publicar, no de sembrar)", () => {
     const out = seedBrandIntoHtml(BANDA, { links: [] } as unknown as BusinessProfileData);
-    expect(out).not.toContain("data-ol-platforms-section");
+    expect(out).toContain("data-ol-platforms-section");
   });
 
   it("una página sin el marcador queda intacta", () => {
@@ -215,6 +222,8 @@ describe("seedBrandIntoHtml", () => {
 });
 
 describe("fillPlatformsBand", () => {
+  const STRIP = { whenEmpty: "strip" } as const;
+
   it("re-sembrar la banda real de buildModuleSection (marcador <div>) no deja HTML desbalanceado", () => {
     const html =
       '<section style="max-width:900px;margin:64px auto;padding:0 24px;box-sizing:border-box;">' +
@@ -224,8 +233,8 @@ describe("fillPlatformsBand", () => {
       "<div data-ol-platforms-section></div>" +
       "</section>";
     const data = { links: [{ type: "twitch", url: "kira" }] } as BusinessProfileData;
-    const once = fillPlatformsBand(html, data);
-    const twice = fillPlatformsBand(once, data);
+    const once = fillPlatformsBand(html, data, STRIP);
+    const twice = fillPlatformsBand(once, data, STRIP);
     expect(twice).toBe(once);
     const opens = (twice.match(/<div/g) ?? []).length;
     const closes = (twice.match(/<\/div>/g) ?? []).length;
@@ -235,9 +244,10 @@ describe("fillPlatformsBand", () => {
   it("el marcador dentro de un atributo ajeno NO cuenta — el elemento queda intacto", () => {
     const html = '<div title="see data-ol-platforms-section docs">unrelated</div>';
     const data = { links: [{ type: "twitch", url: "kira" }] } as BusinessProfileData;
-    expect(fillPlatformsBand(html, data)).toBe(html);
+    expect(fillPlatformsBand(html, data, STRIP)).toBe(html);
     const empty = { links: [] } as unknown as BusinessProfileData;
-    expect(fillPlatformsBand(html, empty)).toBe(html);
+    expect(fillPlatformsBand(html, empty, STRIP)).toBe(html);
+    expect(fillPlatformsBand(html, empty, { whenEmpty: "keep" })).toBe(html);
   });
 
   it("dos bandas en el mismo documento: ambas se rellenan", () => {
@@ -246,7 +256,7 @@ describe("fillPlatformsBand", () => {
       "<p>en medio</p>" +
       "<section data-ol-platforms-section></section>";
     const data = { links: [{ type: "twitch", url: "kira" }] } as BusinessProfileData;
-    const out = fillPlatformsBand(html, data);
+    const out = fillPlatformsBand(html, data, STRIP);
     expect(out.match(/href="https:\/\/twitch\.tv\/kira"/g)?.length).toBe(2);
     expect(out).toContain("<p>en medio</p>");
   });
@@ -254,9 +264,9 @@ describe("fillPlatformsBand", () => {
   it("los genéricos toman el idioma del propio documento", () => {
     const band = "<div data-ol-platforms-section></div>";
     const data = { links: [{ type: "website", url: "tunegocio.mx" }] } as BusinessProfileData;
-    const es = fillPlatformsBand(`<html lang="es"><body>${band}</body></html>`, data);
+    const es = fillPlatformsBand(`<html lang="es"><body>${band}</body></html>`, data, STRIP);
     const en = fillPlatformsBand(`<html lang="en">
-<body>${band}</body></html>`, data);
+<body>${band}</body></html>`, data, STRIP);
     expect(es).toContain("Sitio web");
     expect(en).toContain("Website");
     expect(en).not.toContain("Sitio web");
@@ -268,9 +278,83 @@ describe("fillPlatformsBand", () => {
       "<p>en medio</p>" +
       "<section data-ol-platforms-section></section>";
     const empty = { links: [] } as unknown as BusinessProfileData;
-    const out = fillPlatformsBand(html, empty);
+    const out = fillPlatformsBand(html, empty, STRIP);
     expect(out).not.toContain("data-ol-platforms-section");
     expect(out).toContain("<p>en medio</p>");
+  });
+});
+
+// La MISMA función hacía dos trabajos con una sola política: borrar la banda
+// vacía es correcto de cara al visitante y destructivo sobre data.html. El seed
+// corre en cada "Guardar" de Mi negocio, así que la sección que el creador
+// insertó desaparecía del proyecto sin toast y sin deshacer — y de paso volvía
+// inalcanzable el aviso ámbar de Publicar, que solo aparece si la banda existe.
+describe("política del caso vacío", () => {
+  // La banda REAL que emite el insert — stripBandByMarker solo reconoce como
+  // "nuestra" la firma de band() (<section style="max-width:…;margin:64px
+  // auto;…">); con un <section> a mano el strip es conservador y deja el
+  // encabezado, así que un DOC inventado probaría otra cosa.
+  const BAND = buildModuleSection("platforms", { lang: "es" });
+  const DOC = `<html lang="es"><body><h1>kira</h1>${BAND}</body></html>`;
+  const sinLinks = { links: [] } as unknown as BusinessProfileData;
+  // Un enlace capturado pero NO armable: el caso `micafe` del review anterior.
+  const soloBasura = {
+    links: [{ type: "website", url: "micafe" }],
+  } as BusinessProfileData;
+
+  it("sembrar PRESERVA la banda cuando no hay enlaces armables", () => {
+    for (const data of [sinLinks, soloBasura]) {
+      const out = fillPlatformsBand(DOC, data, { whenEmpty: "keep" });
+      expect(out).toContain("data-ol-platforms-section");
+      expect(out).toContain("Encuéntrame en");
+      expect(out).toContain("<h1>kira</h1>");
+    }
+  });
+
+  it("sembrar deja el placeholder VACÍO, no las tarjetas rancias del enlace borrado", () => {
+    const conTarjeta = fillPlatformsBand(
+      DOC,
+      { links: [{ type: "twitch", url: "kira" }] } as BusinessProfileData,
+      { whenEmpty: "keep" },
+    );
+    expect(conTarjeta).toContain("twitch.tv/kira");
+    // El creador borra su único enlace y vuelve a guardar Mi negocio.
+    const traseBorrar = fillPlatformsBand(conTarjeta, sinLinks, { whenEmpty: "keep" });
+    expect(traseBorrar).not.toContain("twitch.tv/kira");
+    expect(traseBorrar).toContain("data-ol-platforms-section");
+  });
+
+  it("sembrar sigue siendo IDEMPOTENTE con la política de preservar", () => {
+    const once = fillPlatformsBand(DOC, sinLinks, { whenEmpty: "keep" });
+    const twice = fillPlatformsBand(once, sinLinks, { whenEmpty: "keep" });
+    expect(twice).toBe(once);
+    const opens = (twice.match(/<div/g) ?? []).length;
+    const closes = (twice.match(/<\/div>/g) ?? []).length;
+    expect(closes).toBe(opens);
+  });
+
+  it("publicar/preview BORRAN la banda entera — nunca un encabezado sobre un hueco", () => {
+    for (const data of [sinLinks, soloBasura]) {
+      const out = fillPlatformsBand(DOC, data, { whenEmpty: "strip" });
+      expect(out).not.toContain("data-ol-platforms-section");
+      expect(out).not.toContain("Encuéntrame en");
+      expect(out).toContain("<h1>kira</h1>");
+    }
+  });
+
+  it("seedBrandIntoHtml (el camino que corre en cada guardado) no destruye la banda", () => {
+    const out = seedBrandIntoHtml(DOC, sinLinks);
+    expect(out).toContain("data-ol-platforms-section");
+    expect(out).toContain("Encuéntrame en");
+  });
+
+  it("el aviso ámbar de Publicar queda ALCANZABLE tras guardar sin enlaces", () => {
+    // La condición del aviso (page.tsx) es `p.platforms.length > 0 && !platformLinks`.
+    // Con la política vieja el primer término daba 0 y el aviso nunca salía.
+    const seeded = seedBrandIntoHtml(DOC, sinLinks);
+    const placements = modulePlacements({ html: seeded });
+    const platformLinks = (sinLinks.links ?? []).filter(platformLinkRenders);
+    expect(placements.platforms.length > 0 && platformLinks.length === 0).toBe(true);
   });
 });
 

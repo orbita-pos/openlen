@@ -173,9 +173,17 @@ export function bakeModulesForPreviewHtml(html: string, ctx: PreviewBakeCtx): st
     }
   }
 
-  if (ctx.platforms?.length) {
+  // Gateado por el MARCADOR, no por `ctx.platforms?.length`: el borrador tiene
+  // que enseñar lo que se va a publicar, y publicar borra la banda cuando no
+  // queda ningún enlace armable. Con el gate viejo, /p/ mostraba un
+  // "Encuéntrame en" sobre un hueco que la página publicada no iba a tener.
+  if (out.includes(PLATFORMS_BAND_MARKER)) {
     try {
-      out = fillPlatformsBand(out, { links: ctx.platforms } as BusinessProfileData);
+      out = fillPlatformsBand(
+        out,
+        { links: ctx.platforms ?? [] } as BusinessProfileData,
+        { whenEmpty: "strip" },
+      );
     } catch {
       /* soft-fail */
     }

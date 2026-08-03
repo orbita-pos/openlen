@@ -46,7 +46,11 @@ export function seedBrandIntoHtml(
   const accent = data.brand?.accent ?? null;
   let out = stripPriorSeed(html);
   if (recolor && accent) out = applyAccentToHtml(out, accent);
-  out = fillPlatformsBand(out, data);
+  // "keep": sembrar NUNCA destruye una banda que el creador insertó. Corre en
+  // cada guardado de Mi negocio (reseedCurrentPage), así que "strip" aquí
+  // borraba la sección del proyecto antes de que el aviso de publicación
+  // pudiera siquiera mostrarse.
+  out = fillPlatformsBand(out, data, { whenEmpty: "keep" });
   out = injectContactWidget(out, data, accent ?? DEFAULT_ACCENT);
   return out;
 }
@@ -84,21 +88,40 @@ function matchingCloseStart(html: string, contentStart: number, tag: string): nu
   return -1;
 }
 
+/** Qué hacer cuando NINGUNA plataforma es armable:
+ *  - `"strip"` — borrar la banda entera. Correcto en las superficies que el
+ *    visitante ve (publicar, /p/): un "Encuéntrame en" sobre un hueco es el
+ *    agujero de Born-100 que el spec manda evitar.
+ *  - `"keep"` — vaciar el placeholder pero DEJAR la banda. Obligatorio al
+ *    sembrar sobre `data.html`: esa sección la insertó el creador a propósito
+ *    y el seed corre en cada "Guardar" de Mi negocio — borrarla ahí le comía
+ *    su trabajo en silencio, sin toast y sin deshacer.
+ *
+ *  Explícito y sin default a propósito: la política es la decisión, y un
+ *  camino nuevo que la herede por descuido vuelve a destruir páginas. */
+export type EmptyPlatformsBandPolicy = "strip" | "keep";
+
 /** Rellena el placeholder de la banda con la rejilla de tarjetas — en TODAS
- *  las bandas del documento, no solo la primera. Sin ninguna plataforma
- *  armable borra la banda ENTERA — un encabezado "Encuéntrame en" sobre un
- *  hueco vacío rompería Born-100. Idempotente: reemplaza el CONTENIDO de
- *  cada elemento marcado, así que re-sembrar no duplica.
+ *  las bandas del documento, no solo la primera. Idempotente: reemplaza el
+ *  CONTENIDO de cada elemento marcado, así que re-sembrar no duplica —
+ *  incluido el caso vacío bajo `"keep"`, que deja el placeholder ya vaciado
+ *  (y de paso barre las tarjetas RANCIAS de un enlace que el creador borró).
  *
  *  Los tres nombres GENÉRICOS del registry (Sitio web / Menú / Otro enlace) se
  *  resuelven con el idioma del propio documento, así que la tarjeta habla el
  *  mismo idioma que el encabezado que la envuelve. */
-export function fillPlatformsBand(html: string, data: BusinessProfileData): string {
+export function fillPlatformsBand(
+  html: string,
+  data: BusinessProfileData,
+  opts: { whenEmpty: EmptyPlatformsBandPolicy },
+): string {
   const hits = findMarkerTags(html, PLATFORMS_BAND_MARKER);
   if (hits.length === 0) return html;
 
   const grid = renderPlatformsBand(data, { lang: detectHtmlLang(html) ?? "" });
-  if (!grid) return stripBandByMarker(html, PLATFORMS_BAND_MARKER);
+  if (!grid && opts.whenEmpty === "strip") {
+    return stripBandByMarker(html, PLATFORMS_BAND_MARKER);
+  }
 
   let out = html;
   for (let i = hits.length - 1; i >= 0; i--) {

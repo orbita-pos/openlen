@@ -628,9 +628,11 @@ async function bakeDocument(
   // marcador — el 99% de las páginas no paga nada. Soft-fail como el resto.
   if (migratedHtml.includes(PLATFORMS_BAND_MARKER)) {
     try {
-      migratedHtml = fillPlatformsBand(migratedHtml, {
-        links: ctx.platforms ?? [],
-      } as BusinessProfileData);
+      migratedHtml = fillPlatformsBand(
+        migratedHtml,
+        { links: ctx.platforms ?? [] } as BusinessProfileData,
+        { whenEmpty: "strip" },
+      );
     } catch (err) {
       // eslint-disable-next-line no-console
       console.warn("[publishToDir] platforms band fill failed; publishing as-is", err);
