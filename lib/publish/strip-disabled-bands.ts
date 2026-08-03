@@ -17,7 +17,7 @@
 // (an 8MB from-html paste could pin the box's event loop for minutes at
 // publish). Pure string, no DOM. Idempotent. Enabled modules untouched.
 
-import { hasAttr, openTagEnd } from "./tag-attrs";
+import { BAND_ATTR, BAND_ATTR_OPEN, hasAttr, openTagEnd } from "./tag-attrs";
 
 const MARKERS = {
   bookings: "data-ol-bookings-section",
@@ -88,13 +88,21 @@ export function stripBandByMarker(html: string, marker: string): string {
     let removeStart = tagStart;
     let removeEnd = elEnd;
     if (tagName !== "section") {
-      const bandOpen = out.lastIndexOf(BAND_OPEN_PREFIX, tagStart);
+      // Ancla por ATRIBUTO primero: exacta, imposible de confundir con una
+      // sección del usuario. Si el documento trae una banda VIEJA (insertada
+      // antes de que se estampara), caemos a la huella de estilo de siempre —
+      // idéntica a la de hoy, sin ensanchar nada: una banda vieja que ya pasó
+      // por el DOM del editor sigue sin detectarse, que es el estado actual.
+      let bandOpen = out.lastIndexOf(BAND_ATTR_OPEN, tagStart);
+      let stamped = bandOpen !== -1;
+      if (!stamped) bandOpen = out.lastIndexOf(BAND_OPEN_PREFIX, tagStart);
       if (bandOpen !== -1) {
         const bandTagEnd = out.indexOf(">", bandOpen);
         const between = out.slice(bandOpen, tagStart);
         const openTag = bandTagEnd === -1 ? "" : out.slice(bandOpen, bandTagEnd + 1);
+        if (stamped) stamped = hasAttr(openTag, BAND_ATTR);
         if (
-          openTag.includes(BAND_OPEN_SIGNATURE) &&
+          (stamped || openTag.includes(BAND_OPEN_SIGNATURE)) &&
           !between.slice(openTag.length).toLowerCase().includes("</section>") &&
           !between.slice(openTag.length).toLowerCase().includes("<section")
         ) {

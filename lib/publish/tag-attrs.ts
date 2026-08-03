@@ -13,6 +13,22 @@
 // documento: la primera versión de stripBandByMarker medía O(n²) con pegados
 // de 8MB y colgaba el event loop al publicar.
 
+/** Marca del ENVOLTORIO de una banda diseñada (`buildModuleSection`). Vive
+ *  aquí, en el módulo puro, porque la emiten las bandas y la leen tanto el
+ *  strip al publicar como el preview del canvas.
+ *
+ *  Por qué un atributo y no la huella del `style`: el `style` no es fiable. El
+ *  DOM del editor lo re-serializa con espacios (`margin: 64px auto`), y
+ *  `lib/agent/redesign.ts` autoriza a la IA a re-estilizar el envoltorio. Un
+ *  `data-ol-*`, en cambio, cae bajo la regla que obliga a conservar el elemento
+ *  y sus atributos INTACTOS. */
+export const BAND_ATTR = "data-ol-module-band";
+
+/** El texto exacto con que abre una banda estampada. Ancla de una sola
+ *  búsqueda, igual que la huella vieja: el spam de aperturas degrada a «no hay
+ *  banda», nunca a un re-escaneo. */
+export const BAND_ATTR_OPEN = `<section ${BAND_ATTR}`;
+
 /** Índice del ">" que cierra el tag que empieza en `open`, saltando cualquier
  *  ">" que aparezca dentro del valor entrecomillado de un atributo. -1 si el
  *  tag nunca cierra. */

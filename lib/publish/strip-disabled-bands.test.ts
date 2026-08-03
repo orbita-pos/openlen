@@ -119,11 +119,68 @@ describe("stripDisabledModuleBands", () => {
     );
   });
 
-  it("no markers → document untouched (byte-identical)", () => {
+  it("sin marcadores → documento intacto (byte-idéntico)", () => {
     const html = DOC("<section><p>nada de módulos</p></section>");
     assert.equal(
       stripDisabledModuleBands(html, { bookings: false, collections: false, comments: false, chat: false }),
       html,
     );
+  });
+});
+
+// El bug que esto cierra: la banda se detectaba por la huella de su `style`
+// inline, y el DOM del iframe del editor la re-serializa CON espacios
+// (`margin: 64px auto`, `0` → `0px`). Tras el primer guardado la huella dejaba
+// de casar y la página publicada se quedaba con el encabezado huérfano. Medido
+// en navegador; afectaba a bookings/collections/comments/chat en producción.
+describe("la banda estampada se detecta tras pasar por el DOM del editor", () => {
+  const OFF = { bookings: false, collections: false, comments: false, chat: false };
+
+  const asSavedByTheEditor = (marker: string) =>
+    `<section data-ol-module-band style="max-width: 900px; margin: 64px auto; padding: 0px 24px; box-sizing: border-box;">` +
+    `<div style="text-align: center;"><p>Reservas</p><h2>Agenda una cita</h2><p>Elige el día.</p></div>` +
+    `<div ${marker}></div></section>`;
+
+  it("borra la banda ENTERA con el estilo normalizado por el DOM", () => {
+    const out = stripDisabledModuleBands(DOC(asSavedByTheEditor("data-ol-bookings-section")), OFF);
+    assert.ok(!out.includes("data-ol-bookings-section"), "marcador fuera");
+    assert.ok(!out.includes("Agenda una cita"), "encabezado fuera — era el huérfano");
+    assert.ok(!out.includes("data-ol-module-band"), "envoltorio fuera");
+    assert.ok(out.includes("Hola"), "el resto del documento sobrevive");
+  });
+
+  it("buildModuleSection estampa el envoltorio, y también se borra entero", () => {
+    const html = DOC(buildModuleSection("collections", { lang: "es" }));
+    assert.ok(html.includes("data-ol-module-band"), "estampa presente al emitir");
+    assert.ok(!stripDisabledModuleBands(html, OFF).includes("Lo que ofrecemos"), "encabezado fuera");
+  });
+
+  // Respaldo: las bandas insertadas ANTES de que se estampara siguen
+  // dependiendo de la huella de estilo. Comportamiento IDÉNTICO al de hoy —
+  // este arreglo no lo ensancha, para no arriesgar borrar secciones del user.
+  it("banda vieja sin estampa, estilo compacto: se sigue borrando entera", () => {
+    const legacy =
+      `<section style="max-width:720px;margin:64px auto;padding:0 24px;box-sizing:border-box;">` +
+      `<h2>Lo que opina la gente</h2><div data-ol-comments-section></div></section>`;
+    assert.ok(!stripDisabledModuleBands(DOC(legacy), OFF).includes("Lo que opina la gente"));
+  });
+
+  it("banda vieja sin estampa YA normalizada: solo el marcador (limitación conocida)", () => {
+    const legacy =
+      `<section style="max-width: 720px; margin: 64px auto;">` +
+      `<h2>Lo que opina la gente</h2><div data-ol-comments-section></div></section>`;
+    const out = stripDisabledModuleBands(DOC(legacy), OFF);
+    assert.ok(!out.includes("data-ol-comments-section"), "el marcador sí se va");
+    assert.ok(out.includes("Lo que opina la gente"), "el encabezado queda — estado de hoy, no una regresión");
+  });
+
+  // El riesgo caro es el inverso: tragarse una sección que escribió el user.
+  it("NO se traga una sección del usuario que casualmente comparte el estilo", () => {
+    const suya =
+      `<section style="max-width: 900px; margin: 64px auto; box-sizing: border-box;">` +
+      `<h2>Mi taller</h2><p>Texto que escribí yo</p><div data-ol-chat-section></div></section>`;
+    const out = stripDisabledModuleBands(DOC(suya), OFF);
+    assert.ok(!out.includes("data-ol-chat-section"), "el marcador se va");
+    assert.ok(out.includes("Texto que escribí yo"), "mi contenido NO se borra");
   });
 });

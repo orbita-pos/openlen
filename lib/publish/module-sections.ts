@@ -14,6 +14,7 @@
 // client-side (the home-section insert in the workspace).
 
 import { waHref } from "./whatsapp-button";
+import { BAND_ATTR } from "./tag-attrs";
 
 export type ModuleSurface = "bookings" | "collections" | "comments" | "whatsapp" | "chat" | "platforms";
 
@@ -76,7 +77,7 @@ function band(
   inner: string,
 ): string {
   return (
-    `<section style="max-width:${maxWidth}px;margin:64px auto;padding:0 24px;box-sizing:border-box;">` +
+    `<section ${BAND_ATTR} style="max-width:${maxWidth}px;margin:64px auto;padding:0 24px;box-sizing:border-box;">` +
     `<div style="text-align:center;max-width:620px;margin:0 auto 32px;">` +
     `<p style="margin:0 0 10px;font-size:13px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--ol-accent,#FF5A36);">${esc(c.eyebrow)}</p>` +
     `<h2 style="margin:0 0 12px;font-size:clamp(26px,4vw,40px);font-weight:800;letter-spacing:-.02em;line-height:1.12;color:inherit;">${esc(c.heading)}</h2>` +
