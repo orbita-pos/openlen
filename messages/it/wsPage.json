@@ -186,7 +186,8 @@
     "modulePageCreated": "Pagina creata",
     "modulePageExists": "Pagina esistente aperta",
     "moduleAlreadyOnPage": "Questo modulo è già in questa pagina",
-    "moduleNeedsAccounts": "Attiva prima gli Account — questo modulo ne ha bisogno."
+    "moduleNeedsAccounts": "Attiva prima gli Account — questo modulo ne ha bisogno.",
+    "platformsNeedLinks": "Aggiungi almeno un link in La mia attività"
   },
   "whatsapp": {
     "title": "Pulsante WhatsApp",
@@ -265,5 +266,14 @@
     "open": "Apri",
     "activate": "Attiva",
     "drawerClose": "Chiudi"
+  },
+  "platforms": {
+    "title": "Le mie piattaforme",
+    "tagline": "I tuoi social e link, in una fascia di schede",
+    "needsLinks": "Aggiungi almeno un link in La mia attività e la fascia è pronta.",
+    "insert": "Inserisci",
+    "inserted": "Fatto: la fascia è nella pagina",
+    "manage": "Vai a La mia attività",
+    "note": "Senza costi. I link si aggiornano da soli alla pubblicazione."
   }
 }

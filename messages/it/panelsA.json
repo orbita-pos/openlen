@@ -74,7 +74,11 @@
     "sectionsTab": "Sezioni",
     "manageProducts": "Gestisci i prodotti",
     "modulesTargetLabel": "Verrà aggiunto a",
-    "siteLabel": "Sito"
+    "siteLabel": "Sito",
+    "modulePlatformsTitle": "Le mie piattaforme",
+    "modulePlatformsDesc": "I tuoi social e link, in schede",
+    "modulePlatformsNeedsLinks": "Aggiungi prima i tuoi link in La mia attività",
+    "modulePlatformsAddLinks": "Aggiungi i miei link"
   },
   "paste": {
     "heading": "Incolla HTML",

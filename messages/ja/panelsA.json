@@ -74,7 +74,11 @@
     "sectionsTab": "セクション",
     "manageProducts": "商品を管理",
     "modulesTargetLabel": "追加先",
-    "siteLabel": "サイト"
+    "siteLabel": "サイト",
+    "modulePlatformsTitle": "あなたのプラットフォーム",
+    "modulePlatformsDesc": "SNSやリンクをカードで表示",
+    "modulePlatformsNeedsLinks": "先に「あなたのお店」でリンクを追加してください",
+    "modulePlatformsAddLinks": "リンクを追加"
   },
   "paste": {
     "heading": "HTMLを貼り付け",

@@ -186,7 +186,8 @@
     "modulePageCreated": "ページを作成しました",
     "modulePageExists": "既存のページを開きました",
     "moduleAlreadyOnPage": "このモジュールはすでにこのページにあります",
-    "moduleNeedsAccounts": "先にアカウントをオンにしてください — このモジュールに必要です。"
+    "moduleNeedsAccounts": "先にアカウントをオンにしてください — このモジュールに必要です。",
+    "platformsNeedLinks": "「あなたのお店」でリンクを1つ以上追加してください"
   },
   "whatsapp": {
     "title": "WhatsAppボタン",
@@ -265,5 +266,14 @@
     "open": "開く",
     "activate": "オンにする",
     "drawerClose": "閉じる"
+  },
+  "platforms": {
+    "title": "あなたのプラットフォーム",
+    "tagline": "SNSやリンクをカードの帯で表示",
+    "needsLinks": "「あなたのお店」でリンクを1つ以上追加すると、帯が使えるようになります。",
+    "insert": "挿入",
+    "inserted": "完了：帯をページに追加しました",
+    "manage": "「あなたのお店」へ",
+    "note": "無料です。公開時にリンクは自動で更新されます。"
   }
 }

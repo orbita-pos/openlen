@@ -186,7 +186,8 @@
     "modulePageCreated": "페이지를 만들었습니다",
     "modulePageExists": "기존 페이지를 열었습니다",
     "moduleAlreadyOnPage": "이 모듈은 이미 이 페이지에 있어요",
-    "moduleNeedsAccounts": "먼저 계정을 켜세요 — 이 모듈에 필요합니다."
+    "moduleNeedsAccounts": "먼저 계정을 켜세요 — 이 모듈에 필요합니다.",
+    "platformsNeedLinks": "내 가게에서 링크를 하나 이상 추가하세요"
   },
   "whatsapp": {
     "title": "WhatsApp 버튼",
@@ -265,5 +266,14 @@
     "open": "열기",
     "activate": "켜기",
     "drawerClose": "닫기"
+  },
+  "platforms": {
+    "title": "내 플랫폼",
+    "tagline": "SNS와 링크를 카드 띠로",
+    "needsLinks": "내 가게에서 링크를 하나 이상 추가하면 띠를 넣을 수 있습니다.",
+    "insert": "삽입",
+    "inserted": "완료: 띠가 페이지에 추가되었습니다",
+    "manage": "내 가게로 이동",
+    "note": "무료입니다. 게시할 때 링크가 자동으로 갱신됩니다."
   }
 }

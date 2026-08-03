@@ -30,6 +30,7 @@ import {
   Globe,
   Grid3,
   Inbox,
+  Link,
   Loader,
   LockIcon,
   Megaphone,
@@ -41,7 +42,7 @@ import {
   X,
 } from "../icons";
 
-// The 8 modules the hub can show — drives which one the drawer has open.
+// The 9 modules the hub can show — drives which one the drawer has open.
 type ModuleKey =
   | "members"
   | "broadcast"
@@ -50,7 +51,8 @@ type ModuleKey =
   | "bookings"
   | "collections"
   | "comments"
-  | "orders";
+  | "orders"
+  | "platforms";
 
 interface ModuleEntry {
   key: ModuleKey;
@@ -61,6 +63,9 @@ interface ModuleEntry {
   on: boolean;
   busy?: boolean;
   onToggle: () => void;
+  /** false → the drawer hides the Switch. "Mis plataformas" has no
+   *  settings.enabled: it's on when its band is placed, off when it isn't. */
+  toggleable?: boolean;
   /** One live-state line shown on the ACTIVE card (mode/number/mount/placement). */
   status?: string;
   /** Overrides `tagline` on the AVAILABLE card only (e.g. Broadcast's needsMembers hint). */
@@ -117,6 +122,11 @@ interface ModulesPanelProps {
   /** Private chat module — toggle + mount + self-serve. */
   chatSettings?: ChatSettings;
   onUpdateChat?: (patch: ChatSettings) => Promise<boolean>;
+  /** "Mis plataformas": how many links the active business profile carries.
+   *  0 → the card teaches and sends the user to Mi negocio (no toggle to flip). */
+  platformLinkCount?: number;
+  onInsertPlatformsSection?: () => void;
+  onOpenBusinessProfile?: () => void;
   /** Create a dedicated brand-matched page for the module (bookings/collections). */
   onCreateModulePage?: (module: "bookings" | "collections") => void | Promise<void>;
   /** Insert the designed WhatsApp CTA section into the home. */
@@ -167,6 +177,9 @@ export function ModulesPanel({
   onUpdateOrders,
   chatSettings,
   onUpdateChat,
+  platformLinkCount,
+  onInsertPlatformsSection,
+  onOpenBusinessProfile,
   onCreateModulePage,
   onAddWhatsappSection,
   onShowLeads,
@@ -207,6 +220,9 @@ export function ModulesPanel({
   const chatSelfServe = chatSettings?.selfServeJoin !== false;
   const chatIdentityMode = chatSettings?.identityMode ?? "guest";
   const chatTheme = chatSettings?.theme ?? "light";
+  // Platforms has no toggle: it's "active" once its band is placed somewhere.
+  const platformsOn = (placements?.platforms.length ?? 0) > 0;
+  const hasPlatformLinks = (platformLinkCount ?? 0) > 0;
   const [waBusy, setWaBusy] = useState(false);
   const [waNumber, setWaNumber] = useState(whatsappSettings?.number ?? "");
   const [waMessage, setWaMessage] = useState(whatsappSettings?.message ?? "");
@@ -246,6 +262,7 @@ export function ModulesPanel({
   const [bkInserted, setBkInserted] = useState(false);
   const [colBusy, setColBusy] = useState(false);
   const [colInserted, setColInserted] = useState(false);
+  const [platInserted, setPlatInserted] = useState(false);
   const [inserted, setInserted] = useState(false);
   const [autoPageSlug, setAutoPageSlug] = useState<string | null>(null);
   const [openKey, setOpenKey] = useState<ModuleKey | null>(null);
@@ -259,6 +276,7 @@ export function ModulesPanel({
     whatsappOn,
     ordersOn,
     chatOn,
+    platformsOn,
   ].filter(Boolean).length;
 
   if (!currentProjectId) {
@@ -422,6 +440,14 @@ export function ModulesPanel({
           placements && placements.comments.length > 0
             ? tw("modulesHub.placedIn", {
                 pages: placements.comments
+                  .map((s) => (s === "" ? tw("modulesHub.home") : `/${s}`))
+                  .join(", "),
+              })
+            : tw("modulesHub.placedNowhere");
+        const platformsPlacement =
+          placements && placements.platforms.length > 0
+            ? tw("modulesHub.placedIn", {
+                pages: placements.platforms
                   .map((s) => (s === "" ? tw("modulesHub.home") : `/${s}`))
                   .join(", "),
               })
@@ -877,6 +903,61 @@ export function ModulesPanel({
             ),
           },
           {
+            key: "platforms",
+            icon: <Link size={18} />,
+            title: tw("platforms.title"),
+            tagline: tw("platforms.tagline"),
+            scope: scopePageText,
+            on: platformsOn,
+            toggleable: false,
+            onToggle: () => {},
+            status: platformsPlacement,
+            availableHint: !hasPlatformLinks ? tw("platforms.needsLinks") : undefined,
+            body: !hasPlatformLinks ? (
+              <div className="space-y-2">
+                <p className="text-[11.5px] leading-relaxed text-amber-700 dark:text-amber-400">
+                  {tw("platforms.needsLinks")}
+                </p>
+                {onOpenBusinessProfile && (
+                  <SurfaceButton
+                    primary
+                    label={tw("platforms.manage")}
+                    onClick={onOpenBusinessProfile}
+                  />
+                )}
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <CardActions
+                  onInsert={
+                    onInsertPlatformsSection
+                      ? () => { onInsertPlatformsSection(); setPlatInserted(true); }
+                      : undefined
+                  }
+                  insertLabel={tw("platforms.insert")}
+                  inserted={platInserted}
+                  insertedLabel={tw("platforms.inserted")}
+                  onManage={onOpenBusinessProfile}
+                  manageLabel={tw("platforms.manage")}
+                  note={tw("platforms.note")}
+                />
+                <p className="text-[10.5px] fg-faint leading-relaxed">{platformsPlacement}</p>
+                {onOpenLibrary && (
+                  <SurfaceButton label={tw("modulesHub.addToPage")} onClick={onOpenLibrary} />
+                )}
+                {onSwitchPage && (
+                  <TargetPageSelector
+                    activeSitePage={activeSitePage}
+                    sitePages={sitePages}
+                    homePageLabel={homePageLabel}
+                    onSwitchPage={onSwitchPage}
+                    label={tw("modulesHub.targetLabel")}
+                  />
+                )}
+              </div>
+            ),
+          },
+          {
             key: "orders",
             icon: <Package size={18} />,
             title: tw("orders.title"),
@@ -1196,7 +1277,9 @@ function ModuleDrawer({
                 </div>
                 <div className="text-[12.5px] fg-muted leading-snug mt-1">{content.tagline}</div>
               </div>
-              <Switch on={content.on} disabled={content.busy} label={content.title} onClick={content.onToggle} />
+              {content.toggleable !== false && (
+                <Switch on={content.on} disabled={content.busy} label={content.title} onClick={content.onToggle} />
+              )}
               <button
                 type="button"
                 aria-label={closeLabel}

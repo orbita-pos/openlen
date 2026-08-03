@@ -74,7 +74,11 @@
     "sectionsTab": "Sections",
     "manageProducts": "Gérer les produits",
     "modulesTargetLabel": "Sera ajouté à",
-    "siteLabel": "Site"
+    "siteLabel": "Site",
+    "modulePlatformsTitle": "Mes plateformes",
+    "modulePlatformsDesc": "Vos réseaux et liens, en cartes",
+    "modulePlatformsNeedsLinks": "Ajoutez vos liens dans Mon entreprise",
+    "modulePlatformsAddLinks": "Ajouter mes liens"
   },
   "paste": {
     "heading": "Coller du HTML",

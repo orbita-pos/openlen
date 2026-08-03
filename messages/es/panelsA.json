@@ -78,7 +78,11 @@
     "sectionsTab": "Secciones",
     "manageProducts": "Administrar productos",
     "modulesTargetLabel": "Se agregará a",
-    "siteLabel": "Sitio"
+    "siteLabel": "Sitio",
+    "modulePlatformsTitle": "Mis plataformas",
+    "modulePlatformsDesc": "Tus redes y enlaces, en tarjetas",
+    "modulePlatformsNeedsLinks": "Primero agrega tus enlaces en Mi negocio",
+    "modulePlatformsAddLinks": "Agregar mis enlaces"
   },
   "paste": {
     "heading": "Pegar HTML",

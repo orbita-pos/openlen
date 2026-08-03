@@ -186,7 +186,8 @@
     "modulePageCreated": "Page created",
     "modulePageExists": "Opened the existing page",
     "moduleAlreadyOnPage": "This module is already on this page",
-    "moduleNeedsAccounts": "Turn on Accounts first — this module needs it."
+    "moduleNeedsAccounts": "Turn on Accounts first — this module needs it.",
+    "platformsNeedLinks": "Add at least one link in My business"
   },
   "whatsapp": {
     "title": "WhatsApp button",
@@ -265,5 +266,14 @@
     "open": "Open",
     "activate": "Turn on",
     "drawerClose": "Close"
+  },
+  "platforms": {
+    "title": "My platforms",
+    "tagline": "Your socials and links, as a band of cards",
+    "needsLinks": "Add at least one link in My business and the band is ready.",
+    "insert": "Insert",
+    "inserted": "Done: the band is on the page",
+    "manage": "Go to My business",
+    "note": "No charge. Links refresh themselves on publish."
   }
 }

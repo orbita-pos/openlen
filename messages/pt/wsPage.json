@@ -186,7 +186,8 @@
     "modulePageCreated": "Página criada",
     "modulePageExists": "Abri a página existente",
     "moduleAlreadyOnPage": "Este módulo já está nesta página",
-    "moduleNeedsAccounts": "Ative Contas primeiro — este módulo precisa disso."
+    "moduleNeedsAccounts": "Ative Contas primeiro — este módulo precisa disso.",
+    "platformsNeedLinks": "Adicione pelo menos um link em Meu negócio"
   },
   "whatsapp": {
     "title": "Botão de WhatsApp",
@@ -265,5 +266,14 @@
     "open": "Abrir",
     "activate": "Ativar",
     "drawerClose": "Fechar"
+  },
+  "platforms": {
+    "title": "Minhas plataformas",
+    "tagline": "Suas redes e links, numa faixa de cartões",
+    "needsLinks": "Adicione pelo menos um link em Meu negócio e a faixa fica pronta.",
+    "insert": "Inserir",
+    "inserted": "Pronto: a faixa está na página",
+    "manage": "Ir para Meu negócio",
+    "note": "Sem custo. Os links se atualizam sozinhos ao publicar."
   }
 }

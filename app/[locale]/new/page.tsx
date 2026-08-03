@@ -464,6 +464,22 @@ function NewV2Inner() {
       alive = false;
     };
   }, [loadedProject?.id, collectionsPreviewOn, centerView]);
+  // Linked profile first, else the user's default — same resolution as
+  // projectBusinessProfile (lib/business-profiles/whatsapp-default.ts), done
+  // here from data the workspace already has loaded: the project's profileId
+  // (GET /api/projects/[id]) and the profile list (GET /api/profiles,
+  // `profiles` state) — no extra fetch. Feeds BOTH the canvas preview and the
+  // "Mis plataformas" insert affordance (that module has no settings.enabled;
+  // these links ARE its on/off state).
+  const platformLinks = useMemo(() => {
+    const profile = loadedProject?.profileId
+      ? profiles.find((p) => p.id === loadedProject.profileId)
+      : profiles.find((p) => p.isDefault);
+    // Filas con URL en blanco no arman tarjeta (renderPlatformsBand las salta),
+    // así que tampoco deben hacer creer que la banda ya tiene con qué nacer.
+    const links = (profile?.data.links ?? []).filter((l) => l.url?.trim());
+    return links.length ? links : null;
+  }, [profiles, loadedProject?.profileId]);
   const modulesPreviewKey = JSON.stringify([
     loadedProject?.settings?.whatsapp,
     loadedProject?.settings?.assistant?.enabled,
@@ -481,15 +497,7 @@ function NewV2Inner() {
     const colPayload = previewCollections;
     const bookingsOn = st?.bookings?.enabled === true;
     const commentsOn = st?.comments?.enabled === true;
-    // Linked profile first, else the user's default — same resolution as
-    // projectBusinessProfile (lib/business-profiles/whatsapp-default.ts),
-    // done here from data the workspace already has loaded: the project's
-    // profileId (GET /api/projects/[id]) and the profile list (GET
-    // /api/profiles, `profiles` state) — no extra fetch.
-    const profile = loadedProject?.profileId
-      ? profiles.find((p) => p.id === loadedProject.profileId)
-      : profiles.find((p) => p.isDefault);
-    const platforms = profile?.data.links?.length ? profile.data.links : null;
+    const platforms = platformLinks;
     if (!wa && !colPayload && !bookingsOn && !commentsOn && !platforms) return null;
     const assistantOn = st?.assistant?.enabled === true;
     const handoffMerged =
@@ -517,7 +525,7 @@ function NewV2Inner() {
       commentsOn,
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [modulesPreviewKey, previewCollections, profiles, loadedProject?.profileId]);
+  }, [modulesPreviewKey, previewCollections, platformLinks]);
   // Strip a stale ?page= once the project has loaded without that slug
   // (deleted page, mistyped share link).
   useEffect(() => {
@@ -3434,6 +3442,21 @@ function NewV2Inner() {
       sectionType: "bookings",
     });
   }, [loadedProject?.html]);
+  // "Mis plataformas": la banda nace ya con las tarjetas reales (son HTML+CSS
+  // puro, no hay widget que esperar). El marcador queda vacío en data.html —
+  // fillPlatformsBand lo rellena con links frescos al publicar.
+  const insertPlatformsSection = useCallback(() => {
+    const lang = /<html[^>]*\blang=["']?es/i.test(loadedProject?.html ?? "") ? "es" : "en";
+    insertNonceRef.current += 1;
+    setInsertRequest({
+      html: bandWithPreview("platforms", buildModuleSection("platforms", { lang }), {
+        docHtml: loadedProject?.html ?? "",
+        platforms: platformLinks,
+      }),
+      nonce: insertNonceRef.current,
+      sectionType: "platforms",
+    });
+  }, [loadedProject?.html, platformLinks]);
   // Library "Módulos": activar (con cadena Cuentas si aplica) + colocar. Los
   // pasos vienen del plan puro; aquí solo se ejecutan con los handlers de
   // siempre. Singleton: banda ya presente → scroll a ella, nunca duplicar.
@@ -3447,9 +3470,13 @@ function NewV2Inner() {
       const steps = planModuleAdd({
         module,
         destination,
-        moduleEnabled: loadedProject?.settings?.[module]?.enabled === true,
+        moduleEnabled:
+          module === "platforms"
+            ? !!platformLinks
+            : loadedProject?.settings?.[module]?.enabled === true,
         membersEnabled: loadedProject?.settings?.members?.enabled === true,
         activePageHasBand: pageHasModule(activeDoc, module),
+        hasPlatformLinks: !!platformLinks,
       });
       for (const step of steps) {
         switch (step.kind) {
@@ -3474,19 +3501,27 @@ function NewV2Inner() {
           case "insertSection": {
             (step.module === "collections" ? insertCollectionsSection
               : step.module === "bookings" ? insertBookingsSection
-              : insertCommentsSection)();
+              : step.module === "comments" ? insertCommentsSection
+              : insertPlatformsSection)();
             // Same Deshacer pill curated sections get — a mis-clicked module
             // band must not need manual deletion via the reorder toolbar.
             const nameKey =
               step.module === "collections" ? "Catalog"
               : step.module === "bookings" ? "Bookings"
-              : "Comments";
+              : step.module === "comments" ? "Comments"
+              : "Platforms";
             pendingInsertRef.current = {
               id: `module-${step.module}`,
               name: tSections(`sections.module${nameKey}Title`),
             };
             break;
           }
+          // Nadie puede inventarle una red social al usuario: sin links
+          // capturados la tarjeta enseña y manda a Mi negocio.
+          case "openBusinessProfile":
+            setCenterView("business");
+            toast.info(t("toast.platformsNeedLinks"));
+            break;
           case "createPage":
             await createModulePage(step.module);
             break;
@@ -3506,21 +3541,24 @@ function NewV2Inner() {
         }
       }
     },
-    [loadedProject?.settings, activeDoc, updateMembersSettings, updateCollectionsSettings,
+    [loadedProject?.settings, activeDoc, platformLinks, setCenterView,
+     updateMembersSettings, updateCollectionsSettings,
      updateBookingsSettings, updateCommentsSettings, insertCollectionsSection,
-     insertBookingsSection, insertCommentsSection, createModulePage, toast, t,
-     tMembers, tSections],
+     insertBookingsSection, insertCommentsSection, insertPlatformsSection,
+     createModulePage, toast, t, tMembers, tSections],
   );
   const moduleCards = useMemo<ModuleCardState[]>(() => {
     if (!loadedProject) return [];
     const s = loadedProject.settings;
-    return (["collections", "bookings", "comments"] as const).map((module) => ({
+    return (["collections", "bookings", "comments", "platforms"] as const).map((module) => ({
       module,
-      enabled: s?.[module]?.enabled === true,
+      // Platforms no tiene settings.enabled: sus links SON su estado.
+      enabled: module === "platforms" ? !!platformLinks : s?.[module]?.enabled === true,
       alreadyOnPage: pageHasModule(activeDoc, module),
       needsMembers: module === "comments" && s?.members?.enabled !== true,
+      needsPlatformLinks: module === "platforms" && !platformLinks,
     }));
-  }, [loadedProject, activeDoc]);
+  }, [loadedProject, activeDoc, platformLinks]);
   const toggleInspect = useCallback(() => {
     setInspectMode((m) => !m);
     setInspectSelection(null);
@@ -3779,6 +3817,9 @@ function NewV2Inner() {
             onUpdateOrdersSettings={updateOrdersSettings}
             chatSettings={loadedProject?.settings?.chat}
             onUpdateChatSettings={updateChatSettings}
+            platformLinkCount={platformLinks?.length ?? 0}
+            onInsertPlatformsSection={() => void addModuleFromLibrary("platforms", "section")}
+            onOpenBusinessProfile={() => setCenterView("business")}
             onCreateModulePage={createModulePage}
             onAddWhatsappSection={insertWhatsappSection}
             onShowLeads={() => {

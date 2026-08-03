@@ -8,7 +8,7 @@
 
 import { useEffect, useState, type ReactNode } from "react";
 import { useTranslations } from "next-intl";
-import { Calendar, Eye, Grid3, MessageSq, Sparkles } from "../icons";
+import { Calendar, Eye, Grid3, Link, MessageSq, Sparkles } from "../icons";
 import { TemplatePreviewFrame } from "../template-preview-frame";
 import {
   SECTION_TYPES_ORDERED,
@@ -26,6 +26,9 @@ export interface ModuleCardState {
   enabled: boolean;
   alreadyOnPage: boolean;
   needsMembers: boolean;
+  /** platforms only: no links captured yet, so the card teaches instead of
+   *  inserting (the band would be deleted at publish). */
+  needsPlatformLinks?: boolean;
 }
 
 interface SectionsPanelProps {
@@ -63,6 +66,14 @@ const MODULE_ICON: Record<ContentModule, (p: { size?: number }) => ReactNode> = 
   collections: (p) => <Grid3 size={p.size ?? 15} />,
   bookings: (p) => <Calendar size={p.size ?? 15} />,
   comments: (p) => <MessageSq size={p.size ?? 15} />,
+  platforms: (p) => <Link size={p.size ?? 15} />,
+};
+
+const MODULE_KEY: Record<ContentModule, string> = {
+  collections: "Catalog",
+  bookings: "Bookings",
+  comments: "Comments",
+  platforms: "Platforms",
 };
 
 function ModuleCard({
@@ -75,7 +86,7 @@ function ModuleCard({
   onManageCollections?: () => void;
 }) {
   const t = useTranslations("panelsA");
-  const key = card.module === "collections" ? "Catalog" : card.module === "bookings" ? "Bookings" : "Comments";
+  const key = MODULE_KEY[card.module];
   return (
     <div className="rounded-lg ring-1 ring-[color:var(--border)] px-3 py-2.5" style={{ background: "var(--bg)" }}>
       <div className="flex items-center gap-2 mb-0.5">
@@ -101,9 +112,11 @@ function ModuleCard({
             onClick={() => onAddModule(card.module, "section")}
             className="flex-1 inline-flex items-center justify-center text-[11px] font-medium h-7 rounded-md text-white bg-[var(--accent-strong)] hover:opacity-90 transition"
           >
-            {t("sections.moduleInsertHere")}
+            {card.needsPlatformLinks
+              ? t("sections.modulePlatformsAddLinks")
+              : t("sections.moduleInsertHere")}
           </button>
-          {card.module !== "comments" && (
+          {card.module !== "comments" && card.module !== "platforms" && (
             <button
               type="button"
               onClick={() => onAddModule(card.module, "page")}
@@ -116,6 +129,11 @@ function ModuleCard({
       )}
       {card.needsMembers && !card.alreadyOnPage && (
         <p className="mt-1.5 text-[10px] fg-faint leading-snug">{t("sections.moduleNeedsMembers")}</p>
+      )}
+      {card.needsPlatformLinks && !card.alreadyOnPage && (
+        <p className="mt-1.5 text-[10px] fg-faint leading-snug">
+          {t("sections.modulePlatformsNeedsLinks")}
+        </p>
       )}
       {card.module === "collections" && card.enabled && onManageCollections && (
         <button

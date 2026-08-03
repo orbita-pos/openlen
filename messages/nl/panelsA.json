@@ -78,7 +78,11 @@
     "sectionsTab": "Secties",
     "manageProducts": "Producten beheren",
     "modulesTargetLabel": "Wordt toegevoegd aan",
-    "siteLabel": "Site"
+    "siteLabel": "Site",
+    "modulePlatformsTitle": "Mijn platforms",
+    "modulePlatformsDesc": "Je socials en links, als kaarten",
+    "modulePlatformsNeedsLinks": "Voeg eerst je links toe in Mijn bedrijf",
+    "modulePlatformsAddLinks": "Mijn links toevoegen"
   },
   "paste": {
     "heading": "HTML plakken",

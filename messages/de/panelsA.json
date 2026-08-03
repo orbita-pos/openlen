@@ -74,7 +74,11 @@
     "sectionsTab": "Abschnitte",
     "manageProducts": "Produkte verwalten",
     "modulesTargetLabel": "Wird hinzugefügt zu",
-    "siteLabel": "Website"
+    "siteLabel": "Website",
+    "modulePlatformsTitle": "Meine Plattformen",
+    "modulePlatformsDesc": "Deine Netzwerke und Links als Karten",
+    "modulePlatformsNeedsLinks": "Füge zuerst deine Links in Mein Geschäft hinzu",
+    "modulePlatformsAddLinks": "Meine Links hinzufügen"
   },
   "paste": {
     "heading": "HTML einfügen",

@@ -186,7 +186,8 @@
     "modulePageCreated": "Pagina gemaakt",
     "modulePageExists": "Bestaande pagina geopend",
     "moduleAlreadyOnPage": "Deze module staat al op deze pagina",
-    "moduleNeedsAccounts": "Zet eerst Accounts aan — deze module heeft ze nodig."
+    "moduleNeedsAccounts": "Zet eerst Accounts aan — deze module heeft ze nodig.",
+    "platformsNeedLinks": "Voeg minstens één link toe in Mijn bedrijf"
   },
   "whatsapp": {
     "title": "WhatsApp-knop",
@@ -265,5 +266,14 @@
     "open": "Openen",
     "activate": "Inschakelen",
     "drawerClose": "Sluiten"
+  },
+  "platforms": {
+    "title": "Mijn platforms",
+    "tagline": "Je socials en links, als kaartenband",
+    "needsLinks": "Voeg minstens één link toe in Mijn bedrijf en de band staat klaar.",
+    "insert": "Invoegen",
+    "inserted": "Klaar: de band staat op de pagina",
+    "manage": "Naar Mijn bedrijf",
+    "note": "Zonder kosten. De links werken zichzelf bij bij het publiceren."
   }
 }

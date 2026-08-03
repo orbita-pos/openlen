@@ -78,7 +78,11 @@
     "sectionsTab": "Sections",
     "manageProducts": "Manage products",
     "modulesTargetLabel": "Will be added to",
-    "siteLabel": "Site"
+    "siteLabel": "Site",
+    "modulePlatformsTitle": "My platforms",
+    "modulePlatformsDesc": "Your socials and links, as cards",
+    "modulePlatformsNeedsLinks": "Add your links in My business first",
+    "modulePlatformsAddLinks": "Add my links"
   },
   "paste": {
     "heading": "Paste HTML",

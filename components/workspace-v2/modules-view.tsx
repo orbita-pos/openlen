@@ -57,6 +57,11 @@ export interface ModulesViewProps {
   onUpdateOrdersSettings?: (patch: OrdersSettings) => Promise<boolean>;
   chatSettings?: ChatSettings;
   onUpdateChatSettings?: (patch: ChatSettings) => Promise<boolean>;
+  /** "Mis plataformas" — links captured on the active business profile, the
+   *  insert action, and the escape hatch to Mi negocio when there are none. */
+  platformLinkCount?: number;
+  onInsertPlatformsSection?: () => void;
+  onOpenBusinessProfile?: () => void;
   /** Create a dedicated, brand-matched page for a module (bookings/collections). */
   onCreateModulePage?: (module: "bookings" | "collections") => void | Promise<void>;
   /** Insert the designed WhatsApp CTA section into the home. */
@@ -133,6 +138,9 @@ export function ModulesView(props: ModulesViewProps) {
               onUpdateOrders={props.onUpdateOrdersSettings}
               chatSettings={props.chatSettings}
               onUpdateChat={props.onUpdateChatSettings}
+              platformLinkCount={props.platformLinkCount}
+              onInsertPlatformsSection={() => afterInsert(props.onInsertPlatformsSection)}
+              onOpenBusinessProfile={props.onOpenBusinessProfile}
               onCreateModulePage={async (m) => {
                 await props.onCreateModulePage?.(m);
                 props.onReturnToCanvas?.();

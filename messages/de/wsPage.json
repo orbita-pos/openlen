@@ -186,7 +186,8 @@
     "modulePageCreated": "Seite erstellt",
     "modulePageExists": "Vorhandene Seite geöffnet",
     "moduleAlreadyOnPage": "Dieses Modul ist bereits auf dieser Seite",
-    "moduleNeedsAccounts": "Aktiviere zuerst Konten — dieses Modul braucht sie."
+    "moduleNeedsAccounts": "Aktiviere zuerst Konten — dieses Modul braucht sie.",
+    "platformsNeedLinks": "Füge mindestens einen Link in Mein Geschäft hinzu"
   },
   "whatsapp": {
     "title": "WhatsApp-Button",
@@ -265,5 +266,14 @@
     "open": "Öffnen",
     "activate": "Aktivieren",
     "drawerClose": "Schließen"
+  },
+  "platforms": {
+    "title": "Meine Plattformen",
+    "tagline": "Deine Netzwerke und Links als Kartenband",
+    "needsLinks": "Füge mindestens einen Link in Mein Geschäft hinzu, dann ist das Band fertig.",
+    "insert": "Einfügen",
+    "inserted": "Fertig: Das Band steht auf der Seite",
+    "manage": "Zu Mein Geschäft",
+    "note": "Kostenlos. Die Links aktualisieren sich beim Veröffentlichen von selbst."
   }
 }

@@ -74,7 +74,11 @@
     "sectionsTab": "Seções",
     "manageProducts": "Gerenciar produtos",
     "modulesTargetLabel": "Será adicionado a",
-    "siteLabel": "Site"
+    "siteLabel": "Site",
+    "modulePlatformsTitle": "Minhas plataformas",
+    "modulePlatformsDesc": "Suas redes e links, em cartões",
+    "modulePlatformsNeedsLinks": "Primeiro adicione seus links em Meu negócio",
+    "modulePlatformsAddLinks": "Adicionar meus links"
   },
   "paste": {
     "heading": "Colar HTML",

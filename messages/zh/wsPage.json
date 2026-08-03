@@ -186,7 +186,8 @@
     "modulePageCreated": "页面已创建",
     "modulePageExists": "已打开现有页面",
     "moduleAlreadyOnPage": "此模块已经在此页面",
-    "moduleNeedsAccounts": "请先开启账户 — 此模块需要它。"
+    "moduleNeedsAccounts": "请先开启账户 — 此模块需要它。",
+    "platformsNeedLinks": "请在“我的店铺”里至少添加一个链接"
   },
   "whatsapp": {
     "title": "WhatsApp 按钮",
@@ -265,5 +266,14 @@
     "open": "打开",
     "activate": "开启",
     "drawerClose": "关闭"
+  },
+  "platforms": {
+    "title": "我的平台",
+    "tagline": "把社交账号和链接做成一条卡片区块",
+    "needsLinks": "在“我的店铺”里至少添加一个链接，区块就可以插入了。",
+    "insert": "插入",
+    "inserted": "完成：区块已加到页面上",
+    "manage": "前往“我的店铺”",
+    "note": "不收费。发布时链接会自动更新。"
   }
 }
