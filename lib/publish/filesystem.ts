@@ -25,6 +25,9 @@ import { bakeComments, hasCommentsSection } from "@/lib/publish/comments-widget"
 import { bakeBookings, hasBookingsSection } from "@/lib/publish/bookings-widget";
 import { bakeCollections } from "@/lib/publish/collections-block";
 import { stripDisabledModuleBands } from "@/lib/publish/strip-disabled-bands";
+import { fillPlatformsBand } from "@/lib/business-profiles/seed-html";
+import { PLATFORMS_BAND_MARKER } from "@/lib/business-profiles/platforms-band";
+import type { BusinessProfileData } from "@/lib/business-profiles/types";
 import { applyLiveData } from "@/lib/live";
 import { bakeWhatsAppButton, waHref } from "@/lib/publish/whatsapp-button";
 import { injectOrdersCart } from "@/lib/publish/orders-cart";
@@ -224,6 +227,12 @@ export interface PublishParams {
   /** Private chat module (settings.chat). When enabled, the 1:1 messaging
    *  widget is baked on the root doc + every page/locale variant. */
   chat?: ChatBake;
+  /** Mis plataformas: los enlaces del perfil de negocio efectivo del proyecto,
+   *  resueltos en publishProject (projectBusinessProfile — linked-first-else-
+   *  default). Cada publicación re-rellena la banda con estos handles FRESCOS;
+   *  sin ninguno armable (o `null` = perfil ausente / lookup fallido) la banda
+   *  se borra entera, para no publicar un "Encuéntrame en" sobre un hueco. */
+  platforms?: BusinessProfileData["links"] | null;
   /** Members module: pages that publish as a login STUB at their public path
    *  while the REAL document (full bake chain + seal) is written OUTSIDE the
    *  release — <sub>/protected/<sha>/<slug>/index.html, unreachable by the
@@ -520,6 +529,9 @@ interface BakeDocumentCtx {
   scene3d?: { enabled: boolean; spec?: unknown };
   /** Private chat module. When enabled, the 1:1 messaging widget is baked. */
   chat?: ChatBake;
+  /** Mis plataformas — enlaces del perfil de negocio efectivo. Ver
+   *  PublishParams.platforms. */
+  platforms?: BusinessProfileData["links"] | null;
   /** Per SECTION module: does the site declare its band in at least ONE
    *  document? True → the widget bakes ONLY in the documents that carry the
    *  band. False → the historical fallback (append before </body> everywhere)
@@ -604,6 +616,25 @@ async function bakeDocument(
   } catch (err) {
     // eslint-disable-next-line no-console
     console.warn("[publishToDir] disabled-band strip failed; publishing as-is", err);
+  }
+
+  // Mis plataformas — la banda se re-rellena con los handles del perfil en CADA
+  // publicación, igual que Colecciones re-hornea sus items. Antes solo la
+  // llenaban el seed de creación y «Aplicar a mis páginas», así que el creador
+  // editaba sus handles, los veía en /p/[id] y publicaba los viejos. Sin
+  // ninguna plataforma armable (perfil vacío, borrado, o lookup fallido → null)
+  // fillPlatformsBand borra la banda ENTERA: un "Encuéntrame en" sobre un hueco
+  // es justo el agujero de Born-100 que el spec manda evitar. Gateado por el
+  // marcador — el 99% de las páginas no paga nada. Soft-fail como el resto.
+  if (migratedHtml.includes(PLATFORMS_BAND_MARKER)) {
+    try {
+      migratedHtml = fillPlatformsBand(migratedHtml, {
+        links: ctx.platforms ?? [],
+      } as BusinessProfileData);
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.warn("[publishToDir] platforms band fill failed; publishing as-is", err);
+    }
   }
 
   // Collections — bake the owner's item list as STATIC HTML. Runs BEFORE the
@@ -1141,6 +1172,7 @@ export async function publishToDir(
     orders: params.orders,
     scene3d: params.scene3d,
     chat: params.chat,
+    platforms: params.platforms,
     sectionBands,
   };
   let migratedHtml = await bakeDocument(publishHtml, bakeCtx);

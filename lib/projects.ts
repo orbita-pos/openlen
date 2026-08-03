@@ -34,6 +34,9 @@ import { localizeForPublish } from "@/lib/publish/localize";
 import { detectHtmlLang } from "@/lib/publish/language-cluster";
 import { isPublishLocale } from "@/lib/publish/publish-locales";
 import { getProfile } from "@/lib/business-profiles/store";
+import { projectBusinessProfile } from "@/lib/business-profiles/whatsapp-default";
+import { PLATFORMS_BAND_MARKER } from "@/lib/business-profiles/platforms-band";
+import type { BusinessProfileData } from "@/lib/business-profiles/types";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Project persistence helpers.
@@ -901,6 +904,24 @@ export async function publishProject(
   // ya trata eso como no-op.
   const liveDataCfg = project.data?.settings?.liveData ?? null;
 
+  // Mis plataformas: los handles del perfil se leen en CADA publicación, como
+  // los items de Colecciones, para que editar el perfil se refleje al publicar
+  // sin pasar por «Aplicar a mis páginas». Gateado por la presencia del
+  // marcador en algún documento del sitio: una página sin banda no paga la
+  // lectura a BD. La resolución es la canónica (projectBusinessProfile,
+  // linked-first-else-default) — soft-fail interno a null, y `null` río abajo
+  // significa "borra la banda", nunca "publica un hueco".
+  let platformsBake: BusinessProfileData["links"] | null = null;
+  const siteDocsForBands = [
+    html,
+    ...publicPages.map((p) => p.html),
+    ...gatedPages.map((p) => p.html),
+  ];
+  if (siteDocsForBands.some((doc) => doc.includes(PLATFORMS_BAND_MARKER))) {
+    const profile = await projectBusinessProfile(params.projectId, params.userId);
+    platformsBake = profile?.links ?? null;
+  }
+
   let publishResult: {
     sha: string;
     html: string;
@@ -928,6 +949,7 @@ export async function publishProject(
         : undefined,
       collections: collectionsBake,
       liveData: liveDataCfg,
+      platforms: platformsBake,
       scene3d: project.data?.settings?.scene3d?.enabled
         ? { enabled: true, spec: project.data.settings.scene3d.spec }
         : undefined,
