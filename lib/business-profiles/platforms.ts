@@ -53,6 +53,27 @@ export const PLATFORMS: Record<string, Platform> = {
   otro: P("otro", "Otro enlace", "", "pega-tu-link.com", { shape: "url", icon: "link" }),
 };
 
+// Los tres HEREDADOS son sustantivos genéricos, no marcas: en una página en
+// inglés la tarjeta decía "Sitio web" bajo un encabezado "Find me on", y el
+// aria-label del widget flotante salía en español en los 10 locales. Las MARCAS
+// (Twitch, Ko-fi, Spotify…) no se traducen y por eso no viven aquí.
+const GENERIC_LABEL_EN: Record<string, string> = {
+  website: "Website",
+  menu: "Menu / Linktree",
+  otro: "Other link",
+};
+
+/** Nombre visible de la plataforma para el idioma de la página. Mismo criterio
+ *  es/en que buildModuleSection: solo un `lang` que empiece por "es" es
+ *  español; cualquier otro (o ninguno) va en inglés. Un `type` desconocido cae
+ *  a sí mismo, como antes. */
+export function platformLabel(type: string, lang?: string): string {
+  const p = PLATFORMS[type];
+  if (!p) return type;
+  if (/^es/i.test(lang ?? "")) return p.label;
+  return GENERIC_LABEL_EN[type] ?? p.label;
+}
+
 export const PLATFORM_ORDER: string[] = [
   "youtube", "twitch", "kick", "tiktok",
   "discord", "telegram", "x", "instagram",

@@ -251,6 +251,17 @@ describe("fillPlatformsBand", () => {
     expect(out).toContain("<p>en medio</p>");
   });
 
+  it("los genéricos toman el idioma del propio documento", () => {
+    const band = "<div data-ol-platforms-section></div>";
+    const data = { links: [{ type: "website", url: "tunegocio.mx" }] } as BusinessProfileData;
+    const es = fillPlatformsBand(`<html lang="es"><body>${band}</body></html>`, data);
+    const en = fillPlatformsBand(`<html lang="en">
+<body>${band}</body></html>`, data);
+    expect(es).toContain("Sitio web");
+    expect(en).toContain("Website");
+    expect(en).not.toContain("Sitio web");
+  });
+
   it("dos bandas en el mismo documento sin plataformas: ambas se borran", () => {
     const html =
       "<div data-ol-platforms-section></div>" +

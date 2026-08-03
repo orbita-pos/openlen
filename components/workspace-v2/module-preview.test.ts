@@ -251,4 +251,29 @@ describe("banda de plataformas en el canvas", () => {
     expect(out).toBe(seeded);
     expect(out.match(/href="https:\/\/twitch\.tv\/kira"/g)?.length).toBe(1);
   });
+
+  it("el marcador dentro del valor de otro atributo NO recibe el preview", () => {
+    // La regex ingenua `\b${marker}\b` que este archivo usaba acertaba también
+    // con el texto del marcador escrito dentro de un atributo ajeno, y metía la
+    // rejilla dentro de un elemento del usuario. Ahora usa el mismo tokenizador
+    // que el camino de publicación (lib/publish/tag-attrs).
+    const html =
+      '<html lang="es"><body><div title="ver data-ol-platforms-section docs">nota</div></body></html>';
+    expect(
+      injectEditorModulesPreview(html, { platforms: [{ type: "twitch", url: "kira" }] }),
+    ).toBe(html);
+  });
+
+  it("los genéricos del preview siguen el idioma del documento", () => {
+    const en = injectEditorModulesPreview(
+      '<html lang="en"><body><section data-ol-platforms-section></section></body></html>',
+      { platforms: [{ type: "website", url: "tunegocio.mx" }] },
+    );
+    expect(en).toContain("Website");
+    expect(en).not.toContain("Sitio web");
+    const es = injectEditorModulesPreview(PLATFORMS_HTML, {
+      platforms: [{ type: "website", url: "tunegocio.mx" }],
+    });
+    expect(es).toContain("Sitio web");
+  });
 });

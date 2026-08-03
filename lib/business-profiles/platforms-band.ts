@@ -4,7 +4,7 @@
 // renderiza — nunca hay tarjeta rota, así que Born-100 se cumple solo.
 
 import type { BusinessProfileData } from "./types";
-import { PLATFORMS, PLATFORM_ICON_PATHS, platformHref } from "./platforms";
+import { PLATFORMS, PLATFORM_ICON_PATHS, platformHref, platformLabel } from "./platforms";
 
 export const PLATFORMS_BAND_MARKER = "data-ol-platforms-section";
 
@@ -21,15 +21,24 @@ function icon(id: string): string {
   return `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths}</svg>`;
 }
 
+export interface PlatformsBandOpts {
+  /** Idioma del documento (`<html lang>`). Solo mueve los tres nombres
+   *  GENÉRICOS del registry; las marcas salen igual en todos los locales. */
+  lang?: string;
+}
+
 /** SOLO la rejilla de tarjetas, o "" si no hay nada que mostrar. El encabezado
  *  lo pone el envoltorio de buildModuleSection — emitirlo aquí lo duplicaría. */
-export function renderPlatformsBand(data: BusinessProfileData): string {
+export function renderPlatformsBand(
+  data: BusinessProfileData,
+  opts: PlatformsBandOpts = {},
+): string {
   const cards: string[] = [];
   for (const l of data.links ?? []) {
     if (!l.url?.trim()) continue;
     const href = platformHref(l.type, l.url);
     if (!href) continue;
-    const label = PLATFORMS[l.type]?.label ?? l.type;
+    const label = platformLabel(l.type, opts.lang);
     cards.push(
       `<a href="${esc(href)}" target="_blank" rel="noopener noreferrer" ` +
         `style="display:flex;align-items:center;gap:12px;padding:16px 18px;border-radius:14px;` +

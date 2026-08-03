@@ -17,6 +17,8 @@
 // (an 8MB from-html paste could pin the box's event loop for minutes at
 // publish). Pure string, no DOM. Idempotent. Enabled modules untouched.
 
+import { hasAttr, openTagEnd } from "./tag-attrs";
+
 const MARKERS = {
   bookings: "data-ol-bookings-section",
   collections: "data-ol-collection-section",
@@ -41,39 +43,6 @@ function elementEnd(html: string, open: number, tag: string): number {
     if (depth === 0) return scan.lastIndex;
   }
   return -1;
-}
-
-/** Index of the ">" that closes the tag starting at `open`, skipping any
- *  ">" that appears inside a quoted attribute value. -1 if it never closes. */
-function openTagEnd(html: string, open: number): number {
-  let quote: string | null = null;
-  for (let i = open; i < html.length; i++) {
-    const ch = html[i];
-    if (quote) {
-      if (ch === quote) quote = null;
-    } else if (ch === '"' || ch === "'") {
-      quote = ch;
-    } else if (ch === ">") {
-      return i;
-    }
-  }
-  return -1;
-}
-
-const ATTR_TOKEN_RE = /([a-zA-Z_:][-a-zA-Z0-9_:.]*)(?:\s*=\s*(?:"[^"]*"|'[^']*'|[^\s"'=<>`]+))?/g;
-
-/** Is `name` a genuine attribute in `tagText` — not merely a substring that
- *  happens to sit inside another attribute's quoted value (e.g.
- *  title="see data-ol-platforms-section docs")? Walks attribute TOKENS
- *  instead of doing a raw substring search. */
-function hasAttr(tagText: string, name: string): boolean {
-  ATTR_TOKEN_RE.lastIndex = 0;
-  let m: RegExpExecArray | null;
-  while ((m = ATTR_TOKEN_RE.exec(tagText))) {
-    if (m[1] === name) return true;
-    if (m.index === ATTR_TOKEN_RE.lastIndex) ATTR_TOKEN_RE.lastIndex++;
-  }
-  return false;
 }
 
 /** Borra la banda entera que contiene `marker`. Escaneo lineal, idempotente. */

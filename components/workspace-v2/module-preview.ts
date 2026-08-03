@@ -16,6 +16,8 @@
 import { bakeWhatsAppButton } from "@/lib/publish/whatsapp-button";
 import { renderCollectionsWidget } from "@/lib/publish/collections-block";
 import { renderPlatformsBand } from "@/lib/business-profiles/platforms-band";
+import { findMarkerTag } from "@/lib/publish/tag-attrs";
+import { detectHtmlLang } from "@/lib/publish/language-cluster";
 import type { ItemRow } from "@/lib/collections/store";
 import type { BusinessProfileData } from "@/lib/business-profiles/types";
 
@@ -112,12 +114,14 @@ function collectionGhosts(es: boolean): string {
 }
 
 /** Insert `chunk` right after the opening tag of the element carrying
- *  `marker`. No-op when the marker isn't in the document. */
+ *  `marker`. No-op when the marker isn't in the document. Usa el tokenizador
+ *  compartido (lib/publish/tag-attrs), no `\b${marker}\b`: la regex ingenua
+ *  también acertaba con el texto del marcador dentro del valor de otro
+ *  atributo, e inyectaba el preview en un elemento ajeno. */
 function injectIntoBand(html: string, marker: string, chunk: string): string {
-  const open = new RegExp(`<(section|div)[^>]*\\b${marker}\\b[^>]*>`, "i").exec(html);
-  if (!open) return html;
-  const at = open.index + open[0].length;
-  return html.slice(0, at) + chunk + html.slice(at);
+  const hit = findMarkerTag(html, marker);
+  if (!hit) return html;
+  return html.slice(0, hit.contentStart) + chunk + html.slice(hit.contentStart);
 }
 
 /** Does the band's marker element have no content yet? Every OTHER module
@@ -130,9 +134,9 @@ function injectIntoBand(html: string, marker: string, chunk: string): string {
  *  preview scoped to the one case it's actually for: a band inserted after
  *  creation that hasn't been through a seed/fill pass yet. */
 function bandIsEmpty(html: string, marker: string): boolean {
-  const open = new RegExp(`<(section|div)[^>]*\\b${marker}\\b[^>]*>`, "i").exec(html);
-  if (!open) return false;
-  return html.slice(open.index + open[0].length).trimStart().startsWith("</");
+  const hit = findMarkerTag(html, marker);
+  if (!hit) return false;
+  return html.slice(hit.contentStart).trimStart().startsWith("</");
 }
 
 /** A freshly-inserted band, with its preview (grid / skeleton) ALREADY
@@ -188,13 +192,13 @@ export function injectEditorModulesPreview(
         orders: col.ordersNumber ? { number: col.ordersNumber } : null,
         theme: col.theme,
       });
-      const bandOpen = /<(section|div)[^>]*\bdata-ol-collection-section\b[^>]*>/i.exec(out);
+      const bandOpen = findMarkerTag(out, "data-ol-collection-section");
       if (widget && bandOpen) {
         const stamped = widget.replace(
           "data-ol-collection-widget",
           `data-ol-collection-widget ${STAMP}`,
         );
-        const at = bandOpen.index + bandOpen[0].length;
+        const at = bandOpen.contentStart;
         out = out.slice(0, at) + stamped + out.slice(at);
         // While the real grid previews, hide the band's dashed empty
         // placeholder (a DIRECT child — `>` keeps card internals unaffected).
@@ -217,7 +221,9 @@ export function injectEditorModulesPreview(
   }
 
   if (cfg.platforms?.length && bandIsEmpty(out, "data-ol-platforms-section")) {
-    const banda = renderPlatformsBand({ links: cfg.platforms } as BusinessProfileData);
+    const banda = renderPlatformsBand({ links: cfg.platforms } as BusinessProfileData, {
+      lang: detectHtmlLang(out) ?? "",
+    });
     if (banda) {
       out = injectIntoBand(
         out,

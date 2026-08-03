@@ -95,6 +95,30 @@ describe("stripDisabledModuleBands", () => {
     assert.ok(ms < 1000, `tardó ${Math.round(ms)}ms — huele a O(n²)`);
   });
 
+  it("el marcador dentro del valor de OTRO atributo no borra nada (gate de hasAttr)", () => {
+    // La única función de esta rama que cambia el comportamiento de módulos
+    // VIVOS al publicar: sin el tokenizador, el `indexOf` crudo tomaba el texto
+    // del marcador dentro de un title/alt/data-* ajeno como si fuera la banda y
+    // se llevaba por delante contenido del usuario.
+    const html = DOC('<div title="ver data-ol-bookings-section docs">contenido</div>');
+    const out = stripDisabledModuleBands(html, { bookings: false, collections: false, comments: false, chat: false });
+    assert.equal(out, html, "documento intacto — no era una banda");
+  });
+
+  it("banda real + falso positivo en el mismo documento: se va solo la banda", () => {
+    const html = DOC(
+      '<div data-nota="lee data-ol-comments-section en los docs">glosario</div>' +
+        buildModuleSection("comments", { lang: "es" }),
+    );
+    const out = stripDisabledModuleBands(html, { bookings: false, collections: false, comments: false, chat: false });
+    assert.ok(!out.includes("Lo que opina la gente"), "la banda real se fue");
+    assert.ok(out.includes("glosario"), "el falso positivo sobrevive");
+    assert.ok(
+      out.includes('data-nota="lee data-ol-comments-section en los docs"'),
+      "el atributo ajeno queda intacto",
+    );
+  });
+
   it("no markers → document untouched (byte-identical)", () => {
     const html = DOC("<section><p>nada de módulos</p></section>");
     assert.equal(

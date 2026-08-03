@@ -5,7 +5,8 @@
 // template's own footer. Only emitted when the profile has something to show.
 
 import type { BusinessProfileData } from "./types";
-import { PLATFORMS, PLATFORM_ICON_PATHS, platformHref } from "./platforms";
+import { PLATFORMS, PLATFORM_ICON_PATHS, platformHref, platformLabel } from "./platforms";
+import { detectHtmlLang } from "@/lib/publish/language-cluster";
 
 function esc(s: string): string {
   return s
@@ -59,7 +60,7 @@ interface Action {
   primary?: boolean;
 }
 
-function buildActions(data: BusinessProfileData): Action[] {
+function buildActions(data: BusinessProfileData, lang: string): Action[] {
   const a: Action[] = [];
   const c = data.contact;
   const s = c?.socials;
@@ -72,7 +73,9 @@ function buildActions(data: BusinessProfileData): Action[] {
     const href = platformHref(l.type, l.url);
     if (!href) continue; // handle inarmable → mejor nada que un enlace roto
     const p = PLATFORMS[l.type];
-    a.push({ href, icon: p?.icon ?? "link", label: p?.label ?? l.type });
+    // El aria-label VIAJA en la página publicada: los tres genéricos del
+    // registry ("Sitio web"…) se resuelven con el idioma del documento.
+    a.push({ href, icon: p?.icon ?? "link", label: platformLabel(l.type, lang) });
   }
   if (c?.phone?.trim()) a.push({ href: `tel:${digits(c.phone)}`, icon: "phone", label: "Teléfono" });
   if (c?.email?.trim()) a.push({ href: `mailto:${c.email.trim()}`, icon: "mail", label: "Email" });
@@ -89,7 +92,7 @@ export function injectContactWidget(
   // Opt-out switch (Mi negocio → "Barra de contacto flotante"). Only an
   // explicit false hides it, so profiles saved before the toggle still show it.
   if (data.showContactWidget === false) return html;
-  const actions = buildActions(data);
+  const actions = buildActions(data, detectHtmlLang(html) ?? "");
   if (actions.length === 0) return html;
   const ac = /^#[0-9a-fA-F]{6}$/.test(accent) ? accent : "#FF5A36";
   const side = data.contactWidgetSide === "left" ? "left" : "right";
