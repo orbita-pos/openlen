@@ -183,4 +183,15 @@ describe("la banda estampada se detecta tras pasar por el DOM del editor", () =>
     assert.ok(!out.includes("data-ol-chat-section"), "el marcador se va");
     assert.ok(out.includes("Texto que escribí yo"), "mi contenido NO se borra");
   });
+
+  // Este es el caso que SÍ se borraba: mismo estilo compacto que emite band(),
+  // pero incompleto. Bastaba `margin:64px auto` para que la huella casara.
+  it("tampoco se traga una sección del usuario con el estilo COMPACTO incompleto", () => {
+    const suya =
+      `<section style="max-width:900px;margin:64px auto;box-sizing:border-box;">` +
+      `<h2>Mi taller</h2><p>Texto que escribí yo</p><div data-ol-chat-section></div></section>`;
+    const out = stripDisabledModuleBands(DOC(suya), OFF);
+    assert.ok(!out.includes("data-ol-chat-section"), "el marcador se va");
+    assert.ok(out.includes("Texto que escribí yo"), "mi contenido NO se borra");
+  });
 });

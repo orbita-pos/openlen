@@ -29,7 +29,18 @@ const MARKERS = {
 export type StrippableModule = keyof typeof MARKERS;
 
 const BAND_OPEN_PREFIX = '<section style="max-width:';
-const BAND_OPEN_SIGNATURE = "margin:64px auto;";
+/** Huella de RESPALDO, solo para bandas insertadas antes de que se estampara el
+ *  envoltorio. Exige la firma COMPLETA que `band()` emite desde su primera
+ *  versión (63a95c39, 2026-06-25), no un par de tokens: bastando
+ *  `margin:64px auto`, una `<section>` centrada del usuario que contuviera un
+ *  marcador se borraba entera. Exigir las cuatro no pierde ninguna banda vieja
+ *  —todas salieron de esa misma función— y solo puede fallar hacia «no la
+ *  detecto», nunca hacia borrar contenido ajeno. */
+const BAND_OPEN_SIGNATURE = [
+  "margin:64px auto;",
+  "padding:0 24px;",
+  "box-sizing:border-box;",
+];
 
 /** End index (exclusive) of the element whose open tag starts at `open`,
  *  matching nested same-name tags; -1 when the close is missing. Linear. */
@@ -90,9 +101,10 @@ export function stripBandByMarker(html: string, marker: string): string {
     if (tagName !== "section") {
       // Ancla por ATRIBUTO primero: exacta, imposible de confundir con una
       // sección del usuario. Si el documento trae una banda VIEJA (insertada
-      // antes de que se estampara), caemos a la huella de estilo de siempre —
-      // idéntica a la de hoy, sin ensanchar nada: una banda vieja que ya pasó
-      // por el DOM del editor sigue sin detectarse, que es el estado actual.
+      // antes de que se estampara), caemos a la huella de estilo, que ahora
+      // exige la firma completa. Una banda vieja ya normalizada por el DOM del
+      // editor sigue sin detectarse: es el estado actual, y cubrirla exigiría
+      // ensanchar la huella — el camino que ya borró secciones de más.
       let bandOpen = out.lastIndexOf(BAND_ATTR_OPEN, tagStart);
       let stamped = bandOpen !== -1;
       if (!stamped) bandOpen = out.lastIndexOf(BAND_OPEN_PREFIX, tagStart);
@@ -102,7 +114,7 @@ export function stripBandByMarker(html: string, marker: string): string {
         const openTag = bandTagEnd === -1 ? "" : out.slice(bandOpen, bandTagEnd + 1);
         if (stamped) stamped = hasAttr(openTag, BAND_ATTR);
         if (
-          (stamped || openTag.includes(BAND_OPEN_SIGNATURE)) &&
+          (stamped || BAND_OPEN_SIGNATURE.every((t) => openTag.includes(t))) &&
           !between.slice(openTag.length).toLowerCase().includes("</section>") &&
           !between.slice(openTag.length).toLowerCase().includes("<section")
         ) {
