@@ -437,6 +437,7 @@ export const templates = pgTable(
     pitch: text("pitch").notNull(),
     description: text("description").notNull(),
     mode: text("mode").notNull(), // 'dark' | 'light' | 'cream'
+    visualMetadata: jsonb("visualMetadata").$type<Record<string, unknown>>(),
 
     // Reference to the HTML body in object storage.
     storageKey: text("storageKey").notNull(),

@@ -78,6 +78,10 @@ export async function PUT(
     description: parsed.data.description ?? existing.description,
     mode: parsed.data.mode ?? existing.mode,
     html: bodyHtml,
+    visualMetadata:
+      parsed.data.visualMetadata === undefined
+        ? existing.visualMetadata
+        : parsed.data.visualMetadata,
     // Preserve subpages unless the caller explicitly sends a new set —
     // upsert always writes the pages column, so a partial update without
     // this would wipe a multi-page template down to its home.

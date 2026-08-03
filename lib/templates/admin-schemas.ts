@@ -2,6 +2,7 @@ import { z } from "zod";
 
 import { sanitizeForPublish } from "@/lib/html-engine";
 import { validatePageSlug } from "@/lib/projects/site-pages";
+import { TemplateVisualMetadataSchema } from "./visual-metadata";
 
 // Shared Zod schemas + invariant helpers for the admin template endpoints.
 // Both POST (create / replace) and PUT (partial update) consume these so
@@ -111,6 +112,7 @@ export const CreateSchema = z.object({
   description: z.string().min(1).max(500),
   mode: MODE,
   html: HTML,
+  visualMetadata: TemplateVisualMetadataSchema.nullable().optional(),
   // Extra pages for a multi-page template — each cloned into data.pages.
   pages: PAGES.optional(),
   status: STATUS.optional(),
@@ -128,6 +130,7 @@ export const UpdateSchema = z
     description: z.string().min(1).max(500).optional(),
     mode: MODE.optional(),
     html: HTML.optional(),
+    visualMetadata: TemplateVisualMetadataSchema.nullable().optional(),
     pages: PAGES.optional(),
     status: STATUS.optional(),
   })

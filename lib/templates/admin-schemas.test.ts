@@ -4,7 +4,7 @@
 import { test } from "node:test";
 import { strict as assert } from "node:assert";
 
-import { findTemplateHtmlIssue } from "./admin-schemas";
+import { CreateSchema, UpdateSchema, findTemplateHtmlIssue } from "./admin-schemas";
 
 // Las plantillas se guardan CRUDAS en R2 A PROPÓSITO y se sanitizan al CLONAR
 // — ese diseño es lo que permitió que el fix del carrier (977e325) reparara
@@ -20,6 +20,30 @@ import { findTemplateHtmlIssue } from "./admin-schemas";
 //   meta refresh ....... 0%                    → rechazo seguro
 
 const HEAD = '<!doctype html><html><head><script src="https://cdn.tailwindcss.com"></script>';
+
+const visualMetadata = {
+  schemaVersion: "template-visual-metadata/1.0",
+  domains: ["children_entertainment"], audiences: ["children"], ageRanges: ["5_10"],
+  emotionalRegisters: ["playful"], visualArchetypes: ["illustrated_creative_play"],
+  visualSignals: ["child_friendly_illustration"], layoutTraits: ["image_forward"],
+  requiredAssetTypes: ["illustration"], negativeTags: ["enterprise_b2b"],
+  supportedSiteTypes: ["content_platform"], supportedSectionRoles: ["hero", "stories", "footer"],
+  themeability: "high", identityStrength: "high", reviewStatus: "reviewed",
+};
+
+test("accepts reviewed visual metadata on create", () => {
+  assert.equal(CreateSchema.safeParse({
+    id: "kids", name: "Kids", family: "education", accent: "#F472B6",
+    pitch: "Creative play", description: "Illustrated activities for children",
+    mode: "light", html: "<!doctype html><html><body>Kids</body></html>", visualMetadata,
+  }).success, true);
+});
+
+test("rejects prose taxonomy tags on update", () => {
+  assert.equal(UpdateSchema.safeParse({
+    visualMetadata: { ...visualMetadata, domains: ["Children Entertainment"] },
+  }).success, false);
+});
 
 test("acepta una plantilla curada normal: config de Tailwind + script inline", () => {
   const html =

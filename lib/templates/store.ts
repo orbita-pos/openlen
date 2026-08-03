@@ -15,6 +15,10 @@ import {
   type TemplateMode,
   type TemplateStatus,
 } from "./families";
+import {
+  parseTemplateVisualMetadata,
+  type TemplateVisualMetadata,
+} from "./visual-metadata";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Templates store — single entry point for reading/writing curated templates.
@@ -45,6 +49,7 @@ export interface TemplateRecord {
   pitch: string;
   description: string;
   mode: TemplateMode;
+  visualMetadata: TemplateVisualMetadata | null;
   storageKey: string;
   storageUrl: string;
   contentHash: string;
@@ -136,6 +141,7 @@ export interface CreateOrUpdateInput {
   description: string;
   mode: TemplateMode;
   html: string;
+  visualMetadata?: TemplateVisualMetadata | null;
   pages?: Array<{ slug: string; html: string }>;
   status?: TemplateStatus;
 }
@@ -163,6 +169,7 @@ export async function upsertTemplate(
     pitch: input.pitch,
     description: input.description,
     mode: input.mode,
+    visualMetadata: input.visualMetadata ?? null,
     storageKey,
     storageUrl: uploaded.url,
     contentHash: hash,
@@ -185,6 +192,10 @@ export async function upsertTemplate(
         pitch: values.pitch,
         description: values.description,
         mode: values.mode,
+        visualMetadata:
+          input.visualMetadata === undefined
+            ? schema.templates.visualMetadata
+            : input.visualMetadata,
         storageKey: values.storageKey,
         storageUrl: values.storageUrl,
         contentHash: values.contentHash,
@@ -228,6 +239,7 @@ function rowToRecord(row: typeof schema.templates.$inferSelect): TemplateRecord 
     pitch: row.pitch,
     description: row.description,
     mode: row.mode as TemplateMode,
+    visualMetadata: parseTemplateVisualMetadata(row.visualMetadata),
     storageKey: row.storageKey,
     storageUrl: row.storageUrl,
     contentHash: row.contentHash,
