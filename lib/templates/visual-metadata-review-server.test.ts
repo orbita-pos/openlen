@@ -71,12 +71,15 @@ interface ServerWorkspace extends VisualMetadataReviewWorkspace {
   getScreenshotSourceUrl(id: string): string | null;
 }
 
-function fakeWorkspace(rows = [sourceRow("one"), sourceRow("two")]) {
+function fakeWorkspace(
+  rows = [sourceRow("one"), sourceRow("two")],
+  reviewer = { name: "Ada Reviewer", email: "ada@example.test" },
+) {
   let event = 0;
   let session = createReviewSession({
     sourceSha256: "a".repeat(64),
     rows,
-    reviewer: { name: "Ada Reviewer", email: "ada@example.test" },
+    reviewer,
     now: new Date("2026-08-03T12:00:00.000Z"),
   });
   let currentTemplateId: string | null = rows[0]?.id ?? null;
@@ -454,6 +457,68 @@ describe("visual metadata review loopback server", () => {
     expect(foreignBody).toBe(JSON.stringify({ error: "identity_open_in_progress" }));
     expect(foreignBody).not.toContain("ada@example.test");
     expect(foreignBody).not.toContain("grace@example.test");
+  });
+
+  it("rejects a deferred identity body after another request has assigned the workspace", async () => {
+    const first = fakeWorkspace(
+      [sourceRow("one"), sourceRow("two")],
+      { name: "Ada Reviewer", email: "ada@example.test" },
+    );
+    const replacement = fakeWorkspace(
+      [sourceRow("one"), sourceRow("two")],
+      { name: "Grace Reviewer", email: "grace@example.test" },
+    );
+    const identities: Array<{ name: string; email: string }> = [];
+    const server = await start({
+      workspaceFactory: async (identity) => {
+        identities.push(identity);
+        return identities.length === 1 ? first.workspace : replacement.workspace;
+      },
+    });
+    const cookie = await exchange(server);
+    const delayedBody = JSON.stringify({ name: "Grace Reviewer", email: "grace@example.test" });
+    const delayed = nodeRequest({
+      server,
+      path: "/api/identity",
+      method: "POST",
+      headers: {
+        cookie,
+        origin: server.origin,
+        expect: "100-continue",
+        "content-type": "application/json",
+        "content-length": Buffer.byteLength(delayedBody),
+      },
+    });
+    const continued = deferred<void>();
+    delayed.request.once("continue", continued.resolve);
+    delayed.request.flushHeaders();
+    await continued.promise;
+
+    const opened = await authed(server, cookie, "/api/identity", {
+      method: "POST",
+      headers: { "content-type": "application/json", origin: server.origin },
+      body: JSON.stringify({ name: "Ada Reviewer", email: "ada@example.test" }),
+    });
+    expect(opened.status).toBe(200);
+    delayed.request.end(delayedBody);
+    const rejected = await delayed.response;
+    const rejectedBody = rejected.body;
+
+    expect(rejected).toMatchObject({
+      status: 409,
+      body: JSON.stringify({ error: "identity_already_set" }),
+    });
+    expect(identities).toEqual([{ name: "Ada Reviewer", email: "ada@example.test" }]);
+    expect(rejectedBody).not.toContain("Ada Reviewer");
+    expect(rejectedBody).not.toContain("Grace Reviewer");
+    expect(rejectedBody).not.toContain("ada@example.test");
+    expect(rejectedBody).not.toContain("grace@example.test");
+    expect(await (await authed(server, cookie, "/api/session")).json()).toMatchObject({
+      reviewerName: "Ada Reviewer",
+    });
+    await server.close();
+    expect(first.calls.filter((call) => call === "close")).toHaveLength(1);
+    expect(replacement.calls.filter((call) => call === "close")).toHaveLength(0);
   });
 
   it("owns a pending open through disconnected clients and rejects an identity completed during close", async () => {

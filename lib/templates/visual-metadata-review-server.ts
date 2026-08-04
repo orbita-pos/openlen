@@ -303,6 +303,7 @@ export async function startVisualMetadataReviewServer(
           throw new SafeHttpError(400, "identity_invalid");
         }
         if (closing) throw new SafeHttpError(503, "server_closing");
+        if (workspace) throw new SafeHttpError(409, "identity_already_set");
         if (workspaceOpening
           && (workspaceOpening.reviewer.name !== reviewer.name || workspaceOpening.reviewer.email !== reviewer.email)) {
           throw new SafeHttpError(409, "identity_open_in_progress");
