@@ -73,6 +73,8 @@
     "templates:thumbnails": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/templates/generate-thumbnails.ts",
     "templates:tiles": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/templates/generate-tiles.ts",
     "templates:visual-metadata:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/templates/bootstrap-visual-metadata-column.ts",
+    "templates:visual-metadata:suggest": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/templates/suggest-visual-metadata.ts",
+    "templates:visual-metadata:import": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/templates/import-visual-metadata.ts",
     "templates:bootstrap-tile-column": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/templates/bootstrap-tile-column.ts",
     "projects:thumbnails": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/projects/generate-thumbnails.ts",
     "templates:capture-screenshots": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/templates/capture-screenshots.ts",
