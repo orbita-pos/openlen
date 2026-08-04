@@ -1,5 +1,5 @@
 import { open, rename as renameFile } from "node:fs/promises";
-import { basename, dirname, join, relative, resolve } from "node:path";
+import { basename, dirname, isAbsolute, join, relative, resolve } from "node:path";
 
 export const ATOMIC_JSON_RETRY_DELAYS_MS = [20, 40, 80, 160, 320] as const;
 
@@ -20,9 +20,10 @@ export class AtomicJsonWriteError extends Error {
   readonly targetPath: string;
   readonly temporaryPath: string;
 
-  constructor(code: string, targetPath: string, temporaryPath: string, cause: unknown) {
-    super(`Unable to replace ${targetPath}: ${code}`, { cause });
+  constructor(code: string, targetPath: string, temporaryPath: string) {
+    super(`Unable to replace ${targetPath}: ${code}`);
     this.name = "AtomicJsonWriteError";
+    this.stack = `${this.name}: ${this.message}`;
     this.code = code;
     this.targetPath = targetPath;
     this.temporaryPath = temporaryPath;
@@ -42,6 +43,11 @@ function errorCode(error: unknown): string {
 
 function isTransientReplacementError(code: string): boolean {
   return code === "EPERM" || code === "EACCES" || code === "EBUSY";
+}
+
+function safeRelativePath(path: string): string {
+  const relativePath = relative(process.cwd(), path);
+  return isAbsolute(relativePath) ? basename(path) : relativePath;
 }
 
 export async function writeJsonAtomic(
@@ -75,7 +81,11 @@ export async function writeJsonAtomic(
         await wait(retryDelaysMs[attempt]);
         continue;
       }
-      throw new AtomicJsonWriteError(code, relative(process.cwd(), resolvedTargetPath), temporaryPath, error);
+      throw new AtomicJsonWriteError(
+        code,
+        safeRelativePath(resolvedTargetPath),
+        safeRelativePath(temporaryPath),
+      );
     }
   }
 }

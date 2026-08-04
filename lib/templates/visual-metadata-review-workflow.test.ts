@@ -498,7 +498,6 @@ describe("retry-failed suggestion artifacts", () => {
       "EPERM",
       "artifact.json",
       `${path}.temporary.tmp`,
-      new Error("replacement exhausted"),
     ));
     try {
       await expect(writeSuggestionArtifactAtomic(path, [artifactRow("replacement", "failed")]))

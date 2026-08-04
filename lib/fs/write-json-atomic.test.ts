@@ -1,6 +1,6 @@
 import { existsSync } from "node:fs";
 import { mkdtemp, readFile, rename, rm, writeFile } from "node:fs/promises";
-import { basename, join, relative } from "node:path";
+import { join, relative, resolve } from "node:path";
 import { tmpdir } from "node:os";
 import { afterEach, describe, expect, it } from "vitest";
 import {
@@ -111,15 +111,22 @@ describe("writeJsonAtomic", () => {
     const targetPath = join(directory, "artifact.json");
     await writeFile(targetPath, '{"previous":true}\n');
     let attempts = 0;
+    let actualTemporaryPath: string | undefined;
+    const rawMessage = "raw rename failure must not leak";
 
     let failure: AtomicJsonWriteError | undefined;
     try {
       await writeJsonAtomic(targetPath, { replacement: "failed" }, {
         randomId: () => "exhausted-id",
         sleep: async () => undefined,
-        rename: async () => {
+        rename: async (from, to) => {
           attempts += 1;
-          throw replacementError("EPERM");
+          actualTemporaryPath = from;
+          throw Object.assign(new Error(`${rawMessage}: ${from} -> ${to}`), {
+            code: "EPERM",
+            path: from,
+            dest: to,
+          });
         },
       });
     } catch (error) {
@@ -130,11 +137,25 @@ describe("writeJsonAtomic", () => {
     expect(failure).toMatchObject({
       code: "EPERM",
       targetPath: relative(process.cwd(), targetPath),
-      temporaryPath: join(directory, `${basename(targetPath)}.${process.pid}.exhausted-id.tmp`),
+      temporaryPath: relative(process.cwd(), actualTemporaryPath!),
     });
     expect(attempts).toBe(6);
     expect(await readFile(targetPath, "utf8")).toBe('{"previous":true}\n');
-    expect(existsSync(failure!.temporaryPath)).toBe(true);
-    expect(await readFile(failure!.temporaryPath, "utf8")).toBe('{\n  "replacement": "failed"\n}\n');
+    expect(resolve(process.cwd(), failure!.temporaryPath)).toBe(actualTemporaryPath);
+    expect(existsSync(resolve(process.cwd(), failure!.temporaryPath))).toBe(true);
+    expect(await readFile(resolve(process.cwd(), failure!.temporaryPath), "utf8")).toBe('{\n  "replacement": "failed"\n}\n');
+
+    const exposed = JSON.stringify({
+      cause: failure!.cause,
+      message: failure!.message,
+      serialized: JSON.stringify(failure),
+      stack: failure!.stack,
+      targetPath: failure!.targetPath,
+      temporaryPath: failure!.temporaryPath,
+    });
+    expect(failure!.cause).toBeUndefined();
+    for (const secret of [directory, targetPath, actualTemporaryPath!, rawMessage]) {
+      expect(exposed).not.toContain(secret);
+    }
   });
 });
