@@ -29,14 +29,16 @@ async function main(): Promise<void> {
     const retry = prepareVisualMetadataRetry(templates, seedValue);
     templatesToAttempt = retry.templates;
     seedRows = retry.seedRows;
-    writeSuggestionArtifactAtomic(outputPath, seedRows);
+    await writeSuggestionArtifactAtomic(outputPath, seedRows);
   }
   const batch = await runVisualMetadataSuggestionBatch(templatesToAttempt, {
     force,
     seedRows,
-    onCheckpoint: (rows) => writeSuggestionArtifactAtomic(outputPath, rows),
+    onCheckpoint: async (rows) => {
+      await writeSuggestionArtifactAtomic(outputPath, rows);
+    },
   });
-  writeSuggestionArtifactAtomic(outputPath, batch.rows);
+  await writeSuggestionArtifactAtomic(outputPath, batch.rows);
   console.log(`attempted=${batch.attempted} failed=${batch.failed} out=${outputPath}`);
   if (batch.shouldFail) process.exitCode = 1;
 }

@@ -60,6 +60,7 @@ export default defineConfig({
       "lib/templates/store-visual-metadata.test.ts",
       "lib/templates/suggest-visual-metadata.test.ts",
       "lib/templates/visual-metadata-review-workflow.test.ts",
+      "lib/fs/**/*.test.ts",
       // lib/ai mixes runners — vision-critique.test.ts is node:test (in
       // test:node), so list the vitest ai tests individually.
       "lib/ai/image-edit-core.test.ts",

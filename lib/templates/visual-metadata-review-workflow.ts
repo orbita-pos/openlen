@@ -1,6 +1,5 @@
-import { renameSync, writeFileSync } from "node:fs";
-import { resolve } from "node:path";
 import { sql, type SQL } from "drizzle-orm";
+import { writeJsonAtomic } from "../fs/write-json-atomic";
 import type { TemplateRecord } from "./store";
 import {
   suggestVisualMetadata,
@@ -310,14 +309,11 @@ export function prepareVisualMetadataRetry(
   };
 }
 
-export function writeSuggestionArtifactAtomic(
+export async function writeSuggestionArtifactAtomic(
   path: string,
   rows: SuggestionArtifactRow[],
-): void {
-  const target = resolve(path);
-  const temporary = `${target}.tmp`;
-  writeFileSync(temporary, `${JSON.stringify(rows, null, 2)}\n`, "utf8");
-  renameSync(temporary, target);
+): Promise<void> {
+  await writeJsonAtomic(path, rows);
 }
 
 export interface ReviewedMetadataRow {

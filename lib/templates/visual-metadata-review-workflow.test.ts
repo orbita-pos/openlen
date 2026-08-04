@@ -1,9 +1,11 @@
-import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { readdir } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { basename, join } from "node:path";
 import { PgDialect } from "drizzle-orm/pg-core";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { TemplateRecord } from "./store";
+import { AtomicJsonWriteError, writeJsonAtomic } from "../fs/write-json-atomic";
 import type {
   SuggestVisualMetadataAudit,
   SuggestVisualMetadataResult,
@@ -19,6 +21,15 @@ import {
   type SuggestionArtifactRow,
   type SuggestionArtifactProvenance,
 } from "./visual-metadata-review-workflow";
+
+vi.mock("../fs/write-json-atomic", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../fs/write-json-atomic")>();
+  return { ...actual, writeJsonAtomic: vi.fn(actual.writeJsonAtomic) };
+});
+
+beforeEach(() => {
+  vi.mocked(writeJsonAtomic).mockClear();
+});
 
 const REVIEWED_METADATA: TemplateVisualMetadata = {
   schemaVersion: "template-visual-metadata/1.0",
@@ -439,16 +450,60 @@ describe("retry-failed suggestion artifacts", () => {
     })).rejects.toThrow("duplicate seed template a");
   });
 
-  it("writes and replaces an artifact through an atomic checkpoint", () => {
+  it("writes and replaces an artifact through an atomic checkpoint", async () => {
     const directory = mkdtempSync(join(tmpdir(), "openlen-metadata-review-"));
     const path = join(directory, "artifact.json");
     try {
-      writeSuggestionArtifactAtomic(path, [artifactRow("a", "failed")]);
+      await writeSuggestionArtifactAtomic(path, [artifactRow("a", "failed")]);
       expect(JSON.parse(readFileSync(path, "utf8"))).toHaveLength(1);
-      writeSuggestionArtifactAtomic(path, [artifactRow("a", "suggested"), artifactRow("b", "failed")]);
+      await writeSuggestionArtifactAtomic(path, [artifactRow("a", "suggested"), artifactRow("b", "failed")]);
       const replaced = JSON.parse(readFileSync(path, "utf8"));
       expect(replaced.map((row: { id: string }) => row.id)).toEqual(["a", "b"]);
-      expect(existsSync(`${path}.tmp`)).toBe(false);
+      expect((await readdir(directory)).filter((entry) => entry.startsWith(`${basename(path)}.`))).toEqual([]);
+    } finally {
+      rmSync(directory, { recursive: true, force: true });
+    }
+  });
+
+  it("awaits the resilient atomic writer for every checkpoint", async () => {
+    let releaseWrite: (() => void) | undefined;
+    const writeStarted = new Promise<void>((resolve) => { releaseWrite = resolve; });
+    vi.mocked(writeJsonAtomic).mockImplementation(async (targetPath) => {
+      await writeStarted;
+      return { targetPath, temporaryPath: `${targetPath}.tmp` };
+    });
+    let batchFinished = false;
+
+    const batch = runVisualMetadataSuggestionBatch([template("a"), template("b")], {
+      suggest: async () => success(),
+      onCheckpoint: async (rows) => {
+        await writeSuggestionArtifactAtomic("checkpoint.json", rows);
+      },
+    }).then(() => { batchFinished = true; });
+
+    await vi.waitFor(() => expect(writeJsonAtomic).toHaveBeenCalledTimes(1));
+    expect(batchFinished).toBe(false);
+    releaseWrite!();
+    await batch;
+
+    expect(writeJsonAtomic).toHaveBeenCalledTimes(2);
+  });
+
+  it("leaves the prior suggestion artifact valid when replacement is exhausted", async () => {
+    const directory = mkdtempSync(join(tmpdir(), "openlen-metadata-review-"));
+    const path = join(directory, "artifact.json");
+    const priorRows = [artifactRow("prior", "suggested")];
+    writeFileSync(path, `${JSON.stringify(priorRows, null, 2)}\n`, "utf8");
+    vi.mocked(writeJsonAtomic).mockRejectedValueOnce(new AtomicJsonWriteError(
+      "EPERM",
+      "artifact.json",
+      `${path}.temporary.tmp`,
+      new Error("replacement exhausted"),
+    ));
+    try {
+      await expect(writeSuggestionArtifactAtomic(path, [artifactRow("replacement", "failed")]))
+        .rejects.toMatchObject({ code: "EPERM" });
+      expect(JSON.parse(readFileSync(path, "utf8"))).toEqual(priorRows);
     } finally {
       rmSync(directory, { recursive: true, force: true });
     }
