@@ -6,6 +6,7 @@ interface ReviewQueueProps {
   currentId: string | null;
   filter?: ReviewState;
   query: string;
+  disabled: boolean;
   onToggle(): void;
   onFilter(filter?: ReviewState): void;
   onQuery(query: string): void;
@@ -26,6 +27,7 @@ export function ReviewQueue({
   currentId,
   filter,
   query,
+  disabled,
   onToggle,
   onFilter,
   onQuery,
@@ -52,6 +54,7 @@ export function ReviewQueue({
                 key={candidate.label}
                 data-filter={candidate.value}
                 aria-pressed={filter === candidate.value}
+                disabled={disabled}
                 onClick={() => onFilter(candidate.value)}
               >
                 {candidate.label}
@@ -61,6 +64,7 @@ export function ReviewQueue({
           <input
             type="search"
             value={query}
+            disabled={disabled}
             onChange={(event) => onQuery(event.currentTarget.value)}
             placeholder="Search ID, name, or tag"
             aria-label="Search templates by ID, name, or tag"
@@ -73,6 +77,7 @@ export function ReviewQueue({
                 type="button"
                 className={item.id === currentId ? "current" : ""}
                 aria-current={item.id === currentId ? "true" : undefined}
+                disabled={disabled}
                 onClick={() => onNavigate(item.id)}
               >
                 <span><strong>{item.name}</strong><code>{item.id}</code></span>

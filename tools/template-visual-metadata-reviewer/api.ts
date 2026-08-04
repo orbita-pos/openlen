@@ -48,6 +48,15 @@ function integer(value: unknown): number | null {
 
 const REVIEW_STATES = new Set<ReviewState>(["pending", "approved", "rejected", "failed"]);
 
+export function encodeReviewerItemRouteSegment(id: string): string {
+  if (/^[A-Za-z0-9_-]+$/.test(id)) return id;
+  const bytes = new TextEncoder().encode(id);
+  let binary = "";
+  for (const byte of bytes) binary += String.fromCharCode(byte);
+  const encoded = btoa(binary).replaceAll("+", "-").replaceAll("/", "_").replace(/=+$/, "");
+  return `~${encoded}`;
+}
+
 function parseProgress(value: unknown) {
   if (!isRecord(value)) throw new ReviewerApiError("response_invalid", 502);
   const total = integer(value.total);
@@ -112,6 +121,10 @@ function parseItem(value: unknown): SafeReviewItemDto {
   if (!id || !name || !state || !REVIEW_STATES.has(state as ReviewState)
     || screenshotEndpoint === null && value.screenshotEndpoint !== null
     || failureKind === null && value.failureKind !== null) {
+    throw new ReviewerApiError("response_invalid", 502);
+  }
+  if (screenshotEndpoint !== null
+    && screenshotEndpoint !== `/api/items/${encodeReviewerItemRouteSegment(id)}/screenshot`) {
     throw new ReviewerApiError("response_invalid", 502);
   }
   return {
@@ -190,7 +203,7 @@ export function createReviewerApi(fetchImpl: typeof fetch = fetch): ReviewerApi 
     },
     async updateMetadata(id, field, value) {
       return parseWorkspaceSession(await request(
-        `/api/items/${encodeURIComponent(id)}/metadata`,
+        `/api/items/${encodeReviewerItemRouteSegment(id)}/metadata`,
         json("PATCH", { field, value }),
       ));
     },
@@ -199,12 +212,15 @@ export function createReviewerApi(fetchImpl: typeof fetch = fetch): ReviewerApi 
         ? { decision: "approve" }
         : { decision: "reject", reason: decision.reason };
       return parseWorkspaceSession(await request(
-        `/api/items/${encodeURIComponent(id)}/decision`,
+        `/api/items/${encodeReviewerItemRouteSegment(id)}/decision`,
         json("POST", body),
       ));
     },
     async reopen(id) {
-      return parseWorkspaceSession(await request(`/api/items/${encodeURIComponent(id)}/reopen`, json("POST", {})));
+      return parseWorkspaceSession(await request(
+        `/api/items/${encodeReviewerItemRouteSegment(id)}/reopen`,
+        json("POST", {}),
+      ));
     },
     async navigate(id) {
       parseSession(await request("/api/navigation", json("POST", { templateId: id })));

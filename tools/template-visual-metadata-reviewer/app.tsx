@@ -25,11 +25,13 @@ function Modal({
   children,
   onClose,
   initialFocus,
+  dismissDisabled = false,
 }: {
   title: string;
   children: ReactNode;
   onClose?: () => void;
   initialFocus?: string;
+  dismissDisabled?: boolean;
 }) {
   const dialogRef = useRef<HTMLDivElement>(null);
   const previousFocus = useRef<HTMLElement | null>(null);
@@ -58,7 +60,12 @@ function Modal({
     }
   };
   return (
-    <div className="dialog-backdrop">
+    <div
+      className="dialog-backdrop"
+      onClick={(event) => {
+        if (event.target === event.currentTarget && onClose && !dismissDisabled) onClose();
+      }}
+    >
       <div
         ref={dialogRef}
         className="review-dialog"
@@ -70,7 +77,9 @@ function Modal({
       >
         <div className="dialog-heading">
           <h2 id="dialog-title">{title}</h2>
-          {onClose && <button type="button" aria-label="Close dialog" onClick={onClose}>×</button>}
+          {onClose && (
+            <button type="button" aria-label="Close dialog" onClick={onClose} disabled={dismissDisabled}>×</button>
+          )}
         </div>
         {children}
       </div>
@@ -115,41 +124,50 @@ function IdentityForm({
 
 function RejectionDialog({
   busy,
+  error: operationError,
   onClose,
   onConfirm,
 }: {
   busy: boolean;
+  error: string;
   onClose(): void;
   onConfirm(reason: string): Promise<void>;
 }) {
   const [reason, setReason] = useState("");
-  const [error, setError] = useState("");
+  const [validationError, setValidationError] = useState("");
   const confirm = async () => {
     const normalized = reason.trim();
     if (!normalized) {
-      setError("Enter a rejection reason.");
+      setValidationError("Enter a rejection reason.");
       return;
     }
     if (Array.from(normalized).length > 500) {
-      setError("Keep the rejection reason to 500 characters.");
+      setValidationError("Keep the rejection reason to 500 characters.");
       return;
     }
-    setError("");
+    setValidationError("");
     await onConfirm(normalized);
   };
   return (
-    <Modal title="Reject this proposal" onClose={onClose} initialFocus="textarea">
+    <Modal
+      title="Reject this proposal"
+      onClose={onClose}
+      initialFocus="textarea"
+      dismissDisabled={busy}
+    >
       <p className="dialog-intro">Record what the screenshot does not support.</p>
       <label className="reason-field">
         Rejection reason
         <textarea
           value={reason}
           onChange={(event) => setReason(event.currentTarget.value)}
-          aria-invalid={Boolean(error)}
+          aria-invalid={Boolean(validationError || operationError)}
           rows={5}
         />
       </label>
-      {error && <p className="form-error" role="alert">{error}</p>}
+      {(validationError || operationError) && (
+        <p className="form-error" role="alert">{validationError || operationError}</p>
+      )}
       <div className="dialog-actions">
         <button type="button" onClick={onClose} disabled={busy}>Cancel</button>
         <button type="button" className="reject-button" data-confirm-reject onClick={() => void confirm()} disabled={busy}>
@@ -170,6 +188,14 @@ function safeErrorMessage(error: unknown): string {
   return "The operation failed. Retry it or exit without making another change.";
 }
 
+function isTerminalMutationError(error: unknown): boolean {
+  if (!error || typeof error !== "object") return false;
+  const candidate = error as { code?: unknown; status?: unknown };
+  return candidate.code === "request_rejected"
+    || candidate.code === "server_closing"
+    || typeof candidate.status === "number" && candidate.status >= 500;
+}
+
 export function ReviewerApp({ api }: { api: ReviewerApi }) {
   const [session, setSession] = useState<SafeReviewSessionDto | null>(null);
   const [items, setItems] = useState<SafeReviewItemDto[]>([]);
@@ -181,9 +207,43 @@ export function ReviewerApp({ api }: { api: ReviewerApi }) {
   const [screenshotAttempt, setScreenshotAttempt] = useState(0);
   const [zoom, setZoom] = useState(1);
   const [busy, setBusy] = useState(false);
+  const [paused, setPaused] = useState(false);
   const [error, setError] = useState("");
   const [rejectionOpen, setRejectionOpen] = useState(false);
   const itemRequest = useRef(0);
+  const navigationRequest = useRef(0);
+  const currentIdRef = useRef<string | null>(null);
+  const screenshotAttemptRef = useRef(0);
+  const loadedScreenshotRef = useRef<{ itemId: string; attempt: number } | null>(null);
+  const filterRef = useRef<ReviewState | undefined>(undefined);
+  const queryRef = useRef("");
+  const handleMutationError = useCallback((cause: unknown) => {
+    setError(safeErrorMessage(cause));
+    if (isTerminalMutationError(cause)) {
+      loadedScreenshotRef.current = null;
+      setPaused(true);
+      setRejectionOpen(false);
+    }
+  }, []);
+
+  const activateItem = useCallback((
+    id: string | null,
+    availableItems: SafeReviewItemDto[],
+    force = false,
+  ) => {
+    const candidate = availableItems.find((item) => item.id === id) ?? null;
+    if (!force && currentIdRef.current === id) {
+      setCurrentId(id);
+      return;
+    }
+    currentIdRef.current = id;
+    loadedScreenshotRef.current = null;
+    const attempt = ++screenshotAttemptRef.current;
+    setScreenshotAttempt(attempt);
+    setScreenshotState(candidate?.screenshotEndpoint ? "loading" : "idle");
+    setZoom(1);
+    setCurrentId(id);
+  }, []);
 
   const fetchItems = useCallback(async (
     nextFilter: ReviewState | undefined,
@@ -194,11 +254,24 @@ export function ReviewerApp({ api }: { api: ReviewerApi }) {
     const nextItems = await api.getItems({ status: nextFilter, q: nextQuery || undefined });
     if (requestId !== itemRequest.current) return;
     setItems(nextItems);
-    setCurrentId((existing) => {
-      const wanted = preferredId === undefined ? existing : preferredId;
-      return nextItems.some((item) => item.id === wanted) ? wanted! : nextItems[0]?.id ?? null;
-    });
-  }, [api]);
+    const wanted = preferredId === undefined ? currentIdRef.current : preferredId;
+    const selected = nextItems.some((item) => item.id === wanted) ? wanted! : nextItems[0]?.id ?? null;
+    activateItem(selected, nextItems);
+  }, [activateItem, api]);
+
+  const fetchItemsSafely = useCallback(async (
+    nextFilter: ReviewState | undefined,
+    nextQuery: string,
+    preferredId?: string | null,
+  ) => {
+    const expectedRequest = itemRequest.current + 1;
+    try {
+      await fetchItems(nextFilter, nextQuery, preferredId);
+      if (itemRequest.current === expectedRequest) setError("");
+    } catch (cause) {
+      if (itemRequest.current === expectedRequest) setError(safeErrorMessage(cause));
+    }
+  }, [fetchItems]);
 
   useEffect(() => {
     let active = true;
@@ -206,7 +279,6 @@ export function ReviewerApp({ api }: { api: ReviewerApi }) {
       if (!active) return;
       setSession(nextSession);
       if (nextSession.phase === "review") {
-        setCurrentId(nextSession.currentTemplateId);
         await fetchItems(undefined, "", nextSession.currentTemplateId);
       }
     }).catch((cause) => {
@@ -224,22 +296,19 @@ export function ReviewerApp({ api }: { api: ReviewerApi }) {
     [currentId, items],
   );
 
-  useEffect(() => {
-    setScreenshotState(currentItem?.screenshotEndpoint ? "loading" : "idle");
-    setScreenshotAttempt((attempt) => attempt + 1);
-    setZoom(1);
-  }, [currentItem?.id, currentItem?.screenshotEndpoint]);
-
   const navigate = useCallback(async (id: string) => {
-    if (busy || id === currentId) return;
+    if (busy || paused || id === currentId) return;
+    const requestId = ++navigationRequest.current;
     setError("");
     try {
       await api.navigate(id);
-      setCurrentId(id);
+      if (requestId !== navigationRequest.current) return;
+      activateItem(id, items);
     } catch (cause) {
-      setError(safeErrorMessage(cause));
+      if (requestId !== navigationRequest.current) return;
+      handleMutationError(cause);
     }
-  }, [api, busy, currentId]);
+  }, [activateItem, api, busy, currentId, handleMutationError, items, paused]);
 
   const adjacent = useCallback((direction: 1 | -1): SafeReviewItemDto | null => {
     if (!currentItem || items.length === 0) return null;
@@ -251,29 +320,38 @@ export function ReviewerApp({ api }: { api: ReviewerApi }) {
   const decide = useCallback(async (
     decision: { action: "approved" } | { action: "rejected"; reason: string },
   ) => {
-    if (!currentItem || busy) return;
+    if (!currentItem || busy || paused) return;
+    if (currentItem.state !== "pending" || currentIdRef.current !== currentItem.id) return;
+    if (decision.action === "approved") {
+      const loaded = loadedScreenshotRef.current;
+      if (!loaded || loaded.itemId !== currentItem.id || loaded.attempt !== screenshotAttemptRef.current) return;
+    }
     setBusy(true);
     setError("");
+    let succeeded = false;
     try {
       const nextSession = await api.decide(currentItem.id, decision);
       setSession(nextSession);
-      setRejectionOpen(false);
       const next = adjacent(1);
       if (next && next.id !== currentItem.id) {
         await api.navigate(next.id);
-        setCurrentId(next.id);
+        activateItem(next.id, items);
       }
-      await fetchItems(filter, query, next?.id ?? currentItem.id);
+      await fetchItems(filterRef.current, queryRef.current, next?.id ?? currentItem.id);
+      succeeded = true;
     } catch (cause) {
-      setError(safeErrorMessage(cause));
+      handleMutationError(cause);
     } finally {
       setBusy(false);
+      if (succeeded) setRejectionOpen(false);
     }
-  }, [adjacent, api, busy, currentItem, fetchItems, filter, query]);
+  }, [activateItem, adjacent, api, busy, currentItem, fetchItems, handleMutationError, items, paused]);
 
   const approvalEnabled = Boolean(
     currentItem?.metadata
-    && screenshotState === "loaded"
+    && currentItem.state === "pending"
+    && loadedScreenshotRef.current?.itemId === currentItem.id
+    && loadedScreenshotRef.current?.attempt === screenshotAttempt
     && TemplateVisualMetadataSchema.safeParse(currentItem.metadata).success,
   );
 
@@ -281,20 +359,21 @@ export function ReviewerApp({ api }: { api: ReviewerApi }) {
     const handleShortcut = (event: KeyboardEvent) => {
       const target = event.target instanceof Element ? event.target : null;
       const editing = target?.closest("input, textarea, select, [contenteditable]") !== null;
+      if (event.repeat || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey || paused) return;
       const openDialog = document.querySelector("[role='dialog'][aria-modal='true']");
       if (openDialog) {
-        if (event.key === "Escape" && rejectionOpen) {
+        if (event.key === "Escape" && rejectionOpen && !busy) {
           event.preventDefault();
           setRejectionOpen(false);
         }
         return;
       }
-      if (editing || event.altKey || event.ctrlKey || event.metaKey) return;
+      if (editing) return;
       const shortcut = event.key.toLocaleLowerCase();
       if (!["a", "r", "j", "k", "e"].includes(shortcut)) return;
       event.preventDefault();
       if (shortcut === "a" && approvalEnabled && !busy) void decide({ action: "approved" });
-      if (shortcut === "r" && currentItem?.metadata && !busy) setRejectionOpen(true);
+      if (shortcut === "r" && currentItem?.metadata && currentItem.state === "pending" && !busy) setRejectionOpen(true);
       if (shortcut === "j") {
         const next = adjacent(1);
         if (next) void navigate(next.id);
@@ -310,7 +389,7 @@ export function ReviewerApp({ api }: { api: ReviewerApi }) {
     };
     document.addEventListener("keydown", handleShortcut);
     return () => document.removeEventListener("keydown", handleShortcut);
-  }, [adjacent, approvalEnabled, busy, currentItem?.metadata, decide, navigate, rejectionOpen]);
+  }, [adjacent, approvalEnabled, busy, currentItem?.metadata, decide, navigate, paused, rejectionOpen]);
 
   const submitIdentity = async (identity: { name: string; email: string }) => {
     setBusy(true);
@@ -319,7 +398,6 @@ export function ReviewerApp({ api }: { api: ReviewerApi }) {
       const nextSession = await api.submitIdentity(identity);
       setSession(nextSession);
       if (nextSession.phase === "review") {
-        setCurrentId(nextSession.currentTemplateId);
         await fetchItems(undefined, "", nextSession.currentTemplateId);
       }
     } catch (cause) {
@@ -337,7 +415,7 @@ export function ReviewerApp({ api }: { api: ReviewerApi }) {
   }
 
   const commitMetadata = async (field: string, value: unknown) => {
-    if (!currentItem?.metadata || busy) return false;
+    if (!currentItem?.metadata || busy || paused) return false;
     setBusy(true);
     setError("");
     try {
@@ -347,9 +425,11 @@ export function ReviewerApp({ api }: { api: ReviewerApi }) {
       const nextSession = await api.updateMetadata(currentItem.id, field, value);
       setSession(nextSession);
       setItems((existing) => existing.map((item) => item.id === currentItem.id ? { ...item, metadata: parsed.data } : item));
+      await fetchItems(filterRef.current, queryRef.current, currentItem.id);
+      setItems((existing) => existing.map((item) => item.id === currentItem.id ? { ...item, metadata: parsed.data } : item));
       return true;
     } catch (cause) {
-      setError(safeErrorMessage(cause));
+      handleMutationError(cause);
       return false;
     } finally {
       setBusy(false);
@@ -357,28 +437,29 @@ export function ReviewerApp({ api }: { api: ReviewerApi }) {
   };
 
   const reopen = async () => {
-    if (!currentItem || busy) return;
+    if (!currentItem || busy || paused) return;
     setBusy(true);
     setError("");
     try {
       const nextSession = await api.reopen(currentItem.id);
       setSession(nextSession);
-      await fetchItems(filter, query, currentItem.id);
+      await fetchItems(filterRef.current, queryRef.current, currentItem.id);
     } catch (cause) {
-      setError(safeErrorMessage(cause));
+      handleMutationError(cause);
     } finally {
       setBusy(false);
     }
   };
 
   const runExport = async (kind: "final" | "audit") => {
+    if (paused) return;
     setBusy(true);
     setError("");
     try {
       if (kind === "final") await api.exportFinal();
       else await api.exportAudit();
     } catch (cause) {
-      setError(safeErrorMessage(cause));
+      handleMutationError(cause);
     } finally {
       setBusy(false);
     }
@@ -393,23 +474,44 @@ export function ReviewerApp({ api }: { api: ReviewerApi }) {
           screenshotState={screenshotState}
           screenshotAttempt={screenshotAttempt}
           zoom={zoom}
-          onLoad={() => setScreenshotState("loaded")}
-          onError={() => setScreenshotState("error")}
+          onLoad={(itemId, attempt) => {
+            if (currentIdRef.current !== itemId || screenshotAttemptRef.current !== attempt) return;
+            loadedScreenshotRef.current = { itemId, attempt };
+            setScreenshotState("loaded");
+          }}
+          onError={(itemId, attempt) => {
+            if (currentIdRef.current !== itemId || screenshotAttemptRef.current !== attempt) return;
+            loadedScreenshotRef.current = null;
+            setScreenshotState("error");
+          }}
           onRetry={() => {
+            if (!currentItem) return;
+            loadedScreenshotRef.current = null;
+            const attempt = ++screenshotAttemptRef.current;
+            setScreenshotAttempt(attempt);
             setScreenshotState("loading");
-            setScreenshotAttempt((attempt) => attempt + 1);
           }}
           onZoom={setZoom}
         />
         <div className="inspector-column">
+          {paused && (
+            <div className="paused-review" data-review-paused role="alert">
+              <strong>Review paused</strong>
+              <span>Session persistence could not be confirmed. Do not make another decision.</span>
+              <span>Reload this local reviewer to resume safely. If it cannot resume, exit and restart the local review command.</span>
+              <button type="button" onClick={() => window.location.reload()}>Reload local reviewer</button>
+            </div>
+          )}
           {error && <div className="operation-error" role="alert">{error}</div>}
           <MetadataInspector
             item={currentItem}
             approvalEnabled={approvalEnabled}
-            busy={busy}
+            busy={busy || paused}
             onCommit={commitMetadata}
             onApprove={() => void decide({ action: "approved" })}
-            onReject={() => setRejectionOpen(true)}
+            onReject={() => {
+              if (!paused) setRejectionOpen(true);
+            }}
             onReopen={() => void reopen()}
           />
         </div>
@@ -420,26 +522,30 @@ export function ReviewerApp({ api }: { api: ReviewerApi }) {
         currentId={currentItem?.id ?? null}
         filter={filter}
         query={query}
+        disabled={busy || paused}
         onToggle={() => setQueueOpen((open) => !open)}
         onFilter={(nextFilter) => {
+          filterRef.current = nextFilter;
           setFilter(nextFilter);
-          void fetchItems(nextFilter, query);
+          void fetchItemsSafely(nextFilter, queryRef.current);
         }}
         onQuery={(nextQuery) => {
+          queryRef.current = nextQuery;
           setQuery(nextQuery);
-          void fetchItems(filter, nextQuery);
+          void fetchItemsSafely(filterRef.current, nextQuery);
         }}
         onNavigate={(id) => void navigate(id)}
       />
       <CompletionPanel
         session={reviewSession!}
-        busy={busy}
+        busy={busy || paused}
         onExportFinal={() => void runExport("final")}
         onExportAudit={() => void runExport("audit")}
       />
       {rejectionOpen && (
         <RejectionDialog
           busy={busy}
+          error={error}
           onClose={() => setRejectionOpen(false)}
           onConfirm={(reason) => decide({ action: "rejected", reason })}
         />

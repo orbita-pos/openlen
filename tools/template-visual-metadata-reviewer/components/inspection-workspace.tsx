@@ -6,8 +6,8 @@ interface InspectionWorkspaceProps {
   screenshotState: "idle" | "loading" | "loaded" | "error";
   screenshotAttempt: number;
   zoom: number;
-  onLoad(): void;
-  onError(): void;
+  onLoad(itemId: string, attempt: number): void;
+  onError(itemId: string, attempt: number): void;
   onRetry(): void;
   onZoom(zoom: number): void;
 }
@@ -63,8 +63,8 @@ export function InspectionWorkspace({
               key={`${item.id}-${screenshotAttempt}`}
               src={item.screenshotEndpoint}
               alt={`Full-page screenshot of ${item.name}`}
-              onLoad={onLoad}
-              onError={onError}
+              onLoad={() => onLoad(item.id, screenshotAttempt)}
+              onError={() => onError(item.id, screenshotAttempt)}
               style={{ width: `${zoom * 100}%` }}
               hidden={screenshotState === "error"}
             />

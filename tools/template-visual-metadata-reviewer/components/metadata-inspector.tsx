@@ -100,6 +100,7 @@ export function MetadataInspector({
 }: MetadataInspectorProps) {
   const metadata = item?.metadata ?? null;
   const valid = metadata ? TemplateVisualMetadataSchema.safeParse(metadata).success : false;
+  const editable = item?.state === "pending" && !busy;
   return (
     <aside className="metadata-inspector" tabIndex={-1} aria-label="Metadata inspector">
       <header className="inspector-header">
@@ -121,25 +122,29 @@ export function MetadataInspector({
       {metadata && (
         <div className="metadata-groups">
           {GROUPS.map((group) => (
-            <fieldset key={group.title} disabled={busy}>
+            <fieldset key={group.title} disabled={!editable}>
               <legend>{group.title}</legend>
               {group.fields.map((field) => (
                 <ChipEditor
                   key={field.key}
                   field={field}
                   values={metadata[field.key]}
-                  disabled={busy}
+                  disabled={!editable}
                   onCommit={onCommit}
                 />
               ))}
             </fieldset>
           ))}
-          <fieldset disabled={busy}>
+          <fieldset disabled={!editable}>
             <legend>Themeability and identity strength</legend>
             {(["themeability", "identityStrength"] as const).map((field) => (
               <label className="scalar-field" key={field}>
                 <span>{field === "themeability" ? "Themeability" : "Identity strength"}</span>
-                <select value={metadata[field]} onChange={(event) => void onCommit(field, event.currentTarget.value)}>
+                <select
+                  value={metadata[field]}
+                  disabled={!editable}
+                  onChange={(event) => void onCommit(field, event.currentTarget.value)}
+                >
                   <option value="low">low</option>
                   <option value="medium">medium</option>
                   <option value="high">high</option>
@@ -166,7 +171,7 @@ export function MetadataInspector({
               className="reject-button"
               data-action="reject"
               onClick={onReject}
-              disabled={busy || !metadata}
+              disabled={!editable || !metadata}
             >
               Reject <kbd>R</kbd>
             </button>
@@ -175,7 +180,7 @@ export function MetadataInspector({
               className="approve-button"
               data-action="approve"
               onClick={onApprove}
-              disabled={busy || !approvalEnabled || !valid}
+              disabled={!editable || !approvalEnabled || !valid}
             >
               Approve <kbd>A</kbd>
             </button>
