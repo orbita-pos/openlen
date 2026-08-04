@@ -7,62 +7,46 @@ import type { TemplateRecord } from "./store";
 
 export const VISUAL_METADATA_WORKFLOW_VERSION = "template-visual-metadata-suggestion-workflow/1.0" as const;
 export const VISUAL_METADATA_MODEL_CHOICE_VERSION = "template-visual-metadata-model-choice/1.0" as const;
-export const VISUAL_METADATA_PROMPT_VERSION = "template-visual-metadata-prompt/2.0" as const;
-export const VISUAL_METADATA_GENERATION_CONFIG_VERSION = "template-visual-metadata-generation-config/2.0" as const;
+export const VISUAL_METADATA_PROMPT_VERSION = "template-visual-metadata-prompt/3.0" as const;
+export const VISUAL_METADATA_GENERATION_CONFIG_VERSION = "template-visual-metadata-generation-config/3.0" as const;
 export const VISUAL_METADATA_FAILURE_POLICY_VERSION = "template-visual-metadata-failure-policy/1.0" as const;
 export const VISUAL_METADATA_TIMEOUT_POLICY_VERSION = "template-visual-metadata-timeout-policy/1.0" as const;
 export const VISUAL_METADATA_MAXIMUM_FAILURE_RATE = 0.10;
 export const VISUAL_METADATA_PER_TEMPLATE_TIMEOUT_MS = 60_000;
 
-const TAXONOMY_ITEM_SCHEMA = {
-  type: "string",
-  description: "A lowercase snake_case taxonomy string containing only letters, digits, and underscores.",
+const TAXONOMY_ARRAY_SCHEMA = {
+  type: "array",
+  items: { type: "string" },
 } as const;
-
-function taxonomyArraySchema(description: string, minItems = 0): Record<string, unknown> {
-  return {
-    type: "array",
-    description,
-    items: TAXONOMY_ITEM_SCHEMA,
-    minItems,
-    maxItems: 40,
-  };
-}
 
 const RESPONSE_JSON_SCHEMA = {
   type: "object",
+  description: "Taxonomy array items use lowercase snake_case.",
   additionalProperties: false,
   properties: {
     schemaVersion: {
       type: "string",
       enum: [TEMPLATE_VISUAL_METADATA_SCHEMA_VERSION],
-      description: `Must be exactly ${TEMPLATE_VISUAL_METADATA_SCHEMA_VERSION}.`,
     },
-    domains: taxonomyArraySchema("Visible or pitch-supported domains as lowercase snake_case strings.", 1),
-    audiences: taxonomyArraySchema("Visible or pitch-supported audiences as lowercase snake_case strings.", 1),
+    domains: TAXONOMY_ARRAY_SCHEMA,
+    audiences: TAXONOMY_ARRAY_SCHEMA,
     ageRanges: {
-      ...taxonomyArraySchema(
-        "Age ranges as lowercase snake_case strings. Use underscore ranges such as 5_10, 18_24, and 65_plus; never use hyphens.",
-      ),
-      items: {
-        ...TAXONOMY_ITEM_SCHEMA,
-        description: "An age range in lowercase snake_case. Examples: 5_10, 18_24, 65_plus. Never use hyphens.",
-      },
+      ...TAXONOMY_ARRAY_SCHEMA,
+      description: "Use ranges such as 5_10, 18_24, or 65_plus; never hyphens.",
     },
-    emotionalRegisters: taxonomyArraySchema("Visible emotional registers as lowercase snake_case strings."),
-    visualArchetypes: taxonomyArraySchema("Visible visual archetypes as lowercase snake_case strings."),
-    visualSignals: taxonomyArraySchema("Signals visibly present in the screenshot as lowercase snake_case strings."),
-    layoutTraits: taxonomyArraySchema("Visible layout traits as lowercase snake_case strings."),
-    requiredAssetTypes: taxonomyArraySchema("Asset types required by the visible design as lowercase snake_case strings."),
-    negativeTags: taxonomyArraySchema("Domains or audiences this design would mislead, as lowercase snake_case strings."),
-    supportedSiteTypes: taxonomyArraySchema("Supported site types as lowercase snake_case strings.", 1),
-    supportedSectionRoles: taxonomyArraySchema("Supported section roles as lowercase snake_case strings.", 1),
+    emotionalRegisters: TAXONOMY_ARRAY_SCHEMA,
+    visualArchetypes: TAXONOMY_ARRAY_SCHEMA,
+    visualSignals: TAXONOMY_ARRAY_SCHEMA,
+    layoutTraits: TAXONOMY_ARRAY_SCHEMA,
+    requiredAssetTypes: TAXONOMY_ARRAY_SCHEMA,
+    negativeTags: TAXONOMY_ARRAY_SCHEMA,
+    supportedSiteTypes: TAXONOMY_ARRAY_SCHEMA,
+    supportedSectionRoles: TAXONOMY_ARRAY_SCHEMA,
     themeability: { type: "string", enum: ["low", "medium", "high"] },
     identityStrength: { type: "string", enum: ["low", "medium", "high"] },
     reviewStatus: {
       type: "string",
       enum: ["unreviewed"],
-      description: "Must remain unreviewed until a separate human review occurs.",
     },
   },
   required: [
@@ -189,6 +173,35 @@ function failure(
     : { ok: false, kind, message, raw, audit };
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+function boundedProviderText(value: unknown, maximumLength: number): string | null {
+  if (typeof value !== "string") return null;
+  const normalized = value.trim().replace(/\s+/g, " ");
+  if (!normalized) return null;
+  return normalized.length <= maximumLength
+    ? normalized
+    : `${normalized.slice(0, maximumLength - 1)}…`;
+}
+
+async function geminiHttpErrorMessage(response: Response): Promise<string> {
+  const fallback = `Gemini ${response.status}`;
+  let payload: unknown;
+  try {
+    payload = await response.json();
+  } catch {
+    return fallback;
+  }
+  if (!isRecord(payload) || !isRecord(payload.error)) return fallback;
+  const providerStatus = boundedProviderText(payload.error.status, 64);
+  const providerMessage = boundedProviderText(payload.error.message, 512);
+  if (providerStatus && providerMessage) return `${fallback} ${providerStatus}: ${providerMessage}`;
+  if (providerStatus) return `${fallback} ${providerStatus}`;
+  return providerMessage ? `${fallback}: ${providerMessage}` : fallback;
+}
+
 function cancellationFailure(
   audit: SuggestVisualMetadataAudit,
   cancellation: CancellationKind | null,
@@ -288,7 +301,7 @@ async function executeSuggestion(
     return cancellationFailure(audit, cancellationState.kind, "model", "Gemini request failed");
   }
   if (!modelResponse.ok) {
-    return failure(audit, "model", `Gemini ${modelResponse.status}`);
+    return failure(audit, "model", await geminiHttpErrorMessage(modelResponse));
   }
 
   let payload: unknown;

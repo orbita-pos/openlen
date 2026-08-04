@@ -94,13 +94,14 @@ describe("suggestVisualMetadata failure boundaries and audit", () => {
           version: "template-visual-metadata-model-choice/1.0",
           modelId: "gemini-test-model",
         },
-        promptVersion: "template-visual-metadata-prompt/2.0",
+        promptVersion: "template-visual-metadata-prompt/3.0",
         schemaVersion: "template-visual-metadata/1.0",
         generationConfig: {
-          version: "template-visual-metadata-generation-config/2.0",
+          version: "template-visual-metadata-generation-config/3.0",
           temperature: 0.2,
           maxOutputTokens: 2_048,
           responseMimeType: "application/json",
+          responseJsonSchemaVersion: "template-visual-metadata/1.0",
           thinkingBudget: 0,
         },
         failurePolicy: {
@@ -113,7 +114,16 @@ describe("suggestVisualMetadata failure boundaries and audit", () => {
     const request = JSON.parse(String(fetchImpl.mock.calls[1][1]?.body));
     expect(request.contents[0].parts[1].inlineData.mimeType).toBe("image/png");
     expect(request.contents[0].parts[0].text).toContain("ageRanges examples: 5_10, 18_24, 65_plus");
-    expect(request.generationConfig.responseJsonSchema).toMatchObject({
+  });
+
+  it("sends a low-state response schema while preserving the required output shape", async () => {
+    const fetchImpl = vi.fn()
+      .mockResolvedValueOnce(new Response(new Uint8Array([1]), { status: 200 }))
+      .mockResolvedValueOnce(geminiResponse());
+    await suggestVisualMetadata(TEMPLATE, { apiKey: "key", fetchImpl });
+    const request = JSON.parse(String(fetchImpl.mock.calls[1][1]?.body));
+    const responseJsonSchema = request.generationConfig.responseJsonSchema;
+    expect(responseJsonSchema).toMatchObject({
       type: "object",
       additionalProperties: false,
       required: [
@@ -124,20 +134,24 @@ describe("suggestVisualMetadata failure boundaries and audit", () => {
       ],
       properties: {
         schemaVersion: { type: "string", enum: ["template-visual-metadata/1.0"] },
-        domains: { type: "array", minItems: 1, maxItems: 40 },
-        ageRanges: {
-          type: "array",
-          maxItems: 40,
-          items: {
-            type: "string",
-            description: expect.stringContaining("5_10, 18_24, 65_plus"),
-          },
-        },
+        ageRanges: { type: "array", items: { type: "string" } },
         themeability: { type: "string", enum: ["low", "medium", "high"] },
         identityStrength: { type: "string", enum: ["low", "medium", "high"] },
         reviewStatus: { type: "string", enum: ["unreviewed"] },
       },
     });
+    expect(Object.keys(responseJsonSchema.properties)).toEqual(responseJsonSchema.required);
+    expect(responseJsonSchema.description).toBe("Taxonomy array items use lowercase snake_case.");
+    expect(responseJsonSchema.properties.ageRanges.description)
+      .toBe("Use ranges such as 5_10, 18_24, or 65_plus; never hyphens.");
+    expect(JSON.stringify(responseJsonSchema)).not.toMatch(/"(?:minItems|maxItems)"/);
+    for (const key of [
+      "domains", "audiences", "emotionalRegisters", "visualArchetypes", "visualSignals",
+      "layoutTraits", "requiredAssetTypes", "negativeTags", "supportedSiteTypes",
+      "supportedSectionRoles",
+    ]) {
+      expect(responseJsonSchema.properties[key]).toEqual({ type: "array", items: { type: "string" } });
+    }
   });
 
   it("canonicalizes only pure numeric hyphenated age ranges before final validation", async () => {
@@ -170,12 +184,52 @@ describe("suggestVisualMetadata failure boundaries and audit", () => {
     expect(result).toMatchObject({ ok: false, kind: "fetch", message: "screenshot 404" });
   });
 
-  it("returns a typed model failure for a Gemini HTTP error", async () => {
+  it("retains only bounded Gemini provider status and message for an HTTP error", async () => {
+    const providerMessage = "The specified schema produces a constraint that has too many states for serving.";
     const fetchImpl = vi.fn()
       .mockResolvedValueOnce(new Response(new Uint8Array([1]), { status: 200 }))
-      .mockResolvedValueOnce(new Response(null, { status: 503 }));
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        error: {
+          code: 400,
+          status: "INVALID_ARGUMENT",
+          message: providerMessage,
+          details: [{ request: "never-retain-request", credential: "never-retain-credential" }],
+        },
+        rawResponse: "never-retain-raw-response",
+        screenshot: "never-retain-screenshot",
+      }), { status: 400 }));
+    const result = await suggestVisualMetadata(TEMPLATE, { apiKey: "key", fetchImpl });
+    expect(result).toMatchObject({
+      ok: false,
+      kind: "model",
+      message: `Gemini 400 INVALID_ARGUMENT: ${providerMessage}`,
+    });
+    expect(JSON.stringify(result)).not.toMatch(/never-retain-(?:request|credential|raw-response|screenshot)/);
+  });
+
+  it("bounds long Gemini provider status and message fields", async () => {
+    const providerStatus = `STATUS_${"s".repeat(200)}`;
+    const providerMessage = `message_${"m".repeat(2_000)}`;
+    const fetchImpl = vi.fn()
+      .mockResolvedValueOnce(new Response(new Uint8Array([1]), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        error: { status: providerStatus, message: providerMessage },
+      }), { status: 400 }));
+    const result = await suggestVisualMetadata(TEMPLATE, { apiKey: "key", fetchImpl });
+    expect(result).toMatchObject({
+      ok: false,
+      kind: "model",
+      message: `Gemini 400 ${providerStatus.slice(0, 63)}…: ${providerMessage.slice(0, 511)}…`,
+    });
+  });
+
+  it("falls back to the HTTP status when a Gemini error body is malformed", async () => {
+    const fetchImpl = vi.fn()
+      .mockResolvedValueOnce(new Response(new Uint8Array([1]), { status: 200 }))
+      .mockResolvedValueOnce(new Response("not-json never-retain-body", { status: 503 }));
     const result = await suggestVisualMetadata(TEMPLATE, { apiKey: "key", fetchImpl });
     expect(result).toMatchObject({ ok: false, kind: "model", message: "Gemini 503" });
+    expect(JSON.stringify(result)).not.toContain("never-retain-body");
   });
 
   it("returns a typed fetch failure when the screenshot body cannot be read", async () => {

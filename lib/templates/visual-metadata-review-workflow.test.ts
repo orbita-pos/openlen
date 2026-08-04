@@ -38,10 +38,10 @@ const AUDIT: SuggestVisualMetadataAudit = {
     version: "template-visual-metadata-model-choice/1.0",
     modelId: "gemini-test-model",
   },
-  promptVersion: "template-visual-metadata-prompt/2.0",
+  promptVersion: "template-visual-metadata-prompt/3.0",
   schemaVersion: "template-visual-metadata/1.0",
   generationConfig: {
-    version: "template-visual-metadata-generation-config/2.0",
+    version: "template-visual-metadata-generation-config/3.0",
     temperature: 0.2,
     maxOutputTokens: 2_048,
     responseMimeType: "application/json",
@@ -80,6 +80,19 @@ const HISTORICAL_AUDIT: SuggestionArtifactProvenance = {
   timeoutPolicy: {
     version: "template-visual-metadata-timeout-policy/1.0",
     timeoutMs: 60_000,
+  },
+};
+
+const V2_AUDIT: SuggestionArtifactProvenance = {
+  ...HISTORICAL_AUDIT,
+  promptVersion: "template-visual-metadata-prompt/2.0",
+  generationConfig: {
+    version: "template-visual-metadata-generation-config/2.0",
+    temperature: 0.2,
+    maxOutputTokens: 2_048,
+    responseMimeType: "application/json",
+    responseJsonSchemaVersion: "template-visual-metadata/1.0",
+    thinkingBudget: 0,
   },
 };
 
@@ -236,14 +249,62 @@ describe("retry-failed suggestion artifacts", () => {
     });
   });
 
-  it("accepts complete historical and current provenance without rewriting either", () => {
-    for (const [id, provenance] of [["historical", HISTORICAL_AUDIT], ["current", AUDIT]] as const) {
+  it("accepts all three exact provenance generations without rewriting them", () => {
+    for (const [id, provenance] of [
+      ["v1", HISTORICAL_AUDIT],
+      ["v2", V2_AUDIT],
+      ["v3", AUDIT],
+    ] as const) {
       const rows = validateSuggestionArtifactSeed(
         [artifactRow(id, "suggested", provenance)],
         new Set([id]),
       );
       expect(rows[0].provenance).toEqual(provenance);
     }
+  });
+
+  it("preserves existing v1 and v2 failure rows field-for-field", () => {
+    const input = [
+      artifactRow("v1-failure", "failed", HISTORICAL_AUDIT),
+      artifactRow("v2-failure", "failed", V2_AUDIT),
+    ];
+    expect(validateSuggestionArtifactSeed(input, new Set(["v1-failure", "v2-failure"]))).toEqual(input);
+  });
+
+  it.each([
+    ["template-visual-metadata-prompt/1.0", "template-visual-metadata-generation-config/1.0", true],
+    ["template-visual-metadata-prompt/2.0", "template-visual-metadata-generation-config/2.0", true],
+    ["template-visual-metadata-prompt/3.0", "template-visual-metadata-generation-config/3.0", true],
+    ["template-visual-metadata-prompt/1.0", "template-visual-metadata-generation-config/2.0", false],
+    ["template-visual-metadata-prompt/1.0", "template-visual-metadata-generation-config/3.0", false],
+    ["template-visual-metadata-prompt/2.0", "template-visual-metadata-generation-config/1.0", false],
+    ["template-visual-metadata-prompt/2.0", "template-visual-metadata-generation-config/3.0", false],
+    ["template-visual-metadata-prompt/3.0", "template-visual-metadata-generation-config/1.0", false],
+    ["template-visual-metadata-prompt/3.0", "template-visual-metadata-generation-config/2.0", false],
+    ["template-visual-metadata-prompt/999", "template-visual-metadata-generation-config/1.0", false],
+    ["template-visual-metadata-prompt/1.0", "template-visual-metadata-generation-config/999", false],
+  ])("validates only the closed provenance pair %s + %s", (promptVersion, generationVersion, accepted) => {
+    const generationConfig: Record<string, unknown> = {
+      version: generationVersion,
+      temperature: 0.2,
+      maxOutputTokens: 2_048,
+      responseMimeType: "application/json",
+      thinkingBudget: 0,
+    };
+    if (generationVersion !== "template-visual-metadata-generation-config/1.0") {
+      generationConfig.responseJsonSchemaVersion = "template-visual-metadata/1.0";
+    }
+    const provenance = {
+      ...HISTORICAL_AUDIT,
+      promptVersion,
+      generationConfig,
+    };
+    const validate = () => validateSuggestionArtifactSeed(
+      [artifactRow("a", "failed", provenance as unknown as SuggestionArtifactProvenance)],
+      new Set(["a"]),
+    );
+    if (accepted) expect(validate()[0].provenance).toEqual(provenance);
+    else expect(validate).toThrow("row 0: incomplete provenance");
   });
 
   it.each([
@@ -257,10 +318,10 @@ describe("retry-failed suggestion artifacts", () => {
     ["missing prompt version", (value: MutableProvenance) => { delete value.promptVersion; }],
     ["empty prompt version", (value: MutableProvenance) => { value.promptVersion = ""; }],
     ["unknown prompt version", (value: MutableProvenance) => { value.promptVersion = "prompt/999"; }],
-    ["current prompt with historical generation config", (value: MutableProvenance) => {
+    ["v2 prompt with v1 generation config", (value: MutableProvenance) => {
       value.promptVersion = "template-visual-metadata-prompt/2.0";
     }],
-    ["historical prompt with current generation config", (value: MutableProvenance) => {
+    ["v1 prompt with v2 generation config", (value: MutableProvenance) => {
       value.generationConfig!.version = "template-visual-metadata-generation-config/2.0";
       value.generationConfig!.responseJsonSchemaVersion = "template-visual-metadata/1.0";
     }],
@@ -279,6 +340,10 @@ describe("retry-failed suggestion artifacts", () => {
     ["missing v2 response schema version", (value: MutableProvenance) => {
       value.promptVersion = "template-visual-metadata-prompt/2.0";
       value.generationConfig!.version = "template-visual-metadata-generation-config/2.0";
+    }],
+    ["missing v3 response schema version", (value: MutableProvenance) => {
+      value.promptVersion = "template-visual-metadata-prompt/3.0";
+      value.generationConfig!.version = "template-visual-metadata-generation-config/3.0";
     }],
     ["missing failure policy", (value: MutableProvenance) => { delete value.failurePolicy; }],
     ["empty failure-policy version", (value: MutableProvenance) => { value.failurePolicy!.version = ""; }],

@@ -32,6 +32,13 @@ describe("TemplateVisualMetadataSchema", () => {
     expect(TemplateVisualMetadataSchema.safeParse({ ...REVIEWED, schemaVersion: "v2" }).success).toBe(false);
   });
 
+  it("retains the authoritative taxonomy list limit", () => {
+    expect(TemplateVisualMetadataSchema.safeParse({
+      ...REVIEWED,
+      domains: Array.from({ length: 41 }, () => "saas"),
+    }).success).toBe(false);
+  });
+
   it("returns null for malformed DB metadata", () => {
     expect(parseTemplateVisualMetadata({ domains: ["saas"] })).toBeNull();
   });

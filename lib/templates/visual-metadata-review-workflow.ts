@@ -24,8 +24,13 @@ import {
 export const VISUAL_METADATA_ARTIFACT_VERSION = "template-visual-metadata-suggestion-artifact/1.0" as const;
 export const VISUAL_METADATA_DECISION_VERSION = "template-visual-metadata-suggestion-decision/1.0" as const;
 
-type HistoricalPromptVersion = "template-visual-metadata-prompt/1.0";
+type HistoricalPromptVersion =
+  | "template-visual-metadata-prompt/1.0"
+  | "template-visual-metadata-prompt/2.0";
 type HistoricalGenerationConfigVersion = "template-visual-metadata-generation-config/1.0";
+type StructuredGenerationConfigVersion =
+  | "template-visual-metadata-generation-config/2.0"
+  | typeof VISUAL_METADATA_GENERATION_CONFIG_VERSION;
 
 interface HistoricalGenerationConfig {
   version: HistoricalGenerationConfigVersion;
@@ -35,8 +40,8 @@ interface HistoricalGenerationConfig {
   thinkingBudget: 0;
 }
 
-interface CurrentGenerationConfig {
-  version: typeof VISUAL_METADATA_GENERATION_CONFIG_VERSION;
+interface StructuredGenerationConfig {
+  version: StructuredGenerationConfigVersion;
   temperature: 0.2;
   maxOutputTokens: 2048;
   responseMimeType: "application/json";
@@ -52,7 +57,7 @@ export interface SuggestionArtifactProvenance {
   };
   promptVersion: HistoricalPromptVersion | typeof VISUAL_METADATA_PROMPT_VERSION;
   schemaVersion: typeof TEMPLATE_VISUAL_METADATA_SCHEMA_VERSION;
-  generationConfig: HistoricalGenerationConfig | CurrentGenerationConfig;
+  generationConfig: HistoricalGenerationConfig | StructuredGenerationConfig;
   failurePolicy: {
     version: typeof VISUAL_METADATA_FAILURE_POLICY_VERSION;
     maximumFailureRate: number;
@@ -186,8 +191,16 @@ function validProvenance(value: unknown): value is SuggestionArtifactProvenance 
       && generationConfig.version === "template-visual-metadata-generation-config/1.0"
     )
     || (
-      value.promptVersion === VISUAL_METADATA_PROMPT_VERSION
-      && generationConfig.version === VISUAL_METADATA_GENERATION_CONFIG_VERSION
+      (
+        (
+          value.promptVersion === "template-visual-metadata-prompt/2.0"
+          && generationConfig.version === "template-visual-metadata-generation-config/2.0"
+        )
+        || (
+          value.promptVersion === VISUAL_METADATA_PROMPT_VERSION
+          && generationConfig.version === VISUAL_METADATA_GENERATION_CONFIG_VERSION
+        )
+      )
       && generationConfig.responseJsonSchemaVersion === TEMPLATE_VISUAL_METADATA_SCHEMA_VERSION
     )
   );
