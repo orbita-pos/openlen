@@ -1,5 +1,7 @@
 // @vitest-environment node
 import { Buffer } from "node:buffer";
+import { request as httpRequest, type ClientRequest, type IncomingHttpHeaders } from "node:http";
+import { connect } from "node:net";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   applyReviewCommand,
@@ -135,6 +137,76 @@ function fixedRandomBytes() {
   return (size: number) => Buffer.alloc(size, ++value);
 }
 
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  let reject!: (error: unknown) => void;
+  const promise = new Promise<T>((resolvePromise, rejectPromise) => {
+    resolve = resolvePromise;
+    reject = rejectPromise;
+  });
+  return { promise, resolve, reject };
+}
+
+function nodeRequest(args: {
+  server: RunningReviewServer;
+  path: string;
+  method?: string;
+  headers?: Record<string, string | number>;
+}): {
+  request: ClientRequest;
+  connected: Promise<void>;
+  response: Promise<{ status: number; headers: IncomingHttpHeaders; body: string }>;
+} {
+  const url = new URL(args.server.origin);
+  const response = deferred<{ status: number; headers: IncomingHttpHeaders; body: string }>();
+  const connected = deferred<void>();
+  const request = httpRequest({
+    hostname: url.hostname,
+    port: Number(url.port),
+    method: args.method ?? "GET",
+    path: args.path,
+    headers: args.headers,
+  }, (incoming) => {
+    const chunks: Buffer[] = [];
+    incoming.on("data", (chunk) => chunks.push(Buffer.from(chunk)));
+    incoming.on("end", () => response.resolve({
+      status: incoming.statusCode ?? 0,
+      headers: incoming.headers,
+      body: Buffer.concat(chunks).toString("utf8"),
+    }));
+  });
+  request.on("socket", (socket) => {
+    if (socket.connecting) socket.once("connect", connected.resolve);
+    else connected.resolve();
+  });
+  request.on("error", response.reject);
+  return { request, connected: connected.promise, response: response.promise };
+}
+
+async function bounded<T>(promise: Promise<T>, milliseconds = 500): Promise<T | "bounded_timeout"> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      promise,
+      new Promise<"bounded_timeout">((resolve) => { timer = setTimeout(() => resolve("bounded_timeout"), milliseconds); }),
+    ]);
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+}
+
+async function rawSocketRequest(server: RunningReviewServer, wireRequest: string): Promise<string> {
+  const url = new URL(server.origin);
+  return new Promise<string>((resolve, reject) => {
+    const socket = connect({ host: url.hostname, port: Number(url.port) });
+    const chunks: Buffer[] = [];
+    socket.on("connect", () => socket.end(wireRequest));
+    socket.on("data", (chunk) => chunks.push(Buffer.from(chunk)));
+    socket.on("end", () => resolve(Buffer.concat(chunks).toString("utf8")));
+    socket.on("error", reject);
+  });
+}
+
 async function start(args: {
   workspace?: ServerWorkspace;
   workspaceFactory?: (identity: { name: string; email: string }) => Promise<ServerWorkspace>;
@@ -182,6 +254,39 @@ describe("visual metadata review loopback server", () => {
     const url = new URL(server.origin);
     expect(url.hostname).toBe("127.0.0.1");
     expect(Number(url.port)).toBeGreaterThan(0);
+  });
+
+  it("accepts only the canonical Host authority and rejects foreign absolute-form targets", async () => {
+    const server = await start();
+    const bootstrap = new URL(server.bootstrapUrl);
+    const alternate = nodeRequest({
+      server,
+      path: `${bootstrap.pathname}${bootstrap.search}`,
+      headers: { host: "attacker.example" },
+    });
+    alternate.request.end();
+    expect(await alternate.response).toMatchObject({
+      status: 400,
+      body: JSON.stringify({ error: "host_rejected" }),
+    });
+
+    const absolute = nodeRequest({
+      server,
+      path: `http://attacker.example${bootstrap.pathname}${bootstrap.search}`,
+      headers: { host: bootstrap.host },
+    });
+    absolute.request.end();
+    expect(await absolute.response).toMatchObject({
+      status: 400,
+      body: JSON.stringify({ error: "request_target_rejected" }),
+    });
+
+    const duplicateHost = await rawSocketRequest(server,
+      `GET ${bootstrap.pathname}${bootstrap.search} HTTP/1.1\r\nHost: ${bootstrap.host}\r\nHost: ${bootstrap.host}\r\nConnection: close\r\n\r\n`);
+    expect(duplicateHost).toContain("400 Bad Request");
+    expect(duplicateHost).toContain(JSON.stringify({ error: "host_rejected" }));
+
+    expect((await fetch(server.bootstrapUrl, { redirect: "manual" })).status).toBe(303);
   });
 
   it("exchanges a one-use bootstrap token for HttpOnly SameSite Strict cookie and redirects", async () => {
@@ -241,6 +346,31 @@ describe("visual metadata review loopback server", () => {
     expect(tooLarge.status).toBe(413);
   });
 
+  it.each([
+    ["non-JSON", { "content-type": "text/plain", "content-length": 100_000 }, "x", 415],
+    ["declared oversize", { "content-type": "application/json", "content-length": 100_000 }, "{", 413],
+    ["streamed oversize", { "content-type": "application/json" }, `"${"x".repeat(65_537)}`, 413],
+  ])("terminates a slow %s request so close is bounded", async (_case, headers, partialBody, expectedStatus) => {
+    const server = await start();
+    const cookie = await exchange(server);
+    const slow = nodeRequest({
+      server,
+      path: "/api/navigation",
+      method: "POST",
+      headers: { ...headers, cookie, origin: server.origin },
+    });
+    slow.request.write(partialBody);
+    const response = await slow.response;
+    expect(response.status).toBe(expectedStatus);
+    const closing = server.close();
+    const closeOutcome = await bounded(closing);
+    if (closeOutcome === "bounded_timeout") {
+      slow.request.destroy();
+      await closing;
+    }
+    expect(closeOutcome).not.toBe("bounded_timeout");
+  });
+
   it("opens the workspace through the identity endpoint when runtime identity is absent", async () => {
     const identities: Array<{ name: string; email: string }> = [];
     const server = await start({
@@ -259,6 +389,133 @@ describe("visual metadata review loopback server", () => {
     expect(created.status).toBe(200);
     expect(identities).toEqual([{ name: "Ada Reviewer", email: "ada@example.test" }]);
     expect((await authed(server, cookie, "/api/session")).status).toBe(200);
+  });
+
+  it("shares one pending identity open only between the same normalized identity", async () => {
+    const opening = deferred<ServerWorkspace>();
+    const calls: Array<{ name: string; email: string }> = [];
+    const factoryCalled = deferred<void>();
+    const server = await start({
+      workspaceFactory: async (identity) => {
+        calls.push(identity);
+        factoryCalled.resolve();
+        return opening.promise;
+      },
+    });
+    const cookie = await exchange(server);
+    const identity = (name: string, email: string) => authed(server, cookie, "/api/identity", {
+      method: "POST",
+      headers: { "content-type": "application/json", origin: server.origin },
+      body: JSON.stringify({ name, email }),
+    });
+
+    const first = identity(" Ada Reviewer ", " ada@example.test ");
+    await factoryCalled.promise;
+    const same = identity("Ada Reviewer", "ada@example.test");
+    expect(await bounded(same, 50)).toBe("bounded_timeout");
+    opening.resolve(fakeWorkspace().workspace);
+    const responses = await Promise.all([first, same]);
+
+    expect(responses.map((response) => response.status)).toEqual([200, 200]);
+    expect(calls).toEqual([{ name: "Ada Reviewer", email: "ada@example.test" }]);
+  });
+
+  it("rejects a different identity while an open is pending without leaking either email", async () => {
+    const opening = deferred<ServerWorkspace>();
+    const calls: Array<{ name: string; email: string }> = [];
+    const factoryCalled = deferred<void>();
+    const server = await start({
+      workspaceFactory: async (identity) => {
+        calls.push(identity);
+        factoryCalled.resolve();
+        return opening.promise;
+      },
+    });
+    const cookie = await exchange(server);
+    const identity = (name: string, email: string) => authed(server, cookie, "/api/identity", {
+      method: "POST",
+      headers: { "content-type": "application/json", origin: server.origin },
+      body: JSON.stringify({ name, email }),
+    });
+
+    const first = identity("Ada Reviewer", "ada@example.test");
+    await factoryCalled.promise;
+    const foreign = identity("Grace Reviewer", "grace@example.test");
+    const foreignBeforeOpen = await bounded(foreign);
+    opening.resolve(fakeWorkspace().workspace);
+    const firstResponse = await first;
+    const foreignResponse = foreignBeforeOpen === "bounded_timeout" ? await foreign : foreignBeforeOpen;
+
+    expect(firstResponse.status).toBe(200);
+    expect(foreignBeforeOpen).not.toBe("bounded_timeout");
+    expect(foreignResponse.status).toBe(409);
+    expect(calls).toEqual([{ name: "Ada Reviewer", email: "ada@example.test" }]);
+    const foreignBody = await foreignResponse.text();
+    expect(foreignBody).toBe(JSON.stringify({ error: "identity_open_in_progress" }));
+    expect(foreignBody).not.toContain("ada@example.test");
+    expect(foreignBody).not.toContain("grace@example.test");
+  });
+
+  it("owns a pending open through disconnected clients and rejects an identity completed during close", async () => {
+    const opening = deferred<ServerWorkspace>();
+    const factoryCalled = deferred<void>();
+    const { workspace, calls } = fakeWorkspace();
+    const server = await start({
+      workspaceFactory: async () => {
+        factoryCalled.resolve();
+        return opening.promise;
+      },
+    });
+    const cookie = await exchange(server);
+    const firstBody = JSON.stringify({ name: "Ada Reviewer", email: "ada@example.test" });
+    const first = nodeRequest({
+      server,
+      path: "/api/identity",
+      method: "POST",
+      headers: {
+        cookie,
+        origin: server.origin,
+        "content-type": "application/json",
+        "content-length": Buffer.byteLength(firstBody),
+      },
+    });
+    first.response.catch(() => undefined);
+    first.request.end(firstBody);
+    await factoryCalled.promise;
+    first.request.destroy();
+
+    const delayedBody = JSON.stringify({ name: "Grace Reviewer", email: "grace@example.test" });
+    const delayed = nodeRequest({
+      server,
+      path: "/api/identity",
+      method: "POST",
+      headers: {
+        cookie,
+        origin: server.origin,
+        "content-type": "application/json",
+        "content-length": Buffer.byteLength(delayedBody),
+      },
+    });
+    delayed.request.flushHeaders();
+    await delayed.connected;
+    delayed.request.write(delayedBody.slice(0, 1));
+    const closing = server.close();
+    delayed.request.end(delayedBody.slice(1));
+    const delayedBeforeOpen = await bounded(delayed.response);
+    expect(await bounded(closing, 50)).toBe("bounded_timeout");
+    opening.resolve(workspace);
+    const delayedResponse = delayedBeforeOpen === "bounded_timeout" ? await delayed.response : delayedBeforeOpen;
+    const closedAfterOpen = await bounded(closing);
+    if (closedAfterOpen === "bounded_timeout") await closing;
+    await server.close();
+
+    expect(delayedBeforeOpen).not.toBe("bounded_timeout");
+    expect(closedAfterOpen).not.toBe("bounded_timeout");
+    expect(delayedResponse).toMatchObject({
+      status: 503,
+      body: JSON.stringify({ error: "server_closing" }),
+    });
+    expect(calls.filter((call) => call === "close")).toHaveLength(1);
   });
 
   it("never serializes evidence, rawModelResponse, email, prompts, credentials, or source paths", async () => {
@@ -355,6 +612,48 @@ describe("visual metadata review loopback server", () => {
     await vi.advanceTimersByTimeAsync(20_001);
     expect((await pending).status).toBe(504);
     vi.useRealTimers();
+  });
+
+  it("aborts an upstream screenshot body when the downstream client disconnects and grants no eligibility", async () => {
+    const upstreamStarted = deferred<void>();
+    const upstreamAborted = deferred<void>();
+    let releaseUpstream!: () => void;
+    const fetchImpl = vi.fn(async (_url: RequestInfo | URL, init?: RequestInit) => new Response(
+      new ReadableStream<Uint8Array>({
+        start(controller) {
+          releaseUpstream = () => controller.error(new DOMException("test cleanup", "AbortError"));
+          controller.enqueue(new Uint8Array([0xff]));
+          init?.signal?.addEventListener("abort", () => {
+            upstreamAborted.resolve();
+            controller.error(new DOMException("downstream closed", "AbortError"));
+          });
+          upstreamStarted.resolve();
+        },
+      }),
+      { headers: { "content-type": "image/jpeg" } },
+    )) as unknown as typeof fetch;
+    const server = await start({ fetchImpl });
+    const cookie = await exchange(server);
+    const screenshot = nodeRequest({
+      server,
+      path: "/api/items/one/screenshot",
+      headers: { cookie },
+    });
+    screenshot.response.catch(() => undefined);
+    screenshot.request.end();
+    await upstreamStarted.promise;
+    screenshot.request.destroy();
+    const abortOutcome = await bounded(upstreamAborted.promise);
+    if (abortOutcome === "bounded_timeout") releaseUpstream();
+
+    expect(abortOutcome).not.toBe("bounded_timeout");
+    const decision = await authed(server, cookie, "/api/items/one/decision", {
+      method: "POST",
+      headers: { "content-type": "application/json", origin: server.origin },
+      body: JSON.stringify({ decision: "approve" }),
+    });
+    expect(decision.status).toBe(409);
+    expect(await decision.json()).toEqual({ error: "screenshot_required" });
   });
 
   it("prevents approval until that template screenshot was served successfully", async () => {

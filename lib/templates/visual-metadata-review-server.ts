@@ -108,6 +108,28 @@ function sessionCookie(request: IncomingMessage): string | undefined {
   return matches[0].slice(COOKIE_NAME.length + 1);
 }
 
+function exactHostHeader(request: IncomingMessage, authority: string): boolean {
+  const values: string[] = [];
+  for (let index = 0; index < request.rawHeaders.length; index += 2) {
+    if (request.rawHeaders[index].toLowerCase() === "host") values.push(request.rawHeaders[index + 1]);
+  }
+  return values.length === 1 && values[0] === authority;
+}
+
+function trustedRequestUrl(target: string, origin: string): URL {
+  let parsed: URL;
+  try {
+    parsed = new URL(target, origin);
+  } catch {
+    throw new SafeHttpError(400, "request_target_rejected");
+  }
+  if ((!target.startsWith("/") && !/^https?:\/\//i.test(target))
+    || parsed.origin !== origin || parsed.username !== "" || parsed.password !== "") {
+    throw new SafeHttpError(400, "request_target_rejected");
+  }
+  return parsed;
+}
+
 function decodeItemId(encoded: string): string {
   try {
     let decoded: string;
@@ -203,15 +225,33 @@ export async function startVisualMetadataReviewServer(
   let bootstrapToken: string | null = bootstrapBytes.toString("hex");
   const browserSessionToken = sessionBytes.toString("hex");
   let workspace = options.workspace;
-  let workspaceOpening: Promise<VisualMetadataReviewWorkspace> | null = null;
+  let workspaceOpening: {
+    reviewer: { name: string; email: string };
+    promise: Promise<VisualMetadataReviewWorkspace>;
+  } | null = null;
   let origin = "";
+  let authority = "";
+  let closing = false;
   const servedScreenshots = new Set<string>();
   const fetchImpl = options.fetchImpl ?? fetch;
+  const closedWorkspaces = new WeakSet<VisualMetadataReviewWorkspace>();
+  const closeWorkspaceOnce = async (candidate: VisualMetadataReviewWorkspace): Promise<void> => {
+    if (closedWorkspaces.has(candidate)) return;
+    closedWorkspaces.add(candidate);
+    try {
+      await candidate.close();
+    } finally {
+      if (workspace === candidate) workspace = undefined;
+    }
+  };
 
   const listener = createServer(async (request, response) => {
+    const requestSocket = request.socket;
     securityHeaders(response);
     try {
-      const requestUrl = new URL(request.url ?? "/", origin);
+      if (!exactHostHeader(request, authority)) throw new SafeHttpError(400, "host_rejected");
+      const requestUrl = trustedRequestUrl(request.url ?? "/", origin);
+      if (closing) throw new SafeHttpError(503, "server_closing");
       const method = request.method ?? "GET";
 
       if (method === "GET" && requestUrl.pathname === "/" && requestUrl.searchParams.has("bootstrap")) {
@@ -262,12 +302,31 @@ export async function startVisualMetadataReviewServer(
           || reviewer.email.length > 320 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(reviewer.email)) {
           throw new SafeHttpError(400, "identity_invalid");
         }
-        if (!workspaceOpening) workspaceOpening = options.workspaceFactory(reviewer);
+        if (closing) throw new SafeHttpError(503, "server_closing");
+        if (workspaceOpening
+          && (workspaceOpening.reviewer.name !== reviewer.name || workspaceOpening.reviewer.email !== reviewer.email)) {
+          throw new SafeHttpError(409, "identity_open_in_progress");
+        }
+        if (!workspaceOpening) {
+          const pending = {
+            reviewer,
+            promise: Promise.resolve().then(() => options.workspaceFactory!(reviewer)),
+          };
+          workspaceOpening = pending;
+          pending.promise.catch(() => {
+            if (workspaceOpening === pending) workspaceOpening = null;
+          });
+        }
+        const pending = workspaceOpening;
         try {
-          workspace = await workspaceOpening;
+          const opened = await pending.promise;
+          if (closing) throw new SafeHttpError(503, "server_closing");
+          workspace = opened;
+          if (workspaceOpening === pending) workspaceOpening = null;
           servedScreenshots.clear();
-        } catch {
-          workspaceOpening = null;
+        } catch (error) {
+          if (error instanceof SafeHttpError) throw error;
+          if (workspaceOpening === pending) workspaceOpening = null;
           throw new SafeHttpError(500, "workspace_open_failed");
         }
         sendJson(response, 200, safeDto(workspace).session);
@@ -292,6 +351,12 @@ export async function startVisualMetadataReviewServer(
         const source = current.getScreenshotSourceUrl(id);
         if (!validScreenshotSource(source)) throw new SafeHttpError(404, "screenshot_not_found");
         const controller = new AbortController();
+        const abortForDisconnect = () => {
+          if (!response.writableFinished) controller.abort();
+        };
+        response.once("close", abortForDisconnect);
+        request.once("aborted", abortForDisconnect);
+        if (response.destroyed || request.aborted) controller.abort();
         const timeout = setTimeout(() => controller.abort(), IMAGE_TIMEOUT_MS);
         let upstream: Response;
         let image: Buffer;
@@ -304,6 +369,8 @@ export async function startVisualMetadataReviewServer(
           throw new SafeHttpError(502, "screenshot_unavailable");
         } finally {
           clearTimeout(timeout);
+          response.off("close", abortForDisconnect);
+          request.off("aborted", abortForDisconnect);
         }
         securityHeaders(response);
         response.statusCode = 200;
@@ -390,11 +457,18 @@ export async function startVisualMetadataReviewServer(
       }
       throw new SafeHttpError(404, "not_found");
     } catch (error) {
-      if (response.headersSent) {
+      if (response.headersSent || response.destroyed) {
         response.destroy();
         return;
       }
-      sendError(response, error instanceof SafeHttpError ? error : new SafeHttpError(409, "request_rejected"));
+      const safeError = error instanceof SafeHttpError ? error : new SafeHttpError(409, "request_rejected");
+      if (safeError.code === "server_closing") response.setHeader("Connection", "close");
+      if (!request.complete && (safeError.code === "json_required" || safeError.code === "body_too_large")) {
+        request.resume();
+        response.setHeader("Connection", "close");
+        response.once("finish", () => requestSocket.end());
+      }
+      sendError(response, safeError);
     }
   });
 
@@ -415,6 +489,7 @@ export async function startVisualMetadataReviewServer(
     throw new SafeHttpError(500, "server_start_failed");
   }
   origin = `http://${LOOPBACK_HOST}:${address.port}`;
+  authority = `${LOOPBACK_HOST}:${address.port}`;
   const encodedBootstrap = encodeURIComponent(bootstrapToken!);
   let closePromise: Promise<void> | null = null;
   return {
@@ -422,10 +497,19 @@ export async function startVisualMetadataReviewServer(
     bootstrapUrl: `${origin}/?bootstrap=${encodedBootstrap}`,
     close() {
       if (!closePromise) {
-        closePromise = new Promise<void>((resolve, reject) => {
+        closing = true;
+        const listenerClosed = new Promise<void>((resolve, reject) => {
           listener.close((error) => error ? reject(new SafeHttpError(500, "server_close_failed")) : resolve());
-        }).then(async () => {
-          if (workspace) await workspace.close();
+        });
+        const openingAtClose = workspaceOpening;
+        const opened = openingAtClose
+          ? openingAtClose.promise.catch(() => undefined)
+          : Promise.resolve(undefined);
+        closePromise = Promise.all([listenerClosed, opened]).then(async ([, openedWorkspace]) => {
+          if (openedWorkspace) await closeWorkspaceOnce(openedWorkspace);
+          if (workspace) await closeWorkspaceOnce(workspace);
+          workspaceOpening = null;
+          workspace = undefined;
         });
       }
       return closePromise;
