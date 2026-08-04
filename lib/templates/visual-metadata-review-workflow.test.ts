@@ -257,6 +257,13 @@ describe("retry-failed suggestion artifacts", () => {
     ["missing prompt version", (value: MutableProvenance) => { delete value.promptVersion; }],
     ["empty prompt version", (value: MutableProvenance) => { value.promptVersion = ""; }],
     ["unknown prompt version", (value: MutableProvenance) => { value.promptVersion = "prompt/999"; }],
+    ["current prompt with historical generation config", (value: MutableProvenance) => {
+      value.promptVersion = "template-visual-metadata-prompt/2.0";
+    }],
+    ["historical prompt with current generation config", (value: MutableProvenance) => {
+      value.generationConfig!.version = "template-visual-metadata-generation-config/2.0";
+      value.generationConfig!.responseJsonSchemaVersion = "template-visual-metadata/1.0";
+    }],
     ["missing schema version", (value: MutableProvenance) => { delete value.schemaVersion; }],
     ["unknown schema version", (value: MutableProvenance) => { value.schemaVersion = "template-visual-metadata/999"; }],
     ["missing generation config", (value: MutableProvenance) => { delete value.generationConfig; }],

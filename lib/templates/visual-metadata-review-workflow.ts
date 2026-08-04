@@ -180,20 +180,23 @@ function validProvenance(value: unknown): value is SuggestionArtifactProvenance 
     && generationConfig.maxOutputTokens === 2_048
     && generationConfig.responseMimeType === "application/json"
     && generationConfig.thinkingBudget === 0;
-  const validGenerationConfig = baseGenerationConfig && (
-    generationConfig.version === "template-visual-metadata-generation-config/1.0"
+  const validProvenanceVersionPair = isRecord(generationConfig) && (
+    (
+      value.promptVersion === "template-visual-metadata-prompt/1.0"
+      && generationConfig.version === "template-visual-metadata-generation-config/1.0"
+    )
     || (
-      generationConfig.version === VISUAL_METADATA_GENERATION_CONFIG_VERSION
+      value.promptVersion === VISUAL_METADATA_PROMPT_VERSION
+      && generationConfig.version === VISUAL_METADATA_GENERATION_CONFIG_VERSION
       && generationConfig.responseJsonSchemaVersion === TEMPLATE_VISUAL_METADATA_SCHEMA_VERSION
     )
   );
+  const validGenerationConfig = baseGenerationConfig && validProvenanceVersionPair;
   return value.workflowVersion === VISUAL_METADATA_WORKFLOW_VERSION
     && isRecord(modelChoice)
     && modelChoice.version === VISUAL_METADATA_MODEL_CHOICE_VERSION
     && typeof modelChoice.modelId === "string"
     && modelChoice.modelId.trim().length > 0
-    && (value.promptVersion === "template-visual-metadata-prompt/1.0"
-      || value.promptVersion === VISUAL_METADATA_PROMPT_VERSION)
     && value.schemaVersion === TEMPLATE_VISUAL_METADATA_SCHEMA_VERSION
     && validGenerationConfig
     && isRecord(failurePolicy)
