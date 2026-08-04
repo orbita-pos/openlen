@@ -526,6 +526,33 @@ describe("visual metadata review session store", () => {
     await winnerB.close();
   });
 
+  it("exposes only a copied safe DTO and exact per-ID screenshot source to the loopback server", async () => {
+    const config = await fixture([row("one"), row("two")]);
+    const privateScreenshot = "https://templates.openlen.com/screenshots/private-source.jpg";
+    const source = JSON.parse(await readFile(config.inputPath, "utf8"));
+    source[0].screenshotUrl = privateScreenshot;
+    source[0].evidence.rawModelResponse = "RAW_PRIVATE_EVIDENCE";
+    source[0].provenance.modelChoice.modelId = "PRIVATE_MODEL";
+    await writeFile(config.inputPath, JSON.stringify(source));
+    const workspace = await openVisualMetadataReviewWorkspace(config, deps());
+
+    const dto = workspace.getSafeReviewDto();
+    const serialized = JSON.stringify(dto);
+    for (const forbidden of [
+      privateScreenshot, "RAW_PRIVATE_EVIDENCE", "rawModelResponse", "PRIVATE_MODEL",
+      config.inputPath, config.sessionPath, "reviewer@example.test",
+    ]) {
+      expect(serialized).not.toContain(forbidden);
+    }
+    expect(workspace.getScreenshotSourceUrl("one")).toBe(privateScreenshot);
+    expect(workspace.getScreenshotSourceUrl("unknown")).toBeNull();
+    dto.items[0].name = "mutated outside";
+    expect(workspace.getSafeReviewDto().items[0].name).not.toBe("mutated outside");
+    await workspace.setCurrentTemplate("two");
+    expect(workspace.getSafeReviewDto().session).toMatchObject({ currentTemplateId: "two" });
+    await workspace.close();
+  });
+
   it("recovers a dead recovery lease left by a crashed guard reclaimer", async () => {
     const config = await fixture();
     const seed = await openVisualMetadataReviewWorkspace(config, deps());

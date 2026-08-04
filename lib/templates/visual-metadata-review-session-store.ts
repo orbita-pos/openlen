@@ -4,8 +4,9 @@ import { isAbsolute, join, relative, resolve } from "node:path";
 import { writeJsonAtomic, type AtomicWriteResult } from "../fs/write-json-atomic";
 import {
   REVIEW_AUDIT_VERSION, REVIEW_SESSION_VERSION, ReviewSessionV1Schema, applyReviewCommand, buildReviewExports,
-  createReviewSession, deriveReviewState, requiredApprovalCount,
+  buildSafeReviewDto, createReviewSession, deriveReviewState, requiredApprovalCount,
   type DerivedReviewState, type ReviewAuditV1, type ReviewCommand, type ReviewSessionV1,
+  type SafeReviewItemDto, type SafeReviewSessionDto,
 } from "./visual-metadata-review-session";
 import { validateSuggestionArtifactSeed, type SuggestionArtifactRow } from "./visual-metadata-review-workflow";
 
@@ -29,6 +30,8 @@ export interface LoadedReviewSource {
 export interface ReviewWorkspaceSnapshot { session: ReviewSessionV1; state: DerivedReviewState; currentTemplateId: string | null; }
 export interface VisualMetadataReviewWorkspace {
   snapshot(): ReviewWorkspaceSnapshot;
+  getSafeReviewDto(): { session: SafeReviewSessionDto; items: SafeReviewItemDto[] };
+  getScreenshotSourceUrl(id: string): string | null;
   dispatch(command: ReviewCommand): Promise<ReviewWorkspaceSnapshot>;
   setCurrentTemplate(id: string): Promise<ReviewWorkspaceSnapshot>;
   exportFinal(): Promise<{ reviewedPath: string; auditPath: string }>;
@@ -388,6 +391,7 @@ export async function openVisualMetadataReviewWorkspace(config: ReviewWorkspaceC
     const state = deriveReviewState(session, source.rows);
     return { session: cloneSession(session), state, currentTemplateId: currentTemplateId && state.items[currentTemplateId] ? currentTemplateId : state.currentTemplateId };
   };
+  const sourceRowsById = new Map(source.rows.map((row) => [row.id, row] as const));
   const enqueue = <T>(operation: () => Promise<T>, allowClosed = false): Promise<T> => {
     const result = chain.then(async () => { if (!allowClosed && closed) throw new ReviewWorkspaceClosedError(); if (!allowClosed && frozen) throw frozen; return operation(); });
     chain = result.then(() => undefined, () => undefined); return result;
@@ -397,6 +401,14 @@ export async function openVisualMetadataReviewWorkspace(config: ReviewWorkspaceC
   };
   return {
     snapshot,
+    getSafeReviewDto() {
+      const dto = buildSafeReviewDto(session, source.rows);
+      if (dto.session.phase === "review") dto.session.currentTemplateId = snapshot().currentTemplateId;
+      return structuredClone(dto);
+    },
+    getScreenshotSourceUrl(id) {
+      return sourceRowsById.get(String(id))?.screenshotUrl ?? null;
+    },
     dispatch(command) {
       let immutableCommand: ReviewCommand;
       try { immutableCommand = structuredClone(command); } catch { return Promise.reject(new ReviewWorkspaceCommandError()); }
