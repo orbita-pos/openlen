@@ -214,7 +214,7 @@ describe("visual metadata review session store", () => {
     await expect(readFile(`${config.sessionPath}.lock`, "utf8")).resolves.toContain("processUuid");
   });
 
-  it("does not let a reclaimer delete a newly acquired lock", async () => {
+  it("does not let a second reclaimer enter after the first holds the canonical guard", async () => {
     const config = await fixture();
     const first = await openVisualMetadataReviewWorkspace(config, deps());
     await first.close();
@@ -234,11 +234,11 @@ describe("visual metadata review session store", () => {
     ]);
     expect(claimOutcome).toBe("claimed");
     expect(claimed).toBe(true);
-    const winner = await openVisualMetadataReviewWorkspace(config, deps({
+    await expect(openVisualMetadataReviewWorkspace(config, deps({
       lockId: () => "44444444-4444-4444-8444-444444444444",
-    }));
+    }))).rejects.toMatchObject({ name: "ReviewWorkspaceLockError" });
     releaseClaim!();
-    await expect(contender).rejects.toMatchObject({ name: "ReviewWorkspaceLockError" });
+    const winner = await contender;
     await winner.close();
   });
 
@@ -360,5 +360,78 @@ describe("visual metadata review session store", () => {
     const first = await openVisualMetadataReviewWorkspace({ ...config, reviewer: { name: " Ada Reviewer ", email: " ada@example.test " } }, deps());
     await first.close();
     await expect(openVisualMetadataReviewWorkspace(config, deps())).resolves.toBeDefined();
+  });
+
+  it("never lets an A reclaimer rename B's later live owner after B wins the stale guard", async () => {
+    const config = await fixture();
+    const seed = await openVisualMetadataReviewWorkspace(config, deps());
+    await seed.close();
+    await writeFile(`${config.sessionPath}.lock`, JSON.stringify(strictLock()));
+    let releaseARead: (() => void) | undefined;
+    let signalARead: (() => void) | undefined;
+    const aRead = new Promise<void>((resolveRead) => { signalARead = resolveRead; });
+    const holdA = new Promise<void>((resolveHold) => { releaseARead = resolveHold; });
+    const contenderA = openVisualMetadataReviewWorkspace(config, deps({
+      lockId: () => "66666666-6666-4666-8666-666666666666",
+      onAfterStaleLockRead: async () => { signalARead!(); await holdA; },
+    }));
+    const readOutcome = await Promise.race([aRead.then(() => "read"), contenderA.then(() => "settled", () => "settled")]);
+    expect(readOutcome).toBe("read");
+    const winnerB = await openVisualMetadataReviewWorkspace(config, deps({
+      lockId: () => "77777777-7777-4777-8777-777777777777",
+    }));
+    releaseARead!();
+    await expect(contenderA).rejects.toMatchObject({ name: "ReviewWorkspaceLockError" });
+    await expect(readFile(`${config.sessionPath}.lock`, "utf8")).resolves.toContain("77777777");
+    await winnerB.close();
+  });
+
+  it("serializes close through an ownership guard so a reclaimer cannot replace between check and removal", async () => {
+    const config = await fixture();
+    let releaseClose: (() => void) | undefined;
+    let signalCloseGuard: (() => void) | undefined;
+    const closeGuard = new Promise<void>((resolveGuard) => { signalCloseGuard = resolveGuard; });
+    const holdClose = new Promise<void>((resolveHold) => { releaseClose = resolveHold; });
+    const workspace = await openVisualMetadataReviewWorkspace(config, deps({
+      onAfterReleaseLockGuard: async () => { signalCloseGuard!(); await holdClose; },
+    }));
+    const closing = workspace.close();
+    const guardOutcome = await Promise.race([closeGuard.then(() => "guarded"), closing.then(() => "settled", () => "settled")]);
+    expect(guardOutcome).toBe("guarded");
+    await expect(openVisualMetadataReviewWorkspace(config, deps({ processExists: () => false })))
+      .rejects.toMatchObject({ name: "ReviewWorkspaceLockError" });
+    releaseClose!();
+    await closing;
+  });
+
+  it.each([
+    ["normalized calendar overflow", strictLock({ startedAt: "2026-02-30T00:00:00.000Z" })],
+    ["non-canonical milliseconds", strictLock({ startedAt: "2026-08-04T00:00:00.00Z" })],
+  ])("fails closed for lock timestamps with %s", async (_name, lock) => {
+    const config = await fixture();
+    const workspace = await openVisualMetadataReviewWorkspace(config, deps());
+    await workspace.close();
+    await writeFile(`${config.sessionPath}.lock`, JSON.stringify(lock));
+    await expect(openVisualMetadataReviewWorkspace(config, deps({ processExists: () => false })))
+      .rejects.toMatchObject({ name: "ReviewWorkspaceLockError" });
+  });
+
+  it.each([0, -1, 1.5, Number.MAX_SAFE_INTEGER + 1])("rejects invalid injected PID %p before creating a lock", async (pid) => {
+    const config = await fixture();
+    await expect(openVisualMetadataReviewWorkspace(config, deps({ pid })))
+      .rejects.toMatchObject({ name: "ReviewWorkspaceConfigError" });
+    await expect(readFile(`${config.sessionPath}.lock`)).rejects.toMatchObject({ code: "ENOENT" });
+  });
+
+  it("persists a session that excludes source paths, raw evidence, and source metadata", async () => {
+    const config = await fixture();
+    const sourceRaw = "SOURCE_BYTES_MUST_REMAIN_PRIVATE";
+    const workspace = await openVisualMetadataReviewWorkspace(config, deps());
+    const serialized = await readFile(config.sessionPath, "utf8");
+
+    for (const forbidden of [config.inputPath, config.sessionPath, sourceRaw, "rawModelResponse", "developer_tools", "provenance"]) {
+      expect(serialized).not.toContain(forbidden);
+    }
+    await workspace.close();
   });
 });
