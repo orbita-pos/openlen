@@ -1,3 +1,6 @@
+import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { PgDialect } from "drizzle-orm/pg-core";
 import { describe, expect, it, vi } from "vitest";
 import type { TemplateRecord } from "./store";
@@ -8,8 +11,12 @@ import type {
 import type { TemplateVisualMetadata } from "./visual-metadata";
 import {
   executeReviewedMetadataUpdate,
+  prepareVisualMetadataRetry,
   runVisualMetadataSuggestionBatch,
+  validateSuggestionArtifactSeed,
   validateReviewedMetadataInput,
+  writeSuggestionArtifactAtomic,
+  type SuggestionArtifactRow,
 } from "./visual-metadata-review-workflow";
 
 const REVIEWED_METADATA: TemplateVisualMetadata = {
@@ -30,13 +37,14 @@ const AUDIT: SuggestVisualMetadataAudit = {
     version: "template-visual-metadata-model-choice/1.0",
     modelId: "gemini-test-model",
   },
-  promptVersion: "template-visual-metadata-prompt/1.0",
+  promptVersion: "template-visual-metadata-prompt/2.0",
   schemaVersion: "template-visual-metadata/1.0",
   generationConfig: {
-    version: "template-visual-metadata-generation-config/1.0",
+    version: "template-visual-metadata-generation-config/2.0",
     temperature: 0.2,
     maxOutputTokens: 2_048,
     responseMimeType: "application/json",
+    responseJsonSchemaVersion: "template-visual-metadata/1.0",
     thinkingBudget: 0,
   },
   failurePolicy: {
@@ -69,6 +77,28 @@ function failure(raw?: string): SuggestVisualMetadataResult {
     message: "malformed metadata JSON",
     ...(raw === undefined ? {} : { raw }),
     audit: AUDIT,
+  };
+}
+
+function artifactRow(
+  id: string,
+  outcome: "suggested" | "failed",
+  provenance: SuggestionArtifactRow["provenance"] = AUDIT,
+): SuggestionArtifactRow {
+  return {
+    artifactVersion: "template-visual-metadata-suggestion-artifact/1.0",
+    recordedAt: "2026-08-03T12:00:00.000Z",
+    decision: {
+      version: "template-visual-metadata-suggestion-decision/1.0",
+      outcome,
+    },
+    id,
+    name: `Template ${id}`,
+    screenshotUrl: `https://example.test/${id}.jpg`,
+    metadata: outcome === "suggested" ? UNREVIEWED_METADATA : null,
+    error: outcome === "suggested" ? null : "parse: metadata schema rejected model output",
+    provenance,
+    evidence: { rawModelResponse: outcome === "suggested" ? "valid raw" : "invalid raw" },
   };
 }
 
@@ -143,6 +173,124 @@ describe("runVisualMetadataSuggestionBatch", () => {
       evidence: { rawModelResponse: "bad model output" },
       provenance: { failurePolicy: AUDIT.failurePolicy },
     });
+  });
+});
+
+describe("retry-failed suggestion artifacts", () => {
+  it("validates complete seed coverage and selects only failed template IDs", () => {
+    const historicalProvenance = {
+      ...AUDIT,
+      promptVersion: "template-visual-metadata-prompt/1.0",
+      generationConfig: {
+        ...AUDIT.generationConfig,
+        version: "template-visual-metadata-generation-config/1.0",
+        responseJsonSchemaVersion: undefined,
+      },
+    } as unknown as SuggestionArtifactRow["provenance"];
+    const successful = artifactRow("success", "suggested", historicalProvenance);
+    const failed = artifactRow("failed", "failed", historicalProvenance);
+
+    const retry = prepareVisualMetadataRetry(
+      [template("success"), template("failed")],
+      [successful, failed],
+    );
+
+    expect(retry.templates.map((row) => row.id)).toEqual(["failed"]);
+    expect(retry.seedRows).toHaveLength(2);
+    expect(retry.seedRows[0].provenance).toMatchObject({
+      promptVersion: "template-visual-metadata-prompt/1.0",
+      generationConfig: { version: "template-visual-metadata-generation-config/1.0" },
+    });
+  });
+
+  it("rejects duplicate, unknown, or incomplete seed IDs", () => {
+    expect(() => validateSuggestionArtifactSeed(
+      [artifactRow("a", "failed"), artifactRow("a", "failed")],
+      new Set(["a"]),
+    )).toThrow("row 1: duplicate template a");
+    expect(() => validateSuggestionArtifactSeed(
+      [artifactRow("unknown", "failed")],
+      new Set(["a"]),
+    )).toThrow("row 0: unknown published template unknown");
+    expect(() => validateSuggestionArtifactSeed(
+      [artifactRow("a", "failed")],
+      new Set(["a", "b"]),
+    )).toThrow("seed artifact does not cover published template b");
+  });
+
+  it("rejects decision/metadata mismatches and incomplete provenance", () => {
+    const reviewedSuccess = {
+      ...artifactRow("a", "suggested"),
+      metadata: REVIEWED_METADATA,
+    };
+    expect(() => validateSuggestionArtifactSeed([reviewedSuccess], new Set(["a"])))
+      .toThrow("row 0: a suggestion is not unreviewed");
+
+    const failedWithMetadata = {
+      ...artifactRow("a", "failed"),
+      metadata: UNREVIEWED_METADATA,
+    };
+    expect(() => validateSuggestionArtifactSeed([failedWithMetadata], new Set(["a"])))
+      .toThrow("row 0: a failed decision must have null metadata");
+
+    const missingProvenance = {
+      ...artifactRow("a", "failed"),
+      provenance: { workflowVersion: "template-visual-metadata-suggestion-workflow/1.0" },
+    };
+    expect(() => validateSuggestionArtifactSeed([missingProvenance], new Set(["a"])))
+      .toThrow("row 0: incomplete provenance");
+  });
+
+  it("merges retry results by ID, preserves successes, and checkpoints after every attempt", async () => {
+    const preserved = artifactRow("preserved", "suggested");
+    const seedRows = [preserved, artifactRow("retry-a", "failed"), artifactRow("retry-b", "failed")];
+    const checkpoints: SuggestionArtifactRow[][] = [];
+    const result = await runVisualMetadataSuggestionBatch(
+      [template("retry-a"), template("retry-b")],
+      {
+        seedRows,
+        suggest: async (record) => record.id === "retry-a" ? success("new valid raw") : failure("still invalid"),
+        now: () => new Date("2026-08-03T13:00:00.000Z"),
+        onCheckpoint: (rows) => {
+          checkpoints.push(structuredClone(rows));
+        },
+      },
+    );
+
+    expect(result.attempted).toBe(2);
+    expect(result.failed).toBe(1);
+    expect(result.rows.map((row) => row.id)).toEqual(["preserved", "retry-a", "retry-b"]);
+    expect(new Set(result.rows.map((row) => row.id)).size).toBe(3);
+    expect(result.rows[0]).toEqual(preserved);
+    expect(result.rows[1]).toMatchObject({
+      decision: { outcome: "suggested" },
+      recordedAt: "2026-08-03T13:00:00.000Z",
+      evidence: { rawModelResponse: "new valid raw" },
+    });
+    expect(checkpoints).toHaveLength(2);
+    expect(checkpoints[0].map((row) => row.id)).toEqual(["preserved", "retry-a", "retry-b"]);
+    expect(checkpoints[0].find((row) => row.id === "retry-b")?.decision.outcome).toBe("failed");
+  });
+
+  it("rejects duplicate seed rows even when the batch unit is called directly", async () => {
+    await expect(runVisualMetadataSuggestionBatch([], {
+      seedRows: [artifactRow("a", "failed"), artifactRow("a", "failed")],
+    })).rejects.toThrow("duplicate seed template a");
+  });
+
+  it("writes and replaces an artifact through an atomic checkpoint", () => {
+    const directory = mkdtempSync(join(tmpdir(), "openlen-metadata-review-"));
+    const path = join(directory, "artifact.json");
+    try {
+      writeSuggestionArtifactAtomic(path, [artifactRow("a", "failed")]);
+      expect(JSON.parse(readFileSync(path, "utf8"))).toHaveLength(1);
+      writeSuggestionArtifactAtomic(path, [artifactRow("a", "suggested"), artifactRow("b", "failed")]);
+      const replaced = JSON.parse(readFileSync(path, "utf8"));
+      expect(replaced.map((row: { id: string }) => row.id)).toEqual(["a", "b"]);
+      expect(existsSync(`${path}.tmp`)).toBe(false);
+    } finally {
+      rmSync(directory, { recursive: true, force: true });
+    }
   });
 });
 

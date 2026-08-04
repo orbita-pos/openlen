@@ -94,10 +94,10 @@ describe("suggestVisualMetadata failure boundaries and audit", () => {
           version: "template-visual-metadata-model-choice/1.0",
           modelId: "gemini-test-model",
         },
-        promptVersion: "template-visual-metadata-prompt/1.0",
+        promptVersion: "template-visual-metadata-prompt/2.0",
         schemaVersion: "template-visual-metadata/1.0",
         generationConfig: {
-          version: "template-visual-metadata-generation-config/1.0",
+          version: "template-visual-metadata-generation-config/2.0",
           temperature: 0.2,
           maxOutputTokens: 2_048,
           responseMimeType: "application/json",
@@ -112,7 +112,55 @@ describe("suggestVisualMetadata failure boundaries and audit", () => {
     expect(JSON.stringify(result)).not.toContain("never-log-this-key");
     const request = JSON.parse(String(fetchImpl.mock.calls[1][1]?.body));
     expect(request.contents[0].parts[1].inlineData.mimeType).toBe("image/png");
+    expect(request.contents[0].parts[0].text).toContain("ageRanges examples: 5_10, 18_24, 65_plus");
+    expect(request.generationConfig.responseJsonSchema).toMatchObject({
+      type: "object",
+      additionalProperties: false,
+      required: [
+        "schemaVersion", "domains", "audiences", "ageRanges", "emotionalRegisters",
+        "visualArchetypes", "visualSignals", "layoutTraits", "requiredAssetTypes",
+        "negativeTags", "supportedSiteTypes", "supportedSectionRoles", "themeability",
+        "identityStrength", "reviewStatus",
+      ],
+      properties: {
+        schemaVersion: { type: "string", enum: ["template-visual-metadata/1.0"] },
+        domains: { type: "array", minItems: 1, maxItems: 40 },
+        ageRanges: {
+          type: "array",
+          maxItems: 40,
+          items: {
+            type: "string",
+            description: expect.stringContaining("5_10, 18_24, 65_plus"),
+          },
+        },
+        themeability: { type: "string", enum: ["low", "medium", "high"] },
+        identityStrength: { type: "string", enum: ["low", "medium", "high"] },
+        reviewStatus: { type: "string", enum: ["unreviewed"] },
+      },
+    });
   });
+
+  it("canonicalizes only pure numeric hyphenated age ranges before final validation", async () => {
+    const fetchImpl = vi.fn()
+      .mockResolvedValueOnce(new Response(new Uint8Array([1]), { status: 200 }))
+      .mockResolvedValueOnce(geminiResponse({ ...MODEL_VALUE, ageRanges: ["5-10", "18-24", "65_plus"] }));
+    const result = await suggestVisualMetadata(TEMPLATE, { apiKey: "key", fetchImpl });
+    expect(result).toMatchObject({
+      ok: true,
+      metadata: { ageRanges: ["5_10", "18_24", "65_plus"], reviewStatus: "unreviewed" },
+    });
+  });
+
+  it.each(["18 - 24", "young-adults", "18-24-years"])(
+    "does not normalize non-canonical age-range prose %s",
+    async (ageRange) => {
+      const fetchImpl = vi.fn()
+        .mockResolvedValueOnce(new Response(new Uint8Array([1]), { status: 200 }))
+        .mockResolvedValueOnce(geminiResponse({ ...MODEL_VALUE, ageRanges: [ageRange] }));
+      const result = await suggestVisualMetadata(TEMPLATE, { apiKey: "key", fetchImpl });
+      expect(result).toMatchObject({ ok: false, kind: "parse" });
+    },
+  );
 
   it("returns a typed fetch failure for a screenshot HTTP error", async () => {
     const result = await suggestVisualMetadata(TEMPLATE, {

@@ -1,7 +1,11 @@
-import { writeFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { listTemplates } from "@/lib/templates/store";
-import { runVisualMetadataSuggestionBatch } from "@/lib/templates/visual-metadata-review-workflow";
+import {
+  prepareVisualMetadataRetry,
+  runVisualMetadataSuggestionBatch,
+  writeSuggestionArtifactAtomic,
+} from "@/lib/templates/visual-metadata-review-workflow";
 
 function arg(name: string): string | null {
   const i = process.argv.indexOf(name);
@@ -12,10 +16,28 @@ async function main(): Promise<void> {
   const out = arg("--out");
   if (!out) throw new Error("--out is required");
   const force = process.argv.includes("--force");
+  const retryFlag = process.argv.includes("--retry-failed-from");
+  const retryFrom = arg("--retry-failed-from");
+  if (retryFlag && !retryFrom) throw new Error("--retry-failed-from requires a path");
+  if (force && retryFrom) throw new Error("--force cannot be combined with --retry-failed-from");
+  const outputPath = resolve(out);
   const templates = await listTemplates({ status: "published" });
-  const batch = await runVisualMetadataSuggestionBatch(templates, { force });
-  writeFileSync(resolve(out), `${JSON.stringify(batch.rows, null, 2)}\n`, "utf8");
-  console.log(`attempted=${batch.attempted} failed=${batch.failed} out=${resolve(out)}`);
+  let templatesToAttempt = templates;
+  let seedRows;
+  if (retryFrom) {
+    const seedValue = JSON.parse(readFileSync(resolve(retryFrom), "utf8")) as unknown;
+    const retry = prepareVisualMetadataRetry(templates, seedValue);
+    templatesToAttempt = retry.templates;
+    seedRows = retry.seedRows;
+    writeSuggestionArtifactAtomic(outputPath, seedRows);
+  }
+  const batch = await runVisualMetadataSuggestionBatch(templatesToAttempt, {
+    force,
+    seedRows,
+    onCheckpoint: (rows) => writeSuggestionArtifactAtomic(outputPath, rows),
+  });
+  writeSuggestionArtifactAtomic(outputPath, batch.rows);
+  console.log(`attempted=${batch.attempted} failed=${batch.failed} out=${outputPath}`);
   if (batch.shouldFail) process.exitCode = 1;
 }
 
