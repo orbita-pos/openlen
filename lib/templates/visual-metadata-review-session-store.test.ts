@@ -89,6 +89,20 @@ function strictLock(overrides: Record<string, unknown> = {}) {
   };
 }
 
+function strictGuard(overrides: Record<string, unknown> = {}) {
+  return {
+    version: "template-visual-metadata-review-lock-guard/1.0",
+    pid: 54321,
+    processUuid: "88888888-8888-4888-8888-888888888888",
+    startedAt: "2026-08-04T00:00:00.000Z",
+    ...overrides,
+  };
+}
+
+function strictGuardRecovery(overrides: Record<string, unknown> = {}) {
+  return { ...strictGuard({ version: "template-visual-metadata-review-lock-guard-recovery/1.0" }), ...overrides };
+}
+
 function successfulWrite(path: string) {
   return Promise.resolve({ targetPath: path, temporaryPath: `${path}.tmp` });
 }
@@ -209,7 +223,7 @@ describe("visual metadata review session store", () => {
     const config = await fixture();
     await writeFile(`${config.sessionPath}.lock`, JSON.stringify(strictLock()));
 
-    await expect(openVisualMetadataReviewWorkspace(config, deps({ processExists: () => false })))
+    await expect(openVisualMetadataReviewWorkspace(config, deps({ processExists: () => true })))
       .rejects.toMatchObject({ name: "ReviewWorkspaceLockError" });
     await expect(readFile(`${config.sessionPath}.lock`, "utf8")).resolves.toContain("processUuid");
   });
@@ -236,6 +250,7 @@ describe("visual metadata review session store", () => {
     expect(claimed).toBe(true);
     await expect(openVisualMetadataReviewWorkspace(config, deps({
       lockId: () => "44444444-4444-4444-8444-444444444444",
+      processExists: () => true,
     }))).rejects.toMatchObject({ name: "ReviewWorkspaceLockError" });
     releaseClaim!();
     const winner = await contender;
@@ -259,6 +274,9 @@ describe("visual metadata review session store", () => {
     ["audit output", (config: Awaited<ReturnType<typeof fixture>>) => ({ ...config, auditOutputPath: config.sessionPath })],
     ["outputs", (config: Awaited<ReturnType<typeof fixture>>) => ({ ...config, auditOutputPath: config.reviewedOutputPath })],
     ["lock", (config: Awaited<ReturnType<typeof fixture>>) => ({ ...config, reviewedOutputPath: `${config.sessionPath}.lock` })],
+    ["lock guard", (config: Awaited<ReturnType<typeof fixture>>) => ({ ...config, reviewedOutputPath: `${config.sessionPath}.lock.claim` })],
+    ["lock guard recovery", (config: Awaited<ReturnType<typeof fixture>>) => ({ ...config, auditOutputPath: `${config.sessionPath}.lock.claim.recovery` })],
+    ["lock guard recovery companion", (config: Awaited<ReturnType<typeof fixture>>) => ({ ...config, reviewedOutputPath: `${config.sessionPath}.lock.claim.any-stale-generation` })],
   ])("rejects aliased %s paths before creating files", async (_name, alter) => {
     const config = await fixture();
     const aliased = alter(config);
@@ -351,7 +369,7 @@ describe("visual metadata review session store", () => {
     await workspace.close();
     await writeFile(`${config.sessionPath}.lock`, JSON.stringify(lock));
 
-    await expect(openVisualMetadataReviewWorkspace(config, deps({ processExists: () => false })))
+    await expect(openVisualMetadataReviewWorkspace(config, deps({ processExists: () => true })))
       .rejects.toMatchObject({ name: "ReviewWorkspaceLockError" });
   });
 
@@ -398,7 +416,7 @@ describe("visual metadata review session store", () => {
     const closing = workspace.close();
     const guardOutcome = await Promise.race([closeGuard.then(() => "guarded"), closing.then(() => "settled", () => "settled")]);
     expect(guardOutcome).toBe("guarded");
-    await expect(openVisualMetadataReviewWorkspace(config, deps({ processExists: () => false })))
+    await expect(openVisualMetadataReviewWorkspace(config, deps({ processExists: () => true })))
       .rejects.toMatchObject({ name: "ReviewWorkspaceLockError" });
     releaseClose!();
     await closing;
@@ -433,5 +451,95 @@ describe("visual metadata review session store", () => {
       expect(serialized).not.toContain(forbidden);
     }
     await workspace.close();
+  });
+
+  it("reclaims a dead stale canonical guard after validating the durable session", async () => {
+    const config = await fixture();
+    const seed = await openVisualMetadataReviewWorkspace(config, deps());
+    await seed.close();
+    await writeFile(`${config.sessionPath}.lock.claim`, JSON.stringify(strictGuard()));
+
+    const recovered = await openVisualMetadataReviewWorkspace(config, deps({ processExists: () => false }));
+    await recovered.close();
+    await expect(readFile(`${config.sessionPath}.lock.claim`)).rejects.toMatchObject({ code: "ENOENT" });
+  });
+
+  it("fails closed while a canonical guard owner is live", async () => {
+    const config = await fixture();
+    await writeFile(`${config.sessionPath}.lock.claim`, JSON.stringify(strictGuard()));
+
+    await expect(openVisualMetadataReviewWorkspace(config, deps({ processExists: () => true })))
+      .rejects.toMatchObject({ name: "ReviewWorkspaceLockError" });
+  });
+
+  it("recovers a stale guard left after release cleanup failure", async () => {
+    const config = await fixture();
+    const workspace = await openVisualMetadataReviewWorkspace(config, deps({
+      onAfterReleaseLockGuard: async () => {
+        await writeFile(`${config.sessionPath}.lock.claim`, JSON.stringify(strictGuard()));
+      },
+    }));
+    await expect(workspace.close()).rejects.toMatchObject({ name: "ReviewWorkspaceLockError" });
+
+    const recovered = await openVisualMetadataReviewWorkspace(config, deps({ processExists: () => false }));
+    await recovered.close();
+  });
+
+  it("allows only one concurrent stale-guard recovery claimant", async () => {
+    const config = await fixture();
+    const seed = await openVisualMetadataReviewWorkspace(config, deps());
+    await seed.close();
+    await writeFile(`${config.sessionPath}.lock.claim`, JSON.stringify(strictGuard()));
+    let releaseA: (() => void) | undefined;
+    let signalA: (() => void) | undefined;
+    const aRead = new Promise<void>((resolveRead) => { signalA = resolveRead; });
+    const holdA = new Promise<void>((resolveHold) => { releaseA = resolveHold; });
+    const contenderA = openVisualMetadataReviewWorkspace(config, deps({
+      lockId: () => "99999999-9999-4999-8999-999999999999",
+      processExists: () => false,
+      onAfterStaleGuardRead: async () => { signalA!(); await holdA; },
+    }));
+    const aOutcome = await Promise.race([aRead.then(() => "read"), contenderA.then(() => "settled", () => "settled")]);
+    expect(aOutcome).toBe("read");
+    const winnerB = await openVisualMetadataReviewWorkspace(config, deps({
+      lockId: () => "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      processExists: () => false,
+    }));
+    releaseA!();
+    await expect(contenderA).rejects.toMatchObject({ name: "ReviewWorkspaceLockError" });
+    await winnerB.close();
+  });
+
+  it("recovers a dead recovery lease left by a crashed guard reclaimer", async () => {
+    const config = await fixture();
+    const seed = await openVisualMetadataReviewWorkspace(config, deps());
+    await seed.close();
+    await writeFile(`${config.sessionPath}.lock.claim.recovery`, JSON.stringify(strictGuardRecovery()));
+
+    const recovered = await openVisualMetadataReviewWorkspace(config, deps({ processExists: () => false }));
+    await recovered.close();
+    await expect(readFile(`${config.sessionPath}.lock.claim.recovery`)).rejects.toMatchObject({ code: "ENOENT" });
+  });
+
+  it("allows only one concurrent stale recovery-lease claimant", async () => {
+    const config = await fixture();
+    const seed = await openVisualMetadataReviewWorkspace(config, deps());
+    await seed.close();
+    await writeFile(`${config.sessionPath}.lock.claim.recovery`, JSON.stringify(strictGuardRecovery()));
+    let releaseA: (() => void) | undefined;
+    let signalA: (() => void) | undefined;
+    const aRead = new Promise<void>((resolveRead) => { signalA = resolveRead; });
+    const holdA = new Promise<void>((resolveHold) => { releaseA = resolveHold; });
+    const contenderA = openVisualMetadataReviewWorkspace(config, deps({
+      lockId: () => "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+      processExists: () => false,
+      onAfterStaleRecoveryRead: async () => { signalA!(); await holdA; },
+    }));
+    const aOutcome = await Promise.race([aRead.then(() => "read"), contenderA.then(() => "settled", () => "settled")]);
+    expect(aOutcome).toBe("read");
+    const winnerB = await openVisualMetadataReviewWorkspace(config, deps({ processExists: () => false }));
+    releaseA!();
+    await expect(contenderA).rejects.toMatchObject({ name: "ReviewWorkspaceLockError" });
+    await winnerB.close();
   });
 });

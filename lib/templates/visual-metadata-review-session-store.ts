@@ -11,6 +11,7 @@ import { validateSuggestionArtifactSeed, type SuggestionArtifactRow } from "./vi
 
 const LOCK_VERSION = "template-visual-metadata-review-lock/1.0" as const;
 const LOCK_GUARD_VERSION = "template-visual-metadata-review-lock-guard/1.0" as const;
+const LOCK_GUARD_RECOVERY_VERSION = "template-visual-metadata-review-lock-guard-recovery/1.0" as const;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 export interface ReviewWorkspaceConfig {
@@ -45,6 +46,8 @@ export interface ReviewWorkspaceDependencies {
   onAfterStaleLockClaim?: () => void | Promise<void>;
   onAfterStaleLockRead?: () => void | Promise<void>;
   onAfterReleaseLockGuard?: () => void | Promise<void>;
+  onAfterStaleGuardRead?: () => void | Promise<void>;
+  onAfterStaleRecoveryRead?: () => void | Promise<void>;
   relativePath?: (from: string, to: string) => string;
   pathIsAbsolute?: (path: string) => boolean;
 }
@@ -63,7 +66,8 @@ export class ReviewWorkspaceConfigError extends SafeStoreError { constructor() {
 export class ReviewWorkspaceCommandError extends SafeStoreError { constructor() { super("ReviewWorkspaceCommandError", "REVIEW_WORKSPACE_COMMAND_REJECTED", "review command was rejected"); } }
 
 interface ReviewLock { version: typeof LOCK_VERSION; pid: number; processUuid: string; startedAt: string; }
-interface ReviewLockGuard { version: typeof LOCK_GUARD_VERSION; ownerUuid: string; }
+interface ReviewLockGuard { version: typeof LOCK_GUARD_VERSION; pid: number; processUuid: string; startedAt: string; }
+interface ReviewLockGuardRecovery { version: typeof LOCK_GUARD_RECOVERY_VERSION; pid: number; processUuid: string; startedAt: string; }
 interface FrozenConfig {
   inputPath: string; sessionPath: string; lockPath: string; reviewedOutputPath: string; auditOutputPath: string;
   reviewer: { name: string; email: string }; reviewedRelativePath: string; auditRelativePath: string;
@@ -98,8 +102,11 @@ function freezeConfig(config: ReviewWorkspaceConfig, dependencies: ReviewWorkspa
   const auditOutputPath = resolve(config.auditOutputPath);
   const lockPath = `${sessionPath}.lock`;
   const key = (path: string) => process.platform === "win32" ? path.toLocaleLowerCase("en-US") : path;
-  const paths = [inputPath, sessionPath, reviewedOutputPath, auditOutputPath, lockPath];
+  const paths = [inputPath, sessionPath, reviewedOutputPath, auditOutputPath, lockPath, guardPath(lockPath), recoveryPath(lockPath)];
   if (new Set(paths.map(key)).size !== paths.length) throw new ReviewWorkspaceConfigError();
+  if ([inputPath, sessionPath, reviewedOutputPath, auditOutputPath].some((path) => key(path).startsWith(`${key(guardPath(lockPath))}.`))) {
+    throw new ReviewWorkspaceConfigError();
+  }
   const makeRelative = dependencies.relativePath ?? relative;
   const absolute = dependencies.pathIsAbsolute ?? isAbsolute;
   const reviewedRelativePath = makeRelative(process.cwd(), reviewedOutputPath);
@@ -114,12 +121,20 @@ function sameLock(left: ReviewLock | null, right: ReviewLock): boolean {
   return left !== null && left.pid === right.pid && left.processUuid === right.processUuid && left.startedAt === right.startedAt;
 }
 function guardPath(lockPath: string): string { return `${lockPath}.claim`; }
+function recoveryPath(lockPath: string): string { return `${guardPath(lockPath)}.recovery`; }
 function parseGuard(value: unknown): ReviewLockGuard | null {
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
   const guard = value as Record<string, unknown>;
-  if (Object.keys(guard).length !== 2 || guard.version !== LOCK_GUARD_VERSION
-    || typeof guard.ownerUuid !== "string" || !UUID.test(guard.ownerUuid)) return null;
-  return { version: LOCK_GUARD_VERSION, ownerUuid: guard.ownerUuid };
+  if (Object.keys(guard).length !== 4 || guard.version !== LOCK_GUARD_VERSION || !Number.isSafeInteger(guard.pid)
+    || (guard.pid as number) < 1 || typeof guard.processUuid !== "string" || !UUID.test(guard.processUuid) || !validIso(guard.startedAt)) return null;
+  return { version: LOCK_GUARD_VERSION, pid: guard.pid as number, processUuid: guard.processUuid, startedAt: guard.startedAt };
+}
+function parseGuardRecovery(value: unknown): ReviewLockGuardRecovery | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const recovery = value as Record<string, unknown>;
+  if (Object.keys(recovery).length !== 4 || recovery.version !== LOCK_GUARD_RECOVERY_VERSION || !Number.isSafeInteger(recovery.pid)
+    || (recovery.pid as number) < 1 || typeof recovery.processUuid !== "string" || !UUID.test(recovery.processUuid) || !validIso(recovery.startedAt)) return null;
+  return { version: LOCK_GUARD_RECOVERY_VERSION, pid: recovery.pid as number, processUuid: recovery.processUuid, startedAt: recovery.startedAt };
 }
 function auditFor(session: ReviewSessionV1): ReviewAuditV1 {
   return { version: REVIEW_AUDIT_VERSION, sessionVersion: REVIEW_SESSION_VERSION,
@@ -146,40 +161,105 @@ async function createLock(path: string, lock: ReviewLock): Promise<void> {
   catch { throw new ReviewWorkspaceLockError(); }
   finally { try { await file?.close(); } catch { throw new ReviewWorkspaceLockError(); } }
 }
-async function createLockGuard(lockPath: string, ownerUuid: string): Promise<void> {
+async function createLockGuard(lockPath: string, owner: ReviewLock): Promise<void> {
   let file: Awaited<ReturnType<typeof open>> | undefined;
   try {
     file = await open(guardPath(lockPath), "wx");
-    await file.writeFile(`${JSON.stringify({ version: LOCK_GUARD_VERSION, ownerUuid })}\n`, "utf8");
+    await file.writeFile(`${JSON.stringify({ version: LOCK_GUARD_VERSION, pid: owner.pid, processUuid: owner.processUuid, startedAt: owner.startedAt })}\n`, "utf8");
     await file.sync();
   } catch { throw new ReviewWorkspaceLockError(); }
   finally { try { await file?.close(); } catch { throw new ReviewWorkspaceLockError(); } }
 }
-async function releaseLockGuard(lockPath: string, ownerUuid: string): Promise<void> {
+async function readLockGuard(lockPath: string): Promise<ReviewLockGuard | null> {
+  try {
+    const parsed = parseGuard(JSON.parse((await readFile(guardPath(lockPath))).toString("utf8")));
+    if (!parsed) throw new ReviewWorkspaceLockError();
+    return parsed;
+  } catch (error) { if (isErrno(error, "ENOENT")) return null; throw new ReviewWorkspaceLockError(); }
+}
+async function releaseLockGuard(lockPath: string, owner: ReviewLock): Promise<void> {
   let guard: ReviewLockGuard | null;
-  try { guard = parseGuard(JSON.parse((await readFile(guardPath(lockPath))).toString("utf8"))); }
-  catch { throw new ReviewWorkspaceLockError(); }
-  if (!guard || guard.ownerUuid !== ownerUuid) throw new ReviewWorkspaceLockError();
+  try { guard = await readLockGuard(lockPath); } catch { throw new ReviewWorkspaceLockError(); }
+  if (!guard || guard.pid !== owner.pid || guard.processUuid !== owner.processUuid || guard.startedAt !== owner.startedAt) throw new ReviewWorkspaceLockError();
   try { await rm(guardPath(lockPath)); } catch { throw new ReviewWorkspaceLockError(); }
 }
-async function noActiveLockGuard(lockPath: string): Promise<void> {
+async function createLockGuardRecovery(lockPath: string, owner: ReviewLock): Promise<void> {
+  let file: Awaited<ReturnType<typeof open>> | undefined;
   try {
-    await readFile(guardPath(lockPath));
-    throw new ReviewWorkspaceLockError();
-  } catch (error) {
-    if (error instanceof ReviewWorkspaceLockError) throw error;
-    if (!isErrno(error, "ENOENT")) throw new ReviewWorkspaceLockError();
+    file = await open(recoveryPath(lockPath), "wx");
+    await file.writeFile(`${JSON.stringify({ version: LOCK_GUARD_RECOVERY_VERSION, pid: owner.pid, processUuid: owner.processUuid, startedAt: owner.startedAt })}\n`, "utf8");
+    await file.sync();
+  } catch { throw new ReviewWorkspaceLockError(); }
+  finally { try { await file?.close(); } catch { throw new ReviewWorkspaceLockError(); } }
+}
+async function releaseLockGuardRecovery(lockPath: string, owner: ReviewLock): Promise<void> {
+  let recovery: ReviewLockGuardRecovery | null;
+  try { recovery = parseGuardRecovery(JSON.parse((await readFile(recoveryPath(lockPath))).toString("utf8"))); }
+  catch { throw new ReviewWorkspaceLockError(); }
+  if (!recovery || recovery.pid !== owner.pid || recovery.processUuid !== owner.processUuid || recovery.startedAt !== owner.startedAt) throw new ReviewWorkspaceLockError();
+  try { await rm(recoveryPath(lockPath)); } catch { throw new ReviewWorkspaceLockError(); }
+}
+async function readLockGuardRecovery(lockPath: string): Promise<ReviewLockGuardRecovery | null> {
+  try {
+    const parsed = parseGuardRecovery(JSON.parse((await readFile(recoveryPath(lockPath))).toString("utf8")));
+    if (!parsed) throw new ReviewWorkspaceLockError();
+    return parsed;
+  } catch (error) { if (isErrno(error, "ENOENT")) return null; throw new ReviewWorkspaceLockError(); }
+}
+function staleRecoveryClaimPath(lockPath: string, recovery: ReviewLockGuardRecovery): string {
+  const generation = createHash("sha256").update(JSON.stringify(recovery)).digest("hex");
+  return `${recoveryPath(lockPath)}.${generation}.stale`;
+}
+async function recoverOrRejectLockGuardRecovery(
+  lockPath: string,
+  processExists: (pid: number) => boolean | Promise<boolean>,
+  onStaleRead?: () => void | Promise<void>,
+): Promise<void> {
+  const staleRecovery = await readLockGuardRecovery(lockPath);
+  if (staleRecovery === null) return;
+  if (await processExists(staleRecovery.pid)) throw new ReviewWorkspaceLockError();
+  await onStaleRead?.();
+  const claimPath = staleRecoveryClaimPath(lockPath, staleRecovery);
+  try { await rename(recoveryPath(lockPath), claimPath); } catch { throw new ReviewWorkspaceLockError(); }
+  try {
+    const current = await readLockGuardRecovery(lockPath);
+    if (current !== null) throw new ReviewWorkspaceLockError();
+  } finally {
+    try { await rm(claimPath); } catch { /* inert stale claim never blocks canonical recovery */ }
+  }
+}
+function sameGuard(left: ReviewLockGuard | null, right: ReviewLockGuard): boolean {
+  return left !== null && left.pid === right.pid && left.processUuid === right.processUuid && left.startedAt === right.startedAt;
+}
+async function recoverOrRejectLockGuard(
+  lockPath: string,
+  owner: ReviewLock,
+  processExists: (pid: number) => boolean | Promise<boolean>,
+  validateSession: () => Promise<void>,
+  onStaleRead?: () => void | Promise<void>,
+): Promise<void> {
+  const staleGuard = await readLockGuard(lockPath);
+  if (staleGuard === null) return;
+  if (await processExists(staleGuard.pid)) throw new ReviewWorkspaceLockError();
+  await validateSession();
+  await onStaleRead?.();
+  await createLockGuardRecovery(lockPath, owner);
+  try {
+    if (!sameGuard(await readLockGuard(lockPath), staleGuard) || await processExists(staleGuard.pid)) throw new ReviewWorkspaceLockError();
+    try { await rm(guardPath(lockPath)); } catch { throw new ReviewWorkspaceLockError(); }
+  } finally {
+    await releaseLockGuardRecovery(lockPath, owner);
   }
 }
 async function releaseLock(path: string, ownedLock: ReviewLock, onGuard?: () => void | Promise<void>): Promise<void> {
-  await createLockGuard(path, ownedLock.processUuid);
+  await createLockGuard(path, ownedLock);
   try {
     if (!sameLock(await readLock(path), ownedLock)) throw new ReviewWorkspaceLockError();
     await onGuard?.();
     if (!sameLock(await readLock(path), ownedLock)) throw new ReviewWorkspaceLockError();
     try { await rm(path); } catch { throw new ReviewWorkspaceLockError(); }
   } finally {
-    await releaseLockGuard(path, ownedLock.processUuid);
+    await releaseLockGuard(path, ownedLock);
   }
 }
 
@@ -210,7 +290,18 @@ export async function openVisualMetadataReviewWorkspace(config: ReviewWorkspaceC
   const lock: ReviewLock = { version: LOCK_VERSION, pid, processUuid, startedAt: now().toISOString() };
   const processExists = dependencies.processExists ?? defaultProcessExists;
   const writeJson = dependencies.writeJson ?? writeJsonAtomic;
-  await noActiveLockGuard(frozenConfig.lockPath);
+  await recoverOrRejectLockGuardRecovery(frozenConfig.lockPath, processExists, dependencies.onAfterStaleRecoveryRead);
+  await recoverOrRejectLockGuard(
+    frozenConfig.lockPath,
+    lock,
+    processExists,
+    async () => {
+      const durableSession = await readSession(frozenConfig.sessionPath);
+      if (durableSession === null) throw new ReviewWorkspaceLockError();
+      validateResumedSession(durableSession, source, frozenConfig.reviewer);
+    },
+    dependencies.onAfterStaleGuardRead,
+  );
   const existingLock = await readLock(frozenConfig.lockPath);
   if (existingLock === null) {
     try { await createLock(frozenConfig.lockPath, lock); } catch (error) { if (error instanceof ReviewWorkspaceLockError) throw error; throw new ReviewWorkspaceLockError(); }
@@ -220,7 +311,7 @@ export async function openVisualMetadataReviewWorkspace(config: ReviewWorkspaceC
     if (durableSession === null) throw new ReviewWorkspaceLockError();
     validateResumedSession(durableSession, source, frozenConfig.reviewer);
     await dependencies.onAfterStaleLockRead?.();
-    await createLockGuard(frozenConfig.lockPath, lock.processUuid);
+    await createLockGuard(frozenConfig.lockPath, lock);
     const retiredPath = `${frozenConfig.lockPath}.${(dependencies.claimId ?? randomUUID)()}.retired`;
     try {
       if (!sameLock(await readLock(frozenConfig.lockPath), existingLock)) throw new ReviewWorkspaceLockError();
@@ -231,7 +322,7 @@ export async function openVisualMetadataReviewWorkspace(config: ReviewWorkspaceC
     } catch {
       throw new ReviewWorkspaceLockError();
     } finally {
-      await releaseLockGuard(frozenConfig.lockPath, lock.processUuid);
+      await releaseLockGuard(frozenConfig.lockPath, lock);
     }
   }
 
