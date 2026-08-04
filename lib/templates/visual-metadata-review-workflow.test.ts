@@ -17,6 +17,7 @@ import {
   validateReviewedMetadataInput,
   writeSuggestionArtifactAtomic,
   type SuggestionArtifactRow,
+  type SuggestionArtifactProvenance,
 } from "./visual-metadata-review-workflow";
 
 const REVIEWED_METADATA: TemplateVisualMetadata = {
@@ -56,6 +57,47 @@ const AUDIT: SuggestVisualMetadataAudit = {
     timeoutMs: 60_000,
   },
 };
+
+const HISTORICAL_AUDIT: SuggestionArtifactProvenance = {
+  workflowVersion: "template-visual-metadata-suggestion-workflow/1.0",
+  modelChoice: {
+    version: "template-visual-metadata-model-choice/1.0",
+    modelId: "gemini-2.5-flash",
+  },
+  promptVersion: "template-visual-metadata-prompt/1.0",
+  schemaVersion: "template-visual-metadata/1.0",
+  generationConfig: {
+    version: "template-visual-metadata-generation-config/1.0",
+    temperature: 0.2,
+    maxOutputTokens: 2_048,
+    responseMimeType: "application/json",
+    thinkingBudget: 0,
+  },
+  failurePolicy: {
+    version: "template-visual-metadata-failure-policy/1.0",
+    maximumFailureRate: 0.10,
+  },
+  timeoutPolicy: {
+    version: "template-visual-metadata-timeout-policy/1.0",
+    timeoutMs: 60_000,
+  },
+};
+
+type MutableProvenance = {
+  workflowVersion?: unknown;
+  modelChoice?: Record<string, unknown>;
+  promptVersion?: unknown;
+  schemaVersion?: unknown;
+  generationConfig?: Record<string, unknown>;
+  failurePolicy?: Record<string, unknown>;
+  timeoutPolicy?: Record<string, unknown>;
+};
+
+function corruptHistoricalProvenance(change: (value: MutableProvenance) => void): unknown {
+  const value = structuredClone(HISTORICAL_AUDIT) as unknown as MutableProvenance;
+  change(value);
+  return value;
+}
 
 function template(id: string, reviewStatus: "reviewed" | "unreviewed" | null = null): TemplateRecord {
   return {
@@ -178,17 +220,8 @@ describe("runVisualMetadataSuggestionBatch", () => {
 
 describe("retry-failed suggestion artifacts", () => {
   it("validates complete seed coverage and selects only failed template IDs", () => {
-    const historicalProvenance = {
-      ...AUDIT,
-      promptVersion: "template-visual-metadata-prompt/1.0",
-      generationConfig: {
-        ...AUDIT.generationConfig,
-        version: "template-visual-metadata-generation-config/1.0",
-        responseJsonSchemaVersion: undefined,
-      },
-    } as unknown as SuggestionArtifactRow["provenance"];
-    const successful = artifactRow("success", "suggested", historicalProvenance);
-    const failed = artifactRow("failed", "failed", historicalProvenance);
+    const successful = artifactRow("success", "suggested", HISTORICAL_AUDIT);
+    const failed = artifactRow("failed", "failed", HISTORICAL_AUDIT);
 
     const retry = prepareVisualMetadataRetry(
       [template("success"), template("failed")],
@@ -202,6 +235,62 @@ describe("retry-failed suggestion artifacts", () => {
       generationConfig: { version: "template-visual-metadata-generation-config/1.0" },
     });
   });
+
+  it("accepts complete historical and current provenance without rewriting either", () => {
+    for (const [id, provenance] of [["historical", HISTORICAL_AUDIT], ["current", AUDIT]] as const) {
+      const rows = validateSuggestionArtifactSeed(
+        [artifactRow(id, "suggested", provenance)],
+        new Set([id]),
+      );
+      expect(rows[0].provenance).toEqual(provenance);
+    }
+  });
+
+  it.each([
+    ["missing workflow version", (value: MutableProvenance) => { delete value.workflowVersion; }],
+    ["empty workflow version", (value: MutableProvenance) => { value.workflowVersion = ""; }],
+    ["unknown workflow version", (value: MutableProvenance) => { value.workflowVersion = "workflow/999"; }],
+    ["missing model choice", (value: MutableProvenance) => { delete value.modelChoice; }],
+    ["empty model-choice version", (value: MutableProvenance) => { value.modelChoice!.version = ""; }],
+    ["unknown model-choice version", (value: MutableProvenance) => { value.modelChoice!.version = "model-choice/999"; }],
+    ["empty model ID", (value: MutableProvenance) => { value.modelChoice!.modelId = "  "; }],
+    ["missing prompt version", (value: MutableProvenance) => { delete value.promptVersion; }],
+    ["empty prompt version", (value: MutableProvenance) => { value.promptVersion = ""; }],
+    ["unknown prompt version", (value: MutableProvenance) => { value.promptVersion = "prompt/999"; }],
+    ["missing schema version", (value: MutableProvenance) => { delete value.schemaVersion; }],
+    ["unknown schema version", (value: MutableProvenance) => { value.schemaVersion = "template-visual-metadata/999"; }],
+    ["missing generation config", (value: MutableProvenance) => { delete value.generationConfig; }],
+    ["empty generation-config version", (value: MutableProvenance) => { value.generationConfig!.version = ""; }],
+    ["unknown generation-config version", (value: MutableProvenance) => { value.generationConfig!.version = "generation/999"; }],
+    ["missing temperature", (value: MutableProvenance) => { delete value.generationConfig!.temperature; }],
+    ["invalid temperature", (value: MutableProvenance) => { value.generationConfig!.temperature = -0.1; }],
+    ["non-numeric temperature", (value: MutableProvenance) => { value.generationConfig!.temperature = "0.2"; }],
+    ["invalid max output tokens", (value: MutableProvenance) => { value.generationConfig!.maxOutputTokens = 0; }],
+    ["non-numeric max output tokens", (value: MutableProvenance) => { value.generationConfig!.maxOutputTokens = "2048"; }],
+    ["invalid response MIME", (value: MutableProvenance) => { value.generationConfig!.responseMimeType = "text/plain"; }],
+    ["invalid thinking budget", (value: MutableProvenance) => { value.generationConfig!.thinkingBudget = -1; }],
+    ["missing v2 response schema version", (value: MutableProvenance) => {
+      value.promptVersion = "template-visual-metadata-prompt/2.0";
+      value.generationConfig!.version = "template-visual-metadata-generation-config/2.0";
+    }],
+    ["missing failure policy", (value: MutableProvenance) => { delete value.failurePolicy; }],
+    ["empty failure-policy version", (value: MutableProvenance) => { value.failurePolicy!.version = ""; }],
+    ["invalid maximum failure rate", (value: MutableProvenance) => { value.failurePolicy!.maximumFailureRate = 0.2; }],
+    ["non-numeric maximum failure rate", (value: MutableProvenance) => { value.failurePolicy!.maximumFailureRate = "0.1"; }],
+    ["missing timeout policy", (value: MutableProvenance) => { delete value.timeoutPolicy; }],
+    ["empty timeout-policy version", (value: MutableProvenance) => { value.timeoutPolicy!.version = ""; }],
+    ["invalid timeout", (value: MutableProvenance) => { value.timeoutPolicy!.timeoutMs = 0; }],
+    ["non-numeric timeout", (value: MutableProvenance) => { value.timeoutPolicy!.timeoutMs = "60000"; }],
+  ] as Array<[string, (value: MutableProvenance) => void]>) (
+    "rejects provenance with %s",
+    (_label, mutate) => {
+      const provenance = corruptHistoricalProvenance(mutate);
+      expect(() => validateSuggestionArtifactSeed(
+        [artifactRow("a", "failed", provenance as SuggestionArtifactRow["provenance"])],
+        new Set(["a"]),
+      )).toThrow("row 0: incomplete provenance");
+    },
+  );
 
   it("rejects duplicate, unknown, or incomplete seed IDs", () => {
     expect(() => validateSuggestionArtifactSeed(

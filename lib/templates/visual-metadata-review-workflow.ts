@@ -4,12 +4,19 @@ import { sql, type SQL } from "drizzle-orm";
 import type { TemplateRecord } from "./store";
 import {
   suggestVisualMetadata,
+  VISUAL_METADATA_FAILURE_POLICY_VERSION,
+  VISUAL_METADATA_GENERATION_CONFIG_VERSION,
   VISUAL_METADATA_MAXIMUM_FAILURE_RATE,
+  VISUAL_METADATA_MODEL_CHOICE_VERSION,
   VISUAL_METADATA_PER_TEMPLATE_TIMEOUT_MS,
+  VISUAL_METADATA_PROMPT_VERSION,
+  VISUAL_METADATA_TIMEOUT_POLICY_VERSION,
+  VISUAL_METADATA_WORKFLOW_VERSION,
   type SuggestVisualMetadataOptions,
   type SuggestVisualMetadataResult,
 } from "./suggest-visual-metadata";
 import {
+  TEMPLATE_VISUAL_METADATA_SCHEMA_VERSION,
   TemplateVisualMetadataSchema,
   type TemplateVisualMetadata,
 } from "./visual-metadata";
@@ -17,14 +24,43 @@ import {
 export const VISUAL_METADATA_ARTIFACT_VERSION = "template-visual-metadata-suggestion-artifact/1.0" as const;
 export const VISUAL_METADATA_DECISION_VERSION = "template-visual-metadata-suggestion-decision/1.0" as const;
 
+type HistoricalPromptVersion = "template-visual-metadata-prompt/1.0";
+type HistoricalGenerationConfigVersion = "template-visual-metadata-generation-config/1.0";
+
+interface HistoricalGenerationConfig {
+  version: HistoricalGenerationConfigVersion;
+  temperature: 0.2;
+  maxOutputTokens: 2048;
+  responseMimeType: "application/json";
+  thinkingBudget: 0;
+}
+
+interface CurrentGenerationConfig {
+  version: typeof VISUAL_METADATA_GENERATION_CONFIG_VERSION;
+  temperature: 0.2;
+  maxOutputTokens: 2048;
+  responseMimeType: "application/json";
+  responseJsonSchemaVersion: typeof TEMPLATE_VISUAL_METADATA_SCHEMA_VERSION;
+  thinkingBudget: 0;
+}
+
 export interface SuggestionArtifactProvenance {
-  workflowVersion: string;
-  modelChoice: { version: string; modelId: string };
-  promptVersion: string;
-  schemaVersion: string;
-  generationConfig: { version: string };
-  failurePolicy: { version: string };
-  timeoutPolicy: { version: string };
+  workflowVersion: typeof VISUAL_METADATA_WORKFLOW_VERSION;
+  modelChoice: {
+    version: typeof VISUAL_METADATA_MODEL_CHOICE_VERSION;
+    modelId: string;
+  };
+  promptVersion: HistoricalPromptVersion | typeof VISUAL_METADATA_PROMPT_VERSION;
+  schemaVersion: typeof TEMPLATE_VISUAL_METADATA_SCHEMA_VERSION;
+  generationConfig: HistoricalGenerationConfig | CurrentGenerationConfig;
+  failurePolicy: {
+    version: typeof VISUAL_METADATA_FAILURE_POLICY_VERSION;
+    maximumFailureRate: number;
+  };
+  timeoutPolicy: {
+    version: typeof VISUAL_METADATA_TIMEOUT_POLICY_VERSION;
+    timeoutMs: number;
+  };
 }
 
 export interface SuggestionArtifactRow {
@@ -139,18 +175,36 @@ function validProvenance(value: unknown): value is SuggestionArtifactProvenance 
   const generationConfig = value.generationConfig;
   const failurePolicy = value.failurePolicy;
   const timeoutPolicy = value.timeoutPolicy;
-  return typeof value.workflowVersion === "string"
+  const baseGenerationConfig = isRecord(generationConfig)
+    && generationConfig.temperature === 0.2
+    && generationConfig.maxOutputTokens === 2_048
+    && generationConfig.responseMimeType === "application/json"
+    && generationConfig.thinkingBudget === 0;
+  const validGenerationConfig = baseGenerationConfig && (
+    generationConfig.version === "template-visual-metadata-generation-config/1.0"
+    || (
+      generationConfig.version === VISUAL_METADATA_GENERATION_CONFIG_VERSION
+      && generationConfig.responseJsonSchemaVersion === TEMPLATE_VISUAL_METADATA_SCHEMA_VERSION
+    )
+  );
+  return value.workflowVersion === VISUAL_METADATA_WORKFLOW_VERSION
     && isRecord(modelChoice)
-    && typeof modelChoice.version === "string"
+    && modelChoice.version === VISUAL_METADATA_MODEL_CHOICE_VERSION
     && typeof modelChoice.modelId === "string"
-    && typeof value.promptVersion === "string"
-    && typeof value.schemaVersion === "string"
-    && isRecord(generationConfig)
-    && typeof generationConfig.version === "string"
+    && modelChoice.modelId.trim().length > 0
+    && (value.promptVersion === "template-visual-metadata-prompt/1.0"
+      || value.promptVersion === VISUAL_METADATA_PROMPT_VERSION)
+    && value.schemaVersion === TEMPLATE_VISUAL_METADATA_SCHEMA_VERSION
+    && validGenerationConfig
     && isRecord(failurePolicy)
-    && typeof failurePolicy.version === "string"
+    && failurePolicy.version === VISUAL_METADATA_FAILURE_POLICY_VERSION
+    && failurePolicy.maximumFailureRate === VISUAL_METADATA_MAXIMUM_FAILURE_RATE
     && isRecord(timeoutPolicy)
-    && typeof timeoutPolicy.version === "string";
+    && timeoutPolicy.version === VISUAL_METADATA_TIMEOUT_POLICY_VERSION
+    && typeof timeoutPolicy.timeoutMs === "number"
+    && Number.isInteger(timeoutPolicy.timeoutMs)
+    && timeoutPolicy.timeoutMs >= 1
+    && timeoutPolicy.timeoutMs <= 600_000;
 }
 
 export function validateSuggestionArtifactSeed(
