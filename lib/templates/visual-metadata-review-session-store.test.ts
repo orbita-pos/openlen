@@ -1,4 +1,5 @@
-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { createHash } from "node:crypto";
+import { mkdir, mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { isAbsolute, join, resolve } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
@@ -101,6 +102,21 @@ function strictGuard(overrides: Record<string, unknown> = {}) {
 
 function strictGuardRecovery(overrides: Record<string, unknown> = {}) {
   return { ...strictGuard({ version: "template-visual-metadata-review-lock-guard-recovery/1.0" }), ...overrides };
+}
+
+function recoveryMarkerName(recovery: ReturnType<typeof strictGuardRecovery>): string {
+  return `${createHash("sha256").update(JSON.stringify(recovery)).digest("hex")}.owner`;
+}
+
+async function writeRecoveryLease(path: string, recovery: ReturnType<typeof strictGuardRecovery>): Promise<void> {
+  await mkdir(path);
+  await writeFile(join(path, recoveryMarkerName(recovery)), JSON.stringify(recovery));
+}
+
+async function readRecoveryLease(path: string): Promise<string> {
+  const entries = await readdir(path);
+  if (entries.length !== 1) throw new Error("expected exactly one recovery generation");
+  return readFile(join(path, entries[0]), "utf8");
 }
 
 function successfulWrite(path: string) {
@@ -541,5 +557,84 @@ describe("visual metadata review session store", () => {
     releaseA!();
     await expect(contenderA).rejects.toMatchObject({ name: "ReviewWorkspaceLockError" });
     await winnerB.close();
+  });
+
+  it("never lets a paused R1 reclaimer touch B's later live R2 recovery lease", async () => {
+    const config = await fixture();
+    const seed = await openVisualMetadataReviewWorkspace(config, deps());
+    await seed.close();
+    const staleRecovery = strictGuardRecovery({
+      pid: 51001,
+      processUuid: "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+    });
+    await writeFile(`${config.sessionPath}.lock.claim`, JSON.stringify(strictGuard()));
+    await writeRecoveryLease(`${config.sessionPath}.lock.claim.recovery`, staleRecovery);
+
+    let releaseA: (() => void) | undefined;
+    let signalA: (() => void) | undefined;
+    const aRead = new Promise<void>((resolveRead) => { signalA = resolveRead; });
+    const holdA = new Promise<void>((resolveHold) => { releaseA = resolveHold; });
+    const contenderA = openVisualMetadataReviewWorkspace(config, deps({
+      pid: 51002,
+      lockId: () => "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
+      processExists: (pid) => pid === 52002,
+      onAfterStaleRecoveryRead: async () => { signalA!(); await holdA; },
+    }));
+    await aRead;
+
+    let releaseB: (() => void) | undefined;
+    let signalB: (() => void) | undefined;
+    const bOwnsR2 = new Promise<void>((resolveOwned) => { signalB = resolveOwned; });
+    const holdB = new Promise<void>((resolveHold) => { releaseB = resolveHold; });
+    let staleGuardChecks = 0;
+    const contenderB = openVisualMetadataReviewWorkspace(config, deps({
+      pid: 52002,
+      lockId: () => "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee",
+      processExists: async (pid) => {
+        if (pid === 54321 && ++staleGuardChecks === 2) { signalB!(); await holdB; }
+        return false;
+      },
+    }));
+    await bOwnsR2;
+    releaseA!();
+
+    let openedA: Awaited<ReturnType<typeof openVisualMetadataReviewWorkspace>> | undefined;
+    let errorA: unknown;
+    try { openedA = await contenderA; } catch (error) { errorA = error; }
+    let recoveryDuringB: string | undefined;
+    try { recoveryDuringB = await readRecoveryLease(`${config.sessionPath}.lock.claim.recovery`); } catch { /* assertion below */ }
+    releaseB!();
+    let openedB: Awaited<ReturnType<typeof openVisualMetadataReviewWorkspace>> | undefined;
+    try { openedB = await contenderB; } catch { /* assertions below identify the protocol failure */ }
+    if (openedA) await openedA.close().catch(() => undefined);
+    if (openedB) await openedB.close();
+
+    expect(errorA).toMatchObject({ name: "ReviewWorkspaceLockError" });
+    expect(recoveryDuringB).toContain("eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee");
+    expect(openedB).toBeDefined();
+  });
+
+  it("ignores a preexisting deterministic R1 claim when recovering that generation", async () => {
+    const config = await fixture();
+    const seed = await openVisualMetadataReviewWorkspace(config, deps());
+    await seed.close();
+    const staleRecovery = strictGuardRecovery();
+    const generation = createHash("sha256").update(JSON.stringify(staleRecovery)).digest("hex");
+    await writeFile(`${config.sessionPath}.lock.claim`, JSON.stringify(strictGuard()));
+    await writeRecoveryLease(`${config.sessionPath}.lock.claim.recovery`, staleRecovery);
+    await mkdir(`${config.sessionPath}.lock.claim.recovery.${generation}.stale`);
+
+    const recovered = await openVisualMetadataReviewWorkspace(config, deps({ processExists: () => false }));
+    await recovered.close();
+  });
+
+  it("recovers an empty canonical recovery lease left after marker-retirement crash", async () => {
+    const config = await fixture();
+    const seed = await openVisualMetadataReviewWorkspace(config, deps());
+    await seed.close();
+    await mkdir(`${config.sessionPath}.lock.claim.recovery`);
+
+    const recovered = await openVisualMetadataReviewWorkspace(config, deps({ processExists: () => false }));
+    await recovered.close();
   });
 });

@@ -1,6 +1,6 @@
 import { createHash, randomUUID } from "node:crypto";
-import { open, readFile, rename, rm } from "node:fs/promises";
-import { isAbsolute, relative, resolve } from "node:path";
+import { mkdtemp, open, readFile, readdir, rename, rm, rmdir, unlink } from "node:fs/promises";
+import { isAbsolute, join, relative, resolve } from "node:path";
 import { writeJsonAtomic, type AtomicWriteResult } from "../fs/write-json-atomic";
 import {
   REVIEW_AUDIT_VERSION, REVIEW_SESSION_VERSION, ReviewSessionV1Schema, applyReviewCommand, buildReviewExports,
@@ -68,6 +68,7 @@ export class ReviewWorkspaceCommandError extends SafeStoreError { constructor() 
 interface ReviewLock { version: typeof LOCK_VERSION; pid: number; processUuid: string; startedAt: string; }
 interface ReviewLockGuard { version: typeof LOCK_GUARD_VERSION; pid: number; processUuid: string; startedAt: string; }
 interface ReviewLockGuardRecovery { version: typeof LOCK_GUARD_RECOVERY_VERSION; pid: number; processUuid: string; startedAt: string; }
+interface ReviewLockGuardRecoveryLease { owner: ReviewLockGuardRecovery; markerPath: string | null; }
 interface FrozenConfig {
   inputPath: string; sessionPath: string; lockPath: string; reviewedOutputPath: string; auditOutputPath: string;
   reviewer: { name: string; email: string }; reviewedRelativePath: string; auditRelativePath: string;
@@ -183,32 +184,81 @@ async function releaseLockGuard(lockPath: string, owner: ReviewLock): Promise<vo
   if (!guard || guard.pid !== owner.pid || guard.processUuid !== owner.processUuid || guard.startedAt !== owner.startedAt) throw new ReviewWorkspaceLockError();
   try { await rm(guardPath(lockPath)); } catch { throw new ReviewWorkspaceLockError(); }
 }
+function recoveryOwner(owner: ReviewLock): ReviewLockGuardRecovery {
+  return { version: LOCK_GUARD_RECOVERY_VERSION, pid: owner.pid, processUuid: owner.processUuid, startedAt: owner.startedAt };
+}
+function recoveryMarkerName(owner: ReviewLockGuardRecovery): string {
+  return `${createHash("sha256").update(JSON.stringify(owner)).digest("hex")}.owner`;
+}
+async function discardRecoveryStaging(stagingPath: string, markerPath: string): Promise<void> {
+  try { await rm(markerPath); } catch { /* an unpublished or already-cleaned marker is inert */ }
+  try { await rmdir(stagingPath); } catch { /* an unpublished staging directory is inert */ }
+}
+async function publishRecoveryDirectory(stagingPath: string, canonicalPath: string): Promise<void> {
+  try { await rename(stagingPath, canonicalPath); return; } catch { /* an empty retired directory may still occupy the name */ }
+  try { await rmdir(canonicalPath); } catch { /* a non-empty generation must remain untouched */ }
+  try { await rename(stagingPath, canonicalPath); } catch { throw new ReviewWorkspaceLockError(); }
+}
 async function createLockGuardRecovery(lockPath: string, owner: ReviewLock): Promise<void> {
+  const canonicalPath = recoveryPath(lockPath);
+  let stagingPath = "";
+  let markerPath = "";
   let file: Awaited<ReturnType<typeof open>> | undefined;
   try {
-    file = await open(recoveryPath(lockPath), "wx");
-    await file.writeFile(`${JSON.stringify({ version: LOCK_GUARD_RECOVERY_VERSION, pid: owner.pid, processUuid: owner.processUuid, startedAt: owner.startedAt })}\n`, "utf8");
+    const recovery = recoveryOwner(owner);
+    stagingPath = await mkdtemp(`${canonicalPath}.pending-`);
+    markerPath = join(stagingPath, recoveryMarkerName(recovery));
+    file = await open(markerPath, "wx");
+    await file.writeFile(`${JSON.stringify(recovery)}\n`, "utf8");
     await file.sync();
-  } catch { throw new ReviewWorkspaceLockError(); }
-  finally { try { await file?.close(); } catch { throw new ReviewWorkspaceLockError(); } }
+    await file.close();
+    file = undefined;
+    await publishRecoveryDirectory(stagingPath, canonicalPath);
+  } catch {
+    try { await file?.close(); } catch { /* redacted below */ }
+    if (stagingPath) await discardRecoveryStaging(stagingPath, markerPath);
+    throw new ReviewWorkspaceLockError();
+  }
+}
+async function readLockGuardRecovery(lockPath: string): Promise<ReviewLockGuardRecoveryLease | null> {
+  const canonicalPath = recoveryPath(lockPath);
+  let entries: string[];
+  try { entries = await readdir(canonicalPath); }
+  catch (error) {
+    if (isErrno(error, "ENOENT")) return null;
+    if (!isErrno(error, "ENOTDIR")) throw new ReviewWorkspaceLockError();
+    let owner: ReviewLockGuardRecovery | null;
+    try { owner = parseGuardRecovery(JSON.parse((await readFile(canonicalPath)).toString("utf8"))); }
+    catch { throw new ReviewWorkspaceLockError(); }
+    if (!owner) throw new ReviewWorkspaceLockError();
+    return { owner, markerPath: null };
+  }
+  if (entries.length === 0) {
+    try { await rmdir(canonicalPath); return null; }
+    catch (error) { if (isErrno(error, "ENOENT")) return null; throw new ReviewWorkspaceLockError(); }
+  }
+  if (entries.length !== 1) throw new ReviewWorkspaceLockError();
+  const markerPath = join(canonicalPath, entries[0]);
+  let owner: ReviewLockGuardRecovery | null;
+  try { owner = parseGuardRecovery(JSON.parse((await readFile(markerPath)).toString("utf8"))); }
+  catch { throw new ReviewWorkspaceLockError(); }
+  if (!owner || entries[0] !== recoveryMarkerName(owner)) throw new ReviewWorkspaceLockError();
+  return { owner, markerPath };
+}
+async function retireLockGuardRecovery(lockPath: string, lease: ReviewLockGuardRecoveryLease): Promise<void> {
+  if (lease.markerPath === null) {
+    try { await unlink(recoveryPath(lockPath)); } catch { throw new ReviewWorkspaceLockError(); }
+    return;
+  }
+  try { await rm(lease.markerPath); } catch { throw new ReviewWorkspaceLockError(); }
+  try { await rmdir(recoveryPath(lockPath)); } catch { throw new ReviewWorkspaceLockError(); }
 }
 async function releaseLockGuardRecovery(lockPath: string, owner: ReviewLock): Promise<void> {
-  let recovery: ReviewLockGuardRecovery | null;
-  try { recovery = parseGuardRecovery(JSON.parse((await readFile(recoveryPath(lockPath))).toString("utf8"))); }
-  catch { throw new ReviewWorkspaceLockError(); }
-  if (!recovery || recovery.pid !== owner.pid || recovery.processUuid !== owner.processUuid || recovery.startedAt !== owner.startedAt) throw new ReviewWorkspaceLockError();
-  try { await rm(recoveryPath(lockPath)); } catch { throw new ReviewWorkspaceLockError(); }
-}
-async function readLockGuardRecovery(lockPath: string): Promise<ReviewLockGuardRecovery | null> {
-  try {
-    const parsed = parseGuardRecovery(JSON.parse((await readFile(recoveryPath(lockPath))).toString("utf8")));
-    if (!parsed) throw new ReviewWorkspaceLockError();
-    return parsed;
-  } catch (error) { if (isErrno(error, "ENOENT")) return null; throw new ReviewWorkspaceLockError(); }
-}
-function staleRecoveryClaimPath(lockPath: string, recovery: ReviewLockGuardRecovery): string {
-  const generation = createHash("sha256").update(JSON.stringify(recovery)).digest("hex");
-  return `${recoveryPath(lockPath)}.${generation}.stale`;
+  const lease = await readLockGuardRecovery(lockPath);
+  if (!lease || lease.owner.pid !== owner.pid || lease.owner.processUuid !== owner.processUuid || lease.owner.startedAt !== owner.startedAt) {
+    throw new ReviewWorkspaceLockError();
+  }
+  await retireLockGuardRecovery(lockPath, lease);
 }
 async function recoverOrRejectLockGuardRecovery(
   lockPath: string,
@@ -217,16 +267,9 @@ async function recoverOrRejectLockGuardRecovery(
 ): Promise<void> {
   const staleRecovery = await readLockGuardRecovery(lockPath);
   if (staleRecovery === null) return;
-  if (await processExists(staleRecovery.pid)) throw new ReviewWorkspaceLockError();
+  if (await processExists(staleRecovery.owner.pid)) throw new ReviewWorkspaceLockError();
   await onStaleRead?.();
-  const claimPath = staleRecoveryClaimPath(lockPath, staleRecovery);
-  try { await rename(recoveryPath(lockPath), claimPath); } catch { throw new ReviewWorkspaceLockError(); }
-  try {
-    const current = await readLockGuardRecovery(lockPath);
-    if (current !== null) throw new ReviewWorkspaceLockError();
-  } finally {
-    try { await rm(claimPath); } catch { /* inert stale claim never blocks canonical recovery */ }
-  }
+  await retireLockGuardRecovery(lockPath, staleRecovery);
 }
 function sameGuard(left: ReviewLockGuard | null, right: ReviewLockGuard): boolean {
   return left !== null && left.pid === right.pid && left.processUuid === right.processUuid && left.startedAt === right.startedAt;
