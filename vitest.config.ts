@@ -42,6 +42,8 @@ export default defineConfig({
     include: [
       "components/workspace-v2/**/*.test.ts",
       "components/workspace-v2/**/*.test.tsx",
+      "tools/template-visual-metadata-reviewer/**/*.test.ts",
+      "tools/template-visual-metadata-reviewer/**/*.test.tsx",
       "components/community/**/*.test.ts",
       "lib/three3d/**/*.test.ts",
       "lib/workspace-v2/**/*.test.ts",
