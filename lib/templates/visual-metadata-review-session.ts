@@ -1,5 +1,8 @@
 import { z } from "zod";
-import type { SuggestionArtifactRow } from "./visual-metadata-review-workflow";
+import {
+  VISUAL_METADATA_ARTIFACT_VERSION,
+  type SuggestionArtifactRow,
+} from "./visual-metadata-review-workflow";
 import {
   TEMPLATE_VISUAL_METADATA_SCHEMA_VERSION,
   TemplateVisualMetadataSchema,
@@ -9,6 +12,22 @@ import {
 export const REVIEW_SESSION_VERSION = "template-visual-metadata-review-session/1.0" as const;
 export const REVIEW_EVENT_VERSION = "template-visual-metadata-review-event/1.0" as const;
 export const REVIEW_AUDIT_VERSION = "template-visual-metadata-review-audit/1.0" as const;
+
+const StrictTemplateVisualMetadataSchema = TemplateVisualMetadataSchema.strict();
+
+function codePointLength(value: string): number {
+  return Array.from(value).length;
+}
+
+const RejectionReasonSchema = z.string().superRefine((value, context) => {
+  const normalized = value.trim();
+  if (!normalized || codePointLength(normalized) > 500) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "rejection reason must be non-empty and at most 500 code points",
+    });
+  }
+}).transform((value) => value.trim());
 
 const MetadataArrayFieldSchema = z.enum([
   "domains",
@@ -36,7 +55,7 @@ const ReviewCommandSchema = z.discriminatedUnion("action", [
     value: z.unknown(),
   }).strict(),
   z.object({ action: z.literal("approved"), templateId: z.string().min(1) }).strict(),
-  z.object({ action: z.literal("rejected"), templateId: z.string().min(1), reason: z.string() }).strict(),
+  z.object({ action: z.literal("rejected"), templateId: z.string().min(1), reason: RejectionReasonSchema }).strict(),
   z.object({ action: z.literal("reopened"), templateId: z.string().min(1) }).strict(),
 ]);
 
@@ -62,11 +81,11 @@ const MetadataUpdatedEventSchema = EventBaseSchema.extend({
 }).strict();
 const ApprovedEventSchema = EventBaseSchema.extend({
   action: z.literal("approved"),
-  metadata: TemplateVisualMetadataSchema,
+  metadata: StrictTemplateVisualMetadataSchema,
 }).strict();
 const RejectedEventSchema = EventBaseSchema.extend({
   action: z.literal("rejected"),
-  reason: z.string(),
+  reason: RejectionReasonSchema,
 }).strict();
 const ReopenedEventSchema = EventBaseSchema.extend({ action: z.literal("reopened") }).strict();
 
@@ -81,7 +100,7 @@ export type ReviewEventV1 = z.infer<typeof ReviewEventV1Schema>;
 export const ReviewSessionV1Schema = z.object({
   version: z.literal(REVIEW_SESSION_VERSION),
   source: z.object({
-    artifactVersion: z.string().min(1),
+    artifactVersion: z.literal(VISUAL_METADATA_ARTIFACT_VERSION),
     sha256: z.string().regex(/^[a-f0-9]{64}$/),
     templateIds: z.array(z.string().min(1)),
   }).strict(),
@@ -190,16 +209,8 @@ function sameJson(left: unknown, right: unknown): boolean {
   return JSON.stringify(left) === JSON.stringify(right);
 }
 
-function codePointLength(value: string): number {
-  return Array.from(value).length;
-}
-
 function normalizeRejectionReason(reason: string): string {
-  const normalized = reason.trim();
-  if (!normalized || codePointLength(normalized) > 500) {
-    throw new Error("rejection reason must be non-empty and at most 500 code points");
-  }
-  return normalized;
+  return RejectionReasonSchema.parse(reason);
 }
 
 function sourceRowsById(session: ReviewSessionV1, sourceRows: readonly SuggestionArtifactRow[]): Map<string, SuggestionArtifactRow> {
@@ -241,7 +252,7 @@ export function createReviewSession(args: {
   if (!(args.now instanceof Date) || Number.isNaN(args.now.valueOf())) throw new Error("invalid review session time");
   const ids = args.rows.map((row) => row.id);
   if (new Set(ids).size !== ids.length) throw new Error("source rows contain duplicate template IDs");
-  const artifactVersion = args.rows[0]?.artifactVersion ?? "template-visual-metadata-suggestion-artifact/1.0";
+  const artifactVersion = args.rows[0]?.artifactVersion ?? VISUAL_METADATA_ARTIFACT_VERSION;
   if (args.rows.some((row) => row.artifactVersion !== artifactVersion)) {
     throw new Error("source rows contain multiple artifact versions");
   }
@@ -295,8 +306,11 @@ export function deriveReviewState(
     }
     if (event.action === "approved") {
       if (item.state !== "pending") throw new Error("approval requires a pending suggestion");
-      const approved = TemplateVisualMetadataSchema.parse(event.metadata);
+      const approved = StrictTemplateVisualMetadataSchema.parse(event.metadata);
       if (approved.reviewStatus !== "reviewed") throw new Error("approved event must contain reviewed metadata");
+      if (item.draft === null || !sameJson(approved, metadataWithReviewStatus(item.draft, "reviewed"))) {
+        throw new Error("approved event metadata does not match draft");
+      }
       item.state = "approved";
       item.metadata = copyMetadata(approved);
       item.rejectionReason = null;
@@ -320,7 +334,7 @@ export function deriveReviewState(
   const pending = itemValues.filter((item) => item.state === "pending").length;
   const approved = itemValues.filter((item) => item.state === "approved").length;
   const rejected = itemValues.filter((item) => item.state === "rejected").length;
-  const requiredApprovals = requiredApprovalCount(suggested);
+  const requiredApprovals = requiredApprovalCount(itemValues.length);
   const progress = {
     total: itemValues.length,
     suggested,
@@ -437,6 +451,27 @@ function copyEvent(event: ReviewEventV1): ReviewEventV1 {
   };
 }
 
+const FAILURE_KINDS = new Set([
+  "missing_key",
+  "missing_screenshot",
+  "fetch",
+  "model",
+  "parse",
+  "aborted",
+  "timeout",
+]);
+
+function safeFailureKind(error: string | null): string | null {
+  if (error === null) return null;
+  const category = error.split(":", 1)[0].trim();
+  return FAILURE_KINDS.has(category) ? category : "unknown";
+}
+
+function safeScreenshotEndpoint(id: string): string {
+  const encodedId = encodeURIComponent(id).replace(/\./g, "%2E");
+  return `/api/internal/template-review/screenshots/${encodedId}`;
+}
+
 export function buildReviewExports(
   session: ReviewSessionV1,
   sourceRows: readonly SuggestionArtifactRow[],
@@ -480,13 +515,11 @@ export function buildSafeReviewDto(
   for (const id of validSession.source.templateIds) {
     const row = rowsById.get(id)!;
     const item = state.items[id];
-    const failureKind = row.decision.outcome === "failed" && row.error
-      ? row.error.split(":", 1)[0].trim() || null
-      : null;
+    const failureKind = row.decision.outcome === "failed" ? safeFailureKind(row.error) : null;
     items.push({
       id: row.id,
       name: row.name,
-      screenshotEndpoint: row.screenshotUrl,
+      screenshotEndpoint: safeScreenshotEndpoint(row.id),
       metadata: item.metadata ? copyMetadata(item.metadata) : null,
       failureKind,
       state: item.state,

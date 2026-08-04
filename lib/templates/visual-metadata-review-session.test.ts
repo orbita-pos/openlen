@@ -2,8 +2,8 @@ import { describe, expect, it } from "vitest";
 import type { SuggestionArtifactRow } from "./visual-metadata-review-workflow";
 import type { TemplateVisualMetadata } from "./visual-metadata";
 import {
-  REVIEW_EVENT_VERSION,
-  REVIEW_SESSION_VERSION,
+  ReviewEventV1Schema,
+  ReviewSessionV1Schema,
   applyReviewCommand,
   buildReviewExports,
   buildSafeReviewDto,
@@ -85,7 +85,7 @@ describe("visual metadata review session domain", () => {
     const sourceRows = [row("one")];
     const session = create(sourceRows);
 
-    expect(session.version).toBe(REVIEW_SESSION_VERSION);
+    expect(session.version).toBe("template-visual-metadata-review-session/1.0");
     expect(JSON.stringify(session)).not.toContain("RAW_EVIDENCE_MUST_NEVER_LEAK");
     expect(JSON.stringify(session)).not.toContain("rawModelResponse");
   });
@@ -99,7 +99,7 @@ describe("visual metadata review session domain", () => {
     const session = applyReviewCommand(withEdit, sourceRows, { action: "approved", templateId: "one" }, deps());
 
     expect(session.events.map((event) => [event.version, event.sequence]))
-      .toEqual([[REVIEW_EVENT_VERSION, 1], [REVIEW_EVENT_VERSION, 2]]);
+      .toEqual([["template-visual-metadata-review-event/1.0", 1], ["template-visual-metadata-review-event/1.0", 2]]);
     expect(deriveReviewState(session, sourceRows)).toEqual(deriveReviewState(session, structuredClone(sourceRows)));
     expect(deriveReviewState(session, sourceRows).items["one"]).toMatchObject({
       state: "approved",
@@ -148,6 +148,11 @@ describe("visual metadata review session domain", () => {
     expect(deriveReviewState(rejected, sourceRows).items["one"]).toMatchObject({
       state: "rejected", rejectionReason: "Not a match",
     });
+    const emoji = String.fromCodePoint(0x1f600);
+    const fiveHundredEmoji = applyReviewCommand(create(sourceRows), sourceRows, {
+      action: "rejected", templateId: "one", reason: emoji.repeat(500),
+    }, deps());
+    expect(deriveReviewState(fiveHundredEmoji, sourceRows).items["one"].rejectionReason).toBe(emoji.repeat(500));
   });
 
   it("reopens an approval without erasing history", () => {
@@ -190,18 +195,123 @@ describe("visual metadata review session domain", () => {
   });
 
   it("builds a safe DTO field by field without evidence, raw values, emails, or paths", () => {
-    const sourceRows = [row("one"), row("failed", "failed")];
+    const sourceRows = [row("../one"), row("failed", "failed")];
+    sourceRows[0].screenshotUrl = "file:///C:/private/raw-image.png";
+    sourceRows[1].error = "private local artifact without a failure category";
     const session = create(sourceRows);
     const dto = buildSafeReviewDto(session, sourceRows);
     const serialized = JSON.stringify(dto);
 
     expect(dto.items).toEqual(expect.arrayContaining([
-      expect.objectContaining({ id: "one", screenshotEndpoint: "https://images.example.test/one.jpg", state: "pending" }),
-      expect.objectContaining({ id: "failed", failureKind: "parse", state: "failed", metadata: null }),
+      expect.objectContaining({
+        id: "../one", screenshotEndpoint: "/api/internal/template-review/screenshots/%2E%2E%2Fone", state: "pending",
+      }),
+      expect.objectContaining({ id: "failed", failureKind: "unknown", state: "failed", metadata: null }),
     ]));
     expect(serialized).not.toContain("RAW_EVIDENCE_MUST_NEVER_LEAK");
     expect(serialized).not.toContain("rawModelResponse");
     expect(serialized).not.toContain("ada@example.test");
     expect(serialized).not.toContain("provenance");
+    expect(serialized).not.toContain("file:///C:/private/raw-image.png");
+    expect(serialized).not.toContain("private local artifact without a failure category");
+  });
+
+  it("uses all 450 source rows for the gate when 10 source rows failed", () => {
+    const sourceRows = [
+      ...Array.from({ length: 440 }, (_, index) => row(`suggested-${index}`)),
+      ...Array.from({ length: 10 }, (_, index) => row(`failed-${index}`, "failed")),
+    ];
+    const reviewDeps = deps();
+    let session = create(sourceRows);
+    for (let index = 0; index < 427; index++) {
+      session = applyReviewCommand(session, sourceRows, { action: "approved", templateId: `suggested-${index}` }, reviewDeps);
+    }
+    for (let index = 427; index < 440; index++) {
+      session = applyReviewCommand(session, sourceRows, {
+        action: "rejected", templateId: `suggested-${index}`, reason: "Out of scope",
+      }, reviewDeps);
+    }
+
+    expect(deriveReviewState(session, sourceRows).progress).toMatchObject({
+      total: 450, suggested: 440, failed: 10, pending: 0, requiredApprovals: 428, finalExportEnabled: false,
+    });
+    expect(() => buildReviewExports(session, sourceRows)).toThrow("final export is not enabled");
+    session = applyReviewCommand(session, sourceRows, { action: "reopened", templateId: "suggested-427" }, reviewDeps);
+    session = applyReviewCommand(session, sourceRows, { action: "approved", templateId: "suggested-427" }, reviewDeps);
+    expect(deriveReviewState(session, sourceRows).progress.finalExportEnabled).toBe(true);
+    expect(buildReviewExports(session, sourceRows).reviewed).toHaveLength(428);
+  });
+
+  it("uses a closed allowlist for failed-row categories", () => {
+    const sourceRows = [row("parse", "failed"), row("unknown", "failed")];
+    sourceRows[0].error = "parse: expected metadata";
+    sourceRows[1].error = "file:///C:/private/raw.json";
+    const dto = buildSafeReviewDto(create(sourceRows), sourceRows);
+
+    expect(dto.items.map((item) => item.failureKind)).toEqual(["parse", "unknown"]);
+  });
+
+  it("rejects replay when an approved snapshot differs from the current draft", () => {
+    const sourceRows = [row("one")];
+    const approved = applyReviewCommand(create(sourceRows), sourceRows, { action: "approved", templateId: "one" }, deps());
+    const tampered = structuredClone(approved) as unknown as { events: Array<Record<string, unknown>> };
+    tampered.events[0].metadata = { ...METADATA, themeability: "low", reviewStatus: "reviewed" };
+
+    expect(() => deriveReviewState(tampered as never, sourceRows)).toThrow("approved event metadata does not match draft");
+    expect(() => buildReviewExports(tampered as never, sourceRows)).toThrow("approved event metadata does not match draft");
+  });
+
+  it("rejects strict schema violations for source versions, event snapshots, and rejection reasons", () => {
+    const session = create([row("one")]);
+    const unsupportedSource = structuredClone(session) as unknown as { source: { artifactVersion: string } };
+    unsupportedSource.source.artifactVersion = "template-visual-metadata-suggestion-artifact/999";
+    expect(ReviewSessionV1Schema.safeParse(unsupportedSource).success).toBe(false);
+
+    const approvedEvent = {
+      version: "template-visual-metadata-review-event/1.0",
+      id: "event-1",
+      sequence: 1,
+      at: "2026-08-03T12:00:01.000Z",
+      templateId: "one",
+      action: "approved",
+      metadata: { ...METADATA, reviewStatus: "reviewed", unexpected: true },
+    };
+    expect(ReviewEventV1Schema.safeParse(approvedEvent).success).toBe(false);
+    expect(ReviewEventV1Schema.safeParse({
+      version: "template-visual-metadata-review-event/1.0",
+      id: "event-2",
+      sequence: 2,
+      at: "2026-08-03T12:00:01.000Z",
+      templateId: "one",
+      action: "rejected",
+      reason: "   ",
+    }).success).toBe(false);
+  });
+
+  it("rejects gaps and reordered review event sequences", () => {
+    const sourceRows = [row("one"), row("two")];
+    const reviewDeps = deps();
+    const first = applyReviewCommand(create(sourceRows), sourceRows, { action: "approved", templateId: "one" }, reviewDeps);
+    const twoEvents = applyReviewCommand(first, sourceRows, { action: "approved", templateId: "two" }, reviewDeps);
+    const gap = structuredClone(twoEvents);
+    gap.events[1].sequence = 3;
+    const reordered = structuredClone(twoEvents);
+    reordered.events.reverse();
+
+    expect(() => deriveReviewState(gap, sourceRows)).toThrow("review events must have contiguous sequences");
+    expect(() => deriveReviewState(reordered, sourceRows)).toThrow("review events must have contiguous sequences");
+  });
+
+  it("keeps audit and reviewed exports free of source evidence, raw values, emails, provenance, and paths", () => {
+    const sourceRows = [row("one")];
+    sourceRows[0].screenshotUrl = "file:///C:/private/raw-image.png";
+    sourceRows[0].evidence.rawModelResponse = "raw local evidence";
+    const session = applyReviewCommand(create(sourceRows), sourceRows, { action: "approved", templateId: "one" }, deps());
+    const exported = buildReviewExports(session, sourceRows);
+    const serialized = JSON.stringify(exported);
+
+    for (const forbidden of ["raw local evidence", "rawModelResponse", "ada@example.test", "provenance", "file:///C:/private/raw-image.png"]) {
+      expect(serialized).not.toContain(forbidden);
+    }
   });
 });
