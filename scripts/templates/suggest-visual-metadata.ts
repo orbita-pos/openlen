@@ -1,7 +1,7 @@
 import { writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { listTemplates } from "@/lib/templates/store";
-import { suggestVisualMetadata } from "@/lib/templates/suggest-visual-metadata";
+import { runVisualMetadataSuggestionBatch } from "@/lib/templates/visual-metadata-review-workflow";
 
 function arg(name: string): string | null {
   const i = process.argv.indexOf(name);
@@ -13,25 +13,10 @@ async function main(): Promise<void> {
   if (!out) throw new Error("--out is required");
   const force = process.argv.includes("--force");
   const templates = await listTemplates({ status: "published" });
-  const rows: Array<Record<string, unknown>> = [];
-  let attempted = 0;
-  let failed = 0;
-  for (const template of templates) {
-    if (!force && template.visualMetadata?.reviewStatus === "reviewed") continue;
-    attempted++;
-    const result = await suggestVisualMetadata(template);
-    if (!result.ok) failed++;
-    rows.push({
-      id: template.id,
-      name: template.name,
-      screenshotUrl: template.screenshotUrl,
-      metadata: result.ok ? result.metadata : null,
-      error: result.ok ? null : `${result.kind}: ${result.message}`,
-    });
-  }
-  writeFileSync(resolve(out), `${JSON.stringify(rows, null, 2)}\n`, "utf8");
-  console.log(`attempted=${attempted} failed=${failed} out=${resolve(out)}`);
-  if (attempted > 0 && failed / attempted > 0.10) process.exitCode = 1;
+  const batch = await runVisualMetadataSuggestionBatch(templates, { force });
+  writeFileSync(resolve(out), `${JSON.stringify(batch.rows, null, 2)}\n`, "utf8");
+  console.log(`attempted=${batch.attempted} failed=${batch.failed} out=${resolve(out)}`);
+  if (batch.shouldFail) process.exitCode = 1;
 }
 
 main().catch((error) => {

@@ -1,11 +1,30 @@
-import { TemplateVisualMetadataSchema, type TemplateVisualMetadata } from "./visual-metadata";
+import {
+  TEMPLATE_VISUAL_METADATA_SCHEMA_VERSION,
+  TemplateVisualMetadataSchema,
+  type TemplateVisualMetadata,
+} from "./visual-metadata";
 import type { TemplateRecord } from "./store";
+
+export const VISUAL_METADATA_WORKFLOW_VERSION = "template-visual-metadata-suggestion-workflow/1.0" as const;
+export const VISUAL_METADATA_MODEL_CHOICE_VERSION = "template-visual-metadata-model-choice/1.0" as const;
+export const VISUAL_METADATA_PROMPT_VERSION = "template-visual-metadata-prompt/1.0" as const;
+export const VISUAL_METADATA_GENERATION_CONFIG_VERSION = "template-visual-metadata-generation-config/1.0" as const;
+export const VISUAL_METADATA_FAILURE_POLICY_VERSION = "template-visual-metadata-failure-policy/1.0" as const;
+export const VISUAL_METADATA_TIMEOUT_POLICY_VERSION = "template-visual-metadata-timeout-policy/1.0" as const;
+export const VISUAL_METADATA_MAXIMUM_FAILURE_RATE = 0.10;
+export const VISUAL_METADATA_PER_TEMPLATE_TIMEOUT_MS = 60_000;
+
+const GENERATION_CONFIG = {
+  temperature: 0.2,
+  maxOutputTokens: 2_048,
+  responseMimeType: "application/json",
+  thinkingConfig: { thinkingBudget: 0 },
+} as const;
 
 export function coerceSuggestedMetadata(value: unknown): TemplateVisualMetadata | null {
   if (!value || typeof value !== "object") return null;
   const parsed = TemplateVisualMetadataSchema.safeParse({
     ...(value as Record<string, unknown>),
-    schemaVersion: "template-visual-metadata/1.0",
     reviewStatus: "unreviewed",
   });
   return parsed.success ? parsed.data : null;
@@ -15,46 +34,115 @@ export interface SuggestVisualMetadataOptions {
   apiKey?: string;
   modelId?: string;
   signal?: AbortSignal;
+  timeoutMs?: number;
   fetchImpl?: typeof fetch;
 }
 
-export type SuggestVisualMetadataResult =
-  | { ok: true; metadata: TemplateVisualMetadata; raw: string }
-  | { ok: false; kind: "missing_key" | "missing_screenshot" | "fetch" | "model" | "parse"; message: string };
+export interface SuggestVisualMetadataAudit {
+  workflowVersion: typeof VISUAL_METADATA_WORKFLOW_VERSION;
+  modelChoice: {
+    version: typeof VISUAL_METADATA_MODEL_CHOICE_VERSION;
+    modelId: string;
+  };
+  promptVersion: typeof VISUAL_METADATA_PROMPT_VERSION;
+  schemaVersion: typeof TEMPLATE_VISUAL_METADATA_SCHEMA_VERSION;
+  generationConfig: {
+    version: typeof VISUAL_METADATA_GENERATION_CONFIG_VERSION;
+    temperature: 0.2;
+    maxOutputTokens: 2048;
+    responseMimeType: "application/json";
+    thinkingBudget: 0;
+  };
+  failurePolicy: {
+    version: typeof VISUAL_METADATA_FAILURE_POLICY_VERSION;
+    maximumFailureRate: number;
+  };
+  timeoutPolicy: {
+    version: typeof VISUAL_METADATA_TIMEOUT_POLICY_VERSION;
+    timeoutMs: number;
+  };
+}
 
-export async function suggestVisualMetadata(
-  record: TemplateRecord,
-  options: SuggestVisualMetadataOptions = {},
-): Promise<SuggestVisualMetadataResult> {
-  const apiKey = options.apiKey ?? process.env.GEMINI_API_KEY;
-  if (!apiKey) return { ok: false, kind: "missing_key", message: "GEMINI_API_KEY not set" };
-  if (!record.screenshotUrl) {
-    return { ok: false, kind: "missing_screenshot", message: `template ${record.id} has no screenshot` };
-  }
-  const fetchImpl = options.fetchImpl ?? fetch;
-  let screenshot: Response;
-  try {
-    screenshot = await fetchImpl(record.screenshotUrl, { signal: options.signal });
-  } catch (error) {
-    return { ok: false, kind: "fetch", message: error instanceof Error ? error.message : String(error) };
-  }
-  if (!screenshot.ok) {
-    return { ok: false, kind: "fetch", message: `screenshot ${screenshot.status}` };
-  }
-  const bytes = Buffer.from(await screenshot.arrayBuffer());
-  const mimeType = screenshot.headers.get("content-type")?.split(";")[0] || "image/jpeg";
-  const modelId = options.modelId
-    ?? process.env.OPENLEN_METADATA_MODEL
-    ?? process.env.STYLE_MATCH_TEXT_MODEL
-    ?? "gemini-2.5-flash";
-  const prompt = [
+export type SuggestVisualMetadataFailureKind =
+  | "missing_key"
+  | "missing_screenshot"
+  | "fetch"
+  | "model"
+  | "parse"
+  | "aborted"
+  | "timeout";
+
+export type SuggestVisualMetadataResult =
+  | { ok: true; metadata: TemplateVisualMetadata; raw: string; audit: SuggestVisualMetadataAudit }
+  | {
+      ok: false;
+      kind: SuggestVisualMetadataFailureKind;
+      message: string;
+      raw?: string;
+      audit: SuggestVisualMetadataAudit;
+    };
+
+type CancellationKind = "aborted" | "timeout";
+
+function createAudit(modelId: string, timeoutMs: number): SuggestVisualMetadataAudit {
+  return {
+    workflowVersion: VISUAL_METADATA_WORKFLOW_VERSION,
+    modelChoice: { version: VISUAL_METADATA_MODEL_CHOICE_VERSION, modelId },
+    promptVersion: VISUAL_METADATA_PROMPT_VERSION,
+    schemaVersion: TEMPLATE_VISUAL_METADATA_SCHEMA_VERSION,
+    generationConfig: {
+      version: VISUAL_METADATA_GENERATION_CONFIG_VERSION,
+      temperature: GENERATION_CONFIG.temperature,
+      maxOutputTokens: GENERATION_CONFIG.maxOutputTokens,
+      responseMimeType: GENERATION_CONFIG.responseMimeType,
+      thinkingBudget: GENERATION_CONFIG.thinkingConfig.thinkingBudget,
+    },
+    failurePolicy: {
+      version: VISUAL_METADATA_FAILURE_POLICY_VERSION,
+      maximumFailureRate: VISUAL_METADATA_MAXIMUM_FAILURE_RATE,
+    },
+    timeoutPolicy: { version: VISUAL_METADATA_TIMEOUT_POLICY_VERSION, timeoutMs },
+  };
+}
+
+function failure(
+  audit: SuggestVisualMetadataAudit,
+  kind: SuggestVisualMetadataFailureKind,
+  message: string,
+  raw?: string,
+): SuggestVisualMetadataResult {
+  return raw === undefined
+    ? { ok: false, kind, message, audit }
+    : { ok: false, kind, message, raw, audit };
+}
+
+function cancellationFailure(
+  audit: SuggestVisualMetadataAudit,
+  cancellation: CancellationKind | null,
+  fallbackKind: "fetch" | "model",
+  fallbackMessage: string,
+): SuggestVisualMetadataResult {
+  if (cancellation === "timeout") return failure(audit, "timeout", "template suggestion timed out");
+  if (cancellation === "aborted") return failure(audit, "aborted", "template suggestion aborted");
+  return failure(audit, fallbackKind, fallbackMessage);
+}
+
+function screenshotMimeType(response: Response): string | null {
+  const contentType = response.headers.get("content-type");
+  if (!contentType) return "image/jpeg";
+  const mimeType = contentType.split(";", 1)[0]?.trim().toLowerCase() ?? "";
+  return /^image\/[a-z0-9.+-]+$/.test(mimeType) ? mimeType : null;
+}
+
+function promptFor(record: TemplateRecord): string {
+  return [
     "Analyze the attached full-page template screenshot and return metadata.",
     "Describe what is visibly present, not what the template name implies.",
     "Use lowercase snake_case taxonomy tags.",
     "visualSignals are signals present in the screenshot.",
     "negativeTags are domains/audiences for which this design would be misleading.",
     "Do not mark the result reviewed; human review is mandatory.",
-    "Return strict JSON matching template-visual-metadata/1.0.",
+    `Return strict JSON matching ${TEMPLATE_VISUAL_METADATA_SCHEMA_VERSION}.`,
     "Required keys: schemaVersion, domains, audiences, ageRanges, emotionalRegisters, visualArchetypes, visualSignals, layoutTraits, requiredAssetTypes, negativeTags, supportedSiteTypes, supportedSectionRoles, themeability, identityStrength, reviewStatus.",
     "Every taxonomy collection is an array of lowercase snake_case strings. themeability and identityStrength are low|medium|high. reviewStatus is unreviewed.",
     `Template: ${record.name}`,
@@ -62,6 +150,37 @@ export async function suggestVisualMetadata(
     `Pitch: ${record.pitch}`,
     `Description: ${record.description}`,
   ].join("\n");
+}
+
+async function executeSuggestion(
+  record: TemplateRecord,
+  apiKey: string,
+  modelId: string,
+  fetchImpl: typeof fetch,
+  signal: AbortSignal,
+  audit: SuggestVisualMetadataAudit,
+  cancellationState: { kind: CancellationKind | null },
+): Promise<SuggestVisualMetadataResult> {
+  let screenshot: Response;
+  try {
+    screenshot = await fetchImpl(record.screenshotUrl!, { signal });
+  } catch {
+    return cancellationFailure(audit, cancellationState.kind, "fetch", "screenshot request failed");
+  }
+  if (!screenshot.ok) {
+    return failure(audit, "fetch", `screenshot ${screenshot.status}`);
+  }
+  const mimeType = screenshotMimeType(screenshot);
+  if (!mimeType) {
+    return failure(audit, "fetch", "screenshot content type is not an image");
+  }
+  let bytes: Buffer;
+  try {
+    bytes = Buffer.from(await screenshot.arrayBuffer());
+  } catch {
+    return cancellationFailure(audit, cancellationState.kind, "fetch", "screenshot body unreadable");
+  }
+
   let modelResponse: Response;
   try {
     modelResponse = await fetchImpl(
@@ -69,39 +188,101 @@ export async function suggestVisualMetadata(
       {
         method: "POST",
         headers: { "content-type": "application/json" },
-        signal: options.signal,
+        signal,
         body: JSON.stringify({
           contents: [{ role: "user", parts: [
-            { text: prompt },
+            { text: promptFor(record) },
             { inlineData: { mimeType, data: bytes.toString("base64") } },
           ] }],
-          generationConfig: {
-            temperature: 0.2,
-            maxOutputTokens: 2_048,
-            responseMimeType: "application/json",
-            thinkingConfig: { thinkingBudget: 0 },
-          },
+          generationConfig: GENERATION_CONFIG,
         }),
       },
     );
-  } catch (error) {
-    return { ok: false, kind: "model", message: error instanceof Error ? error.message : String(error) };
+  } catch {
+    return cancellationFailure(audit, cancellationState.kind, "model", "Gemini request failed");
   }
   if (!modelResponse.ok) {
-    return { ok: false, kind: "model", message: `Gemini ${modelResponse.status}` };
+    return failure(audit, "model", `Gemini ${modelResponse.status}`);
   }
-  const payload = await modelResponse.json() as {
-    candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
-  };
-  const raw = payload.candidates?.[0]?.content?.parts?.map((p) => p.text ?? "").join("") ?? "";
+
+  let payload: unknown;
+  try {
+    payload = await modelResponse.json();
+  } catch {
+    return cancellationFailure(audit, cancellationState.kind, "model", "invalid Gemini response envelope");
+  }
+  if (!payload || typeof payload !== "object") {
+    return failure(audit, "model", "invalid Gemini response envelope");
+  }
+  const candidates = (payload as { candidates?: unknown }).candidates;
+  if (!Array.isArray(candidates)) {
+    return failure(audit, "model", "invalid Gemini response envelope");
+  }
+  const first = candidates[0];
+  const parts = first && typeof first === "object"
+    ? (first as { content?: { parts?: unknown } }).content?.parts
+    : null;
+  if (!Array.isArray(parts)) {
+    return failure(audit, "model", "invalid Gemini response envelope");
+  }
+  const raw = parts
+    .map((part) => part && typeof part === "object" && typeof (part as { text?: unknown }).text === "string"
+      ? (part as { text: string }).text
+      : "")
+    .join("");
   let value: unknown;
   try {
     value = JSON.parse(raw.replace(/^```(?:json)?\s*|\s*```$/gi, "").trim());
   } catch {
-    return { ok: false, kind: "parse", message: "malformed metadata JSON" };
+    return failure(audit, "parse", "malformed metadata JSON", raw);
   }
   const metadata = coerceSuggestedMetadata(value);
   return metadata
-    ? { ok: true, metadata, raw }
-    : { ok: false, kind: "parse", message: "metadata schema rejected model output" };
+    ? { ok: true, metadata, raw, audit }
+    : failure(audit, "parse", "metadata schema rejected model output", raw);
+}
+
+export async function suggestVisualMetadata(
+  record: TemplateRecord,
+  options: SuggestVisualMetadataOptions = {},
+): Promise<SuggestVisualMetadataResult> {
+  const modelId = options.modelId
+    ?? process.env.OPENLEN_METADATA_MODEL
+    ?? process.env.STYLE_MATCH_TEXT_MODEL
+    ?? "gemini-2.5-flash";
+  const timeoutMs = Math.max(1, options.timeoutMs ?? VISUAL_METADATA_PER_TEMPLATE_TIMEOUT_MS);
+  const audit = createAudit(modelId, timeoutMs);
+  const apiKey = options.apiKey ?? process.env.GEMINI_API_KEY;
+  if (!apiKey) return failure(audit, "missing_key", "GEMINI_API_KEY not set");
+  if (!record.screenshotUrl) {
+    return failure(audit, "missing_screenshot", `template ${record.id} has no screenshot`);
+  }
+  if (options.signal?.aborted) return failure(audit, "aborted", "template suggestion aborted");
+
+  const controller = new AbortController();
+  const cancellationState: { kind: CancellationKind | null } = { kind: null };
+  let resolveCancellation!: (result: SuggestVisualMetadataResult) => void;
+  const cancellation = new Promise<SuggestVisualMetadataResult>((resolve) => {
+    resolveCancellation = resolve;
+  });
+  const cancel = (kind: CancellationKind): void => {
+    if (cancellationState.kind) return;
+    cancellationState.kind = kind;
+    controller.abort();
+    resolveCancellation(kind === "timeout"
+      ? failure(audit, "timeout", "template suggestion timed out")
+      : failure(audit, "aborted", "template suggestion aborted"));
+  };
+  const timer = setTimeout(() => cancel("timeout"), timeoutMs);
+  const onAbort = (): void => cancel("aborted");
+  options.signal?.addEventListener("abort", onAbort, { once: true });
+  try {
+    return await Promise.race([
+      executeSuggestion(record, apiKey, modelId, options.fetchImpl ?? fetch, controller.signal, audit, cancellationState),
+      cancellation,
+    ]);
+  } finally {
+    clearTimeout(timer);
+    options.signal?.removeEventListener("abort", onAbort);
+  }
 }

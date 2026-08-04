@@ -3,8 +3,10 @@ import { TaxonomySlugSchema } from "@/lib/generation/contracts";
 
 const SlugList = z.array(TaxonomySlugSchema).max(40);
 
+export const TEMPLATE_VISUAL_METADATA_SCHEMA_VERSION = "template-visual-metadata/1.0" as const;
+
 export const TemplateVisualMetadataSchema = z.object({
-  schemaVersion: z.literal("template-visual-metadata/1.0"),
+  schemaVersion: z.literal(TEMPLATE_VISUAL_METADATA_SCHEMA_VERSION),
   domains: SlugList.min(1),
   audiences: SlugList.min(1),
   ageRanges: SlugList,
