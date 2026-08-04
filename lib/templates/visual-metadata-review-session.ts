@@ -1,8 +1,6 @@
 import { z } from "zod";
-import {
-  VISUAL_METADATA_ARTIFACT_VERSION,
-  type SuggestionArtifactRow,
-} from "./visual-metadata-review-workflow";
+import type { SuggestionArtifactRow } from "./visual-metadata-review-workflow";
+import { VISUAL_METADATA_ARTIFACT_VERSION } from "./visual-metadata-suggestion-contract";
 import {
   TEMPLATE_VISUAL_METADATA_SCHEMA_VERSION,
   TemplateVisualMetadataSchema,

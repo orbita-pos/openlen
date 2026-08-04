@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import type { SuggestionArtifactRow } from "./visual-metadata-review-workflow";
 import type { TemplateVisualMetadata } from "./visual-metadata";
 import {
@@ -177,6 +177,22 @@ describe("visual metadata review session domain", () => {
     expect(() => buildReviewExports(session, sourceRows)).toThrow("final export is not enabled");
   });
 
+  it("blocks final export when 19 of 20 suggestions are approved but one remains pending", () => {
+    const sourceRows = Array.from({ length: 20 }, (_, index) => row(`template-${index}`));
+    const reviewDeps = deps();
+    let session = create(sourceRows);
+    for (let index = 0; index < 19; index++) {
+      session = applyReviewCommand(session, sourceRows, {
+        action: "approved", templateId: `template-${index}`,
+      }, reviewDeps);
+    }
+
+    expect(deriveReviewState(session, sourceRows).progress).toMatchObject({
+      requiredApprovals: 19, approved: 19, pending: 1, finalExportEnabled: false,
+    });
+    expect(() => buildReviewExports(session, sourceRows)).toThrow("final export is not enabled");
+  });
+
   it("blocks final export at 427 of 450 and enables it at 428 of 450", () => {
     const sourceRows = Array.from({ length: 450 }, (_, index) => row(String(index)));
     const reviewDeps = deps();
@@ -312,6 +328,20 @@ describe("visual metadata review session domain", () => {
 
     for (const forbidden of ["raw local evidence", "rawModelResponse", "ada@example.test", "provenance", "file:///C:/private/raw-image.png"]) {
       expect(serialized).not.toContain(forbidden);
+    }
+  });
+
+  it("loads the review domain without evaluating the workflow runtime", async () => {
+    vi.resetModules();
+    vi.doMock("./visual-metadata-review-workflow", () => {
+      throw new Error("workflow runtime must not load");
+    });
+    try {
+      await expect(import("./visual-metadata-review-session")).resolves.toMatchObject({
+        REVIEW_SESSION_VERSION: "template-visual-metadata-review-session/1.0",
+      });
+    } finally {
+      vi.doUnmock("./visual-metadata-review-workflow");
     }
   });
 });
