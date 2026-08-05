@@ -2,6 +2,7 @@ import type { TemplateRecord } from "@/lib/templates/store";
 
 import {
   analyzeIntent,
+  INTENT_PROMPT_VERSION,
   type AnalyzeIntentResult,
 } from "./analyze-intent";
 import {
@@ -22,7 +23,7 @@ export type SafeSelectionShadowLog =
   | {
       status: "ok";
       schemaVersion: "safe-selection-shadow/1.0";
-      promptVersion: "intent-prompt/1.0";
+      promptVersion: typeof INTENT_PROMPT_VERSION;
       policyVersion: typeof DECISION_POLICY_VERSION;
       modelId: string;
       decision: ReturnType<typeof decideGenerationRoute>;

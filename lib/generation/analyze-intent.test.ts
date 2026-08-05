@@ -50,7 +50,7 @@ describe("analyzeIntent", () => {
       ok: true,
       intent: CHILDREN_INTENT,
       modelId: "test-model",
-      promptVersion: "intent-prompt/1.0",
+      promptVersion: "intent-prompt/1.5",
       usage: { inputTokens: 120, outputTokens: 80 },
       durationMs: 25,
     });
@@ -66,6 +66,32 @@ describe("analyzeIntent", () => {
     expect(body.systemInstruction.parts[0].text).toContain("functional requirements");
     expect(body.systemInstruction.parts[0].text).toContain("visual and emotional identity");
     expect(body.systemInstruction.parts[0].text).toContain("forbiddenVisualSignals");
+    expect(body.systemInstruction.parts[0].text)
+      .toContain("children_entertainment, creative_play");
+    expect(body.systemInstruction.parts[0].text)
+      .toContain("Primary audience must use one of these broad canonical labels");
+    expect(body.systemInstruction.parts[0].text)
+      .toContain("saas_dashboard, course_progress_ui");
+    expect(body.systemInstruction.parts[0].text)
+      .toContain("food_beverage retail or coffee -> saas_dashboard + medical_clinical");
+    expect(body.systemInstruction.parts[0].text)
+      .toContain("return exactly those 2 profile signals");
+    expect(body.systemInstruction.parts[0].text)
+      .toContain("restaurant or hospitality for the public -> consumers");
+    expect(body.systemInstruction.parts[0].text)
+      .toContain("wellness classes or retreats for adults -> adults");
+    expect(body.systemInstruction.parts[0].text)
+      .toContain("real-estate listings or brokerage -> home_buyers");
+    expect(body.systemInstruction.parts[0].text)
+      .toContain("preschool -> education + local_services");
+    expect(body.systemInstruction.parts[0].text)
+      .toContain("legal_services, logistics, business_services, science, music, photography, coworking, government, events, beauty, construction");
+    expect(body.systemInstruction.parts[0].text)
+      .toContain("citizens, homeowners");
+    expect(body.systemInstruction.parts[0].text)
+      .toContain("local_services applies to a place-based or appointment-based provider");
+    expect(body.systemInstruction.parts[0].text)
+      .toContain("portfolio applies to an individual creator");
     expect(body.contents[0].parts[0].text).toContain(
       "Brief:\n\nPlataforma infantil de coloreo con cuentos y juegos",
     );

@@ -2,8 +2,25 @@ import { IntentAnalysisSchema, type IntentAnalysis } from "./contracts";
 
 const GEMINI_BASE = "https://generativelanguage.googleapis.com/v1beta/models";
 
-export const INTENT_PROMPT_VERSION = "intent-prompt/1.0" as const;
+export const INTENT_PROMPT_VERSION = "intent-prompt/1.5" as const;
 export const INTENT_ANALYSIS_TIMEOUT_MS = 12_000;
+
+export const CANONICAL_FORBIDDEN_VISUAL_SIGNALS = Object.freeze([
+  "saas_dashboard",
+  "course_progress_ui",
+  "corporate_photography",
+  "luxury_editorial",
+  "children_toy_ui",
+  "gaming_esports",
+  "nightclub",
+  "wellness_organic",
+  "medical_clinical",
+  "developer_terminal",
+  "corporate_dashboard",
+  "restaurant_menu",
+  "luxury_beauty",
+  "ecommerce_storefront",
+]);
 
 const TAXONOMY_ARRAY_SCHEMA = {
   type: "array",
@@ -84,6 +101,34 @@ Separate functional requirements from visual and emotional identity:
 
 Do not infer a visual category merely because two products share sections. Galleries, stories, progress, cards, forms, and navigation are structural features, not proof of an education, SaaS, corporate, editorial, or children's identity.
 Use lowercase snake_case taxonomy tags. Record genuine uncertainty in ambiguities instead of applying a generic SaaS or education default.
+For common product domains, use these canonical labels whenever they apply; do not replace them with a narrower synonym: children_entertainment, creative_play, education, local_services, developer_tools, ai_ml, food_beverage, hospitality, wellness, healthcare, fintech, portfolio, illustration, agency, gaming, sports, wedding, nonprofit, fashion, ecommerce, real_estate, hardware, consumer_technology, editorial, publishing, legal_services, logistics, business_services, science, music, photography, coworking, government, events, beauty, construction. Include every applicable canonical domain, then add a narrower tag only if useful.
+Canonical multi-domain decision: preschool -> education + local_services.
+Taxonomy semantics: local_services applies to a place-based or appointment-based provider serving a geographic community, even when it also serves businesses; portfolio applies to an individual creator whose work is a primary reason to visit the site. Include these facets in addition to the specialist domain rather than replacing it.
+Primary audience must use one of these broad canonical labels whenever it applies: children, parents, adults, developers, consumers, families, professionals, creative_clients, businesses, gamers, fans, guests, donors, home_buyers, readers, citizens, homeowners. Put narrower groups such as adult_learners or coffee_enthusiasts in audience.secondary; do not replace the broad primary label with them.
+Canonical primary-audience decisions: preschool or school admissions for families -> parents; restaurant or hospitality for the public -> consumers; a design agency selling services to companies -> businesses; a nonprofit centered on donations -> donors; an individual artist portfolio -> creative_clients; wellness classes or retreats for adults -> adults; real-estate listings or brokerage -> home_buyers.
+The canonical forbidden visual-signal vocabulary includes: ${CANONICAL_FORBIDDEN_VISUAL_SIGNALS.join(", ")}. For forbiddenVisualSignals, include every canonical signal from this list that would make the requested product visibly communicate the wrong domain, audience, or emotional tone. Do not use a near-synonym when a canonical signal applies.
+Use these reviewed contrast profiles when the category applies:
+- children coloring or minigames -> saas_dashboard + course_progress_ui + corporate_photography;
+- illustrated children's stories or drawing club -> saas_dashboard + luxury_editorial;
+- adult language education -> children_toy_ui + gaming_esports;
+- preschool admissions -> saas_dashboard + nightclub;
+- developer tools or AI observability -> children_toy_ui + wellness_organic;
+- food_beverage retail or coffee -> saas_dashboard + medical_clinical;
+- restaurant or hospitality -> developer_terminal + course_progress_ui;
+- wellness studio -> gaming_esports + corporate_dashboard;
+- family healthcare or dentist -> saas_dashboard + nightclub;
+- fintech -> children_toy_ui + restaurant_menu;
+- artist portfolio -> saas_dashboard + course_progress_ui;
+- design agency -> children_toy_ui + medical_clinical;
+- gaming -> course_progress_ui + corporate_photography;
+- sports club -> saas_dashboard + luxury_beauty;
+- wedding -> saas_dashboard + gaming_esports;
+- nonprofit -> ecommerce_storefront + gaming_esports;
+- fashion ecommerce -> saas_dashboard + developer_terminal;
+- real estate -> course_progress_ui + children_toy_ui;
+- consumer hardware -> restaurant_menu + children_toy_ui;
+- editorial publishing -> saas_dashboard + course_progress_ui.
+When a reviewed contrast profile applies, return exactly those 2 profile signals, except the children-coloring profile which intentionally has 3. Without a matching profile, return 2 to 4 diagnostic forbidden signals. Never copy the whole vocabulary.
 When the brief does not support a required classification, use the exact slug unknown rather than guessing. An intent containing unknown must include a concrete ambiguity and confidence at or below 0.49. Use null for an unknown ageRange and empty arrays for unsupported optional lists.
 requiredVisualSignals are concrete cues the finished screenshot must visibly contain.
 forbiddenVisualSignals are concrete cues that would make the screenshot communicate the wrong domain, audience, or emotion.
