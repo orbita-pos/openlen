@@ -324,6 +324,15 @@ describe("openReviewBrowser", () => {
 
 describe("reviewer CLI entry", () => {
   const npm = process.platform === "win32" ? "npm.cmd" : "npm";
+  const runPublicReviewer = (args: readonly string[]) => {
+    const options = { cwd: process.cwd(), env: { ...process.env, INARIWATCH_CAPTURE_V2: "false" } };
+    return process.platform === "win32"
+      ? execFile(process.env.ComSpec ?? "cmd.exe", [
+        "/d", "/s", "/c",
+        `npm.cmd run --silent templates:visual-metadata:review -- ${args.join(" ")}`,
+      ], options)
+      : execFile(npm, ["run", "--silent", "templates:visual-metadata:review", "--", ...args], options);
+  };
   const runConfiguredReviewer = (args: readonly string[]) => {
     const filter = resolve(process.cwd(), "scripts/templates/reviewer/capture-local-output-filter.mjs");
     const entry = resolve(process.cwd(), "scripts/templates/reviewer/review-visual-metadata.mts");
@@ -352,14 +361,29 @@ describe("reviewer CLI entry", () => {
     });
   });
 
-  it("keeps the public npm command on the scoped reviewer runtime", async () => {
-    const options = { cwd: process.cwd(), env: { ...process.env, INARIWATCH_CAPTURE_V2: "false" } };
-    const command = process.platform === "win32"
-      ? execFile(process.env.ComSpec ?? "cmd.exe", ["/d", "/s", "/c", "npm.cmd run templates:visual-metadata:review -- --unknown-flag"], options)
-      : execFile(npm, ["run", "templates:visual-metadata:review", "--", "--unknown-flag"], options);
-    await expect(command).rejects.toMatchObject({
-      stderr: expect.stringContaining("error=REVIEW_LAUNCH_ARGUMENTS_INVALID"),
-    });
+  it("prints exactly one aggregate line through the silent public npm command", async () => {
+    const directory = await mkdtemp(join(tmpdir(), "openlen-reviewer-public-cli-"));
+    const inputPath = join(directory, "synthetic-valid.json");
+    await writeFile(inputPath, `${JSON.stringify(validCliArtifact())}\n`, "utf8");
+    try {
+      const result = await runPublicReviewer(["--input", inputPath, "--validate-only"]);
+      expect(result.stdout).toBe("rows=20 unique=20 suggested=19 failed=1 requiredApprovals=19 decisions=0\n");
+      expect(result.stderr).toBe("");
+    } finally {
+      await rm(directory, { recursive: true, force: true });
+    }
+  });
+
+  it("prints only a typed error through the silent public npm command", async () => {
+    const error = await runPublicReviewer(["--unknown-flag"]).then(
+      () => { throw new Error("expected the public command to exit nonzero"); },
+      (caught: unknown) => caught as { code?: unknown; stdout?: unknown; stderr?: unknown },
+    );
+
+    expect(error.code).toEqual(expect.any(Number));
+    expect(error.code).not.toBe(0);
+    expect(error.stdout).toBe("");
+    expect(error.stderr).toBe("error=REVIEW_LAUNCH_ARGUMENTS_INVALID\n");
   });
 });
 
