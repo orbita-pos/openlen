@@ -61,7 +61,7 @@ npm.cmd run templates:visual-metadata:import -- --input scratch/template-visual-
 To validate an artifact without identity, client build, listener, session, lock, or outputs:
 
 ```powershell
-npm.cmd run templates:visual-metadata:review -- --input scratch/template-visual-metadata-review.json --validate-only
+npm.cmd run --silent templates:visual-metadata:review -- --input scratch/template-visual-metadata-review.json --validate-only
 ```
 
 For the current real artifact, the only output line is:
