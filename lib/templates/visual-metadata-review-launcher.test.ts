@@ -1,7 +1,10 @@
 import { EventEmitter } from "node:events";
 import { execFile as executeFile } from "node:child_process";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
 import { promisify } from "node:util";
-import { resolve } from "node:path";
+import { join, resolve } from "node:path";
+import { pathToFileURL } from "node:url";
 import { describe, expect, it, vi } from "vitest";
 import type { BuildOptions, BuildResult } from "esbuild";
 import type { ReviewClientAssets, RunningReviewServer, VisualMetadataReviewServerOptions } from "./visual-metadata-review-server";
@@ -26,6 +29,32 @@ const REQUIRED_PATH_ARGS = [
   "--audit-out", "scratch/audit.json",
 ] as const;
 const execFile = promisify(executeFile);
+
+function validCliArtifact(): unknown[] {
+  const metadata = {
+    schemaVersion: "template-visual-metadata/1.0", domains: ["saas"], audiences: ["founders"], ageRanges: [],
+    emotionalRegisters: [], visualArchetypes: [], visualSignals: [], layoutTraits: [], requiredAssetTypes: [],
+    negativeTags: [], supportedSiteTypes: ["landing_page"], supportedSectionRoles: ["hero"],
+    themeability: "high", identityStrength: "medium", reviewStatus: "unreviewed",
+  };
+  const provenance = {
+    workflowVersion: "template-visual-metadata-suggestion-workflow/1.0",
+    modelChoice: { version: "template-visual-metadata-model-choice/1.0", modelId: "synthetic-cli" },
+    promptVersion: "template-visual-metadata-prompt/3.0", schemaVersion: "template-visual-metadata/1.0",
+    generationConfig: { version: "template-visual-metadata-generation-config/3.0", temperature: 0.2, maxOutputTokens: 2048, responseMimeType: "application/json", responseJsonSchemaVersion: "template-visual-metadata/1.0", thinkingBudget: 0 },
+    failurePolicy: { version: "template-visual-metadata-failure-policy/1.0", maximumFailureRate: 0.1 },
+    timeoutPolicy: { version: "template-visual-metadata-timeout-policy/1.0", timeoutMs: 60_000 },
+  };
+  const base = { artifactVersion: "template-visual-metadata-suggestion-artifact/1.0", recordedAt: "2026-08-04T00:00:00.000Z", provenance };
+  return [
+    ...Array.from({ length: 19 }, (_, index) => ({
+      ...base, decision: { version: "template-visual-metadata-suggestion-decision/1.0", outcome: "suggested" },
+      id: `cli-${index + 1}`, name: `CLI synthetic ${index + 1}`, screenshotUrl: "https://templates.openlen.com/synthetic.png",
+      metadata, error: null, evidence: { rawModelResponse: null },
+    })),
+    { ...base, decision: { version: "template-visual-metadata-suggestion-decision/1.0", outcome: "failed" }, id: "cli-failure", name: "CLI typed failure", screenshotUrl: null, metadata: null, error: "timeout: synthetic", evidence: { rawModelResponse: null } },
+  ];
+}
 
 function makeLoadedSource(): LoadedReviewSource {
   return {
@@ -294,12 +323,41 @@ describe("openReviewBrowser", () => {
 });
 
 describe("reviewer CLI entry", () => {
-  it("loads capture and reaches argument validation in its configured module mode", async () => {
-    const entry = resolve(process.cwd(), "scripts/templates/review-visual-metadata.ts");
-    await expect(execFile(process.execPath, ["--import", "tsx", entry, "--unknown-flag"], {
-      cwd: process.cwd(),
-      env: { ...process.env, INARIWATCH_CAPTURE_V2: "false" },
-    })).rejects.toMatchObject({
+  const npm = process.platform === "win32" ? "npm.cmd" : "npm";
+  const runConfiguredReviewer = (args: readonly string[]) => {
+    const filter = resolve(process.cwd(), "scripts/templates/reviewer/capture-local-output-filter.mjs");
+    const entry = resolve(process.cwd(), "scripts/templates/reviewer/review-visual-metadata.mts");
+    return execFile(process.execPath, ["--import", pathToFileURL(filter).href, "--import", "tsx", entry, ...args], {
+      cwd: process.cwd(), env: { ...process.env, INARIWATCH_CAPTURE_V2: "false" },
+    });
+  };
+
+  it("prints only the validate-only aggregate through the configured npm entry", async () => {
+    const directory = await mkdtemp(join(tmpdir(), "openlen-reviewer-cli-"));
+    const inputPath = join(directory, "synthetic-valid.json");
+    await writeFile(inputPath, `${JSON.stringify(validCliArtifact())}\n`, "utf8");
+    try {
+      const result = await runConfiguredReviewer(["--input", inputPath, "--validate-only"]);
+      expect(result.stdout).toBe("rows=20 unique=20 suggested=19 failed=1 requiredApprovals=19 decisions=0\n");
+      expect(result.stderr).toBe("");
+    } finally {
+      await rm(directory, { recursive: true, force: true });
+    }
+  });
+
+  it("prints only a fixed typed category on configured-entry errors", async () => {
+    await expect(runConfiguredReviewer(["--unknown-flag"])).rejects.toMatchObject({
+      stdout: "",
+      stderr: "error=REVIEW_LAUNCH_ARGUMENTS_INVALID\n",
+    });
+  });
+
+  it("keeps the public npm command on the scoped reviewer runtime", async () => {
+    const options = { cwd: process.cwd(), env: { ...process.env, INARIWATCH_CAPTURE_V2: "false" } };
+    const command = process.platform === "win32"
+      ? execFile(process.env.ComSpec ?? "cmd.exe", ["/d", "/s", "/c", "npm.cmd run templates:visual-metadata:review -- --unknown-flag"], options)
+      : execFile(npm, ["run", "templates:visual-metadata:review", "--", "--unknown-flag"], options);
+    await expect(command).rejects.toMatchObject({
       stderr: expect.stringContaining("error=REVIEW_LAUNCH_ARGUMENTS_INVALID"),
     });
   });

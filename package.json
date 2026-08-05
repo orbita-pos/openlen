@@ -74,7 +74,7 @@
     "templates:tiles": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/templates/generate-tiles.ts",
     "templates:visual-metadata:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/templates/bootstrap-visual-metadata-column.ts",
     "templates:visual-metadata:suggest": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/templates/suggest-visual-metadata.ts",
-    "templates:visual-metadata:review": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/templates/review-visual-metadata.ts",
+    "templates:visual-metadata:review": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json --import ./scripts/templates/reviewer/capture-local-output-filter.mjs scripts/templates/reviewer/review-visual-metadata.mts",
     "templates:visual-metadata:import": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/templates/import-visual-metadata.ts",
     "test:template-reviewer": "vitest run lib/fs/write-json-atomic.test.ts lib/templates/visual-metadata-review-session.test.ts lib/templates/visual-metadata-review-session-store.test.ts lib/templates/visual-metadata-review-server.test.ts lib/templates/visual-metadata-review-launcher.test.ts tools/template-visual-metadata-reviewer/api.test.ts tools/template-visual-metadata-reviewer/app.test.tsx",
     "templates:bootstrap-tile-column": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/templates/bootstrap-tile-column.ts",

@@ -1,6 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 import { Buffer } from "node:buffer";
-import { mkdtemp, readdir, rm, writeFile } from "node:fs/promises";
+import { createHash } from "node:crypto";
+import { mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { buildReviewClientAssets } from "../../lib/templates/visual-metadata-review-launcher";
@@ -12,6 +13,12 @@ import {
   type SuggestionArtifactRow,
 } from "../../lib/templates/visual-metadata-review-workflow";
 import type { ReviewClientAssets } from "../../lib/templates/visual-metadata-review-server";
+import {
+  REVIEW_AUDIT_VERSION,
+  REVIEW_SESSION_VERSION,
+  ReviewEventV1Schema,
+} from "../../lib/templates/visual-metadata-review-session";
+import { TemplateVisualMetadataSchema } from "../../lib/templates/visual-metadata";
 
 const TEST_REVIEWER = { name: "E2E Test Reviewer", email: "e2e-reviewer@example.test" };
 const PNG = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9WlHh34AAAAASUVORK5CYII=", "base64");
@@ -111,6 +118,34 @@ async function expectScreenshotReady(page: Page): Promise<void> {
   await expect(page.getByRole("button", { name: /Approve/ })).toBeEnabled();
 }
 
+function assertFinalExports(reviewedValue: unknown, auditValue: unknown, sourceBytes: Buffer): void {
+  if (!Array.isArray(reviewedValue) || reviewedValue.length !== 19) throw new Error("reviewed export must contain 19 approvals");
+  const expectedIds = Array.from({ length: 19 }, (_, index) => `synthetic-${String(index + 1).padStart(2, "0")}`);
+  const reviewedIds = reviewedValue.map((entry) => {
+    if (!entry || typeof entry !== "object" || Array.isArray(entry)) throw new Error("reviewed export entry must be an object");
+    const candidate = entry as { id?: unknown; metadata?: unknown };
+    if (typeof candidate.id !== "string" || !TemplateVisualMetadataSchema.safeParse(candidate.metadata).success
+      || (candidate.metadata as { reviewStatus?: unknown }).reviewStatus !== "reviewed") {
+      throw new Error("reviewed export entry must be reviewed metadata");
+    }
+    return candidate.id;
+  });
+  if (JSON.stringify(reviewedIds) !== JSON.stringify(expectedIds)) throw new Error("reviewed export IDs must match approved suggestions");
+  if (!auditValue || typeof auditValue !== "object" || Array.isArray(auditValue)) throw new Error("audit export must be an object");
+  const audit = auditValue as { version?: unknown; sessionVersion?: unknown; source?: unknown; events?: unknown };
+  const source = audit.source as { artifactVersion?: unknown; sha256?: unknown } | null;
+  if (audit.version !== REVIEW_AUDIT_VERSION || audit.sessionVersion !== REVIEW_SESSION_VERSION
+    || !source || source.artifactVersion !== VISUAL_METADATA_ARTIFACT_VERSION
+    || source.sha256 !== createHash("sha256").update(sourceBytes).digest("hex") || !Array.isArray(audit.events)) {
+    throw new Error("audit export source proof is invalid");
+  }
+  const events = audit.events.map((event) => ReviewEventV1Schema.parse(event));
+  if (events.length !== 19 || events.some((event, index) => event.sequence !== index + 1 || event.action !== "approved")
+    || JSON.stringify(events.map((event) => event.templateId)) !== JSON.stringify(expectedIds)) {
+    throw new Error("audit export must cover every approved decision");
+  }
+}
+
 test.describe("template visual metadata reviewer", () => {
   let harness: Harness;
 
@@ -159,6 +194,16 @@ test.describe("template visual metadata reviewer", () => {
     await expect(page.getByText("Ready to export")).toBeVisible();
     await page.getByRole("button", { name: "Export reviewed artifact" }).click();
     await expect.poll(() => readdir(harness.directory)).toEqual(expect.arrayContaining(["reviewed.json", "audit.json"]));
+    const [sourceBytes, reviewedText, auditText] = await Promise.all([
+      readFile(harness.inputPath),
+      readFile(join(harness.directory, "reviewed.json"), "utf8"),
+      readFile(join(harness.directory, "audit.json"), "utf8"),
+    ]);
+    const reviewed = JSON.parse(reviewedText) as unknown;
+    const audit = JSON.parse(auditText) as unknown;
+    expect(() => assertFinalExports((reviewed as unknown[]).slice(0, 18), audit, sourceBytes))
+      .toThrow("reviewed export must contain 19 approvals");
+    assertFinalExports(reviewed, audit, sourceBytes);
   });
 
   test("cannot approve before the screenshot proxy succeeds", async ({ page }) => {

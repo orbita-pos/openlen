@@ -2,7 +2,7 @@ import "@inariwatch/capture/auto";
 import {
   VisualMetadataReviewLauncherError,
   runVisualMetadataReviewer,
-} from "../../lib/templates/visual-metadata-review-launcher";
+} from "../../../lib/templates/visual-metadata-review-launcher";
 
 async function main(): Promise<void> {
   await runVisualMetadataReviewer();
