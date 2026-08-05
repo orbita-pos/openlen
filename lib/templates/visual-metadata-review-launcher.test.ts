@@ -1,4 +1,7 @@
 import { EventEmitter } from "node:events";
+import { execFile as executeFile } from "node:child_process";
+import { promisify } from "node:util";
+import { resolve } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 import type { BuildOptions, BuildResult } from "esbuild";
 import type { ReviewClientAssets, RunningReviewServer, VisualMetadataReviewServerOptions } from "./visual-metadata-review-server";
@@ -22,6 +25,7 @@ const REQUIRED_PATH_ARGS = [
   "--reviewed-out", "scratch/reviewed.json",
   "--audit-out", "scratch/audit.json",
 ] as const;
+const execFile = promisify(executeFile);
 
 function makeLoadedSource(): LoadedReviewSource {
   return {
@@ -286,6 +290,18 @@ describe("openReviewBrowser", () => {
       code: "REVIEW_BROWSER_URL_REJECTED",
     });
     expect(spawn).not.toHaveBeenCalled();
+  });
+});
+
+describe("reviewer CLI entry", () => {
+  it("loads capture and reaches argument validation in its configured module mode", async () => {
+    const entry = resolve(process.cwd(), "scripts/templates/review-visual-metadata.ts");
+    await expect(execFile(process.execPath, ["--import", "tsx", entry, "--unknown-flag"], {
+      cwd: process.cwd(),
+      env: { ...process.env, INARIWATCH_CAPTURE_V2: "false" },
+    })).rejects.toMatchObject({
+      stderr: expect.stringContaining("error=REVIEW_LAUNCH_ARGUMENTS_INVALID"),
+    });
   });
 });
 
