@@ -126,7 +126,7 @@ export function MetadataInspector({
               <legend>{group.title}</legend>
               {group.fields.map((field) => (
                 <ChipEditor
-                  key={field.key}
+                  key={`${item?.id ?? "no-item"}:${field.key}`}
                   field={field}
                   values={metadata[field.key]}
                   disabled={!editable}

@@ -218,6 +218,27 @@ describe("template visual metadata reviewer", () => {
     expect(host!.textContent).toContain("design_systems");
   });
 
+  it("discards chip draft and error when navigation changes the template", async () => {
+    const api = makeApi();
+    await render(api);
+    const editor = host!.querySelector<HTMLInputElement>("input[aria-label='Add domains tag']")!;
+    await input(editor, "invalid draft");
+    await key("Enter", editor);
+    expect(host!.textContent).toContain("Use lowercase snake_case");
+    await input(editor, "one_only");
+
+    await click(host!.querySelector("button[aria-controls='review-queue']"));
+    const toTwo = [...host!.querySelectorAll<HTMLButtonElement>("#review-queue li button")]
+      .find((button) => button.textContent?.includes("Template two"))!;
+    await click(toTwo);
+
+    const nextEditor = host!.querySelector<HTMLInputElement>("input[aria-label='Add domains tag']")!;
+    expect(nextEditor.value).toBe("");
+    expect(host!.textContent).not.toContain("Use lowercase snake_case");
+    await key("Enter", nextEditor);
+    expect(api.updateMetadata).not.toHaveBeenCalled();
+  });
+
   it("requires rejection reason and advances after a successful decision", async () => {
     const api = makeApi();
     await render(api);

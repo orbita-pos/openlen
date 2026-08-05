@@ -3,12 +3,16 @@ import { mkdtemp, open, readFile, readdir, rename, rm, rmdir, unlink } from "nod
 import { isAbsolute, join, relative, resolve } from "node:path";
 import { writeJsonAtomic, type AtomicWriteResult } from "../fs/write-json-atomic";
 import {
-  REVIEW_AUDIT_VERSION, REVIEW_SESSION_VERSION, ReviewSessionV1Schema, applyReviewCommand, buildReviewExports,
+  ReviewSessionV1Schema, applyReviewCommand, buildReviewAudit, buildReviewExports,
   buildSafeReviewDto, createReviewSession, deriveReviewState, requiredApprovalCount,
-  type DerivedReviewState, type ReviewAuditV1, type ReviewCommand, type ReviewSessionV1,
+  setReviewSessionCurrentTemplate,
+  type DerivedReviewState, type ReviewCommand, type ReviewSessionV1,
   type SafeReviewItemDto, type SafeReviewSessionDto,
 } from "./visual-metadata-review-session";
-import { validateSuggestionArtifactSeed, type SuggestionArtifactRow } from "./visual-metadata-review-workflow";
+import {
+  validateSuggestionArtifactSeed,
+  type SuggestionArtifactRow,
+} from "./visual-metadata-suggestion-contract";
 
 const LOCK_VERSION = "template-visual-metadata-review-lock/1.0" as const;
 const LOCK_GUARD_VERSION = "template-visual-metadata-review-lock-guard/1.0" as const;
@@ -139,11 +143,6 @@ function parseGuardRecovery(value: unknown): ReviewLockGuardRecovery | null {
   if (Object.keys(recovery).length !== 4 || recovery.version !== LOCK_GUARD_RECOVERY_VERSION || !Number.isSafeInteger(recovery.pid)
     || (recovery.pid as number) < 1 || typeof recovery.processUuid !== "string" || !UUID.test(recovery.processUuid) || !validIso(recovery.startedAt)) return null;
   return { version: LOCK_GUARD_RECOVERY_VERSION, pid: recovery.pid as number, processUuid: recovery.processUuid, startedAt: recovery.startedAt };
-}
-function auditFor(session: ReviewSessionV1): ReviewAuditV1 {
-  return { version: REVIEW_AUDIT_VERSION, sessionVersion: REVIEW_SESSION_VERSION,
-    source: { artifactVersion: session.source.artifactVersion, sha256: session.source.sha256 }, reviewerName: session.reviewer.name,
-    createdAt: session.createdAt, events: structuredClone(session.events) };
 }
 async function readSession(path: string): Promise<ReviewSessionV1 | null> {
   try { return ReviewSessionV1Schema.parse(JSON.parse((await readFile(path)).toString("utf8"))); }
@@ -383,13 +382,12 @@ export async function openVisualMetadataReviewWorkspace(config: ReviewWorkspaceC
     throw new ReviewWorkspacePersistenceError();
   }
 
-  let currentTemplateId: string | null = deriveReviewState(session, source.rows).currentTemplateId;
   let frozen: ReviewWorkspacePersistenceError | null = null;
   let closed = false;
   let chain: Promise<void> = Promise.resolve();
   const snapshot = (): ReviewWorkspaceSnapshot => {
     const state = deriveReviewState(session, source.rows);
-    return { session: cloneSession(session), state, currentTemplateId: currentTemplateId && state.items[currentTemplateId] ? currentTemplateId : state.currentTemplateId };
+    return { session: cloneSession(session), state, currentTemplateId: state.currentTemplateId };
   };
   const sourceRowsById = new Map(source.rows.map((row) => [row.id, row] as const));
   const enqueue = <T>(operation: () => Promise<T>, allowClosed = false): Promise<T> => {
@@ -402,9 +400,7 @@ export async function openVisualMetadataReviewWorkspace(config: ReviewWorkspaceC
   return {
     snapshot,
     getSafeReviewDto() {
-      const dto = buildSafeReviewDto(session, source.rows);
-      if (dto.session.phase === "review") dto.session.currentTemplateId = snapshot().currentTemplateId;
-      return structuredClone(dto);
+      return structuredClone(buildSafeReviewDto(session, source.rows));
     },
     getScreenshotSourceUrl(id) {
       return sourceRowsById.get(String(id))?.screenshotUrl ?? null;
@@ -415,23 +411,34 @@ export async function openVisualMetadataReviewWorkspace(config: ReviewWorkspaceC
       return enqueue(async () => {
         let next: ReviewSessionV1;
         try { next = applyReviewCommand(session, source.rows, immutableCommand, { now, eventId }); } catch { throw new ReviewWorkspaceCommandError(); }
-        await persistSession(next); session = next; currentTemplateId = deriveReviewState(session, source.rows).currentTemplateId; return snapshot();
+        await persistSession(next); session = next; return snapshot();
       });
     },
     setCurrentTemplate(id) {
       const immutableId = String(id);
-      return enqueue(async () => { if (!deriveReviewState(session, source.rows).items[immutableId]) throw new ReviewWorkspaceCommandError(); currentTemplateId = immutableId; return snapshot(); });
+      return enqueue(async () => {
+        let next: ReviewSessionV1;
+        try { next = setReviewSessionCurrentTemplate(session, source.rows, immutableId, now()); }
+        catch { throw new ReviewWorkspaceCommandError(); }
+        await persistSession(next);
+        session = next;
+        return snapshot();
+      });
     },
     exportFinal() {
       return enqueue(async () => {
-        const exports = buildReviewExports(session, source.rows);
+        const exports = buildReviewExports(session, source.rows, now());
         try { await writeJson(frozenConfig.auditOutputPath, exports.audit); await writeJson(frozenConfig.reviewedOutputPath, exports.reviewed); }
         catch { frozen = new ReviewWorkspacePersistenceError(); throw frozen; }
         return { reviewedPath: frozenConfig.reviewedRelativePath, auditPath: frozenConfig.auditRelativePath };
       });
     },
     exportAuditBackup() {
-      return enqueue(async () => { try { await writeJson(frozenConfig.auditOutputPath, auditFor(session)); } catch { frozen = new ReviewWorkspacePersistenceError(); throw frozen; } return { auditPath: frozenConfig.auditRelativePath }; });
+      return enqueue(async () => {
+        try { await writeJson(frozenConfig.auditOutputPath, buildReviewAudit(session, source.rows, now())); }
+        catch { frozen = new ReviewWorkspacePersistenceError(); throw frozen; }
+        return { auditPath: frozenConfig.auditRelativePath };
+      });
     },
     close() { return enqueue(async () => { if (closed) return; await releaseLock(frozenConfig.lockPath, lock, dependencies.onAfterReleaseLockGuard); closed = true; }, true); },
   };

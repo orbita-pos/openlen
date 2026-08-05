@@ -11,7 +11,7 @@ import {
   VISUAL_METADATA_ARTIFACT_VERSION,
   VISUAL_METADATA_DECISION_VERSION,
   type SuggestionArtifactRow,
-} from "../../lib/templates/visual-metadata-review-workflow";
+} from "../../lib/templates/visual-metadata-suggestion-contract";
 import type { ReviewClientAssets } from "../../lib/templates/visual-metadata-review-server";
 import {
   REVIEW_AUDIT_VERSION,
@@ -132,11 +132,30 @@ function assertFinalExports(reviewedValue: unknown, auditValue: unknown, sourceB
   });
   if (JSON.stringify(reviewedIds) !== JSON.stringify(expectedIds)) throw new Error("reviewed export IDs must match approved suggestions");
   if (!auditValue || typeof auditValue !== "object" || Array.isArray(auditValue)) throw new Error("audit export must be an object");
-  const audit = auditValue as { version?: unknown; sessionVersion?: unknown; source?: unknown; events?: unknown };
-  const source = audit.source as { artifactVersion?: unknown; sha256?: unknown } | null;
-  if (audit.version !== REVIEW_AUDIT_VERSION || audit.sessionVersion !== REVIEW_SESSION_VERSION
+  const audit = auditValue as Record<string, unknown>;
+  const source = audit.source as Record<string, unknown> | null;
+  const reviewer = audit.reviewer as Record<string, unknown> | null;
+  const finalCounts = audit.finalCounts as Record<string, unknown> | null;
+  const coverage = audit.coverage as Record<string, unknown> | null;
+  const templates = audit.templates as Record<string, Record<string, unknown>> | null;
+  if (audit.schemaVersion !== REVIEW_AUDIT_VERSION || audit.sessionSchemaVersion !== REVIEW_SESSION_VERSION
     || !source || source.artifactVersion !== VISUAL_METADATA_ARTIFACT_VERSION
-    || source.sha256 !== createHash("sha256").update(sourceBytes).digest("hex") || !Array.isArray(audit.events)) {
+    || source.sha256 !== createHash("sha256").update(sourceBytes).digest("hex")
+    || source.rowCount !== 20 || source.suggestedCount !== 19 || source.failedCount !== 1
+    || !reviewer || reviewer.name !== TEST_REVIEWER.name || reviewer.email !== TEST_REVIEWER.email
+    || typeof audit.sessionStartedAt !== "string"
+    || typeof audit.completedAt !== "string" || typeof audit.exportedAt !== "string"
+    || Date.parse(audit.completedAt) < Date.parse(audit.sessionStartedAt)
+    || Date.parse(audit.exportedAt) < Date.parse(audit.completedAt)
+    || !finalCounts || finalCounts.approved !== 19 || finalCounts.rejected !== 0
+    || finalCounts.failed !== 1 || finalCounts.pending !== 0
+    || !coverage || coverage.numerator !== 19 || coverage.denominator !== 20 || coverage.fraction !== "19/20"
+    || !templates || Object.keys(templates).length !== 20
+    || templates["synthetic-01"]?.state !== "approved"
+    || (templates["synthetic-01"]?.metadata as Record<string, unknown> | null)?.reviewStatus !== "reviewed"
+    || templates["synthetic-failure"]?.state !== "failed"
+    || templates["synthetic-failure"]?.failureKind !== "unknown"
+    || !Array.isArray(audit.events)) {
     throw new Error("audit export source proof is invalid");
   }
   const events = audit.events.map((event) => ReviewEventV1Schema.parse(event));
@@ -167,8 +186,22 @@ test.describe("template visual metadata reviewer", () => {
     await expectScreenshotReady(page);
     await page.getByRole("button", { name: /Approve/ }).click();
     await expect(page.getByRole("heading", { name: "Synthetic template 2" })).toBeVisible();
+    const durableSession = JSON.parse(await readFile(join(harness.directory, "session.json"), "utf8")) as Record<string, unknown>;
+    const durableSource = durableSession.source as Record<string, unknown>;
+    const durableEvents = durableSession.events as Array<Record<string, unknown>>;
+    expect(durableSession).toMatchObject({
+      schemaVersion: REVIEW_SESSION_VERSION,
+      currentTemplateId: "synthetic-02",
+    });
+    expect(durableSource).toMatchObject({ rowCount: 20, suggestedCount: 19, failedCount: 1 });
+    expect(durableEvents[0]).toMatchObject({
+      schemaVersion: "template-visual-metadata-review-event/1.0",
+      action: "approved",
+    });
+    expect(durableEvents[0].eventId).toMatch(/^[0-9a-f-]{36}$/);
 
-    await page.goto("about:blank");
+    const context = page.context();
+    await page.close();
     await harness.server.close();
     harness.server = (await startVisualMetadataReviewServer({
       assets,
@@ -180,11 +213,13 @@ test.describe("template visual metadata reviewer", () => {
       }),
       fetchImpl: async () => new Response(PNG, { status: 200, headers: { "content-type": "image/png", "content-length": String(PNG.byteLength) } }),
     }));
+    page = await context.newPage();
     await page.goto(harness.server.bootstrapUrl);
     await expect(page.getByRole("heading", { name: "Identify this review session" })).toBeVisible();
     await page.getByLabel("Name").fill(TEST_REVIEWER.name);
     await page.getByLabel("Email").fill(TEST_REVIEWER.email);
     await page.getByRole("button", { name: "Open review session" }).click();
+    await expect(page.getByRole("heading", { name: "Synthetic template 2" })).toBeVisible();
     await expect(page.getByText("1/19 decisions")).toBeVisible();
 
     for (let index = 2; index <= 19; index += 1) {
@@ -232,6 +267,7 @@ test.describe("template visual metadata reviewer", () => {
     await expectScreenshotReady(page);
     await page.keyboard.press("a");
     await expect(page.getByRole("heading", { name: "Synthetic template 2" })).toBeVisible();
+    await expect(page.locator("button[data-action='reject']")).toBeEnabled();
     await page.keyboard.press("r");
     const rejectionDialog = page.getByRole("dialog", { name: "Reject this proposal" });
     await expect(rejectionDialog).toBeVisible();

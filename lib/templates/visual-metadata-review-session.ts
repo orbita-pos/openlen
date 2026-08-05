@@ -1,6 +1,8 @@
 import { z } from "zod";
-import type { SuggestionArtifactRow } from "./visual-metadata-review-workflow";
-import { VISUAL_METADATA_ARTIFACT_VERSION } from "./visual-metadata-suggestion-contract";
+import {
+  VISUAL_METADATA_ARTIFACT_VERSION,
+  type SuggestionArtifactRow,
+} from "./visual-metadata-suggestion-contract";
 import {
   TEMPLATE_VISUAL_METADATA_SCHEMA_VERSION,
   TemplateVisualMetadataSchema,
@@ -12,6 +14,9 @@ export const REVIEW_EVENT_VERSION = "template-visual-metadata-review-event/1.0" 
 export const REVIEW_AUDIT_VERSION = "template-visual-metadata-review-audit/1.0" as const;
 
 const StrictTemplateVisualMetadataSchema = TemplateVisualMetadataSchema.strict();
+const IsoUtcSchema = z.string()
+  .regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/)
+  .refine((value) => !Number.isNaN(Date.parse(value)) && new Date(value).toISOString() === value);
 
 function codePointLength(value: string): number {
   return Array.from(value).length;
@@ -64,10 +69,10 @@ export type ReviewCommand =
   | { action: "reopened"; templateId: string };
 
 const EventBaseSchema = z.object({
-  version: z.literal(REVIEW_EVENT_VERSION),
-  id: z.string().min(1),
+  schemaVersion: z.literal(REVIEW_EVENT_VERSION),
+  eventId: z.string().uuid(),
   sequence: z.number().int().min(1),
-  at: z.string().datetime(),
+  at: IsoUtcSchema,
   templateId: z.string().min(1),
 });
 
@@ -85,7 +90,10 @@ const RejectedEventSchema = EventBaseSchema.extend({
   action: z.literal("rejected"),
   reason: RejectionReasonSchema,
 }).strict();
-const ReopenedEventSchema = EventBaseSchema.extend({ action: z.literal("reopened") }).strict();
+const ReopenedEventSchema = EventBaseSchema.extend({
+  action: z.literal("reopened"),
+  previousDecision: z.enum(["approved", "rejected"]),
+}).strict();
 
 export const ReviewEventV1Schema = z.discriminatedUnion("action", [
   MetadataUpdatedEventSchema,
@@ -96,14 +104,18 @@ export const ReviewEventV1Schema = z.discriminatedUnion("action", [
 export type ReviewEventV1 = z.infer<typeof ReviewEventV1Schema>;
 
 export const ReviewSessionV1Schema = z.object({
-  version: z.literal(REVIEW_SESSION_VERSION),
+  schemaVersion: z.literal(REVIEW_SESSION_VERSION),
   source: z.object({
-    artifactVersion: z.literal(VISUAL_METADATA_ARTIFACT_VERSION),
     sha256: z.string().regex(/^[a-f0-9]{64}$/),
-    templateIds: z.array(z.string().min(1)),
+    artifactVersion: z.literal(VISUAL_METADATA_ARTIFACT_VERSION),
+    rowCount: z.number().int().nonnegative(),
+    suggestedCount: z.number().int().nonnegative(),
+    failedCount: z.number().int().nonnegative(),
   }).strict(),
   reviewer: z.object({ name: z.string().trim().min(1), email: z.string().email() }).strict(),
-  createdAt: z.string().datetime(),
+  createdAt: IsoUtcSchema,
+  updatedAt: IsoUtcSchema,
+  currentTemplateId: z.string().min(1).nullable(),
   events: z.array(ReviewEventV1Schema),
 }).strict();
 export type ReviewSessionV1 = z.infer<typeof ReviewSessionV1Schema>;
@@ -156,12 +168,22 @@ export type SafeReviewSessionDto =
     };
 
 export interface ReviewAuditV1 {
-  version: typeof REVIEW_AUDIT_VERSION;
-  sessionVersion: typeof REVIEW_SESSION_VERSION;
-  source: { artifactVersion: string; sha256: string };
-  reviewerName: string;
-  createdAt: string;
+  schemaVersion: typeof REVIEW_AUDIT_VERSION;
+  sessionSchemaVersion: typeof REVIEW_SESSION_VERSION;
+  source: ReviewSessionV1["source"];
+  reviewer: { name: string; email: string };
+  sessionStartedAt: string;
+  completedAt: string | null;
+  exportedAt: string;
+  finalCounts: { approved: number; rejected: number; failed: number; pending: number };
+  coverage: { numerator: number; denominator: number; fraction: string };
   events: ReviewEventV1[];
+  templates: Record<string, {
+    state: DerivedReviewItem["state"];
+    metadata: TemplateVisualMetadata | null;
+    rejectionReason: string | null;
+    failureKind: string | null;
+  }>;
 }
 
 function copyMetadata(metadata: TemplateVisualMetadata): TemplateVisualMetadata {
@@ -217,11 +239,11 @@ function sourceRowsById(session: ReviewSessionV1, sourceRows: readonly Suggestio
     if (byId.has(row.id)) throw new Error(`duplicate source suggestion ${row.id}`);
     byId.set(row.id, row);
   }
-  const actualIds = Array.from(byId.keys());
-  if (actualIds.length !== session.source.templateIds.length
-    || actualIds.some((id) => !session.source.templateIds.includes(id))) {
-    throw new Error("source rows do not match review session");
-  }
+  const suggestedCount = sourceRows.filter((row) => row.decision.outcome === "suggested").length;
+  const failedCount = sourceRows.length - suggestedCount;
+  if (sourceRows.length !== session.source.rowCount
+    || suggestedCount !== session.source.suggestedCount
+    || failedCount !== session.source.failedCount) throw new Error("source rows do not match review session");
   for (const row of sourceRows) {
     if (row.artifactVersion !== session.source.artifactVersion) {
       throw new Error("source artifact version does not match review session");
@@ -232,11 +254,16 @@ function sourceRowsById(session: ReviewSessionV1, sourceRows: readonly Suggestio
 
 function validateSession(session: ReviewSessionV1): ReviewSessionV1 {
   const parsed = ReviewSessionV1Schema.parse(session);
-  const ids = new Set(parsed.source.templateIds);
-  if (ids.size !== parsed.source.templateIds.length) throw new Error("review session has duplicate source template IDs");
+  if (parsed.source.suggestedCount + parsed.source.failedCount !== parsed.source.rowCount) {
+    throw new Error("review session source counts are inconsistent");
+  }
+  if (parsed.updatedAt < parsed.createdAt) throw new Error("review session updatedAt precedes createdAt");
+  const eventIds = new Set<string>();
   parsed.events.forEach((event, index) => {
     if (event.sequence !== index + 1) throw new Error("review events must have contiguous sequences");
-    if (!ids.has(event.templateId)) throw new Error(`review event references unknown template ${event.templateId}`);
+    if (eventIds.has(event.eventId)) throw new Error("review event IDs must be unique");
+    eventIds.add(event.eventId);
+    if (event.at > parsed.updatedAt) throw new Error("review event occurs after session updatedAt");
   });
   return parsed;
 }
@@ -254,11 +281,23 @@ export function createReviewSession(args: {
   if (args.rows.some((row) => row.artifactVersion !== artifactVersion)) {
     throw new Error("source rows contain multiple artifact versions");
   }
+  const createdAt = args.now.toISOString();
+  const suggestedCount = args.rows.filter((row) => row.decision.outcome === "suggested").length;
   return validateSession({
-    version: REVIEW_SESSION_VERSION,
-    source: { artifactVersion, sha256: args.sourceSha256, templateIds: [...ids] },
+    schemaVersion: REVIEW_SESSION_VERSION,
+    source: {
+      sha256: args.sourceSha256,
+      artifactVersion,
+      rowCount: args.rows.length,
+      suggestedCount,
+      failedCount: args.rows.length - suggestedCount,
+    },
     reviewer: { name: args.reviewer.name, email: args.reviewer.email },
-    createdAt: args.now.toISOString(),
+    createdAt,
+    updatedAt: createdAt,
+    currentTemplateId: args.rows.find((row) => row.decision.outcome === "suggested")?.id
+      ?? args.rows[0]?.id
+      ?? null,
     events: [],
   });
 }
@@ -266,6 +305,28 @@ export function createReviewSession(args: {
 export function requiredApprovalCount(total: number): number {
   if (!Number.isInteger(total) || total < 0) throw new Error("approval total must be a non-negative integer");
   return Math.ceil(total * 0.95);
+}
+
+export function setReviewSessionCurrentTemplate(
+  session: ReviewSessionV1,
+  sourceRows: readonly SuggestionArtifactRow[],
+  templateId: string,
+  now: Date,
+): ReviewSessionV1 {
+  const validSession = validateSession(session);
+  const state = deriveReviewState(validSession, sourceRows);
+  if (!state.items[templateId]) throw new Error(`unknown template ${templateId}`);
+  if (!(now instanceof Date) || Number.isNaN(now.valueOf())) throw new Error("invalid review navigation time");
+  const updatedAt = now.toISOString();
+  if (updatedAt < validSession.updatedAt) throw new Error("review navigation time precedes updatedAt");
+  return validateSession({
+    ...validSession,
+    source: { ...validSession.source },
+    reviewer: { ...validSession.reviewer },
+    updatedAt,
+    currentTemplateId: templateId,
+    events: validSession.events.map(copyEvent),
+  });
 }
 
 export function deriveReviewState(
@@ -276,8 +337,8 @@ export function deriveReviewState(
   const rowsById = sourceRowsById(validSession, sourceRows);
   const items: Record<string, DerivedReviewItem & { draft: TemplateVisualMetadata | null }> = {};
 
-  for (const id of validSession.source.templateIds) {
-    const row = rowsById.get(id)!;
+  for (const row of sourceRows) {
+    const id = row.id;
     if (row.decision.outcome === "failed") {
       if (row.metadata !== null) throw new Error(`failed source suggestion ${id} has metadata`);
       items[id] = { id, metadata: null, draft: null, state: "failed", rejectionReason: null };
@@ -345,7 +406,7 @@ export function deriveReviewState(
     finalExportEnabled: pending === 0 && approved >= requiredApprovals,
   };
   const publicItems: Record<string, DerivedReviewItem> = {};
-  for (const id of validSession.source.templateIds) {
+  for (const id of rowsById.keys()) {
     const item = items[id];
     publicItems[id] = {
       id: item.id,
@@ -354,10 +415,13 @@ export function deriveReviewState(
       rejectionReason: item.rejectionReason,
     };
   }
+  if (validSession.currentTemplateId !== null && !publicItems[validSession.currentTemplateId]) {
+    throw new Error("review session current template is unknown");
+  }
   return {
     items: publicItems,
     progress,
-    currentTemplateId: validSession.source.templateIds.find((id) => publicItems[id].state === "pending") ?? null,
+    currentTemplateId: validSession.currentTemplateId,
   };
 }
 
@@ -370,13 +434,16 @@ export function applyReviewCommand(
   const validSession = validateSession(session);
   const parsedCommand = ReviewCommandSchema.parse(command);
   const state = deriveReviewState(validSession, sourceRows);
+  if (validSession.currentTemplateId !== null && !state.items[validSession.currentTemplateId]) {
+    throw new Error("review session current template is unknown");
+  }
   const item = state.items[parsedCommand.templateId];
   if (!item) throw new Error(`unknown template ${parsedCommand.templateId}`);
   const at = deps.now();
   if (!(at instanceof Date) || Number.isNaN(at.valueOf())) throw new Error("invalid review event time");
   const base = {
-    version: REVIEW_EVENT_VERSION,
-    id: deps.eventId(),
+    schemaVersion: REVIEW_EVENT_VERSION,
+    eventId: deps.eventId(),
     sequence: validSession.events.length + 1,
     at: at.toISOString(),
     templateId: parsedCommand.templateId,
@@ -408,18 +475,16 @@ export function applyReviewCommand(
   } else {
     if (item.state === "failed") throw new Error("cannot reopen failed suggestion");
     if (item.state !== "approved" && item.state !== "rejected") throw new Error("reopen requires an approval or rejection");
-    event = { ...base, action: "reopened" };
+    event = { ...base, action: "reopened", previousDecision: item.state };
   }
 
   return validateSession({
-    version: validSession.version,
-    source: {
-      artifactVersion: validSession.source.artifactVersion,
-      sha256: validSession.source.sha256,
-      templateIds: [...validSession.source.templateIds],
-    },
+    schemaVersion: validSession.schemaVersion,
+    source: { ...validSession.source },
     reviewer: { name: validSession.reviewer.name, email: validSession.reviewer.email },
     createdAt: validSession.createdAt,
+    updatedAt: event.at,
+    currentTemplateId: validSession.currentTemplateId,
     events: [...validSession.events, event],
   });
 }
@@ -427,25 +492,25 @@ export function applyReviewCommand(
 function copyEvent(event: ReviewEventV1): ReviewEventV1 {
   if (event.action === "metadata_updated") {
     return {
-      version: event.version, id: event.id, sequence: event.sequence, at: event.at, templateId: event.templateId,
+      schemaVersion: event.schemaVersion, eventId: event.eventId, sequence: event.sequence, at: event.at, templateId: event.templateId,
       action: event.action, field: event.field, before: structuredClone(event.before), after: structuredClone(event.after),
     };
   }
   if (event.action === "approved") {
     return {
-      version: event.version, id: event.id, sequence: event.sequence, at: event.at, templateId: event.templateId,
+      schemaVersion: event.schemaVersion, eventId: event.eventId, sequence: event.sequence, at: event.at, templateId: event.templateId,
       action: event.action, metadata: copyMetadata(event.metadata),
     };
   }
   if (event.action === "rejected") {
     return {
-      version: event.version, id: event.id, sequence: event.sequence, at: event.at, templateId: event.templateId,
+      schemaVersion: event.schemaVersion, eventId: event.eventId, sequence: event.sequence, at: event.at, templateId: event.templateId,
       action: event.action, reason: event.reason,
     };
   }
   return {
-    version: event.version, id: event.id, sequence: event.sequence, at: event.at, templateId: event.templateId,
-    action: event.action,
+    schemaVersion: event.schemaVersion, eventId: event.eventId, sequence: event.sequence, at: event.at, templateId: event.templateId,
+    action: event.action, previousDecision: event.previousDecision,
   };
 }
 
@@ -473,6 +538,7 @@ function safeScreenshotEndpoint(id: string): string {
 export function buildReviewExports(
   session: ReviewSessionV1,
   sourceRows: readonly SuggestionArtifactRow[],
+  exportedAt: Date,
 ): {
   reviewed: Array<{ id: string; metadata: TemplateVisualMetadata & { reviewStatus: "reviewed" } }>;
   audit: ReviewAuditV1;
@@ -481,7 +547,7 @@ export function buildReviewExports(
   const state = deriveReviewState(validSession, sourceRows);
   if (!state.progress.finalExportEnabled) throw new Error("final export is not enabled");
   const reviewed: Array<{ id: string; metadata: TemplateVisualMetadata & { reviewStatus: "reviewed" } }> = [];
-  for (const id of validSession.source.templateIds) {
+  for (const { id } of sourceRows) {
     const item = state.items[id];
     if (item.state !== "approved" || item.metadata === null) continue;
     const metadata = TemplateVisualMetadataSchema.parse(item.metadata);
@@ -490,14 +556,55 @@ export function buildReviewExports(
   }
   return {
     reviewed,
-    audit: {
-      version: REVIEW_AUDIT_VERSION,
-      sessionVersion: REVIEW_SESSION_VERSION,
-      source: { artifactVersion: validSession.source.artifactVersion, sha256: validSession.source.sha256 },
-      reviewerName: validSession.reviewer.name,
-      createdAt: validSession.createdAt,
-      events: validSession.events.map(copyEvent),
+    audit: buildReviewAudit(validSession, sourceRows, exportedAt),
+  };
+}
+
+export function buildReviewAudit(
+  session: ReviewSessionV1,
+  sourceRows: readonly SuggestionArtifactRow[],
+  exportedAt: Date,
+): ReviewAuditV1 {
+  const validSession = validateSession(session);
+  const state = deriveReviewState(validSession, sourceRows);
+  if (!(exportedAt instanceof Date) || Number.isNaN(exportedAt.valueOf())) throw new Error("invalid audit export time");
+  const exportedAtIso = exportedAt.toISOString();
+  const templates: ReviewAuditV1["templates"] = {};
+  const rowsById = new Map(sourceRows.map((row) => [row.id, row] as const));
+  for (const { id } of sourceRows) {
+    const item = state.items[id];
+    const row = rowsById.get(id)!;
+    templates[id] = {
+      state: item.state,
+      metadata: item.metadata ? copyMetadata(item.metadata) : null,
+      rejectionReason: item.rejectionReason,
+      failureKind: row.decision.outcome === "failed" ? safeFailureKind(row.error) : null,
+    };
+  }
+  const lastDecisionAt = [...validSession.events].reverse().find(
+    (event) => event.action === "approved" || event.action === "rejected",
+  )?.at;
+  return {
+    schemaVersion: REVIEW_AUDIT_VERSION,
+    sessionSchemaVersion: REVIEW_SESSION_VERSION,
+    source: { ...validSession.source },
+    reviewer: { ...validSession.reviewer },
+    sessionStartedAt: validSession.createdAt,
+    completedAt: state.progress.pending === 0 ? lastDecisionAt ?? validSession.createdAt : null,
+    exportedAt: exportedAtIso,
+    finalCounts: {
+      approved: state.progress.approved,
+      rejected: state.progress.rejected,
+      failed: state.progress.failed,
+      pending: state.progress.pending,
     },
+    coverage: {
+      numerator: state.progress.approved,
+      denominator: state.progress.total,
+      fraction: `${state.progress.approved}/${state.progress.total}`,
+    },
+    events: validSession.events.map(copyEvent),
+    templates,
   };
 }
 
@@ -510,8 +617,8 @@ export function buildSafeReviewDto(
   const state = deriveReviewState(validSession, sourceRows);
   const rowsById = sourceRowsById(validSession, sourceRows);
   const items: SafeReviewItemDto[] = [];
-  for (const id of validSession.source.templateIds) {
-    const row = rowsById.get(id)!;
+  for (const row of sourceRows) {
+    const id = row.id;
     const item = state.items[id];
     const failureKind = row.decision.outcome === "failed" ? safeFailureKind(row.error) : null;
     items.push({

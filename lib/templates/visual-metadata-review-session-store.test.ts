@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import { mkdir, mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { isAbsolute, join, resolve } from "node:path";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { VISUAL_METADATA_ARTIFACT_VERSION, VISUAL_METADATA_DECISION_VERSION } from "./visual-metadata-suggestion-contract";
 import {
   loadVisualMetadataReviewSource,
@@ -72,7 +72,7 @@ function deps(overrides: Partial<ReviewWorkspaceDependencies> = {}): ReviewWorks
   let event = 0;
   return {
     now: () => new Date("2026-08-04T12:00:00.000Z"),
-    eventId: () => `event-${++event}`,
+    eventId: () => `00000000-0000-4000-8000-${String(++event).padStart(12, "0")}`,
     lockId: () => "11111111-1111-4111-8111-111111111111",
     processExists: () => false,
     pid: 12345,
@@ -142,6 +142,29 @@ describe("visual metadata review session store", () => {
       .rejects.toMatchObject({ name: "ReviewWorkspaceResumeError" });
     await writeFile(config.inputPath, `${JSON.stringify([row("other")])}\n`);
     await expect(openVisualMetadataReviewWorkspace(config, deps())).rejects.toMatchObject({ name: "ReviewWorkspaceResumeError" });
+  });
+
+  it("persists navigation in the v1 session and resumes the exact current template", async () => {
+    const config = await fixture([row("one"), row("two")]);
+    let clock = 0;
+    const dependencies = deps({
+      now: () => new Date(`2026-08-04T12:00:0${clock++}.000Z`),
+    });
+    const initial = await openVisualMetadataReviewWorkspace(config, dependencies);
+    await initial.setCurrentTemplate("two");
+    const durable = JSON.parse(await readFile(config.sessionPath, "utf8"));
+
+    expect(durable).toMatchObject({
+      schemaVersion: "template-visual-metadata-review-session/1.0",
+      currentTemplateId: "two",
+      updatedAt: "2026-08-04T12:00:02.000Z",
+    });
+    await initial.close();
+
+    const resumed = await openVisualMetadataReviewWorkspace(config, deps());
+    expect(resumed.snapshot().currentTemplateId).toBe("two");
+    expect(resumed.getSafeReviewDto().session).toMatchObject({ currentTemplateId: "two" });
+    await resumed.close();
   });
 
   it("refuses a corrupt session without overwriting it", async () => {
@@ -230,7 +253,16 @@ describe("visual metadata review session store", () => {
     expect(isAbsolute(auditPath)).toBe(false);
     expect(auditPath).not.toMatch(/^[A-Za-z]:[\\/]|^[\\/]{1,2}/);
     expect(resolve(process.cwd(), auditPath)).toBe(config.auditOutputPath);
-    await expect(readFile(config.auditOutputPath, "utf8")).resolves.toContain("review-audit");
+    const audit = JSON.parse(await readFile(config.auditOutputPath, "utf8"));
+    expect(audit).toMatchObject({
+      schemaVersion: "template-visual-metadata-review-audit/1.0",
+      reviewer: { name: "Ada Reviewer", email: "ada@example.test" },
+      completedAt: null,
+      exportedAt: "2026-08-04T12:00:00.000Z",
+      finalCounts: { approved: 0, rejected: 0, failed: 0, pending: 1 },
+      coverage: { numerator: 0, denominator: 1, fraction: "0/1" },
+      templates: { one: { state: "pending" } },
+    });
     await expect(readFile(config.reviewedOutputPath)).rejects.toMatchObject({ code: "ENOENT" });
     await workspace.close();
   });
@@ -551,6 +583,27 @@ describe("visual metadata review session store", () => {
     await workspace.setCurrentTemplate("two");
     expect(workspace.getSafeReviewDto().session).toMatchObject({ currentTemplateId: "two" });
     await workspace.close();
+  });
+
+  it("loads the store and server boundaries without evaluating the suggestion workflow or model module", async () => {
+    vi.resetModules();
+    vi.doMock("./visual-metadata-review-workflow", () => {
+      throw new Error("suggestion workflow runtime must not load");
+    });
+    vi.doMock("./suggest-visual-metadata", () => {
+      throw new Error("suggestion model runtime must not load");
+    });
+    try {
+      await expect(import("./visual-metadata-review-session-store")).resolves.toMatchObject({
+        openVisualMetadataReviewWorkspace: expect.any(Function),
+      });
+      await expect(import("./visual-metadata-review-server")).resolves.toMatchObject({
+        startVisualMetadataReviewServer: expect.any(Function),
+      });
+    } finally {
+      vi.doUnmock("./visual-metadata-review-workflow");
+      vi.doUnmock("./suggest-visual-metadata");
+    }
   });
 
   it("recovers a dead recovery lease left by a crashed guard reclaimer", async () => {

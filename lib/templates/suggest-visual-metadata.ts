@@ -4,15 +4,27 @@ import {
   type TemplateVisualMetadata,
 } from "./visual-metadata";
 import type { TemplateRecord } from "./store";
+import {
+  VISUAL_METADATA_FAILURE_POLICY_VERSION,
+  VISUAL_METADATA_GENERATION_CONFIG_VERSION,
+  VISUAL_METADATA_MAXIMUM_FAILURE_RATE,
+  VISUAL_METADATA_MODEL_CHOICE_VERSION,
+  VISUAL_METADATA_PER_TEMPLATE_TIMEOUT_MS,
+  VISUAL_METADATA_PROMPT_VERSION,
+  VISUAL_METADATA_TIMEOUT_POLICY_VERSION,
+  VISUAL_METADATA_WORKFLOW_VERSION,
+} from "./visual-metadata-suggestion-contract";
 
-export const VISUAL_METADATA_WORKFLOW_VERSION = "template-visual-metadata-suggestion-workflow/1.0" as const;
-export const VISUAL_METADATA_MODEL_CHOICE_VERSION = "template-visual-metadata-model-choice/1.0" as const;
-export const VISUAL_METADATA_PROMPT_VERSION = "template-visual-metadata-prompt/3.0" as const;
-export const VISUAL_METADATA_GENERATION_CONFIG_VERSION = "template-visual-metadata-generation-config/3.0" as const;
-export const VISUAL_METADATA_FAILURE_POLICY_VERSION = "template-visual-metadata-failure-policy/1.0" as const;
-export const VISUAL_METADATA_TIMEOUT_POLICY_VERSION = "template-visual-metadata-timeout-policy/1.0" as const;
-export const VISUAL_METADATA_MAXIMUM_FAILURE_RATE = 0.10;
-export const VISUAL_METADATA_PER_TEMPLATE_TIMEOUT_MS = 60_000;
+export {
+  VISUAL_METADATA_FAILURE_POLICY_VERSION,
+  VISUAL_METADATA_GENERATION_CONFIG_VERSION,
+  VISUAL_METADATA_MAXIMUM_FAILURE_RATE,
+  VISUAL_METADATA_MODEL_CHOICE_VERSION,
+  VISUAL_METADATA_PER_TEMPLATE_TIMEOUT_MS,
+  VISUAL_METADATA_PROMPT_VERSION,
+  VISUAL_METADATA_TIMEOUT_POLICY_VERSION,
+  VISUAL_METADATA_WORKFLOW_VERSION,
+};
 
 const TAXONOMY_ARRAY_SCHEMA = {
   type: "array",

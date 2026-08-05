@@ -5,6 +5,7 @@ import {
   ReviewEventV1Schema,
   ReviewSessionV1Schema,
   applyReviewCommand,
+  buildReviewAudit,
   buildReviewExports,
   buildSafeReviewDto,
   createReviewSession,
@@ -76,16 +77,30 @@ function deps() {
   let event = 0;
   return {
     now: () => new Date("2026-08-03T12:00:01.000Z"),
-    eventId: () => `event-${++event}`,
+    eventId: () => `00000000-0000-4000-8000-${String(++event).padStart(12, "0")}`,
   };
 }
 
 describe("visual metadata review session domain", () => {
-  it("creates a v1 session without copying raw evidence", () => {
+  it("creates the exact persisted v1 session contract without copying raw evidence", () => {
     const sourceRows = [row("one")];
     const session = create(sourceRows);
 
-    expect(session.version).toBe("template-visual-metadata-review-session/1.0");
+    expect(session).toEqual({
+      schemaVersion: "template-visual-metadata-review-session/1.0",
+      source: {
+        sha256: "a".repeat(64),
+        artifactVersion: "template-visual-metadata-suggestion-artifact/1.0",
+        rowCount: 1,
+        suggestedCount: 1,
+        failedCount: 0,
+      },
+      reviewer: { name: "Ada Reviewer", email: "ada@example.test" },
+      createdAt: "2026-08-03T12:00:00.000Z",
+      updatedAt: "2026-08-03T12:00:00.000Z",
+      currentTemplateId: "one",
+      events: [],
+    });
     expect(JSON.stringify(session)).not.toContain("RAW_EVIDENCE_MUST_NEVER_LEAK");
     expect(JSON.stringify(session)).not.toContain("rawModelResponse");
   });
@@ -93,13 +108,19 @@ describe("visual metadata review session domain", () => {
   it("emits contiguous sequences and deterministic derived state", () => {
     const sourceRows = [row("one")];
     const initial = create(sourceRows);
+    const reviewDeps = deps();
     const withEdit = applyReviewCommand(initial, sourceRows, {
       action: "metadata_updated", templateId: "one", field: "domains", value: ["developer_tools"],
-    }, deps());
-    const session = applyReviewCommand(withEdit, sourceRows, { action: "approved", templateId: "one" }, deps());
+    }, reviewDeps);
+    const session = applyReviewCommand(withEdit, sourceRows, { action: "approved", templateId: "one" }, reviewDeps);
 
-    expect(session.events.map((event) => [event.version, event.sequence]))
+    expect(session.events.map((event) => [event.schemaVersion, event.sequence]))
       .toEqual([["template-visual-metadata-review-event/1.0", 1], ["template-visual-metadata-review-event/1.0", 2]]);
+    expect(session.events.map((event) => event.eventId)).toEqual([
+      "00000000-0000-4000-8000-000000000001",
+      "00000000-0000-4000-8000-000000000002",
+    ]);
+    expect(session.updatedAt).toBe("2026-08-03T12:00:01.000Z");
     expect(deriveReviewState(session, sourceRows)).toEqual(deriveReviewState(session, structuredClone(sourceRows)));
     expect(deriveReviewState(session, sourceRows).items["one"]).toMatchObject({
       state: "approved",
@@ -116,15 +137,16 @@ describe("visual metadata review session domain", () => {
 
   it("sets reviewed only inside an approved server-side transition", () => {
     const sourceRows = [row("one")];
+    const reviewDeps = deps();
     const session = applyReviewCommand(create(sourceRows), sourceRows, {
       action: "metadata_updated", templateId: "one", field: "themeability", value: "high",
-    }, deps());
+    }, reviewDeps);
 
     expect(deriveReviewState(session, sourceRows).items["one"].metadata?.reviewStatus).toBe("unreviewed");
     expect(() => applyReviewCommand(session, sourceRows, {
       action: "metadata_updated", templateId: "one", field: "reviewStatus" as never, value: "reviewed",
-    }, deps())).toThrow();
-    const approved = applyReviewCommand(session, sourceRows, { action: "approved", templateId: "one" }, deps());
+    }, reviewDeps)).toThrow();
+    const approved = applyReviewCommand(session, sourceRows, { action: "approved", templateId: "one" }, reviewDeps);
     expect(deriveReviewState(approved, sourceRows).items["one"].metadata?.reviewStatus).toBe("reviewed");
   });
 
@@ -157,12 +179,38 @@ describe("visual metadata review session domain", () => {
 
   it("reopens an approval without erasing history", () => {
     const sourceRows = [row("one")];
-    const approved = applyReviewCommand(create(sourceRows), sourceRows, { action: "approved", templateId: "one" }, deps());
-    const reopened = applyReviewCommand(approved, sourceRows, { action: "reopened", templateId: "one" }, deps());
+    const reviewDeps = deps();
+    const approved = applyReviewCommand(create(sourceRows), sourceRows, { action: "approved", templateId: "one" }, reviewDeps);
+    const reopened = applyReviewCommand(approved, sourceRows, { action: "reopened", templateId: "one" }, reviewDeps);
 
     expect(reopened.events).toHaveLength(2);
     expect(reopened.events.map((event) => event.action)).toEqual(["approved", "reopened"]);
+    expect(reopened.events[1]).toMatchObject({ previousDecision: "approved" });
     expect(deriveReviewState(reopened, sourceRows).items["one"].state).toBe("pending");
+  });
+
+  it("records the previous rejected decision when reopening", () => {
+    const sourceRows = [row("one")];
+    const reviewDeps = deps();
+    const rejected = applyReviewCommand(create(sourceRows), sourceRows, {
+      action: "rejected", templateId: "one", reason: "Unsupported",
+    }, reviewDeps);
+    const reopened = applyReviewCommand(rejected, sourceRows, { action: "reopened", templateId: "one" }, reviewDeps);
+
+    expect(reopened.events.at(-1)).toMatchObject({
+      action: "reopened",
+      previousDecision: "rejected",
+    });
+  });
+
+  it("requires UUID event IDs", () => {
+    const sourceRows = [row("one")];
+    expect(() => applyReviewCommand(create(sourceRows), sourceRows, {
+      action: "approved", templateId: "one",
+    }, {
+      now: () => new Date("2026-08-03T12:00:01.000Z"),
+      eventId: () => "not-a-uuid",
+    })).toThrow();
   });
 
   it.each([[450, 428], [100, 95], [3, 3], [0, 0]])("computes ceil 95 percent for %i as %i", (total, expected) => {
@@ -174,7 +222,8 @@ describe("visual metadata review session domain", () => {
     const session = applyReviewCommand(create(sourceRows), sourceRows, { action: "approved", templateId: "approved" }, deps());
 
     expect(deriveReviewState(session, sourceRows).progress.finalExportEnabled).toBe(false);
-    expect(() => buildReviewExports(session, sourceRows)).toThrow("final export is not enabled");
+    expect(() => buildReviewExports(session, sourceRows, new Date("2026-08-03T12:00:02.000Z")))
+      .toThrow("final export is not enabled");
   });
 
   it("blocks final export when 19 of 20 suggestions are approved but one remains pending", () => {
@@ -190,7 +239,8 @@ describe("visual metadata review session domain", () => {
     expect(deriveReviewState(session, sourceRows).progress).toMatchObject({
       requiredApprovals: 19, approved: 19, pending: 1, finalExportEnabled: false,
     });
-    expect(() => buildReviewExports(session, sourceRows)).toThrow("final export is not enabled");
+    expect(() => buildReviewExports(session, sourceRows, new Date("2026-08-03T12:00:02.000Z")))
+      .toThrow("final export is not enabled");
   });
 
   it("blocks final export at 427 of 450 and enables it at 428 of 450", () => {
@@ -207,7 +257,7 @@ describe("visual metadata review session domain", () => {
     session = applyReviewCommand(session, sourceRows, { action: "reopened", templateId: "427" }, reviewDeps);
     session = applyReviewCommand(session, sourceRows, { action: "approved", templateId: "427" }, reviewDeps);
     expect(deriveReviewState(session, sourceRows).progress.finalExportEnabled).toBe(true);
-    expect(buildReviewExports(session, sourceRows).reviewed).toHaveLength(428);
+    expect(buildReviewExports(session, sourceRows, new Date("2026-08-03T12:00:02.000Z")).reviewed).toHaveLength(428);
   });
 
   it("builds a safe DTO field by field without evidence, raw values, emails, or paths", () => {
@@ -251,11 +301,12 @@ describe("visual metadata review session domain", () => {
     expect(deriveReviewState(session, sourceRows).progress).toMatchObject({
       total: 450, suggested: 440, failed: 10, pending: 0, requiredApprovals: 428, finalExportEnabled: false,
     });
-    expect(() => buildReviewExports(session, sourceRows)).toThrow("final export is not enabled");
+    expect(() => buildReviewExports(session, sourceRows, new Date("2026-08-03T12:00:02.000Z")))
+      .toThrow("final export is not enabled");
     session = applyReviewCommand(session, sourceRows, { action: "reopened", templateId: "suggested-427" }, reviewDeps);
     session = applyReviewCommand(session, sourceRows, { action: "approved", templateId: "suggested-427" }, reviewDeps);
     expect(deriveReviewState(session, sourceRows).progress.finalExportEnabled).toBe(true);
-    expect(buildReviewExports(session, sourceRows).reviewed).toHaveLength(428);
+    expect(buildReviewExports(session, sourceRows, new Date("2026-08-03T12:00:02.000Z")).reviewed).toHaveLength(428);
   });
 
   it("uses a closed allowlist for failed-row categories", () => {
@@ -274,7 +325,11 @@ describe("visual metadata review session domain", () => {
     tampered.events[0].metadata = { ...METADATA, themeability: "low", reviewStatus: "reviewed" };
 
     expect(() => deriveReviewState(tampered as never, sourceRows)).toThrow("approved event metadata does not match draft");
-    expect(() => buildReviewExports(tampered as never, sourceRows)).toThrow("approved event metadata does not match draft");
+    expect(() => buildReviewExports(
+      tampered as never,
+      sourceRows,
+      new Date("2026-08-03T12:00:02.000Z"),
+    )).toThrow("approved event metadata does not match draft");
   });
 
   it("rejects strict schema violations for source versions, event snapshots, and rejection reasons", () => {
@@ -284,8 +339,8 @@ describe("visual metadata review session domain", () => {
     expect(ReviewSessionV1Schema.safeParse(unsupportedSource).success).toBe(false);
 
     const approvedEvent = {
-      version: "template-visual-metadata-review-event/1.0",
-      id: "event-1",
+      schemaVersion: "template-visual-metadata-review-event/1.0",
+      eventId: "00000000-0000-4000-8000-000000000001",
       sequence: 1,
       at: "2026-08-03T12:00:01.000Z",
       templateId: "one",
@@ -294,8 +349,8 @@ describe("visual metadata review session domain", () => {
     };
     expect(ReviewEventV1Schema.safeParse(approvedEvent).success).toBe(false);
     expect(ReviewEventV1Schema.safeParse({
-      version: "template-visual-metadata-review-event/1.0",
-      id: "event-2",
+      schemaVersion: "template-visual-metadata-review-event/1.0",
+      eventId: "00000000-0000-4000-8000-000000000002",
       sequence: 2,
       at: "2026-08-03T12:00:01.000Z",
       templateId: "one",
@@ -323,12 +378,80 @@ describe("visual metadata review session domain", () => {
     sourceRows[0].screenshotUrl = "file:///C:/private/raw-image.png";
     sourceRows[0].evidence.rawModelResponse = "raw local evidence";
     const session = applyReviewCommand(create(sourceRows), sourceRows, { action: "approved", templateId: "one" }, deps());
-    const exported = buildReviewExports(session, sourceRows);
-    const serialized = JSON.stringify(exported);
+    const exported = buildReviewExports(session, sourceRows, new Date("2026-08-03T12:00:02.000Z"));
+    const reviewedSerialized = JSON.stringify(exported.reviewed);
 
     for (const forbidden of ["raw local evidence", "rawModelResponse", "ada@example.test", "provenance", "file:///C:/private/raw-image.png"]) {
-      expect(serialized).not.toContain(forbidden);
+      expect(reviewedSerialized).not.toContain(forbidden);
     }
+    expect(exported.audit.reviewer).toEqual({ name: "Ada Reviewer", email: "ada@example.test" });
+  });
+
+  it("builds the complete local audit contract with exact timestamps, counts, coverage, and final template summaries", () => {
+    const sourceRows = [
+      ...Array.from({ length: 19 }, (_, index) => row(`suggested-${index + 1}`)),
+      row("failed", "failed"),
+    ];
+    let session = create(sourceRows);
+    let event = 0;
+    const transitionDeps = {
+      now: () => new Date(`2026-08-03T12:00:${String(++event).padStart(2, "0")}.000Z`),
+      eventId: () => `00000000-0000-4000-8000-${String(event).padStart(12, "0")}`,
+    };
+    for (let index = 1; index <= 19; index += 1) {
+      session = applyReviewCommand(session, sourceRows, {
+        action: "approved", templateId: `suggested-${index}`,
+      }, transitionDeps);
+    }
+
+    const audit = buildReviewExports(
+      session,
+      sourceRows,
+      new Date("2026-08-03T12:01:00.000Z"),
+    ).audit;
+    expect(audit).toMatchObject({
+      schemaVersion: "template-visual-metadata-review-audit/1.0",
+      sessionSchemaVersion: "template-visual-metadata-review-session/1.0",
+      source: {
+        artifactVersion: "template-visual-metadata-suggestion-artifact/1.0",
+        sha256: "a".repeat(64),
+        rowCount: 20,
+        suggestedCount: 19,
+        failedCount: 1,
+      },
+      reviewer: { name: "Ada Reviewer", email: "ada@example.test" },
+      sessionStartedAt: "2026-08-03T12:00:00.000Z",
+      completedAt: "2026-08-03T12:00:19.000Z",
+      exportedAt: "2026-08-03T12:01:00.000Z",
+      finalCounts: { approved: 19, rejected: 0, failed: 1, pending: 0 },
+      coverage: { numerator: 19, denominator: 20, fraction: "19/20" },
+    });
+    expect(Object.keys(audit.templates)).toHaveLength(20);
+    expect(audit.templates["suggested-1"]).toMatchObject({
+      state: "approved",
+      metadata: { reviewStatus: "reviewed" },
+      rejectionReason: null,
+      failureKind: null,
+    });
+    expect(audit.templates.failed).toEqual({
+      state: "failed",
+      metadata: null,
+      rejectionReason: null,
+      failureKind: "parse",
+    });
+  });
+
+  it("keeps completion null in an audit backup while decisions remain pending", () => {
+    const sourceRows = [row("one"), row("two")];
+    const audit = buildReviewAudit(
+      create(sourceRows),
+      sourceRows,
+      new Date("2026-08-03T12:01:00.000Z"),
+    );
+
+    expect(audit.completedAt).toBeNull();
+    expect(audit.finalCounts).toEqual({ approved: 0, rejected: 0, failed: 0, pending: 2 });
+    expect(audit.coverage).toEqual({ numerator: 0, denominator: 2, fraction: "0/2" });
   });
 
   it("loads the review domain without evaluating the workflow runtime", async () => {

@@ -95,7 +95,7 @@ function fakeWorkspace(
       calls.push(command.action);
       session = applyReviewCommand(session, rows, command, {
         now: () => new Date(`2026-08-03T12:00:${String(++event).padStart(2, "0")}.000Z`),
-        eventId: () => `event-${event}`,
+        eventId: () => `00000000-0000-4000-8000-${String(event).padStart(12, "0")}`,
       });
       return snapshot();
     },
