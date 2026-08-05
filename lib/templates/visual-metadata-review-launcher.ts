@@ -378,6 +378,11 @@ export async function runVisualMetadataReviewer(
     return { mode: "validate-only", counts: structuredClone(source.counts) };
   }
 
+  try {
+    await loadSource(args.inputPath);
+  } catch (error) {
+    throw wrapLauncherError(error, "REVIEW_SOURCE_VALIDATION_FAILED");
+  }
   const openWorkspace = dependencies.openWorkspace ?? openVisualMetadataReviewWorkspace;
   const startServer = dependencies.startServer ?? startVisualMetadataReviewServer;
   const openBrowser = dependencies.openBrowser ?? openReviewBrowser;
@@ -391,23 +396,32 @@ export async function runVisualMetadataReviewer(
   });
 
   let activeWorkspace: VisualMetadataReviewWorkspace | undefined;
-  const openTrackedWorkspace = async (
+  const pendingWorkspaceOpenings = new Set<Promise<VisualMetadataReviewWorkspace>>();
+  const openTrackedWorkspace = (
     reviewer: { name: string; email: string },
   ): Promise<VisualMetadataReviewWorkspace> => {
-    try {
-      const workspace = await openWorkspace({
-        inputPath: args.inputPath,
-        sessionPath: args.sessionPath,
-        reviewedOutputPath: args.reviewedOutputPath,
-        auditOutputPath: args.auditOutputPath,
-        reviewer,
-      });
-      const tracked = closeOnce(workspace);
-      activeWorkspace = tracked;
-      return tracked;
-    } catch (error) {
-      throw wrapLauncherError(error, "REVIEW_WORKSPACE_OPEN_FAILED");
-    }
+    const opening = (async () => {
+      try {
+        const workspace = await openWorkspace({
+          inputPath: args.inputPath,
+          sessionPath: args.sessionPath,
+          reviewedOutputPath: args.reviewedOutputPath,
+          auditOutputPath: args.auditOutputPath,
+          reviewer,
+        });
+        const tracked = closeOnce(workspace);
+        activeWorkspace = tracked;
+        return tracked;
+      } catch (error) {
+        throw wrapLauncherError(error, "REVIEW_WORKSPACE_OPEN_FAILED");
+      }
+    })();
+    pendingWorkspaceOpenings.add(opening);
+    void opening.then(
+      () => pendingWorkspaceOpenings.delete(opening),
+      () => pendingWorkspaceOpenings.delete(opening),
+    );
+    return opening;
   };
 
   if (args.reviewer) activeWorkspace = await openTrackedWorkspace(args.reviewer);
@@ -429,12 +443,28 @@ export async function runVisualMetadataReviewer(
   const removeSignalListeners: Array<() => void> = [];
   const close = (): Promise<void> => {
     if (!shutdownPromise) {
-      for (const remove of removeSignalListeners.splice(0)) remove();
       shutdownPromise = (async () => {
+        let cleanupFailed = false;
+        for (const remove of removeSignalListeners.splice(0)) {
+          try {
+            remove();
+          } catch {
+            cleanupFailed = true;
+          }
+        }
         try {
           await server.close();
-        } finally {
+        } catch {
+          cleanupFailed = true;
+        }
+        await Promise.allSettled([...pendingWorkspaceOpenings]);
+        try {
           await activeWorkspace?.close();
+        } catch {
+          cleanupFailed = true;
+        }
+        if (cleanupFailed) {
+          throw new VisualMetadataReviewLauncherError("REVIEW_LAUNCH_SHUTDOWN_FAILED");
         }
       })();
     }
@@ -457,8 +487,17 @@ export async function runVisualMetadataReviewer(
     }
     throw wrapLauncherError(error, "REVIEW_BROWSER_URL_REJECTED");
   }
-  removeSignalListeners.push(registerSignal("SIGINT", handleSignal));
-  removeSignalListeners.push(registerSignal("SIGTERM", handleSignal));
+  try {
+    removeSignalListeners.push(registerSignal("SIGINT", handleSignal));
+    removeSignalListeners.push(registerSignal("SIGTERM", handleSignal));
+  } catch {
+    try {
+      await close();
+    } catch {
+      // The fixed startup failure below owns all registration and cleanup causes.
+    }
+    throw new VisualMetadataReviewLauncherError("REVIEW_LAUNCH_SHUTDOWN_FAILED");
+  }
 
   try {
     if (!args.noOpen) await openBrowser(safeBootstrapUrl);

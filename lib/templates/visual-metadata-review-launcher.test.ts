@@ -85,6 +85,20 @@ function fakeBuildResult(): BuildResult {
   };
 }
 
+function deferred<T>() {
+  let resolvePromise!: (value: T) => void;
+  let rejectPromise!: (error: unknown) => void;
+  const promise = new Promise<T>((resolve, reject) => {
+    resolvePromise = resolve;
+    rejectPromise = reject;
+  });
+  return { promise, resolve: resolvePromise, reject: rejectPromise };
+}
+
+async function nextEventLoopTurn(): Promise<void> {
+  await new Promise<void>((resolve) => setTimeout(resolve, 0));
+}
+
 describe("parseReviewCliArgs", () => {
   it.each([
     ["--input"],
@@ -277,6 +291,54 @@ describe("openReviewBrowser", () => {
 
 describe("runVisualMetadataReviewer", () => {
   const build = async () => fakeBuildResult();
+  const loadSource = async () => makeLoadedSource();
+
+  it.each([
+    ["identity form", []],
+    ["configured identity", [
+      "--reviewer-name", "Runtime Reviewer",
+      "--reviewer-email", "runtime@example.test",
+    ]],
+  ] as const)("preflights an invalid source before every %s launch boundary", async (
+    _mode,
+    identityArgs,
+  ) => {
+    const loadSource = vi.fn(async () => {
+      throw new Error("private invalid-source detail");
+    });
+    const buildClient = vi.fn(async () => fakeBuildResult());
+    const openWorkspace = vi.fn(async () => makeWorkspace(vi.fn(async () => undefined)));
+    const startServer = vi.fn(async () => ({
+      bootstrapUrl: `http://127.0.0.1:43123/?bootstrap=${"a".repeat(64)}`,
+      origin: "http://127.0.0.1:43123",
+      close: vi.fn(async () => undefined),
+    }));
+    const openBrowser = vi.fn(async () => undefined);
+    const registerSignal = vi.fn(() => vi.fn());
+
+    await expect(runVisualMetadataReviewer({
+      argv: [...REQUIRED_PATH_ARGS, ...identityArgs],
+      environment: {},
+      loadSource,
+      build: buildClient,
+      openWorkspace,
+      startServer,
+      openBrowser,
+      registerSignal,
+      log: vi.fn(),
+    })).rejects.toMatchObject({
+      code: "REVIEW_SOURCE_VALIDATION_FAILED",
+      message: "review_source_validation_failed",
+    });
+
+    expect(loadSource).toHaveBeenCalledOnce();
+    expect(loadSource).toHaveBeenCalledWith("scratch/source.json");
+    expect(buildClient).not.toHaveBeenCalled();
+    expect(openWorkspace).not.toHaveBeenCalled();
+    expect(startServer).not.toHaveBeenCalled();
+    expect(openBrowser).not.toHaveBeenCalled();
+    expect(registerSignal).not.toHaveBeenCalled();
+  });
 
   it("permits the identity-form fallback without logging or retaining the submitted email", async () => {
     const logs: string[] = [];
@@ -287,6 +349,7 @@ describe("runVisualMetadataReviewer", () => {
       argv: REQUIRED_PATH_ARGS,
       environment: {},
       build,
+      loadSource,
       openBrowser: vi.fn(async () => undefined),
       registerSignal: () => vi.fn(),
       log: (message) => logs.push(message),
@@ -347,6 +410,7 @@ describe("runVisualMetadataReviewer", () => {
       ],
       environment: {},
       build,
+      loadSource,
       openBrowser,
       openWorkspace: vi.fn(async () => workspace),
       startServer: vi.fn(async (options): Promise<RunningReviewServer> => {
@@ -379,6 +443,183 @@ describe("runVisualMetadataReviewer", () => {
     expect(removeListeners.sort()).toEqual(["SIGINT", "SIGTERM"]);
   });
 
+  it.each([
+    ["SIGINT registration", (order: string[]) => (_signal: ReviewSignal) => {
+      throw new Error("private SIGINT registration detail");
+    }],
+    ["SIGTERM registration", (order: string[]) => (signal: ReviewSignal) => {
+      if (signal === "SIGTERM") throw new Error("private SIGTERM registration detail");
+      return () => order.push("remove:SIGINT");
+    }],
+    ["a throwing installed remover", (order: string[]) => (signal: ReviewSignal) => {
+      if (signal === "SIGTERM") throw new Error("private SIGTERM registration detail");
+      return () => {
+        order.push("remove:SIGINT");
+        throw new Error("private remover detail");
+      };
+    }],
+  ] as const)("cleans up safely when %s fails during startup", async (
+    _case,
+    makeRegistrar,
+  ) => {
+    const order: string[] = [];
+    const workspaceClose = vi.fn(async () => {
+      order.push("workspace");
+    });
+    const serverClose = vi.fn(async () => {
+      order.push("server");
+    });
+    const openBrowser = vi.fn(async () => undefined);
+    const logs: string[] = [];
+
+    const launch = runVisualMetadataReviewer({
+      argv: [
+        ...REQUIRED_PATH_ARGS,
+        "--reviewer-name", "Runtime Reviewer",
+        "--reviewer-email", "runtime@example.test",
+      ],
+      environment: {},
+      build,
+      loadSource,
+      openWorkspace: vi.fn(async () => makeWorkspace(workspaceClose)),
+      startServer: vi.fn(async () => ({
+        bootstrapUrl: `http://127.0.0.1:43123/?bootstrap=${"a".repeat(64)}`,
+        origin: "http://127.0.0.1:43123",
+        close: serverClose,
+      })),
+      openBrowser,
+      registerSignal: makeRegistrar(order),
+      log: (message) => logs.push(message),
+    });
+
+    await expect(launch).rejects.toMatchObject({
+      code: "REVIEW_LAUNCH_SHUTDOWN_FAILED",
+      message: "review_launch_shutdown_failed",
+    });
+    await expect(launch).rejects.not.toThrow("private");
+    expect(serverClose).toHaveBeenCalledOnce();
+    expect(workspaceClose).toHaveBeenCalledOnce();
+    expect(order.slice(-2)).toEqual(["server", "workspace"]);
+    expect(openBrowser).not.toHaveBeenCalled();
+    expect(logs).toEqual([]);
+  });
+
+  it("awaits an in-flight identity workspace and closes it after an early server-close failure", async () => {
+    const order: string[] = [];
+    const workspaceClose = vi.fn(async () => {
+      order.push("workspace");
+    });
+    const pendingWorkspace = deferred<VisualMetadataReviewWorkspace>();
+    let opening: Promise<VisualMetadataReviewWorkspace> | undefined;
+    const serverClose = vi.fn(async () => {
+      order.push("server");
+      throw new Error("private server-close detail");
+    });
+
+    const run = await runVisualMetadataReviewer({
+      argv: [...REQUIRED_PATH_ARGS, "--no-open"],
+      environment: {},
+      build,
+      loadSource,
+      openWorkspace: vi.fn(async () => pendingWorkspace.promise),
+      startServer: vi.fn(async (options) => {
+        const pendingOpening = options.workspaceFactory!({
+          name: "Form Reviewer",
+          email: "private@example.test",
+        });
+        opening = pendingOpening;
+        void pendingOpening.catch(() => undefined);
+        return {
+          bootstrapUrl: `http://127.0.0.1:43123/?bootstrap=${"a".repeat(64)}`,
+          origin: "http://127.0.0.1:43123",
+          close: serverClose,
+        };
+      }),
+      registerSignal: () => vi.fn(),
+      log: vi.fn(),
+    });
+    if (run.mode !== "review") throw new Error("expected review mode");
+    if (!opening) throw new Error("expected pending workspace opening");
+
+    const closing = run.close();
+    let settled = false;
+    void closing.then(
+      () => { settled = true; },
+      () => { settled = true; },
+    );
+    await nextEventLoopTurn();
+    expect(serverClose).toHaveBeenCalledOnce();
+    expect(settled).toBe(false);
+    expect(order).toEqual(["server"]);
+
+    pendingWorkspace.resolve(makeWorkspace(workspaceClose));
+    await expect(opening).resolves.toBeDefined();
+    await expect(closing).rejects.toMatchObject({
+      code: "REVIEW_LAUNCH_SHUTDOWN_FAILED",
+      message: "review_launch_shutdown_failed",
+    });
+    expect(workspaceClose).toHaveBeenCalledOnce();
+    expect(order).toEqual(["server", "workspace"]);
+    await expect(run.close()).rejects.toMatchObject({
+      code: "REVIEW_LAUNCH_SHUTDOWN_FAILED",
+    });
+    expect(serverClose).toHaveBeenCalledOnce();
+    expect(workspaceClose).toHaveBeenCalledOnce();
+  });
+
+  it("observes an in-flight identity workspace rejection after server-close failure", async () => {
+    const pendingWorkspace = deferred<VisualMetadataReviewWorkspace>();
+    let opening: Promise<VisualMetadataReviewWorkspace> | undefined;
+    const serverClose = vi.fn(async () => {
+      throw new Error("private server-close detail");
+    });
+
+    const run = await runVisualMetadataReviewer({
+      argv: [...REQUIRED_PATH_ARGS, "--no-open"],
+      environment: {},
+      build,
+      loadSource,
+      openWorkspace: vi.fn(async () => pendingWorkspace.promise),
+      startServer: vi.fn(async (options) => {
+        const pendingOpening = options.workspaceFactory!({
+          name: "Form Reviewer",
+          email: "private@example.test",
+        });
+        opening = pendingOpening;
+        void pendingOpening.catch(() => undefined);
+        return {
+          bootstrapUrl: `http://127.0.0.1:43123/?bootstrap=${"a".repeat(64)}`,
+          origin: "http://127.0.0.1:43123",
+          close: serverClose,
+        };
+      }),
+      registerSignal: () => vi.fn(),
+      log: vi.fn(),
+    });
+    if (run.mode !== "review") throw new Error("expected review mode");
+    if (!opening) throw new Error("expected pending workspace opening");
+
+    const closing = run.close();
+    let settled = false;
+    void closing.then(
+      () => { settled = true; },
+      () => { settled = true; },
+    );
+    await nextEventLoopTurn();
+    expect(serverClose).toHaveBeenCalledOnce();
+    expect(settled).toBe(false);
+
+    pendingWorkspace.reject(new Error("private workspace-open detail"));
+    await expect(opening).rejects.toMatchObject({
+      code: "REVIEW_WORKSPACE_OPEN_FAILED",
+      message: "review_workspace_open_failed",
+    });
+    await expect(closing).rejects.toMatchObject({
+      code: "REVIEW_LAUNCH_SHUTDOWN_FAILED",
+      message: "review_launch_shutdown_failed",
+    });
+  });
+
   it("rejects a bootstrap URL that does not belong to the server origin even with no-open", async () => {
     const logs: string[] = [];
     const workspaceClose = vi.fn(async () => undefined);
@@ -394,6 +635,7 @@ describe("runVisualMetadataReviewer", () => {
       ],
       environment: {},
       build,
+      loadSource,
       openWorkspace: vi.fn(async () => workspace),
       startServer: vi.fn(async () => ({
         bootstrapUrl: `http://127.0.0.1:43123/?bootstrap=${"a".repeat(64)}`,
