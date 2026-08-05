@@ -233,11 +233,14 @@ test.describe("template visual metadata reviewer", () => {
     await page.keyboard.press("a");
     await expect(page.getByRole("heading", { name: "Synthetic template 2" })).toBeVisible();
     await page.keyboard.press("r");
-    await expect(page.getByRole("dialog", { name: "Reject this proposal" })).toBeVisible();
+    const rejectionDialog = page.getByRole("dialog", { name: "Reject this proposal" });
+    await expect(rejectionDialog).toBeVisible();
     await page.getByLabel("Rejection reason").fill("Keyboard review rejection.");
     await page.getByRole("button", { name: "Reject proposal" }).focus();
     await page.keyboard.press("Enter");
     await expect(page.getByRole("heading", { name: "Synthetic template 3" })).toBeVisible();
+    await expect(rejectionDialog).toBeHidden();
+    await expect(page.locator("button[data-action='reject']")).toBeEnabled();
     await page.keyboard.press("j");
     await expect(page.getByRole("heading", { name: "Synthetic template 4" })).toBeVisible();
     await page.keyboard.press("k");
