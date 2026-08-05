@@ -323,15 +323,24 @@ describe("openReviewBrowser", () => {
 });
 
 describe("reviewer CLI entry", () => {
-  const npm = process.platform === "win32" ? "npm.cmd" : "npm";
+  const npmExecPath = process.env.npm_execpath;
+  it("runs the supported reviewer test gate through npm-cli", () => {
+    expect(npmExecPath).toMatch(/[\\/]npm-cli\.js$/i);
+  });
+
   const runPublicReviewer = (args: readonly string[]) => {
+    if (!npmExecPath?.match(/[\\/]npm-cli\.js$/i)) {
+      throw new Error(`expected npm-cli.js, received ${npmExecPath ?? "undefined"}`);
+    }
     const options = { cwd: process.cwd(), env: { ...process.env, INARIWATCH_CAPTURE_V2: "false" } };
-    return process.platform === "win32"
-      ? execFile(process.env.ComSpec ?? "cmd.exe", [
-        "/d", "/s", "/c",
-        `npm.cmd run --silent templates:visual-metadata:review -- ${args.join(" ")}`,
-      ], options)
-      : execFile(npm, ["run", "--silent", "templates:visual-metadata:review", "--", ...args], options);
+    return execFile(process.execPath, [
+      npmExecPath,
+      "run",
+      "--silent",
+      "templates:visual-metadata:review",
+      "--",
+      ...args,
+    ], options);
   };
   const runConfiguredReviewer = (args: readonly string[]) => {
     const filter = resolve(process.cwd(), "scripts/templates/reviewer/capture-local-output-filter.mjs");
@@ -362,7 +371,7 @@ describe("reviewer CLI entry", () => {
   });
 
   it("prints exactly one aggregate line through the silent public npm command", async () => {
-    const directory = await mkdtemp(join(tmpdir(), "openlen-reviewer-public-cli-"));
+    const directory = await mkdtemp(join(tmpdir(), "openlen reviewer public cli-"));
     const inputPath = join(directory, "synthetic-valid.json");
     await writeFile(inputPath, `${JSON.stringify(validCliArtifact())}\n`, "utf8");
     try {
