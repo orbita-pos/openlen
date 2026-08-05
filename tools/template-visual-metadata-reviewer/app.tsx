@@ -212,6 +212,7 @@ export function ReviewerApp({ api }: { api: ReviewerApi }) {
   const [rejectionOpen, setRejectionOpen] = useState(false);
   const itemRequest = useRef(0);
   const navigationRequest = useRef(0);
+  const pausedRef = useRef(false);
   const currentIdRef = useRef<string | null>(null);
   const screenshotAttemptRef = useRef(0);
   const loadedScreenshotRef = useRef<{ itemId: string; attempt: number } | null>(null);
@@ -220,6 +221,9 @@ export function ReviewerApp({ api }: { api: ReviewerApi }) {
   const handleMutationError = useCallback((cause: unknown) => {
     setError(safeErrorMessage(cause));
     if (isTerminalMutationError(cause)) {
+      pausedRef.current = true;
+      navigationRequest.current += 1;
+      itemRequest.current += 1;
       loadedScreenshotRef.current = null;
       setPaused(true);
       setRejectionOpen(false);
@@ -252,7 +256,7 @@ export function ReviewerApp({ api }: { api: ReviewerApi }) {
   ) => {
     const requestId = ++itemRequest.current;
     const nextItems = await api.getItems({ status: nextFilter, q: nextQuery || undefined });
-    if (requestId !== itemRequest.current) return;
+    if (requestId !== itemRequest.current || pausedRef.current) return;
     setItems(nextItems);
     const wanted = preferredId === undefined ? currentIdRef.current : preferredId;
     const selected = nextItems.some((item) => item.id === wanted) ? wanted! : nextItems[0]?.id ?? null;
@@ -297,12 +301,12 @@ export function ReviewerApp({ api }: { api: ReviewerApi }) {
   );
 
   const navigate = useCallback(async (id: string) => {
-    if (busy || paused || id === currentId) return;
+    if (busy || pausedRef.current || id === currentId) return;
     const requestId = ++navigationRequest.current;
     setError("");
     try {
       await api.navigate(id);
-      if (requestId !== navigationRequest.current) return;
+      if (requestId !== navigationRequest.current || pausedRef.current) return;
       activateItem(id, items);
     } catch (cause) {
       if (requestId !== navigationRequest.current) return;
@@ -320,7 +324,7 @@ export function ReviewerApp({ api }: { api: ReviewerApi }) {
   const decide = useCallback(async (
     decision: { action: "approved" } | { action: "rejected"; reason: string },
   ) => {
-    if (!currentItem || busy || paused) return;
+    if (!currentItem || busy || pausedRef.current) return;
     if (currentItem.state !== "pending" || currentIdRef.current !== currentItem.id) return;
     if (decision.action === "approved") {
       const loaded = loadedScreenshotRef.current;
@@ -415,7 +419,7 @@ export function ReviewerApp({ api }: { api: ReviewerApi }) {
   }
 
   const commitMetadata = async (field: string, value: unknown) => {
-    if (!currentItem?.metadata || busy || paused) return false;
+    if (!currentItem?.metadata || busy || pausedRef.current) return false;
     setBusy(true);
     setError("");
     try {
@@ -437,7 +441,7 @@ export function ReviewerApp({ api }: { api: ReviewerApi }) {
   };
 
   const reopen = async () => {
-    if (!currentItem || busy || paused) return;
+    if (!currentItem || busy || pausedRef.current) return;
     setBusy(true);
     setError("");
     try {
@@ -452,7 +456,7 @@ export function ReviewerApp({ api }: { api: ReviewerApi }) {
   };
 
   const runExport = async (kind: "final" | "audit") => {
-    if (paused) return;
+    if (pausedRef.current) return;
     setBusy(true);
     setError("");
     try {
@@ -525,11 +529,13 @@ export function ReviewerApp({ api }: { api: ReviewerApi }) {
         disabled={busy || paused}
         onToggle={() => setQueueOpen((open) => !open)}
         onFilter={(nextFilter) => {
+          if (pausedRef.current) return;
           filterRef.current = nextFilter;
           setFilter(nextFilter);
           void fetchItemsSafely(nextFilter, queryRef.current);
         }}
         onQuery={(nextQuery) => {
+          if (pausedRef.current) return;
           queryRef.current = nextQuery;
           setQuery(nextQuery);
           void fetchItemsSafely(filterRef.current, nextQuery);

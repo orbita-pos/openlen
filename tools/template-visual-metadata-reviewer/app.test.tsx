@@ -518,6 +518,77 @@ describe("template visual metadata reviewer", () => {
     expect(vi.mocked(api.navigate).mock.calls).toHaveLength(navigationCalls);
   });
 
+  it("revokes a pending navigation when a mutation terminally pauses the review", async () => {
+    const navigation = deferred<void>();
+    const api = makeApi({
+      navigate: vi.fn(() => navigation.promise),
+      updateMetadata: vi.fn(async () => {
+        throw new ReviewerApiError("request_rejected", 500);
+      }),
+    });
+    await render(api);
+    await loadScreenshot();
+    const exactImage = host!.querySelector("img");
+    await click(host!.querySelector("button[aria-controls='review-queue']"));
+    const toTwo = [...host!.querySelectorAll<HTMLButtonElement>("#review-queue li button")]
+      .find((button) => button.textContent?.includes("Template two"))!;
+    await click(toTwo);
+
+    const editor = host!.querySelector<HTMLInputElement>("input[aria-label='Add domains tag']")!;
+    await input(editor, "terminal_edit");
+    await key("Enter", editor);
+    expect(host!.querySelector("[data-review-paused]")).not.toBeNull();
+    expect(host!.querySelector("h1")?.textContent).toBe("Template one");
+    expect(host!.querySelector("img")).toBe(exactImage);
+    expect(host!.querySelector(".stage-message")).toBeNull();
+
+    navigation.resolve();
+    await act(async () => {
+      await vi.mocked(api.navigate).mock.results[0].value;
+      await Promise.resolve();
+    });
+    expect(host!.querySelector("[data-review-paused]")).not.toBeNull();
+    expect(host!.querySelector("h1")?.textContent).toBe("Template one");
+    expect(host!.querySelector("img")).toBe(exactImage);
+    expect(host!.querySelector(".stage-message")).toBeNull();
+  });
+
+  it("revokes a pending item query when a mutation terminally pauses the review", async () => {
+    const query = deferred<SafeReviewItemDto[]>();
+    const api = makeApi({
+      getItems: vi.fn(async ({ q }) => q === "late" ? query.promise : [item("one"), item("two")]),
+      updateMetadata: vi.fn(async () => {
+        throw new ReviewerApiError("request_rejected", 500);
+      }),
+    });
+    await render(api);
+    await loadScreenshot();
+    await click(host!.querySelector("button[aria-controls='review-queue']"));
+    const queueBefore = host!.querySelector("#review-queue")?.textContent;
+    const exactImage = host!.querySelector("img");
+    const search = host!.querySelector<HTMLInputElement>("#review-queue input[type='search']")!;
+    await input(search, "late");
+
+    const editor = host!.querySelector<HTMLInputElement>("input[aria-label='Add domains tag']")!;
+    await input(editor, "terminal_edit");
+    await key("Enter", editor);
+    expect(host!.querySelector("[data-review-paused]")).not.toBeNull();
+    expect(host!.querySelector("h1")?.textContent).toBe("Template one");
+    expect(host!.querySelector("#review-queue")?.textContent).toBe(queueBefore);
+    expect(host!.querySelector("img")).toBe(exactImage);
+
+    query.resolve([item("late-result", "pending", { name: "Late query result" })]);
+    await act(async () => {
+      await query.promise;
+      await Promise.resolve();
+    });
+    expect(host!.querySelector("[data-review-paused]")).not.toBeNull();
+    expect(host!.querySelector("h1")?.textContent).toBe("Template one");
+    expect(host!.querySelector("#review-queue")?.textContent).toBe(queueBefore);
+    expect(host!.querySelector("#review-queue")?.textContent).not.toContain("Late query result");
+    expect(host!.querySelector("img")).toBe(exactImage);
+  });
+
   it("shows exact remaining approvals and completion gate state", async () => {
     const api = makeApi();
     await render(api);
