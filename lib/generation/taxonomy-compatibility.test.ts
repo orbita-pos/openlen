@@ -10,7 +10,7 @@ import {
 
 describe("taxonomy compatibility", () => {
   it("exposes a versioned deterministic contract", () => {
-    expect(TAXONOMY_COMPATIBILITY_VERSION).toBe("taxonomy-compatibility/1.0");
+    expect(TAXONOMY_COMPATIBILITY_VERSION).toBe("taxonomy-compatibility/1.1");
   });
 
   it.each([
@@ -28,6 +28,19 @@ describe("taxonomy compatibility", () => {
     expect(siteTypeCompatibility("landing_page", "product_landing_page"))
       .toMatchObject({ kind: "structural", score: 0.85 });
     expect(siteTypeCompatibility("product_landing_page", "landing_page"))
+      .toEqual({ kind: "none", score: 0, ruleId: null });
+  });
+
+  it.each([
+    ["business_presence", "restaurant_website"],
+    ["business_presence", "fine_dining_restaurant"],
+    ["business_presence", "local_business"],
+    ["product_marketing", "product_landing_page"],
+    ["product_marketing", "company_website"],
+  ])("supports the audited site-type specialization %s > %s", (required, supported) => {
+    expect(siteTypeCompatibility(required, supported))
+      .toMatchObject({ kind: "structural", score: 0.85 });
+    expect(siteTypeCompatibility(supported, required))
       .toEqual({ kind: "none", score: 0, ruleId: null });
   });
 
@@ -55,6 +68,19 @@ describe("taxonomy compatibility", () => {
     expect(audienceCompatibility("professionals", "financial_professionals"))
       .toMatchObject({ kind: "soft", score: 0.7 });
     expect(audienceCompatibility("children", "children_focused"))
+      .toEqual({ kind: "none", score: 0, ruleId: null });
+  });
+
+  it.each([
+    "coffee_lovers",
+    "foodies",
+    "tech_enthusiasts",
+    "homeowners",
+    "early_adopters",
+  ])("treats the audited consumer specialty %s as soft support", (candidate) => {
+    expect(audienceCompatibility("consumers", candidate))
+      .toMatchObject({ kind: "soft", score: 0.7 });
+    expect(audienceCompatibility(candidate, "consumers"))
       .toEqual({ kind: "none", score: 0, ruleId: null });
   });
 

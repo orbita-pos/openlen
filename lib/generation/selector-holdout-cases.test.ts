@@ -22,5 +22,7 @@ describe("SELECTOR_HOLDOUT_CASES", () => {
       expect(item.forbiddenSignals.length).toBeGreaterThan(0);
       expect(INTENT_SYSTEM_PROMPT).not.toContain(item.brief);
     }
+    expect(INTENT_SYSTEM_PROMPT).not.toContain("individual photographer");
+    expect(INTENT_SYSTEM_PROMPT).not.toContain("residential contractor");
   });
 });

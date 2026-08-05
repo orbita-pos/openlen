@@ -5,7 +5,7 @@ export const SELECTOR_HOLDOUT_CASES: readonly SelectorEvalCase[] = [
     id: "legal-firm-holdout-en",
     language: "en",
     brief: "Boutique employment law firm for startup founders, with attorney profiles, case insights, consultation booking and transparent services.",
-    expectedDomains: ["legal_services", "local_services"],
+    expectedDomains: ["legal_services", "business_services"],
     expectedAudience: "businesses",
     forbiddenSignals: ["children_toy_ui", "gaming_esports"],
     adversarial: true,

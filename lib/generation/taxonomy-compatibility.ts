@@ -1,5 +1,5 @@
 export const TAXONOMY_COMPATIBILITY_VERSION =
-  "taxonomy-compatibility/1.0" as const;
+  "taxonomy-compatibility/1.1" as const;
 
 export type CompatibilityKind = "exact" | "alias" | "structural" | "soft" | "none";
 
@@ -34,6 +34,11 @@ const SITE_TYPE_ALIASES: Readonly<Record<string, string>> = {
 
 const SITE_TYPE_CHILDREN: Readonly<Record<string, readonly string[]>> = {
   blog: ["food_blog", "personal_blog", "tech_blog", "travel_blog"],
+  business_presence: [
+    "fine_dining_restaurant",
+    "local_business",
+    "restaurant_website",
+  ],
   content_platform: [
     "community_platform",
     "entertainment_platform",
@@ -56,6 +61,7 @@ const SITE_TYPE_CHILDREN: Readonly<Record<string, readonly string[]>> = {
     "portfolio_site",
     "portfolio_website",
   ],
+  product_marketing: ["company_website", "product_landing_page"],
 };
 
 const SECTION_ROLE_ALIASES: Readonly<Record<string, string>> = {
@@ -80,7 +86,18 @@ const SECTION_ROLE_CHILDREN: Readonly<Record<string, readonly string[]>> = {
 };
 
 const SOFT_AUDIENCES: Readonly<Record<string, readonly string[]>> = {
-  consumers: ["adults", "customers", "general_consumers", "general_public", "young_adults"],
+  consumers: [
+    "adults",
+    "coffee_lovers",
+    "customers",
+    "early_adopters",
+    "foodies",
+    "general_consumers",
+    "general_public",
+    "homeowners",
+    "tech_enthusiasts",
+    "young_adults",
+  ],
   creative_clients: ["clients", "creative_professionals", "creatives", "potential_clients"],
   fans: ["sports_fans"],
   guests: ["wedding_guests"],

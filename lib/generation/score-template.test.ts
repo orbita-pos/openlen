@@ -353,6 +353,73 @@ describe("scoreTemplate", () => {
     expect(score.identityFit).toBeGreaterThan(0.8);
   });
 
+  it.each([
+    {
+      id: "grano",
+      siteType: "ecommerce",
+      domains: ["food_beverage", "ecommerce"],
+      audience: "coffee_lovers",
+      supportedSiteTypes: ["e_commerce", "landing_page"],
+      metadataDomains: ["food_and_drink", "e_commerce"],
+    },
+    {
+      id: "marcato",
+      siteType: "business_presence",
+      domains: ["food_beverage", "hospitality", "local_services"],
+      audience: "foodies",
+      supportedSiteTypes: ["restaurant_website", "fine_dining_restaurant"],
+      metadataDomains: ["food_and_drink", "hospitality", "restaurants"],
+    },
+    {
+      id: "lintel",
+      siteType: "product_marketing",
+      domains: ["consumer_technology", "hardware", "wellness"],
+      audience: "tech_enthusiasts",
+      supportedSiteTypes: ["product_landing_page", "company_website"],
+      metadataDomains: ["hardware", "smart_home", "technology", "e_commerce"],
+    },
+  ])("does not hard-filter the audited $id category", ({
+    id,
+    siteType,
+    domains,
+    audience,
+    supportedSiteTypes,
+    metadataDomains,
+  }) => {
+    const intent: IntentAnalysis = {
+      ...CHILDREN_INTENT,
+      functional: {
+        ...CHILDREN_INTENT.functional,
+        siteType,
+        requiredSections: ["about", "contact"],
+      },
+      audience: { primary: "consumers", ageRange: "adults", secondary: [] },
+      domains,
+      emotionalGoals: [],
+      requiredVisualSignals: [],
+      forbiddenVisualSignals: [],
+    };
+    const template: ScorableTemplate = {
+      id,
+      visualMetadata: {
+        ...KIDS_TEMPLATE.visualMetadata!,
+        domains: metadataDomains,
+        audiences: [audience],
+        ageRanges: ["adults"],
+        emotionalRegisters: [],
+        visualSignals: [],
+        supportedSiteTypes,
+        supportedSectionRoles: ["about_us", "contact_page"],
+      },
+    };
+
+    const score = scoreTemplate(intent, template);
+
+    expect(score.eligible).toBe(true);
+    expect(score.reasonCodes).not.toContain("unsupported_site_type");
+    expect(score.reasonCodes).not.toContain("audience_mismatch");
+  });
+
   it("does not invent a complete children-coloring match from a generic gallery", () => {
     const sportsSchool: ScorableTemplate = {
       id: "sports-school",
