@@ -45,6 +45,7 @@ export const ReasonCodeSchema = z.enum([
   "identity_below_threshold",
   "structure_below_threshold",
   "adaptation_cost_too_high",
+  "themeability_below_threshold",
 ]);
 
 export type ReasonCode = z.infer<typeof ReasonCodeSchema>;

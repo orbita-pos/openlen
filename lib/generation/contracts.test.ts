@@ -81,4 +81,23 @@ describe("GenerationDecisionSchema", () => {
 
     expect(decision.rejectedCandidates[0]?.reasonCodes).toEqual(["intent_ambiguous"]);
   });
+
+  it("preserves a skeleton themeability rejection reason", () => {
+    const decision = GenerationDecisionSchema.parse({
+      schemaVersion: "generation-decision/1.0",
+      route: "section_composition",
+      templateId: null,
+      structuralFit: 0.9,
+      identityFit: 0.4,
+      adaptationCost: 0.5,
+      selectedSections: [],
+      rejectedCandidates: [{
+        id: "rigid",
+        reasonCodes: ["themeability_below_threshold"],
+      }],
+    });
+
+    expect(decision.rejectedCandidates[0]?.reasonCodes)
+      .toEqual(["themeability_below_threshold"]);
+  });
 });
