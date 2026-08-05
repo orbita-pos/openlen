@@ -64,4 +64,21 @@ describe("GenerationDecisionSchema", () => {
       rejectedCandidates: [],
     }).success).toBe(false);
   });
+
+  it("preserves an explicit reason when ambiguous intent makes a candidate ineligible", () => {
+    const decision = GenerationDecisionSchema.parse({
+      schemaVersion: "generation-decision/1.0",
+      route: "section_composition",
+      templateId: null,
+      structuralFit: 0,
+      identityFit: 0,
+      adaptationCost: 1,
+      selectedSections: [],
+      rejectedCandidates: [
+        { id: "generic", reasonCodes: ["intent_ambiguous"] },
+      ],
+    });
+
+    expect(decision.rejectedCandidates[0]?.reasonCodes).toEqual(["intent_ambiguous"]);
+  });
 });

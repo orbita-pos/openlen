@@ -34,6 +34,7 @@ export const IntentAnalysisSchema = z.object({
 export type IntentAnalysis = z.infer<typeof IntentAnalysisSchema>;
 
 export const ReasonCodeSchema = z.enum([
+  "intent_ambiguous",
   "metadata_missing",
   "metadata_unreviewed",
   "unsupported_site_type",
