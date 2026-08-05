@@ -15,6 +15,10 @@ import { ensurePageMeta } from "@/lib/publish/ensure-page-meta";
 import { renderProjectThumbnail } from "@/lib/projects/thumbnail";
 import { listTemplates, getTemplateHtml } from "@/lib/templates/store";
 import { pickTemplate, pickWeighted, type TemplateCatalogItem } from "@/lib/curate/pick-template";
+import {
+  logShadowComparisonWhenReady,
+  runShadowSelection,
+} from "@/lib/generation/shadow-selection";
 import { fillAssembled } from "@/lib/assemble/fill";
 import { resolveProfileForCreation } from "@/lib/business-profiles/store";
 import { overlayProfile } from "@/lib/business-profiles/overlay";
@@ -122,6 +126,7 @@ export async function POST(req: Request): Promise<Response> {
           pitch: t.pitch,
           description: t.description,
         }));
+        const shadowPromise = runShadowSelection(brief, templates);
         const pick = await pickTemplate(brief, catalog);
         if (!pick.ok) {
           emit("error", { kind: pick.error.kind, message: `Pick failed: ${pick.error.message}` });
@@ -132,6 +137,7 @@ export async function POST(req: Request): Promise<Response> {
         // template instead of the same page every time.
         const chosenId = pickWeighted(pick.templateIds);
         const chosen = templates.find((t) => t.id === chosenId);
+        void logShadowComparisonWhenReady(shadowPromise, chosenId);
 
         // Seed the copy from the user's saved business profile (if one was
         // picked): real info wins, the model's invented copy fills any gaps.
