@@ -76,6 +76,25 @@ describe("safe template picker shadow", () => {
     expect(analyze).not.toHaveBeenCalled();
   });
 
+  it("keeps the existing off gate and maps active selection into the shadow schema", async () => {
+    const analyze = successfulAnalyzer();
+
+    expect(await runShadowSelection("brief", [TEMPLATE], {
+      mode: "off",
+      analyzeIntentImpl: analyze,
+    })).toBeNull();
+    expect(analyze).not.toHaveBeenCalled();
+
+    await expect(runShadowSelection("brief", [TEMPLATE], {
+      mode: "shadow",
+      analyzeIntentImpl: successfulAnalyzer(),
+    })).resolves.toMatchObject({
+      status: "ok",
+      schemaVersion: "safe-selection-shadow/1.0",
+      decision: { route: "template_full", templateId: "kids" },
+    });
+  });
+
   it("normalizes an unsupported runtime option to off", async () => {
     const analyze = successfulAnalyzer();
 

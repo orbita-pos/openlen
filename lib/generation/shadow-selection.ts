@@ -1,15 +1,12 @@
 import type { TemplateRecord } from "@/lib/templates/store";
 
-import {
-  analyzeIntent,
-  INTENT_PROMPT_VERSION,
-  type AnalyzeIntentResult,
-} from "./analyze-intent";
+import { analyzeIntent, INTENT_PROMPT_VERSION } from "./analyze-intent";
 import {
   DECISION_POLICY_VERSION,
   decideGenerationRoute,
 } from "./decide-route";
-import { rankTemplates, type ScoredTemplate } from "./score-template";
+import type { ScoredTemplate } from "./score-template";
+import { selectGenerationRoute } from "./safe-selection";
 
 export type SafeTemplatePickerMode = "off" | "shadow";
 
@@ -80,11 +77,6 @@ export async function logShadowComparisonWhenReady(
   }
 }
 
-function elapsedMilliseconds(started: number, now: () => number): number {
-  const elapsed = now() - started;
-  return Number.isFinite(elapsed) ? Math.max(0, elapsed) : 0;
-}
-
 export async function runShadowSelection(
   brief: string,
   templates: readonly Pick<TemplateRecord, "id" | "visualMetadata">[],
@@ -93,40 +85,27 @@ export async function runShadowSelection(
   const mode = safeTemplatePickerMode(options.mode);
   if (mode === "off") return null;
 
-  const now = options.now ?? Date.now;
-  const started = now();
-  const elapsed = () => elapsedMilliseconds(started, now);
-
-  try {
-    const analyze = options.analyzeIntentImpl ?? analyzeIntent;
-    const result: AnalyzeIntentResult = await analyze(brief);
-    if (!result.ok) {
-      return {
-        status: "error",
-        schemaVersion: "safe-selection-shadow/1.0",
-        errorKind: result.error.kind,
-        durationMs: elapsed(),
-      };
-    }
-
-    const ranked = rankTemplates(result.intent, templates);
-    return {
-      status: "ok",
-      schemaVersion: "safe-selection-shadow/1.0",
-      promptVersion: result.promptVersion,
-      policyVersion: DECISION_POLICY_VERSION,
-      modelId: result.modelId,
-      decision: decideGenerationRoute(ranked),
-      topCandidates: ranked.slice(0, 5),
-      usage: result.usage,
-      durationMs: elapsed(),
-    };
-  } catch {
+  const result = await selectGenerationRoute(brief, templates, {
+    analyzeIntentImpl: options.analyzeIntentImpl ?? analyzeIntent,
+    now: options.now,
+  });
+  if (!result.ok) {
     return {
       status: "error",
       schemaVersion: "safe-selection-shadow/1.0",
-      errorKind: "unexpected_error",
-      durationMs: elapsed(),
+      errorKind: result.errorKind,
+      durationMs: result.durationMs,
     };
   }
+  return {
+    status: "ok",
+    schemaVersion: "safe-selection-shadow/1.0",
+    promptVersion: result.promptVersion,
+    policyVersion: result.policyVersion,
+    modelId: result.modelId,
+    decision: result.decision,
+    topCandidates: result.ranked.slice(0, 5),
+    usage: result.usage,
+    durationMs: result.durationMs,
+  };
 }
