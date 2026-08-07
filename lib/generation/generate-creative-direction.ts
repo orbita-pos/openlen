@@ -417,7 +417,7 @@ export async function generateCreativeDirection(
   const work = (async (): Promise<GenerateCreativeDirectionResult> => {
     let providerResponse: CreativeProviderResponse;
     try {
-      providerResponse = await provider.generate(request, { signal: controller.signal });
+      providerResponse = await provider.generate(providerPayload(request), { signal: controller.signal });
     } catch (error) {
       if (cancellation.kind) return errorResult(cancellation.kind, base);
       if (error instanceof CreativeProviderError) return errorResult(error.kind, base);

@@ -156,6 +156,29 @@ describe("generateCreativeDirection", () => {
     expect(JSON.stringify(providerPayload)).not.toContain("<!doctype html>");
   });
 
+  it("does not pass runtime extras to a replaceable provider", async () => {
+    let receivedRequest: unknown;
+    const provider: CreativeDirectionProvider = {
+      generate: vi.fn(async (request) => {
+        receivedRequest = request;
+        return { text: JSON.stringify(READY_RESPONSE) };
+      }),
+    };
+    const untrustedRuntimeRequest = {
+      ...REQUEST,
+      html: "<!doctype html><body>must-not-reach-provider</body>",
+      privateNotes: "must-not-reach-provider-private",
+      intent: { ...REQUEST.intent, privateNotes: "must-not-reach-provider-intent" },
+      inventory: { ...REQUEST.inventory, rawHtml: "must-not-reach-provider-inventory" },
+    } as CreativeDirectionRequest;
+
+    await generateCreativeDirection(untrustedRuntimeRequest, { provider, now: () => 10 });
+
+    expect(receivedRequest).toEqual(REQUEST);
+    expect(JSON.stringify(receivedRequest)).not.toContain("must-not-reach-provider");
+    expect(JSON.stringify(receivedRequest)).not.toContain("<!doctype html>");
+  });
+
   it("returns redacted typed failures for local, provider, parser, contract, compatibility, and unexpected errors", async () => {
     const malformed = await generateCreativeDirection(REQUEST, { apiKey: "x", fetchImpl: vi.fn().mockResolvedValue(geminiResponse("```json\n{}\n```")), now: () => 10 });
     const schema = await generateCreativeDirection(REQUEST, { apiKey: "x", fetchImpl: vi.fn().mockResolvedValue(geminiResponse(JSON.stringify({ schemaVersion: "skeleton-creative-response/1.0", status: "ready" }))), now: () => 10 });
