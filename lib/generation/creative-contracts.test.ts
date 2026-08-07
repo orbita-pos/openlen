@@ -5,7 +5,10 @@ import {
   SkeletonCreativeResponseSchema,
   SkeletonInventorySchema,
 } from "@/lib/generation/creative-contracts";
+import { CREATIVE_TOKEN_ALLOWLIST } from "@/lib/generation/creative-registry";
 import { COLORING_DIRECTION, COLORING_PLAN, COLORING_TEMPLATE_METADATA } from "@/lib/generation/creative-fixtures.test-support";
+
+const VALID_FINGERPRINT = `sha256:${"a".repeat(64)}`;
 
 describe("creative contracts", () => {
   it("parses the shared coloring direction", () => {
@@ -19,8 +22,20 @@ describe("creative contracts", () => {
   });
 
   it("validates a restrictive skeleton inventory", () => {
-    expect(SkeletonInventorySchema.parse({ schemaVersion: "skeleton-inventory/1.0", ...COLORING_TEMPLATE_METADATA })).toMatchObject({ templateId: "coloring-template" });
+    expect(SkeletonInventorySchema.parse({ schemaVersion: "skeleton-inventory/1.0", ...COLORING_TEMPLATE_METADATA, structuralFingerprint: VALID_FINGERPRINT })).toMatchObject({ templateId: "coloring-template" });
     expect(() => SkeletonInventorySchema.parse({ schemaVersion: "skeleton-inventory/1.0", ...COLORING_TEMPLATE_METADATA, styleHooks: [{ ...COLORING_TEMPLATE_METADATA.styleHooks[0], id: "Bad Hook" }] })).toThrow();
+  });
+
+  it("accepts the complete creative token allowlist and an exact SHA-256 fingerprint", () => {
+    const availableTokens = [...CREATIVE_TOKEN_ALLOWLIST].sort((left, right) => left.localeCompare(right));
+    const inventory = { schemaVersion: "skeleton-inventory/1.0", ...COLORING_TEMPLATE_METADATA, availableTokens, structuralFingerprint: VALID_FINGERPRINT };
+
+    expect(SkeletonInventorySchema.parse(inventory).availableTokens).toEqual(availableTokens);
+    expect(() => SkeletonInventorySchema.parse({ ...inventory, availableTokens: [...availableTokens, availableTokens[0]] })).toThrow();
+    expect(() => SkeletonInventorySchema.parse({ ...inventory, availableTokens: [...availableTokens.slice(0, -1), "--not-approved"] })).toThrow();
+    expect(() => SkeletonInventorySchema.parse({ ...inventory, structuralFingerprint: `sha256:${"A".repeat(64)}` })).toThrow();
+    expect(() => SkeletonInventorySchema.parse({ ...inventory, structuralFingerprint: `sha256:${"a".repeat(63)}` })).toThrow();
+    expect(() => SkeletonInventorySchema.parse({ ...inventory, structuralFingerprint: "sha256-a".repeat(64) })).toThrow();
   });
 
   it("rejects duplicate inventory tokens, hook properties, hook IDs, and asset slots", () => {
@@ -88,7 +103,7 @@ describe("creative contracts", () => {
     const slot = inventory.assetSlots[0];
     const override = COLORING_PLAN.cssOverride[0];
     const asset = COLORING_PLAN.assets[0];
-    expect(() => SkeletonInventorySchema.parse({ ...inventory, availableTokens: ["--ol-bg", "--ol-surface", "--ol-surface-2", "--ol-fg", "--ol-fg-muted", "--ol-fg-faint", "--ol-border", "--ol-border-strong", "--ol-accent", "--ol-accent-ink", "--ol-radius", "--ol-r-scale", "--ol-space-scale"] })).toThrow();
+    expect(() => SkeletonInventorySchema.parse({ ...inventory, availableTokens: [...CREATIVE_TOKEN_ALLOWLIST, "--ol-bg"] })).toThrow();
     expect(() => SkeletonInventorySchema.parse({ ...inventory, styleHooks: Array.from({ length: 13 }, (_, id) => ({ ...hook, id: `hook-${id}` })) })).toThrow();
     expect(() => SkeletonInventorySchema.parse({ ...inventory, styleHooks: [{ ...hook, allowedProperties: ["background-color", "color", "font-family", "border-color", "border-radius", "padding", "gap", "box-shadow", "text-align", "fill", "stroke", "stroke-width", "stroke-linecap"] }] })).toThrow();
     expect(() => SkeletonInventorySchema.parse({ ...inventory, assetSlots: Array.from({ length: 13 }, (_, slotIndex) => ({ ...slot, slotIndex })) })).toThrow();

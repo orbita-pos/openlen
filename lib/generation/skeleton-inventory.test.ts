@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { parse } from "node-html-parser";
 import { buildSkeletonInventory, SkeletonInventoryError } from "@/lib/generation/skeleton-inventory";
 
 const HTML = `<!doctype html>
@@ -34,6 +35,42 @@ describe("buildSkeletonInventory", () => {
     const inventory = buildSkeletonInventory(HTML, "color-base");
 
     expect(inventory.assetSlots.map((asset) => asset.currentAlt)).toEqual(["Classroom", "Workbook"]);
+  });
+
+  it("excludes logos identified on the image and data URIs in srcset", () => {
+    const adversarialHtml = HTML.replace("</main>", `<section>
+      <img id="brand-logo" src="/brand-logo.png" alt="Brand mark">
+      <img src="/image.jpg" srcset="data:image/png;base64,abc 1x" alt="Data srcset">
+      <img src="/safe.jpg" alt="Safe content">
+    </section></main>`);
+    const inventory = buildSkeletonInventory(adversarialHtml, "color-base");
+
+    expect(inventory.assetSlots.map((asset) => asset.currentAlt)).toEqual(["Classroom", "Workbook", "Safe content"]);
+  });
+
+  it("uses DOM-path selectors that uniquely scope hooks amid colliding markup", () => {
+    const collisionHtml = `<!doctype html><html><body>
+      <nav id="primary-nav"></nav>
+      <main id="application">
+        <nav id="nested-nav"></nav>
+        <section id="hero-section"><section id="nested-section"></section></section>
+        <section id="card-section"><article id="card-a" class="activity-card"></article><article id="card-b" class="activity-card"></article></section>
+      </main>
+      <section id="outside-section"><article id="outside-card" class="activity-card"></article></section>
+    </body></html>`;
+    const inventory = buildSkeletonInventory(collisionHtml, "collision-base");
+    const dom = parse(collisionHtml);
+    const idsFor = (hookId: string) => dom.querySelectorAll(inventory.styleHooks.find((hook) => hook.id === hookId)!.selector).map((element) => element.getAttribute("id"));
+
+    expect(idsFor("navigation")).toEqual(["primary-nav"]);
+    expect(idsFor("hero")).toEqual(["hero-section"]);
+    expect(idsFor("section-1")).toEqual(["nested-section"]);
+    expect(idsFor("cards-activity-card")).toEqual(["card-a", "card-b"]);
+  });
+
+  it("maps runtime schema validation failures to a typed inventory error", () => {
+    expect(() => buildSkeletonInventory(HTML, "x".repeat(181))).toThrow(SkeletonInventoryError);
+    expect(() => buildSkeletonInventory(HTML, "x".repeat(181))).toThrow(expect.objectContaining({ code: "invalid_inventory" }));
   });
 
   it("fails closed with a typed error when no safe template skeleton can be extracted", () => {
