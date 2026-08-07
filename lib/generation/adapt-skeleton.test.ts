@@ -5,6 +5,7 @@ import {
   CreativeDirectionSchema,
   SkeletonAdaptationPlanSchema,
   type CreativeDirection,
+  type SkeletonAdaptationFailureCode,
   type SkeletonAdaptationPlan,
 } from "@/lib/generation/creative-contracts";
 import { IntentAnalysisSchema } from "@/lib/generation/contracts";
@@ -13,7 +14,7 @@ import {
   type GenerateCreativeDirectionResult,
 } from "@/lib/generation/generate-creative-direction";
 import { resolveSkeletonAssets } from "@/lib/generation/skeleton-assets";
-import { buildSkeletonInventory } from "@/lib/generation/skeleton-inventory";
+import { buildSkeletonInventory, SkeletonInventoryError } from "@/lib/generation/skeleton-inventory";
 import { fingerprintStructure } from "@/lib/generation/structural-fingerprint";
 import type { CuratedImage } from "@/lib/imagery/manifest";
 import {
@@ -173,10 +174,20 @@ describe("adaptTemplateSkeleton", () => {
     providerCalls: number;
     change: (deps: AdaptTemplateSkeletonDeps) => void;
   }> = [
-    { name: "inventory error", reasonCode: "internal_error", providerCalls: 0, change: (deps) => { deps.buildInventory = () => { throw new Error("bad inventory"); }; } },
+    ...(["insufficient_style_hooks", "invalid_html", "invalid_inventory"] as const).map((code) => ({
+      name: `typed inventory error ${code}`,
+      reasonCode: code,
+      providerCalls: 0,
+      change: (deps: AdaptTemplateSkeletonDeps) => { deps.buildInventory = () => { throw new SkeletonInventoryError(code, "safe inventory error"); }; },
+    })),
     { name: "provider timeout", reasonCode: "provider_timeout", providerCalls: 1, change: (deps) => { deps.generateCreativeDirection = vi.fn().mockResolvedValue(providerFailure("timeout")); } },
     { name: "invalid provider response", reasonCode: "invalid_provider_response", providerCalls: 1, change: (deps) => { deps.generateCreativeDirection = vi.fn().mockResolvedValue(providerFailure("schema")); } },
-    { name: "model incompatibility", reasonCode: "model_incompatible", providerCalls: 1, change: (deps) => { deps.generateCreativeDirection = vi.fn().mockResolvedValue({ ...READY, response: { schemaVersion: "skeleton-creative-response/1.0", status: "incompatible", reasonCode: "cannot_add_required_signal" } }); } },
+    ...(["cannot_remove_forbidden_signal", "cannot_add_required_signal", "asset_slot_unavailable", "hook_property_not_allowed"] as const satisfies readonly SkeletonAdaptationFailureCode[]).map((reasonCode) => ({
+      name: `model incompatibility ${reasonCode}`,
+      reasonCode,
+      providerCalls: 1,
+      change: (deps: AdaptTemplateSkeletonDeps) => { deps.generateCreativeDirection = vi.fn().mockResolvedValue({ ...READY, response: { schemaVersion: "skeleton-creative-response/1.0", status: "incompatible", reasonCode } }); },
+    })),
     { name: "CSS policy violation", reasonCode: "css_policy_violation", providerCalls: 1, change: (deps) => { deps.compileIdentity = () => ({ ok: false, code: "css_policy_violation", message: "unsafe CSS" }); } },
     { name: "contrast violation", reasonCode: "contrast_violation", providerCalls: 1, change: (deps) => { deps.compileIdentity = () => ({ ok: false, code: "contrast_violation", message: "low contrast" }); } },
     { name: "required asset miss", reasonCode: "required_asset_unavailable", providerCalls: 1, change: (deps) => { deps.resolveAssets = async () => ({ ok: false, code: "required_asset_unavailable", slotIndex: 0 }); } },
@@ -209,6 +220,23 @@ describe("adaptTemplateSkeleton", () => {
     const result = await adaptTemplateSkeleton(INPUT, deps);
 
     expect(result).toEqual(expect.objectContaining({ ok: false, status: "fallback", reasonCode: "structural_invariant_failed" }));
+    expect(result).not.toHaveProperty("html");
+  });
+
+  it.each([
+    { name: "comment lookalike", mutate: (html: string) => html.replace(/<style data-openlen-visual-engine="creative-direction\/1\.0">[\s\S]*?<\/style>/, '<!-- data-openlen-visual-engine="creative-direction/1.0" -->') },
+    { name: "text lookalike", mutate: (html: string) => html.replace(/<style data-openlen-visual-engine="creative-direction\/1\.0">[\s\S]*?<\/style>/, '<title>data-openlen-visual-engine="creative-direction/1.0"</title>') },
+    { name: "missing marker", mutate: (html: string) => html.replace(/<style data-openlen-visual-engine="creative-direction\/1\.0">[\s\S]*?<\/style>/, "") },
+    { name: "duplicate marker", mutate: (html: string) => html.replace(/(<style data-openlen-visual-engine="creative-direction\/1\.0">[\s\S]*?<\/style>)/, "$1$1") },
+    { name: "wrong element", mutate: (html: string) => html.replace(/<style data-openlen-visual-engine="creative-direction\/1\.0">[\s\S]*?<\/style>/, '<div data-openlen-visual-engine="creative-direction/1.0"></div>') },
+  ])("rejects a $name instead of accepting a marker string", async ({ mutate }) => {
+    const deps = baseDeps();
+    deps.sanitize = (html) => ({ html: mutate(html) });
+    deps.fingerprint = () => buildSkeletonInventory(HTML, "color-base").structuralFingerprint;
+
+    const result = await adaptTemplateSkeleton(INPUT, deps);
+
+    expect(result).toMatchObject({ ok: false, status: "fallback", reasonCode: "structural_invariant_failed" });
     expect(result).not.toHaveProperty("html");
   });
 

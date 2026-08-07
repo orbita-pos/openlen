@@ -6,6 +6,13 @@ import type { VisualEngineMode } from "./visual-engine-mode";
 export type VisualEnginePilotPhase = "2a" | "2b" | "2c";
 export type PilotRunStatus = "started" | "adapted" | "fallback" | "failed" | "abandoned";
 export type PilotReasonCode =
+  | "insufficient_style_hooks"
+  | "invalid_html"
+  | "invalid_inventory"
+  | "cannot_remove_forbidden_signal"
+  | "cannot_add_required_signal"
+  | "asset_slot_unavailable"
+  | "hook_property_not_allowed"
   | "provider_timeout"
   | "provider_error"
   | "invalid_provider_response"

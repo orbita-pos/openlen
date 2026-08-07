@@ -191,9 +191,10 @@ function canonicalRootStyle(style: string): Array<[string, string]> {
     if (!declaration.trim()) continue;
     const colon = declarationColon(declaration);
     if (colon === null) return [["__unparsed_style__", style]];
-    const property = declaration.slice(0, colon).trim().toLowerCase();
-    if (!property) return [["__unparsed_style__", style]];
-    if (!CREATIVE_TOKEN_ALLOWLIST.has(property) && !INTERNAL_DERIVED_ROOT_TOKENS.has(property)) {
+    const rawProperty = declaration.slice(0, colon).trim();
+    const property = rawProperty.toLowerCase();
+    if (!rawProperty) return [["__unparsed_style__", style]];
+    if (!CREATIVE_TOKEN_ALLOWLIST.has(property) && !INTERNAL_DERIVED_ROOT_TOKENS.has(rawProperty)) {
       nonApproved.push([property, normalizeCssValue(declaration.slice(colon + 1))]);
     }
   }

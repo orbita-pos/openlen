@@ -1,3 +1,4 @@
+import { parse } from "node-html-parser";
 import { renderHtmlToInlineImage } from "@/lib/ai/inline-image";
 import {
   compileSkeletonIdentity,
@@ -19,7 +20,7 @@ import {
   type SkeletonAssetDependencies,
   type SkeletonAssetResult,
 } from "@/lib/generation/skeleton-assets";
-import { buildSkeletonInventory } from "@/lib/generation/skeleton-inventory";
+import { buildSkeletonInventory, SkeletonInventoryError } from "@/lib/generation/skeleton-inventory";
 import {
   fingerprintStructure,
   type StructuralFingerprintOptions,
@@ -114,6 +115,13 @@ async function defaultTechnicalRender(html: string): Promise<boolean> {
   return (await renderHtmlToInlineImage(html)) !== null;
 }
 
+function hasExactCreativeDirectionMarker(html: string): boolean {
+  const markers = parse(html).querySelectorAll("[data-openlen-visual-engine]");
+  return markers.length === 1
+    && markers[0].rawTagName?.toLowerCase() === "style"
+    && markers[0].getAttribute("data-openlen-visual-engine") === "creative-direction/1.0";
+}
+
 /**
  * Adapts a safe template skeleton as one atomic candidate. Every intermediate
  * HTML string remains local to this function and no failure exposes it.
@@ -146,7 +154,7 @@ export async function adaptTemplateSkeleton(
     };
 
     if (!creative.ok) return fallback(providerFailureReason(creative), context);
-    if (creative.response.status === "incompatible") return fallback("model_incompatible", context);
+    if (creative.response.status === "incompatible") return fallback(creative.response.reasonCode, context);
 
     const direction = creative.response.creativeDirection;
     const plan = creative.response.adaptationPlan;
@@ -176,7 +184,7 @@ export async function adaptTemplateSkeleton(
       .filter((slot) => slot.replaceable)
       .map((slot) => slot.slotIndex);
     const after = (deps.fingerprint ?? fingerprintStructure)(sanitized.html, { allowedAssetSlots });
-    if (after !== before || !sanitized.html.includes('data-openlen-visual-engine="creative-direction/1.0"')) {
+    if (after !== before || !hasExactCreativeDirectionMarker(sanitized.html)) {
       return fallback("structural_invariant_failed", context);
     }
 
@@ -198,7 +206,8 @@ export async function adaptTemplateSkeleton(
       usage: creative.usage,
       durationMs: creative.durationMs,
     };
-  } catch {
+  } catch (error) {
+    if (error instanceof SkeletonInventoryError) return fallback(error.code, context);
     return fallback("internal_error", context);
   }
 }

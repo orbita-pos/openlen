@@ -7,6 +7,7 @@ import {
   markStaleVisualEnginePilotRuns,
   recordVisualEnginePilotComparison,
   reserveVisualEnginePilotRun,
+  type PilotReasonCode,
 } from "./visual-engine-pilot-store";
 
 const migrationPath = resolve(process.cwd(), "drizzle/migrations/0005_visual_engine_pilot.sql");
@@ -69,6 +70,21 @@ describe("reserveVisualEnginePilotRun", () => {
 });
 
 describe("pilot run updates", () => {
+  it.each([
+    "insufficient_style_hooks",
+    "invalid_html",
+    "invalid_inventory",
+    "cannot_remove_forbidden_signal",
+    "cannot_add_required_signal",
+    "asset_slot_unavailable",
+    "hook_property_not_allowed",
+  ] as const satisfies readonly PilotReasonCode[])("persists typed adaptation reason %s without a raw message", async (reasonCode) => {
+    const execute = vi.fn().mockResolvedValue({ rows: [] });
+    await completeVisualEnginePilotRun("run-1", { status: "fallback", reasonCode }, { execute });
+    const compiled = new PgDialect().sqlToQuery(execute.mock.calls[0]![0]);
+    expect(compiled.params).toContain(reasonCode);
+  });
+
   it("updates only allowlisted scalar completion fields", async () => {
     const execute = vi.fn().mockResolvedValue({ rows: [] });
     await completeVisualEnginePilotRun("run-1", {

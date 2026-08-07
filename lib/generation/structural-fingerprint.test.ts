@@ -72,12 +72,14 @@ describe("fingerprintStructure", () => {
     const withoutDerivative = HTML;
     const withDerivative = HTML.replace("--ol-accent: #f00", "--ol-accent: #f00; --ol-accent-r: 255,0,0");
     const changedDerivative = withDerivative.replace("255,0,0", "0,255,0");
+    const caseVariantDerivative = withDerivative.replace("--ol-accent-r", "--OL-accent-r");
     const unknownOpenLenToken = withDerivative.replace("--ol-accent-r", "--ol-accent-r-extra");
     const ordinaryCss = withDerivative.replace("--ol-accent-r: 255,0,0", "color: red");
 
     const expected = fingerprintStructure(withoutDerivative);
     expect(fingerprintStructure(withDerivative)).toBe(expected);
     expect(fingerprintStructure(changedDerivative)).toBe(expected);
+    expect(fingerprintStructure(caseVariantDerivative)).not.toBe(expected);
     expect(fingerprintStructure(unknownOpenLenToken)).not.toBe(expected);
     expect(fingerprintStructure(ordinaryCss)).not.toBe(expected);
   });
