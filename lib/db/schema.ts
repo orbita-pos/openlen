@@ -12,6 +12,7 @@ import {
   real,
   text,
   timestamp,
+  unique,
   uniqueIndex,
 } from "drizzle-orm/pg-core";
 import type { AdapterAccountType } from "next-auth/adapters";
@@ -1682,7 +1683,7 @@ export const visualEnginePilotRuns = pgTable(
     completedAt: timestamp("completedAt", { mode: "date" }),
   },
   (table) => [
-    uniqueIndex("visualEnginePilotRuns_phase_ordinal_idx").on(table.phase, table.ordinal),
+    unique("visualEnginePilotRuns_phase_ordinal_unique").on(table.phase, table.ordinal),
     index("visualEnginePilotRuns_phase_status_idx").on(table.phase, table.status),
     index("visualEnginePilotRuns_createdAt_idx").on(table.createdAt),
   ],

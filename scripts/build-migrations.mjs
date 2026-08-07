@@ -44,6 +44,7 @@ const targets = [
   "inbox-migrate",
   "publish-hash-migrate",
   "versions-baseline-migrate",
+  "visual-engine-pilot-migrate",
 ];
 
 for (const [i, name] of targets.entries()) {
