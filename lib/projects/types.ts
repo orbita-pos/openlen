@@ -1,3 +1,5 @@
+import type { CreativeDirection } from "@/lib/generation/creative-contracts";
+
 // The shape of a project's `data` JSONB column.
 //
 // A project's `data` holds the page as a self-contained HTML string. There
@@ -273,6 +275,18 @@ export interface PreviewSettings {
   passcodeHash?: string;
 }
 
+export interface VisualEngineProjectMetadata {
+  schemaVersion: "visual-engine-project/1.0";
+  route: "template_skeleton";
+  templateId: string;
+  creativeDirection: CreativeDirection;
+  promptVersion: string;
+  policyVersion: string;
+  contractVersion: "creative-direction/1.0";
+  structuralFingerprintBefore: string;
+  structuralFingerprintAfter: string;
+}
+
 export interface ProjectData {
   /** Publish-ready static HTML — the source of truth for the project. */
   html: string;
@@ -283,6 +297,8 @@ export interface ProjectData {
   pages?: Record<string, SitePage>;
   /** Shareable draft-preview link. Absent = no preview link issued. */
   preview?: PreviewSettings;
+  /** Versioned Visual Engine memory. Present only for accepted skeleton routes. */
+  generation?: { visualEngine?: VisualEngineProjectMetadata };
 }
 
 // One persisted Chat-tab turn. The Chat panel's live turn type carries HTML

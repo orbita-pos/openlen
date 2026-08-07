@@ -9,44 +9,42 @@ import {
   AUTOFILL_CREDIT_COST,
 } from "@/lib/credits";
 import { consumeToken, RATE_LIMITS } from "@/lib/rate-limit";
-import { sanitizeForPublish } from "@/lib/html-engine";
-import { normalizeBornCanonical } from "@/lib/normalize";
-import { ensurePageMeta } from "@/lib/publish/ensure-page-meta";
 import { renderProjectThumbnail } from "@/lib/projects/thumbnail";
-import { listTemplates, getTemplateHtml } from "@/lib/templates/store";
+import type { ProjectData } from "@/lib/projects/types";
+import { listTemplates } from "@/lib/templates/store";
 import { pickTemplate, pickWeighted, type TemplateCatalogItem } from "@/lib/curate/pick-template";
 import {
   logShadowComparisonWhenReady,
   runShadowSelection,
+  safeTemplatePickerMode,
 } from "@/lib/generation/shadow-selection";
-import { fillAssembled } from "@/lib/assemble/fill";
 import { resolveProfileForCreation } from "@/lib/business-profiles/store";
 import { overlayProfile } from "@/lib/business-profiles/overlay";
-import { seedBrandIntoHtml, profileMeta } from "@/lib/business-profiles/seed-html";
+import { selectGenerationRoute } from "@/lib/generation/safe-selection";
+import { shouldRunLegacySafeShadow, visualEngineMode } from "@/lib/generation/visual-engine-mode";
+import { fillAndNormalizeCuratedTemplate, finalizeCuratedDocument } from "@/lib/curate/build-curated-document";
+import {
+  calculateQuickDeliveryCredits,
+  commitQuickVisualEngineDocument,
+  launchShadowSkeletonCandidate,
+  planQuickVisualEngineRoute,
+  runSkeletonCandidate,
+} from "@/lib/curate/quick-visual-engine";
 
-// ─────────────────────────────────────────────────────────────────────────────
 // POST /api/curate — the FREE-tier page builder (CURATION).
 // Body: { brief: string }
 //
-// brief → pick ONE whole curated template (Flash, by fit) + invent copy → fill
-// the copy (Gemini) → save as a new project. A curated template is already a
-// coherent, centred page, so there is NO stitching / theming / centering — the
-// model CHOOSES a design rather than assembling one. Bespoke /api/generate stays
-// the PAID tier (a from-scratch, novel layout).
-//
 // SSE events:
 //   progress { stage: "picking"|"loading"|"filling"|"persisting" }
-//   preview  { html }   — the chosen template (instant), then the filled page
+//   preview  { html }
 //   done     { projectId, title, templateId, filled, appliedOps, credits, durationMs }
 //   error    { kind, message }
-// ─────────────────────────────────────────────────────────────────────────────
 
 export const runtime = "nodejs";
 
 const ENCODER = new TextEncoder();
 
-// One curate per user at a time (a model pick + a fill) — a double-click
-// shouldn't fire two. Cleared in finally so a crash can't lock out.
+// One curate per user at a time. Cleared in finally so a crash cannot lock out.
 const inFlightUsers = new Set<string>();
 
 export async function POST(req: Request): Promise<Response> {
@@ -111,106 +109,222 @@ export async function POST(req: Request): Promise<Response> {
           return close();
         }
 
-        // 1. Pick the best-fitting template + invent copy (Flash).
+        const visualMode = visualEngineMode();
         emit("progress", { stage: "picking" });
         const templates = await listTemplates({ status: "published" });
         if (templates.length === 0) {
           emit("error", { kind: "no-templates", message: "No published templates to choose from." });
           return close();
         }
-        const catalog: TemplateCatalogItem[] = templates.map((t) => ({
-          id: t.id,
-          name: t.name,
-          family: t.family,
-          mode: t.mode,
-          pitch: t.pitch,
-          description: t.description,
+        const catalog: TemplateCatalogItem[] = templates.map((template) => ({
+          id: template.id,
+          name: template.name,
+          family: template.family,
+          mode: template.mode,
+          pitch: template.pitch,
+          description: template.description,
         }));
-        const shadowPromise = runShadowSelection(brief, templates);
-        const pick = await pickTemplate(brief, catalog);
+
+        // Weighted Quick and safe selection are independent and start together.
+        const pickPromise = pickTemplate(brief, catalog);
+        const safePromise = visualMode === "off"
+          ? Promise.resolve(null)
+          : selectGenerationRoute(brief, templates);
+        const legacyShadowPromise = shouldRunLegacySafeShadow(
+          visualMode,
+          safeTemplatePickerMode(),
+        )
+          ? runShadowSelection(brief, templates)
+          : Promise.resolve(null);
+        const pick = await pickPromise;
+        // Shadow selection/candidate work must not delay the baseline. Skeleton
+        // mode awaits the safe result because it can change user-visible delivery.
+        const safeResult = visualMode === "skeleton" ? await safePromise : null;
         if (!pick.ok) {
           emit("error", { kind: pick.error.kind, message: `Pick failed: ${pick.error.message}` });
           return close();
         }
-        // Pick one of the model's ranked candidates, biased toward #1 — so
-        // re-generating the same brief gives a different (still well-fitting)
-        // template instead of the same page every time.
-        const chosenId = pickWeighted(pick.templateIds);
-        const chosen = templates.find((t) => t.id === chosenId);
-        void logShadowComparisonWhenReady(shadowPromise, chosenId);
 
-        // Seed the copy from the user's saved business profile (if one was
-        // picked): real info wins, the model's invented copy fills any gaps.
+        const chosenId = pickWeighted(pick.templateIds);
+        void logShadowComparisonWhenReady(legacyShadowPromise, chosenId);
+        const routePlan = planQuickVisualEngineRoute({
+          mode: visualMode,
+          weightedTemplateId: chosenId,
+          safeResult,
+        });
+
+        // Resolve these once. Shadow and delivery share the same immutable values.
         const profile = await resolveProfileForCreation(userId, profileId);
         const copy = overlayProfile(pick.copy, profile.data);
+        const titleFor = (templateId: string) =>
+          copy.business_name?.trim()
+          || templates.find((template) => template.id === templateId)?.name
+          || "Untitled page";
 
-        // 2. Load the chosen template's HTML.
-        emit("progress", { stage: "loading" });
-        const templateHtml = await getTemplateHtml(chosenId);
-        if (templateHtml === null) {
-          emit("error", { kind: "template-unavailable", message: "Chosen template's HTML is unavailable." });
-          return close();
+        if (visualMode === "shadow") {
+          // Safe selection and the candidate remain off the SSE critical path.
+          // The candidate helper owns all errors and cannot preview or persist.
+          void safePromise.then(async (shadowSafeResult) => {
+            const shadowPlan = planQuickVisualEngineRoute({
+              mode: "shadow",
+              weightedTemplateId: chosenId,
+              safeResult: shadowSafeResult,
+            });
+            if (!shadowPlan.shadowTemplateId || !shadowSafeResult?.ok) return;
+            const shadowTemplate = templates.find(
+              (template) => template.id === shadowPlan.shadowTemplateId,
+            );
+            if (!shadowTemplate?.visualMetadata) return;
+            await launchShadowSkeletonCandidate({
+              mode: "shadow",
+              candidateTemplateId: shadowPlan.shadowTemplateId,
+              fallbackTemplateId: chosenId,
+              candidateTitle: titleFor(shadowPlan.shadowTemplateId),
+              fallbackTitle: titleFor(chosenId),
+              copy,
+              profileData: profile.data,
+              intent: shadowSafeResult.intent,
+              templateMetadata: shadowTemplate.visualMetadata,
+              policyVersion: shadowSafeResult.policyVersion,
+            });
+          }).catch(() => {
+            captureException(new Error("Visual Engine shadow routing failed"), {
+              route: "curate",
+              stage: "visual-engine-shadow-routing",
+              templateId: chosenId,
+              reasonCode: "internal_error",
+            });
+          });
         }
-        // Show the real chosen design immediately — the user watches their
-        // actual page appear while the copy fills in next.
-        emit("preview", { html: templateHtml });
 
-        // 3. Fill the invented copy (Gemini); degrades to the template's own copy.
-        emit("progress", { stage: "filling" });
-        const fill = await fillAssembled(templateHtml, copy, {
-          onStage: (stage) => emit("progress", { stage }),
-        });
-        // Visible por diseño: una fuga que no deja rastro es la que se queda
-        // meses en producción (ver el hueco de foto que nunca logueó nada).
-        if (fill.leaksBefore) {
+        type DeliveredDocument = {
+          html: string;
+          templateId: string;
+          title: string;
+          filled: boolean;
+          appliedOps: number;
+          leaksBefore?: number;
+          leaksAfter?: number;
+          visualEngine?: NonNullable<ProjectData["generation"]>["visualEngine"];
+        };
+        let delivered: DeliveredDocument;
+        const safeTemplate = templates.find(
+          (template) => template.id === routePlan.delivery.templateId,
+        );
+
+        if (
+          routePlan.delivery.kind === "template_skeleton"
+          && safeResult?.ok
+          && safeTemplate?.visualMetadata
+        ) {
+          // A skeleton never emits its raw or intermediate HTML.
+          emit("progress", { stage: "loading" });
+          emit("progress", { stage: "filling" });
+          const skeleton = await runSkeletonCandidate({
+            candidateTemplateId: routePlan.delivery.templateId,
+            fallbackTemplateId: chosenId,
+            candidateTitle: titleFor(routePlan.delivery.templateId),
+            fallbackTitle: titleFor(chosenId),
+            copy,
+            profileData: profile.data,
+            intent: safeResult.intent,
+            templateMetadata: safeTemplate.visualMetadata,
+            policyVersion: safeResult.policyVersion,
+            onStage: (stage) => emit("progress", { stage }),
+          });
+          if (!skeleton.ok) {
+            emit("error", {
+              kind: skeleton.kind,
+              message: skeleton.kind === "template-unavailable"
+                ? "Chosen template's HTML is unavailable."
+                : "Curated HTML carried editor markers — try again.",
+            });
+            return close();
+          }
+          delivered = {
+            html: skeleton.html,
+            templateId: skeleton.templateId,
+            title: titleFor(skeleton.templateId),
+            filled: skeleton.filled,
+            appliedOps: skeleton.appliedOps,
+            leaksBefore: skeleton.leaksBefore,
+            leaksAfter: skeleton.leaksAfter,
+            visualEngine: skeleton.route === "template_skeleton"
+              ? skeleton.visualEngine
+              : undefined,
+          };
+        } else {
+          // Off, weighted fallbacks and full-template routes preserve current
+          // Quick's immediate raw preview before filling.
+          const deliveredTemplateId = routePlan.delivery.kind === "template_skeleton"
+            ? chosenId
+            : routePlan.delivery.templateId;
+          emit("progress", { stage: "loading" });
+          const built = await fillAndNormalizeCuratedTemplate({
+            templateId: deliveredTemplateId,
+            copy,
+            onTemplateLoaded: (html) => {
+              emit("preview", { html });
+              emit("progress", { stage: "filling" });
+            },
+            onStage: (stage) => emit("progress", { stage }),
+          });
+          if (!built.ok) {
+            emit("error", { kind: built.kind, message: "Chosen template's HTML is unavailable." });
+            return close();
+          }
+          const finalized = finalizeCuratedDocument({
+            normalizedHtml: built.normalizedHtml,
+            profileData: profile.data,
+            title: titleFor(deliveredTemplateId),
+            brandRecolor: true,
+          });
+          if (!finalized.ok) {
+            emit("error", { kind: finalized.kind, message: "Curated HTML carried editor markers — try again." });
+            return close();
+          }
+          delivered = {
+            html: finalized.html,
+            templateId: deliveredTemplateId,
+            title: titleFor(deliveredTemplateId),
+            filled: built.filled,
+            appliedOps: built.appliedOps,
+            leaksBefore: built.leaksBefore,
+            leaksAfter: built.leaksAfter,
+          };
+        }
+
+        if (delivered.leaksBefore) {
           // eslint-disable-next-line no-console
           console.log(
-            `[curate] copy de plantilla heredado: ${fill.leaksBefore} bloque(s) tras el relleno, ${fill.leaksAfter} tras el parche (plantilla ${chosenId})`,
+            `[curate] copy de plantilla heredado: ${delivered.leaksBefore} bloque(s) tras el relleno, ${delivered.leaksAfter} tras el parche (plantilla ${delivered.templateId})`,
           );
         }
 
-        // 4. Born-canonical + brand seed (accent + contact widget — both no-op
-        // for an empty profile) + SEO head: the same ingestion every creation
-        // path uses (lib/business-profiles/seed-html).
-        const title = copy.business_name?.trim() || chosen?.name || "Untitled page";
-        const normalized = normalizeBornCanonical(fill.html);
-        const themed = seedBrandIntoHtml(normalized, profile.data);
-        // replaceStaleMeta: this page is a CLONE of `chosenId`, so its <head>
-        // is still the template's (title / description / og:*). Without the
-        // takeover the user's page ships the template's brand into the tab,
-        // Google and the WhatsApp card.
-        const finalHtml = ensurePageMeta(themed, {
-          title,
-          ...profileMeta(profile.data),
-          replaceStaleMeta: true,
-        });
-
-        // 5. Reserved-marker guard + sanitize (defense in depth, like from-html).
-        const sanitized = sanitizeForPublish(finalHtml);
-        if (sanitized.html === null) {
-          emit("error", { kind: "editor-marker-leak", message: "Curated HTML carried editor markers — try again." });
-          return close();
-        }
-        const cleanHtml = sanitized.html;
-        // Swap the preview to the filled page so the copy visibly lands
-        // before the editor hand-off.
-        emit("preview", { html: cleanHtml });
-
-        // 6. Persist as a new project.
-        emit("progress", { stage: "persisting" });
+        const title = delivered.title;
+        const cleanHtml = delivered.html;
         const projectId = crypto.randomUUID();
         try {
-          await db.insert(schema.projects).values({
-            id: projectId,
-            userId,
-            title,
-            brief,
-            thumbnailUrl: null,
-            tags: ["curated"],
-            status: "draft",
-            profileId: profile.id,
-            logoUrl: profile?.data.brand?.logoUrl ?? null,
-            data: { html: cleanHtml },
+          await commitQuickVisualEngineDocument({
+            html: cleanHtml,
+            visualEngine: delivered.visualEngine,
+          }, {
+            emitPreview: (html) => emit("preview", { html }),
+            persist: async (data) => {
+              emit("progress", { stage: "persisting" });
+              await db.insert(schema.projects).values({
+                id: projectId,
+                userId,
+                title,
+                brief,
+                thumbnailUrl: null,
+                tags: ["curated"],
+                status: "draft",
+                profileId: profile.id,
+                logoUrl: profile.data.brand?.logoUrl ?? null,
+                data,
+              });
+            },
           });
         } catch (err) {
           console.error("[curate] db insert failed", err);
@@ -226,19 +340,19 @@ export async function POST(req: Request): Promise<Response> {
         );
         void renderProjectThumbnail({ projectId, html: cleanHtml });
 
-        // 7. Charge: metered pick (Flash) + the fill (flat, only if it ran).
-        const pickCredits = pick.usage
-          ? creditsForUsage(pick.usage.inputTokens, pick.usage.outputTokens, "gemini-flash")
-          : 1;
-        const credits = pickCredits + (fill.filled ? AUTOFILL_CREDIT_COST : 0);
+        // Creative adaptation does not alter user credit debit.
+        const credits = calculateQuickDeliveryCredits({
+          pickUsage: pick.usage,
+          filled: delivered.filled,
+        }, creditsForUsage, AUTOFILL_CREDIT_COST);
         await debitCredits(userId, credits);
 
         emit("done", {
           projectId,
           title,
-          templateId: chosenId,
-          filled: fill.filled,
-          appliedOps: fill.appliedOps,
+          templateId: delivered.templateId,
+          filled: delivered.filled,
+          appliedOps: delivered.appliedOps,
           credits,
           durationMs: Date.now() - t0,
         });
