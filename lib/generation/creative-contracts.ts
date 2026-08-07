@@ -8,8 +8,10 @@ const HookIdSchema = z.string().regex(/^[a-z0-9]+(?:[-_:][a-z0-9]+)*$/).max(96);
 const allowedDeclarationProperties = new Set<string>(Object.values(HOOK_PROPERTY_POLICY).flat());
 const DeclarationPropertySchema = z.string().refine((property) => allowedDeclarationProperties.has(property), "must be an approved hook property");
 const containsProhibitedEmbeddedContent = (value: string) => /<\/?[a-z][^>]*>|\b[a-z][a-z0-9+.-]*:\/\/|\bwww\.|\b(?:javascript|vbscript|data|file|mailto):/i.test(value);
+// Asset descriptions can be rephrased, so reject bounded identifier-colon-value syntax instead of maintaining a CSS property catalog.
+const containsCssDeclarationSyntax = (value: string) => /(?:^|[\s;])(?:--[a-z_][a-z0-9_-]{0,62}|-?[a-z_][a-z0-9_-]{0,63})\s*:\s*\S/i.test(value);
 const safeTextSchema = (maxLength: number) => z.string().min(1).max(maxLength).refine(
-  (value) => !containsProhibitedEmbeddedContent(value) && !/[{}]|\b(?:background(?:-color|-image)?|border(?:-color|-radius)?|box-shadow|color|content|display|fill|font-family|gap|padding|position|stroke(?:-width|-linecap|-linejoin)?|text-align)\s*:/i.test(value),
+  (value) => !containsProhibitedEmbeddedContent(value) && !/[{}]/.test(value) && !containsCssDeclarationSyntax(value),
   "must not contain HTML, scripts, URLs, or free-form CSS",
 );
 const SafeTextSchema = safeTextSchema(180);

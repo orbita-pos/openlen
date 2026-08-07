@@ -48,10 +48,10 @@ describe("creative contracts", () => {
 
   it("rejects model-facing markup, script schemes, URLs, and CSS payloads in asset text", () => {
     const asset = COLORING_PLAN.assets[0];
-    for (const query of ["<script>alert(1)</script>", "javascript:alert(1)", "vbscript:msgbox(1)", "https://example.com/cat", "ftp://example.com/cat", "coloring cats { display: none; }"]) {
+    for (const query of ["<script>alert(1)</script>", "javascript:alert(1)", "vbscript:msgbox(1)", "https://example.com/cat", "ftp://example.com/cat", "coloring cats { display: none; }", "margin: 0", "--evil: red", "-webkit-line-clamp: 2"]) {
       expect(() => SkeletonAdaptationPlanSchema.parse({ ...COLORING_PLAN, assets: [{ ...asset, query }] })).toThrow();
     }
-    for (const alt of ["<img src=x>", "data:text/html,bad", "mailto:bad@example.com", "www.example.com/cat", "friendly cats; position: fixed;"]) {
+    for (const alt of ["<img src=x>", "data:text/html,bad", "mailto:bad@example.com", "www.example.com/cat", "friendly cats; position: fixed;", "margin: 0", "--evil: red", "-webkit-line-clamp: 2"]) {
       expect(() => SkeletonAdaptationPlanSchema.parse({ ...COLORING_PLAN, assets: [{ ...asset, alt }] })).toThrow();
     }
     expect(SkeletonAdaptationPlanSchema.parse({ ...COLORING_PLAN, assets: [{ ...asset, query: "playful woodland animals; simple shapes for a children's coloring page", alt: "Smiling woodland animals; ready to color" }] })).toBeTruthy();
