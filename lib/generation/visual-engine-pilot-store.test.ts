@@ -103,6 +103,16 @@ describe("pilot run updates", () => {
     }
   });
 
+  it("completes only a started row so terminal outcomes cannot be overwritten", async () => {
+    const execute = vi.fn().mockResolvedValue({ rowCount: 1 });
+    await completeVisualEnginePilotRun("run-1", { status: "adapted", candidatePersisted: false }, { execute });
+    const compiled = new PgDialect().sqlToQuery(execute.mock.calls[0]![0]);
+    const normalized = compiled.sql.replace(/\s+/g, " ").trim().toLowerCase();
+
+    expect(normalized).toContain('where "id" = $');
+    expect(normalized).toContain('and "status" = \'started\'');
+  });
+
   it("records a scalar human comparison and abandons stale starts without reclaiming quota", async () => {
     const execute = vi.fn().mockResolvedValue({ rowCount: 3 });
     await recordVisualEnginePilotComparison("run-1", { verdict: "candidate", acceptedForbiddenSignalCount: 0 }, { execute });

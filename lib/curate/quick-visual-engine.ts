@@ -313,6 +313,14 @@ export async function launchShadowSkeletonCandidate(
   const complete = deps.completeVisualEnginePilotRun ?? completeVisualEnginePilotRun;
   const capture = deps.captureException ?? reportException;
   let reservationId: string | null = null;
+  let completionAttempted = false;
+  const attemptCompletion = async (
+    id: string,
+    outcome: CompleteVisualEnginePilotRunOutcome,
+  ): Promise<void> => {
+    completionAttempted = true;
+    await complete(id, outcome);
+  };
 
   try {
     const candidate = await build({
@@ -339,7 +347,7 @@ export async function launchShadowSkeletonCandidate(
       brand: { accent: input.profileData.brand?.accent ?? null },
     });
     if (!adapted.ok) {
-      await complete(reservationId, pilotOutcome(adapted, input.policyVersion));
+      await attemptCompletion(reservationId, pilotOutcome(adapted, input.policyVersion));
       return;
     }
 
@@ -350,7 +358,7 @@ export async function launchShadowSkeletonCandidate(
       brandRecolor: false,
     });
     if (!finalized.ok) {
-      await complete(reservationId, {
+      await attemptCompletion(reservationId, {
         ...pilotOutcome(adapted, input.policyVersion),
         status: "fallback",
         reasonCode: "sanitization_failed",
@@ -360,10 +368,10 @@ export async function launchShadowSkeletonCandidate(
       return;
     }
 
-    await complete(reservationId, pilotOutcome(adapted, input.policyVersion));
+    await attemptCompletion(reservationId, pilotOutcome(adapted, input.policyVersion));
   } catch {
-    if (reservationId !== null) {
-      await complete(reservationId, {
+    if (reservationId !== null && !completionAttempted) {
+      await attemptCompletion(reservationId, {
         status: "failed",
         reasonCode: "internal_error",
         candidatePersisted: false,

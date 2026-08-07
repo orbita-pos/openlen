@@ -309,6 +309,40 @@ describe("shadow skeleton candidate", () => {
     }));
   });
 
+  it.each([
+    { name: "adapted", adaptation: ADAPTED },
+    {
+      name: "fallback",
+      adaptation: {
+        ok: false as const,
+        status: "fallback" as const,
+        reasonCode: "contrast_violation" as const,
+        promptVersion: "creative-prompt/1.0",
+        modelId: "creative-model",
+        usage: { inputTokens: 20, outputTokens: 10, thinkingTokens: 5, cachedTokens: 0 },
+        durationMs: 25,
+      },
+    },
+  ])("never issues a second terminal completion when $name completion throws", async ({ adaptation }) => {
+    const complete = vi.fn(async () => { throw new Error("database completion failed"); });
+    const capture = vi.fn();
+
+    await launchShadowSkeletonCandidate({ ...candidateInput(), mode: "shadow" }, {
+      fillAndNormalizeCuratedTemplate: async ({ templateId }) => buildResult(templateId),
+      reserveVisualEnginePilotRun: async () => ({ ok: true, id: "run-terminal", ordinal: 4 }),
+      adaptTemplateSkeleton: async () => adaptation,
+      finalizeCuratedDocument: ({ normalizedHtml }) => ({ ok: true, html: `${normalizedHtml}|final` }),
+      completeVisualEnginePilotRun: complete,
+      captureException: capture,
+    });
+
+    expect(complete).toHaveBeenCalledTimes(1);
+    expect(capture).toHaveBeenCalledWith(
+      expect.objectContaining({ message: "Visual Engine shadow candidate failed" }),
+      { route: "curate", stage: "visual-engine-shadow", templateId: "safe-skeleton", reasonCode: "internal_error" },
+    );
+  });
+
   it("completes reserved exceptions with a typed reason and captures only redacted context", async () => {
     const capture = vi.fn();
     const complete = vi.fn(async () => undefined);
@@ -323,6 +357,7 @@ describe("shadow skeleton candidate", () => {
     expect(complete).toHaveBeenCalledWith("run-2", {
       status: "failed", reasonCode: "internal_error", candidatePersisted: false,
     });
+    expect(complete).toHaveBeenCalledTimes(1);
     expect(capture).toHaveBeenCalledWith(
       expect.objectContaining({ message: "Visual Engine shadow candidate failed" }),
       { route: "curate", stage: "visual-engine-shadow", templateId: "safe-skeleton", reasonCode: "internal_error" },

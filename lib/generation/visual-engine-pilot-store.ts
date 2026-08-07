@@ -141,7 +141,7 @@ export async function completeVisualEnginePilotRun(
       "structuralFingerprintAfter" = ${outcome.structuralFingerprintAfter ?? null},
       "candidatePersisted" = ${outcome.candidatePersisted ?? false},
       "structuralInvariantPassed" = ${outcome.structuralInvariantPassed ?? null}, "completedAt" = now()
-    WHERE "id" = ${id}
+    WHERE "id" = ${id} AND "status" = 'started'
   `);
 }
 
