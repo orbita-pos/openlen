@@ -167,7 +167,7 @@ function hasOptionalInputShape(input: CreativeCompileInput): boolean {
     const overrides = input.explicitOverrides as unknown as Record<string, unknown>;
     const keys = ["mode", "background", "surface", "surfaceAlt", "foreground", "foregroundMuted", "border", "accent", "accentInk", "displayFont", "bodyFont", "monoFont", "radius", "radiusScale", "spacingScale", "textScale"];
     if (!hasOnlyKeys(overrides, keys)) return false;
-    if (overrides.mode !== undefined && !new Set(["light", "dark", "cream"]).has(String(overrides.mode))) return false;
+    if (overrides.mode !== undefined && (typeof overrides.mode !== "string" || !new Set(["light", "dark", "cream"]).has(overrides.mode))) return false;
     for (const key of ["radiusScale", "spacingScale", "textScale"]) {
       if (overrides[key] !== undefined && (typeof overrides[key] !== "number" || !Number.isFinite(overrides[key]))) return false;
     }
@@ -180,10 +180,20 @@ function hasOptionalInputShape(input: CreativeCompileInput): boolean {
 
 function elementLooksLikeLogo(element: HTMLElement): boolean {
   for (let current: HTMLElement | null = element; current; current = current.parentNode) {
-    const identity = [current.getAttribute("id"), current.getAttribute("class"), current.getAttribute("aria-label"), current.getAttribute("alt"), current.getAttribute("src")].filter(Boolean).join(" ");
-    if (/logo/i.test(identity)) return true;
+    const tag = current.rawTagName?.toLowerCase() ?? "";
+    if (current !== element && ["nav", "header", "body", "html", "main", "section"].includes(tag)) break;
+    const identity = [current.getAttribute("id"), current.getAttribute("class"), current.getAttribute("aria-label"), current.getAttribute("title"), current.getAttribute("role"), current.getAttribute("alt"), current.getAttribute("src")].filter(Boolean).join(" ");
+    if (/(?:logo|brand|home|inicio)/i.test(identity)) return true;
   }
-  return false;
+  const anchor = element.closest("a");
+  if (!anchor) return false;
+  const href = anchor.getAttribute("href")?.trim() ?? "";
+  const semanticLabel = [anchor.getAttribute("aria-label"), anchor.getAttribute("title"), anchor.getAttribute("role")].filter(Boolean).join(" ");
+  if (/\b(?:home|inicio|start|brand)\b/i.test(semanticLabel)) return true;
+  const homeHref = /^(?:\/|\/home\/?|\/inicio\/?)(?:[?#].*)?$/i.test(href);
+  if (!homeHref) return false;
+  const landmark = anchor.closest("nav") ?? anchor.closest("header");
+  return Boolean(landmark);
 }
 
 function iconHookTargetsLogo(html: string, inventory: SkeletonInventory): boolean {
@@ -202,6 +212,22 @@ function stripVisualEngineStyles(html: string): string {
     .map((style) => style.range)
     .sort((left, right) => right[0] - left[0]);
   return ranges.reduce((source, [start, end]) => source.slice(0, start) + source.slice(end), html);
+}
+
+function insertVisualEngineStyle(html: string, styleBlock: string): string | null {
+  const root = parseHtml(html);
+  const head = root.querySelector("head");
+  if (!head) return null;
+  const [start, end] = head.range;
+  const source = html.slice(start, end);
+  const close = /<\/head\s*>$/i.exec(source);
+  if (!close) return null;
+  const insertion = start + close.index;
+  const output = html.slice(0, insertion) + styleBlock + html.slice(insertion);
+  const parsed = parseHtml(output);
+  const allOwned = parsed.querySelectorAll("style").filter((style) => style.hasAttribute("data-openlen-visual-engine"));
+  const headOwned = parsed.querySelector("head")?.querySelectorAll("style").filter((style) => style.hasAttribute("data-openlen-visual-engine")) ?? [];
+  return allOwned.length === 1 && headOwned.length === 1 ? output : null;
 }
 
 function fontFamilyName(value: string): string {
@@ -305,9 +331,14 @@ function parseExplicitConstraints(constraints: readonly string[] | undefined):
   const claims: ConstraintClaim[] = [];
   let mode: CreativeDirection["mode"] | undefined;
   const roles: Record<string, string> = {
-    background: "--ol-bg", fondo: "--ol-bg", surface: "--ol-surface", superficie: "--ol-surface",
-    foreground: "--ol-fg", texto: "--ol-fg", border: "--ol-border", borde: "--ol-border",
-    accent: "--ol-accent", acento: "--ol-accent", "accent ink": "--ol-accent-ink",
+    background: "--ol-bg", fondo: "--ol-bg",
+    surface: "--ol-surface", superficie: "--ol-surface",
+    surfacealt: "--ol-surface-2", superficiealternativa: "--ol-surface-2",
+    foreground: "--ol-fg", text: "--ol-fg", texto: "--ol-fg",
+    foregroundmuted: "--ol-fg-muted", textomuted: "--ol-fg-muted", textoatenuado: "--ol-fg-muted",
+    border: "--ol-border", borde: "--ol-border",
+    accent: "--ol-accent", acento: "--ol-accent",
+    accentink: "--ol-accent-ink", tintadeacento: "--ol-accent-ink",
   };
   for (const raw of constraints ?? []) {
     const constraint = raw.trim();
@@ -316,10 +347,12 @@ function parseExplicitConstraints(constraints: readonly string[] | undefined):
       claims.push({ raw, mode: "dark" });
       continue;
     }
-    const color = /^(background|fondo|surface|superficie|foreground|texto|border|borde|accent|acento|accent ink)\s*:\s*(#[0-9a-f]{6})$/i.exec(constraint);
-    if (color) {
-      const token = roles[color[1].toLowerCase()];
-      const value = color[2].toUpperCase();
+    const structuredColor = /^([^:]+)\s*:\s*([\s\S]*)$/.exec(constraint);
+    const normalizedRole = structuredColor?.[1].trim().toLowerCase().replace(/[\s_-]+/g, "") ?? "";
+    if (structuredColor && roles[normalizedRole]) {
+      if (!HEX_COLOR.test(structuredColor[2].trim())) return failure("invalid_input", `Explicit ${structuredColor[1].trim()} color must be a six-digit hex value`);
+      const token = roles[normalizedRole];
+      const value = structuredColor[2].trim().toUpperCase();
       tokens[token] = value;
       claims.push({ raw, token, value });
       continue;
@@ -380,13 +413,122 @@ function balancedFunctions(value: string): boolean {
   return depth === 0;
 }
 
-function isSpacing(value: string): boolean {
+function splitSpacingComponents(value: string): string[] | null {
+  const parts: string[] = [];
+  let depth = 0;
+  let start = 0;
+  for (let index = 0; index < value.length; index += 1) {
+    const character = value[index];
+    if (character === "(") depth += 1;
+    else if (character === ")" && --depth < 0) return null;
+    else if (/\s/.test(character) && depth === 0) {
+      if (value.slice(start, index).trim()) parts.push(value.slice(start, index).trim());
+      start = index + 1;
+    }
+  }
+  if (depth !== 0) return null;
+  if (value.slice(start).trim()) parts.push(value.slice(start).trim());
+  return parts;
+}
+
+function splitCalcExpression(value: string): { operands: string[]; operators: string[] } | null {
+  const operands: string[] = [];
+  const operators: string[] = [];
+  let depth = 0;
+  let start = 0;
+  for (let index = 0; index < value.length; index += 1) {
+    const character = value[index];
+    if (character === "(") depth += 1;
+    else if (character === ")" && --depth < 0) return null;
+    else if (depth === 0 && "+-*/".includes(character)) {
+      if ("+-".includes(character) && (!/\s/.test(value[index - 1] ?? "") || !/\s/.test(value[index + 1] ?? ""))) return null;
+      const operand = value.slice(start, index).trim();
+      if (!operand) return null;
+      operands.push(operand);
+      operators.push(character);
+      start = index + 1;
+    }
+  }
+  const finalOperand = value.slice(start).trim();
+  if (depth !== 0 || !finalOperand) return null;
+  operands.push(finalOperand);
+  return { operands, operators };
+}
+
+type SpacingDimension = "length" | "number" | "zero";
+type SpacingMetric = { dimension: SpacingDimension; numericValue?: number };
+
+function addDimensions(left: SpacingMetric, right: SpacingMetric): SpacingMetric | null {
+  if (left.dimension === "zero") return right;
+  if (right.dimension === "zero") return left;
+  return left.dimension === right.dimension ? { dimension: left.dimension } : null;
+}
+
+function multiplyDimensions(left: SpacingMetric, right: SpacingMetric): SpacingMetric | null {
+  if (left.dimension === "zero" || right.dimension === "zero") return { dimension: "zero", numericValue: 0 };
+  if (left.dimension === "length" && right.dimension === "length") return null;
+  if (left.dimension === "length" || right.dimension === "length") return { dimension: "length" };
+  return { dimension: "number" };
+}
+
+function spacingMetric(value: string, depth = 0): SpacingMetric | null {
+  if (depth > 2) return null;
   const trimmed = value.trim();
-  if (/^-?\d+(?:\.\d+)?(?:px|rem|em)$/.test(trimmed) || trimmed === "0") return true;
-  if (!/^(?:calc|clamp)\(/.test(trimmed) || !balancedFunctions(trimmed)) return false;
-  if (/var\((?!--ol-)/i.test(trimmed)) return false;
-  const withoutVars = trimmed.replace(/var\(--ol-[a-z0-9-]+\)/gi, "0px");
-  return /^(?:calc|clamp)\([\d\s.,+*/()%-]*(?:px|rem|em)[\d\s.,+*/()%-]*\)$/.test(withoutVars);
+  if (trimmed === "0") return { dimension: "zero", numericValue: 0 };
+  if (/^(?:\d+(?:\.\d+)?|\.\d+)(?:px|rem|em)$/.test(trimmed)) return { dimension: "length" };
+  if (/^(?:\d+(?:\.\d+)?|\.\d+)$/.test(trimmed)) return { dimension: "number", numericValue: Number(trimmed) };
+  const variable = /^var\((--ol-[a-z0-9-]+)\)$/.exec(trimmed);
+  if (variable) {
+    const token = variable[1];
+    if (token === "--ol-radius") return { dimension: "length" };
+    if (["--ol-r-scale", "--ol-space-scale", "--ol-text-scale"].includes(token)) return { dimension: "number" };
+    return null;
+  }
+  const fn = /^(calc|clamp)\(([\s\S]*)\)$/i.exec(trimmed);
+  if (!fn || !balancedFunctions(trimmed)) return null;
+  if (fn[1].toLowerCase() === "clamp") {
+    const args = splitTopLevelCommas(fn[2]);
+    if (!args || args.length !== 3) return null;
+    const metrics = args.map((argument) => spacingMetric(argument, depth + 1));
+    if (metrics.some((metric) => !metric || metric.dimension === "number")) return null;
+    return metrics.some((metric) => metric?.dimension === "length") ? { dimension: "length" } : { dimension: "zero", numericValue: 0 };
+  }
+  const expression = splitCalcExpression(fn[2]);
+  if (!expression) return null;
+  const metrics = expression.operands.map((operand) => spacingMetric(operand, depth + 1));
+  if (metrics.some((metric) => !metric)) return null;
+  const reducedMetrics = metrics as SpacingMetric[];
+  const reducedOperators = [...expression.operators];
+  for (let index = 0; index < reducedOperators.length;) {
+    const operator = reducedOperators[index];
+    if (operator !== "*" && operator !== "/") {
+      index += 1;
+      continue;
+    }
+    const left = reducedMetrics[index];
+    const right = reducedMetrics[index + 1];
+    let combined: SpacingMetric | null;
+    if (operator === "*") combined = multiplyDimensions(left, right);
+    else combined = right.dimension === "number" && right.numericValue !== undefined && right.numericValue > 0 ? left : null;
+    if (!combined) return null;
+    reducedMetrics.splice(index, 2, combined);
+    reducedOperators.splice(index, 1);
+  }
+  let result = reducedMetrics[0];
+  for (let index = 0; index < reducedOperators.length; index += 1) {
+    if (reducedOperators[index] !== "+") return null;
+    result = addDimensions(result, reducedMetrics[index + 1])!;
+    if (!result) return null;
+  }
+  return result;
+}
+
+function isSpacing(value: string): boolean {
+  const components = splitSpacingComponents(value.trim());
+  return Boolean(components && components.length >= 1 && components.length <= 4 && components.every((component) => {
+    const metric = spacingMetric(component);
+    return metric?.dimension === "length" || metric?.dimension === "zero";
+  }));
 }
 
 function splitTopLevelCommas(value: string): string[] | null {
@@ -536,8 +678,8 @@ export function compileSkeletonIdentity(input: CreativeCompileInput): CreativeCo
   if (typeof styleBlock !== "string") return styleBlock;
   const withoutPreviousBlock = stripVisualEngineStyles(input.html);
   const themedHtml = applyThemeTokensToHtml(withoutPreviousBlock, tokens);
-  if (!/<\/head>/i.test(themedHtml)) return failure("invalid_input", "Creative compilation requires a document head");
-  const html = themedHtml.replace(/<\/head>/i, `${styleBlock}</head>`);
+  const html = insertVisualEngineStyle(themedHtml, styleBlock);
+  if (!html) return failure("invalid_input", "Creative compilation requires one parseable document head");
   if (!structureIsPreserved(themedHtml, html, { allowedAssetSlots: inventory.assetSlots.map((asset) => asset.slotIndex) })) {
     return failure("structural_violation", "Creative compilation changed protected document structure");
   }

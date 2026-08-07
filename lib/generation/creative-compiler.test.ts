@@ -121,6 +121,22 @@ describe("compileSkeletonIdentity", () => {
     if (result.ok) expect(readThemeTokenFromHtml(result.html, "--ol-accent")).toBe("#0057B8");
   });
 
+  it("recognizes every palette role and reports only values reflected after precedence", () => {
+    const result = compile({
+      explicitConstraints: ["surfaceAlt: #EEEEDD", "foreground muted: #655D55", "accent ink: #FFFFFF"],
+      explicitOverrides: { surfaceAlt: "#DDDDCC" },
+    });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(readThemeTokenFromHtml(result.html, "--ol-surface-2")).toBe("#DDDDCC");
+    expect(readThemeTokenFromHtml(result.html, "--ol-fg-muted")).toBe("#655D55");
+    expect(result.enforcedConstraints).toEqual(["foreground muted: #655D55", "accent ink: #FFFFFF"]);
+  });
+
+  it.each(["accent: red", "surfaceAlt: #FFF", "foreground muted: #12GG00", "accent:", "surfaceAlt:   ", "accent:\nred"])("rejects malformed structured color constraint %s", (constraint) => {
+    expect(compile({ explicitConstraints: [constraint] })).toMatchObject({ ok: false, code: "invalid_input" });
+  });
+
   it("compiles iconography through the inventory icon hook without replacing SVG or logo markup", () => {
     const result = compile();
     expect(result.ok).toBe(true);
@@ -136,6 +152,38 @@ describe("compileSkeletonIdentity", () => {
     const html = NORMALIZED_SKELETON_HTML.replace('<svg id="brand-logo" aria-label="Logo">', '<svg id="brand-logo" aria-label="Logo" data-lucide="brand">');
     const result = compile({ html, inventory: buildSkeletonInventory(html, "color-base") });
     expect(result).toMatchObject({ ok: false, code: "invalid_inventory" });
+  });
+
+  it.each([
+    '<a class="brand" href="/home"><svg data-lucide="spark"></svg></a>',
+    '<a href="/"><svg data-lucide="spark"></svg></a>',
+  ])("rejects semantic navigation brand artwork without requiring logo text: %s", (markup) => {
+    const html = NORMALIZED_SKELETON_HTML.replace('<a href="/" class="brand"><svg id="brand-logo" aria-label="Logo"><path d="M0 0L8 8"></path></svg></a>', markup);
+    expect(compile({ html, inventory: buildSkeletonInventory(html, "color-base") })).toMatchObject({ ok: false, code: "invalid_inventory" });
+  });
+
+  it("retains a genuine non-brand navigation icon", () => {
+    const html = NORMALIZED_SKELETON_HTML.replace("</nav>", '<a href="/search" aria-label="Search"><svg data-lucide="search"></svg></a></nav>');
+    expect(compile({ html, inventory: buildSkeletonInventory(html, "color-base") })).toMatchObject({ ok: true });
+  });
+
+  it("does not classify every icon as a logo because an outer document ancestor says home", () => {
+    const html = NORMALIZED_SKELETON_HTML.replace("<body ", '<body class="home" ').replace("</nav>", '<a href="/search" aria-label="Search"><svg data-lucide="search"></svg></a></nav>');
+    expect(compile({ html, inventory: buildSkeletonInventory(html, "color-base") })).toMatchObject({ ok: true });
+  });
+
+  it("protects a root home link even when another navigation link comes first", () => {
+    const html = NORMALIZED_SKELETON_HTML.replace('<a href="/" class="brand"><svg id="brand-logo" aria-label="Logo"><path d="M0 0L8 8"></path></svg></a>', '<a href="/search">Search</a><a href="/"><svg data-lucide="spark"></svg></a>');
+    expect(compile({ html, inventory: buildSkeletonInventory(html, "color-base") })).toMatchObject({ ok: false, code: "invalid_inventory" });
+  });
+
+  it.each([
+    '<a id="brandLogo" href="/elsewhere"><svg data-lucide="spark"></svg></a>',
+    '<a href="/home/"><svg data-lucide="spark"></svg></a>',
+    '<a href="/inicio/"><svg data-lucide="spark"></svg></a>',
+  ])("protects additional semantic brand markers and home paths: %s", (markup) => {
+    const html = NORMALIZED_SKELETON_HTML.replace('<a href="/" class="brand"><svg id="brand-logo" aria-label="Logo"><path d="M0 0L8 8"></path></svg></a>', `<a href="/search">Search</a>${markup}`);
+    expect(compile({ html, inventory: buildSkeletonInventory(html, "color-base") })).toMatchObject({ ok: false, code: "invalid_inventory" });
   });
 
   it("is idempotent and serializes exactly one deterministic style block before head closes", () => {
@@ -179,6 +227,19 @@ describe("compileSkeletonIdentity", () => {
     if (result.ok) expect(result.html).toContain(lookalike);
   });
 
+  it("inserts before the parsed head close, ignoring literal close text in comments, attributes, and scripts", () => {
+    const html = NORMALIZED_SKELETON_HTML.replace(
+      "<title>Coloring</title>",
+      '<!-- </head> --><meta content="</head>"><script>window.fakeHead="</head>"</script><title>Coloring</title>',
+    );
+    const result = compile({ html, inventory: buildSkeletonInventory(html, "color-base") });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.html).toContain('<!-- </head> --><meta content="</head>"><script>window.fakeHead="</head>"</script><title>Coloring</title>');
+    expect(result.html.indexOf("data-openlen-visual-engine")).toBeGreaterThan(result.html.indexOf("<title>Coloring</title>"));
+    expect(result.html.match(/data-openlen-visual-engine/g)).toHaveLength(1);
+  });
+
   it.each([
     "url(https://example.com/a.png)",
     "@import 'x'",
@@ -202,6 +263,37 @@ describe("compileSkeletonIdentity", () => {
     expect(compile({ plan: unsafePlan })).toMatchObject({ ok: false, code: "css_policy_violation" });
   });
 
+  it.each([
+    ["padding", "clamp(1px)"],
+    ["padding", "calc(1px + )"],
+    ["padding", "1vh"],
+    ["padding", "-1px"],
+    ["gap", "1rem -2px"],
+    ["gap", "1px 2px 3px 4px 5px"],
+    ["border-radius", "min(1px, 2px)"],
+    ["border-radius", "clamp(1px, 2px, 3px, 4px)"],
+    ["padding", "var(--ol-accent)"],
+    ["padding", "calc(var(--ol-font-body) * 1rem)"],
+    ["padding", "calc(1px * 2px)"],
+    ["padding", "calc(1px / 0)"],
+    ["padding", "calc(0 - 1px)"],
+    ["padding", "calc(1 + 2 * 1px)"],
+    ["padding", "calc(1px+2px)"],
+    ["padding", "var(--OL-RADIUS)"],
+  ])("rejects semantically invalid spacing %s: %s", (property, value) => {
+    const unsafePlan = { ...plan(), cssOverride: [{ hookId: "hero", declarations: { [property]: value } }] } as SkeletonAdaptationPlan;
+    expect(compile({ plan: unsafePlan })).toMatchObject({ ok: false, code: "css_policy_violation" });
+  });
+
+  it.each([
+    ["padding", "1px 2rem 0 3em"],
+    ["gap", "calc(var(--ol-space-scale) * 1rem) 2rem"],
+    ["border-radius", "clamp(1px, 2rem, 3em)"],
+  ])("accepts bounded spacing grammar %s: %s", (property, value) => {
+    const safePlan = { ...plan(), cssOverride: [{ hookId: "hero", declarations: { [property]: value } }] } as SkeletonAdaptationPlan;
+    expect(compile({ plan: safePlan })).toMatchObject({ ok: true });
+  });
+
   it("rejects an unknown hook", () => {
     const unsafePlan = { ...plan(), cssOverride: [{ hookId: "footer", declarations: { color: "#FFFFFF" } }] } as SkeletonAdaptationPlan;
     expect(compile({ plan: unsafePlan })).toMatchObject({ ok: false, code: "unknown_hook", hookId: "footer" });
@@ -217,6 +309,9 @@ describe("compileSkeletonIdentity", () => {
     { explicitConstraints: [null] },
     { brand: { accent: 42 } },
     { explicitOverrides: { mode: "sepia" } },
+    { explicitOverrides: { mode: ["dark"] } },
+    { explicitOverrides: { mode: new String("dark") } },
+    { explicitOverrides: { mode: { toString: (): string => "dark" } } },
   ])("returns invalid_input for malformed optional runtime input %#", (runtimeInput) => {
     const invoke = () => compile(runtimeInput as unknown as Partial<Parameters<typeof compileSkeletonIdentity>[0]>);
     expect(invoke).not.toThrow();
