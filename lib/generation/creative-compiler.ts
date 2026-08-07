@@ -178,12 +178,21 @@ function hasOptionalInputShape(input: CreativeCompileInput): boolean {
   return true;
 }
 
+function hasBrandIdentityToken(value: string): boolean {
+  const tokens = value
+    .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
+    .toLowerCase()
+    .split(/[^a-z0-9]+/)
+    .filter(Boolean);
+  return tokens.some((token) => ["logo", "brand", "wordmark", "identity"].includes(token));
+}
+
 function elementLooksLikeLogo(element: HTMLElement): boolean {
   for (let current: HTMLElement | null = element; current; current = current.parentNode) {
     const tag = current.rawTagName?.toLowerCase() ?? "";
     if (current !== element && ["nav", "header", "body", "html", "main", "section"].includes(tag)) break;
     const identity = [current.getAttribute("id"), current.getAttribute("class"), current.getAttribute("aria-label"), current.getAttribute("title"), current.getAttribute("role"), current.getAttribute("alt"), current.getAttribute("src")].filter(Boolean).join(" ");
-    if (/(?:logo|brand|home|inicio)/i.test(identity)) return true;
+    if (hasBrandIdentityToken(identity)) return true;
   }
   const anchor = element.closest("a");
   if (!anchor) return false;
@@ -191,9 +200,7 @@ function elementLooksLikeLogo(element: HTMLElement): boolean {
   const semanticLabel = [anchor.getAttribute("aria-label"), anchor.getAttribute("title"), anchor.getAttribute("role")].filter(Boolean).join(" ");
   if (/\b(?:home|inicio|start|brand)\b/i.test(semanticLabel)) return true;
   const homeHref = /^(?:\/|\/home\/?|\/inicio\/?)(?:[?#].*)?$/i.test(href);
-  if (!homeHref) return false;
-  const landmark = anchor.closest("nav") ?? anchor.closest("header");
-  return Boolean(landmark);
+  return homeHref;
 }
 
 function iconHookTargetsLogo(html: string, inventory: SkeletonInventory): boolean {
@@ -350,6 +357,7 @@ function parseExplicitConstraints(constraints: readonly string[] | undefined):
     const structuredColor = /^([^:]+)\s*:\s*([\s\S]*)$/.exec(constraint);
     const normalizedRole = structuredColor?.[1].trim().toLowerCase().replace(/[\s_-]+/g, "") ?? "";
     if (structuredColor && roles[normalizedRole]) {
+      if (/[\r\n]/.test(raw)) return failure("invalid_input", `Explicit ${structuredColor[1].trim()} color must be single-line`);
       if (!HEX_COLOR.test(structuredColor[2].trim())) return failure("invalid_input", `Explicit ${structuredColor[1].trim()} color must be a six-digit hex value`);
       const token = roles[normalizedRole];
       const value = structuredColor[2].trim().toUpperCase();
@@ -455,17 +463,14 @@ function splitCalcExpression(value: string): { operands: string[]; operators: st
   return { operands, operators };
 }
 
-type SpacingDimension = "length" | "number" | "zero";
+type SpacingDimension = "length" | "number";
 type SpacingMetric = { dimension: SpacingDimension; numericValue?: number };
 
 function addDimensions(left: SpacingMetric, right: SpacingMetric): SpacingMetric | null {
-  if (left.dimension === "zero") return right;
-  if (right.dimension === "zero") return left;
   return left.dimension === right.dimension ? { dimension: left.dimension } : null;
 }
 
 function multiplyDimensions(left: SpacingMetric, right: SpacingMetric): SpacingMetric | null {
-  if (left.dimension === "zero" || right.dimension === "zero") return { dimension: "zero", numericValue: 0 };
   if (left.dimension === "length" && right.dimension === "length") return null;
   if (left.dimension === "length" || right.dimension === "length") return { dimension: "length" };
   return { dimension: "number" };
@@ -474,7 +479,7 @@ function multiplyDimensions(left: SpacingMetric, right: SpacingMetric): SpacingM
 function spacingMetric(value: string, depth = 0): SpacingMetric | null {
   if (depth > 2) return null;
   const trimmed = value.trim();
-  if (trimmed === "0") return { dimension: "zero", numericValue: 0 };
+  if (trimmed === "0") return { dimension: "number", numericValue: 0 };
   if (/^(?:\d+(?:\.\d+)?|\.\d+)(?:px|rem|em)$/.test(trimmed)) return { dimension: "length" };
   if (/^(?:\d+(?:\.\d+)?|\.\d+)$/.test(trimmed)) return { dimension: "number", numericValue: Number(trimmed) };
   const variable = /^var\((--ol-[a-z0-9-]+)\)$/.exec(trimmed);
@@ -491,7 +496,7 @@ function spacingMetric(value: string, depth = 0): SpacingMetric | null {
     if (!args || args.length !== 3) return null;
     const metrics = args.map((argument) => spacingMetric(argument, depth + 1));
     if (metrics.some((metric) => !metric || metric.dimension === "number")) return null;
-    return metrics.some((metric) => metric?.dimension === "length") ? { dimension: "length" } : { dimension: "zero", numericValue: 0 };
+    return { dimension: "length" };
   }
   const expression = splitCalcExpression(fn[2]);
   if (!expression) return null;
@@ -523,11 +528,13 @@ function spacingMetric(value: string, depth = 0): SpacingMetric | null {
   return result;
 }
 
-function isSpacing(value: string): boolean {
+function isSpacing(value: string, property: string): boolean {
   const components = splitSpacingComponents(value.trim());
-  return Boolean(components && components.length >= 1 && components.length <= 4 && components.every((component) => {
+  const maximumComponents = property === "gap" ? 2 : 4;
+  return Boolean(components && components.length >= 1 && components.length <= maximumComponents && components.every((component) => {
+    if (component === "0") return true;
     const metric = spacingMetric(component);
-    return metric?.dimension === "length" || metric?.dimension === "zero";
+    return metric?.dimension === "length";
   }));
 }
 
@@ -571,7 +578,7 @@ function validateDeclaration(hookId: string, property: string, value: string): C
   }
   if (COLOR_PROPERTIES.has(property) && !isColor(trimmed)) return failure("css_policy_violation", `${property} requires a hex or rgba color`, { hookId, property });
   if ((property === "fill" || property === "stroke") && !ICON_VALUES[property].has(trimmed)) return failure("icon_policy_violation", `Icon ${property} is not registered`, { hookId, property });
-  if (SPACE_PROPERTIES.has(property) && !isSpacing(trimmed)) return failure("css_policy_violation", `${property} requires a bounded length expression`, { hookId, property });
+  if (SPACE_PROPERTIES.has(property) && !isSpacing(trimmed, property)) return failure("css_policy_violation", `${property} requires a bounded length expression`, { hookId, property });
   if (property === "box-shadow") {
     const shadows = trimmed.length <= 240 ? splitTopLevelCommas(trimmed) : null;
     if (!shadows || shadows.length > 4 || shadows.some((shadow) => !shadow.trim())) return failure("css_policy_violation", "Box shadow exceeds compiler bounds", { hookId, property });

@@ -133,7 +133,7 @@ describe("compileSkeletonIdentity", () => {
     expect(result.enforcedConstraints).toEqual(["foreground muted: #655D55", "accent ink: #FFFFFF"]);
   });
 
-  it.each(["accent: red", "surfaceAlt: #FFF", "foreground muted: #12GG00", "accent:", "surfaceAlt:   ", "accent:\nred"])("rejects malformed structured color constraint %s", (constraint) => {
+  it.each(["accent: red", "surfaceAlt: #FFF", "foreground muted: #12GG00", "accent:", "surfaceAlt:   ", "accent:\nred", "accent:\n#112233", "surfaceAlt:\r\n#112233"])("rejects malformed structured color constraint %s", (constraint) => {
     expect(compile({ explicitConstraints: [constraint] })).toMatchObject({ ok: false, code: "invalid_input" });
   });
 
@@ -184,6 +184,16 @@ describe("compileSkeletonIdentity", () => {
   ])("protects additional semantic brand markers and home paths: %s", (markup) => {
     const html = NORMALIZED_SKELETON_HTML.replace('<a href="/" class="brand"><svg id="brand-logo" aria-label="Logo"><path d="M0 0L8 8"></path></svg></a>', `<a href="/search">Search</a>${markup}`);
     expect(compile({ html, inventory: buildSkeletonInventory(html, "color-base") })).toMatchObject({ ok: false, code: "invalid_inventory" });
+  });
+
+  it("protects a root/home SVG link outside navigation landmarks", () => {
+    const html = NORMALIZED_SKELETON_HTML.replace('<section class="hero">', '<section class="hero"><a href="/"><svg data-lucide="outside-home"></svg></a>');
+    expect(compile({ html, inventory: buildSkeletonInventory(html, "color-base") })).toMatchObject({ ok: false, code: "invalid_inventory" });
+  });
+
+  it.each(["homepage-search", "brandish"])("keeps non-brand identifier %s eligible for icon styling", (identifier) => {
+    const html = NORMALIZED_SKELETON_HTML.replace('<svg data-lucide="star" aria-hidden="true"><path d="M1 1L2 2"></path></svg>', `<span id="${identifier}"><svg data-lucide="star" aria-hidden="true"><path d="M1 1L2 2"></path></svg></span>`);
+    expect(compile({ html, inventory: buildSkeletonInventory(html, "color-base") })).toMatchObject({ ok: true });
   });
 
   it("is idempotent and serializes exactly one deterministic style block before head closes", () => {
@@ -280,12 +290,16 @@ describe("compileSkeletonIdentity", () => {
     ["padding", "calc(1 + 2 * 1px)"],
     ["padding", "calc(1px+2px)"],
     ["padding", "var(--OL-RADIUS)"],
+    ["gap", "1px 2px 3px"],
+    ["padding", "calc(0 + 1px)"],
+    ["padding", "clamp(0, 1px, 2px)"],
   ])("rejects semantically invalid spacing %s: %s", (property, value) => {
     const unsafePlan = { ...plan(), cssOverride: [{ hookId: "hero", declarations: { [property]: value } }] } as SkeletonAdaptationPlan;
     expect(compile({ plan: unsafePlan })).toMatchObject({ ok: false, code: "css_policy_violation" });
   });
 
   it.each([
+    ["padding", "0"],
     ["padding", "1px 2rem 0 3em"],
     ["gap", "calc(var(--ol-space-scale) * 1rem) 2rem"],
     ["border-radius", "clamp(1px, 2rem, 3em)"],
