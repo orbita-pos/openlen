@@ -17,6 +17,10 @@ export class StructuralFingerprintError extends Error {
 }
 
 const ROOT_TAGS = new Set(["html", "body"]);
+// theme-apply deterministically derives this visual-only carrier whenever the
+// approved accent token changes. It is not model-addressable and therefore
+// intentionally remains outside CREATIVE_TOKEN_ALLOWLIST.
+const INTERNAL_DERIVED_ROOT_TOKENS = new Set(["--ol-accent-r"]);
 const MAX_ROOT_STYLE_LENGTH = 4_096;
 const MAX_ROOT_STYLE_DECLARATIONS = 64;
 
@@ -189,7 +193,7 @@ function canonicalRootStyle(style: string): Array<[string, string]> {
     if (colon === null) return [["__unparsed_style__", style]];
     const property = declaration.slice(0, colon).trim().toLowerCase();
     if (!property) return [["__unparsed_style__", style]];
-    if (!CREATIVE_TOKEN_ALLOWLIST.has(property)) {
+    if (!CREATIVE_TOKEN_ALLOWLIST.has(property) && !INTERNAL_DERIVED_ROOT_TOKENS.has(property)) {
       nonApproved.push([property, normalizeCssValue(declaration.slice(colon + 1))]);
     }
   }
