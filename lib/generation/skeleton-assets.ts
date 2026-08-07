@@ -24,7 +24,7 @@ export interface SkeletonAssetDependencies {
   loadImages?: () => Promise<CuratedImage[]>;
 }
 
-function tokens(value: string): string[] {
+function normalizedTokens(value: string): string[] {
   return value
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
@@ -33,7 +33,11 @@ function tokens(value: string): string[] {
     .replace(/[^a-z0-9]+/g, " ")
     .trim()
     .split(/\s+/)
-    .filter((token) => token.length >= 3 && !STOP_WORDS.has(token));
+    .filter(Boolean);
+}
+
+function subjectTokens(value: string): string[] {
+  return normalizedTokens(value).filter((token) => token.length >= 3 && !STOP_WORDS.has(token));
 }
 
 function hasOverlap(needles: readonly string[], haystack: readonly string[]): number {
@@ -60,26 +64,28 @@ function strategyAllows(image: CuratedImage, direction: CreativeDirection): bool
 }
 
 function forbiddenTokens(direction: CreativeDirection): string[] {
-  return [...direction.imagery.avoid, ...direction.forbiddenVisualSignals].flatMap(tokens);
+  // Safety policy terms are not subject terms: short tokens (for example AI)
+  // and otherwise generic words must remain enforceable.
+  return [...direction.imagery.avoid, ...direction.forbiddenVisualSignals].flatMap(normalizedTokens);
 }
 
 function hasForbiddenToken(image: CuratedImage, forbidden: readonly string[]): boolean {
-  const imageTokens = tokens(`${image.id} ${image.style} ${image.family.join(" ")} ${image.alt}`);
-  return hasOverlap(forbidden, imageTokens) > 0;
+  const imageTokens = new Set(normalizedTokens(`${image.id} ${image.style} ${image.family.join(" ")} ${image.alt}`));
+  return forbidden.some((token) => imageTokens.has(token));
 }
 
 /** Returns eligible image IDs in deterministic best-first order. */
 export function rankSkeletonAssets(input: { query: string; direction: CreativeDirection; images: readonly CuratedImage[] }): string[] {
   // The instruction query supplies the requested subject; direction constrains
   // the visual treatment but must not turn an unrelated request into a match.
-  const subjectTokens = tokens(input.query);
+  const queryTokens = subjectTokens(input.query);
   const forbidden = forbiddenTokens(input.direction);
   const desiredTone = input.direction.mode === "dark" ? "dark" : "light";
   return input.images
     .map((image) => {
       if (!strategyAllows(image, input.direction) || hasForbiddenToken(image, forbidden)) return null;
-      const haystack = tokens(`${image.id} ${image.style} ${image.family.join(" ")} ${image.alt}`);
-      const signal = hasOverlap(subjectTokens, haystack);
+      const haystack = subjectTokens(`${image.id} ${image.style} ${image.family.join(" ")} ${image.alt}`);
+      const signal = hasOverlap(queryTokens, haystack);
       if (signal === 0) return null;
       const tone = imageTone(image.alt);
       const toneBonus = tone === desiredTone ? 1 : tone === "neutral" ? 0.5 : 0;
@@ -96,7 +102,8 @@ function srcsetFor(image: CuratedImage): string {
 
 function originalIsSafe(image: { getAttribute(name: string): string | undefined }, direction: CreativeDirection): boolean {
   const forbidden = forbiddenTokens(direction);
-  return hasOverlap(forbidden, tokens(`${image.getAttribute("alt") ?? ""} ${image.getAttribute("style") ?? ""}`)) === 0;
+  const originalTokens = new Set(normalizedTokens(`${image.getAttribute("alt") ?? ""} ${image.getAttribute("style") ?? ""}`));
+  return !forbidden.some((token) => originalTokens.has(token));
 }
 
 export async function resolveSkeletonAssets(
@@ -104,7 +111,9 @@ export async function resolveSkeletonAssets(
   deps: SkeletonAssetDependencies = {},
 ): Promise<SkeletonAssetResult> {
   const root = parse(input.html);
-  const images = replaceableContentImages(root);
+  // Inventory enumeration is body-scoped; maintain the exact same scope here.
+  const body = root.querySelector("body");
+  const images = body ? replaceableContentImages(body) : [];
   const catalog = await (deps.loadImages ?? loadCuratedImages)();
   const catalogById = new Map(catalog.map((image) => [image.id, image]));
   const used = new Set<string>();
