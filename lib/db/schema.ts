@@ -2,6 +2,7 @@ import { sql as sqlOp } from "drizzle-orm";
 import {
   type AnyPgColumn,
   boolean,
+  check,
   date,
   index,
   integer,
@@ -1623,4 +1624,66 @@ export const pageReports = pgTable(
     createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
   },
   (t) => [index("pageReports_status_createdAt_idx").on(t.status, t.createdAt)],
+);
+
+// Redacted Visual Engine pilot ledger. These rows are operational evidence,
+// not project records: they intentionally have no user/project linkage or
+// text/blob columns for briefs, HTML, prompts, responses, or provider errors.
+export const visualEnginePilotBudgets = pgTable(
+  "visualEnginePilotBudgets",
+  {
+    phase: text("phase").primaryKey(),
+    limit: integer("limit").notNull(),
+    used: integer("used").notNull().default(0),
+    updatedAt: timestamp("updatedAt", { mode: "date" }).notNull().defaultNow(),
+  },
+  (table) => [
+    check(
+      "visualEnginePilotBudgets_nonnegative",
+      sqlOp`${table.limit} >= 0 AND ${table.used} >= 0 AND ${table.used} <= ${table.limit}`,
+    ),
+  ],
+);
+
+export const visualEnginePilotRuns = pgTable(
+  "visualEnginePilotRuns",
+  {
+    id: text("id").primaryKey(),
+    phase: text("phase").notNull(),
+    ordinal: integer("ordinal").notNull(),
+    mode: text("mode").notNull(),
+    route: text("route").notNull(),
+    templateId: text("templateId").notNull(),
+    status: text("status").notNull(),
+    reasonCode: text("reasonCode"),
+    promptVersion: text("promptVersion"),
+    contractVersion: text("contractVersion"),
+    policyVersion: text("policyVersion"),
+    taxonomyVersion: text("taxonomyVersion"),
+    modelVersion: text("modelVersion"),
+    rateCardVersion: text("rateCardVersion"),
+    inputTokens: integer("inputTokens"),
+    outputTokens: integer("outputTokens"),
+    thinkingTokens: integer("thinkingTokens"),
+    cachedTokens: integer("cachedTokens"),
+    productionEquivalentCostMicromxn: integer("productionEquivalentCostMicromxn"),
+    observedPilotCostMicromxn: integer("observedPilotCostMicromxn"),
+    durationMs: integer("durationMs"),
+    criticVisualQualityScore: integer("criticVisualQualityScore"),
+    criticBriefAdherenceScore: integer("criticBriefAdherenceScore"),
+    criticFallback: boolean("criticFallback"),
+    structuralFingerprintBefore: text("structuralFingerprintBefore"),
+    structuralFingerprintAfter: text("structuralFingerprintAfter"),
+    candidatePersisted: boolean("candidatePersisted").notNull().default(false),
+    structuralInvariantPassed: boolean("structuralInvariantPassed"),
+    comparisonVerdict: text("comparisonVerdict"),
+    acceptedForbiddenSignalCount: integer("acceptedForbiddenSignalCount"),
+    createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
+    completedAt: timestamp("completedAt", { mode: "date" }),
+  },
+  (table) => [
+    uniqueIndex("visualEnginePilotRuns_phase_ordinal_idx").on(table.phase, table.ordinal),
+    index("visualEnginePilotRuns_phase_status_idx").on(table.phase, table.status),
+    index("visualEnginePilotRuns_createdAt_idx").on(table.createdAt),
+  ],
 );
