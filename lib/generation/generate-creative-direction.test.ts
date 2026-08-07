@@ -127,6 +127,35 @@ describe("generateCreativeDirection", () => {
       .thinkingConfig.thinkingBudget).toBe(2048);
   });
 
+  it("allowlists the runtime payload before it reaches the provider", async () => {
+    let providerPayload: Record<string, unknown> | null = null;
+    const fetchImpl = vi.fn(async (_input: string | URL | Request, init?: RequestInit) => {
+      const body = JSON.parse(String(init?.body)) as { contents: Array<{ parts: Array<{ text: string }> }> };
+      providerPayload = JSON.parse(body.contents[0]!.parts[0]!.text) as Record<string, unknown>;
+      return geminiResponse(JSON.stringify(READY_RESPONSE));
+    });
+    const untrustedRuntimeRequest = {
+      ...REQUEST,
+      html: "<!doctype html><html><body>must-not-leak</body></html>",
+      privateNotes: "must-not-leak-private-notes",
+      intent: { ...REQUEST.intent, privateNotes: "must-not-leak-intent" },
+      template: { ...REQUEST.template, internalReview: "must-not-leak-template" },
+      inventory: { ...REQUEST.inventory, rawHtml: "<!doctype html>must-not-leak-inventory" },
+      brand: { ...REQUEST.brand, secretBrandNote: "must-not-leak-brand" },
+    } as CreativeDirectionRequest;
+
+    await generateCreativeDirection(untrustedRuntimeRequest, { apiKey: "x", fetchImpl, now: () => 10 });
+
+    expect(providerPayload).toEqual({
+      intent: REQUEST.intent,
+      template: REQUEST.template,
+      inventory: REQUEST.inventory,
+      brand: REQUEST.brand,
+    });
+    expect(JSON.stringify(providerPayload)).not.toContain("must-not-leak");
+    expect(JSON.stringify(providerPayload)).not.toContain("<!doctype html>");
+  });
+
   it("returns redacted typed failures for local, provider, parser, contract, compatibility, and unexpected errors", async () => {
     const malformed = await generateCreativeDirection(REQUEST, { apiKey: "x", fetchImpl: vi.fn().mockResolvedValue(geminiResponse("```json\n{}\n```")), now: () => 10 });
     const schema = await generateCreativeDirection(REQUEST, { apiKey: "x", fetchImpl: vi.fn().mockResolvedValue(geminiResponse(JSON.stringify({ schemaVersion: "skeleton-creative-response/1.0", status: "ready" }))), now: () => 10 });

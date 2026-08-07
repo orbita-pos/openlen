@@ -244,6 +244,59 @@ function generationConfig(thinkingBudget: number) {
   };
 }
 
+function providerPayload(request: CreativeDirectionRequest): CreativeDirectionRequest {
+  return {
+    intent: {
+      schemaVersion: request.intent.schemaVersion,
+      language: request.intent.language,
+      functional: {
+        siteType: request.intent.functional.siteType,
+        requiredSections: [...request.intent.functional.requiredSections],
+        primaryActions: [...request.intent.functional.primaryActions],
+        contentModel: request.intent.functional.contentModel,
+      },
+      audience: {
+        primary: request.intent.audience.primary,
+        ageRange: request.intent.audience.ageRange,
+        secondary: [...request.intent.audience.secondary],
+      },
+      domains: [...request.intent.domains],
+      emotionalGoals: [...request.intent.emotionalGoals],
+      requiredVisualSignals: [...request.intent.requiredVisualSignals],
+      forbiddenVisualSignals: [...request.intent.forbiddenVisualSignals],
+      explicitConstraints: [...request.intent.explicitConstraints],
+      ambiguities: [...request.intent.ambiguities],
+      confidence: request.intent.confidence,
+    },
+    template: {
+      domains: [...request.template.domains],
+      audiences: [...request.template.audiences],
+      visualSignals: [...request.template.visualSignals],
+      negativeTags: [...request.template.negativeTags],
+      themeability: request.template.themeability,
+    },
+    inventory: {
+      schemaVersion: request.inventory.schemaVersion,
+      templateId: request.inventory.templateId,
+      availableTokens: [...request.inventory.availableTokens],
+      styleHooks: request.inventory.styleHooks.map((hook) => ({
+        id: hook.id,
+        selector: hook.selector,
+        allowedProperties: [...hook.allowedProperties],
+      })),
+      assetSlots: request.inventory.assetSlots.map((slot) => ({
+        slotIndex: slot.slotIndex,
+        kind: slot.kind,
+        role: slot.role,
+        currentAlt: slot.currentAlt,
+        replaceable: slot.replaceable,
+      })),
+      structuralFingerprint: request.inventory.structuralFingerprint,
+    },
+    brand: { accent: request.brand.accent },
+  };
+}
+
 export class GeminiCreativeDirectionProvider implements CreativeDirectionProvider {
   private readonly apiKey: string | undefined;
   private readonly modelId: string;
@@ -269,7 +322,7 @@ export class GeminiCreativeDirectionProvider implements CreativeDirectionProvide
           signal: options.signal,
           body: JSON.stringify({
             systemInstruction: { parts: [{ text: CREATIVE_SYSTEM_PROMPT }] },
-            contents: [{ role: "user", parts: [{ text: JSON.stringify(request) }] }],
+            contents: [{ role: "user", parts: [{ text: JSON.stringify(providerPayload(request)) }] }],
             generationConfig: generationConfig(this.thinkingBudget),
           }),
         },
