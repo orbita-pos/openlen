@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import type { SelectorEvalCase } from "./selector-cases";
+import type { VisualEngine2APilotCase } from "./visual-engine-2a-cohort";
 import type { CritiqueVerdict } from "@/lib/ai/vision-critique";
 import type { CompleteVisualEnginePilotRunOutcome } from "./visual-engine-pilot-store";
 import { pickWeighted } from "@/lib/curate/pick-template";
@@ -24,18 +24,24 @@ export const VISUAL_ENGINE_2A_SCENARIOS = [
 export interface VisualEngine2APoolRow {
   caseId: string;
   scenarioId: string;
+  datasetVersion: VisualEngine2APilotCase["datasetVersion"];
+  archetype: VisualEngine2APilotCase["archetype"];
   language: "es" | "en";
   brief: string;
   forbiddenSignals: string[];
+  allowedSkeletonTemplateIds: string[];
 }
 
-export function buildVisualEngine2APool(cases: readonly SelectorEvalCase[]): VisualEngine2APoolRow[] {
+export function buildVisualEngine2APool(cases: readonly VisualEngine2APilotCase[]): VisualEngine2APoolRow[] {
   const rows = cases.flatMap((item) => VISUAL_ENGINE_2A_SCENARIOS.map((scenario) => ({
     caseId: item.id,
     scenarioId: scenario.id,
+    datasetVersion: item.datasetVersion,
+    archetype: item.archetype,
     language: item.language,
     brief: scenario.suffix ? `${item.brief}\n\n${scenario.suffix}` : item.brief,
-    forbiddenSignals: [...item.forbiddenSignals],
+    forbiddenSignals: [...item.forbiddenVisualSignals],
+    allowedSkeletonTemplateIds: [...item.allowedSkeletonTemplateIds],
   })));
   return rows.sort((left, right) =>
     left.caseId.localeCompare(right.caseId) || left.scenarioId.localeCompare(right.scenarioId));
@@ -57,7 +63,7 @@ export interface PilotPreflightCounts {
 }
 
 export async function preflightVisualEngine2A(args: {
-  cases: readonly SelectorEvalCase[];
+  cases: readonly VisualEngine2APilotCase[];
   templates: readonly unknown[];
   select: (
     brief: string,
@@ -80,6 +86,10 @@ export async function preflightVisualEngine2A(args: {
     const result = await args.select(row.brief, args.templates, row);
     counts.analyzed += 1;
     if (!result.ok) {
+      counts.selectionFailures += 1;
+      continue;
+    }
+    if (result.route === "template_skeleton" && !row.allowedSkeletonTemplateIds.includes(result.templateId)) {
       counts.selectionFailures += 1;
       continue;
     }

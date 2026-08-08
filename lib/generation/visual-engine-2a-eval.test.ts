@@ -2,8 +2,7 @@ import { mkdtemp, readFile, readdir, rm } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { describe, expect, it, vi } from "vitest";
-import { SELECTOR_CASES } from "./selector-cases";
-import { SELECTOR_HOLDOUT_CASES } from "./selector-holdout-cases";
+import { VISUAL_ENGINE_2A_PILOT_CASES } from "./visual-engine-2a-cohort";
 import {
   buildVisualEngine2APool,
   preflightVisualEngine2A,
@@ -50,35 +49,49 @@ describe("Visual Engine 2A pilot", () => {
     }
   });
 
-  it("builds and sorts all 150 pre-output candidates", () => {
-    const pool = buildVisualEngine2APool([...SELECTOR_CASES, ...SELECTOR_HOLDOUT_CASES]);
-    expect(pool).toHaveLength(150);
+  it("builds and sorts the 75 cohort scenario rows with qualification provenance", () => {
+    const pool = buildVisualEngine2APool(VISUAL_ENGINE_2A_PILOT_CASES);
+    expect(pool).toHaveLength(75);
     expect(pool.map((row) => `${row.caseId}/${row.scenarioId}`)).toEqual(
       [...pool].map((row) => `${row.caseId}/${row.scenarioId}`).sort(),
     );
+    expect(pool[0]).toMatchObject({
+      datasetVersion: "visual-engine-2a-cohort/1.0",
+      archetype: "restaurant_hospitality",
+      allowedSkeletonTemplateIds: ["cafe-tramonto"],
+    });
   });
 
   it("stops before reservation when fewer than 75 candidates are eligible", async () => {
     const reserve = vi.fn();
     const result = await preflightVisualEngine2A({
-      cases: [...SELECTOR_CASES, ...SELECTOR_HOLDOUT_CASES],
+      cases: VISUAL_ENGINE_2A_PILOT_CASES,
       templates: [],
       select: async () => ({ ok: true, route: "template_full", templateId: "t" }),
       reserve,
     });
     expect(result.ok).toBe(false);
-    expect(result.counts).toMatchObject({ pool: 150, analyzed: 150, templateSkeleton: 0 });
+    expect(result.counts).toMatchObject({ pool: 75, analyzed: 75, templateSkeleton: 0 });
     expect(reserve).not.toHaveBeenCalled();
   });
 
   it("caps the sorted safe skeleton set at exactly 75", async () => {
     const result = await preflightVisualEngine2A({
-      cases: [...SELECTOR_CASES, ...SELECTOR_HOLDOUT_CASES],
+      cases: VISUAL_ENGINE_2A_PILOT_CASES,
       templates: [],
-      select: async (_brief, _templates, row) => ({ ok: true, route: "template_skeleton", templateId: row.caseId }),
+      select: async (_brief, _templates, row) => ({ ok: true, route: "template_skeleton", templateId: row.allowedSkeletonTemplateIds![0] }),
     });
     expect(result.ok).toBe(true);
     if (result.ok) expect(result.eligible).toHaveLength(75);
+  });
+
+  it("rejects a skeleton choice outside the cohort allowlist before live work", async () => {
+    const result = await preflightVisualEngine2A({
+      cases: VISUAL_ENGINE_2A_PILOT_CASES,
+      templates: [],
+      select: async () => ({ ok: true, route: "template_skeleton", templateId: "not-allowlisted" }),
+    });
+    expect(result).toMatchObject({ ok: false, code: "insufficient_eligible_cases", counts: { pool: 75, templateSkeleton: 0, selectionFailures: 75 } });
   });
 
   it("enforces every approved gate and denominator", () => {
@@ -265,7 +278,8 @@ describe("Visual Engine 2A pilot", () => {
   it("runs exactly one critic and one scalar completion per reserved adaptation", async () => {
     const eligible = Array.from({ length: 75 }, (_, index) => ({
       caseId: `case-${String(index).padStart(2, "0")}`, scenarioId: "plain",
-      language: "en" as const, brief: "safe fixture", forbiddenSignals: [], templateId: "template",
+      datasetVersion: "visual-engine-2a-cohort/1.0" as const, archetype: "technical_saas" as const,
+      language: "en" as const, brief: "safe fixture", forbiddenSignals: [], allowedSkeletonTemplateIds: ["template"], templateId: "template",
     }));
     const critic = vi.fn(async () => ({
       visualQuality: 8, briefAdherence: 9, issues: [], shouldRegenerate: false,
@@ -304,7 +318,8 @@ describe("Visual Engine 2A pilot", () => {
   it("scores 72 adapted rows plus three paid provider failures without structural failures", async () => {
     const eligible = Array.from({ length: 75 }, (_, index) => ({
       caseId: `case-${String(index).padStart(2, "0")}`, scenarioId: "plain",
-      language: "en" as const, brief: "safe fixture", forbiddenSignals: [], templateId: "template",
+      datasetVersion: "visual-engine-2a-cohort/1.0" as const, archetype: "technical_saas" as const,
+      language: "en" as const, brief: "safe fixture", forbiddenSignals: [], allowedSkeletonTemplateIds: ["template"], templateId: "template",
     }));
     const completions: Array<Parameters<Parameters<typeof generateVisualEngine2AEvidence>[0]["deps"]["complete"]>[1]> = [];
     const paidFailureUsage = { inputTokens: 7, outputTokens: 3, cachedTokens: 1, thinkingTokens: 2 };
@@ -368,8 +383,8 @@ describe("Visual Engine 2A pilot", () => {
 
   it("downgrades an adapted fingerprint mismatch before evidence and fails the structural gate", async () => {
     const eligible = Array.from({ length: 75 }, (_, index) => ({
-      caseId: `case-${index}`, scenarioId: "plain", language: "en" as const,
-      brief: "fixture", forbiddenSignals: [], templateId: "template",
+      caseId: `case-${index}`, scenarioId: "plain", datasetVersion: "visual-engine-2a-cohort/1.0" as const, archetype: "technical_saas" as const, language: "en" as const,
+      brief: "fixture", forbiddenSignals: [], allowedSkeletonTemplateIds: ["template"], templateId: "template",
     }));
     const completions: Array<Parameters<Parameters<typeof generateVisualEngine2AEvidence>[0]["deps"]["complete"]>[1]> = [];
     const writeEvidence = vi.fn(async () => undefined);
@@ -441,8 +456,8 @@ describe("Visual Engine 2A pilot", () => {
     expect(fill.mock.calls.map(([templateId]) => templateId)).toEqual(["weighted-first", "safe-skeleton"]);
 
     const eligible = Array.from({ length: 75 }, (_, index) => ({
-      caseId: `case-${index}`, scenarioId: "plain", language: "en" as const,
-      brief: "fixture", forbiddenSignals: [], templateId: "safe-skeleton",
+      caseId: `case-${index}`, scenarioId: "plain", datasetVersion: "visual-engine-2a-cohort/1.0" as const, archetype: "technical_saas" as const, language: "en" as const,
+      brief: "fixture", forbiddenSignals: [], allowedSkeletonTemplateIds: ["safe-skeleton"], templateId: "safe-skeleton",
     }));
     let firstEvidence: Record<string, Uint8Array> | undefined;
     await generateVisualEngine2AEvidence({

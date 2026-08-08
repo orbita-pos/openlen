@@ -3,8 +3,7 @@ import { join } from "node:path";
 import { sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { listTemplates } from "@/lib/templates/store";
-import { SELECTOR_CASES } from "@/lib/generation/selector-cases";
-import { SELECTOR_HOLDOUT_CASES } from "@/lib/generation/selector-holdout-cases";
+import { VISUAL_ENGINE_2A_PILOT_CASES } from "@/lib/generation/visual-engine-2a-cohort";
 import { selectGenerationRoute } from "@/lib/generation/safe-selection";
 import { pickTemplate, type TemplateCatalogItem } from "@/lib/curate/pick-template";
 import { fillAndNormalizeCuratedTemplate, finalizeCuratedDocument } from "@/lib/curate/build-curated-document";
@@ -65,7 +64,7 @@ async function main() {
   const templates = await listTemplates({ status: "published" });
   const rich = new Map<string, RichSelection>();
   const preflight = await preflightVisualEngine2A({
-    cases: [...SELECTOR_CASES, ...SELECTOR_HOLDOUT_CASES],
+    cases: VISUAL_ENGINE_2A_PILOT_CASES,
     templates,
     select: async (brief, rows, row) => {
       const result = await selectGenerationRoute(brief, rows as typeof templates);
