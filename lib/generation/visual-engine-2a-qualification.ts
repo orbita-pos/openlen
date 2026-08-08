@@ -80,7 +80,7 @@ function isUnsafeProse(value: string): boolean {
     || /\bAKIA[0-9A-Z]{16}\b/.test(value)
     || /\bghp_[A-Za-z0-9]{20,}\b/.test(value)
     || /-----BEGIN (?:[A-Z ]+ )?PRIVATE KEY-----/.test(value)
-    || /(?:^|[\s"'(])(?:[A-Za-z]:)?\\{1,2}(?:[A-Za-z0-9_.-]+\\)+/.test(value)
+    || /(?:^|[\s"'(])(?:[A-Za-z]:)?\\{1,2}[A-Za-z0-9_.-]+(?:\\[A-Za-z0-9_.-]+)*/.test(value)
     || /(?:^|[\s"'(])\/[A-Za-z0-9_.-]+(?:\/[^\s]*)?/.test(value);
 }
 

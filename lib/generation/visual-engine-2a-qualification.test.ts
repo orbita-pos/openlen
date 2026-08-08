@@ -98,6 +98,8 @@ describe("qualifyVisualEngine2ACohort", () => {
     ["rationale", (caseRow: VisualEngine2APilotCase) => { caseRow.structuralRationale = "<main>markup</main>"; }],
     ["UNC path", (caseRow: VisualEngine2APilotCase) => { caseRow.expectedIntent.explicitConstraints = ["\\\\server\\share\\secret.txt"]; }],
     ["rooted Windows path", (caseRow: VisualEngine2APilotCase) => { caseRow.expectedIntent.ambiguities = ["\\Users\\secret.txt"]; }],
+    ["drive-rooted Windows file", (caseRow: VisualEngine2APilotCase) => { caseRow.expectedIntent.explicitConstraints = ["C:\\secret.txt"]; }],
+    ["single-rooted Windows file", (caseRow: VisualEngine2APilotCase) => { caseRow.expectedIntent.ambiguities = ["\\secret.txt"]; }],
     ["project API key", (caseRow: VisualEngine2APilotCase) => { caseRow.identityConflict.structuralPattern = "sk-proj-abcdefghijklmnopqrstuvwxyz"; }],
     ["AWS access key", (caseRow: VisualEngine2APilotCase) => { caseRow.identityConflict.baselineIdentity = "AKIAABCDEFGHIJKLMNOP"; }],
     ["GitHub token", (caseRow: VisualEngine2APilotCase) => { caseRow.identityConflict.requestedIdentity = "ghp_abcdefghijklmnopqrstuvwxyzABCDEFGH"; }],
