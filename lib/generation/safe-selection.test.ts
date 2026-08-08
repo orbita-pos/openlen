@@ -49,7 +49,7 @@ function successfulAnalyzer() {
     intent: INTENT,
     modelId: "test-model",
     promptVersion: "intent-prompt/1.5",
-    usage: { inputTokens: 10, outputTokens: 20 },
+    usage: { inputTokens: 10, outputTokens: 20, cachedTokens: 4, thinkingTokens: 2 },
     durationMs: 3,
   });
 }
@@ -70,7 +70,7 @@ describe("safe selection", () => {
       promptVersion: "intent-prompt/1.5",
       policyVersion: "template-policy/1.0",
       modelId: "test-model",
-      usage: { inputTokens: 10, outputTokens: 20 },
+      usage: { inputTokens: 10, outputTokens: 20, cachedTokens: 4, thinkingTokens: 2 },
       decision: { route: "template_full", templateId: "kids" },
       durationMs: 8,
     });
@@ -84,11 +84,16 @@ describe("safe selection", () => {
         modelId: "test-model",
         promptVersion: "intent-prompt/1.5",
         error: { kind: "schema", message: "sensitive provider output" },
+        usage: { inputTokens: 11, outputTokens: 3, cachedTokens: 5, thinkingTokens: 1 },
         durationMs: 3,
       }),
     });
 
-    expect(result).toEqual(expect.objectContaining({ ok: false, errorKind: "schema" }));
+    expect(result).toEqual(expect.objectContaining({
+      ok: false,
+      errorKind: "schema",
+      usage: { inputTokens: 11, outputTokens: 3, cachedTokens: 5, thinkingTokens: 1 },
+    }));
     expect(JSON.stringify(result)).not.toContain("sensitive provider output");
   });
 

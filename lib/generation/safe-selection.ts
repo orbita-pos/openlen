@@ -6,6 +6,7 @@ import {
 } from "./analyze-intent";
 import type { IntentAnalysis, GenerationDecision } from "./contracts";
 import { DECISION_POLICY_VERSION, decideGenerationRoute } from "./decide-route";
+import type { ModelTokenUsage } from "./model-cost";
 import { rankTemplates, type ScoredTemplate } from "./score-template";
 
 export type SafeSelectionResult =
@@ -17,12 +18,13 @@ export type SafeSelectionResult =
       promptVersion: typeof INTENT_PROMPT_VERSION;
       policyVersion: typeof DECISION_POLICY_VERSION;
       modelId: string;
-      usage?: { inputTokens: number; outputTokens: number };
+      usage?: ModelTokenUsage;
       durationMs: number;
     }
   | {
       ok: false;
       errorKind: string;
+      usage?: ModelTokenUsage;
       durationMs: number;
     };
 
@@ -48,7 +50,14 @@ export async function selectGenerationRoute(
   try {
     const analyze = options.analyzeIntentImpl ?? analyzeIntent;
     const result = await analyze(brief);
-    if (!result.ok) return { ok: false, errorKind: result.error.kind, durationMs: elapsed() };
+    if (!result.ok) {
+      return {
+        ok: false,
+        errorKind: result.error.kind,
+        ...(result.usage ? { usage: result.usage } : {}),
+        durationMs: elapsed(),
+      };
+    }
 
     const ranked = rankTemplates(result.intent, templates);
     return {

@@ -21,10 +21,19 @@ const CHILDREN_INTENT = {
   confidence: 0.93,
 } as const;
 
-function geminiResponse(text: string, status = 200): Response {
+function geminiResponse(
+  text: string,
+  status = 200,
+  usageMetadata: unknown = {
+    promptTokenCount: 120,
+    candidatesTokenCount: 80,
+    cachedContentTokenCount: 20,
+    thoughtsTokenCount: 0,
+  },
+): Response {
   return new Response(JSON.stringify({
     candidates: [{ content: { parts: [{ text }] } }],
-    usageMetadata: { promptTokenCount: 120, candidatesTokenCount: 80 },
+    ...(usageMetadata === null ? {} : { usageMetadata }),
   }), { status, headers: { "content-type": "application/json" } });
 }
 
@@ -51,7 +60,7 @@ describe("analyzeIntent", () => {
       intent: CHILDREN_INTENT,
       modelId: "test-model",
       promptVersion: "intent-prompt/1.5",
-      usage: { inputTokens: 120, outputTokens: 80 },
+      usage: { inputTokens: 120, outputTokens: 80, cachedTokens: 20, thinkingTokens: 0 },
       durationMs: 25,
     });
     expect(capturedUrl).toContain("/test-model:generateContent");
@@ -181,6 +190,9 @@ describe("analyzeIntent", () => {
     });
 
     expect(result).toMatchObject({ ok: false, error: { kind: "parse" } });
+    expect(result).toMatchObject({
+      usage: { inputTokens: 120, outputTokens: 80, cachedTokens: 20, thinkingTokens: 0 },
+    });
     expect(result).not.toHaveProperty("intent");
   });
 
@@ -192,7 +204,72 @@ describe("analyzeIntent", () => {
     });
 
     expect(result).toMatchObject({ ok: false, error: { kind: "schema" } });
+    expect(result).toMatchObject({
+      usage: { inputTokens: 120, outputTokens: 80, cachedTokens: 20, thinkingTokens: 0 },
+    });
     expect(result).not.toHaveProperty("intent");
+  });
+
+  it("preserves explicit zeroes in a complete provider usage envelope", async () => {
+    const result = await analyzeIntent("A complete product brief", {
+      apiKey: "x",
+      fetchImpl: vi.fn().mockResolvedValue(geminiResponse(JSON.stringify(CHILDREN_INTENT), 200, {
+        promptTokenCount: 0,
+        candidatesTokenCount: 0,
+        cachedContentTokenCount: 0,
+        thoughtsTokenCount: 0,
+      })),
+      now: () => 10,
+    });
+
+    expect(result).toMatchObject({
+      ok: true,
+      usage: { inputTokens: 0, outputTokens: 0, cachedTokens: 0, thinkingTokens: 0 },
+    });
+  });
+
+  it.each([
+    ["omitted", null],
+    ["partially missing", { promptTokenCount: 10, candidatesTokenCount: 2, cachedContentTokenCount: 0 }],
+    ["negative", { promptTokenCount: -1, candidatesTokenCount: 2, cachedContentTokenCount: 0, thoughtsTokenCount: 0 }],
+    ["fractional", { promptTokenCount: 1.5, candidatesTokenCount: 2, cachedContentTokenCount: 0, thoughtsTokenCount: 0 }],
+    ["string", { promptTokenCount: "1", candidatesTokenCount: 2, cachedContentTokenCount: 0, thoughtsTokenCount: 0 }],
+  ])("omits %s usage metadata instead of synthesizing token counts", async (_label, usageMetadata) => {
+    const result = await analyzeIntent("A complete product brief", {
+      apiKey: "x",
+      fetchImpl: vi.fn().mockResolvedValue(geminiResponse(
+        JSON.stringify(CHILDREN_INTENT),
+        200,
+        usageMetadata,
+      )),
+      now: () => 10,
+    });
+
+    expect(result).toMatchObject({ ok: true });
+    expect(result).not.toHaveProperty("usage");
+  });
+
+  it("preserves a valid usage envelope on a provider HTTP failure without exposing its body", async () => {
+    const result = await analyzeIntent("A complete product brief", {
+      apiKey: "x",
+      fetchImpl: vi.fn().mockResolvedValue(new Response(JSON.stringify({
+        error: { message: "provider secret detail" },
+        usageMetadata: {
+          promptTokenCount: 7,
+          candidatesTokenCount: 1,
+          cachedContentTokenCount: 3,
+          thoughtsTokenCount: 2,
+        },
+      }), { status: 429 })),
+      now: () => 10,
+    });
+
+    expect(result).toMatchObject({
+      ok: false,
+      error: { kind: "api", message: "Gemini 429" },
+      usage: { inputTokens: 7, outputTokens: 1, cachedTokens: 3, thinkingTokens: 2 },
+    });
+    expect(JSON.stringify(result)).not.toContain("provider secret detail");
   });
 
   it("requires an explicit ambiguity and low confidence for unknown classifications", async () => {

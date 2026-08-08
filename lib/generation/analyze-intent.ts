@@ -1,4 +1,5 @@
 import { IntentAnalysisSchema, type IntentAnalysis } from "./contracts";
+import type { ModelTokenUsage } from "./model-cost";
 
 const GEMINI_BASE = "https://generativelanguage.googleapis.com/v1beta/models";
 
@@ -156,13 +157,15 @@ export type AnalyzeIntentFailureKind =
   | "timeout"
   | "invalid_input";
 
+export type IntentModelUsage = ModelTokenUsage;
+
 export type AnalyzeIntentResult =
   | {
       ok: true;
       intent: IntentAnalysis;
       modelId: string;
       promptVersion: typeof INTENT_PROMPT_VERSION;
-      usage?: { inputTokens: number; outputTokens: number };
+      usage?: IntentModelUsage;
       durationMs: number;
     }
   | {
@@ -170,6 +173,7 @@ export type AnalyzeIntentResult =
       error: { kind: AnalyzeIntentFailureKind; message: string };
       modelId: string;
       promptVersion: typeof INTENT_PROMPT_VERSION;
+      usage?: IntentModelUsage;
       durationMs: number;
     };
 
@@ -181,8 +185,23 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
 }
 
-function tokenCount(value: unknown): number {
-  return Number.isSafeInteger(value) && Number(value) >= 0 ? Number(value) : 0;
+function validTokenCount(value: unknown): value is number {
+  return typeof value === "number" && Number.isSafeInteger(value) && value >= 0;
+}
+
+function readUsageMetadata(payload: unknown): IntentModelUsage | undefined {
+  if (!isRecord(payload) || !isRecord(payload.usageMetadata)) return undefined;
+  const metadata = payload.usageMetadata;
+  if (!validTokenCount(metadata.promptTokenCount)
+    || !validTokenCount(metadata.candidatesTokenCount)
+    || !validTokenCount(metadata.cachedContentTokenCount)
+    || !validTokenCount(metadata.thoughtsTokenCount)) return undefined;
+  return {
+    inputTokens: metadata.promptTokenCount,
+    outputTokens: metadata.candidatesTokenCount,
+    cachedTokens: metadata.cachedContentTokenCount,
+    thinkingTokens: metadata.thoughtsTokenCount,
+  };
 }
 
 function duration(started: number, now: () => number): number {
@@ -245,15 +264,6 @@ async function requestIntent(
     return { ok: false, ...base, error: { kind, message }, durationMs: elapsed() };
   }
 
-  if (!response.ok) {
-    return {
-      ok: false,
-      ...base,
-      error: { kind: "api", message: `Gemini ${response.status}` },
-      durationMs: elapsed(),
-    };
-  }
-
   let payload: unknown;
   try {
     payload = await response.json();
@@ -261,7 +271,20 @@ async function requestIntent(
     return {
       ok: false,
       ...base,
-      error: { kind: "api", message: "invalid Gemini response envelope" },
+      error: {
+        kind: "api",
+        message: response.ok ? "invalid Gemini response envelope" : `Gemini ${response.status}`,
+      },
+      durationMs: elapsed(),
+    };
+  }
+  const usage = readUsageMetadata(payload);
+  if (!response.ok) {
+    return {
+      ok: false,
+      ...base,
+      error: { kind: "api", message: `Gemini ${response.status}` },
+      ...(usage ? { usage } : {}),
       durationMs: elapsed(),
     };
   }
@@ -270,6 +293,7 @@ async function requestIntent(
       ok: false,
       ...base,
       error: { kind: "api", message: "invalid Gemini response envelope" },
+      ...(usage ? { usage } : {}),
       durationMs: elapsed(),
     };
   }
@@ -282,6 +306,7 @@ async function requestIntent(
       ok: false,
       ...base,
       error: { kind: "api", message: "invalid Gemini response envelope" },
+      ...(usage ? { usage } : {}),
       durationMs: elapsed(),
     };
   }
@@ -297,6 +322,7 @@ async function requestIntent(
       ok: false,
       ...base,
       error: { kind: "parse", message: "malformed intent JSON" },
+      ...(usage ? { usage } : {}),
       durationMs: elapsed(),
     };
   }
@@ -310,6 +336,7 @@ async function requestIntent(
       ok: false,
       ...base,
       error: { kind: "schema", message },
+      ...(usage ? { usage } : {}),
       durationMs: elapsed(),
     };
   }
@@ -321,17 +348,10 @@ async function requestIntent(
         kind: "schema",
         message: "unknown classifications require an ambiguity and confidence <= 0.49",
       },
+      ...(usage ? { usage } : {}),
       durationMs: elapsed(),
     };
   }
-
-  const usageMetadata = isRecord(payload.usageMetadata) ? payload.usageMetadata : null;
-  const usage = usageMetadata
-    ? {
-        inputTokens: tokenCount(usageMetadata.promptTokenCount),
-        outputTokens: tokenCount(usageMetadata.candidatesTokenCount),
-      }
-    : undefined;
   return {
     ok: true,
     ...base,
