@@ -12,7 +12,6 @@ import {
   type VisualEngine2AQualificationManifest,
 } from "@/lib/generation/visual-engine-2a-qualification";
 import { buildSkeletonInventory } from "@/lib/generation/skeleton-inventory";
-import { getTemplateHtml, listTemplates } from "@/lib/templates/store";
 
 const execFileAsync = promisify(execFile);
 
@@ -20,6 +19,7 @@ export type QualificationCliFailureCode =
   | "catalog_load_failed"
   | "template_html_unavailable"
   | "commit_lookup_failed"
+  | "commit_changed"
   | "qualification_failed"
   | "artifact_write_failed";
 
@@ -47,6 +47,19 @@ function qualificationArtifactPath(cwd: string): string {
   return join(cwd, "scratch", "visual-engine-2a", "qualification.json");
 }
 
+function isCommitSha(value: string): boolean {
+  return /^[0-9a-f]{40}$/i.test(value);
+}
+
+async function captureCommitSha(getCommitSha: QualificationCliDependencies["getCommitSha"]): Promise<string> {
+  try {
+    const commitSha = await getCommitSha();
+    return isCommitSha(commitSha) ? commitSha : failure("commit_lookup_failed");
+  } catch {
+    return failure("commit_lookup_failed");
+  }
+}
+
 async function loadTemplateMaterials(
   ids: readonly string[],
   getHtml: QualificationCliDependencies["getTemplateHtml"],
@@ -72,6 +85,7 @@ export async function runVisualEngine2AQualification(
   cwd = process.cwd(),
 ): Promise<VisualEngine2AQualificationManifest> {
   try {
+    const initialCommitSha = await captureCommitSha(deps.getCommitSha);
     let selectionCatalog: readonly SelectionCatalogTemplate[];
     try {
       selectionCatalog = await deps.listTemplates({ status: "published" });
@@ -80,19 +94,16 @@ export async function runVisualEngine2AQualification(
     }
     const allowedIds = [...new Set(VISUAL_ENGINE_2A_PILOT_CASES.flatMap((caseRow) => caseRow.allowedSkeletonTemplateIds))];
     const templateMaterials = await loadTemplateMaterials(allowedIds, deps.getTemplateHtml);
-    let commitSha: string;
-    try {
-      commitSha = await deps.getCommitSha();
-    } catch {
-      return failure("commit_lookup_failed");
-    }
     const result = qualifyVisualEngine2ACohort({
       cases: VISUAL_ENGINE_2A_PILOT_CASES,
       selectionCatalog,
       templateMaterials,
-      commitSha,
+      commitSha: initialCommitSha,
     });
     if (!result.ok) return failure("qualification_failed");
+
+    const finalCommitSha = await captureCommitSha(deps.getCommitSha);
+    if (finalCommitSha !== initialCommitSha) return failure("commit_changed");
 
     const targetPath = qualificationArtifactPath(cwd);
     try {
@@ -115,21 +126,24 @@ async function gitCommitSha(): Promise<string> {
   return stdout.trim();
 }
 
-const productionDependencies: QualificationCliDependencies = {
-  listTemplates: async (options) => (await listTemplates(options)).map((template) => ({
-    id: template.id,
-    status: template.status,
-    visualMetadata: template.visualMetadata,
-  })),
-  getTemplateHtml,
-  getCommitSha: gitCommitSha,
-  mkdir,
-  writeJsonAtomic,
-  log: (line) => console.log(line),
-};
+async function productionDependencies(): Promise<QualificationCliDependencies> {
+  const { getTemplateHtml, listTemplates } = await import("@/lib/templates/store");
+  return {
+    listTemplates: async (options) => (await listTemplates(options)).map((template) => ({
+      id: template.id,
+      status: template.status,
+      visualMetadata: template.visualMetadata,
+    })),
+    getTemplateHtml,
+    getCommitSha: gitCommitSha,
+    mkdir,
+    writeJsonAtomic,
+    log: (line) => console.log(line),
+  };
+}
 
 async function main(): Promise<void> {
-  await runVisualEngine2AQualification(productionDependencies);
+  await runVisualEngine2AQualification(await productionDependencies());
 }
 
 if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) {
