@@ -41,7 +41,9 @@ async function main() {
     structuralFailure: row.structuralInvariantPassed === false,
     partialPersistenceFailure: row.candidatePersisted === true,
     acceptedForbiddenSignals: Number(row.acceptedForbiddenSignalCount ?? 0),
-    productionEquivalentCostMicromxn: Number(row.productionEquivalentCostMicromxn ?? 0),
+    productionEquivalentCostMicromxn: typeof row.productionEquivalentCostMicromxn === "number"
+      ? row.productionEquivalentCostMicromxn
+      : null,
   })), { verified: true });
   console.log(JSON.stringify({ event: "visual_engine_2a_scorecard", ...score }));
   if (!score.passed) process.exitCode = 2;

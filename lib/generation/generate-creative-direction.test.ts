@@ -208,6 +208,48 @@ describe("generateCreativeDirection", () => {
     }
   });
 
+  it("preserves safe usage for paid malformed results while no-call and HTTP failures keep it absent", async () => {
+    const usage = { inputTokens: 21, outputTokens: 8, thinkingTokens: 3, cachedTokens: 2 };
+    const provider = (text: string): CreativeDirectionProvider => ({
+      generate: vi.fn().mockResolvedValue({ text, usage }),
+    });
+    const invalidJson = await generateCreativeDirection(REQUEST, { provider: provider("not-json"), now: () => 10 });
+    const invalidSchema = await generateCreativeDirection(REQUEST, { provider: provider("{}"), now: () => 10 });
+    const futureVersion = await generateCreativeDirection(REQUEST, {
+      provider: provider(JSON.stringify({ ...READY_RESPONSE, schemaVersion: "skeleton-creative-response/2.0" })),
+      now: () => 10,
+    });
+    const incompatible = await generateCreativeDirection(REQUEST, {
+      provider: provider(JSON.stringify({
+        schemaVersion: "skeleton-creative-response/1.0", status: "incompatible",
+        reasonCode: "cannot_add_required_signal",
+      })),
+      now: () => 10,
+    });
+    const invalidProviderResult = await generateCreativeDirection(REQUEST, {
+      apiKey: "x",
+      fetchImpl: vi.fn().mockResolvedValue(new Response(JSON.stringify({
+        candidates: [],
+        usageMetadata: {
+          promptTokenCount: 21, candidatesTokenCount: 8,
+          thoughtsTokenCount: 3, cachedContentTokenCount: 2,
+        },
+      }), { status: 200 })),
+      now: () => 10,
+    });
+    const http = await generateCreativeDirection(REQUEST, {
+      apiKey: "x", fetchImpl: vi.fn().mockResolvedValue(new Response("redacted", { status: 500 })), now: () => 10,
+    });
+    const missingKey = await generateCreativeDirection(REQUEST, { apiKey: "", fetchImpl: vi.fn(), now: () => 10 });
+
+    for (const result of [invalidJson, invalidSchema, futureVersion, incompatible, invalidProviderResult]) {
+      expect(result.usage).toEqual(usage);
+      expect(JSON.stringify(result)).not.toContain("not-json");
+    }
+    expect(http).not.toHaveProperty("usage");
+    expect(missingKey).not.toHaveProperty("usage");
+  });
+
   it("propagates timeout and caller abort through the provider signal", async () => {
     let observedSignal: AbortSignal | undefined;
     const timeoutFetch = vi.fn((_input: string | URL | Request, init?: RequestInit) => {

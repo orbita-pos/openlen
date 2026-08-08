@@ -111,7 +111,6 @@ function providerFailure(kind: "timeout" | "schema"): GenerateCreativeDirectionR
     error: { kind, message: "raw provider detail must not escape" },
     promptVersion: CREATIVE_PROMPT_VERSION,
     modelId: "test-model",
-    usage: null,
     durationMs: 25,
   };
 }
@@ -191,6 +190,7 @@ describe("adaptTemplateSkeleton", () => {
     { name: "CSS policy violation", reasonCode: "css_policy_violation", providerCalls: 1, change: (deps) => { deps.compileIdentity = () => ({ ok: false, code: "css_policy_violation", message: "unsafe CSS" }); } },
     { name: "contrast violation", reasonCode: "contrast_violation", providerCalls: 1, change: (deps) => { deps.compileIdentity = () => ({ ok: false, code: "contrast_violation", message: "low contrast" }); } },
     { name: "required asset miss", reasonCode: "required_asset_unavailable", providerCalls: 1, change: (deps) => { deps.resolveAssets = async () => ({ ok: false, code: "required_asset_unavailable", slotIndex: 0 }); } },
+    { name: "unreplaceable asset slot", reasonCode: "asset_slot_unavailable", providerCalls: 1, change: (deps) => { deps.resolveAssets = async () => ({ ok: false, code: "asset_slot_unavailable", slotIndex: 0 }); } },
     { name: "sanitizer rejection", reasonCode: "sanitization_failed", providerCalls: 1, change: (deps) => { deps.sanitize = () => ({ html: null }); } },
     { name: "technical render failure", reasonCode: "technical_render_failed", providerCalls: 1, change: (deps) => { deps.technicalRender = async () => false; } },
     { name: "structural mismatch", reasonCode: "structural_invariant_failed", providerCalls: 1, change: (deps) => { deps.sanitize = (html) => ({ html: html.replace("<body>", '<body data-unexpected="true">') }); } },
@@ -205,7 +205,26 @@ describe("adaptTemplateSkeleton", () => {
 
     expect(result).toMatchObject({ ok: false, status: "fallback", reasonCode });
     expect(result).not.toHaveProperty("html");
+    if (providerCalls === 0 || reasonCode === "provider_timeout") expect(result).not.toHaveProperty("usage");
     expect(deps.generateCreativeDirection).toHaveBeenCalledTimes(providerCalls);
+  });
+
+  it("preserves paid usage on a typed model incompatibility", async () => {
+    const deps = baseDeps();
+    deps.generateCreativeDirection = vi.fn().mockResolvedValue({
+      ...READY,
+      response: {
+        schemaVersion: "skeleton-creative-response/1.0",
+        status: "incompatible",
+        reasonCode: "cannot_add_required_signal",
+      },
+    });
+    const result = await adaptTemplateSkeleton(INPUT, deps);
+    expect(result).toMatchObject({
+      ok: false,
+      reasonCode: "cannot_add_required_signal",
+      usage: READY.ok ? READY.usage : undefined,
+    });
   });
 
   it("rejects the entire candidate when an asset resolver mutates an href", async () => {

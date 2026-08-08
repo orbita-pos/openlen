@@ -2,12 +2,15 @@ import { randomBytes } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
+import { sql } from "drizzle-orm";
+import { db } from "@/lib/db";
 import { writeJsonAtomic } from "@/lib/fs/write-json-atomic";
 import {
   createVisualEngine2AReviewSession,
   loadVisualEngine2AReviewSource,
   persistVisualEngine2AReviewSession,
   resumeVisualEngine2AReviewSession,
+  validateVisualEngine2AReviewCoverage,
   type VisualEngine2AReviewSession,
 } from "@/lib/generation/visual-engine-2a-review-session";
 import { recordVisualEnginePilotComparison } from "@/lib/generation/visual-engine-pilot-store";
@@ -17,9 +20,25 @@ const root = join(process.cwd(), "scratch", "visual-engine-2a");
 const sessionPath = join(root, "review-session.json");
 
 async function evidenceSource() {
-  const source = await loadVisualEngine2AReviewSource(root);
-  if (source.rows.length !== 75) throw new Error("Review requires exactly 75 verified evidence manifests");
-  return source;
+  return loadVisualEngine2AReviewSource(root);
+}
+
+function resultRows(value: unknown): Record<string, unknown>[] {
+  if (Array.isArray(value)) return value as Record<string, unknown>[];
+  return value && typeof value === "object" && "rows" in value && Array.isArray(value.rows)
+    ? value.rows as Record<string, unknown>[] : [];
+}
+
+async function reviewLedger() {
+  const result = await db.execute(sql`
+    SELECT "id", "ordinal", "status"
+    FROM "visualEnginePilotRuns" WHERE "phase" = '2a' ORDER BY "ordinal"
+  `);
+  return resultRows(result).map((row) => ({
+    pilotRunId: typeof row.id === "string" ? row.id : "",
+    ordinal: Number(row.ordinal),
+    technicalSuccess: row.status === "adapted",
+  }));
 }
 
 async function main() {
@@ -29,6 +48,7 @@ async function main() {
   };
   if (!reviewer.name || !/^\S+@\S+\.\S+$/.test(reviewer.email)) throw new Error("Reviewer runtime identity is required");
   const source = await evidenceSource();
+  validateVisualEngine2AReviewCoverage(source.rows, await reviewLedger());
   let session: VisualEngine2AReviewSession;
   try {
     const serialized = await readFile(sessionPath, "utf8");

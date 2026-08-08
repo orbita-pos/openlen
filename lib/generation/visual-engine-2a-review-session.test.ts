@@ -11,6 +11,7 @@ import {
   createVisualEngine2AReviewSession,
   resumeVisualEngine2AReviewSession,
   loadVisualEngine2AReviewSource,
+  validateVisualEngine2AReviewCoverage,
 } from "./visual-engine-2a-review-session";
 
 const source = [{
@@ -109,4 +110,51 @@ describe("Visual Engine 2A blind review session", () => {
     await expect(loadVisualEngine2AReviewSource(temporaryRoot)).rejects.toThrow(/manifest|directory|hash/i);
     expect(() => resumeVisualEngine2AReviewSession(session, "sha256:" + "b".repeat(64), loaded.rows)).toThrow(/source/i);
   });
+
+  it.each([72, 74, 75])("accepts %i verified manifests when they cover every technical success", (technicalSuccesses) => {
+    const fixture = reviewCoverageFixture(technicalSuccesses);
+    expect(() => validateVisualEngine2AReviewCoverage(fixture.rows, fixture.runs)).not.toThrow();
+  });
+
+  it.each([71, 76])("rejects %i evidence manifests outside the technical gate", (technicalSuccesses) => {
+    const fixture = reviewCoverageFixture(technicalSuccesses);
+    expect(() => validateVisualEngine2AReviewCoverage(fixture.rows, fixture.runs)).toThrow(/72|75|coverage|ledger/i);
+  });
+
+  it("rejects missing, duplicate or non-contiguous ledger coverage", () => {
+    const fixture = reviewCoverageFixture(72);
+    const missing = structuredClone(fixture.rows);
+    missing[0].pilotRunId = "unexpected-run";
+    expect(() => validateVisualEngine2AReviewCoverage(missing, fixture.runs)).toThrow(/coverage|duplicate/i);
+    const duplicate = structuredClone(fixture.rows);
+    duplicate[1].pilotRunId = duplicate[0].pilotRunId;
+    expect(() => validateVisualEngine2AReviewCoverage(duplicate, fixture.runs)).toThrow(/coverage|duplicate/i);
+    expect(() => validateVisualEngine2AReviewCoverage(fixture.rows, fixture.runs.slice(1))).toThrow(/ledger|ordinal|75/i);
+    const duplicateOrdinal = structuredClone(fixture.runs);
+    duplicateOrdinal[1].ordinal = duplicateOrdinal[0].ordinal;
+    expect(() => validateVisualEngine2AReviewCoverage(fixture.rows, duplicateOrdinal)).toThrow(/ledger|ordinal|duplicate/i);
+    const duplicateRunId = structuredClone(fixture.runs);
+    duplicateRunId[1].pilotRunId = duplicateRunId[0].pilotRunId;
+    expect(() => validateVisualEngine2AReviewCoverage(fixture.rows, duplicateRunId)).toThrow(/ledger|run|duplicate/i);
+  });
 });
+
+function reviewCoverageFixture(technicalSuccesses: number) {
+  const total = technicalSuccesses > 75 ? technicalSuccesses : 75;
+  const runs = Array.from({ length: total }, (_, index) => ({
+    pilotRunId: `run-${index + 1}`,
+    ordinal: index + 1,
+    technicalSuccess: index < technicalSuccesses,
+  }));
+  const rows = Array.from({ length: technicalSuccesses }, (_, index) => ({
+    comparisonId: `comparison-${index + 1}`,
+    pilotRunId: `run-${index + 1}`,
+    baseline: { normal: `${index}/baseline.jpg`, neutral: `${index}/baseline-neutral.jpg` },
+    candidate: { normal: `${index}/candidate.jpg`, neutral: `${index}/candidate-neutral.jpg` },
+    hashes: {
+      baseline: { normal: `sha256:${"1".repeat(64)}`, neutral: `sha256:${"2".repeat(64)}` },
+      candidate: { normal: `sha256:${"3".repeat(64)}`, neutral: `sha256:${"4".repeat(64)}` },
+    },
+  }));
+  return { rows, runs };
+}

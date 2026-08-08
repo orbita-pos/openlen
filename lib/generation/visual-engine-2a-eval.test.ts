@@ -1,3 +1,6 @@
+import { mkdtemp, readFile, readdir, rm } from "node:fs/promises";
+import { join } from "node:path";
+import { tmpdir } from "node:os";
 import { describe, expect, it, vi } from "vitest";
 import { SELECTOR_CASES } from "./selector-cases";
 import { SELECTOR_HOLDOUT_CASES } from "./selector-holdout-cases";
@@ -12,8 +15,41 @@ import {
   prepareVisualEngine2ABuilds,
   captureVisualEngine2ARollbackModes,
 } from "./visual-engine-2a-eval";
+import { writeVisualEngine2ARollbackEvidence } from "@/scripts/visual-engine-2a-rollback-check";
 
 describe("Visual Engine 2A pilot", () => {
+  it("preloads the server-only shim for every Task 10 operational CLI", async () => {
+    const packageJson = JSON.parse(await readFile(join(process.cwd(), "package.json"), "utf8")) as {
+      scripts: Record<string, string>;
+    };
+    const commands = [
+      "generation:visual-engine-2a:eval",
+      "generation:visual-engine-2a:review",
+      "generation:visual-engine-2a:scorecard",
+      "generation:visual-engine-2a:rollback-check",
+    ];
+
+    for (const command of commands) {
+      const script = packageJson.scripts[command];
+      expect(script).toContain("--require ./scripts/test-node-server-only-shim.cjs");
+      expect(script.indexOf("--require ./scripts/test-node-server-only-shim.cjs"))
+        .toBeLessThan(script.indexOf("scripts/visual-engine-2a-"));
+    }
+  });
+
+  it("writes rollback evidence below the exact ignored path when its parent is absent", async () => {
+    const root = await mkdtemp(join(tmpdir(), "openlen-visual-engine-2a-"));
+    const evidence = { verified: true, fixtureSha256: "fixture" };
+    try {
+      const outputPath = await writeVisualEngine2ARollbackEvidence(evidence, root);
+      expect(outputPath).toBe(join(root, "scratch", "visual-engine-2a", "rollback-evidence.json"));
+      expect(JSON.parse(await readFile(outputPath, "utf8"))).toEqual(evidence);
+      expect(await readdir(join(root, "scratch"))).toEqual(["visual-engine-2a"]);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it("builds and sorts all 150 pre-output candidates", () => {
     const pool = buildVisualEngine2APool([...SELECTOR_CASES, ...SELECTOR_HOLDOUT_CASES]);
     expect(pool).toHaveLength(150);
@@ -120,6 +156,40 @@ describe("Visual Engine 2A pilot", () => {
     expect(score.visuallyPreferredRate).toBe(0);
     expect(score.passed).toBe(false);
     expect(score.failures).toEqual(expect.arrayContaining(["visualPreference", "meanCost"]));
+  });
+
+  it.each([
+    ["null", null],
+    ["missing", undefined],
+    ["non-finite", Number.NaN],
+    ["negative", -1],
+    ["fractional", 0.5],
+  ])("fails incomplete production-equivalent cost coverage for a %s value", (_label, invalidCost) => {
+    const rows = Array.from({ length: 75 }, (_, index) => ({
+      started: true, technicalSuccess: index < 72,
+      verdict: index < 65 ? "candidate" as const : index < 72 ? "tie" as const : null,
+      structuralFailure: false, partialPersistenceFailure: false, acceptedForbiddenSignals: 0,
+      productionEquivalentCostMicromxn: index === 74 ? invalidCost : 0,
+    }));
+    const score = scoreVisualEngine2APilot(rows, { verified: true });
+    expect(score).toMatchObject({ costRowsRecorded: 74, costRowsMissing: 1, passed: false });
+    expect(score.failures).toContain("costCoverage");
+  });
+
+  it("accepts an explicit zero cost and includes recorded technical failures in cost coverage", () => {
+    const rows = Array.from({ length: 75 }, (_, index) => ({
+      started: true, technicalSuccess: index < 72,
+      verdict: index < 65 ? "candidate" as const : index < 72 ? "tie" as const : null,
+      structuralFailure: false, partialPersistenceFailure: false, acceptedForbiddenSignals: 0,
+      productionEquivalentCostMicromxn: index === 74 ? 0 : 1,
+    }));
+    const score = scoreVisualEngine2APilot(rows, { verified: true });
+    expect(score).toMatchObject({
+      costRowsRecorded: 75, costRowsMissing: 0,
+      meanProductionEquivalentCostMicromxn: 74 / 75,
+      passed: true,
+    });
+    expect(score.failures).not.toContain("costCoverage");
   });
 
   it("neutralizes visible copy without changing markup or attributes", () => {
@@ -229,6 +299,126 @@ describe("Visual Engine 2A pilot", () => {
     expect(complete).toHaveBeenCalledWith(expect.any(String), expect.objectContaining({
       candidatePersisted: false, productionEquivalentCostMicromxn: 10,
     }));
+  });
+
+  it("scores 72 adapted rows plus three paid provider failures without structural failures", async () => {
+    const eligible = Array.from({ length: 75 }, (_, index) => ({
+      caseId: `case-${String(index).padStart(2, "0")}`, scenarioId: "plain",
+      language: "en" as const, brief: "safe fixture", forbiddenSignals: [], templateId: "template",
+    }));
+    const completions: Array<Parameters<Parameters<typeof generateVisualEngine2AEvidence>[0]["deps"]["complete"]>[1]> = [];
+    const paidFailureUsage = { inputTokens: 7, outputTokens: 3, cachedTokens: 1, thinkingTokens: 2 };
+    const result = await generateVisualEngine2AEvidence({
+      eligible, rateCardVersion: "test/1",
+      calculateCosts: (creative, critic) => ({
+        productionEquivalentCostMicromxn: creative.inputTokens + creative.outputTokens + critic.inputTokens + critic.outputTokens,
+        observedPilotCostMicromxn: creative.inputTokens + creative.outputTokens + critic.inputTokens + critic.outputTokens,
+      }),
+      deps: {
+        reserve: async (row) => ({ ok: true, id: `run-${row.caseId}` }),
+        baseline: async () => ({ html: "<main>Baseline</main>" }),
+        adapt: async (row) => Number(row.caseId.slice(-2)) >= 72
+          ? { ok: false, reasonCode: "provider_error", usage: paidFailureUsage, durationMs: 4 }
+          : {
+              ok: true, html: "<main>Candidate</main>", durationMs: 5,
+              usage: { inputTokens: 10, outputTokens: 5, cachedTokens: 1, thinkingTokens: 2 },
+              structuralFingerprintBefore: "sha256:" + "a".repeat(64),
+              structuralFingerprintAfter: "sha256:" + "a".repeat(64),
+              promptVersion: "prompt/1", contractVersion: "creative-direction/1.0",
+              policyVersion: "policy/1", taxonomyVersion: "taxonomy/1", modelVersion: "model/1",
+            },
+        critique: async () => ({
+          visualQuality: 0, briefAdherence: 0, issues: [], shouldRegenerate: false,
+          regenerationFeedback: "", fallback: true,
+          usage: { inputTokens: 2, outputTokens: 1, cachedTokens: 0, thinkingTokens: 0 },
+        }),
+        render: async () => Uint8Array.from([1, 2, 3]),
+        writeEvidence: async () => undefined,
+        complete: async (_id, outcome) => { completions.push(outcome); },
+      },
+    });
+    expect(result).toEqual({ started: 75, evidence: 72 });
+    expect(completions).toHaveLength(75);
+    expect(completions[0]).toMatchObject({
+      status: "adapted", criticFallback: true, productionEquivalentCostMicromxn: 18,
+      structuralInvariantPassed: true,
+    });
+    for (const outcome of completions.slice(72)) {
+      expect(outcome).toMatchObject({
+        status: "fallback", reasonCode: "provider_error",
+        inputTokens: 7, outputTokens: 3,
+        productionEquivalentCostMicromxn: 10,
+      });
+      expect(outcome.structuralInvariantPassed).toBeUndefined();
+    }
+    const score = scoreVisualEngine2APilot(completions.map((outcome, index) => ({
+      started: true,
+      technicalSuccess: outcome.status === "adapted",
+      verdict: index < 65 ? "candidate" as const : index < 72 ? "tie" as const : null,
+      structuralFailure: outcome.structuralInvariantPassed === false,
+      partialPersistenceFailure: outcome.candidatePersisted === true,
+      acceptedForbiddenSignals: 0,
+      productionEquivalentCostMicromxn: outcome.productionEquivalentCostMicromxn,
+    })), { verified: true });
+    expect(score).toMatchObject({
+      started: 75, technicalSuccesses: 72, technicalFailures: 3,
+      technicalSuccessRate: 72 / 75, structuralFailures: 0, costRowsRecorded: 75, passed: true,
+    });
+  });
+
+  it("downgrades an adapted fingerprint mismatch before evidence and fails the structural gate", async () => {
+    const eligible = Array.from({ length: 75 }, (_, index) => ({
+      caseId: `case-${index}`, scenarioId: "plain", language: "en" as const,
+      brief: "fixture", forbiddenSignals: [], templateId: "template",
+    }));
+    const completions: Array<Parameters<Parameters<typeof generateVisualEngine2AEvidence>[0]["deps"]["complete"]>[1]> = [];
+    const writeEvidence = vi.fn(async () => undefined);
+    const result = await generateVisualEngine2AEvidence({
+      eligible, rateCardVersion: "test/1",
+      calculateCosts: () => ({ productionEquivalentCostMicromxn: 0, observedPilotCostMicromxn: 0 }),
+      deps: {
+        reserve: async (row) => ({ ok: true, id: row.caseId }),
+        baseline: async () => ({ html: "baseline" }),
+        adapt: async (row) => row.caseId === "case-1"
+          ? { ok: false, reasonCode: "provider_error", durationMs: 1 }
+          : {
+              ok: true, html: "candidate", durationMs: 1,
+              usage: { inputTokens: 1, outputTokens: 1, cachedTokens: 0, thinkingTokens: 0 },
+              structuralFingerprintBefore: `sha256:${"a".repeat(64)}`,
+              structuralFingerprintAfter: `sha256:${(row.caseId === "case-0" ? "b" : "a").repeat(64)}`,
+              promptVersion: "p", contractVersion: "c", policyVersion: "policy",
+              taxonomyVersion: "t", modelVersion: "m",
+            },
+        critique: async () => ({
+          visualQuality: 8, briefAdherence: 8, issues: [], shouldRegenerate: false,
+          regenerationFeedback: "", fallback: false,
+        }),
+        render: async () => Uint8Array.from([1]),
+        writeEvidence,
+        complete: async (_id, outcome) => { completions.push(outcome); },
+      },
+    });
+    expect(result).toEqual({ started: 75, evidence: 73 });
+    expect(writeEvidence).toHaveBeenCalledTimes(73);
+    expect(completions).toHaveLength(75);
+    expect(completions[0]).toMatchObject({
+      status: "fallback", reasonCode: "structural_invariant_failed", structuralInvariantPassed: false,
+    });
+    expect(completions[1].structuralInvariantPassed).toBeUndefined();
+    for (const outcome of completions.slice(2)) expect(outcome.structuralInvariantPassed).toBe(true);
+    const score = scoreVisualEngine2APilot(completions.map((outcome, index) => ({
+      started: true,
+      technicalSuccess: outcome.status === "adapted",
+      verdict: index >= 2 && index < 68 ? "candidate" as const : index >= 68 ? "tie" as const : null,
+      structuralFailure: outcome.structuralInvariantPassed === false,
+      partialPersistenceFailure: outcome.candidatePersisted === true,
+      acceptedForbiddenSignals: 0,
+      productionEquivalentCostMicromxn: outcome.productionEquivalentCostMicromxn,
+    })), { verified: true });
+    expect(score).toMatchObject({
+      technicalSuccesses: 73, technicalFailures: 2, structuralFailures: 1, passed: false,
+    });
+    expect(score.failures).toContain("structuralIntegrity");
   });
 
   it("uses the Quick weighted pick for baseline evidence and the safe skeleton only for the candidate", async () => {

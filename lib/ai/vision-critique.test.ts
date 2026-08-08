@@ -127,6 +127,7 @@ test("parses a clean JSON verdict correctly", async () => {
 test("handles malformed JSON gracefully (returns no-critique fallback)", async () => {
   const provider = scriptedProvider([
     { type: "text_delta", text: "Honestly the page looks great — no JSON here." },
+    { type: "usage", inputTokens: 40, outputTokens: 9, cachedTokens: 2, thinkingTokens: 5 },
     { type: "done", stopReason: { kind: "end_turn" } },
   ]);
 
@@ -137,6 +138,7 @@ test("handles malformed JSON gracefully (returns no-critique fallback)", async (
 
   assert.equal(verdict.fallback, true);
   assert.equal(verdict.shouldRegenerate, false, "fallback never triggers regen");
+  assert.deepEqual(verdict.usage, { inputTokens: 40, outputTokens: 9, cachedTokens: 2, thinkingTokens: 5 });
 });
 
 test("default critic deadline is 18s (smoke: Pulsegrid timed out at 12016ms under 12s)", () => {
@@ -174,6 +176,7 @@ test("render failure falls back (no blind regen without a screenshot)", async ()
 
 test("gemini done{error} falls back", async () => {
   const provider = scriptedProvider([
+    { type: "usage", inputTokens: 30, outputTokens: 4, cachedTokens: 1, thinkingTokens: 6 },
     {
       type: "done",
       stopReason: { kind: "error", error: "finish_reason: SAFETY" },
@@ -184,6 +187,22 @@ test("gemini done{error} falls back", async () => {
     render: fakeRender,
   });
   assert.equal(verdict.fallback, true);
+  assert.deepEqual(verdict.usage, { inputTokens: 30, outputTokens: 4, cachedTokens: 1, thinkingTokens: 6 });
+});
+
+test("provider error after usage returns a redacted fallback with accumulated usage", async () => {
+  const provider: CritiqueProviderLike = {
+    stream() {
+      return (async function* (): AsyncIterableIterator<StreamEvent> {
+        yield { type: "usage", inputTokens: 12, outputTokens: 3, cachedTokens: 1, thinkingTokens: 2 };
+        throw new Error("raw-provider-secret");
+      })();
+    },
+  };
+  const verdict = await critiqueGeneratedPage(baseParams, { provider, render: fakeRender });
+  assert.equal(verdict.fallback, true);
+  assert.deepEqual(verdict.usage, { inputTokens: 12, outputTokens: 3, cachedTokens: 1, thinkingTokens: 2 });
+  assert.equal(JSON.stringify(verdict).includes("raw-provider-secret"), false);
 });
 
 test("missing API key falls back without calling the provider", async () => {

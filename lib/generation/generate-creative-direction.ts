@@ -92,7 +92,7 @@ export type GenerateCreativeDirectionResult =
       error: { kind: GenerateCreativeDirectionFailureKind; message: string };
       modelId: string;
       promptVersion: typeof CREATIVE_PROMPT_VERSION;
-      usage: CreativeUsage | null;
+      usage?: CreativeUsage;
       durationMs: number;
     };
 
@@ -108,7 +108,10 @@ export interface GenerateCreativeDirectionOptions {
 }
 
 class CreativeProviderError extends Error {
-  constructor(public readonly kind: "missing_key" | "http" | "provider") {
+  constructor(
+    public readonly kind: "missing_key" | "http" | "provider",
+    public readonly usage?: CreativeUsage,
+  ) {
     super(kind);
     this.name = "CreativeProviderError";
   }
@@ -339,29 +342,30 @@ export class GeminiCreativeDirectionProvider implements CreativeDirectionProvide
     } catch {
       throw new CreativeProviderError("provider");
     }
+    const metadata = isRecord(payload) && isRecord(payload.usageMetadata) ? payload.usageMetadata : undefined;
+    const usage = metadata ? {
+      inputTokens: safeTokenCount(metadata.promptTokenCount),
+      outputTokens: safeTokenCount(metadata.candidatesTokenCount),
+      thinkingTokens: safeTokenCount(metadata.thoughtsTokenCount),
+      cachedTokens: safeTokenCount(metadata.cachedContentTokenCount),
+    } : undefined;
     const first = isRecord(payload) && Array.isArray(payload.candidates) ? payload.candidates[0] : null;
     const parts = isRecord(first) && isRecord(first.content) && Array.isArray(first.content.parts)
       ? first.content.parts
       : null;
-    if (!parts) throw new CreativeProviderError("provider");
+    if (!parts) throw new CreativeProviderError("provider", usage);
     const text = parts.map((part) => isRecord(part) && typeof part.text === "string" ? part.text : "").join("");
-    if (!text) throw new CreativeProviderError("provider");
-    const metadata = isRecord(payload) && isRecord(payload.usageMetadata) ? payload.usageMetadata : undefined;
+    if (!text) throw new CreativeProviderError("provider", usage);
     return {
       text,
-      usage: {
-        inputTokens: safeTokenCount(metadata?.promptTokenCount),
-        outputTokens: safeTokenCount(metadata?.candidatesTokenCount),
-        thinkingTokens: safeTokenCount(metadata?.thoughtsTokenCount),
-        cachedTokens: safeTokenCount(metadata?.cachedContentTokenCount),
-      },
+      usage,
     };
   }
 }
 
 function errorResult(
   kind: GenerateCreativeDirectionFailureKind,
-  base: { modelId: string; started: number; now: () => number },
+  base: { modelId: string; started: number; now: () => number; usage?: CreativeUsage },
 ): GenerateCreativeDirectionResult {
   const messages: Record<GenerateCreativeDirectionFailureKind, string> = {
     missing_key: "Gemini API key not configured",
@@ -379,7 +383,7 @@ function errorResult(
     error: { kind, message: messages[kind] },
     modelId: base.modelId,
     promptVersion: CREATIVE_PROMPT_VERSION,
-    usage: null,
+    ...(base.usage ? { usage: base.usage } : {}),
     durationMs: duration(base.started, base.now),
   };
 }
@@ -420,7 +424,7 @@ export async function generateCreativeDirection(
       providerResponse = await provider.generate(providerPayload(request), { signal: controller.signal });
     } catch (error) {
       if (cancellation.kind) return errorResult(cancellation.kind, base);
-      if (error instanceof CreativeProviderError) return errorResult(error.kind, base);
+      if (error instanceof CreativeProviderError) return errorResult(error.kind, { ...base, usage: error.usage });
       return errorResult("unexpected", base);
     }
     if (cancellation.kind) return errorResult(cancellation.kind, base);
@@ -429,11 +433,11 @@ export async function generateCreativeDirection(
     try {
       parsed = JSON.parse(providerResponse.text);
     } catch {
-      return errorResult("invalid_json", base);
+      return errorResult("invalid_json", { ...base, usage: providerResponse.usage && normalizeUsage(providerResponse.usage) });
     }
-    if (isFutureResponseVersion(parsed)) return errorResult("future_version", base);
+    if (isFutureResponseVersion(parsed)) return errorResult("future_version", { ...base, usage: providerResponse.usage && normalizeUsage(providerResponse.usage) });
     const validated = SkeletonCreativeResponseSchema.safeParse(parsed);
-    if (!validated.success) return errorResult("schema", base);
+    if (!validated.success) return errorResult("schema", { ...base, usage: providerResponse.usage && normalizeUsage(providerResponse.usage) });
     const usage = normalizeUsage(providerResponse.usage);
     const response = validated.data.status === "ready"
       ? {

@@ -131,6 +131,52 @@ export async function loadVisualEngine2AReviewSource(root: string): Promise<{
   return { rows, sourceSha: canonicalJsonSha256(descriptors) };
 }
 
+export interface VisualEngine2AReviewRun {
+  pilotRunId: string;
+  ordinal: number;
+  technicalSuccess: boolean;
+}
+
+/** Ensures blind review covers exactly the successful rows in one complete 75-run ledger. */
+export function validateVisualEngine2AReviewCoverage(
+  source: readonly ReviewEvidencePair[],
+  runs: readonly VisualEngine2AReviewRun[],
+): void {
+  if (runs.length !== 75) throw new Error("review ledger must contain exactly 75 runs");
+  const runIds = new Set<string>();
+  const ordinals = new Set<number>();
+  for (const run of runs) {
+    if (!run.pilotRunId || runIds.has(run.pilotRunId)) throw new Error("duplicate review ledger run ID");
+    if (!Number.isInteger(run.ordinal) || run.ordinal < 1 || run.ordinal > 75 || ordinals.has(run.ordinal)) {
+      throw new Error("review ledger ordinals must be unique and contiguous from 1 through 75");
+    }
+    runIds.add(run.pilotRunId);
+    ordinals.add(run.ordinal);
+  }
+  for (let ordinal = 1; ordinal <= 75; ordinal += 1) {
+    if (!ordinals.has(ordinal)) throw new Error("review ledger ordinal gap");
+  }
+
+  const successfulRunIds = new Set(runs.filter((run) => run.technicalSuccess).map((run) => run.pilotRunId));
+  if (successfulRunIds.size < 72 || successfulRunIds.size > 75) {
+    throw new Error("review coverage requires between 72 and 75 technical successes");
+  }
+  if (source.length !== successfulRunIds.size) throw new Error("review evidence coverage mismatch");
+
+  const evidenceRunIds = new Set<string>();
+  const comparisonIds = new Set<string>();
+  for (const row of source) {
+    if (!row.comparisonId || comparisonIds.has(row.comparisonId)) throw new Error("duplicate review comparison ID");
+    if (!row.pilotRunId || evidenceRunIds.has(row.pilotRunId)) throw new Error("duplicate review evidence run ID");
+    if (!successfulRunIds.has(row.pilotRunId)) throw new Error("review evidence does not match technical-success coverage");
+    comparisonIds.add(row.comparisonId);
+    evidenceRunIds.add(row.pilotRunId);
+  }
+  for (const pilotRunId of successfulRunIds) {
+    if (!evidenceRunIds.has(pilotRunId)) throw new Error("review evidence is missing a technical-success run");
+  }
+}
+
 export function createVisualEngine2AReviewSession(
   sourceSha256: string,
   source: readonly ReviewEvidencePair[],

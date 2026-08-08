@@ -65,7 +65,7 @@ export type SkeletonAdaptationResult =
       reasonCode: PilotReasonCode;
       promptVersion: string | null;
       modelId: string | null;
-      usage: CreativeUsage | null;
+      usage?: CreativeUsage;
       durationMs: number;
     };
 
@@ -89,7 +89,7 @@ export interface AdaptTemplateSkeletonDeps {
 interface FallbackContext {
   promptVersion: string | null;
   modelId: string | null;
-  usage: CreativeUsage | null;
+  usage?: CreativeUsage;
   durationMs: number;
 }
 
@@ -133,7 +133,6 @@ export async function adaptTemplateSkeleton(
   let context: FallbackContext = {
     promptVersion: null,
     modelId: null,
-    usage: null,
     durationMs: 0,
   };
 
@@ -149,7 +148,7 @@ export async function adaptTemplateSkeleton(
     context = {
       promptVersion: creative.promptVersion,
       modelId: creative.modelId,
-      usage: creative.usage,
+      ...(creative.usage ? { usage: creative.usage } : {}),
       durationMs: creative.durationMs,
     };
 
@@ -175,7 +174,7 @@ export async function adaptTemplateSkeleton(
       direction,
       plan,
     }, deps.loadCuratedImages ? { loadImages: deps.loadCuratedImages } : undefined);
-    if (!assets.ok) return fallback("required_asset_unavailable", context);
+    if (!assets.ok) return fallback(assets.code, context);
 
     const sanitized = (deps.sanitize ?? sanitizeForPublish)(assets.html);
     if (sanitized.html === null) return fallback("sanitization_failed", context);

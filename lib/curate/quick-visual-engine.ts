@@ -278,7 +278,7 @@ function pilotOutcome(
       cachedTokens: result.usage?.cachedTokens,
       durationMs: result.durationMs,
       candidatePersisted: false,
-      structuralInvariantPassed: false,
+      ...(result.reasonCode === "structural_invariant_failed" ? { structuralInvariantPassed: false } : {}),
     };
   }
   return {
@@ -296,7 +296,9 @@ function pilotOutcome(
     structuralFingerprintBefore: result.structuralFingerprintBefore,
     structuralFingerprintAfter: result.structuralFingerprintAfter,
     candidatePersisted: false,
-    structuralInvariantPassed: true,
+    ...(result.structuralFingerprintBefore === result.structuralFingerprintAfter
+      ? { structuralInvariantPassed: true }
+      : {}),
   };
 }
 
@@ -358,12 +360,12 @@ export async function launchShadowSkeletonCandidate(
       brandRecolor: false,
     });
     if (!finalized.ok) {
+      const { structuralInvariantPassed: _structuralInvariantPassed, ...adaptedOutcome } = pilotOutcome(adapted, input.policyVersion);
       await attemptCompletion(reservationId, {
-        ...pilotOutcome(adapted, input.policyVersion),
+        ...adaptedOutcome,
         status: "fallback",
         reasonCode: "sanitization_failed",
         candidatePersisted: false,
-        structuralInvariantPassed: false,
       });
       return;
     }

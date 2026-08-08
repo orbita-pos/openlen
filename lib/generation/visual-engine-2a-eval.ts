@@ -129,7 +129,7 @@ export interface VisualEngine2AScoreRow {
   structuralFailure: boolean;
   partialPersistenceFailure: boolean;
   acceptedForbiddenSignals: number;
-  productionEquivalentCostMicromxn: number;
+  productionEquivalentCostMicromxn?: number | null;
 }
 
 export interface VisualEngine2AScorecard {
@@ -148,7 +148,9 @@ export interface VisualEngine2AScorecard {
   structuralFailures: number;
   partialPersistenceFailures: number;
   acceptedForbiddenSignals: number;
-  meanProductionEquivalentCostMicromxn: number;
+  costRowsRecorded: number;
+  costRowsMissing: number;
+  meanProductionEquivalentCostMicromxn: number | null;
   rollbackVerified: boolean;
   failures: string[];
   passed: boolean;
@@ -174,8 +176,13 @@ export function scoreVisualEngine2APilot(
   const structuralFailures = startedRows.filter((row) => row.structuralFailure).length;
   const partialPersistenceFailures = startedRows.filter((row) => row.partialPersistenceFailure).length;
   const acceptedForbiddenSignals = startedRows.reduce((sum, row) => sum + row.acceptedForbiddenSignals, 0);
-  const totalCost = startedRows.reduce((sum, row) => sum + row.productionEquivalentCostMicromxn, 0);
-  const meanCost = startedRows.length === 0 ? 0 : totalCost / startedRows.length;
+  const costRows = startedRows.filter((row) => {
+    const cost = row.productionEquivalentCostMicromxn;
+    return typeof cost === "number" && Number.isFinite(cost) && Number.isInteger(cost) && cost >= 0;
+  });
+  const costRowsMissing = startedRows.length - costRows.length;
+  const totalCost = costRows.reduce((sum, row) => sum + (row.productionEquivalentCostMicromxn as number), 0);
+  const meanCost = costRowsMissing === 0 && startedRows.length > 0 ? totalCost / startedRows.length : null;
   const requiredVisualWins = Math.ceil(0.9 * comparableRows.length);
   const failures: string[] = [];
   if (startedRows.length !== VISUAL_ENGINE_2A_PILOT_SIZE) failures.push("started");
@@ -186,7 +193,8 @@ export function scoreVisualEngine2APilot(
   if (structuralFailures !== 0) failures.push("structuralIntegrity");
   if (partialPersistenceFailures !== 0) failures.push("partialPersistence");
   if (acceptedForbiddenSignals !== 0) failures.push("forbiddenSignals");
-  if (!(meanCost < VISUAL_ENGINE_2A_COST_LIMIT_MICROMXN)) failures.push("meanCost");
+  if (costRowsMissing !== 0) failures.push("costCoverage");
+  else if (meanCost === null || !(meanCost < VISUAL_ENGINE_2A_COST_LIMIT_MICROMXN)) failures.push("meanCost");
   if (!rollback.verified) failures.push("rollback");
   return {
     started: startedRows.length,
@@ -204,6 +212,8 @@ export function scoreVisualEngine2APilot(
     structuralFailures,
     partialPersistenceFailures,
     acceptedForbiddenSignals,
+    costRowsRecorded: costRows.length,
+    costRowsMissing,
     meanProductionEquivalentCostMicromxn: meanCost,
     rollbackVerified: rollback.verified,
     failures,
@@ -483,8 +493,28 @@ export async function generateVisualEngine2AEvidence(args: {
           rateCardVersion: args.rateCardVersion,
           inputTokens: adapted.usage?.inputTokens, outputTokens: adapted.usage?.outputTokens,
           cachedTokens: adapted.usage?.cachedTokens, thinkingTokens: adapted.usage?.thinkingTokens,
-          durationMs: adapted.durationMs, candidatePersisted: false, structuralInvariantPassed: false,
+          durationMs: adapted.durationMs, candidatePersisted: false,
+          structuralInvariantPassed: adapted.reasonCode === "structural_invariant_failed" ? false : undefined,
           ...costs,
+        });
+        continue;
+      }
+      if (adapted.structuralFingerprintBefore !== adapted.structuralFingerprintAfter) {
+        const zero = { inputTokens: 0, outputTokens: 0, cachedTokens: 0, thinkingTokens: 0 };
+        const costs = args.calculateCosts(adapted.usage, zero, baseline.duplicateShadowCandidateFill);
+        await args.deps.complete(reservation.id, {
+          status: "fallback", reasonCode: "structural_invariant_failed",
+          promptVersion: adapted.promptVersion, contractVersion: adapted.contractVersion,
+          policyVersion: adapted.policyVersion, taxonomyVersion: adapted.taxonomyVersion,
+          modelVersion: adapted.modelVersion, rateCardVersion: args.rateCardVersion,
+          inputTokens: adapted.usage.inputTokens, outputTokens: adapted.usage.outputTokens,
+          cachedTokens: adapted.usage.cachedTokens, thinkingTokens: adapted.usage.thinkingTokens,
+          ...costs,
+          durationMs: adapted.durationMs,
+          structuralFingerprintBefore: adapted.structuralFingerprintBefore,
+          structuralFingerprintAfter: adapted.structuralFingerprintAfter,
+          candidatePersisted: false,
+          structuralInvariantPassed: false,
         });
         continue;
       }
@@ -506,7 +536,7 @@ export async function generateVisualEngine2AEvidence(args: {
           status: "failed", reasonCode: "technical_render_failed",
           rateCardVersion: args.rateCardVersion,
           ...adapted.usage, durationMs: adapted.durationMs,
-          candidatePersisted: false, structuralInvariantPassed: true,
+          candidatePersisted: false,
           ...costs,
         });
         continue;
@@ -535,7 +565,7 @@ export async function generateVisualEngine2AEvidence(args: {
         structuralFingerprintBefore: adapted.structuralFingerprintBefore,
         structuralFingerprintAfter: adapted.structuralFingerprintAfter,
         candidatePersisted: false,
-        structuralInvariantPassed: adapted.structuralFingerprintBefore === adapted.structuralFingerprintAfter,
+        structuralInvariantPassed: true,
       });
     } catch {
       await args.deps.complete(reservation.id, terminalFailure).catch(() => undefined);

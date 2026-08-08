@@ -1,4 +1,5 @@
-import { join } from "node:path";
+import { mkdir } from "node:fs/promises";
+import { dirname, join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { writeJsonAtomic } from "@/lib/fs/write-json-atomic";
 import {
@@ -16,6 +17,13 @@ import {
   captureVisualEngine2ARollbackModes,
   VISUAL_ENGINE_2A_ROLLBACK_FIXTURE,
 } from "@/lib/generation/visual-engine-2a-eval";
+
+export async function writeVisualEngine2ARollbackEvidence(evidence: unknown, cwd = process.cwd()): Promise<string> {
+  const evidencePath = join(cwd, "scratch", "visual-engine-2a", "rollback-evidence.json");
+  await mkdir(dirname(evidencePath), { recursive: true });
+  await writeJsonAtomic(evidencePath, evidence);
+  return evidencePath;
+}
 
 async function delivery() {
   const mode = visualEngineMode();
@@ -107,7 +115,7 @@ async function main() {
     fixture: VISUAL_ENGINE_2A_ROLLBACK_FIXTURE,
     unset, off, shadow,
   });
-  await writeJsonAtomic(join(process.cwd(), "scratch", "visual-engine-2a", "rollback-evidence.json"), evidence);
+  await writeVisualEngine2ARollbackEvidence(evidence);
   console.log(JSON.stringify({ event: "visual_engine_2a_rollback", verified: true, fixtureSha256: evidence.fixtureSha256 }));
 }
 

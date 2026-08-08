@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import { IntentAnalysisSchema, type GenerationDecision } from "@/lib/generation/contracts";
 import { CreativeDirectionSchema } from "@/lib/generation/creative-contracts";
 import type { SafeSelectionResult } from "@/lib/generation/safe-selection";
+import type { CompleteVisualEnginePilotRunOutcome } from "@/lib/generation/visual-engine-pilot-store";
 import type { TemplateVisualMetadata } from "@/lib/templates/visual-metadata";
 import type { BusinessProfileData } from "@/lib/business-profiles/types";
 import type { ExtractedBusinessData } from "@/lib/style-match/autofill/types";
@@ -170,7 +171,7 @@ describe("runSkeletonCandidate", () => {
       fillAndNormalizeCuratedTemplate: async ({ templateId }) => buildResult(templateId),
       adaptTemplateSkeleton: async () => ({
         ok: false, status: "fallback", reasonCode: "contrast_violation",
-        promptVersion: "creative-prompt/1.0", modelId: "creative-model", usage: null, durationMs: 20,
+        promptVersion: "creative-prompt/1.0", modelId: "creative-model", durationMs: 20,
       }),
       finalizeCuratedDocument: ({ normalizedHtml, brandRecolor }) => ({ ok: true, html: `${normalizedHtml}|final:${brandRecolor}` }),
     });
@@ -207,7 +208,7 @@ describe("runSkeletonCandidate", () => {
   it("persists and emits only the complete fallback document after adaptation failure", async () => {
     const result = await runSkeletonCandidate(candidateInput(), {
       fillAndNormalizeCuratedTemplate: async ({ templateId }) => buildResult(templateId),
-      adaptTemplateSkeleton: async () => ({ ok: false, status: "fallback", reasonCode: "provider_timeout", promptVersion: null, modelId: null, usage: null, durationMs: 15 }),
+      adaptTemplateSkeleton: async () => ({ ok: false, status: "fallback", reasonCode: "provider_timeout", promptVersion: null, modelId: null, durationMs: 15 }),
       finalizeCuratedDocument: ({ normalizedHtml }) => ({ ok: true, html: `${normalizedHtml}|complete` }),
     });
     if (!result.ok) throw new Error("fixture run failed");
@@ -250,7 +251,7 @@ describe("shadow skeleton candidate", () => {
       { html: "weighted-final" },
       { emitPreview: (html) => events.push(html), persist: async (data) => { projects.push(data); } },
     );
-    const complete = vi.fn(async () => undefined);
+    const complete = vi.fn(async (_id: string, _outcome: CompleteVisualEnginePilotRunOutcome) => undefined);
 
     await launchShadowSkeletonCandidate({
       ...candidateInput(), mode: "shadow",
@@ -265,7 +266,9 @@ describe("shadow skeleton candidate", () => {
 
     expect(events).toEqual(["weighted-final"]);
     expect(projects).toEqual([{ html: "weighted-final" }]);
-    expect(complete).toHaveBeenCalledWith("run-1", expect.objectContaining({ status: "adapted", candidatePersisted: false }));
+    expect(complete).toHaveBeenCalledWith("run-1", expect.objectContaining({
+      status: "adapted", candidatePersisted: false, structuralInvariantPassed: true,
+    }));
   });
 
   it("reserves immediately before adaptation and no-ops when quota is exhausted", async () => {
@@ -284,7 +287,7 @@ describe("shadow skeleton candidate", () => {
   });
 
   it("completes every reserved typed fallback without persisting a candidate", async () => {
-    const complete = vi.fn(async () => undefined);
+    const complete = vi.fn(async (_id: string, _outcome: CompleteVisualEnginePilotRunOutcome) => undefined);
     await launchShadowSkeletonCandidate({ ...candidateInput(), mode: "shadow" }, {
       fillAndNormalizeCuratedTemplate: async ({ templateId }) => buildResult(templateId),
       reserveVisualEnginePilotRun: async () => ({ ok: true, id: "run-fallback", ordinal: 3 }),
@@ -307,6 +310,38 @@ describe("shadow skeleton candidate", () => {
       inputTokens: 20,
       outputTokens: 10,
     }));
+    expect(complete.mock.calls[0]?.[1]).not.toHaveProperty("structuralInvariantPassed");
+  });
+
+  it("records false only for a typed structural-invariant adaptation fallback", async () => {
+    const complete = vi.fn(async () => undefined);
+    await launchShadowSkeletonCandidate({ ...candidateInput(), mode: "shadow" }, {
+      fillAndNormalizeCuratedTemplate: async ({ templateId }) => buildResult(templateId),
+      reserveVisualEnginePilotRun: async () => ({ ok: true, id: "run-structural", ordinal: 4 }),
+      adaptTemplateSkeleton: async () => ({
+        ok: false, status: "fallback", reasonCode: "structural_invariant_failed",
+        promptVersion: "creative-prompt/1.0", modelId: "creative-model", durationMs: 25,
+      }),
+      completeVisualEnginePilotRun: complete,
+    });
+    expect(complete).toHaveBeenCalledWith("run-structural", expect.objectContaining({
+      status: "fallback", reasonCode: "structural_invariant_failed", structuralInvariantPassed: false,
+    }));
+  });
+
+  it("does not label finalization failure as a structural-invariant failure", async () => {
+    const complete = vi.fn(async (_id: string, _outcome: CompleteVisualEnginePilotRunOutcome) => undefined);
+    await launchShadowSkeletonCandidate({ ...candidateInput(), mode: "shadow" }, {
+      fillAndNormalizeCuratedTemplate: async ({ templateId }) => buildResult(templateId),
+      reserveVisualEnginePilotRun: async () => ({ ok: true, id: "run-finalize", ordinal: 5 }),
+      adaptTemplateSkeleton: async () => ADAPTED,
+      finalizeCuratedDocument: () => ({ ok: false, kind: "editor-marker-leak" }),
+      completeVisualEnginePilotRun: complete,
+    });
+    expect(complete).toHaveBeenCalledWith("run-finalize", expect.objectContaining({
+      status: "fallback", reasonCode: "sanitization_failed", candidatePersisted: false,
+    }));
+    expect(complete.mock.calls[0]?.[1]).not.toHaveProperty("structuralInvariantPassed");
   });
 
   it.each([
