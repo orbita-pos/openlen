@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { buildSkeletonInventory } from "./skeleton-inventory";
+import { decideGenerationRoute } from "./decide-route";
 import {
   VISUAL_ENGINE_2A_DATASET_VERSION,
   VISUAL_ENGINE_2A_PILOT_CASES,
@@ -95,6 +96,11 @@ describe("qualifyVisualEngine2ACohort", () => {
     ["baseline identity", (caseRow: VisualEngine2APilotCase) => { caseRow.identityConflict.baselineIdentity = "C:\\private\\template.html"; }],
     ["requested identity", (caseRow: VisualEngine2APilotCase) => { caseRow.identityConflict.requestedIdentity = "/private/template.html"; }],
     ["rationale", (caseRow: VisualEngine2APilotCase) => { caseRow.structuralRationale = "<main>markup</main>"; }],
+    ["UNC path", (caseRow: VisualEngine2APilotCase) => { caseRow.expectedIntent.explicitConstraints = ["\\\\server\\share\\secret.txt"]; }],
+    ["rooted Windows path", (caseRow: VisualEngine2APilotCase) => { caseRow.expectedIntent.ambiguities = ["\\Users\\secret.txt"]; }],
+    ["project API key", (caseRow: VisualEngine2APilotCase) => { caseRow.identityConflict.structuralPattern = "sk-proj-abcdefghijklmnopqrstuvwxyz"; }],
+    ["AWS access key", (caseRow: VisualEngine2APilotCase) => { caseRow.identityConflict.baselineIdentity = "AKIAABCDEFGHIJKLMNOP"; }],
+    ["GitHub token", (caseRow: VisualEngine2APilotCase) => { caseRow.identityConflict.requestedIdentity = "ghp_abcdefghijklmnopqrstuvwxyzABCDEFGH"; }],
   ])("rejects sensitive content in every prose-bearing field: %s", (_label, mutate) => {
     const cases = cloneCases();
     mutate(cases[0]);
@@ -117,6 +123,48 @@ describe("qualifyVisualEngine2ACohort", () => {
     const templates = templatesFor();
     mutate(templates);
     expect(qualify(undefined, templates).ok).toBe(false);
+  });
+
+  it.each([
+    ["missing", undefined],
+    ["draft", (template: QualifiedCatalogTemplate) => { template.status = "draft"; }],
+    ["unreviewed", (template: QualifiedCatalogTemplate) => { template.visualMetadata!.reviewStatus = "unreviewed"; }],
+    ["non-high themeability", (template: QualifiedCatalogTemplate) => { template.visualMetadata!.themeability = "medium"; }],
+    ["invalid inventory", (template: QualifiedCatalogTemplate) => { template.inventory = { ...template.inventory, templateId: "wrong-template" }; }],
+  ])("rejects an additional %s allowlisted template even when the chosen template remains valid", (_label, mutate) => {
+    const cases = cloneCases();
+    const extraId = "additional-allowlisted";
+    cases[0].allowedSkeletonTemplateIds = [cases[0].allowedSkeletonTemplateIds[0], extraId];
+    const templates = templatesFor();
+    if (mutate) {
+      const extra: QualifiedCatalogTemplate = {
+        id: extraId, status: "published", visualMetadata: metadataFor(cases[0]),
+        html: HTML, inventory: buildSkeletonInventory(HTML, extraId),
+      };
+      mutate(extra);
+      templates.push(extra);
+    }
+    expect(qualify(cases, templates)).toEqual({
+      ok: false,
+      code: mutate ? "invalid_allowlisted_template" : "missing_allowlisted_template",
+    });
+  });
+
+  it("rejects a chosen route outside its case allowlist at qualification time", () => {
+    const cases = cloneCases();
+    cases[0].allowedSkeletonTemplateIds = [cases[1].allowedSkeletonTemplateIds[0]];
+    expect(qualify(cases)).toEqual({ ok: false, code: "no_qualified_selection" });
+  });
+
+  it("uses the fixed production route boundaries without a qualification threshold override", () => {
+    const candidate = {
+      id: "boundary", eligible: true, structuralFit: 0.75, identityFit: 0.79,
+      adaptationCost: 0.60, themeability: "high" as const, reasonCodes: [],
+    };
+    expect(decideGenerationRoute([candidate])).toMatchObject({ route: "template_skeleton", templateId: "boundary" });
+    expect(decideGenerationRoute([{ ...candidate, structuralFit: 0.749999 }]).route).toBe("section_composition");
+    expect(decideGenerationRoute([{ ...candidate, identityFit: 0.80 }])).toMatchObject({ route: "template_full", templateId: "boundary" });
+    expect(decideGenerationRoute([{ ...candidate, adaptationCost: 0.600001 }]).route).toBe("section_composition");
   });
 
   it("requires at least ten selected templates and at most two base cases per selected template", () => {
@@ -162,6 +210,14 @@ describe("qualifyVisualEngine2ACohort", () => {
 
     const reordered = { datasetVersion: manifest.datasetVersion, schemaVersion: manifest.schemaVersion, cases: manifest.cases, templates: manifest.templates, datasetSha256: manifest.datasetSha256, catalogSha256: manifest.catalogSha256, commitSha: manifest.commitSha, promptVersion: manifest.promptVersion, policyVersion: manifest.policyVersion, taxonomyVersion: manifest.taxonomyVersion, baseCaseCount: manifest.baseCaseCount, expandedRowCount: manifest.expandedRowCount };
     expect(verifyVisualEngine2AQualification({ manifest: { ...reordered, manifestSha256: manifest.manifestSha256 }, current })).toEqual({ ok: true });
+
+    const currentWithOnlyInventoryHashChanged = {
+      ...current,
+      templates: current.templates.map((template, index) => index === 0
+        ? { ...template, inventorySha256: `sha256:${"c".repeat(64)}` }
+        : template),
+    };
+    expect(verifyVisualEngine2AQualification({ manifest, current: currentWithOnlyInventoryHashChanged })).toEqual({ ok: false, code: "manifest_stale" });
   });
 
   it("changes manifest hashes for canonical cohort, metadata, HTML, inventory, and catalog membership", () => {

@@ -28,6 +28,8 @@ export type QualificationFailureCode =
   | "unsafe_case_source"
   | "invalid_catalog"
   | "invalid_template"
+  | "missing_allowlisted_template"
+  | "invalid_allowlisted_template"
   | "no_qualified_selection"
   | "insufficient_selected_templates"
   | "template_overrepresented"
@@ -73,9 +75,12 @@ function isUnsafeProse(value: string): boolean {
     || /\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/i.test(value)
     || /\bhttps?:\/\/[^\s/@:]+:[^\s/@]+@/i.test(value)
     || /\b(?:sk|pk|api)[_-]?(?:live|test)?[_-][A-Za-z0-9]{16,}\b/i.test(value)
+    || /\bsk-proj-[A-Za-z0-9_-]{16,}\b/i.test(value)
     || /\bAIza[A-Za-z0-9_-]{20,}\b/.test(value)
+    || /\bAKIA[0-9A-Z]{16}\b/.test(value)
+    || /\bghp_[A-Za-z0-9]{20,}\b/.test(value)
     || /-----BEGIN (?:[A-Z ]+ )?PRIVATE KEY-----/.test(value)
-    || /(?:^|[\s"'(])[A-Za-z]:\\/.test(value)
+    || /(?:^|[\s"'(])(?:[A-Za-z]:)?\\{1,2}(?:[A-Za-z0-9_.-]+\\)+/.test(value)
     || /(?:^|[\s"'(])\/[A-Za-z0-9_.-]+(?:\/[^\s]*)?/.test(value);
 }
 
@@ -108,18 +113,28 @@ function catalogValue(template: QualifiedCatalogTemplate) {
   };
 }
 
-function catalogIsValid(templates: readonly QualifiedCatalogTemplate[]): QualificationFailureCode | null {
+function templateIsBuildable(template: QualifiedCatalogTemplate): boolean {
+  if (template.id.trim().length === 0 || template.status !== "published") return false;
+  const metadata = TemplateVisualMetadataSchema.safeParse(template.visualMetadata);
+  if (!metadata.success || metadata.data.reviewStatus !== "reviewed" || metadata.data.themeability !== "high") return false;
+  if (!SkeletonInventorySchema.safeParse(template.inventory).success || template.inventory.templateId !== template.id) return false;
+  try {
+    return canonicalJsonSha256(buildSkeletonInventory(template.html, template.id)) === canonicalJsonSha256(template.inventory);
+  } catch {
+    return false;
+  }
+}
+
+function catalogIsValid(cases: readonly VisualEngine2APilotCase[], templates: readonly QualifiedCatalogTemplate[]): QualificationFailureCode | null {
   if (templates.length === 0 || new Set(templates.map((template) => template.id)).size !== templates.length) return "invalid_catalog";
+  const byId = new Map(templates.map((template) => [template.id, template]));
+  for (const id of new Set(cases.flatMap((caseRow) => caseRow.allowedSkeletonTemplateIds))) {
+    const template = byId.get(id);
+    if (!template) return "missing_allowlisted_template";
+    if (!templateIsBuildable(template)) return "invalid_allowlisted_template";
+  }
   for (const template of templates) {
-    if (template.id.trim().length === 0 || template.status !== "published") return "invalid_template";
-    const metadata = TemplateVisualMetadataSchema.safeParse(template.visualMetadata);
-    if (!metadata.success || metadata.data.reviewStatus !== "reviewed" || metadata.data.themeability !== "high") return "invalid_template";
-    if (!SkeletonInventorySchema.safeParse(template.inventory).success || template.inventory.templateId !== template.id) return "invalid_template";
-    try {
-      if (canonicalJsonSha256(buildSkeletonInventory(template.html, template.id)) !== canonicalJsonSha256(template.inventory)) return "invalid_template";
-    } catch {
-      return "invalid_template";
-    }
+    if (!templateIsBuildable(template)) return "invalid_template";
   }
   return null;
 }
@@ -135,7 +150,7 @@ export function qualifyVisualEngine2ACohort(args: {
 }): QualificationResult {
   const caseFailure = casesAreValid(args.cases);
   if (caseFailure) return FAILURE(caseFailure);
-  const catalogFailure = catalogIsValid(args.templates);
+  const catalogFailure = catalogIsValid(args.cases, args.templates);
   if (catalogFailure) return FAILURE(catalogFailure);
   if (!isCommitSha(args.commitSha)) return FAILURE("invalid_catalog");
 
