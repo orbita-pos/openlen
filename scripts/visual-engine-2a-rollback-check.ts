@@ -45,7 +45,8 @@ async function delivery() {
     persist: async (data) => { projectData = structuredClone(data); },
   });
   let creativeCalls = 0;
-  let pilotCalls = 0;
+  let pilotReserveCalls = 0;
+  let pilotCompleteCalls = 0;
   let candidateJobs = 0;
   await launchShadowSkeletonCandidate(plan.shadowTemplateId ? ({
     mode: "shadow",
@@ -65,7 +66,7 @@ async function delivery() {
       filled: false, appliedOps: 0, durationMs: 0, leaksBefore: 0, leaksAfter: 0,
     }),
     reserveVisualEnginePilotRun: async () => {
-      pilotCalls += 1; candidateJobs += 1;
+      pilotReserveCalls += 1; candidateJobs += 1;
       return { ok: true, id: "rollback-isolated", ordinal: 1 };
     },
     adaptTemplateSkeleton: async () => {
@@ -79,7 +80,7 @@ async function delivery() {
       };
     },
     finalizeCuratedDocument: () => ({ ok: true, html: document.html }),
-    completeVisualEnginePilotRun: async () => undefined,
+    completeVisualEnginePilotRun: async () => { pilotCompleteCalls += 1; },
     captureException: () => undefined,
   });
   const creditDelta = calculateQuickDeliveryCredits(
@@ -94,7 +95,8 @@ async function delivery() {
     projectData,
     creditDelta,
     creativeCalls,
-    pilotCalls,
+    pilotReserveCalls,
+    pilotCompleteCalls,
     candidateJobs,
   };
 }

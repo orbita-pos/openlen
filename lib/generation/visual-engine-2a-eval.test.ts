@@ -131,11 +131,11 @@ describe("Visual Engine 2A pilot", () => {
     const delivery = {
       selectedTemplateId: "weighted", finalizedHtml: "same",
       previewSequence: ["preview:same"], projectData: { html: "same" }, creditDelta: 3,
-      creativeCalls: 0, pilotCalls: 0, candidateJobs: 0,
+      creativeCalls: 0, pilotReserveCalls: 0, pilotCompleteCalls: 0, candidateJobs: 0,
     };
     const evidence = buildRollbackEvidence({
       fixture: { brief: "fixture" }, unset: delivery, off: delivery,
-      shadow: { ...delivery, creativeCalls: 1, pilotCalls: 1, candidateJobs: 1 },
+      shadow: { ...delivery, creativeCalls: 1, pilotReserveCalls: 1, pilotCompleteCalls: 1, candidateJobs: 1 },
     });
     expect(evidence.verified).toBe(true);
     expect(validateRollbackEvidence(evidence, evidence.fixtureSha256)).toBe(true);
@@ -145,17 +145,18 @@ describe("Visual Engine 2A pilot", () => {
       { projectData: { html: "same", generation: { unexpected: true } } },
       { creditDelta: 4 },
       { creativeCalls: 1 },
-      { pilotCalls: 1 },
+      { pilotReserveCalls: 1 },
+      { pilotCompleteCalls: 1 },
     ];
     for (const mismatch of mismatches) {
       expect(() => buildRollbackEvidence({
         fixture: { brief: "fixture" }, unset: delivery, off: { ...delivery, ...mismatch },
-        shadow: { ...delivery, creativeCalls: 1, pilotCalls: 1, candidateJobs: 1 },
+        shadow: { ...delivery, creativeCalls: 1, pilotReserveCalls: 1, pilotCompleteCalls: 1, candidateJobs: 1 },
       })).toThrow(/rollback/i);
     }
     expect(() => buildRollbackEvidence({
       fixture: { brief: "fixture" }, unset: delivery, off: delivery,
-      shadow: { ...delivery, projectData: { html: "other" }, creativeCalls: 1, pilotCalls: 1, candidateJobs: 1 },
+      shadow: { ...delivery, projectData: { html: "other" }, creativeCalls: 1, pilotReserveCalls: 1, pilotCompleteCalls: 1, candidateJobs: 1 },
     })).toThrow(/rollback/i);
   });
 
@@ -175,6 +176,20 @@ describe("Visual Engine 2A pilot", () => {
       if (previous === undefined) delete process.env.OPENLEN_VISUAL_ENGINE;
       else process.env.OPENLEN_VISUAL_ENGINE = previous;
     }
+  });
+
+  it("rejects a shadow candidate that reserves pilot quota but never completes it", () => {
+    const delivery = {
+      selectedTemplateId: "weighted", finalizedHtml: "same",
+      previewSequence: ["preview:same"], projectData: { html: "same" }, creditDelta: 3,
+      creativeCalls: 0, pilotReserveCalls: 0, pilotCompleteCalls: 0, candidateJobs: 0,
+    };
+    expect(() => buildRollbackEvidence({
+      fixture: { brief: "fixture" }, unset: delivery, off: delivery,
+      shadow: {
+        ...delivery, creativeCalls: 1, pilotReserveCalls: 1, pilotCompleteCalls: 0, candidateJobs: 1,
+      },
+    })).toThrow(/rollback/i);
   });
 
   it("runs exactly one critic and one scalar completion per reserved adaptation", async () => {

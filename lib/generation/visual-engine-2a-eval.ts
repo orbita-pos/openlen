@@ -254,11 +254,14 @@ export interface VisualEngine2ARollbackEvidence {
   offDeliverySha256: string;
   shadowDeliverySha256: string;
   unsetCreativeCalls: 0;
-  unsetPilotCalls: 0;
+  unsetPilotReserveCalls: 0;
+  unsetPilotCompleteCalls: 0;
   offCreativeCalls: 0;
-  offPilotCalls: 0;
+  offPilotReserveCalls: 0;
+  offPilotCompleteCalls: 0;
   shadowCreativeCalls: 1;
-  shadowPilotCalls: 1;
+  shadowPilotReserveCalls: 1;
+  shadowPilotCompleteCalls: 1;
   candidateJobs: 1;
   verified: true;
   evidenceSha256: string;
@@ -271,7 +274,8 @@ export interface VisualEngine2ARollbackState {
   projectData: unknown;
   creditDelta: number;
   creativeCalls: number;
-  pilotCalls: number;
+  pilotReserveCalls: number;
+  pilotCompleteCalls: number;
   candidateJobs: number;
 }
 
@@ -300,9 +304,9 @@ export function buildRollbackEvidence(args: {
   if (unsetOutputSha256 !== offOutputSha256
     || unsetDeliverySha256 !== offDeliverySha256
     || unsetDeliverySha256 !== shadowDeliverySha256
-    || args.unset.creativeCalls !== 0 || args.unset.pilotCalls !== 0 || args.unset.candidateJobs !== 0
-    || args.off.creativeCalls !== 0 || args.off.pilotCalls !== 0 || args.off.candidateJobs !== 0
-    || args.shadow.creativeCalls !== 1 || args.shadow.pilotCalls !== 1 || args.shadow.candidateJobs !== 1) {
+    || args.unset.creativeCalls !== 0 || args.unset.pilotReserveCalls !== 0 || args.unset.pilotCompleteCalls !== 0 || args.unset.candidateJobs !== 0
+    || args.off.creativeCalls !== 0 || args.off.pilotReserveCalls !== 0 || args.off.pilotCompleteCalls !== 0 || args.off.candidateJobs !== 0
+    || args.shadow.creativeCalls !== 1 || args.shadow.pilotReserveCalls !== 1 || args.shadow.pilotCompleteCalls !== 1 || args.shadow.candidateJobs !== 1) {
     throw new Error("rollback verification failed");
   }
   const evidence = {
@@ -310,9 +314,9 @@ export function buildRollbackEvidence(args: {
     fixtureSha256: canonicalJsonSha256(args.fixture),
     unsetOutputSha256, offOutputSha256, shadowOutputSha256,
     unsetDeliverySha256, offDeliverySha256, shadowDeliverySha256,
-    unsetCreativeCalls: 0, unsetPilotCalls: 0,
-    offCreativeCalls: 0, offPilotCalls: 0,
-    shadowCreativeCalls: 1, shadowPilotCalls: 1,
+    unsetCreativeCalls: 0, unsetPilotReserveCalls: 0, unsetPilotCompleteCalls: 0,
+    offCreativeCalls: 0, offPilotReserveCalls: 0, offPilotCompleteCalls: 0,
+    shadowCreativeCalls: 1, shadowPilotReserveCalls: 1, shadowPilotCompleteCalls: 1,
     candidateJobs: 1,
     verified: true,
   } as const;
@@ -332,9 +336,9 @@ export function validateRollbackEvidence(
     && value.unsetDeliverySha256 === value.offDeliverySha256
     && value.unsetDeliverySha256 === value.shadowDeliverySha256
     && validEvidenceHash(value.unsetDeliverySha256)
-    && value.unsetCreativeCalls === 0 && value.unsetPilotCalls === 0
-    && value.offCreativeCalls === 0 && value.offPilotCalls === 0
-    && value.shadowCreativeCalls === 1 && value.shadowPilotCalls === 1
+    && value.unsetCreativeCalls === 0 && value.unsetPilotReserveCalls === 0 && value.unsetPilotCompleteCalls === 0
+    && value.offCreativeCalls === 0 && value.offPilotReserveCalls === 0 && value.offPilotCompleteCalls === 0
+    && value.shadowCreativeCalls === 1 && value.shadowPilotReserveCalls === 1 && value.shadowPilotCompleteCalls === 1
     && value.candidateJobs === 1
     && value.verified === true
     && value.evidenceSha256 === canonicalJsonSha256({
@@ -347,11 +351,14 @@ export function validateRollbackEvidence(
       offDeliverySha256: value.offDeliverySha256,
       shadowDeliverySha256: value.shadowDeliverySha256,
       unsetCreativeCalls: value.unsetCreativeCalls,
-      unsetPilotCalls: value.unsetPilotCalls,
+      unsetPilotReserveCalls: value.unsetPilotReserveCalls,
+      unsetPilotCompleteCalls: value.unsetPilotCompleteCalls,
       offCreativeCalls: value.offCreativeCalls,
-      offPilotCalls: value.offPilotCalls,
+      offPilotReserveCalls: value.offPilotReserveCalls,
+      offPilotCompleteCalls: value.offPilotCompleteCalls,
       shadowCreativeCalls: value.shadowCreativeCalls,
-      shadowPilotCalls: value.shadowPilotCalls,
+      shadowPilotReserveCalls: value.shadowPilotReserveCalls,
+      shadowPilotCompleteCalls: value.shadowPilotCompleteCalls,
       candidateJobs: value.candidateJobs,
       verified: value.verified,
     });
