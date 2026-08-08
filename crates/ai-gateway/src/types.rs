@@ -228,6 +228,8 @@ pub enum StreamEvent {
         /// invoice — not reflected in OpenLen's own credit pricing as of
         /// F3). `0` when the provider reported no cache hit, never absent.
         cached_tokens: u32,
+        /// Provider-reported internal reasoning tokens. `0` when absent.
+        thinking_tokens: u32,
     },
     Done {
         stop_reason: StopReason,
@@ -385,12 +387,14 @@ mod tests {
             input_tokens: 12,
             output_tokens: 34,
             cached_tokens: 0,
+            thinking_tokens: 0,
         };
         let v: serde_json::Value = serde_json::to_value(&e).unwrap();
         assert_eq!(v["type"], "usage");
         assert_eq!(v["input_tokens"], 12);
         assert_eq!(v["output_tokens"], 34);
         assert_eq!(v["cached_tokens"], 0);
+        assert_eq!(v["thinking_tokens"], 0);
     }
 
     #[test]
@@ -401,9 +405,11 @@ mod tests {
             input_tokens: 120,
             output_tokens: 30,
             cached_tokens: 100,
+            thinking_tokens: 40,
         };
         let v: serde_json::Value = serde_json::to_value(&e).unwrap();
         assert_eq!(v["cached_tokens"], 100);
+        assert_eq!(v["thinking_tokens"], 40);
     }
 
     #[test]

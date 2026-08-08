@@ -65,6 +65,7 @@ async fn live_mini_prompt_emits_expected_event_shape() {
                 input_tokens,
                 output_tokens,
                 cached_tokens,
+                thinking_tokens: _,
             } => {
                 assert!(input_tokens > 0, "expected non-zero input_tokens");
                 assert!(output_tokens > 0, "expected non-zero output_tokens");

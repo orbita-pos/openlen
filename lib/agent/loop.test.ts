@@ -17,6 +17,7 @@ const usage = (o: number, cached = 0): StreamEvent => ({
   inputTokens: 100,
   outputTokens: o,
   cachedTokens: cached,
+  thinkingTokens: 0,
 });
 
 describe("runAgentLoop", () => {
@@ -326,7 +327,7 @@ describe("runAgentLoop", () => {
         opened += 1;
         return (async function* () {
           yield { type: "text_delta", text: "empeza" } as StreamEvent;
-          yield { type: "usage", inputTokens: 100, outputTokens: 20, cachedTokens: 0 } as StreamEvent;
+          yield { type: "usage", inputTokens: 100, outputTokens: 20, cachedTokens: 0, thinkingTokens: 0 } as StreamEvent;
           yield { type: "done", stopReason: { kind: "max_tokens" } } as StreamEvent;
         })();
       },

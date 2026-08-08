@@ -92,7 +92,7 @@ test("parses a clean JSON verdict correctly", async () => {
       // Split across two deltas to prove accumulation.
       { type: "text_delta", text: json.slice(0, 12) },
       { type: "text_delta", text: json.slice(12) },
-      { type: "usage", inputTokens: 100, outputTokens: 20, cachedTokens: 0 },
+      { type: "usage", inputTokens: 100, outputTokens: 20, cachedTokens: 3, thinkingTokens: 7 },
       { type: "done", stopReason: { kind: "end_turn" } },
     ],
     (r) => {
@@ -110,6 +110,12 @@ test("parses a clean JSON verdict correctly", async () => {
   assert.equal(verdict.briefAdherence, 9);
   assert.equal(verdict.shouldRegenerate, false);
   assert.equal(verdict.issues.length, 0);
+  assert.deepEqual(verdict.usage, {
+    inputTokens: 100,
+    outputTokens: 20,
+    cachedTokens: 3,
+    thinkingTokens: 7,
+  });
 
   // The request must carry native structured-output controls + the screenshot.
   assert.equal(captured?.responseMimeType, "application/json");
@@ -163,6 +169,7 @@ test("render failure falls back (no blind regen without a screenshot)", async ()
   });
   assert.equal(verdict.fallback, true);
   assert.equal(verdict.shouldRegenerate, false);
+  assert.equal(verdict.usage, undefined, "no provider call means no usage");
 });
 
 test("gemini done{error} falls back", async () => {

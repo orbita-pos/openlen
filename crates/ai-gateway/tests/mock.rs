@@ -200,7 +200,8 @@ async fn happy_path_emits_start_deltas_usage_done_in_order() {
             StreamEvent::Usage {
                 input_tokens: 3,
                 output_tokens: 4,
-                cached_tokens: 0
+                cached_tokens: 0,
+                thinking_tokens: 0
             }
         ),
         "got {:?}",
@@ -244,13 +245,34 @@ async fn cached_content_token_count_surfaces_on_the_usage_event() {
             input_tokens,
             output_tokens,
             cached_tokens,
+            thinking_tokens,
         }) => {
             assert_eq!(input_tokens, 120);
             assert_eq!(output_tokens, 30);
             assert_eq!(cached_tokens, 100);
+            assert_eq!(thinking_tokens, 0);
         }
         other => panic!("expected Usage event, got {other:?}"),
     }
+}
+
+#[tokio::test]
+async fn thoughts_token_count_surfaces_on_the_usage_event() {
+    let body = "data: {\"candidates\":[{\"finishReason\":\"STOP\"}],\"usageMetadata\":{\"promptTokenCount\":12,\"candidatesTokenCount\":5,\"thoughtsTokenCount\":9}}\n\n";
+    let url = serve_one(sse_envelope(body), Duration::ZERO).await;
+    let provider = GeminiProvider::with_base_url("k", url);
+    let mut stream = provider
+        .stream(small_request(), CancellationToken::new())
+        .await
+        .unwrap();
+
+    while let Some(item) = stream.next().await {
+        if let StreamEvent::Usage { thinking_tokens, .. } = item.unwrap() {
+            assert_eq!(thinking_tokens, 9);
+            return;
+        }
+    }
+    panic!("expected Usage event");
 }
 
 #[tokio::test]

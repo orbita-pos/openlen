@@ -137,6 +137,7 @@ public/openlen-images/motion/
 /.photo-export/
 /.photo-batch*/
 /spike/
+/scratch/visual-engine-2a/
 
 # Tematica art workbench (originals archive + smoke screenshots — local only)
 .tematicas-art/

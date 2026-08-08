@@ -44,6 +44,8 @@ export default defineConfig({
       "components/workspace-v2/**/*.test.tsx",
       "tools/template-visual-metadata-reviewer/**/*.test.ts",
       "tools/template-visual-metadata-reviewer/**/*.test.tsx",
+      "tools/visual-engine-2a-reviewer/**/*.test.ts",
+      "tools/visual-engine-2a-reviewer/**/*.test.tsx",
       "components/community/**/*.test.ts",
       "lib/three3d/**/*.test.ts",
       "lib/workspace-v2/**/*.test.ts",

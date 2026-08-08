@@ -31,6 +31,13 @@ export interface CritiqueVerdict {
    *  failure, API error). The loop treats a fallback verdict as "the first
    *  pass is final" — it never triggers a regen. */
   fallback: boolean;
+  /** Provider usage for the diagnostic call. Present only for a valid verdict. */
+  usage?: {
+    inputTokens: number;
+    outputTokens: number;
+    cachedTokens: number;
+    thinkingTokens: number;
+  };
 }
 
 export interface CritiqueParams {
@@ -177,6 +184,7 @@ async function runCritique(
   const prompt = buildCriticPrompt(params.brief, params.html);
 
   let raw = "";
+  let usage: NonNullable<CritiqueVerdict["usage"]> | undefined;
   for await (const ev of provider.stream(
     {
       model: params.model,
@@ -191,6 +199,17 @@ async function runCritique(
   )) {
     if (ev.type === "text_delta") {
       raw += ev.text;
+    } else if (ev.type === "usage") {
+      usage = usage ?? {
+        inputTokens: 0,
+        outputTokens: 0,
+        cachedTokens: 0,
+        thinkingTokens: 0,
+      };
+      usage.inputTokens += ev.inputTokens;
+      usage.outputTokens += ev.outputTokens;
+      usage.cachedTokens += ev.cachedTokens;
+      usage.thinkingTokens += ev.thinkingTokens;
     } else if (ev.type === "done" && ev.stopReason.kind === "error") {
       logFallback(`gemini error: ${ev.stopReason.error}`);
       return fallbackVerdict();
@@ -202,6 +221,7 @@ async function runCritique(
     logFallback("malformed JSON verdict");
     return fallbackVerdict();
   }
+  if (usage) verdict.usage = usage;
   logVerdict(verdict);
   return verdict;
 }

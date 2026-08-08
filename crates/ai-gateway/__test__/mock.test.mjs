@@ -101,7 +101,7 @@ test("happy path: start → text_delta → usage → done", async () => {
   const sse =
     'data: {"candidates":[{"content":{"parts":[{"text":"Hel"}]}}]}\n\n' +
     'data: {"candidates":[{"content":{"parts":[{"text":"lo"}]}}]}\n\n' +
-    'data: {"candidates":[{"finishReason":"STOP"}],"usageMetadata":{"promptTokenCount":3,"candidatesTokenCount":2}}\n\n';
+    'data: {"candidates":[{"finishReason":"STOP"}],"usageMetadata":{"promptTokenCount":3,"candidatesTokenCount":2,"thoughtsTokenCount":7}}\n\n';
   const server = await serveOne({ status: 200, sseBody: sse });
   try {
     const p = new GeminiProvider("k", server.baseUrl);
@@ -125,6 +125,7 @@ test("happy path: start → text_delta → usage → done", async () => {
     const usage = events.find((e) => e.type === "usage");
     assert.equal(usage.inputTokens, 3);
     assert.equal(usage.outputTokens, 2);
+    assert.equal(usage.thinkingTokens, 7);
 
     const done = events.find((e) => e.type === "done");
     assert.equal(done.stopReason.kind, "end_turn");

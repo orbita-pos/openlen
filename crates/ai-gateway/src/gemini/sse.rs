@@ -178,6 +178,9 @@ pub(crate) struct GeminiUsageMetadata {
     /// automatically on Google's side. Absent when the turn had no cache
     /// hit (short prompts, or the model/context isn't cache-eligible yet).
     pub(crate) cached_content_token_count: Option<u32>,
+    /// Gemini 2.5+ internal reasoning tokens. Absent for models/responses
+    /// that do not report them.
+    pub(crate) thoughts_token_count: Option<u32>,
 }
 
 #[derive(Debug, Default, Deserialize, PartialEq)]
@@ -374,6 +377,15 @@ mod tests {
         assert_eq!(um.prompt_token_count, Some(120));
         assert_eq!(um.candidates_token_count, Some(30));
         assert_eq!(um.cached_content_token_count, Some(100));
+    }
+
+    #[test]
+    fn parses_thoughts_token_count_when_present() {
+        let mut p = SseParser::new();
+        let bytes = b"data: {\"candidates\":[{\"finishReason\":\"STOP\"}],\"usageMetadata\":{\"promptTokenCount\":120,\"candidatesTokenCount\":30,\"thoughtsTokenCount\":40}}\n\n";
+        let events = p.feed(bytes).unwrap();
+        let usage = events[0].usage_metadata.as_ref().unwrap();
+        assert_eq!(usage.thoughts_token_count, Some(40));
     }
 
     #[test]

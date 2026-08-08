@@ -27,7 +27,7 @@ function providerReturning(raw: string) {
     stream: () =>
       (async function* (): AsyncGenerator<StreamEvent> {
         yield { type: "text_delta", text: raw };
-        yield { type: "usage", inputTokens: 9000, outputTokens: 7000, cachedTokens: 100 };
+        yield { type: "usage", inputTokens: 9000, outputTokens: 7000, cachedTokens: 100, thinkingTokens: 0 };
         yield { type: "done", stopReason: { kind: "end_turn" } };
       })() as AsyncIterableIterator<StreamEvent>,
   };

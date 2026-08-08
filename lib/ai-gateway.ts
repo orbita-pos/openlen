@@ -114,6 +114,8 @@ export type StreamEvent =
        *  discount automatically on Google's invoice. `0` when the turn
        *  had no cache hit. */
       cachedTokens: number;
+      /** Provider-reported internal reasoning tokens; `0` when absent. */
+      thinkingTokens: number;
     }
   | { type: "done"; stopReason: StopReason }
   | {
@@ -282,6 +284,7 @@ function narrowEvent(raw: RustStreamEvent): StreamEvent {
         inputTokens: raw.inputTokens as number,
         outputTokens: raw.outputTokens as number,
         cachedTokens: raw.cachedTokens ?? 0,
+        thinkingTokens: raw.thinkingTokens ?? 0,
       };
     case "done":
       return {

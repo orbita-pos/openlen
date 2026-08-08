@@ -218,7 +218,7 @@ test("happy path: 3 text_deltas → 3 enqueued chunks, 1 usage → 1 debit", asy
     { type: "text_delta", text: "<!doctype html>" },
     { type: "text_delta", text: "<html><body>" },
     { type: "text_delta", text: "<h1>Hi</h1></body></html>" },
-    { type: "usage", inputTokens: 12, outputTokens: 34, cachedTokens: 0 },
+    { type: "usage", inputTokens: 12, outputTokens: 34, cachedTokens: 0, thinkingTokens: 0 },
     { type: "done", stopReason: { kind: "end_turn" } },
   ]);
 
@@ -253,7 +253,7 @@ test("happy path with model=gemini-flash routes credit rate accordingly", async 
   const debit = spyDebit();
   const provider = scriptedProvider([
     { type: "text_delta", text: "<p>x</p>" },
-    { type: "usage", inputTokens: 1000, outputTokens: 1000, cachedTokens: 0 },
+    { type: "usage", inputTokens: 1000, outputTokens: 1000, cachedTokens: 0, thinkingTokens: 0 },
     { type: "done", stopReason: { kind: "end_turn" } },
   ]);
 
@@ -280,7 +280,7 @@ test("max_tokens stop reason still calls end() and resolves with final HTML", as
   const debit = spyDebit();
   const provider = scriptedProvider([
     { type: "text_delta", text: "<div>truncated" },
-    { type: "usage", inputTokens: 50, outputTokens: 200, cachedTokens: 0 },
+    { type: "usage", inputTokens: 50, outputTokens: 200, cachedTokens: 0, thinkingTokens: 0 },
     { type: "done", stopReason: { kind: "max_tokens" } },
   ]);
 
@@ -307,7 +307,7 @@ test("cancel mid-stream: stream closes <500ms; debit NOT called", async () => {
     { type: "text_delta", text: "<p>first" },
     { __wait: gate.promise },
     { type: "text_delta", text: "<p>after-cancel" }, // never reached
-    { type: "usage", inputTokens: 10, outputTokens: 20, cachedTokens: 0 }, // never reached
+    { type: "usage", inputTokens: 10, outputTokens: 20, cachedTokens: 0, thinkingTokens: 0 }, // never reached
     { type: "done", stopReason: { kind: "end_turn" } },
   ]);
 
@@ -361,7 +361,7 @@ test("cancel BEFORE first event yields no chunks and no debit", async () => {
   const provider = scriptedProvider([
     { __wait: gate.promise },
     { type: "text_delta", text: "<p>x" },
-    { type: "usage", inputTokens: 10, outputTokens: 20, cachedTokens: 0 },
+    { type: "usage", inputTokens: 10, outputTokens: 20, cachedTokens: 0, thinkingTokens: 0 },
     { type: "done", stopReason: { kind: "end_turn" } },
   ]);
 
@@ -392,7 +392,7 @@ test("cancel via stream.cancel() (consumer side) forwards to upstream", async ()
   const provider = scriptedProvider([
     { type: "text_delta", text: "<p>seen" },
     { __wait: gate.promise },
-    { type: "usage", inputTokens: 1, outputTokens: 2, cachedTokens: 0 },
+    { type: "usage", inputTokens: 1, outputTokens: 2, cachedTokens: 0, thinkingTokens: 0 },
     { type: "done", stopReason: { kind: "end_turn" } },
   ]);
 
@@ -428,7 +428,7 @@ test("cancel AFTER usage: one debit recorded, no refund, stopKind=cancelled", as
   const gate = awaitable();
   const provider = scriptedProvider([
     { type: "text_delta", text: "<p>warm" },
-    { type: "usage", inputTokens: 50, outputTokens: 100, cachedTokens: 0 },
+    { type: "usage", inputTokens: 50, outputTokens: 100, cachedTokens: 0, thinkingTokens: 0 },
     { __wait: gate.promise },
     { type: "done", stopReason: { kind: "end_turn" } },
   ]);
@@ -555,7 +555,7 @@ test("HtmlStream.write throws (slot-path) → stream errors, no further chunks",
   const provider = scriptedProvider([
     { type: "text_delta", text: '<div data-slot-path="x">' },
     { type: "text_delta", text: "more" },
-    { type: "usage", inputTokens: 1, outputTokens: 1, cachedTokens: 0 },
+    { type: "usage", inputTokens: 1, outputTokens: 1, cachedTokens: 0, thinkingTokens: 0 },
     { type: "done", stopReason: { kind: "end_turn" } },
   ]);
 
@@ -586,7 +586,7 @@ test("debit failure logs but does NOT break the stream", async () => {
   const debit = failingDebit(1);
   const provider = scriptedProvider([
     { type: "text_delta", text: "<p>x</p>" },
-    { type: "usage", inputTokens: 10, outputTokens: 10, cachedTokens: 0 },
+    { type: "usage", inputTokens: 10, outputTokens: 10, cachedTokens: 0, thinkingTokens: 0 },
     { type: "text_delta", text: "<p>y</p>" },
     { type: "done", stopReason: { kind: "end_turn" } },
   ]);
@@ -675,7 +675,7 @@ test("bypass: la paleta emitida por el modelo sobrevive como carrier data-ol-tw"
       type: "text_delta",
       text: '</head><body><span class="text-blood-500">x</span></body></html>',
     },
-    { type: "usage", inputTokens: 10, outputTokens: 20, cachedTokens: 0 },
+    { type: "usage", inputTokens: 10, outputTokens: 20, cachedTokens: 0, thinkingTokens: 0 },
     { type: "done", stopReason: { kind: "end_turn" } },
   ]);
   const { stream, done } = generateHtmlStream(
@@ -702,7 +702,7 @@ test("bypass: un <script data-ol-*> forjado por el modelo NO llega al finalHtml"
       type: "text_delta",
       text: '<script data-ol-pwn>window.__pwn=1</script></head><body><p class="p-4">x</p></body></html>',
     },
-    { type: "usage", inputTokens: 10, outputTokens: 20, cachedTokens: 0 },
+    { type: "usage", inputTokens: 10, outputTokens: 20, cachedTokens: 0, thinkingTokens: 0 },
     { type: "done", stopReason: { kind: "end_turn" } },
   ]);
   const { stream, done } = generateHtmlStream(
@@ -726,7 +726,7 @@ test("bypass: sin config del modelo no se inventa carrier y el doc queda canóni
   const provider = scriptedProvider([
     { type: "text_delta", text: REAL_DOC_OPEN },
     { type: "text_delta", text: '</head><body><p class="p-4">x</p></body></html>' },
-    { type: "usage", inputTokens: 5, outputTokens: 5, cachedTokens: 0 },
+    { type: "usage", inputTokens: 5, outputTokens: 5, cachedTokens: 0, thinkingTokens: 0 },
     { type: "done", stopReason: { kind: "end_turn" } },
   ]);
   const { stream, done } = generateHtmlStream(

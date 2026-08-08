@@ -128,6 +128,8 @@ pub struct StreamEvent {
     /// discount count (`cachedContentTokenCount`) — `Some(0)` when the
     /// provider reported no cache hit, `None` on every non-usage variant.
     pub cached_tokens: Option<u32>,
+    /// Populated only for `type == "usage"`; `Some(0)` when absent upstream.
+    pub thinking_tokens: Option<u32>,
     pub stop_reason: Option<StopReason>,
     /// Populated only for `type == "function_call"`.
     pub name: Option<String>,
@@ -285,6 +287,7 @@ impl From<NativeStreamEvent> for StreamEvent {
                 input_tokens: None,
                 output_tokens: None,
                 cached_tokens: None,
+                thinking_tokens: None,
                 stop_reason: None,
                 name: None,
                 args_json: None,
@@ -297,6 +300,7 @@ impl From<NativeStreamEvent> for StreamEvent {
                 input_tokens: None,
                 output_tokens: None,
                 cached_tokens: None,
+                thinking_tokens: None,
                 stop_reason: None,
                 name: None,
                 args_json: None,
@@ -306,6 +310,7 @@ impl From<NativeStreamEvent> for StreamEvent {
                 input_tokens,
                 output_tokens,
                 cached_tokens,
+                thinking_tokens,
             } => Self {
                 event_type: "usage".to_owned(),
                 id: None,
@@ -313,6 +318,7 @@ impl From<NativeStreamEvent> for StreamEvent {
                 input_tokens: Some(input_tokens),
                 output_tokens: Some(output_tokens),
                 cached_tokens: Some(cached_tokens),
+                thinking_tokens: Some(thinking_tokens),
                 stop_reason: None,
                 name: None,
                 args_json: None,
@@ -325,6 +331,7 @@ impl From<NativeStreamEvent> for StreamEvent {
                 input_tokens: None,
                 output_tokens: None,
                 cached_tokens: None,
+                thinking_tokens: None,
                 stop_reason: Some(stop_reason.into()),
                 name: None,
                 args_json: None,
@@ -341,6 +348,7 @@ impl From<NativeStreamEvent> for StreamEvent {
                 input_tokens: None,
                 output_tokens: None,
                 cached_tokens: None,
+                thinking_tokens: None,
                 stop_reason: None,
                 name: Some(name),
                 args_json: Some(args_json),
@@ -635,6 +643,7 @@ mod tests {
             input_tokens: 12,
             output_tokens: 34,
             cached_tokens: 0,
+            thinking_tokens: 0,
         }
         .into();
         assert_eq!(js.event_type, "usage");
@@ -649,9 +658,11 @@ mod tests {
             input_tokens: 120,
             output_tokens: 30,
             cached_tokens: 100,
+            thinking_tokens: 40,
         }
         .into();
         assert_eq!(js.cached_tokens, Some(100));
+        assert_eq!(js.thinking_tokens, Some(40));
     }
 
     #[test]
