@@ -15,10 +15,14 @@ export interface VisualEngine2AQualifiedTemplate {
   inventorySha256: string;
 }
 
-export interface QualifiedCatalogTemplate {
+export interface SelectionCatalogTemplate {
   id: string;
   status: "published" | "draft" | "archived";
   visualMetadata: TemplateVisualMetadata | null;
+}
+
+export interface TemplateMaterial {
+  id: string;
   html: string;
   inventory: SkeletonInventory;
 }
@@ -103,20 +107,23 @@ function casesAreValid(cases: readonly VisualEngine2APilotCase[]): Qualification
   return null;
 }
 
-function catalogValue(template: QualifiedCatalogTemplate) {
+function catalogValue(template: SelectionCatalogTemplate) {
   return {
     id: template.id,
     status: template.status,
     visualMetadata: template.visualMetadata,
-    html: template.html,
-    inventory: template.inventory,
   };
 }
 
-function templateIsBuildable(template: QualifiedCatalogTemplate): boolean {
+function selectionTemplateIsAllowlisted(template: SelectionCatalogTemplate): boolean {
   if (template.id.trim().length === 0 || template.status !== "published") return false;
   const metadata = TemplateVisualMetadataSchema.safeParse(template.visualMetadata);
   if (!metadata.success || metadata.data.reviewStatus !== "reviewed" || metadata.data.themeability !== "high") return false;
+  return true;
+}
+
+function materialIsBuildable(template: TemplateMaterial): boolean {
+  if (template.id.trim().length === 0) return false;
   if (!SkeletonInventorySchema.safeParse(template.inventory).success || template.inventory.templateId !== template.id) return false;
   try {
     return canonicalJsonSha256(buildSkeletonInventory(template.html, template.id)) === canonicalJsonSha256(template.inventory);
@@ -125,16 +132,27 @@ function templateIsBuildable(template: QualifiedCatalogTemplate): boolean {
   }
 }
 
-function catalogIsValid(cases: readonly VisualEngine2APilotCase[], templates: readonly QualifiedCatalogTemplate[]): QualificationFailureCode | null {
-  if (templates.length === 0 || new Set(templates.map((template) => template.id)).size !== templates.length) return "invalid_catalog";
-  const byId = new Map(templates.map((template) => [template.id, template]));
-  for (const id of new Set(cases.flatMap((caseRow) => caseRow.allowedSkeletonTemplateIds))) {
-    const template = byId.get(id);
-    if (!template) return "missing_allowlisted_template";
-    if (!templateIsBuildable(template)) return "invalid_allowlisted_template";
+function catalogIsValid(
+  cases: readonly VisualEngine2APilotCase[],
+  selectionCatalog: readonly SelectionCatalogTemplate[],
+  templateMaterials: readonly TemplateMaterial[],
+): QualificationFailureCode | null {
+  if (selectionCatalog.length === 0 || new Set(selectionCatalog.map((template) => template.id)).size !== selectionCatalog.length) return "invalid_catalog";
+  const allowedIds = new Set(cases.flatMap((caseRow) => caseRow.allowedSkeletonTemplateIds));
+  const selectionById = new Map(selectionCatalog.map((template) => [template.id, template]));
+  const materialById = new Map(templateMaterials.map((template) => [template.id, template]));
+  for (const id of allowedIds) {
+    const selection = selectionById.get(id);
+    if (!selection) return "missing_allowlisted_template";
+    if (!selectionTemplateIsAllowlisted(selection)) return "invalid_allowlisted_template";
+    const material = materialById.get(id);
+    if (!material) return "invalid_allowlisted_template";
   }
-  for (const template of templates) {
-    if (!templateIsBuildable(template)) return "invalid_template";
+  if (templateMaterials.length !== allowedIds.size
+    || new Set(templateMaterials.map((template) => template.id)).size !== templateMaterials.length
+    || templateMaterials.some((template) => !allowedIds.has(template.id))) return "invalid_template";
+  for (const id of allowedIds) {
+    if (!materialIsBuildable(materialById.get(id)!)) return "invalid_allowlisted_template";
   }
   return null;
 }
@@ -145,23 +163,25 @@ function isCommitSha(value: string): boolean {
 
 export function qualifyVisualEngine2ACohort(args: {
   cases: readonly VisualEngine2APilotCase[];
-  templates: readonly QualifiedCatalogTemplate[];
+  selectionCatalog: readonly SelectionCatalogTemplate[];
+  templateMaterials: readonly TemplateMaterial[];
   commitSha: string;
 }): QualificationResult {
   const caseFailure = casesAreValid(args.cases);
   if (caseFailure) return FAILURE(caseFailure);
-  const catalogFailure = catalogIsValid(args.cases, args.templates);
+  const catalogFailure = catalogIsValid(args.cases, args.selectionCatalog, args.templateMaterials);
   if (catalogFailure) return FAILURE(catalogFailure);
   if (!isCommitSha(args.commitSha)) return FAILURE("invalid_catalog");
 
-  const templateById = new Map(args.templates.map((template) => [template.id, template]));
-  const selected: Array<{ caseRow: VisualEngine2APilotCase; template: QualifiedCatalogTemplate }> = [];
+  const selectionById = new Map(args.selectionCatalog.map((template) => [template.id, template]));
+  const materialById = new Map(args.templateMaterials.map((template) => [template.id, template]));
+  const selected: Array<{ caseRow: VisualEngine2APilotCase; template: SelectionCatalogTemplate }> = [];
   for (const caseRow of args.cases) {
-    const ranked = rankTemplates(caseRow.expectedIntent, args.templates);
+    const ranked = rankTemplates(caseRow.expectedIntent, args.selectionCatalog);
     const decision = decideGenerationRoute(ranked);
     if (decision.route !== "template_skeleton" || decision.templateId === null
       || !caseRow.allowedSkeletonTemplateIds.includes(decision.templateId)) return FAILURE("no_qualified_selection");
-    const template = templateById.get(decision.templateId);
+    const template = selectionById.get(decision.templateId);
     if (!template) return FAILURE("no_qualified_selection");
     selected.push({ caseRow, template });
   }
@@ -176,20 +196,21 @@ export function qualifyVisualEngine2ACohort(args: {
     selectedTemplateId: template.id,
     allowedTemplateIdsSha256: canonicalJsonSha256([...caseRow.allowedSkeletonTemplateIds].sort()),
   })).sort((left, right) => left.caseId.localeCompare(right.caseId));
-  const templates = [...selectedCounts.keys()].sort((left, right) => left.localeCompare(right)).map((id) => {
-    const template = templateById.get(id)!;
+  const templates = [...new Set(args.cases.flatMap((caseRow) => caseRow.allowedSkeletonTemplateIds))].sort((left, right) => left.localeCompare(right)).map((id) => {
+    const template = selectionById.get(id)!;
+    const material = materialById.get(id)!;
     return {
       id,
       metadataSha256: canonicalJsonSha256(template.visualMetadata),
-      htmlSha256: canonicalJsonSha256(template.html),
-      inventorySha256: canonicalJsonSha256(template.inventory),
+      htmlSha256: canonicalJsonSha256(material.html),
+      inventorySha256: canonicalJsonSha256(material.inventory),
     };
   });
   const manifestWithoutHash: Omit<VisualEngine2AQualificationManifest, "manifestSha256"> = {
     schemaVersion: "visual-engine-2a-qualification/1.0",
     datasetVersion: VISUAL_ENGINE_2A_DATASET_VERSION,
     datasetSha256: canonicalJsonSha256(args.cases),
-    catalogSha256: canonicalJsonSha256([...args.templates].map(catalogValue).sort((left, right) => left.id.localeCompare(right.id))),
+    catalogSha256: canonicalJsonSha256([...args.selectionCatalog].map(catalogValue).sort((left, right) => left.id.localeCompare(right.id))),
     commitSha: args.commitSha,
     promptVersion: INTENT_PROMPT_VERSION,
     policyVersion: DECISION_POLICY_VERSION,

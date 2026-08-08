@@ -9,7 +9,8 @@ import {
 import {
   qualifyVisualEngine2ACohort,
   verifyVisualEngine2AQualification,
-  type QualifiedCatalogTemplate,
+  type SelectionCatalogTemplate,
+  type TemplateMaterial,
 } from "./visual-engine-2a-qualification";
 
 const HTML = "<!doctype html><html><body><header><a class=\"cta\" href=\"#contact\">Start</a></header><main><section><h1>Template</h1></section><section><p>Details</p></section></main></body></html>";
@@ -38,21 +39,33 @@ function metadataFor(caseRow: VisualEngine2APilotCase) {
   };
 }
 
-function templatesFor(cases = VISUAL_ENGINE_2A_PILOT_CASES): QualifiedCatalogTemplate[] {
+function selectionCatalogFor(cases = VISUAL_ENGINE_2A_PILOT_CASES): SelectionCatalogTemplate[] {
   return cases.map((caseRow) => {
     const id = caseRow.allowedSkeletonTemplateIds[0];
     return {
       id,
       status: "published" as const,
       visualMetadata: metadataFor(caseRow),
+    };
+  });
+}
+
+function templateMaterialsFor(cases = VISUAL_ENGINE_2A_PILOT_CASES): TemplateMaterial[] {
+  return [...new Set(cases.flatMap((caseRow) => caseRow.allowedSkeletonTemplateIds))].map((id) => {
+    return {
+      id,
       html: HTML,
       inventory: buildSkeletonInventory(HTML, id),
     };
   });
 }
 
-function qualify(cases = cloneCases(), templates = templatesFor()) {
-  return qualifyVisualEngine2ACohort({ cases, templates, commitSha: "a".repeat(40) });
+function qualify(
+  cases = cloneCases(),
+  selectionCatalog = selectionCatalogFor(),
+  templateMaterials = templateMaterialsFor(),
+) {
+  return qualifyVisualEngine2ACohort({ cases, selectionCatalog, templateMaterials, commitSha: "a".repeat(40) });
 }
 
 describe("qualifyVisualEngine2ACohort", () => {
@@ -112,41 +125,48 @@ describe("qualifyVisualEngine2ACohort", () => {
   });
 
   it.each([
-    ["unpublished", (templates: QualifiedCatalogTemplate[]) => { templates[0].status = "draft"; }],
-    ["unreviewed", (templates: QualifiedCatalogTemplate[]) => { templates[0].visualMetadata!.reviewStatus = "unreviewed"; }],
-    ["non-high themeability", (templates: QualifiedCatalogTemplate[]) => { templates[0].visualMetadata!.themeability = "medium"; }],
-    ["hard scoring filter", (templates: QualifiedCatalogTemplate[]) => { templates[0].visualMetadata!.negativeTags = ["education"]; }],
-    ["full route", (templates: QualifiedCatalogTemplate[]) => { templates[0].visualMetadata!.emotionalRegisters = [...VISUAL_ENGINE_2A_PILOT_CASES[0].expectedIntent.emotionalGoals]; templates[0].visualMetadata!.visualSignals = [...VISUAL_ENGINE_2A_PILOT_CASES[0].expectedIntent.requiredVisualSignals]; }],
-    ["structural fit below 0.75", (templates: QualifiedCatalogTemplate[]) => { templates[0].visualMetadata!.supportedSectionRoles = []; }],
-    ["identity fit at or above 0.80", (templates: QualifiedCatalogTemplate[]) => { templates[0].visualMetadata!.emotionalRegisters = [...VISUAL_ENGINE_2A_PILOT_CASES[0].expectedIntent.emotionalGoals]; templates[0].visualMetadata!.visualSignals = [...VISUAL_ENGINE_2A_PILOT_CASES[0].expectedIntent.requiredVisualSignals]; }],
-    ["adaptation cost above 0.60", (templates: QualifiedCatalogTemplate[]) => { templates[0].visualMetadata!.domains = []; }],
-    ["invalid inventory", (templates: QualifiedCatalogTemplate[]) => { templates[0].inventory = { ...templates[0].inventory, templateId: "other" }; }],
+    ["unpublished", (selectionCatalog: SelectionCatalogTemplate[]) => { selectionCatalog[0].status = "draft"; }],
+    ["unreviewed", (selectionCatalog: SelectionCatalogTemplate[]) => { selectionCatalog[0].visualMetadata!.reviewStatus = "unreviewed"; }],
+    ["non-high themeability", (selectionCatalog: SelectionCatalogTemplate[]) => { selectionCatalog[0].visualMetadata!.themeability = "medium"; }],
+    ["hard scoring filter", (selectionCatalog: SelectionCatalogTemplate[]) => { selectionCatalog[0].visualMetadata!.negativeTags = ["education"]; }],
+    ["full route", (selectionCatalog: SelectionCatalogTemplate[]) => { selectionCatalog[0].visualMetadata!.emotionalRegisters = [...VISUAL_ENGINE_2A_PILOT_CASES[0].expectedIntent.emotionalGoals]; selectionCatalog[0].visualMetadata!.visualSignals = [...VISUAL_ENGINE_2A_PILOT_CASES[0].expectedIntent.requiredVisualSignals]; }],
+    ["structural fit below 0.75", (selectionCatalog: SelectionCatalogTemplate[]) => { selectionCatalog[0].visualMetadata!.supportedSectionRoles = []; }],
+    ["identity fit at or above 0.80", (selectionCatalog: SelectionCatalogTemplate[]) => { selectionCatalog[0].visualMetadata!.emotionalRegisters = [...VISUAL_ENGINE_2A_PILOT_CASES[0].expectedIntent.emotionalGoals]; selectionCatalog[0].visualMetadata!.visualSignals = [...VISUAL_ENGINE_2A_PILOT_CASES[0].expectedIntent.requiredVisualSignals]; }],
+    ["adaptation cost above 0.60", (selectionCatalog: SelectionCatalogTemplate[]) => { selectionCatalog[0].visualMetadata!.domains = []; }],
+    ["invalid inventory", (_selectionCatalog: SelectionCatalogTemplate[], templateMaterials: TemplateMaterial[]) => { templateMaterials[0].inventory = { ...templateMaterials[0].inventory, templateId: "other" }; }],
   ])("fails deterministic qualification for %s", (_label, mutate) => {
-    const templates = templatesFor();
-    mutate(templates);
-    expect(qualify(undefined, templates).ok).toBe(false);
+    const selectionCatalog = selectionCatalogFor();
+    const templateMaterials = templateMaterialsFor();
+    mutate(selectionCatalog, templateMaterials);
+    expect(qualify(undefined, selectionCatalog, templateMaterials).ok).toBe(false);
   });
 
   it.each([
     ["missing", undefined],
-    ["draft", (template: QualifiedCatalogTemplate) => { template.status = "draft"; }],
-    ["unreviewed", (template: QualifiedCatalogTemplate) => { template.visualMetadata!.reviewStatus = "unreviewed"; }],
-    ["non-high themeability", (template: QualifiedCatalogTemplate) => { template.visualMetadata!.themeability = "medium"; }],
-    ["invalid inventory", (template: QualifiedCatalogTemplate) => { template.inventory = { ...template.inventory, templateId: "wrong-template" }; }],
+    ["draft", (template: SelectionCatalogTemplate) => { template.status = "draft"; }],
+    ["unreviewed", (template: SelectionCatalogTemplate) => { template.visualMetadata!.reviewStatus = "unreviewed"; }],
+    ["non-high themeability", (template: SelectionCatalogTemplate) => { template.visualMetadata!.themeability = "medium"; }],
+    ["invalid inventory", (template: TemplateMaterial) => { template.inventory = { ...template.inventory, templateId: "wrong-template" }; }],
   ])("rejects an additional %s allowlisted template even when the chosen template remains valid", (_label, mutate) => {
     const cases = cloneCases();
     const extraId = "additional-allowlisted";
     cases[0].allowedSkeletonTemplateIds = [cases[0].allowedSkeletonTemplateIds[0], extraId];
-    const templates = templatesFor();
+    const selectionCatalog = selectionCatalogFor();
+    const templateMaterials = templateMaterialsFor();
     if (mutate) {
-      const extra: QualifiedCatalogTemplate = {
+      const selection: SelectionCatalogTemplate = {
         id: extraId, status: "published", visualMetadata: metadataFor(cases[0]),
+      };
+      const material: TemplateMaterial = {
+        id: extraId,
         html: HTML, inventory: buildSkeletonInventory(HTML, extraId),
       };
-      mutate(extra);
-      templates.push(extra);
+      if (_label === "invalid inventory") (mutate as (template: TemplateMaterial) => void)(material);
+      else (mutate as (template: SelectionCatalogTemplate) => void)(selection);
+      selectionCatalog.push(selection);
+      templateMaterials.push(material);
     }
-    expect(qualify(cases, templates)).toEqual({
+    expect(qualify(cases, selectionCatalog, templateMaterials)).toEqual({
       ok: false,
       code: mutate ? "invalid_allowlisted_template" : "missing_allowlisted_template",
     });
@@ -155,7 +175,7 @@ describe("qualifyVisualEngine2ACohort", () => {
   it("rejects a chosen route outside its case allowlist at qualification time", () => {
     const cases = cloneCases();
     cases[0].allowedSkeletonTemplateIds = [cases[1].allowedSkeletonTemplateIds[0]];
-    expect(qualify(cases)).toEqual({ ok: false, code: "no_qualified_selection" });
+    expect(qualify(cases, selectionCatalogFor(), templateMaterialsFor(cases))).toEqual({ ok: false, code: "no_qualified_selection" });
   });
 
   it("uses the fixed production route boundaries without a qualification threshold override", () => {
@@ -177,19 +197,26 @@ describe("qualifyVisualEngine2ACohort", () => {
     sharedMetadata.audiences = [...new Set(cases.map((caseRow) => caseRow.expectedIntent.audience.primary))];
     sharedMetadata.supportedSiteTypes = [...new Set(cases.map((caseRow) => caseRow.expectedIntent.functional.siteType))];
     sharedMetadata.supportedSectionRoles = [...new Set(cases.flatMap((caseRow) => caseRow.expectedIntent.functional.requiredSections))];
-    const shared = [{
+    const sharedSelectionCatalog = [{
       id: "shared", status: "published" as const, visualMetadata: sharedMetadata,
+    }];
+    const sharedTemplateMaterials = [{
+      id: "shared",
       html: HTML, inventory: buildSkeletonInventory(HTML, "shared"),
     }];
-    expect(qualify(cases, shared)).toEqual({ ok: false, code: "insufficient_selected_templates" });
+    expect(qualify(cases, sharedSelectionCatalog, sharedTemplateMaterials)).toEqual({ ok: false, code: "insufficient_selected_templates" });
 
     const distributedCases = cloneCases();
     for (const caseRow of distributedCases.slice(0, 6)) caseRow.allowedSkeletonTemplateIds = ["shared"];
-    const distributedTemplates = [
-      ...shared,
-      ...templatesFor(distributedCases.slice(6)),
+    const distributedSelectionCatalog = [
+      ...sharedSelectionCatalog,
+      ...selectionCatalogFor(distributedCases.slice(6)),
     ];
-    expect(qualify(distributedCases, distributedTemplates)).toEqual({ ok: false, code: "template_overrepresented" });
+    const distributedTemplateMaterials = [
+      ...sharedTemplateMaterials,
+      ...templateMaterialsFor(distributedCases.slice(6)),
+    ];
+    expect(qualify(distributedCases, distributedSelectionCatalog, distributedTemplateMaterials)).toEqual({ ok: false, code: "template_overrepresented" });
   });
 
   it("hashes canonical input by value and detects every material staleness dimension", () => {
@@ -229,18 +256,17 @@ describe("qualifyVisualEngine2ACohort", () => {
     const changedHtml = HTML.replace("<section><p>Details</p></section>", "<section><p>Details</p></section><section><p>More</p></section>");
     const variants = [
       () => qualify(cloneCases().map((caseRow, index) => index === 0 ? { ...caseRow, brief: `${caseRow.brief}!` } : caseRow)),
-      () => qualify(undefined, templatesFor().map((template, index) => index === 0 ? { ...template, visualMetadata: { ...template.visualMetadata!, layoutTraits: ["additional_trait"] } } : template)),
-      () => qualify(undefined, templatesFor().map((template, index) => index === 0 ? { ...template, html: changedHtml, inventory: buildSkeletonInventory(changedHtml, template.id) } : template)),
+      () => qualify(undefined, selectionCatalogFor().map((template, index) => index === 0 ? { ...template, visualMetadata: { ...template.visualMetadata!, layoutTraits: ["additional_trait"] } } : template)),
+      () => qualify(undefined, selectionCatalogFor(), templateMaterialsFor().map((template, index) => index === 0 ? { ...template, html: changedHtml, inventory: buildSkeletonInventory(changedHtml, template.id) } : template)),
       () => {
         const extraMetadata = metadataFor(VISUAL_ENGINE_2A_PILOT_CASES[0]);
         extraMetadata.domains = ["unrelated_domain"];
         extraMetadata.audiences = ["unrelated_audience"];
         extraMetadata.supportedSiteTypes = ["unrelated_site"];
         extraMetadata.supportedSectionRoles = ["unrelated_section"];
-        return qualify(undefined, [...templatesFor(), {
+        return qualify(undefined, [...selectionCatalogFor(), {
           id: "zz-extra", status: "published" as const, visualMetadata: extraMetadata,
-          html: HTML, inventory: buildSkeletonInventory(HTML, "zz-extra"),
-        }]);
+        }], templateMaterialsFor());
       },
     ];
     for (const variant of variants) {
@@ -248,6 +274,29 @@ describe("qualifyVisualEngine2ACohort", () => {
       expect(result.ok).toBe(true);
       if (result.ok) expect(result.manifest.manifestSha256).not.toBe(baseline.manifest.manifestSha256);
     }
-    expect(qualify(undefined, templatesFor().map((template, index) => index === 0 ? { ...template, status: "archived" } : template)).ok).toBe(false);
+    expect(qualify(undefined, selectionCatalogFor().map((template, index) => index === 0 ? { ...template, status: "archived" } : template), templateMaterialsFor()).ok).toBe(false);
+  });
+
+  it("ranks every published catalog record while accepting HTML only for the allowlist", () => {
+    const selectionCatalog = selectionCatalogFor();
+    const templateMaterials = templateMaterialsFor();
+    const extra = {
+      id: "aaa-unallowlisted-winner",
+      status: "published" as const,
+      visualMetadata: structuredClone(selectionCatalog[0].visualMetadata),
+    };
+    selectionCatalog.push(extra);
+    expect(qualify(undefined, selectionCatalog, templateMaterials)).toEqual({ ok: false, code: "no_qualified_selection" });
+    expect(qualify(undefined, selectionCatalogFor(), [])).toEqual({ ok: false, code: "invalid_allowlisted_template" });
+  });
+
+  it("rejects fetched material outside the union of all case allowlists", () => {
+    const extraMaterial: TemplateMaterial = {
+      id: "unallowlisted-html",
+      html: HTML,
+      inventory: buildSkeletonInventory(HTML, "unallowlisted-html"),
+    };
+    expect(qualify(undefined, selectionCatalogFor(), [...templateMaterialsFor(), extraMaterial]))
+      .toEqual({ ok: false, code: "invalid_template" });
   });
 });
