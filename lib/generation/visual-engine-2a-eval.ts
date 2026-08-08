@@ -32,6 +32,8 @@ export interface VisualEngine2APoolRow {
   allowedSkeletonTemplateIds: string[];
 }
 
+export type QualifiedPilotRow = VisualEngine2APoolRow & { templateId: string };
+
 export function buildVisualEngine2APool(cases: readonly VisualEngine2APilotCase[]): VisualEngine2APoolRow[] {
   const rows = cases.flatMap((item) => VISUAL_ENGINE_2A_SCENARIOS.map((scenario) => ({
     caseId: item.id,
@@ -70,10 +72,8 @@ export async function preflightVisualEngine2A(args: {
     templates: readonly unknown[],
     row: VisualEngine2APoolRow,
   ) => Promise<PilotPreflightSelection>;
-  /** Accepted for callers that share pilot dependencies; never invoked in preflight. */
-  reserve?: (...args: never[]) => unknown;
 }): Promise<
-  | { ok: true; eligible: Array<VisualEngine2APoolRow & { templateId: string }>; counts: PilotPreflightCounts }
+  | { ok: true; eligible: QualifiedPilotRow[]; counts: PilotPreflightCounts }
   | { ok: false; code: "insufficient_eligible_cases"; counts: PilotPreflightCounts }
 > {
   const pool = buildVisualEngine2APool(args.cases);
@@ -81,7 +81,7 @@ export async function preflightVisualEngine2A(args: {
     pool: pool.length, analyzed: 0, selectionFailures: 0,
     templateSkeleton: 0, templateFull: 0, sectionComposition: 0, safeFailure: 0, scratchControlled: 0,
   };
-  const eligible: Array<VisualEngine2APoolRow & { templateId: string }> = [];
+  const eligible: QualifiedPilotRow[] = [];
   for (const row of pool) {
     const result = await args.select(row.brief, args.templates, row);
     counts.analyzed += 1;

@@ -63,16 +63,13 @@ describe("Visual Engine 2A pilot", () => {
   });
 
   it("stops before reservation when fewer than 75 candidates are eligible", async () => {
-    const reserve = vi.fn();
     const result = await preflightVisualEngine2A({
       cases: VISUAL_ENGINE_2A_PILOT_CASES,
       templates: [],
       select: async () => ({ ok: true, route: "template_full", templateId: "t" }),
-      reserve,
     });
     expect(result.ok).toBe(false);
     expect(result.counts).toMatchObject({ pool: 75, analyzed: 75, templateSkeleton: 0 });
-    expect(reserve).not.toHaveBeenCalled();
   });
 
   it("caps the sorted safe skeleton set at exactly 75", async () => {

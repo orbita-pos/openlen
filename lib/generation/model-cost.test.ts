@@ -28,6 +28,15 @@ describe("calculateModelCostMicros", () => {
     }, RATE_CARD, 20)).toEqual({ productionEquivalentCostMicromxn: 0, observedPilotCostMicromxn: 0 });
     expect(() => calculateModelCostMicros({ creative: { inputTokens: 0, cachedTokens: 0, outputTokens: 0, thinkingTokens: 0 }, critic: { inputTokens: 0, cachedTokens: 0, outputTokens: 0, thinkingTokens: 0 } }, RATE_CARD, 0)).toThrow("mxnPerUsd");
   });
+
+  it("prices an intent-only preflight through the shared frozen rate-card math", () => {
+    expect(calculateModelCostMicros({
+      intent: { inputTokens: 7_500, cachedTokens: 1_875, outputTokens: 750, thinkingTokens: 375 },
+    }, RATE_CARD, 20)).toEqual({
+      productionEquivalentCostMicromxn: 371_250,
+      observedPilotCostMicromxn: 371_250,
+    });
+  });
 });
 
 describe("parsePilotRateCardFromEnv", () => {

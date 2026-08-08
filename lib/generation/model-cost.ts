@@ -20,6 +20,12 @@ export interface PilotModelUsage {
   duplicateShadowCandidateFill?: ModelTokenUsage;
 }
 
+export interface IntentOnlyModelUsage {
+  intent: ModelTokenUsage;
+}
+
+export type PilotRateCard = ModelRateCard;
+
 export interface CostBreakdown {
   productionEquivalentCostMicromxn: number;
   observedPilotCostMicromxn: number;
@@ -55,7 +61,7 @@ function usageMicromxn(usage: ModelTokenUsage, rateCard: ModelRateCard, mxnPerUs
 
 /** Calculates all cost from the fixed rate card captured for the pilot. */
 export function calculateModelCostMicros(
-  usage: PilotModelUsage,
+  usage: PilotModelUsage | IntentOnlyModelUsage,
   rateCard: ModelRateCard,
   mxnPerUsd: number,
 ): CostBreakdown {
@@ -65,6 +71,11 @@ export function calculateModelCostMicros(
   positiveFinite(rateCard.outputUsdPerMillion, "outputUsdPerMillion");
   positiveFinite(rateCard.thinkingUsdPerMillion, "thinkingUsdPerMillion");
   if (!rateCard.version.trim()) throw new Error("rate card version is required");
+
+  if ("intent" in usage) {
+    const cost = usageMicromxn(usage.intent, rateCard, mxnPerUsd);
+    return { productionEquivalentCostMicromxn: cost, observedPilotCostMicromxn: cost };
+  }
 
   const failed = (usage.failedCalls ?? []).reduce(
     (total, call) => total + usageMicromxn(call, rateCard, mxnPerUsd),
