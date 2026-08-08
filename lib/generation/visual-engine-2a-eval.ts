@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import type { SelectorEvalCase } from "./selector-cases";
 import type { CritiqueVerdict } from "@/lib/ai/vision-critique";
 import type { CompleteVisualEnginePilotRunOutcome } from "./visual-engine-pilot-store";
+import { pickWeighted } from "@/lib/curate/pick-template";
 
 export const VISUAL_ENGINE_2A_PILOT_SIZE = 75;
 export const VISUAL_ENGINE_2A_COST_LIMIT_MICROMXN = 400_000;
@@ -96,12 +97,35 @@ export async function preflightVisualEngine2A(args: {
   return { ok: true, eligible: eligible.slice(0, VISUAL_ENGINE_2A_PILOT_SIZE), counts };
 }
 
+/** Reproduces Quick's ranked weighted baseline while keeping the safe route only for the candidate. */
+export async function prepareVisualEngine2ABuilds<TCopy, TBuild>(args: {
+  rankedTemplateIds: string[];
+  safeTemplateId: string;
+  copy: TCopy;
+  random?: () => number;
+  fill(templateId: string, copy: TCopy): Promise<TBuild>;
+}): Promise<{
+  baselineTemplateId: string;
+  candidateTemplateId: string;
+  baselineBuild: TBuild;
+  candidateBuild: TBuild;
+}> {
+  const baselineTemplateId = pickWeighted(args.rankedTemplateIds, args.random);
+  if (!baselineTemplateId) throw new Error("Quick returned no weighted template");
+  const candidateTemplateId = args.safeTemplateId;
+  const [baselineBuild, candidateBuild] = await Promise.all([
+    args.fill(baselineTemplateId, args.copy),
+    args.fill(candidateTemplateId, args.copy),
+  ]);
+  return { baselineTemplateId, candidateTemplateId, baselineBuild, candidateBuild };
+}
+
 export type PilotReviewVerdict = "candidate" | "baseline" | "tie" | "invalid";
 export interface VisualEngine2AScoreRow {
   started: boolean;
   technicalSuccess: boolean;
-  comparable: boolean;
-  verdict: PilotReviewVerdict;
+  /** Null until a reviewer records a decision. */
+  verdict: PilotReviewVerdict | null;
   structuralFailure: boolean;
   partialPersistenceFailure: boolean;
   acceptedForbiddenSignals: number;
@@ -111,7 +135,12 @@ export interface VisualEngine2AScoreRow {
 export interface VisualEngine2AScorecard {
   started: number;
   technicalSuccesses: number;
+  technicalFailures: number;
   technicalSuccessRate: number;
+  reviewed: number;
+  expectedReviews: number;
+  unreviewed: number;
+  invalidReviews: number;
   comparable: number;
   candidateWins: number;
   requiredVisualWins: number;
@@ -131,7 +160,14 @@ export function scoreVisualEngine2APilot(
 ): VisualEngine2AScorecard {
   const startedRows = rows.filter((row) => row.started);
   const technicalSuccesses = startedRows.filter((row) => row.technicalSuccess).length;
-  const comparableRows = startedRows.filter((row) => row.comparable);
+  const technicalFailures = startedRows.length - technicalSuccesses;
+  const expectedReviews = technicalSuccesses;
+  const reviewedRows = startedRows.filter((row) => row.technicalSuccess && row.verdict !== null);
+  const unreviewed = expectedReviews - reviewedRows.length;
+  const invalidReviews = startedRows.filter((row) => row.verdict === "invalid").length;
+  const comparableRows = reviewedRows.filter(
+    (row) => row.verdict === "candidate" || row.verdict === "baseline" || row.verdict === "tie",
+  );
   const candidateWins = comparableRows.filter(
     (row) => row.verdict === "candidate" && row.acceptedForbiddenSignals === 0,
   ).length;
@@ -144,7 +180,9 @@ export function scoreVisualEngine2APilot(
   const failures: string[] = [];
   if (startedRows.length !== VISUAL_ENGINE_2A_PILOT_SIZE) failures.push("started");
   if (technicalSuccesses < 72) failures.push("technicalSuccess");
-  if (candidateWins < requiredVisualWins) failures.push("visualPreference");
+  if (unreviewed !== 0) failures.push("reviewCoverage");
+  if (invalidReviews !== 0) failures.push("invalidReview");
+  if (comparableRows.length === 0 || candidateWins < requiredVisualWins) failures.push("visualPreference");
   if (structuralFailures !== 0) failures.push("structuralIntegrity");
   if (partialPersistenceFailures !== 0) failures.push("partialPersistence");
   if (acceptedForbiddenSignals !== 0) failures.push("forbiddenSignals");
@@ -153,7 +191,12 @@ export function scoreVisualEngine2APilot(
   return {
     started: startedRows.length,
     technicalSuccesses,
+    technicalFailures,
     technicalSuccessRate: startedRows.length === 0 ? 0 : technicalSuccesses / startedRows.length,
+    reviewed: reviewedRows.length,
+    expectedReviews,
+    unreviewed,
+    invalidReviews,
     comparable: comparableRows.length,
     candidateWins,
     requiredVisualWins,
@@ -190,42 +233,90 @@ export function sha256(value: string | Uint8Array): string {
   return `sha256:${createHash("sha256").update(value).digest("hex")}`;
 }
 
+function canonicalJson(value: unknown): string {
+  if (value === null || typeof value !== "object") return JSON.stringify(value);
+  if (Array.isArray(value)) return `[${value.map(canonicalJson).join(",")}]`;
+  const object = value as Record<string, unknown>;
+  return `{${Object.keys(object).sort().map((key) => `${JSON.stringify(key)}:${canonicalJson(object[key])}`).join(",")}}`;
+}
+
+export function canonicalJsonSha256(value: unknown): string {
+  return sha256(canonicalJson(value));
+}
+
 export interface VisualEngine2ARollbackEvidence {
   schemaVersion: "visual-engine-2a-rollback/1.0";
   fixtureSha256: string;
   unsetOutputSha256: string;
   offOutputSha256: string;
   shadowOutputSha256: string;
+  unsetDeliverySha256: string;
+  offDeliverySha256: string;
+  shadowDeliverySha256: string;
+  unsetCreativeCalls: 0;
+  unsetPilotCalls: 0;
+  offCreativeCalls: 0;
+  offPilotCalls: 0;
+  shadowCreativeCalls: 1;
+  shadowPilotCalls: 1;
   candidateJobs: 1;
   verified: true;
   evidenceSha256: string;
 }
 
+export interface VisualEngine2ARollbackState {
+  selectedTemplateId: string;
+  finalizedHtml: string;
+  previewSequence: unknown[];
+  projectData: unknown;
+  creditDelta: number;
+  creativeCalls: number;
+  pilotCalls: number;
+  candidateJobs: number;
+}
+
+function rollbackDelivery(state: VisualEngine2ARollbackState) {
+  return {
+    selectedTemplateId: state.selectedTemplateId,
+    finalizedHtml: state.finalizedHtml,
+    previewSequence: state.previewSequence,
+    projectData: state.projectData,
+    creditDelta: state.creditDelta,
+  };
+}
+
 export function buildRollbackEvidence(args: {
   fixture: unknown;
-  unset: string;
-  off: string;
-  shadow: string;
-  candidateJobs: number;
+  unset: VisualEngine2ARollbackState;
+  off: VisualEngine2ARollbackState;
+  shadow: VisualEngine2ARollbackState;
 }): VisualEngine2ARollbackEvidence {
-  const unsetOutputSha256 = sha256(args.unset);
-  const offOutputSha256 = sha256(args.off);
-  const shadowOutputSha256 = sha256(args.shadow);
+  const unsetOutputSha256 = canonicalJsonSha256(args.unset);
+  const offOutputSha256 = canonicalJsonSha256(args.off);
+  const shadowOutputSha256 = canonicalJsonSha256(args.shadow);
+  const unsetDeliverySha256 = canonicalJsonSha256(rollbackDelivery(args.unset));
+  const offDeliverySha256 = canonicalJsonSha256(rollbackDelivery(args.off));
+  const shadowDeliverySha256 = canonicalJsonSha256(rollbackDelivery(args.shadow));
   if (unsetOutputSha256 !== offOutputSha256
-    || unsetOutputSha256 !== shadowOutputSha256
-    || args.candidateJobs !== 1) {
+    || unsetDeliverySha256 !== offDeliverySha256
+    || unsetDeliverySha256 !== shadowDeliverySha256
+    || args.unset.creativeCalls !== 0 || args.unset.pilotCalls !== 0 || args.unset.candidateJobs !== 0
+    || args.off.creativeCalls !== 0 || args.off.pilotCalls !== 0 || args.off.candidateJobs !== 0
+    || args.shadow.creativeCalls !== 1 || args.shadow.pilotCalls !== 1 || args.shadow.candidateJobs !== 1) {
     throw new Error("rollback verification failed");
   }
   const evidence = {
     schemaVersion: "visual-engine-2a-rollback/1.0",
-    fixtureSha256: sha256(JSON.stringify(args.fixture)),
-    unsetOutputSha256,
-    offOutputSha256,
-    shadowOutputSha256,
+    fixtureSha256: canonicalJsonSha256(args.fixture),
+    unsetOutputSha256, offOutputSha256, shadowOutputSha256,
+    unsetDeliverySha256, offDeliverySha256, shadowDeliverySha256,
+    unsetCreativeCalls: 0, unsetPilotCalls: 0,
+    offCreativeCalls: 0, offPilotCalls: 0,
+    shadowCreativeCalls: 1, shadowPilotCalls: 1,
     candidateJobs: 1,
     verified: true,
   } as const;
-  return { ...evidence, evidenceSha256: sha256(JSON.stringify(evidence)) };
+  return { ...evidence, evidenceSha256: canonicalJsonSha256(evidence) };
 }
 
 export function validateRollbackEvidence(
@@ -236,19 +327,52 @@ export function validateRollbackEvidence(
     && validEvidenceHash(value.fixtureSha256)
     && value.fixtureSha256 === expectedFixtureSha256
     && value.unsetOutputSha256 === value.offOutputSha256
-    && value.unsetOutputSha256 === value.shadowOutputSha256
     && validEvidenceHash(value.unsetOutputSha256)
+    && validEvidenceHash(value.shadowOutputSha256)
+    && value.unsetDeliverySha256 === value.offDeliverySha256
+    && value.unsetDeliverySha256 === value.shadowDeliverySha256
+    && validEvidenceHash(value.unsetDeliverySha256)
+    && value.unsetCreativeCalls === 0 && value.unsetPilotCalls === 0
+    && value.offCreativeCalls === 0 && value.offPilotCalls === 0
+    && value.shadowCreativeCalls === 1 && value.shadowPilotCalls === 1
     && value.candidateJobs === 1
     && value.verified === true
-    && value.evidenceSha256 === sha256(JSON.stringify({
+    && value.evidenceSha256 === canonicalJsonSha256({
       schemaVersion: value.schemaVersion,
       fixtureSha256: value.fixtureSha256,
       unsetOutputSha256: value.unsetOutputSha256,
       offOutputSha256: value.offOutputSha256,
       shadowOutputSha256: value.shadowOutputSha256,
+      unsetDeliverySha256: value.unsetDeliverySha256,
+      offDeliverySha256: value.offDeliverySha256,
+      shadowDeliverySha256: value.shadowDeliverySha256,
+      unsetCreativeCalls: value.unsetCreativeCalls,
+      unsetPilotCalls: value.unsetPilotCalls,
+      offCreativeCalls: value.offCreativeCalls,
+      offPilotCalls: value.offPilotCalls,
+      shadowCreativeCalls: value.shadowCreativeCalls,
+      shadowPilotCalls: value.shadowPilotCalls,
       candidateJobs: value.candidateJobs,
       verified: value.verified,
-    }));
+    });
+}
+
+export async function captureVisualEngine2ARollbackModes<T>(deliver: () => Promise<T>): Promise<{
+  unset: T; off: T; shadow: T;
+}> {
+  const previous = process.env.OPENLEN_VISUAL_ENGINE;
+  try {
+    delete process.env.OPENLEN_VISUAL_ENGINE;
+    const unset = await deliver();
+    process.env.OPENLEN_VISUAL_ENGINE = "off";
+    const off = await deliver();
+    process.env.OPENLEN_VISUAL_ENGINE = "shadow";
+    const shadow = await deliver();
+    return { unset, off, shadow };
+  } finally {
+    if (previous === undefined) delete process.env.OPENLEN_VISUAL_ENGINE;
+    else process.env.OPENLEN_VISUAL_ENGINE = previous;
+  }
 }
 
 function validEvidenceHash(value: string): boolean {
@@ -385,7 +509,7 @@ export async function generateVisualEngine2AEvidence(args: {
         pilotRunId: reservation.id,
         baselineNormal, baselineNeutral, candidateNormal, candidateNeutral,
       });
-      const key = sha256(JSON.stringify(manifest)).slice("sha256:".length);
+      const key = canonicalJsonSha256(manifest).slice("sha256:".length);
       await args.deps.writeEvidence(key, { baselineNormal, baselineNeutral, candidateNormal, candidateNeutral }, manifest);
       evidence += 1;
       await args.deps.complete(reservation.id, {

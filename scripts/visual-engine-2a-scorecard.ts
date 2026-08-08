@@ -5,7 +5,7 @@ import { sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import {
   scoreVisualEngine2APilot,
-  sha256,
+  canonicalJsonSha256,
   validateRollbackEvidence,
   VISUAL_ENGINE_2A_ROLLBACK_FIXTURE,
   type PilotReviewVerdict,
@@ -18,7 +18,8 @@ function rows(value: unknown): Record<string, unknown>[] {
     ? value.rows as Record<string, unknown>[] : [];
 }
 
-function verdict(value: unknown): PilotReviewVerdict {
+function verdict(value: unknown): PilotReviewVerdict | null {
+  if (value === null || value === undefined) return null;
   return value === "candidate" || value === "baseline" || value === "tie" || value === "invalid" ? value : "invalid";
 }
 
@@ -26,7 +27,7 @@ async function main() {
   const rollback = JSON.parse(await readFile(
     join(process.cwd(), "scratch", "visual-engine-2a", "rollback-evidence.json"), "utf8",
   )) as VisualEngine2ARollbackEvidence;
-  const expectedFixtureSha = sha256(JSON.stringify(VISUAL_ENGINE_2A_ROLLBACK_FIXTURE));
+  const expectedFixtureSha = canonicalJsonSha256(VISUAL_ENGINE_2A_ROLLBACK_FIXTURE);
   if (!validateRollbackEvidence(rollback, expectedFixtureSha)) throw new Error("Rollback evidence is missing or invalid");
   const result = await db.execute(sql`
     SELECT "status", "structuralInvariantPassed", "candidatePersisted",
@@ -36,7 +37,6 @@ async function main() {
   const score = scoreVisualEngine2APilot(rows(result).map((row) => ({
     started: true,
     technicalSuccess: row.status === "adapted",
-    comparable: row.status === "adapted" && row.comparisonVerdict !== null && row.comparisonVerdict !== "invalid",
     verdict: verdict(row.comparisonVerdict),
     structuralFailure: row.structuralInvariantPassed === false,
     partialPersistenceFailure: row.candidatePersisted === true,

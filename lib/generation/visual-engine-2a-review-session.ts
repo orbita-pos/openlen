@@ -1,4 +1,11 @@
 import { writeJsonAtomic } from "@/lib/fs/write-json-atomic";
+import { readFile, readdir } from "node:fs/promises";
+import { relative, resolve } from "node:path";
+import {
+  canonicalJsonSha256,
+  sha256,
+  type VisualEngine2AEvidenceManifest,
+} from "./visual-engine-2a-eval";
 
 export type BlindSideDecision = "left" | "right" | "tie" | "invalid";
 export type SemanticComparisonVerdict = "candidate" | "baseline" | "tie" | "invalid";
@@ -8,6 +15,10 @@ export interface ReviewEvidencePair {
   pilotRunId: string;
   baseline: { normal: string; neutral: string };
   candidate: { normal: string; neutral: string };
+  hashes: {
+    baseline: { normal: string; neutral: string };
+    candidate: { normal: string; neutral: string };
+  };
 }
 
 interface ReviewComparison {
@@ -49,6 +60,77 @@ function safeEvidencePath(value: string): string {
   return normalized;
 }
 
+const EVIDENCE_MANIFEST_KEYS = [
+  "baselineNeutralSha256", "baselineNormalSha256", "candidateNeutralSha256", "candidateNormalSha256",
+  "caseId", "pilotRunId", "scenarioId", "schemaVersion",
+] as const;
+
+function parseEvidenceManifest(serialized: string): VisualEngine2AEvidenceManifest {
+  const value = JSON.parse(serialized) as unknown;
+  if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error("invalid evidence manifest");
+  const object = value as Record<string, unknown>;
+  if (Object.keys(object).sort().join("\0") !== [...EVIDENCE_MANIFEST_KEYS].sort().join("\0")) {
+    throw new Error("invalid evidence manifest fields");
+  }
+  if (object.schemaVersion !== "visual-engine-2a-evidence/1.0"
+    || typeof object.caseId !== "string" || !object.caseId
+    || typeof object.scenarioId !== "string" || !object.scenarioId
+    || typeof object.pilotRunId !== "string" || !object.pilotRunId
+    || typeof object.baselineNormalSha256 !== "string" || !validSha(object.baselineNormalSha256)
+    || typeof object.baselineNeutralSha256 !== "string" || !validSha(object.baselineNeutralSha256)
+    || typeof object.candidateNormalSha256 !== "string" || !validSha(object.candidateNormalSha256)
+    || typeof object.candidateNeutralSha256 !== "string" || !validSha(object.candidateNeutralSha256)) {
+    throw new Error("invalid evidence manifest");
+  }
+  return object as unknown as VisualEngine2AEvidenceManifest;
+}
+
+/** Loads one immutable source snapshot and rejects any path/content substitution before review. */
+export async function loadVisualEngine2AReviewSource(root: string): Promise<{
+  rows: ReviewEvidencePair[];
+  sourceSha: string;
+}> {
+  const resolvedRoot = resolve(root);
+  const entries = await readdir(resolvedRoot, { recursive: true, withFileTypes: true });
+  const manifests = entries.filter((entry) => entry.isFile() && entry.name === "manifest.json");
+  const descriptors: Array<{ directory: string; manifest: VisualEngine2AEvidenceManifest; evidenceHashes: string[] }> = [];
+  const rows: ReviewEvidencePair[] = [];
+  for (const entry of manifests) {
+    const parent = resolve(entry.parentPath);
+    const directory = relative(resolvedRoot, parent).replace(/\\/g, "/");
+    if (!/^[a-f0-9]{64}$/.test(directory)) throw new Error("unsafe evidence directory");
+    const manifest = parseEvidenceManifest(await readFile(resolve(parent, entry.name), "utf8"));
+    const manifestDirectory = canonicalJsonSha256(manifest).slice("sha256:".length);
+    if (directory !== manifestDirectory) throw new Error("evidence manifest directory hash mismatch");
+    const assets = [
+      ["baselineNormal", manifest.baselineNormalSha256],
+      ["baselineNeutral", manifest.baselineNeutralSha256],
+      ["candidateNormal", manifest.candidateNormalSha256],
+      ["candidateNeutral", manifest.candidateNeutralSha256],
+    ] as const;
+    const actualHashes: string[] = [];
+    for (const [name, expectedHash] of assets) {
+      const actualHash = sha256(await readFile(resolve(parent, `${name}.jpg`)));
+      if (actualHash !== expectedHash) throw new Error(`evidence hash mismatch: ${name}`);
+      actualHashes.push(actualHash);
+    }
+    rows.push({
+      comparisonId: sha256(`${manifest.caseId}/${manifest.scenarioId}`).slice("sha256:".length, "sha256:".length + 24),
+      pilotRunId: manifest.pilotRunId,
+      baseline: { normal: `${directory}/baselineNormal.jpg`, neutral: `${directory}/baselineNeutral.jpg` },
+      candidate: { normal: `${directory}/candidateNormal.jpg`, neutral: `${directory}/candidateNeutral.jpg` },
+      hashes: {
+        baseline: { normal: manifest.baselineNormalSha256, neutral: manifest.baselineNeutralSha256 },
+        candidate: { normal: manifest.candidateNormalSha256, neutral: manifest.candidateNeutralSha256 },
+      },
+    });
+    descriptors.push({ directory, manifest, evidenceHashes: actualHashes });
+  }
+  rows.sort((left, right) => left.comparisonId.localeCompare(right.comparisonId));
+  descriptors.sort((left, right) => left.directory.localeCompare(right.directory));
+  return { rows, sourceSha: canonicalJsonSha256(descriptors) };
+}
+
 export function createVisualEngine2AReviewSession(
   sourceSha256: string,
   source: readonly ReviewEvidencePair[],
@@ -64,7 +146,11 @@ export function createVisualEngine2AReviewSession(
       pilotRunId: row.pilotRunId,
       baseline: { normal: safeEvidencePath(row.baseline.normal), neutral: safeEvidencePath(row.baseline.neutral) },
       candidate: { normal: safeEvidencePath(row.candidate.normal), neutral: safeEvidencePath(row.candidate.neutral) },
+      hashes: structuredClone(row.hashes),
     };
+    for (const hash of [evidence.hashes.baseline.normal, evidence.hashes.baseline.neutral, evidence.hashes.candidate.normal, evidence.hashes.candidate.neutral]) {
+      if (!validSha(hash)) throw new Error("invalid evidence hash");
+    }
     const candidateOnLeft = random() >= 0.5;
     return {
       comparisonId: row.comparisonId,
@@ -86,9 +172,27 @@ export function createVisualEngine2AReviewSession(
 export function resumeVisualEngine2AReviewSession(
   session: VisualEngine2AReviewSession,
   sourceSha256: string,
+  source: readonly ReviewEvidencePair[],
 ): VisualEngine2AReviewSession {
   if (!validSha(sourceSha256) || session.sourceSha256 !== sourceSha256) {
     throw new Error("review source SHA mismatch");
+  }
+  if (session.schemaVersion !== "visual-engine-2a-review-session/1.0" || session.comparisons.length !== source.length) {
+    throw new Error("review source/session mismatch");
+  }
+  const expected = new Map(source.map((row) => [row.comparisonId, row]));
+  const seen = new Set<string>();
+  for (const comparison of session.comparisons) {
+    const row = expected.get(comparison.comparisonId);
+    if (!row || seen.has(comparison.comparisonId)
+      || comparison.pilotRunId !== row.pilotRunId
+      || canonicalJsonSha256(comparison.evidence) !== canonicalJsonSha256(row)
+      || comparison.left === comparison.right
+      || ![comparison.left, comparison.right].includes("baseline")
+      || ![comparison.left, comparison.right].includes("candidate")) {
+      throw new Error("review evidence/source mismatch");
+    }
+    seen.add(comparison.comparisonId);
   }
   return structuredClone(session);
 }
@@ -198,10 +302,14 @@ export function resolveBlindEvidencePath(
   comparisonId: string,
   side: "left" | "right",
   kind: "normal" | "neutral",
-): string | null {
+): { path: string; sha256: string } | null {
   const comparison = session.comparisons.find((row) => row.comparisonId === comparisonId);
   if (!comparison) return null;
-  return comparison.evidence[comparison[side]][kind];
+  const semanticSide = comparison[side];
+  return {
+    path: comparison.evidence[semanticSide][kind],
+    sha256: comparison.evidence.hashes[semanticSide][kind],
+  };
 }
 
 export async function persistVisualEngine2AReviewSession(

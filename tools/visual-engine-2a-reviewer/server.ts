@@ -11,6 +11,7 @@ import {
   type VisualEngine2AReviewSession,
 } from "@/lib/generation/visual-engine-2a-review-session";
 import type { PilotComparisonVerdict } from "@/lib/generation/visual-engine-pilot-store";
+import { sha256 } from "@/lib/generation/visual-engine-2a-eval";
 
 export interface RunningReviewerServer {
   origin: string;
@@ -87,6 +88,12 @@ function safeDefaultReader(root: string) {
 export async function startVisualEngine2AReviewerServer(options: ReviewerServerOptions): Promise<RunningReviewerServer> {
   if (options.token.length < 32) throw new Error("review token is too short");
   let session = structuredClone(options.session);
+  let decisionQueue: Promise<void> = Promise.resolve();
+  const serializeDecision = <T>(work: () => Promise<T>): Promise<T> => {
+    const result = decisionQueue.then(work);
+    decisionQueue = result.then(() => undefined, () => undefined);
+    return result;
+  };
   const readEvidence = options.readEvidence ?? safeDefaultReader(options.evidenceRoot ?? "scratch/visual-engine-2a");
   const now = options.now ?? (() => new Date());
   const server = createServer(async (req, res) => {
@@ -106,25 +113,29 @@ export async function startVisualEngine2AReviewerServer(options: ReviewerServerO
       }
       if (req.method === "POST" && requestUrl.pathname === "/api/decision") {
         const command = await body(req) as BlindDecisionCommand;
-        let next = appendVisualEngine2ADecision(session, command, now().toISOString());
-        if (next.decisions.length === next.comparisons.length) next = completeVisualEngine2AReview(next, now().toISOString());
-        await options.persist(next);
-        const comparison = next.comparisons.find((row) => row.comparisonId === command.comparisonId)!;
-        const decision = next.decisions.find((row) => row.comparisonId === command.comparisonId)!;
-        await options.recordComparison(comparison.pilotRunId, {
-          verdict: decision.verdict,
-          acceptedForbiddenSignalCount: decision.acceptedForbiddenSignalCount,
+        const dto = await serializeDecision(async () => {
+          let next = appendVisualEngine2ADecision(session, command, now().toISOString());
+          if (next.decisions.length === next.comparisons.length) next = completeVisualEngine2AReview(next, now().toISOString());
+          const comparison = next.comparisons.find((row) => row.comparisonId === command.comparisonId)!;
+          const decision = next.decisions.find((row) => row.comparisonId === command.comparisonId)!;
+          await options.recordComparison(comparison.pilotRunId, {
+            verdict: decision.verdict,
+            acceptedForbiddenSignalCount: decision.acceptedForbiddenSignalCount,
+          });
+          await options.persist(next);
+          session = next;
+          return buildBlindReviewDto(session);
         });
-        session = next;
-        json(res, 200, buildBlindReviewDto(session)); return;
+        json(res, 200, dto); return;
       }
       const evidence = /^\/evidence\/([^/]+)\/(left|right)\/(normal|neutral)$/.exec(requestUrl.pathname);
       if (req.method === "GET" && evidence) {
         const comparisonId = decodeURIComponent(evidence[1]);
         if (comparisonId === "." || comparisonId === ".." || comparisonId.includes("/")) { json(res, 404, { error: "not_found" }); return; }
-        const path = resolveBlindEvidencePath(session, comparisonId, evidence[2] as "left" | "right", evidence[3] as "normal" | "neutral");
-        if (!path) { json(res, 404, { error: "not_found" }); return; }
-        const image = await readEvidence(path);
+        const asset = resolveBlindEvidencePath(session, comparisonId, evidence[2] as "left" | "right", evidence[3] as "normal" | "neutral");
+        if (!asset) { json(res, 404, { error: "not_found" }); return; }
+        const image = await readEvidence(asset.path);
+        if (sha256(image) !== asset.sha256) throw new Error("evidence hash mismatch");
         res.writeHead(200, { "content-type": "image/jpeg", "cache-control": "no-store", "x-content-type-options": "nosniff" });
         res.end(image); return;
       }

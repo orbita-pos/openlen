@@ -9,6 +9,8 @@ import {
   buildRollbackEvidence,
   validateRollbackEvidence,
   generateVisualEngine2AEvidence,
+  prepareVisualEngine2ABuilds,
+  captureVisualEngine2ARollbackModes,
 } from "./visual-engine-2a-eval";
 
 describe("Visual Engine 2A pilot", () => {
@@ -47,8 +49,8 @@ describe("Visual Engine 2A pilot", () => {
     const rows = Array.from({ length: 75 }, (_, index) => ({
       started: true,
       technicalSuccess: index < 72,
-      comparable: index < 70,
-      verdict: index < 63 ? "candidate" as const : index < 70 ? "tie" as const : "invalid" as const,
+      comparable: index < 72,
+      verdict: index < 65 ? "candidate" as const : index < 72 ? "tie" as const : null,
       structuralFailure: false,
       partialPersistenceFailure: false,
       acceptedForbiddenSignals: 0,
@@ -58,14 +60,53 @@ describe("Visual Engine 2A pilot", () => {
     expect(score).toMatchObject({
       started: 75,
       technicalSuccessRate: 0.96,
-      visuallyPreferredRate: 0.9,
+      reviewed: 72,
+      expectedReviews: 72,
+      unreviewed: 0,
+      invalidReviews: 0,
+      comparable: 72,
       structuralFailures: 0,
       partialPersistenceFailures: 0,
       acceptedForbiddenSignals: 0,
       rollbackVerified: true,
       passed: true,
     });
-    expect(score.requiredVisualWins).toBe(63);
+    expect(score.requiredVisualWins).toBe(65);
+  });
+
+  it("fails when technically successful rows have not been reviewed", () => {
+    const rows = Array.from({ length: 75 }, (_, index) => ({
+      started: true, technicalSuccess: index < 72, comparable: false,
+      verdict: null,
+      structuralFailure: false, partialPersistenceFailure: false,
+      acceptedForbiddenSignals: 0, productionEquivalentCostMicromxn: 1,
+    }));
+    const score = scoreVisualEngine2APilot(rows, { verified: true });
+    expect(score).toMatchObject({ reviewed: 0, expectedReviews: 72, unreviewed: 72, comparable: 0, passed: false });
+    expect(score.failures).toEqual(expect.arrayContaining(["reviewCoverage", "visualPreference"]));
+  });
+
+  it("fails an explicit invalid review instead of dropping it from the denominator", () => {
+    const rows = Array.from({ length: 75 }, (_, index) => ({
+      started: true, technicalSuccess: index < 72, comparable: index < 71,
+      verdict: index < 71 ? "candidate" as const : index === 71 ? "invalid" as const : null,
+      structuralFailure: false, partialPersistenceFailure: false,
+      acceptedForbiddenSignals: 0, productionEquivalentCostMicromxn: 1,
+    }));
+    const score = scoreVisualEngine2APilot(rows, { verified: true });
+    expect(score).toMatchObject({ reviewed: 72, expectedReviews: 72, unreviewed: 0, invalidReviews: 1, comparable: 71, passed: false });
+    expect(score.failures).toContain("invalidReview");
+  });
+
+  it("keeps ties in the comparable denominator as non-wins at the ninety-percent boundary", () => {
+    const make = (wins: number) => Array.from({ length: 75 }, (_, index) => ({
+      started: true, technicalSuccess: index < 72, comparable: index < 72,
+      verdict: index < wins ? "candidate" as const : index < 72 ? "tie" as const : null,
+      structuralFailure: false, partialPersistenceFailure: false,
+      acceptedForbiddenSignals: 0, productionEquivalentCostMicromxn: 1,
+    }));
+    expect(scoreVisualEngine2APilot(make(65), { verified: true })).toMatchObject({ comparable: 72, candidateWins: 65, requiredVisualWins: 65, passed: true });
+    expect(scoreVisualEngine2APilot(make(64), { verified: true })).toMatchObject({ comparable: 72, candidateWins: 64, requiredVisualWins: 65, passed: false });
   });
 
   it("treats ties as losses and requires mean cost strictly below 400000", () => {
@@ -86,15 +127,54 @@ describe("Visual Engine 2A pilot", () => {
       .toBe('<main aria-label="Keep"><h1>Neutral copy</h1><script>x()</script></main>');
   });
 
-  it("accepts rollback evidence only for byte-equal unset/off/shadow delivery with an isolated candidate", () => {
+  it("accepts rollback evidence only for deep-equal delivery artifacts and one isolated shadow candidate", () => {
+    const delivery = {
+      selectedTemplateId: "weighted", finalizedHtml: "same",
+      previewSequence: ["preview:same"], projectData: { html: "same" }, creditDelta: 3,
+      creativeCalls: 0, pilotCalls: 0, candidateJobs: 0,
+    };
     const evidence = buildRollbackEvidence({
-      fixture: { brief: "fixture" }, unset: "same", off: "same", shadow: "same", candidateJobs: 1,
+      fixture: { brief: "fixture" }, unset: delivery, off: delivery,
+      shadow: { ...delivery, creativeCalls: 1, pilotCalls: 1, candidateJobs: 1 },
     });
     expect(evidence.verified).toBe(true);
     expect(validateRollbackEvidence(evidence, evidence.fixtureSha256)).toBe(true);
+    const mismatches = [
+      { selectedTemplateId: "other" },
+      { previewSequence: ["preview:other"] },
+      { projectData: { html: "same", generation: { unexpected: true } } },
+      { creditDelta: 4 },
+      { creativeCalls: 1 },
+      { pilotCalls: 1 },
+    ];
+    for (const mismatch of mismatches) {
+      expect(() => buildRollbackEvidence({
+        fixture: { brief: "fixture" }, unset: delivery, off: { ...delivery, ...mismatch },
+        shadow: { ...delivery, creativeCalls: 1, pilotCalls: 1, candidateJobs: 1 },
+      })).toThrow(/rollback/i);
+    }
     expect(() => buildRollbackEvidence({
-      fixture: { brief: "fixture" }, unset: "same", off: "changed", shadow: "same", candidateJobs: 1,
+      fixture: { brief: "fixture" }, unset: delivery, off: delivery,
+      shadow: { ...delivery, projectData: { html: "other" }, creativeCalls: 1, pilotCalls: 1, candidateJobs: 1 },
     })).toThrow(/rollback/i);
+  });
+
+  it("runs rollback delivery under true unset, off and shadow env states and restores the caller env", async () => {
+    const previous = process.env.OPENLEN_VISUAL_ENGINE;
+    process.env.OPENLEN_VISUAL_ENGINE = "skeleton";
+    const observed: Array<string | undefined> = [];
+    try {
+      const result = await captureVisualEngine2ARollbackModes(async () => {
+        observed.push(process.env.OPENLEN_VISUAL_ENGINE);
+        return { state: process.env.OPENLEN_VISUAL_ENGINE ?? "unset" };
+      });
+      expect(observed).toEqual([undefined, "off", "shadow"]);
+      expect(result).toEqual({ unset: { state: "unset" }, off: { state: "off" }, shadow: { state: "shadow" } });
+      expect(process.env.OPENLEN_VISUAL_ENGINE).toBe("skeleton");
+    } finally {
+      if (previous === undefined) delete process.env.OPENLEN_VISUAL_ENGINE;
+      else process.env.OPENLEN_VISUAL_ENGINE = previous;
+    }
   });
 
   it("runs exactly one critic and one scalar completion per reserved adaptation", async () => {
@@ -134,5 +214,50 @@ describe("Visual Engine 2A pilot", () => {
     expect(complete).toHaveBeenCalledWith(expect.any(String), expect.objectContaining({
       candidatePersisted: false, productionEquivalentCostMicromxn: 10,
     }));
+  });
+
+  it("uses the Quick weighted pick for baseline evidence and the safe skeleton only for the candidate", async () => {
+    const fill = vi.fn(async (templateId: string) => ({
+      ok: true as const,
+      normalizedHtml: `<main>${templateId}</main>`,
+      usage: { inputTokens: 1, outputTokens: 1 },
+    }));
+    const builds = await prepareVisualEngine2ABuilds({
+      rankedTemplateIds: ["weighted-first", "weighted-second"],
+      safeTemplateId: "safe-skeleton",
+      copy: { business_name: "Fixture" },
+      random: () => 0,
+      fill,
+    });
+    expect(builds.baselineTemplateId).toBe("weighted-first");
+    expect(builds.candidateTemplateId).toBe("safe-skeleton");
+    expect(builds.baselineBuild.normalizedHtml).toBe("<main>weighted-first</main>");
+    expect(builds.candidateBuild.normalizedHtml).toBe("<main>safe-skeleton</main>");
+    expect(fill.mock.calls.map(([templateId]) => templateId)).toEqual(["weighted-first", "safe-skeleton"]);
+
+    const eligible = Array.from({ length: 75 }, (_, index) => ({
+      caseId: `case-${index}`, scenarioId: "plain", language: "en" as const,
+      brief: "fixture", forbiddenSignals: [], templateId: "safe-skeleton",
+    }));
+    let firstEvidence: Record<string, Uint8Array> | undefined;
+    await generateVisualEngine2AEvidence({
+      eligible, rateCardVersion: "test/1", calculateCosts: () => ({ productionEquivalentCostMicromxn: 1, observedPilotCostMicromxn: 1 }),
+      deps: {
+        reserve: async (row) => ({ ok: true, id: row.caseId }),
+        baseline: async () => ({ html: `${builds.baselineBuild.normalizedHtml}|final` }),
+        adapt: async () => ({
+          ok: true, html: `${builds.candidateBuild.normalizedHtml}|adapted`, durationMs: 1,
+          usage: { inputTokens: 1, outputTokens: 1, cachedTokens: 0, thinkingTokens: 0 },
+          structuralFingerprintBefore: `sha256:${"a".repeat(64)}`, structuralFingerprintAfter: `sha256:${"a".repeat(64)}`,
+          promptVersion: "p", contractVersion: "c", policyVersion: "policy", taxonomyVersion: "t", modelVersion: "m",
+        }),
+        critique: async () => ({ visualQuality: 8, briefAdherence: 8, issues: [], shouldRegenerate: false, regenerationFeedback: "", fallback: false }),
+        render: async (html) => Buffer.from(html),
+        writeEvidence: async (_key, files) => { firstEvidence ??= files; },
+        complete: async () => undefined,
+      },
+    });
+    expect(Buffer.from(firstEvidence!.baselineNormal).toString()).toBe("<main>weighted-first</main>|final");
+    expect(Buffer.from(firstEvidence!.candidateNormal).toString()).toBe("<main>safe-skeleton</main>|adapted");
   });
 });

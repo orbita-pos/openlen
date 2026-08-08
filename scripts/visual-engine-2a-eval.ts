@@ -18,6 +18,7 @@ import { calculateModelCostMicros, parsePilotRateCardFromEnv } from "@/lib/gener
 import { writeJsonAtomic } from "@/lib/fs/write-json-atomic";
 import {
   generateVisualEngine2AEvidence,
+  prepareVisualEngine2ABuilds,
   preflightVisualEngine2A,
   type PilotAdaptationResult,
   type VisualEngine2APoolRow,
@@ -93,14 +94,19 @@ async function main() {
         brand: { logoUrl: null, accent: row.scenarioId === "saved-brand-accent" ? "#E85D9E" : null },
         links: [], photos: [],
       });
-      const built = await fillAndNormalizeCuratedTemplate({ templateId: row.templateId, copy: pick.copy });
-      if (!built.ok) throw new Error("Template unavailable");
-      const baseline = finalizeCuratedDocument({ normalizedHtml: built.normalizedHtml, profileData: profile, title: pick.copy.business_name ?? row.caseId, brandRecolor: true });
+      const builds = await prepareVisualEngine2ABuilds({
+        rankedTemplateIds: pick.templateIds,
+        safeTemplateId: row.templateId,
+        copy: pick.copy,
+        fill: (templateId, copy) => fillAndNormalizeCuratedTemplate({ templateId, copy }),
+      });
+      if (!builds.baselineBuild.ok || !builds.candidateBuild.ok) throw new Error("Template unavailable");
+      const baseline = finalizeCuratedDocument({ normalizedHtml: builds.baselineBuild.normalizedHtml, profileData: profile, title: pick.copy.business_name ?? row.caseId, brandRecolor: true });
       if (!baseline.ok) throw new Error("Baseline finalization failed");
       return {
-        normalizedHtml: built.normalizedHtml, baselineHtml: baseline.html, profile,
-        duplicateShadowCandidateFill: built.usage ? {
-          inputTokens: built.usage.inputTokens, outputTokens: built.usage.outputTokens,
+        normalizedHtml: builds.candidateBuild.normalizedHtml, baselineHtml: baseline.html, profile,
+        duplicateShadowCandidateFill: builds.candidateBuild.usage ? {
+          inputTokens: builds.candidateBuild.usage.inputTokens, outputTokens: builds.candidateBuild.usage.outputTokens,
           cachedTokens: 0, thinkingTokens: 0,
         } : undefined,
       };
