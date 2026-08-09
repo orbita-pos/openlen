@@ -127,6 +127,7 @@ export interface VisualEngine2ALiveCanaryDependencies {
   rateCard: PilotRateCard;
   mxnPerUsd: number;
   select(row: VisualEngine2APoolRow): Promise<SafeSelectionResult>;
+  betweenRequests?: () => Promise<void>;
   now?: () => number;
 }
 
@@ -249,19 +250,14 @@ export async function runVisualEngine2ALiveCanary(
   }).ok) return preProviderFailure("qualification_stale");
 
   const settled = new Array<SafeSelectionResult>(representatives.length);
-  let nextIndex = 0;
-  const worker = async () => {
-    while (nextIndex < representatives.length) {
-      const index = nextIndex;
-      nextIndex += 1;
-      try {
-        settled[index] = await args.select(representatives[index]);
-      } catch {
-        settled[index] = { ok: false, errorKind: "unexpected_error", durationMs: 0 };
-      }
+  for (let index = 0; index < representatives.length; index += 1) {
+    if (index > 0) await args.betweenRequests?.();
+    try {
+      settled[index] = await args.select(representatives[index]);
+    } catch {
+      settled[index] = { ok: false, errorKind: "unexpected_error", durationMs: 0 };
     }
-  };
-  await Promise.all(Array.from({ length: Math.min(3, representatives.length) }, worker));
+  }
 
   const qualificationByCase = new Map(args.qualification.cases.map((item) => [item.caseId, item]));
   const caseById = new Map(args.cases.map((item) => [item.id, item]));

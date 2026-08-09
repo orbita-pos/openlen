@@ -10,7 +10,7 @@ Perform the following order without skipping or combining gates:
 2. Have a human review the resulting qualification manifest and selected-template distribution.
 3. Freeze the current provider rate card and dated FIX/USD-MXN basis.
 4. Obtain new explicit approval for the complete paid footprint.
-5. Run the strict 15/15 live canary, one intent request per frozen base case with maximum concurrency 3.
+5. Run the strict 15/15 live canary, one intent request per frozen base case, sequentially with a 6-second pause before each request after the first.
 6. Atomically write the redacted canary artifact, then pass the post-write freshness/quota gate.
 7. Run the frozen 75 adaptations using the 15 successful in-memory selections.
 8. Conduct the blinded review, regenerate non-live rollback evidence, and run the unchanged score gates.
@@ -31,7 +31,7 @@ Qualification is read-only: `npm.cmd run generation:visual-engine-2a:qualify` ma
 
 ## Live canary and accounting rules
 
-The live runner starts only from the stable qualified manifest and exact quota state `limit=75`, `used=0`, `existingRuns=0`. It performs exactly 15 selections over the `plain` representative rows, one per case, with maximum concurrency 3 and no retry or replacement. Success is strict 15/15: every response must be usage-complete and version-compatible, choose `template_skeleton`, stay in the case allowlist, and equal the qualified template ID.
+The live runner starts only from the stable qualified manifest and exact quota state `limit=75`, `used=0`, `existingRuns=0`. It performs exactly 15 sequential selections over the `plain` representative rows, one per case, with a 6-second pause before each request after the first and no retry or replacement. Success is strict 15/15: every response must be usage-complete and version-compatible, choose `template_skeleton`, stay in the case allowlist, and equal the qualified template ID.
 
 The runner atomically writes the redacted canary before any adaptation reservation, then rechecks HEAD, recomputed qualification hashes, HEAD again, and exact zero-use quota. Only then does it reuse one successful selection per case across five scenarios and expose 75 adaptations. Missing canary usage sets token/cost aggregates to `null` and fails the canary; do not replace missing evidence with zero.
 

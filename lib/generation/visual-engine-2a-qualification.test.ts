@@ -78,7 +78,7 @@ describe("qualifyVisualEngine2ACohort", () => {
       "stable qualification → human manifest review → fresh rate/FIX freeze → new explicit approval → 15/15 live canary → atomic redacted canary artifact → post-write freshness/quota gate → 75 adaptations → blind review → rollback → scorecard",
       "The prior paid authorization was consumed by the stopped 75-analysis run.",
       "one intent request per frozen base case",
-      "maximum concurrency 3",
+      "6-second pause before each request after the first",
       "reservationCount=0",
       "The completed code must not be run live yet",
       "Selector adversarial cases remain separate from the 2A cohort.",

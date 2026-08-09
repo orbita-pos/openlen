@@ -11,7 +11,7 @@ Implementation completion and pilot success are separate decisions:
 - No command under **Paid pilot execution** may run without separate, explicit user authorization for the complete paid evaluation footprint.
 - The implementation commit does not enable `skeleton` globally. The default and every unknown value remain `off`.
 
-The paid footprint begins with a strict 15/15 live canary before quota reservation. It makes one intent request per frozen base case, with maximum concurrency 3, and reuses that successful in-memory selection across the case's five scenarios. Every case must resolve to its exact qualified, allowlisted `template_skeleton` or the command writes only the redacted terminal canary artifact and stops with `reservationCount=0`. There is no retry, replacement, or fallback. Only a successful post-artifact freshness/quota gate exposes the frozen 75 adaptations. Each adaptation can also perform Quick baseline/candidate fill work and at most one diagnostic vision critique, so the operator must authorize the complete footprint.
+The paid footprint begins with a strict 15/15 live canary before quota reservation. It makes one intent request per frozen base case sequentially, with a 6-second pause before each request after the first, and reuses that successful in-memory selection across the case's five scenarios. Every case must resolve to its exact qualified, allowlisted `template_skeleton` or the command writes only the redacted terminal canary artifact and stops with `reservationCount=0`. There is no retry, replacement, or fallback. Only a successful post-artifact freshness/quota gate exposes the frozen 75 adaptations. Each adaptation can also perform Quick baseline/candidate fill work and at most one diagnostic vision critique, so the operator must authorize the complete footprint.
 
 ## Cohort order and authorization boundary
 
@@ -223,7 +223,7 @@ Stop here until the user explicitly authorizes the complete paid evaluation and 
 npm.cmd run generation:visual-engine-2a:eval
 ```
 
-The runner refuses `off`/`skeleton`, missing provider/database/rate-card configuration, inconsistent quota, any result other than a 15/15 exact-qualified-template live canary, or a non-zero 2A budget. It makes exactly one intent request per frozen base case with maximum concurrency 3, atomically writes `scratch/visual-engine-2a/live-canary.json`, then rechecks HEAD, qualification material, HEAD again, and exact zero-use quota before exposing 75 adaptations. Every case must pass; there is no larger candidate pool, retry, removal, replacement, or second intent request in the adaptation path.
+The runner refuses `off`/`skeleton`, missing provider/database/rate-card configuration, inconsistent quota, any result other than a 15/15 exact-qualified-template live canary, or a non-zero 2A budget. It makes exactly one intent request per frozen base case sequentially, with a 6-second pause before each request after the first, atomically writes `scratch/visual-engine-2a/live-canary.json`, then rechecks HEAD, qualification material, HEAD again, and exact zero-use quota before exposing 75 adaptations. Every case must pass; there is no larger candidate pool, retry, removal, replacement, or second intent request in the adaptation path.
 
 After the command, inspect counts without exposing content:
 

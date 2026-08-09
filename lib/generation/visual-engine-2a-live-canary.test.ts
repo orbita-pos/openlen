@@ -127,33 +127,32 @@ function collectKeys(value: unknown, keys = new Set<string>()): Set<string> {
 }
 
 describe("Visual Engine 2A strict live canary", () => {
-  it("selects each plain base case once with exactly three requests maximum in flight", async () => {
+  it("paces the 15 plain cases sequentially without retries", async () => {
     const calls: Parameters<VisualEngine2ALiveCanaryDependencies["select"]>[0][] = [];
-    const releases: Array<() => void> = [];
     let inFlight = 0;
     let maxInFlight = 0;
-    const pending = runVisualEngine2ALiveCanary(dependencies({
+    let waits = 0;
+    const deps = dependencies({
       select: async (row) => {
         calls.push(row);
         inFlight += 1;
         maxInFlight = Math.max(maxInFlight, inFlight);
-        await new Promise<void>((resolve) => releases.push(resolve));
+        await Promise.resolve();
         inFlight -= 1;
         return selected(row);
       },
-    }));
+    });
+    (deps as VisualEngine2ALiveCanaryDependencies & {
+      betweenRequests: () => Promise<void>;
+    }).betweenRequests = async () => { waits += 1; };
 
-    for (let completed = 0; completed < 15; completed += 1) {
-      await vi.waitFor(() => expect(calls.length).toBe(Math.min(completed + 3, 15)));
-      releases[completed]();
-    }
-
-    const result = await pending;
+    const result = await runVisualEngine2ALiveCanary(deps);
     expect(result.ok).toBe(true);
     expect(calls).toHaveLength(15);
     expect(new Set(calls.map((row) => row.caseId)).size).toBe(15);
     expect(calls.every((row) => row.scenarioId === "plain")).toBe(true);
-    expect(maxInFlight).toBe(3);
+    expect(maxInFlight).toBe(1);
+    expect(waits).toBe(14);
   });
 
   it.each([

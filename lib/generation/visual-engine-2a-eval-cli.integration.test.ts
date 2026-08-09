@@ -156,7 +156,7 @@ describe("Visual Engine 2A eval CLI injected integration", () => {
       "reservationCount=0",
       "15/15",
       "one intent request per frozen base case",
-      "maximum concurrency 3",
+      "6-second pause before each request after the first",
       "75 adaptations",
       "no replacement rows",
       "abandoned",
@@ -196,6 +196,19 @@ describe("Visual Engine 2A eval CLI injected integration", () => {
     expect(state.order.indexOf("head")).toBeLessThan(state.order.indexOf("provider"));
     expect(state.order.indexOf("qualification")).toBeLessThan(state.order.indexOf("provider"));
     expect(state.order.indexOf("recompute")).toBeLessThan(state.order.indexOf("provider"));
+  });
+
+  it("forwards one pacing boundary between each of the 15 intent requests", async () => {
+    let waits = 0;
+    const state = fixture();
+    (state.deps as VisualEngine2AEvalCliDependencies & {
+      betweenIntentRequests: () => Promise<void>;
+    }).betweenIntentRequests = async () => { waits += 1; };
+
+    const result = await run(state.deps);
+
+    expect(result.ok).toBe(true);
+    expect(waits).toBe(14);
   });
 
   it("rejects a stale qualification artifact with zero provider or reservation calls", async () => {

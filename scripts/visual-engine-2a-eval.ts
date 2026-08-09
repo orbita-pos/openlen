@@ -29,6 +29,7 @@ export interface VisualEngine2AEvalCliDependencies {
   readQualification(path: string): Promise<unknown>;
   recomputeQualification(commitSha: string): Promise<VisualEngine2AQualificationManifest>;
   select(row: VisualEngine2APoolRow): Promise<SafeSelectionResult>;
+  betweenIntentRequests?: () => Promise<void>;
   writeJsonAtomic(path: string, value: unknown): Promise<unknown>;
   generateEvidence(eligible: readonly QualifiedPilotRow[]): Promise<{ started: number; evidence: number; budgetExhausted?: true }>;
   log(line: string): void;
@@ -154,6 +155,7 @@ export async function runVisualEngine2AEvalCli(
               modelId: deps.modelId,
               rateCard: deps.rateCard,
               mxnPerUsd: deps.rateCard.mxnPerUsd,
+              betweenRequests: deps.betweenIntentRequests,
               select: async (row) => {
                 const lease = deps.budgetGuard.acquire("intent", deps.intentMaximumCostMicromxn);
                 if (!lease) return { ok: false, errorKind: "budget_exhausted", durationMs: 0 };
@@ -342,6 +344,7 @@ async function productionDependencies(): Promise<VisualEngine2AEvalCliDependenci
       if (result.ok) rich.set(row.caseId, result);
       return result;
     },
+    betweenIntentRequests: () => new Promise((resolve) => setTimeout(resolve, 6_000)),
     writeJsonAtomic: async (path, value) => {
       await mkdir(dirname(path), { recursive: true });
       return writeJsonAtomic(path, value);
