@@ -28,79 +28,10 @@ export const CANONICAL_FORBIDDEN_VISUAL_SIGNALS = Object.freeze([
   "ecommerce_storefront",
 ]);
 
-const TAXONOMY_ARRAY_SCHEMA = {
-  type: "array",
-  items: { type: "string" },
-  maxItems: 24,
-} as const;
-
-const enumArraySchema = (values: readonly string[]) => ({
-  type: "array" as const,
-  items: { type: "string" as const, enum: values },
-  maxItems: 24,
-});
-
-const PROSE_ARRAY_SCHEMA = {
-  type: "array",
-  items: { type: "string" },
-  maxItems: 12,
-} as const;
-
-const RESPONSE_JSON_SCHEMA = {
-  type: "object",
-  additionalProperties: false,
-  properties: {
-    schemaVersion: { type: "string", enum: ["intent-analysis/1.0"] },
-    language: { type: "string" },
-    functional: {
-      type: "object",
-      additionalProperties: false,
-      properties: {
-        siteType: { type: "string", enum: CANONICAL_SITE_TYPES },
-        requiredSections: enumArraySchema(CANONICAL_SECTION_ROLES),
-        primaryActions: TAXONOMY_ARRAY_SCHEMA,
-        contentModel: { type: "string" },
-      },
-      required: ["siteType", "requiredSections", "primaryActions", "contentModel"],
-    },
-    audience: {
-      type: "object",
-      additionalProperties: false,
-      properties: {
-        primary: { type: "string", enum: CANONICAL_PRIMARY_AUDIENCES },
-        ageRange: { type: ["string", "null"] },
-        secondary: TAXONOMY_ARRAY_SCHEMA,
-      },
-      required: ["primary", "ageRange", "secondary"],
-    },
-    domains: { ...TAXONOMY_ARRAY_SCHEMA, minItems: 1 },
-    emotionalGoals: TAXONOMY_ARRAY_SCHEMA,
-    requiredVisualSignals: TAXONOMY_ARRAY_SCHEMA,
-    forbiddenVisualSignals: TAXONOMY_ARRAY_SCHEMA,
-    explicitConstraints: PROSE_ARRAY_SCHEMA,
-    ambiguities: PROSE_ARRAY_SCHEMA,
-    confidence: { type: "number", minimum: 0, maximum: 1 },
-  },
-  required: [
-    "schemaVersion",
-    "language",
-    "functional",
-    "audience",
-    "domains",
-    "emotionalGoals",
-    "requiredVisualSignals",
-    "forbiddenVisualSignals",
-    "explicitConstraints",
-    "ambiguities",
-    "confidence",
-  ],
-} as const;
-
 const GENERATION_CONFIG = {
   temperature: 0.2,
   maxOutputTokens: 2_048,
   responseMimeType: "application/json",
-  responseJsonSchema: RESPONSE_JSON_SCHEMA,
   thinkingConfig: { thinkingBudget: 0 },
 } as const;
 

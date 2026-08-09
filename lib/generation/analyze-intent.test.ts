@@ -43,7 +43,7 @@ function geminiResponse(
 }
 
 describe("analyzeIntent", () => {
-  it("sends separate functional and visual intent instructions with a native JSON schema", async () => {
+  it("requests JSON without sending the provider a complex schema", async () => {
     let capturedUrl = "";
     let capturedBody: Record<string, unknown> | null = null;
     const fetchImpl = vi.fn(async (input: string | URL | Request, init?: RequestInit) => {
@@ -123,41 +123,7 @@ describe("analyzeIntent", () => {
       responseMimeType: "application/json",
       thinkingConfig: { thinkingBudget: 0 },
     });
-    expect(body.generationConfig.responseJsonSchema).toEqual(expect.objectContaining({
-      type: "object",
-      required: expect.arrayContaining([
-        "functional",
-        "audience",
-        "domains",
-        "requiredVisualSignals",
-        "forbiddenVisualSignals",
-      ]),
-    }));
-    const responseSchema = body.generationConfig.responseJsonSchema as {
-      properties: {
-        domains: Record<string, unknown>;
-        functional: { properties: {
-          siteType: Record<string, unknown>;
-          requiredSections: { items: Record<string, unknown> } & Record<string, unknown>;
-        } };
-        audience: { properties: { primary: Record<string, unknown> } };
-        explicitConstraints: Record<string, unknown>;
-        ambiguities: Record<string, unknown>;
-      };
-    };
-    expect(responseSchema.properties.domains).toMatchObject({ minItems: 1, maxItems: 24 });
-    expect(responseSchema.properties.functional.properties.requiredSections)
-      .toMatchObject({ maxItems: 24 });
-    expect(responseSchema.properties.functional.properties.siteType.enum)
-      .toEqual(CANONICAL_SITE_TYPES);
-    expect(responseSchema.properties.functional.properties.requiredSections.items.enum)
-      .toEqual(CANONICAL_SECTION_ROLES);
-    expect(responseSchema.properties.audience.properties.primary.enum)
-      .toEqual(CANONICAL_PRIMARY_AUDIENCES);
-    expect(responseSchema.properties.explicitConstraints).toMatchObject({ maxItems: 12 });
-    expect(responseSchema.properties.ambiguities).toMatchObject({ maxItems: 12 });
-    expect(JSON.stringify(responseSchema)).not.toContain("minLength");
-    expect(JSON.stringify(responseSchema)).not.toContain("maxLength");
+    expect(body.generationConfig).not.toHaveProperty("responseJsonSchema");
     const headers = fetchImpl.mock.calls[0]?.[1]?.headers as Record<string, string>;
     expect(headers["x-goog-api-key"]).toBe("secret key");
   });
