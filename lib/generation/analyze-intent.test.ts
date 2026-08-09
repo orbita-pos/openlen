@@ -64,7 +64,7 @@ describe("analyzeIntent", () => {
       ok: true,
       intent: CHILDREN_INTENT,
       modelId: "test-model",
-      promptVersion: "intent-prompt/1.6",
+      promptVersion: "intent-prompt/1.7",
       usage: { inputTokens: 120, outputTokens: 80, cachedTokens: 20, thinkingTokens: 0 },
       durationMs: 25,
     });
@@ -113,7 +113,11 @@ describe("analyzeIntent", () => {
       .toContain("stories and testimonials are different roles");
     expect(body.systemInstruction.parts[0].text)
       .toContain("minigames and activities are different roles");
-    expect(INTENT_PROMPT_VERSION).toBe("intent-prompt/1.6");
+    expect(body.systemInstruction.parts[0].text)
+      .toContain('schemaVersion must be the exact literal string "intent-analysis/1.0"');
+    expect(body.systemInstruction.parts[0].text)
+      .toContain("functional.contentModel must be one lowercase snake_case string");
+    expect(INTENT_PROMPT_VERSION).toBe("intent-prompt/1.7");
     expect(body.contents[0].parts[0].text).toContain(
       "Brief:\n\nPlataforma infantil de coloreo con cuentos y juegos",
     );

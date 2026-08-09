@@ -31,7 +31,7 @@ async function delivery() {
     ok: true as const,
     intent: {} as never,
     decision: { route: "template_skeleton" as const, templateId: VISUAL_ENGINE_2A_ROLLBACK_FIXTURE.skeletonTemplateId, reasonCodes: [] },
-    ranked: [], promptVersion: "intent-prompt/1.6" as const, policyVersion: "generation-decision/1.0" as const,
+    ranked: [], promptVersion: "intent-prompt/1.7" as const, policyVersion: "generation-decision/1.0" as const,
     modelId: "rollback-fixture", durationMs: 0,
   } as unknown as SafeSelectionResult) : null;
   const plan = planQuickVisualEngineRoute({

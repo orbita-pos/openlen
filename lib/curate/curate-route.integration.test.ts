@@ -146,7 +146,7 @@ const SAFE_SKELETON = {
     selectedSections: [], rejectedCandidates: [],
   },
   ranked: [],
-  promptVersion: "intent-prompt/1.6" as const,
+  promptVersion: "intent-prompt/1.7" as const,
   policyVersion: "template-policy/1.0" as const,
   modelId: "safe-model",
   durationMs: 5,

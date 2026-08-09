@@ -8,7 +8,7 @@ import {
 
 const GEMINI_BASE = "https://generativelanguage.googleapis.com/v1beta/models";
 
-export const INTENT_PROMPT_VERSION = "intent-prompt/1.6" as const;
+export const INTENT_PROMPT_VERSION = "intent-prompt/1.7" as const;
 export const INTENT_ANALYSIS_TIMEOUT_MS = 12_000;
 
 export const CANONICAL_FORBIDDEN_VISUAL_SIGNALS = Object.freeze([
@@ -84,6 +84,8 @@ forbiddenVisualSignals are concrete cues that would make the screenshot communic
 Preserve explicit user constraints as concise prose in explicitConstraints. Do not invent requirements the brief does not support.
 
 Return keys exactly as follows: schemaVersion, language, functional { siteType, requiredSections, primaryActions, contentModel }, audience { primary, ageRange, secondary }, domains, emotionalGoals, requiredVisualSignals, forbiddenVisualSignals, explicitConstraints, ambiguities, confidence.
+schemaVersion must be the exact literal string "intent-analysis/1.0", not "1.0" or any other shorthand.
+functional.contentModel must be one lowercase snake_case string, never an array, object, boolean, number, or null.
 All taxonomy values are lowercase snake_case strings. confidence is a number from 0 to 1. ageRange is a lowercase snake_case range such as 5_10 or null.
 Return strict JSON matching intent-analysis/1.0 and no prose.`;
 
