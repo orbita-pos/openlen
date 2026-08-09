@@ -144,23 +144,25 @@ describe("Visual Engine 2A eval CLI injected integration", () => {
     expect(rankTemplates(source.expectedIntent, catalog).map((row) => row.id)).toEqual(["published-only"]);
   });
 
-  it("documents redacted artifacts, preflight barriers, and the no-replacement cohort policy", async () => {
+  it("documents the strict live canary, redacted barrier, and the no-replacement cohort policy", async () => {
     const cohortOps = await readFile(resolve(process.cwd(), "docs/generation/visual-engine-2a-pilot-cohort.md"), "utf8");
 
     for (const contract of [
       "scratch/visual-engine-2a/qualification.json",
-      "scratch/visual-engine-2a/preflight.json",
+      "scratch/visual-engine-2a/live-canary.json",
       "reservationCount=0",
-      "75/75",
-      "redacted aggregate schemas",
-      "usage-incomplete",
+      "15/15",
+      "one intent request per frozen base case",
+      "maximum concurrency 3",
+      "75 adaptations",
       "no replacement rows",
       "abandoned",
       "72–75",
       "unchanged score gates",
       "npx.cmd tsx --env-file=.env.local --tsconfig tsconfig.eval.json --require ./scripts/test-node-server-only-shim.cjs scripts/visual-engine-2a-rollback-check.ts",
-      "must not run without new explicit approval",
+      "new explicit approval",
     ]) expect(cohortOps).toContain(contract);
+    expect(cohortOps).not.toContain("75 paid intent-analysis calls");
   });
 
   it("imports without eager database, template-store, provider, or console side effects", async () => {
@@ -219,16 +221,19 @@ describe("Visual Engine 2A eval CLI injected integration", () => {
   });
 
   it.each([
-    ["74 of 75 skeletons", (row: Parameters<VisualEngine2AEvalCliDependencies["select"]>[0], index: number) => selection(row, index === 74 ? "template_full" : "template_skeleton")],
-    ["one outside-allowlist template", (row: Parameters<VisualEngine2AEvalCliDependencies["select"]>[0], index: number) => selection(row, "template_skeleton", index === 74 ? "outside" : row.allowedSkeletonTemplateIds[0])],
-  ])("keeps reservations at zero for %s", async (_label, selectResult) => {
+    ["14 of 15 skeletons", (row: Parameters<VisualEngine2AEvalCliDependencies["select"]>[0], index: number) => selection(row, index === 14 ? "template_full" : "template_skeleton")],
+    ["one outside-allowlist template", (row: Parameters<VisualEngine2AEvalCliDependencies["select"]>[0], index: number) => selection(row, "template_skeleton", index === 14 ? "outside" : row.allowedSkeletonTemplateIds[0])],
+    ["one provider failure", (row: Parameters<VisualEngine2AEvalCliDependencies["select"]>[0], index: number) => index === 14 ? { ok: false as const, errorKind: "api", usage: USAGE, durationMs: 2 } : selection(row)],
+    ["one version mismatch", (row: Parameters<VisualEngine2AEvalCliDependencies["select"]>[0], index: number) => index === 14 ? { ...selection(row), modelId: "wrong" } : selection(row)],
+    ["one missing usage", (row: Parameters<VisualEngine2AEvalCliDependencies["select"]>[0], index: number) => index === 14 ? { ...selection(row), usage: undefined } : selection(row)],
+  ])("keeps evidence and reservations at zero for %s", async (_label, selectResult) => {
     let index = 0;
     const state = fixture({ select: vi.fn(async (row) => selectResult(row, index++)) });
 
     const result = await run(state.deps);
 
     expect(result.ok).toBe(false);
-    expect(index).toBe(75);
+    expect(index).toBe(15);
     expect(state.reservations).toHaveLength(0);
     expect(state.deps.generateEvidence).not.toHaveBeenCalled();
   });
@@ -276,7 +281,7 @@ describe("Visual Engine 2A eval CLI injected integration", () => {
     expect(state.logs[0]).not.toContain("workspace");
   });
 
-  it("atomically writes preflight evidence before exactly 75 existing-engine reservations", async () => {
+  it("runs exactly 15 selections, writes the live canary, rechecks barriers, then exposes 75 frozen rows", async () => {
     const cwd = join("workspace", "openlen");
     const state = fixture();
 
@@ -284,9 +289,19 @@ describe("Visual Engine 2A eval CLI injected integration", () => {
 
     expect(result).toMatchObject({ ok: true, summary: { started: 75, evidence: 75 } });
     expect(state.writes).toHaveLength(1);
-    expect(state.writes[0].path).toBe(join(cwd, "scratch", "visual-engine-2a", "preflight.json"));
-    expect(state.writes[0].value).toMatchObject({ reservationCount: 0, counts: { templateSkeleton: 75 } });
+    expect(state.deps.select).toHaveBeenCalledTimes(15);
+    expect(new Set(vi.mocked(state.deps.select).mock.calls.map(([row]) => row.caseId)).size).toBe(15);
+    expect(vi.mocked(state.deps.select).mock.calls.every(([row]) => row.scenarioId === "plain")).toBe(true);
+    expect(state.writes[0].path).toBe(join(cwd, "scratch", "visual-engine-2a", "live-canary.json"));
+    expect(state.writes[0].path).not.toContain("preflight.json");
+    expect(state.writes[0].value).toMatchObject({ reservationCount: 0, counts: { analyzed: 15, passed: 15, failed: 0 } });
     expect(state.order.indexOf("write")).toBeLessThan(state.order.indexOf("reserve"));
+    expect(state.order).toEqual([
+      "quota", "head", "qualification", "recompute", "head", "quota",
+      ...Array.from({ length: 15 }, () => "provider"),
+      "write", "head", "recompute", "head", "quota", "evidence",
+      ...Array.from({ length: 75 }, () => "reserve"),
+    ]);
     expect(state.order.slice(state.order.indexOf("write"), state.order.indexOf("evidence") + 1)).toEqual([
       "write", "head", "recompute", "head", "quota", "evidence",
     ]);
@@ -294,7 +309,7 @@ describe("Visual Engine 2A eval CLI injected integration", () => {
     expect(state.deps.generateEvidence).toHaveBeenCalledTimes(1);
   });
 
-  it("refuses a HEAD change after the 75th selection and keeps adaptation at zero", async () => {
+  it("refuses a HEAD change after the 15th selection and keeps adaptation at zero", async () => {
     const state = fixture();
     const commits = [COMMIT_SHA, COMMIT_SHA, "f".repeat(40)];
     state.deps.getCommitSha = vi.fn(async () => { state.order.push("head"); return commits.shift()!; });
@@ -302,7 +317,7 @@ describe("Visual Engine 2A eval CLI injected integration", () => {
     const result = await run(state.deps);
 
     expect(result).toMatchObject({ ok: false, code: "qualification_stale", reportSha256: expect.any(String) });
-    expect(state.deps.select).toHaveBeenCalledTimes(75);
+    expect(state.deps.select).toHaveBeenCalledTimes(15);
     expect(state.writes).toHaveLength(1);
     expect(state.order.slice(state.order.indexOf("write"))).toEqual(["write", "head"]);
     expect(state.deps.generateEvidence).not.toHaveBeenCalled();
@@ -329,7 +344,7 @@ describe("Visual Engine 2A eval CLI injected integration", () => {
       const result = await run(state.deps);
 
       expect(result).toMatchObject({ ok: false, code: "qualification_stale", reportSha256: expect.any(String) });
-      expect(state.deps.select).toHaveBeenCalledTimes(75);
+      expect(state.deps.select).toHaveBeenCalledTimes(15);
       expect(state.writes).toHaveLength(1);
       expect(state.order.slice(state.order.indexOf("write"))).toEqual(["write", "head", "recompute", "head"]);
       expect(state.deps.generateEvidence).not.toHaveBeenCalled();
@@ -350,7 +365,7 @@ describe("Visual Engine 2A eval CLI injected integration", () => {
     const result = await run(state.deps);
 
     expect(result).toMatchObject({ ok: false, code: "invalid_quota", reportSha256: expect.any(String) });
-    expect(state.deps.select).toHaveBeenCalledTimes(75);
+    expect(state.deps.select).toHaveBeenCalledTimes(15);
     expect(state.writes).toHaveLength(1);
     expect(state.order.slice(state.order.indexOf("write"))).toEqual([
       "write", "head", "recompute", "head", "quota",
@@ -360,6 +375,19 @@ describe("Visual Engine 2A eval CLI injected integration", () => {
     expect(state.logs).toHaveLength(1);
     expect(JSON.parse(state.logs[0])).toMatchObject({ ok: false, code: "invalid_quota" });
     expect(state.logs[0]).not.toContain("workspace");
+  });
+
+  it("stops before evidence and reservations when the atomic canary write fails", async () => {
+    const state = fixture({
+      writeJsonAtomic: vi.fn(async () => { throw new Error("disk unavailable"); }),
+    });
+
+    const result = await run(state.deps);
+
+    expect(result).toEqual({ ok: false, code: "evaluation_failed" });
+    expect(state.deps.select).toHaveBeenCalledTimes(15);
+    expect(state.deps.generateEvidence).not.toHaveBeenCalled();
+    expect(state.reservations).toHaveLength(0);
   });
 
   it("passes only frozen cohort rows to adaptation and emits one redacted terminal record", async () => {

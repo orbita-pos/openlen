@@ -89,8 +89,8 @@ function validCommit(value: string): boolean {
   return /^[0-9a-f]{40}$/i.test(value);
 }
 
-function qualificationIsInternallyValid(
-  args: VisualEngine2APreflightDependencies,
+export function visualEngine2AQualificationIsInternallyValid(
+  args: Pick<VisualEngine2APreflightDependencies, "cases" | "currentQualification">,
 ): boolean {
   const current = args.currentQualification;
   if (current.schemaVersion !== "visual-engine-2a-qualification/1.0"
@@ -195,7 +195,7 @@ export async function runVisualEngine2APreflight(
 
   if (args.quota.limit !== 75 || args.quota.used !== 0) return failedBeforeProvider("invalid_quota");
   if (args.quota.existingRuns !== 0) return failedBeforeProvider("existing_runs");
-  if (!qualificationIsInternallyValid(args)) return failedBeforeProvider("qualification_invalid");
+  if (!visualEngine2AQualificationIsInternallyValid(args)) return failedBeforeProvider("qualification_invalid");
   if (!verifyVisualEngine2AQualification({
     manifest: args.qualification,
     current: args.currentQualification,

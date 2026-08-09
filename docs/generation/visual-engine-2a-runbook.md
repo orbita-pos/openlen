@@ -11,13 +11,13 @@ Implementation completion and pilot success are separate decisions:
 - No command under **Paid pilot execution** may run without separate, explicit user authorization for the complete paid evaluation footprint.
 - The implementation commit does not enable `skeleton` globally. The default and every unknown value remain `off`.
 
-The paid footprint is larger than 75 provider requests. The evaluation performs the exact frozen 75-row safe-selection preflight before quota reservation. All 75 rows must resolve to an allowlisted `template_skeleton` route or the run stops with zero reservations. No row is retried, replaced, or selected from a larger pool. A successful preflight therefore makes exactly 75 paid intent-analysis calls before starting exactly 75 adaptations. Each adaptation can also perform Quick baseline/candidate fill work and at most one diagnostic vision critique. The operator must budget and authorize all of those calls, not describe the authorization as merely “75 Gemini calls.”
+The paid footprint begins with a strict 15/15 live canary before quota reservation. It makes one intent request per frozen base case, with maximum concurrency 3, and reuses that successful in-memory selection across the case's five scenarios. Every case must resolve to its exact qualified, allowlisted `template_skeleton` or the command writes only the redacted terminal canary artifact and stops with `reservationCount=0`. There is no retry, replacement, or fallback. Only a successful post-artifact freshness/quota gate exposes the frozen 75 adaptations. Each adaptation can also perform Quick baseline/candidate fill work and at most one diagnostic vision critique, so the operator must authorize the complete footprint.
 
 ## Cohort order and authorization boundary
 
-Follow this exact order: **qualification → human manifest review → fresh rate/FIX freeze → new explicit paid authorization → live eval → blind review → rollback → scorecard**. The read-only qualification checkpoint is `npm.cmd run generation:visual-engine-2a:qualify`; it produces an ignored local aggregate and does not make provider calls or database writes. A human must review that manifest before freezing the current provider rate card and dated foreign-exchange (FIX) basis.
+Follow this exact order: **stable qualification → human manifest review → fresh rate/FIX freeze → new explicit approval → 15/15 live canary → atomic redacted canary artifact → post-write freshness/quota gate → 75 adaptations → blind review → rollback → scorecard**. The read-only qualification checkpoint is `npm.cmd run generation:visual-engine-2a:qualify`; it produces an ignored local aggregate and does not make provider calls or database writes. A human must review that manifest before freezing the current provider rate card and dated foreign-exchange (FIX) basis.
 
-The prior paid authorization was consumed by the stopped paid preflight. It does not authorize a later run. The future paid eval must receive new, explicit approval for its complete footprint; do not run `npm.cmd run generation:visual-engine-2a:eval` without it. `OPENLEN_VISUAL_ENGINE` remains `off` until a separate rollout decision.
+The prior paid authorization was consumed by the stopped 75-analysis run. It does not authorize a later run. The completed code must not be run live yet: the future paid eval requires new explicit approval for the 15 requests and any following 75 adaptations. Do not run `npm.cmd run generation:visual-engine-2a:eval` without it. `OPENLEN_VISUAL_ENGINE` remains `off` until a separate rollout decision.
 
 The 2A cohort is only the frozen 15 base cases expanded to 75 rows. Selector adversarial cases remain separate from the 2A cohort. Complex coloring, minigames, and stories belong to 2B. They are not a 2A exception or replacement route.
 
@@ -152,6 +152,8 @@ The final query must show the same `used` value as before the update. Never run 
 
 ## Privacy audit
 
+The local canary artifact has a binding allowlist. `scratch/visual-engine-2a/live-canary.json` may contain only schema/dataset/qualification/catalog/commit identifiers or hashes; model, prompt, policy, taxonomy and rate-card versions; exactly 15 rows with `caseId`, route, selected template ID or `null`, three fit/cost scores or `null`, typed result code, usage counters or `null`, and `intentSha256`; aggregate counts, tokens, cost and duration; `reservationCount=0`; and its canonical self-hash. Full intents remain in process memory only. Briefs, full intents, ranked results, prompts, responses, HTML, copy, profiles, images, screenshots, provider bodies, keys, secrets, emails, reviewer identity, messages and absolute paths are forbidden. A failed canary still writes only this redacted terminal shape when the writer is available.
+
 The ledger is redacted telemetry, not project storage. It must contain no user identity, brief, copy, HTML, profile, prompt, raw model response, raw provider/database error, API key or reviewer identity.
 
 Verify the exact schema allowlist after migration:
@@ -207,7 +209,7 @@ All persisted costs use integer micro-MXN (`1 MXN = 1,000,000 micro-MXN`) and th
 - `observedPilotCostMicromxn` is the production-equivalent amount plus the duplicated shadow candidate-fill usage needed by the evaluation harness.
 - The scorecard gate uses the mean **production-equivalent** cost over all 75 starts, including failures, and requires it to be strictly below `400,000` micro-MXN (`MXN 0.40`). `0.40` exactly fails.
 - A missing production-equivalent cost on any started row is incomplete evidence and must fail the gate; it must never be coerced to a free `0` call.
-- Total cash spend for the experiment is broader than the scorecard metric because preflight safe selection, baseline construction, rendering and other evaluation-only work can occur outside that definition. Record that separately for budgeting.
+- Total cash spend for the experiment is broader than the scorecard metric because the 15-request live canary, baseline construction, rendering and other evaluation-only work can occur outside that definition. Record that separately for budgeting.
 
 ## Paid pilot execution — explicit authorization required
 
@@ -221,7 +223,7 @@ Stop here until the user explicitly authorizes the complete paid evaluation and 
 npm.cmd run generation:visual-engine-2a:eval
 ```
 
-The runner refuses `off`/`skeleton`, missing provider/database/rate-card configuration, inconsistent quota, any result other than a 75/75 allowlisted skeleton preflight, or a non-zero 2A budget. It completes the deterministic frozen 75-row preflight before any reservation. Every row must pass; there is no larger candidate pool, retry, removal, or replacement. Do not remove failures, replace an unattractive result or replenish quota.
+The runner refuses `off`/`skeleton`, missing provider/database/rate-card configuration, inconsistent quota, any result other than a 15/15 exact-qualified-template live canary, or a non-zero 2A budget. It makes exactly one intent request per frozen base case with maximum concurrency 3, atomically writes `scratch/visual-engine-2a/live-canary.json`, then rechecks HEAD, qualification material, HEAD again, and exact zero-use quota before exposing 75 adaptations. Every case must pass; there is no larger candidate pool, retry, removal, replacement, or second intent request in the adaptation path.
 
 After the command, inspect counts without exposing content:
 

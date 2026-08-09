@@ -75,12 +75,12 @@ describe("qualifyVisualEngine2ACohort", () => {
   it("documents the ordered, non-live-to-paid 2A authorization boundary", async () => {
     const runbook = await readFile(resolve(process.cwd(), "docs/generation/visual-engine-2a-runbook.md"), "utf8");
     const steps = [
-      "qualification → human manifest review → fresh rate/FIX freeze → new explicit paid authorization → live eval → blind review → rollback → scorecard",
-      "The prior paid authorization was consumed by the stopped paid preflight.",
-      "exact frozen 75-row safe-selection preflight",
-      "All 75 rows must resolve to an allowlisted `template_skeleton` route",
-      "No row is retried, replaced, or selected from a larger pool",
-      "exactly 75 paid intent-analysis calls",
+      "stable qualification → human manifest review → fresh rate/FIX freeze → new explicit approval → 15/15 live canary → atomic redacted canary artifact → post-write freshness/quota gate → 75 adaptations → blind review → rollback → scorecard",
+      "The prior paid authorization was consumed by the stopped 75-analysis run.",
+      "one intent request per frozen base case",
+      "maximum concurrency 3",
+      "reservationCount=0",
+      "The completed code must not be run live yet",
       "Selector adversarial cases remain separate from the 2A cohort.",
       "Complex coloring, minigames, and stories belong to 2B.",
       "`OPENLEN_VISUAL_ENGINE` remains `off` until a separate rollout decision.",
@@ -92,6 +92,9 @@ describe("qualifyVisualEngine2ACohort", () => {
       "stopped 150-call preflight",
       "deterministic 150-row preflight",
       "first 75 eligible",
+      "exact frozen 75-row safe-selection preflight",
+      "All 75 rows must resolve to an allowlisted `template_skeleton` route",
+      "exactly 75 paid intent-analysis calls",
     ]) expect(runbook).not.toContain(obsolete);
   });
 

@@ -9,7 +9,7 @@ import type { PilotRateCardConfig } from "@/lib/generation/model-cost";
 import { calculateModelCostMicros, parsePilotRateCardFromEnv } from "@/lib/generation/model-cost";
 import { VISUAL_ENGINE_2A_PILOT_CASES } from "@/lib/generation/visual-engine-2a-cohort";
 import type { QualifiedPilotRow, VisualEngine2APoolRow } from "@/lib/generation/visual-engine-2a-eval";
-import { runVisualEngine2APreflight } from "@/lib/generation/visual-engine-2a-preflight";
+import { runVisualEngine2ALiveCanary } from "@/lib/generation/visual-engine-2a-live-canary";
 import {
   verifyVisualEngine2AQualification,
   type VisualEngine2AQualificationManifest,
@@ -47,8 +47,8 @@ function qualificationPath(cwd: string): string {
   return join(cwd, "scratch", "visual-engine-2a", "qualification.json");
 }
 
-function preflightPath(cwd: string): string {
-  return join(cwd, "scratch", "visual-engine-2a", "preflight.json");
+function liveCanaryPath(cwd: string): string {
+  return join(cwd, "scratch", "visual-engine-2a", "live-canary.json");
 }
 
 function isCommitSha(value: string): boolean {
@@ -143,7 +143,7 @@ export async function runVisualEngine2AEvalCli(
           if (quotaFailure) {
             terminal = { ok: false, code: quotaFailure };
           } else {
-            const preflight = await runVisualEngine2APreflight({
+            const liveCanary = await runVisualEngine2ALiveCanary({
               cases: VISUAL_ENGINE_2A_PILOT_CASES,
               qualification: qualificationValue,
               currentQualification: currentQualification(recomputed),
@@ -153,12 +153,12 @@ export async function runVisualEngine2AEvalCli(
               mxnPerUsd: deps.rateCard.mxnPerUsd,
               select: deps.select,
             });
-            await deps.writeJsonAtomic(preflightPath(cwd), preflight.report);
-            if (!preflight.ok) {
+            await deps.writeJsonAtomic(liveCanaryPath(cwd), liveCanary.report);
+            if (!liveCanary.ok) {
               terminal = {
                 ok: false,
-                code: preflight.code,
-                reportSha256: preflight.report.reportSha256,
+                code: liveCanary.code,
+                reportSha256: liveCanary.report.reportSha256,
               };
             } else {
               const finalFailure = await finalQualificationGate(deps, commitSha, qualificationValue);
@@ -166,11 +166,11 @@ export async function runVisualEngine2AEvalCli(
                 terminal = {
                   ok: false,
                   code: finalFailure,
-                  reportSha256: preflight.report.reportSha256,
+                  reportSha256: liveCanary.report.reportSha256,
                 };
               } else {
-                const summary = await deps.generateEvidence(preflight.eligible);
-                terminal = { ok: true, summary, reportSha256: preflight.report.reportSha256 };
+                const summary = await deps.generateEvidence(liveCanary.eligible);
+                terminal = { ok: true, summary, reportSha256: liveCanary.report.reportSha256 };
               }
             }
           }
@@ -309,7 +309,7 @@ async function productionDependencies(): Promise<VisualEngine2AEvalCliDependenci
     },
     select: async (row) => {
       const result = await selectGenerationRoute(row.brief, await loadCatalog());
-      if (result.ok) rich.set(rowKey(row), result);
+      if (result.ok) rich.set(row.caseId, result);
       return result;
     },
     writeJsonAtomic: async (path, value) => {
@@ -403,8 +403,8 @@ async function productionDependencies(): Promise<VisualEngine2AEvalCliDependenci
             };
           },
           adapt: async (row) => {
-            const selection = rich.get(rowKey(row));
-            if (!selection) throw new Error("Missing preflight selection");
+            const selection = rich.get(row.caseId);
+            if (!selection) throw new Error("Missing live canary selection");
             const template = catalogRows.find((item) => item.id === row.templateId);
             if (!template?.visualMetadata) throw new Error("Missing reviewed metadata");
             const base = await prepare(row);
