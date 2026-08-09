@@ -30,6 +30,8 @@ const mocks = vi.hoisted(() => ({
   adaptTemplateSkeleton: vi.fn(),
   reserveVisualEnginePilotRun: vi.fn(),
   completeVisualEnginePilotRun: vi.fn(),
+  listSections: vi.fn(),
+  composeSectionCandidate: vi.fn(),
 }));
 
 vi.mock("@inariwatch/capture", () => ({ captureException: mocks.captureException }));
@@ -78,6 +80,10 @@ vi.mock("@/lib/generation/adapt-skeleton", () => ({ adaptTemplateSkeleton: mocks
 vi.mock("@/lib/generation/visual-engine-pilot-store", () => ({
   reserveVisualEnginePilotRun: mocks.reserveVisualEnginePilotRun,
   completeVisualEnginePilotRun: mocks.completeVisualEnginePilotRun,
+}));
+vi.mock("@/lib/sections/store", () => ({ listSections: mocks.listSections }));
+vi.mock("@/lib/generation/compose-sections", () => ({
+  composeSectionCandidate: mocks.composeSectionCandidate,
 }));
 
 import { POST } from "@/app/api/curate/route";
@@ -150,6 +156,11 @@ const SAFE_SKELETON = {
   policyVersion: "template-policy/1.0" as const,
   modelId: "safe-model",
   durationMs: 5,
+};
+
+const SAFE_COMPOSITION = {
+  ...SAFE_SKELETON,
+  decision: { ...SAFE_SKELETON.decision, route: "section_composition" as const, templateId: null },
 };
 
 const ADAPTED = {
@@ -241,6 +252,33 @@ describe("POST /api/curate Visual Engine integration", () => {
     mocks.adaptTemplateSkeleton.mockResolvedValue(ADAPTED);
     mocks.reserveVisualEnginePilotRun.mockResolvedValue({ ok: true, id: "pilot-1", ordinal: 1 });
     mocks.completeVisualEnginePilotRun.mockResolvedValue(undefined);
+    mocks.listSections.mockResolvedValue([]);
+    mocks.composeSectionCandidate.mockResolvedValue({
+      ok: true,
+      status: "composed",
+      html: "COMPOSED:COMPLETE",
+      creativeDirection: DIRECTION,
+      manifest: {
+        schemaVersion: "section-composition-manifest/1.0",
+        intentHash: `sha256:${"a".repeat(64)}`,
+        creativeDirectionHash: `sha256:${"b".repeat(64)}`,
+        inventoryHash: `sha256:${"c".repeat(64)}`,
+        orderedRoles: ["gallery"],
+        selectedSectionIds: ["gallery-01"],
+        selectedContentHashes: ["111111111111"],
+        compatibilityRuleIds: ["section_component:exact:gallery"],
+        outputHash: `sha256:${"d".repeat(64)}`,
+        resultCode: "composed",
+      },
+      fill: { filled: true, appliedOps: 4, durationMs: 10, leaksBefore: 0, leaksAfter: 0 },
+      adaptation: {
+        ok: true, status: "adapted", creativeDirectionVersion: "creative-direction/1.0",
+        planVersion: "skeleton-adaptation-plan/1.0", promptVersion: "creative-direction/1.7",
+        modelId: "creative-model", structuralFingerprintBefore: `sha256:${"e".repeat(64)}`,
+        structuralFingerprintAfter: `sha256:${"e".repeat(64)}`,
+        usage: { inputTokens: 20, outputTokens: 10, thinkingTokens: 0, cachedTokens: 0 }, durationMs: 25,
+      },
+    });
     mocks.insert.mockReturnValue({ values: mocks.insertValues });
     mocks.insertValues.mockResolvedValue(undefined);
     mocks.createVersion.mockResolvedValue(undefined);
@@ -322,6 +360,32 @@ describe("POST /api/curate Visual Engine integration", () => {
     expect(mocks.insertValues).toHaveBeenCalledWith(expect.objectContaining({ data: { html: fallbackHtml } }));
     expect(events.at(-1)).toMatchObject({ event: "done", data: { templateId: "weighted", credits: 5 } });
     expect(mocks.debitCredits).toHaveBeenCalledOnce();
+  });
+
+  it("delivers one finalized composition preview with section metadata and unchanged credits", async () => {
+    process.env.OPENLEN_VISUAL_ENGINE = "composition";
+    mocks.selectGenerationRoute.mockResolvedValue(SAFE_COMPOSITION);
+    const { events } = await post();
+    const finalHtml = "SAFE:META:SEEDED:false:COMPOSED:COMPLETE";
+
+    expect(previews(events)).toEqual([finalHtml]);
+    expect(previews(events).join(" ")).not.toContain("RAW:");
+    expect(mocks.listSections).toHaveBeenCalledWith({ status: "published" });
+    expect(mocks.insertValues).toHaveBeenCalledWith(expect.objectContaining({
+      data: {
+        html: finalHtml,
+        generation: {
+          visualEngine: expect.objectContaining({
+            route: "section_composition",
+            templateId: null,
+            creativeDirection: DIRECTION,
+            compositionManifest: expect.objectContaining({ resultCode: "composed" }),
+          }),
+        },
+      },
+    }));
+    expect(events.at(-1)).toMatchObject({ event: "done", data: { templateId: "section-composition", credits: 5 } });
+    expect(mocks.debitCredits).toHaveBeenCalledWith("user-1", 5);
   });
 
   it("delivers baseline without awaiting shadow, then reserves and completes only the background candidate", async () => {

@@ -69,6 +69,8 @@ export interface ComposeSectionCandidateDeps {
   fillAssembled?: typeof fillAssembled;
   normalizeBornCanonical?: typeof normalizeBornCanonical;
   adaptTemplateSkeleton?: typeof adaptTemplateSkeleton;
+  /** Last gate before the first paid composition call (fill). */
+  beforeCreative?: () => Promise<boolean>;
 }
 
 export type SectionCompositionResult =
@@ -78,6 +80,7 @@ export type SectionCompositionResult =
       html: string;
       creativeDirection: CreativeDirection;
       manifest: SectionCompositionManifest;
+      fill: Pick<FillAssembledResult, "filled" | "appliedOps" | "usage" | "durationMs" | "leaksBefore" | "leaksAfter">;
       adaptation: Omit<Extract<SkeletonAdaptationResult, { ok: true }>, "html" | "creativeDirection">;
     }
   | {
@@ -85,6 +88,12 @@ export type SectionCompositionResult =
       status: "fallback";
       reasonCode: Exclude<SectionCompositionResultCode, "composed">;
       manifest: SectionCompositionManifest;
+      telemetry?: {
+        promptVersion: string | null;
+        modelId: string | null;
+        usage?: Extract<SkeletonAdaptationResult, { ok: false }>["usage"];
+        durationMs: number;
+      };
     };
 
 const FAILURE_CODES = new Set<SectionCompositionResultCode>(
@@ -142,12 +151,14 @@ function failure(
   reasonCode: Exclude<SectionCompositionResultCode, "composed">,
   inventory?: SectionCompositionInventory,
   selection: readonly SectionSelectionRow[] = [],
+  telemetry?: Extract<SectionCompositionResult, { ok: false }>["telemetry"],
 ): Extract<SectionCompositionResult, { ok: false }> {
   return {
     ok: false,
     status: "fallback",
     reasonCode,
     manifest: manifest(input, reasonCode, inventory, selection),
+    ...(telemetry ? { telemetry } : {}),
   };
 }
 
@@ -207,13 +218,26 @@ export async function composeSectionCandidate(
       fetched.fragments as SectionFragment[],
       COMPOSITION_BASE_THEME,
     );
+    if (deps.beforeCreative && !(await deps.beforeCreative())) {
+      return failure(input, "internal_error", inventory, selection);
+    }
     const fill: FillAssembledResult = await (deps.fillAssembled ?? fillAssembled)(
       stitched,
       input.copy,
       { onStage: input.onStage },
     );
     if ((fill.leaksAfter ?? 0) > 0 || (!fill.filled && hasFillableCopy(input.copy))) {
-      return failure(input, "inherited_copy_leak", inventory, selection);
+      return failure(input, "inherited_copy_leak", inventory, selection, fill.usage ? {
+        promptVersion: null,
+        modelId: null,
+        usage: {
+          inputTokens: fill.usage.inputTokens,
+          outputTokens: fill.usage.outputTokens,
+          thinkingTokens: 0,
+          cachedTokens: 0,
+        },
+        durationMs: fill.durationMs,
+      } : undefined);
     }
 
     const normalized = (deps.normalizeBornCanonical ?? normalizeBornCanonical)(fill.html);
@@ -230,6 +254,12 @@ export async function composeSectionCandidate(
         mapCompositionAdaptationReason(adapted.reasonCode),
         inventory,
         selection,
+        {
+          promptVersion: adapted.promptVersion,
+          modelId: adapted.modelId,
+          ...(adapted.usage ? { usage: adapted.usage } : {}),
+          durationMs: adapted.durationMs,
+        },
       );
     }
     if (!rolesRemainExact(adapted.html, selection)) {
@@ -243,6 +273,14 @@ export async function composeSectionCandidate(
       html: adapted.html,
       creativeDirection,
       manifest: manifest(input, "composed", inventory, selection, creativeDirection, adapted.html),
+      fill: {
+        filled: fill.filled,
+        appliedOps: fill.appliedOps,
+        ...(fill.usage ? { usage: fill.usage } : {}),
+        durationMs: fill.durationMs,
+        ...(fill.leaksBefore === undefined ? {} : { leaksBefore: fill.leaksBefore }),
+        ...(fill.leaksAfter === undefined ? {} : { leaksAfter: fill.leaksAfter }),
+      },
       adaptation,
     };
   } catch (error) {

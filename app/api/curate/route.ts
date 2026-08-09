@@ -12,6 +12,7 @@ import { consumeToken, RATE_LIMITS } from "@/lib/rate-limit";
 import { renderProjectThumbnail } from "@/lib/projects/thumbnail";
 import type { ProjectData } from "@/lib/projects/types";
 import { listTemplates } from "@/lib/templates/store";
+import { listSections } from "@/lib/sections/store";
 import { pickTemplate, pickWeighted, type TemplateCatalogItem } from "@/lib/curate/pick-template";
 import {
   logShadowComparisonWhenReady,
@@ -23,6 +24,11 @@ import { overlayProfile } from "@/lib/business-profiles/overlay";
 import { selectGenerationRoute } from "@/lib/generation/safe-selection";
 import { shouldRunLegacySafeShadow, visualEngineMode } from "@/lib/generation/visual-engine-mode";
 import { fillAndNormalizeCuratedTemplate, finalizeCuratedDocument } from "@/lib/curate/build-curated-document";
+import { canonicalJsonSha256 } from "@/lib/generation/visual-engine-2a-eval";
+import {
+  launchShadowSectionCompositionCandidate,
+  runSectionCompositionCandidate,
+} from "@/lib/curate/quick-section-composition";
 import {
   calculateQuickDeliveryCredits,
   commitQuickVisualEngineDocument,
@@ -139,7 +145,9 @@ export async function POST(req: Request): Promise<Response> {
         const pick = await pickPromise;
         // Shadow selection/candidate work must not delay the baseline. Skeleton
         // mode awaits the safe result because it can change user-visible delivery.
-        const safeResult = visualMode === "skeleton" ? await safePromise : null;
+        const safeResult = visualMode === "skeleton" || visualMode === "composition"
+          ? await safePromise
+          : null;
         if (!pick.ok) {
           emit("error", { kind: pick.error.kind, message: `Pick failed: ${pick.error.message}` });
           return close();
@@ -170,21 +178,35 @@ export async function POST(req: Request): Promise<Response> {
               weightedTemplateId: chosenId,
               safeResult: shadowSafeResult,
             });
-            if (!shadowPlan.shadowTemplateId || !shadowSafeResult?.ok) return;
-            const shadowTemplate = templates.find(
-              (template) => template.id === shadowPlan.shadowTemplateId,
-            );
-            if (!shadowTemplate?.visualMetadata) return;
-            await launchShadowSkeletonCandidate({
+            if (!shadowPlan.shadowCandidate || !shadowSafeResult?.ok) return;
+            if (shadowPlan.shadowCandidate.kind === "template_skeleton") {
+              const shadowTemplateId = shadowPlan.shadowCandidate.templateId;
+              const shadowTemplate = templates.find((template) => template.id === shadowTemplateId);
+              if (!shadowTemplate?.visualMetadata) return;
+              await launchShadowSkeletonCandidate({
+                mode: "shadow",
+                candidateTemplateId: shadowTemplateId,
+                fallbackTemplateId: chosenId,
+                candidateTitle: titleFor(shadowTemplateId),
+                fallbackTitle: titleFor(chosenId),
+                copy,
+                profileData: profile.data,
+                intent: shadowSafeResult.intent,
+                templateMetadata: shadowTemplate.visualMetadata,
+                policyVersion: shadowSafeResult.policyVersion,
+              });
+              return;
+            }
+            await launchShadowSectionCompositionCandidate({
               mode: "shadow",
-              candidateTemplateId: shadowPlan.shadowTemplateId,
               fallbackTemplateId: chosenId,
-              candidateTitle: titleFor(shadowPlan.shadowTemplateId),
               fallbackTitle: titleFor(chosenId),
+              candidateTitle: copy.business_name?.trim() || "Untitled page",
               copy,
               profileData: profile.data,
               intent: shadowSafeResult.intent,
-              templateMetadata: shadowTemplate.visualMetadata,
+              intentHash: canonicalJsonSha256(shadowSafeResult.intent),
+              records: await listSections({ status: "published" }),
               policyVersion: shadowSafeResult.policyVersion,
             });
           }).catch(() => {
@@ -208,11 +230,55 @@ export async function POST(req: Request): Promise<Response> {
           visualEngine?: NonNullable<ProjectData["generation"]>["visualEngine"];
         };
         let delivered: DeliveredDocument;
-        const safeTemplate = templates.find(
-          (template) => template.id === routePlan.delivery.templateId,
-        );
+        const safeTemplate = routePlan.delivery.templateId === null
+          ? undefined
+          : templates.find((template) => template.id === routePlan.delivery.templateId);
 
         if (
+          routePlan.delivery.kind === "section_composition"
+          && safeResult?.ok
+        ) {
+          emit("progress", { stage: "recipe" });
+          emit("progress", { stage: "selecting" });
+          const records = await listSections({ status: "published" });
+          emit("progress", { stage: "stitching" });
+          emit("progress", { stage: "filling" });
+          const composition = await runSectionCompositionCandidate({
+            fallbackTemplateId: chosenId,
+            fallbackTitle: titleFor(chosenId),
+            candidateTitle: copy.business_name?.trim() || "Untitled page",
+            copy,
+            profileData: profile.data,
+            intent: safeResult.intent,
+            intentHash: canonicalJsonSha256(safeResult.intent),
+            records,
+            policyVersion: safeResult.policyVersion,
+            onStage: (stage) => emit("progress", { stage }),
+          });
+          if (!composition.ok) {
+            emit("error", {
+              kind: composition.kind,
+              message: composition.kind === "template-unavailable"
+                ? "Chosen template's HTML is unavailable."
+                : "Curated HTML carried editor markers — try again.",
+            });
+            return close();
+          }
+          delivered = {
+            html: composition.html,
+            templateId: composition.templateId,
+            title: composition.route === "section_composition"
+              ? (copy.business_name?.trim() || "Untitled page")
+              : titleFor(composition.templateId),
+            filled: composition.filled,
+            appliedOps: composition.appliedOps,
+            leaksBefore: composition.leaksBefore,
+            leaksAfter: composition.leaksAfter,
+            visualEngine: composition.route === "section_composition"
+              ? composition.visualEngine
+              : undefined,
+          };
+        } else if (
           routePlan.delivery.kind === "template_skeleton"
           && safeResult?.ok
           && safeTemplate?.visualMetadata
@@ -258,7 +324,7 @@ export async function POST(req: Request): Promise<Response> {
           // Quick's immediate raw preview before filling.
           const deliveredTemplateId = routePlan.delivery.kind === "template_skeleton"
             ? chosenId
-            : routePlan.delivery.templateId;
+            : routePlan.delivery.templateId ?? chosenId;
           emit("progress", { stage: "loading" });
           const built = await fillAndNormalizeCuratedTemplate({
             templateId: deliveredTemplateId,

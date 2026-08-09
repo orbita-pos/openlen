@@ -80,17 +80,20 @@ const SAFE_ERROR: SafeSelectionResult = { ok: false, errorKind: "timeout", durat
 describe("planQuickVisualEngineRoute", () => {
   it.each([
     { mode: "off", safeResult: safe("template_skeleton", "safe-skeleton"), kind: "weighted", id: "weighted", shadow: null },
-    { mode: "shadow", safeResult: safe("template_skeleton", "safe-skeleton"), kind: "weighted", id: "weighted", shadow: "safe-skeleton" },
+    { mode: "shadow", safeResult: safe("template_skeleton", "safe-skeleton"), kind: "weighted", id: "weighted", shadow: { kind: "template_skeleton", templateId: "safe-skeleton" } },
+    { mode: "shadow", safeResult: safe("section_composition", null), kind: "weighted", id: "weighted", shadow: { kind: "section_composition" } },
     { mode: "shadow", safeResult: safe("template_full", "safe-full"), kind: "weighted", id: "weighted", shadow: null },
     { mode: "shadow", safeResult: SAFE_ERROR, kind: "weighted", id: "weighted", shadow: null },
     { mode: "skeleton", safeResult: safe("template_full", "safe-full"), kind: "template_full", id: "safe-full", shadow: null },
     { mode: "skeleton", safeResult: safe("template_skeleton", "safe-skeleton"), kind: "template_skeleton", id: "safe-skeleton", shadow: null },
     { mode: "skeleton", safeResult: safe("section_composition", null), kind: "weighted", id: "weighted", shadow: null },
-    { mode: "skeleton", safeResult: safe("safe_failure", null), kind: "weighted", id: "weighted", shadow: null },
-    { mode: "skeleton", safeResult: SAFE_ERROR, kind: "weighted", id: "weighted", shadow: null },
+    { mode: "composition", safeResult: safe("section_composition", null), kind: "section_composition", id: null, shadow: null },
+    { mode: "composition", safeResult: safe("template_skeleton", "safe-skeleton"), kind: "template_skeleton", id: "safe-skeleton", shadow: null },
+    { mode: "composition", safeResult: safe("template_full", "safe-full"), kind: "template_full", id: "safe-full", shadow: null },
+    { mode: "composition", safeResult: safe("safe_failure", null), kind: "weighted", id: "weighted", shadow: null },
   ] as const)("maps $mode / $kind without crossing route identities", ({ mode, safeResult, kind, id, shadow }) => {
     expect(planQuickVisualEngineRoute({ mode, weightedTemplateId: "weighted", safeResult })).toEqual({
-      delivery: { kind, templateId: id }, shadowTemplateId: shadow,
+      delivery: { kind, templateId: id }, shadowCandidate: shadow,
     });
   });
 });

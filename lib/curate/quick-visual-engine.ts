@@ -24,11 +24,17 @@ import {
   type FinalizeCuratedDocumentResult,
 } from "./build-curated-document";
 
-export type QuickVisualEngineDeliveryKind = "weighted" | "template_full" | "template_skeleton";
+export type QuickVisualEngineDeliveryKind = "weighted" | "template_full" | "template_skeleton" | "section_composition";
+
+export type QuickVisualEngineShadowCandidate =
+  | { kind: "template_skeleton"; templateId: string }
+  | { kind: "section_composition" };
 
 export interface QuickVisualEngineRoutePlan {
-  delivery: { kind: QuickVisualEngineDeliveryKind; templateId: string };
-  shadowTemplateId: string | null;
+  delivery:
+    | { kind: Exclude<QuickVisualEngineDeliveryKind, "section_composition">; templateId: string }
+    | { kind: "section_composition"; templateId: null };
+  shadowCandidate: QuickVisualEngineShadowCandidate | null;
 }
 
 type UsageCreditCalculator = (
@@ -59,15 +65,19 @@ export function planQuickVisualEngineRoute(input: {
 }): QuickVisualEngineRoutePlan {
   const weighted = {
     delivery: { kind: "weighted" as const, templateId: input.weightedTemplateId },
-    shadowTemplateId: null,
+    shadowCandidate: null,
   };
   if (input.mode === "off" || !input.safeResult?.ok) return weighted;
 
   const { decision } = input.safeResult;
   if (input.mode === "shadow") {
-    return decision.route === "template_skeleton" && decision.templateId
-      ? { ...weighted, shadowTemplateId: decision.templateId }
-      : weighted;
+    if (decision.route === "template_skeleton" && decision.templateId) {
+      return { ...weighted, shadowCandidate: { kind: "template_skeleton", templateId: decision.templateId } };
+    }
+    if (decision.route === "section_composition") {
+      return { ...weighted, shadowCandidate: { kind: "section_composition" } };
+    }
+    return weighted;
   }
   if (
     (decision.route === "template_full" || decision.route === "template_skeleton")
@@ -75,7 +85,13 @@ export function planQuickVisualEngineRoute(input: {
   ) {
     return {
       delivery: { kind: decision.route, templateId: decision.templateId },
-      shadowTemplateId: null,
+      shadowCandidate: null,
+    };
+  }
+  if (input.mode === "composition" && decision.route === "section_composition") {
+    return {
+      delivery: { kind: "section_composition", templateId: null },
+      shadowCandidate: null,
     };
   }
   return weighted;

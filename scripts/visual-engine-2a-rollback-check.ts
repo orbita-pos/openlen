@@ -56,10 +56,15 @@ async function delivery() {
   let pilotReserveCalls = 0;
   let pilotCompleteCalls = 0;
   let candidateJobs = 0;
-  await launchShadowSkeletonCandidate(plan.shadowTemplateId ? ({
+  const shadowTemplateId = plan.shadowCandidate?.kind === "template_skeleton"
+    ? plan.shadowCandidate.templateId
+    : null;
+  const deliveryTemplateId = plan.delivery.templateId
+    ?? VISUAL_ENGINE_2A_ROLLBACK_FIXTURE.weightedTemplateId;
+  await launchShadowSkeletonCandidate(shadowTemplateId ? ({
     mode: "shadow",
-    candidateTemplateId: plan.shadowTemplateId,
-    fallbackTemplateId: plan.delivery.templateId,
+    candidateTemplateId: shadowTemplateId,
+    fallbackTemplateId: deliveryTemplateId,
     candidateTitle: "Rollback Candidate",
     fallbackTitle: "Rollback Fixture",
     copy: { business_name: "Rollback Fixture" } as never,
@@ -97,7 +102,7 @@ async function delivery() {
     1,
   );
   return {
-    selectedTemplateId: plan.delivery.templateId,
+    selectedTemplateId: deliveryTemplateId,
     finalizedHtml: document.html,
     previewSequence,
     projectData,
