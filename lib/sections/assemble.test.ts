@@ -127,4 +127,30 @@ describe("assembleDocument — stitch fragments into one coherent doc", () => {
     expect(doc).toContain("footer-2"); // last footer kept
     expect(doc).not.toContain("footer-1"); // earlier footer dropped
   });
+
+  it("preserves composition order and marks each fragment with its semantic owner", () => {
+    const composed: SectionFragment[] = [
+      { slug: "features-01", type: "features", requestedRole: "minigames", html: frag("features-01", "#111111") },
+      { slug: "features-02", type: "features", requestedRole: "stories", html: frag("features-02", "#222222") },
+      { slug: "gallery-01", type: "gallery", requestedRole: "coloring_gallery", html: frag("gallery-01", "#333333") },
+    ];
+    const doc = assembleDocument(composed, THEME);
+    expect(doc.indexOf("features-01")).toBeLessThan(doc.indexOf("features-02"));
+    expect(doc.indexOf("features-02")).toBeLessThan(doc.indexOf("gallery-01"));
+    expect(doc).toContain('data-openlen-role="minigames"');
+    expect(doc).toContain('data-openlen-role="stories"');
+    expect(doc).toContain('data-openlen-role="coloring_gallery"');
+    expect(doc).not.toContain('data-openlen-role="features"');
+  });
+
+  it("rejects zero or multiple roots for a role-owned fragment", () => {
+    expect(() => assembleDocument([{
+      slug: "features-01", type: "features", requestedRole: "stories",
+      html: '<style>.x{color:red}</style><section><h2>No scoped root</h2></section>',
+    }], THEME)).toThrow(expect.objectContaining({ code: "section_role_coverage_failed" }));
+    expect(() => assembleDocument([{
+      slug: "features-01", type: "features", requestedRole: "stories",
+      html: '<section data-sec="features-01"></section><section data-sec="features-01"></section>',
+    }], THEME)).toThrow(expect.objectContaining({ code: "section_role_coverage_failed" }));
+  });
 });

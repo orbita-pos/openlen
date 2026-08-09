@@ -90,6 +90,7 @@ export async function fillAssembled(
     // Curate/assemble always start from someone else's page, so the previous
     // brand must not survive a "no data for this slot" decision.
     clonedTemplate: true,
+    roleAware: /\bdata-openlen-role\s*=/i.test(stitchedHtml),
   });
 
   if (r.ok) {

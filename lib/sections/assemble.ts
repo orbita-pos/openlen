@@ -21,6 +21,7 @@ import { deriveContractColors, type BaseColors } from "../theme-derive";
 import { SECTION_TYPE_META, type SectionMode, type SectionType } from "./types";
 import { centerOrphanedMaxWidth } from "./scope";
 import { getSectionHtml } from "./store";
+import type { CanonicalSectionRole } from "@/lib/generation/structural-taxonomy";
 
 export interface AssembleTheme {
   /** The 5 base color roles; the other contract colors are derived. */
@@ -43,6 +44,17 @@ export interface SectionFragment {
   type: SectionType;
   /** The stored, already-scoped fragment (font links + <style> + body). */
   html: string;
+  /** Semantic role owned by this fragment in a composed page. */
+  requestedRole?: CanonicalSectionRole;
+}
+
+export class SectionRoleMarkerError extends Error {
+  readonly code = "section_role_coverage_failed" as const;
+
+  constructor() {
+    super("section_role_coverage_failed");
+    this.name = "SectionRoleMarkerError";
+  }
 }
 
 // A section's local dialect/contract token → the page --ol-* token it binds to.
@@ -157,6 +169,7 @@ function orderAndDedupe(frags: SectionFragment[]): SectionFragment[] {
     if (f.type === "footer") return f === lastFooter;
     return true;
   });
+  if (kept.some((fragment) => fragment.requestedRole !== undefined)) return kept;
   return kept
     .map((f, i) => ({ f, i }))
     .sort((a, b) => {
@@ -164,6 +177,25 @@ function orderAndDedupe(frags: SectionFragment[]): SectionFragment[] {
       return d !== 0 ? d : a.i - b.i; // stable within a type
     })
     .map((x) => x.f);
+}
+
+function escapeRegex(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function markRequestedRole(fragment: SectionFragment, html: string): string {
+  if (!fragment.requestedRole) return html;
+  const slug = escapeRegex(fragment.slug);
+  const rootPattern = new RegExp(
+    `<[a-z][a-z0-9:-]*\\b(?=[^>]*\\bdata-sec\\s*=\\s*["']${slug}["'])[^>]*>`,
+    "gi",
+  );
+  const matches = [...html.matchAll(rootPattern)];
+  if (matches.length !== 1) throw new SectionRoleMarkerError();
+  const root = matches[0][0];
+  if (/\bdata-openlen-role\s*=/i.test(root)) throw new SectionRoleMarkerError();
+  const marked = root.replace(/>$/, ` data-openlen-role="${fragment.requestedRole}">`);
+  return `${html.slice(0, matches[0].index)}${marked}${html.slice((matches[0].index ?? 0) + root.length)}`;
 }
 
 function hexToTriplet(hex: string): string | null {
@@ -237,7 +269,7 @@ export function assembleDocument(fragments: SectionFragment[], theme: AssembleTh
   for (const f of ordered) {
     const { links, rest } = extractFontLinks(f.html);
     fontLinks.push(...links);
-    bodyParts.push(bindStyles(rest, f.slug).trim());
+    bodyParts.push(markRequestedRole(f, bindStyles(rest, f.slug)).trim());
   }
   const links = dedupe([...fontLinks, ...(theme.fontLinks ?? [])]);
   return [

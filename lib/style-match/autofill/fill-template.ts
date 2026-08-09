@@ -124,10 +124,11 @@ Output ONLY the <edits>...</edits> block. No preamble. No markdown fences. No co
 export function buildFillUserMessage(
   data: unknown,
   taggedHtml: string,
-  opts: { clonedTemplate?: boolean } = {},
+  opts: { clonedTemplate?: boolean; roleAware?: boolean } = {},
 ): string {
   return `Fill this landing page template with the business data below.
 ${opts.clonedTemplate ? CLONED_TEMPLATE_ADDENDUM : ""}
+${opts.roleAware ? ROLE_MARKER_ADDENDUM : ""}
 
 ═══════════════════════════════════════════
 BUSINESS DATA (JSON):
@@ -179,12 +180,23 @@ short truthful line about the industry instead, or reuse copy from the pitch.
 Structure stays sacred: no deletes, leaf text only, same length budget.
 `;
 
+const ROLE_MARKER_ADDENDUM = `
+COMPOSED-SECTION ROLE OWNERSHIP
+
+Elements inside data-openlen-role must describe that exact role.
+Do not rename minigames as features, stories as testimonials, activities as
+services, or any other role as the source component's original business purpose.
+The role marker is trusted page structure. Preserve it and change leaf copy only.
+`;
+
 export interface FillTemplateInput {
   /** The HTML to fill. Will be tagged with data-op-id internally; do NOT pre-tag. */
   sourceHtml: string;
   /** The document is a clone of ANOTHER business's page (curate / assemble),
    *  so the previous brand's identity must not survive. See the addendum. */
   clonedTemplate?: boolean;
+  /** The document carries trusted data-openlen-role composition markers. */
+  roleAware?: boolean;
   /** Business data (extracted from image or provided directly). */
   data: ExtractedBusinessData | Record<string, unknown>;
   /** Optional progress callback (fires once on completion — non-streaming). */
@@ -288,7 +300,10 @@ export async function fillTemplate(
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
         systemInstruction: { parts: [{ text: FILL_SYSTEM_PROMPT }] },
-        contents: [{ role: "user", parts: [{ text: buildFillUserMessage(input.data, taggedHtml) }] }],
+        contents: [{ role: "user", parts: [{ text: buildFillUserMessage(input.data, taggedHtml, {
+          clonedTemplate: input.clonedTemplate,
+          roleAware: input.roleAware,
+        }) }] }],
         generationConfig: {
           temperature: TEMPERATURE,
           maxOutputTokens: MAX_TOKENS,

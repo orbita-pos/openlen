@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import { fillAssembled, hasFillableCopy } from "./fill";
 import type { ExtractedBusinessData } from "../style-match/autofill/types";
 import type { FillTemplateResult } from "../style-match/autofill/fill-template";
+import { buildFillUserMessage } from "../style-match/autofill/fill-template";
 
 const STITCHED = "<!doctype html><html><body><h1>Generic</h1></body></html>";
 
@@ -85,6 +86,20 @@ describe("fillAssembled — parche de copy heredado", () => {
     expect(sawFlag).toBe(true);
   });
 
+  it("activa la disciplina semántica cuando el documento tiene roles de composición", async () => {
+    let sawRoleAware: boolean | undefined;
+    const fillFn = async (input: { roleAware?: boolean }) => {
+      sawRoleAware = input.roleAware;
+      return okFill();
+    };
+    await fillAssembled(
+      '<!doctype html><html><body><section data-openlen-role="stories"><h2>Features</h2></section></body></html>',
+      FULL_COPY,
+      { fillFn: fillFn as never },
+    );
+    expect(sawRoleAware).toBe(true);
+  });
+
   it("no gasta la llamada del parche cuando no hay fuga", async () => {
     let patches = 0;
     const r = await fillAssembled(STITCHED, FULL_COPY, {
@@ -166,5 +181,23 @@ describe("fillAssembled", () => {
     expect(called).toBe(false);
     expect(r.filled).toBe(false);
     expect(r.html).toBe(STITCHED);
+  });
+});
+
+describe("buildFillUserMessage role ownership", () => {
+  it("forces composed roles to keep their semantic meaning", () => {
+    const message = buildFillUserMessage(
+      { business_name: "PintaMundo" },
+      '<section data-openlen-role="stories"><h2 data-op-id="1">Features</h2></section>',
+      { clonedTemplate: true, roleAware: true },
+    );
+    expect(message).toContain("data-openlen-role must describe that exact role");
+    expect(message).toContain("Do not rename minigames as features");
+    expect(message).toContain("stories as testimonials");
+  });
+
+  it("does not change prompts for ordinary template fills", () => {
+    expect(buildFillUserMessage({}, "<h1>Hi</h1>"))
+      .not.toContain("data-openlen-role must describe that exact role");
   });
 });
