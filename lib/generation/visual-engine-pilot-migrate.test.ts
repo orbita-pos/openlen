@@ -23,6 +23,8 @@ describe("Visual Engine pilot deployment migration", () => {
     expect(script).toContain("ON CONFLICT (\"phase\") DO NOTHING");
     expect(script).toContain("ADD CONSTRAINT");
     expect(script).toContain("EXCEPTION WHEN duplicate_object");
+    expect(script).toContain("FROM pg_constraint");
+    expect(script).toContain("conrelid = '\"visualEnginePilotRuns\"'::regclass");
     expect(script).toContain("CREATE INDEX IF NOT EXISTS");
   });
 

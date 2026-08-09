@@ -57,9 +57,15 @@ async function main() {
     "completedAt" timestamp
   );`);
   await db.execute(sql`DO $$ BEGIN
-    ALTER TABLE "visualEnginePilotRuns"
-      ADD CONSTRAINT "visualEnginePilotRuns_phase_ordinal_unique" UNIQUE("phase", "ordinal");
-  EXCEPTION WHEN duplicate_object THEN NULL;
+    IF NOT EXISTS (
+      SELECT 1
+      FROM pg_constraint
+      WHERE conname = 'visualEnginePilotRuns_phase_ordinal_unique'
+        AND conrelid = '"visualEnginePilotRuns"'::regclass
+    ) THEN
+      ALTER TABLE "visualEnginePilotRuns"
+        ADD CONSTRAINT "visualEnginePilotRuns_phase_ordinal_unique" UNIQUE("phase", "ordinal");
+    END IF;
   END $$;`);
   await db.execute(sql`CREATE INDEX IF NOT EXISTS "visualEnginePilotRuns_phase_status_idx"
     ON "visualEnginePilotRuns" ("phase", "status");`);
