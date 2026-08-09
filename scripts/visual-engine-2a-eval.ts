@@ -7,8 +7,9 @@ import { promisify } from "node:util";
 import type { SafeSelectionResult } from "@/lib/generation/safe-selection";
 import type { PilotRateCardConfig } from "@/lib/generation/model-cost";
 import { calculateModelCostMicros, parsePilotRateCardFromEnv } from "@/lib/generation/model-cost";
+import { createPilotBudgetGuard, type PilotBudgetGuard } from "@/lib/generation/visual-engine-pilot-budget";
 import { VISUAL_ENGINE_2A_PILOT_CASES } from "@/lib/generation/visual-engine-2a-cohort";
-import type { QualifiedPilotRow, VisualEngine2APoolRow } from "@/lib/generation/visual-engine-2a-eval";
+import { buildVisualEngine2ASmokeRows, type QualifiedPilotRow, type VisualEngine2APoolRow } from "@/lib/generation/visual-engine-2a-eval";
 import { runVisualEngine2ALiveCanary } from "@/lib/generation/visual-engine-2a-live-canary";
 import {
   verifyVisualEngine2AQualification,
@@ -21,13 +22,15 @@ export interface VisualEngine2AEvalCliDependencies {
   mode: string | undefined;
   modelId: string;
   rateCard: PilotRateCardConfig;
+  budgetGuard: PilotBudgetGuard;
+  intentMaximumCostMicromxn: number;
   getQuota(): Promise<{ limit: number; used: number; existingRuns: number }>;
   getCommitSha(): Promise<string>;
   readQualification(path: string): Promise<unknown>;
   recomputeQualification(commitSha: string): Promise<VisualEngine2AQualificationManifest>;
   select(row: VisualEngine2APoolRow): Promise<SafeSelectionResult>;
   writeJsonAtomic(path: string, value: unknown): Promise<unknown>;
-  generateEvidence(eligible: readonly QualifiedPilotRow[]): Promise<{ started: number; evidence: number }>;
+  generateEvidence(eligible: readonly QualifiedPilotRow[]): Promise<{ started: number; evidence: number; budgetExhausted?: true }>;
   log(line: string): void;
 }
 
@@ -151,10 +154,26 @@ export async function runVisualEngine2AEvalCli(
               modelId: deps.modelId,
               rateCard: deps.rateCard,
               mxnPerUsd: deps.rateCard.mxnPerUsd,
-              select: deps.select,
+              select: async (row) => {
+                const lease = deps.budgetGuard.acquire("intent", deps.intentMaximumCostMicromxn);
+                if (!lease) return { ok: false, errorKind: "budget_exhausted", durationMs: 0 };
+                const result = await deps.select(row);
+                const actualCost = result.usage
+                  ? calculateModelCostMicros({ intent: result.usage }, deps.rateCard, deps.rateCard.mxnPerUsd)
+                    .observedPilotCostMicromxn
+                  : undefined;
+                lease.settle(actualCost);
+                return result;
+              },
             });
             await deps.writeJsonAtomic(liveCanaryPath(cwd), liveCanary.report);
-            if (!liveCanary.ok) {
+            if (deps.budgetGuard.snapshot().exhausted) {
+              terminal = {
+                ok: false,
+                code: "budget_exhausted",
+                reportSha256: liveCanary.report.reportSha256,
+              };
+            } else if (!liveCanary.ok) {
               terminal = {
                 ok: false,
                 code: liveCanary.code,
@@ -169,8 +188,10 @@ export async function runVisualEngine2AEvalCli(
                   reportSha256: liveCanary.report.reportSha256,
                 };
               } else {
-                const summary = await deps.generateEvidence(liveCanary.eligible);
-                terminal = { ok: true, summary, reportSha256: liveCanary.report.reportSha256 };
+                const summary = await deps.generateEvidence(buildVisualEngine2ASmokeRows(liveCanary.eligible));
+                terminal = summary.budgetExhausted
+                  ? { ok: false, code: "budget_exhausted", reportSha256: liveCanary.report.reportSha256 }
+                  : { ok: true, summary, reportSha256: liveCanary.report.reportSha256 };
               }
             }
           }
@@ -188,12 +209,14 @@ export async function runVisualEngine2AEvalCli(
         started: terminal.summary.started,
         evidence: terminal.summary.evidence,
         reportSha256: terminal.reportSha256,
+        budget: deps.budgetGuard.snapshot(),
       }
     : {
         event: "visual_engine_2a_eval",
         ok: false,
         code: terminal.code,
         ...(terminal.reportSha256 ? { reportSha256: terminal.reportSha256 } : {}),
+        ...(terminal.code === "budget_exhausted" ? { budget: deps.budgetGuard.snapshot() } : {}),
       }));
   return terminal;
 }
@@ -256,6 +279,11 @@ async function productionDependencies(): Promise<VisualEngine2AEvalCliDependenci
     return templates;
   };
   const rateCard = parsePilotRateCardFromEnv(process.env);
+  const budgetLimitMicromxn = Number(process.env.OPENLEN_VISUAL_ENGINE_PILOT_BUDGET_MICROMXN);
+  if (!Number.isSafeInteger(budgetLimitMicromxn) || budgetLimitMicromxn !== 30_000_000) {
+    throw new Error("OPENLEN_VISUAL_ENGINE_PILOT_BUDGET_MICROMXN must equal 30000000");
+  }
+  const budgetGuard = createPilotBudgetGuard(budgetLimitMicromxn);
 
   return {
     mode: process.env.OPENLEN_VISUAL_ENGINE,
@@ -264,6 +292,8 @@ async function productionDependencies(): Promise<VisualEngine2AEvalCliDependenci
       ?? process.env.STYLE_MATCH_TEXT_MODEL
       ?? "gemini-2.5-flash",
     rateCard,
+    budgetGuard,
+    intentMaximumCostMicromxn: 1_000_000,
     getQuota: async () => {
       const result = await db.execute(sql`
         SELECT "limit", "used",
@@ -331,6 +361,7 @@ async function productionDependencies(): Promise<VisualEngine2AEvalCliDependenci
           cachedTokens: number;
           thinkingTokens: number;
         };
+        budgetCostMicromxn?: number;
       }>>();
       const prepare = (row: QualifiedPilotRow) => {
         const key = rowKey(row);
@@ -374,6 +405,17 @@ async function productionDependencies(): Promise<VisualEngine2AEvalCliDependenci
                   thinkingTokens: 0,
                 }
               : undefined,
+            budgetCostMicromxn: pick.usage && builds.baselineBuild.usage && builds.candidateBuild.usage
+              ? [pick.usage, builds.baselineBuild.usage, builds.candidateBuild.usage].reduce((total, usage) =>
+                  total + calculateModelCostMicros({
+                    intent: {
+                      inputTokens: usage.inputTokens,
+                      outputTokens: usage.outputTokens,
+                      cachedTokens: 0,
+                      thinkingTokens: 0,
+                    },
+                  }, rateCard, rateCard.mxnPerUsd).observedPilotCostMicromxn, 0)
+              : undefined,
           };
         })();
         prepared.set(key, value);
@@ -382,6 +424,11 @@ async function productionDependencies(): Promise<VisualEngine2AEvalCliDependenci
       const evidenceRoot = join(process.cwd(), "scratch", "visual-engine-2a");
       return generateVisualEngine2AEvidence({
         eligible,
+        expectedSize: 15,
+        budget: {
+          guard: budgetGuard,
+          maximumRowCostMicromxn: 8_000_000,
+        },
         rateCardVersion: rateCard.version,
         calculateCosts: (creative, critic, duplicateShadowCandidateFill) => calculateModelCostMicros({
           creative,
@@ -400,6 +447,7 @@ async function productionDependencies(): Promise<VisualEngine2AEvalCliDependenci
             return {
               html: value.baselineHtml,
               duplicateShadowCandidateFill: value.duplicateShadowCandidateFill,
+              budgetCostMicromxn: value.budgetCostMicromxn,
             };
           },
           adapt: async (row) => {

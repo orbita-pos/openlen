@@ -8,6 +8,7 @@ import { DECISION_POLICY_VERSION } from "./decide-route";
 import { TAXONOMY_COMPATIBILITY_VERSION } from "./taxonomy-compatibility";
 import { VISUAL_ENGINE_2A_PILOT_CASES } from "./visual-engine-2a-cohort";
 import { canonicalJsonSha256 } from "./visual-engine-2a-eval";
+import { createPilotBudgetGuard } from "./visual-engine-pilot-budget";
 import { rankTemplates } from "./score-template";
 import type { VisualEngine2AQualificationManifest } from "./visual-engine-2a-qualification";
 import type { VisualEngine2AEvalCliDependencies } from "@/scripts/visual-engine-2a-eval";
@@ -87,6 +88,8 @@ function fixture(overrides: Partial<VisualEngine2AEvalCliDependencies> = {}) {
       thinkingUsdPerMillion: 1,
       mxnPerUsd: 20,
     },
+    budgetGuard: createPilotBudgetGuard(30_000_000),
+    intentMaximumCostMicromxn: 1_000_000,
     getQuota: vi.fn(async () => { order.push("quota"); return { limit: 75, used: 0, existingRuns: 0 }; }),
     getCommitSha: vi.fn(async () => { order.push("head"); return COMMIT_SHA; }),
     readQualification: vi.fn(async () => { order.push("qualification"); return manifest(current); }),
@@ -208,6 +211,20 @@ describe("Visual Engine 2A eval CLI injected integration", () => {
     expect(state.logs).toHaveLength(1);
   });
 
+  it("stops before provider and reservation when the paid budget cannot acquire the canary", async () => {
+    const state = fixture({
+      budgetGuard: createPilotBudgetGuard(500_000),
+      intentMaximumCostMicromxn: 1_000_000,
+    });
+
+    const result = await run(state.deps);
+
+    expect(result).toMatchObject({ ok: false, code: "budget_exhausted" });
+    expect(state.deps.select).not.toHaveBeenCalled();
+    expect(state.deps.generateEvidence).not.toHaveBeenCalled();
+    expect(state.reservations).toHaveLength(0);
+  });
+
   it("rechecks HEAD after recomputing hashes and refuses a changed checkout before provider", async () => {
     const commits = [COMMIT_SHA, "f".repeat(40)];
     const state = fixture({ getCommitSha: vi.fn(async () => commits.shift()!) });
@@ -281,13 +298,13 @@ describe("Visual Engine 2A eval CLI injected integration", () => {
     expect(state.logs[0]).not.toContain("workspace");
   });
 
-  it("runs exactly 15 selections, writes the live canary, rechecks barriers, then exposes 75 frozen rows", async () => {
+  it("runs exactly 15 selections, writes the live canary, rechecks barriers, then exposes 15 plain smoke rows", async () => {
     const cwd = join("workspace", "openlen");
     const state = fixture();
 
     const result = await run(state.deps, cwd);
 
-    expect(result).toMatchObject({ ok: true, summary: { started: 75, evidence: 75 } });
+    expect(result).toMatchObject({ ok: true, summary: { started: 15, evidence: 15 } });
     expect(state.writes).toHaveLength(1);
     expect(state.deps.select).toHaveBeenCalledTimes(15);
     expect(new Set(vi.mocked(state.deps.select).mock.calls.map(([row]) => row.caseId)).size).toBe(15);
@@ -300,12 +317,13 @@ describe("Visual Engine 2A eval CLI injected integration", () => {
       "quota", "head", "qualification", "recompute", "head", "quota",
       ...Array.from({ length: 15 }, () => "provider"),
       "write", "head", "recompute", "head", "quota", "evidence",
-      ...Array.from({ length: 75 }, () => "reserve"),
+      ...Array.from({ length: 15 }, () => "reserve"),
     ]);
     expect(state.order.slice(state.order.indexOf("write"), state.order.indexOf("evidence") + 1)).toEqual([
       "write", "head", "recompute", "head", "quota", "evidence",
     ]);
-    expect(state.reservations).toHaveLength(75);
+    expect(state.reservations).toHaveLength(15);
+    expect(state.reservations.every((key) => key.includes("/plain/"))).toBe(true);
     expect(state.deps.generateEvidence).toHaveBeenCalledTimes(1);
   });
 
@@ -392,16 +410,15 @@ describe("Visual Engine 2A eval CLI injected integration", () => {
 
   it("passes only frozen cohort rows to adaptation and emits one redacted terminal record", async () => {
     const state = fixture();
-    const allowedRows = new Set(VISUAL_ENGINE_2A_PILOT_CASES.flatMap((item) => [
-      "accessible-generous-spacing", "anti-generic", "identity-before-copy", "plain", "saved-brand-accent",
-    ].map((scenario) => `${item.id}/${scenario}/${item.allowedSkeletonTemplateIds[0]}`)));
+    const allowedRows = new Set(VISUAL_ENGINE_2A_PILOT_CASES.map((item) =>
+      `${item.id}/plain/${item.allowedSkeletonTemplateIds[0]}`));
 
     await run(state.deps);
 
     expect(state.reservations.every((key) => allowedRows.has(key))).toBe(true);
     expect(state.logs).toHaveLength(1);
     const record = JSON.parse(state.logs[0]);
-    expect(record).toMatchObject({ event: "visual_engine_2a_eval", ok: true, started: 75, evidence: 75 });
+    expect(record).toMatchObject({ event: "visual_engine_2a_eval", ok: true, started: 15, evidence: 15 });
     expect(state.logs[0]).not.toContain(VISUAL_ENGINE_2A_PILOT_CASES[0].brief);
     expect(state.logs[0]).not.toContain("workspace");
   });

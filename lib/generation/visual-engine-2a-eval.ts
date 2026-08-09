@@ -3,8 +3,10 @@ import type { VisualEngine2APilotCase } from "./visual-engine-2a-cohort";
 import type { CritiqueVerdict } from "@/lib/ai/vision-critique";
 import type { CompleteVisualEnginePilotRunOutcome } from "./visual-engine-pilot-store";
 import { pickWeighted } from "@/lib/curate/pick-template";
+import type { PilotBudgetGuard } from "./visual-engine-pilot-budget";
 
 export const VISUAL_ENGINE_2A_PILOT_SIZE = 75;
+export const VISUAL_ENGINE_2A_SMOKE_SIZE = 15;
 export const VISUAL_ENGINE_2A_COST_LIMIT_MICROMXN = 400_000;
 export const VISUAL_ENGINE_2A_ROLLBACK_FIXTURE = Object.freeze({
   brief: "Visual Engine 2A rollback fixture",
@@ -47,6 +49,24 @@ export function buildVisualEngine2APool(cases: readonly VisualEngine2APilotCase[
   })));
   return rows.sort((left, right) =>
     left.caseId.localeCompare(right.caseId) || left.scenarioId.localeCompare(right.scenarioId));
+}
+
+export function buildVisualEngine2ASmokeRows(
+  qualified: readonly QualifiedPilotRow[],
+): QualifiedPilotRow[] {
+  const rows = qualified.filter((row) => row.scenarioId === "plain");
+  if (rows.length !== VISUAL_ENGINE_2A_SMOKE_SIZE
+    || new Set(rows.map((row) => row.caseId)).size !== VISUAL_ENGINE_2A_SMOKE_SIZE) {
+    throw new Error("smoke pilot requires exactly 15 unique plain rows");
+  }
+  return [...rows].sort((left, right) => left.caseId.localeCompare(right.caseId));
+}
+
+export function validateVisualEngine2AEvidenceSize(
+  actual: number,
+  expected: typeof VISUAL_ENGINE_2A_SMOKE_SIZE | typeof VISUAL_ENGINE_2A_PILOT_SIZE,
+): void {
+  if (actual !== expected) throw new Error(`pilot requires exactly ${expected} preflight rows`);
 }
 
 export type PilotPreflightSelection =
@@ -464,17 +484,23 @@ export type PilotAdaptationResult = PilotAdaptationSuccess | {
  */
 export async function generateVisualEngine2AEvidence(args: {
   eligible: ReadonlyArray<VisualEngine2APoolRow & { templateId: string }>;
+  expectedSize?: typeof VISUAL_ENGINE_2A_SMOKE_SIZE | typeof VISUAL_ENGINE_2A_PILOT_SIZE;
   rateCardVersion: string;
   calculateCosts: (
     creative: PilotAdaptationSuccess["usage"],
     critic: PilotAdaptationSuccess["usage"],
     duplicateShadowCandidateFill?: PilotAdaptationSuccess["usage"],
   ) => { productionEquivalentCostMicromxn: number; observedPilotCostMicromxn: number };
+  budget?: {
+    guard: PilotBudgetGuard;
+    maximumRowCostMicromxn: number;
+  };
   deps: {
     reserve(row: VisualEngine2APoolRow & { templateId: string }): Promise<{ ok: true; id: string } | { ok: false }>;
     baseline(row: VisualEngine2APoolRow & { templateId: string }): Promise<{
       html: string;
       duplicateShadowCandidateFill?: PilotAdaptationSuccess["usage"];
+      budgetCostMicromxn?: number;
     }>;
     adapt(row: VisualEngine2APoolRow & { templateId: string }): Promise<PilotAdaptationResult>;
     critique(row: VisualEngine2APoolRow & { templateId: string }, html: string): Promise<CritiqueVerdict>;
@@ -482,12 +508,21 @@ export async function generateVisualEngine2AEvidence(args: {
     writeEvidence(key: string, files: Record<string, Uint8Array>, manifest: VisualEngine2AEvidenceManifest): Promise<void>;
     complete(id: string, outcome: CompleteVisualEnginePilotRunOutcome): Promise<void>;
   };
-}): Promise<{ started: number; evidence: number }> {
-  if (args.eligible.length !== VISUAL_ENGINE_2A_PILOT_SIZE) throw new Error("pilot requires exactly 75 preflight rows");
+}): Promise<{ started: number; evidence: number; budgetExhausted?: true }> {
+  validateVisualEngine2AEvidenceSize(args.eligible.length, args.expectedSize ?? VISUAL_ENGINE_2A_PILOT_SIZE);
   let started = 0; let evidence = 0;
   for (const row of args.eligible) {
-    const reservation = await args.deps.reserve(row);
-    if (!reservation.ok) throw new Error("pilot quota became inconsistent after preflight");
+    const budgetLease = args.budget?.guard.acquire("baseline", args.budget.maximumRowCostMicromxn);
+    if (args.budget && !budgetLease) return { started, evidence, budgetExhausted: true };
+    let rowActualCostMicromxn: number | undefined;
+    const reservation = await args.deps.reserve(row).catch((error) => {
+      budgetLease?.settle(undefined);
+      throw error;
+    });
+    if (!reservation.ok) {
+      budgetLease?.settle(undefined);
+      throw new Error("pilot quota became inconsistent after preflight");
+    }
     started += 1;
     let terminalFailure: CompleteVisualEnginePilotRunOutcome = {
       status: "failed", reasonCode: "internal_error", rateCardVersion: args.rateCardVersion,
@@ -498,6 +533,9 @@ export async function generateVisualEngine2AEvidence(args: {
       if (!adapted.ok) {
         const zero = { inputTokens: 0, outputTokens: 0, cachedTokens: 0, thinkingTokens: 0 };
         const costs = args.calculateCosts(adapted.usage ?? zero, zero, baseline.duplicateShadowCandidateFill);
+        rowActualCostMicromxn = baseline.budgetCostMicromxn === undefined
+          ? undefined
+          : baseline.budgetCostMicromxn + costs.productionEquivalentCostMicromxn;
         await args.deps.complete(reservation.id, {
           status: "fallback", reasonCode: adapted.reasonCode,
           rateCardVersion: args.rateCardVersion,
@@ -512,6 +550,9 @@ export async function generateVisualEngine2AEvidence(args: {
       if (adapted.structuralFingerprintBefore !== adapted.structuralFingerprintAfter) {
         const zero = { inputTokens: 0, outputTokens: 0, cachedTokens: 0, thinkingTokens: 0 };
         const costs = args.calculateCosts(adapted.usage, zero, baseline.duplicateShadowCandidateFill);
+        rowActualCostMicromxn = baseline.budgetCostMicromxn === undefined
+          ? undefined
+          : baseline.budgetCostMicromxn + costs.productionEquivalentCostMicromxn;
         await args.deps.complete(reservation.id, {
           status: "fallback", reasonCode: "structural_invariant_failed",
           promptVersion: adapted.promptVersion, contractVersion: adapted.contractVersion,
@@ -531,6 +572,9 @@ export async function generateVisualEngine2AEvidence(args: {
       const critic = await args.deps.critique(row, adapted.html);
       const criticUsage = critic.usage ?? { inputTokens: 0, outputTokens: 0, cachedTokens: 0, thinkingTokens: 0 };
       const costs = args.calculateCosts(adapted.usage, criticUsage, baseline.duplicateShadowCandidateFill);
+      rowActualCostMicromxn = baseline.budgetCostMicromxn === undefined || !critic.usage
+        ? undefined
+        : baseline.budgetCostMicromxn + costs.productionEquivalentCostMicromxn;
       terminalFailure = {
         ...terminalFailure,
         inputTokens: adapted.usage.inputTokens, outputTokens: adapted.usage.outputTokens,
@@ -579,6 +623,8 @@ export async function generateVisualEngine2AEvidence(args: {
       });
     } catch {
       await args.deps.complete(reservation.id, terminalFailure).catch(() => undefined);
+    } finally {
+      budgetLease?.settle(rowActualCostMicromxn);
     }
   }
   return { started, evidence };

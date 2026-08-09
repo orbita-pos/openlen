@@ -4,6 +4,8 @@ import { tmpdir } from "node:os";
 import { describe, expect, it, vi } from "vitest";
 import { VISUAL_ENGINE_2A_PILOT_CASES } from "./visual-engine-2a-cohort";
 import {
+  buildVisualEngine2ASmokeRows,
+  validateVisualEngine2AEvidenceSize,
   buildVisualEngine2APool,
   preflightVisualEngine2A,
   scoreVisualEngine2APilot,
@@ -15,6 +17,7 @@ import {
   captureVisualEngine2ARollbackModes,
 } from "./visual-engine-2a-eval";
 import { writeVisualEngine2ARollbackEvidence } from "@/scripts/visual-engine-2a-rollback-check";
+import { createPilotBudgetGuard } from "./visual-engine-pilot-budget";
 
 describe("Visual Engine 2A pilot", () => {
   it("preloads the server-only shim for every Task 10 operational CLI", async () => {
@@ -60,6 +63,55 @@ describe("Visual Engine 2A pilot", () => {
       archetype: "restaurant_hospitality",
       allowedSkeletonTemplateIds: ["cafe-tramonto"],
     });
+  });
+
+  it("reduces a qualified cohort to one plain smoke row per case", () => {
+    const qualified = buildVisualEngine2APool(VISUAL_ENGINE_2A_PILOT_CASES).map((row) => ({
+      ...row,
+      templateId: row.allowedSkeletonTemplateIds[0],
+    }));
+
+    const smoke = buildVisualEngine2ASmokeRows(qualified);
+
+    expect(smoke).toHaveLength(15);
+    expect(new Set(smoke.map((row) => row.caseId)).size).toBe(15);
+    expect(smoke.every((row) => row.scenarioId === "plain")).toBe(true);
+  });
+
+  it("accepts only the declared full or smoke evidence cardinality", () => {
+    expect(() => validateVisualEngine2AEvidenceSize(15, 15)).not.toThrow();
+    expect(() => validateVisualEngine2AEvidenceSize(75, 75)).not.toThrow();
+    expect(() => validateVisualEngine2AEvidenceSize(14, 15)).toThrow("exactly 15");
+    expect(() => validateVisualEngine2AEvidenceSize(15, 75)).toThrow("exactly 75");
+  });
+
+  it("stops before DB reservation when a smoke row cannot fit the paid budget", async () => {
+    const eligible = buildVisualEngine2ASmokeRows(
+      buildVisualEngine2APool(VISUAL_ENGINE_2A_PILOT_CASES).map((row) => ({
+        ...row,
+        templateId: row.allowedSkeletonTemplateIds[0],
+      })),
+    );
+    const reserve = vi.fn();
+
+    const result = await generateVisualEngine2AEvidence({
+      eligible,
+      expectedSize: 15,
+      rateCardVersion: "test/1",
+      calculateCosts: () => ({ productionEquivalentCostMicromxn: 1, observedPilotCostMicromxn: 1 }),
+      budget: {
+        guard: createPilotBudgetGuard(7_000_000),
+        maximumRowCostMicromxn: 8_000_000,
+      },
+      deps: {
+        reserve,
+        baseline: vi.fn(), adapt: vi.fn(), critique: vi.fn(), render: vi.fn(),
+        writeEvidence: vi.fn(), complete: vi.fn(),
+      },
+    });
+
+    expect(result).toEqual({ started: 0, evidence: 0, budgetExhausted: true });
+    expect(reserve).not.toHaveBeenCalled();
   });
 
   it("stops before reservation when fewer than 75 candidates are eligible", async () => {
