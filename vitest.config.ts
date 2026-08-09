@@ -72,6 +72,8 @@ export default defineConfig({
       // lib/ai mixes runners — vision-critique.test.ts is node:test (in
       // test:node), so list the vitest ai tests individually.
       "lib/ai/image-edit-core.test.ts",
+      "lib/ai/visual-quality-renderer.test.ts",
+      "lib/ai/visual-quality-critic.test.ts",
       "lib/business-profiles/**/*.test.ts",
       "lib/billing/**/*.test.ts",
       "lib/auth/**/*.test.ts",
