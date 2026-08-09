@@ -78,7 +78,19 @@ describe("critiqueVisualQuality", () => {
       temperature: 0,
       thinkingBudget: 0,
       responseMimeType: "application/json",
+      responseSchema: {
+        properties: {
+          issues: {
+            items: {
+              properties: {
+                explanation: { type: "STRING", maxLength: 180 },
+              },
+            },
+          },
+        },
+      },
     });
+    expect(captured?.messages[0]?.content).toContain("Each issue explanation must be 180 characters or fewer");
   });
 
   it("builds the prompt from the allowlisted intent projection only", async () => {

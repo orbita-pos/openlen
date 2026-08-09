@@ -84,7 +84,7 @@ const RESPONSE_SCHEMA: Record<string, unknown> = {
           ] },
           severity: { type: "STRING", enum: ["warning", "critical"] },
           hookId: { type: "STRING", nullable: true },
-          explanation: { type: "STRING" },
+          explanation: { type: "STRING", maxLength: 180 },
         },
         required: ["code", "severity", "hookId", "explanation"],
       },
@@ -134,6 +134,7 @@ function criticPrompt(input: VisualQualityCriticInput): string {
     "Judge the attached desktop and mobile renders only against this allowlisted intent projection:",
     JSON.stringify(criticIntent),
     "Return strict JSON matching visual-quality-verdict/2.0. Do not propose HTML, CSS, URLs, copy, or structure changes.",
+    "Each issue explanation must be 180 characters or fewer.",
   ].join("\n");
 }
 
