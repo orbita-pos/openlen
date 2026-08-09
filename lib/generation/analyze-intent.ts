@@ -42,7 +42,7 @@ const enumArraySchema = (values: readonly string[]) => ({
 
 const PROSE_ARRAY_SCHEMA = {
   type: "array",
-  items: { type: "string", minLength: 1, maxLength: 240 },
+  items: { type: "string" },
   maxItems: 12,
 } as const;
 

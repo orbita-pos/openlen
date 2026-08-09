@@ -156,6 +156,8 @@ describe("analyzeIntent", () => {
       .toEqual(CANONICAL_PRIMARY_AUDIENCES);
     expect(responseSchema.properties.explicitConstraints).toMatchObject({ maxItems: 12 });
     expect(responseSchema.properties.ambiguities).toMatchObject({ maxItems: 12 });
+    expect(JSON.stringify(responseSchema)).not.toContain("minLength");
+    expect(JSON.stringify(responseSchema)).not.toContain("maxLength");
     const headers = fetchImpl.mock.calls[0]?.[1]?.headers as Record<string, string>;
     expect(headers["x-goog-api-key"]).toBe("secret key");
   });
