@@ -1,164 +1,433 @@
-import { mkdir, writeFile } from "node:fs/promises";
-import { join } from "node:path";
-import { sql } from "drizzle-orm";
-import { db } from "@/lib/db";
-import { listTemplates } from "@/lib/templates/store";
-import { VISUAL_ENGINE_2A_PILOT_CASES } from "@/lib/generation/visual-engine-2a-cohort";
-import { selectGenerationRoute } from "@/lib/generation/safe-selection";
-import { pickTemplate, type TemplateCatalogItem } from "@/lib/curate/pick-template";
-import { fillAndNormalizeCuratedTemplate, finalizeCuratedDocument } from "@/lib/curate/build-curated-document";
-import { normalizeProfileData } from "@/lib/business-profiles/normalize";
-import { adaptTemplateSkeleton } from "@/lib/generation/adapt-skeleton";
-import { critiqueGeneratedPage } from "@/lib/ai/vision-critique";
-import { renderHtmlToInlineImage } from "@/lib/ai/inline-image";
-import { TAXONOMY_COMPATIBILITY_VERSION } from "@/lib/generation/taxonomy-compatibility";
-import { reserveVisualEnginePilotRun, completeVisualEnginePilotRun } from "@/lib/generation/visual-engine-pilot-store";
+import { execFile } from "node:child_process";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { dirname, join } from "node:path";
+import { pathToFileURL } from "node:url";
+import { promisify } from "node:util";
+
+import type { SafeSelectionResult } from "@/lib/generation/safe-selection";
+import type { PilotRateCardConfig } from "@/lib/generation/model-cost";
 import { calculateModelCostMicros, parsePilotRateCardFromEnv } from "@/lib/generation/model-cost";
-import { writeJsonAtomic } from "@/lib/fs/write-json-atomic";
-import {
-  generateVisualEngine2AEvidence,
-  prepareVisualEngine2ABuilds,
-  preflightVisualEngine2A,
-  type PilotAdaptationResult,
-  type VisualEngine2APoolRow,
-} from "@/lib/generation/visual-engine-2a-eval";
+import { VISUAL_ENGINE_2A_PILOT_CASES } from "@/lib/generation/visual-engine-2a-cohort";
+import type { QualifiedPilotRow, VisualEngine2APoolRow } from "@/lib/generation/visual-engine-2a-eval";
+import { runVisualEngine2APreflight } from "@/lib/generation/visual-engine-2a-preflight";
+import type { VisualEngine2AQualificationManifest } from "@/lib/generation/visual-engine-2a-qualification";
 
-type RichSelection = Extract<Awaited<ReturnType<typeof selectGenerationRoute>>, { ok: true }>;
+const execFileAsync = promisify(execFile);
 
-function required(name: string): string {
-  const value = process.env[name]?.trim();
-  if (!value) throw new Error(`Missing ${name}`);
-  return value;
+export interface VisualEngine2AEvalCliDependencies {
+  mode: string | undefined;
+  modelId: string;
+  rateCard: PilotRateCardConfig;
+  getQuota(): Promise<{ limit: number; used: number; existingRuns: number }>;
+  getCommitSha(): Promise<string>;
+  readQualification(path: string): Promise<unknown>;
+  recomputeQualification(commitSha: string): Promise<VisualEngine2AQualificationManifest>;
+  select(row: VisualEngine2APoolRow): Promise<SafeSelectionResult>;
+  writeJsonAtomic(path: string, value: unknown): Promise<unknown>;
+  generateEvidence(eligible: readonly QualifiedPilotRow[]): Promise<{ started: number; evidence: number }>;
+  log(line: string): void;
 }
 
-function environment() {
-  if (process.env.OPENLEN_VISUAL_ENGINE !== "shadow") {
-    throw new Error("OPENLEN_VISUAL_ENGINE must be exactly shadow; skeleton/off are refused");
+export type VisualEngine2AEvalCliResult =
+  | {
+      ok: true;
+      summary: { started: number; evidence: number };
+      reportSha256: string;
+    }
+  | {
+      ok: false;
+      code: string;
+      reportSha256?: string;
+    };
+
+function qualificationPath(cwd: string): string {
+  return join(cwd, "scratch", "visual-engine-2a", "qualification.json");
+}
+
+function preflightPath(cwd: string): string {
+  return join(cwd, "scratch", "visual-engine-2a", "preflight.json");
+}
+
+function isCommitSha(value: string): boolean {
+  return /^[0-9a-f]{40}$/i.test(value);
+}
+
+function isQualificationManifest(value: unknown): value is VisualEngine2AQualificationManifest {
+  return value !== null
+    && typeof value === "object"
+    && !Array.isArray(value)
+    && (value as Record<string, unknown>).schemaVersion === "visual-engine-2a-qualification/1.0"
+    && typeof (value as Record<string, unknown>).manifestSha256 === "string";
+}
+
+function rateCardIsComplete(rateCard: PilotRateCardConfig): boolean {
+  try {
+    calculateModelCostMicros({
+      intent: { inputTokens: 0, cachedTokens: 0, outputTokens: 0, thinkingTokens: 0 },
+    }, rateCard, rateCard.mxnPerUsd);
+    return true;
+  } catch {
+    return false;
   }
-  if (!process.env.DATABASE_URL && !process.env.POSTGRES_URL) throw new Error("Database configuration is required");
-  required("GEMINI_API_KEY");
-  return parsePilotRateCardFromEnv(process.env);
 }
 
-function resultRows(value: unknown): Record<string, unknown>[] {
-  if (Array.isArray(value)) return value as Record<string, unknown>[];
-  return value && typeof value === "object" && "rows" in value && Array.isArray(value.rows)
-    ? value.rows as Record<string, unknown>[] : [];
+function currentQualification(
+  manifest: VisualEngine2AQualificationManifest,
+): Omit<VisualEngine2AQualificationManifest, "manifestSha256"> {
+  const { manifestSha256: _manifestSha256, ...current } = manifest;
+  return current;
 }
 
-async function validateQuota() {
-  const result = await db.execute(sql`SELECT "phase", "limit", "used" FROM "visualEnginePilotBudgets" ORDER BY "phase"`);
-  const rows = resultRows(result);
-  const expected = new Map([["2a", [75, 0]], ["2b", [75, 0]], ["2c", [150, 0]]]);
-  if (rows.length !== 3 || rows.some((row) => {
-    const value = expected.get(String(row.phase));
-    return !value || Number(row.limit) !== value[0] || Number(row.used) !== value[1];
-  })) throw new Error("Pilot quota state is inconsistent; refusing all work");
-}
-
-function key(row: Pick<VisualEngine2APoolRow, "caseId" | "scenarioId">) { return `${row.caseId}/${row.scenarioId}`; }
-
-async function main() {
-  const env = environment();
-  await validateQuota();
-  const templates = await listTemplates({ status: "published" });
-  const rich = new Map<string, RichSelection>();
-  const preflight = await preflightVisualEngine2A({
-    cases: VISUAL_ENGINE_2A_PILOT_CASES,
-    templates,
-    select: async (brief, rows, row) => {
-      const result = await selectGenerationRoute(brief, rows as typeof templates);
-      if (!result.ok) return { ok: false as const, errorKind: result.errorKind };
-      rich.set(key(row), result);
-      return { ok: true as const, route: result.decision.route, templateId: result.decision.templateId ?? "" };
-    },
-  });
-  console.log(JSON.stringify({ event: "visual_engine_2a_preflight", ...preflight.counts }));
-  if (!preflight.ok) process.exitCode = 2;
-  if (!preflight.ok) return;
-
-  const catalog: TemplateCatalogItem[] = templates.map(({ id, name, family, mode, pitch, description }) => ({ id, name, family, mode, pitch, description }));
-  const prepared = new Map<string, Promise<{
-    normalizedHtml: string; baselineHtml: string; profile: ReturnType<typeof normalizeProfileData>;
-    duplicateShadowCandidateFill?: { inputTokens: number; outputTokens: number; cachedTokens: number; thinkingTokens: number };
-  }>>();
-  const prepare = (row: VisualEngine2APoolRow & { templateId: string }) => {
-    const id = key(row);
-    const existing = prepared.get(id); if (existing) return existing;
-    const value = (async () => {
-      const pick = await pickTemplate(row.brief, catalog);
-      if (!pick.ok) throw new Error("Quick copy generation failed");
-      const profile = normalizeProfileData({
-        ...pick.copy,
-        brand: { logoUrl: null, accent: row.scenarioId === "saved-brand-accent" ? "#E85D9E" : null },
-        links: [], photos: [],
-      });
-      const builds = await prepareVisualEngine2ABuilds({
-        rankedTemplateIds: pick.templateIds,
-        safeTemplateId: row.templateId,
-        copy: pick.copy,
-        fill: (templateId, copy) => fillAndNormalizeCuratedTemplate({ templateId, copy }),
-      });
-      if (!builds.baselineBuild.ok || !builds.candidateBuild.ok) throw new Error("Template unavailable");
-      const baseline = finalizeCuratedDocument({ normalizedHtml: builds.baselineBuild.normalizedHtml, profileData: profile, title: pick.copy.business_name ?? row.caseId, brandRecolor: true });
-      if (!baseline.ok) throw new Error("Baseline finalization failed");
-      return {
-        normalizedHtml: builds.candidateBuild.normalizedHtml, baselineHtml: baseline.html, profile,
-        duplicateShadowCandidateFill: builds.candidateBuild.usage ? {
-          inputTokens: builds.candidateBuild.usage.inputTokens, outputTokens: builds.candidateBuild.usage.outputTokens,
-          cachedTokens: 0, thinkingTokens: 0,
-        } : undefined,
-      };
-    })();
-    prepared.set(id, value); return value;
-  };
-  const evidenceRoot = join(process.cwd(), "scratch", "visual-engine-2a");
-  const summary = await generateVisualEngine2AEvidence({
-    eligible: preflight.eligible,
-    rateCardVersion: env.version,
-    calculateCosts: (creative, critic, duplicateShadowCandidateFill) => calculateModelCostMicros({
-      creative, critic, duplicateShadowCandidateFill,
-    }, env, env.mxnPerUsd),
-    deps: {
-      reserve: (row) => reserveVisualEnginePilotRun({ phase: "2a", mode: "shadow", route: "template_skeleton", templateId: row.templateId }),
-      baseline: async (row) => {
-        const value = await prepare(row);
-        return { html: value.baselineHtml, duplicateShadowCandidateFill: value.duplicateShadowCandidateFill };
-      },
-      adapt: async (row): Promise<PilotAdaptationResult> => {
-        const selection = rich.get(key(row)); if (!selection) throw new Error("Missing preflight selection");
-        const template = templates.find((item) => item.id === row.templateId); if (!template?.visualMetadata) throw new Error("Missing reviewed metadata");
-        const base = await prepare(row);
-        const result = await adaptTemplateSkeleton({
-          html: base.normalizedHtml, templateId: row.templateId, intent: selection.intent,
-          templateMetadata: template.visualMetadata, brand: { accent: base.profile.brand?.accent ?? null },
+export async function runVisualEngine2AEvalCli(
+  deps: VisualEngine2AEvalCliDependencies,
+  cwd = process.cwd(),
+): Promise<VisualEngine2AEvalCliResult> {
+  let terminal: VisualEngine2AEvalCliResult;
+  try {
+    if (deps.mode !== "shadow" || !rateCardIsComplete(deps.rateCard)) {
+      terminal = { ok: false, code: "invalid_environment" };
+    } else {
+      const quota = await deps.getQuota();
+      const commitSha = await deps.getCommitSha();
+      if (!isCommitSha(commitSha)) throw new Error("invalid commit");
+      const qualificationValue = await deps.readQualification(qualificationPath(cwd));
+      if (!isQualificationManifest(qualificationValue)) {
+        terminal = { ok: false, code: "qualification_stale" };
+      } else {
+        const recomputed = await deps.recomputeQualification(commitSha);
+        if (recomputed.commitSha !== commitSha) throw new Error("commit changed");
+        const verifiedCommitSha = await deps.getCommitSha();
+        if (verifiedCommitSha !== commitSha) throw new Error("commit changed");
+        const preflight = await runVisualEngine2APreflight({
+          cases: VISUAL_ENGINE_2A_PILOT_CASES,
+          qualification: qualificationValue,
+          currentQualification: currentQualification(recomputed),
+          quota,
+          modelId: deps.modelId,
+          rateCard: deps.rateCard,
+          mxnPerUsd: deps.rateCard.mxnPerUsd,
+          select: deps.select,
         });
-        if (!result.ok) return { ok: false, reasonCode: result.reasonCode, usage: result.usage ?? undefined, durationMs: result.durationMs };
-        const finalized = finalizeCuratedDocument({ normalizedHtml: result.html, profileData: base.profile, title: row.caseId, brandRecolor: false });
-        if (!finalized.ok) return { ok: false, reasonCode: "sanitization_failed", usage: result.usage, durationMs: result.durationMs };
-        return {
-          ok: true, html: finalized.html, usage: result.usage, durationMs: result.durationMs,
-          structuralFingerprintBefore: result.structuralFingerprintBefore,
-          structuralFingerprintAfter: result.structuralFingerprintAfter,
-          promptVersion: result.promptVersion, contractVersion: result.creativeDirectionVersion,
-          policyVersion: selection.policyVersion, taxonomyVersion: TAXONOMY_COMPATIBILITY_VERSION,
-          modelVersion: result.modelId,
-        };
-      },
-      critique: (row, html) => critiqueGeneratedPage({ brief: row.brief, html, model: process.env.OPENLEN_VISUAL_ENGINE_CRITIC_MODEL ?? "gemini-2.5-flash" }),
-      render: async (html) => {
-        const rendered = await renderHtmlToInlineImage(html, { maxBytes: 8 * 1024 * 1024 });
-        return rendered ? Buffer.from(rendered.dataBase64, "base64") : null;
-      },
-      writeEvidence: async (hash, files, manifest) => {
-        const directory = join(evidenceRoot, hash); await mkdir(directory, { recursive: true });
-        await Promise.all(Object.entries(files).map(([name, bytes]) => writeFile(join(directory, `${name}.jpg`), bytes)));
-        await writeJsonAtomic(join(directory, "manifest.json"), manifest);
-      },
-      complete: completeVisualEnginePilotRun,
-    },
-  });
-  console.log(JSON.stringify({ event: "visual_engine_2a_complete", ...summary }));
+        await deps.writeJsonAtomic(preflightPath(cwd), preflight.report);
+        if (!preflight.ok) {
+          terminal = {
+            ok: false,
+            code: preflight.code,
+            reportSha256: preflight.report.reportSha256,
+          };
+        } else {
+          const summary = await deps.generateEvidence(preflight.eligible);
+          terminal = { ok: true, summary, reportSha256: preflight.report.reportSha256 };
+        }
+      }
+    }
+  } catch {
+    terminal = { ok: false, code: "evaluation_failed" };
+  }
+
+  deps.log(JSON.stringify(terminal.ok
+    ? {
+        event: "visual_engine_2a_eval",
+        ok: true,
+        started: terminal.summary.started,
+        evidence: terminal.summary.evidence,
+        reportSha256: terminal.reportSha256,
+      }
+    : {
+        event: "visual_engine_2a_eval",
+        ok: false,
+        code: terminal.code,
+        ...(terminal.reportSha256 ? { reportSha256: terminal.reportSha256 } : {}),
+      }));
+  return terminal;
 }
 
-main().catch(() => { console.error("Visual Engine 2A evaluation failed (details redacted)."); process.exitCode = 1; });
+async function gitCommitSha(): Promise<string> {
+  const { stdout } = await execFileAsync("git", ["rev-parse", "HEAD"], {
+    cwd: process.cwd(),
+    shell: false,
+  });
+  return stdout.trim();
+}
+
+async function productionDependencies(): Promise<VisualEngine2AEvalCliDependencies> {
+  const [
+    { sql },
+    { db },
+    templateStore,
+    { selectGenerationRoute },
+    { qualifyVisualEngine2ACohort },
+    { buildSkeletonInventory },
+    { generateVisualEngine2AEvidence, prepareVisualEngine2ABuilds },
+    { normalizeProfileData },
+    { pickTemplate },
+    { fillAndNormalizeCuratedTemplate, finalizeCuratedDocument },
+    { adaptTemplateSkeleton },
+    { critiqueGeneratedPage },
+    { renderHtmlToInlineImage },
+    { TAXONOMY_COMPATIBILITY_VERSION },
+    { reserveVisualEnginePilotRun, completeVisualEnginePilotRun },
+    { writeJsonAtomic },
+  ] = await Promise.all([
+    import("drizzle-orm"),
+    import("@/lib/db"),
+    import("@/lib/templates/store"),
+    import("@/lib/generation/safe-selection"),
+    import("@/lib/generation/visual-engine-2a-qualification"),
+    import("@/lib/generation/skeleton-inventory"),
+    import("@/lib/generation/visual-engine-2a-eval"),
+    import("@/lib/business-profiles/normalize"),
+    import("@/lib/curate/pick-template"),
+    import("@/lib/curate/build-curated-document"),
+    import("@/lib/generation/adapt-skeleton"),
+    import("@/lib/ai/vision-critique"),
+    import("@/lib/ai/inline-image"),
+    import("@/lib/generation/taxonomy-compatibility"),
+    import("@/lib/generation/visual-engine-pilot-store"),
+    import("@/lib/fs/write-json-atomic"),
+  ]);
+
+  type RichSelection = Extract<Awaited<ReturnType<typeof selectGenerationRoute>>, { ok: true }>;
+  type TemplateRecord = Awaited<ReturnType<typeof templateStore.listAllForAdmin>>[number];
+  let templates: readonly TemplateRecord[] | null = null;
+  const rich = new Map<string, RichSelection>();
+  const rowKey = (row: Pick<VisualEngine2APoolRow, "caseId" | "scenarioId">) => `${row.caseId}/${row.scenarioId}`;
+  const loadCatalog = async () => {
+    templates ??= await templateStore.listAllForAdmin();
+    return templates;
+  };
+  const rateCard = parsePilotRateCardFromEnv(process.env);
+
+  return {
+    mode: process.env.OPENLEN_VISUAL_ENGINE,
+    modelId: process.env.OPENLEN_INTENT_MODEL
+      ?? process.env.CURATE_PICK_MODEL
+      ?? process.env.STYLE_MATCH_TEXT_MODEL
+      ?? "gemini-2.5-flash",
+    rateCard,
+    getQuota: async () => {
+      const result = await db.execute(sql`
+        SELECT "limit", "used",
+          (SELECT COUNT(*) FROM "visualEnginePilotRuns" WHERE "phase" = '2a') AS "existingRuns"
+        FROM "visualEnginePilotBudgets" WHERE "phase" = '2a'
+      `);
+      const rows = Array.isArray(result)
+        ? result as Array<Record<string, unknown>>
+        : result && typeof result === "object" && "rows" in result && Array.isArray(result.rows)
+          ? result.rows as Array<Record<string, unknown>>
+          : [];
+      const row = rows[0];
+      return {
+        limit: Number(row?.limit ?? Number.NaN),
+        used: Number(row?.used ?? Number.NaN),
+        existingRuns: Number(row?.existingRuns ?? Number.NaN),
+      };
+    },
+    getCommitSha: gitCommitSha,
+    readQualification: async (path) => JSON.parse(await readFile(path, "utf8")) as unknown,
+    recomputeQualification: async (commitSha) => {
+      const catalog = await loadCatalog();
+      const selectionCatalog = catalog.map(({ id, status, visualMetadata }) => ({
+        id,
+        status,
+        visualMetadata,
+      }));
+      const allowedIds = [...new Set(VISUAL_ENGINE_2A_PILOT_CASES.flatMap((item) => item.allowedSkeletonTemplateIds))];
+      const templateMaterials = await Promise.all(allowedIds.map(async (id) => {
+        const html = await templateStore.getTemplateHtml(id);
+        if (html === null) throw new Error("template unavailable");
+        return { id, html, inventory: buildSkeletonInventory(html, id) };
+      }));
+      const result = qualifyVisualEngine2ACohort({
+        cases: VISUAL_ENGINE_2A_PILOT_CASES,
+        selectionCatalog,
+        templateMaterials,
+        commitSha,
+      });
+      if (!result.ok) throw new Error("qualification recomputation failed");
+      return result.manifest;
+    },
+    select: async (row) => {
+      const result = await selectGenerationRoute(row.brief, await loadCatalog());
+      if (result.ok) rich.set(rowKey(row), result);
+      return result;
+    },
+    writeJsonAtomic: async (path, value) => {
+      await mkdir(dirname(path), { recursive: true });
+      return writeJsonAtomic(path, value);
+    },
+    generateEvidence: async (eligible) => {
+      const catalogRows = await loadCatalog();
+      const published = catalogRows.filter((item) => item.status === "published");
+      const catalog = published.map(({ id, name, family, mode, pitch, description }) => ({
+        id, name, family, mode, pitch, description,
+      }));
+      const prepared = new Map<string, Promise<{
+        normalizedHtml: string;
+        baselineHtml: string;
+        profile: ReturnType<typeof normalizeProfileData>;
+        duplicateShadowCandidateFill?: {
+          inputTokens: number;
+          outputTokens: number;
+          cachedTokens: number;
+          thinkingTokens: number;
+        };
+      }>>();
+      const prepare = (row: QualifiedPilotRow) => {
+        const key = rowKey(row);
+        const existing = prepared.get(key);
+        if (existing) return existing;
+        const value = (async () => {
+          const pick = await pickTemplate(row.brief, catalog);
+          if (!pick.ok) throw new Error("Quick copy generation failed");
+          const profile = normalizeProfileData({
+            ...pick.copy,
+            brand: {
+              logoUrl: null,
+              accent: row.scenarioId === "saved-brand-accent" ? "#E85D9E" : null,
+            },
+            links: [],
+            photos: [],
+          });
+          const builds = await prepareVisualEngine2ABuilds({
+            rankedTemplateIds: pick.templateIds,
+            safeTemplateId: row.templateId,
+            copy: pick.copy,
+            fill: (templateId, copy) => fillAndNormalizeCuratedTemplate({ templateId, copy }),
+          });
+          if (!builds.baselineBuild.ok || !builds.candidateBuild.ok) throw new Error("Template unavailable");
+          const baseline = finalizeCuratedDocument({
+            normalizedHtml: builds.baselineBuild.normalizedHtml,
+            profileData: profile,
+            title: pick.copy.business_name ?? row.caseId,
+            brandRecolor: true,
+          });
+          if (!baseline.ok) throw new Error("Baseline finalization failed");
+          return {
+            normalizedHtml: builds.candidateBuild.normalizedHtml,
+            baselineHtml: baseline.html,
+            profile,
+            duplicateShadowCandidateFill: builds.candidateBuild.usage
+              ? {
+                  inputTokens: builds.candidateBuild.usage.inputTokens,
+                  outputTokens: builds.candidateBuild.usage.outputTokens,
+                  cachedTokens: 0,
+                  thinkingTokens: 0,
+                }
+              : undefined,
+          };
+        })();
+        prepared.set(key, value);
+        return value;
+      };
+      const evidenceRoot = join(process.cwd(), "scratch", "visual-engine-2a");
+      return generateVisualEngine2AEvidence({
+        eligible,
+        rateCardVersion: rateCard.version,
+        calculateCosts: (creative, critic, duplicateShadowCandidateFill) => calculateModelCostMicros({
+          creative,
+          critic,
+          duplicateShadowCandidateFill,
+        }, rateCard, rateCard.mxnPerUsd),
+        deps: {
+          reserve: (row) => reserveVisualEnginePilotRun({
+            phase: "2a",
+            mode: "shadow",
+            route: "template_skeleton",
+            templateId: row.templateId,
+          }),
+          baseline: async (row) => {
+            const value = await prepare(row);
+            return {
+              html: value.baselineHtml,
+              duplicateShadowCandidateFill: value.duplicateShadowCandidateFill,
+            };
+          },
+          adapt: async (row) => {
+            const selection = rich.get(rowKey(row));
+            if (!selection) throw new Error("Missing preflight selection");
+            const template = catalogRows.find((item) => item.id === row.templateId);
+            if (!template?.visualMetadata) throw new Error("Missing reviewed metadata");
+            const base = await prepare(row);
+            const result = await adaptTemplateSkeleton({
+              html: base.normalizedHtml,
+              templateId: row.templateId,
+              intent: selection.intent,
+              templateMetadata: template.visualMetadata,
+              brand: { accent: base.profile.brand?.accent ?? null },
+            });
+            if (!result.ok) {
+              return {
+                ok: false as const,
+                reasonCode: result.reasonCode,
+                usage: result.usage ?? undefined,
+                durationMs: result.durationMs,
+              };
+            }
+            const finalized = finalizeCuratedDocument({
+              normalizedHtml: result.html,
+              profileData: base.profile,
+              title: row.caseId,
+              brandRecolor: false,
+            });
+            if (!finalized.ok) {
+              return {
+                ok: false as const,
+                reasonCode: "sanitization_failed",
+                usage: result.usage,
+                durationMs: result.durationMs,
+              };
+            }
+            return {
+              ok: true as const,
+              html: finalized.html,
+              usage: result.usage,
+              durationMs: result.durationMs,
+              structuralFingerprintBefore: result.structuralFingerprintBefore,
+              structuralFingerprintAfter: result.structuralFingerprintAfter,
+              promptVersion: result.promptVersion,
+              contractVersion: result.creativeDirectionVersion,
+              policyVersion: selection.policyVersion,
+              taxonomyVersion: TAXONOMY_COMPATIBILITY_VERSION,
+              modelVersion: result.modelId,
+            };
+          },
+          critique: (row, html) => critiqueGeneratedPage({
+            brief: row.brief,
+            html,
+            model: process.env.OPENLEN_VISUAL_ENGINE_CRITIC_MODEL ?? "gemini-2.5-flash",
+          }),
+          render: async (html) => {
+            const rendered = await renderHtmlToInlineImage(html, { maxBytes: 8 * 1024 * 1024 });
+            return rendered ? Buffer.from(rendered.dataBase64, "base64") : null;
+          },
+          writeEvidence: async (hash, files, evidenceManifest) => {
+            const directory = join(evidenceRoot, hash);
+            await mkdir(directory, { recursive: true });
+            await Promise.all(Object.entries(files).map(([name, bytes]) => writeFile(
+              join(directory, `${name}.jpg`),
+              bytes,
+            )));
+            await writeJsonAtomic(join(directory, "manifest.json"), evidenceManifest);
+          },
+          complete: completeVisualEnginePilotRun,
+        },
+      });
+    },
+    log: (line) => console.log(line),
+  };
+}
+
+async function main(): Promise<void> {
+  try {
+    const result = await runVisualEngine2AEvalCli(await productionDependencies());
+    if (!result.ok) process.exitCode = 2;
+  } catch {
+    console.log(JSON.stringify({ event: "visual_engine_2a_eval", ok: false, code: "dependency_construction_failed" }));
+    process.exitCode = 1;
+  }
+}
+
+if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) {
+  void main();
+}
