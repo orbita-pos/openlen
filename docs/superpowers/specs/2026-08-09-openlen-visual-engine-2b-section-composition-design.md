@@ -67,14 +67,13 @@ The 2B pipeline is:
 3. Load a published section inventory and freeze its canonical hash.
 4. Build a deterministic `SectionPlan` from `functional.requiredSections` plus bounded page chrome.
 5. Resolve every requested role to a compatible component type and published variant.
-6. Generate or reuse the existing `CreativeDirection` through the same safe provider boundary used by 2A.
-7. Convert the approved creative direction into the existing `AssembleTheme` and token contract.
-8. Fetch the selected fragments and recheck their IDs and content hashes.
-9. Stitch fragments, bind the shared visual tokens, and retain role ownership markers.
-10. Fill copy with the existing user/brief context without reclassifying the product.
-11. Run inherited-copy detection, role coverage, token allowlist, HTML normalization, sanitization, and asset validation.
-12. Run Vision Critic diagnostically in shadow and pilot modes.
-13. Atomically finalize preview, project data, metadata, debit, and pilot result.
+6. Fetch the selected fragments and recheck their IDs and content hashes.
+7. Stitch a neutral composition skeleton, bind section token dialects to the shared `--ol-*` contract, and retain role ownership markers.
+8. Fill copy with the existing user/brief context without reclassifying the product, then reject inherited copy.
+9. Pass the complete neutral skeleton through the existing 2A adaptation boundary. That boundary generates `CreativeDirection`, compiles the approved identity, resolves assets, sanitizes, fingerprints, and technically renders the candidate without changing its structure.
+10. Revalidate exact role coverage, token policy, HTML normalization, sanitization, and asset policy after adaptation.
+11. Run Vision Critic diagnostically in shadow and pilot modes.
+12. Atomically finalize preview, project data, metadata, debit, and pilot result.
 
 No partially assembled result is deliverable.
 
@@ -142,7 +141,7 @@ The inventory hash is checked after planning and again before assembly. Selected
 
 ## 9. Creative direction and copy
 
-2B reuses the 2A creative contract for palette, typography, radii, shapes, density, iconography, imagery, and emotional tone. A narrow adapter maps approved tokens to `AssembleTheme`; it cannot change the section plan.
+2B reuses the 2A creative contract for palette, typography, radii, shapes, density, iconography, imagery, and emotional tone. The assembler first uses a fixed neutral `AssembleTheme` only to normalize each fragment's token dialect. The resulting complete document is then adapted by the existing 2A compiler, which owns the final `--ol-*` values and cannot change the section plan.
 
 All fragments bind to a single page-level token source. Section-local hardcoded theme definitions are rebound through the existing `--ol-*` contract. Tokens outside the allowlist are rejected or left non-controllable according to the current compiler rules.
 
