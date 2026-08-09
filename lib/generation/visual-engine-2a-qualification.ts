@@ -78,6 +78,7 @@ const HTML_RAW_TEXT_ELEMENTS = [
   "title",
   "xmp",
 ] as const;
+const CLOUDFLARE_EMAIL_PROTECTION_HREF_PREFIX = "/cdn-cgi/l/email-protection#";
 
 function cloudflareEmailHash(value: string): string | null {
   if (value.length < 4 || value.length % 2 !== 0 || !/^[0-9a-f]+$/i.test(value)) return null;
@@ -85,6 +86,12 @@ function cloudflareEmailHash(value: string): string | null {
   const key = bytes[0];
   const decoded = Buffer.from(bytes.subarray(1).map((byte) => byte ^ key));
   return `sha256:${createHash("sha256").update(decoded).digest("hex")}`;
+}
+
+function canonicalCloudflareEmailProtectionHref(value: string): string | null {
+  if (!value.startsWith(CLOUDFLARE_EMAIL_PROTECTION_HREF_PREFIX)) return null;
+  const hash = cloudflareEmailHash(value.slice(CLOUDFLARE_EMAIL_PROTECTION_HREF_PREFIX.length));
+  return hash === null ? null : `${CLOUDFLARE_EMAIL_PROTECTION_HREF_PREFIX}${hash}`;
 }
 
 function isHtmlWhitespace(character: string): boolean {
@@ -157,9 +164,13 @@ function canonicalizeCloudflareAttributeInStartTag(startTag: string, tagNameEnd:
     const valueEnd = index;
     if (quote !== null) index += 1;
 
-    if (!asciiCaseInsensitiveEquals(name, "data-cfemail")) continue;
-    const hash = cloudflareEmailHash(startTag.slice(valueStart, valueEnd));
-    if (hash !== null) replacements.push({ start: valueStart, end: valueEnd, value: hash });
+    const value = startTag.slice(valueStart, valueEnd);
+    const canonicalValue = asciiCaseInsensitiveEquals(name, "data-cfemail")
+      ? cloudflareEmailHash(value)
+      : quote !== null && asciiCaseInsensitiveEquals(name, "href")
+        ? canonicalCloudflareEmailProtectionHref(value)
+        : null;
+    if (canonicalValue !== null) replacements.push({ start: valueStart, end: valueEnd, value: canonicalValue });
   }
 
   if (replacements.length === 0) return startTag;

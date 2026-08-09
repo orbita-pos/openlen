@@ -14,6 +14,7 @@ import {
   type SelectionCatalogTemplate,
   type TemplateMaterial,
 } from "./visual-engine-2a-qualification";
+import { canonicalJsonSha256 } from "./visual-engine-2a-eval";
 
 const HTML = "<!doctype html><html><body><header><a class=\"cta\" href=\"#contact\">Start</a></header><main><section><h1>Template</h1></section><section><p>Details</p></section></main></body></html>";
 
@@ -336,6 +337,103 @@ describe("qualifyVisualEngine2ACohort", () => {
     };
 
     expect(manifestForValue("7c1d3c1e521f1311")).toBe(manifestForValue("2a4b6a4804494547"));
+  });
+
+  it.each([
+    ["double quoted href", (value: string) => `<a href="/cdn-cgi/l/email-protection#${value}">protected</a>`],
+    ["single quoted href", (value: string) => `<a href='/cdn-cgi/l/email-protection#${value}'>protected</a>`],
+    ["ASCII case-insensitive attribute name", (value: string) => `<a HREF="/cdn-cgi/l/email-protection#${value}">protected</a>`],
+  ])("stabilizes an exact Cloudflare local %s without hiding a different email", (_label, fragmentFor) => {
+    const manifestForValue = (value: string) => {
+      const html = HTML.replace("</body>", `${fragmentFor(value)}</body>`);
+      const templateMaterials = templateMaterialsFor();
+      const templateId = templateMaterials[0].id;
+      templateMaterials[0] = {
+        ...templateMaterials[0],
+        html,
+        inventory: buildSkeletonInventory(html, templateId),
+      };
+      const result = qualify(undefined, selectionCatalogFor(), templateMaterials);
+      expect(result.ok).toBe(true);
+      if (!result.ok) throw new Error("Expected valid template material");
+      return {
+        manifestSha256: result.manifest.manifestSha256,
+        template: result.manifest.templates.find((template) => template.id === templateId)!,
+      };
+    };
+
+    const firstEncoding = manifestForValue("2a4b6a4804494547");
+    const secondEncoding = manifestForValue("7c1d3c1e521f1311");
+    const differentEmail = manifestForValue("2a486a4804494547");
+
+    expect(secondEncoding.manifestSha256).toBe(firstEncoding.manifestSha256);
+    expect(secondEncoding.template.htmlSha256).toBe(firstEncoding.template.htmlSha256);
+    expect(secondEncoding.template.inventorySha256).toBe(firstEncoding.template.inventorySha256);
+    expect(differentEmail.manifestSha256).not.toBe(firstEncoding.manifestSha256);
+    expect(differentEmail.template.htmlSha256).not.toBe(firstEncoding.template.htmlSha256);
+  });
+
+  it("preserves quote style while canonicalizing an exact Cloudflare href", () => {
+    const htmlSha256For = (fragment: string) => {
+      const html = HTML.replace("</body>", `${fragment}</body>`);
+      const templateMaterials = templateMaterialsFor();
+      const templateId = templateMaterials[0].id;
+      templateMaterials[0] = {
+        ...templateMaterials[0],
+        html,
+        inventory: buildSkeletonInventory(html, templateId),
+      };
+      const result = qualify(undefined, selectionCatalogFor(), templateMaterials);
+      expect(result.ok).toBe(true);
+      if (!result.ok) throw new Error("Expected valid template material");
+      return result.manifest.templates.find((template) => template.id === templateId)!.htmlSha256;
+    };
+
+    expect(htmlSha256For(`<a href='/cdn-cgi/l/email-protection#2a4b6a4804494547'>protected</a>`))
+      .not.toBe(htmlSha256For(`<a href="/cdn-cgi/l/email-protection#2a4b6a4804494547">protected</a>`));
+  });
+
+  it.each([
+    ["text", (value: string) => `<p>href="/cdn-cgi/l/email-protection#${value}"</p>`, "2a4b6a4804494547", "7c1d3c1e521f1311"],
+    ["comments", (value: string) => `<!-- <a href="/cdn-cgi/l/email-protection#${value}"> -->`, "2a4b6a4804494547", "7c1d3c1e521f1311"],
+    ["scripts", (value: string) => `<script>const link = '<a href="/cdn-cgi/l/email-protection#${value}">';</script>`, "2a4b6a4804494547", "7c1d3c1e521f1311"],
+    ["styles", (value: string) => `<style>.x { content: '<a href="/cdn-cgi/l/email-protection#${value}">'; }</style>`, "2a4b6a4804494547", "7c1d3c1e521f1311"],
+    ["textarea", (value: string) => `<textarea><a href="/cdn-cgi/l/email-protection#${value}"></a></textarea>`, "2a4b6a4804494547", "7c1d3c1e521f1311"],
+    ["another attribute value", (value: string) => `<a title='href="/cdn-cgi/l/email-protection#${value}"'>protected</a>`, "2a4b6a4804494547", "7c1d3c1e521f1311"],
+    ["a suffix attribute", (value: string) => `<a x-href="/cdn-cgi/l/email-protection#${value}">protected</a>`, "2a4b6a4804494547", "7c1d3c1e521f1311"],
+    ["an unquoted value", (value: string) => `<a href=/cdn-cgi/l/email-protection#${value}>protected</a>`, "2a4b6a4804494547", "7c1d3c1e521f1311"],
+    ["a different local path", (value: string) => `<a href="/cdn-cgi/other#${value}">protected</a>`, "2a4b6a4804494547", "7c1d3c1e521f1311"],
+    ["an absolute URL", (value: string) => `<a href="https://example.com/cdn-cgi/l/email-protection#${value}">protected</a>`, "2a4b6a4804494547", "7c1d3c1e521f1311"],
+    ["a differently cased path", (value: string) => `<a href="/CDN-CGI/l/email-protection#${value}">protected</a>`, "2a4b6a4804494547", "7c1d3c1e521f1311"],
+    ["a query suffix", (value: string) => `<a href="/cdn-cgi/l/email-protection#${value}?source=x">protected</a>`, "2a4b6a4804494547", "7c1d3c1e521f1311"],
+    ["additional fragment characters", (value: string) => `<a href="/cdn-cgi/l/email-protection#${value}/more">protected</a>`, "2a4b6a4804494547", "7c1d3c1e521f1311"],
+    ["malformed hex", (value: string) => `<a href="/cdn-cgi/l/email-protection#${value}">protected</a>`, "not-hex", "also-bad"],
+    ["odd-length hex", (value: string) => `<a href="/cdn-cgi/l/email-protection#${value}">protected</a>`, "abc", "def"],
+    ["an empty payload", (value: string) => `<a href="/cdn-cgi/l/email-protection#${value}">protected</a>`, "", "?"],
+  ])("preserves Cloudflare-href-looking bytes in %s", (_label, fragmentFor, firstValue, secondValue) => {
+    const hashesFor = (value: string) => {
+      const html = HTML.replace("</body>", `${fragmentFor(value)}</body>`);
+      const templateMaterials = templateMaterialsFor();
+      const templateId = templateMaterials[0].id;
+      templateMaterials[0] = {
+        ...templateMaterials[0],
+        html,
+        inventory: buildSkeletonInventory(html, templateId),
+      };
+      const result = qualify(undefined, selectionCatalogFor(), templateMaterials);
+      expect(result.ok).toBe(true);
+      if (!result.ok) throw new Error("Expected valid template material");
+      return {
+        actual: result.manifest.templates.find((template) => template.id === templateId)!.htmlSha256,
+        unchanged: canonicalJsonSha256(html),
+      };
+    };
+
+    const first = hashesFor(firstValue);
+    const second = hashesFor(secondValue);
+    expect(first.actual).toBe(first.unchanged);
+    expect(second.actual).toBe(second.unchanged);
+    expect(first.actual).not.toBe(second.actual);
   });
 
   it("hashes canonical input by value and detects every material staleness dimension", () => {
