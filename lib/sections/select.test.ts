@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { scoreVariant, rankVariants } from "./select";
+import { scoreVariant, rankVariants, rankCompositionVariants } from "./select";
+import { CreativeDirectionSchema } from "@/lib/generation/creative-contracts";
 import type { SectionRecord } from "./store";
 import type { SectionMode, SectionType } from "./types";
 import type { AssembleTheme } from "./assemble";
@@ -75,5 +76,31 @@ describe("scoreVariant / rankVariants — deterministic mode+radius selection", 
     const matchedJs = mk("m", "dark", { radius: "10px", needsJs: true });
     const mismatched = mk("x", "light", { radius: "10px" });
     expect(scoreVariant(matchedJs, DARK)).toBeGreaterThan(scoreVariant(mismatched, DARK));
+  });
+});
+
+describe("rankCompositionVariants", () => {
+  const direction = CreativeDirectionSchema.parse({
+    schemaVersion: "creative-direction/1.0",
+    mode: "light",
+    visualArchetype: "playful_editorial",
+    emotionalTone: ["playful"],
+    palette: { background: "#FFF8FC", surface: "#FFFFFF", surfaceAlt: "#FFF0F7", foreground: "#382A35", foregroundMuted: "#756672", accent: "#F06AA6", accentInk: "#FFFFFF", border: "#F3C9DD" },
+    typography: { display: "rounded_playful", body: "friendly_high_legibility", mono: null, scale: "expressive" },
+    geometry: { radius: "extra_round", radiusScale: 1.75, spacingScale: 1.15, density: "low_medium" },
+    imagery: { strategy: "illustration_first", artDirection: "childrens_coloring", subjects: ["coloring_pages"], avoid: ["corporate_dashboard"] },
+    iconography: { style: "rounded_outline", strokeWeight: "medium", cornerStyle: "round" },
+    componentTreatment: { cards: "playful", buttons: "pill", navigation: "friendly", sections: "airy" },
+    requiredVisualSignals: ["coloring_art"],
+    forbiddenVisualSignals: ["corporate_dashboard"],
+  });
+
+  it("uses composition signals but keeps exact ties ordered by id", () => {
+    const ranked = rankCompositionVariants([
+      { id: "z", mode: "light", radiusBucket: "soft", density: "unknown", needsJs: false },
+      { id: "a", mode: "light", radiusBucket: "soft", density: "unknown", needsJs: false },
+      { id: "sharp", mode: "light", radiusBucket: "sharp", density: "unknown", needsJs: false },
+    ], direction);
+    expect(ranked.map((row) => row.id)).toEqual(["a", "z", "sharp"]);
   });
 });

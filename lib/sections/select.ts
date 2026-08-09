@@ -10,6 +10,7 @@
 import { listSections, type SectionRecord } from "./store";
 import type { SectionMode, SectionType } from "./types";
 import type { AssembleTheme } from "./assemble";
+import type { CreativeDirection } from "@/lib/generation/creative-contracts";
 
 type Bucket = "sharp" | "medium" | "soft";
 const BUCKETS: Bucket[] = ["sharp", "medium", "soft"];
@@ -57,6 +58,62 @@ export function rankVariants(recs: SectionRecord[], theme: AssembleTheme): Secti
     .map((r) => ({ r, s: scoreVariant(r, theme) }))
     .sort((a, b) => b.s - a.s || a.r.id.localeCompare(b.r.id))
     .map((x) => x.r);
+}
+
+export interface CompositionVariantSignals {
+  id: string;
+  mode: SectionMode;
+  radiusBucket: Bucket | "unknown";
+  density: CreativeDirection["geometry"]["density"] | "unknown";
+  needsJs: boolean;
+}
+
+function desiredRadiusBucket(
+  radius: CreativeDirection["geometry"]["radius"],
+): Bucket {
+  if (radius === "square") return "sharp";
+  if (radius === "soft") return "medium";
+  return "soft";
+}
+
+function compositionVariantScore(
+  row: CompositionVariantSignals,
+  direction: CreativeDirection,
+): number {
+  let score = modeScore(row.mode, direction.mode);
+  if (row.radiusBucket !== "unknown") {
+    const distance = Math.abs(
+      BUCKETS.indexOf(row.radiusBucket) -
+      BUCKETS.indexOf(desiredRadiusBucket(direction.geometry.radius)),
+    );
+    score += distance === 0 ? 10 : distance === 1 ? 5 : 0;
+  }
+  if (row.density === direction.geometry.density) score += 5;
+  if (row.needsJs) score -= 3;
+  return score;
+}
+
+export function rankCompositionVariants<T extends CompositionVariantSignals>(
+  rows: readonly T[],
+  direction: CreativeDirection,
+  opts?: { seed?: number },
+): T[] {
+  const seededTie = (id: string) => {
+    let hash = (opts?.seed ?? 0) >>> 0;
+    for (let index = 0; index < id.length; index++) {
+      hash = Math.imul(hash ^ id.charCodeAt(index), 16777619) >>> 0;
+    }
+    return hash;
+  };
+  return rows
+    .map((row) => ({ row, score: compositionVariantScore(row, direction) }))
+    .sort((left, right) =>
+      right.score - left.score ||
+      (opts?.seed === undefined
+        ? left.row.id.localeCompare(right.row.id)
+        : seededTie(left.row.id) - seededTie(right.row.id) ||
+          left.row.id.localeCompare(right.row.id)))
+    .map(({ row }) => row);
 }
 
 /** Pick the best published variant of `type` for the theme. `seed` rotates among
