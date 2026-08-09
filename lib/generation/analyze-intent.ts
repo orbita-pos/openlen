@@ -1,9 +1,14 @@
 import { IntentAnalysisSchema, type IntentAnalysis } from "./contracts";
 import type { ModelTokenUsage } from "./model-cost";
+import {
+  CANONICAL_PRIMARY_AUDIENCES,
+  CANONICAL_SECTION_ROLES,
+  CANONICAL_SITE_TYPES,
+} from "./structural-taxonomy";
 
 const GEMINI_BASE = "https://generativelanguage.googleapis.com/v1beta/models";
 
-export const INTENT_PROMPT_VERSION = "intent-prompt/1.5" as const;
+export const INTENT_PROMPT_VERSION = "intent-prompt/1.6" as const;
 export const INTENT_ANALYSIS_TIMEOUT_MS = 12_000;
 
 export const CANONICAL_FORBIDDEN_VISUAL_SIGNALS = Object.freeze([
@@ -29,6 +34,12 @@ const TAXONOMY_ARRAY_SCHEMA = {
   maxItems: 24,
 } as const;
 
+const enumArraySchema = (values: readonly string[]) => ({
+  type: "array" as const,
+  items: { type: "string" as const, enum: values },
+  maxItems: 24,
+});
+
 const PROSE_ARRAY_SCHEMA = {
   type: "array",
   items: { type: "string", minLength: 1, maxLength: 240 },
@@ -45,8 +56,8 @@ const RESPONSE_JSON_SCHEMA = {
       type: "object",
       additionalProperties: false,
       properties: {
-        siteType: { type: "string" },
-        requiredSections: TAXONOMY_ARRAY_SCHEMA,
+        siteType: { type: "string", enum: CANONICAL_SITE_TYPES },
+        requiredSections: enumArraySchema(CANONICAL_SECTION_ROLES),
         primaryActions: TAXONOMY_ARRAY_SCHEMA,
         contentModel: { type: "string" },
       },
@@ -56,7 +67,7 @@ const RESPONSE_JSON_SCHEMA = {
       type: "object",
       additionalProperties: false,
       properties: {
-        primary: { type: "string" },
+        primary: { type: "string", enum: CANONICAL_PRIMARY_AUDIENCES },
         ageRange: { type: ["string", "null"] },
         secondary: TAXONOMY_ARRAY_SCHEMA,
       },
@@ -102,6 +113,12 @@ Separate functional requirements from visual and emotional identity:
 
 Do not infer a visual category merely because two products share sections. Galleries, stories, progress, cards, forms, and navigation are structural features, not proof of an education, SaaS, corporate, editorial, or children's identity.
 Use lowercase snake_case taxonomy tags. Record genuine uncertainty in ambiguities instead of applying a generic SaaS or education default.
+For functional.siteType, use exactly one of: ${CANONICAL_SITE_TYPES.join(", ")}.
+For audience.primary, use exactly one of: ${CANONICAL_PRIMARY_AUDIENCES.join(", ")}.
+For functional.requiredSections, use only these roles: ${CANONICAL_SECTION_ROLES.join(", ")}.
+Use canonical structural values instead of synonyms. Omit an unsupported section role and record the unsupported requirement as a concrete ambiguity; never invent a nearest role. Keep wrapper roles such as header, hero, call_to_action, and footer when the brief requires a complete page.
+Structural category guidance: dining, cafe, bakery, bar, and wine-bar presences use restaurant; appointment-based wellness providers use small_business; software product marketing uses saas_product_page; open-source product promotion uses product_landing_page; creator link or resource pages use creator_hub; personal work showcases use portfolio; teaching-resource libraries use educational_resource; documentation uses documentation_site.
+Role boundaries: stories and testimonials are different roles; minigames and activities are different roles; a coloring_gallery is not proof of an educational product.
 For common product domains, use these canonical labels whenever they apply; do not replace them with a narrower synonym: children_entertainment, creative_play, education, local_services, developer_tools, ai_ml, food_beverage, hospitality, wellness, healthcare, fintech, portfolio, illustration, agency, gaming, sports, wedding, nonprofit, fashion, ecommerce, real_estate, hardware, consumer_technology, editorial, publishing, legal_services, logistics, business_services, science, music, photography, coworking, government, events, beauty, construction. Include every applicable canonical domain, then add a narrower tag only if useful.
 Canonical multi-domain decision: preschool -> education + local_services.
 Taxonomy semantics: local_services applies to a place-based or appointment-based provider serving a geographic community, even when it also serves businesses; portfolio applies to an individual creator whose work is a primary reason to visit the site. Include these facets in addition to the specialist domain rather than replacing it.
@@ -230,6 +247,18 @@ function unsafeUnknownIntent(intent: IntentAnalysis): boolean {
   return hasUnknown && (intent.ambiguities.length === 0 || intent.confidence > 0.49);
 }
 
+const CANONICAL_SITE_TYPE_SET = new Set<string>(CANONICAL_SITE_TYPES);
+const CANONICAL_PRIMARY_AUDIENCE_SET = new Set<string>(CANONICAL_PRIMARY_AUDIENCES);
+const CANONICAL_SECTION_ROLE_SET = new Set<string>(CANONICAL_SECTION_ROLES);
+
+function hasNoncanonicalStructure(intent: IntentAnalysis): boolean {
+  return !CANONICAL_SITE_TYPE_SET.has(intent.functional.siteType)
+    || !CANONICAL_PRIMARY_AUDIENCE_SET.has(intent.audience.primary)
+    || intent.functional.requiredSections.some(
+      (section) => !CANONICAL_SECTION_ROLE_SET.has(section),
+    );
+}
+
 async function requestIntent(
   brief: string,
   apiKey: string,
@@ -342,6 +371,15 @@ async function requestIntent(
       ok: false,
       ...base,
       error: { kind: "schema", message },
+      ...(usage ? { usage } : {}),
+      durationMs: elapsed(),
+    };
+  }
+  if (hasNoncanonicalStructure(validated.data)) {
+    return {
+      ok: false,
+      ...base,
+      error: { kind: "schema", message: "intent structural taxonomy mismatch" },
       ...(usage ? { usage } : {}),
       durationMs: elapsed(),
     };

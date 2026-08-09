@@ -342,7 +342,7 @@ describe("scoreTemplate", () => {
         emotionalRegisters: [],
         visualSignals: [],
         supportedSiteTypes: ["product_landing_page"],
-        supportedSectionRoles: ["product_gallery", "about_us", "contact_page"],
+        supportedSectionRoles: ["media_gallery", "about_us", "contact_page"],
       },
     };
 

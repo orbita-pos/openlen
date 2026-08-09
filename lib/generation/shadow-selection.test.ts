@@ -53,7 +53,7 @@ function successfulAnalyzer() {
     ok: true,
     intent: INTENT,
     modelId: "test-model",
-    promptVersion: "intent-prompt/1.5",
+    promptVersion: "intent-prompt/1.6",
     usage: { inputTokens: 10, outputTokens: 20 },
     durationMs: 3,
   });
@@ -116,7 +116,7 @@ describe("safe template picker shadow", () => {
     expect(result).toMatchObject({
       status: "ok",
       schemaVersion: "safe-selection-shadow/1.0",
-      promptVersion: "intent-prompt/1.5",
+      promptVersion: "intent-prompt/1.6",
       policyVersion: "template-policy/1.0",
       modelId: "test-model",
       decision: { route: "template_full", templateId: "kids" },
@@ -148,7 +148,7 @@ describe("safe template picker shadow", () => {
     const analyze = vi.fn().mockResolvedValue({
       ok: false,
       modelId: "test-model",
-      promptVersion: "intent-prompt/1.5",
+      promptVersion: "intent-prompt/1.6",
       error: { kind: "schema", message: "sensitive provider output" },
       durationMs: 3,
     });

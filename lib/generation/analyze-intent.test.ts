@@ -1,6 +1,11 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { analyzeIntent } from "./analyze-intent";
+import { analyzeIntent, INTENT_PROMPT_VERSION } from "./analyze-intent";
+import {
+  CANONICAL_PRIMARY_AUDIENCES,
+  CANONICAL_SECTION_ROLES,
+  CANONICAL_SITE_TYPES,
+} from "./structural-taxonomy";
 
 const CHILDREN_INTENT = {
   schemaVersion: "intent-analysis/1.0",
@@ -59,7 +64,7 @@ describe("analyzeIntent", () => {
       ok: true,
       intent: CHILDREN_INTENT,
       modelId: "test-model",
-      promptVersion: "intent-prompt/1.5",
+      promptVersion: "intent-prompt/1.6",
       usage: { inputTokens: 120, outputTokens: 80, cachedTokens: 20, thinkingTokens: 0 },
       durationMs: 25,
     });
@@ -101,6 +106,14 @@ describe("analyzeIntent", () => {
       .toContain("local_services applies to a place-based or appointment-based provider");
     expect(body.systemInstruction.parts[0].text)
       .toContain("portfolio applies to an individual creator");
+    expect(body.systemInstruction.parts[0].text).toContain(CANONICAL_SITE_TYPES.join(", "));
+    expect(body.systemInstruction.parts[0].text).toContain(CANONICAL_PRIMARY_AUDIENCES.join(", "));
+    expect(body.systemInstruction.parts[0].text).toContain(CANONICAL_SECTION_ROLES.join(", "));
+    expect(body.systemInstruction.parts[0].text)
+      .toContain("stories and testimonials are different roles");
+    expect(body.systemInstruction.parts[0].text)
+      .toContain("minigames and activities are different roles");
+    expect(INTENT_PROMPT_VERSION).toBe("intent-prompt/1.6");
     expect(body.contents[0].parts[0].text).toContain(
       "Brief:\n\nPlataforma infantil de coloreo con cuentos y juegos",
     );
@@ -123,7 +136,11 @@ describe("analyzeIntent", () => {
     const responseSchema = body.generationConfig.responseJsonSchema as {
       properties: {
         domains: Record<string, unknown>;
-        functional: { properties: { requiredSections: Record<string, unknown> } };
+        functional: { properties: {
+          siteType: Record<string, unknown>;
+          requiredSections: { items: Record<string, unknown> } & Record<string, unknown>;
+        } };
+        audience: { properties: { primary: Record<string, unknown> } };
         explicitConstraints: Record<string, unknown>;
         ambiguities: Record<string, unknown>;
       };
@@ -131,6 +148,12 @@ describe("analyzeIntent", () => {
     expect(responseSchema.properties.domains).toMatchObject({ minItems: 1, maxItems: 24 });
     expect(responseSchema.properties.functional.properties.requiredSections)
       .toMatchObject({ maxItems: 24 });
+    expect(responseSchema.properties.functional.properties.siteType.enum)
+      .toEqual(CANONICAL_SITE_TYPES);
+    expect(responseSchema.properties.functional.properties.requiredSections.items.enum)
+      .toEqual(CANONICAL_SECTION_ROLES);
+    expect(responseSchema.properties.audience.properties.primary.enum)
+      .toEqual(CANONICAL_PRIMARY_AUDIENCES);
     expect(responseSchema.properties.explicitConstraints).toMatchObject({ maxItems: 12 });
     expect(responseSchema.properties.ambiguities).toMatchObject({ maxItems: 12 });
     const headers = fetchImpl.mock.calls[0]?.[1]?.headers as Record<string, string>;
@@ -208,6 +231,44 @@ describe("analyzeIntent", () => {
       usage: { inputTokens: 120, outputTokens: 80, cachedTokens: 20, thinkingTokens: 0 },
     });
     expect(result).not.toHaveProperty("intent");
+  });
+
+  it.each([
+    ["site type", { functional: { ...CHILDREN_INTENT.functional, siteType: "learning_app" } }],
+    ["primary audience", { audience: { ...CHILDREN_INTENT.audience, primary: "young_artists" } }],
+    ["required section", { functional: { ...CHILDREN_INTENT.functional, requiredSections: ["hero", "lesson_dashboard"] } }],
+  ])("rejects an out-of-vocabulary structural %s while preserving paid usage", async (_label, change) => {
+    const result = await analyzeIntent("A complete product brief", {
+      apiKey: "x",
+      fetchImpl: vi.fn().mockResolvedValue(geminiResponse(JSON.stringify({
+        ...CHILDREN_INTENT,
+        ...change,
+      }))),
+      now: () => 10,
+    });
+
+    expect(result).toMatchObject({
+      ok: false,
+      error: { kind: "schema" },
+      usage: { inputTokens: 120, outputTokens: 80, cachedTokens: 20, thinkingTokens: 0 },
+    });
+    expect(result).not.toHaveProperty("intent");
+  });
+
+  it("keeps visual signals expressive when structural fields are canonical", async () => {
+    const result = await analyzeIntent("A complete product brief", {
+      apiKey: "x",
+      fetchImpl: vi.fn().mockResolvedValue(geminiResponse(JSON.stringify({
+        ...CHILDREN_INTENT,
+        requiredVisualSignals: ["new_hand_cut_felt_collage"],
+      }))),
+      now: () => 10,
+    });
+
+    expect(result).toMatchObject({
+      ok: true,
+      intent: { requiredVisualSignals: ["new_hand_cut_felt_collage"] },
+    });
   });
 
   it("preserves explicit zeroes in a complete provider usage envelope", async () => {

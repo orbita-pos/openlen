@@ -1,5 +1,5 @@
 export const TAXONOMY_COMPATIBILITY_VERSION =
-  "taxonomy-compatibility/1.1" as const;
+  "taxonomy-compatibility/1.2" as const;
 
 export type CompatibilityKind = "exact" | "alias" | "structural" | "soft" | "none";
 
@@ -62,6 +62,19 @@ const SITE_TYPE_CHILDREN: Readonly<Record<string, readonly string[]>> = {
     "portfolio_website",
   ],
   product_marketing: ["company_website", "product_landing_page"],
+  restaurant: [
+    "bakery",
+    "cafe",
+    "fine_dining_restaurant",
+    "restaurant_website",
+    "wine_bar",
+  ],
+  small_business: ["fitness_studio"],
+  documentation_site: ["technical_documentation"],
+  saas_product_page: ["saas_landing_page"],
+  creator_hub: ["creator_page"],
+  educational_resource: ["educational_site"],
+  community_hub: ["community_site"],
 };
 
 const SECTION_ROLE_ALIASES: Readonly<Record<string, string>> = {
@@ -69,20 +82,37 @@ const SECTION_ROLE_ALIASES: Readonly<Record<string, string>> = {
   about_page: "about",
   about_us: "about",
   about_us_page: "about",
+  about_us_section: "about",
+  origin_story: "about",
+  our_story: "about",
+  mission: "about",
+  testimonials: "testimonials",
+  reviews: "testimonials",
+  social_proof: "testimonials",
+  how_it_works: "how_it_works",
+  workflow: "how_it_works",
+  process: "how_it_works",
+  events: "events",
+  event_list: "events",
+  event_listing: "events",
+  events_list: "events",
+  events_page: "events",
+  gallery: "gallery",
+  image_gallery: "gallery",
+  media_gallery: "gallery",
   contact: "contact",
   contact_page: "contact",
   contact_us: "contact",
+  contact_form: "contact",
+  booking: "booking",
+  booking_form: "booking",
+  booking_page: "booking",
   faq: "faq",
   faq_page: "faq",
   pricing: "pricing",
   pricing_page: "pricing",
   schedule: "schedule",
   schedule_section: "schedule",
-};
-
-const SECTION_ROLE_CHILDREN: Readonly<Record<string, readonly string[]>> = {
-  events: ["event_list", "event_listing", "events_list", "events_page"],
-  gallery: ["image_gallery", "media_gallery", "product_gallery"],
 };
 
 const SOFT_AUDIENCES: Readonly<Record<string, readonly string[]>> = {
@@ -173,9 +203,6 @@ export function sectionRoleCompatibility(
     return required === supported
       ? exact("section_role:exact")
       : alias(`section_role:alias:${canonicalRequired}`);
-  }
-  if (SECTION_ROLE_CHILDREN[canonicalRequired]?.includes(canonicalSupported)) {
-    return structural(0.85, `section_role:${canonicalRequired}>${canonicalSupported}`);
   }
   if (canonicalRequired === "coloring_gallery" && canonicalSupported === "gallery") {
     return structural(0.45, "section_role:coloring_gallery>gallery");
