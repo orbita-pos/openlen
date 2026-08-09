@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   audienceCompatibility,
   canonicalizeDomain,
+  sectionComponentCompatibility,
   sectionRoleCompatibility,
   siteTypeCompatibility,
   TAXONOMY_COMPATIBILITY_VERSION,
@@ -10,7 +11,7 @@ import {
 
 describe("taxonomy compatibility", () => {
   it("exposes a versioned deterministic contract", () => {
-    expect(TAXONOMY_COMPATIBILITY_VERSION).toBe("taxonomy-compatibility/1.3");
+    expect(TAXONOMY_COMPATIBILITY_VERSION).toBe("taxonomy-compatibility/1.4");
   });
 
   it.each([
@@ -99,6 +100,33 @@ describe("taxonomy compatibility", () => {
     expect(sectionRoleCompatibility("minigames", "activities"))
       .toEqual({ kind: "none", score: 0, ruleId: null });
     expect(sectionRoleCompatibility("stories", "testimonials"))
+      .toEqual({ kind: "none", score: 0, ruleId: null });
+  });
+
+  it.each([
+    ["hero", "hero", "exact", 1],
+    ["header", "navbar", "alias", 1],
+    ["call_to_action", "cta", "alias", 1],
+    ["how_it_works", "how-it-works", "alias", 1],
+    ["clients", "logos", "alias", 1],
+    ["coloring_gallery", "gallery", "structural", 0.85],
+    ["minigames", "features", "structural", 0.85],
+    ["stories", "features", "structural", 0.85],
+    ["activities", "features", "structural", 0.85],
+    ["reservations", "contact", "structural", 0.85],
+    ["membership", "pricing", "structural", 0.85],
+  ])("maps the audited section component %s → %s", (role, component, kind, score) => {
+    expect(sectionComponentCompatibility(role, component)).toMatchObject({ kind, score });
+  });
+
+  it.each([
+    ["stories", "testimonials"],
+    ["minigames", "pricing"],
+    ["activities", "logos"],
+    ["unknown", "unknown"],
+    ["navbar", "navbar"],
+  ])("rejects the misleading section substitution %s → %s", (role, component) => {
+    expect(sectionComponentCompatibility(role, component))
       .toEqual({ kind: "none", score: 0, ruleId: null });
   });
 

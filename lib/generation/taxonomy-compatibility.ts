@@ -1,5 +1,5 @@
 export const TAXONOMY_COMPATIBILITY_VERSION =
-  "taxonomy-compatibility/1.3" as const;
+  "taxonomy-compatibility/1.4" as const;
 
 export type CompatibilityKind = "exact" | "alias" | "structural" | "soft" | "none";
 
@@ -10,6 +10,52 @@ export interface Compatibility {
 }
 
 const NONE: Compatibility = { kind: "none", score: 0, ruleId: null };
+
+const SECTION_COMPONENT_ALIASES: Readonly<Record<string, string>> = {
+  header: "navbar",
+  how_it_works: "how-it-works",
+  call_to_action: "cta",
+  clients: "logos",
+};
+
+const EXACT_SECTION_COMPONENTS = new Set([
+  "hero",
+  "features",
+  "testimonials",
+  "pricing",
+  "integrations",
+  "gallery",
+  "faq",
+  "about",
+  "team",
+  "contact",
+  "footer",
+]);
+
+const SECTION_COMPONENT_STRUCTURAL: Readonly<Record<string, readonly string[]>> = {
+  features: [
+    "services",
+    "programs",
+    "menu",
+    "events",
+    "schedule",
+    "profile_summary",
+    "link_list",
+    "featured_content",
+    "content_list",
+    "minigames",
+    "stories",
+    "activities",
+    "use_cases",
+    "case_studies",
+    "blog",
+    "news",
+    "newsletter",
+  ],
+  gallery: ["coloring_gallery", "products"],
+  contact: ["reservations", "booking", "location", "social_links"],
+  pricing: ["membership"],
+};
 
 const DOMAIN_ALIASES: Readonly<Record<string, string>> = {
   ai_ml: "ai_ml",
@@ -207,6 +253,25 @@ export function sectionRoleCompatibility(
   }
   if (canonicalRequired === "coloring_gallery" && canonicalSupported === "gallery") {
     return structural(0.45, "section_role:coloring_gallery>gallery");
+  }
+  return NONE;
+}
+
+export function sectionComponentCompatibility(
+  requested: string,
+  component: string,
+): Compatibility {
+  if (requested === component && EXACT_SECTION_COMPONENTS.has(component)) {
+    return exact(`section_component:exact:${requested}`);
+  }
+  if (SECTION_COMPONENT_ALIASES[requested] === component) {
+    return alias(`section_component:alias:${requested}>${component}`);
+  }
+  if (SECTION_COMPONENT_STRUCTURAL[component]?.includes(requested)) {
+    return structural(
+      0.85,
+      `section_component:structural:${requested}>${component}`,
+    );
   }
   return NONE;
 }
