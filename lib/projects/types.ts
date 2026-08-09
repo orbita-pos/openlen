@@ -1,4 +1,5 @@
 import type { CreativeDirection } from "@/lib/generation/creative-contracts";
+import type { SectionCompositionManifest } from "@/lib/generation/section-composition-contracts";
 
 // The shape of a project's `data` JSONB column.
 //
@@ -275,17 +276,28 @@ export interface PreviewSettings {
   passcodeHash?: string;
 }
 
-export interface VisualEngineProjectMetadata {
-  schemaVersion: "visual-engine-project/1.0";
-  route: "template_skeleton";
-  templateId: string;
-  creativeDirection: CreativeDirection;
-  promptVersion: string;
-  policyVersion: string;
-  contractVersion: "creative-direction/1.0";
-  structuralFingerprintBefore: string;
-  structuralFingerprintAfter: string;
-}
+export type VisualEngineProjectMetadata =
+  | {
+      schemaVersion: "visual-engine-project/1.0";
+      route: "template_skeleton";
+      templateId: string;
+      creativeDirection: CreativeDirection;
+      promptVersion: string;
+      policyVersion: string;
+      contractVersion: "creative-direction/1.0";
+      structuralFingerprintBefore: string;
+      structuralFingerprintAfter: string;
+    }
+  | {
+      schemaVersion: "visual-engine-project/1.0";
+      route: "section_composition";
+      templateId: null;
+      creativeDirection: CreativeDirection;
+      promptVersion: string;
+      policyVersion: string;
+      contractVersion: "creative-direction/1.0";
+      compositionManifest: SectionCompositionManifest;
+    };
 
 export interface ProjectData {
   /** Publish-ready static HTML — the source of truth for the project. */

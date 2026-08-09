@@ -23,6 +23,12 @@ export type PilotReasonCode =
   | "sanitization_failed"
   | "structural_invariant_failed"
   | "technical_render_failed"
+  | "unsupported_section_role"
+  | "section_inventory_stale"
+  | "section_fragment_unavailable"
+  | "section_fragment_stale"
+  | "section_role_coverage_failed"
+  | "inherited_copy_leak"
   | "internal_error";
 export type PilotComparisonVerdict = "candidate" | "baseline" | "tie" | "invalid";
 

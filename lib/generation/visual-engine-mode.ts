@@ -1,9 +1,11 @@
-export type VisualEngineMode = "off" | "shadow" | "skeleton";
+export type VisualEngineMode = "off" | "shadow" | "skeleton" | "composition";
 
 export function visualEngineMode(
   raw = process.env.OPENLEN_VISUAL_ENGINE,
 ): VisualEngineMode {
-  return raw === "shadow" || raw === "skeleton" ? raw : "off";
+  return raw === "shadow" || raw === "skeleton" || raw === "composition"
+    ? raw
+    : "off";
 }
 
 export function shouldRunLegacySafeShadow(

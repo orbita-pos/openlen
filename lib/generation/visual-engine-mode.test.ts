@@ -7,14 +7,17 @@ describe("visualEngineMode", () => {
     expect(visualEngineMode(raw)).toBe("off");
   });
 
-  it("accepts only shadow and skeleton", () => {
+  it("accepts shadow, skeleton, and the exact lowercase composition mode", () => {
     expect(visualEngineMode("shadow")).toBe("shadow");
     expect(visualEngineMode("skeleton")).toBe("skeleton");
+    expect(visualEngineMode("composition")).toBe("composition");
+    expect(visualEngineMode("COMPOSITION")).toBe("off");
   });
 
   it("suppresses the legacy shadow when Visual Engine owns selection", () => {
     expect(shouldRunLegacySafeShadow("off", "shadow")).toBe(true);
     expect(shouldRunLegacySafeShadow("shadow", "shadow")).toBe(false);
     expect(shouldRunLegacySafeShadow("skeleton", "shadow")).toBe(false);
+    expect(shouldRunLegacySafeShadow("composition", "shadow")).toBe(false);
   });
 });

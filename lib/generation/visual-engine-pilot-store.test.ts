@@ -78,6 +78,12 @@ describe("pilot run updates", () => {
     "cannot_add_required_signal",
     "asset_slot_unavailable",
     "hook_property_not_allowed",
+    "unsupported_section_role",
+    "section_inventory_stale",
+    "section_fragment_unavailable",
+    "section_fragment_stale",
+    "section_role_coverage_failed",
+    "inherited_copy_leak",
   ] as const satisfies readonly PilotReasonCode[])("persists typed adaptation reason %s without a raw message", async (reasonCode) => {
     const execute = vi.fn().mockResolvedValue({ rows: [] });
     await completeVisualEnginePilotRun("run-1", { status: "fallback", reasonCode }, { execute });
