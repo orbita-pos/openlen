@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { INTENT_PROMPT_VERSION } from "./analyze-intent";
 import { VisualEngine2APilotCaseSchema, VISUAL_ENGINE_2A_DATASET_VERSION, type VisualEngine2APilotCase } from "./visual-engine-2a-cohort";
 import { canonicalJsonSha256 } from "./visual-engine-2a-eval";
@@ -67,6 +68,23 @@ const REQUIRED_ARCHETYPES = [
   "technical_saas",
   "editorial_portfolio",
 ] as const;
+const CLOUDFLARE_EMAIL_ATTRIBUTE = /\b(data-cfemail\s*=\s*)(?:(['"])([^'"]*)\2|([^\s>]+))/gi;
+
+function cloudflareEmailHash(value: string): string | null {
+  if (value.length < 4 || value.length % 2 !== 0 || !/^[0-9a-f]+$/i.test(value)) return null;
+  const bytes = Buffer.from(value, "hex");
+  const key = bytes[0];
+  const decoded = Buffer.from(bytes.subarray(1).map((byte) => byte ^ key));
+  return `sha256:${createHash("sha256").update(decoded).digest("hex")}`;
+}
+
+function canonicalizeCloudflareEmailProtection(html: string): string {
+  return html.replace(CLOUDFLARE_EMAIL_ATTRIBUTE, (attribute, prefix: string, quote: string | undefined, quotedValue: string | undefined, unquotedValue: string | undefined) => {
+    const hash = cloudflareEmailHash(quotedValue ?? unquotedValue ?? "");
+    if (hash === null) return attribute;
+    return quote === undefined ? `${prefix}${hash}` : `${prefix}${quote}${hash}${quote}`;
+  });
+}
 
 function values(value: unknown): unknown[] {
   if (Array.isArray(value)) return value.flatMap(values);
@@ -199,11 +217,13 @@ export function qualifyVisualEngine2ACohort(args: {
   const templates = [...new Set(args.cases.flatMap((caseRow) => caseRow.allowedSkeletonTemplateIds))].sort((left, right) => left.localeCompare(right)).map((id) => {
     const template = selectionById.get(id)!;
     const material = materialById.get(id)!;
+    const canonicalHtml = canonicalizeCloudflareEmailProtection(material.html);
+    const canonicalInventory = buildSkeletonInventory(canonicalHtml, material.id);
     return {
       id,
       metadataSha256: canonicalJsonSha256(template.visualMetadata),
-      htmlSha256: canonicalJsonSha256(material.html),
-      inventorySha256: canonicalJsonSha256(material.inventory),
+      htmlSha256: canonicalJsonSha256(canonicalHtml),
+      inventorySha256: canonicalJsonSha256(canonicalInventory),
     };
   });
   const manifestWithoutHash: Omit<VisualEngine2AQualificationManifest, "manifestSha256"> = {

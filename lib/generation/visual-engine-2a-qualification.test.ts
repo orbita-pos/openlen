@@ -250,6 +250,38 @@ describe("qualifyVisualEngine2ACohort", () => {
     expect(qualify(distributedCases, distributedSelectionCatalog, distributedTemplateMaterials)).toEqual({ ok: false, code: "template_overrepresented" });
   });
 
+  it("stabilizes Cloudflare email protection hashes without hiding real HTML changes", () => {
+    const manifestForFirstHtml = (html: string) => {
+      const templateMaterials = templateMaterialsFor();
+      templateMaterials[0] = {
+        ...templateMaterials[0],
+        html,
+        inventory: buildSkeletonInventory(html, templateMaterials[0].id),
+      };
+      const result = qualify(undefined, selectionCatalogFor(), templateMaterials);
+      expect(result.ok).toBe(true);
+      if (!result.ok) throw new Error("Expected valid template material");
+      return result.manifest;
+    };
+    const protectedHtml = (value: string) => HTML.replace("</body>", `<a data-cfemail="${value}">protected</a></body>`);
+
+    const firstEncoding = manifestForFirstHtml(protectedHtml("2a4b6a4804494547"));
+    const secondEncoding = manifestForFirstHtml(protectedHtml("7c1d3c1e521f1311"));
+    const differentEmail = manifestForFirstHtml(protectedHtml("2a486a4804494547"));
+    const malformed = manifestForFirstHtml(protectedHtml("not-hex"));
+    const oddLength = manifestForFirstHtml(protectedHtml("abc"));
+    const ordinaryChange = manifestForFirstHtml(HTML.replace("Details", "Changed details"));
+
+    expect(secondEncoding.manifestSha256).toBe(firstEncoding.manifestSha256);
+    expect(secondEncoding.templates[0].htmlSha256).toBe(firstEncoding.templates[0].htmlSha256);
+    expect(secondEncoding.templates[0].inventorySha256).toBe(firstEncoding.templates[0].inventorySha256);
+    expect(differentEmail.manifestSha256).not.toBe(firstEncoding.manifestSha256);
+    expect(malformed.manifestSha256).not.toBe(firstEncoding.manifestSha256);
+    expect(oddLength.manifestSha256).not.toBe(firstEncoding.manifestSha256);
+    expect(oddLength.manifestSha256).not.toBe(malformed.manifestSha256);
+    expect(ordinaryChange.manifestSha256).not.toBe(firstEncoding.manifestSha256);
+  });
+
   it("hashes canonical input by value and detects every material staleness dimension", () => {
     const result = qualify();
     expect(result.ok).toBe(true);
