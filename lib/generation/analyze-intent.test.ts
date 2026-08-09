@@ -272,6 +272,32 @@ describe("analyzeIntent", () => {
     expect(JSON.stringify(result)).not.toContain("provider secret detail");
   });
 
+  it.each([
+    ["invalid candidates", { candidates: {} }],
+    ["missing candidate parts", { candidates: [{ content: {} }] }],
+    ["invalid candidate parts", { candidates: [{ content: { parts: "not-an-array" } }] }],
+  ])("omits paid usage from an HTTP-200 %s envelope", async (_label, candidateEnvelope) => {
+    const result = await analyzeIntent("A complete product brief", {
+      apiKey: "x",
+      fetchImpl: vi.fn().mockResolvedValue(new Response(JSON.stringify({
+        ...candidateEnvelope,
+        usageMetadata: {
+          promptTokenCount: 7,
+          candidatesTokenCount: 1,
+          cachedContentTokenCount: 3,
+          thoughtsTokenCount: 2,
+        },
+      }), { status: 200 })),
+      now: () => 10,
+    });
+
+    expect(result).toMatchObject({
+      ok: false,
+      error: { kind: "api", message: "invalid Gemini response envelope" },
+    });
+    expect(result).not.toHaveProperty("usage");
+  });
+
   it("requires an explicit ambiguity and low confidence for unknown classifications", async () => {
     const unsafeUnknown = {
       ...CHILDREN_INTENT,

@@ -71,6 +71,16 @@ function rateCardIsComplete(rateCard: PilotRateCardConfig): boolean {
   }
 }
 
+function quotaFailureCode(quota: {
+  limit: number;
+  used: number;
+  existingRuns: number;
+}): "invalid_quota" | "existing_runs" | null {
+  if (quota.limit !== 75 || quota.used !== 0) return "invalid_quota";
+  if (quota.existingRuns !== 0) return "existing_runs";
+  return null;
+}
+
 function currentQualification(
   manifest: VisualEngine2AQualificationManifest,
 ): Omit<VisualEngine2AQualificationManifest, "manifestSha256"> {
@@ -87,37 +97,48 @@ export async function runVisualEngine2AEvalCli(
     if (deps.mode !== "shadow" || !rateCardIsComplete(deps.rateCard)) {
       terminal = { ok: false, code: "invalid_environment" };
     } else {
-      const quota = await deps.getQuota();
-      const commitSha = await deps.getCommitSha();
-      if (!isCommitSha(commitSha)) throw new Error("invalid commit");
-      const qualificationValue = await deps.readQualification(qualificationPath(cwd));
-      if (!isQualificationManifest(qualificationValue)) {
-        terminal = { ok: false, code: "qualification_stale" };
+      const initialQuota = await deps.getQuota();
+      const initialQuotaFailure = quotaFailureCode(initialQuota);
+      if (initialQuotaFailure) {
+        terminal = { ok: false, code: initialQuotaFailure };
       } else {
-        const recomputed = await deps.recomputeQualification(commitSha);
-        if (recomputed.commitSha !== commitSha) throw new Error("commit changed");
-        const verifiedCommitSha = await deps.getCommitSha();
-        if (verifiedCommitSha !== commitSha) throw new Error("commit changed");
-        const preflight = await runVisualEngine2APreflight({
-          cases: VISUAL_ENGINE_2A_PILOT_CASES,
-          qualification: qualificationValue,
-          currentQualification: currentQualification(recomputed),
-          quota,
-          modelId: deps.modelId,
-          rateCard: deps.rateCard,
-          mxnPerUsd: deps.rateCard.mxnPerUsd,
-          select: deps.select,
-        });
-        await deps.writeJsonAtomic(preflightPath(cwd), preflight.report);
-        if (!preflight.ok) {
-          terminal = {
-            ok: false,
-            code: preflight.code,
-            reportSha256: preflight.report.reportSha256,
-          };
+        const commitSha = await deps.getCommitSha();
+        if (!isCommitSha(commitSha)) throw new Error("invalid commit");
+        const qualificationValue = await deps.readQualification(qualificationPath(cwd));
+        if (!isQualificationManifest(qualificationValue)) {
+          terminal = { ok: false, code: "qualification_stale" };
         } else {
-          const summary = await deps.generateEvidence(preflight.eligible);
-          terminal = { ok: true, summary, reportSha256: preflight.report.reportSha256 };
+          const recomputed = await deps.recomputeQualification(commitSha);
+          if (recomputed.commitSha !== commitSha) throw new Error("commit changed");
+          const verifiedCommitSha = await deps.getCommitSha();
+          if (verifiedCommitSha !== commitSha) throw new Error("commit changed");
+          const quota = await deps.getQuota();
+          const quotaFailure = quotaFailureCode(quota);
+          if (quotaFailure) {
+            terminal = { ok: false, code: quotaFailure };
+          } else {
+            const preflight = await runVisualEngine2APreflight({
+              cases: VISUAL_ENGINE_2A_PILOT_CASES,
+              qualification: qualificationValue,
+              currentQualification: currentQualification(recomputed),
+              quota,
+              modelId: deps.modelId,
+              rateCard: deps.rateCard,
+              mxnPerUsd: deps.rateCard.mxnPerUsd,
+              select: deps.select,
+            });
+            await deps.writeJsonAtomic(preflightPath(cwd), preflight.report);
+            if (!preflight.ok) {
+              terminal = {
+                ok: false,
+                code: preflight.code,
+                reportSha256: preflight.report.reportSha256,
+              };
+            } else {
+              const summary = await deps.generateEvidence(preflight.eligible);
+              terminal = { ok: true, summary, reportSha256: preflight.report.reportSha256 };
+            }
+          }
         }
       }
     }

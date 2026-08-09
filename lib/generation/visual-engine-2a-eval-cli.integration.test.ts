@@ -191,6 +191,39 @@ describe("Visual Engine 2A eval CLI injected integration", () => {
     expect(state.reservations).toHaveLength(0);
   });
 
+  it("uses a second post-qualification quota snapshot and refuses stale quota before selection", async () => {
+    const state = fixture();
+    const snapshots = [
+      { limit: 75, used: 0, existingRuns: 0 },
+      { limit: 75, used: 1, existingRuns: 0 },
+    ];
+    state.deps.getQuota = vi.fn(async () => {
+      state.order.push("quota");
+      return snapshots.shift()!;
+    });
+
+    const result = await run(state.deps);
+
+    expect(result).toEqual({ ok: false, code: "invalid_quota" });
+    expect(state.deps.getQuota).toHaveBeenCalledTimes(2);
+    expect(state.order.slice(state.order.lastIndexOf("recompute"))).toEqual([
+      "recompute", "head", "quota",
+    ]);
+    expect(state.deps.select).not.toHaveBeenCalled();
+    expect(state.writes).toHaveLength(0);
+    expect(state.deps.writeJsonAtomic).not.toHaveBeenCalled();
+    expect(state.deps.generateEvidence).not.toHaveBeenCalled();
+    expect(state.reservations).toHaveLength(0);
+    expect(state.logs).toHaveLength(1);
+    expect(JSON.parse(state.logs[0])).toEqual({
+      event: "visual_engine_2a_eval",
+      ok: false,
+      code: "invalid_quota",
+    });
+    expect(state.logs[0]).not.toContain("qualification");
+    expect(state.logs[0]).not.toContain("workspace");
+  });
+
   it("atomically writes preflight evidence before exactly 75 existing-engine reservations", async () => {
     const cwd = join("workspace", "openlen");
     const state = fixture();

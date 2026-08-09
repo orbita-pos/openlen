@@ -278,8 +278,8 @@ async function requestIntent(
       durationMs: elapsed(),
     };
   }
-  const usage = readUsageMetadata(payload);
   if (!response.ok) {
+    const usage = readUsageMetadata(payload);
     return {
       ok: false,
       ...base,
@@ -293,7 +293,6 @@ async function requestIntent(
       ok: false,
       ...base,
       error: { kind: "api", message: "invalid Gemini response envelope" },
-      ...(usage ? { usage } : {}),
       durationMs: elapsed(),
     };
   }
@@ -306,10 +305,10 @@ async function requestIntent(
       ok: false,
       ...base,
       error: { kind: "api", message: "invalid Gemini response envelope" },
-      ...(usage ? { usage } : {}),
       durationMs: elapsed(),
     };
   }
+  const usage = readUsageMetadata(payload);
   const raw = parts
     .map((part) => isRecord(part) && typeof part.text === "string" ? part.text : "")
     .join("");
