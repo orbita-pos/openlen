@@ -233,8 +233,14 @@ describe("qualifyVisualEngine2ACohort", () => {
 
     const distributedCases = cloneCases();
     for (const caseRow of distributedCases.slice(0, 6)) caseRow.allowedSkeletonTemplateIds = ["shared"];
+    const distributedSharedCases = distributedCases.slice(0, 6);
+    const distributedSharedMetadata = metadataFor(distributedSharedCases[0]);
+    distributedSharedMetadata.domains = [...new Set(distributedSharedCases.flatMap((caseRow) => caseRow.expectedIntent.domains))];
+    distributedSharedMetadata.audiences = [...new Set(distributedSharedCases.map((caseRow) => caseRow.expectedIntent.audience.primary))];
+    distributedSharedMetadata.supportedSiteTypes = [...new Set(distributedSharedCases.map((caseRow) => caseRow.expectedIntent.functional.siteType))];
+    distributedSharedMetadata.supportedSectionRoles = [...new Set(distributedSharedCases.flatMap((caseRow) => caseRow.expectedIntent.functional.requiredSections))];
     const distributedSelectionCatalog = [
-      ...sharedSelectionCatalog,
+      { id: "shared", status: "published" as const, visualMetadata: distributedSharedMetadata },
       ...selectionCatalogFor(distributedCases.slice(6)),
     ];
     const distributedTemplateMaterials = [
