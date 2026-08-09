@@ -4,6 +4,7 @@ import {
   type PilotRateCard,
 } from "./model-cost";
 import type { SafeSelectionResult } from "./safe-selection";
+import type { ReasonCode } from "./contracts";
 import {
   VISUAL_ENGINE_2A_DATASET_VERSION,
   type VisualEngine2APilotCase,
@@ -63,10 +64,27 @@ export interface VisualEngine2ALiveCanaryRow {
   resultCode: VisualEngine2ALiveCanaryResultCode;
   usage: ModelTokenUsage | null;
   intentSha256: string | null;
+  qualifiedCandidate: {
+    templateId: string;
+    eligible: boolean;
+    structuralFit: number;
+    identityFit: number;
+    adaptationCost: number;
+    themeability: "low" | "medium" | "high" | null;
+    reasonCodes: readonly ReasonCode[];
+  } | null;
+  classificationMatch: {
+    siteType: boolean;
+    contentModel: boolean;
+    primaryAudience: boolean;
+    ageRange: boolean;
+    sections: { expected: number; observed: number; exactOverlap: number };
+    domains: { expected: number; observed: number; exactOverlap: number };
+  } | null;
 }
 
 export interface VisualEngine2ALiveCanaryReport {
-  schemaVersion: "visual-engine-2a-live-canary/1.0";
+  schemaVersion: "visual-engine-2a-live-canary/1.1";
   datasetVersion: "visual-engine-2a-cohort/1.0";
   datasetSha256: string;
   qualificationManifestSha256: string;
@@ -152,7 +170,14 @@ function emptyRow(caseId: string): VisualEngine2ALiveCanaryRow {
     resultCode: "invalid_input",
     usage: null,
     intentSha256: null,
+    qualifiedCandidate: null,
+    classificationMatch: null,
   };
+}
+
+function exactOverlap(left: readonly string[], right: readonly string[]): number {
+  const rightValues = new Set(right);
+  return new Set(left.filter((value) => rightValues.has(value))).size;
 }
 
 function buildReport(args: {
@@ -166,7 +191,7 @@ function buildReport(args: {
   totalDurationMs: number;
 }): VisualEngine2ALiveCanaryReport {
   const unsigned = {
-    schemaVersion: "visual-engine-2a-live-canary/1.0" as const,
+    schemaVersion: "visual-engine-2a-live-canary/1.1" as const,
     datasetVersion: VISUAL_ENGINE_2A_DATASET_VERSION,
     datasetSha256: canonicalJsonSha256(args.deps.cases),
     qualificationManifestSha256: args.deps.qualification.manifestSha256,
@@ -239,6 +264,7 @@ export async function runVisualEngine2ALiveCanary(
   await Promise.all(Array.from({ length: Math.min(3, representatives.length) }, worker));
 
   const qualificationByCase = new Map(args.qualification.cases.map((item) => [item.caseId, item]));
+  const caseById = new Map(args.cases.map((item) => [item.id, item]));
   const aggregate: ModelTokenUsage = {
     inputTokens: 0,
     cachedTokens: 0,
@@ -272,6 +298,44 @@ export async function runVisualEngine2ALiveCanary(
       adaptationCost: result.decision.adaptationCost,
       usage: result.usage ?? null,
       intentSha256: canonicalJsonSha256(result.intent),
+      qualifiedCandidate: (() => {
+        const templateId = qualificationByCase.get(representative.caseId)?.selectedTemplateId;
+        const candidate = templateId
+          ? result.ranked.find((item) => item.id === templateId)
+          : undefined;
+        return candidate ? {
+          templateId: candidate.id,
+          eligible: candidate.eligible,
+          structuralFit: candidate.structuralFit,
+          identityFit: candidate.identityFit,
+          adaptationCost: candidate.adaptationCost,
+          themeability: candidate.themeability,
+          reasonCodes: [...candidate.reasonCodes],
+        } : null;
+      })(),
+      classificationMatch: (() => {
+        const expected = caseById.get(representative.caseId)?.expectedIntent;
+        if (!expected) return null;
+        return {
+          siteType: result.intent.functional.siteType === expected.functional.siteType,
+          contentModel: result.intent.functional.contentModel === expected.functional.contentModel,
+          primaryAudience: result.intent.audience.primary === expected.audience.primary,
+          ageRange: result.intent.audience.ageRange === expected.audience.ageRange,
+          sections: {
+            expected: expected.functional.requiredSections.length,
+            observed: result.intent.functional.requiredSections.length,
+            exactOverlap: exactOverlap(
+              expected.functional.requiredSections,
+              result.intent.functional.requiredSections,
+            ),
+          },
+          domains: {
+            expected: expected.domains.length,
+            observed: result.intent.domains.length,
+            exactOverlap: exactOverlap(expected.domains, result.intent.domains),
+          },
+        };
+      })(),
     };
     if (result.modelId !== args.modelId
       || result.promptVersion !== args.qualification.promptVersion

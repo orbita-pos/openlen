@@ -78,7 +78,15 @@ function selected(
     ok: true,
     intent: cohortCase.expectedIntent,
     decision: decision("template_skeleton", cohortCase.allowedSkeletonTemplateIds[0]),
-    ranked: [],
+    ranked: [{
+      id: cohortCase.allowedSkeletonTemplateIds[0],
+      eligible: true,
+      structuralFit: 0.95,
+      identityFit: 0.9,
+      adaptationCost: 0.1,
+      themeability: "high",
+      reasonCodes: [],
+    }],
     promptVersion: INTENT_PROMPT_VERSION,
     policyVersion: DECISION_POLICY_VERSION,
     modelId: "gemini-test",
@@ -170,7 +178,7 @@ describe("Visual Engine 2A strict live canary", () => {
     expect(result).toMatchObject({
       ok: true,
       report: {
-        schemaVersion: "visual-engine-2a-live-canary/1.0",
+        schemaVersion: "visual-engine-2a-live-canary/1.1",
         datasetVersion: "visual-engine-2a-cohort/1.0",
         datasetSha256: canonicalJsonSha256(VISUAL_ENGINE_2A_PILOT_CASES),
         qualificationManifestSha256: manifest().manifestSha256,
@@ -202,8 +210,8 @@ describe("Visual Engine 2A strict live canary", () => {
     );
     expect(result.report.rows.every((row) => row.intentSha256?.startsWith("sha256:"))).toBe(true);
     expect(result.report.rows.every((row) => Object.keys(row).sort().join(",") === [
-      "adaptationCost", "caseId", "identityFit", "intentSha256", "resultCode", "route",
-      "selectedTemplateId", "structuralFit", "usage",
+      "adaptationCost", "caseId", "classificationMatch", "identityFit", "intentSha256",
+      "qualifiedCandidate", "resultCode", "route", "selectedTemplateId", "structuralFit", "usage",
     ].sort().join(","))).toBe(true);
     const { reportSha256, ...unsigned } = result.report;
     expect(reportSha256).toBe(canonicalJsonSha256(unsigned));
@@ -217,6 +225,65 @@ describe("Visual Engine 2A strict live canary", () => {
     for (const forbidden of ["intent", "ranked", "prompt", "response", "html", "copy", "email", "path", "message"]) {
       expect(keys.has(forbidden)).toBe(false);
     }
+  });
+
+  it("records only redacted qualified-candidate reasons and classification deltas", async () => {
+    const target = [...VISUAL_ENGINE_2A_PILOT_CASES].sort((a, b) => a.id.localeCompare(b.id))[0];
+    const rawSiteType = "provider_specific_site_type";
+    const rawSection = "provider_specific_section";
+    const rawDomain = "provider_specific_domain";
+    const result = await runVisualEngine2ALiveCanary(dependencies({
+      select: async (row) => {
+        if (row.caseId !== target.id) return selected(row);
+        const intent = {
+          ...target.expectedIntent,
+          functional: {
+            ...target.expectedIntent.functional,
+            siteType: rawSiteType,
+            requiredSections: [rawSection],
+          },
+          domains: [rawDomain],
+        };
+        return selected(row, {
+          intent,
+          decision: decision("section_composition", null),
+          ranked: [{
+            id: target.allowedSkeletonTemplateIds[0],
+            eligible: false,
+            structuralFit: 0.2,
+            identityFit: 0.3,
+            adaptationCost: 0.4,
+            themeability: "high",
+            reasonCodes: ["unsupported_site_type"],
+          }],
+        });
+      },
+    }));
+
+    expect(result).toMatchObject({ ok: false, code: "ineligible_route" });
+    expect(result.report.rows[0]).toMatchObject({
+      qualifiedCandidate: {
+        templateId: target.allowedSkeletonTemplateIds[0],
+        eligible: false,
+        structuralFit: 0.2,
+        identityFit: 0.3,
+        adaptationCost: 0.4,
+        themeability: "high",
+        reasonCodes: ["unsupported_site_type"],
+      },
+      classificationMatch: {
+        siteType: false,
+        contentModel: true,
+        primaryAudience: true,
+        ageRange: true,
+        sections: { expected: target.expectedIntent.functional.requiredSections.length, observed: 1, exactOverlap: 0 },
+        domains: { expected: target.expectedIntent.domains.length, observed: 1, exactOverlap: 0 },
+      },
+    });
+    const serialized = JSON.stringify(result.report);
+    expect(serialized).not.toContain(rawSiteType);
+    expect(serialized).not.toContain(rawSection);
+    expect(serialized).not.toContain(rawDomain);
   });
 
   it.each([
