@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { compileSkeletonIdentity } from "./creative-compiler";
 import { buildSkeletonInventory } from "./skeleton-inventory";
 import { VISUAL_ENGINE_2C_CASES } from "./visual-engine-2c-cohort";
 import { buildVisualEngine2CDirection, buildVisualEngine2CFixtureHtml } from "./visual-engine-2c-fixtures";
@@ -31,6 +32,43 @@ describe("Visual Engine 2C synthetic fixtures", () => {
         expect(html).toContain("main{display:none!important}");
       }
     }
+  });
+
+  it("makes the base pixels agree with the synthetic creative direction", () => {
+    for (const row of VISUAL_ENGINE_2C_CASES) {
+      const direction = buildVisualEngine2CDirection(row);
+      const html = buildVisualEngine2CFixtureHtml(row);
+      expect(direction.imagery.strategy).toBe("illustration_first");
+      expect(direction.componentTreatment).toEqual({
+        cards: "soft_layered_cards",
+        buttons: "rounded_primary_button",
+        navigation: "minimal_header_navigation",
+        sections: "spacious_three_card_grid",
+      });
+      expect(html).toContain(`--ol-space-scale:${direction.geometry.spacingScale}`);
+      expect(html).toContain(`--ol-r-scale:${direction.geometry.radiusScale}`);
+      expect(html).toContain("box-shadow:0 12px 28px");
+    }
+    expect(buildVisualEngine2CFixtureHtml(VISUAL_ENGINE_2C_CASES[2]!)).toContain("--ol-font-display:'Trebuchet MS'");
+    expect(buildVisualEngine2CFixtureHtml(VISUAL_ENGINE_2C_CASES[11]!)).toContain("--ol-font-display:Arial");
+    const hotel = buildVisualEngine2CFixtureHtml(VISUAL_ENGINE_2C_CASES[4]!);
+    expect(hotel).toContain('class="hotel-scene"');
+    expect(hotel).toContain('class="hotel-bed"');
+  });
+
+  it("keeps every synthetic direction inside the real compiler policy", () => {
+    const failures: Array<{ id: string; code: string }> = [];
+    for (const row of VISUAL_ENGINE_2C_CASES) {
+      const html = buildVisualEngine2CFixtureHtml(row);
+      const result = compileSkeletonIdentity({
+        html,
+        inventory: buildSkeletonInventory(html, row.fixtureId),
+        direction: buildVisualEngine2CDirection(row),
+        plan: { schemaVersion: "skeleton-adaptation-plan/1.0", tokens: {}, cssOverride: [], assets: [] },
+      });
+      if (!result.ok) failures.push({ id: row.id, code: result.code });
+    }
+    expect(failures).toEqual([]);
   });
 
   it("shows domain language and functional sections instead of taxonomy slugs", () => {

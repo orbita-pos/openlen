@@ -23,9 +23,12 @@ const ISSUE_CODES: VisualRepairIssueCode[] = [
 export const VISUAL_ENGINE_2C_CASES: readonly VisualEngine2CCase[] = Object.freeze(
   VISUAL_ENGINE_2B_CASES.map((source, index): VisualEngine2CCase => {
     const kind: VisualEngine2CCaseClass = index < 6 ? "healthy_keep" : index < 12 ? "repairable" : "nonrepairable_or_fallback";
+    const syntheticIntent = index === 4
+      ? { ...source.intent, requiredVisualSignals: ["serene_hospitality", "boutique_calm"] }
+      : source.intent;
     return {
       id: `repair-${String(index + 1).padStart(2, "0")}-${source.id}`,
-      intent: source.intent,
+      intent: syntheticIntent,
       route: index % 2 === 0 ? "template_skeleton" : "section_composition",
       fixtureId: `fixture-2c-${String(index + 1).padStart(2, "0")}`,
       class: kind,

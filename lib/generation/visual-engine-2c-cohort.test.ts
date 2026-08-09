@@ -20,4 +20,10 @@ describe("VISUAL_ENGINE_2C_CASES", () => {
       expect(row.expectedDelivery).toBe(row.class === "repairable" ? "repaired" : "original");
     }
   });
+
+  it("does not require photographic evidence from the illustration-only 2C fixture", () => {
+    const hotel = VISUAL_ENGINE_2C_CASES[4]!;
+    expect(hotel.intent.requiredVisualSignals).toEqual(["serene_hospitality", "boutique_calm"]);
+    expect(hotel.intent.requiredVisualSignals).not.toContain("editorial_photography");
+  });
 });
