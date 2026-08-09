@@ -10,7 +10,7 @@ import {
 
 describe("taxonomy compatibility", () => {
   it("exposes a versioned deterministic contract", () => {
-    expect(TAXONOMY_COMPATIBILITY_VERSION).toBe("taxonomy-compatibility/1.2");
+    expect(TAXONOMY_COMPATIBILITY_VERSION).toBe("taxonomy-compatibility/1.3");
   });
 
   it.each([
@@ -50,7 +50,9 @@ describe("taxonomy compatibility", () => {
     ["restaurant", "wine_bar"],
     ["restaurant", "restaurant_website"],
     ["restaurant", "fine_dining_restaurant"],
+    ["restaurant", "business"],
     ["small_business", "fitness_studio"],
+    ["small_business", "business"],
     ["documentation_site", "technical_documentation"],
     ["saas_product_page", "saas_landing_page"],
     ["creator_hub", "creator_page"],

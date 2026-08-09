@@ -1,5 +1,5 @@
 export const TAXONOMY_COMPATIBILITY_VERSION =
-  "taxonomy-compatibility/1.2" as const;
+  "taxonomy-compatibility/1.3" as const;
 
 export type CompatibilityKind = "exact" | "alias" | "structural" | "soft" | "none";
 
@@ -64,12 +64,13 @@ const SITE_TYPE_CHILDREN: Readonly<Record<string, readonly string[]>> = {
   product_marketing: ["company_website", "product_landing_page"],
   restaurant: [
     "bakery",
+    "business",
     "cafe",
     "fine_dining_restaurant",
     "restaurant_website",
     "wine_bar",
   ],
-  small_business: ["fitness_studio"],
+  small_business: ["business", "fitness_studio"],
   documentation_site: ["technical_documentation"],
   saas_product_page: ["saas_landing_page"],
   creator_hub: ["creator_page"],

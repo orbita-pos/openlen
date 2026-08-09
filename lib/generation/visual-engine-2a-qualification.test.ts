@@ -1,6 +1,7 @@
 import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
+import { INTENT_PROMPT_VERSION } from "./analyze-intent";
 import { buildSkeletonInventory } from "./skeleton-inventory";
 import { decideGenerationRoute } from "./decide-route";
 import {
@@ -109,9 +110,14 @@ describe("qualifyVisualEngine2ACohort", () => {
       baseCaseCount: 15,
       expandedRowCount: 75,
       commitSha: "a".repeat(40),
+      promptVersion: INTENT_PROMPT_VERSION,
     });
     expect(result.manifest.cases).toHaveLength(15);
     expect(result.manifest.templates).toHaveLength(15);
+    expect(new Set(VISUAL_ENGINE_2A_PILOT_CASES.flatMap((row) => row.allowedSkeletonTemplateIds)).size).toBe(15);
+    expect(VISUAL_ENGINE_2A_PILOT_CASES.find((row) => row.id === "bakery-morning-en")?.expectedIntent.functional.siteType).toBe("restaurant");
+    expect(VISUAL_ENGINE_2A_PILOT_CASES.find((row) => row.id === "botanical-winebar-es")?.expectedIntent.functional.siteType).toBe("restaurant");
+    expect(VISUAL_ENGINE_2A_PILOT_CASES.find((row) => row.id === "prenatal-movement-en")?.expectedIntent.functional.siteType).toBe("small_business");
     expect(Object.keys(result.manifest.cases[0]).sort()).toEqual(["allowedTemplateIdsSha256", "caseId", "selectedTemplateId"]);
     expect(JSON.stringify(result.manifest)).not.toContain(VISUAL_ENGINE_2A_PILOT_CASES[0].brief);
     expect(qualifyVisualEngine2ACohort).toHaveLength(1);

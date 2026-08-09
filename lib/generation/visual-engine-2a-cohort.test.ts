@@ -10,11 +10,11 @@ const EXPECTED_TABLE_MAPPINGS = [
   ["printable-library-en", "children_creative", "en", "medium", "educational_resource", ["hero", "about", "programs", "call_to_action", "faq", "footer"], "parents", ["education", "creative_play"], ["lantern"]],
   ["teacher-art-hub-en", "children_creative", "en", "detailed", "creator_hub", ["header", "profile_summary", "link_list", "featured_content", "social_links", "footer"], "educators", ["education", "creative_play"], ["enlace"]],
   ["taqueria-pop-es", "restaurant_hospitality", "es", "short", "restaurant", ["hero", "about", "menu", "gallery", "reservations", "contact", "footer"], "consumers", ["food_beverage", "hospitality"], ["mesa"]],
-  ["bakery-morning-en", "restaurant_hospitality", "en", "medium", "business", ["hero", "about", "menu", "gallery", "testimonials", "contact", "call_to_action", "footer"], "consumers", ["food_beverage", "hospitality"], ["cafe-tramonto"]],
-  ["botanical-winebar-es", "restaurant_hospitality", "es", "detailed", "restaurant_website", ["hero", "about", "menu", "events", "reservations", "contact", "footer"], "consumers", ["food_beverage", "hospitality"], ["tanino"]],
+  ["bakery-morning-en", "restaurant_hospitality", "en", "medium", "restaurant", ["hero", "about", "menu", "gallery", "testimonials", "contact", "call_to_action", "footer"], "consumers", ["food_beverage", "hospitality"], ["cafe-tramonto"]],
+  ["botanical-winebar-es", "restaurant_hospitality", "es", "detailed", "restaurant", ["hero", "about", "menu", "events", "reservations", "contact", "footer"], "consumers", ["food_beverage", "hospitality"], ["tanino"]],
   ["breathwork-studio-en", "wellness", "en", "short", "small_business", ["hero", "about", "services", "team", "pricing", "contact"], "adults", ["wellness"], ["aire-estudio"]],
   ["sleep-community-es", "wellness", "es", "medium", "community_hub", ["hero", "about", "services", "schedule", "pricing", "testimonials", "contact"], "adults", ["wellness", "health"], ["loto"]],
-  ["prenatal-movement-en", "wellness", "en", "detailed", "business", ["hero", "about", "services", "team", "pricing", "testimonials", "contact", "faq", "schedule"], "adults", ["wellness", "fitness"], ["poise"]],
+  ["prenatal-movement-en", "wellness", "en", "detailed", "small_business", ["hero", "about", "services", "team", "pricing", "testimonials", "contact", "faq", "schedule"], "adults", ["wellness", "fitness"], ["poise"]],
   ["retro-cli-es", "technical_saas", "es", "short", "documentation_site", ["hero", "features", "how_it_works", "testimonials", "pricing", "faq", "footer"], "developers", ["developer_tools", "software_development"], ["codex"]],
   ["component-cloud-en", "technical_saas", "en", "medium", "saas_product_page", ["hero", "features", "how_it_works", "pricing", "testimonials", "faq", "call_to_action", "footer"], "developers", ["developer_tools", "saas"], ["pavilion"]],
   ["open-source-observability-es", "technical_saas", "es", "detailed", "product_landing_page", ["hero", "features", "how_it_works", "testimonials", "call_to_action", "footer"], "developers", ["developer_tools", "open_source"], ["yunque"]],
@@ -80,6 +80,24 @@ describe("VISUAL_ENGINE_2A_PILOT_CASES", () => {
       expect(caseRow.expectedIntent.requiredVisualSignals).toEqual(caseRow.requiredVisualSignals);
       expect(caseRow.expectedIntent.forbiddenVisualSignals).toEqual(caseRow.forbiddenVisualSignals);
       expect(caseRow.expectedIntent.confidence).toBe(0.95);
+    }
+  });
+
+  it("uses the canonical structural policy without treating contentModel as an allowlist key", () => {
+    const byId = (id: string) => VISUAL_ENGINE_2A_PILOT_CASES.find((row) => row.id === id)!;
+
+    expect(byId("bakery-morning-en").expectedIntent.functional.siteType).toBe("restaurant");
+    expect(byId("botanical-winebar-es").expectedIntent.functional.siteType).toBe("restaurant");
+    expect(byId("prenatal-movement-en").expectedIntent.functional.siteType).toBe("small_business");
+    expect(byId("creative-club-es").expectedIntent.functional.siteType).toBe("business");
+    expect(byId("creative-club-es").expectedIntent.audience.primary).toBe("children");
+    expect(byId("teacher-art-hub-en").expectedIntent.audience.primary).toBe("educators");
+    expect(byId("literary-newsletter-en").expectedIntent.functional.siteType).toBe("blog");
+
+    const allowlistIds = new Set(VISUAL_ENGINE_2A_PILOT_CASES.flatMap((row) => row.allowedSkeletonTemplateIds));
+    for (const row of VISUAL_ENGINE_2A_PILOT_CASES) {
+      expect(row.expectedIntent.functional.contentModel).toMatch(/^[a-z0-9]+(?:_[a-z0-9]+)*$/);
+      expect(allowlistIds.has(row.expectedIntent.functional.contentModel)).toBe(false);
     }
   });
 
