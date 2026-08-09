@@ -17,7 +17,7 @@ export interface VisualEngine2CCase {
 
 const ISSUE_CODES: VisualRepairIssueCode[] = [
   "theme_mismatch", "palette_mismatch", "weak_typography_hierarchy",
-  "spacing_density", "mobile_overflow", "imagery_mismatch",
+  "palette_mismatch", "mobile_overflow", "component_treatment_mismatch",
 ];
 
 export const VISUAL_ENGINE_2C_CASES: readonly VisualEngine2CCase[] = Object.freeze(

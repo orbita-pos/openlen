@@ -1,7 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
 
 import type { StreamEvent, StreamRequest } from "../ai-gateway";
+import { CreativeDirectionSchema } from "../generation/creative-contracts";
 import { IntentAnalysisSchema } from "../generation/contracts";
+import { COLORING_DIRECTION } from "../generation/creative-fixtures.test-support";
 import { critiqueVisualQuality, type VisualQualityCriticProviderLike } from "./visual-quality-critic";
 
 const INTENT = IntentAnalysisSchema.parse({
@@ -27,6 +29,7 @@ const IMAGES = {
   desktop: { mimeType: "image/jpeg", dataBase64: Buffer.from("desktop-secret").toString("base64") },
   mobile: { mimeType: "image/jpeg", dataBase64: Buffer.from("mobile-secret").toString("base64") },
 };
+const DIRECTION = CreativeDirectionSchema.parse(COLORING_DIRECTION);
 
 const CLEAN = {
   schemaVersion: "visual-quality-verdict/2.0",
@@ -55,6 +58,7 @@ function providerFrom(events: StreamEvent[], capture?: (request: StreamRequest, 
 
 const INPUT = {
   intent: INTENT,
+  direction: DIRECTION,
   orderedRoles: ["header", "hero", "features", "footer"],
   route: "template_skeleton" as const,
   images: IMAGES,
@@ -72,7 +76,7 @@ describe("critiqueVisualQuality", () => {
       ], (request) => { captured = request; }),
     });
 
-    expect(result).toMatchObject({ ok: true, verdict: CLEAN, promptVersion: "visual-quality-critic/2.0" });
+    expect(result).toMatchObject({ ok: true, verdict: CLEAN, promptVersion: "visual-quality-critic/2.2" });
     expect(captured).toMatchObject({
       images: [IMAGES.desktop, IMAGES.mobile],
       temperature: 0,
@@ -90,7 +94,7 @@ describe("critiqueVisualQuality", () => {
         },
       },
     });
-    expect(captured?.messages[0]?.content).toContain("Each issue explanation must be 180 characters or fewer");
+    expect(captured?.messages[0]?.content).toContain("one short sentence of 160 characters or fewer");
   });
 
   it("builds the prompt from the allowlisted intent projection only", async () => {
@@ -103,6 +107,17 @@ describe("critiqueVisualQuality", () => {
 
     expect(prompt).toContain("children_creativity");
     expect(prompt).toContain("generic_education");
+    expect(prompt).toContain("creative_platform");
+    expect(prompt).toContain('"requiredSections":["gallery","activities"]');
+    expect(prompt).toContain("start_coloring");
+    expect(prompt).toContain("soft_bordered");
+    expect(prompt).toContain("hand_drawn");
+    expect(prompt).toContain('"radiusScale":1');
+    expect(prompt).toContain("A visibly blank, hidden, or missing primary experience is nonrepairable");
+    expect(prompt).toContain("Use repair only when the visible defect can be corrected without changing copy or structure");
+    expect(prompt).toContain("keep requires no visible contradiction of the creativeDirection");
+    expect(prompt).toContain("A polished page can still require repair");
+    expect(prompt).toContain("Set every hookId to null");
     expect(prompt).not.toContain("raw secret brief text");
     expect(prompt).not.toContain("private ambiguity");
     expect(prompt).not.toContain("desktop-secret");
@@ -132,6 +147,39 @@ describe("critiqueVisualQuality", () => {
     });
     expect(stopped).toMatchObject({ ok: false, kind: "provider_error", usage: { inputTokens: 10 } });
     expect(JSON.stringify(stopped)).not.toContain("private upstream body");
+  });
+
+  it("replaces provider explanation prose with deterministic redacted text", async () => {
+    const providerVerdict = {
+      ...CLEAN,
+      decision: "repair",
+      scores: { ...CLEAN.scores, componentCoherence: 5 },
+      issues: [{
+        code: "component_treatment_mismatch",
+        severity: "warning",
+        hookId: null,
+        explanation: "border-radius:0; see https://private.example/provider-output",
+      }],
+    };
+    const result = await critiqueVisualQuality(INPUT, {
+      provider: providerFrom([{ type: "text_delta", text: JSON.stringify(providerVerdict) }]),
+    });
+    expect(result).toMatchObject({
+      ok: true,
+      verdict: { issues: [{ code: "component_treatment_mismatch", explanation: "Component treatment conflicts with the approved creative direction." }] },
+    });
+    expect(JSON.stringify(result)).not.toMatch(/border-radius|private\.example/i);
+  });
+
+  it("normalizes keep with reported issues to repair for closed-loop proof", async () => {
+    const inconsistent = {
+      ...CLEAN,
+      issues: [{ code: "component_treatment_mismatch", severity: "warning", hookId: null, explanation: "Square components conflict with the direction." }],
+    };
+    const result = await critiqueVisualQuality(INPUT, {
+      provider: providerFrom([{ type: "text_delta", text: JSON.stringify(inconsistent) }]),
+    });
+    expect(result).toMatchObject({ ok: true, verdict: { decision: "repair", issues: [{ code: "component_treatment_mismatch" }] } });
   });
 
   it("preserves usage when the stream throws", async () => {

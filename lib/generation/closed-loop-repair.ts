@@ -7,7 +7,7 @@ import type { ApplyVisualRepairResult } from "./apply-visual-repair";
 import type { GenerateVisualRepairPlanResult } from "./generate-visual-repair";
 import type { VisualQualityScores, VisualQualityVerdict } from "./visual-repair-contracts";
 
-export function shouldAttemptVisualRepair(v: VisualQualityVerdict): boolean { return v.decision === "repair" && (Object.values(v.scores).some((score) => score < 7) || v.issues.some((issue) => issue.severity === "critical")); }
+export function shouldAttemptVisualRepair(v: VisualQualityVerdict): boolean { return v.decision === "repair" && v.issues.length > 0; }
 export function repairImprovesQuality(before: VisualQualityVerdict, after: VisualQualityVerdict): boolean {
   const keys = Object.keys(before.scores) as Array<keyof VisualQualityScores>;
   return !after.issues.some((issue) => issue.severity === "critical")
@@ -20,7 +20,7 @@ export interface ClosedLoopVisualRepairInput { html: string; metadata: object; s
 export interface ClosedLoopVisualRepairDeps {
   buildInventory?: (html: string, sourceId: string) => SkeletonInventory;
   render(html: string, options?: { signal: AbortSignal }): Promise<VisualQualityViewports | null>;
-  critic(input: { intent: IntentAnalysis; orderedRoles: string[]; route: ClosedLoopVisualRepairInput["route"]; images: VisualQualityViewports }, options?: { signal: AbortSignal }): Promise<VisualQualityCriticResult>;
+  critic(input: { intent: IntentAnalysis; direction: CreativeDirection; orderedRoles: string[]; route: ClosedLoopVisualRepairInput["route"]; images: VisualQualityViewports }, options?: { signal: AbortSignal }): Promise<VisualQualityCriticResult>;
   generatePlan(input: { direction: CreativeDirection; inventory: SkeletonInventory; verdict: VisualQualityVerdict }, options?: { signal: AbortSignal }): Promise<GenerateVisualRepairPlanResult>;
   applyPlan(input: { html: string; sourceId: string; direction: CreativeDirection; plan: SkeletonAdaptationPlan; brandAccent?: string | null; explicitConstraints?: readonly string[] }, options?: { signal: AbortSignal }): Promise<ApplyVisualRepairResult>;
 }
@@ -36,7 +36,7 @@ export async function runClosedLoopVisualRepair(input: ClosedLoopVisualRepairInp
     try {
       const boundary = { signal: controller.signal };
       const firstImages = await deps.render(input.html, boundary); if (!firstImages) return original(input, "initial_render_failed", usage);
-      const first = await deps.critic({ intent: input.intent, orderedRoles: orderedRoles(input.html), route: input.route, images: firstImages }, boundary);
+      const first = await deps.critic({ intent: input.intent, direction: input.direction, orderedRoles: orderedRoles(input.html), route: input.route, images: firstImages }, boundary);
       if (first.usage) usage.push(first.usage);
       if (!first.ok) return original(input, "initial_critic_failed", usage);
       if (!shouldAttemptVisualRepair(first.verdict)) return original(input, first.verdict.decision === "keep" ? "healthy_keep" : "nonrepairable", usage);
@@ -47,7 +47,7 @@ export async function runClosedLoopVisualRepair(input: ClosedLoopVisualRepairInp
       const applied = await deps.applyPlan({ html: input.html, sourceId: input.sourceId, direction: input.direction, plan: generated.plan, brandAccent: input.brandAccent, explicitConstraints: input.explicitConstraints }, boundary);
       if (!applied.ok) return original(input, applied.code, usage);
       const finalImages = await deps.render(applied.html, boundary); if (!finalImages) return original(input, "final_render_failed", usage);
-      const final = await deps.critic({ intent: input.intent, orderedRoles: orderedRoles(applied.html), route: input.route, images: finalImages }, boundary);
+      const final = await deps.critic({ intent: input.intent, direction: input.direction, orderedRoles: orderedRoles(applied.html), route: input.route, images: finalImages }, boundary);
       if (final.usage) usage.push(final.usage);
       if (!final.ok || !repairImprovesQuality(first.verdict, final.verdict)) return original(input, !final.ok ? "final_critic_failed" : "not_improved", usage);
       return { html: applied.html, metadata: { ...input.metadata }, accepted: true as const, trace: {

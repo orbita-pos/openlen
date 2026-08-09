@@ -66,10 +66,10 @@ function environmentShapeReady(env: Env): boolean {
 async function gitHead(): Promise<string> { const { stdout } = await execFileAsync("git", ["rev-parse", "HEAD"], { cwd: process.cwd(), shell: false }); return stdout.trim(); }
 
 async function productionDeps(): Promise<VisualEngine2CEvalCliDeps> {
-  const [{ sql }, { db }, store, cost, cohort, contracts, closed, renderer, critic, repair, apply] = await Promise.all([
+  const [{ sql }, { db }, store, cost, cohort, fixtures, closed, renderer, critic, repair, apply] = await Promise.all([
     import("drizzle-orm"), import("@/lib/db"), import("@/lib/generation/visual-engine-pilot-store"),
     import("@/lib/generation/model-cost"), import("@/lib/generation/visual-engine-2c-cohort"),
-    import("@/lib/generation/creative-contracts"), import("@/lib/generation/closed-loop-repair"),
+    import("@/lib/generation/visual-engine-2c-fixtures"), import("@/lib/generation/closed-loop-repair"),
     import("@/lib/ai/visual-quality-renderer"), import("@/lib/ai/visual-quality-critic"),
     import("@/lib/generation/generate-visual-repair"), import("@/lib/generation/apply-visual-repair"),
   ]);
@@ -79,34 +79,6 @@ async function productionDeps(): Promise<VisualEngine2CEvalCliDeps> {
     const raw = await db.execute(sql`SELECT "limit", "used", (SELECT COUNT(*) FROM "visualEnginePilotRuns" WHERE "phase" = '2c') AS "existingRuns" FROM "visualEnginePilotBudgets" WHERE "phase" = '2c'`);
     const rows = Array.isArray(raw) ? raw as Array<Record<string, unknown>> : raw && typeof raw === "object" && "rows" in raw && Array.isArray(raw.rows) ? raw.rows as Array<Record<string, unknown>> : [];
     return { limit: Number(rows[0]?.limit), used: Number(rows[0]?.used), existingRuns: Number(rows[0]?.existingRuns) };
-  };
-  const visualTokens = (row: (typeof cohort.VISUAL_ENGINE_2C_CASES)[number]) => {
-    const domain = row.intent.domains[0] ?? "creative";
-    if (/developer|technical/.test(domain)) return { background: "#07111F", surface: "#0E1B2E", surfaceAlt: "#14243A", foreground: "#E8F2FF", foregroundMuted: "#AFC4DB", accent: "#38BDF8", accentInk: "#06121F", border: "#28425E" };
-    if (/wellness|hospitality/.test(domain)) return { background: "#F5F3EA", surface: "#FFFFFF", surfaceAlt: "#E8EEE3", foreground: "#243129", foregroundMuted: "#637067", accent: "#6D8B74", accentInk: "#FFFFFF", border: "#CBD6C8" };
-    if (/food/.test(domain)) return { background: "#FFF8ED", surface: "#FFFFFF", surfaceAlt: "#F8E6D0", foreground: "#3A2419", foregroundMuted: "#775D4F", accent: "#C75B39", accentInk: "#FFFFFF", border: "#EBC6AA" };
-    return { background: "#FFF7FC", surface: "#FFFFFF", surfaceAlt: "#FCE7F3", foreground: "#31213A", foregroundMuted: "#6B5B73", accent: "#EC4899", accentInk: "#FFFFFF", border: "#F5B8D3" };
-  };
-  const directionFor = (row: (typeof cohort.VISUAL_ENGINE_2C_CASES)[number]) => contracts.CreativeDirectionSchema.parse({
-    schemaVersion: "creative-direction/1.0", mode: "cream", visualArchetype: "editorial_play",
-    emotionalTone: row.intent.emotionalGoals, palette: visualTokens(row),
-    typography: { display: "rounded_playful", body: "friendly_high_legibility", mono: null, scale: "expressive" },
-    geometry: { radius: "extra_round", radiusScale: 1.75, spacingScale: 1.15, density: "low_medium" },
-    imagery: { strategy: "illustration_first", artDirection: "editorial_play", subjects: row.intent.requiredVisualSignals, avoid: row.intent.forbiddenVisualSignals },
-    iconography: { style: "rounded_outline", strokeWeight: "medium", cornerStyle: "round" },
-    componentTreatment: { cards: "soft", buttons: "round", navigation: "friendly", sections: "pastel" }, requiredVisualSignals: row.intent.requiredVisualSignals, forbiddenVisualSignals: row.intent.forbiddenVisualSignals,
-  });
-  const html = (row: (typeof cohort.VISUAL_ENGINE_2C_CASES)[number]) => {
-    const palette = visualTokens(row);
-    const defect = row.class === "healthy_keep" ? ""
-      : row.class === "nonrepairable_or_fallback" ? "main{display:none}body{background:#fff;color:#fff}"
-      : row.issueCode === "palette_mismatch" ? ":root{--ol-bg:#111;--ol-surface:#222;--ol-fg:#777;--ol-accent:#555;--ol-border:#333}"
-      : row.issueCode === "weak_typography_hierarchy" ? "h1,.card,button{font-size:12px;font-weight:400;line-height:1.1}"
-      : row.issueCode === "spacing_density" ? "main,section,.card{padding:2px;margin:1px;gap:1px}"
-      : row.issueCode === "mobile_overflow" ? "main{width:1400px;max-width:none}"
-      : row.issueCode === "imagery_mismatch" ? ".card::before{content:'KPI 98% / quarterly revenue';display:block}"
-      : "body{border-radius:0;background:#E8F0FF}.card,button{border-radius:0}";
-    return `<!doctype html><html><head><style>:root{--ol-bg:${palette.background};--ol-surface:${palette.surface};--ol-fg:${palette.foreground};--ol-accent:${palette.accent};--ol-accent-ink:${palette.accentInk};--ol-border:${palette.border}}body{background:var(--ol-bg);color:var(--ol-fg);font-family:system-ui}main,section{padding:32px}.card{background:var(--ol-surface);border:1px solid var(--ol-border);border-radius:24px;padding:24px;margin:12px}button{background:var(--ol-accent);color:var(--ol-accent-ink);border-radius:999px;padding:12px 20px}${defect}</style></head><body><header data-openlen-role="header"><nav>${row.id}</nav></header><main><section data-openlen-role="hero"><h1>${row.intent.functional.siteType}</h1><button>Explore</button></section><section data-openlen-role="features"><div class="card">${row.intent.requiredVisualSignals[0] ?? "Distinctive experience"}</div><div class="card">${row.intent.requiredVisualSignals[1] ?? "Curated content"}</div></section></main><footer data-openlen-role="footer">OpenLen synthetic pilot</footer></body></html>`;
   };
   const evidenceRoot = join(process.cwd(), "scratch", "visual-engine-2c", "evidence");
   return {
@@ -119,13 +91,13 @@ async function productionDeps(): Promise<VisualEngine2CEvalCliDeps> {
     evaluate: async (index, reservation, lease) => {
       if (!rateCard) throw new Error("rate_card_unavailable");
       const row = cohort.VISUAL_ENGINE_2C_CASES[index]!;
-      const originalHtml = html(row);
+      const originalHtml = fixtures.buildVisualEngine2CFixtureHtml(row);
       let providerCalls = 0;
       const consumeProviderCall = () => {
         if (providerCalls >= lease.providerCallCeiling) throw new Error("provider_call_ceiling_exhausted");
         providerCalls += 1;
       };
-      const result = await closed.runClosedLoopVisualRepair({ html: originalHtml, metadata: {}, sourceId: row.fixtureId, intent: row.intent, direction: directionFor(row), route: row.route }, {
+      const result = await closed.runClosedLoopVisualRepair({ html: originalHtml, metadata: {}, sourceId: row.fixtureId, intent: row.intent, direction: fixtures.buildVisualEngine2CDirection(row), route: row.route }, {
         render: (value) => renderer.renderVisualQualityViewports(value),
         critic: (request) => { consumeProviderCall(); return critic.critiqueVisualQuality({ ...request, model: process.env.OPENLEN_VISUAL_ENGINE_CRITIC_MODEL ?? "gemini-2.5-flash" }); },
         generatePlan: (request) => { consumeProviderCall(); return repair.generateVisualRepairPlan(request); },

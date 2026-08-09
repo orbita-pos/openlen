@@ -10,8 +10,52 @@ import {
 import { VisualQualityVerdictSchema, type VisualQualityVerdict } from "./visual-repair-contracts";
 import type { VisualQualityUsage } from "@/lib/ai/visual-quality-critic";
 
-export const VISUAL_REPAIR_PROMPT_VERSION = "visual-repair-prompt/1.0" as const;
+export const VISUAL_REPAIR_PROMPT_VERSION = "visual-repair-prompt/1.1" as const;
 const RESPONSE_VERSION = "visual-repair-response/1.0" as const;
+
+const VISUAL_REPAIR_RESPONSE_SCHEMA: Record<string, unknown> = {
+  type: "OBJECT",
+  properties: {
+    schemaVersion: { type: "STRING", enum: [RESPONSE_VERSION] },
+    plan: {
+      type: "OBJECT",
+      properties: {
+        schemaVersion: { type: "STRING", enum: ["skeleton-adaptation-plan/1.0"] },
+        tokens: { type: "OBJECT" },
+        cssOverride: {
+          type: "ARRAY",
+          maxItems: 12,
+          items: {
+            type: "OBJECT",
+            properties: {
+              hookId: { type: "STRING" },
+              declarations: { type: "OBJECT" },
+            },
+            required: ["hookId", "declarations"],
+          },
+        },
+        assets: {
+          type: "ARRAY",
+          maxItems: 12,
+          items: {
+            type: "OBJECT",
+            properties: {
+              slotIndex: { type: "INTEGER" },
+              action: { type: "STRING", enum: ["keep", "replace"] },
+              mediaType: { type: "STRING", enum: ["photo", "illustration", "texture"] },
+              query: { type: "STRING", nullable: true },
+              alt: { type: "STRING", nullable: true },
+              required: { type: "BOOLEAN" },
+            },
+            required: ["slotIndex", "action", "mediaType", "query", "alt", "required"],
+          },
+        },
+      },
+      required: ["schemaVersion", "tokens", "cssOverride", "assets"],
+    },
+  },
+  required: ["schemaVersion", "plan"],
+};
 
 export interface VisualRepairPlanRequest { direction: CreativeDirection; inventory: SkeletonInventory; verdict: VisualQualityVerdict }
 export interface VisualRepairPlanProvider {
@@ -34,10 +78,12 @@ export function buildVisualRepairStreamRequest(request: VisualRepairPlanRequest,
     model,
     messages: [{ role: "user", content: [
       "You are OpenLen's bounded visual repair planner. The existing creative direction is authoritative.",
-      "Return one delta plan only. Preserve brand and explicit constraints. Never emit HTML, selectors, URLs, scripts, copy, structure, or free-form CSS.",
+      'Return exactly one JSON object shaped as {"schemaVersion":"visual-repair-response/1.0","plan":{...}}.',
+      "The plan must be a bounded delta only. Preserve brand and explicit constraints. Never emit HTML, selectors, URLs, scripts, copy, structure, or free-form CSS.",
       JSON.stringify(request),
     ].join("\n") }],
-    responseMimeType: "application/json", temperature: 0, maxOutputTokens: 2048, thinkingBudget: 0,
+    responseMimeType: "application/json", responseSchema: VISUAL_REPAIR_RESPONSE_SCHEMA,
+    temperature: 0, maxOutputTokens: 2048, thinkingBudget: 0,
   };
 }
 

@@ -7,7 +7,7 @@ export interface VisualEngine2CQualificationRow {
 }
 export interface VisualEngine2CQualificationManifest {
   schemaVersion: "visual-engine-2c-qualification/1.0"; commitSha: string;
-  criticVersion: "visual-quality-verdict/2.0"; repairVersion: "visual-repair-prompt/1.0";
+  criticVersion: "visual-quality-verdict/2.0"; repairVersion: "visual-repair-prompt/1.1";
   caseIds: string[]; rows: VisualEngine2CQualificationRow[];
   counts: { total: 15; keep: number; repairable: number; nonrepairable: number };
   manifestSha256: string;
@@ -28,7 +28,7 @@ export async function qualifyVisualEngine2CCohort(deps: QualifyVisualEngine2CDep
   }
   const unsigned = {
     schemaVersion: "visual-engine-2c-qualification/1.0" as const, commitSha: deps.commitSha,
-    criticVersion: "visual-quality-verdict/2.0" as const, repairVersion: "visual-repair-prompt/1.0" as const,
+    criticVersion: "visual-quality-verdict/2.0" as const, repairVersion: "visual-repair-prompt/1.1" as const,
     caseIds: cases.map((row) => row.id), rows,
     counts: { total: 15 as const, keep: rows.filter((row) => row.class === "healthy_keep").length, repairable: rows.filter((row) => row.class === "repairable").length, nonrepairable: rows.filter((row) => row.class === "nonrepairable_or_fallback").length },
   };
@@ -41,7 +41,7 @@ export async function qualifyVisualEngine2CCohort(deps: QualifyVisualEngine2CDep
 export function verifyVisualEngine2CQualification(manifest: VisualEngine2CQualificationManifest, current: { commitSha: string }): boolean {
   const { manifestSha256, ...unsigned } = manifest;
   return manifest.schemaVersion === "visual-engine-2c-qualification/1.0" && manifest.commitSha === current.commitSha
-    && manifest.criticVersion === "visual-quality-verdict/2.0" && manifest.repairVersion === "visual-repair-prompt/1.0"
+    && manifest.criticVersion === "visual-quality-verdict/2.0" && manifest.repairVersion === "visual-repair-prompt/1.1"
     && manifest.caseIds.length === 15 && manifest.rows.length === 15
     && manifest.caseIds.every((id, index) => id === VISUAL_ENGINE_2C_CASES[index]!.id)
     && manifest.rows.every((row, index) => row.caseId === manifest.caseIds[index] && row.resultCode === VISUAL_ENGINE_2C_CASES[index]!.class && HASH.test(row.inputHash) && HASH.test(row.outputHash))

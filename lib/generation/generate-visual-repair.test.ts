@@ -21,13 +21,35 @@ const READY = { schemaVersion: "visual-repair-response/1.0", plan: { ...COLORING
 
 describe("generateVisualRepairPlan", () => {
   it("disables dynamic thinking for the bounded JSON repair plan", () => {
-    expect(buildVisualRepairStreamRequest(REQUEST, "gemini-2.5-flash")).toMatchObject({
+    const streamRequest = buildVisualRepairStreamRequest(REQUEST, "gemini-2.5-flash");
+    expect(streamRequest).toMatchObject({
       model: "gemini-2.5-flash",
       responseMimeType: "application/json",
       maxOutputTokens: 2048,
       thinkingBudget: 0,
       temperature: 0,
+      responseSchema: {
+        type: "OBJECT",
+        properties: {
+          schemaVersion: { type: "STRING", enum: ["visual-repair-response/1.0"] },
+          plan: {
+            type: "OBJECT",
+            properties: {
+              schemaVersion: { type: "STRING", enum: ["skeleton-adaptation-plan/1.0"] },
+              tokens: { type: "OBJECT" },
+              cssOverride: { type: "ARRAY", maxItems: 12 },
+              assets: { type: "ARRAY", maxItems: 12 },
+            },
+            required: ["schemaVersion", "tokens", "cssOverride", "assets"],
+          },
+        },
+        required: ["schemaVersion", "plan"],
+      },
     });
+    expect(streamRequest.messages[0]?.content).toContain(
+      'Return exactly one JSON object shaped as {"schemaVersion":"visual-repair-response/1.0","plan":{...}}.',
+    );
+    expect(JSON.stringify(streamRequest.responseSchema)).not.toContain("additionalProperties");
   });
 
   it("sends one allowlisted request and accepts only a strict bounded plan", async () => {
