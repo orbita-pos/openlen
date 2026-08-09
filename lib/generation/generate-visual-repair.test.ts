@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { CreativeDirectionSchema, SkeletonInventorySchema } from "./creative-contracts";
-import { generateVisualRepairPlan, type VisualRepairPlanProvider } from "./generate-visual-repair";
+import { buildVisualRepairStreamRequest, generateVisualRepairPlan, type VisualRepairPlanProvider } from "./generate-visual-repair";
 import { VisualQualityVerdictSchema } from "./visual-repair-contracts";
 import { COLORING_DIRECTION, COLORING_PLAN } from "./creative-fixtures.test-support";
 
@@ -20,6 +20,16 @@ const REQUEST = {
 const READY = { schemaVersion: "visual-repair-response/1.0", plan: { ...COLORING_PLAN, tokens: { "--ol-accent": "#E85D9E" }, cssOverride: [], assets: [] } };
 
 describe("generateVisualRepairPlan", () => {
+  it("disables dynamic thinking for the bounded JSON repair plan", () => {
+    expect(buildVisualRepairStreamRequest(REQUEST, "gemini-2.5-flash")).toMatchObject({
+      model: "gemini-2.5-flash",
+      responseMimeType: "application/json",
+      maxOutputTokens: 2048,
+      thinkingBudget: 0,
+      temperature: 0,
+    });
+  });
+
   it("sends one allowlisted request and accepts only a strict bounded plan", async () => {
     let payload: unknown;
     const provider: VisualRepairPlanProvider = { generate: vi.fn(async (request) => {

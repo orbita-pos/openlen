@@ -29,18 +29,22 @@ function usageAdd(current: VisualQualityUsage | undefined, event: Extract<Stream
   return { inputTokens: (current?.inputTokens ?? 0) + event.inputTokens, outputTokens: (current?.outputTokens ?? 0) + event.outputTokens, cachedTokens: (current?.cachedTokens ?? 0) + event.cachedTokens, thinkingTokens: (current?.thinkingTokens ?? 0) + event.thinkingTokens };
 }
 
+export function buildVisualRepairStreamRequest(request: VisualRepairPlanRequest, model: string): StreamRequest {
+  return {
+    model,
+    messages: [{ role: "user", content: [
+      "You are OpenLen's bounded visual repair planner. The existing creative direction is authoritative.",
+      "Return one delta plan only. Preserve brand and explicit constraints. Never emit HTML, selectors, URLs, scripts, copy, structure, or free-form CSS.",
+      JSON.stringify(request),
+    ].join("\n") }],
+    responseMimeType: "application/json", temperature: 0, maxOutputTokens: 2048, thinkingBudget: 0,
+  };
+}
+
 class GatewayRepairProvider implements VisualRepairPlanProvider {
   constructor(private readonly provider: GeminiProvider, private readonly model: string) {}
   async generate(request: VisualRepairPlanRequest, options: { signal: AbortSignal }) {
-    const streamRequest: StreamRequest = {
-      model: this.model,
-      messages: [{ role: "user", content: [
-        "You are OpenLen's bounded visual repair planner. The existing creative direction is authoritative.",
-        "Return one delta plan only. Preserve brand and explicit constraints. Never emit HTML, selectors, URLs, scripts, copy, structure, or free-form CSS.",
-        JSON.stringify(request),
-      ].join("\n") }],
-      responseMimeType: "application/json", temperature: 0, maxOutputTokens: 2048,
-    };
+    const streamRequest = buildVisualRepairStreamRequest(request, this.model);
     let text = ""; let usage: VisualQualityUsage | undefined;
     for await (const event of this.provider.stream(streamRequest, { signal: options.signal })) {
       if (event.type === "text_delta") text += event.text;
