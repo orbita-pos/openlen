@@ -37,6 +37,25 @@ describe("Visual Engine 2C paid gate", () => {
     expect(order.indexOf("reserve:0")).toBeGreaterThan(order.indexOf("quota"));
   });
 
+  it("settles a reserved provider failure once at the conservative row ceiling without retry", async () => {
+    const evaluate = vi.fn(async (index: number) => {
+      if (index === 0) throw new Error("provider body must stay redacted");
+      return { providerCalls: index < 6 ? 1 : index < 12 ? 3 : 1, costMicromxn: 1000, status: "adapted" as const };
+    });
+    const complete = vi.fn(async () => undefined);
+    const result = await runVisualEngine2CSmoke(valid, {
+      currentHead: async () => "a".repeat(40),
+      currentQuota: async () => ({ limit: 150, used: 0, existingRuns: 0 }),
+      reserve: async (index) => ({ ok: true, id: `run-${index}`, ordinal: index + 1 }),
+      evaluate,
+      complete,
+    });
+    expect(result).toMatchObject({ ok: true, reservations: 15, providerCalls: 27, totalCostMicromxn: 2_014_000 });
+    expect(evaluate).toHaveBeenCalledTimes(15);
+    expect(complete).toHaveBeenCalledTimes(15);
+    expect(complete).toHaveBeenNthCalledWith(1, "run-0", { providerCalls: 1, costMicromxn: 2_000_000, status: "failed" });
+  });
+
   it("fails scorecard unless integrity, cost and human preference gates all pass", () => {
     const rows = Array.from({ length: 15 }, (_, index) => ({
       acceptedRepair: index < 6,

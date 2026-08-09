@@ -116,20 +116,24 @@ async function productionDeps(): Promise<VisualEngine2CEvalCliDeps> {
       const row = cohort.VISUAL_ENGINE_2C_CASES[index]!;
       return store.reserveVisualEnginePilotRun({ phase: "2c", mode: "shadow", route: row.route, templateId: row.fixtureId });
     },
-    evaluate: async (index, reservation) => {
+    evaluate: async (index, reservation, lease) => {
       if (!rateCard) throw new Error("rate_card_unavailable");
       const row = cohort.VISUAL_ENGINE_2C_CASES[index]!;
       const originalHtml = html(row);
       let providerCalls = 0;
+      const consumeProviderCall = () => {
+        if (providerCalls >= lease.providerCallCeiling) throw new Error("provider_call_ceiling_exhausted");
+        providerCalls += 1;
+      };
       const result = await closed.runClosedLoopVisualRepair({ html: originalHtml, metadata: {}, sourceId: row.fixtureId, intent: row.intent, direction: directionFor(row), route: row.route }, {
         render: (value) => renderer.renderVisualQualityViewports(value),
-        critic: (request) => { providerCalls += 1; return critic.critiqueVisualQuality({ ...request, model: process.env.OPENLEN_VISUAL_ENGINE_CRITIC_MODEL ?? "gemini-2.5-flash" }); },
-        generatePlan: (request) => { providerCalls += 1; return repair.generateVisualRepairPlan(request); },
+        critic: (request) => { consumeProviderCall(); return critic.critiqueVisualQuality({ ...request, model: process.env.OPENLEN_VISUAL_ENGINE_CRITIC_MODEL ?? "gemini-2.5-flash" }); },
+        generatePlan: (request) => { consumeProviderCall(); return repair.generateVisualRepairPlan(request); },
         applyPlan: (request) => apply.applyVisualRepairPlan(request),
       });
       const usages = result.trace.usage;
       const actualCost = usages.reduce((sum, usage) => sum + cost.calculateModelCostMicros({ intent: usage }, rateCard!, rateCard!.mxnPerUsd).observedPilotCostMicromxn, 0);
-      const costMicromxn = usages.length === providerCalls ? actualCost : Math.floor(budget(process.env) / 15);
+      const costMicromxn = usages.length === providerCalls ? actualCost : Math.max(actualCost, lease.costMicromxnCeiling);
       if (result.accepted) {
         const [baseline, candidate] = await Promise.all([
           renderer.renderVisualQualityViewports(originalHtml),

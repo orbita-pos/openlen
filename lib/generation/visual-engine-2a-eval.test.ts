@@ -17,7 +17,11 @@ import {
   captureVisualEngine2ARollbackModes,
   captureVisualEngineRollbackModes,
 } from "./visual-engine-2a-eval";
-import { writeVisualEngine2ARollbackEvidence } from "@/scripts/visual-engine-2a-rollback-check";
+import {
+  buildVisualEngine2CRollbackEvidence,
+  captureVisualEngine2CRollbackMatrix,
+  writeVisualEngine2ARollbackEvidence,
+} from "@/scripts/visual-engine-2a-rollback-check";
 import { createPilotBudgetGuard } from "./visual-engine-pilot-budget";
 
 describe("Visual Engine 2A pilot", () => {
@@ -321,6 +325,39 @@ describe("Visual Engine 2A pilot", () => {
     } finally {
       if (previous === undefined) delete process.env.OPENLEN_VISUAL_ENGINE;
       else process.env.OPENLEN_VISUAL_ENGINE = previous;
+    }
+  });
+
+  it("captures the 2C rollback matrix, restores both flags and proves fail-open delivery", async () => {
+    const previousMain = process.env.OPENLEN_VISUAL_ENGINE;
+    const previousRepair = process.env.OPENLEN_VISUAL_ENGINE_REPAIR;
+    process.env.OPENLEN_VISUAL_ENGINE = "shadow";
+    process.env.OPENLEN_VISUAL_ENGINE_REPAIR = "on";
+    try {
+      const matrix = await captureVisualEngine2CRollbackMatrix(async (acceptRepair) => {
+        const main = process.env.OPENLEN_VISUAL_ENGINE ?? "unset";
+        const repair = process.env.OPENLEN_VISUAL_ENGINE_REPAIR ?? "unset";
+        const eligible = main === "skeleton" || main === "composition";
+        const calls = eligible && (repair === "shadow" || repair === "on") ? 1 : 0;
+        const accepted = eligible && repair === "on" && acceptRepair;
+        return {
+          html: accepted ? `${main}:repaired` : `${main}:original`,
+          visualEngine: { route: main, ...(accepted ? { repair: { accepted: true } } : {}) },
+          repairCalls: calls,
+        };
+      });
+      expect(process.env.OPENLEN_VISUAL_ENGINE).toBe("shadow");
+      expect(process.env.OPENLEN_VISUAL_ENGINE_REPAIR).toBe("on");
+      expect(matrix.off.onAccepted.repairCalls).toBe(0);
+      expect(matrix.skeleton.unset).toEqual(matrix.skeleton.off);
+      expect(matrix.skeleton.shadow.html).toBe(matrix.skeleton.off.html);
+      expect(matrix.composition.onRejected.html).toBe(matrix.composition.off.html);
+      expect(matrix.skeleton.onAccepted).toMatchObject({ html: "skeleton:repaired", visualEngine: { repair: { accepted: true } } });
+      expect(buildVisualEngine2CRollbackEvidence(matrix)).toMatchObject({ schemaVersion: "visual-engine-2c-rollback/1.0", verified: true });
+      expect(() => buildVisualEngine2CRollbackEvidence({ ...matrix, skeleton: { ...matrix.skeleton, shadow: { ...matrix.skeleton.shadow, html: "changed" } } })).toThrow(/2C rollback/i);
+    } finally {
+      if (previousMain === undefined) delete process.env.OPENLEN_VISUAL_ENGINE; else process.env.OPENLEN_VISUAL_ENGINE = previousMain;
+      if (previousRepair === undefined) delete process.env.OPENLEN_VISUAL_ENGINE_REPAIR; else process.env.OPENLEN_VISUAL_ENGINE_REPAIR = previousRepair;
     }
   });
 

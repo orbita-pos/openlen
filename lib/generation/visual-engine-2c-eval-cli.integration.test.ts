@@ -32,7 +32,12 @@ describe("runVisualEngine2CEvalCli", () => {
     expect(result).toMatchObject({ ok: true, reservations: 15, providerCalls: 27 });
     expect(state.order.slice(0, 5)).toEqual(["head", "quota", "qualification", "head", "quota"]);
     expect(state.order[5]).toBe("reserve:0");
-    expect(state.deps.evaluate).toHaveBeenNthCalledWith(1, 0, { ok: true, id: "id-0", ordinal: 1 });
+    expect(state.deps.evaluate).toHaveBeenNthCalledWith(
+      1,
+      0,
+      { ok: true, id: "id-0", ordinal: 1 },
+      { providerCallCeiling: 1, costMicromxnCeiling: 2_000_000 },
+    );
   });
   it("closes stale and unauthorized runs before reservation", async () => {
     const unauthorized = await fixture(); unauthorized.deps.env.OPENLEN_VISUAL_ENGINE_2C_AUTHORIZATION = "wrong";

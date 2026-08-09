@@ -8,15 +8,85 @@ import {
   launchShadowSkeletonCandidate,
   planQuickVisualEngineRoute,
 } from "@/lib/curate/quick-visual-engine";
+import { launchShadowVisualRepair, runQuickVisualRepair } from "@/lib/curate/quick-visual-repair";
 import { finalizeCuratedDocument } from "@/lib/curate/build-curated-document";
 import { normalizeProfileData } from "@/lib/business-profiles/normalize";
 import type { SafeSelectionResult } from "@/lib/generation/safe-selection";
 import { visualEngineMode } from "@/lib/generation/visual-engine-mode";
+import { visualRepairMode } from "@/lib/generation/visual-repair-mode";
 import {
   buildRollbackEvidence,
+  canonicalJsonSha256,
   captureVisualEngineRollbackModes,
   VISUAL_ENGINE_2A_ROLLBACK_FIXTURE,
 } from "@/lib/generation/visual-engine-2a-eval";
+
+export interface VisualEngine2CRollbackState {
+  html: string;
+  visualEngine: unknown;
+  repairCalls: number;
+}
+
+interface VisualEngine2CRollbackGroup<T> {
+  unset: T; off: T; shadow: T; onAccepted: T; onRejected: T;
+}
+
+export interface VisualEngine2CRollbackMatrix<T = VisualEngine2CRollbackState> {
+  off: VisualEngine2CRollbackGroup<T>;
+  skeleton: VisualEngine2CRollbackGroup<T>;
+  composition: VisualEngine2CRollbackGroup<T>;
+}
+
+export async function captureVisualEngine2CRollbackMatrix<T>(
+  deliver: (acceptRepair: boolean) => Promise<T>,
+): Promise<VisualEngine2CRollbackMatrix<T>> {
+  const previousMain = process.env.OPENLEN_VISUAL_ENGINE;
+  const previousRepair = process.env.OPENLEN_VISUAL_ENGINE_REPAIR;
+  const captureGroup = async (main: "off" | "skeleton" | "composition"): Promise<VisualEngine2CRollbackGroup<T>> => {
+    process.env.OPENLEN_VISUAL_ENGINE = main;
+    delete process.env.OPENLEN_VISUAL_ENGINE_REPAIR;
+    const unset = await deliver(false);
+    process.env.OPENLEN_VISUAL_ENGINE_REPAIR = "off";
+    const off = await deliver(false);
+    process.env.OPENLEN_VISUAL_ENGINE_REPAIR = "shadow";
+    const shadow = await deliver(false);
+    process.env.OPENLEN_VISUAL_ENGINE_REPAIR = "on";
+    const onAccepted = await deliver(true);
+    const onRejected = await deliver(false);
+    return { unset, off, shadow, onAccepted, onRejected };
+  };
+  try {
+    return { off: await captureGroup("off"), skeleton: await captureGroup("skeleton"), composition: await captureGroup("composition") };
+  } finally {
+    if (previousMain === undefined) delete process.env.OPENLEN_VISUAL_ENGINE; else process.env.OPENLEN_VISUAL_ENGINE = previousMain;
+    if (previousRepair === undefined) delete process.env.OPENLEN_VISUAL_ENGINE_REPAIR; else process.env.OPENLEN_VISUAL_ENGINE_REPAIR = previousRepair;
+  }
+}
+
+function deliveryOnly(state: VisualEngine2CRollbackState) { return { html: state.html, visualEngine: state.visualEngine }; }
+
+export function buildVisualEngine2CRollbackEvidence(matrix: VisualEngine2CRollbackMatrix): {
+  schemaVersion: "visual-engine-2c-rollback/1.0"; matrixSha256: string; verified: true;
+} {
+  const same = (left: VisualEngine2CRollbackState, right: VisualEngine2CRollbackState) =>
+    canonicalJsonSha256(deliveryOnly(left)) === canonicalJsonSha256(deliveryOnly(right));
+  for (const group of [matrix.off, matrix.skeleton, matrix.composition]) {
+    if (!same(group.unset, group.off) || group.unset.repairCalls !== 0 || group.off.repairCalls !== 0) throw new Error("Visual Engine 2C rollback verification failed");
+  }
+  if (![matrix.off.unset, matrix.off.off, matrix.off.shadow, matrix.off.onAccepted, matrix.off.onRejected]
+      .every((state) => same(state, matrix.off.off) && state.repairCalls === 0)) throw new Error("Visual Engine 2C rollback verification failed");
+  for (const group of [matrix.skeleton, matrix.composition]) {
+    if (!same(group.shadow, group.off) || !same(group.onRejected, group.off)
+      || group.shadow.repairCalls !== 1 || group.onRejected.repairCalls !== 1 || group.onAccepted.repairCalls !== 1
+      || group.onAccepted.html === group.off.html) throw new Error("Visual Engine 2C rollback verification failed");
+    const accepted = group.onAccepted.visualEngine as { repair?: { accepted?: unknown } };
+    const { repair, ...acceptedBase } = accepted;
+    if (repair?.accepted !== true || canonicalJsonSha256(acceptedBase) !== canonicalJsonSha256(group.off.visualEngine)) {
+      throw new Error("Visual Engine 2C rollback verification failed");
+    }
+  }
+  return { schemaVersion: "visual-engine-2c-rollback/1.0", matrixSha256: canonicalJsonSha256(matrix), verified: true };
+}
 
 export async function writeVisualEngine2ARollbackEvidence(evidence: unknown, cwd = process.cwd()): Promise<string> {
   const evidencePath = join(cwd, "scratch", "visual-engine-2a", "rollback-evidence.json");
@@ -118,6 +188,43 @@ async function delivery() {
   };
 }
 
+async function repairDelivery(acceptRepair: boolean): Promise<VisualEngine2CRollbackState> {
+  const mainMode = visualEngineMode();
+  const repairMode = visualRepairMode();
+  const originalHtml = "<!doctype html><html><body><main data-openlen-role=\"hero\"><h1>Rollback 2C original</h1></main></body></html>";
+  if (mainMode !== "skeleton" && mainMode !== "composition") {
+    return { html: originalHtml, visualEngine: { route: "weighted" }, repairCalls: 0 };
+  }
+  const visualEngine = {
+    schemaVersion: "visual-engine-project/1.0", route: mainMode === "skeleton" ? "template_skeleton" : "section_composition",
+    templateId: mainMode === "skeleton" ? "rollback-skeleton" : null, creativeDirection: {},
+    promptVersion: "rollback-fixture/1", policyVersion: "rollback-fixture/1", contractVersion: "creative-direction/1.0",
+    structuralFingerprintBefore: "sha256:" + "a".repeat(64), structuralFingerprintAfter: "sha256:" + "a".repeat(64),
+  } as never;
+  const input = { html: originalHtml, visualEngine, intent: {} as never };
+  let repairCalls = 0;
+  const runRepair = async () => {
+    repairCalls += 1;
+    if (!acceptRepair) return { html: originalHtml, metadata: visualEngine, accepted: false as const, trace: { resultCode: "not_improved", usage: [] } };
+    return {
+      html: originalHtml.replace("original", "repaired"), metadata: visualEngine, accepted: true as const,
+      trace: {
+        resultCode: "accepted", usage: [], promptVersion: "visual-repair-prompt/1.0", criticVersion: "visual-quality-verdict/2.0" as const,
+        issueCodesBefore: ["theme_mismatch" as const], issueCodesAfter: [],
+        scoresBefore: { themeRecognition: 4, visualHierarchy: 7, componentCoherence: 7, mobileReadability: 7, imageryRelevance: 6, briefAdherence: 4 },
+        scoresAfter: { themeRecognition: 8, visualHierarchy: 8, componentCoherence: 8, mobileReadability: 8, imageryRelevance: 8, briefAdherence: 8 },
+        outputHashBefore: "sha256:" + "b".repeat(64), outputHashAfter: "sha256:" + "c".repeat(64),
+      },
+    };
+  };
+  if (repairMode === "shadow") {
+    await launchShadowVisualRepair(input, { runRepair: runRepair as never });
+    return { html: originalHtml, visualEngine, repairCalls };
+  }
+  const result = await runQuickVisualRepair(input, { mode: repairMode, runRepair: runRepair as never, captureException: () => undefined });
+  return { html: result.html, visualEngine: result.visualEngine, repairCalls };
+}
+
 async function main() {
   const { unset, off, shadow, skeleton, composition } = await captureVisualEngineRollbackModes(delivery);
   if (unset.deliveryKind !== "weighted" || off.deliveryKind !== "weighted"
@@ -130,8 +237,9 @@ async function main() {
     fixture: VISUAL_ENGINE_2A_ROLLBACK_FIXTURE,
     unset, off, shadow,
   });
-  await writeVisualEngine2ARollbackEvidence(evidence);
-  console.log(JSON.stringify({ event: "visual_engine_2a_rollback", verified: true, fixtureSha256: evidence.fixtureSha256 }));
+  const visualEngine2C = buildVisualEngine2CRollbackEvidence(await captureVisualEngine2CRollbackMatrix(repairDelivery));
+  await writeVisualEngine2ARollbackEvidence({ ...evidence, visualEngine2C });
+  console.log(JSON.stringify({ event: "visual_engine_2a_rollback", verified: true, fixtureSha256: evidence.fixtureSha256, visualEngine2CSha256: visualEngine2C.matrixSha256 }));
 }
 
 if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) {

@@ -349,3 +349,65 @@ git diff --cached --check
 ```
 
 Confirm that no `.env*`, `scratch/`, JPG/JPEG/PNG screenshot, reviewer identity/session, provider/model raw response, API key, absolute local path, local audit JSON or ignored generated binding is staged. The five pre-existing `scratch/*.json` selector audit files are local user artifacts: preserve them unchanged and never stage them as part of 2A.
+
+## Visual Engine 2C: closed-loop visual repair
+
+2C is a shared post-processing layer for successful `template_skeleton` and `section_composition` candidates. It does not replace the HTML engine, agent engine, 2A design-token compiler, or 2B section composer. Its independent runtime contract is `OPENLEN_VISUAL_ENGINE_REPAIR=off|shadow|on`:
+
+- `off` and unset return the original candidate without renderer, critic, repair-model, preview, persistence, or metadata changes;
+- `shadow` evaluates a detached diagnostic but delivery remains the original candidate byte-for-byte;
+- `on` may deliver a repair only after one allowlisted patch and a second critic prove improvement; every rejection or failure returns the original candidate byte-for-byte.
+
+Rollback is immediate: set OPENLEN_VISUAL_ENGINE_REPAIR=off. This kill switch is independent from `OPENLEN_VISUAL_ENGINE`; disabling 2C does not disable the proven 2A/2B delivery route.
+
+### Non-live qualification
+
+Run on the exact candidate HEAD:
+
+```powershell
+npm.cmd run generation:visual-engine-2c:qualify
+```
+
+Run it twice and require identical SHA-256 bytes for `scratch/visual-engine-2c/qualification.json`. The local qualifier uses 15 synthetic cases: six healthy, six repairable, and three nonrepairable/fallback. It makes no provider request and writes no DB row.
+
+### Paid smoke boundary — closed by default
+
+The smoke remains closed until a new, explicit authorization covers this exact command and budget. Configure all of the following together:
+
+```text
+OPENLEN_VISUAL_ENGINE_REPAIR=shadow
+OPENLEN_VISUAL_ENGINE_2C_AUTHORIZATION=AUTHORIZED_2C_SMOKE_ONCE
+OPENLEN_VISUAL_ENGINE_2C_PILOT_BUDGET_MICROMXN=30000000
+```
+
+Then, and only under that one-time authorization, the operator may run:
+
+```powershell
+npm.cmd run generation:visual-engine-2c:eval
+```
+
+The runner rechecks qualification HEAD, phase `2c` quota (`limit=150`, `used=0`, no existing runs), rate card and budget before the first reservation. It is sequential and bounded to 15 reservations and 33 provider calls. No retry or replacement is allowed. Missing usage is charged conservatively at the configured per-row ceiling. Evidence is written only for accepted repairs and contains four hash-bound JPGs: original/repaired desktop/mobile. HTML, copy, briefs, raw responses and model explanations are never persisted.
+
+### Blind review and scorecard
+
+Review every accepted repair and no healthy, rejected or fallback row:
+
+```powershell
+npm.cmd run generation:visual-engine-2c:review
+```
+
+The reviewer reuses the loopback-only tokenized UI. For 2C, the existing `Normal copy` slot is desktop and `Copy neutralized` is mobile. Reviewer identity, session and images remain local under the ignored privacy root `scratch/visual-engine-2c/`.
+
+After all accepted repairs have one decision, run:
+
+```powershell
+npm.cmd run generation:visual-engine-2c:scorecard
+```
+
+Passing requires exactly six accepted repairs, every accepted repair reviewed, preferred-or-tied rate at least `0.80`, zero healthy replacements, zero technical/allowlist/structure/copy/role/navigation/identity violations, complete scalar cost on all 15 rows, and total cost no greater than `30000000` micro-MXN. A passing scorecard still requires separate rollout approval before setting repair mode to `on` for users.
+
+### Incident and artifact boundary
+
+On any incident, set OPENLEN_VISUAL_ENGINE_REPAIR=off first, confirm new requests make zero 2C calls, retain only scalar ledger rows, and inspect typed result codes. Do not retry the paid smoke or reset quota without a new explicit decision.
+
+Only `scratch/visual-engine-2c/` may hold qualification, JPG evidence, review session and reviewer identity. It is ignored and must never be staged. `.env*`, HTML, copy, prompts, raw responses, provider errors, keys, absolute paths and user content are forbidden from evidence and telemetry. The repository's unrelated controlled-scratch is out of scope: preserve it unchanged and never stage it as part of Visual Engine 2C.

@@ -1,3 +1,5 @@
+import { VISUAL_ENGINE_2C_CASES } from "./visual-engine-2c-cohort";
+
 export interface VisualEngine2CSmokeGuardInput {
   mode: string | undefined; authorization: string | undefined;
   commitSha: string; qualificationCommitSha: string; qualificationValid: boolean;
@@ -20,7 +22,11 @@ export interface VisualEngine2CSmokeDeps {
   currentHead: () => Promise<string>;
   currentQuota: () => Promise<{ limit: number; used: number; existingRuns: number }>;
   reserve: (index: number) => Promise<{ ok: true; id: string; ordinal: number } | { ok: false }>;
-  evaluate: (index: number, reservation: { ok: true; id: string; ordinal: number }) => Promise<{ providerCalls: number; costMicromxn: number; status: "adapted" | "fallback" | "failed" }>;
+  evaluate: (
+    index: number,
+    reservation: { ok: true; id: string; ordinal: number },
+    lease: { providerCallCeiling: number; costMicromxnCeiling: number },
+  ) => Promise<{ providerCalls: number; costMicromxn: number; status: "adapted" | "fallback" | "failed" }>;
   complete: (id: string, result: { providerCalls: number; costMicromxn: number; status: string }) => Promise<void>;
 }
 
@@ -29,10 +35,30 @@ export async function runVisualEngine2CSmoke(guard: VisualEngine2CSmokeGuardInpu
   const [head, quota] = await Promise.all([deps.currentHead(), deps.currentQuota()]);
   const fresh = validateVisualEngine2CSmokeGuard({ ...guard, commitSha: head, quota }); if (!fresh.ok) return fresh;
   let providerCalls = 0; let totalCostMicromxn = 0; let reservations = 0;
+  const conservativeRowCostMicromxn = Math.floor(guard.budgetMicromxn / 15);
   for (let index = 0; index < 15; index += 1) {
+    const lease = {
+      providerCallCeiling: VISUAL_ENGINE_2C_CASES[index]!.expectedCallCeiling,
+      costMicromxnCeiling: conservativeRowCostMicromxn,
+    };
+    if (providerCalls + lease.providerCallCeiling > 33 || totalCostMicromxn + lease.costMicromxnCeiling > guard.budgetMicromxn) {
+      return { ok: false as const, code: "budget_exceeded", reservations, providerCalls, totalCostMicromxn };
+    }
     const reservation = await deps.reserve(index); if (!reservation.ok) return { ok: false as const, code: "reservation_failed", reservations, providerCalls, totalCostMicromxn };
     reservations += 1;
-    const evaluated = await deps.evaluate(index, reservation);
+    let evaluated: Awaited<ReturnType<VisualEngine2CSmokeDeps["evaluate"]>>;
+    try {
+      evaluated = await deps.evaluate(index, reservation, lease);
+      if (!Number.isSafeInteger(evaluated.providerCalls) || evaluated.providerCalls < 0
+        || !Number.isSafeInteger(evaluated.costMicromxn) || evaluated.costMicromxn < 0
+        || !["adapted", "fallback", "failed"].includes(evaluated.status)) throw new Error("invalid scalar evaluation");
+    } catch {
+      evaluated = {
+        providerCalls: lease.providerCallCeiling,
+        costMicromxn: lease.costMicromxnCeiling,
+        status: "failed",
+      };
+    }
     providerCalls += evaluated.providerCalls; totalCostMicromxn += evaluated.costMicromxn;
     await deps.complete(reservation.id, evaluated);
     if (providerCalls > 33 || totalCostMicromxn > guard.budgetMicromxn) return { ok: false as const, code: "budget_exceeded", reservations, providerCalls, totalCostMicromxn };
