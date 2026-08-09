@@ -68,6 +68,30 @@ describe("buildSkeletonInventory", () => {
     expect(idsFor("cards-activity-card")).toEqual(["card-a", "card-b"]);
   });
 
+  it("keeps the buttons hook within the selector contract for many safe anchor classes", () => {
+    const anchorClasses = Array.from({ length: 24 }, (_, index) => `action-control-${String(24 - index).padStart(2, "0")}`);
+    const buttonHtml = `<!doctype html><html><body><main>
+      <section class="hero"><button id="primary-button">Start</button></section>
+      ${anchorClasses.map((className) => `<a id="${className}" class="${className}" href="/${className}">Open</a>`).join("")}
+    </main></body></html>`;
+
+    const inventory = buildSkeletonInventory(buttonHtml, "button-selector-limit");
+    const repeatedInventory = buildSkeletonInventory(buttonHtml, "button-selector-limit");
+    const selector = inventory.styleHooks.find((hook) => hook.id === "buttons")!.selector;
+    const selectedIds = parse(buttonHtml).querySelectorAll(selector).map((element) => element.getAttribute("id"));
+    const selectedAnchorClasses = [...anchorClasses]
+      .sort()
+      .filter((className) => selectedIds.includes(className));
+    const anchorSelectorFragments = selector.split(", ").filter((fragment) => fragment.startsWith("a."));
+
+    expect(selector).toBe(repeatedInventory.styleHooks.find((hook) => hook.id === "buttons")!.selector);
+    expect(selector.length).toBeLessThanOrEqual(240);
+    expect(selectedIds).toContain("primary-button");
+    expect(selectedAnchorClasses).not.toHaveLength(0);
+    expect(selectedAnchorClasses).toEqual([...anchorClasses].sort().slice(0, selectedAnchorClasses.length));
+    expect(anchorSelectorFragments).toEqual(selectedAnchorClasses.map((className) => `a.${className}`));
+  });
+
   it("maps runtime schema validation failures to a typed inventory error", () => {
     expect(() => buildSkeletonInventory(HTML, "x".repeat(181))).toThrow(SkeletonInventoryError);
     expect(() => buildSkeletonInventory(HTML, "x".repeat(181))).toThrow(expect.objectContaining({ code: "invalid_inventory" }));

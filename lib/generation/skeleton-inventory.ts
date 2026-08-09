@@ -8,6 +8,7 @@ type HookRole = keyof typeof HOOK_PROPERTY_POLICY;
 
 const MAX_STYLE_HOOKS = 12;
 const MAX_ASSET_SLOTS = 12;
+const MAX_STYLE_HOOK_SELECTOR_LENGTH = 240;
 const SAFE_CLASS_NAME = /^[a-zA-Z][a-zA-Z0-9_-]{0,63}$/;
 
 export class SkeletonInventoryError extends Error {
@@ -82,7 +83,12 @@ function buttonSelector(root: HTMLElement): string | null {
       if (SAFE_CLASS_NAME.test(className)) anchorClasses.add(className);
     }
   }
-  for (const className of [...anchorClasses].sort((left, right) => left.localeCompare(right))) selectors.push(`a.${className}`);
+  for (const className of [...anchorClasses].sort((left, right) => left.localeCompare(right))) {
+    const selector = `a.${className}`;
+    const next = selectors.length === 0 ? selector : `${selectors.join(", ")}, ${selector}`;
+    if (next.length > MAX_STYLE_HOOK_SELECTOR_LENGTH) break;
+    selectors.push(selector);
+  }
   return selectors.length > 0 ? selectors.join(", ") : null;
 }
 
