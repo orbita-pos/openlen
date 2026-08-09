@@ -68,7 +68,16 @@ const REQUIRED_ARCHETYPES = [
   "technical_saas",
   "editorial_portfolio",
 ] as const;
-const CLOUDFLARE_EMAIL_ATTRIBUTE = /\b(data-cfemail\s*=\s*)(?:(['"])([^'"]*)\2|([^\s>]+))/gi;
+const HTML_RAW_TEXT_ELEMENTS = new Set([
+  "iframe",
+  "noembed",
+  "noframes",
+  "script",
+  "style",
+  "textarea",
+  "title",
+  "xmp",
+]);
 
 function cloudflareEmailHash(value: string): string | null {
   if (value.length < 4 || value.length % 2 !== 0 || !/^[0-9a-f]+$/i.test(value)) return null;
@@ -78,12 +87,132 @@ function cloudflareEmailHash(value: string): string | null {
   return `sha256:${createHash("sha256").update(decoded).digest("hex")}`;
 }
 
+function isHtmlWhitespace(character: string): boolean {
+  return character === " " || character === "\t" || character === "\n" || character === "\r" || character === "\f";
+}
+
+function findTagEnd(html: string, start: number): number {
+  let quote: "\"" | "'" | null = null;
+  for (let index = start + 1; index < html.length; index += 1) {
+    const character = html[index];
+    if (quote !== null) {
+      if (character === quote) quote = null;
+    } else if (character === "\"" || character === "'") {
+      quote = character;
+    } else if (character === ">") {
+      return index;
+    }
+  }
+  return -1;
+}
+
+function canonicalizeCloudflareAttributeInStartTag(startTag: string, tagNameEnd: number): string {
+  const replacements: Array<{ start: number; end: number; value: string }> = [];
+  let index = tagNameEnd;
+  while (index < startTag.length - 1) {
+    while (isHtmlWhitespace(startTag[index] ?? "")) index += 1;
+    if (index >= startTag.length - 1 || startTag[index] === "/" || startTag[index] === ">") break;
+
+    const nameStart = index;
+    while (index < startTag.length - 1
+      && !isHtmlWhitespace(startTag[index])
+      && startTag[index] !== "="
+      && startTag[index] !== "/"
+      && startTag[index] !== ">") index += 1;
+    const name = startTag.slice(nameStart, index);
+    if (name.length === 0) {
+      index += 1;
+      continue;
+    }
+
+    while (isHtmlWhitespace(startTag[index] ?? "")) index += 1;
+    if (startTag[index] !== "=") continue;
+    index += 1;
+    while (isHtmlWhitespace(startTag[index] ?? "")) index += 1;
+
+    const quote = startTag[index] === "\"" || startTag[index] === "'" ? startTag[index] : null;
+    if (quote !== null) index += 1;
+    const valueStart = index;
+    if (quote !== null) {
+      while (index < startTag.length - 1 && startTag[index] !== quote) index += 1;
+      if (startTag[index] !== quote) break;
+    } else {
+      while (index < startTag.length - 1 && !isHtmlWhitespace(startTag[index]) && startTag[index] !== ">") index += 1;
+    }
+    const valueEnd = index;
+    if (quote !== null) index += 1;
+
+    if (name.toLowerCase() !== "data-cfemail") continue;
+    const hash = cloudflareEmailHash(startTag.slice(valueStart, valueEnd));
+    if (hash !== null) replacements.push({ start: valueStart, end: valueEnd, value: hash });
+  }
+
+  if (replacements.length === 0) return startTag;
+  let canonical = "";
+  let cursor = 0;
+  for (const replacement of replacements) {
+    canonical += startTag.slice(cursor, replacement.start) + replacement.value;
+    cursor = replacement.end;
+  }
+  return canonical + startTag.slice(cursor);
+}
+
+function rawTextEnd(htmlLowerCase: string, start: number, tagName: string): number {
+  const closingPrefix = `</${tagName}`;
+  let candidate = htmlLowerCase.indexOf(closingPrefix, start);
+  while (candidate !== -1) {
+    const boundary = htmlLowerCase[candidate + closingPrefix.length] ?? "";
+    if (boundary === ">" || boundary === "/" || isHtmlWhitespace(boundary)) return candidate;
+    candidate = htmlLowerCase.indexOf(closingPrefix, candidate + closingPrefix.length);
+  }
+  return htmlLowerCase.length;
+}
+
 function canonicalizeCloudflareEmailProtection(html: string): string {
-  return html.replace(CLOUDFLARE_EMAIL_ATTRIBUTE, (attribute, prefix: string, quote: string | undefined, quotedValue: string | undefined, unquotedValue: string | undefined) => {
-    const hash = cloudflareEmailHash(quotedValue ?? unquotedValue ?? "");
-    if (hash === null) return attribute;
-    return quote === undefined ? `${prefix}${hash}` : `${prefix}${quote}${hash}${quote}`;
-  });
+  const htmlLowerCase = html.toLowerCase();
+  let canonical = "";
+  let cursor = 0;
+  let scan = 0;
+  while (scan < html.length) {
+    const tagStart = html.indexOf("<", scan);
+    if (tagStart === -1) break;
+    if (html.startsWith("<!--", tagStart)) {
+      const commentEnd = html.indexOf("-->", tagStart + 4);
+      if (commentEnd === -1) break;
+      scan = commentEnd + 3;
+      continue;
+    }
+
+    const first = html[tagStart + 1] ?? "";
+    if (!/[A-Za-z]/.test(first)) {
+      if (first === "/" || first === "!" || first === "?") {
+        const ignoredTagEnd = findTagEnd(html, tagStart);
+        scan = ignoredTagEnd === -1 ? html.length : ignoredTagEnd + 1;
+      } else {
+        scan = tagStart + 1;
+      }
+      continue;
+    }
+
+    const tagEnd = findTagEnd(html, tagStart);
+    if (tagEnd === -1) break;
+    let tagNameEnd = tagStart + 1;
+    while (tagNameEnd < tagEnd
+      && !isHtmlWhitespace(html[tagNameEnd])
+      && html[tagNameEnd] !== "/"
+      && html[tagNameEnd] !== ">") tagNameEnd += 1;
+    const tagName = html.slice(tagStart + 1, tagNameEnd).toLowerCase();
+    const startTag = html.slice(tagStart, tagEnd + 1);
+    canonical += html.slice(cursor, tagStart)
+      + canonicalizeCloudflareAttributeInStartTag(startTag, tagNameEnd - tagStart);
+    cursor = tagEnd + 1;
+    scan = cursor;
+
+    if (HTML_RAW_TEXT_ELEMENTS.has(tagName)) {
+      scan = rawTextEnd(htmlLowerCase, scan, tagName);
+    }
+  }
+  return canonical + html.slice(cursor);
 }
 
 function values(value: unknown): unknown[] {

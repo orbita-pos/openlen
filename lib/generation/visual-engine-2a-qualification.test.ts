@@ -253,6 +253,7 @@ describe("qualifyVisualEngine2ACohort", () => {
   it("stabilizes Cloudflare email protection hashes without hiding real HTML changes", () => {
     const manifestForFirstHtml = (html: string) => {
       const templateMaterials = templateMaterialsFor();
+      const templateId = templateMaterials[0].id;
       templateMaterials[0] = {
         ...templateMaterials[0],
         html,
@@ -261,7 +262,10 @@ describe("qualifyVisualEngine2ACohort", () => {
       const result = qualify(undefined, selectionCatalogFor(), templateMaterials);
       expect(result.ok).toBe(true);
       if (!result.ok) throw new Error("Expected valid template material");
-      return result.manifest;
+      return {
+        manifest: result.manifest,
+        template: result.manifest.templates.find((template) => template.id === templateId)!,
+      };
     };
     const protectedHtml = (value: string) => HTML.replace("</body>", `<a data-cfemail="${value}">protected</a></body>`);
 
@@ -272,14 +276,65 @@ describe("qualifyVisualEngine2ACohort", () => {
     const oddLength = manifestForFirstHtml(protectedHtml("abc"));
     const ordinaryChange = manifestForFirstHtml(HTML.replace("Details", "Changed details"));
 
-    expect(secondEncoding.manifestSha256).toBe(firstEncoding.manifestSha256);
-    expect(secondEncoding.templates[0].htmlSha256).toBe(firstEncoding.templates[0].htmlSha256);
-    expect(secondEncoding.templates[0].inventorySha256).toBe(firstEncoding.templates[0].inventorySha256);
-    expect(differentEmail.manifestSha256).not.toBe(firstEncoding.manifestSha256);
-    expect(malformed.manifestSha256).not.toBe(firstEncoding.manifestSha256);
-    expect(oddLength.manifestSha256).not.toBe(firstEncoding.manifestSha256);
-    expect(oddLength.manifestSha256).not.toBe(malformed.manifestSha256);
-    expect(ordinaryChange.manifestSha256).not.toBe(firstEncoding.manifestSha256);
+    expect(secondEncoding.manifest.manifestSha256).toBe(firstEncoding.manifest.manifestSha256);
+    expect(secondEncoding.template.htmlSha256).toBe(firstEncoding.template.htmlSha256);
+    expect(secondEncoding.template.inventorySha256).toBe(firstEncoding.template.inventorySha256);
+    expect(differentEmail.manifest.manifestSha256).not.toBe(firstEncoding.manifest.manifestSha256);
+    expect(malformed.manifest.manifestSha256).not.toBe(firstEncoding.manifest.manifestSha256);
+    expect(oddLength.manifest.manifestSha256).not.toBe(firstEncoding.manifest.manifestSha256);
+    expect(oddLength.manifest.manifestSha256).not.toBe(malformed.manifest.manifestSha256);
+    expect(ordinaryChange.manifest.manifestSha256).not.toBe(firstEncoding.manifest.manifestSha256);
+  });
+
+  it.each([
+    ["text", (value: string) => `<p>data-cfemail="${value}"</p>`],
+    ["comments", (value: string) => `<!-- data-cfemail="${value}" -->`],
+    ["scripts", (value: string) => `<script>const marker = '<a data-cfemail="${value}">';</script>`],
+    ["self-closing-looking scripts", (value: string) => `<script/>const marker = '<a data-cfemail="${value}">';</script>`],
+    ["styles", (value: string) => `<style>.marker::after { content: '<a data-cfemail="${value}">'; }</style>`],
+    ["raw text", (value: string) => `<textarea><a data-cfemail="${value}"></a></textarea>`],
+    ["another attribute value", (value: string) => `<a title='data-cfemail="${value}"'>protected</a>`],
+    ["a suffix attribute", (value: string) => `<a x-data-cfemail="${value}">protected</a>`],
+  ])("preserves Cloudflare-looking bytes in %s", (_label, fragmentFor) => {
+    const manifestForValue = (value: string) => {
+      const html = HTML.replace("</body>", `${fragmentFor(value)}</body>`);
+      const templateMaterials = templateMaterialsFor();
+      const templateId = templateMaterials[0].id;
+      templateMaterials[0] = {
+        ...templateMaterials[0],
+        html,
+        inventory: buildSkeletonInventory(html, templateMaterials[0].id),
+      };
+      const result = qualify(undefined, selectionCatalogFor(), templateMaterials);
+      expect(result.ok).toBe(true);
+      if (!result.ok) throw new Error("Expected valid template material");
+      return result.manifest.templates.find((template) => template.id === templateId)!.htmlSha256;
+    };
+
+    expect(manifestForValue("7c1d3c1e521f1311")).not.toBe(manifestForValue("2a4b6a4804494547"));
+  });
+
+  it.each([
+    ["single quoted", (value: string) => `<a data-cfemail='${value}'>protected</a>`],
+    ["double quoted and case insensitive", (value: string) => `<a DATA-CFEMAIL="${value}">protected</a>`],
+    ["after a text less-than sign", (value: string) => `<p>1 < 2 <a data-cfemail="${value}">protected</a></p>`],
+  ])("stabilizes an exact %s attribute in a real start tag", (_label, fragmentFor) => {
+    const manifestForValue = (value: string) => {
+      const html = HTML.replace("</body>", `${fragmentFor(value)}</body>`);
+      const templateMaterials = templateMaterialsFor();
+      const templateId = templateMaterials[0].id;
+      templateMaterials[0] = {
+        ...templateMaterials[0],
+        html,
+        inventory: buildSkeletonInventory(html, templateMaterials[0].id),
+      };
+      const result = qualify(undefined, selectionCatalogFor(), templateMaterials);
+      expect(result.ok).toBe(true);
+      if (!result.ok) throw new Error("Expected valid template material");
+      return result.manifest.templates.find((template) => template.id === templateId)!.htmlSha256;
+    };
+
+    expect(manifestForValue("7c1d3c1e521f1311")).toBe(manifestForValue("2a4b6a4804494547"));
   });
 
   it("hashes canonical input by value and detects every material staleness dimension", () => {
