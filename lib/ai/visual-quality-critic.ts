@@ -152,6 +152,7 @@ async function runCritic(
       responseMimeType: "application/json",
       responseSchema: RESPONSE_SCHEMA,
       maxOutputTokens: 2048,
+      thinkingBudget: 0,
       temperature: 0,
     }, { signal })) {
       if (event.type === "text_delta") raw += event.text;

@@ -80,6 +80,9 @@ export interface StreamRequest {
   /** Gemini 2.5 Flash: keep `>= 256` for any prompt to avoid empty
    *  output due to thinking-budget consumption (see file header). */
   maxOutputTokens?: number;
+  /** Gemini 2.5 thinking budget. `0` disables thinking for deterministic,
+   *  bounded structured-output calls; `-1` keeps provider-dynamic thinking. */
+  thinkingBudget?: number;
   /** Range 0.0–2.0; passed verbatim to Gemini. */
   temperature?: number;
   /** Reference images attached to the LAST user message. Empty/omitted for
@@ -253,6 +256,7 @@ function streamRequestToRust(r: StreamRequest): RustStreamRequest {
     model: r.model,
     messages: r.messages.map(messageToRust),
     maxOutputTokens: r.maxOutputTokens,
+    thinkingBudget: r.thinkingBudget,
     temperature: r.temperature,
     images: r.images,
     responseMimeType: r.responseMimeType,

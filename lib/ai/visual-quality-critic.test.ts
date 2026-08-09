@@ -76,6 +76,7 @@ describe("critiqueVisualQuality", () => {
     expect(captured).toMatchObject({
       images: [IMAGES.desktop, IMAGES.mobile],
       temperature: 0,
+      thinkingBudget: 0,
       responseMimeType: "application/json",
     });
   });

@@ -400,6 +400,8 @@ struct GenerationConfig {
     temperature: Option<f32>,
     #[serde(skip_serializing_if = "Option::is_none")]
     max_output_tokens: Option<u32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    thinking_config: Option<ThinkingConfig>,
     // Quality S3: structured-output controls. `responseMimeType` /
     // `responseSchema` are the native Gemini field names — serialized verbatim
     // under `generationConfig`. Skipped when unset so the free-form path emits
@@ -408,6 +410,12 @@ struct GenerationConfig {
     response_mime_type: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     response_schema: Option<serde_json::Value>,
+}
+
+#[derive(Serialize, Debug)]
+#[serde(rename_all = "camelCase")]
+struct ThinkingConfig {
+    thinking_budget: i32,
 }
 
 fn build_request_body(request: &StreamRequest) -> GeminiRequestBody {
@@ -497,12 +505,16 @@ fn build_request_body(request: &StreamRequest) -> GeminiRequestBody {
 
     let generation_config = if request.temperature.is_some()
         || request.max_output_tokens.is_some()
+        || request.thinking_budget.is_some()
         || request.response_mime_type.is_some()
         || request.response_schema.is_some()
     {
         Some(GenerationConfig {
             temperature: request.temperature,
             max_output_tokens: request.max_output_tokens,
+            thinking_config: request
+                .thinking_budget
+                .map(|thinking_budget| ThinkingConfig { thinking_budget }),
             response_mime_type: request.response_mime_type.clone(),
             response_schema: request.response_schema.clone(),
         })
@@ -693,6 +705,15 @@ mod tests {
             v["generationConfig"]["responseSchema"]["properties"]["shouldRegenerate"]["type"],
             "BOOLEAN"
         );
+    }
+
+    #[test]
+    fn build_request_body_emits_thinking_budget_zero() {
+        let req = StreamRequest::new("gemini-2.5-flash", vec![Message::user("critique this")])
+            .with_thinking_budget(0);
+        let body = build_request_body(&req);
+        let v: serde_json::Value = serde_json::to_value(&body).unwrap();
+        assert_eq!(v["generationConfig"]["thinkingConfig"]["thinkingBudget"], 0);
     }
 
     #[test]

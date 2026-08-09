@@ -86,6 +86,8 @@ pub struct StreamRequest {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub max_output_tokens: Option<u32>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    pub thinking_budget: Option<i32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub temperature: Option<f32>,
     /// Reference images for the request. Attached as native `inlineData`
     /// parts on the LAST user content. Empty by default — the text-only path
@@ -120,6 +122,7 @@ impl StreamRequest {
             model: model.into(),
             messages,
             max_output_tokens: None,
+            thinking_budget: None,
             temperature: None,
             images: Vec::new(),
             response_mime_type: None,
@@ -131,6 +134,11 @@ impl StreamRequest {
 
     pub fn with_max_output_tokens(mut self, n: u32) -> Self {
         self.max_output_tokens = Some(n);
+        self
+    }
+
+    pub fn with_thinking_budget(mut self, n: i32) -> Self {
+        self.thinking_budget = Some(n);
         self
     }
 
@@ -328,6 +336,15 @@ mod tests {
         let v: serde_json::Value = serde_json::to_value(&req).unwrap();
         assert!(v.get("response_mime_type").is_none());
         assert!(v.get("response_schema").is_none());
+    }
+
+    #[test]
+    fn thinking_budget_zero_is_preserved() {
+        let req = StreamRequest::new("gemini-2.5-flash", vec![Message::user("hi")])
+            .with_thinking_budget(0);
+        assert_eq!(req.thinking_budget, Some(0));
+        let v: serde_json::Value = serde_json::to_value(&req).unwrap();
+        assert_eq!(v["thinking_budget"], 0);
     }
 
     #[test]

@@ -82,6 +82,9 @@ pub struct StreamRequest {
     pub model: String,
     pub messages: Vec<Message>,
     pub max_output_tokens: Option<u32>,
+    /// Gemini 2.5 thinking budget. `0` disables thinking and `-1` keeps
+    /// provider-dynamic thinking.
+    pub thinking_budget: Option<i32>,
     /// napi-rs marshals JS `number` as `f64`; the underlying Rust type
     /// stores `f32`. Lossy down-cast happens on the boundary — the
     /// rounding error for a temperature in `[0.0, 2.0]` is below
@@ -208,6 +211,9 @@ impl TryFrom<StreamRequest> for NativeStreamRequest {
         let mut req = NativeStreamRequest::new(r.model, messages);
         if let Some(n) = r.max_output_tokens {
             req = req.with_max_output_tokens(n);
+        }
+        if let Some(n) = r.thinking_budget {
+            req = req.with_thinking_budget(n);
         }
         if let Some(t) = r.temperature {
             req = req.with_temperature(t as f32);
@@ -482,6 +488,7 @@ mod tests {
                 function_responses_json: None,
             }],
             max_output_tokens: Some(256),
+            thinking_budget: Some(0),
             temperature: Some(0.2),
             images: None,
             response_mime_type: None,
@@ -492,6 +499,7 @@ mod tests {
         let native: NativeStreamRequest = r.try_into().unwrap();
         assert_eq!(native.model, "gemini-2.5-flash");
         assert_eq!(native.max_output_tokens, Some(256));
+        assert_eq!(native.thinking_budget, Some(0));
         assert!((native.temperature.unwrap() - 0.2).abs() < 1e-6);
         assert_eq!(native.messages.len(), 1);
         assert_eq!(native.messages[0].role, NativeRole::System);
@@ -509,6 +517,7 @@ mod tests {
                 function_responses_json: None,
             }],
             max_output_tokens: None,
+            thinking_budget: None,
             temperature: None,
             images: Some(vec![InlineImage {
                 mime_type: "image/jpeg".to_owned(),
@@ -536,6 +545,7 @@ mod tests {
                 function_responses_json: None,
             }],
             max_output_tokens: None,
+            thinking_budget: None,
             temperature: None,
             images: None,
             response_mime_type: None,
@@ -558,6 +568,7 @@ mod tests {
                 function_responses_json: None,
             }],
             max_output_tokens: None,
+            thinking_budget: None,
             temperature: None,
             images: None,
             response_mime_type: Some("application/json".to_owned()),
@@ -588,6 +599,7 @@ mod tests {
                 function_responses_json: None,
             }],
             max_output_tokens: None,
+            thinking_budget: None,
             temperature: None,
             images: None,
             response_mime_type: Some("application/json".to_owned()),
@@ -749,6 +761,7 @@ mod tests {
                 function_responses_json: None,
             }],
             max_output_tokens: None,
+            thinking_budget: None,
             temperature: None,
             images: None,
             response_mime_type: None,
