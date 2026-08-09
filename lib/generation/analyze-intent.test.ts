@@ -229,8 +229,40 @@ describe("analyzeIntent", () => {
   });
 
   it.each([
+    ["cache and thoughts", { promptTokenCount: 10, candidatesTokenCount: 2 }, 0, 0],
+    ["thoughts", { promptTokenCount: 10, candidatesTokenCount: 2, cachedContentTokenCount: 3 }, 3, 0],
+    ["cache", { promptTokenCount: 10, candidatesTokenCount: 2, thoughtsTokenCount: 4 }, 0, 4],
+  ])("treats omitted zero-value %s counters as zero", async (
+    _label,
+    usageMetadata,
+    expectedCachedTokens,
+    expectedThinkingTokens,
+  ) => {
+    const result = await analyzeIntent("A complete product brief", {
+      apiKey: "x",
+      fetchImpl: vi.fn().mockResolvedValue(geminiResponse(
+        JSON.stringify(CHILDREN_INTENT),
+        200,
+        usageMetadata,
+      )),
+      now: () => 10,
+    });
+
+    expect(result).toMatchObject({
+      ok: true,
+      usage: {
+        inputTokens: 10,
+        outputTokens: 2,
+        cachedTokens: expectedCachedTokens,
+        thinkingTokens: expectedThinkingTokens,
+      },
+    });
+  });
+
+  it.each([
     ["omitted", null],
-    ["partially missing", { promptTokenCount: 10, candidatesTokenCount: 2, cachedContentTokenCount: 0 }],
+    ["missing prompt", { candidatesTokenCount: 2 }],
+    ["missing candidates", { promptTokenCount: 10 }],
     ["negative", { promptTokenCount: -1, candidatesTokenCount: 2, cachedContentTokenCount: 0, thoughtsTokenCount: 0 }],
     ["fractional", { promptTokenCount: 1.5, candidatesTokenCount: 2, cachedContentTokenCount: 0, thoughtsTokenCount: 0 }],
     ["string", { promptTokenCount: "1", candidatesTokenCount: 2, cachedContentTokenCount: 0, thoughtsTokenCount: 0 }],

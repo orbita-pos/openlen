@@ -189,18 +189,25 @@ function validTokenCount(value: unknown): value is number {
   return typeof value === "number" && Number.isSafeInteger(value) && value >= 0;
 }
 
+function optionalZeroTokenCount(value: unknown): number | null {
+  if (value === undefined) return 0;
+  return validTokenCount(value) ? value : null;
+}
+
 function readUsageMetadata(payload: unknown): IntentModelUsage | undefined {
   if (!isRecord(payload) || !isRecord(payload.usageMetadata)) return undefined;
   const metadata = payload.usageMetadata;
+  const cachedTokens = optionalZeroTokenCount(metadata.cachedContentTokenCount);
+  const thinkingTokens = optionalZeroTokenCount(metadata.thoughtsTokenCount);
   if (!validTokenCount(metadata.promptTokenCount)
     || !validTokenCount(metadata.candidatesTokenCount)
-    || !validTokenCount(metadata.cachedContentTokenCount)
-    || !validTokenCount(metadata.thoughtsTokenCount)) return undefined;
+    || cachedTokens === null
+    || thinkingTokens === null) return undefined;
   return {
     inputTokens: metadata.promptTokenCount,
     outputTokens: metadata.candidatesTokenCount,
-    cachedTokens: metadata.cachedContentTokenCount,
-    thinkingTokens: metadata.thoughtsTokenCount,
+    cachedTokens,
+    thinkingTokens,
   };
 }
 
