@@ -422,6 +422,28 @@ export async function captureVisualEngine2ARollbackModes<T>(deliver: () => Promi
   }
 }
 
+export async function captureVisualEngineRollbackModes<T>(deliver: () => Promise<T>): Promise<{
+  unset: T; off: T; shadow: T; skeleton: T; composition: T;
+}> {
+  const previous = process.env.OPENLEN_VISUAL_ENGINE;
+  try {
+    delete process.env.OPENLEN_VISUAL_ENGINE;
+    const unset = await deliver();
+    process.env.OPENLEN_VISUAL_ENGINE = "off";
+    const off = await deliver();
+    process.env.OPENLEN_VISUAL_ENGINE = "shadow";
+    const shadow = await deliver();
+    process.env.OPENLEN_VISUAL_ENGINE = "skeleton";
+    const skeleton = await deliver();
+    process.env.OPENLEN_VISUAL_ENGINE = "composition";
+    const composition = await deliver();
+    return { unset, off, shadow, skeleton, composition };
+  } finally {
+    if (previous === undefined) delete process.env.OPENLEN_VISUAL_ENGINE;
+    else process.env.OPENLEN_VISUAL_ENGINE = previous;
+  }
+}
+
 function validEvidenceHash(value: string): boolean {
   return /^sha256:[a-f0-9]{64}$/.test(value);
 }

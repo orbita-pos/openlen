@@ -300,6 +300,42 @@ For any incident:
 
 If any gate fails, correct 2A and request a new budget decision. Do not borrow the 75-unit 2B reserve. 2B starts only after 2A succeeds and composition has its own implementation and gate.
 
+## Visual Engine 2B: composición de secciones
+
+2B reutiliza el selector seguro, el inventario publicado de secciones, el ensamblador, el fill y el adaptador visual existentes. No reemplaza el motor HTML ni el motor agente. `off`, `shadow` y `skeleton` conservan su significado; únicamente `composition` puede entregar una composición al usuario.
+
+La cohorte 2B contiene exactamente 15 casos sintéticos: 13 composiciones soportadas y 2 roles deliberadamente no soportados. No existe un requisito de 75 adaptaciones para 2B. La calificación es local/read-only, no llama a Gemini ni escribe telemetría:
+
+```powershell
+npm.cmd run generation:visual-engine-2b:qualify
+```
+
+El manifiesto agregado vive únicamente en `scratch/visual-engine-2b/qualification.json` y debe permanecer ignorado. Antes de un piloto, ejecútalo dos veces sobre el mismo HEAD y exige el mismo SHA-256. Revisa que HEAD, inventory hash, versiones, 15 IDs, 13 `composed`, 2 `unsupported_section_role` y self-hash coincidan.
+
+El piloto 2B está cerrado salvo una autorización separada y explícita. Su tope recomendado es 20 MXN (`20000000` micro-MXN). Requiere simultáneamente `OPENLEN_VISUAL_ENGINE=shadow`, cuota 2B exacta `limit=15, used=0`, rate card completa, calificación vigente y:
+
+```text
+OPENLEN_VISUAL_ENGINE_2B_AUTHORIZATION=AUTHORIZED_2B_SMOKE_ONCE
+OPENLEN_VISUAL_ENGINE_2B_PILOT_BUDGET_MICROMXN=20000000
+OPENLEN_VISUAL_ENGINE_2B_CASE_MAX_MICROMXN=1000000
+```
+
+Solo después de una nueva autorización del usuario se permite ejecutar una vez:
+
+```powershell
+npm.cmd run generation:visual-engine-2b:eval
+```
+
+Nunca guardar briefs, HTML, copy, capturas, respuestas del modelo, claves o identidad en el ledger: solo escalares allowlisted y hashes. La salida de terminal es agregada y redactada. Si cualquier gate cambia antes del primer caso, el comando debe terminar sin reservar ni llamar al proveedor.
+
+Rollback inmediato: eliminar `OPENLEN_VISUAL_ENGINE` o fijarlo en `off`. `shadow` no entrega candidatos; `skeleton` entrega únicamente la ruta 2A; `composition` puede entregar 2A o 2B según la decisión segura. Verifica los cinco estados sin red mediante:
+
+```powershell
+npm.cmd run generation:visual-engine-2a:rollback-check
+```
+
+La frontera siguiente es 2C (crítica visual y reparación). No se habilita ni se implementa como consecuencia automática de aprobar 2B; requiere un diseño, presupuesto y autorización independientes.
+
 ## Repository artifact audit
 
 Before commit, merge, deployment or pilot execution, inspect both unstaged and staged state:

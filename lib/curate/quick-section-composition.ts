@@ -230,8 +230,8 @@ function compositionOutcome(
 export async function launchShadowSectionCompositionCandidate(
   input: ShadowSectionCompositionCandidateInput | null,
   deps: ShadowSectionCompositionCandidateDeps = {},
-): Promise<void> {
-  if (input === null) return;
+): Promise<SectionCompositionResult | null> {
+  if (input === null) return null;
   const compose = deps.composeSectionCandidate ?? composeSectionCandidate;
   const reserve = deps.reserveVisualEnginePilotRun ?? reserveVisualEnginePilotRun;
   const complete = deps.completeVisualEnginePilotRun ?? completeVisualEnginePilotRun;
@@ -259,8 +259,9 @@ export async function launchShadowSectionCompositionCandidate(
         return true;
       },
     });
-    if (reservationId === null) return;
+    if (reservationId === null) return result;
     await attemptCompletion(compositionOutcome(result, input.policyVersion));
+    return result;
   } catch {
     await attemptCompletion({
       status: "failed",
@@ -273,5 +274,6 @@ export async function launchShadowSectionCompositionCandidate(
       templateId: "section-composition",
       reasonCode: "internal_error",
     });
+    return null;
   }
 }

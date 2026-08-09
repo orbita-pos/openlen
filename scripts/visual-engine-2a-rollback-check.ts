@@ -14,7 +14,7 @@ import type { SafeSelectionResult } from "@/lib/generation/safe-selection";
 import { visualEngineMode } from "@/lib/generation/visual-engine-mode";
 import {
   buildRollbackEvidence,
-  captureVisualEngine2ARollbackModes,
+  captureVisualEngineRollbackModes,
   VISUAL_ENGINE_2A_ROLLBACK_FIXTURE,
 } from "@/lib/generation/visual-engine-2a-eval";
 
@@ -27,10 +27,12 @@ export async function writeVisualEngine2ARollbackEvidence(evidence: unknown, cwd
 
 async function delivery() {
   const mode = visualEngineMode();
-  const safeResult = mode === "shadow" ? ({
+  const safeResult = mode === "shadow" || mode === "skeleton" || mode === "composition" ? ({
     ok: true as const,
     intent: {} as never,
-    decision: { route: "template_skeleton" as const, templateId: VISUAL_ENGINE_2A_ROLLBACK_FIXTURE.skeletonTemplateId, reasonCodes: [] },
+    decision: mode === "composition"
+      ? { route: "section_composition" as const, reasonCodes: [] }
+      : { route: "template_skeleton" as const, templateId: VISUAL_ENGINE_2A_ROLLBACK_FIXTURE.skeletonTemplateId, reasonCodes: [] },
     ranked: [], promptVersion: "intent-prompt/1.8" as const, policyVersion: "generation-decision/1.0" as const,
     modelId: "rollback-fixture", durationMs: 0,
   } as unknown as SafeSelectionResult) : null;
@@ -111,11 +113,19 @@ async function delivery() {
     pilotReserveCalls,
     pilotCompleteCalls,
     candidateJobs,
+    deliveryKind: plan.delivery.kind,
+    shadowCandidateKind: plan.shadowCandidate?.kind ?? null,
   };
 }
 
 async function main() {
-  const { unset, off, shadow } = await captureVisualEngine2ARollbackModes(delivery);
+  const { unset, off, shadow, skeleton, composition } = await captureVisualEngineRollbackModes(delivery);
+  if (unset.deliveryKind !== "weighted" || off.deliveryKind !== "weighted"
+    || shadow.deliveryKind !== "weighted" || shadow.shadowCandidateKind !== "template_skeleton"
+    || skeleton.deliveryKind !== "template_skeleton" || skeleton.shadowCandidateKind !== null
+    || composition.deliveryKind !== "section_composition" || composition.shadowCandidateKind !== null) {
+    throw new Error("Visual Engine 2B rollback mode verification failed");
+  }
   const evidence = buildRollbackEvidence({
     fixture: VISUAL_ENGINE_2A_ROLLBACK_FIXTURE,
     unset, off, shadow,

@@ -15,6 +15,7 @@ import {
   generateVisualEngine2AEvidence,
   prepareVisualEngine2ABuilds,
   captureVisualEngine2ARollbackModes,
+  captureVisualEngineRollbackModes,
 } from "./visual-engine-2a-eval";
 import { writeVisualEngine2ARollbackEvidence } from "@/scripts/visual-engine-2a-rollback-check";
 import { createPilotBudgetGuard } from "./visual-engine-pilot-budget";
@@ -303,6 +304,19 @@ describe("Visual Engine 2A pilot", () => {
       });
       expect(observed).toEqual([undefined, "off", "shadow"]);
       expect(result).toEqual({ unset: { state: "unset" }, off: { state: "off" }, shadow: { state: "shadow" } });
+      expect(process.env.OPENLEN_VISUAL_ENGINE).toBe("skeleton");
+    } finally {
+      if (previous === undefined) delete process.env.OPENLEN_VISUAL_ENGINE;
+      else process.env.OPENLEN_VISUAL_ENGINE = previous;
+    }
+  });
+
+  it("captures all five Visual Engine delivery modes and restores the caller env", async () => {
+    const previous = process.env.OPENLEN_VISUAL_ENGINE;
+    process.env.OPENLEN_VISUAL_ENGINE = "skeleton";
+    try {
+      const result = await captureVisualEngineRollbackModes(async () => process.env.OPENLEN_VISUAL_ENGINE ?? "unset");
+      expect(result).toEqual({ unset: "unset", off: "off", shadow: "shadow", skeleton: "skeleton", composition: "composition" });
       expect(process.env.OPENLEN_VISUAL_ENGINE).toBe("skeleton");
     } finally {
       if (previous === undefined) delete process.env.OPENLEN_VISUAL_ENGINE;
