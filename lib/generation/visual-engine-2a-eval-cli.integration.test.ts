@@ -116,6 +116,15 @@ async function run(deps: VisualEngine2AEvalCliDependencies, cwd = join("workspac
 }
 
 describe("Visual Engine 2A eval CLI injected integration", () => {
+  it("accepts the authorized remaining budget without permitting more than 30 MXN", async () => {
+    const { parseVisualEngine2APilotBudgetMicromxn } = await import("@/scripts/visual-engine-2a-eval");
+
+    expect(parseVisualEngine2APilotBudgetMicromxn("26000000")).toBe(26_000_000);
+    expect(() => parseVisualEngine2APilotBudgetMicromxn("30000001")).toThrow();
+    expect(() => parseVisualEngine2APilotBudgetMicromxn("0")).toThrow();
+    expect(() => parseVisualEngine2APilotBudgetMicromxn("26000000.5")).toThrow();
+  });
+
   it("loads only published templates at the production catalog boundary", async () => {
     const source = VISUAL_ENGINE_2A_PILOT_CASES[0];
     const metadata = {

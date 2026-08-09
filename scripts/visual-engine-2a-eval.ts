@@ -78,6 +78,14 @@ function rateCardIsComplete(rateCard: PilotRateCardConfig): boolean {
   }
 }
 
+export function parseVisualEngine2APilotBudgetMicromxn(value: string | undefined): number {
+  const budget = Number(value);
+  if (!Number.isSafeInteger(budget) || budget <= 0 || budget > 30_000_000) {
+    throw new Error("OPENLEN_VISUAL_ENGINE_PILOT_BUDGET_MICROMXN must be an integer from 1 to 30000000");
+  }
+  return budget;
+}
+
 function quotaFailureCode(quota: {
   limit: number;
   used: number;
@@ -281,10 +289,9 @@ async function productionDependencies(): Promise<VisualEngine2AEvalCliDependenci
     return templates;
   };
   const rateCard = parsePilotRateCardFromEnv(process.env);
-  const budgetLimitMicromxn = Number(process.env.OPENLEN_VISUAL_ENGINE_PILOT_BUDGET_MICROMXN);
-  if (!Number.isSafeInteger(budgetLimitMicromxn) || budgetLimitMicromxn !== 30_000_000) {
-    throw new Error("OPENLEN_VISUAL_ENGINE_PILOT_BUDGET_MICROMXN must equal 30000000");
-  }
+  const budgetLimitMicromxn = parseVisualEngine2APilotBudgetMicromxn(
+    process.env.OPENLEN_VISUAL_ENGINE_PILOT_BUDGET_MICROMXN,
+  );
   const budgetGuard = createPilotBudgetGuard(budgetLimitMicromxn);
 
   return {
