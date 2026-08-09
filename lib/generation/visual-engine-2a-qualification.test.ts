@@ -318,6 +318,7 @@ describe("qualifyVisualEngine2ACohort", () => {
     ["single quoted", (value: string) => `<a data-cfemail='${value}'>protected</a>`],
     ["double quoted and case insensitive", (value: string) => `<a DATA-CFEMAIL="${value}">protected</a>`],
     ["after a text less-than sign", (value: string) => `<p>1 < 2 <a data-cfemail="${value}">protected</a></p>`],
+    ["after Unicode-expanding raw text", (value: string) => `<script>${"İ".repeat(32)}</script><a data-cfemail="${value}">protected</a>`],
   ])("stabilizes an exact %s attribute in a real start tag", (_label, fragmentFor) => {
     const manifestForValue = (value: string) => {
       const html = HTML.replace("</body>", `${fragmentFor(value)}</body>`);

@@ -68,7 +68,7 @@ const REQUIRED_ARCHETYPES = [
   "technical_saas",
   "editorial_portfolio",
 ] as const;
-const HTML_RAW_TEXT_ELEMENTS = new Set([
+const HTML_RAW_TEXT_ELEMENTS = [
   "iframe",
   "noembed",
   "noframes",
@@ -77,7 +77,7 @@ const HTML_RAW_TEXT_ELEMENTS = new Set([
   "textarea",
   "title",
   "xmp",
-]);
+] as const;
 
 function cloudflareEmailHash(value: string): string | null {
   if (value.length < 4 || value.length % 2 !== 0 || !/^[0-9a-f]+$/i.test(value)) return null;
@@ -89,6 +89,21 @@ function cloudflareEmailHash(value: string): string | null {
 
 function isHtmlWhitespace(character: string): boolean {
   return character === " " || character === "\t" || character === "\n" || character === "\r" || character === "\f";
+}
+
+function asciiCaseInsensitiveStartsAt(value: string, start: number, expectedLowercase: string): boolean {
+  if (start < 0 || start + expectedLowercase.length > value.length) return false;
+  for (let offset = 0; offset < expectedLowercase.length; offset += 1) {
+    const codeUnit = value.charCodeAt(start + offset);
+    const foldedCodeUnit = codeUnit >= 65 && codeUnit <= 90 ? codeUnit + 32 : codeUnit;
+    if (foldedCodeUnit !== expectedLowercase.charCodeAt(offset)) return false;
+  }
+  return true;
+}
+
+function asciiCaseInsensitiveEquals(value: string, expectedLowercase: string): boolean {
+  return value.length === expectedLowercase.length
+    && asciiCaseInsensitiveStartsAt(value, 0, expectedLowercase);
 }
 
 function findTagEnd(html: string, start: number): number {
@@ -142,7 +157,7 @@ function canonicalizeCloudflareAttributeInStartTag(startTag: string, tagNameEnd:
     const valueEnd = index;
     if (quote !== null) index += 1;
 
-    if (name.toLowerCase() !== "data-cfemail") continue;
+    if (!asciiCaseInsensitiveEquals(name, "data-cfemail")) continue;
     const hash = cloudflareEmailHash(startTag.slice(valueStart, valueEnd));
     if (hash !== null) replacements.push({ start: valueStart, end: valueEnd, value: hash });
   }
@@ -157,19 +172,19 @@ function canonicalizeCloudflareAttributeInStartTag(startTag: string, tagNameEnd:
   return canonical + startTag.slice(cursor);
 }
 
-function rawTextEnd(htmlLowerCase: string, start: number, tagName: string): number {
+function rawTextEnd(html: string, start: number, tagName: string): number {
   const closingPrefix = `</${tagName}`;
-  let candidate = htmlLowerCase.indexOf(closingPrefix, start);
+  let candidate = html.indexOf("</", start);
   while (candidate !== -1) {
-    const boundary = htmlLowerCase[candidate + closingPrefix.length] ?? "";
-    if (boundary === ">" || boundary === "/" || isHtmlWhitespace(boundary)) return candidate;
-    candidate = htmlLowerCase.indexOf(closingPrefix, candidate + closingPrefix.length);
+    const boundary = html[candidate + closingPrefix.length] ?? "";
+    if (asciiCaseInsensitiveStartsAt(html, candidate, closingPrefix)
+      && (boundary === ">" || boundary === "/" || isHtmlWhitespace(boundary))) return candidate;
+    candidate = html.indexOf("</", candidate + 2);
   }
-  return htmlLowerCase.length;
+  return html.length;
 }
 
 function canonicalizeCloudflareEmailProtection(html: string): string {
-  const htmlLowerCase = html.toLowerCase();
   let canonical = "";
   let cursor = 0;
   let scan = 0;
@@ -201,15 +216,16 @@ function canonicalizeCloudflareEmailProtection(html: string): string {
       && !isHtmlWhitespace(html[tagNameEnd])
       && html[tagNameEnd] !== "/"
       && html[tagNameEnd] !== ">") tagNameEnd += 1;
-    const tagName = html.slice(tagStart + 1, tagNameEnd).toLowerCase();
+    const tagName = html.slice(tagStart + 1, tagNameEnd);
     const startTag = html.slice(tagStart, tagEnd + 1);
     canonical += html.slice(cursor, tagStart)
       + canonicalizeCloudflareAttributeInStartTag(startTag, tagNameEnd - tagStart);
     cursor = tagEnd + 1;
     scan = cursor;
 
-    if (HTML_RAW_TEXT_ELEMENTS.has(tagName)) {
-      scan = rawTextEnd(htmlLowerCase, scan, tagName);
+    const rawTextTagName = HTML_RAW_TEXT_ELEMENTS.find((name) => asciiCaseInsensitiveEquals(tagName, name));
+    if (rawTextTagName !== undefined) {
+      scan = rawTextEnd(html, scan, rawTextTagName);
     }
   }
   return canonical + html.slice(cursor);
