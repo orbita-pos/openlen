@@ -23,6 +23,7 @@ import { resolveProfileForCreation } from "@/lib/business-profiles/store";
 import { overlayProfile } from "@/lib/business-profiles/overlay";
 import { selectGenerationRoute } from "@/lib/generation/safe-selection";
 import { shouldRunLegacySafeShadow, visualEngineMode } from "@/lib/generation/visual-engine-mode";
+import { visualRepairMode } from "@/lib/generation/visual-repair-mode";
 import { fillAndNormalizeCuratedTemplate, finalizeCuratedDocument } from "@/lib/curate/build-curated-document";
 import { canonicalJsonSha256 } from "@/lib/generation/visual-engine-2a-eval";
 import {
@@ -36,6 +37,7 @@ import {
   planQuickVisualEngineRoute,
   runSkeletonCandidate,
 } from "@/lib/curate/quick-visual-engine";
+import { launchShadowVisualRepair, runQuickVisualRepair } from "@/lib/curate/quick-visual-repair";
 
 // POST /api/curate — the FREE-tier page builder (CURATION).
 // Body: { brief: string }
@@ -116,6 +118,7 @@ export async function POST(req: Request): Promise<Response> {
         }
 
         const visualMode = visualEngineMode();
+        const repairMode = visualRepairMode();
         emit("progress", { stage: "picking" });
         const templates = await listTemplates({ status: "published" });
         if (templates.length === 0) {
@@ -365,6 +368,25 @@ export async function POST(req: Request): Promise<Response> {
           console.log(
             `[curate] copy de plantilla heredado: ${delivered.leaksBefore} bloque(s) tras el relleno, ${delivered.leaksAfter} tras el parche (plantilla ${delivered.templateId})`,
           );
+        }
+
+        const repairInput = delivered.visualEngine && safeResult?.ok
+          ? {
+              html: delivered.html,
+              visualEngine: delivered.visualEngine,
+              intent: safeResult.intent,
+              brandAccent: profile.data.brand?.accent ?? null,
+              explicitConstraints: safeResult.intent.explicitConstraints,
+            }
+          : null;
+        if (repairMode === "on" && repairInput) {
+          emit("progress", { stage: "reviewing" });
+          const repaired = await runQuickVisualRepair(repairInput, { mode: "on" });
+          delivered.html = repaired.html;
+          delivered.visualEngine = repaired.visualEngine;
+          emit("progress", { stage: "polishing" });
+        } else if (repairMode === "shadow" && repairInput) {
+          void launchShadowVisualRepair(repairInput);
         }
 
         const title = delivered.title;

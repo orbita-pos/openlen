@@ -1,5 +1,6 @@
 import type { CreativeDirection } from "@/lib/generation/creative-contracts";
 import type { SectionCompositionManifest } from "@/lib/generation/section-composition-contracts";
+import type { VisualQualityScores, VisualRepairIssueCode } from "@/lib/generation/visual-repair-contracts";
 
 // The shape of a project's `data` JSONB column.
 //
@@ -276,6 +277,20 @@ export interface PreviewSettings {
   passcodeHash?: string;
 }
 
+export interface VisualRepairProjectMetadata {
+  schemaVersion: "visual-repair-metadata/1.0";
+  accepted: true;
+  promptVersion: string;
+  criticVersion: "visual-quality-verdict/2.0";
+  compilerVersion: "creative-direction/1.0";
+  issueCodesBefore: VisualRepairIssueCode[];
+  issueCodesAfter: VisualRepairIssueCode[];
+  scoresBefore: VisualQualityScores;
+  scoresAfter: VisualQualityScores;
+  outputHashBefore: string;
+  outputHashAfter: string;
+}
+
 export type VisualEngineProjectMetadata =
   | {
       schemaVersion: "visual-engine-project/1.0";
@@ -287,6 +302,7 @@ export type VisualEngineProjectMetadata =
       contractVersion: "creative-direction/1.0";
       structuralFingerprintBefore: string;
       structuralFingerprintAfter: string;
+      repair?: VisualRepairProjectMetadata;
     }
   | {
       schemaVersion: "visual-engine-project/1.0";
@@ -297,6 +313,7 @@ export type VisualEngineProjectMetadata =
       policyVersion: string;
       contractVersion: "creative-direction/1.0";
       compositionManifest: SectionCompositionManifest;
+      repair?: VisualRepairProjectMetadata;
     };
 
 export interface ProjectData {

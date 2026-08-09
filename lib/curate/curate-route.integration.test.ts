@@ -32,6 +32,9 @@ const mocks = vi.hoisted(() => ({
   completeVisualEnginePilotRun: vi.fn(),
   listSections: vi.fn(),
   composeSectionCandidate: vi.fn(),
+  visualRepairMode: vi.fn(),
+  runQuickVisualRepair: vi.fn(),
+  launchShadowVisualRepair: vi.fn(),
 }));
 
 vi.mock("@inariwatch/capture", () => ({ captureException: mocks.captureException }));
@@ -84,6 +87,11 @@ vi.mock("@/lib/generation/visual-engine-pilot-store", () => ({
 vi.mock("@/lib/sections/store", () => ({ listSections: mocks.listSections }));
 vi.mock("@/lib/generation/compose-sections", () => ({
   composeSectionCandidate: mocks.composeSectionCandidate,
+}));
+vi.mock("@/lib/generation/visual-repair-mode", () => ({ visualRepairMode: mocks.visualRepairMode }));
+vi.mock("@/lib/curate/quick-visual-repair", () => ({
+  runQuickVisualRepair: mocks.runQuickVisualRepair,
+  launchShadowVisualRepair: mocks.launchShadowVisualRepair,
 }));
 
 import { POST } from "@/app/api/curate/route";
@@ -213,6 +221,7 @@ describe("POST /api/curate Visual Engine integration", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     process.env.OPENLEN_VISUAL_ENGINE = "off";
+    mocks.visualRepairMode.mockReturnValue("off");
     mocks.auth.mockResolvedValue({ user: { id: "user-1" } });
     mocks.consumeToken.mockReturnValue({ allowed: true });
     mocks.getCreditState.mockResolvedValue({ balance: 10 });
@@ -279,6 +288,8 @@ describe("POST /api/curate Visual Engine integration", () => {
         usage: { inputTokens: 20, outputTokens: 10, thinkingTokens: 0, cachedTokens: 0 }, durationMs: 25,
       },
     });
+    mocks.runQuickVisualRepair.mockImplementation(async (value) => value);
+    mocks.launchShadowVisualRepair.mockResolvedValue(undefined);
     mocks.insert.mockReturnValue({ values: mocks.insertValues });
     mocks.insertValues.mockResolvedValue(undefined);
     mocks.createVersion.mockResolvedValue(undefined);
@@ -386,6 +397,33 @@ describe("POST /api/curate Visual Engine integration", () => {
     }));
     expect(events.at(-1)).toMatchObject({ event: "done", data: { templateId: "section-composition", credits: 5 } });
     expect(mocks.debitCredits).toHaveBeenCalledWith("user-1", 5);
+  });
+
+  it("repair on emits and persists only the accepted final document", async () => {
+    process.env.OPENLEN_VISUAL_ENGINE = "skeleton";
+    mocks.visualRepairMode.mockReturnValue("on");
+    mocks.runQuickVisualRepair.mockImplementation(async (value) => ({
+      html: "REPAIRED:FINAL",
+      visualEngine: { ...value.visualEngine, repair: { schemaVersion: "visual-repair-metadata/1.0", accepted: true } },
+    }));
+    const { events } = await post();
+    expect(progress(events)).toEqual(expect.arrayContaining(["reviewing", "polishing", "persisting"]));
+    expect(previews(events)).toEqual(["REPAIRED:FINAL"]);
+    expect(mocks.insertValues).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ html: "REPAIRED:FINAL", generation: { visualEngine: expect.objectContaining({ repair: expect.objectContaining({ accepted: true }) }) } }) }));
+    expect(mocks.runQuickVisualRepair).toHaveBeenCalledTimes(1);
+  });
+
+  it("repair shadow is detached and cannot change preview or persistence", async () => {
+    process.env.OPENLEN_VISUAL_ENGINE = "skeleton";
+    mocks.visualRepairMode.mockReturnValue("shadow");
+    let resolveRepair!: () => void;
+    mocks.launchShadowVisualRepair.mockImplementation(() => new Promise<void>((resolve) => { resolveRepair = resolve; }));
+    const { events } = await post();
+    const original = "SAFE:META:SEEDED:false:ADAPTED:NORMAL:FILLED:RAW:safe-skeleton";
+    expect(previews(events)).toEqual([original]);
+    expect(mocks.insertValues).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ html: original }) }));
+    expect(mocks.launchShadowVisualRepair).toHaveBeenCalledTimes(1);
+    resolveRepair();
   });
 
   it("delivers baseline without awaiting shadow, then reserves and completes only the background candidate", async () => {

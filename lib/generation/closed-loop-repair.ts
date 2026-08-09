@@ -25,6 +25,7 @@ export interface ClosedLoopVisualRepairDeps {
   applyPlan(input: { html: string; sourceId: string; direction: CreativeDirection; plan: SkeletonAdaptationPlan; brandAccent?: string | null; explicitConstraints?: readonly string[] }, options?: { signal: AbortSignal }): Promise<ApplyVisualRepairResult>;
 }
 function orderedRoles(html: string): string[] { return [...html.matchAll(/data-openlen-role=["']([^"']+)["']/gi)].map((match) => match[1]!); }
+function outputHash(html: string): string { return `sha256:${createHash("sha256").update(html).digest("hex")}`; }
 function original(input: ClosedLoopVisualRepairInput, code: string, usage: VisualQualityUsage[] = []) { return { html: input.html, metadata: input.metadata, accepted: false as const, trace: { resultCode: code, usage: usage.map((item) => ({ ...item })) } }; }
 
 export async function runClosedLoopVisualRepair(input: ClosedLoopVisualRepairInput, deps: ClosedLoopVisualRepairDeps) {
@@ -49,7 +50,13 @@ export async function runClosedLoopVisualRepair(input: ClosedLoopVisualRepairInp
       const final = await deps.critic({ intent: input.intent, orderedRoles: orderedRoles(applied.html), route: input.route, images: finalImages }, boundary);
       if (final.usage) usage.push(final.usage);
       if (!final.ok || !repairImprovesQuality(first.verdict, final.verdict)) return original(input, !final.ok ? "final_critic_failed" : "not_improved", usage);
-      return { html: applied.html, metadata: { ...input.metadata }, accepted: true as const, trace: { resultCode: "accepted", usage: usage.map((item) => ({ ...item })), scoresBefore: first.verdict.scores, scoresAfter: final.verdict.scores } };
+      return { html: applied.html, metadata: { ...input.metadata }, accepted: true as const, trace: {
+        resultCode: "accepted", usage: usage.map((item) => ({ ...item })),
+        promptVersion: generated.promptVersion, criticVersion: "visual-quality-verdict/2.0" as const,
+        issueCodesBefore: first.verdict.issues.map((issue) => issue.code), issueCodesAfter: final.verdict.issues.map((issue) => issue.code),
+        scoresBefore: first.verdict.scores, scoresAfter: final.verdict.scores,
+        outputHashBefore: outputHash(input.html), outputHashAfter: outputHash(applied.html),
+      } };
     } catch { return original(input, "internal_error", usage); }
   };
   const timeout = new Promise<"timeout">((resolve) => { timer = setTimeout(() => { controller.abort(); resolve("timeout"); }, input.timeoutMs ?? 45_000); });
@@ -58,3 +65,4 @@ export async function runClosedLoopVisualRepair(input: ClosedLoopVisualRepairInp
     return result === "timeout" ? original(input, "timeout", usage) : result;
   } finally { if (timer) clearTimeout(timer); controller.abort(); }
 }
+import { createHash } from "node:crypto";
