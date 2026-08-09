@@ -1,4 +1,5 @@
-import { join } from "node:path";
+import { readFile } from "node:fs/promises";
+import { join, resolve } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 
 import { INTENT_PROMPT_VERSION } from "./analyze-intent";
@@ -111,6 +112,25 @@ async function run(deps: VisualEngine2AEvalCliDependencies, cwd = join("workspac
 }
 
 describe("Visual Engine 2A eval CLI injected integration", () => {
+  it("documents redacted artifacts, preflight barriers, and the no-replacement cohort policy", async () => {
+    const cohortOps = await readFile(resolve(process.cwd(), "docs/generation/visual-engine-2a-pilot-cohort.md"), "utf8");
+
+    for (const contract of [
+      "scratch/visual-engine-2a/qualification.json",
+      "scratch/visual-engine-2a/preflight.json",
+      "reservationCount=0",
+      "75/75",
+      "redacted aggregate schemas",
+      "usage-incomplete",
+      "no replacement rows",
+      "abandoned",
+      "72–75",
+      "unchanged score gates",
+      "npx.cmd tsx --env-file=.env.local --tsconfig tsconfig.eval.json --require ./scripts/test-node-server-only-shim.cjs scripts/visual-engine-2a-rollback-check.ts",
+      "must not run without new explicit approval",
+    ]) expect(cohortOps).toContain(contract);
+  });
+
   it("imports without eager database, template-store, provider, or console side effects", async () => {
     vi.resetModules();
     vi.stubEnv("DATABASE_URL", "");

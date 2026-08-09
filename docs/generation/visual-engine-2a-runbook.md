@@ -13,6 +13,14 @@ Implementation completion and pilot success are separate decisions:
 
 The paid footprint is larger than 75 provider requests. The evaluation performs a 150-row safe-selection preflight before quota reservation and, if it finds enough eligible rows, starts exactly 75 adaptations. Each adaptation can also perform Quick baseline/candidate fill work and at most one diagnostic vision critique. The operator must budget and authorize all of those calls, not describe the authorization as merely “75 Gemini calls.”
 
+## Cohort order and authorization boundary
+
+Follow this exact order: **qualification → human manifest review → fresh rate/FIX freeze → new explicit paid authorization → live eval → blind review → rollback → scorecard**. The read-only qualification checkpoint is `npm.cmd run generation:visual-engine-2a:qualify`; it produces an ignored local aggregate and does not make provider calls or database writes. A human must review that manifest before freezing the current provider rate card and dated foreign-exchange (FIX) basis.
+
+The prior paid authorization was consumed by the stopped 150-call preflight. It does not authorize a later run. The future paid eval must receive new, explicit approval for its complete footprint; do not run `npm.cmd run generation:visual-engine-2a:eval` without it. `OPENLEN_VISUAL_ENGINE` remains `off` until a separate rollout decision.
+
+The 2A cohort is only the frozen 15 base cases expanded to 75 rows. Selector adversarial cases remain separate from the 2A cohort. Complex coloring, minigames, and stories belong to 2B. They are not a 2A exception or replacement route.
+
 ## Runtime modes and precedence
 
 | `OPENLEN_VISUAL_ENGINE` | Delivery behavior | Creative/pilot behavior |

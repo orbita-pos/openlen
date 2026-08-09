@@ -1,3 +1,5 @@
+import { readFile } from "node:fs/promises";
+import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import { buildSkeletonInventory } from "./skeleton-inventory";
 import { decideGenerationRoute } from "./decide-route";
@@ -69,6 +71,19 @@ function qualify(
 }
 
 describe("qualifyVisualEngine2ACohort", () => {
+  it("documents the ordered, non-live-to-paid 2A authorization boundary", async () => {
+    const runbook = await readFile(resolve(process.cwd(), "docs/generation/visual-engine-2a-runbook.md"), "utf8");
+    const steps = [
+      "qualification → human manifest review → fresh rate/FIX freeze → new explicit paid authorization → live eval → blind review → rollback → scorecard",
+      "The prior paid authorization was consumed by the stopped 150-call preflight.",
+      "Selector adversarial cases remain separate from the 2A cohort.",
+      "Complex coloring, minigames, and stories belong to 2B.",
+      "`OPENLEN_VISUAL_ENGINE` remains `off` until a separate rollout decision.",
+    ];
+
+    for (const step of steps) expect(runbook).toContain(step);
+  });
+
   it("qualifies the exact 15-case distribution without retaining prose in the manifest", () => {
     const result = qualify();
     expect(result.ok).toBe(true);
