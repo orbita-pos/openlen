@@ -8,6 +8,7 @@ import { DECISION_POLICY_VERSION } from "./decide-route";
 import { TAXONOMY_COMPATIBILITY_VERSION } from "./taxonomy-compatibility";
 import { VISUAL_ENGINE_2A_PILOT_CASES } from "./visual-engine-2a-cohort";
 import { canonicalJsonSha256 } from "./visual-engine-2a-eval";
+import { rankTemplates } from "./score-template";
 import type { VisualEngine2AQualificationManifest } from "./visual-engine-2a-qualification";
 import type { VisualEngine2AEvalCliDependencies } from "@/scripts/visual-engine-2a-eval";
 
@@ -112,6 +113,37 @@ async function run(deps: VisualEngine2AEvalCliDependencies, cwd = join("workspac
 }
 
 describe("Visual Engine 2A eval CLI injected integration", () => {
+  it("loads only published templates at the production catalog boundary", async () => {
+    const source = VISUAL_ENGINE_2A_PILOT_CASES[0];
+    const metadata = {
+      schemaVersion: "template-visual-metadata/1.0" as const,
+      domains: [...source.expectedIntent.domains],
+      audiences: [source.expectedIntent.audience.primary],
+      ageRanges: [], emotionalRegisters: [], visualArchetypes: [], visualSignals: [],
+      layoutTraits: [], requiredAssetTypes: [], negativeTags: [],
+      supportedSiteTypes: [source.expectedIntent.functional.siteType],
+      supportedSectionRoles: [...source.expectedIntent.functional.requiredSections],
+      themeability: "high" as const,
+      identityStrength: "high" as const,
+      reviewStatus: "reviewed" as const,
+    };
+    const mixed = [
+      { id: "draft-winner", status: "draft", visualMetadata: metadata },
+      { id: "published-only", status: "published", visualMetadata: metadata },
+      { id: "archived-winner", status: "archived", visualMetadata: metadata },
+    ] as const;
+    const listTemplates = vi.fn(async () => mixed);
+    const { loadVisualEngine2APublishedCatalog } = await import("@/scripts/visual-engine-2a-eval");
+
+    const catalog = await loadVisualEngine2APublishedCatalog(listTemplates);
+
+    expect(listTemplates).toHaveBeenCalledWith({ status: "published" });
+    expect(catalog.map((row) => row.id)).toEqual(["published-only"]);
+    expect(canonicalJsonSha256(catalog)).toBe(canonicalJsonSha256([mixed[1]]));
+    expect(canonicalJsonSha256(catalog)).not.toBe(canonicalJsonSha256(mixed));
+    expect(rankTemplates(source.expectedIntent, catalog).map((row) => row.id)).toEqual(["published-only"]);
+  });
+
   it("documents redacted artifacts, preflight barriers, and the no-replacement cohort policy", async () => {
     const cohortOps = await readFile(resolve(process.cwd(), "docs/generation/visual-engine-2a-pilot-cohort.md"), "utf8");
 
@@ -255,8 +287,79 @@ describe("Visual Engine 2A eval CLI injected integration", () => {
     expect(state.writes[0].path).toBe(join(cwd, "scratch", "visual-engine-2a", "preflight.json"));
     expect(state.writes[0].value).toMatchObject({ reservationCount: 0, counts: { templateSkeleton: 75 } });
     expect(state.order.indexOf("write")).toBeLessThan(state.order.indexOf("reserve"));
+    expect(state.order.slice(state.order.indexOf("write"), state.order.indexOf("evidence") + 1)).toEqual([
+      "write", "head", "recompute", "head", "quota", "evidence",
+    ]);
     expect(state.reservations).toHaveLength(75);
     expect(state.deps.generateEvidence).toHaveBeenCalledTimes(1);
+  });
+
+  it("refuses a HEAD change after the 75th selection and keeps adaptation at zero", async () => {
+    const state = fixture();
+    const commits = [COMMIT_SHA, COMMIT_SHA, "f".repeat(40)];
+    state.deps.getCommitSha = vi.fn(async () => { state.order.push("head"); return commits.shift()!; });
+
+    const result = await run(state.deps);
+
+    expect(result).toMatchObject({ ok: false, code: "qualification_stale", reportSha256: expect.any(String) });
+    expect(state.deps.select).toHaveBeenCalledTimes(75);
+    expect(state.writes).toHaveLength(1);
+    expect(state.order.slice(state.order.indexOf("write"))).toEqual(["write", "head"]);
+    expect(state.deps.generateEvidence).not.toHaveBeenCalled();
+    expect(state.reservations).toHaveLength(0);
+    expect(state.logs).toHaveLength(1);
+    expect(state.logs[0]).not.toContain("workspace");
+  });
+
+  it.each(["catalog", "material"] as const)(
+    "refuses %s drift after preflight and before adaptation",
+    async (kind) => {
+      const state = fixture();
+      let recomputations = 0;
+      state.deps.recomputeQualification = vi.fn(async () => {
+        state.order.push("recompute");
+        recomputations += 1;
+        if (recomputations === 1) return manifest();
+        const changed = qualificationCurrent();
+        if (kind === "catalog") changed.catalogSha256 = `sha256:${"9".repeat(64)}`;
+        else changed.templates[0].htmlSha256 = `sha256:${"9".repeat(64)}`;
+        return manifest(changed);
+      });
+
+      const result = await run(state.deps);
+
+      expect(result).toMatchObject({ ok: false, code: "qualification_stale", reportSha256: expect.any(String) });
+      expect(state.deps.select).toHaveBeenCalledTimes(75);
+      expect(state.writes).toHaveLength(1);
+      expect(state.order.slice(state.order.indexOf("write"))).toEqual(["write", "head", "recompute", "head"]);
+      expect(state.deps.generateEvidence).not.toHaveBeenCalled();
+      expect(state.reservations).toHaveLength(0);
+      expect(state.logs).toHaveLength(1);
+    },
+  );
+
+  it("refuses quota drift after preflight immediately before adaptation", async () => {
+    const state = fixture();
+    const quotas = [
+      { limit: 75, used: 0, existingRuns: 0 },
+      { limit: 75, used: 0, existingRuns: 0 },
+      { limit: 75, used: 1, existingRuns: 0 },
+    ];
+    state.deps.getQuota = vi.fn(async () => { state.order.push("quota"); return quotas.shift()!; });
+
+    const result = await run(state.deps);
+
+    expect(result).toMatchObject({ ok: false, code: "invalid_quota", reportSha256: expect.any(String) });
+    expect(state.deps.select).toHaveBeenCalledTimes(75);
+    expect(state.writes).toHaveLength(1);
+    expect(state.order.slice(state.order.indexOf("write"))).toEqual([
+      "write", "head", "recompute", "head", "quota",
+    ]);
+    expect(state.deps.generateEvidence).not.toHaveBeenCalled();
+    expect(state.reservations).toHaveLength(0);
+    expect(state.logs).toHaveLength(1);
+    expect(JSON.parse(state.logs[0])).toMatchObject({ ok: false, code: "invalid_quota" });
+    expect(state.logs[0]).not.toContain("workspace");
   });
 
   it("passes only frozen cohort rows to adaptation and emits one redacted terminal record", async () => {

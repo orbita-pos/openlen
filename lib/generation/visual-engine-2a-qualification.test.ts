@@ -75,13 +75,23 @@ describe("qualifyVisualEngine2ACohort", () => {
     const runbook = await readFile(resolve(process.cwd(), "docs/generation/visual-engine-2a-runbook.md"), "utf8");
     const steps = [
       "qualification → human manifest review → fresh rate/FIX freeze → new explicit paid authorization → live eval → blind review → rollback → scorecard",
-      "The prior paid authorization was consumed by the stopped 150-call preflight.",
+      "The prior paid authorization was consumed by the stopped paid preflight.",
+      "exact frozen 75-row safe-selection preflight",
+      "All 75 rows must resolve to an allowlisted `template_skeleton` route",
+      "No row is retried, replaced, or selected from a larger pool",
+      "exactly 75 paid intent-analysis calls",
       "Selector adversarial cases remain separate from the 2A cohort.",
       "Complex coloring, minigames, and stories belong to 2B.",
       "`OPENLEN_VISUAL_ENGINE` remains `off` until a separate rollout decision.",
     ];
 
     for (const step of steps) expect(runbook).toContain(step);
+    for (const obsolete of [
+      "150-row safe-selection preflight",
+      "stopped 150-call preflight",
+      "deterministic 150-row preflight",
+      "first 75 eligible",
+    ]) expect(runbook).not.toContain(obsolete);
   });
 
   it("qualifies the exact 15-case distribution without retaining prose in the manifest", () => {

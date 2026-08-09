@@ -11,13 +11,13 @@ Implementation completion and pilot success are separate decisions:
 - No command under **Paid pilot execution** may run without separate, explicit user authorization for the complete paid evaluation footprint.
 - The implementation commit does not enable `skeleton` globally. The default and every unknown value remain `off`.
 
-The paid footprint is larger than 75 provider requests. The evaluation performs a 150-row safe-selection preflight before quota reservation and, if it finds enough eligible rows, starts exactly 75 adaptations. Each adaptation can also perform Quick baseline/candidate fill work and at most one diagnostic vision critique. The operator must budget and authorize all of those calls, not describe the authorization as merely “75 Gemini calls.”
+The paid footprint is larger than 75 provider requests. The evaluation performs the exact frozen 75-row safe-selection preflight before quota reservation. All 75 rows must resolve to an allowlisted `template_skeleton` route or the run stops with zero reservations. No row is retried, replaced, or selected from a larger pool. A successful preflight therefore makes exactly 75 paid intent-analysis calls before starting exactly 75 adaptations. Each adaptation can also perform Quick baseline/candidate fill work and at most one diagnostic vision critique. The operator must budget and authorize all of those calls, not describe the authorization as merely “75 Gemini calls.”
 
 ## Cohort order and authorization boundary
 
 Follow this exact order: **qualification → human manifest review → fresh rate/FIX freeze → new explicit paid authorization → live eval → blind review → rollback → scorecard**. The read-only qualification checkpoint is `npm.cmd run generation:visual-engine-2a:qualify`; it produces an ignored local aggregate and does not make provider calls or database writes. A human must review that manifest before freezing the current provider rate card and dated foreign-exchange (FIX) basis.
 
-The prior paid authorization was consumed by the stopped 150-call preflight. It does not authorize a later run. The future paid eval must receive new, explicit approval for its complete footprint; do not run `npm.cmd run generation:visual-engine-2a:eval` without it. `OPENLEN_VISUAL_ENGINE` remains `off` until a separate rollout decision.
+The prior paid authorization was consumed by the stopped paid preflight. It does not authorize a later run. The future paid eval must receive new, explicit approval for its complete footprint; do not run `npm.cmd run generation:visual-engine-2a:eval` without it. `OPENLEN_VISUAL_ENGINE` remains `off` until a separate rollout decision.
 
 The 2A cohort is only the frozen 15 base cases expanded to 75 rows. Selector adversarial cases remain separate from the 2A cohort. Complex coloring, minigames, and stories belong to 2B. They are not a 2A exception or replacement route.
 
@@ -221,7 +221,7 @@ Stop here until the user explicitly authorizes the complete paid evaluation and 
 npm.cmd run generation:visual-engine-2a:eval
 ```
 
-The runner refuses `off`/`skeleton`, missing provider/database/rate-card configuration, inconsistent quota, fewer than 75 eligible skeleton rows, or a non-zero 2A budget. It completes a deterministic 150-row preflight before any reservation and selects the first 75 eligible sorted rows. Do not remove failures, retry a row, replace an unattractive result or replenish quota.
+The runner refuses `off`/`skeleton`, missing provider/database/rate-card configuration, inconsistent quota, any result other than a 75/75 allowlisted skeleton preflight, or a non-zero 2A budget. It completes the deterministic frozen 75-row preflight before any reservation. Every row must pass; there is no larger candidate pool, retry, removal, or replacement. Do not remove failures, replace an unattractive result or replenish quota.
 
 After the command, inspect counts without exposing content:
 

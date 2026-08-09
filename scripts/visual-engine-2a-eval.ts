@@ -10,7 +10,10 @@ import { calculateModelCostMicros, parsePilotRateCardFromEnv } from "@/lib/gener
 import { VISUAL_ENGINE_2A_PILOT_CASES } from "@/lib/generation/visual-engine-2a-cohort";
 import type { QualifiedPilotRow, VisualEngine2APoolRow } from "@/lib/generation/visual-engine-2a-eval";
 import { runVisualEngine2APreflight } from "@/lib/generation/visual-engine-2a-preflight";
-import type { VisualEngine2AQualificationManifest } from "@/lib/generation/visual-engine-2a-qualification";
+import {
+  verifyVisualEngine2AQualification,
+  type VisualEngine2AQualificationManifest,
+} from "@/lib/generation/visual-engine-2a-qualification";
 
 const execFileAsync = promisify(execFile);
 
@@ -88,6 +91,29 @@ function currentQualification(
   return current;
 }
 
+export async function loadVisualEngine2APublishedCatalog<T extends { status: string }>(
+  listTemplates: (options: { status: "published" }) => Promise<readonly T[]>,
+): Promise<readonly T[]> {
+  const catalog = await listTemplates({ status: "published" });
+  return catalog.filter((template) => template.status === "published");
+}
+
+async function finalQualificationGate(
+  deps: VisualEngine2AEvalCliDependencies,
+  commitSha: string,
+  qualification: VisualEngine2AQualificationManifest,
+): Promise<"qualification_stale" | "invalid_quota" | "existing_runs" | null> {
+  if (await deps.getCommitSha() !== commitSha) return "qualification_stale";
+  const recomputed = await deps.recomputeQualification(commitSha);
+  if (recomputed.commitSha !== commitSha) return "qualification_stale";
+  if (await deps.getCommitSha() !== commitSha) return "qualification_stale";
+  if (!verifyVisualEngine2AQualification({
+    manifest: qualification,
+    current: currentQualification(recomputed),
+  }).ok) return "qualification_stale";
+  return quotaFailureCode(await deps.getQuota());
+}
+
 export async function runVisualEngine2AEvalCli(
   deps: VisualEngine2AEvalCliDependencies,
   cwd = process.cwd(),
@@ -135,8 +161,17 @@ export async function runVisualEngine2AEvalCli(
                 reportSha256: preflight.report.reportSha256,
               };
             } else {
-              const summary = await deps.generateEvidence(preflight.eligible);
-              terminal = { ok: true, summary, reportSha256: preflight.report.reportSha256 };
+              const finalFailure = await finalQualificationGate(deps, commitSha, qualificationValue);
+              if (finalFailure) {
+                terminal = {
+                  ok: false,
+                  code: finalFailure,
+                  reportSha256: preflight.report.reportSha256,
+                };
+              } else {
+                const summary = await deps.generateEvidence(preflight.eligible);
+                terminal = { ok: true, summary, reportSha256: preflight.report.reportSha256 };
+              }
             }
           }
         }
@@ -209,12 +244,15 @@ async function productionDependencies(): Promise<VisualEngine2AEvalCliDependenci
   ]);
 
   type RichSelection = Extract<Awaited<ReturnType<typeof selectGenerationRoute>>, { ok: true }>;
-  type TemplateRecord = Awaited<ReturnType<typeof templateStore.listAllForAdmin>>[number];
+  type TemplateRecord = Awaited<ReturnType<typeof templateStore.listTemplates>>[number];
   let templates: readonly TemplateRecord[] | null = null;
   const rich = new Map<string, RichSelection>();
   const rowKey = (row: Pick<VisualEngine2APoolRow, "caseId" | "scenarioId">) => `${row.caseId}/${row.scenarioId}`;
+  const loadFreshCatalog = async () => loadVisualEngine2APublishedCatalog(
+    (options) => templateStore.listTemplates(options),
+  );
   const loadCatalog = async () => {
-    templates ??= await templateStore.listAllForAdmin();
+    templates ??= await loadFreshCatalog();
     return templates;
   };
   const rateCard = parsePilotRateCardFromEnv(process.env);
@@ -247,7 +285,8 @@ async function productionDependencies(): Promise<VisualEngine2AEvalCliDependenci
     getCommitSha: gitCommitSha,
     readQualification: async (path) => JSON.parse(await readFile(path, "utf8")) as unknown,
     recomputeQualification: async (commitSha) => {
-      const catalog = await loadCatalog();
+      const catalog = await loadFreshCatalog();
+      templates = catalog;
       const selectionCatalog = catalog.map(({ id, status, visualMetadata }) => ({
         id,
         status,
@@ -279,8 +318,7 @@ async function productionDependencies(): Promise<VisualEngine2AEvalCliDependenci
     },
     generateEvidence: async (eligible) => {
       const catalogRows = await loadCatalog();
-      const published = catalogRows.filter((item) => item.status === "published");
-      const catalog = published.map(({ id, name, family, mode, pitch, description }) => ({
+      const catalog = catalogRows.map(({ id, name, family, mode, pitch, description }) => ({
         id, name, family, mode, pitch, description,
       }));
       const prepared = new Map<string, Promise<{
