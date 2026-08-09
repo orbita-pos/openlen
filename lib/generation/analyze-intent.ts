@@ -8,7 +8,7 @@ import {
 
 const GEMINI_BASE = "https://generativelanguage.googleapis.com/v1beta/models";
 
-export const INTENT_PROMPT_VERSION = "intent-prompt/1.7" as const;
+export const INTENT_PROMPT_VERSION = "intent-prompt/1.8" as const;
 export const INTENT_ANALYSIS_TIMEOUT_MS = 12_000;
 
 export const CANONICAL_FORBIDDEN_VISUAL_SIGNALS = Object.freeze([
@@ -29,7 +29,7 @@ export const CANONICAL_FORBIDDEN_VISUAL_SIGNALS = Object.freeze([
 ]);
 
 const GENERATION_CONFIG = {
-  temperature: 0.2,
+  temperature: 0,
   maxOutputTokens: 2_048,
   responseMimeType: "application/json",
   thinkingConfig: { thinkingBudget: 0 },
@@ -48,12 +48,12 @@ For functional.siteType, use exactly one of: ${CANONICAL_SITE_TYPES.join(", ")}.
 For audience.primary, use exactly one of: ${CANONICAL_PRIMARY_AUDIENCES.join(", ")}.
 For functional.requiredSections, use only these roles: ${CANONICAL_SECTION_ROLES.join(", ")}.
 Use canonical structural values instead of synonyms. Omit an unsupported section role and record the unsupported requirement as a concrete ambiguity; never invent a nearest role. Keep wrapper roles such as header, hero, call_to_action, and footer when the brief requires a complete page.
-Structural category guidance: dining, cafe, bakery, bar, and wine-bar presences use restaurant; appointment-based wellness providers use small_business; software product marketing uses saas_product_page; open-source product promotion uses product_landing_page; creator link or resource pages use creator_hub; personal work showcases use portfolio; teaching-resource libraries use educational_resource; documentation uses documentation_site.
+Structural category guidance: public cafe, bakery, wine bar, taqueria, or restaurant -> restaurant; appointment-based or membership-based local wellness studio -> small_business; software product marketing -> saas_product_page; open-source product promotion -> product_landing_page; creator link or resource page -> creator_hub; personal work showcase -> portfolio; teaching-resource library -> educational_resource; documentation -> documentation_site; issue archive with membership CTA -> blog; signup-first publication without an issue archive -> newsletter.
 Role boundaries: stories and testimonials are different roles; minigames and activities are different roles; a coloring_gallery is not proof of an educational product.
 For common product domains, use these canonical labels whenever they apply; do not replace them with a narrower synonym: children_entertainment, creative_play, education, local_services, developer_tools, ai_ml, food_beverage, hospitality, wellness, healthcare, fintech, portfolio, illustration, agency, gaming, sports, wedding, nonprofit, fashion, ecommerce, real_estate, hardware, consumer_technology, editorial, publishing, legal_services, logistics, business_services, science, music, photography, coworking, government, events, beauty, construction. Include every applicable canonical domain, then add a narrower tag only if useful.
 Canonical multi-domain decision: preschool -> education + local_services.
 Taxonomy semantics: local_services applies to a place-based or appointment-based provider serving a geographic community, even when it also serves businesses; portfolio applies to an individual creator whose work is a primary reason to visit the site. Include these facets in addition to the specialist domain rather than replacing it.
-Primary audience must use one of these broad canonical labels whenever it applies: children, parents, adults, developers, consumers, families, professionals, creative_clients, businesses, gamers, fans, guests, donors, home_buyers, readers, citizens, homeowners. Put narrower groups such as adult_learners or coffee_enthusiasts in audience.secondary; do not replace the broad primary label with them.
+Primary audience must use one of these broad canonical labels whenever it applies: children, parents, adults, developers, consumers, families, professionals, educators, creative_clients, businesses, gamers, fans, guests, donors, home_buyers, readers, citizens, homeowners. Put narrower groups such as adult_learners or coffee_enthusiasts in audience.secondary; do not replace the broad primary label with them. Canonical visual-audience decisions: child-focused creative club -> children, with parents or families in audience.secondary when registration is adult-mediated; art educator creator hub -> educators.
 Canonical primary-audience decisions: preschool or school admissions for families -> parents; restaurant or hospitality for the public -> consumers; a design agency selling services to companies -> businesses; a nonprofit centered on donations -> donors; an individual artist portfolio -> creative_clients; wellness classes or retreats for adults -> adults; real-estate listings or brokerage -> home_buyers.
 The canonical forbidden visual-signal vocabulary includes: ${CANONICAL_FORBIDDEN_VISUAL_SIGNALS.join(", ")}. For forbiddenVisualSignals, include every canonical signal from this list that would make the requested product visibly communicate the wrong domain, audience, or emotional tone. Do not use a near-synonym when a canonical signal applies.
 Use these reviewed contrast profiles when the category applies:
@@ -86,7 +86,8 @@ Preserve explicit user constraints as concise prose in explicitConstraints. Do n
 Return keys exactly as follows: schemaVersion, language, functional { siteType, requiredSections, primaryActions, contentModel }, audience { primary, ageRange, secondary }, domains, emotionalGoals, requiredVisualSignals, forbiddenVisualSignals, explicitConstraints, ambiguities, confidence.
 schemaVersion must be the exact literal string "intent-analysis/1.0", not "1.0" or any other shorthand.
 functional.contentModel must be one lowercase snake_case string, never an array, object, boolean, number, or null.
-All taxonomy values are lowercase snake_case strings. confidence is a number from 0 to 1. ageRange is a lowercase snake_case range such as 5_10 or null.
+All taxonomy values are lowercase snake_case strings. confidence is a number from 0 to 1. ageRange is a lowercase snake_case range such as 5_10 only when the brief supports a concrete range; otherwise use null.
+The JSON shape is exactly: {"schemaVersion":"intent-analysis/1.0","language":"en","functional":{"siteType":"business","requiredSections":[],"primaryActions":[],"contentModel":"descriptive_content_model"},"audience":{"primary":"consumers","ageRange":null,"secondary":[]},"domains":[],"emotionalGoals":[],"requiredVisualSignals":[],"forbiddenVisualSignals":[],"explicitConstraints":[],"ambiguities":[],"confidence":0.9}.
 Return strict JSON matching intent-analysis/1.0 and no prose.`;
 
 export interface AnalyzeIntentOptions {

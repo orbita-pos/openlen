@@ -70,7 +70,7 @@ function decision(route: GenerationDecision["route"], templateId: string | null)
 function safe(route: GenerationDecision["route"], templateId: string | null): SafeSelectionResult {
   return {
     ok: true, intent: INTENT, decision: decision(route, templateId), ranked: [],
-    promptVersion: "intent-prompt/1.7", policyVersion: "template-policy/1.0",
+    promptVersion: "intent-prompt/1.8", policyVersion: "template-policy/1.0",
     modelId: "safe-model", durationMs: 5,
   };
 }

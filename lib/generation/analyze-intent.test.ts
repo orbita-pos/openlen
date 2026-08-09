@@ -64,7 +64,7 @@ describe("analyzeIntent", () => {
       ok: true,
       intent: CHILDREN_INTENT,
       modelId: "test-model",
-      promptVersion: "intent-prompt/1.7",
+      promptVersion: "intent-prompt/1.8",
       usage: { inputTokens: 120, outputTokens: 80, cachedTokens: 20, thinkingTokens: 0 },
       durationMs: 25,
     });
@@ -117,12 +117,25 @@ describe("analyzeIntent", () => {
       .toContain('schemaVersion must be the exact literal string "intent-analysis/1.0"');
     expect(body.systemInstruction.parts[0].text)
       .toContain("functional.contentModel must be one lowercase snake_case string");
-    expect(INTENT_PROMPT_VERSION).toBe("intent-prompt/1.7");
+    expect(body.systemInstruction.parts[0].text).toContain('"schemaVersion":"intent-analysis/1.0"');
+    expect(body.systemInstruction.parts[0].text)
+      .toContain("public cafe, bakery, wine bar, taqueria, or restaurant -> restaurant");
+    expect(body.systemInstruction.parts[0].text)
+      .toContain("appointment-based or membership-based local wellness studio -> small_business");
+    expect(body.systemInstruction.parts[0].text)
+      .toContain("child-focused creative club -> children");
+    expect(body.systemInstruction.parts[0].text)
+      .toContain("art educator creator hub -> educators");
+    expect(body.systemInstruction.parts[0].text)
+      .toContain("issue archive with membership CTA -> blog");
+    expect(body.systemInstruction.parts[0].text)
+      .toContain("signup-first publication without an issue archive -> newsletter");
+    expect(INTENT_PROMPT_VERSION).toBe("intent-prompt/1.8");
     expect(body.contents[0].parts[0].text).toContain(
       "Brief:\n\nPlataforma infantil de coloreo con cuentos y juegos",
     );
     expect(body.generationConfig).toMatchObject({
-      temperature: 0.2,
+      temperature: 0,
       maxOutputTokens: 2048,
       responseMimeType: "application/json",
       thinkingConfig: { thinkingBudget: 0 },

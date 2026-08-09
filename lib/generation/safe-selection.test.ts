@@ -48,7 +48,7 @@ function successfulAnalyzer() {
     ok: true,
     intent: INTENT,
     modelId: "test-model",
-    promptVersion: "intent-prompt/1.7",
+    promptVersion: "intent-prompt/1.8",
     usage: { inputTokens: 10, outputTokens: 20, cachedTokens: 4, thinkingTokens: 2 },
     durationMs: 3,
   });
@@ -67,7 +67,7 @@ describe("safe selection", () => {
     expect(result).toMatchObject({
       ok: true,
       intent: INTENT,
-      promptVersion: "intent-prompt/1.7",
+      promptVersion: "intent-prompt/1.8",
       policyVersion: "template-policy/1.0",
       modelId: "test-model",
       usage: { inputTokens: 10, outputTokens: 20, cachedTokens: 4, thinkingTokens: 2 },
@@ -82,7 +82,7 @@ describe("safe selection", () => {
       analyzeIntentImpl: vi.fn().mockResolvedValue({
         ok: false,
         modelId: "test-model",
-        promptVersion: "intent-prompt/1.7",
+        promptVersion: "intent-prompt/1.8",
         error: { kind: "schema", message: "sensitive provider output" },
         usage: { inputTokens: 11, outputTokens: 3, cachedTokens: 5, thinkingTokens: 1 },
         durationMs: 3,
