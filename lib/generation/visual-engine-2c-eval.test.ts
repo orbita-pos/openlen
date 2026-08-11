@@ -1,5 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import {
+  buildVisualEngine2CScoreRow,
+  classifyVisualEngine2CTraceResult,
   runVisualEngine2CSmoke,
   scoreVisualEngine2CPilot,
   validateVisualEngine2CReviewCoverage,
@@ -29,7 +31,13 @@ describe("Visual Engine 2C paid gate", () => {
       currentHead: vi.fn(async () => { order.push("head"); return "a".repeat(40); }),
       currentQuota: vi.fn(async () => { order.push("quota"); return { limit: 150, used: 0, existingRuns: 0 }; }),
       reserve, complete,
-      evaluate: vi.fn(async (index: number) => ({ providerCalls: index < 6 ? 1 : index < 12 ? 3 : 1, costMicromxn: 1000, status: index < 12 ? "adapted" as const : "fallback" as const })),
+      evaluate: vi.fn(async (index: number) => ({
+        providerCalls: index < 6 ? 1 : index < 12 ? 3 : 1,
+        costMicromxn: 1000,
+        status: index < 12 ? "adapted" as const : "fallback" as const,
+        reasonCode: index < 6 ? "visual_healthy_keep" as const : index < 12 ? "visual_repair_accepted" as const : "visual_nonrepairable" as const,
+        structuralInvariantPassed: index >= 6 && index < 12 ? true : undefined,
+      })),
     });
     expect(result).toMatchObject({ ok: true, reservations: 15, providerCalls: 27, totalCostMicromxn: 15_000 });
     expect(reserve).toHaveBeenCalledTimes(15); expect(complete).toHaveBeenCalledTimes(15);
@@ -40,7 +48,7 @@ describe("Visual Engine 2C paid gate", () => {
   it("settles a reserved provider failure once at the conservative row ceiling without retry", async () => {
     const evaluate = vi.fn(async (index: number) => {
       if (index === 0) throw new Error("provider body must stay redacted");
-      return { providerCalls: index < 6 ? 1 : index < 12 ? 3 : 1, costMicromxn: 1000, status: "adapted" as const };
+      return { providerCalls: index < 6 ? 1 : index < 12 ? 3 : 1, costMicromxn: 1000, status: "adapted" as const, reasonCode: "visual_healthy_keep" as const };
     });
     const complete = vi.fn(async () => undefined);
     const result = await runVisualEngine2CSmoke(valid, {
@@ -53,7 +61,32 @@ describe("Visual Engine 2C paid gate", () => {
     expect(result).toMatchObject({ ok: true, reservations: 15, providerCalls: 27, totalCostMicromxn: 2_014_000 });
     expect(evaluate).toHaveBeenCalledTimes(15);
     expect(complete).toHaveBeenCalledTimes(15);
-    expect(complete).toHaveBeenNthCalledWith(1, "run-0", { providerCalls: 1, costMicromxn: 2_000_000, status: "failed" });
+    expect(complete).toHaveBeenNthCalledWith(1, "run-0", { providerCalls: 1, costMicromxn: 2_000_000, status: "failed", reasonCode: "internal_error" });
+  });
+
+  it("maps closed-loop results to four typed redacted outcomes", () => {
+    expect(classifyVisualEngine2CTraceResult(false, "healthy_keep")).toEqual({ status: "adapted", reasonCode: "visual_healthy_keep", structuralInvariantPassed: undefined });
+    expect(classifyVisualEngine2CTraceResult(true, "accepted")).toEqual({ status: "adapted", reasonCode: "visual_repair_accepted", structuralInvariantPassed: true });
+    expect(classifyVisualEngine2CTraceResult(false, "nonrepairable")).toEqual({ status: "fallback", reasonCode: "visual_nonrepairable", structuralInvariantPassed: undefined });
+    expect(classifyVisualEngine2CTraceResult(false, "not_improved")).toEqual({ status: "fallback", reasonCode: "visual_not_improved", structuralInvariantPassed: undefined });
+    expect(classifyVisualEngine2CTraceResult(false, "structural_invariant_failed")).toEqual({ status: "fallback", reasonCode: "structural_invariant_failed", structuralInvariantPassed: false });
+    expect(classifyVisualEngine2CTraceResult(false, "private_provider_body")).toEqual({ status: "fallback", reasonCode: "internal_error", structuralInvariantPassed: undefined });
+  });
+
+  it("requires an exact class, status and typed outcome match in score rows", () => {
+    const healthy = buildVisualEngine2CScoreRow("healthy_keep", { status: "adapted", reasonCode: "visual_healthy_keep", costMicromxn: 10, structuralInvariantPassed: null, acceptedForbiddenSignalCount: 0 });
+    const repaired = buildVisualEngine2CScoreRow("repairable", { status: "adapted", reasonCode: "visual_repair_accepted", costMicromxn: 11, structuralInvariantPassed: true, acceptedForbiddenSignalCount: 0 });
+    const nonrepairable = buildVisualEngine2CScoreRow("nonrepairable_or_fallback", { status: "fallback", reasonCode: "visual_nonrepairable", costMicromxn: 12, structuralInvariantPassed: null, acceptedForbiddenSignalCount: 0 });
+    expect(healthy).toMatchObject({ technicalFailure: false, acceptedRepair: false, healthyReplacement: false, costMicromxn: 10 });
+    expect(repaired).toMatchObject({ technicalFailure: false, acceptedRepair: true, healthyReplacement: false, structureViolation: false });
+    expect(nonrepairable).toMatchObject({ technicalFailure: false, acceptedRepair: false, healthyReplacement: false });
+
+    expect(buildVisualEngine2CScoreRow("healthy_keep", { status: "adapted", reasonCode: "visual_repair_accepted", costMicromxn: 10, structuralInvariantPassed: true, acceptedForbiddenSignalCount: 0 }))
+      .toMatchObject({ technicalFailure: true, healthyReplacement: true });
+    expect(buildVisualEngine2CScoreRow("repairable", { status: "adapted", reasonCode: "visual_healthy_keep", costMicromxn: 10, structuralInvariantPassed: null, acceptedForbiddenSignalCount: 0 }))
+      .toMatchObject({ technicalFailure: true, acceptedRepair: false });
+    expect(buildVisualEngine2CScoreRow(undefined, { status: "adapted", reasonCode: "visual_healthy_keep", costMicromxn: 10, structuralInvariantPassed: false, acceptedForbiddenSignalCount: 1 }))
+      .toMatchObject({ technicalFailure: true, allowlistViolation: true, identityViolation: true });
   });
 
   it("fails scorecard unless integrity, cost and human preference gates all pass", () => {

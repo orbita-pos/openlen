@@ -84,6 +84,10 @@ describe("pilot run updates", () => {
     "section_fragment_stale",
     "section_role_coverage_failed",
     "inherited_copy_leak",
+    "visual_healthy_keep",
+    "visual_repair_accepted",
+    "visual_nonrepairable",
+    "visual_not_improved",
   ] as const satisfies readonly PilotReasonCode[])("persists typed adaptation reason %s without a raw message", async (reasonCode) => {
     const execute = vi.fn().mockResolvedValue({ rows: [] });
     await completeVisualEnginePilotRun("run-1", { status: "fallback", reasonCode }, { execute });

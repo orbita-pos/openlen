@@ -29,7 +29,7 @@ function rows(value: unknown): Record<string, unknown>[] {
 
 async function reviewLedger() {
   const result = await db.execute(sql`
-    SELECT "id", "ordinal", "status" FROM "visualEnginePilotRuns"
+    SELECT "id", "ordinal", "status", "reasonCode" FROM "visualEnginePilotRuns"
     WHERE "phase" = '2c' ORDER BY "ordinal"
   `);
   return rows(result).map((row) => {
@@ -38,7 +38,7 @@ async function reviewLedger() {
     return {
       pilotRunId: typeof row.id === "string" ? row.id : "",
       ordinal,
-      acceptedRepair: cohort?.class === "repairable" && row.status === "adapted",
+      acceptedRepair: cohort?.class === "repairable" && row.status === "adapted" && row.reasonCode === "visual_repair_accepted",
     };
   });
 }

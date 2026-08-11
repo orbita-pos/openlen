@@ -1,4 +1,42 @@
-import { VISUAL_ENGINE_2C_CASES } from "./visual-engine-2c-cohort";
+import { VISUAL_ENGINE_2C_CASES, type VisualEngine2CCaseClass } from "./visual-engine-2c-cohort";
+import type { PilotReasonCode } from "./visual-engine-pilot-store";
+
+export type VisualEngine2COutcomeCode =
+  | "visual_healthy_keep"
+  | "visual_repair_accepted"
+  | "visual_nonrepairable"
+  | "visual_not_improved";
+
+export interface VisualEngine2CClassifiedOutcome {
+  status: "adapted" | "fallback";
+  reasonCode: PilotReasonCode;
+  structuralInvariantPassed: boolean | undefined;
+}
+
+const TECHNICAL_RESULT_REASONS = {
+  initial_render_failed: "technical_render_failed",
+  final_render_failed: "technical_render_failed",
+  technical_render_failed: "technical_render_failed",
+  initial_critic_failed: "provider_error",
+  final_critic_failed: "provider_error",
+  repair_provider_failed: "provider_error",
+  timeout: "provider_timeout",
+  inventory_failed: "invalid_inventory",
+  compile_failed: "css_policy_violation",
+  asset_failed: "required_asset_unavailable",
+  sanitization_failed: "sanitization_failed",
+  structural_invariant_failed: "structural_invariant_failed",
+  internal_error: "internal_error",
+} as const satisfies Record<string, PilotReasonCode>;
+
+export function classifyVisualEngine2CTraceResult(accepted: boolean, resultCode: string): VisualEngine2CClassifiedOutcome {
+  if (accepted && resultCode === "accepted") return { status: "adapted", reasonCode: "visual_repair_accepted", structuralInvariantPassed: true };
+  if (!accepted && resultCode === "healthy_keep") return { status: "adapted", reasonCode: "visual_healthy_keep", structuralInvariantPassed: undefined };
+  if (!accepted && resultCode === "nonrepairable") return { status: "fallback", reasonCode: "visual_nonrepairable", structuralInvariantPassed: undefined };
+  if (!accepted && resultCode === "not_improved") return { status: "fallback", reasonCode: "visual_not_improved", structuralInvariantPassed: undefined };
+  const reasonCode = TECHNICAL_RESULT_REASONS[resultCode as keyof typeof TECHNICAL_RESULT_REASONS] ?? "internal_error";
+  return { status: "fallback", reasonCode, structuralInvariantPassed: resultCode === "structural_invariant_failed" ? false : undefined };
+}
 
 export interface VisualEngine2CSmokeGuardInput {
   mode: string | undefined; authorization: string | undefined;
@@ -26,8 +64,8 @@ export interface VisualEngine2CSmokeDeps {
     index: number,
     reservation: { ok: true; id: string; ordinal: number },
     lease: { providerCallCeiling: number; costMicromxnCeiling: number },
-  ) => Promise<{ providerCalls: number; costMicromxn: number; status: "adapted" | "fallback" | "failed" }>;
-  complete: (id: string, result: { providerCalls: number; costMicromxn: number; status: string }) => Promise<void>;
+  ) => Promise<{ providerCalls: number; costMicromxn: number; status: "adapted" | "fallback" | "failed"; reasonCode: PilotReasonCode; structuralInvariantPassed?: boolean }>;
+  complete: (id: string, result: { providerCalls: number; costMicromxn: number; status: "adapted" | "fallback" | "failed"; reasonCode: PilotReasonCode; structuralInvariantPassed?: boolean }) => Promise<void>;
 }
 
 export async function runVisualEngine2CSmoke(guard: VisualEngine2CSmokeGuardInput, deps: VisualEngine2CSmokeDeps) {
@@ -57,6 +95,7 @@ export async function runVisualEngine2CSmoke(guard: VisualEngine2CSmokeGuardInpu
         providerCalls: lease.providerCallCeiling,
         costMicromxn: lease.costMicromxnCeiling,
         status: "failed",
+        reasonCode: "internal_error",
       };
     }
     providerCalls += evaluated.providerCalls; totalCostMicromxn += evaluated.costMicromxn;
@@ -101,6 +140,47 @@ export interface VisualEngine2CScoreRow {
   structureViolation: boolean; copyViolation: boolean; roleViolation: boolean; navigationViolation: boolean; identityViolation: boolean;
   costMicromxn: number | null;
 }
+export interface VisualEngine2CLedgerScoreInput {
+  status: string;
+  reasonCode: string | null;
+  costMicromxn: unknown;
+  structuralInvariantPassed: boolean | null;
+  acceptedForbiddenSignalCount: unknown;
+}
+
+export function buildVisualEngine2CScoreRow(
+  caseClass: VisualEngine2CCaseClass | undefined,
+  row: VisualEngine2CLedgerScoreInput,
+): VisualEngine2CScoreRow {
+  const acceptedRepair = caseClass === "repairable"
+    && row.status === "adapted"
+    && row.reasonCode === "visual_repair_accepted"
+    && row.structuralInvariantPassed === true;
+  const healthyReplacement = caseClass === "healthy_keep" && row.reasonCode === "visual_repair_accepted";
+  const exactOutcome = caseClass === "healthy_keep"
+    ? row.status === "adapted" && row.reasonCode === "visual_healthy_keep"
+    : caseClass === "repairable"
+      ? acceptedRepair
+      : caseClass === "nonrepairable_or_fallback"
+        ? row.status === "fallback" && row.reasonCode === "visual_nonrepairable"
+        : false;
+  const structuralViolation = row.structuralInvariantPassed === false;
+  const forbidden = Number(row.acceptedForbiddenSignalCount ?? 0) > 0;
+  const costMicromxn = Number.isSafeInteger(row.costMicromxn) && Number(row.costMicromxn) >= 0 ? Number(row.costMicromxn) : null;
+  return {
+    acceptedRepair,
+    healthyReplacement,
+    technicalFailure: !exactOutcome,
+    allowlistViolation: structuralViolation,
+    structureViolation: structuralViolation,
+    copyViolation: false,
+    roleViolation: structuralViolation,
+    navigationViolation: structuralViolation,
+    identityViolation: forbidden,
+    costMicromxn,
+  };
+}
+
 export function scoreVisualEngine2CPilot(rows: readonly VisualEngine2CScoreRow[], decisions: readonly ("candidate" | "baseline" | "tie" | "invalid")[], options: { budgetMicromxn: number }) {
   const accepted = rows.filter((row) => row.acceptedRepair).length;
   const reviewed = decisions.filter((decision) => decision !== "invalid").length;

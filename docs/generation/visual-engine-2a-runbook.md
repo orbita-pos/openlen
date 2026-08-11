@@ -388,6 +388,8 @@ npm.cmd run generation:visual-engine-2c:eval
 
 The runner rechecks qualification HEAD, phase `2c` quota (`limit=150`, `used=0`, no existing runs), rate card and budget before the first reservation. It is sequential and bounded to 15 reservations and 33 provider calls. No retry or replacement is allowed. Missing usage is charged conservatively at the configured per-row ceiling. Evidence is written only for accepted repairs and contains four hash-bound JPGs: original/repaired desktop/mobile. HTML, copy, briefs, raw responses and model explanations are never persisted.
 
+Each terminal row records one redacted outcome: `visual_healthy_keep`, `visual_repair_accepted`, `visual_nonrepairable`, `visual_not_improved`, or an existing typed technical failure. The scorecard requires the exact class/outcome match: six healthy rows must be `visual_healthy_keep`, six repairable rows must be `visual_repair_accepted`, and three nonrepairable rows must be `visual_nonrepairable`. Status alone is not sufficient, and an accepted repair on a healthy row is a failing healthy replacement.
+
 ### Blind review and scorecard
 
 Review every accepted repair and no healthy, rejected or fallback row:

@@ -29,6 +29,10 @@ export type PilotReasonCode =
   | "section_fragment_stale"
   | "section_role_coverage_failed"
   | "inherited_copy_leak"
+  | "visual_healthy_keep"
+  | "visual_repair_accepted"
+  | "visual_nonrepairable"
+  | "visual_not_improved"
   | "internal_error";
 export type PilotComparisonVerdict = "candidate" | "baseline" | "tie" | "invalid";
 

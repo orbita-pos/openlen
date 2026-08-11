@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { mkdtemp, readFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { runVisualEngine2CEvalCli, writeVisualEngine2CEvidence } from "@/scripts/visual-engine-2c-eval";
+import { runVisualEngine2CEvalCli, writeVisualEngine2CEvidence, type VisualEngine2CEvalCliDeps } from "@/scripts/visual-engine-2c-eval";
 import { loadVisualEngine2AReviewSource } from "./visual-engine-2a-review-session";
 import { qualifyVisualEngine2CCohort } from "./visual-engine-2c-qualification";
 
@@ -19,8 +19,14 @@ async function fixture() {
     getQuota: vi.fn(async () => { order.push("quota"); return { limit: 150, used: 0, existingRuns: 0 }; }),
     readQualification: vi.fn(async () => { order.push("qualification"); return qualified.manifest; }),
     reserve: vi.fn(async (index: number) => { order.push(`reserve:${index}`); return { ok: true as const, id: `id-${index}`, ordinal: index + 1 }; }),
-    evaluate: vi.fn(async (index: number) => ({ providerCalls: index < 6 ? 1 : index < 12 ? 3 : 1, costMicromxn: 1000, status: index < 12 ? "adapted" as const : "fallback" as const })),
-    complete: vi.fn(async () => undefined), log: vi.fn(),
+    evaluate: vi.fn(async (index: number) => ({
+      providerCalls: index < 6 ? 1 : index < 12 ? 3 : 1,
+      costMicromxn: 1000,
+      status: index < 12 ? "adapted" as const : "fallback" as const,
+      reasonCode: index < 6 ? "visual_healthy_keep" as const : index < 12 ? "visual_repair_accepted" as const : "visual_nonrepairable" as const,
+      structuralInvariantPassed: index >= 6 && index < 12 ? true : undefined,
+    })),
+    complete: vi.fn<VisualEngine2CEvalCliDeps["complete"]>(async () => undefined), log: vi.fn(),
   };
   return { qualified, order, deps };
 }
@@ -38,6 +44,11 @@ describe("runVisualEngine2CEvalCli", () => {
       { ok: true, id: "id-0", ordinal: 1 },
       { providerCallCeiling: 1, costMicromxnCeiling: 2_000_000 },
     );
+    expect(state.deps.complete.mock.calls.map(([, value]) => value.reasonCode)).toEqual([
+      ...Array(6).fill("visual_healthy_keep"),
+      ...Array(6).fill("visual_repair_accepted"),
+      ...Array(3).fill("visual_nonrepairable"),
+    ]);
   });
   it("closes stale and unauthorized runs before reservation", async () => {
     const unauthorized = await fixture(); unauthorized.deps.env.OPENLEN_VISUAL_ENGINE_2C_AUTHORIZATION = "wrong";

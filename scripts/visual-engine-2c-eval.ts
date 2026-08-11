@@ -3,7 +3,7 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { promisify } from "node:util";
-import { runVisualEngine2CSmoke, validateVisualEngine2CSmokeGuard, type VisualEngine2CSmokeDeps } from "@/lib/generation/visual-engine-2c-eval";
+import { classifyVisualEngine2CTraceResult, runVisualEngine2CSmoke, validateVisualEngine2CSmokeGuard, type VisualEngine2CSmokeDeps } from "@/lib/generation/visual-engine-2c-eval";
 import { buildEvidenceManifest, canonicalJsonSha256 } from "@/lib/generation/visual-engine-2a-eval";
 import { writeJsonAtomic } from "@/lib/fs/write-json-atomic";
 import { verifyVisualEngine2CQualification, type VisualEngine2CQualificationManifest } from "@/lib/generation/visual-engine-2c-qualification";
@@ -111,7 +111,7 @@ async function productionDeps(): Promise<VisualEngine2CEvalCliDeps> {
           renderer.renderVisualQualityViewports(originalHtml),
           renderer.renderVisualQualityViewports(result.html),
         ]);
-        if (!baseline || !candidate) return { providerCalls, costMicromxn, status: "failed" as const };
+        if (!baseline || !candidate) return { providerCalls, costMicromxn, status: "failed" as const, reasonCode: "technical_render_failed" as const };
         await writeVisualEngine2CEvidence(evidenceRoot, {
           caseId: row.id, pilotRunId: reservation.id,
           baselineNormal: Buffer.from(baseline.desktop.dataBase64, "base64"),
@@ -120,9 +120,17 @@ async function productionDeps(): Promise<VisualEngine2CEvalCliDeps> {
           candidateNeutral: Buffer.from(candidate.mobile.dataBase64, "base64"),
         });
       }
-      return { providerCalls, costMicromxn, status: result.accepted || result.trace.resultCode === "healthy_keep" ? "adapted" as const : "fallback" as const };
+      return { providerCalls, costMicromxn, ...classifyVisualEngine2CTraceResult(result.accepted, result.trace.resultCode) };
     },
-    complete: async (id, result) => store.completeVisualEnginePilotRun(id, { status: result.status === "adapted" ? "adapted" : result.status === "failed" ? "failed" : "fallback", observedPilotCostMicromxn: result.costMicromxn, productionEquivalentCostMicromxn: result.costMicromxn, rateCardVersion: rateCard?.version, candidatePersisted: false }),
+    complete: async (id, result) => store.completeVisualEnginePilotRun(id, {
+      status: result.status,
+      reasonCode: result.reasonCode,
+      observedPilotCostMicromxn: result.costMicromxn,
+      productionEquivalentCostMicromxn: result.costMicromxn,
+      rateCardVersion: rateCard?.version,
+      candidatePersisted: false,
+      structuralInvariantPassed: result.structuralInvariantPassed,
+    }),
     log: (line) => console.log(line),
   };
 }

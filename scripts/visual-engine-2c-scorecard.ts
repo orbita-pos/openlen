@@ -10,7 +10,7 @@ import {
   type VisualEngine2AReviewSession,
 } from "@/lib/generation/visual-engine-2a-review-session";
 import { VISUAL_ENGINE_2C_CASES } from "@/lib/generation/visual-engine-2c-cohort";
-import { scoreVisualEngine2CPilot, validateVisualEngine2CReviewCoverage } from "@/lib/generation/visual-engine-2c-eval";
+import { buildVisualEngine2CScoreRow, scoreVisualEngine2CPilot, validateVisualEngine2CReviewCoverage } from "@/lib/generation/visual-engine-2c-eval";
 
 const root = join(process.cwd(), "scratch", "visual-engine-2c");
 
@@ -32,14 +32,14 @@ async function main() {
   const session = resumeVisualEngine2AReviewSession(storedSession, source.sourceSha, source.rows);
   if (session.completedAt === null) throw new Error("Review is incomplete");
   const result = await db.execute(sql`
-    SELECT "id", "ordinal", "status", "comparisonVerdict", "acceptedForbiddenSignalCount",
+    SELECT "id", "ordinal", "status", "reasonCode", "comparisonVerdict", "acceptedForbiddenSignalCount",
       "productionEquivalentCostMicromxn", "structuralInvariantPassed"
     FROM "visualEnginePilotRuns" WHERE "phase" = '2c' ORDER BY "ordinal"
   `);
   const ledger = rows(result);
   const reviewRuns = ledger.map((row) => {
     const ordinal = Number(row.ordinal); const cohort = VISUAL_ENGINE_2C_CASES[ordinal - 1];
-    return { pilotRunId: typeof row.id === "string" ? row.id : "", ordinal, acceptedRepair: cohort?.class === "repairable" && row.status === "adapted" };
+    return { pilotRunId: typeof row.id === "string" ? row.id : "", ordinal, acceptedRepair: cohort?.class === "repairable" && row.status === "adapted" && row.reasonCode === "visual_repair_accepted" };
   });
   validateVisualEngine2CReviewCoverage(source.rows, reviewRuns);
   const sourceByComparison = new Map(source.rows.map((row) => [row.comparisonId, row.pilotRunId]));
@@ -49,25 +49,13 @@ async function main() {
     if (!row || verdict(row.comparisonVerdict) !== decision.verdict) throw new Error("Review decision mismatch");
     return decision.verdict;
   });
-  const scoreRows = ledger.map((row, index) => {
-    const cohort = VISUAL_ENGINE_2C_CASES[index];
-    const statusMatches = cohort?.class === "healthy_keep" ? row.status === "adapted"
-      : cohort?.class === "repairable" ? row.status === "adapted" : row.status === "fallback";
-    const structuralViolation = row.structuralInvariantPassed === false;
-    const forbidden = Number(row.acceptedForbiddenSignalCount ?? 0) > 0;
-    return {
-      acceptedRepair: cohort?.class === "repairable" && row.status === "adapted",
-      healthyReplacement: false,
-      technicalFailure: !cohort || !statusMatches,
-      allowlistViolation: structuralViolation,
-      structureViolation: structuralViolation,
-      copyViolation: false,
-      roleViolation: structuralViolation,
-      navigationViolation: structuralViolation,
-      identityViolation: forbidden,
-      costMicromxn: typeof row.productionEquivalentCostMicromxn === "number" ? row.productionEquivalentCostMicromxn : null,
-    };
-  });
+  const scoreRows = ledger.map((row, index) => buildVisualEngine2CScoreRow(VISUAL_ENGINE_2C_CASES[index]?.class, {
+    status: typeof row.status === "string" ? row.status : "",
+    reasonCode: typeof row.reasonCode === "string" ? row.reasonCode : null,
+    structuralInvariantPassed: typeof row.structuralInvariantPassed === "boolean" ? row.structuralInvariantPassed : null,
+    acceptedForbiddenSignalCount: row.acceptedForbiddenSignalCount,
+    costMicromxn: row.productionEquivalentCostMicromxn,
+  }));
   const score = scoreVisualEngine2CPilot(scoreRows, decisions, { budgetMicromxn });
   console.log(JSON.stringify({ event: "visual_engine_2c_scorecard", ...score }));
   if (!score.passed) process.exitCode = 2;
