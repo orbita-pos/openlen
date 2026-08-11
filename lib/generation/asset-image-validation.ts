@@ -1,5 +1,7 @@
 import { createHash } from "node:crypto";
 
+import { processImage, type ImageFormat, type ProcessImageOptions, type ProcessImageResult } from "@/lib/images";
+
 const MAX_IMAGE_BYTES = 6 * 1024 * 1024;
 const MIN_DIMENSION = 64;
 const MAX_DIMENSION = 4096;
@@ -13,6 +15,10 @@ export interface ValidatedImage {
   width: number;
   height: number;
   checksum: string;
+}
+
+export interface ImageValidationDependencies {
+  processImage?: (options: ProcessImageOptions) => Promise<ProcessImageResult>;
 }
 
 function invalid(code: string): never {
@@ -90,7 +96,11 @@ function webpDimensions(bytes: Buffer): { width: number; height: number } {
   return invalid("invalid_image_data");
 }
 
-export function validateGeneratedImage(input: Uint8Array, declaredMimeType: string): ValidatedImage {
+export async function validateGeneratedImage(
+  input: Uint8Array,
+  declaredMimeType: string,
+  dependencies: ImageValidationDependencies = {},
+): Promise<ValidatedImage> {
   if (declaredMimeType !== "image/png" && declaredMimeType !== "image/jpeg" && declaredMimeType !== "image/webp") {
     return invalid("unsupported_image_type");
   }
@@ -121,6 +131,30 @@ export function validateGeneratedImage(input: Uint8Array, declaredMimeType: stri
   const { width, height } = dimensions;
   if (width < MIN_DIMENSION || height < MIN_DIMENSION || width > MAX_DIMENSION || height > MAX_DIMENSION || width * height > MAX_PIXELS) {
     return invalid("invalid_image_dimensions");
+  }
+  if (actualMimeType === "image/png" && (bytes.length < 45 || bytes.toString("ascii", bytes.length - 8, bytes.length - 4) !== "IEND")) {
+    return invalid("invalid_image_data");
+  }
+  if (actualMimeType === "image/jpeg" && (bytes.length < 4 || bytes[bytes.length - 2] !== 0xff || bytes[bytes.length - 1] !== 0xd9)) {
+    return invalid("invalid_image_data");
+  }
+  const format: ImageFormat = actualMimeType === "image/jpeg"
+    ? "jpeg"
+    : actualMimeType === "image/png" ? "png" : "webp";
+  let decodedDimensions: { width: number; height: number } | undefined;
+  try {
+    const decoded = await (dependencies.processImage ?? processImage)({
+      input: bytes,
+      variants: [{ width: 0, format, quality: 100 }],
+      autoOrient: false,
+      withoutEnlargement: true,
+    });
+    decodedDimensions = decoded.variants[0];
+  } catch {
+    return invalid("invalid_image_data");
+  }
+  if (!decodedDimensions || decodedDimensions.width !== width || decodedDimensions.height !== height) {
+    return invalid("invalid_image_data");
   }
   return {
     mimeType: actualMimeType,

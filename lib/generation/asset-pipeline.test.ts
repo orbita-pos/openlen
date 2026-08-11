@@ -4,6 +4,19 @@ import path from "node:path";
 
 import { describe, expect, it, vi } from "vitest";
 
+vi.mock("@/lib/images", () => ({
+  processImage: async ({ input, variants }: { input: Buffer; variants: Array<{ format: string }> }) => ({
+    variants: variants.map((variant) => ({
+      width: input.readUIntLE(24, 3) + 1,
+      height: input.readUIntLE(27, 3) + 1,
+      format: variant.format,
+      mime: `image/${variant.format}`,
+      bytes: input,
+      size: input.length,
+    })),
+  }),
+}));
+
 import type { CuratedAssetPackResult } from "@/lib/generation/asset-catalog";
 import {
   AssetManifestSchema,

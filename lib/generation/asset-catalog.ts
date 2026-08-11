@@ -134,7 +134,7 @@ export async function verifyCuratedAssetBytes(url: string, deps: CuratedAssetDep
       const declaredMimeType = response.headers.get("content-type")?.split(";", 1)[0]?.trim().toLowerCase();
       if (!declaredMimeType) throw new Error("missing_content_type");
       const bytes = await readBoundedBytes(response);
-      return validateGeneratedImage(bytes, declaredMimeType);
+      return await validateGeneratedImage(bytes, declaredMimeType);
     })();
     verificationCache.set(url, verification);
     verification.catch(() => verificationCache.delete(url));

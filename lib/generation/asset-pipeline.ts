@@ -266,16 +266,16 @@ function buildValidatedManifest(
   return parsed.success ? parsed.data : null;
 }
 
-function validateProviderPack(
+async function validateProviderPack(
   projectId: string,
   unresolved: readonly AssetIntent[],
   result: Extract<AssetPackResult, { ok: true }>,
-): Array<{
+): Promise<Array<{
   intent: AssetIntent;
   image: Extract<AssetPackResult, { ok: true }>["images"][number];
   validated: ValidatedImage;
   resolution: Extract<AssetResolution, { source: "generated" }>;
-}> | null {
+}> | null> {
   if (result.images.length !== unresolved.length) return null;
   const expected = new Map(unresolved.map((intent) => [intent.slotIndex, intent]));
   const seen = new Set<number>();
@@ -285,7 +285,7 @@ function validateProviderPack(
       const assetIntent = expected.get(image.slotIndex);
       if (!assetIntent || seen.has(image.slotIndex) || sha256(image.prompt) !== image.promptSha256) return null;
       seen.add(image.slotIndex);
-      const validImage = validateGeneratedImage(image.bytes, image.mimeType);
+      const validImage = await validateGeneratedImage(image.bytes, image.mimeType);
       const checksumHex = validImage.checksum.slice("sha256:".length);
       const expectedFilename = `${checksumHex}.${validImage.ext}`;
       const resolution = AssetResolutionSchema.safeParse({
@@ -319,7 +319,7 @@ function validateProviderPack(
 
 async function storeGeneratedPack(
   projectId: string,
-  pack: NonNullable<ReturnType<typeof validateProviderPack>>,
+  pack: NonNullable<Awaited<ReturnType<typeof validateProviderPack>>>,
   storage: Pick<AssetStorage, "put">,
 ): Promise<GeneratedAssignment[] | null> {
   const assignments: GeneratedAssignment[] = [];
@@ -419,7 +419,7 @@ export async function resolveDomainAssetManifest(
       };
     }
     providerResult = generated;
-    const validatedPack = validateProviderPack(input.projectId, unresolved, generated);
+    const validatedPack = await validateProviderPack(input.projectId, unresolved, generated);
     if (!validatedPack) {
       return {
         ok: false,

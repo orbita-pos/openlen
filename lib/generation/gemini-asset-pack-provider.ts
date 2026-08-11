@@ -185,7 +185,7 @@ function strictBase64(value: string): Buffer | null {
   return bytes.toString("base64") === value ? bytes : null;
 }
 
-function parseInlineImage(payload: unknown): ParsedGeminiImage | "blocked" | "invalid_response" | "invalid_image" {
+async function parseInlineImage(payload: unknown): Promise<ParsedGeminiImage | "blocked" | "invalid_response" | "invalid_image"> {
   const usage = readUsage(payload);
   if (isBlocked(payload)) return "blocked";
   if (!isRecord(payload) || !Array.isArray(payload.candidates)) return "invalid_response";
@@ -202,7 +202,7 @@ function parseInlineImage(payload: unknown): ParsedGeminiImage | "blocked" | "in
   const bytes = strictBase64(inlineData.data as string);
   if (!bytes) return "invalid_image";
   try {
-    validateGeneratedImage(bytes, inlineData.mimeType);
+    await validateGeneratedImage(bytes, inlineData.mimeType);
   } catch {
     return "invalid_image";
   }
@@ -340,7 +340,7 @@ export function createGeminiAssetPackProvider(options: GeminiAssetPackProviderOp
         usage = addUsage(usage, responseUsage);
         if (!response.ok) return failure("provider_error", modelId, started, now, usage);
 
-        const parsed = parseInlineImage(payload);
+        const parsed = await parseInlineImage(payload);
         if (parsed === "blocked") return failure("provider_blocked", modelId, started, now, usage);
         if (parsed === "invalid_response") return failure("invalid_provider_response", modelId, started, now, usage);
         if (parsed === "invalid_image") return failure("invalid_image", modelId, started, now, usage);

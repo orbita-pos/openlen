@@ -1,11 +1,65 @@
 import { createHash } from "node:crypto";
-import { describe, expect, it } from "vitest";
+import { deflateSync } from "node:zlib";
+import { beforeAll, describe, expect, it } from "vitest";
 
 import { validateGeneratedImage } from "@/lib/generation/asset-image-validation";
+import { processImage } from "@/lib/images";
 
-function png(width: number, height: number): Buffer {
+const CRC_TABLE = (() => {
+  const table = new Uint32Array(256);
+  for (let value = 0; value < 256; value += 1) {
+    let crc = value;
+    for (let bit = 0; bit < 8; bit += 1) crc = crc & 1 ? 0xedb88320 ^ (crc >>> 1) : crc >>> 1;
+    table[value] = crc >>> 0;
+  }
+  return table;
+})();
+
+function crc32(bytes: Buffer): number {
+  let crc = 0xffffffff;
+  for (const byte of bytes) crc = CRC_TABLE[(crc ^ byte) & 0xff] ^ (crc >>> 8);
+  return (crc ^ 0xffffffff) >>> 0;
+}
+
+function pngChunk(kind: string, data: Buffer): Buffer {
+  const length = Buffer.alloc(4);
+  length.writeUInt32BE(data.length);
+  const body = Buffer.concat([Buffer.from(kind, "ascii"), data]);
+  const checksum = Buffer.alloc(4);
+  checksum.writeUInt32BE(crc32(body));
+  return Buffer.concat([length, body, checksum]);
+}
+
+function validPng(width: number, height: number): Buffer {
+  const signature = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+  const ihdr = Buffer.alloc(13);
+  ihdr.writeUInt32BE(width, 0);
+  ihdr.writeUInt32BE(height, 4);
+  Buffer.from([8, 6, 0, 0, 0]).copy(ihdr, 8);
+  const rowLength = 1 + width * 4;
+  const pixels = Buffer.alloc(rowLength * height);
+  for (let row = 0; row < height; row += 1) {
+    const offset = row * rowLength;
+    pixels[offset] = 0;
+    for (let column = 0; column < width; column += 1) {
+      const pixel = offset + 1 + column * 4;
+      pixels[pixel] = 35;
+      pixels[pixel + 1] = 85;
+      pixels[pixel + 2] = 170;
+      pixels[pixel + 3] = 255;
+    }
+  }
+  return Buffer.concat([
+    signature,
+    pngChunk("IHDR", ihdr),
+    pngChunk("IDAT", deflateSync(pixels)),
+    pngChunk("IEND", Buffer.alloc(0)),
+  ]);
+}
+
+function headerOnlyPng(width: number, height: number): Buffer {
   const bytes = Buffer.alloc(33);
-  Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]).copy(bytes, 0);
+  Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]).copy(bytes);
   bytes.writeUInt32BE(13, 8);
   bytes.write("IHDR", 12, "ascii");
   bytes.writeUInt32BE(width, 16);
@@ -14,117 +68,147 @@ function png(width: number, height: number): Buffer {
   return bytes;
 }
 
-function jpeg(width: number, height: number): Buffer {
+function headerOnlyJpeg(width: number, height: number): Buffer {
   return Buffer.from([
-    0xff, 0xd8,
-    0xff, 0xe0, 0x00, 0x04, 0x00, 0x00,
+    0xff, 0xd8, 0xff, 0xe0, 0x00, 0x04, 0x00, 0x00,
     0xff, 0xc0, 0x00, 0x0b, 0x08,
     (height >>> 8) & 0xff, height & 0xff,
     (width >>> 8) & 0xff, width & 0xff,
-    0x01, 0x01, 0x11, 0x00,
-    0xff, 0xd9,
+    0x01, 0x01, 0x11, 0x00, 0xff, 0xd9,
   ]);
 }
 
-function webpChunk(kind: "VP8X" | "VP8 " | "VP8L", payload: Buffer): Buffer {
-  const padded = payload.length + (payload.length % 2);
-  const bytes = Buffer.alloc(20 + padded);
+function headerOnlyWebp(width: number, height: number): Buffer {
+  const bytes = Buffer.alloc(30);
   bytes.write("RIFF", 0, "ascii");
-  bytes.writeUInt32LE(bytes.length - 8, 4);
-  bytes.write("WEBP", 8, "ascii");
-  bytes.write(kind, 12, "ascii");
-  bytes.writeUInt32LE(payload.length, 16);
-  payload.copy(bytes, 20);
+  bytes.writeUInt32LE(22, 4);
+  bytes.write("WEBPVP8X", 8, "ascii");
+  bytes.writeUInt32LE(10, 16);
+  bytes.writeUIntLE(width - 1, 24, 3);
+  bytes.writeUIntLE(height - 1, 27, 3);
   return bytes;
 }
 
-function webpVp8x(width: number, height: number): Buffer {
-  const payload = Buffer.alloc(10);
-  payload.writeUIntLE(width - 1, 4, 3);
-  payload.writeUIntLE(height - 1, 7, 3);
-  return webpChunk("VP8X", payload);
+const fixturePng = validPng(120, 80);
+let fixtureJpeg: Buffer;
+let fixtureWebp: Buffer;
+
+function corruptPng(bytes: Buffer): Buffer {
+  const corrupted = Buffer.from(bytes);
+  const idat = corrupted.indexOf(Buffer.from("IDAT", "ascii"));
+  corrupted[idat + 4] = 0;
+  return corrupted;
 }
 
-function webpVp8(width: number, height: number): Buffer {
-  const payload = Buffer.from([
-    0x00, 0x00, 0x00, 0x9d, 0x01, 0x2a,
-    width & 0xff, (width >>> 8) & 0x3f,
-    height & 0xff, (height >>> 8) & 0x3f,
-  ]);
-  return webpChunk("VP8 ", payload);
+function corruptJpeg(bytes: Buffer): Buffer {
+  const sof = bytes.findIndex((byte, index) => byte === 0xff
+    && index + 1 < bytes.length
+    && bytes[index + 1] >= 0xc0
+    && bytes[index + 1] <= 0xcf
+    && ![0xc4, 0xc8, 0xcc].includes(bytes[index + 1]));
+  const segmentLength = bytes.readUInt16BE(sof + 2);
+  return Buffer.concat([bytes.subarray(0, sof + 2 + segmentLength), Buffer.from([0xff, 0xd9])]);
 }
 
-function webpVp8l(width: number, height: number): Buffer {
-  const packed = ((width - 1) | ((height - 1) << 14)) >>> 0;
-  const payload = Buffer.alloc(5);
-  payload[0] = 0x2f;
-  payload.writeUInt32LE(packed, 1);
-  return webpChunk("VP8L", payload);
+function corruptWebp(bytes: Buffer): Buffer {
+  const corrupted = Buffer.from(bytes);
+  corrupted[20] |= 1;
+  return corrupted;
 }
+
+function truncatedWebp(bytes: Buffer): Buffer {
+  const truncated = Buffer.from(bytes.subarray(0, Math.max(30, Math.floor(bytes.length / 2))));
+  truncated.writeUInt32LE(truncated.length - 8, 4);
+  truncated.writeUInt32LE(truncated.length - 20, 16);
+  return truncated;
+}
+
+beforeAll(async () => {
+  const { variants } = await processImage({
+    input: fixturePng,
+    variants: [
+      { width: 0, format: "jpeg", quality: 90 },
+      { width: 0, format: "webp", quality: 90 },
+    ],
+    autoOrient: false,
+    withoutEnlargement: true,
+  });
+  fixtureJpeg = variants.find((variant) => variant.format === "jpeg")!.bytes;
+  fixtureWebp = variants.find((variant) => variant.format === "webp")!.bytes;
+});
 
 describe("validateGeneratedImage", () => {
   it.each([
-    ["PNG IHDR", png(1200, 630), "image/png", "png"],
-    ["JPEG SOF0", jpeg(1600, 900), "image/jpeg", "jpg"],
-    ["WebP VP8X", webpVp8x(1024, 768), "image/webp", "webp"],
-    ["WebP VP8", webpVp8(800, 600), "image/webp", "webp"],
-    ["WebP VP8L", webpVp8l(640, 480), "image/webp", "webp"],
-  ])("reads bounded dimensions from %s bytes", (_name, bytes, mimeType, ext) => {
-    const result = validateGeneratedImage(bytes as Buffer, mimeType as string);
-    const expected = {
+    ["PNG", () => fixturePng, "image/png", "png"],
+    ["JPEG", () => fixtureJpeg, "image/jpeg", "jpg"],
+    ["WebP", () => fixtureWebp, "image/webp", "webp"],
+  ])("fully decodes a valid real %s fixture", async (_name, getBytes, mimeType, ext) => {
+    const bytes = getBytes();
+    await expect(validateGeneratedImage(bytes, mimeType)).resolves.toEqual({
       mimeType,
       ext,
-      width: _name === "PNG IHDR" ? 1200 : _name === "JPEG SOF0" ? 1600 : _name === "WebP VP8X" ? 1024 : _name === "WebP VP8" ? 800 : 640,
-      height: _name === "PNG IHDR" ? 630 : _name === "JPEG SOF0" ? 900 : _name === "WebP VP8X" ? 768 : _name === "WebP VP8" ? 600 : 480,
-      checksum: `sha256:${createHash("sha256").update(bytes as Buffer).digest("hex")}`,
-    };
-    expect(result).toEqual(expected);
+      width: 120,
+      height: 80,
+      checksum: `sha256:${createHash("sha256").update(bytes).digest("hex")}`,
+    });
   });
 
   it.each([
-    [png(1200, 630), "image/jpeg"],
-    [jpeg(1200, 630), "image/webp"],
-    [webpVp8x(1200, 630), "image/png"],
-  ])("rejects when declared and actual image types disagree", (bytes, mimeType) => {
-    expect(() => validateGeneratedImage(bytes, mimeType)).toThrow("mime_type_mismatch");
+    ["header-only PNG", headerOnlyPng(120, 80), "image/png"],
+    ["header-only JPEG", headerOnlyJpeg(120, 80), "image/jpeg"],
+    ["header-only WebP", headerOnlyWebp(120, 80), "image/webp"],
+  ])("rejects %s data that has parseable dimensions", async (_name, bytes, mimeType) => {
+    await expect(Promise.resolve().then(() => validateGeneratedImage(bytes, mimeType))).rejects.toThrow("invalid_image_data");
+  });
+
+  it.each([
+    ["PNG", () => fixturePng.subarray(0, -1), "image/png"],
+    ["JPEG", () => fixtureJpeg.subarray(0, -1), "image/jpeg"],
+    ["WebP", () => truncatedWebp(fixtureWebp), "image/webp"],
+  ])("rejects truncated %s data with an intact dimension header", async (_name, getBytes, mimeType) => {
+    await expect(Promise.resolve().then(() => validateGeneratedImage(getBytes(), mimeType))).rejects.toThrow("invalid_image_data");
+  });
+
+  it.each([
+    ["PNG", () => corruptPng(fixturePng), "image/png"],
+    ["JPEG", () => corruptJpeg(fixtureJpeg), "image/jpeg"],
+    ["WebP", () => corruptWebp(fixtureWebp), "image/webp"],
+  ])("rejects corrupt %s data with an intact dimension header", async (_name, getBytes, mimeType) => {
+    await expect(Promise.resolve().then(() => validateGeneratedImage(getBytes(), mimeType))).rejects.toThrow("invalid_image_data");
+  });
+
+  it.each([
+    [() => fixturePng, "image/jpeg"],
+    [() => fixtureJpeg, "image/webp"],
+    [() => fixtureWebp, "image/png"],
+  ])("rejects when declared and actual image types disagree", async (getBytes, mimeType) => {
+    await expect(Promise.resolve().then(() => validateGeneratedImage(getBytes(), mimeType))).rejects.toThrow("mime_type_mismatch");
   });
 
   it.each([
     [Buffer.from("<svg/>"), "image/svg+xml"],
-    [Buffer.from("<?xml version='1.0'?><svg/>") , "application/xml"],
-  ])("rejects SVG and XML rather than treating active content as an image", (bytes, mimeType) => {
-    expect(() => validateGeneratedImage(bytes, mimeType)).toThrow("unsupported_image_type");
+    [Buffer.from("<?xml version='1.0'?><svg/>"), "application/xml"],
+  ])("rejects SVG and XML rather than treating active content as an image", async (bytes, mimeType) => {
+    await expect(Promise.resolve().then(() => validateGeneratedImage(bytes, mimeType))).rejects.toThrow("unsupported_image_type");
   });
 
   it.each([
-    [png(1200, 630).subarray(0, 28), "image/png"],
-    [Buffer.from([0xff, 0xd8, 0xff, 0xc0, 0x00, 0x0b, 0x08]), "image/jpeg"],
-    [webpVp8x(1200, 630).subarray(0, 25), "image/webp"],
-  ])("rejects truncated image structures", (bytes, mimeType) => {
-    expect(() => validateGeneratedImage(bytes, mimeType)).toThrow("invalid_image_data");
+    [headerOnlyPng(0, 630), "zero width"],
+    [headerOnlyPng(1200, 0), "zero height"],
+    [headerOnlyPng(63, 630), "width below the floor"],
+    [headerOnlyPng(1200, 63), "height below the floor"],
+    [headerOnlyPng(4097, 630), "oversized width"],
+    [headerOnlyPng(1200, 4097), "oversized height"],
+    [headerOnlyPng(100_000, 100_000), "decompression-bomb dimensions"],
+  ])("rejects %s before decode", async (bytes) => {
+    await expect(Promise.resolve().then(() => validateGeneratedImage(bytes, "image/png"))).rejects.toThrow("invalid_image_dimensions");
   });
 
-  it.each([
-    [png(0, 630), "zero width"],
-    [png(1200, 0), "zero height"],
-    [png(63, 630), "width below the floor"],
-    [png(1200, 63), "height below the floor"],
-    [png(4097, 630), "oversized width"],
-    [png(1200, 4097), "oversized height"],
-    [png(100_000, 100_000), "decompression-bomb dimensions"],
-  ])("rejects %s", (bytes) => {
-    expect(() => validateGeneratedImage(bytes, "image/png")).toThrow("invalid_image_dimensions");
+  it("rejects empty bytes", async () => {
+    await expect(Promise.resolve().then(() => validateGeneratedImage(Buffer.alloc(0), "image/png"))).rejects.toThrow("invalid_image_data");
   });
 
-  it("accepts the exact maximum dimension and pixel boundary", () => {
-    expect(validateGeneratedImage(png(4096, 4096), "image/png")).toMatchObject({ width: 4096, height: 4096 });
-  });
-
-  it("rejects empty bytes", () => {
-    expect(() => validateGeneratedImage(Buffer.alloc(0), "image/png")).toThrow("invalid_image_data");
-  });
-
-  it("rejects bytes above the 6 MiB cap before parsing", () => {
-    expect(() => validateGeneratedImage(Buffer.alloc(6 * 1024 * 1024 + 1), "image/png")).toThrow("image_too_large");
+  it("rejects bytes above the 6 MiB cap before parsing", async () => {
+    await expect(Promise.resolve().then(() => validateGeneratedImage(Buffer.alloc(6 * 1024 * 1024 + 1), "image/png"))).rejects.toThrow("image_too_large");
   });
 });
