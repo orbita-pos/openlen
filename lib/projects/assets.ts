@@ -83,7 +83,7 @@ const VALID_EXT = new Set([
 ]);
 
 function hashContents(b: Buffer): string {
-  return crypto.createHash("sha256").update(b).digest("hex").slice(0, 16);
+  return crypto.createHash("sha256").update(b).digest("hex");
 }
 
 function normalizeExt(ext: string): string {

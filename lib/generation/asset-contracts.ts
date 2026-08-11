@@ -183,6 +183,7 @@ const AssetResolutionResultCodeSchema = z.enum([
   "invalid_manifest",
   "internal_error",
 ]);
+const UsageCounterSchema = z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER);
 
 export const AssetResolutionTraceSchema = z.object({
   schemaVersion: z.literal("asset-resolution-trace/1.0"),
@@ -197,8 +198,14 @@ export const AssetResolutionTraceSchema = z.object({
   provider: z.string().max(64).nullable(),
   modelId: z.string().max(96).nullable(),
   promptSha256: z.array(HashSchema).max(3),
-  estimatedCostMicromxn: z.number().int().nonnegative(),
-  durationMs: z.number().int().nonnegative(),
+  usage: z.object({
+    inputTokens: UsageCounterSchema,
+    outputTokens: UsageCounterSchema,
+    cachedTokens: UsageCounterSchema,
+    thinkingTokens: UsageCounterSchema,
+  }).strict().optional(),
+  estimatedCostMicromxn: UsageCounterSchema,
+  durationMs: UsageCounterSchema,
   resultCode: AssetResolutionResultCodeSchema,
 }).strict().superRefine((value, ctx) => {
   if (value.requiredUnresolvedCount > 0 && value.resultCode === "resolved") {

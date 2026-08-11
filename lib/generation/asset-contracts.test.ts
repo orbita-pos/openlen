@@ -253,6 +253,34 @@ describe("AssetManifestSchema", () => {
 });
 
 describe("AssetResolutionTraceSchema", () => {
+  it("accepts only bounded provider usage counters", () => {
+    const trace = {
+      schemaVersion: "asset-resolution-trace/1.0",
+      manifestId: HASH,
+      consistencyGroupCount: 1,
+      curatedCount: 0,
+      generatedCount: 1,
+      abstractCount: 0,
+      placeholderCount: 0,
+      requiredUnresolvedCount: 0,
+      rejectionCounts: {},
+      provider: "test_provider",
+      modelId: "test-model",
+      promptSha256: [HASH],
+      usage: { inputTokens: 10, outputTokens: 20, cachedTokens: 3, thinkingTokens: 4 },
+      estimatedCostMicromxn: 50,
+      durationMs: 100,
+      resultCode: "resolved",
+    } as const;
+
+    expect(AssetResolutionTraceSchema.parse(trace).usage).toEqual(trace.usage);
+    expect(() => AssetResolutionTraceSchema.parse({ ...trace, usage: { ...trace.usage, rawPrompt: "private" } })).toThrow();
+    expect(() => AssetResolutionTraceSchema.parse({ ...trace, usage: { ...trace.usage, inputTokens: -1 } })).toThrow();
+    expect(() => AssetResolutionTraceSchema.parse({ ...trace, usage: { ...trace.usage, inputTokens: Number.MAX_SAFE_INTEGER + 1 } })).toThrow();
+    expect(() => AssetResolutionTraceSchema.parse({ ...trace, estimatedCostMicromxn: Number.MAX_SAFE_INTEGER + 1 })).toThrow();
+    expect(() => AssetResolutionTraceSchema.parse({ ...trace, durationMs: Number.MAX_SAFE_INTEGER + 1 })).toThrow();
+  });
+
   it("keeps telemetry redacted to hashes", () => {
     expect(() => AssetResolutionTraceSchema.parse({ schemaVersion: "asset-resolution-trace/1.0", manifestId: HASH, consistencyGroupCount: 1, curatedCount: 1, generatedCount: 0, abstractCount: 0, placeholderCount: 0, requiredUnresolvedCount: 0, rejectionCounts: {}, provider: null, modelId: null, promptSha256: [], estimatedCostMicromxn: 0, durationMs: 1, resultCode: "resolved", prompt: "secret" })).toThrow();
   });
