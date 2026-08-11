@@ -1,7 +1,7 @@
 # Visual Engine 2C Stable Critic Design
 
 **Date:** 2026-08-10
-**Status:** Design written, pending user review
+**Status:** Approved 2026-08-10
 **Scope:** Stabilize the existing 2C closed-loop visual repair gate. Do not redesign the Visual Engine, add a new asset generator, or change 2A/2B delivery.
 
 ## Context and evidence
