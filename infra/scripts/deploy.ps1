@@ -51,6 +51,13 @@ function Step($n, $msg) {
 # paso 6 con exactamente esos sintomas.)
 function Sh($cmd) { $cmd -replace "`r`n", "`n" }
 
+# Hybrid-only creation is a release invariant, including when a prebuilt
+# standalone bundle is reused. Keep these checks outside the skip-build branch.
+npm.cmd run generation:ai-hybrid:gate
+if ($LASTEXITCODE -ne 0) { throw "AI hybrid generation gate failed" }
+npm.cmd run typecheck
+if ($LASTEXITCODE -ne 0) { throw "Typecheck failed" }
+
 # --- 1. Build ----------------------------------------------------------
 if ($env:OPENLEN_SKIP_BUILD -ne "1") {
   Step 1 "Building Next.js standalone..."

@@ -3,9 +3,12 @@ import { runVisualEngine2BEvalCli, VISUAL_ENGINE_2B_AUTHORIZATION, visualEngine2
 import { qualifyVisualEngine2BCohort } from "./visual-engine-2b-qualification";
 import type { SectionRecord } from "@/lib/sections/store";
 import type { SectionType } from "@/lib/sections/types";
+import { createHash } from "node:crypto";
 
 function record(id: string, type: SectionType): SectionRecord {
-  return { id, type, name: id, variantLabel: id, rootTag: "section", mode: "light", storageKey: id, storageUrl: `https://invalid/${id}`, contentHash: id.padEnd(12, "0").slice(0, 12), size: 1, designTokens: null, fonts: null, needsJs: false, hasPlaceholders: false, thumbnailUrl: null, status: "published", createdAt: new Date(0), updatedAt: new Date(0), publishedAt: new Date(0) };
+  const html = `<section data-sec="${id}">${id}</section>`;
+  const contentHash = createHash("sha256").update(html).digest("hex").slice(0, 12);
+  return { id, type, name: id, variantLabel: id, rootTag: "section", mode: "light", storageKey: `sections/${id}-${contentHash}.html`, storageUrl: `https://invalid/${id}`, contentHash, size: html.length, designTokens: null, fonts: null, needsJs: false, hasPlaceholders: false, thumbnailUrl: null, status: "published", createdAt: new Date(0), updatedAt: new Date(0), publishedAt: new Date(0) };
 }
 const records = ["navbar", "hero", "gallery", "how-it-works", "integrations", "pricing", "faq", "about", "contact", "footer"]
   .flatMap((type) => Array.from({ length: type === "contact" || type === "gallery" ? 2 : 1 }, (_, i) => record(`${type}-${i}`, type as SectionType)))

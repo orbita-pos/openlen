@@ -6,8 +6,9 @@ import { qualifyVisualEngine2BCohort, verifyVisualEngine2BQualification } from "
 
 function record(id: string, type: SectionType): SectionRecord {
   const html = `<section data-sec="${id}">${id}</section>`;
-  return { id, type, name: id, variantLabel: id, rootTag: "section", mode: "light", storageKey: `sections/${id}.html`, storageUrl: `https://invalid/${id}`,
-    contentHash: createHash("sha256").update(html).digest("hex").slice(0, 12), size: html.length, designTokens: null, fonts: null, needsJs: false,
+  const contentHash = createHash("sha256").update(html).digest("hex").slice(0, 12);
+  return { id, type, name: id, variantLabel: id, rootTag: "section", mode: "light", storageKey: `sections/${id}-${contentHash}.html`, storageUrl: `https://invalid/${id}`,
+    contentHash, size: html.length, designTokens: null, fonts: null, needsJs: false,
     hasPlaceholders: false, thumbnailUrl: null, status: "published", createdAt: new Date(0), updatedAt: new Date(0), publishedAt: new Date(0) };
 }
 
