@@ -3,7 +3,7 @@ import type { BusinessProfileData } from "@/lib/business-profiles/types";
 import type { AssetPipelineMode } from "@/lib/generation/asset-pipeline-mode";
 import type { AssetResolutionTrace } from "@/lib/generation/asset-contracts";
 import { analyzeIntent } from "@/lib/generation/analyze-intent";
-import { canonicalJsonSha256 } from "@/lib/generation/visual-engine-2a-eval";
+import { canonicalJsonSha256 } from "@/lib/generation/content-hash";
 import { listSections } from "@/lib/sections/store";
 import {
   validateAiCompositionDelivery,

@@ -10,7 +10,7 @@ import type { AssetResolutionTrace } from "@/lib/generation/asset-contracts";
 import type { VisualRepairMode } from "@/lib/generation/visual-repair-mode";
 import type { AssetPipelineMode } from "@/lib/generation/asset-pipeline-mode";
 import type { VisualEngineAssetMetadata, VisualEngineProjectMetadata, VisualRepairProjectMetadata } from "@/lib/projects/types";
-import { sha256 } from "@/lib/generation/visual-engine-2a-eval";
+import { sha256 } from "@/lib/generation/content-hash";
 import { sealAiCompositionOutput } from "./ai-composition-delivery";
 
 export interface QuickVisualRepairInput {

@@ -4,7 +4,7 @@ import type { AssetManifest, AssetResolutionTrace } from "@/lib/generation/asset
 import { CreativeDirectionSchema } from "@/lib/generation/creative-contracts";
 import { IntentAnalysisSchema } from "@/lib/generation/contracts";
 import { COLORING_DIRECTION, COLORING_INTENT } from "@/lib/generation/creative-fixtures.test-support";
-import { canonicalJsonSha256, sha256 } from "@/lib/generation/visual-engine-2a-eval";
+import { canonicalJsonSha256, sha256 } from "@/lib/generation/content-hash";
 import { SectionCompositionManifestSchema } from "@/lib/generation/section-composition-contracts";
 import { launchShadowVisualRepair, runQuickVisualQualityGate, runQuickVisualRepair } from "./quick-visual-repair";
 

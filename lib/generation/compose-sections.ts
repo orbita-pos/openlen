@@ -22,7 +22,7 @@ import {
   type SectionSelectionRow,
 } from "./section-inventory";
 import { planSectionComposition } from "./section-plan";
-import { canonicalJsonSha256, sha256 } from "./visual-engine-2a-eval";
+import { canonicalJsonSha256, sha256 } from "./content-hash";
 import type { PilotReasonCode } from "./visual-engine-pilot-store";
 import type { AssetPipelineMode } from "./asset-pipeline-mode";
 import type { AssetResolutionTrace } from "./asset-contracts";

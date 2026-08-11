@@ -5,7 +5,7 @@ import { CreativeDirectionSchema } from "@/lib/generation/creative-contracts";
 import { COLORING_DIRECTION, COLORING_INTENT } from "@/lib/generation/creative-fixtures.test-support";
 import { IntentAnalysisSchema } from "@/lib/generation/contracts";
 import { SectionCompositionManifestSchema } from "@/lib/generation/section-composition-contracts";
-import { canonicalJsonSha256, sha256 } from "@/lib/generation/visual-engine-2a-eval";
+import { canonicalJsonSha256, sha256 } from "@/lib/generation/content-hash";
 import type { SectionRecord } from "@/lib/sections/store";
 import type { ExtractedBusinessData } from "@/lib/style-match/autofill/types";
 import {

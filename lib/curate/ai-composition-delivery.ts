@@ -7,7 +7,7 @@ import {
 } from "@/lib/generation/asset-contracts";
 import { CreativeDirectionSchema } from "@/lib/generation/creative-contracts";
 import { SectionCompositionManifestSchema } from "@/lib/generation/section-composition-contracts";
-import { canonicalJsonSha256, sha256 } from "@/lib/generation/visual-engine-2a-eval";
+import { canonicalJsonSha256, sha256 } from "@/lib/generation/content-hash";
 import type { VisualEngineProjectMetadata } from "@/lib/projects/types";
 
 type CompositionMetadata = Extract<VisualEngineProjectMetadata, { route: "section_composition" }>;

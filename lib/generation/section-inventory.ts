@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 
 import type { CreativeDirection } from "./creative-contracts";
 import type { SectionPlan, SectionPlanRow } from "./section-composition-contracts";
-import { canonicalJsonSha256 } from "./visual-engine-2a-eval";
+import { canonicalJsonSha256 } from "./content-hash";
 import { rankCompositionVariants } from "@/lib/sections/select";
 import type { SectionRecord } from "@/lib/sections/store";
 import type { SectionMode, SectionType } from "@/lib/sections/types";

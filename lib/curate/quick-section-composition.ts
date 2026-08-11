@@ -12,7 +12,7 @@ import {
   type SectionCompositionManifest,
   type SectionCompositionResultCode,
 } from "@/lib/generation/section-composition-contracts";
-import { sha256 } from "@/lib/generation/visual-engine-2a-eval";
+import { sha256 } from "@/lib/generation/content-hash";
 import { TAXONOMY_COMPATIBILITY_VERSION } from "@/lib/generation/taxonomy-compatibility";
 import {
   completeVisualEnginePilotRun,

@@ -1,69 +1,56 @@
 import { captureException } from "@inariwatch/capture";
-import { auth } from "@/auth";
-import { db, schema } from "@/lib/db";
-import { createVersion } from "@/lib/projects/versions";
-import {
-  getCreditState,
-  debitCredits,
-  creditsForUsage,
-  AUTOFILL_CREDIT_COST,
-} from "@/lib/credits";
-import { consumeToken, RATE_LIMITS } from "@/lib/rate-limit";
-import { renderProjectThumbnail } from "@/lib/projects/thumbnail";
-import type { ProjectData } from "@/lib/projects/types";
-import { listTemplates } from "@/lib/templates/store";
-import { listSections } from "@/lib/sections/store";
-import { pickTemplate, pickWeighted, type TemplateCatalogItem } from "@/lib/curate/pick-template";
-import {
-  logShadowComparisonWhenReady,
-  runShadowSelection,
-  safeTemplatePickerMode,
-} from "@/lib/generation/shadow-selection";
-import { resolveProfileForCreation } from "@/lib/business-profiles/store";
-import { overlayProfile } from "@/lib/business-profiles/overlay";
-import { selectGenerationRoute } from "@/lib/generation/safe-selection";
-import { shouldRunLegacySafeShadow, visualEngineMode } from "@/lib/generation/visual-engine-mode";
-import { visualRepairMode } from "@/lib/generation/visual-repair-mode";
-import { assetPipelineMode } from "@/lib/generation/asset-pipeline-mode";
-import { AssetResolutionTraceSchema, type AssetResolutionTrace } from "@/lib/generation/asset-contracts";
-import { fillAndNormalizeCuratedTemplate, finalizeCuratedDocument } from "@/lib/curate/build-curated-document";
-import { canonicalJsonSha256 } from "@/lib/generation/visual-engine-2a-eval";
-import {
-  launchShadowSectionCompositionCandidate,
-  runSectionCompositionCandidate,
-} from "@/lib/curate/quick-section-composition";
-import {
-  calculateQuickDeliveryCredits,
-  commitQuickVisualEngineDocument,
-  launchShadowSkeletonCandidate,
-  planQuickVisualEngineRoute,
-  runSkeletonCandidate,
-} from "@/lib/curate/quick-visual-engine";
-import { launchShadowVisualRepair, runQuickVisualRepair } from "@/lib/curate/quick-visual-repair";
 
-// POST /api/curate — the FREE-tier page builder (CURATION).
-// Body: { brief: string }
+import { auth } from "@/auth";
+import { resolveProfileForCreation } from "@/lib/business-profiles/store";
+import {
+  AUTOFILL_CREDIT_COST,
+  creditsForUsage,
+  debitCredits,
+  getCreditState,
+} from "@/lib/credits";
+import { calculateAiCreationCredits } from "@/lib/curate/ai-creation-credits";
+import type { AiCreationReasonCode, AiCreationStage } from "@/lib/curate/ai-creation-contracts";
+import { aiCreationMode } from "@/lib/curate/ai-creation-mode";
+import { commitAiCompositionDocument } from "@/lib/curate/commit-ai-composition";
+import { runAiCreation } from "@/lib/curate/run-ai-creation";
+import { db, schema } from "@/lib/db";
+import { assetPipelineMode } from "@/lib/generation/asset-pipeline-mode";
+import { renderProjectThumbnail } from "@/lib/projects/thumbnail";
+import { createVersion } from "@/lib/projects/versions";
+import { consumeToken, RATE_LIMITS } from "@/lib/rate-limit";
+
+// POST /api/curate — hybrid-only AI page creation.
+// Body: { brief: string, profileId?: string }
 //
 // SSE events:
-//   progress { stage: "picking"|"loading"|"filling"|"persisting" }
-//   preview  { html }
-//   done     { projectId, title, templateId, filled, appliedOps, credits, durationMs }
+//   progress { stage }
+//   preview  { html } — emitted once, after the final document is persisted
+//   done     { projectId, route: "section_composition", templateId: null, ... }
 //   error    { kind, message }
 
 export const runtime = "nodejs";
 
 const ENCODER = new TextEncoder();
-
-function logAssetShadowTrace(trace: AssetResolutionTrace): void {
-  const parsed = AssetResolutionTraceSchema.safeParse(trace);
-  if (!parsed.success) return;
-  // Operational shadow telemetry only: the strict trace contains no HTML,
-  // manifest slots, raw prompts, provider bodies, copy, or image bytes.
-  console.info("[curate] asset shadow trace", parsed.data);
-}
+const AI_FAILURE_MESSAGE = "No pudimos construir una página coherente. Reintentar.";
+const PROGRESS_STAGE: Record<AiCreationStage, string> = {
+  intent: "analyzing",
+  copy: "writing",
+  sections: "planning",
+  composition: "assembling",
+  delivery_gate: "styling",
+  visual_quality: "reviewing",
+};
 
 // One curate per user at a time. Cleared in finally so a crash cannot lock out.
 const inFlightUsers = new Set<string>();
+
+function captureFailure(stage: string, reasonCode: string): void {
+  captureException(new Error("AI creation failed"), {
+    route: "curate",
+    stage,
+    reasonCode,
+  });
+}
 
 export async function POST(req: Request): Promise<Response> {
   const session = await auth();
@@ -75,7 +62,13 @@ export async function POST(req: Request): Promise<Response> {
     const retryAfterSec = Math.ceil(rate.retryAfterMs / 1000);
     return new Response(
       JSON.stringify({ error: `Rate limit excedido — máximo ${rate.limit} por hora.`, retryAfterSec }),
-      { status: 429, headers: { "content-type": "application/json", "retry-after": String(retryAfterSec) } },
+      {
+        status: 429,
+        headers: {
+          "content-type": "application/json",
+          "retry-after": String(retryAfterSec),
+        },
+      },
     );
   }
 
@@ -86,7 +79,9 @@ export async function POST(req: Request): Promise<Response> {
     return errorJson(400, "invalid JSON body");
   }
   const brief = typeof body.brief === "string" ? body.brief.trim() : "";
-  if (brief.length < 10) return errorJson(400, "brief is required — describe the page in at least a sentence");
+  if (brief.length < 10) {
+    return errorJson(400, "brief is required — describe the page in at least a sentence");
+  }
   if (brief.length > 4000) return errorJson(400, "brief too long (max 4000 characters)");
   const profileId = typeof body.profileId === "string" ? body.profileId : null;
 
@@ -116,304 +111,50 @@ export async function POST(req: Request): Promise<Response> {
         try {
           controller.close();
         } catch {
-          /* already closed */
+          // The client already closed the stream.
         }
+      };
+      const fail = (reasonCode: string) => {
+        emit("error", { kind: reasonCode, message: AI_FAILURE_MESSAGE });
+        close();
       };
 
       try {
         const { balance } = await getCreditState(userId);
         if (balance < 1) {
-          emit("error", { kind: "credits", message: "Te quedaste sin créditos este mes. Esperá al reset o pasá a Pro." });
+          emit("error", {
+            kind: "credits",
+            message: "Te quedaste sin créditos este mes. Esperá al reset o pasá a Pro.",
+          });
           return close();
+        }
+
+        if (aiCreationMode() !== "enabled") {
+          return fail("creation_disabled");
         }
 
         const projectId = crypto.randomUUID();
-        const assetMode = assetPipelineMode();
-        const visualMode = visualEngineMode();
-        const repairMode = visualRepairMode();
-        emit("progress", { stage: "picking" });
-        const templates = await listTemplates({ status: "published" });
-        if (templates.length === 0) {
-          emit("error", { kind: "no-templates", message: "No published templates to choose from." });
-          return close();
-        }
-        const catalog: TemplateCatalogItem[] = templates.map((template) => ({
-          id: template.id,
-          name: template.name,
-          family: template.family,
-          mode: template.mode,
-          pitch: template.pitch,
-          description: template.description,
-        }));
-
-        // Weighted Quick and safe selection are independent and start together.
-        const pickPromise = pickTemplate(brief, catalog);
-        const safePromise = visualMode === "off"
-          ? Promise.resolve(null)
-          : selectGenerationRoute(brief, templates);
-        const legacyShadowPromise = shouldRunLegacySafeShadow(
-          visualMode,
-          safeTemplatePickerMode(),
-        )
-          ? runShadowSelection(brief, templates)
-          : Promise.resolve(null);
-        const pick = await pickPromise;
-        // Shadow selection/candidate work must not delay the baseline. Skeleton
-        // mode awaits the safe result because it can change user-visible delivery.
-        const safeResult = visualMode === "skeleton" || visualMode === "composition"
-          ? await safePromise
-          : null;
-        if (!pick.ok) {
-          emit("error", { kind: pick.error.kind, message: `Pick failed: ${pick.error.message}` });
-          return close();
-        }
-
-        const chosenId = pickWeighted(pick.templateIds);
-        void logShadowComparisonWhenReady(legacyShadowPromise, chosenId);
-        const routePlan = planQuickVisualEngineRoute({
-          mode: visualMode,
-          weightedTemplateId: chosenId,
-          safeResult,
+        const profile = await resolveProfileForCreation(userId, profileId);
+        const result = await runAiCreation({
+          projectId,
+          brief,
+          profileData: profile.data,
+          assetMode: assetPipelineMode(),
+          onStage: (stage) => {
+            const progress = PROGRESS_STAGE[stage as AiCreationStage];
+            if (progress) emit("progress", { stage: progress });
+          },
         });
 
-        // Resolve these once. Shadow and delivery share the same immutable values.
-        const profile = await resolveProfileForCreation(userId, profileId);
-        const copy = overlayProfile(pick.copy, profile.data);
-        const titleFor = (templateId: string) =>
-          copy.business_name?.trim()
-          || templates.find((template) => template.id === templateId)?.name
-          || "Untitled page";
-
-        if (visualMode === "shadow") {
-          // Safe selection and the candidate remain off the SSE critical path.
-          // The candidate helper owns all errors and cannot preview or persist.
-          void safePromise.then(async (shadowSafeResult) => {
-            const shadowPlan = planQuickVisualEngineRoute({
-              mode: "shadow",
-              weightedTemplateId: chosenId,
-              safeResult: shadowSafeResult,
-            });
-            if (!shadowPlan.shadowCandidate || !shadowSafeResult?.ok) return;
-            if (shadowPlan.shadowCandidate.kind === "template_skeleton") {
-              const shadowTemplateId = shadowPlan.shadowCandidate.templateId;
-              const shadowTemplate = templates.find((template) => template.id === shadowTemplateId);
-              if (!shadowTemplate?.visualMetadata) return;
-              await launchShadowSkeletonCandidate({
-                projectId,
-                assetMode,
-                assetTraceSink: logAssetShadowTrace,
-                mode: "shadow",
-                candidateTemplateId: shadowTemplateId,
-                fallbackTemplateId: chosenId,
-                candidateTitle: titleFor(shadowTemplateId),
-                fallbackTitle: titleFor(chosenId),
-                copy,
-                profileData: profile.data,
-                intent: shadowSafeResult.intent,
-                templateMetadata: shadowTemplate.visualMetadata,
-                policyVersion: shadowSafeResult.policyVersion,
-              });
-              return;
-            }
-            await launchShadowSectionCompositionCandidate({
-              projectId,
-              assetMode,
-              assetTraceSink: logAssetShadowTrace,
-              mode: "shadow",
-              candidateTitle: copy.business_name?.trim() || "Untitled page",
-              copy,
-              profileData: profile.data,
-              intent: shadowSafeResult.intent,
-              intentHash: canonicalJsonSha256(shadowSafeResult.intent),
-              records: await listSections({ status: "published" }),
-              policyVersion: shadowSafeResult.policyVersion,
-            });
-          }).catch(() => {
-            captureException(new Error("Visual Engine shadow routing failed"), {
-              route: "curate",
-              stage: "visual-engine-shadow-routing",
-              templateId: chosenId,
-              reasonCode: "internal_error",
-            });
-          });
+        if (!result.ok) {
+          captureFailure(result.stage, result.reasonCode);
+          return fail(result.reasonCode);
         }
 
-        type DeliveredDocument = {
-          html: string;
-          templateId: string | null;
-          title: string;
-          filled: boolean;
-          appliedOps: number;
-          leaksBefore?: number;
-          leaksAfter?: number;
-          visualEngine?: NonNullable<ProjectData["generation"]>["visualEngine"];
-        };
-        let delivered: DeliveredDocument;
-        const safeTemplate = routePlan.delivery.templateId === null
-          ? undefined
-          : templates.find((template) => template.id === routePlan.delivery.templateId);
-
-        if (
-          routePlan.delivery.kind === "section_composition"
-          && safeResult?.ok
-        ) {
-          emit("progress", { stage: "recipe" });
-          emit("progress", { stage: "selecting" });
-          const records = await listSections({ status: "published" });
-          emit("progress", { stage: "stitching" });
-          emit("progress", { stage: "filling" });
-          const composition = await runSectionCompositionCandidate({
-            projectId,
-            assetMode,
-            assetTraceSink: logAssetShadowTrace,
-            candidateTitle: copy.business_name?.trim() || "Untitled page",
-            copy,
-            profileData: profile.data,
-            intent: safeResult.intent,
-            intentHash: canonicalJsonSha256(safeResult.intent),
-            records,
-            policyVersion: safeResult.policyVersion,
-            onStage: (stage) => emit("progress", { stage }),
-          });
-          if (!composition.ok) {
-            emit("error", {
-              kind: composition.reasonCode,
-              message: composition.reasonCode === "sanitization_failed"
-                ? "Chosen template's HTML is unavailable."
-                : "Curated HTML carried editor markers — try again.",
-            });
-            return close();
-          }
-          delivered = {
-            html: composition.html,
-            templateId: composition.templateId,
-            title: copy.business_name?.trim() || "Untitled page",
-            filled: composition.filled,
-            appliedOps: composition.appliedOps,
-            leaksBefore: composition.leaksBefore,
-            leaksAfter: composition.leaksAfter,
-            visualEngine: composition.visualEngine,
-          };
-        } else if (
-          routePlan.delivery.kind === "template_skeleton"
-          && safeResult?.ok
-          && safeTemplate?.visualMetadata
-        ) {
-          // A skeleton never emits its raw or intermediate HTML.
-          emit("progress", { stage: "loading" });
-          emit("progress", { stage: "filling" });
-          const skeleton = await runSkeletonCandidate({
-            projectId,
-            assetMode,
-            assetTraceSink: logAssetShadowTrace,
-            candidateTemplateId: routePlan.delivery.templateId,
-            fallbackTemplateId: chosenId,
-            candidateTitle: titleFor(routePlan.delivery.templateId),
-            fallbackTitle: titleFor(chosenId),
-            copy,
-            profileData: profile.data,
-            intent: safeResult.intent,
-            templateMetadata: safeTemplate.visualMetadata,
-            policyVersion: safeResult.policyVersion,
-            onStage: (stage) => emit("progress", { stage }),
-          });
-          if (!skeleton.ok) {
-            emit("error", {
-              kind: skeleton.kind,
-              message: skeleton.kind === "template-unavailable"
-                ? "Chosen template's HTML is unavailable."
-                : "Curated HTML carried editor markers — try again.",
-            });
-            return close();
-          }
-          delivered = {
-            html: skeleton.html,
-            templateId: skeleton.templateId,
-            title: titleFor(skeleton.templateId),
-            filled: skeleton.filled,
-            appliedOps: skeleton.appliedOps,
-            leaksBefore: skeleton.leaksBefore,
-            leaksAfter: skeleton.leaksAfter,
-            visualEngine: skeleton.route === "template_skeleton"
-              ? skeleton.visualEngine
-              : undefined,
-          };
-        } else {
-          // Off, weighted fallbacks and full-template routes preserve current
-          // Quick's immediate raw preview before filling.
-          const deliveredTemplateId = routePlan.delivery.kind === "template_skeleton"
-            ? chosenId
-            : routePlan.delivery.templateId ?? chosenId;
-          emit("progress", { stage: "loading" });
-          const built = await fillAndNormalizeCuratedTemplate({
-            templateId: deliveredTemplateId,
-            copy,
-            onTemplateLoaded: (html) => {
-              emit("preview", { html });
-              emit("progress", { stage: "filling" });
-            },
-            onStage: (stage) => emit("progress", { stage }),
-          });
-          if (!built.ok) {
-            emit("error", { kind: built.kind, message: "Chosen template's HTML is unavailable." });
-            return close();
-          }
-          const finalized = finalizeCuratedDocument({
-            normalizedHtml: built.normalizedHtml,
-            profileData: profile.data,
-            title: titleFor(deliveredTemplateId),
-            brandRecolor: true,
-          });
-          if (!finalized.ok) {
-            emit("error", { kind: finalized.kind, message: "Curated HTML carried editor markers — try again." });
-            return close();
-          }
-          delivered = {
-            html: finalized.html,
-            templateId: deliveredTemplateId,
-            title: titleFor(deliveredTemplateId),
-            filled: built.filled,
-            appliedOps: built.appliedOps,
-            leaksBefore: built.leaksBefore,
-            leaksAfter: built.leaksAfter,
-          };
-        }
-
-        if (delivered.leaksBefore) {
-          // eslint-disable-next-line no-console
-          console.log(
-            `[curate] copy de plantilla heredado: ${delivered.leaksBefore} bloque(s) tras el relleno, ${delivered.leaksAfter} tras el parche (plantilla ${delivered.templateId})`,
-          );
-        }
-
-        const repairInput = delivered.visualEngine && safeResult?.ok
-          ? {
-              projectId,
-              assetMode,
-              assetTraceSink: logAssetShadowTrace,
-              html: delivered.html,
-              visualEngine: delivered.visualEngine,
-              intent: safeResult.intent,
-              brandAccent: profile.data.brand?.accent ?? null,
-              explicitConstraints: safeResult.intent.explicitConstraints,
-            }
-          : null;
-        if (repairMode === "on" && repairInput) {
-          emit("progress", { stage: "reviewing" });
-          const repaired = await runQuickVisualRepair(repairInput, { mode: "on" });
-          delivered.html = repaired.html;
-          delivered.visualEngine = repaired.visualEngine;
-          emit("progress", { stage: "polishing" });
-        } else if (repairMode === "shadow" && repairInput) {
-          void launchShadowVisualRepair(repairInput);
-        }
-
-        const title = delivered.title;
-        const cleanHtml = delivered.html;
         try {
-          await commitQuickVisualEngineDocument({
-            html: cleanHtml,
-            visualEngine: delivered.visualEngine,
+          await commitAiCompositionDocument({
+            html: result.html,
+            visualEngine: result.visualEngine,
           }, {
             emitPreview: (html) => emit("preview", { html }),
             persist: async (data) => {
@@ -421,7 +162,7 @@ export async function POST(req: Request): Promise<Response> {
               await db.insert(schema.projects).values({
                 id: projectId,
                 userId,
-                title,
+                title: result.title,
                 brief,
                 thumbnailUrl: null,
                 tags: ["curated"],
@@ -432,42 +173,45 @@ export async function POST(req: Request): Promise<Response> {
               });
             },
           });
-        } catch (err) {
-          console.error("[curate] db insert failed", err);
-          if (err instanceof Error) captureException(err, { route: "curate", stage: "db-insert", userId });
-          emit("error", { kind: "db", message: "Curated successfully but failed to save — try again." });
-          return close();
+        } catch {
+          captureFailure("persistence", "persistence_failed");
+          return fail("persistence_failed");
         }
 
-        await createVersion({ projectId, html: cleanHtml, label: `Curated: ${title}`, source: "initial" }).catch(
-          (err: unknown) => {
-            console.error("[curate] initial version snapshot failed", err);
-          },
-        );
-        void renderProjectThumbnail({ projectId, html: cleanHtml });
-
-        // Creative adaptation does not alter user credit debit.
-        const credits = calculateQuickDeliveryCredits({
-          pickUsage: pick.usage,
-          filled: delivered.filled,
+        const credits = calculateAiCreationCredits({
+          ...(result.copyUsage ? { copyUsage: result.copyUsage } : {}),
+          filled: result.filled,
         }, creditsForUsage, AUTOFILL_CREDIT_COST);
-        await debitCredits(userId, credits);
+        try {
+          await debitCredits(userId, credits);
+        } catch {
+          captureFailure("debit", "persistence_failed");
+          return fail("persistence_failed");
+        }
+
+        await createVersion({
+          projectId,
+          html: result.html,
+          label: `Curated: ${result.title}`,
+          source: "initial",
+        }).catch(() => undefined);
+        void renderProjectThumbnail({ projectId, html: result.html }).catch(() => undefined);
 
         emit("done", {
           projectId,
-          title,
-          templateId: delivered.templateId,
-          filled: delivered.filled,
-          appliedOps: delivered.appliedOps,
+          title: result.title,
+          route: result.route,
+          templateId: result.templateId,
+          filled: result.filled,
+          appliedOps: result.appliedOps,
           credits,
           durationMs: Date.now() - t0,
         });
         close();
-      } catch (err) {
-        console.error("[curate] stream failed", err);
-        if (err instanceof Error) captureException(err, { route: "curate", stage: "stream", userId });
-        emit("error", { kind: "unhandled", message: err instanceof Error ? err.message : "Unknown error" });
-        close();
+      } catch {
+        const reasonCode: AiCreationReasonCode = "composition_failed";
+        captureFailure("composition", reasonCode);
+        fail(reasonCode);
       } finally {
         inFlightUsers.delete(userId);
       }

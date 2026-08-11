@@ -7,11 +7,12 @@ import type { GenerationState } from "@/lib/use-generation";
 // useCuration — drives the /new AI entry flow on the CURATION path (free tier).
 //
 // POSTs a brief to /api/curate and consumes its SSE stream (progress / done /
-// error). Unlike /api/generate, curation does NOT stream HTML — the cheap model
-// picks a whole curated template + invents copy, the server fills + saves, then
-// emits `done {projectId}`. We surface each stage as a `notice` so the loader
-// shows live progress (and the page's "server saturated" silence-note never
-// trips), then redirect to ?project=<id> on done.
+// error). Unlike /api/generate, curation does not stream intermediate HTML.
+// The server assembles and validates independent sections, persists the final
+// hybrid document, emits its sole preview, then emits `done {projectId}`. We
+// surface each stage as a `notice` so the loader shows live progress (and the
+// page's "server saturated" silence-note never trips), then redirect to
+// ?project=<id> on done.
 //
 // Returns the SAME GenerationState shape as useGeneration so the page's
 // render + redirect wiring is reused verbatim — only the engine differs.
@@ -24,15 +25,14 @@ export interface UseCurationResult {
 
 const SILENCE_TIMEOUT_MS = 180_000; // curation is short; only a dead connection trips this
 
-// SSE progress stage → user-facing notice (abstract, never reveals "picking a
-// template"; reads as the AI building the page).
+// SSE progress stage → user-facing hybrid creation notice.
 const STAGE_TEXT: Record<string, string> = {
-  picking: "Designing your page…",
-  loading: "Building the layout…",
-  tagging: "Preparing the page…",
-  "calling-model": "Writing your copy…",
-  filling: "Writing your copy…",
-  applying: "Applying your content…",
+  analyzing: "Understanding your idea…",
+  writing: "Writing your content…",
+  planning: "Planning the sections…",
+  assembling: "Building the layout…",
+  styling: "Creating the visual identity…",
+  reviewing: "Reviewing visual quality…",
   persisting: "Finishing up…",
 };
 
@@ -46,13 +46,12 @@ export function useCuration(): UseCurationResult {
   useEffect(() => () => abortRef.current?.abort(), []);
 
   // `profileId` (optional) seeds the page from a saved business profile — the
-  // server overlays the user's real info onto the model's invented copy. No
-  // model picker: curation always uses Flash for pick + fill.
+  // server overlays the user's real info onto generated copy before composing.
   const curate = useCallback(async (brief: string, profileId?: string | null) => {
     abortRef.current?.abort();
     const controller = new AbortController();
     abortRef.current = controller;
-    setState({ kind: "generating", reasoning: "", html: "", notice: STAGE_TEXT.picking });
+    setState({ kind: "generating", reasoning: "", html: "", notice: STAGE_TEXT.analyzing });
 
     let timedOut = false;
     let watchdog: ReturnType<typeof setTimeout> | undefined;
