@@ -11,6 +11,8 @@ const AFTER = VisualQualityVerdictSchema.parse({ schemaVersion: "visual-quality-
 const KEEP = VisualQualityVerdictSchema.parse({ ...AFTER, scores: { ...AFTER.scores, themeRecognition: 9 } });
 const NONREPAIRABLE = VisualQualityVerdictSchema.parse({ ...BEFORE, decision: "nonrepairable", nonrepairableReason: "primary_content_hidden", scores: { ...BEFORE.scores, mobileReadability: 2 }, issues: [] });
 const INPUT = { html: "<html>original</html>", metadata: { route: "template_skeleton" }, sourceId: "fixture", intent: IntentAnalysisSchema.parse(COLORING_INTENT), direction: CreativeDirectionSchema.parse(COLORING_DIRECTION), route: "template_skeleton" as const };
+const ASSET_MANIFEST = { schemaVersion: "asset-manifest/1.0", manifestId: `sha256:${"f".repeat(64)}` } as never;
+const ASSET_TRACE = { schemaVersion: "asset-resolution-trace/1.0", resultCode: "resolved" } as never;
 const images = { desktop: { mimeType: "image/jpeg", dataBase64: "ZA==" }, mobile: { mimeType: "image/jpeg", dataBase64: "bQ==" } };
 const criticSuccess = (verdict: unknown) => ({ ok: true as const, verdict, durationMs: 1, promptVersion: "visual-quality-critic/2.4" as const, modelId: "critic-test" });
 const criticFailure = { ok: false as const, kind: "provider_error" as const, durationMs: 1, promptVersion: "visual-quality-critic/2.4" as const, modelId: "critic-test" };
@@ -61,6 +63,39 @@ describe("closed-loop repair", () => {
     expect(d.critic).toHaveBeenCalledTimes(2); expect(d.generatePlan).toHaveBeenCalledTimes(1); expect(d.applyPlan).toHaveBeenCalledTimes(1);
     expect(d.critic).toHaveBeenNthCalledWith(1, expect.objectContaining({ direction: INPUT.direction }), expect.anything());
     expect(d.critic).toHaveBeenNthCalledWith(2, expect.objectContaining({ direction: INPUT.direction }), expect.anything());
+  });
+
+  it("carries replacement asset metadata only on an accepted final improvement", async () => {
+    const d = deps();
+    d.applyPlan.mockResolvedValueOnce({
+      ok: true, html: "<html>repaired</html>",
+      structuralFingerprintBefore: `sha256:${"a".repeat(64)}`,
+      structuralFingerprintAfter: `sha256:${"a".repeat(64)}`,
+      assetManifest: ASSET_MANIFEST, assetTrace: ASSET_TRACE,
+    });
+    const accepted = await runClosedLoopVisualRepair({
+      ...INPUT, assetContext: { mode: "curated", projectId: "project-1" },
+    }, d);
+    expect(d.applyPlan).toHaveBeenCalledWith(expect.objectContaining({
+      intent: INPUT.intent,
+      assetContext: { mode: "curated", projectId: "project-1" },
+    }), expect.anything());
+    expect(accepted).toMatchObject({ accepted: true, metadata: { assetManifest: ASSET_MANIFEST, assetTrace: ASSET_TRACE } });
+
+    const rejectedDeps = deps(BEFORE, BEFORE);
+    rejectedDeps.applyPlan.mockResolvedValueOnce({
+      ok: true, html: "<html>repaired</html>", structuralFingerprintBefore: `sha256:${"a".repeat(64)}`,
+      structuralFingerprintAfter: `sha256:${"a".repeat(64)}`, assetManifest: ASSET_MANIFEST, assetTrace: ASSET_TRACE,
+    });
+    const rejected = await runClosedLoopVisualRepair(INPUT, rejectedDeps);
+    expect(rejected.metadata).toBe(INPUT.metadata);
+  });
+
+  it("propagates the production shadow trace sink to the repair applier", async () => {
+    const sink = vi.fn();
+    const d = deps();
+    await runClosedLoopVisualRepair({ ...INPUT, assetTraceSink: sink }, d);
+    expect(d.applyPlan).toHaveBeenCalledWith(expect.objectContaining({ assetTraceSink: sink }), expect.anything());
   });
 
   it("passes the validated mobile_overflow issue to the bounded apply boundary", async () => {

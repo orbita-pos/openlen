@@ -6,6 +6,8 @@ import type { IntentAnalysis } from "./contracts";
 import type { ApplyVisualRepairResult } from "./apply-visual-repair";
 import type { GenerateVisualRepairPlanResult } from "./generate-visual-repair";
 import { VisualQualityVerdictSchema, type VisualQualityScores, type VisualQualityVerdict, type VisualRepairIssueCode } from "./visual-repair-contracts";
+import type { AssetPipelineMode } from "./asset-pipeline-mode";
+import type { AssetResolutionTrace } from "./asset-contracts";
 
 export function shouldAttemptVisualRepair(v: VisualQualityVerdict): boolean { return v.decision === "repair" && v.issues.length > 0; }
 export const VISUAL_REPAIR_SCORE_DIMENSIONS = {
@@ -33,13 +35,13 @@ export function repairImprovesQuality(before: VisualQualityVerdict, after: Visua
   const totalGain = keys.reduce((sum, key) => sum + after.scores[key] - before.scores[key], 0);
   return totalGain >= 0 && after.scores.themeRecognition >= 7 && after.scores.briefAdherence >= 7;
 }
-export interface ClosedLoopVisualRepairInput { html: string; metadata: object; sourceId: string; intent: IntentAnalysis; direction: CreativeDirection; route: "template_skeleton" | "section_composition"; brandAccent?: string | null; explicitConstraints?: readonly string[]; timeoutMs?: number }
+export interface ClosedLoopVisualRepairInput { html: string; metadata: object; sourceId: string; intent: IntentAnalysis; direction: CreativeDirection; route: "template_skeleton" | "section_composition"; assetContext?: { mode: AssetPipelineMode; projectId: string }; assetTraceSink?: (trace: AssetResolutionTrace) => void; brandAccent?: string | null; explicitConstraints?: readonly string[]; timeoutMs?: number }
 export interface ClosedLoopVisualRepairDeps {
   buildInventory?: (html: string, sourceId: string) => SkeletonInventory;
   render(html: string, options?: { signal: AbortSignal }): Promise<VisualQualityViewports | null>;
   critic(input: { intent: IntentAnalysis; direction: CreativeDirection; orderedRoles: string[]; route: ClosedLoopVisualRepairInput["route"]; images: VisualQualityViewports }, options?: { signal: AbortSignal }): Promise<VisualQualityCriticResult>;
   generatePlan(input: { direction: CreativeDirection; inventory: SkeletonInventory; verdict: VisualQualityVerdict }, options?: { signal: AbortSignal }): Promise<GenerateVisualRepairPlanResult>;
-  applyPlan(input: { html: string; sourceId: string; direction: CreativeDirection; plan: SkeletonAdaptationPlan; brandAccent?: string | null; explicitConstraints?: readonly string[]; issueCodes?: readonly VisualRepairIssueCode[] }, options?: { signal: AbortSignal }): Promise<ApplyVisualRepairResult>;
+  applyPlan(input: { html: string; sourceId: string; intent: IntentAnalysis; direction: CreativeDirection; plan: SkeletonAdaptationPlan; assetContext?: { mode: AssetPipelineMode; projectId: string }; assetTraceSink?: (trace: AssetResolutionTrace) => void; brandAccent?: string | null; explicitConstraints?: readonly string[]; issueCodes?: readonly VisualRepairIssueCode[] }, options?: { signal: AbortSignal }): Promise<ApplyVisualRepairResult>;
 }
 function orderedRoles(html: string): string[] { return [...html.matchAll(/data-openlen-role=["']([^"']+)["']/gi)].map((match) => match[1]!); }
 function outputHash(html: string): string { return `sha256:${createHash("sha256").update(html).digest("hex")}`; }
@@ -124,14 +126,14 @@ export async function runClosedLoopVisualRepair(input: ClosedLoopVisualRepairInp
       const generated = await deps.generatePlan({ direction: input.direction, inventory, verdict: firstVerdict }, boundary);
       if (generated.usage) usage.push(generated.usage);
       if (!generated.ok) return original(input, "repair_provider_failed", usage);
-      const applied = await deps.applyPlan({ html: input.html, sourceId: input.sourceId, direction: input.direction, plan: generated.plan, brandAccent: input.brandAccent, explicitConstraints: input.explicitConstraints, issueCodes: firstVerdict.issues.map((issue) => issue.code) }, boundary);
+      const applied = await deps.applyPlan({ html: input.html, sourceId: input.sourceId, intent: input.intent, direction: input.direction, plan: generated.plan, assetContext: input.assetContext, assetTraceSink: input.assetTraceSink, brandAccent: input.brandAccent, explicitConstraints: input.explicitConstraints, issueCodes: firstVerdict.issues.map((issue) => issue.code) }, boundary);
       if (!applied.ok) return original(input, applied.code, usage);
       const finalImages = await deps.render(applied.html, boundary); if (!finalImages) return original(input, "final_render_failed", usage);
       const final = await deps.critic({ intent: input.intent, direction: input.direction, orderedRoles: orderedRoles(applied.html), route: input.route, images: finalImages }, boundary);
       if (final.usage) usage.push(final.usage);
       const finalHasRendererDiagnostics = rendererDiagnosticCodes(finalImages, input.direction).length > 0;
       if (!final.ok || finalHasRendererDiagnostics || !repairImprovesQuality(firstVerdict, final.verdict)) return original(input, !final.ok ? "final_critic_failed" : "not_improved", usage);
-      return { html: applied.html, metadata: { ...input.metadata }, accepted: true as const, trace: {
+      return { html: applied.html, metadata: { ...input.metadata, ...(applied.assetManifest && applied.assetTrace ? { assetManifest: applied.assetManifest, assetTrace: applied.assetTrace } : {}) }, accepted: true as const, trace: {
         resultCode: "accepted", usage: usage.map((item) => ({ ...item })),
         promptVersion: generated.promptVersion, criticVersion: "visual-quality-verdict/2.1" as const,
         issueCodesBefore: firstVerdict.issues.map((issue) => issue.code), issueCodesAfter: final.verdict.issues.map((issue) => issue.code),

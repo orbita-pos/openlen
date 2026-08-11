@@ -1,7 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
 import { CreativeDirectionSchema, SkeletonAdaptationPlanSchema } from "./creative-contracts";
 import { applyVisualRepairPlan } from "./apply-visual-repair";
-import { COLORING_DIRECTION } from "./creative-fixtures.test-support";
+import { COLORING_DIRECTION, COLORING_INTENT } from "./creative-fixtures.test-support";
+import { IntentAnalysisSchema } from "./contracts";
 import { VISUAL_ENGINE_2C_CASES } from "./visual-engine-2c-cohort";
 import { buildVisualEngine2CDirection, buildVisualEngine2CFixtureHtml } from "./visual-engine-2c-fixtures";
 
@@ -9,8 +10,30 @@ const HTML = '<!doctype html><html><head></head><body><header data-openlen-role=
 const PLAN = SkeletonAdaptationPlanSchema.parse({ schemaVersion: "skeleton-adaptation-plan/1.0", tokens: {}, cssOverride: [], assets: [] });
 const HASH = `sha256:${"a".repeat(64)}`;
 const INVENTORY = { schemaVersion: "skeleton-inventory/1.0" as const, templateId: "fixture", availableTokens: [], styleHooks: [], assetSlots: [], structuralFingerprint: HASH };
+const ASSET_MANIFEST = { schemaVersion: "asset-manifest/1.0", manifestId: `sha256:${"f".repeat(64)}` } as never;
+const ASSET_TRACE = { schemaVersion: "asset-resolution-trace/1.0", resultCode: "resolved" } as never;
 
 describe("applyVisualRepairPlan", () => {
+  it("returns replacement asset metadata only after curated manifest application succeeds", async () => {
+    const order: string[] = [];
+    const result = await applyVisualRepairPlan({
+      html: HTML,
+      sourceId: "fixture",
+      intent: IntentAnalysisSchema.parse(COLORING_INTENT),
+      direction: CreativeDirectionSchema.parse(COLORING_DIRECTION),
+      plan: PLAN,
+      assetContext: { mode: "curated", projectId: "project-1" },
+    }, {
+      buildInventory: () => INVENTORY,
+      compileIdentity: (input) => ({ ok: true, html: input.html.replace("</head>", '<style data-openlen-visual-engine="creative-direction/1.0"></style></head>'), tokens: {}, mode: "light", enforcedConstraints: [] }),
+      buildAssetIntents: () => { order.push("intent"); return [{ slotIndex: 0 }] as never; },
+      resolveDomainAssets: async (input) => { order.push(`${input.mode}:${input.projectId}`); return { ok: true, manifest: ASSET_MANIFEST, trace: ASSET_TRACE }; },
+      applyAssetManifest: (input) => { order.push("apply"); return { ok: true, html: input.html, manifest: ASSET_MANIFEST }; },
+      sanitize: (html) => ({ html }), fingerprint: () => HASH, technicalRender: async () => true,
+    });
+    expect(result).toMatchObject({ ok: true, assetManifest: ASSET_MANIFEST, assetTrace: ASSET_TRACE });
+    expect(order).toEqual(["intent", "curated:project-1", "apply"]);
+  });
   it("runs inventory, compiler, assets, sanitizer, fingerprint, roles and render atomically", async () => {
     const order: string[] = [];
     const result = await applyVisualRepairPlan({ html: HTML, sourceId: "fixture", direction: CreativeDirectionSchema.parse(COLORING_DIRECTION), plan: PLAN }, {

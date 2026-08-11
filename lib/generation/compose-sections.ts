@@ -24,6 +24,8 @@ import {
 import { planSectionComposition } from "./section-plan";
 import { canonicalJsonSha256, sha256 } from "./visual-engine-2a-eval";
 import type { PilotReasonCode } from "./visual-engine-pilot-store";
+import type { AssetPipelineMode } from "./asset-pipeline-mode";
+import type { AssetResolutionTrace } from "./asset-contracts";
 import { fillAssembled, hasFillableCopy, type FillAssembledResult } from "@/lib/assemble/fill";
 import { normalizeBornCanonical } from "@/lib/normalize";
 import {
@@ -51,6 +53,9 @@ export const COMPOSITION_BASE_THEME: AssembleTheme = Object.freeze({
 
 export interface ComposeSectionCandidateInput {
   route: GenerationRoute;
+  projectId?: string;
+  assetMode?: AssetPipelineMode;
+  assetTraceSink?: (trace: AssetResolutionTrace) => void;
   intent: IntentAnalysis;
   intentHash: string;
   records: readonly SectionRecord[];
@@ -241,13 +246,18 @@ export async function composeSectionCandidate(
     }
 
     const normalized = (deps.normalizeBornCanonical ?? normalizeBornCanonical)(fill.html);
-    const adapted = await (deps.adaptTemplateSkeleton ?? adaptTemplateSkeleton)({
+    const adapt = deps.adaptTemplateSkeleton ?? adaptTemplateSkeleton;
+    const adaptInput = {
       html: normalized,
       templateId: `composition:${inventory.hash}`,
       intent: input.intent,
       templateMetadata: metadataFromIntent(input.intent),
       brand: input.brand,
-    });
+      ...(input.projectId && input.assetMode ? { assetContext: { mode: input.assetMode, projectId: input.projectId } } : {}),
+    };
+    const adapted = input.assetTraceSink
+      ? await adapt(adaptInput, { onAssetTrace: input.assetTraceSink })
+      : await adapt(adaptInput);
     if (!adapted.ok) {
       return failure(
         input,

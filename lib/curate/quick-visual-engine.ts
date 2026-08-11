@@ -6,6 +6,8 @@ import type { IntentAnalysis } from "@/lib/generation/contracts";
 import type { SafeSelectionResult } from "@/lib/generation/safe-selection";
 import { TAXONOMY_COMPATIBILITY_VERSION } from "@/lib/generation/taxonomy-compatibility";
 import type { VisualEngineMode } from "@/lib/generation/visual-engine-mode";
+import type { AssetPipelineMode } from "@/lib/generation/asset-pipeline-mode";
+import type { AssetResolutionTrace } from "@/lib/generation/asset-contracts";
 import {
   completeVisualEnginePilotRun,
   reserveVisualEnginePilotRun,
@@ -98,6 +100,9 @@ export function planQuickVisualEngineRoute(input: {
 }
 
 export interface SkeletonCandidateInput {
+  projectId?: string;
+  assetMode?: AssetPipelineMode;
+  assetTraceSink?: (trace: AssetResolutionTrace) => void;
   candidateTemplateId: string;
   fallbackTemplateId: string;
   candidateTitle: string;
@@ -203,13 +208,17 @@ export async function runSkeletonCandidate(
     });
     if (!candidate.ok) return buildFallback(input, "internal_error", fallbackDeps);
 
-    const adapted = await adapt({
+    const adaptInput = {
       html: candidate.normalizedHtml,
       templateId: input.candidateTemplateId,
       intent: input.intent,
       templateMetadata: input.templateMetadata,
       brand: { accent: input.profileData.brand?.accent ?? null },
-    });
+      ...(input.projectId && input.assetMode ? { assetContext: { mode: input.assetMode, projectId: input.projectId } } : {}),
+    };
+    const adapted = input.assetTraceSink
+      ? await adapt(adaptInput, { onAssetTrace: input.assetTraceSink })
+      : await adapt(adaptInput);
     if (!adapted.ok) return buildFallback(input, adapted.reasonCode, fallbackDeps);
 
     const finalized = finalize({
@@ -220,23 +229,28 @@ export async function runSkeletonCandidate(
     });
     if (!finalized.ok) return buildFallback(input, "sanitization_failed", fallbackDeps);
 
+    const visualEngineBase = {
+      schemaVersion: "visual-engine-project/1.0" as const,
+      route: "template_skeleton" as const,
+      templateId: input.candidateTemplateId,
+      creativeDirection: adapted.creativeDirection,
+      promptVersion: adapted.promptVersion,
+      policyVersion: input.policyVersion,
+      contractVersion: "creative-direction/1.0" as const,
+      structuralFingerprintBefore: adapted.structuralFingerprintBefore,
+      structuralFingerprintAfter: adapted.structuralFingerprintAfter,
+    };
+    const visualEngine: VisualEngineProjectMetadata = adapted.assetManifest && adapted.assetTrace
+      ? { ...visualEngineBase, assetManifest: adapted.assetManifest, assetTrace: adapted.assetTrace }
+      : visualEngineBase;
+
     return {
       ok: true,
       route: "template_skeleton",
       templateId: input.candidateTemplateId,
       html: finalized.html,
       ...fillData(candidate),
-      visualEngine: {
-        schemaVersion: "visual-engine-project/1.0",
-        route: "template_skeleton",
-        templateId: input.candidateTemplateId,
-        creativeDirection: adapted.creativeDirection,
-        promptVersion: adapted.promptVersion,
-        policyVersion: input.policyVersion,
-        contractVersion: "creative-direction/1.0",
-        structuralFingerprintBefore: adapted.structuralFingerprintBefore,
-        structuralFingerprintAfter: adapted.structuralFingerprintAfter,
-      },
+      visualEngine,
     };
   } catch {
     return buildFallback(input, "internal_error", fallbackDeps);
@@ -357,13 +371,17 @@ export async function launchShadowSkeletonCandidate(
     if (!reservation.ok) return;
     reservationId = reservation.id;
 
-    const adapted = await adapt({
+    const adaptInput = {
       html: candidate.normalizedHtml,
       templateId: input.candidateTemplateId,
       intent: input.intent,
       templateMetadata: input.templateMetadata,
       brand: { accent: input.profileData.brand?.accent ?? null },
-    });
+      ...(input.projectId && input.assetMode ? { assetContext: { mode: input.assetMode, projectId: input.projectId } } : {}),
+    };
+    const adapted = input.assetTraceSink
+      ? await adapt(adaptInput, { onAssetTrace: input.assetTraceSink })
+      : await adapt(adaptInput);
     if (!adapted.ok) {
       await attemptCompletion(reservationId, pilotOutcome(adapted, input.policyVersion));
       return;

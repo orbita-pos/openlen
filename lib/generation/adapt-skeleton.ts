@@ -8,6 +8,18 @@ import {
 } from "@/lib/generation/creative-compiler";
 import type { CreativeDirection } from "@/lib/generation/creative-contracts";
 import type { IntentAnalysis } from "@/lib/generation/contracts";
+import { applyAssetManifest, type AppliedAssetManifestResult } from "@/lib/generation/apply-asset-manifest";
+import { buildAssetIntents, type BuildAssetIntentsInput } from "@/lib/generation/asset-intent";
+import { AssetResolutionTraceSchema, type AssetManifest, type AssetResolutionTrace } from "@/lib/generation/asset-contracts";
+import { parseAssetGenerationBudget } from "@/lib/generation/asset-pack-provider";
+import {
+  resolveDomainAssetManifest,
+  type AssetPipelineDependencies,
+  type AssetPipelineResult,
+  type ResolveDomainAssetManifestInput,
+} from "@/lib/generation/asset-pipeline";
+import type { AssetPipelineMode } from "@/lib/generation/asset-pipeline-mode";
+import { createGeminiAssetPackProvider } from "@/lib/generation/gemini-asset-pack-provider";
 import {
   generateCreativeDirection,
   type CreativeDirectionRequest,
@@ -28,6 +40,8 @@ import {
 import type { PilotReasonCode } from "@/lib/generation/visual-engine-pilot-store";
 import { sanitizeForPublish } from "@/lib/html-engine";
 import type { CuratedImage } from "@/lib/imagery/manifest";
+import { loadCuratedImages } from "@/lib/imagery/manifest";
+import { getAssetStorage } from "@/lib/projects/assets";
 import type { TemplateVisualMetadata } from "@/lib/templates/visual-metadata";
 
 type CreativeTemplateMetadata = Pick<
@@ -42,10 +56,15 @@ export interface AdaptTemplateSkeletonInput {
   templateMetadata: CreativeTemplateMetadata;
   brand: { accent: string | null };
   explicitOverrides?: ExplicitCreativeOverrides;
+  assetContext?: { mode: AssetPipelineMode; projectId: string };
 }
 
+type AcceptedAssetMetadata =
+  | { assetManifest: AssetManifest; assetTrace: AssetResolutionTrace }
+  | { assetManifest?: never; assetTrace?: never };
+
 export type SkeletonAdaptationResult =
-  | {
+  | ({
       ok: true;
       status: "adapted";
       html: string;
@@ -58,7 +77,7 @@ export type SkeletonAdaptationResult =
       structuralFingerprintAfter: string;
       usage: CreativeUsage;
       durationMs: number;
-    }
+    } & AcceptedAssetMetadata)
   | {
       ok: false;
       status: "fallback";
@@ -81,6 +100,14 @@ export interface AdaptTemplateSkeletonDeps {
     deps?: SkeletonAssetDependencies,
   ) => Promise<SkeletonAssetResult>;
   loadCuratedImages?: () => Promise<CuratedImage[]>;
+  buildAssetIntents?: (input: BuildAssetIntentsInput) => ReturnType<typeof buildAssetIntents>;
+  resolveDomainAssets?: (
+    input: ResolveDomainAssetManifestInput,
+    deps: AssetPipelineDependencies,
+  ) => Promise<AssetPipelineResult>;
+  applyAssetManifest?: typeof applyAssetManifest;
+  assetPipelineDeps?: AssetPipelineDependencies;
+  onAssetTrace?: (trace: AssetResolutionTrace) => void;
   sanitize?: SanitizeProbe;
   fingerprint?: (html: string, options?: StructuralFingerprintOptions) => string;
   technicalRender?: TechnicalRenderProbe;
@@ -120,6 +147,29 @@ function hasExactCreativeDirectionMarker(html: string): boolean {
   return markers.length === 1
     && markers[0].rawTagName?.toLowerCase() === "style"
     && markers[0].getAttribute("data-openlen-visual-engine") === "creative-direction/1.0";
+}
+
+function defaultAssetPipelineDeps(): AssetPipelineDependencies {
+  const budget = parseAssetGenerationBudget(process.env) ?? {
+    version: "disabled",
+    maxCostMicromxn: 1,
+    estimatedImageCostMicromxn: 1,
+  };
+  return {
+    loadCuratedImages,
+    catalogVersion: "openlen-images/1",
+    fetchImpl: fetch,
+    provider: createGeminiAssetPackProvider(),
+    storage: getAssetStorage(),
+    budget,
+  };
+}
+
+function assetFailureReason(result: Extract<AssetPipelineResult, { ok: false }>): PilotReasonCode {
+  if (result.code === "required_asset_unavailable" || result.code === "asset_slot_unavailable") return result.code;
+  if (result.code === "provider_error") return "provider_error";
+  if (result.code === "invalid_asset") return "invalid_provider_response";
+  return "internal_error";
 }
 
 /**
@@ -168,13 +218,67 @@ export async function adaptTemplateSkeleton(
     });
     if (!compiled.ok) return fallback(compileFailureReason(compiled), context);
 
-    const assets = await (deps.resolveAssets ?? resolveSkeletonAssets)({
-      html: compiled.html,
-      inventory,
-      direction,
-      plan,
-    }, deps.loadCuratedImages ? { loadImages: deps.loadCuratedImages } : undefined);
-    if (!assets.ok) return fallback(assets.code, context);
+    const mode = input.assetContext?.mode ?? "off";
+    let assets: SkeletonAssetResult | AppliedAssetManifestResult;
+    let acceptedAssetMetadata: { assetManifest: AssetManifest; assetTrace: AssetResolutionTrace } | undefined;
+    if (mode === "off" || mode === "shadow") {
+      assets = await (deps.resolveAssets ?? resolveSkeletonAssets)({
+        html: compiled.html,
+        inventory,
+        direction,
+        plan,
+      }, deps.loadCuratedImages ? { loadImages: deps.loadCuratedImages } : undefined);
+      if (!assets.ok) return fallback(assets.code, context);
+
+      if (mode === "shadow" && input.assetContext) {
+        try {
+          const intents = (deps.buildAssetIntents ?? buildAssetIntents)({
+            intent: input.intent,
+            direction,
+            inventory,
+            plan,
+          });
+          if (intents.length > 0) {
+            const shadow = await (deps.resolveDomainAssets ?? resolveDomainAssetManifest)({
+              intents,
+              direction,
+              projectId: input.assetContext.projectId,
+              mode: "curated",
+            }, deps.assetPipelineDeps ?? defaultAssetPipelineDeps());
+            const parsedTrace = AssetResolutionTraceSchema.safeParse(shadow.trace);
+            if (parsedTrace.success) deps.onAssetTrace?.(parsedTrace.data);
+          }
+        } catch {
+          // Shadow never changes delivery and exposes no candidate metadata.
+        }
+      }
+    } else {
+      const intents = (deps.buildAssetIntents ?? buildAssetIntents)({
+        intent: input.intent,
+        direction,
+        inventory,
+        plan,
+      });
+      if (intents.length === 0) {
+        assets = { ok: true, html: compiled.html, applied: 0, assigned: [] };
+      } else {
+        const resolved = await (deps.resolveDomainAssets ?? resolveDomainAssetManifest)({
+          intents,
+          direction,
+          projectId: input.assetContext!.projectId,
+          mode,
+        }, deps.assetPipelineDeps ?? defaultAssetPipelineDeps());
+        if (!resolved.ok) return fallback(assetFailureReason(resolved), context);
+        const applied = (deps.applyAssetManifest ?? applyAssetManifest)({
+          html: compiled.html,
+          manifest: resolved.manifest,
+          inputFingerprint: before,
+        });
+        if (!applied.ok) return fallback(applied.code, context);
+        assets = applied;
+        acceptedAssetMetadata = { assetManifest: resolved.manifest, assetTrace: resolved.trace };
+      }
+    }
 
     const sanitized = (deps.sanitize ?? sanitizeForPublish)(assets.html);
     if (sanitized.html === null) return fallback("sanitization_failed", context);
@@ -191,7 +295,7 @@ export async function adaptTemplateSkeleton(
       return fallback("technical_render_failed", context);
     }
 
-    return {
+    const result = {
       ok: true,
       status: "adapted",
       html: sanitized.html,
@@ -204,7 +308,10 @@ export async function adaptTemplateSkeleton(
       structuralFingerprintAfter: after,
       usage: creative.usage,
       durationMs: creative.durationMs,
-    };
+    } as const;
+    return acceptedAssetMetadata
+      ? { ...result, assetManifest: acceptedAssetMetadata.assetManifest, assetTrace: acceptedAssetMetadata.assetTrace }
+      : result;
   } catch (error) {
     if (error instanceof SkeletonInventoryError) return fallback(error.code, context);
     return fallback("internal_error", context);

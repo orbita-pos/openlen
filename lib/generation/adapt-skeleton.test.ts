@@ -14,6 +14,7 @@ import {
   type GenerateCreativeDirectionResult,
 } from "@/lib/generation/generate-creative-direction";
 import { resolveSkeletonAssets } from "@/lib/generation/skeleton-assets";
+import type { AssetManifest, AssetResolutionTrace } from "@/lib/generation/asset-contracts";
 import { buildSkeletonInventory, SkeletonInventoryError } from "@/lib/generation/skeleton-inventory";
 import { fingerprintStructure } from "@/lib/generation/structural-fingerprint";
 import type { CuratedImage } from "@/lib/imagery/manifest";
@@ -105,6 +106,18 @@ const READY: GenerateCreativeDirectionResult = {
   durationMs: 25,
 };
 
+const ASSET_MANIFEST = { schemaVersion: "asset-manifest/1.0", manifestId: `sha256:${"a".repeat(64)}` } as AssetManifest;
+const ASSET_TRACE: AssetResolutionTrace = {
+  schemaVersion: "asset-resolution-trace/1.0", manifestId: `sha256:${"a".repeat(64)}`,
+  consistencyGroupCount: 1, curatedCount: 1, generatedCount: 0, abstractCount: 0,
+  placeholderCount: 0, requiredUnresolvedCount: 0, rejectionCounts: {}, provider: null,
+  modelId: null, promptSha256: [], estimatedCostMicromxn: 0, durationMs: 1, resultCode: "resolved",
+};
+const ASSET_FAILURE_TRACE: AssetResolutionTrace = {
+  ...ASSET_TRACE, manifestId: null, consistencyGroupCount: 0, curatedCount: 0,
+  requiredUnresolvedCount: 1, resultCode: "required_asset_unavailable",
+};
+
 function providerFailure(kind: "timeout" | "schema"): GenerateCreativeDirectionResult {
   return {
     ok: false,
@@ -125,6 +138,97 @@ function baseDeps(): AdaptTemplateSkeletonDeps {
 }
 
 describe("adaptTemplateSkeleton", () => {
+  it("keeps the exact legacy result and resolver path when assets are off", async () => {
+    const legacy = baseDeps();
+    const legacyResult = await adaptTemplateSkeleton(INPUT, legacy);
+    const resolveDomainAssets = vi.fn();
+    const applyManifest = vi.fn();
+    const off = baseDeps();
+    off.resolveDomainAssets = resolveDomainAssets;
+    off.applyAssetManifest = applyManifest;
+
+    const offResult = await adaptTemplateSkeleton({
+      ...INPUT,
+      assetContext: { mode: "off", projectId: "project-1" },
+    }, off);
+
+    expect(offResult).toEqual(legacyResult);
+    expect(resolveDomainAssets).not.toHaveBeenCalled();
+    expect(applyManifest).not.toHaveBeenCalled();
+  });
+
+  it("runs intent, manifest, and apply before sanitize for curated candidates", async () => {
+    const order: string[] = [];
+    const deps = baseDeps();
+    deps.buildAssetIntents = () => { order.push("intent"); return [{ slotIndex: 0 }] as never; };
+    deps.resolveDomainAssets = async (input) => {
+      order.push(`manifest:${input.mode}:${input.projectId}`);
+      return { ok: true, manifest: ASSET_MANIFEST, trace: ASSET_TRACE };
+    };
+    deps.applyAssetManifest = (input) => {
+      order.push("apply");
+      return { ok: true, html: input.html, manifest: ASSET_MANIFEST };
+    };
+    deps.sanitize = (html) => { order.push("sanitize"); return { html }; };
+    deps.fingerprint = (html, options) => { order.push("fingerprint"); return fingerprintStructure(html, options); };
+    deps.technicalRender = async () => { order.push("render"); return true; };
+
+    const result = await adaptTemplateSkeleton({
+      ...INPUT,
+      assetContext: { mode: "curated", projectId: "project-1" },
+    }, deps);
+
+    expect(result).toMatchObject({ ok: true, assetManifest: ASSET_MANIFEST, assetTrace: ASSET_TRACE });
+    expect(order).toEqual(["intent", "manifest:curated:project-1", "apply", "sanitize", "fingerprint", "render"]);
+  });
+
+  it("forces shadow through curated-only resolution and delivers the exact legacy result", async () => {
+    const legacyResult = await adaptTemplateSkeleton(INPUT, baseDeps());
+    const provider = { capabilities: vi.fn(), createPack: vi.fn() };
+    const storage = { put: vi.fn() };
+    const resolveDomainAssets = vi.fn(async (input) => {
+      expect(input.mode).toBe("curated");
+      return { ok: false as const, code: "required_asset_unavailable" as const, trace: ASSET_FAILURE_TRACE };
+    });
+    const onAssetTrace = vi.fn();
+    const deps = baseDeps();
+    deps.buildAssetIntents = () => [{ slotIndex: 0 }] as never;
+    deps.resolveDomainAssets = resolveDomainAssets;
+    deps.onAssetTrace = onAssetTrace;
+    deps.assetPipelineDeps = { loadCuratedImages: async () => [], catalogVersion: "test", fetchImpl: vi.fn(), provider, storage, budget: { version: "test", maxCostMicromxn: 1, estimatedImageCostMicromxn: 1 } };
+
+    const result = await adaptTemplateSkeleton({
+      ...INPUT,
+      assetContext: { mode: "shadow", projectId: "project-1" },
+    }, deps);
+
+    expect(result).toEqual(legacyResult);
+    expect(resolveDomainAssets).toHaveBeenCalledTimes(1);
+    expect(onAssetTrace).toHaveBeenCalledWith(ASSET_FAILURE_TRACE);
+    expect(provider.createPack).not.toHaveBeenCalled();
+    expect(storage.put).not.toHaveBeenCalled();
+  });
+
+  it("emits the parsed redacted trace for a successful shadow manifest attempt", async () => {
+    const onAssetTrace = vi.fn();
+    const deps = baseDeps();
+    deps.buildAssetIntents = () => [{ slotIndex: 0 }] as never;
+    deps.resolveDomainAssets = async () => ({ ok: true, manifest: ASSET_MANIFEST, trace: ASSET_TRACE });
+    deps.onAssetTrace = onAssetTrace;
+    const result = await adaptTemplateSkeleton({ ...INPUT, assetContext: { mode: "shadow", projectId: "project-1" } }, deps);
+    expect(result).toMatchObject({ ok: true });
+    expect(onAssetTrace).toHaveBeenCalledWith(ASSET_TRACE);
+  });
+
+  it("maps manifest or apply failure to a typed fallback without candidate HTML", async () => {
+    const deps = baseDeps();
+    deps.buildAssetIntents = () => [{ slotIndex: 0 }] as never;
+    deps.resolveDomainAssets = async () => ({ ok: false, code: "required_asset_unavailable", slotIndex: 0, trace: ASSET_TRACE });
+    const result = await adaptTemplateSkeleton({ ...INPUT, assetContext: { mode: "curated", projectId: "project-1" } }, deps);
+    expect(result).toMatchObject({ ok: false, reasonCode: "required_asset_unavailable" });
+    expect(result).not.toHaveProperty("html");
+    expect(result).not.toHaveProperty("assetManifest");
+  });
   it("runs one bounded creative call and returns only a fully validated adaptation", async () => {
     const original = structuredClone(INPUT);
     const deps = baseDeps();

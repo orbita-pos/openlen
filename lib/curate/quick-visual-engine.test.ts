@@ -115,6 +115,8 @@ function buildResult(templateId: string, html = `${templateId}-normalized`) {
 
 function candidateInput() {
   return {
+    projectId: "project-1",
+    assetMode: "curated" as const,
     candidateTemplateId: "safe-skeleton",
     fallbackTemplateId: "weighted",
     candidateTitle: "Safe",
@@ -140,6 +142,8 @@ const ADAPTED = {
   structuralFingerprintAfter: `sha256:${"a".repeat(64)}`,
   usage: { inputTokens: 20, outputTokens: 10, thinkingTokens: 5, cachedTokens: 0 },
   durationMs: 25,
+  assetManifest: { schemaVersion: "asset-manifest/1.0", manifestId: `sha256:${"f".repeat(64)}` } as never,
+  assetTrace: { schemaVersion: "asset-resolution-trace/1.0", resultCode: "resolved" } as never,
 };
 
 describe("runSkeletonCandidate", () => {
@@ -163,10 +167,35 @@ describe("runSkeletonCandidate", () => {
         contractVersion: "creative-direction/1.0",
         structuralFingerprintBefore: `sha256:${"a".repeat(64)}`,
         structuralFingerprintAfter: `sha256:${"a".repeat(64)}`,
+        assetManifest: ADAPTED.assetManifest,
+        assetTrace: ADAPTED.assetTrace,
       },
     });
     expect(build).toHaveBeenCalledTimes(1);
     expect(finalize).toHaveBeenCalledWith(expect.objectContaining({ brandRecolor: false }));
+  });
+
+  it("passes project ID and mode to adaptation", async () => {
+    const adapt = vi.fn(async () => ADAPTED);
+    await runSkeletonCandidate(candidateInput(), {
+      fillAndNormalizeCuratedTemplate: async ({ templateId }) => buildResult(templateId),
+      adaptTemplateSkeleton: adapt,
+      finalizeCuratedDocument: ({ normalizedHtml }) => ({ ok: true, html: normalizedHtml }),
+    });
+    expect(adapt).toHaveBeenCalledWith(expect.objectContaining({
+      assetContext: { mode: "curated", projectId: "project-1" },
+    }));
+  });
+
+  it("propagates the production shadow trace sink to the shared adapter", async () => {
+    const sink = vi.fn();
+    const adapt = vi.fn(async () => ADAPTED);
+    await runSkeletonCandidate({ ...candidateInput(), assetTraceSink: sink }, {
+      fillAndNormalizeCuratedTemplate: async ({ templateId }) => buildResult(templateId),
+      adaptTemplateSkeleton: adapt,
+      finalizeCuratedDocument: ({ normalizedHtml }) => ({ ok: true, html: normalizedHtml }),
+    });
+    expect(adapt).toHaveBeenCalledWith(expect.anything(), { onAssetTrace: sink });
   });
 
   it("falls back atomically to the original weighted ID and never exposes the unadapted skeleton", async () => {

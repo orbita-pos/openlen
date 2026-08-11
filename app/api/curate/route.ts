@@ -24,6 +24,8 @@ import { overlayProfile } from "@/lib/business-profiles/overlay";
 import { selectGenerationRoute } from "@/lib/generation/safe-selection";
 import { shouldRunLegacySafeShadow, visualEngineMode } from "@/lib/generation/visual-engine-mode";
 import { visualRepairMode } from "@/lib/generation/visual-repair-mode";
+import { assetPipelineMode } from "@/lib/generation/asset-pipeline-mode";
+import { AssetResolutionTraceSchema, type AssetResolutionTrace } from "@/lib/generation/asset-contracts";
 import { fillAndNormalizeCuratedTemplate, finalizeCuratedDocument } from "@/lib/curate/build-curated-document";
 import { canonicalJsonSha256 } from "@/lib/generation/visual-engine-2a-eval";
 import {
@@ -51,6 +53,14 @@ import { launchShadowVisualRepair, runQuickVisualRepair } from "@/lib/curate/qui
 export const runtime = "nodejs";
 
 const ENCODER = new TextEncoder();
+
+function logAssetShadowTrace(trace: AssetResolutionTrace): void {
+  const parsed = AssetResolutionTraceSchema.safeParse(trace);
+  if (!parsed.success) return;
+  // Operational shadow telemetry only: the strict trace contains no HTML,
+  // manifest slots, raw prompts, provider bodies, copy, or image bytes.
+  console.info("[curate] asset shadow trace", parsed.data);
+}
 
 // One curate per user at a time. Cleared in finally so a crash cannot lock out.
 const inFlightUsers = new Set<string>();
@@ -117,6 +127,8 @@ export async function POST(req: Request): Promise<Response> {
           return close();
         }
 
+        const projectId = crypto.randomUUID();
+        const assetMode = assetPipelineMode();
         const visualMode = visualEngineMode();
         const repairMode = visualRepairMode();
         emit("progress", { stage: "picking" });
@@ -187,6 +199,9 @@ export async function POST(req: Request): Promise<Response> {
               const shadowTemplate = templates.find((template) => template.id === shadowTemplateId);
               if (!shadowTemplate?.visualMetadata) return;
               await launchShadowSkeletonCandidate({
+                projectId,
+                assetMode,
+                assetTraceSink: logAssetShadowTrace,
                 mode: "shadow",
                 candidateTemplateId: shadowTemplateId,
                 fallbackTemplateId: chosenId,
@@ -201,6 +216,9 @@ export async function POST(req: Request): Promise<Response> {
               return;
             }
             await launchShadowSectionCompositionCandidate({
+              projectId,
+              assetMode,
+              assetTraceSink: logAssetShadowTrace,
               mode: "shadow",
               fallbackTemplateId: chosenId,
               fallbackTitle: titleFor(chosenId),
@@ -247,6 +265,9 @@ export async function POST(req: Request): Promise<Response> {
           emit("progress", { stage: "stitching" });
           emit("progress", { stage: "filling" });
           const composition = await runSectionCompositionCandidate({
+            projectId,
+            assetMode,
+            assetTraceSink: logAssetShadowTrace,
             fallbackTemplateId: chosenId,
             fallbackTitle: titleFor(chosenId),
             candidateTitle: copy.business_name?.trim() || "Untitled page",
@@ -290,6 +311,9 @@ export async function POST(req: Request): Promise<Response> {
           emit("progress", { stage: "loading" });
           emit("progress", { stage: "filling" });
           const skeleton = await runSkeletonCandidate({
+            projectId,
+            assetMode,
+            assetTraceSink: logAssetShadowTrace,
             candidateTemplateId: routePlan.delivery.templateId,
             fallbackTemplateId: chosenId,
             candidateTitle: titleFor(routePlan.delivery.templateId),
@@ -372,6 +396,9 @@ export async function POST(req: Request): Promise<Response> {
 
         const repairInput = delivered.visualEngine && safeResult?.ok
           ? {
+              projectId,
+              assetMode,
+              assetTraceSink: logAssetShadowTrace,
               html: delivered.html,
               visualEngine: delivered.visualEngine,
               intent: safeResult.intent,
@@ -391,7 +418,6 @@ export async function POST(req: Request): Promise<Response> {
 
         const title = delivered.title;
         const cleanHtml = delivered.html;
-        const projectId = crypto.randomUUID();
         try {
           await commitQuickVisualEngineDocument({
             html: cleanHtml,

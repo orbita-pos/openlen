@@ -1,4 +1,6 @@
+import { createHash } from "node:crypto";
 import { describe, expect, it, vi } from "vitest";
+import type { AssetManifest, AssetResolutionTrace } from "@/lib/generation/asset-contracts";
 import { CreativeDirectionSchema } from "@/lib/generation/creative-contracts";
 import { IntentAnalysisSchema } from "@/lib/generation/contracts";
 import { COLORING_DIRECTION, COLORING_INTENT } from "@/lib/generation/creative-fixtures.test-support";
@@ -6,14 +8,45 @@ import { launchShadowVisualRepair, runQuickVisualRepair } from "./quick-visual-r
 
 const direction = CreativeDirectionSchema.parse(COLORING_DIRECTION);
 const intent = IntentAnalysisSchema.parse(COLORING_INTENT);
+function canonicalJson(value: unknown): string {
+  if (Array.isArray(value)) return `[${value.map(canonicalJson).join(",")}]`;
+  if (value !== null && typeof value === "object") {
+    const record = value as Record<string, unknown>;
+    return `{${Object.keys(record).sort().map((key) => `${JSON.stringify(key)}:${canonicalJson(record[key])}`).join(",")}}`;
+  }
+  return JSON.stringify(value);
+}
+function assetPair(styleLock: string): { manifest: AssetManifest; trace: AssetResolutionTrace } {
+  const unsigned = {
+    schemaVersion: "asset-manifest/1.0" as const,
+    consistencyGroup: { id: `asset-pack-${styleLock}`, mediaType: "illustration" as const, artDirection: "storybook", paletteHints: [], styleLock },
+    slots: [],
+    fallbackPolicy: "fail_closed_on_required_identity_asset" as const,
+  };
+  const manifest = { ...unsigned, manifestId: `sha256:${createHash("sha256").update(canonicalJson(unsigned)).digest("hex")}` as const };
+  const trace: AssetResolutionTrace = {
+    schemaVersion: "asset-resolution-trace/1.0", manifestId: manifest.manifestId,
+    consistencyGroupCount: 1, curatedCount: 0, generatedCount: 0, abstractCount: 0,
+    placeholderCount: 0, requiredUnresolvedCount: 0, rejectionCounts: {}, provider: null,
+    modelId: null, promptSha256: [], estimatedCostMicromxn: 0, durationMs: 1, resultCode: "resolved",
+  };
+  return { manifest, trace };
+}
+const originalPair = assetPair("original");
+const replacementPair = assetPair("replacement");
+const originalManifest = originalPair.manifest;
+const replacementManifest = replacementPair.manifest;
+const replacementTrace = replacementPair.trace;
 const visualEngine = {
   schemaVersion: "visual-engine-project/1.0" as const, route: "template_skeleton" as const, templateId: "fixture",
   creativeDirection: direction, promptVersion: "creative-prompt/1.0", policyVersion: "template-policy/1.0", contractVersion: "creative-direction/1.0" as const,
   structuralFingerprintBefore: `sha256:${"a".repeat(64)}`, structuralFingerprintAfter: `sha256:${"a".repeat(64)}`,
+  assetManifest: originalManifest,
+  assetTrace: originalPair.trace,
 };
-const input = { html: "<html>original</html>", visualEngine, intent, brandAccent: null };
+const input = { html: "<html>original</html>", visualEngine, intent, brandAccent: null, projectId: "project-1", assetMode: "curated" as const };
 const accepted = {
-  html: "<html>repaired</html>", metadata: {}, accepted: true as const,
+  html: "<html>repaired</html>", metadata: { route: "section_composition", assetManifest: replacementManifest, assetTrace: replacementTrace }, accepted: true as const,
   trace: {
     resultCode: "accepted", promptVersion: "visual-repair-prompt/1.1", criticVersion: "visual-quality-verdict/2.1" as const,
     issueCodesBefore: ["palette_mismatch" as const], issueCodesAfter: [],
@@ -40,12 +73,36 @@ describe("quick visual repair", () => {
       issueCodesBefore: ["palette_mismatch"], issueCodesAfter: [], scoresBefore: accepted.trace.scoresBefore,
       scoresAfter: accepted.trace.scoresAfter, outputHashBefore: accepted.trace.outputHashBefore, outputHashAfter: accepted.trace.outputHashAfter,
     });
+    expect(result.visualEngine.assetManifest).toEqual(replacementManifest);
+    expect(result.visualEngine.assetTrace).toEqual(replacementTrace);
+    expect(result.visualEngine.route).toBe("template_skeleton");
     expect(JSON.stringify(result.visualEngine)).not.toMatch(/usage|explanation|dataBase64/i);
   });
 
   it("on failure preserves original HTML and metadata reference", async () => {
     const result = await runQuickVisualRepair(input, { mode: "on", runRepair: vi.fn().mockResolvedValue({ html: input.html, metadata: visualEngine, accepted: false, trace: { resultCode: "not_improved", usage: [] } }) });
     expect(result.html).toBe(input.html); expect(result.visualEngine).toBe(visualEngine);
+  });
+
+  it("preserves the original asset pair when an accepted repair returns only one replacement field", async () => {
+    const oneSided = { ...accepted, metadata: { assetManifest: replacementManifest } };
+    const result = await runQuickVisualRepair(input, { mode: "on", runRepair: vi.fn().mockResolvedValue(oneSided) });
+    expect(result.html).toBe(oneSided.html);
+    expect(result.visualEngine.assetManifest).toBe(originalPair.manifest);
+    expect(result.visualEngine.assetTrace).toBe(originalPair.trace);
+  });
+
+  it("preserves the original asset pair when both replacement fields fail validation", async () => {
+    const invalid = {
+      ...accepted,
+      metadata: {
+        assetManifest: { ...replacementManifest, manifestId: `sha256:${"f".repeat(64)}` },
+        assetTrace: { ...replacementTrace, manifestId: `sha256:${"e".repeat(64)}` },
+      },
+    };
+    const result = await runQuickVisualRepair(input, { mode: "on", runRepair: vi.fn().mockResolvedValue(invalid) });
+    expect(result.visualEngine.assetManifest).toBe(originalPair.manifest);
+    expect(result.visualEngine.assetTrace).toBe(originalPair.trace);
   });
 
   it("on catches unexpected dependency exceptions and preserves original references", async () => {

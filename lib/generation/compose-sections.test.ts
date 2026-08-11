@@ -39,6 +39,8 @@ const HTML_BY_URL = new Map(RECORDS.map((row) => [row.storageUrl,
 
 const INPUT: ComposeSectionCandidateInput = {
   route: "section_composition",
+  projectId: "project-1",
+  assetMode: "curated",
   intent: IntentAnalysisSchema.parse({
     schemaVersion: "intent-analysis/1.0", language: "es",
     functional: { siteType: "content_platform", requiredSections: ["hero", "coloring_gallery", "minigames", "stories", "activities"], primaryActions: ["color"], contentModel: "creative_activities" },
@@ -78,6 +80,25 @@ function successfulDeps(): ComposeSectionCandidateDeps {
 }
 
 describe("composeSectionCandidate", () => {
+  it("passes the same project asset context to the shared skeleton adapter", async () => {
+    const deps = successfulDeps();
+    const adapt = deps.adaptTemplateSkeleton!;
+    deps.adaptTemplateSkeleton = vi.fn(async (input, adaptDeps) => {
+      expect(input.assetContext).toEqual({ mode: "curated", projectId: "project-1" });
+      return adapt(input, adaptDeps);
+    });
+    await expect(composeSectionCandidate(INPUT, deps)).resolves.toMatchObject({ ok: true });
+    expect(deps.adaptTemplateSkeleton).toHaveBeenCalledTimes(1);
+  });
+
+  it("passes the shadow trace sink to skeleton adaptation", async () => {
+    const sink = vi.fn();
+    const deps = successfulDeps();
+    const adapt = deps.adaptTemplateSkeleton!;
+    deps.adaptTemplateSkeleton = vi.fn((input, adaptDeps) => adapt(input, adaptDeps));
+    await expect(composeSectionCandidate({ ...INPUT, assetTraceSink: sink }, deps)).resolves.toMatchObject({ ok: true });
+    expect(deps.adaptTemplateSkeleton).toHaveBeenCalledWith(expect.anything(), { onAssetTrace: sink });
+  });
   it("stitches, fills, adapts and returns one redacted manifest", async () => {
     const result = await composeSectionCandidate(INPUT, successfulDeps());
     expect(result).toMatchObject({

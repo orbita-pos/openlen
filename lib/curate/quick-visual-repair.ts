@@ -5,10 +5,16 @@ import { applyVisualRepairPlan } from "@/lib/generation/apply-visual-repair";
 import { runClosedLoopVisualRepair } from "@/lib/generation/closed-loop-repair";
 import type { IntentAnalysis } from "@/lib/generation/contracts";
 import { generateVisualRepairPlan } from "@/lib/generation/generate-visual-repair";
+import { AssetManifestSchema, AssetResolutionTraceSchema, validateAssetManifestHash } from "@/lib/generation/asset-contracts";
+import type { AssetResolutionTrace } from "@/lib/generation/asset-contracts";
 import type { VisualRepairMode } from "@/lib/generation/visual-repair-mode";
-import type { VisualEngineProjectMetadata, VisualRepairProjectMetadata } from "@/lib/projects/types";
+import type { AssetPipelineMode } from "@/lib/generation/asset-pipeline-mode";
+import type { VisualEngineAssetMetadata, VisualEngineProjectMetadata, VisualRepairProjectMetadata } from "@/lib/projects/types";
 
 export interface QuickVisualRepairInput {
+  projectId?: string;
+  assetMode?: AssetPipelineMode;
+  assetTraceSink?: (trace: AssetResolutionTrace) => void;
   html: string;
   visualEngine: VisualEngineProjectMetadata;
   intent: IntentAnalysis;
@@ -57,7 +63,19 @@ function repairInput(input: QuickVisualRepairInput): Parameters<RunRepair>[0] {
     intent: input.intent, direction: input.visualEngine.creativeDirection,
     route: input.visualEngine.route, brandAccent: input.brandAccent,
     explicitConstraints: input.explicitConstraints,
+    ...(input.projectId && input.assetMode ? { assetContext: { mode: input.assetMode, projectId: input.projectId } } : {}),
+    ...(input.assetTraceSink ? { assetTraceSink: input.assetTraceSink } : {}),
   };
+}
+
+function replacementAssetMetadata(metadata: object): VisualEngineAssetMetadata {
+  const candidate = metadata as Pick<VisualEngineProjectMetadata, "assetManifest" | "assetTrace">;
+  if (!candidate.assetManifest || !candidate.assetTrace) return {};
+  const manifest = AssetManifestSchema.safeParse(candidate.assetManifest);
+  const trace = AssetResolutionTraceSchema.safeParse(candidate.assetTrace);
+  if (!manifest.success || !trace.success || !validateAssetManifestHash(manifest.data)) return {};
+  if (trace.data.manifestId !== manifest.data.manifestId || trace.data.resultCode !== "resolved") return {};
+  return { assetManifest: manifest.data, assetTrace: trace.data };
 }
 
 export async function runQuickVisualRepair(input: QuickVisualRepairInput, deps: QuickVisualRepairDeps = {}) {
@@ -65,7 +83,12 @@ export async function runQuickVisualRepair(input: QuickVisualRepairInput, deps: 
   try {
     const result = await (deps.runRepair ?? defaultRepair)(repairInput(input));
     if (!result.accepted) return { html: input.html, visualEngine: input.visualEngine };
-    return { html: result.html, visualEngine: { ...input.visualEngine, repair: repairMetadata(result.trace) } };
+    const replacement = replacementAssetMetadata(result.metadata);
+    const repair = repairMetadata(result.trace);
+    const visualEngine: VisualEngineProjectMetadata = replacement.assetManifest && replacement.assetTrace
+      ? { ...input.visualEngine, assetManifest: replacement.assetManifest, assetTrace: replacement.assetTrace, repair }
+      : { ...input.visualEngine, repair };
+    return { html: result.html, visualEngine };
   } catch {
     (deps.captureException ?? reportException)(new Error("Visual repair on failed"), { route: "curate", stage: "visual-repair-on" });
     return { html: input.html, visualEngine: input.visualEngine };

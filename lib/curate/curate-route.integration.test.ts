@@ -185,8 +185,19 @@ const ADAPTED = {
   usage: { inputTokens: 20, outputTokens: 10, thinkingTokens: 5, cachedTokens: 0 },
   durationMs: 25,
 };
+const SHADOW_TRACE = {
+  schemaVersion: "asset-resolution-trace/1.0" as const, manifestId: `sha256:${"f".repeat(64)}`,
+  consistencyGroupCount: 1, curatedCount: 1, generatedCount: 0, abstractCount: 0,
+  placeholderCount: 0, requiredUnresolvedCount: 0, rejectionCounts: {}, provider: null,
+  modelId: null, promptSha256: [], estimatedCostMicromxn: 0, durationMs: 1, resultCode: "resolved" as const,
+};
+const SHADOW_FAILURE_TRACE = {
+  ...SHADOW_TRACE, manifestId: null, consistencyGroupCount: 0, curatedCount: 0,
+  requiredUnresolvedCount: 1, resultCode: "required_asset_unavailable" as const,
+};
 
 const previousVisualEngineMode = process.env.OPENLEN_VISUAL_ENGINE;
+const previousAssetMode = process.env.OPENLEN_VISUAL_ENGINE_ASSETS;
 
 interface SseEvent { event: string; data: Record<string, unknown> }
 
@@ -221,6 +232,7 @@ describe("POST /api/curate Visual Engine integration", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     process.env.OPENLEN_VISUAL_ENGINE = "off";
+    process.env.OPENLEN_VISUAL_ENGINE_ASSETS = "off";
     mocks.visualRepairMode.mockReturnValue("off");
     mocks.auth.mockResolvedValue({ user: { id: "user-1" } });
     mocks.consumeToken.mockReturnValue({ allowed: true });
@@ -301,6 +313,8 @@ describe("POST /api/curate Visual Engine integration", () => {
   afterAll(() => {
     if (previousVisualEngineMode === undefined) delete process.env.OPENLEN_VISUAL_ENGINE;
     else process.env.OPENLEN_VISUAL_ENGINE = previousVisualEngineMode;
+    if (previousAssetMode === undefined) delete process.env.OPENLEN_VISUAL_ENGINE_ASSETS;
+    else process.env.OPENLEN_VISUAL_ENGINE_ASSETS = previousAssetMode;
   });
 
   it("keeps off byte/event/persistence/debit behavior and calls no safe or creative path", async () => {
@@ -350,6 +364,27 @@ describe("POST /api/curate Visual Engine integration", () => {
     expect(mocks.debitCredits).toHaveBeenCalledWith("user-1", 5);
     expect(mocks.resolveProfileForCreation).toHaveBeenCalledOnce();
     expect(mocks.overlayProfile).toHaveBeenCalledOnce();
+    const persisted = mocks.insertValues.mock.calls[0]![0] as { id: string };
+    expect(mocks.adaptTemplateSkeleton).toHaveBeenCalledWith(expect.objectContaining({
+      assetContext: { mode: "off", projectId: persisted.id },
+    }), { onAssetTrace: expect.any(Function) });
+  });
+
+  it.each([
+    ["success", SHADOW_TRACE],
+    ["typed failure", SHADOW_FAILURE_TRACE],
+  ] as const)("sends only the parsed asset shadow trace to the production log sink on %s", async (_name, trace) => {
+    process.env.OPENLEN_VISUAL_ENGINE = "skeleton";
+    process.env.OPENLEN_VISUAL_ENGINE_ASSETS = "shadow";
+    const log = vi.spyOn(console, "info").mockImplementation(() => undefined);
+    mocks.adaptTemplateSkeleton.mockImplementation(async (_input, deps) => {
+      deps?.onAssetTrace?.(trace);
+      return ADAPTED;
+    });
+    await post();
+    expect(log).toHaveBeenCalledWith("[curate] asset shadow trace", trace);
+    expect(JSON.stringify(log.mock.calls)).not.toMatch(/html|prompt(?!Sha256)|dataBase64|manifestId.*slots/i);
+    log.mockRestore();
   });
 
   it("emits and persists only the original weighted fallback after skeleton failure", async () => {
@@ -411,6 +446,12 @@ describe("POST /api/curate Visual Engine integration", () => {
     expect(previews(events)).toEqual(["REPAIRED:FINAL"]);
     expect(mocks.insertValues).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ html: "REPAIRED:FINAL", generation: { visualEngine: expect.objectContaining({ repair: expect.objectContaining({ accepted: true }) }) } }) }));
     expect(mocks.runQuickVisualRepair).toHaveBeenCalledTimes(1);
+    const persisted = mocks.insertValues.mock.calls[0]![0] as { id: string };
+    expect(mocks.runQuickVisualRepair).toHaveBeenCalledWith(expect.objectContaining({
+      projectId: persisted.id,
+      assetMode: "off",
+      assetTraceSink: expect.any(Function),
+    }), { mode: "on" });
   });
 
   it("repair shadow is detached and cannot change preview or persistence", async () => {

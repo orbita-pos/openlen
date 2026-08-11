@@ -15,6 +15,8 @@ import {
   type PilotReasonCode,
 } from "@/lib/generation/visual-engine-pilot-store";
 import type { VisualEngineProjectMetadata } from "@/lib/projects/types";
+import type { AssetPipelineMode } from "@/lib/generation/asset-pipeline-mode";
+import type { AssetResolutionTrace } from "@/lib/generation/asset-contracts";
 import type { SectionRecord } from "@/lib/sections/store";
 import type { ExtractedBusinessData } from "@/lib/style-match/autofill/types";
 import {
@@ -27,6 +29,9 @@ import {
 } from "./build-curated-document";
 
 export interface SectionCompositionCandidateInput {
+  projectId?: string;
+  assetMode?: AssetPipelineMode;
+  assetTraceSink?: (trace: AssetResolutionTrace) => void;
   fallbackTemplateId: string;
   fallbackTitle: string;
   candidateTitle: string;
@@ -118,6 +123,8 @@ async function weightedFallback(
 function composeInput(input: SectionCompositionCandidateInput): ComposeSectionCandidateInput {
   return {
     route: "section_composition",
+    ...(input.projectId && input.assetMode ? { projectId: input.projectId, assetMode: input.assetMode } : {}),
+    ...(input.assetTraceSink ? { assetTraceSink: input.assetTraceSink } : {}),
     intent: input.intent,
     intentHash: input.intentHash,
     records: input.records,
@@ -145,22 +152,26 @@ export async function runSectionCompositionCandidate(
       brandRecolor: false,
     });
     if (!finalized.ok) return weightedFallback(input, "sanitization_failed", fallbackDeps);
+    const visualEngineBase = {
+      schemaVersion: "visual-engine-project/1.0" as const,
+      route: "section_composition" as const,
+      templateId: null,
+      creativeDirection: candidate.creativeDirection,
+      promptVersion: candidate.adaptation.promptVersion,
+      policyVersion: input.policyVersion,
+      contractVersion: "creative-direction/1.0" as const,
+      compositionManifest: candidate.manifest,
+    };
+    const visualEngine: Extract<VisualEngineProjectMetadata, { route: "section_composition" }> = candidate.adaptation.assetManifest && candidate.adaptation.assetTrace
+      ? { ...visualEngineBase, assetManifest: candidate.adaptation.assetManifest, assetTrace: candidate.adaptation.assetTrace }
+      : visualEngineBase;
     return {
       ok: true,
       route: "section_composition",
       templateId: "section-composition",
       html: finalized.html,
       ...candidate.fill,
-      visualEngine: {
-        schemaVersion: "visual-engine-project/1.0",
-        route: "section_composition",
-        templateId: null,
-        creativeDirection: candidate.creativeDirection,
-        promptVersion: candidate.adaptation.promptVersion,
-        policyVersion: input.policyVersion,
-        contractVersion: "creative-direction/1.0",
-        compositionManifest: candidate.manifest,
-      },
+      visualEngine,
     };
   } catch {
     return weightedFallback(input, "internal_error", fallbackDeps);

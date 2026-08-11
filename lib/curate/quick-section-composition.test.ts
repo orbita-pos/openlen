@@ -30,6 +30,7 @@ const MANIFEST: SectionCompositionManifest = {
   outputHash: `sha256:${"d".repeat(64)}`, resultCode: "composed",
 };
 const INPUT: SectionCompositionCandidateInput = {
+  projectId: "project-1", assetMode: "curated",
   fallbackTemplateId: "weighted", fallbackTitle: "Weighted", candidateTitle: "PintaMundo",
   copy: { business_name: "PintaMundo" } as ExtractedBusinessData,
   profileData: { brand: { accent: "#F06AA6", logoUrl: null } } as BusinessProfileData,
@@ -46,6 +47,8 @@ const COMPOSED = {
     promptVersion: "creative-direction/1.7", modelId: "gemini-fixture",
     structuralFingerprintBefore: `sha256:${"e".repeat(64)}`, structuralFingerprintAfter: `sha256:${"e".repeat(64)}`,
     usage: { inputTokens: 20, outputTokens: 10, thinkingTokens: 2, cachedTokens: 0 }, durationMs: 25,
+    assetManifest: { schemaVersion: "asset-manifest/1.0", manifestId: `sha256:${"f".repeat(64)}` } as never,
+    assetTrace: { schemaVersion: "asset-resolution-trace/1.0", resultCode: "resolved" } as never,
   },
 };
 
@@ -65,6 +68,20 @@ describe("runSectionCompositionCandidate", () => {
       visualEngine: { route: "section_composition", templateId: null, creativeDirection: DIRECTION, compositionManifest: MANIFEST },
       filled: true, appliedOps: 8,
     });
+  });
+
+  it("passes project ID and asset mode into composition and persists accepted asset metadata", async () => {
+    const compose = vi.fn(async () => COMPOSED);
+    const result = await runSectionCompositionCandidate(INPUT, {
+      composeSectionCandidate: compose,
+      finalizeCuratedDocument: ({ normalizedHtml }) => ({ ok: true, html: normalizedHtml }),
+      fillAndNormalizeCuratedTemplate: vi.fn(),
+    });
+    expect(compose).toHaveBeenCalledWith(expect.objectContaining({ projectId: "project-1", assetMode: "curated" }));
+    expect(result).toMatchObject({ ok: true, route: "section_composition", visualEngine: {
+      assetManifest: COMPOSED.adaptation.assetManifest,
+      assetTrace: COMPOSED.adaptation.assetTrace,
+    } });
   });
 
   it("rebuilds the weighted fallback atomically on any typed composition failure", async () => {

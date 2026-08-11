@@ -1,4 +1,5 @@
 import type { CreativeDirection } from "@/lib/generation/creative-contracts";
+import type { AssetManifest, AssetResolutionTrace } from "@/lib/generation/asset-contracts";
 import type { SectionCompositionManifest } from "@/lib/generation/section-composition-contracts";
 import type { VisualQualityScores, VisualRepairIssueCode } from "@/lib/generation/visual-repair-contracts";
 
@@ -291,8 +292,12 @@ export interface VisualRepairProjectMetadata {
   outputHashAfter: string;
 }
 
+export type VisualEngineAssetMetadata =
+  | { assetManifest: AssetManifest; assetTrace: AssetResolutionTrace }
+  | { assetManifest?: never; assetTrace?: never };
+
 export type VisualEngineProjectMetadata =
-  | {
+  | ({
       schemaVersion: "visual-engine-project/1.0";
       route: "template_skeleton";
       templateId: string;
@@ -303,8 +308,8 @@ export type VisualEngineProjectMetadata =
       structuralFingerprintBefore: string;
       structuralFingerprintAfter: string;
       repair?: VisualRepairProjectMetadata;
-    }
-  | {
+    } & VisualEngineAssetMetadata)
+  | ({
       schemaVersion: "visual-engine-project/1.0";
       route: "section_composition";
       templateId: null;
@@ -314,7 +319,7 @@ export type VisualEngineProjectMetadata =
       contractVersion: "creative-direction/1.0";
       compositionManifest: SectionCompositionManifest;
       repair?: VisualRepairProjectMetadata;
-    };
+    } & VisualEngineAssetMetadata);
 
 export interface ProjectData {
   /** Publish-ready static HTML — the source of truth for the project. */
