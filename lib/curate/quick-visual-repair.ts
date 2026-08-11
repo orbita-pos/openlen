@@ -10,6 +10,8 @@ import type { AssetResolutionTrace } from "@/lib/generation/asset-contracts";
 import type { VisualRepairMode } from "@/lib/generation/visual-repair-mode";
 import type { AssetPipelineMode } from "@/lib/generation/asset-pipeline-mode";
 import type { VisualEngineAssetMetadata, VisualEngineProjectMetadata, VisualRepairProjectMetadata } from "@/lib/projects/types";
+import { sha256 } from "@/lib/generation/visual-engine-2a-eval";
+import { sealAiCompositionOutput } from "./ai-composition-delivery";
 
 export interface QuickVisualRepairInput {
   projectId?: string;
@@ -30,6 +32,21 @@ export interface QuickVisualRepairDeps {
   runRepair?: RunRepair;
   captureException?: (error: Error, context: { route: string; stage: string }) => void;
 }
+
+type CompositionMetadata = Extract<VisualEngineProjectMetadata, { route: "section_composition" }>;
+
+export type QuickVisualQualityGateResult =
+  | {
+      ok: true;
+      outcome: "healthy_keep" | "repaired";
+      html: string;
+      visualEngine: CompositionMetadata;
+    }
+  | {
+      ok: false;
+      reasonCode: "visual_quality_failed";
+      detailCode: string;
+    };
 
 function eligible(input: QuickVisualRepairInput): boolean {
   return (input.visualEngine.route === "template_skeleton" || input.visualEngine.route === "section_composition")
@@ -92,6 +109,56 @@ export async function runQuickVisualRepair(input: QuickVisualRepairInput, deps: 
   } catch {
     (deps.captureException ?? reportException)(new Error("Visual repair on failed"), { route: "curate", stage: "visual-repair-on" });
     return { html: input.html, visualEngine: input.visualEngine };
+  }
+}
+
+function qualityFailure(detailCode: string): QuickVisualQualityGateResult {
+  return { ok: false, reasonCode: "visual_quality_failed", detailCode };
+}
+
+export async function runQuickVisualQualityGate(
+  input: QuickVisualRepairInput & { visualEngine: CompositionMetadata },
+  deps: QuickVisualRepairDeps = {},
+): Promise<QuickVisualQualityGateResult> {
+  try {
+    const inputHash = sha256(input.html);
+    if (input.visualEngine.compositionManifest.outputHash !== inputHash) {
+      return qualityFailure("internal_error");
+    }
+
+    const result = await (deps.runRepair ?? defaultRepair)(repairInput(input));
+    if (!result.accepted) {
+      return result.trace.resultCode === "healthy_keep"
+        ? {
+            ok: true,
+            outcome: "healthy_keep",
+            html: input.html,
+            visualEngine: sealAiCompositionOutput(input.visualEngine, input.html),
+          }
+        : qualityFailure(result.trace.resultCode);
+    }
+
+    const outputHash = sha256(result.html);
+    if (result.trace.resultCode !== "accepted"
+      || result.trace.outputHashBefore !== inputHash
+      || result.trace.outputHashAfter !== outputHash) {
+      return qualityFailure("internal_error");
+    }
+
+    const replacement = replacementAssetMetadata(result.metadata);
+    const repair = repairMetadata(result.trace);
+    const repaired = replacement.assetManifest && replacement.assetTrace
+      ? { ...input.visualEngine, assetManifest: replacement.assetManifest, assetTrace: replacement.assetTrace, repair }
+      : { ...input.visualEngine, repair };
+    return {
+      ok: true,
+      outcome: "repaired",
+      html: result.html,
+      visualEngine: sealAiCompositionOutput(repaired, result.html),
+    };
+  } catch {
+    (deps.captureException ?? reportException)(new Error("Visual quality gate failed"), { route: "curate", stage: "visual-quality-gate" });
+    return qualityFailure("internal_error");
   }
 }
 

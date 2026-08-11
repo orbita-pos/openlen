@@ -4,7 +4,9 @@ import type { AssetManifest, AssetResolutionTrace } from "@/lib/generation/asset
 import { CreativeDirectionSchema } from "@/lib/generation/creative-contracts";
 import { IntentAnalysisSchema } from "@/lib/generation/contracts";
 import { COLORING_DIRECTION, COLORING_INTENT } from "@/lib/generation/creative-fixtures.test-support";
-import { launchShadowVisualRepair, runQuickVisualRepair } from "./quick-visual-repair";
+import { canonicalJsonSha256, sha256 } from "@/lib/generation/visual-engine-2a-eval";
+import { SectionCompositionManifestSchema } from "@/lib/generation/section-composition-contracts";
+import { launchShadowVisualRepair, runQuickVisualQualityGate, runQuickVisualRepair } from "./quick-visual-repair";
 
 const direction = CreativeDirectionSchema.parse(COLORING_DIRECTION);
 const intent = IntentAnalysisSchema.parse(COLORING_INTENT);
@@ -55,6 +57,47 @@ const accepted = {
     outputHashBefore: `sha256:${"b".repeat(64)}`, outputHashAfter: `sha256:${"c".repeat(64)}`, usage: [],
   },
 };
+
+const compositionHtml = '<!doctype html><html><head><style data-openlen-visual-engine="creative-direction/1.0"></style></head><body><section data-sec="hero-one" data-openlen-role="hero"></section><section data-sec="gallery-one" data-openlen-role="coloring_gallery"></section><footer data-sec="footer-one" data-openlen-role="footer"></footer></body></html>';
+const compositionVisualEngine = {
+  schemaVersion: "visual-engine-project/1.0" as const,
+  route: "section_composition" as const,
+  templateId: null,
+  creativeDirection: direction,
+  promptVersion: "creative-prompt/1.0",
+  policyVersion: "template-policy/1.0",
+  contractVersion: "creative-direction/1.0" as const,
+  compositionManifest: SectionCompositionManifestSchema.parse({
+    schemaVersion: "section-composition-manifest/1.0",
+    intentHash: `sha256:${"a".repeat(64)}`,
+    creativeDirectionHash: canonicalJsonSha256(direction),
+    inventoryHash: `sha256:${"b".repeat(64)}`,
+    orderedRoles: ["hero", "coloring_gallery", "footer"],
+    selectedSectionIds: ["hero-one", "gallery-one", "footer-one"],
+    selectedContentHashes: ["111111111111", "222222222222", "333333333333"],
+    compatibilityRuleIds: ["section_component:hero>hero", "section_component:coloring_gallery>gallery", "section_component:footer>footer"],
+    outputHash: sha256(compositionHtml),
+    resultCode: "composed",
+  }),
+};
+const qualityInput = { html: compositionHtml, visualEngine: compositionVisualEngine, intent, brandAccent: null };
+
+function rejectedQualityResult(resultCode: string) {
+  return { html: compositionHtml, metadata: compositionVisualEngine, accepted: false as const, trace: { resultCode, usage: [] } };
+}
+
+function acceptedQualityResult(html = `${compositionHtml}\n`) {
+  return {
+    html,
+    metadata: compositionVisualEngine,
+    accepted: true as const,
+    trace: {
+      ...accepted.trace,
+      outputHashBefore: sha256(compositionHtml),
+      outputHashAfter: sha256(html),
+    },
+  };
+}
 
 describe("quick visual repair", () => {
   it("off returns original references without invoking the loop", async () => {
@@ -118,5 +161,76 @@ describe("quick visual repair", () => {
     await expect(launchShadowVisualRepair(input, { runRepair, captureException: vi.fn() })).resolves.toBeUndefined();
     expect(runRepair).toHaveBeenCalledTimes(1);
     expect(runRepair.mock.calls[0]).toHaveLength(1);
+  });
+
+  it("strict quality accepts only an explicit healthy keep and invokes the loop once even when legacy mode is off", async () => {
+    const runRepair = vi.fn().mockResolvedValue(rejectedQualityResult("healthy_keep"));
+    const result = await runQuickVisualQualityGate(qualityInput, { mode: "off", runRepair });
+    expect(result).toMatchObject({ ok: true, outcome: "healthy_keep", html: compositionHtml });
+    expect(runRepair).toHaveBeenCalledTimes(1);
+  });
+
+  it("strict quality seals accepted repaired bytes and redacted repair metadata", async () => {
+    const repaired = acceptedQualityResult();
+    const result = await runQuickVisualQualityGate(qualityInput, { runRepair: vi.fn().mockResolvedValue(repaired) });
+    expect(result).toMatchObject({
+      ok: true,
+      outcome: "repaired",
+      html: repaired.html,
+      visualEngine: {
+        compositionManifest: { outputHash: sha256(repaired.html), resultCode: "composed" },
+        repair: { outputHashBefore: sha256(compositionHtml), outputHashAfter: sha256(repaired.html) },
+      },
+    });
+    expect(JSON.stringify(result)).not.toMatch(/usage|explanation|dataBase64/i);
+  });
+
+  it.each([
+    "nonrepairable",
+    "timeout",
+    "initial_render_failed",
+    "initial_critic_failed",
+    "repair_provider_failed",
+    "final_render_failed",
+    "final_critic_failed",
+    "not_improved",
+    "internal_error",
+  ])("strict quality fails closed for %s", async (detailCode) => {
+    const result = await runQuickVisualQualityGate(qualityInput, {
+      runRepair: vi.fn().mockResolvedValue(rejectedQualityResult(detailCode)),
+    });
+    expect(result).toEqual({ ok: false, reasonCode: "visual_quality_failed", detailCode });
+  });
+
+  it("strict quality rejects a repaired result whose pre-repair hash is not the manifest hash", async () => {
+    const repaired = acceptedQualityResult();
+    repaired.trace.outputHashBefore = `sha256:${"f".repeat(64)}`;
+    await expect(runQuickVisualQualityGate(qualityInput, { runRepair: vi.fn().mockResolvedValue(repaired) })).resolves.toEqual({
+      ok: false,
+      reasonCode: "visual_quality_failed",
+      detailCode: "internal_error",
+    });
+  });
+
+  it("strict quality rejects a repaired result whose post-repair hash does not match its HTML", async () => {
+    const repaired = acceptedQualityResult();
+    repaired.trace.outputHashAfter = `sha256:${"f".repeat(64)}`;
+    await expect(runQuickVisualQualityGate(qualityInput, { runRepair: vi.fn().mockResolvedValue(repaired) })).resolves.toEqual({
+      ok: false,
+      reasonCode: "visual_quality_failed",
+      detailCode: "internal_error",
+    });
+  });
+
+  it("strict quality redacts thrown dependency errors", async () => {
+    const captureException = vi.fn();
+    const result = await runQuickVisualQualityGate(qualityInput, {
+      runRepair: vi.fn().mockRejectedValue(new Error("private")),
+      captureException,
+    });
+    expect(result).toEqual({ ok: false, reasonCode: "visual_quality_failed", detailCode: "internal_error" });
+    expect(JSON.stringify(result)).not.toContain("private");
+    expect(captureException).toHaveBeenCalledWith(expect.any(Error), { route: "curate", stage: "visual-quality-gate" });
+    expect(JSON.stringify(captureException.mock.calls)).not.toContain("private");
   });
 });
