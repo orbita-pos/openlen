@@ -53,11 +53,13 @@ const CommonResolutionSchema = z.object({
 
 function hasTraversal(url: string): boolean {
   let decoded = url.split(/[?#]/, 1)[0] ?? "";
-  for (let pass = 0; pass < 3; pass += 1) {
+  const maxDecodePasses = 8;
+  for (let pass = 0; pass <= maxDecodePasses; pass += 1) {
     if (/(?:^|\/)\.{1,2}(?:\/|$)/.test(decoded)) return true;
     try {
       const next = decodeURIComponent(decoded);
       if (next === decoded) return false;
+      if (pass === maxDecodePasses) return true;
       decoded = next;
     } catch {
       return true;

@@ -191,6 +191,21 @@ describe("AssetManifestSchema", () => {
     expect(AssetManifestSchema.parse(withUrl(COLORING_MANIFEST, "https://images.openlen.com/coloring.v1.webp")).slots[0].resolution.url).toBe("https://images.openlen.com/coloring.v1.webp");
   });
 
+  it("fails closed for traversal at every bounded percent-encoding depth", () => {
+    const encode = (value: string, depth: number) => Array.from({ length: depth }, (_, index) => index).reduce(
+      (encoded, index) => index === 0 ? encoded.replace(/\./g, "%2e") : encoded.replace(/%/g, "%25"),
+      value,
+    );
+    const traversalUrls = Array.from({ length: 6 }, (_, index) => index + 1).flatMap((depth) => [
+      `https://images.openlen.com/${encode("..", depth)}/coloring.webp`,
+      `https://images.openlen.com/.${encode(".", depth)}/coloring.webp`,
+      `https://images.openlen.com/${encode(".", depth)}./coloring.webp`,
+    ]);
+    traversalUrls.forEach((url) => expect(() => AssetManifestSchema.parse(withUrl(COLORING_MANIFEST, url))).toThrow());
+    ["https://images.openlen.com/%/coloring.webp", "https://images.openlen.com/%ZZ/coloring.webp"].forEach((url) => expect(() => AssetManifestSchema.parse(withUrl(COLORING_MANIFEST, url))).toThrow());
+    expect(AssetManifestSchema.parse(withUrl(COLORING_MANIFEST, "https://images.openlen.com/coloring.v1.webp")).slots[0].resolution.url).toBe("https://images.openlen.com/coloring.v1.webp");
+  });
+
   it("requires unique, aligned slot indexes and a single bounded pack", () => {
     expect(() => AssetManifestSchema.parse(withDuplicateSlot(COLORING_MANIFEST))).toThrow();
     expect(() => AssetManifestSchema.parse({ ...COLORING_MANIFEST, slots: Array.from({ length: 13 }, () => COLORING_MANIFEST.slots[0]) })).toThrow();
