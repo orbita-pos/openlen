@@ -50,6 +50,11 @@ function defaultAssetPipelineDeps(): AssetPipelineDependencies {
 }
 function roles(html: string): string[] { return parse(html).querySelectorAll("[data-openlen-role]").map((node) => node.getAttribute("data-openlen-role") ?? ""); }
 function oneMarker(html: string): boolean { const nodes = parse(html).querySelectorAll('style[data-openlen-visual-engine="creative-direction/1.0"]'); return nodes.length === 1; }
+function emitAssetTrace(trace: unknown, sink: ApplyVisualRepairInput["assetTraceSink"]): void {
+  const parsed = AssetResolutionTraceSchema.safeParse(trace);
+  if (!parsed.success) return;
+  try { sink?.(parsed.data); } catch { /* Telemetry never changes candidate delivery. */ }
+}
 function applyBoundedResponsiveRepair(html: string, issueCodes: readonly VisualRepairIssueCode[] | undefined): string | null {
   if (!Array.isArray(issueCodes) || !issueCodes.includes("mobile_overflow")) return html;
   const marker = '<style data-openlen-visual-engine="creative-direction/1.0">';
@@ -79,8 +84,7 @@ export async function applyVisualRepairPlan(input: ApplyVisualRepairInput, deps:
           const intents = (deps.buildAssetIntents ?? buildAssetIntents)({ intent: input.intent, direction: input.direction, inventory, plan: input.plan });
           if (intents.length > 0) {
             const shadow = await (deps.resolveDomainAssets ?? resolveDomainAssetManifest)({ intents, direction: input.direction, projectId: input.assetContext.projectId, mode: "curated" }, deps.assetPipelineDeps ?? defaultAssetPipelineDeps());
-            const parsedTrace = AssetResolutionTraceSchema.safeParse(shadow.trace);
-            if (parsedTrace.success) input.assetTraceSink?.(parsedTrace.data);
+            emitAssetTrace(shadow.trace, input.assetTraceSink);
           }
         } catch { /* shadow never changes the repair candidate */ }
       }
@@ -91,6 +95,7 @@ export async function applyVisualRepairPlan(input: ApplyVisualRepairInput, deps:
         assets = { ok: true, html: responsiveHtml, applied: 0, assigned: [] };
       } else {
         const resolved = await (deps.resolveDomainAssets ?? resolveDomainAssetManifest)({ intents, direction: input.direction, projectId: input.assetContext!.projectId, mode }, deps.assetPipelineDeps ?? defaultAssetPipelineDeps());
+        emitAssetTrace(resolved.trace, input.assetTraceSink);
         if (!resolved.ok) return { ok: false, code: "asset_failed" };
         const applied = (deps.applyAssetManifest ?? applyAssetManifest)({ html: responsiveHtml, manifest: resolved.manifest, inputFingerprint: before });
         if (!applied.ok) return { ok: false, code: "asset_failed" };

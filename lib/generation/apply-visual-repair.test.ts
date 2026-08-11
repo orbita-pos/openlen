@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import type { AssetResolutionTrace } from "./asset-contracts";
 import { CreativeDirectionSchema, SkeletonAdaptationPlanSchema } from "./creative-contracts";
 import { applyVisualRepairPlan } from "./apply-visual-repair";
 import { COLORING_DIRECTION, COLORING_INTENT } from "./creative-fixtures.test-support";
@@ -11,11 +12,19 @@ const PLAN = SkeletonAdaptationPlanSchema.parse({ schemaVersion: "skeleton-adapt
 const HASH = `sha256:${"a".repeat(64)}`;
 const INVENTORY = { schemaVersion: "skeleton-inventory/1.0" as const, templateId: "fixture", availableTokens: [], styleHooks: [], assetSlots: [], structuralFingerprint: HASH };
 const ASSET_MANIFEST = { schemaVersion: "asset-manifest/1.0", manifestId: `sha256:${"f".repeat(64)}` } as never;
-const ASSET_TRACE = { schemaVersion: "asset-resolution-trace/1.0", resultCode: "resolved" } as never;
+const ASSET_TRACE: AssetResolutionTrace = {
+  schemaVersion: "asset-resolution-trace/1.0", manifestId: `sha256:${"f".repeat(64)}`,
+  consistencyGroupCount: 1, curatedCount: 0, generatedCount: 1, abstractCount: 0,
+  placeholderCount: 0, requiredUnresolvedCount: 0, rejectionCounts: {}, provider: "gemini",
+  modelId: "gemini-image-test", promptSha256: [`sha256:${"b".repeat(64)}`],
+  usage: { inputTokens: 31, outputTokens: 7, cachedTokens: 3, thinkingTokens: 2 },
+  estimatedCostMicromxn: 456, durationMs: 19, resultCode: "resolved",
+};
 
 describe("applyVisualRepairPlan", () => {
   it("returns replacement asset metadata only after curated manifest application succeeds", async () => {
     const order: string[] = [];
+    const assetTraceSink = vi.fn();
     const result = await applyVisualRepairPlan({
       html: HTML,
       sourceId: "fixture",
@@ -23,6 +32,7 @@ describe("applyVisualRepairPlan", () => {
       direction: CreativeDirectionSchema.parse(COLORING_DIRECTION),
       plan: PLAN,
       assetContext: { mode: "curated", projectId: "project-1" },
+      assetTraceSink,
     }, {
       buildInventory: () => INVENTORY,
       compileIdentity: (input) => ({ ok: true, html: input.html.replace("</head>", '<style data-openlen-visual-engine="creative-direction/1.0"></style></head>'), tokens: {}, mode: "light", enforcedConstraints: [] }),
@@ -32,6 +42,8 @@ describe("applyVisualRepairPlan", () => {
       sanitize: (html) => ({ html }), fingerprint: () => HASH, technicalRender: async () => true,
     });
     expect(result).toMatchObject({ ok: true, assetManifest: ASSET_MANIFEST, assetTrace: ASSET_TRACE });
+    expect(assetTraceSink).toHaveBeenCalledTimes(1);
+    expect(assetTraceSink).toHaveBeenCalledWith(ASSET_TRACE);
     expect(order).toEqual(["intent", "curated:project-1", "apply"]);
   });
   it("runs inventory, compiler, assets, sanitizer, fingerprint, roles and render atomically", async () => {
@@ -47,6 +59,35 @@ describe("applyVisualRepairPlan", () => {
     expect(result).toMatchObject({ ok: true, structuralFingerprintBefore: HASH, structuralFingerprintAfter: HASH });
     expect(result.ok && result.html).not.toBe(HTML);
     expect(order).toEqual(["inventory", "compile", "assets", "sanitize", "fingerprint", "render"]);
+  });
+
+  it.each(["sanitize", "render"] as const)("emits the paid asset trace once when repair %s rejects before 2C acceptance", async (stage) => {
+    const assetTraceSink = vi.fn();
+    const result = await applyVisualRepairPlan({
+      html: HTML,
+      sourceId: "fixture",
+      intent: IntentAnalysisSchema.parse(COLORING_INTENT),
+      direction: CreativeDirectionSchema.parse(COLORING_DIRECTION),
+      plan: PLAN,
+      assetContext: { mode: "hybrid", projectId: "project-1" },
+      assetTraceSink,
+    }, {
+      buildInventory: () => INVENTORY,
+      compileIdentity: (input) => ({ ok: true, html: input.html.replace("</head>", '<style data-openlen-visual-engine="creative-direction/1.0"></style></head>'), tokens: {}, mode: "light", enforcedConstraints: [] }),
+      buildAssetIntents: () => [{ slotIndex: 0 }] as never,
+      resolveDomainAssets: async () => ({ ok: true, manifest: ASSET_MANIFEST, trace: ASSET_TRACE }),
+      applyAssetManifest: (input) => ({ ok: true, html: input.html, manifest: ASSET_MANIFEST }),
+      sanitize: (html) => ({ html: stage === "sanitize" ? null : html }),
+      fingerprint: () => HASH,
+      technicalRender: async () => stage !== "render",
+    });
+
+    expect(result).toMatchObject({ ok: false, code: stage === "sanitize" ? "sanitization_failed" : "technical_render_failed" });
+    expect(assetTraceSink).toHaveBeenCalledTimes(1);
+    expect(assetTraceSink).toHaveBeenCalledWith(ASSET_TRACE);
+    expect(JSON.stringify(assetTraceSink.mock.calls)).not.toMatch(/html|prompt(?!Sha256)|raw|private/i);
+    expect(result).not.toHaveProperty("assetManifest");
+    expect(result).not.toHaveProperty("assetTrace");
   });
 
   it.each(["compile", "assets", "sanitize", "fingerprint", "render"])("returns no candidate on %s failure", async (stage) => {

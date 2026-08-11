@@ -1,4 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
+import type { AssetResolutionTrace } from "./asset-contracts";
+import { applyVisualRepairPlan } from "./apply-visual-repair";
 import { CreativeDirectionSchema } from "./creative-contracts";
 import { IntentAnalysisSchema } from "./contracts";
 import { runClosedLoopVisualRepair, repairImprovesQuality, shouldAttemptVisualRepair, type ClosedLoopVisualRepairDeps } from "./closed-loop-repair";
@@ -12,7 +14,14 @@ const KEEP = VisualQualityVerdictSchema.parse({ ...AFTER, scores: { ...AFTER.sco
 const NONREPAIRABLE = VisualQualityVerdictSchema.parse({ ...BEFORE, decision: "nonrepairable", nonrepairableReason: "primary_content_hidden", scores: { ...BEFORE.scores, mobileReadability: 2 }, issues: [] });
 const INPUT = { html: "<html>original</html>", metadata: { route: "template_skeleton" }, sourceId: "fixture", intent: IntentAnalysisSchema.parse(COLORING_INTENT), direction: CreativeDirectionSchema.parse(COLORING_DIRECTION), route: "template_skeleton" as const };
 const ASSET_MANIFEST = { schemaVersion: "asset-manifest/1.0", manifestId: `sha256:${"f".repeat(64)}` } as never;
-const ASSET_TRACE = { schemaVersion: "asset-resolution-trace/1.0", resultCode: "resolved" } as never;
+const ASSET_TRACE: AssetResolutionTrace = {
+  schemaVersion: "asset-resolution-trace/1.0", manifestId: `sha256:${"f".repeat(64)}`,
+  consistencyGroupCount: 1, curatedCount: 0, generatedCount: 1, abstractCount: 0,
+  placeholderCount: 0, requiredUnresolvedCount: 0, rejectionCounts: {}, provider: "gemini",
+  modelId: "gemini-image-test", promptSha256: [`sha256:${"b".repeat(64)}`],
+  usage: { inputTokens: 31, outputTokens: 7, cachedTokens: 3, thinkingTokens: 2 },
+  estimatedCostMicromxn: 456, durationMs: 19, resultCode: "resolved",
+};
 const images = { desktop: { mimeType: "image/jpeg", dataBase64: "ZA==" }, mobile: { mimeType: "image/jpeg", dataBase64: "bQ==" } };
 const criticSuccess = (verdict: unknown) => ({ ok: true as const, verdict, durationMs: 1, promptVersion: "visual-quality-critic/2.4" as const, modelId: "critic-test" });
 const criticFailure = { ok: false as const, kind: "provider_error" as const, durationMs: 1, promptVersion: "visual-quality-critic/2.4" as const, modelId: "critic-test" };
@@ -96,6 +105,33 @@ describe("closed-loop repair", () => {
     const d = deps();
     await runClosedLoopVisualRepair({ ...INPUT, assetTraceSink: sink }, d);
     expect(d.applyPlan).toHaveBeenCalledWith(expect.objectContaining({ assetTraceSink: sink }), expect.anything());
+  });
+
+  it("retains paid asset telemetry exactly once when final 2C acceptance rejects the applied candidate", async () => {
+    const sink = vi.fn();
+    const d = deps(BEFORE, BEFORE);
+    d.applyPlan.mockImplementation((request) => applyVisualRepairPlan(request, {
+      buildInventory: () => ({ schemaVersion: "skeleton-inventory/1.0", templateId: "fixture", availableTokens: [], styleHooks: [], assetSlots: [], structuralFingerprint: `sha256:${"a".repeat(64)}` }),
+      compileIdentity: (input) => ({ ok: true, html: input.html.replace("</html>", '<style data-openlen-visual-engine="creative-direction/1.0"></style></html>'), tokens: {}, mode: "light", enforcedConstraints: [] }),
+      buildAssetIntents: () => [{ slotIndex: 0 }] as never,
+      resolveDomainAssets: async () => ({ ok: true, manifest: ASSET_MANIFEST, trace: ASSET_TRACE }),
+      applyAssetManifest: (input) => ({ ok: true, html: input.html, manifest: ASSET_MANIFEST }),
+      sanitize: (html) => ({ html }),
+      fingerprint: () => `sha256:${"a".repeat(64)}`,
+      technicalRender: async () => true,
+    }));
+
+    const result = await runClosedLoopVisualRepair({
+      ...INPUT,
+      assetContext: { mode: "hybrid", projectId: "project-1" },
+      assetTraceSink: sink,
+    }, d);
+
+    expect(result).toMatchObject({ accepted: false, trace: { resultCode: "not_improved" } });
+    expect(sink).toHaveBeenCalledTimes(1);
+    expect(sink).toHaveBeenCalledWith(ASSET_TRACE);
+    expect(JSON.stringify(sink.mock.calls)).not.toMatch(/html|prompt(?!Sha256)|raw|private/i);
+    expect(result.metadata).toBe(INPUT.metadata);
   });
 
   it("passes the validated mobile_overflow issue to the bounded apply boundary", async () => {

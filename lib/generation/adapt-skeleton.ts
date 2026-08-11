@@ -172,6 +172,12 @@ function assetFailureReason(result: Extract<AssetPipelineResult, { ok: false }>)
   return "internal_error";
 }
 
+function emitAssetTrace(trace: unknown, sink: AdaptTemplateSkeletonDeps["onAssetTrace"]): void {
+  const parsed = AssetResolutionTraceSchema.safeParse(trace);
+  if (!parsed.success) return;
+  try { sink?.(parsed.data); } catch { /* Telemetry never changes candidate delivery. */ }
+}
+
 /**
  * Adapts a safe template skeleton as one atomic candidate. Every intermediate
  * HTML string remains local to this function and no failure exposes it.
@@ -245,8 +251,7 @@ export async function adaptTemplateSkeleton(
               projectId: input.assetContext.projectId,
               mode: "curated",
             }, deps.assetPipelineDeps ?? defaultAssetPipelineDeps());
-            const parsedTrace = AssetResolutionTraceSchema.safeParse(shadow.trace);
-            if (parsedTrace.success) deps.onAssetTrace?.(parsedTrace.data);
+            emitAssetTrace(shadow.trace, deps.onAssetTrace);
           }
         } catch {
           // Shadow never changes delivery and exposes no candidate metadata.
@@ -268,6 +273,7 @@ export async function adaptTemplateSkeleton(
           projectId: input.assetContext!.projectId,
           mode,
         }, deps.assetPipelineDeps ?? defaultAssetPipelineDeps());
+        emitAssetTrace(resolved.trace, deps.onAssetTrace);
         if (!resolved.ok) return fallback(assetFailureReason(resolved), context);
         const applied = (deps.applyAssetManifest ?? applyAssetManifest)({
           html: compiled.html,

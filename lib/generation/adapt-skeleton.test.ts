@@ -117,6 +117,16 @@ const ASSET_FAILURE_TRACE: AssetResolutionTrace = {
   ...ASSET_TRACE, manifestId: null, consistencyGroupCount: 0, curatedCount: 0,
   requiredUnresolvedCount: 1, resultCode: "required_asset_unavailable",
 };
+const PAID_ASSET_TRACE: AssetResolutionTrace = {
+  ...ASSET_FAILURE_TRACE,
+  provider: "gemini",
+  modelId: "gemini-image-test",
+  promptSha256: [`sha256:${"b".repeat(64)}`],
+  usage: { inputTokens: 31, outputTokens: 7, cachedTokens: 3, thinkingTokens: 2 },
+  estimatedCostMicromxn: 456,
+  durationMs: 19,
+  resultCode: "provider_timeout",
+};
 
 function providerFailure(kind: "timeout" | "schema"): GenerateCreativeDirectionResult {
   return {
@@ -144,8 +154,10 @@ describe("adaptTemplateSkeleton", () => {
     const resolveDomainAssets = vi.fn();
     const applyManifest = vi.fn();
     const off = baseDeps();
+    const onAssetTrace = vi.fn();
     off.resolveDomainAssets = resolveDomainAssets;
     off.applyAssetManifest = applyManifest;
+    off.onAssetTrace = onAssetTrace;
 
     const offResult = await adaptTemplateSkeleton({
       ...INPUT,
@@ -155,10 +167,12 @@ describe("adaptTemplateSkeleton", () => {
     expect(offResult).toEqual(legacyResult);
     expect(resolveDomainAssets).not.toHaveBeenCalled();
     expect(applyManifest).not.toHaveBeenCalled();
+    expect(onAssetTrace).not.toHaveBeenCalled();
   });
 
   it("runs intent, manifest, and apply before sanitize for curated candidates", async () => {
     const order: string[] = [];
+    const onAssetTrace = vi.fn();
     const deps = baseDeps();
     deps.buildAssetIntents = () => { order.push("intent"); return [{ slotIndex: 0 }] as never; };
     deps.resolveDomainAssets = async (input) => {
@@ -172,6 +186,7 @@ describe("adaptTemplateSkeleton", () => {
     deps.sanitize = (html) => { order.push("sanitize"); return { html }; };
     deps.fingerprint = (html, options) => { order.push("fingerprint"); return fingerprintStructure(html, options); };
     deps.technicalRender = async () => { order.push("render"); return true; };
+    deps.onAssetTrace = onAssetTrace;
 
     const result = await adaptTemplateSkeleton({
       ...INPUT,
@@ -179,6 +194,8 @@ describe("adaptTemplateSkeleton", () => {
     }, deps);
 
     expect(result).toMatchObject({ ok: true, assetManifest: ASSET_MANIFEST, assetTrace: ASSET_TRACE });
+    expect(onAssetTrace).toHaveBeenCalledTimes(1);
+    expect(onAssetTrace).toHaveBeenCalledWith(ASSET_TRACE);
     expect(order).toEqual(["intent", "manifest:curated:project-1", "apply", "sanitize", "fingerprint", "render"]);
   });
 
@@ -204,6 +221,7 @@ describe("adaptTemplateSkeleton", () => {
 
     expect(result).toEqual(legacyResult);
     expect(resolveDomainAssets).toHaveBeenCalledTimes(1);
+    expect(onAssetTrace).toHaveBeenCalledTimes(1);
     expect(onAssetTrace).toHaveBeenCalledWith(ASSET_FAILURE_TRACE);
     expect(provider.createPack).not.toHaveBeenCalled();
     expect(storage.put).not.toHaveBeenCalled();
@@ -217,6 +235,7 @@ describe("adaptTemplateSkeleton", () => {
     deps.onAssetTrace = onAssetTrace;
     const result = await adaptTemplateSkeleton({ ...INPUT, assetContext: { mode: "shadow", projectId: "project-1" } }, deps);
     expect(result).toMatchObject({ ok: true });
+    expect(onAssetTrace).toHaveBeenCalledTimes(1);
     expect(onAssetTrace).toHaveBeenCalledWith(ASSET_TRACE);
   });
 
@@ -228,6 +247,52 @@ describe("adaptTemplateSkeleton", () => {
     expect(result).toMatchObject({ ok: false, reasonCode: "required_asset_unavailable" });
     expect(result).not.toHaveProperty("html");
     expect(result).not.toHaveProperty("assetManifest");
+  });
+
+  it.each([
+    ["provider", "provider_error", "provider_timeout"],
+    ["validation", "invalid_asset", "invalid_provider_output"],
+    ["storage", "storage_error", "storage_failure"],
+  ] as const)("emits paid hybrid %s failure telemetry exactly once", async (_name, code, resultCode) => {
+    const onAssetTrace = vi.fn();
+    const trace = { ...PAID_ASSET_TRACE, resultCode };
+    const deps = baseDeps();
+    deps.buildAssetIntents = () => [{ slotIndex: 0 }] as never;
+    deps.resolveDomainAssets = async () => ({ ok: false, code, trace } as never);
+    deps.onAssetTrace = onAssetTrace;
+
+    const result = await adaptTemplateSkeleton({
+      ...INPUT,
+      assetContext: { mode: "hybrid", projectId: "project-1" },
+    }, deps);
+
+    expect(result).toMatchObject({ ok: false });
+    expect(onAssetTrace).toHaveBeenCalledTimes(1);
+    expect(onAssetTrace).toHaveBeenCalledWith(trace);
+    expect(JSON.stringify(onAssetTrace.mock.calls)).not.toMatch(/html|prompt(?!Sha256)|raw|private/i);
+  });
+
+  it.each(["sanitize", "render"] as const)("retains a paid hybrid trace when downstream %s rejects the candidate", async (stage) => {
+    const onAssetTrace = vi.fn();
+    const trace = { ...PAID_ASSET_TRACE, manifestId: ASSET_MANIFEST.manifestId, requiredUnresolvedCount: 0, resultCode: "resolved" as const };
+    const deps = baseDeps();
+    deps.buildAssetIntents = () => [{ slotIndex: 0 }] as never;
+    deps.resolveDomainAssets = async () => ({ ok: true, manifest: ASSET_MANIFEST, trace });
+    deps.applyAssetManifest = (input) => ({ ok: true, html: input.html, manifest: ASSET_MANIFEST });
+    deps.onAssetTrace = onAssetTrace;
+    if (stage === "sanitize") deps.sanitize = () => ({ html: null });
+    if (stage === "render") deps.technicalRender = async () => false;
+
+    const result = await adaptTemplateSkeleton({
+      ...INPUT,
+      assetContext: { mode: "hybrid", projectId: "project-1" },
+    }, deps);
+
+    expect(result).toMatchObject({ ok: false, reasonCode: stage === "sanitize" ? "sanitization_failed" : "technical_render_failed" });
+    expect(onAssetTrace).toHaveBeenCalledTimes(1);
+    expect(onAssetTrace).toHaveBeenCalledWith(trace);
+    expect(result).not.toHaveProperty("assetManifest");
+    expect(result).not.toHaveProperty("assetTrace");
   });
   it("runs one bounded creative call and returns only a fully validated adaptation", async () => {
     const original = structuredClone(INPUT);
