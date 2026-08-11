@@ -24,5 +24,8 @@ describe("production deploy native crate packaging", () => {
     expect(compose).toContain(
       'if (-not (Test-Path "$targetDir/index.js")) { throw "Missing native crate wrapper: $crate" }',
     );
+    expect(script).toContain(
+      '& tar --options "gzip:compression-level=1" -czf $tarballName -C .next/standalone .',
+    );
   });
 });

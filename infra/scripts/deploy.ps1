@@ -123,7 +123,7 @@ Write-Host ("    standalone: {0} MB" -f [math]::Round($size/1MB, 1))
 # --- 4. Tar locally ----------------------------------------------------
 Step 4 "Creating tarball ($tarballName)..."
 $sw = [System.Diagnostics.Stopwatch]::StartNew()
-& tar -czf $tarballName -C .next/standalone .
+& tar --options "gzip:compression-level=1" -czf $tarballName -C .next/standalone .
 if ($LASTEXITCODE -ne 0) { throw "tar failed (exit $LASTEXITCODE)" }
 $tarSize = (Get-Item $tarballName).Length
 $sw.Stop()
