@@ -676,7 +676,7 @@ git commit -m "feat(generation): integrate domain asset pipeline"
 Add one package script that invokes Vitest with every new asset test plus the existing skeleton, composition, repair, route, fingerprint, image-edit, and project metadata tests:
 
 ```json
-"generation:visual-engine-assets:gate": "vitest run lib/generation/asset-contracts.test.ts lib/generation/asset-intent.test.ts lib/generation/asset-catalog.test.ts lib/generation/asset-image-validation.test.ts lib/generation/imagery-manifest.test.ts lib/generation/gemini-asset-pack-provider.test.ts lib/generation/asset-pipeline.test.ts lib/generation/apply-asset-manifest.test.ts lib/generation/asset-pipeline-mode.test.ts lib/generation/skeleton-assets.test.ts lib/generation/adapt-skeleton.test.ts lib/generation/compose-sections.test.ts lib/generation/apply-visual-repair.test.ts lib/generation/closed-loop-repair.test.ts lib/curate/quick-visual-engine.test.ts lib/curate/quick-section-composition.test.ts lib/curate/quick-visual-repair.test.ts lib/curate/curate-route.integration.test.ts"
+"generation:visual-engine-assets:gate": "vitest run lib/generation/asset-contracts.test.ts lib/generation/asset-intent.test.ts lib/generation/asset-catalog.test.ts lib/generation/asset-image-validation.test.ts lib/generation/imagery-manifest.test.ts lib/generation/project-asset-storage-contract.test.ts lib/generation/gemini-asset-pack-provider.test.ts lib/generation/asset-pipeline.test.ts lib/generation/apply-asset-manifest.test.ts lib/generation/asset-pipeline-mode.test.ts lib/generation/skeleton-assets.test.ts lib/generation/adapt-skeleton.test.ts lib/generation/compose-sections.test.ts lib/generation/apply-visual-repair.test.ts lib/generation/closed-loop-repair.test.ts lib/curate/quick-visual-engine.test.ts lib/curate/quick-section-composition.test.ts lib/curate/quick-visual-repair.test.ts lib/curate/curate-route.integration.test.ts"
 ```
 
 - [ ] **Step 2: Write the operator runbook**
@@ -686,7 +686,7 @@ Document exact meanings and precedence for:
 - `OPENLEN_VISUAL_ENGINE_ASSETS=off|shadow|curated|hybrid`;
 - `OPENLEN_ASSET_IMAGE_MODEL`;
 - the three required asset budget variables;
-- `OPENLEN_APP_BASE_URL` requirement for renderable generated project URLs;
+- `OPENLEN_APP_BASE_URL` behavior for existing storage metadata, while generated manifests use the canonical same-origin `/api/projects/<id>/assets/<hash>.<ext>` route;
 - curated host allowlist and generated MIME/size/dimension bounds;
 - redacted trace fields and forbidden telemetry;
 - provider, validation, storage, required-slot, and structural failures;
