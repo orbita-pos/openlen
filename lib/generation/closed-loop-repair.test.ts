@@ -12,8 +12,8 @@ const KEEP = VisualQualityVerdictSchema.parse({ ...AFTER, scores: { ...AFTER.sco
 const NONREPAIRABLE = VisualQualityVerdictSchema.parse({ ...BEFORE, decision: "nonrepairable", nonrepairableReason: "primary_content_hidden", scores: { ...BEFORE.scores, mobileReadability: 2 }, issues: [] });
 const INPUT = { html: "<html>original</html>", metadata: { route: "template_skeleton" }, sourceId: "fixture", intent: IntentAnalysisSchema.parse(COLORING_INTENT), direction: CreativeDirectionSchema.parse(COLORING_DIRECTION), route: "template_skeleton" as const };
 const images = { desktop: { mimeType: "image/jpeg", dataBase64: "ZA==" }, mobile: { mimeType: "image/jpeg", dataBase64: "bQ==" } };
-const criticSuccess = (verdict: unknown) => ({ ok: true as const, verdict, durationMs: 1, promptVersion: "visual-quality-critic/2.3" as const, modelId: "critic-test" });
-const criticFailure = { ok: false as const, kind: "provider_error" as const, durationMs: 1, promptVersion: "visual-quality-critic/2.3" as const, modelId: "critic-test" };
+const criticSuccess = (verdict: unknown) => ({ ok: true as const, verdict, durationMs: 1, promptVersion: "visual-quality-critic/2.4" as const, modelId: "critic-test" });
+const criticFailure = { ok: false as const, kind: "provider_error" as const, durationMs: 1, promptVersion: "visual-quality-critic/2.4" as const, modelId: "critic-test" };
 
 function deps(first: unknown = BEFORE, second: unknown = AFTER) {
   const asResult = (value: unknown) => value && typeof value === "object" && "ok" in value ? value : criticSuccess(value);
@@ -61,6 +61,24 @@ describe("closed-loop repair", () => {
     expect(d.critic).toHaveBeenCalledTimes(2); expect(d.generatePlan).toHaveBeenCalledTimes(1); expect(d.applyPlan).toHaveBeenCalledTimes(1);
     expect(d.critic).toHaveBeenNthCalledWith(1, expect.objectContaining({ direction: INPUT.direction }), expect.anything());
     expect(d.critic).toHaveBeenNthCalledWith(2, expect.objectContaining({ direction: INPUT.direction }), expect.anything());
+  });
+
+  it("passes the validated mobile_overflow issue to the bounded apply boundary", async () => {
+    const mobileBefore = VisualQualityVerdictSchema.parse({
+      ...BEFORE,
+      scores: { ...BEFORE.scores, mobileReadability: 4 },
+      issues: [{ code: "mobile_overflow", severity: "critical", hookId: null, explanation: "The mobile render visibly overflows its viewport." }],
+    });
+    const mobileAfter = VisualQualityVerdictSchema.parse({
+      ...AFTER,
+      scores: { ...AFTER.scores, mobileReadability: 7 },
+    });
+    const d = deps(mobileBefore, mobileAfter);
+    await runClosedLoopVisualRepair(INPUT, d);
+    expect(d.applyPlan).toHaveBeenCalledWith(
+      expect.objectContaining({ issueCodes: ["mobile_overflow"] }),
+      expect.anything(),
+    );
   });
 
   it("aborts the upstream boundary at the overall deadline and returns the original", async () => {

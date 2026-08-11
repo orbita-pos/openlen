@@ -77,7 +77,7 @@ describe("critiqueVisualQuality", () => {
       ], (request) => { captured = request; }),
     });
 
-    expect(result).toMatchObject({ ok: true, verdict: CLEAN, promptVersion: "visual-quality-critic/2.3" });
+    expect(result).toMatchObject({ ok: true, verdict: CLEAN, promptVersion: "visual-quality-critic/2.4" });
     expect(captured).toMatchObject({
       images: [IMAGES.desktop, IMAGES.mobile],
       temperature: 0,
@@ -119,11 +119,16 @@ describe("critiqueVisualQuality", () => {
     expect(prompt).toContain("soft_bordered");
     expect(prompt).toContain("hand_drawn");
     expect(prompt).toContain('"radiusScale":1');
-    expect(prompt).toContain("Missing photography, abstract imagery, palette, typography, spacing and component styling are repairable");
+    expect(prompt).toContain("When visible pixels materially contradict the direction, photography, abstract imagery, palette, typography, spacing and component styling problems are repairable");
+    expect(prompt).not.toContain("Missing photography, abstract imagery");
     expect(prompt).toContain("Never use nonrepairable for an ordinary visual mismatch");
     expect(prompt).toContain("Use repair only when the visible defect can be corrected without changing copy or structure");
     expect(prompt).toContain("keep requires no visible contradiction of the creativeDirection");
     expect(prompt).toContain("A polished page can still require repair");
+    expect(prompt).toContain("Report an issue only for a material visible contradiction");
+    expect(prompt).toContain("Simple relevant symbols, abstract shapes, CSS illustration and missing optional photography are not mismatches by themselves");
+    expect(prompt).toContain("requiredVisualSignals are semantic cues, not a literal asset checklist");
+    expect(prompt).toContain("Room for optional polish is not a repair requirement");
     expect(prompt).toContain("Set every hookId to null");
     expect(prompt).not.toContain("raw secret brief text");
     expect(prompt).not.toContain("private ambiguity");

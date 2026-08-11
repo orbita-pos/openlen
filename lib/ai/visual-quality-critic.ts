@@ -9,7 +9,7 @@ import {
 } from "@/lib/generation/visual-repair-contracts";
 import type { VisualQualityViewports } from "./visual-quality-renderer";
 
-export const VISUAL_QUALITY_CRITIC_PROMPT_VERSION = "visual-quality-critic/2.3" as const;
+export const VISUAL_QUALITY_CRITIC_PROMPT_VERSION = "visual-quality-critic/2.4" as const;
 export const DEFAULT_VISUAL_QUALITY_CRITIC_TIMEOUT_MS = 18_000;
 
 export interface VisualQualityCriticProviderLike {
@@ -189,11 +189,15 @@ function criticPrompt(input: VisualQualityCriticInput): string {
     "- keep: the visible page communicates the requested domain, audience, emotional tone, required sections and actions; every score is at least 7 and no issue remains. Set nonrepairableReason to none.",
     "- repair: the visible experience is present and structurally usable, but palette, typography, spacing, imagery or component treatment can be corrected without changing copy or structure.",
     "- nonrepairable: the visible primary experience is absent, hidden or structurally unusable. Select the matching typed nonrepairableReason and score at least one dimension from 1 through 3.",
-    "Missing photography, abstract imagery, palette, typography, spacing and component styling are repairable visual mismatches, not evidence that the primary experience is unavailable.",
+    "When visible pixels materially contradict the direction, photography, abstract imagery, palette, typography, spacing and component styling problems are repairable visual mismatches, not evidence that the primary experience is unavailable.",
     "Never use nonrepairable for an ordinary visual mismatch. Never infer invisible content from orderedRoles.",
     "Use repair only when the visible defect can be corrected without changing copy or structure.",
-    "Compare the visible output explicitly with every creativeDirection field. keep requires no visible contradiction of the creativeDirection.",
-    "A polished page can still require repair when it contradicts the specified palette, typography scale, density, radius, imagery, iconography or component treatment.",
+    "Report an issue only for a material visible contradiction, not because the page could receive additional optional polish.",
+    "Simple relevant symbols, abstract shapes, CSS illustration and missing optional photography are not mismatches by themselves.",
+    "requiredVisualSignals are semantic cues, not a literal asset checklist. Do not require every cue to appear as a separate object.",
+    "Room for optional polish is not a repair requirement. A coherent page can keep simple imagery when its domain, audience and emotion are already recognizable.",
+    "Use creativeDirection as a calibration target. keep requires no visible contradiction of the creativeDirection, but it does not require literal rendering of every field.",
+    "A polished page can still require repair when it materially contradicts the specified palette, typography scale, density, radius, imagery, iconography or component treatment.",
     "Examples: expressive typography is contradicted by near-uniform tiny text; low or low-medium density is contradicted by compressed spacing; round or soft treatment is contradicted by square double-bordered components.",
     "Score each dimension independently from visible evidence. Scores 7-10 mean the requirement is clearly satisfied; scores 1-3 mean it is absent or contradicted.",
     `Return strict JSON matching ${VISUAL_QUALITY_VERDICT_VERSION}. Do not propose HTML, CSS, URLs, copy, or structure changes.`,

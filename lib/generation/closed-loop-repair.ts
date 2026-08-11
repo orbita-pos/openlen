@@ -39,7 +39,7 @@ export interface ClosedLoopVisualRepairDeps {
   render(html: string, options?: { signal: AbortSignal }): Promise<VisualQualityViewports | null>;
   critic(input: { intent: IntentAnalysis; direction: CreativeDirection; orderedRoles: string[]; route: ClosedLoopVisualRepairInput["route"]; images: VisualQualityViewports }, options?: { signal: AbortSignal }): Promise<VisualQualityCriticResult>;
   generatePlan(input: { direction: CreativeDirection; inventory: SkeletonInventory; verdict: VisualQualityVerdict }, options?: { signal: AbortSignal }): Promise<GenerateVisualRepairPlanResult>;
-  applyPlan(input: { html: string; sourceId: string; direction: CreativeDirection; plan: SkeletonAdaptationPlan; brandAccent?: string | null; explicitConstraints?: readonly string[] }, options?: { signal: AbortSignal }): Promise<ApplyVisualRepairResult>;
+  applyPlan(input: { html: string; sourceId: string; direction: CreativeDirection; plan: SkeletonAdaptationPlan; brandAccent?: string | null; explicitConstraints?: readonly string[]; issueCodes?: readonly VisualRepairIssueCode[] }, options?: { signal: AbortSignal }): Promise<ApplyVisualRepairResult>;
 }
 function orderedRoles(html: string): string[] { return [...html.matchAll(/data-openlen-role=["']([^"']+)["']/gi)].map((match) => match[1]!); }
 function outputHash(html: string): string { return `sha256:${createHash("sha256").update(html).digest("hex")}`; }
@@ -61,7 +61,7 @@ export async function runClosedLoopVisualRepair(input: ClosedLoopVisualRepairInp
       const generated = await deps.generatePlan({ direction: input.direction, inventory, verdict: first.verdict }, boundary);
       if (generated.usage) usage.push(generated.usage);
       if (!generated.ok) return original(input, "repair_provider_failed", usage);
-      const applied = await deps.applyPlan({ html: input.html, sourceId: input.sourceId, direction: input.direction, plan: generated.plan, brandAccent: input.brandAccent, explicitConstraints: input.explicitConstraints }, boundary);
+      const applied = await deps.applyPlan({ html: input.html, sourceId: input.sourceId, direction: input.direction, plan: generated.plan, brandAccent: input.brandAccent, explicitConstraints: input.explicitConstraints, issueCodes: first.verdict.issues.map((issue) => issue.code) }, boundary);
       if (!applied.ok) return original(input, applied.code, usage);
       const finalImages = await deps.render(applied.html, boundary); if (!finalImages) return original(input, "final_render_failed", usage);
       const final = await deps.critic({ intent: input.intent, direction: input.direction, orderedRoles: orderedRoles(applied.html), route: input.route, images: finalImages }, boundary);

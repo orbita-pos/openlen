@@ -6,8 +6,11 @@ import type { CreativeDirection, SkeletonAdaptationPlan, SkeletonInventory } fro
 import { resolveSkeletonAssets, type ResolveSkeletonAssetsInput, type SkeletonAssetResult } from "./skeleton-assets";
 import { buildSkeletonInventory } from "./skeleton-inventory";
 import { fingerprintStructure, type StructuralFingerprintOptions } from "./structural-fingerprint";
+import type { VisualRepairIssueCode } from "./visual-repair-contracts";
 
-export interface ApplyVisualRepairInput { html: string; sourceId: string; direction: CreativeDirection; plan: SkeletonAdaptationPlan; brandAccent?: string | null; explicitConstraints?: readonly string[] }
+export const MOBILE_OVERFLOW_REPAIR_CSS = "@media(max-width:700px){html,body{max-width:100%!important;overflow-x:hidden!important}body>:first-child{width:100%!important;max-width:100%!important;margin-left:auto!important;margin-right:auto!important}[data-openlen-role=\"hero\"],[data-openlen-role=\"features\"]{grid-template-columns:minmax(0,1fr)!important;max-width:100%!important}[data-openlen-role]{min-width:0!important;max-width:100%!important}[data-openlen-role] img,[data-openlen-role] video,[data-openlen-role] canvas,[data-openlen-role] svg{max-width:100%!important;height:auto!important}}";
+
+export interface ApplyVisualRepairInput { html: string; sourceId: string; direction: CreativeDirection; plan: SkeletonAdaptationPlan; brandAccent?: string | null; explicitConstraints?: readonly string[]; issueCodes?: readonly VisualRepairIssueCode[] }
 export type ApplyVisualRepairResult = { ok: true; html: string; structuralFingerprintBefore: string; structuralFingerprintAfter: string }
   | { ok: false; code: "inventory_failed" | "compile_failed" | "asset_failed" | "sanitization_failed" | "structural_invariant_failed" | "technical_render_failed" };
 export interface ApplyVisualRepairDeps {
@@ -20,6 +23,15 @@ export interface ApplyVisualRepairDeps {
 }
 function roles(html: string): string[] { return parse(html).querySelectorAll("[data-openlen-role]").map((node) => node.getAttribute("data-openlen-role") ?? ""); }
 function oneMarker(html: string): boolean { const nodes = parse(html).querySelectorAll('style[data-openlen-visual-engine="creative-direction/1.0"]'); return nodes.length === 1; }
+function applyBoundedResponsiveRepair(html: string, issueCodes: readonly VisualRepairIssueCode[] | undefined): string | null {
+  if (!Array.isArray(issueCodes) || !issueCodes.includes("mobile_overflow")) return html;
+  const marker = '<style data-openlen-visual-engine="creative-direction/1.0">';
+  const start = html.indexOf(marker);
+  if (start < 0 || html.indexOf(marker, start + marker.length) >= 0) return null;
+  const close = html.indexOf("</style>", start + marker.length);
+  if (close < 0) return null;
+  return html.slice(0, close) + MOBILE_OVERFLOW_REPAIR_CSS + html.slice(close);
+}
 
 export async function applyVisualRepairPlan(input: ApplyVisualRepairInput, deps: ApplyVisualRepairDeps = {}): Promise<ApplyVisualRepairResult> {
   try {
@@ -27,7 +39,9 @@ export async function applyVisualRepairPlan(input: ApplyVisualRepairInput, deps:
     const before = inventory.structuralFingerprint;
     const compiled = (deps.compileIdentity ?? compileSkeletonIdentity)({ html: input.html, inventory, direction: input.direction, plan: input.plan, brand: input.brandAccent ? { accent: input.brandAccent } : undefined, explicitConstraints: input.explicitConstraints });
     if (!compiled.ok) return { ok: false, code: "compile_failed" };
-    const assets = await (deps.resolveAssets ?? resolveSkeletonAssets)({ html: compiled.html, inventory, direction: input.direction, plan: input.plan });
+    const responsiveHtml = applyBoundedResponsiveRepair(compiled.html, input.issueCodes);
+    if (!responsiveHtml) return { ok: false, code: "compile_failed" };
+    const assets = await (deps.resolveAssets ?? resolveSkeletonAssets)({ html: responsiveHtml, inventory, direction: input.direction, plan: input.plan });
     if (!assets.ok) return { ok: false, code: "asset_failed" };
     const sanitized = (deps.sanitize ?? sanitizeForPublish)(assets.html);
     if (!sanitized.html) return { ok: false, code: "sanitization_failed" };
