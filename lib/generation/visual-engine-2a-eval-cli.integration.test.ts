@@ -186,9 +186,9 @@ describe("Visual Engine 2A eval CLI injected integration", () => {
     const error = vi.spyOn(console, "error").mockImplementation(() => undefined);
     const log = vi.spyOn(console, "log").mockImplementation(() => undefined);
 
-    const module = await import("@/scripts/visual-engine-2a-eval");
+    const evalModule = await import("@/scripts/visual-engine-2a-eval");
 
-    expect(module.runVisualEngine2AEvalCli).toBeTypeOf("function");
+    expect(evalModule.runVisualEngine2AEvalCli).toBeTypeOf("function");
     expect(warn).not.toHaveBeenCalled();
     expect(error).not.toHaveBeenCalled();
     expect(log).not.toHaveBeenCalled();

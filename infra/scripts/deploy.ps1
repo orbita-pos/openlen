@@ -86,6 +86,19 @@ if (Test-Path "public") {
   Copy-Item -Recurse -Force "public/*" ".next/standalone/public/"
 }
 
+# Next's Windows file tracer cannot always recreate npm workspace junctions in
+# the standalone tree (EPERM without symlink privileges). Materialize the small
+# JS package wrappers explicitly; step 6.5 builds and adds the Linux .node
+# binaries before the atomic swap.
+$nativeCrates = @("html-engine", "ai-gateway", "images", "rate-limit")
+foreach ($crate in $nativeCrates) {
+  $sourceDir = "crates/$crate"
+  $targetDir = ".next/standalone/node_modules/@openlen/$crate"
+  New-Item -ItemType Directory -Force -Path $targetDir | Out-Null
+  Copy-Item -Force "$sourceDir/index.js", "$sourceDir/index.d.ts", "$sourceDir/package.json" $targetDir
+  if (-not (Test-Path "$targetDir/index.js")) { throw "Missing native crate wrapper: $crate" }
+}
+
 # Bundle the cron entrypoints into self-contained ESM (deps inlined) so the
 # systemd timers run them with plain `node` — the standalone prunes
 # node_modules and never ships scripts/ or lib/ source. esbuild emits into
