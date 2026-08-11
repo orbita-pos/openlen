@@ -116,6 +116,22 @@ describe("generatePageCopy", () => {
   });
 
   it.each([
+    ["null", null],
+    ["array", []],
+    ["string", "not page copy"],
+    ["number", 42],
+  ] as const)("rejects a malformed %s copy before normalizing it", async (_label, copy) => {
+    const result = await generatePageCopy("A complete brief", {
+      apiKey: "x",
+      fetchImpl: vi.fn().mockResolvedValue(geminiResponse(pageCopyJson(copy))),
+      now: () => 10,
+    });
+
+    expect(result).toMatchObject({ ok: false, error: { kind: "schema" } });
+    expect(result).not.toHaveProperty("copy");
+  });
+
+  it.each([
     ["negative", { promptTokenCount: -1, candidatesTokenCount: 13 }],
     ["fractional", { promptTokenCount: 21.5, candidatesTokenCount: 13 }],
     ["string", { promptTokenCount: "21", candidatesTokenCount: 13 }],

@@ -48,19 +48,19 @@ export interface GeneratePageCopyOptions {
   now?: () => number;
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
 const PageCopyEnvelopeSchema = z.object({
   schemaVersion: z.literal("page-copy/1.0"),
-  copy: LenientBusinessDataSchema,
+  copy: z.custom<Record<string, unknown>>((value) => isRecord(value)).pipe(LenientBusinessDataSchema),
 }).strict();
 
 const PAGE_COPY_SYSTEM_PROMPT = `You create believable, specific, on-brand demo page copy for OpenLen.
 Given a business brief, invent a confident customer-facing demo: a product or company name, a punchy tagline, a one-to-two sentence overview, a hero keyword, three-to-six concrete features, realistic pricing tiers when the brief implies a paid product, two-to-three fictional testimonials with plausible names, three-to-five FAQ answers, and natural calls to action.
 Avoid generic filler such as "Lorem ipsum" or "Your tagline here". Write in the brief's language and identify that language.
 Output strict JSON only, with no markdown or prose, in this shape: {"schemaVersion":"page-copy/1.0","copy":{...}}.`;
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
-}
 
 function validTokenCount(value: unknown): value is number {
   return typeof value === "number" && Number.isSafeInteger(value) && value >= 0;
