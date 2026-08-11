@@ -242,6 +242,35 @@ describe("section composition inventory", () => {
       .resolves.toEqual({ ok: false, code: "section_fragment_invalid" });
   });
 
+  it("does not treat a self-closing non-void HTML div as closed", async () => {
+    const html = "<div/><section data-sec=\"hero-01\">swallowed</section>";
+    const frozen = buildSectionCompositionInventory([record("hero-01", "hero", html)]);
+    const selection = [{ ...plan(frozen.hash).rows[0], inventoryHash: frozen.hash, sectionId: "hero-01", contentHash: sha12(html) }];
+    await expect(fetchVerifiedSectionFragments(selection, frozen, { fetchText: async () => html }))
+      .resolves.toEqual({ ok: false, code: "section_fragment_invalid" });
+  });
+
+  it("accepts self-closing children in SVG and MathML foreign content", async () => {
+    const fragments = [
+      "<section data-sec=\"hero-01\"><svg viewBox=\"0 0 10 10\"><path d=\"M0 0\" /><use href=\"#dot\" /><circle cx=\"5\" cy=\"5\" r=\"2\" /></svg></section>",
+      "<section data-sec=\"hero-01\"><math><mspace width=\"1em\"/><mi/></math></section>",
+    ];
+    for (const html of fragments) {
+      const frozen = buildSectionCompositionInventory([record("hero-01", "hero", html)]);
+      const selection = [{ ...plan(frozen.hash).rows[0], inventoryHash: frozen.hash, sectionId: "hero-01", contentHash: sha12(html) }];
+      await expect(fetchVerifiedSectionFragments(selection, frozen, { fetchText: async () => html }))
+        .resolves.toMatchObject({ ok: true, fragments: [{ slug: "hero-01", html }] });
+    }
+  });
+
+  it("keeps HTML non-void rules inside foreign integration points", async () => {
+    const html = "<section data-sec=\"hero-01\"><svg><foreignObject><div/></foreignObject></svg></section>";
+    const frozen = buildSectionCompositionInventory([record("hero-01", "hero", html)]);
+    const selection = [{ ...plan(frozen.hash).rows[0], inventoryHash: frozen.hash, sectionId: "hero-01", contentHash: sha12(html) }];
+    await expect(fetchVerifiedSectionFragments(selection, frozen, { fetchText: async () => html }))
+      .resolves.toEqual({ ok: false, code: "section_fragment_invalid" });
+  });
+
   it("ignores document-shaped literals in every raw-text and RCDATA element", async () => {
     for (const tag of ["script", "style", "textarea", "title", "iframe", "xmp", "noembed", "noframes"]) {
       const html = `<section data-sec=\"hero-01\"><${tag}><html><head></head><body>literal</body></html></${tag}><br/>Hero</section>`;

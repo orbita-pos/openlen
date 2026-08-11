@@ -178,6 +178,34 @@ const VOID_TAGS = new Set([
 const RAW_TEXT_TAGS = new Set([
   "script", "style", "textarea", "title", "iframe", "xmp", "noembed", "noframes",
 ]);
+const SVG_HTML_INTEGRATION_POINTS = new Set(["foreignobject", "desc", "title"]);
+const MATHML_HTML_INTEGRATION_POINTS = new Set(["mi", "mo", "mn", "ms", "mtext"]);
+
+type MarkupNamespace = "html" | "svg" | "math";
+
+interface OpenElement {
+  name: string;
+  namespace: MarkupNamespace;
+}
+
+function childNamespace(openTags: readonly OpenElement[]): MarkupNamespace {
+  const parent = openTags.at(-1);
+  if (!parent) return "html";
+  if (parent.namespace === "svg" && SVG_HTML_INTEGRATION_POINTS.has(parent.name)) {
+    return "html";
+  }
+  if (parent.namespace === "math" && MATHML_HTML_INTEGRATION_POINTS.has(parent.name)) {
+    return "html";
+  }
+  return parent.namespace;
+}
+
+function elementNamespace(parentNamespace: MarkupNamespace, name: string): MarkupNamespace {
+  if (parentNamespace !== "html") return parentNamespace;
+  if (name === "svg") return "svg";
+  if (name === "math") return "math";
+  return "html";
+}
 
 function tagEnd(html: string, start: number): number {
   let quote = "";
@@ -203,7 +231,7 @@ function attributeValue(tag: string, name: string): string | null {
 }
 
 function hasValidFragmentShape(html: string, sectionId: string): boolean {
-  const openTags: string[] = [];
+  const openTags: OpenElement[] = [];
   let nonStyleLinkRoots = 0;
   let matchingMarkerRoots = 0;
   let matchingMarkers = 0;
@@ -211,8 +239,8 @@ function hasValidFragmentShape(html: string, sectionId: string): boolean {
 
   while (index < html.length) {
     const rawTag = openTags.at(-1);
-    if (rawTag && RAW_TEXT_TAGS.has(rawTag)) {
-      const closing = new RegExp(`<\\/\\s*${rawTag}\\s*>`, "i").exec(html.slice(index));
+    if (rawTag && RAW_TEXT_TAGS.has(rawTag.name)) {
+      const closing = new RegExp(`<\\/\\s*${rawTag.name}\\s*>`, "i").exec(html.slice(index));
       if (!closing || closing.index === undefined) return false;
       index += closing.index + closing[0].length;
       openTags.pop();
@@ -237,7 +265,7 @@ function hasValidFragmentShape(html: string, sectionId: string): boolean {
     const closing = /^<\/\s*([a-z][a-z0-9:-]*)\s*>$/i.exec(tag);
     if (closing) {
       const name = closing[1].toLowerCase();
-      if (["html", "head", "body"].includes(name) || openTags.at(-1) !== name) return false;
+      if (["html", "head", "body"].includes(name) || openTags.at(-1)?.name !== name) return false;
       openTags.pop();
       index = end + 1;
       continue;
@@ -253,9 +281,13 @@ function hasValidFragmentShape(html: string, sectionId: string): boolean {
       nonStyleLinkRoots += 1;
       if (marker === sectionId) matchingMarkerRoots += 1;
     }
-    // HTML ignores a self-closing solidus on non-void elements. Only HTML-void
-    // tags may be closed without a matching end tag.
-    if (!VOID_TAGS.has(name)) openTags.push(name);
+    const namespace = elementNamespace(childNamespace(openTags), name);
+    const selfClosing = /\/\s*>$/.test(tag);
+    // HTML ignores a self-closing solidus on non-void elements. SVG and MathML
+    // foreign content honor it, except at their bounded HTML integration points.
+    if (!VOID_TAGS.has(name) && !(namespace !== "html" && selfClosing)) {
+      openTags.push({ name, namespace });
+    }
     index = end + 1;
   }
 
