@@ -9,6 +9,8 @@ export interface VisualQualityViewports {
   desktop: InlineImage;
   mobile: InlineImage;
   mobileOverflow?: boolean;
+  weakTypographyHierarchy?: boolean;
+  squareComponentTreatment?: boolean;
 }
 
 interface PageLike {
@@ -50,6 +52,39 @@ function hasDocumentHorizontalOverflow(value: unknown): boolean {
   return Math.max(Number(rootScrollWidth), Number(bodyScrollWidth)) > Number(clientWidth) + 1;
 }
 
+function readFiniteMeasurement(value: Record<string, unknown>, key: string): number | null {
+  const measurement = value[key];
+  return typeof measurement === "number" && Number.isFinite(measurement) && measurement >= 0
+    ? measurement
+    : null;
+}
+
+function readVisualDiagnostics(value: unknown): {
+  weakTypographyHierarchy: boolean;
+  squareComponentTreatment: boolean;
+} {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return { weakTypographyHierarchy: false, squareComponentTreatment: false };
+  }
+  const measurements = value as Record<string, unknown>;
+  const h1FontPx = readFiniteMeasurement(measurements, "h1FontPx");
+  const heroBodyFontPx = readFiniteMeasurement(measurements, "heroBodyFontPx");
+  const componentCount = readFiniteMeasurement(measurements, "componentCount");
+  const roundedComponentCount = readFiniteMeasurement(measurements, "roundedComponentCount");
+
+  const weakTypographyHierarchy = h1FontPx !== null && (
+    h1FontPx < 24
+    || (heroBodyFontPx !== null && heroBodyFontPx < 12)
+    || (heroBodyFontPx !== null && heroBodyFontPx > 0 && h1FontPx / heroBodyFontPx < 1.5)
+  );
+  const squareComponentTreatment = componentCount !== null
+    && roundedComponentCount !== null
+    && componentCount >= 3
+    && roundedComponentCount / componentCount < 0.25;
+
+  return { weakTypographyHierarchy, squareComponentTreatment };
+}
+
 async function defaultLaunchBrowser(): Promise<BrowserLike> {
   const puppeteer = (await import("puppeteer")).default;
   const executablePath = process.env.PUPPETEER_EXECUTABLE_PATH?.trim() || undefined;
@@ -76,6 +111,8 @@ async function captureWithBrowser(
 
     const images: InlineImage[] = [];
     let mobileOverflow = false;
+    let weakTypographyHierarchy = false;
+    let squareComponentTreatment = false;
     for (const viewport of [VISUAL_QUALITY_DESKTOP_VIEWPORT, VISUAL_QUALITY_MOBILE_VIEWPORT]) {
       if (viewport !== VISUAL_QUALITY_DESKTOP_VIEWPORT) await page.setViewport(viewport);
       await page.evaluate(() =>
@@ -86,20 +123,66 @@ async function captureWithBrowser(
         const geometry = await page.evaluate(() => {
           const root = document.documentElement;
           const body = document.body;
+          const h1 = document.querySelector("h1");
+          let h1FontPx: number | null = null;
+          if (h1 instanceof HTMLElement) {
+            const style = window.getComputedStyle(h1);
+            const rect = h1.getBoundingClientRect();
+            const value = Number.parseFloat(style.fontSize);
+            if (rect.width > 0 && rect.height > 0 && style.display !== "none" && style.visibility !== "hidden" && Number.isFinite(value) && value >= 0) {
+              h1FontPx = value;
+            }
+          }
+          const heroBody = document.querySelector("[data-openlen-role='hero'] p, main p, body p");
+          let heroBodyFontPx: number | null = null;
+          if (heroBody instanceof HTMLElement) {
+            const style = window.getComputedStyle(heroBody);
+            const rect = heroBody.getBoundingClientRect();
+            const value = Number.parseFloat(style.fontSize);
+            if (rect.width > 0 && rect.height > 0 && style.display !== "none" && style.visibility !== "hidden" && Number.isFinite(value) && value >= 0) {
+              heroBodyFontPx = value;
+            }
+          }
+          let componentCount = 0;
+          let roundedComponentCount = 0;
+          for (const component of document.querySelectorAll("button,[role='button'],article")) {
+            if (!(component instanceof HTMLElement)) continue;
+            const style = window.getComputedStyle(component);
+            const rect = component.getBoundingClientRect();
+            if (rect.width <= 0 || rect.height <= 0 || style.display === "none" || style.visibility === "hidden") continue;
+            componentCount += 1;
+            if (Math.max(
+              Number.parseFloat(style.borderTopLeftRadius) || 0,
+              Number.parseFloat(style.borderTopRightRadius) || 0,
+              Number.parseFloat(style.borderBottomRightRadius) || 0,
+              Number.parseFloat(style.borderBottomLeftRadius) || 0,
+            ) >= 8) roundedComponentCount += 1;
+          }
           return {
             rootScrollWidth: root.scrollWidth,
             bodyScrollWidth: body?.scrollWidth ?? 0,
             clientWidth: Math.max(window.innerWidth, root.clientWidth),
+            h1FontPx,
+            heroBodyFontPx,
+            componentCount,
+            roundedComponentCount,
           };
         });
         mobileOverflow = hasDocumentHorizontalOverflow(geometry);
+        ({ weakTypographyHierarchy, squareComponentTreatment } = readVisualDiagnostics(geometry));
       }
       const bytes = Buffer.from(await page.screenshot({ type: "jpeg", quality: 75, fullPage: false }));
       const image = { mimeType: "image/jpeg", dataBase64: bytes.toString("base64") };
       if (!isBoundedJpeg(image)) return null;
       images.push(image);
     }
-    return { desktop: images[0]!, mobile: images[1]!, mobileOverflow };
+    return {
+      desktop: images[0]!,
+      mobile: images[1]!,
+      mobileOverflow,
+      weakTypographyHierarchy,
+      squareComponentTreatment,
+    };
   } finally {
     await browser.close();
   }

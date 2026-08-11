@@ -130,6 +130,62 @@ describe("closed-loop repair", () => {
     expect(d.generatePlan).not.toHaveBeenCalled();
   });
 
+  it.each([
+    ["weak typography", { weakTypographyHierarchy: true }, "weak_typography_hierarchy"],
+    ["square components", { squareComponentTreatment: true }, "component_treatment_mismatch"],
+  ] as const)("turns measured %s into a bounded repair", async (_name, diagnostic, issueCode) => {
+    const finalKeep = VisualQualityVerdictSchema.parse({
+      ...KEEP,
+      scores: { ...KEEP.scores, visualHierarchy: 9, componentCoherence: 9 },
+    });
+    const d = deps(KEEP, finalKeep);
+    d.render
+      .mockResolvedValueOnce({ ...images, ...diagnostic })
+      .mockResolvedValueOnce({ ...images, weakTypographyHierarchy: false, squareComponentTreatment: false });
+
+    const result = await runClosedLoopVisualRepair(INPUT, d);
+
+    expect(result).toMatchObject({ accepted: true, html: "<html>repaired</html>" });
+    expect(d.generatePlan).toHaveBeenCalledWith(
+      expect.objectContaining({ verdict: expect.objectContaining({
+        decision: "repair",
+        issues: [expect.objectContaining({ code: issueCode, severity: "critical", hookId: null })],
+      }) }),
+      expect.anything(),
+    );
+    expect(d.applyPlan).toHaveBeenCalledWith(
+      expect.objectContaining({ issueCodes: [issueCode] }),
+      expect.anything(),
+    );
+  });
+
+  it.each([
+    ["weak typography", { weakTypographyHierarchy: true }],
+    ["square components", { squareComponentTreatment: true }],
+  ] as const)("rejects a candidate when measured %s persists", async (_name, diagnostic) => {
+    const d = deps(KEEP, KEEP);
+    d.render
+      .mockResolvedValueOnce({ ...images, ...diagnostic })
+      .mockResolvedValueOnce({ ...images, ...diagnostic });
+
+    const result = await runClosedLoopVisualRepair(INPUT, d);
+
+    expect(result).toMatchObject({ accepted: false, html: INPUT.html, trace: { resultCode: "not_improved" } });
+  });
+
+  it("does not treat square components as a mismatch when the direction requests square geometry", async () => {
+    const d = deps(KEEP);
+    d.render.mockResolvedValueOnce({ ...images, squareComponentTreatment: true });
+
+    const result = await runClosedLoopVisualRepair({
+      ...INPUT,
+      direction: CreativeDirectionSchema.parse({ ...COLORING_DIRECTION, geometry: { ...COLORING_DIRECTION.geometry, radius: "square" } }),
+    }, d);
+
+    expect(result).toMatchObject({ accepted: false, trace: { resultCode: "healthy_keep" } });
+    expect(d.generatePlan).not.toHaveBeenCalled();
+  });
+
   it("aborts the upstream boundary at the overall deadline and returns the original", async () => {
     let signal: AbortSignal | undefined;
     const d = deps();

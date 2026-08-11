@@ -164,3 +164,19 @@ Document-level horizontal overflow is browser geometry, not a subjective visual 
 When the initial production render reports `mobileOverflow=true`, OpenLen will deterministically reconcile a coherent `keep` or `repair` verdict into a repair verdict containing the canonical critical `mobile_overflow` issue and a mobile-readability score no greater than 5. A coherent `nonrepairable` verdict remains authoritative. The final render is measured again; acceptance requires `mobileOverflow=false` in addition to the existing defect-directed improvement and structural gates. Injected/custom renderers that cannot measure geometry leave the boolean absent and preserve existing behavior.
 
 This is generic browser diagnostics with no fixture, ordinal, template or domain branch. It adds no provider call and does not change copy, DOM structure, navigation, templates or model-authored CSS.
+
+## Approved deterministic typography and component-geometry correction
+
+The final 15-case smoke matched 13 expected semantic classes. Cases 9 and 12 were the only mismatches: the rendered case-9 typography was materially unreadable and case 12 visibly flattened the rounded component treatment, while the critic classified both as healthy. These are computed-style boundaries that OpenLen can measure without another provider call.
+
+At the existing 390-pixel mobile viewport, the production renderer will additionally measure only these redacted scalars:
+
+- the visible `h1` and first hero/main/body paragraph computed font sizes;
+- the count of visible buttons, button roles and articles;
+- the count of those components whose largest computed corner radius is at least 8 pixels.
+
+It derives two booleans. `weakTypographyHierarchy` is true only when a visible `h1` is below 24 pixels, the corresponding visible body text is below 12 pixels, or their size ratio is below 1.5. `squareComponentTreatment` is true only with at least three measured components and fewer than 25 percent rounded components. Raw dimensions, selectors, HTML and computed styles do not enter Gemini requests, traces or telemetry.
+
+The closed loop reconciles a coherent `keep` or `repair` verdict with these measurements. Weak typography adds the canonical critical `weak_typography_hierarchy` issue and caps `visualHierarchy` at 5. Essentially square components add the canonical critical `component_treatment_mismatch` issue and cap `componentCoherence` at 5 only when the approved direction does not explicitly request square geometry. A coherent `nonrepairable` verdict remains authoritative. The final render must clear every deterministic diagnostic before acceptance.
+
+This correction is generic and contains no case ID, ordinal, fixture, template or domain branch. It reuses the existing compiler tokens and structural fingerprint gate, adds no provider call, and makes no database change during implementation.

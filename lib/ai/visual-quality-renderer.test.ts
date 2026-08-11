@@ -105,12 +105,62 @@ describe("renderVisualQualityViewports", () => {
     expect(result).toMatchObject({ mobileOverflow: false });
   });
 
+  it("reports materially weak mobile typography hierarchy from computed styles", async () => {
+    const page = {
+      setViewport: vi.fn(async () => undefined),
+      setContent: vi.fn(async () => undefined),
+      evaluate: vi.fn()
+        .mockResolvedValueOnce(undefined)
+        .mockResolvedValueOnce(undefined)
+        .mockResolvedValueOnce({
+          rootScrollWidth: 390, bodyScrollWidth: 390, clientWidth: 390,
+          h1FontPx: 9, heroBodyFontPx: 4,
+          componentCount: 4, roundedComponentCount: 4,
+        }),
+      screenshot: vi.fn(async () => Buffer.from("jpeg")),
+    };
+
+    const result = await renderVisualQualityViewports(HTML, {
+      launchBrowser: async () => ({ newPage: async () => page, close: async () => undefined }),
+      installGuard: async () => undefined,
+      settle: async () => undefined,
+    });
+
+    expect(result).toMatchObject({ weakTypographyHierarchy: true, squareComponentTreatment: false });
+  });
+
+  it("reports an essentially square set of visible components", async () => {
+    const page = {
+      setViewport: vi.fn(async () => undefined),
+      setContent: vi.fn(async () => undefined),
+      evaluate: vi.fn()
+        .mockResolvedValueOnce(undefined)
+        .mockResolvedValueOnce(undefined)
+        .mockResolvedValueOnce({
+          rootScrollWidth: 390, bodyScrollWidth: 390, clientWidth: 390,
+          h1FontPx: 48, heroBodyFontPx: 17,
+          componentCount: 4, roundedComponentCount: 0,
+        }),
+      screenshot: vi.fn(async () => Buffer.from("jpeg")),
+    };
+
+    const result = await renderVisualQualityViewports(HTML, {
+      launchBrowser: async () => ({ newPage: async () => page, close: async () => undefined }),
+      installGuard: async () => undefined,
+      settle: async () => undefined,
+    });
+
+    expect(result).toMatchObject({ weakTypographyHierarchy: false, squareComponentTreatment: true });
+  });
+
   it("keeps image-only capture seams geometry-neutral", async () => {
     const result = await renderVisualQualityViewports(HTML, {
       capture: async () => ({ mimeType: "image/jpeg", dataBase64: Buffer.from("jpeg").toString("base64") }),
     });
 
     expect(result).not.toHaveProperty("mobileOverflow");
+    expect(result).not.toHaveProperty("weakTypographyHierarchy");
+    expect(result).not.toHaveProperty("squareComponentTreatment");
   });
 
   it("closes the browser and returns null when production capture throws", async () => {

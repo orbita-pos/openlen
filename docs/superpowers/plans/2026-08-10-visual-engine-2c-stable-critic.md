@@ -646,3 +646,46 @@ git diff --check
 ```
 
 Commit only the four production/test files plus this approved spec/plan amendment. Do not call Gemini or mutate the pilot ledger.
+
+---
+
+### Corrective Task 6: Deterministic typography and component geometry
+
+**Files:**
+- Modify: `lib/ai/visual-quality-renderer.ts`
+- Modify: `lib/ai/visual-quality-renderer.test.ts`
+- Modify: `lib/generation/closed-loop-repair.ts`
+- Modify: `lib/generation/closed-loop-repair.test.ts`
+
+**Interfaces:**
+- Extends: `VisualQualityViewports` with optional `weakTypographyHierarchy` and `squareComponentTreatment` booleans.
+- Produces: renderer-owned computed-style diagnostics at the existing mobile viewport.
+- Preserves: image-only capture compatibility, nonrepairable precedence, provider-call ceilings, compiler allowlists and structural fingerprint equality.
+
+- [x] **Step 1: Add and verify RED renderer tests**
+
+Require materially small typography to set only `weakTypographyHierarchy`; require an essentially square visible component set to set only `squareComponentTreatment`; require the image-only seam to leave both absent.
+
+- [x] **Step 2: Add and verify RED closed-loop tests**
+
+Require either measured defect to convert critic `keep` into the corresponding canonical critical issue, reach the bounded apply boundary, and remain rejected if the final render still reports it. Require square geometry explicitly requested by the direction to remain valid.
+
+- [x] **Step 3: Implement the minimal correction**
+
+Measure computed mobile font sizes and a bounded generic component-radius ratio in the existing browser lifecycle. Reconcile only redacted booleans locally, and never add the component mismatch when the direction requests square geometry.
+
+- [x] **Step 4: Prove the real synthetic boundaries locally**
+
+Render cases 9 and 12 with Chromium through the production SSRF-guarded path. Require the expected diagnostic before repair, no diagnostic after the existing compiler-token repair, and equal structural fingerprints. Do not call Gemini or the database.
+
+- [x] **Step 5: Run the release gate and commit**
+
+```powershell
+npm.cmd test -- lib/ai/visual-quality-renderer.test.ts lib/generation/closed-loop-repair.test.ts lib/generation/apply-visual-repair.test.ts lib/generation/visual-engine-2c-eval.test.ts lib/generation/visual-engine-2c-eval-cli.integration.test.ts
+npm.cmd run typecheck
+npm.cmd test
+npm.cmd run generation:visual-engine-2a:rollback-check
+git diff --check
+```
+
+Commit only the four production/test files plus this approved spec/plan amendment. Do not call Gemini, archive pilot rows or mutate the database.
