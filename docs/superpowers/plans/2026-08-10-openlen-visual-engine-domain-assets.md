@@ -195,6 +195,7 @@ export const AssetResolutionTraceSchema = z.object({
   provider: z.string().max(64).nullable(),
   modelId: z.string().max(96).nullable(),
   promptSha256: z.array(HashSchema).max(3),
+  usage: z.object({ inputTokens: z.number().int().nonnegative(), outputTokens: z.number().int().nonnegative(), cachedTokens: z.number().int().nonnegative(), thinkingTokens: z.number().int().nonnegative() }).strict().optional(),
   estimatedCostMicromxn: z.number().int().nonnegative(),
   durationMs: z.number().int().nonnegative(),
   resultCode: z.string().regex(/^[a-z0-9_]+$/).max(64),
@@ -464,6 +465,8 @@ git commit -m "feat(generation): add validated asset pack provider"
 - Create: `lib/generation/asset-pipeline.test.ts`
 - Create: `lib/generation/apply-asset-manifest.ts`
 - Create: `lib/generation/apply-asset-manifest.test.ts`
+- Modify: `lib/generation/asset-contracts.ts`
+- Modify: `lib/generation/asset-contracts.test.ts`
 - Modify: `lib/projects/assets.ts`
 - Create: `lib/generation/project-asset-storage-contract.test.ts`
 - Create: `public/openlen-assets/placeholders/neutral-abstract.svg`
@@ -485,6 +488,8 @@ export type AppliedAssetManifestResult =
 - [ ] **Step 1: Align the shared storage identity contract with RED coverage**
 
 Add a regression proving newly stored image filenames use the full 64-character SHA-256 while legacy shorter filenames remain readable/listable. Change only new-write naming in `lib/projects/assets.ts`; do not migrate, delete, or rename existing assets.
+
+Extend `AssetResolutionTraceSchema` with one optional strict `usage` object containing only nonnegative integer `inputTokens`, `outputTokens`, `cachedTokens`, and `thinkingTokens`. Add contract tests proving valid usage is accepted and unknown/private usage fields are rejected.
 
 - [ ] **Step 2: Write RED hybrid-order and atomicity tests**
 
@@ -534,7 +539,7 @@ Parse the original HTML once, derive replaceable image nodes using the same orde
 Run:
 
 ```powershell
-npm.cmd test -- lib/generation/project-asset-storage-contract.test.ts lib/generation/asset-pipeline.test.ts lib/generation/apply-asset-manifest.test.ts lib/generation/structural-fingerprint.test.ts
+npm.cmd test -- lib/generation/asset-contracts.test.ts lib/generation/project-asset-storage-contract.test.ts lib/generation/asset-pipeline.test.ts lib/generation/apply-asset-manifest.test.ts lib/generation/structural-fingerprint.test.ts
 npm.cmd run typecheck
 git diff --check
 ```
@@ -544,7 +549,7 @@ Expected: all tests PASS and no provider/storage/network call escapes test doubl
 - [ ] **Step 8: Commit Task 4**
 
 ```powershell
-git add lib/projects/assets.ts lib/generation/project-asset-storage-contract.test.ts lib/generation/asset-pipeline.ts lib/generation/asset-pipeline.test.ts lib/generation/apply-asset-manifest.ts lib/generation/apply-asset-manifest.test.ts public/openlen-assets/placeholders/neutral-abstract.svg
+git add lib/generation/asset-contracts.ts lib/generation/asset-contracts.test.ts lib/projects/assets.ts lib/generation/project-asset-storage-contract.test.ts lib/generation/asset-pipeline.ts lib/generation/asset-pipeline.test.ts lib/generation/apply-asset-manifest.ts lib/generation/apply-asset-manifest.test.ts public/openlen-assets/placeholders/neutral-abstract.svg
 git commit -m "feat(generation): orchestrate hybrid asset manifests"
 ```
 
