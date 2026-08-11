@@ -239,7 +239,7 @@ function hasValidFragmentShape(html: string, sectionId: string): boolean {
 
   while (index < html.length) {
     const rawTag = openTags.at(-1);
-    if (rawTag && RAW_TEXT_TAGS.has(rawTag.name)) {
+    if (rawTag?.namespace === "html" && RAW_TEXT_TAGS.has(rawTag.name)) {
       const closing = new RegExp(`<\\/\\s*${rawTag.name}\\s*>`, "i").exec(html.slice(index));
       if (!closing || closing.index === undefined) return false;
       index += closing.index + closing[0].length;

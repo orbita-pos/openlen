@@ -271,6 +271,20 @@ describe("section composition inventory", () => {
       .resolves.toEqual({ ok: false, code: "section_fragment_invalid" });
   });
 
+  it("applies HTML integration-child rules beneath an SVG title", async () => {
+    const invalidHtml = "<section data-sec=\"hero-01\"><svg><title><div/></title></svg></section>";
+    const validHtml = "<section data-sec=\"hero-01\"><svg><title>Plain text</title></svg></section>";
+    for (const [html, expected] of [
+      [invalidHtml, { ok: false, code: "section_fragment_invalid" }],
+      [validHtml, { ok: true }],
+    ] as const) {
+      const frozen = buildSectionCompositionInventory([record("hero-01", "hero", html)]);
+      const selection = [{ ...plan(frozen.hash).rows[0], inventoryHash: frozen.hash, sectionId: "hero-01", contentHash: sha12(html) }];
+      await expect(fetchVerifiedSectionFragments(selection, frozen, { fetchText: async () => html }))
+        .resolves.toMatchObject(expected);
+    }
+  });
+
   it("ignores document-shaped literals in every raw-text and RCDATA element", async () => {
     for (const tag of ["script", "style", "textarea", "title", "iframe", "xmp", "noembed", "noframes"]) {
       const html = `<section data-sec=\"hero-01\"><${tag}><html><head></head><body>literal</body></html></${tag}><br/>Hero</section>`;
