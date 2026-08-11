@@ -14,6 +14,13 @@ export interface CuratedImage {
   family: string[];
   alt: string;
   src: { hero: string; tablet: string; thumb: string };
+  domains?: string[];
+  audiences?: string[];
+  visualSignals?: string[];
+  negativeTags?: string[];
+  mediaType?: "photo" | "illustration" | "texture";
+  license?: "openlen_catalog";
+  checksum?: string;
 }
 
 // Transparent cutouts break full-bleed slots; the branded drops (LUME /
@@ -25,6 +32,78 @@ const EXCLUDE_STYLE = new Set(["pet-editorial"]);
 
 let cache: CuratedImage[] | null = null;
 
+const TAXONOMY_TAG = /^[a-z0-9]+(?:_[a-z0-9]+)*$/;
+const CHECKSUM = /^sha256:[a-f0-9]{64}$/;
+
+function reviewedList(value: unknown): string[] | null {
+  if (!Array.isArray(value) || value.length > 12 || value.some((item) => typeof item !== "string" || !TAXONOMY_TAG.test(item))) return null;
+  if (new Set(value).size !== value.length) return null;
+  return [...value];
+}
+
+function parseRow(value: unknown): CuratedImage | null {
+  if (!value || typeof value !== "object") return null;
+  const row = value as Record<string, unknown>;
+  const src = row.src;
+  if (
+    typeof row.id !== "string"
+    || typeof row.promptNum !== "number"
+    || !Number.isFinite(row.promptNum)
+    || typeof row.style !== "string"
+    || !Array.isArray(row.family)
+    || row.family.some((item) => typeof item !== "string")
+    || typeof row.alt !== "string"
+    || !src
+    || typeof src !== "object"
+  ) return null;
+  const source = src as Record<string, unknown>;
+  if (typeof source.hero !== "string" || !source.hero || typeof source.tablet !== "string" || !source.tablet || typeof source.thumb !== "string" || !source.thumb) return null;
+
+  const parsed: CuratedImage = {
+    id: row.id,
+    promptNum: row.promptNum,
+    style: row.style,
+    family: [...row.family] as string[],
+    alt: row.alt,
+    src: { hero: source.hero, tablet: source.tablet, thumb: source.thumb },
+  };
+  for (const field of ["domains", "audiences", "visualSignals", "negativeTags"] as const) {
+    if (!(field in row)) continue;
+    const list = reviewedList(row[field]);
+    if (!list) return null;
+    parsed[field] = list;
+  }
+  if ("mediaType" in row) {
+    if (row.mediaType !== "photo" && row.mediaType !== "illustration" && row.mediaType !== "texture") return null;
+    parsed.mediaType = row.mediaType;
+  }
+  if ("license" in row) {
+    if (row.license !== "openlen_catalog") return null;
+    parsed.license = row.license;
+  }
+  if ("checksum" in row) {
+    if (typeof row.checksum !== "string" || !CHECKSUM.test(row.checksum)) return null;
+    parsed.checksum = row.checksum;
+  }
+  return parsed;
+}
+
+function manifestRows(raw: unknown): unknown[] {
+  if (Array.isArray(raw)) return raw;
+  if (!raw || typeof raw !== "object") return [];
+  const record = raw as { images?: unknown; items?: unknown } & Record<string, unknown>;
+  if (Array.isArray(record.images)) return record.images;
+  if (Array.isArray(record.items)) return record.items;
+  return Object.values(record).find(Array.isArray) ?? [];
+}
+
+export function parseCuratedImageManifest(raw: unknown): CuratedImage[] {
+  return manifestRows(raw)
+    .map(parseRow)
+    .filter((image): image is CuratedImage => image !== null)
+    .filter((image) => !EXCLUDE_ID.test(image.id) && !EXCLUDE_STYLE.has(image.style));
+}
+
 export async function loadCuratedImages(): Promise<CuratedImage[]> {
   if (cache) return cache;
   const file = path.join(
@@ -34,20 +113,7 @@ export async function loadCuratedImages(): Promise<CuratedImage[]> {
     "manifest.json",
   );
   const raw = JSON.parse(await readFile(file, "utf8")) as unknown;
-  const arr = Array.isArray(raw)
-    ? raw
-    : ((raw as { images?: unknown[]; items?: unknown[] })?.images ??
-        (raw as { items?: unknown[] })?.items ??
-        Object.values(raw as object).find(Array.isArray) ??
-        []);
-  cache = (arr as CuratedImage[]).filter(
-    (e) =>
-      e &&
-      typeof e.id === "string" &&
-      e.src?.hero &&
-      !EXCLUDE_ID.test(e.id) &&
-      !EXCLUDE_STYLE.has(e.style),
-  );
+  cache = parseCuratedImageManifest(raw);
   return cache;
 }
 
