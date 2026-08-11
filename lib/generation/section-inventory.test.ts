@@ -26,6 +26,7 @@ function record(
     needsJs?: boolean;
     hasPlaceholders?: boolean;
     storageKey?: string;
+    contentHash?: string;
   } = {},
 ): SectionRecord {
   return {
@@ -37,7 +38,7 @@ function record(
     mode: opts.mode ?? "light",
     storageKey: opts.storageKey ?? `sections/${id}-${sha12(html)}.html`,
     storageUrl: `https://storage.invalid/${id}.html`,
-    contentHash: sha12(html),
+    contentHash: opts.contentHash ?? sha12(html),
     size: html.length,
     designTokens: opts.radius ? { "--radius": opts.radius } : null,
     fonts: null,
@@ -134,6 +135,29 @@ describe("section composition inventory", () => {
     }
   });
 
+  it("rejects malformed IDs and hashes even when their interpolated storage key matches", () => {
+    const html = HTML["hero-01"];
+    const validHash = sha12(html);
+    const maliciousRecords = [
+      record("a".repeat(129), "hero", html, {
+        storageKey: `sections/${"a".repeat(129)}-${validHash}.html`,
+      }),
+      record("../hero", "hero", html, { storageKey: `sections/../hero-${validHash}.html` }),
+      record("hero-01", "hero", html, {
+        contentHash: `../${validHash}`,
+        storageKey: `sections/hero-01-../${validHash}.html`,
+      }),
+      record("hero-01", "hero", html, {
+        contentHash: validHash.toUpperCase(),
+        storageKey: `sections/hero-01-${validHash.toUpperCase()}.html`,
+      }),
+    ];
+    for (const malicious of maliciousRecords) {
+      expect(() => buildSectionCompositionInventory([malicious]))
+        .toThrow(expect.objectContaining({ code: "section_inventory_stale" }));
+    }
+  });
+
   it("never lets seeded variety outrank the creative-direction fit", () => {
     const frozen = buildSectionCompositionInventory([
       record("hero-best", "hero", "<section>best</section>", { radius: "10px" }),
@@ -208,6 +232,24 @@ describe("section composition inventory", () => {
     const selection = [{ ...plan(frozen.hash).rows[0], inventoryHash: frozen.hash, sectionId: "hero-01", contentHash: sha12(html) }];
     await expect(fetchVerifiedSectionFragments(selection, frozen, { fetchText: async () => html }))
       .resolves.toMatchObject({ ok: true, fragments: [{ slug: "hero-01", html }] });
+  });
+
+  it("does not treat a self-closing non-void style tag as closed", async () => {
+    const html = "<style/><section data-sec=\"hero-01\">swallowed</section>";
+    const frozen = buildSectionCompositionInventory([record("hero-01", "hero", html)]);
+    const selection = [{ ...plan(frozen.hash).rows[0], inventoryHash: frozen.hash, sectionId: "hero-01", contentHash: sha12(html) }];
+    await expect(fetchVerifiedSectionFragments(selection, frozen, { fetchText: async () => html }))
+      .resolves.toEqual({ ok: false, code: "section_fragment_invalid" });
+  });
+
+  it("ignores document-shaped literals in every raw-text and RCDATA element", async () => {
+    for (const tag of ["script", "style", "textarea", "title", "iframe", "xmp", "noembed", "noframes"]) {
+      const html = `<section data-sec=\"hero-01\"><${tag}><html><head></head><body>literal</body></html></${tag}><br/>Hero</section>`;
+      const frozen = buildSectionCompositionInventory([record("hero-01", "hero", html)]);
+      const selection = [{ ...plan(frozen.hash).rows[0], inventoryHash: frozen.hash, sectionId: "hero-01", contentHash: sha12(html) }];
+      await expect(fetchVerifiedSectionFragments(selection, frozen, { fetchText: async () => html }))
+        .resolves.toMatchObject({ ok: true, fragments: [{ slug: "hero-01", html }] });
+    }
   });
 
   it("requires exactly one matching fragment root beyond style and link nodes", async () => {

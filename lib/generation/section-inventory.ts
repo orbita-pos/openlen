@@ -59,6 +59,13 @@ function canonicalStorageKey(id: string, hash: string): string {
   return `sections/${id}-${hash}.html`;
 }
 
+const SECTION_ID_PATTERN = /^[a-z0-9]+(?:[-_][a-z0-9]+)*$/;
+const CONTENT_HASH_PATTERN = /^[a-f0-9]{12}$/;
+
+function hasCanonicalSectionId(value: string): boolean {
+  return value.length >= 1 && value.length <= 128 && SECTION_ID_PATTERN.test(value);
+}
+
 interface FrozenSource {
   storageUrl: string;
   contentHash: string;
@@ -87,6 +94,10 @@ export function buildSectionCompositionInventory(
   const published = records
     .filter((record) => record.status === "published")
     .sort((left, right) => left.id.localeCompare(right.id));
+  if (published.some((record) =>
+    !hasCanonicalSectionId(record.id) || !CONTENT_HASH_PATTERN.test(record.contentHash))) {
+    throw new SectionCompositionSelectionError("section_inventory_stale");
+  }
   if (published.some((record) => record.storageKey !== canonicalStorageKey(record.id, record.contentHash))) {
     throw new SectionCompositionSelectionError("section_inventory_stale");
   }
@@ -164,7 +175,9 @@ function contentHash(html: string): string {
 const VOID_TAGS = new Set([
   "area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta", "param", "source", "track", "wbr",
 ]);
-const RAW_TEXT_TAGS = new Set(["script", "style", "textarea", "title"]);
+const RAW_TEXT_TAGS = new Set([
+  "script", "style", "textarea", "title", "iframe", "xmp", "noembed", "noframes",
+]);
 
 function tagEnd(html: string, start: number): number {
   let quote = "";
@@ -240,8 +253,9 @@ function hasValidFragmentShape(html: string, sectionId: string): boolean {
       nonStyleLinkRoots += 1;
       if (marker === sectionId) matchingMarkerRoots += 1;
     }
-    const selfClosing = /\/\s*>$/.test(tag);
-    if (!selfClosing && !VOID_TAGS.has(name)) openTags.push(name);
+    // HTML ignores a self-closing solidus on non-void elements. Only HTML-void
+    // tags may be closed without a matching end tag.
+    if (!VOID_TAGS.has(name)) openTags.push(name);
     index = end + 1;
   }
 
