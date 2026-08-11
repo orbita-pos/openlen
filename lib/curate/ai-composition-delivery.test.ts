@@ -171,6 +171,22 @@ describe("AI composition delivery", () => {
     });
   });
 
+  it("rejects unique section IDs that alias the same verified fragment bytes", () => {
+    const metadata = visualEngine();
+    const aliased = {
+      ...metadata,
+      compositionManifest: {
+        ...metadata.compositionManifest,
+        selectedContentHashes: ["111111111111", "111111111111", "111111111111"],
+        outputHash: sha256(HTML),
+      },
+    };
+    expect(validate(HTML, aliased)).toEqual({
+      ok: false,
+      reasonCode: "section_role_coverage_failed",
+    });
+  });
+
   it("accepts a valid paired asset manifest and resolution trace", () => {
     const { manifest, trace } = assetPair();
     const metadata = { ...visualEngine(), assetManifest: manifest, assetTrace: trace };

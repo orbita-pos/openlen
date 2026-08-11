@@ -74,9 +74,11 @@ function rolesAndSectionsAreExact(
   html: string,
   orderedRoles: readonly string[],
   selectedSectionIds: readonly string[],
+  selectedContentHashes: readonly string[],
 ): boolean {
   if (orderedRoles.length < 3 || selectedSectionIds.length < 3) return false;
   if (new Set(selectedSectionIds).size !== selectedSectionIds.length) return false;
+  if (new Set(selectedContentHashes).size < 3) return false;
 
   const root = parse(html);
   const body = root.querySelector("body");
@@ -120,6 +122,7 @@ export function validateAiCompositionDelivery(input: {
     input.html,
     manifest.data.orderedRoles,
     manifest.data.selectedSectionIds,
+    manifest.data.selectedContentHashes,
   )) {
     return { ok: false, reasonCode: "section_role_coverage_failed" };
   }
