@@ -530,3 +530,72 @@ After the three commits and a clean non-live gate:
 3. Request explicit approval for a bounded synthetic diagnostic only. Test the previously unstable healthy cases and repair cases 8/11 first.
 4. Permit another 15-case paid smoke only if the targeted diagnostic matches all expected classes and a new explicit budget is approved.
 5. Open blind review only when exactly six repairable cases have accepted evidence and the ledger has six `visual_healthy_keep`, six `visual_repair_accepted`, and three `visual_nonrepairable` outcomes.
+
+---
+
+### Corrective Task 4: Material-defect calibration and bounded mobile containment
+
+**Files:**
+- Modify: `lib/ai/visual-quality-critic.ts`
+- Modify: `lib/ai/visual-quality-critic.test.ts`
+- Modify: `lib/generation/apply-visual-repair.ts`
+- Modify: `lib/generation/apply-visual-repair.test.ts`
+- Modify: `lib/generation/closed-loop-repair.ts`
+- Modify: `lib/generation/closed-loop-repair.test.ts`
+
+**Interfaces:**
+- Produces: `VISUAL_QUALITY_CRITIC_PROMPT_VERSION = "visual-quality-critic/2.4"`.
+- Produces: fixed `MOBILE_OVERFLOW_REPAIR_CSS` owned by OpenLen.
+- Extends: `ApplyVisualRepairInput` with optional validated `issueCodes: readonly VisualRepairIssueCode[]`.
+- Preserves: verdict contract `2.1`, call ceilings, original-page fallback and structural fingerprint equality.
+
+- [ ] **Step 1: Add RED prompt-calibration assertions**
+
+In `visual-quality-critic.test.ts`, require prompt version `2.4` and exact guidance that only material visible contradictions are issues; simple relevant symbols, abstract shapes, CSS illustration and missing optional photography are not mismatches by themselves; required signals are semantic rather than a literal asset checklist.
+
+- [ ] **Step 2: Add RED responsive-preset behavior tests**
+
+In `apply-visual-repair.test.ts`, use the real case-11 fixture and an empty bounded plan. Assert that `issueCodes: ["mobile_overflow"]` produces one owned style marker containing a fixed `@media(max-width:700px)` containment rule, preserves the structural fingerprint and reaches the technical-render boundary. Assert that no other issue code adds the preset and runtime lookalike strings do not activate it.
+
+- [ ] **Step 3: Add RED closed-loop propagation test**
+
+In `closed-loop-repair.test.ts`, assert that an initial validated `mobile_overflow` verdict passes `issueCodes: ["mobile_overflow"]` to `applyPlan`; keep/nonrepairable paths never call `applyPlan`.
+
+- [ ] **Step 4: Run RED**
+
+Run:
+
+```powershell
+npm.cmd test -- lib/ai/visual-quality-critic.test.ts lib/generation/apply-visual-repair.test.ts lib/generation/closed-loop-repair.test.ts
+```
+
+Expected: failures for prompt `2.3`, absent issue propagation and absent bounded preset.
+
+- [ ] **Step 5: Implement the minimal correction**
+
+Advance only the critic prompt version and calibration wording. Pass the parsed initial issue-code list into `applyPlan`. Append the fixed preset inside the compiler-owned style element only for exact `mobile_overflow`; do not accept selectors, breakpoints, declarations or values from the provider.
+
+- [ ] **Step 6: Run GREEN and non-live release gates**
+
+Run:
+
+```powershell
+npm.cmd test -- lib/ai/visual-quality-critic.test.ts lib/generation/apply-visual-repair.test.ts lib/generation/closed-loop-repair.test.ts lib/generation/visual-engine-2c-eval.test.ts lib/generation/visual-engine-2c-eval-cli.integration.test.ts
+npm.cmd run typecheck
+npm.cmd test
+npm.cmd run generation:visual-engine-2a:rollback-check
+git diff --check
+```
+
+Expected: focused and full tests pass, typecheck exits 0, rollback reports `verified:true`, and diff check exits 0.
+
+- [ ] **Step 7: Commit the correction**
+
+```powershell
+git add -- lib/ai/visual-quality-critic.ts lib/ai/visual-quality-critic.test.ts lib/generation/apply-visual-repair.ts lib/generation/apply-visual-repair.test.ts lib/generation/closed-loop-repair.ts lib/generation/closed-loop-repair.test.ts
+git commit -m "fix(generation): calibrate bounded visual repairs"
+```
+
+- [ ] **Step 8: Regenerate qualification twice**
+
+Run `npm.cmd run generation:visual-engine-2c:qualify` twice and require identical manifest and file hashes. Do not call Gemini or mutate the pilot ledger in this step. A new explicit authorization remains required before repeating the six-case paid diagnostic.

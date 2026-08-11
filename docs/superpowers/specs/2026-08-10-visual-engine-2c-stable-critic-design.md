@@ -141,3 +141,16 @@ No paid call is needed to implement or verify these contracts. Once local verifi
 - Telemetry differentiates healthy keep, accepted repair, nonrepairable and not improved.
 - All non-live repository gates pass.
 - Repair mode remains closed until the 2C human-review scorecard passes on a separately authorized pilot.
+
+## Approved post-diagnostic correction
+
+The first targeted run under the new `2.1` contract used ten provider calls across healthy cases 1, 2, 3 and 5 plus repairable cases 8 and 11. All six returned the redacted outcome `visual_not_improved`; measured cost was `171020` micro-MXN. The 15-case smoke therefore remained closed.
+
+Local review established two boundaries that the original design did not cover:
+
+1. The healthy renders visibly communicate their domains and requested experiences, but the critic prompt asks the model to compare every creative-direction field and can turn optional polish into a repair requirement. The critic must report a mismatch only for a material visible contradiction. Simple relevant symbols, abstract shapes, CSS illustration or lack of optional photography are not defects by themselves. `requiredVisualSignals` are semantic cues, not a literal asset checklist.
+2. `mobile_overflow` is declared repairable, but the bounded compiler does not allow the model to emit arbitrary width, grid or overflow CSS. The repair path will therefore add one deterministic responsive-containment preset when—and only when—the validated initial verdict contains `mobile_overflow`. The preset is owned by OpenLen, fixed in source, scoped to mobile, appended inside the existing Visual Engine style marker and never authored or parameterized by the model.
+
+The preset may constrain the document root wrapper and role-marked regions to the viewport, collapse hero/features grids to one bounded column, and constrain replaced media. It must not change DOM, copy, roles, navigation, URLs, assets or arbitrary selectors. Structural fingerprint equality and the existing sanitizer/render gates remain mandatory.
+
+The critic prompt advances to `visual-quality-critic/2.4`; the verdict schema remains `visual-quality-verdict/2.1`. The targeted six-case diagnostic must be repeated before a full smoke. Passing requires four `visual_healthy_keep` and two `visual_repair_accepted` outcomes with no technical failure. This is a correction inside 2C, not a new phase or rollout.
