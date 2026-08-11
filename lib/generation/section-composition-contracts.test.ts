@@ -71,6 +71,7 @@ describe("section composition contracts", () => {
       "section_inventory_stale",
       "section_fragment_unavailable",
       "section_fragment_stale",
+      "section_fragment_invalid",
       "section_role_coverage_failed",
       "inherited_copy_leak",
       "provider_timeout",

@@ -430,7 +430,7 @@ describe("POST /api/curate Visual Engine integration", () => {
         },
       },
     }));
-    expect(events.at(-1)).toMatchObject({ event: "done", data: { templateId: "section-composition", credits: 5 } });
+    expect(events.at(-1)).toMatchObject({ event: "done", data: { templateId: null, credits: 5 } });
     expect(mocks.debitCredits).toHaveBeenCalledWith("user-1", 5);
   });
 

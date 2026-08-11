@@ -27,6 +27,7 @@ export const SectionCompositionResultCodeSchema = z.enum([
   "section_inventory_stale",
   "section_fragment_unavailable",
   "section_fragment_stale",
+  "section_fragment_invalid",
   "section_role_coverage_failed",
   "inherited_copy_leak",
   "provider_timeout",

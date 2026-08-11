@@ -157,8 +157,6 @@ async function productionDeps(): Promise<VisualEngine2BEvalDeps> {
       const copy = coerceBusinessData({ business_name: row.id, industry: row.intent.domains[0], pitch: row.brief, tagline_es: row.brief, cta_primary: "Explorar", language_detected: "es" });
       const result = await launchShadowSectionCompositionCandidate({
         mode: "shadow",
-        fallbackTemplateId: "pilot-only",
-        fallbackTitle: row.id,
         candidateTitle: row.id,
         copy,
         profileData: { ...copy, brand: null, photos: [], links: [] },

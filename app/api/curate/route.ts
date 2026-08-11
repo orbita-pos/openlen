@@ -220,8 +220,6 @@ export async function POST(req: Request): Promise<Response> {
               assetMode,
               assetTraceSink: logAssetShadowTrace,
               mode: "shadow",
-              fallbackTemplateId: chosenId,
-              fallbackTitle: titleFor(chosenId),
               candidateTitle: copy.business_name?.trim() || "Untitled page",
               copy,
               profileData: profile.data,
@@ -242,7 +240,7 @@ export async function POST(req: Request): Promise<Response> {
 
         type DeliveredDocument = {
           html: string;
-          templateId: string;
+          templateId: string | null;
           title: string;
           filled: boolean;
           appliedOps: number;
@@ -268,8 +266,6 @@ export async function POST(req: Request): Promise<Response> {
             projectId,
             assetMode,
             assetTraceSink: logAssetShadowTrace,
-            fallbackTemplateId: chosenId,
-            fallbackTitle: titleFor(chosenId),
             candidateTitle: copy.business_name?.trim() || "Untitled page",
             copy,
             profileData: profile.data,
@@ -281,8 +277,8 @@ export async function POST(req: Request): Promise<Response> {
           });
           if (!composition.ok) {
             emit("error", {
-              kind: composition.kind,
-              message: composition.kind === "template-unavailable"
+              kind: composition.reasonCode,
+              message: composition.reasonCode === "sanitization_failed"
                 ? "Chosen template's HTML is unavailable."
                 : "Curated HTML carried editor markers — try again.",
             });
@@ -291,16 +287,12 @@ export async function POST(req: Request): Promise<Response> {
           delivered = {
             html: composition.html,
             templateId: composition.templateId,
-            title: composition.route === "section_composition"
-              ? (copy.business_name?.trim() || "Untitled page")
-              : titleFor(composition.templateId),
+            title: copy.business_name?.trim() || "Untitled page",
             filled: composition.filled,
             appliedOps: composition.appliedOps,
             leaksBefore: composition.leaksBefore,
             leaksAfter: composition.leaksAfter,
-            visualEngine: composition.route === "section_composition"
-              ? composition.visualEngine
-              : undefined,
+            visualEngine: composition.visualEngine,
           };
         } else if (
           routePlan.delivery.kind === "template_skeleton"

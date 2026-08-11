@@ -7,6 +7,12 @@ import {
   type ComposeSectionCandidateInput,
   type SectionCompositionResult,
 } from "@/lib/generation/compose-sections";
+import {
+  SectionCompositionManifestSchema,
+  type SectionCompositionManifest,
+  type SectionCompositionResultCode,
+} from "@/lib/generation/section-composition-contracts";
+import { sha256 } from "@/lib/generation/visual-engine-2a-eval";
 import { TAXONOMY_COMPATIBILITY_VERSION } from "@/lib/generation/taxonomy-compatibility";
 import {
   completeVisualEnginePilotRun,
@@ -19,21 +25,12 @@ import type { AssetPipelineMode } from "@/lib/generation/asset-pipeline-mode";
 import type { AssetResolutionTrace } from "@/lib/generation/asset-contracts";
 import type { SectionRecord } from "@/lib/sections/store";
 import type { ExtractedBusinessData } from "@/lib/style-match/autofill/types";
-import {
-  fillAndNormalizeCuratedTemplate,
-  finalizeCuratedDocument,
-  type FillAndNormalizeCuratedTemplateInput,
-  type FillAndNormalizeCuratedTemplateResult,
-  type FinalizeCuratedDocumentInput,
-  type FinalizeCuratedDocumentResult,
-} from "./build-curated-document";
+import { finalizeComposedDocument } from "./finalize-composed-document";
 
 export interface SectionCompositionCandidateInput {
   projectId?: string;
   assetMode?: AssetPipelineMode;
   assetTraceSink?: (trace: AssetResolutionTrace) => void;
-  fallbackTemplateId: string;
-  fallbackTitle: string;
   candidateTitle: string;
   copy: ExtractedBusinessData;
   profileData: BusinessProfileData;
@@ -57,67 +54,23 @@ export type QuickSectionCompositionResult =
   | ({
       ok: true;
       route: "section_composition";
-      templateId: "section-composition";
+      templateId: null;
       html: string;
       visualEngine: Extract<VisualEngineProjectMetadata, { route: "section_composition" }>;
     } & DeliveryData)
-  | ({
-      ok: true;
-      route: "fallback";
-      templateId: string;
-      html: string;
-      fallbackReasonCode: string;
-    } & DeliveryData)
-  | { ok: false; kind: "template-unavailable" | "editor-marker-leak"; templateId: string };
+  | {
+      ok: false;
+      route: "section_composition";
+      reasonCode: Exclude<SectionCompositionResultCode, "composed">;
+      manifest?: SectionCompositionManifest;
+    };
 
 export interface RunSectionCompositionCandidateDeps {
   composeSectionCandidate?: (
     input: ComposeSectionCandidateInput,
     deps?: ComposeSectionCandidateDeps,
   ) => Promise<SectionCompositionResult>;
-  fillAndNormalizeCuratedTemplate?: (
-    input: FillAndNormalizeCuratedTemplateInput,
-  ) => Promise<FillAndNormalizeCuratedTemplateResult>;
-  finalizeCuratedDocument?: (input: FinalizeCuratedDocumentInput) => FinalizeCuratedDocumentResult;
-}
-
-function buildData(build: Extract<FillAndNormalizeCuratedTemplateResult, { ok: true }>): DeliveryData {
-  return {
-    filled: build.filled,
-    appliedOps: build.appliedOps,
-    ...(build.usage ? { usage: build.usage } : {}),
-    durationMs: build.durationMs,
-    ...(build.leaksBefore === undefined ? {} : { leaksBefore: build.leaksBefore }),
-    ...(build.leaksAfter === undefined ? {} : { leaksAfter: build.leaksAfter }),
-  };
-}
-
-async function weightedFallback(
-  input: SectionCompositionCandidateInput,
-  reasonCode: string,
-  deps: Required<Pick<RunSectionCompositionCandidateDeps, "fillAndNormalizeCuratedTemplate" | "finalizeCuratedDocument">>,
-): Promise<QuickSectionCompositionResult> {
-  const built = await deps.fillAndNormalizeCuratedTemplate({
-    templateId: input.fallbackTemplateId,
-    copy: input.copy,
-    onStage: input.onStage,
-  });
-  if (!built.ok) return built;
-  const finalized = deps.finalizeCuratedDocument({
-    normalizedHtml: built.normalizedHtml,
-    profileData: input.profileData,
-    title: input.fallbackTitle,
-    brandRecolor: true,
-  });
-  if (!finalized.ok) return { ok: false, kind: finalized.kind, templateId: input.fallbackTemplateId };
-  return {
-    ok: true,
-    route: "fallback",
-    templateId: input.fallbackTemplateId,
-    html: finalized.html,
-    fallbackReasonCode: reasonCode,
-    ...buildData(built),
-  };
+  finalizeComposedDocument?: typeof finalizeComposedDocument;
 }
 
 function composeInput(input: SectionCompositionCandidateInput): ComposeSectionCandidateInput {
@@ -139,19 +92,30 @@ export async function runSectionCompositionCandidate(
   deps: RunSectionCompositionCandidateDeps = {},
 ): Promise<QuickSectionCompositionResult> {
   const compose = deps.composeSectionCandidate ?? composeSectionCandidate;
-  const fill = deps.fillAndNormalizeCuratedTemplate ?? fillAndNormalizeCuratedTemplate;
-  const finalize = deps.finalizeCuratedDocument ?? finalizeCuratedDocument;
-  const fallbackDeps = { fillAndNormalizeCuratedTemplate: fill, finalizeCuratedDocument: finalize };
+  const finalize = deps.finalizeComposedDocument ?? finalizeComposedDocument;
   try {
     const candidate = await compose(composeInput(input));
-    if (!candidate.ok) return weightedFallback(input, candidate.reasonCode, fallbackDeps);
+    if (!candidate.ok) {
+      return {
+        ok: false,
+        route: "section_composition",
+        reasonCode: candidate.reasonCode,
+        manifest: candidate.manifest,
+      };
+    }
     const finalized = finalize({
-      normalizedHtml: candidate.html,
+      html: candidate.html,
       profileData: input.profileData,
       title: input.candidateTitle,
-      brandRecolor: false,
     });
-    if (!finalized.ok) return weightedFallback(input, "sanitization_failed", fallbackDeps);
+    if (!finalized.ok) {
+      return { ok: false, route: "section_composition", reasonCode: "sanitization_failed" };
+    }
+    const compositionManifest = SectionCompositionManifestSchema.parse({
+      ...candidate.manifest,
+      outputHash: sha256(finalized.html),
+      resultCode: "composed",
+    });
     const visualEngineBase = {
       schemaVersion: "visual-engine-project/1.0" as const,
       route: "section_composition" as const,
@@ -160,7 +124,7 @@ export async function runSectionCompositionCandidate(
       promptVersion: candidate.adaptation.promptVersion,
       policyVersion: input.policyVersion,
       contractVersion: "creative-direction/1.0" as const,
-      compositionManifest: candidate.manifest,
+      compositionManifest,
     };
     const visualEngine: Extract<VisualEngineProjectMetadata, { route: "section_composition" }> = candidate.adaptation.assetManifest && candidate.adaptation.assetTrace
       ? { ...visualEngineBase, assetManifest: candidate.adaptation.assetManifest, assetTrace: candidate.adaptation.assetTrace }
@@ -168,13 +132,13 @@ export async function runSectionCompositionCandidate(
     return {
       ok: true,
       route: "section_composition",
-      templateId: "section-composition",
+      templateId: null,
       html: finalized.html,
       ...candidate.fill,
       visualEngine,
     };
   } catch {
-    return weightedFallback(input, "internal_error", fallbackDeps);
+    return { ok: false, route: "section_composition", reasonCode: "internal_error" };
   }
 }
 

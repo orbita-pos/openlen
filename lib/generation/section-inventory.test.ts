@@ -25,6 +25,7 @@ function record(
     radius?: string;
     needsJs?: boolean;
     hasPlaceholders?: boolean;
+    storageKey?: string;
   } = {},
 ): SectionRecord {
   return {
@@ -34,7 +35,7 @@ function record(
     variantLabel: `variant ${id}`,
     rootTag: "section",
     mode: opts.mode ?? "light",
-    storageKey: `sections/${id}.html`,
+    storageKey: opts.storageKey ?? `sections/${id}-${sha12(html)}.html`,
     storageUrl: `https://storage.invalid/${id}.html`,
     contentHash: sha12(html),
     size: html.length,
@@ -51,10 +52,10 @@ function record(
 }
 
 const HTML: Record<string, string> = {
-  "hero-01": "<section><h1>Hero</h1></section>",
-  "features-01": "<section><h2>One</h2></section>",
-  "features-02": "<section><h2>Two</h2></section>",
-  "features-03": "<section><h2>Three</h2></section>",
+  "hero-01": "<section data-sec=\"hero-01\"><h1>Hero</h1></section>",
+  "features-01": "<section data-sec=\"features-01\"><h2>One</h2></section>",
+  "features-02": "<section data-sec=\"features-02\"><h2>Two</h2></section>",
+  "features-03": "<section data-sec=\"features-03\"><h2>Three</h2></section>",
 };
 
 function inventory() {
@@ -118,6 +119,21 @@ describe("section composition inventory", () => {
       .toThrow(expect.objectContaining({ code: "section_inventory_stale" }));
   });
 
+  it("rejects every non-canonical published storage key as stale inventory", () => {
+    const html = HTML["hero-01"];
+    for (const storageKey of [
+      `sections/other-${sha12(html)}.html`,
+      `sections/hero-01-${"0".repeat(12)}.html`,
+      `sections/../hero-01-${sha12(html)}.html`,
+      `alternate/hero-01-${sha12(html)}.html`,
+      `sections/hero-01-${sha12(html)}.html?query=1`,
+    ]) {
+      expect(() => buildSectionCompositionInventory([
+        record("hero-01", "hero", html, { storageKey }),
+      ])).toThrow(expect.objectContaining({ code: "section_inventory_stale" }));
+    }
+  });
+
   it("never lets seeded variety outrank the creative-direction fit", () => {
     const frozen = buildSectionCompositionInventory([
       record("hero-best", "hero", "<section>best</section>", { radius: "10px" }),
@@ -176,5 +192,35 @@ describe("section composition inventory", () => {
       "hero-01", "features-01", "features-02", "features-03",
     ]);
     expect(fetchText).toHaveBeenCalledTimes(4);
+  });
+
+  it("rejects a full document with a valid hash and section marker", async () => {
+    const html = "<!doctype html><html><head></head><body><section data-sec=\"hero-01\">Hero</section></body></html>";
+    const frozen = buildSectionCompositionInventory([record("hero-01", "hero", html)]);
+    const selection = [{ ...plan(frozen.hash).rows[0], inventoryHash: frozen.hash, sectionId: "hero-01", contentHash: sha12(html) }];
+    await expect(fetchVerifiedSectionFragments(selection, frozen, { fetchText: async () => html }))
+      .resolves.toEqual({ ok: false, code: "section_fragment_invalid" });
+  });
+
+  it("ignores document-shaped text in comments and raw-text elements", async () => {
+    const html = "<!-- <html><body>ignored</body></html> --><style>.x::before{content:'<body>'}</style><section data-sec=\"hero-01\">Hero</section>";
+    const frozen = buildSectionCompositionInventory([record("hero-01", "hero", html)]);
+    const selection = [{ ...plan(frozen.hash).rows[0], inventoryHash: frozen.hash, sectionId: "hero-01", contentHash: sha12(html) }];
+    await expect(fetchVerifiedSectionFragments(selection, frozen, { fetchText: async () => html }))
+      .resolves.toMatchObject({ ok: true, fragments: [{ slug: "hero-01", html }] });
+  });
+
+  it("requires exactly one matching fragment root beyond style and link nodes", async () => {
+    const invalidFragments = [
+      "<section data-sec=\"hero-01\">one</section><section data-sec=\"hero-01\">two</section>",
+      "<section><div data-sec=\"hero-01\">nested</div></section>",
+      "<section data-sec=\"other\">wrong</section>",
+    ];
+    for (const html of invalidFragments) {
+      const frozen = buildSectionCompositionInventory([record("hero-01", "hero", html)]);
+      const selection = [{ ...plan(frozen.hash).rows[0], inventoryHash: frozen.hash, sectionId: "hero-01", contentHash: sha12(html) }];
+      await expect(fetchVerifiedSectionFragments(selection, frozen, { fetchText: async () => html }))
+        .resolves.toEqual({ ok: false, code: "section_fragment_invalid" });
+    }
   });
 });

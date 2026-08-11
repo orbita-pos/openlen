@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 
 import type { CompleteVisualEnginePilotRunOutcome } from "@/lib/generation/visual-engine-pilot-store";
@@ -5,6 +7,7 @@ import { CreativeDirectionSchema } from "@/lib/generation/creative-contracts";
 import { COLORING_DIRECTION } from "@/lib/generation/creative-fixtures.test-support";
 import { IntentAnalysisSchema } from "@/lib/generation/contracts";
 import type { SectionCompositionManifest } from "@/lib/generation/section-composition-contracts";
+import { sha256 } from "@/lib/generation/visual-engine-2a-eval";
 import type { ExtractedBusinessData } from "@/lib/style-match/autofill/types";
 import type { BusinessProfileData } from "@/lib/business-profiles/types";
 import {
@@ -31,7 +34,7 @@ const MANIFEST: SectionCompositionManifest = {
 };
 const INPUT: SectionCompositionCandidateInput = {
   projectId: "project-1", assetMode: "curated",
-  fallbackTemplateId: "weighted", fallbackTitle: "Weighted", candidateTitle: "PintaMundo",
+  candidateTitle: "PintaMundo",
   copy: { business_name: "PintaMundo" } as ExtractedBusinessData,
   profileData: { brand: { accent: "#F06AA6", logoUrl: null } } as BusinessProfileData,
   intent: INTENT, intentHash: `sha256:${"a".repeat(64)}`, records: [], policyVersion: "template-policy/1.0",
@@ -52,20 +55,28 @@ const COMPOSED = {
   },
 };
 
-function fallbackBuild(templateId: string) {
-  return { ok: true as const, templateId, templateHtml: "RAW", normalizedHtml: "WEIGHTED-COMPLETE", filled: true, appliedOps: 2, durationMs: 3 };
-}
-
 describe("runSectionCompositionCandidate", () => {
+  it("does not retain a whole-template delivery boundary", () => {
+    const source = readFileSync(resolve(process.cwd(), "lib/curate/quick-section-composition.ts"), "utf8");
+    for (const removedBoundary of [
+      "weightedFallback",
+      "fillAndNormalizeCuratedTemplate",
+      "fallbackTemplateId",
+      "fallbackTitle",
+      "build-curated-document",
+    ]) {
+      expect(source).not.toContain(removedBoundary);
+    }
+  });
+
   it("returns only the finalized composition with section metadata", async () => {
     const result = await runSectionCompositionCandidate(INPUT, {
       composeSectionCandidate: async () => COMPOSED,
-      finalizeCuratedDocument: ({ normalizedHtml }) => ({ ok: true, html: `${normalizedHtml}|FINAL` }),
-      fillAndNormalizeCuratedTemplate: vi.fn(),
+      finalizeComposedDocument: ({ html }) => ({ ok: true, html: `${html}|FINAL` }),
     });
     expect(result).toMatchObject({
-      ok: true, route: "section_composition", templateId: "section-composition", html: "COMPOSED-COMPLETE|FINAL",
-      visualEngine: { route: "section_composition", templateId: null, creativeDirection: DIRECTION, compositionManifest: MANIFEST },
+      ok: true, route: "section_composition", templateId: null, html: "COMPOSED-COMPLETE|FINAL",
+      visualEngine: { route: "section_composition", templateId: null, creativeDirection: DIRECTION, compositionManifest: { ...MANIFEST, outputHash: sha256("COMPOSED-COMPLETE|FINAL") } },
       filled: true, appliedOps: 8,
     });
   });
@@ -74,8 +85,7 @@ describe("runSectionCompositionCandidate", () => {
     const compose = vi.fn(async () => COMPOSED);
     const result = await runSectionCompositionCandidate(INPUT, {
       composeSectionCandidate: compose,
-      finalizeCuratedDocument: ({ normalizedHtml }) => ({ ok: true, html: normalizedHtml }),
-      fillAndNormalizeCuratedTemplate: vi.fn(),
+      finalizeComposedDocument: ({ html }) => ({ ok: true, html }),
     });
     expect(compose).toHaveBeenCalledWith(expect.objectContaining({ projectId: "project-1", assetMode: "curated" }));
     expect(result).toMatchObject({ ok: true, route: "section_composition", visualEngine: {
@@ -84,14 +94,29 @@ describe("runSectionCompositionCandidate", () => {
     } });
   });
 
-  it("rebuilds the weighted fallback atomically on any typed composition failure", async () => {
+  it("fails closed on a typed composition failure without loading a whole template", async () => {
+    const loadWholeTemplate = vi.fn();
     const result = await runSectionCompositionCandidate(INPUT, {
       composeSectionCandidate: async () => ({ ok: false, status: "fallback", reasonCode: "section_fragment_stale", manifest: { ...MANIFEST, outputHash: null, resultCode: "section_fragment_stale" } }),
-      fillAndNormalizeCuratedTemplate: async ({ templateId }) => fallbackBuild(templateId),
-      finalizeCuratedDocument: ({ normalizedHtml }) => ({ ok: true, html: `${normalizedHtml}|FINAL` }),
     });
-    expect(result).toMatchObject({ ok: true, route: "fallback", templateId: "weighted", html: "WEIGHTED-COMPLETE|FINAL", fallbackReasonCode: "section_fragment_stale" });
-    expect(JSON.stringify(result)).not.toContain("COMPOSED-COMPLETE");
+    expect(result).toMatchObject({ ok: false, route: "section_composition", reasonCode: "section_fragment_stale" });
+    expect(JSON.stringify(result)).not.toContain("WEIGHTED-COMPLETE");
+    expect(loadWholeTemplate).not.toHaveBeenCalled();
+  });
+
+  it("fails closed when finalization rejects a composed candidate", async () => {
+    const result = await runSectionCompositionCandidate(INPUT, {
+      composeSectionCandidate: async () => COMPOSED,
+      finalizeComposedDocument: () => ({ ok: false, reasonCode: "sanitization_failed" }),
+    });
+    expect(result).toEqual({ ok: false, route: "section_composition", reasonCode: "sanitization_failed" });
+  });
+
+  it("redacts thrown composition errors as an internal section-composition failure", async () => {
+    const result = await runSectionCompositionCandidate(INPUT, {
+      composeSectionCandidate: async () => { throw new Error("WEIGHTED-COMPLETE"); },
+    });
+    expect(result).toEqual({ ok: false, route: "section_composition", reasonCode: "internal_error" });
   });
 });
 

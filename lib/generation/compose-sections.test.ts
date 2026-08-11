@@ -21,7 +21,7 @@ function section(id: string, type: SectionType): SectionRecord {
   const html = `<style>[data-sec="${id}"]{--radius:12px}</style><section data-sec="${id}"><h2>Inherited ${type}</h2></section>`;
   return {
     id, type, name: id, variantLabel: id, rootTag: "section", mode: "cream",
-    storageKey: `sections/${id}.html`, storageUrl: `https://storage.invalid/${id}.html`,
+    storageKey: `sections/${id}-${sha12(html)}.html`, storageUrl: `https://storage.invalid/${id}.html`,
     contentHash: sha12(html), size: html.length, designTokens: { "--radius": "12px" },
     fonts: null, needsJs: false, hasPlaceholders: false, thumbnailUrl: null,
     status: "published", createdAt: new Date(0), updatedAt: new Date(0), publishedAt: new Date(0),

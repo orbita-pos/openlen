@@ -55,6 +55,10 @@ export class SectionCompositionSelectionError extends Error {
   }
 }
 
+function canonicalStorageKey(id: string, hash: string): string {
+  return `sections/${id}-${hash}.html`;
+}
+
 interface FrozenSource {
   storageUrl: string;
   contentHash: string;
@@ -83,6 +87,9 @@ export function buildSectionCompositionInventory(
   const published = records
     .filter((record) => record.status === "published")
     .sort((left, right) => left.id.localeCompare(right.id));
+  if (published.some((record) => record.storageKey !== canonicalStorageKey(record.id, record.contentHash))) {
+    throw new SectionCompositionSelectionError("section_inventory_stale");
+  }
   const ids = published.map((record) => record.id);
   if (new Set(ids).size !== ids.length) {
     throw new SectionCompositionSelectionError("section_inventory_stale");
@@ -154,13 +161,100 @@ function contentHash(html: string): string {
   return createHash("sha256").update(html, "utf8").digest("hex").slice(0, 12);
 }
 
+const VOID_TAGS = new Set([
+  "area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta", "param", "source", "track", "wbr",
+]);
+const RAW_TEXT_TAGS = new Set(["script", "style", "textarea", "title"]);
+
+function tagEnd(html: string, start: number): number {
+  let quote = "";
+  for (let index = start; index < html.length; index += 1) {
+    const character = html[index];
+    if (quote) {
+      if (character === quote) quote = "";
+      continue;
+    }
+    if (character === "\"" || character === "'") {
+      quote = character;
+    } else if (character === ">") {
+      return index;
+    }
+  }
+  return -1;
+}
+
+function attributeValue(tag: string, name: string): string | null {
+  const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const match = new RegExp(`\\s${escaped}\\s*=\\s*(?:\"([^\"]*)\"|'([^']*)'|([^\\s\"'=<>]+))`, "i").exec(tag);
+  return match ? match[1] ?? match[2] ?? match[3] ?? "" : null;
+}
+
+function hasValidFragmentShape(html: string, sectionId: string): boolean {
+  const openTags: string[] = [];
+  let nonStyleLinkRoots = 0;
+  let matchingMarkerRoots = 0;
+  let matchingMarkers = 0;
+  let index = 0;
+
+  while (index < html.length) {
+    const rawTag = openTags.at(-1);
+    if (rawTag && RAW_TEXT_TAGS.has(rawTag)) {
+      const closing = new RegExp(`<\\/\\s*${rawTag}\\s*>`, "i").exec(html.slice(index));
+      if (!closing || closing.index === undefined) return false;
+      index += closing.index + closing[0].length;
+      openTags.pop();
+      continue;
+    }
+    const next = html.indexOf("<", index);
+    if (next === -1) {
+      if (openTags.length === 0 && html.slice(index).trim()) return false;
+      break;
+    }
+    if (openTags.length === 0 && html.slice(index, next).trim()) return false;
+    if (html.startsWith("<!--", next)) {
+      const end = html.indexOf("-->", next + 4);
+      if (end === -1) return false;
+      index = end + 3;
+      continue;
+    }
+    if (html.startsWith("<!", next) || html.startsWith("<?", next)) return false;
+    const end = tagEnd(html, next + 1);
+    if (end === -1) return false;
+    const tag = html.slice(next, end + 1);
+    const closing = /^<\/\s*([a-z][a-z0-9:-]*)\s*>$/i.exec(tag);
+    if (closing) {
+      const name = closing[1].toLowerCase();
+      if (["html", "head", "body"].includes(name) || openTags.at(-1) !== name) return false;
+      openTags.pop();
+      index = end + 1;
+      continue;
+    }
+    const opening = /^<\s*([a-z][a-z0-9:-]*)\b[^>]*>$/i.exec(tag);
+    if (!opening) return false;
+    const name = opening[1].toLowerCase();
+    if (["html", "head", "body"].includes(name)) return false;
+    const root = openTags.length === 0;
+    const marker = attributeValue(tag, "data-sec");
+    if (marker === sectionId) matchingMarkers += 1;
+    if (root && name !== "style" && name !== "link") {
+      nonStyleLinkRoots += 1;
+      if (marker === sectionId) matchingMarkerRoots += 1;
+    }
+    const selfClosing = /\/\s*>$/.test(tag);
+    if (!selfClosing && !VOID_TAGS.has(name)) openTags.push(name);
+    index = end + 1;
+  }
+
+  return openTags.length === 0 && nonStyleLinkRoots === 1 && matchingMarkerRoots === 1 && matchingMarkers === 1;
+}
+
 export async function fetchVerifiedSectionFragments(
   selection: readonly SectionSelectionRow[],
   inventory: SectionCompositionInventory,
   deps: { fetchText: (storageUrl: string) => Promise<string | null> },
 ): Promise<
   | { ok: true; fragments: VerifiedSectionFragment[] }
-  | { ok: false; code: "section_fragment_unavailable" | "section_fragment_stale" | "section_inventory_stale" }
+  | { ok: false; code: "section_fragment_unavailable" | "section_fragment_stale" | "section_fragment_invalid" | "section_inventory_stale" }
 > {
   if (selection.some((row) => row.inventoryHash !== inventory.hash)) {
     return { ok: false, code: "section_inventory_stale" };
@@ -182,6 +276,9 @@ export async function fetchVerifiedSectionFragments(
     if (html === null) return { ok: false, code: "section_fragment_unavailable" };
     if (contentHash(html) !== source.contentHash) {
       return { ok: false, code: "section_fragment_stale" };
+    }
+    if (!hasValidFragmentShape(html, row.sectionId)) {
+      return { ok: false, code: "section_fragment_invalid" };
     }
     fragments.push({
       slug: row.sectionId,
