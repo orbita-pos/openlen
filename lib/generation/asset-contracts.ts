@@ -52,7 +52,18 @@ const CommonResolutionSchema = z.object({
 });
 
 function hasTraversal(url: string): boolean {
-  return /(?:^|\/)(?:\.{1,2}|%2e(?:%2e)?)(?:\/|%2f|$)/i.test(url.split(/[?#]/, 1)[0]);
+  let decoded = url.split(/[?#]/, 1)[0] ?? "";
+  for (let pass = 0; pass < 3; pass += 1) {
+    if (/(?:^|\/)\.{1,2}(?:\/|$)/.test(decoded)) return true;
+    try {
+      const next = decodeURIComponent(decoded);
+      if (next === decoded) return false;
+      decoded = next;
+    } catch {
+      return true;
+    }
+  }
+  return false;
 }
 
 function isCatalogUrl(url: string): boolean {
@@ -157,6 +168,20 @@ export const AssetManifestSchema = z.object({
   if (generatedCount > 3) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["slots"], message: "at most three generated resolutions are allowed" });
 });
 
+const AssetResolutionResultCodeSchema = z.enum([
+  "resolved",
+  "required_asset_unavailable",
+  "asset_slot_unavailable",
+  "provider_unavailable",
+  "provider_timeout",
+  "provider_blocked",
+  "invalid_provider_output",
+  "storage_failure",
+  "budget_exhausted",
+  "invalid_manifest",
+  "internal_error",
+]);
+
 export const AssetResolutionTraceSchema = z.object({
   schemaVersion: z.literal("asset-resolution-trace/1.0"),
   manifestId: HashSchema.nullable(),
@@ -172,9 +197,9 @@ export const AssetResolutionTraceSchema = z.object({
   promptSha256: z.array(HashSchema).max(3),
   estimatedCostMicromxn: z.number().int().nonnegative(),
   durationMs: z.number().int().nonnegative(),
-  resultCode: z.string().regex(/^[a-z0-9_]+$/).max(64),
+  resultCode: AssetResolutionResultCodeSchema,
 }).strict().superRefine((value, ctx) => {
-  if (value.requiredUnresolvedCount > 0 && new Set(["resolved", "success", "completed", "ok"]).has(value.resultCode)) {
+  if (value.requiredUnresolvedCount > 0 && value.resultCode === "resolved") {
     ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["resultCode"], message: "required unresolved assets cannot produce a successful result" });
   }
 });

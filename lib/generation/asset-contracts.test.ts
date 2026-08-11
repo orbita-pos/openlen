@@ -179,6 +179,18 @@ describe("AssetManifestSchema", () => {
     }
   });
 
+  it("rejects mixed and double-encoded traversal before catalog URL normalization", () => {
+    [
+      "https://images.openlen.com/%2e./coloring.webp",
+      "https://images.openlen.com/.%2e/coloring.webp",
+      "https://images.openlen.com/%2E./coloring.webp",
+      "https://images.openlen.com/.%2E/coloring.webp",
+      "https://images.openlen.com/%252e%252e/coloring.webp",
+      "https://images.openlen.com/%252E%252E/coloring.webp",
+    ].forEach((url) => expect(() => AssetManifestSchema.parse(withUrl(COLORING_MANIFEST, url))).toThrow());
+    expect(AssetManifestSchema.parse(withUrl(COLORING_MANIFEST, "https://images.openlen.com/coloring.v1.webp")).slots[0].resolution.url).toBe("https://images.openlen.com/coloring.v1.webp");
+  });
+
   it("requires unique, aligned slot indexes and a single bounded pack", () => {
     expect(() => AssetManifestSchema.parse(withDuplicateSlot(COLORING_MANIFEST))).toThrow();
     expect(() => AssetManifestSchema.parse({ ...COLORING_MANIFEST, slots: Array.from({ length: 13 }, () => COLORING_MANIFEST.slots[0]) })).toThrow();
@@ -232,5 +244,12 @@ describe("AssetResolutionTraceSchema", () => {
 
   it("never represents unresolved required assets as a successful result", () => {
     expect(() => AssetResolutionTraceSchema.parse({ schemaVersion: "asset-resolution-trace/1.0", manifestId: HASH, consistencyGroupCount: 0, curatedCount: 0, generatedCount: 0, abstractCount: 0, placeholderCount: 0, requiredUnresolvedCount: 1, rejectionCounts: { required_asset_unavailable: 1 }, provider: null, modelId: null, promptSha256: [], estimatedCostMicromxn: 0, durationMs: 1, resultCode: "resolved" })).toThrow();
+  });
+
+  it("uses a closed resolution result-code vocabulary", () => {
+    const trace = { schemaVersion: "asset-resolution-trace/1.0", manifestId: HASH, consistencyGroupCount: 0, curatedCount: 0, generatedCount: 0, abstractCount: 0, placeholderCount: 0, requiredUnresolvedCount: 0, rejectionCounts: {}, provider: null, modelId: null, promptSha256: [], estimatedCostMicromxn: 0, durationMs: 1 } as const;
+    expect(AssetResolutionTraceSchema.parse({ ...trace, resultCode: "resolved" }).resultCode).toBe("resolved");
+    expect(() => AssetResolutionTraceSchema.parse({ ...trace, resultCode: "asset_pack_succeeded" })).toThrow();
+    expect(() => AssetResolutionTraceSchema.parse({ ...trace, requiredUnresolvedCount: 1, resultCode: "asset_pack_succeeded" })).toThrow();
   });
 });
