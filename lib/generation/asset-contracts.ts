@@ -51,23 +51,40 @@ const CommonResolutionSchema = z.object({
   styleMatch: z.literal(true),
 });
 
+function hasTraversal(url: string): boolean {
+  return /(?:^|\/)(?:\.{1,2}|%2e(?:%2e)?)(?:\/|%2f|$)/i.test(url.split(/[?#]/, 1)[0]);
+}
+
 function isCatalogUrl(url: string): boolean {
-  return /^https:\/\/images\.openlen\.com\/[A-Za-z0-9._~!$&'()*+,;=:@%/-]+$/.test(url);
+  if (hasTraversal(url)) return false;
+  try {
+    const candidate = new URL(url);
+    return candidate.protocol === "https:" && candidate.hostname === "images.openlen.com" && !candidate.username && !candidate.password && !candidate.search && !candidate.hash && candidate.pathname.startsWith("/") && candidate.pathname.length > 1;
+  } catch {
+    return false;
+  }
 }
 
 function isPlaceholderUrl(url: string): boolean {
-  return /^\/openlen-assets\/[A-Za-z0-9._~!$&'()*+,;=:@%/-]+$/.test(url);
+  if (!url.startsWith("/") || hasTraversal(url)) return false;
+  const candidate = new URL(url, "https://openlen.invalid");
+  return candidate.pathname === url && !candidate.search && !candidate.hash && candidate.pathname.startsWith("/openlen-assets/") && candidate.pathname.length > "/openlen-assets/".length;
 }
 
 function isGeneratedUrl(url: string): boolean {
   const pathPattern = /^\/api\/projects\/[a-z0-9][a-z0-9_-]{0,127}\/assets\/[a-f0-9]{64}\.(?:png|jpg|jpeg|webp)$/;
   const configuredBaseUrl = process.env.OPENLEN_APP_BASE_URL;
-  if (pathPattern.test(url)) return true;
+  if (url.startsWith("/")) {
+    if (hasTraversal(url)) return false;
+    const candidate = new URL(url, "https://openlen.invalid");
+    return candidate.pathname === url && !candidate.search && !candidate.hash && pathPattern.test(candidate.pathname);
+  }
   if (!configuredBaseUrl) return false;
   try {
+    if (hasTraversal(url)) return false;
     const base = new URL(configuredBaseUrl);
     const candidate = new URL(url);
-    return candidate.origin === base.origin && pathPattern.test(candidate.pathname) && !candidate.search && !candidate.hash;
+    return !base.username && !base.password && !candidate.username && !candidate.password && candidate.origin === base.origin && pathPattern.test(candidate.pathname) && !candidate.search && !candidate.hash;
   } catch {
     return false;
   }
@@ -156,7 +173,11 @@ export const AssetResolutionTraceSchema = z.object({
   estimatedCostMicromxn: z.number().int().nonnegative(),
   durationMs: z.number().int().nonnegative(),
   resultCode: z.string().regex(/^[a-z0-9_]+$/).max(64),
-}).strict();
+}).strict().superRefine((value, ctx) => {
+  if (value.requiredUnresolvedCount > 0 && new Set(["resolved", "success", "completed", "ok"]).has(value.resultCode)) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["resultCode"], message: "required unresolved assets cannot produce a successful result" });
+  }
+});
 
 export type AssetResolution = z.infer<typeof AssetResolutionSchema>;
 export type AssetIntent = z.infer<typeof AssetIntentSchema>;

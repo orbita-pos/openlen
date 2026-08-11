@@ -1,6 +1,7 @@
 import { AssetIntentSchema, AssetResolutionSchema, type AssetIntent, type AssetResolution } from "@/lib/generation/asset-contracts";
 import { IntentAnalysisSchema, type IntentAnalysis } from "@/lib/generation/contracts";
 import { CreativeDirectionSchema, SkeletonInventorySchema, type CreativeDirection, type SkeletonAdaptationPlan, type SkeletonInventory } from "@/lib/generation/creative-contracts";
+import { z } from "zod";
 
 export interface BuildAssetIntentsInput {
   intent: IntentAnalysis;
@@ -23,6 +24,31 @@ function unique<T>(values: readonly T[]): T[] {
   return [...new Set(values)];
 }
 
+const containsProhibitedEmbeddedContent = (value: string) => /<\/?[a-z][^>]*>|\b[a-z][a-z0-9+.-]*:\/\/|\bwww\.|\b(?:javascript|vbscript|data|file|mailto):/i.test(value);
+const containsCssDeclarationSyntax = (value: string) => /(?:^|[\s;])(?:--[a-z_][a-z0-9_-]{0,62}|-?[a-z_][a-z0-9_-]{0,63})\s*:\s*\S/i.test(value);
+const safeInstructionText = (maxLength: number) => z.string().min(1).max(maxLength).refine(
+  (value) => !containsProhibitedEmbeddedContent(value) && !/[{}]/.test(value) && !containsCssDeclarationSyntax(value),
+  "must not contain HTML, scripts, URLs, or free-form CSS",
+);
+const AssetInstructionSchema = z.object({
+  slotIndex: z.number().int().min(0).max(255),
+  action: z.enum(["keep", "replace"]),
+  mediaType: z.enum(["photo", "illustration", "texture"]),
+  query: safeInstructionText(180).nullable(),
+  alt: safeInstructionText(240).nullable(),
+  required: z.boolean(),
+}).strict().superRefine((value, ctx) => {
+  const hasDetails = value.query !== null || value.alt !== null;
+  if (value.action === "replace" && !value.query) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["query"], message: "replace requires query and alt" });
+  if (value.action === "replace" && !value.alt) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["alt"], message: "replace requires query and alt" });
+  if (value.action === "keep" && hasDetails) ctx.addIssue({ code: z.ZodIssueCode.custom, message: "keep requires null query and alt" });
+});
+const AssetPlanSchema = z.object({
+  assets: z.array(AssetInstructionSchema).max(12).superRefine((assets, ctx) => {
+    if (new Set(assets.map((asset) => asset.slotIndex)).size !== assets.length) ctx.addIssue({ code: z.ZodIssueCode.custom, message: "asset slot indices must be unique" });
+  }),
+}).strict();
+
 function querySubjects(value: string | null): string[] {
   if (!value) return [];
   return value.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim().split(/\s+/).filter((part) => /^[a-z0-9]+$/.test(part));
@@ -44,9 +70,7 @@ export function buildAssetIntents(input: BuildAssetIntentsInput): AssetIntent[] 
   const intent = IntentAnalysisSchema.parse(input.intent);
   const direction = CreativeDirectionSchema.parse(input.direction);
   const inventory = SkeletonInventorySchema.parse(input.inventory);
-  // The public boundary is intentionally the already-validated assets subset;
-  // accepting the full plan here would let unrelated model-controlled fields in.
-  const plan = input.plan;
+  const plan = AssetPlanSchema.parse(input.plan);
   const requiredSignals = unique([...intent.requiredVisualSignals, ...direction.requiredVisualSignals]);
   const forbiddenSignals = unique([...intent.forbiddenVisualSignals, ...direction.forbiddenVisualSignals, ...direction.imagery.avoid]);
   const audiences = unique([intent.audience.primary, ...intent.audience.secondary, ...(intent.audience.ageRange ? [intent.audience.ageRange] : [])]);

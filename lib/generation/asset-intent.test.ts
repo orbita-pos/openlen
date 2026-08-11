@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { buildAssetIntents, AssetIntentError } from "@/lib/generation/asset-intent";
-import { CreativeDirectionSchema, SkeletonAdaptationPlanSchema, SkeletonInventorySchema } from "@/lib/generation/creative-contracts";
+import { CreativeDirectionSchema, SkeletonAdaptationPlanSchema, SkeletonInventorySchema, type SkeletonAdaptationPlan } from "@/lib/generation/creative-contracts";
 import { IntentAnalysisSchema } from "@/lib/generation/contracts";
 
 const intent = IntentAnalysisSchema.parse({
@@ -25,32 +25,47 @@ const plan = SkeletonAdaptationPlanSchema.parse({
   schemaVersion: "skeleton-adaptation-plan/1.0", tokens: {}, cssOverride: [],
   assets: [{ slotIndex: 1, action: "replace", mediaType: "illustration", query: "crayons", alt: "Pastel crayons", required: false }, { slotIndex: 0, action: "replace", mediaType: "illustration", query: "friendly animals", alt: "Friendly animals ready to color", required: true }],
 });
+const assetPlan = { assets: plan.assets };
 
 describe("buildAssetIntents", () => {
   it("produces stable slot ordering and deterministic role defaults", () => {
-    expect(buildAssetIntents({ intent, direction, inventory, plan })).toEqual([
+    expect(buildAssetIntents({ intent, direction, inventory, plan: assetPlan })).toEqual([
       expect.objectContaining({ slotIndex: 0, role: "hero", required: true, identityBearing: true, mediaType: "illustration", aspectRatio: "16:9", focalPoint: "center", domains: ["education"], audiences: ["parents", "teachers", "children"] }),
       expect.objectContaining({ slotIndex: 1, role: "card", required: false, identityBearing: false, mediaType: "illustration", aspectRatio: "1:1", focalPoint: "center" }),
     ]);
   });
 
   it("bounds subjects and combines validated directional signals", () => {
-    const [hero] = buildAssetIntents({ intent, direction, inventory, plan });
+    const [hero] = buildAssetIntents({ intent, direction, inventory, plan: assetPlan });
     expect(hero.subjects).toEqual(["friendly_animals", "friendly", "animals"]);
     expect(hero.requiredSignals).toEqual(["friendly", "playful"]);
     expect(hero.forbiddenSignals).toEqual(["corporate", "photorealism"]);
   });
 
   it("omits keep instructions only for explicitly verified originals", () => {
-    const keepPlan = SkeletonAdaptationPlanSchema.parse({ ...plan, assets: [{ slotIndex: 1, action: "keep", mediaType: "illustration", query: null, alt: null, required: false }] });
+    const keepPlan: Pick<SkeletonAdaptationPlan, "assets"> = { assets: [{ slotIndex: 1, action: "keep", mediaType: "illustration", query: null, alt: null, required: false }] };
     expect(buildAssetIntents({ intent, direction, inventory, plan: keepPlan })).toHaveLength(1);
     expect(buildAssetIntents({ intent, direction, inventory, plan: keepPlan, originalProvenance: new Map([[1, { source: "curated", slotIndex: 1, assetId: "verified-original", url: "https://images.openlen.com/verified.webp", mimeType: "image/webp", checksum: `sha256:${"b".repeat(64)}`, width: 400, height: 400, domainMatch: true, audienceMatch: true, styleMatch: true, provenance: { catalogVersion: "openlen-images-1", license: "openlen_catalog" } }]]) })).toEqual([]);
   });
 
   it("fails closed when a plan refers to an unavailable or nonreplaceable slot", () => {
-    const absent = SkeletonAdaptationPlanSchema.parse({ ...plan, assets: [{ ...plan.assets[0], slotIndex: 99 }] });
+    const absent = { assets: [{ ...plan.assets[0], slotIndex: 99 }] };
     expect(() => buildAssetIntents({ intent, direction, inventory, plan: absent })).toThrow(new AssetIntentError("asset_slot_unavailable", 99));
     const lockedInventory = SkeletonInventorySchema.parse({ ...inventory, assetSlots: [{ ...inventory.assetSlots[0], replaceable: false }] });
-    expect(() => buildAssetIntents({ intent, direction, inventory: lockedInventory, plan: SkeletonAdaptationPlanSchema.parse({ ...plan, assets: [{ ...plan.assets[1], slotIndex: 0 }] }) })).toThrow(new AssetIntentError("asset_slot_unavailable", 0));
+    expect(() => buildAssetIntents({ intent, direction, inventory: lockedInventory, plan: { assets: [{ ...plan.assets[1], slotIndex: 0 }] } })).toThrow(new AssetIntentError("asset_slot_unavailable", 0));
+  });
+
+  it("rejects unvalidated asset-instruction subsets", () => {
+    const invalidPlans = [
+      { assets: [{ ...plan.assets[0], action: "generate" }] },
+      { assets: [plan.assets[0], plan.assets[0]] },
+      { assets: Array.from({ length: 13 }, () => plan.assets[0]) },
+      { assets: [{ ...plan.assets[0], privateHtml: "<main>secret</main>" }] },
+      { assets: [plan.assets[0]], privateHtml: "<main>secret</main>" },
+      { assets: [{ ...plan.assets[0], action: "keep", query: "crayons", alt: "Pastel crayons" }] },
+    ];
+    invalidPlans.forEach((invalidPlan) => {
+      expect(() => buildAssetIntents({ intent, direction, inventory, plan: invalidPlan as typeof plan })).toThrow();
+    });
   });
 });

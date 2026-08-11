@@ -112,6 +112,35 @@ function withDuplicateSlot(manifest: typeof COLORING_MANIFEST) {
   return copy;
 }
 
+function withPlaceholderUrl(manifest: typeof COLORING_MANIFEST, url: string) {
+  const copy = structuredClone(manifest);
+  copy.slots[1].resolution.url = url;
+  return copy;
+}
+
+function withGeneratedUrl(manifest: typeof COLORING_MANIFEST, url: string) {
+  return {
+    ...structuredClone(manifest),
+    slots: [{
+      ...manifest.slots[0],
+      resolution: {
+        source: "generated",
+        slotIndex: 0,
+        assetId: "generated-coloring-1",
+        url,
+        mimeType: "image/webp",
+        checksum: HASH,
+        width: 1200,
+        height: 675,
+        domainMatch: true,
+        audienceMatch: true,
+        styleMatch: true,
+        provenance: { provider: "test", model: "test-model", requestVersion: "asset-pack-request/1.0", prompt: "friendly coloring animals", promptSha256: HASH },
+      },
+    }, manifest.slots[1]],
+  };
+}
+
 function canonicalJson(value: unknown): string {
   if (Array.isArray(value)) return `[${value.map(canonicalJson).join(",")}]`;
   if (value !== null && typeof value === "object") {
@@ -130,6 +159,24 @@ describe("AssetManifestSchema", () => {
     expect(() => AssetManifestSchema.parse({ ...COLORING_MANIFEST, privateHtml: "<main>secret</main>" })).toThrow();
     expect(() => AssetManifestSchema.parse(withUrl(COLORING_MANIFEST, "https://evil.example/a.png"))).toThrow();
     expect(() => AssetManifestSchema.parse(withUrl(COLORING_MANIFEST, "https://provider.example/a.png"))).toThrow();
+  });
+
+  it("canonicalizes local asset paths and configured generated URLs", () => {
+    expect(() => AssetManifestSchema.parse(withPlaceholderUrl(COLORING_MANIFEST, "/openlen-assets/../api/private.svg"))).toThrow();
+    expect(() => AssetManifestSchema.parse(withPlaceholderUrl(COLORING_MANIFEST, "/openlen-assets/%2e%2e/api/private.svg"))).toThrow();
+
+    const originalBaseUrl = process.env.OPENLEN_APP_BASE_URL;
+    process.env.OPENLEN_APP_BASE_URL = "https://app.openlen.test";
+    const assetPath = "/api/projects/kids/assets/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.webp";
+    try {
+      expect(AssetManifestSchema.parse(withGeneratedUrl(COLORING_MANIFEST, `https://app.openlen.test${assetPath}`)).slots[0].resolution.url).toBe(`https://app.openlen.test${assetPath}`);
+      expect(() => AssetManifestSchema.parse(withGeneratedUrl(COLORING_MANIFEST, `https://user:pass@app.openlen.test${assetPath}`))).toThrow();
+      expect(() => AssetManifestSchema.parse(withGeneratedUrl(COLORING_MANIFEST, `https://app.openlen.test${assetPath}?private=1`))).toThrow();
+      expect(() => AssetManifestSchema.parse(withGeneratedUrl(COLORING_MANIFEST, `https://app.openlen.test${assetPath}#private`))).toThrow();
+    } finally {
+      if (originalBaseUrl === undefined) delete process.env.OPENLEN_APP_BASE_URL;
+      else process.env.OPENLEN_APP_BASE_URL = originalBaseUrl;
+    }
   });
 
   it("requires unique, aligned slot indexes and a single bounded pack", () => {
@@ -181,5 +228,9 @@ describe("AssetManifestSchema", () => {
 describe("AssetResolutionTraceSchema", () => {
   it("keeps telemetry redacted to hashes", () => {
     expect(() => AssetResolutionTraceSchema.parse({ schemaVersion: "asset-resolution-trace/1.0", manifestId: HASH, consistencyGroupCount: 1, curatedCount: 1, generatedCount: 0, abstractCount: 0, placeholderCount: 0, requiredUnresolvedCount: 0, rejectionCounts: {}, provider: null, modelId: null, promptSha256: [], estimatedCostMicromxn: 0, durationMs: 1, resultCode: "resolved", prompt: "secret" })).toThrow();
+  });
+
+  it("never represents unresolved required assets as a successful result", () => {
+    expect(() => AssetResolutionTraceSchema.parse({ schemaVersion: "asset-resolution-trace/1.0", manifestId: HASH, consistencyGroupCount: 0, curatedCount: 0, generatedCount: 0, abstractCount: 0, placeholderCount: 0, requiredUnresolvedCount: 1, rejectionCounts: { required_asset_unavailable: 1 }, provider: null, modelId: null, promptSha256: [], estimatedCostMicromxn: 0, durationMs: 1, resultCode: "resolved" })).toThrow();
   });
 });
