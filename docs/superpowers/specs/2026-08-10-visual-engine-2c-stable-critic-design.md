@@ -154,3 +154,13 @@ Local review established two boundaries that the original design did not cover:
 The preset may constrain the document root wrapper and role-marked regions to the viewport, collapse hero/features grids to one bounded column, and constrain replaced media. It must not change DOM, copy, roles, navigation, URLs, assets or arbitrary selectors. Structural fingerprint equality and the existing sanitizer/render gates remain mandatory.
 
 The critic prompt advances to `visual-quality-critic/2.4`; the verdict schema remains `visual-quality-verdict/2.1`. The targeted six-case diagnostic must be repeated before a full smoke. Passing requires four `visual_healthy_keep` and two `visual_repair_accepted` outcomes with no technical failure. This is a correction inside 2C, not a new phase or rollout.
+
+## Approved deterministic overflow correction
+
+The repeated targeted diagnostic matched five of six cases. Healthy cases 1, 2, 3 and 5 and repairable case 8 matched their expected outcomes. Case 11 remained the only mismatch: its mobile render has document-level horizontal overflow, but the critic returned `keep`. Local rendering also proved that the existing fixed containment preset removes that overflow while preserving the structural fingerprint.
+
+Document-level horizontal overflow is browser geometry, not a subjective visual judgment. The production renderer will therefore measure it at the 390-pixel mobile viewport by comparing the document/body scroll width with the viewport client width using a one-pixel tolerance. It will return only the boolean `mobileOverflow`; no DOM content, dimensions or selectors enter the provider request, trace or telemetry.
+
+When the initial production render reports `mobileOverflow=true`, OpenLen will deterministically reconcile a coherent `keep` or `repair` verdict into a repair verdict containing the canonical critical `mobile_overflow` issue and a mobile-readability score no greater than 5. A coherent `nonrepairable` verdict remains authoritative. The final render is measured again; acceptance requires `mobileOverflow=false` in addition to the existing defect-directed improvement and structural gates. Injected/custom renderers that cannot measure geometry leave the boolean absent and preserve existing behavior.
+
+This is generic browser diagnostics with no fixture, ordinal, template or domain branch. It adds no provider call and does not change copy, DOM structure, navigation, templates or model-authored CSS.

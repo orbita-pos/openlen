@@ -8,6 +8,7 @@ const MAX_VIEWPORT_BYTES = 1024 * 1024;
 export interface VisualQualityViewports {
   desktop: InlineImage;
   mobile: InlineImage;
+  mobileOverflow?: boolean;
 }
 
 interface PageLike {
@@ -39,6 +40,16 @@ function isBoundedJpeg(image: InlineImage | null): image is InlineImage {
   }
 }
 
+function hasDocumentHorizontalOverflow(value: unknown): boolean {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  const geometry = value as Record<string, unknown>;
+  const rootScrollWidth = geometry.rootScrollWidth;
+  const bodyScrollWidth = geometry.bodyScrollWidth;
+  const clientWidth = geometry.clientWidth;
+  if (![rootScrollWidth, bodyScrollWidth, clientWidth].every((item) => typeof item === "number" && Number.isFinite(item) && item >= 0)) return false;
+  return Math.max(Number(rootScrollWidth), Number(bodyScrollWidth)) > Number(clientWidth) + 1;
+}
+
 async function defaultLaunchBrowser(): Promise<BrowserLike> {
   const puppeteer = (await import("puppeteer")).default;
   const executablePath = process.env.PUPPETEER_EXECUTABLE_PATH?.trim() || undefined;
@@ -64,18 +75,31 @@ async function captureWithBrowser(
     await page.setContent(html, { waitUntil: "load", timeout: 20_000 });
 
     const images: InlineImage[] = [];
+    let mobileOverflow = false;
     for (const viewport of [VISUAL_QUALITY_DESKTOP_VIEWPORT, VISUAL_QUALITY_MOBILE_VIEWPORT]) {
       if (viewport !== VISUAL_QUALITY_DESKTOP_VIEWPORT) await page.setViewport(viewport);
       await page.evaluate(() =>
         "fonts" in document ? document.fonts.ready : Promise.resolve(),
       );
       await (internals.settle ?? (() => new Promise((resolve) => setTimeout(resolve, 400))))();
+      if (viewport === VISUAL_QUALITY_MOBILE_VIEWPORT) {
+        const geometry = await page.evaluate(() => {
+          const root = document.documentElement;
+          const body = document.body;
+          return {
+            rootScrollWidth: root.scrollWidth,
+            bodyScrollWidth: body?.scrollWidth ?? 0,
+            clientWidth: Math.max(window.innerWidth, root.clientWidth),
+          };
+        });
+        mobileOverflow = hasDocumentHorizontalOverflow(geometry);
+      }
       const bytes = Buffer.from(await page.screenshot({ type: "jpeg", quality: 75, fullPage: false }));
       const image = { mimeType: "image/jpeg", dataBase64: bytes.toString("base64") };
       if (!isBoundedJpeg(image)) return null;
       images.push(image);
     }
-    return { desktop: images[0]!, mobile: images[1]! };
+    return { desktop: images[0]!, mobile: images[1]!, mobileOverflow };
   } finally {
     await browser.close();
   }

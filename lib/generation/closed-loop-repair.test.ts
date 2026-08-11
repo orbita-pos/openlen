@@ -81,6 +81,55 @@ describe("closed-loop repair", () => {
     );
   });
 
+  it("turns measured mobile overflow into a bounded repair when the critic says keep", async () => {
+    const finalKeep = VisualQualityVerdictSchema.parse({
+      ...KEEP,
+      scores: { ...KEEP.scores, mobileReadability: 9 },
+    });
+    const d = deps(KEEP, finalKeep);
+    d.render
+      .mockResolvedValueOnce({ ...images, mobileOverflow: true })
+      .mockResolvedValueOnce({ ...images, mobileOverflow: false });
+
+    const result = await runClosedLoopVisualRepair(INPUT, d);
+
+    expect(result).toMatchObject({ accepted: true, html: "<html>repaired</html>" });
+    expect(d.generatePlan).toHaveBeenCalledWith(
+      expect.objectContaining({
+        verdict: expect.objectContaining({
+          decision: "repair",
+          issues: [expect.objectContaining({ code: "mobile_overflow", severity: "critical", hookId: null })],
+        }),
+      }),
+      expect.anything(),
+    );
+    expect(d.applyPlan).toHaveBeenCalledWith(
+      expect.objectContaining({ issueCodes: ["mobile_overflow"] }),
+      expect.anything(),
+    );
+  });
+
+  it("rejects a candidate whose final mobile render still overflows", async () => {
+    const d = deps(KEEP, KEEP);
+    d.render
+      .mockResolvedValueOnce({ ...images, mobileOverflow: true })
+      .mockResolvedValueOnce({ ...images, mobileOverflow: true });
+
+    const result = await runClosedLoopVisualRepair(INPUT, d);
+
+    expect(result).toMatchObject({ accepted: false, html: INPUT.html, trace: { resultCode: "not_improved" } });
+  });
+
+  it("does not replace a coherent nonrepairable verdict with a geometry repair", async () => {
+    const d = deps(NONREPAIRABLE);
+    d.render.mockResolvedValueOnce({ ...images, mobileOverflow: true });
+
+    const result = await runClosedLoopVisualRepair(INPUT, d);
+
+    expect(result).toMatchObject({ accepted: false, trace: { resultCode: "nonrepairable" } });
+    expect(d.generatePlan).not.toHaveBeenCalled();
+  });
+
   it("aborts the upstream boundary at the overall deadline and returns the original", async () => {
     let signal: AbortSignal | undefined;
     const d = deps();

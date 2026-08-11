@@ -5,7 +5,7 @@ import { buildSkeletonInventory } from "./skeleton-inventory";
 import type { IntentAnalysis } from "./contracts";
 import type { ApplyVisualRepairResult } from "./apply-visual-repair";
 import type { GenerateVisualRepairPlanResult } from "./generate-visual-repair";
-import type { VisualQualityScores, VisualQualityVerdict, VisualRepairIssueCode } from "./visual-repair-contracts";
+import { VisualQualityVerdictSchema, type VisualQualityScores, type VisualQualityVerdict, type VisualRepairIssueCode } from "./visual-repair-contracts";
 
 export function shouldAttemptVisualRepair(v: VisualQualityVerdict): boolean { return v.decision === "repair" && v.issues.length > 0; }
 export const VISUAL_REPAIR_SCORE_DIMENSIONS = {
@@ -44,6 +44,24 @@ export interface ClosedLoopVisualRepairDeps {
 function orderedRoles(html: string): string[] { return [...html.matchAll(/data-openlen-role=["']([^"']+)["']/gi)].map((match) => match[1]!); }
 function outputHash(html: string): string { return `sha256:${createHash("sha256").update(html).digest("hex")}`; }
 function original(input: ClosedLoopVisualRepairInput, code: string, usage: VisualQualityUsage[] = []) { return { html: input.html, metadata: input.metadata, accepted: false as const, trace: { resultCode: code, usage: usage.map((item) => ({ ...item })) } }; }
+function reconcileRendererDiagnostics(verdict: VisualQualityVerdict, images: VisualQualityViewports): VisualQualityVerdict {
+  if (images.mobileOverflow !== true || verdict.decision === "nonrepairable") return verdict;
+  const issues = verdict.issues
+    .filter((issue) => issue.code !== "mobile_overflow")
+    .slice(0, 11);
+  return VisualQualityVerdictSchema.parse({
+    ...verdict,
+    decision: "repair",
+    nonrepairableReason: "none",
+    scores: { ...verdict.scores, mobileReadability: Math.min(verdict.scores.mobileReadability, 5) },
+    issues: [...issues, {
+      code: "mobile_overflow",
+      severity: "critical",
+      hookId: null,
+      explanation: "The mobile render visibly overflows its viewport.",
+    }],
+  });
+}
 
 export async function runClosedLoopVisualRepair(input: ClosedLoopVisualRepairInput, deps: ClosedLoopVisualRepairDeps) {
   const controller = new AbortController();
@@ -56,22 +74,23 @@ export async function runClosedLoopVisualRepair(input: ClosedLoopVisualRepairInp
       const first = await deps.critic({ intent: input.intent, direction: input.direction, orderedRoles: orderedRoles(input.html), route: input.route, images: firstImages }, boundary);
       if (first.usage) usage.push(first.usage);
       if (!first.ok) return original(input, "initial_critic_failed", usage);
-      if (!shouldAttemptVisualRepair(first.verdict)) return original(input, first.verdict.decision === "keep" ? "healthy_keep" : "nonrepairable", usage);
+      const firstVerdict = reconcileRendererDiagnostics(first.verdict, firstImages);
+      if (!shouldAttemptVisualRepair(firstVerdict)) return original(input, firstVerdict.decision === "keep" ? "healthy_keep" : "nonrepairable", usage);
       const inventory = (deps.buildInventory ?? buildSkeletonInventory)(input.html, input.sourceId);
-      const generated = await deps.generatePlan({ direction: input.direction, inventory, verdict: first.verdict }, boundary);
+      const generated = await deps.generatePlan({ direction: input.direction, inventory, verdict: firstVerdict }, boundary);
       if (generated.usage) usage.push(generated.usage);
       if (!generated.ok) return original(input, "repair_provider_failed", usage);
-      const applied = await deps.applyPlan({ html: input.html, sourceId: input.sourceId, direction: input.direction, plan: generated.plan, brandAccent: input.brandAccent, explicitConstraints: input.explicitConstraints, issueCodes: first.verdict.issues.map((issue) => issue.code) }, boundary);
+      const applied = await deps.applyPlan({ html: input.html, sourceId: input.sourceId, direction: input.direction, plan: generated.plan, brandAccent: input.brandAccent, explicitConstraints: input.explicitConstraints, issueCodes: firstVerdict.issues.map((issue) => issue.code) }, boundary);
       if (!applied.ok) return original(input, applied.code, usage);
       const finalImages = await deps.render(applied.html, boundary); if (!finalImages) return original(input, "final_render_failed", usage);
       const final = await deps.critic({ intent: input.intent, direction: input.direction, orderedRoles: orderedRoles(applied.html), route: input.route, images: finalImages }, boundary);
       if (final.usage) usage.push(final.usage);
-      if (!final.ok || !repairImprovesQuality(first.verdict, final.verdict)) return original(input, !final.ok ? "final_critic_failed" : "not_improved", usage);
+      if (!final.ok || finalImages.mobileOverflow === true || !repairImprovesQuality(firstVerdict, final.verdict)) return original(input, !final.ok ? "final_critic_failed" : "not_improved", usage);
       return { html: applied.html, metadata: { ...input.metadata }, accepted: true as const, trace: {
         resultCode: "accepted", usage: usage.map((item) => ({ ...item })),
         promptVersion: generated.promptVersion, criticVersion: "visual-quality-verdict/2.1" as const,
-        issueCodesBefore: first.verdict.issues.map((issue) => issue.code), issueCodesAfter: final.verdict.issues.map((issue) => issue.code),
-        scoresBefore: first.verdict.scores, scoresAfter: final.verdict.scores,
+        issueCodesBefore: firstVerdict.issues.map((issue) => issue.code), issueCodesAfter: final.verdict.issues.map((issue) => issue.code),
+        scoresBefore: firstVerdict.scores, scoresAfter: final.verdict.scores,
         outputHashBefore: outputHash(input.html), outputHashAfter: outputHash(applied.html),
       } };
     } catch { return original(input, "internal_error", usage); }

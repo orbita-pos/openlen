@@ -39,10 +39,11 @@ describe("renderVisualQualityViewports", () => {
 
   it("uses one browser lifecycle and installs the SSRF guard before loading HTML", async () => {
     const order: string[] = [];
+    let evaluations = 0;
     const page = {
       setViewport: vi.fn(async ({ width }: { width: number }) => { order.push(`viewport:${width}`); }),
       setContent: vi.fn(async () => { order.push("content"); }),
-      evaluate: vi.fn(async () => { order.push("fonts"); }),
+      evaluate: vi.fn(async () => { evaluations += 1; order.push(evaluations === 3 ? "overflow" : "fonts"); return false; }),
       screenshot: vi.fn(async () => Buffer.from("jpeg")),
     };
     const close = vi.fn(async () => { order.push("close"); });
@@ -58,9 +59,58 @@ describe("renderVisualQualityViewports", () => {
 
     expect(result).not.toBeNull();
     expect(order).toEqual([
-      "guard", "viewport:1280", "content", "fonts", "viewport:390", "fonts", "close",
+      "guard", "viewport:1280", "content", "fonts", "viewport:390", "fonts", "overflow", "close",
     ]);
     expect(close).toHaveBeenCalledTimes(1);
+  });
+
+  it("reports document-level horizontal overflow measured at the mobile viewport", async () => {
+    const page = {
+      setViewport: vi.fn(async () => undefined),
+      setContent: vi.fn(async () => undefined),
+      evaluate: vi.fn()
+        .mockResolvedValueOnce(undefined)
+        .mockResolvedValueOnce(undefined)
+        .mockResolvedValueOnce({ rootScrollWidth: 392, bodyScrollWidth: 390, clientWidth: 390 }),
+      screenshot: vi.fn(async () => Buffer.from("jpeg")),
+    };
+
+    const result = await renderVisualQualityViewports(HTML, {
+      launchBrowser: async () => ({ newPage: async () => page, close: async () => undefined }),
+      installGuard: async () => undefined,
+      settle: async () => undefined,
+    });
+
+    expect(result).toMatchObject({ mobileOverflow: true });
+    expect(page.evaluate).toHaveBeenCalledTimes(3);
+  });
+
+  it("tolerates one pixel of mobile layout rounding", async () => {
+    const page = {
+      setViewport: vi.fn(async () => undefined),
+      setContent: vi.fn(async () => undefined),
+      evaluate: vi.fn()
+        .mockResolvedValueOnce(undefined)
+        .mockResolvedValueOnce(undefined)
+        .mockResolvedValueOnce({ rootScrollWidth: 391, bodyScrollWidth: 390, clientWidth: 390 }),
+      screenshot: vi.fn(async () => Buffer.from("jpeg")),
+    };
+
+    const result = await renderVisualQualityViewports(HTML, {
+      launchBrowser: async () => ({ newPage: async () => page, close: async () => undefined }),
+      installGuard: async () => undefined,
+      settle: async () => undefined,
+    });
+
+    expect(result).toMatchObject({ mobileOverflow: false });
+  });
+
+  it("keeps image-only capture seams geometry-neutral", async () => {
+    const result = await renderVisualQualityViewports(HTML, {
+      capture: async () => ({ mimeType: "image/jpeg", dataBase64: Buffer.from("jpeg").toString("base64") }),
+    });
+
+    expect(result).not.toHaveProperty("mobileOverflow");
   });
 
   it("closes the browser and returns null when production capture throws", async () => {

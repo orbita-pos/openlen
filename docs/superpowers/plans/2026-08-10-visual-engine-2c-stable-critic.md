@@ -599,3 +599,50 @@ git commit -m "fix(generation): calibrate bounded visual repairs"
 - [ ] **Step 8: Regenerate qualification twice**
 
 Run `npm.cmd run generation:visual-engine-2c:qualify` twice and require identical manifest and file hashes. Do not call Gemini or mutate the pilot ledger in this step. A new explicit authorization remains required before repeating the six-case paid diagnostic.
+
+---
+
+### Corrective Task 5: Deterministic document-level mobile overflow
+
+**Files:**
+- Modify: `lib/ai/visual-quality-renderer.ts`
+- Modify: `lib/ai/visual-quality-renderer.test.ts`
+- Modify: `lib/generation/closed-loop-repair.ts`
+- Modify: `lib/generation/closed-loop-repair.test.ts`
+
+**Interfaces:**
+- Extends: `VisualQualityViewports` with optional `mobileOverflow: boolean`.
+- Produces: renderer-owned document-level overflow measurement at the existing 390-pixel viewport.
+- Preserves: injected capture compatibility, provider-call ceilings, nonrepairable precedence, fixed repair CSS and all structural gates.
+
+- [x] **Step 1: Add RED renderer measurement tests**
+
+Require production browser capture to return `mobileOverflow=true` only when the measured document/body scroll width exceeds the mobile client width by more than one pixel. The injected image-only capture seam must leave the field absent.
+
+- [x] **Step 2: Add RED closed-loop reconciliation tests**
+
+Prove that initial measured overflow converts a critic `keep` into the canonical critical `mobile_overflow` repair, reaches the fixed apply boundary, and cannot be accepted if the final render still overflows. Prove that measured overflow does not replace a coherent nonrepairable outcome.
+
+- [x] **Step 3: Run RED**
+
+```powershell
+npm.cmd test -- lib/ai/visual-quality-renderer.test.ts lib/generation/closed-loop-repair.test.ts
+```
+
+Expected: failures for absent geometry measurement and absent deterministic reconciliation.
+
+- [x] **Step 4: Implement the minimal correction**
+
+Measure only document-level mobile overflow inside the existing browser lifecycle. Reconcile the parsed verdict locally without sending geometry to Gemini. Recheck the final measurement before accepting the repaired HTML.
+
+- [x] **Step 5: Verify and commit**
+
+```powershell
+npm.cmd test -- lib/ai/visual-quality-renderer.test.ts lib/generation/closed-loop-repair.test.ts lib/generation/apply-visual-repair.test.ts lib/generation/visual-engine-2c-eval.test.ts lib/generation/visual-engine-2c-eval-cli.integration.test.ts
+npm.cmd run typecheck
+npm.cmd test
+npm.cmd run generation:visual-engine-2a:rollback-check
+git diff --check
+```
+
+Commit only the four production/test files plus this approved spec/plan amendment. Do not call Gemini or mutate the pilot ledger.
