@@ -5,16 +5,33 @@ import { buildSkeletonInventory } from "./skeleton-inventory";
 import type { IntentAnalysis } from "./contracts";
 import type { ApplyVisualRepairResult } from "./apply-visual-repair";
 import type { GenerateVisualRepairPlanResult } from "./generate-visual-repair";
-import type { VisualQualityScores, VisualQualityVerdict } from "./visual-repair-contracts";
+import type { VisualQualityScores, VisualQualityVerdict, VisualRepairIssueCode } from "./visual-repair-contracts";
 
 export function shouldAttemptVisualRepair(v: VisualQualityVerdict): boolean { return v.decision === "repair" && v.issues.length > 0; }
+export const VISUAL_REPAIR_SCORE_DIMENSIONS = {
+  theme_mismatch: ["themeRecognition", "briefAdherence"],
+  palette_mismatch: ["themeRecognition", "briefAdherence"],
+  weak_typography_hierarchy: ["visualHierarchy"],
+  spacing_density: ["visualHierarchy", "componentCoherence"],
+  mobile_overflow: ["mobileReadability"],
+  imagery_mismatch: ["imageryRelevance", "briefAdherence"],
+  component_treatment_mismatch: ["componentCoherence"],
+} as const satisfies Record<VisualRepairIssueCode, readonly (keyof VisualQualityScores)[]>;
 export function repairImprovesQuality(before: VisualQualityVerdict, after: VisualQualityVerdict): boolean {
   const keys = Object.keys(before.scores) as Array<keyof VisualQualityScores>;
-  return !after.issues.some((issue) => issue.severity === "critical")
-    && before.issues.filter((issue) => issue.severity === "critical").every((issue) => !after.issues.some((next) => next.code === issue.code))
-    && keys.every((key) => after.scores[key] >= before.scores[key])
-    && keys.reduce((sum, key) => sum + after.scores[key] - before.scores[key], 0) >= 2
-    && after.scores.themeRecognition >= 7 && after.scores.briefAdherence >= 7;
+  if (after.issues.some((issue) => issue.severity === "critical")) return false;
+  const beforeCodes = new Set(before.issues.map((issue) => issue.code));
+  if (after.issues.some((issue) => !beforeCodes.has(issue.code))) return false;
+  const criticalBefore = new Set(before.issues.filter((issue) => issue.severity === "critical").map((issue) => issue.code));
+  if (after.issues.some((issue) => criticalBefore.has(issue.code))) return false;
+  const relevant = new Set<keyof VisualQualityScores>();
+  for (const issue of before.issues) for (const key of VISUAL_REPAIR_SCORE_DIMENSIONS[issue.code]) relevant.add(key);
+  if ([...relevant].some((key) => after.scores[key] < before.scores[key])) return false;
+  const relevantGain = [...relevant].reduce((sum, key) => sum + after.scores[key] - before.scores[key], 0);
+  if (relevantGain < 2) return false;
+  if (keys.some((key) => !relevant.has(key) && after.scores[key] < before.scores[key] - 1)) return false;
+  const totalGain = keys.reduce((sum, key) => sum + after.scores[key] - before.scores[key], 0);
+  return totalGain >= 0 && after.scores.themeRecognition >= 7 && after.scores.briefAdherence >= 7;
 }
 export interface ClosedLoopVisualRepairInput { html: string; metadata: object; sourceId: string; intent: IntentAnalysis; direction: CreativeDirection; route: "template_skeleton" | "section_composition"; brandAccent?: string | null; explicitConstraints?: readonly string[]; timeoutMs?: number }
 export interface ClosedLoopVisualRepairDeps {
@@ -52,7 +69,7 @@ export async function runClosedLoopVisualRepair(input: ClosedLoopVisualRepairInp
       if (!final.ok || !repairImprovesQuality(first.verdict, final.verdict)) return original(input, !final.ok ? "final_critic_failed" : "not_improved", usage);
       return { html: applied.html, metadata: { ...input.metadata }, accepted: true as const, trace: {
         resultCode: "accepted", usage: usage.map((item) => ({ ...item })),
-        promptVersion: generated.promptVersion, criticVersion: "visual-quality-verdict/2.0" as const,
+        promptVersion: generated.promptVersion, criticVersion: "visual-quality-verdict/2.1" as const,
         issueCodesBefore: first.verdict.issues.map((issue) => issue.code), issueCodesAfter: final.verdict.issues.map((issue) => issue.code),
         scoresBefore: first.verdict.scores, scoresAfter: final.verdict.scores,
         outputHashBefore: outputHash(input.html), outputHashAfter: outputHash(applied.html),

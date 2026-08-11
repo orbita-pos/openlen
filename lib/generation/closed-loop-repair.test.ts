@@ -3,12 +3,13 @@ import { CreativeDirectionSchema } from "./creative-contracts";
 import { IntentAnalysisSchema } from "./contracts";
 import { runClosedLoopVisualRepair, repairImprovesQuality, shouldAttemptVisualRepair, type ClosedLoopVisualRepairDeps } from "./closed-loop-repair";
 import { COLORING_DIRECTION, COLORING_INTENT } from "./creative-fixtures.test-support";
-import { VisualQualityVerdictSchema } from "./visual-repair-contracts";
+import { VisualQualityVerdictSchema, type VisualQualityScores } from "./visual-repair-contracts";
 
 const scores = { themeRecognition: 5, visualHierarchy: 7, componentCoherence: 7, mobileReadability: 8, imageryRelevance: 6, briefAdherence: 5 };
-const BEFORE = VisualQualityVerdictSchema.parse({ schemaVersion: "visual-quality-verdict/2.0", decision: "repair", scores, issues: [{ code: "palette_mismatch", severity: "critical", hookId: null, explanation: "Palette misses the intended mood." }] });
-const AFTER = VisualQualityVerdictSchema.parse({ schemaVersion: "visual-quality-verdict/2.0", decision: "keep", scores: { ...scores, themeRecognition: 7, imageryRelevance: 7, briefAdherence: 7 }, issues: [] });
+const BEFORE = VisualQualityVerdictSchema.parse({ schemaVersion: "visual-quality-verdict/2.1", decision: "repair", nonrepairableReason: "none", scores, issues: [{ code: "palette_mismatch", severity: "critical", hookId: null, explanation: "Palette misses the intended mood." }] });
+const AFTER = VisualQualityVerdictSchema.parse({ schemaVersion: "visual-quality-verdict/2.1", decision: "keep", nonrepairableReason: "none", scores: { ...scores, themeRecognition: 7, imageryRelevance: 7, briefAdherence: 7 }, issues: [] });
 const KEEP = VisualQualityVerdictSchema.parse({ ...AFTER, scores: { ...AFTER.scores, themeRecognition: 9 } });
+const NONREPAIRABLE = VisualQualityVerdictSchema.parse({ ...BEFORE, decision: "nonrepairable", nonrepairableReason: "primary_content_hidden", scores: { ...BEFORE.scores, mobileReadability: 2 }, issues: [] });
 const INPUT = { html: "<html>original</html>", metadata: { route: "template_skeleton" }, sourceId: "fixture", intent: IntentAnalysisSchema.parse(COLORING_INTENT), direction: CreativeDirectionSchema.parse(COLORING_DIRECTION), route: "template_skeleton" as const };
 const images = { desktop: { mimeType: "image/jpeg", dataBase64: "ZA==" }, mobile: { mimeType: "image/jpeg", dataBase64: "bQ==" } };
 const criticSuccess = (verdict: unknown) => ({ ok: true as const, verdict, durationMs: 1, promptVersion: "visual-quality-critic/2.3" as const, modelId: "critic-test" });
@@ -35,7 +36,7 @@ describe("closed-loop repair", () => {
   });
 
   it.each([
-    ["nonrepairable", VisualQualityVerdictSchema.parse({ ...BEFORE, decision: "nonrepairable" })],
+    ["nonrepairable", NONREPAIRABLE],
     ["critic fallback", criticFailure],
   ])("keeps the original for %s", async (_name, first) => {
     const d = deps(first);
@@ -56,7 +57,7 @@ describe("closed-loop repair", () => {
   it("accepts one proven improvement and never exceeds two critics or one plan", async () => {
     const d = deps();
     const result = await runClosedLoopVisualRepair(INPUT, d);
-    expect(result).toMatchObject({ html: "<html>repaired</html>", accepted: true });
+    expect(result).toMatchObject({ html: "<html>repaired</html>", accepted: true, trace: { criticVersion: "visual-quality-verdict/2.1" } });
     expect(d.critic).toHaveBeenCalledTimes(2); expect(d.generatePlan).toHaveBeenCalledTimes(1); expect(d.applyPlan).toHaveBeenCalledTimes(1);
     expect(d.critic).toHaveBeenNthCalledWith(1, expect.objectContaining({ direction: INPUT.direction }), expect.anything());
     expect(d.critic).toHaveBeenNthCalledWith(2, expect.objectContaining({ direction: INPUT.direction }), expect.anything());
@@ -91,12 +92,42 @@ describe("closed-loop repair", () => {
     expect(JSON.stringify(result.trace)).not.toMatch(/html|explanation|dataBase64/i);
   });
 
-  it("rejects score decreases, gains below two, and remaining critical issues", () => {
-    expect(repairImprovesQuality(BEFORE, { ...AFTER, scores: { ...AFTER.scores, visualHierarchy: 6 } })).toBe(false);
-    expect(repairImprovesQuality(BEFORE, { ...BEFORE, decision: "keep", scores: { ...BEFORE.scores, themeRecognition: 6 }, issues: [] })).toBe(false);
-    expect(repairImprovesQuality(BEFORE, { ...AFTER, issues: [{ code: "palette_mismatch", severity: "critical", hookId: null, explanation: "Palette still misses the intended mood." }] })).toBe(false);
-    expect(repairImprovesQuality(BEFORE, AFTER)).toBe(true);
+  it.each([
+    ["theme_mismatch", "themeRecognition"],
+    ["palette_mismatch", "themeRecognition"],
+    ["weak_typography_hierarchy", "visualHierarchy"],
+    ["spacing_density", "componentCoherence"],
+    ["mobile_overflow", "mobileReadability"],
+    ["imagery_mismatch", "imageryRelevance"],
+    ["component_treatment_mismatch", "componentCoherence"],
+  ] as const)("accepts targeted %s improvement", (code, dimension) => {
+    const baseScores: VisualQualityScores = { themeRecognition: 7, visualHierarchy: 7, componentCoherence: 7, mobileReadability: 7, imageryRelevance: 7, briefAdherence: 7 };
+    const beforeScores = { ...baseScores, [dimension]: 5 };
+    const before = VisualQualityVerdictSchema.parse({ schemaVersion: "visual-quality-verdict/2.1", decision: "repair", nonrepairableReason: "none", scores: beforeScores, issues: [{ code, severity: "critical", hookId: null, explanation: "The visible treatment needs repair." }] });
+    const after = VisualQualityVerdictSchema.parse({ schemaVersion: "visual-quality-verdict/2.1", decision: "keep", nonrepairableReason: "none", scores: baseScores, issues: [] });
+    expect(repairImprovesQuality(before, after)).toBe(true);
+  });
+
+  it("allows one-point unrelated score jitter when the targeted defect improves", () => {
+    const before = { ...BEFORE, scores: { ...BEFORE.scores, visualHierarchy: 8 } };
+    const after = { ...AFTER, scores: { ...AFTER.scores, visualHierarchy: 7 } };
+    expect(repairImprovesQuality(before, after)).toBe(true);
+  });
+
+  it("rejects relevant regressions, new issues, remaining critical issues, large unrelated drops, and negative total change", () => {
+    expect(repairImprovesQuality(BEFORE, { ...AFTER, scores: { ...AFTER.scores, themeRecognition: 4 } })).toBe(false);
+    expect(repairImprovesQuality(BEFORE, { ...AFTER, decision: "repair", issues: [{ code: "component_treatment_mismatch", severity: "warning", hookId: null, explanation: "Components remain inconsistent." }] })).toBe(false);
+    expect(repairImprovesQuality(BEFORE, { ...AFTER, decision: "repair", issues: [{ code: "palette_mismatch", severity: "critical", hookId: null, explanation: "Palette still misses the intended mood." }] })).toBe(false);
+    expect(repairImprovesQuality(BEFORE, { ...AFTER, scores: { ...AFTER.scores, visualHierarchy: 5 } })).toBe(false);
+    const highBefore = { ...BEFORE, scores: { ...BEFORE.scores, briefAdherence: 7, visualHierarchy: 8, componentCoherence: 8, mobileReadability: 8, imageryRelevance: 8 } };
+    const globallyWorse = { ...AFTER, scores: { ...AFTER.scores, themeRecognition: 7, briefAdherence: 7, visualHierarchy: 7, componentCoherence: 7, mobileReadability: 7, imageryRelevance: 7 } };
+    expect(repairImprovesQuality(highBefore, globallyWorse)).toBe(false);
+  });
+
+  it("keeps repair eligibility limited to repair verdicts with issues", () => {
     expect(shouldAttemptVisualRepair(BEFORE)).toBe(true);
     expect(shouldAttemptVisualRepair({ ...AFTER, decision: "repair", issues: [{ code: "component_treatment_mismatch", severity: "warning", hookId: null, explanation: "Component treatment conflicts with the approved creative direction." }] })).toBe(true);
+    expect(shouldAttemptVisualRepair(KEEP)).toBe(false);
+    expect(shouldAttemptVisualRepair(NONREPAIRABLE)).toBe(false);
   });
 });
