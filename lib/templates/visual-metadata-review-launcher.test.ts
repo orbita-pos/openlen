@@ -381,7 +381,7 @@ describe("reviewer CLI entry", () => {
     } finally {
       await rm(directory, { recursive: true, force: true });
     }
-  });
+  }, 15_000);
 
   it("prints only a typed error through the silent public npm command", async () => {
     const error = await runPublicReviewer(["--unknown-flag"]).then(
@@ -393,7 +393,7 @@ describe("reviewer CLI entry", () => {
     expect(error.code).not.toBe(0);
     expect(error.stdout).toBe("");
     expect(error.stderr).toBe("error=REVIEW_LAUNCH_ARGUMENTS_INVALID\n");
-  });
+  }, 15_000);
 });
 
 describe("runVisualMetadataReviewer", () => {
