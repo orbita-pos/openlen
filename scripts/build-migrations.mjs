@@ -44,6 +44,7 @@ const targets = [
   "inbox-migrate",
   "publish-hash-migrate",
   "versions-baseline-migrate",
+  "template-visual-metadata-migrate",
   "visual-engine-pilot-migrate",
 ];
 
