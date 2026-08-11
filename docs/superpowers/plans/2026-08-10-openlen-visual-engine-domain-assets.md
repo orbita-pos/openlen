@@ -51,7 +51,7 @@
 ### Modified files
 
 - `lib/imagery/manifest.ts` — validate optional reviewed domain/audience/signal/license/checksum metadata while preserving old rows.
-- `lib/imagery/manifest.test.ts` — new legacy and enriched manifest compatibility coverage.
+- `lib/generation/imagery-manifest.test.ts` — collected legacy and enriched imagery-manifest compatibility coverage.
 - `lib/generation/adapt-skeleton.ts` and `.test.ts` — call the new pipeline in enabled modes and return manifest/trace.
 - `lib/generation/compose-sections.ts` and `.test.ts` — pass asset context into the shared adaptation path.
 - `lib/generation/apply-visual-repair.ts` and `.test.ts` — use the same pipeline and return a replacement manifest only on success.
@@ -265,7 +265,7 @@ git commit -m "feat(generation): define domain asset contracts"
 - Create: `lib/generation/asset-image-validation.ts`
 - Create: `lib/generation/asset-image-validation.test.ts`
 - Modify: `lib/imagery/manifest.ts`
-- Create: `lib/imagery/manifest.test.ts`
+- Create: `lib/generation/imagery-manifest.test.ts`
 
 **Interfaces:**
 - Consumes: `AssetIntent[]`, `CreativeDirection`, and `CuratedImage[]`.
@@ -334,7 +334,7 @@ Implement `verifyCuratedAssetBytes` with injected `fetchImpl`, `redirect: "error
 Run:
 
 ```powershell
-npm.cmd test -- lib/generation/asset-image-validation.test.ts lib/imagery/manifest.test.ts lib/generation/asset-catalog.test.ts lib/generation/skeleton-assets.test.ts
+npm.cmd test -- lib/generation/asset-image-validation.test.ts lib/generation/imagery-manifest.test.ts lib/generation/asset-catalog.test.ts lib/generation/skeleton-assets.test.ts
 npm.cmd run typecheck
 git diff --check
 ```
@@ -344,7 +344,7 @@ Expected: all tests PASS and the legacy skeleton-assets tests remain unchanged.
 - [ ] **Step 9: Commit Task 2**
 
 ```powershell
-git add lib/generation/asset-image-validation.ts lib/generation/asset-image-validation.test.ts lib/imagery/manifest.ts lib/imagery/manifest.test.ts lib/generation/asset-catalog.ts lib/generation/asset-catalog.test.ts
+git add lib/generation/asset-image-validation.ts lib/generation/asset-image-validation.test.ts lib/imagery/manifest.ts lib/generation/imagery-manifest.test.ts lib/generation/asset-catalog.ts lib/generation/asset-catalog.test.ts
 git commit -m "feat(generation): resolve coherent curated asset packs"
 ```
 
@@ -665,7 +665,7 @@ git commit -m "feat(generation): integrate domain asset pipeline"
 Add one package script that invokes Vitest with every new asset test plus the existing skeleton, composition, repair, route, fingerprint, image-edit, and project metadata tests:
 
 ```json
-"generation:visual-engine-assets:gate": "vitest run lib/generation/asset-contracts.test.ts lib/generation/asset-intent.test.ts lib/generation/asset-catalog.test.ts lib/generation/asset-image-validation.test.ts lib/generation/gemini-asset-pack-provider.test.ts lib/generation/asset-pipeline.test.ts lib/generation/apply-asset-manifest.test.ts lib/generation/asset-pipeline-mode.test.ts lib/generation/skeleton-assets.test.ts lib/generation/adapt-skeleton.test.ts lib/generation/compose-sections.test.ts lib/generation/apply-visual-repair.test.ts lib/generation/closed-loop-repair.test.ts lib/curate/quick-visual-engine.test.ts lib/curate/quick-section-composition.test.ts lib/curate/quick-visual-repair.test.ts lib/curate/curate-route.integration.test.ts"
+"generation:visual-engine-assets:gate": "vitest run lib/generation/asset-contracts.test.ts lib/generation/asset-intent.test.ts lib/generation/asset-catalog.test.ts lib/generation/asset-image-validation.test.ts lib/generation/imagery-manifest.test.ts lib/generation/gemini-asset-pack-provider.test.ts lib/generation/asset-pipeline.test.ts lib/generation/apply-asset-manifest.test.ts lib/generation/asset-pipeline-mode.test.ts lib/generation/skeleton-assets.test.ts lib/generation/adapt-skeleton.test.ts lib/generation/compose-sections.test.ts lib/generation/apply-visual-repair.test.ts lib/generation/closed-loop-repair.test.ts lib/curate/quick-visual-engine.test.ts lib/curate/quick-section-composition.test.ts lib/curate/quick-visual-repair.test.ts lib/curate/curate-route.integration.test.ts"
 ```
 
 - [ ] **Step 2: Write the operator runbook**
