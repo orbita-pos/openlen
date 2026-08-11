@@ -1,6 +1,13 @@
 import { z } from "zod";
 
-export const VISUAL_QUALITY_VERDICT_VERSION = "visual-quality-verdict/2.0" as const;
+export const VISUAL_QUALITY_VERDICT_VERSION = "visual-quality-verdict/2.1" as const;
+
+export const VisualNonrepairableReasonSchema = z.enum([
+  "none",
+  "primary_content_absent",
+  "primary_content_hidden",
+  "structurally_unusable",
+]);
 
 export const VISUAL_REPAIR_ISSUE_CODES = [
   "theme_mismatch",
@@ -36,26 +43,36 @@ export const VisualRepairIssueSchema = z.object({
 export const VisualQualityVerdictSchema = z.object({
   schemaVersion: z.literal(VISUAL_QUALITY_VERDICT_VERSION),
   decision: z.enum(["keep", "repair", "nonrepairable"]),
+  nonrepairableReason: VisualNonrepairableReasonSchema,
   scores: VisualQualityScoresSchema,
   issues: z.array(VisualRepairIssueSchema).max(12),
 }).strict().superRefine((value, ctx) => {
-  if (value.decision === "keep" && value.issues.some((issue) => issue.severity === "critical")) {
+  const minScore = Math.min(...Object.values(value.scores));
+  if (value.decision === "keep" && (value.nonrepairableReason !== "none" || value.issues.length > 0 || minScore < 7)) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
-      path: ["issues"],
-      message: "keep cannot contain critical issues",
+      path: ["decision"],
+      message: "keep requires satisfied scores and no issues",
     });
   }
-  if (value.decision === "repair" && value.issues.length === 0) {
+  if (value.decision === "repair" && (value.nonrepairableReason !== "none" || value.issues.length === 0)) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
-      path: ["issues"],
-      message: "repair requires at least one repairable issue",
+      path: ["decision"],
+      message: "repair requires repairable issues only",
+    });
+  }
+  if (value.decision === "nonrepairable" && (value.nonrepairableReason === "none" || minScore > 3)) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["decision"],
+      message: "nonrepairable requires a typed reason and visible failure score",
     });
   }
 });
 
 export type VisualRepairIssueCode = z.infer<typeof VisualRepairIssueCodeSchema>;
 export type VisualRepairIssue = z.infer<typeof VisualRepairIssueSchema>;
+export type VisualNonrepairableReason = z.infer<typeof VisualNonrepairableReasonSchema>;
 export type VisualQualityScores = z.infer<typeof VisualQualityScoresSchema>;
 export type VisualQualityVerdict = z.infer<typeof VisualQualityVerdictSchema>;

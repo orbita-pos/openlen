@@ -15,7 +15,7 @@ const input = { html: "<html>original</html>", visualEngine, intent, brandAccent
 const accepted = {
   html: "<html>repaired</html>", metadata: {}, accepted: true as const,
   trace: {
-    resultCode: "accepted", promptVersion: "visual-repair-prompt/1.1", criticVersion: "visual-quality-verdict/2.0" as const,
+    resultCode: "accepted", promptVersion: "visual-repair-prompt/1.1", criticVersion: "visual-quality-verdict/2.1" as const,
     issueCodesBefore: ["palette_mismatch" as const], issueCodesAfter: [],
     scoresBefore: { themeRecognition: 5, visualHierarchy: 7, componentCoherence: 7, mobileReadability: 8, imageryRelevance: 6, briefAdherence: 5 },
     scoresAfter: { themeRecognition: 7, visualHierarchy: 7, componentCoherence: 7, mobileReadability: 8, imageryRelevance: 7, briefAdherence: 7 },
@@ -36,7 +36,7 @@ describe("quick visual repair", () => {
     expect(result.visualEngine).not.toBe(visualEngine);
     expect(result.visualEngine.repair).toEqual({
       schemaVersion: "visual-repair-metadata/1.0", accepted: true, promptVersion: "visual-repair-prompt/1.1",
-      criticVersion: "visual-quality-verdict/2.0", compilerVersion: "creative-direction/1.0",
+      criticVersion: "visual-quality-verdict/2.1", compilerVersion: "creative-direction/1.0",
       issueCodesBefore: ["palette_mismatch"], issueCodesAfter: [], scoresBefore: accepted.trace.scoresBefore,
       scoresAfter: accepted.trace.scoresAfter, outputHashBefore: accepted.trace.outputHashBefore, outputHashAfter: accepted.trace.outputHashAfter,
     });

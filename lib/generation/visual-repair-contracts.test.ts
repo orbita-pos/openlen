@@ -6,8 +6,9 @@ import {
 } from "./visual-repair-contracts";
 
 const CLEAN = {
-  schemaVersion: "visual-quality-verdict/2.0",
+  schemaVersion: "visual-quality-verdict/2.1",
   decision: "keep",
+  nonrepairableReason: "none",
   scores: {
     themeRecognition: 9,
     visualHierarchy: 8,
@@ -19,9 +20,40 @@ const CLEAN = {
   issues: [],
 } as const;
 
+const PALETTE_ISSUE = {
+  code: "palette_mismatch",
+  severity: "warning",
+  hookId: null,
+  explanation: "Palette conflicts with the intended mood.",
+} as const;
+
 describe("VisualQualityVerdictSchema", () => {
-  it("accepts a clean strict v2 verdict", () => {
+  it("accepts a clean strict v2.1 verdict", () => {
     expect(VisualQualityVerdictSchema.parse(CLEAN)).toEqual(CLEAN);
+  });
+
+  it.each([
+    { ...CLEAN, decision: "keep" },
+    { ...CLEAN, decision: "repair", issues: [PALETTE_ISSUE] },
+    {
+      ...CLEAN,
+      decision: "nonrepairable",
+      nonrepairableReason: "primary_content_hidden",
+      scores: { ...CLEAN.scores, briefAdherence: 2 },
+    },
+  ])("accepts coherent decision and reason combinations %#", (value) => {
+    expect(VisualQualityVerdictSchema.safeParse(value).success).toBe(true);
+  });
+
+  it.each([
+    { ...CLEAN, scores: { ...CLEAN.scores, imageryRelevance: 6 } },
+    { ...CLEAN, issues: [PALETTE_ISSUE] },
+    { ...CLEAN, decision: "repair" },
+    { ...CLEAN, decision: "repair", nonrepairableReason: "structurally_unusable", issues: [PALETTE_ISSUE] },
+    { ...CLEAN, decision: "nonrepairable" },
+    { ...CLEAN, decision: "nonrepairable", nonrepairableReason: "primary_content_absent" },
+  ])("rejects incoherent decision and reason combinations %#", (value) => {
+    expect(VisualQualityVerdictSchema.safeParse(value).success).toBe(false);
   });
 
   it("rejects unknown verdict and score keys", () => {

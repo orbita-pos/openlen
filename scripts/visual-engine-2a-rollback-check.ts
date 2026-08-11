@@ -209,7 +209,7 @@ async function repairDelivery(acceptRepair: boolean): Promise<VisualEngine2CRoll
     return {
       html: originalHtml.replace("original", "repaired"), metadata: visualEngine, accepted: true as const,
       trace: {
-        resultCode: "accepted", usage: [], promptVersion: "visual-repair-prompt/1.1", criticVersion: "visual-quality-verdict/2.0" as const,
+        resultCode: "accepted", usage: [], promptVersion: "visual-repair-prompt/1.1", criticVersion: "visual-quality-verdict/2.1" as const,
         issueCodesBefore: ["theme_mismatch" as const], issueCodesAfter: [],
         scoresBefore: { themeRecognition: 4, visualHierarchy: 7, componentCoherence: 7, mobileReadability: 7, imageryRelevance: 6, briefAdherence: 4 },
         scoresAfter: { themeRecognition: 8, visualHierarchy: 8, componentCoherence: 8, mobileReadability: 8, imageryRelevance: 8, briefAdherence: 8 },

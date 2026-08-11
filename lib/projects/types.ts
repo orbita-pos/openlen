@@ -281,7 +281,7 @@ export interface VisualRepairProjectMetadata {
   schemaVersion: "visual-repair-metadata/1.0";
   accepted: true;
   promptVersion: string;
-  criticVersion: "visual-quality-verdict/2.0";
+  criticVersion: "visual-quality-verdict/2.0" | "visual-quality-verdict/2.1";
   compilerVersion: "creative-direction/1.0";
   issueCodesBefore: VisualRepairIssueCode[];
   issueCodesAfter: VisualRepairIssueCode[];

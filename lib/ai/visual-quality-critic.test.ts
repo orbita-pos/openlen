@@ -32,8 +32,9 @@ const IMAGES = {
 const DIRECTION = CreativeDirectionSchema.parse(COLORING_DIRECTION);
 
 const CLEAN = {
-  schemaVersion: "visual-quality-verdict/2.0",
+  schemaVersion: "visual-quality-verdict/2.1",
   decision: "keep",
+  nonrepairableReason: "none",
   scores: {
     themeRecognition: 9,
     visualHierarchy: 8,
@@ -76,7 +77,7 @@ describe("critiqueVisualQuality", () => {
       ], (request) => { captured = request; }),
     });
 
-    expect(result).toMatchObject({ ok: true, verdict: CLEAN, promptVersion: "visual-quality-critic/2.2" });
+    expect(result).toMatchObject({ ok: true, verdict: CLEAN, promptVersion: "visual-quality-critic/2.3" });
     expect(captured).toMatchObject({
       images: [IMAGES.desktop, IMAGES.mobile],
       temperature: 0,
@@ -84,6 +85,10 @@ describe("critiqueVisualQuality", () => {
       responseMimeType: "application/json",
       responseSchema: {
         properties: {
+          nonrepairableReason: {
+            type: "STRING",
+            enum: ["none", "primary_content_absent", "primary_content_hidden", "structurally_unusable"],
+          },
           issues: {
             items: {
               properties: {
@@ -94,6 +99,7 @@ describe("critiqueVisualQuality", () => {
         },
       },
     });
+    expect(captured?.responseSchema?.required).toEqual(expect.arrayContaining(["nonrepairableReason"]));
     expect(captured?.messages[0]?.content).toContain("one short sentence of 160 characters or fewer");
   });
 
@@ -113,7 +119,8 @@ describe("critiqueVisualQuality", () => {
     expect(prompt).toContain("soft_bordered");
     expect(prompt).toContain("hand_drawn");
     expect(prompt).toContain('"radiusScale":1');
-    expect(prompt).toContain("A visibly blank, hidden, or missing primary experience is nonrepairable");
+    expect(prompt).toContain("Missing photography, abstract imagery, palette, typography, spacing and component styling are repairable");
+    expect(prompt).toContain("Never use nonrepairable for an ordinary visual mismatch");
     expect(prompt).toContain("Use repair only when the visible defect can be corrected without changing copy or structure");
     expect(prompt).toContain("keep requires no visible contradiction of the creativeDirection");
     expect(prompt).toContain("A polished page can still require repair");
@@ -128,6 +135,8 @@ describe("critiqueVisualQuality", () => {
     ["malformed JSON", "not-json"],
     ["future version", JSON.stringify({ ...CLEAN, schemaVersion: "visual-quality-verdict/3.0" })],
     ["unknown keys", JSON.stringify({ ...CLEAN, private: true })],
+    ["incoherent keep", JSON.stringify({ ...CLEAN, scores: { ...CLEAN.scores, imageryRelevance: 6 } })],
+    ["incoherent nonrepairable", JSON.stringify({ ...CLEAN, decision: "nonrepairable" })],
   ])("rejects %s without salvaging", async (_name, text) => {
     const result = await critiqueVisualQuality(INPUT, {
       provider: providerFrom([{ type: "text_delta", text }]),

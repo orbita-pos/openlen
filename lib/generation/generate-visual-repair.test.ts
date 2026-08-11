@@ -11,7 +11,7 @@ const REQUEST = {
     styleHooks: [], assetSlots: [], structuralFingerprint: `sha256:${"a".repeat(64)}`,
   }),
   verdict: VisualQualityVerdictSchema.parse({
-    schemaVersion: "visual-quality-verdict/2.0", decision: "repair",
+    schemaVersion: "visual-quality-verdict/2.1", decision: "repair", nonrepairableReason: "none",
     scores: { themeRecognition: 5, visualHierarchy: 7, componentCoherence: 7, mobileReadability: 8, imageryRelevance: 6, briefAdherence: 5 },
     issues: [{ code: "palette_mismatch", severity: "critical", hookId: null, explanation: "Palette misses the intended mood." }],
   }),

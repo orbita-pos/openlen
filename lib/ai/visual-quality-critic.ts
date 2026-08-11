@@ -9,7 +9,7 @@ import {
 } from "@/lib/generation/visual-repair-contracts";
 import type { VisualQualityViewports } from "./visual-quality-renderer";
 
-export const VISUAL_QUALITY_CRITIC_PROMPT_VERSION = "visual-quality-critic/2.2" as const;
+export const VISUAL_QUALITY_CRITIC_PROMPT_VERSION = "visual-quality-critic/2.3" as const;
 export const DEFAULT_VISUAL_QUALITY_CRITIC_TIMEOUT_MS = 18_000;
 
 export interface VisualQualityCriticProviderLike {
@@ -63,6 +63,10 @@ const RESPONSE_SCHEMA: Record<string, unknown> = {
   properties: {
     schemaVersion: { type: "STRING", enum: [VISUAL_QUALITY_VERDICT_VERSION] },
     decision: { type: "STRING", enum: ["keep", "repair", "nonrepairable"] },
+    nonrepairableReason: {
+      type: "STRING",
+      enum: ["none", "primary_content_absent", "primary_content_hidden", "structurally_unusable"],
+    },
     scores: {
       type: "OBJECT",
       properties: Object.fromEntries([
@@ -93,7 +97,7 @@ const RESPONSE_SCHEMA: Record<string, unknown> = {
       },
     },
   },
-  required: ["schemaVersion", "decision", "scores", "issues"],
+  required: ["schemaVersion", "decision", "nonrepairableReason", "scores", "issues"],
 };
 
 const CANONICAL_ISSUE_EXPLANATIONS: Record<VisualRepairIssueCode, string> = {
@@ -182,16 +186,17 @@ function criticPrompt(input: VisualQualityCriticInput): string {
     "Judge only visible pixels in the attached desktop and mobile renders against this allowlisted intent projection:",
     JSON.stringify(criticIntent),
     "Decision rubric:",
-    "- keep: the visible page communicates the requested domain, audience, emotional tone, required sections and actions; no critical issue remains.",
+    "- keep: the visible page communicates the requested domain, audience, emotional tone, required sections and actions; every score is at least 7 and no issue remains. Set nonrepairableReason to none.",
     "- repair: the visible experience is present and structurally usable, but palette, typography, spacing, imagery or component treatment can be corrected without changing copy or structure.",
-    "- nonrepairable: primary content is absent, hidden, blank, structurally unusable, or the requested domain cannot be communicated without changing copy or structure.",
-    "A visibly blank, hidden, or missing primary experience is nonrepairable. Never infer invisible content from orderedRoles.",
+    "- nonrepairable: the visible primary experience is absent, hidden or structurally unusable. Select the matching typed nonrepairableReason and score at least one dimension from 1 through 3.",
+    "Missing photography, abstract imagery, palette, typography, spacing and component styling are repairable visual mismatches, not evidence that the primary experience is unavailable.",
+    "Never use nonrepairable for an ordinary visual mismatch. Never infer invisible content from orderedRoles.",
     "Use repair only when the visible defect can be corrected without changing copy or structure.",
     "Compare the visible output explicitly with every creativeDirection field. keep requires no visible contradiction of the creativeDirection.",
     "A polished page can still require repair when it contradicts the specified palette, typography scale, density, radius, imagery, iconography or component treatment.",
     "Examples: expressive typography is contradicted by near-uniform tiny text; low or low-medium density is contradicted by compressed spacing; round or soft treatment is contradicted by square double-bordered components.",
     "Score each dimension independently from visible evidence. Scores 7-10 mean the requirement is clearly satisfied; scores 1-3 mean it is absent or contradicted.",
-    "Return strict JSON matching visual-quality-verdict/2.0. Do not propose HTML, CSS, URLs, copy, or structure changes.",
+    `Return strict JSON matching ${VISUAL_QUALITY_VERDICT_VERSION}. Do not propose HTML, CSS, URLs, copy, or structure changes.`,
     "Set every hookId to null. Each issue explanation must be one short sentence of 160 characters or fewer.",
   ].join("\n");
 }
