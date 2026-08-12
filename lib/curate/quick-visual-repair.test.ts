@@ -6,6 +6,7 @@ import { IntentAnalysisSchema } from "@/lib/generation/contracts";
 import { COLORING_DIRECTION, COLORING_INTENT } from "@/lib/generation/creative-fixtures.test-support";
 import { canonicalJsonSha256, sha256 } from "@/lib/generation/content-hash";
 import { SectionCompositionManifestSchema } from "@/lib/generation/section-composition-contracts";
+import { sealAiCompositionOutput } from "./ai-composition-delivery";
 import { launchShadowVisualRepair, runQuickVisualQualityGate, runQuickVisualRepair } from "./quick-visual-repair";
 
 const direction = CreativeDirectionSchema.parse(COLORING_DIRECTION);
@@ -167,6 +168,20 @@ describe("quick visual repair", () => {
     const runRepair = vi.fn().mockResolvedValue(rejectedQualityResult("healthy_keep"));
     const result = await runQuickVisualQualityGate(qualityInput, { mode: "off", runRepair });
     expect(result).toMatchObject({ ok: true, outcome: "healthy_keep", html: compositionHtml });
+    expect(runRepair).toHaveBeenCalledTimes(1);
+  });
+
+  it("strict quality accepts critic_unavailable_keep only with the unchanged original bytes", async () => {
+    const runRepair = vi.fn().mockResolvedValue(rejectedQualityResult("critic_unavailable_keep"));
+
+    const result = await runQuickVisualQualityGate(qualityInput, { runRepair });
+
+    expect(result).toEqual({
+      ok: true,
+      outcome: "healthy_keep",
+      html: qualityInput.html,
+      visualEngine: sealAiCompositionOutput(qualityInput.visualEngine, qualityInput.html),
+    });
     expect(runRepair).toHaveBeenCalledTimes(1);
   });
 

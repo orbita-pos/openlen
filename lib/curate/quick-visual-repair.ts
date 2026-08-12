@@ -128,7 +128,7 @@ export async function runQuickVisualQualityGate(
 
     const result = await (deps.runRepair ?? defaultRepair)(repairInput(input));
     if (!result.accepted) {
-      return result.trace.resultCode === "healthy_keep"
+      return result.trace.resultCode === "healthy_keep" || result.trace.resultCode === "critic_unavailable_keep"
         ? {
             ok: true,
             outcome: "healthy_keep",

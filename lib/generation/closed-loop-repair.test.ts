@@ -65,6 +65,55 @@ describe("closed-loop repair", () => {
     expect(result.html).toBe(INPUT.html); expect(result.metadata).toBe(INPUT.metadata);
   });
 
+  it("keeps the unchanged original when the initial critic is unavailable and renderer diagnostics are clean", async () => {
+    const usage = { inputTokens: 9, outputTokens: 1, cachedTokens: 0, thinkingTokens: 0 };
+    const d = deps({ ...criticFailure, usage });
+
+    const result = await runClosedLoopVisualRepair(INPUT, d);
+
+    expect(result).toMatchObject({
+      accepted: false,
+      html: INPUT.html,
+      trace: { resultCode: "critic_unavailable_keep", usage: [usage] },
+    });
+    expect(d.critic).toHaveBeenCalledTimes(1);
+    expect(d.generatePlan).not.toHaveBeenCalled();
+  });
+
+  it("keeps initial critic failure blocking when renderer diagnostics detect overflow", async () => {
+    const d = deps(criticFailure);
+    d.render.mockResolvedValueOnce({ ...images, mobileOverflow: true });
+
+    const result = await runClosedLoopVisualRepair(INPUT, d);
+
+    expect(result).toMatchObject({ accepted: false, html: INPUT.html, trace: { resultCode: "initial_critic_failed" } });
+    expect(d.critic).toHaveBeenCalledTimes(1);
+    expect(d.generatePlan).not.toHaveBeenCalled();
+  });
+
+  it("keeps the unchanged original when the final critic is unavailable and both renders are clean", async () => {
+    const d = deps(BEFORE, criticFailure);
+
+    const result = await runClosedLoopVisualRepair(INPUT, d);
+
+    expect(result).toMatchObject({ accepted: false, html: INPUT.html, trace: { resultCode: "critic_unavailable_keep" } });
+    expect(d.critic).toHaveBeenCalledTimes(2);
+    expect(d.generatePlan).toHaveBeenCalledTimes(1);
+    expect(d.applyPlan).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps final critic failure blocking when the repaired render still overflows", async () => {
+    const d = deps(BEFORE, criticFailure);
+    d.render
+      .mockResolvedValueOnce({ ...images, mobileOverflow: false })
+      .mockResolvedValueOnce({ ...images, mobileOverflow: true });
+
+    const result = await runClosedLoopVisualRepair(INPUT, d);
+
+    expect(result).toMatchObject({ accepted: false, html: INPUT.html, trace: { resultCode: "final_critic_failed" } });
+    expect(d.critic).toHaveBeenCalledTimes(2);
+  });
+
   it("accepts one proven improvement and never exceeds two critics or one plan", async () => {
     const d = deps();
     const result = await runClosedLoopVisualRepair(INPUT, d);

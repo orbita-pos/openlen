@@ -117,9 +117,10 @@ export async function runClosedLoopVisualRepair(input: ClosedLoopVisualRepairInp
     try {
       const boundary = { signal: controller.signal };
       const firstImages = await deps.render(input.html, boundary); if (!firstImages) return original(input, "initial_render_failed", usage);
+      const firstDiagnosticCodes = rendererDiagnosticCodes(firstImages, input.direction);
       const first = await deps.critic({ intent: input.intent, direction: input.direction, orderedRoles: orderedRoles(input.html), route: input.route, images: firstImages }, boundary);
       if (first.usage) usage.push(first.usage);
-      if (!first.ok) return original(input, "initial_critic_failed", usage);
+      if (!first.ok) return original(input, firstDiagnosticCodes.length === 0 ? "critic_unavailable_keep" : "initial_critic_failed", usage);
       const firstVerdict = reconcileRendererDiagnostics(first.verdict, firstImages, input.direction);
       if (!shouldAttemptVisualRepair(firstVerdict)) return original(input, firstVerdict.decision === "keep" ? "healthy_keep" : "nonrepairable", usage);
       const inventory = (deps.buildInventory ?? buildSkeletonInventory)(input.html, input.sourceId);
@@ -131,8 +132,12 @@ export async function runClosedLoopVisualRepair(input: ClosedLoopVisualRepairInp
       const finalImages = await deps.render(applied.html, boundary); if (!finalImages) return original(input, "final_render_failed", usage);
       const final = await deps.critic({ intent: input.intent, direction: input.direction, orderedRoles: orderedRoles(applied.html), route: input.route, images: finalImages }, boundary);
       if (final.usage) usage.push(final.usage);
-      const finalHasRendererDiagnostics = rendererDiagnosticCodes(finalImages, input.direction).length > 0;
-      if (!final.ok || finalHasRendererDiagnostics || !repairImprovesQuality(firstVerdict, final.verdict)) return original(input, !final.ok ? "final_critic_failed" : "not_improved", usage);
+      const finalDiagnosticCodes = rendererDiagnosticCodes(finalImages, input.direction);
+      if (!final.ok) {
+        const originalAndFinalAreDeterministicallyClean = firstDiagnosticCodes.length === 0 && finalDiagnosticCodes.length === 0;
+        return original(input, originalAndFinalAreDeterministicallyClean ? "critic_unavailable_keep" : "final_critic_failed", usage);
+      }
+      if (finalDiagnosticCodes.length > 0 || !repairImprovesQuality(firstVerdict, final.verdict)) return original(input, "not_improved", usage);
       return { html: applied.html, metadata: { ...input.metadata, ...(applied.assetManifest && applied.assetTrace ? { assetManifest: applied.assetManifest, assetTrace: applied.assetTrace } : {}) }, accepted: true as const, trace: {
         resultCode: "accepted", usage: usage.map((item) => ({ ...item })),
         promptVersion: generated.promptVersion, criticVersion: "visual-quality-verdict/2.1" as const,
