@@ -80,6 +80,30 @@ function successfulDeps(): ComposeSectionCandidateDeps {
 }
 
 describe("composeSectionCandidate", () => {
+  it("adds one mobile-safety style before creative adaptation without changing roles", async () => {
+    const deps = successfulDeps();
+    const adapt = deps.adaptTemplateSkeleton!;
+    deps.adaptTemplateSkeleton = vi.fn(async (input, adaptDeps) => {
+      expect(input.html.match(/data-openlen-composition-safety="mobile\/1\.0"/g)).toHaveLength(1);
+      expect(input.html.match(/data-openlen-role=/g)).toHaveLength(7);
+      return adapt(input, adaptDeps);
+    });
+
+    await expect(composeSectionCandidate(INPUT, deps)).resolves.toMatchObject({ ok: true });
+  });
+
+  it("uses a skeleton-safe composition id without CSS-like colon syntax", async () => {
+    const deps = successfulDeps();
+    const adapt = deps.adaptTemplateSkeleton!;
+    deps.adaptTemplateSkeleton = vi.fn(async (input, adaptDeps) => {
+      expect(input.templateId).toMatch(/^composition-[a-f0-9]{64}$/);
+      expect(input.templateId).not.toContain(":");
+      return adapt(input, adaptDeps);
+    });
+
+    await expect(composeSectionCandidate(INPUT, deps)).resolves.toMatchObject({ ok: true });
+  });
+
   it("passes the same project asset context to the shared skeleton adapter", async () => {
     const deps = successfulDeps();
     const adapt = deps.adaptTemplateSkeleton!;

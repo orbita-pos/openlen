@@ -36,6 +36,7 @@ import {
 } from "@/lib/sections/assemble";
 import type { SectionRecord } from "@/lib/sections/store";
 import type { ExtractedBusinessData } from "@/lib/style-match/autofill/types";
+import { ensureCompositionMobileSafety } from "./composition-mobile-safety";
 
 export const COMPOSITION_BASE_THEME: AssembleTheme = Object.freeze({
   base: Object.freeze({
@@ -246,10 +247,11 @@ export async function composeSectionCandidate(
     }
 
     const normalized = (deps.normalizeBornCanonical ?? normalizeBornCanonical)(fill.html);
+    const mobileSafe = ensureCompositionMobileSafety(normalized);
     const adapt = deps.adaptTemplateSkeleton ?? adaptTemplateSkeleton;
     const adaptInput = {
-      html: normalized,
-      templateId: `composition:${inventory.hash}`,
+      html: mobileSafe,
+      templateId: `composition-${inventory.hash.replace(/^sha256:/, "")}`,
       intent: input.intent,
       templateMetadata: metadataFromIntent(input.intent),
       brand: input.brand,
