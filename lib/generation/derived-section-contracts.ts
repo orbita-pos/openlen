@@ -112,8 +112,8 @@ export const DerivedSectionCompilationReportSchema = z.object({
   schemaVersion: z.literal("derived-section-compilation-report/1.0"),
   corpusManifestHash: Sha256Schema,
   catalogManifestHash: Sha256Schema,
-  expectedTemplates: z.literal(451),
-  processedTemplates: SafeCountSchema.max(451),
+  expectedTemplates: z.literal(450),
+  processedTemplates: SafeCountSchema.max(450),
   acceptedCount: SafeCountSchema,
   rejectedCount: SafeCountSchema,
   duplicateCount: SafeCountSchema,
@@ -128,7 +128,7 @@ export type DerivedSectionCompilationReport = z.infer<typeof DerivedSectionCompi
 interface CompilationInput {
   corpusManifestHash: string;
   catalogManifestHash: string;
-  expectedTemplates: 451;
+  expectedTemplates: 450;
   processedTemplates: number;
   accepted: readonly {
     id: string;

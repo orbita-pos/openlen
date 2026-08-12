@@ -9,7 +9,11 @@ import type {
   CompileDerivedSectionResult,
 } from "./derived-section-compiler";
 import type { ExtractTemplateBandsResult, ExtractedTemplateBand } from "./template-section-extractor";
-import type { TemplateCorpusManifest, TemplateCorpusRow } from "./template-section-corpus";
+import {
+  TEMPLATE_SECTION_CORPUS_EXPECTED_COUNT,
+  type TemplateCorpusManifest,
+  type TemplateCorpusRow,
+} from "./template-section-corpus";
 import type { z } from "zod";
 
 export interface TemplateSectionCompilationDeps {
@@ -33,13 +37,14 @@ export interface TemplateSectionCompilationResult {
 }
 
 export function parseTemplateSectionCompilationArgs(argv: readonly string[]): "dry-run" | "publish" {
-  const allowed = new Set(["--dry-run", "--publish", "--expected-count=451"]);
+  const expectedCountArg = `--expected-count=${TEMPLATE_SECTION_CORPUS_EXPECTED_COUNT}`;
+  const allowed = new Set(["--dry-run", "--publish", expectedCountArg]);
   if (argv.length !== new Set(argv).size || argv.some((value) => !allowed.has(value))) {
     throw new Error("invalid_compile_argument");
   }
   const dryRun = argv.includes("--dry-run");
   const publish = argv.includes("--publish");
-  if (dryRun === publish || !argv.includes("--expected-count=451")) throw new Error("invalid_compile_mode");
+  if (dryRun === publish || !argv.includes(expectedCountArg)) throw new Error("invalid_compile_mode");
   return dryRun ? "dry-run" : "publish";
 }
 
@@ -81,7 +86,7 @@ export async function runTemplateSectionCompilation(
   const report = redactDerivedSectionCompilation({
     corpusManifestHash: corpus.manifestHash,
     catalogManifestHash: canonicalJsonSha256(catalogProjection(deduped.accepted)),
-    expectedTemplates: 451,
+    expectedTemplates: TEMPLATE_SECTION_CORPUS_EXPECTED_COUNT,
     processedTemplates: corpus.rows.length,
     accepted: deduped.accepted,
     rejected,

@@ -6,7 +6,7 @@ import type { TemplateMode } from "@/lib/templates/families";
 import type { TemplateVisualMetadata } from "@/lib/templates/visual-metadata";
 
 export const TEMPLATE_SECTION_CORPUS_VERSION = "template-section-corpus/1.0" as const;
-export const TEMPLATE_SECTION_CORPUS_EXPECTED_COUNT = 451 as const;
+export const TEMPLATE_SECTION_CORPUS_EXPECTED_COUNT = 450 as const;
 
 export type TemplateCorpusErrorCode =
   | "template_corpus_count_mismatch"

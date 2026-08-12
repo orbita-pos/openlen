@@ -48,7 +48,7 @@ function deps(events: string[] = []) {
     sourceExactHash: templateId === "arcana" ? `sha256:${"d".repeat(64)}` : `sha256:${"e".repeat(64)}`,
   });
   return {
-    loadCorpus: vi.fn(async () => ({ schemaVersion: "template-section-corpus/1.0" as const, expectedCount: 451 as const, manifestHash: HASH, rows: [row("arcana"), row("obra")] })),
+    loadCorpus: vi.fn(async () => ({ schemaVersion: "template-section-corpus/1.0" as const, expectedCount: 450 as const, manifestHash: HASH, rows: [row("arcana"), row("obra")] })),
     extract: vi.fn((source: ReturnType<typeof row>): ExtractTemplateBandsResult => ({ ok: true as const, bands: [{ templateId: source.templateId, templateContentHash: source.templateContentHash, ordinal: 0, rootTag: "section" as const, sourceHtml: source.html, sourceHash: HASH, sourceIds: ["hero"] }] })),
     compile: vi.fn(async (band: { templateId: string }): Promise<CompileDerivedSectionResult> => ({ ok: true as const, section: section(band.templateId) })),
     dedupe: vi.fn((sections: ReturnType<typeof section>[]) => ({ accepted: sections, duplicates: [] })),
@@ -58,12 +58,12 @@ function deps(events: string[] = []) {
 }
 
 describe("runTemplateSectionCompilation", () => {
-  it("accepts exactly one mode and the fixed 451-template guard", () => {
-    expect(parseTemplateSectionCompilationArgs(["--dry-run", "--expected-count=451"])).toBe("dry-run");
-    expect(parseTemplateSectionCompilationArgs(["--publish", "--expected-count=451"])).toBe("publish");
+  it("accepts exactly one mode and the fixed 450-published-template guard", () => {
+    expect(parseTemplateSectionCompilationArgs(["--dry-run", "--expected-count=450"])).toBe("dry-run");
+    expect(parseTemplateSectionCompilationArgs(["--publish", "--expected-count=450"])).toBe("publish");
     expect(() => parseTemplateSectionCompilationArgs(["--dry-run"])).toThrow("invalid_compile_mode");
-    expect(() => parseTemplateSectionCompilationArgs(["--dry-run", "--publish", "--expected-count=451"])).toThrow("invalid_compile_mode");
-    expect(() => parseTemplateSectionCompilationArgs(["--dry-run", "--expected-count=450"])).toThrow("invalid_compile_argument");
+    expect(() => parseTemplateSectionCompilationArgs(["--dry-run", "--publish", "--expected-count=450"])).toThrow("invalid_compile_mode");
+    expect(() => parseTemplateSectionCompilationArgs(["--dry-run", "--expected-count=451"])).toThrow("invalid_compile_argument");
   });
   it("dry-run compiles every row and writes a redacted report with zero publication", async () => {
     const d = deps();

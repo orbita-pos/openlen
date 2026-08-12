@@ -9,7 +9,7 @@ function report() {
     provenance: { schemaVersion: "derived-section-provenance/1.0" as const, sourceTemplateId: `donor-${index}`, sourceTemplateHash: "a".repeat(12), sourceBandOrdinal: index, extractionVersion: "template-band-extractor/1.0" as const, sourceHash: SHA, structuralFingerprint: `sha256:${String(index + 1).repeat(64)}` },
     semantics: { schemaVersion: "derived-section-semantics/1.0" as const, role: "hero" as const, layoutArchetypes: ["centered" as const], domains: ["children_creativity" as const], audiences: ["children" as const], moods: ["playful" as const], negativeSignals: [] },
   }));
-  return redactDerivedSectionCompilation({ corpusManifestHash: SHA, catalogManifestHash: `sha256:${"b".repeat(64)}`, expectedTemplates: 451, processedTemplates: 451, accepted, rejected: [], duplicates: [] });
+  return redactDerivedSectionCompilation({ corpusManifestHash: SHA, catalogManifestHash: `sha256:${"b".repeat(64)}`, expectedTemplates: 450, processedTemplates: 450, accepted, rejected: [], duplicates: [] });
 }
 
 describe("derived section catalog rollback", () => {

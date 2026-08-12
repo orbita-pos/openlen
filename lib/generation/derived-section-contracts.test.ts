@@ -57,8 +57,8 @@ describe("derived section contracts", () => {
     const report = redactDerivedSectionCompilation({
       corpusManifestHash: HASH,
       catalogManifestHash: `sha256:${"c".repeat(64)}`,
-      expectedTemplates: 451,
-      processedTemplates: 451,
+      expectedTemplates: 450,
+      processedTemplates: 450,
       accepted: [{
         id: "derived-hero-arcana-2-aaaaaaaaaaaa",
         contentHash: "a".repeat(12),
@@ -73,8 +73,8 @@ describe("derived section contracts", () => {
     const serialized = JSON.stringify(report);
     expect(() => DerivedSectionCompilationReportSchema.parse(report)).not.toThrow();
     expect(report).toMatchObject({
-      expectedTemplates: 451,
-      processedTemplates: 451,
+      expectedTemplates: 450,
+      processedTemplates: 450,
       acceptedCount: 1,
       rejectedCount: 1,
       duplicateCount: 1,
@@ -90,8 +90,8 @@ describe("derived section contracts", () => {
       schemaVersion: "derived-section-compilation-report/1.0",
       corpusManifestHash: HASH,
       catalogManifestHash: HASH,
-      expectedTemplates: 451,
-      processedTemplates: 451,
+      expectedTemplates: 450,
+      processedTemplates: 450,
       acceptedCount: 0,
       rejectedCount: 0,
       duplicateCount: 0,

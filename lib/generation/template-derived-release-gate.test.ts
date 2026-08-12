@@ -20,7 +20,7 @@ describe("template-derived release gate contract", () => {
   });
   it("documents immutable publication, privacy, bounded canary and explicit-clone separation", () => {
     const doc = readFileSync(resolve(root, "docs/generation/template-derived-sections-runbook.md"), "utf8");
-    for (const phrase of ["exactly 451", "Repeat dry compile", "one database transaction", "at most two roles", "at least two real donors", "never HTML, CSS, JavaScript, URLs or copy values", "one sequential attempt per fixture", "positive MXN cap", "explicit template cloning remains available", "sections:derived-rollback", "prior-catalog-sha256"]) expect(doc).toContain(phrase);
+    for (const phrase of ["exactly 450 published", "Repeat dry compile", "one database transaction", "at most two roles", "at least two real donors", "never HTML, CSS, JavaScript, URLs or copy values", "one sequential attempt per fixture", "positive MXN cap", "explicit template cloning remains available", "sections:derived-rollback", "prior-catalog-sha256"]) expect(doc).toContain(phrase);
   });
   it("bundles the idempotent migration, preserves immutable history, and keeps operational output redacted", () => {
     const pkg = JSON.parse(readFileSync(resolve(root, "package.json"), "utf8"));

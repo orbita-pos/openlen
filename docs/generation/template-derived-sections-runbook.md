@@ -1,6 +1,6 @@
 # Template-derived section catalog runbook
 
-This catalog lets Create with AI compose pages from verified sections extracted offline from all 451 published templates. Source templates remain unchanged. The explicit **Use this template** command remains the only whole-template clone path.
+This catalog lets Create with AI compose pages from verified sections extracted offline from exactly 450 published templates. The 451st catalog row, Apex Freedom, remains archived and is excluded. Source templates remain unchanged. The explicit **Use this template** command remains the only whole-template clone path.
 
 ## Deterministic release gates
 
@@ -21,10 +21,10 @@ The deploy script runs the template-derived, asset, hybrid, and typecheck gates 
 ## Compile and publication
 
 1. Run the idempotent schema migration: `npm.cmd run sections:derived-migrate`.
-2. Dry compile: `npm.cmd run sections:compile-templates -- --dry-run --expected-count=451`.
-3. Review `scratch/visual-engine-derived-sections/compilation-report.json`. Require exactly 451 processed published templates, a stable corpus/catalog manifest, and viable coverage for Mundo Pincel, terror, escuela, cocina, hotel and producto físico.
+2. Dry compile: `npm.cmd run sections:compile-templates -- --dry-run --expected-count=450`.
+3. Review `scratch/visual-engine-derived-sections/compilation-report.json`. Require exactly 450 published templates processed, a stable corpus/catalog manifest, and viable coverage for Mundo Pincel, terror, escuela, cocina, hotel and producto físico.
 4. Repeat dry compile and require the same manifest hash.
-5. Publish atomically: `npm.cmd run sections:compile-templates -- --publish --expected-count=451`.
+5. Publish atomically: `npm.cmd run sections:compile-templates -- --publish --expected-count=450`.
 
 Migration and publication mutate the current database/storage and require explicit authorization. Publication writes immutable content-addressed fragments and commits the catalog rows plus active manifest in one database transaction. A failed write leaves the previous manifest authoritative.
 
@@ -43,7 +43,7 @@ The canary is closed by default. After deterministic preflight, obtain one-time 
 ```powershell
 $env:OPENLEN_TEMPLATE_DERIVED_CANARY_AUTHORIZATION = "AUTHORIZED_TEMPLATE_DERIVED_CANARY_ONCE"
 $env:OPENLEN_TEMPLATE_DERIVED_CATALOG_SHA256 = "<reviewed-catalog-sha256>"
-$env:OPENLEN_TEMPLATE_DERIVED_CORPUS_SHA256 = "<current-451-template-corpus-sha256>"
+$env:OPENLEN_TEMPLATE_DERIVED_CORPUS_SHA256 = "<current-450-template-corpus-sha256>"
 $env:OPENLEN_TEMPLATE_DERIVED_CANARY_MAX_MICROMXN = "<approved-positive-integer>"
 $env:OPENLEN_TEMPLATE_DERIVED_CANARY_CASE_MAX_MICROMXN = "<conservative-positive-per-case-integer>"
 npm.cmd run generation:template-derived-sections:canary -- --live

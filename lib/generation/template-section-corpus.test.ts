@@ -43,7 +43,7 @@ function template(index: number, overrides: Partial<TemplateRecord> = {}): Templ
 }
 
 function corpus(): TemplateRecord[] {
-  return Array.from({ length: 451 }, (_, index) => template(index + 1));
+  return Array.from({ length: 450 }, (_, index) => template(index + 1));
 }
 
 function htmlFor(record: TemplateRecord): string {
@@ -52,7 +52,7 @@ function htmlFor(record: TemplateRecord): string {
 }
 
 describe("buildTemplateCorpus", () => {
-  it("builds the exact deterministic 451-template authoritative corpus", async () => {
+  it("builds the exact deterministic 450-published-template authoritative corpus", async () => {
     const records = corpus().reverse();
     const fetchText = vi.fn(async (url: string) => {
       const record = records.find((row) => row.storageUrl === url);
@@ -62,17 +62,17 @@ describe("buildTemplateCorpus", () => {
     const result = await buildTemplateCorpus(records, { fetchText });
 
     expect(result.schemaVersion).toBe("template-section-corpus/1.0");
-    expect(result.expectedCount).toBe(451);
-    expect(result.rows).toHaveLength(451);
+    expect(result.expectedCount).toBe(450);
+    expect(result.rows).toHaveLength(450);
     expect(result.rows[0]?.templateId).toBe("template-001");
-    expect(result.rows[450]?.templateId).toBe("template-451");
+    expect(result.rows[449]?.templateId).toBe("template-450");
     expect(result.manifestHash).toMatch(/^sha256:[a-f0-9]{64}$/);
-    expect(fetchText).toHaveBeenCalledTimes(451);
+    expect(fetchText).toHaveBeenCalledTimes(450);
   });
 
   it.each([
-    ["template_corpus_count_mismatch", () => corpus().slice(0, 450)],
-    ["template_corpus_duplicate", () => [...corpus().slice(0, 450), template(1)]],
+    ["template_corpus_count_mismatch", () => corpus().slice(0, 449)],
+    ["template_corpus_duplicate", () => [...corpus().slice(0, 449), template(1)]],
     ["template_corpus_unpublished", () => corpus().map((row, index) => index === 0 ? { ...row, status: "draft" as const } : row)],
     ["template_corpus_invalid_record", () => corpus().map((row, index) => index === 0 ? { ...row, id: "../escape" } : row)],
     ["template_corpus_invalid_record", () => corpus().map((row, index) => index === 0 ? { ...row, storageKey: "templates/wrong.html" } : row)],
@@ -104,7 +104,7 @@ describe("buildTemplateCorpus", () => {
     const serialized = JSON.stringify(report);
     expect(serialized).not.toContain("<html");
     expect(serialized).not.toContain("https://");
-    expect(report).toMatchObject({ expectedCount: 451, rowCount: 451, manifestHash: manifest.manifestHash });
+    expect(report).toMatchObject({ expectedCount: 450, rowCount: 450, manifestHash: manifest.manifestHash });
   });
 
   it("changes the manifest when trusted visual classification changes without exposing it", async () => {
