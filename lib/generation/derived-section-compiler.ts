@@ -7,8 +7,9 @@ import {
   type DerivedSectionProvenance,
   type DerivedSectionSemantics,
   type DerivedSectionRejectionCodeSchema,
+  type CompiledDerivedSection,
+  type ExtractedTemplateBand,
 } from "./derived-section-contracts";
-import type { ExtractedTemplateBand } from "./template-section-extractor";
 import { fingerprintStructure } from "./structural-fingerprint";
 import { sanitizeForPublish } from "@/lib/html-engine";
 import { scopeSectionDocument } from "@/lib/sections/scope";
@@ -25,21 +26,7 @@ export type RenderValidationResult =
   | { ok: false; code: "render_failed" }
   | { ok: true; desktopVisible: boolean; mobileVisible: boolean; mobileOverflow: boolean; score: number };
 
-export interface CompiledDerivedSection {
-  id: string;
-  html: string;
-  type: SectionType;
-  mode: SectionMode;
-  provenance: DerivedSectionProvenance;
-  semantics: DerivedSectionSemantics;
-  designTokens: Record<string, string>;
-  fonts: string[];
-  needsJs: boolean;
-  hasPlaceholders: boolean;
-  contentHash: string;
-  renderScore: number;
-  sourceExactHash: string;
-}
+export type { CompiledDerivedSection } from "./derived-section-contracts";
 
 export type CompileDerivedSectionResult =
   | { ok: true; section: CompiledDerivedSection }

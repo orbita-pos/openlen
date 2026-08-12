@@ -59,6 +59,34 @@ export const DerivedSectionSemanticsSchema = z.object({
 
 export type DerivedSectionSemantics = z.infer<typeof DerivedSectionSemanticsSchema>;
 
+/** Runtime-neutral shape shared by the offline compiler and catalog store. */
+export interface CompiledDerivedSection {
+  id: string;
+  html: string;
+  type: (typeof SECTION_TYPES)[number];
+  mode: "light" | "dark" | "cream";
+  provenance: DerivedSectionProvenance;
+  semantics: DerivedSectionSemantics;
+  designTokens: Record<string, string>;
+  fonts: string[];
+  needsJs: boolean;
+  hasPlaceholders: boolean;
+  contentHash: string;
+  renderScore: number;
+  sourceExactHash: string;
+}
+
+/** Offline extraction input kept here so the runtime compiler stays catalog-only. */
+export interface ExtractedTemplateBand {
+  templateId: string;
+  templateContentHash: string;
+  ordinal: number;
+  rootTag: "nav" | "header" | "section" | "footer";
+  sourceHtml: string;
+  sourceHash: string;
+  sourceIds: readonly string[];
+}
+
 const ReportAcceptedSchema = z.object({
   id: SlugSchema,
   contentHash: Hash12Schema,

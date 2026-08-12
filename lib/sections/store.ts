@@ -13,10 +13,10 @@ import { db, schema } from "@/lib/db";
 import {
   DerivedSectionProvenanceSchema,
   DerivedSectionSemanticsSchema,
+  type CompiledDerivedSection,
   type DerivedSectionProvenance,
   type DerivedSectionSemantics,
 } from "@/lib/generation/derived-section-contracts";
-import type { CompiledDerivedSection } from "@/lib/generation/derived-section-compiler";
 import { getTemplateStorage } from "@/lib/storage/templates";
 import type {
   SectionMode,

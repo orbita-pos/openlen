@@ -15,6 +15,7 @@ import { publishDerivedSectionCatalog } from "@/lib/sections/store";
 import { listTemplates } from "@/lib/templates/store";
 
 const REPORT_PATH = join(process.cwd(), "scratch", "visual-engine-derived-sections", "compilation-report.json");
+const REPORT_HISTORY = join(process.cwd(), "scratch", "visual-engine-derived-sections", "history");
 
 function templateHead(html: string): string {
   return /<head\b[^>]*>([\s\S]*?)<\/head>/i.exec(html)?.[1] ?? "";
@@ -73,6 +74,8 @@ async function main(): Promise<void> {
     writeReportAtomic: async (report) => {
       await mkdir(dirname(REPORT_PATH), { recursive: true });
       await writeJsonAtomic(REPORT_PATH, report);
+      await mkdir(REPORT_HISTORY, { recursive: true });
+      await writeJsonAtomic(join(REPORT_HISTORY, `${report.catalogManifestHash.replace(/^sha256:/, "")}.json`), report);
     },
     publishCatalog: async (sections) => publishDerivedSectionCatalog(sections),
   });
@@ -89,11 +92,11 @@ async function main(): Promise<void> {
 }
 
 if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) {
-  main().catch((error) => {
+  main().catch(() => {
     console.error(JSON.stringify({
       event: "derived_section_compilation",
       ok: false,
-      code: error instanceof Error ? error.message : "compile_failed",
+      code: "compile_failed",
     }));
     process.exitCode = 1;
   });

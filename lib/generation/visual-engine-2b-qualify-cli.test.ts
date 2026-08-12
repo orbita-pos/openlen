@@ -7,9 +7,13 @@ import type { SectionType } from "@/lib/sections/types";
 function record(id: string, type: SectionType): SectionRecord {
   const html = `<section>${id}</section>`;
   const contentHash = createHash("sha256").update(html).digest("hex").slice(0, 12);
+  const sha256 = `sha256:${createHash("sha256").update(`source:${id}`).digest("hex")}`;
   return { id, type, name: id, variantLabel: id, rootTag: "section", mode: "light", storageKey: `sections/${id}-${contentHash}.html`, storageUrl: `https://invalid/${id}`,
     contentHash, size: html.length, designTokens: null, fonts: null, needsJs: false,
-    hasPlaceholders: false, thumbnailUrl: null, status: "published", createdAt: new Date(0), updatedAt: new Date(0), publishedAt: new Date(0) };
+    hasPlaceholders: false, thumbnailUrl: null, status: "published",
+    provenance: { schemaVersion: "derived-section-provenance/1.0", sourceTemplateId: `donor-${id}`, sourceTemplateHash: contentHash, sourceBandOrdinal: 0, extractionVersion: "template-band-extractor/1.0", sourceHash: sha256, structuralFingerprint: sha256 },
+    derivedSemantics: { schemaVersion: "derived-section-semantics/1.0", role: type, layoutArchetypes: [], domains: [], audiences: [], moods: [], negativeSignals: [] },
+    createdAt: new Date(0), updatedAt: new Date(0), publishedAt: new Date(0) };
 }
 
 const records = ["navbar", "hero", "gallery", "how-it-works", "integrations", "pricing", "faq", "about", "contact", "footer"]

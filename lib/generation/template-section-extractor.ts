@@ -1,16 +1,9 @@
 import { createHash } from "node:crypto";
 
+import type { ExtractedTemplateBand } from "./derived-section-contracts";
 import type { TemplateCorpusRow } from "./template-section-corpus";
 
-export interface ExtractedTemplateBand {
-  templateId: string;
-  templateContentHash: string;
-  ordinal: number;
-  rootTag: "nav" | "header" | "section" | "footer";
-  sourceHtml: string;
-  sourceHash: string;
-  sourceIds: readonly string[];
-}
+export type { ExtractedTemplateBand } from "./derived-section-contracts";
 
 export type ExtractTemplateBandsResult =
   | { ok: true; bands: readonly ExtractedTemplateBand[] }
