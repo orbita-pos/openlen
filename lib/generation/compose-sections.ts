@@ -8,6 +8,7 @@ import type { CreativeDirection } from "./creative-contracts";
 import type { GenerationRoute, IntentAnalysis } from "./contracts";
 import {
   SECTION_COMPOSITION_MANIFEST_VERSION,
+  hasOriginalSectionProvenance,
   SectionCompositionManifestSchema,
   SectionCompositionResultCodeSchema,
   type SectionCompositionManifest,
@@ -147,6 +148,10 @@ function manifest(
     orderedRoles: selection.map((row) => row.requestedRole),
     selectedSectionIds: selection.map((row) => row.sectionId),
     selectedContentHashes: selection.map((row) => row.contentHash),
+    selectedSourceKinds: selection.map((row) => row.sourceKind),
+    selectedSourceTemplateIds: selection.map((row) => row.sourceTemplateId),
+    selectedSourceBandOrdinals: selection.map((row) => row.sourceBandOrdinal),
+    selectedStructuralFingerprints: selection.map((row) => row.structuralFingerprint),
     compatibilityRuleIds: selection.map((row) => row.compatibilityRuleId),
     outputHash: outputHtml === null ? null : sha256(outputHtml),
     resultCode,
@@ -180,6 +185,15 @@ function rolesRemainExact(html: string, selection: readonly SectionSelectionRow[
     .map((node) => node.getAttribute("data-openlen-role"));
   return actual.length === selection.length &&
     actual.every((role, index) => role === selection[index].requestedRole);
+}
+
+function selectionRemainsOriginal(selection: readonly SectionSelectionRow[]): boolean {
+  return hasOriginalSectionProvenance({
+    contentHashes: selection.map((row) => row.contentHash),
+    sourceKinds: selection.map((row) => row.sourceKind),
+    sourceTemplateIds: selection.map((row) => row.sourceTemplateId),
+    sourceBandOrdinals: selection.map((row) => row.sourceBandOrdinal),
+  });
 }
 
 function metadataFromIntent(intent: IntentAnalysis) {
@@ -218,6 +232,9 @@ export async function composeSectionCandidate(
       intent: input.intent,
       direction: deterministic.direction,
     });
+    if (!selectionRemainsOriginal(selection)) {
+      return failure(input, "section_originality_failed", inventory, selection);
+    }
     const fetched = await (deps.fetchFragments ?? fetchVerifiedSectionFragments)(
       selection,
       inventory,
@@ -281,6 +298,9 @@ export async function composeSectionCandidate(
     }
     if (!rolesRemainExact(adapted.html, selection)) {
       return failure(input, "section_role_coverage_failed", inventory, selection);
+    }
+    if (!selectionRemainsOriginal(selection)) {
+      return failure(input, "section_originality_failed", inventory, selection);
     }
 
     const { html: _html, creativeDirection, ...adaptation } = adapted;

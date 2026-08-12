@@ -6,7 +6,10 @@ import {
   validateAssetManifestHash,
 } from "@/lib/generation/asset-contracts";
 import { CreativeDirectionSchema } from "@/lib/generation/creative-contracts";
-import { SectionCompositionManifestSchema } from "@/lib/generation/section-composition-contracts";
+import {
+  hasOriginalSectionProvenance,
+  SectionCompositionManifestSchema,
+} from "@/lib/generation/section-composition-contracts";
 import { canonicalJsonSha256, sha256 } from "@/lib/generation/content-hash";
 import type { VisualEngineProjectMetadata } from "@/lib/projects/types";
 
@@ -16,6 +19,7 @@ export type AiCompositionDeliveryReason =
   | "invalid_composition_metadata"
   | "invalid_composition_manifest"
   | "section_role_coverage_failed"
+  | "section_originality_failed"
   | "creative_marker_invalid"
   | "output_hash_mismatch"
   | "asset_metadata_invalid";
@@ -125,6 +129,14 @@ export function validateAiCompositionDelivery(input: {
     manifest.data.selectedContentHashes,
   )) {
     return { ok: false, reasonCode: "section_role_coverage_failed" };
+  }
+  if (!hasOriginalSectionProvenance({
+    contentHashes: manifest.data.selectedContentHashes,
+    sourceKinds: manifest.data.selectedSourceKinds,
+    sourceTemplateIds: manifest.data.selectedSourceTemplateIds,
+    sourceBandOrdinals: manifest.data.selectedSourceBandOrdinals,
+  })) {
+    return { ok: false, reasonCode: "section_originality_failed" };
   }
   if (!hasOneCreativeMarker(input.html)) {
     return { ok: false, reasonCode: "creative_marker_invalid" };

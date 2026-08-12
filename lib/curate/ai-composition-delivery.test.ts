@@ -31,13 +31,19 @@ function visualEngine(html = HTML): Extract<VisualEngineProjectMetadata, { route
     policyVersion: "template-policy/1.0",
     contractVersion: "creative-direction/1.0",
     compositionManifest: SectionCompositionManifestSchema.parse({
-      schemaVersion: "section-composition-manifest/1.0",
+      schemaVersion: "section-composition-manifest/2.0",
       intentHash: `sha256:${"a".repeat(64)}`,
       creativeDirectionHash: canonicalJsonSha256(direction),
       inventoryHash: `sha256:${"b".repeat(64)}`,
       orderedRoles: ["hero", "coloring_gallery", "footer"],
       selectedSectionIds: ["hero-coloring", "gallery-coloring", "footer-coloring"],
       selectedContentHashes: ["111111111111", "222222222222", "333333333333"],
+      selectedSourceKinds: ["template_derived", "template_derived", "template_derived"],
+      selectedSourceTemplateIds: ["arcana", "obra", "lumen"],
+      selectedSourceBandOrdinals: [0, 2, 4],
+      selectedStructuralFingerprints: [
+        `sha256:${"1".repeat(64)}`, `sha256:${"2".repeat(64)}`, `sha256:${"3".repeat(64)}`,
+      ],
       compatibilityRuleIds: [
         "section_component:hero>hero",
         "section_component:coloring_gallery>gallery",
@@ -154,7 +160,14 @@ describe("AI composition delivery", () => {
     [
       "fewer than three fragments",
       HTML.replace('<footer data-sec="footer-coloring" data-openlen-role="footer">Contacto</footer>', ""),
-      { ...visualEngine(), compositionManifest: { ...visualEngine().compositionManifest, orderedRoles: ["hero", "coloring_gallery"], selectedSectionIds: ["hero-coloring", "gallery-coloring"], selectedContentHashes: ["111111111111", "222222222222"], compatibilityRuleIds: ["section_component:hero>hero", "section_component:coloring_gallery>gallery"] } },
+      { ...visualEngine(), compositionManifest: {
+        ...visualEngine().compositionManifest,
+        orderedRoles: ["hero", "coloring_gallery"], selectedSectionIds: ["hero-coloring", "gallery-coloring"],
+        selectedContentHashes: ["111111111111", "222222222222"],
+        selectedSourceKinds: ["template_derived", "template_derived"], selectedSourceTemplateIds: ["arcana", "obra"],
+        selectedSourceBandOrdinals: [0, 2], selectedStructuralFingerprints: [`sha256:${"1".repeat(64)}`, `sha256:${"2".repeat(64)}`],
+        compatibilityRuleIds: ["section_component:hero>hero", "section_component:coloring_gallery>gallery"],
+      } },
     ],
     ["role mismatch", HTML.replace('data-openlen-role="coloring_gallery"', 'data-openlen-role="stories"'), visualEngine()],
     ["section mismatch", HTML.replace('data-sec="gallery-coloring"', 'data-sec="gallery-other"'), visualEngine()],
@@ -185,6 +198,22 @@ describe("AI composition delivery", () => {
       ok: false,
       reasonCode: "section_role_coverage_failed",
     });
+  });
+
+  it.each([
+    ["one donor", ["arcana", "arcana", "arcana"], [0, 2, 4]],
+    ["contiguous donor sequence", ["arcana", "arcana", "arcana"], [2, 3, 4]],
+  ])("rejects originality failure: %s", (_name, donors, ordinals) => {
+    const metadata = visualEngine();
+    const changed = {
+      ...metadata,
+      compositionManifest: {
+        ...metadata.compositionManifest,
+        selectedSourceTemplateIds: donors,
+        selectedSourceBandOrdinals: ordinals,
+      },
+    };
+    expect(validate(HTML, changed)).toEqual({ ok: false, reasonCode: "section_originality_failed" });
   });
 
   it("accepts a valid paired asset manifest and resolution trace", () => {

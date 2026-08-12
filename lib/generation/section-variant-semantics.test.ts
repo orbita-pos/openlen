@@ -6,6 +6,7 @@ import { IntentAnalysisSchema } from "./contracts";
 import {
   buildSectionSemanticPolicy,
   profileSectionVariant,
+  profileDerivedSectionSemantics,
   scoreSectionSemanticProfile,
   type SectionSemanticTag,
 } from "./section-variant-semantics";
@@ -60,6 +61,20 @@ describe("profileSectionVariant", () => {
 });
 
 describe("section semantic policy", () => {
+  it("uses trusted derived semantics instead of donor display text", () => {
+    expect(profileDerivedSectionSemantics({
+      schemaVersion: "derived-section-semantics/1.0",
+      role: "hero",
+      layoutArchetypes: ["editorial"],
+      domains: ["children_creativity"],
+      audiences: ["children"],
+      moods: ["playful"],
+      negativeSignals: [],
+    })).toEqual({
+      tags: ["creator", "editorial", "illustrated", "playful", "warm"],
+      source: "derived_metadata",
+    });
+  });
   it.each(AI_HYBRID_NICHE_CASES)(
     "builds a deterministic bounded positive policy for $id",
     (row) => {

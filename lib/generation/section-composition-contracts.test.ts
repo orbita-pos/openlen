@@ -40,13 +40,17 @@ const PLAN = {
 } as const;
 
 const MANIFEST = {
-  schemaVersion: "section-composition-manifest/1.0",
+  schemaVersion: "section-composition-manifest/2.0",
   intentHash: SHA_A,
   creativeDirectionHash: SHA_B,
   inventoryHash: SHA_C,
   orderedRoles: ["hero", "activities"],
   selectedSectionIds: ["hero-01", "features-02"],
   selectedContentHashes: ["a".repeat(12), "b".repeat(12)],
+  selectedSourceKinds: ["template_derived", "template_derived"],
+  selectedSourceTemplateIds: ["arcana", "obra"],
+  selectedSourceBandOrdinals: [0, 1],
+  selectedStructuralFingerprints: [SHA_A, SHA_B],
   compatibilityRuleIds: [
     "section_component:exact:hero",
     "section_component:structural:activities>features",
@@ -73,6 +77,8 @@ describe("section composition contracts", () => {
       "section_fragment_stale",
       "section_fragment_invalid",
       "section_role_coverage_failed",
+      "section_semantic_coverage_failed",
+      "section_originality_failed",
       "inherited_copy_leak",
       "provider_timeout",
       "provider_error",
@@ -88,10 +94,12 @@ describe("section composition contracts", () => {
   });
 
   it("keeps the composition manifest scalar, redacted, aligned, and strict", () => {
-    expect(SECTION_COMPOSITION_MANIFEST_VERSION).toBe("section-composition-manifest/1.0");
+    expect(SECTION_COMPOSITION_MANIFEST_VERSION).toBe("section-composition-manifest/2.0");
     expect(SectionCompositionManifestSchema.parse(MANIFEST)).toEqual(MANIFEST);
     expect(SectionCompositionManifestSchema.safeParse({ ...MANIFEST, html: "<html>secret</html>" }).success).toBe(false);
     expect(SectionCompositionManifestSchema.safeParse({ ...MANIFEST, selectedSectionIds: ["hero-01"] }).success).toBe(false);
+    expect(SectionCompositionManifestSchema.safeParse({ ...MANIFEST, selectedSourceTemplateIds: ["arcana"] }).success).toBe(false);
+    expect(SectionCompositionManifestSchema.safeParse({ ...MANIFEST, selectedSourceKinds: ["manual", "template_derived"] }).success).toBe(false);
     expect(SectionCompositionManifestSchema.safeParse({ ...MANIFEST, outputHash: null }).success).toBe(false);
     expect(SectionCompositionManifestSchema.safeParse({ ...MANIFEST, resultCode: "provider_error", outputHash: null }).success).toBe(true);
   });

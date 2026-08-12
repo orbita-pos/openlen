@@ -25,10 +25,13 @@ const INTENT = IntentAnalysisSchema.parse({
   explicitConstraints: [], ambiguities: [], confidence: 0.95,
 });
 const MANIFEST: SectionCompositionManifest = {
-  schemaVersion: "section-composition-manifest/1.0", intentHash: `sha256:${"a".repeat(64)}`,
+  schemaVersion: "section-composition-manifest/2.0", intentHash: `sha256:${"a".repeat(64)}`,
   creativeDirectionHash: `sha256:${"b".repeat(64)}`, inventoryHash: `sha256:${"c".repeat(64)}`,
   orderedRoles: ["hero", "stories"], selectedSectionIds: ["hero-01", "features-01"],
   selectedContentHashes: ["111111111111", "222222222222"],
+  selectedSourceKinds: ["template_derived", "template_derived"],
+  selectedSourceTemplateIds: ["arcana", "obra"], selectedSourceBandOrdinals: [0, 1],
+  selectedStructuralFingerprints: [`sha256:${"1".repeat(64)}`, `sha256:${"2".repeat(64)}`],
   compatibilityRuleIds: ["section_component:exact:hero", "section_component:structural:stories>features"],
   outputHash: `sha256:${"d".repeat(64)}`, resultCode: "composed",
 };

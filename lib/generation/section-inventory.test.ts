@@ -31,8 +31,14 @@ function record(
     contentHash?: string;
     name?: string;
     variantLabel?: string;
+    manual?: boolean;
+    sourceTemplateId?: string;
+    sourceBandOrdinal?: number;
+    negativeSignals?: Array<"dashboard" | "analytics" | "software_mockup">;
   } = {},
 ): SectionRecord {
+  const hash = opts.contentHash ?? sha12(html);
+  const sourceTemplateId = opts.sourceTemplateId ?? `donor-${id}`;
   return {
     id,
     type,
@@ -42,13 +48,33 @@ function record(
     mode: opts.mode ?? "light",
     storageKey: opts.storageKey ?? `sections/${id}-${sha12(html)}.html`,
     storageUrl: `https://storage.invalid/${id}.html`,
-    contentHash: opts.contentHash ?? sha12(html),
+    contentHash: hash,
     size: html.length,
     designTokens: opts.radius ? { "--radius": opts.radius } : null,
     fonts: null,
     needsJs: opts.needsJs ?? false,
     hasPlaceholders: opts.hasPlaceholders ?? false,
     thumbnailUrl: null,
+    ...(opts.manual ? {} : {
+      provenance: {
+        schemaVersion: "derived-section-provenance/1.0",
+        sourceTemplateId,
+        sourceTemplateHash: "a".repeat(12),
+        sourceBandOrdinal: opts.sourceBandOrdinal ?? 0,
+        extractionVersion: "template-band-extractor/1.0",
+        sourceHash: `sha256:${"a".repeat(64)}`,
+        structuralFingerprint: `sha256:${createHash("sha256").update(id).digest("hex")}`,
+      },
+      derivedSemantics: {
+        schemaVersion: "derived-section-semantics/1.0",
+        role: type,
+        layoutArchetypes: ["centered"],
+        domains: ["children_creativity"],
+        audiences: ["children"],
+        moods: ["playful"],
+        negativeSignals: opts.negativeSignals ?? [],
+      },
+    }),
     status: opts.status ?? "published",
     createdAt: new Date(0),
     updatedAt: new Date(0),
@@ -105,9 +131,9 @@ function plan(inventoryHash: string) {
 
 describe("section composition inventory", () => {
   it("projects only published scalar metadata and hashes canonically", () => {
-    const draft = record("gallery-draft", "gallery", "<section>draft</section>", { status: "draft" });
-    const publishedA = record("hero-01", "hero", HTML["hero-01"], { radius: "24px", hasPlaceholders: true });
-    const publishedB = record("features-01", "features", HTML["features-01"]);
+    const draft = record("gallery-draft", "gallery", "<section>draft</section>", { status: "draft", manual: true });
+    const publishedA = record("hero-01", "hero", HTML["hero-01"], { radius: "24px", hasPlaceholders: true, manual: true });
+    const publishedB = record("features-01", "features", HTML["features-01"], { manual: true });
     const first = buildSectionCompositionInventory([draft, publishedB, publishedA]);
     const second = buildSectionCompositionInventory([publishedA, draft, publishedB]);
 
@@ -123,13 +149,26 @@ describe("section composition inventory", () => {
       },
     });
     expect(Object.keys(first.entries[0]).sort()).toEqual([
-      "assetCapability", "contentHash", "density", "id", "mode", "needsJs", "radiusBucket", "semanticProfile", "type",
+      "assetCapability", "contentHash", "density", "derivedSemantics", "id", "mode", "needsJs", "radiusBucket", "semanticProfile", "sourceBandOrdinal", "sourceKind", "sourceTemplateId", "structuralFingerprint", "type",
     ]);
     expect(Object.isFrozen(first)).toBe(true);
     expect(Object.isFrozen(first.entries)).toBe(true);
     expect(first.entries.every(Object.isFrozen)).toBe(true);
     expect(JSON.stringify(first)).not.toContain("storageUrl");
     expect(JSON.stringify(first)).not.toContain("<html");
+  });
+
+  it("binds provenance and trusted semantics into the inventory hash", () => {
+    const first = record("hero-derived", "hero", "<section>hero</section>", { sourceTemplateId: "arcana", sourceBandOrdinal: 1 });
+    const altered = record("hero-derived", "hero", "<section>hero</section>", { sourceTemplateId: "obra", sourceBandOrdinal: 1 });
+    expect(buildSectionCompositionInventory([first]).hash).not.toBe(buildSectionCompositionInventory([altered]).hash);
+  });
+
+  it("rejects derived semantics whose role disagrees with the stored section type", () => {
+    const mismatched = record("hero-derived", "hero", "<section>hero</section>");
+    mismatched.derivedSemantics = { ...mismatched.derivedSemantics!, role: "pricing" };
+    expect(() => buildSectionCompositionInventory([mismatched]))
+      .toThrow(expect.objectContaining({ code: "section_inventory_stale" }));
   });
 
   it("selects repeatable distinct variants for repeated semantic roles", () => {
@@ -196,7 +235,7 @@ describe("section composition inventory", () => {
         schemaVersion: "section-plan/1.0",
         intentHash: `sha256:${digit.repeat(64)}`,
         inventoryHash: frozen.hash,
-        rows: [{ ordinal: 0, requestedRole: "hero", componentType: "hero", compatibilityKind: "exact", compatibilityScore: 1, compatibilityRuleId: "section_component:exact:hero", required: true }],
+        rows: [0, 1, 2].map((ordinal) => ({ ordinal, requestedRole: "hero", componentType: "hero", compatibilityKind: "exact", compatibilityScore: 1, compatibilityRuleId: "section_component:exact:hero", required: true })),
       });
       expect(resolveSectionPlan(
         heroOnly,
@@ -220,12 +259,12 @@ describe("section composition inventory", () => {
 
   it("rejects dashboard hero and feature variants for Mundo Pincel", () => {
     const frozen = buildSectionCompositionInventory([
-      record("hero-01", "hero", "<section>dashboard</section>"),
+      record("hero-01", "hero", "<section>dashboard</section>", { negativeSignals: ["dashboard", "analytics", "software_mockup"] }),
       record("hero-11", "hero", "<section>creator</section>", {
         name: "Illustrated Creator Playground",
         variantLabel: "Playful",
       }),
-      record("features-01", "features", "<section>analytics</section>"),
+      record("features-01", "features", "<section>analytics</section>", { negativeSignals: ["dashboard", "analytics"] }),
       record("features-11", "features", "<section>activity</section>", {
         name: "Creative Activity Cards",
         variantLabel: "Playful",
@@ -243,7 +282,7 @@ describe("section composition inventory", () => {
 
   it("fails closed when every candidate for a required role is forbidden", () => {
     const frozen = buildSectionCompositionInventory([
-      record("hero-01", "hero", "<section>dashboard</section>"),
+      record("hero-01", "hero", "<section>dashboard</section>", { negativeSignals: ["dashboard", "analytics", "software_mockup"] }),
     ]);
     const heroOnly = SectionPlanSchema.parse({
       schemaVersion: "section-plan/1.0",
@@ -260,7 +299,31 @@ describe("section composition inventory", () => {
       }],
     });
     expect(() => resolveSectionPlan(heroOnly, frozen, CONTEXT))
-      .toThrow(expect.objectContaining({ code: "section_role_coverage_failed" }));
+      .toThrow(expect.objectContaining({ code: "section_semantic_coverage_failed" }));
+  });
+
+  it("backtracks from one strong donor to three deterministic source templates", () => {
+    const frozen = buildSectionCompositionInventory([
+      record("hero-shared", "hero", "<section>hero shared</section>", { sourceTemplateId: "shared", sourceBandOrdinal: 0 }),
+      record("features-shared-a", "features", "<section>shared a</section>", { sourceTemplateId: "shared", sourceBandOrdinal: 1 }),
+      record("features-shared-b", "features", "<section>shared b</section>", { sourceTemplateId: "shared", sourceBandOrdinal: 2 }),
+      record("features-donor-b", "features", "<section>donor b</section>", { sourceTemplateId: "donor-b", sourceBandOrdinal: 4 }),
+      record("features-donor-c", "features", "<section>donor c</section>", { sourceTemplateId: "donor-c", sourceBandOrdinal: 7 }),
+    ]);
+    const selection = resolveSectionPlan(plan(frozen.hash), frozen, CONTEXT);
+    expect(new Set(selection.map((row) => row.sourceTemplateId)).size).toBeGreaterThanOrEqual(3);
+    expect(Math.max(...[...new Set(selection.map((row) => row.sourceTemplateId))].map((donor) => selection.filter((row) => row.sourceTemplateId === donor).length))).toBeLessThanOrEqual(2);
+  });
+
+  it("fails originality instead of reconstructing all bands from one template", () => {
+    const frozen = buildSectionCompositionInventory([
+      record("hero-one", "hero", "<section>hero</section>", { sourceTemplateId: "single", sourceBandOrdinal: 0 }),
+      record("features-one", "features", "<section>one</section>", { sourceTemplateId: "single", sourceBandOrdinal: 1 }),
+      record("features-two", "features", "<section>two</section>", { sourceTemplateId: "single", sourceBandOrdinal: 2 }),
+      record("features-three", "features", "<section>three</section>", { sourceTemplateId: "single", sourceBandOrdinal: 3 }),
+    ]);
+    expect(() => resolveSectionPlan(plan(frozen.hash), frozen, CONTEXT))
+      .toThrow(expect.objectContaining({ code: "section_originality_failed" }));
   });
 
   it("rejects fetched bytes whose content hash changed without selecting an alternate", async () => {

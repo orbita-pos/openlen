@@ -2,17 +2,23 @@ import { createHash } from "node:crypto";
 
 import type { CreativeDirection } from "./creative-contracts";
 import type { IntentAnalysis } from "./contracts";
-import type { SectionPlan, SectionPlanRow } from "./section-composition-contracts";
+import { hasOriginalSectionProvenance, type SectionPlan, type SectionPlanRow } from "./section-composition-contracts";
 import { canonicalJsonSha256 } from "./content-hash";
 import {
   buildSectionSemanticPolicy,
   profileSectionVariant,
+  profileDerivedSectionSemantics,
   scoreSectionSemanticProfile,
   type SectionVariantSemanticProfile,
 } from "./section-variant-semantics";
 import { rankCompositionVariants } from "@/lib/sections/select";
 import type { SectionRecord } from "@/lib/sections/store";
 import type { SectionMode, SectionType } from "@/lib/sections/types";
+import {
+  DerivedSectionProvenanceSchema,
+  DerivedSectionSemanticsSchema,
+  type DerivedSectionSemantics,
+} from "./derived-section-contracts";
 
 export type SectionRadiusBucket = "sharp" | "medium" | "soft" | "unknown";
 export type SectionDensity =
@@ -30,10 +36,15 @@ export interface SectionCompositionInventoryEntry {
   needsJs: boolean;
   assetCapability: SectionAssetCapability;
   semanticProfile: SectionVariantSemanticProfile;
+  sourceKind: "manual" | "template_derived" | "generated";
+  sourceTemplateId: string | null;
+  sourceBandOrdinal: number | null;
+  structuralFingerprint: string;
+  derivedSemantics: DerivedSectionSemantics | null;
 }
 
 export interface SectionCompositionInventory {
-  readonly schemaVersion: "section-composition-inventory/1.0";
+  readonly schemaVersion: "section-composition-inventory/2.0";
   readonly hash: string;
   readonly entries: readonly SectionCompositionInventoryEntry[];
 }
@@ -42,6 +53,10 @@ export interface SectionSelectionRow extends SectionPlanRow {
   inventoryHash: string;
   sectionId: string;
   contentHash: string;
+  sourceKind: SectionCompositionInventoryEntry["sourceKind"];
+  sourceTemplateId: string | null;
+  sourceBandOrdinal: number | null;
+  structuralFingerprint: string;
 }
 
 export interface VerifiedSectionFragment {
@@ -54,7 +69,9 @@ export interface VerifiedSectionFragment {
 type SelectionFailureCode =
   | "section_inventory_stale"
   | "section_fragment_unavailable"
-  | "section_role_coverage_failed";
+  | "section_role_coverage_failed"
+  | "section_semantic_coverage_failed"
+  | "section_originality_failed";
 
 export class SectionCompositionSelectionError extends Error {
   constructor(readonly code: SelectionFailureCode) {
@@ -113,7 +130,18 @@ export function buildSectionCompositionInventory(
   if (new Set(ids).size !== ids.length) {
     throw new SectionCompositionSelectionError("section_inventory_stale");
   }
-  const entries = Object.freeze(published.map((record) => Object.freeze({
+  const entries = Object.freeze(published.map((record) => {
+    const provenance = DerivedSectionProvenanceSchema.safeParse(record.provenance);
+    const semantics = DerivedSectionSemanticsSchema.safeParse(record.derivedSemantics);
+    const hasNeither = record.provenance == null && record.derivedSemantics == null;
+    if (!hasNeither && (!provenance.success || !semantics.success)) {
+      throw new SectionCompositionSelectionError("section_inventory_stale");
+    }
+    const derived = provenance.success && semantics.success;
+    if (derived && semantics.data.role !== record.type) {
+      throw new SectionCompositionSelectionError("section_inventory_stale");
+    }
+    return Object.freeze({
     id: record.id,
     type: record.type,
     mode: record.mode,
@@ -122,14 +150,22 @@ export function buildSectionCompositionInventory(
     density: "unknown" as const,
     needsJs: record.needsJs,
     assetCapability: record.hasPlaceholders ? "replaceable" as const : "none" as const,
-    semanticProfile: profileSectionVariant({
+    semanticProfile: derived ? profileDerivedSectionSemantics(semantics.data) : profileSectionVariant({
       id: record.id,
       name: record.name,
       variantLabel: record.variantLabel,
     }),
-  })));
+    sourceKind: derived ? "template_derived" as const : "manual" as const,
+    sourceTemplateId: derived ? provenance.data.sourceTemplateId : null,
+    sourceBandOrdinal: derived ? provenance.data.sourceBandOrdinal : null,
+    structuralFingerprint: derived
+      ? provenance.data.structuralFingerprint
+      : canonicalJsonSha256({ kind: "manual", id: record.id, contentHash: record.contentHash, type: record.type }),
+    derivedSemantics: derived ? semantics.data : null,
+  });
+  }));
   const inventory: SectionCompositionInventory = Object.freeze({
-    schemaVersion: "section-composition-inventory/1.0",
+    schemaVersion: "section-composition-inventory/2.0",
     hash: canonicalJsonSha256(entries),
     entries,
   });
@@ -157,43 +193,74 @@ export function resolveSectionPlan(
     throw new SectionCompositionSelectionError("section_inventory_stale");
   }
   const semanticPolicy = buildSectionSemanticPolicy(context.intent, context.direction);
-  const used = new Set<string>();
-  return plan.rows.map((row) => {
+  const rankedRows = plan.rows.map((row) => {
     const eligible = inventory.entries.filter((entry) =>
-      entry.type === row.componentType && !entry.needsJs && !used.has(entry.id));
+      entry.type === row.componentType && !entry.needsJs);
     const evaluated = eligible
       .map((entry) => ({
         entry,
         semantic: scoreSectionSemanticProfile(entry.semanticProfile, semanticPolicy),
       }))
-      .filter(({ semantic }) => semantic.eligible);
+      .filter(({ entry, semantic }) => semantic.eligible && (semantic.score > 0 || entry.semanticProfile.tags.includes("neutral")));
     const visual = rankCompositionVariants(
       evaluated.map(({ entry }) => entry),
       context.direction,
       { seed: stableSeed(plan, row) },
     );
     const visualIndex = new Map(visual.map((entry, index) => [entry.id, index]));
-    const selected = evaluated.sort((left, right) =>
+    const ranked = evaluated.sort((left, right) =>
       right.semantic.score - left.semantic.score ||
       (visualIndex.get(left.entry.id) ?? Number.MAX_SAFE_INTEGER) -
         (visualIndex.get(right.entry.id) ?? Number.MAX_SAFE_INTEGER) ||
       left.entry.id.localeCompare(right.entry.id)
-    )[0]?.entry;
-    if (!selected) {
+    ).map(({ entry }) => entry).slice(0, 32);
+    if (ranked.length === 0) {
       throw new SectionCompositionSelectionError(
         eligible.length > 0 || inventory.entries.some((entry) => entry.type === row.componentType)
-          ? "section_role_coverage_failed"
+          ? "section_semantic_coverage_failed"
           : "section_fragment_unavailable",
       );
     }
-    used.add(selected.id);
-    return {
-      ...row,
-      inventoryHash: inventory.hash,
-      sectionId: selected.id,
-      contentHash: selected.contentHash,
-    };
+    return { row, ranked };
   });
+
+  let explored = 0;
+  const chosen: SectionCompositionInventoryEntry[] = [];
+  const used = new Set<string>();
+  const search = (index: number): SectionCompositionInventoryEntry[] | null => {
+    if (explored >= 4096) return null;
+    explored += 1;
+    if (index === rankedRows.length) {
+      return hasOriginalSectionProvenance({
+        contentHashes: chosen.map((entry) => entry.contentHash),
+        sourceKinds: chosen.map((entry) => entry.sourceKind),
+        sourceTemplateIds: chosen.map((entry) => entry.sourceTemplateId),
+        sourceBandOrdinals: chosen.map((entry) => entry.sourceBandOrdinal),
+      }) ? [...chosen] : null;
+    }
+    for (const candidate of rankedRows[index].ranked) {
+      if (used.has(candidate.id)) continue;
+      const donorUse = candidate.sourceTemplateId === null ? 0 : chosen.filter((entry) => entry.sourceTemplateId === candidate.sourceTemplateId).length;
+      if (candidate.sourceKind === "template_derived" && donorUse >= 2) continue;
+      chosen.push(candidate); used.add(candidate.id);
+      const result = search(index + 1);
+      if (result) return result;
+      used.delete(candidate.id); chosen.pop();
+    }
+    return null;
+  };
+  const selected = search(0);
+  if (!selected) throw new SectionCompositionSelectionError("section_originality_failed");
+  return selected.map((entry, index) => ({
+    ...rankedRows[index].row,
+    inventoryHash: inventory.hash,
+    sectionId: entry.id,
+    contentHash: entry.contentHash,
+    sourceKind: entry.sourceKind,
+    sourceTemplateId: entry.sourceTemplateId,
+    sourceBandOrdinal: entry.sourceBandOrdinal,
+    structuralFingerprint: entry.structuralFingerprint,
+  }));
 }
 
 function contentHash(html: string): string {
@@ -323,7 +390,8 @@ function hasValidFragmentShape(html: string, sectionId: string): boolean {
 }
 
 export async function fetchVerifiedSectionFragments(
-  selection: readonly SectionSelectionRow[],
+  selection: readonly Omit<SectionSelectionRow,
+    "sourceKind" | "sourceTemplateId" | "sourceBandOrdinal" | "structuralFingerprint">[],
   inventory: SectionCompositionInventory,
   deps: { fetchText: (storageUrl: string) => Promise<string | null> },
 ): Promise<

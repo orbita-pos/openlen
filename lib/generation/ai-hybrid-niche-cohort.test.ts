@@ -59,6 +59,10 @@ function semanticRecord(input: {
   type: SectionType;
   name: string;
   variantLabel: string;
+  domain?: "children_creativity" | "cooking" | "education" | "entertainment_horror" | "physical_product" | "professional_services";
+  negativeSignals?: Array<"analytics" | "corporate" | "course_ui" | "dashboard" | "developer_tool" | "documentation" | "game_ui" | "commerce_grid" | "software_mockup" | "terminal" | "wellness">;
+  layout?: "centered" | "editorial" | "marquee";
+  mood?: "playful" | "cinematic" | "warm";
 }): SectionRecord {
   const html = `<section data-sec="${input.id}">${input.id}</section>`;
   const contentHash = createHash("sha256").update(html, "utf8").digest("hex").slice(0, 12);
@@ -75,6 +79,17 @@ function semanticRecord(input: {
     needsJs: false,
     hasPlaceholders: false,
     thumbnailUrl: null,
+    provenance: {
+      schemaVersion: "derived-section-provenance/1.0", sourceTemplateId: input.id,
+      sourceTemplateHash: "a".repeat(12), sourceBandOrdinal: 0,
+      extractionVersion: "template-band-extractor/1.0", sourceHash: `sha256:${"a".repeat(64)}`,
+      structuralFingerprint: `sha256:${createHash("sha256").update(input.id).digest("hex")}`,
+    },
+    derivedSemantics: {
+      schemaVersion: "derived-section-semantics/1.0", role: input.type,
+      layoutArchetypes: [input.layout ?? "centered"], domains: input.domain ? [input.domain] : [],
+      audiences: [], moods: input.mood ? [input.mood] : [], negativeSignals: input.negativeSignals ?? [],
+    },
     status: "published",
     createdAt: new Date(0),
     updatedAt: new Date(0),
@@ -83,6 +98,24 @@ function semanticRecord(input: {
 }
 
 function semanticCatalog(row: (typeof AI_HYBRID_NICHE_CASES)[number]): SectionRecord[] {
+  const positive = {
+    "kids-coloring": { domain: "children_creativity", mood: "playful" },
+    "horror-experience": { domain: "entertainment_horror", mood: "cinematic" },
+    "comedy-club": { domain: "professional_services", mood: "playful", layout: "marquee" },
+    "video-game-launch": { domain: "entertainment_horror", mood: "cinematic" },
+    "school-website": { domain: "education", mood: "warm" },
+    "cooking-publication": { domain: "cooking", mood: "warm", layout: "editorial" },
+    "physical-product-sale": { domain: "physical_product", mood: "warm" },
+  }[row.id] as Pick<Parameters<typeof semanticRecord>[0], "domain" | "mood" | "layout">;
+  const forbidden = {
+    "kids-coloring": ["analytics", "dashboard", "software_mockup"],
+    "horror-experience": ["game_ui"],
+    "comedy-club": ["corporate"],
+    "video-game-launch": ["developer_tool", "documentation", "terminal"],
+    "school-website": ["course_ui", "dashboard"],
+    "cooking-publication": ["commerce_grid", "wellness", "dashboard"],
+    "physical-product-sale": ["analytics", "dashboard", "software_mockup"],
+  }[row.id] as Parameters<typeof semanticRecord>[0]["negativeSignals"];
   const counts = new Map<SectionType, number>();
   for (const type of row.expectedComponents) counts.set(type, (counts.get(type) ?? 0) + 1);
   return [...counts].flatMap(([type, count]) => {
@@ -95,12 +128,14 @@ function semanticCatalog(row: (typeof AI_HYBRID_NICHE_CASES)[number]): SectionRe
         type,
         name: FORBIDDEN_LABELS[row.id],
         variantLabel: "Forbidden",
+        negativeSignals: forbidden,
       }),
       ...Array.from({ length: count }, (_, index) => semanticRecord({
         id: `${type}-semantic-${index + 1}-${row.id}`,
         type,
         name: POSITIVE_LABELS[row.id],
         variantLabel: "Reviewed semantic fit",
+        ...positive,
       })),
       semanticRecord({
         id: `${type}-neutral-${row.id}`,
@@ -131,13 +166,17 @@ function successDeps(row: (typeof AI_HYBRID_NICHE_CASES)[number]): Required<RunA
     policyVersion: AI_HYBRID_POLICY_VERSION,
     contractVersion: "creative-direction/1.0" as const,
     compositionManifest: SectionCompositionManifestSchema.parse({
-      schemaVersion: "section-composition-manifest/1.0",
+      schemaVersion: "section-composition-manifest/2.0",
       intentHash: canonicalJsonSha256(row.intent),
       creativeDirectionHash: canonicalJsonSha256(row.expectedCreativeDirection),
       inventoryHash: INVENTORY_HASH,
       orderedRoles: planning.plan.rows.map((planRow) => planRow.requestedRole),
       selectedSectionIds,
       selectedContentHashes: planning.plan.rows.map((_planRow, index) => (index + 1).toString(16).padStart(12, "0")),
+      selectedSourceKinds: planning.plan.rows.map(() => "template_derived" as const),
+      selectedSourceTemplateIds: planning.plan.rows.map((_planRow, index) => `donor-${index}`),
+      selectedSourceBandOrdinals: planning.plan.rows.map(() => 0),
+      selectedStructuralFingerprints: planning.plan.rows.map((_planRow, index) => `sha256:${(index + 1).toString(16).repeat(64).slice(0, 64)}`),
       compatibilityRuleIds: planning.plan.rows.map((planRow) => planRow.compatibilityRuleId),
       outputHash: sha256(html),
       resultCode: "composed",

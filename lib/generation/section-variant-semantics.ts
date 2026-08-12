@@ -1,5 +1,6 @@
 import type { CreativeDirection } from "./creative-contracts";
 import type { IntentAnalysis } from "./contracts";
+import type { DerivedSectionSemantics } from "./derived-section-contracts";
 
 export const SECTION_SEMANTIC_TAGS = [
   "neutral",
@@ -34,7 +35,7 @@ export type SectionSemanticTag = typeof SECTION_SEMANTIC_TAGS[number];
 
 export interface SectionVariantSemanticProfile {
   readonly tags: readonly SectionSemanticTag[];
-  readonly source: "reviewed_override" | "catalog_tokens" | "neutral";
+  readonly source: "derived_metadata" | "reviewed_override" | "catalog_tokens" | "neutral";
 }
 
 export interface SectionSemanticPolicy {
@@ -185,6 +186,40 @@ export function profileSectionVariant(input: {
   return tags.length > 0
     ? Object.freeze({ tags: Object.freeze(tags), source: "catalog_tokens" as const })
     : Object.freeze({ tags: Object.freeze(["neutral"] as const), source: "neutral" as const });
+}
+
+const DERIVED_DOMAIN_TAGS = Object.freeze({
+  children_creativity: ["creator", "illustrated", "playful", "warm"],
+  cooking: ["editorial", "photographic", "tactile", "warm"],
+  education: ["community", "editorial", "school", "warm"],
+  entertainment_horror: ["cinematic", "editorial"],
+  hospitality: ["editorial", "photographic", "warm"],
+  physical_product: ["commerce", "photographic", "product", "tactile"],
+  professional_services: ["editorial"],
+  saas: ["analytics", "dashboard", "software_mockup"],
+} satisfies Record<DerivedSectionSemantics["domains"][number], readonly SectionSemanticTag[]>);
+
+export function profileDerivedSectionSemantics(
+  semantics: DerivedSectionSemantics,
+): SectionVariantSemanticProfile {
+  const tags: SectionSemanticTag[] = [...semantics.negativeSignals];
+  for (const domain of semantics.domains) tags.push(...DERIVED_DOMAIN_TAGS[domain]);
+  for (const mood of semantics.moods) {
+    if (mood === "playful") tags.push("playful");
+    if (mood === "warm") tags.push("warm");
+    if (mood === "cinematic" || mood === "atmospheric") tags.push("cinematic");
+    if (mood === "editorial") tags.push("editorial");
+    if (mood === "tactile") tags.push("tactile");
+  }
+  for (const layout of semantics.layoutArchetypes) {
+    if (layout === "editorial") tags.push("editorial");
+    if (layout === "gallery") tags.push("photographic");
+    if (layout === "marquee") tags.push("marquee");
+  }
+  return Object.freeze({
+    tags: Object.freeze(sortedTags(tags.length > 0 ? tags : ["neutral"])),
+    source: "derived_metadata" as const,
+  });
 }
 
 function mappedTags<T extends Record<string, readonly SectionSemanticTag[]>>(

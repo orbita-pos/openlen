@@ -25,6 +25,16 @@ function section(id: string, type: SectionType): SectionRecord {
     storageKey: `sections/${id}-${sha12(html)}.html`, storageUrl: `https://storage.invalid/${id}.html`,
     contentHash: sha12(html), size: html.length, designTokens: { "--radius": "12px" },
     fonts: null, needsJs: false, hasPlaceholders: false, thumbnailUrl: null,
+    provenance: {
+      schemaVersion: "derived-section-provenance/1.0", sourceTemplateId: `donor-${id}`,
+      sourceTemplateHash: "a".repeat(12), sourceBandOrdinal: 0,
+      extractionVersion: "template-band-extractor/1.0", sourceHash: `sha256:${"a".repeat(64)}`,
+      structuralFingerprint: `sha256:${createHash("sha256").update(id).digest("hex")}`,
+    },
+    derivedSemantics: {
+      schemaVersion: "derived-section-semantics/1.0", role: type,
+      layoutArchetypes: ["centered"], domains: ["children_creativity"], audiences: ["children"], moods: ["playful"], negativeSignals: [],
+    },
     status: "published", createdAt: new Date(0), updatedAt: new Date(0), publishedAt: new Date(0),
   };
 }
@@ -140,7 +150,7 @@ describe("composeSectionCandidate", () => {
     expect(result).toMatchObject({
       ok: true, status: "composed", creativeDirection: DIRECTION,
       manifest: {
-        schemaVersion: "section-composition-manifest/1.0",
+        schemaVersion: "section-composition-manifest/2.0",
         orderedRoles: ["header", "hero", "coloring_gallery", "minigames", "stories", "activities", "footer"],
         selectedSectionIds: expect.arrayContaining(["navbar-11", "hero-11", "gallery-11", "footer-11"]),
         resultCode: "composed",

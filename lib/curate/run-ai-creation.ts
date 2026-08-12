@@ -78,6 +78,8 @@ function compositionReason(
   switch (reasonCode) {
     case "unsupported_section_role":
     case "section_role_coverage_failed":
+    case "section_semantic_coverage_failed":
+    case "section_originality_failed":
       return "section_plan_failed";
     case "section_inventory_stale":
       return "section_inventory_unavailable";
