@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 
-const GATE = "vitest run lib/curate/generate-page-copy.test.ts lib/curate/finalize-composed-document.test.ts lib/curate/quick-section-composition.test.ts lib/curate/ai-composition-delivery.test.ts lib/curate/quick-visual-repair.test.ts lib/curate/run-ai-creation.test.ts lib/curate/ai-creation-mode.test.ts lib/curate/ai-creation-credits.test.ts lib/curate/commit-ai-composition.test.ts lib/curate/curate-route.integration.test.ts lib/generation/ai-hybrid-niche-cohort.test.ts lib/curate/ai-hybrid-import-boundary.test.ts lib/curate/ai-hybrid-regression.test.ts lib/curate/explicit-template-clone-contract.test.ts lib/curate/ai-hybrid-runbook-contract.test.ts";
+const GATE = "vitest run lib/curate/generate-page-copy.test.ts lib/curate/finalize-composed-document.test.ts lib/curate/quick-section-composition.test.ts lib/curate/ai-composition-delivery.test.ts lib/curate/quick-visual-repair.test.ts lib/curate/run-ai-creation.test.ts lib/curate/ai-creation-mode.test.ts lib/curate/ai-creation-credits.test.ts lib/curate/commit-ai-composition.test.ts lib/curate/curate-route.integration.test.ts lib/generation/section-variant-semantics.test.ts lib/generation/deterministic-creative-direction.test.ts lib/generation/section-inventory.test.ts lib/generation/compose-sections.test.ts lib/generation/visual-engine-2b-qualification.test.ts lib/generation/ai-hybrid-niche-cohort.test.ts lib/curate/ai-hybrid-import-boundary.test.ts lib/curate/ai-hybrid-regression.test.ts lib/curate/explicit-template-clone-contract.test.ts lib/curate/ai-hybrid-runbook-contract.test.ts";
 
 function repositoryFile(relativePath: string): string {
   return fs.readFileSync(path.join(process.cwd(), relativePath), "utf8");
@@ -46,6 +46,11 @@ describe("AI hybrid release and operations contract", () => {
     expect(runbook).toMatch(/positive MXN cap|tope positivo.*MXN/i);
     expect(runbook).toMatch(/one request per case|una solicitud por caso/i);
     expect(runbook).toMatch(/no automatic retr(?:y|ies)|sin reintentos autom[aá]ticos/i);
+    expect(runbook).toMatch(/selection is deterministic and model-free/i);
+    expect(runbook).toMatch(/section_role_coverage_failed/);
+    expect(runbook).toContain("OPENLEN_VISUAL_ENGINE_ASSETS=hybrid");
+    expect(runbook).toMatch(/kids-coloring.*first/is);
+    expect(runbook).toMatch(/remaining six.*only after Mundo Pincel\s+passes/is);
     for (const id of ["kids-coloring", "horror-experience", "comedy-club", "video-game-launch", "school-website", "cooking-publication", "physical-product-sale"]) {
       expect(runbook).toContain(id);
     }

@@ -115,9 +115,12 @@ describe("Mundo Pincel hybrid-only regression", () => {
       runQuickVisualQualityGate: vi.fn(async () => ({ ok: true as const, outcome: "healthy_keep" as const, html, visualEngine })),
     }, loadWholeTemplate);
 
-    const result = await runAiCreation({ projectId: "mundo-pincel", brief: coloring.brief, profileData: coerceBusinessData({}), assetMode: "off" }, deps);
+    const result = await runAiCreation({ projectId: "mundo-pincel", brief: coloring.brief, profileData: coerceBusinessData({}), assetMode: "hybrid" }, deps);
 
     expect(loadWholeTemplate).not.toHaveBeenCalled();
+    expect(deps.runSectionCompositionCandidate).toHaveBeenCalledWith(
+      expect.objectContaining({ assetMode: "hybrid" }),
+    );
     expect(result).toMatchObject({ ok: true, route: "section_composition", templateId: null });
     if (!result.ok) throw new Error(result.reasonCode);
     for (const residue of coloring.forbiddenResidues) expect(result.html).not.toContain(residue);

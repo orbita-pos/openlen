@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { describe, expect, it, vi } from "vitest";
 
 import type { BusinessProfileData } from "@/lib/business-profiles/types";
@@ -7,7 +8,18 @@ import { SectionCompositionManifestSchema } from "./section-composition-contract
 import { canonicalJsonSha256, sha256 } from "./content-hash";
 import { AI_HYBRID_NICHE_CASES } from "./ai-hybrid-niche-cohort";
 import { planSectionComposition } from "./section-plan";
+import {
+  buildSectionCompositionInventory,
+  resolveSectionPlan,
+} from "./section-inventory";
+import {
+  buildSectionSemanticPolicy,
+  scoreSectionSemanticProfile,
+} from "./section-variant-semantics";
+import { buildDeterministicCreativeDirection } from "./deterministic-creative-direction";
 import { SECTION_TYPES } from "@/lib/sections/types";
+import type { SectionRecord } from "@/lib/sections/store";
+import type { SectionType } from "@/lib/sections/types";
 import { coerceBusinessData } from "@/lib/style-match/autofill/types";
 
 const INTENT_HASH = `sha256:${"a".repeat(64)}`;
@@ -21,6 +33,84 @@ const EXPECTED_IDS = {
   "cooking-publication": ["cooking-publication-header", "cooking-publication-hero", "cooking-publication-featured_content", "cooking-publication-content_list", "cooking-publication-newsletter", "cooking-publication-footer"],
   "physical-product-sale": ["physical-product-sale-header", "physical-product-sale-hero", "physical-product-sale-products", "physical-product-sale-features", "physical-product-sale-testimonials", "physical-product-sale-faq", "physical-product-sale-call_to_action", "physical-product-sale-footer"],
 } as const;
+
+const POSITIVE_LABELS = {
+  "kids-coloring": "Illustrated Creator Playground Playful",
+  "horror-experience": "Cinematic Editorial",
+  "comedy-club": "Event Marquee Photo Playful",
+  "video-game-launch": "Cinematic Game Illustrated",
+  "school-website": "School Community Warm Photo Editorial",
+  "cooking-publication": "Editorial Warm Photo Tactile",
+  "physical-product-sale": "Product Commerce Photo Tactile",
+} as const;
+
+const FORBIDDEN_LABELS = {
+  "kids-coloring": "Analytics Dashboard Software Mockup",
+  "horror-experience": "Game UI",
+  "comedy-club": "Corporate",
+  "video-game-launch": "Developer Terminal Documentation",
+  "school-website": "Course UI Dashboard",
+  "cooking-publication": "Ecommerce Grid Wellness Dashboard",
+  "physical-product-sale": "Analytics Dashboard Software Mockup",
+} as const;
+
+function semanticRecord(input: {
+  id: string;
+  type: SectionType;
+  name: string;
+  variantLabel: string;
+}): SectionRecord {
+  const html = `<section data-sec="${input.id}">${input.id}</section>`;
+  const contentHash = createHash("sha256").update(html, "utf8").digest("hex").slice(0, 12);
+  return {
+    ...input,
+    rootTag: "section",
+    mode: "light",
+    storageKey: `sections/${input.id}-${contentHash}.html`,
+    storageUrl: `memory://${input.id}`,
+    contentHash,
+    size: html.length,
+    designTokens: null,
+    fonts: null,
+    needsJs: false,
+    hasPlaceholders: false,
+    thumbnailUrl: null,
+    status: "published",
+    createdAt: new Date(0),
+    updatedAt: new Date(0),
+    publishedAt: new Date(0),
+  };
+}
+
+function semanticCatalog(row: (typeof AI_HYBRID_NICHE_CASES)[number]): SectionRecord[] {
+  const counts = new Map<SectionType, number>();
+  for (const type of row.expectedComponents) counts.set(type, (counts.get(type) ?? 0) + 1);
+  return [...counts].flatMap(([type, count]) => {
+    const forbiddenId = row.id === "kids-coloring" && (type === "hero" || type === "features")
+      ? `${type}-01`
+      : `${type}-forbidden-${row.id}`;
+    return [
+      semanticRecord({
+        id: forbiddenId,
+        type,
+        name: FORBIDDEN_LABELS[row.id],
+        variantLabel: "Forbidden",
+      }),
+      ...Array.from({ length: count }, (_, index) => semanticRecord({
+        id: `${type}-semantic-${index + 1}-${row.id}`,
+        type,
+        name: POSITIVE_LABELS[row.id],
+        variantLabel: "Reviewed semantic fit",
+      })),
+      semanticRecord({
+        id: `${type}-neutral-${row.id}`,
+        type,
+        name: "Aurora",
+        variantLabel: "Neutral",
+      }),
+    ];
+  });
+}
 
 function successDeps(row: (typeof AI_HYBRID_NICHE_CASES)[number]): Required<RunAiCreationDeps> {
   const planning = planSectionComposition({
@@ -104,16 +194,49 @@ describe("AI hybrid niche cohort", () => {
     expect(result.plan.rows).toHaveLength(row.intent.functional.requiredSections.length + 2);
   });
 
+  it.each(AI_HYBRID_NICHE_CASES)("selects semantically compatible fragments for $id", (row) => {
+    const inventory = buildSectionCompositionInventory(semanticCatalog(row));
+    const planning = planSectionComposition({
+      intent: row.intent,
+      intentHash: canonicalJsonSha256(row.intent),
+      inventoryHash: inventory.hash,
+      availableTypes: new Set(inventory.entries.map(({ type }) => type)),
+    });
+    expect(planning.ok).toBe(true);
+    if (!planning.ok) throw new Error(planning.code);
+    const direction = buildDeterministicCreativeDirection(row.intent).direction;
+    const selection = resolveSectionPlan(planning.plan, inventory, { intent: row.intent, direction });
+    const policy = buildSectionSemanticPolicy(row.intent, direction);
+    const selectedEntries = selection.map((selected) =>
+      inventory.entries.find((entry) => entry.id === selected.sectionId)!);
+
+    expect(new Set(selection.map(({ contentHash }) => contentHash)).size).toBeGreaterThanOrEqual(3);
+    expect(selectedEntries.every((entry) =>
+      scoreSectionSemanticProfile(entry.semanticProfile, policy).eligible)).toBe(true);
+    expect(selection.every(({ sectionId }) => sectionId.endsWith("-01"))).toBe(false);
+
+    if (row.id === "kids-coloring") {
+      const ids = selection.map(({ sectionId }) => sectionId);
+      const tags = selectedEntries.flatMap(({ semanticProfile }) => semanticProfile.tags);
+      expect(ids).not.toContain("hero-01");
+      expect(ids).not.toContain("features-01");
+      expect(tags.some((tag) => ["creator", "illustrated", "playful"].includes(tag))).toBe(true);
+    }
+  });
+
   it.each(AI_HYBRID_NICHE_CASES)("delivers only coherent composition metadata for $id", async (row) => {
     const deps = successDeps(row);
     const result = await runAiCreation({
       projectId: `project-${row.id}`,
       brief: row.brief,
       profileData: {} as BusinessProfileData,
-      assetMode: "off",
+      assetMode: "hybrid",
     }, deps);
 
     expect(result).toMatchObject({ ok: true, route: "section_composition", templateId: null });
+    expect(deps.runSectionCompositionCandidate).toHaveBeenCalledWith(
+      expect.objectContaining({ assetMode: "hybrid" }),
+    );
     if (!result.ok) throw new Error(result.reasonCode);
     expect(Object.keys(result.visualEngine).sort()).toEqual([
       "compositionManifest", "contractVersion", "creativeDirection", "policyVersion",

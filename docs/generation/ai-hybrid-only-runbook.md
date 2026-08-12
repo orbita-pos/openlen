@@ -36,6 +36,30 @@ git diff --check
 
 All commands must exit `0`. The focused gate covers copy, composition, delivery, 2C, route atomicity, the deterministic seven-case cohort, the transitive import boundary, the explicit clone distinction, and this operations contract. The deploy script runs the focused gate and typecheck before its `OPENLEN_SKIP_BUILD` branch, so reusing a build cannot bypass either safety check.
 
+## Deterministic section semantics and visual acceptance
+
+Section selection is deterministic and model-free. OpenLen profiles only the
+curated section ID, name, and variant label into a closed semantic vocabulary.
+It never profiles section HTML, copy, prompts, provider responses, or private
+metadata. A variant that conflicts with a forbidden visual signal is rejected
+before mode, radius, density, or seeded tie-breaking. If every available
+variant for a required role is forbidden, generation fails closed with
+`section_role_coverage_failed`; it does not choose the least-bad fragment or
+load a whole template.
+
+Use `OPENLEN_VISUAL_ENGINE_ASSETS=hybrid` for real visual acceptance. Asset
+mode `off` is a rollback/control state and is not evidence that an
+illustration-first or photography-first brief was visually satisfied. Local
+tests mock provider and storage boundaries and therefore make no paid call.
+
+For live visual acceptance, run `kids-coloring` (Mundo Pincel) first with one
+request and no retry. Require zero forbidden semantic matches, at least three
+distinct section content hashes, no `hero-01` or `features-01`, a resolved
+asset manifest/trace pair, clean deterministic mobile diagnostics, and an
+explicit desktop/mobile visual review with no dashboard or software-mockup
+appearance. Run the remaining six cases sequentially only after Mundo Pincel
+passes. Stop the sequence at the first failure.
+
 ## Production activation and rollback
 
 Activate only after every local release check succeeds:
