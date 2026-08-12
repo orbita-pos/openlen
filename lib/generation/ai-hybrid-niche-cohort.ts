@@ -16,10 +16,10 @@ export interface AiHybridNicheCase {
 }
 
 const PALETTES = {
-  coloring: { background: "#FFF7FC", surface: "#FFFFFF", surfaceAlt: "#FDE3F1", foreground: "#33213B", foregroundMuted: "#725E79", accent: "#D13F86", accentInk: "#FFFFFF", border: "#F3B6D4" },
+  coloring: { background: "#FFF7FC", surface: "#FFFFFF", surfaceAlt: "#FDE3F1", foreground: "#33213B", foregroundMuted: "#725E79", accent: "#B4236A", accentInk: "#FFFFFF", border: "#F3B6D4" },
   horror: { background: "#09090B", surface: "#151318", surfaceAlt: "#241A21", foreground: "#F7F1ED", foregroundMuted: "#B8A9AC", accent: "#B91C35", accentInk: "#FFFFFF", border: "#443038" },
-  comedy: { background: "#FFF8E8", surface: "#FFFFFF", surfaceAlt: "#FFE39A", foreground: "#2D2018", foregroundMuted: "#786453", accent: "#E14924", accentInk: "#FFFFFF", border: "#F1BE74" },
-  game: { background: "#080D1A", surface: "#111A2E", surfaceAlt: "#1B2950", foreground: "#F0F5FF", foregroundMuted: "#A8B8D5", accent: "#7C5CFC", accentInk: "#FFFFFF", border: "#33436B" },
+  comedy: { background: "#FFF8E8", surface: "#FFFFFF", surfaceAlt: "#FFE39A", foreground: "#2D2018", foregroundMuted: "#786453", accent: "#C93413", accentInk: "#FFFFFF", border: "#F1BE74" },
+  game: { background: "#080D1A", surface: "#111A2E", surfaceAlt: "#1B2950", foreground: "#F0F5FF", foregroundMuted: "#A8B8D5", accent: "#6342D8", accentInk: "#FFFFFF", border: "#33436B" },
   school: { background: "#F5FAFF", surface: "#FFFFFF", surfaceAlt: "#E1F0FF", foreground: "#17324D", foregroundMuted: "#5E7488", accent: "#1769AA", accentInk: "#FFFFFF", border: "#BED7EA" },
   cooking: { background: "#FFF8ED", surface: "#FFFFFF", surfaceAlt: "#F3E2C8", foreground: "#38261D", foregroundMuted: "#765E50", accent: "#A8452B", accentInk: "#FFFFFF", border: "#E8C8A9" },
   product: { background: "#F6F3EE", surface: "#FFFFFF", surfaceAlt: "#E8E2D9", foreground: "#282521", foregroundMuted: "#6E6860", accent: "#246B58", accentInk: "#FFFFFF", border: "#D0C8BD" },

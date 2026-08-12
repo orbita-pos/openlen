@@ -137,6 +137,15 @@ describe("compileSkeletonIdentity", () => {
     expect(compile({ explicitConstraints: [constraint] })).toMatchObject({ ok: false, code: "invalid_input" });
   });
 
+  it("does not reject an untouched inherited mono token when the direction does not request mono", () => {
+    const html = NORMALIZED_SKELETON_HTML.replace(
+      "--ol-bg: #FAFAFA",
+      "--ol-bg: #FAFAFA; --ol-font-mono: ui-monospace",
+    );
+    expect(compile({ html, inventory: buildSkeletonInventory(html, "color-base") }))
+      .toMatchObject({ ok: true });
+  });
+
   it("compiles iconography through the inventory icon hook without replacing SVG or logo markup", () => {
     const result = compile();
     expect(result.ok).toBe(true);
@@ -148,18 +157,29 @@ describe("compileSkeletonIdentity", () => {
     expect(result.html).toContain('<svg data-lucide="star" aria-hidden="true"><path d="M1 1L2 2"></path></svg>');
   });
 
-  it("rejects an inventory icon hook that would visually target a protected logo", () => {
+  it("scopes content icon styling away from a navigation logo", () => {
+    const html = NORMALIZED_SKELETON_HTML.replace(
+      '<svg id="brand-logo" aria-label="Logo">',
+      '<svg id="brand-logo" aria-label="Logo" data-lucide="brand" aria-hidden="true">',
+    );
+    const result = compile({ html, inventory: buildSkeletonInventory(html, "color-base") });
+    expect(result).toMatchObject({ ok: true });
+    if (!result.ok) return;
+    expect(result.html).toContain("main svg[data-lucide]");
+  });
+
+  it("excludes a data-lucide navigation logo from the generated icon hook", () => {
     const html = NORMALIZED_SKELETON_HTML.replace('<svg id="brand-logo" aria-label="Logo">', '<svg id="brand-logo" aria-label="Logo" data-lucide="brand">');
     const result = compile({ html, inventory: buildSkeletonInventory(html, "color-base") });
-    expect(result).toMatchObject({ ok: false, code: "invalid_inventory" });
+    expect(result).toMatchObject({ ok: true });
   });
 
   it.each([
     '<a class="brand" href="/home"><svg data-lucide="spark"></svg></a>',
     '<a href="/"><svg data-lucide="spark"></svg></a>',
-  ])("rejects semantic navigation brand artwork without requiring logo text: %s", (markup) => {
+  ])("protects semantic navigation brand artwork by excluding it from content hooks: %s", (markup) => {
     const html = NORMALIZED_SKELETON_HTML.replace('<a href="/" class="brand"><svg id="brand-logo" aria-label="Logo"><path d="M0 0L8 8"></path></svg></a>', markup);
-    expect(compile({ html, inventory: buildSkeletonInventory(html, "color-base") })).toMatchObject({ ok: false, code: "invalid_inventory" });
+    expect(compile({ html, inventory: buildSkeletonInventory(html, "color-base") })).toMatchObject({ ok: true });
   });
 
   it("retains a genuine non-brand navigation icon", () => {
@@ -174,16 +194,16 @@ describe("compileSkeletonIdentity", () => {
 
   it("protects a root home link even when another navigation link comes first", () => {
     const html = NORMALIZED_SKELETON_HTML.replace('<a href="/" class="brand"><svg id="brand-logo" aria-label="Logo"><path d="M0 0L8 8"></path></svg></a>', '<a href="/search">Search</a><a href="/"><svg data-lucide="spark"></svg></a>');
-    expect(compile({ html, inventory: buildSkeletonInventory(html, "color-base") })).toMatchObject({ ok: false, code: "invalid_inventory" });
+    expect(compile({ html, inventory: buildSkeletonInventory(html, "color-base") })).toMatchObject({ ok: true });
   });
 
   it.each([
     '<a id="brandLogo" href="/elsewhere"><svg data-lucide="spark"></svg></a>',
     '<a href="/home/"><svg data-lucide="spark"></svg></a>',
     '<a href="/inicio/"><svg data-lucide="spark"></svg></a>',
-  ])("protects additional semantic brand markers and home paths: %s", (markup) => {
+  ])("protects additional navigation brand markers by excluding them from content hooks: %s", (markup) => {
     const html = NORMALIZED_SKELETON_HTML.replace('<a href="/" class="brand"><svg id="brand-logo" aria-label="Logo"><path d="M0 0L8 8"></path></svg></a>', `<a href="/search">Search</a>${markup}`);
-    expect(compile({ html, inventory: buildSkeletonInventory(html, "color-base") })).toMatchObject({ ok: false, code: "invalid_inventory" });
+    expect(compile({ html, inventory: buildSkeletonInventory(html, "color-base") })).toMatchObject({ ok: true });
   });
 
   it("protects a root/home SVG link outside navigation landmarks", () => {

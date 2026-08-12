@@ -160,32 +160,6 @@ function expectProviderBoundariesAtMostOnce(deps: Required<RunAiCreationDeps>) {
 
 const FAILURE_CASES = [
   {
-    name: "intent",
-    stage: "intent",
-    reasonCode: "intent_analysis_failed",
-    override: () => ({ analyzeIntent: vi.fn(async () => ({
-      ok: false as const,
-      error: { kind: "api" as const, message: "private" },
-      modelId: "intent-fixture",
-      promptVersion: "intent-prompt/1.8" as const,
-      durationMs: 4,
-    })) }),
-    later: ["listSections", "overlayProfile", "runSectionCompositionCandidate", "validateAiCompositionDelivery", "runQuickVisualQualityGate"],
-  },
-  {
-    name: "copy",
-    stage: "copy",
-    reasonCode: "copy_generation_failed",
-    override: () => ({ generatePageCopy: vi.fn(async () => ({
-      ok: false as const,
-      error: { kind: "provider" as const, message: "private" },
-      modelId: "copy-fixture",
-      promptVersion: "page-copy-prompt/1.0" as const,
-      durationMs: 5,
-    })) }),
-    later: ["listSections", "overlayProfile", "runSectionCompositionCandidate", "validateAiCompositionDelivery", "runQuickVisualQualityGate"],
-  },
-  {
     name: "sections",
     stage: "sections",
     reasonCode: "section_inventory_unavailable",
@@ -320,6 +294,35 @@ describe("runAiCreation", () => {
       expect(deps[boundary]).not.toHaveBeenCalled();
     }
     expectProviderBoundariesAtMostOnce(deps);
+  });
+
+  it("continues deterministically when intent and copy providers fail", async () => {
+    const deps = makeDeps({
+      analyzeIntent: vi.fn(async () => ({
+        ok: false as const,
+        error: { kind: "api" as const, message: "private" },
+        modelId: "intent-fixture",
+        promptVersion: "intent-prompt/1.8" as const,
+        durationMs: 4,
+      })),
+      generatePageCopy: vi.fn(async () => ({
+        ok: false as const,
+        error: { kind: "provider" as const, message: "private" },
+        modelId: "copy-fixture",
+        promptVersion: "page-copy-prompt/1.0" as const,
+        durationMs: 5,
+      })),
+    });
+
+    const result = await runAiCreation(INPUT, deps);
+
+    expect(result).toMatchObject({ ok: true, route: "section_composition" });
+    expect(deps.runSectionCompositionCandidate).toHaveBeenCalledWith(expect.objectContaining({
+      intent: expect.objectContaining({ schemaVersion: "intent-analysis/1.0" }),
+      copy: expect.objectContaining({ business_name: expect.any(String) }),
+    }));
+    expect(deps.analyzeIntent).toHaveBeenCalledOnce();
+    expect(deps.generatePageCopy).toHaveBeenCalledOnce();
   });
 
   it("fails at sections when no authoritative published inventory exists", async () => {

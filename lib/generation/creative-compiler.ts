@@ -1,7 +1,7 @@
 import { wcagContrast } from "culori";
 import { parse as parseHtml, type HTMLElement } from "node-html-parser";
 import { parse as parseCss, type Declaration, type Rule } from "postcss";
-import { applyThemeTokensToHtml, readThemeTokenFromHtml } from "@/lib/agent/theme-apply";
+import { applyThemeTokensToHtml } from "@/lib/agent/theme-apply";
 import {
   CreativeDirectionSchema,
   SkeletonAdaptationPlanSchema,
@@ -660,12 +660,7 @@ export function compileSkeletonIdentity(input: CreativeCompileInput): CreativeCo
 
   const parsedConstraints = parseExplicitConstraints(input.explicitConstraints);
   if (!parsedConstraints.ok) return parsedConstraints;
-  const originalTokens: Record<string, string> = {};
-  for (const token of inventory.availableTokens) {
-    const value = readThemeTokenFromHtml(input.html, token);
-    if (value !== null) originalTokens[token] = value;
-  }
-  let rawTokens: Record<string, string> = { ...originalTokens, ...directionTokens(direction) };
+  let rawTokens: Record<string, string> = directionTokens(direction);
   rawTokens = mergeTokenTier(rawTokens, plan.tokens);
   rawTokens = mergeTokenTier(rawTokens, input.brand?.accent ? { "--ol-accent": input.brand.accent } : {});
   rawTokens = mergeTokenTier(rawTokens, parsedConstraints.tokens);

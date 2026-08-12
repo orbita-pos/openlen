@@ -196,7 +196,7 @@ describe("adaptTemplateSkeleton", () => {
     expect(result).toMatchObject({ ok: true, assetManifest: ASSET_MANIFEST, assetTrace: ASSET_TRACE });
     expect(onAssetTrace).toHaveBeenCalledTimes(1);
     expect(onAssetTrace).toHaveBeenCalledWith(ASSET_TRACE);
-    expect(order).toEqual(["intent", "manifest:curated:project-1", "apply", "sanitize", "fingerprint", "render"]);
+    expect(order).toEqual(["sanitize", "intent", "manifest:curated:project-1", "apply", "sanitize", "fingerprint", "render"]);
   });
 
   it("forces shadow through curated-only resolution and delivers the exact legacy result", async () => {
@@ -280,7 +280,10 @@ describe("adaptTemplateSkeleton", () => {
     deps.resolveDomainAssets = async () => ({ ok: true, manifest: ASSET_MANIFEST, trace });
     deps.applyAssetManifest = (input) => ({ ok: true, html: input.html, manifest: ASSET_MANIFEST });
     deps.onAssetTrace = onAssetTrace;
-    if (stage === "sanitize") deps.sanitize = () => ({ html: null });
+    if (stage === "sanitize") {
+      let sanitizeCalls = 0;
+      deps.sanitize = (html) => ({ html: ++sanitizeCalls === 1 ? html : null });
+    }
     if (stage === "render") deps.technicalRender = async () => false;
 
     const result = await adaptTemplateSkeleton({
@@ -333,7 +336,23 @@ describe("adaptTemplateSkeleton", () => {
     };
 
     await expect(adaptTemplateSkeleton(INPUT, deps)).resolves.toMatchObject({ ok: true });
-    expect(order).toEqual(["inventory", "creative", "compile", "assets", "sanitize", "fingerprint", "render"]);
+    expect(order).toEqual(["sanitize", "inventory", "creative", "compile", "assets", "sanitize", "fingerprint", "render"]);
+  });
+
+  it("establishes sanitized markup as the structural baseline before creative compilation", async () => {
+    const unsafeInput = {
+      ...INPUT,
+      html: INPUT.html.replace('class="cta"', 'class="cta" onclick="private()"'),
+    };
+    const deps = baseDeps();
+    deps.sanitize = (html) => ({ html: html.replace(/\s+onclick="[^"]*"/g, "") });
+
+    const result = await adaptTemplateSkeleton(unsafeInput, deps);
+
+    expect(result, JSON.stringify(result)).toMatchObject({ ok: true, status: "adapted" });
+    if (!result.ok) return;
+    expect(result.html).not.toContain("onclick");
+    expect(result.structuralFingerprintAfter).toBe(result.structuralFingerprintBefore);
   });
 
   const fallbackCases: Array<{
@@ -348,21 +367,17 @@ describe("adaptTemplateSkeleton", () => {
       providerCalls: 0,
       change: (deps: AdaptTemplateSkeletonDeps) => { deps.buildInventory = () => { throw new SkeletonInventoryError(code, "safe inventory error"); }; },
     })),
-    { name: "provider timeout", reasonCode: "provider_timeout", providerCalls: 1, change: (deps) => { deps.generateCreativeDirection = vi.fn().mockResolvedValue(providerFailure("timeout")); } },
-    { name: "invalid provider response", reasonCode: "invalid_provider_response", providerCalls: 1, change: (deps) => { deps.generateCreativeDirection = vi.fn().mockResolvedValue(providerFailure("schema")); } },
-    ...(["cannot_remove_forbidden_signal", "cannot_add_required_signal", "asset_slot_unavailable", "hook_property_not_allowed"] as const satisfies readonly SkeletonAdaptationFailureCode[]).map((reasonCode) => ({
-      name: `model incompatibility ${reasonCode}`,
-      reasonCode,
-      providerCalls: 1,
-      change: (deps: AdaptTemplateSkeletonDeps) => { deps.generateCreativeDirection = vi.fn().mockResolvedValue({ ...READY, response: { schemaVersion: "skeleton-creative-response/1.0", status: "incompatible", reasonCode } }); },
-    })),
-    { name: "CSS policy violation", reasonCode: "css_policy_violation", providerCalls: 1, change: (deps) => { deps.compileIdentity = () => ({ ok: false, code: "css_policy_violation", message: "unsafe CSS" }); } },
-    { name: "contrast violation", reasonCode: "contrast_violation", providerCalls: 1, change: (deps) => { deps.compileIdentity = () => ({ ok: false, code: "contrast_violation", message: "low contrast" }); } },
     { name: "required asset miss", reasonCode: "required_asset_unavailable", providerCalls: 1, change: (deps) => { deps.resolveAssets = async () => ({ ok: false, code: "required_asset_unavailable", slotIndex: 0 }); } },
     { name: "unreplaceable asset slot", reasonCode: "asset_slot_unavailable", providerCalls: 1, change: (deps) => { deps.resolveAssets = async () => ({ ok: false, code: "asset_slot_unavailable", slotIndex: 0 }); } },
-    { name: "sanitizer rejection", reasonCode: "sanitization_failed", providerCalls: 1, change: (deps) => { deps.sanitize = () => ({ html: null }); } },
+    { name: "sanitizer rejection", reasonCode: "sanitization_failed", providerCalls: 1, change: (deps) => {
+      let sanitizeCalls = 0;
+      deps.sanitize = (html) => ({ html: ++sanitizeCalls === 1 ? html : null });
+    } },
     { name: "technical render failure", reasonCode: "technical_render_failed", providerCalls: 1, change: (deps) => { deps.technicalRender = async () => false; } },
-    { name: "structural mismatch", reasonCode: "structural_invariant_failed", providerCalls: 1, change: (deps) => { deps.sanitize = (html) => ({ html: html.replace("<body>", '<body data-unexpected="true">') }); } },
+    { name: "structural mismatch", reasonCode: "structural_invariant_failed", providerCalls: 1, change: (deps) => {
+      let sanitizeCalls = 0;
+      deps.sanitize = (html) => ({ html: ++sanitizeCalls === 1 ? html : html.replace("<body>", '<body data-unexpected="true">') });
+    } },
     { name: "unexpected exception", reasonCode: "internal_error", providerCalls: 1, change: (deps) => { deps.compileIdentity = () => { throw new Error("provider payload secret"); }; } },
   ];
 
@@ -378,23 +393,66 @@ describe("adaptTemplateSkeleton", () => {
     expect(deps.generateCreativeDirection).toHaveBeenCalledTimes(providerCalls);
   });
 
-  it("preserves paid usage on a typed model incompatibility", async () => {
-    const deps = baseDeps();
-    deps.generateCreativeDirection = vi.fn().mockResolvedValue({
-      ...READY,
-      response: {
-        schemaVersion: "skeleton-creative-response/1.0",
-        status: "incompatible",
-        reasonCode: "cannot_add_required_signal",
-      },
-    });
-    const result = await adaptTemplateSkeleton(INPUT, deps);
-    expect(result).toMatchObject({
-      ok: false,
-      reasonCode: "cannot_add_required_signal",
-      usage: READY.ok ? READY.usage : undefined,
-    });
-  });
+  it.each([
+    "cannot_remove_forbidden_signal",
+    "cannot_add_required_signal",
+    "asset_slot_unavailable",
+    "hook_property_not_allowed",
+  ] as const satisfies readonly SkeletonAdaptationFailureCode[])(
+    "uses a deterministic visual direction when the model reports %s",
+    async (reasonCode) => {
+      const deps = baseDeps();
+      deps.generateCreativeDirection = vi.fn().mockResolvedValue({
+        ...READY,
+        response: {
+          schemaVersion: "skeleton-creative-response/1.0",
+          status: "incompatible",
+          reasonCode,
+        },
+      });
+
+      const result = await adaptTemplateSkeleton(INPUT, deps);
+
+      expect(result, JSON.stringify(result)).toMatchObject({
+        ok: true,
+        status: "adapted",
+        usage: READY.ok ? READY.usage : undefined,
+      });
+      expect(deps.generateCreativeDirection).toHaveBeenCalledTimes(1);
+    },
+  );
+
+  it.each(["timeout", "schema"] as const)(
+    "uses deterministic visual direction when the creative provider returns %s",
+    async (kind) => {
+      const deps = baseDeps();
+      deps.generateCreativeDirection = vi.fn().mockResolvedValue(providerFailure(kind));
+
+      const result = await adaptTemplateSkeleton(INPUT, deps);
+
+      expect(result, JSON.stringify(result)).toMatchObject({ ok: true, status: "adapted" });
+      expect(deps.generateCreativeDirection).toHaveBeenCalledTimes(1);
+    },
+  );
+
+  it.each(["css_policy_violation", "contrast_violation"] as const)(
+    "discards a ready model plan that fails %s and recompiles deterministically",
+    async (code) => {
+      const deps = baseDeps();
+      let compileCalls = 0;
+      deps.compileIdentity = (input) => {
+        compileCalls += 1;
+        return compileCalls === 1
+          ? { ok: false, code, message: "unsafe model plan" }
+          : compileSkeletonIdentity(input);
+      };
+
+      const result = await adaptTemplateSkeleton(INPUT, deps);
+
+      expect(result, JSON.stringify(result)).toMatchObject({ ok: true, status: "adapted" });
+      expect(compileCalls).toBe(2);
+    },
+  );
 
   it("rejects the entire candidate when an asset resolver mutates an href", async () => {
     const deps = baseDeps();
@@ -438,7 +496,7 @@ describe("adaptTemplateSkeleton", () => {
     await expect(adaptTemplateSkeleton(INPUT, deps)).resolves.toMatchObject({ ok: false, reasonCode: "contrast_violation" });
     expect(deps.generateCreativeDirection).toHaveBeenCalledTimes(1);
     expect(deps.resolveAssets).not.toHaveBeenCalled();
-    expect(deps.sanitize).not.toHaveBeenCalled();
+    expect(deps.sanitize).toHaveBeenCalledTimes(1);
     expect(deps.technicalRender).not.toHaveBeenCalled();
   });
 });

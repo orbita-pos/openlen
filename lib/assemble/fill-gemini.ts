@@ -73,6 +73,7 @@ export async function fillWithGemini(input: FillTemplateInput): Promise<FillTemp
           {
             text: buildFillUserMessage(input.data, taggedHtml, {
               clonedTemplate: input.clonedTemplate,
+              roleAware: input.roleAware,
             }),
           },
         ],

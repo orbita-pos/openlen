@@ -93,10 +93,13 @@ function buttonSelector(root: HTMLElement): string | null {
 }
 
 function iconSelector(root: HTMLElement): string | null {
+  const main = root.querySelector("main");
+  const contentRoot = main ?? root;
+  const scope = main ? "main " : "section ";
   const selectors: string[] = [];
-  if (root.querySelector("svg[data-lucide]")) selectors.push("svg[data-lucide]");
-  if (root.querySelector(".icon svg")) selectors.push(".icon svg");
-  if (root.querySelectorAll("svg").some((icon) => icon.getAttribute("aria-hidden") === "true")) selectors.push('svg[aria-hidden="true"]');
+  if (contentRoot.querySelector("svg[data-lucide]")) selectors.push(`${scope}svg[data-lucide]`);
+  if (contentRoot.querySelector(".icon svg")) selectors.push(`${scope}.icon svg`);
+  if (contentRoot.querySelectorAll("svg").some((icon) => icon.getAttribute("aria-hidden") === "true")) selectors.push(`${scope}svg[aria-hidden="true"]`);
   return selectors.length > 0 ? selectors.join(", ") : null;
 }
 

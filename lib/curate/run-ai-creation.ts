@@ -21,6 +21,7 @@ import {
   type QuickSectionCompositionResult,
 } from "./quick-section-composition";
 import { runQuickVisualQualityGate } from "./quick-visual-repair";
+import { buildDeterministicIntent, buildDeterministicPageCopy } from "./deterministic-page-input";
 
 export interface RunAiCreationInput {
   projectId: string;
@@ -131,20 +132,12 @@ export async function runAiCreation(
   const copyPromise = callBoundary(() => copyGenerator(input.brief));
   const [intentCall, copyCall] = await Promise.all([intentPromise, copyPromise]);
 
-  if (!intentCall.ok) {
-    return failure("intent", "intent_analysis_failed");
-  }
-  const intentResult = intentCall.value;
-  if (!intentResult.ok) {
-    return failure("intent", "intent_analysis_failed");
-  }
-  if (!copyCall.ok) {
-    return failure("copy", "copy_generation_failed");
-  }
-  const copyResult = copyCall.value;
-  if (!copyResult.ok) {
-    return failure("copy", "copy_generation_failed");
-  }
+  const intentResult = intentCall.ok && intentCall.value.ok
+    ? intentCall.value
+    : { ok: true as const, intent: buildDeterministicIntent(input.brief) };
+  const copyResult = copyCall.ok && copyCall.value.ok
+    ? copyCall.value
+    : { ok: true as const, copy: buildDeterministicPageCopy(input.brief, intentResult.intent) };
 
   let copy;
   try {
@@ -238,7 +231,7 @@ export async function runAiCreation(
     title,
     html: qualityCall.value.html,
     visualEngine: postRepair.visualEngine,
-    ...(copyResult.usage ? { copyUsage: copyResult.usage } : {}),
+    ...("usage" in copyResult && copyResult.usage ? { copyUsage: copyResult.usage } : {}),
     filled: composition.filled,
     appliedOps: composition.appliedOps,
   };

@@ -43,6 +43,7 @@ import type { CuratedImage } from "@/lib/imagery/manifest";
 import { loadCuratedImages } from "@/lib/imagery/manifest";
 import { getAssetStorage } from "@/lib/projects/assets";
 import type { TemplateVisualMetadata } from "@/lib/templates/visual-metadata";
+import { buildDeterministicCreativeDirection } from "@/lib/generation/deterministic-creative-direction";
 
 type CreativeTemplateMetadata = Pick<
   TemplateVisualMetadata,
@@ -124,12 +125,6 @@ function fallback(reasonCode: PilotReasonCode, context: FallbackContext): Skelet
   return { ok: false, status: "fallback", reasonCode, ...context };
 }
 
-function providerFailureReason(result: Extract<GenerateCreativeDirectionResult, { ok: false }>): PilotReasonCode {
-  if (result.error.kind === "timeout" || result.error.kind === "aborted") return "provider_timeout";
-  if (["invalid_json", "schema", "future_version"].includes(result.error.kind)) return "invalid_provider_response";
-  return "provider_error";
-}
-
 function compileFailureReason(result: Extract<CreativeCompileResult, { ok: false }>): PilotReasonCode {
   if (result.code === "contrast_violation") return "contrast_violation";
   if (["css_policy_violation", "font_not_registered", "icon_policy_violation"].includes(result.code)) {
@@ -193,7 +188,11 @@ export async function adaptTemplateSkeleton(
   };
 
   try {
-    const inventory = (deps.buildInventory ?? buildSkeletonInventory)(input.html, input.templateId);
+    const sanitize = deps.sanitize ?? sanitizeForPublish;
+    const baseline = sanitize(input.html);
+    if (baseline.html === null) return fallback("sanitization_failed", context);
+    const sourceHtml = baseline.html;
+    const inventory = (deps.buildInventory ?? buildSkeletonInventory)(sourceHtml, input.templateId);
     const before = inventory.structuralFingerprint;
     const creative = await (deps.generateCreativeDirection ?? generateCreativeDirection)({
       intent: input.intent,
@@ -208,13 +207,24 @@ export async function adaptTemplateSkeleton(
       durationMs: creative.durationMs,
     };
 
-    if (!creative.ok) return fallback(providerFailureReason(creative), context);
-    if (creative.response.status === "incompatible") return fallback(creative.response.reasonCode, context);
+    const resolvedCreative = !creative.ok || creative.response.status === "incompatible"
+      ? buildDeterministicCreativeDirection(input.intent)
+      : {
+          direction: creative.response.creativeDirection,
+          plan: creative.response.adaptationPlan,
+        };
+    const creativeUsage = creative.usage ?? {
+      inputTokens: 0,
+      outputTokens: 0,
+      thinkingTokens: 0,
+      cachedTokens: 0,
+    };
 
-    const direction = creative.response.creativeDirection;
-    const plan = creative.response.adaptationPlan;
-    const compiled = (deps.compileIdentity ?? compileSkeletonIdentity)({
-      html: input.html,
+    let direction = resolvedCreative.direction;
+    let plan = resolvedCreative.plan;
+    const compile = deps.compileIdentity ?? compileSkeletonIdentity;
+    let compiled = compile({
+      html: sourceHtml,
       inventory,
       direction,
       plan,
@@ -222,6 +232,20 @@ export async function adaptTemplateSkeleton(
       explicitOverrides: input.explicitOverrides,
       explicitConstraints: input.intent.explicitConstraints,
     });
+    if (!compiled.ok && creative.ok && creative.response.status === "ready") {
+      const deterministic = buildDeterministicCreativeDirection(input.intent);
+      direction = deterministic.direction;
+      plan = deterministic.plan;
+      compiled = compile({
+        html: sourceHtml,
+        inventory,
+        direction,
+        plan,
+        brand: input.brand.accent === null ? undefined : { accent: input.brand.accent },
+        explicitOverrides: input.explicitOverrides,
+        explicitConstraints: input.intent.explicitConstraints,
+      });
+    }
     if (!compiled.ok) return fallback(compileFailureReason(compiled), context);
 
     const mode = input.assetContext?.mode ?? "off";
@@ -286,7 +310,7 @@ export async function adaptTemplateSkeleton(
       }
     }
 
-    const sanitized = (deps.sanitize ?? sanitizeForPublish)(assets.html);
+    const sanitized = sanitize(assets.html);
     if (sanitized.html === null) return fallback("sanitization_failed", context);
 
     const allowedAssetSlots = inventory.assetSlots
@@ -312,7 +336,7 @@ export async function adaptTemplateSkeleton(
       modelId: creative.modelId,
       structuralFingerprintBefore: before,
       structuralFingerprintAfter: after,
-      usage: creative.usage,
+      usage: creativeUsage,
       durationMs: creative.durationMs,
     } as const;
     return acceptedAssetMetadata
