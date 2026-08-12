@@ -37,6 +37,7 @@ import {
 import type { SectionRecord } from "@/lib/sections/store";
 import type { ExtractedBusinessData } from "@/lib/style-match/autofill/types";
 import { ensureCompositionMobileSafety } from "./composition-mobile-safety";
+import { buildDeterministicCreativeDirection } from "./deterministic-creative-direction";
 
 export const COMPOSITION_BASE_THEME: AssembleTheme = Object.freeze({
   base: Object.freeze({
@@ -212,7 +213,11 @@ export async function composeSectionCandidate(
     });
     if (!planning.ok) return failure(input, planning.code, inventory);
 
-    selection = (deps.resolvePlan ?? resolveSectionPlan)(planning.plan, inventory, null);
+    const deterministic = buildDeterministicCreativeDirection(input.intent);
+    selection = (deps.resolvePlan ?? resolveSectionPlan)(planning.plan, inventory, {
+      intent: input.intent,
+      direction: deterministic.direction,
+    });
     const fetched = await (deps.fetchFragments ?? fetchVerifiedSectionFragments)(
       selection,
       inventory,

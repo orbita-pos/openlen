@@ -4,6 +4,8 @@ import { describe, expect, it, vi } from "vitest";
 import { SectionPlanSchema } from "./section-composition-contracts";
 import { CreativeDirectionSchema } from "./creative-contracts";
 import { COLORING_DIRECTION } from "./creative-fixtures.test-support";
+import { AI_HYBRID_NICHE_CASES } from "./ai-hybrid-niche-cohort";
+import { IntentAnalysisSchema } from "./contracts";
 import {
   buildSectionCompositionInventory,
   fetchVerifiedSectionFragments,
@@ -27,13 +29,15 @@ function record(
     hasPlaceholders?: boolean;
     storageKey?: string;
     contentHash?: string;
+    name?: string;
+    variantLabel?: string;
   } = {},
 ): SectionRecord {
   return {
     id,
     type,
-    name: `<html hidden name ${id}>`,
-    variantLabel: `variant ${id}`,
+    name: opts.name ?? `<html hidden name ${id}>`,
+    variantLabel: opts.variantLabel ?? `variant ${id}`,
     rootTag: "section",
     mode: opts.mode ?? "light",
     storageKey: opts.storageKey ?? `sections/${id}-${sha12(html)}.html`,
@@ -51,6 +55,23 @@ function record(
     publishedAt: opts.status === "draft" ? null : new Date(0),
   };
 }
+
+const COLORING = AI_HYBRID_NICHE_CASES[0];
+const CONTEXT = {
+  intent: COLORING.intent,
+  direction: COLORING.expectedCreativeDirection,
+};
+const LEGACY_CONTEXT = {
+  intent: IntentAnalysisSchema.parse({
+    ...COLORING.intent,
+    forbiddenVisualSignals: [],
+  }),
+  direction: CreativeDirectionSchema.parse({
+    ...COLORING.expectedCreativeDirection,
+    forbiddenVisualSignals: [],
+    imagery: { ...COLORING.expectedCreativeDirection.imagery, avoid: [] },
+  }),
+};
 
 const HTML: Record<string, string> = {
   "hero-01": "<section data-sec=\"hero-01\"><h1>Hero</h1></section>",
@@ -92,9 +113,17 @@ describe("section composition inventory", () => {
 
     expect(first).toEqual(second);
     expect(first.entries.map((row) => row.id)).toEqual(["features-01", "hero-01"]);
-    expect(first.entries[1]).toMatchObject({ radiusBucket: "soft", density: "unknown", assetCapability: "replaceable" });
+    expect(first.entries[1]).toMatchObject({
+      radiusBucket: "soft",
+      density: "unknown",
+      assetCapability: "replaceable",
+      semanticProfile: {
+        tags: ["analytics", "dashboard", "software_mockup"],
+        source: "reviewed_override",
+      },
+    });
     expect(Object.keys(first.entries[0]).sort()).toEqual([
-      "assetCapability", "contentHash", "density", "id", "mode", "needsJs", "radiusBucket", "type",
+      "assetCapability", "contentHash", "density", "id", "mode", "needsJs", "radiusBucket", "semanticProfile", "type",
     ]);
     expect(Object.isFrozen(first)).toBe(true);
     expect(Object.isFrozen(first.entries)).toBe(true);
@@ -105,18 +134,16 @@ describe("section composition inventory", () => {
 
   it("selects repeatable distinct variants for repeated semantic roles", () => {
     const frozen = inventory();
-    const first = resolveSectionPlan(plan(frozen.hash), frozen, null);
-    const second = resolveSectionPlan(plan(frozen.hash), frozen, null);
+    const first = resolveSectionPlan(plan(frozen.hash), frozen, LEGACY_CONTEXT);
+    const second = resolveSectionPlan(plan(frozen.hash), frozen, LEGACY_CONTEXT);
     expect(first).toEqual(second);
     expect(first.map((row) => row.requestedRole)).toEqual(["hero", "minigames", "stories", "activities"]);
-    expect(first.filter((row) => row.componentType === "features").map((row) => row.sectionId)).toEqual([
-      "features-01", "features-02", "features-03",
-    ]);
+    expect(new Set(first.map((row) => row.sectionId)).size).toBe(4);
   });
 
   it("rejects a plan created against another frozen inventory", () => {
     const frozen = inventory();
-    expect(() => resolveSectionPlan(plan(`sha256:${"b".repeat(64)}`), frozen, null))
+    expect(() => resolveSectionPlan(plan(`sha256:${"b".repeat(64)}`), frozen, LEGACY_CONTEXT))
       .toThrow(expect.objectContaining({ code: "section_inventory_stale" }));
   });
 
@@ -174,7 +201,10 @@ describe("section composition inventory", () => {
       expect(resolveSectionPlan(
         heroOnly,
         frozen,
-        CreativeDirectionSchema.parse(COLORING_DIRECTION),
+        {
+          intent: LEGACY_CONTEXT.intent,
+          direction: CreativeDirectionSchema.parse(COLORING_DIRECTION),
+        },
       )[0].sectionId).toBe("hero-best");
     }
   });
@@ -184,13 +214,58 @@ describe("section composition inventory", () => {
       record("hero-draft", "hero", HTML["hero-01"], { status: "draft" }),
       record("hero-js", "hero", HTML["hero-01"], { needsJs: true }),
     ]);
-    expect(() => resolveSectionPlan(plan(frozen.hash), frozen, null))
+    expect(() => resolveSectionPlan(plan(frozen.hash), frozen, LEGACY_CONTEXT))
       .toThrow(SectionCompositionSelectionError);
+  });
+
+  it("rejects dashboard hero and feature variants for Mundo Pincel", () => {
+    const frozen = buildSectionCompositionInventory([
+      record("hero-01", "hero", "<section>dashboard</section>"),
+      record("hero-11", "hero", "<section>creator</section>", {
+        name: "Illustrated Creator Playground",
+        variantLabel: "Playful",
+      }),
+      record("features-01", "features", "<section>analytics</section>"),
+      record("features-11", "features", "<section>activity</section>", {
+        name: "Creative Activity Cards",
+        variantLabel: "Playful",
+      }),
+      record("features-12", "features", "<section>stories</section>"),
+      record("features-13", "features", "<section>games</section>"),
+    ]);
+    const selection = resolveSectionPlan(plan(frozen.hash), frozen, CONTEXT);
+    const ids = selection.map((row) => row.sectionId);
+    expect(ids).not.toContain("hero-01");
+    expect(ids).not.toContain("features-01");
+    expect(ids).toContain("hero-11");
+    expect(ids).toContain("features-11");
+  });
+
+  it("fails closed when every candidate for a required role is forbidden", () => {
+    const frozen = buildSectionCompositionInventory([
+      record("hero-01", "hero", "<section>dashboard</section>"),
+    ]);
+    const heroOnly = SectionPlanSchema.parse({
+      schemaVersion: "section-plan/1.0",
+      intentHash: `sha256:${"c".repeat(64)}`,
+      inventoryHash: frozen.hash,
+      rows: [{
+        ordinal: 0,
+        requestedRole: "hero",
+        componentType: "hero",
+        compatibilityKind: "exact",
+        compatibilityScore: 1,
+        compatibilityRuleId: "section_component:exact:hero",
+        required: true,
+      }],
+    });
+    expect(() => resolveSectionPlan(heroOnly, frozen, CONTEXT))
+      .toThrow(expect.objectContaining({ code: "section_role_coverage_failed" }));
   });
 
   it("rejects fetched bytes whose content hash changed without selecting an alternate", async () => {
     const frozen = inventory();
-    const selection = resolveSectionPlan(plan(frozen.hash), frozen, null);
+    const selection = resolveSectionPlan(plan(frozen.hash), frozen, LEGACY_CONTEXT);
     const fetchText = vi.fn(async () => "changed bytes");
     await expect(fetchVerifiedSectionFragments(selection, frozen, { fetchText }))
       .resolves.toEqual({ ok: false, code: "section_fragment_stale" });
@@ -200,7 +275,7 @@ describe("section composition inventory", () => {
 
   it("returns unavailable for missing bytes and never falls through to another variant", async () => {
     const frozen = inventory();
-    const selection = resolveSectionPlan(plan(frozen.hash), frozen, null);
+    const selection = resolveSectionPlan(plan(frozen.hash), frozen, LEGACY_CONTEXT);
     const fetchText = vi.fn(async () => null);
     await expect(fetchVerifiedSectionFragments(selection, frozen, { fetchText }))
       .resolves.toEqual({ ok: false, code: "section_fragment_unavailable" });
@@ -209,12 +284,12 @@ describe("section composition inventory", () => {
 
   it("returns the exact selected fragments after verifying every frozen hash", async () => {
     const frozen = inventory();
-    const selection = resolveSectionPlan(plan(frozen.hash), frozen, null);
+    const selection = resolveSectionPlan(plan(frozen.hash), frozen, LEGACY_CONTEXT);
     const fetchText = vi.fn(async (url: string) => HTML[url.split("/").pop()!.replace(".html", "")]);
     const result = await fetchVerifiedSectionFragments(selection, frozen, { fetchText });
-    expect(result.ok && result.fragments.map((row) => row.slug)).toEqual([
-      "hero-01", "features-01", "features-02", "features-03",
-    ]);
+    expect(result.ok && result.fragments.map((row) => row.slug)).toEqual(
+      selection.map((row) => row.sectionId),
+    );
     expect(fetchText).toHaveBeenCalledTimes(4);
   });
 

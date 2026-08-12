@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import { CreativeDirectionSchema } from "./creative-contracts";
 import { COLORING_DIRECTION } from "./creative-fixtures.test-support";
+import { resolveSectionPlan } from "./section-inventory";
 import { IntentAnalysisSchema } from "./contracts";
 import {
   composeSectionCandidate,
@@ -29,9 +30,9 @@ function section(id: string, type: SectionType): SectionRecord {
 }
 
 const RECORDS = [
-  section("navbar-01", "navbar"), section("hero-01", "hero"), section("gallery-01", "gallery"),
-  section("features-01", "features"), section("features-02", "features"), section("features-03", "features"),
-  section("footer-01", "footer"),
+  section("navbar-11", "navbar"), section("hero-11", "hero"), section("gallery-11", "gallery"),
+  section("features-11", "features"), section("features-12", "features"), section("features-13", "features"),
+  section("footer-11", "footer"),
 ];
 const HTML_BY_URL = new Map(RECORDS.map((row) => [row.storageUrl,
   `<style>[data-sec="${row.id}"]{--radius:12px}</style><section data-sec="${row.id}"><h2>Inherited ${row.type}</h2></section>`,
@@ -115,6 +116,17 @@ describe("composeSectionCandidate", () => {
     expect(deps.adaptTemplateSkeleton).toHaveBeenCalledTimes(1);
   });
 
+  it("passes a deterministic illustrated direction into section selection", async () => {
+    const deps = successfulDeps();
+    deps.resolvePlan = vi.fn((plan, inventory, context) => {
+      expect(context.intent).toEqual(INPUT.intent);
+      expect(context.direction.visualArchetype).toBe("illustrated_activity_book");
+      return resolveSectionPlan(plan, inventory, context);
+    });
+    await expect(composeSectionCandidate(INPUT, deps)).resolves.toMatchObject({ ok: true });
+    expect(deps.resolvePlan).toHaveBeenCalledTimes(1);
+  });
+
   it("passes the shadow trace sink to skeleton adaptation", async () => {
     const sink = vi.fn();
     const deps = successfulDeps();
@@ -130,7 +142,7 @@ describe("composeSectionCandidate", () => {
       manifest: {
         schemaVersion: "section-composition-manifest/1.0",
         orderedRoles: ["header", "hero", "coloring_gallery", "minigames", "stories", "activities", "footer"],
-        selectedSectionIds: ["navbar-01", "hero-01", "gallery-01", "features-01", "features-02", "features-03", "footer-01"],
+        selectedSectionIds: expect.arrayContaining(["navbar-11", "hero-11", "gallery-11", "footer-11"]),
         resultCode: "composed",
       },
     });

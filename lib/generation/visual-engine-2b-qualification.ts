@@ -5,6 +5,7 @@ import { SECTION_PLAN_VERSION } from "./section-composition-contracts";
 import { TAXONOMY_COMPATIBILITY_VERSION } from "./taxonomy-compatibility";
 import { canonicalJsonSha256 } from "./visual-engine-2a-eval";
 import { VISUAL_ENGINE_2B_CASES, type VisualEngine2BCase } from "./visual-engine-2b-cohort";
+import { buildDeterministicCreativeDirection } from "./deterministic-creative-direction";
 
 export interface VisualEngine2BQualificationRow {
   caseId: string;
@@ -44,7 +45,11 @@ function qualifyCase(
     return { caseId: row.id, resultCode: planning.code, planSha256: canonicalJsonSha256(planning) };
   }
   try {
-    resolveSectionPlan(planning.plan, inventory, null);
+    const deterministic = buildDeterministicCreativeDirection(row.intent);
+    resolveSectionPlan(planning.plan, inventory, {
+      intent: row.intent,
+      direction: deterministic.direction,
+    });
   } catch (error) {
     const code = error && typeof error === "object" && "code" in error
       ? String(error.code)

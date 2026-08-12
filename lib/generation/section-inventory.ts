@@ -1,8 +1,15 @@
 import { createHash } from "node:crypto";
 
 import type { CreativeDirection } from "./creative-contracts";
+import type { IntentAnalysis } from "./contracts";
 import type { SectionPlan, SectionPlanRow } from "./section-composition-contracts";
 import { canonicalJsonSha256 } from "./content-hash";
+import {
+  buildSectionSemanticPolicy,
+  profileSectionVariant,
+  scoreSectionSemanticProfile,
+  type SectionVariantSemanticProfile,
+} from "./section-variant-semantics";
 import { rankCompositionVariants } from "@/lib/sections/select";
 import type { SectionRecord } from "@/lib/sections/store";
 import type { SectionMode, SectionType } from "@/lib/sections/types";
@@ -22,6 +29,7 @@ export interface SectionCompositionInventoryEntry {
   density: SectionDensity;
   needsJs: boolean;
   assetCapability: SectionAssetCapability;
+  semanticProfile: SectionVariantSemanticProfile;
 }
 
 export interface SectionCompositionInventory {
@@ -114,6 +122,11 @@ export function buildSectionCompositionInventory(
     density: "unknown" as const,
     needsJs: record.needsJs,
     assetCapability: record.hasPlaceholders ? "replaceable" as const : "none" as const,
+    semanticProfile: profileSectionVariant({
+      id: record.id,
+      name: record.name,
+      variantLabel: record.variantLabel,
+    }),
   })));
   const inventory: SectionCompositionInventory = Object.freeze({
     schemaVersion: "section-composition-inventory/1.0",
@@ -138,22 +151,37 @@ function stableSeed(plan: SectionPlan, row: SectionPlanRow): number {
 export function resolveSectionPlan(
   plan: SectionPlan,
   inventory: SectionCompositionInventory,
-  direction: CreativeDirection | null,
+  context: { readonly intent: IntentAnalysis; readonly direction: CreativeDirection },
 ): SectionSelectionRow[] {
   if (plan.inventoryHash !== inventory.hash) {
     throw new SectionCompositionSelectionError("section_inventory_stale");
   }
+  const semanticPolicy = buildSectionSemanticPolicy(context.intent, context.direction);
   const used = new Set<string>();
   return plan.rows.map((row) => {
     const eligible = inventory.entries.filter((entry) =>
       entry.type === row.componentType && !entry.needsJs && !used.has(entry.id));
-    const ranked = direction
-      ? rankCompositionVariants(eligible, direction, { seed: stableSeed(plan, row) })
-      : eligible.sort((left, right) => left.id.localeCompare(right.id));
-    const selected = ranked[0];
+    const evaluated = eligible
+      .map((entry) => ({
+        entry,
+        semantic: scoreSectionSemanticProfile(entry.semanticProfile, semanticPolicy),
+      }))
+      .filter(({ semantic }) => semantic.eligible);
+    const visual = rankCompositionVariants(
+      evaluated.map(({ entry }) => entry),
+      context.direction,
+      { seed: stableSeed(plan, row) },
+    );
+    const visualIndex = new Map(visual.map((entry, index) => [entry.id, index]));
+    const selected = evaluated.sort((left, right) =>
+      right.semantic.score - left.semantic.score ||
+      (visualIndex.get(left.entry.id) ?? Number.MAX_SAFE_INTEGER) -
+        (visualIndex.get(right.entry.id) ?? Number.MAX_SAFE_INTEGER) ||
+      left.entry.id.localeCompare(right.entry.id)
+    )[0]?.entry;
     if (!selected) {
       throw new SectionCompositionSelectionError(
-        inventory.entries.some((entry) => entry.type === row.componentType)
+        eligible.length > 0 || inventory.entries.some((entry) => entry.type === row.componentType)
           ? "section_role_coverage_failed"
           : "section_fragment_unavailable",
       );
