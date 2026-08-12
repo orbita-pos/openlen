@@ -157,6 +157,7 @@ export async function runAiCreation(
 
   notify(input, "composition");
   const compositionCall = await callBoundary(() => compose({
+    allowGeneratedFallback: process.env.OPENLEN_AI_CREATION === "enabled",
     projectId: input.projectId,
     assetMode: input.assetMode,
     ...(input.assetTraceSink ? { assetTraceSink: input.assetTraceSink } : {}),
@@ -234,6 +235,8 @@ export async function runAiCreation(
     html: qualityCall.value.html,
     visualEngine: postRepair.visualEngine,
     ...("usage" in copyResult && copyResult.usage ? { copyUsage: copyResult.usage } : {}),
+    ...(composition.generatedSectionUsage ? { generatedSectionUsage: composition.generatedSectionUsage } : {}),
+    ...(composition.generatedSectionCount ? { generatedSectionCount: composition.generatedSectionCount } : {}),
     filled: composition.filled,
     appliedOps: composition.appliedOps,
   };

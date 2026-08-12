@@ -135,6 +135,7 @@ export function validateAiCompositionDelivery(input: {
     sourceKinds: manifest.data.selectedSourceKinds,
     sourceTemplateIds: manifest.data.selectedSourceTemplateIds,
     sourceBandOrdinals: manifest.data.selectedSourceBandOrdinals,
+    structuralFingerprints: manifest.data.selectedStructuralFingerprints,
   })) {
     return { ok: false, reasonCode: "section_originality_failed" };
   }

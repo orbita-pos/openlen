@@ -26,8 +26,11 @@ import type { AssetResolutionTrace } from "@/lib/generation/asset-contracts";
 import type { SectionRecord } from "@/lib/sections/store";
 import type { ExtractedBusinessData } from "@/lib/style-match/autofill/types";
 import { finalizeComposedDocument } from "./finalize-composed-document";
+import { createGeminiSectionSpecProvider } from "@/lib/generation/gemini-section-spec-provider";
+import { createDefaultMissingSectionGenerator } from "@/lib/generation/generate-missing-section";
 
 export interface SectionCompositionCandidateInput {
+  allowGeneratedFallback?: boolean;
   projectId?: string;
   assetMode?: AssetPipelineMode;
   assetTraceSink?: (trace: AssetResolutionTrace) => void;
@@ -48,6 +51,8 @@ interface DeliveryData {
   durationMs: number;
   leaksBefore?: number;
   leaksAfter?: number;
+  generatedSectionCount?: number;
+  generatedSectionUsage?: { inputTokens: number; outputTokens: number; thinkingTokens: number; cachedTokens: number };
 }
 
 export type QuickSectionCompositionResult =
@@ -71,6 +76,7 @@ export interface RunSectionCompositionCandidateDeps {
     deps?: ComposeSectionCandidateDeps,
   ) => Promise<SectionCompositionResult>;
   finalizeComposedDocument?: typeof finalizeComposedDocument;
+  generateMissing?: NonNullable<ComposeSectionCandidateDeps["generateMissing"]>;
 }
 
 function composeInput(input: SectionCompositionCandidateInput): ComposeSectionCandidateInput {
@@ -94,7 +100,12 @@ export async function runSectionCompositionCandidate(
   const compose = deps.composeSectionCandidate ?? composeSectionCandidate;
   const finalize = deps.finalizeComposedDocument ?? finalizeComposedDocument;
   try {
-    const candidate = await compose(composeInput(input));
+    const generateMissing = deps.generateMissing ?? (input.allowGeneratedFallback === true
+      ? createDefaultMissingSectionGenerator(createGeminiSectionSpecProvider())
+      : undefined);
+    const candidate = generateMissing
+      ? await compose(composeInput(input), { generateMissing })
+      : await compose(composeInput(input));
     if (!candidate.ok) {
       return {
         ok: false,
@@ -135,6 +146,8 @@ export async function runSectionCompositionCandidate(
       templateId: null,
       html: finalized.html,
       ...candidate.fill,
+      ...(candidate.generatedSectionCount ? { generatedSectionCount: candidate.generatedSectionCount } : {}),
+      ...(candidate.generatedSectionUsage ? { generatedSectionUsage: candidate.generatedSectionUsage } : {}),
       visualEngine,
     };
   } catch {

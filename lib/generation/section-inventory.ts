@@ -69,12 +69,13 @@ export interface VerifiedSectionFragment {
 type SelectionFailureCode =
   | "section_inventory_stale"
   | "section_fragment_unavailable"
+  | "section_fragment_invalid"
   | "section_role_coverage_failed"
   | "section_semantic_coverage_failed"
   | "section_originality_failed";
 
 export class SectionCompositionSelectionError extends Error {
-  constructor(readonly code: SelectionFailureCode) {
+  constructor(readonly code: SelectionFailureCode, readonly row?: SectionPlanRow) {
     super(code);
     this.name = "SectionCompositionSelectionError";
   }
@@ -92,7 +93,8 @@ function hasCanonicalSectionId(value: string): boolean {
 }
 
 interface FrozenSource {
-  storageUrl: string;
+  storageUrl?: string;
+  inlineHtml?: string;
   contentHash: string;
 }
 
@@ -179,6 +181,38 @@ export function buildSectionCompositionInventory(
   return inventory;
 }
 
+export function extendSectionCompositionInventoryWithGenerated(
+  inventory: SectionCompositionInventory,
+  candidates: readonly (SectionCompositionInventoryEntry & { html: string })[],
+  excludeIds: readonly string[] = [],
+): SectionCompositionInventory {
+  const sources = FROZEN_SOURCES.get(inventory);
+  if (!sources || candidates.length === 0 || candidates.length > 2) {
+    throw new SectionCompositionSelectionError("section_inventory_stale");
+  }
+  const ids = new Set(inventory.entries.map((entry) => entry.id));
+  if (candidates.some((candidate) => candidate.sourceKind !== "generated" || ids.has(candidate.id)
+    || candidate.sourceTemplateId !== null || candidate.sourceBandOrdinal !== null
+    || contentHash(candidate.html) !== candidate.contentHash || !hasValidFragmentShape(candidate.html, candidate.id))) {
+    throw new SectionCompositionSelectionError("section_fragment_invalid");
+  }
+  const excluded = new Set(excludeIds);
+  const entries = Object.freeze([
+    ...inventory.entries.filter((entry) => !excluded.has(entry.id)),
+    ...candidates.map(({ html: _html, ...candidate }) => Object.freeze(candidate)),
+  ].sort((left, right) => left.id.localeCompare(right.id)));
+  const extended: SectionCompositionInventory = Object.freeze({
+    schemaVersion: "section-composition-inventory/2.0",
+    hash: canonicalJsonSha256(entries),
+    entries,
+  });
+  const nextSources = new Map(sources);
+  for (const id of excluded) nextSources.delete(id);
+  for (const candidate of candidates) nextSources.set(candidate.id, { inlineHtml: candidate.html, contentHash: candidate.contentHash });
+  FROZEN_SOURCES.set(extended, nextSources);
+  return extended;
+}
+
 function stableSeed(plan: SectionPlan, row: SectionPlanRow): number {
   const seed = `${plan.intentHash}:${plan.inventoryHash}:${row.ordinal}:${row.requestedRole}`;
   return createHash("sha256").update(seed).digest().readUInt32BE(0);
@@ -219,6 +253,7 @@ export function resolveSectionPlan(
         eligible.length > 0 || inventory.entries.some((entry) => entry.type === row.componentType)
           ? "section_semantic_coverage_failed"
           : "section_fragment_unavailable",
+        row,
       );
     }
     return { row, ranked };
@@ -236,6 +271,7 @@ export function resolveSectionPlan(
         sourceKinds: chosen.map((entry) => entry.sourceKind),
         sourceTemplateIds: chosen.map((entry) => entry.sourceTemplateId),
         sourceBandOrdinals: chosen.map((entry) => entry.sourceBandOrdinal),
+        structuralFingerprints: chosen.map((entry) => entry.structuralFingerprint),
       }) ? [...chosen] : null;
     }
     for (const candidate of rankedRows[index].ranked) {
@@ -396,7 +432,7 @@ export async function fetchVerifiedSectionFragments(
   deps: { fetchText: (storageUrl: string) => Promise<string | null> },
 ): Promise<
   | { ok: true; fragments: VerifiedSectionFragment[] }
-  | { ok: false; code: "section_fragment_unavailable" | "section_fragment_stale" | "section_fragment_invalid" | "section_inventory_stale" }
+  | { ok: false; code: "section_fragment_unavailable" | "section_fragment_stale" | "section_fragment_invalid" | "section_inventory_stale"; failedOrdinal?: number }
 > {
   if (selection.some((row) => row.inventoryHash !== inventory.hash)) {
     return { ok: false, code: "section_inventory_stale" };
@@ -411,11 +447,11 @@ export async function fetchVerifiedSectionFragments(
     }
     let html: string | null;
     try {
-      html = await deps.fetchText(source.storageUrl);
+      html = source.inlineHtml ?? (source.storageUrl ? await deps.fetchText(source.storageUrl) : null);
     } catch {
-      return { ok: false, code: "section_fragment_unavailable" };
+      return { ok: false, code: "section_fragment_unavailable", failedOrdinal: row.ordinal };
     }
-    if (html === null) return { ok: false, code: "section_fragment_unavailable" };
+    if (html === null) return { ok: false, code: "section_fragment_unavailable", failedOrdinal: row.ordinal };
     if (contentHash(html) !== source.contentHash) {
       return { ok: false, code: "section_fragment_stale" };
     }

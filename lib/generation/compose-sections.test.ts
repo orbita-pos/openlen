@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import { CreativeDirectionSchema } from "./creative-contracts";
 import { COLORING_DIRECTION } from "./creative-fixtures.test-support";
-import { resolveSectionPlan } from "./section-inventory";
+import { resolveSectionPlan, SectionCompositionSelectionError } from "./section-inventory";
 import { IntentAnalysisSchema } from "./contracts";
 import {
   composeSectionCandidate,
@@ -14,6 +14,7 @@ import {
 import type { SectionRecord } from "@/lib/sections/store";
 import type { SectionType } from "@/lib/sections/types";
 import type { FillAssembledResult } from "@/lib/assemble/fill";
+import type { SectionPlanRow } from "./section-composition-contracts";
 
 const DIRECTION = CreativeDirectionSchema.parse(COLORING_DIRECTION);
 const sha12 = (html: string) => createHash("sha256").update(html).digest("hex").slice(0, 12);
@@ -90,6 +91,20 @@ function successfulDeps(): ComposeSectionCandidateDeps {
   };
 }
 
+function generatedGallery() {
+  const html = '<section data-sec="generated-gallery"><h2>Galería creativa</h2></section>';
+  return {
+    id: "generated-gallery", html, type: "gallery" as const, mode: "cream" as const,
+    contentHash: sha12(html), radiusBucket: "unknown" as const, density: "medium" as const,
+    needsJs: false, assetCapability: "none" as const,
+    semanticProfile: { tags: ["playful", "illustrated"] as const, source: "derived_metadata" as const },
+    sourceKind: "generated" as const, sourceTemplateId: null, sourceBandOrdinal: null,
+    structuralFingerprint: `sha256:${"9".repeat(64)}`,
+    derivedSemantics: { schemaVersion: "derived-section-semantics/1.0" as const, role: "gallery" as const, layoutArchetypes: ["gallery" as const], domains: ["children_creativity" as const], audiences: ["children" as const], moods: ["playful" as const], negativeSignals: [] },
+    specHash: `sha256:${"8".repeat(64)}`,
+  };
+}
+
 describe("composeSectionCandidate", () => {
   it("adds one mobile-safety style before creative adaptation without changing roles", async () => {
     const deps = successfulDeps();
@@ -135,6 +150,73 @@ describe("composeSectionCandidate", () => {
     });
     await expect(composeSectionCandidate(INPUT, deps)).resolves.toMatchObject({ ok: true });
     expect(deps.resolvePlan).toHaveBeenCalledTimes(1);
+  });
+
+  it("generates only a missing role, then re-enters selection with real donor diversity", async () => {
+    const deps = successfulDeps();
+    const generateMissing = vi.fn(async () => ({
+      ok: true as const,
+      candidate: generatedGallery(),
+      modelId: "fixture", promptVersion: "generated-section-spec-prompt/1.0" as const, durationMs: 1,
+    }));
+    const result = await composeSectionCandidate({ ...INPUT, records: RECORDS.filter((record) => record.type !== "gallery") }, { ...deps, generateMissing });
+    expect(result).toMatchObject({ ok: true, manifest: { selectedSourceKinds: expect.arrayContaining(["generated"]) } });
+    expect(generateMissing).toHaveBeenCalledTimes(1);
+    expect(generateMissing).toHaveBeenCalledWith(expect.objectContaining({ row: expect.objectContaining({ componentType: "gallery" }) }));
+  });
+
+  it("never calls generation when compatible donors already exist", async () => {
+    const generateMissing = vi.fn();
+    await expect(composeSectionCandidate(INPUT, { ...successfulDeps(), generateMissing })).resolves.toMatchObject({ ok: true });
+    expect(generateMissing).not.toHaveBeenCalled();
+  });
+
+  it("replaces only a selected fragment whose stored bytes are unavailable", async () => {
+    const deps = successfulDeps();
+    deps.fetchText = async (url) => url.endsWith("gallery-11.html") ? null : HTML_BY_URL.get(url) ?? null;
+    const generateMissing = vi.fn(async () => ({
+      ok: true as const, candidate: generatedGallery(), modelId: "fixture",
+      promptVersion: "generated-section-spec-prompt/1.0" as const, durationMs: 1,
+    }));
+    const result = await composeSectionCandidate(INPUT, { ...deps, generateMissing });
+    expect(result).toMatchObject({ ok: true, generatedSectionCount: 1 });
+    expect(generateMissing).toHaveBeenCalledTimes(1);
+  });
+
+  it("never generates for stale inventory or an invalid fetched fragment", async () => {
+    const generateMissing = vi.fn();
+    await expect(composeSectionCandidate(INPUT, {
+      ...successfulDeps(), generateMissing,
+      buildInventory: () => { throw new SectionCompositionSelectionError("section_inventory_stale"); },
+    })).resolves.toMatchObject({ ok: false, reasonCode: "section_inventory_stale" });
+    expect(generateMissing).not.toHaveBeenCalled();
+    await expect(composeSectionCandidate(INPUT, {
+      ...successfulDeps(), generateMissing,
+      fetchFragments: async () => ({ ok: false as const, code: "section_fragment_invalid" as const }),
+    })).resolves.toMatchObject({ ok: false, reasonCode: "section_fragment_invalid" });
+    expect(generateMissing).not.toHaveBeenCalled();
+  });
+
+  it("caps missing-section generation at two roles with no retries", async () => {
+    const rows = [
+      { ordinal: 0, requestedRole: "hero", componentType: "hero", compatibilityKind: "exact", compatibilityScore: 1, compatibilityRuleId: "section_component:exact:hero", required: true },
+      { ordinal: 1, requestedRole: "stories", componentType: "about", compatibilityKind: "structural", compatibilityScore: 0.85, compatibilityRuleId: "section_component:structural:stories>about", required: true },
+      { ordinal: 2, requestedRole: "activities", componentType: "features", compatibilityKind: "structural", compatibilityScore: 0.85, compatibilityRuleId: "section_component:structural:activities>features", required: true },
+    ] as const;
+    let attempts = 0;
+    const generateMissing = vi.fn(async ({ row }: { row: SectionPlanRow }) => {
+      const html = `<section data-sec="generated-${row.componentType}">${row.requestedRole}</section>`;
+      return { ok: true as const, candidate: {
+        ...generatedGallery(), id: `generated-${row.componentType}`, html, type: row.componentType,
+        contentHash: sha12(html), structuralFingerprint: `sha256:${String(attempts).repeat(64)}`,
+      }, modelId: "fixture", promptVersion: "generated-section-spec-prompt/1.0" as const, durationMs: 1 };
+    });
+    const result = await composeSectionCandidate(INPUT, {
+      ...successfulDeps(), generateMissing,
+      resolvePlan: () => { throw new SectionCompositionSelectionError("section_semantic_coverage_failed", rows[Math.min(attempts++, 2)]); },
+    });
+    expect(result).toMatchObject({ ok: false, reasonCode: "section_semantic_coverage_failed" });
+    expect(generateMissing).toHaveBeenCalledTimes(2);
   });
 
   it("passes the shadow trace sink to skeleton adaptation", async () => {

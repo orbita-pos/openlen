@@ -38,6 +38,8 @@ export type AiCreationResult =
       html: string;
       visualEngine: Extract<VisualEngineProjectMetadata, { route: "section_composition" }>;
       copyUsage?: ModelTokenUsage;
+      generatedSectionUsage?: ModelTokenUsage;
+      generatedSectionCount?: number;
       filled: boolean;
       appliedOps: number;
     }

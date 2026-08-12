@@ -171,19 +171,29 @@ export function hasOriginalSectionProvenance(input: {
   sourceKinds: readonly ("manual" | "template_derived" | "generated")[];
   sourceTemplateIds: readonly (string | null)[];
   sourceBandOrdinals: readonly (number | null)[];
+  structuralFingerprints?: readonly string[];
 }): boolean {
   const length = input.contentHashes.length;
   if (length < 3 || [input.sourceKinds, input.sourceTemplateIds, input.sourceBandOrdinals].some((rows) => rows.length !== length)) return false;
+  if (input.structuralFingerprints && input.structuralFingerprints.length !== length) return false;
   if (new Set(input.contentHashes).size < 3) return false;
   const donorCounts = new Map<string, number>();
+  const generatedSources = new Set<string>();
   for (let index = 0; index < length; index += 1) {
+    if (input.sourceKinds[index] === "generated") {
+      const fingerprint = input.structuralFingerprints?.[index];
+      if (!fingerprint) return false;
+      generatedSources.add(`generated:${fingerprint}`);
+      continue;
+    }
     if (input.sourceKinds[index] !== "template_derived") continue;
     const donor = input.sourceTemplateIds[index];
     const ordinal = input.sourceBandOrdinals[index];
     if (donor === null || ordinal === null) return false;
     donorCounts.set(donor, (donorCounts.get(donor) ?? 0) + 1);
   }
-  if (donorCounts.size < 3 || [...donorCounts.values()].some((count) => count > 2)) return false;
+  const minimumRealDonors = generatedSources.size > 0 ? 2 : 3;
+  if (donorCounts.size < minimumRealDonors || donorCounts.size + generatedSources.size < 3 || [...donorCounts.values()].some((count) => count > 2)) return false;
   for (let index = 0; index + 2 < length; index += 1) {
     const donor = input.sourceTemplateIds[index];
     const ordinal = input.sourceBandOrdinals[index];

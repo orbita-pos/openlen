@@ -84,6 +84,17 @@ describe("runSectionCompositionCandidate", () => {
     });
   });
 
+  it("passes an injected missing-section generator through the Quick boundary", async () => {
+    const compose = vi.fn(async () => COMPOSED);
+    const generateMissing = vi.fn();
+    await runSectionCompositionCandidate({ ...INPUT, allowGeneratedFallback: true }, {
+      composeSectionCandidate: compose,
+      generateMissing,
+      finalizeComposedDocument: ({ html }) => ({ ok: true, html }),
+    });
+    expect(compose).toHaveBeenCalledWith(expect.anything(), { generateMissing });
+  });
+
   it("passes project ID and asset mode into composition and persists accepted asset metadata", async () => {
     const compose = vi.fn(async () => COMPOSED);
     const result = await runSectionCompositionCandidate(INPUT, {

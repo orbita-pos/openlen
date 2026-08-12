@@ -7,6 +7,7 @@ export type UsageCreditCalculator = (
 export function calculateAiCreationCredits(
   input: {
     copyUsage?: { inputTokens: number; outputTokens: number };
+    generatedSectionUsage?: { inputTokens: number; outputTokens: number };
     filled: boolean;
   },
   usageCredits: UsageCreditCalculator,
@@ -19,5 +20,8 @@ export function calculateAiCreationCredits(
         "gemini-flash",
       )
     : 1;
-  return copyCredits + (input.filled ? autofillCreditCost : 0);
+  const generatedCredits = input.generatedSectionUsage
+    ? usageCredits(input.generatedSectionUsage.inputTokens, input.generatedSectionUsage.outputTokens, "gemini-flash")
+    : 0;
+  return copyCredits + generatedCredits + (input.filled ? autofillCreditCost : 0);
 }

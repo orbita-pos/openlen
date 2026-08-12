@@ -228,6 +228,7 @@ describe("runAiCreation", () => {
     expect(deps.overlayProfile).toHaveBeenCalledWith(COPY, PROFILE);
     expect(deps.listSections).toHaveBeenCalledWith({ status: "published" });
     expect(deps.runSectionCompositionCandidate).toHaveBeenCalledWith({
+      allowGeneratedFallback: process.env.OPENLEN_AI_CREATION === "enabled",
       projectId: "project-1",
       assetMode: "hybrid",
       assetTraceSink: INPUT.assetTraceSink,
@@ -284,6 +285,23 @@ describe("runAiCreation", () => {
     });
     expect(JSON.stringify(result)).not.toMatch(/weighted|template_skeleton|template_full/i);
     expectProviderBoundariesAtMostOnce(deps);
+  });
+
+  it("allows generated missing sections only under the enabled AI creation flag", async () => {
+    const previous = process.env.OPENLEN_AI_CREATION;
+    try {
+      process.env.OPENLEN_AI_CREATION = "disabled";
+      const disabled = makeDeps();
+      await runAiCreation(INPUT, disabled);
+      expect(disabled.runSectionCompositionCandidate).toHaveBeenCalledWith(expect.objectContaining({ allowGeneratedFallback: false }));
+      process.env.OPENLEN_AI_CREATION = "enabled";
+      const enabled = makeDeps();
+      await runAiCreation(INPUT, enabled);
+      expect(enabled.runSectionCompositionCandidate).toHaveBeenCalledWith(expect.objectContaining({ allowGeneratedFallback: true }));
+    } finally {
+      if (previous === undefined) delete process.env.OPENLEN_AI_CREATION;
+      else process.env.OPENLEN_AI_CREATION = previous;
+    }
   });
 
   it.each(FAILURE_CASES)("fails closed at $name without invoking a later stage", async ({ stage, reasonCode, override, later }) => {

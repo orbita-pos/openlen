@@ -6,6 +6,7 @@ import {
   SectionCompositionManifestSchema,
   SectionCompositionResultCodeSchema,
   SectionPlanSchema,
+  hasOriginalSectionProvenance,
 } from "./section-composition-contracts";
 
 const SHA_A = `sha256:${"a".repeat(64)}`;
@@ -102,5 +103,18 @@ describe("section composition contracts", () => {
     expect(SectionCompositionManifestSchema.safeParse({ ...MANIFEST, selectedSourceKinds: ["manual", "template_derived"] }).success).toBe(false);
     expect(SectionCompositionManifestSchema.safeParse({ ...MANIFEST, outputHash: null }).success).toBe(false);
     expect(SectionCompositionManifestSchema.safeParse({ ...MANIFEST, resultCode: "provider_error", outputHash: null }).success).toBe(true);
+  });
+
+  it("counts generated fingerprints as distinct sources but still requires two real donors", () => {
+    const base = {
+      contentHashes: ["a".repeat(12), "b".repeat(12), "c".repeat(12)],
+      sourceKinds: ["template_derived", "template_derived", "generated"] as const,
+      sourceTemplateIds: ["arcana", "obra", null],
+      sourceBandOrdinals: [0, 1, null],
+      structuralFingerprints: [SHA_A, SHA_B, SHA_C],
+    };
+    expect(hasOriginalSectionProvenance(base)).toBe(true);
+    expect(hasOriginalSectionProvenance({ ...base, sourceTemplateIds: ["arcana", "arcana", null] })).toBe(false);
+    expect(hasOriginalSectionProvenance({ ...base, structuralFingerprints: [SHA_A, SHA_B, ""] })).toBe(false);
   });
 });

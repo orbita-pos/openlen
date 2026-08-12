@@ -180,6 +180,7 @@ export async function POST(req: Request): Promise<Response> {
 
         const credits = calculateAiCreationCredits({
           ...(result.copyUsage ? { copyUsage: result.copyUsage } : {}),
+          ...(result.generatedSectionUsage ? { generatedSectionUsage: result.generatedSectionUsage } : {}),
           filled: result.filled,
         }, creditsForUsage, AUTOFILL_CREDIT_COST);
         try {

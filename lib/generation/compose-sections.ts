@@ -16,12 +16,14 @@ import {
 } from "./section-composition-contracts";
 import {
   buildSectionCompositionInventory,
+  extendSectionCompositionInventoryWithGenerated,
   fetchVerifiedSectionFragments,
   resolveSectionPlan,
   SectionCompositionSelectionError,
   type SectionCompositionInventory,
   type SectionSelectionRow,
 } from "./section-inventory";
+import type { GenerateMissingSectionResult } from "./generate-missing-section";
 import { planSectionComposition } from "./section-plan";
 import { canonicalJsonSha256, sha256 } from "./content-hash";
 import type { PilotReasonCode } from "./visual-engine-pilot-store";
@@ -36,6 +38,7 @@ import {
   type SectionFragment,
 } from "@/lib/sections/assemble";
 import type { SectionRecord } from "@/lib/sections/store";
+import { SECTION_TYPES } from "@/lib/sections/types";
 import type { ExtractedBusinessData } from "@/lib/style-match/autofill/types";
 import { ensureCompositionMobileSafety } from "./composition-mobile-safety";
 import { buildDeterministicCreativeDirection } from "./deterministic-creative-direction";
@@ -79,6 +82,12 @@ export interface ComposeSectionCandidateDeps {
   adaptTemplateSkeleton?: typeof adaptTemplateSkeleton;
   /** Last gate before the first paid composition call (fill). */
   beforeCreative?: () => Promise<boolean>;
+  generateMissing?: (input: {
+    row: import("./section-composition-contracts").SectionPlanRow;
+    intent: IntentAnalysis;
+    direction: CreativeDirection;
+    copy: ExtractedBusinessData;
+  }) => Promise<GenerateMissingSectionResult>;
 }
 
 export type SectionCompositionResult =
@@ -90,6 +99,8 @@ export type SectionCompositionResult =
       manifest: SectionCompositionManifest;
       fill: Pick<FillAssembledResult, "filled" | "appliedOps" | "usage" | "durationMs" | "leaksBefore" | "leaksAfter">;
       adaptation: Omit<Extract<SkeletonAdaptationResult, { ok: true }>, "html" | "creativeDirection">;
+      generatedSectionCount?: number;
+      generatedSectionUsage?: { inputTokens: number; outputTokens: number; thinkingTokens: number; cachedTokens: number };
     }
   | {
       ok: false;
@@ -193,6 +204,7 @@ function selectionRemainsOriginal(selection: readonly SectionSelectionRow[]): bo
     sourceKinds: selection.map((row) => row.sourceKind),
     sourceTemplateIds: selection.map((row) => row.sourceTemplateId),
     sourceBandOrdinals: selection.map((row) => row.sourceBandOrdinal),
+    structuralFingerprints: selection.map((row) => row.structuralFingerprint),
   });
 }
 
@@ -216,31 +228,68 @@ export async function composeSectionCandidate(
   let selection: SectionSelectionRow[] = [];
   try {
     inventory = (deps.buildInventory ?? buildSectionCompositionInventory)(input.records);
-    const availableTypes = new Set(inventory.entries
+    const availableTypes = deps.generateMissing ? new Set(SECTION_TYPES) : new Set(inventory.entries
       .filter((entry) => !entry.needsJs)
       .map((entry) => entry.type));
-    const planning = (deps.planSections ?? planSectionComposition)({
+    let planning = (deps.planSections ?? planSectionComposition)({
       intent: input.intent,
       intentHash: input.intentHash,
       inventoryHash: inventory.hash,
       availableTypes,
     });
     if (!planning.ok) return failure(input, planning.code, inventory);
+    let plan = planning.plan;
 
     const deterministic = buildDeterministicCreativeDirection(input.intent);
-    selection = (deps.resolvePlan ?? resolveSectionPlan)(planning.plan, inventory, {
-      intent: input.intent,
-      direction: deterministic.direction,
-    });
-    if (!selectionRemainsOriginal(selection)) {
-      return failure(input, "section_originality_failed", inventory, selection);
+    const generated = [] as Extract<GenerateMissingSectionResult, { ok: true }>["candidate"][];
+    const generatedUsage: NonNullable<Extract<GenerateMissingSectionResult, { ok: true }>["usage"]>[] = [];
+    const addGenerated = async (row: import("./section-composition-contracts").SectionPlanRow, excludeIds: readonly string[] = []) => {
+      if (!deps.generateMissing || generated.length >= 2 || generated.some((candidate) => candidate.type === row.componentType)) return false as const;
+      const result = await deps.generateMissing({ row, intent: input.intent, direction: deterministic.direction, copy: input.copy });
+      if (!result.ok) return result;
+      generated.push(result.candidate);
+      if (result.usage) generatedUsage.push(result.usage);
+      inventory = extendSectionCompositionInventoryWithGenerated(inventory!, [result.candidate], excludeIds);
+      plan = { ...plan, inventoryHash: inventory.hash };
+      return true as const;
+    };
+    let fetched: Awaited<ReturnType<typeof fetchVerifiedSectionFragments>>;
+    for (;;) {
+      try {
+        selection = (deps.resolvePlan ?? resolveSectionPlan)(plan, inventory, {
+          intent: input.intent,
+          direction: deterministic.direction,
+        });
+      } catch (error) {
+        if (!(error instanceof SectionCompositionSelectionError)
+          || !deps.generateMissing
+          || !error.row
+          || !["section_semantic_coverage_failed", "section_fragment_unavailable"].includes(error.code)
+        ) throw error;
+        const generatedResult = await addGenerated(error.row);
+        if (generatedResult === false) throw error;
+        if (generatedResult !== true) return failure(input, generatedResult.code, inventory, selection, generatedResult.durationMs === undefined ? undefined : {
+          promptVersion: "generated-section-spec-prompt/1.0",
+          modelId: generatedResult.modelId ?? null,
+          ...(generatedResult.usage ? { usage: generatedResult.usage } : {}),
+          durationMs: generatedResult.durationMs,
+        });
+        continue;
+      }
+      if (!selectionRemainsOriginal(selection)) return failure(input, "section_originality_failed", inventory, selection);
+      fetched = await (deps.fetchFragments ?? fetchVerifiedSectionFragments)(selection, inventory, { fetchText: deps.fetchText ?? defaultFetchText });
+      if (fetched.ok) break;
+      const fetchedFailure = fetched as Extract<typeof fetched, { ok: false }>;
+      if (fetchedFailure.code !== "section_fragment_unavailable" || fetchedFailure.failedOrdinal === undefined) return failure(input, fetchedFailure.code, inventory, selection);
+      const failed = selection.find((row) => row.ordinal === fetchedFailure.failedOrdinal);
+      if (!failed) return failure(input, fetchedFailure.code, inventory, selection);
+      const generatedResult = await addGenerated(failed, [failed.sectionId]);
+      if (generatedResult === false) return failure(input, fetchedFailure.code, inventory, selection);
+      if (generatedResult !== true) return failure(input, generatedResult.code, inventory, selection, generatedResult.durationMs === undefined ? undefined : {
+        promptVersion: "generated-section-spec-prompt/1.0", modelId: generatedResult.modelId ?? null,
+        ...(generatedResult.usage ? { usage: generatedResult.usage } : {}), durationMs: generatedResult.durationMs,
+      });
     }
-    const fetched = await (deps.fetchFragments ?? fetchVerifiedSectionFragments)(
-      selection,
-      inventory,
-      { fetchText: deps.fetchText ?? defaultFetchText },
-    );
-    if (!fetched.ok) return failure(input, fetched.code, inventory, selection);
 
     const stitched = (deps.assembleDocument ?? assembleDocument)(
       fetched.fragments as SectionFragment[],
@@ -319,6 +368,13 @@ export async function composeSectionCandidate(
         ...(fill.leaksAfter === undefined ? {} : { leaksAfter: fill.leaksAfter }),
       },
       adaptation,
+      generatedSectionCount: generated.length,
+      ...(generatedUsage.length > 0 ? { generatedSectionUsage: generatedUsage.reduce((sum, row) => ({
+        inputTokens: sum.inputTokens + row.inputTokens,
+        outputTokens: sum.outputTokens + row.outputTokens,
+        thinkingTokens: sum.thinkingTokens + row.thinkingTokens,
+        cachedTokens: sum.cachedTokens + row.cachedTokens,
+      }), { inputTokens: 0, outputTokens: 0, thinkingTokens: 0, cachedTokens: 0 }) } : {}),
     };
   } catch (error) {
     if (error instanceof SectionCompositionSelectionError) {

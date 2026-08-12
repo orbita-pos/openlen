@@ -341,7 +341,7 @@ describe("section composition inventory", () => {
     const selection = resolveSectionPlan(plan(frozen.hash), frozen, LEGACY_CONTEXT);
     const fetchText = vi.fn(async () => null);
     await expect(fetchVerifiedSectionFragments(selection, frozen, { fetchText }))
-      .resolves.toEqual({ ok: false, code: "section_fragment_unavailable" });
+      .resolves.toEqual({ ok: false, code: "section_fragment_unavailable", failedOrdinal: 0 });
     expect(fetchText).toHaveBeenCalledTimes(1);
   });
 
