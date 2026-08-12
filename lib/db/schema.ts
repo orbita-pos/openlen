@@ -18,6 +18,7 @@ import {
 import type { AdapterAccountType } from "next-auth/adapters";
 import type { ProjectData } from "@/lib/projects/types";
 import type { BusinessProfileData } from "@/lib/business-profiles/types";
+import type { DerivedSectionProvenance, DerivedSectionSemantics } from "@/lib/generation/derived-section-contracts";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Drizzle schema for auth.
@@ -611,13 +612,20 @@ export const sections = pgTable(
 
     // Pre-rendered gallery thumbnail. Null until a thumbnail pass has run.
     thumbnailUrl: text("thumbnailUrl"),
+    provenance: jsonb("provenance").$type<DerivedSectionProvenance>(),
+    derivedSemantics: jsonb("derivedSemantics").$type<DerivedSectionSemantics>(),
 
     status: text("status").notNull().default("published"),
     createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
     updatedAt: timestamp("updatedAt", { mode: "date" }).notNull().defaultNow(),
     publishedAt: timestamp("publishedAt", { mode: "date" }),
   },
-  (table) => [index("sections_status_type_idx").on(table.status, table.type)],
+  (table) => [
+    index("sections_status_type_idx").on(table.status, table.type),
+    index("sections_derived_source_idx")
+      .on(sqlOp`(${table.provenance}->>'sourceTemplateId')`)
+      .where(sqlOp`${table.provenance} IS NOT NULL`),
+  ],
 );
 
 // Per-page analytics events — append-only log of pageviews + outbound clicks

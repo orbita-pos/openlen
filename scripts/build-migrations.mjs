@@ -45,6 +45,7 @@ const targets = [
   "publish-hash-migrate",
   "versions-baseline-migrate",
   "template-visual-metadata-migrate",
+  "sections-derived-migrate",
   "visual-engine-pilot-migrate",
 ];
 

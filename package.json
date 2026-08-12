@@ -43,6 +43,8 @@
     "transform:gate": "tsx --tsconfig tsconfig.eval.json --env-file=.env.local --require ./scripts/test-node-server-only-shim.cjs scripts/qa/transform-gate.mts",
     "evals:agent": "tsx --tsconfig tsconfig.eval.json --env-file=.env.local --require ./scripts/test-node-server-only-shim.cjs scripts/agent-eval.ts",
     "sections:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/sections-migrate.ts",
+    "sections:derived-migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/sections-derived-migrate.ts",
+    "sections:compile-templates": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json --require ./scripts/test-node-server-only-shim.cjs scripts/sections-compile-templates.ts",
     "integrations:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/integrations-migrate.ts",
     "billing:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/billing-migrate.ts",
     "members:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/members-migrate.ts",
