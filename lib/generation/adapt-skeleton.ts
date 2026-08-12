@@ -266,7 +266,7 @@ export async function adaptTemplateSkeleton(
             intent: input.intent,
             direction,
             inventory,
-            plan,
+            plan: { assets: plan.assets },
           });
           if (intents.length > 0) {
             const shadow = await (deps.resolveDomainAssets ?? resolveDomainAssetManifest)({
@@ -286,7 +286,7 @@ export async function adaptTemplateSkeleton(
         intent: input.intent,
         direction,
         inventory,
-        plan,
+        plan: { assets: plan.assets },
       });
       if (intents.length === 0) {
         assets = { ok: true, html: compiled.html, applied: 0, assigned: [] };

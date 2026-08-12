@@ -199,6 +199,31 @@ describe("adaptTemplateSkeleton", () => {
     expect(order).toEqual(["sanitize", "intent", "manifest:curated:project-1", "apply", "sanitize", "fingerprint", "render"]);
   });
 
+  it("passes only the asset-plan subset to the strict intent boundary", async () => {
+    const resolveDomainAssets = vi.fn(async () => ({
+      ok: false as const,
+      code: "required_asset_unavailable" as const,
+      slotIndex: 0,
+      trace: ASSET_FAILURE_TRACE,
+    }));
+    const deps = baseDeps();
+    deps.resolveDomainAssets = resolveDomainAssets;
+
+    const result = await adaptTemplateSkeleton({
+      ...INPUT,
+      assetContext: { mode: "curated", projectId: "project-1" },
+    }, deps);
+
+    expect(result).toMatchObject({ ok: false, reasonCode: "required_asset_unavailable" });
+    expect(resolveDomainAssets).toHaveBeenCalledTimes(1);
+    expect(resolveDomainAssets).toHaveBeenCalledWith(
+      expect.objectContaining({
+        intents: [expect.objectContaining({ slotIndex: 0, mediaType: "illustration", required: true })],
+      }),
+      expect.anything(),
+    );
+  });
+
   it("forces shadow through curated-only resolution and delivers the exact legacy result", async () => {
     const legacyResult = await adaptTemplateSkeleton(INPUT, baseDeps());
     const provider = { capabilities: vi.fn(), createPack: vi.fn() };
