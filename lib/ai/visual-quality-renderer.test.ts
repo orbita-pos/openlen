@@ -1,10 +1,126 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { renderVisualQualityViewports } from "./visual-quality-renderer";
+import { createVisualQualityRendererPool, renderVisualQualityViewports } from "./visual-quality-renderer";
 
 const HTML = "<!doctype html><html><body>hello</body></html>";
 
 describe("renderVisualQualityViewports", () => {
+  it("injects a deterministic reset and fails closed when consecutive mobile geometry samples disagree", async () => {
+    const pageHtml: string[] = [];
+    const noOverflow = { rootScrollWidth: 390, bodyScrollWidth: 390, clientWidth: 390 };
+    const shiftedGeometry = { rootScrollWidth: 391, bodyScrollWidth: 390, clientWidth: 390 };
+    const page = {
+      setViewport: vi.fn(async () => undefined),
+      setContent: vi.fn(async (html: string) => { pageHtml.push(html); }),
+      evaluate: vi.fn()
+        .mockResolvedValueOnce(undefined)
+        .mockResolvedValueOnce(undefined)
+        .mockResolvedValueOnce(noOverflow)
+        .mockResolvedValueOnce(shiftedGeometry)
+        .mockResolvedValueOnce(undefined)
+        .mockResolvedValueOnce(undefined)
+        .mockResolvedValueOnce(noOverflow)
+        .mockResolvedValueOnce(shiftedGeometry),
+      screenshot: vi.fn(async () => Buffer.from("jpeg")),
+    };
+    const internals = {
+      launchBrowser: async () => ({ newPage: async () => page, close: async () => undefined }),
+      installGuard: async () => undefined,
+      settle: async () => undefined,
+    };
+
+    const first = await renderVisualQualityViewports(HTML, internals);
+    const second = await renderVisualQualityViewports(HTML, internals);
+
+    expect(first).not.toBeNull();
+    expect(second).not.toBeNull();
+    expect(first?.mobileOverflow).toBe(true);
+    expect(first?.mobileOverflow).toBe(second?.mobileOverflow);
+    expect(pageHtml).toHaveLength(2);
+    expect(pageHtml[0]).toContain("animation:none!important");
+    expect(pageHtml[0]).toContain("transition:none!important");
+  });
+
+  it("ignores diagnostic-only sample changes when deciding mobile overflow", async () => {
+    const firstSample = {
+      rootScrollWidth: 390,
+      bodyScrollWidth: 390,
+      clientWidth: 390,
+      h1FontPx: 9,
+      heroBodyFontPx: 4,
+      componentCount: 4,
+      roundedComponentCount: 0,
+    };
+    const secondSample = {
+      rootScrollWidth: 390,
+      bodyScrollWidth: 390,
+      clientWidth: 390,
+      h1FontPx: 48,
+      heroBodyFontPx: 17,
+      componentCount: 4,
+      roundedComponentCount: 4,
+    };
+    const page = {
+      setViewport: vi.fn(async () => undefined),
+      setContent: vi.fn(async () => undefined),
+      evaluate: vi.fn()
+        .mockResolvedValueOnce(undefined)
+        .mockResolvedValueOnce(undefined)
+        .mockResolvedValueOnce(firstSample)
+        .mockResolvedValueOnce(secondSample),
+      screenshot: vi.fn(async () => Buffer.from("jpeg")),
+    };
+
+    const result = await renderVisualQualityViewports(HTML, {
+      launchBrowser: async () => ({ newPage: async () => page, close: async () => undefined }),
+      installGuard: async () => undefined,
+      settle: async () => undefined,
+    });
+
+    expect(result).toMatchObject({
+      mobileOverflow: false,
+      weakTypographyHierarchy: true,
+      squareComponentTreatment: true,
+    });
+  });
+
+  it("reuses two browser workers and never renders more than two pages concurrently", async () => {
+    let active = 0;
+    let maximum = 0;
+    const release: Array<() => void> = [];
+    const close = vi.fn(async () => undefined);
+    const launchBrowser = vi.fn(async () => ({
+      newPage: async () => ({
+        setViewport: async () => undefined,
+        setContent: async () => {
+          active += 1;
+          maximum = Math.max(maximum, active);
+          await new Promise<void>((resolve) => release.push(resolve));
+          active -= 1;
+        },
+        evaluate: async () => ({}),
+        screenshot: async () => Buffer.from("jpeg"),
+      }),
+      close,
+    }));
+    const pool = await createVisualQualityRendererPool(2, {
+      launchBrowser,
+      installGuard: async () => undefined,
+      settle: async () => undefined,
+    });
+
+    const renders = Array.from({ length: 6 }, (_, index) => pool.render(`${HTML}${index}`));
+    for (let wave = 0; wave < 3; wave += 1) {
+      await vi.waitFor(() => expect(release).toHaveLength(2));
+      release.splice(0).forEach((resolve) => resolve());
+    }
+    await expect(Promise.all(renders)).resolves.toHaveLength(6);
+    await pool.close();
+
+    expect(maximum).toBe(2);
+    expect(launchBrowser).toHaveBeenCalledTimes(2);
+    expect(close).toHaveBeenCalledTimes(2);
+  });
   it("captures desktop then mobile with the exact calibrated viewports", async () => {
     const calls: Array<{ width: number; height: number }> = [];
     const result = await renderVisualQualityViewports(HTML, {
@@ -43,7 +159,7 @@ describe("renderVisualQualityViewports", () => {
     const page = {
       setViewport: vi.fn(async ({ width }: { width: number }) => { order.push(`viewport:${width}`); }),
       setContent: vi.fn(async () => { order.push("content"); }),
-      evaluate: vi.fn(async () => { evaluations += 1; order.push(evaluations === 3 ? "overflow" : "fonts"); return false; }),
+      evaluate: vi.fn(async () => { evaluations += 1; order.push(evaluations > 2 ? "overflow" : "settle"); return false; }),
       screenshot: vi.fn(async () => Buffer.from("jpeg")),
     };
     const close = vi.fn(async () => { order.push("close"); });
@@ -59,7 +175,7 @@ describe("renderVisualQualityViewports", () => {
 
     expect(result).not.toBeNull();
     expect(order).toEqual([
-      "guard", "viewport:1280", "content", "fonts", "viewport:390", "fonts", "overflow", "close",
+      "guard", "viewport:1280", "content", "settle", "viewport:390", "settle", "overflow", "overflow", "close",
     ]);
     expect(close).toHaveBeenCalledTimes(1);
   });
@@ -71,6 +187,7 @@ describe("renderVisualQualityViewports", () => {
       evaluate: vi.fn()
         .mockResolvedValueOnce(undefined)
         .mockResolvedValueOnce(undefined)
+        .mockResolvedValueOnce({ rootScrollWidth: 392, bodyScrollWidth: 390, clientWidth: 390 })
         .mockResolvedValueOnce({ rootScrollWidth: 392, bodyScrollWidth: 390, clientWidth: 390 }),
       screenshot: vi.fn(async () => Buffer.from("jpeg")),
     };
@@ -82,7 +199,7 @@ describe("renderVisualQualityViewports", () => {
     });
 
     expect(result).toMatchObject({ mobileOverflow: true });
-    expect(page.evaluate).toHaveBeenCalledTimes(3);
+    expect(page.evaluate).toHaveBeenCalledTimes(4);
   });
 
   it("tolerates one pixel of mobile layout rounding", async () => {
@@ -92,6 +209,7 @@ describe("renderVisualQualityViewports", () => {
       evaluate: vi.fn()
         .mockResolvedValueOnce(undefined)
         .mockResolvedValueOnce(undefined)
+        .mockResolvedValueOnce({ rootScrollWidth: 391, bodyScrollWidth: 390, clientWidth: 390 })
         .mockResolvedValueOnce({ rootScrollWidth: 391, bodyScrollWidth: 390, clientWidth: 390 }),
       screenshot: vi.fn(async () => Buffer.from("jpeg")),
     };
@@ -116,6 +234,11 @@ describe("renderVisualQualityViewports", () => {
           rootScrollWidth: 390, bodyScrollWidth: 390, clientWidth: 390,
           h1FontPx: 9, heroBodyFontPx: 4,
           componentCount: 4, roundedComponentCount: 4,
+        })
+        .mockResolvedValueOnce({
+          rootScrollWidth: 390, bodyScrollWidth: 390, clientWidth: 390,
+          h1FontPx: 9, heroBodyFontPx: 4,
+          componentCount: 4, roundedComponentCount: 4,
         }),
       screenshot: vi.fn(async () => Buffer.from("jpeg")),
     };
@@ -136,6 +259,11 @@ describe("renderVisualQualityViewports", () => {
       evaluate: vi.fn()
         .mockResolvedValueOnce(undefined)
         .mockResolvedValueOnce(undefined)
+        .mockResolvedValueOnce({
+          rootScrollWidth: 390, bodyScrollWidth: 390, clientWidth: 390,
+          h1FontPx: 48, heroBodyFontPx: 17,
+          componentCount: 4, roundedComponentCount: 0,
+        })
         .mockResolvedValueOnce({
           rootScrollWidth: 390, bodyScrollWidth: 390, clientWidth: 390,
           h1FontPx: 48, heroBodyFontPx: 17,

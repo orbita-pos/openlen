@@ -14,6 +14,8 @@ import {
   type TemplateCorpusManifest,
   type TemplateCorpusRow,
 } from "./template-section-corpus";
+import { buildTemplateCorpus } from "./template-section-corpus";
+import type { TemplateRecord } from "@/lib/templates/store";
 import type { z } from "zod";
 
 export interface TemplateSectionCompilationDeps {
@@ -34,6 +36,37 @@ export interface TemplateSectionCompilationResult {
   rejectedCount: number;
   duplicateCount: number;
   report: DerivedSectionCompilationReport;
+}
+
+async function mapWithConcurrency<T, R>(
+  items: readonly T[],
+  limit: number,
+  work: (item: T) => Promise<R>,
+): Promise<R[]> {
+  const results = new Array<R>(items.length);
+  let cursor = 0;
+  const workers = Array.from({ length: Math.min(limit, items.length) }, async () => {
+    while (cursor < items.length) {
+      const index = cursor;
+      cursor += 1;
+      results[index] = await work(items[index]);
+    }
+  });
+  await Promise.all(workers);
+  return results;
+}
+
+export async function buildTemplateCorpusFromOrigin(
+  records: readonly TemplateRecord[],
+  readObject: (storageKey: string) => Promise<string | null>,
+): Promise<TemplateCorpusManifest> {
+  const storageKeysByUrl = new Map(records.map((record) => [record.storageUrl, record.storageKey]));
+  return buildTemplateCorpus(records, {
+    fetchText: async (storageUrl) => {
+      const storageKey = storageKeysByUrl.get(storageUrl);
+      return storageKey ? readObject(storageKey) : null;
+    },
+  });
 }
 
 export function parseTemplateSectionCompilationArgs(argv: readonly string[]): "dry-run" | "publish" {
@@ -65,15 +98,18 @@ export async function runTemplateSectionCompilation(
 ): Promise<TemplateSectionCompilationResult> {
   const corpus = await deps.loadCorpus();
   const work: { row: TemplateCorpusRow; band: ExtractedTemplateBand }[] = [];
+  const rejected: { templateId: string; ordinal: number; code: z.infer<typeof DerivedSectionRejectionCodeSchema> }[] = [];
   for (const row of corpus.rows) {
     const extracted = deps.extract(row);
-    if (!extracted.ok) throw new Error(extracted.code);
+    if (!extracted.ok) {
+      rejected.push({ templateId: row.templateId, ordinal: 0, code: "invalid_fragment" });
+      continue;
+    }
     for (const band of extracted.bands) work.push({ row, band });
   }
 
-  const compiled = await Promise.all(work.map(({ row, band }) => deps.compile(band, row)));
+  const compiled = await mapWithConcurrency(work, 2, ({ row, band }) => deps.compile(band, row));
   const acceptedBeforeDedupe: CompiledDerivedSection[] = [];
-  const rejected: { templateId: string; ordinal: number; code: z.infer<typeof DerivedSectionRejectionCodeSchema> }[] = [];
   compiled.forEach((result, index) => {
     if (result.ok) acceptedBeforeDedupe.push(result.section);
     else rejected.push({

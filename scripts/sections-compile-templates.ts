@@ -2,15 +2,17 @@ import { mkdir } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { pathToFileURL } from "node:url";
 
-import { renderVisualQualityViewports } from "@/lib/ai/visual-quality-renderer";
+import { createVisualQualityRendererPool } from "@/lib/ai/visual-quality-renderer";
 import { writeJsonAtomic } from "@/lib/fs/write-json-atomic";
 import { compileDerivedSection, dedupeDerivedSections } from "@/lib/generation/derived-section-compiler";
 import {
+  buildTemplateCorpusFromOrigin,
   parseTemplateSectionCompilationArgs,
   runTemplateSectionCompilation,
 } from "@/lib/generation/sections-compile-templates-cli";
-import { buildTemplateCorpus, TEMPLATE_SECTION_CORPUS_EXPECTED_COUNT } from "@/lib/generation/template-section-corpus";
+import { TEMPLATE_SECTION_CORPUS_EXPECTED_COUNT } from "@/lib/generation/template-section-corpus";
 import { extractTemplateBands } from "@/lib/generation/template-section-extractor";
+import { readTemplateObjectText } from "@/lib/generation/template-object-reader";
 import { publishDerivedSectionCatalog } from "@/lib/sections/store";
 import { listTemplates } from "@/lib/templates/store";
 
@@ -41,15 +43,12 @@ function safeAssetReferences(html: string): boolean {
 
 async function main(): Promise<void> {
   const mode = parseTemplateSectionCompilationArgs(process.argv.slice(2));
+  const rendererPool = await createVisualQualityRendererPool(2);
+  try {
   const result = await runTemplateSectionCompilation({ mode }, {
-    loadCorpus: async () => buildTemplateCorpus(
+    loadCorpus: async () => buildTemplateCorpusFromOrigin(
       await listTemplates({ status: "published" }),
-      {
-        fetchText: async (storageUrl) => {
-          const response = await fetch(storageUrl, { cache: "no-store", signal: AbortSignal.timeout(15_000) });
-          return response.ok ? response.text() : null;
-        },
-      },
+      readTemplateObjectText,
     ),
     extract: extractTemplateBands,
     compile: async (band, row) => compileDerivedSection(band, {
@@ -59,7 +58,7 @@ async function main(): Promise<void> {
     }, {
       validateAssets: async (html) => safeAssetReferences(html),
       validateRender: async ({ html }) => {
-        const rendered = await renderVisualQualityViewports(`<!doctype html><html><head></head><body>${html}</body></html>`);
+        const rendered = await rendererPool.render(`<!doctype html><html><head></head><body>${html}</body></html>`);
         if (!rendered) return { ok: false, code: "render_failed" };
         return {
           ok: true,
@@ -89,6 +88,9 @@ async function main(): Promise<void> {
     duplicateCount: result.duplicateCount,
     reportPath: "scratch/visual-engine-derived-sections/compilation-report.json",
   }));
+  } finally {
+    await rendererPool.close();
+  }
 }
 
 if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) {
