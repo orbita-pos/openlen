@@ -32,6 +32,38 @@ describe("Fable runtime composition", () => {
     expect(result).toEqual({ ok: true, candidate, repaired: false });
     expect(client.request).toHaveBeenCalledOnce();
     expect(runtime.pageBudget).toBeDefined();
+    expect(sink).not.toHaveBeenCalled();
+    await runtime.recordDelivered();
     expect(sink).toHaveBeenCalledWith(expect.objectContaining({ outcome: "delivered", paidCalls: [expect.objectContaining({ modelId: "accounts/fireworks/models/qwen3p7-plus" })] }));
+  });
+
+  it("records redacted model and image accounting from adaptive stages on the same page telemetry", async () => {
+    const sink = vi.fn();
+    const runtime = createFableRuntimeComposition({
+      client: { request: vi.fn() } as never,
+      budgetConfig: { rateCardVersion: "test", mxnPerUsd: 20, targetMicromxn: 5_000_000, capMicromxn: 10_000_000 },
+      telemetrySink: sink,
+    });
+    runtime.recordModel("scout", {
+      modelId: "qwen-scout",
+      usage: { inputTokens: 3, cachedTokens: 0, outputTokens: 2, thinkingTokens: 1 },
+      durationMs: 4,
+      attempts: 1,
+    });
+    runtime.recordImage({
+      modelId: "gemini-image",
+      generatedCount: 2,
+      durationMs: 8,
+    });
+    await runtime.recordFailure("image", "required_asset_unavailable");
+
+    expect(sink).toHaveBeenCalledWith(expect.objectContaining({
+      outcome: "failed",
+      stage: "image",
+      paidCalls: [
+        expect.objectContaining({ kind: "model", stage: "scout", modelId: "qwen-scout" }),
+        expect.objectContaining({ kind: "image", stage: "image", modelId: "gemini-image", usage: { imageCount: 2 } }),
+      ],
+    }));
   });
 });

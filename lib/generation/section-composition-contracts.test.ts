@@ -142,4 +142,14 @@ describe("section composition contracts", () => {
     expect(hasOriginalSectionProvenance({ ...base, sourceTemplateIds: ["arcana", "arcana", null] })).toBe(false);
     expect(hasOriginalSectionProvenance({ ...base, structuralFingerprints: [SHA_A, SHA_B, ""] })).toBe(false);
   });
+
+  it("accepts an adaptive all-generate page when three bounded programs have distinct fingerprints", () => {
+    expect(hasOriginalSectionProvenance({
+      contentHashes: ["a".repeat(12), "b".repeat(12), "c".repeat(12)],
+      sourceKinds: ["generated", "generated", "generated"],
+      sourceTemplateIds: [null, null, null],
+      sourceBandOrdinals: [null, null, null],
+      structuralFingerprints: [SHA_A, SHA_B, SHA_C],
+    })).toBe(true);
+  });
 });

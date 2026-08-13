@@ -118,6 +118,7 @@ describe("Mundo Pincel hybrid-only regression", () => {
       validateAiCompositionDelivery: vi.fn(({ visualEngine: metadata }) => ({ ok: true as const, visualEngine: metadata as typeof visualEngine })),
       runFableFinalVisualGate: vi.fn(async (input) => ({ ok: true as const, candidate: input.candidate, repaired: false })),
       createFableRuntimeComposition: vi.fn() as never,
+      fableAdaptivePipelineDeps: undefined as never,
     }, loadWholeTemplate);
 
     const result = await runAiCreation({ projectId: "mundo-pincel", brief: coloring.brief, profileData: coerceBusinessData({}), assetMode: "hybrid" }, deps);

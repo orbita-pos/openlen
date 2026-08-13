@@ -2,7 +2,6 @@ import { overlayProfile } from "@/lib/business-profiles/overlay";
 import type { BusinessProfileData } from "@/lib/business-profiles/types";
 import type { AssetPipelineMode } from "@/lib/generation/asset-pipeline-mode";
 import type { AssetResolutionTrace } from "@/lib/generation/asset-contracts";
-import { analyzeIntent } from "@/lib/generation/analyze-intent";
 import { canonicalJsonSha256 } from "@/lib/generation/content-hash";
 import { listSections } from "@/lib/sections/store";
 import {
@@ -15,15 +14,15 @@ import {
   type AiCreationResult,
   type AiCreationStage,
 } from "./ai-creation-contracts";
-import { generatePageCopy } from "./generate-page-copy";
 import {
   runSectionCompositionCandidate,
   type QuickSectionCompositionResult,
 } from "./quick-section-composition";
-import { buildDeterministicIntent, buildDeterministicPageCopy } from "./deterministic-page-input";
 import type { FableFinalVisualGateResult, FableVisualRepairHandoff } from "./fable-final-visual-gate";
 import type { VisualEngineProjectMetadata } from "@/lib/projects/types";
-import { createFableRuntimeComposition, type FableRuntimeVisualBrief } from "./fable-runtime-composition";
+import { createFableRuntimeComposition, type FableRuntimeComposition, type FableRuntimeVisualBrief } from "./fable-runtime-composition";
+import type { FableCopyResult, FableIntentResult } from "./fable-input-adapters";
+import type { FableAdaptivePipelineDeps } from "./fable-adaptive-pipeline";
 
 export interface RunAiCreationInput {
   projectId: string;
@@ -35,8 +34,8 @@ export interface RunAiCreationInput {
 }
 
 export interface RunAiCreationDeps {
-  analyzeIntent?: typeof analyzeIntent;
-  generatePageCopy?: typeof generatePageCopy;
+  analyzeIntent?: (brief: string, requestId: string) => Promise<FableIntentResult>;
+  generatePageCopy?: (brief: string, requestId: string) => Promise<FableCopyResult>;
   listSections?: typeof listSections;
   overlayProfile?: typeof overlayProfile;
   runSectionCompositionCandidate?: typeof runSectionCompositionCandidate;
@@ -52,6 +51,8 @@ export interface RunAiCreationDeps {
     readonly brief: FableRuntimeVisualBrief;
   }) => Promise<FableFinalVisualGateResult>;
   createFableRuntimeComposition?: typeof createFableRuntimeComposition;
+  /** Test/runtime adapter for external rendering and storage boundaries only. */
+  fableAdaptivePipelineDeps?: Omit<FableAdaptivePipelineDeps, "runtime" | "finalize">;
 }
 
 type BoundaryResult<T> =
@@ -133,38 +134,40 @@ export async function runAiCreation(
   input: RunAiCreationInput,
   deps: RunAiCreationDeps = {},
 ): Promise<AiCreationResult> {
-  const analyze = deps.analyzeIntent ?? analyzeIntent;
-  const copyGenerator = deps.generatePageCopy ?? generatePageCopy;
+  let runtime: FableRuntimeComposition;
+  try {
+    runtime = (deps.createFableRuntimeComposition ?? createFableRuntimeComposition)();
+  } catch {
+    return failure("intent", "intent_analysis_failed");
+  }
+  const analyze = deps.analyzeIntent ?? runtime.inputAdapters.analyzeIntent;
+  const copyGenerator = deps.generatePageCopy ?? runtime.inputAdapters.generatePageCopy;
   const loadSections = deps.listSections ?? listSections;
   const overlay = deps.overlayProfile ?? overlayProfile;
   const compose = deps.runSectionCompositionCandidate ?? runSectionCompositionCandidate;
   const validate = deps.validateAiCompositionDelivery ?? validateAiCompositionDelivery;
-  let finalGate = deps.runFableFinalVisualGate;
-  if (!finalGate) {
-    try {
-      finalGate = (deps.createFableRuntimeComposition ?? createFableRuntimeComposition)().runFinalGate;
-    } catch {
-      return failure("visual_quality", "visual_quality_failed");
-    }
-  }
+  const finalGate = deps.runFableFinalVisualGate ?? runtime.runFinalGate;
 
   notify(input, "intent");
-  const intentPromise = callBoundary(() => analyze(input.brief));
+  const intentCall = await callBoundary(() => analyze(input.brief, input.projectId));
+  if (!intentCall.ok || !intentCall.value.ok) {
+    await runtime.recordFailure("intent", "intent_analysis_failed");
+    return failure("intent", "intent_analysis_failed");
+  }
   notify(input, "copy");
-  const copyPromise = callBoundary(() => copyGenerator(input.brief));
-  const [intentCall, copyCall] = await Promise.all([intentPromise, copyPromise]);
-
-  const intentResult = intentCall.ok && intentCall.value.ok
-    ? intentCall.value
-    : { ok: true as const, intent: buildDeterministicIntent(input.brief) };
-  const copyResult = copyCall.ok && copyCall.value.ok
-    ? copyCall.value
-    : { ok: true as const, copy: buildDeterministicPageCopy(input.brief, intentResult.intent) };
+  const copyCall = await callBoundary(() => copyGenerator(input.brief, input.projectId));
+  if (!copyCall.ok || !copyCall.value.ok) {
+    await runtime.recordFailure("copy", "copy_generation_failed");
+    return failure("copy", "copy_generation_failed");
+  }
+  const intentResult = intentCall.value;
+  const copyResult = copyCall.value;
 
   let copy;
   try {
     copy = overlay(copyResult.copy, input.profileData);
   } catch {
+    await runtime.recordFailure("copy", "copy_generation_failed");
     return failure("copy", "copy_generation_failed");
   }
   const title = copy.business_name?.trim() || "Untitled page";
@@ -172,11 +175,12 @@ export async function runAiCreation(
   notify(input, "sections");
   const sectionCall = await callBoundary(() => loadSections({ status: "published" }));
   if (!sectionCall.ok || sectionCall.value.length === 0) {
+    await runtime.recordFailure("initial_program", "section_inventory_unavailable");
     return failure("sections", "section_inventory_unavailable");
   }
 
   notify(input, "composition");
-  const compositionCall = await callBoundary(() => compose({
+  const compositionInput = {
     allowGeneratedFallback: process.env.OPENLEN_AI_CREATION === "enabled",
     projectId: input.projectId,
     assetMode: input.assetMode,
@@ -188,14 +192,21 @@ export async function runAiCreation(
     intentHash: canonicalJsonSha256(intentResult.intent),
     records: sectionCall.value,
     policyVersion: AI_HYBRID_POLICY_VERSION,
+    fableRuntime: runtime,
     ...(input.onStage ? { onStage: input.onStage } : {}),
-  }));
+  };
+  const compositionCall = await callBoundary(() => deps.fableAdaptivePipelineDeps
+    ? compose(compositionInput, { fableAdaptivePipelineDeps: deps.fableAdaptivePipelineDeps })
+    : compose(compositionInput));
   if (!compositionCall.ok) {
+    await runtime.recordFailure("initial_program", "composition_failed");
     return failure("composition", "composition_failed");
   }
   const composition = compositionCall.value;
   if (!composition.ok) {
-    return failure("composition", compositionReason(composition.reasonCode));
+    const reasonCode = compositionReason(composition.reasonCode);
+    await runtime.recordFailure("initial_program", reasonCode);
+    return failure("composition", reasonCode);
   }
 
   notify(input, "delivery_gate");
@@ -208,18 +219,23 @@ export async function runAiCreation(
       leaksAfter,
     });
   } catch {
+    await runtime.recordFailure("visual_quality", leaksAfter === 0 ? "semantic_gate_failed" : "inherited_copy_leak");
     return failure("delivery_gate", leaksAfter === 0 ? "semantic_gate_failed" : "inherited_copy_leak");
   }
   if (!preRepair.ok) {
-    return failure("delivery_gate", deliveryReason(preRepair.reasonCode, leaksAfter));
+    const reasonCode = deliveryReason(preRepair.reasonCode, leaksAfter);
+    await runtime.recordFailure("visual_quality", reasonCode);
+    return failure("delivery_gate", reasonCode);
   }
   if (leaksAfter !== 0) {
+    await runtime.recordFailure("visual_quality", "inherited_copy_leak");
     return failure("delivery_gate", "inherited_copy_leak");
   }
 
   // The final visual gate is deliberately mandatory. A legacy composition
   // without the adaptive handoff cannot be delivered through Create with AI.
   if (!composition.fableVisualRepairHandoff || !finalGate) {
+    await runtime.recordFailure("visual_quality", "visual_quality_failed");
     return failure("visual_quality", "visual_quality_failed");
   }
   const fableHandoff = composition.fableVisualRepairHandoff;
@@ -235,6 +251,7 @@ export async function runAiCreation(
     },
   }));
   if (!visualCall.ok || !visualCall.value.ok) {
+    await runtime.recordFailure("visual_quality", "visual_quality_failed");
     return failure("visual_quality", "visual_quality_failed");
   }
 
@@ -246,10 +263,13 @@ export async function runAiCreation(
       leaksAfter,
     });
   } catch {
+    await runtime.recordFailure("visual_quality", leaksAfter === 0 ? "semantic_gate_failed" : "inherited_copy_leak");
     return failure("delivery_gate", leaksAfter === 0 ? "semantic_gate_failed" : "inherited_copy_leak");
   }
   if (!postRepair.ok) {
-    return failure("delivery_gate", deliveryReason(postRepair.reasonCode, leaksAfter));
+    const reasonCode = deliveryReason(postRepair.reasonCode, leaksAfter);
+    await runtime.recordFailure("visual_quality", reasonCode);
+    return failure("delivery_gate", reasonCode);
   }
 
   return {
@@ -259,10 +279,12 @@ export async function runAiCreation(
     title,
     html: visualCall.value.candidate.html,
     visualEngine: postRepair.visualEngine,
-    ...("usage" in copyResult && copyResult.usage ? { copyUsage: copyResult.usage } : {}),
+    ...(copyResult.usage ? { copyUsage: copyResult.usage } : {}),
     ...(composition.generatedSectionUsage ? { generatedSectionUsage: composition.generatedSectionUsage } : {}),
     ...(composition.generatedSectionCount ? { generatedSectionCount: composition.generatedSectionCount } : {}),
     filled: composition.filled,
     appliedOps: composition.appliedOps,
+    finalizeFableTelemetry: () => runtime.recordDelivered(),
+    failFableTelemetry: (_stage, reasonCode) => runtime.recordFailure("delivery", reasonCode),
   };
 }

@@ -1,11 +1,10 @@
 import { captureException as reportException } from "@inariwatch/capture";
 
 import type { BusinessProfileData } from "@/lib/business-profiles/types";
-import {
-  composeSectionCandidate,
-  type ComposeSectionCandidateDeps,
-  type ComposeSectionCandidateInput,
-  type SectionCompositionResult,
+import type {
+  ComposeSectionCandidateDeps,
+  ComposeSectionCandidateInput,
+  SectionCompositionResult,
 } from "@/lib/generation/compose-sections";
 import {
   SectionCompositionManifestSchema,
@@ -27,6 +26,8 @@ import type { SectionRecord } from "@/lib/sections/store";
 import type { ExtractedBusinessData } from "@/lib/style-match/autofill/types";
 import { finalizeComposedDocument } from "./finalize-composed-document";
 import type { FableVisualRepairHandoff } from "./fable-final-visual-gate";
+import { runFableAdaptivePipeline, type FableAdaptivePipelineDeps } from "./fable-adaptive-pipeline";
+import type { FableRuntimeComposition } from "./fable-runtime-composition";
 
 export interface SectionCompositionCandidateInput {
   allowGeneratedFallback?: boolean;
@@ -41,6 +42,8 @@ export interface SectionCompositionCandidateInput {
   records: readonly SectionRecord[];
   policyVersion: string;
   onStage?: (stage: string) => void;
+  /** Private per-request root; never stored in project data. */
+  fableRuntime?: FableRuntimeComposition;
 }
 
 interface DeliveryData {
@@ -78,6 +81,8 @@ export interface RunSectionCompositionCandidateDeps {
   ) => Promise<SectionCompositionResult>;
   finalizeComposedDocument?: typeof finalizeComposedDocument;
   generateMissing?: NonNullable<ComposeSectionCandidateDeps["generateMissing"]>;
+  runFableAdaptivePipeline?: typeof runFableAdaptivePipeline;
+  fableAdaptivePipelineDeps?: Omit<FableAdaptivePipelineDeps, "runtime" | "finalize">;
 }
 
 function composeInput(input: SectionCompositionCandidateInput): ComposeSectionCandidateInput {
@@ -98,9 +103,17 @@ export async function runSectionCompositionCandidate(
   input: SectionCompositionCandidateInput,
   deps: RunSectionCompositionCandidateDeps = {},
 ): Promise<QuickSectionCompositionResult> {
-  const compose = deps.composeSectionCandidate ?? composeSectionCandidate;
   const finalize = deps.finalizeComposedDocument ?? finalizeComposedDocument;
   try {
+    if (!deps.composeSectionCandidate) {
+      if (!input.fableRuntime) return { ok: false, route: "section_composition", reasonCode: "internal_error" };
+      return await (deps.runFableAdaptivePipeline ?? runFableAdaptivePipeline)(input, {
+        runtime: input.fableRuntime,
+        finalize,
+        ...(deps.fableAdaptivePipelineDeps ?? {}),
+      });
+    }
+    const compose = deps.composeSectionCandidate;
     // Create-with-AI no longer reaches Gemini's text/vision path. The Fable
     // adaptive composer supplies GLM programs explicitly; this legacy helper
     // only honors an injected repository-owned generator in tests/shadow work.
@@ -222,7 +235,11 @@ export async function launchShadowSectionCompositionCandidate(
   deps: ShadowSectionCompositionCandidateDeps = {},
 ): Promise<SectionCompositionResult | null> {
   if (input === null) return null;
-  const compose = deps.composeSectionCandidate ?? composeSectionCandidate;
+  // Shadow work is explicitly opt-in and injected. Keeping the legacy
+  // composer out of this module's import graph prevents Create with AI from
+  // regaining Gemini text/vision reachability through a non-default branch.
+  const compose = deps.composeSectionCandidate;
+  if (!compose) return null;
   const reserve = deps.reserveVisualEnginePilotRun ?? reserveVisualEnginePilotRun;
   const complete = deps.completeVisualEnginePilotRun ?? completeVisualEnginePilotRun;
   const capture = deps.captureException ?? reportException;

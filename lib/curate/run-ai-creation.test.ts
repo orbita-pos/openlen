@@ -92,16 +92,19 @@ const INTENT_OK = {
   ok: true as const,
   intent: INTENT,
   modelId: "intent-fixture",
-  promptVersion: "intent-prompt/1.8" as const,
+  promptVersion: "fable-intent-prompt/1.0" as const,
+  usage: { inputTokens: 4, outputTokens: 3, cachedTokens: 0, thinkingTokens: 1 },
   durationMs: 4,
+  attempts: 1 as const,
 };
 const COPY_OK = {
   ok: true as const,
   copy: COPY,
   modelId: "copy-fixture",
-  promptVersion: "page-copy-prompt/1.0" as const,
+  promptVersion: "fable-page-copy-prompt/1.0" as const,
   usage: COPY_USAGE,
   durationMs: 5,
+  attempts: 1 as const,
 };
 const COMPOSITION_OK = {
   ok: true as const,
@@ -117,7 +120,21 @@ const COMPOSITION_OK = {
   fableVisualRepairHandoff: {} as never,
 };
 
+function fakeRuntime(runFinalGate = vi.fn(async (input: Parameters<NonNullable<RunAiCreationDeps["runFableFinalVisualGate"]>>[0]) => ({
+  ok: true as const,
+  candidate: input.candidate,
+  repaired: false,
+}))) {
+  return {
+    pageBudget: {}, fireworksClient: {}, glmSectionProgramProvider: {}, geminiAssetPackProvider: {},
+    inputAdapters: { analyzeIntent: vi.fn(async () => INTENT_OK), generatePageCopy: vi.fn(async () => COPY_OK) },
+    recordModel: vi.fn(), recordImage: vi.fn(), recordFailure: vi.fn(async () => undefined), recordDelivered: vi.fn(async () => undefined),
+    runFinalGate,
+  };
+}
+
 function makeDeps(overrides: Partial<RunAiCreationDeps> = {}): Required<RunAiCreationDeps> {
+  const runtime = fakeRuntime();
   return {
     analyzeIntent: vi.fn(async () => INTENT_OK),
     generatePageCopy: vi.fn(async () => COPY_OK),
@@ -133,7 +150,8 @@ function makeDeps(overrides: Partial<RunAiCreationDeps> = {}): Required<RunAiCre
       candidate: input.candidate,
       repaired: false,
     })),
-    createFableRuntimeComposition: vi.fn() as never,
+    createFableRuntimeComposition: vi.fn(() => runtime) as never,
+    fableAdaptivePipelineDeps: undefined as never,
     ...overrides,
   };
 }
@@ -200,7 +218,7 @@ const FAILURE_CASES = [
 }>;
 
 describe("runAiCreation", () => {
-  it("starts intent and copy before awaiting either provider", async () => {
+  it("runs DeepSeek intent before copy on the runtime created before either paid boundary", async () => {
     const intent = deferred<typeof INTENT_OK>();
     const copy = deferred<typeof COPY_OK>();
     const deps = makeDeps({
@@ -211,10 +229,10 @@ describe("runAiCreation", () => {
     const resultPromise = runAiCreation(INPUT, deps);
 
     expect(deps.analyzeIntent).toHaveBeenCalledOnce();
-    expect(deps.generatePageCopy).toHaveBeenCalledOnce();
+    expect(deps.generatePageCopy).not.toHaveBeenCalled();
     expect(deps.listSections).not.toHaveBeenCalled();
     intent.resolve(INTENT_OK);
-    await Promise.resolve();
+    await vi.waitFor(() => expect(deps.generatePageCopy).toHaveBeenCalledOnce());
     expect(deps.listSections).not.toHaveBeenCalled();
     copy.resolve(COPY_OK);
 
@@ -225,6 +243,7 @@ describe("runAiCreation", () => {
     const deps = makeDeps();
 
     const result = await runAiCreation(INPUT, deps);
+    const runtime = vi.mocked(deps.createFableRuntimeComposition).mock.results[0].value;
 
     expect(deps.overlayProfile).toHaveBeenCalledWith(COPY, PROFILE);
     expect(deps.listSections).toHaveBeenCalledWith({ status: "published" });
@@ -240,6 +259,7 @@ describe("runAiCreation", () => {
       intentHash: canonicalJsonSha256(INTENT),
       records: [RECORD],
       policyVersion: AI_HYBRID_POLICY_VERSION,
+      fableRuntime: runtime,
       onStage: INPUT.onStage,
     });
     expect(deps.validateAiCompositionDelivery).toHaveBeenNthCalledWith(1, {
@@ -272,7 +292,12 @@ describe("runAiCreation", () => {
       copyUsage: COPY_USAGE,
       filled: true,
       appliedOps: 7,
+      finalizeFableTelemetry: expect.any(Function),
+      failFableTelemetry: expect.any(Function),
     });
+    expect(runtime.recordDelivered).not.toHaveBeenCalled();
+    if (result.ok) await result.finalizeFableTelemetry?.();
+    expect(runtime.recordDelivered).toHaveBeenCalledOnce();
     expect(result).toMatchObject({
       ok: true,
       route: "section_composition",
@@ -294,7 +319,7 @@ describe("runAiCreation", () => {
       candidate: input.candidate,
       repaired: false,
     }));
-    const factory = vi.fn(() => ({ runFinalGate: finalGate }));
+    const factory = vi.fn(() => fakeRuntime(finalGate));
     const deps = makeDeps({ runFableFinalVisualGate: undefined, createFableRuntimeComposition: factory as never });
 
     await expect(runAiCreation(INPUT, deps)).resolves.toMatchObject({ ok: true, route: "section_composition" });
@@ -306,21 +331,12 @@ describe("runAiCreation", () => {
     }));
   });
 
-  it("allows generated missing sections only under the enabled AI creation flag", async () => {
-    const previous = process.env.OPENLEN_AI_CREATION;
-    try {
-      process.env.OPENLEN_AI_CREATION = "disabled";
-      const disabled = makeDeps();
-      await runAiCreation(INPUT, disabled);
-      expect(disabled.runSectionCompositionCandidate).toHaveBeenCalledWith(expect.objectContaining({ allowGeneratedFallback: false }));
-      process.env.OPENLEN_AI_CREATION = "enabled";
-      const enabled = makeDeps();
-      await runAiCreation(INPUT, enabled);
-      expect(enabled.runSectionCompositionCandidate).toHaveBeenCalledWith(expect.objectContaining({ allowGeneratedFallback: true }));
-    } finally {
-      if (previous === undefined) delete process.env.OPENLEN_AI_CREATION;
-      else process.env.OPENLEN_AI_CREATION = previous;
-    }
+  it("creates the shared Fable runtime before intent and passes that exact root into composition", async () => {
+    const deps = makeDeps();
+    await runAiCreation(INPUT, deps);
+    const runtime = vi.mocked(deps.createFableRuntimeComposition).mock.results[0].value;
+    expect(vi.mocked(deps.createFableRuntimeComposition).mock.invocationCallOrder[0]).toBeLessThan(vi.mocked(deps.analyzeIntent).mock.invocationCallOrder[0]);
+    expect(deps.runSectionCompositionCandidate).toHaveBeenCalledWith(expect.objectContaining({ fableRuntime: runtime }));
   });
 
   it.each(FAILURE_CASES)("fails closed at $name without invoking a later stage", async ({ stage, reasonCode, override, later }) => {
@@ -336,33 +352,30 @@ describe("runAiCreation", () => {
     expectProviderBoundariesAtMostOnce(deps);
   });
 
-  it("continues deterministically when intent and copy providers fail", async () => {
+  it("fails closed when the enabled intent provider fails and never calls copy or composition", async () => {
     const deps = makeDeps({
       analyzeIntent: vi.fn(async () => ({
         ok: false as const,
-        error: { kind: "api" as const, message: "private" },
+        code: "provider_error",
         modelId: "intent-fixture",
-        promptVersion: "intent-prompt/1.8" as const,
         durationMs: 4,
+        attempts: 1 as const,
       })),
       generatePageCopy: vi.fn(async () => ({
         ok: false as const,
-        error: { kind: "provider" as const, message: "private" },
+        code: "provider_error",
         modelId: "copy-fixture",
-        promptVersion: "page-copy-prompt/1.0" as const,
         durationMs: 5,
+        attempts: 1 as const,
       })),
     });
 
     const result = await runAiCreation(INPUT, deps);
 
-    expect(result).toMatchObject({ ok: true, route: "section_composition" });
-    expect(deps.runSectionCompositionCandidate).toHaveBeenCalledWith(expect.objectContaining({
-      intent: expect.objectContaining({ schemaVersion: "intent-analysis/1.0" }),
-      copy: expect.objectContaining({ business_name: expect.any(String) }),
-    }));
+    expectOnlyPublicFailure(result, "intent", "intent_analysis_failed");
     expect(deps.analyzeIntent).toHaveBeenCalledOnce();
-    expect(deps.generatePageCopy).toHaveBeenCalledOnce();
+    expect(deps.generatePageCopy).not.toHaveBeenCalled();
+    expect(deps.runSectionCompositionCandidate).not.toHaveBeenCalled();
   });
 
   it("fails at sections when no authoritative published inventory exists", async () => {

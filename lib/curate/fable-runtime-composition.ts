@@ -1,7 +1,7 @@
 import { assessFinalVisualCandidate } from "@/lib/ai/qwen-visual-critic";
 import { createFireworksJsonClient, type FireworksJsonClient } from "@/lib/ai/fireworks-client";
 import { renderVisualQualityViewports } from "@/lib/ai/visual-quality-renderer";
-import { createFableGenerationTelemetry, type FableGenerationTelemetryEvent } from "@/lib/generation/fable-generation-telemetry";
+import { createFableGenerationTelemetry, type FableGenerationTelemetryEvent, type FableTelemetryStage } from "@/lib/generation/fable-generation-telemetry";
 import { createGeminiAssetPackProvider } from "@/lib/generation/gemini-asset-pack-provider";
 import { createGlmSectionProgramProvider, type GlmSectionProgramProvider } from "@/lib/generation/glm-section-program-provider";
 import { createGlmVisualRepairProvider, type GlmVisualRepairProvider } from "@/lib/generation/glm-visual-repair";
@@ -18,6 +18,7 @@ import {
   type FableInspection,
   type FableVisualRepairHandoff,
 } from "./fable-final-visual-gate";
+import { createFableInputAdapters, type FableInputAdapters } from "./fable-input-adapters";
 
 export interface FableRuntimeVisualBrief {
   readonly niche: string;
@@ -42,6 +43,16 @@ export interface FableRuntimeComposition {
   /** Task 4 composition seams, all bound to this page's sole budget. */
   readonly glmSectionProgramProvider: GlmSectionProgramProvider;
   readonly geminiAssetPackProvider: ReturnType<typeof createGeminiAssetPackProvider>;
+  readonly inputAdapters: FableInputAdapters;
+  recordModel(stage: FableTelemetryStage, result: {
+    readonly modelId?: string | null;
+    readonly usage?: { readonly inputTokens: number; readonly cachedTokens: number; readonly outputTokens: number; readonly thinkingTokens: number };
+    readonly durationMs?: number;
+    readonly attempts?: 0 | 1 | 2 | 3;
+  }): void;
+  recordImage(trace: { readonly modelId?: string | null; readonly generatedCount: number; readonly durationMs: number }): void;
+  recordFailure(stage: "intent" | "copy" | "scout" | "page_plan" | "initial_program" | "image" | "visual_quality" | "delivery", reasonCode: string): Promise<void>;
+  recordDelivered(): Promise<void>;
   runFinalGate(input: {
     readonly requestId: string;
     readonly candidate: Parameters<typeof runFableFinalVisualGate>[0]["candidate"];
@@ -86,20 +97,45 @@ export function createFableRuntimeComposition(options: FableRuntimeCompositionOp
   const glmSectionProgramProvider = createGlmSectionProgramProvider({ client: fireworksClient });
   const geminiAssetPackProvider = createGeminiAssetPackProvider({ pageBudget });
   const telemetry = createFableGenerationTelemetry({ budget: pageBudget, sink: options.telemetrySink });
+  const recordModel: FableRuntimeComposition["recordModel"] = (stage, result) => {
+    if (!result.modelId) return;
+    telemetry.recordModel({
+      stage,
+      modelId: result.modelId,
+      usage: result.usage ?? { inputTokens: 0, cachedTokens: 0, outputTokens: 0, thinkingTokens: 0 },
+      durationMs: result.durationMs ?? 0,
+      attempts: result.attempts ?? 0,
+    });
+  };
+  const recordImage: FableRuntimeComposition["recordImage"] = (trace) => {
+    if (!trace.modelId) return;
+    telemetry.recordImage({
+      stage: "image",
+      modelId: trace.modelId,
+      usage: { imageCount: trace.generatedCount },
+      durationMs: trace.durationMs,
+      attempts: 1,
+    });
+  };
+  const rawInputAdapters = createFableInputAdapters({ client: fireworksClient });
+  const inputAdapters: FableInputAdapters = {
+    async analyzeIntent(brief, requestId) {
+      const result = await rawInputAdapters.analyzeIntent(brief, requestId);
+      recordModel("intent", result);
+      return result;
+    },
+    async generatePageCopy(brief, requestId) {
+      const result = await rawInputAdapters.generatePageCopy(brief, requestId);
+      recordModel("copy", result);
+      return result;
+    },
+  };
   const inspect = options.inspect ?? defaultInspect;
   const configuredRepairProvider = options.repairProvider ?? createGlmVisualRepairProvider({ client: fireworksClient });
   const repairProvider: GlmVisualRepairProvider = {
     async repair(request) {
       const repaired = await configuredRepairProvider.repair(request);
-      if ("modelId" in repaired && repaired.modelId) {
-        telemetry.recordModel({
-          stage: "visual_repair",
-          modelId: repaired.modelId,
-          usage: repaired.usage ?? { inputTokens: 0, cachedTokens: 0, outputTokens: 0, thinkingTokens: 0 },
-          durationMs: repaired.durationMs,
-          attempts: repaired.attempts,
-        });
-      }
+      recordModel("visual_repair", "modelId" in repaired ? repaired : {});
       return repaired;
     },
   };
@@ -109,6 +145,11 @@ export function createFableRuntimeComposition(options: FableRuntimeCompositionOp
     fireworksClient,
     glmSectionProgramProvider,
     geminiAssetPackProvider,
+    inputAdapters,
+    recordModel,
+    recordImage,
+    recordFailure: (stage, reasonCode) => telemetry.recordFailure({ stage, reasonCode }),
+    recordDelivered: () => telemetry.recordDelivered(),
     async runFinalGate(input) {
       try {
         const result = await runFableFinalVisualGate({
@@ -125,23 +166,14 @@ export function createFableRuntimeComposition(options: FableRuntimeCompositionOp
           critique: async ({ requestId, screenshots, deterministic }) => {
             const reviewed = await assessFinalVisualCandidate({ requestId, screenshots, deterministic, brief: input.brief }, { client: fireworksClient });
             if (!reviewed.ok) {
-              if ("modelId" in reviewed && reviewed.modelId) {
-                telemetry.recordModel({
-                  stage: "final_critic",
-                  modelId: reviewed.modelId,
-                  usage: reviewed.usage ?? { inputTokens: 0, cachedTokens: 0, outputTokens: 0, thinkingTokens: 0 },
-                  durationMs: reviewed.durationMs,
-                  attempts: reviewed.attempts,
-                });
-              }
+              recordModel("final_critic", "modelId" in reviewed ? reviewed : {});
               return { ok: false };
             }
-            telemetry.recordModel({ stage: "final_critic", modelId: reviewed.modelId, usage: reviewed.usage, durationMs: reviewed.durationMs, attempts: reviewed.attempts });
+            recordModel("final_critic", reviewed);
             return { ok: true, verdict: reviewed.verdict };
           },
         });
-        if (result.ok) await telemetry.recordDelivered();
-        else await telemetry.recordFailure({ stage: "visual_quality", reasonCode: result.code });
+        if (!result.ok) await telemetry.recordFailure({ stage: "visual_quality", reasonCode: result.code });
         return result;
       } catch {
         await telemetry.recordFailure({ stage: "visual_quality", reasonCode: "internal_error" });

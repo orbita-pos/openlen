@@ -3,10 +3,10 @@ import { z } from "zod";
 
 import { AdaptivePageDesignProgramSchema, type AdaptivePageDesignProgram } from "./adaptive-design-contracts";
 import { canonicalJsonSha256, sha256 } from "./content-hash";
-import type { CompileDerivedSectionResult, CompiledDerivedSection } from "./derived-section-compiler";
 import { ExpressiveSectionProgramSchema, SectionDecisionProvenanceSchema, type ExpressiveSectionProgram, type SectionDecisionProvenance } from "./expressive-section-contracts";
-import { generateExpressiveMissingSection } from "./generate-missing-section";
+import { compileExpressiveSection } from "./expressive-section-compiler";
 import type { GlmSectionProgramProvider, GlmSectionProgramProviderResult } from "./glm-section-program-provider";
+import type { GlmVisualRepairDelta } from "./glm-visual-repair";
 import {
   ADAPTIVE_SECTION_COMPOSITION_MANIFEST_VERSION,
   AdaptiveSectionCompositionManifestSchema,
@@ -54,12 +54,29 @@ export interface AdaptiveDerivedSectionDraft {
   readonly provenance: SectionDecisionProvenance;
 }
 
+/**
+ * Page-local compiler output for Task 4 programs. Unlike catalog-derived
+ * sections it intentionally carries no template provenance: a generated AST
+ * must not impersonate an extracted template band.
+ */
+export interface AdaptiveCompiledSection {
+  readonly id: string;
+  readonly html: string;
+  readonly type: SectionType;
+  readonly contentHash: string;
+  readonly structuralFingerprint: string;
+}
+
+export type AdaptiveSectionCompileResult =
+  | { readonly ok: true; readonly section: AdaptiveCompiledSection }
+  | { readonly ok: false; readonly code: string };
+
 export interface AdaptiveSectionCompositionDeps {
   readonly provider: GlmSectionProgramProvider;
   readonly fetchText: (storageUrl: string) => Promise<string | null>;
   readonly fetchFragments: typeof fetchVerifiedSectionFragments;
-  readonly compileDerived: (draft: AdaptiveDerivedSectionDraft) => Promise<CompileDerivedSectionResult>;
-  readonly validateSemantics: (section: CompiledDerivedSection, row: SectionPlanRow) => Promise<boolean> | boolean;
+  readonly compileDerived: (draft: AdaptiveDerivedSectionDraft) => Promise<AdaptiveSectionCompileResult>;
+  readonly validateSemantics: (section: AdaptiveCompiledSection, row: SectionPlanRow) => Promise<boolean> | boolean;
   readonly validateAssets: (html: string, row: SectionPlanRow) => Promise<boolean> | boolean;
   readonly validateRender: (html: string, row: SectionPlanRow) => Promise<{
     readonly ok: boolean;
@@ -147,6 +164,8 @@ export type AdaptiveSectionCompositionResult =
       readonly telemetry: readonly RedactedProviderTelemetry[];
       /** Internal only: structured Task 5 repair input; never serialize this with public manifests. */
       readonly handoff: AdaptiveSectionRepairHandoff;
+      /** Private request-local seam: no provider calls, only bounded recompilation and gates. */
+      readonly applyDelta: (delta: GlmVisualRepairDelta) => Promise<AdaptiveSectionDeltaResult>;
     }
   | {
       readonly ok: false;
@@ -155,6 +174,15 @@ export type AdaptiveSectionCompositionResult =
       readonly manifest: AdaptiveSectionCompositionManifest;
       readonly telemetry: readonly RedactedProviderTelemetry[];
     };
+
+export type AdaptiveSectionDeltaResult =
+  | {
+      readonly ok: true;
+      readonly html: string;
+      readonly manifest: AdaptiveSectionCompositionManifest;
+      readonly handoff: AdaptiveSectionRepairHandoff;
+    }
+  | { readonly ok: false };
 
 function manifest(
   rows: readonly CompletedRow[],
@@ -357,19 +385,19 @@ export async function composeAdaptiveSections(
             verifiedFragmentHtml: verified!.html,
           },
         } as const;
-        const generated = await generateExpressiveMissingSection({ request, copy: input.copy, provenance } as import("./generate-missing-section").GenerateExpressiveMissingSectionInput, { provider: deps.provider });
-        if (!generated.ok) {
-          const providerTrace = generated.code === "compile_failed"
-            ? providerTelemetry(generated.provider)
-            : "modelId" in generated ? providerTelemetry(generated) : undefined;
-          if (providerTrace) telemetry.push(providerTrace);
-          if (generated.code === "compile_failed") return fail(generated.compileCode === "donor_reconstruction" ? "section_originality_failed" : "invalid_provider_response");
-          return fail(providerFailureCode(generated.code));
-        }
-        const providerResult = generated.provider;
+        const providerResult = await deps.provider.generate(request);
         const providerTrace = providerTelemetry(providerResult);
         if (providerTrace) telemetry.push(providerTrace);
-        const expressive = generated.draft;
+        if (!providerResult.ok) return fail(providerFailureCode(providerResult.code));
+        const compiledExpressive = compileExpressiveSection({
+          program: providerResult.program,
+          allowedCopyKeys: request.copyKeys,
+          allowedAssetSlots: request.assetSlots.map((slot) => slot.slotIndex),
+          copy: input.copy,
+          provenance,
+        });
+        if (!compiledExpressive.ok) return fail(compiledExpressive.code === "donor_reconstruction" ? "section_originality_failed" : "invalid_provider_response");
+        const expressive = compiledExpressive.draft;
         generatedProgram = providerResult.program;
         programHash = expressive.programHash;
         normalizedStructuralFingerprint = expressive.structuralFingerprint;
@@ -396,7 +424,7 @@ export async function composeAdaptiveSections(
       if (decision.action === "rebuild"
         && (section.contentHash === donor!.entry.contentHash
           || normalizedStructuralFingerprint === donor!.entry.structuralFingerprint
-          || section.provenance.structuralFingerprint === donor!.entry.structuralFingerprint)) {
+          || section.structuralFingerprint === donor!.entry.structuralFingerprint)) {
         return fail("section_originality_failed");
       }
       if (!(await deps.validateSemantics(section, row))) return fail("section_semantic_coverage_failed");
@@ -413,7 +441,7 @@ export async function composeAdaptiveSections(
         sourceTemplateId: decision.action === "generate" ? null : donor!.entry.sourceTemplateId,
         sourceBandOrdinal: decision.action === "generate" ? null : donor!.entry.sourceBandOrdinal,
         contentHash: section.contentHash,
-        structuralFingerprint: normalizedStructuralFingerprint ?? section.provenance.structuralFingerprint,
+        structuralFingerprint: normalizedStructuralFingerprint ?? section.structuralFingerprint,
         programHash,
         fragment: { slug: section.id, type: section.type, requestedRole: row.requestedRole, html: sanitized.html },
       });
@@ -427,7 +455,7 @@ export async function composeAdaptiveSections(
         compiledFragmentId: section.id,
         compiledContentHash: section.contentHash,
         compiledFragmentHash: sha256(section.html),
-        structuralFingerprint: section.provenance.structuralFingerprint,
+        structuralFingerprint: section.structuralFingerprint,
         programId: null,
         programHash: null,
         program: null,
@@ -441,7 +469,7 @@ export async function composeAdaptiveSections(
         compiledFragmentId: section.id,
         compiledContentHash: section.contentHash,
         compiledFragmentHash: sha256(section.html),
-        structuralFingerprint: normalizedStructuralFingerprint ?? section.provenance.structuralFingerprint,
+        structuralFingerprint: normalizedStructuralFingerprint ?? section.structuralFingerprint,
         programId: draft.id,
         programHash: programHash!,
         program: (generatedProgram as ExpressiveSectionProgram),
@@ -461,16 +489,109 @@ export async function composeAdaptiveSections(
     if (!sanitized.html) return fail("sanitization_failed");
     const sealed = deps.seal(sanitized.html);
     if (!sealed.sealed) return fail("sanitization_failed");
+    let currentRows = completed.slice();
+    let currentHandoff = AdaptiveSectionRepairHandoffSchema.parse({
+      schemaVersion: ADAPTIVE_SECTION_REPAIR_HANDOFF_VERSION,
+      entries: handoffEntries,
+    });
+    const applyDelta = async (delta: GlmVisualRepairDelta): Promise<AdaptiveSectionDeltaResult> => {
+      if (delta?.schemaVersion !== "glm-visual-repair-delta/1.0"
+        || !Array.isArray(delta.changes)
+        || delta.changes.length < 1
+        || delta.changes.length > 32
+        || new Set(delta.changes.map((change) => change.programId)).size !== delta.changes.length) return { ok: false };
+      const entriesById = new Map(currentHandoff.entries.flatMap((entry) => entry.programId ? [[entry.programId, entry] as const] : []));
+      if (delta.changes.some((change) => !entriesById.has(change.programId))) return { ok: false };
+
+      const nextRows = currentRows.slice();
+      const nextEntries = currentHandoff.entries.slice();
+      try {
+        for (const change of delta.changes) {
+          const entry = entriesById.get(change.programId)!;
+          const row = input.plan.rows[entry.ordinal];
+          const program = change.program as ExpressiveSectionProgram;
+          if (!entry.programId || !entry.program || !row || program.role !== entry.role) return { ok: false };
+          const expressive = compileExpressiveSection({
+            program,
+            allowedCopyKeys: entry.allowedCopyKeys,
+            allowedAssetSlots: entry.allowedAssetSlots,
+            copy: input.copy,
+            provenance: entry.provenance,
+          });
+          if (!expressive.ok) return { ok: false };
+          const draft: AdaptiveDerivedSectionDraft = {
+            action: entry.action,
+            ordinal: entry.ordinal,
+            id: expressive.draft.id,
+            html: expressive.draft.html,
+            rootTag: expressive.draft.rootTag,
+            role: entry.role,
+            componentType: row.componentType,
+            provenance: entry.provenance,
+          };
+          const derived = await deps.compileDerived(draft);
+          if (!derived.ok
+            || derived.section.type !== row.componentType
+            || contentHash(derived.section.html) !== derived.section.contentHash
+            || (entry.action === "rebuild" && (
+              derived.section.contentHash === entry.provenance.sourceContentHash
+              || expressive.draft.structuralFingerprint === entry.provenance.sourceStructuralFingerprint
+              || derived.section.structuralFingerprint === entry.provenance.sourceStructuralFingerprint
+            ))) return { ok: false };
+          if (!(await deps.validateSemantics(derived.section, row))) return { ok: false };
+          if (!(await deps.validateAssets(derived.section.html, row))) return { ok: false };
+          const rendered = await deps.validateRender(derived.section.html, row);
+          if (!rendered.ok || !rendered.desktopVisible || !rendered.mobileVisible || rendered.mobileOverflow) return { ok: false };
+          const sanitizedSection = deps.sanitize(derived.section.html);
+          if (!sanitizedSection.html || sanitizedSection.html !== derived.section.html) return { ok: false };
+          nextRows[entry.ordinal] = {
+            ...nextRows[entry.ordinal],
+            contentHash: derived.section.contentHash,
+            structuralFingerprint: expressive.draft.structuralFingerprint,
+            programHash: expressive.draft.programHash,
+            fragment: { slug: derived.section.id, type: derived.section.type, requestedRole: row.requestedRole, html: sanitizedSection.html },
+          };
+          nextEntries[entry.ordinal] = {
+            ...entry,
+            compiledFragmentId: derived.section.id,
+            compiledContentHash: derived.section.contentHash,
+            compiledFragmentHash: sha256(derived.section.html),
+            structuralFingerprint: expressive.draft.structuralFingerprint,
+            programHash: expressive.draft.programHash,
+            program: program as never,
+          };
+        }
+        if (!hasAdaptiveSectionOriginality({
+          actions: nextRows.map((row) => row.action),
+          finalStructuralFingerprints: nextRows.map((row) => row.structuralFingerprint),
+          finalProgramHashes: nextRows.map((row) => row.programHash),
+          sourceTemplateIds: nextRows.map((row) => row.sourceTemplateId),
+          sourceBandOrdinals: nextRows.map((row) => row.sourceBandOrdinal),
+        })) return { ok: false };
+        const assembledDelta = deps.assemble(nextRows.map((row) => row.fragment));
+        const sanitizedDelta = deps.sanitize(assembledDelta);
+        if (!sanitizedDelta.html) return { ok: false };
+        const sealedDelta = deps.seal(sanitizedDelta.html);
+        if (!sealedDelta.sealed) return { ok: false };
+        const handoff = AdaptiveSectionRepairHandoffSchema.parse({
+          schemaVersion: ADAPTIVE_SECTION_REPAIR_HANDOFF_VERSION,
+          entries: nextEntries,
+        });
+        currentRows = nextRows;
+        currentHandoff = handoff;
+        return { ok: true, html: sealedDelta.html, manifest: manifest(nextRows, "composed", sealedDelta.html), handoff };
+      } catch {
+        return { ok: false };
+      }
+    };
     return {
       ok: true,
       status: "composed",
       html: sealed.html,
       manifest: manifest(completed, "composed", sealed.html),
       telemetry: Object.freeze(telemetry.map((row) => Object.freeze({ ...row }))),
-      handoff: AdaptiveSectionRepairHandoffSchema.parse({
-        schemaVersion: ADAPTIVE_SECTION_REPAIR_HANDOFF_VERSION,
-        entries: handoffEntries,
-      }),
+      handoff: currentHandoff,
+      applyDelta,
     };
   } catch {
     return fail("internal_error");

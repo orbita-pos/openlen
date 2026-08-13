@@ -42,6 +42,10 @@ export type AiCreationResult =
       generatedSectionCount?: number;
       filled: boolean;
       appliedOps: number;
+      /** Ephemeral success acknowledgement; excluded from persistence and SSE. */
+      finalizeFableTelemetry?: () => Promise<void>;
+      /** Ephemeral post-generation failure acknowledgement for persistence/debit. */
+      failFableTelemetry?: (stage: "delivery", reasonCode: string) => Promise<void>;
     }
   | {
       ok: false;

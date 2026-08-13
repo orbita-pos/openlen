@@ -25,10 +25,18 @@ const FORBIDDEN_GEMINI_CREATE_SYMBOLS = [
   "critiqueVisualQuality",
   "generateVisualRepairPlan",
 ] as const;
+const FORBIDDEN_GEMINI_CREATE_MODULES = [
+  "analyze-intent",
+  "generate-page-copy",
+  "gemini-section-spec-provider",
+  "visual-quality-critic",
+  "generate-visual-repair",
+] as const;
 
 interface ModuleReference {
   specifier: string;
   symbols: string[];
+  typeOnly: boolean;
 }
 
 function moduleReferences(source: string, fileName: string): ModuleReference[] {
@@ -49,19 +57,19 @@ function moduleReferences(source: string, fileName: string): ModuleReference[] {
       if (clause?.namedBindings && ts.isNamedImports(clause.namedBindings)) {
         symbols.push(...clause.namedBindings.elements.map((element) => element.propertyName?.text ?? element.name.text));
       }
-      references.push({ specifier: node.moduleSpecifier.text, symbols });
+      references.push({ specifier: node.moduleSpecifier.text, symbols, typeOnly: clause?.isTypeOnly === true });
     } else if (ts.isExportDeclaration(node) && node.moduleSpecifier && ts.isStringLiteral(node.moduleSpecifier)) {
       const symbols = node.exportClause && ts.isNamedExports(node.exportClause)
         ? node.exportClause.elements.map((element) => element.propertyName?.text ?? element.name.text)
         : [];
-      references.push({ specifier: node.moduleSpecifier.text, symbols });
+      references.push({ specifier: node.moduleSpecifier.text, symbols, typeOnly: node.isTypeOnly });
     } else if (
       ts.isCallExpression(node)
       && node.expression.kind === ts.SyntaxKind.ImportKeyword
       && node.arguments.length === 1
       && ts.isStringLiteral(node.arguments[0])
     ) {
-      references.push({ specifier: node.arguments[0].text, symbols: [] });
+      references.push({ specifier: node.arguments[0].text, symbols: [], typeOnly: false });
     }
     ts.forEachChild(node, visit);
   };
@@ -109,7 +117,7 @@ function findForbiddenDependencies(root: string, entry: string): string[] {
       if (forbidden) {
         violations.add(path.relative(root, resolved).replaceAll(path.sep, "/"));
       }
-      pending.push(resolved);
+      if (!reference.typeOnly) pending.push(resolved);
     }
   }
   return [...violations].sort();
@@ -127,10 +135,11 @@ function findGeminiTextOrVisionDependencies(root: string, entry: string): string
     for (const reference of moduleReferences(source, current)) {
       const resolved = resolveRepositoryModule(root, current, reference.specifier);
       if (!resolved || !resolved.startsWith(`${path.resolve(root)}${path.sep}`)) continue;
-      if (FORBIDDEN_GEMINI_CREATE_SYMBOLS.some((symbol) => reference.symbols.includes(symbol))) {
+      if (!reference.typeOnly && (FORBIDDEN_GEMINI_CREATE_MODULES.some((moduleName) => reference.specifier.includes(moduleName))
+        || FORBIDDEN_GEMINI_CREATE_SYMBOLS.some((symbol) => reference.symbols.includes(symbol)))) {
         violations.add(path.relative(root, resolved).replaceAll(path.sep, "/"));
       }
-      pending.push(resolved);
+      if (!reference.typeOnly) pending.push(resolved);
     }
   }
   return [...violations].sort();
@@ -149,6 +158,23 @@ describe("AI hybrid production import boundary", () => {
       expect(findForbiddenDependencies(root, path.join(root, "entry.ts"))).toEqual([
         "clone.ts",
         "picker.ts",
+      ]);
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("detects the retired Gemini-backed intent and page-copy module paths transitively", () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "ai-hybrid-gemini-text-"));
+    try {
+      fs.writeFileSync(path.join(root, "entry.ts"), 'import "./middle";');
+      fs.writeFileSync(path.join(root, "middle.ts"), 'import "./analyze-intent"; import "./generate-page-copy";');
+      fs.writeFileSync(path.join(root, "analyze-intent.ts"), "export const retiredIntent = true;\n");
+      fs.writeFileSync(path.join(root, "generate-page-copy.ts"), "export const retiredCopy = true;\n");
+
+      expect(findGeminiTextOrVisionDependencies(root, path.join(root, "entry.ts"))).toEqual([
+        "analyze-intent.ts",
+        "generate-page-copy.ts",
       ]);
     } finally {
       fs.rmSync(root, { recursive: true, force: true });

@@ -4,10 +4,9 @@ import { AdaptivePageDesignProgramSchema } from "./adaptive-design-contracts";
 import { CreativeDirectionSchema } from "./creative-contracts";
 import { COLORING_DIRECTION } from "./creative-fixtures.test-support";
 import { sha256 } from "./content-hash";
-import type { CompileDerivedSectionResult } from "./derived-section-compiler";
 import type { ExpressiveSectionProgram } from "./expressive-section-contracts";
 import type { GlmSectionProgramProvider, GlmSectionProgramRequest } from "./glm-section-program-provider";
-import { composeAdaptiveSections, type AdaptiveSectionCompositionDeps } from "./adaptive-section-composition";
+import { composeAdaptiveSections, type AdaptiveSectionCompileResult, type AdaptiveSectionCompositionDeps } from "./adaptive-section-composition";
 import type { SectionCompositionInventory } from "./section-inventory";
 import { SectionPlanSchema } from "./section-composition-contracts";
 import type { VisualScoutSuccess } from "./visual-candidate-scout";
@@ -88,12 +87,9 @@ function program(role: ExpressiveSectionProgram["role"], copyKey: string): Expre
   };
 }
 
-function compiled(id: string, html: string, type: "hero" | "features" | "footer", fingerprint: string): CompileDerivedSectionResult {
+function compiled(id: string, html: string, type: "hero" | "features" | "footer", fingerprint: string): AdaptiveSectionCompileResult {
   return { ok: true, section: {
-    id, html, type, mode: "light",
-    provenance: { schemaVersion: "derived-section-provenance/1.0", sourceTemplateId: "adaptive-source", sourceTemplateHash: "a".repeat(12), sourceBandOrdinal: 0, extractionVersion: "template-band-extractor/1.0", sourceHash: sha256(html), structuralFingerprint: fingerprint },
-    semantics: { schemaVersion: "derived-section-semantics/1.0", role: type, layoutArchetypes: [type === "features" ? "grid" : "centered"], domains: ["children_creativity"], audiences: ["children"], moods: ["playful"], negativeSignals: [] },
-    designTokens: {}, fonts: [], needsJs: false, hasPlaceholders: false, contentHash: hash12(html), renderScore: 100, sourceExactHash: sha256(html),
+    id, html, type, contentHash: hash12(html), structuralFingerprint: fingerprint,
   } };
 }
 
@@ -120,9 +116,8 @@ function setup(overrides: Partial<AdaptiveSectionCompositionDeps> = {}) {
     compileDerived: vi.fn(async (draft) => {
       events.push(`compile:${draft.action}:${draft.ordinal}`);
       if (draft.action === "reuse") return compiled("chosen-footer", draft.html, "footer", `sha256:${"d".repeat(64)}`);
-      const fingerprints = [`sha256:${"e".repeat(64)}`, `sha256:${"f".repeat(64)}`];
-      const types = ["hero", "features"] as const;
-      return compiled(draft.id, draft.html, types[generatedIndex], fingerprints[generatedIndex++]);
+      const fingerprints = [`sha256:${"e".repeat(64)}`, `sha256:${"f".repeat(64)}`, `sha256:${"1".repeat(64)}`];
+      return compiled(draft.id, draft.html, draft.componentType, fingerprints[generatedIndex++]);
     }),
     validateSemantics: vi.fn(async (_section, row) => { events.push(`semantics:${row.ordinal}`); return true; }),
     validateAssets: vi.fn(async (_html, row) => { events.push(`assets:${row.ordinal}`); return true; }),
@@ -182,6 +177,40 @@ describe("adaptive section composition", () => {
       ],
     });
     expect(JSON.stringify(result.ok && result.handoff)).not.toMatch(/A new hero|Make something|Verified hero donor|<header/i);
+  });
+
+  it("applies a bounded delta by recompiling and gating only affected programs, then updates its private handoff", async () => {
+    const d = setup();
+    const initial = await composeAdaptiveSections(INPUT, d.deps);
+    expect(initial.ok).toBe(true);
+    if (!initial.ok) return;
+    const target = initial.handoff.entries[1];
+    expect(target.programId).toEqual(expect.any(String));
+    const changedProgram = {
+      ...program("activities", "activities.title"),
+      root: { ...program("activities", "activities.title").root, gap: "xl" as const },
+    };
+    const providerCallsBeforeRepair = d.providerCalls.length;
+    const compileCallsBeforeRepair = vi.mocked(d.deps.compileDerived).mock.calls.length;
+    const repaired = await initial.applyDelta({
+      schemaVersion: "glm-visual-repair-delta/1.0",
+      changes: [{ programId: target.programId!, program: changedProgram as never }],
+    });
+
+    expect(repaired).toMatchObject({ ok: true, handoff: { entries: [{ ordinal: 0 }, { ordinal: 1, program: { root: { gap: "xl" } } }, { ordinal: 2 }] } });
+    expect(d.providerCalls).toHaveLength(providerCallsBeforeRepair);
+    expect(vi.mocked(d.deps.compileDerived)).toHaveBeenCalledTimes(compileCallsBeforeRepair + 1);
+    expect(d.deps.validateSemantics).toHaveBeenCalledTimes(4);
+    expect(d.deps.validateAssets).toHaveBeenCalledTimes(4);
+    expect(d.deps.validateRender).toHaveBeenCalledTimes(4);
+    expect(d.deps.assemble).toHaveBeenCalledTimes(2);
+    expect(d.deps.seal).toHaveBeenCalledTimes(2);
+
+    await expect(initial.applyDelta({
+      schemaVersion: "glm-visual-repair-delta/1.0",
+      changes: [{ programId: "unknown-program", program: changedProgram as never }],
+    })).resolves.toEqual({ ok: false });
+    expect(vi.mocked(d.deps.compileDerived)).toHaveBeenCalledTimes(compileCallsBeforeRepair + 1);
   });
 
   it("returns a typed atomic failure with no HTML when provider or a section gate fails", async () => {

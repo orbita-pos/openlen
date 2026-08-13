@@ -246,7 +246,7 @@ export function hasOriginalSectionProvenance(input: {
     if (donor === null || ordinal === null) return false;
     donorCounts.set(donor, (donorCounts.get(donor) ?? 0) + 1);
   }
-  const minimumRealDonors = generatedSources.size > 0 ? 2 : 3;
+  const minimumRealDonors = generatedSources.size >= 3 ? 0 : generatedSources.size > 0 ? 2 : 3;
   if (donorCounts.size < minimumRealDonors || donorCounts.size + generatedSources.size < 3 || [...donorCounts.values()].some((count) => count > 2)) return false;
   for (let index = 0; index + 2 < length; index += 1) {
     const donor = input.sourceTemplateIds[index];
