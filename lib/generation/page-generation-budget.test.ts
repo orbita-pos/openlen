@@ -11,7 +11,6 @@ const CONFIG = {
   mxnPerUsd: 20,
   targetMicromxn: 5_000_000,
   capMicromxn: 10_000_000,
-  rates: FABLE_PRODUCTION_RATES,
 };
 const GLM = "accounts/fireworks/models/glm-5p2";
 const QWEN = "accounts/fireworks/models/qwen3p7-plus";
@@ -59,14 +58,14 @@ describe("page generation budget", () => {
   });
 
   it("counts retry attempts as independent reservations", () => {
-    const budget = createPageGenerationBudget({ ...CONFIG, targetMicromxn: 500_000, capMicromxn: 700_000 });
-    const first = budget.reserve({ kind: "model", modelId: GLM, maxInputTokens: 10_000, maxOutputTokens: 2_000 });
+    const budget = createPageGenerationBudget(CONFIG);
+    const first = budget.reserve({ kind: "model", modelId: GLM, maxInputTokens: 10_000, maxOutputTokens: 70_000 });
     expect(first.ok).toBe(true);
-    const retryWhileFirstOutstanding = budget.reserve({ kind: "model", modelId: GLM, maxInputTokens: 10_000, maxOutputTokens: 2_000 });
+    const retryWhileFirstOutstanding = budget.reserve({ kind: "model", modelId: GLM, maxInputTokens: 10_000, maxOutputTokens: 70_000 });
     expect(retryWhileFirstOutstanding).toEqual({ ok: false, code: "budget_exceeded" });
     if (!first.ok) throw new Error("expected lease");
     budget.complete(first.leaseId, { inputTokens: 0, cachedTokens: 0, outputTokens: 0, thinkingTokens: 0 });
-    expect(budget.reserve({ kind: "model", modelId: GLM, maxInputTokens: 10_000, maxOutputTokens: 2_000 }).ok).toBe(true);
+    expect(budget.reserve({ kind: "model", modelId: GLM, maxInputTokens: 10_000, maxOutputTokens: 70_000 }).ok).toBe(true);
   });
 
   it("prices generated images by count and keeps Gemini image-only", () => {
@@ -91,14 +90,14 @@ describe("page generation budget", () => {
   });
 
   it("never overspends under interleaved concurrent reservations", () => {
-    const budget = createPageGenerationBudget({ ...CONFIG, targetMicromxn: 300_000, capMicromxn: 320_000 });
-    const calls = Array.from({ length: 3 }, () => budget.reserve({ kind: "model" as const, modelId: QWEN, maxInputTokens: 10_000, maxOutputTokens: 1_000 }));
+    const budget = createPageGenerationBudget(CONFIG);
+    const calls = Array.from({ length: 3 }, () => budget.reserve({ kind: "model" as const, modelId: QWEN, maxInputTokens: 10_000, maxOutputTokens: 65_000 }));
     expect(calls.filter((call) => call.ok)).toHaveLength(2);
     expect(calls[2]).toEqual({ ok: false, code: "budget_exceeded" });
-    expect(budget.snapshot().actualMicromxn + budget.snapshot().reservedMicromxn).toBeLessThanOrEqual(320_000);
+    expect(budget.snapshot().actualMicromxn + budget.snapshot().reservedMicromxn).toBeLessThanOrEqual(10_000_000);
   });
 
-  it("fails closed for absent or invalid enabled configuration and disallows a cap above 10 MXN", () => {
+  it("fails closed for absent, invalid, or non-exact enabled configuration", () => {
     const valid = {
       OPENLEN_FABLE_RATE_CARD_VERSION: "fable-production/2026-08-12",
       OPENLEN_FABLE_MXN_PER_USD: "20",
@@ -109,14 +108,34 @@ describe("page generation budget", () => {
     for (const [key, value] of Object.entries({
       OPENLEN_FABLE_RATE_CARD_VERSION: " ",
       OPENLEN_FABLE_MXN_PER_USD: "NaN",
-      OPENLEN_FABLE_PAGE_TARGET_MICROMXN: "0",
-      OPENLEN_FABLE_PAGE_CAP_MICROMXN: "10000001",
+      OPENLEN_FABLE_PAGE_TARGET_MICROMXN: "4999999",
+      OPENLEN_FABLE_PAGE_CAP_MICROMXN: "9000000",
     })) {
       expect(() => parseFablePageBudgetConfigFromEnv({ ...valid, [key]: value })).toThrow();
     }
     expect(() => createPageGenerationBudget({
       ...CONFIG,
       rates: { ...FABLE_PRODUCTION_RATES, [GLM]: { input: 1.40, cached: .14, output: Number.NaN } },
-    })).toThrow("output rate");
+    } as never)).toThrow("production rates are fixed");
+  });
+
+  it("rejects caller-supplied rate maps that are subvalued or contain extra models", () => {
+    expect(() => createPageGenerationBudget({
+      ...CONFIG,
+      rates: { ...FABLE_PRODUCTION_RATES, [QWEN]: { input: .01, cached: .01, output: .01 } },
+    } as never)).toThrow("production rates are fixed");
+    expect(() => createPageGenerationBudget({
+      ...CONFIG,
+      rates: { ...FABLE_PRODUCTION_RATES, "unapproved-model": { input: .01, cached: .01, output: .01 } },
+    } as never)).toThrow("production rates are fixed");
+  });
+
+  it.each([
+    [4_999_999, 10_000_000],
+    [5_000_001, 10_000_000],
+    [5_000_000, 9_000_000],
+  ])("rejects non-exact page target %i or cap %i", (targetMicromxn, capMicromxn) => {
+    expect(() => createPageGenerationBudget({ ...CONFIG, targetMicromxn, capMicromxn }))
+      .toThrow("exactly 5000000/10000000");
   });
 });

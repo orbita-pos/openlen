@@ -25,7 +25,7 @@ export interface FireworksJsonClientOptions {
   fetchImpl?: typeof fetch;
   timeoutMs?: number;
   now?: () => number;
-  budget?: PageBudget;
+  budget: PageBudget;
   modelIds?: Partial<Record<FableModelRole, string>>;
 }
 
@@ -41,13 +41,24 @@ function providerUsage(value: unknown): ModelTokenUsage | undefined {
   const root = record(value);
   const usage = record(root?.usage);
   const promptDetails = record(usage?.prompt_tokens_details);
-  const completionDetails = record(usage?.completion_tokens_details);
-  if (!usage || !promptDetails || !completionDetails) return undefined;
+  const completionDetailsValue = usage?.completion_tokens_details;
+  const completionDetails = completionDetailsValue === undefined ? null : record(completionDetailsValue);
+  if (!usage || !promptDetails || (completionDetailsValue !== undefined && !completionDetails)) return undefined;
   const inputTokens = safeToken(usage.prompt_tokens);
   const outputTokens = safeToken(usage.completion_tokens);
+  const totalTokens = safeToken(usage.total_tokens);
   const cachedTokens = safeToken(promptDetails.cached_tokens);
-  const thinkingTokens = safeToken(completionDetails.reasoning_tokens);
-  if (inputTokens === null || outputTokens === null || cachedTokens === null || thinkingTokens === null || cachedTokens > inputTokens) return undefined;
+  const reasoningValue = completionDetails?.reasoning_tokens;
+  const thinkingTokens = reasoningValue === undefined ? 0 : safeToken(reasoningValue);
+  if (inputTokens === null
+    || outputTokens === null
+    || totalTokens === null
+    || cachedTokens === null
+    || thinkingTokens === null
+    || !Number.isSafeInteger(inputTokens + outputTokens)
+    || totalTokens !== inputTokens + outputTokens
+    || cachedTokens > inputTokens
+    || thinkingTokens > outputTokens) return undefined;
   return { inputTokens, cachedTokens, outputTokens, thinkingTokens };
 }
 
@@ -87,7 +98,8 @@ function connectionTimeout(error: unknown): boolean {
   return code === "ETIMEDOUT" || code === "UND_ERR_CONNECT_TIMEOUT";
 }
 
-export function createFireworksJsonClient(options: FireworksJsonClientOptions = {}): FireworksJsonClient {
+export function createFireworksJsonClient(options: FireworksJsonClientOptions): FireworksJsonClient {
+  if (!options?.budget) throw new Error("page budget is required");
   const env = options.env ?? process.env;
   const apiKey = (options.apiKey ?? env.FIREWORKS_API_KEY)?.trim();
   const fetchImpl = options.fetchImpl ?? fetch;
@@ -130,8 +142,8 @@ export function createFireworksJsonClient(options: FireworksJsonClientOptions = 
       const maxInputTokens = new TextEncoder().encode(payload).length;
 
       for (const attempt of [1, 2] as const) {
-        const lease = options.budget?.reserve({ kind: "model", modelId, maxInputTokens, maxOutputTokens: request.maxOutputTokens });
-        if (lease && !lease.ok) return fail("budget_exceeded", (attempt - 1) as 0 | 1);
+        const lease = options.budget.reserve({ kind: "model", modelId, maxInputTokens, maxOutputTokens: request.maxOutputTokens });
+        if (!lease.ok) return fail("budget_exceeded", (attempt - 1) as 0 | 1);
 
         const controller = new AbortController();
         let timedOut = false;
@@ -145,9 +157,12 @@ export function createFireworksJsonClient(options: FireworksJsonClientOptions = 
         });
         let body = "";
         let safeUsage: ModelTokenUsage | undefined;
+        let responseReceived = false;
+        let leaseSettled = false;
 
         const settleBudget = (usage: ModelTokenUsage | undefined): boolean => {
-          if (!lease?.ok || !options.budget) return true;
+          if (leaseSettled) return true;
+          leaseSettled = true;
           try {
             options.budget.complete(lease.leaseId, usage ?? ({} as ModelTokenUsage));
             return true;
@@ -166,6 +181,7 @@ export function createFireworksJsonClient(options: FireworksJsonClientOptions = 
             }),
             deadline,
           ]);
+          responseReceived = true;
           body = await Promise.race([response.text(), deadline]);
           let decodedEnvelope: unknown;
           if (body.length > 0) {
@@ -189,7 +205,7 @@ export function createFireworksJsonClient(options: FireworksJsonClientOptions = 
         } catch (error) {
           settleBudget(safeUsage);
           const isTimeout = timedOut || connectionTimeout(error);
-          if (isTimeout && attempt === 1 && body.length === 0 && safeUsage === undefined) continue;
+          if (isTimeout && !responseReceived && attempt === 1 && body.length === 0 && safeUsage === undefined) continue;
           return fail(isTimeout ? "timeout" : "provider", attempt, safeUsage);
         } finally {
           if (timer !== undefined) clearTimeout(timer);

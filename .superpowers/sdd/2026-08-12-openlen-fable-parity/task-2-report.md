@@ -123,8 +123,9 @@ mutate environment state.
   counters; incomplete usage fails closed.
 - Requests, responses, bodies, prompts, credentials, provider IDs, and errors
   are never logged or included in results.
-- Empty 429/502/503/504 and exact connection/body timeouts may retry once.
-  Body bytes, reported usage, schema/JSON/provider incompatibility, all other
+- Empty 429/502/503/504 and connection timeouts before any response may retry
+  once. Body timeouts never retry. Body bytes, reported usage,
+  schema/JSON/provider incompatibility, all other
   HTTP statuses, and other connection failures never retry.
 - Both attempts reuse the same serialized payload and redacted request ID.
 - Every attempt reserves the page budget before HTTP. Missing usage charges the
@@ -150,8 +151,8 @@ mutate environment state.
   expectations continue to pass.
 - Shared synchronous reservation ledger includes outstanding reservations in
   the cap decision, preventing interleaved overspend.
-- Default target/cap env contracts are exactly 5,000,000 / 10,000,000 micromxn;
-  the cap may be configured downward but never above 10 MXN.
+- Target/cap env contracts are exactly 5,000,000 / 10,000,000 micromxn; any
+  deviation fails closed.
 - Missing/invalid version, FX, target, cap, model/image rate, usage, lease, or
   count fails closed.
 - Telemetry snapshot is an allowlist of rate-card version, target/cap,
@@ -304,3 +305,242 @@ feat(ai): add budgeted Fireworks model gateway
 
 The resulting hash is reported in the parent handoff; embedding a commit's own
 hash in a file contained by that commit is self-referential.
+
+## Fix round 1/5 — mandatory ledger and closed retry/config contracts
+
+This section supersedes the initial report wherever it discusses optional
+budget injection, body-timeout retry, configurable-downward target/cap, or
+caller-supplied rate maps.
+
+### Review verification and root causes
+
+- `FireworksJsonClientOptions.budget?` plus optional-chained `reserve` allowed a
+  paid fetch without a page ledger. There were no callers outside Task 2.
+- One `timedOut` flag covered both the pre-response fetch and post-response
+  `response.text()`. Because `body` is assigned only after `text()` resolves, a
+  partial stalled body still looked empty and satisfied the retry predicate.
+- Usage parsing did not read `total_tokens`, did not bound reasoning by
+  completion, and required completion detail metadata even for non-thinking
+  calls.
+- `PageBudgetConfig.rates` accepted arbitrary positive rate maps, including a
+  subvalued conservative Qwen rate or extra models.
+- Target and cap validation accepted positive/downward values instead of the
+  required exact 5/10 MXN contract.
+
+### RED evidence
+
+Mandatory ledger RED:
+
+```text
+npm.cmd test -- lib/ai/fireworks-client.test.ts -t "rejects construction without a page budget"
+exit 1
+Test Files: 1 failed (1)
+Tests: 1 failed, 22 skipped (23)
+```
+
+Exact intended failure: constructing the public client without `PageBudget`
+did not throw, proving the paid boundary remained reachable without a ledger.
+
+Body timeout/partial body RED:
+
+```text
+npm.cmd test -- lib/ai/fireworks-client.test.ts -t "response-body timeout|partial bytes"
+exit 1
+Test Files: 1 failed (1)
+Tests: 2 failed, 22 skipped (24)
+```
+
+Exact intended failures:
+
+- a hanging `response.text()` returned `timeout` after two attempts instead of
+  one;
+- a response that emitted `{"choices":` and never closed was fetched twice,
+  ending as `provider` instead of a one-attempt `timeout`.
+
+Complete usage RED:
+
+```text
+npm.cmd test -- lib/ai/fireworks-client.test.ts -t "non-thinking usage|usage without exposing"
+exit 1
+Test Files: 1 failed (1)
+Tests: 4 failed, 2 passed, 24 skipped (30)
+```
+
+Exact intended failures:
+
+- valid non-thinking usage without completion detail metadata was rejected;
+- missing/mismatched `total_tokens` and reasoning above completion were
+  accepted. Existing cached-above-prompt and unsafe-reasoning guards were the
+  two passing cases.
+
+Fixed rate/exact cap RED:
+
+```text
+npm.cmd test -- lib/generation/page-generation-budget.test.ts -t "caller-supplied rate maps|non-exact page"
+exit 1
+Test Files: 1 failed (1)
+Tests: 4 failed, 8 skipped (12)
+```
+
+Exact intended failures: a subvalued Qwen map and target/cap deviations were
+accepted. The first assertion stopped the rate-map case before its extra-model
+assertion, while all three exact target/cap rows independently failed.
+
+All RED runs emitted only the pre-existing Vite CJS Node API deprecation
+warning. Provider fetches were local doubles only.
+
+### GREEN changes and evidence
+
+- `PageBudget` is a required factory option in both TypeScript and runtime.
+  Every attempt calls `reserve` synchronously before fetch; denial returns
+  `budget_exceeded` without a provider call.
+- The client records whether a `Response` was received. Only a connection
+  timeout before that point may retry; body read/partial-body timeout never
+  retries.
+- Usage now requires safe nonnegative prompt/completion/total counts, exact
+  `total = prompt + completion`, cached no greater than prompt, and reasoning
+  no greater than completion. Missing completion detail/reasoning defaults to
+  zero; invalid detail fields fail closed.
+- Production rates are internal and frozen. `PageBudgetConfig` has no rate-map
+  field, and a runtime `rates` property is rejected even through an unsafe cast.
+- Target and cap must be exactly 5,000,000 and 10,000,000 micromxn in direct and
+  environment-derived configuration.
+
+Focused GREENs:
+
+```text
+npm.cmd test -- lib/ai/fireworks-client.test.ts -t "rejects construction without a page budget"
+exit 0
+Test Files: 1 passed (1)
+Tests: 1 passed, 22 skipped (23)
+```
+
+```text
+npm.cmd test -- lib/ai/fireworks-client.test.ts -t "response-body timeout|partial bytes"
+exit 0
+Test Files: 1 passed (1)
+Tests: 2 passed, 22 skipped (24)
+```
+
+```text
+npm.cmd test -- lib/ai/fireworks-client.test.ts -t "non-thinking usage|usage without exposing"
+exit 0
+Test Files: 1 passed (1)
+Tests: 6 passed, 24 skipped (30)
+```
+
+```text
+npm.cmd test -- lib/generation/page-generation-budget.test.ts -t "caller-supplied rate maps|non-exact page"
+exit 0
+Test Files: 1 passed (1)
+Tests: 4 passed, 8 skipped (12)
+```
+
+Lease order/lifecycle verification:
+
+```text
+npm.cmd test -- lib/ai/fireworks-client.test.ts -t "completes each attempt lease exactly once"
+exit 0
+Test Files: 1 passed (1)
+Tests: 1 passed, 30 skipped (31)
+```
+
+The event trace asserted exactly:
+
+```text
+reserve:lease-1, fetch:1, complete:lease-1,
+reserve:lease-2, fetch:2, complete:lease-2
+```
+
+The first empty 503 closes fail-closed without usage; the second successful
+attempt preserves complete usage. A refused second reservation remains covered
+by the existing test and prevents the second fetch.
+
+Intermediate affected-suite verification:
+
+```text
+npm.cmd test -- lib/ai/fireworks-client.test.ts lib/generation/page-generation-budget.test.ts
+exit 0
+Test Files: 2 passed (2)
+Tests: 42 passed (42)
+```
+
+The first complete four-suite run passed 58/58 tests. Its paired typecheck found
+only a test-double inference error caused by referencing `fetchImpl.mock.calls`
+inside its own initializer. The test now uses an explicit counter and
+`Promise<Response>` return type. Fresh final four-suite/typecheck/diff evidence
+is recorded below after the report update.
+
+### Fix-round self-review
+
+- Confirmed no `budget?`, `budget?.reserve`, or external production caller
+  remains.
+- Confirmed empty allowed HTTP statuses and connection timeouts reserve the
+  second lease before the second fetch, with byte-identical payload.
+- Confirmed body timeout, partial body, malformed JSON, schema failure, body
+  bytes, usage-bearing status, and non-timeout connection errors never retry.
+- Confirmed success and failure each complete their lease once; duplicate lease
+  completion throws in the ledger and in the lifecycle test double.
+- Confirmed safe usage is retained on HTTP and schema/JSON failures; incomplete
+  or inconsistent usage is omitted from the result and charged fail-closed.
+- Confirmed Qwen retains the conservative `.50/.10/3.00` rate and Gemini remains
+  image-only at `.039`; no caller can replace or extend the map.
+- Confirmed no request, response, body, prompt, credential, or provider error is
+  logged or included in telemetry.
+- No network, model, DB, migration, deployment, publication, environment
+  mutation, or independent subagent/review was performed in this fix round.
+
+Resumed self-review found one additional lease-lifecycle exception after the
+controller interruption: a caller schema that throws (rather than returning a
+normal failed parse) ran the catch path after usage had already completed the
+lease. RED evidence:
+
+```text
+npm.cmd test -- lib/ai/fireworks-client.test.ts -t "caller schema parsing throws"
+exit 1
+Test Files: 1 failed (1)
+Tests: 1 failed, 31 skipped (32)
+```
+
+Exact intended failure: `PageBudget.complete` was called twice for `lease-1`.
+The minimal fix tracks settlement per attempt and makes subsequent catch-path
+settlement a no-op. GREEN evidence:
+
+```text
+npm.cmd test -- lib/ai/fireworks-client.test.ts -t "caller schema parsing throws"
+exit 0
+Test Files: 1 passed (1)
+Tests: 1 passed, 31 skipped (32)
+```
+
+### Final fix-round verification
+
+Fresh exact focused suite after all fixes and resumed self-review:
+
+```text
+npm.cmd test -- lib/ai/fireworks-client.test.ts lib/generation/fable-model-policy.test.ts lib/generation/page-generation-budget.test.ts lib/generation/model-cost.test.ts
+exit 0
+Test Files: 4 passed (4)
+Tests: 59 passed (59)
+Vitest duration: 3.69s
+```
+
+Only the pre-existing Vite CJS Node API deprecation warning was emitted.
+
+Fresh typecheck:
+
+```text
+npm.cmd run typecheck
+> tsc --noEmit
+exit 0
+```
+
+Fresh unstaged diff check before final report staging:
+
+```text
+git -c safe.directory='<repo>' diff --check
+exit 0
+```
+
+Git emitted only the sandbox permission warning for
+`.git/objects/info/alternates`.

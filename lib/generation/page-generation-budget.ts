@@ -14,8 +14,6 @@ export const FABLE_PRODUCTION_RATES = Object.freeze({
   "gemini-2.5-flash-image": Object.freeze({ image: .039 }),
 });
 
-export type ProductionRateMap = Readonly<Record<string, ProductionModelRate | ProductionImageRate>>;
-
 export type PlannedPaidCall =
   | { kind: "model"; modelId: string; maxInputTokens: number; maxOutputTokens: number }
   | { kind: "image"; modelId: string; imageCount: number };
@@ -41,7 +39,6 @@ export interface PageBudgetConfig {
   mxnPerUsd: number;
   targetMicromxn: number;
   capMicromxn: number;
-  rates: ProductionRateMap;
 }
 
 type Environment = Readonly<Record<string, string | undefined>>;
@@ -55,8 +52,8 @@ function positiveFinite(value: number, name: string): void {
   if (!Number.isFinite(value) || value <= 0) throw new Error(`${name} must be a finite positive number`);
 }
 
-function textRate(rates: ProductionRateMap, modelId: string): ProductionModelRate {
-  const rate = rates[modelId];
+function textRate(modelId: string): ProductionModelRate {
+  const rate = FABLE_PRODUCTION_RATES[modelId as keyof typeof FABLE_PRODUCTION_RATES];
   if (!rate || !("input" in rate) || !("cached" in rate) || !("output" in rate)) throw new Error("unknown text model");
   positiveFinite(rate.input, "input rate");
   positiveFinite(rate.cached, "cached rate");
@@ -64,8 +61,8 @@ function textRate(rates: ProductionRateMap, modelId: string): ProductionModelRat
   return rate;
 }
 
-function imageRate(rates: ProductionRateMap, modelId: string): ProductionImageRate {
-  const rate = rates[modelId];
+function imageRate(modelId: string): ProductionImageRate {
+  const rate = FABLE_PRODUCTION_RATES[modelId as keyof typeof FABLE_PRODUCTION_RATES];
   if (!rate || !("image" in rate)) throw new Error("unknown image model");
   positiveFinite(rate.image, "image rate");
   return rate;
@@ -74,7 +71,7 @@ function imageRate(rates: ProductionRateMap, modelId: string): ProductionImageRa
 function reservationCost(call: PlannedPaidCall, config: PageBudgetConfig): number {
   if (call.kind === "image") {
     positiveSafeInteger(call.imageCount, "imageCount");
-    return calculateImageUsageMicromxn({ imageCount: call.imageCount }, imageRate(config.rates, call.modelId), config.mxnPerUsd);
+    return calculateImageUsageMicromxn({ imageCount: call.imageCount }, imageRate(call.modelId), config.mxnPerUsd);
   }
   positiveSafeInteger(call.maxInputTokens, "maxInputTokens");
   positiveSafeInteger(call.maxOutputTokens, "maxOutputTokens");
@@ -83,19 +80,21 @@ function reservationCost(call: PlannedPaidCall, config: PageBudgetConfig): numbe
     cachedTokens: 0,
     outputTokens: call.maxOutputTokens,
     thinkingTokens: 0,
-  }, textRate(config.rates, call.modelId), config.mxnPerUsd);
+  }, textRate(call.modelId), config.mxnPerUsd);
 }
 
 function validateConfig(config: PageBudgetConfig): void {
+  if ("rates" in config) throw new Error("production rates are fixed");
   if (!config.rateCardVersion.trim()) throw new Error("rateCardVersion is required");
   positiveFinite(config.mxnPerUsd, "mxnPerUsd");
   positiveSafeInteger(config.targetMicromxn, "targetMicromxn");
   positiveSafeInteger(config.capMicromxn, "capMicromxn");
-  if (config.targetMicromxn > config.capMicromxn) throw new Error("targetMicromxn cannot exceed capMicromxn");
-  if (config.capMicromxn > 10_000_000) throw new Error("capMicromxn cannot exceed 10000000");
+  if (config.targetMicromxn !== 5_000_000 || config.capMicromxn !== 10_000_000) {
+    throw new Error("page target/cap must be exactly 5000000/10000000 micromxn");
+  }
   for (const modelId of Object.keys(FABLE_PRODUCTION_RATES)) {
-    if (modelId === "gemini-2.5-flash-image") imageRate(config.rates, modelId);
-    else textRate(config.rates, modelId);
+    if (modelId === "gemini-2.5-flash-image") imageRate(modelId);
+    else textRate(modelId);
   }
 }
 
@@ -124,14 +123,14 @@ export function createPageGenerationBudget(config: PageBudgetConfig): PageBudget
       reservedMicromxn -= lease.reservedMicromxn;
       try {
         if (lease.kind === "model") {
-          const cost = calculateModelUsageMicromxn(usage as ModelTokenUsage, textRate(config.rates, lease.modelId), config.mxnPerUsd);
+          const cost = calculateModelUsageMicromxn(usage as ModelTokenUsage, textRate(lease.modelId), config.mxnPerUsd);
           if (cost > lease.reservedMicromxn) throw new Error("reported usage exceeds reservation");
           actualMicromxn += cost;
           modelUsage.push({ ...(usage as ModelTokenUsage), modelId: lease.modelId, costMicromxn: cost });
         } else {
           const image = usage as ImageUsage;
           if (!Number.isSafeInteger(image?.imageCount) || image.imageCount < 0 || image.imageCount > lease.imageCount) throw new Error("complete image usage is required");
-          const cost = image.imageCount === 0 ? 0 : calculateImageUsageMicromxn(image, imageRate(config.rates, lease.modelId), config.mxnPerUsd);
+          const cost = image.imageCount === 0 ? 0 : calculateImageUsageMicromxn(image, imageRate(lease.modelId), config.mxnPerUsd);
           actualMicromxn += cost;
           imageUsage.push({ imageCount: image.imageCount, modelId: lease.modelId, costMicromxn: cost });
         }
@@ -170,7 +169,6 @@ export function parseFablePageBudgetConfigFromEnv(env: Environment = process.env
     mxnPerUsd: requiredNumber(env, "OPENLEN_FABLE_MXN_PER_USD"),
     targetMicromxn: requiredNumber(env, "OPENLEN_FABLE_PAGE_TARGET_MICROMXN"),
     capMicromxn: requiredNumber(env, "OPENLEN_FABLE_PAGE_CAP_MICROMXN"),
-    rates: FABLE_PRODUCTION_RATES,
   };
   validateConfig(config);
   return config;
