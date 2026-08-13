@@ -144,10 +144,31 @@ describe("Fireworks JSON client", () => {
       prompt_tokens_details: { cached_tokens: 30 },
     };
     const fetchImpl = vi.fn(async () => jsonResponse(successEnvelope(undefined, usage)));
-    await expect(createClient({ apiKey: "key", fetchImpl }).request(REQUEST)).resolves.toMatchObject({
+    await expect(createClient({ apiKey: "key", fetchImpl }).request({ ...REQUEST, reasoningEffort: "none" })).resolves.toMatchObject({
       ok: true,
       usage: { inputTokens: 100, cachedTokens: 30, outputTokens: 40, thinkingTokens: 0 },
     });
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
+  });
+
+  it.each([
+    ["high", "reasoner", undefined],
+    ["high", "reasoner", {}],
+    ["max", "designer", undefined],
+    ["max", "designer", {}],
+  ] as const)("fails closed when %s reasoning usage is absent", async (reasoningEffort, role, completionTokensDetails) => {
+    const usage = {
+      prompt_tokens: 100,
+      completion_tokens: 40,
+      total_tokens: 140,
+      prompt_tokens_details: { cached_tokens: 30 },
+      ...(completionTokensDetails === undefined ? {} : { completion_tokens_details: completionTokensDetails }),
+    };
+    const fetchImpl = vi.fn(async () => jsonResponse(successEnvelope(undefined, usage)));
+    const result = await createClient({ apiKey: "key", fetchImpl }).request({ ...REQUEST, role, reasoningEffort });
+    expect(result).toMatchObject({ ok: false, code: "provider", attempts: 1 });
+    expect(result).not.toHaveProperty("usage");
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
   });
 
   it.each([

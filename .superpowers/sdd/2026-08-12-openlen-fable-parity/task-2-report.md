@@ -544,3 +544,88 @@ exit 0
 
 Git emitted only the sandbox permission warning for
 `.git/objects/info/alternates`.
+
+## Fix round 2/5 — reasoning-aware usage completeness
+
+Round 1 treated absent `completion_tokens_details.reasoning_tokens` as zero for
+every request. The test named non-thinking also reused the default `high`
+request, so it did not actually prove the intended exception.
+
+### RED
+
+The non-thinking case now sends `reasoningEffort: "none"`. Four thinking cases
+cover `high` and `max`, each with the completion details object absent and with
+the object present but its reasoning counter absent.
+
+```text
+npm.cmd test -- lib/ai/fireworks-client.test.ts -t "complete non-thinking usage|reasoning usage is absent"
+exit 1
+Test Files: 1 failed (1)
+Tests: 4 failed, 1 passed, 31 skipped (36)
+```
+
+Exact intended result: the real `none` case passed with `thinkingTokens: 0`,
+while all four `high/max` cases incorrectly returned success instead of a
+one-attempt fail-closed provider result.
+
+### GREEN
+
+`providerUsage` now receives the request's typed `reasoningEffort`. It defaults
+absent reasoning usage to zero only for `none`; `high` and `max` require the
+provider reasoning counter. It does not infer thinking mode from provider text.
+Incomplete thinking usage is omitted from the typed result, the lease charges
+fail-closed through the existing incomplete-usage path, and the response is not
+retried.
+
+```text
+npm.cmd test -- lib/ai/fireworks-client.test.ts -t "complete non-thinking usage|reasoning usage is absent"
+exit 0
+Test Files: 1 passed (1)
+Tests: 5 passed, 31 skipped (36)
+```
+
+Only the pre-existing Vite CJS Node API deprecation warning was emitted. No
+network, provider/model, DB, deployment, publication, migration, environment
+mutation, or subagent was used.
+
+### Final fix-round 2 verification and self-review
+
+```text
+npm.cmd test -- lib/ai/fireworks-client.test.ts
+exit 0
+Test Files: 1 passed (1)
+Tests: 36 passed (36)
+Vitest duration: 2.17s
+```
+
+```text
+npm.cmd test -- lib/ai/fireworks-client.test.ts lib/generation/fable-model-policy.test.ts lib/generation/page-generation-budget.test.ts lib/generation/model-cost.test.ts
+exit 0
+Test Files: 4 passed (4)
+Tests: 63 passed (63)
+Vitest duration: 3.78s
+```
+
+```text
+npm.cmd run typecheck
+> tsc --noEmit
+exit 0
+```
+
+```text
+git -c safe.directory='<repo>' diff --check
+exit 0
+```
+
+Only the pre-existing Vite warning and Git sandbox warning for
+`.git/objects/info/alternates` were emitted.
+
+- Confirmed the parser receives the typed request effort directly.
+- Confirmed absent completion details and absent reasoning fields both fail
+  closed for `high` and `max`, return `provider`, omit incomplete usage, and
+  perform exactly one fetch.
+- Confirmed the same absent details are accepted only for `none`, producing
+  complete usage with `thinkingTokens: 0`.
+- Confirmed existing valid reported reasoning usage remains preserved on
+  success and typed paid failures.
+- Confirmed no logging/body leakage or retry semantics changed.
