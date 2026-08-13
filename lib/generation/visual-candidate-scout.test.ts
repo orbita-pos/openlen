@@ -12,6 +12,7 @@ import type { FireworksJsonRequest } from "../ai/fireworks-contracts";
 import type { SectionRecord } from "@/lib/sections/store";
 
 const sha12 = (html: string) => createHash("sha256").update(html).digest("hex").slice(0, 12);
+const VALID_JPEG_BASE64 = "/9j/4AAQSkZJRgABAQEAYABgAAD/2wBDAAMCAgMCAgMDAwMEAwMEBQgFBQQEBQoHBwYIDAoMDAsKCwsNDhIQDQ4RDgsLEBYQERMUFRUVDA8XGBYUGBIUFRT/2wBDAQMEBAUEBQkFBQkUDQsNFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBT/wAARCABAAEADASIAAhEBAxEB/8QAHwAAAQUBAQEBAQEAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAAAgEDAwIEAwUFBAQAAAF9AQIDAAQRBRIhMUEGE1FhByJxFDKBkaEII0KxwRVS0fAkM2JyggkKFhcYGRolJicoKSo0NTY3ODk6Q0RFRkdISUpTVFVWV1hZWmNkZWZnaGlqc3R1dnd4eXqDhIWGh4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uHi4+Tl5ufo6erx8vP09fb3+Pn6/8QAHwEAAwEBAQEBAQEBAQAAAAAAAAECAwQFBgcICQoL/8QAtREAAgECBAQDBAcFBAQAAQJ3AAECAxEEBSExBhJBUQdhcRMiMoEIFEKRobHBCSMzUvAVYnLRChYkNOEl8RcYGRomJygpKjU2Nzg5OkNERUZHSElKU1RVVldYWVpjZGVmZ2hpanN0dXZ3eHl6goOEhYaHiImKkpOUlZaXmJmaoqOkpaanqKmqsrO0tba3uLm6wsPExcbHyMnK0tPU1dbX2Nna4uPk5ebn6Onq8vP09fb3+Pn6/9oADAMBAAIRAxEAPwDq6KKK/os/KgooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigD//2Q==";
 
 function record(id: string, html: string, negativeSignals: string[] = []): SectionRecord {
   const contentHash = sha12(html);
@@ -101,7 +102,7 @@ describe("scoutVisualCandidates", () => {
     const fetchText = vi.fn(async (url: string) => url.endsWith("hero-safe.html") ? safeHtml : rejectedHtml);
     const renderContactSheet = vi.fn(async (fragments: readonly { candidateId: string; html: string }[]) => {
       expect(fragments.map((fragment) => fragment.candidateId)).toEqual(["hero-safe"]);
-      return { mimeType: "image/jpeg", dataBase64: Buffer.from("contact-sheet").toString("base64") };
+      return { mimeType: "image/jpeg", dataBase64: VALID_JPEG_BASE64 };
     });
 
     const result = await scoutVisualCandidates({
@@ -112,13 +113,13 @@ describe("scoutVisualCandidates", () => {
       requestId: "page-123",
     }, { client, fetchText, renderContactSheet });
 
-    expect(result).toMatchObject({ ok: true, decisions: [{ action: "generate", candidateId: null }] });
+    expect(result).toMatchObject({ ok: true, requiredRoles: ["hero"], decisions: [{ action: "generate", candidateId: null }] });
     expect(fetchText).toHaveBeenCalledTimes(1);
     expect(renderContactSheet).toHaveBeenCalledTimes(1);
     expect(providerPayload).toContain("hero-safe");
     expect(userContent).toEqual([
       { type: "text", text: expect.stringContaining("hero-safe") },
-      { type: "image_url", image_url: { url: `data:image/jpeg;base64,${Buffer.from("contact-sheet").toString("base64")}` } },
+      { type: "image_url", image_url: { url: `data:image/jpeg;base64,${VALID_JPEG_BASE64}` } },
     ]);
     expect(providerPayload).not.toContain("hero-dashboard");
     expect(providerPayload).not.toContain("storage.invalid");
@@ -158,7 +159,7 @@ describe("scoutVisualCandidates", () => {
     }, {
       client,
       fetchText: async () => null,
-      renderContactSheet: async () => ({ mimeType: "image/jpeg", dataBase64: "c2hlZXQ=" }),
+      renderContactSheet: async () => ({ mimeType: "image/jpeg", dataBase64: VALID_JPEG_BASE64 }),
     });
 
     expect(result).toMatchObject({ ok: false, code: "schema", usage: { inputTokens: 12 } });

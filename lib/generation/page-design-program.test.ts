@@ -8,9 +8,15 @@ import type { FireworksJsonClient } from "../ai/fireworks-client";
 import type { FireworksJsonRequest } from "../ai/fireworks-contracts";
 
 const direction = CreativeDirectionSchema.parse(COLORING_DIRECTION);
+const responseDirection = CreativeDirectionSchema.parse({
+  ...COLORING_DIRECTION,
+  requiredVisualSignals: ["coloring_art", "friendly", "playful"],
+  forbiddenVisualSignals: ["corporate", "dashboard"],
+});
 
 const scout = {
   ok: true,
+  requiredRoles: ["hero"],
   candidates: [{
     candidateId: "hero-safe",
     ordinal: 0,
@@ -32,11 +38,11 @@ const scout = {
 const response = {
   schemaVersion: "adaptive-page-design/1.0",
   narrative: ["hero"],
-    direction,
+  direction: responseDirection,
   decisions: scout.decisions,
   rhythm: "storytelling",
-  requiredSignals: ["playful"],
-  forbiddenSignals: ["generic_saas"],
+  requiredSignals: ["coloring_art", "friendly", "playful"],
+  forbiddenSignals: ["corporate", "dashboard"],
   imageSlots: [{ slotIndex: 0, ordinal: 0, mediaType: "illustration", subject: "hand_drawn_characters", purpose: "hero_focal", required: true }],
 } as const;
 
@@ -104,5 +110,45 @@ describe("createPageDesignProgram", () => {
       requestId: "page-789",
     }, { client });
     expect(result).toMatchObject({ ok: false, code: "schema", usage: { inputTokens: 1 } });
+  });
+
+  it.each([
+    ["same-length replacement", ["features", "footer"]],
+    ["reordered", ["footer", "hero"]],
+  ] as const)("rejects %s role drift before DeepSeek even for all-generate with no candidates", async (_label, requiredRoles) => {
+    let requests = 0;
+    const emptyScout = {
+      ...scout,
+      requiredRoles: ["hero", "footer"],
+      candidates: [],
+      decisions: [
+        { ordinal: 0, action: "generate", candidateId: null, usefulTraits: [], rejectedTraits: [] },
+        { ordinal: 1, action: "generate", candidateId: null, usefulTraits: [], rejectedTraits: [] },
+      ],
+    } as unknown as VisualScoutSuccess;
+    const result = await createPageDesignProgram({
+      scout: emptyScout,
+      requiredRoles,
+      initialDirection: direction,
+      syntheticIntent: { siteType: "content_platform", audience: "children", domains: ["creative_play"], emotionalGoals: ["playful"], requiredSignals: [], forbiddenSignals: [] },
+      copyKeyNames: ["hero.title"],
+      requestId: "page-role-drift",
+    }, { client: { async request() { requests += 1; throw new Error("must not call DeepSeek"); } } });
+    expect(result).toEqual({ ok: false, code: "invalid_input" });
+    expect(requests).toBe(0);
+  });
+
+  it("rejects contradictory initial signals before DeepSeek", async () => {
+    let requests = 0;
+    const result = await createPageDesignProgram({
+      scout: { ...scout, requiredRoles: ["hero"] } as unknown as VisualScoutSuccess,
+      requiredRoles: ["hero"],
+      initialDirection: direction,
+      syntheticIntent: { siteType: "content_platform", audience: "children", domains: ["creative_play"], emotionalGoals: ["playful"], requiredSignals: ["corporate"], forbiddenSignals: [] },
+      copyKeyNames: ["hero.title"],
+      requestId: "page-signal-conflict",
+    }, { client: { async request() { requests += 1; throw new Error("must not call DeepSeek"); } } });
+    expect(result).toEqual({ ok: false, code: "invalid_input" });
+    expect(requests).toBe(0);
   });
 });

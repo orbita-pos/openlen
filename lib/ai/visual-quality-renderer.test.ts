@@ -23,7 +23,7 @@ describe("renderVisualQualityViewports", () => {
     expect(pool.render).toHaveBeenCalledTimes(1);
     expect(renderedHtml).toContain("0 · hero · hero-safe");
     expect(renderedHtml).toContain("1 · features · features-safe");
-    expect(renderedHtml).toContain('data-sec="hero-safe"');
+    expect(renderedHtml).toContain("data-sec=&quot;hero-safe&quot;");
   });
 
   it("refuses more than twelve contact-sheet fragments before using a browser worker", async () => {
@@ -36,6 +36,25 @@ describe("renderVisualQualityViewports", () => {
     }));
     await expect(renderVisualCandidateContactSheet(fragments, pool)).resolves.toBeNull();
     expect(pool.render).not.toHaveBeenCalled();
+  });
+
+  it("isolates active fragment content from labels, top navigation, the document, and the next pooled render", async () => {
+    const documents: string[] = [];
+    const jpeg = { mimeType: "image/jpeg", dataBase64: Buffer.from("jpeg").toString("base64") } as const;
+    const pool = {
+      render: vi.fn(async (html: string) => { documents.push(html); return { desktop: jpeg, mobile: jpeg }; }),
+      close: vi.fn(async () => undefined),
+    };
+    const malicious = `<style>body,figcaption{display:none!important}</style><script>top.location='https://private.invalid';document.write('replaced')</script><img onerror="top.location='https://private.invalid'" src=x><svg onload="document.write('svg')"></svg><section data-sec="hero-hostile">first-run-sentinel</section>`;
+    await renderVisualCandidateContactSheet([{ candidateId: "hero-hostile", ordinal: 0, role: "hero", html: malicious }], pool);
+    await renderVisualCandidateContactSheet([{ candidateId: "hero-safe", ordinal: 0, role: "hero", html: '<section data-sec="hero-safe">second</section>' }], pool);
+
+    expect(documents[0]).toContain('<iframe sandbox=""');
+    expect(documents[0]).not.toMatch(/allow-scripts|allow-top-navigation|<script>|<style>body,figcaption/);
+    expect(documents[0]).toContain("&lt;script&gt;top.location=");
+    expect(documents[0].indexOf("<figcaption")).toBeLessThan(documents[0].indexOf("<iframe"));
+    expect(documents[1]).not.toContain("first-run-sentinel");
+    expect(documents[1]).toContain("hero-safe");
   });
 
   it("injects a deterministic reset and fails closed when consecutive mobile geometry samples disagree", async () => {

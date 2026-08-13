@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { COLORING_DIRECTION } from "./creative-fixtures.test-support";
+import { CreativeDirectionSchema } from "./creative-contracts";
 import {
   AdaptivePageDesignProgramSchema,
   createAdaptivePageDesignProgramSchema,
@@ -17,10 +18,16 @@ const decisions = [
   { ordinal: 1, action: "generate", candidateId: null, usefulTraits: [], rejectedTraits: ["generic"] },
 ] as const;
 
+const coherentDirection = CreativeDirectionSchema.parse({
+  ...COLORING_DIRECTION,
+  requiredVisualSignals: ["cinematic", "tactile"],
+  forbiddenVisualSignals: ["generic_saas"],
+});
+
 const valid = {
   schemaVersion: "adaptive-page-design/1.0",
   narrative: ["hero", "features"],
-  direction: COLORING_DIRECTION,
+  direction: coherentDirection,
   decisions,
   rhythm: "cinematic",
   requiredSignals: ["cinematic", "tactile"],
@@ -88,5 +95,31 @@ describe("adaptive design contracts", () => {
     } as const;
     expect(schema.parse(allGenerate)).toEqual(allGenerate);
     expect(schema.safeParse({ ...allGenerate, decisions: allGenerate.decisions.slice(0, 1) }).success).toBe(false);
+  });
+
+  it("rejects traits claimed as both useful and rejected", () => {
+    expect(AdaptivePageDesignProgramSchema.safeParse({
+      ...valid,
+      decisions: [{ ...decisions[0], rejectedTraits: ["cinematic"] }, decisions[1]],
+    }).success).toBe(false);
+  });
+
+  it("keeps direction and program signal sets coherent with canonical initial requirements", () => {
+    const schema = createAdaptivePageDesignProgramSchema({
+      requiredRoles: ["hero", "features"],
+      retrievedCandidates: candidates,
+      initialRequiredSignals: ["tactile", "cinematic"],
+      initialForbiddenSignals: ["generic_saas"],
+    } as never);
+    expect(schema.safeParse(valid).success).toBe(true);
+    const contradictions = [
+      { ...valid, requiredSignals: ["cinematic"] },
+      { ...valid, requiredSignals: ["cinematic", "generic_saas", "tactile"], forbiddenSignals: [] },
+      { ...valid, forbiddenSignals: ["cinematic", "generic_saas"], requiredSignals: ["tactile"] },
+      { ...valid, direction: { ...coherentDirection, requiredVisualSignals: ["cinematic", "generic_saas", "tactile"], forbiddenVisualSignals: [] } },
+      { ...valid, direction: { ...coherentDirection, requiredVisualSignals: ["tactile"], forbiddenVisualSignals: ["cinematic", "generic_saas"] } },
+      { ...valid, direction: { ...coherentDirection, requiredVisualSignals: ["tactile", "cinematic"] } },
+    ];
+    contradictions.forEach((value) => expect(schema.safeParse(value).success).toBe(false));
   });
 });

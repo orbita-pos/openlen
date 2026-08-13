@@ -33,6 +33,10 @@ export const CandidateDecisionSchema = z.object({
       ctx.addIssue({ code: z.ZodIssueCode.custom, path: [key], message: "traits must be unique" });
     }
   }
+  const rejected = new Set(value.rejectedTraits);
+  if (value.usefulTraits.some((trait) => rejected.has(trait))) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["rejectedTraits"], message: "useful and rejected traits must be disjoint" });
+  }
 });
 
 export const BoundedImageRequirementSchema = z.object({
@@ -63,6 +67,34 @@ function addAlignedDecisionIssues(
   }
 }
 
+function canonicalTaxonomy(values: readonly string[]): string[] {
+  return [...new Set(values)].sort();
+}
+
+function sameOrderedValues(left: readonly string[], right: readonly string[]): boolean {
+  return left.length === right.length && left.every((value, index) => value === right[index]);
+}
+
+function addCanonicalSignalIssues(
+  required: readonly string[],
+  forbidden: readonly string[],
+  basePath: "direction" | undefined,
+  ctx: z.RefinementCtx,
+): void {
+  const requiredPath = basePath ? [basePath, "requiredVisualSignals"] : ["requiredSignals"];
+  const forbiddenPath = basePath ? [basePath, "forbiddenVisualSignals"] : ["forbiddenSignals"];
+  if (!sameOrderedValues(required, canonicalTaxonomy(required))) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: requiredPath, message: "required signals must use canonical lexical order" });
+  }
+  if (!sameOrderedValues(forbidden, canonicalTaxonomy(forbidden))) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: forbiddenPath, message: "forbidden signals must use canonical lexical order" });
+  }
+  const forbiddenSet = new Set(forbidden);
+  if (required.some((signal) => forbiddenSet.has(signal))) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: requiredPath, message: "required and forbidden signals must be disjoint" });
+  }
+}
+
 export const AdaptivePageDesignProgramSchema = z.object({
   schemaVersion: z.literal("adaptive-page-design/1.0"),
   narrative: z.array(SectionRoleSchema).min(1).max(32),
@@ -86,9 +118,13 @@ export const AdaptivePageDesignProgramSchema = z.object({
       ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["imageSlots", index, "ordinal"], message: "image slot role is missing" });
     }
   });
-  const forbidden = new Set(value.forbiddenSignals);
-  if (value.requiredSignals.some((signal) => forbidden.has(signal))) {
-    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["requiredSignals"], message: "required and forbidden signals must be disjoint" });
+  addCanonicalSignalIssues(value.requiredSignals, value.forbiddenSignals, undefined, ctx);
+  addCanonicalSignalIssues(value.direction.requiredVisualSignals, value.direction.forbiddenVisualSignals, "direction", ctx);
+  if (!sameOrderedValues(value.requiredSignals, value.direction.requiredVisualSignals)) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["direction", "requiredVisualSignals"], message: "direction and program required signals must match" });
+  }
+  if (!sameOrderedValues(value.forbiddenSignals, value.direction.forbiddenVisualSignals)) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["direction", "forbiddenVisualSignals"], message: "direction and program forbidden signals must match" });
   }
 });
 
@@ -102,6 +138,8 @@ interface ContextualContract {
   readonly requiredRoles: readonly (typeof CANONICAL_SECTION_ROLES)[number][];
   readonly retrievedCandidates: readonly RetrievedCandidateReference[];
   readonly expectedDecisions?: readonly z.infer<typeof CandidateDecisionSchema>[];
+  readonly initialRequiredSignals?: readonly string[];
+  readonly initialForbiddenSignals?: readonly string[];
 }
 
 function contextualIssues(
@@ -123,11 +161,38 @@ function contextualIssues(
 }
 
 export function createAdaptivePageDesignProgramSchema(context: ContextualContract) {
+  const initialRequired = canonicalTaxonomy(context.initialRequiredSignals ?? []);
+  const initialForbidden = canonicalTaxonomy(context.initialForbiddenSignals ?? []);
+  const validInitialRequired = z.array(TaxonomySlugSchema).max(24).safeParse(initialRequired).success;
+  const validInitialForbidden = z.array(TaxonomySlugSchema).max(24).safeParse(initialForbidden).success;
   return AdaptivePageDesignProgramSchema.superRefine((value, ctx) => {
     if (JSON.stringify(value.narrative) !== JSON.stringify(context.requiredRoles)) {
       ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["narrative"], message: "all required roles must be present in order" });
     }
     contextualIssues(value.decisions, context, ctx);
+    if (!validInitialRequired || !validInitialForbidden) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["requiredSignals"], message: "initial signals are invalid" });
+      return;
+    }
+    const required = new Set(value.requiredSignals);
+    const forbidden = new Set(value.forbiddenSignals);
+    const initialRequiredSet = new Set(initialRequired);
+    const initialForbiddenSet = new Set(initialForbidden);
+    if (initialRequired.some((signal) => initialForbiddenSet.has(signal))) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["requiredSignals"], message: "initial required and forbidden signals conflict" });
+    }
+    if (initialRequired.some((signal) => !required.has(signal))) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["requiredSignals"], message: "initial required signals cannot be omitted" });
+    }
+    if (initialForbidden.some((signal) => !forbidden.has(signal))) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["forbiddenSignals"], message: "initial forbidden signals cannot be omitted" });
+    }
+    if (initialForbidden.some((signal) => required.has(signal))) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["requiredSignals"], message: "initial forbidden signals cannot become required" });
+    }
+    if (value.forbiddenSignals.some((signal) => initialRequiredSet.has(signal))) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["forbiddenSignals"], message: "initial required signals cannot become forbidden" });
+    }
   });
 }
 

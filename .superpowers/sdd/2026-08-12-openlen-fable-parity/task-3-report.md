@@ -297,3 +297,157 @@ exit 0
 Only the pre-existing Vite warning and intentional explicit-clone failure
 fixture stderr described above were emitted. The staged diff check and scoped
 commit are recorded by the final controller handoff.
+
+## Fix review round 1/5 (2026-08-13)
+
+### Ruling and scope
+
+The controller confirmed four Important findings and authorized only the
+existing Task 3 files plus the Task 2 multimodal gateway files. The fix does
+not add a network/model call, retry, database/migration, deployment, telemetry,
+catalog quota, or optional hardening. The contact sheet remains bounded to 12
+candidates and `all-generate` remains valid without penalty.
+
+### RED evidence
+
+Role continuity was first specified with same-length replacement and reorder
+mutations against an all-generate scout with an empty candidate set:
+
+```text
+npm.cmd test -- lib/generation/page-design-program.test.ts -t "role drift"
+exit 1
+Test Files: 1 failed (1)
+Tests: 2 failed | 3 skipped (5)
+Both mutations reached the DeepSeek double ("must not call DeepSeek").
+```
+
+Contact-sheet isolation was specified with script, image/SVG handlers, hostile
+`body`/`figcaption` style, top navigation, `document.write`, and a second pooled
+render contamination check:
+
+```text
+npm.cmd test -- lib/ai/visual-quality-renderer.test.ts -t "isolates active fragment"
+exit 1
+Test Files: 1 failed (1)
+Tests: 1 failed | 14 skipped (15)
+The generated document contained the hostile fragment directly and no sandboxed iframe.
+```
+
+The JPEG boundary was specified with a real 64x64 JPEG positive fixture and
+labeled text, header-only, truncated, and corrupt negative fixtures, including
+budget-reservation and fetch spies:
+
+```text
+npm.cmd test -- lib/ai/fireworks-client.test.ts -t "fully decodes JPEG"
+exit 1
+Test Files: 1 failed (1)
+Tests: 1 failed | 39 skipped (40)
+The first invalid image reserved/fetched and returned attempts: 1 instead of attempts: 0.
+```
+
+Semantic coherence was specified with overlapping useful/rejected traits and
+mutations covering omitted initial-required signals, forbidden-as-required,
+required-as-forbidden, direction/program disagreement, and non-canonical order:
+
+```text
+npm.cmd test -- lib/generation/adaptive-design-contracts.test.ts -t "traits claimed|signal sets coherent"
+exit 1
+Test Files: 1 failed (1)
+Tests: 2 failed | 4 skipped (6)
+The overlap and at least one contradictory signal program were accepted.
+```
+
+### GREEN implementation and evidence
+
+- `VisualScoutSuccess` now returns a frozen copy of the canonical ordered
+  `requiredRoles`; the planner verifies exact ordered identity before schema
+  construction or DeepSeek. Same-length substitution, reorder, and empty-set
+  all-generate drift now fail with `invalid_input` and zero provider calls.
+- Each verified fragment is rendered inside its own `iframe sandbox=""` using
+  an escaped `srcdoc`; labels remain in the parent document. No script or
+  top-navigation capability is granted, fragment styles cannot escape the
+  frame, and each pooled call constructs a fresh deterministic document.
+- The gateway retains canonical JPEG data-URI and one-MiB checks, then uses the
+  existing trusted image boundary to parse, dimension-check, terminator-check,
+  and fully decode the JPEG before JSON-schema construction, budget lease, or
+  fetch. Retry payload construction remains a single immutable string.
+- Candidate traits are disjoint across useful/rejected sets. Direction and
+  program signals must be disjoint, identical, unique, and in canonical lexical
+  order. The planner canonicalizes the union of initial direction and intent
+  requirements/prohibitions and rejects a conflicting or over-bound union
+  before DeepSeek; contextual validation prevents omission or polarity changes.
+
+Focused GREEN checks during implementation:
+
+```text
+npm.cmd test -- lib/generation/page-design-program.test.ts -t "role drift"
+exit 0; 2 passed | 3 skipped
+npm.cmd test -- lib/generation/visual-candidate-scout.test.ts
+exit 0; 2 passed
+npm.cmd test -- lib/ai/visual-quality-renderer.test.ts
+exit 0; 15 passed
+npm.cmd test -- lib/ai/fireworks-client.test.ts -t "fully decodes JPEG"
+exit 0; 1 passed | 39 skipped
+npm.cmd test -- lib/ai/fireworks-client.test.ts
+exit 0; 40 passed
+npm.cmd test -- lib/generation/adaptive-design-contracts.test.ts
+exit 0; 6 passed
+npm.cmd test -- lib/generation/page-design-program.test.ts
+exit 0; 5 passed
+```
+
+### Final fix verification
+
+```text
+npm.cmd test -- lib/ai/fireworks-client.test.ts lib/generation/adaptive-design-contracts.test.ts lib/generation/visual-candidate-scout.test.ts lib/generation/page-design-program.test.ts lib/generation/section-inventory.test.ts lib/generation/section-plan.test.ts lib/ai/visual-quality-renderer.test.ts
+exit 0
+Test Files: 7 passed (7)
+Tests: 102 passed (102)
+```
+
+```text
+npm.cmd run generation:fable-boundary:gate
+exit 0
+Test Files: 4 passed (4)
+Tests: 67 passed (67)
+```
+
+```text
+npm.cmd run generation:template-derived-sections:gate
+exit 0
+Test Files: 19 passed (19)
+Tests: 207 passed (207)
+```
+
+```text
+npm.cmd run typecheck
+> tsc --noEmit
+exit 0
+```
+
+`git diff --check` passed before the final suite. Test output contained only
+the pre-existing Vite CJS warning and the derived gate's intentional
+explicit-clone failure-fixture stderr.
+
+### Fix self-review and deferred ledger
+
+- Confirmed exactly one canonical JPEG is accepted only in a visual-critic user
+  message; system, reasoner, and designer remain text-only.
+- Confirmed malformed JPEGs do not reserve or complete a budget lease and do
+  not call fetch; valid retry bodies remain byte-identical.
+- Confirmed the sandbox has no `allow-scripts` or top-navigation token and the
+  parent label precedes the isolated frame.
+- Confirmed exact role identity is independent of candidate availability, so
+  zero reuse/rebuild decisions introduce no bypass or hidden quota.
+- Confirmed all signal comparisons use a deterministic sorted set and strict
+  contextual Zod validation; a valid all-generate program still parses.
+- Confirmed no user-owned/untracked file was edited, removed, reset, cleaned,
+  or selected for staging.
+- Minor findings remain deferred per controller instruction; no optional
+  hardening was added in this round.
+
+The scoped fix commit message is:
+
+```text
+fix(generation): harden adaptive visual planning
+```

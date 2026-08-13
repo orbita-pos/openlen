@@ -32,6 +32,7 @@ type ProviderFailure = Extract<FireworksJsonResult<never>, { ok: false }>;
 
 export interface VisualScoutSuccess {
   readonly ok: true;
+  readonly requiredRoles: readonly CanonicalSectionRole[];
   readonly candidates: readonly VisualScoutCandidate[];
   readonly decisions: readonly CandidateDecision[];
   readonly modelId: string;
@@ -160,6 +161,7 @@ export async function scoutVisualCandidates(
   if (!result.ok) return result;
   return {
     ok: true,
+    requiredRoles: Object.freeze([...requiredRoles]),
     candidates,
     decisions: result.value.decisions,
     modelId: result.modelId,

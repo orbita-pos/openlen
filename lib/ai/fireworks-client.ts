@@ -6,6 +6,7 @@ import {
   type FireworksReasoningEffort,
 } from "./fireworks-contracts";
 import { modelIdForRole, reasoningEffortAllowed } from "../generation/fable-model-policy";
+import { validateGeneratedImage } from "../generation/asset-image-validation";
 import type { ModelTokenUsage } from "../generation/model-cost";
 import type { PageBudget } from "../generation/page-generation-budget";
 
@@ -132,6 +133,18 @@ function validRequest<T>(request: FireworksJsonRequest<T>): boolean {
     && reasoningEffortAllowed(request.role, request.reasoningEffort);
 }
 
+function inlineJpegBytes<T>(request: FireworksJsonRequest<T>): Buffer | null {
+  for (const message of request.messages) {
+    if (!Array.isArray(message.content)) continue;
+    const imagePart = record(message.content[1]);
+    const imageUrl = record(imagePart?.image_url);
+    if (typeof imageUrl?.url === "string" && imageUrl.url.startsWith(JPEG_DATA_URI_PREFIX)) {
+      return Buffer.from(imageUrl.url.slice(JPEG_DATA_URI_PREFIX.length), "base64");
+    }
+  }
+  return null;
+}
+
 function connectionTimeout(error: unknown): boolean {
   const outer = record(error);
   const cause = record(outer?.cause);
@@ -164,6 +177,10 @@ export function createFireworksJsonClient(options: FireworksJsonClientOptions): 
 
       if (!apiKey) return fail("missing_key", 0);
       if (selectedModel(options, request.role) === null || !validRequest(request)) return fail("provider", 0);
+      const jpegBytes = inlineJpegBytes(request);
+      if (jpegBytes) {
+        try { await validateGeneratedImage(jpegBytes, "image/jpeg"); } catch { return fail("provider", 0); }
+      }
 
       let strictSchema: Record<string, unknown>;
       try { strictSchema = fireworksJsonSchema(request.responseSchema); } catch { return fail("schema", 0); }

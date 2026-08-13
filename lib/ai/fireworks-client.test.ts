@@ -8,6 +8,7 @@ import {
 } from "../generation/page-generation-budget";
 
 const ResultSchema = z.object({ title: z.string().min(1), score: z.number().int().min(0).max(10) }).strict();
+const VALID_JPEG_BASE64 = "/9j/4AAQSkZJRgABAQEAYABgAAD/2wBDAAMCAgMCAgMDAwMEAwMEBQgFBQQEBQoHBwYIDAoMDAsKCwsNDhIQDQ4RDgsLEBYQERMUFRUVDA8XGBYUGBIUFRT/2wBDAQMEBAUEBQkFBQkUDQsNFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBT/wAARCABAAEADASIAAhEBAxEB/8QAHwAAAQUBAQEBAQEAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAAAgEDAwIEAwUFBAQAAAF9AQIDAAQRBRIhMUEGE1FhByJxFDKBkaEII0KxwRVS0fAkM2JyggkKFhcYGRolJicoKSo0NTY3ODk6Q0RFRkdISUpTVFVWV1hZWmNkZWZnaGlqc3R1dnd4eXqDhIWGh4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uHi4+Tl5ufo6erx8vP09fb3+Pn6/8QAHwEAAwEBAQEBAQEBAQAAAAAAAAECAwQFBgcICQoL/8QAtREAAgECBAQDBAcFBAQAAQJ3AAECAxEEBSExBhJBUQdhcRMiMoEIFEKRobHBCSMzUvAVYnLRChYkNOEl8RcYGRomJygpKjU2Nzg5OkNERUZHSElKU1RVVldYWVpjZGVmZ2hpanN0dXZ3eHl6goOEhYaHiImKkpOUlZaXmJmaoqOkpaanqKmqsrO0tba3uLm6wsPExcbHyMnK0tPU1dbX2Nna4uPk5ebn6Onq8vP09fb3+Pn6/9oADAMBAAIRAxEAPwDq6KKK/os/KgooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigD//2Q==";
 const REQUEST = {
   role: "reasoner" as const,
   messages: [
@@ -54,7 +55,7 @@ describe("Fireworks JSON client", () => {
       total_tokens: 140,
       prompt_tokens_details: { cached_tokens: 30 },
     })));
-    const jpegUrl = `data:image/jpeg;base64,${Buffer.from([0xff, 0xd8, 0xff, 0xd9]).toString("base64")}`;
+    const jpegUrl = `data:image/jpeg;base64,${VALID_JPEG_BASE64}`;
     const visualRequest = {
       ...REQUEST,
       role: "visual_critic",
@@ -75,7 +76,7 @@ describe("Fireworks JSON client", () => {
 
   it("rejects non-visual, non-user, duplicate, non-JPEG, non-data, malformed, and oversized image blocks before HTTP", async () => {
     const fetchImpl = vi.fn();
-    const jpeg = Buffer.from([0xff, 0xd8, 0xff, 0xd9]).toString("base64");
+    const jpeg = VALID_JPEG_BASE64;
     const block = { type: "image_url", image_url: { url: `data:image/jpeg;base64,${jpeg}` } };
     const multimodal = (role: string, messages: unknown[]) => ({ ...REQUEST, role, reasoningEffort: role === "visual_critic" ? "none" : "high", messages });
     const invalid = [
@@ -95,8 +96,36 @@ describe("Fireworks JSON client", () => {
     expect(fetchImpl).not.toHaveBeenCalled();
   });
 
+  it("fully decodes JPEG bytes and rejects labeled text, header-only, truncated, or corrupt images before lease reservation", async () => {
+    const validBytes = Buffer.from(VALID_JPEG_BASE64, "base64");
+    const headerOnly = Buffer.from([
+      0xff, 0xd8, 0xff, 0xe0, 0x00, 0x04, 0x00, 0x00,
+      0xff, 0xc0, 0x00, 0x0b, 0x08, 0x00, 0x40, 0x00, 0x40,
+      0x01, 0x01, 0x11, 0x00, 0xff, 0xd9,
+    ]);
+    const corrupt = Buffer.concat([validBytes.subarray(0, validBytes.indexOf(Buffer.from([0xff, 0xda]))), Buffer.from([0xff, 0xd9])]);
+    const reserve = vi.fn(() => ({ ok: true as const, leaseId: "must-not-reserve" }));
+    const budget: PageBudget = { reserve, complete: vi.fn(), snapshot: vi.fn() as never };
+    const fetchImpl = vi.fn();
+    for (const bytes of [Buffer.from("not a jpeg"), headerOnly, validBytes.subarray(0, -1), corrupt]) {
+      const request = {
+        ...REQUEST,
+        role: "visual_critic",
+        reasoningEffort: "none",
+        messages: [{ role: "user", content: [
+          { type: "text", text: "inspect" },
+          { type: "image_url", image_url: { url: `data:image/jpeg;base64,${bytes.toString("base64")}` } },
+        ] }],
+      };
+      await expect(createClient({ apiKey: "key", fetchImpl, budget }).request(request as never))
+        .resolves.toMatchObject({ ok: false, code: "provider", attempts: 0 });
+    }
+    expect(reserve).not.toHaveBeenCalled();
+    expect(fetchImpl).not.toHaveBeenCalled();
+  });
+
   it("retries a visual request with a byte-identical multimodal payload", async () => {
-    const jpegUrl = `data:image/jpeg;base64,${Buffer.from([0xff, 0xd8, 0xff, 0xd9]).toString("base64")}`;
+    const jpegUrl = `data:image/jpeg;base64,${VALID_JPEG_BASE64}`;
     const fetchImpl = vi.fn<typeof fetch>()
       .mockResolvedValueOnce(new Response(null, { status: 503 }))
       .mockResolvedValueOnce(jsonResponse(successEnvelope(undefined, {

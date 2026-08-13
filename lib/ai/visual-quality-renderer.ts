@@ -256,17 +256,21 @@ function escapeContactSheetLabel(value: string): string {
   return value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\"/g, "&quot;").replace(/'/g, "&#39;");
 }
 
+function escapeContactSheetSrcdoc(value: string): string {
+  return value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\"/g, "&quot;").replace(/'/g, "&#39;");
+}
+
 function contactSheetHtml(fragments: readonly VisualCandidateContactSheetFragment[]): string {
   const cells = fragments.map((fragment) => `<figure class="openlen-candidate">
     <figcaption>${fragment.ordinal} · ${escapeContactSheetLabel(fragment.role)} · ${escapeContactSheetLabel(fragment.candidateId)}</figcaption>
-    <div class="openlen-candidate-fragment">${fragment.html}</div>
+    <iframe sandbox="" title="Candidate ${fragment.ordinal}" srcdoc="${escapeContactSheetSrcdoc(fragment.html)}"></iframe>
   </figure>`).join("");
   return `<!doctype html><html><head><meta charset="utf-8"><style>
     html,body{margin:0;width:1280px;height:720px;overflow:hidden;background:#111;color:#fff;font-family:Arial,sans-serif}
     .openlen-contact-sheet{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));grid-auto-rows:234px;gap:8px;padding:8px;box-sizing:border-box}
     .openlen-candidate{position:relative;margin:0;overflow:hidden;border:1px solid #555;background:#fff;color:#111}
     .openlen-candidate figcaption{position:absolute;z-index:2147483647;top:0;left:0;right:0;padding:5px 7px;background:rgba(0,0,0,.86);color:#fff;font:700 11px/1.2 Arial,sans-serif}
-    .openlen-candidate-fragment{position:absolute;inset:25px 0 0;overflow:hidden;transform-origin:top left}
+    .openlen-candidate iframe{position:absolute;inset:25px 0 0;width:100%;height:calc(100% - 25px);border:0;background:#fff}
   </style></head><body><main class="openlen-contact-sheet">${cells}</main></body></html>`;
 }
 

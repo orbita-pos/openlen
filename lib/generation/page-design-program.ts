@@ -20,6 +20,10 @@ const SyntheticIntentSchema = z.object({
 }).strict();
 const REQUEST_ID = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,111}$/;
 
+function canonicalSignals(...sets: readonly (readonly string[])[]): string[] {
+  return [...new Set(sets.flat())].sort();
+}
+
 export interface PageDesignProgramInput {
   readonly scout: VisualScoutSuccess;
   readonly requiredRoles: readonly CanonicalSectionRole[];
@@ -58,7 +62,16 @@ export async function createPageDesignProgram(
     || input.requiredRoles.length > 32
     || new Set(input.requiredRoles).size !== input.requiredRoles.length
     || new Set(copyKeyNames.data).size !== copyKeyNames.data.length
+    || input.scout.requiredRoles.length !== input.requiredRoles.length
+    || input.scout.requiredRoles.some((role, index) => role !== input.requiredRoles[index])
     || input.scout.decisions.length !== input.requiredRoles.length) return { ok: false, code: "invalid_input" };
+
+  const initialRequiredSignals = canonicalSignals(direction.data.requiredVisualSignals, intent.data.requiredSignals);
+  const initialForbiddenSignals = canonicalSignals(direction.data.forbiddenVisualSignals, intent.data.forbiddenSignals);
+  const initialForbiddenSet = new Set(initialForbiddenSignals);
+  if (initialRequiredSignals.length > 12
+    || initialForbiddenSignals.length > 12
+    || initialRequiredSignals.some((signal) => initialForbiddenSet.has(signal))) return { ok: false, code: "invalid_input" };
 
   const responseSchema = createAdaptivePageDesignProgramSchema({
     requiredRoles: input.requiredRoles,
@@ -68,6 +81,8 @@ export async function createPageDesignProgram(
       role: candidate.requestedRole,
     })),
     expectedDecisions: input.scout.decisions,
+    initialRequiredSignals,
+    initialForbiddenSignals,
   });
   const result = await deps.client.request({
     role: "reasoner",
