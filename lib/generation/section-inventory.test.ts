@@ -9,6 +9,8 @@ import { IntentAnalysisSchema } from "./contracts";
 import {
   buildSectionCompositionInventory,
   fetchVerifiedSectionFragments,
+  hasAdaptiveSectionOriginality,
+  retrieveAdaptiveSectionCandidates,
   resolveSectionPlan,
   SectionCompositionSelectionError,
 } from "./section-inventory";
@@ -324,6 +326,45 @@ describe("section composition inventory", () => {
     ]);
     expect(() => resolveSectionPlan(plan(frozen.hash), frozen, CONTEXT))
       .toThrow(expect.objectContaining({ code: "section_originality_failed" }));
+  });
+
+  it("retrieves at most twelve adaptive candidates, at most three per role, after hard-negative filtering", () => {
+    const records = [
+      record("hero-dashboard", "hero", "<section>dashboard</section>", { negativeSignals: ["dashboard"] }),
+      ...Array.from({ length: 8 }, (_, index) => record(`hero-safe-${index}`, "hero", `<section>hero ${index}</section>`, { name: "Illustrated Creator Playground", variantLabel: "Playful" })),
+      ...Array.from({ length: 8 }, (_, index) => record(`features-safe-${index}`, "features", `<section>features ${index}</section>`, { name: "Creative Activity Cards", variantLabel: "Playful" })),
+    ];
+    const frozen = buildSectionCompositionInventory(records);
+    const candidates = retrieveAdaptiveSectionCandidates(plan(frozen.hash), frozen, CONTEXT);
+    const counts = new Map<number, number>();
+    candidates.forEach((candidate) => counts.set(candidate.ordinal, (counts.get(candidate.ordinal) ?? 0) + 1));
+    expect(candidates.length).toBeLessThanOrEqual(12);
+    expect([...counts.values()].every((count) => count <= 3)).toBe(true);
+    expect(candidates.map((candidate) => candidate.candidateId)).not.toContain("hero-dashboard");
+    expect(JSON.stringify(candidates)).not.toContain("<section");
+  });
+
+  it("accepts zero donors when adaptive output has three structures and unique generated programs", () => {
+    expect(hasAdaptiveSectionOriginality({
+      actions: ["generate", "generate", "generate"],
+      finalStructuralFingerprints: [`sha256:${"a".repeat(64)}`, `sha256:${"b".repeat(64)}`, `sha256:${"c".repeat(64)}`],
+      finalProgramHashes: [`sha256:${"d".repeat(64)}`, `sha256:${"e".repeat(64)}`, `sha256:${"f".repeat(64)}`],
+      sourceTemplateIds: [null, null, null],
+      sourceBandOrdinals: [null, null, null],
+    })).toBe(true);
+  });
+
+  it("rejects repeated programs, three contiguous donor bands, and a donor reused directly more than twice", () => {
+    const base = {
+      actions: ["rebuild", "generate", "reuse"] as const,
+      finalStructuralFingerprints: [`sha256:${"a".repeat(64)}`, `sha256:${"b".repeat(64)}`, `sha256:${"c".repeat(64)}`],
+      finalProgramHashes: [`sha256:${"d".repeat(64)}`, `sha256:${"e".repeat(64)}`, null],
+      sourceTemplateIds: ["donor-a", null, "donor-b"],
+      sourceBandOrdinals: [0, null, 4],
+    };
+    expect(hasAdaptiveSectionOriginality({ ...base, finalProgramHashes: [base.finalProgramHashes[0], base.finalProgramHashes[0], null] })).toBe(false);
+    expect(hasAdaptiveSectionOriginality({ ...base, actions: ["rebuild", "rebuild", "rebuild"], sourceTemplateIds: ["donor-a", "donor-a", "donor-a"], sourceBandOrdinals: [0, 1, 2] })).toBe(false);
+    expect(hasAdaptiveSectionOriginality({ ...base, actions: ["reuse", "reuse", "reuse"], sourceTemplateIds: ["donor-a", "donor-a", "donor-a"], sourceBandOrdinals: [0, 4, 8] })).toBe(false);
   });
 
   it("rejects fetched bytes whose content hash changed without selecting an alternate", async () => {

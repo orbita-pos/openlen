@@ -47,6 +47,70 @@ function createClient(options: Omit<FireworksJsonClientOptions, "budget"> & { bu
 }
 
 describe("Fireworks JSON client", () => {
+  it("sends one canonical bounded JPEG image block only to the visual critic", async () => {
+    const fetchImpl = vi.fn<typeof fetch>(async () => jsonResponse(successEnvelope(undefined, {
+      prompt_tokens: 100,
+      completion_tokens: 40,
+      total_tokens: 140,
+      prompt_tokens_details: { cached_tokens: 30 },
+    })));
+    const jpegUrl = `data:image/jpeg;base64,${Buffer.from([0xff, 0xd8, 0xff, 0xd9]).toString("base64")}`;
+    const visualRequest = {
+      ...REQUEST,
+      role: "visual_critic",
+      reasoningEffort: "none",
+      messages: [
+        { role: "system", content: "Return a bounded visual decision." },
+        { role: "user", content: [
+          { type: "text", text: "Inspect the labeled candidates." },
+          { type: "image_url", image_url: { url: jpegUrl } },
+        ] },
+      ],
+    };
+
+    await expect(createClient({ apiKey: "key", fetchImpl }).request(visualRequest as never))
+      .resolves.toMatchObject({ ok: true, modelId: "accounts/fireworks/models/qwen3p7-plus" });
+    expect(JSON.parse(String(fetchImpl.mock.calls[0]?.[1]?.body)).messages).toEqual(visualRequest.messages);
+  });
+
+  it("rejects non-visual, non-user, duplicate, non-JPEG, non-data, malformed, and oversized image blocks before HTTP", async () => {
+    const fetchImpl = vi.fn();
+    const jpeg = Buffer.from([0xff, 0xd8, 0xff, 0xd9]).toString("base64");
+    const block = { type: "image_url", image_url: { url: `data:image/jpeg;base64,${jpeg}` } };
+    const multimodal = (role: string, messages: unknown[]) => ({ ...REQUEST, role, reasoningEffort: role === "visual_critic" ? "none" : "high", messages });
+    const invalid = [
+      multimodal("reasoner", [{ role: "user", content: [{ type: "text", text: "x" }, block] }]),
+      multimodal("designer", [{ role: "user", content: [{ type: "text", text: "x" }, block] }]),
+      multimodal("visual_critic", [{ role: "system", content: [{ type: "text", text: "x" }, block] }]),
+      multimodal("visual_critic", [{ role: "user", content: [{ type: "text", text: "x" }, block, block] }]),
+      multimodal("visual_critic", [{ role: "user", content: [{ type: "text", text: "x" }, { type: "image_url", image_url: { url: "https://private.invalid/a.jpg" } }] }]),
+      multimodal("visual_critic", [{ role: "user", content: [{ type: "text", text: "x" }, { type: "image_url", image_url: { url: `data:image/png;base64,${jpeg}` } }] }]),
+      multimodal("visual_critic", [{ role: "user", content: [{ type: "text", text: "x" }, { type: "image_url", image_url: { url: "data:image/jpeg;base64,not+canonical===" } }] }]),
+      multimodal("visual_critic", [{ role: "user", content: [{ type: "text", text: "x" }, { type: "image_url", image_url: { url: `data:image/jpeg;base64,${Buffer.alloc(1024 * 1024 + 1).toString("base64")}` } }] }]),
+    ];
+    for (const request of invalid) {
+      await expect(createClient({ apiKey: "key", fetchImpl }).request(request as never))
+        .resolves.toMatchObject({ ok: false, code: "provider", attempts: 0 });
+    }
+    expect(fetchImpl).not.toHaveBeenCalled();
+  });
+
+  it("retries a visual request with a byte-identical multimodal payload", async () => {
+    const jpegUrl = `data:image/jpeg;base64,${Buffer.from([0xff, 0xd8, 0xff, 0xd9]).toString("base64")}`;
+    const fetchImpl = vi.fn<typeof fetch>()
+      .mockResolvedValueOnce(new Response(null, { status: 503 }))
+      .mockResolvedValueOnce(jsonResponse(successEnvelope(undefined, {
+        prompt_tokens: 100, completion_tokens: 40, total_tokens: 140, prompt_tokens_details: { cached_tokens: 30 },
+      })));
+    await createClient({ apiKey: "key", fetchImpl }).request({
+      ...REQUEST,
+      role: "visual_critic",
+      reasoningEffort: "none",
+      messages: [{ role: "user", content: [{ type: "text", text: "inspect" }, { type: "image_url", image_url: { url: jpegUrl } }] }],
+    } as never);
+    expect(fetchImpl.mock.calls[1]?.[1]?.body).toBe(fetchImpl.mock.calls[0]?.[1]?.body);
+  });
+
   it("rejects construction without a page budget before any provider call", () => {
     const fetchImpl = vi.fn();
     expect(() => createFireworksJsonClient({ apiKey: "key", fetchImpl } as never)).toThrow("page budget");

@@ -66,6 +66,11 @@ export interface VerifiedSectionFragment {
   html: string;
 }
 
+export interface AdaptiveSectionCandidate extends SectionSelectionRow {
+  candidateId: string;
+  traits: readonly string[];
+}
+
 type SelectionFailureCode =
   | "section_inventory_stale"
   | "section_fragment_unavailable"
@@ -218,6 +223,120 @@ function stableSeed(plan: SectionPlan, row: SectionPlanRow): number {
   return createHash("sha256").update(seed).digest().readUInt32BE(0);
 }
 
+function rankEligibleEntries(
+  plan: SectionPlan,
+  row: SectionPlanRow,
+  inventory: SectionCompositionInventory,
+  context: { readonly intent: IntentAnalysis; readonly direction: CreativeDirection },
+): SectionCompositionInventoryEntry[] {
+  const semanticPolicy = buildSectionSemanticPolicy(context.intent, context.direction);
+  const eligible = inventory.entries.filter((entry) => entry.type === row.componentType && !entry.needsJs);
+  const evaluated = eligible
+    .map((entry) => ({ entry, semantic: scoreSectionSemanticProfile(entry.semanticProfile, semanticPolicy) }))
+    .filter(({ entry, semantic }) => semantic.eligible && (semantic.score > 0 || entry.semanticProfile.tags.includes("neutral")));
+  const visual = rankCompositionVariants(evaluated.map(({ entry }) => entry), context.direction, { seed: stableSeed(plan, row) });
+  const visualIndex = new Map(visual.map((entry, index) => [entry.id, index]));
+  return evaluated.sort((left, right) =>
+    right.semantic.score - left.semantic.score
+    || (visualIndex.get(left.entry.id) ?? Number.MAX_SAFE_INTEGER) - (visualIndex.get(right.entry.id) ?? Number.MAX_SAFE_INTEGER)
+    || left.entry.id.localeCompare(right.entry.id)
+  ).map(({ entry }) => entry).slice(0, 32);
+}
+
+function candidateTraits(entry: SectionCompositionInventoryEntry): readonly string[] {
+  if (entry.derivedSemantics) {
+    return [...new Set([
+      ...entry.derivedSemantics.layoutArchetypes,
+      ...entry.derivedSemantics.domains,
+      ...entry.derivedSemantics.audiences,
+      ...entry.derivedSemantics.moods,
+    ])].slice(0, 12);
+  }
+  return entry.semanticProfile.tags.filter((trait) => trait !== "neutral").slice(0, 12);
+}
+
+/** Retrieves optional catalog inspiration without applying the legacy donor quota. */
+export function retrieveAdaptiveSectionCandidates(
+  plan: SectionPlan,
+  inventory: SectionCompositionInventory,
+  context: { readonly intent: IntentAnalysis; readonly direction: CreativeDirection },
+): AdaptiveSectionCandidate[] {
+  if (plan.inventoryHash !== inventory.hash) throw new SectionCompositionSelectionError("section_inventory_stale");
+  const rankedRows = plan.rows.map((row) => ({ row, ranked: rankEligibleEntries(plan, row, inventory, context), cursor: 0, selected: 0 }));
+  const used = new Set<string>();
+  const selected: AdaptiveSectionCandidate[] = [];
+  while (selected.length < 12) {
+    let progressed = false;
+    for (const rankedRow of rankedRows) {
+      if (selected.length >= 12 || rankedRow.selected >= 3) continue;
+      let entry: SectionCompositionInventoryEntry | undefined;
+      while (rankedRow.cursor < rankedRow.ranked.length) {
+        const next = rankedRow.ranked[rankedRow.cursor++];
+        if (!used.has(next.id)) { entry = next; break; }
+      }
+      if (!entry) continue;
+      progressed = true;
+      rankedRow.selected += 1;
+      used.add(entry.id);
+      selected.push({
+        ...rankedRow.row,
+        inventoryHash: inventory.hash,
+        candidateId: entry.id,
+        sectionId: entry.id,
+        contentHash: entry.contentHash,
+        sourceKind: entry.sourceKind,
+        sourceTemplateId: entry.sourceTemplateId,
+        sourceBandOrdinal: entry.sourceBandOrdinal,
+        structuralFingerprint: entry.structuralFingerprint,
+        traits: candidateTraits(entry),
+      });
+    }
+    if (!progressed) break;
+  }
+  return selected;
+}
+
+export function hasAdaptiveSectionOriginality(input: {
+  readonly actions: readonly ("reuse" | "rebuild" | "generate")[];
+  readonly finalStructuralFingerprints: readonly string[];
+  readonly finalProgramHashes: readonly (string | null)[];
+  readonly sourceTemplateIds: readonly (string | null)[];
+  readonly sourceBandOrdinals: readonly (number | null)[];
+}): boolean {
+  const length = input.actions.length;
+  if (length < 3 || [input.finalStructuralFingerprints, input.finalProgramHashes, input.sourceTemplateIds, input.sourceBandOrdinals]
+    .some((values) => values.length !== length)) return false;
+  if (input.finalStructuralFingerprints.some((value) => !value) || new Set(input.finalStructuralFingerprints).size < 3) return false;
+  const programHashes = input.finalProgramHashes.filter((hash): hash is string => hash !== null);
+  if (programHashes.some((hash) => !hash) || new Set(programHashes).size !== programHashes.length) return false;
+  for (let index = 0; index < length; index += 1) {
+    const generated = input.actions[index] !== "reuse";
+    if (generated !== (input.finalProgramHashes[index] !== null)) return false;
+    if ((input.sourceTemplateIds[index] === null) !== (input.sourceBandOrdinals[index] === null)) return false;
+    if (input.actions[index] === "generate" && input.sourceTemplateIds[index] !== null) return false;
+  }
+  const directReuseCounts = new Map<string, number>();
+  input.actions.forEach((action, index) => {
+    const donor = input.sourceTemplateIds[index];
+    if (action === "reuse" && donor !== null) directReuseCounts.set(donor, (directReuseCounts.get(donor) ?? 0) + 1);
+  });
+  if ([...directReuseCounts.values()].some((count) => count > 2)) return false;
+  for (let index = 0; index + 2 < length; index += 1) {
+    const donor = input.sourceTemplateIds[index];
+    const ordinal = input.sourceBandOrdinals[index];
+    if (input.actions[index] !== "generate"
+      && input.actions[index + 1] !== "generate"
+      && input.actions[index + 2] !== "generate"
+      && donor !== null
+      && donor === input.sourceTemplateIds[index + 1]
+      && donor === input.sourceTemplateIds[index + 2]
+      && ordinal !== null
+      && input.sourceBandOrdinals[index + 1] === ordinal + 1
+      && input.sourceBandOrdinals[index + 2] === ordinal + 2) return false;
+  }
+  return true;
+}
+
 export function resolveSectionPlan(
   plan: SectionPlan,
   inventory: SectionCompositionInventory,
@@ -226,28 +345,9 @@ export function resolveSectionPlan(
   if (plan.inventoryHash !== inventory.hash) {
     throw new SectionCompositionSelectionError("section_inventory_stale");
   }
-  const semanticPolicy = buildSectionSemanticPolicy(context.intent, context.direction);
   const rankedRows = plan.rows.map((row) => {
-    const eligible = inventory.entries.filter((entry) =>
-      entry.type === row.componentType && !entry.needsJs);
-    const evaluated = eligible
-      .map((entry) => ({
-        entry,
-        semantic: scoreSectionSemanticProfile(entry.semanticProfile, semanticPolicy),
-      }))
-      .filter(({ entry, semantic }) => semantic.eligible && (semantic.score > 0 || entry.semanticProfile.tags.includes("neutral")));
-    const visual = rankCompositionVariants(
-      evaluated.map(({ entry }) => entry),
-      context.direction,
-      { seed: stableSeed(plan, row) },
-    );
-    const visualIndex = new Map(visual.map((entry, index) => [entry.id, index]));
-    const ranked = evaluated.sort((left, right) =>
-      right.semantic.score - left.semantic.score ||
-      (visualIndex.get(left.entry.id) ?? Number.MAX_SAFE_INTEGER) -
-        (visualIndex.get(right.entry.id) ?? Number.MAX_SAFE_INTEGER) ||
-      left.entry.id.localeCompare(right.entry.id)
-    ).map(({ entry }) => entry).slice(0, 32);
+    const eligible = inventory.entries.filter((entry) => entry.type === row.componentType && !entry.needsJs);
+    const ranked = rankEligibleEntries(plan, row, inventory, context);
     if (ranked.length === 0) {
       throw new SectionCompositionSelectionError(
         eligible.length > 0 || inventory.entries.some((entry) => entry.type === row.componentType)

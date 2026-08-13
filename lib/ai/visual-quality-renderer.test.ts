@@ -1,10 +1,43 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { createVisualQualityRendererPool, renderVisualQualityViewports } from "./visual-quality-renderer";
+import { createVisualQualityRendererPool, renderVisualCandidateContactSheet, renderVisualQualityViewports } from "./visual-quality-renderer";
 
 const HTML = "<!doctype html><html><body>hello</body></html>";
 
 describe("renderVisualQualityViewports", () => {
+  it("renders verified fragments once as a labeled bounded JPEG contact sheet through the existing pool", async () => {
+    const jpeg = { mimeType: "image/jpeg", dataBase64: Buffer.from("jpeg").toString("base64") } as const;
+    let renderedHtml = "";
+    const pool = {
+      render: vi.fn(async (html: string) => {
+        renderedHtml = html;
+        return { desktop: jpeg, mobile: jpeg };
+      }),
+      close: vi.fn(async () => undefined),
+    };
+    const result = await renderVisualCandidateContactSheet([
+      { candidateId: "hero-safe", ordinal: 0, role: "hero", html: '<section data-sec="hero-safe">Hero</section>' },
+      { candidateId: "features-safe", ordinal: 1, role: "features", html: '<section data-sec="features-safe">Features</section>' },
+    ], pool);
+    expect(result).toEqual(jpeg);
+    expect(pool.render).toHaveBeenCalledTimes(1);
+    expect(renderedHtml).toContain("0 · hero · hero-safe");
+    expect(renderedHtml).toContain("1 · features · features-safe");
+    expect(renderedHtml).toContain('data-sec="hero-safe"');
+  });
+
+  it("refuses more than twelve contact-sheet fragments before using a browser worker", async () => {
+    const pool = { render: vi.fn(), close: vi.fn() };
+    const fragments = Array.from({ length: 13 }, (_, index) => ({
+      candidateId: `hero-${index}`,
+      ordinal: index,
+      role: "hero",
+      html: `<section data-sec="hero-${index}">Hero</section>`,
+    }));
+    await expect(renderVisualCandidateContactSheet(fragments, pool)).resolves.toBeNull();
+    expect(pool.render).not.toHaveBeenCalled();
+  });
+
   it("injects a deterministic reset and fails closed when consecutive mobile geometry samples disagree", async () => {
     const pageHtml: string[] = [];
     const noOverflow = { rootScrollWidth: 390, bodyScrollWidth: 390, clientWidth: 390 };

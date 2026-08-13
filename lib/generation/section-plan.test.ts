@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { IntentAnalysisSchema } from "./contracts";
-import { planSectionComposition } from "./section-plan";
+import { planAdaptiveSectionComposition, planSectionComposition } from "./section-plan";
 import type { SectionType } from "@/lib/sections/types";
 
 const INTENT_HASH = `sha256:${"a".repeat(64)}`;
@@ -109,5 +109,20 @@ describe("planSectionComposition", () => {
       availableTypes: ALL_NEEDED,
     };
     expect(planSectionComposition(input)).toEqual(planSectionComposition(input));
+  });
+
+  it("plans every adaptive role even when the catalog has no compatible entry", () => {
+    const result = planAdaptiveSectionComposition({
+      intent: COLORING_INTENT,
+      intentHash: INTENT_HASH,
+      inventoryHash: INVENTORY_HASH,
+    });
+    expect(result.ok && result.plan.rows.map(({ requestedRole, componentType }) => [requestedRole, componentType])).toEqual([
+      ["hero", "hero"],
+      ["coloring_gallery", "gallery"],
+      ["minigames", "features"],
+      ["stories", "features"],
+      ["activities", "features"],
+    ]);
   });
 });

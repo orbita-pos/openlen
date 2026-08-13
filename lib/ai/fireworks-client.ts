@@ -12,6 +12,8 @@ import type { PageBudget } from "../generation/page-generation-budget";
 const FIREWORKS_ENDPOINT = "https://api.fireworks.ai/inference/v1/chat/completions";
 const RETRYABLE_EMPTY_STATUS = new Set([429, 502, 503, 504]);
 const REQUEST_ID = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/;
+const JPEG_DATA_URI_PREFIX = "data:image/jpeg;base64,";
+const MAX_INLINE_JPEG_BYTES = 1024 * 1024;
 
 type Environment = Readonly<Record<string, string | undefined>>;
 type FailureCode = Extract<FireworksJsonResult<never>, { ok: false }>["code"];
@@ -83,10 +85,47 @@ function selectedModel(options: FireworksJsonClientOptions, role: FableModelRole
   return candidate === approved ? candidate : null;
 }
 
+function hasOnlyKeys(value: Record<string, unknown>, keys: readonly string[]): boolean {
+  const actual = Object.keys(value).sort();
+  return actual.length === keys.length && actual.every((key, index) => key === [...keys].sort()[index]);
+}
+
+function validJpegDataUri(value: unknown): value is string {
+  if (typeof value !== "string" || !value.startsWith(JPEG_DATA_URI_PREFIX)) return false;
+  const encoded = value.slice(JPEG_DATA_URI_PREFIX.length);
+  if (!encoded || !/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(encoded)) return false;
+  const bytes = Buffer.from(encoded, "base64");
+  return bytes.length > 0 && bytes.length <= MAX_INLINE_JPEG_BYTES && bytes.toString("base64") === encoded;
+}
+
+function validMultimodalContent(value: unknown): boolean {
+  if (!Array.isArray(value) || value.length !== 2) return false;
+  const textPart = record(value[0]);
+  const imagePart = record(value[1]);
+  const imageUrl = record(imagePart?.image_url);
+  return !!textPart
+    && hasOnlyKeys(textPart, ["text", "type"])
+    && textPart.type === "text"
+    && typeof textPart.text === "string"
+    && !!imagePart
+    && hasOnlyKeys(imagePart, ["image_url", "type"])
+    && imagePart.type === "image_url"
+    && !!imageUrl
+    && hasOnlyKeys(imageUrl, ["url"])
+    && validJpegDataUri(imageUrl.url);
+}
+
 function validRequest<T>(request: FireworksJsonRequest<T>): boolean {
+  let imageCount = 0;
   return Array.isArray(request.messages)
     && request.messages.length > 0
-    && request.messages.every((message) => (message.role === "system" || message.role === "user") && typeof message.content === "string")
+    && request.messages.every((message) => {
+      if (!message || (message.role !== "system" && message.role !== "user")) return false;
+      if (typeof message.content === "string") return true;
+      if (request.role !== "visual_critic" || message.role !== "user" || !validMultimodalContent(message.content)) return false;
+      imageCount += 1;
+      return imageCount <= 1;
+    })
     && Number.isSafeInteger(request.maxOutputTokens)
     && request.maxOutputTokens > 0
     && REQUEST_ID.test(request.requestId)

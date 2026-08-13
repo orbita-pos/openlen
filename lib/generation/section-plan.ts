@@ -18,6 +18,8 @@ export interface PlanSectionCompositionInput {
   availableTypes: ReadonlySet<SectionType>;
 }
 
+export type PlanAdaptiveSectionCompositionInput = Omit<PlanSectionCompositionInput, "availableTypes">;
+
 export type SectionPlanningResult =
   | { ok: true; plan: SectionPlan }
   | {
@@ -85,6 +87,39 @@ export function planSectionComposition(
     });
   }
 
+  return {
+    ok: true,
+    plan: SectionPlanSchema.parse({
+      schemaVersion: SECTION_PLAN_VERSION,
+      intentHash: input.intentHash,
+      inventoryHash: input.inventoryHash,
+      rows,
+    }),
+  };
+}
+
+export function planAdaptiveSectionComposition(
+  input: PlanAdaptiveSectionCompositionInput,
+): SectionPlanningResult {
+  const requested = input.intent.functional.requiredSections;
+  if (new Set(requested).size !== requested.length) return { ok: false, code: "section_role_coverage_failed" };
+  if (requested.some((role) => !CANONICAL_ROLE_SET.has(role))) return { ok: false, code: "unsupported_section_role" };
+
+  const rows = [];
+  const allTypes = new Set<SectionType>(SECTION_TYPES);
+  for (const [ordinal, requestedRole] of requested.entries()) {
+    const selected = selectComponent(requestedRole as CanonicalSectionRole, allTypes);
+    if (!selected || selected.compatibility.ruleId === null) return { ok: false, code: "unsupported_section_role" };
+    rows.push({
+      ordinal,
+      requestedRole,
+      componentType: selected.componentType,
+      compatibilityKind: selected.compatibility.kind,
+      compatibilityScore: selected.compatibility.score,
+      compatibilityRuleId: selected.compatibility.ruleId,
+      required: true as const,
+    });
+  }
   return {
     ok: true,
     plan: SectionPlanSchema.parse({

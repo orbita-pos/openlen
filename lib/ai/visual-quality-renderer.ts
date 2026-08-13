@@ -245,6 +245,52 @@ export interface VisualQualityRendererPool {
   close(): Promise<void>;
 }
 
+export interface VisualCandidateContactSheetFragment {
+  candidateId: string;
+  ordinal: number;
+  role: string;
+  html: string;
+}
+
+function escapeContactSheetLabel(value: string): string {
+  return value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\"/g, "&quot;").replace(/'/g, "&#39;");
+}
+
+function contactSheetHtml(fragments: readonly VisualCandidateContactSheetFragment[]): string {
+  const cells = fragments.map((fragment) => `<figure class="openlen-candidate">
+    <figcaption>${fragment.ordinal} · ${escapeContactSheetLabel(fragment.role)} · ${escapeContactSheetLabel(fragment.candidateId)}</figcaption>
+    <div class="openlen-candidate-fragment">${fragment.html}</div>
+  </figure>`).join("");
+  return `<!doctype html><html><head><meta charset="utf-8"><style>
+    html,body{margin:0;width:1280px;height:720px;overflow:hidden;background:#111;color:#fff;font-family:Arial,sans-serif}
+    .openlen-contact-sheet{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));grid-auto-rows:234px;gap:8px;padding:8px;box-sizing:border-box}
+    .openlen-candidate{position:relative;margin:0;overflow:hidden;border:1px solid #555;background:#fff;color:#111}
+    .openlen-candidate figcaption{position:absolute;z-index:2147483647;top:0;left:0;right:0;padding:5px 7px;background:rgba(0,0,0,.86);color:#fff;font:700 11px/1.2 Arial,sans-serif}
+    .openlen-candidate-fragment{position:absolute;inset:25px 0 0;overflow:hidden;transform-origin:top left}
+  </style></head><body><main class="openlen-contact-sheet">${cells}</main></body></html>`;
+}
+
+/** Uses the calibrated renderer pool so browser reuse and deterministic settling stay unchanged. */
+export async function renderVisualCandidateContactSheet(
+  fragments: readonly VisualCandidateContactSheetFragment[],
+  pool: VisualQualityRendererPool,
+): Promise<InlineImage | null> {
+  if (fragments.length > 12) return null;
+  const ids = fragments.map((fragment) => fragment.candidateId);
+  if (new Set(ids).size !== ids.length || fragments.some((fragment) =>
+    !Number.isInteger(fragment.ordinal)
+    || fragment.ordinal < 0
+    || fragment.ordinal > 31
+    || !fragment.candidateId
+    || /<!doctype\b|<html\b|<head\b|<body\b/i.test(fragment.html))) return null;
+  try {
+    const rendered = await pool.render(contactSheetHtml(fragments));
+    return rendered && isBoundedJpeg(rendered.desktop) ? rendered.desktop : null;
+  } catch {
+    return null;
+  }
+}
+
 export async function createVisualQualityRendererPool(
   size: number,
   internals: VisualQualityRendererInternals = {},

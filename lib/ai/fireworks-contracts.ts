@@ -5,9 +5,23 @@ import type { ModelTokenUsage } from "../generation/model-cost";
 export type FableModelRole = "reasoner" | "designer" | "visual_critic";
 export type FireworksReasoningEffort = "none" | "high" | "max";
 
+export interface FireworksTextPart {
+  readonly type: "text";
+  readonly text: string;
+}
+
+export interface FireworksImageUrlPart {
+  readonly type: "image_url";
+  readonly image_url: { readonly url: string };
+}
+
+export type FireworksMessage =
+  | { readonly role: "system"; readonly content: string }
+  | { readonly role: "user"; readonly content: string | readonly [FireworksTextPart, FireworksImageUrlPart] };
+
 export interface FireworksJsonRequest<T> {
   role: FableModelRole;
-  messages: readonly { role: "system" | "user"; content: string }[];
+  messages: readonly FireworksMessage[];
   responseSchema: ZodType<T>;
   maxOutputTokens: number;
   reasoningEffort: FireworksReasoningEffort;
