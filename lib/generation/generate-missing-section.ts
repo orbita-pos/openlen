@@ -20,32 +20,41 @@ import type { SectionPlanRow } from "./section-composition-contracts";
 import type { SectionCompositionInventoryEntry } from "./section-inventory";
 import { profileDerivedSectionSemantics } from "./section-variant-semantics";
 import { compileExpressiveSection, type ExpressiveSectionDraft } from "./expressive-section-compiler";
-import type { SectionDecisionProvenance } from "./expressive-section-contracts";
-import type { GlmSectionProgramProvider, GlmSectionProgramRequest, GlmSectionProgramProviderResult } from "./glm-section-program-provider";
+import { SectionDecisionProvenanceSchema, type SectionDecisionProvenance } from "./expressive-section-contracts";
+import { GlmSectionProgramRequestSchema, type GlmSectionProgramProvider, type GlmSectionProgramRequest, type GlmSectionProgramProviderResult } from "./glm-section-program-provider";
 
 export type GenerateExpressiveMissingSectionResult =
   | { readonly ok: true; readonly draft: ExpressiveSectionDraft; readonly provider: Extract<GlmSectionProgramProviderResult, { ok: true }> }
   | Extract<GlmSectionProgramProviderResult, { ok: false }>
-  | { readonly ok: false; readonly code: "compile_failed"; readonly compileCode: "invalid_program" | "copy_key_not_allowed" | "asset_slot_not_allowed" | "invalid_provenance" | "donor_reconstruction" };
+  | { readonly ok: false; readonly code: "invalid_input" }
+  | { readonly ok: false; readonly code: "compile_failed"; readonly compileCode: "invalid_program" | "copy_key_not_allowed" | "asset_slot_not_allowed" | "invalid_provenance" | "donor_reconstruction"; readonly provider: Extract<GlmSectionProgramProviderResult, { ok: true }> };
+
+type GenerateExpressiveRequest = Extract<GlmSectionProgramRequest, { readonly mode: "generate" }>;
+type RebuildExpressiveRequest = Extract<GlmSectionProgramRequest, { readonly mode: "rebuild" }>;
+type GenerateExpressiveProvenance = Extract<SectionDecisionProvenance, { readonly action: "generate" }>;
+type RebuildExpressiveProvenance = Extract<SectionDecisionProvenance, { readonly action: "rebuild" }>;
+
+export type GenerateExpressiveMissingSectionInput =
+  | { readonly request: GenerateExpressiveRequest; readonly copy: Readonly<Record<string, string>>; readonly provenance: GenerateExpressiveProvenance }
+  | { readonly request: RebuildExpressiveRequest; readonly copy: Readonly<Record<string, string>>; readonly provenance: RebuildExpressiveProvenance };
 
 export async function generateExpressiveMissingSection(
-  input: {
-    readonly request: GlmSectionProgramRequest;
-    readonly copy: Readonly<Record<string, string>>;
-    readonly provenance: SectionDecisionProvenance;
-  },
+  input: GenerateExpressiveMissingSectionInput,
   deps: { readonly provider: GlmSectionProgramProvider },
 ): Promise<GenerateExpressiveMissingSectionResult> {
-  const result = await deps.provider.generate(input.request);
+  const request = GlmSectionProgramRequestSchema.safeParse(input.request);
+  const provenance = SectionDecisionProvenanceSchema.safeParse(input.provenance);
+  if (!request.success || !provenance.success || request.data.mode !== provenance.data.action) return { ok: false, code: "invalid_input" };
+  const result = await deps.provider.generate(request.data);
   if (!result.ok) return result;
   const compiled = compileExpressiveSection({
     program: result.program,
-    allowedCopyKeys: input.request.copyKeys,
-    allowedAssetSlots: input.request.assetSlots.map((slot) => slot.slotIndex),
+    allowedCopyKeys: request.data.copyKeys,
+    allowedAssetSlots: request.data.assetSlots.map((slot) => slot.slotIndex),
     copy: input.copy,
-    provenance: input.provenance,
+    provenance: provenance.data,
   });
-  if (!compiled.ok) return { ok: false, code: "compile_failed", compileCode: compiled.code };
+  if (!compiled.ok) return { ok: false, code: "compile_failed", compileCode: compiled.code, provider: result };
   return { ok: true, draft: compiled.draft, provider: result };
 }
 

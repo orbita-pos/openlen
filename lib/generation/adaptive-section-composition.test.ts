@@ -173,6 +173,15 @@ describe("adaptive section composition", () => {
     ]);
     expect(d.deps.sanitize).toHaveBeenCalledTimes(4);
     expect(JSON.stringify(result.manifest)).not.toMatch(/A new hero|Make something|Verified hero donor|https?:/i);
+    expect(result.ok && result.handoff).toMatchObject({
+      schemaVersion: "adaptive-section-repair-handoff/1.0",
+      entries: [
+        { ordinal: 0, action: "rebuild", programId: expect.any(String), program: { role: "hero" }, provenance: { action: "rebuild" }, allowedCopyKeys: ["hero.title", "activities.title"], allowedAssetSlots: [] },
+        { ordinal: 1, action: "generate", programId: expect.any(String), program: { role: "activities" }, provenance: { action: "generate" }, allowedCopyKeys: ["hero.title", "activities.title"], allowedAssetSlots: [] },
+        { ordinal: 2, action: "reuse", programId: null, program: null, provenance: { action: "reuse" }, allowedCopyKeys: [], allowedAssetSlots: [] },
+      ],
+    });
+    expect(JSON.stringify(result.ok && result.handoff)).not.toMatch(/A new hero|Make something|Verified hero donor|<header/i);
   });
 
   it("returns a typed atomic failure with no HTML when provider or a section gate fails", async () => {
@@ -181,7 +190,7 @@ describe("adaptive section composition", () => {
       assemble: vi.fn(() => "must-not-assemble"),
     });
     const first = await composeAdaptiveSections(INPUT, providerFailure.deps);
-    expect(first).toMatchObject({ ok: false, reasonCode: "invalid_provider_response", telemetry: { usage: { inputTokens: 2 } } });
+    expect(first).toMatchObject({ ok: false, reasonCode: "invalid_provider_response", telemetry: [{ usage: { inputTokens: 2 } }] });
     expect(first).not.toHaveProperty("html");
     expect(providerFailure.deps.assemble).not.toHaveBeenCalled();
 
@@ -190,6 +199,40 @@ describe("adaptive section composition", () => {
     expect(second).toMatchObject({ ok: false, reasonCode: "required_asset_unavailable" });
     expect(second).not.toHaveProperty("html");
     expect(gateFailure.deps.assemble).not.toHaveBeenCalled();
+  });
+
+  it("retains paid provider telemetry in call order through compiler and later gate failures", async () => {
+    const first = program("hero", "hero.title");
+    const provider: GlmSectionProgramProvider = {
+      generate: vi.fn()
+        .mockResolvedValueOnce({ ok: true as const, program: first, modelId: "glm-first", promptVersion: "glm-section-program-prompt/1.0" as const, usage: { inputTokens: 3, cachedTokens: 0, outputTokens: 2, thinkingTokens: 1 }, durationMs: 4, attempts: 1 as const })
+        .mockResolvedValueOnce({ ok: false as const, code: "schema" as const, modelId: "glm-second", promptVersion: "glm-section-program-prompt/1.0" as const, usage: { inputTokens: 5, cachedTokens: 0, outputTokens: 1, thinkingTokens: 0 }, durationMs: 6, attempts: 1 as const }),
+    };
+    const d = setup({ provider, assemble: vi.fn(() => "must-not-assemble") });
+    const result = await composeAdaptiveSections(INPUT, d.deps);
+    expect(result).toMatchObject({
+      ok: false,
+      reasonCode: "invalid_provider_response",
+      telemetry: [
+        { modelId: "glm-first", usage: { inputTokens: 3 } },
+        { modelId: "glm-second", usage: { inputTokens: 5 } },
+      ],
+    });
+    expect(result).not.toHaveProperty("html");
+  });
+
+  it("retains a successful provider call when its compiler rejects the program", async () => {
+    const badProgram = {
+      ...program("hero", "hero.title"),
+      root: { ...program("hero", "hero.title").root, copyKey: "unknown.key" },
+    } as never;
+    const d = setup({
+      provider: { generate: vi.fn(async () => ({ ok: true as const, program: badProgram, modelId: "glm-paid", promptVersion: "glm-section-program-prompt/1.0" as const, usage: { inputTokens: 7, cachedTokens: 0, outputTokens: 3, thinkingTokens: 1 }, durationMs: 8, attempts: 1 as const })) },
+      assemble: vi.fn(() => "must-not-assemble"),
+    });
+    const result = await composeAdaptiveSections(INPUT, d.deps);
+    expect(result).toMatchObject({ ok: false, reasonCode: "invalid_provider_response", telemetry: [{ modelId: "glm-paid", usage: { inputTokens: 7 } }] });
+    expect(d.deps.assemble).not.toHaveBeenCalled();
   });
 
   it("rejects reuse byte drift before any assembly", async () => {

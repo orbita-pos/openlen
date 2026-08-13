@@ -112,6 +112,29 @@ describe("expressive section compiler", () => {
     expect(html).not.toContain("horror-grain");
   });
 
+  it("materializes copy tone and decoration kind so visual fingerprints do not distinguish identical renders", () => {
+    const sourceRoot = FIXTURES.childrenColoring.root;
+    if (sourceRoot.kind !== "layout") throw new Error("fixture root must be a layout");
+    const textured = {
+      ...FIXTURES.childrenColoring,
+      root: {
+        ...sourceRoot,
+        children: sourceRoot.children.map((node) => node.kind === "decoration"
+          ? { ...node, decoration: "texture" as const }
+          : node),
+      },
+    };
+    const shaped = compile(FIXTURES.childrenColoring);
+    const result = compile(textured);
+    expect(shaped.ok && result.ok).toBe(true);
+    const shapedHtml = (shaped as CompileExpressiveSectionSuccess).draft.html;
+    const texturedHtml = (result as CompileExpressiveSectionSuccess).draft.html;
+    expect(shapedHtml).toContain("olx-tone-default");
+    expect(shapedHtml).toContain("olx-decoration-shape");
+    expect(texturedHtml).toContain("olx-decoration-texture");
+    expect(shapedHtml).not.toBe(texturedHtml);
+  });
+
   it("fails closed on invalid programs, references, and provenance", () => {
     expect(compileExpressiveSection({
       program: { ...FIXTURES.vhsHorror, html: "<section>raw</section>" } as never,

@@ -64,12 +64,12 @@ const InspirationSchema = z.object({
 
 const GenerateRequestSchema = z.object({ ...BaseRequestShape, mode: z.literal("generate") }).strict();
 const RebuildRequestSchema = z.object({ ...BaseRequestShape, mode: z.literal("rebuild"), inspiration: InspirationSchema }).strict();
-const RequestSchema = z.discriminatedUnion("mode", [GenerateRequestSchema, RebuildRequestSchema]).superRefine((value, ctx) => {
+export const GlmSectionProgramRequestSchema = z.discriminatedUnion("mode", [GenerateRequestSchema, RebuildRequestSchema]).superRefine((value, ctx) => {
   if (new Set(value.copyKeys).size !== value.copyKeys.length) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["copyKeys"], message: "copy keys must be unique" });
   if (new Set(value.assetSlots.map((slot) => slot.slotIndex)).size !== value.assetSlots.length) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["assetSlots"], message: "asset slots must be unique" });
 });
 
-export type GlmSectionProgramRequest = z.infer<typeof RequestSchema>;
+export type GlmSectionProgramRequest = z.infer<typeof GlmSectionProgramRequestSchema>;
 
 type GatewayFailure = Extract<FireworksJsonResult<never>, { ok: false }>;
 export type GlmSectionProgramProviderResult =
@@ -168,7 +168,7 @@ export function createGlmSectionProgramProvider(options: Options): GlmSectionPro
   if (!options?.client) throw new Error("Fireworks client with PageBudget is required");
   return {
     async generate(request) {
-      const parsed = RequestSchema.safeParse(request);
+      const parsed = GlmSectionProgramRequestSchema.safeParse(request);
       if (!parsed.success) return { ok: false, code: "invalid_input", promptVersion: PROMPT_VERSION };
       const payload = userPayload(parsed.data);
       if (!payload) return { ok: false, code: "invalid_input", promptVersion: PROMPT_VERSION };

@@ -1,15 +1,17 @@
 import { parse } from "node-html-parser";
+import { z } from "zod";
 
 import { AdaptivePageDesignProgramSchema, type AdaptivePageDesignProgram } from "./adaptive-design-contracts";
 import { canonicalJsonSha256, sha256 } from "./content-hash";
 import type { CompileDerivedSectionResult, CompiledDerivedSection } from "./derived-section-compiler";
-import type { SectionDecisionProvenance } from "./expressive-section-contracts";
+import { ExpressiveSectionProgramSchema, SectionDecisionProvenanceSchema, type ExpressiveSectionProgram, type SectionDecisionProvenance } from "./expressive-section-contracts";
 import { generateExpressiveMissingSection } from "./generate-missing-section";
 import type { GlmSectionProgramProvider, GlmSectionProgramProviderResult } from "./glm-section-program-provider";
 import {
   ADAPTIVE_SECTION_COMPOSITION_MANIFEST_VERSION,
   AdaptiveSectionCompositionManifestSchema,
   SectionPlanSchema,
+  SectionPlanRowSchema,
   type AdaptiveSectionCompositionManifest,
   type SectionCompositionResultCode,
   type SectionPlan,
@@ -26,6 +28,11 @@ import type { SectionFragment } from "@/lib/sections/assemble";
 import type { SectionType } from "@/lib/sections/types";
 
 const REQUEST_ID = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,95}$/;
+const ADAPTIVE_SECTION_REPAIR_HANDOFF_VERSION = "adaptive-section-repair-handoff/1.0" as const;
+const REPAIR_COPY_KEY = /^[a-z][a-z0-9_.-]{0,79}$/;
+const REPAIR_SECTION_ID = /^[a-z0-9]+(?:[-_][a-z0-9]+)*$/;
+const REPAIR_CONTENT_HASH = /^[a-f0-9]{12}$/;
+const REPAIR_SHA256 = /^sha256:[a-f0-9]{64}$/;
 
 export interface AdaptiveSectionCompositionInput {
   readonly requestId: string;
@@ -77,6 +84,52 @@ interface CompletedRow {
   readonly fragment: SectionFragment;
 }
 
+const RepairHandoffEntryBase = {
+  ordinal: z.number().int().min(0).max(31),
+  role: SectionPlanRowSchema.shape.requestedRole,
+  provenance: SectionDecisionProvenanceSchema,
+  allowedCopyKeys: z.array(z.string().regex(REPAIR_COPY_KEY)).max(64),
+  allowedAssetSlots: z.array(z.number().int().min(0).max(11)).max(12),
+  compiledFragmentId: z.string().regex(REPAIR_SECTION_ID),
+  compiledContentHash: z.string().regex(REPAIR_CONTENT_HASH),
+  compiledFragmentHash: z.string().regex(REPAIR_SHA256),
+  structuralFingerprint: z.string().regex(REPAIR_SHA256),
+};
+const GeneratedRepairHandoffEntrySchema = z.object({
+  ...RepairHandoffEntryBase,
+  action: z.enum(["rebuild", "generate"]),
+  programId: z.string().regex(REPAIR_SECTION_ID),
+  programHash: z.string().regex(REPAIR_SHA256),
+  program: ExpressiveSectionProgramSchema,
+}).strict().superRefine((value, ctx) => {
+  if (value.provenance.action !== value.action || value.program.role !== value.role) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: "program action and role must match the repair entry" });
+  }
+  if (new Set(value.allowedCopyKeys).size !== value.allowedCopyKeys.length || new Set(value.allowedAssetSlots).size !== value.allowedAssetSlots.length) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: "repair allowlists must be unique" });
+  }
+});
+const ReuseRepairHandoffEntrySchema = z.object({
+  ...RepairHandoffEntryBase,
+  action: z.literal("reuse"),
+  programId: z.null(),
+  programHash: z.null(),
+  program: z.null(),
+}).strict().superRefine((value, ctx) => {
+  if (value.provenance.action !== "reuse" || value.allowedCopyKeys.length !== 0 || value.allowedAssetSlots.length !== 0) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: "reuse has explicit donor provenance and no program" });
+  }
+});
+export const AdaptiveSectionRepairHandoffSchema = z.object({
+  schemaVersion: z.literal(ADAPTIVE_SECTION_REPAIR_HANDOFF_VERSION),
+  entries: z.array(z.union([GeneratedRepairHandoffEntrySchema, ReuseRepairHandoffEntrySchema])).min(1).max(32),
+}).strict().superRefine((value, ctx) => {
+  value.entries.forEach((entry, index) => {
+    if (entry.ordinal !== index) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["entries", index, "ordinal"], message: "repair entries must preserve page order" });
+  });
+});
+export type AdaptiveSectionRepairHandoff = z.infer<typeof AdaptiveSectionRepairHandoffSchema>;
+
 interface RedactedProviderTelemetry {
   readonly promptVersion: "glm-section-program-prompt/1.0";
   readonly modelId: string | null;
@@ -92,13 +145,15 @@ export type AdaptiveSectionCompositionResult =
       readonly html: string;
       readonly manifest: AdaptiveSectionCompositionManifest;
       readonly telemetry: readonly RedactedProviderTelemetry[];
+      /** Internal only: structured Task 5 repair input; never serialize this with public manifests. */
+      readonly handoff: AdaptiveSectionRepairHandoff;
     }
   | {
       readonly ok: false;
       readonly status: "fallback";
       readonly reasonCode: Exclude<SectionCompositionResultCode, "composed">;
       readonly manifest: AdaptiveSectionCompositionManifest;
-      readonly telemetry?: RedactedProviderTelemetry;
+      readonly telemetry: readonly RedactedProviderTelemetry[];
     };
 
 function manifest(
@@ -135,14 +190,14 @@ function providerTelemetry(result: GlmSectionProgramProviderResult): RedactedPro
 function failure(
   rows: readonly CompletedRow[],
   reasonCode: Exclude<SectionCompositionResultCode, "composed">,
-  telemetry?: RedactedProviderTelemetry,
+  telemetry: readonly RedactedProviderTelemetry[] = [],
 ): Extract<AdaptiveSectionCompositionResult, { ok: false }> {
   return {
     ok: false,
     status: "fallback",
     reasonCode,
     manifest: manifest(rows, reasonCode, null),
-    ...(telemetry ? { telemetry } : {}),
+    telemetry: Object.freeze(telemetry.map((row) => Object.freeze({ ...row }))),
   };
 }
 
@@ -224,7 +279,9 @@ export async function composeAdaptiveSections(
 ): Promise<AdaptiveSectionCompositionResult> {
   const completed: CompletedRow[] = [];
   const telemetry: RedactedProviderTelemetry[] = [];
-  if (!validInput(input)) return failure(completed, "model_incompatible");
+  const fail = (reasonCode: Exclude<SectionCompositionResultCode, "composed">) => failure(completed, reasonCode, telemetry);
+  if (!validInput(input)) return fail("model_incompatible");
+  const handoffEntries: unknown[] = [];
 
   try {
     for (const row of input.plan.rows) {
@@ -236,9 +293,9 @@ export async function composeAdaptiveSections(
       let verified: VerifiedSectionFragment | null = null;
       if (decision.action !== "generate") {
         donor = sourceForDecision(input, row, decision.candidateId!);
-        if (!donor) return failure(completed, "section_inventory_stale");
+        if (!donor) return fail("section_inventory_stale");
         const fetched = await fetchChosenFragment(input, deps, row, decision.candidateId!);
-        if (!fetched.ok) return failure(completed, fetched.code);
+        if (!fetched.ok) return fail(fetched.code);
         verified = fetched.fragment;
       }
 
@@ -265,9 +322,10 @@ export async function composeAdaptiveSections(
       let draft: AdaptiveDerivedSectionDraft;
       let programHash: string | null = null;
       let normalizedStructuralFingerprint: string | null = null;
+      let generatedProgram: ExpressiveSectionProgram | null = null;
       if (decision.action === "reuse") {
         const tag = fragmentRootTag(verified!);
-        if (!tag) return failure(completed, "section_fragment_invalid");
+        if (!tag) return fail("section_fragment_invalid");
         draft = {
           action: "reuse", ordinal: row.ordinal, id: verified!.slug, html: verified!.html, rootTag: tag,
           role: row.requestedRole, componentType: row.componentType, provenance,
@@ -299,15 +357,20 @@ export async function composeAdaptiveSections(
             verifiedFragmentHtml: verified!.html,
           },
         } as const;
-        const generated = await generateExpressiveMissingSection({ request, copy: input.copy, provenance }, { provider: deps.provider });
+        const generated = await generateExpressiveMissingSection({ request, copy: input.copy, provenance } as import("./generate-missing-section").GenerateExpressiveMissingSectionInput, { provider: deps.provider });
         if (!generated.ok) {
-          if (generated.code === "compile_failed") return failure(completed, generated.compileCode === "donor_reconstruction" ? "section_originality_failed" : "invalid_provider_response");
-          return failure(completed, providerFailureCode(generated.code), providerTelemetry(generated));
+          const providerTrace = generated.code === "compile_failed"
+            ? providerTelemetry(generated.provider)
+            : "modelId" in generated ? providerTelemetry(generated) : undefined;
+          if (providerTrace) telemetry.push(providerTrace);
+          if (generated.code === "compile_failed") return fail(generated.compileCode === "donor_reconstruction" ? "section_originality_failed" : "invalid_provider_response");
+          return fail(providerFailureCode(generated.code));
         }
         const providerResult = generated.provider;
         const providerTrace = providerTelemetry(providerResult);
         if (providerTrace) telemetry.push(providerTrace);
         const expressive = generated.draft;
+        generatedProgram = providerResult.program;
         programHash = expressive.programHash;
         normalizedStructuralFingerprint = expressive.structuralFingerprint;
         draft = {
@@ -324,24 +387,24 @@ export async function composeAdaptiveSections(
 
       const derived = await deps.compileDerived(draft);
       if (!derived.ok || derived.section.type !== row.componentType || contentHash(derived.section.html) !== derived.section.contentHash) {
-        return failure(completed, "model_incompatible");
+        return fail("model_incompatible");
       }
       const section = derived.section;
       if (decision.action === "reuse" && (section.id !== verified!.slug || section.html !== verified!.html || section.contentHash !== donor!.entry.contentHash)) {
-        return failure(completed, "section_fragment_stale");
+        return fail("section_fragment_stale");
       }
       if (decision.action === "rebuild"
         && (section.contentHash === donor!.entry.contentHash
           || normalizedStructuralFingerprint === donor!.entry.structuralFingerprint
           || section.provenance.structuralFingerprint === donor!.entry.structuralFingerprint)) {
-        return failure(completed, "section_originality_failed");
+        return fail("section_originality_failed");
       }
-      if (!(await deps.validateSemantics(section, row))) return failure(completed, "section_semantic_coverage_failed");
-      if (!(await deps.validateAssets(section.html, row))) return failure(completed, "required_asset_unavailable");
+      if (!(await deps.validateSemantics(section, row))) return fail("section_semantic_coverage_failed");
+      if (!(await deps.validateAssets(section.html, row))) return fail("required_asset_unavailable");
       const rendered = await deps.validateRender(section.html, row);
-      if (!rendered.ok || !rendered.desktopVisible || !rendered.mobileVisible || rendered.mobileOverflow) return failure(completed, "technical_render_failed");
+      if (!rendered.ok || !rendered.desktopVisible || !rendered.mobileVisible || rendered.mobileOverflow) return fail("technical_render_failed");
       const sanitized = deps.sanitize(section.html);
-      if (!sanitized.html || sanitized.html !== section.html) return failure(completed, "sanitization_failed");
+      if (!sanitized.html || sanitized.html !== section.html) return fail("sanitization_failed");
 
       completed.push({
         action: decision.action,
@@ -354,6 +417,35 @@ export async function composeAdaptiveSections(
         programHash,
         fragment: { slug: section.id, type: section.type, requestedRole: row.requestedRole, html: sanitized.html },
       });
+      handoffEntries.push(decision.action === "reuse" ? {
+        ordinal: row.ordinal,
+        action: "reuse",
+        role: row.requestedRole,
+        provenance,
+        allowedCopyKeys: [],
+        allowedAssetSlots: [],
+        compiledFragmentId: section.id,
+        compiledContentHash: section.contentHash,
+        compiledFragmentHash: sha256(section.html),
+        structuralFingerprint: section.provenance.structuralFingerprint,
+        programId: null,
+        programHash: null,
+        program: null,
+      } : {
+        ordinal: row.ordinal,
+        action: decision.action,
+        role: row.requestedRole,
+        provenance,
+        allowedCopyKeys: Object.keys(input.copy),
+        allowedAssetSlots: assetSlots.map((slot) => slot.slotIndex),
+        compiledFragmentId: section.id,
+        compiledContentHash: section.contentHash,
+        compiledFragmentHash: sha256(section.html),
+        structuralFingerprint: normalizedStructuralFingerprint ?? section.provenance.structuralFingerprint,
+        programId: draft.id,
+        programHash: programHash!,
+        program: (generatedProgram as ExpressiveSectionProgram),
+      });
     }
 
     if (!hasAdaptiveSectionOriginality({
@@ -362,21 +454,25 @@ export async function composeAdaptiveSections(
       finalProgramHashes: completed.map((row) => row.programHash),
       sourceTemplateIds: completed.map((row) => row.sourceTemplateId),
       sourceBandOrdinals: completed.map((row) => row.sourceBandOrdinal),
-    })) return failure(completed, "section_originality_failed");
+    })) return fail("section_originality_failed");
 
     const assembled = deps.assemble(completed.map((row) => row.fragment));
     const sanitized = deps.sanitize(assembled);
-    if (!sanitized.html) return failure(completed, "sanitization_failed");
+    if (!sanitized.html) return fail("sanitization_failed");
     const sealed = deps.seal(sanitized.html);
-    if (!sealed.sealed) return failure(completed, "sanitization_failed");
+    if (!sealed.sealed) return fail("sanitization_failed");
     return {
       ok: true,
       status: "composed",
       html: sealed.html,
       manifest: manifest(completed, "composed", sealed.html),
       telemetry: Object.freeze(telemetry.map((row) => Object.freeze({ ...row }))),
+      handoff: AdaptiveSectionRepairHandoffSchema.parse({
+        schemaVersion: ADAPTIVE_SECTION_REPAIR_HANDOFF_VERSION,
+        entries: handoffEntries,
+      }),
     };
   } catch {
-    return failure(completed, "internal_error");
+    return fail("internal_error");
   }
 }

@@ -464,3 +464,106 @@ Only the files enumerated above plus this report will be staged, using:
 ```text
 feat(generation): compile expressive adaptive sections
 ```
+
+---
+
+## Fix Round 1/5 â€” Fable-Parity Important findings
+
+### Scope
+
+This follow-up changes only the Task 4 expressive compiler, GLM request seam,
+adaptive composer, their focused tests, and this report. It does not touch
+providers, models, database state, deployments, environment files, or any
+untracked user-owned file.
+
+### RED evidence
+
+```text
+npm.cmd test -- lib/generation/expressive-section-compiler.test.ts lib/generation/generate-missing-section.test.ts lib/generation/adaptive-section-composition.test.ts
+exit 1
+Tests: 6 failed, 18 passed (24)
+```
+
+The failures proved all four review findings before production changes:
+
+- canonical `tone` and decoration-kind values changed fingerprints without a
+  compiler-owned visual class/rule;
+- a forged `generate` request with `rebuild` provenance reached the provider;
+- the first paid provider trace replaced, rather than accumulated with, later
+  traces and a compiler failure discarded its paid trace;
+- successful adaptive composition exposed no strict, repairable Task 5 handoff.
+
+The first in-sandbox invocation could not load `vitest.config.ts` because
+esbuild was denied a parent-directory read; the identical command was then run
+with the needed filesystem permission and produced the RED result above.
+
+### GREEN implementation
+
+- The compiler now renders every copy tone through repository-owned classes and
+  visual rules. Decoration kind and size likewise select distinct owned layout
+  treatments, so visual hashes do not encode a no-op value.
+- `generateExpressiveMissingSection` now accepts a discriminated input union
+  tying `request.mode` to `provenance.action`, validates both at runtime before
+  provider/compiler use, requires the rebuild donor shape, and rejects forged
+  combinations with zero calls.
+- Compiler failures retain the successful provider result. Adaptive failures
+  always return a frozen ordered telemetry array containing every paid trace
+  collected through the failed stage, without prompt/body/program/HTML data.
+- Successful adaptive composition now retains the internal,
+  `adaptive-section-repair-handoff/1.0` artifact for Task 5. Entries stay in
+  ordinal order and bind action, program ID/full safe AST (or explicit no-program
+  reuse), provenance, copy/asset allowlists, compiled-fragment IDs and hashes.
+  The public manifest remains redacted and the handoff carries no raw copy or
+  fragment HTML.
+
+### GREEN verification
+
+```text
+npm.cmd test -- lib/generation/expressive-section-compiler.test.ts lib/generation/generate-missing-section.test.ts lib/generation/adaptive-section-composition.test.ts
+exit 0
+Test Files: 3 passed (3)
+Tests: 24 passed (24)
+
+npm.cmd test -- lib/generation/expressive-section-contracts.test.ts lib/generation/expressive-section-compiler.test.ts lib/generation/glm-section-program-provider.test.ts lib/generation/adaptive-section-composition.test.ts lib/generation/generated-section-contracts.test.ts lib/generation/compose-sections.test.ts lib/generation/section-composition-contracts.test.ts lib/generation/generate-missing-section.test.ts
+exit 0
+Test Files: 8 passed (8)
+Tests: 64 passed (64)
+
+npm.cmd run generation:template-derived-sections:gate
+exit 0
+Test Files: 19 passed (19)
+Tests: 213 passed (213)
+
+npm.cmd run generation:ai-hybrid:gate
+exit 0
+Test Files: 20 passed (20)
+Tests: 257 passed (257)
+
+npm.cmd run typecheck
+exit 0
+tsc --noEmit
+```
+
+The two gates emit their established Vite CJS deprecation warning and the
+intentional stderr from explicit-template-clone failure fixtures; all assertions
+passed.
+
+### Self-review
+
+- Confirmed each `tone` and `decoration` enum value now selects owned rendering
+  behavior rather than only influencing canonical hashes.
+- Confirmed generated and rebuilt handoff records retain full safe program data,
+  while reuse is explicit and has no program; raw copy and compiled HTML are
+  excluded.
+- Confirmed every typed adaptive failure receives the entire frozen telemetry
+  sequence, including semantic, assets, render, sanitizer, compiler, and later
+  provider failure paths.
+- Confirmed input correlation is enforced both by the exported TypeScript union
+  and runtime schemas before invoking the provider or compiler.
+- Preserved strict AST validation, PageBudget ownership, single-provider retry,
+  atomic no-partial-HTML behavior, and existing originality checks.
+
+### Concerns
+
+The handoff is deliberately an internal result field for Task 5 orchestration;
+it must not be copied into public manifests, telemetry, logs, or persistence.

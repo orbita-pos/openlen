@@ -57,6 +57,17 @@ describe("generateMissingSection", () => {
     expect(provider.generate).toHaveBeenCalledTimes(1);
   });
 
+  it("rejects forged request and provenance mode mismatches before invoking the provider", async () => {
+    const provider = { generate: vi.fn() };
+    const result = await generateExpressiveMissingSection({
+      request: { mode: "generate", requestId: "page.section-2", ordinal: 2, role: "activities", direction: { rhythm: "playful", requiredSignals: ["playful"], forbiddenSignals: ["corporate"] }, copyKeys: ["activities.title"], assetSlots: [] },
+      copy: { "activities.title": "Escaped <title>" },
+      provenance: { schemaVersion: "section-decision-provenance/1.0", action: "rebuild", candidateId: "donor", sourceTemplateId: "template", sourceBandOrdinal: 0, sourceContentHash: "a".repeat(12), sourceStructuralFingerprint: `sha256:${"a".repeat(64)}`, usefulTraits: [] },
+    } as never, { provider });
+    expect(result).toEqual({ ok: false, code: "invalid_input" });
+    expect(provider.generate).not.toHaveBeenCalled();
+  });
+
   it("makes one spec request, compiles repository markup, and returns a generated candidate", async () => {
     const d = deps(); const result = await generateMissingSection(input, d);
     expect(result).toMatchObject({ ok: true, candidate: { sourceKind: "generated", sourceTemplateId: null, sourceBandOrdinal: null, type: "features" }, usage: { inputTokens: 10 } });
