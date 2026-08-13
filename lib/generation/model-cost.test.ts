@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { calculateModelCostMicros, parsePilotRateCardFromEnv } from "./model-cost";
+import {
+  calculateImageUsageMicromxn,
+  calculateModelCostMicros,
+  calculateModelUsageMicromxn,
+  parsePilotRateCardFromEnv,
+} from "./model-cost";
 
 const RATE_CARD = {
   version: "gemini-test/2026-08-07",
@@ -59,5 +64,34 @@ describe("parsePilotRateCardFromEnv", () => {
     })) {
       expect(() => parsePilotRateCardFromEnv({ ...valid, [key]: value })).toThrow();
     }
+  });
+});
+
+describe("production multi-model cost arithmetic", () => {
+  it("prices text usage with cached input and provider-inclusive reasoning usage", () => {
+    expect(calculateModelUsageMicromxn(
+      { inputTokens: 8_000, cachedTokens: 2_000, outputTokens: 1_000, thinkingTokens: 400 },
+      { input: 1.40, cached: .14, output: 4.40 },
+      20,
+    )).toBe(261_600);
+  });
+
+  it("prices image count and rounds once with integer-safe micromxn arithmetic", () => {
+    expect(calculateImageUsageMicromxn({ imageCount: 3 }, { image: .039 }, 20)).toBe(2_340_000);
+    expect(calculateModelUsageMicromxn(
+      { inputTokens: Number.MAX_SAFE_INTEGER, cachedTokens: Number.MAX_SAFE_INTEGER, outputTokens: 0, thinkingTokens: 0 },
+      { input: .14, cached: .028, output: .28 },
+      1,
+    )).toBe(252_201_579_132_748);
+  });
+
+  it("rejects incomplete, unsafe, or internally inconsistent production usage", () => {
+    expect(() => calculateModelUsageMicromxn({ inputTokens: 1 } as never, { input: .14, cached: .028, output: .28 }, 20)).toThrow("complete model usage");
+    expect(() => calculateModelUsageMicromxn(
+      { inputTokens: 2, cachedTokens: 3, outputTokens: 0, thinkingTokens: 0 },
+      { input: .14, cached: .028, output: .28 },
+      20,
+    )).toThrow("cachedTokens");
+    expect(() => calculateImageUsageMicromxn({ imageCount: 0 }, { image: .039 }, 20)).toThrow("imageCount");
   });
 });
