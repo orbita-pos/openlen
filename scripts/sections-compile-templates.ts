@@ -86,7 +86,8 @@ async function main(): Promise<void> {
     acceptedCount: result.acceptedCount,
     rejectedCount: result.rejectedCount,
     duplicateCount: result.duplicateCount,
-    reportPath: "scratch/visual-engine-derived-sections/compilation-report.json",
+    evidenceHash: result.evidenceHash,
+    reportPath: mode === "publish" ? "scratch/visual-engine-derived-sections/compilation-report.json" : null,
   }));
   } finally {
     await rendererPool.close();

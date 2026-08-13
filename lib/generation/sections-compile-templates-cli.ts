@@ -35,6 +35,7 @@ export interface TemplateSectionCompilationResult {
   acceptedCount: number;
   rejectedCount: number;
   duplicateCount: number;
+  evidenceHash: string;
   report: DerivedSectionCompilationReport;
 }
 
@@ -92,6 +93,20 @@ function catalogProjection(sections: readonly CompiledDerivedSection[]) {
     }));
 }
 
+function compilationEvidenceProjection(report: DerivedSectionCompilationReport) {
+  return {
+    schemaVersion: report.schemaVersion,
+    corpusManifestHash: report.corpusManifestHash,
+    catalogManifestHash: report.catalogManifestHash,
+    expectedTemplates: report.expectedTemplates,
+    processedTemplates: report.processedTemplates,
+    accepted: report.accepted,
+    rejectionCounts: report.rejectionCounts,
+    coverage: report.coverage,
+    duplicates: report.duplicates,
+  };
+}
+
 export async function runTemplateSectionCompilation(
   input: { mode: "dry-run" | "publish" },
   deps: TemplateSectionCompilationDeps,
@@ -129,13 +144,17 @@ export async function runTemplateSectionCompilation(
     duplicates: deduped.duplicates,
   });
 
-  await deps.writeReportAtomic(report);
-  if (input.mode === "publish") await deps.publishCatalog(deduped.accepted, report);
+  const evidenceHash = canonicalJsonSha256(compilationEvidenceProjection(report));
+  if (input.mode === "publish") {
+    await deps.writeReportAtomic(report);
+    await deps.publishCatalog(deduped.accepted, report);
+  }
   return {
     ok: true,
     acceptedCount: deduped.accepted.length,
     rejectedCount: rejected.length,
     duplicateCount: deduped.duplicates.length,
+    evidenceHash,
     report,
   };
 }

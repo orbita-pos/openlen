@@ -53,7 +53,14 @@ function deps(events: string[] = []) {
     loadCorpus: vi.fn(async () => ({ schemaVersion: "template-section-corpus/1.0" as const, expectedCount: 450 as const, manifestHash: HASH, rows: [row("arcana"), row("obra")] })),
     extract: vi.fn((source: ReturnType<typeof row>): ExtractTemplateBandsResult => ({ ok: true as const, bands: [{ templateId: source.templateId, templateContentHash: source.templateContentHash, ordinal: 0, rootTag: "section" as const, sourceHtml: source.html, sourceHash: HASH, sourceIds: ["hero"] }] })),
     compile: vi.fn(async (band: { templateId: string }): Promise<CompileDerivedSectionResult> => ({ ok: true as const, section: section(band.templateId) })),
-    dedupe: vi.fn((sections: ReturnType<typeof section>[]) => ({ accepted: sections, duplicates: [] })),
+    dedupe: vi.fn((sections: ReturnType<typeof section>[]) => ({
+      accepted: sections,
+      duplicates: [] as Array<{
+        rejectedId: string;
+        representativeId: string;
+        reason: "exact" | "structural";
+      }>,
+    })),
     writeReportAtomic: vi.fn(async (_report: unknown) => { events.push("report"); }),
     publishCatalog: vi.fn(async (_sections: unknown, _report: unknown) => { events.push("publish"); }),
   };
@@ -109,14 +116,48 @@ describe("runTemplateSectionCompilation", () => {
     expect(() => parseTemplateSectionCompilationArgs(["--dry-run", "--publish", "--expected-count=450"])).toThrow("invalid_compile_mode");
     expect(() => parseTemplateSectionCompilationArgs(["--dry-run", "--expected-count=451"])).toThrow("invalid_compile_argument");
   });
-  it("dry-run compiles every row and writes a redacted report with zero publication", async () => {
-    const d = deps();
-    const result = await runTemplateSectionCompilation({ mode: "dry-run" }, d);
-    expect(result).toMatchObject({ ok: true, acceptedCount: 2 });
-    expect(d.compile).toHaveBeenCalledTimes(2);
-    expect(d.writeReportAtomic).toHaveBeenCalledTimes(1);
-    expect(d.publishCatalog).not.toHaveBeenCalled();
-    expect(JSON.stringify(d.writeReportAtomic.mock.calls[0]?.[0])).not.toContain("<section>");
+  it("dry-run returns comprehensive deterministic evidence without writing", async () => {
+    const firstDeps = deps();
+    const secondDeps = deps();
+
+    const first = await runTemplateSectionCompilation({ mode: "dry-run" }, firstDeps);
+    const second = await runTemplateSectionCompilation({ mode: "dry-run" }, secondDeps);
+
+    expect(first).toMatchObject({ ok: true, acceptedCount: 2 });
+    expect(first.evidenceHash).toMatch(/^sha256:[a-f0-9]{64}$/);
+    expect(first.evidenceHash).toBe(second.evidenceHash);
+    expect(firstDeps.compile).toHaveBeenCalledTimes(2);
+    expect(firstDeps.writeReportAtomic).not.toHaveBeenCalled();
+    expect(firstDeps.publishCatalog).not.toHaveBeenCalled();
+    expect(JSON.stringify(first.report)).not.toContain("<section>");
+
+    const rejectionDeps = deps();
+    rejectionDeps.loadCorpus.mockResolvedValueOnce({
+      schemaVersion: "template-section-corpus/1.0",
+      expectedCount: 450,
+      manifestHash: HASH,
+      rows: [row("arcana"), row("obra"), row("invalid")],
+    });
+    rejectionDeps.extract.mockImplementation((source: ReturnType<typeof row>): ExtractTemplateBandsResult =>
+      source.templateId === "invalid"
+        ? { ok: false as const, code: "invalid_template_document" }
+        : { ok: true as const, bands: [{ templateId: source.templateId, templateContentHash: source.templateContentHash, ordinal: 0, rootTag: "section" as const, sourceHtml: source.html, sourceHash: HASH, sourceIds: ["hero"] }] });
+    const withRejection = await runTemplateSectionCompilation({ mode: "dry-run" }, rejectionDeps);
+    expect(withRejection.report.catalogManifestHash).toBe(first.report.catalogManifestHash);
+    expect(withRejection.evidenceHash).not.toBe(first.evidenceHash);
+
+    const duplicateDeps = deps();
+    duplicateDeps.dedupe.mockImplementation((sections) => ({
+      accepted: sections,
+      duplicates: [{
+        rejectedId: "derived-hero-obra-0-aaaaaaaaaaaa",
+        representativeId: "derived-hero-arcana-0-aaaaaaaaaaaa",
+        reason: "structural" as const,
+      }],
+    }));
+    const withDuplicate = await runTemplateSectionCompilation({ mode: "dry-run" }, duplicateDeps);
+    expect(withDuplicate.report.catalogManifestHash).toBe(first.report.catalogManifestHash);
+    expect(withDuplicate.evidenceHash).not.toBe(first.evidenceHash);
   });
 
   it("bounds compilation concurrency to two workers", async () => {

@@ -3,6 +3,17 @@ import { resolve } from "node:path";
 
 const TEMPLATE_STORAGE_KEY = /^templates\/[a-z0-9]+(?:[-_][a-z0-9]+)*-[a-f0-9]{12}\.html$/;
 
+export type TemplateObjectReadErrorCode =
+  | "invalid_template_storage_key"
+  | "template_object_unavailable";
+
+export class TemplateObjectReadError extends Error {
+  constructor(readonly code: TemplateObjectReadErrorCode) {
+    super(code);
+    this.name = "TemplateObjectReadError";
+  }
+}
+
 interface TemplateObjectEnvironment {
   [key: string]: string | undefined;
   R2_ACCOUNT_ID?: string;
@@ -22,11 +33,11 @@ interface R2ReadRequest {
 
 interface TemplateObjectReaderDeps {
   env: TemplateObjectEnvironment;
-  readR2(request: R2ReadRequest): Promise<string>;
-  readFile(path: string): Promise<string>;
+  readR2(request: R2ReadRequest): Promise<string | null>;
+  readFile(path: string): Promise<string | null>;
 }
 
-async function readR2Object(request: R2ReadRequest): Promise<string> {
+async function readR2Object(request: R2ReadRequest): Promise<string | null> {
   const { GetObjectCommand, S3Client } = await import("@aws-sdk/client-s3");
   const client = new S3Client({
     region: "auto",
@@ -40,7 +51,7 @@ async function readR2Object(request: R2ReadRequest): Promise<string> {
     Bucket: request.bucket,
     Key: request.key,
   }));
-  if (!result.Body) throw new Error("template_object_unavailable");
+  if (!result.Body) return null;
   return result.Body.transformToString("utf8");
 }
 
@@ -50,22 +61,40 @@ const DEFAULT_DEPS: TemplateObjectReaderDeps = {
   readFile: (path) => readFile(path, "utf8"),
 };
 
+function isMissingObject(error: unknown): boolean {
+  if (!error || typeof error !== "object") return false;
+  const record = error as Record<string, unknown>;
+  const metadata = record.$metadata;
+  const status = metadata && typeof metadata === "object"
+    ? (metadata as Record<string, unknown>).httpStatusCode
+    : undefined;
+  return record.code === "ENOENT"
+    || record.name === "NoSuchKey"
+    || record.name === "NotFound"
+    || status === 404;
+}
+
 export async function readTemplateObjectText(
   storageKey: string,
   deps: TemplateObjectReaderDeps = DEFAULT_DEPS,
-): Promise<string> {
+): Promise<string | null> {
   if (!TEMPLATE_STORAGE_KEY.test(storageKey)) {
-    throw new Error("invalid_template_storage_key");
+    throw new TemplateObjectReadError("invalid_template_storage_key");
   }
-  const { R2_ACCOUNT_ID, R2_ACCESS_KEY, R2_SECRET_KEY } = deps.env;
-  if (R2_ACCOUNT_ID && R2_ACCESS_KEY && R2_SECRET_KEY) {
-    return deps.readR2({
-      accountId: R2_ACCOUNT_ID,
-      accessKey: R2_ACCESS_KEY,
-      secretKey: R2_SECRET_KEY,
-      bucket: deps.env.R2_TEMPLATES_BUCKET || "openlen-templates",
-      key: storageKey,
-    });
+  try {
+    const { R2_ACCOUNT_ID, R2_ACCESS_KEY, R2_SECRET_KEY } = deps.env;
+    if (R2_ACCOUNT_ID && R2_ACCESS_KEY && R2_SECRET_KEY) {
+      return await deps.readR2({
+        accountId: R2_ACCOUNT_ID,
+        accessKey: R2_ACCESS_KEY,
+        secretKey: R2_SECRET_KEY,
+        bucket: deps.env.R2_TEMPLATES_BUCKET || "openlen-templates",
+        key: storageKey,
+      });
+    }
+    return await deps.readFile(resolve(deps.env.TEMPLATES_DIR || "./public/template-objects", storageKey));
+  } catch (error) {
+    if (isMissingObject(error)) return null;
+    throw new TemplateObjectReadError("template_object_unavailable");
   }
-  return deps.readFile(resolve(deps.env.TEMPLATES_DIR || "./public/template-objects", storageKey));
 }
