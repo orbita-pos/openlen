@@ -135,6 +135,53 @@ describe("expressive section compiler", () => {
     expect(shapedHtml).not.toBe(texturedHtml);
   });
 
+  it("gives every copy tone a cascade-winning semantic style across copy variants", () => {
+    const toneStyle = {
+      default: "font-weight:500;letter-spacing:0",
+      quiet: "font-weight:400;letter-spacing:.02em;opacity:.72",
+      strong: "font-weight:900;letter-spacing:-.01em",
+    } as const;
+    for (const [tone, declarations] of Object.entries(toneStyle)) {
+      const heading = {
+        schemaVersion: "expressive-section-program/1.0" as const,
+        role: "hero" as const,
+        root: { ...copy("title", "heading", "hero.title"), tone: tone as keyof typeof toneStyle },
+        responsive: { mobile: [] },
+        motion: [],
+      };
+      const result = compile(heading);
+      expect(result.ok).toBe(true);
+      const html = (result as CompileExpressiveSectionSuccess).draft.html;
+      expect(html).toContain(`.olx-copy.olx-tone-${tone}{${declarations}`);
+      expect(html).toContain(`olx-heading olx-node-0 olx-tone-${tone}`);
+    }
+
+    const variants = fixture("hero", layout("all-copy-kinds", "stack", [
+      { ...copy("heading", "heading", "hero.title"), tone: "strong" as const },
+      { ...copy("body", "body", "activities.title"), tone: "strong" as const },
+      { ...copy("quote", "quote", "menu.quote"), tone: "strong" as const },
+      { ...copy("stat", "stat", "booking.stat"), tone: "strong" as const },
+      { ...copy("badge", "badge", "cta.label"), tone: "strong" as const },
+      { kind: "copy" as const, id: "list", variant: "list" as const, copyKeys: ["hero.title", "activities.title"], tone: "strong" as const, size: "md" as const, color: "ink" as const, align: "start" as const },
+      { kind: "copy" as const, id: "action", variant: "action" as const, copyKey: "cta.label", destination: "contact" as const, tone: "strong" as const, size: "md" as const, color: "ink" as const, align: "start" as const },
+    ]), "all-copy-kinds", "heading", "fade_up");
+    const result = compile(variants);
+    expect(result.ok).toBe(true);
+    const html = (result as CompileExpressiveSectionSuccess).draft.html;
+    for (const variant of ["heading", "body", "quote", "stat", "badge", "list", "action"]) {
+      expect(html).toContain(`olx-${variant} olx-node-`);
+      expect(html).toContain("olx-tone-strong");
+    }
+
+    const textured = compile({
+      ...FIXTURES.childrenColoring,
+      root: { ...FIXTURES.childrenColoring.root as Extract<ExpressiveNode, { kind: "layout" }>, children: FIXTURES.childrenColoring.root.kind === "layout" ? FIXTURES.childrenColoring.root.children.map((node) => node.kind === "decoration" ? { ...node, decoration: "texture" as const } : node) : [] },
+    });
+    expect(textured.ok).toBe(true);
+    const textureCss = (textured as CompileExpressiveSectionSuccess).draft.html.match(/\.olx-decoration-texture\{([^}]*)}/)?.[1] ?? "";
+    expect(textureCss).not.toContain("mix-blend-mode");
+  });
+
   it("fails closed on invalid programs, references, and provenance", () => {
     expect(compileExpressiveSection({
       program: { ...FIXTURES.vhsHorror, html: "<section>raw</section>" } as never,

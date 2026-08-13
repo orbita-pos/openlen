@@ -567,3 +567,68 @@ passed.
 
 The handoff is deliberately an internal result field for Task 5 orchestration;
 it must not be copied into public manifests, telemetry, logs, or persistence.
+
+---
+
+## Fix Round 2/5 â€” tone cascade materialization
+
+### RED
+
+```text
+npm.cmd test -- lib/generation/expressive-section-compiler.test.ts
+exit 1
+Test Files: 1 failed (1)
+Tests: 1 failed, 7 passed (8)
+```
+
+The regression compiled a heading with `default`, `quiet`, and `strong` tones.
+It proved the former `.olx-tone-*` selectors lost to the later heading
+font-weight/letter-spacing rules, leaving `default` and `strong` render-identical
+despite distinct fingerprints. The same cascade inspection found that texture
+was overwriting the model-selected decoration blend.
+
+### GREEN
+
+- Tone selectors are now `.olx-copy.olx-tone-*`, so their two-class specificity
+  wins over all one-class copy-variant rules. Each canonical tone owns distinct
+  visible font/spacing/opacity or color treatment for headings, body, quote,
+  stat, badge, list, and action nodes.
+- Texture retains its positional treatment but no longer fixes
+  `mix-blend-mode`; the closed blend enum remains a material visual input.
+- The regression checks default/quiet/strong semantic declarations, their
+  cascade-winning selector, every copy variant, and the texture blend boundary.
+
+### Verification
+
+```text
+npm.cmd test -- lib/generation/expressive-section-compiler.test.ts
+exit 0
+Test Files: 1 passed (1)
+Tests: 8 passed (8)
+
+npm.cmd test -- lib/generation/expressive-section-contracts.test.ts lib/generation/expressive-section-compiler.test.ts lib/generation/glm-section-program-provider.test.ts lib/generation/adaptive-section-composition.test.ts lib/generation/generated-section-contracts.test.ts lib/generation/compose-sections.test.ts lib/generation/section-composition-contracts.test.ts
+exit 0
+Test Files: 7 passed (7)
+Tests: 59 passed (59)
+
+npm.cmd run generation:template-derived-sections:gate
+exit 0
+Test Files: 19 passed (19)
+Tests: 213 passed (213)
+
+npm.cmd run generation:ai-hybrid:gate
+exit 0
+Test Files: 20 passed (20)
+Tests: 257 passed (257)
+
+npm.cmd run typecheck
+exit 0
+```
+
+### Scope/self-review
+
+Only the compiler CSS, its regression test, and this ignored Task 4 report were
+changed. The final selectors preserve repository ownership, strict AST/security,
+PageBudget, provider retry, atomic composition, and all existing handoff and
+telemetry behavior. No untracked file, provider, model, database, deployment,
+or environment state was changed.
