@@ -13,6 +13,8 @@ const mocks = vi.hoisted(() => ({
   renderProjectThumbnail: vi.fn(),
   insert: vi.fn(),
   insertValues: vi.fn(),
+  remove: vi.fn(),
+  removeWhere: vi.fn(),
   resolveProfileForCreation: vi.fn(),
   runAiCreation: vi.fn(),
 }));
@@ -20,7 +22,7 @@ const mocks = vi.hoisted(() => ({
 vi.mock("@inariwatch/capture", () => ({ captureException: mocks.captureException }));
 vi.mock("@/auth", () => ({ auth: mocks.auth }));
 vi.mock("@/lib/db", () => ({
-  db: { insert: mocks.insert },
+  db: { insert: mocks.insert, delete: mocks.remove },
   schema: { projects: { id: "projects" } },
 }));
 vi.mock("@/lib/projects/versions", () => ({ createVersion: mocks.createVersion }));
@@ -121,6 +123,8 @@ describe("POST /api/curate hybrid-only integration", () => {
     });
     mocks.insert.mockReturnValue({ values: mocks.insertValues });
     mocks.insertValues.mockResolvedValue(undefined);
+    mocks.remove.mockReturnValue({ where: mocks.removeWhere });
+    mocks.removeWhere.mockResolvedValue(undefined);
     mocks.createVersion.mockResolvedValue(undefined);
     mocks.renderProjectThumbnail.mockResolvedValue(undefined);
     mocks.creditsForUsage.mockReturnValue(3);
@@ -292,6 +296,22 @@ describe("POST /api/curate hybrid-only integration", () => {
     expect(eventsNamed(events, "preview")).toEqual([]);
     expect(eventsNamed(events, "done")).toEqual([]);
     expect(mocks.debitCredits).not.toHaveBeenCalled();
+  });
+
+  it("compensates the known draft when debit fails, with no preview or done event", async () => {
+    mocks.debitCredits.mockRejectedValue(new Error("private debit failure"));
+
+    const { events, text } = await post();
+
+    expect(mocks.insertValues).toHaveBeenCalledTimes(1);
+    expect(mocks.removeWhere).toHaveBeenCalledTimes(1);
+    expect(eventsNamed(events, "preview")).toEqual([]);
+    expect(eventsNamed(events, "done")).toEqual([]);
+    expect(eventsNamed(events, "error")).toEqual([{
+      event: "error",
+      data: { kind: "persistence_failed", message: expect.any(String) },
+    }]);
+    expect(text).not.toContain("private debit failure");
   });
 
   it("preserves authentication, rate, input, and credit prechecks before the pipeline", async () => {

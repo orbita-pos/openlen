@@ -20,8 +20,10 @@ import {
   runSectionCompositionCandidate,
   type QuickSectionCompositionResult,
 } from "./quick-section-composition";
-import { runQuickVisualQualityGate } from "./quick-visual-repair";
 import { buildDeterministicIntent, buildDeterministicPageCopy } from "./deterministic-page-input";
+import type { FableFinalVisualGateResult, FableVisualRepairHandoff } from "./fable-final-visual-gate";
+import type { VisualEngineProjectMetadata } from "@/lib/projects/types";
+import { createFableRuntimeComposition, type FableRuntimeVisualBrief } from "./fable-runtime-composition";
 
 export interface RunAiCreationInput {
   projectId: string;
@@ -39,7 +41,17 @@ export interface RunAiCreationDeps {
   overlayProfile?: typeof overlayProfile;
   runSectionCompositionCandidate?: typeof runSectionCompositionCandidate;
   validateAiCompositionDelivery?: typeof validateAiCompositionDelivery;
-  runQuickVisualQualityGate?: typeof runQuickVisualQualityGate;
+  /** Injected by the adaptive composer; it owns Qwen screenshots and the one-repair machine. */
+  runFableFinalVisualGate?: (input: {
+    readonly requestId: string;
+    readonly candidate: {
+      readonly html: string;
+      readonly visualEngine: Extract<VisualEngineProjectMetadata, { route: "section_composition" }>;
+    };
+    readonly handoff: FableVisualRepairHandoff;
+    readonly brief: FableRuntimeVisualBrief;
+  }) => Promise<FableFinalVisualGateResult>;
+  createFableRuntimeComposition?: typeof createFableRuntimeComposition;
 }
 
 type BoundaryResult<T> =
@@ -127,7 +139,14 @@ export async function runAiCreation(
   const overlay = deps.overlayProfile ?? overlayProfile;
   const compose = deps.runSectionCompositionCandidate ?? runSectionCompositionCandidate;
   const validate = deps.validateAiCompositionDelivery ?? validateAiCompositionDelivery;
-  const visualQuality = deps.runQuickVisualQualityGate ?? runQuickVisualQualityGate;
+  let finalGate = deps.runFableFinalVisualGate;
+  if (!finalGate) {
+    try {
+      finalGate = (deps.createFableRuntimeComposition ?? createFableRuntimeComposition)().runFinalGate;
+    } catch {
+      return failure("visual_quality", "visual_quality_failed");
+    }
+  }
 
   notify(input, "intent");
   const intentPromise = callBoundary(() => analyze(input.brief));
@@ -198,31 +217,36 @@ export async function runAiCreation(
     return failure("delivery_gate", "inherited_copy_leak");
   }
 
+  // The final visual gate is deliberately mandatory. A legacy composition
+  // without the adaptive handoff cannot be delivered through Create with AI.
+  if (!composition.fableVisualRepairHandoff || !finalGate) {
+    return failure("visual_quality", "visual_quality_failed");
+  }
+  const fableHandoff = composition.fableVisualRepairHandoff;
   notify(input, "visual_quality");
-  const qualityCall = await callBoundary(() => visualQuality({
-    projectId: input.projectId,
-    assetMode: input.assetMode,
-    ...(input.assetTraceSink ? { assetTraceSink: input.assetTraceSink } : {}),
-    html: composition.html,
-    visualEngine: preRepair.visualEngine,
-    intent: intentResult.intent,
-    brandAccent: input.profileData.brand?.accent ?? null,
-    explicitConstraints: intentResult.intent.explicitConstraints,
+  const visualCall = await callBoundary(() => finalGate({
+    requestId: input.projectId,
+    candidate: { html: composition.html, visualEngine: preRepair.visualEngine },
+    handoff: fableHandoff,
+    brief: {
+      niche: intentResult.intent.functional.siteType,
+      requiredSignals: intentResult.intent.requiredVisualSignals,
+      forbiddenSignals: intentResult.intent.forbiddenVisualSignals,
+    },
   }));
-  if (!qualityCall.ok || !qualityCall.value.ok) {
+  if (!visualCall.ok || !visualCall.value.ok) {
     return failure("visual_quality", "visual_quality_failed");
   }
 
-  notify(input, "delivery_gate");
   let postRepair;
   try {
     postRepair = validate({
-      html: qualityCall.value.html,
-      visualEngine: qualityCall.value.visualEngine,
+      html: visualCall.value.candidate.html,
+      visualEngine: visualCall.value.candidate.visualEngine,
       leaksAfter,
     });
   } catch {
-    return failure("delivery_gate", "semantic_gate_failed");
+    return failure("delivery_gate", leaksAfter === 0 ? "semantic_gate_failed" : "inherited_copy_leak");
   }
   if (!postRepair.ok) {
     return failure("delivery_gate", deliveryReason(postRepair.reasonCode, leaksAfter));
@@ -233,7 +257,7 @@ export async function runAiCreation(
     route: "section_composition",
     templateId: null,
     title,
-    html: qualityCall.value.html,
+    html: visualCall.value.candidate.html,
     visualEngine: postRepair.visualEngine,
     ...("usage" in copyResult && copyResult.usage ? { copyUsage: copyResult.usage } : {}),
     ...(composition.generatedSectionUsage ? { generatedSectionUsage: composition.generatedSectionUsage } : {}),

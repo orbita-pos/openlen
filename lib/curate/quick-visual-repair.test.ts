@@ -7,7 +7,7 @@ import { COLORING_DIRECTION, COLORING_INTENT } from "@/lib/generation/creative-f
 import { canonicalJsonSha256, sha256 } from "@/lib/generation/content-hash";
 import { SectionCompositionManifestSchema } from "@/lib/generation/section-composition-contracts";
 import { sealAiCompositionOutput } from "./ai-composition-delivery";
-import { launchShadowVisualRepair, runQuickVisualQualityGate, runQuickVisualRepair } from "./quick-visual-repair";
+import { launchShadowVisualRepair, runFableFinalVisualGate, runQuickVisualQualityGate, runQuickVisualRepair } from "./quick-visual-repair";
 
 const direction = CreativeDirectionSchema.parse(COLORING_DIRECTION);
 const intent = IntentAnalysisSchema.parse(COLORING_INTENT);
@@ -104,6 +104,59 @@ function acceptedQualityResult(html = `${compositionHtml}\n`) {
 }
 
 describe("quick visual repair", () => {
+  it("final Fable gate accepts exactly one inspected Qwen verdict without invoking GLM", async () => {
+    const inspect = vi.fn(async () => ({ ok: true, deterministic: { mobileOverflow: false, weakTypographyHierarchy: false, invalidGeometry: false }, screenshots: { desktop: { mimeType: "image/jpeg", dataBase64: "a" }, mobile: { mimeType: "image/jpeg", dataBase64: "b" } } }));
+    const critique = vi.fn(async () => ({ ok: true, verdict: { schemaVersion: "fable-visual-verdict/1.0" as const, nicheRecognition: 9, promptFidelity: 9, visualQuality: 9, coherence: 9, originality: 9, mobileQuality: 9, wrongNiche: false, genericAiStyle: false, issues: [], decision: "accept" as const } }));
+    const repairProvider = { repair: vi.fn() };
+    const applyDelta = vi.fn();
+
+    const result = await runFableFinalVisualGate({ requestId: "fable-final", candidate: { html: compositionHtml, visualEngine: compositionVisualEngine }, handoff: {} as never }, { inspect, critique, repairProvider, applyDelta });
+
+    expect(result).toEqual({ ok: true, candidate: { html: compositionHtml, visualEngine: compositionVisualEngine }, repaired: false });
+    expect(inspect).toHaveBeenCalledOnce();
+    expect(critique).toHaveBeenCalledOnce();
+    expect(repairProvider.repair).not.toHaveBeenCalled();
+    expect(applyDelta).not.toHaveBeenCalled();
+  });
+
+  it("uses GLM once for a repair verdict, then rerenders and asks Qwen exactly once more", async () => {
+    const program = {
+      schemaVersion: "expressive-section-program/1.0" as const,
+      role: "hero" as const,
+      root: { kind: "layout" as const, id: "root", preset: "stack" as const, gap: "md" as const, padding: "lg" as const, width: "wide" as const, align: "stretch" as const, justify: "between" as const, columns: "one" as const, color: "surface" as const, radius: "lg" as const, border: "hairline" as const, transform: "none" as const, blend: "normal" as const, children: [{ kind: "copy" as const, id: "title", variant: "heading" as const, copyKey: "hero.title", tone: "strong" as const, size: "2xl" as const, color: "ink" as const, align: "start" as const }] },
+      responsive: { mobile: [] }, motion: [],
+    };
+    const handoff = {
+      design: { schemaVersion: "adaptive-page-design/1.0" as const, narrative: ["hero" as const], direction: { ...direction, requiredVisualSignals: ["friendly", "playful"] }, decisions: [{ ordinal: 0, action: "generate" as const, candidateId: null, usefulTraits: [], rejectedTraits: [] }], rhythm: "playful" as const, requiredSignals: ["friendly", "playful"], forbiddenSignals: ["corporate"], imageSlots: [] },
+      sections: { schemaVersion: "adaptive-section-repair-handoff/1.0" as const, entries: [{ ordinal: 0, action: "generate" as const, role: "hero" as const, provenance: { schemaVersion: "section-decision-provenance/1.0" as const, action: "generate" as const, candidateId: null, usefulTraits: [], sourceTemplateId: null, sourceBandOrdinal: null, sourceContentHash: null, sourceStructuralFingerprint: null }, allowedCopyKeys: ["hero.title"], allowedAssetSlots: [], compiledFragmentId: "expressive-hero-old", compiledContentHash: "a".repeat(12), compiledFragmentHash: `sha256:${"a".repeat(64)}`, structuralFingerprint: `sha256:${"b".repeat(64)}`, programId: "expressive-hero-old", programHash: `sha256:${"c".repeat(64)}`, program }] },
+    };
+    const inspect = vi.fn(async () => ({ ok: true, deterministic: { mobileOverflow: false, weakTypographyHierarchy: false, invalidGeometry: false }, screenshots: { desktop: { mimeType: "image/jpeg", dataBase64: "a" }, mobile: { mimeType: "image/jpeg", dataBase64: "b" } } }));
+    const critique = vi.fn()
+      .mockResolvedValueOnce({ ok: true, verdict: { schemaVersion: "fable-visual-verdict/1.0" as const, nicheRecognition: 8, promptFidelity: 8, visualQuality: 7, coherence: 8, originality: 6, mobileQuality: 8, wrongNiche: false, genericAiStyle: false, issues: [{ code: "originality" as const, severity: "major" as const, viewport: "desktop" as const }], decision: "repair" as const } })
+      .mockResolvedValueOnce({ ok: true, verdict: { schemaVersion: "fable-visual-verdict/1.0" as const, nicheRecognition: 8, promptFidelity: 8, visualQuality: 8, coherence: 8, originality: 8, mobileQuality: 8, wrongNiche: false, genericAiStyle: false, issues: [], decision: "accept" as const } });
+    const repairedProgram = { ...program, root: { ...program.root, preset: "layered" as const } };
+    const repairProvider = { repair: vi.fn(async () => ({
+      ok: true as const,
+      delta: {
+        schemaVersion: "glm-visual-repair-delta/1.0" as const,
+        changes: [{ programId: "expressive-hero-old", program: repairedProgram }],
+      },
+      modelId: "accounts/fireworks/models/glm-5p2",
+      usage: { inputTokens: 2, cachedTokens: 0, outputTokens: 2, thinkingTokens: 1 },
+      durationMs: 3,
+      attempts: 1 as const,
+    })) };
+    const repaired = { html: `${compositionHtml}\n`, visualEngine: compositionVisualEngine };
+    const applyDelta = vi.fn(async () => ({ ok: true as const, candidate: repaired }));
+
+    const result = await runFableFinalVisualGate({ requestId: "fable-final-repair", candidate: { html: compositionHtml, visualEngine: compositionVisualEngine }, handoff }, { inspect, critique, repairProvider, applyDelta });
+
+    expect(result).toEqual({ ok: true, candidate: repaired, repaired: true });
+    expect(repairProvider.repair).toHaveBeenCalledOnce();
+    expect(applyDelta).toHaveBeenCalledWith(expect.objectContaining({ changes: [{ programId: "expressive-hero-old", program: expect.any(Object) }] }));
+    expect(inspect).toHaveBeenCalledTimes(2);
+    expect(critique).toHaveBeenCalledTimes(2);
+  });
   it("off returns original references without invoking the loop", async () => {
     const runRepair = vi.fn();
     const result = await runQuickVisualRepair(input, { mode: "off", runRepair });

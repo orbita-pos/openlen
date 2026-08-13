@@ -74,6 +74,26 @@ describe("Fireworks JSON client", () => {
     expect(JSON.parse(String(fetchImpl.mock.calls[0]?.[1]?.body)).messages).toEqual(visualRequest.messages);
   });
 
+  it("accepts and decodes exactly two separate final viewport images only for Qwen", async () => {
+    const fetchImpl = vi.fn<typeof fetch>(async () => jsonResponse(successEnvelope(undefined, {
+      prompt_tokens: 100, completion_tokens: 40, total_tokens: 140, prompt_tokens_details: { cached_tokens: 30 },
+    })));
+    const image = { type: "image_url" as const, image_url: { url: `data:image/jpeg;base64,${VALID_JPEG_BASE64}` } };
+    const visualRequest = {
+      ...REQUEST,
+      role: "visual_critic" as const,
+      reasoningEffort: "none" as const,
+      messages: [
+        { role: "system" as const, content: "Return a bounded final visual decision." },
+        { role: "user" as const, content: [{ type: "text" as const, text: "desktop" }, image] },
+        { role: "user" as const, content: [{ type: "text" as const, text: "mobile" }, image] },
+      ],
+    };
+
+    await expect(createClient({ apiKey: "key", fetchImpl }).request(visualRequest as never)).resolves.toMatchObject({ ok: true });
+    expect(fetchImpl).toHaveBeenCalledOnce();
+  });
+
   it("rejects non-visual, non-user, duplicate, non-JPEG, non-data, malformed, and oversized image blocks before HTTP", async () => {
     const fetchImpl = vi.fn();
     const jpeg = VALID_JPEG_BASE64;

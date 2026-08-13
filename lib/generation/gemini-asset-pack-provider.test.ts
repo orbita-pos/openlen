@@ -21,6 +21,7 @@ import {
 } from "@/lib/generation/asset-pack-provider";
 import { createGeminiAssetPackProvider } from "@/lib/generation/gemini-asset-pack-provider";
 import type { AssetIntent, AssetManifest } from "@/lib/generation/asset-contracts";
+import type { PageBudget } from "@/lib/generation/page-generation-budget";
 
 const CONFIGURED_ENV = {
   NODE_ENV: "test",
@@ -222,6 +223,34 @@ describe("createGeminiAssetPackProvider request policy", () => {
 
     expect(result).toMatchObject({ ok: false, code: "invalid_provider_response" });
     expect(fetchImpl).not.toHaveBeenCalled();
+  });
+
+  it("reserves and settles the shared page budget for every image attempt", async () => {
+    const reserve = vi.fn(() => ({ ok: true as const, leaseId: "image-lease-1" }));
+    const complete = vi.fn();
+    const pageBudget = { reserve, complete, snapshot: vi.fn() } as unknown as PageBudget;
+    const fetchImpl = vi.fn().mockResolvedValue(imageResponse(webp()));
+    const result = await createGeminiAssetPackProvider({ apiKey: "synthetic-key", env: CONFIGURED_ENV, fetchImpl, pageBudget }).createPack(request());
+
+    expect(result).toMatchObject({ ok: true, modelId: "gemini-2.5-flash-image" });
+    expect(reserve).toHaveBeenCalledWith({ kind: "image", modelId: "gemini-2.5-flash-image", imageCount: 1 });
+    expect(complete).toHaveBeenCalledWith("image-lease-1", { imageCount: 1 });
+  });
+
+  it("pins the shared-budget Create-with-AI route to gemini-2.5-flash-image despite model overrides", async () => {
+    const pageBudget = { reserve: vi.fn(() => ({ ok: true as const, leaseId: "image-lease-1" })), complete: vi.fn(), snapshot: vi.fn() } as unknown as PageBudget;
+    const fetchImpl = vi.fn().mockResolvedValue(imageResponse(webp()));
+
+    const result = await createGeminiAssetPackProvider({
+      apiKey: "synthetic-key",
+      env: { ...CONFIGURED_ENV, OPENLEN_ASSET_IMAGE_MODEL: "text-or-vision-model" },
+      modelId: "another-model",
+      pageBudget,
+      fetchImpl,
+    }).createPack(request());
+
+    expect(result).toMatchObject({ ok: true, modelId: "gemini-2.5-flash-image" });
+    expect(String(fetchImpl.mock.calls[0]?.[0])).toContain("/gemini-2.5-flash-image:generateContent");
   });
 
   it("uses the asset model override before image-edit and default model fallbacks", async () => {

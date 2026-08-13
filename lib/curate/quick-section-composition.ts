@@ -26,8 +26,7 @@ import type { AssetResolutionTrace } from "@/lib/generation/asset-contracts";
 import type { SectionRecord } from "@/lib/sections/store";
 import type { ExtractedBusinessData } from "@/lib/style-match/autofill/types";
 import { finalizeComposedDocument } from "./finalize-composed-document";
-import { createGeminiSectionSpecProvider } from "@/lib/generation/gemini-section-spec-provider";
-import { createDefaultMissingSectionGenerator } from "@/lib/generation/generate-missing-section";
+import type { FableVisualRepairHandoff } from "./fable-final-visual-gate";
 
 export interface SectionCompositionCandidateInput {
   allowGeneratedFallback?: boolean;
@@ -62,6 +61,8 @@ export type QuickSectionCompositionResult =
       templateId: null;
       html: string;
       visualEngine: Extract<VisualEngineProjectMetadata, { route: "section_composition" }>;
+      /** Private, non-serializable input for Task 5's one-repair state machine. */
+      fableVisualRepairHandoff?: FableVisualRepairHandoff;
     } & DeliveryData)
   | {
       ok: false;
@@ -100,9 +101,10 @@ export async function runSectionCompositionCandidate(
   const compose = deps.composeSectionCandidate ?? composeSectionCandidate;
   const finalize = deps.finalizeComposedDocument ?? finalizeComposedDocument;
   try {
-    const generateMissing = deps.generateMissing ?? (input.allowGeneratedFallback === true
-      ? createDefaultMissingSectionGenerator(createGeminiSectionSpecProvider())
-      : undefined);
+    // Create-with-AI no longer reaches Gemini's text/vision path. The Fable
+    // adaptive composer supplies GLM programs explicitly; this legacy helper
+    // only honors an injected repository-owned generator in tests/shadow work.
+    const generateMissing = deps.generateMissing;
     const candidate = generateMissing
       ? await compose(composeInput(input), { generateMissing })
       : await compose(composeInput(input));

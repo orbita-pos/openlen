@@ -13,6 +13,15 @@ import type { VisualEngineAssetMetadata, VisualEngineProjectMetadata, VisualRepa
 import { sha256 } from "@/lib/generation/content-hash";
 import { sealAiCompositionOutput } from "./ai-composition-delivery";
 
+export {
+  runFableFinalVisualGate,
+  type FableCandidate,
+  type FableFinalVisualGateDeps,
+  type FableFinalVisualGateResult,
+  type FableInspection,
+  type FableVisualRepairHandoff,
+} from "./fable-final-visual-gate";
+
 export interface QuickVisualRepairInput {
   projectId?: string;
   assetMode?: AssetPipelineMode;

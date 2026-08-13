@@ -114,9 +114,10 @@ describe("Mundo Pincel hybrid-only regression", () => {
       generatePageCopy: vi.fn(async () => ({ ok: true as const, copy, modelId: "copy-fixture", promptVersion: "page-copy-prompt/1.0" as const, durationMs: 1 })),
       listSections: vi.fn(async () => [{ id: "fixture" }] as never),
       overlayProfile: vi.fn((copy) => copy),
-      runSectionCompositionCandidate: vi.fn(async () => ({ ok: true as const, route: "section_composition" as const, templateId: null, html, visualEngine, filled: true, appliedOps: 1, durationMs: 1, leaksBefore: 0, leaksAfter: 0 })),
+      runSectionCompositionCandidate: vi.fn(async () => ({ ok: true as const, route: "section_composition" as const, templateId: null, html, visualEngine, filled: true, appliedOps: 1, durationMs: 1, leaksBefore: 0, leaksAfter: 0, fableVisualRepairHandoff: {} as never })),
       validateAiCompositionDelivery: vi.fn(({ visualEngine: metadata }) => ({ ok: true as const, visualEngine: metadata as typeof visualEngine })),
-      runQuickVisualQualityGate: vi.fn(async () => ({ ok: true as const, outcome: "healthy_keep" as const, html, visualEngine })),
+      runFableFinalVisualGate: vi.fn(async (input) => ({ ok: true as const, candidate: input.candidate, repaired: false })),
+      createFableRuntimeComposition: vi.fn() as never,
     }, loadWholeTemplate);
 
     const result = await runAiCreation({ projectId: "mundo-pincel", brief: coloring.brief, profileData: coerceBusinessData({}), assetMode: "hybrid" }, deps);

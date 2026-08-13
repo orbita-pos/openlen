@@ -1,0 +1,152 @@
+import { assessFinalVisualCandidate } from "@/lib/ai/qwen-visual-critic";
+import { createFireworksJsonClient, type FireworksJsonClient } from "@/lib/ai/fireworks-client";
+import { renderVisualQualityViewports } from "@/lib/ai/visual-quality-renderer";
+import { createFableGenerationTelemetry, type FableGenerationTelemetryEvent } from "@/lib/generation/fable-generation-telemetry";
+import { createGeminiAssetPackProvider } from "@/lib/generation/gemini-asset-pack-provider";
+import { createGlmSectionProgramProvider, type GlmSectionProgramProvider } from "@/lib/generation/glm-section-program-provider";
+import { createGlmVisualRepairProvider, type GlmVisualRepairProvider } from "@/lib/generation/glm-visual-repair";
+import {
+  createPageGenerationBudget,
+  parseFablePageBudgetConfigFromEnv,
+  type PageBudget,
+  type PageBudgetConfig,
+} from "@/lib/generation/page-generation-budget";
+
+import {
+  runFableFinalVisualGate,
+  type FableFinalVisualGateResult,
+  type FableInspection,
+  type FableVisualRepairHandoff,
+} from "./fable-final-visual-gate";
+
+export interface FableRuntimeVisualBrief {
+  readonly niche: string;
+  readonly requiredSignals: readonly string[];
+  readonly forbiddenSignals: readonly string[];
+}
+
+export interface FableRuntimeCompositionOptions {
+  /** The factory creates this once per page and passes it to every paid seam. */
+  readonly budgetConfig?: PageBudgetConfig;
+  readonly pageBudget?: PageBudget;
+  readonly client?: FireworksJsonClient;
+  readonly inspect?: (candidate: Parameters<typeof runFableFinalVisualGate>[0]["candidate"]) => Promise<FableInspection>;
+  readonly repairProvider?: GlmVisualRepairProvider;
+  readonly applyDelta?: Parameters<typeof runFableFinalVisualGate>[1]["applyDelta"];
+  readonly telemetrySink?: (event: FableGenerationTelemetryEvent) => void | Promise<void>;
+}
+
+export interface FableRuntimeComposition {
+  readonly pageBudget: PageBudget;
+  readonly fireworksClient: FireworksJsonClient;
+  /** Task 4 composition seams, all bound to this page's sole budget. */
+  readonly glmSectionProgramProvider: GlmSectionProgramProvider;
+  readonly geminiAssetPackProvider: ReturnType<typeof createGeminiAssetPackProvider>;
+  runFinalGate(input: {
+    readonly requestId: string;
+    readonly candidate: Parameters<typeof runFableFinalVisualGate>[0]["candidate"];
+    readonly handoff: FableVisualRepairHandoff;
+    readonly brief: FableRuntimeVisualBrief;
+  }): Promise<FableFinalVisualGateResult>;
+}
+
+function defaultInspect(candidate: Parameters<typeof runFableFinalVisualGate>[0]["candidate"]): Promise<FableInspection> {
+  return renderVisualQualityViewports(candidate.html).then((rendered) => {
+    if (!rendered) {
+      return {
+        ok: false,
+        deterministic: { mobileOverflow: false, weakTypographyHierarchy: false, invalidGeometry: true },
+        screenshots: { desktop: { mimeType: "image/jpeg", dataBase64: "" }, mobile: { mimeType: "image/jpeg", dataBase64: "" } },
+      };
+    }
+    return {
+      ok: true,
+      deterministic: {
+        mobileOverflow: rendered.mobileOverflow === true,
+        weakTypographyHierarchy: rendered.weakTypographyHierarchy === true,
+        invalidGeometry: rendered.desktop.dataBase64.length === 0 || rendered.mobile.dataBase64.length === 0,
+      },
+      screenshots: { desktop: rendered.desktop, mobile: rendered.mobile },
+    };
+  }).catch(() => ({
+    ok: false,
+    deterministic: { mobileOverflow: false, weakTypographyHierarchy: false, invalidGeometry: true },
+    screenshots: { desktop: { mimeType: "image/jpeg", dataBase64: "" }, mobile: { mimeType: "image/jpeg", dataBase64: "" } },
+  }));
+}
+
+/**
+ * Production composition root for the final Fable loop. It is intentionally
+ * the only place that creates a Fable PageBudget and Fireworks client, so Qwen
+ * and the one permitted GLM repair cannot accidentally use separate budgets.
+ */
+export function createFableRuntimeComposition(options: FableRuntimeCompositionOptions = {}): FableRuntimeComposition {
+  const pageBudget = options.pageBudget ?? createPageGenerationBudget(options.budgetConfig ?? parseFablePageBudgetConfigFromEnv());
+  const fireworksClient = options.client ?? createFireworksJsonClient({ budget: pageBudget });
+  const glmSectionProgramProvider = createGlmSectionProgramProvider({ client: fireworksClient });
+  const geminiAssetPackProvider = createGeminiAssetPackProvider({ pageBudget });
+  const telemetry = createFableGenerationTelemetry({ budget: pageBudget, sink: options.telemetrySink });
+  const inspect = options.inspect ?? defaultInspect;
+  const configuredRepairProvider = options.repairProvider ?? createGlmVisualRepairProvider({ client: fireworksClient });
+  const repairProvider: GlmVisualRepairProvider = {
+    async repair(request) {
+      const repaired = await configuredRepairProvider.repair(request);
+      if ("modelId" in repaired && repaired.modelId) {
+        telemetry.recordModel({
+          stage: "visual_repair",
+          modelId: repaired.modelId,
+          usage: repaired.usage ?? { inputTokens: 0, cachedTokens: 0, outputTokens: 0, thinkingTokens: 0 },
+          durationMs: repaired.durationMs,
+          attempts: repaired.attempts,
+        });
+      }
+      return repaired;
+    },
+  };
+
+  return {
+    pageBudget,
+    fireworksClient,
+    glmSectionProgramProvider,
+    geminiAssetPackProvider,
+    async runFinalGate(input) {
+      try {
+        const result = await runFableFinalVisualGate({
+          requestId: input.requestId,
+          candidate: input.candidate,
+          handoff: input.handoff,
+        }, {
+          inspect,
+          repairProvider,
+          // The adaptive composer retains this closure only for the live
+          // request. It recompiles affected ASTs and reassembles/rerenders;
+          // nothing program-shaped reaches project persistence or telemetry.
+          applyDelta: input.handoff.applyDelta ?? options.applyDelta ?? (async () => ({ ok: false })),
+          critique: async ({ requestId, screenshots, deterministic }) => {
+            const reviewed = await assessFinalVisualCandidate({ requestId, screenshots, deterministic, brief: input.brief }, { client: fireworksClient });
+            if (!reviewed.ok) {
+              if ("modelId" in reviewed && reviewed.modelId) {
+                telemetry.recordModel({
+                  stage: "final_critic",
+                  modelId: reviewed.modelId,
+                  usage: reviewed.usage ?? { inputTokens: 0, cachedTokens: 0, outputTokens: 0, thinkingTokens: 0 },
+                  durationMs: reviewed.durationMs,
+                  attempts: reviewed.attempts,
+                });
+              }
+              return { ok: false };
+            }
+            telemetry.recordModel({ stage: "final_critic", modelId: reviewed.modelId, usage: reviewed.usage, durationMs: reviewed.durationMs, attempts: reviewed.attempts });
+            return { ok: true, verdict: reviewed.verdict };
+          },
+        });
+        if (result.ok) await telemetry.recordDelivered();
+        else await telemetry.recordFailure({ stage: "visual_quality", reasonCode: result.code });
+        return result;
+      } catch {
+        await telemetry.recordFailure({ stage: "visual_quality", reasonCode: "internal_error" });
+        return { ok: false, code: "qwen_failed" };
+      }
+    },
+  };
+}

@@ -19,6 +19,12 @@ const FORBIDDEN = [
   "fillAndNormalizeCuratedTemplate",
   "weightedFallback",
 ] as const;
+const FORBIDDEN_GEMINI_CREATE_SYMBOLS = [
+  "GeminiProvider",
+  "createGeminiSectionSpecProvider",
+  "critiqueVisualQuality",
+  "generateVisualRepairPlan",
+] as const;
 
 interface ModuleReference {
   specifier: string;
@@ -109,6 +115,27 @@ function findForbiddenDependencies(root: string, entry: string): string[] {
   return [...violations].sort();
 }
 
+function findGeminiTextOrVisionDependencies(root: string, entry: string): string[] {
+  const pending = [path.resolve(entry)];
+  const visited = new Set<string>();
+  const violations = new Set<string>();
+  while (pending.length > 0) {
+    const current = pending.pop()!;
+    if (visited.has(current)) continue;
+    visited.add(current);
+    const source = fs.readFileSync(current, "utf8");
+    for (const reference of moduleReferences(source, current)) {
+      const resolved = resolveRepositoryModule(root, current, reference.specifier);
+      if (!resolved || !resolved.startsWith(`${path.resolve(root)}${path.sep}`)) continue;
+      if (FORBIDDEN_GEMINI_CREATE_SYMBOLS.some((symbol) => reference.symbols.includes(symbol))) {
+        violations.add(path.relative(root, resolved).replaceAll(path.sep, "/"));
+      }
+      pending.push(resolved);
+    }
+  }
+  return [...violations].sort();
+}
+
 describe("AI hybrid production import boundary", () => {
   it("detects forbidden transitive static, re-export, and dynamic imports", () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), "ai-hybrid-import-"));
@@ -134,5 +161,10 @@ describe("AI hybrid production import boundary", () => {
       root,
       path.join(root, "app", "api", "curate", "route.ts"),
     )).toEqual([]);
+  });
+
+  it("keeps Gemini text and vision providers outside Create with AI while retaining image-only assets", () => {
+    const root = process.cwd();
+    expect(findGeminiTextOrVisionDependencies(root, path.join(root, "app", "api", "curate", "route.ts"))).toEqual([]);
   });
 });

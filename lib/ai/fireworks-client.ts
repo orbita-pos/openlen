@@ -125,7 +125,7 @@ function validRequest<T>(request: FireworksJsonRequest<T>): boolean {
       if (typeof message.content === "string") return true;
       if (request.role !== "visual_critic" || message.role !== "user" || !validMultimodalContent(message.content)) return false;
       imageCount += 1;
-      return imageCount <= 1;
+      return imageCount <= 2;
     })
     && Number.isSafeInteger(request.maxOutputTokens)
     && request.maxOutputTokens > 0
@@ -133,16 +133,17 @@ function validRequest<T>(request: FireworksJsonRequest<T>): boolean {
     && reasoningEffortAllowed(request.role, request.reasoningEffort);
 }
 
-function inlineJpegBytes<T>(request: FireworksJsonRequest<T>): Buffer | null {
+function inlineJpegBytes<T>(request: FireworksJsonRequest<T>): Buffer[] {
+  const images: Buffer[] = [];
   for (const message of request.messages) {
     if (!Array.isArray(message.content)) continue;
     const imagePart = record(message.content[1]);
     const imageUrl = record(imagePart?.image_url);
     if (typeof imageUrl?.url === "string" && imageUrl.url.startsWith(JPEG_DATA_URI_PREFIX)) {
-      return Buffer.from(imageUrl.url.slice(JPEG_DATA_URI_PREFIX.length), "base64");
+      images.push(Buffer.from(imageUrl.url.slice(JPEG_DATA_URI_PREFIX.length), "base64"));
     }
   }
-  return null;
+  return images;
 }
 
 function connectionTimeout(error: unknown): boolean {
@@ -178,8 +179,10 @@ export function createFireworksJsonClient(options: FireworksJsonClientOptions): 
       if (!apiKey) return fail("missing_key", 0);
       if (selectedModel(options, request.role) === null || !validRequest(request)) return fail("provider", 0);
       const jpegBytes = inlineJpegBytes(request);
-      if (jpegBytes) {
-        try { await validateGeneratedImage(jpegBytes, "image/jpeg"); } catch { return fail("provider", 0); }
+      if (jpegBytes.length > 0) {
+        try {
+          for (const bytes of jpegBytes) await validateGeneratedImage(bytes, "image/jpeg");
+        } catch { return fail("provider", 0); }
       }
 
       let strictSchema: Record<string, unknown>;

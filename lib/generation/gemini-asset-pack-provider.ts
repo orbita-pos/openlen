@@ -14,6 +14,7 @@ import {
   type AssetPackResult,
   type AssetPackUsage,
 } from "@/lib/generation/asset-pack-provider";
+import type { PageBudget } from "@/lib/generation/page-generation-budget";
 
 const GEMINI_BASE = "https://generativelanguage.googleapis.com/v1beta/models";
 const DEFAULT_IMAGE_MODEL = "gemini-2.5-flash-image";
@@ -33,6 +34,8 @@ export interface GeminiAssetPackProviderOptions {
   fetchImpl?: typeof fetch;
   now?: () => number;
   timeoutMs?: number;
+  /** Required by the Fable route so each image attempt shares its page cap. */
+  pageBudget?: PageBudget;
 }
 
 interface ParsedGeminiImage {
@@ -245,12 +248,16 @@ function selectModelId(...candidates: Array<string | undefined>): string {
 export function createGeminiAssetPackProvider(options: GeminiAssetPackProviderOptions = {}): AssetPackProvider {
   const env = options.env ?? process.env;
   const apiKey = options.apiKey ?? env.GEMINI_API_KEY;
-  const modelId = selectModelId(
-    options.modelId,
-    env.OPENLEN_ASSET_IMAGE_MODEL,
-    env.OPENLEN_IMAGE_EDIT_MODEL,
-    DEFAULT_IMAGE_MODEL,
-  );
+  // A shared Fable PageBudget identifies Create-with-AI. That route is pinned
+  // to its sole approved image model and cannot inherit text/edit overrides.
+  const modelId = options.pageBudget
+    ? DEFAULT_IMAGE_MODEL
+    : selectModelId(
+      options.modelId,
+      env.OPENLEN_ASSET_IMAGE_MODEL,
+      env.OPENLEN_IMAGE_EDIT_MODEL,
+      DEFAULT_IMAGE_MODEL,
+    );
   const fetchImpl = options.fetchImpl ?? fetch;
   const now = options.now ?? Date.now;
   const timeoutMs = Number.isFinite(options.timeoutMs) && (options.timeoutMs ?? 0) > 0
@@ -298,6 +305,19 @@ export function createGeminiAssetPackProvider(options: GeminiAssetPackProviderOp
             ]
           : [{ text: prompt }];
         const controller = new AbortController();
+        const reservation = options.pageBudget?.reserve({ kind: "image", modelId, imageCount: 1 });
+        if (reservation && !reservation.ok) return failure("budget_exhausted", modelId, started, now, usage);
+        let budgetSettled = false;
+        const settlePageBudget = (): boolean => {
+          if (!reservation || budgetSettled) return true;
+          budgetSettled = true;
+          try {
+            options.pageBudget!.complete(reservation.leaseId, { imageCount: 1 });
+            return true;
+          } catch {
+            return false;
+          }
+        };
         let timer: ReturnType<typeof setTimeout> | undefined;
         let didTimeout = false;
         const timeout = new Promise<never>((_resolve, reject) => {
@@ -324,6 +344,7 @@ export function createGeminiAssetPackProvider(options: GeminiAssetPackProviderOp
           ]);
         } catch {
           if (timer) clearTimeout(timer);
+          if (!settlePageBudget()) return failure("budget_exhausted", modelId, started, now, usage);
           return failure(didTimeout ? "provider_timeout" : "provider_error", modelId, started, now, usage);
         }
 
@@ -332,12 +353,14 @@ export function createGeminiAssetPackProvider(options: GeminiAssetPackProviderOp
           payload = await Promise.race([response.json(), timeout]);
         } catch {
           if (timer) clearTimeout(timer);
+          if (!settlePageBudget()) return failure("budget_exhausted", modelId, started, now, usage);
           if (didTimeout) return failure("provider_timeout", modelId, started, now, usage);
           return failure(response.ok ? "invalid_provider_response" : "provider_error", modelId, started, now, usage);
         }
         if (timer) clearTimeout(timer);
         const responseUsage = readUsage(payload);
         usage = addUsage(usage, responseUsage);
+        if (!settlePageBudget()) return failure("budget_exhausted", modelId, started, now, usage);
         if (!response.ok) return failure("provider_error", modelId, started, now, usage);
 
         const parsed = await parseInlineImage(payload);

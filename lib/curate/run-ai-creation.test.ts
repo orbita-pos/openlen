@@ -114,6 +114,7 @@ const COMPOSITION_OK = {
   durationMs: 12,
   leaksBefore: 2,
   leaksAfter: 0,
+  fableVisualRepairHandoff: {} as never,
 };
 
 function makeDeps(overrides: Partial<RunAiCreationDeps> = {}): Required<RunAiCreationDeps> {
@@ -127,12 +128,12 @@ function makeDeps(overrides: Partial<RunAiCreationDeps> = {}): Required<RunAiCre
       ok: true as const,
       visualEngine: visualEngine as typeof VISUAL_ENGINE,
     })),
-    runQuickVisualQualityGate: vi.fn(async () => ({
+    runFableFinalVisualGate: vi.fn(async (input) => ({
       ok: true as const,
-      outcome: "healthy_keep" as const,
-      html: HTML,
-      visualEngine: VISUAL_ENGINE,
+      candidate: input.candidate,
+      repaired: false,
     })),
+    createFableRuntimeComposition: vi.fn() as never,
     ...overrides,
   };
 }
@@ -158,7 +159,7 @@ function expectProviderBoundariesAtMostOnce(deps: Required<RunAiCreationDeps>) {
   expect(vi.mocked(deps.analyzeIntent).mock.calls.length).toBeLessThanOrEqual(1);
   expect(vi.mocked(deps.generatePageCopy).mock.calls.length).toBeLessThanOrEqual(1);
   expect(vi.mocked(deps.runSectionCompositionCandidate).mock.calls.length).toBeLessThanOrEqual(1);
-  expect(vi.mocked(deps.runQuickVisualQualityGate).mock.calls.length).toBeLessThanOrEqual(1);
+  expect(vi.mocked(deps.runFableFinalVisualGate).mock.calls.length).toBeLessThanOrEqual(1);
 }
 
 const FAILURE_CASES = [
@@ -167,27 +168,27 @@ const FAILURE_CASES = [
     stage: "sections",
     reasonCode: "section_inventory_unavailable",
     override: () => ({ listSections: vi.fn(async () => { throw new Error("private DB state"); }) }),
-    later: ["runSectionCompositionCandidate", "validateAiCompositionDelivery", "runQuickVisualQualityGate"],
+    later: ["runSectionCompositionCandidate", "validateAiCompositionDelivery", "runFableFinalVisualGate"],
   },
   {
     name: "composition",
     stage: "composition",
     reasonCode: "composition_failed",
     override: () => ({ runSectionCompositionCandidate: vi.fn(async () => ({ ok: false as const, route: "section_composition" as const, reasonCode: "internal_error" as const })) }),
-    later: ["validateAiCompositionDelivery", "runQuickVisualQualityGate"],
+    later: ["validateAiCompositionDelivery", "runFableFinalVisualGate"],
   },
   {
     name: "delivery gate",
     stage: "delivery_gate",
     reasonCode: "semantic_gate_failed",
     override: () => ({ validateAiCompositionDelivery: vi.fn(() => ({ ok: false as const, reasonCode: "invalid_composition_manifest" as const })) }),
-    later: ["runQuickVisualQualityGate"],
+    later: ["runFableFinalVisualGate"],
   },
   {
     name: "visual quality",
     stage: "visual_quality",
     reasonCode: "visual_quality_failed",
-    override: () => ({ runQuickVisualQualityGate: vi.fn(async () => ({ ok: false as const, reasonCode: "visual_quality_failed" as const, detailCode: "private-provider-detail" })) }),
+    override: () => ({ runFableFinalVisualGate: vi.fn(async () => ({ ok: false as const, code: "qwen_failed" as const })) }),
     later: [],
   },
 ] satisfies Array<{
@@ -246,15 +247,15 @@ describe("runAiCreation", () => {
       visualEngine: VISUAL_ENGINE,
       leaksAfter: 0,
     });
-    expect(deps.runQuickVisualQualityGate).toHaveBeenCalledWith({
-      projectId: "project-1",
-      assetMode: "hybrid",
-      assetTraceSink: INPUT.assetTraceSink,
-      html: HTML,
-      visualEngine: VISUAL_ENGINE,
-      intent: INTENT,
-      brandAccent: "#f06aa6",
-      explicitConstraints: INTENT.explicitConstraints,
+    expect(deps.runFableFinalVisualGate).toHaveBeenCalledWith({
+      requestId: "project-1",
+      candidate: { html: HTML, visualEngine: VISUAL_ENGINE },
+      handoff: COMPOSITION_OK.fableVisualRepairHandoff,
+      brief: {
+        niche: INTENT.functional.siteType,
+        requiredSignals: INTENT.requiredVisualSignals,
+        forbiddenSignals: INTENT.forbiddenVisualSignals,
+      },
     });
     expect(deps.validateAiCompositionDelivery).toHaveBeenNthCalledWith(2, {
       html: HTML,
@@ -285,6 +286,24 @@ describe("runAiCreation", () => {
     });
     expect(JSON.stringify(result)).not.toMatch(/weighted|template_skeleton|template_full/i);
     expectProviderBoundariesAtMostOnce(deps);
+  });
+
+  it("uses the production Fable composition root when a test gate is not injected", async () => {
+    const finalGate = vi.fn(async (input: Parameters<NonNullable<RunAiCreationDeps["runFableFinalVisualGate"]>>[0]) => ({
+      ok: true as const,
+      candidate: input.candidate,
+      repaired: false,
+    }));
+    const factory = vi.fn(() => ({ runFinalGate: finalGate }));
+    const deps = makeDeps({ runFableFinalVisualGate: undefined, createFableRuntimeComposition: factory as never });
+
+    await expect(runAiCreation(INPUT, deps)).resolves.toMatchObject({ ok: true, route: "section_composition" });
+
+    expect(factory).toHaveBeenCalledOnce();
+    expect(finalGate).toHaveBeenCalledWith(expect.objectContaining({
+      requestId: "project-1",
+      brief: expect.objectContaining({ niche: INTENT.functional.siteType }),
+    }));
   });
 
   it("allows generated missing sections only under the enabled AI creation flag", async () => {
@@ -388,7 +407,7 @@ describe("runAiCreation", () => {
 
     expectOnlyPublicFailure(result, "composition", expected);
     expect(deps.validateAiCompositionDelivery).not.toHaveBeenCalled();
-    expect(deps.runQuickVisualQualityGate).not.toHaveBeenCalled();
+    expect(deps.runFableFinalVisualGate).not.toHaveBeenCalled();
     expectProviderBoundariesAtMostOnce(deps);
   });
 
@@ -401,7 +420,7 @@ describe("runAiCreation", () => {
     const result = await runAiCreation(INPUT, deps);
 
     expectOnlyPublicFailure(result, "delivery_gate", "inherited_copy_leak");
-    expect(deps.runQuickVisualQualityGate).not.toHaveBeenCalled();
+    expect(deps.runFableFinalVisualGate).not.toHaveBeenCalled();
   });
 
   it("maps invalid final asset metadata after visual repair to the delivery gate", async () => {
@@ -418,13 +437,13 @@ describe("runAiCreation", () => {
 
     expectOnlyPublicFailure(result, "delivery_gate", "asset_resolution_failed");
     expect(vi.mocked(validate)).toHaveBeenCalledTimes(2);
-    expect(deps.runQuickVisualQualityGate).toHaveBeenCalledTimes(1);
+    expect(deps.runFableFinalVisualGate).toHaveBeenCalledTimes(1);
     expectProviderBoundariesAtMostOnce(deps);
   });
 
   it("does not retry when provider-capable dependencies reject", async () => {
     const deps = makeDeps({
-      runQuickVisualQualityGate: vi.fn(async () => { throw new Error("private critic response"); }),
+      runFableFinalVisualGate: vi.fn(async () => { throw new Error("private critic response"); }),
     });
 
     const result = await runAiCreation(INPUT, deps);
