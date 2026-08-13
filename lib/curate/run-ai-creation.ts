@@ -91,6 +91,7 @@ function compositionReason(
       return "inherited_copy_leak";
     case "provider_timeout":
     case "provider_error":
+    case "budget_exceeded":
     case "invalid_provider_response":
     case "model_incompatible":
     case "css_policy_violation":

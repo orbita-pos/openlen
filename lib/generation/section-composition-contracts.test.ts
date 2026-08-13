@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  ADAPTIVE_SECTION_COMPOSITION_MANIFEST_VERSION,
+  AdaptiveSectionCompositionManifestSchema,
   SECTION_COMPOSITION_MANIFEST_VERSION,
   SECTION_PLAN_VERSION,
   SectionCompositionManifestSchema,
@@ -83,6 +85,7 @@ describe("section composition contracts", () => {
       "inherited_copy_leak",
       "provider_timeout",
       "provider_error",
+      "budget_exceeded",
       "invalid_provider_response",
       "model_incompatible",
       "css_policy_violation",
@@ -92,6 +95,28 @@ describe("section composition contracts", () => {
       "technical_render_failed",
       "internal_error",
     ]);
+  });
+
+  it("keeps adaptive decisions and originality evidence aligned and redacted", () => {
+    const adaptive = {
+      schemaVersion: "adaptive-section-composition-manifest/1.0",
+      actions: ["rebuild", "generate", "reuse"],
+      orderedRoles: ["hero", "activities", "footer"],
+      selectedCandidateIds: ["hero-source", null, "footer-source"],
+      sourceTemplateIds: ["donor-one", null, "donor-two"],
+      sourceBandOrdinals: [1, null, 3],
+      finalContentHashes: ["a".repeat(12), "b".repeat(12), "c".repeat(12)],
+      finalStructuralFingerprints: [SHA_A, SHA_B, SHA_C],
+      finalProgramHashes: [SHA_B, SHA_C, null],
+      outputHash: SHA_D,
+      resultCode: "composed",
+    } as const;
+    expect(ADAPTIVE_SECTION_COMPOSITION_MANIFEST_VERSION).toBe("adaptive-section-composition-manifest/1.0");
+    expect(AdaptiveSectionCompositionManifestSchema.parse(adaptive)).toEqual(adaptive);
+    expect(AdaptiveSectionCompositionManifestSchema.safeParse({ ...adaptive, html: "<html>private</html>" }).success).toBe(false);
+    expect(AdaptiveSectionCompositionManifestSchema.safeParse({ ...adaptive, finalProgramHashes: [SHA_B, null, null] }).success).toBe(false);
+    expect(AdaptiveSectionCompositionManifestSchema.safeParse({ ...adaptive, selectedCandidateIds: ["hero-source"] }).success).toBe(false);
+    expect(AdaptiveSectionCompositionManifestSchema.safeParse({ ...adaptive, resultCode: "provider_error", outputHash: null }).success).toBe(true);
   });
 
   it("keeps the composition manifest scalar, redacted, aligned, and strict", () => {

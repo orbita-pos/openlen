@@ -6,6 +6,7 @@ import { COLORING_DIRECTION } from "./creative-fixtures.test-support";
 import { resolveSectionPlan, SectionCompositionSelectionError } from "./section-inventory";
 import { IntentAnalysisSchema } from "./contracts";
 import {
+  composeAdaptiveSections,
   composeSectionCandidate,
   mapCompositionAdaptationReason,
   type ComposeSectionCandidateDeps,
@@ -106,6 +107,10 @@ function generatedGallery() {
 }
 
 describe("composeSectionCandidate", () => {
+  it("exports the adaptive atomic composition entrypoint", () => {
+    expect(composeAdaptiveSections).toBeTypeOf("function");
+  });
+
   it("adds one mobile-safety style before creative adaptation without changing roles", async () => {
     const deps = successfulDeps();
     const adapt = deps.adaptTemplateSkeleton!;

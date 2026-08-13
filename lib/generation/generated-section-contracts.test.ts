@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  ExpressiveSectionProgramSchema,
   GeneratedSectionSpecSchema,
   renderGeneratedSectionDraft,
   validateGeneratedSectionReferences,
@@ -20,6 +21,16 @@ const SPEC = {
 const PARSED_SPEC = GeneratedSectionSpecSchema.parse(SPEC);
 
 describe("generated section contracts", () => {
+  it("publishes the expressive v1 AST as the generated-section contract", () => {
+    expect(ExpressiveSectionProgramSchema.safeParse({
+      schemaVersion: "expressive-section-program/1.0",
+      role: "hero",
+      root: { kind: "copy", id: "title", variant: "heading", copyKey: "hero.title", tone: "strong", size: "display", color: "ink", align: "start" },
+      responsive: { mobile: [] },
+      motion: [],
+    }).success).toBe(true);
+  });
+
   it("accepts only the closed scalar spec and rejects model-authored implementation", () => {
     expect(GeneratedSectionSpecSchema.parse(SPEC)).toEqual(SPEC);
     for (const extra of [

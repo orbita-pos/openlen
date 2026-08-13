@@ -366,6 +366,7 @@ describe("runAiCreation", () => {
     ["inherited_copy_leak", "inherited_copy_leak"],
     ["provider_timeout", "creative_direction_failed"],
     ["provider_error", "creative_direction_failed"],
+    ["budget_exceeded", "creative_direction_failed"],
     ["invalid_provider_response", "creative_direction_failed"],
     ["model_incompatible", "creative_direction_failed"],
     ["css_policy_violation", "creative_direction_failed"],

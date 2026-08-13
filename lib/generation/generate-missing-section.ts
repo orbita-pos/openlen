@@ -19,6 +19,35 @@ import type {
 import type { SectionPlanRow } from "./section-composition-contracts";
 import type { SectionCompositionInventoryEntry } from "./section-inventory";
 import { profileDerivedSectionSemantics } from "./section-variant-semantics";
+import { compileExpressiveSection, type ExpressiveSectionDraft } from "./expressive-section-compiler";
+import type { SectionDecisionProvenance } from "./expressive-section-contracts";
+import type { GlmSectionProgramProvider, GlmSectionProgramRequest, GlmSectionProgramProviderResult } from "./glm-section-program-provider";
+
+export type GenerateExpressiveMissingSectionResult =
+  | { readonly ok: true; readonly draft: ExpressiveSectionDraft; readonly provider: Extract<GlmSectionProgramProviderResult, { ok: true }> }
+  | Extract<GlmSectionProgramProviderResult, { ok: false }>
+  | { readonly ok: false; readonly code: "compile_failed"; readonly compileCode: "invalid_program" | "copy_key_not_allowed" | "asset_slot_not_allowed" | "invalid_provenance" | "donor_reconstruction" };
+
+export async function generateExpressiveMissingSection(
+  input: {
+    readonly request: GlmSectionProgramRequest;
+    readonly copy: Readonly<Record<string, string>>;
+    readonly provenance: SectionDecisionProvenance;
+  },
+  deps: { readonly provider: GlmSectionProgramProvider },
+): Promise<GenerateExpressiveMissingSectionResult> {
+  const result = await deps.provider.generate(input.request);
+  if (!result.ok) return result;
+  const compiled = compileExpressiveSection({
+    program: result.program,
+    allowedCopyKeys: input.request.copyKeys,
+    allowedAssetSlots: input.request.assetSlots.map((slot) => slot.slotIndex),
+    copy: input.copy,
+    provenance: input.provenance,
+  });
+  if (!compiled.ok) return { ok: false, code: "compile_failed", compileCode: compiled.code };
+  return { ok: true, draft: compiled.draft, provider: result };
+}
 
 export interface GeneratedSectionCandidate extends SectionCompositionInventoryEntry {
   html: string;

@@ -6,6 +6,8 @@ import { SECTION_TYPES } from "@/lib/sections/types";
 export const SECTION_PLAN_VERSION = "section-plan/1.0" as const;
 export const SECTION_COMPOSITION_MANIFEST_VERSION =
   "section-composition-manifest/2.0" as const;
+export const ADAPTIVE_SECTION_COMPOSITION_MANIFEST_VERSION =
+  "adaptive-section-composition-manifest/1.0" as const;
 
 const Sha256Schema = z.string().regex(/^sha256:[a-f0-9]{64}$/);
 const ContentHashSchema = z.string().regex(/^[a-f0-9]{12}$/);
@@ -34,6 +36,7 @@ export const SectionCompositionResultCodeSchema = z.enum([
   "inherited_copy_leak",
   "provider_timeout",
   "provider_error",
+  "budget_exceeded",
   "invalid_provider_response",
   "model_incompatible",
   "css_policy_violation",
@@ -165,6 +168,57 @@ export const SectionCompositionManifestSchema = z
 export type SectionCompositionManifest = z.infer<
   typeof SectionCompositionManifestSchema
 >;
+
+export const AdaptiveSectionCompositionManifestSchema = z.object({
+  schemaVersion: z.literal(ADAPTIVE_SECTION_COMPOSITION_MANIFEST_VERSION),
+  actions: z.array(z.enum(["reuse", "rebuild", "generate"])).max(32),
+  orderedRoles: z.array(SectionPlanRowSchema.shape.requestedRole).max(32),
+  selectedCandidateIds: z.array(SectionIdSchema.nullable()).max(32),
+  sourceTemplateIds: z.array(SectionIdSchema.nullable()).max(32),
+  sourceBandOrdinals: z.array(z.number().int().min(0).max(127).nullable()).max(32),
+  finalContentHashes: z.array(ContentHashSchema).max(32),
+  finalStructuralFingerprints: z.array(Sha256Schema).max(32),
+  finalProgramHashes: z.array(Sha256Schema.nullable()).max(32),
+  outputHash: Sha256Schema.nullable(),
+  resultCode: SectionCompositionResultCodeSchema,
+}).strict().superRefine((value, ctx) => {
+  const lengths = [
+    value.actions.length,
+    value.orderedRoles.length,
+    value.selectedCandidateIds.length,
+    value.sourceTemplateIds.length,
+    value.sourceBandOrdinals.length,
+    value.finalContentHashes.length,
+    value.finalStructuralFingerprints.length,
+    value.finalProgramHashes.length,
+  ];
+  if (new Set(lengths).size !== 1) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: "adaptive composition manifest arrays must be aligned" });
+  }
+  if ((value.resultCode === "composed") !== (value.outputHash !== null)) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["outputHash"], message: "only composed output has a hash" });
+  }
+  value.actions.forEach((action, index) => {
+    const candidateId = value.selectedCandidateIds[index];
+    const templateId = value.sourceTemplateIds[index];
+    const bandOrdinal = value.sourceBandOrdinals[index];
+    const programHash = value.finalProgramHashes[index];
+    if ((templateId === null) !== (bandOrdinal === null)) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["sourceTemplateIds", index], message: "template provenance must be paired" });
+    }
+    if (action === "generate" && (candidateId !== null || templateId !== null || programHash === null)) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["actions", index], message: "generate has only program provenance" });
+    }
+    if (action === "rebuild" && (candidateId === null || programHash === null)) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["actions", index], message: "rebuild requires candidate and program provenance" });
+    }
+    if (action === "reuse" && (candidateId === null || programHash !== null)) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["actions", index], message: "reuse requires exact candidate provenance" });
+    }
+  });
+});
+
+export type AdaptiveSectionCompositionManifest = z.infer<typeof AdaptiveSectionCompositionManifestSchema>;
 
 export function hasOriginalSectionProvenance(input: {
   contentHashes: readonly string[];

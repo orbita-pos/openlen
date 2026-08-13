@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { generateMissingSection } from "./generate-missing-section";
+import { generateExpressiveMissingSection, generateMissingSection } from "./generate-missing-section";
 
 const row = {
   ordinal: 2, requestedRole: "activities" as const, componentType: "features" as const,
@@ -36,6 +36,27 @@ const input = {
 };
 
 describe("generateMissingSection", () => {
+  it("requests and repository-compiles one expressive missing section", async () => {
+    const expressiveProgram = {
+      schemaVersion: "expressive-section-program/1.0" as const,
+      role: "activities" as const,
+      root: { kind: "copy" as const, id: "title", variant: "heading" as const, copyKey: "activities.title", tone: "strong" as const, size: "2xl" as const, color: "ink" as const, align: "start" as const },
+      responsive: { mobile: [] }, motion: [],
+    };
+    const provider = { generate: vi.fn(async () => ({
+      ok: true as const, program: expressiveProgram, modelId: "glm", promptVersion: "glm-section-program-prompt/1.0" as const,
+      usage: { inputTokens: 1, cachedTokens: 0, outputTokens: 1, thinkingTokens: 0 }, durationMs: 1, attempts: 1 as const,
+    })) };
+    const provenance = { schemaVersion: "section-decision-provenance/1.0" as const, action: "generate" as const, candidateId: null, sourceTemplateId: null, sourceBandOrdinal: null, sourceContentHash: null, sourceStructuralFingerprint: null, usefulTraits: [] };
+    const result = await generateExpressiveMissingSection({
+      request: { mode: "generate", requestId: "page.section-2", ordinal: 2, role: "activities", direction: { rhythm: "playful", requiredSignals: ["playful"], forbiddenSignals: ["corporate"] }, copyKeys: ["activities.title"], assetSlots: [] },
+      copy: { "activities.title": "Escaped <title>" }, provenance,
+    }, { provider });
+    expect(result).toMatchObject({ ok: true, draft: { role: "activities", provenance } });
+    expect(result.ok && result.draft.html).toContain("Escaped &lt;title&gt;");
+    expect(provider.generate).toHaveBeenCalledTimes(1);
+  });
+
   it("makes one spec request, compiles repository markup, and returns a generated candidate", async () => {
     const d = deps(); const result = await generateMissingSection(input, d);
     expect(result).toMatchObject({ ok: true, candidate: { sourceKind: "generated", sourceTemplateId: null, sourceBandOrdinal: null, type: "features" }, usage: { inputTokens: 10 } });

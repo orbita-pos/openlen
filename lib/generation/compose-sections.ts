@@ -43,6 +43,13 @@ import type { ExtractedBusinessData } from "@/lib/style-match/autofill/types";
 import { ensureCompositionMobileSafety } from "./composition-mobile-safety";
 import { buildDeterministicCreativeDirection } from "./deterministic-creative-direction";
 
+export { composeAdaptiveSections } from "./adaptive-section-composition";
+export type {
+  AdaptiveSectionCompositionDeps,
+  AdaptiveSectionCompositionInput,
+  AdaptiveSectionCompositionResult,
+} from "./adaptive-section-composition";
+
 export const COMPOSITION_BASE_THEME: AssembleTheme = Object.freeze({
   base: Object.freeze({
     bg: "#ffffff",

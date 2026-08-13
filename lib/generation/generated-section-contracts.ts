@@ -4,6 +4,24 @@ import { canonicalJsonSha256 } from "./content-hash";
 import { SectionPlanRowSchema } from "./section-composition-contracts";
 import type { SectionType } from "@/lib/sections/types";
 
+export {
+  ExpressiveSectionProgramSchema,
+  MotionPresetSchema,
+  ResponsiveProgramSchema,
+  SectionDecisionProvenanceSchema,
+  validateExpressiveSectionProgram,
+} from "./expressive-section-contracts";
+export type {
+  DecorationNode,
+  ExpressiveNode,
+  ExpressiveSectionProgram,
+  LayoutNode,
+  MediaNode,
+  MotionPreset,
+  ResponsiveProgram,
+  SectionDecisionProvenance,
+} from "./expressive-section-contracts";
+
 const CopyKeySchema = z.string().min(1).max(80).regex(/^[a-z][a-z0-9_.-]*$/);
 const GeneratedBlockSchema = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("heading"), copyKey: CopyKeySchema }).strict(),
