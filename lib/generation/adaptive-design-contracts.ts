@@ -232,6 +232,39 @@ function orderedProviderDecisions(
   return Array.from({ length: expectedDecisionCount }, (_, ordinal) => byOrdinal.get(ordinal));
 }
 
+function normalizeProviderTraitList(value: unknown): unknown {
+  if (!Array.isArray(value) || !value.every((entry) => typeof entry === "string")) return value;
+  const normalized: string[] = [];
+  for (const entry of value) {
+    if (entry.length === 0 || entry.length > 160 || /[<>]|(?:https?:\/\/|javascript:|data:)/i.test(entry)) {
+      return value;
+    }
+    const slug = entry
+      .normalize("NFKD")
+      .replace(/\p{M}/gu, "")
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "_")
+      .replace(/^_+|_+$/g, "");
+    if (!slug || slug.length > 64) return value;
+    normalized.push(slug);
+  }
+  return canonicalTaxonomy(normalized).slice(0, 8);
+}
+
+function normalizeProviderDecisionTraits(value: unknown): unknown {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return value;
+  const decision = value as Record<string, unknown>;
+  return {
+    ...decision,
+    ...(Object.hasOwn(decision, "usefulTraits")
+      ? { usefulTraits: normalizeProviderTraitList(decision.usefulTraits) }
+      : {}),
+    ...(Object.hasOwn(decision, "rejectedTraits")
+      ? { rejectedTraits: normalizeProviderTraitList(decision.rejectedTraits) }
+      : {}),
+  };
+}
+
 function normalizeProviderDecisionEnvelope(
   input: unknown,
   expectedDecisionCount: number,
@@ -244,7 +277,7 @@ function normalizeProviderDecisionEnvelope(
   return {
     schemaVersion: envelope.schemaVersion,
     decisions: Object.fromEntries(
-      ordered.map((decision, ordinal) => [`decision_${ordinal}`, decision]),
+      ordered.map((decision, ordinal) => [`decision_${ordinal}`, normalizeProviderDecisionTraits(decision)]),
     ),
   };
 }

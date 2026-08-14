@@ -125,6 +125,52 @@ describe("adaptive design contracts", () => {
     expect(schema.safeParse({ ...canonical, decisions: [hero, { ...features, ordinal: 9 }] }).success).toBe(false);
   });
 
+  it("normalizes harmless Qwen trait labels without relaxing structural controls", () => {
+    const schema = createCandidateScoutResponseSchema({
+      requiredRoles: ["hero", "features"],
+      retrievedCandidates: candidates,
+    });
+    const result = schema.parse({
+      decisions: {
+        hero: {
+          ordinal: 0,
+          action: "reuse",
+          candidateId: "hero-safe",
+          usefulTraits: ["Soft Rounded Shapes", "soft-rounded-shapes", "Café Crayón", "Playful"],
+          rejectedTraits: ["Generic SaaS", "Corporate", "Dashboard", "Dense", "Cold", "Flat", "Muted", "Rigid", "Extra"],
+        },
+        features: {
+          ordinal: 1,
+          action: "generate",
+          usefulTraits: [],
+          rejectedTraits: [],
+        },
+      },
+    });
+
+    expect(result.decisions[0]).toEqual({
+      ordinal: 0,
+      action: "reuse",
+      candidateId: "hero-safe",
+      usefulTraits: ["cafe_crayon", "playful", "soft_rounded_shapes"],
+      rejectedTraits: ["cold", "corporate", "dashboard", "dense", "extra", "flat", "generic_saas", "muted"],
+    });
+    for (const unsafeTrait of ["<script>alert(1)</script>", "https://private.invalid/trait", "javascript:alert(1)"]) {
+      expect(schema.safeParse({
+        decisions: {
+          hero: { ordinal: 0, action: "reuse", candidateId: "hero-safe", usefulTraits: [unsafeTrait], rejectedTraits: [] },
+          features: { ordinal: 1, action: "generate", usefulTraits: [], rejectedTraits: [] },
+        },
+      }).success).toBe(false);
+    }
+    expect(schema.safeParse({
+      decisions: {
+        hero: { ordinal: 0, action: "reuse", candidateId: "outside-set", usefulTraits: ["Playful"], rejectedTraits: [] },
+        features: { ordinal: 1, action: "generate", usefulTraits: [], rejectedTraits: [] },
+      },
+    }).success).toBe(false);
+  });
+
   it("gives Qwen named positional decisions while preserving DeepSeek's proven page-plan schema", () => {
     const scoutJson = fireworksJsonSchema(createCandidateScoutResponseSchema({
       requiredRoles: ["hero", "features"],
