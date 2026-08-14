@@ -17,6 +17,54 @@ export type FireworksProviderCategory =
   | "timeout"
   | "transport";
 
+export type CreativeToolName = "inspect_canvas" | "apply_creative_patch" | "request_image" | "render_preview";
+
+export interface FireworksToolCall {
+  readonly id: string;
+  readonly name: CreativeToolName;
+  readonly arguments: unknown;
+}
+
+export interface FireworksProviderToolCall {
+  readonly id: string;
+  readonly type: "function";
+  readonly function: { readonly name: string; readonly arguments: string };
+}
+
+export type FireworksToolMessage =
+  | { readonly role: "system"; readonly content: string }
+  | { readonly role: "user"; readonly content: string }
+  | {
+      readonly role: "assistant";
+      readonly content: string | null;
+      readonly reasoning_content?: string;
+      readonly tool_calls?: readonly FireworksProviderToolCall[];
+    }
+  | { readonly role: "tool"; readonly tool_call_id: string; readonly content: string };
+
+export interface FireworksToolTurnRequest {
+  readonly messages: readonly FireworksToolMessage[];
+  readonly maxOutputTokens: number;
+  readonly requestId: string;
+}
+
+export type FireworksToolTurnResult =
+  | {
+      readonly ok: true;
+      readonly calls: readonly FireworksToolCall[];
+      readonly content: string | null;
+      readonly usage: ModelTokenUsage;
+      readonly durationMs: number;
+      readonly modelId: string;
+    }
+  | {
+      readonly ok: false;
+      readonly code: "missing_key" | "budget_exceeded" | "timeout" | "http" | "provider" | "invalid_tool_call";
+      readonly usage?: ModelTokenUsage;
+      readonly durationMs: number;
+      readonly modelId: string;
+    };
+
 export interface FireworksTextPart {
   readonly type: "text";
   readonly text: string;
