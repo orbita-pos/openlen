@@ -9,7 +9,7 @@ import {
 
 export const FABLE_PRODUCTION_RATES = Object.freeze({
   "accounts/fireworks/models/deepseek-v4-flash": Object.freeze({ input: .14, cached: .028, output: .28 }),
-  "accounts/fireworks/models/glm-5p2": Object.freeze({ input: 1.40, cached: .14, output: 4.40 }),
+  "accounts/fireworks/models/glm-5p2": Object.freeze({ input: 1.40, cached: .26, output: 4.40 }),
   "accounts/fireworks/models/qwen3p7-plus": Object.freeze({ input: .50, cached: .10, output: 3.00 }),
   "gemini-2.5-flash-image": Object.freeze({ image: .039 }),
 });

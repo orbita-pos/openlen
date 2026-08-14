@@ -19,7 +19,7 @@ describe("page generation budget", () => {
   it("exposes the conservative multi-model and image rate card", () => {
     expect(FABLE_PRODUCTION_RATES).toEqual({
       "accounts/fireworks/models/deepseek-v4-flash": { input: .14, cached: .028, output: .28 },
-      "accounts/fireworks/models/glm-5p2": { input: 1.40, cached: .14, output: 4.40 },
+      "accounts/fireworks/models/glm-5p2": { input: 1.40, cached: .26, output: 4.40 },
       "accounts/fireworks/models/qwen3p7-plus": { input: .50, cached: .10, output: 3.00 },
       "gemini-2.5-flash-image": { image: .039 },
     });
@@ -46,14 +46,14 @@ describe("page generation budget", () => {
     expect(budget.snapshot().reservedMicromxn).toBe(456_000);
     if (!lease.ok) throw new Error("expected lease");
     budget.complete(lease.leaseId, { inputTokens: 8_000, cachedTokens: 2_000, outputTokens: 1_000, thinkingTokens: 400 });
-    expect(budget.snapshot()).toMatchObject({ actualMicromxn: 261_600, reservedMicromxn: 0 });
+    expect(budget.snapshot()).toMatchObject({ actualMicromxn: 266_400, reservedMicromxn: 0 });
     expect(budget.snapshot().modelUsage).toEqual([{
       modelId: GLM,
       inputTokens: 8_000,
       cachedTokens: 2_000,
       outputTokens: 1_000,
       thinkingTokens: 400,
-      costMicromxn: 261_600,
+      costMicromxn: 266_400,
     }]);
   });
 
