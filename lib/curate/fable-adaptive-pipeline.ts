@@ -60,6 +60,7 @@ export interface FableAdaptivePipelineDeps {
   readonly createPageDesign?: typeof createPageDesignProgram;
   readonly composeAdaptiveSections?: typeof composeAdaptiveSections;
   readonly adaptiveCompositionDeps?: AdaptiveSectionCompositionDeps;
+  readonly onInternalError?: AdaptiveSectionCompositionDeps["onInternalError"];
   readonly resolveAssets?: (
     input: { readonly design: AdaptivePageDesignProgram; readonly request: SectionCompositionCandidateInput; readonly usedAssetSlots: readonly number[] },
     deps: {
@@ -198,6 +199,7 @@ function productionCompositionDeps(
   design: AdaptivePageDesignProgram,
   fetchText: (storageUrl: string) => Promise<string | null>,
   renderViewports: typeof renderVisualQualityViewports,
+  onInternalError?: AdaptiveSectionCompositionDeps["onInternalError"],
 ): AdaptiveSectionCompositionDeps {
   const semanticPolicy = buildSectionSemanticPolicy(request.intent, design.direction);
   const theme = themeFor(design);
@@ -226,6 +228,7 @@ function productionCompositionDeps(
     sanitize: sanitizeForPublish,
     assemble: (fragments: SectionFragment[]) => assembleAdaptiveDocument(fragments, theme),
     seal: sealRelease,
+    ...(onInternalError ? { onInternalError } : {}),
   };
 }
 
@@ -424,7 +427,15 @@ export async function runFableAdaptivePipeline(
   runtime.recordModel("page_plan", "modelId" in pageDesign ? pageDesign : {});
   if (!pageDesign.ok) return fail("page_plan", pageDesign.code);
 
-  const compositionDeps = deps.adaptiveCompositionDeps ?? productionCompositionDeps(request, runtime, inventory, pageDesign.program, fetchText, deps.renderViewports ?? renderVisualQualityViewports);
+  const compositionDeps = deps.adaptiveCompositionDeps ?? productionCompositionDeps(
+    request,
+    runtime,
+    inventory,
+    pageDesign.program,
+    fetchText,
+    deps.renderViewports ?? renderVisualQualityViewports,
+    deps.onInternalError,
+  );
   const resolveAssets = deps.resolveAssets ?? resolveProductionAssets;
   let assets: ResolvedPipelineAssets | null = null;
   let assetFailure: FailedPipelineAssets | null = null;

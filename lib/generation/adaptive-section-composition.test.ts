@@ -309,6 +309,20 @@ describe("adaptive section composition", () => {
     expect(result).not.toHaveProperty("html");
   });
 
+  it("reports only the redacted phase when an internal composition exception is contained", async () => {
+    const onInternalError = vi.fn();
+    const d = setup({
+      assemble: vi.fn(() => { throw new Error("private assembly state"); }),
+      onInternalError,
+    });
+
+    const result = await composeAdaptiveSections(INPUT, d.deps);
+
+    expect(result).toMatchObject({ ok: false, reasonCode: "internal_error" });
+    expect(onInternalError).toHaveBeenCalledOnce();
+    expect(onInternalError).toHaveBeenCalledWith({ phase: "assemble" });
+  });
+
   it("fails originality when fingerprints collapse or rebuild reconstructs its donor", async () => {
     const repeatedProvider: GlmSectionProgramProvider = { async generate(request) {
       const copyKey = request.role === "hero" ? "hero.title" : "activities.title";

@@ -90,6 +90,11 @@ export interface AdaptiveSectionCompositionDeps {
   /** Delivers each paid GLM trace immediately after the provider returns, so
    * callers can flush failure telemetry without waiting for composition. */
   readonly onProviderTelemetry?: (telemetry: RedactedProviderTelemetry) => void;
+  /** Reports only the internal phase name when an unexpected exception is
+   * contained. It must never receive provider payloads, HTML, copy or errors. */
+  readonly onInternalError?: (event: {
+    readonly phase: "prepare" | "program" | "assets" | "compile" | "validate" | "assemble" | "seal";
+  }) => void;
   /** Runs once after every GLM program has been prepared and before any
    * compiler/render gate. The returned binder makes resolved asset refs part
    * of the bytes that are compiled, gated, assembled, and repaired. */
@@ -382,6 +387,9 @@ export async function composeAdaptiveSections(
   const fail = (reasonCode: Exclude<SectionCompositionResultCode, "composed">) => failure(completed, reasonCode, telemetry);
   if (!validInput(input)) return fail("model_incompatible");
   const handoffEntries: unknown[] = [];
+  let internalPhase: NonNullable<AdaptiveSectionCompositionDeps["onInternalError"]> extends (event: infer Event) => void
+    ? Event extends { phase: infer Phase } ? Phase : never
+    : never = "prepare";
 
   try {
     const preparedRows: PreparedRow[] = [];
@@ -425,6 +433,7 @@ export async function composeAdaptiveSections(
 
       let generatedProgram: ExpressiveSectionProgram;
       {
+        internalPhase = "program";
         const request = action === "generate" ? {
           mode: "generate",
           requestId: `${input.requestId}.section-${row.ordinal}`,
@@ -465,6 +474,7 @@ export async function composeAdaptiveSections(
     const usedAssetSlots = [...new Set(preparedRows.flatMap((prepared) => prepared.generatedProgram
       ? collectProgramAssetSlots(prepared.generatedProgram)
       : []))].sort((left, right) => left - right);
+    internalPhase = "assets";
     const binding = deps.beforeCompile
       ? await deps.beforeCompile({ plan: input.plan, design: input.design, usedAssetSlots })
       : null;
@@ -476,6 +486,7 @@ export async function composeAdaptiveSections(
       let programHash: string | null = null;
       let normalizedStructuralFingerprint: string | null = null;
       {
+        internalPhase = "compile";
         const compiledExpressive = compileExpressiveSection({
           program: generatedProgram,
           allowedCopyKeys: Object.keys(input.copy),
@@ -513,6 +524,7 @@ export async function composeAdaptiveSections(
           || section.structuralFingerprint === donor!.entry.structuralFingerprint)) {
         return fail("section_originality_failed");
       }
+      internalPhase = "validate";
       if (!(await deps.validateSemantics(section, row))) return fail("section_semantic_coverage_failed");
       if (!(await deps.validateAssets(section.html, row))) return fail("required_asset_unavailable");
       const rendered = await deps.validateRender(section.html, row);
@@ -556,7 +568,9 @@ export async function composeAdaptiveSections(
       sourceBandOrdinals: completed.map((row) => row.sourceBandOrdinal),
     })) return fail("section_originality_failed");
 
+    internalPhase = "assemble";
     const assembled = deps.assemble(completed.map((row) => row.fragment));
+    internalPhase = "seal";
     const sanitized = deps.sanitize(assembled);
     if (!sanitized.html) return fail("sanitization_failed");
     const donorFingerprints = donorOnlyVisibleTextFingerprints(donorHtml, input.copy);
@@ -677,6 +691,7 @@ export async function composeAdaptiveSections(
       applyDelta,
     };
   } catch {
+    try { deps.onInternalError?.({ phase: internalPhase }); } catch { /* diagnostics cannot widen failure */ }
     return fail("internal_error");
   }
 }
