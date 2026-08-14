@@ -4,6 +4,11 @@ import type { FireworksJsonClient } from "@/lib/ai/fireworks-client";
 import { IntentAnalysisSchema, type IntentAnalysis } from "@/lib/generation/contracts";
 import { reasoningEffortFor } from "@/lib/generation/fable-model-policy";
 import type { ModelTokenUsage } from "@/lib/generation/model-cost";
+import {
+  CANONICAL_PRIMARY_AUDIENCES,
+  CANONICAL_SECTION_ROLES,
+  CANONICAL_SITE_TYPES,
+} from "@/lib/generation/structural-taxonomy";
 import { LenientBusinessDataSchema, type ExtractedBusinessData } from "@/lib/style-match/autofill/types";
 
 export const FABLE_INTENT_PROMPT_VERSION = "fable-intent-prompt/1.0" as const;
@@ -28,6 +33,31 @@ const PageCopyResponseSchema = z.object({
 }).strict();
 interface PageCopyResponse { readonly schemaVersion: "page-copy/1.0"; readonly copy: ExtractedBusinessData }
 
+const CanonicalIntentAnalysisSchema: z.ZodType<IntentAnalysis> = IntentAnalysisSchema.extend({
+  functional: IntentAnalysisSchema.shape.functional.extend({
+    siteType: z.enum(CANONICAL_SITE_TYPES),
+    requiredSections: z.array(z.enum(CANONICAL_SECTION_ROLES)).max(24),
+  }),
+  audience: IntentAnalysisSchema.shape.audience.extend({
+    primary: z.enum(CANONICAL_PRIMARY_AUDIENCES),
+  }),
+}).transform((value): IntentAnalysis => ({
+  ...value,
+  functional: {
+    ...value.functional,
+    requiredSections: [...new Set(value.functional.requiredSections)],
+  },
+}));
+
+const INTENT_SYSTEM_PROMPT = [
+  "Return only intent-analysis/1.0 strict JSON. Classify the actual product using lowercase taxonomy.",
+  `functional.siteType must be one of: ${CANONICAL_SITE_TYPES.join(", ")}.`,
+  `functional.requiredSections must use only: ${CANONICAL_SECTION_ROLES.join(", ")}.`,
+  `audience.primary must be one of: ${CANONICAL_PRIMARY_AUDIENCES.join(", ")}.`,
+  "Keep required sections ordered and unique. Include audience, domains, visible required and forbidden signals.",
+  "Never return HTML, CSS, JS, URLs, prompts, or prose.",
+].join(" ");
+
 function validBrief(brief: string): boolean {
   return typeof brief === "string" && brief.trim().length >= 10 && brief.length <= 4000;
 }
@@ -45,9 +75,9 @@ export function createFableInputAdapters(options: { readonly client: FireworksJs
         reasoningEffort: reasoningEffortFor("reasoner", "simple_extraction"),
         requestId: `${requestId}.intent`,
         maxOutputTokens: 4096,
-        responseSchema: IntentAnalysisSchema,
+        responseSchema: CanonicalIntentAnalysisSchema,
         messages: [
-          { role: "system", content: "Return only intent-analysis/1.0 strict JSON. Classify the actual product using lowercase taxonomy. Include functional site type, ordered canonical section roles, audience, domains, visible required and forbidden signals. Never return HTML, CSS, JS, URLs, prompts, or prose." },
+          { role: "system", content: INTENT_SYSTEM_PROMPT },
           { role: "user", content: JSON.stringify({ schemaVersion: "fable-intent-input/1.0", brief: brief.trim() }) },
         ],
       });
