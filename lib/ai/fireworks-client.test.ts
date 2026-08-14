@@ -198,9 +198,10 @@ describe("Fireworks JSON client", () => {
       type: "object",
       additionalProperties: false,
       required: ["title", "score"],
+      properties: { title: { type: "string", minLength: 1 } },
     });
     expect(JSON.stringify(body.response_format.json_schema.schema))
-      .not.toMatch(/"(?:minLength|maxLength|minItems|maxItems|pattern|oneOf|prefixItems)"/);
+      .not.toMatch(/"(?:oneOf|prefixItems)"/);
     expect(JSON.stringify(result)).not.toMatch(/provider-private-id|secret|Return a bounded plan/);
   });
 

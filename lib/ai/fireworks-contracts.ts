@@ -63,6 +63,16 @@ function numberBounds(checks: readonly Record<string, unknown>[]): JsonSchema {
   return result;
 }
 
+function stringBounds(checks: readonly Record<string, unknown>[]): JsonSchema {
+  const result: JsonSchema = {};
+  for (const check of checks) {
+    if (check.kind === "min" && typeof check.value === "number") result.minLength = check.value;
+    if (check.kind === "max" && typeof check.value === "number") result.maxLength = check.value;
+    if (check.kind === "regex" && check.regex instanceof RegExp) result.pattern = check.regex.source;
+  }
+  return result;
+}
+
 /** Converts the bounded Zod response contract into Fireworks' strict JSON Schema payload. */
 export function fireworksJsonSchema(schema: z.ZodTypeAny): JsonSchema {
   const definition = schema._def as Record<string, unknown>;
@@ -74,7 +84,7 @@ export function fireworksJsonSchema(schema: z.ZodTypeAny): JsonSchema {
       return { type: "object", properties, required, additionalProperties: false };
     }
     case z.ZodFirstPartyTypeKind.ZodString:
-      return { type: "string" };
+      return { type: "string", ...stringBounds(definition.checks as readonly Record<string, unknown>[]) };
     case z.ZodFirstPartyTypeKind.ZodNumber:
       return { type: "number", ...numberBounds(definition.checks as readonly Record<string, unknown>[]) };
     case z.ZodFirstPartyTypeKind.ZodBoolean:
@@ -90,7 +100,14 @@ export function fireworksJsonSchema(schema: z.ZodTypeAny): JsonSchema {
       return { enum: values };
     }
     case z.ZodFirstPartyTypeKind.ZodArray: {
-      return { type: "array", items: fireworksJsonSchema(definition.type as z.ZodTypeAny) };
+      const result: JsonSchema = { type: "array", items: fireworksJsonSchema(definition.type as z.ZodTypeAny) };
+      const minLength = definition.minLength as { value: number } | null;
+      const maxLength = definition.maxLength as { value: number } | null;
+      const exactLength = definition.exactLength as { value: number } | null;
+      if (minLength) result.minItems = minLength.value;
+      if (maxLength) result.maxItems = maxLength.value;
+      if (exactLength) { result.minItems = exactLength.value; result.maxItems = exactLength.value; }
+      return result;
     }
     case z.ZodFirstPartyTypeKind.ZodUnion:
       return { anyOf: (definition.options as z.ZodTypeAny[]).map(fireworksJsonSchema) };
@@ -108,11 +125,15 @@ export function fireworksJsonSchema(schema: z.ZodTypeAny): JsonSchema {
       return fireworksJsonSchema(definition.schema as z.ZodTypeAny);
     case z.ZodFirstPartyTypeKind.ZodRecord:
       return { type: "object", additionalProperties: fireworksJsonSchema(definition.valueType as z.ZodTypeAny) };
-    case z.ZodFirstPartyTypeKind.ZodTuple:
+    case z.ZodFirstPartyTypeKind.ZodTuple: {
+      const items = definition.items as z.ZodTypeAny[];
       return {
         type: "array",
-        items: { anyOf: (definition.items as z.ZodTypeAny[]).map(fireworksJsonSchema) },
+        items: { anyOf: items.map(fireworksJsonSchema) },
+        minItems: items.length,
+        maxItems: items.length,
       };
+    }
     case z.ZodFirstPartyTypeKind.ZodIntersection:
       return { allOf: [fireworksJsonSchema(definition.left as z.ZodTypeAny), fireworksJsonSchema(definition.right as z.ZodTypeAny)] };
     default:

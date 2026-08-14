@@ -102,7 +102,8 @@ describe("adaptive design contracts", () => {
     const scoutJson = fireworksJsonSchema(createCandidateScoutResponseSchema({
       requiredRoles: ["hero", "features"],
       retrievedCandidates: candidates,
-    })) as { properties: { decisions: { items?: { anyOf?: unknown[] } } } };
+    })) as { properties: { decisions: { minItems?: number; maxItems?: number; items?: { anyOf?: unknown[] } } } };
+    expect(scoutJson.properties.decisions).toMatchObject({ minItems: 2, maxItems: 2 });
     expect(scoutJson.properties.decisions.items?.anyOf).toHaveLength(2);
     expect(JSON.stringify(scoutJson.properties.decisions.items?.anyOf?.[0])).toContain('"const":0');
     expect(JSON.stringify(scoutJson.properties.decisions.items?.anyOf?.[0])).toContain('"const":"hero-safe"');
@@ -117,8 +118,10 @@ describe("adaptive design contracts", () => {
       })),
       initialRequiredSignals: ["cinematic", "tactile"],
       initialForbiddenSignals: ["generic_saas"],
-    })) as { properties: { narrative: { items?: { anyOf?: unknown[] } }; decisions: { items?: { anyOf?: unknown[] } } } };
+    })) as { properties: { narrative: { minItems?: number; maxItems?: number; items?: { anyOf?: unknown[] } }; decisions: { minItems?: number; maxItems?: number; items?: { anyOf?: unknown[] } } } };
+    expect(pageJson.properties.narrative).toMatchObject({ minItems: 2, maxItems: 2 });
     expect(pageJson.properties.narrative.items?.anyOf).toHaveLength(2);
+    expect(pageJson.properties.decisions).toMatchObject({ minItems: 2, maxItems: 2 });
     expect(pageJson.properties.decisions.items?.anyOf).toHaveLength(2);
     expect(JSON.stringify(pageJson.properties.decisions.items?.anyOf?.[0])).toContain('"const":"reuse"');
     expect(JSON.stringify(pageJson.properties.decisions.items?.anyOf?.[1])).toContain('"const":"generate"');
