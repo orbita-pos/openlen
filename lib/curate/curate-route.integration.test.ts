@@ -60,9 +60,11 @@ const VISUAL_ENGINE = {
     outputHash: FINAL_HASH,
   },
 };
+// A charged delivery is one the creative model authored. The baseline route is
+// covered separately below, where it must cost nothing.
 const SUCCESS = {
   ok: true,
-  route: "section_composition",
+  route: "creative_document",
   templateId: null,
   title: "Mundo Color",
   html: FINAL_HTML,
@@ -125,7 +127,7 @@ describe("POST /api/curate hybrid-only integration", () => {
       data: { brand: { accent: "#EC4899", logoUrl: null } },
     });
     mocks.runAiCreation.mockImplementation(async (input: { onStage?: (stage: string) => void }) => {
-      for (const stage of ["intent", "copy", "sections", "composition", "delivery_gate", "visual_quality"]) {
+      for (const stage of ["sections", "baseline", "creative_document", "delivery_gate"]) {
         input.onStage?.(stage);
       }
       return SUCCESS;
@@ -208,12 +210,10 @@ describe("POST /api/curate hybrid-only integration", () => {
       { event: "preview", data: { html: FINAL_HTML } },
     ]);
     expect(eventsNamed(events, "progress").map((event) => event.data.stage)).toEqual([
-      "analyzing",
-      "writing",
       "planning",
       "assembling",
+      "designing",
       "styling",
-      "reviewing",
       "persisting",
     ]);
     expect(events.at(-1)).toMatchObject({
@@ -221,7 +221,7 @@ describe("POST /api/curate hybrid-only integration", () => {
       data: {
         projectId: expect.any(String),
         title: "Mundo Color",
-        route: "section_composition",
+        route: "creative_document",
         templateId: null,
         filled: true,
         appliedOps: 4,
@@ -251,6 +251,18 @@ describe("POST /api/curate hybrid-only integration", () => {
     expect(eventsNamed(events, "heartbeat").length).toBeGreaterThan(0);
     expect(mocks.runAiCreation).toHaveBeenCalledTimes(1);
     expect(maxDuration).toBe(900);
+  });
+
+  // Billing decision 2026-08-14: a baseline delivery is a fallback the user did
+  // not ask for, so it is delivered but never charged.
+  it("delivers the baseline route without charging a credit", async () => {
+    mocks.runAiCreation.mockResolvedValue({ ...SUCCESS, route: "section_composition" });
+
+    const { events } = await post();
+
+    expect(mocks.commitAtomic).toHaveBeenCalledWith(expect.objectContaining({ userId: "user-1", credits: 0 }));
+    expect(events.at(-1)).toMatchObject({ event: "done", data: { credits: 0, route: "section_composition" } });
+    expect(eventsNamed(events, "error")).toEqual([]);
   });
 
   it("uses the one-credit copy fallback without charging autofill when fill made no change", async () => {

@@ -5,6 +5,7 @@ import { detectTemplateLeaks } from "@/lib/assemble/leaks";
 import type { BusinessProfileData } from "@/lib/business-profiles/types";
 import type { SectionRecord } from "@/lib/sections/store";
 import type { SectionType } from "@/lib/sections/types";
+import { validateAiCompositionDelivery } from "./ai-composition-delivery";
 import { buildCreativeBaseline, type CreativeBaselineDeps } from "./creative-baseline";
 
 const sha12 = (html: string) => createHash("sha256").update(html).digest("hex").slice(0, 12);
@@ -84,5 +85,22 @@ describe("buildCreativeBaseline", () => {
     const result = await buildCreativeBaseline(INPUT, makeDeps({ fragments: LEAKY_FRAGMENTS }));
 
     expect(result.ok && detectTemplateLeaks(LEAKY_SOURCE, result.candidate.html).damaging).toEqual([]);
+  });
+
+  // The whole fail-soft contract rests on this: the baseline is what ships when
+  // the creative model produces nothing usable, so it must clear the very gate
+  // that guards delivery. A baseline that cannot pass it is not a fallback.
+  it("produces a baseline that passes the real composition delivery gate", async () => {
+    const result = await buildCreativeBaseline(INPUT, makeDeps());
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+
+    const gate = validateAiCompositionDelivery({
+      html: result.candidate.html,
+      visualEngine: result.candidate.visualEngine,
+      leaksAfter: 0,
+    });
+    expect((gate as { reasonCode?: string }).reasonCode).toBeUndefined();
+    expect(gate).toMatchObject({ ok: true });
   });
 });

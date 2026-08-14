@@ -57,7 +57,13 @@ export type QuickVisualQualityGateResult =
       detailCode: string;
     };
 
-function eligible(input: QuickVisualRepairInput): boolean {
+/** The legacy closed-loop repair only understands the two composed routes. A
+ *  creative_document page carries no skeleton or section manifest to diff, and
+ *  repairs inside its own authoring loop instead. */
+type LegacyRepairMetadata = Extract<VisualEngineProjectMetadata, { route: "template_skeleton" | "section_composition" }>;
+type LegacyRepairInput = QuickVisualRepairInput & { visualEngine: LegacyRepairMetadata };
+
+function eligible(input: QuickVisualRepairInput): input is LegacyRepairInput {
   return (input.visualEngine.route === "template_skeleton" || input.visualEngine.route === "section_composition")
     && Boolean(input.visualEngine.creativeDirection);
 }
@@ -82,7 +88,7 @@ function repairMetadata(trace: Extract<Awaited<ReturnType<RunRepair>>, { accepte
   };
 }
 
-function repairInput(input: QuickVisualRepairInput): Parameters<RunRepair>[0] {
+function repairInput(input: LegacyRepairInput): Parameters<RunRepair>[0] {
   return {
     html: input.html, metadata: input.visualEngine,
     sourceId: input.visualEngine.templateId ?? "section-composition",

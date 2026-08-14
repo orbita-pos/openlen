@@ -1,5 +1,6 @@
 import { assessFinalVisualCandidate } from "@/lib/ai/qwen-visual-critic";
 import { createFireworksJsonClient, type FireworksJsonClient, type FireworksJsonClientOptions } from "@/lib/ai/fireworks-client";
+import { createFireworksDocumentClient, type FireworksDocumentClient, type FireworksDocumentClientOptions } from "@/lib/ai/fireworks-document-client";
 import type { FireworksProviderCategory, FireworksServiceTier } from "@/lib/ai/fireworks-contracts";
 import { renderVisualQualityViewports } from "@/lib/ai/visual-quality-renderer";
 import { createFableGenerationTelemetry, type FableGenerationTelemetryEvent, type FableTelemetryStage } from "@/lib/generation/fable-generation-telemetry";
@@ -32,9 +33,13 @@ export interface FableRuntimeCompositionOptions {
   readonly budgetConfig?: PageBudgetConfig;
   readonly pageBudget?: PageBudget;
   readonly client?: FireworksJsonClient;
+  readonly documentClient?: FireworksDocumentClient;
+  readonly documentClientOptions?: Omit<FireworksDocumentClientOptions, "budget">;
   readonly fireworksClientOptions?: Omit<FireworksJsonClientOptions, "budget">;
   readonly geminiAssetPackProviderOptions?: Omit<GeminiAssetPackProviderOptions, "pageBudget">;
   readonly renderViewports?: typeof renderVisualQualityViewports;
+  /** Section fragment byte loader used by the provider-free baseline. */
+  readonly sectionFragmentFetch?: (storageUrl: string) => Promise<string | null>;
   readonly inspect?: (candidate: Parameters<typeof runFableFinalVisualGate>[0]["candidate"]) => Promise<FableInspection>;
   readonly repairProvider?: GlmVisualRepairProvider;
   readonly applyDelta?: Parameters<typeof runFableFinalVisualGate>[1]["applyDelta"];
@@ -44,6 +49,8 @@ export interface FableRuntimeCompositionOptions {
 export interface FableRuntimeComposition {
   readonly pageBudget: PageBudget;
   readonly fireworksClient: FireworksJsonClient;
+  /** Plain-text transport for whole-document creative generation. */
+  readonly documentClient: FireworksDocumentClient;
   /** Task 4 composition seams, all bound to this page's sole budget. */
   readonly glmSectionProgramProvider: GlmSectionProgramProvider;
   readonly geminiAssetPackProvider: ReturnType<typeof createGeminiAssetPackProvider>;
@@ -58,7 +65,7 @@ export interface FableRuntimeComposition {
     readonly httpStatus?: number;
   }): void;
   recordImage(trace: { readonly modelId?: string | null; readonly generatedCount: number; readonly durationMs: number }): void;
-  recordFailure(stage: "intent" | "copy" | "scout" | "page_plan" | "initial_program" | "image" | "delivery_gate" | "visual_quality" | "delivery", reasonCode: string): Promise<void>;
+  recordFailure(stage: "intent" | "copy" | "scout" | "page_plan" | "initial_program" | "baseline" | "creative_document" | "image" | "delivery_gate" | "visual_quality" | "delivery", reasonCode: string): Promise<void>;
   recordDelivered(): Promise<void>;
   runFinalGate(input: {
     readonly requestId: string;
@@ -101,6 +108,8 @@ function defaultInspect(candidate: Parameters<typeof runFableFinalVisualGate>[0]
 export function createFableRuntimeComposition(options: FableRuntimeCompositionOptions = {}): FableRuntimeComposition {
   const pageBudget = options.pageBudget ?? createPageGenerationBudget(options.budgetConfig ?? parseFablePageBudgetConfigFromEnv());
   const fireworksClient = options.client ?? createFireworksJsonClient({ ...options.fireworksClientOptions, budget: pageBudget });
+  const documentClient = options.documentClient
+    ?? createFireworksDocumentClient({ ...options.documentClientOptions, budget: pageBudget });
   const glmSectionProgramProvider = createGlmSectionProgramProvider({ client: fireworksClient });
   const geminiAssetPackProvider = createGeminiAssetPackProvider({ ...options.geminiAssetPackProviderOptions, pageBudget });
   const telemetry = createFableGenerationTelemetry({ budget: pageBudget, sink: options.telemetrySink });
@@ -153,6 +162,7 @@ export function createFableRuntimeComposition(options: FableRuntimeCompositionOp
   return {
     pageBudget,
     fireworksClient,
+    documentClient,
     glmSectionProgramProvider,
     geminiAssetPackProvider,
     inputAdapters,

@@ -109,24 +109,33 @@ describe("Mundo Pincel hybrid-only regression", () => {
     };
     const loadWholeTemplate = vi.fn(() => LEGACY_HTML);
     const copy = coerceBusinessData({ business_name: "Mundo Pincel" });
-    const deps = withForbiddenWholeTemplateLoader<Required<RunAiCreationDeps>>({
-      analyzeIntent: vi.fn(async () => ({ ok: true as const, intent: coloring.intent, modelId: "intent-fixture", promptVersion: "intent-prompt/1.8" as const, durationMs: 1 })),
-      generatePageCopy: vi.fn(async () => ({ ok: true as const, copy, modelId: "copy-fixture", promptVersion: "page-copy-prompt/1.0" as const, durationMs: 1 })),
+    const runtime = {
+      documentClient: { write: vi.fn() },
+      recordModel: vi.fn(),
+      recordFailure: vi.fn(async () => {}),
+      recordDelivered: vi.fn(async () => {}),
+    };
+    const deps = withForbiddenWholeTemplateLoader<RunAiCreationDeps>({
+      createFableRuntimeComposition: () => runtime as never,
       listSections: vi.fn(async () => [{ id: "fixture" }] as never),
-      overlayProfile: vi.fn((copy) => copy),
-      runSectionCompositionCandidate: vi.fn(async () => ({ ok: true as const, route: "section_composition" as const, templateId: null, html, visualEngine, filled: true, appliedOps: 1, durationMs: 1, leaksBefore: 0, leaksAfter: 0, fableVisualRepairHandoff: {} as never })),
+      buildCreativeBaseline: vi.fn(async () => ({
+        ok: true as const,
+        candidate: { html, title: "Mundo Pincel", visualEngine, filled: true, appliedOps: 1, source: "baseline" as const },
+        intent: coloring.intent,
+        copy,
+      })) as never,
+      // The creative model declining is the interesting case here: the page is
+      // still delivered from catalog fragments, and no whole template is read.
+      runCreativeDocument: vi.fn(async () => ({ candidate: null, turns: 2, rejections: [], stoppedBy: "rejected" as const })) as never,
       validateAiCompositionDelivery: vi.fn(({ visualEngine: metadata }) => ({ ok: true as const, visualEngine: metadata as typeof visualEngine })),
-      runFableFinalVisualGate: vi.fn(async (input) => ({ ok: true as const, candidate: input.candidate, repaired: false })),
-      createFableRuntimeComposition: vi.fn() as never,
-      fableRuntimeOptions: undefined as never,
-      fableAdaptivePipelineDeps: undefined as never,
     }, loadWholeTemplate);
 
     const result = await runAiCreation({ projectId: "mundo-pincel", brief: coloring.brief, profileData: coerceBusinessData({}), assetMode: "hybrid" }, deps);
 
     expect(loadWholeTemplate).not.toHaveBeenCalled();
-    expect(deps.runSectionCompositionCandidate).toHaveBeenCalledWith(
-      expect.objectContaining({ assetMode: "hybrid" }),
+    expect(deps.buildCreativeBaseline).toHaveBeenCalledWith(
+      expect.objectContaining({ brief: coloring.brief }),
+      expect.anything(),
     );
     expect(result).toMatchObject({ ok: true, route: "section_composition", templateId: null });
     if (!result.ok) throw new Error(result.reasonCode);

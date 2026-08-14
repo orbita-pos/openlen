@@ -3,7 +3,7 @@ import type { PageBudget, RedactedPageCost } from "./page-generation-budget";
 import type { FireworksProviderCategory, FireworksServiceTier } from "../ai/fireworks-contracts";
 import { z } from "zod";
 
-export type FableTelemetryStage = "intent" | "copy" | "scout" | "page_plan" | "initial_program" | "image" | "final_critic" | "visual_repair" | "delivery_gate" | "delivery" | "visual_quality";
+export type FableTelemetryStage = "intent" | "copy" | "scout" | "page_plan" | "initial_program" | "baseline" | "creative_document" | "image" | "final_critic" | "visual_repair" | "delivery_gate" | "delivery" | "visual_quality";
 
 export interface FablePaidCallTelemetry {
   readonly stage: FableTelemetryStage;
@@ -43,19 +43,30 @@ const UsageSchema = z.object({
   thinkingTokens: NonNegativeSafeInteger,
 }).strict();
 const ImageUsageSchema = z.object({ imageCount: NonNegativeSafeInteger }).strict();
+/** Must stay in step with FableTelemetryStage and FireworksProviderCategory:
+ *  the operational sink drops any event it cannot parse, silently, so a stage
+ *  missing here means losing every record of that part of the runtime. */
+const TelemetryStageSchema = z.enum([
+  "intent", "copy", "scout", "page_plan", "initial_program", "baseline", "creative_document",
+  "image", "final_critic", "visual_repair", "delivery_gate", "delivery", "visual_quality",
+]);
+const ProviderCategorySchema = z.enum([
+  "request", "http", "response", "response_envelope", "response_truncated",
+  "response_content", "response_usage", "schema", "timeout", "transport",
+]);
 const PaidCallSchema = z.discriminatedUnion("kind", [
   z.object({
-    stage: z.enum(["intent", "copy", "scout", "page_plan", "initial_program", "image", "final_critic", "visual_repair", "delivery_gate", "delivery", "visual_quality"]),
+    stage: TelemetryStageSchema,
     kind: z.literal("model"),
     modelId: ModelId,
     usage: UsageSchema,
     durationMs: NonNegativeSafeInteger,
     attempts: z.union([z.literal(0), z.literal(1), z.literal(2), z.literal(3)]),
     serviceTier: z.enum(["standard", "priority"]).optional(),
-    providerCategory: z.enum(["request", "http", "response", "schema", "timeout", "transport"]).optional(),
+    providerCategory: ProviderCategorySchema.optional(),
     httpStatus: z.number().int().min(100).max(599).optional(),
   }).strict(),
-  z.object({ stage: z.enum(["intent", "copy", "scout", "page_plan", "initial_program", "image", "final_critic", "visual_repair", "delivery_gate", "delivery", "visual_quality"]), kind: z.literal("image"), modelId: ModelId, usage: ImageUsageSchema, durationMs: NonNegativeSafeInteger, attempts: z.union([z.literal(0), z.literal(1), z.literal(2), z.literal(3)]) }).strict(),
+  z.object({ stage: TelemetryStageSchema, kind: z.literal("image"), modelId: ModelId, usage: ImageUsageSchema, durationMs: NonNegativeSafeInteger, attempts: z.union([z.literal(0), z.literal(1), z.literal(2), z.literal(3)]) }).strict(),
 ]);
 const CostSchema = z.object({
   rateCardVersion: z.string().min(1).max(64).regex(/^[A-Za-z0-9._:-]+$/),
@@ -69,7 +80,7 @@ const CostSchema = z.object({
 const OperationalEventSchema = z.object({
   schemaVersion: z.literal("fable-generation-telemetry/1.0"),
   outcome: z.enum(["failed", "delivered"]),
-  stage: z.enum(["intent", "copy", "scout", "page_plan", "initial_program", "image", "final_critic", "visual_repair", "delivery_gate", "delivery", "visual_quality"]),
+  stage: TelemetryStageSchema,
   reasonCode: z.string().min(1).max(80).regex(/^[a-z][a-z0-9_]*$/).nullable(),
   paidCalls: z.array(PaidCallSchema).max(64),
   cost: CostSchema.nullable(),

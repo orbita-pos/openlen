@@ -147,55 +147,6 @@ function semanticCatalog(row: (typeof AI_HYBRID_NICHE_CASES)[number]): SectionRe
   });
 }
 
-function successDeps(row: (typeof AI_HYBRID_NICHE_CASES)[number]): Required<RunAiCreationDeps> {
-  const planning = planSectionComposition({
-    intent: row.intent,
-    intentHash: INTENT_HASH,
-    inventoryHash: INVENTORY_HASH,
-    availableTypes: new Set(SECTION_TYPES),
-  });
-  if (!planning.ok) throw new Error(planning.code);
-  const selectedSectionIds = [...EXPECTED_IDS[row.id]];
-  const html = `<!doctype html><html><head><style data-openlen-visual-engine="creative-direction/1.0"></style></head><body>${planning.plan.rows.map((planRow, index) => `<section data-sec="${selectedSectionIds[index]}" data-openlen-role="${planRow.requestedRole}"><h2>${row.id} ${planRow.requestedRole}</h2></section>`).join("")}</body></html>`;
-  const visualEngine = {
-    schemaVersion: "visual-engine-project/1.0" as const,
-    route: "section_composition" as const,
-    templateId: null,
-    creativeDirection: row.expectedCreativeDirection,
-    promptVersion: "creative-prompt/1.0",
-    policyVersion: AI_HYBRID_POLICY_VERSION,
-    contractVersion: "creative-direction/1.0" as const,
-    compositionManifest: SectionCompositionManifestSchema.parse({
-      schemaVersion: "section-composition-manifest/2.0",
-      intentHash: canonicalJsonSha256(row.intent),
-      creativeDirectionHash: canonicalJsonSha256(row.expectedCreativeDirection),
-      inventoryHash: INVENTORY_HASH,
-      orderedRoles: planning.plan.rows.map((planRow) => planRow.requestedRole),
-      selectedSectionIds,
-      selectedContentHashes: planning.plan.rows.map((_planRow, index) => (index + 1).toString(16).padStart(12, "0")),
-      selectedSourceKinds: planning.plan.rows.map(() => "template_derived" as const),
-      selectedSourceTemplateIds: planning.plan.rows.map((_planRow, index) => `donor-${index}`),
-      selectedSourceBandOrdinals: planning.plan.rows.map(() => 0),
-      selectedStructuralFingerprints: planning.plan.rows.map((_planRow, index) => `sha256:${(index + 1).toString(16).repeat(64).slice(0, 64)}`),
-      compatibilityRuleIds: planning.plan.rows.map((planRow) => planRow.compatibilityRuleId),
-      outputHash: sha256(html),
-      resultCode: "composed",
-    }),
-  };
-  const copy = coerceBusinessData({ business_name: row.id });
-  return {
-    analyzeIntent: vi.fn(async () => ({ ok: true as const, intent: row.intent, modelId: "intent-fixture", promptVersion: "intent-prompt/1.8" as const, durationMs: 1 })),
-    generatePageCopy: vi.fn(async () => ({ ok: true as const, copy, modelId: "copy-fixture", promptVersion: "page-copy-prompt/1.0" as const, durationMs: 1 })),
-    listSections: vi.fn(async () => [{ id: "fixture" }] as never),
-    overlayProfile: vi.fn((copy) => copy),
-    runSectionCompositionCandidate: vi.fn(async () => ({ ok: true as const, route: "section_composition" as const, templateId: null, html, visualEngine, filled: true, appliedOps: 1, durationMs: 1, leaksBefore: 0, leaksAfter: 0, fableVisualRepairHandoff: {} as never })),
-    validateAiCompositionDelivery: vi.fn(({ visualEngine: metadata }) => ({ ok: true as const, visualEngine: metadata as typeof visualEngine })),
-    runFableFinalVisualGate: vi.fn(async (input) => ({ ok: true as const, candidate: input.candidate, repaired: false })),
-    createFableRuntimeComposition: vi.fn() as never,
-    fableRuntimeOptions: undefined as never,
-    fableAdaptivePipelineDeps: undefined as never,
-  };
-}
 
 describe("AI hybrid niche cohort", () => {
   it("defines the exact immutable seven-case release cohort", () => {
@@ -266,33 +217,10 @@ describe("AI hybrid niche cohort", () => {
     }
   });
 
-  it.each(AI_HYBRID_NICHE_CASES)("delivers only coherent composition metadata for $id", async (row) => {
-    const deps = successDeps(row);
-    const result = await runAiCreation({
-      projectId: `project-${row.id}`,
-      brief: row.brief,
-      profileData: {} as BusinessProfileData,
-      assetMode: "hybrid",
-    }, deps);
-
-    expect(result).toMatchObject({ ok: true, route: "section_composition", templateId: null });
-    expect(deps.runSectionCompositionCandidate).toHaveBeenCalledWith(
-      expect.objectContaining({ assetMode: "hybrid" }),
-    );
-    if (!result.ok) throw new Error(result.reasonCode);
-    expect(Object.keys(result.visualEngine).sort()).toEqual([
-      "compositionManifest", "contractVersion", "creativeDirection", "policyVersion",
-      "promptVersion", "route", "schemaVersion", "templateId",
-    ]);
-    expect(result.visualEngine.compositionManifest.orderedRoles).toEqual(row.expectedRoles);
-    expect(result.visualEngine.compositionManifest.selectedSectionIds).toEqual([...EXPECTED_IDS[row.id]]);
-    expect(new Set(result.visualEngine.compositionManifest.selectedSectionIds).size).toBe(row.expectedRoles.length);
-    expect(result.visualEngine.creativeDirection.requiredVisualSignals).toEqual(expect.arrayContaining([...row.requiredVisualSignals]));
-    expect(result.visualEngine.creativeDirection.forbiddenVisualSignals).toEqual(expect.arrayContaining([...row.forbiddenVisualSignals]));
-    for (const forbiddenSignal of row.forbiddenVisualSignals) {
-      expect(result.visualEngine.creativeDirection.requiredVisualSignals).not.toContain(forbiddenSignal);
-    }
-    expect(result.visualEngine.compositionManifest.creativeDirectionHash).toBe(canonicalJsonSha256(result.visualEngine.creativeDirection));
-    for (const residue of row.forbiddenResidues) expect(result.html).not.toContain(residue);
-  });
+  // RETIRED 2026-08-14: the end-to-end case drove runAiCreation through the
+  // removed intent/copy/GLM pipeline and asserted a composition manifest the
+  // creative_document route does not produce. It also only ever proved the
+  // seven memorised briefs, so a green run said nothing about an unseen niche.
+  // The cohort rows above stay as planning/fragment fixtures and as the manual
+  // review checklist for real niche pages.
 });

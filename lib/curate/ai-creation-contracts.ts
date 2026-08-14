@@ -17,11 +17,14 @@ export type AiCreationStage =
   | "intent"
   | "copy"
   | "sections"
+  | "baseline"
+  | "creative_document"
   | "composition"
   | "delivery_gate"
   | "visual_quality";
 
 export type AiCreationReasonCode =
+  | "baseline_invalid"
   | "intent_analysis_failed"
   | "copy_generation_failed"
   | "section_inventory_unavailable"
@@ -42,11 +45,11 @@ export type AiCreationDeliveryReasonCode =
 export type AiCreationResult =
   | {
       ok: true;
-      route: "section_composition";
+      route: "section_composition" | "creative_document";
       templateId: null;
       title: string;
       html: string;
-      visualEngine: Extract<VisualEngineProjectMetadata, { route: "section_composition" }>;
+      visualEngine: Extract<VisualEngineProjectMetadata, { route: "section_composition" | "creative_document" }>;
       copyUsage?: ModelTokenUsage;
       generatedSectionUsage?: ModelTokenUsage;
       generatedSectionCount?: number;

@@ -1,5 +1,6 @@
 import type { CreativeDirection } from "@/lib/generation/creative-contracts";
 import type { AssetManifest, AssetResolutionTrace } from "@/lib/generation/asset-contracts";
+import type { CreativeDocumentManifest } from "@/lib/generation/creative-document-contracts";
 import type { SectionCompositionManifest } from "@/lib/generation/section-composition-contracts";
 import type { VisualQualityScores, VisualRepairIssueCode } from "@/lib/generation/visual-repair-contracts";
 
@@ -318,6 +319,20 @@ export type VisualEngineProjectMetadata =
       policyVersion: string;
       contractVersion: "creative-direction/1.0";
       compositionManifest: SectionCompositionManifest;
+      repair?: VisualRepairProjectMetadata;
+    } & VisualEngineAssetMetadata)
+  // A page the creative model authored end to end. It has no section manifest
+  // because there are no composed sections to describe — OpenLen owns the hash
+  // and the safety gates, the model owns the document.
+  | ({
+      schemaVersion: "visual-engine-project/1.0";
+      route: "creative_document";
+      templateId: null;
+      creativeDirection: CreativeDirection;
+      promptVersion: string;
+      policyVersion: string;
+      contractVersion: "creative-direction/1.0";
+      documentManifest: CreativeDocumentManifest;
       repair?: VisualRepairProjectMetadata;
     } & VisualEngineAssetMetadata);
 

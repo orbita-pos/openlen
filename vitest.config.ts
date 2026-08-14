@@ -74,6 +74,7 @@ export default defineConfig({
       "lib/ai/image-edit-core.test.ts",
       "lib/ai/fireworks-client.test.ts",
       "lib/ai/fireworks-tool-client.test.ts",
+      "lib/ai/fireworks-document-client.test.ts",
       "lib/ai/qwen-visual-critic.test.ts",
       "lib/ai/visual-quality-renderer.test.ts",
       "lib/ai/visual-quality-critic.test.ts",

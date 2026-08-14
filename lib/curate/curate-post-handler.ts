@@ -35,6 +35,8 @@ const PROGRESS_STAGE: Record<AiCreationStage, string> = {
   intent: "analyzing",
   copy: "writing",
   sections: "planning",
+  baseline: "assembling",
+  creative_document: "designing",
   composition: "assembling",
   delivery_gate: "styling",
   visual_quality: "reviewing",
@@ -173,11 +175,17 @@ return async function curatePost(req: Request): Promise<Response> {
         let committedPreview: string | null = null;
         let credits = 0;
         try {
-          credits = calculateAiCreationCredits({
-            ...(result.copyUsage ? { copyUsage: result.copyUsage } : {}),
-            ...(result.generatedSectionUsage ? { generatedSectionUsage: result.generatedSectionUsage } : {}),
-            filled: result.filled,
-          }, creditsForUsage, AUTOFILL_CREDIT_COST);
+          // Only an authored page costs a credit. When the creative model fails
+          // the user still receives a working page, but it is the provider-free
+          // baseline — OpenLen absorbs that attempt rather than billing for a
+          // fallback the user did not ask for.
+          credits = result.route === "creative_document"
+            ? calculateAiCreationCredits({
+              ...(result.copyUsage ? { copyUsage: result.copyUsage } : {}),
+              ...(result.generatedSectionUsage ? { generatedSectionUsage: result.generatedSectionUsage } : {}),
+              filled: result.filled,
+            }, creditsForUsage, AUTOFILL_CREDIT_COST)
+            : 0;
           await commitAiCompositionDocument({
             html: result.html,
             visualEngine: result.visualEngine,

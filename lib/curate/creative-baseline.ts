@@ -32,6 +32,8 @@ export type CreativeBaselineResult =
 export interface CreativeBaselineDeps {
   /** Deterministic fragment bytes for local callers and tests. */
   fragments?: ReadonlyMap<string, string>;
+  /** Fragment byte loader owned by the composition root; wins over `fragments`. */
+  fetchText?: (storageUrl: string) => Promise<string | null>;
   compose?: typeof composeSectionCandidate;
   finalize?: typeof finalizeComposedDocument;
   seal?: typeof sealRelease;
@@ -104,15 +106,28 @@ function fillComposedDocumentLocally(html: string, copy: ExtractedBusinessData):
   };
 }
 
+/** The delivery gate requires exactly one creative-direction marker, the same
+ *  one the adaptive pipeline stamps. The baseline really does apply a
+ *  deterministic creative direction, so it owns the marker too — without it the
+ *  baseline cannot pass the gate that guards its own delivery. */
+function stampCreativeMarker(html: string): string {
+  if (/<style\b[^>]*\bdata-openlen-visual-engine\b/i.test(html)) return html;
+  const marker = '<style data-openlen-visual-engine="creative-direction/1.0"></style>';
+  return /<\/head>/i.test(html)
+    ? html.replace(/<\/head>/i, `${marker}</head>`)
+    : `${marker}${html}`;
+}
+
 async function adaptComposedDocumentLocally(
   input: Parameters<NonNullable<ComposeSectionCandidateDeps["adaptTemplateSkeleton"]>>[0],
 ): Promise<SkeletonAdaptationResult> {
   const deterministic = buildDeterministicCreativeDirection(input.intent);
+  const html = stampCreativeMarker(input.html);
   const fingerprint = sha256(input.html);
   return {
     ok: true,
     status: "adapted",
-    html: input.html,
+    html,
     creativeDirectionVersion: "creative-direction/1.0",
     planVersion: "skeleton-adaptation-plan/1.0",
     creativeDirection: deterministic.direction,
@@ -147,7 +162,11 @@ export async function buildCreativeBaseline(
   const copy = buildDeterministicPageCopy(input.brief, intent);
   const compose = deps.compose ?? composeSectionCandidate;
   const composed = await compose(composeInput(input, intent, copy), {
-    ...(deps.fragments ? { fetchText: async (storageUrl: string) => deps.fragments?.get(storageUrl) ?? null } : {}),
+    ...(deps.fetchText
+      ? { fetchText: deps.fetchText }
+      : deps.fragments
+        ? { fetchText: async (storageUrl: string) => deps.fragments?.get(storageUrl) ?? null }
+        : {}),
     fillAssembled: async (html, localCopy) => fillComposedDocumentLocally(html, localCopy),
     adaptTemplateSkeleton: adaptComposedDocumentLocally,
   });

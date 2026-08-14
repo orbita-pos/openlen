@@ -65,6 +65,43 @@ export type FireworksToolTurnResult =
       readonly modelId: string;
     };
 
+/** Plain-text turn used by whole-document creative generation. */
+export type FireworksDocumentMessage =
+  | { readonly role: "system"; readonly content: string }
+  | { readonly role: "user"; readonly content: string }
+  | { readonly role: "assistant"; readonly content: string };
+
+export interface FireworksDocumentRequest {
+  readonly messages: readonly FireworksDocumentMessage[];
+  readonly maxOutputTokens: number;
+  readonly requestId: string;
+  /** Creative work needs warmth; the strict-JSON path deliberately runs at 0. */
+  readonly temperature?: number;
+  readonly reasoningEffort?: Extract<FireworksReasoningEffort, "none" | "high">;
+}
+
+export type FireworksDocumentResult =
+  | {
+      readonly ok: true;
+      readonly text: string;
+      /** The provider hit its output cap; the text is usable but incomplete. */
+      readonly truncated: boolean;
+      readonly usage: ModelTokenUsage;
+      /** False when the provider reported no usage and cost had to be booked as zero. */
+      readonly usageKnown: boolean;
+      readonly durationMs: number;
+      readonly modelId: string;
+    }
+  | {
+      readonly ok: false;
+      readonly code: "missing_key" | "budget_exceeded" | "timeout" | "http" | "provider" | "empty";
+      readonly usage?: ModelTokenUsage;
+      readonly durationMs: number;
+      readonly modelId: string;
+      readonly providerCategory?: FireworksProviderCategory;
+      readonly httpStatus?: number;
+    };
+
 export interface FireworksTextPart {
   readonly type: "text";
   readonly text: string;

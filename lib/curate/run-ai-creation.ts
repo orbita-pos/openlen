@@ -1,28 +1,20 @@
-import { overlayProfile } from "@/lib/business-profiles/overlay";
 import type { BusinessProfileData } from "@/lib/business-profiles/types";
 import type { AssetPipelineMode } from "@/lib/generation/asset-pipeline-mode";
 import type { AssetResolutionTrace } from "@/lib/generation/asset-contracts";
-import { canonicalJsonSha256 } from "@/lib/generation/content-hash";
 import { listSections } from "@/lib/sections/store";
 import {
   validateAiCompositionDelivery,
   type AiCompositionDeliveryReason,
 } from "./ai-composition-delivery";
 import {
-  AI_HYBRID_POLICY_VERSION,
   type AiCreationReasonCode,
   type AiCreationResult,
   type AiCreationStage,
 } from "./ai-creation-contracts";
-import {
-  runSectionCompositionCandidate,
-  type QuickSectionCompositionResult,
-} from "./quick-section-composition";
-import type { FableFinalVisualGateResult, FableVisualRepairHandoff } from "./fable-final-visual-gate";
-import type { VisualEngineProjectMetadata } from "@/lib/projects/types";
-import { createFableRuntimeComposition, type FableRuntimeComposition, type FableRuntimeCompositionOptions, type FableRuntimeVisualBrief } from "./fable-runtime-composition";
-import type { FableCopyResult, FableIntentResult } from "./fable-input-adapters";
-import type { FableAdaptivePipelineDeps } from "./fable-adaptive-pipeline";
+import { buildCreativeBaseline } from "./creative-baseline";
+import { runCreativeDocument } from "./creative-document";
+import { validateCreativeDocumentDelivery } from "./creative-document-delivery";
+import { createFableRuntimeComposition, type FableRuntimeComposition, type FableRuntimeCompositionOptions } from "./fable-runtime-composition";
 
 export interface RunAiCreationInput {
   projectId: string;
@@ -34,27 +26,14 @@ export interface RunAiCreationInput {
 }
 
 export interface RunAiCreationDeps {
-  analyzeIntent?: (brief: string, requestId: string) => Promise<FableIntentResult>;
-  generatePageCopy?: (brief: string, requestId: string) => Promise<FableCopyResult>;
   listSections?: typeof listSections;
-  overlayProfile?: typeof overlayProfile;
-  runSectionCompositionCandidate?: typeof runSectionCompositionCandidate;
+  buildCreativeBaseline?: typeof buildCreativeBaseline;
+  runCreativeDocument?: typeof runCreativeDocument;
   validateAiCompositionDelivery?: typeof validateAiCompositionDelivery;
-  /** Injected by the adaptive composer; it owns Qwen screenshots and the one-repair machine. */
-  runFableFinalVisualGate?: (input: {
-    readonly requestId: string;
-    readonly candidate: {
-      readonly html: string;
-      readonly visualEngine: Extract<VisualEngineProjectMetadata, { route: "section_composition" }>;
-    };
-    readonly handoff: FableVisualRepairHandoff;
-    readonly brief: FableRuntimeVisualBrief;
-  }) => Promise<FableFinalVisualGateResult>;
+  validateCreativeDocumentDelivery?: typeof validateCreativeDocumentDelivery;
   createFableRuntimeComposition?: typeof createFableRuntimeComposition;
   /** Low-level transports/renderers used by the real production root. */
   fableRuntimeOptions?: FableRuntimeCompositionOptions;
-  /** Test/runtime adapter for external rendering and storage boundaries only. */
-  fableAdaptivePipelineDeps?: Omit<FableAdaptivePipelineDeps, "runtime" | "finalize">;
 }
 
 type BoundaryResult<T> =
@@ -87,51 +66,24 @@ function notify(input: RunAiCreationInput, stage: AiCreationStage): void {
   }
 }
 
-function compositionReason(
-  reasonCode: Extract<QuickSectionCompositionResult, { ok: false }>["reasonCode"],
-): AiCreationReasonCode {
-  switch (reasonCode) {
-    case "unsupported_section_role":
-    case "section_role_coverage_failed":
-    case "section_semantic_coverage_failed":
-    case "section_originality_failed":
-      return "section_plan_failed";
-    case "section_inventory_stale":
-      return "section_inventory_unavailable";
-    case "section_fragment_unavailable":
-    case "section_fragment_stale":
-    case "section_fragment_invalid":
-      return "section_fragment_unavailable";
-    case "inherited_copy_leak":
-      return "inherited_copy_leak";
-    case "provider_timeout":
-    case "provider_error":
-    case "budget_exceeded":
-    case "invalid_provider_response":
-    case "model_incompatible":
-    case "css_policy_violation":
-    case "contrast_violation":
-      return "creative_direction_failed";
-    case "required_asset_unavailable":
-      return "asset_resolution_failed";
-    case "route_ineligible":
-    case "sanitization_failed":
-    case "technical_render_failed":
-    case "internal_error":
-      return "composition_failed";
-  }
+function deliveryReason(reasonCode: AiCompositionDeliveryReason): AiCreationReasonCode {
+  return reasonCode === "asset_metadata_invalid" ? "asset_resolution_failed" : "semantic_gate_failed";
 }
 
-function deliveryReason(
-  reasonCode: AiCompositionDeliveryReason,
-  leaksAfter: number,
-): AiCreationReasonCode {
-  if (leaksAfter !== 0) return "inherited_copy_leak";
-  return reasonCode === "asset_metadata_invalid"
-    ? "asset_resolution_failed"
-    : "semantic_gate_failed";
-}
-
+/**
+ * Baseline first, then improvement.
+ *
+ * OpenLen builds a complete, safe page with no provider involved at all. That
+ * page is the floor: from the moment it exists, no provider timeout, malformed
+ * reply, rejected document, exhausted budget, or dead renderer may turn this
+ * request into a failure. The creative model gets one chance to write something
+ * better and one diagnosed chance to fix it; whatever survives the delivery
+ * gate is what ships.
+ *
+ * The only failures left are the ones where there is genuinely nothing to
+ * deliver: no section inventory, no safe baseline, or a baseline that cannot
+ * pass its own gate.
+ */
 export async function runAiCreation(
   input: RunAiCreationInput,
   deps: RunAiCreationDeps = {},
@@ -140,39 +92,13 @@ export async function runAiCreation(
   try {
     runtime = (deps.createFableRuntimeComposition ?? createFableRuntimeComposition)(deps.fableRuntimeOptions);
   } catch {
-    return failure("intent", "intent_analysis_failed");
+    return failure("baseline", "baseline_invalid");
   }
-  const analyze = deps.analyzeIntent ?? runtime.inputAdapters.analyzeIntent;
-  const copyGenerator = deps.generatePageCopy ?? runtime.inputAdapters.generatePageCopy;
   const loadSections = deps.listSections ?? listSections;
-  const overlay = deps.overlayProfile ?? overlayProfile;
-  const compose = deps.runSectionCompositionCandidate ?? runSectionCompositionCandidate;
-  const validate = deps.validateAiCompositionDelivery ?? validateAiCompositionDelivery;
-  const finalGate = deps.runFableFinalVisualGate ?? runtime.runFinalGate;
-
-  notify(input, "intent");
-  const intentCall = await callBoundary(() => analyze(input.brief, input.projectId));
-  if (!intentCall.ok || !intentCall.value.ok) {
-    await runtime.recordFailure("intent", "intent_analysis_failed");
-    return failure("intent", "intent_analysis_failed");
-  }
-  notify(input, "copy");
-  const copyCall = await callBoundary(() => copyGenerator(input.brief, input.projectId));
-  if (!copyCall.ok || !copyCall.value.ok) {
-    await runtime.recordFailure("copy", "copy_generation_failed");
-    return failure("copy", "copy_generation_failed");
-  }
-  const intentResult = intentCall.value;
-  const copyResult = copyCall.value;
-
-  let copy;
-  try {
-    copy = overlay(copyResult.copy, input.profileData);
-  } catch {
-    await runtime.recordFailure("copy", "copy_generation_failed");
-    return failure("copy", "copy_generation_failed");
-  }
-  const title = copy.business_name?.trim() || "Untitled page";
+  const buildBaseline = deps.buildCreativeBaseline ?? buildCreativeBaseline;
+  const writeDocument = deps.runCreativeDocument ?? runCreativeDocument;
+  const validateComposed = deps.validateAiCompositionDelivery ?? validateAiCompositionDelivery;
+  const validateDocument = deps.validateCreativeDocumentDelivery ?? validateCreativeDocumentDelivery;
 
   notify(input, "sections");
   const sectionCall = await callBoundary(() => loadSections({ status: "published" }));
@@ -181,95 +107,86 @@ export async function runAiCreation(
     return failure("sections", "section_inventory_unavailable");
   }
 
-  notify(input, "composition");
-  const compositionInput = {
-    allowGeneratedFallback: process.env.OPENLEN_AI_CREATION === "enabled",
+  // The composition root owns every external boundary, rendering included, so
+  // both passes measure through the same injected viewport renderer.
+  const render = deps.fableRuntimeOptions?.renderViewports;
+  const fetchText = deps.fableRuntimeOptions?.sectionFragmentFetch;
+
+  notify(input, "baseline");
+  const baselineCall = await callBoundary(() => buildBaseline({
     projectId: input.projectId,
-    assetMode: input.assetMode,
-    ...(input.assetTraceSink ? { assetTraceSink: input.assetTraceSink } : {}),
-    candidateTitle: title,
-    copy,
+    brief: input.brief,
     profileData: input.profileData,
-    intent: intentResult.intent,
-    intentHash: canonicalJsonSha256(intentResult.intent),
     records: sectionCall.value,
-    policyVersion: AI_HYBRID_POLICY_VERSION,
-    fableRuntime: runtime,
-    ...(input.onStage ? { onStage: input.onStage } : {}),
-  };
-  const compositionCall = await callBoundary(() => deps.fableAdaptivePipelineDeps
-    ? compose(compositionInput, { fableAdaptivePipelineDeps: deps.fableAdaptivePipelineDeps })
-    : compose(compositionInput));
-  if (!compositionCall.ok) {
-    await runtime.recordFailure("initial_program", "composition_failed");
-    return failure("composition", "composition_failed");
+  }, { ...(render ? { render } : {}), ...(fetchText ? { fetchText } : {}) }));
+  if (!baselineCall.ok) {
+    await runtime.recordFailure("baseline", "baseline_invalid");
+    return failure("baseline", "baseline_invalid");
   }
-  const composition = compositionCall.value;
-  if (!composition.ok) {
-    const reasonCode = compositionReason(composition.reasonCode);
-    await runtime.recordFailure("initial_program", reasonCode);
-    return failure("composition", reasonCode);
+  const baseline = baselineCall.value;
+  if (!baseline.ok) {
+    const reasonCode: AiCreationReasonCode = baseline.code === "section_inventory_unavailable"
+      ? "section_inventory_unavailable"
+      : "baseline_invalid";
+    await runtime.recordFailure("baseline", reasonCode);
+    return failure("baseline", reasonCode);
   }
+
+  notify(input, "creative_document");
+  const documentCall = await callBoundary(() => writeDocument({
+    requestId: input.projectId,
+    brief: input.brief,
+    title: baseline.candidate.title,
+    profileData: input.profileData,
+    creativeDirection: baseline.candidate.visualEngine.creativeDirection,
+    intent: baseline.intent,
+  }, {
+    client: runtime.documentClient,
+    ...(render ? { render } : {}),
+    recordModel: (result) => runtime.recordModel("creative_document", {
+      modelId: result.modelId,
+      ...(result.ok ? { usage: result.usage } : result.usage ? { usage: result.usage } : {}),
+      durationMs: result.durationMs,
+      attempts: 1,
+      ...(!result.ok && result.providerCategory ? { providerCategory: result.providerCategory } : {}),
+      ...(!result.ok && result.httpStatus !== undefined ? { httpStatus: result.httpStatus } : {}),
+    }),
+  }));
 
   notify(input, "delivery_gate");
-  const leaksAfter = composition.leaksAfter ?? 0;
-  let preRepair;
-  try {
-    preRepair = validate({
-      html: composition.html,
-      visualEngine: composition.visualEngine,
-      leaksAfter,
-    });
-  } catch {
-    await runtime.recordFailure("delivery_gate", leaksAfter === 0 ? "semantic_gate_failed" : "inherited_copy_leak");
-    return failure("delivery_gate", leaksAfter === 0 ? "semantic_gate_failed" : "inherited_copy_leak");
-  }
-  if (!preRepair.ok) {
-    const reasonCode = deliveryReason(preRepair.reasonCode, leaksAfter);
-    await runtime.recordFailure("delivery_gate", reasonCode);
-    return failure("delivery_gate", reasonCode);
-  }
-  if (leaksAfter !== 0) {
-    await runtime.recordFailure("delivery_gate", "inherited_copy_leak");
-    return failure("delivery_gate", "inherited_copy_leak");
+  const authored = documentCall.ok ? documentCall.value.candidate : null;
+  if (authored) {
+    const validated = await callBoundary(() => validateDocument({ html: authored.html, visualEngine: authored.visualEngine }));
+    if (validated.ok && validated.value.ok) {
+      return {
+        ok: true,
+        route: "creative_document",
+        templateId: null,
+        title: authored.title,
+        html: authored.html,
+        visualEngine: validated.value.visualEngine,
+        filled: true,
+        appliedOps: 0,
+        finalizeFableTelemetry: () => runtime.recordDelivered(),
+        failFableTelemetry: (_stage, reasonCode) => runtime.recordFailure("delivery", reasonCode),
+      };
+    }
+    // An authored page that cannot be delivered is an observation, not a
+    // failure: the baseline underneath it is still a publishable page.
+    await runtime.recordFailure("creative_document", "semantic_gate_failed");
+  } else if (!documentCall.ok) {
+    await runtime.recordFailure("creative_document", "creative_direction_failed");
   }
 
-  // The final visual gate is deliberately mandatory. A legacy composition
-  // without the adaptive handoff cannot be delivered through Create with AI.
-  if (!composition.fableVisualRepairHandoff || !finalGate) {
-    await runtime.recordFailure("visual_quality", "visual_quality_failed");
-    return failure("visual_quality", "visual_quality_failed");
-  }
-  const fableHandoff = composition.fableVisualRepairHandoff;
-  notify(input, "visual_quality");
-  const visualCall = await callBoundary(() => finalGate({
-    requestId: input.projectId,
-    candidate: { html: composition.html, visualEngine: preRepair.visualEngine },
-    handoff: fableHandoff,
-    brief: {
-      niche: intentResult.intent.functional.siteType,
-      requiredSignals: intentResult.intent.requiredVisualSignals,
-      forbiddenSignals: intentResult.intent.forbiddenVisualSignals,
-    },
+  const composed = await callBoundary(() => validateComposed({
+    html: baseline.candidate.html,
+    visualEngine: baseline.candidate.visualEngine,
+    leaksAfter: 0,
   }));
-  if (!visualCall.ok || !visualCall.value.ok) {
-    await runtime.recordFailure("visual_quality", "visual_quality_failed");
-    return failure("visual_quality", "visual_quality_failed");
-  }
-
-  let postRepair;
-  try {
-    postRepair = validate({
-      html: visualCall.value.candidate.html,
-      visualEngine: visualCall.value.candidate.visualEngine,
-      leaksAfter,
-    });
-  } catch {
-    await runtime.recordFailure("delivery_gate", leaksAfter === 0 ? "semantic_gate_failed" : "inherited_copy_leak");
-    return failure("delivery_gate", leaksAfter === 0 ? "semantic_gate_failed" : "inherited_copy_leak");
-  }
-  if (!postRepair.ok) {
-    const reasonCode = deliveryReason(postRepair.reasonCode, leaksAfter);
+  if (!composed.ok || !composed.value.ok) {
+    const reasonCode: AiCreationReasonCode = composed.ok && !composed.value.ok
+      ? deliveryReason(composed.value.reasonCode)
+      : "semantic_gate_failed";
     await runtime.recordFailure("delivery_gate", reasonCode);
     return failure("delivery_gate", reasonCode);
   }
@@ -278,14 +195,11 @@ export async function runAiCreation(
     ok: true,
     route: "section_composition",
     templateId: null,
-    title,
-    html: visualCall.value.candidate.html,
-    visualEngine: postRepair.visualEngine,
-    ...(copyResult.usage ? { copyUsage: copyResult.usage } : {}),
-    ...(composition.generatedSectionUsage ? { generatedSectionUsage: composition.generatedSectionUsage } : {}),
-    ...(composition.generatedSectionCount ? { generatedSectionCount: composition.generatedSectionCount } : {}),
-    filled: composition.filled,
-    appliedOps: composition.appliedOps,
+    title: baseline.candidate.title,
+    html: baseline.candidate.html,
+    visualEngine: composed.value.visualEngine,
+    filled: baseline.candidate.filled,
+    appliedOps: baseline.candidate.appliedOps,
     finalizeFableTelemetry: () => runtime.recordDelivered(),
     failFableTelemetry: (_stage, reasonCode) => runtime.recordFailure("delivery", reasonCode),
   };
