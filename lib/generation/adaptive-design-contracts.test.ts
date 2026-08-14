@@ -98,15 +98,14 @@ describe("adaptive design contracts", () => {
     expect(schema.safeParse({ ...allGenerate, decisions: allGenerate.decisions.slice(0, 1) }).success).toBe(false);
   });
 
-  it("exposes contextual scout and page-plan invariants in the Fireworks JSON Schema", () => {
+  it("exposes contextual scout and page-plan invariants with Fireworks-supported anyOf schemas", () => {
     const scoutJson = fireworksJsonSchema(createCandidateScoutResponseSchema({
       requiredRoles: ["hero", "features"],
       retrievedCandidates: candidates,
-    })) as { properties: { decisions: { minItems?: number; maxItems?: number; prefixItems?: unknown[] } } };
-    expect(scoutJson.properties.decisions).toMatchObject({ minItems: 2, maxItems: 2 });
-    expect(scoutJson.properties.decisions.prefixItems).toHaveLength(2);
-    expect(JSON.stringify(scoutJson.properties.decisions.prefixItems?.[0])).toContain('"const":0');
-    expect(JSON.stringify(scoutJson.properties.decisions.prefixItems?.[0])).toContain('"const":"hero-safe"');
+    })) as { properties: { decisions: { items?: { anyOf?: unknown[] } } } };
+    expect(scoutJson.properties.decisions.items?.anyOf).toHaveLength(2);
+    expect(JSON.stringify(scoutJson.properties.decisions.items?.anyOf?.[0])).toContain('"const":0');
+    expect(JSON.stringify(scoutJson.properties.decisions.items?.anyOf?.[0])).toContain('"const":"hero-safe"');
 
     const pageJson = fireworksJsonSchema(createAdaptivePageDesignProgramSchema({
       requiredRoles: ["hero", "features"],
@@ -118,13 +117,11 @@ describe("adaptive design contracts", () => {
       })),
       initialRequiredSignals: ["cinematic", "tactile"],
       initialForbiddenSignals: ["generic_saas"],
-    })) as { properties: { narrative: { minItems?: number; maxItems?: number; prefixItems?: unknown[] }; decisions: { minItems?: number; maxItems?: number; prefixItems?: unknown[] } } };
-    expect(pageJson.properties.narrative).toMatchObject({ minItems: 2, maxItems: 2 });
-    expect(pageJson.properties.narrative.prefixItems).toHaveLength(2);
-    expect(pageJson.properties.decisions).toMatchObject({ minItems: 2, maxItems: 2 });
-    expect(pageJson.properties.decisions.prefixItems).toHaveLength(2);
-    expect(JSON.stringify(pageJson.properties.decisions.prefixItems?.[0])).toContain('"const":"reuse"');
-    expect(JSON.stringify(pageJson.properties.decisions.prefixItems?.[1])).toContain('"const":"generate"');
+    })) as { properties: { narrative: { items?: { anyOf?: unknown[] } }; decisions: { items?: { anyOf?: unknown[] } } } };
+    expect(pageJson.properties.narrative.items?.anyOf).toHaveLength(2);
+    expect(pageJson.properties.decisions.items?.anyOf).toHaveLength(2);
+    expect(JSON.stringify(pageJson.properties.decisions.items?.anyOf?.[0])).toContain('"const":"reuse"');
+    expect(JSON.stringify(pageJson.properties.decisions.items?.anyOf?.[1])).toContain('"const":"generate"');
   });
 
   it("rejects traits claimed as both useful and rejected", () => {
