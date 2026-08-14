@@ -26,6 +26,7 @@ import {
 import type { VisualScoutSuccess } from "./visual-candidate-scout";
 import type { SectionFragment } from "@/lib/sections/assemble";
 import type { SectionType } from "@/lib/sections/types";
+import type { FireworksProviderCategory } from "@/lib/ai/fireworks-contracts";
 
 const REQUEST_ID = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,95}$/;
 const ADAPTIVE_SECTION_REPAIR_HANDOFF_VERSION = "adaptive-section-repair-handoff/1.0" as const;
@@ -206,7 +207,7 @@ interface RedactedProviderTelemetry {
   readonly usage?: { readonly inputTokens: number; readonly cachedTokens: number; readonly outputTokens: number; readonly thinkingTokens: number };
   readonly durationMs: number;
   readonly attempts: 0 | 1 | 2;
-  readonly providerCategory?: "request" | "http" | "response" | "schema" | "timeout" | "transport";
+  readonly providerCategory?: FireworksProviderCategory;
   readonly httpStatus?: number;
 }
 

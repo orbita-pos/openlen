@@ -243,7 +243,7 @@ describe("Fireworks JSON client", () => {
       apiKey: "key",
       fetchImpl: async () => jsonResponse({ private: "DO NOT RETAIN" }),
     }).request({ ...REQUEST, maxAttempts: 1 });
-    expect(invalidEnvelope).toMatchObject({ ok: false, code: "provider", providerCategory: "response" });
+    expect(invalidEnvelope).toMatchObject({ ok: false, code: "provider", providerCategory: "response_envelope" });
     expect(JSON.stringify(invalidEnvelope)).not.toContain("DO NOT RETAIN");
 
     const transport = await createClient({
@@ -301,8 +301,48 @@ describe("Fireworks JSON client", () => {
   it("fails closed on incomplete usage and does not retry incompatibility", async () => {
     const fetchImpl = vi.fn(async () => jsonResponse(successEnvelope(undefined, { prompt_tokens: 10, completion_tokens: 2 })));
     await expect(createClient({ apiKey: "key", fetchImpl }).request(REQUEST))
-      .resolves.toMatchObject({ ok: false, code: "provider", attempts: 1 });
+      .resolves.toMatchObject({ ok: false, code: "provider", providerCategory: "response_usage", attempts: 1 });
     expect(fetchImpl).toHaveBeenCalledTimes(1);
+  });
+
+  it("derives conservative usage when Fireworks omits optional token details", async () => {
+    const fetchImpl = vi.fn(async () => jsonResponse(successEnvelope(undefined, {
+      prompt_tokens: 100,
+      total_tokens: 140,
+    })));
+    await expect(createClient({ apiKey: "key", fetchImpl }).request(REQUEST)).resolves.toMatchObject({
+      ok: true,
+      usage: { inputTokens: 100, cachedTokens: 0, outputTokens: 40, thinkingTokens: 0 },
+    });
+    expect(fetchImpl).toHaveBeenCalledOnce();
+  });
+
+  it("accepts complete structured content at the token boundary and rejects genuinely truncated bytes", async () => {
+    const completeAtBoundaryFetch = vi.fn(async () => jsonResponse({
+      ...successEnvelope(),
+      choices: [{ index: 0, finish_reason: "length", message: { role: "assistant", content: JSON.stringify({ title: "Launch", score: 8 }) } }],
+    }));
+    await expect(createClient({ apiKey: "key", fetchImpl: completeAtBoundaryFetch }).request(REQUEST))
+      .resolves.toMatchObject({ ok: true, value: { title: "Launch", score: 8 } });
+
+    const truncatedFetch = vi.fn(async () => jsonResponse({
+      ...successEnvelope(),
+      choices: [{ index: 0, finish_reason: "length", message: { role: "assistant", content: "PRIVATE PARTIAL JSON" } }],
+    }));
+    const truncated = await createClient({ apiKey: "key", fetchImpl: truncatedFetch }).request(REQUEST);
+    expect(truncated).toMatchObject({ ok: false, code: "invalid_json", providerCategory: "response_truncated", attempts: 1 });
+    expect(JSON.stringify(truncated)).not.toContain("PRIVATE PARTIAL JSON");
+
+  });
+
+  it("distinguishes missing response content without retaining provider bytes", async () => {
+    const missingContentFetch = vi.fn(async () => jsonResponse({
+      ...successEnvelope(),
+      choices: [{ index: 0, finish_reason: "stop", message: { role: "assistant", content: null } }],
+    }));
+    const missingContent = await createClient({ apiKey: "key", fetchImpl: missingContentFetch }).request(REQUEST);
+    expect(missingContent).toMatchObject({ ok: false, code: "provider", providerCategory: "response_content", attempts: 1 });
+    expect(JSON.stringify(missingContent)).not.toContain("PRIVATE");
   });
 
   it("accepts complete non-thinking usage when completion details are absent", async () => {

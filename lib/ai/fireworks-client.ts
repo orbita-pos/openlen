@@ -47,18 +47,28 @@ function safeToken(value: unknown): number | null {
 function providerUsage(value: unknown): ModelTokenUsage | undefined {
   const root = record(value);
   const usage = record(root?.usage);
-  const promptDetails = record(usage?.prompt_tokens_details);
+  const promptDetailsValue = usage?.prompt_tokens_details;
+  const promptDetails = promptDetailsValue === undefined ? null : record(promptDetailsValue);
   const completionDetailsValue = usage?.completion_tokens_details;
   const completionDetails = completionDetailsValue === undefined ? null : record(completionDetailsValue);
-  if (!usage || !promptDetails || (completionDetailsValue !== undefined && !completionDetails)) return undefined;
+  if (!usage
+    || (promptDetailsValue !== undefined && !promptDetails)
+    || (completionDetailsValue !== undefined && !completionDetails)) return undefined;
   const inputTokens = safeToken(usage.prompt_tokens);
-  const outputTokens = safeToken(usage.completion_tokens);
   const totalTokens = safeToken(usage.total_tokens);
-  const cachedTokens = safeToken(promptDetails.cached_tokens);
+  const reportedOutputTokens = usage.completion_tokens === undefined ? undefined : safeToken(usage.completion_tokens);
+  const outputTokens = reportedOutputTokens === undefined && inputTokens !== null && totalTokens !== null
+    ? totalTokens - inputTokens
+    : reportedOutputTokens;
+  const cachedValue = promptDetails?.cached_tokens;
+  const cachedTokens = cachedValue === undefined ? 0 : safeToken(cachedValue);
   const reasoningValue = completionDetails?.reasoning_tokens;
   const thinkingTokens = reasoningValue === undefined ? 0 : safeToken(reasoningValue);
   if (inputTokens === null
     || outputTokens === null
+    || outputTokens === undefined
+    || !Number.isSafeInteger(outputTokens)
+    || outputTokens < 0
     || totalTokens === null
     || cachedTokens === null
     || thinkingTokens === null
@@ -69,13 +79,23 @@ function providerUsage(value: unknown): ModelTokenUsage | undefined {
   return { inputTokens, cachedTokens, outputTokens, thinkingTokens };
 }
 
-function responseContent(value: unknown): string | null {
+function responseContent(value: unknown):
+  | { ok: true; content: string; tokenBoundary: boolean }
+  | { ok: false; category: FireworksProviderCategory } {
   const root = record(value);
-  if (!root || !Array.isArray(root.choices) || root.choices.length !== 1) return null;
+  if (!root || !Array.isArray(root.choices) || root.choices.length !== 1) {
+    return { ok: false, category: "response_envelope" };
+  }
   const choice = record(root.choices[0]);
   const message = record(choice?.message);
-  if (!choice || choice.finish_reason !== "stop" || !message || typeof message.content !== "string") return null;
-  return message.content;
+  if (!choice || !message) return { ok: false, category: "response_envelope" };
+  if (choice.finish_reason !== "stop" && choice.finish_reason !== "length") {
+    return { ok: false, category: "response_envelope" };
+  }
+  if (typeof message.content !== "string" || message.content.length === 0) {
+    return { ok: false, category: "response_content" };
+  }
+  return { ok: true, content: message.content, tokenBoundary: choice.finish_reason === "length" };
 }
 
 function elapsed(started: number, now: () => number): number {
@@ -277,11 +297,16 @@ export function createFireworksJsonClient(options: FireworksJsonClientOptions): 
             if (attempt < requestMaxAttempts && RETRYABLE_EMPTY_STATUS.has(response.status) && body.length === 0 && safeUsage === undefined) continue;
             return fail("http", attempt, safeUsage, { providerCategory: "http", httpStatus: response.status });
           }
-          if (body.length === 0 || decodedEnvelope === undefined || !safeUsage) return fail("provider", attempt, undefined, { providerCategory: "response" });
+          if (body.length === 0 || decodedEnvelope === undefined) return fail("provider", attempt, undefined, { providerCategory: "response_envelope" });
           const content = responseContent(decodedEnvelope);
-          if (content === null) return fail("provider", attempt, safeUsage, { providerCategory: "response" });
+          if (!content.ok) return fail("provider", attempt, safeUsage, { providerCategory: content.category });
+          if (!safeUsage) return fail("provider", attempt, undefined, { providerCategory: "response_usage" });
           let decodedContent: unknown;
-          try { decodedContent = JSON.parse(content); } catch { return fail("invalid_json", attempt, safeUsage, { providerCategory: "response" }); }
+          try { decodedContent = JSON.parse(content.content); } catch {
+            return fail("invalid_json", attempt, safeUsage, {
+              providerCategory: content.tokenBoundary ? "response_truncated" : "response_content",
+            });
+          }
           const parsed = request.responseSchema.safeParse(decodedContent);
           if (!parsed.success) return fail("schema", attempt, safeUsage, { providerCategory: "schema" });
           return {

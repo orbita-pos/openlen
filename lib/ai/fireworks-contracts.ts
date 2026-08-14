@@ -5,7 +5,17 @@ import type { ModelTokenUsage } from "../generation/model-cost";
 export type FableModelRole = "reasoner" | "designer" | "visual_critic";
 export type FireworksReasoningEffort = "none" | "high" | "max";
 export type FireworksServiceTier = "standard" | "priority";
-export type FireworksProviderCategory = "request" | "http" | "response" | "schema" | "timeout" | "transport";
+export type FireworksProviderCategory =
+  | "request"
+  | "http"
+  | "response"
+  | "response_envelope"
+  | "response_truncated"
+  | "response_content"
+  | "response_usage"
+  | "schema"
+  | "timeout"
+  | "transport";
 
 export interface FireworksTextPart {
   readonly type: "text";
