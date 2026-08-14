@@ -82,6 +82,23 @@ describe("GLM expressive section provider", () => {
     expect(JSON.stringify(payload)).not.toMatch(/candidate|fragment|template|sourceContent|sourceStructural|https?:|<script/i);
   });
 
+  it("gives Fireworks the exact role, copy keys, and asset slots it must generate", async () => {
+    const fake = clientWith({ ok: true, value: PROGRAM, modelId: "accounts/fireworks/models/glm-5p2", usage: USAGE, durationMs: 9, attempts: 1 });
+    await createGlmSectionProgramProvider({ client: fake.client }).generate(generateRequest());
+
+    const responseSchema = fake.calls[0].responseSchema;
+    expect(responseSchema.safeParse(PROGRAM).success).toBe(true);
+    expect(responseSchema.safeParse({ ...PROGRAM, role: "footer" }).success).toBe(false);
+    expect(responseSchema.safeParse({
+      ...PROGRAM,
+      root: { ...PROGRAM.root, children: [{ ...PROGRAM.root.children[0], copyKey: "private.copy" }, PROGRAM.root.children[1]] },
+    }).success).toBe(false);
+    expect(responseSchema.safeParse({
+      ...PROGRAM,
+      root: { ...PROGRAM.root, children: [PROGRAM.root.children[0], { ...PROGRAM.root.children[1], slotIndex: 9 }] },
+    }).success).toBe(false);
+  });
+
   it("sends only immutable donor metadata and never donor HTML or visible copy", async () => {
     const html = '<style>[data-sec="chosen-hero"] .secret{color:red}</style><section data-sec="chosen-hero" class="secret"><h2>DONOR COPY SECRET</h2><img src="https://private.invalid/a.jpg" alt="COPY ALT"><div><p>More copy</p></div></section>';
     const fake = clientWith({ ok: true, value: PROGRAM, modelId: "accounts/fireworks/models/glm-5p2", usage: USAGE, durationMs: 9, attempts: 1 });

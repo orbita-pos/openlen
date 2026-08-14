@@ -232,11 +232,11 @@ describe("adaptive section composition", () => {
 
   it("returns a typed atomic failure with no HTML when provider or a section gate fails", async () => {
     const providerFailure = setup({
-      provider: { generate: vi.fn(async () => ({ ok: false as const, code: "schema" as const, modelId: "glm", promptVersion: "glm-section-program-prompt/1.0" as const, usage: { inputTokens: 2, cachedTokens: 0, outputTokens: 1, thinkingTokens: 0 }, durationMs: 2, attempts: 1 as const })) },
+      provider: { generate: vi.fn(async () => ({ ok: false as const, code: "schema" as const, modelId: "glm", promptVersion: "glm-section-program-prompt/1.0" as const, usage: { inputTokens: 2, cachedTokens: 0, outputTokens: 1, thinkingTokens: 0 }, durationMs: 2, attempts: 1 as const, providerCategory: "schema" as const })) },
       assemble: vi.fn(() => "must-not-assemble"),
     });
     const first = await composeAdaptiveSections(INPUT, providerFailure.deps);
-    expect(first).toMatchObject({ ok: false, reasonCode: "invalid_provider_response", telemetry: [{ usage: { inputTokens: 2 } }] });
+    expect(first).toMatchObject({ ok: false, reasonCode: "invalid_provider_response", telemetry: [{ usage: { inputTokens: 2 }, providerCategory: "schema" }] });
     expect(first).not.toHaveProperty("html");
     expect(providerFailure.deps.assemble).not.toHaveBeenCalled();
 

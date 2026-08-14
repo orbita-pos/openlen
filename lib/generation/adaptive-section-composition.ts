@@ -201,6 +201,8 @@ interface RedactedProviderTelemetry {
   readonly usage?: { readonly inputTokens: number; readonly cachedTokens: number; readonly outputTokens: number; readonly thinkingTokens: number };
   readonly durationMs: number;
   readonly attempts: 0 | 1 | 2;
+  readonly providerCategory?: "request" | "http" | "response" | "schema" | "timeout" | "transport";
+  readonly httpStatus?: number;
 }
 
 export type AdaptiveSectionCompositionResult =
@@ -263,6 +265,8 @@ function providerTelemetry(result: GlmSectionProgramProviderResult): RedactedPro
     ...(result.usage ? { usage: result.usage } : {}),
     durationMs: result.durationMs,
     attempts: result.attempts,
+    ...("providerCategory" in result && result.providerCategory ? { providerCategory: result.providerCategory } : {}),
+    ...("httpStatus" in result && result.httpStatus !== undefined ? { httpStatus: result.httpStatus } : {}),
   };
 }
 

@@ -162,7 +162,7 @@ const ProgramShapeSchema = z.object({
   motion: z.array(MotionPresetSchema).max(16),
 }).strict();
 
-export const ExpressiveSectionProgramSchema = ProgramShapeSchema.superRefine((value, ctx) => {
+function addProgramIssues(value: z.infer<typeof ProgramShapeSchema>, ctx: z.RefinementCtx): void {
   const state: VisitedProgram = {
     nodeIds: new Set(), layoutIds: new Set(), mediaSlots: new Set(), copyKeys: [], nodeCount: 0, mediaCount: 0,
   };
@@ -186,7 +186,69 @@ export const ExpressiveSectionProgramSchema = ProgramShapeSchema.superRefine((va
     }
     motionIds.add(motion.nodeId);
   });
-});
+}
+
+export const ExpressiveSectionProgramSchema = ProgramShapeSchema.superRefine(addProgramIssues);
+
+function exactStrings(values: readonly string[]): z.ZodTypeAny | null {
+  const unique = [...new Set(values)];
+  if (unique.length === 0) return null;
+  if (unique.length === 1) return z.literal(unique[0]);
+  return z.enum(unique as [string, ...string[]]);
+}
+
+function exactNumbers(values: readonly number[]): z.ZodTypeAny | null {
+  const unique = [...new Set(values)];
+  if (unique.length === 0) return null;
+  if (unique.length === 1) return z.literal(unique[0]);
+  return z.union(unique.map((value) => z.literal(value)) as [z.ZodLiteral<number>, z.ZodLiteral<number>, ...z.ZodLiteral<number>[]]);
+}
+
+function contextualCopyNodeSchema(copyKeySchema: z.ZodTypeAny): z.ZodTypeAny {
+  const single = z.object({
+    ...BaseCopyShape,
+    variant: z.enum(["heading", "body", "quote", "stat", "badge", "action"]),
+    copyKey: copyKeySchema,
+    destination: z.enum(["primary", "secondary", "contact"]).optional(),
+  }).strict().superRefine((value, ctx) => {
+    if (value.variant === "action" && value.destination === undefined) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["destination"], message: "actions require a repository destination" });
+    if (value.variant !== "action" && value.destination !== undefined) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["destination"], message: "only actions have destinations" });
+  });
+  const list = z.object({ ...BaseCopyShape, variant: z.literal("list"), copyKeys: z.array(copyKeySchema).min(1).max(8) }).strict();
+  return z.union([single, list]);
+}
+
+function contextualMediaNodeSchema(slotIndexSchema: z.ZodTypeAny, copyKeySchema: z.ZodTypeAny): z.ZodTypeAny {
+  return z.object({
+    kind: z.literal("media"), id: NodeIdSchema, slotIndex: slotIndexSchema,
+    aspect: z.enum(["square", "portrait", "landscape", "cinematic", "auto"]), fit: z.enum(["cover", "contain"]),
+    treatment: z.enum(["plain", "framed", "bleed", "cutout", "film", "paper"]), radius: RadiusSchema,
+    transform: TransformSchema, altCopyKey: copyKeySchema.optional(),
+  }).strict();
+}
+
+function contextualNodeSchema(depthRemaining: number, leafSchema: z.ZodTypeAny): z.ZodTypeAny {
+  if (depthRemaining <= 1) return leafSchema;
+  const layout = z.object({ ...LayoutFields, children: z.array(contextualNodeSchema(depthRemaining - 1, leafSchema)).min(1).max(63) }).strict();
+  return z.union([layout, leafSchema]);
+}
+
+export function createExpressiveSectionProgramResponseSchema(input: {
+  readonly role: ExpressiveSectionProgram["role"];
+  readonly allowedCopyKeys: readonly string[];
+  readonly allowedAssetSlots: readonly number[];
+}): z.ZodType<ExpressiveSectionProgram> {
+  const exactCopyKeys = exactStrings(input.allowedCopyKeys);
+  const exactAssetSlots = exactNumbers(input.allowedAssetSlots);
+  const leaves: z.ZodTypeAny[] = [DecorationNodeSchema];
+  if (exactCopyKeys) leaves.push(contextualCopyNodeSchema(exactCopyKeys));
+  if (exactAssetSlots) leaves.push(contextualMediaNodeSchema(exactAssetSlots, exactCopyKeys ?? CopyKeySchema));
+  const leafSchema = leaves.length === 1 ? leaves[0] : z.union(leaves as [z.ZodTypeAny, z.ZodTypeAny, ...z.ZodTypeAny[]]);
+  return ProgramShapeSchema.extend({
+    role: z.literal(input.role),
+    root: contextualNodeSchema(5, leafSchema),
+  }).strict().superRefine(addProgramIssues) as z.ZodType<ExpressiveSectionProgram>;
+}
 
 const ProvenanceBaseSchema = z.object({
   schemaVersion: z.literal("section-decision-provenance/1.0"),

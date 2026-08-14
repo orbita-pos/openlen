@@ -2,7 +2,7 @@ import { z } from "zod";
 
 import type { FireworksJsonClient } from "../ai/fireworks-client";
 import type { FireworksJsonResult } from "../ai/fireworks-contracts";
-import { ExpressiveSectionProgramSchema, validateExpressiveSectionProgram, type ExpressiveSectionProgram } from "./expressive-section-contracts";
+import { createExpressiveSectionProgramResponseSchema, validateExpressiveSectionProgram, type ExpressiveSectionProgram } from "./expressive-section-contracts";
 import { reasoningEffortFor } from "./fable-model-policy";
 import { SectionPlanRowSchema } from "./section-composition-contracts";
 
@@ -117,7 +117,11 @@ export function createGlmSectionProgramProvider(options: Options): GlmSectionPro
         reasoningEffort: reasoningEffortFor("designer", "initial_section_program"),
         requestId: parsed.data.requestId,
         maxOutputTokens: 8192,
-        responseSchema: ExpressiveSectionProgramSchema,
+        responseSchema: createExpressiveSectionProgramResponseSchema({
+          role: parsed.data.role,
+          allowedCopyKeys: parsed.data.copyKeys,
+          allowedAssetSlots: parsed.data.assetSlots.map((slot) => slot.slotIndex),
+        }),
         messages: [
           {
             role: "system",
@@ -139,6 +143,7 @@ export function createGlmSectionProgramProvider(options: Options): GlmSectionPro
           usage: result.usage,
           durationMs: result.durationMs,
           attempts: result.attempts,
+          providerCategory: "schema",
           promptVersion: PROMPT_VERSION,
         };
       }
