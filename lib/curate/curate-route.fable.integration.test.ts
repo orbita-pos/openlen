@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import sharp from "sharp";
 
 import type { SectionRecord } from "@/lib/sections/store";
@@ -121,7 +121,7 @@ function fireworksBoundary(options: {
   }) as typeof fetch;
 }
 
-function realPost(options: { final?: "accept" | "reject" | "repair" | "paid_failure"; sequence: string[]; calls: string[] }) {
+function realPost(options: { final?: "accept" | "reject" | "repair" | "paid_failure"; sequence: string[]; calls: string[]; defaultTelemetry?: boolean }) {
   const qwenImagePayloads: string[][] = [];
   const renderedDocuments: string[] = [];
   const fireworksFetch = vi.fn(fireworksBoundary({ final: options.final ?? "accept", calls: options.calls, qwenImagePayloads }));
@@ -158,7 +158,7 @@ function realPost(options: { final?: "accept" | "reject" | "repair" | "paid_fail
             },
           },
           renderViewports,
-          telemetrySink,
+          ...(options.defaultTelemetry ? {} : { telemetrySink }),
         },
         fableAdaptivePipelineDeps: {
           fetchText: async (url) => url === "memory://hero-donor" ? DONOR : null,
@@ -182,12 +182,13 @@ async function invoke(post: (request: Request) => Promise<Response>) {
   return parseSse(await response.text());
 }
 
-const previous = Object.fromEntries(["OPENLEN_AI_CREATION", "OPENLEN_VISUAL_ENGINE_ASSETS", "OPENLEN_FABLE_RATE_CARD_VERSION", "OPENLEN_FABLE_MXN_PER_USD", "OPENLEN_FABLE_PAGE_TARGET_MICROMXN", "OPENLEN_FABLE_PAGE_CAP_MICROMXN"].map((key) => [key, process.env[key]]));
+const previous = Object.fromEntries(["OPENLEN_AI_CREATION", "OPENLEN_AI_CREATION_ROLLOUT_PERCENT", "OPENLEN_VISUAL_ENGINE_ASSETS", "OPENLEN_FABLE_RATE_CARD_VERSION", "OPENLEN_FABLE_MXN_PER_USD", "OPENLEN_FABLE_PAGE_TARGET_MICROMXN", "OPENLEN_FABLE_PAGE_CAP_MICROMXN"].map((key) => [key, process.env[key]]));
 
 describe("POST /api/curate real Fable root", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     process.env.OPENLEN_AI_CREATION = "enabled";
+    process.env.OPENLEN_AI_CREATION_ROLLOUT_PERCENT = "99";
     process.env.OPENLEN_VISUAL_ENGINE_ASSETS = "hybrid";
     mocks.auth.mockResolvedValue({ user: { id: "fable-user" } }); mocks.consumeToken.mockReturnValue({ allowed: true }); mocks.getCreditState.mockResolvedValue({ balance: 10 });
     mocks.resolveProfileForCreation.mockResolvedValue({ id: "profile-1", data: { business_name: "Mundo Pincel", brand: { accent: "#EC4899", logoUrl: null } } });
@@ -195,6 +196,8 @@ describe("POST /api/curate real Fable root", () => {
     mocks.creditsForUsage.mockReturnValue(1); mocks.debitCredits.mockResolvedValue(undefined); mocks.createVersion.mockResolvedValue(undefined); mocks.renderProjectThumbnail.mockResolvedValue(undefined);
     mocks.commitAtomic.mockResolvedValue(undefined);
   });
+
+  afterEach(() => vi.restoreAllMocks());
 
   afterAll(() => { for (const [key, value] of Object.entries(previous)) { if (value === undefined) delete process.env[key]; else process.env[key] = value; } });
 
@@ -280,6 +283,20 @@ describe("POST /api/curate real Fable root", () => {
     expect(events.filter((event) => event.event === "error")).toHaveLength(1);
   });
 
+  it("retains delivered and paid-failure telemetry through the default route sink", async () => {
+    const retained: Array<{ outcome: string; paidCalls: unknown[] }> = [];
+    vi.spyOn(console, "info").mockImplementation((line) => { retained.push(JSON.parse(String(line))); });
+    mocks.commitAtomic.mockResolvedValue(undefined);
+
+    await invoke(realPost({ final: "accept", sequence: [], calls: [], defaultTelemetry: true }).post);
+    await invoke(realPost({ final: "reject", sequence: [], calls: [], defaultTelemetry: true }).post);
+
+    expect(retained.map((event) => event.outcome)).toEqual(["delivered", "failed"]);
+    expect(retained[0]!.paidCalls.length).toBeGreaterThan(0);
+    expect(retained[1]!.paidCalls.length).toBeGreaterThan(0);
+    expect(JSON.stringify(retained)).not.toMatch(/"(?:userId|prompt|copy|html|screenshot|url|providerBody|credential|secret)"\s*:/i);
+  });
+
   it("fails closed before providers when required Fable budget configuration is absent", async () => {
     for (const key of ["OPENLEN_FABLE_RATE_CARD_VERSION", "OPENLEN_FABLE_MXN_PER_USD", "OPENLEN_FABLE_PAGE_TARGET_MICROMXN", "OPENLEN_FABLE_PAGE_CAP_MICROMXN"]) delete process.env[key];
     const post = createCuratePost({ runAiCreationDeps: { listSections: vi.fn(async () => [RECORD]) } });
@@ -287,6 +304,39 @@ describe("POST /api/curate real Fable root", () => {
     const events = await invoke(post);
 
     expect(events.filter((event) => event.event === "error")).toEqual([expect.objectContaining({ data: expect.objectContaining({ kind: "intent_analysis_failed" }) })]);
+    expect(mocks.commitAtomic).not.toHaveBeenCalled();
+    expect(mocks.debitCredits).not.toHaveBeenCalled();
+  });
+
+  it.each([undefined, "0", "100", "1.5", "garbage"])(
+    "fails closed before runtime, provider, project, or debit when rollout percent is %s",
+    async (rolloutPercent) => {
+      if (rolloutPercent === undefined) delete process.env.OPENLEN_AI_CREATION_ROLLOUT_PERCENT;
+      else process.env.OPENLEN_AI_CREATION_ROLLOUT_PERCENT = rolloutPercent;
+      const runAiCreationDeps = { listSections: vi.fn(async () => [RECORD]) };
+      const post = createCuratePost({ runAiCreationDeps });
+
+      const events = await invoke(post);
+
+      expect(events).toEqual([expect.objectContaining({ event: "error", data: expect.objectContaining({ kind: "creation_disabled" }) })]);
+      expect(runAiCreationDeps.listSections).not.toHaveBeenCalled();
+      expect(mocks.commitAtomic).not.toHaveBeenCalled();
+      expect(mocks.debitCredits).not.toHaveBeenCalled();
+    },
+  );
+
+  it("uses a stable SHA-256 cohort and fails outside it before provider or credit debit", async () => {
+    process.env.OPENLEN_AI_CREATION_ROLLOUT_PERCENT = "50";
+    mocks.auth.mockResolvedValue({ user: { id: "outside-user" } });
+    const runAiCreationDeps = { listSections: vi.fn(async () => [RECORD]) };
+    const post = createCuratePost({ runAiCreationDeps });
+
+    const first = await invoke(post);
+    const second = await invoke(post);
+
+    expect(first).toEqual([expect.objectContaining({ event: "error", data: expect.objectContaining({ kind: "creation_disabled" }) })]);
+    expect(second).toEqual(first);
+    expect(runAiCreationDeps.listSections).not.toHaveBeenCalled();
     expect(mocks.commitAtomic).not.toHaveBeenCalled();
     expect(mocks.debitCredits).not.toHaveBeenCalled();
   });

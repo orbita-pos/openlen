@@ -3,13 +3,27 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { pathToFileURL } from "node:url";
 
-import { FABLE_MODEL_POLICY } from "@/lib/generation/fable-model-policy";
 import {
   buildFableParityCohort,
+  fableParityCohortSha256,
   type FableParityCohortRow,
   type FableParityPrompt,
   type SealedHiddenRecord,
 } from "@/lib/generation/fable-parity-cohort";
+import {
+  createFableParityAggregateBudget,
+  createFableParityEvaluatorRequest,
+  createHmacFableParityAttestationVerifier,
+  fableParityAuthorizationManifestSha256,
+  hashFableParityAuthorizationToken,
+  validateFableParityAuthorizationManifest,
+  verifyFableParityAttestedResponse,
+  type FableParityAttestationVerifier,
+  type FableParityAttestedEvaluatorResponse,
+  type FableParityEvalAuthorizationManifest,
+  type FableParityEvaluatorRequest,
+} from "@/lib/generation/fable-parity-evaluator-contract";
+import { canonicalJsonSha256 } from "@/lib/generation/content-hash";
 import {
   writeBlindArtifactBundle,
   type BlindComparisonArtifactsInput,
@@ -19,37 +33,32 @@ export const FABLE_PARITY_EVAL_AUTHORIZATION = "AUTHORIZED_FABLE_PARITY_EVAL_ONC
 
 type Environment = Readonly<Record<string, string | undefined>>;
 
-interface EvaluationSideResult {
-  readonly htmlBytes: Uint8Array;
-  readonly desktop: { readonly bytes: Uint8Array; readonly fullPage: true; readonly viewport: { readonly width: number; readonly height: number } };
-  readonly mobile: { readonly bytes: Uint8Array; readonly fullPage: true; readonly viewport: { readonly width: number; readonly height: number } };
-  readonly costMicromxn: number;
-  readonly technicalStatus: "ok" | "failed";
-  readonly eligible: boolean;
-  readonly criticalFailures: readonly ("whole_template_clone" | "critical_safety" | "horizontal_overflow" | "unreadable_primary_text" | "persistence_credit_atomicity")[];
-  readonly paidCalls: readonly { readonly result: "delivered" | "failed"; readonly costMicromxn: number }[];
-}
-
 export interface FableParityEvalCliDeps {
   readonly env: Environment;
+  readonly loadAuthorizationManifest: () => Promise<unknown>;
   readonly loadSealedRecords: () => Promise<readonly SealedHiddenRecord[]>;
   readonly decryptHiddenRecord: (record: SealedHiddenRecord, index: number) => Promise<unknown>;
-  readonly consumeAuthorization: () => Promise<void>;
-  readonly generateOpenLen: (row: FableParityCohortRow) => Promise<EvaluationSideResult>;
-  readonly generateFable: (row: FableParityCohortRow) => Promise<EvaluationSideResult>;
+  readonly consumeAuthorization: (input: { readonly manifestSha256: string; readonly tokenSha256: string }) => Promise<void>;
+  readonly generateOpenLen: (request: FableParityEvaluatorRequest, row: FableParityCohortRow) => Promise<FableParityAttestedEvaluatorResponse>;
+  readonly generateFable: (request: FableParityEvaluatorRequest, row: FableParityCohortRow) => Promise<FableParityAttestedEvaluatorResponse>;
+  readonly verifyAttestation: FableParityAttestationVerifier;
   readonly writeBundle: (input: {
     readonly workspaceRoot: string;
     readonly runId: string;
     readonly comparisons: readonly BlindComparisonArtifactsInput[];
+    readonly provenance: {
+      readonly authorizationManifestSha256: string;
+      readonly cohortVersion: string;
+      readonly cohortSha256: string;
+      readonly sourceRevision: string;
+      readonly buildId: string;
+      readonly artifactDigest: string;
+      readonly immutableRateCardSha256: string;
+      readonly rolloutPercent: number;
+    };
   }) => Promise<{ readonly manifestPath: string; readonly manifestSha256: string }>;
   readonly randomRunId: () => string;
   readonly workspaceRoot?: string;
-}
-
-interface EvalConfig {
-  readonly totalCapMicromxn: number;
-  readonly pageCapMicromxn: 10_000_000;
-  readonly referencePageCapMicromxn: number;
 }
 
 function positiveSafeInteger(env: Environment, name: string): number {
@@ -58,73 +67,30 @@ function positiveSafeInteger(env: Environment, name: string): number {
   return value;
 }
 
-function reviewedModel(env: Environment, key: string, expected: string): void {
-  if (env[key] !== expected) throw new Error(`${key} is not the reviewed model`);
-}
-
-export function validateFableParityEvalEnvironment(env: Environment): EvalConfig {
+export function validateFableParityEvalEnvironment(env: Environment, manifestValue?: unknown): FableParityEvalAuthorizationManifest {
   if (env.OPENLEN_FABLE_PARITY_LIVE !== "1") throw new Error("live evaluation gate is closed");
   if (env.OPENLEN_FABLE_PARITY_AUTHORIZATION !== FABLE_PARITY_EVAL_AUTHORIZATION) throw new Error("one-time authorization is invalid");
+  const expectedManifestSha256 = env.OPENLEN_FABLE_PARITY_AUTHORIZATION_MANIFEST_SHA256;
+  if (!expectedManifestSha256 || !/^sha256:[a-f0-9]{64}$/.test(expectedManifestSha256) || manifestValue === undefined) throw new Error("owner-approved authorization manifest is required");
+  const manifest = validateFableParityAuthorizationManifest(manifestValue);
+  if (fableParityAuthorizationManifestSha256(manifest) !== expectedManifestSha256) throw new Error("authorization manifest hash is stale");
+  if (hashFableParityAuthorizationToken(env.OPENLEN_FABLE_PARITY_AUTHORIZATION) !== manifest.oneTimeTokenSha256) throw new Error("authorization token is not bound to the manifest");
   const pageCapMicromxn = positiveSafeInteger(env, "OPENLEN_FABLE_PARITY_PAGE_CAP_MICROMXN");
-  if (pageCapMicromxn !== 10_000_000) throw new Error("OpenLen page cap must be exactly 10 MXN");
+  if (pageCapMicromxn !== manifest.caps.openLenPageMicromxn) throw new Error("OpenLen page cap does not match authorization manifest");
   const referencePageCapMicromxn = positiveSafeInteger(env, "OPENLEN_FABLE_PARITY_REFERENCE_PAGE_CAP_MICROMXN");
+  if (referencePageCapMicromxn !== manifest.caps.fablePageMicromxn) throw new Error("Fable page cap does not match authorization manifest");
   const totalCapMicromxn = positiveSafeInteger(env, "OPENLEN_FABLE_PARITY_TOTAL_CAP_MICROMXN");
   const authorizedMaximum = 20 * (pageCapMicromxn + referencePageCapMicromxn);
-  if (totalCapMicromxn < authorizedMaximum) throw new Error("total cap cannot reserve all 20 sequential comparisons");
-  reviewedModel(env, "OPENLEN_FABLE_PARITY_REASONER_MODEL", FABLE_MODEL_POLICY.reasoner.modelId);
-  reviewedModel(env, "OPENLEN_FABLE_PARITY_DESIGNER_MODEL", FABLE_MODEL_POLICY.designer.modelId);
-  reviewedModel(env, "OPENLEN_FABLE_PARITY_CRITIC_MODEL", FABLE_MODEL_POLICY.visualCritic.modelId);
-  reviewedModel(env, "OPENLEN_FABLE_PARITY_IMAGE_MODEL", "gemini-2.5-flash-image");
-  reviewedModel(env, "OPENLEN_FABLE_PARITY_REFERENCE_MODEL", "fable-5");
+  if (totalCapMicromxn !== authorizedMaximum || totalCapMicromxn !== manifest.caps.aggregateMicromxn) throw new Error("total cap must equal the exact authorized theoretical maximum");
+  const declaredModels = [env.OPENLEN_FABLE_PARITY_REASONER_MODEL, env.OPENLEN_FABLE_PARITY_DESIGNER_MODEL, env.OPENLEN_FABLE_PARITY_CRITIC_MODEL, env.OPENLEN_FABLE_PARITY_IMAGE_MODEL];
+  if (JSON.stringify(declaredModels) !== JSON.stringify(manifest.adapters.openlen.modelIds)
+    || JSON.stringify([env.OPENLEN_FABLE_PARITY_REFERENCE_MODEL]) !== JSON.stringify(manifest.adapters.fable.modelIds)) throw new Error("declared models do not match authorization manifest");
   const actualRateCard = env.OPENLEN_FABLE_PARITY_RATE_CARD_SHA256;
   const reviewedRateCard = env.OPENLEN_FABLE_PARITY_REVIEWED_RATE_CARD_SHA256;
-  if (!actualRateCard || !/^sha256:[a-f0-9]{64}$/.test(actualRateCard) || actualRateCard !== reviewedRateCard) {
+  if (!actualRateCard || !/^sha256:[a-f0-9]{64}$/.test(actualRateCard) || actualRateCard !== reviewedRateCard || actualRateCard !== manifest.immutableRateCardSha256) {
     throw new Error("reviewed rate card hash is missing or stale");
   }
-  return { totalCapMicromxn, pageCapMicromxn, referencePageCapMicromxn };
-}
-
-function validateSideResult(result: EvaluationSideResult, capMicromxn: number, label: string): void {
-  const bytes = (value: Uint8Array | undefined) => value !== undefined && (Buffer.isBuffer(value) || ArrayBuffer.isView(value)) && value.byteLength > 0;
-  if (!result || !bytes(result.htmlBytes)
-    || result.desktop?.fullPage !== true || !bytes(result.desktop.bytes)
-    || result.mobile?.fullPage !== true || !bytes(result.mobile.bytes)) {
-    throw new Error(`${label} did not return complete full-page artifacts`);
-  }
-  for (const screenshot of [result.desktop, result.mobile]) {
-    if (!Number.isSafeInteger(screenshot.viewport?.width) || screenshot.viewport.width <= 0
-      || !Number.isSafeInteger(screenshot.viewport?.height) || screenshot.viewport.height <= 0) {
-      throw new Error(`${label} viewport is invalid`);
-    }
-  }
-  if (result.technicalStatus !== "ok" && result.technicalStatus !== "failed") throw new Error(`${label} technical status is invalid`);
-  if (typeof result.eligible !== "boolean" || (result.technicalStatus === "failed" && result.eligible)) {
-    throw new Error(`${label} eligibility contradicts technical status`);
-  }
-  const allowedCriticalFailures = new Set([
-    "whole_template_clone",
-    "critical_safety",
-    "horizontal_overflow",
-    "unreadable_primary_text",
-    "persistence_credit_atomicity",
-  ]);
-  if (!Array.isArray(result.criticalFailures)
-    || result.criticalFailures.some((failure) => !allowedCriticalFailures.has(failure))
-    || new Set(result.criticalFailures).size !== result.criticalFailures.length) {
-    throw new Error(`${label} critical failure ledger is invalid`);
-  }
-  if (!Number.isSafeInteger(result.costMicromxn) || result.costMicromxn < 0 || result.costMicromxn > capMicromxn) throw new Error(`${label} exceeded its page cap`);
-  if (!Array.isArray(result.paidCalls)) throw new Error(`${label} paid-call ledger is invalid`);
-  const ledgerCost = result.paidCalls.reduce((total, call) => {
-    if (!call || (call.result !== "delivered" && call.result !== "failed")
-      || !Number.isSafeInteger(call.costMicromxn) || call.costMicromxn <= 0
-      || !Number.isSafeInteger(total + call.costMicromxn)) throw new Error(`${label} paid-call ledger is invalid`);
-    return total + call.costMicromxn;
-  }, 0);
-  if (ledgerCost !== result.costMicromxn) throw new Error(`${label} paid failures are not fully represented in cost`);
-  if (result.technicalStatus === "ok" && (result.paidCalls.length === 0 || ledgerCost === 0)) {
-    throw new Error(`${label} successful result requires non-zero paid accounting`);
-  }
+  return manifest;
 }
 
 function promptManifest(prompt: FableParityPrompt): Uint8Array {
@@ -140,30 +106,52 @@ function promptManifest(prompt: FableParityPrompt): Uint8Array {
 
 export async function runFableParityEvalCli(deps: FableParityEvalCliDeps): Promise<
   | { readonly ok: false; readonly code: "closed" }
-  | { readonly ok: true; readonly comparisons: 20; readonly openLenCalls: 20; readonly fableCalls: 20; readonly manifestPath: string; readonly manifestSha256: string; readonly authorizedMaximumMicromxn: number }
+  | { readonly ok: true; readonly comparisons: 20; readonly openLenCalls: 20; readonly fableCalls: 20; readonly manifestPath: string; readonly manifestSha256: string; readonly authorizedMaximumMicromxn: number; readonly authorizationManifestSha256: string }
 > {
-  let config: EvalConfig;
+  let manifest: FableParityEvalAuthorizationManifest;
+  let authorizationManifestSha256: string;
   try {
-    config = validateFableParityEvalEnvironment(deps.env);
+    manifest = validateFableParityEvalEnvironment(deps.env, await deps.loadAuthorizationManifest());
+    authorizationManifestSha256 = fableParityAuthorizationManifestSha256(manifest);
   } catch {
     return { ok: false, code: "closed" };
   }
   try {
-    await deps.consumeAuthorization();
+    await deps.consumeAuthorization({ manifestSha256: authorizationManifestSha256, tokenSha256: manifest.oneTimeTokenSha256 });
   } catch {
     return { ok: false, code: "closed" };
   }
   const cohort = await buildFableParityCohort(await deps.loadSealedRecords(), deps.decryptHiddenRecord);
+  if (fableParityCohortSha256(cohort) !== manifest.cohort.sha256) throw new Error("cohort hash does not match authorization manifest");
   const comparisons: BlindComparisonArtifactsInput[] = [];
+  const aggregateBudget = createFableParityAggregateBudget(manifest);
   let openLenCalls = 0;
   let fableCalls = 0;
   for (const row of cohort) {
-    const openLen = await deps.generateOpenLen(row);
+    const promptSha256 = canonicalJsonSha256(JSON.parse(Buffer.from(promptManifest(row.prompt)).toString("utf8")));
+    const openLenReservation = aggregateBudget.reserve("openlen");
+    const openLenRequest = createFableParityEvaluatorRequest({
+      manifest, manifestSha256: authorizationManifestSha256, comparisonId: row.comparisonId, ordinal: row.ordinal,
+      promptSha256, side: "openlen", sequence: openLenReservation.sequence,
+      aggregateRemainingBeforeMicromxn: openLenReservation.aggregateRemainingBeforeMicromxn,
+      aggregateRemainingAfterReservationMicromxn: openLenReservation.aggregateRemainingAfterReservationMicromxn,
+    });
+    const openLenEnvelope = await deps.generateOpenLen(openLenRequest, row);
     openLenCalls += 1;
-    validateSideResult(openLen, config.pageCapMicromxn, "OpenLen");
-    const fable = await deps.generateFable(row);
+    const openLen = await verifyFableParityAttestedResponse(openLenRequest, openLenEnvelope, deps.verifyAttestation);
+    aggregateBudget.settle(openLenReservation, openLen.costMicromxn);
+
+    const fableReservation = aggregateBudget.reserve("fable");
+    const fableRequest = createFableParityEvaluatorRequest({
+      manifest, manifestSha256: authorizationManifestSha256, comparisonId: row.comparisonId, ordinal: row.ordinal,
+      promptSha256, side: "fable", sequence: fableReservation.sequence,
+      aggregateRemainingBeforeMicromxn: fableReservation.aggregateRemainingBeforeMicromxn,
+      aggregateRemainingAfterReservationMicromxn: fableReservation.aggregateRemainingAfterReservationMicromxn,
+    });
+    const fableEnvelope = await deps.generateFable(fableRequest, row);
     fableCalls += 1;
-    validateSideResult(fable, config.referencePageCapMicromxn, "Fable");
+    const fable = await verifyFableParityAttestedResponse(fableRequest, fableEnvelope, deps.verifyAttestation);
+    aggregateBudget.settle(fableReservation, fable.costMicromxn);
     const technicalStatus = openLen.technicalStatus === "failed" && fable.technicalStatus === "failed" ? "both_failure"
       : openLen.technicalStatus === "failed" ? "openlen_failure"
         : fable.technicalStatus === "failed" ? "fable_failure" : "ok";
@@ -177,15 +165,38 @@ export async function runFableParityEvalCli(deps: FableParityEvalCliDeps): Promi
         technicalStatus,
         openLenEligible: openLen.eligible,
         criticalFailures: openLen.criticalFailures,
-        paidCalls: openLen.paidCalls,
+        provenance: {
+          authorizationManifestSha256,
+          cohortVersion: manifest.cohort.version,
+          cohortSha256: manifest.cohort.sha256,
+          sourceRevision: manifest.source.revision,
+          buildId: manifest.source.buildId,
+          artifactDigest: manifest.source.artifactDigest,
+          immutableRateCardSha256: manifest.immutableRateCardSha256,
+          rolloutPercent: manifest.rolloutPercent,
+          adapters: manifest.adapters,
+        },
+        openLen: { technicalStatus: openLen.technicalStatus, eligible: openLen.eligible, criticalFailures: openLen.criticalFailures, paidCalls: openLen.paidCalls, costMicromxn: openLen.costMicromxn, requestSha256: openLen.requestSha256, attestationSha256: canonicalJsonSha256(openLenEnvelope.attestation) },
+        fable: { technicalStatus: fable.technicalStatus, eligible: fable.eligible, criticalFailures: fable.criticalFailures, paidCalls: fable.paidCalls, costMicromxn: fable.costMicromxn, requestSha256: fable.requestSha256, attestationSha256: canonicalJsonSha256(fableEnvelope.attestation) },
       })),
     });
   }
   if (openLenCalls !== 20 || fableCalls !== 20) throw new Error("evaluation call count invariant failed");
+  aggregateBudget.assertComplete();
   const written = await deps.writeBundle({
     workspaceRoot: deps.workspaceRoot ?? process.cwd(),
     runId: deps.randomRunId(),
     comparisons,
+    provenance: {
+      authorizationManifestSha256,
+      cohortVersion: manifest.cohort.version,
+      cohortSha256: manifest.cohort.sha256,
+      sourceRevision: manifest.source.revision,
+      buildId: manifest.source.buildId,
+      artifactDigest: manifest.source.artifactDigest,
+      immutableRateCardSha256: manifest.immutableRateCardSha256,
+      rolloutPercent: manifest.rolloutPercent,
+    },
   });
   return {
     ok: true,
@@ -194,7 +205,8 @@ export async function runFableParityEvalCli(deps: FableParityEvalCliDeps): Promi
     fableCalls: 20,
     manifestPath: written.manifestPath,
     manifestSha256: written.manifestSha256,
-    authorizedMaximumMicromxn: config.totalCapMicromxn,
+    authorizedMaximumMicromxn: manifest.caps.aggregateMicromxn,
+    authorizationManifestSha256,
   };
 }
 
@@ -217,52 +229,28 @@ function aesDecryptor(env: Environment) {
   };
 }
 
-async function endpointResult(endpoint: string, token: string, row: FableParityCohortRow): Promise<EvaluationSideResult> {
-  const response = await fetch(endpoint, {
-    method: "POST",
-    headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
-    body: JSON.stringify({ comparisonId: row.comparisonId, prompt: row.prompt.prompt }),
-  });
-  if (!response.ok) throw new Error("evaluation endpoint failed");
-  const body = await response.json() as Record<string, unknown>;
-  const screenshot = (name: "desktop" | "mobile") => {
-    const value = body[name] as Record<string, unknown>;
-    return {
-      bytes: Buffer.from(String(value?.screenshotBase64 ?? ""), "base64"),
-      fullPage: value?.fullPage as true,
-      viewport: value?.viewport as { width: number; height: number },
-    };
-  };
-  return {
-    htmlBytes: Buffer.from(String(body.html ?? ""), "utf8"),
-    desktop: screenshot("desktop"),
-    mobile: screenshot("mobile"),
-    costMicromxn: Number(body.costMicromxn),
-    technicalStatus: body.technicalStatus as "ok" | "failed",
-    eligible: body.eligible === true,
-    criticalFailures: body.criticalFailures as EvaluationSideResult["criticalFailures"],
-    paidCalls: body.paidCalls as EvaluationSideResult["paidCalls"],
-  };
-}
-
 async function main(): Promise<void> {
   const env = process.env;
   const hiddenPath = required(env, "OPENLEN_FABLE_PARITY_HIDDEN_COHORT_PATH");
-  const openLenEndpoint = required(env, "OPENLEN_FABLE_PARITY_OPENLEN_ENDPOINT");
-  const openLenToken = required(env, "OPENLEN_FABLE_PARITY_OPENLEN_TOKEN");
-  const fableEndpoint = required(env, "OPENLEN_FABLE_PARITY_REFERENCE_ENDPOINT");
-  const fableToken = required(env, "OPENLEN_FABLE_PARITY_REFERENCE_TOKEN");
+  const authorizationManifestPath = required(env, "OPENLEN_FABLE_PARITY_AUTHORIZATION_MANIFEST_PATH");
+  const verifierKey = Buffer.from(required(env, "OPENLEN_FABLE_PARITY_ATTESTATION_KEY_BASE64"), "base64");
+  const verifierKeyId = required(env, "OPENLEN_FABLE_PARITY_ATTESTATION_KEY_ID");
+  const unavailableAdapter = async (): Promise<never> => {
+    throw new Error("No repository-owned reviewed live evaluator adapter is installed");
+  };
   const result = await runFableParityEvalCli({
     env,
+    loadAuthorizationManifest: async () => JSON.parse(await readFile(authorizationManifestPath, "utf8")),
     loadSealedRecords: async () => JSON.parse(await readFile(hiddenPath, "utf8")) as SealedHiddenRecord[],
     decryptHiddenRecord: aesDecryptor(env),
-    consumeAuthorization: async () => {
-      const marker = join(process.cwd(), "scratch", "fable-parity", "authorizations", `${FABLE_PARITY_EVAL_AUTHORIZATION}.consumed`);
+    consumeAuthorization: async ({ manifestSha256, tokenSha256 }) => {
+      const marker = join(process.cwd(), "scratch", "fable-parity", "authorizations", `${manifestSha256.slice(7)}-${tokenSha256.slice(7)}.consumed`);
       await mkdir(dirname(marker), { recursive: true });
       await writeFile(marker, new Date().toISOString(), { flag: "wx" });
     },
-    generateOpenLen: (row) => endpointResult(openLenEndpoint, openLenToken, row),
-    generateFable: (row) => endpointResult(fableEndpoint, fableToken, row),
+    generateOpenLen: unavailableAdapter,
+    generateFable: unavailableAdapter,
+    verifyAttestation: createHmacFableParityAttestationVerifier(verifierKey, verifierKeyId),
     writeBundle: (input) => writeBlindArtifactBundle(input),
     randomRunId: () => randomBytes(12).toString("hex"),
   });

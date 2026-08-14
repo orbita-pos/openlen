@@ -1,5 +1,6 @@
 import type { ModelTokenUsage } from "./model-cost";
 import type { PageBudget, RedactedPageCost } from "./page-generation-budget";
+import { z } from "zod";
 
 export type FableTelemetryStage = "intent" | "copy" | "scout" | "page_plan" | "initial_program" | "image" | "final_critic" | "visual_repair" | "delivery_gate" | "delivery" | "visual_quality";
 
@@ -29,6 +30,51 @@ export interface FableGenerationTelemetry {
   snapshot(outcome: "failed" | "delivered", stage: FableTelemetryStage, reasonCode: string | null): FableGenerationTelemetryEvent;
 }
 
+const NonNegativeSafeInteger = z.number().int().min(0).max(Number.MAX_SAFE_INTEGER);
+const ModelId = z.string().min(1).max(160).regex(/^[A-Za-z0-9][A-Za-z0-9._:/+-]*$/);
+const UsageSchema = z.object({
+  inputTokens: NonNegativeSafeInteger,
+  cachedTokens: NonNegativeSafeInteger,
+  outputTokens: NonNegativeSafeInteger,
+  thinkingTokens: NonNegativeSafeInteger,
+}).strict();
+const ImageUsageSchema = z.object({ imageCount: NonNegativeSafeInteger }).strict();
+const PaidCallSchema = z.discriminatedUnion("kind", [
+  z.object({ stage: z.enum(["intent", "copy", "scout", "page_plan", "initial_program", "image", "final_critic", "visual_repair", "delivery_gate", "delivery", "visual_quality"]), kind: z.literal("model"), modelId: ModelId, usage: UsageSchema, durationMs: NonNegativeSafeInteger, attempts: z.union([z.literal(0), z.literal(1), z.literal(2), z.literal(3)]) }).strict(),
+  z.object({ stage: z.enum(["intent", "copy", "scout", "page_plan", "initial_program", "image", "final_critic", "visual_repair", "delivery_gate", "delivery", "visual_quality"]), kind: z.literal("image"), modelId: ModelId, usage: ImageUsageSchema, durationMs: NonNegativeSafeInteger, attempts: z.union([z.literal(0), z.literal(1), z.literal(2), z.literal(3)]) }).strict(),
+]);
+const CostSchema = z.object({
+  rateCardVersion: z.string().min(1).max(64).regex(/^[A-Za-z0-9._:-]+$/),
+  targetMicromxn: NonNegativeSafeInteger,
+  capMicromxn: NonNegativeSafeInteger,
+  actualMicromxn: NonNegativeSafeInteger,
+  reservedMicromxn: NonNegativeSafeInteger,
+  modelUsage: z.array(UsageSchema.extend({ modelId: ModelId, costMicromxn: NonNegativeSafeInteger }).strict()).max(64),
+  imageUsage: z.array(ImageUsageSchema.extend({ modelId: ModelId, costMicromxn: NonNegativeSafeInteger }).strict()).max(16),
+}).strict();
+const OperationalEventSchema = z.object({
+  schemaVersion: z.literal("fable-generation-telemetry/1.0"),
+  outcome: z.enum(["failed", "delivered"]),
+  stage: z.enum(["intent", "copy", "scout", "page_plan", "initial_program", "image", "final_critic", "visual_repair", "delivery_gate", "delivery", "visual_quality"]),
+  reasonCode: z.string().min(1).max(80).regex(/^[a-z][a-z0-9_]*$/).nullable(),
+  paidCalls: z.array(PaidCallSchema).max(64),
+  cost: CostSchema.nullable(),
+}).strict();
+
+export function createOperationalFableTelemetrySink(
+  write: (line: string) => void = (line) => console.info(line),
+): (event: FableGenerationTelemetryEvent) => Promise<void> {
+  return async (event) => {
+    try {
+      const parsed = OperationalEventSchema.safeParse(event);
+      if (!parsed.success) return;
+      write(JSON.stringify(parsed.data));
+    } catch {
+      // The process journal must never widen a user-visible generation failure.
+    }
+  };
+}
+
 function safeDuration(value: number): number {
   return Number.isSafeInteger(value) && value >= 0 ? value : 0;
 }
@@ -55,6 +101,7 @@ export function createFableGenerationTelemetry(options: {
   readonly budget?: PageBudget;
 } = {}): FableGenerationTelemetry {
   const paidCalls: FablePaidCallTelemetry[] = [];
+  const sink = options.sink ?? createOperationalFableTelemetrySink();
   let flushed = false;
 
   const snapshot = (outcome: "failed" | "delivered", stage: FableTelemetryStage, reasonCode: string | null): FableGenerationTelemetryEvent => ({
@@ -69,7 +116,7 @@ export function createFableGenerationTelemetry(options: {
   const emit = async (event: FableGenerationTelemetryEvent): Promise<void> => {
     if (flushed) return;
     flushed = true;
-    try { await options.sink?.(event); } catch { /* telemetry cannot widen delivery failures */ }
+    try { await sink(event); } catch { /* telemetry cannot widen delivery failures */ }
   };
 
   return {

@@ -18,6 +18,8 @@
 #   $env:OPENLEN_HOST = "openlen"          # ssh alias from ~/.ssh/config
 #   $env:OPENLEN_REMOTE_PATH = "/opt/openlen-app"
 #   $env:OPENLEN_AI_CREATION_TARGET_MODE = "enabled" # or "disabled"; required
+#   $env:OPENLEN_AI_CREATION_TARGET_ROLLOUT_PERCENT = "10" # 1..99 enabled; 0 disabled
+#   $env:OPENLEN_FABLE_PARITY_APPROVED_REVISION = "<git sha>" # exact release revision
 #   $env:OPENLEN_SKIP_BUILD = "1"          # reuse existing .next/standalone
 #   $env:OPENLEN_SKIP_MIGRATE = "1"        # skip billing:migrate (already applied)
 #   $env:OPENLEN_SKIP_CRATES_REBUILD = "1" # skip the Rust crate rebuild step.
@@ -39,6 +41,20 @@ $backupDir = "$remoteDir.old"
 $targetMode = $env:OPENLEN_AI_CREATION_TARGET_MODE
 if ($targetMode -ne "enabled" -and $targetMode -ne "disabled") {
   throw "OPENLEN_AI_CREATION_TARGET_MODE must be explicitly enabled or disabled"
+}
+$targetRolloutPercent = $env:OPENLEN_AI_CREATION_TARGET_ROLLOUT_PERCENT
+if ($targetMode -eq "enabled" -and ($targetRolloutPercent -notmatch '^(?:[1-9]|[1-9][0-9])$')) {
+  throw "Enabled AI creation requires OPENLEN_AI_CREATION_TARGET_ROLLOUT_PERCENT from 1 through 99"
+}
+if ($targetMode -eq "disabled" -and $targetRolloutPercent -ne "0") {
+  throw "Disabled AI creation requires OPENLEN_AI_CREATION_TARGET_ROLLOUT_PERCENT=0"
+}
+$releaseRevision = (& git rev-parse HEAD).Trim()
+if ($LASTEXITCODE -ne 0 -or $releaseRevision -notmatch '^[a-f0-9]{40}([a-f0-9]{24})?$') {
+  throw "Unable to resolve the current release revision"
+}
+if ($env:OPENLEN_FABLE_PARITY_APPROVED_REVISION -ne $releaseRevision) {
+  throw "OPENLEN_FABLE_PARITY_APPROVED_REVISION must equal the current release revision"
 }
 
 function Step($n, $msg) {
@@ -62,8 +78,6 @@ npm.cmd run generation:template-derived-sections:gate
 if ($LASTEXITCODE -ne 0) { throw "Template-derived section gate failed" }
 npm.cmd run generation:fable-parity:gate
 if ($LASTEXITCODE -ne 0) { throw "Deterministic Fable parity gate failed" }
-npm.cmd run generation:fable-parity:scorecard -- --deploy-gate
-if ($LASTEXITCODE -ne 0) { throw "Fable parity activation scorecard gate failed" }
 npm.cmd run generation:visual-engine-assets:gate
 if ($LASTEXITCODE -ne 0) { throw "Visual Engine assets gate failed" }
 npm.cmd run generation:ai-hybrid:gate
@@ -131,6 +145,19 @@ if ($LASTEXITCODE -ne 0) { throw "cron:bundle failed (exit $LASTEXITCODE)" }
 Step 3 "Bundling DB migrations (esbuild) to run on the box..."
 npm run migrations:bundle
 if ($LASTEXITCODE -ne 0) { throw "migrations:bundle failed (exit $LASTEXITCODE)" }
+
+# Never relabel reused output. A normal build receives its attestation only
+# after Next and all local standalone composition steps succeeded; skip-build
+# can only verify the pre-existing revision/build/artifact identity.
+if ($env:OPENLEN_SKIP_BUILD -eq "1") {
+  npm.cmd run generation:fable-parity:build-attestation -- --verify
+  if ($LASTEXITCODE -ne 0) { throw "Existing standalone build attestation is absent, stale, or substituted" }
+} else {
+  npm.cmd run generation:fable-parity:build-attestation -- --write
+  if ($LASTEXITCODE -ne 0) { throw "Standalone build attestation write failed" }
+}
+npm.cmd run generation:fable-parity:scorecard -- --deploy-gate
+if ($LASTEXITCODE -ne 0) { throw "Fable parity activation scorecard gate failed" }
 
 $size = (Get-ChildItem -Recurse ".next/standalone" | Measure-Object -Property Length -Sum).Sum
 Write-Host ("    standalone: {0} MB" -f [math]::Round($size/1MB, 1))
@@ -280,12 +307,13 @@ systemctl stop openlen-app
 test -f /etc/openlen/openlen.env
 tmp_env=$(mktemp /etc/openlen/openlen.env.openlen-ai.XXXXXX)
 trap 'rm -f "$tmp_env"' EXIT
-awk 'BEGIN{seen=0} /^OPENLEN_AI_CREATION=/{if(!seen){print "OPENLEN_AI_CREATION=__TARGET_MODE__";seen=1};next} {print} END{if(!seen)print "OPENLEN_AI_CREATION=__TARGET_MODE__"}' /etc/openlen/openlen.env > "$tmp_env"
+awk 'BEGIN{seen_mode=0;seen_percent=0} /^OPENLEN_AI_CREATION=/{if(!seen_mode){print "OPENLEN_AI_CREATION=__TARGET_MODE__";seen_mode=1};next} /^OPENLEN_AI_CREATION_ROLLOUT_PERCENT=/{if(!seen_percent){print "OPENLEN_AI_CREATION_ROLLOUT_PERCENT=__TARGET_ROLLOUT_PERCENT__";seen_percent=1};next} {print} END{if(!seen_mode)print "OPENLEN_AI_CREATION=__TARGET_MODE__";if(!seen_percent)print "OPENLEN_AI_CREATION_ROLLOUT_PERCENT=__TARGET_ROLLOUT_PERCENT__"}' /etc/openlen/openlen.env > "$tmp_env"
 chown --reference=/etc/openlen/openlen.env "$tmp_env"
 chmod --reference=/etc/openlen/openlen.env "$tmp_env"
 mv -f "$tmp_env" /etc/openlen/openlen.env
 trap - EXIT
 test "$(sed -n 's/^OPENLEN_AI_CREATION=//p' /etc/openlen/openlen.env | tail -n 1)" = "__TARGET_MODE__"
+test "$(sed -n 's/^OPENLEN_AI_CREATION_ROLLOUT_PERCENT=//p' /etc/openlen/openlen.env | tail -n 1)" = "__TARGET_ROLLOUT_PERCENT__"
 rm -rf __BACKUP_DIR__
 mv __REMOTE_DIR__ __BACKUP_DIR__
 mv __STAGING_DIR__ __REMOTE_DIR__
@@ -295,9 +323,10 @@ systemctl is-active --quiet openlen-app
 pid=$(systemctl show -p MainPID --value openlen-app)
 test "$pid" -gt 0
 tr '\000' '\n' < "/proc/$pid/environ" | grep -Fx 'OPENLEN_AI_CREATION=__TARGET_MODE__' > /dev/null
+tr '\000' '\n' < "/proc/$pid/environ" | grep -Fx 'OPENLEN_AI_CREATION_ROLLOUT_PERCENT=__TARGET_ROLLOUT_PERCENT__' > /dev/null
 curl -sI -o /dev/null -w '  smoke: HTTP %{http_code} (%{time_total}s)' http://127.0.0.1:3000/
 '@
-$swapCmd = $swapCmd.Replace("__TARGET_MODE__", $targetMode).Replace("__BACKUP_DIR__", $backupDir).Replace("__REMOTE_DIR__", $remoteDir).Replace("__STAGING_DIR__", $stagingDir)
+$swapCmd = $swapCmd.Replace("__TARGET_MODE__", $targetMode).Replace("__TARGET_ROLLOUT_PERCENT__", $targetRolloutPercent).Replace("__BACKUP_DIR__", $backupDir).Replace("__REMOTE_DIR__", $remoteDir).Replace("__STAGING_DIR__", $stagingDir)
 & ssh $host_ (Sh $swapCmd)
 if ($LASTEXITCODE -ne 0) { throw "Swap or restart failed (exit $LASTEXITCODE)" }
 

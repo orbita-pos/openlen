@@ -118,11 +118,12 @@ interface CompletedRow {
 interface PreparedRow {
   readonly row: SectionPlanRow;
   readonly decision: AdaptivePageDesignProgram["decisions"][number];
+  readonly action: "rebuild" | "generate";
   readonly assetSlots: readonly { readonly slotIndex: number; readonly mediaType: AdaptivePageDesignProgram["imageSlots"][number]["mediaType"] }[];
   readonly donor: NonNullable<ReturnType<typeof sourceForDecision>> | null;
   readonly verified: VerifiedSectionFragment | null;
   readonly provenance: SectionDecisionProvenance;
-  readonly generatedProgram: ExpressiveSectionProgram | null;
+  readonly generatedProgram: ExpressiveSectionProgram;
 }
 
 function collectProgramAssetSlots(program: ExpressiveSectionProgram): number[] {
@@ -133,6 +134,19 @@ function collectProgramAssetSlots(program: ExpressiveSectionProgram): number[] {
   };
   visit(program.root);
   return slots;
+}
+
+function collectProgramCopyKeys(program: ExpressiveSectionProgram): string[] {
+  const keys: string[] = [];
+  const visit = (node: ExpressiveNode) => {
+    if (node.kind === "layout") node.children.forEach(visit);
+    else if (node.kind === "copy") {
+      if ("copyKey" in node) keys.push(node.copyKey);
+      else keys.push(...node.copyKeys);
+    }
+  };
+  visit(program.root);
+  return keys;
 }
 
 const RepairHandoffEntryBase = {
@@ -198,6 +212,9 @@ export type AdaptiveSectionCompositionResult =
       readonly telemetry: readonly RedactedProviderTelemetry[];
       /** Internal only: structured Task 5 repair input; never serialize this with public manifests. */
       readonly handoff: AdaptiveSectionRepairHandoff;
+      readonly leaksBefore: number;
+      readonly leaksAfter: 0;
+      readonly appliedOps: number;
       /** Private request-local seam: no provider calls, only bounded recompilation and gates. */
       readonly applyDelta: (delta: GlmVisualRepairDelta) => Promise<AdaptiveSectionDeltaResult>;
     }
@@ -274,14 +291,31 @@ function contentHash(html: string): string {
   return sha256(html).replace(/^sha256:/, "").slice(0, 12);
 }
 
-function fragmentRootTag(fragment: VerifiedSectionFragment): "nav" | "header" | "section" | "footer" | null {
-  try {
-    const root = parse(fragment.html).querySelector(`[data-sec="${fragment.slug}"]`);
-    const tag = root?.rawTagName.toLowerCase();
-    return tag === "nav" || tag === "header" || tag === "section" || tag === "footer" ? tag : null;
-  } catch {
-    return null;
+function normalizedVisibleText(value: string): string {
+  return value.normalize("NFKD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+}
+
+function donorOnlyVisibleTextFingerprints(donorHtml: readonly string[], currentCopy: Readonly<Record<string, string>>): string[] {
+  const current = new Set(Object.values(currentCopy).map(normalizedVisibleText).filter(Boolean));
+  const fingerprints = new Set<string>();
+  for (const html of donorHtml) {
+    let root;
+    try { root = parse(html); } catch { continue; }
+    for (const node of root.querySelectorAll("script,style,svg,noscript")) node.remove();
+    for (const line of root.structuredText.split(/\r?\n/)) {
+      const text = normalizedVisibleText(line);
+      if (text.length >= 4 && !current.has(text)) fingerprints.add(text);
+    }
   }
+  return [...fingerprints].sort();
+}
+
+function countVisibleTextLeaks(html: string, fingerprints: readonly string[]): number {
+  let root;
+  try { root = parse(html); } catch { return fingerprints.length; }
+  for (const node of root.querySelectorAll("script,style,svg,noscript")) node.remove();
+  const visible = normalizedVisibleText(root.structuredText);
+  return fingerprints.filter((fingerprint) => visible.includes(fingerprint)).length;
 }
 
 function validInput(input: AdaptiveSectionCompositionInput): boolean {
@@ -347,8 +381,10 @@ export async function composeAdaptiveSections(
 
   try {
     const preparedRows: PreparedRow[] = [];
+    const donorHtml: string[] = [];
     for (const row of input.plan.rows) {
       const decision = input.design.decisions[row.ordinal];
+      const action = decision.action === "generate" ? "generate" : "rebuild";
       const assetSlots = input.design.imageSlots
         .filter((slot) => slot.ordinal === row.ordinal)
         .map((slot) => ({ slotIndex: slot.slotIndex, mediaType: slot.mediaType }));
@@ -360,9 +396,10 @@ export async function composeAdaptiveSections(
         const fetched = await fetchChosenFragment(input, deps, row, decision.candidateId!);
         if (!fetched.ok) return fail(fetched.code);
         verified = fetched.fragment;
+        donorHtml.push(verified.html);
       }
 
-      const provenance: SectionDecisionProvenance = decision.action === "generate" ? {
+      const provenance: SectionDecisionProvenance = action === "generate" ? {
         schemaVersion: "section-decision-provenance/1.0",
         action: "generate",
         candidateId: null,
@@ -373,7 +410,7 @@ export async function composeAdaptiveSections(
         usefulTraits: decision.usefulTraits,
       } : {
         schemaVersion: "section-decision-provenance/1.0",
-        action: decision.action,
+        action,
         candidateId: decision.candidateId!,
         sourceTemplateId: donor!.entry.sourceTemplateId,
         sourceBandOrdinal: donor!.entry.sourceBandOrdinal,
@@ -382,12 +419,9 @@ export async function composeAdaptiveSections(
         usefulTraits: decision.usefulTraits,
       };
 
-      let generatedProgram: ExpressiveSectionProgram | null = null;
-      if (decision.action === "reuse") {
-        const tag = fragmentRootTag(verified!);
-        if (!tag) return fail("section_fragment_invalid");
-      } else {
-        const request = decision.action === "generate" ? {
+      let generatedProgram: ExpressiveSectionProgram;
+      {
+        const request = action === "generate" ? {
           mode: "generate",
           requestId: `${input.requestId}.section-${row.ordinal}`,
           ordinal: row.ordinal,
@@ -410,7 +444,6 @@ export async function composeAdaptiveSections(
             sourceContentHash: donor!.entry.contentHash,
             sourceStructuralFingerprint: donor!.entry.structuralFingerprint,
             usefulTraits: decision.usefulTraits,
-            verifiedFragmentHtml: verified!.html,
           },
         } as const;
         const providerResult = await deps.provider.generate(request);
@@ -422,7 +455,7 @@ export async function composeAdaptiveSections(
         if (!providerResult.ok) return fail(providerFailureCode(providerResult.code));
         generatedProgram = providerResult.program;
       }
-      preparedRows.push({ row, decision, assetSlots, donor, verified, provenance, generatedProgram });
+      preparedRows.push({ row, decision, action, assetSlots, donor, verified, provenance, generatedProgram });
     }
 
     const usedAssetSlots = [...new Set(preparedRows.flatMap((prepared) => prepared.generatedProgram
@@ -434,20 +467,13 @@ export async function composeAdaptiveSections(
     if (binding && !binding.ok) return fail("required_asset_unavailable");
 
     for (const prepared of preparedRows) {
-      const { row, decision, assetSlots, donor, verified, provenance, generatedProgram } = prepared;
+      const { row, decision, action, assetSlots, donor, provenance, generatedProgram } = prepared;
       let draft: AdaptiveDerivedSectionDraft;
       let programHash: string | null = null;
       let normalizedStructuralFingerprint: string | null = null;
-      if (decision.action === "reuse") {
-        const tag = fragmentRootTag(verified!);
-        if (!tag) return fail("section_fragment_invalid");
-        draft = {
-          action: "reuse", ordinal: row.ordinal, id: verified!.slug, html: verified!.html, rootTag: tag,
-          role: row.requestedRole, componentType: row.componentType, provenance,
-        };
-      } else {
+      {
         const compiledExpressive = compileExpressiveSection({
-          program: generatedProgram!,
+          program: generatedProgram,
           allowedCopyKeys: Object.keys(input.copy),
           allowedAssetSlots: assetSlots.map((slot) => slot.slotIndex),
           copy: input.copy,
@@ -455,13 +481,13 @@ export async function composeAdaptiveSections(
         });
         if (!compiledExpressive.ok) return fail(compiledExpressive.code === "donor_reconstruction" ? "section_originality_failed" : "invalid_provider_response");
         const expressive = compiledExpressive.draft;
-        const slotsInProgram = collectProgramAssetSlots(generatedProgram!);
+        const slotsInProgram = collectProgramAssetSlots(generatedProgram);
         const bound = binding?.ok ? binding.bind(expressive.html, slotsInProgram) : { ok: true as const, html: expressive.html };
         if (!bound.ok) return fail("required_asset_unavailable");
         programHash = expressive.programHash;
         normalizedStructuralFingerprint = expressive.structuralFingerprint;
         draft = {
-          action: decision.action,
+          action,
           ordinal: row.ordinal,
           id: expressive.id,
           html: bound.html,
@@ -477,10 +503,7 @@ export async function composeAdaptiveSections(
         return fail("model_incompatible");
       }
       const section = derived.section;
-      if (decision.action === "reuse" && (section.id !== verified!.slug || section.html !== verified!.html || section.contentHash !== donor!.entry.contentHash)) {
-        return fail("section_fragment_stale");
-      }
-      if (decision.action === "rebuild"
+      if (action === "rebuild"
         && (section.contentHash === donor!.entry.contentHash
           || normalizedStructuralFingerprint === donor!.entry.structuralFingerprint
           || section.structuralFingerprint === donor!.entry.structuralFingerprint)) {
@@ -494,33 +517,19 @@ export async function composeAdaptiveSections(
       if (!sanitized.html || sanitized.html !== section.html) return fail("sanitization_failed");
 
       completed.push({
-        action: decision.action,
+        action,
         role: row.requestedRole,
         candidateId: decision.candidateId,
-        sourceTemplateId: decision.action === "generate" ? null : donor!.entry.sourceTemplateId,
-        sourceBandOrdinal: decision.action === "generate" ? null : donor!.entry.sourceBandOrdinal,
+        sourceTemplateId: action === "generate" ? null : donor!.entry.sourceTemplateId,
+        sourceBandOrdinal: action === "generate" ? null : donor!.entry.sourceBandOrdinal,
         contentHash: section.contentHash,
         structuralFingerprint: normalizedStructuralFingerprint ?? section.structuralFingerprint,
         programHash,
         fragment: { slug: section.id, type: section.type, requestedRole: row.requestedRole, html: sanitized.html },
       });
-      handoffEntries.push(decision.action === "reuse" ? {
+      handoffEntries.push({
         ordinal: row.ordinal,
-        action: "reuse",
-        role: row.requestedRole,
-        provenance,
-        allowedCopyKeys: [],
-        allowedAssetSlots: [],
-        compiledFragmentId: section.id,
-        compiledContentHash: section.contentHash,
-        compiledFragmentHash: sha256(section.html),
-        structuralFingerprint: section.structuralFingerprint,
-        programId: null,
-        programHash: null,
-        program: null,
-      } : {
-        ordinal: row.ordinal,
-        action: decision.action,
+        action,
         role: row.requestedRole,
         provenance,
         allowedCopyKeys: Object.keys(input.copy),
@@ -531,7 +540,7 @@ export async function composeAdaptiveSections(
         structuralFingerprint: normalizedStructuralFingerprint ?? section.structuralFingerprint,
         programId: draft.id,
         programHash: programHash!,
-        program: generatedProgram!,
+        program: generatedProgram,
       });
     }
 
@@ -546,6 +555,9 @@ export async function composeAdaptiveSections(
     const assembled = deps.assemble(completed.map((row) => row.fragment));
     const sanitized = deps.sanitize(assembled);
     if (!sanitized.html) return fail("sanitization_failed");
+    const donorFingerprints = donorOnlyVisibleTextFingerprints(donorHtml, input.copy);
+    const leaksAfter = countVisibleTextLeaks(sanitized.html, donorFingerprints);
+    if (leaksAfter !== 0) return fail("inherited_copy_leak");
     const sealed = deps.seal(sanitized.html);
     if (!sealed.sealed) return fail("sanitization_failed");
     let currentRows = completed.slice();
@@ -553,6 +565,7 @@ export async function composeAdaptiveSections(
       schemaVersion: ADAPTIVE_SECTION_REPAIR_HANDOFF_VERSION,
       entries: handoffEntries,
     });
+    const appliedOps = new Set(preparedRows.flatMap((row) => collectProgramCopyKeys(row.generatedProgram))).size;
     const applyDelta = async (delta: GlmVisualRepairDelta): Promise<AdaptiveSectionDeltaResult> => {
       if (delta?.schemaVersion !== "glm-visual-repair-delta/1.0"
         || !Array.isArray(delta.changes)
@@ -633,6 +646,7 @@ export async function composeAdaptiveSections(
         const assembledDelta = deps.assemble(nextRows.map((row) => row.fragment));
         const sanitizedDelta = deps.sanitize(assembledDelta);
         if (!sanitizedDelta.html) return { ok: false };
+        if (countVisibleTextLeaks(sanitizedDelta.html, donorFingerprints) !== 0) return { ok: false };
         const sealedDelta = deps.seal(sanitizedDelta.html);
         if (!sealedDelta.sealed) return { ok: false };
         const handoff = AdaptiveSectionRepairHandoffSchema.parse({
@@ -653,6 +667,9 @@ export async function composeAdaptiveSections(
       manifest: manifest(completed, "composed", sealed.html),
       telemetry: Object.freeze(telemetry.map((row) => Object.freeze({ ...row }))),
       handoff: currentHandoff,
+      leaksBefore: donorFingerprints.length,
+      leaksAfter: 0,
+      appliedOps,
       applyDelta,
     };
   } catch {

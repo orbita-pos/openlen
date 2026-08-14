@@ -25,6 +25,18 @@ import {
 
 let workspaceRoot: string | undefined;
 
+const JPEG = Buffer.from("/9j/4AAQSkZJRgABAQEAYABgAAD/2wBDAAMCAgMCAgMDAwMEAwMEBQgFBQQEBQoHBwYIDAoMDAsKCwsNDhIQDQ4RDgsLEBYQERMUFRUVDA8XGBYUGBIUFRT/2wBDAQMEBAUEBQkFBQkUDQsNFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBT/wAARCABAAEADASIAAhEBAxEB/8QAHwAAAQUBAQEBAQEAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAAAgEDAwIEAwUFBAQAAAF9AQIDAAQRBRIhMUEGE1FhByJxFDKBkaEII0KxwRVS0fAkM2JyggkKFhcYGRolJicoKSo0NTY3ODk6Q0RFRkdISUpTVFVWV1hZWmNkZWZnaGlqc3R1dnd4eXqDhIWGh4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uHi4+Tl5ufo6erx8vP09fb3+Pn6/8QAHwEAAwEBAQEBAQEBAQAAAAAAAAECAwQFBgcICQoL/8QAtREAAgECBAQDBAcFBAQAAQJ3AAECAxEEBSExBhJBUQdhcRMiMoEIFEKRobHBCSMzUvAVYnLRChYkNOEl8RcYGRomJygpKjU2Nzg5OkNERUZHSElKU1RVVldYWVpjZGVmZ2hpanN0dXZ3eHl6goOEhYaHiImKkpOUlZaXmJmaoqOkpaanqKmqsrO0tba3uLm6wsPExcbHyMnK0tPU1dbX2Nna4uPk5ebn6Onq8vP09fb3+Pn6/9oADAMBAAIRAxEAPwDq6KKK/os/KgooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigD//2Q==", "base64");
+const RELEASE_PROVENANCE = {
+  authorizationManifestSha256: `sha256:${"a".repeat(64)}`,
+  cohortVersion: "fable-parity-cohort/1",
+  cohortSha256: `sha256:${"b".repeat(64)}`,
+  sourceRevision: "bcb19ccd00f36e0a901ae2731e96f88bc8632b08",
+  buildId: "openlen-build-20260813",
+  artifactDigest: `sha256:${"c".repeat(64)}`,
+  immutableRateCardSha256: `sha256:${"d".repeat(64)}`,
+  rolloutPercent: 10,
+} as const;
+
 afterEach(async () => {
   if (workspaceRoot?.startsWith(tmpdir())) await rm(workspaceRoot, { recursive: true, force: true });
   workspaceRoot = undefined;
@@ -32,10 +44,12 @@ afterEach(async () => {
 
 function comparison(index: number): BlindComparisonArtifactsInput {
   const id = (index + 1).toString(16).padStart(24, "0");
-  const screenshot = (side: "openlen" | "fable", viewport: "desktop" | "mobile") => ({
-    bytes: Buffer.from(`${id}:${side}:${viewport}:full-page-bytes`),
+  const screenshot = (_side: "openlen" | "fable", _viewport: "desktop" | "mobile") => ({
+    bytes: JPEG,
+    mimeType: "image/jpeg" as const,
     fullPage: true as const,
-    viewport: viewport === "desktop" ? { width: 1440, height: 1000 } : { width: 390, height: 844 },
+    viewport: { width: 64, height: 32 },
+    contentHeight: 64,
   });
   return {
     comparisonId: id,
@@ -55,7 +69,9 @@ function comparison(index: number): BlindComparisonArtifactsInput {
       technicalStatus: "ok",
       openLenEligible: true,
       criticalFailures: [],
-      paidCalls: [{ result: "delivered", costMicromxn: 1 }],
+      provenance: RELEASE_PROVENANCE,
+      openLen: { technicalStatus: "ok", eligible: true, criticalFailures: [], paidCalls: [{ result: "delivered", costMicromxn: 1 }], costMicromxn: 1, requestSha256: `sha256:${"e".repeat(64)}`, attestationSha256: `sha256:${"f".repeat(64)}` },
+      fable: { technicalStatus: "ok", eligible: true, criticalFailures: [], paidCalls: [{ result: "delivered", costMicromxn: 1 }], costMicromxn: 1, requestSha256: `sha256:${"1".repeat(64)}`, attestationSha256: `sha256:${"2".repeat(64)}` },
     })),
   };
 }
@@ -66,6 +82,7 @@ async function bundle() {
     workspaceRoot,
     runId: "0123456789abcdef01234567",
     comparisons: Array.from({ length: 20 }, (_, index) => comparison(index)),
+    provenance: RELEASE_PROVENANCE,
     openLenOnSideA: (index) => index % 2 === 0,
   });
 }
@@ -83,8 +100,8 @@ describe("Fable parity blind artifact and review session", () => {
       expect(row.result.sha256).toMatch(/^sha256:[a-f0-9]{64}$/);
       for (const side of [row.sides.A, row.sides.B]) {
         expect(side.html.sha256).toMatch(/^sha256:[a-f0-9]{64}$/);
-        expect(side.desktop).toMatchObject({ fullPage: true, viewport: { width: 1440, height: 1000 } });
-        expect(side.mobile).toMatchObject({ fullPage: true, viewport: { width: 390, height: 844 } });
+        expect(side.desktop).toMatchObject({ fullPage: true, mimeType: "image/jpeg", decoded: { width: 64, height: 64 }, viewport: { width: 64, height: 32 }, contentHeight: 64 });
+        expect(side.mobile).toMatchObject({ fullPage: true, mimeType: "image/jpeg", decoded: { width: 64, height: 64 }, viewport: { width: 64, height: 32 }, contentHeight: 64 });
       }
     }
     const envelope = JSON.parse(await readFile(written.manifestPath, "utf8")) as { manifestSha256: string };
@@ -112,8 +129,8 @@ describe("Fable parity blind artifact and review session", () => {
     const served = await resolveVerifiedBlindArtifact(
       workspaceRoot!, written.manifestPath, "000000000000000000000001", "A", "desktop",
     );
-    expect(served.contentType).toBe("image/png");
-    expect(Buffer.from(served.bytes).toString("utf8")).toContain("openlen:desktop");
+    expect(served.contentType).toBe("image/jpeg");
+    expect(Buffer.from(served.bytes)).toEqual(JPEG);
     expect("path" in served).toBe(false);
   });
 
@@ -200,8 +217,31 @@ describe("Fable parity blind artifact and review session", () => {
       workspaceRoot,
       runId: "333333333333333333333333",
       comparisons,
+      provenance: RELEASE_PROVENANCE,
       openLenOnSideA: () => true,
     })).rejects.toThrow(/full.page/i);
+  });
+
+  it.each([
+    ["corrupt bytes", { bytes: Buffer.from("not-an-image") }],
+    ["wrong MIME", { mimeType: "image/png" }],
+    ["decoded width mismatch", { viewport: { width: 63, height: 32 } }],
+    ["declared content-height mismatch", { contentHeight: 65 }],
+    ["viewport-only capture", { viewport: { width: 64, height: 64 }, contentHeight: 64 }],
+  ])("rejects %s as canonical screenshot evidence", async (_label, mutation) => {
+    workspaceRoot = await mkdtemp(join(tmpdir(), "openlen-fable-parity-"));
+    const comparisons = Array.from({ length: 20 }, (_, index) => comparison(index));
+    comparisons[0] = {
+      ...comparisons[0]!,
+      openLen: { ...comparisons[0]!.openLen, desktop: { ...comparisons[0]!.openLen.desktop, ...mutation } as never },
+    };
+    await expect(writeBlindArtifactBundle({
+      workspaceRoot,
+      runId: "666666666666666666666666",
+      comparisons,
+      provenance: RELEASE_PROVENANCE,
+      openLenOnSideA: () => true,
+    })).rejects.toThrow(/image|mime|decode|width|height|full.page|viewport/i);
   });
 
   it("serializes concurrent persisted decisions and completion without losing locked state", async () => {
@@ -273,17 +313,30 @@ describe("Fable parity blind artifact and review session", () => {
     await writeFableParityScorecardFile(workspaceRoot!, scorecardPath, scorecard);
     const env = {
       OPENLEN_AI_CREATION_TARGET_MODE: "enabled",
+      OPENLEN_AI_CREATION_TARGET_ROLLOUT_PERCENT: "10",
+      OPENLEN_FABLE_PARITY_APPROVED_REVISION: RELEASE_PROVENANCE.sourceRevision,
       OPENLEN_FABLE_PARITY_SCORECARD_PATH: scorecardPath,
       OPENLEN_FABLE_PARITY_SCORECARD_SHA256: scorecard.scorecardSha256,
       OPENLEN_FABLE_REVIEW_MANIFEST_PATH: written.manifestPath,
       OPENLEN_FABLE_REVIEW_SESSION_PATHS: sessionPaths.join(","),
     };
-    await expect(verifyFableParityDeployGate(env, workspaceRoot!)).resolves.toMatchObject({
+    const deployDeps = {
+      currentRevision: async () => RELEASE_PROVENANCE.sourceRevision,
+      verifyBuildAttestation: async () => ({
+        schemaVersion: "openlen-standalone-build-attestation/1.0" as const,
+        sourceRevision: RELEASE_PROVENANCE.sourceRevision,
+        buildId: RELEASE_PROVENANCE.buildId,
+        artifacts: [],
+        artifactDigest: RELEASE_PROVENANCE.artifactDigest,
+        attestationSha256: `sha256:${"9".repeat(64)}`,
+      }),
+    };
+    await expect(verifyFableParityDeployGate(env, workspaceRoot!, deployDeps)).resolves.toMatchObject({
       targetMode: "enabled",
       verified: true,
       scorecardSha256: scorecard.scorecardSha256,
     });
     await writeFile(sessionPaths[0]!, "{}");
-    await expect(verifyFableParityDeployGate(env, workspaceRoot!)).rejects.toThrow(/session|review|invalid|source/i);
+    await expect(verifyFableParityDeployGate(env, workspaceRoot!, deployDeps)).rejects.toThrow(/session|review|invalid|source/i);
   });
 });

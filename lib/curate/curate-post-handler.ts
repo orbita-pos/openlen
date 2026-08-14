@@ -11,6 +11,7 @@ import { commitCurateProjectAndDebit, type AtomicCurateCommitInput } from "@/lib
 import { calculateAiCreationCredits } from "@/lib/curate/ai-creation-credits";
 import type { AiCreationReasonCode, AiCreationStage } from "@/lib/curate/ai-creation-contracts";
 import { aiCreationMode } from "@/lib/curate/ai-creation-mode";
+import { isUserInAiCreationRollout } from "@/lib/curate/ai-creation-rollout";
 import { commitAiCompositionDocument } from "@/lib/curate/commit-ai-composition";
 import { runAiCreation, type RunAiCreationDeps } from "@/lib/curate/run-ai-creation";
 import { assetPipelineMode } from "@/lib/generation/asset-pipeline-mode";
@@ -125,6 +126,10 @@ return async function curatePost(req: Request): Promise<Response> {
       };
 
       try {
+        if (aiCreationMode() !== "enabled" || !isUserInAiCreationRollout(userId)) {
+          return fail("creation_disabled");
+        }
+
         const { balance } = await getCreditState(userId);
         if (balance < 1) {
           emit("error", {
@@ -132,10 +137,6 @@ return async function curatePost(req: Request): Promise<Response> {
             message: "Te quedaste sin créditos este mes. Esperá al reset o pasá a Pro.",
           });
           return close();
-        }
-
-        if (aiCreationMode() !== "enabled") {
-          return fail("creation_disabled");
         }
 
         const projectId = crypto.randomUUID();

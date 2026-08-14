@@ -1,9 +1,7 @@
-import { parse, NodeType, type HTMLElement, type Node } from "node-html-parser";
 import { z } from "zod";
 
 import type { FireworksJsonClient } from "../ai/fireworks-client";
 import type { FireworksJsonResult } from "../ai/fireworks-contracts";
-import { sha256 } from "./content-hash";
 import { ExpressiveSectionProgramSchema, validateExpressiveSectionProgram, type ExpressiveSectionProgram } from "./expressive-section-contracts";
 import { reasoningEffortFor } from "./fable-model-policy";
 import { SectionPlanRowSchema } from "./section-composition-contracts";
@@ -14,8 +12,6 @@ const SECTION_ID = /^[a-z0-9]+(?:[-_][a-z0-9]+)*$/;
 const COPY_KEY = /^[a-z][a-z0-9_.-]{0,79}$/;
 const SHA256 = /^sha256:[a-f0-9]{64}$/;
 const CONTENT_HASH = /^[a-f0-9]{12}$/;
-const VOID_TAGS = new Set(["area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta", "param", "source", "track", "wbr"]);
-const SAFE_TAGS = new Set(["nav", "header", "section", "footer", "main", "aside", "article", "div", "span", "h1", "h2", "h3", "h4", "p", "strong", "em", "small", "blockquote", "ul", "ol", "li", "figure", "figcaption", "picture", "img", "button", "a", "hr"]);
 
 const DirectionSchema = z.object({
   rhythm: z.enum(["editorial", "cinematic", "playful", "immersive", "conversion", "storytelling"]),
@@ -52,7 +48,6 @@ const InspirationSchema = z.object({
   sourceContentHash: z.string().regex(CONTENT_HASH),
   sourceStructuralFingerprint: z.string().regex(SHA256),
   usefulTraits: z.array(z.string().min(1).max(80).regex(/^[a-z0-9]+(?:_[a-z0-9]+)*$/)).max(8),
-  verifiedFragmentHtml: z.string().min(1).max(128 * 1024),
 }).strict().superRefine((value, ctx) => {
   if ((value.sourceTemplateId === null) !== (value.sourceBandOrdinal === null)) {
     ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["sourceTemplateId"], message: "template provenance must be paired" });
@@ -93,50 +88,7 @@ interface Options {
   readonly client: FireworksJsonClient;
 }
 
-interface FragmentStructure {
-  readonly fragment: string;
-  readonly rootTag: string;
-  readonly nodeCount: number;
-  readonly maxDepth: number;
-}
-
-function contentHash(html: string): string {
-  return sha256(html).replace(/^sha256:/, "").slice(0, 12);
-}
-
-function elementChildren(node: Node): HTMLElement[] {
-  return node.childNodes.filter((child): child is HTMLElement => child.nodeType === NodeType.ELEMENT_NODE);
-}
-
-function safeTag(element: HTMLElement): string {
-  const tag = element.rawTagName.toLowerCase();
-  return SAFE_TAGS.has(tag) ? tag : "div";
-}
-
-function serializeStructure(element: HTMLElement, state: { nodeCount: number; maxDepth: number }, depth: number): string {
-  state.nodeCount += 1;
-  state.maxDepth = Math.max(state.maxDepth, depth);
-  const tag = safeTag(element);
-  if (VOID_TAGS.has(tag)) return `<${tag}>`;
-  return `<${tag}>${elementChildren(element).map((child) => serializeStructure(child, state, depth + 1)).join("")}</${tag}>`;
-}
-
-function verifiedStructure(input: z.infer<typeof InspirationSchema>): FragmentStructure | null {
-  const html = input.verifiedFragmentHtml;
-  if (/<!doctype|<(?:html|head|body|script|iframe|object|embed|template)\b|\son[a-z]+\s*=/i.test(html)) return null;
-  if (contentHash(html) !== input.sourceContentHash) return null;
-  let parsed;
-  try { parsed = parse(html); } catch { return null; }
-  const roots = elementChildren(parsed).filter((element) => element.rawTagName.toLowerCase() !== "style" && element.rawTagName.toLowerCase() !== "link");
-  if (roots.length !== 1 || roots[0].getAttribute("data-sec") !== input.candidateId) return null;
-  if (parsed.querySelectorAll(`[data-sec="${input.candidateId}"]`).length !== 1) return null;
-  const state = { nodeCount: 0, maxDepth: 0 };
-  const fragment = serializeStructure(roots[0], state, 1);
-  if (state.nodeCount < 1 || state.nodeCount > 64 || state.maxDepth > 5) return null;
-  return { fragment, rootTag: safeTag(roots[0]), nodeCount: state.nodeCount, maxDepth: state.maxDepth };
-}
-
-function userPayload(request: GlmSectionProgramRequest): Record<string, unknown> | null {
+function userPayload(request: GlmSectionProgramRequest): Record<string, unknown> {
   const base = {
     schemaVersion: "glm-section-program-input/1.0",
     mode: request.mode,
@@ -147,20 +99,9 @@ function userPayload(request: GlmSectionProgramRequest): Record<string, unknown>
     assetSlots: request.assetSlots,
   };
   if (request.mode === "generate") return base;
-  const structure = verifiedStructure(request.inspiration);
-  if (!structure) return null;
   return {
     ...base,
-    inspiration: {
-      candidateId: request.inspiration.candidateId,
-      sourceTemplateId: request.inspiration.sourceTemplateId,
-      sourceBandOrdinal: request.inspiration.sourceBandOrdinal,
-      sourceContentHash: request.inspiration.sourceContentHash,
-      sourceStructuralFingerprint: request.inspiration.sourceStructuralFingerprint,
-      usefulTraits: request.inspiration.usefulTraits,
-      fragment: structure.fragment,
-      structure: { rootTag: structure.rootTag, nodeCount: structure.nodeCount, maxDepth: structure.maxDepth },
-    },
+    inspiration: { ...request.inspiration },
   };
 }
 
@@ -171,7 +112,6 @@ export function createGlmSectionProgramProvider(options: Options): GlmSectionPro
       const parsed = GlmSectionProgramRequestSchema.safeParse(request);
       if (!parsed.success) return { ok: false, code: "invalid_input", promptVersion: PROMPT_VERSION };
       const payload = userPayload(parsed.data);
-      if (!payload) return { ok: false, code: "invalid_input", promptVersion: PROMPT_VERSION };
       const result = await options.client.request({
         role: "designer",
         reasoningEffort: reasoningEffortFor("designer", "initial_section_program"),

@@ -107,12 +107,14 @@ function eventsNamed(events: SseEvent[], name: string): SseEvent[] {
 }
 
 const previousAiCreation = process.env.OPENLEN_AI_CREATION;
+const previousAiCreationRolloutPercent = process.env.OPENLEN_AI_CREATION_ROLLOUT_PERCENT;
 const previousAssetMode = process.env.OPENLEN_VISUAL_ENGINE_ASSETS;
 
 describe("POST /api/curate hybrid-only integration", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     process.env.OPENLEN_AI_CREATION = "enabled";
+    process.env.OPENLEN_AI_CREATION_ROLLOUT_PERCENT = "99";
     process.env.OPENLEN_VISUAL_ENGINE_ASSETS = "off";
     mocks.auth.mockResolvedValue({ user: { id: "user-1" } });
     mocks.consumeToken.mockReturnValue({ allowed: true });
@@ -143,6 +145,8 @@ describe("POST /api/curate hybrid-only integration", () => {
   afterAll(() => {
     if (previousAiCreation === undefined) delete process.env.OPENLEN_AI_CREATION;
     else process.env.OPENLEN_AI_CREATION = previousAiCreation;
+    if (previousAiCreationRolloutPercent === undefined) delete process.env.OPENLEN_AI_CREATION_ROLLOUT_PERCENT;
+    else process.env.OPENLEN_AI_CREATION_ROLLOUT_PERCENT = previousAiCreationRolloutPercent;
     if (previousAssetMode === undefined) delete process.env.OPENLEN_VISUAL_ENGINE_ASSETS;
     else process.env.OPENLEN_VISUAL_ENGINE_ASSETS = previousAssetMode;
   });
@@ -159,7 +163,7 @@ describe("POST /api/curate hybrid-only integration", () => {
         message: "No pudimos construir una página coherente. Reintentar.",
       },
     }]);
-    expect(mocks.getCreditState).toHaveBeenCalledWith("user-1");
+    expect(mocks.getCreditState).not.toHaveBeenCalled();
     expect(mocks.resolveProfileForCreation).not.toHaveBeenCalled();
     expect(mocks.runAiCreation).not.toHaveBeenCalled();
     expect(mocks.insertValues).not.toHaveBeenCalled();

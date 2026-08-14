@@ -65,9 +65,8 @@ function rebuildRequest(html: string): GlmSectionProgramRequest {
       sourceContentHash: sha256(html).replace(/^sha256:/, "").slice(0, 12),
       sourceStructuralFingerprint: `sha256:${"b".repeat(64)}`,
       usefulTraits: ["cinematic", "layered"],
-      verifiedFragmentHtml: html,
     },
-  };
+  } as unknown as GlmSectionProgramRequest;
 }
 
 describe("GLM expressive section provider", () => {
@@ -83,7 +82,7 @@ describe("GLM expressive section provider", () => {
     expect(JSON.stringify(payload)).not.toMatch(/candidate|fragment|template|sourceContent|sourceStructural|https?:|<script/i);
   });
 
-  it("sends only one verified rebuild fragment with copy, URLs, styles, and selectors removed", async () => {
+  it("sends only immutable donor metadata and never donor HTML or visible copy", async () => {
     const html = '<style>[data-sec="chosen-hero"] .secret{color:red}</style><section data-sec="chosen-hero" class="secret"><h2>DONOR COPY SECRET</h2><img src="https://private.invalid/a.jpg" alt="COPY ALT"><div><p>More copy</p></div></section>';
     const fake = clientWith({ ok: true, value: PROGRAM, modelId: "accounts/fireworks/models/glm-5p2", usage: USAGE, durationMs: 9, attempts: 1 });
     const result = await createGlmSectionProgramProvider({ client: fake.client }).generate(rebuildRequest(html));
@@ -93,20 +92,20 @@ describe("GLM expressive section provider", () => {
     expect(payload.inspiration).toMatchObject({
       candidateId: "chosen-hero", sourceTemplateId: "donor-one", sourceBandOrdinal: 3,
       usefulTraits: ["cinematic", "layered"],
-      fragment: "<section><h2></h2><img><div><p></p></div></section>",
-      structure: { rootTag: "section", nodeCount: 5, maxDepth: 3 },
+      sourceContentHash: sha256(html).replace(/^sha256:/, "").slice(0, 12),
+      sourceStructuralFingerprint: `sha256:${"b".repeat(64)}`,
     });
-    expect(JSON.stringify(payload)).not.toMatch(/DONOR COPY SECRET|More copy|COPY ALT|private\.invalid|https?:|src=|alt=|class=|data-sec|<style|\[data-sec|color:red/i);
+    expect(JSON.stringify(payload)).not.toMatch(/fragment|structure|verifiedFragmentHtml|DONOR COPY SECRET|More copy|COPY ALT|private\.invalid|https?:|src=|alt=|class=|data-sec|<style|\[data-sec|color:red/i);
   });
 
-  it("rejects unverified, whole-document, scripted, or mismatched rebuild material before the client", async () => {
+  it("rejects any attempt to add donor bytes to the metadata-only rebuild contract", async () => {
     const fake = clientWith({ ok: true, value: PROGRAM, modelId: "accounts/fireworks/models/glm-5p2", usage: USAGE, durationMs: 9, attempts: 1 });
     const provider = createGlmSectionProgramProvider({ client: fake.client });
     const valid = '<section data-sec="chosen-hero"><h2>copy</h2></section>';
     const bad = [
-      { ...rebuildRequest(valid), inspiration: { ...(rebuildRequest(valid) as Extract<GlmSectionProgramRequest, { mode: "rebuild" }>).inspiration, sourceContentHash: "a".repeat(12) } },
-      rebuildRequest('<!doctype html><html><body><section data-sec="chosen-hero"></section></body></html>'),
-      rebuildRequest('<section data-sec="chosen-hero"><script>alert(1)</script></section>'),
+      { ...rebuildRequest(valid), inspiration: { ...(rebuildRequest(valid) as Extract<GlmSectionProgramRequest, { mode: "rebuild" }>).inspiration, verifiedFragmentHtml: valid } },
+      { ...rebuildRequest(valid), inspiration: { ...(rebuildRequest(valid) as Extract<GlmSectionProgramRequest, { mode: "rebuild" }>).inspiration, fragment: "<section><h2></h2></section>" } },
+      { ...rebuildRequest(valid), inspiration: { ...(rebuildRequest(valid) as Extract<GlmSectionProgramRequest, { mode: "rebuild" }>).inspiration, donorVisibleText: "copy" } },
       { ...generateRequest(), inspiration: (rebuildRequest(valid) as Extract<GlmSectionProgramRequest, { mode: "rebuild" }>).inspiration },
     ];
     for (const request of bad) {

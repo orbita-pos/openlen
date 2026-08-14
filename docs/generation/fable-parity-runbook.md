@@ -23,6 +23,7 @@ not operational telemetry.
 | `npm.cmd run generation:fable-parity:review` | loopback HTTP only; serves verified local evidence | local reviewer token required |
 | `npm.cmd run generation:fable-parity:scorecard` | verified local artifacts only; none | three locked reviews required |
 | `npm.cmd run generation:fable-parity:rollback` | controlled SSH transition of the configured production runtime; no provider/DB call | explicit rollback authority required |
+| `npm.cmd run generation:fable-parity:build-attestation -- --write|--verify` | local standalone hashing only; none | deploy workflow only |
 
 Do not run the live eval command during implementation or routine CI. The
 authorization string is exact and single-use:
@@ -30,6 +31,12 @@ authorization string is exact and single-use:
 before loading hidden prompts or contacting either adapter. A stopped or failed
 run requires a new cohort version, a new explicit owner authorization, and a
 new cap; do not delete the consumption marker to reuse approval.
+
+The repository deliberately ships no callable live OpenLen or Fable adapter.
+The CLI fails closed at that boundary until separately reviewed adapters
+implement the repository-owned versioned request/attestation contract. An
+arbitrary URL, self-declared provider response, or test fixture is never live
+evidence.
 
 ## 1. Prepare the sealed cohort outside the repository
 
@@ -64,15 +71,27 @@ The exact authorization maximum is:
 20 × (10,000,000 + reference-page-cap-micromxn)
 ```
 
-The total cap must reserve at least that amount. This is the maximum approval
+The total cap must equal that amount exactly. This is the maximum approval
 request, not a forecast. Ask the owner to approve that exact MXN value and the
 one-time authorization before setting `OPENLEN_FABLE_PARITY_LIVE=1`.
+
+Before authorization, create a separate owner-approved
+`fable-parity-eval-authorization/2.0` manifest. It binds the hash of the exact
+one-time token; cohort version/hash; source revision, build ID, and standalone
+artifact digest; rollout percent; both adapter IDs and endpoint hashes; exact
+model IDs; immutable rate-card hash; both page caps; and the exact aggregate
+cap. Pin its canonical hash in
+`OPENLEN_FABLE_PARITY_AUTHORIZATION_MANIFEST_SHA256`. The adapter verifier key
+and key ID are injected through the narrow attestation boundary; never log or
+write the key into evidence.
 
 Required live variables are:
 
 ```text
 OPENLEN_FABLE_PARITY_LIVE=1
 OPENLEN_FABLE_PARITY_AUTHORIZATION=AUTHORIZED_FABLE_PARITY_EVAL_ONCE
+OPENLEN_FABLE_PARITY_AUTHORIZATION_MANIFEST_PATH=<external approved JSON path>
+OPENLEN_FABLE_PARITY_AUTHORIZATION_MANIFEST_SHA256=sha256:<canonical manifest hash>
 OPENLEN_FABLE_PARITY_TOTAL_CAP_MICROMXN=<exact approved maximum>
 OPENLEN_FABLE_PARITY_PAGE_CAP_MICROMXN=10000000
 OPENLEN_FABLE_PARITY_REFERENCE_PAGE_CAP_MICROMXN=<reviewed positive cap>
@@ -85,15 +104,23 @@ OPENLEN_FABLE_PARITY_RATE_CARD_SHA256=sha256:<reviewed hash>
 OPENLEN_FABLE_PARITY_REVIEWED_RATE_CARD_SHA256=sha256:<same reviewed hash>
 OPENLEN_FABLE_PARITY_HIDDEN_COHORT_PATH=<external absolute path>
 OPENLEN_FABLE_PARITY_HIDDEN_KEY_BASE64=<external secret>
+OPENLEN_FABLE_PARITY_ATTESTATION_HMAC_KEY_BASE64=<external 32+ byte key>
+OPENLEN_FABLE_PARITY_ATTESTATION_KEY_ID=<reviewed key identity>
 ```
 
-The OpenLen and reference adapter endpoints each receive one prompt per request
-and must return the HTML bytes, native full-page desktop and mobile screenshot
-bytes with viewport metadata, technical/eligibility status, critical failures,
-and a complete paid-call ledger. The OpenLen adapter must invoke the production
+Each repository-owned adapter receives a canonical request hash, authorization
+manifest hash, side, exact adapter/model/build/rate identities, page cap, and
+the aggregate budget before/after reservation. It must return an authenticated
+attestation bound to that request, result, and configuration, plus HTML bytes;
+decoded JPEG full-page desktop/mobile images with viewport and content height;
+technical/eligibility status; critical failures; and its complete positive
+paid-call ledger. Wrong adapter, model, build, rate, request, signature, or
+ledger fails closed. The OpenLen adapter must invoke the production
 Create-with-AI path; a fixture or alternate generator invalidates the run. The
 harness makes one call to each adapter per comparison in strict sequence and
-does not add creative retries beyond production policy.
+does not add creative retries beyond production policy. It reserves the
+side-specific maximum before every call, settles the exact attested cost, and
+cannot issue a 21st call on either side or any retry/extra call.
 
 ## 3. Conduct three independent blind reviews
 
@@ -135,7 +162,13 @@ Run `npm.cmd run generation:fable-parity:scorecard`. It revalidates every
 prompt manifest, HTML file, desktop/mobile screenshot, side assignment, result,
 and sealed decision before scoring. Technical failures remain losses, all 20
 comparisons remain in the denominator, and every recorded paid failure remains
-in page cost.
+in page cost. The v2 scorecard seals both OpenLen and Fable paid ledgers,
+request/attestation hashes, authorization/cohort/rate provenance, source
+revision, build ID, standalone artifact digest, and rollout percent. Screenshot
+evidence is accepted only when the Rust-backed decoder proves a real JPEG,
+decoded width equals viewport width, decoded height equals declared content
+height, and content height exceeds viewport height; corrupt, header-only,
+wrong-MIME, viewport-only, blank, or oversized evidence is rejected.
 
 The thresholds are immutable: at least 70% wins-or-ties; at least 40% outright
 wins unless ties alone reach 80%; zero majority wrong-niche pages; at least 18
@@ -150,28 +183,43 @@ paid comparison requires a new versioned cohort and new authorization.
 Every deploy must explicitly declare `OPENLEN_AI_CREATION_TARGET_MODE=enabled`
 or `OPENLEN_AI_CREATION_TARGET_MODE=disabled` before
 `infra/scripts/deploy.ps1` runs. This is the requested state of the remote
-runtime environment, not a statement about the local shell. Disabled
-deployments require no parity scorecard. Enabling requires all four source and
-approval inputs:
+runtime environment, not a statement about the local shell. It must also set
+`OPENLEN_AI_CREATION_TARGET_ROLLOUT_PERCENT`: exactly `0` when disabled, or an
+integer from `1` through `99` when enabled. `100` is intentionally invalid and
+requires a future policy/code change. Disabled deployments require no parity
+scorecard. Enabling requires the source and approval inputs:
 
 ```text
 OPENLEN_FABLE_PARITY_SCORECARD_PATH=<passing scorecard below scratch/fable-parity>
 OPENLEN_FABLE_PARITY_SCORECARD_SHA256=sha256:<owner-approved scorecard hash>
 OPENLEN_FABLE_REVIEW_MANIFEST_PATH=<exact source manifest below scratch/fable-parity>
 OPENLEN_FABLE_REVIEW_SESSION_PATHS=<exact session-1>,<exact session-2>,<exact session-3>
+OPENLEN_FABLE_PARITY_APPROVED_REVISION=<exact current git release revision>
+OPENLEN_AI_CREATION_TARGET_ROLLOUT_PERCENT=<1..99 matching the scorecard>
 ```
 
-The deploy script runs the deterministic parity gate and rebuilds the sealed
-scorecard from the exact manifest and three locked reviewer sessions before
-its first `OPENLEN_SKIP_BUILD` branch, so a reused build cannot bypass those
-controls. Only after those gates pass does it atomically patch
-`/etc/openlen/openlen.env` on the target host. It verifies the stored target
-mode before starting the service and verifies the effective value again in the
-started process environment.
+The deploy script runs deterministic gates before its first
+`OPENLEN_SKIP_BUILD` branch. A normal successful build writes
+`.next/standalone/.openlen-build-attestation.json` only after standalone
+composition; skip-build verifies the pre-existing attestation and never
+rewrites or relabels it. The deploy gate then requires current git revision =
+approved revision = scorecard revision = build-attestation revision, and the
+scorecard build ID/artifact digest must equal freshly re-hashed standalone
+output. It also rebuilds the scorecard from the exact manifest and three locked
+sessions. Only after those checks pass does deploy atomically patch both mode
+and rollout percent in `/etc/openlen/openlen.env`, verify both values before
+start, and verify both again in the started process environment. A stale or
+substituted standalone is rejected even with `OPENLEN_SKIP_BUILD=1`.
+
+Increase exposure gradually with a new explicit deployment and a newly
+approved scorecard whose sealed rollout percent matches the target. Never
+change the percent in place. Every increase remains within `1..99`; full 100%
+exposure needs a future policy change, not another environment edit.
 
 For rollback, run `npm.cmd run generation:fable-parity:rollback` only with
 explicit production rollback authority and the configured SSH target. The CLI
-atomically sets `OPENLEN_AI_CREATION=disabled` in the real remote environment,
+atomically sets `OPENLEN_AI_CREATION=disabled` and
+`OPENLEN_AI_CREATION_ROLLOUT_PERCENT=0` in the real remote environment,
 restarts the service, reads the effective value from the running process, and
 verifies through an anonymous fail-closed HTTP probe that the explicit
 user-selected template clone route remains reachable.

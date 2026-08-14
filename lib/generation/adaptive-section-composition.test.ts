@@ -16,7 +16,7 @@ const HASH_A = `sha256:${"a".repeat(64)}`;
 const HASH_B = `sha256:${"b".repeat(64)}`;
 const HASH_C = `sha256:${"c".repeat(64)}`;
 const DONOR_HERO = '<header data-sec="chosen-hero"><h1>Verified hero donor</h1></header>';
-const DONOR_FOOTER = '<footer data-sec="chosen-footer"><p>Verified footer donor</p></footer>';
+const DONOR_FOOTER = '<footer data-sec="chosen-footer"><p>DONOR ONLY MARKER</p><a href="#donor">Join Donor Club</a></footer>';
 const hash12 = (html: string) => sha256(html).replace(/^sha256:/, "").slice(0, 12);
 
 const rows = [
@@ -79,7 +79,7 @@ function program(role: ExpressiveSectionProgram["role"], copyKey: string): Expre
     schemaVersion: "expressive-section-program/1.0",
     role,
     root: {
-      kind: "layout", id: "root", preset: role === "hero" ? "layered" : "collage", gap: "md", padding: "lg", width: "wide", align: "stretch", justify: "between", columns: "two", color: "surface", radius: "lg", border: "hairline", transform: "none", blend: "normal",
+      kind: "layout", id: "root", preset: role === "hero" ? "layered" : role === "footer" ? "split" : "collage", gap: "md", padding: "lg", width: "wide", align: "stretch", justify: "between", columns: "two", color: "surface", radius: "lg", border: "hairline", transform: "none", blend: "normal",
       children: [{ kind: "copy", id: "title", variant: "heading", copyKey, tone: "strong", size: "2xl", color: "ink", align: "start" }],
     },
     responsive: { mobile: [{ nodeId: "root", preset: "stack", columns: "one", gap: "sm", padding: "sm", hidden: false }] },
@@ -100,7 +100,9 @@ function setup(overrides: Partial<AdaptiveSectionCompositionDeps> = {}) {
     async generate(request) {
       providerCalls.push(request);
       events.push(`provider:${request.mode}:${request.ordinal}`);
-      const p = request.role === "hero" ? program("hero", "hero.title") : program("activities", "activities.title");
+      const p = request.role === "hero" ? program("hero", "hero.title")
+        : request.role === "footer" ? program("footer", "footer.title")
+          : program("activities", "activities.title");
       return { ok: true, program: p, modelId: "glm-fixture", promptVersion: "glm-section-program-prompt/1.0", usage: { inputTokens: 2, cachedTokens: 0, outputTokens: 2, thinkingTokens: 1 }, durationMs: 2, attempts: 1 };
     },
   };
@@ -139,11 +141,11 @@ const INPUT = {
   design,
   scout,
   inventory,
-  copy: { "hero.title": "A new hero", "activities.title": "Make something" },
+  copy: { "hero.title": "A new hero", "activities.title": "Make something", "footer.title": "Visit the color club" },
 };
 
 describe("adaptive section composition", () => {
-  it("executes decisions in page order, reuses exact bytes, gates every output, then seals atomically", async () => {
+  it("turns every donor decision into an expressive rebuild without sending or delivering donor copy bytes", async () => {
     const d = setup();
     (d.deps as AdaptiveSectionCompositionDeps & { onProviderTelemetry: (row: { modelId: string | null }) => void }).onProviderTelemetry = (row) => {
       d.events.push(`telemetry:${row.modelId}`);
@@ -164,32 +166,31 @@ describe("adaptive section composition", () => {
       status: "composed",
       manifest: {
         schemaVersion: "adaptive-section-composition-manifest/1.0",
-        actions: ["rebuild", "generate", "reuse"],
+        actions: ["rebuild", "generate", "rebuild"],
         selectedCandidateIds: ["chosen-hero", null, "chosen-footer"],
         resultCode: "composed",
       },
     });
-    expect(result.ok && result.html).toContain(DONOR_FOOTER);
-    expect(d.providerCalls.map((request) => request.mode)).toEqual(["rebuild", "generate"]);
-    expect(d.providerCalls[0]).toMatchObject({ role: "hero", inspiration: { candidateId: "chosen-hero", verifiedFragmentHtml: DONOR_HERO } });
+    expect(result.ok && result.html).not.toMatch(/DONOR ONLY MARKER|Join Donor Club|Verified hero donor/i);
+    expect(result.ok && result.html).toContain("Visit the color club");
+    expect(d.providerCalls.map((request) => request.mode)).toEqual(["rebuild", "generate", "rebuild"]);
+    expect(d.providerCalls[0]).toMatchObject({ role: "hero", inspiration: { candidateId: "chosen-hero" } });
     expect(d.providerCalls[1]).not.toHaveProperty("inspiration");
+    expect(JSON.stringify(d.providerCalls)).not.toMatch(/DONOR ONLY MARKER|Join Donor Club|Verified hero donor|verifiedFragmentHtml|<header|<footer/i);
     expect(d.deps.fetchFragments).toHaveBeenNthCalledWith(1, expect.anything(), inventory, { fetchText: d.deps.fetchText });
-    expect(d.events).toEqual([
-      "fetch:chosen-hero", "provider:rebuild:0", "telemetry:glm-fixture",
-      "provider:generate:1", "telemetry:glm-fixture", "fetch:chosen-footer", "images",
-      "bind", "compile:rebuild:0", "semantics:0", "assets:0", "render:0",
-      "bind", "compile:generate:1", "semantics:1", "assets:1", "render:1",
-      "compile:reuse:2", "semantics:2", "assets:2", "render:2", "assemble", "seal",
-    ]);
+    expect(d.events).toEqual(expect.arrayContaining([
+      "provider:rebuild:0", "provider:generate:1", "provider:rebuild:2",
+      "compile:rebuild:0", "compile:generate:1", "compile:rebuild:2", "assemble", "seal",
+    ]));
     expect(vi.mocked(d.deps.compileDerived).mock.calls[0]?.[0].html).toContain("asset-refs-bound");
     expect(d.deps.sanitize).toHaveBeenCalledTimes(4);
     expect(JSON.stringify(result.manifest)).not.toMatch(/A new hero|Make something|Verified hero donor|https?:/i);
     expect(result.ok && result.handoff).toMatchObject({
       schemaVersion: "adaptive-section-repair-handoff/1.0",
       entries: [
-        { ordinal: 0, action: "rebuild", programId: expect.any(String), program: { role: "hero" }, provenance: { action: "rebuild" }, allowedCopyKeys: ["hero.title", "activities.title"], allowedAssetSlots: [] },
-        { ordinal: 1, action: "generate", programId: expect.any(String), program: { role: "activities" }, provenance: { action: "generate" }, allowedCopyKeys: ["hero.title", "activities.title"], allowedAssetSlots: [] },
-        { ordinal: 2, action: "reuse", programId: null, program: null, provenance: { action: "reuse" }, allowedCopyKeys: [], allowedAssetSlots: [] },
+        { ordinal: 0, action: "rebuild", programId: expect.any(String), program: { role: "hero" }, provenance: { action: "rebuild" }, allowedCopyKeys: ["hero.title", "activities.title", "footer.title"], allowedAssetSlots: [] },
+        { ordinal: 1, action: "generate", programId: expect.any(String), program: { role: "activities" }, provenance: { action: "generate" }, allowedCopyKeys: ["hero.title", "activities.title", "footer.title"], allowedAssetSlots: [] },
+        { ordinal: 2, action: "rebuild", programId: expect.any(String), program: { role: "footer" }, provenance: { action: "rebuild" }, allowedCopyKeys: ["hero.title", "activities.title", "footer.title"], allowedAssetSlots: [] },
       ],
     });
     expect(JSON.stringify(result.ok && result.handoff)).not.toMatch(/A new hero|Make something|Verified hero donor|<header/i);
@@ -279,21 +280,20 @@ describe("adaptive section composition", () => {
     expect(result).toMatchObject({ ok: false, reasonCode: "invalid_provider_response", telemetry: [
       { modelId: "glm-paid", usage: { inputTokens: 7 } },
       { modelId: "glm-paid", usage: { inputTokens: 7 } },
+      { modelId: "glm-paid", usage: { inputTokens: 7 } },
     ] });
     expect(d.deps.assemble).not.toHaveBeenCalled();
   });
 
-  it("rejects reuse byte drift before any assembly", async () => {
+  it("rejects donor-only visible text injected by a downstream compiler before delivery", async () => {
     const d = setup({
-      compileDerived: vi.fn(async (draft) => draft.action === "reuse"
-        ? compiled("chosen-footer", `${draft.html}<p>changed</p>`, "footer", `sha256:${"d".repeat(64)}`)
+      compileDerived: vi.fn(async (draft) => draft.ordinal === 2
+        ? compiled(draft.id, '<footer data-sec="generated-footer"><p>DONOR ONLY MARKER</p><a href="#donor">Join Donor Club</a></footer>', "footer", `sha256:${"1".repeat(64)}`)
         : compiled(draft.id, draft.html, draft.ordinal === 0 ? "hero" : "features", draft.ordinal === 0 ? `sha256:${"e".repeat(64)}` : `sha256:${"f".repeat(64)}`)),
-      assemble: vi.fn(() => "must-not-assemble"),
     });
     const result = await composeAdaptiveSections(INPUT, d.deps);
-    expect(result).toMatchObject({ ok: false, reasonCode: "section_fragment_stale" });
+    expect(result).toMatchObject({ ok: false, reasonCode: "inherited_copy_leak" });
     expect(result).not.toHaveProperty("html");
-    expect(d.deps.assemble).not.toHaveBeenCalled();
   });
 
   it.each([

@@ -1,4 +1,4 @@
-import { sha256 } from "./content-hash";
+import { canonicalJsonSha256, sha256 } from "./content-hash";
 
 export const FABLE_PARITY_NICHES = [
   "childrens_creativity",
@@ -245,4 +245,20 @@ export async function buildFableParityCohort(
     comparisonIds.add(comparisonId);
     return Object.freeze({ ordinal: index + 1, comparisonId, prompt });
   }));
+}
+
+export function fableParityCohortSha256(rows: readonly FableParityCohortRow[]): string {
+  if (!Array.isArray(rows) || rows.length !== 20 || rows.some((row, index) => row.ordinal !== index + 1)) {
+    throw new Error("versioned Fable parity cohort must contain exactly 20 ordered rows");
+  }
+  return canonicalJsonSha256(rows.map((row) => ({
+    ordinal: row.ordinal,
+    comparisonId: row.comparisonId,
+    recordId: row.prompt.recordId,
+    version: row.prompt.version,
+    promptSha256: sha256(row.prompt.prompt),
+    niche: row.prompt.niche,
+    direction: row.prompt.direction,
+    forbiddenSignals: [...row.prompt.forbiddenSignals],
+  })));
 }

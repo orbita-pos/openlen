@@ -140,3 +140,36 @@ The full `npm test` and build commands were not rerun, preserving the brief's on
 ## Handoff
 
 No files are staged and no commit was created. The controller should request an independent scoped review of the files listed above. Even if that review is clean, paid evaluation and deployment remain closed until the missing acceptance evidence is resolved through an authorized future full-suite/build run and the immutable live-evaluation authorization and cost controls are separately satisfied.
+
+## Whole-branch final fix round
+
+The final whole-branch review reported two Critical and four Important release
+blockers. All six were reproduced in one focused RED run (7 files, 103 tests:
+24 failed and 79 passed) and corrected without crossing a live boundary:
+
+1. Live-eval authorization is now owner-manifest-bound. Every request and
+   authenticated adapter attestation binds the cohort, adapter, model IDs,
+   rate card, source/build identity and remaining cap. Aggregate cost is
+   reserved before a call and settled from the verified ledger.
+2. Scorecard schema v2 seals both paid ledgers and exact release provenance.
+   Deploy compares the approved/current revision, build ID and artifact digest;
+   skip-build verifies an existing attestation and cannot relabel stale output.
+3. Catalog donors are metadata-only inspiration. `reuse` is rebuilt through
+   the expressive compiler, donor HTML/copy is rejected at the provider seam,
+   and visible donor-copy leakage is measured rather than self-declared.
+4. The production POST installs the strict nonthrowing redacted telemetry sink.
+5. Review evidence is decoded JPEG with bounded dimensions, matching MIME,
+   viewport width and declared full-page content height. Corrupt, header-only,
+   wrong-size and viewport-only evidence fails before sealing or serving.
+6. AI creation requires an explicit rollout percentage from 1 through 99 and
+   a stable SHA-256 user bucket. Missing, 0 and 100 fail closed before credits,
+   budget or providers. Deploy/rollback bind mode and percentage together.
+
+Final local evidence: the original focused set reached 116/116 functional
+passes, followed by 3/3 for the final documentation contract; AI-hybrid passed
+21 files / 275 tests; Fable parity passed four files / 74 tests; the adaptive
+pipeline passed 3/3; TypeScript, diff-check and the deploy PowerShell parser
+all passed. No full test/build rerun, live eval, provider/model request,
+database operation, activation, rollback or deploy occurred. Paid evaluation,
+deployment and any Fable-level claim remain closed pending independent
+rereview and the separately authorized release sequence.

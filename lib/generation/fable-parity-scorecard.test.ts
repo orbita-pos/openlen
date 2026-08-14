@@ -11,6 +11,16 @@ import {
 
 const RUBRIC = { niche: 8, fidelity: 8, polish: 8, coherence: 8, usability: 8 } as const;
 const ARTIFACT_MANIFEST_SHA256 = `sha256:${"c".repeat(64)}`;
+const RELEASE_PROVENANCE = {
+  authorizationManifestSha256: `sha256:${"a".repeat(64)}`,
+  cohortVersion: "fable-parity-cohort/1",
+  cohortSha256: `sha256:${"d".repeat(64)}`,
+  sourceRevision: "bcb19ccd00f36e0a901ae2731e96f88bc8632b08",
+  buildId: "openlen-build-20260813",
+  artifactDigest: `sha256:${"b".repeat(64)}`,
+  immutableRateCardSha256: `sha256:${"e".repeat(64)}`,
+  rolloutPercent: 10,
+} as const;
 
 type Outcome = "win" | "tie" | "loss";
 
@@ -22,6 +32,11 @@ function comparison(index: number, overrides: Partial<FableParityComparisonResul
     openLenEligible: true,
     criticalFailures: [],
     paidCalls: [{ result: "delivered", costMicromxn: 1_000_000 }],
+    referencePaidCalls: [{ result: "delivered", costMicromxn: 500_000 }],
+    openLenRequestSha256: `sha256:${"1".repeat(64)}`,
+    fableRequestSha256: `sha256:${"2".repeat(64)}`,
+    openLenAttestationSha256: `sha256:${"3".repeat(64)}`,
+    fableAttestationSha256: `sha256:${"4".repeat(64)}`,
     ...overrides,
   };
 }
@@ -154,7 +169,8 @@ describe("Fable parity immutable scorecard", () => {
   });
 
   it("seals the verified scorecard and rejects any post-decision mutation", () => {
-    const sealed = sealFableParityScorecard(fixture(), ARTIFACT_MANIFEST_SHA256);
+    const sealed = (sealFableParityScorecard as Function)(fixture(), ARTIFACT_MANIFEST_SHA256, RELEASE_PROVENANCE);
+    expect(sealed).toMatchObject({ schemaVersion: "fable-parity-scorecard/2.0", source: RELEASE_PROVENANCE });
     expect(verifyFableParityScorecard(sealed)).toEqual(sealed.score);
     const mutated = structuredClone(sealed);
     mutated.score.nonLossRate = 1;
@@ -163,7 +179,7 @@ describe("Fable parity immutable scorecard", () => {
 
   it("rejects a forged passing score even when the attacker recomputes the unkeyed envelope hash", () => {
     const failing = fixture(Array<Outcome>(20).fill("loss"));
-    const forged = structuredClone(sealFableParityScorecard(failing, ARTIFACT_MANIFEST_SHA256));
+    const forged = structuredClone((sealFableParityScorecard as Function)(failing, ARTIFACT_MANIFEST_SHA256, RELEASE_PROVENANCE));
     forged.score.passed = true;
     forged.score.failures = [];
     const { scorecardSha256: _oldHash, ...unsigned } = forged;
@@ -172,12 +188,24 @@ describe("Fable parity immutable scorecard", () => {
   });
 
   it("binds the normalized comparisons and decisions to the exact artifact manifest hash", () => {
-    const sealed = sealFableParityScorecard(fixture(), ARTIFACT_MANIFEST_SHA256);
+    const sealed = (sealFableParityScorecard as Function)(fixture(), ARTIFACT_MANIFEST_SHA256, RELEASE_PROVENANCE);
     expect(sealed.source.artifactManifestSha256).toBe(ARTIFACT_MANIFEST_SHA256);
     const rebound = structuredClone(sealed);
     rebound.source.artifactManifestSha256 = `sha256:${"d".repeat(64)}`;
     const { scorecardSha256: _oldHash, ...unsigned } = rebound;
     Object.assign(rebound, { scorecardSha256: canonicalJsonSha256(unsigned) });
     expect(() => verifyFableParityScorecard(rebound)).toThrow(/evidence|source|manifest/i);
+  });
+
+  it.each([
+    ["source revision", { sourceRevision: "a".repeat(40) }],
+    ["build identity", { buildId: "stale-build" }],
+    ["artifact digest", { artifactDigest: `sha256:${"d".repeat(64)}` }],
+    ["rollout percent", { rolloutPercent: 99 }],
+  ])("rejects sealed release provenance tampering in %s", (_label, mutation) => {
+    const sealed = (sealFableParityScorecard as Function)(fixture(), ARTIFACT_MANIFEST_SHA256, RELEASE_PROVENANCE);
+    const mutated = structuredClone(sealed);
+    Object.assign(mutated.source, mutation);
+    expect(() => verifyFableParityScorecard(mutated)).toThrow(/source|evidence|hash|revision|build|rollout/i);
   });
 });

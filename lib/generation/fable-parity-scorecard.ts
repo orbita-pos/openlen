@@ -27,6 +27,14 @@ export interface FableParityComparisonResult {
     readonly result: "delivered" | "failed";
     readonly costMicromxn: number;
   }[];
+  readonly referencePaidCalls: readonly {
+    readonly result: "delivered" | "failed";
+    readonly costMicromxn: number;
+  }[];
+  readonly openLenRequestSha256: string;
+  readonly fableRequestSha256: string;
+  readonly openLenAttestationSha256: string;
+  readonly fableAttestationSha256: string;
 }
 
 export interface FableParityScoreInput {
@@ -47,15 +55,26 @@ export interface FableParityScore {
 }
 
 export interface SealedFableParityScorecard {
-  readonly schemaVersion: "fable-parity-scorecard/1.1";
+  readonly schemaVersion: "fable-parity-scorecard/2.0";
   readonly evidenceSha256: string;
-  readonly source: {
+  readonly source: FableParityScorecardProvenance & {
     artifactManifestSha256: string;
     comparisons: FableParityComparisonResult[];
     decisions: BlindDecision[];
   };
   readonly score: FableParityScore;
   readonly scorecardSha256: string;
+}
+
+export interface FableParityScorecardProvenance {
+  readonly authorizationManifestSha256: string;
+  readonly cohortVersion: string;
+  readonly cohortSha256: string;
+  readonly sourceRevision: string;
+  readonly buildId: string;
+  readonly artifactDigest: string;
+  readonly immutableRateCardSha256: string;
+  readonly rolloutPercent: number;
 }
 
 const preferenceValues = new Set(["A", "tie", "B"]);
@@ -72,6 +91,9 @@ const criticalFailures = new Set([
 
 function validateComparison(row: FableParityComparisonResult): void {
   if (!row || typeof row !== "object" || !row.comparisonId) throw new Error("comparison ID is required");
+  if (!exactKeys(row, ["comparisonId", "openLenSide", "technicalStatus", "openLenEligible", "criticalFailures", "paidCalls", "referencePaidCalls", "openLenRequestSha256", "fableRequestSha256", "openLenAttestationSha256", "fableAttestationSha256"])) {
+    throw new Error("comparison evidence must use the strict sealed schema");
+  }
   if (row.openLenSide !== "A" && row.openLenSide !== "B") throw new Error("invalid side assignment");
   if (!technicalStatuses.has(row.technicalStatus)) throw new Error("invalid technical status");
   if (typeof row.openLenEligible !== "boolean") throw new Error("eligibility must be boolean");
@@ -79,15 +101,22 @@ function validateComparison(row: FableParityComparisonResult): void {
     throw new Error("OpenLen failure cannot be eligible");
   }
   if (!Array.isArray(row.criticalFailures) || row.criticalFailures.some((failure) => !criticalFailures.has(failure))) throw new Error("invalid critical release failure");
-  if (!Array.isArray(row.paidCalls)) throw new Error("paid call ledger is required");
-  for (const call of row.paidCalls) {
-    if (!call || (call.result !== "delivered" && call.result !== "failed")
-      || !Number.isSafeInteger(call.costMicromxn) || call.costMicromxn <= 0) {
-      throw new Error("invalid paid call ledger entry");
+  for (const ledger of [row.paidCalls, row.referencePaidCalls]) {
+    if (!Array.isArray(ledger)) throw new Error("both paid call ledgers are required");
+    for (const call of ledger) {
+      if (!call || !exactKeys(call, ["result", "costMicromxn"]) || (call.result !== "delivered" && call.result !== "failed")
+        || !Number.isSafeInteger(call.costMicromxn) || call.costMicromxn <= 0) {
+        throw new Error("invalid paid call ledger entry");
+      }
     }
+  }
+  for (const hash of [row.openLenRequestSha256, row.fableRequestSha256, row.openLenAttestationSha256, row.fableAttestationSha256]) {
+    if (!sha256Hash.test(hash)) throw new Error("comparison attestation provenance is required");
   }
   const openLenSucceeded = row.technicalStatus === "ok" || row.technicalStatus === "fable_failure";
   if (openLenSucceeded && row.paidCalls.length === 0) throw new Error("successful OpenLen result requires paid accounting");
+  const fableSucceeded = row.technicalStatus === "ok" || row.technicalStatus === "openlen_failure";
+  if (fableSucceeded && row.referencePaidCalls.length === 0) throw new Error("successful Fable result requires paid accounting");
 }
 
 function validateDecision(row: BlindDecision): void {
@@ -214,6 +243,11 @@ function normalizedScoreInput(input: FableParityScoreInput): { comparisons: Fabl
     openLenEligible: row.openLenEligible,
     criticalFailures: [...row.criticalFailures],
     paidCalls: row.paidCalls.map((call) => ({ result: call.result, costMicromxn: call.costMicromxn })),
+    referencePaidCalls: row.referencePaidCalls.map((call) => ({ result: call.result, costMicromxn: call.costMicromxn })),
+    openLenRequestSha256: row.openLenRequestSha256,
+    fableRequestSha256: row.fableRequestSha256,
+    openLenAttestationSha256: row.openLenAttestationSha256,
+    fableAttestationSha256: row.fableAttestationSha256,
   })).sort((left, right) => left.comparisonId.localeCompare(right.comparisonId));
   const decisions = input.decisions.map((row) => ({
     comparisonId: row.comparisonId,
@@ -233,15 +267,29 @@ function exactKeys(value: object, keys: readonly string[]): boolean {
   return Object.keys(value).sort().join(",") === [...keys].sort().join(",");
 }
 
+function validateProvenance(value: FableParityScorecardProvenance): void {
+  if (!value || typeof value !== "object"
+    || !exactKeys(value, ["authorizationManifestSha256", "cohortVersion", "cohortSha256", "sourceRevision", "buildId", "artifactDigest", "immutableRateCardSha256", "rolloutPercent"])
+    || ![value.authorizationManifestSha256, value.cohortSha256, value.artifactDigest, value.immutableRateCardSha256].every((hash) => sha256Hash.test(hash))
+    || !/^[a-f0-9]{40}(?:[a-f0-9]{24})?$/.test(value.sourceRevision)
+    || !/^[A-Za-z0-9][A-Za-z0-9._:/+-]{0,159}$/.test(value.buildId)
+    || !/^[A-Za-z0-9][A-Za-z0-9._:/+-]{0,159}$/.test(value.cohortVersion)
+    || !Number.isInteger(value.rolloutPercent) || value.rolloutPercent < 1 || value.rolloutPercent > 99) {
+    throw new Error("invalid scorecard release provenance");
+  }
+}
+
 export function sealFableParityScorecard(
   input: FableParityScoreInput,
   artifactManifestSha256: string,
+  provenance: FableParityScorecardProvenance,
 ): SealedFableParityScorecard {
   if (!sha256Hash.test(artifactManifestSha256)) throw new Error("artifact manifest hash is required");
+  validateProvenance(provenance);
   const normalized = normalizedScoreInput(input);
-  const source = { artifactManifestSha256, ...normalized };
+  const source = { ...structuredClone(provenance), artifactManifestSha256, ...normalized };
   const unsigned = unsignedScorecard({
-    schemaVersion: "fable-parity-scorecard/1.1",
+    schemaVersion: "fable-parity-scorecard/2.0",
     evidenceSha256: canonicalJsonSha256(source),
     source,
     score: scoreFableParity(normalized),
@@ -253,18 +301,33 @@ export function verifyFableParityScorecard(value: unknown): FableParityScore {
   if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error("invalid scorecard manifest");
   const manifest = value as SealedFableParityScorecard;
   if (!exactKeys(manifest, ["schemaVersion", "evidenceSha256", "source", "score", "scorecardSha256"])
-    || manifest.schemaVersion !== "fable-parity-scorecard/1.1"
+    || manifest.schemaVersion !== "fable-parity-scorecard/2.0"
     || !/^sha256:[a-f0-9]{64}$/.test(manifest.evidenceSha256 ?? "")
     || !/^sha256:[a-f0-9]{64}$/.test(manifest.scorecardSha256 ?? "")) {
     throw new Error("invalid immutable scorecard manifest");
   }
   if (!manifest.source || typeof manifest.source !== "object"
-    || !exactKeys(manifest.source, ["artifactManifestSha256", "comparisons", "decisions"])
+    || !exactKeys(manifest.source, ["authorizationManifestSha256", "cohortVersion", "cohortSha256", "sourceRevision", "buildId", "artifactDigest", "immutableRateCardSha256", "rolloutPercent", "artifactManifestSha256", "comparisons", "decisions"])
     || !sha256Hash.test(manifest.source.artifactManifestSha256 ?? "")) {
     throw new Error("invalid scorecard source evidence");
   }
+  const provenance: FableParityScorecardProvenance = {
+    authorizationManifestSha256: manifest.source.authorizationManifestSha256,
+    cohortVersion: manifest.source.cohortVersion,
+    cohortSha256: manifest.source.cohortSha256,
+    sourceRevision: manifest.source.sourceRevision,
+    buildId: manifest.source.buildId,
+    artifactDigest: manifest.source.artifactDigest,
+    immutableRateCardSha256: manifest.source.immutableRateCardSha256,
+    rolloutPercent: manifest.source.rolloutPercent,
+  };
+  validateProvenance(provenance);
   const normalized = normalizedScoreInput(manifest.source);
-  const normalizedSource = { artifactManifestSha256: manifest.source.artifactManifestSha256, ...normalized };
+  const normalizedSource = {
+    ...provenance,
+    artifactManifestSha256: manifest.source.artifactManifestSha256,
+    ...normalized,
+  };
   if (canonicalJsonSha256(normalizedSource) !== manifest.evidenceSha256) throw new Error("scorecard source evidence hash mismatch");
   const recomputedScore = scoreFableParity(normalized);
   if (canonicalJsonSha256(recomputedScore) !== canonicalJsonSha256(manifest.score)) {
