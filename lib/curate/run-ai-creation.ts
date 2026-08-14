@@ -20,7 +20,7 @@ import {
 } from "./quick-section-composition";
 import type { FableFinalVisualGateResult, FableVisualRepairHandoff } from "./fable-final-visual-gate";
 import type { VisualEngineProjectMetadata } from "@/lib/projects/types";
-import { createFableRuntimeComposition, type FableRuntimeComposition, type FableRuntimeVisualBrief } from "./fable-runtime-composition";
+import { createFableRuntimeComposition, type FableRuntimeComposition, type FableRuntimeCompositionOptions, type FableRuntimeVisualBrief } from "./fable-runtime-composition";
 import type { FableCopyResult, FableIntentResult } from "./fable-input-adapters";
 import type { FableAdaptivePipelineDeps } from "./fable-adaptive-pipeline";
 
@@ -51,6 +51,8 @@ export interface RunAiCreationDeps {
     readonly brief: FableRuntimeVisualBrief;
   }) => Promise<FableFinalVisualGateResult>;
   createFableRuntimeComposition?: typeof createFableRuntimeComposition;
+  /** Low-level transports/renderers used by the real production root. */
+  fableRuntimeOptions?: FableRuntimeCompositionOptions;
   /** Test/runtime adapter for external rendering and storage boundaries only. */
   fableAdaptivePipelineDeps?: Omit<FableAdaptivePipelineDeps, "runtime" | "finalize">;
 }
@@ -136,7 +138,7 @@ export async function runAiCreation(
 ): Promise<AiCreationResult> {
   let runtime: FableRuntimeComposition;
   try {
-    runtime = (deps.createFableRuntimeComposition ?? createFableRuntimeComposition)();
+    runtime = (deps.createFableRuntimeComposition ?? createFableRuntimeComposition)(deps.fableRuntimeOptions);
   } catch {
     return failure("intent", "intent_analysis_failed");
   }
@@ -219,16 +221,16 @@ export async function runAiCreation(
       leaksAfter,
     });
   } catch {
-    await runtime.recordFailure("visual_quality", leaksAfter === 0 ? "semantic_gate_failed" : "inherited_copy_leak");
+    await runtime.recordFailure("delivery_gate", leaksAfter === 0 ? "semantic_gate_failed" : "inherited_copy_leak");
     return failure("delivery_gate", leaksAfter === 0 ? "semantic_gate_failed" : "inherited_copy_leak");
   }
   if (!preRepair.ok) {
     const reasonCode = deliveryReason(preRepair.reasonCode, leaksAfter);
-    await runtime.recordFailure("visual_quality", reasonCode);
+    await runtime.recordFailure("delivery_gate", reasonCode);
     return failure("delivery_gate", reasonCode);
   }
   if (leaksAfter !== 0) {
-    await runtime.recordFailure("visual_quality", "inherited_copy_leak");
+    await runtime.recordFailure("delivery_gate", "inherited_copy_leak");
     return failure("delivery_gate", "inherited_copy_leak");
   }
 
@@ -263,12 +265,12 @@ export async function runAiCreation(
       leaksAfter,
     });
   } catch {
-    await runtime.recordFailure("visual_quality", leaksAfter === 0 ? "semantic_gate_failed" : "inherited_copy_leak");
+    await runtime.recordFailure("delivery_gate", leaksAfter === 0 ? "semantic_gate_failed" : "inherited_copy_leak");
     return failure("delivery_gate", leaksAfter === 0 ? "semantic_gate_failed" : "inherited_copy_leak");
   }
   if (!postRepair.ok) {
     const reasonCode = deliveryReason(postRepair.reasonCode, leaksAfter);
-    await runtime.recordFailure("visual_quality", reasonCode);
+    await runtime.recordFailure("delivery_gate", reasonCode);
     return failure("delivery_gate", reasonCode);
   }
 

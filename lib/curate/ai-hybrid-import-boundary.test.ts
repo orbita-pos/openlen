@@ -123,6 +123,23 @@ function findForbiddenDependencies(root: string, entry: string): string[] {
   return [...violations].sort();
 }
 
+function findReachableModules(root: string, entry: string): string[] {
+  const pending = [path.resolve(entry)];
+  const visited = new Set<string>();
+  while (pending.length > 0) {
+    const current = pending.pop()!;
+    if (visited.has(current)) continue;
+    visited.add(current);
+    const source = fs.readFileSync(current, "utf8");
+    for (const reference of moduleReferences(source, current)) {
+      if (reference.typeOnly) continue;
+      const resolved = resolveRepositoryModule(root, current, reference.specifier);
+      if (resolved?.startsWith(`${path.resolve(root)}${path.sep}`)) pending.push(resolved);
+    }
+  }
+  return [...visited].map((file) => path.relative(root, file).replaceAll(path.sep, "/")).sort();
+}
+
 function findGeminiTextOrVisionDependencies(root: string, entry: string): string[] {
   const pending = [path.resolve(entry)];
   const visited = new Set<string>();
@@ -192,5 +209,9 @@ describe("AI hybrid production import boundary", () => {
   it("keeps Gemini text and vision providers outside Create with AI while retaining image-only assets", () => {
     const root = process.cwd();
     expect(findGeminiTextOrVisionDependencies(root, path.join(root, "app", "api", "curate", "route.ts"))).toEqual([]);
+    const geminiModules = findReachableModules(root, path.join(root, "app", "api", "curate", "route.ts"))
+      .filter((moduleName) => /(?:^|\/)gemini-[^/]+\.ts$/.test(moduleName));
+    expect(geminiModules).toEqual(["lib/generation/gemini-asset-pack-provider.ts"]);
+    expect(fs.readFileSync(path.join(root, geminiModules[0]!), "utf8")).toMatch(/responseModalities:\s*\["IMAGE"\]/);
   });
 });

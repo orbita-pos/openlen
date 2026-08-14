@@ -55,6 +55,105 @@ git diff --check
 # PASS
 ```
 
+## Fix Round 1/5 — review blockers (2026-08-13)
+
+Esta sección sustituye las afirmaciones anteriores sobre el gate visual y la
+compensación de persistencia. El POST ya no usa insert/debit/delete: proyecto y
+cobro se confirman mediante una sola sentencia PostgreSQL.
+
+### RED observado
+
+- El bloque inicial de cinco suites tuvo 13 fallos genuinos de 67 pruebas: un
+  score 1/10 y issues major/critical podían aceptar; una captura no vacía podía
+  ocultar geometría inválida; `fullPage` era falso; scout/page-plan perdían la
+  traza de intentos pagados; y assets se resolvían después de compilar.
+- La unidad atómica empezó RED por módulo ausente. Después, la prueba de saldo
+  insuficiente quedó 1 RED de 8 porque el CTE todavía permitía clamping desde un
+  saldo menor al cargo.
+- La prueba de orden Task 4 quedó 1 RED de 12 al exigir entrega inmediata de la
+  traza GLM antes de Gemini y antes de cualquier compilación.
+
+### GREEN productivo
+
+- El gate final exige decisión `accept`, los seis scores >= 7,
+  `wrongNiche=false`, `genericAiStyle=false`, cero issues major/critical y cero
+  fallos deterministas. Los JPEG desktop/mobile son de página completa. Overflow
+  y geometría provienen de dos lecturas del renderer; nunca del tamaño del
+  screenshot. Un fallo determinista corta antes de Qwen.
+- Task 4 prepara una sola vez todos los programas GLM, registra cada intento al
+  retorno, recolecta los slots usados y sólo entonces invoca el resolver Gemini.
+  El binder aplica las refs validadas a los bytes que posteriormente pasan por
+  compile, semantic/assets, render desktop/mobile, sanitize, assemble y seal.
+  `applyDelta` reutiliza el binder y recompila sólo IDs válidos afectados, sin
+  otra generación inicial ni segundo repair.
+- Intent, copy, scout, page-plan, programas, imagen, crítico y repair comparten
+  el único `PageBudget`/cliente creado por el runtime antes de la primera llamada
+  pagada. Los fallos pagados se registran antes del flush; delivery-gate usa su
+  stage propio. El grafo conserva una única ruta Gemini positiva, image-only, y
+  bloquea proveedores Gemini text/vision y whole-template.
+- `commitCurateProjectAndDebit` valida entrada y serialización antes de tocar DB
+  y ejecuta un único writable CTE: `UPDATE ... WHERE credits >= charge RETURNING`
+  alimenta `INSERT ... SELECT ... RETURNING`. Usuario ausente, saldo insuficiente
+  o fallo de INSERT producen error tipado y cero mutación parcial; saldo exacto
+  termina intencionalmente en cero. El route calcula créditos y valida el
+  documento antes de invocarlo. Telemetría delivered y el único preview/done se
+  emiten sólo después del commit atómico; toda excepción de cálculo, validación
+  o commit emite primero telemetría failed y deja cero proyecto/cobro/preview.
+- La integración POST usa la raíz por defecto real y sólo sustituye transportes,
+  renderer, storage, catálogo y commit externos. Prueba un slot de imagen hybrid,
+  una llamada Gemini (máximo tres), fixtures JPEG decodificables 64x64, tres
+  programas GLM antes de imagen, ambos screenshots entregados a Qwen, accept y
+  un único repair, rechazo/fallo pagado y configuración faltante fail-closed.
+
+### Alcance exacto
+
+Producción modificada:
+
+- `lib/ai/qwen-visual-critic.ts`
+- `lib/ai/visual-quality-renderer.ts`
+- `lib/curate/atomic-curate-commit.ts` (nuevo)
+- `lib/curate/curate-post-handler.ts`
+- `lib/curate/fable-adaptive-pipeline.ts`
+- `lib/curate/fable-final-visual-gate.ts`
+- `lib/curate/fable-runtime-composition.ts`
+- `lib/curate/run-ai-creation.ts`
+- `lib/generation/adaptive-section-composition.ts`
+- `lib/generation/fable-generation-telemetry.ts`
+
+Pruebas modificadas/nuevas:
+
+- `lib/ai/qwen-visual-critic.test.ts`
+- `lib/ai/visual-quality-renderer.test.ts`
+- `lib/curate/ai-hybrid-import-boundary.test.ts`
+- `lib/curate/ai-hybrid-regression.test.ts`
+- `lib/curate/atomic-curate-commit.test.ts` (nuevo)
+- `lib/curate/curate-route.fable.integration.test.ts`
+- `lib/curate/curate-route.integration.test.ts`
+- `lib/curate/fable-adaptive-pipeline.test.ts`
+- `lib/curate/quick-visual-repair.test.ts`
+- `lib/curate/run-ai-creation.test.ts`
+- `lib/generation/adaptive-section-composition.test.ts`
+- `lib/generation/ai-hybrid-niche-cohort.test.ts`
+
+Documentación: este reporte y `progress.md`. No se modificó ningún archivo
+ajeno ni se ejecutó red, DB, navegador/modelo real, publicación o deploy.
+
+### Verificación final
+
+```text
+9 suites Task 5 obligatorias: 120/120 PASS
+8 suites enfocadas runtime/adapters/Task4/atomic/renderer/POST: 53/53 PASS
+generation:ai-hybrid:gate: 20 archivos, 266/266 PASS
+generation:visual-engine-assets:gate: 21 archivos, 350/350 PASS
+typecheck: PASS
+git diff --check: PASS
+```
+
+Auditoría de privacidad: el evento Fable sólo admite stage, reasonCode,
+modelId, usage, duration, attempts y costo agregado. No se añadieron programas,
+prompts, copy, HTML, screenshots, cuerpos raw, URLs privadas ni identidad a
+telemetría o a este reporte.
+
 ## Fix Round 1 — 2026-08-13
 
 La evidencia anterior no era suficiente: `b01de910` podía quedar GREEN con

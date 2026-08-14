@@ -7,6 +7,7 @@ const mocks = vi.hoisted(() => ({
   captureException: vi.fn(),
   getCreditState: vi.fn(),
   debitCredits: vi.fn(),
+  commitAtomic: vi.fn(),
   creditsForUsage: vi.fn(),
   consumeToken: vi.fn(),
   createVersion: vi.fn(),
@@ -17,6 +18,8 @@ const mocks = vi.hoisted(() => ({
   removeWhere: vi.fn(),
   resolveProfileForCreation: vi.fn(),
   runAiCreation: vi.fn(),
+  failTelemetry: vi.fn(),
+  finalizeTelemetry: vi.fn(),
 }));
 
 vi.mock("@inariwatch/capture", () => ({ captureException: mocks.captureException }));
@@ -39,6 +42,7 @@ vi.mock("@/lib/rate-limit", () => ({
 vi.mock("@/lib/projects/thumbnail", () => ({ renderProjectThumbnail: mocks.renderProjectThumbnail }));
 vi.mock("@/lib/business-profiles/store", () => ({ resolveProfileForCreation: mocks.resolveProfileForCreation }));
 vi.mock("@/lib/curate/run-ai-creation", () => ({ runAiCreation: mocks.runAiCreation }));
+vi.mock("@/lib/curate/atomic-curate-commit", () => ({ commitCurateProjectAndDebit: mocks.commitAtomic }));
 
 import { POST } from "@/app/api/curate/route";
 
@@ -65,6 +69,8 @@ const SUCCESS = {
   copyUsage: { inputTokens: 120, outputTokens: 30 },
   filled: true,
   appliedOps: 4,
+  failFableTelemetry: mocks.failTelemetry,
+  finalizeFableTelemetry: mocks.finalizeTelemetry,
 };
 
 interface SseEvent {
@@ -129,6 +135,9 @@ describe("POST /api/curate hybrid-only integration", () => {
     mocks.renderProjectThumbnail.mockResolvedValue(undefined);
     mocks.creditsForUsage.mockReturnValue(3);
     mocks.debitCredits.mockResolvedValue(undefined);
+    mocks.commitAtomic.mockResolvedValue(undefined);
+    mocks.failTelemetry.mockResolvedValue(undefined);
+    mocks.finalizeTelemetry.mockResolvedValue(undefined);
   });
 
   afterAll(() => {
@@ -169,8 +178,10 @@ describe("POST /api/curate hybrid-only integration", () => {
       assetMode: "off",
       onStage: expect.any(Function),
     }));
-    expect(mocks.insertValues).toHaveBeenCalledTimes(1);
-    expect(mocks.insertValues).toHaveBeenCalledWith(expect.objectContaining({
+    expect(mocks.commitAtomic).toHaveBeenCalledTimes(1);
+    expect(mocks.commitAtomic).toHaveBeenCalledWith(expect.objectContaining({
+      userId: "user-1",
+      credits: 5,
       title: "Mundo Color",
       brief: BRIEF,
       profileId: "profile-1",
@@ -213,9 +224,11 @@ describe("POST /api/curate hybrid-only integration", () => {
       },
     });
     expect(mocks.creditsForUsage).toHaveBeenCalledWith(120, 30, "gemini-flash");
-    expect(mocks.debitCredits).toHaveBeenCalledWith("user-1", 5);
+    expect(mocks.debitCredits).not.toHaveBeenCalled();
     expect(mocks.createVersion).toHaveBeenCalledWith(expect.objectContaining({ html: FINAL_HTML }));
     expect(mocks.renderProjectThumbnail).toHaveBeenCalledWith(expect.objectContaining({ html: FINAL_HTML }));
+    expect(mocks.finalizeTelemetry).toHaveBeenCalledOnce();
+    expect(mocks.failTelemetry).not.toHaveBeenCalled();
   });
 
   it("uses the one-credit copy fallback without charging autofill when fill made no change", async () => {
@@ -228,7 +241,7 @@ describe("POST /api/curate hybrid-only integration", () => {
     const { events } = await post();
 
     expect(mocks.creditsForUsage).not.toHaveBeenCalled();
-    expect(mocks.debitCredits).toHaveBeenCalledWith("user-1", 1);
+    expect(mocks.commitAtomic).toHaveBeenCalledWith(expect.objectContaining({ userId: "user-1", credits: 1 }));
     expect(events.at(-1)).toMatchObject({ event: "done", data: { credits: 1, filled: false } });
   });
 
@@ -275,11 +288,11 @@ describe("POST /api/curate hybrid-only integration", () => {
   });
 
   it("maps a database failure to persistence_failed without preview, debit, done, or raw error leakage", async () => {
-    mocks.insertValues.mockRejectedValue(new Error("private database address"));
+    mocks.commitAtomic.mockRejectedValue(new Error("private database address"));
 
     const { events, text } = await post();
 
-    expect(mocks.insertValues).toHaveBeenCalledTimes(1);
+    expect(mocks.commitAtomic).toHaveBeenCalledTimes(1);
     expect(eventsNamed(events, "error")).toEqual([{
       event: "error",
       data: {
@@ -288,6 +301,7 @@ describe("POST /api/curate hybrid-only integration", () => {
       },
     }]);
     expect(text).not.toContain("private database address");
+    expect(mocks.failTelemetry).toHaveBeenCalledWith("delivery", "persistence_failed");
     expect(mocks.captureException).toHaveBeenCalledWith(expect.any(Error), {
       route: "curate",
       stage: "persistence",
@@ -298,13 +312,14 @@ describe("POST /api/curate hybrid-only integration", () => {
     expect(mocks.debitCredits).not.toHaveBeenCalled();
   });
 
-  it("compensates the known draft when debit fails, with no preview or done event", async () => {
-    mocks.debitCredits.mockRejectedValue(new Error("private debit failure"));
+  it("leaves observable project and debit state unchanged when the atomic debit is rejected", async () => {
+    const state = { projects: [] as string[], debited: 0 };
+    mocks.commitAtomic.mockImplementation(async () => { throw new Error("private debit failure"); });
 
     const { events, text } = await post();
 
-    expect(mocks.insertValues).toHaveBeenCalledTimes(1);
-    expect(mocks.removeWhere).toHaveBeenCalledTimes(1);
+    expect(mocks.commitAtomic).toHaveBeenCalledTimes(1);
+    expect(state).toEqual({ projects: [], debited: 0 });
     expect(eventsNamed(events, "preview")).toEqual([]);
     expect(eventsNamed(events, "done")).toEqual([]);
     expect(eventsNamed(events, "error")).toEqual([{
@@ -312,6 +327,32 @@ describe("POST /api/curate hybrid-only integration", () => {
       data: { kind: "persistence_failed", message: expect.any(String) },
     }]);
     expect(text).not.toContain("private debit failure");
+    expect(mocks.failTelemetry).toHaveBeenCalledWith("delivery", "persistence_failed");
+  });
+
+  it("leaves observable state unchanged on atomic insert failure and on later credit/validation exceptions", async () => {
+    const state = { projects: [] as string[], debited: 0 };
+    mocks.commitAtomic.mockImplementationOnce(async () => { throw new Error("private insert failure"); });
+    let outcome = await post();
+    expect(outcome.events.filter((event) => ["preview", "done"].includes(event.event))).toEqual([]);
+    expect(state).toEqual({ projects: [], debited: 0 });
+    expect(mocks.failTelemetry).toHaveBeenCalledWith("delivery", "persistence_failed");
+
+    mocks.failTelemetry.mockClear();
+    mocks.creditsForUsage.mockImplementationOnce(() => { throw new Error("private calculation failure"); });
+    outcome = await post();
+    expect(mocks.commitAtomic).toHaveBeenCalledTimes(1);
+    expect(outcome.events.filter((event) => ["preview", "done"].includes(event.event))).toEqual([]);
+    expect(state).toEqual({ projects: [], debited: 0 });
+    expect(mocks.failTelemetry).toHaveBeenCalledWith("delivery", "persistence_failed");
+
+    mocks.failTelemetry.mockClear();
+    mocks.runAiCreation.mockResolvedValueOnce({ ...SUCCESS, visualEngine: { ...VISUAL_ENGINE, templateId: "forged" } });
+    outcome = await post();
+    expect(mocks.commitAtomic).toHaveBeenCalledTimes(1);
+    expect(outcome.events.filter((event) => ["preview", "done"].includes(event.event))).toEqual([]);
+    expect(state).toEqual({ projects: [], debited: 0 });
+    expect(mocks.failTelemetry).toHaveBeenCalledWith("delivery", "persistence_failed");
   });
 
   it("preserves authentication, rate, input, and credit prechecks before the pipeline", async () => {

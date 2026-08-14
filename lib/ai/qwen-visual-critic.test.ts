@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import type { FireworksJsonClient, } from "./fireworks-client";
 import type { FireworksJsonRequest } from "./fireworks-contracts";
-import { assessFinalVisualCandidate } from "./qwen-visual-critic";
+import { assessFinalVisualCandidate, type FinalVisualVerdict } from "./qwen-visual-critic";
 
 const JPEG = "/9j/4AAQSkZJRgABAQEAYABgAAD/2wBDAAMCAgMCAgMDAwMEAwMEBQgFBQQEBQoHBwYIDAoMDAsKCwsNDhIQDQ4RDgsLEBYQERMUFRUVDA8XGBYUGBIUFRT/2wBDAQMEBAUEBQkFBQkUDQsNFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBT/wAARCABAAEADASIAAhEBAxEB/8QAHwAAAQUBAQEBAQEAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAAAgEDAwIEAwUFBAQAAAF9AQIDAAQRBRIhMUEGE1FhByJxFDKBkaEII0KxwRVS0fAkM2JyggkKFhcYGRolJicoKSo0NTY3ODk6Q0RFRkdISUpTVFVWV1hZWmNkZWZnaGlqc3R1dnd4eXqDhIWGh4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMT1NXW19jZ2uHi4+Tl5ufo6erx8vP09fb3+Pn6/8QAHwEAAwEBAQEBAQEBAQAAAAAAAAECAwQFBgcICQoL/8QAtREAAgECBAQDBAcFBAQAAQJ3AAECAxEEBSExBhJBUQdhcRMiMoEIFEKRobHBCSMzUvAVYnLRChYkNOEl8RcYGRomJygpKjU2Nzg5OkNERUZHSElKU1RVVldYWVpjZGVmZ2hpanN0dnd4eXqDhIWGh4iJipKTlJWWl5iZmqKmqsrO0tba3uLm6wsLDxMXGx8jJytLT1NXW19jZ2uHi4+Tl5ufo6erx8vP09fb3+Pn6/9oADAMBAAIRAxEAPwDq6KKK/os/KgooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigD//2Q==";
 
@@ -20,7 +20,7 @@ const verdict = {
   decision: "accept" as const,
 };
 
-function client(reply = verdict) {
+function client(reply: FinalVisualVerdict = verdict) {
   let request: FireworksJsonRequest<unknown> | undefined;
   const value: FireworksJsonClient = {
     async request<T>(candidate: FireworksJsonRequest<T>) {
@@ -71,5 +71,40 @@ describe("assessFinalVisualCandidate", () => {
       const result = await assessFinalVisualCandidate(input, { client: client(reply).value });
       expect(result).toMatchObject({ ok: true, verdict: { decision: "reject" } });
     }
+  });
+
+  it.each([
+    "nicheRecognition",
+    "promptFidelity",
+    "visualQuality",
+    "coherence",
+    "originality",
+    "mobileQuality",
+  ] as const)("rejects an accept verdict when %s is below seven", async (score) => {
+    const result = await assessFinalVisualCandidate(input, {
+      client: client({ ...verdict, [score]: 1 }).value,
+    });
+
+    expect(result).toMatchObject({ ok: true, verdict: { decision: "reject", [score]: 1 } });
+  });
+
+  it("rejects any major or critical issue even when Qwen says accept, while allowing minor issues", async () => {
+    for (const severity of ["major", "critical"] as const) {
+      const result = await assessFinalVisualCandidate(input, {
+        client: client({
+          ...verdict,
+          issues: [{ code: "quality" as const, severity, viewport: "both" as const }],
+        }).value,
+      });
+      expect(result).toMatchObject({ ok: true, verdict: { decision: "reject" } });
+    }
+
+    const minor = await assessFinalVisualCandidate(input, {
+      client: client({
+        ...verdict,
+        issues: [{ code: "quality" as const, severity: "minor" as const, viewport: "both" as const }],
+      }).value,
+    });
+    expect(minor).toMatchObject({ ok: true, verdict: { decision: "accept" } });
   });
 });

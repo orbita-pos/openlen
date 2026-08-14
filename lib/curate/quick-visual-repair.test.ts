@@ -119,6 +119,35 @@ describe("quick visual repair", () => {
     expect(applyDelta).not.toHaveBeenCalled();
   });
 
+  it("rejects deterministic geometry before a permissive critic can accept it", async () => {
+    const inspect = vi.fn(async () => ({ ok: true, deterministic: { mobileOverflow: false, weakTypographyHierarchy: false, invalidGeometry: true }, screenshots: { desktop: { mimeType: "image/jpeg", dataBase64: "a" }, mobile: { mimeType: "image/jpeg", dataBase64: "b" } } }));
+    const critique = vi.fn(async () => ({ ok: true, verdict: { schemaVersion: "fable-visual-verdict/1.0" as const, nicheRecognition: 9, promptFidelity: 9, visualQuality: 9, coherence: 9, originality: 9, mobileQuality: 9, wrongNiche: false, genericAiStyle: false, issues: [], decision: "accept" as const } }));
+    const repairProvider = { repair: vi.fn() };
+
+    const result = await runFableFinalVisualGate(
+      { requestId: "fable-bad-geometry", candidate: { html: compositionHtml, visualEngine: compositionVisualEngine }, handoff: {} as never },
+      { inspect, critique, repairProvider, applyDelta: vi.fn() },
+    );
+
+    expect(result).toEqual({ ok: false, code: "deterministic_gate_failed" });
+    expect(critique).not.toHaveBeenCalled();
+    expect(repairProvider.repair).not.toHaveBeenCalled();
+  });
+
+  it("does not accept a low-score or critical-issue verdict injected at the final gate", async () => {
+    const inspect = vi.fn(async () => ({ ok: true, deterministic: { mobileOverflow: false, weakTypographyHierarchy: false, invalidGeometry: false }, screenshots: { desktop: { mimeType: "image/jpeg", dataBase64: "a" }, mobile: { mimeType: "image/jpeg", dataBase64: "b" } } }));
+    for (const verdict of [
+      { schemaVersion: "fable-visual-verdict/1.0" as const, nicheRecognition: 9, promptFidelity: 1, visualQuality: 9, coherence: 9, originality: 9, mobileQuality: 9, wrongNiche: false, genericAiStyle: false, issues: [], decision: "accept" as const },
+      { schemaVersion: "fable-visual-verdict/1.0" as const, nicheRecognition: 9, promptFidelity: 9, visualQuality: 9, coherence: 9, originality: 9, mobileQuality: 9, wrongNiche: false, genericAiStyle: false, issues: [{ code: "quality" as const, severity: "critical" as const, viewport: "both" as const }], decision: "accept" as const },
+    ]) {
+      const result = await runFableFinalVisualGate(
+        { requestId: "fable-bad-accept", candidate: { html: compositionHtml, visualEngine: compositionVisualEngine }, handoff: {} as never },
+        { inspect, critique: vi.fn(async () => ({ ok: true, verdict })), repairProvider: { repair: vi.fn() }, applyDelta: vi.fn() },
+      );
+      expect(result).toEqual({ ok: false, code: "visual_rejected" });
+    }
+  });
+
   it("uses GLM once for a repair verdict, then rerenders and asks Qwen exactly once more", async () => {
     const program = {
       schemaVersion: "expressive-section-program/1.0" as const,

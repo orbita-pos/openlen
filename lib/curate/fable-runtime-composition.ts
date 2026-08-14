@@ -1,8 +1,8 @@
 import { assessFinalVisualCandidate } from "@/lib/ai/qwen-visual-critic";
-import { createFireworksJsonClient, type FireworksJsonClient } from "@/lib/ai/fireworks-client";
+import { createFireworksJsonClient, type FireworksJsonClient, type FireworksJsonClientOptions } from "@/lib/ai/fireworks-client";
 import { renderVisualQualityViewports } from "@/lib/ai/visual-quality-renderer";
 import { createFableGenerationTelemetry, type FableGenerationTelemetryEvent, type FableTelemetryStage } from "@/lib/generation/fable-generation-telemetry";
-import { createGeminiAssetPackProvider } from "@/lib/generation/gemini-asset-pack-provider";
+import { createGeminiAssetPackProvider, type GeminiAssetPackProviderOptions } from "@/lib/generation/gemini-asset-pack-provider";
 import { createGlmSectionProgramProvider, type GlmSectionProgramProvider } from "@/lib/generation/glm-section-program-provider";
 import { createGlmVisualRepairProvider, type GlmVisualRepairProvider } from "@/lib/generation/glm-visual-repair";
 import {
@@ -31,6 +31,9 @@ export interface FableRuntimeCompositionOptions {
   readonly budgetConfig?: PageBudgetConfig;
   readonly pageBudget?: PageBudget;
   readonly client?: FireworksJsonClient;
+  readonly fireworksClientOptions?: Omit<FireworksJsonClientOptions, "budget">;
+  readonly geminiAssetPackProviderOptions?: Omit<GeminiAssetPackProviderOptions, "pageBudget">;
+  readonly renderViewports?: typeof renderVisualQualityViewports;
   readonly inspect?: (candidate: Parameters<typeof runFableFinalVisualGate>[0]["candidate"]) => Promise<FableInspection>;
   readonly repairProvider?: GlmVisualRepairProvider;
   readonly applyDelta?: Parameters<typeof runFableFinalVisualGate>[1]["applyDelta"];
@@ -51,7 +54,7 @@ export interface FableRuntimeComposition {
     readonly attempts?: 0 | 1 | 2 | 3;
   }): void;
   recordImage(trace: { readonly modelId?: string | null; readonly generatedCount: number; readonly durationMs: number }): void;
-  recordFailure(stage: "intent" | "copy" | "scout" | "page_plan" | "initial_program" | "image" | "visual_quality" | "delivery", reasonCode: string): Promise<void>;
+  recordFailure(stage: "intent" | "copy" | "scout" | "page_plan" | "initial_program" | "image" | "delivery_gate" | "visual_quality" | "delivery", reasonCode: string): Promise<void>;
   recordDelivered(): Promise<void>;
   runFinalGate(input: {
     readonly requestId: string;
@@ -61,8 +64,8 @@ export interface FableRuntimeComposition {
   }): Promise<FableFinalVisualGateResult>;
 }
 
-function defaultInspect(candidate: Parameters<typeof runFableFinalVisualGate>[0]["candidate"]): Promise<FableInspection> {
-  return renderVisualQualityViewports(candidate.html).then((rendered) => {
+function defaultInspect(candidate: Parameters<typeof runFableFinalVisualGate>[0]["candidate"], renderViewports = renderVisualQualityViewports): Promise<FableInspection> {
+  return renderViewports(candidate.html).then((rendered) => {
     if (!rendered) {
       return {
         ok: false,
@@ -75,7 +78,7 @@ function defaultInspect(candidate: Parameters<typeof runFableFinalVisualGate>[0]
       deterministic: {
         mobileOverflow: rendered.mobileOverflow === true,
         weakTypographyHierarchy: rendered.weakTypographyHierarchy === true,
-        invalidGeometry: rendered.desktop.dataBase64.length === 0 || rendered.mobile.dataBase64.length === 0,
+        invalidGeometry: rendered.invalidGeometry === true,
       },
       screenshots: { desktop: rendered.desktop, mobile: rendered.mobile },
     };
@@ -93,9 +96,9 @@ function defaultInspect(candidate: Parameters<typeof runFableFinalVisualGate>[0]
  */
 export function createFableRuntimeComposition(options: FableRuntimeCompositionOptions = {}): FableRuntimeComposition {
   const pageBudget = options.pageBudget ?? createPageGenerationBudget(options.budgetConfig ?? parseFablePageBudgetConfigFromEnv());
-  const fireworksClient = options.client ?? createFireworksJsonClient({ budget: pageBudget });
+  const fireworksClient = options.client ?? createFireworksJsonClient({ ...options.fireworksClientOptions, budget: pageBudget });
   const glmSectionProgramProvider = createGlmSectionProgramProvider({ client: fireworksClient });
-  const geminiAssetPackProvider = createGeminiAssetPackProvider({ pageBudget });
+  const geminiAssetPackProvider = createGeminiAssetPackProvider({ ...options.geminiAssetPackProviderOptions, pageBudget });
   const telemetry = createFableGenerationTelemetry({ budget: pageBudget, sink: options.telemetrySink });
   const recordModel: FableRuntimeComposition["recordModel"] = (stage, result) => {
     if (!result.modelId) return;
@@ -130,7 +133,7 @@ export function createFableRuntimeComposition(options: FableRuntimeCompositionOp
       return result;
     },
   };
-  const inspect = options.inspect ?? defaultInspect;
+  const inspect = options.inspect ?? ((candidate) => defaultInspect(candidate, options.renderViewports));
   const configuredRepairProvider = options.repairProvider ?? createGlmVisualRepairProvider({ client: fireworksClient });
   const repairProvider: GlmVisualRepairProvider = {
     async repair(request) {

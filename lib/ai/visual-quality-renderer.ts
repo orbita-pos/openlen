@@ -12,6 +12,7 @@ export interface VisualQualityViewports {
   mobileOverflow?: boolean;
   weakTypographyHierarchy?: boolean;
   squareComponentTreatment?: boolean;
+  invalidGeometry?: boolean;
 }
 
 interface PageLike {
@@ -71,6 +72,14 @@ function hasDocumentHorizontalOverflow(value: unknown): boolean {
   const clientWidth = geometry.clientWidth;
   if (![rootScrollWidth, bodyScrollWidth, clientWidth].every((item) => typeof item === "number" && Number.isFinite(item) && item >= 0)) return false;
   return Math.max(Number(rootScrollWidth), Number(bodyScrollWidth)) > Number(clientWidth) + 1;
+}
+
+function hasValidDocumentGeometry(value: unknown): boolean {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  const geometry = value as Record<string, unknown>;
+  const measurements = [geometry.rootScrollWidth, geometry.bodyScrollWidth, geometry.clientWidth];
+  return measurements.every((item) => typeof item === "number" && Number.isFinite(item) && item >= 0)
+    && Number(geometry.clientWidth) > 0;
 }
 
 function overflowGeometrySamplesDisagree(first: unknown, second: unknown): boolean {
@@ -140,6 +149,7 @@ async function captureWithPage(
   let mobileOverflow = false;
   let weakTypographyHierarchy = false;
   let squareComponentTreatment = false;
+  let invalidGeometry = false;
   for (const viewport of [VISUAL_QUALITY_DESKTOP_VIEWPORT, VISUAL_QUALITY_MOBILE_VIEWPORT]) {
     if (viewport !== VISUAL_QUALITY_DESKTOP_VIEWPORT) await page.setViewport(viewport);
     await awaitDeterministicLayout(page);
@@ -195,12 +205,13 @@ async function captureWithPage(
       });
       const firstGeometry = await readGeometry();
       const secondGeometry = await readGeometry();
+      invalidGeometry = !hasValidDocumentGeometry(firstGeometry) || !hasValidDocumentGeometry(secondGeometry);
       mobileOverflow = overflowGeometrySamplesDisagree(firstGeometry, secondGeometry)
         || hasDocumentHorizontalOverflow(firstGeometry)
         || hasDocumentHorizontalOverflow(secondGeometry);
       ({ weakTypographyHierarchy, squareComponentTreatment } = readVisualDiagnostics(firstGeometry));
     }
-    const bytes = Buffer.from(await page.screenshot({ type: "jpeg", quality: 75, fullPage: false }));
+    const bytes = Buffer.from(await page.screenshot({ type: "jpeg", quality: 75, fullPage: true }));
     const image = { mimeType: "image/jpeg", dataBase64: bytes.toString("base64") };
     if (!isBoundedJpeg(image)) return null;
     images.push(image);
@@ -211,6 +222,7 @@ async function captureWithPage(
     mobileOverflow,
     weakTypographyHierarchy,
     squareComponentTreatment,
+    invalidGeometry,
   };
 }
 

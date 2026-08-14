@@ -230,6 +230,32 @@ describe("renderVisualQualityViewports", () => {
       "guard", "viewport:1280", "content", "settle", "viewport:390", "settle", "overflow", "overflow", "close",
     ]);
     expect(close).toHaveBeenCalledTimes(1);
+    expect(page.screenshot).toHaveBeenCalledTimes(2);
+    expect(page.screenshot).toHaveBeenNthCalledWith(1, expect.objectContaining({ fullPage: true }));
+    expect(page.screenshot).toHaveBeenNthCalledWith(2, expect.objectContaining({ fullPage: true }));
+  });
+
+  it("derives invalid geometry from renderer measurements rather than non-empty screenshot bytes", async () => {
+    const page = {
+      setViewport: vi.fn(async () => undefined),
+      setContent: vi.fn(async () => undefined),
+      evaluate: vi.fn()
+        .mockResolvedValueOnce(undefined)
+        .mockResolvedValueOnce(undefined)
+        .mockResolvedValueOnce({ rootScrollWidth: Number.NaN, bodyScrollWidth: 390, clientWidth: 390 })
+        .mockResolvedValueOnce({ rootScrollWidth: Number.NaN, bodyScrollWidth: 390, clientWidth: 390 }),
+      screenshot: vi.fn(async () => Buffer.from("non-empty-valid-capture")),
+    };
+
+    const result = await renderVisualQualityViewports(HTML, {
+      launchBrowser: async () => ({ newPage: async () => page, close: async () => undefined }),
+      installGuard: async () => undefined,
+      settle: async () => undefined,
+    });
+
+    expect(result).toMatchObject({ invalidGeometry: true });
+    expect(result?.desktop.dataBase64).not.toBe("");
+    expect(result?.mobile.dataBase64).not.toBe("");
   });
 
   it("reports document-level horizontal overflow measured at the mobile viewport", async () => {

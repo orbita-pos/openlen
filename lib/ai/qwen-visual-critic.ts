@@ -77,6 +77,17 @@ function issue(code: BoundedVisualIssue["code"], viewport: BoundedVisualIssue["v
   return { code, severity: "critical", viewport };
 }
 
+/** Binding release policy. Minor observations are allowed; weak scores and
+ * material issues can never be converted into an acceptance by model prose. */
+export function isFinalVisualAcceptance(verdict: FinalVisualVerdict): boolean {
+  return verdict.decision === "accept"
+    && [verdict.nicheRecognition, verdict.promptFidelity, verdict.visualQuality, verdict.coherence, verdict.originality, verdict.mobileQuality]
+      .every((score) => score >= 7)
+    && !verdict.wrongNiche
+    && !verdict.genericAiStyle
+    && !verdict.issues.some((entry) => entry.severity === "major" || entry.severity === "critical");
+}
+
 function withDeterministicFailures(
   candidate: FinalVisualVerdict,
   deterministic: FinalVisualCriticInput["deterministic"],
@@ -85,7 +96,10 @@ function withDeterministicFailures(
   if (deterministic.mobileOverflow) failures.push(issue("overflow", "mobile"));
   if (deterministic.weakTypographyHierarchy) failures.push(issue("typography", "both"));
   if (deterministic.invalidGeometry) failures.push(issue("geometry", "both"));
-  const disqualifiesAcceptance = candidate.wrongNiche || candidate.genericAiStyle || candidate.nicheRecognition < 7 || failures.length > 0;
+  const disqualifiesAcceptance = candidate.wrongNiche
+    || candidate.genericAiStyle
+    || failures.length > 0
+    || (candidate.decision === "accept" && !isFinalVisualAcceptance(candidate));
   if (!disqualifiesAcceptance) return candidate;
   const merged = [...candidate.issues, ...failures].filter((entry, index, values) => values.findIndex((other) => other.code === entry.code && other.viewport === entry.viewport) === index).slice(0, 8);
   return { ...candidate, issues: merged, decision: "reject" };

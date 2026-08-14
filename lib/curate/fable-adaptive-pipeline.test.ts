@@ -32,10 +32,14 @@ describe("Fable adaptive production pipeline", () => {
       events.push("compose");
       expect(deps.provider).toBe(runtime.glmSectionProgramProvider);
       expect(input.design).toBe(design);
+      const assetBinding = await deps.beforeCompile({ plan: input.plan, design: input.design, usedAssetSlots: [] });
+      if (!assetBinding.ok) return { ok: false as const, reasonCode: "required_asset_unavailable", telemetry: [] };
+      const bound = assetBinding.bind("<!doctype html><html><body>INITIAL</body></html>", []);
+      if (!bound.ok) return { ok: false as const, reasonCode: "required_asset_unavailable", telemetry: [] };
       return {
         ok: true as const,
         status: "composed" as const,
-        html: "<!doctype html><html><body>INITIAL</body></html>",
+        html: bound.html,
         manifest: { outputHash: "sha256:initial" },
         telemetry: [],
         handoff: { schemaVersion: "adaptive-section-repair-handoff/1.0", entries: [{ programId: "program-1" }] },
@@ -78,7 +82,13 @@ describe("Fable adaptive production pipeline", () => {
       resolveAssets: async (_input, deps) => {
         events.push("assets");
         expect(deps.provider).toBe(runtime.geminiAssetPackProvider);
-        return { ok: true as const, html: "<!doctype html><html><body>INITIAL+ASSET</body></html>", assetManifest: undefined, assetTrace: undefined };
+        return {
+          ok: true as const,
+          assetManifest: undefined,
+          assetTrace: undefined,
+          bind: (html: string) => ({ ok: true as const, html: html.replace("INITIAL", "INITIAL+ASSET") }),
+          reapply: (html: string) => ({ ok: true as const, html }),
+        };
       },
       sealFinal: ((html: string) => ({ html, sealed: true })) as never,
       buildVisualEngine: ({ html }) => ({ html, visualEngine: { compositionManifest: { outputHash: "sha256:initial" } } as never }),
@@ -94,5 +104,50 @@ describe("Fable adaptive production pipeline", () => {
     }) : { ok: false };
     expect(applyDelta).toHaveBeenCalledOnce();
     expect(repaired).toMatchObject({ ok: true, candidate: { html: `${repairedHtml}|FINAL` } });
+  });
+
+  it.each(["scout", "page_plan"] as const)("records a failed paid %s attempt before flushing failure telemetry", async (failedStage) => {
+    const events: string[] = [];
+    const runtime = {
+      fireworksClient: { request: vi.fn() },
+      glmSectionProgramProvider: { generate: vi.fn() },
+      geminiAssetPackProvider: { createPack: vi.fn() },
+      recordModel: vi.fn((stage: string, result: { modelId?: string }) => events.push(`model:${stage}:${result.modelId}`)),
+      recordImage: vi.fn(),
+      recordFailure: vi.fn(async (stage: string) => { events.push(`failure:${stage}`); }),
+    };
+    const paidFailure = {
+      ok: false as const,
+      code: "provider_error" as const,
+      modelId: failedStage === "scout" ? "qwen-paid-failure" : "deepseek-paid-failure",
+      usage: { inputTokens: 13, cachedTokens: 0, outputTokens: 2, thinkingTokens: 1 },
+      durationMs: 17,
+      attempts: 2 as const,
+    };
+    const scoutSuccess = {
+      ok: true as const,
+      requiredRoles: ["hero"], candidates: [], decisions: [],
+      modelId: "qwen-success", usage: { inputTokens: 1, cachedTokens: 0, outputTokens: 1, thinkingTokens: 0 }, durationMs: 1, attempts: 1 as const,
+    };
+
+    const result = await runFableAdaptivePipeline({
+      projectId: "project-paid-failure",
+      copy: {}, records: [], profileData: {}, candidateTitle: "Safe",
+      intent: { functional: { siteType: "landing" }, audience: { primary: "general", ageRange: null, secondary: [] }, domains: [], emotionalGoals: [], requiredVisualSignals: [], forbiddenVisualSignals: [] },
+      intentHash: `sha256:${"a".repeat(64)}`, policyVersion: "ai-hybrid-policy/1.0", assetMode: "curated",
+    } as never, {
+      runtime: runtime as never,
+      buildInventory: () => ({ hash: `sha256:${"b".repeat(64)}`, entries: [] }) as never,
+      planAdaptive: () => ({ ok: true as const, plan: { rows: [{ requestedRole: "hero" }] } }) as never,
+      buildInitialDirection: () => ({ direction: { schemaVersion: "creative-direction/1.0" } }) as never,
+      scoutCandidates: async () => failedStage === "scout" ? paidFailure as never : scoutSuccess as never,
+      createPageDesign: async () => paidFailure as never,
+      finalize: vi.fn() as never,
+    });
+
+    expect(result).toMatchObject({ ok: false, reasonCode: "provider_error" });
+    expect(events).toEqual(failedStage === "scout"
+      ? ["model:scout:qwen-paid-failure", "failure:scout"]
+      : ["model:scout:qwen-success", "model:page_plan:deepseek-paid-failure", "failure:page_plan"]);
   });
 });

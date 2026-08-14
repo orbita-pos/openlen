@@ -3,7 +3,7 @@ import { z } from "zod";
 
 import { AdaptivePageDesignProgramSchema, type AdaptivePageDesignProgram } from "./adaptive-design-contracts";
 import { canonicalJsonSha256, sha256 } from "./content-hash";
-import { ExpressiveSectionProgramSchema, SectionDecisionProvenanceSchema, type ExpressiveSectionProgram, type SectionDecisionProvenance } from "./expressive-section-contracts";
+import { ExpressiveSectionProgramSchema, SectionDecisionProvenanceSchema, type ExpressiveNode, type ExpressiveSectionProgram, type SectionDecisionProvenance } from "./expressive-section-contracts";
 import { compileExpressiveSection } from "./expressive-section-compiler";
 import type { GlmSectionProgramProvider, GlmSectionProgramProviderResult } from "./glm-section-program-provider";
 import type { GlmVisualRepairDelta } from "./glm-visual-repair";
@@ -87,6 +87,20 @@ export interface AdaptiveSectionCompositionDeps {
   readonly sanitize: (html: string) => { readonly html: string | null };
   readonly assemble: (fragments: SectionFragment[]) => string;
   readonly seal: (html: string) => { readonly html: string; readonly sealed: boolean };
+  /** Delivers each paid GLM trace immediately after the provider returns, so
+   * callers can flush failure telemetry without waiting for composition. */
+  readonly onProviderTelemetry?: (telemetry: RedactedProviderTelemetry) => void;
+  /** Runs once after every GLM program has been prepared and before any
+   * compiler/render gate. The returned binder makes resolved asset refs part
+   * of the bytes that are compiled, gated, assembled, and repaired. */
+  readonly beforeCompile?: (input: {
+    readonly plan: SectionPlan;
+    readonly design: AdaptivePageDesignProgram;
+    readonly usedAssetSlots: readonly number[];
+  }) => Promise<
+    | { readonly ok: true; readonly bind: (html: string, usedAssetSlots: readonly number[]) => { readonly ok: true; readonly html: string } | { readonly ok: false } }
+    | { readonly ok: false; readonly code?: string }
+  >;
 }
 
 interface CompletedRow {
@@ -99,6 +113,26 @@ interface CompletedRow {
   readonly structuralFingerprint: string;
   readonly programHash: string | null;
   readonly fragment: SectionFragment;
+}
+
+interface PreparedRow {
+  readonly row: SectionPlanRow;
+  readonly decision: AdaptivePageDesignProgram["decisions"][number];
+  readonly assetSlots: readonly { readonly slotIndex: number; readonly mediaType: AdaptivePageDesignProgram["imageSlots"][number]["mediaType"] }[];
+  readonly donor: NonNullable<ReturnType<typeof sourceForDecision>> | null;
+  readonly verified: VerifiedSectionFragment | null;
+  readonly provenance: SectionDecisionProvenance;
+  readonly generatedProgram: ExpressiveSectionProgram | null;
+}
+
+function collectProgramAssetSlots(program: ExpressiveSectionProgram): number[] {
+  const slots: number[] = [];
+  const visit = (node: ExpressiveNode) => {
+    if (node.kind === "layout") node.children.forEach(visit);
+    else if (node.kind === "media") slots.push(node.slotIndex);
+  };
+  visit(program.root);
+  return slots;
 }
 
 const RepairHandoffEntryBase = {
@@ -312,6 +346,7 @@ export async function composeAdaptiveSections(
   const handoffEntries: unknown[] = [];
 
   try {
+    const preparedRows: PreparedRow[] = [];
     for (const row of input.plan.rows) {
       const decision = input.design.decisions[row.ordinal];
       const assetSlots = input.design.imageSlots
@@ -347,17 +382,10 @@ export async function composeAdaptiveSections(
         usefulTraits: decision.usefulTraits,
       };
 
-      let draft: AdaptiveDerivedSectionDraft;
-      let programHash: string | null = null;
-      let normalizedStructuralFingerprint: string | null = null;
       let generatedProgram: ExpressiveSectionProgram | null = null;
       if (decision.action === "reuse") {
         const tag = fragmentRootTag(verified!);
         if (!tag) return fail("section_fragment_invalid");
-        draft = {
-          action: "reuse", ordinal: row.ordinal, id: verified!.slug, html: verified!.html, rootTag: tag,
-          role: row.requestedRole, componentType: row.componentType, provenance,
-        };
       } else {
         const request = decision.action === "generate" ? {
           mode: "generate",
@@ -387,25 +415,56 @@ export async function composeAdaptiveSections(
         } as const;
         const providerResult = await deps.provider.generate(request);
         const providerTrace = providerTelemetry(providerResult);
-        if (providerTrace) telemetry.push(providerTrace);
+        if (providerTrace) {
+          telemetry.push(providerTrace);
+          deps.onProviderTelemetry?.(providerTrace);
+        }
         if (!providerResult.ok) return fail(providerFailureCode(providerResult.code));
+        generatedProgram = providerResult.program;
+      }
+      preparedRows.push({ row, decision, assetSlots, donor, verified, provenance, generatedProgram });
+    }
+
+    const usedAssetSlots = [...new Set(preparedRows.flatMap((prepared) => prepared.generatedProgram
+      ? collectProgramAssetSlots(prepared.generatedProgram)
+      : []))].sort((left, right) => left - right);
+    const binding = deps.beforeCompile
+      ? await deps.beforeCompile({ plan: input.plan, design: input.design, usedAssetSlots })
+      : null;
+    if (binding && !binding.ok) return fail("required_asset_unavailable");
+
+    for (const prepared of preparedRows) {
+      const { row, decision, assetSlots, donor, verified, provenance, generatedProgram } = prepared;
+      let draft: AdaptiveDerivedSectionDraft;
+      let programHash: string | null = null;
+      let normalizedStructuralFingerprint: string | null = null;
+      if (decision.action === "reuse") {
+        const tag = fragmentRootTag(verified!);
+        if (!tag) return fail("section_fragment_invalid");
+        draft = {
+          action: "reuse", ordinal: row.ordinal, id: verified!.slug, html: verified!.html, rootTag: tag,
+          role: row.requestedRole, componentType: row.componentType, provenance,
+        };
+      } else {
         const compiledExpressive = compileExpressiveSection({
-          program: providerResult.program,
-          allowedCopyKeys: request.copyKeys,
-          allowedAssetSlots: request.assetSlots.map((slot) => slot.slotIndex),
+          program: generatedProgram!,
+          allowedCopyKeys: Object.keys(input.copy),
+          allowedAssetSlots: assetSlots.map((slot) => slot.slotIndex),
           copy: input.copy,
           provenance,
         });
         if (!compiledExpressive.ok) return fail(compiledExpressive.code === "donor_reconstruction" ? "section_originality_failed" : "invalid_provider_response");
         const expressive = compiledExpressive.draft;
-        generatedProgram = providerResult.program;
+        const slotsInProgram = collectProgramAssetSlots(generatedProgram!);
+        const bound = binding?.ok ? binding.bind(expressive.html, slotsInProgram) : { ok: true as const, html: expressive.html };
+        if (!bound.ok) return fail("required_asset_unavailable");
         programHash = expressive.programHash;
         normalizedStructuralFingerprint = expressive.structuralFingerprint;
         draft = {
           action: decision.action,
           ordinal: row.ordinal,
           id: expressive.id,
-          html: expressive.html,
+          html: bound.html,
           rootTag: expressive.rootTag,
           role: row.requestedRole,
           componentType: row.componentType,
@@ -472,7 +531,7 @@ export async function composeAdaptiveSections(
         structuralFingerprint: normalizedStructuralFingerprint ?? section.structuralFingerprint,
         programId: draft.id,
         programHash: programHash!,
-        program: (generatedProgram as ExpressiveSectionProgram),
+        program: generatedProgram!,
       });
     }
 
@@ -519,11 +578,14 @@ export async function composeAdaptiveSections(
             provenance: entry.provenance,
           });
           if (!expressive.ok) return { ok: false };
+          const repairedSlots = collectProgramAssetSlots(program);
+          const rebound = binding?.ok ? binding.bind(expressive.draft.html, repairedSlots) : { ok: true as const, html: expressive.draft.html };
+          if (!rebound.ok) return { ok: false };
           const draft: AdaptiveDerivedSectionDraft = {
             action: entry.action,
             ordinal: entry.ordinal,
             id: expressive.draft.id,
-            html: expressive.draft.html,
+            html: rebound.html,
             rootTag: expressive.draft.rootTag,
             role: entry.role,
             componentType: row.componentType,

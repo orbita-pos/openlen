@@ -3,11 +3,11 @@ import { parse } from "node-html-parser";
 import { renderVisualCandidateContactSheet, createVisualQualityRendererPool, renderVisualQualityViewports } from "@/lib/ai/visual-quality-renderer";
 import { sanitizeForPublish, sealRelease } from "@/lib/html-engine";
 import { loadCuratedImages } from "@/lib/imagery/manifest";
-import { getAssetStorage } from "@/lib/projects/assets";
+import { getAssetStorage, type AssetStorage } from "@/lib/projects/assets";
 import { assembleDocument, type AssembleTheme, type SectionFragment } from "@/lib/sections/assemble";
 import { applyAssetManifest } from "@/lib/generation/apply-asset-manifest";
 import { AssetIntentSchema, type AssetManifest, type AssetResolutionTrace } from "@/lib/generation/asset-contracts";
-import { parseAssetGenerationBudget } from "@/lib/generation/asset-pack-provider";
+import { parseAssetGenerationBudget, type AssetGenerationBudget } from "@/lib/generation/asset-pack-provider";
 import { resolveDomainAssetManifest } from "@/lib/generation/asset-pipeline";
 import {
   composeAdaptiveSections,
@@ -41,9 +41,9 @@ type CompositionMetadata = Extract<VisualEngineProjectMetadata, { route: "sectio
 
 interface ResolvedPipelineAssets {
   readonly ok: true;
-  readonly html: string;
   readonly assetManifest?: AssetManifest;
   readonly assetTrace?: AssetResolutionTrace;
+  readonly bind: (html: string, usedAssetSlots: readonly number[]) => { readonly ok: true; readonly html: string } | { readonly ok: false };
   readonly reapply?: (html: string) => { readonly ok: true; readonly html: string } | { readonly ok: false };
 }
 
@@ -60,8 +60,11 @@ export interface FableAdaptivePipelineDeps {
   readonly composeAdaptiveSections?: typeof composeAdaptiveSections;
   readonly adaptiveCompositionDeps?: AdaptiveSectionCompositionDeps;
   readonly resolveAssets?: (
-    input: { readonly html: string; readonly design: AdaptivePageDesignProgram; readonly request: SectionCompositionCandidateInput },
-    deps: { readonly provider: FableRuntimeComposition["geminiAssetPackProvider"] },
+    input: { readonly design: AdaptivePageDesignProgram; readonly request: SectionCompositionCandidateInput; readonly usedAssetSlots: readonly number[] },
+    deps: {
+      readonly provider: FableRuntimeComposition["geminiAssetPackProvider"];
+      readonly resolution?: FableAdaptivePipelineDeps["assetResolutionDeps"];
+    },
   ) => Promise<ResolvedPipelineAssets | FailedPipelineAssets>;
   readonly buildVisualEngine?: (input: {
     readonly html: string;
@@ -80,6 +83,14 @@ export interface FableAdaptivePipelineDeps {
   readonly renderContactSheet?: Parameters<typeof scoutVisualCandidates>[1]["renderContactSheet"];
   /** External browser boundary for desktop/mobile render gates. */
   readonly renderViewports?: typeof renderVisualQualityViewports;
+  /** Low-level catalog/network/storage boundaries for the production asset resolver. */
+  readonly assetResolutionDeps?: {
+    readonly loadCuratedImages?: typeof loadCuratedImages;
+    readonly fetchImpl?: typeof fetch;
+    readonly storage?: AssetStorage;
+    readonly budget?: AssetGenerationBudget;
+    readonly catalogVersion?: string;
+  };
 }
 
 function flattenCopy(copy: ExtractedBusinessData): Record<string, string> {
@@ -219,10 +230,13 @@ function imageIntent(slot: AdaptivePageDesignProgram["imageSlots"][number], requ
   });
 }
 
-function applyAdaptiveAssets(html: string, manifest: AssetManifest): { ok: true; html: string } | { ok: false } {
+function applyAdaptiveAssets(html: string, manifest: AssetManifest, usedAssetSlots: readonly number[]): { ok: true; html: string } | { ok: false } {
   try {
+    if (usedAssetSlots.length === 0) return { ok: true, html };
+    const wanted = new Set(usedAssetSlots);
+    if (wanted.size !== usedAssetSlots.length || [...wanted].some((slotIndex) => !manifest.slots.some((slot) => slot.slotIndex === slotIndex))) return { ok: false };
     const document = parse(html);
-    for (const slot of manifest.slots) {
+    for (const slot of manifest.slots.filter((candidate) => wanted.has(candidate.slotIndex))) {
       const nodes = document.querySelectorAll(`[data-openlen-asset-slot="${slot.slotIndex}"]`);
       if (nodes.length !== 1) return { ok: false };
       const node = nodes[0];
@@ -241,24 +255,30 @@ function applyAdaptiveAssets(html: string, manifest: AssetManifest): { ok: true;
 }
 
 async function resolveProductionAssets(
-  input: { readonly html: string; readonly design: AdaptivePageDesignProgram; readonly request: SectionCompositionCandidateInput },
-  deps: { readonly provider: FableRuntimeComposition["geminiAssetPackProvider"] },
+  input: { readonly design: AdaptivePageDesignProgram; readonly request: SectionCompositionCandidateInput; readonly usedAssetSlots: readonly number[] },
+  deps: {
+    readonly provider: FableRuntimeComposition["geminiAssetPackProvider"];
+    readonly resolution?: FableAdaptivePipelineDeps["assetResolutionDeps"];
+  },
 ): Promise<ResolvedPipelineAssets | FailedPipelineAssets> {
-  if (input.design.imageSlots.length === 0) return { ok: true, html: input.html };
+  const used = new Set(input.usedAssetSlots);
+  if (input.design.imageSlots.some((slot) => slot.required && !used.has(slot.slotIndex))) return { ok: false, code: "asset_slot_unavailable" };
+  const requestedSlots = input.design.imageSlots.filter((slot) => used.has(slot.slotIndex));
+  if (requestedSlots.length === 0) return { ok: true, bind: (html) => ({ ok: true, html }), reapply: (html) => ({ ok: true, html }) };
   if (input.request.assetMode !== "curated" && input.request.assetMode !== "hybrid") return { ok: false, code: "required_asset_unavailable" };
-  const budget = parseAssetGenerationBudget(process.env);
+  const budget = deps.resolution?.budget ?? parseAssetGenerationBudget(process.env);
   if (!budget) return { ok: false, code: "required_asset_unavailable" };
   const resolved = await resolveDomainAssetManifest({
-    intents: input.design.imageSlots.map((slot) => imageIntent(slot, input.request, input.design)),
+    intents: requestedSlots.map((slot) => imageIntent(slot, input.request, input.design)),
     direction: input.design.direction,
     projectId: input.request.projectId!,
     mode: input.request.assetMode as Extract<AssetPipelineMode, "curated" | "hybrid">,
   }, {
-    loadCuratedImages,
-    catalogVersion: "openlen-images/1",
-    fetchImpl: fetch,
+    loadCuratedImages: deps.resolution?.loadCuratedImages ?? loadCuratedImages,
+    catalogVersion: deps.resolution?.catalogVersion ?? "openlen-images/1",
+    fetchImpl: deps.resolution?.fetchImpl ?? fetch,
     provider: deps.provider,
-    storage: getAssetStorage(),
+    storage: deps.resolution?.storage ?? getAssetStorage(),
     budget,
   });
   if (!resolved.ok) return { ok: false, code: resolved.code, trace: resolved.trace };
@@ -266,10 +286,13 @@ async function resolveProductionAssets(
   // media slots are div-based, so their bounded adapter applies the same
   // validated manifest without pretending they are legacy <img> slots.
   void applyAssetManifest;
-  const applied = applyAdaptiveAssets(input.html, resolved.manifest);
-  return applied.ok
-    ? { ok: true, html: applied.html, assetManifest: resolved.manifest, assetTrace: resolved.trace, reapply: (html) => applyAdaptiveAssets(html, resolved.manifest) }
-    : { ok: false, code: "asset_slot_unavailable", trace: resolved.trace };
+  return {
+    ok: true,
+    assetManifest: resolved.manifest,
+    assetTrace: resolved.trace,
+    bind: (html, slots) => applyAdaptiveAssets(html, resolved.manifest, slots),
+    reapply: (html) => applyAdaptiveAssets(html, resolved.manifest, input.usedAssetSlots),
+  };
 }
 
 function buildProductionVisualEngine(input: Parameters<NonNullable<FableAdaptivePipelineDeps["buildVisualEngine"]>>[0]) {
@@ -359,8 +382,8 @@ export async function runFableAdaptivePipeline(
   } finally {
     await rendererPool?.close().catch(() => undefined);
   }
+  runtime.recordModel("scout", "modelId" in scout ? scout : {});
   if (!scout.ok) return fail("scout", scout.code);
-  runtime.recordModel("scout", scout);
 
   const copy = flattenCopy(request.copy);
   const pageDesign = await (deps.createPageDesign ?? createPageDesignProgram)({
@@ -378,23 +401,51 @@ export async function runFableAdaptivePipeline(
     copyKeyNames: Object.keys(copy),
     requestId: request.projectId!,
   }, { client: runtime.fireworksClient });
+  runtime.recordModel("page_plan", "modelId" in pageDesign ? pageDesign : {});
   if (!pageDesign.ok) return fail("page_plan", pageDesign.code);
-  runtime.recordModel("page_plan", pageDesign);
 
   const compositionDeps = deps.adaptiveCompositionDeps ?? productionCompositionDeps(request, runtime, inventory, pageDesign.program, fetchText, deps.renderViewports ?? renderVisualQualityViewports);
+  const resolveAssets = deps.resolveAssets ?? resolveProductionAssets;
+  let assets: ResolvedPipelineAssets | null = null;
+  let assetFailure: FailedPipelineAssets | null = null;
+  let streamedProviderTelemetry = 0;
+  const existingProviderTelemetrySink = compositionDeps.onProviderTelemetry;
   const composition = await (deps.composeAdaptiveSections ?? composeAdaptiveSections)({
     requestId: request.projectId!, plan: planned.plan, design: pageDesign.program, scout, inventory, copy,
-  }, { ...compositionDeps, provider: runtime.glmSectionProgramProvider });
-  for (const row of composition.telemetry) runtime.recordModel("initial_program", row);
+  }, {
+    ...compositionDeps,
+    provider: runtime.glmSectionProgramProvider,
+    onProviderTelemetry: (row) => {
+      existingProviderTelemetrySink?.(row);
+      streamedProviderTelemetry += 1;
+      runtime.recordModel("initial_program", row);
+    },
+    beforeCompile: async ({ usedAssetSlots }) => {
+      try {
+        const resolved = await resolveAssets(
+          { design: pageDesign.program, request, usedAssetSlots },
+          { provider: runtime.geminiAssetPackProvider, ...(deps.assetResolutionDeps ? { resolution: deps.assetResolutionDeps } : {}) },
+        );
+        if (!resolved.ok) {
+          assetFailure = resolved;
+          if (resolved.trace?.modelId) runtime.recordImage(resolved.trace);
+          return { ok: false as const, code: resolved.code };
+        }
+        assets = resolved;
+        if (resolved.assetTrace?.modelId) runtime.recordImage(resolved.assetTrace);
+        return { ok: true as const, bind: resolved.bind };
+      } catch {
+        assetFailure = { ok: false, code: "required_asset_unavailable" };
+        return { ok: false as const, code: "required_asset_unavailable" };
+      }
+    },
+  });
+  for (const row of composition.telemetry.slice(streamedProviderTelemetry)) runtime.recordModel("initial_program", row);
+  const failedAssets = assetFailure as FailedPipelineAssets | null;
+  if (failedAssets) return fail("image", failedAssets.code);
   if (!composition.ok) return fail("initial_program", composition.reasonCode);
-
-  const resolveAssets = deps.resolveAssets ?? resolveProductionAssets;
-  const assets = await resolveAssets({ html: composition.html, design: pageDesign.program, request }, { provider: runtime.geminiAssetPackProvider });
-  if (!assets.ok) {
-    if (assets.trace?.modelId) runtime.recordImage(assets.trace);
-    return fail("image", assets.code);
-  }
-  if (assets.assetTrace?.modelId) runtime.recordImage(assets.assetTrace);
+  const resolvedAssets = assets as ResolvedPipelineAssets | null;
+  if (!resolvedAssets) return fail("image", "required_asset_unavailable");
 
   const finalizeAndSeal = (html: string): { ok: true; html: string } | { ok: false } => {
     const finalized = deps.finalize({ html, profileData: request.profileData, title: request.candidateTitle });
@@ -402,14 +453,14 @@ export async function runFableAdaptivePipeline(
     const sealed = (deps.sealFinal ?? sealRelease)(finalized.html);
     return sealed.sealed ? { ok: true, html: sealed.html } : { ok: false };
   };
-  const finalized = finalizeAndSeal(assets.html);
+  const finalized = finalizeAndSeal(composition.html);
   if (!finalized.ok) return fail("initial_program", "sanitization_failed");
   const buildVisualEngine = deps.buildVisualEngine ?? buildProductionVisualEngine;
   const built = buildVisualEngine({
     html: finalized.html, request, inventory, plan: planned.plan, design: pageDesign.program,
     composition, handoff: composition.handoff,
-    ...(assets.assetManifest ? { assetManifest: assets.assetManifest } : {}),
-    ...(assets.assetTrace ? { assetTrace: assets.assetTrace } : {}),
+    ...(resolvedAssets.assetManifest ? { assetManifest: resolvedAssets.assetManifest } : {}),
+    ...(resolvedAssets.assetTrace ? { assetTrace: resolvedAssets.assetTrace } : {}),
   });
 
   let currentHandoff = composition.handoff;
@@ -422,15 +473,15 @@ export async function runFableAdaptivePipeline(
       const repaired = await composition.applyDelta(delta);
       if (!repaired.ok) return { ok: false };
       currentHandoff = repaired.handoff;
-      const reapplied = assets.reapply ? assets.reapply(repaired.html) : { ok: true as const, html: repaired.html };
+      const reapplied = resolvedAssets.reapply ? resolvedAssets.reapply(repaired.html) : { ok: true as const, html: repaired.html };
       if (!reapplied.ok) return { ok: false };
       const repairedFinal = finalizeAndSeal(reapplied.html);
       if (!repairedFinal.ok) return { ok: false };
       const rebuilt = buildVisualEngine({
         html: repairedFinal.html, request, inventory, plan: planned.plan, design: pageDesign.program,
         composition, handoff: repaired.handoff,
-        ...(assets.assetManifest ? { assetManifest: assets.assetManifest } : {}),
-        ...(assets.assetTrace ? { assetTrace: assets.assetTrace } : {}),
+        ...(resolvedAssets.assetManifest ? { assetManifest: resolvedAssets.assetManifest } : {}),
+        ...(resolvedAssets.assetTrace ? { assetTrace: resolvedAssets.assetTrace } : {}),
       });
       return { ok: true, candidate: { html: rebuilt.html, visualEngine: rebuilt.visualEngine } satisfies FableCandidate };
     },

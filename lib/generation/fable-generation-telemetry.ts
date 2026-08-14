@@ -1,7 +1,7 @@
 import type { ModelTokenUsage } from "./model-cost";
 import type { PageBudget, RedactedPageCost } from "./page-generation-budget";
 
-export type FableTelemetryStage = "intent" | "copy" | "scout" | "page_plan" | "initial_program" | "image" | "final_critic" | "visual_repair" | "delivery" | "visual_quality";
+export type FableTelemetryStage = "intent" | "copy" | "scout" | "page_plan" | "initial_program" | "image" | "final_critic" | "visual_repair" | "delivery_gate" | "delivery" | "visual_quality";
 
 export interface FablePaidCallTelemetry {
   readonly stage: FableTelemetryStage;

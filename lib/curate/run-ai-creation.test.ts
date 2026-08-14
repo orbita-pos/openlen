@@ -151,6 +151,7 @@ function makeDeps(overrides: Partial<RunAiCreationDeps> = {}): Required<RunAiCre
       repaired: false,
     })),
     createFableRuntimeComposition: vi.fn(() => runtime) as never,
+    fableRuntimeOptions: undefined as never,
     fableAdaptivePipelineDeps: undefined as never,
     ...overrides,
   };

@@ -1,6 +1,6 @@
 import type { AdaptivePageDesignProgram } from "@/lib/generation/adaptive-design-contracts";
 import type { AdaptiveSectionRepairHandoff } from "@/lib/generation/adaptive-section-composition";
-import type { BoundedVisualIssue, FinalVisualVerdict } from "@/lib/ai/qwen-visual-critic";
+import { isFinalVisualAcceptance, type BoundedVisualIssue, type FinalVisualVerdict } from "@/lib/ai/qwen-visual-critic";
 import type { GlmVisualRepairDelta, GlmVisualRepairProvider } from "@/lib/generation/glm-visual-repair";
 import { createVisualRepairMachine } from "@/lib/generation/glm-visual-repair";
 import type { VisualEngineProjectMetadata } from "@/lib/projects/types";
@@ -46,6 +46,9 @@ export async function runFableFinalVisualGate(
   const judge = async (candidate: FableCandidate, round: "initial" | "final") => {
     const inspected = await deps.inspect(candidate);
     if (!inspected.ok) return { ok: false as const, code: "deterministic_gate_failed" as const };
+    if (inspected.deterministic.mobileOverflow || inspected.deterministic.weakTypographyHierarchy || inspected.deterministic.invalidGeometry) {
+      return { ok: false as const, code: "deterministic_gate_failed" as const };
+    }
     const reviewed = await deps.critique({ requestId: `${input.requestId}.${round}`, screenshots: inspected.screenshots, deterministic: inspected.deterministic });
     if (!reviewed.ok || !reviewed.verdict) return { ok: false as const, code: "qwen_failed" as const };
     return { ok: true as const, verdict: reviewed.verdict, issues: reviewed.issues ?? reviewed.verdict.issues };
@@ -53,7 +56,9 @@ export async function runFableFinalVisualGate(
 
   const initial = await judge(input.candidate, "initial");
   if (!initial.ok) return initial;
-  if (initial.verdict.decision === "accept") return { ok: true, candidate: input.candidate, repaired: false };
+  if (initial.verdict.decision === "accept") return isFinalVisualAcceptance(initial.verdict)
+    ? { ok: true, candidate: input.candidate, repaired: false }
+    : { ok: false, code: "visual_rejected" };
   if (initial.verdict.decision === "reject") return { ok: false, code: "visual_rejected" };
 
   const machine = createVisualRepairMachine({ design: input.handoff.design, handoff: input.handoff.sections, issues: initial.issues, requestId: input.requestId }, { provider: deps.repairProvider });
@@ -64,7 +69,7 @@ export async function runFableFinalVisualGate(
 
   const final = await judge(applied.candidate, "final");
   if (!final.ok) return final;
-  return final.verdict.decision === "accept"
+  return isFinalVisualAcceptance(final.verdict)
     ? { ok: true, candidate: applied.candidate, repaired: true }
     : { ok: false, code: "visual_rejected" };
 }

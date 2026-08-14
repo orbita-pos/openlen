@@ -145,6 +145,19 @@ const INPUT = {
 describe("adaptive section composition", () => {
   it("executes decisions in page order, reuses exact bytes, gates every output, then seals atomically", async () => {
     const d = setup();
+    (d.deps as AdaptiveSectionCompositionDeps & { onProviderTelemetry: (row: { modelId: string | null }) => void }).onProviderTelemetry = (row) => {
+      d.events.push(`telemetry:${row.modelId}`);
+    };
+    (d.deps as AdaptiveSectionCompositionDeps & { beforeCompile: NonNullable<AdaptiveSectionCompositionDeps["beforeCompile"]> }).beforeCompile = vi.fn(async () => {
+      d.events.push("images");
+      return {
+        ok: true as const,
+        bind: (html: string) => {
+          d.events.push("bind");
+          return { ok: true as const, html: `${html}<!--asset-refs-bound-->` };
+        },
+      };
+    });
     const result = await composeAdaptiveSections(INPUT, d.deps);
     expect(result).toMatchObject({
       ok: true,
@@ -162,10 +175,13 @@ describe("adaptive section composition", () => {
     expect(d.providerCalls[1]).not.toHaveProperty("inspiration");
     expect(d.deps.fetchFragments).toHaveBeenNthCalledWith(1, expect.anything(), inventory, { fetchText: d.deps.fetchText });
     expect(d.events).toEqual([
-      "fetch:chosen-hero", "provider:rebuild:0", "compile:rebuild:0", "semantics:0", "assets:0", "render:0",
-      "provider:generate:1", "compile:generate:1", "semantics:1", "assets:1", "render:1",
-      "fetch:chosen-footer", "compile:reuse:2", "semantics:2", "assets:2", "render:2", "assemble", "seal",
+      "fetch:chosen-hero", "provider:rebuild:0", "telemetry:glm-fixture",
+      "provider:generate:1", "telemetry:glm-fixture", "fetch:chosen-footer", "images",
+      "bind", "compile:rebuild:0", "semantics:0", "assets:0", "render:0",
+      "bind", "compile:generate:1", "semantics:1", "assets:1", "render:1",
+      "compile:reuse:2", "semantics:2", "assets:2", "render:2", "assemble", "seal",
     ]);
+    expect(vi.mocked(d.deps.compileDerived).mock.calls[0]?.[0].html).toContain("asset-refs-bound");
     expect(d.deps.sanitize).toHaveBeenCalledTimes(4);
     expect(JSON.stringify(result.manifest)).not.toMatch(/A new hero|Make something|Verified hero donor|https?:/i);
     expect(result.ok && result.handoff).toMatchObject({
@@ -260,7 +276,10 @@ describe("adaptive section composition", () => {
       assemble: vi.fn(() => "must-not-assemble"),
     });
     const result = await composeAdaptiveSections(INPUT, d.deps);
-    expect(result).toMatchObject({ ok: false, reasonCode: "invalid_provider_response", telemetry: [{ modelId: "glm-paid", usage: { inputTokens: 7 } }] });
+    expect(result).toMatchObject({ ok: false, reasonCode: "invalid_provider_response", telemetry: [
+      { modelId: "glm-paid", usage: { inputTokens: 7 } },
+      { modelId: "glm-paid", usage: { inputTokens: 7 } },
+    ] });
     expect(d.deps.assemble).not.toHaveBeenCalled();
   });
 
