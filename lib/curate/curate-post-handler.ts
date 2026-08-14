@@ -29,6 +29,7 @@ import { consumeToken, RATE_LIMITS } from "@/lib/rate-limit";
 //   error    { kind, message }
 
 const ENCODER = new TextEncoder();
+const DEFAULT_HEARTBEAT_INTERVAL_MS = 15_000;
 const AI_FAILURE_MESSAGE = "No pudimos construir una página coherente. Reintentar.";
 const PROGRESS_STAGE: Record<AiCreationStage, string> = {
   intent: "analyzing",
@@ -55,6 +56,8 @@ export interface CuratePostRuntimeOptions {
   readonly runAiCreationDeps?: RunAiCreationDeps;
   /** Durable database boundary; production is one writable PostgreSQL CTE. */
   readonly commitProjectAndDebit?: (input: AtomicCurateCommitInput) => Promise<void>;
+  /** Test seam; production keeps proxy/browser SSE connections alive every 15s. */
+  readonly heartbeatIntervalMs?: number;
 }
 
 export function createCuratePost(options: CuratePostRuntimeOptions = {}) {
@@ -103,6 +106,10 @@ return async function curatePost(req: Request): Promise<Response> {
     async start(controller) {
       const t0 = Date.now();
       let closed = false;
+      const heartbeatIntervalMs = Number.isFinite(options.heartbeatIntervalMs) && Number(options.heartbeatIntervalMs) > 0
+        ? Math.floor(Number(options.heartbeatIntervalMs))
+        : DEFAULT_HEARTBEAT_INTERVAL_MS;
+      let heartbeat: ReturnType<typeof setInterval> | undefined;
       const emit = (event: string, data: unknown) => {
         if (closed) return;
         try {
@@ -114,6 +121,7 @@ return async function curatePost(req: Request): Promise<Response> {
       const close = () => {
         if (closed) return;
         closed = true;
+        if (heartbeat !== undefined) clearInterval(heartbeat);
         try {
           controller.close();
         } catch {
@@ -124,6 +132,8 @@ return async function curatePost(req: Request): Promise<Response> {
         emit("error", { kind: reasonCode, message: AI_FAILURE_MESSAGE });
         close();
       };
+      heartbeat = setInterval(() => emit("heartbeat", { elapsedMs: Date.now() - t0 }), heartbeatIntervalMs);
+      heartbeat.unref?.();
 
       try {
         if (aiCreationMode() !== "enabled" || !isUserInAiCreationRollout(userId)) {
@@ -231,6 +241,7 @@ return async function curatePost(req: Request): Promise<Response> {
         captureFailure("composition", reasonCode);
         fail(reasonCode);
       } finally {
+        if (heartbeat !== undefined) clearInterval(heartbeat);
         inFlightUsers.delete(userId);
       }
     },

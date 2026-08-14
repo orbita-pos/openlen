@@ -44,7 +44,8 @@ vi.mock("@/lib/business-profiles/store", () => ({ resolveProfileForCreation: moc
 vi.mock("@/lib/curate/run-ai-creation", () => ({ runAiCreation: mocks.runAiCreation }));
 vi.mock("@/lib/curate/atomic-curate-commit", () => ({ commitCurateProjectAndDebit: mocks.commitAtomic }));
 
-import { POST } from "@/app/api/curate/route";
+import { maxDuration, POST } from "@/app/api/curate/route";
+import { createCuratePost } from "@/lib/curate/curate-post-handler";
 
 const BRIEF = "Una plataforma infantil para colorear y crear";
 const FINAL_HTML = "FINAL-HYBRID-HTML";
@@ -233,6 +234,23 @@ describe("POST /api/curate hybrid-only integration", () => {
     expect(mocks.renderProjectThumbnail).toHaveBeenCalledWith(expect.objectContaining({ html: FINAL_HTML }));
     expect(mocks.finalizeTelemetry).toHaveBeenCalledOnce();
     expect(mocks.failTelemetry).not.toHaveBeenCalled();
+  });
+
+  it("keeps a long generation stream alive without starting another model attempt", async () => {
+    mocks.runAiCreation.mockImplementation(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 15));
+      return SUCCESS;
+    });
+    const heartbeatPost = createCuratePost({ heartbeatIntervalMs: 1 });
+    const response = await heartbeatPost(new Request("http://localhost/api/curate", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ brief: BRIEF }),
+    }));
+    const events = parseSse(await response.text());
+    expect(eventsNamed(events, "heartbeat").length).toBeGreaterThan(0);
+    expect(mocks.runAiCreation).toHaveBeenCalledTimes(1);
+    expect(maxDuration).toBe(900);
   });
 
   it("uses the one-credit copy fallback without charging autofill when fill made no change", async () => {

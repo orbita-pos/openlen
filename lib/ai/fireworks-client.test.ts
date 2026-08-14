@@ -49,7 +49,7 @@ function createClient(options: Omit<FireworksJsonClientOptions, "budget"> & { bu
 
 describe("Fireworks JSON client", () => {
   it("allows one long structured generation to finish without requiring a retry", () => {
-    expect(DEFAULT_FIREWORKS_TIMEOUT_MS).toBe(120_000);
+    expect(DEFAULT_FIREWORKS_TIMEOUT_MS).toBe(600_000);
   });
 
   it("sends one canonical bounded JPEG image block only to the visual critic", async () => {
