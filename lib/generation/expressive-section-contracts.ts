@@ -158,8 +158,8 @@ const ProgramShapeSchema = z.object({
   schemaVersion: z.literal("expressive-section-program/1.0"),
   role: SectionPlanRowSchema.shape.requestedRole,
   root: nodeSchema(5),
-  responsive: ResponsiveProgramSchema,
-  motion: z.array(MotionPresetSchema).max(16),
+  responsive: ResponsiveProgramSchema.default({ mobile: [] }),
+  motion: z.array(MotionPresetSchema).max(16).default([]),
 }).strict();
 
 function addProgramIssues(value: z.infer<typeof ProgramShapeSchema>, ctx: z.RefinementCtx): void {
@@ -244,10 +244,31 @@ export function createExpressiveSectionProgramResponseSchema(input: {
   if (exactCopyKeys) leaves.push(contextualCopyNodeSchema(exactCopyKeys));
   if (exactAssetSlots) leaves.push(contextualMediaNodeSchema(exactAssetSlots, exactCopyKeys ?? CopyKeySchema));
   const leafSchema = leaves.length === 1 ? leaves[0] : z.union(leaves as [z.ZodTypeAny, z.ZodTypeAny, ...z.ZodTypeAny[]]);
-  return ProgramShapeSchema.extend({
+  const finalSchema = ProgramShapeSchema.extend({
     role: z.literal(input.role),
     root: contextualNodeSchema(5, leafSchema),
-  }).strict().superRefine(addProgramIssues) as z.ZodType<ExpressiveSectionProgram>;
+  }).strict().superRefine(addProgramIssues);
+  const providerSchema = ProgramShapeSchema.extend({
+    role: z.literal(input.role),
+    root: contextualNodeSchema(5, leafSchema),
+    responsive: z.object({ mobile: z.array(ResponsiveOverrideSchema).max(64).optional() }).strict().optional(),
+    motion: z.array(MotionPresetSchema).max(16).optional(),
+  }).strict();
+  return z.preprocess((raw) => {
+    if (!raw || typeof raw !== "object") return raw;
+    const value = raw as Record<string, unknown>;
+    const responsive = value.responsive === undefined
+      || (Array.isArray(value.responsive) && value.responsive.length === 0)
+      ? { mobile: [] }
+      : value.responsive && typeof value.responsive === "object" && !Array.isArray(value.responsive)
+        ? { ...value.responsive as Record<string, unknown>, mobile: (value.responsive as { mobile?: unknown }).mobile ?? [] }
+        : value.responsive;
+    return { ...value, responsive, motion: value.motion ?? [] };
+  }, providerSchema).superRefine((value, ctx) => {
+    if (!finalSchema.safeParse(value).success) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: "invalid expressive section program" });
+    }
+  }).transform((value) => finalSchema.parse(value) as ExpressiveSectionProgram) as z.ZodType<ExpressiveSectionProgram>;
 }
 
 const ProvenanceBaseSchema = z.object({

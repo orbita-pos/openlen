@@ -1,4 +1,4 @@
-import { z, type ZodType } from "zod";
+import { z, type ZodType, type ZodTypeDef } from "zod";
 
 import type { ModelTokenUsage } from "../generation/model-cost";
 
@@ -24,7 +24,7 @@ export type FireworksMessage =
 export interface FireworksJsonRequest<T> {
   role: FableModelRole;
   messages: readonly FireworksMessage[];
-  responseSchema: ZodType<T>;
+  responseSchema: ZodType<T, ZodTypeDef, unknown>;
   maxOutputTokens: number;
   reasoningEffort: FireworksReasoningEffort;
   requestId: string;
@@ -112,7 +112,7 @@ export function fireworksJsonSchema(schema: z.ZodTypeAny): JsonSchema {
     case z.ZodFirstPartyTypeKind.ZodUnion:
       return { anyOf: (definition.options as z.ZodTypeAny[]).map(fireworksJsonSchema) };
     case z.ZodFirstPartyTypeKind.ZodDiscriminatedUnion:
-      return { anyOf: [...(definition.options as Map<unknown, z.ZodTypeAny>).values()].map(fireworksJsonSchema) };
+      return { oneOf: [...(definition.options as Map<unknown, z.ZodTypeAny>).values()].map(fireworksJsonSchema) };
     case z.ZodFirstPartyTypeKind.ZodNullable:
       return { anyOf: [fireworksJsonSchema(definition.innerType as z.ZodTypeAny), { type: "null" }] };
     case z.ZodFirstPartyTypeKind.ZodOptional:
@@ -125,15 +125,13 @@ export function fireworksJsonSchema(schema: z.ZodTypeAny): JsonSchema {
       return fireworksJsonSchema(definition.schema as z.ZodTypeAny);
     case z.ZodFirstPartyTypeKind.ZodRecord:
       return { type: "object", additionalProperties: fireworksJsonSchema(definition.valueType as z.ZodTypeAny) };
-    case z.ZodFirstPartyTypeKind.ZodTuple: {
-      const items = definition.items as z.ZodTypeAny[];
+    case z.ZodFirstPartyTypeKind.ZodTuple:
       return {
         type: "array",
-        items: { anyOf: items.map(fireworksJsonSchema) },
-        minItems: items.length,
-        maxItems: items.length,
+        prefixItems: (definition.items as z.ZodTypeAny[]).map(fireworksJsonSchema),
+        minItems: (definition.items as z.ZodTypeAny[]).length,
+        maxItems: (definition.items as z.ZodTypeAny[]).length,
       };
-    }
     case z.ZodFirstPartyTypeKind.ZodIntersection:
       return { allOf: [fireworksJsonSchema(definition.left as z.ZodTypeAny), fireworksJsonSchema(definition.right as z.ZodTypeAny)] };
     default:

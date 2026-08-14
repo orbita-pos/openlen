@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 
 import { COLORING_DIRECTION } from "./creative-fixtures.test-support";
-import { createVisualRepairMachine, type GlmVisualRepairProvider } from "./glm-visual-repair";
+import type { FireworksJsonClient } from "@/lib/ai/fireworks-client";
+import { createGlmVisualRepairProvider, createVisualRepairMachine, type GlmVisualRepairProvider } from "./glm-visual-repair";
 
 const program = {
   schemaVersion: "expressive-section-program/1.0" as const,
@@ -17,6 +18,36 @@ const handoff = {
 const design = { schemaVersion: "adaptive-page-design/1.0" as const, narrative: ["hero" as const], direction: { ...COLORING_DIRECTION, requiredVisualSignals: ["friendly", "playful"] }, decisions: [{ ordinal: 0, action: "generate" as const, candidateId: null, usefulTraits: [], rejectedTraits: [] }], rhythm: "playful" as const, requiredSignals: ["friendly", "playful"], forbiddenSignals: ["corporate"], imageSlots: [] } as unknown as import("./adaptive-design-contracts").AdaptivePageDesignProgram;
 
 describe("createVisualRepairMachine", () => {
+  it("normalizes fixed repair versions and omitted empty program containers before validation", async () => {
+    const { responsive: _responsive, motion: _motion, ...sparseProgram } = program;
+    const client: FireworksJsonClient = {
+      async request(request) {
+        return {
+          ok: true as const,
+          value: request.responseSchema.parse({ changes: [{ programId: "expressive-hero-old", program: sparseProgram }] }),
+          modelId: "accounts/fireworks/models/glm-5p2",
+          usage: { inputTokens: 9, cachedTokens: 0, outputTokens: 4, thinkingTokens: 1 },
+          durationMs: 3,
+          attempts: 1 as const,
+        };
+      },
+    };
+    const result = await createGlmVisualRepairProvider({ client }).repair({
+      requestId: "page-repair",
+      design,
+      programs: [{ programId: "expressive-hero-old", role: "hero", allowedCopyKeys: ["hero.title"], allowedAssetSlots: [], program }],
+      issues: [{ code: "originality", severity: "major", viewport: "desktop" }],
+    });
+
+    expect(result).toMatchObject({
+      ok: true,
+      delta: {
+        schemaVersion: "glm-visual-repair-delta/1.0",
+        changes: [{ program: { responsive: { mobile: [] }, motion: [] } }],
+      },
+    });
+  });
+
   it("permits exactly one GLM delta over known program IDs and then becomes terminal", async () => {
     const calls: unknown[] = [];
     const provider: GlmVisualRepairProvider = { async repair(request) { calls.push(request); return { ok: true as const, delta: { schemaVersion: "glm-visual-repair-delta/1.0" as const, changes: [{ programId: "expressive-hero-old", program: { ...program, root: { ...program.root, preset: "layered" as const } } }] }, modelId: "accounts/fireworks/models/glm-5p2", usage: { inputTokens: 9, cachedTokens: 0, outputTokens: 4, thinkingTokens: 1 }, durationMs: 3, attempts: 1 as const }; } };

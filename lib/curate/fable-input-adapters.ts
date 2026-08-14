@@ -28,25 +28,42 @@ export interface FableInputAdapters {
 }
 
 const PageCopyResponseSchema = z.object({
-  schemaVersion: z.literal("page-copy/1.0"),
+  schemaVersion: z.literal("page-copy/1.0").default("page-copy/1.0"),
   copy: LenientBusinessDataSchema,
 }).strict();
 interface PageCopyResponse { readonly schemaVersion: "page-copy/1.0"; readonly copy: ExtractedBusinessData }
 
-const CanonicalIntentAnalysisSchema: z.ZodType<IntentAnalysis> = IntentAnalysisSchema.extend({
+const CanonicalIntentAnalysisSchema: z.ZodType<IntentAnalysis, z.ZodTypeDef, unknown> = IntentAnalysisSchema.extend({
+  schemaVersion: z.literal("intent-analysis/1.0").default("intent-analysis/1.0"),
   functional: IntentAnalysisSchema.shape.functional.extend({
     siteType: z.enum(CANONICAL_SITE_TYPES),
     requiredSections: z.array(z.enum(CANONICAL_SECTION_ROLES)).max(24),
+    primaryActions: IntentAnalysisSchema.shape.functional.shape.primaryActions.default([]),
   }),
   audience: IntentAnalysisSchema.shape.audience.extend({
     primary: z.enum(CANONICAL_PRIMARY_AUDIENCES),
+    ageRange: IntentAnalysisSchema.shape.audience.shape.ageRange.default(null),
+    secondary: IntentAnalysisSchema.shape.audience.shape.secondary.default([]),
   }),
+  emotionalGoals: IntentAnalysisSchema.shape.emotionalGoals.default([]),
+  requiredVisualSignals: IntentAnalysisSchema.shape.requiredVisualSignals.default([]),
+  forbiddenVisualSignals: IntentAnalysisSchema.shape.forbiddenVisualSignals.default([]),
+  explicitConstraints: IntentAnalysisSchema.shape.explicitConstraints.default([]),
+  ambiguities: IntentAnalysisSchema.shape.ambiguities.default([]),
 }).transform((value): IntentAnalysis => ({
   ...value,
   functional: {
     ...value.functional,
     requiredSections: [...new Set(value.functional.requiredSections)],
+    primaryActions: [...new Set(value.functional.primaryActions)],
   },
+  audience: { ...value.audience, secondary: [...new Set(value.audience.secondary)] },
+  domains: [...new Set(value.domains)],
+  emotionalGoals: [...new Set(value.emotionalGoals)],
+  requiredVisualSignals: [...new Set(value.requiredVisualSignals)],
+  forbiddenVisualSignals: [...new Set(value.forbiddenVisualSignals)],
+  explicitConstraints: [...new Set(value.explicitConstraints)],
+  ambiguities: [...new Set(value.ambiguities)],
 }));
 
 const INTENT_SYSTEM_PROMPT = [

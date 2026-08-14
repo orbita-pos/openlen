@@ -98,15 +98,46 @@ describe("adaptive design contracts", () => {
     expect(schema.safeParse({ ...allGenerate, decisions: allGenerate.decisions.slice(0, 1) }).success).toBe(false);
   });
 
-  it("exposes contextual scout and page-plan invariants with Fireworks-supported anyOf schemas", () => {
+  it("normalizes equivalent Qwen arrays or objects by ordinal and rejects ambiguity", () => {
+    const schema = createCandidateScoutResponseSchema({
+      requiredRoles: ["hero", "features"],
+      retrievedCandidates: candidates,
+    });
+    const hero = { ordinal: 0, action: "reuse", candidateId: "hero-safe", usefulTraits: ["cinematic"], rejectedTraits: [] };
+    const features = { ordinal: 1, action: "generate", candidateId: null, usefulTraits: [], rejectedTraits: ["generic"] };
+    const canonical = { schemaVersion: "adaptive-candidate-decisions/1.0", decisions: [hero, features] };
+
+    expect(schema.parse({ ...canonical, decisions: [features, hero] })).toEqual(canonical);
+    expect(schema.parse({ ...canonical, decisions: { second: features, first: hero } })).toEqual(canonical);
+    expect(schema.parse({
+      decisions: {
+        hero: { ordinal: 0, action: "reuse", candidateId: "hero-safe" },
+        features: { ordinal: 1, action: "generate" },
+      },
+    })).toEqual({
+      schemaVersion: "adaptive-candidate-decisions/1.0",
+      decisions: [
+        { ordinal: 0, action: "reuse", candidateId: "hero-safe", usefulTraits: [], rejectedTraits: [] },
+        { ordinal: 1, action: "generate", candidateId: null, usefulTraits: [], rejectedTraits: [] },
+      ],
+    });
+    expect(schema.safeParse({ ...canonical, decisions: [hero, { ...features, ordinal: 0 }] }).success).toBe(false);
+    expect(schema.safeParse({ ...canonical, decisions: [hero, { ...features, ordinal: 9 }] }).success).toBe(false);
+  });
+
+  it("gives Qwen named positional decisions while preserving DeepSeek's proven page-plan schema", () => {
     const scoutJson = fireworksJsonSchema(createCandidateScoutResponseSchema({
       requiredRoles: ["hero", "features"],
       retrievedCandidates: candidates,
-    })) as { properties: { decisions: { minItems?: number; maxItems?: number; items?: { anyOf?: unknown[] } } } };
-    expect(scoutJson.properties.decisions).toMatchObject({ minItems: 2, maxItems: 2 });
-    expect(scoutJson.properties.decisions.items?.anyOf).toHaveLength(2);
-    expect(JSON.stringify(scoutJson.properties.decisions.items?.anyOf?.[0])).toContain('"const":0');
-    expect(JSON.stringify(scoutJson.properties.decisions.items?.anyOf?.[0])).toContain('"const":"hero-safe"');
+    })) as { properties: { decisions: { type?: string; required?: string[]; properties?: Record<string, unknown> } } };
+    expect(scoutJson.properties.decisions).toMatchObject({
+      type: "object",
+      required: ["decision_0", "decision_1"],
+      properties: { decision_0: expect.any(Object), decision_1: expect.any(Object) },
+    });
+    expect(JSON.stringify(scoutJson.properties.decisions.properties?.decision_0)).toContain('"const":0');
+    expect(JSON.stringify(scoutJson.properties.decisions.properties?.decision_0)).toContain('"const":"hero-safe"');
+    expect(JSON.stringify(scoutJson)).not.toMatch(/"(?:oneOf|prefixItems)"/);
 
     const pageJson = fireworksJsonSchema(createAdaptivePageDesignProgramSchema({
       requiredRoles: ["hero", "features"],
@@ -118,13 +149,51 @@ describe("adaptive design contracts", () => {
       })),
       initialRequiredSignals: ["cinematic", "tactile"],
       initialForbiddenSignals: ["generic_saas"],
-    })) as { properties: { narrative: { minItems?: number; maxItems?: number; items?: { anyOf?: unknown[] } }; decisions: { minItems?: number; maxItems?: number; items?: { anyOf?: unknown[] } } } };
+    })) as { properties: { narrative: { minItems?: number; maxItems?: number; prefixItems?: unknown[] }; decisions: { minItems?: number; maxItems?: number; prefixItems?: unknown[] } } };
     expect(pageJson.properties.narrative).toMatchObject({ minItems: 2, maxItems: 2 });
-    expect(pageJson.properties.narrative.items?.anyOf).toHaveLength(2);
+    expect(pageJson.properties.narrative.prefixItems).toHaveLength(2);
     expect(pageJson.properties.decisions).toMatchObject({ minItems: 2, maxItems: 2 });
-    expect(pageJson.properties.decisions.items?.anyOf).toHaveLength(2);
-    expect(JSON.stringify(pageJson.properties.decisions.items?.anyOf?.[0])).toContain('"const":"reuse"');
-    expect(JSON.stringify(pageJson.properties.decisions.items?.anyOf?.[1])).toContain('"const":"generate"');
+    expect(pageJson.properties.decisions.prefixItems).toHaveLength(2);
+    expect(JSON.stringify(pageJson.properties.decisions.prefixItems?.[0])).toContain('"const":"reuse"');
+    expect(JSON.stringify(pageJson.properties.decisions.prefixItems?.[1])).toContain('"const":"generate"');
+  });
+
+  it("canonicalizes equivalent DeepSeek decision maps, signal sets, and image-slot order", () => {
+    const schema = createAdaptivePageDesignProgramSchema({
+      requiredRoles: ["hero", "features"],
+      retrievedCandidates: candidates,
+      expectedDecisions: decisions.map((decision) => ({
+        ...decision,
+        usefulTraits: [...decision.usefulTraits],
+        rejectedTraits: [...decision.rejectedTraits],
+      })),
+      initialRequiredSignals: ["cinematic", "tactile"],
+      initialForbiddenSignals: ["generic_saas"],
+    });
+    const secondSlot = { slotIndex: 1, ordinal: 1, mediaType: "texture", subject: "paper_grain", purpose: "section_depth", required: false } as const;
+    const equivalent = {
+      ...valid,
+      decisions: { second: decisions[1], first: decisions[0] },
+      requiredSignals: ["tactile", "cinematic", "tactile"],
+      forbiddenSignals: ["generic_saas", "generic_saas"],
+      direction: {
+        ...coherentDirection,
+        requiredVisualSignals: ["tactile", "cinematic", "cinematic"],
+        forbiddenVisualSignals: ["generic_saas", "generic_saas"],
+      },
+      imageSlots: [secondSlot, valid.imageSlots[0]],
+    };
+
+    expect(schema.parse(equivalent)).toEqual({
+      ...valid,
+      decisions: decisions.map((decision) => ({
+        ...decision,
+        usefulTraits: [...decision.usefulTraits],
+        rejectedTraits: [...decision.rejectedTraits],
+      })),
+      imageSlots: [valid.imageSlots[0], secondSlot],
+    });
+    expect(schema.safeParse({ ...equivalent, decisions: { first: decisions[0], duplicate: decisions[0] } }).success).toBe(false);
   });
 
   it("rejects traits claimed as both useful and rejected", () => {
@@ -148,8 +217,8 @@ describe("adaptive design contracts", () => {
       { ...valid, forbiddenSignals: ["cinematic", "generic_saas"], requiredSignals: ["tactile"] },
       { ...valid, direction: { ...coherentDirection, requiredVisualSignals: ["cinematic", "generic_saas", "tactile"], forbiddenVisualSignals: [] } },
       { ...valid, direction: { ...coherentDirection, requiredVisualSignals: ["tactile"], forbiddenVisualSignals: ["cinematic", "generic_saas"] } },
-      { ...valid, direction: { ...coherentDirection, requiredVisualSignals: ["tactile", "cinematic"] } },
     ];
     contradictions.forEach((value) => expect(schema.safeParse(value).success).toBe(false));
+    expect(schema.safeParse({ ...valid, direction: { ...coherentDirection, requiredVisualSignals: ["tactile", "cinematic"] } }).success).toBe(true);
   });
 });

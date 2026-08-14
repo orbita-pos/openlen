@@ -61,4 +61,42 @@ describe("Fable DeepSeek input adapters", () => {
       .analyzeIntent("Una pagina para colorear", "page-3");
     expect(result).toMatchObject({ ok: true, intent: { functional: { requiredSections: ["hero", "activities", "footer"] } } });
   });
+
+  it("fills only fixed or empty DeepSeek envelope fields and deduplicates set-like taxonomy", async () => {
+    const request = vi.fn(async (input) => ({
+      ok: true as const,
+      value: input.responseSchema.parse(input.requestId.endsWith("intent") ? {
+        language: "es",
+        functional: { siteType: "content_platform", requiredSections: ["hero", "activities"], contentModel: "creative_play" },
+        audience: { primary: "children" },
+        domains: ["creative_play", "creative_play"],
+        requiredVisualSignals: ["hand_drawn", "hand_drawn"],
+        confidence: 0.9,
+      } : { copy: { business_name: "Mundo Pincel" } }),
+      modelId: "accounts/fireworks/models/deepseek-v4-flash-0731",
+      usage: { inputTokens: 2, cachedTokens: 0, outputTokens: 2, thinkingTokens: 0 },
+      durationMs: 1,
+      attempts: 1 as const,
+    }));
+    const adapters = createFableInputAdapters({ client: { request } as never });
+
+    await expect(adapters.analyzeIntent("Una pagina para colorear", "page-4")).resolves.toMatchObject({
+      ok: true,
+      intent: {
+        schemaVersion: "intent-analysis/1.0",
+        functional: { primaryActions: [] },
+        audience: { ageRange: null, secondary: [] },
+        domains: ["creative_play"],
+        emotionalGoals: [],
+        requiredVisualSignals: ["hand_drawn"],
+        forbiddenVisualSignals: [],
+        explicitConstraints: [],
+        ambiguities: [],
+      },
+    });
+    await expect(adapters.generatePageCopy("Una pagina para colorear", "page-4")).resolves.toMatchObject({
+      ok: true,
+      copy: { business_name: "Mundo Pincel", features: [], faq_questions: [] },
+    });
+  });
 });

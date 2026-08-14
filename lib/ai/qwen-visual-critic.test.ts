@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import type { FireworksJsonClient, } from "./fireworks-client";
 import type { FireworksJsonRequest } from "./fireworks-contracts";
+import { fireworksJsonSchema } from "./fireworks-contracts";
 import { assessFinalVisualCandidate, type FinalVisualVerdict } from "./qwen-visual-critic";
 
 const JPEG = "/9j/4AAQSkZJRgABAQEAYABgAAD/2wBDAAMCAgMCAgMDAwMEAwMEBQgFBQQEBQoHBwYIDAoMDAsKCwsNDhIQDQ4RDgsLEBYQERMUFRUVDA8XGBYUGBIUFRT/2wBDAQMEBAUEBQkFBQkUDQsNFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBT/wAARCABAAEADASIAAhEBAxEB/8QAHwAAAQUBAQEBAQEAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAAAgEDAwIEAwUFBAQAAAF9AQIDAAQRBRIhMUEGE1FhByJxFDKBkaEII0KxwRVS0fAkM2JyggkKFhcYGRolJicoKSo0NTY3ODk6Q0RFRkdISUpTVFVWV1hZWmNkZWZnaGlqc3R1dnd4eXqDhIWGh4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMT1NXW19jZ2uHi4+Tl5ufo6erx8vP09fb3+Pn6/8QAHwEAAwEBAQEBAQEBAQAAAAAAAAECAwQFBgcICQoL/8QAtREAAgECBAQDBAcFBAQAAQJ3AAECAxEEBSExBhJBUQdhcRMiMoEIFEKRobHBCSMzUvAVYnLRChYkNOEl8RcYGRomJygpKjU2Nzg5OkNERUZHSElKU1RVVldYWVpjZGVmZ2hpanN0dnd4eXqDhIWGh4iJipKTlJWWl5iZmqKmqsrO0tba3uLm6wsLDxMXGx8jJytLT1NXW19jZ2uHi4+Tl5ufo6erx8vP09fb3+Pn6/9oADAMBAAIRAxEAPwDq6KKK/os/KgooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigD//2Q==";
@@ -51,6 +52,17 @@ describe("assessFinalVisualCandidate", () => {
     const desktopParts = messages[1]!.content as readonly [{ type: "text"; text: string }, { type: "image_url"; image_url: { url: string } }];
     const mobileParts = messages[2]!.content as readonly [{ type: "text"; text: string }, { type: "image_url"; image_url: { url: string } }];
     expect([desktopParts[0].text, mobileParts[0].text].join("\n")).not.toMatch(/html|css|https?:|private-copy/i);
+  });
+
+  it("infers the fixed verdict version and an empty issue list when Qwen omits only those inert fields", async () => {
+    const { schemaVersion: _schemaVersion, issues: _issues, ...equivalent } = verdict;
+    const qwen = client(equivalent as FinalVisualVerdict);
+    const result = await assessFinalVisualCandidate(input, { client: qwen.value });
+
+    expect(result).toMatchObject({ ok: true, verdict });
+    const jsonSchema = fireworksJsonSchema(qwen.request()!.responseSchema) as { required?: string[] };
+    expect(jsonSchema.required).not.toContain("schemaVersion");
+    expect(jsonSchema.required).not.toContain("issues");
   });
 
   it("overrides a Qwen accept when a deterministic overflow, typography, or geometry failure exists", async () => {

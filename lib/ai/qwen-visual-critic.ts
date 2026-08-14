@@ -16,7 +16,7 @@ export const BoundedVisualIssueSchema = z.object({
 }).strict();
 
 export const FinalVisualVerdictSchema = z.object({
-  schemaVersion: z.literal("fable-visual-verdict/1.0"),
+  schemaVersion: z.literal("fable-visual-verdict/1.0").default("fable-visual-verdict/1.0"),
   nicheRecognition: z.number().int().min(1).max(10),
   promptFidelity: z.number().int().min(1).max(10),
   visualQuality: z.number().int().min(1).max(10),
@@ -25,7 +25,7 @@ export const FinalVisualVerdictSchema = z.object({
   mobileQuality: z.number().int().min(1).max(10),
   wrongNiche: z.boolean(),
   genericAiStyle: z.boolean(),
-  issues: z.array(BoundedVisualIssueSchema).max(8),
+  issues: z.array(BoundedVisualIssueSchema).max(8).default([]),
   decision: z.enum(["accept", "repair", "reject"]),
 }).strict();
 

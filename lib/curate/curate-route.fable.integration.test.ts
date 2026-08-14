@@ -72,7 +72,7 @@ function fireworksBoundary(options: {
       if (body.user.endsWith(".intent")) {
         response = {
           schemaVersion: "intent-analysis/1.0", language: "es",
-          functional: { siteType: "coloring_pages", requiredSections: ["hero", "features", "footer"], primaryActions: ["create"], contentModel: "creative_play" },
+          functional: { siteType: "content_platform", requiredSections: ["hero", "features", "footer"], primaryActions: ["create"], contentModel: "creative_play" },
           audience: { primary: "children", ageRange: null, secondary: ["parents"] }, domains: ["creative_play"], emotionalGoals: ["playful"],
           requiredVisualSignals: ["hand_drawn"], forbiddenVisualSignals: ["saas_dashboard"], explicitConstraints: [], ambiguities: [], confidence: .95,
         };

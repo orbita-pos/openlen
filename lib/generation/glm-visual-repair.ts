@@ -12,7 +12,7 @@ const REQUEST_ID = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,111}$/;
 const PROGRAM_ID = /^[a-z0-9]+(?:[-_][a-z0-9]+)*$/;
 
 export const GlmVisualRepairDeltaSchema = z.object({
-  schemaVersion: z.literal("glm-visual-repair-delta/1.0"),
+  schemaVersion: z.literal("glm-visual-repair-delta/1.0").default("glm-visual-repair-delta/1.0"),
   changes: z.array(z.object({
     programId: z.string().regex(PROGRAM_ID),
     program: ExpressiveSectionProgramSchema,

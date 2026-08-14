@@ -180,31 +180,118 @@ function providerDecisionSchema(input: {
 }) {
   const shared = {
     ordinal: z.literal(input.ordinal),
-    usefulTraits: ProviderTraitListSchema,
-    rejectedTraits: ProviderTraitListSchema,
+    usefulTraits: ProviderTraitListSchema.default([]),
+    rejectedTraits: ProviderTraitListSchema.default([]),
   };
-  const generate = z.object({ ...shared, action: z.literal("generate"), candidateId: z.null() }).strict();
+  const generate = z.object({ ...shared, action: z.literal("generate"), candidateId: z.null().default(null) }).strict();
   if (input.candidateIds.length === 0) return generate;
   const ids = [...new Set(input.candidateIds)].map((candidateId) => CandidateIdSchema.parse(candidateId));
   const candidateId = ids.length === 1
     ? z.literal(ids[0])
     : z.enum(ids as [string, ...string[]]);
-  return z.discriminatedUnion("action", [
+  return z.union([
     generate,
     z.object({ ...shared, action: z.literal("reuse"), candidateId }).strict(),
     z.object({ ...shared, action: z.literal("rebuild"), candidateId }).strict(),
   ]);
 }
 
-function providerDecisionTuple(context: Omit<ContextualContract, "expectedDecisions">) {
-  const schemas = context.requiredRoles.map((role, ordinal) => providerDecisionSchema({
-    ordinal,
-    candidateIds: context.retrievedCandidates
-      .filter((candidate) => candidate.ordinal === ordinal && candidate.role === role)
-      .map((candidate) => candidate.candidateId),
-  }));
-  if (schemas.length === 0) return z.tuple([]);
-  return z.tuple(schemas as unknown as [z.ZodTypeAny, ...z.ZodTypeAny[]]);
+function providerDecisionObject(context: Omit<ContextualContract, "expectedDecisions">) {
+  const shape = Object.fromEntries(context.requiredRoles.map((role, ordinal) => [
+    `decision_${ordinal}`,
+    providerDecisionSchema({
+      ordinal,
+      candidateIds: context.retrievedCandidates
+        .filter((candidate) => candidate.ordinal === ordinal && candidate.role === role)
+        .map((candidate) => candidate.candidateId),
+    }),
+  ]));
+  return z.object(shape).strict();
+}
+
+function orderedProviderDecisions(
+  raw: unknown,
+  expectedDecisionCount: number,
+): unknown[] | null {
+  const rawDecisions = Array.isArray(raw)
+    ? raw
+    : raw && typeof raw === "object"
+      ? Object.values(raw)
+      : null;
+  if (!rawDecisions || rawDecisions.length !== expectedDecisionCount) return null;
+
+  const byOrdinal = new Map<number, unknown>();
+  for (const decision of rawDecisions) {
+    if (!decision || typeof decision !== "object") return null;
+    const ordinal = (decision as { ordinal?: unknown }).ordinal;
+    if (!Number.isInteger(ordinal) || (ordinal as number) < 0 || (ordinal as number) >= expectedDecisionCount) return null;
+    if (byOrdinal.has(ordinal as number)) return null;
+    byOrdinal.set(ordinal as number, decision);
+  }
+  if (byOrdinal.size !== expectedDecisionCount) return null;
+  return Array.from({ length: expectedDecisionCount }, (_, ordinal) => byOrdinal.get(ordinal));
+}
+
+function normalizeProviderDecisionEnvelope(
+  input: unknown,
+  expectedDecisionCount: number,
+): unknown {
+  if (!input || typeof input !== "object") return input;
+  const envelope = input as { schemaVersion?: unknown; decisions?: unknown };
+  const ordered = orderedProviderDecisions(envelope.decisions, expectedDecisionCount);
+  if (!ordered) return input;
+
+  return {
+    schemaVersion: envelope.schemaVersion,
+    decisions: Object.fromEntries(
+      ordered.map((decision, ordinal) => [`decision_${ordinal}`, decision]),
+    ),
+  };
+}
+
+function canonicalStringList(value: unknown): unknown {
+  return Array.isArray(value) && value.every((entry) => typeof entry === "string")
+    ? canonicalTaxonomy(value)
+    : value;
+}
+
+function normalizeAdaptivePageDesignEnvelope(input: unknown, expectedDecisionCount: number): unknown {
+  if (!input || typeof input !== "object") return input;
+  const envelope = input as Record<string, unknown>;
+  const orderedDecisions = orderedProviderDecisions(envelope.decisions, expectedDecisionCount);
+  if (!orderedDecisions) return input;
+  const normalizedDecisions: z.infer<typeof CandidateDecisionSchema>[] = [];
+  for (const decision of orderedDecisions) {
+    try {
+      normalizedDecisions.push(normalizedDecision(decision));
+    } catch {
+      return input;
+    }
+  }
+  const direction = envelope.direction && typeof envelope.direction === "object"
+    ? envelope.direction as Record<string, unknown>
+    : null;
+  const imageSlots = Array.isArray(envelope.imageSlots)
+    ? [...envelope.imageSlots].sort((left, right) => {
+      const leftIndex = left && typeof left === "object" ? (left as { slotIndex?: unknown }).slotIndex : undefined;
+      const rightIndex = right && typeof right === "object" ? (right as { slotIndex?: unknown }).slotIndex : undefined;
+      return typeof leftIndex === "number" && typeof rightIndex === "number" ? leftIndex - rightIndex : 0;
+    })
+    : envelope.imageSlots;
+  return {
+    ...envelope,
+    decisions: normalizedDecisions,
+    requiredSignals: canonicalStringList(envelope.requiredSignals),
+    forbiddenSignals: canonicalStringList(envelope.forbiddenSignals),
+    imageSlots,
+    ...(direction ? {
+      direction: {
+        ...direction,
+        requiredVisualSignals: canonicalStringList(direction.requiredVisualSignals),
+        forbiddenVisualSignals: canonicalStringList(direction.forbiddenVisualSignals),
+      },
+    } : {}),
+  };
 }
 
 function exactDecisionTuple(decisions: readonly z.infer<typeof CandidateDecisionSchema>[]) {
@@ -253,7 +340,10 @@ export function createAdaptivePageDesignProgramSchema(context: ContextualContrac
       }),
     })
     : AdaptivePageDesignProgramObjectSchema;
-  return providerVisible.superRefine((rawValue: unknown, ctx: z.RefinementCtx) => {
+  return z.preprocess(
+    (input) => normalizeAdaptivePageDesignEnvelope(input, context.requiredRoles.length),
+    providerVisible,
+  ).superRefine((rawValue: unknown, ctx: z.RefinementCtx) => {
     const parsed = AdaptivePageDesignProgramObjectSchema.safeParse(rawValue);
     if (!parsed.success) {
       ctx.addIssue({ code: z.ZodIssueCode.custom, message: "invalid adaptive page design program" });
@@ -292,12 +382,16 @@ export function createAdaptivePageDesignProgramSchema(context: ContextualContrac
 }
 
 export function createCandidateScoutResponseSchema(context: Omit<ContextualContract, "expectedDecisions">) {
-  return z.object({
-    schemaVersion: z.literal("adaptive-candidate-decisions/1.0"),
-    decisions: providerDecisionTuple(context),
-  }).strict().transform((value) => ({
+  const providerVisible = z.object({
+    schemaVersion: z.literal("adaptive-candidate-decisions/1.0").default("adaptive-candidate-decisions/1.0"),
+    decisions: providerDecisionObject(context),
+  }).strict();
+  return z.preprocess(
+    (input) => normalizeProviderDecisionEnvelope(input, context.requiredRoles.length),
+    providerVisible,
+  ).transform((value) => ({
     schemaVersion: value.schemaVersion,
-    decisions: value.decisions.map(normalizedDecision),
+    decisions: context.requiredRoles.map((_, ordinal) => normalizedDecision(value.decisions[`decision_${ordinal}`])),
   })) as z.ZodType<{
     schemaVersion: "adaptive-candidate-decisions/1.0";
     decisions: z.infer<typeof CandidateDecisionSchema>[];
