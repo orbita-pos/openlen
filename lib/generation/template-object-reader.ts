@@ -1,7 +1,7 @@
 import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 
-const TEMPLATE_STORAGE_KEY = /^templates\/[a-z0-9]+(?:[-_][a-z0-9]+)*-[a-f0-9]{12}\.html$/;
+const TEMPLATE_STORAGE_KEY = /^(?:templates|sections)\/[a-z0-9]+(?:[-_][a-z0-9]+)*-[a-f0-9]{12}\.html$/;
 
 export type TemplateObjectReadErrorCode =
   | "invalid_template_storage_key"

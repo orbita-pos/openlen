@@ -330,6 +330,15 @@ describe("Fireworks JSON client", () => {
     expect(fetchImpl.mock.calls[1]?.[1]?.body).toBe(fetchImpl.mock.calls[0]?.[1]?.body);
   });
 
+  it("honors an explicit single-attempt boundary", async () => {
+    const fetchImpl = vi.fn<typeof fetch>()
+      .mockResolvedValueOnce(new Response(null, { status: 503 }))
+      .mockResolvedValueOnce(jsonResponse(successEnvelope()));
+    const result = await createClient({ apiKey: "key", fetchImpl, maxAttempts: 1 }).request(REQUEST);
+    expect(result).toMatchObject({ ok: false, code: "http", attempts: 1 });
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
+  });
+
   it("reserves before each retry fetch and completes each attempt lease exactly once", async () => {
     const events: string[] = [];
     let leaseNumber = 0;

@@ -24,6 +24,7 @@ import { planAdaptiveSectionComposition } from "@/lib/generation/section-plan";
 import { buildSectionSemanticPolicy, scoreSectionSemanticProfile } from "@/lib/generation/section-variant-semantics";
 import { SectionCompositionManifestSchema, type SectionPlan } from "@/lib/generation/section-composition-contracts";
 import { fingerprintStructure } from "@/lib/generation/structural-fingerprint";
+import { readTemplateObjectText } from "@/lib/generation/template-object-reader";
 import { scoutVisualCandidates } from "@/lib/generation/visual-candidate-scout";
 import { canonicalJsonSha256, sha256 } from "@/lib/generation/content-hash";
 import type { AssetPipelineMode } from "@/lib/generation/asset-pipeline-mode";
@@ -113,10 +114,29 @@ function flattenCopy(copy: ExtractedBusinessData): Record<string, string> {
   return flattened;
 }
 
-async function defaultFetchText(storageUrl: string): Promise<string | null> {
-  const response = await fetch(storageUrl, { cache: "no-store" });
+const CANONICAL_SECTION_OBJECT = /^sections\/[a-z0-9]+(?:[-_][a-z0-9]+)*-[a-f0-9]{12}\.html$/;
+
+export async function fetchAuthoritativeSectionText(
+  storageUrl: string,
+  deps: {
+    readObject?: typeof readTemplateObjectText;
+    fetchImpl?: typeof fetch;
+  } = {},
+): Promise<string | null> {
+  try {
+    const url = new URL(storageUrl);
+    const storageKey = url.pathname.startsWith("/") ? url.pathname.slice(1) : url.pathname;
+    if (url.search === "" && url.hash === "" && CANONICAL_SECTION_OBJECT.test(storageKey)) {
+      return (deps.readObject ?? readTemplateObjectText)(storageKey);
+    }
+  } catch {
+    // Relative/local URLs continue through the existing fetch boundary.
+  }
+  const response = await (deps.fetchImpl ?? fetch)(storageUrl, { cache: "no-store" });
   return response.ok ? response.text() : null;
 }
+
+const defaultFetchText = fetchAuthoritativeSectionText;
 
 function fullDocument(fragment: string): string {
   return `<!doctype html><html><head></head><body>${fragment}</body></html>`;

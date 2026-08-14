@@ -1,8 +1,19 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { runFableAdaptivePipeline } from "./fable-adaptive-pipeline";
+import { fetchAuthoritativeSectionText, runFableAdaptivePipeline } from "./fable-adaptive-pipeline";
 
 describe("Fable adaptive production pipeline", () => {
+  it("reads canonical section objects from origin instead of transformed CDN bytes", async () => {
+    const readObject = vi.fn(async () => "<footer>authoritative</footer>");
+    const fetchImpl = vi.fn();
+    await expect(fetchAuthoritativeSectionText(
+      "https://templates.openlen.com/sections/derived-footer-aaaaaaaaaaaa.html",
+      { readObject, fetchImpl: fetchImpl as never },
+    )).resolves.toBe("<footer>authoritative</footer>");
+    expect(readObject).toHaveBeenCalledWith("sections/derived-footer-aaaaaaaaaaaa.html");
+    expect(fetchImpl).not.toHaveBeenCalled();
+  });
+
   it("runs scout, page planning, adaptive composition and assets in order on the shared runtime", async () => {
     const events: string[] = [];
     const runtime = {

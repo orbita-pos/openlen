@@ -28,6 +28,24 @@ describe("readTemplateObjectText", () => {
     expect(readFile).not.toHaveBeenCalled();
   });
 
+  it("reads canonical derived section HTML from the authoritative R2 origin", async () => {
+    const readR2 = vi.fn(async () => "<section>origin</section>");
+    await expect(readTemplateObjectText("sections/derived-footer-aaaaaaaaaaaa.html", {
+      env: {
+        R2_ACCOUNT_ID: "account",
+        R2_ACCESS_KEY: "access",
+        R2_SECRET_KEY: "secret",
+        R2_TEMPLATES_BUCKET: "templates",
+      },
+      readR2,
+      readFile: vi.fn(),
+    })).resolves.toBe("<section>origin</section>");
+    expect(readR2).toHaveBeenCalledWith(expect.objectContaining({
+      bucket: "templates",
+      key: "sections/derived-footer-aaaaaaaaaaaa.html",
+    }));
+  });
+
   it("reads the exact object from the filesystem fallback and rejects traversal", async () => {
     const readFile = vi.fn(async () => "<html>local</html>");
     await expect(readTemplateObjectText("templates/mirror-aaaaaaaaaaaa.html", {

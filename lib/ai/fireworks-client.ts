@@ -31,6 +31,7 @@ export interface FireworksJsonClientOptions {
   now?: () => number;
   budget: PageBudget;
   modelIds?: Partial<Record<FableModelRole, string>>;
+  maxAttempts?: 1 | 2;
 }
 
 function record(value: unknown): Record<string, unknown> | null {
@@ -162,6 +163,7 @@ export function createFireworksJsonClient(options: FireworksJsonClientOptions): 
   const timeoutMs = Number.isFinite(options.timeoutMs) && Number(options.timeoutMs) > 0
     ? Math.floor(Number(options.timeoutMs))
     : 30_000;
+  const maxAttempts = options.maxAttempts === 1 ? 1 : 2;
 
   return {
     async request<T>(request: FireworksJsonRequest<T>): Promise<FireworksJsonResult<T>> {
@@ -202,7 +204,7 @@ export function createFireworksJsonClient(options: FireworksJsonClientOptions): 
       });
       const maxInputTokens = new TextEncoder().encode(payload).length;
 
-      for (const attempt of [1, 2] as const) {
+      for (const attempt of ([1, 2] as const).slice(0, maxAttempts)) {
         const lease = options.budget.reserve({ kind: "model", modelId, maxInputTokens, maxOutputTokens: request.maxOutputTokens });
         if (!lease.ok) return fail("budget_exceeded", (attempt - 1) as 0 | 1);
 
@@ -252,7 +254,7 @@ export function createFireworksJsonClient(options: FireworksJsonClientOptions): 
           if (!settleBudget(safeUsage)) return fail("budget_exceeded", attempt, safeUsage);
 
           if (!response.ok) {
-            if (attempt === 1 && RETRYABLE_EMPTY_STATUS.has(response.status) && body.length === 0 && safeUsage === undefined) continue;
+            if (attempt < maxAttempts && RETRYABLE_EMPTY_STATUS.has(response.status) && body.length === 0 && safeUsage === undefined) continue;
             return fail("http", attempt, safeUsage);
           }
           if (body.length === 0 || decodedEnvelope === undefined || !safeUsage) return fail("provider", attempt);
@@ -266,13 +268,13 @@ export function createFireworksJsonClient(options: FireworksJsonClientOptions): 
         } catch (error) {
           settleBudget(safeUsage);
           const isTimeout = timedOut || connectionTimeout(error);
-          if (isTimeout && !responseReceived && attempt === 1 && body.length === 0 && safeUsage === undefined) continue;
+          if (isTimeout && !responseReceived && attempt < maxAttempts && body.length === 0 && safeUsage === undefined) continue;
           return fail(isTimeout ? "timeout" : "provider", attempt, safeUsage);
         } finally {
           if (timer !== undefined) clearTimeout(timer);
         }
       }
-      return fail("provider", 2);
+      return fail("provider", maxAttempts);
     },
   };
 }
