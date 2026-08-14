@@ -54,6 +54,9 @@ export interface CreativeDocumentOutcome {
   /** Redacted, in the order they were observed. Safe for telemetry. */
   readonly rejections: readonly CreativeDocumentRejection[];
   readonly stoppedBy: "authored" | "repaired" | "provider" | "budget" | "rejected";
+  /** The transport's own failure code. `stoppedBy` collapses several distinct
+   *  provider outcomes into "provider"; this keeps the one that happened. */
+  readonly providerCode?: "missing_key" | "budget_exceeded" | "timeout" | "http" | "provider" | "empty";
 }
 
 /**
@@ -300,7 +303,12 @@ export async function runCreativeDocument(
     const lastTurn = turn === 2;
     let response: FireworksDocumentResult;
     try {
-      response = await client.write({ messages, maxOutputTokens, requestId: `${input.requestId}-doc-${turn}` });
+      response = await client.write({
+        messages,
+        maxOutputTokens,
+        requestId: `${input.requestId}-doc-${turn}`,
+        reasoningEffort: "none",
+      });
     } catch {
       return { candidate: null, turns: turn - 1, rejections, stoppedBy: "provider" };
     }
@@ -312,6 +320,7 @@ export async function runCreativeDocument(
         turns: turn - 1,
         rejections,
         stoppedBy: response.code === "budget_exceeded" ? "budget" : "provider",
+        providerCode: response.code,
       };
     }
 

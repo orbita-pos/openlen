@@ -133,7 +133,11 @@ export function createFireworksDocumentClient(options: FireworksDocumentClientOp
         model: modelId,
         messages: request.messages,
         max_tokens: request.maxOutputTokens,
-        reasoning_effort: request.reasoningEffort ?? "high",
+        // "none" by default, learned from a live canary: at "high" DeepSeek V4
+        // spent all 32k output tokens inside reasoning_content and returned an
+        // empty message, so the request cost full price and produced no page.
+        // Document writing wants the budget spent on the document.
+        reasoning_effort: request.reasoningEffort ?? "none",
         temperature: request.temperature ?? 0.7,
         user: request.requestId,
       });

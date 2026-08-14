@@ -214,7 +214,7 @@ describe("Fireworks document client", () => {
       model: "accounts/fireworks/models/deepseek-v4-flash-0731",
       messages: REQUEST.messages,
       max_tokens: 4_096,
-      reasoning_effort: "high",
+      reasoning_effort: "none",
       temperature: 0.7,
       user: "creative-document-1",
     });
