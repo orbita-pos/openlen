@@ -79,6 +79,37 @@ describe("derived section persistence", () => {
     ]);
   });
 
+  it("bounds concurrent immutable uploads before publishing the catalog", async () => {
+    let activeUploads = 0;
+    let maxActiveUploads = 0;
+    const rows = Array.from({ length: 25 }, (_, ordinal) => ({
+      id: `derived-hero-arcana-${ordinal}-${ordinal.toString(16).padStart(12, "0")}`,
+      html: `<section id="hero-${ordinal}">Arcana ${ordinal}</section>`,
+      type: "hero" as const,
+      mode: "light" as const,
+      provenance: { ...provenance, sourceBandOrdinal: ordinal },
+      semantics,
+      designTokens: {},
+      fonts: [],
+      needsJs: false,
+      hasPlaceholders: false,
+      contentHash: ordinal.toString(16).padStart(12, "0"),
+      renderScore: 90,
+      sourceExactHash: `sha256:${ordinal.toString(16).padStart(64, "0")}` as const,
+    }));
+    await publishDerivedSectionCatalog(rows, {
+      upload: async ({ body }) => {
+        activeUploads += 1;
+        maxActiveUploads = Math.max(maxActiveUploads, activeUploads);
+        await new Promise((resolve) => setTimeout(resolve, 1));
+        activeUploads -= 1;
+        return { url: "https://sections.invalid/fragment.html", size: body.length };
+      },
+      execute: async () => [],
+    });
+    expect(maxActiveUploads).toBeLessThanOrEqual(8);
+  });
+
   it("does not touch the database when any catalog upload fails", async () => {
     const execute = vi.fn(async () => []);
     await expect(publishDerivedSectionCatalog([{

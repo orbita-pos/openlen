@@ -194,6 +194,8 @@ interface PublishDerivedCatalogDependencies {
   execute?: (statement: unknown) => Promise<unknown>;
 }
 
+const DERIVED_SECTION_UPLOAD_CONCURRENCY = 8;
+
 /**
  * Publishes a complete derived catalog without exposing a partial database
  * generation. Immutable objects are uploaded first; one PostgreSQL statement
@@ -213,7 +215,7 @@ export async function publishDerivedSectionCatalog(
 
   const storage = getTemplateStorage();
   const upload = dependencies.upload ?? ((input) => storage.upload(input));
-  const uploaded = await Promise.all(sections.map(async (section) => {
+  const uploadSection = async (section: CompiledDerivedSection) => {
     const storageKey = `sections/${section.id}-${section.contentHash}.html`;
     const object = await upload({
       key: storageKey,
@@ -239,7 +241,20 @@ export async function publishDerivedSectionCatalog(
       provenance: section.provenance,
       derivedSemantics: section.semantics,
     };
-  }));
+  };
+  const uploaded: Awaited<ReturnType<typeof uploadSection>>[] = new Array(sections.length);
+  let nextIndex = 0;
+  const workers = Array.from(
+    { length: Math.min(DERIVED_SECTION_UPLOAD_CONCURRENCY, sections.length) },
+    async () => {
+      while (nextIndex < sections.length) {
+        const index = nextIndex;
+        nextIndex += 1;
+        uploaded[index] = await uploadSection(sections[index]);
+      }
+    },
+  );
+  await Promise.all(workers);
 
   const payload = JSON.stringify(uploaded);
   const statement = sql`
