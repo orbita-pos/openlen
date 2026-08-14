@@ -1,5 +1,6 @@
 import type { ModelTokenUsage } from "./model-cost";
 import type { PageBudget, RedactedPageCost } from "./page-generation-budget";
+import type { FireworksProviderCategory, FireworksServiceTier } from "../ai/fireworks-contracts";
 import { z } from "zod";
 
 export type FableTelemetryStage = "intent" | "copy" | "scout" | "page_plan" | "initial_program" | "image" | "final_critic" | "visual_repair" | "delivery_gate" | "delivery" | "visual_quality";
@@ -11,6 +12,9 @@ export interface FablePaidCallTelemetry {
   readonly usage: ModelTokenUsage | { readonly imageCount: number };
   readonly durationMs: number;
   readonly attempts: 0 | 1 | 2 | 3;
+  readonly serviceTier?: FireworksServiceTier;
+  readonly providerCategory?: FireworksProviderCategory;
+  readonly httpStatus?: number;
 }
 
 export interface FableGenerationTelemetryEvent {
@@ -40,7 +44,17 @@ const UsageSchema = z.object({
 }).strict();
 const ImageUsageSchema = z.object({ imageCount: NonNegativeSafeInteger }).strict();
 const PaidCallSchema = z.discriminatedUnion("kind", [
-  z.object({ stage: z.enum(["intent", "copy", "scout", "page_plan", "initial_program", "image", "final_critic", "visual_repair", "delivery_gate", "delivery", "visual_quality"]), kind: z.literal("model"), modelId: ModelId, usage: UsageSchema, durationMs: NonNegativeSafeInteger, attempts: z.union([z.literal(0), z.literal(1), z.literal(2), z.literal(3)]) }).strict(),
+  z.object({
+    stage: z.enum(["intent", "copy", "scout", "page_plan", "initial_program", "image", "final_critic", "visual_repair", "delivery_gate", "delivery", "visual_quality"]),
+    kind: z.literal("model"),
+    modelId: ModelId,
+    usage: UsageSchema,
+    durationMs: NonNegativeSafeInteger,
+    attempts: z.union([z.literal(0), z.literal(1), z.literal(2), z.literal(3)]),
+    serviceTier: z.enum(["standard", "priority"]).optional(),
+    providerCategory: z.enum(["request", "http", "response", "schema", "timeout", "transport"]).optional(),
+    httpStatus: z.number().int().min(100).max(599).optional(),
+  }).strict(),
   z.object({ stage: z.enum(["intent", "copy", "scout", "page_plan", "initial_program", "image", "final_critic", "visual_repair", "delivery_gate", "delivery", "visual_quality"]), kind: z.literal("image"), modelId: ModelId, usage: ImageUsageSchema, durationMs: NonNegativeSafeInteger, attempts: z.union([z.literal(0), z.literal(1), z.literal(2), z.literal(3)]) }).strict(),
 ]);
 const CostSchema = z.object({
@@ -49,7 +63,7 @@ const CostSchema = z.object({
   capMicromxn: NonNegativeSafeInteger,
   actualMicromxn: NonNegativeSafeInteger,
   reservedMicromxn: NonNegativeSafeInteger,
-  modelUsage: z.array(UsageSchema.extend({ modelId: ModelId, costMicromxn: NonNegativeSafeInteger }).strict()).max(64),
+  modelUsage: z.array(UsageSchema.extend({ modelId: ModelId, serviceTier: z.enum(["standard", "priority"]).optional(), costMicromxn: NonNegativeSafeInteger }).strict()).max(64),
   imageUsage: z.array(ImageUsageSchema.extend({ modelId: ModelId, costMicromxn: NonNegativeSafeInteger }).strict()).max(16),
 }).strict();
 const OperationalEventSchema = z.object({
@@ -121,7 +135,17 @@ export function createFableGenerationTelemetry(options: {
 
   return {
     recordModel(call) {
-      paidCalls.push({ stage: call.stage, kind: "model", modelId: call.modelId, usage: modelUsage(call.usage as ModelTokenUsage), durationMs: safeDuration(call.durationMs), attempts: safeAttempts(call.attempts) });
+      paidCalls.push({
+        stage: call.stage,
+        kind: "model",
+        modelId: call.modelId,
+        usage: modelUsage(call.usage as ModelTokenUsage),
+        durationMs: safeDuration(call.durationMs),
+        attempts: safeAttempts(call.attempts),
+        ...(call.serviceTier ? { serviceTier: call.serviceTier } : {}),
+        ...(call.providerCategory ? { providerCategory: call.providerCategory } : {}),
+        ...(call.httpStatus !== undefined ? { httpStatus: call.httpStatus } : {}),
+      });
     },
     recordImage(call) {
       const imageCount = Number.isSafeInteger(call.usage.imageCount) && call.usage.imageCount >= 0 ? call.usage.imageCount : 0;

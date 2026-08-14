@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  FABLE_PRIORITY_RATES,
   FABLE_PRODUCTION_RATES,
   createPageGenerationBudget,
   parseFablePageBudgetConfigFromEnv,
@@ -14,6 +15,7 @@ const CONFIG = {
 };
 const GLM = "accounts/fireworks/models/glm-5p2";
 const QWEN = "accounts/fireworks/models/qwen3p7-plus";
+const DEEPSEEK = "accounts/fireworks/models/deepseek-v4-flash";
 
 describe("page generation budget", () => {
   it("exposes the conservative multi-model and image rate card", () => {
@@ -23,6 +25,33 @@ describe("page generation budget", () => {
       "accounts/fireworks/models/qwen3p7-plus": { input: .50, cached: .10, output: 3.00 },
       "gemini-2.5-flash-image": { image: .039 },
     });
+    expect(FABLE_PRIORITY_RATES).toEqual({
+      "accounts/fireworks/models/deepseek-v4-flash": { input: .21, cached: .042, output: .42 },
+    });
+  });
+
+  it("reserves and settles DeepSeek Priority at the official tier rate", () => {
+    const budget = createPageGenerationBudget(CONFIG);
+    const lease = budget.reserve({
+      kind: "model",
+      modelId: DEEPSEEK,
+      serviceTier: "priority",
+      maxInputTokens: 10_000,
+      maxOutputTokens: 2_000,
+    });
+    expect(lease.ok).toBe(true);
+    expect(budget.snapshot().reservedMicromxn).toBe(58_800);
+    if (!lease.ok) throw new Error("expected lease");
+    budget.complete(lease.leaseId, { inputTokens: 8_000, cachedTokens: 2_000, outputTokens: 1_000, thinkingTokens: 400 });
+    expect(budget.snapshot().modelUsage).toEqual([{
+      modelId: DEEPSEEK,
+      serviceTier: "priority",
+      inputTokens: 8_000,
+      cachedTokens: 2_000,
+      outputTokens: 1_000,
+      thinkingTokens: 400,
+      costMicromxn: 35_280,
+    }]);
   });
 
   it("reports the 5 MXN target and exact 10 MXN hard cap using only redacted allowlisted fields", () => {

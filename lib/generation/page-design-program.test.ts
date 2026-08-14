@@ -51,11 +51,15 @@ describe("createPageDesignProgram", () => {
     let payload = "";
     let requestRole = "";
     let effort = "";
+    let serviceTier = "";
+    let maxAttempts = 0;
     const client: FireworksJsonClient = {
       async request<T>(request: FireworksJsonRequest<T>) {
         payload = request.messages.map((message) => message.content).join("\n");
         requestRole = request.role;
         effort = request.reasoningEffort;
+        serviceTier = request.serviceTier ?? "";
+        maxAttempts = request.maxAttempts ?? 0;
         const value = request.responseSchema.parse(response);
         return { ok: true, value, modelId: "accounts/fireworks/models/deepseek-v4-flash", usage: { inputTokens: 30, cachedTokens: 4, outputTokens: 12, thinkingTokens: 5 }, durationMs: 3, attempts: 1 };
       },
@@ -80,6 +84,8 @@ describe("createPageDesignProgram", () => {
     expect(result).toMatchObject({ ok: true, program: { rhythm: "storytelling" } });
     expect(requestRole).toBe("reasoner");
     expect(effort).toBe("high");
+    expect(serviceTier).toBe("priority");
+    expect(maxAttempts).toBe(1);
     expect(payload).toContain("hero.title");
     expect(payload).toContain("donor-safe");
     expect(payload).toContain("playful");

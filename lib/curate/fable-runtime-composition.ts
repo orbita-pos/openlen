@@ -1,5 +1,6 @@
 import { assessFinalVisualCandidate } from "@/lib/ai/qwen-visual-critic";
 import { createFireworksJsonClient, type FireworksJsonClient, type FireworksJsonClientOptions } from "@/lib/ai/fireworks-client";
+import type { FireworksProviderCategory, FireworksServiceTier } from "@/lib/ai/fireworks-contracts";
 import { renderVisualQualityViewports } from "@/lib/ai/visual-quality-renderer";
 import { createFableGenerationTelemetry, type FableGenerationTelemetryEvent, type FableTelemetryStage } from "@/lib/generation/fable-generation-telemetry";
 import { createGeminiAssetPackProvider, type GeminiAssetPackProviderOptions } from "@/lib/generation/gemini-asset-pack-provider";
@@ -52,6 +53,9 @@ export interface FableRuntimeComposition {
     readonly usage?: { readonly inputTokens: number; readonly cachedTokens: number; readonly outputTokens: number; readonly thinkingTokens: number };
     readonly durationMs?: number;
     readonly attempts?: 0 | 1 | 2 | 3;
+    readonly serviceTier?: FireworksServiceTier;
+    readonly providerCategory?: FireworksProviderCategory;
+    readonly httpStatus?: number;
   }): void;
   recordImage(trace: { readonly modelId?: string | null; readonly generatedCount: number; readonly durationMs: number }): void;
   recordFailure(stage: "intent" | "copy" | "scout" | "page_plan" | "initial_program" | "image" | "delivery_gate" | "visual_quality" | "delivery", reasonCode: string): Promise<void>;
@@ -108,6 +112,9 @@ export function createFableRuntimeComposition(options: FableRuntimeCompositionOp
       usage: result.usage ?? { inputTokens: 0, cachedTokens: 0, outputTokens: 0, thinkingTokens: 0 },
       durationMs: result.durationMs ?? 0,
       attempts: result.attempts ?? 0,
+      ...(result.serviceTier ? { serviceTier: result.serviceTier } : {}),
+      ...(result.providerCategory ? { providerCategory: result.providerCategory } : {}),
+      ...(result.httpStatus !== undefined ? { httpStatus: result.httpStatus } : {}),
     });
   };
   const recordImage: FableRuntimeComposition["recordImage"] = (trace) => {

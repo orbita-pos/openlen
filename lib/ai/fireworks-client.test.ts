@@ -202,6 +202,58 @@ describe("Fireworks JSON client", () => {
     expect(JSON.stringify(result)).not.toMatch(/provider-private-id|secret|Return a bounded plan/);
   });
 
+  it("routes only an explicitly requested call through Priority and reserves its Priority price", async () => {
+    const reserve = vi.fn(() => ({ ok: true as const, leaseId: "priority-lease" }));
+    const budget: PageBudget = { reserve, complete: vi.fn(), snapshot: vi.fn() as never };
+    const priorityFetch = vi.fn<typeof fetch>(async () => jsonResponse(successEnvelope()));
+    await expect(createClient({ apiKey: "key", fetchImpl: priorityFetch, budget }).request({
+      ...REQUEST,
+      serviceTier: "priority",
+      maxAttempts: 1,
+    })).resolves.toMatchObject({ ok: true, serviceTier: "priority", attempts: 1 });
+    expect(JSON.parse(String(priorityFetch.mock.calls[0]?.[1]?.body))).toMatchObject({ service_tier: "priority" });
+    expect(reserve).toHaveBeenCalledWith(expect.objectContaining({
+      kind: "model",
+      modelId: "accounts/fireworks/models/deepseek-v4-flash",
+      serviceTier: "priority",
+    }));
+
+    const standardFetch = vi.fn<typeof fetch>(async () => jsonResponse(successEnvelope()));
+    await createClient({ apiKey: "key", fetchImpl: standardFetch }).request(REQUEST);
+    expect(JSON.parse(String(standardFetch.mock.calls[0]?.[1]?.body))).not.toHaveProperty("service_tier");
+  });
+
+  it("returns only a redacted provider category and HTTP status on Priority failure", async () => {
+    const fetchImpl = vi.fn<typeof fetch>(async () => new Response("PRIVATE PROVIDER BODY", { status: 503 }));
+    const result = await createClient({ apiKey: "key", fetchImpl }).request({ ...REQUEST, serviceTier: "priority", maxAttempts: 1 });
+    expect(result).toMatchObject({
+      ok: false,
+      code: "http",
+      serviceTier: "priority",
+      providerCategory: "http",
+      httpStatus: 503,
+      attempts: 1,
+    });
+    expect(JSON.stringify(result)).not.toContain("PRIVATE PROVIDER BODY");
+    expect(fetchImpl).toHaveBeenCalledOnce();
+  });
+
+  it("classifies an invalid success envelope and transport failure without retaining error values", async () => {
+    const invalidEnvelope = await createClient({
+      apiKey: "key",
+      fetchImpl: async () => jsonResponse({ private: "DO NOT RETAIN" }),
+    }).request({ ...REQUEST, maxAttempts: 1 });
+    expect(invalidEnvelope).toMatchObject({ ok: false, code: "provider", providerCategory: "response" });
+    expect(JSON.stringify(invalidEnvelope)).not.toContain("DO NOT RETAIN");
+
+    const transport = await createClient({
+      apiKey: "key",
+      fetchImpl: async () => { throw new Error("PRIVATE CONNECTION DETAIL"); },
+    }).request({ ...REQUEST, maxAttempts: 1 });
+    expect(transport).toMatchObject({ ok: false, code: "provider", providerCategory: "transport" });
+    expect(JSON.stringify(transport)).not.toContain("PRIVATE CONNECTION DETAIL");
+  });
+
   it("fails before HTTP when the key is missing or the requested effort is outside role policy", async () => {
     const fetchImpl = vi.fn();
     await expect(createClient({ env: {}, fetchImpl }).request(REQUEST))
@@ -399,9 +451,9 @@ describe("Fireworks JSON client", () => {
   it("covers response-body timeout without retry and returns only a typed redacted failure", async () => {
     const fetchImpl = vi.fn<typeof fetch>(async () => ({ ok: true, status: 200, text: () => new Promise<string>(() => {}) }) as Response);
     const result = await createClient({ apiKey: "key", fetchImpl, timeoutMs: 5 }).request(REQUEST);
-    expect(result).toMatchObject({ ok: false, code: "timeout", attempts: 1 });
+    expect(result).toMatchObject({ ok: false, code: "timeout", providerCategory: "timeout", attempts: 1 });
     expect(fetchImpl).toHaveBeenCalledTimes(1);
-    expect(Object.keys(result).sort()).toEqual(["attempts", "code", "durationMs", "modelId", "ok"].sort());
+    expect(Object.keys(result).sort()).toEqual(["attempts", "code", "durationMs", "modelId", "ok", "providerCategory"].sort());
   });
 
   it("does not duplicate a response whose body delivers partial bytes and then stalls", async () => {

@@ -50,6 +50,14 @@ describe("Fable runtime composition", () => {
       durationMs: 4,
       attempts: 1,
     });
+    runtime.recordModel("page_plan", {
+      modelId: "accounts/fireworks/models/deepseek-v4-flash",
+      serviceTier: "priority",
+      providerCategory: "http",
+      httpStatus: 503,
+      durationMs: 36_874,
+      attempts: 1,
+    });
     runtime.recordImage({
       modelId: "gemini-image",
       generatedCount: 2,
@@ -62,6 +70,14 @@ describe("Fable runtime composition", () => {
       stage: "image",
       paidCalls: [
         expect.objectContaining({ kind: "model", stage: "scout", modelId: "qwen-scout" }),
+        expect.objectContaining({
+          kind: "model",
+          stage: "page_plan",
+          modelId: "accounts/fireworks/models/deepseek-v4-flash",
+          serviceTier: "priority",
+          providerCategory: "http",
+          httpStatus: 503,
+        }),
         expect.objectContaining({ kind: "image", stage: "image", modelId: "gemini-image", usage: { imageCount: 2 } }),
       ],
     }));

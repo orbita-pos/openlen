@@ -14,8 +14,15 @@ export const FABLE_PRODUCTION_RATES = Object.freeze({
   "gemini-2.5-flash-image": Object.freeze({ image: .039 }),
 });
 
+/** Official Fireworks Priority prices in USD per one million tokens. */
+export const FABLE_PRIORITY_RATES = Object.freeze({
+  "accounts/fireworks/models/deepseek-v4-flash": Object.freeze({ input: .21, cached: .042, output: .42 }),
+});
+
+export type ModelServiceTier = "standard" | "priority";
+
 export type PlannedPaidCall =
-  | { kind: "model"; modelId: string; maxInputTokens: number; maxOutputTokens: number }
+  | { kind: "model"; modelId: string; serviceTier?: ModelServiceTier; maxInputTokens: number; maxOutputTokens: number }
   | { kind: "image"; modelId: string; imageCount: number };
 
 export interface RedactedPageCost {
@@ -24,7 +31,7 @@ export interface RedactedPageCost {
   capMicromxn: number;
   actualMicromxn: number;
   reservedMicromxn: number;
-  modelUsage: readonly (ModelTokenUsage & { modelId: string; costMicromxn: number })[];
+  modelUsage: readonly (ModelTokenUsage & { modelId: string; serviceTier?: ModelServiceTier; costMicromxn: number })[];
   imageUsage: readonly (ImageUsage & { modelId: string; costMicromxn: number })[];
 }
 
@@ -52,8 +59,9 @@ function positiveFinite(value: number, name: string): void {
   if (!Number.isFinite(value) || value <= 0) throw new Error(`${name} must be a finite positive number`);
 }
 
-function textRate(modelId: string): ProductionModelRate {
-  const rate = FABLE_PRODUCTION_RATES[modelId as keyof typeof FABLE_PRODUCTION_RATES];
+function textRate(modelId: string, serviceTier: ModelServiceTier = "standard"): ProductionModelRate {
+  const rates = serviceTier === "priority" ? FABLE_PRIORITY_RATES : FABLE_PRODUCTION_RATES;
+  const rate = rates[modelId as keyof typeof rates];
   if (!rate || !("input" in rate) || !("cached" in rate) || !("output" in rate)) throw new Error("unknown text model");
   positiveFinite(rate.input, "input rate");
   positiveFinite(rate.cached, "cached rate");
@@ -80,7 +88,7 @@ function reservationCost(call: PlannedPaidCall, config: PageBudgetConfig): numbe
     cachedTokens: 0,
     outputTokens: call.maxOutputTokens,
     thinkingTokens: 0,
-  }, textRate(call.modelId), config.mxnPerUsd);
+  }, textRate(call.modelId, call.serviceTier), config.mxnPerUsd);
 }
 
 function validateConfig(config: PageBudgetConfig): void {
@@ -96,12 +104,13 @@ function validateConfig(config: PageBudgetConfig): void {
     if (modelId === "gemini-2.5-flash-image") imageRate(modelId);
     else textRate(modelId);
   }
+  for (const modelId of Object.keys(FABLE_PRIORITY_RATES)) textRate(modelId, "priority");
 }
 
 export function createPageGenerationBudget(config: PageBudgetConfig): PageBudget {
   validateConfig(config);
   const leases = new Map<string, Lease>();
-  const modelUsage: Array<ModelTokenUsage & { modelId: string; costMicromxn: number }> = [];
+  const modelUsage: Array<ModelTokenUsage & { modelId: string; serviceTier?: ModelServiceTier; costMicromxn: number }> = [];
   const imageUsage: Array<ImageUsage & { modelId: string; costMicromxn: number }> = [];
   let actualMicromxn = 0;
   let reservedMicromxn = 0;
@@ -123,10 +132,15 @@ export function createPageGenerationBudget(config: PageBudgetConfig): PageBudget
       reservedMicromxn -= lease.reservedMicromxn;
       try {
         if (lease.kind === "model") {
-          const cost = calculateModelUsageMicromxn(usage as ModelTokenUsage, textRate(lease.modelId), config.mxnPerUsd);
+          const cost = calculateModelUsageMicromxn(usage as ModelTokenUsage, textRate(lease.modelId, lease.serviceTier), config.mxnPerUsd);
           if (cost > lease.reservedMicromxn) throw new Error("reported usage exceeds reservation");
           actualMicromxn += cost;
-          modelUsage.push({ ...(usage as ModelTokenUsage), modelId: lease.modelId, costMicromxn: cost });
+          modelUsage.push({
+            ...(usage as ModelTokenUsage),
+            modelId: lease.modelId,
+            ...(lease.serviceTier === "priority" ? { serviceTier: "priority" as const } : {}),
+            costMicromxn: cost,
+          });
         } else {
           const image = usage as ImageUsage;
           if (!Number.isSafeInteger(image?.imageCount) || image.imageCount < 0 || image.imageCount > lease.imageCount) throw new Error("complete image usage is required");

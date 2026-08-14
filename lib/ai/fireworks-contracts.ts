@@ -4,6 +4,8 @@ import type { ModelTokenUsage } from "../generation/model-cost";
 
 export type FableModelRole = "reasoner" | "designer" | "visual_critic";
 export type FireworksReasoningEffort = "none" | "high" | "max";
+export type FireworksServiceTier = "standard" | "priority";
+export type FireworksProviderCategory = "request" | "http" | "response" | "schema" | "timeout" | "transport";
 
 export interface FireworksTextPart {
   readonly type: "text";
@@ -26,10 +28,12 @@ export interface FireworksJsonRequest<T> {
   maxOutputTokens: number;
   reasoningEffort: FireworksReasoningEffort;
   requestId: string;
+  serviceTier?: FireworksServiceTier;
+  maxAttempts?: 1 | 2;
 }
 
 export type FireworksJsonResult<T> =
-  | { ok: true; value: T; modelId: string; usage: ModelTokenUsage; durationMs: number; attempts: 1 | 2 }
+  | { ok: true; value: T; modelId: string; usage: ModelTokenUsage; durationMs: number; attempts: 1 | 2; serviceTier?: FireworksServiceTier }
   | {
       ok: false;
       code: "missing_key" | "timeout" | "http" | "provider" | "invalid_json" | "schema" | "budget_exceeded";
@@ -37,6 +41,9 @@ export type FireworksJsonResult<T> =
       usage?: ModelTokenUsage;
       durationMs: number;
       attempts: 0 | 1 | 2;
+      serviceTier?: FireworksServiceTier;
+      providerCategory?: FireworksProviderCategory;
+      httpStatus?: number;
     };
 
 type JsonSchema = Record<string, unknown>;

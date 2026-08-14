@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 import type { FireworksJsonClient } from "../ai/fireworks-client";
-import type { FireworksJsonResult } from "../ai/fireworks-contracts";
+import type { FireworksJsonResult, FireworksServiceTier } from "../ai/fireworks-contracts";
 import { createAdaptivePageDesignProgramSchema, type AdaptivePageDesignProgram } from "./adaptive-design-contracts";
 import { CreativeDirectionSchema, type CreativeDirection } from "./creative-contracts";
 import { TaxonomySlugSchema } from "./contracts";
@@ -45,6 +45,7 @@ export type PageDesignProgramResult = ProviderFailure | { readonly ok: false; re
   readonly usage: Extract<FireworksJsonResult<unknown>, { ok: true }>["usage"];
   readonly durationMs: number;
   readonly attempts: 1 | 2;
+  readonly serviceTier?: FireworksServiceTier;
 };
 
 export async function createPageDesignProgram(
@@ -87,6 +88,8 @@ export async function createPageDesignProgram(
   const result = await deps.client.request({
     role: "reasoner",
     reasoningEffort: reasoningEffortFor("reasoner", "page_planning"),
+    serviceTier: "priority",
+    maxAttempts: 1,
     requestId: `${input.requestId}.plan`,
     maxOutputTokens: 8192,
     responseSchema,
@@ -127,5 +130,6 @@ export async function createPageDesignProgram(
     usage: result.usage,
     durationMs: result.durationMs,
     attempts: result.attempts,
+    serviceTier: result.serviceTier,
   };
 }

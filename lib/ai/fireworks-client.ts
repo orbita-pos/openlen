@@ -4,6 +4,8 @@ import {
   type FireworksJsonRequest,
   type FireworksJsonResult,
   type FireworksReasoningEffort,
+  type FireworksProviderCategory,
+  type FireworksServiceTier,
 } from "./fireworks-contracts";
 import { modelIdForRole, reasoningEffortAllowed } from "../generation/fable-model-policy";
 import { validateGeneratedImage } from "../generation/asset-image-validation";
@@ -132,6 +134,8 @@ function validRequest<T>(request: FireworksJsonRequest<T>): boolean {
     && Number.isSafeInteger(request.maxOutputTokens)
     && request.maxOutputTokens > 0
     && REQUEST_ID.test(request.requestId)
+    && (request.serviceTier === undefined || request.serviceTier === "standard" || request.serviceTier === "priority")
+    && (request.maxAttempts === undefined || request.maxAttempts === 1 || request.maxAttempts === 2)
     && reasoningEffortAllowed(request.role, request.reasoningEffort);
 }
 
@@ -170,26 +174,35 @@ export function createFireworksJsonClient(options: FireworksJsonClientOptions): 
     async request<T>(request: FireworksJsonRequest<T>): Promise<FireworksJsonResult<T>> {
       const started = now();
       const modelId = selectedModel(options, request.role) ?? modelIdForRole(request.role);
-      const fail = (code: FailureCode, attempts: 0 | 1 | 2, usage?: ModelTokenUsage): FireworksJsonResult<T> => ({
+      const serviceTier: FireworksServiceTier = request.serviceTier ?? "standard";
+      const fail = (
+        code: FailureCode,
+        attempts: 0 | 1 | 2,
+        usage?: ModelTokenUsage,
+        diagnostics?: { providerCategory?: FireworksProviderCategory; httpStatus?: number },
+      ): FireworksJsonResult<T> => ({
         ok: false,
         code,
         modelId,
         ...(usage ? { usage } : {}),
+        ...(serviceTier === "priority" ? { serviceTier } : {}),
+        ...(diagnostics?.providerCategory ? { providerCategory: diagnostics.providerCategory } : {}),
+        ...(diagnostics?.httpStatus !== undefined ? { httpStatus: diagnostics.httpStatus } : {}),
         durationMs: elapsed(started, now),
         attempts,
       });
 
       if (!apiKey) return fail("missing_key", 0);
-      if (selectedModel(options, request.role) === null || !validRequest(request)) return fail("provider", 0);
+      if (selectedModel(options, request.role) === null || !validRequest(request)) return fail("provider", 0, undefined, { providerCategory: "request" });
       const jpegBytes = inlineJpegBytes(request);
       if (jpegBytes.length > 0) {
         try {
           for (const bytes of jpegBytes) await validateGeneratedImage(bytes, "image/jpeg");
-        } catch { return fail("provider", 0); }
+        } catch { return fail("provider", 0, undefined, { providerCategory: "request" }); }
       }
 
       let strictSchema: Record<string, unknown>;
-      try { strictSchema = fireworksJsonSchema(request.responseSchema); } catch { return fail("schema", 0); }
+      try { strictSchema = fireworksJsonSchema(request.responseSchema); } catch { return fail("schema", 0, undefined, { providerCategory: "schema" }); }
 
       const payload = JSON.stringify({
         model: modelId,
@@ -198,6 +211,7 @@ export function createFireworksJsonClient(options: FireworksJsonClientOptions): 
         reasoning_effort: request.reasoningEffort,
         temperature: 0,
         user: request.requestId,
+        ...(serviceTier === "priority" ? { service_tier: "priority" } : {}),
         response_format: {
           type: "json_schema",
           json_schema: { name: "openlen_fable_response", strict: true, schema: strictSchema },
@@ -205,8 +219,15 @@ export function createFireworksJsonClient(options: FireworksJsonClientOptions): 
       });
       const maxInputTokens = new TextEncoder().encode(payload).length;
 
-      for (const attempt of ([1, 2] as const).slice(0, maxAttempts)) {
-        const lease = options.budget.reserve({ kind: "model", modelId, maxInputTokens, maxOutputTokens: request.maxOutputTokens });
+      const requestMaxAttempts = Math.min(maxAttempts, request.maxAttempts ?? maxAttempts) as 1 | 2;
+      for (const attempt of ([1, 2] as const).slice(0, requestMaxAttempts)) {
+        const lease = options.budget.reserve({
+          kind: "model",
+          modelId,
+          ...(serviceTier === "priority" ? { serviceTier } : {}),
+          maxInputTokens,
+          maxOutputTokens: request.maxOutputTokens,
+        });
         if (!lease.ok) return fail("budget_exceeded", (attempt - 1) as 0 | 1);
 
         const controller = new AbortController();
@@ -255,27 +276,40 @@ export function createFireworksJsonClient(options: FireworksJsonClientOptions): 
           if (!settleBudget(safeUsage)) return fail("budget_exceeded", attempt, safeUsage);
 
           if (!response.ok) {
-            if (attempt < maxAttempts && RETRYABLE_EMPTY_STATUS.has(response.status) && body.length === 0 && safeUsage === undefined) continue;
-            return fail("http", attempt, safeUsage);
+            if (attempt < requestMaxAttempts && RETRYABLE_EMPTY_STATUS.has(response.status) && body.length === 0 && safeUsage === undefined) continue;
+            return fail("http", attempt, safeUsage, { providerCategory: "http", httpStatus: response.status });
           }
-          if (body.length === 0 || decodedEnvelope === undefined || !safeUsage) return fail("provider", attempt);
+          if (body.length === 0 || decodedEnvelope === undefined || !safeUsage) return fail("provider", attempt, undefined, { providerCategory: "response" });
           const content = responseContent(decodedEnvelope);
-          if (content === null) return fail("provider", attempt, safeUsage);
+          if (content === null) return fail("provider", attempt, safeUsage, { providerCategory: "response" });
           let decodedContent: unknown;
-          try { decodedContent = JSON.parse(content); } catch { return fail("invalid_json", attempt, safeUsage); }
+          try { decodedContent = JSON.parse(content); } catch { return fail("invalid_json", attempt, safeUsage, { providerCategory: "response" }); }
           const parsed = request.responseSchema.safeParse(decodedContent);
-          if (!parsed.success) return fail("schema", attempt, safeUsage);
-          return { ok: true, value: parsed.data, modelId, usage: safeUsage, durationMs: elapsed(started, now), attempts: attempt };
+          if (!parsed.success) return fail("schema", attempt, safeUsage, { providerCategory: "schema" });
+          return {
+            ok: true,
+            value: parsed.data,
+            modelId,
+            usage: safeUsage,
+            durationMs: elapsed(started, now),
+            attempts: attempt,
+            ...(serviceTier === "priority" ? { serviceTier } : {}),
+          };
         } catch (error) {
           settleBudget(safeUsage);
           const isTimeout = timedOut || connectionTimeout(error);
-          if (isTimeout && !responseReceived && attempt < maxAttempts && body.length === 0 && safeUsage === undefined) continue;
-          return fail(isTimeout ? "timeout" : "provider", attempt, safeUsage);
+          if (isTimeout && !responseReceived && attempt < requestMaxAttempts && body.length === 0 && safeUsage === undefined) continue;
+          return fail(
+            isTimeout ? "timeout" : "provider",
+            attempt,
+            safeUsage,
+            { providerCategory: isTimeout ? "timeout" : responseReceived ? "response" : "transport" },
+          );
         } finally {
           if (timer !== undefined) clearTimeout(timer);
         }
       }
-      return fail("provider", maxAttempts);
+      return fail("provider", requestMaxAttempts, undefined, { providerCategory: "transport" });
     },
   };
 }
