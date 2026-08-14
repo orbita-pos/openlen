@@ -11,6 +11,7 @@ import type { ModelTokenUsage } from "../generation/model-cost";
 import type { PageBudget } from "../generation/page-generation-budget";
 
 const FIREWORKS_ENDPOINT = "https://api.fireworks.ai/inference/v1/chat/completions";
+export const DEFAULT_FIREWORKS_TIMEOUT_MS = 120_000;
 const RETRYABLE_EMPTY_STATUS = new Set([429, 502, 503, 504]);
 const REQUEST_ID = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/;
 const JPEG_DATA_URI_PREFIX = "data:image/jpeg;base64,";
@@ -162,7 +163,7 @@ export function createFireworksJsonClient(options: FireworksJsonClientOptions): 
   const now = options.now ?? Date.now;
   const timeoutMs = Number.isFinite(options.timeoutMs) && Number(options.timeoutMs) > 0
     ? Math.floor(Number(options.timeoutMs))
-    : 30_000;
+    : DEFAULT_FIREWORKS_TIMEOUT_MS;
   const maxAttempts = options.maxAttempts === 1 ? 1 : 2;
 
   return {
