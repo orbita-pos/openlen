@@ -1,5 +1,5 @@
 import { AI_HYBRID_NICHE_CASES, type AiHybridNicheCase } from "@/lib/generation/ai-hybrid-niche-cohort";
-import type { IntentAnalysis } from "@/lib/generation/contracts";
+import { IntentAnalysisSchema, type IntentAnalysis } from "@/lib/generation/contracts";
 import { coerceBusinessData, type ExtractedBusinessData } from "@/lib/style-match/autofill/types";
 
 const NAMES: Record<AiHybridNicheCase["id"], string> = {
@@ -36,15 +36,37 @@ function score(brief: Set<string>, candidate: AiHybridNicheCase): number {
   return matches;
 }
 
-export function matchDeterministicNiche(brief: string): AiHybridNicheCase {
+export function matchDeterministicNiche(brief: string): { candidate: AiHybridNicheCase; score: number } {
   const words = tokens(brief);
-  return AI_HYBRID_NICHE_CASES
+  const winner = AI_HYBRID_NICHE_CASES
     .map((candidate, index) => ({ candidate, index, score: score(words, candidate) }))
-    .sort((left, right) => right.score - left.score || left.index - right.index)[0].candidate;
+    .sort((left, right) => right.score - left.score || left.index - right.index)[0];
+  return { candidate: winner.candidate, score: winner.score };
 }
 
 export function buildDeterministicIntent(brief: string): IntentAnalysis {
-  return matchDeterministicNiche(brief).intent;
+  const match = matchDeterministicNiche(brief);
+  if (match.score > 0) return match.candidate.intent;
+  return IntentAnalysisSchema.parse({
+    schemaVersion: "intent-analysis/1.0",
+    language: /\b(?:para|crea|página|sitio)\b/i.test(brief) ? "es" : "en",
+    functional: {
+      siteType: "marketing",
+      requiredSections: ["header", "hero", "features", "cta", "footer"],
+      primaryActions: [],
+      contentModel: "landing_page",
+    },
+    audience: { primary: "general", secondary: [], ageRange: null },
+    // The current contract requires a domain and confidence even when the
+    // deterministic interpreter deliberately has no niche knowledge.
+    domains: ["general"],
+    emotionalGoals: [],
+    requiredVisualSignals: [],
+    forbiddenVisualSignals: [],
+    explicitConstraints: [],
+    ambiguities: [],
+    confidence: 0,
+  });
 }
 
 function explicitName(brief: string): string | null {
@@ -58,7 +80,7 @@ export function buildDeterministicPageCopy(
 ): ExtractedBusinessData {
   const niche = matchDeterministicNiche(brief);
   const language = intent.language === "es" ? "es" : "en";
-  const name = explicitName(brief) ?? NAMES[niche.id];
+  const name = explicitName(brief) ?? (niche.score > 0 ? NAMES[niche.candidate.id] : "OpenLen");
   const roles = intent.functional.requiredSections.filter((role) => !["header", "footer"].includes(role));
   const tone = intent.emotionalGoals.slice(0, 3).join(", ").replace(/_/g, " ");
   const pitch = brief.trim().replace(/\s+/g, " ").slice(0, 240);

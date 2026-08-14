@@ -3,6 +3,16 @@ import type { VisualEngineProjectMetadata } from "@/lib/projects/types";
 
 export const AI_HYBRID_POLICY_VERSION = "ai-hybrid-policy/1.0" as const;
 
+/** The safe, sealed candidate shared by baseline construction and later creative passes. */
+export interface SafeCreativeCandidate {
+  readonly html: string;
+  readonly title: string;
+  readonly visualEngine: Extract<VisualEngineProjectMetadata, { route: "section_composition" }>;
+  readonly filled: boolean;
+  readonly appliedOps: number;
+  readonly source: "baseline" | "deepseek" | "deepseek_repair";
+}
+
 export type AiCreationStage =
   | "intent"
   | "copy"
