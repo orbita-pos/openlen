@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { fireworksJsonSchema } from "@/lib/ai/fireworks-contracts";
 import { COLORING_DIRECTION } from "./creative-fixtures.test-support";
 import { CreativeDirectionSchema } from "./creative-contracts";
 import {
@@ -95,6 +96,35 @@ describe("adaptive design contracts", () => {
     } as const;
     expect(schema.parse(allGenerate)).toEqual(allGenerate);
     expect(schema.safeParse({ ...allGenerate, decisions: allGenerate.decisions.slice(0, 1) }).success).toBe(false);
+  });
+
+  it("exposes contextual scout and page-plan invariants in the Fireworks JSON Schema", () => {
+    const scoutJson = fireworksJsonSchema(createCandidateScoutResponseSchema({
+      requiredRoles: ["hero", "features"],
+      retrievedCandidates: candidates,
+    })) as { properties: { decisions: { minItems?: number; maxItems?: number; prefixItems?: unknown[] } } };
+    expect(scoutJson.properties.decisions).toMatchObject({ minItems: 2, maxItems: 2 });
+    expect(scoutJson.properties.decisions.prefixItems).toHaveLength(2);
+    expect(JSON.stringify(scoutJson.properties.decisions.prefixItems?.[0])).toContain('"const":0');
+    expect(JSON.stringify(scoutJson.properties.decisions.prefixItems?.[0])).toContain('"const":"hero-safe"');
+
+    const pageJson = fireworksJsonSchema(createAdaptivePageDesignProgramSchema({
+      requiredRoles: ["hero", "features"],
+      retrievedCandidates: candidates,
+      expectedDecisions: decisions.map((decision) => ({
+        ...decision,
+        usefulTraits: [...decision.usefulTraits],
+        rejectedTraits: [...decision.rejectedTraits],
+      })),
+      initialRequiredSignals: ["cinematic", "tactile"],
+      initialForbiddenSignals: ["generic_saas"],
+    })) as { properties: { narrative: { minItems?: number; maxItems?: number; prefixItems?: unknown[] }; decisions: { minItems?: number; maxItems?: number; prefixItems?: unknown[] } } };
+    expect(pageJson.properties.narrative).toMatchObject({ minItems: 2, maxItems: 2 });
+    expect(pageJson.properties.narrative.prefixItems).toHaveLength(2);
+    expect(pageJson.properties.decisions).toMatchObject({ minItems: 2, maxItems: 2 });
+    expect(pageJson.properties.decisions.prefixItems).toHaveLength(2);
+    expect(JSON.stringify(pageJson.properties.decisions.prefixItems?.[0])).toContain('"const":"reuse"');
+    expect(JSON.stringify(pageJson.properties.decisions.prefixItems?.[1])).toContain('"const":"generate"');
   });
 
   it("rejects traits claimed as both useful and rejected", () => {

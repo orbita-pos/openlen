@@ -95,7 +95,7 @@ function addCanonicalSignalIssues(
   }
 }
 
-export const AdaptivePageDesignProgramSchema = z.object({
+const AdaptivePageDesignProgramObjectSchema = z.object({
   schemaVersion: z.literal("adaptive-page-design/1.0"),
   narrative: z.array(SectionRoleSchema).min(1).max(32),
   direction: CreativeDirectionSchema,
@@ -104,7 +104,12 @@ export const AdaptivePageDesignProgramSchema = z.object({
   requiredSignals: TaxonomyListSchema,
   forbiddenSignals: TaxonomyListSchema,
   imageSlots: z.array(BoundedImageRequirementSchema).max(12),
-}).strict().superRefine((value, ctx) => {
+}).strict();
+
+function addAdaptivePageDesignIssues(
+  value: z.infer<typeof AdaptivePageDesignProgramObjectSchema>,
+  ctx: z.RefinementCtx,
+): void {
   addAlignedDecisionIssues(value.decisions, ctx);
   if (value.narrative.length !== value.decisions.length || new Set(value.narrative).size !== value.narrative.length) {
     ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["narrative"], message: "narrative and decisions must be aligned and roles unique" });
@@ -126,7 +131,9 @@ export const AdaptivePageDesignProgramSchema = z.object({
   if (!sameOrderedValues(value.forbiddenSignals, value.direction.forbiddenVisualSignals)) {
     ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["direction", "forbiddenVisualSignals"], message: "direction and program forbidden signals must match" });
   }
-});
+}
+
+export const AdaptivePageDesignProgramSchema = AdaptivePageDesignProgramObjectSchema.superRefine(addAdaptivePageDesignIssues);
 
 export interface RetrievedCandidateReference {
   readonly candidateId: string;
@@ -160,12 +167,100 @@ function contextualIssues(
   }
 }
 
+function literalStringTuple(values: readonly string[]) {
+  if (values.length === 0) return z.tuple([]);
+  return z.tuple(values.map((value) => z.literal(value)) as [z.ZodLiteral<string>, ...z.ZodLiteral<string>[]]);
+}
+
+const ProviderTraitListSchema = z.array(TaxonomySlugSchema).max(8);
+
+function providerDecisionSchema(input: {
+  readonly ordinal: number;
+  readonly candidateIds: readonly string[];
+}) {
+  const shared = {
+    ordinal: z.literal(input.ordinal),
+    usefulTraits: ProviderTraitListSchema,
+    rejectedTraits: ProviderTraitListSchema,
+  };
+  const generate = z.object({ ...shared, action: z.literal("generate"), candidateId: z.null() }).strict();
+  if (input.candidateIds.length === 0) return generate;
+  const ids = [...new Set(input.candidateIds)].map((candidateId) => CandidateIdSchema.parse(candidateId));
+  const candidateId = ids.length === 1
+    ? z.literal(ids[0])
+    : z.enum(ids as [string, ...string[]]);
+  return z.discriminatedUnion("action", [
+    generate,
+    z.object({ ...shared, action: z.literal("reuse"), candidateId }).strict(),
+    z.object({ ...shared, action: z.literal("rebuild"), candidateId }).strict(),
+  ]);
+}
+
+function providerDecisionTuple(context: Omit<ContextualContract, "expectedDecisions">) {
+  const schemas = context.requiredRoles.map((role, ordinal) => providerDecisionSchema({
+    ordinal,
+    candidateIds: context.retrievedCandidates
+      .filter((candidate) => candidate.ordinal === ordinal && candidate.role === role)
+      .map((candidate) => candidate.candidateId),
+  }));
+  if (schemas.length === 0) return z.tuple([]);
+  return z.tuple(schemas as unknown as [z.ZodTypeAny, ...z.ZodTypeAny[]]);
+}
+
+function exactDecisionTuple(decisions: readonly z.infer<typeof CandidateDecisionSchema>[]) {
+  const schemas = decisions.map((decision) => z.object({
+    ordinal: z.literal(decision.ordinal),
+    action: z.literal(decision.action),
+    candidateId: decision.candidateId === null ? z.null() : z.literal(decision.candidateId),
+    usefulTraits: literalStringTuple(decision.usefulTraits),
+    rejectedTraits: literalStringTuple(decision.rejectedTraits),
+  }).strict());
+  if (schemas.length === 0) return z.tuple([]);
+  return z.tuple(schemas as unknown as [z.ZodTypeAny, ...z.ZodTypeAny[]]);
+}
+
+function normalizedDecision(value: unknown): z.infer<typeof CandidateDecisionSchema> {
+  const parsed = z.object({
+    ordinal: z.number().int().min(0).max(31),
+    action: z.enum(["reuse", "rebuild", "generate"]),
+    candidateId: CandidateIdSchema.nullable(),
+    usefulTraits: ProviderTraitListSchema,
+    rejectedTraits: ProviderTraitListSchema,
+  }).strict().parse(value);
+  const rejectedTraits = canonicalTaxonomy(parsed.rejectedTraits);
+  const rejected = new Set(rejectedTraits);
+  return CandidateDecisionSchema.parse({
+    ...parsed,
+    usefulTraits: canonicalTaxonomy(parsed.usefulTraits).filter((trait) => !rejected.has(trait)),
+    rejectedTraits,
+  });
+}
+
 export function createAdaptivePageDesignProgramSchema(context: ContextualContract) {
   const initialRequired = canonicalTaxonomy(context.initialRequiredSignals ?? []);
   const initialForbidden = canonicalTaxonomy(context.initialForbiddenSignals ?? []);
   const validInitialRequired = z.array(TaxonomySlugSchema).max(24).safeParse(initialRequired).success;
   const validInitialForbidden = z.array(TaxonomySlugSchema).max(24).safeParse(initialForbidden).success;
-  return AdaptivePageDesignProgramSchema.superRefine((value, ctx) => {
+  const providerVisible: z.ZodTypeAny = context.expectedDecisions
+    ? AdaptivePageDesignProgramObjectSchema.extend({
+      narrative: literalStringTuple(context.requiredRoles),
+      decisions: exactDecisionTuple(context.expectedDecisions),
+      requiredSignals: literalStringTuple(initialRequired),
+      forbiddenSignals: literalStringTuple(initialForbidden),
+      direction: CreativeDirectionSchema.extend({
+        requiredVisualSignals: literalStringTuple(initialRequired),
+        forbiddenVisualSignals: literalStringTuple(initialForbidden),
+      }),
+    })
+    : AdaptivePageDesignProgramObjectSchema;
+  return providerVisible.superRefine((rawValue: unknown, ctx: z.RefinementCtx) => {
+    const parsed = AdaptivePageDesignProgramObjectSchema.safeParse(rawValue);
+    if (!parsed.success) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: "invalid adaptive page design program" });
+      return;
+    }
+    const value = parsed.data;
+    addAdaptivePageDesignIssues(value, ctx);
     if (JSON.stringify(value.narrative) !== JSON.stringify(context.requiredRoles)) {
       ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["narrative"], message: "all required roles must be present in order" });
     }
@@ -193,22 +288,20 @@ export function createAdaptivePageDesignProgramSchema(context: ContextualContrac
     if (value.forbiddenSignals.some((signal) => initialRequiredSet.has(signal))) {
       ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["forbiddenSignals"], message: "initial required signals cannot become forbidden" });
     }
-  });
+  }) as z.ZodType<z.infer<typeof AdaptivePageDesignProgramSchema>>;
 }
 
-const CandidateScoutResponseSchema = z.object({
-  schemaVersion: z.literal("adaptive-candidate-decisions/1.0"),
-  decisions: z.array(CandidateDecisionSchema).min(1).max(32),
-}).strict();
-
 export function createCandidateScoutResponseSchema(context: Omit<ContextualContract, "expectedDecisions">) {
-  return CandidateScoutResponseSchema.superRefine((value, ctx) => {
-    addAlignedDecisionIssues(value.decisions, ctx);
-    if (value.decisions.length !== context.requiredRoles.length) {
-      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["decisions"], message: "every required role needs one decision" });
-    }
-    contextualIssues(value.decisions, context, ctx);
-  });
+  return z.object({
+    schemaVersion: z.literal("adaptive-candidate-decisions/1.0"),
+    decisions: providerDecisionTuple(context),
+  }).strict().transform((value) => ({
+    schemaVersion: value.schemaVersion,
+    decisions: value.decisions.map(normalizedDecision),
+  })) as z.ZodType<{
+    schemaVersion: "adaptive-candidate-decisions/1.0";
+    decisions: z.infer<typeof CandidateDecisionSchema>[];
+  }>;
 }
 
 export type CandidateDecision = z.infer<typeof CandidateDecisionSchema>;
