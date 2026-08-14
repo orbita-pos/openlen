@@ -30,7 +30,7 @@ const SingleCopyNodeSchema = z.object({
   ...BaseCopyShape,
   variant: z.enum(["heading", "body", "quote", "stat", "badge", "action"]),
   copyKey: CopyKeySchema,
-  destination: z.enum(["none", "primary", "secondary", "contact"]).optional(),
+  destination: z.enum(["primary", "secondary", "contact"]).optional(),
 }).strict().superRefine((value, ctx) => {
   if (value.variant === "action" && value.destination === undefined) {
     ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["destination"], message: "actions require a repository destination" });

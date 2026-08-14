@@ -17,6 +17,7 @@
 # Override defaults via env vars:
 #   $env:OPENLEN_HOST = "openlen"          # ssh alias from ~/.ssh/config
 #   $env:OPENLEN_REMOTE_PATH = "/opt/openlen-app"
+#   $env:OPENLEN_AI_CREATION_TARGET_MODE = "enabled" # or "disabled"; required
 #   $env:OPENLEN_SKIP_BUILD = "1"          # reuse existing .next/standalone
 #   $env:OPENLEN_SKIP_MIGRATE = "1"        # skip billing:migrate (already applied)
 #   $env:OPENLEN_SKIP_CRATES_REBUILD = "1" # skip the Rust crate rebuild step.
@@ -35,6 +36,10 @@ $remoteDir = if ($env:OPENLEN_REMOTE_PATH) { $env:OPENLEN_REMOTE_PATH } else { "
 $tarballName = "openlen-deploy.tar.gz"
 $stagingDir = "$remoteDir-staging"
 $backupDir = "$remoteDir.old"
+$targetMode = $env:OPENLEN_AI_CREATION_TARGET_MODE
+if ($targetMode -ne "enabled" -and $targetMode -ne "disabled") {
+  throw "OPENLEN_AI_CREATION_TARGET_MODE must be explicitly enabled or disabled"
+}
 
 function Step($n, $msg) {
   Write-Host ""
@@ -55,6 +60,10 @@ function Sh($cmd) { $cmd -replace "`r`n", "`n" }
 # standalone bundle is reused. Keep these checks outside the skip-build branch.
 npm.cmd run generation:template-derived-sections:gate
 if ($LASTEXITCODE -ne 0) { throw "Template-derived section gate failed" }
+npm.cmd run generation:fable-parity:gate
+if ($LASTEXITCODE -ne 0) { throw "Deterministic Fable parity gate failed" }
+npm.cmd run generation:fable-parity:scorecard -- --deploy-gate
+if ($LASTEXITCODE -ne 0) { throw "Fable parity activation scorecard gate failed" }
 npm.cmd run generation:visual-engine-assets:gate
 if ($LASTEXITCODE -ne 0) { throw "Visual Engine assets gate failed" }
 npm.cmd run generation:ai-hybrid:gate
@@ -265,16 +274,30 @@ bash /root/build-crates-on-box.sh $stagingDir
 
 # --- 7. Atomic swap + restart + smoke test ---------------------------
 Step 7 "Atomic swap + restart..."
-$swapCmd = @"
+$swapCmd = @'
+set -eu
 systemctl stop openlen-app
-rm -rf $backupDir
-mv $remoteDir $backupDir
-mv $stagingDir $remoteDir
+test -f /etc/openlen/openlen.env
+tmp_env=$(mktemp /etc/openlen/openlen.env.openlen-ai.XXXXXX)
+trap 'rm -f "$tmp_env"' EXIT
+awk 'BEGIN{seen=0} /^OPENLEN_AI_CREATION=/{if(!seen){print "OPENLEN_AI_CREATION=__TARGET_MODE__";seen=1};next} {print} END{if(!seen)print "OPENLEN_AI_CREATION=__TARGET_MODE__"}' /etc/openlen/openlen.env > "$tmp_env"
+chown --reference=/etc/openlen/openlen.env "$tmp_env"
+chmod --reference=/etc/openlen/openlen.env "$tmp_env"
+mv -f "$tmp_env" /etc/openlen/openlen.env
+trap - EXIT
+test "$(sed -n 's/^OPENLEN_AI_CREATION=//p' /etc/openlen/openlen.env | tail -n 1)" = "__TARGET_MODE__"
+rm -rf __BACKUP_DIR__
+mv __REMOTE_DIR__ __BACKUP_DIR__
+mv __STAGING_DIR__ __REMOTE_DIR__
 systemctl start openlen-app
 sleep 2
-systemctl is-active openlen-app
+systemctl is-active --quiet openlen-app
+pid=$(systemctl show -p MainPID --value openlen-app)
+test "$pid" -gt 0
+tr '\000' '\n' < "/proc/$pid/environ" | grep -Fx 'OPENLEN_AI_CREATION=__TARGET_MODE__' > /dev/null
 curl -sI -o /dev/null -w '  smoke: HTTP %{http_code} (%{time_total}s)' http://127.0.0.1:3000/
-"@
+'@
+$swapCmd = $swapCmd.Replace("__TARGET_MODE__", $targetMode).Replace("__BACKUP_DIR__", $backupDir).Replace("__REMOTE_DIR__", $remoteDir).Replace("__STAGING_DIR__", $stagingDir)
 & ssh $host_ (Sh $swapCmd)
 if ($LASTEXITCODE -ne 0) { throw "Swap or restart failed (exit $LASTEXITCODE)" }
 

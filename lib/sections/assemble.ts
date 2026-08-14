@@ -57,6 +57,15 @@ export class SectionRoleMarkerError extends Error {
   }
 }
 
+export class SectionActionTargetError extends Error {
+  readonly code = "section_action_target_failed" as const;
+
+  constructor(destination: string) {
+    super(`section_action_target_failed:${destination}`);
+    this.name = "SectionActionTargetError";
+  }
+}
+
 // A section's local dialect/contract token → the page --ol-* token it binds to.
 // --radius is handled specially (kept as a length, scaled by --ol-r-scale).
 const TOKEN_TO_OL: Record<string, string> = {
@@ -183,7 +192,7 @@ function escapeRegex(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
-function markRequestedRole(fragment: SectionFragment, html: string): string {
+function markRequestedRole(fragment: SectionFragment, html: string, target?: "primary" | "secondary" | "contact"): string {
   if (!fragment.requestedRole) return html;
   const slug = escapeRegex(fragment.slug);
   const rootPattern = new RegExp(
@@ -194,8 +203,42 @@ function markRequestedRole(fragment: SectionFragment, html: string): string {
   if (matches.length !== 1) throw new SectionRoleMarkerError();
   const root = matches[0][0];
   if (/\bdata-openlen-role\s*=/i.test(root)) throw new SectionRoleMarkerError();
-  const marked = root.replace(/>$/, ` data-openlen-role="${fragment.requestedRole}">`);
+  if (target && /\bid\s*=/i.test(root)) throw new SectionActionTargetError(target);
+  const targetAttributes = target ? ` id="openlen-${target}" data-openlen-target="${target}"` : "";
+  const marked = root.replace(/>$/, ` data-openlen-role="${fragment.requestedRole}"${targetAttributes}>`);
   return `${html.slice(0, matches[0].index)}${marked}${html.slice((matches[0].index ?? 0) + root.length)}`;
+}
+
+const PRIMARY_ACTION_ROLES = new Set<CanonicalSectionRole>([
+  "services", "programs", "menu", "events", "reservations", "booking", "schedule", "pricing",
+  "gallery", "featured_content", "content_list", "call_to_action", "products", "integrations",
+  "use_cases", "case_studies", "membership", "activities", "minigames", "coloring_gallery",
+]);
+
+function requiredActionDestinations(fragments: readonly SectionFragment[]): Set<"primary" | "secondary" | "contact"> {
+  const required = new Set<"primary" | "secondary" | "contact">();
+  for (const fragment of fragments) {
+    for (const match of fragment.html.matchAll(/\bhref\s*=\s*["']#openlen-(primary|secondary|contact)["']/gi)) {
+      required.add(match[1]!.toLowerCase() as "primary" | "secondary" | "contact");
+    }
+  }
+  return required;
+}
+
+function actionTargets(fragments: readonly SectionFragment[]): Map<SectionFragment, "primary" | "secondary" | "contact"> {
+  const required = requiredActionDestinations(fragments);
+  const targets = new Map<SectionFragment, "primary" | "secondary" | "contact">();
+  const primary = fragments.find((fragment) => fragment.requestedRole !== undefined && PRIMARY_ACTION_ROLES.has(fragment.requestedRole));
+  const secondary = fragments.find((fragment) => fragment !== primary
+    && fragment.requestedRole !== undefined
+    && !["header", "hero", "footer", "contact", "call_to_action"].includes(fragment.requestedRole));
+  const contact = fragments.find((fragment) => fragment.requestedRole === "contact");
+  for (const [destination, fragment] of [["primary", primary], ["secondary", secondary], ["contact", contact]] as const) {
+    if (!required.has(destination)) continue;
+    if (!fragment || targets.has(fragment)) throw new SectionActionTargetError(destination);
+    targets.set(fragment, destination);
+  }
+  return targets;
 }
 
 function hexToTriplet(hex: string): string | null {
@@ -264,12 +307,13 @@ function buildHead(fontLinks: string[]): string {
  *  zero model calls. */
 export function assembleDocument(fragments: SectionFragment[], theme: AssembleTheme): string {
   const ordered = orderAndDedupe(fragments);
+  const targets = actionTargets(ordered);
   const fontLinks: string[] = [];
   const bodyParts: string[] = [];
   for (const f of ordered) {
     const { links, rest } = extractFontLinks(f.html);
     fontLinks.push(...links);
-    bodyParts.push(markRequestedRole(f, bindStyles(rest, f.slug)).trim());
+    bodyParts.push(markRequestedRole(f, bindStyles(rest, f.slug), targets.get(f)).trim());
   }
   const links = dedupe([...fontLinks, ...(theme.fontLinks ?? [])]);
   return [

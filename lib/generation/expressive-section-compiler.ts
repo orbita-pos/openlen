@@ -124,8 +124,7 @@ function renderCopy(node: Extract<ExpressiveNode, { kind: "copy" }>, index: numb
   if (node.variant === "list") return `<ul class="${classes}">${node.copyKeys.map((key) => `<li>${escapeHtml(copy[key] ?? "")}</li>`).join("")}</ul>`;
   const value = escapeHtml(copy[node.copyKey] ?? "");
   if (node.variant === "action") {
-    if (node.destination === "contact") return `<a class="${classes}" href="#contact">${value}</a>`;
-    return `<button class="${classes}" type="button" data-openlen-action="${node.destination}">${value}</button>`;
+    return `<a class="${classes}" href="#openlen-${node.destination}">${value}</a>`;
   }
   const tag = node.variant === "heading" ? "h2" : node.variant === "body" ? "p" : node.variant === "quote" ? "blockquote" : node.variant === "badge" ? "span" : "strong";
   return `<${tag} class="${classes}">${value}</${tag}>`;

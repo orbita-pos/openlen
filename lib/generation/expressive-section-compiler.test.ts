@@ -95,7 +95,9 @@ describe("expressive section compiler", () => {
     expect(html).toContain("Stay &lt;script&gt;alert(1)&lt;/script&gt; &amp; rest");
     expect(html).not.toContain("<script>alert");
     expect(html).toContain('<a class="olx-copy olx-action');
-    expect(html).toContain('href="#contact"');
+    expect(html).toContain('href="#openlen-contact"');
+    expect(html).not.toContain("data-openlen-action");
+    expect(html).not.toContain("<button");
     expect(html).not.toContain("safe-root");
     expect(html).not.toContain("hero.title");
     expect(html).toMatch(/class="olx-layout olx-layout-split olx-node-0/);
@@ -196,6 +198,48 @@ describe("expressive section compiler", () => {
     expect(compileExpressiveSection({
       program: FIXTURES.vhsHorror, allowedCopyKeys: ["hero.title"], allowedAssetSlots: [0], provenance: { ...GENERATE, action: "reuse" } as never,
     })).toEqual({ ok: false, code: "invalid_provenance" });
+    const noneAction = {
+      schemaVersion: "expressive-section-program/1.0" as const,
+      role: "hero" as const,
+      root: {
+        kind: "copy" as const,
+        id: "dead-action",
+        variant: "action" as const,
+        copyKey: "cta.label",
+        destination: "none" as const,
+        tone: "strong" as const,
+        size: "md" as const,
+        color: "accent" as const,
+        align: "center" as const,
+      },
+      responsive: { mobile: [] },
+      motion: [],
+    };
+    expect(compileExpressiveSection({
+      program: noneAction as never,
+      allowedCopyKeys: ["cta.label"],
+      allowedAssetSlots: [],
+      provenance: GENERATE,
+    })).toEqual({ ok: false, code: "invalid_program" });
+  });
+
+  it("compiles every repository destination as a native anchor without JavaScript", () => {
+    for (const destination of ["primary", "secondary", "contact"] as const) {
+      const result = compile({
+        schemaVersion: "expressive-section-program/1.0",
+        role: "hero",
+        root: {
+          kind: "copy", id: `action-${destination}`, variant: "action", copyKey: "cta.label", destination,
+          tone: "strong", size: "md", color: "accent", align: "center",
+        },
+        responsive: { mobile: [] },
+        motion: [],
+      }, { "cta.label": destination });
+      expect(result.ok).toBe(true);
+      const html = (result as CompileExpressiveSectionSuccess).draft.html;
+      expect(html).toContain(`href="#openlen-${destination}"`);
+      expect(html).not.toMatch(/<button|data-openlen-action|onclick|<script/i);
+    }
   });
 
   it("rejects a rebuild that reproduces the donor fingerprint or content hash", () => {

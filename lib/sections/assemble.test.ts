@@ -153,4 +153,37 @@ describe("assembleDocument — stitch fragments into one coherent doc", () => {
       html: '<section data-sec="features-01"></section><section data-sec="features-01"></section>',
     }], THEME)).toThrow(expect.objectContaining({ code: "section_role_coverage_failed" }));
   });
+
+  it("binds primary, secondary, and contact actions to deterministic existing section roots without JavaScript", () => {
+    const actionFragment = (slug: string) => `<section data-sec="${slug}"><a href="#openlen-primary">Primary</a><a href="#openlen-secondary">Secondary</a><a href="#openlen-contact">Contact</a></section>`;
+    const composed: SectionFragment[] = [
+      { slug: "hero-actions", type: "hero", requestedRole: "hero", html: actionFragment("hero-actions") },
+      { slug: "services-target", type: "features", requestedRole: "services", html: frag("services-target", "#111111") },
+      { slug: "about-target", type: "about", requestedRole: "about", html: frag("about-target", "#222222") },
+      { slug: "contact-target", type: "contact", requestedRole: "contact", html: frag("contact-target", "#333333") },
+    ];
+    const doc = assembleDocument(composed, THEME);
+    const parsed = new DOMParser().parseFromString(doc, "text/html");
+    expect(parsed).not.toBeNull();
+    for (const destination of ["primary", "secondary", "contact"] as const) {
+      const anchor = parsed!.querySelector(`a[href="#openlen-${destination}"]`) as HTMLAnchorElement | null;
+      expect(anchor).not.toBeNull();
+      expect(parsed!.getElementById(`openlen-${destination}`)).not.toBeNull();
+    }
+    expect(parsed!.getElementById("openlen-primary")?.getAttribute("data-openlen-role")).toBe("services");
+    expect(parsed!.getElementById("openlen-secondary")?.getAttribute("data-openlen-role")).toBe("about");
+    expect(parsed!.getElementById("openlen-contact")?.getAttribute("data-openlen-role")).toBe("contact");
+    expect(doc).not.toMatch(/data-openlen-action|<button|onclick|<script[^>]*data-openlen-action/i);
+  });
+
+  it("fails closed when a referenced repository destination cannot exist", () => {
+    expect(() => assembleDocument([{
+      slug: "hero-contact", type: "hero", requestedRole: "hero",
+      html: '<section data-sec="hero-contact"><a href="#openlen-contact">Contact</a></section>',
+    }], THEME)).toThrow(/action|contact|target/i);
+    expect(() => assembleDocument([{
+      slug: "hero-primary", type: "hero", requestedRole: "hero",
+      html: '<section data-sec="hero-primary"><a href="#openlen-primary">Primary</a></section>',
+    }], THEME)).toThrow(/action|primary|target/i);
+  });
 });
