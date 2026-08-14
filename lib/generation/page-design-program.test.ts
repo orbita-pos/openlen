@@ -53,6 +53,7 @@ describe("createPageDesignProgram", () => {
     let effort = "";
     let serviceTier = "";
     let maxAttempts = 0;
+    let maxOutputTokens = 0;
     const client: FireworksJsonClient = {
       async request<T>(request: FireworksJsonRequest<T>) {
         payload = request.messages.map((message) => message.content).join("\n");
@@ -60,6 +61,7 @@ describe("createPageDesignProgram", () => {
         effort = request.reasoningEffort;
         serviceTier = request.serviceTier ?? "";
         maxAttempts = request.maxAttempts ?? 0;
+        maxOutputTokens = request.maxOutputTokens;
         const value = request.responseSchema.parse(response);
         return { ok: true, value, modelId: "accounts/fireworks/models/deepseek-v4-flash-0731", usage: { inputTokens: 30, cachedTokens: 4, outputTokens: 12, thinkingTokens: 5 }, durationMs: 3, attempts: 1 };
       },
@@ -86,6 +88,7 @@ describe("createPageDesignProgram", () => {
     expect(effort).toBe("high");
     expect(serviceTier).toBe("priority");
     expect(maxAttempts).toBe(1);
+    expect(maxOutputTokens).toBe(16_384);
     expect(payload).toContain("hero.title");
     expect(payload).toContain("donor-safe");
     expect(payload).toContain("playful");

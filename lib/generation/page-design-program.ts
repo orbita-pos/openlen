@@ -91,7 +91,7 @@ export async function createPageDesignProgram(
     serviceTier: "priority",
     maxAttempts: 1,
     requestId: `${input.requestId}.plan`,
-    maxOutputTokens: 8192,
+    maxOutputTokens: 16_384,
     responseSchema,
     messages: [
       {
