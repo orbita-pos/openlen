@@ -14,7 +14,7 @@ describe("Fable DeepSeek input adapters", () => {
     const request = vi.fn(async (input) => ({
       ok: true as const,
       value: input.responseSchema.parse(input.requestId.endsWith("intent") ? intent : { schemaVersion: "page-copy/1.0", copy: { business_name: "Mundo Pincel", features: [] } }),
-      modelId: "accounts/fireworks/models/deepseek-v4-flash", usage: { inputTokens: 2, cachedTokens: 0, outputTokens: 2, thinkingTokens: 0 }, durationMs: 1, attempts: 1 as const,
+      modelId: "accounts/fireworks/models/deepseek-v4-flash-0731", usage: { inputTokens: 2, cachedTokens: 0, outputTokens: 2, thinkingTokens: 0 }, durationMs: 1, attempts: 1 as const,
     }));
     const adapters = createFableInputAdapters({ client: { request } as never });
 
@@ -37,8 +37,8 @@ describe("Fable DeepSeek input adapters", () => {
         functional: { ...intent.functional, siteType: "coloring_pages", requiredSections: ["hero", "categories", "activities"] },
       });
       return parsed.success
-        ? { ok: true as const, value: parsed.data, modelId: "accounts/fireworks/models/deepseek-v4-flash", usage: { inputTokens: 2, cachedTokens: 0, outputTokens: 2, thinkingTokens: 0 }, durationMs: 1, attempts: 1 as const }
-        : { ok: false as const, code: "schema", modelId: "accounts/fireworks/models/deepseek-v4-flash", durationMs: 1, attempts: 1 as const };
+        ? { ok: true as const, value: parsed.data, modelId: "accounts/fireworks/models/deepseek-v4-flash-0731", usage: { inputTokens: 2, cachedTokens: 0, outputTokens: 2, thinkingTokens: 0 }, durationMs: 1, attempts: 1 as const }
+        : { ok: false as const, code: "schema", modelId: "accounts/fireworks/models/deepseek-v4-flash-0731", durationMs: 1, attempts: 1 as const };
     });
     const result = await createFableInputAdapters({ client: { request } as never })
       .analyzeIntent("Una pagina para colorear", "page-2");
@@ -52,7 +52,7 @@ describe("Fable DeepSeek input adapters", () => {
         ...intent,
         functional: { ...intent.functional, requiredSections: ["hero", "activities", "activities", "footer"] },
       }),
-      modelId: "accounts/fireworks/models/deepseek-v4-flash",
+      modelId: "accounts/fireworks/models/deepseek-v4-flash-0731",
       usage: { inputTokens: 2, cachedTokens: 0, outputTokens: 2, thinkingTokens: 0 },
       durationMs: 1,
       attempts: 1 as const,

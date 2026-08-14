@@ -1,7 +1,7 @@
 import type { FableModelRole, FireworksReasoningEffort } from "../ai/fireworks-contracts";
 
 export const FABLE_MODEL_POLICY = Object.freeze({
-  reasoner: Object.freeze({ modelId: "accounts/fireworks/models/deepseek-v4-flash" }),
+  reasoner: Object.freeze({ modelId: "accounts/fireworks/models/deepseek-v4-flash-0731" }),
   designer: Object.freeze({ modelId: "accounts/fireworks/models/glm-5p2" }),
   visualCritic: Object.freeze({ modelId: "accounts/fireworks/models/qwen3p7-plus" }),
 });

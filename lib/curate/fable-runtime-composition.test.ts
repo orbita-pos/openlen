@@ -51,7 +51,7 @@ describe("Fable runtime composition", () => {
       attempts: 1,
     });
     runtime.recordModel("page_plan", {
-      modelId: "accounts/fireworks/models/deepseek-v4-flash",
+      modelId: "accounts/fireworks/models/deepseek-v4-flash-0731",
       serviceTier: "priority",
       providerCategory: "http",
       httpStatus: 503,
@@ -73,7 +73,7 @@ describe("Fable runtime composition", () => {
         expect.objectContaining({
           kind: "model",
           stage: "page_plan",
-          modelId: "accounts/fireworks/models/deepseek-v4-flash",
+          modelId: "accounts/fireworks/models/deepseek-v4-flash-0731",
           serviceTier: "priority",
           providerCategory: "http",
           httpStatus: 503,

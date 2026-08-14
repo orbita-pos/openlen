@@ -8,7 +8,7 @@ import {
 } from "./model-cost";
 
 export const FABLE_PRODUCTION_RATES = Object.freeze({
-  "accounts/fireworks/models/deepseek-v4-flash": Object.freeze({ input: .14, cached: .028, output: .28 }),
+  "accounts/fireworks/models/deepseek-v4-flash-0731": Object.freeze({ input: .14, cached: .028, output: .28 }),
   "accounts/fireworks/models/glm-5p2": Object.freeze({ input: 1.40, cached: .26, output: 4.40 }),
   "accounts/fireworks/models/qwen3p7-plus": Object.freeze({ input: .50, cached: .10, output: 3.00 }),
   "gemini-2.5-flash-image": Object.freeze({ image: .039 }),
@@ -16,7 +16,7 @@ export const FABLE_PRODUCTION_RATES = Object.freeze({
 
 /** Official Fireworks Priority prices in USD per one million tokens. */
 export const FABLE_PRIORITY_RATES = Object.freeze({
-  "accounts/fireworks/models/deepseek-v4-flash": Object.freeze({ input: .21, cached: .042, output: .42 }),
+  "accounts/fireworks/models/deepseek-v4-flash-0731": Object.freeze({ input: .175, cached: .035, output: .35 }),
 });
 
 export type ModelServiceTier = "standard" | "priority";

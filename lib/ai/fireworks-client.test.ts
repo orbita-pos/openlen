@@ -177,7 +177,7 @@ describe("Fireworks JSON client", () => {
     expect(result).toEqual({
       ok: true,
       value: { title: "Launch", score: 8 },
-      modelId: "accounts/fireworks/models/deepseek-v4-flash",
+      modelId: "accounts/fireworks/models/deepseek-v4-flash-0731",
       usage: { inputTokens: 100, cachedTokens: 30, outputTokens: 40, thinkingTokens: 12 },
       durationMs: 0,
       attempts: 1,
@@ -188,7 +188,7 @@ describe("Fireworks JSON client", () => {
     expect(init?.headers).toEqual({ authorization: "Bearer secret", "content-type": "application/json" });
     const body = JSON.parse(String(init?.body));
     expect(body).toMatchObject({
-      model: "accounts/fireworks/models/deepseek-v4-flash",
+      model: "accounts/fireworks/models/deepseek-v4-flash-0731",
       messages: REQUEST.messages,
       max_tokens: 256,
       reasoning_effort: "high",
@@ -214,7 +214,7 @@ describe("Fireworks JSON client", () => {
     expect(JSON.parse(String(priorityFetch.mock.calls[0]?.[1]?.body))).toMatchObject({ service_tier: "priority" });
     expect(reserve).toHaveBeenCalledWith(expect.objectContaining({
       kind: "model",
-      modelId: "accounts/fireworks/models/deepseek-v4-flash",
+      modelId: "accounts/fireworks/models/deepseek-v4-flash-0731",
       serviceTier: "priority",
     }));
 

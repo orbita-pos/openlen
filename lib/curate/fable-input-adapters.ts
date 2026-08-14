@@ -69,7 +69,7 @@ function validBrief(brief: string): boolean {
 export function createFableInputAdapters(options: { readonly client: FireworksJsonClient }): FableInputAdapters {
   return {
     async analyzeIntent(brief, requestId) {
-      if (!validBrief(brief)) return { ok: false, code: "invalid_input", modelId: "accounts/fireworks/models/deepseek-v4-flash", durationMs: 0, attempts: 0 };
+      if (!validBrief(brief)) return { ok: false, code: "invalid_input", modelId: "accounts/fireworks/models/deepseek-v4-flash-0731", durationMs: 0, attempts: 0 };
       const result = await options.client.request<IntentAnalysis>({
         role: "reasoner",
         reasoningEffort: reasoningEffortFor("reasoner", "simple_extraction"),
@@ -85,7 +85,7 @@ export function createFableInputAdapters(options: { readonly client: FireworksJs
       return { ok: true, intent: result.value, modelId: result.modelId, promptVersion: FABLE_INTENT_PROMPT_VERSION, usage: result.usage, durationMs: result.durationMs, attempts: result.attempts };
     },
     async generatePageCopy(brief, requestId) {
-      if (!validBrief(brief)) return { ok: false, code: "invalid_input", modelId: "accounts/fireworks/models/deepseek-v4-flash", durationMs: 0, attempts: 0 };
+      if (!validBrief(brief)) return { ok: false, code: "invalid_input", modelId: "accounts/fireworks/models/deepseek-v4-flash-0731", durationMs: 0, attempts: 0 };
       const result = await options.client.request<PageCopyResponse>({
         role: "reasoner",
         reasoningEffort: reasoningEffortFor("reasoner", "copy"),

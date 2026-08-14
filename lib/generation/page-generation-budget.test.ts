@@ -15,18 +15,18 @@ const CONFIG = {
 };
 const GLM = "accounts/fireworks/models/glm-5p2";
 const QWEN = "accounts/fireworks/models/qwen3p7-plus";
-const DEEPSEEK = "accounts/fireworks/models/deepseek-v4-flash";
+const DEEPSEEK = "accounts/fireworks/models/deepseek-v4-flash-0731";
 
 describe("page generation budget", () => {
   it("exposes the conservative multi-model and image rate card", () => {
     expect(FABLE_PRODUCTION_RATES).toEqual({
-      "accounts/fireworks/models/deepseek-v4-flash": { input: .14, cached: .028, output: .28 },
+      "accounts/fireworks/models/deepseek-v4-flash-0731": { input: .14, cached: .028, output: .28 },
       "accounts/fireworks/models/glm-5p2": { input: 1.40, cached: .26, output: 4.40 },
       "accounts/fireworks/models/qwen3p7-plus": { input: .50, cached: .10, output: 3.00 },
       "gemini-2.5-flash-image": { image: .039 },
     });
     expect(FABLE_PRIORITY_RATES).toEqual({
-      "accounts/fireworks/models/deepseek-v4-flash": { input: .21, cached: .042, output: .42 },
+      "accounts/fireworks/models/deepseek-v4-flash-0731": { input: .175, cached: .035, output: .35 },
     });
   });
 
@@ -40,7 +40,7 @@ describe("page generation budget", () => {
       maxOutputTokens: 2_000,
     });
     expect(lease.ok).toBe(true);
-    expect(budget.snapshot().reservedMicromxn).toBe(58_800);
+    expect(budget.snapshot().reservedMicromxn).toBe(49_000);
     if (!lease.ok) throw new Error("expected lease");
     budget.complete(lease.leaseId, { inputTokens: 8_000, cachedTokens: 2_000, outputTokens: 1_000, thinkingTokens: 400 });
     expect(budget.snapshot().modelUsage).toEqual([{
@@ -50,7 +50,7 @@ describe("page generation budget", () => {
       cachedTokens: 2_000,
       outputTokens: 1_000,
       thinkingTokens: 400,
-      costMicromxn: 35_280,
+      costMicromxn: 29_400,
     }]);
   });
 

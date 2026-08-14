@@ -61,7 +61,7 @@ describe("createPageDesignProgram", () => {
         serviceTier = request.serviceTier ?? "";
         maxAttempts = request.maxAttempts ?? 0;
         const value = request.responseSchema.parse(response);
-        return { ok: true, value, modelId: "accounts/fireworks/models/deepseek-v4-flash", usage: { inputTokens: 30, cachedTokens: 4, outputTokens: 12, thinkingTokens: 5 }, durationMs: 3, attempts: 1 };
+        return { ok: true, value, modelId: "accounts/fireworks/models/deepseek-v4-flash-0731", usage: { inputTokens: 30, cachedTokens: 4, outputTokens: 12, thinkingTokens: 5 }, durationMs: 3, attempts: 1 };
       },
     };
 
@@ -103,8 +103,8 @@ describe("createPageDesignProgram", () => {
           decisions: [{ ...scout.decisions[0], action: "generate", candidateId: null }],
         });
         return parsed.success
-          ? { ok: true, value: parsed.data, modelId: "accounts/fireworks/models/deepseek-v4-flash", usage: { inputTokens: 1, cachedTokens: 0, outputTokens: 1, thinkingTokens: 1 }, durationMs: 1, attempts: 1 }
-          : { ok: false, code: "schema", modelId: "accounts/fireworks/models/deepseek-v4-flash", usage: { inputTokens: 1, cachedTokens: 0, outputTokens: 1, thinkingTokens: 1 }, durationMs: 1, attempts: 1 };
+          ? { ok: true, value: parsed.data, modelId: "accounts/fireworks/models/deepseek-v4-flash-0731", usage: { inputTokens: 1, cachedTokens: 0, outputTokens: 1, thinkingTokens: 1 }, durationMs: 1, attempts: 1 }
+          : { ok: false, code: "schema", modelId: "accounts/fireworks/models/deepseek-v4-flash-0731", usage: { inputTokens: 1, cachedTokens: 0, outputTokens: 1, thinkingTokens: 1 }, durationMs: 1, attempts: 1 };
       },
     };
     const result = await createPageDesignProgram({
