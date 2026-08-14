@@ -3,7 +3,6 @@ import {
   type FableModelRole,
   type FireworksJsonRequest,
   type FireworksJsonResult,
-  type FireworksReasoningEffort,
   type FireworksProviderCategory,
   type FireworksServiceTier,
 } from "./fireworks-contracts";
@@ -45,7 +44,7 @@ function safeToken(value: unknown): number | null {
   return typeof value === "number" && Number.isSafeInteger(value) && value >= 0 ? value : null;
 }
 
-function providerUsage(value: unknown, reasoningEffort: FireworksReasoningEffort): ModelTokenUsage | undefined {
+function providerUsage(value: unknown): ModelTokenUsage | undefined {
   const root = record(value);
   const usage = record(root?.usage);
   const promptDetails = record(usage?.prompt_tokens_details);
@@ -57,7 +56,6 @@ function providerUsage(value: unknown, reasoningEffort: FireworksReasoningEffort
   const totalTokens = safeToken(usage.total_tokens);
   const cachedTokens = safeToken(promptDetails.cached_tokens);
   const reasoningValue = completionDetails?.reasoning_tokens;
-  if (reasoningEffort !== "none" && reasoningValue === undefined) return undefined;
   const thinkingTokens = reasoningValue === undefined ? 0 : safeToken(reasoningValue);
   if (inputTokens === null
     || outputTokens === null
@@ -272,7 +270,7 @@ export function createFireworksJsonClient(options: FireworksJsonClientOptions): 
           if (body.length > 0) {
             try { decodedEnvelope = JSON.parse(body); } catch { decodedEnvelope = undefined; }
           }
-          safeUsage = providerUsage(decodedEnvelope, request.reasoningEffort);
+          safeUsage = providerUsage(decodedEnvelope);
           if (!settleBudget(safeUsage)) return fail("budget_exceeded", attempt, safeUsage);
 
           if (!response.ok) {
