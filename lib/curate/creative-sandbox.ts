@@ -16,7 +16,12 @@ const EDIT_ID = "data-openlen-edit-id";
 const RESERVED_MARKER = "data-slot-path=";
 const SAFE_PROTOCOLS = new Set(["https:", "http:", "mailto:", "tel:"]);
 const PRIVATE_HOST = /^(?:localhost|0\.0\.0\.0|\[?::1\]?|10\.\d+\.\d+\.\d+|127\.\d+\.\d+\.\d+|169\.254\.\d+\.\d+|192\.168\.\d+\.\d+|172\.(?:1[6-9]|2\d|3[01])\.\d+\.\d+)$/i;
-const CSS_FORBIDDEN = /(?:expression\s*\(|behavior\s*:|-moz-binding|javascript:|vbscript:)/i;
+const CSS_FORBIDDEN = /(?:expression\s*\(|-moz-binding|javascript:|vbscript:)/i;
+// `behavior` is the IE HTC binding property. It is also a substring of
+// `scroll-behavior` and `overscroll-behavior`, so scanning the sheet for the
+// text refused every designed page that scrolls smoothly. Matched by property
+// name only.
+const BINDING_PROPERTIES = new Set(["behavior", "-ms-behavior"]);
 
 export interface CreativeSandboxDeps {
   readonly sanitize: (html: string) => { html: string | null; errors: string[]; removed: { scripts: number; eventHandlers: number; dangerousUrls: number; iframes: number; metaRefresh: number } };
@@ -68,6 +73,7 @@ export function safeCreativeCss(css: string, allowedAssetUrls: readonly string[]
     if (rule.name.toLowerCase() === "import") failure ??= "css_import";
   });
   root.walkDecls((decl) => {
+    if (BINDING_PROPERTIES.has(decl.prop.trim().toLowerCase())) failure ??= "css_execution_primitive";
     for (const match of decl.value.matchAll(/url\(([^)]*)\)/gi)) {
       if (!cssUrlAllowed(match[1] ?? "", allowedAssetUrls)) failure ??= "css_external_fetch";
     }

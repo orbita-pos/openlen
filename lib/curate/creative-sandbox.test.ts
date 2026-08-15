@@ -156,6 +156,24 @@ describe("transactional creative sandbox", () => {
     expect(sandbox.current().html).toBe(BASE_HTML);
   });
 
+  it.each([
+    "html{scroll-behavior:smooth}",
+    ".panel{overscroll-behavior:contain}",
+    ".panel{overscroll-behavior-y:none}",
+  ])("does not read ordinary scrolling css as an execution primitive: %s", (css) => {
+    expect(safeCreativeCss(css)).toEqual({ ok: true });
+  });
+
+  it.each([
+    ".x{behavior:url(evil.htc)}",
+    ".x{-ms-behavior:url(evil.htc)}",
+    ".x{-moz-binding:url(evil.xml)}",
+    ".x{width:expression(alert(1))}",
+    ".x{background:url(javascript:alert(1))}",
+  ])("still refuses %s", (css) => {
+    expect(safeCreativeCss(css)).toMatchObject({ ok: false, detail: "css_execution_primitive" });
+  });
+
   it("keeps a data-uri background and a relative asset path", async () => {
     const sandbox = createCreativeSandbox(CANDIDATE, makeDeps());
     await expect(sandbox.applyPatch({ operations: [{ op: "set_page_css", css: ".a{background-image:url(data:image/svg+xml;base64,PHN2Zz48L3N2Zz4=)}.b{background-image:url(/assets/paper.png)}" }] }))
