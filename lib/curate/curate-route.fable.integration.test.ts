@@ -127,7 +127,7 @@ function lastInspectedTarget(messages: readonly { role: string; content: string 
 function toolBoundary(mode: "improve" | "finish" | "down" | "image", calls: string[], timeline: string[] = []): typeof fetch {
   let turn = 0;
   return (async (_url: string | URL | Request, init?: RequestInit) => {
-    const body = JSON.parse(String(init?.body)) as { model: string; user: string; messages?: { role: string; content: string }[] };
+    const body = JSON.parse(String(init?.body)) as { model: string; user: string; stream?: boolean; messages?: { role: string; content: string }[] };
     calls.push(`${body.model}:${body.user}`);
     timeline.push("provider");
     if (mode === "down") throw new Error("fireworks unreachable");
@@ -144,9 +144,24 @@ function toolBoundary(mode: "improve" | "finish" | "down" | "image", calls: stri
         : { role: "assistant", content: "sin objetivos", reasoning_content: "nada" };
     }
     const patching = (message as { tool_calls?: unknown }).tool_calls !== undefined;
+    const finishReason = patching ? "tool_calls" : "stop";
+    const usage = { prompt_tokens: 10, completion_tokens: 5, total_tokens: 15, prompt_tokens_details: { cached_tokens: 0 } };
+    // The tool turns stream and the visual critic does not, and this one
+    // boundary answers both.
+    if (body.stream === true) {
+      const frames = [
+        { choices: [{ index: 0, delta: message, finish_reason: null }] },
+        { choices: [{ index: 0, delta: {}, finish_reason: finishReason }] },
+        { choices: [], usage },
+      ];
+      return new Response(
+        `${frames.map((frame) => `data: ${JSON.stringify(frame)}\n\n`).join("")}data: [DONE]\n\n`,
+        { status: 200, headers: { "content-type": "text/event-stream" } },
+      );
+    }
     return new Response(JSON.stringify({
-      choices: [{ finish_reason: patching ? "tool_calls" : "stop", message }],
-      usage: { prompt_tokens: 10, completion_tokens: 5, total_tokens: 15, prompt_tokens_details: { cached_tokens: 0 } },
+      choices: [{ finish_reason: finishReason, message }],
+      usage,
     }), { status: 200, headers: { "content-type": "application/json" } });
   }) as typeof fetch;
 }

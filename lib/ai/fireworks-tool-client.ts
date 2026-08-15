@@ -7,12 +7,14 @@ import type { FireworksProviderCategory } from "./fireworks-contracts";
 const FIREWORKS_ENDPOINT = "https://api.fireworks.ai/inference/v1/chat/completions";
 const DEFAULT_TIMEOUT_MS = 180_000;
 // A deadline that cannot cover the ceiling makes a paid turn a guaranteed
-// write-off: nothing is streamed, so a turn that spends its whole allowance
-// returns nothing at all until it is finished. A 180s deadline over a 24,000
-// token ceiling aborted a design turn that was working normally.
-// Measured since, on real design turns: 24,000 tokens in 172.5s and 31,396 in
-// 221.5s -- 139 and 142 tokens per second. The floor keeps a 30% margin under
-// the slower of the two.
+// write-off. Measured on real design turns: 24,000 tokens in 172.5s and 31,396
+// in 221.5s -- 139 and 142 tokens per second. The floor keeps a 30% margin
+// under the slower of the two.
+//
+// This deadline is only reachable because the turn streams. Waiting for a whole
+// completion put every design turn behind undici's 300s headers timeout, which
+// is not ours to move: a 39,995-token turn died at 307s with nothing delivered
+// while our own deadline still had 200s left to give.
 const MIN_OUTPUT_TOKENS_PER_SECOND = 100;
 const DEADLINE_BASE_MS = 30_000;
 
@@ -197,6 +199,83 @@ function readToolCalls(message: Record<string, unknown>): { ok: true; calls: Fir
   return { ok: true, calls };
 }
 
+interface StreamedTurn {
+  finishReason: string | null;
+  content: string | null;
+  reasoningContent: string | null;
+  toolCalls: Record<string, unknown>[];
+  /** The chunk that carried `usage`, kept whole so `providerUsage` reads it
+   * exactly as it reads a non-streamed envelope. */
+  usageEnvelope: unknown;
+}
+
+/** Rebuilds one turn from its deltas. Tool calls arrive split across chunks --
+ * the id and name once, the arguments a few characters at a time -- and are
+ * keyed by index, never by arrival order. */
+async function assembleStreamedTurn(body: ReadableStream<Uint8Array> | null): Promise<StreamedTurn | null> {
+  if (!body) return null;
+  const reader = body.getReader();
+  const decoder = new TextDecoder();
+  const calls = new Map<number, { id?: string; name?: string; args: string }>();
+  let content: string | null = null;
+  let reasoningContent: string | null = null;
+  let finishReason: string | null = null;
+  let usageEnvelope: unknown = null;
+
+  const consume = (line: string): void => {
+    const trimmed = line.trim();
+    if (!trimmed.startsWith("data:")) return;
+    const data = trimmed.slice("data:".length).trim();
+    if (data === "" || data === "[DONE]") return;
+    let parsed: unknown;
+    try { parsed = JSON.parse(data); } catch { return; }
+    const root = record(parsed);
+    if (!root) return;
+    if (record(root.usage)) usageEnvelope = root;
+    const choice = record((root.choices as unknown[] | undefined)?.[0]);
+    if (!choice) return;
+    if (typeof choice.finish_reason === "string") finishReason = choice.finish_reason;
+    const delta = record(choice.delta);
+    if (!delta) return;
+    if (typeof delta.content === "string") content = (content ?? "") + delta.content;
+    if (typeof delta.reasoning_content === "string") reasoningContent = (reasoningContent ?? "") + delta.reasoning_content;
+    for (const entry of Array.isArray(delta.tool_calls) ? delta.tool_calls : []) {
+      const call = record(entry);
+      if (!call) continue;
+      const index = typeof call.index === "number" && Number.isInteger(call.index) ? call.index : calls.size;
+      const previous = calls.get(index) ?? { args: "" };
+      const fn = record(call.function);
+      calls.set(index, {
+        ...(typeof call.id === "string" && call.id ? { id: call.id } : previous.id ? { id: previous.id } : {}),
+        ...(typeof fn?.name === "string" && fn.name ? { name: fn.name } : previous.name ? { name: previous.name } : {}),
+        args: previous.args + (typeof fn?.arguments === "string" ? fn.arguments : ""),
+      });
+    }
+  };
+
+  let buffer = "";
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+    for (let newline = buffer.indexOf("\n"); newline !== -1; newline = buffer.indexOf("\n")) {
+      consume(buffer.slice(0, newline));
+      buffer = buffer.slice(newline + 1);
+    }
+  }
+  consume(buffer);
+
+  return {
+    finishReason,
+    content,
+    reasoningContent,
+    toolCalls: [...calls.entries()]
+      .sort(([left], [right]) => left - right)
+      .map(([, call]) => ({ id: call.id ?? "", function: { name: call.name ?? "", arguments: call.args } })),
+    usageEnvelope,
+  };
+}
+
 export function createFireworksToolClient(options: FireworksToolClientOptions): FireworksToolClient {
   if (!options?.budget) throw new Error("page budget is required");
   const env = options.env ?? process.env;
@@ -236,6 +315,8 @@ export function createFireworksToolClient(options: FireworksToolClientOptions): 
         temperature: 0.2,
         max_tokens: request.maxOutputTokens,
         user: request.requestId,
+        stream: true,
+        stream_options: { include_usage: true },
       });
 
       // Reserve once, call once, settle once. No automatic retry.
@@ -253,6 +334,11 @@ export function createFireworksToolClient(options: FireworksToolClientOptions): 
         () => { timedOut = true; controller.abort(); },
         configuredTimeoutMs ?? deadlineForCeiling(request.maxOutputTokens),
       );
+      const settleUnused = () => options.budget.complete(
+        lease.leaseId,
+        { inputTokens: 0, cachedTokens: 0, outputTokens: 0, thinkingTokens: 0 },
+      );
+
       let response: Response;
       try {
         response = await fetchImpl(FIREWORKS_ENDPOINT, {
@@ -263,23 +349,33 @@ export function createFireworksToolClient(options: FireworksToolClientOptions): 
         });
       } catch {
         clearTimeout(timer);
-        options.budget.complete(lease.leaseId, { inputTokens: 0, cachedTokens: 0, outputTokens: 0, thinkingTokens: 0 });
+        settleUnused();
         return fail(timedOut ? "timeout" : "http");
       }
-      let envelope: unknown;
-      try { envelope = await response.json(); } catch { envelope = null; } finally { clearTimeout(timer); }
+      if (!response.ok) {
+        clearTimeout(timer);
+        settleUnused();
+        return fail("http", { httpStatus: response.status });
+      }
 
-      const usage = providerUsage(envelope);
+      let streamed: StreamedTurn | null;
+      try {
+        streamed = await assembleStreamedTurn(response.body);
+      } catch {
+        settleUnused();
+        return fail(timedOut ? "timeout" : "http");
+      } finally {
+        clearTimeout(timer);
+      }
+
+      const usage = providerUsage(streamed?.usageEnvelope);
       const settle = () => options.budget.complete(
         lease.leaseId,
         usage ?? { inputTokens: 0, cachedTokens: 0, outputTokens: 0, thinkingTokens: 0 },
       );
 
-      if (!response.ok) { settle(); return fail("http", { ...(usage ? { usage } : {}), httpStatus: response.status }); }
-
-      const choice = record((record(envelope)?.choices as unknown[] | undefined)?.[0]);
-      const message = record(choice?.message);
-      if (!choice || !message) { settle(); return fail("provider", { ...(usage ? { usage } : {}), providerCategory: "response_content" }); }
+      // A stream that ended without ever naming a finish reason did not finish.
+      if (!streamed || streamed.finishReason === null) { settle(); return fail("provider", { ...(usage ? { usage } : {}), providerCategory: "response_content" }); }
       if (!usage) { settle(); return fail("provider", { providerCategory: "response_usage" }); }
 
       // finish_reason "length" means the ceiling ended the turn, whichever
@@ -287,8 +383,8 @@ export function createFireworksToolClient(options: FireworksToolClientOptions): 
       // reasoning, or a call cut mid-JSON when it had started writing. Both are
       // truncation, and reporting the second as a malformed call hid a ceiling
       // the session was ready to raise.
-      const truncated = choice.finish_reason === "length";
-      const calls = readToolCalls(message);
+      const truncated = streamed.finishReason === "length";
+      const calls = readToolCalls({ tool_calls: streamed.toolCalls });
       if (!calls.ok) {
         settle();
         return truncated
@@ -300,14 +396,12 @@ export function createFireworksToolClient(options: FireworksToolClientOptions): 
         return fail("provider", { usage, providerCategory: "response_truncated" });
       }
 
-      const content = message.content;
-      const reasoning = message.reasoning_content;
       settle();
       return {
         ok: true,
         calls: calls.calls,
-        content: typeof content === "string" ? content : null,
-        reasoningContent: typeof reasoning === "string" ? reasoning : null,
+        content: streamed.content,
+        reasoningContent: streamed.reasoningContent,
         usage,
         durationMs: Math.max(0, Math.floor(now() - started)),
         modelId,

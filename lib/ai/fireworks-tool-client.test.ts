@@ -45,15 +45,48 @@ function makeBudget(over: { reserve?: PageBudget["reserve"] } = {}) {
   return { budget, completed };
 }
 
+function sseBody(frames: readonly unknown[]) {
+  const text = `${frames.map((frame) => `data: ${JSON.stringify(frame)}\n\n`).join("")}data: [DONE]\n\n`;
+  return new ReadableStream<Uint8Array>({
+    start(controller) {
+      controller.enqueue(new TextEncoder().encode(text));
+      controller.close();
+    },
+  });
+}
+
+/** Turns a whole-response fixture into the deltas the wire actually carries, so
+ * every fixture below keeps saying what a turn means rather than how it
+ * arrives. */
+function framesFor(body: unknown): unknown[] {
+  const envelope = body as { choices?: { finish_reason?: string; message?: Record<string, unknown> }[]; usage?: unknown };
+  const choice = envelope?.choices?.[0];
+  if (!choice) return envelope?.usage ? [{ choices: [], usage: envelope.usage }] : [];
+  const message = choice.message ?? {};
+  const toolCalls = message.tool_calls as { id?: string; function?: unknown }[] | undefined;
+  const delta: Record<string, unknown> = { role: "assistant" };
+  if ("content" in message && typeof message.content === "string") delta.content = message.content;
+  if (typeof message.reasoning_content === "string") delta.reasoning_content = message.reasoning_content;
+  if (toolCalls) delta.tool_calls = toolCalls.map((call, index) => ({ ...call, index }));
+  return [
+    { choices: [{ index: 0, delta, finish_reason: null }] },
+    { choices: [{ index: 0, delta: {}, finish_reason: choice.finish_reason ?? "stop" }] },
+    ...(envelope.usage ? [{ choices: [], usage: envelope.usage }] : []),
+  ];
+}
+
 function makeFetch(body: unknown, status = 200) {
+  return makeStreamingFetch(framesFor(body), status);
+}
+
+function makeStreamingFetch(frames: readonly unknown[], status = 200) {
   const calls: { url: string; init: RequestInit }[] = [];
   const impl = vi.fn(async (url: string, init: RequestInit) => {
     calls.push({ url, init });
     return {
       ok: status >= 200 && status < 300,
       status,
-      async json() { return body; },
-      async text() { return JSON.stringify(body); },
+      body: sseBody(frames),
     } as unknown as Response;
   });
   return { impl: impl as unknown as typeof fetch, calls };
@@ -103,6 +136,72 @@ describe("Fireworks tool transport", () => {
     expect(result.ok && result.calls[0].arguments).toEqual({
       operations: [{ op: "replace_section", targetId: "sec-1", html: "<section>hi</section>" }],
     });
+  });
+
+  it("assembles a tool call whose arguments arrive a few characters at a time", async () => {
+    const { budget } = makeBudget();
+    const { impl } = makeStreamingFetch([
+      { choices: [{ index: 0, delta: { role: "assistant", reasoning_content: "Necesito " } }] },
+      { choices: [{ index: 0, delta: { reasoning_content: "reescribir el hero." } }] },
+      { choices: [{ index: 0, delta: { tool_calls: [{ index: 0, id: "call-1", type: "function", function: { name: "apply_creative_patch", arguments: '{"operations":[{"op":"repl' } }] } }] },
+      { choices: [{ index: 0, delta: { tool_calls: [{ index: 0, function: { arguments: 'ace_section","targetId":"ol-hero-1",' } }] } }] },
+      { choices: [{ index: 0, delta: { tool_calls: [{ index: 0, function: { arguments: '"html":"<section>hola</section>"}]}' } }] } }] },
+      { choices: [{ index: 0, delta: {}, finish_reason: "tool_calls" }] },
+      { choices: [], usage: { prompt_tokens: 100, total_tokens: 340, completion_tokens: 240, prompt_tokens_details: { cached_tokens: 0 } } },
+    ]);
+    const client = createFireworksToolClient({ budget, apiKey: "k", fetchImpl: impl });
+
+    const result = await client.turn(REQUEST);
+
+    expect(result.ok && result.calls).toEqual([{
+      id: "call-1",
+      name: "apply_creative_patch",
+      arguments: { operations: [{ op: "replace_section", targetId: "ol-hero-1", html: "<section>hola</section>" }] },
+    }]);
+    expect(result.ok && result.reasoningContent).toBe("Necesito reescribir el hero.");
+    expect(result.ok && result.usage.outputTokens).toBe(240);
+  });
+
+  it("keeps two concurrent tool calls apart by their index, not their arrival order", async () => {
+    const { budget } = makeBudget();
+    const { impl } = makeStreamingFetch([
+      { choices: [{ index: 0, delta: { tool_calls: [
+        { index: 1, id: "call-b", function: { name: "render_preview", arguments: "" } },
+        { index: 0, id: "call-a", function: { name: "inspect_canvas", arguments: "" } },
+      ] } }] },
+      { choices: [{ index: 0, delta: { tool_calls: [{ index: 0, function: { arguments: "{}" } }] } }] },
+      { choices: [{ index: 0, delta: { tool_calls: [{ index: 1, function: { arguments: "{}" } }] } }] },
+      { choices: [{ index: 0, delta: {}, finish_reason: "tool_calls" }] },
+      { choices: [], usage: { prompt_tokens: 10, total_tokens: 30, completion_tokens: 20, prompt_tokens_details: { cached_tokens: 0 } } },
+    ]);
+    const client = createFireworksToolClient({ budget, apiKey: "k", fetchImpl: impl });
+    const result = await client.turn(REQUEST);
+    expect(result.ok && result.calls.map((call) => call.name)).toEqual(["inspect_canvas", "render_preview"]);
+  });
+
+  it("reports a stream that stops before naming a finish reason as incomplete", async () => {
+    const { budget, completed } = makeBudget();
+    const { impl } = makeStreamingFetch([
+      { choices: [{ index: 0, delta: { role: "assistant", content: "a medio " } }] },
+      { choices: [], usage: { prompt_tokens: 10, total_tokens: 30, completion_tokens: 20, prompt_tokens_details: { cached_tokens: 0 } } },
+    ]);
+    const client = createFireworksToolClient({ budget, apiKey: "k", fetchImpl: impl });
+    await expect(client.turn(REQUEST)).resolves.toMatchObject({
+      ok: false, code: "provider", providerCategory: "response_content",
+    });
+    expect(completed).toHaveLength(1);
+  });
+
+  it("streams the turn and asks for usage with it", async () => {
+    const { budget } = makeBudget();
+    const { impl, calls } = makeFetch(REAL_ENVELOPE);
+    const client = createFireworksToolClient({ budget, apiKey: "k", fetchImpl: impl });
+    await client.turn(REQUEST);
+    const payload = payloadOf(calls);
+    // Without streaming the whole turn waits on undici's 300s headers timeout,
+    // which no deadline of ours can extend.
+    expect(payload.stream).toBe(true);
+    expect(payload.stream_options).toEqual({ include_usage: true });
   });
 
   it("sends tools with tool_choice auto and never a response_format", async () => {
