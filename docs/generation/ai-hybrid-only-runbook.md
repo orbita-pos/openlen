@@ -14,7 +14,11 @@ unaffected.
 
 Disabled behavior is error-only and never legacy fallback. A disabled or failed request must not load or deliver `weighted`, `template_full`, `template_skeleton`, or any whole template. It produces no preview, project insert, completion event, or creation-credit debit.
 
-The copy model precedence is:
+Create with AI no longer calls a copy or intent model: the page's intent and
+copy are derived deterministically from the brief before any provider exists.
+The copy model precedence below therefore governs only the remaining
+Gemini-backed copy surfaces (the visual-engine 2A eval, preflight and
+rollback-check tooling), not this route:
 
 1. an explicitly injected test/caller option;
 2. `OPENLEN_PAGE_COPY_MODEL`;
@@ -22,7 +26,31 @@ The copy model precedence is:
 4. `STYLE_MATCH_TEXT_MODEL`;
 5. `gemini-2.5-flash`.
 
-Provider-capable boundaries make at most one call. There is no automatic retry for intent, copy, creative direction, asset generation, critic, or repair failures.
+There is no automatic retry anywhere: not for the creative session, the image
+tool, the vision critic, or the single repair. Every provider-capable boundary
+makes at most one call per turn, and the creative session is bounded to four
+turns and twelve accepted mutations per page. A failed provider turn ends the
+stage; it is never reissued.
+
+## Generation stages and degraded delivery
+
+A page is built in this order, and only the first stage can fail it:
+
+1. **baseline** — deterministic intent and copy, catalog fragments, local fill,
+   stable target handles, finalize, seal, and a real desktop/mobile render.
+   No provider is reachable before this exists. If it fails, the request fails.
+2. **creative session** — DeepSeek writes real HTML and CSS through the
+   transactional sandbox. Every mutation is sanitized, sealed and rendered
+   before it becomes current; a rejected batch changes nothing.
+3. **advisory review** — one Qwen verdict over the rendered viewports, and at
+   most one DeepSeek repair. The reviewer advises; deterministic checks decide.
+4. **delivery gate** — if the improved candidate cannot ship, the baseline it
+   started from ships instead.
+
+Stages 2 through 4 cannot cost a page. When one of them fails or refuses, the
+request still ends in `delivered` and the reason is recorded in the outcome
+event's `degradations` array. An operator reading only `outcome` will see a
+success; the degradation list is where a dark provider shows up.
 
 Operational telemetry is redacted and the default production route always
 installs a nonthrowing retained structured sink. It accepts only strict parsed
@@ -114,6 +142,35 @@ Likewise, do not perform rollback through `OPENLEN_ENV_LOCAL` plus
 ## Separately authorized live canary
 
 The live canary is closed by default and is not part of deploy or any local gate. Immediately before it runs, obtain one-time authorization for the exact seven requests and a positive MXN cap. Present the estimated maximum cost and stop if the owner does not explicitly approve that cap. Do not infer authorization from an earlier pilot or deploy approval.
+
+It runs only through `scripts/creative-sandbox-canary.ts`, one authorized unit
+of work per invocation:
+
+```powershell
+$env:OPENLEN_CREATIVE_SANDBOX_CANARY_AUTHORIZATION = "AUTHORIZED_CREATIVE_SANDBOX_CANARY_ONCE"
+$env:OPENLEN_CREATIVE_SANDBOX_CANARY_COMMIT = "<exact release commit>"
+npm.cmd run generation:creative-sandbox:canary -- --live --provider=deepseek-tool --max-mxn=10000000 --commit=<exact release commit>
+npm.cmd run generation:creative-sandbox:canary -- --live --provider=qwen-vision  --max-mxn=10000000 --commit=<exact release commit>
+npm.cmd run generation:creative-sandbox:canary -- --live --page=kids-coloring    --max-mxn=10000000 --commit=<exact release commit>
+```
+
+The isolated provider probes run first and a page run is refused until both
+have passed; their evidence lives in the ignored `scratch/creative-sandbox/`.
+Importing the script runs nothing, and every gate — authorization, mode,
+commit, credentials, budget — is checked before the first paid call.
+
+`--max-mxn` must be at least `OPENLEN_FABLE_PAGE_CAP_MICROMXN`, because that
+cap is what actually stops the spending; authorizing less would bound nothing
+until the money was gone. The page budget requires all four of
+`OPENLEN_FABLE_RATE_CARD_VERSION`, `OPENLEN_FABLE_MXN_PER_USD`,
+`OPENLEN_FABLE_PAGE_TARGET_MICROMXN` and `OPENLEN_FABLE_PAGE_CAP_MICROMXN`;
+the target and cap are validated to be exactly `5000000` and `10000000`
+micro-MXN, and the runtime fails closed before any provider if any is missing.
+
+A page that ships the baseline is an operational pass, not a creative one. Read
+the outcome event's `degradations` before calling a case good: a run where the
+creative session or the vision critic degraded proves the fallback works, not
+that the page was designed.
 
 The seven synthetic cases are:
 

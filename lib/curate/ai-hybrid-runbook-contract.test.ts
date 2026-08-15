@@ -58,6 +58,28 @@ describe("AI hybrid release and operations contract", () => {
     expect(runbook).toMatch(/brief.*copy.*HTML.*prompt.*raw response.*private URL.*credential.*user identity/is);
   });
 
+  // The runbook drifted once already: it described intent/copy model calls this
+  // route no longer makes. These pin the facts an operator acts on.
+  it("documents the creative pipeline an operator actually runs", () => {
+    const runbook = repositoryFile("docs/generation/ai-hybrid-only-runbook.md");
+
+    expect(runbook).toMatch(/no longer calls a copy or intent model/i);
+    expect(runbook).toMatch(/baseline[\s\S]*creative session[\s\S]*advisory review[\s\S]*delivery gate/i);
+    expect(runbook).toMatch(/four\s+turns and twelve accepted\s+mutations/i);
+    expect(runbook).toMatch(/degradations/);
+    expect(runbook).toContain("scripts/creative-sandbox-canary.ts");
+    expect(runbook).toContain("--live");
+    expect(runbook).toContain("--max-mxn");
+    for (const key of [
+      "OPENLEN_FABLE_RATE_CARD_VERSION",
+      "OPENLEN_FABLE_MXN_PER_USD",
+      "OPENLEN_FABLE_PAGE_TARGET_MICROMXN",
+      "OPENLEN_FABLE_PAGE_CAP_MICROMXN",
+    ]) expect(runbook).toContain(key);
+    expect(runbook).toMatch(/probes run first|refused until both/i);
+    expect(runbook).toContain("scratch/creative-sandbox/");
+  });
+
   it("runs the focused gate and typecheck exactly once before build can be skipped", () => {
     const deploy = repositoryFile("infra/scripts/deploy.ps1");
     const gateCommand = "npm.cmd run generation:ai-hybrid:gate";
