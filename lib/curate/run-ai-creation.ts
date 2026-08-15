@@ -97,6 +97,14 @@ function productionDeps(
       invalidGeometry: (rendered as { invalidGeometry?: boolean }).invalidGeometry === true,
     };
   };
+  // At initial creation the model is spending on the user's behalf, so the page
+  // buys at most this many photographs. Editing is the other case entirely:
+  // there the user asks for an image and pays for it, and their balance is the
+  // only limit. Counted here rather than inside the tool because a session
+  // calls it once per image, and the repair pass is the same page.
+  const MAX_PAGE_IMAGES = 2;
+  let pageImages = 0;
+
   const sandboxFor = (candidate: SafeCreativeCandidate) =>
     createCreativeSandbox(candidate, { sanitize: sanitizeForPublish, seal: sealRelease, render });
   const recordModel = (stage: "creative_session", result: Parameters<CreativeSessionDeps["recordModel"] & object>[1]) =>
@@ -120,6 +128,7 @@ function productionDeps(
             projectId: session.requestId,
             candidate: sandbox.current(),
             requests: [request],
+            remaining: MAX_PAGE_IMAGES - pageImages,
           }, {
             resolve: () => resolveImage({
               projectId: session.requestId,
@@ -129,7 +138,10 @@ function productionDeps(
               ...(request.mediaType ? { mediaType: request.mediaType } : {}),
             }, { provider: runtime.geminiAssetPackProvider }),
             recordImage: (trace) => {
-              if (trace.outcome === "applied") runtime.recordImage({ modelId: "asset-pipeline", generatedCount: 1, durationMs: 0 });
+              if (trace.outcome === "applied") {
+                pageImages += 1;
+                runtime.recordImage({ modelId: "asset-pipeline", generatedCount: 1, durationMs: 0 });
+              }
               // A refused image costs the page its photography and nothing
               // else, so it never showed up anywhere: the page still ships,
               // just barer than the model designed it.

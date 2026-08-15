@@ -134,3 +134,29 @@ describe("optional image tool", () => {
     expect(JSON.stringify(recordImage.mock.calls[0])).not.toContain("<!doctype");
   });
 });
+
+describe("per-page image budget", () => {
+  it("refuses to resolve past the images a page has left", async () => {
+    const resolve = vi.fn(async () => ({ ok: true as const, url: "https://images.openlen.com/a-1920.webp", source: "curated" as const }));
+    // The cap used to be `requests.slice(0, 3)` inside one call, and the model
+    // sends one request per call, so a page could buy any number of images.
+    const result = await runOptionalImageTool(
+      { projectId: "p", candidate: CANDIDATE, requests: [REQUESTS[0]], remaining: 0 },
+      deps({ resolve } as never),
+    );
+
+    expect(resolve).not.toHaveBeenCalled();
+    expect(result.applied).toBe(false);
+  });
+
+  it("resolves while the page still has budget", async () => {
+    const resolve = vi.fn(async () => ({ ok: true as const, url: "https://images.openlen.com/a-1920.webp", source: "curated" as const }));
+    const result = await runOptionalImageTool(
+      { projectId: "p", candidate: CANDIDATE, requests: [REQUESTS[0]], remaining: 1 },
+      deps({ resolve } as never),
+    );
+
+    expect(resolve).toHaveBeenCalledTimes(1);
+    expect(result.applied).toBe(true);
+  });
+});

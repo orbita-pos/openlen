@@ -16,6 +16,10 @@ export interface OptionalImageToolInput {
   readonly projectId: string;
   readonly candidate: SafeCreativeCandidate;
   readonly requests: readonly OptionalImageRequest[];
+  /** Images this page may still buy. The old cap counted requests inside one
+   * call, and the model sends one request per call, so a page could buy any
+   * number of them: a real run bought five and spent 4.20 MXN. */
+  readonly remaining?: number;
 }
 
 export interface OptionalImageToolDeps {
@@ -38,7 +42,8 @@ export async function runOptionalImageTool(
   let html = input.candidate.html;
   let applied = false;
 
-  for (const request of input.requests.slice(0, MAX_IMAGES_PER_PAGE)) {
+  const allowed = Math.max(0, Math.min(MAX_IMAGES_PER_PAGE, input.remaining ?? MAX_IMAGES_PER_PAGE));
+  for (const request of input.requests.slice(0, allowed)) {
     const document = parse(html);
     const target = document.querySelector(`[${EDIT_ID}="${request.targetId}"]`);
     if (!target) {
