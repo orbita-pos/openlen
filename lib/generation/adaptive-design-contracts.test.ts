@@ -7,6 +7,7 @@ import {
   AdaptivePageDesignProgramSchema,
   createAdaptivePageDesignProgramSchema,
   createCandidateScoutResponseSchema,
+  withRequiredLeadImage,
 } from "./adaptive-design-contracts";
 
 const candidates = [
@@ -266,5 +267,34 @@ describe("adaptive design contracts", () => {
     ];
     contradictions.forEach((value) => expect(schema.safeParse(value).success).toBe(false));
     expect(schema.safeParse({ ...valid, direction: { ...coherentDirection, requiredVisualSignals: ["tactile", "cinematic"] } }).success).toBe(true);
+  });
+});
+
+describe("withRequiredLeadImage", () => {
+  const base = {
+    schemaVersion: "adaptive-page-design/1.0" as const,
+    narrative: ["hero", "features"],
+    decisions: [
+      { ordinal: 0, action: "generate" as const, candidateId: null, usefulTraits: [], rejectedTraits: [] },
+      { ordinal: 1, action: "generate" as const, candidateId: null, usefulTraits: [], rejectedTraits: [] },
+    ],
+    rhythm: "playful" as const,
+  };
+  const slot = (over: Record<string, unknown>) => ({ slotIndex: 0, ordinal: 0, mediaType: "photo" as const, subject: "children_painting", purpose: "hero_identity", required: false, ...over });
+
+  it("promotes an optional lead image so sections must place it and generation may fall back on it", () => {
+    const promoted = withRequiredLeadImage({ ...base, imageSlots: [slot({}), slot({ slotIndex: 1, ordinal: 1 })] });
+    expect(promoted.imageSlots.map((entry) => entry.required)).toEqual([true, false]);
+  });
+
+  it("leaves a plan that already requires a lead image untouched", () => {
+    const program = { ...base, imageSlots: [slot({ required: true }), slot({ slotIndex: 1, required: false })] };
+    expect(withRequiredLeadImage(program)).toBe(program);
+  });
+
+  it("cannot invent a lead image when the plan offered none", () => {
+    const program = { ...base, imageSlots: [slot({ slotIndex: 1, ordinal: 1 })] };
+    expect(withRequiredLeadImage(program)).toBe(program);
+    expect(withRequiredLeadImage({ ...base, imageSlots: [] }).imageSlots).toEqual([]);
   });
 });

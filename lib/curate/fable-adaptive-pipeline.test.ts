@@ -117,6 +117,68 @@ describe("Fable adaptive production pipeline", () => {
     expect(repaired).toMatchObject({ ok: true, candidate: { html: `${repairedHtml}|FINAL` } });
   });
 
+  it("ships the page when a required image slot was never placed instead of failing the whole run", async () => {
+    const runtime = {
+      fireworksClient: { request: vi.fn() },
+      glmSectionProgramProvider: { generate: vi.fn() },
+      geminiAssetPackProvider: { createPack: vi.fn() },
+      recordModel: vi.fn(),
+      recordImage: vi.fn(),
+      recordFailure: vi.fn(),
+    };
+    const design = {
+      schemaVersion: "adaptive-page-design/1.0",
+      narrative: ["hero", "features", "footer"],
+      direction: { schemaVersion: "creative-direction/1.0" },
+      decisions: [],
+      rhythm: "playful",
+      requiredSignals: [], forbiddenSignals: [],
+      imageSlots: [{ slotIndex: 0, ordinal: 0, mediaType: "photo", subject: "children_painting", purpose: "hero_identity", required: true }],
+    };
+    const result = await runFableAdaptivePipeline({
+      projectId: "project-1",
+      assetMode: "hybrid",
+      candidateTitle: "Mundo Pincel",
+      copy: { business_name: "Mundo Pincel" },
+      profileData: { brand: { accent: "#F06AA6", logoUrl: null } },
+      intent: {
+        functional: { siteType: "coloring_pages" },
+        audience: { primary: "children", ageRange: null, secondary: ["parents"] },
+        domains: ["creative_play"], emotionalGoals: ["playful"],
+        requiredVisualSignals: [], forbiddenVisualSignals: [],
+      },
+      intentHash: `sha256:${"a".repeat(64)}`,
+      records: [],
+      policyVersion: "ai-hybrid-policy/1.0",
+    } as never, {
+      runtime: runtime as never,
+      finalize: ({ html }) => ({ ok: true as const, html }),
+      buildInventory: () => ({ hash: `sha256:${"b".repeat(64)}`, entries: [] }) as never,
+      planAdaptive: () => ({ ok: true as const, plan: { rows: [{ requestedRole: "hero" }, { requestedRole: "features" }, { requestedRole: "footer" }] } as never }),
+      buildInitialDirection: () => ({ direction: { schemaVersion: "creative-direction/1.0" } }) as never,
+      scoutCandidates: async () => ({ ok: true as const, requiredRoles: ["hero", "features", "footer"], candidates: [], decisions: [], modelId: "qwen", usage: { inputTokens: 1, cachedTokens: 0, outputTokens: 1, thinkingTokens: 0 }, durationMs: 1, attempts: 1 } as never),
+      createPageDesign: async () => ({ ok: true as const, program: design, modelId: "deepseek", usage: { inputTokens: 1, cachedTokens: 0, outputTokens: 1, thinkingTokens: 0 }, durationMs: 1, attempts: 1 } as never),
+      composeAdaptiveSections: (async (input: never, deps: never) => {
+        const binding = await (deps as { beforeCompile: (arg: unknown) => Promise<{ ok: boolean; bind?: (html: string, slots: number[]) => { ok: true; html: string } }> })
+          .beforeCompile({ plan: (input as { plan: unknown }).plan, design, usedAssetSlots: [] });
+        if (!binding.ok) return { ok: false as const, reasonCode: "required_asset_unavailable", telemetry: [] };
+        return {
+          ok: true as const,
+          status: "composed" as const,
+          html: binding.bind!("<!doctype html><html><body>NO PHOTO</body></html>", []).html,
+          manifest: { outputHash: "sha256:initial" },
+          telemetry: [],
+          handoff: { schemaVersion: "adaptive-section-repair-handoff/1.0", entries: [] },
+        };
+      }) as never,
+      adaptiveCompositionDeps: {} as never,
+      sealFinal: ((html: string) => ({ html, sealed: true })) as never,
+      buildVisualEngine: ({ html }) => ({ html, visualEngine: { compositionManifest: { outputHash: "sha256:initial" } } as never }),
+    });
+
+    expect(result).toMatchObject({ ok: true, html: "<!doctype html><html><body>NO PHOTO</body></html>" });
+  });
+
   it.each(["scout", "page_plan"] as const)("records a failed paid %s attempt before flushing failure telemetry", async (failedStage) => {
     const events: string[] = [];
     const runtime = {

@@ -6,7 +6,7 @@ import { createExpressiveSectionProgramResponseSchema, validateExpressiveSection
 import { reasoningEffortFor } from "./fable-model-policy";
 import { SectionPlanRowSchema } from "./section-composition-contracts";
 
-const PROMPT_VERSION = "glm-section-program-prompt/1.0" as const;
+const PROMPT_VERSION = "glm-section-program-prompt/1.1" as const;
 const REQUEST_ID = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/;
 const SECTION_ID = /^[a-z0-9]+(?:[-_][a-z0-9]+)*$/;
 const COPY_KEY = /^[a-z][a-z0-9_.-]{0,79}$/;
@@ -30,6 +30,7 @@ const DirectionSchema = z.object({
 const AssetSlotSchema = z.object({
   slotIndex: z.number().int().min(0).max(11),
   mediaType: z.enum(["photo", "illustration", "texture"]),
+  required: z.boolean(),
 }).strict();
 
 const BaseRequestShape = {
@@ -125,7 +126,7 @@ export function createGlmSectionProgramProvider(options: Options): GlmSectionPro
         messages: [
           {
             role: "system",
-            content: "Return exactly one expressive-section-program/1.0 AST. Use only supplied roles, copy-key names, asset-slot indexes, enums, responsive overrides, and motion presets. Never return literal copy, URLs, markup, styles, scripts, selectors, event names, imports, or executable text.",
+            content: "Return exactly one expressive-section-program/1.0 AST. Use only supplied roles, copy-key names, asset-slot indexes, enums, responsive overrides, and motion presets. Every asset slot marked required must appear as a media node placed where the image carries the section, not as decoration. Never return literal copy, URLs, markup, styles, scripts, selectors, event names, imports, or executable text.",
           },
           { role: "user", content: JSON.stringify(payload) },
         ],

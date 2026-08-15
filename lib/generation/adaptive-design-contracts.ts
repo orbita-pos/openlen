@@ -135,6 +135,16 @@ function addAdaptivePageDesignIssues(
 
 export const AdaptivePageDesignProgramSchema = AdaptivePageDesignProgramObjectSchema.superRefine(addAdaptivePageDesignIssues);
 
+/** The lead section is the whole first impression: an image offered there is
+ * not optional, whatever the plan marked. Required slots are the ones sections
+ * must place and the ones image generation may fall back on. */
+export function withRequiredLeadImage<T extends { readonly imageSlots: readonly z.infer<typeof BoundedImageRequirementSchema>[] }>(program: T): T {
+  const lead = program.imageSlots.filter((slot) => slot.ordinal === 0);
+  if (lead.length === 0 || lead.some((slot) => slot.required)) return program;
+  const promoted = lead[0].slotIndex;
+  return { ...program, imageSlots: program.imageSlots.map((slot) => slot.slotIndex === promoted ? { ...slot, required: true } : slot) };
+}
+
 export interface RetrievedCandidateReference {
   readonly candidateId: string;
   readonly ordinal: number;

@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { AdaptivePageDesignProgramSchema } from "./adaptive-design-contracts";
+import { AdaptivePageDesignProgramSchema, withRequiredLeadImage } from "./adaptive-design-contracts";
 import { CreativeDirectionSchema } from "./creative-contracts";
 import { COLORING_DIRECTION } from "./creative-fixtures.test-support";
 import { sha256 } from "./content-hash";
@@ -103,7 +103,7 @@ function setup(overrides: Partial<AdaptiveSectionCompositionDeps> = {}) {
       const p = request.role === "hero" ? program("hero", "hero.title")
         : request.role === "footer" ? program("footer", "footer.title")
           : program("activities", "activities.title");
-      return { ok: true, program: p, modelId: "glm-fixture", promptVersion: "glm-section-program-prompt/1.0", usage: { inputTokens: 2, cachedTokens: 0, outputTokens: 2, thinkingTokens: 1 }, durationMs: 2, attempts: 1 };
+      return { ok: true, program: p, modelId: "glm-fixture", promptVersion: "glm-section-program-prompt/1.1", usage: { inputTokens: 2, cachedTokens: 0, outputTokens: 2, thinkingTokens: 1 }, durationMs: 2, attempts: 1 };
     },
   };
   let generatedIndex = 0;
@@ -232,7 +232,7 @@ describe("adaptive section composition", () => {
 
   it("returns a typed atomic failure with no HTML when provider or a section gate fails", async () => {
     const providerFailure = setup({
-      provider: { generate: vi.fn(async () => ({ ok: false as const, code: "schema" as const, modelId: "glm", promptVersion: "glm-section-program-prompt/1.0" as const, usage: { inputTokens: 2, cachedTokens: 0, outputTokens: 1, thinkingTokens: 0 }, durationMs: 2, attempts: 1 as const, providerCategory: "schema" as const })) },
+      provider: { generate: vi.fn(async () => ({ ok: false as const, code: "schema" as const, modelId: "glm", promptVersion: "glm-section-program-prompt/1.1" as const, usage: { inputTokens: 2, cachedTokens: 0, outputTokens: 1, thinkingTokens: 0 }, durationMs: 2, attempts: 1 as const, providerCategory: "schema" as const })) },
       assemble: vi.fn(() => "must-not-assemble"),
     });
     const first = await composeAdaptiveSections(INPUT, providerFailure.deps);
@@ -251,8 +251,8 @@ describe("adaptive section composition", () => {
     const first = program("hero", "hero.title");
     const provider: GlmSectionProgramProvider = {
       generate: vi.fn()
-        .mockResolvedValueOnce({ ok: true as const, program: first, modelId: "glm-first", promptVersion: "glm-section-program-prompt/1.0" as const, usage: { inputTokens: 3, cachedTokens: 0, outputTokens: 2, thinkingTokens: 1 }, durationMs: 4, attempts: 1 as const })
-        .mockResolvedValueOnce({ ok: false as const, code: "schema" as const, modelId: "glm-second", promptVersion: "glm-section-program-prompt/1.0" as const, usage: { inputTokens: 5, cachedTokens: 0, outputTokens: 1, thinkingTokens: 0 }, durationMs: 6, attempts: 1 as const }),
+        .mockResolvedValueOnce({ ok: true as const, program: first, modelId: "glm-first", promptVersion: "glm-section-program-prompt/1.1" as const, usage: { inputTokens: 3, cachedTokens: 0, outputTokens: 2, thinkingTokens: 1 }, durationMs: 4, attempts: 1 as const })
+        .mockResolvedValueOnce({ ok: false as const, code: "schema" as const, modelId: "glm-second", promptVersion: "glm-section-program-prompt/1.1" as const, usage: { inputTokens: 5, cachedTokens: 0, outputTokens: 1, thinkingTokens: 0 }, durationMs: 6, attempts: 1 as const }),
     };
     const d = setup({ provider, assemble: vi.fn(() => "must-not-assemble") });
     const result = await composeAdaptiveSections(INPUT, d.deps);
@@ -273,7 +273,7 @@ describe("adaptive section composition", () => {
       root: { ...program("hero", "hero.title").root, copyKey: "unknown.key" },
     } as never;
     const d = setup({
-      provider: { generate: vi.fn(async () => ({ ok: true as const, program: badProgram, modelId: "glm-paid", promptVersion: "glm-section-program-prompt/1.0" as const, usage: { inputTokens: 7, cachedTokens: 0, outputTokens: 3, thinkingTokens: 1 }, durationMs: 8, attempts: 1 as const })) },
+      provider: { generate: vi.fn(async () => ({ ok: true as const, program: badProgram, modelId: "glm-paid", promptVersion: "glm-section-program-prompt/1.1" as const, usage: { inputTokens: 7, cachedTokens: 0, outputTokens: 3, thinkingTokens: 1 }, durationMs: 8, attempts: 1 as const })) },
       assemble: vi.fn(() => "must-not-assemble"),
     });
     const result = await composeAdaptiveSections(INPUT, d.deps);
@@ -331,7 +331,7 @@ describe("adaptive section composition", () => {
         root: { kind: "layout", id: `root-${request.ordinal}`, preset: "stack", gap: "md", padding: "lg", width: "wide", align: "stretch", justify: "between", columns: "one", color: "surface", radius: "lg", border: "hairline", transform: "none", blend: "normal", children: [
           { kind: "copy", id: `title-${request.ordinal}`, variant: "heading", copyKey, tone: "strong", size: "2xl", color: "ink", align: "start" },
         ] }, responsive: { mobile: [] }, motion: [],
-      }, modelId: "glm", promptVersion: "glm-section-program-prompt/1.0", usage: { inputTokens: 1, cachedTokens: 0, outputTokens: 1, thinkingTokens: 0 }, durationMs: 1, attempts: 1 };
+      }, modelId: "glm", promptVersion: "glm-section-program-prompt/1.1", usage: { inputTokens: 1, cachedTokens: 0, outputTokens: 1, thinkingTokens: 0 }, durationMs: 1, attempts: 1 };
     } };
     const collapsed = setup({
       provider: repeatedProvider,
@@ -346,5 +346,96 @@ describe("adaptive section composition", () => {
     });
     await expect(composeAdaptiveSections(INPUT, reconstructed.deps)).resolves.toMatchObject({ ok: false, reasonCode: "section_originality_failed" });
     expect(reconstructed.deps.assemble).not.toHaveBeenCalled();
+  });
+});
+
+const IMAGE_DESIGN = withRequiredLeadImage(AdaptivePageDesignProgramSchema.parse({
+  ...design,
+  imageSlots: [{ slotIndex: 0, ordinal: 0, mediaType: "photo", subject: "children_painting", purpose: "hero_identity", required: false }],
+}));
+const IMAGE_INPUT = { ...INPUT, design: IMAGE_DESIGN };
+
+function programWithMedia(role: ExpressiveSectionProgram["role"], copyKey: string): ExpressiveSectionProgram {
+  const base = program(role, copyKey);
+  return {
+    ...base,
+    root: {
+      ...base.root,
+      children: [
+        ...(base.root.kind === "layout" ? base.root.children : []),
+        { kind: "media", id: "shot", slotIndex: 0, aspect: "landscape", fit: "cover", treatment: "plain", radius: "lg", transform: "none" },
+      ],
+    },
+  } as ExpressiveSectionProgram;
+}
+
+function providerReturning(programFor: (request: GlmSectionProgramRequest) => ExpressiveSectionProgram) {
+  const calls: GlmSectionProgramRequest[] = [];
+  const provider: GlmSectionProgramProvider = {
+    async generate(request) {
+      calls.push(request);
+      return { ok: true, program: programFor(request), modelId: "glm-fixture", promptVersion: "glm-section-program-prompt/1.1", usage: { inputTokens: 2, cachedTokens: 0, outputTokens: 2, thinkingTokens: 1 }, durationMs: 2, attempts: 1 };
+    },
+  };
+  return { provider, calls };
+}
+
+function slotsSeenBy(deps: AdaptiveSectionCompositionDeps): number[][] {
+  const seen: number[][] = [];
+  (deps as AdaptiveSectionCompositionDeps & { beforeCompile: NonNullable<AdaptiveSectionCompositionDeps["beforeCompile"]> }).beforeCompile =
+    async ({ usedAssetSlots }) => {
+      seen.push([...usedAssetSlots]);
+      return { ok: true as const, bind: (html: string) => ({ ok: true as const, html }) };
+    };
+  return seen;
+}
+
+function programByRole(request: GlmSectionProgramRequest): ExpressiveSectionProgram {
+  return request.role === "hero" ? program("hero", "hero.title")
+    : request.role === "footer" ? program("footer", "footer.title")
+      : program("activities", "activities.title");
+}
+
+describe("lead-section image slots", () => {
+  it("passes the promoted lead slot to the section model as required", async () => {
+    const { provider, calls } = providerReturning(programByRole);
+    const d = setup({ provider });
+    slotsSeenBy(d.deps);
+    await composeAdaptiveSections(IMAGE_INPUT, d.deps);
+    expect(calls[0]).toMatchObject({ ordinal: 0, assetSlots: [{ slotIndex: 0, mediaType: "photo", required: true }] });
+  });
+
+  it("re-asks once when the lead section leaves its image slot empty and keeps the program that fills it", async () => {
+    const { provider, calls } = providerReturning((request) => request.requestId.endsWith(".reask")
+      ? programWithMedia("hero", "hero.title")
+      : programByRole(request));
+    const d = setup({ provider });
+    const seen = slotsSeenBy(d.deps);
+    const result = await composeAdaptiveSections(IMAGE_INPUT, d.deps);
+    expect(result.ok).toBe(true);
+    expect(calls.filter((request) => request.requestId.endsWith(".reask"))).toHaveLength(1);
+    expect(seen).toEqual([[0]]);
+  });
+
+  it("still delivers the page when the re-ask ignores the slot too, and never asks a third time", async () => {
+    const { provider, calls } = providerReturning(programByRole);
+    const d = setup({ provider });
+    const seen = slotsSeenBy(d.deps);
+    const result = await composeAdaptiveSections(IMAGE_INPUT, d.deps);
+    expect(result.ok).toBe(true);
+    expect(calls.filter((request) => request.ordinal === 0)).toHaveLength(2);
+    expect(seen).toEqual([[]]);
+  });
+
+  it("does not re-ask when the lead section already placed its image", async () => {
+    const { provider, calls } = providerReturning((request) => request.role === "hero"
+      ? programWithMedia("hero", "hero.title")
+      : programByRole(request));
+    const d = setup({ provider });
+    const seen = slotsSeenBy(d.deps);
+    const result = await composeAdaptiveSections(IMAGE_INPUT, d.deps);
+    expect(result.ok).toBe(true);
+    expect(calls.some((request) => request.requestId.endsWith(".reask"))).toBe(false);
+    expect(seen).toEqual([[0]]);
   });
 });

@@ -125,7 +125,7 @@ interface PreparedRow {
   readonly row: SectionPlanRow;
   readonly decision: AdaptivePageDesignProgram["decisions"][number];
   readonly action: "rebuild" | "generate";
-  readonly assetSlots: readonly { readonly slotIndex: number; readonly mediaType: AdaptivePageDesignProgram["imageSlots"][number]["mediaType"] }[];
+  readonly assetSlots: readonly { readonly slotIndex: number; readonly mediaType: AdaptivePageDesignProgram["imageSlots"][number]["mediaType"]; readonly required: boolean }[];
   readonly donor: NonNullable<ReturnType<typeof sourceForDecision>> | null;
   readonly verified: VerifiedSectionFragment | null;
   readonly provenance: SectionDecisionProvenance;
@@ -140,6 +140,14 @@ function collectProgramAssetSlots(program: ExpressiveSectionProgram): number[] {
   };
   visit(program.root);
   return slots;
+}
+
+function missingRequiredSlots(
+  program: ExpressiveSectionProgram,
+  assetSlots: PreparedRow["assetSlots"],
+): number[] {
+  const used = new Set(collectProgramAssetSlots(program));
+  return assetSlots.filter((slot) => slot.required && !used.has(slot.slotIndex)).map((slot) => slot.slotIndex);
 }
 
 function collectProgramCopyKeys(program: ExpressiveSectionProgram): string[] {
@@ -202,7 +210,7 @@ export const AdaptiveSectionRepairHandoffSchema = z.object({
 export type AdaptiveSectionRepairHandoff = z.infer<typeof AdaptiveSectionRepairHandoffSchema>;
 
 interface RedactedProviderTelemetry {
-  readonly promptVersion: "glm-section-program-prompt/1.0";
+  readonly promptVersion: "glm-section-program-prompt/1.1";
   readonly modelId: string | null;
   readonly usage?: { readonly inputTokens: number; readonly cachedTokens: number; readonly outputTokens: number; readonly thinkingTokens: number };
   readonly durationMs: number;
@@ -266,7 +274,7 @@ function manifest(
 function providerTelemetry(result: GlmSectionProgramProviderResult): RedactedProviderTelemetry | undefined {
   if (!("modelId" in result)) return undefined;
   return {
-    promptVersion: "glm-section-program-prompt/1.0",
+    promptVersion: "glm-section-program-prompt/1.1",
     modelId: result.modelId,
     ...(result.usage ? { usage: result.usage } : {}),
     durationMs: result.durationMs,
@@ -400,7 +408,7 @@ export async function composeAdaptiveSections(
       const action = decision.action === "generate" ? "generate" : "rebuild";
       const assetSlots = input.design.imageSlots
         .filter((slot) => slot.ordinal === row.ordinal)
-        .map((slot) => ({ slotIndex: slot.slotIndex, mediaType: slot.mediaType }));
+        .map((slot) => ({ slotIndex: slot.slotIndex, mediaType: slot.mediaType, required: slot.required }));
       let donor: ReturnType<typeof sourceForDecision> = null;
       let verified: VerifiedSectionFragment | null = null;
       if (decision.action !== "generate") {
@@ -468,6 +476,18 @@ export async function composeAdaptiveSections(
         }
         if (!providerResult.ok) return fail(providerFailureCode(providerResult.code));
         generatedProgram = providerResult.program;
+        // A required image the section never places is how a page is born with
+        // empty photo slots. Ask once more; if it is ignored again the page
+        // still ships, just without that image.
+        if (missingRequiredSlots(generatedProgram, assetSlots).length > 0) {
+          const reask = await deps.provider.generate({ ...request, requestId: `${request.requestId}.reask` });
+          const reaskTrace = providerTelemetry(reask);
+          if (reaskTrace) {
+            telemetry.push(reaskTrace);
+            deps.onProviderTelemetry?.(reaskTrace);
+          }
+          if (reask.ok && missingRequiredSlots(reask.program, assetSlots).length === 0) generatedProgram = reask.program;
+        }
       }
       preparedRows.push({ row, decision, action, assetSlots, donor, verified, provenance, generatedProgram });
     }

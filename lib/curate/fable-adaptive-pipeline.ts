@@ -28,7 +28,7 @@ import { readTemplateObjectText } from "@/lib/generation/template-object-reader"
 import { scoutVisualCandidates } from "@/lib/generation/visual-candidate-scout";
 import { canonicalJsonSha256, sha256 } from "@/lib/generation/content-hash";
 import type { AssetPipelineMode } from "@/lib/generation/asset-pipeline-mode";
-import type { AdaptivePageDesignProgram } from "@/lib/generation/adaptive-design-contracts";
+import { withRequiredLeadImage, type AdaptivePageDesignProgram } from "@/lib/generation/adaptive-design-contracts";
 import type { VisualEngineProjectMetadata } from "@/lib/projects/types";
 import type { GlmVisualRepairDelta } from "@/lib/generation/glm-visual-repair";
 import type { ExtractedBusinessData } from "@/lib/style-match/autofill/types";
@@ -284,8 +284,9 @@ async function resolveProductionAssets(
     readonly resolution?: FableAdaptivePipelineDeps["assetResolutionDeps"];
   },
 ): Promise<ResolvedPipelineAssets | FailedPipelineAssets> {
+  // A required slot the section never placed costs the page an image, not the
+  // page itself: composition already re-asked for it once.
   const used = new Set(input.usedAssetSlots);
-  if (input.design.imageSlots.some((slot) => slot.required && !used.has(slot.slotIndex))) return { ok: false, code: "asset_slot_unavailable" };
   const requestedSlots = input.design.imageSlots.filter((slot) => used.has(slot.slotIndex));
   if (requestedSlots.length === 0) return { ok: true, bind: (html) => ({ ok: true, html }), reapply: (html) => ({ ok: true, html }) };
   if (input.request.assetMode !== "curated" && input.request.assetMode !== "hybrid") return { ok: false, code: "required_asset_unavailable" };
@@ -426,12 +427,13 @@ export async function runFableAdaptivePipeline(
   }, { client: runtime.fireworksClient });
   runtime.recordModel("page_plan", "modelId" in pageDesign ? pageDesign : {});
   if (!pageDesign.ok) return fail("page_plan", pageDesign.code);
+  const design = withRequiredLeadImage(pageDesign.program);
 
   const compositionDeps = deps.adaptiveCompositionDeps ?? productionCompositionDeps(
     request,
     runtime,
     inventory,
-    pageDesign.program,
+    design,
     fetchText,
     deps.renderViewports ?? renderVisualQualityViewports,
     deps.onInternalError,
@@ -442,7 +444,7 @@ export async function runFableAdaptivePipeline(
   let streamedProviderTelemetry = 0;
   const existingProviderTelemetrySink = compositionDeps.onProviderTelemetry;
   const composition = await (deps.composeAdaptiveSections ?? composeAdaptiveSections)({
-    requestId: request.projectId!, plan: planned.plan, design: pageDesign.program, scout, inventory, copy,
+    requestId: request.projectId!, plan: planned.plan, design: design, scout, inventory, copy,
   }, {
     ...compositionDeps,
     provider: runtime.glmSectionProgramProvider,
@@ -454,7 +456,7 @@ export async function runFableAdaptivePipeline(
     beforeCompile: async ({ usedAssetSlots }) => {
       try {
         const resolved = await resolveAssets(
-          { design: pageDesign.program, request, usedAssetSlots },
+          { design: design, request, usedAssetSlots },
           { provider: runtime.geminiAssetPackProvider, ...(deps.assetResolutionDeps ? { resolution: deps.assetResolutionDeps } : {}) },
         );
         if (!resolved.ok) {
@@ -488,7 +490,7 @@ export async function runFableAdaptivePipeline(
   if (!finalized.ok) return fail("initial_program", "sanitization_failed");
   const buildVisualEngine = deps.buildVisualEngine ?? buildProductionVisualEngine;
   const built = buildVisualEngine({
-    html: finalized.html, request, inventory, plan: planned.plan, design: pageDesign.program,
+    html: finalized.html, request, inventory, plan: planned.plan, design: design,
     composition, handoff: composition.handoff,
     ...(resolvedAssets.assetManifest ? { assetManifest: resolvedAssets.assetManifest } : {}),
     ...(resolvedAssets.assetTrace ? { assetTrace: resolvedAssets.assetTrace } : {}),
@@ -496,7 +498,7 @@ export async function runFableAdaptivePipeline(
 
   let currentHandoff = composition.handoff;
   const repairHandoff: FableVisualRepairHandoff = {
-    design: pageDesign.program,
+    design: design,
     sections: currentHandoff,
     async applyDelta(delta: GlmVisualRepairDelta) {
       const programIds = new Set(currentHandoff.entries.flatMap((entry) => entry.programId ? [entry.programId] : []));
@@ -509,7 +511,7 @@ export async function runFableAdaptivePipeline(
       const repairedFinal = finalizeAndSeal(reapplied.html);
       if (!repairedFinal.ok) return { ok: false };
       const rebuilt = buildVisualEngine({
-        html: repairedFinal.html, request, inventory, plan: planned.plan, design: pageDesign.program,
+        html: repairedFinal.html, request, inventory, plan: planned.plan, design: design,
         composition, handoff: repaired.handoff,
         ...(resolvedAssets.assetManifest ? { assetManifest: resolvedAssets.assetManifest } : {}),
         ...(resolvedAssets.assetTrace ? { assetTrace: resolvedAssets.assetTrace } : {}),

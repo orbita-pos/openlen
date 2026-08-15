@@ -44,7 +44,7 @@ describe("generateMissingSection", () => {
       responsive: { mobile: [] }, motion: [],
     };
     const provider = { generate: vi.fn(async () => ({
-      ok: true as const, program: expressiveProgram, modelId: "glm", promptVersion: "glm-section-program-prompt/1.0" as const,
+      ok: true as const, program: expressiveProgram, modelId: "glm", promptVersion: "glm-section-program-prompt/1.1" as const,
       usage: { inputTokens: 1, cachedTokens: 0, outputTokens: 1, thinkingTokens: 0 }, durationMs: 1, attempts: 1 as const,
     })) };
     const provenance = { schemaVersion: "section-decision-provenance/1.0" as const, action: "generate" as const, candidateId: null, sourceTemplateId: null, sourceBandOrdinal: null, sourceContentHash: null, sourceStructuralFingerprint: null, usefulTraits: [] };

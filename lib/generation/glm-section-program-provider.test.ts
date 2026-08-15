@@ -36,7 +36,7 @@ const BASE_REQUEST = {
     forbiddenSignals: ["corporate_dashboard"],
   },
   copyKeys: ["hero.title"],
-  assetSlots: [{ slotIndex: 0, mediaType: "photo" as const }],
+  assetSlots: [{ slotIndex: 0, mediaType: "photo" as const, required: true }],
 };
 
 function clientWith<T>(result: FireworksJsonResult<T>) {
@@ -73,7 +73,7 @@ describe("GLM expressive section provider", () => {
   it("requests generate once with no donor material and the strict designer policy", async () => {
     const fake = clientWith({ ok: true, value: PROGRAM, modelId: "accounts/fireworks/models/glm-5p2", usage: USAGE, durationMs: 9, attempts: 1 });
     const result = await createGlmSectionProgramProvider({ client: fake.client }).generate(generateRequest());
-    expect(result).toMatchObject({ ok: true, program: PROGRAM, promptVersion: "glm-section-program-prompt/1.0", usage: USAGE, attempts: 1 });
+    expect(result).toMatchObject({ ok: true, program: PROGRAM, promptVersion: "glm-section-program-prompt/1.1", usage: USAGE, attempts: 1 });
     expect(fake.calls).toHaveLength(1);
     expect(fake.calls[0]).toMatchObject({ role: "designer", reasoningEffort: "high", maxOutputTokens: 8192, requestId: "page-1.section-0" });
     const payload = JSON.parse(String(fake.calls[0].messages[1].content));
@@ -138,7 +138,7 @@ describe("GLM expressive section provider", () => {
       { ...generateRequest(), inspiration: (rebuildRequest(valid) as Extract<GlmSectionProgramRequest, { mode: "rebuild" }>).inspiration },
     ];
     for (const request of bad) {
-      await expect(provider.generate(request as GlmSectionProgramRequest)).resolves.toEqual({ ok: false, code: "invalid_input", promptVersion: "glm-section-program-prompt/1.0" });
+      await expect(provider.generate(request as GlmSectionProgramRequest)).resolves.toEqual({ ok: false, code: "invalid_input", promptVersion: "glm-section-program-prompt/1.1" });
     }
     expect(fake.calls).toHaveLength(0);
   });
