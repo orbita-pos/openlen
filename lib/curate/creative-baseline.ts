@@ -78,11 +78,23 @@ function fillSectionLocally(section: HTMLElement, role: string, copy: ExtractedB
   return applied;
 }
 
+/** The stable handles the creative sandbox hands to the model. Without them
+ * `inspect_canvas` returns an empty outline and every targeted operation fails
+ * with `unknown_target`, leaving the model able to change only page CSS. */
+function targetId(role: string, ordinal: number): string {
+  const slug = role.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") || "section";
+  return `ol-${slug}-${ordinal}`.slice(0, 64);
+}
+
 function fillLocally(html: string, copy: ExtractedBusinessData): { html: string; appliedOps: number } {
   const document = parse(html);
   let appliedOps = 0;
+  let ordinal = 0;
   for (const section of document.querySelectorAll("[data-openlen-role]")) {
-    appliedOps += fillSectionLocally(section, section.getAttribute("data-openlen-role") ?? "", copy);
+    const role = section.getAttribute("data-openlen-role") ?? "";
+    ordinal += 1;
+    section.setAttribute("data-openlen-edit-id", targetId(role, ordinal));
+    appliedOps += fillSectionLocally(section, role, copy);
   }
   return { html: document.toString(), appliedOps };
 }

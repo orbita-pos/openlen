@@ -1,11 +1,10 @@
 import { parse } from "node-html-parser";
 
+import { isResolvedAssetUrl, type AssetResolutionSource } from "@/lib/generation/asset-contracts";
 import type { SafeCreativeCandidate } from "./creative-baseline";
 
 const MAX_IMAGES_PER_PAGE = 3;
 const EDIT_ID = "data-openlen-edit-id";
-/** Only bytes that already went through OpenLen's validated asset path. */
-const VALIDATED_ASSET = /^\/api\/projects\/[a-z0-9-]+\/assets\/[a-f0-9]{64}\.(?:webp|avif|jpg|jpeg|png)$/i;
 
 export interface OptionalImageRequest {
   readonly targetId: string;
@@ -26,7 +25,7 @@ export interface OptionalImageToolDeps {
     mediaType: string;
     required: false;
     identityBearing: false;
-  }) => Promise<{ ok: true; url: string; source: "curated" | "generated" } | { ok: false; code: string }>;
+  }) => Promise<{ ok: true; url: string; source: AssetResolutionSource } | { ok: false; code: string }>;
   readonly recordImage?: (trace: { targetId: string; outcome: "applied" | "failed"; source?: string; code?: string }) => void;
 }
 
@@ -65,7 +64,7 @@ export async function runOptionalImageTool(
       deps.recordImage?.({ targetId: request.targetId, outcome: "failed", code: resolved.code });
       continue;
     }
-    if (!VALIDATED_ASSET.test(resolved.url)) {
+    if (!isResolvedAssetUrl(resolved.url, resolved.source)) {
       deps.recordImage?.({ targetId: request.targetId, outcome: "failed", code: "unvalidated_asset" });
       continue;
     }

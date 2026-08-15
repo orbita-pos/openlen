@@ -1,6 +1,6 @@
 import type { ModelTokenUsage } from "./model-cost";
 import type { PageBudget, RedactedPageCost } from "./page-generation-budget";
-import type { FireworksProviderCategory, FireworksServiceTier } from "../ai/fireworks-contracts";
+import { FIREWORKS_PROVIDER_CATEGORIES, type FireworksProviderCategory, type FireworksServiceTier } from "../ai/fireworks-contracts";
 import { z } from "zod";
 
 // One list, used by the types and every schema below. A stage missing from it
@@ -83,7 +83,7 @@ const PaidCallSchema = z.discriminatedUnion("kind", [
     durationMs: NonNegativeSafeInteger,
     attempts: z.union([z.literal(0), z.literal(1), z.literal(2), z.literal(3)]),
     serviceTier: z.enum(["standard", "priority"]).optional(),
-    providerCategory: z.enum(["request", "http", "response", "schema", "timeout", "transport"]).optional(),
+    providerCategory: z.enum(FIREWORKS_PROVIDER_CATEGORIES).optional(),
     httpStatus: z.number().int().min(100).max(599).optional(),
   }).strict(),
   z.object({ stage: StageSchema, kind: z.literal("image"), modelId: ModelId, usage: ImageUsageSchema, durationMs: NonNegativeSafeInteger, attempts: z.union([z.literal(0), z.literal(1), z.literal(2), z.literal(3)]) }).strict(),

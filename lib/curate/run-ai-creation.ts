@@ -1,5 +1,8 @@
 import type { BusinessProfileData } from "@/lib/business-profiles/types";
+import { assessFinalVisualCandidate, isFinalVisualAcceptance } from "@/lib/ai/qwen-visual-critic";
 import { renderVisualQualityViewports } from "@/lib/ai/visual-quality-renderer";
+import type { IntentAnalysis } from "@/lib/generation/contracts";
+import type { CreativeDirection } from "@/lib/generation/creative-contracts";
 import { FABLE_TELEMETRY_STAGES, type FableTelemetryStage } from "@/lib/generation/fable-generation-telemetry";
 import { sanitizeForPublish, sealRelease } from "@/lib/html-engine";
 import { listSections } from "@/lib/sections/store";
@@ -13,9 +16,11 @@ import {
   type AiCreationStage,
 } from "./ai-creation-contracts";
 import { runAdvisoryVisualReview } from "./advisory-visual-review";
-import { buildCreativeBaseline } from "./creative-baseline";
+import { buildCreativeBaseline, type SafeCreativeCandidate } from "./creative-baseline";
+import { resolveCreativeImage } from "./creative-image-resolution";
 import { createCreativeSandbox } from "./creative-sandbox";
-import { runDeepSeekCreativeSession } from "./deepseek-creative-session";
+import { runDeepSeekCreativeSession, type CreativeSessionDeps } from "./deepseek-creative-session";
+import { runOptionalImageTool } from "./optional-image-tool";
 import { createFableRuntimeComposition, type FableRuntimeComposition, type FableRuntimeCompositionOptions } from "./fable-runtime-composition";
 import { runCreativeGeneration, type CreativeGenerationDeps } from "./run-creative-generation";
 
@@ -36,6 +41,8 @@ export interface RunAiCreationDeps {
   creativeGenerationDeps?: Partial<CreativeGenerationDeps>;
   /** Rendering seam so tests never launch a browser. */
   renderViewports?: typeof renderVisualQualityViewports;
+  /** Asset boundary for the model's optional image tool. */
+  resolveImage?: typeof resolveCreativeImage;
   /** Fragment-body loader forwarded to the baseline. */
   fetchText?: (storageUrl: string) => Promise<string | null>;
 }
@@ -71,32 +78,109 @@ function deliveryReason(reasonCode: string): AiCreationReasonCode {
 function productionDeps(
   runtime: FableRuntimeComposition,
   renderViewports: typeof renderVisualQualityViewports,
+  resolveImage: typeof resolveCreativeImage,
 ): CreativeGenerationDeps {
+  // The advisory reviewer needs the same bytes the render gate just produced.
+  // Rendering is a browser launch; one document is rendered once.
+  let lastRender: { html: string; result: Awaited<ReturnType<typeof renderViewports>> } | null = null;
+  const renderFull = async (html: string) => {
+    if (lastRender?.html === html) return lastRender.result;
+    const result = await renderViewports(html);
+    lastRender = { html, result };
+    return result;
+  };
   const render = async (html: string) => {
-    const rendered = await renderViewports(html);
+    const rendered = await renderFull(html);
     if (!rendered) return null;
     return {
       mobileOverflow: (rendered as { mobileOverflow?: boolean }).mobileOverflow === true,
       invalidGeometry: (rendered as { invalidGeometry?: boolean }).invalidGeometry === true,
     };
   };
+  const sandboxFor = (candidate: SafeCreativeCandidate) =>
+    createCreativeSandbox(candidate, { sanitize: sanitizeForPublish, seal: sealRelease, render });
+  const recordModel = (stage: "creative_session", result: Parameters<CreativeSessionDeps["recordModel"] & object>[1]) =>
+    runtime.recordModel(stage, "modelId" in result ? result : {});
+
+  const creativeSession = (
+    session: { requestId: string; brief: string; intent: IntentAnalysis; issueSummary?: string; maxTurns?: 1 },
+    candidate: SafeCreativeCandidate,
+  ) => {
+    const sandbox = sandboxFor(candidate);
+    const direction = (candidate.visualEngine as { creativeDirection?: CreativeDirection }).creativeDirection;
+    return runDeepSeekCreativeSession({ ...session, baseline: candidate }, {
+      client: runtime.fireworksToolClient,
+      sandbox,
+      recordModel,
+      // No creative direction means no taxonomy to resolve against, so the
+      // image tool simply is not offered for that page.
+      ...(direction ? {
+        requestImage: async (request) => {
+          const applied = await runOptionalImageTool({
+            projectId: session.requestId,
+            candidate: sandbox.current(),
+            requests: [request],
+          }, {
+            resolve: () => resolveImage({
+              projectId: session.requestId,
+              intent: session.intent,
+              direction,
+              subject: request.subject,
+              ...(request.mediaType ? { mediaType: request.mediaType } : {}),
+            }, { provider: runtime.geminiAssetPackProvider }),
+            recordImage: (trace) => {
+              if (trace.outcome === "applied") runtime.recordImage({ modelId: "asset-pipeline", generatedCount: 1, durationMs: 0 });
+            },
+          });
+          if (!applied.applied) return { ok: false, code: "invalid_patch", detail: "image_unavailable" };
+          return sandbox.adopt(applied.candidate);
+        },
+      } : {}),
+    });
+  };
 
   return {
     buildBaseline: buildCreativeBaseline,
+    renderCandidate: render,
     validateDelivery: validateAiCompositionDelivery,
     recordFailure: (stage, reasonCode) => { void runtime.recordFailure(telemetryStage(stage), reasonCode); },
     recordDegraded: (stage, reasonCode) => runtime.recordDegraded(telemetryStage(stage), reasonCode),
-    runCreativeSession: (session) => runDeepSeekCreativeSession(session, {
-      client: runtime.fireworksToolClient,
-      sandbox: createCreativeSandbox(session.baseline, { sanitize: sanitizeForPublish, seal: sealRelease, render }),
-      recordModel: (stage, result) => runtime.recordModel(stage, "modelId" in result ? result : {}),
-    }),
-    // Qwen review stays unwired until Task 5 authorises live vision calls; an
-    // absent reviewer is an accepted branch, not a failure.
+    runCreativeSession: (session) => creativeSession(session, session.baseline),
     runAdvisoryReview: (review) => runAdvisoryVisualReview(review, {
       render,
-      review: async () => ({ ok: false }),
-      repair: async () => ({ candidate: review.candidate, changed: false, acceptedMutations: 0, stoppedBy: "provider" }),
+      review: async ({ html }) => {
+        const rendered = await renderFull(html);
+        if (!rendered) return { ok: false };
+        const assessed = await assessFinalVisualCandidate({
+          requestId: review.requestId,
+          screenshots: { desktop: rendered.desktop, mobile: rendered.mobile },
+          deterministic: {
+            mobileOverflow: rendered.mobileOverflow === true,
+            weakTypographyHierarchy: rendered.weakTypographyHierarchy === true,
+            invalidGeometry: rendered.invalidGeometry === true,
+          },
+          brief: {
+            niche: review.intent.functional.siteType,
+            requiredSignals: review.intent.requiredVisualSignals,
+            forbiddenSignals: review.intent.forbiddenVisualSignals,
+          },
+        }, { client: runtime.fireworksClient });
+        runtime.recordModel("final_critic", "modelId" in assessed ? assessed : {});
+        if (!assessed.ok) return { ok: false };
+        return {
+          ok: true,
+          accepted: isFinalVisualAcceptance(assessed.verdict),
+          // Codes only. The critic's prose never reaches the repair prompt.
+          issues: assessed.verdict.issues.map((issue) => `${issue.code}:${issue.viewport}`),
+        };
+      },
+      repair: (input) => creativeSession({
+        requestId: input.requestId,
+        brief: input.brief,
+        intent: review.intent,
+        issueSummary: input.issueSummary,
+        maxTurns: 1,
+      }, review.candidate),
     }),
   };
 }
@@ -132,7 +216,11 @@ export async function runAiCreation(
     records,
     ...(input.onStage ? { onStage: input.onStage } : {}),
   }, {
-    ...productionDeps(runtime, deps.renderViewports ?? renderVisualQualityViewports),
+    ...productionDeps(
+      runtime,
+      deps.renderViewports ?? renderVisualQualityViewports,
+      deps.resolveImage ?? resolveCreativeImage,
+    ),
     ...(deps.fetchText ? { fetchText: deps.fetchText } : {}),
     ...deps.creativeGenerationDeps,
   });

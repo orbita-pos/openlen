@@ -141,6 +141,15 @@ export const AssetResolutionSchema = z.discriminatedUnion("source", [
   if (!validUrl) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["url"], message: "URL does not satisfy the source policy" });
 });
 
+/** The one place that decides whether a resolved asset URL may reach a page.
+ * Callers outside the manifest (the creative image tool) reuse it instead of
+ * writing a second, narrower pattern. */
+export function isResolvedAssetUrl(url: string, source: AssetResolutionSource): boolean {
+  if (source === "curated" || source === "abstract" || source === "template") return isCatalogUrl(url);
+  if (source === "generated") return isGeneratedUrl(url);
+  return isPlaceholderUrl(url);
+}
+
 export const AssetManifestSchema = z.object({
   schemaVersion: z.literal("asset-manifest/1.0"),
   manifestId: HashSchema,

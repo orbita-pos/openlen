@@ -28,6 +28,9 @@ export interface CreativeSandbox {
   current(): SafeCreativeCandidate;
   inspect(): CreativeCanvasInspection;
   applyPatch(input: unknown): Promise<CreativeToolResult>;
+  /** Takes bytes produced outside the patch protocol (the image tool) through
+   * the same sanitize/seal/render gate. Nothing becomes current unvetted. */
+  adopt(candidate: SafeCreativeCandidate): Promise<CreativeToolResult>;
   renderPreview(): Promise<CreativeToolResult>;
 }
 
@@ -171,6 +174,20 @@ export function createCreativeSandbox(baseline: SafeCreativeCandidate, deps: Cre
     return { ok: true, html: sealed.html, warnings: warningsFor(sanitized.removed) };
   };
 
+  // Every accepted mutation re-stamps the manifest hash; otherwise the delivery
+  // gate rejects the improved page for not matching its own bytes.
+  const commit = (next: SafeCreativeCandidate, html: string): void => {
+    const manifest = (next.visualEngine as { compositionManifest?: Record<string, unknown> }).compositionManifest;
+    state = {
+      ...next,
+      html,
+      visualEngine: {
+        ...next.visualEngine,
+        ...(manifest ? { compositionManifest: { ...manifest, outputHash: sha256(html) } } : {}),
+      } as SafeCreativeCandidate["visualEngine"],
+    };
+  };
+
   return {
     current: () => state,
 
@@ -209,19 +226,18 @@ export function createCreativeSandbox(baseline: SafeCreativeCandidate, deps: Cre
 
       const gated = await gate(draft.toString());
       if (!("html" in gated)) return gated;
-      // Every accepted mutation re-stamps the manifest hash; otherwise the
-      // delivery gate rejects the improved page for not matching its own bytes.
-      const manifest = (state.visualEngine as { compositionManifest?: Record<string, unknown> }).compositionManifest;
-      state = {
+      commit({
         ...state,
-        html: gated.html,
         source: "deepseek",
         appliedOps: state.appliedOps + parsed.patch.operations.length,
-        visualEngine: {
-          ...state.visualEngine,
-          ...(manifest ? { compositionManifest: { ...manifest, outputHash: sha256(gated.html) } } : {}),
-        } as SafeCreativeCandidate["visualEngine"],
-      };
+      }, gated.html);
+      return { ok: true, warnings: gated.warnings };
+    },
+
+    async adopt(candidate) {
+      const gated = await gate(candidate.html);
+      if (!("html" in gated)) return gated;
+      commit({ ...candidate, source: "deepseek" }, gated.html);
       return { ok: true, warnings: gated.warnings };
     },
 

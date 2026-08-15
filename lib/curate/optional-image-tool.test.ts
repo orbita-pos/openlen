@@ -21,7 +21,7 @@ const url = (sha: string) => `/api/projects/p/assets/${sha}.webp`;
 
 function deps(over: Partial<OptionalImageToolDeps> = {}): OptionalImageToolDeps {
   return {
-    resolve: async (intent) => ({ ok: true as const, url: url(intent.subject === "dos" ? "b".repeat(64) : FIRST_SHA), source: "curated" as const }),
+    resolve: async (intent) => ({ ok: true as const, url: url(intent.subject === "dos" ? "b".repeat(64) : FIRST_SHA), source: "generated" as const }),
     recordImage: vi.fn(),
     ...over,
   };
@@ -40,7 +40,7 @@ describe("optional image tool", () => {
   });
 
   it("asks the asset boundary for an optional, non-identity image", async () => {
-    const resolve = vi.fn(async (_intent: { required: boolean; identityBearing: boolean }) => ({ ok: true as const, url: url(FIRST_SHA), source: "curated" as const }));
+    const resolve = vi.fn(async (_intent: { required: boolean; identityBearing: boolean }) => ({ ok: true as const, url: url(FIRST_SHA), source: "generated" as const }));
     await runOptionalImageTool({ projectId: "p", candidate: CANDIDATE, requests: [REQUESTS[0]] }, deps({ resolve } as never));
     expect(resolve.mock.calls[0][0]).toMatchObject({ required: false, identityBearing: false });
   });
@@ -48,7 +48,7 @@ describe("optional image tool", () => {
   it("keeps the existing candidate when image two fails after image one", async () => {
     const resolve = vi.fn(async (intent: { subject: string }) => (intent.subject === "dos"
       ? { ok: false as const, code: "provider" as const }
-      : { ok: true as const, url: url(FIRST_SHA), source: "curated" as const }));
+      : { ok: true as const, url: url(FIRST_SHA), source: "generated" as const }));
     const result = await runOptionalImageTool({ projectId: "p", candidate: CANDIDATE, requests: REQUESTS }, deps({ resolve }));
     expect(result.candidate.html).toContain(url(FIRST_SHA));
     expect(result.candidate.html).toContain("data-original-image-two");
@@ -74,7 +74,7 @@ describe("optional image tool", () => {
   });
 
   it("never resolves more than three images for one page", async () => {
-    const resolve = vi.fn(async () => ({ ok: true as const, url: url(FIRST_SHA), source: "curated" as const }));
+    const resolve = vi.fn(async () => ({ ok: true as const, url: url(FIRST_SHA), source: "generated" as const }));
     await runOptionalImageTool({
       projectId: "p",
       candidate: CANDIDATE,
@@ -89,7 +89,7 @@ describe("optional image tool", () => {
   });
 
   it("skips a request whose DOM target does not exist", async () => {
-    const resolve = vi.fn(async () => ({ ok: true as const, url: url(FIRST_SHA), source: "curated" as const }));
+    const resolve = vi.fn(async () => ({ ok: true as const, url: url(FIRST_SHA), source: "generated" as const }));
     const result = await runOptionalImageTool(
       { projectId: "p", candidate: CANDIDATE, requests: [{ targetId: "ol-ghost-9", subject: "uno" }] },
       deps({ resolve }),
@@ -105,6 +105,26 @@ describe("optional image tool", () => {
     );
     expect(result.applied).toBe(false);
     expect(result.candidate).toEqual(CANDIDATE);
+  });
+
+  // The curated catalog is the first resolver in production. A tool that only
+  // accepted stored project assets would silently drop every catalog image.
+  it("applies a curated catalog image", async () => {
+    const catalog = "https://images.openlen.com/openlen/uno.webp";
+    const result = await runOptionalImageTool(
+      { projectId: "p", candidate: CANDIDATE, requests: [REQUESTS[0]] },
+      deps({ resolve: async () => ({ ok: true, url: catalog, source: "curated" }) }),
+    );
+    expect(result.applied).toBe(true);
+    expect(result.candidate.html).toContain(catalog);
+  });
+
+  it("refuses a url that does not satisfy its own source policy", async () => {
+    const result = await runOptionalImageTool(
+      { projectId: "p", candidate: CANDIDATE, requests: [REQUESTS[0]] },
+      deps({ resolve: async () => ({ ok: true, url: url(FIRST_SHA), source: "curated" }) }),
+    );
+    expect(result.applied).toBe(false);
   });
 
   it("records a redacted image trace that carries no page bytes", async () => {

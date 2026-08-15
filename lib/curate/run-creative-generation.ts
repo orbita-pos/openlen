@@ -1,4 +1,5 @@
 import type { BusinessProfileData } from "@/lib/business-profiles/types";
+import type { IntentAnalysis } from "@/lib/generation/contracts";
 import type { VisualEngineProjectMetadata } from "@/lib/projects/types";
 import type { SectionRecord } from "@/lib/sections/store";
 import type { validateAiCompositionDelivery } from "./ai-composition-delivery";
@@ -18,15 +19,22 @@ export interface CreativeGenerationDeps {
   readonly buildBaseline: typeof buildCreativeBaseline;
   /** Forwarded to the baseline builder so the whole path can run offline. */
   readonly fetchText?: (storageUrl: string) => Promise<string | null>;
+  /** The baseline's own render gate. Without it the baseline builder falls back
+   * to a stub that approves every document, so overflow ships unchecked. */
+  readonly renderCandidate?: (html: string) => Promise<{ mobileOverflow: boolean; invalidGeometry: boolean } | null>;
+  /** `intent` travels with both improvement stages: the image boundary and the
+   * vision critic both speak the taxonomy, not the free-text brief. */
   readonly runCreativeSession: (input: {
     requestId: string;
     brief: string;
     baseline: SafeCreativeCandidate;
+    intent: IntentAnalysis;
   }) => Promise<CreativeSessionResult>;
   readonly runAdvisoryReview: (input: {
     requestId: string;
     brief: string;
     candidate: SafeCreativeCandidate;
+    intent: IntentAnalysis;
   }) => Promise<AdvisoryReviewResult>;
   readonly validateDelivery: typeof validateAiCompositionDelivery;
   /** Terminal: only the two branches that cost the user a page use it. */
@@ -74,7 +82,10 @@ export async function runCreativeGeneration(
       brief: input.brief,
       profileData: input.profileData,
       records: input.records,
-    }, deps.fetchText ? { fetchText: deps.fetchText } : undefined);
+    }, {
+      ...(deps.fetchText ? { fetchText: deps.fetchText } : {}),
+      ...(deps.renderCandidate ? { render: deps.renderCandidate } : {}),
+    });
   } catch {
     deps.recordFailure?.("baseline", "composition_failed");
     return { ok: false, stage: "composition", reasonCode: "composition_failed" };
@@ -93,6 +104,7 @@ export async function runCreativeGeneration(
       requestId: input.projectId,
       brief: input.brief,
       baseline: lastKnownGood,
+      intent: baseline.intent,
     });
     lastKnownGood = creative.candidate;
     if (!creative.changed) {
@@ -110,6 +122,7 @@ export async function runCreativeGeneration(
       requestId: input.projectId,
       brief: input.brief,
       candidate: lastKnownGood,
+      intent: baseline.intent,
     });
     lastKnownGood = reviewed.candidate;
     if (!reviewed.reviewed) deps.recordDegraded?.("advisory_review", "review_unavailable");

@@ -186,6 +186,7 @@ function successDeps(row: (typeof AI_HYBRID_NICHE_CASES)[number]): Required<RunA
     listSections: vi.fn(async () => [{ id: "fixture" }] as never),
     fetchText: vi.fn(async () => null),
     renderViewports: vi.fn() as never,
+    resolveImage: vi.fn() as never,
     createFableRuntimeComposition: (() => ({
       recordModel: vi.fn(), recordImage: vi.fn(), recordDegraded: vi.fn(),
       recordFailure: vi.fn(async () => undefined), recordDelivered: vi.fn(async () => undefined),

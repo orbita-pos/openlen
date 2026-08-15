@@ -1,6 +1,9 @@
 import { createHash } from "node:crypto";
 
+import { parse } from "node-html-parser";
 import { describe, expect, it, vi } from "vitest";
+
+import { StableTargetIdSchema } from "./creative-sandbox-contracts";
 
 import { detectTemplateLeaks } from "@/lib/assemble/leaks";
 import type { SectionRecord } from "@/lib/sections/store";
@@ -194,5 +197,24 @@ describe("baseline against real catalog fragments", () => {
     expect(result.candidate.html).toContain("<html");
     expect(result.candidate.html).not.toContain("Donante");
     expect(result.candidate.appliedOps).toBeGreaterThan(0);
+  });
+
+  // Without stable handles the sandbox's outline is empty and every targeted
+  // operation fails, leaving the model able to change only page CSS.
+  it("hands the sandbox an addressable target for every role it composed", async () => {
+    const result = await buildCreativeBaseline(
+      { ...INPUT, brief: GENERIC_BRIEF, records: CATALOG },
+      { fetchText: CATALOG_FETCH, render: async () => ({ mobileOverflow: false, invalidGeometry: false }) },
+    );
+    if (!result.ok) throw new Error(`baseline failed: ${result.code}`);
+
+    const document = parse(result.candidate.html);
+    const roles = document.querySelectorAll("[data-openlen-role]");
+    const targets = document.querySelectorAll("[data-openlen-edit-id]");
+    expect(roles.length).toBeGreaterThan(0);
+    expect(targets).toHaveLength(roles.length);
+    const ids = targets.map((node) => node.getAttribute("data-openlen-edit-id") ?? "");
+    expect(new Set(ids).size).toBe(ids.length);
+    for (const id of ids) expect(StableTargetIdSchema.safeParse(id).success).toBe(true);
   });
 });

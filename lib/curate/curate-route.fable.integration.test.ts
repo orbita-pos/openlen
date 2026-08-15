@@ -1,11 +1,13 @@
 import { createHash } from "node:crypto";
 
 import { createFireworksToolClient } from "@/lib/ai/fireworks-tool-client";
+import { modelIdForRole } from "@/lib/generation/fable-model-policy";
 import { createPageGenerationBudget } from "@/lib/generation/page-generation-budget";
 import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import sharp from "sharp";
 
 import type { SectionRecord } from "@/lib/sections/store";
+import type { RunAiCreationDeps } from "@/lib/curate/run-ai-creation";
 
 const mocks = vi.hoisted(() => ({
   auth: vi.fn(), captureException: vi.fn(), getCreditState: vi.fn(), debitCredits: vi.fn(), creditsForUsage: vi.fn(), consumeToken: vi.fn(),
@@ -28,6 +30,8 @@ const BRIEF = "Necesito un sitio para mi taller de restauración de relojes mec�
 const NICHE_BRIEF = "Una plataforma infantil para colorear, jugar y crear historias";
 const JPEG = "/9j/4AAQSkZJRgABAQEAYABgAAD/2wBDAAMCAgMCAgMDAwMEAwMEBQgFBQQEBQoHBwYIDAoMDAsKCwsNDhIQDQ4RDgsLEBYQERMUFRUVDA8XGBYUGBIUFRT/2wBDAQMEBAUEBQkFBQkUDQsNFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBT/wAARCABAAEADASIAAhEBAxEB/8QAHwAAAQUBAQEBAQEAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAAAgEDAwIEAwUFBAQAAAF9AQIDAAQRBRIhMUEGE1FhByJxFDKBkaEII0KxwRVS0fAkM2JyggkKFhcYGRolJicoKSo0NTY3ODk6Q0RFRkdISUpTVFVWV1hZWmNkZWZnaGlqc3R1dnd4eXqDhIWGh4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uHi4+Tl5ufo6erx8vP09fb3+Pn6/8QAHwEAAwEBAQEBAQEBAQAAAAAAAAECAwQFBgcICQoL/8QAtREAAgECBAQDBAcFBAQAAQJ3AAECAxEEBSExBhJBUQdhcRMiMoEIFEKRobHBCSMzUvAVYnLRChYkNOEl8RcYGRomJygpKjU2Nzg5OkNERUZHSElKU1RVVldYWVpjZGVmZ2hpanN0dXZ3eHl6goOEhYaHiImKkpOUlZaXmJmaoqOkpaanqKmqsrO0tba3uLm6wsPExcbHyMnK0tPU1dbX2Nna4uPk5ebn6Onq8vP09fb3+Pn6/9oADAMBAAIRAxEAPwDq6KKK/os/KgooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigD//2Q==";
 const DONOR = '<header data-sec="hero-donor"><h1>Donor</h1></header>';
+const DEEPSEEK_MODEL = modelIdForRole("reasoner");
+const CRITIC_MODEL = modelIdForRole("visual_critic");
 const shortHash = (value: string) => createHash("sha256").update(value).digest("hex").slice(0, 12);
 const BODIES: Record<string, string> = {
   "header-fix": '<header data-sec="header-fix"><a href="#top">Donante marca</a><a href="#x">Donante enlace</a></header>',
@@ -99,25 +103,47 @@ function expressiveProgram(role: string, ordinal: number) {
 
 /** Tool-calling boundary. `mode` decides whether DeepSeek improves the page,
  * refuses to, or is unreachable entirely. */
-function toolBoundary(mode: "improve" | "finish" | "down", calls: string[]): typeof fetch {
+function toolCall(name: string, args: unknown, reasoning: string) {
+  return {
+    role: "assistant", content: "", reasoning_content: reasoning,
+    tool_calls: [{ index: 0, id: `call-${name}`, type: "function", name: null, function: { name, arguments: JSON.stringify(args) } }],
+  };
+}
+
+/** The last target the sandbox reported back through `inspect_canvas`. The
+ * model can only address handles OpenLen handed it. */
+function lastInspectedTarget(messages: readonly { role: string; content: string }[]): string | null {
+  for (let index = messages.length - 1; index >= 0; index -= 1) {
+    const entry = messages[index];
+    if (entry?.role !== "tool") continue;
+    try {
+      const parsed = JSON.parse(entry.content) as { outline?: { targetId: string }[] };
+      if (parsed.outline?.length) return parsed.outline[0]!.targetId;
+    } catch { /* not an inspection result */ }
+  }
+  return null;
+}
+
+function toolBoundary(mode: "improve" | "finish" | "down" | "image", calls: string[], timeline: string[] = []): typeof fetch {
   let turn = 0;
   return (async (_url: string | URL | Request, init?: RequestInit) => {
-    const body = JSON.parse(String(init?.body)) as { model: string; user: string };
+    const body = JSON.parse(String(init?.body)) as { model: string; user: string; messages?: { role: string; content: string }[] };
     calls.push(`${body.model}:${body.user}`);
+    timeline.push("provider");
     if (mode === "down") throw new Error("fireworks unreachable");
-    const patching = mode === "improve" && turn++ === 0;
-    const message = patching
-      ? {
-          role: "assistant", content: "", reasoning_content: "mejorando el hero",
-          tool_calls: [{
-            index: 0, id: "call-1", type: "function", name: null,
-            function: {
-              name: "apply_creative_patch",
-              arguments: JSON.stringify({ operations: [{ op: "set_page_css", css: ".ol-x{letter-spacing:.02em}" }] }),
-            },
-          }],
-        }
-      : { role: "assistant", content: "La página quedó bien.", reasoning_content: "listo" };
+    const step = turn++;
+    let message: unknown = { role: "assistant", content: "La página quedó bien.", reasoning_content: "listo" };
+    if (mode === "improve" && step === 0) {
+      message = toolCall("apply_creative_patch", { operations: [{ op: "set_page_css", css: ".ol-x{letter-spacing:.02em}" }] }, "mejorando el hero");
+    } else if (mode === "image" && step === 0) {
+      message = toolCall("inspect_canvas", {}, "quiero ver el lienzo");
+    } else if (mode === "image" && step === 1) {
+      const targetId = lastInspectedTarget(body.messages ?? []);
+      message = targetId
+        ? toolCall("request_image", { targetId, subject: "taller de relojes", mediaType: "photo" }, "una foto real")
+        : { role: "assistant", content: "sin objetivos", reasoning_content: "nada" };
+    }
+    const patching = (message as { tool_calls?: unknown }).tool_calls !== undefined;
     return new Response(JSON.stringify({
       choices: [{ finish_reason: patching ? "tool_calls" : "stop", message }],
       usage: { prompt_tokens: 10, completion_tokens: 5, total_tokens: 15, prompt_tokens_details: { cached_tokens: 0 } },
@@ -125,23 +151,32 @@ function toolBoundary(mode: "improve" | "finish" | "down", calls: string[]): typ
   }) as typeof fetch;
 }
 
-function realPost(options: { mode?: "improve" | "finish" | "down"; sequence: string[]; calls: string[]; defaultTelemetry?: boolean }) {
+function realPost(options: {
+  mode?: "improve" | "finish" | "down" | "image";
+  sequence: string[];
+  calls: string[];
+  defaultTelemetry?: boolean;
+  resolveImage?: RunAiCreationDeps["resolveImage"];
+}) {
   const renderedDocuments: string[] = [];
-  const fireworksFetch = vi.fn(toolBoundary(options.mode ?? "improve", options.calls));
+  const timeline: string[] = [];
+  const fireworksFetch = vi.fn(toolBoundary(options.mode ?? "improve", options.calls, timeline));
   const telemetrySink = vi.fn(async (event) => { options.sequence.push(`telemetry:${event.outcome}`); });
   const renderViewports = vi.fn(async (html: string) => {
     renderedDocuments.push(html);
+    timeline.push("render");
     return { desktop: { mimeType: "image/jpeg" as const, dataBase64: JPEG }, mobile: { mimeType: "image/jpeg" as const, dataBase64: JPEG }, mobileOverflow: false, weakTypographyHierarchy: false, invalidGeometry: false };
   });
   const pageBudget = createPageGenerationBudget({ rateCardVersion: "test", mxnPerUsd: 20, targetMicromxn: 5_000_000, capMicromxn: 10_000_000 });
   const toolClient = createFireworksToolClient({ budget: pageBudget, apiKey: "fixture-fireworks-key", fetchImpl: fireworksFetch as unknown as typeof fetch, now: () => 100 });
   return {
-    telemetrySink, fireworksFetch, renderedDocuments, renderViewports,
+    telemetrySink, fireworksFetch, renderedDocuments, renderViewports, timeline,
     post: createCuratePost({
       runAiCreationDeps: {
         listSections: vi.fn(async () => CATALOG),
         fetchText: CATALOG_FETCH,
         renderViewports: renderViewports as never,
+        ...(options.resolveImage ? { resolveImage: options.resolveImage } : {}),
         fableRuntimeOptions: {
           pageBudget,
           toolClient,
@@ -187,7 +222,11 @@ describe("POST /api/curate real Fable root", () => {
     const events = await invoke(runtime.post);
 
     expect(calls.length, JSON.stringify({ events, telemetry: runtime.telemetrySink.mock.calls })).toBeGreaterThan(0);
-    expect(calls.every((call) => call.startsWith("accounts/fireworks/models/deepseek"))).toBe(true);
+    // DeepSeek writes the page; the vision critic reviews it. Both must be
+    // reached, or a stage is silently dark.
+    expect(calls.some((call) => call.startsWith(`${DEEPSEEK_MODEL}:`))).toBe(true);
+    expect(calls.some((call) => call.startsWith(`${CRITIC_MODEL}:`))).toBe(true);
+    expect(calls.every((call) => call.startsWith(`${DEEPSEEK_MODEL}:`) || call.startsWith(`${CRITIC_MODEL}:`))).toBe(true);
     expect(mocks.commitAtomic).toHaveBeenCalledOnce();
     expect(events.filter((event) => event.event === "preview")).toHaveLength(1);
     expect(events.filter((event) => event.event === "done")).toHaveLength(1);
@@ -215,6 +254,23 @@ describe("POST /api/curate real Fable root", () => {
     expect(sequence).toEqual(["project", "debit", "telemetry:delivered"]);
   });
 
+  // The model can only ask for an image on a handle the sandbox gave it, and
+  // the resolved bytes still go through the sandbox's own gate.
+  it("resolves and adopts an image the model asks for on a real target", async () => {
+    const asset = `/api/projects/p/assets/${"a".repeat(64)}.webp`;
+    const resolveImage = vi.fn(async () => ({ ok: true as const, url: asset, source: "generated" as const }));
+    const runtime = realPost({ mode: "image", sequence: [], calls: [], resolveImage });
+
+    const events = await invoke(runtime.post);
+
+    expect(resolveImage).toHaveBeenCalledTimes(1);
+    expect((resolveImage.mock.calls as unknown as [{ subject: string; mediaType: string }][])[0]![0])
+      .toMatchObject({ subject: "taller de relojes", mediaType: "photo" });
+    const preview = events.find((event) => event.event === "preview");
+    expect(String(preview?.data.html)).toContain(asset);
+    expect(events.filter((event) => event.event === "error")).toHaveLength(0);
+  });
+
   it("never reaches a paid provider before the safe baseline exists", async () => {
     const calls: string[] = [];
     const runtime = realPost({ mode: "improve", sequence: [], calls });
@@ -222,7 +278,8 @@ describe("POST /api/curate real Fable root", () => {
     // The baseline is assembled, filled, sealed and rendered locally; the first
     // paid call can only happen after it exists.
     expect(runtime.renderedDocuments.length).toBeGreaterThan(0);
-    expect(calls.every((call) => call.includes(".creative-"))).toBe(true);
+    expect(runtime.timeline[0]).toBe("render");
+    expect(runtime.timeline).toContain("provider");
   });
 
   it("retains delivered telemetry through the default route sink without leaking page bytes", async () => {

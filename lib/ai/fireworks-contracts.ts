@@ -5,17 +5,22 @@ import type { ModelTokenUsage } from "../generation/model-cost";
 export type FableModelRole = "reasoner" | "designer" | "visual_critic";
 export type FireworksReasoningEffort = "none" | "high" | "max";
 export type FireworksServiceTier = "standard" | "priority";
-export type FireworksProviderCategory =
-  | "request"
-  | "http"
-  | "response"
-  | "response_envelope"
-  | "response_truncated"
-  | "response_content"
-  | "response_usage"
-  | "schema"
-  | "timeout"
-  | "transport";
+// Runtime list, not just a type: telemetry validates against it, and a value
+// missing there makes the operational sink drop the whole event.
+export const FIREWORKS_PROVIDER_CATEGORIES = [
+  "request",
+  "http",
+  "response",
+  "response_envelope",
+  "response_truncated",
+  "response_content",
+  "response_usage",
+  "schema",
+  "timeout",
+  "transport",
+] as const;
+
+export type FireworksProviderCategory = (typeof FIREWORKS_PROVIDER_CATEGORIES)[number];
 
 export interface FireworksTextPart {
   readonly type: "text";

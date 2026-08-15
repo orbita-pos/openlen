@@ -38,6 +38,10 @@ function makeSandbox(over: { applyPatch?: CreativeSandbox["applyPatch"] } = {}) 
       current = { ...current, html: `${current.html}<!--patched-->`, source: "deepseek" };
       return { ok: true, warnings: [] } as CreativeToolResult;
     }),
+    adopt: async (candidate) => {
+      current = { ...candidate, source: "deepseek" };
+      return { ok: true, warnings: [] } as CreativeToolResult;
+    },
     renderPreview: async () => ({ ok: true, warnings: ["mobileOverflow=false"] }),
   };
   return sandbox;
