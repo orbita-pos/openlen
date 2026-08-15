@@ -1,4 +1,7 @@
 import { createHash } from "node:crypto";
+
+import { createFireworksToolClient } from "@/lib/ai/fireworks-tool-client";
+import { createPageGenerationBudget } from "@/lib/generation/page-generation-budget";
 import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import sharp from "sharp";
 
@@ -21,16 +24,52 @@ vi.mock("@/lib/curate/atomic-curate-commit", () => ({ commitCurateProjectAndDebi
 
 import { createCuratePost } from "@/lib/curate/curate-post-handler";
 
-const BRIEF = "Una plataforma infantil para colorear, jugar y crear historias";
+const BRIEF = "Necesito un sitio para mi taller de restauración de relojes mecánicos";
+const NICHE_BRIEF = "Una plataforma infantil para colorear, jugar y crear historias";
 const JPEG = "/9j/4AAQSkZJRgABAQEAYABgAAD/2wBDAAMCAgMCAgMDAwMEAwMEBQgFBQQEBQoHBwYIDAoMDAsKCwsNDhIQDQ4RDgsLEBYQERMUFRUVDA8XGBYUGBIUFRT/2wBDAQMEBAUEBQkFBQkUDQsNFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBT/wAARCABAAEADASIAAhEBAxEB/8QAHwAAAQUBAQEBAQEAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAAAgEDAwIEAwUFBAQAAAF9AQIDAAQRBRIhMUEGE1FhByJxFDKBkaEII0KxwRVS0fAkM2JyggkKFhcYGRolJicoKSo0NTY3ODk6Q0RFRkdISUpTVFVWV1hZWmNkZWZnaGlqc3R1dnd4eXqDhIWGh4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uHi4+Tl5ufo6erx8vP09fb3+Pn6/8QAHwEAAwEBAQEBAQEBAQAAAAAAAAECAwQFBgcICQoL/8QAtREAAgECBAQDBAcFBAQAAQJ3AAECAxEEBSExBhJBUQdhcRMiMoEIFEKRobHBCSMzUvAVYnLRChYkNOEl8RcYGRomJygpKjU2Nzg5OkNERUZHSElKU1RVVldYWVpjZGVmZ2hpanN0dXZ3eHl6goOEhYaHiImKkpOUlZaXmJmaoqOkpaanqKmqsrO0tba3uLm6wsPExcbHyMnK0tPU1dbX2Nna4uPk5ebn6Onq8vP09fb3+Pn6/9oADAMBAAIRAxEAPwDq6KKK/os/KgooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigD//2Q==";
 const DONOR = '<header data-sec="hero-donor"><h1>Donor</h1></header>';
 const shortHash = (value: string) => createHash("sha256").update(value).digest("hex").slice(0, 12);
-const RECORD = {
-  id: "hero-donor", type: "hero", name: "Friendly hero", variantLabel: "Playful", rootTag: "header", mode: "light",
-  storageKey: `sections/hero-donor-${shortHash(DONOR)}.html`, storageUrl: "memory://hero-donor", contentHash: shortHash(DONOR), size: DONOR.length,
-  designTokens: null, fonts: null, needsJs: false, hasPlaceholders: false, thumbnailUrl: null, provenance: null, derivedSemantics: null,
-  status: "published", createdAt: new Date(0), updatedAt: new Date(0), publishedAt: new Date(0),
-} as SectionRecord;
+const BODIES: Record<string, string> = {
+  "header-fix": '<header data-sec="header-fix"><a href="#top">Donante marca</a><a href="#x">Donante enlace</a></header>',
+  "hero-fix": '<header data-sec="hero-fix"><h1>Donante hero</h1><p>Texto donante</p><a href="#a">Acción</a></header>',
+  "features-fix": '<section data-sec="features-fix"><h2>Donante features</h2><p>Uno</p><p>Dos</p><p>Tres</p></section>',
+  "cta-fix": '<section data-sec="cta-fix"><h2>Donante cta</h2><a href="#c">Donante botón</a></section>',
+  "footer-fix": '<footer data-sec="footer-fix"><p>Donante footer</p><a href="#b">Enlace</a></footer>',
+};
+
+function catalogRecord(id: string, type: string, rootTag: string, donorIndex: number) {
+  const html = BODIES[id]!;
+  const hash = shortHash(html);
+  return {
+    id, type, name: id, variantLabel: "Base", rootTag, mode: "light",
+    storageKey: `sections/${id}-${hash}.html`, storageUrl: `memory://${id}`, contentHash: hash, size: html.length,
+    designTokens: null, fonts: null, needsJs: false, hasPlaceholders: false, thumbnailUrl: null,
+    provenance: {
+      schemaVersion: "derived-section-provenance/1.0",
+      sourceTemplateId: `donor-${donorIndex}`,
+      sourceTemplateHash: hash,
+      sourceBandOrdinal: donorIndex,
+      extractionVersion: "template-band-extractor/1.0",
+      sourceHash: `sha256:${createHash("sha256").update(html).digest("hex")}`,
+      structuralFingerprint: `sha256:${createHash("sha256").update(`${id}-fp`).digest("hex")}`,
+    },
+    derivedSemantics: {
+      schemaVersion: "derived-section-semantics/1.0",
+      role: type, layoutArchetypes: [], domains: [], audiences: [], moods: [], negativeSignals: [],
+    },
+    status: "published", createdAt: new Date(0), updatedAt: new Date(0), publishedAt: new Date(0),
+  } as unknown as SectionRecord;
+}
+
+const CATALOG = [
+  catalogRecord("header-fix", "navbar", "header", 0),
+  catalogRecord("hero-fix", "hero", "header", 1),
+  catalogRecord("features-fix", "features", "section", 2),
+  catalogRecord("cta-fix", "cta", "section", 3),
+  catalogRecord("footer-fix", "footer", "footer", 4),
+];
+
+const CATALOG_FETCH = async (url: string) => BODIES[url.replace("memory://", "")] ?? null;
 
 interface SseEvent { event: string; data: Record<string, unknown> }
 function parseSse(text: string): SseEvent[] {
@@ -58,119 +97,57 @@ function expressiveProgram(role: string, ordinal: number) {
   };
 }
 
-function fireworksBoundary(options: {
-  final: "accept" | "reject" | "repair" | "paid_failure";
-  calls: string[];
-  qwenImagePayloads: string[][];
-}): typeof fetch {
+/** Tool-calling boundary. `mode` decides whether DeepSeek improves the page,
+ * refuses to, or is unreachable entirely. */
+function toolBoundary(mode: "improve" | "finish" | "down", calls: string[]): typeof fetch {
+  let turn = 0;
   return (async (_url: string | URL | Request, init?: RequestInit) => {
-      const body = JSON.parse(String(init?.body)) as { model: string; user: string; messages: Array<{ role: string; content: unknown }> };
-      options.calls.push(`${body.model}:${body.user}`);
-      const user = body.messages.findLast((message) => message.role === "user")?.content;
-      const parsedUser = typeof user === "string" ? JSON.parse(user) as Record<string, any> : {};
-      let response: unknown;
-      if (body.user.endsWith(".intent")) {
-        response = {
-          schemaVersion: "intent-analysis/1.0", language: "es",
-          functional: { siteType: "content_platform", requiredSections: ["hero", "features", "footer"], primaryActions: ["create"], contentModel: "creative_play" },
-          audience: { primary: "children", ageRange: null, secondary: ["parents"] }, domains: ["creative_play"], emotionalGoals: ["playful"],
-          requiredVisualSignals: ["hand_drawn"], forbiddenVisualSignals: ["saas_dashboard"], explicitConstraints: [], ambiguities: [], confidence: .95,
-        };
-      } else if (body.user.endsWith(".copy")) {
-        response = { schemaVersion: "page-copy/1.0", copy: { business_name: "Mundo Pincel", pitch: "Crea mundos llenos de color", features: [] } };
-      } else if (body.user.endsWith(".scout")) {
-        response = { schemaVersion: "adaptive-candidate-decisions/1.0", decisions: ["hero", "features", "footer"].map((_role, ordinal) => ({ ordinal, action: "generate", candidateId: null, usefulTraits: [], rejectedTraits: [] })) };
-      } else if (body.user.endsWith(".plan")) {
-        const payload = parsedUser;
-        const requiredSignals = [...new Set([...payload.initialDirection.requiredVisualSignals, ...payload.intent.requiredSignals])].sort();
-        const forbiddenSignals = [...new Set([...payload.initialDirection.forbiddenVisualSignals, ...payload.intent.forbiddenSignals])].sort();
-        response = {
-          schemaVersion: "adaptive-page-design/1.0", narrative: payload.requiredRoles,
-          direction: { ...payload.initialDirection, requiredVisualSignals: requiredSignals, forbiddenVisualSignals: forbiddenSignals }, decisions: payload.scoutDecisions,
-          rhythm: "playful", requiredSignals, forbiddenSignals,
-          imageSlots: [{ slotIndex: 0, ordinal: 0, required: true, mediaType: "illustration", subject: "friendly_animals", purpose: "hero_focal" }],
-        };
-      } else if (/\.section-\d+$/.test(body.user)) {
-        const ordinal = Number(parsedUser.ordinal);
-        response = expressiveProgram(parsedUser.role, ordinal);
-      } else if (body.user.endsWith(".repair")) {
-        const target = parsedUser.programs[0];
-        response = { schemaVersion: "glm-visual-repair-delta/1.0", changes: [{ programId: target.programId, program: { ...target.program, root: { ...target.program.root, gap: "2xl" } } }] };
-      } else {
-        const imagePayloads = body.messages.flatMap((message) => Array.isArray(message.content)
-          ? message.content.flatMap((part: any) => part?.type === "image_url" ? [String(part.image_url.url)] : [])
-          : []);
-        options.qwenImagePayloads.push(imagePayloads);
-        const initial = body.user.endsWith(".initial.final");
-        if (initial && options.final === "paid_failure") {
-          return new Response(JSON.stringify({
-            usage: { prompt_tokens: 10, completion_tokens: 5, total_tokens: 15, prompt_tokens_details: { cached_tokens: 0 }, completion_tokens_details: { reasoning_tokens: 2 } },
-          }), { status: 400, headers: { "content-type": "application/json" } });
+    const body = JSON.parse(String(init?.body)) as { model: string; user: string };
+    calls.push(`${body.model}:${body.user}`);
+    if (mode === "down") throw new Error("fireworks unreachable");
+    const patching = mode === "improve" && turn++ === 0;
+    const message = patching
+      ? {
+          role: "assistant", content: "", reasoning_content: "mejorando el hero",
+          tool_calls: [{
+            index: 0, id: "call-1", type: "function", name: null,
+            function: {
+              name: "apply_creative_patch",
+              arguments: JSON.stringify({ operations: [{ op: "set_page_css", css: ".ol-x{letter-spacing:.02em}" }] }),
+            },
+          }],
         }
-        const decision = initial ? options.final : "accept";
-        response = {
-          schemaVersion: "fable-visual-verdict/1.0", nicheRecognition: 9, promptFidelity: 9, visualQuality: 9, coherence: 9, originality: 9, mobileQuality: 9,
-          wrongNiche: false, genericAiStyle: false,
-          issues: decision === "repair" ? [{ code: "originality", severity: "major", viewport: "desktop" }] : [], decision,
-        };
-      }
-      return new Response(JSON.stringify({
-        choices: [{ finish_reason: "stop", message: { content: JSON.stringify(response) } }],
-        usage: { prompt_tokens: 10, completion_tokens: 5, total_tokens: 15, prompt_tokens_details: { cached_tokens: 0 }, completion_tokens_details: { reasoning_tokens: 2 } },
-      }), { status: 200, headers: { "content-type": "application/json" } });
+      : { role: "assistant", content: "La página quedó bien.", reasoning_content: "listo" };
+    return new Response(JSON.stringify({
+      choices: [{ finish_reason: patching ? "tool_calls" : "stop", message }],
+      usage: { prompt_tokens: 10, completion_tokens: 5, total_tokens: 15, prompt_tokens_details: { cached_tokens: 0 } },
+    }), { status: 200, headers: { "content-type": "application/json" } });
   }) as typeof fetch;
 }
 
-function realPost(options: { final?: "accept" | "reject" | "repair" | "paid_failure"; sequence: string[]; calls: string[]; defaultTelemetry?: boolean }) {
-  const qwenImagePayloads: string[][] = [];
+function realPost(options: { mode?: "improve" | "finish" | "down"; sequence: string[]; calls: string[]; defaultTelemetry?: boolean }) {
   const renderedDocuments: string[] = [];
-  const fireworksFetch = vi.fn(fireworksBoundary({ final: options.final ?? "accept", calls: options.calls, qwenImagePayloads }));
-  const geminiFetch = vi.fn(async () => new Response(JSON.stringify({
-    candidates: [{ content: { parts: [{ inlineData: { mimeType: "image/jpeg", data: JPEG } }] } }],
-    usageMetadata: { promptTokenCount: 11, candidatesTokenCount: 2, cachedContentTokenCount: 0, thoughtsTokenCount: 1 },
-  }), { status: 200, headers: { "content-type": "application/json" } }));
+  const fireworksFetch = vi.fn(toolBoundary(options.mode ?? "improve", options.calls));
   const telemetrySink = vi.fn(async (event) => { options.sequence.push(`telemetry:${event.outcome}`); });
   const renderViewports = vi.fn(async (html: string) => {
     renderedDocuments.push(html);
     return { desktop: { mimeType: "image/jpeg" as const, dataBase64: JPEG }, mobile: { mimeType: "image/jpeg" as const, dataBase64: JPEG }, mobileOverflow: false, weakTypographyHierarchy: false, invalidGeometry: false };
   });
-  const storage = {
-    put: vi.fn(async (_projectId: string, bytes: Buffer, ext: string, contentType: string) => ({ filename: `${createHash("sha256").update(bytes).digest("hex")}.${ext}`, contentType, size: bytes.length, url: "https://ignored.invalid/generated.jpg" })),
-    get: vi.fn(async () => null), list: vi.fn(async () => []), listAudio: vi.fn(async () => []),
-  };
+  const pageBudget = createPageGenerationBudget({ rateCardVersion: "test", mxnPerUsd: 20, targetMicromxn: 5_000_000, capMicromxn: 10_000_000 });
+  const toolClient = createFireworksToolClient({ budget: pageBudget, apiKey: "fixture-fireworks-key", fetchImpl: fireworksFetch as unknown as typeof fetch, now: () => 100 });
   return {
-    telemetrySink, fireworksFetch, geminiFetch, qwenImagePayloads, renderedDocuments, renderViewports,
+    telemetrySink, fireworksFetch, renderedDocuments, renderViewports,
     post: createCuratePost({
       runAiCreationDeps: {
-        listSections: vi.fn(async () => [RECORD]),
+        listSections: vi.fn(async () => CATALOG),
+        fetchText: CATALOG_FETCH,
+        renderViewports: renderViewports as never,
         fableRuntimeOptions: {
-          budgetConfig: { rateCardVersion: "test", mxnPerUsd: 20, targetMicromxn: 5_000_000, capMicromxn: 10_000_000 },
+          pageBudget,
+          toolClient,
           fireworksClientOptions: { apiKey: "fixture-fireworks-key", fetchImpl: fireworksFetch as unknown as typeof fetch, now: () => 100 },
-          geminiAssetPackProviderOptions: {
-            apiKey: "fixture-gemini-key",
-            fetchImpl: geminiFetch as unknown as typeof fetch,
-            now: () => 100,
-            env: {
-              NODE_ENV: "test",
-              OPENLEN_VISUAL_ENGINE_ASSET_RATE_CARD_VERSION: "7",
-              OPENLEN_VISUAL_ENGINE_ASSET_MAX_MICROMXN: "1000000",
-              OPENLEN_VISUAL_ENGINE_ASSET_ESTIMATED_IMAGE_MICROMXN: "100000",
-            },
-          },
           renderViewports,
           ...(options.defaultTelemetry ? {} : { telemetrySink }),
-        },
-        fableAdaptivePipelineDeps: {
-          fetchText: async (url) => url === "memory://hero-donor" ? DONOR : null,
-          renderContactSheet: async () => ({ mimeType: "image/jpeg", dataBase64: JPEG }),
-          renderViewports,
-          assetResolutionDeps: {
-            loadCuratedImages: async () => [],
-            fetchImpl: vi.fn() as unknown as typeof fetch,
-            storage: storage as never,
-            budget: { version: "7", maxCostMicromxn: 1_000_000, estimatedImageCostMicromxn: 100_000 },
-            catalogVersion: "test-images/1",
-          },
         },
       },
     }),
@@ -201,109 +178,89 @@ describe("POST /api/curate real Fable root", () => {
 
   afterAll(() => { for (const [key, value] of Object.entries(previous)) { if (value === undefined) delete process.env[key]; else process.env[key] = value; } });
 
-  it.each(["accept", "repair"] as const)("runs the real adaptive POST through Qwen (%s), then commits exactly once", async (final) => {
+  it("commits exactly once when DeepSeek improves the page", async () => {
     const sequence: string[] = [];
     mocks.commitAtomic.mockImplementation(async () => { sequence.push("project", "debit"); });
     const calls: string[] = [];
-    const runtime = realPost({ final, sequence, calls });
+    const runtime = realPost({ mode: "improve", sequence, calls });
 
     const events = await invoke(runtime.post);
 
-    expect(calls, JSON.stringify({ events, sequence, telemetry: runtime.telemetrySink.mock.calls })).toEqual(expect.arrayContaining([expect.stringMatching(/:.*\.scout$/), expect.stringMatching(/:.*\.initial\.final$/)]));
-    expect(calls.filter((call) => call.endsWith(".repair"))).toHaveLength(final === "repair" ? 1 : 0);
-    expect(calls.filter((call) => call.includes(".section-"))).toHaveLength(3);
+    expect(calls.length, JSON.stringify({ events, telemetry: runtime.telemetrySink.mock.calls })).toBeGreaterThan(0);
+    expect(calls.every((call) => call.startsWith("accounts/fireworks/models/deepseek"))).toBe(true);
     expect(mocks.commitAtomic).toHaveBeenCalledOnce();
-    expect(mocks.debitCredits).not.toHaveBeenCalled();
     expect(events.filter((event) => event.event === "preview")).toHaveLength(1);
     expect(events.filter((event) => event.event === "done")).toHaveLength(1);
     expect(events.filter((event) => event.event === "error")).toHaveLength(0);
     expect(runtime.telemetrySink).toHaveBeenCalledWith(expect.objectContaining({ outcome: "delivered" }));
-    expect(runtime.geminiFetch).toHaveBeenCalledTimes(1);
-    expect(runtime.geminiFetch.mock.calls.length).toBeLessThanOrEqual(3);
-    expect(runtime.qwenImagePayloads).toHaveLength(final === "repair" ? 2 : 1);
-    for (const payloads of runtime.qwenImagePayloads) {
-      expect(payloads).toEqual([`data:image/jpeg;base64,${JPEG}`, `data:image/jpeg;base64,${JPEG}`]);
-      expect(payloads.map((payload) => Buffer.from(payload.split(",")[1]!, "base64").subarray(0, 2).toString("hex"))).toEqual(["ffd8", "ffd8"]);
-      await expect(Promise.all(payloads.map(async (payload) => {
-        const metadata = await sharp(Buffer.from(payload.split(",")[1]!, "base64")).metadata();
-        return { format: metadata.format, width: metadata.width, height: metadata.height };
-      }))).resolves.toEqual([
-        { format: "jpeg", width: 64, height: 64 },
-        { format: "jpeg", width: 64, height: 64 },
-      ]);
-    }
-    expect(runtime.renderedDocuments.some((html) => html.includes("background-image:url('/api/projects/"))).toBe(true);
-    expect(runtime.telemetrySink).toHaveBeenCalledWith(expect.objectContaining({
-      outcome: "delivered",
-      cost: expect.objectContaining({ modelUsage: expect.any(Array), imageUsage: [expect.objectContaining({ modelId: "gemini-2.5-flash-image", imageCount: 1 })] }),
-    }));
-    const deliveredTelemetry = runtime.telemetrySink.mock.calls
-      .map(([event]) => event as { outcome?: string; paidCalls?: Array<{ kind: string; stage: string }> })
-      .find((event) => event.outcome === "delivered");
-    const paidOrder = deliveredTelemetry?.paidCalls?.map((call) => `${call.kind}:${call.stage}`) ?? [];
-    expect(paidOrder.filter((call) => call === "model:initial_program")).toHaveLength(3);
-    expect(paidOrder.findLastIndex((call) => call === "model:initial_program"))
-      .toBeLessThan(paidOrder.indexOf("image:image"));
     expect(sequence).toEqual(["project", "debit", "telemetry:delivered"]);
   });
 
-  it("records a paid Qwen rejection before returning zero preview/project/debit/done", async () => {
+  it.each(["down", "finish"] as const)("still delivers a page when DeepSeek is %s", async (mode) => {
     const sequence: string[] = [];
-    const calls: string[] = [];
-    const runtime = realPost({ final: "reject", sequence, calls });
+    mocks.commitAtomic.mockImplementation(async () => { sequence.push("project", "debit"); });
+    const runtime = realPost({ mode, sequence, calls: [] });
 
     const events = await invoke(runtime.post);
 
-    expect(calls, JSON.stringify({ events, sequence })).toEqual(expect.arrayContaining([expect.stringMatching(/:.*\.initial\.final$/)]));
-    expect(runtime.telemetrySink).toHaveBeenCalledWith(expect.objectContaining({ outcome: "failed", stage: "visual_quality" }));
-    expect(sequence).toEqual(["telemetry:failed"]);
-    expect(mocks.commitAtomic).not.toHaveBeenCalled();
-    expect(mocks.debitCredits).not.toHaveBeenCalled();
-    expect(events.filter((event) => ["preview", "done"].includes(event.event))).toEqual([]);
-    expect(events.filter((event) => event.event === "error")).toHaveLength(1);
-  });
-
-  it("flushes paid-provider failure telemetry before returning zero preview/project/debit/done", async () => {
-    const sequence: string[] = [];
-    const calls: string[] = [];
-    const runtime = realPost({ final: "paid_failure", sequence, calls });
-
-    const events = await invoke(runtime.post);
-
-    expect(calls).toEqual(expect.arrayContaining([expect.stringMatching(/:.*\.initial\.final$/)]));
+    expect(events.filter((event) => event.event === "error"), JSON.stringify(events)).toHaveLength(0);
+    expect(events.filter((event) => event.event === "preview")).toHaveLength(1);
+    expect(events.filter((event) => event.event === "done")).toHaveLength(1);
+    expect(mocks.commitAtomic).toHaveBeenCalledOnce();
+    // Delivered, but the request still says out loud which stage was lost.
     expect(runtime.telemetrySink).toHaveBeenCalledWith(expect.objectContaining({
-      outcome: "failed",
-      stage: "visual_quality",
-      paidCalls: expect.arrayContaining([expect.objectContaining({ kind: "model", stage: "final_critic" })]),
+      outcome: "delivered",
+      degradations: expect.arrayContaining([expect.objectContaining({ stage: "creative_session" })]),
     }));
-    expect(sequence).toEqual(["telemetry:failed"]);
-    expect(mocks.commitAtomic).not.toHaveBeenCalled();
-    expect(mocks.debitCredits).not.toHaveBeenCalled();
-    expect(events.filter((event) => ["preview", "done"].includes(event.event))).toEqual([]);
-    expect(events.filter((event) => event.event === "error")).toHaveLength(1);
+    expect(sequence).toEqual(["project", "debit", "telemetry:delivered"]);
   });
 
-  it("retains delivered and paid-failure telemetry through the default route sink", async () => {
+  it("never reaches a paid provider before the safe baseline exists", async () => {
+    const calls: string[] = [];
+    const runtime = realPost({ mode: "improve", sequence: [], calls });
+    await invoke(runtime.post);
+    // The baseline is assembled, filled, sealed and rendered locally; the first
+    // paid call can only happen after it exists.
+    expect(runtime.renderedDocuments.length).toBeGreaterThan(0);
+    expect(calls.every((call) => call.includes(".creative-"))).toBe(true);
+  });
+
+  it("retains delivered telemetry through the default route sink without leaking page bytes", async () => {
     const retained: Array<{ outcome: string; paidCalls: unknown[] }> = [];
     vi.spyOn(console, "info").mockImplementation((line) => { retained.push(JSON.parse(String(line))); });
     mocks.commitAtomic.mockResolvedValue(undefined);
 
-    await invoke(realPost({ final: "accept", sequence: [], calls: [], defaultTelemetry: true }).post);
-    await invoke(realPost({ final: "reject", sequence: [], calls: [], defaultTelemetry: true }).post);
+    await invoke(realPost({ mode: "improve", sequence: [], calls: [], defaultTelemetry: true }).post);
+    await invoke(realPost({ mode: "down", sequence: [], calls: [], defaultTelemetry: true }).post);
 
-    expect(retained.map((event) => event.outcome)).toEqual(["delivered", "failed"]);
-    expect(retained[0]!.paidCalls.length).toBeGreaterThan(0);
-    expect(retained[1]!.paidCalls.length).toBeGreaterThan(0);
+    expect(retained.map((event) => event.outcome)).toEqual(["delivered", "delivered"]);
     expect(JSON.stringify(retained)).not.toMatch(/"(?:userId|prompt|copy|html|screenshot|url|providerBody|credential|secret)"\s*:/i);
+    expect(JSON.stringify(retained)).not.toContain("<!doctype");
+  });
+
+  it("fails before any paid work when the catalog cannot cover the niche's roles", async () => {
+    const calls: string[] = [];
+    const runtime = realPost({ mode: "improve", sequence: [], calls });
+    const response = await runtime.post(new Request("http://localhost/api/curate", {
+      method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ brief: NICHE_BRIEF }),
+    }));
+    const events = parseSse(await response.text());
+    // GLM used to invent the missing section; the provider-free baseline can
+    // only use section types the catalog actually holds.
+    expect(events.filter((event) => event.event === "error")).toHaveLength(1);
+    expect(calls).toEqual([]);
+    expect(mocks.commitAtomic).not.toHaveBeenCalled();
   });
 
   it("fails closed before providers when required Fable budget configuration is absent", async () => {
     for (const key of ["OPENLEN_FABLE_RATE_CARD_VERSION", "OPENLEN_FABLE_MXN_PER_USD", "OPENLEN_FABLE_PAGE_TARGET_MICROMXN", "OPENLEN_FABLE_PAGE_CAP_MICROMXN"]) delete process.env[key];
-    const post = createCuratePost({ runAiCreationDeps: { listSections: vi.fn(async () => [RECORD]) } });
+    const post = createCuratePost({ runAiCreationDeps: { listSections: vi.fn(async () => [...CATALOG]) } });
 
     const events = await invoke(post);
 
-    expect(events.filter((event) => event.event === "error")).toEqual([expect.objectContaining({ data: expect.objectContaining({ kind: "intent_analysis_failed" }) })]);
+    // No provider is reachable without a page budget, so the request dies at
+    // the composition root — before the catalog, the baseline or any paid call.
+    expect(events.filter((event) => event.event === "error")).toEqual([expect.objectContaining({ data: expect.objectContaining({ kind: "composition_failed" }) })]);
     expect(mocks.commitAtomic).not.toHaveBeenCalled();
     expect(mocks.debitCredits).not.toHaveBeenCalled();
   });
@@ -313,7 +270,7 @@ describe("POST /api/curate real Fable root", () => {
     async (rolloutPercent) => {
       if (rolloutPercent === undefined) delete process.env.OPENLEN_AI_CREATION_ROLLOUT_PERCENT;
       else process.env.OPENLEN_AI_CREATION_ROLLOUT_PERCENT = rolloutPercent;
-      const runAiCreationDeps = { listSections: vi.fn(async () => [RECORD]) };
+      const runAiCreationDeps = { listSections: vi.fn(async () => [...CATALOG]) };
       const post = createCuratePost({ runAiCreationDeps });
 
       const events = await invoke(post);
@@ -328,7 +285,7 @@ describe("POST /api/curate real Fable root", () => {
   it("uses a stable SHA-256 cohort and fails outside it before provider or credit debit", async () => {
     process.env.OPENLEN_AI_CREATION_ROLLOUT_PERCENT = "50";
     mocks.auth.mockResolvedValue({ user: { id: "outside-user" } });
-    const runAiCreationDeps = { listSections: vi.fn(async () => [RECORD]) };
+    const runAiCreationDeps = { listSections: vi.fn(async () => [...CATALOG]) };
     const post = createCuratePost({ runAiCreationDeps });
 
     const first = await invoke(post);

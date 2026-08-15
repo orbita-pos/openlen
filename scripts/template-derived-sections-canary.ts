@@ -115,7 +115,7 @@ async function productionDeps(live: boolean): Promise<TemplateDerivedCanaryDeps>
     runCase: async ({ brief }) => {
       const started = Date.now();
       const profile = coerceBusinessData({ business_name: "Synthetic canary", pitch: brief, tagline_es: brief, cta_primary: "Explorar", language_detected: "es" });
-      const result = await runAiCreation({ projectId: crypto.randomUUID(), brief, profileData: { ...profile, brand: null, photos: [], links: [] }, assetMode: "off" }, { listSections: async () => records });
+      const result = await runAiCreation({ projectId: crypto.randomUUID(), brief, profileData: { ...profile, brand: null, photos: [], links: [] } }, { listSections: async () => records });
       return { ok: result.ok, resultCode: result.ok ? "composed" : result.reasonCode, costMicromxn: reservedWorstCaseMicromxn, durationMs: Math.max(0, Date.now() - started) };
     },
     recordTelemetry: async (row) => { await db.execute(sql`INSERT INTO "templateDerivedCanaryRuns" ("id", "runId", "caseId", "ok", "resultCode", "costMicromxn", "durationMs") VALUES (${crypto.randomUUID()}, ${runId}, ${row.caseId}, ${row.ok}, ${row.resultCode}, ${row.costMicromxn}, ${row.durationMs})`); },

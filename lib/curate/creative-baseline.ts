@@ -87,6 +87,19 @@ function fillLocally(html: string, copy: ExtractedBusinessData): { html: string;
   return { html: document.toString(), appliedOps };
 }
 
+function withCreativeMarker(html: string, direction: { palette: Record<string, string> }): string {
+  const tokens = Object.entries(direction.palette)
+    .filter(([, value]) => typeof value === "string" && /^#[0-9a-f]{3,8}$/i.test(value))
+    .map(([name, value]) => `--ol-${name.replace(/[^a-z0-9]+/gi, "-").toLowerCase()}:${value}`)
+    .join(";");
+  const marker = `<style data-openlen-visual-engine="creative-direction/1.0">:root{${tokens}}</style>`;
+  const document = parse(html);
+  const head = document.querySelector("head");
+  if (!head) return html.replace("<body", `${marker}<body`);
+  head.insertAdjacentHTML("beforeend", marker);
+  return document.toString();
+}
+
 const INVENTORY_CODES = new Set([
   "section_inventory_stale", "section_fragment_unavailable", "section_fragment_stale",
   "section_fragment_invalid", "no_eligible_sections", "section_role_coverage_failed",
@@ -120,14 +133,18 @@ export async function buildCreativeBaseline(
       return { html: local.html, filled: true, appliedOps: local.appliedOps, leaksBefore: 0, leaksAfter: 0, durationMs: 0 };
     }) as never,
     adaptTemplateSkeleton: (async (adaptInput: { html: string }) => {
-      const fingerprint = fingerprintStructure(adaptInput.html);
+      const direction = buildDeterministicCreativeDirection(intent).direction;
+      // The delivery gate requires exactly one creative-direction marker, and
+      // the page may as well carry the direction's tokens while it is there.
+      const themed = withCreativeMarker(adaptInput.html, direction);
+      const fingerprint = fingerprintStructure(themed);
       return {
         ok: true as const,
         status: "adapted" as const,
-        html: adaptInput.html,
+        html: themed,
         creativeDirectionVersion: "creative-direction/1.0" as const,
         planVersion: "skeleton-adaptation-plan/1.0" as const,
-        creativeDirection: buildDeterministicCreativeDirection(intent).direction,
+        creativeDirection: direction,
         promptVersion: PROMPT_VERSION,
         modelId: "deterministic",
         structuralFingerprintBefore: fingerprint,
@@ -173,7 +190,9 @@ export async function buildCreativeBaseline(
         promptVersion: PROMPT_VERSION,
         policyVersion: POLICY_VERSION,
         contractVersion: "creative-direction/1.0",
-        compositionManifest: composed.manifest,
+        // The manifest hash must track the bytes we actually deliver: the
+        // delivery gate compares it against sha256 of the final document.
+        compositionManifest: { ...composed.manifest, outputHash: sha256(sealed.html) },
       },
     },
   };

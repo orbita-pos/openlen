@@ -182,18 +182,22 @@ function successDeps(row: (typeof AI_HYBRID_NICHE_CASES)[number]): Required<RunA
       resultCode: "composed",
     }),
   };
-  const copy = coerceBusinessData({ business_name: row.id });
   return {
-    analyzeIntent: vi.fn(async () => ({ ok: true as const, intent: row.intent, modelId: "intent-fixture", promptVersion: "intent-prompt/1.8" as const, durationMs: 1 })),
-    generatePageCopy: vi.fn(async () => ({ ok: true as const, copy, modelId: "copy-fixture", promptVersion: "page-copy-prompt/1.0" as const, durationMs: 1 })),
     listSections: vi.fn(async () => [{ id: "fixture" }] as never),
-    overlayProfile: vi.fn((copy) => copy),
-    runSectionCompositionCandidate: vi.fn(async () => ({ ok: true as const, route: "section_composition" as const, templateId: null, html, visualEngine, filled: true, appliedOps: 1, durationMs: 1, leaksBefore: 0, leaksAfter: 0, fableVisualRepairHandoff: {} as never })),
-    validateAiCompositionDelivery: vi.fn(({ visualEngine: metadata }) => ({ ok: true as const, visualEngine: metadata as typeof visualEngine })),
-    runFableFinalVisualGate: vi.fn(async (input) => ({ ok: true as const, candidate: input.candidate, repaired: false })),
-    createFableRuntimeComposition: vi.fn() as never,
+    fetchText: vi.fn(async () => null),
+    renderViewports: vi.fn() as never,
+    createFableRuntimeComposition: (() => ({
+      recordModel: vi.fn(), recordImage: vi.fn(), recordDegraded: vi.fn(),
+      recordFailure: vi.fn(async () => undefined), recordDelivered: vi.fn(async () => undefined),
+    })) as never,
     fableRuntimeOptions: undefined as never,
-    fableAdaptivePipelineDeps: undefined as never,
+    creativeGenerationDeps: {} as never,
+    // The composed candidate is the fixture; this asserts what the delivery
+    // contract does with per-niche metadata, not how the page was built.
+    runCreativeGeneration: vi.fn(async () => ({
+      ok: true as const, route: "section_composition" as const, templateId: null,
+      title: row.id, html, visualEngine, filled: true, appliedOps: 1, degraded: false,
+    })) as never,
   };
 }
 
@@ -272,12 +276,12 @@ describe("AI hybrid niche cohort", () => {
       projectId: `project-${row.id}`,
       brief: row.brief,
       profileData: {} as BusinessProfileData,
-      assetMode: "hybrid",
     }, deps);
 
     expect(result).toMatchObject({ ok: true, route: "section_composition", templateId: null });
-    expect(deps.runSectionCompositionCandidate).toHaveBeenCalledWith(
-      expect.objectContaining({ assetMode: "hybrid" }),
+    expect(deps.runCreativeGeneration).toHaveBeenCalledWith(
+      expect.objectContaining({ brief: row.brief, records: [{ id: "fixture" }] }),
+      expect.any(Object),
     );
     if (!result.ok) throw new Error(result.reasonCode);
     expect(Object.keys(result.visualEngine).sort()).toEqual([

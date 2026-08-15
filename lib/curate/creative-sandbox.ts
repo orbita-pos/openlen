@@ -1,6 +1,8 @@
 import { parse, type HTMLElement } from "node-html-parser";
 import postcss from "postcss";
 
+import { sha256 } from "@/lib/generation/content-hash";
+
 import type { SafeCreativeCandidate } from "./creative-baseline";
 import {
   parseCreativePatch,
@@ -207,7 +209,19 @@ export function createCreativeSandbox(baseline: SafeCreativeCandidate, deps: Cre
 
       const gated = await gate(draft.toString());
       if (!("html" in gated)) return gated;
-      state = { ...state, html: gated.html, source: "deepseek", appliedOps: state.appliedOps + parsed.patch.operations.length };
+      // Every accepted mutation re-stamps the manifest hash; otherwise the
+      // delivery gate rejects the improved page for not matching its own bytes.
+      const manifest = (state.visualEngine as { compositionManifest?: Record<string, unknown> }).compositionManifest;
+      state = {
+        ...state,
+        html: gated.html,
+        source: "deepseek",
+        appliedOps: state.appliedOps + parsed.patch.operations.length,
+        visualEngine: {
+          ...state.visualEngine,
+          ...(manifest ? { compositionManifest: { ...manifest, outputHash: sha256(gated.html) } } : {}),
+        } as SafeCreativeCandidate["visualEngine"],
+      };
       return { ok: true, warnings: gated.warnings };
     },
 

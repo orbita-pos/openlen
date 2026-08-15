@@ -3,7 +3,26 @@ import type { PageBudget, RedactedPageCost } from "./page-generation-budget";
 import type { FireworksProviderCategory, FireworksServiceTier } from "../ai/fireworks-contracts";
 import { z } from "zod";
 
-export type FableTelemetryStage = "intent" | "copy" | "scout" | "page_plan" | "initial_program" | "image" | "final_critic" | "visual_repair" | "delivery_gate" | "delivery" | "visual_quality";
+// One list, used by the types and every schema below. A stage missing from it
+// makes the operational sink drop the whole event, silently.
+export const FABLE_TELEMETRY_STAGES = [
+  "intent",
+  "copy",
+  "scout",
+  "page_plan",
+  "initial_program",
+  "baseline",
+  "creative_session",
+  "advisory_review",
+  "image",
+  "final_critic",
+  "visual_repair",
+  "delivery_gate",
+  "delivery",
+  "visual_quality",
+] as const;
+
+export type FableTelemetryStage = (typeof FABLE_TELEMETRY_STAGES)[number];
 
 export interface FablePaidCallTelemetry {
   readonly stage: FableTelemetryStage;
@@ -17,18 +36,28 @@ export interface FablePaidCallTelemetry {
   readonly httpStatus?: number;
 }
 
+/** A stage that failed without costing the page. The request still ends in
+ * `delivered`; this is how we see what the user paid nothing for. */
+export interface FableDegradationTelemetry {
+  readonly stage: FableTelemetryStage;
+  readonly reasonCode: string;
+}
+
 export interface FableGenerationTelemetryEvent {
   readonly schemaVersion: "fable-generation-telemetry/1.0";
   readonly outcome: "failed" | "delivered";
   readonly stage: FableTelemetryStage;
   readonly reasonCode: string | null;
   readonly paidCalls: readonly FablePaidCallTelemetry[];
+  readonly degradations: readonly FableDegradationTelemetry[];
   readonly cost: RedactedPageCost | null;
 }
 
 export interface FableGenerationTelemetry {
   recordModel(call: Omit<FablePaidCallTelemetry, "kind"> & { readonly kind?: "model" }): void;
   recordImage(call: Omit<FablePaidCallTelemetry, "kind"> & { readonly kind?: "image"; readonly usage: { readonly imageCount: number } }): void;
+  /** Non-terminal: it never consumes the single outcome event. */
+  recordDegraded(input: { readonly stage: FableTelemetryStage; readonly reasonCode: string }): void;
   recordFailure(input: { readonly stage: FableTelemetryStage; readonly reasonCode: string }): Promise<void>;
   recordDelivered(): Promise<void>;
   snapshot(outcome: "failed" | "delivered", stage: FableTelemetryStage, reasonCode: string | null): FableGenerationTelemetryEvent;
@@ -43,9 +72,11 @@ const UsageSchema = z.object({
   thinkingTokens: NonNegativeSafeInteger,
 }).strict();
 const ImageUsageSchema = z.object({ imageCount: NonNegativeSafeInteger }).strict();
+const StageSchema = z.enum(FABLE_TELEMETRY_STAGES);
+const ReasonCode = z.string().min(1).max(80).regex(/^[a-z][a-z0-9_]*$/);
 const PaidCallSchema = z.discriminatedUnion("kind", [
   z.object({
-    stage: z.enum(["intent", "copy", "scout", "page_plan", "initial_program", "image", "final_critic", "visual_repair", "delivery_gate", "delivery", "visual_quality"]),
+    stage: StageSchema,
     kind: z.literal("model"),
     modelId: ModelId,
     usage: UsageSchema,
@@ -55,8 +86,9 @@ const PaidCallSchema = z.discriminatedUnion("kind", [
     providerCategory: z.enum(["request", "http", "response", "schema", "timeout", "transport"]).optional(),
     httpStatus: z.number().int().min(100).max(599).optional(),
   }).strict(),
-  z.object({ stage: z.enum(["intent", "copy", "scout", "page_plan", "initial_program", "image", "final_critic", "visual_repair", "delivery_gate", "delivery", "visual_quality"]), kind: z.literal("image"), modelId: ModelId, usage: ImageUsageSchema, durationMs: NonNegativeSafeInteger, attempts: z.union([z.literal(0), z.literal(1), z.literal(2), z.literal(3)]) }).strict(),
+  z.object({ stage: StageSchema, kind: z.literal("image"), modelId: ModelId, usage: ImageUsageSchema, durationMs: NonNegativeSafeInteger, attempts: z.union([z.literal(0), z.literal(1), z.literal(2), z.literal(3)]) }).strict(),
 ]);
+const DegradationSchema = z.object({ stage: StageSchema, reasonCode: ReasonCode }).strict();
 const CostSchema = z.object({
   rateCardVersion: z.string().min(1).max(64).regex(/^[A-Za-z0-9._:-]+$/),
   targetMicromxn: NonNegativeSafeInteger,
@@ -69,9 +101,10 @@ const CostSchema = z.object({
 const OperationalEventSchema = z.object({
   schemaVersion: z.literal("fable-generation-telemetry/1.0"),
   outcome: z.enum(["failed", "delivered"]),
-  stage: z.enum(["intent", "copy", "scout", "page_plan", "initial_program", "image", "final_critic", "visual_repair", "delivery_gate", "delivery", "visual_quality"]),
-  reasonCode: z.string().min(1).max(80).regex(/^[a-z][a-z0-9_]*$/).nullable(),
+  stage: StageSchema,
+  reasonCode: ReasonCode.nullable(),
   paidCalls: z.array(PaidCallSchema).max(64),
+  degradations: z.array(DegradationSchema).max(16),
   cost: CostSchema.nullable(),
 }).strict();
 
@@ -97,6 +130,13 @@ function safeAttempts(value: number): 0 | 1 | 2 | 3 {
   return value === 1 || value === 2 || value === 3 ? value : 0;
 }
 
+/** A reason code that fails the schema would drop the whole event, so codes are
+ * coerced into the vocabulary instead of being trusted verbatim. */
+function safeReasonCode(value: string): string {
+  const coerced = value.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "").slice(0, 80);
+  return /^[a-z][a-z0-9_]*$/.test(coerced) ? coerced : "unspecified";
+}
+
 function modelUsage(value: ModelTokenUsage): ModelTokenUsage {
   return {
     inputTokens: Number.isSafeInteger(value.inputTokens) && value.inputTokens >= 0 ? value.inputTokens : 0,
@@ -115,6 +155,7 @@ export function createFableGenerationTelemetry(options: {
   readonly budget?: PageBudget;
 } = {}): FableGenerationTelemetry {
   const paidCalls: FablePaidCallTelemetry[] = [];
+  const degradations: FableDegradationTelemetry[] = [];
   const sink = options.sink ?? createOperationalFableTelemetrySink();
   let flushed = false;
 
@@ -122,8 +163,9 @@ export function createFableGenerationTelemetry(options: {
     schemaVersion: "fable-generation-telemetry/1.0",
     outcome,
     stage,
-    reasonCode,
+    reasonCode: reasonCode === null ? null : safeReasonCode(reasonCode),
     paidCalls: paidCalls.map((call) => ({ ...call, usage: call.kind === "model" ? modelUsage(call.usage as ModelTokenUsage) : { imageCount: (call.usage as { imageCount: number }).imageCount } })),
+    degradations: [...degradations],
     cost: options.budget ? options.budget.snapshot() : null,
   });
 
@@ -150,6 +192,10 @@ export function createFableGenerationTelemetry(options: {
     recordImage(call) {
       const imageCount = Number.isSafeInteger(call.usage.imageCount) && call.usage.imageCount >= 0 ? call.usage.imageCount : 0;
       paidCalls.push({ stage: call.stage, kind: "image", modelId: call.modelId, usage: { imageCount }, durationMs: safeDuration(call.durationMs), attempts: safeAttempts(call.attempts) });
+    },
+    recordDegraded({ stage, reasonCode }) {
+      if (degradations.length >= 16) return;
+      degradations.push({ stage, reasonCode: safeReasonCode(reasonCode) });
     },
     recordFailure({ stage, reasonCode }) { return emit(snapshot("failed", stage, reasonCode)); },
     recordDelivered() { return emit(snapshot("delivered", "delivery", null)); },

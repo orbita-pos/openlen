@@ -9,12 +9,11 @@ import {
 } from "@/lib/credits";
 import { commitCurateProjectAndDebit, type AtomicCurateCommitInput } from "@/lib/curate/atomic-curate-commit";
 import { calculateAiCreationCredits } from "@/lib/curate/ai-creation-credits";
-import type { AiCreationReasonCode, AiCreationStage } from "@/lib/curate/ai-creation-contracts";
+import type { AiCreationReasonCode } from "@/lib/curate/ai-creation-contracts";
 import { aiCreationMode } from "@/lib/curate/ai-creation-mode";
 import { isUserInAiCreationRollout } from "@/lib/curate/ai-creation-rollout";
 import { commitAiCompositionDocument } from "@/lib/curate/commit-ai-composition";
 import { runAiCreation, type RunAiCreationDeps } from "@/lib/curate/run-ai-creation";
-import { assetPipelineMode } from "@/lib/generation/asset-pipeline-mode";
 import { renderProjectThumbnail } from "@/lib/projects/thumbnail";
 import { createVersion } from "@/lib/projects/versions";
 import { consumeToken, RATE_LIMITS } from "@/lib/rate-limit";
@@ -31,13 +30,13 @@ import { consumeToken, RATE_LIMITS } from "@/lib/rate-limit";
 const ENCODER = new TextEncoder();
 const DEFAULT_HEARTBEAT_INTERVAL_MS = 15_000;
 const AI_FAILURE_MESSAGE = "No pudimos construir una página coherente. Reintentar.";
-const PROGRESS_STAGE: Record<AiCreationStage, string> = {
-  intent: "analyzing",
-  copy: "writing",
+// Allowlist over the generation pipeline's stage names. An unmapped stage is
+// deliberately silent rather than leaking an internal name to the UI.
+const PROGRESS_STAGE: Record<string, string> = {
   sections: "planning",
-  composition: "assembling",
-  delivery_gate: "styling",
-  visual_quality: "reviewing",
+  baseline: "assembling",
+  creative: "styling",
+  review: "reviewing",
 };
 
 // One curate per user at a time. Cleared in finally so a crash cannot lock out.
@@ -155,9 +154,8 @@ return async function curatePost(req: Request): Promise<Response> {
           projectId,
           brief,
           profileData: profile.data,
-          assetMode: assetPipelineMode(),
           onStage: (stage: string) => {
-            const progress = PROGRESS_STAGE[stage as AiCreationStage];
+            const progress = PROGRESS_STAGE[stage];
             if (progress) emit("progress", { stage: progress });
           },
         };

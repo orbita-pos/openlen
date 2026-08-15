@@ -121,15 +121,31 @@ describe("creative generation orchestration", () => {
     expect(result.ok).toBe(true);
   });
 
-  it("records a redacted failure for a degraded delivery without aborting", async () => {
+  // A degraded stage is redacted telemetry, not a failure: recording it as a
+  // failure would spend the request's single terminal outcome on a page that
+  // shipped fine.
+  it("records a degraded stage without touching the terminal failure channel", async () => {
     const recordFailure = vi.fn();
+    const recordDegraded = vi.fn();
     const result = await runCreativeGeneration(INPUT, deps({
       runCreativeSession: async () => ({ candidate: BASELINE, changed: false, acceptedMutations: 0, stoppedBy: "provider" }),
       recordFailure,
+      recordDegraded,
     }));
     expect(result.ok).toBe(true);
-    expect(recordFailure).toHaveBeenCalledWith("creative_session", "provider");
-    expect(JSON.stringify(recordFailure.mock.calls)).not.toContain("<!doctype");
+    expect(recordDegraded).toHaveBeenCalledWith("creative_session", "provider");
+    expect(recordFailure).not.toHaveBeenCalled();
+    expect(JSON.stringify(recordDegraded.mock.calls)).not.toContain("<!doctype");
+  });
+
+  it("still records a terminal failure when no candidate can be delivered", async () => {
+    const recordFailure = vi.fn();
+    const result = await runCreativeGeneration(INPUT, deps({
+      validateDelivery: (() => ({ ok: false as const, reasonCode: "invalid_composition_metadata" as const })) as never,
+      recordFailure,
+    }));
+    expect(result).toMatchObject({ ok: false, stage: "delivery_gate" });
+    expect(recordFailure).toHaveBeenCalledWith("delivery_gate", "invalid_composition_metadata");
   });
 
   it("passes the baseline's own intent and copy into the creative session", async () => {

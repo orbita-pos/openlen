@@ -63,7 +63,9 @@ export interface FableRuntimeComposition {
     readonly httpStatus?: number;
   }): void;
   recordImage(trace: { readonly modelId?: string | null; readonly generatedCount: number; readonly durationMs: number }): void;
-  recordFailure(stage: "intent" | "copy" | "scout" | "page_plan" | "initial_program" | "image" | "delivery_gate" | "visual_quality" | "delivery", reasonCode: string): Promise<void>;
+  /** A stage that failed without costing the page. Never terminal. */
+  recordDegraded(stage: FableTelemetryStage, reasonCode: string): void;
+  recordFailure(stage: FableTelemetryStage, reasonCode: string): Promise<void>;
   recordDelivered(): Promise<void>;
   runFinalGate(input: {
     readonly requestId: string;
@@ -165,6 +167,7 @@ export function createFableRuntimeComposition(options: FableRuntimeCompositionOp
     inputAdapters,
     recordModel,
     recordImage,
+    recordDegraded: (stage, reasonCode) => telemetry.recordDegraded({ stage, reasonCode }),
     recordFailure: (stage, reasonCode) => telemetry.recordFailure({ stage, reasonCode }),
     recordDelivered: () => telemetry.recordDelivered(),
     async runFinalGate(input) {

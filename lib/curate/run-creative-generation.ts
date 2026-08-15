@@ -29,7 +29,10 @@ export interface CreativeGenerationDeps {
     candidate: SafeCreativeCandidate;
   }) => Promise<AdvisoryReviewResult>;
   readonly validateDelivery: typeof validateAiCompositionDelivery;
+  /** Terminal: only the two branches that cost the user a page use it. */
   readonly recordFailure?: (stage: string, reasonCode: string) => void;
+  /** Non-terminal: a stage that failed while the page still ships. */
+  readonly recordDegraded?: (stage: string, reasonCode: string) => void;
 }
 
 export type CreativeGenerationResult =
@@ -94,11 +97,11 @@ export async function runCreativeGeneration(
     lastKnownGood = creative.candidate;
     if (!creative.changed) {
       degraded = true;
-      deps.recordFailure?.("creative_session", creative.stoppedBy);
+      deps.recordDegraded?.("creative_session", creative.stoppedBy);
     }
   } catch {
     degraded = true;
-    deps.recordFailure?.("creative_session", "internal_error");
+    deps.recordDegraded?.("creative_session", "internal_error");
   }
 
   notify(input, "review");
@@ -109,8 +112,9 @@ export async function runCreativeGeneration(
       candidate: lastKnownGood,
     });
     lastKnownGood = reviewed.candidate;
+    if (!reviewed.reviewed) deps.recordDegraded?.("advisory_review", "review_unavailable");
   } catch {
-    deps.recordFailure?.("advisory_review", "internal_error");
+    deps.recordDegraded?.("advisory_review", "internal_error");
   }
 
   notify(input, "delivery_gate");
@@ -127,7 +131,7 @@ export async function runCreativeGeneration(
   if (!validated.ok && chosen !== baseline.candidate) {
     // An improvement that cannot ship must not cost the page the baseline
     // already earned.
-    deps.recordFailure?.("delivery_gate", validated.reasonCode);
+    deps.recordDegraded?.("delivery_gate", validated.reasonCode);
     chosen = baseline.candidate;
     degraded = true;
     validated = deliver(chosen);

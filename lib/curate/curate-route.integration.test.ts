@@ -125,7 +125,7 @@ describe("POST /api/curate hybrid-only integration", () => {
       data: { brand: { accent: "#EC4899", logoUrl: null } },
     });
     mocks.runAiCreation.mockImplementation(async (input: { onStage?: (stage: string) => void }) => {
-      for (const stage of ["intent", "copy", "sections", "composition", "delivery_gate", "visual_quality"]) {
+      for (const stage of ["sections", "baseline", "creative", "review", "delivery_gate"]) {
         input.onStage?.(stage);
       }
       return SUCCESS;
@@ -180,7 +180,6 @@ describe("POST /api/curate hybrid-only integration", () => {
     expect(mocks.runAiCreation).toHaveBeenCalledWith(expect.objectContaining({
       brief: BRIEF,
       profileData: { brand: { accent: "#EC4899", logoUrl: null } },
-      assetMode: "off",
       onStage: expect.any(Function),
     }));
     expect(mocks.commitAtomic).toHaveBeenCalledTimes(1);
@@ -208,8 +207,6 @@ describe("POST /api/curate hybrid-only integration", () => {
       { event: "preview", data: { html: FINAL_HTML } },
     ]);
     expect(eventsNamed(events, "progress").map((event) => event.data.stage)).toEqual([
-      "analyzing",
-      "writing",
       "planning",
       "assembling",
       "styling",
