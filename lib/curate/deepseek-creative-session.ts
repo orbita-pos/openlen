@@ -51,7 +51,8 @@ export interface CreativeSessionResult {
 function systemPrompt(): string {
   return [
     "You are OpenLen's page designer. You improve a real landing page through tools.",
-    "Inspect the canvas before changing anything, then make the page unmistakably belong to its niche:",
+    "The canvas comes with the brief, so spend your first turn changing the page, not looking at it.",
+    "Make the page unmistakably belong to its niche:",
     "structure, rhythm, colour, typography, texture and motion are all yours through HTML and CSS.",
     "Avoid the generic centred hero-badge-title-paragraph-two-buttons stack unless the brief truly calls for it.",
     "You may not use scripts, event handlers or executable URLs; reach for CSS or an OpenLen module instead.",
@@ -118,9 +119,17 @@ export async function runDeepSeekCreativeSession(
     { role: "system", content: systemPrompt() },
     {
       role: "user",
-      content: input.issueSummary
-        ? `Brief: ${input.brief}\n\nA reviewer flagged: ${input.issueSummary}\nFix it in one pass.`
-        : `Brief: ${input.brief}\n\nInspect the page, then make it belong to this niche.`,
+      content: [
+        input.issueSummary
+          ? `Brief: ${input.brief}\n\nA reviewer flagged: ${input.issueSummary}\nFix it in one pass.`
+          : `Brief: ${input.brief}\n\nMake this page belong to its niche.`,
+        // The handles a patch needs were only obtainable through a tool call,
+        // so every session paid at least one turn to learn them -- and a
+        // session that pays four never designs. Niche-independent by
+        // construction: no brief needs its own instructions for this.
+        `Canvas: ${redactToolResult(deps.sandbox.inspect() as unknown as Record<string, unknown>)}`,
+        `You have ${maxTurns} tool turn(s). Changing the page is what they are for.`,
+      ].join("\n\n"),
     },
   ];
 

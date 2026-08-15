@@ -206,6 +206,23 @@ describe("finite DeepSeek creative session", () => {
     expect(result.changed).toBe(false);
   });
 
+  it("hands the model the canvas with the brief so no turn is spent finding handles", async () => {
+    const { client, seen } = clientReturning(ok([PATCH_CALL]), ok([], "done"));
+    await runDeepSeekCreativeSession(INPUT, { client, sandbox: makeSandbox() });
+    const opening = JSON.stringify(seen[0]);
+    // A session that has to ask for its own targets spends turns looking, and
+    // a four-turn session that looks four times never designs anything.
+    expect(opening).toContain("ol-hero-1");
+    expect(opening).toContain("hero");
+    expect(opening).not.toContain("<!doctype html");
+  });
+
+  it("tells the model how many turns it actually has", async () => {
+    const { client, seen } = clientReturning(ok([], "done"));
+    await runDeepSeekCreativeSession({ ...INPUT, maxTurns: 1 }, { client, sandbox: makeSandbox() });
+    expect(JSON.stringify(seen[0])).toContain("1");
+  });
+
   it("records every paid turn through the telemetry sink", async () => {
     const recordModel = vi.fn();
     const { client } = clientReturning(ok([PATCH_CALL]), ok([], "done"));
