@@ -42,6 +42,8 @@ export type AiCreationResult =
       generatedSectionCount?: number;
       filled: boolean;
       appliedOps: number;
+      /** The page shipped, but an improvement stage was lost on the way. */
+      degraded?: boolean;
       /** Ephemeral success acknowledgement; excluded from persistence and SSE. */
       finalizeFableTelemetry?: () => Promise<void>;
       /** Ephemeral post-generation failure acknowledgement for persistence/debit. */

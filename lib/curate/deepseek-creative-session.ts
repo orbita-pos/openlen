@@ -121,8 +121,11 @@ export async function runDeepSeekCreativeSession(
       maxOutputTokens: input.maxOutputTokens ?? DEFAULT_MAX_OUTPUT_TOKENS,
       messages,
     });
-    if (!response.ok) return finish(response.code === "budget_exceeded" ? "budget" : "provider");
+    // Recorded before the outcome check: a turn that failed still reserved and
+    // settled budget, and its category is the only trace of why the session
+    // stopped. Skipping it makes a paid failure invisible in the journal.
     deps.recordModel?.("creative_session", response);
+    if (!response.ok) return finish(response.code === "budget_exceeded" ? "budget" : "provider");
     if (response.calls.length === 0) return finish("finished");
 
     messages.push({

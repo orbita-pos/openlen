@@ -2,6 +2,7 @@ import { assessFinalVisualCandidate } from "@/lib/ai/qwen-visual-critic";
 import { renderVisualQualityViewports } from "@/lib/ai/visual-quality-renderer";
 import { AI_HYBRID_NICHE_CASES } from "@/lib/generation/ai-hybrid-niche-cohort";
 import { sha256 } from "@/lib/generation/content-hash";
+import type { FableGenerationTelemetryEvent } from "@/lib/generation/fable-generation-telemetry";
 import { createPageGenerationBudget, parseFablePageBudgetConfigFromEnv } from "@/lib/generation/page-generation-budget";
 import { listSections } from "@/lib/sections/store";
 import { coerceBusinessData } from "@/lib/style-match/autofill/types";
@@ -91,14 +92,21 @@ export async function runCreativeSandboxCanaryPage(caseId: string): Promise<Crea
 
   const budget = createPageGenerationBudget(parseFablePageBudgetConfigFromEnv());
   const profile = coerceBusinessData({ business_name: "Canary", pitch: fixture.brief, language_detected: "es" });
+  // The redacted outcome event is the only place that says which stages were
+  // lost; without it "delivered" cannot be told apart from "the baseline shipped".
+  let telemetry: FableGenerationTelemetryEvent | null = null;
   const result = await runAiCreation({
     projectId: crypto.randomUUID(),
     brief: fixture.brief,
     profileData: { ...profile, brand: null, photos: [], links: [] } as unknown as BusinessProfileData,
   }, {
     listSections,
-    fableRuntimeOptions: { pageBudget: budget },
+    fableRuntimeOptions: { pageBudget: budget, telemetrySink: (event) => { telemetry = event; } },
   });
+  // The terminal event is the caller's to flush — the route does it after its
+  // atomic commit. Without this the sink never fires and the evidence is blind.
+  if (result.ok) await result.finalizeFableTelemetry?.();
+  const event = telemetry as FableGenerationTelemetryEvent | null;
 
   const cost = budget.snapshot().actualMicromxn;
   if (!result.ok) {
@@ -109,15 +117,25 @@ export async function runCreativeSandboxCanaryPage(caseId: string): Promise<Crea
   const images = (result.html.match(/background-image:url\(/g) ?? []).length;
   return {
     ok: true,
-    resultCode: "delivered",
-    modelId: "none",
+    // Delivering the baseline is not the same page as the model designing one.
+    resultCode: result.degraded ? "delivered_degraded" : "delivered",
+    modelId: event?.paidCalls.map((call) => call.modelId).join(",") || "none",
     costMicromxn: cost,
     ...counters(started),
     attempts: 1,
     providerCategory: null,
     mutations: result.appliedOps,
     images,
-    finalHash: `sha256:${sha256(result.html)}`,
+    ...(event ? {
+      degradations: [
+        ...event.degradations.map((entry) => `${entry.stage}:${entry.reasonCode}`),
+        // A failed paid turn carries the only clue about why a stage stopped.
+        ...event.paidCalls
+          .filter((call) => call.providerCategory !== undefined || call.httpStatus !== undefined)
+          .map((call) => `${call.stage}:${call.providerCategory ?? "unknown"}${call.httpStatus ? `:${call.httpStatus}` : ""}`),
+      ],
+    } : {}),
+    finalHash: sha256(result.html),
     deterministic: rendered
       ? {
           mobileOverflow: rendered.mobileOverflow === true,

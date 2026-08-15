@@ -36,6 +36,8 @@ export interface CreativeSandboxProbeOutcome {
 export interface CreativeSandboxPageOutcome extends CreativeSandboxProbeOutcome {
   readonly mutations: number;
   readonly images: number;
+  /** Stages that failed without costing the page, as `stage:reason`. */
+  readonly degradations?: readonly string[];
   readonly finalHash: string | null;
   readonly deterministic: {
     readonly mobileOverflow: boolean;
@@ -147,6 +149,7 @@ function row(id: string, outcome: CreativeSandboxProbeOutcome | CreativeSandboxP
     providerCategory: outcome.providerCategory ?? null,
     mutations: safeCounter(page.mutations ?? 0),
     images: safeCounter(page.images ?? 0),
+    ...(page.degradations ? { degradations: [...page.degradations] } : {}),
     finalHash: page.finalHash ?? null,
     deterministic: page.deterministic ?? { mobileOverflow: false, weakTypographyHierarchy: false, invalidGeometry: false },
   };

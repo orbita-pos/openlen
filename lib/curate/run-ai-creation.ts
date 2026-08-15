@@ -242,6 +242,10 @@ export async function runAiCreation(
     visualEngine: generation.visualEngine,
     filled: generation.filled,
     appliedOps: generation.appliedOps,
+    // True when an improvement stage failed and the baseline shipped instead.
+    // Delivering is operational success; this is how a caller tells that apart
+    // from the model actually having designed the page.
+    degraded: generation.degraded,
     finalizeFableTelemetry: () => runtime.recordDelivered(),
     failFableTelemetry: (_stage, reasonCode) => runtime.recordFailure("delivery", reasonCode),
   };
