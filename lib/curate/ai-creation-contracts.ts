@@ -37,6 +37,8 @@ export type AiCreationResult =
       title: string;
       html: string;
       visualEngine: Extract<VisualEngineProjectMetadata, { route: "section_composition" }>;
+      /** Photographs the page bought, charged one credit each. */
+      generatedImages?: number;
       copyUsage?: ModelTokenUsage;
       generatedSectionUsage?: ModelTokenUsage;
       generatedSectionCount?: number;

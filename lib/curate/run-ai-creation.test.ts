@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import type { BusinessProfileData } from "@/lib/business-profiles/types";
 import type { SectionRecord } from "@/lib/sections/store";
-import { runAiCreation, type RunAiCreationDeps } from "./run-ai-creation";
+import { DEFAULT_PAGE_IMAGES, pageImageAllowance, runAiCreation, type RunAiCreationDeps } from "./run-ai-creation";
 
 const BASELINE_HTML = "<!doctype html><html><body><section>baseline</section></body></html>";
 const IMPROVED_HTML = "<!doctype html><html><body><section>improved</section></body></html>";
@@ -162,5 +162,28 @@ describe("runAiCreation", () => {
   it("reports progress without letting a throwing callback change delivery", async () => {
     const result = await runAiCreation({ ...INPUT, onStage: () => { throw new Error("ui blew up"); } }, deps());
     expect(result.ok).toBe(true);
+  });
+});
+
+describe("pageImageAllowance", () => {
+  const intent = (requestedImages?: number | null) =>
+    ({ ...(requestedImages === undefined ? {} : { requestedImages }) } as never);
+
+  it("gives two when the brief says nothing about imagery", () => {
+    expect(pageImageAllowance(intent(), 50)).toBe(DEFAULT_PAGE_IMAGES);
+    expect(pageImageAllowance(intent(null), 50)).toBe(DEFAULT_PAGE_IMAGES);
+  });
+
+  it("gives what the brief asked for, because that choice is the user's", () => {
+    expect(pageImageAllowance(intent(4), 50)).toBe(4);
+    expect(pageImageAllowance(intent(0), 50)).toBe(0);
+  });
+
+  it("never spends more than the balance can pay", () => {
+    // One credit for the page, one per image. A brief demanding fifty
+    // photographs must not empty a month's allowance.
+    expect(pageImageAllowance(intent(50), 6)).toBe(5);
+    expect(pageImageAllowance(intent(4), 1)).toBe(0);
+    expect(pageImageAllowance(intent(4), 0)).toBe(0);
   });
 });

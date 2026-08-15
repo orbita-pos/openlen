@@ -30,3 +30,20 @@ describe("calculateAiCreationCredits", () => {
     expect(usageCredits).not.toHaveBeenCalled();
   });
 });
+
+describe("photographs are charged", () => {
+  it("adds one credit per image the page bought", () => {
+    const usage = () => 1;
+    // An image costs $0.039 to make, which is 0.84 of a credit. It was being
+    // given away: pure cost, zero revenue, on every page that asked for one.
+    const withoutImages = calculateAiCreationCredits({ filled: false }, usage, 2);
+    const withImages = calculateAiCreationCredits({ filled: false, generatedImages: 3 }, usage, 2);
+    expect(withImages - withoutImages).toBe(3);
+  });
+
+  it("charges nothing for a page that bought none", () => {
+    const usage = () => 1;
+    expect(calculateAiCreationCredits({ filled: false, generatedImages: 0 }, usage, 2))
+      .toBe(calculateAiCreationCredits({ filled: false }, usage, 2));
+  });
+});

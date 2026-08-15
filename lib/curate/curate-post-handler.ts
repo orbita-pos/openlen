@@ -154,6 +154,9 @@ return async function curatePost(req: Request): Promise<Response> {
           projectId,
           brief,
           profileData: profile.data,
+          // Read a few lines above to gate the request; it bounds photography
+          // too, so a brief asking for fifty images cannot spend a month.
+          creditBalance: balance,
           onStage: (stage: string) => {
             const progress = PROGRESS_STAGE[stage];
             if (progress) emit("progress", { stage: progress });
@@ -172,6 +175,7 @@ return async function curatePost(req: Request): Promise<Response> {
         let credits = 0;
         try {
           credits = calculateAiCreationCredits({
+            ...(result.generatedImages ? { generatedImages: result.generatedImages } : {}),
             ...(result.copyUsage ? { copyUsage: result.copyUsage } : {}),
             ...(result.generatedSectionUsage ? { generatedSectionUsage: result.generatedSectionUsage } : {}),
             filled: result.filled,

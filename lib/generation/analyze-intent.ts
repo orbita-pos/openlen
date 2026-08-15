@@ -82,6 +82,7 @@ When the brief does not support a required classification, use the exact slug un
 requiredVisualSignals are concrete cues the finished screenshot must visibly contain.
 forbiddenVisualSignals are concrete cues that would make the screenshot communicate the wrong domain, audience, or emotion.
 Preserve explicit user constraints as concise prose in explicitConstraints. Do not invent requirements the brief does not support.
+Set requestedImages only when the brief itself asks for photography and says how much: a plain number for "four photos", the number of sections for "one image per section", the upper end for "four or five". Use null when the brief is silent about imagery, and 0 when it asks for none. Never infer a count from the niche.
 
 Return keys exactly as follows: schemaVersion, language, functional { siteType, requiredSections, primaryActions, contentModel }, audience { primary, ageRange, secondary }, domains, emotionalGoals, requiredVisualSignals, forbiddenVisualSignals, explicitConstraints, ambiguities, confidence.
 schemaVersion must be the exact literal string "intent-analysis/1.0", not "1.0" or any other shorthand.

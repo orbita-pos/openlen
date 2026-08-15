@@ -28,6 +28,9 @@ export interface RunAiCreationInput {
   projectId: string;
   brief: string;
   profileData: BusinessProfileData;
+  /** Credits the user has before this page runs. Bounds what the page may
+   * spend on photography; omitted, imagery falls back to the default. */
+  creditBalance?: number;
   onStage?: (stage: string) => void;
 }
 
@@ -57,6 +60,19 @@ function notify(input: RunAiCreationInput, stage: string): void {
   }
 }
 
+/** Photographs the page may buy. Two when the brief says nothing, because the
+ * model is spending on the user's behalf and a niche that wants none should get
+ * none. What the brief asks for when it asks, because that choice is the
+ * user's. Never more than the balance can pay: one credit for the page, one per
+ * image, so a brief demanding fifty photographs cannot empty an account. */
+export const DEFAULT_PAGE_IMAGES = 2;
+
+export function pageImageAllowance(intent: IntentAnalysis, creditBalance: number | undefined): number {
+  const requested = intent.requestedImages ?? DEFAULT_PAGE_IMAGES;
+  if (creditBalance === undefined) return Math.max(0, requested);
+  return Math.max(0, Math.min(requested, Math.floor(creditBalance) - 1));
+}
+
 function baselineReason(code: string): AiCreationReasonCode {
   return code === "section_inventory_unavailable" ? "section_inventory_unavailable" : "composition_failed";
 }
@@ -79,7 +95,8 @@ function productionDeps(
   runtime: FableRuntimeComposition,
   renderViewports: typeof renderVisualQualityViewports,
   resolveImage: typeof resolveCreativeImage,
-): CreativeGenerationDeps {
+  creditBalance: number | undefined,
+): { deps: CreativeGenerationDeps; imagesApplied: () => number } {
   // The advisory reviewer needs the same bytes the render gate just produced.
   // Rendering is a browser launch; one document is rendered once.
   let lastRender: { html: string; result: Awaited<ReturnType<typeof renderViewports>> } | null = null;
@@ -97,13 +114,10 @@ function productionDeps(
       invalidGeometry: (rendered as { invalidGeometry?: boolean }).invalidGeometry === true,
     };
   };
-  // At initial creation the model is spending on the user's behalf, so the page
-  // buys at most this many photographs. Editing is the other case entirely:
-  // there the user asks for an image and pays for it, and their balance is the
-  // only limit. Counted here rather than inside the tool because a session
-  // calls it once per image, and the repair pass is the same page.
-  const MAX_PAGE_IMAGES = 2;
-  let pageImages = 0;
+  // Two counts, because they answer different questions: the provider bills
+  // attempts, and the user may only be charged for photographs they got.
+  let pageImageAttempts = 0;
+  let pageImagesApplied = 0;
 
   const sandboxFor = (candidate: SafeCreativeCandidate) =>
     createCreativeSandbox(candidate, { sanitize: sanitizeForPublish, seal: sealRelease, render });
@@ -128,7 +142,7 @@ function productionDeps(
             projectId: session.requestId,
             candidate: sandbox.current(),
             requests: [request],
-            remaining: MAX_PAGE_IMAGES - pageImages,
+            remaining: pageImageAllowance(session.intent, creditBalance) - pageImageAttempts,
           }, {
             resolve: () => resolveImage({
               projectId: session.requestId,
@@ -138,8 +152,13 @@ function productionDeps(
               ...(request.mediaType ? { mediaType: request.mediaType } : {}),
             }, { provider: runtime.geminiAssetPackProvider }),
             recordImage: (trace) => {
+              // The provider bills attempts, not results. Counting only what
+              // landed let four paid attempts slip a two-image budget and cost
+              // 5.03 MXN. A target that does not exist never reaches it and is
+              // the one failure that is genuinely free.
+              if (trace.code !== "unknown_target") pageImageAttempts += 1;
               if (trace.outcome === "applied") {
-                pageImages += 1;
+                pageImagesApplied += 1;
                 runtime.recordImage({ modelId: "asset-pipeline", generatedCount: 1, durationMs: 0 });
               }
               // A refused image costs the page its photography and nothing
@@ -155,7 +174,7 @@ function productionDeps(
     });
   };
 
-  return {
+  const deps: CreativeGenerationDeps = {
     buildBaseline: buildCreativeBaseline,
     renderCandidate: render,
     validateDelivery: validateAiCompositionDelivery,
@@ -199,6 +218,7 @@ function productionDeps(
       }, review.candidate),
     }),
   };
+  return { deps, imagesApplied: () => pageImagesApplied };
 }
 
 export async function runAiCreation(
@@ -225,6 +245,12 @@ export async function runAiCreation(
     return failure("sections", "section_inventory_unavailable");
   }
 
+  const production = productionDeps(
+    runtime,
+    deps.renderViewports ?? renderVisualQualityViewports,
+    deps.resolveImage ?? resolveCreativeImage,
+    input.creditBalance,
+  );
   const generation = await (deps.runCreativeGeneration ?? runCreativeGeneration)({
     projectId: input.projectId,
     brief: input.brief,
@@ -232,11 +258,7 @@ export async function runAiCreation(
     records,
     ...(input.onStage ? { onStage: input.onStage } : {}),
   }, {
-    ...productionDeps(
-      runtime,
-      deps.renderViewports ?? renderVisualQualityViewports,
-      deps.resolveImage ?? resolveCreativeImage,
-    ),
+    ...production.deps,
     ...(deps.fetchText ? { fetchText: deps.fetchText } : {}),
     ...deps.creativeGenerationDeps,
   });
@@ -258,6 +280,7 @@ export async function runAiCreation(
     visualEngine: generation.visualEngine,
     filled: generation.filled,
     appliedOps: generation.appliedOps,
+    generatedImages: production.imagesApplied(),
     // True when an improvement stage failed and the baseline shipped instead.
     // Delivering is operational success; this is how a caller tells that apart
     // from the model actually having designed the page.
