@@ -78,9 +78,20 @@ describe("creative generation orchestration", () => {
 
   it("fails only when no safe baseline can be built", async () => {
     const result = await runCreativeGeneration(INPUT, deps({
-      buildBaseline: async () => ({ ok: false, code: "section_inventory_unavailable" }),
+      buildBaseline: async () => ({ ok: false, code: "section_inventory_unavailable", detail: "section_fragment_stale" }),
     }));
     expect(result).toMatchObject({ ok: false, stage: "composition", reasonCode: "section_inventory_unavailable" });
+  });
+
+  // The public reason is coarse on purpose; the journal must still say which
+  // of a dozen catalog failures actually happened.
+  it("records the composer's own reason, not the collapsed public one", async () => {
+    const recordFailure = vi.fn();
+    await runCreativeGeneration(INPUT, deps({
+      buildBaseline: async () => ({ ok: false, code: "section_inventory_unavailable", detail: "section_fragment_stale" }),
+      recordFailure,
+    }));
+    expect(recordFailure).toHaveBeenCalledWith("baseline", "section_fragment_stale");
   });
 
   it("fails when the baseline builder itself throws", async () => {

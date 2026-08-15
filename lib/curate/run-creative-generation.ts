@@ -91,7 +91,9 @@ export async function runCreativeGeneration(
     return { ok: false, stage: "composition", reasonCode: "composition_failed" };
   }
   if (!baseline.ok) {
-    deps.recordFailure?.("baseline", baseline.code);
+    // The user-facing reason stays coarse; the journal gets the real cause, or
+    // "the catalog broke" is indistinguishable from "the page did".
+    deps.recordFailure?.("baseline", baseline.detail || baseline.code);
     return { ok: false, stage: "composition", reasonCode: baseline.code };
   }
 

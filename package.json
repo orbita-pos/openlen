@@ -97,6 +97,7 @@
     "sections:backfill-scope": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/sections-backfill-scope.ts",
     "sections:backfill-host-adopt": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/sections-backfill-host-adopt.ts",
     "sections:verify-render": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/sections-verify-render.ts",
+    "sections:verify-integrity": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json --require ./scripts/test-node-server-only-shim.cjs scripts/sections-verify-integrity.ts",
     "sections:audit": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/sections-audit.ts",
     "templates:thumbnails": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/templates/generate-thumbnails.ts",
     "templates:tiles": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/templates/generate-tiles.ts",

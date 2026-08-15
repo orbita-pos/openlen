@@ -29,7 +29,14 @@ export interface SafeCreativeCandidate {
 
 export type CreativeBaselineResult =
   | { readonly ok: true; readonly candidate: SafeCreativeCandidate; readonly intent: IntentAnalysis; readonly copy: ExtractedBusinessData }
-  | { readonly ok: false; readonly code: "section_inventory_unavailable" | "baseline_invalid" };
+  | {
+      readonly ok: false;
+      readonly code: "section_inventory_unavailable" | "baseline_invalid";
+      /** The composer's own reason, kept for telemetry. The two public codes
+       * above collapse a dozen distinct causes into "we could not build it",
+       * which is useless when the catalog is the thing that broke. */
+      readonly detail: string;
+    };
 
 export interface CreativeBaselineDeps {
   readonly composeSection?: typeof composeSectionCandidate;
@@ -123,7 +130,7 @@ export async function buildCreativeBaseline(
 ): Promise<CreativeBaselineResult> {
   const intent = buildDeterministicIntent(input.brief);
   const copy = buildDeterministicPageCopy(input.brief, intent);
-  if (input.records.length === 0) return { ok: false, code: "section_inventory_unavailable" };
+  if (input.records.length === 0) return { ok: false, code: "section_inventory_unavailable", detail: "no_published_sections" };
 
   // Provider-free by construction: the two paid seams are replaced rather than
   // gated. `beforeCreative` is NOT the switch — returning false there makes the
@@ -167,7 +174,7 @@ export async function buildCreativeBaseline(
     }) as never,
   });
   if (!composed.ok) {
-    return { ok: false, code: INVENTORY_CODES.has(composed.reasonCode) ? "section_inventory_unavailable" : "baseline_invalid" };
+    return { ok: false, code: INVENTORY_CODES.has(composed.reasonCode) ? "section_inventory_unavailable" : "baseline_invalid", detail: composed.reasonCode };
   }
 
   const title = present([copy.business_name, copy.hero_keyword])[0]
@@ -177,12 +184,12 @@ export async function buildCreativeBaseline(
     profileData: input.profileData,
     title,
   });
-  if (!finalized.ok) return { ok: false, code: "baseline_invalid" };
+  if (!finalized.ok) return { ok: false, code: "baseline_invalid", detail: "finalize_failed" };
   const sealed = (deps.seal ?? sealRelease)(finalized.html);
-  if (!sealed.sealed) return { ok: false, code: "baseline_invalid" };
+  if (!sealed.sealed) return { ok: false, code: "baseline_invalid", detail: "seal_failed" };
   const rendered = await (deps.render ?? (async () => ({ mobileOverflow: false, invalidGeometry: false })))(sealed.html);
   // Weak typography is an improvement signal for the sandbox, not a safety abort.
-  if (!rendered || rendered.mobileOverflow || rendered.invalidGeometry) return { ok: false, code: "baseline_invalid" };
+  if (!rendered || rendered.mobileOverflow || rendered.invalidGeometry) return { ok: false, code: "baseline_invalid", detail: rendered ? "baseline_render_defect" : "baseline_render_failed" };
 
   return {
     ok: true,

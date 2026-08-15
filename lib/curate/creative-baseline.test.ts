@@ -89,7 +89,7 @@ describe("provider-free creative baseline", () => {
 
   it("fails before paid work when no catalog fragment can form a safe baseline", async () => {
     await expect(buildCreativeBaseline({ ...INPUT, records: [] }, makeDeps()))
-      .resolves.toEqual({ ok: false, code: "section_inventory_unavailable" });
+      .resolves.toMatchObject({ ok: false, code: "section_inventory_unavailable", detail: expect.any(String) });
   });
 
   it("replaces every substantive donor text block locally", async () => {
@@ -106,7 +106,7 @@ describe("provider-free creative baseline", () => {
 
   it("rejects a baseline that will not seal", async () => {
     await expect(buildCreativeBaseline(INPUT, makeDeps({ sealed: false })))
-      .resolves.toEqual({ ok: false, code: "baseline_invalid" });
+      .resolves.toMatchObject({ ok: false, code: "baseline_invalid", detail: expect.any(String) });
   });
 
   it.each([
@@ -115,7 +115,7 @@ describe("provider-free creative baseline", () => {
     ["does not render at all", null],
   ] as const)("rejects a baseline that %s", async (_name, rendered) => {
     await expect(buildCreativeBaseline(INPUT, makeDeps({ rendered })))
-      .resolves.toEqual({ ok: false, code: "baseline_invalid" });
+      .resolves.toMatchObject({ ok: false, code: "baseline_invalid", detail: expect.any(String) });
   });
 
   it("treats weak typography as an improvement signal, not a safety abort", async () => {
