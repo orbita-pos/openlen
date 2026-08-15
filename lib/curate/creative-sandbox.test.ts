@@ -194,6 +194,16 @@ describe("transactional creative sandbox", () => {
   });
 
   it.each([
+    ".a{background-image:url(https://images.openlen.com/tematicas/wanderlust-pool-1920.webp)}",
+    ".a{background-image:url('https://images.openlen.com/texturas/papel.png')}",
+  ])("accepts openlen's own image catalog: %s", (css) => {
+    expect(safeCreativeCss(css)).toEqual({ ok: true });
+  });
+
+  it.each([
+    ".a{background-image:url(https://images.openlen.com/x.png?token=1)}",
+    ".a{background-image:url(https://images.openlen.com.evil.com/x.png)}",
+    ".a{background-image:url(http://images.openlen.com/x.png)}",
     ".a{background-image:url(//evil.com/x.png)}",
     ".a{background-image:url(https://evil.com/x.png)}",
     ".a{background-image:url(data:text/html,<h1>x</h1>)}",

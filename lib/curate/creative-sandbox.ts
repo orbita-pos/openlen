@@ -1,6 +1,7 @@
 import { parse, type HTMLElement } from "node-html-parser";
 import postcss from "postcss";
 
+import { isResolvedAssetUrl } from "@/lib/generation/asset-contracts";
 import { sha256 } from "@/lib/generation/content-hash";
 
 import type { SafeCreativeCandidate } from "./creative-baseline";
@@ -66,6 +67,9 @@ function cssUrlAllowed(rawUrl: string, allowedAssetUrls: readonly string[]): boo
   // not a fetch to validate. `fonts/x.woff2` is exactly `./fonts/x.woff2`, and
   // only the leading-dot spellings used to be accepted.
   if (!/^[a-z][a-z0-9+.-]*:/i.test(value)) return true;
+  // OpenLen's own image catalog, decided by the same predicate the asset
+  // manifest and the image tool use rather than a second host pattern here.
+  if (isResolvedAssetUrl(value, "curated")) return true;
   return allowedAssetUrls.includes(value);
 }
 
