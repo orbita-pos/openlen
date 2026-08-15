@@ -174,6 +174,34 @@ describe("transactional creative sandbox", () => {
     expect(safeCreativeCss(css)).toMatchObject({ ok: false, detail: "css_execution_primitive" });
   });
 
+  it.each([
+    // The idiom 22 curated sheets already use: a URL-encoded SVG texture. Same
+    // bytes the base64 form carries, and a comma instead of a semicolon.
+    ".a{background-image:url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'%3E%3C/svg%3E\")}",
+    ".a{background-image:url(data:image/svg+xml;base64,PHN2Zz48L3N2Zz4=)}",
+    ".a{background-image:url(data:image/png;base64,iVBORw0KGgo=)}",
+  ])("accepts an inline image whichever way it is encoded: %s", (css) => {
+    expect(safeCreativeCss(css)).toEqual({ ok: true });
+  });
+
+  it.each([
+    "@font-face{src:url('fonts/rubik.woff2') format('woff2')}",
+    ".a{background-image:url(./img/paper.png)}",
+    ".a{background-image:url(/img/paper.png)}",
+    ".a{clip-path:url(#blob)}",
+  ])("accepts a same-origin reference however it is spelled: %s", (css) => {
+    expect(safeCreativeCss(css)).toEqual({ ok: true });
+  });
+
+  it.each([
+    ".a{background-image:url(//evil.com/x.png)}",
+    ".a{background-image:url(https://evil.com/x.png)}",
+    ".a{background-image:url(data:text/html,<h1>x</h1>)}",
+    ".a{background-image:url(data:application/xml,%3Cx/%3E)}",
+  ])("still refuses a non-image data uri: %s", (css) => {
+    expect(safeCreativeCss(css)).toMatchObject({ ok: false, detail: "css_external_fetch" });
+  });
+
   it("keeps a data-uri background and a relative asset path", async () => {
     const sandbox = createCreativeSandbox(CANDIDATE, makeDeps());
     await expect(sandbox.applyPatch({ operations: [{ op: "set_page_css", css: ".a{background-image:url(data:image/svg+xml;base64,PHN2Zz48L3N2Zz4=)}.b{background-image:url(/assets/paper.png)}" }] }))

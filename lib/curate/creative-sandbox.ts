@@ -56,9 +56,16 @@ export function safeCreativeUrl(raw: string): boolean {
 
 function cssUrlAllowed(rawUrl: string, allowedAssetUrls: readonly string[]): boolean {
   const value = rawUrl.trim().replace(/^["']|["']$/g, "");
-  if (value === "") return false;
-  if (value.startsWith("#") || value.startsWith("/") || value.startsWith("./") || value.startsWith("../")) return !value.startsWith("//");
-  if (value.startsWith("data:")) return /^data:image\/(?:png|jpeg|gif|webp|avif|svg\+xml);/i.test(value);
+  if (value === "" || value.startsWith("//")) return false;
+  // `;` for the base64 form, `,` for the URL-encoded one. Requiring the
+  // semicolon refused every percent-encoded SVG texture -- 22 of them in the
+  // curated catalog alone -- while carrying exactly the bytes base64 already
+  // carried. CSS-referenced SVG does not script, whichever way it is written.
+  if (value.startsWith("data:")) return /^data:image\/(?:png|jpeg|gif|webp|avif|svg\+xml)[;,]/i.test(value);
+  // Anything without a scheme resolves against the page's own origin, so it is
+  // not a fetch to validate. `fonts/x.woff2` is exactly `./fonts/x.woff2`, and
+  // only the leading-dot spellings used to be accepted.
+  if (!/^[a-z][a-z0-9+.-]*:/i.test(value)) return true;
   return allowedAssetUrls.includes(value);
 }
 
