@@ -255,6 +255,49 @@ describe("transactional creative sandbox", () => {
     })).resolves.toMatchObject({ ok: false, code: "unsafe_css", detail: "css_external_fetch" });
   });
 
+  it("keeps a photo the user already paid for when the model rewrites its section", async () => {
+    const PHOTO = "https://images.openlen.com/food-editorial-01-1920.webp";
+    const withPhoto: SafeCreativeCandidate = {
+      ...CANDIDATE,
+      html: BASE_HTML.replace(
+        'data-openlen-edit-id="ol-hero-1"',
+        `data-openlen-edit-id="ol-hero-1" data-openlen-asset="${PHOTO}" role="img" aria-label="guiso" style="background-image:url('${PHOTO}');"`,
+      ),
+    };
+    const sandbox = createCreativeSandbox(withPhoto, makeDeps());
+
+    await expect(sandbox.applyPatch({
+      operations: [{ op: "replace_section", targetId: "ol-hero-1", html: "<section><h1>Nuevo hero</h1></section>" }],
+    })).resolves.toMatchObject({ ok: true });
+
+    // The image was resolved, billed and applied before this patch. A rewrite
+    // that silently drops it charges the user for something they never see.
+    const html = sandbox.current().html;
+    expect(html).toContain(PHOTO);
+    expect(html).toContain("Nuevo hero");
+  });
+
+  it("leaves the model's own use of the photo alone", async () => {
+    const PHOTO = "https://images.openlen.com/food-editorial-01-1920.webp";
+    const withPhoto: SafeCreativeCandidate = {
+      ...CANDIDATE,
+      html: BASE_HTML.replace(
+        'data-openlen-edit-id="ol-hero-1"',
+        `data-openlen-edit-id="ol-hero-1" data-openlen-asset="${PHOTO}" style="background-image:url('${PHOTO}');"`,
+      ),
+    };
+    const sandbox = createCreativeSandbox(withPhoto, makeDeps());
+
+    await sandbox.applyPatch({
+      operations: [{ op: "replace_section", targetId: "ol-hero-1", html: `<section><figure><img src="${PHOTO}" alt="guiso"></figure></section>` }],
+    });
+
+    const html = sandbox.current().html;
+    // It placed the photo itself, so the root must not get a second copy.
+    expect(html).toContain(`<img src="${PHOTO}"`);
+    expect(html).not.toContain("background-image");
+  });
+
   it("keeps a data-uri background and a relative asset path", async () => {
     const sandbox = createCreativeSandbox(CANDIDATE, makeDeps());
     await expect(sandbox.applyPatch({ operations: [{ op: "set_page_css", css: ".a{background-image:url(data:image/svg+xml;base64,PHN2Zz48L3N2Zz4=)}.b{background-image:url(/assets/paper.png)}" }] }))

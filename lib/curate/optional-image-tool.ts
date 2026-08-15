@@ -71,6 +71,9 @@ export async function runOptionalImageTool(
 
     const existing = target.getAttribute("style")?.trim().replace(/;?$/, ";") ?? "";
     target.setAttribute("style", `${existing}background-image:url('${resolved.url.replace(/[\\']/g, (value) => `\\${value}`)}');`);
+    // Marks the section as carrying a resolved asset so a later rewrite can
+    // tell a photo the user paid for from decoration the model wrote itself.
+    target.setAttribute("data-openlen-asset", resolved.url);
     target.setAttribute("role", "img");
     target.setAttribute("aria-label", request.subject.replaceAll("_", " "));
     html = document.toString();

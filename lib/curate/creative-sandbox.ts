@@ -15,6 +15,7 @@ import {
 
 const EDIT_ID = "data-openlen-edit-id";
 const IDENTITY_ATTRIBUTES = ["data-openlen-role", "data-sec"] as const;
+const ASSET_ATTRIBUTE = "data-openlen-asset";
 const RESERVED_MARKER = "data-slot-path=";
 const SAFE_PROTOCOLS = new Set(["https:", "http:", "mailto:", "tel:"]);
 const PRIVATE_HOST = /^(?:localhost|0\.0\.0\.0|\[?::1\]?|10\.\d+\.\d+\.\d+|127\.\d+\.\d+\.\d+|169\.254\.\d+\.\d+|192\.168\.\d+\.\d+|172\.(?:1[6-9]|2\d|3[01])\.\d+\.\d+)$/i;
@@ -181,6 +182,17 @@ function applyOperation(
       const inherited = target!.getAttribute(attribute);
       if (inherited) replacement.setAttribute(attribute, inherited);
       else replacement.removeAttribute(attribute);
+    }
+    // A photo OpenLen resolved was paid for before this patch existed. If the
+    // replacement uses it the model owns the placement; if it does not, the
+    // page keeps it rather than charging the user for something they never see.
+    const asset = target!.getAttribute(ASSET_ATTRIBUTE);
+    if (asset) {
+      replacement.setAttribute(ASSET_ATTRIBUTE, asset);
+      if (!operation.html.includes(asset)) {
+        const style = replacement.getAttribute("style")?.trim().replace(/;?$/, ";") ?? "";
+        replacement.setAttribute("style", `${style}background-image:url('${asset.replace(/[\\']/g, (value) => `\\${value}`)}');`);
+      }
     }
     replacement.setAttribute(EDIT_ID, operation.targetId);
     target!.replaceWith(replacement);
