@@ -60,6 +60,7 @@ export default defineConfig({
       "lib/design-guidance-seam.test.ts",
       "lib/curate/**/*.test.ts",
       "lib/generation/**/*.test.ts",
+      "lib/html-gate/**/*.test.ts",
       "lib/templates/visual-metadata.test.ts",
       "lib/templates/store-visual-metadata.test.ts",
       "lib/templates/suggest-visual-metadata.test.ts",
