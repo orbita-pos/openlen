@@ -34,11 +34,15 @@ export interface CreativeSessionDeps {
   readonly recordModel?: (stage: "creative_session", result: FireworksToolTurnResult) => void;
 }
 
+/** The transport's own verdict, kept intact. Collapsing timeout, a thrown
+ * connection and a malformed call into one word costs a paid run to undo. */
+type ClientFailure = Exclude<Extract<FireworksToolTurnResult, { ok: false }>["code"], "budget_exceeded">;
+
 export interface CreativeSessionResult {
   readonly candidate: SafeCreativeCandidate;
   readonly changed: boolean;
   readonly acceptedMutations: number;
-  readonly stoppedBy: "finished" | "provider" | "budget" | "tool_limit" | "turn_limit";
+  readonly stoppedBy: "finished" | "budget" | "tool_limit" | "turn_limit" | ClientFailure;
 }
 
 function systemPrompt(): string {
@@ -139,7 +143,7 @@ export async function runDeepSeekCreativeSession(
         maxOutputTokens = TRUNCATED_MAX_OUTPUT_TOKENS;
         continue;
       }
-      return finish("provider");
+      return finish(response.code);
     }
     if (response.calls.length === 0) return finish("finished");
 

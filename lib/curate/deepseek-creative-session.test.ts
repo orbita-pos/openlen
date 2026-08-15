@@ -84,13 +84,13 @@ describe("finite DeepSeek creative session", () => {
     expect(result.stoppedBy).toBe("finished");
   });
 
-  it.each(["timeout", "provider", "invalid_tool_call", "budget_exceeded"] as const)(
-    "returns lastKnownGood on %s", async (code) => {
+  it.each(["timeout", "provider", "invalid_tool_call", "http", "missing_key", "budget_exceeded"] as const)(
+    "returns lastKnownGood on %s and says which one stopped it", async (code) => {
       const { client } = clientReturning({ ok: false, code, durationMs: 1, modelId: "deepseek" });
       const result = await runDeepSeekCreativeSession(INPUT, { client, sandbox: makeSandbox() });
       expect(result.candidate).toEqual(BASELINE);
       expect(result.changed).toBe(false);
-      expect(result.stoppedBy).toBe(code === "budget_exceeded" ? "budget" : "provider");
+      expect(result.stoppedBy).toBe(code === "budget_exceeded" ? "budget" : code);
     },
   );
 
@@ -99,7 +99,7 @@ describe("finite DeepSeek creative session", () => {
     const result = await runDeepSeekCreativeSession(INPUT, { client, sandbox: makeSandbox() });
     expect(result.changed).toBe(true);
     expect(result.candidate.html).toContain("patched");
-    expect(result.stoppedBy).toBe("provider");
+    expect(result.stoppedBy).toBe("timeout");
   });
 
   it("never runs more than four turns", async () => {
@@ -184,6 +184,7 @@ describe("finite DeepSeek creative session", () => {
     const result = await runDeepSeekCreativeSession(INPUT, { client, sandbox: makeSandbox() });
     expect(seen).toHaveLength(2);
     expect(result.stoppedBy).toBe("provider");
+    expect(result.changed).toBe(false);
   });
 
   it("records every paid turn through the telemetry sink", async () => {

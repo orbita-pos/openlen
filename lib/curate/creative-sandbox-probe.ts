@@ -134,7 +134,7 @@ export async function runCreativeSandboxCanaryPage(caseId: string): Promise<Crea
         // output count is the only number that separates them.
         ...event.paidCalls.map((call) => {
           const output = (call.usage as { outputTokens?: number }).outputTokens;
-          return `${call.stage}:${call.providerCategory ?? "ok"}${call.httpStatus ? `:${call.httpStatus}` : ""}:out=${typeof output === "number" ? output : "?"}`;
+          return `${call.stage}:${call.providerCategory ?? "ok"}${call.httpStatus ? `:${call.httpStatus}` : ""}:out=${typeof output === "number" ? output : "?"}:ms=${call.durationMs}`;
         }),
       ],
     } : {}),
