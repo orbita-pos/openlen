@@ -145,3 +145,6 @@ public/openlen-images/motion/
 # Tematica art workbench (originals archive + smoke screenshots — local only)
 .tematicas-art/
 .tematica-smoke/
+
+# Live canary evidence: accounting artifacts, never committed.
+scratch/creative-sandbox/
