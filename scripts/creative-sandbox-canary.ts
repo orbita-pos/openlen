@@ -9,10 +9,6 @@ export const CREATIVE_SANDBOX_CANARY_AUTHORIZATION = "AUTHORIZED_CREATIVE_SANDBO
 
 const PROVIDERS = ["deepseek-tool", "qwen-vision"] as const;
 const COMMIT = /^[a-f0-9]{40}$/;
-// Worst case for one authorized unit of work. A run whose cap cannot cover it
-// never starts, so the cap is a promise rather than a hope.
-const PROBE_WORST_CASE_MICROMXN = 120_000;
-const PAGE_WORST_CASE_MICROMXN = 900_000;
 
 export type CreativeSandboxProvider = (typeof PROVIDERS)[number];
 
@@ -67,6 +63,10 @@ export interface CreativeSandboxCanaryDeps {
   readonly creationMode: string | undefined;
   readonly headCommit: string;
   readonly fireworksKeyPresent: boolean;
+  /** The cap the page budget will actually enforce during the run. The
+   * authorized cap has to cover it, or the spend is only bounded after the
+   * money is gone. */
+  readonly pageBudgetCapMicromxn: number;
   /** Which isolated probes have already passed. A page may not run first. */
   probeEvidence(): Promise<Record<CreativeSandboxProvider, boolean>>;
   runProbe(provider: CreativeSandboxProvider): Promise<CreativeSandboxProbeOutcome>;
@@ -186,8 +186,10 @@ export async function runCreativeSandboxCanary(
   if (!COMMIT.test(deps.headCommit) || deps.headCommit !== args.commit) return fail("commit_mismatch");
   if (!deps.fireworksKeyPresent) return fail("missing_key");
   if (!Number.isSafeInteger(args.maxMicromxn) || args.maxMicromxn <= 0) return fail("invalid_budget");
-
-  const worstCase = args.mode.kind === "provider" ? PROBE_WORST_CASE_MICROMXN : PAGE_WORST_CASE_MICROMXN;
+  const worstCase = deps.pageBudgetCapMicromxn;
+  if (!Number.isSafeInteger(worstCase) || worstCase <= 0) return fail("invalid_budget");
+  // The run's own budget is what actually stops spending; the authorization has
+  // to be at least that large or it promises nothing.
   if (worstCase > args.maxMicromxn) return fail("budget_exceeded");
 
   if (args.mode.kind === "page") {
@@ -237,6 +239,7 @@ async function productionDeps(): Promise<CreativeSandboxCanaryDeps> {
     creationMode: process.env.OPENLEN_AI_CREATION,
     headCommit: process.env.OPENLEN_CREATIVE_SANDBOX_CANARY_COMMIT ?? "",
     fireworksKeyPresent: Boolean(process.env.FIREWORKS_API_KEY),
+    pageBudgetCapMicromxn: Number(process.env.OPENLEN_FABLE_PAGE_CAP_MICROMXN),
     probeEvidence: async () => {
       try {
         const parsed = JSON.parse(await readFile(evidenceFile, "utf8")) as Record<string, boolean>;

@@ -15,6 +15,7 @@ function deps(over: Partial<CreativeSandboxCanaryDeps> = {}): CreativeSandboxCan
     creationMode: "enabled",
     headCommit: COMMIT,
     fireworksKeyPresent: true,
+    pageBudgetCapMicromxn: 500_000,
     probeEvidence: async () => ({ "deepseek-tool": true, "qwen-vision": true }),
     runProbe: async (provider) => ({
       ok: true, resultCode: "probe_ok", modelId: `model-${provider}`,
@@ -86,10 +87,22 @@ describe("creative sandbox canary gates", () => {
     expect(runPage).not.toHaveBeenCalled();
   });
 
-  it("refuses to start a run whose worst case exceeds the authorized cap", async () => {
+  // The authorization has to cover the budget the run will actually enforce,
+  // or it bounds nothing until the money is already spent.
+  it("refuses to start when the run's own budget cap exceeds the authorized cap", async () => {
     const runProbe = vi.fn();
-    const result = await runCreativeSandboxCanary({ ...PROBE, maxMicromxn: 1 }, deps({ runProbe } as never));
+    const result = await runCreativeSandboxCanary(
+      { ...PROBE, maxMicromxn: 499_999 },
+      deps({ pageBudgetCapMicromxn: 500_000, runProbe } as never),
+    );
     expect(result).toMatchObject({ ok: false, code: "budget_exceeded" });
+    expect(runProbe).not.toHaveBeenCalled();
+  });
+
+  it.each([0, -1, Number.NaN])("refuses an unusable page budget cap of %s", async (cap) => {
+    const runProbe = vi.fn();
+    const result = await runCreativeSandboxCanary(PROBE, deps({ pageBudgetCapMicromxn: cap, runProbe } as never));
+    expect(result).toMatchObject({ ok: false, code: "invalid_budget" });
     expect(runProbe).not.toHaveBeenCalled();
   });
 
