@@ -227,6 +227,34 @@ describe("transactional creative sandbox", () => {
     expect(html).toContain("Nuevo");
   });
 
+  it("applies the css a replaced section brings with it, scoped to that section", async () => {
+    const sandbox = createCreativeSandbox(CANDIDATE, makeDeps());
+    await expect(sandbox.applyPatch({
+      operations: [{
+        op: "replace_section",
+        targetId: "ol-hero-1",
+        html: '<section class="galeria"><h1>Colorea</h1><article class="lamina">x</article></section>',
+        css: ".galeria{padding:4rem}.lamina{border-radius:1rem}@media (max-width:600px){.lamina{padding:1rem}}",
+      }],
+    })).resolves.toMatchObject({ ok: true });
+
+    const html = sandbox.current().html;
+    // The donor's stylesheet is keyed to class names the replacement no longer
+    // uses, so a section that brings no css of its own renders naked.
+    expect(html).toContain(".lamina");
+    expect(html).toMatch(/\[data-openlen-edit-id="ol-hero-1"\][^{]*\.lamina/);
+    // Its own root must match too, not only its descendants.
+    expect(html).toMatch(/\[data-openlen-edit-id="ol-hero-1"\]\.galeria/);
+    expect(html).toContain("@media");
+  });
+
+  it("refuses the section css by the same rules as page css", async () => {
+    const sandbox = createCreativeSandbox(CANDIDATE, makeDeps());
+    await expect(sandbox.applyPatch({
+      operations: [{ op: "replace_section", targetId: "ol-hero-1", html: "<section>x</section>", css: ".a{background:url(https://evil.com/x.png)}" }],
+    })).resolves.toMatchObject({ ok: false, code: "unsafe_css", detail: "css_external_fetch" });
+  });
+
   it("keeps a data-uri background and a relative asset path", async () => {
     const sandbox = createCreativeSandbox(CANDIDATE, makeDeps());
     await expect(sandbox.applyPatch({ operations: [{ op: "set_page_css", css: ".a{background-image:url(data:image/svg+xml;base64,PHN2Zz48L3N2Zz4=)}.b{background-image:url(/assets/paper.png)}" }] }))

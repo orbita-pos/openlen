@@ -54,6 +54,7 @@ function systemPrompt(): string {
     "The canvas comes with the brief, so spend your first turn changing the page, not looking at it.",
     "Make the page unmistakably belong to its niche:",
     "structure, rhythm, colour, typography, texture and motion are all yours through HTML and CSS.",
+    "A section you replace loses the stylesheet it had: send that section's css in the same operation as its html, or your markup lands with class names nothing styles.",
     "Avoid the generic centred hero-badge-title-paragraph-two-buttons stack unless the brief truly calls for it.",
     "You may not use scripts, event handlers or executable URLs; reach for CSS or an OpenLen module instead.",
     "Backgrounds and textures come from CSS gradients, data: URIs or the request_image tool: a url() pointing at any other host is refused and costs you the whole patch.",

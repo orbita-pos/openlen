@@ -93,6 +93,28 @@ export function safeCreativeCss(css: string, allowedAssetUrls: readonly string[]
   return failure ? { ok: false, detail: failure } : { ok: true };
 }
 
+/** A replaced section keeps its donor's stylesheet, but that sheet is keyed to
+ * class names the replacement no longer uses, so markup arriving without css of
+ * its own renders naked. Scoping the section's own css to the section keeps two
+ * sections that both style `.card` from fighting. */
+function scopeSectionCss(css: string, editId: string): string | null {
+  const scope = `[${EDIT_ID}="${editId}"]`;
+  let root: postcss.Root;
+  try { root = postcss.parse(css); } catch { return null; }
+  root.walkRules((rule) => {
+    const parent = rule.parent as { type?: string; name?: string } | undefined;
+    // Inside @keyframes the "selectors" are percentages, not elements.
+    if (parent?.type === "atrule" && /keyframes$/i.test(parent.name ?? "")) return;
+    rule.selectors = rule.selectors.flatMap((selector) => {
+      const trimmed = selector.trim();
+      if (trimmed === "" || trimmed.startsWith(":root")) return [trimmed];
+      // The section root itself and its descendants are both in scope.
+      return [`${scope} ${trimmed}`, `${scope}${trimmed}`];
+    });
+  });
+  return root.toString();
+}
+
 function targets(document: HTMLElement): Map<string, HTMLElement> {
   const found = new Map<string, HTMLElement>();
   for (const node of document.querySelectorAll(`[${EDIT_ID}]`)) {
@@ -127,6 +149,19 @@ function preflight(operations: readonly CreativeOperation[]): { code: CreativeTo
   return null;
 }
 
+function attachSectionCss(
+  document: HTMLElement,
+  css: string | undefined,
+  editId: string,
+): CreativeToolFailureCode | null {
+  if (css === undefined || css.trim() === "") return null;
+  const scoped = scopeSectionCss(css, editId);
+  if (scoped === null) return "unsafe_css";
+  const head = document.querySelector("head") ?? document;
+  head.insertAdjacentHTML("beforeend", `<style data-openlen-creative-section="${editId}">${scoped}</style>`);
+  return null;
+}
+
 function applyOperation(
   document: HTMLElement,
   operation: CreativeOperation,
@@ -149,7 +184,7 @@ function applyOperation(
     }
     replacement.setAttribute(EDIT_ID, operation.targetId);
     target!.replaceWith(replacement);
-    return null;
+    return attachSectionCss(document, operation.css, operation.targetId);
   }
   if (operation.op === "remove_section") {
     target!.remove();
@@ -162,8 +197,11 @@ function applyOperation(
     if (operation.op === "insert_section") {
       const created = parse(operation.html).firstChild as HTMLElement | null;
       if (!created || typeof created.setAttribute !== "function") return "invalid_patch";
-      created.setAttribute(EDIT_ID, nextId());
+      const insertedId = nextId();
+      created.setAttribute(EDIT_ID, insertedId);
       created.setAttribute("data-openlen-role", operation.role);
+      const problem = attachSectionCss(document, operation.css, insertedId);
+      if (problem) return problem;
       node = created;
     } else {
       node = target!;
