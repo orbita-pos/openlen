@@ -8,12 +8,12 @@ const FIREWORKS_ENDPOINT = "https://api.fireworks.ai/inference/v1/chat/completio
 const DEFAULT_TIMEOUT_MS = 180_000;
 // A deadline that cannot cover the ceiling makes a paid turn a guaranteed
 // write-off: nothing is streamed, so a turn that spends its whole allowance
-// returns nothing at all until it is finished. Measured: the two cheap turns of
-// a real session answered in 1.8s each and the design turn hit 180,007ms with
-// zero tokens delivered. The floor is deliberately pessimistic -- those two
-// samples were dominated by time-to-first-token, so real generation throughput
-// is still unmeasured.
-const MIN_OUTPUT_TOKENS_PER_SECOND = 50;
+// returns nothing at all until it is finished. A 180s deadline over a 24,000
+// token ceiling aborted a design turn that was working normally.
+// Measured since, on real design turns: 24,000 tokens in 172.5s and 31,396 in
+// 221.5s -- 139 and 142 tokens per second. The floor keeps a 30% margin under
+// the slower of the two.
+const MIN_OUTPUT_TOKENS_PER_SECOND = 100;
 const DEADLINE_BASE_MS = 30_000;
 
 function deadlineForCeiling(maxOutputTokens: number): number {

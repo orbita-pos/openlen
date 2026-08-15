@@ -10,13 +10,12 @@ import { parseCreativePatch, type CreativeToolResult } from "./creative-sandbox-
 
 const MAX_TURNS = 4;
 const MAX_ACCEPTED_MUTATIONS = 12;
-// A single real section patch cost 1,949 output tokens against DeepSeek V4
-// Flash at reasoning_effort "high"; anything tighter truncates mid-thought.
-const DEFAULT_MAX_OUTPUT_TOKENS = 24_000;
-// Measured on a real page: the first turn spent the whole 12,000-token ceiling
-// reasoning and emitted no tool call, so every page shipped its baseline. The
-// ceiling is reserved, not spent, so a generous retry costs nothing unused.
-const TRUNCATED_MAX_OUTPUT_TOKENS = 48_000;
+// Measured on a real page, not estimated: the design turn -- the one that
+// rewrites sections -- spent 31,396 output tokens and finished. 12,000 died
+// reasoning; 24,000 truncated mid-patch and burned a turn on the retry. The
+// ceiling is reserved, not spent, so headroom costs nothing unused.
+const DEFAULT_MAX_OUTPUT_TOKENS = 48_000;
+const TRUNCATED_MAX_OUTPUT_TOKENS = 64_000;
 
 export interface CreativeSessionInput {
   readonly requestId: string;
