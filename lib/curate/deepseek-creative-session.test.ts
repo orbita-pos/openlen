@@ -155,6 +155,37 @@ describe("finite DeepSeek creative session", () => {
     expect(result.candidate).toEqual(BASELINE);
   });
 
+  it("raises the output ceiling once when the ceiling itself ended the turn", async () => {
+    const ceilings: number[] = [];
+    const turns: FireworksToolTurnResult[] = [
+      { ok: false, code: "provider", providerCategory: "response_truncated", durationMs: 1, modelId: "deepseek" },
+      ok([PATCH_CALL]),
+      ok([], "done"),
+    ];
+    let index = 0;
+    const client: FireworksToolClient = {
+      async turn(request) {
+        ceilings.push(request.maxOutputTokens);
+        return turns[Math.min(index++, turns.length - 1)];
+      },
+    };
+
+    const result = await runDeepSeekCreativeSession(INPUT, { client, sandbox: makeSandbox() });
+
+    expect(ceilings[1]).toBeGreaterThan(ceilings[0]);
+    expect(result.changed).toBe(true);
+    expect(result.stoppedBy).toBe("finished");
+  });
+
+  it("stops when the raised ceiling truncates too", async () => {
+    const { client, seen } = clientReturning(
+      { ok: false, code: "provider", providerCategory: "response_truncated", durationMs: 1, modelId: "deepseek" },
+    );
+    const result = await runDeepSeekCreativeSession(INPUT, { client, sandbox: makeSandbox() });
+    expect(seen).toHaveLength(2);
+    expect(result.stoppedBy).toBe("provider");
+  });
+
   it("records every paid turn through the telemetry sink", async () => {
     const recordModel = vi.fn();
     const { client } = clientReturning(ok([PATCH_CALL]), ok([], "done"));

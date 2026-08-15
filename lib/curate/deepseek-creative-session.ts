@@ -12,7 +12,11 @@ const MAX_TURNS = 4;
 const MAX_ACCEPTED_MUTATIONS = 12;
 // A single real section patch cost 1,949 output tokens against DeepSeek V4
 // Flash at reasoning_effort "high"; anything tighter truncates mid-thought.
-const DEFAULT_MAX_OUTPUT_TOKENS = 12_000;
+const DEFAULT_MAX_OUTPUT_TOKENS = 24_000;
+// Measured on a real page: the first turn spent the whole 12,000-token ceiling
+// reasoning and emitted no tool call, so every page shipped its baseline. The
+// ceiling is reserved, not spent, so a generous retry costs nothing unused.
+const TRUNCATED_MAX_OUTPUT_TOKENS = 48_000;
 
 export interface CreativeSessionInput {
   readonly requestId: string;
@@ -115,17 +119,28 @@ export async function runDeepSeekCreativeSession(
   // Explicit and finite: no recursion, no automatic retry, no way to spend more
   // than four paid turns. Provider and tool failures are observations here —
   // the page already exists and is safe.
+  let maxOutputTokens = input.maxOutputTokens ?? DEFAULT_MAX_OUTPUT_TOKENS;
   for (let turn = 0; turn < maxTurns && acceptedMutations < MAX_ACCEPTED_MUTATIONS; turn += 1) {
     const response = await deps.client.turn({
       requestId: `${input.requestId}.creative-${turn}`,
-      maxOutputTokens: input.maxOutputTokens ?? DEFAULT_MAX_OUTPUT_TOKENS,
+      maxOutputTokens,
       messages,
     });
     // Recorded before the outcome check: a turn that failed still reserved and
     // settled budget, and its category is the only trace of why the session
     // stopped. Skipping it makes a paid failure invisible in the journal.
     deps.recordModel?.("creative_session", response);
-    if (!response.ok) return finish(response.code === "budget_exceeded" ? "budget" : "provider");
+    if (!response.ok) {
+      if (response.code === "budget_exceeded") return finish("budget");
+      // The ceiling ended this turn, not the model. Raising it once and
+      // spending the next turn on the same request is the difference between a
+      // designed page and the baseline; a second truncation is a real failure.
+      if (response.providerCategory === "response_truncated" && maxOutputTokens < TRUNCATED_MAX_OUTPUT_TOKENS) {
+        maxOutputTokens = TRUNCATED_MAX_OUTPUT_TOKENS;
+        continue;
+      }
+      return finish("provider");
+    }
     if (response.calls.length === 0) return finish("finished");
 
     messages.push({

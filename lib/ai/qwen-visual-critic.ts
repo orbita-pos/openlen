@@ -138,7 +138,7 @@ export async function assessFinalVisualCandidate(
     messages: [
       {
         role: "system",
-        content: "Return only fable-visual-verdict/1.0. Score the complete desktop and mobile page. Issues may contain only code, severity, and viewport. Never emit copy, HTML, CSS, JS, selectors, URLs, prompts, explanations, or repair instructions.",
+        content: "Return only fable-visual-verdict/1.0. Score the desktop and mobile captures. Each starts at the top of the page and may end at a fixed capture height, so judge what is shown and never penalise the page for content past the cut. Issues may contain only code, severity, and viewport. Never emit copy, HTML, CSS, JS, selectors, URLs, prompts, explanations, or repair instructions.",
       },
       { role: "user", content: [{ type: "text", text: JSON.stringify({ brief: JSON.parse(summary), viewport: "desktop" }) }, { type: "image_url", image_url: { url: `data:image/jpeg;base64,${input.screenshots.desktop.dataBase64}` } }] },
       { role: "user", content: [{ type: "text", text: JSON.stringify({ viewport: "mobile" }) }, { type: "image_url", image_url: { url: `data:image/jpeg;base64,${input.screenshots.mobile.dataBase64}` } }] },

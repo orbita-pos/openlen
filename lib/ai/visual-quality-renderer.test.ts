@@ -231,8 +231,52 @@ describe("renderVisualQualityViewports", () => {
     ]);
     expect(close).toHaveBeenCalledTimes(1);
     expect(page.screenshot).toHaveBeenCalledTimes(2);
-    expect(page.screenshot).toHaveBeenNthCalledWith(1, expect.objectContaining({ fullPage: true }));
-    expect(page.screenshot).toHaveBeenNthCalledWith(2, expect.objectContaining({ fullPage: true }));
+    expect(page.screenshot).toHaveBeenNthCalledWith(1, expect.objectContaining({ clip: { x: 0, y: 0, width: 1280, height: 4096 } }));
+    expect(page.screenshot).toHaveBeenNthCalledWith(2, expect.objectContaining({ clip: { x: 0, y: 0, width: 390, height: 4096 } }));
+  });
+
+  it("bounds a page taller than the inline-image limit at both viewports", async () => {
+    const page = {
+      setViewport: vi.fn(async () => undefined),
+      setContent: vi.fn(async () => undefined),
+      evaluate: vi.fn()
+        .mockResolvedValueOnce(6_400)
+        .mockResolvedValueOnce(18_900)
+        .mockResolvedValue({ rootScrollWidth: 390, bodyScrollWidth: 390, clientWidth: 390 }),
+      screenshot: vi.fn(async () => Buffer.from("jpeg")),
+    };
+
+    const result = await renderVisualQualityViewports(HTML, {
+      launchBrowser: async () => ({ newPage: async () => page, close: async () => undefined }),
+      installGuard: async () => undefined,
+      settle: async () => undefined,
+    });
+
+    expect(result).not.toBeNull();
+    expect(page.screenshot).toHaveBeenNthCalledWith(1, expect.objectContaining({ clip: { x: 0, y: 0, width: 1280, height: 4096 } }));
+    expect(page.screenshot).toHaveBeenNthCalledWith(2, expect.objectContaining({ clip: { x: 0, y: 0, width: 390, height: 4096 } }));
+    expect(page.screenshot).not.toHaveBeenCalledWith(expect.objectContaining({ fullPage: true }));
+  });
+
+  it("captures a page shorter than the limit whole", async () => {
+    const page = {
+      setViewport: vi.fn(async () => undefined),
+      setContent: vi.fn(async () => undefined),
+      evaluate: vi.fn()
+        .mockResolvedValueOnce(1_540)
+        .mockResolvedValueOnce(3_100)
+        .mockResolvedValue({ rootScrollWidth: 390, bodyScrollWidth: 390, clientWidth: 390 }),
+      screenshot: vi.fn(async () => Buffer.from("jpeg")),
+    };
+
+    await renderVisualQualityViewports(HTML, {
+      launchBrowser: async () => ({ newPage: async () => page, close: async () => undefined }),
+      installGuard: async () => undefined,
+      settle: async () => undefined,
+    });
+
+    expect(page.screenshot).toHaveBeenNthCalledWith(1, expect.objectContaining({ clip: { x: 0, y: 0, width: 1280, height: 1540 } }));
+    expect(page.screenshot).toHaveBeenNthCalledWith(2, expect.objectContaining({ clip: { x: 0, y: 0, width: 390, height: 3100 } }));
   });
 
   it("derives invalid geometry from renderer measurements rather than non-empty screenshot bytes", async () => {

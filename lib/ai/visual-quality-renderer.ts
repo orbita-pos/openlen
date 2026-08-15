@@ -4,6 +4,11 @@ import { installSubresourceSsrfGuard } from "@/lib/security/render-ssrf-guard";
 export const VISUAL_QUALITY_DESKTOP_VIEWPORT = { width: 1280, height: 720 } as const;
 export const VISUAL_QUALITY_MOBILE_VIEWPORT = { width: 390, height: 844 } as const;
 const MAX_VIEWPORT_BYTES = 1024 * 1024;
+// These captures cross the same inline-image boundary as generated assets,
+// which refuses anything over 4096px on an axis. A full-page mobile capture of
+// a real landing page is several times that, so the critic was never shown a
+// page at all — the request died before leaving the process.
+const MAX_CAPTURE_HEIGHT = 4096;
 const DETERMINISTIC_RENDER_RESET = "<style data-openlen-deterministic-render-reset>*,*::before,*::after{animation:none!important;transition:none!important;caret-color:transparent!important;scroll-behavior:auto!important}@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important;caret-color:transparent!important;scroll-behavior:auto!important}}</style>";
 
 export interface VisualQualityViewports {
@@ -19,7 +24,12 @@ interface PageLike {
   setViewport(viewport: { width: number; height: number }): Promise<unknown>;
   setContent(html: string, options?: { waitUntil?: "load"; timeout?: number }): Promise<unknown>;
   evaluate(pageFunction: () => unknown): Promise<unknown>;
-  screenshot(options: { type: "jpeg"; quality: number; fullPage: boolean }): Promise<Uint8Array>;
+  screenshot(options: {
+    type: "jpeg";
+    quality: number;
+    captureBeyondViewport: boolean;
+    clip: { x: number; y: number; width: number; height: number };
+  }): Promise<Uint8Array>;
 }
 
 interface BrowserLike {
@@ -57,11 +67,15 @@ function injectDeterministicRenderReset(html: string): string {
   return `${DETERMINISTIC_RENDER_RESET}${html}`;
 }
 
-async function awaitDeterministicLayout(page: PageLike): Promise<void> {
-  await page.evaluate(async () => {
+/** Returns the settled document height, or null when it cannot be measured —
+ * the capture is bounded either way. */
+async function awaitDeterministicLayout(page: PageLike): Promise<number | null> {
+  const height = await page.evaluate(async () => {
     if ("fonts" in document) await document.fonts.ready;
     await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+    return Math.ceil(Math.max(document.documentElement.scrollHeight, document.body?.scrollHeight ?? 0));
   });
+  return typeof height === "number" && Number.isFinite(height) && height > 0 ? height : null;
 }
 
 function hasDocumentHorizontalOverflow(value: unknown): boolean {
@@ -152,7 +166,7 @@ async function captureWithPage(
   let invalidGeometry = false;
   for (const viewport of [VISUAL_QUALITY_DESKTOP_VIEWPORT, VISUAL_QUALITY_MOBILE_VIEWPORT]) {
     if (viewport !== VISUAL_QUALITY_DESKTOP_VIEWPORT) await page.setViewport(viewport);
-    await awaitDeterministicLayout(page);
+    const documentHeight = await awaitDeterministicLayout(page);
     await (internals.settle ?? (() => new Promise((resolve) => setTimeout(resolve, 400))))();
     if (viewport === VISUAL_QUALITY_MOBILE_VIEWPORT) {
       const readGeometry = () => page.evaluate(() => {
@@ -211,7 +225,12 @@ async function captureWithPage(
         || hasDocumentHorizontalOverflow(secondGeometry);
       ({ weakTypographyHierarchy, squareComponentTreatment } = readVisualDiagnostics(firstGeometry));
     }
-    const bytes = Buffer.from(await page.screenshot({ type: "jpeg", quality: 75, fullPage: true }));
+    const bytes = Buffer.from(await page.screenshot({
+      type: "jpeg",
+      quality: 75,
+      captureBeyondViewport: true,
+      clip: { x: 0, y: 0, width: viewport.width, height: Math.min(documentHeight ?? MAX_CAPTURE_HEIGHT, MAX_CAPTURE_HEIGHT) },
+    }));
     const image = { mimeType: "image/jpeg", dataBase64: bytes.toString("base64") };
     if (!isBoundedJpeg(image)) return null;
     images.push(image);
