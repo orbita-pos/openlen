@@ -265,13 +265,20 @@ export function createFireworksToolClient(options: FireworksToolClientOptions): 
       if (!choice || !message) { settle(); return fail("provider", { ...(usage ? { usage } : {}), providerCategory: "response_content" }); }
       if (!usage) { settle(); return fail("provider", { providerCategory: "response_usage" }); }
 
+      // finish_reason "length" means the ceiling ended the turn, whichever
+      // shape the remains take: no call at all when the model was still
+      // reasoning, or a call cut mid-JSON when it had started writing. Both are
+      // truncation, and reporting the second as a malformed call hid a ceiling
+      // the session was ready to raise.
+      const truncated = choice.finish_reason === "length";
       const calls = readToolCalls(message);
-      if (!calls.ok) { settle(); return fail("invalid_tool_call", { usage }); }
-
-      // A reasoning-truncated turn arrives as finish_reason "length" with no
-      // call at all. Reported as truncation so the session can raise the budget
-      // instead of reading it as "the model had nothing to do".
-      if (choice.finish_reason === "length" && calls.calls.length === 0) {
+      if (!calls.ok) {
+        settle();
+        return truncated
+          ? fail("provider", { usage, providerCategory: "response_truncated" })
+          : fail("invalid_tool_call", { usage });
+      }
+      if (truncated && calls.calls.length === 0) {
         settle();
         return fail("provider", { usage, providerCategory: "response_truncated" });
       }

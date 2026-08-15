@@ -129,10 +129,13 @@ export async function runCreativeSandboxCanaryPage(caseId: string): Promise<Crea
     ...(event ? {
       degradations: [
         ...event.degradations.map((entry) => `${entry.stage}:${entry.reasonCode}`),
-        // A failed paid turn carries the only clue about why a stage stopped.
-        ...event.paidCalls
-          .filter((call) => call.providerCategory !== undefined || call.httpStatus !== undefined)
-          .map((call) => `${call.stage}:${call.providerCategory ?? "unknown"}${call.httpStatus ? `:${call.httpStatus}` : ""}`),
+        // Every paid turn, spent or wasted: a category alone cannot tell a
+        // model that stopped early from one that ran into its ceiling, and the
+        // output count is the only number that separates them.
+        ...event.paidCalls.map((call) => {
+          const output = (call.usage as { outputTokens?: number }).outputTokens;
+          return `${call.stage}:${call.providerCategory ?? "ok"}${call.httpStatus ? `:${call.httpStatus}` : ""}:out=${typeof output === "number" ? output : "?"}`;
+        }),
       ],
     } : {}),
     finalHash: sha256(result.html),

@@ -149,6 +149,21 @@ describe("Fireworks tool transport", () => {
     await expect(client.turn(REQUEST)).resolves.toMatchObject({ ok: false, code: "invalid_tool_call" });
   });
 
+  it("reports a tool call cut off by the ceiling as truncation, not as a malformed call", async () => {
+    const envelope = structuredClone(REAL_ENVELOPE);
+    envelope.choices[0].finish_reason = "length";
+    envelope.choices[0].message.tool_calls[0].function = {
+      name: "apply_creative_patch",
+      arguments: '{"operations":[{"op":"replace_section","targetId":"ol-hero-1","html":"<section',
+    };
+    const { budget } = makeBudget();
+    const { impl } = makeFetch(envelope);
+    const client = createFireworksToolClient({ budget, apiKey: "k", fetchImpl: impl });
+    await expect(client.turn(REQUEST)).resolves.toMatchObject({
+      ok: false, code: "provider", providerCategory: "response_truncated",
+    });
+  });
+
   it("reports a reasoning-truncated turn as provider truncation, not a silent empty turn", async () => {
     const { budget } = makeBudget();
     const { impl } = makeFetch({
