@@ -55,6 +55,7 @@ function systemPrompt(): string {
     "structure, rhythm, colour, typography, texture and motion are all yours through HTML and CSS.",
     "Avoid the generic centred hero-badge-title-paragraph-two-buttons stack unless the brief truly calls for it.",
     "You may not use scripts, event handlers or executable URLs; reach for CSS or an OpenLen module instead.",
+    "Backgrounds and textures come from CSS gradients, data: URIs or the request_image tool: a url() pointing at any other host is refused and costs you the whole patch.",
     "Stop by replying with no tool call once the page is genuinely better.",
   ].join(" ");
 }
