@@ -212,6 +212,21 @@ describe("transactional creative sandbox", () => {
     expect(safeCreativeCss(css)).toMatchObject({ ok: false, detail: "css_external_fetch" });
   });
 
+  it("keeps a replaced section's identity, which belongs to the page and not to the patch", async () => {
+    const sandbox = createCreativeSandbox(CANDIDATE, makeDeps());
+    await expect(sandbox.applyPatch({
+      operations: [{ op: "replace_section", targetId: "ol-hero-1", html: '<section data-openlen-role="villain" data-sec="forged"><h1>Nuevo</h1></section>' }],
+    })).resolves.toMatchObject({ ok: true });
+
+    const html = sandbox.current().html;
+    // The delivery gate matches roles and section ids against the manifest, so
+    // a replacement that renames them costs the page its own provenance.
+    expect(html).toContain('data-openlen-role="hero"');
+    expect(html).not.toContain('data-openlen-role="villain"');
+    expect(html).not.toContain('data-sec="forged"');
+    expect(html).toContain("Nuevo");
+  });
+
   it("keeps a data-uri background and a relative asset path", async () => {
     const sandbox = createCreativeSandbox(CANDIDATE, makeDeps());
     await expect(sandbox.applyPatch({ operations: [{ op: "set_page_css", css: ".a{background-image:url(data:image/svg+xml;base64,PHN2Zz48L3N2Zz4=)}.b{background-image:url(/assets/paper.png)}" }] }))

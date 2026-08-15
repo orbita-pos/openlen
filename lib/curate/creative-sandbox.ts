@@ -14,6 +14,7 @@ import {
 } from "./creative-sandbox-contracts";
 
 const EDIT_ID = "data-openlen-edit-id";
+const IDENTITY_ATTRIBUTES = ["data-openlen-role", "data-sec"] as const;
 const RESERVED_MARKER = "data-slot-path=";
 const SAFE_PROTOCOLS = new Set(["https:", "http:", "mailto:", "tel:"]);
 const PRIVATE_HOST = /^(?:localhost|0\.0\.0\.0|\[?::1\]?|10\.\d+\.\d+\.\d+|127\.\d+\.\d+\.\d+|169\.254\.\d+\.\d+|192\.168\.\d+\.\d+|172\.(?:1[6-9]|2\d|3[01])\.\d+\.\d+)$/i;
@@ -138,6 +139,14 @@ function applyOperation(
   if (operation.op === "replace_section") {
     const replacement = parse(operation.html).firstChild as HTMLElement | null;
     if (!replacement || typeof replacement.setAttribute !== "function") return "invalid_patch";
+    // The model owns what a section looks like; the page owns which section it
+    // is. The delivery gate matches roles and section ids against the manifest,
+    // so a replacement carrying its own would cost the page its provenance.
+    for (const attribute of IDENTITY_ATTRIBUTES) {
+      const inherited = target!.getAttribute(attribute);
+      if (inherited) replacement.setAttribute(attribute, inherited);
+      else replacement.removeAttribute(attribute);
+    }
     replacement.setAttribute(EDIT_ID, operation.targetId);
     target!.replaceWith(replacement);
     return null;
