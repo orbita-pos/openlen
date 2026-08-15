@@ -130,6 +130,10 @@ function productionDeps(
             }, { provider: runtime.geminiAssetPackProvider }),
             recordImage: (trace) => {
               if (trace.outcome === "applied") runtime.recordImage({ modelId: "asset-pipeline", generatedCount: 1, durationMs: 0 });
+              // A refused image costs the page its photography and nothing
+              // else, so it never showed up anywhere: the page still ships,
+              // just barer than the model designed it.
+              else runtime.recordDegraded("image", trace.code ?? "image_unavailable");
             },
           });
           if (!applied.applied) return { ok: false, code: "invalid_patch", detail: "image_unavailable" };

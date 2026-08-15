@@ -112,10 +112,11 @@ export async function runCreativeGeneration(
     if (!creative.changed) {
       degraded = true;
       deps.recordDegraded?.("creative_session", creative.stoppedBy);
-      // Why it stopped and what it was refused are different questions, and a
-      // session can answer both at once.
-      for (const code of creative.rejections) deps.recordDegraded?.("creative_session", `tool_${code}`);
     }
+    // Reported whether or not the page changed: a session that redesigned the
+    // page and had every image request refused looks identical to one that
+    // never asked, and only this says which.
+    for (const code of creative.rejections) deps.recordDegraded?.("creative_session", `tool_${code}`);
   } catch {
     degraded = true;
     deps.recordDegraded?.("creative_session", "internal_error");
