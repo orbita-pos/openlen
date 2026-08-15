@@ -194,9 +194,30 @@ function candidateSignals(image: CuratedImage): Set<string> {
   ]);
 }
 
+/** The catalog was tagged with business families and the intents were written
+ * in their own taxonomy, so two vocabularies describe the same picture and
+ * never meet. This bridges only the pairs that plainly mean the same thing;
+ * the real fix is tagging the catalog in the intent taxonomy. A niche with no
+ * entry here is a niche the catalog genuinely does not cover. */
+const DOMAIN_ALIASES: Readonly<Record<string, readonly string[]>> = Object.freeze({
+  video_games: ["gaming", "gaming_editorial"],
+  school_education: ["education"],
+  home_goods: ["ecommerce", "commerce", "product_still_life", "interior_editorial"],
+  food_editorial: ["food_editorial", "hospitality"],
+});
+
+function domainAliases(domain: string): readonly string[] {
+  return DOMAIN_ALIASES[normalizeTag(domain)] ?? [];
+}
+
 function rejectionReason(image: CuratedImage, intent: AssetIntent, direction: CreativeDirection): CuratedAssetRejectionReason | null {
-  const candidateDomains = new Set((image.domains ?? image.family).map(normalizeTag).filter(Boolean));
-  const desiredDomains = new Set(intent.domains.map(normalizeTag));
+  // `style` was already good enough to match signals and was the one thing the
+  // domain check would not look at, so a catalog holding 24 food-editorial
+  // photographs refused every one of them to an intent asking for
+  // food_editorial. Measured before the fix: 501 of 501 rejected, all
+  // wrong_domain, nothing else.
+  const candidateDomains = new Set([...(image.domains ?? image.family), image.style].map(normalizeTag).filter(Boolean));
+  const desiredDomains = new Set([...intent.domains, ...intent.domains.flatMap(domainAliases)].map(normalizeTag));
   if (!intersects(candidateDomains, desiredDomains)) return "wrong_domain";
 
   const desiredAudiences = new Set(intent.audiences.map(normalizeTag));
