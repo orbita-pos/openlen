@@ -34,6 +34,9 @@ export interface CreativeBaselineDeps {
   readonly finalize?: typeof finalizeComposedDocument;
   readonly seal?: typeof sealRelease;
   readonly render?: (html: string) => Promise<{ mobileOverflow: boolean; invalidGeometry: boolean } | null>;
+  /** Fragment-body loader for the composer. Injected so the baseline can be
+   * built with no network at all. */
+  readonly fetchText?: (storageUrl: string) => Promise<string | null>;
 }
 
 export interface CreativeBaselineInput {
@@ -107,6 +110,7 @@ export async function buildCreativeBaseline(
     brand: { accent: input.profileData?.brand?.accent ?? null },
   }, {
     beforeCreative: async () => false,
+    ...(deps.fetchText ? { fetchText: deps.fetchText } : {}),
   });
   if (!composed.ok) {
     return { ok: false, code: INVENTORY_CODES.has(composed.reasonCode) ? "section_inventory_unavailable" : "baseline_invalid" };

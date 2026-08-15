@@ -4,6 +4,7 @@ import type { FireworksProviderCategory, FireworksServiceTier } from "@/lib/ai/f
 import { renderVisualQualityViewports } from "@/lib/ai/visual-quality-renderer";
 import { createFableGenerationTelemetry, type FableGenerationTelemetryEvent, type FableTelemetryStage } from "@/lib/generation/fable-generation-telemetry";
 import { createGeminiAssetPackProvider, type GeminiAssetPackProviderOptions } from "@/lib/generation/gemini-asset-pack-provider";
+import { createFireworksToolClient, type FireworksToolClient } from "@/lib/ai/fireworks-tool-client";
 import { createGlmSectionProgramProvider, type GlmSectionProgramProvider } from "@/lib/generation/glm-section-program-provider";
 import { createGlmVisualRepairProvider, type GlmVisualRepairProvider } from "@/lib/generation/glm-visual-repair";
 import {
@@ -32,6 +33,7 @@ export interface FableRuntimeCompositionOptions {
   readonly budgetConfig?: PageBudgetConfig;
   readonly pageBudget?: PageBudget;
   readonly client?: FireworksJsonClient;
+  readonly toolClient?: FireworksToolClient;
   readonly fireworksClientOptions?: Omit<FireworksJsonClientOptions, "budget">;
   readonly geminiAssetPackProviderOptions?: Omit<GeminiAssetPackProviderOptions, "pageBudget">;
   readonly renderViewports?: typeof renderVisualQualityViewports;
@@ -44,6 +46,9 @@ export interface FableRuntimeCompositionOptions {
 export interface FableRuntimeComposition {
   readonly pageBudget: PageBudget;
   readonly fireworksClient: FireworksJsonClient;
+  /** Tool-calling transport for the creative sandbox. Shares the one page
+   * budget with every other paid call in the request. */
+  readonly fireworksToolClient: FireworksToolClient;
   /** Task 4 composition seams, all bound to this page's sole budget. */
   readonly glmSectionProgramProvider: GlmSectionProgramProvider;
   readonly geminiAssetPackProvider: ReturnType<typeof createGeminiAssetPackProvider>;
@@ -101,6 +106,7 @@ function defaultInspect(candidate: Parameters<typeof runFableFinalVisualGate>[0]
 export function createFableRuntimeComposition(options: FableRuntimeCompositionOptions = {}): FableRuntimeComposition {
   const pageBudget = options.pageBudget ?? createPageGenerationBudget(options.budgetConfig ?? parseFablePageBudgetConfigFromEnv());
   const fireworksClient = options.client ?? createFireworksJsonClient({ ...options.fireworksClientOptions, budget: pageBudget });
+  const fireworksToolClient = options.toolClient ?? createFireworksToolClient({ budget: pageBudget });
   const glmSectionProgramProvider = createGlmSectionProgramProvider({ client: fireworksClient });
   const geminiAssetPackProvider = createGeminiAssetPackProvider({ ...options.geminiAssetPackProviderOptions, pageBudget });
   const telemetry = createFableGenerationTelemetry({ budget: pageBudget, sink: options.telemetrySink });
@@ -153,6 +159,7 @@ export function createFableRuntimeComposition(options: FableRuntimeCompositionOp
   return {
     pageBudget,
     fireworksClient,
+    fireworksToolClient,
     glmSectionProgramProvider,
     geminiAssetPackProvider,
     inputAdapters,

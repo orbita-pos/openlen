@@ -16,6 +16,8 @@ export interface CreativeGenerationInput {
 
 export interface CreativeGenerationDeps {
   readonly buildBaseline: typeof buildCreativeBaseline;
+  /** Forwarded to the baseline builder so the whole path can run offline. */
+  readonly fetchText?: (storageUrl: string) => Promise<string | null>;
   readonly runCreativeSession: (input: {
     requestId: string;
     brief: string;
@@ -69,7 +71,7 @@ export async function runCreativeGeneration(
       brief: input.brief,
       profileData: input.profileData,
       records: input.records,
-    });
+    }, deps.fetchText ? { fetchText: deps.fetchText } : undefined);
   } catch {
     deps.recordFailure?.("baseline", "composition_failed");
     return { ok: false, stage: "composition", reasonCode: "composition_failed" };
