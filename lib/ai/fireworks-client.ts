@@ -44,7 +44,7 @@ function safeToken(value: unknown): number | null {
   return typeof value === "number" && Number.isSafeInteger(value) && value >= 0 ? value : null;
 }
 
-function providerUsage(value: unknown): ModelTokenUsage | undefined {
+export function providerUsage(value: unknown): ModelTokenUsage | undefined {
   const root = record(value);
   const usage = record(root?.usage);
   const promptDetailsValue = usage?.prompt_tokens_details;
@@ -96,6 +96,60 @@ function responseContent(value: unknown):
     return { ok: false, category: "response_content" };
   }
   return { ok: true, content: message.content, tokenBoundary: choice.finish_reason === "length" };
+}
+
+function jsonCandidates(content: string): unknown[] {
+  try {
+    return [JSON.parse(content)];
+  } catch {
+    // Some compatible providers wrap otherwise-valid structured JSON in prose
+    // or a Markdown fence. Extract bounded top-level JSON values; the caller's
+    // strict schema remains the authority and ambiguity is rejected.
+  }
+  const candidates: unknown[] = [];
+  let start = -1;
+  let stack: string[] = [];
+  let inString = false;
+  let escaped = false;
+  for (let index = 0; index < content.length; index += 1) {
+    const character = content[index]!;
+    if (start < 0) {
+      if (character === "{" || character === "[") {
+        start = index;
+        stack = [character];
+      }
+      continue;
+    }
+    if (inString) {
+      if (escaped) escaped = false;
+      else if (character === "\\") escaped = true;
+      else if (character === '"') inString = false;
+      continue;
+    }
+    if (character === '"') {
+      inString = true;
+      continue;
+    }
+    if (character === "{" || character === "[") stack.push(character);
+    if (character === "}" || character === "]") {
+      const expected = character === "}" ? "{" : "[";
+      if (stack.at(-1) !== expected) {
+        start = -1;
+        stack = [];
+        continue;
+      }
+      stack.pop();
+      if (stack.length === 0) {
+        try {
+          candidates.push(JSON.parse(content.slice(start, index + 1)));
+        } catch {
+          // Retain no provider bytes and continue looking for one valid value.
+        }
+        start = -1;
+      }
+    }
+  }
+  return candidates;
 }
 
 function elapsed(started: number, now: () => number): number {
@@ -301,17 +355,19 @@ export function createFireworksJsonClient(options: FireworksJsonClientOptions): 
           const content = responseContent(decodedEnvelope);
           if (!content.ok) return fail("provider", attempt, safeUsage, { providerCategory: content.category });
           if (!safeUsage) return fail("provider", attempt, undefined, { providerCategory: "response_usage" });
-          let decodedContent: unknown;
-          try { decodedContent = JSON.parse(content.content); } catch {
+          const decodedCandidates = jsonCandidates(content.content);
+          if (decodedCandidates.length === 0) {
             return fail("invalid_json", attempt, safeUsage, {
               providerCategory: content.tokenBoundary ? "response_truncated" : "response_content",
             });
           }
-          const parsed = request.responseSchema.safeParse(decodedContent);
-          if (!parsed.success) return fail("schema", attempt, safeUsage, { providerCategory: "schema" });
+          const parsedCandidates = decodedCandidates
+            .map((candidate) => request.responseSchema.safeParse(candidate))
+            .filter((candidate): candidate is Extract<typeof candidate, { success: true }> => candidate.success);
+          if (parsedCandidates.length !== 1) return fail("schema", attempt, safeUsage, { providerCategory: "schema" });
           return {
             ok: true,
-            value: parsed.data,
+            value: parsedCandidates[0].data,
             modelId,
             usage: safeUsage,
             durationMs: elapsed(started, now),

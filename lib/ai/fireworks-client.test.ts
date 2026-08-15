@@ -335,6 +335,28 @@ describe("Fireworks JSON client", () => {
 
   });
 
+  it("extracts one schema-valid JSON value from harmless provider wrapping and rejects ambiguity", async () => {
+    for (const content of [
+      '```json\n{"title":"Launch","score":8}\n```',
+      '<think>Plan carefully without exposing data.</think>\n{"title":"Launch","score":8}',
+    ]) {
+      const fetchImpl = vi.fn(async () => jsonResponse(successEnvelope(content)));
+      await expect(createClient({ apiKey: "key", fetchImpl }).request(REQUEST)).resolves.toMatchObject({
+        ok: true,
+        value: { title: "Launch", score: 8 },
+      });
+    }
+
+    const ambiguousFetch = vi.fn(async () => jsonResponse(successEnvelope(
+      '{"title":"First","score":8}\n{"title":"Second","score":7}',
+    )));
+    await expect(createClient({ apiKey: "key", fetchImpl: ambiguousFetch }).request(REQUEST)).resolves.toMatchObject({
+      ok: false,
+      code: "schema",
+      providerCategory: "schema",
+    });
+  });
+
   it("distinguishes missing response content without retaining provider bytes", async () => {
     const missingContentFetch = vi.fn(async () => jsonResponse({
       ...successEnvelope(),
