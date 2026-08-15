@@ -113,6 +113,16 @@ export async function runCreativeSandboxCanaryPage(caseId: string): Promise<Crea
     return { ok: false, resultCode: result.reasonCode, modelId: "none", costMicromxn: cost, ...counters(started), attempts: 1, providerCategory: null, mutations: 0, images: 0, finalHash: null, deterministic: blank };
   }
 
+  // Opt-in only: the canary's evidence artifact carries accounting and never
+  // page bytes, and that stays true unless someone asks to look at the page.
+  const dumpDir = process.env.OPENLEN_CANARY_DUMP_DIR?.trim();
+  if (dumpDir) {
+    const { mkdir, writeFile } = await import("node:fs/promises");
+    const { join } = await import("node:path");
+    await mkdir(dumpDir, { recursive: true });
+    await writeFile(join(dumpDir, `${caseId}.html`), result.html, "utf8");
+  }
+
   const rendered = await renderVisualQualityViewports(result.html);
   const images = (result.html.match(/background-image:url\(/g) ?? []).length;
   return {
