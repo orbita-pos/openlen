@@ -1,7 +1,12 @@
+import { createHash } from "node:crypto";
+
 import { describe, expect, it, vi } from "vitest";
 
 import { detectTemplateLeaks } from "@/lib/assemble/leaks";
 import type { SectionRecord } from "@/lib/sections/store";
+import { composeSectionCandidate } from "@/lib/generation/compose-sections";
+import { buildDeterministicIntent, buildDeterministicPageCopy } from "./deterministic-page-input";
+import { sha256 } from "@/lib/generation/content-hash";
 import { buildCreativeBaseline, type CreativeBaselineDeps } from "./creative-baseline";
 
 const BRIEF = "Crea una página para Mundo Pincel, dibujos para imprimir y colorear para niños de 2 a 10 años";
@@ -35,12 +40,17 @@ function makeDeps(over: {
   const seenDeps: Record<string, unknown>[] = [];
   return {
     seenDeps,
+    // Mirrors the real composer: it calls the injected fill seam, so the stub
+    // must too or the local fill silently never runs.
     composeSection: (async (_input: unknown, deps: Record<string, unknown>) => {
       seenDeps.push(deps ?? {});
+      const source = over.composedHtml ?? DONOR_SOURCE;
+      const fill = deps.fillAssembled as ((html: string) => Promise<{ html: string }>) | undefined;
+      const filled = fill ? await fill(source) : { html: source };
       return {
         ok: true as const,
         status: "composed" as const,
-        html: over.composedHtml ?? DONOR_SOURCE,
+        html: filled.html,
         creativeDirection: { schemaVersion: "creative-direction/1.0" },
         manifest: { schemaVersion: "section-composition-manifest/1.0", outputHash: `sha256:${"a".repeat(64)}` },
         fill: { filled: false, appliedOps: 0, usage: null, durationMs: 0, leaksBefore: 0, leaksAfter: 0 },
@@ -66,9 +76,12 @@ describe("provider-free creative baseline", () => {
     expect(result.candidate.html).not.toContain("MORADA");
     expect(result.candidate.visualEngine.templateId).toBeNull();
     expect(provider).not.toHaveBeenCalled();
-    // The paid seams of composeSectionCandidate must never be handed down.
+    // GLM section generation is never offered, and the two paid seams are
+    // replaced with deterministic ones rather than left to their defaults.
     expect(deps.seenDeps[0].generateMissing).toBeUndefined();
-    expect(deps.seenDeps[0].adaptTemplateSkeleton).toBeUndefined();
+    expect(deps.seenDeps[0].fillAssembled).toEqual(expect.any(Function));
+    expect(deps.seenDeps[0].adaptTemplateSkeleton).toEqual(expect.any(Function));
+    expect(deps.seenDeps[0].beforeCreative).toBeUndefined();
   });
 
   it("fails before paid work when no catalog fragment can form a safe baseline", async () => {
@@ -114,5 +127,72 @@ describe("provider-free creative baseline", () => {
     const result = await buildCreativeBaseline(INPUT, makeDeps());
     expect(result.ok && result.intent.functional.contentModel).toEqual(expect.any(String));
     expect(result.ok && result.copy.business_name).toBe("Mundo Pincel");
+  });
+});
+
+// Fixtures shaped like real catalog rows, so this exercises the actual
+// composer, plan, inventory and role-coverage gates — not a stubbed seam.
+const BODY = {
+  header: '<header data-sec="header-fix"><a href="#top">Donante marca</a><a href="#x">Donante enlace</a></header>',
+  hero: '<header data-sec="hero-fix"><h1>Donante hero</h1><p>Texto donante</p><a href="#a">Acción</a></header>',
+  features: '<section data-sec="features-fix"><h2>Donante features</h2><p>Uno</p><p>Dos</p><p>Tres</p></section>',
+  cta: '<section data-sec="cta-fix"><h2>Donante cta</h2><a href="#c">Donante botón</a></section>',
+  footer: '<footer data-sec="footer-fix"><p>Donante footer</p><a href="#b">Enlace</a></footer>',
+};
+
+function catalogRecord(id: string, type: string, rootTag: string, html: string, donorIndex: number) {
+  const hash = createHash("sha256").update(html).digest("hex").slice(0, 12);
+  const sha = `sha256:${createHash("sha256").update(`${id}-fingerprint`).digest("hex")}`;
+  return {
+    id, type, name: id, variantLabel: "Base", rootTag, mode: "light",
+    storageKey: `sections/${id}-${hash}.html`, storageUrl: `memory://${id}`, contentHash: hash, size: html.length,
+    designTokens: null, fonts: null, needsJs: false, hasPlaceholders: false, thumbnailUrl: null,
+    // Distinct donors: the originality gate refuses a page drawn from fewer
+    // than three source templates, and manual sections do not count at all.
+    provenance: {
+      schemaVersion: "derived-section-provenance/1.0",
+      sourceTemplateId: `donor-${donorIndex}`,
+      sourceTemplateHash: hash,
+      sourceBandOrdinal: donorIndex,
+      extractionVersion: "template-band-extractor/1.0",
+      sourceHash: `sha256:${createHash("sha256").update(html).digest("hex")}`,
+      structuralFingerprint: sha,
+    },
+    derivedSemantics: {
+      schemaVersion: "derived-section-semantics/1.0",
+      role: type, layoutArchetypes: [], domains: [], audiences: [], moods: [], negativeSignals: [],
+    },
+    status: "published",
+    createdAt: new Date(0), updatedAt: new Date(0), publishedAt: new Date(0),
+  } as unknown as SectionRecord;
+}
+
+const CATALOG = [
+  catalogRecord("header-fix", "navbar", "header", BODY.header, 0),
+  catalogRecord("hero-fix", "hero", "header", BODY.hero, 1),
+  catalogRecord("features-fix", "features", "section", BODY.features, 2),
+  catalogRecord("cta-fix", "cta", "section", BODY.cta, 3),
+  catalogRecord("footer-fix", "footer", "footer", BODY.footer, 4),
+];
+
+const CATALOG_FETCH = async (url: string) => {
+  const key = url.replace("memory://", "").replace("-fix", "") as keyof typeof BODY;
+  return BODY[key] ?? null;
+};
+
+// A brief no reviewed niche covers gets the generic intent, whose roles a
+// modest catalog can cover.
+const GENERIC_BRIEF = "Necesito un sitio para mi taller de restauración de relojes mecánicos";
+
+describe("baseline against real catalog fragments", () => {
+  it("composes, fills and seals a page with no provider seam stubbed", async () => {
+    const result = await buildCreativeBaseline(
+      { ...INPUT, brief: GENERIC_BRIEF, records: CATALOG },
+      { fetchText: CATALOG_FETCH, render: async () => ({ mobileOverflow: false, invalidGeometry: false }) },
+    );
+    if (!result.ok) throw new Error(`baseline failed: ${result.code}`);
+    expect(result.candidate.html).toContain("<html");
+    expect(result.candidate.html).not.toContain("Donante");
+    expect(result.candidate.appliedOps).toBeGreaterThan(0);
   });
 });

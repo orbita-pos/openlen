@@ -2,6 +2,8 @@ import { parse, type HTMLElement } from "node-html-parser";
 
 import { sha256 } from "@/lib/generation/content-hash";
 import { composeSectionCandidate } from "@/lib/generation/compose-sections";
+import { buildDeterministicCreativeDirection } from "@/lib/generation/deterministic-creative-direction";
+import { fingerprintStructure } from "@/lib/generation/structural-fingerprint";
 import type { IntentAnalysis } from "@/lib/generation/contracts";
 import { sealRelease } from "@/lib/html-engine";
 import { escapeHtml } from "@/lib/marketing/fill";
@@ -98,8 +100,10 @@ export async function buildCreativeBaseline(
   const copy = buildDeterministicPageCopy(input.brief, intent);
   if (input.records.length === 0) return { ok: false, code: "section_inventory_unavailable" };
 
-  // Provider-free by construction: none of composeSectionCandidate's paid seams
-  // (generateMissing, adaptTemplateSkeleton, the Gemini fill) are handed down.
+  // Provider-free by construction: the two paid seams are replaced rather than
+  // gated. `beforeCreative` is NOT the switch — returning false there makes the
+  // composer abort with internal_error instead of skipping paid work.
+  let appliedOps = 0;
   const composed = await (deps.composeSection ?? composeSectionCandidate)({
     route: "section_composition",
     projectId: input.projectId,
@@ -109,18 +113,38 @@ export async function buildCreativeBaseline(
     copy,
     brand: { accent: input.profileData?.brand?.accent ?? null },
   }, {
-    beforeCreative: async () => false,
     ...(deps.fetchText ? { fetchText: deps.fetchText } : {}),
+    fillAssembled: (async (html: string) => {
+      const local = fillLocally(html, copy);
+      appliedOps = local.appliedOps;
+      return { html: local.html, filled: true, appliedOps: local.appliedOps, leaksBefore: 0, leaksAfter: 0, durationMs: 0 };
+    }) as never,
+    adaptTemplateSkeleton: (async (adaptInput: { html: string }) => {
+      const fingerprint = fingerprintStructure(adaptInput.html);
+      return {
+        ok: true as const,
+        status: "adapted" as const,
+        html: adaptInput.html,
+        creativeDirectionVersion: "creative-direction/1.0" as const,
+        planVersion: "skeleton-adaptation-plan/1.0" as const,
+        creativeDirection: buildDeterministicCreativeDirection(intent).direction,
+        promptVersion: PROMPT_VERSION,
+        modelId: "deterministic",
+        structuralFingerprintBefore: fingerprint,
+        structuralFingerprintAfter: fingerprint,
+        usage: { creative: { inputTokens: 0, cachedTokens: 0, outputTokens: 0, thinkingTokens: 0 }, critic: { inputTokens: 0, cachedTokens: 0, outputTokens: 0, thinkingTokens: 0 } },
+        durationMs: 0,
+      };
+    }) as never,
   });
   if (!composed.ok) {
     return { ok: false, code: INVENTORY_CODES.has(composed.reasonCode) ? "section_inventory_unavailable" : "baseline_invalid" };
   }
 
-  const filled = fillLocally(composed.html, copy);
   const title = present([copy.business_name, copy.hero_keyword])[0]
     ?? (intent.language === "es" ? "Nuevo Proyecto" : "New Project");
   const finalized = (deps.finalize ?? finalizeComposedDocument)({
-    html: filled.html,
+    html: composed.html,
     profileData: input.profileData,
     title,
   });
@@ -138,8 +162,8 @@ export async function buildCreativeBaseline(
     candidate: {
       html: sealed.html,
       title,
-      filled: filled.appliedOps > 0,
-      appliedOps: filled.appliedOps,
+      filled: appliedOps > 0,
+      appliedOps,
       source: "baseline",
       visualEngine: {
         schemaVersion: "visual-engine-project/1.0",

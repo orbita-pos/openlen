@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { AI_HYBRID_NICHE_CASES } from "@/lib/generation/ai-hybrid-niche-cohort";
+import { CANONICAL_SECTION_ROLES } from "@/lib/generation/structural-taxonomy";
 import { buildDeterministicIntent, buildDeterministicPageCopy, matchDeterministicNiche } from "./deterministic-page-input";
 
 const UNKNOWN_ES = "Necesito un sitio para mi taller de restauración de relojes mecánicos de bolsillo";
@@ -54,6 +55,14 @@ describe("deterministic page input", () => {
     expect(roles).toContain("hero");
     expect(roles).toContain("footer");
     expect(roles.filter((role) => !["header", "hero", "footer"].includes(role)).length).toBeGreaterThanOrEqual(1);
+  });
+
+  // The schema validates slug shape, not the taxonomy, so an invented role
+  // parses fine here and only dies later at plan time.
+  it.each([UNKNOWN_ES, UNKNOWN_EN])("only asks for roles the planner can actually serve (%s)", (brief) => {
+    const roles = buildDeterministicIntent(brief).functional.requiredSections;
+    const canonical = new Set<string>(CANONICAL_SECTION_ROLES);
+    expect(roles.filter((role) => !canonical.has(role))).toEqual([]);
   });
 
   it("still writes usable copy for a brief no cohort row covers", () => {

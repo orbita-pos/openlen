@@ -64,7 +64,7 @@ export function buildDeterministicIntent(brief: string): IntentAnalysis {
     language: SPANISH.test(brief) ? "es" : "en",
     functional: {
       siteType: "marketing",
-      requiredSections: ["header", "hero", "features", "cta", "footer"],
+      requiredSections: ["header", "hero", "features", "call_to_action", "footer"],
       primaryActions: [],
       contentModel: "landing_page",
     },
