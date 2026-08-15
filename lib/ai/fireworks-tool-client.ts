@@ -6,6 +6,20 @@ import type { FireworksProviderCategory } from "./fireworks-contracts";
 
 const FIREWORKS_ENDPOINT = "https://api.fireworks.ai/inference/v1/chat/completions";
 const DEFAULT_TIMEOUT_MS = 180_000;
+// A deadline that cannot cover the ceiling makes a paid turn a guaranteed
+// write-off: nothing is streamed, so a turn that spends its whole allowance
+// returns nothing at all until it is finished. Measured: the two cheap turns of
+// a real session answered in 1.8s each and the design turn hit 180,007ms with
+// zero tokens delivered. The floor is deliberately pessimistic -- those two
+// samples were dominated by time-to-first-token, so real generation throughput
+// is still unmeasured.
+const MIN_OUTPUT_TOKENS_PER_SECOND = 50;
+const DEADLINE_BASE_MS = 30_000;
+
+function deadlineForCeiling(maxOutputTokens: number): number {
+  const covered = DEADLINE_BASE_MS + Math.ceil(maxOutputTokens / MIN_OUTPUT_TOKENS_PER_SECOND) * 1000;
+  return Math.max(DEFAULT_TIMEOUT_MS, covered);
+}
 
 export type CreativeToolName = "inspect_canvas" | "apply_creative_patch" | "request_image" | "render_preview";
 
@@ -189,9 +203,9 @@ export function createFireworksToolClient(options: FireworksToolClientOptions): 
   const apiKey = (options.apiKey ?? env.FIREWORKS_API_KEY)?.trim();
   const fetchImpl = options.fetchImpl ?? fetch;
   const now = options.now ?? Date.now;
-  const timeoutMs = Number.isFinite(options.timeoutMs) && Number(options.timeoutMs) > 0
+  const configuredTimeoutMs = Number.isFinite(options.timeoutMs) && Number(options.timeoutMs) > 0
     ? Math.floor(Number(options.timeoutMs))
-    : DEFAULT_TIMEOUT_MS;
+    : null;
 
   return {
     async turn(request) {
@@ -235,7 +249,10 @@ export function createFireworksToolClient(options: FireworksToolClientOptions): 
 
       const controller = new AbortController();
       let timedOut = false;
-      const timer = setTimeout(() => { timedOut = true; controller.abort(); }, timeoutMs);
+      const timer = setTimeout(
+        () => { timedOut = true; controller.abort(); },
+        configuredTimeoutMs ?? deadlineForCeiling(request.maxOutputTokens),
+      );
       let response: Response;
       try {
         response = await fetchImpl(FIREWORKS_ENDPOINT, {

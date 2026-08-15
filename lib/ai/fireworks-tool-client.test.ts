@@ -149,6 +149,44 @@ describe("Fireworks tool transport", () => {
     await expect(client.turn(REQUEST)).resolves.toMatchObject({ ok: false, code: "invalid_tool_call" });
   });
 
+  it("gives a turn a deadline its own output ceiling fits inside", async () => {
+    vi.useFakeTimers();
+    try {
+      const { budget } = makeBudget();
+      const impl = vi.fn((_url: string, init: RequestInit) => new Promise<Response>((_resolve, reject) => {
+        init.signal?.addEventListener("abort", () => reject(new Error("aborted")));
+      }));
+      const client = createFireworksToolClient({ budget, apiKey: "k", fetchImpl: impl as unknown as typeof fetch });
+      const pending = client.turn({ ...REQUEST, maxOutputTokens: 24_000 });
+      let settled = false;
+      void pending.then(() => { settled = true; });
+
+      await vi.advanceTimersByTimeAsync(180_001);
+      expect(settled).toBe(false);
+
+      await vi.advanceTimersByTimeAsync(600_000);
+      await expect(pending).resolves.toMatchObject({ ok: false, code: "timeout" });
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("lets an explicit timeout override the derived deadline", async () => {
+    vi.useFakeTimers();
+    try {
+      const { budget } = makeBudget();
+      const impl = vi.fn((_url: string, init: RequestInit) => new Promise<Response>((_resolve, reject) => {
+        init.signal?.addEventListener("abort", () => reject(new Error("aborted")));
+      }));
+      const client = createFireworksToolClient({ budget, apiKey: "k", fetchImpl: impl as unknown as typeof fetch, timeoutMs: 5_000 });
+      const pending = client.turn({ ...REQUEST, maxOutputTokens: 24_000 });
+      await vi.advanceTimersByTimeAsync(5_001);
+      await expect(pending).resolves.toMatchObject({ ok: false, code: "timeout" });
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("reports a tool call cut off by the ceiling as truncation, not as a malformed call", async () => {
     const envelope = structuredClone(REAL_ENVELOPE);
     envelope.choices[0].finish_reason = "length";
