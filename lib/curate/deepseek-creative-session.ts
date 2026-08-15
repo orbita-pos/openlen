@@ -42,10 +42,10 @@ export interface CreativeSessionResult {
   readonly changed: boolean;
   readonly acceptedMutations: number;
   readonly stoppedBy: "finished" | "budget" | "tool_limit" | "turn_limit" | ClientFailure;
-  /** Distinct tool refusals the model ran into, in the order it met them. A
-   * session that designed nothing and one whose every patch was refused are
-   * the same empty result without this. */
-  readonly rejections: readonly CreativeToolFailureCode[];
+  /** Distinct tool refusals the model ran into, in the order it met them, as
+   * `code` or `code:detail`. A session that designed nothing and one whose
+   * every patch was refused are the same empty result without this. */
+  readonly rejections: readonly string[];
 }
 
 function systemPrompt(): string {
@@ -75,6 +75,14 @@ function redactToolResult(result: CreativeToolResult | Record<string, unknown>):
     });
   }
   return JSON.stringify({ ok: true, warnings: (result as { warnings?: string[] }).warnings ?? [] });
+}
+
+/** Keeps the refusal bounded by construction: a detail is a slug from one of
+ * the guards or it does not travel. Nothing from the page can ride along. */
+function refusal(result: { code: CreativeToolFailureCode; detail?: string }): string {
+  return result.detail && /^[a-z][a-z0-9_]{0,39}$/.test(result.detail)
+    ? `${result.code}:${result.detail}`
+    : result.code;
 }
 
 function acceptedOperations(call: FireworksToolCall): number {
@@ -116,7 +124,7 @@ export async function runDeepSeekCreativeSession(
   ];
 
   let acceptedMutations = 0;
-  const rejections = new Set<CreativeToolFailureCode>();
+  const rejections = new Set<string>();
   const finish = (stoppedBy: CreativeSessionResult["stoppedBy"]): CreativeSessionResult => ({
     candidate: deps.sandbox.current(),
     changed: acceptedMutations > 0,
@@ -162,7 +170,7 @@ export async function runDeepSeekCreativeSession(
     for (const call of response.calls) {
       const { result, accepted } = await dispatch(call, deps);
       acceptedMutations += accepted;
-      if ("ok" in result && result.ok === false) rejections.add((result as { code: CreativeToolFailureCode }).code);
+      if ("ok" in result && result.ok === false) rejections.add(refusal(result as { code: CreativeToolFailureCode; detail?: string }));
       messages.push({ role: "tool", toolCallId: call.id, content: redactToolResult(result) });
       if (acceptedMutations >= MAX_ACCEPTED_MUTATIONS) return finish("tool_limit");
     }

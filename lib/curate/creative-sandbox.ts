@@ -93,12 +93,18 @@ function warningsFor(removed: { scripts: number; eventHandlers: number; iframes:
   return warnings;
 }
 
-function preflight(operations: readonly CreativeOperation[]): CreativeToolFailureCode | null {
+/** Carries the CSS guard's own reason out. Four different rules answer
+ * "unsafe_css", and a model that cannot tell an external image from an
+ * execution primitive cannot correct itself on the next turn. */
+function preflight(operations: readonly CreativeOperation[]): { code: CreativeToolFailureCode; detail?: string } | null {
   for (const operation of operations) {
-    if ("html" in operation && operation.html.includes(RESERVED_MARKER)) return "invalid_patch";
-    if ("css" in operation && operation.css !== undefined && !safeCreativeCss(operation.css).ok) return "unsafe_css";
-    if (operation.op === "set_page_css" && !safeCreativeCss(operation.css).ok) return "unsafe_css";
-    if (operation.op === "set_link" && !safeCreativeUrl(operation.url)) return "unsafe_url";
+    if ("html" in operation && operation.html.includes(RESERVED_MARKER)) return { code: "invalid_patch" };
+    const css = operation.op === "set_page_css" ? operation.css : "css" in operation ? operation.css : undefined;
+    if (css !== undefined) {
+      const verdict = safeCreativeCss(css);
+      if (!verdict.ok) return { code: "unsafe_css", detail: verdict.detail };
+    }
+    if (operation.op === "set_link" && !safeCreativeUrl(operation.url)) return { code: "unsafe_url" };
   }
   return null;
 }
@@ -214,7 +220,7 @@ export function createCreativeSandbox(baseline: SafeCreativeCandidate, deps: Cre
       const parsed = parseCreativePatch(input);
       if (!parsed.ok) return failure("invalid_patch");
       const blocked = preflight(parsed.patch.operations);
-      if (blocked) return failure(blocked);
+      if (blocked) return failure(blocked.code, blocked.detail);
 
       // Every operation lands on an isolated clone. `state` is replaced only
       // after sanitize, seal and render all pass — a failed batch changes nothing.

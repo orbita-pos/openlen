@@ -141,8 +141,25 @@ describe("transactional creative sandbox", () => {
     await expect(sandbox.applyPatch({ operations: [{ op: "set_link", targetId: "ol-hero-1", url: "javascript:alert(1)" }] }))
       .resolves.toMatchObject({ ok: false, code: "unsafe_url" });
     await expect(sandbox.applyPatch({ operations: [{ op: "set_page_css", css: '@import url("https://evil.com/x.css")' }] }))
-      .resolves.toMatchObject({ ok: false, code: "unsafe_css" });
+      .resolves.toMatchObject({ ok: false, code: "unsafe_css", detail: "css_import" });
     expect(sandbox.current().html).toBe(BASE_HTML);
+  });
+
+  it("tells the model which of the four css rules refused it", async () => {
+    const sandbox = createCreativeSandbox(CANDIDATE, makeDeps());
+    // The refusal a real design turn hits: an external image the sandbox was
+    // never told to allow. Indistinguishable from an @import without a detail.
+    await expect(sandbox.applyPatch({ operations: [{ op: "set_page_css", css: ".hero{background-image:url(https://images.unsplash.com/photo-1.jpg)}" }] }))
+      .resolves.toMatchObject({ ok: false, code: "unsafe_css", detail: "css_external_fetch" });
+    await expect(sandbox.applyPatch({ operations: [{ op: "set_page_css", css: ".hero{width:expression(alert(1))}" }] }))
+      .resolves.toMatchObject({ ok: false, code: "unsafe_css", detail: "css_execution_primitive" });
+    expect(sandbox.current().html).toBe(BASE_HTML);
+  });
+
+  it("keeps a data-uri background and a relative asset path", async () => {
+    const sandbox = createCreativeSandbox(CANDIDATE, makeDeps());
+    await expect(sandbox.applyPatch({ operations: [{ op: "set_page_css", css: ".a{background-image:url(data:image/svg+xml;base64,PHN2Zz48L3N2Zz4=)}.b{background-image:url(/assets/paper.png)}" }] }))
+      .resolves.toMatchObject({ ok: true });
   });
 
   it("keeps an ordinary user link", async () => {

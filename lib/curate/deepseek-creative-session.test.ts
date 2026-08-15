@@ -140,6 +140,13 @@ describe("finite DeepSeek creative session", () => {
     expect(result.rejections).toEqual(["render_failed"]);
   });
 
+  it("carries the refusal detail so the reason survives the session", async () => {
+    const applyPatch = vi.fn(async () => ({ ok: false as const, code: "unsafe_css" as const, detail: "css_external_fetch" }));
+    const { client } = clientReturning(ok([PATCH_CALL]), ok([], "done"));
+    const result = await runDeepSeekCreativeSession(INPUT, { client, sandbox: makeSandbox({ applyPatch }) });
+    expect(result.rejections).toEqual(["unsafe_css:css_external_fetch"]);
+  });
+
   it("reports each distinct tool refusal once", async () => {
     const codes = ["unknown_target", "unknown_target", "sanitization_failed"] as const;
     let index = 0;
