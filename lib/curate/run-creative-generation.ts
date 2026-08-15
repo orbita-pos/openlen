@@ -112,6 +112,9 @@ export async function runCreativeGeneration(
     if (!creative.changed) {
       degraded = true;
       deps.recordDegraded?.("creative_session", creative.stoppedBy);
+      // Why it stopped and what it was refused are different questions, and a
+      // session can answer both at once.
+      for (const code of creative.rejections) deps.recordDegraded?.("creative_session", `tool_${code}`);
     }
   } catch {
     degraded = true;

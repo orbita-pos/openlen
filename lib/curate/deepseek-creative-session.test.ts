@@ -135,6 +135,18 @@ describe("finite DeepSeek creative session", () => {
     expect(result.stoppedBy).toBe("finished");
     expect(result.changed).toBe(false);
     expect(result.candidate).toEqual(BASELINE);
+    // Without this, a session that designed nothing and one whose every patch
+    // was refused are the same empty result.
+    expect(result.rejections).toEqual(["render_failed"]);
+  });
+
+  it("reports each distinct tool refusal once", async () => {
+    const codes = ["unknown_target", "unknown_target", "sanitization_failed"] as const;
+    let index = 0;
+    const applyPatch = vi.fn(async () => ({ ok: false as const, code: codes[Math.min(index++, codes.length - 1)] }));
+    const { client } = clientReturning(ok([PATCH_CALL]), ok([PATCH_CALL]), ok([PATCH_CALL]), ok([], "done"));
+    const result = await runDeepSeekCreativeSession(INPUT, { client, sandbox: makeSandbox({ applyPatch }) });
+    expect(result.rejections).toEqual(["unknown_target", "sanitization_failed"]);
   });
 
   it("feeds tool results back without raw page HTML or URLs", async () => {

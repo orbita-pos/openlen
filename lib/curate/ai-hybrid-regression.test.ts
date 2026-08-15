@@ -142,7 +142,7 @@ describe("Mundo Pincel hybrid-only regression", () => {
       // The creative provider is deliberately absent here; this regression is
       // about what the provider-free page is made of.
       creativeGenerationDeps: {
-        runCreativeSession: async ({ baseline }) => ({ candidate: baseline, changed: false, acceptedMutations: 0, stoppedBy: "provider" as const }),
+        runCreativeSession: async ({ baseline }) => ({ candidate: baseline, changed: false, acceptedMutations: 0, rejections: [], stoppedBy: "provider" as const }),
       },
     }, loadWholeTemplate);
 

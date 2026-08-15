@@ -24,7 +24,7 @@ const INPUT = {
 function deps(over: Partial<CreativeGenerationDeps> = {}): CreativeGenerationDeps {
   return {
     buildBaseline: async () => ({ ok: true, candidate: BASELINE, intent: { language: "es" } as never, copy: {} as never }),
-    runCreativeSession: async () => ({ candidate: IMPROVED, changed: true, acceptedMutations: 2, stoppedBy: "finished" }),
+    runCreativeSession: async () => ({ candidate: IMPROVED, changed: true, acceptedMutations: 2, rejections: [], stoppedBy: "finished" }),
     runAdvisoryReview: async ({ candidate }) => ({ candidate, reviewed: true, repaired: false }),
     validateDelivery: (({ visualEngine }: { visualEngine: unknown }) => ({ ok: true, visualEngine })) as never,
     ...over,
@@ -46,7 +46,7 @@ describe("creative generation orchestration", () => {
     ["deepseek_budget", { stoppedBy: "budget" as const }],
   ])("delivers lastKnownGood on %s", async (_name, over) => {
     const result = await runCreativeGeneration(INPUT, deps({
-      runCreativeSession: async () => ({ candidate: BASELINE, changed: false, acceptedMutations: 0, ...over }),
+      runCreativeSession: async () => ({ candidate: BASELINE, changed: false, acceptedMutations: 0, rejections: [], ...over }),
     }));
     expect(result).toMatchObject({ ok: true, route: "section_composition", templateId: null, degraded: true });
     expect(result.ok && result.html).toBe(BASELINE_HTML);
@@ -139,7 +139,7 @@ describe("creative generation orchestration", () => {
     const recordFailure = vi.fn();
     const recordDegraded = vi.fn();
     const result = await runCreativeGeneration(INPUT, deps({
-      runCreativeSession: async () => ({ candidate: BASELINE, changed: false, acceptedMutations: 0, stoppedBy: "provider" }),
+      runCreativeSession: async () => ({ candidate: BASELINE, changed: false, acceptedMutations: 0, rejections: [], stoppedBy: "provider" }),
       recordFailure,
       recordDegraded,
     }));
@@ -160,7 +160,7 @@ describe("creative generation orchestration", () => {
   });
 
   it("passes the baseline's own intent and copy into the creative session", async () => {
-    const runCreativeSession = vi.fn(async (_input: { baseline: SafeCreativeCandidate; brief: string }) => ({ candidate: IMPROVED, changed: true, acceptedMutations: 1, stoppedBy: "finished" as const }));
+    const runCreativeSession = vi.fn(async (_input: { baseline: SafeCreativeCandidate; brief: string }) => ({ candidate: IMPROVED, changed: true, acceptedMutations: 1, rejections: [], stoppedBy: "finished" as const }));
     await runCreativeGeneration(INPUT, deps({ runCreativeSession }));
     expect(runCreativeSession.mock.calls[0][0]).toMatchObject({ baseline: BASELINE, brief: INPUT.brief });
   });

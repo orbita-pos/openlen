@@ -20,7 +20,7 @@ function deps(over: Partial<AdvisoryReviewDeps> = {}): AdvisoryReviewDeps {
   return {
     render: async () => ({ mobileOverflow: false, invalidGeometry: false }),
     review: async () => ({ ok: true as const, accepted: true, issues: [] }),
-    repair: async () => ({ candidate: REPAIRED, changed: true, acceptedMutations: 1, stoppedBy: "finished" as const }),
+    repair: async () => ({ candidate: REPAIRED, changed: true, acceptedMutations: 1, rejections: [], stoppedBy: "finished" as const }),
     ...over,
   };
 }
@@ -46,7 +46,7 @@ describe("advisory visual review", () => {
 
   it("allows exactly one repair turn when Qwen asks for improvement", async () => {
     const review = vi.fn(async () => ({ ok: true as const, accepted: false, issues: ["hero reads generic"] }));
-    const repair = vi.fn(async () => ({ candidate: REPAIRED, changed: true, acceptedMutations: 1, stoppedBy: "finished" as const }));
+    const repair = vi.fn(async () => ({ candidate: REPAIRED, changed: true, acceptedMutations: 1, rejections: [], stoppedBy: "finished" as const }));
     const result = await runAdvisoryVisualReview(INPUT, deps({ review, repair }));
     expect(result).toMatchObject({ reviewed: true, repaired: true });
     expect(result.candidate).toEqual(REPAIRED);
@@ -55,7 +55,7 @@ describe("advisory visual review", () => {
   });
 
   it("passes the reviewer's issues into the repair turn", async () => {
-    const repair = vi.fn(async (_input: { issueSummary: string }) => ({ candidate: REPAIRED, changed: true, acceptedMutations: 1, stoppedBy: "finished" as const }));
+    const repair = vi.fn(async (_input: { issueSummary: string }) => ({ candidate: REPAIRED, changed: true, acceptedMutations: 1, rejections: [], stoppedBy: "finished" as const }));
     await runAdvisoryVisualReview(INPUT, deps({
       review: async () => ({ ok: true, accepted: false, issues: ["hero reads generic", "palette is muddy"] }),
       repair,
@@ -66,7 +66,7 @@ describe("advisory visual review", () => {
   it("keeps the pre-review candidate when the repair changes nothing", async () => {
     const result = await runAdvisoryVisualReview(INPUT, deps({
       review: async () => ({ ok: true, accepted: false, issues: ["x"] }),
-      repair: async () => ({ candidate: CANDIDATE, changed: false, acceptedMutations: 0, stoppedBy: "provider" as const }),
+      repair: async () => ({ candidate: CANDIDATE, changed: false, acceptedMutations: 0, rejections: [], stoppedBy: "provider" as const }),
     }));
     expect(result.candidate).toEqual(CANDIDATE);
     expect(result.repaired).toBe(false);

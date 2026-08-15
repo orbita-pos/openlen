@@ -6,7 +6,7 @@ import type {
 } from "@/lib/ai/fireworks-tool-client";
 import type { SafeCreativeCandidate } from "./creative-baseline";
 import type { CreativeSandbox } from "./creative-sandbox";
-import { parseCreativePatch, type CreativeToolResult } from "./creative-sandbox-contracts";
+import { parseCreativePatch, type CreativeToolFailureCode, type CreativeToolResult } from "./creative-sandbox-contracts";
 
 const MAX_TURNS = 4;
 const MAX_ACCEPTED_MUTATIONS = 12;
@@ -42,6 +42,10 @@ export interface CreativeSessionResult {
   readonly changed: boolean;
   readonly acceptedMutations: number;
   readonly stoppedBy: "finished" | "budget" | "tool_limit" | "turn_limit" | ClientFailure;
+  /** Distinct tool refusals the model ran into, in the order it met them. A
+   * session that designed nothing and one whose every patch was refused are
+   * the same empty result without this. */
+  readonly rejections: readonly CreativeToolFailureCode[];
 }
 
 function systemPrompt(): string {
@@ -112,11 +116,13 @@ export async function runDeepSeekCreativeSession(
   ];
 
   let acceptedMutations = 0;
+  const rejections = new Set<CreativeToolFailureCode>();
   const finish = (stoppedBy: CreativeSessionResult["stoppedBy"]): CreativeSessionResult => ({
     candidate: deps.sandbox.current(),
     changed: acceptedMutations > 0,
     acceptedMutations,
     stoppedBy,
+    rejections: [...rejections],
   });
 
   // Explicit and finite: no recursion, no automatic retry, no way to spend more
@@ -156,6 +162,7 @@ export async function runDeepSeekCreativeSession(
     for (const call of response.calls) {
       const { result, accepted } = await dispatch(call, deps);
       acceptedMutations += accepted;
+      if ("ok" in result && result.ok === false) rejections.add((result as { code: CreativeToolFailureCode }).code);
       messages.push({ role: "tool", toolCallId: call.id, content: redactToolResult(result) });
       if (acceptedMutations >= MAX_ACCEPTED_MUTATIONS) return finish("tool_limit");
     }
