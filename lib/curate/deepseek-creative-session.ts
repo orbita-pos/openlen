@@ -58,6 +58,7 @@ function systemPrompt(): string {
     "Avoid the generic centred hero-badge-title-paragraph-two-buttons stack unless the brief truly calls for it.",
     "You may not use scripts, event handlers or executable URLs; reach for CSS or an OpenLen module instead.",
     "Backgrounds and textures come from CSS gradients, data: URIs or the request_image tool: a url() pointing at any other host is refused and costs you the whole patch.",
+    "Some niches live on real photography -- food, lodging, travel, physical products, people -- and for those ask request_image and OpenLen resolves and places the photo for you. Where the niche is illustrative, CSS you write yourself will beat any photograph.",
     "Stop by replying with no tool call once the page is genuinely better.",
   ].join(" ");
 }
