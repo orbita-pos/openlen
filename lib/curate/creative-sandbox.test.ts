@@ -353,4 +353,19 @@ describe("transactional creative sandbox", () => {
     expect(preview).toMatchObject({ ok: true });
     expect(JSON.stringify(preview)).not.toMatch(/puppeteer|chrome|devtools/i);
   });
+
+  it("refuses a patch whose document fails the shared gate's behavior check", async () => {
+    const sandbox = createCreativeSandbox(CANDIDATE, makeDeps());
+    // data-ol-behavior/data-ol-target isn't a real marker — no registered
+    // behavior produces an issue from it (confirmed against validateBehaviors
+    // in lib/html-gate/document-gate.test.ts). A lightbox link missing its
+    // required <img> does.
+    const result = await sandbox.applyPatch({
+      operations: [{ op: "replace_section", targetId: "ol-hero-1", html: '<a data-ol-lightbox href="https://images.openlen.com/x.jpg">no img here</a>' }],
+    });
+    // Creation never checked behaviors; the Agent always did. Going through
+    // one gate is what makes that difference disappear.
+    expect(result).toMatchObject({ ok: false, code: "behaviors_invalid" });
+    expect(sandbox.current().html).toBe(BASE_HTML);
+  });
 });

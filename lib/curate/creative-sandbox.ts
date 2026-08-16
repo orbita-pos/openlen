@@ -3,6 +3,7 @@ import postcss from "postcss";
 
 import { isResolvedAssetUrl } from "@/lib/generation/asset-contracts";
 import { sha256 } from "@/lib/generation/content-hash";
+import { passHtmlGate } from "@/lib/html-gate/document-gate";
 
 import type { SafeCreativeCandidate } from "./creative-baseline";
 import {
@@ -247,13 +248,14 @@ export function createCreativeSandbox(baseline: SafeCreativeCandidate, deps: Cre
     ({ ok: false, code, ...(detail ? { detail } : {}) });
 
   const gate = async (html: string): Promise<{ ok: true; html: string; warnings: string[] } | CreativeToolResult> => {
-    const sanitized = deps.sanitize(html);
-    if (sanitized.html === null) return failure("sanitization_failed");
-    const sealed = deps.seal(sanitized.html);
-    if (!sealed.sealed) return failure("seal_failed");
-    const rendered = await deps.render(sealed.html);
-    if (!rendered || rendered.mobileOverflow || rendered.invalidGeometry) return failure("render_failed");
-    return { ok: true, html: sealed.html, warnings: warningsFor(sanitized.removed) };
+    const passed = await passHtmlGate(html, deps, { render: true });
+    // The gate's "reserved_marker" refusal has no dedicated sandbox code: the
+    // sandbox's own preflight() already rejects the same condition as
+    // "invalid_patch" (applyPatch inputs), so `adopt`'s bytes — the one path
+    // that never ran that preflight — get the same label for the same fault
+    // instead of a new failure code the union never declared.
+    if (!passed.ok) return failure(passed.code === "reserved_marker" ? "invalid_patch" : passed.code, passed.detail);
+    return { ok: true, html: passed.html, warnings: warningsFor(passed.removed) };
   };
 
   // Every accepted mutation re-stamps the manifest hash; otherwise the delivery

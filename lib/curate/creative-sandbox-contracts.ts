@@ -40,6 +40,7 @@ export type CreativeToolFailureCode =
   | "unsafe_url"
   | "unsafe_css"
   | "sanitization_failed"
+  | "behaviors_invalid"
   | "seal_failed"
   | "render_failed";
 
