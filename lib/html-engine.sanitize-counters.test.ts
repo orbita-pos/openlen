@@ -51,7 +51,23 @@ describe("sanitizeForPublish's removed counters", () => {
     expect(carrierBody(result.html ?? "", "radius")).toBe(original);
   });
 
-  it("never reports a negative count for a document whose carriers are only injected", () => {
+  // The accounting has to be per carrier element, not per carrier name: a
+  // document can carry a decoy whose attribute merely starts like a carrier's,
+  // or a second real carrier, either of them before the canonical one.
+  it.each([
+    ["an attribute that only starts like a carrier's", '<script data-ol-radius-unrelated>ruido()</script>'],
+    ["a second carrier with a body of its own", '<script data-ol-radius="">ruido()</script>'],
+  ])("counts the decoy and still discounts the healed carrier, given %s", (_name, decoy) => {
+    // Before the real carrier in document order — the position that used to
+    // capture the comparison and inflate the count.
+    const withDecoy = CANONICAL.replace("<script data-ol-radius>", `${decoy}<script data-ol-radius>`);
+    const result = sanitizeForPublish(withDecoy);
+    expect(result.html).not.toContain("ruido()");
+    expect(result.removed.scripts).toBe(1);
+    expect(carrierBody(result.html ?? "", "radius")).toBe(carrierBody(CANONICAL, "radius"));
+  });
+
+  it("reports nothing removed for a document whose carriers were only injected", () => {
     // <style> siblings present, <script> siblings absent: the repair injects
     // three scripts that no strip ever removed.
     const stylesOnly = CANONICAL.replace(/<script\b[^>]*\bdata-ol-(?:radius|space|type)\b[^>]*>[\s\S]*?<\/script>/gi, "");
