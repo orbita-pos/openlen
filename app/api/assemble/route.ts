@@ -17,6 +17,7 @@ import { buildRecipe } from "@/lib/assemble/recipe";
 import { selectVariants } from "@/lib/sections/select";
 import { stitchSections } from "@/lib/sections/assemble";
 import { fillAssembled } from "@/lib/assemble/fill";
+import { pageMetaFor } from "@/lib/publish/page-meta-intent";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // POST /api/assemble  — the FREE-tier page assembler.
@@ -135,10 +136,10 @@ export async function POST(req: Request): Promise<Response> {
         const title = recipe.copy.business_name?.trim() || "Untitled page";
         // Stitched from library sections, so the <head> can carry a section's
         // own demo metadata — same takeover as the curate path.
-        const finalHtml = ensurePageMeta(normalizeBornCanonical(fill.html), {
-          title,
-          replaceStaleMeta: true,
-        });
+        const finalHtml = ensurePageMeta(
+          normalizeBornCanonical(fill.html),
+          pageMetaFor({ provenance: "cloned", title }),
+        );
 
         // 6. Reserved-marker guard + sanitize (defense in depth, like from-html).
         const sanitized = sanitizeForPublish(finalHtml);

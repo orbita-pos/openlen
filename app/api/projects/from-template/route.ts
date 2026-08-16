@@ -7,7 +7,8 @@ import { passHtmlGate } from "@/lib/html-gate/document-gate";
 import { collectDegradations, hadScript } from "@/lib/ingestion/degradations";
 import { transformTemplateCached } from "@/lib/transform/template-cache";
 import { resolveProfileForCreation } from "@/lib/business-profiles/store";
-import { seedBrandIntoHtml, profileMeta } from "@/lib/business-profiles/seed-html";
+import { seedBrandIntoHtml } from "@/lib/business-profiles/seed-html";
+import { pageMetaFor } from "@/lib/publish/page-meta-intent";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // POST /api/projects/from-template
@@ -105,7 +106,10 @@ export async function POST(req: Request): Promise<Response> {
       render: false,
       seal: false,
       behaviors: "warn",
-      meta: { title: entry.name, ...profileMeta(business.data) },
+      // CLONED: the curated body's <title>/og copy is OUR marketing, not this
+      // user's. Preserving it published another product's name into their tab,
+      // their Google result and their WhatsApp card.
+      meta: pageMetaFor({ provenance: "cloned", title: entry.name, profile: business.data }),
     },
   );
   if (!gated.ok) {
@@ -159,7 +163,24 @@ export async function POST(req: Request): Promise<Response> {
     const pgGated = await passHtmlGate(
       pgTransformed,
       { sanitize: sanitizeForPublish },
-      { render: false, seal: false, behaviors: "warn", meta: { title: entry.name } },
+      {
+        render: false,
+        seal: false,
+        behaviors: "warn",
+        // AUTHORED, deliberately — not because a human wrote a subpage's head,
+        // but because the takeover is all-or-nothing (`takeover =
+        // replaceStaleMeta && title`) and the only title in hand is the
+        // project's. Taking over here would rename "Tienda" and every other
+        // subpage to the template's name, flattening the page-specific titles
+        // that make a multi-page site navigable. The same reasoning is already
+        // written into app/api/profiles/[id]/apply.
+        //
+        // The title still travels: non-destructive means it is used ONLY when
+        // the subpage carries none of its own, which is exactly what a fallback
+        // is for. And the profile now travels too, so a cloned subpage inherits
+        // the brand logo/og the home gets — it did not before.
+        meta: pageMetaFor({ provenance: "authored", title: entry.name, profile: business.data }),
+      },
     );
     if (!pgGated.ok) {
       return json(

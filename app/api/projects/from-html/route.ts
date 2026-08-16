@@ -6,8 +6,9 @@ import { passHtmlGate } from "@/lib/html-gate/document-gate";
 import { collectDegradations, hadScript } from "@/lib/ingestion/degradations";
 import { transformIngestedHtml } from "@/lib/transform";
 import { resolveProfileForCreation } from "@/lib/business-profiles/store";
-import { seedBrandIntoHtml, profileMeta } from "@/lib/business-profiles/seed-html";
+import { seedBrandIntoHtml } from "@/lib/business-profiles/seed-html";
 import { renderProjectThumbnail } from "@/lib/projects/thumbnail";
+import { pageMetaFor } from "@/lib/publish/page-meta-intent";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // POST /api/projects/from-html
@@ -93,7 +94,8 @@ export async function POST(req: Request): Promise<Response> {
       render: false,
       seal: false,
       behaviors: "warn",
-      meta: { title, ...profileMeta(business.data) },
+      // AUTHORED: a human may have written this <head>. Never take it over.
+      meta: pageMetaFor({ provenance: "authored", title, profile: business.data }),
     },
   );
   if (!gated.ok) {

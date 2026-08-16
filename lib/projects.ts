@@ -37,6 +37,7 @@ import { getProfile } from "@/lib/business-profiles/store";
 import { projectBusinessProfile } from "@/lib/business-profiles/whatsapp-default";
 import { PLATFORMS_BAND_MARKER } from "@/lib/business-profiles/platforms-band";
 import type { BusinessProfileData } from "@/lib/business-profiles/types";
+import { pageMetaFor } from "@/lib/publish/page-meta-intent";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Project persistence helpers.
@@ -392,7 +393,7 @@ export async function getProject(
   // projects get a near-no-op pass.
   const rawHtml = row.data?.html ?? "";
   const currentHtml = rawHtml
-    ? ensurePageMeta(normalizeBornCanonical(rawHtml), { title: row.title })
+    ? ensurePageMeta(normalizeBornCanonical(rawHtml), pageMetaFor({ provenance: "authored", title: row.title }))
     : "";
   const data: ProjectData =
     row.data && currentHtml !== rawHtml
@@ -808,7 +809,7 @@ export async function publishProject(
   // hero, or a rendered branded card) so the link unfurls on WhatsApp / X /
   // Facebook — and fill twitter:image / og:image dims / og:url. Both soft: a
   // hiccup must never block a publish.
-  let html = ensurePageMeta(project.data?.html ?? "", { title: project.title });
+  let html = ensurePageMeta(project.data?.html ?? "", pageMetaFor({ provenance: "authored", title: project.title }));
   try {
     const baseUrl = `https://${v.value}.${process.env.PUBLISH_BASE_HOST?.trim() || "openlen.com"}`;
     html = await ensureSocialOgImage(html, { title: project.title, baseUrl });

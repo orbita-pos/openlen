@@ -93,4 +93,29 @@ describe("POST /api/projects/from-template", () => {
     // Nothing half-built reaches the database.
     expect(mocks.values).not.toHaveBeenCalled();
   });
+
+  it("does not publish the template's marketing copy as the user's page identity", async () => {
+    // Curated bodies ship real marketing metadata — templates/starter/abismo.html
+    // opens with <title>ABISMO — Terror atmosférico…</title> and an og:description
+    // about a game. ensurePageMeta is NON-DESTRUCTIVE by default, so a clone
+    // faithfully keeps all of it: the user's browser tab, Google result and
+    // WhatsApp card advertise someone else's product. `replaceStaleMeta` exists
+    // for exactly this and names this exact path in its doc comment — and this
+    // path was the one not passing it.
+    const CURATED = `<!doctype html><html lang="es"><head>
+<title>ABISMO — Terror atmosférico de supervivencia. Baja, si te atreves.</title>
+<meta name="description" content="ABISMO es un juego indie de terror. Próximamente en Steam." />
+<meta property="og:title" content="ABISMO — Terror atmosférico de supervivencia" />
+<meta property="og:description" content="Baja al abismo, si te atreves." />
+</head><body><h1>Pastelería Luna</h1><p>Pasteles artesanales hechos a mano en Guadalajara desde 2011.</p>${FILLER}</body></html>`;
+    mocks.getTemplateHtml.mockResolvedValue(CURATED);
+
+    const res = await call();
+
+    expect(res.status).toBe(200);
+    const html = (mocks.values.mock.calls[0][0] as { data: { html: string } }).data.html;
+    expect(html).not.toContain("ABISMO");
+    expect(html).not.toContain("Steam");
+    expect(html).toContain("<title>Mirror</title>");
+  });
 });

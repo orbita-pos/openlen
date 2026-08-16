@@ -2,7 +2,7 @@ import { auth } from "@/auth";
 import { createProject } from "@/lib/projects";
 import { applyModuleIntent } from "@/lib/projects/module-intent";
 import { resolveProfileForCreation } from "@/lib/business-profiles/store";
-import { seedBrandIntoHtml, profileMeta } from "@/lib/business-profiles/seed-html";
+import { seedBrandIntoHtml } from "@/lib/business-profiles/seed-html";
 import type { BusinessProfile, BusinessProfileData } from "@/lib/business-profiles/types";
 import { createVersion } from "@/lib/projects/versions";
 import { getCreditState } from "@/lib/credits";
@@ -19,6 +19,7 @@ import { critiqueGeneratedPage } from "@/lib/ai/vision-critique";
 import { photographHtml } from "@/lib/imagery/photograph";
 import { recordCriticRun, recordRegenOutcome } from "@/lib/ai/quality-metrics";
 import type { InlineImage, Message } from "@/lib/ai-gateway";
+import { pageMetaFor } from "@/lib/publish/page-meta-intent";
 import {
   PLAN_LIMITS,
   checkAndConsume,
@@ -517,7 +518,8 @@ ${brief}`;
             render: false,
             seal: false,
             behaviors: "warn",
-            meta: { title, ...profileMeta(business.data) },
+            // AUTHORED: written for THIS user from their brief, not cloned.
+            meta: pageMetaFor({ provenance: "authored", title, profile: business.data }),
           },
         );
         if (!gated.ok) {
