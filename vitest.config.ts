@@ -162,6 +162,9 @@ export default defineConfig({
       // Same, for the Chat surface. Mocks only the model, DB, auth and
       // credits — the sanitize/normalize/behaviour passes are the real ones.
       "app/api/templates/ai-design/route.test.ts",
+      // Task 5 — the fill surface that had no gate at all. Mocks fillTemplate
+      // so the test drives the route's gate, not the filler's own sanitizer.
+      "app/api/templates/autofill/route.test.ts",
       // NB: lib/projects/site-pages.test.ts is a node:test file (run via
       // `tsx --test`), so include the vitest project tests explicitly.
       "lib/projects/module-settings.test.ts",
