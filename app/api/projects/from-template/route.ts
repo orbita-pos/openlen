@@ -4,7 +4,7 @@ import { getTemplate, getTemplateHtml } from "@/lib/templates/store";
 import { createVersion } from "@/lib/projects/versions";
 import { sanitizeForPublish } from "@/lib/html-engine";
 import { passHtmlGate } from "@/lib/html-gate/document-gate";
-import { collectDegradations } from "@/lib/ingestion/degradations";
+import { collectDegradations, hadScript } from "@/lib/ingestion/degradations";
 import { transformTemplateCached } from "@/lib/transform/template-cache";
 import { resolveProfileForCreation } from "@/lib/business-profiles/store";
 import { seedBrandIntoHtml, profileMeta } from "@/lib/business-profiles/seed-html";
@@ -70,12 +70,14 @@ export async function POST(req: Request): Promise<Response> {
   const remainingBudget = () =>
     Math.max(0, TRANSFORM_TOTAL_BUDGET_MS - (Date.now() - transformStarted));
 
-  const transformedHtml =
-    remainingBudget() > 500
-      ? await transformTemplateCached(entry.id, html, {
-          timeoutMs: Math.min(8000, remainingBudget()),
-        })
-      : html;
+  // Captured once: `remainingBudget()` moves, and the record has to say what
+  // actually happened, not what a second call would say.
+  const homeTransformSkipped = remainingBudget() <= 500;
+  const transformedHtml = homeTransformSkipped
+    ? html
+    : await transformTemplateCached(entry.id, html, {
+        timeoutMs: Math.min(8000, remainingBudget()),
+      });
 
   // Defense in depth: sanitize the curated body (strips any stray
   // scripts/handlers/iframes; clean templates pass through byte-identical) and
@@ -126,7 +128,11 @@ export async function POST(req: Request): Promise<Response> {
     surface: "from-template",
     removed: gated.removed,
     behaviorIssues: gated.issues,
-    transformFallback: undefined,
+    // The shared 12s deadline can run out before the home is transformed —
+    // its JS-built sections then clone empty. Degradation #4: real loss, and
+    // the user has no way to see why, so it goes on the record.
+    transformFallback: homeTransformSkipped ? "budget" : undefined,
+    hadScripts: hadScript(html),
   });
 
   // Multi-page template: clone each extra page through the same born-canonical
@@ -137,12 +143,12 @@ export async function POST(req: Request): Promise<Response> {
     // Mismo transform que la Home, clave propia por página (el hash del
     // contenido distingue versiones; el sufijo evita colisión de claves) y
     // mismo deadline compartido del request.
-    const pgTransformed =
-      remainingBudget() > 500
-        ? await transformTemplateCached(`${entry.id}--${pg.slug}`, pg.html, {
-            timeoutMs: Math.min(8000, remainingBudget()),
-          })
-        : pg.html;
+    const pgTransformSkipped = remainingBudget() <= 500;
+    const pgTransformed = pgTransformSkipped
+      ? pg.html
+      : await transformTemplateCached(`${entry.id}--${pg.slug}`, pg.html, {
+          timeoutMs: Math.min(8000, remainingBudget()),
+        });
     // Degradation #6. This used to `continue` — the subpage vanished, the
     // clone shipped, and the nav still promised a page that no longer
     // existed. Because a broken link serves the HOME page
@@ -170,6 +176,9 @@ export async function POST(req: Request): Promise<Response> {
         surface: "from-template",
         removed: pgGated.removed,
         behaviorIssues: pgGated.issues,
+        // Degradation #5 — same deadline, per subpage.
+        transformFallback: pgTransformSkipped ? "budget" : undefined,
+        hadScripts: hadScript(pg.html),
       }),
     );
   }

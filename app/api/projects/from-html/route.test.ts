@@ -106,12 +106,30 @@ describe("POST /api/projects/from-html", () => {
       report: { bakedContainers: 0, bakedGeoms: 0, translated: [], tabsFound: 0, ms: 1, fallback: "timeout" },
     }));
 
-    const res = await call(doc("<h1>Hola</h1>"));
+    const res = await call(doc("<h1>Hola</h1><script>build()</script>"));
 
     expect(res.status).toBe(200);
     expect(storedData().degradations).toEqual([
       { surface: "from-html", stage: "transform", code: "dynamic_content", count: 1 },
+      { surface: "from-html", stage: "sanitize", code: "scripts", count: 1 },
     ]);
+  });
+
+  it("stays quiet when the transform falls back on a page with no script", async () => {
+    // The fallback also fires when Chrome dies — a recurring failure. Warning
+    // then would alarm every paste during an outage about dynamic content the
+    // page never had.
+    mocks.transform.mockImplementation(async (html: string) => ({
+      html,
+      report: { bakedContainers: 0, bakedGeoms: 0, translated: [], tabsFound: 0, ms: 1, fallback: "timeout" },
+    }));
+
+    const res = await call(doc("<h1>Hola</h1>"));
+
+    expect(res.status).toBe(200);
+    // Absent, not empty: a row with nothing to say reads the same as one
+    // created before this existed, and the surface has nothing to render.
+    expect(storedData().degradations).toBeUndefined();
   });
 
   it("still refuses the reserved marker — that never fails open", async () => {

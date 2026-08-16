@@ -3,7 +3,7 @@ import { db, schema } from "@/lib/db";
 import { createVersion } from "@/lib/projects/versions";
 import { sanitizeForPublish } from "@/lib/html-engine";
 import { passHtmlGate } from "@/lib/html-gate/document-gate";
-import { collectDegradations } from "@/lib/ingestion/degradations";
+import { collectDegradations, hadScript } from "@/lib/ingestion/degradations";
 import { transformIngestedHtml } from "@/lib/transform";
 import { resolveProfileForCreation } from "@/lib/business-profiles/store";
 import { seedBrandIntoHtml, profileMeta } from "@/lib/business-profiles/seed-html";
@@ -121,6 +121,7 @@ export async function POST(req: Request): Promise<Response> {
     removed: gated.removed,
     behaviorIssues: gated.issues,
     transformFallback: transformed.report.fallback,
+    hadScripts: hadScript(html),
   });
 
   const projectId = crypto.randomUUID();

@@ -4188,11 +4188,18 @@ function NewV2Inner() {
                     <div className="min-w-0 flex-1">
                       <b className="block text-[12.5px] fg mb-1">{t("degraded.title")}</b>
                       <ul className="flex flex-col gap-1">
-                        {(loadedProject.degradations ?? []).map((d) => (
-                          <li key={`${d.stage}-${d.code}`} className="text-[12px] fg-muted leading-snug">
-                            {t(`degraded.${d.code}`)}
-                          </li>
-                        ))}
+                        {/* One sentence per distinct code. A multi-page clone
+                            records the same loss per page, and the copy names
+                            no counts — repeating it four times is noise, and
+                            noise is how the silence comes back. The row keeps
+                            every entry for diagnosis. */}
+                        {[...new Set((loadedProject.degradations ?? []).map((d) => d.code))].map(
+                          (code) => (
+                            <li key={code} className="text-[12px] fg-muted leading-snug">
+                              {t(`degraded.${code}`)}
+                            </li>
+                          ),
+                        )}
                       </ul>
                     </div>
                     <button

@@ -41,6 +41,7 @@ describe("collectDegradations", () => {
       surface: "from-html",
       removed: CLEAN,
       transformFallback: "timeout",
+      hadScripts: true,
     });
     expect(out).toEqual([
       { surface: "from-html", stage: "transform", code: "dynamic_content", count: 1 },
@@ -66,6 +67,10 @@ describe("collectDegradations", () => {
       surface: "from-html",
       removed: { scripts: 1, eventHandlers: 0, iframes: 1, dangerousUrls: 0 },
       transformFallback: "disabled",
+      // The kill switch being off is still a real loss to the user: the page
+      // has unbaked dynamic content and is about to lose the script that
+      // built it. Why WE did not transform changes nothing they experience.
+      hadScripts: true,
       behaviorIssues: [{ behavior: "countdown", message: "z" }] as never,
     });
     expect(out.map((d) => d.code)).toEqual([
@@ -73,6 +78,48 @@ describe("collectDegradations", () => {
       "scripts",
       "embeds",
       "broken_controls",
+    ]);
+  });
+
+  // Post-ship verification found this: 152 of the 172 in-repo templates carry
+  // a decorative script (classList.add('js'), an IntersectionObserver reveal)
+  // that lib/transform BAKES and the sanitizer then strips. Reporting it would
+  // put "your page had parts built with JavaScript" in front of ~88% of clones
+  // where nothing visibly broke — the exact noise this notice exists to avoid.
+  // It is also not true in the user's terms: it was never their page.
+  it("does not blame the user for a curated template's own stripped script", () => {
+    const out = collectDegradations({
+      surface: "from-template",
+      removed: { ...CLEAN, scripts: 4, eventHandlers: 1 },
+    });
+    expect(out).toEqual([]);
+  });
+
+  it("still reports a template's embeds and unsafe links, which are real losses", () => {
+    const out = collectDegradations({
+      surface: "from-template",
+      removed: { ...CLEAN, scripts: 4, iframes: 1, dangerousUrls: 1 },
+    });
+    expect(out.map((d) => d.code)).toEqual(["embeds", "unsafe_links"]);
+  });
+
+  // Also found post-ship: transformIngestedHtml returns a fallback when the
+  // kill switch is off OR when Chrome fails — a documented recurring failure
+  // on this box. Reporting that unconditionally would warn on 100% of pastes
+  // during an outage, about content the page may not even have.
+  it("only reports dynamic content when the page actually had script to bake", () => {
+    expect(
+      collectDegradations({ surface: "from-html", removed: CLEAN, transformFallback: "timeout" }),
+    ).toEqual([]);
+    expect(
+      collectDegradations({
+        surface: "from-html",
+        removed: CLEAN,
+        transformFallback: "timeout",
+        hadScripts: true,
+      }),
+    ).toEqual([
+      { surface: "from-html", stage: "transform", code: "dynamic_content", count: 1 },
     ]);
   });
 
