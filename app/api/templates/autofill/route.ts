@@ -272,21 +272,40 @@ export async function POST(req: Request) {
 
         emit("progress", { stage: "persisting" });
 
-        // Snapshot the PRE-apply HTML so the user can revert.
-        await createVersion({
-          projectId,
-          html: currentHtml,
-          label:
-            source === "image"
-              ? `Before Autofill (image)`
-              : `Before Autofill (${businessData.business_name ?? "data"})`,
-          source: "style-match",
-        }).catch((err: unknown) => {
-          console.error("[autofill] pre-apply snapshot failed", err);
-          if (err instanceof Error) {
-            captureException(err, { route: "autofill", stage: "pre-snapshot", projectId, userId });
+        // Snapshot the PRE-apply HTML so the user can revert. This is the
+        // ONLY way back to the page they had, and autofill overwrites it a
+        // few lines below — so a swallowed failure here costs the user their
+        // restore point without telling them. One retry recovers the common
+        // transient blip; losing it still must not cost them the fill they
+        // paid for, so a second failure proceeds (best-effort by design).
+        const preSnapshotLabel =
+          source === "image"
+            ? `Before Autofill (image)`
+            : `Before Autofill (${businessData.business_name ?? "data"})`;
+        let preSnapshotOk = false;
+        for (let attempt = 1; attempt <= 2 && !preSnapshotOk; attempt++) {
+          try {
+            await createVersion({
+              projectId,
+              html: currentHtml,
+              label: preSnapshotLabel,
+              source: "style-match",
+            });
+            preSnapshotOk = true;
+          } catch (err: unknown) {
+            console.error(`[autofill] pre-apply snapshot failed (attempt ${attempt}/2)`, err);
+            if (attempt === 2 && err instanceof Error) {
+              captureException(err, { route: "autofill", stage: "pre-snapshot", projectId, userId });
+            }
           }
-        });
+        }
+        if (!preSnapshotOk) {
+          // TODO(gate/request-surfaces #8): the user should be TOLD they have
+          // no restore point. The modal auto-closes 1200ms after `done`, so
+          // there is nowhere to say it yet — pending the notice-surface
+          // decision that also blocks from-html/from-template.
+          console.error("[autofill] proceeding WITHOUT a restore point", { projectId, userId });
+        }
 
         const now = new Date();
         try {

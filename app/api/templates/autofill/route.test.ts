@@ -151,6 +151,55 @@ describe("POST /api/templates/autofill", () => {
     expect(events.some((e) => e.event === "done")).toBe(false);
   });
 
+  // Degradation #8 — the pre-apply "Before Autofill" snapshot is the user's
+  // only way back to the page they had. Its .catch() used to swallow a
+  // failure and let the autofill overwrite the page anyway, leaving them with
+  // no restore point and no idea. One retry costs a round trip and recovers
+  // the common transient case.
+  it("retries the Before Autofill snapshot once before giving up", async () => {
+    mocks.fillTemplate.mockResolvedValue({
+      ok: true,
+      filledHtml: filled("<h1>Tacos Doña Mari</h1>"),
+      appliedOps: 6,
+      totalOps: 6,
+    });
+    mocks.createVersion
+      .mockRejectedValueOnce(new Error("transient db blip"))
+      .mockResolvedValue("v1");
+
+    const events = await readEvents(await call());
+
+    const preSnapshots = mocks.createVersion.mock.calls.filter((c) =>
+      String((c[0] as { label: string }).label).startsWith("Before Autofill"),
+    );
+    expect(preSnapshots).toHaveLength(2);
+    // The retry succeeded, so the fill proceeds exactly as normal.
+    expect(events.some((e) => e.event === "done")).toBe(true);
+    expect(mocks.update).toHaveBeenCalledTimes(1);
+  });
+
+  it("still applies the fill when both snapshot attempts fail", async () => {
+    mocks.fillTemplate.mockResolvedValue({
+      ok: true,
+      filledHtml: filled("<h1>Tacos Doña Mari</h1>"),
+      appliedOps: 6,
+      totalOps: 6,
+    });
+    // Snapshotting is best-effort: losing the restore point must not cost the
+    // user the fill they paid for. It must not silently double-charge or
+    // wedge either.
+    mocks.createVersion.mockRejectedValue(new Error("db down"));
+
+    const events = await readEvents(await call());
+
+    expect(events.some((e) => e.event === "done")).toBe(true);
+    expect(mocks.update).toHaveBeenCalledTimes(1);
+    const preSnapshots = mocks.createVersion.mock.calls.filter((c) =>
+      String((c[0] as { label: string }).label).startsWith("Before Autofill"),
+    );
+    expect(preSnapshots).toHaveLength(2);
+  });
+
   it("keeps reporting a reserved marker under its own kind", async () => {
     mocks.fillTemplate.mockResolvedValue({
       ok: true,
