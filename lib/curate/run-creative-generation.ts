@@ -85,6 +85,9 @@ export async function runCreativeGeneration(
     }, {
       ...(deps.fetchText ? { fetchText: deps.fetchText } : {}),
       ...(deps.renderCandidate ? { render: deps.renderCandidate } : {}),
+      // The baseline ships even when the gate cannot give it every guarantee,
+      // so the reason only exists if it is recorded here.
+      onDegraded: (reason: string) => deps.recordDegraded?.("baseline", reason),
     });
   } catch {
     deps.recordFailure?.("baseline", "composition_failed");

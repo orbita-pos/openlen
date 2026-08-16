@@ -218,3 +218,51 @@ describe("baseline against real catalog fragments", () => {
     for (const id of ids) expect(StableTargetIdSchema.safeParse(id).success).toBe(true);
   });
 });
+
+// A lightbox link with no <img> is the fixture the gate's own suite proved
+// reaches validateBehaviors; the anchor sits outside every role so the local
+// fill cannot overwrite it before the gate sees it.
+const BEHAVIOR_BREAKING_DONOR = `<!doctype html><html><head></head><body>
+<header data-openlen-role="header"><a href="#top">MORADA STUDIO</a></header>
+<section data-openlen-role="hero"><h1>MORADA — arquitectura sin ruido</h1><p>Proyectos residenciales.</p></section>
+<a data-ol-lightbox href="https://images.openlen.com/x.jpg">sin imagen</a>
+<footer data-openlen-role="footer"><p>© MORADA STUDIO</p></footer>
+</body></html>`;
+
+const MARKED_DONOR = DONOR_SOURCE.replace('data-openlen-role="hero"', 'data-openlen-role="hero" data-slot-path="hero.title"');
+
+describe("the baseline's own door", () => {
+  it("ships a baseline whose behaviors do not validate, and records why", async () => {
+    const onDegraded = vi.fn();
+    const result = await buildCreativeBaseline(
+      INPUT,
+      { ...makeDeps({ composedHtml: BEHAVIOR_BREAKING_DONOR }), onDegraded },
+    );
+    // The baseline has no previous good state to fall back to: a guarantee it
+    // cannot get is a page without that guarantee, not a failed page.
+    expect(result.ok).toBe(true);
+    expect(onDegraded).toHaveBeenCalledTimes(1);
+    const reason = onDegraded.mock.calls[0]?.[0] as string;
+    expect(reason).toMatch(/^[a-z][a-z0-9_]{0,63}$/);
+    expect(reason).toContain("lightbox");
+  });
+
+  it("refuses a baseline carrying the reserved editor marker, which never fails open", async () => {
+    const onDegraded = vi.fn();
+    await expect(buildCreativeBaseline(INPUT, { ...makeDeps({ composedHtml: MARKED_DONOR }), onDegraded }))
+      .resolves.toMatchObject({ ok: false, code: "baseline_invalid", detail: "reserved_marker" });
+    expect(onDegraded).not.toHaveBeenCalled();
+  });
+
+  it("delivers a normalized document with a completed head, like every other ingestion path", async () => {
+    const onDegraded = vi.fn();
+    const result = await buildCreativeBaseline(INPUT, { ...makeDeps(), onDegraded });
+    if (!result.ok) throw new Error(`baseline failed: ${result.code}`);
+    // Same property the gate's suite asserts about ensurePageMeta: a document
+    // arriving with an empty <head> leaves with metadata in it.
+    expect(result.candidate.html).toMatch(/<meta/i);
+    expect(onDegraded).not.toHaveBeenCalled();
+    // The delivery gate compares the manifest hash against the bytes shipped.
+    expect(result.candidate.visualEngine.compositionManifest.outputHash).toBe(sha256(result.candidate.html));
+  });
+});

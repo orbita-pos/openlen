@@ -5,7 +5,8 @@ import { composeSectionCandidate } from "@/lib/generation/compose-sections";
 import { buildDeterministicCreativeDirection } from "@/lib/generation/deterministic-creative-direction";
 import { fingerprintStructure } from "@/lib/generation/structural-fingerprint";
 import type { IntentAnalysis } from "@/lib/generation/contracts";
-import { sealRelease } from "@/lib/html-engine";
+import { sanitizeForPublish, sealRelease } from "@/lib/html-engine";
+import { passHtmlGate } from "@/lib/html-gate/document-gate";
 import { escapeHtml } from "@/lib/marketing/fill";
 import type { VisualEngineProjectMetadata } from "@/lib/projects/types";
 import type { SectionRecord } from "@/lib/sections/store";
@@ -41,8 +42,12 @@ export type CreativeBaselineResult =
 export interface CreativeBaselineDeps {
   readonly composeSection?: typeof composeSectionCandidate;
   readonly finalize?: typeof finalizeComposedDocument;
+  readonly sanitize?: typeof sanitizeForPublish;
   readonly seal?: typeof sealRelease;
   readonly render?: (html: string) => Promise<{ mobileOverflow: boolean; invalidGeometry: boolean } | null>;
+  /** Non-terminal: a guarantee the gate could not give this baseline. The page
+   * still ships, so the reason has to reach the journal or it is lost. */
+  readonly onDegraded?: (reason: string) => void;
   /** Fragment-body loader for the composer. Injected so the baseline can be
    * built with no network at all. */
   readonly fetchText?: (storageUrl: string) => Promise<string | null>;
@@ -185,9 +190,28 @@ export async function buildCreativeBaseline(
     title,
   });
   if (!finalized.ok) return { ok: false, code: "baseline_invalid", detail: "finalize_failed" };
-  const sealed = (deps.seal ?? sealRelease)(finalized.html);
-  if (!sealed.sealed) return { ok: false, code: "baseline_invalid", detail: "seal_failed" };
-  const rendered = await (deps.render ?? (async () => ({ mobileOverflow: false, invalidGeometry: false })))(sealed.html);
+  const seal = deps.seal ?? sealRelease;
+  // The gate, not a bare seal: the baseline was the one document a creative
+  // session could deliver without ever meeting normalizeBornCanonical,
+  // ensurePageMeta or validateBehaviors — true whenever the model edited
+  // nothing. Render stays out; the baseline runs its own check below.
+  const passed = await passHtmlGate(finalized.html, { sanitize: deps.sanitize ?? sanitizeForPublish, seal }, { render: false });
+  let delivered: string;
+  if (passed.ok) {
+    delivered = passed.html;
+  } else if (passed.code === "behaviors_invalid") {
+    // Fail open, and only here. An edit has a previous good state to fall back
+    // to; the baseline has none, so refusing it costs the user the page
+    // instead of a guarantee. Everything below is a safety refusal — the
+    // reserved marker above all — and those never open.
+    deps.onDegraded?.(passed.detail ? `behaviors_${passed.detail}` : "behaviors_invalid");
+    const fallback = seal(finalized.html);
+    if (!fallback.sealed) return { ok: false, code: "baseline_invalid", detail: "seal_failed" };
+    delivered = fallback.html;
+  } else {
+    return { ok: false, code: "baseline_invalid", detail: passed.detail ?? passed.code };
+  }
+  const rendered = await (deps.render ?? (async () => ({ mobileOverflow: false, invalidGeometry: false })))(delivered);
   // Weak typography is an improvement signal for the sandbox, not a safety abort.
   if (!rendered || rendered.mobileOverflow || rendered.invalidGeometry) return { ok: false, code: "baseline_invalid", detail: rendered ? "baseline_render_defect" : "baseline_render_failed" };
 
@@ -196,7 +220,7 @@ export async function buildCreativeBaseline(
     intent,
     copy,
     candidate: {
-      html: sealed.html,
+      html: delivered,
       title,
       filled: appliedOps > 0,
       appliedOps,
@@ -211,7 +235,7 @@ export async function buildCreativeBaseline(
         contractVersion: "creative-direction/1.0",
         // The manifest hash must track the bytes we actually deliver: the
         // delivery gate compares it against sha256 of the final document.
-        compositionManifest: { ...composed.manifest, outputHash: sha256(sealed.html) },
+        compositionManifest: { ...composed.manifest, outputHash: sha256(delivered) },
       },
     },
   };
