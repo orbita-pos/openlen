@@ -275,5 +275,14 @@
     "inserted": "Fatto: la fascia è nella pagina",
     "manage": "Vai a La mia attività",
     "note": "Senza costi. I link si aggiornano da soli alla pubblicazione."
+  },
+  "degraded": {
+    "title": "Alcune cose non sono potute arrivare",
+    "scripts": "La tua pagina aveva parti fatte in JavaScript — come contatori, caroselli o pulsanti interattivi. OpenLen li rimuove per sicurezza. Puoi ricrearli con i Moduli.",
+    "embeds": "È stato rimosso contenuto incorporato da altri siti (video o mappe). Puoi aggiungerlo di nuovo con i Moduli.",
+    "unsafe_links": "Alcuni link non erano sicuri e sono stati rimossi.",
+    "dynamic_content": "Una parte di ciò che la tua pagina costruisce da sola potrebbe apparire vuota. Puoi scriverla direttamente nell'editor.",
+    "broken_controls": "Alcuni controlli interattivi sono collegati male e non funzioneranno. Chiedi all'assistente di sistemarli.",
+    "dismiss": "Ho capito"
   }
 }

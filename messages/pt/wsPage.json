@@ -275,5 +275,14 @@
     "inserted": "Pronto: a faixa está na página",
     "manage": "Ir para Meu negócio",
     "note": "Sem custo. Os links se atualizam sozinhos ao publicar."
+  },
+  "degraded": {
+    "title": "Algumas coisas não puderam vir junto",
+    "scripts": "Sua página tinha partes feitas com JavaScript — coisas como contadores, carrosséis ou botões interativos. O OpenLen os remove por segurança. Você pode recriá-los com Módulos.",
+    "embeds": "Conteúdo incorporado de outros sites (vídeos ou mapas) foi removido. Você pode adicioná-lo novamente com Módulos.",
+    "unsafe_links": "Alguns links não eram seguros e foram removidos.",
+    "dynamic_content": "Parte do que sua página monta sozinha pode aparecer vazia. Você pode escrever direto no editor.",
+    "broken_controls": "Alguns controles interativos ficaram mal conectados e não vão funcionar. Peça ao assistente para corrigi-los.",
+    "dismiss": "Entendi"
   }
 }

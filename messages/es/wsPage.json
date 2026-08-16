@@ -275,5 +275,14 @@
     "inserted": "Listo: la banda quedó en la página",
     "manage": "Ir a Mi negocio",
     "note": "Sin cargo. Los enlaces se actualizan solos al publicar."
+  },
+  "degraded": {
+    "title": "Algunas cosas no se pudieron traer",
+    "scripts": "Tu página traía partes hechas con JavaScript — cosas como contadores, carruseles o botones interactivos. OpenLen los quita por seguridad. Puedes recrearlos con Módulos.",
+    "embeds": "Se quitó contenido incrustado de otros sitios (videos o mapas). Puedes volver a agregarlo con Módulos.",
+    "unsafe_links": "Algunos enlaces no eran seguros y se quitaron.",
+    "dynamic_content": "Parte de lo que tu página arma sola puede verse vacío. Puedes escribirlo directamente en el editor.",
+    "broken_controls": "Algunos controles interactivos quedaron mal conectados y no van a funcionar. Pídele al asistente que los arregle.",
+    "dismiss": "Entendido"
   }
 }

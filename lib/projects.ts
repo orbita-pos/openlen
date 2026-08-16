@@ -524,6 +524,32 @@ const LOGO_URL_MAX = 2000;
 /** Persist the per-project logo URL. Pass null to clear it.
  *  Acceptable: an absolute http(s) URL (uploaded asset, paste-URL, default
  *  data URL) — validation is the caller's responsibility. */
+/** Mark the ingestion-degradation notice as seen. A warning that reappears on
+ *  every load is noise, and noise gets ignored — which is how we arrive back
+ *  at silence through another door. The record itself STAYS for diagnosis;
+ *  only the telling is dismissed. */
+export async function dismissDegradations(
+  projectId: string,
+  userId: string,
+): Promise<boolean> {
+  const rows = await db
+    .select({ data: schema.projects.data })
+    .from(schema.projects)
+    .where(and(eq(schema.projects.id, projectId), eq(schema.projects.userId, userId)))
+    .limit(1);
+  const existing = rows[0];
+  if (!existing) return false;
+  const result = await db
+    .update(schema.projects)
+    .set({
+      data: { ...(existing.data ?? { html: "" }), degradationsDismissed: true },
+      updatedAt: new Date(),
+    })
+    .where(and(eq(schema.projects.id, projectId), eq(schema.projects.userId, userId)))
+    .returning({ id: schema.projects.id });
+  return result.length > 0;
+}
+
 export async function setProjectLogoUrl(
   projectId: string,
   userId: string,

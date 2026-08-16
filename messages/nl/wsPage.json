@@ -275,5 +275,14 @@
     "inserted": "Klaar: de band staat op de pagina",
     "manage": "Naar Mijn bedrijf",
     "note": "Zonder kosten. De links werken zichzelf bij bij het publiceren."
+  },
+  "degraded": {
+    "title": "Sommige dingen konden niet mee",
+    "scripts": "Je pagina had onderdelen gemaakt met JavaScript — zoals tellers, carrousels of interactieve knoppen. OpenLen verwijdert die voor de veiligheid. Je kunt ze opnieuw maken met Modules.",
+    "embeds": "Ingesloten inhoud van andere sites (video's of kaarten) is verwijderd. Je kunt het opnieuw toevoegen met Modules.",
+    "unsafe_links": "Sommige links waren niet veilig en zijn verwijderd.",
+    "dynamic_content": "Een deel van wat je pagina zelf opbouwt kan leeg lijken. Je kunt het rechtstreeks in de editor invullen.",
+    "broken_controls": "Sommige interactieve onderdelen zijn verkeerd aangesloten en werken niet. Vraag de assistent om ze te repareren.",
+    "dismiss": "Begrepen"
   }
 }

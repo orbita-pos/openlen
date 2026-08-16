@@ -39,6 +39,7 @@ import type {
   BroadcastSettings,
   CommentsSettings,
   FormConfig,
+  Degradation,
   MembersSettings,
   MusicSettings,
   OrdersSettings,
@@ -66,7 +67,7 @@ import {
   type SidebarMode,
   type SectionView,
 } from "@/components/workspace-v2/left-sidebar";
-import { Check, Sparkles, Undo, X } from "@/components/workspace-v2/icons";
+import { AlertTriangle, Check, Sparkles, Undo, X } from "@/components/workspace-v2/icons";
 import { SectionPreviewModal } from "@/components/workspace-v2/section-preview-modal";
 import type { SectionSpec } from "@/components/workspace-v2/sections-data";
 import { PreviewPlaceholder } from "@/components/workspace-v2/preview-placeholder";
@@ -178,6 +179,11 @@ interface LoadedProject {
   /** Non-HTML project settings (Phase 2 form config). Loaded with the
    *  project; updated in place when the inspector edits a form. */
   settings: ProjectSettings | undefined;
+  /** What the page lost on the way in (paste / template clone). Drives the
+   *  one-time notice — the user is TOLD, rather than discovering a dead
+   *  control on the published page. */
+  degradations: Degradation[] | undefined;
+  degradationsDismissed: boolean | undefined;
   /** The business this page is linked to (FK → businessProfiles), same field
    *  GET /api/projects/[id] already returns on `project`. Null = no explicit
    *  link, resolve to the user's default business (mirrors
@@ -929,6 +935,26 @@ function NewV2Inner() {
     pendingReseedRef.current = true;
     setProfileModalOpen(true);
   }, []);
+  // Ingestion-degradation notice. Server-persisted (not localStorage like
+  // makeYours): the person who pasted HTML may come back tomorrow, on another
+  // device, and the point is that they were told once — not once per browser.
+  const showDegradedNotice =
+    entryMode === "editing" &&
+    (loadedProject?.degradations?.length ?? 0) > 0 &&
+    !loadedProject?.degradationsDismissed;
+  const onDismissDegradations = useCallback(() => {
+    const id = loadedProject?.id;
+    if (!id) return;
+    setLoadedProject((p) => (p ? { ...p, degradationsDismissed: true } : p));
+    void fetch(`/api/projects/${id}`, {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ degradationsDismissed: true }),
+    }).catch(() => {
+      // Losing the dismissal is a re-show, not a data loss — the optimistic
+      // update already got it out of the user's way for this session.
+    });
+  }, [loadedProject?.id]);
   // Brief can be pre-filled from a deep link (homepage hero CTA, projects
   // example cards, etc.) via ?brief=<urlencoded>.
   const briefParam = searchParams.get("brief");
@@ -1224,6 +1250,8 @@ function NewV2Inner() {
                 filledBlocks?: unknown[];
                 settings?: ProjectSettings;
                 pages?: Record<string, SitePage>;
+                degradations?: Degradation[];
+                degradationsDismissed?: boolean;
               };
             };
           }
@@ -1259,6 +1287,8 @@ function NewV2Inner() {
         userBrief: p.userBrief ?? "",
         chatHistory: p.chatHistory ?? [],
         settings: p.data?.settings,
+        degradations: p.data?.degradations,
+        degradationsDismissed: p.data?.degradationsDismissed,
         profileId: p.profileId ?? null,
       });
       setProjectName(p.title);
@@ -4118,6 +4148,7 @@ function NewV2Inner() {
               )}
               {!hasBusinessInfo &&
                 loadedProject &&
+                !showDegradedNotice &&
                 !makeYoursDismissed.has(loadedProject.id) && (
                   <div className="absolute top-12 lg:top-3 left-1/2 -translate-x-1/2 z-30 flex items-center gap-2 pl-3.5 pr-1.5 py-1.5 rounded-full bg-elev border bd shadow-card fade-in max-w-[calc(100%-2rem)]">
                     <span className="inline-flex items-center gap-1.5 text-[12px] fg whitespace-nowrap min-w-0">
@@ -4145,6 +4176,46 @@ function NewV2Inner() {
                     </button>
                   </div>
                 )}
+              {/* What the page lost on the way in. Shown once, then dismissed
+                  for good — a warning that reappears on every load is noise,
+                  and noise is how a silent failure comes back through another
+                  door. It occupies the same slot as the makeYours pill, which
+                  is gated above rather than stacked. */}
+              {showDegradedNotice && loadedProject && (
+                <div className="absolute top-12 lg:top-3 left-1/2 -translate-x-1/2 z-30 w-[min(30rem,calc(100%-2rem))] rounded-2xl bg-elev border bd shadow-card fade-in overflow-hidden">
+                  <div className="flex items-start gap-2.5 px-3.5 pt-3 pb-2.5">
+                    <AlertTriangle size={14} className="text-accent shrink-0 mt-0.5" />
+                    <div className="min-w-0 flex-1">
+                      <b className="block text-[12.5px] fg mb-1">{t("degraded.title")}</b>
+                      <ul className="flex flex-col gap-1">
+                        {(loadedProject.degradations ?? []).map((d) => (
+                          <li key={`${d.stage}-${d.code}`} className="text-[12px] fg-muted leading-snug">
+                            {t(`degraded.${d.code}`)}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={onDismissDegradations}
+                      aria-label={t("degraded.dismiss")}
+                      title={t("degraded.dismiss")}
+                      className="inline-flex items-center justify-center h-7 w-7 rounded-full fg-faint hover:fg hover:bg-hover transition shrink-0"
+                    >
+                      <X size={13} />
+                    </button>
+                  </div>
+                  <div className="flex justify-end px-3.5 pb-2.5">
+                    <button
+                      type="button"
+                      onClick={onDismissDegradations}
+                      className="inline-flex items-center h-7 px-3 rounded-full text-[11.5px] font-semibold bg-[var(--accent-strong)] text-white shadow-coral hover:brightness-105 transition"
+                    >
+                      {t("degraded.dismiss")}
+                    </button>
+                  </div>
+                </div>
+              )}
               {inspectMode && (
                 // Floating drawer (overlay, not push). PreviewArea keeps its
                 // full width so the iframe's Fit-scale and content layout stay

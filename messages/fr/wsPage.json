@@ -275,5 +275,14 @@
     "inserted": "La bande est sur la page",
     "manage": "Aller à Mon entreprise",
     "note": "Sans frais. Les liens se mettent à jour tout seuls à la publication."
+  },
+  "degraded": {
+    "title": "Certains éléments n'ont pas pu être repris",
+    "scripts": "Votre page contenait des éléments en JavaScript — compteurs, carrousels ou boutons interactifs. OpenLen les retire par sécurité. Vous pouvez les recréer avec les Modules.",
+    "embeds": "Du contenu intégré depuis d'autres sites (vidéos ou cartes) a été retiré. Vous pouvez le rajouter avec les Modules.",
+    "unsafe_links": "Certains liens n'étaient pas sûrs et ont été retirés.",
+    "dynamic_content": "Une partie de ce que votre page génère elle-même peut apparaître vide. Vous pouvez la saisir directement dans l'éditeur.",
+    "broken_controls": "Certains contrôles interactifs sont mal reliés et ne fonctionneront pas. Demandez à l'assistant de les corriger.",
+    "dismiss": "compris"
   }
 }

@@ -8,6 +8,7 @@ import {
   setProjectProfileId,
   setProjectStatus,
   setProjectUserBrief,
+  dismissDegradations,
 } from "@/lib/projects";
 
 export const runtime = "nodejs";
@@ -50,16 +51,20 @@ const PatchSchema = z.object({
   // profileId moves a page to another business. uuid-only: the API never
   // orphans a page (null), upholding "every page has a business".
   profileId: z.string().uuid().optional(),
+  // Ingestion-degradation notice: the user closed it. Only `true` — there is
+  // no un-dismiss, and the record itself is never deleted by this.
+  degradationsDismissed: z.literal(true).optional(),
 }).refine(
   (v) =>
     v.title !== undefined ||
     v.status !== undefined ||
     v.userBrief !== undefined ||
     v.logoUrl !== undefined ||
-    v.profileId !== undefined,
+    v.profileId !== undefined ||
+    v.degradationsDismissed !== undefined,
   {
     message:
-      "Provide at least one of: title, status, userBrief, logoUrl, profileId",
+      "Provide at least one of: title, status, userBrief, logoUrl, profileId, degradationsDismissed",
   },
 );
 
@@ -119,6 +124,11 @@ export async function PATCH(
     );
     if (r === "invalid_profile") return json({ error: "invalid_profile" }, 400);
     if (!r) return json({ error: "not_found" }, 404);
+    touched = true;
+  }
+  if (parsed.data.degradationsDismissed !== undefined) {
+    const ok = await dismissDegradations(id, session.user.id);
+    if (!ok) return json({ error: "not_found" }, 404);
     touched = true;
   }
   if (!touched) return json({ error: "no_op" }, 400);

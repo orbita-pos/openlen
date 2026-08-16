@@ -275,5 +275,14 @@
     "inserted": "Done: the band is on the page",
     "manage": "Go to My business",
     "note": "No charge. Links refresh themselves on publish."
+  },
+  "degraded": {
+    "title": "Some things couldn't come across",
+    "scripts": "Your page had parts built with JavaScript — things like counters, carousels or interactive buttons. OpenLen removes those for safety. You can rebuild them with Modules.",
+    "embeds": "Content embedded from other sites (videos or maps) was removed. You can add it back with Modules.",
+    "unsafe_links": "Some links weren't safe to keep, so they were removed.",
+    "dynamic_content": "Part of what your page builds by itself may look empty. You can write it in directly in the editor.",
+    "broken_controls": "Some interactive controls were wired incorrectly and won't work. Ask the assistant to fix them.",
+    "dismiss": "Got it"
   }
 }

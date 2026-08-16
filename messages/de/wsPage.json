@@ -275,5 +275,14 @@
     "inserted": "Fertig: Das Band steht auf der Seite",
     "manage": "Zu Mein Unternehmen",
     "note": "Kostenlos. Die Links aktualisieren sich beim Veröffentlichen von selbst."
+  },
+  "degraded": {
+    "title": "Einiges konnte nicht übernommen werden",
+    "scripts": "Deine Seite enthielt Teile aus JavaScript — etwa Zähler, Karussells oder interaktive Schaltflächen. OpenLen entfernt sie aus Sicherheitsgründen. Du kannst sie mit Modulen neu aufbauen.",
+    "embeds": "Eingebettete Inhalte von anderen Seiten (Videos oder Karten) wurden entfernt. Du kannst sie mit Modulen wieder hinzufügen.",
+    "unsafe_links": "Einige Links waren nicht sicher und wurden entfernt.",
+    "dynamic_content": "Ein Teil dessen, was deine Seite selbst aufbaut, kann leer aussehen. Du kannst es direkt im Editor eintragen.",
+    "broken_controls": "Einige interaktive Elemente sind falsch verdrahtet und funktionieren nicht. Bitte den Assistenten, sie zu reparieren.",
+    "dismiss": "Verstanden"
   }
 }
