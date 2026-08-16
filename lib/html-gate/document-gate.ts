@@ -75,12 +75,40 @@ export type HtmlGateResult =
  * reserved marker is refused before any pass that could rewrite it out of
  * sight.
  *
- * Adopted so far: the creative sandbox (applyPatch/adopt) and the creative
- * baseline. The other write paths — publishToDir, from-html, from-template,
- * generate, ai-design, the Agent's persistHtmlChange, assemble, autofill —
- * still run their own subsets and are migrated in later steps of the plan.
- * Do NOT skip your own sanitization on the assumption this already covers
- * you; check that your path is on the list above first.
+ * ADOPTED — six callers. Verified by grep, not memory; if you add one, add it
+ * here or this comment starts lying again, which is the defect that shipped
+ * twice already:
+ *   - `lib/curate/creative-sandbox.ts`      { render: true,  seal: true,  behaviors: "block" }
+ *   - `lib/curate/creative-baseline.ts`     { render: false, seal: true,  behaviors: "block" }
+ *   - `app/api/projects/[id]/apply-template` { render: false, seal: false, behaviors: "block" }
+ *   - `lib/agent/tools.ts` persistHtmlChange { render: false, seal: false, behaviors: "block" }
+ *   - `app/api/templates/ai-design`          { render: false, seal: false, behaviors: "block" }
+ *   - `app/api/templates/autofill`           { render: false, seal: false, behaviors: "block" }
+ *
+ * The four edit surfaces pass `seal: false` because nothing is served from
+ * them — they write to the database and publishToDir seals at publish time —
+ * and `render: false` because an interactive request cannot pay a browser
+ * launch. Only the two curate surfaces seal, and only the sandbox renders.
+ *
+ * NOT ADOPTED — pending on purpose, not forgotten:
+ *   - `from-html`, `from-template`, `assemble`, `generate` — the four
+ *     ingestion surfaces. They fail OPEN by design (refusing costs the user
+ *     the whole page, not just an edit), and a surface that fails open needs
+ *     somewhere to record the degradation. Today `from-html` and
+ *     `from-template` have no journal at all — `from-template` already drops
+ *     a subpage silently when sanitize rejects it — and `generate` only has a
+ *     console.warn that fires after the row is committed. Migrating them
+ *     before that journal exists would rebuild the exact trap the
+ *     creative-sandbox saga paid for, so they are PARKED pending that
+ *     decision. Do not migrate one opportunistically.
+ *   - `publishToDir` — deliberately out of scope of this plan, not pending
+ *     inside it. It sanitizes and seals per page inside a ~25-step bake loop
+ *     and has its own plan.
+ *
+ * If your path IS on the adopted list, do not re-run sanitize/normalize/meta
+ * yourself — duplicating them is how the two chains drift apart. If it is
+ * NOT, you still own your own sanitization; adoption is not implied by this
+ * file existing.
  */
 export async function passHtmlGate(
   html: string,
