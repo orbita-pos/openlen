@@ -248,7 +248,7 @@ export function createCreativeSandbox(baseline: SafeCreativeCandidate, deps: Cre
     ({ ok: false, code, ...(detail ? { detail } : {}) });
 
   const gate = async (html: string): Promise<{ ok: true; html: string; warnings: string[] } | CreativeToolResult> => {
-    const passed = await passHtmlGate(html, deps, { render: true });
+    const passed = await passHtmlGate(html, deps, { render: true, seal: true, behaviors: "block" });
     if (!passed.ok) {
       // The gate's "reserved_marker" refusal has no dedicated sandbox code:
       // the sandbox's own preflight() already rejects the same condition as

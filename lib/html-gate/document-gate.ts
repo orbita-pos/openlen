@@ -14,16 +14,18 @@ export type HtmlGateRefusal =
 
 export interface HtmlGateDeps {
   readonly sanitize: (html: string) => { html: string | null; errors: string[]; removed: { scripts: number; eventHandlers: number; dangerousUrls: number; iframes: number; metaRefresh: number } };
-  readonly seal: (html: string) => { html: string; sealed: boolean };
+  readonly seal?: (html: string) => { html: string; sealed: boolean };
   readonly render?: (html: string) => Promise<{ mobileOverflow: boolean; invalidGeometry: boolean } | null>;
 }
 
 export interface HtmlGatePolicy {
   readonly render: boolean;
+  readonly seal: boolean;
+  readonly behaviors: "block" | "warn";
 }
 
 export type HtmlGateResult =
-  | { readonly ok: true; readonly html: string; readonly removed: { scripts: number; eventHandlers: number; iframes: number; dangerousUrls: number } }
+  | { readonly ok: true; readonly html: string; readonly removed: { scripts: number; eventHandlers: number; iframes: number; dangerousUrls: number }; readonly warnings: string[] }
   | { readonly ok: false; readonly code: HtmlGateRefusal; readonly detail?: string };
 
 /**
@@ -56,16 +58,25 @@ export async function passHtmlGate(
   const canonical = ensurePageMeta(normalizeBornCanonical(sanitized.html));
 
   const behaviorIssues = validateBehaviors(canonical);
+  const warnings: string[] = [];
   if (behaviorIssues.length > 0) {
-    return { ok: false, code: "behaviors_invalid", detail: behaviorSlug(behaviorIssues) };
+    if (policy.behaviors === "block") {
+      return { ok: false, code: "behaviors_invalid", detail: behaviorSlug(behaviorIssues) };
+    }
+    warnings.push(behaviorSlug(behaviorIssues));
   }
 
-  const sealed = deps.seal(canonical);
-  if (!sealed.sealed) return { ok: false, code: "seal_failed" };
+  let output = canonical;
+  if (policy.seal) {
+    if (!deps.seal) return { ok: false, code: "seal_failed", detail: "sealer_unavailable" };
+    const sealed = deps.seal(canonical);
+    if (!sealed.sealed) return { ok: false, code: "seal_failed" };
+    output = sealed.html;
+  }
 
   if (policy.render) {
     if (!deps.render) return { ok: false, code: "render_failed", detail: "renderer_unavailable" };
-    const rendered = await deps.render(sealed.html);
+    const rendered = await deps.render(output);
     if (!rendered) return { ok: false, code: "render_failed", detail: "render_unavailable" };
     if (rendered.mobileOverflow) return { ok: false, code: "render_failed", detail: "mobile_overflow" };
     if (rendered.invalidGeometry) return { ok: false, code: "render_failed", detail: "invalid_geometry" };
@@ -73,13 +84,14 @@ export async function passHtmlGate(
 
   return {
     ok: true,
-    html: sealed.html,
+    html: output,
     removed: {
       scripts: sanitized.removed.scripts,
       eventHandlers: sanitized.removed.eventHandlers,
       iframes: sanitized.removed.iframes,
       dangerousUrls: sanitized.removed.dangerousUrls,
     },
+    warnings,
   };
 }
 

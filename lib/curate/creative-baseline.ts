@@ -195,7 +195,7 @@ export async function buildCreativeBaseline(
   // session could deliver without ever meeting normalizeBornCanonical,
   // ensurePageMeta or validateBehaviors — true whenever the model edited
   // nothing. Render stays out; the baseline runs its own check below.
-  const passed = await passHtmlGate(finalized.html, { sanitize: deps.sanitize ?? sanitizeForPublish, seal }, { render: false });
+  const passed = await passHtmlGate(finalized.html, { sanitize: deps.sanitize ?? sanitizeForPublish, seal }, { render: false, seal: true, behaviors: "block" });
   let delivered: string;
   let degradedReason: string | null = null;
   if (passed.ok) {
