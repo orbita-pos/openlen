@@ -101,6 +101,7 @@ export type HtmlGateResult =
  *   - `app/api/projects/from-html`           { render: false, seal: false, behaviors: "warn"  }
  *   - `app/api/projects/from-template`       { render: false, seal: false, behaviors: "warn"  }
  *     (twice — once for the home page, once per cloned subpage)
+ *   - `app/api/generate`                     { render: false, seal: false, behaviors: "warn"  }
  *
  * Every adopted surface passes `seal: false` except the two curate ones:
  * nothing is served from a route that writes to the database, publishToDir
@@ -116,10 +117,6 @@ export type HtmlGateResult =
  * built a silent failure.
  *
  * NOT ADOPTED — pending on purpose, not forgotten:
- *   - `generate` — parked behind a mandatory checkpoint. Four mutations run
- *     AFTER its last sanitize (one of them injects a `<script>`) and it
- *     validates behaviours after the row is already written, so adopting it
- *     changes what gets published, not just where the passes live.
  *   - `assemble` and `finalizeComposedDocument` — both sanitize AFTER
  *     `ensurePageMeta`, the reverse of this gate. Migrating either reorders
  *     the chain; that is the point, but it has to be proven on a real fixture

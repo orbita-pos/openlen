@@ -8,9 +8,9 @@ import { createVersion } from "@/lib/projects/versions";
 import { getCreditState } from "@/lib/credits";
 import { DESIGN_REFERENCE } from "@/lib/design-guidance";
 import { SYSTEM_PROMPT } from "./system-prompt";
-import { detectSlotPath } from "@/lib/html-engine";
-import { ensurePageMeta } from "@/lib/publish/ensure-page-meta";
-import { validateBehaviors } from "@/lib/behaviors/validate";
+import { detectSlotPath, sanitizeForPublish } from "@/lib/html-engine";
+import { passHtmlGate } from "@/lib/html-gate/document-gate";
+import { collectDegradations } from "@/lib/ingestion/degradations";
 import { resolveAIProvider, type AIModel } from "@/lib/ai-provider";
 import { generateHtmlStream } from "@/lib/ai-stream/generate";
 import { selectReferenceTemplate } from "@/lib/templates/select-reference";
@@ -486,17 +486,74 @@ ${brief}`;
         // ── Seed + save the chosen final document ───────────────────────────
         const title = extractTitle(html) ?? brief.slice(0, 60).trim();
 
+        // Reuse the profile resolved up front (a save-time resolve only if
+        // that failed).
+        const business = profile ?? (await resolveProfileForCreation(userId));
+
+        // One gate. `behaviors: "warn"` — this surface FAILS OPEN: the project
+        // does not exist yet, and refusing here costs the user a page they
+        // waited a minute and paid credits for. It ships and we record what
+        // was lost. `seal: false` (publishToDir seals at publish time),
+        // `render: false` (the vision critic above already paid the one render
+        // this request can afford). Brand seeding rides in `beforeMeta` — the
+        // same slot it occupied when it was called inline, unchanged: a
+        // generated page DOES take the brand accent (no `recolor: false`
+        // here), because it was written for this business, not adopted from
+        // someone else's design.
+        //
+        // The four mutations that used to land after the last sanitize — the
+        // Tailwind carrier (a <script>, ours, injected by the stream helper
+        // AFTER it sanitizes), the photo swap, the brand seeding, and the head
+        // completion — are all upstream of this call now. The document that
+        // reaches the DB is one this route sanitized itself, not one it
+        // trusted a helper to have cleaned before four more passes touched it.
+        const gated = await passHtmlGate(
+          html,
+          {
+            sanitize: sanitizeForPublish,
+            beforeMeta: (h) => seedBrandIntoHtml(h, business.data),
+          },
+          {
+            render: false,
+            seal: false,
+            behaviors: "warn",
+            meta: { title, ...profileMeta(business.data) },
+          },
+        );
+        if (!gated.ok) {
+          // Only reachable on the reserved marker (directly, or via
+          // `sanitizeForPublish` returning null for the same reason) — and
+          // that one never fails open, anywhere. runPass already refuses the
+          // model's own markers; this catches bytes the seeding introduced.
+          // eslint-disable-next-line no-console
+          console.error(`[generate] gate refused (${gated.code}) — not saving`);
+          emit("error", {
+            message: "The page came out with editor-mode markers — try again.",
+          });
+          closeStream();
+          return;
+        }
+        html = gated.html;
+
+        // What the page lost on the way in. On the ROW, not in the SSE payload:
+        // the client redirects to the workspace on `project_saved`, so a field
+        // added there dies on arrival.
+        //
+        // In practice this is `broken_controls`. Everything else the gate
+        // counts was already stripped upstream (the stream sanitizes each
+        // write), so the sanitize counters here read zero — which is the
+        // honest answer: the model wrote this page, not the user, and telling
+        // someone their page "had JavaScript removed" about markup they never
+        // typed is the noise this record exists to avoid.
+        const degradations = collectDegradations({
+          surface: "generate",
+          removed: gated.removed,
+          behaviorIssues: gated.issues,
+        });
+
         let projectId: string;
         let enabledModules: string[] = [];
         try {
-          // Reuse the profile resolved up front (a save-time resolve only if
-          // that failed). Seed brand accent + contact widget (no-op for an empty
-          // profile), then complete the <head> (SEO + brand logo/og).
-          const business = profile ?? (await resolveProfileForCreation(userId));
-          html = ensurePageMeta(seedBrandIntoHtml(html, business.data), {
-            title,
-            ...profileMeta(business.data),
-          });
           // AI→módulos bridge: if the page carries a module placeholder, turn
           // that module on so the publish bake wires the real widget.
           const moduleIntent = applyModuleIntent(undefined, html);
@@ -508,6 +565,7 @@ ${brief}`;
             profileId: business.id,
             logoUrl: business.data.brand?.logoUrl ?? null,
             settings: moduleIntent.enabled.length ? moduleIntent.settings : undefined,
+            degradations: degradations.length > 0 ? degradations : undefined,
           });
         } catch (err) {
           // eslint-disable-next-line no-console
@@ -519,30 +577,20 @@ ${brief}`;
           return;
         }
 
-        // Arreglo 2 (revisión final de rama) — DESIGN_GUIDANCE animates the
-        // model to emit data-ol-* markers, but this route is a ONE-SHOT
-        // stream: there is no next turn to hand a fix-it note back to (unlike
-        // ai-design/the agent, which reuse this same validateBehaviors call
-        // via their `aviso` channel). The only honest option here is validate
-        // + LOG — never strip the marker: a <button data-ol-copy="x"> whose
-        // id doesn't exist is still a dead button whether or not the
-        // attribute survives, and removing it would only destroy the one
-        // signal that tells us how often this actually happens. One
-        // structured log line, same `[name] ` + one-line-JSON convention
-        // publishToDir already uses for behaviors telemetry (see
-        // lib/publish/filesystem.ts) — no aggregator, no table.
-        try {
-          const behaviorIssues = validateBehaviors(html);
-          if (behaviorIssues.length > 0) {
-            // eslint-disable-next-line no-console
-            console.warn(
-              "[generate] behavior issues " +
-                JSON.stringify({ projectId, issues: behaviorIssues }),
-            );
-          }
-        } catch (err) {
+        // Telemetry only — the same `[name] ` + one-line-JSON convention
+        // publishToDir uses. This used to be the ONLY answer this route had to
+        // a control born dead: validate after the row was written and write a
+        // line nobody reads. The user's answer is the `broken_controls` record
+        // above, which the workspace shows as "algunos controles quedaron mal
+        // conectados — pedile al asistente que los arregle". The log stays
+        // because it is how we count how often the model does this; it is no
+        // longer how the person who owns the page finds out.
+        if (gated.issues && gated.issues.length > 0) {
           // eslint-disable-next-line no-console
-          console.warn("[generate] behavior validation failed", err);
+          console.warn(
+            "[generate] behavior issues " +
+              JSON.stringify({ projectId, issues: gated.issues }),
+          );
         }
 
         await createVersion({

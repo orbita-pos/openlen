@@ -169,6 +169,9 @@ export default defineConfig({
       // Task 4 — the two fail-open ingestion surfaces.
       "app/api/projects/from-html/route.test.ts",
       "app/api/projects/from-template/route.test.ts",
+      // Task 4 step 3 — the AI creation surface. Ran four mutations after its
+      // last sanitize and validated behaviours after the row was written.
+      "app/api/generate/route.test.ts",
       // NB: lib/projects/site-pages.test.ts is a node:test file (run via
       // `tsx --test`), so include the vitest project tests explicitly.
       "lib/projects/module-settings.test.ts",

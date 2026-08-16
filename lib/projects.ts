@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import { and, desc, eq, gte, isNotNull, isNull, ne, sql as sqlOp } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
-import type { ProjectData, ProjectSettings, StoredChatTurn } from "@/lib/projects/types";
+import type { Degradation, ProjectData, ProjectSettings, StoredChatTurn } from "@/lib/projects/types";
 import { getUserPlan } from "@/lib/limits";
 import { subdomainLimitForPlan } from "@/lib/subdomain/limits";
 import { validateSubdomain } from "@/lib/subdomain/validate";
@@ -223,6 +223,11 @@ export interface CreateProjectInput {
   /** Initial module settings (the AI→módulos bridge sets settings.bookings /
    *  settings.collections when the generated page carries their placeholder). */
   settings?: ProjectSettings;
+  /** What the page lost on the way in. Omitted when nothing was lost — a row
+   *  with nothing to say has to read the same as one written before this
+   *  existed, or every pre-feature project starts claiming a clean bill of
+   *  health it was never given. */
+  degradations?: Degradation[];
 }
 
 export async function createProject(
@@ -245,7 +250,11 @@ export async function createProject(
     status: "draft",
     profileId: input.profileId ?? null,
     logoUrl: input.logoUrl ?? null,
-    data: { html: input.html, ...(input.settings ? { settings: input.settings } : {}) },
+    data: {
+      html: input.html,
+      ...(input.settings ? { settings: input.settings } : {}),
+      ...(input.degradations?.length ? { degradations: input.degradations } : {}),
+    },
   });
   // Render a card thumbnail in the background so the project doesn't show the
   // placeholder icon in /projects. Fire-and-forget: never delays the create

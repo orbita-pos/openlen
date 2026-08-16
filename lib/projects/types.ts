@@ -351,7 +351,7 @@ export interface ProjectData {
  *  recorded — if we cannot say what broke in the user's language, we are not
  *  ready to tell them anything. */
 export interface Degradation {
-  surface: "from-html" | "from-template";
+  surface: "from-html" | "from-template" | "generate";
   stage: "transform" | "sanitize" | "behaviors";
   code: DegradationCode;
   count: number;

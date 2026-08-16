@@ -124,7 +124,22 @@ describe("collectDegradations", () => {
   });
 
   it("is safe to call with nothing measured", () => {
-    // generate/assemble may adopt this later without a `removed` in hand.
+    // assemble may adopt this later without a `removed` in hand.
     expect(collectDegradations({ surface: "from-html" })).toEqual([]);
+  });
+
+  it("says nothing about a generated page that only lost a control", () => {
+    // generate's counters read zero by the time the gate sanitizes — the
+    // stream already stripped the model's scripts. The only honest thing left
+    // to tell the owner of an AI-written page is which control came out dead.
+    expect(
+      collectDegradations({
+        surface: "generate",
+        removed: CLEAN,
+        behaviorIssues: [{ behavior: "copy", message: "id inexistente" }],
+      }),
+    ).toEqual([
+      { surface: "generate", stage: "behaviors", code: "broken_controls", count: 1 },
+    ]);
   });
 });
