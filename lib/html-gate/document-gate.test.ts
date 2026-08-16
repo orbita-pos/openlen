@@ -62,4 +62,36 @@ describe("passHtmlGate", () => {
     }), { render: false });
     expect(result).toMatchObject({ ok: true, removed: { scripts: 2, eventHandlers: 1 } });
   });
+
+  it("normalizes and completes the head, which the Agent did and creation did not", async () => {
+    const result = await passHtmlGate(
+      "<!doctype html><html><head></head><body><section>hola</section></body></html>",
+      deps(),
+      { render: false },
+    );
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    // ensurePageMeta only adds metadata when the document is missing it, but
+    // a document reaching the gate with an empty <head> always is — verified
+    // directly against ensurePageMeta before writing this assertion.
+    expect(result.html).toMatch(/<meta/i);
+  });
+
+  it("refuses a document whose behaviors do not validate", async () => {
+    // data-ol-behavior/data-ol-target (the brief's original fixture) isn't a
+    // real marker — no registered behavior produces an issue from it. A
+    // lightbox link missing its required <img> does: confirmed directly
+    // against validateBehaviors before writing this test.
+    const result = await passHtmlGate(
+      '<!doctype html><html><head></head><body><a data-ol-lightbox href="https://images.openlen.com/x.jpg">no img here</a></body></html>',
+      deps(),
+      { render: false },
+    );
+    expect(result).toMatchObject({ ok: false, code: "behaviors_invalid" });
+    if (result.ok) return;
+    // The reason must survive: a caller that only learns "invalid" cannot
+    // tell the model what to change.
+    expect(result.detail).toMatch(/^[a-z][a-z0-9_]{0,39}$/);
+    expect(result.detail).toBe("lightbox");
+  });
 });

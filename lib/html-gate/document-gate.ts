@@ -1,3 +1,8 @@
+import { validateBehaviors } from "@/lib/behaviors/validate";
+import type { BehaviorIssue } from "@/lib/behaviors/types";
+import { normalizeBornCanonical } from "@/lib/normalize";
+import { ensurePageMeta } from "@/lib/publish/ensure-page-meta";
+
 const RESERVED_MARKER = "data-slot-path=";
 
 export type HtmlGateRefusal =
@@ -37,7 +42,18 @@ export async function passHtmlGate(
   const sanitized = deps.sanitize(html);
   if (sanitized.html === null) return { ok: false, code: "sanitization_failed" };
 
-  const sealed = deps.seal(sanitized.html);
+  // The Agent ran these three and the creative sandbox did not, so a page
+  // created with AI was born without the normalization every ingested page
+  // gets. The gate is the union of what the surfaces enforced, not the set
+  // one of them happened to have.
+  const canonical = ensurePageMeta(normalizeBornCanonical(sanitized.html));
+
+  const behaviorIssues = validateBehaviors(canonical);
+  if (behaviorIssues.length > 0) {
+    return { ok: false, code: "behaviors_invalid", detail: behaviorSlug(behaviorIssues) };
+  }
+
+  const sealed = deps.seal(canonical);
   if (!sealed.sealed) return { ok: false, code: "seal_failed" };
 
   if (policy.render) {
@@ -58,4 +74,15 @@ export async function passHtmlGate(
       dangerousUrls: sanitized.removed.dangerousUrls,
     },
   };
+}
+
+/** Keeps the reason bounded by construction: a slug or nothing. The prose
+ *  from describeBehaviorIssues (lib/behaviors/validate.ts) is for a user,
+ *  not for a refusal code — `BehaviorIssue.behavior` is already a
+ *  lowercase `BehaviorName` slug ("countdown", "lightbox", …), so the regex
+ *  fallback below only fires if that type ever stops being a plain slug. */
+function behaviorSlug(issues: BehaviorIssue[]): string {
+  const raw = typeof issues[0]?.behavior === "string" ? issues[0].behavior : "";
+  const slug = raw.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "").slice(0, 40);
+  return /^[a-z][a-z0-9_]{0,39}$/.test(slug) ? slug : "behavior_issue";
 }
