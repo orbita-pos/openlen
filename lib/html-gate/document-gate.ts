@@ -60,6 +60,13 @@ export type HtmlGateResult =
        * not phrase anything; it hands back what it saw.
        */
       readonly issues?: readonly BehaviorIssue[];
+      /**
+       * Present on every refusal raised AFTER sanitization succeeded. What
+       * sanitize removed is true regardless of which later stage said no, and
+       * a caller that only hears the blocking reason will send the model back
+       * with the same deleted <script> attached.
+       */
+      readonly removed?: { scripts: number; eventHandlers: number; iframes: number; dangerousUrls: number };
     };
 
 /**
@@ -84,6 +91,14 @@ export async function passHtmlGate(
 
   const sanitized = deps.sanitize(html);
   if (sanitized.html === null) return { ok: false, code: "sanitization_failed" };
+  // Every refusal from here down carries this: sanitize already ran, and what
+  // it removed stays true no matter which later stage says no.
+  const removed = {
+    scripts: sanitized.removed.scripts,
+    eventHandlers: sanitized.removed.eventHandlers,
+    iframes: sanitized.removed.iframes,
+    dangerousUrls: sanitized.removed.dangerousUrls,
+  };
 
   // The Agent ran these three and the creative sandbox did not, so a page
   // created with AI was born without the normalization every ingested page
@@ -93,45 +108,35 @@ export async function passHtmlGate(
   const seeded = deps.beforeMeta ? deps.beforeMeta(normalized) : normalized;
   // beforeMeta runs after the one marker check above, on bytes deps.sanitize
   // never saw — the guarantee that never bends has to be re-proven here too.
-  if (seeded.includes(RESERVED_MARKER)) return { ok: false, code: "reserved_marker" };
+  if (seeded.includes(RESERVED_MARKER)) return { ok: false, code: "reserved_marker", removed };
   const canonical = ensurePageMeta(seeded, policy.meta);
 
   const behaviorIssues = validateBehaviors(canonical);
   const warnings: string[] = [];
   if (behaviorIssues.length > 0) {
     if (policy.behaviors === "block") {
-      return { ok: false, code: "behaviors_invalid", detail: behaviorSlug(behaviorIssues), issues: behaviorIssues };
+      return { ok: false, code: "behaviors_invalid", detail: behaviorSlug(behaviorIssues), issues: behaviorIssues, removed };
     }
     warnings.push(behaviorSlug(behaviorIssues));
   }
 
   let output = canonical;
   if (policy.seal) {
-    if (!deps.seal) return { ok: false, code: "seal_failed", detail: "sealer_unavailable" };
+    if (!deps.seal) return { ok: false, code: "seal_failed", detail: "sealer_unavailable", removed };
     const sealed = deps.seal(canonical);
-    if (!sealed.sealed) return { ok: false, code: "seal_failed" };
+    if (!sealed.sealed) return { ok: false, code: "seal_failed", removed };
     output = sealed.html;
   }
 
   if (policy.render) {
-    if (!deps.render) return { ok: false, code: "render_failed", detail: "renderer_unavailable" };
+    if (!deps.render) return { ok: false, code: "render_failed", detail: "renderer_unavailable", removed };
     const rendered = await deps.render(output);
-    if (!rendered) return { ok: false, code: "render_failed", detail: "render_unavailable" };
-    if (rendered.mobileOverflow) return { ok: false, code: "render_failed", detail: "mobile_overflow" };
-    if (rendered.invalidGeometry) return { ok: false, code: "render_failed", detail: "invalid_geometry" };
+    if (!rendered) return { ok: false, code: "render_failed", detail: "render_unavailable", removed };
+    if (rendered.mobileOverflow) return { ok: false, code: "render_failed", detail: "mobile_overflow", removed };
+    if (rendered.invalidGeometry) return { ok: false, code: "render_failed", detail: "invalid_geometry", removed };
   }
 
-  return {
-    ok: true,
-    html: output,
-    removed: {
-      scripts: sanitized.removed.scripts,
-      eventHandlers: sanitized.removed.eventHandlers,
-      iframes: sanitized.removed.iframes,
-      dangerousUrls: sanitized.removed.dangerousUrls,
-    },
-    warnings,
-  };
+  return { ok: true, html: output, removed, warnings };
 }
 
 /** Keeps the reason bounded by construction: a slug or nothing. The prose

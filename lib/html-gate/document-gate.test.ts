@@ -125,6 +125,32 @@ describe("passHtmlGate", () => {
     );
   });
 
+  it("still reports what sanitization stripped when a LATER stage refuses", async () => {
+    // A single Agent turn can lose a <script> AND carry a mis-wired conducta.
+    // The behaviour refusal must not swallow the fact that the JS was
+    // deleted, or the model fixes the conducta and resends the same doomed
+    // script. Sanitize succeeded here — what it removed is true regardless of
+    // which later stage said no.
+    const result = await passHtmlGate(
+      LIGHTBOX_MISSING_IMG_HTML,
+      deps({
+        sanitize: (html) => ({ html, errors: [], removed: { scripts: 2, eventHandlers: 1, dangerousUrls: 0, iframes: 3, metaRefresh: 0 } }),
+      }),
+      { ...BLOCKING_POLICY, render: false },
+    );
+    if (result.ok) throw new Error("expected a refusal");
+    expect(result.code).toBe("behaviors_invalid");
+    expect(result.removed).toEqual({ scripts: 2, eventHandlers: 1, iframes: 3, dangerousUrls: 0 });
+  });
+
+  it("has no removed counters on a refusal that fires before sanitize runs", async () => {
+    const result = await passHtmlGate(MARKED_HTML, deps(), { ...BLOCKING_POLICY, render: false });
+    if (result.ok) throw new Error("expected a refusal");
+    // The marker is refused before any pass that could rewrite it out of
+    // sight, so there is nothing truthful to report here.
+    expect(result.removed).toBeUndefined();
+  });
+
   it("leaves issues absent on refusals that are not about behaviours", async () => {
     const marker = await passHtmlGate(MARKED_HTML, deps(), { ...BLOCKING_POLICY, render: false });
     if (marker.ok) throw new Error("expected a refusal");

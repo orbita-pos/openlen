@@ -512,9 +512,16 @@ describe("editar_pagina", () => {
   // mal cableado que llega al documento guardado es otra vez un control
   // muerto, y el modelo debe enterarse en ESTE turno, no el visitante en la
   // página publicada.
-  it("surfaces an aviso when a data-ol-copy points at a missing id (dead at birth)", async () => {
+  // Gate/request-surfaces Task 3 — the Agent is a fail-CLOSED surface: the
+  // user's page already exists, so refusing an edit costs them the edit, not
+  // the page. Until now a mis-wired conducta saved and only warned, which
+  // meant the visitor could meet the dead control before the model ever
+  // circled back. Now the document is refused and the stored page is
+  // untouched; the same prose still reaches the model, as the error.
+  it("refuses the edit when a data-ol-copy points at a missing id (dead at birth)", async () => {
     const { deps, store } = makeDeps();
     const session = makeSession();
+    const before = store.data.html;
     const target = /<h1[^>]*\bdata-op-id="([^"]+)"/.exec(session.taggedHtml)![1];
     const out = await runAgentTool(session, deps, "editar_pagina", {
       edits: [
@@ -522,17 +529,18 @@ describe("editar_pagina", () => {
       ],
       resumen: "boton copiar",
     });
-    assert.equal(out.response.ok, true);
-    // The edit SUCCEEDS and saves — validateBehaviors doesn't block, it
-    // warns, same contract as the sanitizer's aviso above.
-    assert.ok(store.data.html.includes('data-ol-copy="cupon"'));
-    const aviso = (out.response as { aviso?: string }).aviso ?? "";
-    assert.match(aviso, /cupon/);
-    assert.match(aviso, /nacería muerto/i);
+    assert.equal(out.response.ok, false);
+    assert.equal(store.saved.length, 0);
+    assert.equal(store.data.html, before);
+    const error = String((out.response as { error?: string }).error ?? "");
+    // The reason must survive the refusal — a model told only "invalid"
+    // cannot fix anything.
+    assert.match(error, /cupon/);
+    assert.match(error, /nacería muerto/i);
   });
 
-  it("surfaces an aviso when a data-ol-countdown value isn't a valid ISO date", async () => {
-    const { deps } = makeDeps();
+  it("refuses the edit when a data-ol-countdown value isn't a valid ISO date", async () => {
+    const { deps, store } = makeDeps();
     const session = makeSession();
     const target = /<h1[^>]*\bdata-op-id="([^"]+)"/.exec(session.taggedHtml)![1];
     const out = await runAgentTool(session, deps, "editar_pagina", {
@@ -545,9 +553,9 @@ describe("editar_pagina", () => {
       ],
       resumen: "countdown",
     });
-    assert.equal(out.response.ok, true);
-    const aviso = (out.response as { aviso?: string }).aviso ?? "";
-    assert.match(aviso, /fecha ISO válida/i);
+    assert.equal(out.response.ok, false);
+    assert.equal(store.saved.length, 0);
+    assert.match(String((out.response as { error?: string }).error ?? ""), /fecha ISO válida/i);
   });
 
   it("stays quiet when a behavior is wired correctly (no crying wolf)", async () => {
@@ -568,8 +576,8 @@ describe("editar_pagina", () => {
     assert.equal((out.response as { aviso?: string }).aviso, undefined);
   });
 
-  it("composes both avisos when a turn strips a <script> AND mis-wires a behavior", async () => {
-    const { deps } = makeDeps();
+  it("composes both reasons when a turn strips a <script> AND mis-wires a behavior", async () => {
+    const { deps, store } = makeDeps();
     const session = makeSession();
     const target = /<h1[^>]*\bdata-op-id="([^"]+)"/.exec(session.taggedHtml)![1];
     const out = await runAgentTool(session, deps, "editar_pagina", {
@@ -582,11 +590,16 @@ describe("editar_pagina", () => {
       ],
       resumen: "compuesto",
     });
-    assert.equal(out.response.ok, true);
-    const aviso = (out.response as { aviso?: string }).aviso ?? "";
-    assert.match(aviso, /JavaScript/i);
-    assert.match(aviso, /ghost/);
-    assert.match(aviso, /nacería muerto/i);
+    // Refused now — but a turn can lose a <script> AND carry a mis-wired
+    // conducta at the same time, and the model has to see BOTH to fix both
+    // in this same turn. Reporting only the blocking one would send it back
+    // with the same deleted script attached to a now-valid button.
+    assert.equal(out.response.ok, false);
+    assert.equal(store.saved.length, 0);
+    const error = String((out.response as { error?: string }).error ?? "");
+    assert.match(error, /JavaScript/i);
+    assert.match(error, /ghost/);
+    assert.match(error, /nacería muerto/i);
   });
 });
 

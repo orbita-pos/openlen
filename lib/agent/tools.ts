@@ -24,7 +24,7 @@ import {
   type ImageEditInput,
   type ImageEditResult,
 } from "@/lib/ai/image-edit-core";
-import { describeBehaviorIssues, validateBehaviors } from "@/lib/behaviors/validate";
+import { describeBehaviorIssues } from "@/lib/behaviors/validate";
 import { BEHAVIOR_NAMES } from "@/lib/behaviors/doc";
 import { getOrCreateOwnerChatUser } from "@/lib/chat/store";
 import { getOrCreateDefaultCollection, setCollectionSource } from "@/lib/collections/store";
@@ -33,7 +33,7 @@ import { debitCredits } from "@/lib/credits";
 import { detectSlotPath, sanitizeForPublish } from "@/lib/html-engine";
 import { applyOps, tagWithOpIds, type Op, type OpType } from "@/lib/html-ops";
 import { fetchSheet, resolveSheetCsvUrl } from "@/lib/live/sheet-source";
-import { normalizeBornCanonical } from "@/lib/normalize";
+import { passHtmlGate } from "@/lib/html-gate/document-gate";
 import { setProjectUserBrief, USER_BRIEF_MAX } from "@/lib/projects";
 import { extForMime, getAssetStorage } from "@/lib/projects/assets";
 import { validateUrl } from "@/lib/style-match/scrape/validate-url";
@@ -53,7 +53,6 @@ import type { BusinessProfileData } from "@/lib/business-profiles/types";
 import { summarizeBusinessForAgent } from "@/lib/agent/business";
 import { redesignWithGemini, type RedesignInput, type RedesignOutcome } from "@/lib/agent/redesign";
 import { resolveAIProvider } from "@/lib/ai-provider";
-import { ensurePageMeta } from "@/lib/publish/ensure-page-meta";
 import { liveDataEnabled } from "@/lib/publish/kill-switches";
 import { isPublishLocale } from "@/lib/publish/publish-locales";
 import { AGENT_MODULES, MOTION_LOOKS, type AgentModule } from "@/lib/agent/catalog";
@@ -816,8 +815,9 @@ function activeHtml(data: ProjectData, page: string | null): string | null {
 }
 
 // Shared F1 persist pipeline — same block editar_pagina always ran:
-// editor-mode marker guard -> sanitize -> ensurePageMeta(normalizeBornCanonical)
-// -> module-intent -> snapshot pre/post -> save -> re-tag session.taggedHtml.
+// editor-mode marker guard -> passHtmlGate (sanitize, normalize, meta,
+// behaviours — fail closed) -> module-intent -> snapshot pre/post -> save ->
+// re-tag session.taggedHtml.
 // Any tool that hands the model a mutated document (editar_pagina,
 // cambiar_tema, …) funnels its candidate HTML through this so persistence
 // semantics never drift between tools.
@@ -839,29 +839,39 @@ async function persistHtmlChange(
   if (detectSlotPath(candidateHtml)) {
     return { ok: false, error: "el HTML contiene un marcador reservado (data-slot-path)" };
   }
-  const sanitized = sanitizeForPublish(candidateHtml);
-  if (sanitized.html === null) {
-    return { ok: false, error: "el HTML no pasó la sanitización" };
+  // Fail closed, through the one gate. `seal: false` — nothing is served from
+  // here, publishToDir seals at publish time; `render: false` — an agent turn
+  // cannot pay a twenty-second browser launch, publish verifies instead.
+  const gated = await passHtmlGate(
+    candidateHtml,
+    { sanitize: sanitizeForPublish },
+    { render: false, seal: false, behaviors: "block" },
+  );
+  if (!gated.ok) {
+    // Task 16's rule, now enforced instead of advised: un data-ol-* mal
+    // cableado ya no llega al documento guardado — se rechaza y la página que
+    // el usuario ya tenía queda byte-intacta. El modelo sigue viendo TODAS
+    // las razones: un turno puede a la vez perder un <script> Y traer una
+    // conducta mal cableada, y tiene que arreglar las dos en este mismo
+    // turno; contarle solo la que bloqueó lo devuelve con el mismo script
+    // condenado pegado a un botón ya corregido.
+    const strippedMsg = gated.removed ? sanitizeAviso(gated.removed) : undefined;
+    const behaviorList = describeBehaviorIssues([...(gated.issues ?? [])]);
+    const whyMsg = behaviorList
+      ? `Hay conductas mal cableadas que nacerían MUERTAS en la página: ${behaviorList}. NO se guardó nada — arréglalas y vuelve a mandar el documento en este mismo turno.`
+      : gated.code === "reserved_marker"
+        ? "el HTML contiene un marcador reservado (data-slot-path)"
+        : `el HTML no pasó la puerta de publicación (${gated.code}${gated.detail ? `: ${gated.detail}` : ""})`;
+    return {
+      ok: false,
+      error: [strippedMsg, whyMsg].filter((m): m is string => Boolean(m)).join(" "),
+    };
   }
-  const sanitizeMsg = sanitizeAviso(sanitized.removed);
 
-  const finalHtml = ensurePageMeta(normalizeBornCanonical(sanitized.html));
-
-  // Task 16 — un data-ol-* mal cableado que llega a la página del usuario es
-  // otra vez un control muerto, solo que nunca pasó por el sanitizer: nació
-  // mal escrito. Corre DESPUÉS del sanitizer, sobre finalHtml (el documento
-  // real que se guarda), y se CONCATENA al aviso de arriba en vez de
-  // reemplazarlo — un turno puede a la vez perder un <script> Y traer una
-  // conducta mal cableada, y el modelo necesita ver los dos problemas para
-  // arreglar los dos en este mismo turno.
-  const behaviorIssues = validateBehaviors(finalHtml);
-  const behaviorList = describeBehaviorIssues(behaviorIssues);
-  const behaviorMsg = behaviorList
-    ? `Hay conductas mal cableadas que nacerían MUERTAS en la página: ${behaviorList}. Arréglalas con editar_pagina en este mismo turno, no las des por buenas.`
-    : undefined;
-
-  const aviso =
-    [sanitizeMsg, behaviorMsg].filter((m): m is string => Boolean(m)).join(" ") || undefined;
+  const finalHtml = gated.html;
+  // Behaviours are the gate's call now, so the only thing left to warn about
+  // is what the sanitizer removed from a document that DID pass.
+  const aviso = sanitizeAviso(gated.removed);
 
   const row = await deps.loadProject(session.projectId, session.userId);
   if (!row) return { ok: false, error: "proyecto no encontrado" };
