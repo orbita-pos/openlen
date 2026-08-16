@@ -24,10 +24,9 @@ import {
   tagWithOpIds,
   type ScopedView,
 } from "@/lib/html-ops";
-import { normalizeBornCanonical } from "@/lib/normalize";
+import { passHtmlGate } from "@/lib/html-gate/document-gate";
 import { applyModuleIntent } from "@/lib/projects/module-intent";
-import { ensurePageMeta } from "@/lib/publish/ensure-page-meta";
-import { describeBehaviorIssues, validateBehaviors } from "@/lib/behaviors/validate";
+import { describeBehaviorIssues } from "@/lib/behaviors/validate";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // POST /api/templates/ai-design — conversational AI page redesign.
@@ -747,46 +746,46 @@ VISUAL CONTEXT: the attached image is a full-page render of the CURRENT page (wh
           }
         }
 
-        // Sanitize the model output before persistence — strip any inline
-        // scripts / on*-handlers / dangerous URLs / iframes the model may have
-        // emitted despite the system prompt (prompt guidance is not an
-        // enforcement boundary). Mirrors the /api/generate sanitize:true path.
-        const sanitizeResult = sanitizeForPublish(trimmedHtml);
-        if (sanitizeResult.html === null) {
+        // One gate before persistence — sanitize (inline scripts, on*
+        // handlers, dangerous URLs, iframes the prompt asked the model not to
+        // emit; prompt guidance is not an enforcement boundary), then
+        // born-canonical + <head> completion, which a Mode B rewrite or ops
+        // that hit the token blocks can otherwise drop.
+        //
+        // `seal: false` — nothing is served from here, publishToDir seals at
+        // publish time. `render: false` — a chat turn cannot pay a
+        // twenty-second browser launch; publish verifies instead.
+        //
+        // behaviors: "block" is the user-visible trade. DESIGN_GUIDANCE
+        // animates the model to emit data-ol-* markers, and until now a
+        // mis-wired one landed anyway with a note appended to `reasoning` for
+        // the model to fix on the NEXT turn — which meant the visitor could
+        // meet the dead control first. ai-design edits a page that already
+        // exists, so refusing costs the user the edit, not the page.
+        const gated = await passHtmlGate(
+          trimmedHtml,
+          { sanitize: sanitizeForPublish },
+          { render: false, seal: false, behaviors: "block" },
+        );
+        if (!gated.ok) {
+          // The reason has to survive as prose: describeBehaviorIssues writes
+          // for the person reading the chat, `gated.detail` is the machine
+          // slug. Collapsing them into one string is the mistake this whole
+          // migration exists to stop repeating.
+          const behaviorList = describeBehaviorIssues([...(gated.issues ?? [])]);
           emit("error", {
-            message: "Model emitted editor-mode markers — try again.",
+            message: behaviorList
+              ? `Conductas mal cableadas — no guardé nada para no dejarte un control muerto en la página: ${behaviorList}. Pídemelo otra vez y lo cableo bien.`
+              : gated.code === "reserved_marker"
+                ? "Model emitted editor-mode markers — try again."
+                : `El HTML no pasó la puerta de publicación (${gated.code}${gated.detail ? `: ${gated.detail}` : ""}) — try again.`,
           });
           closeStream();
           return;
         }
-        // Born-canonical: a Mode B rewrite — or ops that hit the token
-        // blocks — can drop the data-ol-* contract. Re-run the chain so
-        // the page stays themeable. Idempotent: a no-op when the markers
-        // survived. Then re-complete the <head> in case a full rewrite
-        // dropped the meta description / og tags / favicon.
-        trimmedHtml = ensurePageMeta(normalizeBornCanonical(sanitizeResult.html));
+        trimmedHtml = gated.html;
 
-        // Arreglo 2 (revisión final de rama) — DESIGN_GUIDANCE animates the
-        // model to emit data-ol-* markers, but until now only the agent (via
-        // lib/agent/tools.ts's `aviso` channel) actually validated them.
-        // ai-design is a conversational loop (unlike /api/generate's one-shot
-        // stream) — it HAS a next turn — so it gets the same net, reusing
-        // describeBehaviorIssues (shared with the agent, not duplicated)
-        // instead of building its own tool-call round trip. There's no
-        // in-turn tool loop here to re-call itself, so the note rides in
-        // `reasoning`: that's the EXACT string chat-panel.tsx stores as this
-        // turn's assistant history entry (`t.assistantReasoning`, spread into
-        // `history` on the next request — see the `history` builder in
-        // chat-panel.tsx's send()), so appending it here puts the issue back
-        // in front of the model on the next real turn, AND shows the user
-        // the same honesty the agent's system prompt requires ("DÍSELO al
-        // usuario"). The SYSTEM_PROMPT rule above ("if your OWN previous
-        // reasoning... fix those FIRST") is what turns this from "the model
-        // MIGHT notice" into "the model is told to self-correct".
-        const behaviorAviso = describeBehaviorIssues(validateBehaviors(trimmedHtml));
-        const reasoning = behaviorAviso
-          ? `${accumulatedReasoning.trim()}\n\n⚠️ Conductas mal cableadas — las arreglo en tu próximo mensaje: ${behaviorAviso}`
-          : accumulatedReasoning.trim();
+        const reasoning = accumulatedReasoning.trim();
         const now = new Date();
         let enabledModules: string[] = [];
 

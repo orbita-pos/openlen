@@ -159,6 +159,9 @@ export default defineConfig({
       // sanitize/normalize load fine here, and mocking them would mock away
       // the pipeline order the test exists to hold still.
       "app/api/projects/[id]/apply-template/route.test.ts",
+      // Same, for the Chat surface. Mocks only the model, DB, auth and
+      // credits — the sanitize/normalize/behaviour passes are the real ones.
+      "app/api/templates/ai-design/route.test.ts",
       // NB: lib/projects/site-pages.test.ts is a node:test file (run via
       // `tsx --test`), so include the vitest project tests explicitly.
       "lib/projects/module-settings.test.ts",
