@@ -1,6 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
 
 import { passHtmlGate, type HtmlGateDeps, type HtmlGatePolicy } from "./document-gate";
+import { normalizeBornCanonical } from "@/lib/normalize";
+import { ensurePageMeta } from "@/lib/publish/ensure-page-meta";
 
 const OK_HTML = "<!doctype html><html><head></head><body><section>hola</section></body></html>";
 const MARKED_HTML = '<!doctype html><html><head></head><body><section data-slot-path="a">x</section></body></html>';
@@ -128,6 +130,91 @@ describe("passHtmlGate", () => {
     const { seal: _seal, ...withoutSeal } = deps();
     const result = await passHtmlGate(OK_HTML, withoutSeal, { render: false, seal: true, behaviors: "block" });
     expect(result).toMatchObject({ ok: false, code: "seal_failed", detail: "sealer_unavailable" });
+  });
+
+  it("pins Task 1's choice: under seal:false render:true, the renderer receives the same unsealed bytes returned as html — no caller relies on this yet", async () => {
+    const seal = vi.fn((html: string) => ({ html: `SEALED(${html})`, sealed: true }));
+    let renderedWith: string | undefined;
+    const render = vi.fn(async (html: string) => {
+      renderedWith = html;
+      return { mobileOverflow: false, invalidGeometry: false };
+    });
+    const result = await passHtmlGate(OK_HTML, deps({ seal, render }), { seal: false, render: true, behaviors: "block" });
+    expect(seal).not.toHaveBeenCalled();
+    expect(render).toHaveBeenCalledTimes(1);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(renderedWith).toBe(result.html);
+    expect(renderedWith).not.toMatch(/^SEALED\(/);
+  });
+
+  describe("the beforeMeta / policy.meta seam", () => {
+    it("stays byte-for-byte identical to today when neither beforeMeta nor policy.meta is supplied", async () => {
+      // The exact chain the gate ran before this seam existed, computed
+      // independently here rather than assumed.
+      const expected = ensurePageMeta(normalizeBornCanonical(OK_HTML));
+      const result = await passHtmlGate(OK_HTML, deps(), { ...BLOCKING_POLICY, render: false });
+      expect(result).toMatchObject({ ok: true, html: expected });
+    });
+
+    it("runs beforeMeta on the normalized document, before ensurePageMeta, and forwards policy.meta", async () => {
+      let sawNormalizedInput = false;
+      const beforeMeta = vi.fn((html: string) => {
+        // Proves beforeMeta receives normalizeBornCanonical's output, not the
+        // raw sanitized bytes — the exact slot seedBrandIntoHtml occupies.
+        sawNormalizedInput = html.includes("data-ol-radius");
+        return html.replace("<section>hola</section>", '<section data-seeded="1">hola</section>');
+      });
+      const result = await passHtmlGate(OK_HTML, deps({ beforeMeta }), {
+        render: false,
+        seal: false,
+        behaviors: "block",
+        meta: { title: "Mi Negocio" },
+      });
+      expect(beforeMeta).toHaveBeenCalledTimes(1);
+      expect(sawNormalizedInput).toBe(true);
+      expect(result.ok).toBe(true);
+      if (!result.ok) return;
+      // beforeMeta's injection survived into the final document...
+      expect(result.html).toContain('data-seeded="1"');
+      // ...and ensurePageMeta ran AFTER it, honoring policy.meta's title.
+      expect(result.html).toMatch(/<title>Mi Negocio<\/title>/);
+    });
+
+    it("refuses reserved_marker when beforeMeta introduces the marker, even though the input never carried it", async () => {
+      const sanitize = vi.fn((html: string) => ({ html, errors: [], removed: { scripts: 0, eventHandlers: 0, dangerousUrls: 0, iframes: 0, metaRefresh: 0 } }));
+      const beforeMeta = (html: string) => `${html}<div data-slot-path="injected">x</div>`;
+      const result = await passHtmlGate(OK_HTML, deps({ sanitize, beforeMeta }), BLOCKING_POLICY);
+      expect(result).toMatchObject({ ok: false, code: "reserved_marker" });
+      // sanitize DID run — the input itself was clean; only beforeMeta's own
+      // output carried the marker, so the gate's own re-check must be what
+      // caught it, not deps.sanitize.
+      expect(sanitize).toHaveBeenCalledTimes(1);
+    });
+
+    describe("a beforeMeta-introduced marker refuses under every policy combination", () => {
+      const sealPolicies = [true, false] as const;
+      const behaviorPolicies = ["block", "warn"] as const;
+      const renderPolicies = [true, false] as const;
+
+      for (const seal of sealPolicies) {
+        for (const behaviors of behaviorPolicies) {
+          for (const render of renderPolicies) {
+            it(`seal=${seal} behaviors=${behaviors} render=${render}`, async () => {
+              const beforeMeta = (html: string) => `${html}<div data-slot-path="injected">x</div>`;
+              const testDeps: HtmlGateDeps = {
+                sanitize: (html: string) => ({ html, errors: [], removed: { scripts: 0, eventHandlers: 0, dangerousUrls: 0, iframes: 0, metaRefresh: 0 } }),
+                beforeMeta,
+                ...(seal ? { seal: (html: string) => ({ html, sealed: true }) } : {}),
+                ...(render ? { render: async () => ({ mobileOverflow: false, invalidGeometry: false }) } : {}),
+              };
+              const result = await passHtmlGate(OK_HTML, testDeps, { seal, behaviors, render });
+              expect(result).toMatchObject({ ok: false, code: "reserved_marker" });
+            });
+          }
+        }
+      }
+    });
   });
 
   describe("the reserved marker refuses under every policy combination", () => {

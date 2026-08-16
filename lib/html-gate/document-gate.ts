@@ -1,7 +1,7 @@
 import { validateBehaviors } from "@/lib/behaviors/validate";
 import type { BehaviorIssue } from "@/lib/behaviors/types";
 import { normalizeBornCanonical } from "@/lib/normalize";
-import { ensurePageMeta } from "@/lib/publish/ensure-page-meta";
+import { ensurePageMeta, type EnsurePageMetaOptions } from "@/lib/publish/ensure-page-meta";
 
 const RESERVED_MARKER = "data-slot-path=";
 
@@ -16,12 +16,31 @@ export interface HtmlGateDeps {
   readonly sanitize: (html: string) => { html: string | null; errors: string[]; removed: { scripts: number; eventHandlers: number; dangerousUrls: number; iframes: number; metaRefresh: number } };
   readonly seal?: (html: string) => { html: string; sealed: boolean };
   readonly render?: (html: string) => Promise<{ mobileOverflow: boolean; invalidGeometry: boolean } | null>;
+  /**
+   * Runs on the normalized document, before ensurePageMeta — the exact slot
+   * `seedBrandIntoHtml` occupies in the four surfaces this seam exists for
+   * (from-html, from-template, generate, finalizeComposedDocument). It is
+   * NOT a general-purpose escape hatch: it runs after `sanitize`, so anything
+   * it injects is unsanitized and only re-checked for the reserved marker,
+   * not re-sanitized. That is safe for `seedBrandIntoHtml` specifically —
+   * it HTML-escapes every user-supplied string it interpolates
+   * (contact-widget.ts / platforms-band.ts's `esc()`), validates the
+   * profile's accent as a strict 6-digit hex before use
+   * (apply-accent.ts's `normalizeHex`), and rejects javascript:/data:/
+   * vbscript: URLs before they reach an href (platforms.ts) — it emits no
+   * `<script>` and no inline event handler. A future `beforeMeta` that hands
+   * this seam anything else (model output, unescaped user text) needs its
+   * own sanitization; do not assume this seam provides it.
+   */
+  readonly beforeMeta?: (html: string) => string;
 }
 
 export interface HtmlGatePolicy {
   readonly render: boolean;
   readonly seal: boolean;
   readonly behaviors: "block" | "warn";
+  /** Forwarded to ensurePageMeta as-is. Omit for today's no-options call. */
+  readonly meta?: EnsurePageMetaOptions;
 }
 
 export type HtmlGateResult =
@@ -55,7 +74,12 @@ export async function passHtmlGate(
   // created with AI was born without the normalization every ingested page
   // gets. The gate is the union of what the surfaces enforced, not the set
   // one of them happened to have.
-  const canonical = ensurePageMeta(normalizeBornCanonical(sanitized.html));
+  const normalized = normalizeBornCanonical(sanitized.html);
+  const seeded = deps.beforeMeta ? deps.beforeMeta(normalized) : normalized;
+  // beforeMeta runs after the one marker check above, on bytes deps.sanitize
+  // never saw — the guarantee that never bends has to be re-proven here too.
+  if (seeded.includes(RESERVED_MARKER)) return { ok: false, code: "reserved_marker" };
+  const canonical = ensurePageMeta(seeded, policy.meta);
 
   const behaviorIssues = validateBehaviors(canonical);
   const warnings: string[] = [];
