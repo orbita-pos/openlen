@@ -1,6 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
 
 import { passHtmlGate, type HtmlGateDeps, type HtmlGatePolicy } from "./document-gate";
+import { describeBehaviorIssues, validateBehaviors } from "@/lib/behaviors/validate";
+import type { BehaviorIssue } from "@/lib/behaviors/types";
 import { normalizeBornCanonical } from "@/lib/normalize";
 import { ensurePageMeta } from "@/lib/publish/ensure-page-meta";
 
@@ -99,6 +101,41 @@ describe("passHtmlGate", () => {
     // tell the model what to change.
     expect(result.detail).toMatch(/^[a-z][a-z0-9_]{0,39}$/);
     expect(result.detail).toBe("lightbox");
+  });
+
+  it("carries the raw behaviour issues on the refusal so a caller keeps its own prose", async () => {
+    // ai-design and the Agent both put describeBehaviorIssues' Spanish prose
+    // in front of the model. Once the gate owns the decision they can no
+    // longer compute it — the canonical bytes it validated are not returned
+    // on a refusal — and re-running normalize+meta in the caller to get them
+    // back is the exact drift this gate exists to delete. So the refusal
+    // carries the issues themselves: `detail` stays the bounded machine slug,
+    // `issues` is what the human-facing sentence is built from.
+    const result = await passHtmlGate(
+      LIGHTBOX_MISSING_IMG_HTML,
+      deps(),
+      { ...BLOCKING_POLICY, render: false },
+    );
+    if (result.ok) throw new Error("expected a refusal");
+    expect(result.issues).toBeDefined();
+    expect(result.issues).toHaveLength(1);
+    expect(result.issues?.[0]?.behavior).toBe("lightbox");
+    expect(describeBehaviorIssues(result.issues as BehaviorIssue[])).toBe(
+      describeBehaviorIssues(validateBehaviors(ensurePageMeta(normalizeBornCanonical(LIGHTBOX_MISSING_IMG_HTML)))),
+    );
+  });
+
+  it("leaves issues absent on refusals that are not about behaviours", async () => {
+    const marker = await passHtmlGate(MARKED_HTML, deps(), { ...BLOCKING_POLICY, render: false });
+    if (marker.ok) throw new Error("expected a refusal");
+    expect(marker.issues).toBeUndefined();
+
+    const unsealed = await passHtmlGate(OK_HTML, deps({ seal: (html) => ({ html, sealed: false }) }), {
+      ...BLOCKING_POLICY,
+      render: false,
+    });
+    if (unsealed.ok) throw new Error("expected a refusal");
+    expect(unsealed.issues).toBeUndefined();
   });
 
   it("turns the same behaviour issue into a bounded warning under behaviors:\"warn\" instead of refusing", async () => {

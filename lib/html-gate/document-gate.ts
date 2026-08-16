@@ -45,7 +45,22 @@ export interface HtmlGatePolicy {
 
 export type HtmlGateResult =
   | { readonly ok: true; readonly html: string; readonly removed: { scripts: number; eventHandlers: number; iframes: number; dangerousUrls: number }; readonly warnings: string[] }
-  | { readonly ok: false; readonly code: HtmlGateRefusal; readonly detail?: string };
+  | {
+      readonly ok: false;
+      readonly code: HtmlGateRefusal;
+      readonly detail?: string;
+      /**
+       * Only on `behaviors_invalid`. `detail` is the bounded machine slug;
+       * this is what a human-facing sentence is built from, via
+       * `describeBehaviorIssues`. It exists because the surfaces that put
+       * that prose in front of the model cannot recompute it once the gate
+       * owns the decision — the canonical bytes it validated are not
+       * returned on a refusal, and re-running normalize+meta caller-side to
+       * get them back is the drift this gate deletes. The gate still does
+       * not phrase anything; it hands back what it saw.
+       */
+      readonly issues?: readonly BehaviorIssue[];
+    };
 
 /**
  * One place a document becomes safe to keep, so a guarantee added once
@@ -85,7 +100,7 @@ export async function passHtmlGate(
   const warnings: string[] = [];
   if (behaviorIssues.length > 0) {
     if (policy.behaviors === "block") {
-      return { ok: false, code: "behaviors_invalid", detail: behaviorSlug(behaviorIssues) };
+      return { ok: false, code: "behaviors_invalid", detail: behaviorSlug(behaviorIssues), issues: behaviorIssues };
     }
     warnings.push(behaviorSlug(behaviorIssues));
   }

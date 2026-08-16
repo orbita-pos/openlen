@@ -13,8 +13,7 @@ import type { ProjectData } from "@/lib/projects/types";
 import { createVersion } from "@/lib/projects/versions";
 import { getCreditState, debitCredits, AUTOFILL_CREDIT_COST } from "@/lib/credits";
 import { sanitizeForPublish } from "@/lib/html-engine";
-import { normalizeBornCanonical } from "@/lib/normalize";
-import { ensurePageMeta } from "@/lib/publish/ensure-page-meta";
+import { passHtmlGate } from "@/lib/html-gate/document-gate";
 import { getTemplateHtml } from "@/lib/templates/store";
 import { fillTemplateFromPage } from "@/lib/style-match/autofill/fill-from-page";
 
@@ -83,10 +82,20 @@ export async function POST(
     return json({ error: "restyle_failed", detail: res.error }, 502);
   }
 
-  // Publish-safety (defense in depth): reject editor markers, then born-canonical + meta.
-  const sanitized = sanitizeForPublish(res.html);
-  if (sanitized.html === null) return json({ error: "editor_markers" }, 422);
-  const finalHtml = ensurePageMeta(normalizeBornCanonical(sanitized.html));
+  // One gate, fail closed: the user's page already exists, so refusing a
+  // restyle costs them the restyle and nothing else. `seal: false` — nothing
+  // is served from here, publishToDir seals at publish time; `render: false` —
+  // an interactive restyle cannot pay a twenty-second browser launch.
+  const gated = await passHtmlGate(res.html, { sanitize: sanitizeForPublish }, {
+    render: false,
+    seal: false,
+    behaviors: "block",
+  });
+  if (!gated.ok) {
+    // No charge: `debitCredits` is below, and the refusal returns before it.
+    return json({ error: gated.code, detail: gated.detail }, 422);
+  }
+  const finalHtml = gated.html;
 
   const now = new Date();
   const base: ProjectData = project.data ?? { html: "" };

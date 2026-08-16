@@ -154,6 +154,11 @@ export default defineConfig({
       // native html-engine binding via lib/projects.ts.
       "app/api/internal/live-republish/route.test.ts",
       "app/api/internal/republish/route.test.ts",
+      // Fail-closed pin for one of the three edit surfaces on the html gate.
+      // Unlike the routes above it does NOT mock @/lib/html-engine — the real
+      // sanitize/normalize load fine here, and mocking them would mock away
+      // the pipeline order the test exists to hold still.
+      "app/api/projects/[id]/apply-template/route.test.ts",
       // NB: lib/projects/site-pages.test.ts is a node:test file (run via
       // `tsx --test`), so include the vitest project tests explicitly.
       "lib/projects/module-settings.test.ts",
