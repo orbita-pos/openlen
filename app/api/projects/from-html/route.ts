@@ -2,9 +2,9 @@ import { auth } from "@/auth";
 import { db, schema } from "@/lib/db";
 import { createVersion } from "@/lib/projects/versions";
 import { sanitizeForPublish } from "@/lib/html-engine";
-import { normalizeBornCanonical } from "@/lib/normalize";
+import { passHtmlGate } from "@/lib/html-gate/document-gate";
+import { collectDegradations } from "@/lib/ingestion/degradations";
 import { transformIngestedHtml } from "@/lib/transform";
-import { ensurePageMeta } from "@/lib/publish/ensure-page-meta";
 import { resolveProfileForCreation } from "@/lib/business-profiles/store";
 import { seedBrandIntoHtml, profileMeta } from "@/lib/business-profiles/seed-html";
 import { renderProjectThumbnail } from "@/lib/projects/thumbnail";
@@ -63,19 +63,6 @@ export async function POST(req: Request): Promise<Response> {
     source: "from-html",
   });
 
-  const sanitized = sanitizeForPublish(transformed.html);
-  if (sanitized.html === null) {
-    return json(
-      {
-        error: "invalid_html",
-        message:
-          "HTML contains editor-mode markers (data-slot-path). Save the rendered output instead.",
-      },
-      400,
-    );
-  }
-  const cleanHtml = sanitized.html;
-
   const title =
     (typeof body.title === "string" && body.title.trim()) ||
     extractTitle(html) ||
@@ -83,22 +70,58 @@ export async function POST(req: Request): Promise<Response> {
 
   // Resolve the business first so the paste is born with the user's info. The
   // user's own HTML keeps its look (recolor:false) but gets the real contact
-  // widget + brand logo/og.
+  // widget + brand logo/og. Moved ahead of the gate because seeding is now the
+  // gate's `beforeMeta` seam; it changes nothing about the HTML chain's order.
   const business = await resolveProfileForCreation(
     session.user.id,
     typeof body.profileId === "string" ? body.profileId : null,
   );
 
-  // Born-canonical: pasted HTML enters on the same token contract as a generated
-  // page — radius / font / accent become controllable → seed contact widget +
-  // logo/og (no-op for an empty profile) → complete the <head> for SEO (pasted
-  // raw HTML often has no meta description / og tags / favicon).
-  const finalHtml = ensurePageMeta(
-    seedBrandIntoHtml(normalizeBornCanonical(cleanHtml), business.data, {
-      recolor: false,
-    }),
-    { title, ...profileMeta(business.data) },
+  // One gate. `behaviors: "warn"` — this surface FAILS OPEN: the project does
+  // not exist yet, so refusing costs the user the whole page instead of an
+  // edit. It ships and we tell them what was lost. `seal: false` (publishToDir
+  // seals at publish time) and `render: false` (a paste cannot pay a browser
+  // launch). Seeding rides in `beforeMeta`, which is the slot Task 2 built for
+  // exactly this: after normalize, before ensurePageMeta.
+  const gated = await passHtmlGate(
+    transformed.html,
+    {
+      sanitize: sanitizeForPublish,
+      beforeMeta: (h) => seedBrandIntoHtml(h, business.data, { recolor: false }),
+    },
+    {
+      render: false,
+      seal: false,
+      behaviors: "warn",
+      meta: { title, ...profileMeta(business.data) },
+    },
   );
+  if (!gated.ok) {
+    // The reserved marker never fails open, anywhere — including when the
+    // seeding seam is what introduced it.
+    if (gated.code === "reserved_marker") {
+      return json(
+        {
+          error: "invalid_html",
+          message:
+            "HTML contains editor-mode markers (data-slot-path). Save the rendered output instead.",
+        },
+        400,
+      );
+    }
+    return json({ error: "sanitization_failed", message: "Could not clean this HTML." }, 400);
+  }
+  const finalHtml = gated.html;
+
+  // What the page lost on the way in. Stored on the ROW, not returned — every
+  // creation client navigates away and destructures the response down to
+  // `projectId`, so a field added there would be dead on arrival.
+  const degradations = collectDegradations({
+    surface: "from-html",
+    removed: gated.removed,
+    behaviorIssues: gated.issues,
+    transformFallback: transformed.report.fallback,
+  });
 
   const projectId = crypto.randomUUID();
   try {
@@ -112,7 +135,7 @@ export async function POST(req: Request): Promise<Response> {
       status: "draft",
       profileId: business.id,
       logoUrl: business.data.brand?.logoUrl ?? null,
-      data: { html: finalHtml },
+      data: { html: finalHtml, ...(degradations.length > 0 ? { degradations } : {}) },
     });
   } catch (err) {
     // eslint-disable-next-line no-console

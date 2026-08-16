@@ -44,7 +44,21 @@ export interface HtmlGatePolicy {
 }
 
 export type HtmlGateResult =
-  | { readonly ok: true; readonly html: string; readonly removed: { scripts: number; eventHandlers: number; iframes: number; dangerousUrls: number }; readonly warnings: string[] }
+  | {
+      readonly ok: true;
+      readonly html: string;
+      readonly removed: { scripts: number; eventHandlers: number; iframes: number; dangerousUrls: number };
+      readonly warnings: string[];
+      /**
+       * Present only when behaviours were WARNED about (policy "warn" found
+       * issues and kept the document). `warnings` is one bounded slug by
+       * design; this is the detail behind it, for a caller that has to record
+       * what was wrong and how many. Symmetric with the refusal branch — if
+       * the gate saw issues it hands them back either way, so nobody has to
+       * re-run validateBehaviors to recover them.
+       */
+      readonly issues?: readonly BehaviorIssue[];
+    }
   | {
       readonly ok: false;
       readonly code: HtmlGateRefusal;
@@ -84,23 +98,32 @@ export type HtmlGateResult =
  *   - `lib/agent/tools.ts` persistHtmlChange { render: false, seal: false, behaviors: "block" }
  *   - `app/api/templates/ai-design`          { render: false, seal: false, behaviors: "block" }
  *   - `app/api/templates/autofill`           { render: false, seal: false, behaviors: "block" }
+ *   - `app/api/projects/from-html`           { render: false, seal: false, behaviors: "warn"  }
+ *   - `app/api/projects/from-template`       { render: false, seal: false, behaviors: "warn"  }
+ *     (twice — once for the home page, once per cloned subpage)
  *
- * The four edit surfaces pass `seal: false` because nothing is served from
- * them — they write to the database and publishToDir seals at publish time —
- * and `render: false` because an interactive request cannot pay a browser
- * launch. Only the two curate surfaces seal, and only the sandbox renders.
+ * Every adopted surface passes `seal: false` except the two curate ones:
+ * nothing is served from a route that writes to the database, publishToDir
+ * seals at publish time. `render: false` everywhere except the sandbox,
+ * because an interactive request cannot pay a browser launch.
+ *
+ * `behaviors` is the fail-closed/fail-open split, and it is not a taste
+ * setting. "block" where the user already HAS a page and refusing costs them
+ * only the edit. "warn" where the project does not exist yet and refusing
+ * would cost them the whole page — those record what was lost via
+ * `collectDegradations` into `data.degradations[]` and the workspace tells
+ * the user. If you add a "warn" caller without writing that record, you have
+ * built a silent failure.
  *
  * NOT ADOPTED — pending on purpose, not forgotten:
- *   - `from-html`, `from-template`, `assemble`, `generate` — the four
- *     ingestion surfaces. They fail OPEN by design (refusing costs the user
- *     the whole page, not just an edit), and a surface that fails open needs
- *     somewhere to record the degradation. Today `from-html` and
- *     `from-template` have no journal at all — `from-template` already drops
- *     a subpage silently when sanitize rejects it — and `generate` only has a
- *     console.warn that fires after the row is committed. Migrating them
- *     before that journal exists would rebuild the exact trap the
- *     creative-sandbox saga paid for, so they are PARKED pending that
- *     decision. Do not migrate one opportunistically.
+ *   - `generate` — parked behind a mandatory checkpoint. Four mutations run
+ *     AFTER its last sanitize (one of them injects a `<script>`) and it
+ *     validates behaviours after the row is already written, so adopting it
+ *     changes what gets published, not just where the passes live.
+ *   - `assemble` and `finalizeComposedDocument` — both sanitize AFTER
+ *     `ensurePageMeta`, the reverse of this gate. Migrating either reorders
+ *     the chain; that is the point, but it has to be proven on a real fixture
+ *     rather than slipped in.
  *   - `publishToDir` — deliberately out of scope of this plan, not pending
  *     inside it. It sanitizes and seals per page inside a ~25-step bake loop
  *     and has its own plan.
@@ -141,11 +164,13 @@ export async function passHtmlGate(
 
   const behaviorIssues = validateBehaviors(canonical);
   const warnings: string[] = [];
+  let warnedIssues: readonly BehaviorIssue[] | undefined;
   if (behaviorIssues.length > 0) {
     if (policy.behaviors === "block") {
       return { ok: false, code: "behaviors_invalid", detail: behaviorSlug(behaviorIssues), issues: behaviorIssues, removed };
     }
     warnings.push(behaviorSlug(behaviorIssues));
+    warnedIssues = behaviorIssues;
   }
 
   let output = canonical;
@@ -164,7 +189,7 @@ export async function passHtmlGate(
     if (rendered.invalidGeometry) return { ok: false, code: "render_failed", detail: "invalid_geometry", removed };
   }
 
-  return { ok: true, html: output, removed, warnings };
+  return { ok: true, html: output, removed, warnings, issues: warnedIssues };
 }
 
 /** Keeps the reason bounded by construction: a slug or nothing. The prose

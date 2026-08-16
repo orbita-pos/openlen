@@ -125,6 +125,33 @@ describe("passHtmlGate", () => {
     );
   });
 
+  it("hands back the behaviour issues it warned about, not just the slug", async () => {
+    // Under behaviors:"warn" the document is kept, so the caller has to be
+    // able to record WHAT was wrong and HOW MANY — the ingestion journal
+    // stores a count. `warnings` is one bounded slug by design and cannot
+    // carry that, and re-running validateBehaviors caller-side to recover it
+    // is the drift this gate deletes. Symmetric with the refusal branch: if
+    // the gate saw issues, it hands them back either way.
+    const result = await passHtmlGate(
+      LIGHTBOX_MISSING_IMG_HTML,
+      deps(),
+      { render: false, seal: true, behaviors: "warn" },
+    );
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.warnings).toHaveLength(1);
+    expect(result.issues).toHaveLength(1);
+    expect(result.issues?.[0]?.behavior).toBe("lightbox");
+  });
+
+  it("leaves issues absent on a clean document under warn", async () => {
+    const result = await passHtmlGate(OK_HTML, deps(), { render: false, seal: true, behaviors: "warn" });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.warnings).toEqual([]);
+    expect(result.issues).toBeUndefined();
+  });
+
   it("still reports what sanitization stripped when a LATER stage refuses", async () => {
     // A single Agent turn can lose a <script> AND carry a mis-wired conducta.
     // The behaviour refusal must not swallow the fact that the JS was

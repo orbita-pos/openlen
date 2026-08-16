@@ -3,9 +3,9 @@ import { db, schema } from "@/lib/db";
 import { getTemplate, getTemplateHtml } from "@/lib/templates/store";
 import { createVersion } from "@/lib/projects/versions";
 import { sanitizeForPublish } from "@/lib/html-engine";
-import { normalizeBornCanonical } from "@/lib/normalize";
+import { passHtmlGate } from "@/lib/html-gate/document-gate";
+import { collectDegradations } from "@/lib/ingestion/degradations";
 import { transformTemplateCached } from "@/lib/transform/template-cache";
-import { ensurePageMeta } from "@/lib/publish/ensure-page-meta";
 import { resolveProfileForCreation } from "@/lib/business-profiles/store";
 import { seedBrandIntoHtml, profileMeta } from "@/lib/business-profiles/seed-html";
 
@@ -80,36 +80,54 @@ export async function POST(req: Request): Promise<Response> {
   // Defense in depth: sanitize the curated body (strips any stray
   // scripts/handlers/iframes; clean templates pass through byte-identical) and
   // reject the data-slot-path editor marker the publish flow also rejects.
-  const sanitized = sanitizeForPublish(transformedHtml);
-  if (sanitized.html === null) {
-    return json(
-      {
-        error: "invalid_template",
-        message:
-          "Template HTML contains data-slot-path markers — fix the curated file.",
-      },
-      500,
-    );
-  }
-  const cleanHtml = sanitized.html;
-
   // Resolve the business first so the clone is born with the user's info. A
   // hand-picked template keeps its OWN look (recolor:false) but still gets the
-  // real contact widget + brand logo/og.
+  // real contact widget + brand logo/og. Ahead of the gate because seeding is
+  // now its `beforeMeta` seam; the HTML chain's order is unchanged.
   const business = await resolveProfileForCreation(
     session.user.id,
     typeof body.profileId === "string" ? body.profileId : null,
   );
 
-  // Clone through the born-canonical normalizer (so radius / font / accent
-  // become editable in the inspector) → seed the contact widget + logo/og
-  // (no-op for an empty profile) → complete the <head> for SEO.
-  const finalHtml = ensurePageMeta(
-    seedBrandIntoHtml(normalizeBornCanonical(cleanHtml), business.data, {
-      recolor: false,
-    }),
-    { title: entry.name, ...profileMeta(business.data) },
+  // One gate. `behaviors: "warn"` — this surface FAILS OPEN: the project does
+  // not exist yet, so refusing costs the user the whole page rather than an
+  // edit. `seal: false` (publishToDir seals at publish time), `render: false`
+  // (a clone cannot pay a browser launch). Seeding rides in `beforeMeta`.
+  const gated = await passHtmlGate(
+    transformedHtml,
+    {
+      sanitize: sanitizeForPublish,
+      beforeMeta: (h) => seedBrandIntoHtml(h, business.data, { recolor: false }),
+    },
+    {
+      render: false,
+      seal: false,
+      behaviors: "warn",
+      meta: { title: entry.name, ...profileMeta(business.data) },
+    },
   );
+  if (!gated.ok) {
+    // A curated template that cannot pass the gate is OUR broken file, not the
+    // user's input — 500 and name it, exactly as before.
+    return json(
+      {
+        error: "invalid_template",
+        message:
+          gated.code === "reserved_marker"
+            ? "Template HTML contains data-slot-path markers — fix the curated file."
+            : "Template HTML could not be cleaned — fix the curated file.",
+      },
+      500,
+    );
+  }
+  const finalHtml = gated.html;
+
+  const degradations = collectDegradations({
+    surface: "from-template",
+    removed: gated.removed,
+    behaviorIssues: gated.issues,
+    transformFallback: undefined,
+  });
 
   // Multi-page template: clone each extra page through the same born-canonical
   // chain (sanitize → normalize → ensurePageMeta) into project.data.pages, so a
@@ -125,11 +143,35 @@ export async function POST(req: Request): Promise<Response> {
             timeoutMs: Math.min(8000, remainingBudget()),
           })
         : pg.html;
-    const ps = sanitizeForPublish(pgTransformed);
-    if (ps.html === null) continue; // defensive: skip a page carrying editor markers
-    clonedPages[pg.slug] = {
-      html: ensurePageMeta(normalizeBornCanonical(ps.html), { title: entry.name }),
-    };
+    // Degradation #6. This used to `continue` — the subpage vanished, the
+    // clone shipped, and the nav still promised a page that no longer
+    // existed. Because a broken link serves the HOME page
+    // ([[caddy-broken-links-serve-home]]) the user had no way to discover it:
+    // the site LOOKED complete and lied about itself. A page we cannot clean
+    // is our broken curated file, so it fails the whole clone loudly, the
+    // same way the home page already does above.
+    const pgGated = await passHtmlGate(
+      pgTransformed,
+      { sanitize: sanitizeForPublish },
+      { render: false, seal: false, behaviors: "warn", meta: { title: entry.name } },
+    );
+    if (!pgGated.ok) {
+      return json(
+        {
+          error: "invalid_template",
+          message: `Template subpage "${pg.slug}" could not be cleaned — fix the curated file.`,
+        },
+        500,
+      );
+    }
+    clonedPages[pg.slug] = { html: pgGated.html };
+    degradations.push(
+      ...collectDegradations({
+        surface: "from-template",
+        removed: pgGated.removed,
+        behaviorIssues: pgGated.issues,
+      }),
+    );
   }
 
   const projectId = crypto.randomUUID();
@@ -152,6 +194,7 @@ export async function POST(req: Request): Promise<Response> {
       data: {
         html: finalHtml,
         ...(Object.keys(clonedPages).length ? { pages: clonedPages } : {}),
+        ...(degradations.length > 0 ? { degradations } : {}),
       },
     });
   } catch (err) {

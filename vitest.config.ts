@@ -65,6 +65,7 @@ export default defineConfig({
       "lib/curate/**/*.test.ts",
       "lib/generation/**/*.test.ts",
       "lib/html-gate/**/*.test.ts",
+      "lib/ingestion/**/*.test.ts",
       "lib/templates/visual-metadata.test.ts",
       "lib/templates/store-visual-metadata.test.ts",
       "lib/templates/suggest-visual-metadata.test.ts",
@@ -165,6 +166,9 @@ export default defineConfig({
       // Task 5 — the fill surface that had no gate at all. Mocks fillTemplate
       // so the test drives the route's gate, not the filler's own sanitizer.
       "app/api/templates/autofill/route.test.ts",
+      // Task 4 — the two fail-open ingestion surfaces.
+      "app/api/projects/from-html/route.test.ts",
+      "app/api/projects/from-template/route.test.ts",
       // NB: lib/projects/site-pages.test.ts is a node:test file (run via
       // `tsx --test`), so include the vitest project tests explicitly.
       "lib/projects/module-settings.test.ts",

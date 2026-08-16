@@ -333,7 +333,36 @@ export interface ProjectData {
   preview?: PreviewSettings;
   /** Versioned Visual Engine memory. Present only for accepted skeleton routes. */
   generation?: { visualEngine?: VisualEngineProjectMetadata };
+  /** What the page lost on the way in. Machine codes only — the user-facing
+   *  sentence is built in the surface, from i18n, never stored. Absent = the
+   *  page came through whole, which is the overwhelmingly common case.
+   *  Lives here (a JSON column) rather than a new column so it needs no
+   *  migration, and on the ROW rather than in the create response because
+   *  every creation client navigates away and destructures the response down
+   *  to `projectId` — the row is what survives a reload and a shared link. */
+  degradations?: Degradation[];
+  /** Set once the user closes the notice. A warning that reappears forever is
+   *  noise, and noise is how we arrive back at silence through another door. */
+  degradationsDismissed?: boolean;
 }
+
+/** One thing lost during ingestion. `count` is for diagnosis; `code` is what
+ *  the surface translates. A code with no user-facing phrasing is not
+ *  recorded — if we cannot say what broke in the user's language, we are not
+ *  ready to tell them anything. */
+export interface Degradation {
+  surface: "from-html" | "from-template";
+  stage: "transform" | "sanitize" | "behaviors";
+  code: DegradationCode;
+  count: number;
+}
+
+export type DegradationCode =
+  | "scripts"
+  | "embeds"
+  | "unsafe_links"
+  | "dynamic_content"
+  | "broken_controls";
 
 // One persisted Chat-tab turn. The Chat panel's live turn type carries HTML
 // snapshots for in-session Undo; this is the transcript-only form written to
