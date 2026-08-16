@@ -249,12 +249,21 @@ export function createCreativeSandbox(baseline: SafeCreativeCandidate, deps: Cre
 
   const gate = async (html: string): Promise<{ ok: true; html: string; warnings: string[] } | CreativeToolResult> => {
     const passed = await passHtmlGate(html, deps, { render: true });
-    // The gate's "reserved_marker" refusal has no dedicated sandbox code: the
-    // sandbox's own preflight() already rejects the same condition as
-    // "invalid_patch" (applyPatch inputs), so `adopt`'s bytes — the one path
-    // that never ran that preflight — get the same label for the same fault
-    // instead of a new failure code the union never declared.
-    if (!passed.ok) return failure(passed.code === "reserved_marker" ? "invalid_patch" : passed.code, passed.detail);
+    if (!passed.ok) {
+      // The gate's "reserved_marker" refusal has no dedicated sandbox code:
+      // the sandbox's own preflight() already rejects the same condition as
+      // "invalid_patch" (applyPatch inputs), so `adopt`'s bytes — the one
+      // path that never ran that preflight — get the same label for the same
+      // fault. But passHtmlGate never sets a `detail` for "reserved_marker"
+      // (it's identified by its own code, not a detail slug), so collapsing
+      // the code without carrying that identity forward would hand the
+      // caller a refusal with zero information — the code alone already
+      // means that for every other passthrough (seal_failed, render_failed,
+      // behaviors_invalid), which keep their own detail untouched.
+      return passed.code === "reserved_marker"
+        ? failure("invalid_patch", "reserved_marker")
+        : failure(passed.code, passed.detail);
+    }
     return { ok: true, html: passed.html, warnings: warningsFor(passed.removed) };
   };
 

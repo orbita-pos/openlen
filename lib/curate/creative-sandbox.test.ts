@@ -368,4 +368,20 @@ describe("transactional creative sandbox", () => {
     expect(result).toMatchObject({ ok: false, code: "behaviors_invalid" });
     expect(sandbox.current().html).toBe(BASE_HTML);
   });
+
+  it("refuses adopted bytes carrying the reserved editor marker", async () => {
+    // `adopt` is the image tool's path into the canvas, and it never ran
+    // preflight()'s RESERVED_MARKER check — only applyPatch did. Before this
+    // sandbox went through the shared gate, this exact html would have sailed
+    // through adopt() untouched (sanitize/seal/render, the mocks below, all
+    // accept it as-is): this test fails if the passHtmlGate call is removed
+    // from `gate`, which is the point of it.
+    const sandbox = createCreativeSandbox(CANDIDATE, makeDeps());
+    const result = await sandbox.adopt({
+      ...CANDIDATE,
+      html: BASE_HTML.replace("<h1>Hola</h1>", '<h1 data-slot-path="hero.title">Hola</h1>'),
+    });
+    expect(result).toMatchObject({ ok: false, code: "invalid_patch", detail: "reserved_marker" });
+    expect(sandbox.current().html).toBe(BASE_HTML);
+  });
 });
