@@ -58,6 +58,10 @@ export default defineConfig({
       // safe, see the NB below). Lives at lib/ root, not under
       // lib/behaviors/, so it needs its own entry.
       "lib/design-guidance-seam.test.ts",
+      // Counter arithmetic of sanitizeForPublish. Lives at lib/ root beside the
+      // module it covers; the older lib/html-engine.test.ts is node:test and
+      // stays out of this runner.
+      "lib/html-engine.sanitize-counters.test.ts",
       "lib/curate/**/*.test.ts",
       "lib/generation/**/*.test.ts",
       "lib/html-gate/**/*.test.ts",

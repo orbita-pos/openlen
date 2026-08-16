@@ -199,10 +199,40 @@ export function sanitizeForPublish(html: string): SanitizeResult {
   // del extend ya rechaza data-slot-path en claves y valores; este guard final
   // es el cinturón: si por lo que sea el marcador aparece en la salida, se
   // rechaza el documento entero (jamás llega a disco NI a la DB).
+  // `removed` es lo que el llamador PERDIÓ, no lo que la capa de Rust tocó a
+  // media tubería: el conteo crudo cobraba los tres carriers que la reparación
+  // de arriba acaba de devolver, y el gate creativo se lo decía al modelo como
+  // "3 script element(s) were removed" en cada patch desde el 2º turno
+  // (`warningsFor`), igual que `sanitizeAviso` al Agente. Se descuenta SOLO el
+  // carrier que volvió idéntico: uno forjado vuelve con bytes canónicos, o sea
+  // que sí perdió su contenido y tiene que seguir contando.
+  const removed = out === null
+    ? r.removed
+    : { ...r.removed, scripts: Math.max(0, r.removed.scripts - healedThemeCarriers(pre, out)) };
+  // Defensa en profundidad del invariante slot-path: como el config script se
+  // extrajo ANTES del gate de Rust, el marcador no pasó por él. El validador
+  // del extend ya rechaza data-slot-path en claves y valores; este guard final
+  // es el cinturón: si por lo que sea el marcador aparece en la salida, se
+  // rechaza el documento entero (jamás llega a disco NI a la DB).
   if (out !== null && out.includes("data-slot-path=")) {
-    return { html: null, errors: [...r.errors, "slot-path marker in output"], removed: r.removed };
+    return { html: null, errors: [...r.errors, "slot-path marker in output"], removed };
   }
-  return { html: out, errors: r.errors, removed: r.removed };
+  return { html: out, errors: r.errors, removed };
+}
+
+const THEME_CARRIERS = ["radius", "space", "type"] as const;
+
+function themeCarrierBody(html: string, name: string): string | null {
+  return new RegExp(`<script\\b[^>]*\\bdata-ol-${name}\\b[^>]*>([\\s\\S]*?)</script>`, "i").exec(html)?.[1] ?? null;
+}
+
+function healedThemeCarriers(before: string, after: string): number {
+  let healed = 0;
+  for (const name of THEME_CARRIERS) {
+    const body = themeCarrierBody(before, name);
+    if (body !== null && body === themeCarrierBody(after, name)) healed += 1;
+  }
+  return healed;
 }
 
 export function optimizeForPublish(html: string): OptimizeResult {
