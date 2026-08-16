@@ -247,6 +247,22 @@ describe("the baseline's own door", () => {
     expect(reason).toContain("lightbox");
   });
 
+  // onDegraded's contract is non-terminal: "the page still ships". A request
+  // that ends up shipping nothing must not also leave a "degraded, delivered"
+  // line in the journal next to its failure.
+  it.each([
+    ["the fallback seal fails", { sealed: false }],
+    ["the render check rejects it", { rendered: { mobileOverflow: true, invalidGeometry: false } }],
+  ] as const)("records no degradation when the page does not ship because %s", async (_name, over) => {
+    const onDegraded = vi.fn();
+    const result = await buildCreativeBaseline(
+      INPUT,
+      { ...makeDeps({ composedHtml: BEHAVIOR_BREAKING_DONOR, ...over }), onDegraded },
+    );
+    expect(result).toMatchObject({ ok: false, code: "baseline_invalid" });
+    expect(onDegraded).not.toHaveBeenCalled();
+  });
+
   it("refuses a baseline carrying the reserved editor marker, which never fails open", async () => {
     const onDegraded = vi.fn();
     await expect(buildCreativeBaseline(INPUT, { ...makeDeps({ composedHtml: MARKED_DONOR }), onDegraded }))

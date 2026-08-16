@@ -197,6 +197,7 @@ export async function buildCreativeBaseline(
   // nothing. Render stays out; the baseline runs its own check below.
   const passed = await passHtmlGate(finalized.html, { sanitize: deps.sanitize ?? sanitizeForPublish, seal }, { render: false });
   let delivered: string;
+  let degradedReason: string | null = null;
   if (passed.ok) {
     delivered = passed.html;
   } else if (passed.code === "behaviors_invalid") {
@@ -204,7 +205,7 @@ export async function buildCreativeBaseline(
     // to; the baseline has none, so refusing it costs the user the page
     // instead of a guarantee. Everything below is a safety refusal — the
     // reserved marker above all — and those never open.
-    deps.onDegraded?.(passed.detail ? `behaviors_${passed.detail}` : "behaviors_invalid");
+    degradedReason = passed.detail ? `behaviors_${passed.detail}` : "behaviors_invalid";
     const fallback = seal(finalized.html);
     if (!fallback.sealed) return { ok: false, code: "baseline_invalid", detail: "seal_failed" };
     delivered = fallback.html;
@@ -214,6 +215,11 @@ export async function buildCreativeBaseline(
   const rendered = await (deps.render ?? (async () => ({ mobileOverflow: false, invalidGeometry: false })))(delivered);
   // Weak typography is an improvement signal for the sandbox, not a safety abort.
   if (!rendered || rendered.mobileOverflow || rendered.invalidGeometry) return { ok: false, code: "baseline_invalid", detail: rendered ? "baseline_render_defect" : "baseline_render_failed" };
+
+  // Only now: the degradation is non-terminal by contract, so reporting it
+  // before the seal and the render agree would put "degraded, delivered" in
+  // the journal next to the failure of a request that delivered nothing.
+  if (degradedReason) deps.onDegraded?.(degradedReason);
 
   return {
     ok: true,

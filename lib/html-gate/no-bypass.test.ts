@@ -35,16 +35,12 @@ const ALLOWED = new Set([
   // passHtmlGate carrying that seal. An injection site, not a second sealer.
   "lib/curate/run-ai-creation.ts",
 
-  // NOT fully justified — recorded here as a known gap, not a blessing.
-  // Seals the AI-creation baseline directly, before the sandbox (and the
-  // gate it wraps) exist. When the creative session makes zero edits, this
-  // is the "degraded" path in run-creative-generation.ts, and the sealed
-  // baseline ships to commitAiCompositionDocument untouched — it never runs
-  // normalizeBornCanonical or validateBehaviors, which is exactly the gap
-  // document-gate.ts's own comment says the gate exists to close ("The
-  // Agent ran these three and the creative sandbox did not..."). Kept in
-  // ALLOWED because it is live in production today; belongs in the next
-  // migration plan, not in this allowlist forever.
+  // Passes this seal INTO passHtmlGate, so the baseline's success path runs
+  // normalizeBornCanonical and validateBehaviors like every other gated
+  // surface. The import survives for one narrow case: when the gate refuses
+  // on behaviors_invalid the baseline fails open — it has no previous good
+  // state to fall back to — and re-seals directly. That fallback is the only
+  // direct seal left here, and it is a decided exception, not a gap.
   "lib/curate/creative-baseline.ts",
 
   // Seals inside the pre-cutover adaptive pipeline that the creative-sandbox

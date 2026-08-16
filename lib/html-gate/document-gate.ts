@@ -27,10 +27,17 @@ export type HtmlGateResult =
   | { readonly ok: false; readonly code: HtmlGateRefusal; readonly detail?: string };
 
 /**
- * The only place a document becomes safe to keep. Every surface that changes
- * page HTML passes through here, so a guarantee added once protects all of
- * them. Order is part of the contract: the reserved marker is refused before
- * any pass that could rewrite it out of sight.
+ * One place a document becomes safe to keep, so a guarantee added once
+ * protects every surface that adopts it. Order is part of the contract: the
+ * reserved marker is refused before any pass that could rewrite it out of
+ * sight.
+ *
+ * Adopted so far: the creative sandbox (applyPatch/adopt) and the creative
+ * baseline. The other write paths — publishToDir, from-html, from-template,
+ * generate, ai-design, the Agent's persistHtmlChange, assemble, autofill —
+ * still run their own subsets and are migrated in later steps of the plan.
+ * Do NOT skip your own sanitization on the assumption this already covers
+ * you; check that your path is on the list above first.
  */
 export async function passHtmlGate(
   html: string,
