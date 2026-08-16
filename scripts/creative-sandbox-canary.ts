@@ -48,15 +48,30 @@ export interface CreativeSandboxPageOutcome extends CreativeSandboxProbeOutcome 
 
 export interface CreativeSandboxCanaryRow extends CreativeSandboxPageOutcome {
   readonly id: string;
+  /**
+   * Whether `costMicromxn` is what the boundary REPORTED or what we reserved
+   * because it threw and never told us. Both are legitimate numbers to hold —
+   * a throw can land after paid turns, so reserving the cap is the safe
+   * assumption — but only one of them is money known to be spent, and a reader
+   * summing them as if they were the same over-reports by the cap per failure.
+   */
+  readonly costMeasured: boolean;
+  /** Why the boundary threw. Bounded + flattened: the artifact carries
+   *  accounting only, and an error message is the one place model output could
+   *  ride in. Absent when nothing threw. */
+  readonly detail?: string;
 }
 
 export interface CreativeSandboxCanaryReport {
-  readonly schemaVersion: "creative-sandbox-canary/1.0";
+  readonly schemaVersion: "creative-sandbox-canary/1.1";
   readonly commit: string;
   readonly mode: string;
   readonly capMicromxn: number;
   readonly rows: readonly CreativeSandboxCanaryRow[];
+  /** Conservative: reservations included. This is the budget number. */
   readonly totalCostMicromxn: number;
+  /** Only what the boundary actually reported. This is the money number. */
+  readonly measuredCostMicromxn: number;
   readonly reportSha256: string;
 }
 
@@ -136,7 +151,31 @@ function safeCounter(value: number): number {
   return Number.isSafeInteger(value) && value >= 0 ? value : 0;
 }
 
-function row(id: string, outcome: CreativeSandboxProbeOutcome | CreativeSandboxPageOutcome): CreativeSandboxCanaryRow {
+const DETAIL_MAX = 200;
+
+/**
+ * Bounded, single-line, and never trusted. `detail` is the only field fed by a
+ * string this file did not write, so it is also the only way page bytes, an
+ * endpoint or a credential-bearing URL could reach an artifact that promises to
+ * carry accounting alone. A fetch failure naming its endpoint is the ordinary
+ * case, not the exotic one — so URLs go out and markup loses its brackets
+ * before anything is written.
+ */
+function detailOf(error: unknown): string {
+  const raw = error instanceof Error ? error.message : String(error);
+  return raw
+    .replace(/\s+/g, " ")
+    .replace(/\b[a-z][a-z0-9+.-]*:\/\/\S+/gi, "[url]")
+    .replace(/[<>]/g, "")
+    .trim()
+    .slice(0, DETAIL_MAX);
+}
+
+function row(
+  id: string,
+  outcome: CreativeSandboxProbeOutcome | CreativeSandboxPageOutcome,
+  unmeasured?: { readonly detail: string },
+): CreativeSandboxCanaryRow {
   const page = outcome as Partial<CreativeSandboxPageOutcome>;
   return {
     id,
@@ -144,6 +183,8 @@ function row(id: string, outcome: CreativeSandboxProbeOutcome | CreativeSandboxP
     resultCode: outcome.resultCode,
     modelId: outcome.modelId,
     costMicromxn: safeCounter(outcome.costMicromxn),
+    costMeasured: unmeasured === undefined,
+    ...(unmeasured ? { detail: unmeasured.detail } : {}),
     durationMs: safeCounter(outcome.durationMs),
     attempts: safeCounter(outcome.attempts),
     providerCategory: outcome.providerCategory ?? null,
@@ -160,12 +201,16 @@ function report(
   rows: readonly CreativeSandboxCanaryRow[],
 ): CreativeSandboxCanaryReport {
   const unsigned = {
-    schemaVersion: "creative-sandbox-canary/1.0" as const,
+    schemaVersion: "creative-sandbox-canary/1.1" as const,
     commit: args.commit,
     mode: label(args.mode),
     capMicromxn: args.maxMicromxn,
     rows,
     totalCostMicromxn: rows.reduce((total, entry) => total + entry.costMicromxn, 0),
+    measuredCostMicromxn: rows.reduce(
+      (total, entry) => total + (entry.costMeasured ? entry.costMicromxn : 0),
+      0,
+    ),
   };
   return { ...unsigned, reportSha256: canonicalJsonSha256(unsigned) };
 }
@@ -207,12 +252,18 @@ export async function runCreativeSandboxCanary(
     outcome = args.mode.kind === "provider"
       ? await deps.runProbe(args.mode.provider)
       : await deps.runPage(args.mode.caseId);
-  } catch {
+  } catch (error) {
     // A thrown boundary is one failed unit of work, never a second attempt.
+    // The cost is the CAP — a throw can land after paid turns, so anything
+    // smaller would under-report real spend. `costMeasured: false` is what
+    // keeps that reservation from being read as money (a cohort loop summing
+    // it booked 8.4 MXN of spend against seven runs that never reached a
+    // model). The reason travels too: swallowing it here is what made seven
+    // identical `unexpected_error` rows out of one knowable string.
     const failedRow = row(id, {
       ok: false, resultCode: "unexpected_error", modelId: "unknown",
       costMicromxn: worstCase, durationMs: 0, attempts: 1, providerCategory: null,
-    });
+    }, { detail: detailOf(error) });
     const failure = args.mode.kind === "provider" ? "probe_failed" as const : "page_failed" as const;
     const finalReport = report(args, [failedRow]);
     try { await deps.writeEvidence(finalReport); } catch { /* evidence is not the gate */ }
@@ -284,9 +335,18 @@ async function main(): Promise<void> {
     return;
   }
   const result = await runCreativeSandboxCanary(args, await productionDeps());
+  // `measuredCostMicromxn` is the money number and `detail` is the reason;
+  // both ride the stdout line because a cohort runner reads this, not the
+  // artifact, and the previous line let a reservation pass for spend and a
+  // knowable failure pass for a mystery.
   console.log(JSON.stringify(result.ok
-    ? { event: "creative_sandbox_canary", ok: true, mode: result.report.mode, totalCostMicromxn: result.report.totalCostMicromxn, reportSha256: result.report.reportSha256 }
-    : { event: "creative_sandbox_canary", ok: false, code: result.code, mode: result.report.mode, totalCostMicromxn: result.report.totalCostMicromxn }));
+    ? { event: "creative_sandbox_canary", ok: true, mode: result.report.mode, totalCostMicromxn: result.report.totalCostMicromxn, measuredCostMicromxn: result.report.measuredCostMicromxn, reportSha256: result.report.reportSha256 }
+    : {
+        event: "creative_sandbox_canary", ok: false, code: result.code, mode: result.report.mode,
+        totalCostMicromxn: result.report.totalCostMicromxn,
+        measuredCostMicromxn: result.report.measuredCostMicromxn,
+        ...(result.report.rows[0]?.detail ? { detail: result.report.rows[0].detail } : {}),
+      }));
   if (!result.ok) process.exitCode = 1;
 }
 

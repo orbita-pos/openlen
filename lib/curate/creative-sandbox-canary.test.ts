@@ -126,6 +126,70 @@ describe("creative sandbox canary gates", () => {
     } as never));
     expect(result).toMatchObject({ ok: false, code: "budget_exceeded" });
   });
+
+  it("names why the boundary threw instead of burying it in unexpected_error", async () => {
+    // A whole cohort once reported `unexpected_error` seven times while the
+    // process knew the exact reason. A canary that hides the one fact worth
+    // having costs a paid run to learn what a string would have said.
+    const runPage = async () => {
+      throw new Error("page target/cap must be exactly 5000000/10000000 micromxn");
+    };
+    const result = await runCreativeSandboxCanary(PAGE, deps({ runPage } as never));
+
+    expect(result.report.rows[0]).toMatchObject({
+      resultCode: "unexpected_error",
+      detail: "page target/cap must be exactly 5000000/10000000 micromxn",
+    });
+  });
+
+  it("redacts a thrown message that carries a url or page bytes", async () => {
+    // The redaction test below only ever runs the happy path, so `detail` is
+    // the one field that could smuggle exactly what the artifact promises not
+    // to hold — a fetch failure naming an endpoint is the ordinary case.
+    const runPage = async () => {
+      throw new Error('fetch failed https://api.fireworks.ai/v1/x for <!doctype html><body>');
+    };
+    const result = await runCreativeSandboxCanary(PAGE, deps({ runPage } as never));
+
+    const serialized = JSON.stringify(result.report);
+    expect(serialized).not.toContain("https://");
+    expect(serialized).not.toContain("<!doctype");
+    // Still says what happened.
+    expect(result.report.rows[0].detail).toContain("fetch failed");
+  });
+
+  it("keeps the thrown detail bounded and on one line", async () => {
+    // The artifact carries accounting only — never prompts or page bytes. An
+    // error message is the one place model output could ride in, so it is
+    // truncated and flattened rather than trusted.
+    const runPage = async () => {
+      throw new Error(`<section>${"x".repeat(4000)}</section>\nsecond line`);
+    };
+    const result = await runCreativeSandboxCanary(PAGE, deps({ runPage } as never));
+
+    const detail = result.report.rows[0].detail ?? "";
+    expect(detail.length).toBeLessThanOrEqual(200);
+    expect(detail).not.toContain("\n");
+  });
+
+  it("books an unmeasured throw at the cap without calling it money spent", async () => {
+    // Reserving the cap is right — a throw can land AFTER paid turns, and
+    // booking zero there would under-count real spend. What was wrong is
+    // reporting a reservation in the same field a reader sums as spend.
+    const runPage = async () => { throw new Error("boom"); };
+    const result = await runCreativeSandboxCanary(PAGE, deps({ runPage } as never));
+
+    expect(result.report.rows[0]).toMatchObject({ costMicromxn: 500_000, costMeasured: false });
+    expect(result.report.totalCostMicromxn).toBe(500_000);
+    expect(result.report.measuredCostMicromxn).toBe(0);
+  });
+
+  it("counts a cost the boundary actually reported as spend", async () => {
+    const result = await runCreativeSandboxCanary(PAGE, deps());
+
+    expect(result.report.rows[0]).toMatchObject({ costMicromxn: 100, costMeasured: true });
+    expect(result.report.measuredCostMicromxn).toBe(100);
+  });
 });
 
 describe("creative sandbox canary evidence", () => {
@@ -135,10 +199,14 @@ describe("creative sandbox canary evidence", () => {
 
     expect(result.ok).toBe(true);
     expect(result.report).toMatchObject({
-      schemaVersion: "creative-sandbox-canary/1.0",
+      // 1.1 added `costMeasured` + `detail` per row and `measuredCostMicromxn`
+      // to the report. A consumer reading a 1.0 artifact cannot tell a
+      // reservation from spend, so the version has to say which one it holds.
+      schemaVersion: "creative-sandbox-canary/1.1",
       commit: COMMIT,
       mode: "page:kids-coloring",
       totalCostMicromxn: 100,
+      measuredCostMicromxn: 100,
     });
     expect(result.report.rows[0]).toMatchObject({ ok: true, resultCode: "delivered", mutations: 3, images: 1 });
     expect(result.report.reportSha256).toMatch(/^sha256:[a-f0-9]{64}$/);
