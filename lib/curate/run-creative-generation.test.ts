@@ -174,7 +174,8 @@ describe("model palette adoption", () => {
   // compares sha256(html) against manifest.outputHash, so the bytes cannot move
   // without resealing.
   const THEMED = '<!doctype html><html class="dark" style="--ol-bg:#09090B"><head>'
-    + "<style>:root{--bg:#070606}</style></head><body><section>improved</section></body></html>";
+    + "<style>:root{--bg:#070606}body{background:var(--bg)}</style></head>"
+    + "<body><section>improved</section></body></html>";
   const H = (c: string) => `sha256:${c.repeat(64)}`;
   // A real manifest: `sealAiCompositionOutput` re-parses it, so a stub shape
   // would only prove the fail-soft path.

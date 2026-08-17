@@ -20,10 +20,21 @@ const olToken = (html: string, name: string) =>
 
 describe("adoptModelPalette", () => {
   it("lifts the model's page background onto --ol-bg so there is one black", () => {
-    const out = adoptModelPalette(page(":root{--bg:#070606;--ink:#d8d0c2}"));
+    // The declaration that PAINTS is what counts, not the token's name — see
+    // the "a name can invert a role" block below for why that matters.
+    const out = adoptModelPalette(
+      page(":root{--bg:#070606;--ink:#d8d0c2}body{background:var(--bg);color:var(--ink)}"),
+    );
 
     expect(olToken(out, "--ol-bg")).toBe("#070606");
     expect(olToken(out, "--ol-fg")).toBe("#d8d0c2");
+  });
+
+  it("leaves the page theme alone when the model declared colours but painted nothing", () => {
+    // Tokens sitting at :root that body never uses are not the page's floor.
+    const out = adoptModelPalette(page(":root{--bg:#070606}"));
+
+    expect(olToken(out, "--ol-bg")).toBe("#09090B");
   });
 
   it("recomputes --ol-accent-r, or every rgba() built from it lies", () => {
@@ -42,7 +53,9 @@ describe("adoptModelPalette", () => {
   });
 
   it("takes the last declaration, the way the cascade does", () => {
-    const out = adoptModelPalette(page(":root{--bg:#111111}</style><style>:root{--bg:#070606}"));
+    const out = adoptModelPalette(
+      page(":root{--bg:#111111}</style><style>:root{--bg:#070606}body{background:var(--bg)}"),
+    );
 
     expect(olToken(out, "--ol-bg")).toBe("#070606");
   });
@@ -102,5 +115,40 @@ body{background:var(--um-bg);color:var(--um-bone)}</style></head><body><h1>x</h1
 <head><style>:root{--um-bg:#fafafa}body{background:var(--um-bg)}</style></head><body>x</body></html>`;
 
     expect(olToken(adoptModelPalette(inverted), "--ol-bg")).toBe("#09090B");
+  });
+});
+
+describe("adoptModelPalette — a name can invert a role", () => {
+  // Measured on the third horror run: the model declared `--ink:#050505` and
+  // painted `body{background:var(--ink)}` with it. `--ink` conventionally means
+  // the TEXT colour, so a name table maps it to --ol-fg and ships near-black
+  // text on a near-black page. That run only escaped because it also declared
+  // `body{color:var(--bone)}`, which resolved later and overwrote the mistake.
+  //
+  // So the two roles that decide whether the page can be read are taken ONLY
+  // from what body paints. A name is a guess, and a wrong guess here is
+  // invisible text.
+  const olToken = (html: string, name: string) =>
+    html.match(new RegExp(`${name}:\s*([^;"]*)`))?.[1]?.trim() ?? null;
+
+  const inverted = `<!doctype html><html class="dark" style="--ol-bg:#09090B;--ol-fg:#F7F1ED">
+<head><style>:root{--ink:#050505}body{background:var(--ink)}</style></head><body>x</body></html>`;
+
+  it("never lets a token name decide the text colour", () => {
+    const out = adoptModelPalette(inverted);
+
+    expect(olToken(out, "--ol-bg")).toBe("#050505");
+    // NOT #050505 — the direction's foreground survives rather than the page
+    // going black-on-black.
+    expect(olToken(out, "--ol-fg")).toBe("#F7F1ED");
+  });
+
+  it("still lets names carry the roles body cannot express", () => {
+    const withSurface = `<!doctype html><html class="dark" style="--ol-bg:#09090B;--ol-surface:#151318;--ol-accent:#B91C35;--ol-accent-r:185, 28, 53">
+<head><style>:root{--surface:#1a1416;--accent:#c02030}</style></head><body>x</body></html>`;
+    const out = adoptModelPalette(withSurface);
+
+    expect(olToken(out, "--ol-surface")).toBe("#1a1416");
+    expect(olToken(out, "--ol-accent")).toBe("#c02030");
   });
 });

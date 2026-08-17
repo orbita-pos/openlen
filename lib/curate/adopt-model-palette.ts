@@ -13,20 +13,22 @@
 // baja al valor del modelo y los fragmentos, que ya leen `--ol-*`, lo siguen.
 // El tema es el piso, no el techo.
 
-/** Token del modelo → token de página. Mismo vocabulario que `TOKEN_TO_OL` en
- *  lib/sections/assemble.ts, recortado a los roles cuyo desacuerdo se VE. Las
- *  fuentes no viajan: la tipografía de la dirección es una decisión y el
- *  `--serif` del modelo no es un rol, es su nombre para una familia. */
+/** Token del modelo → token de página, para los roles que `body` no expresa.
+ *
+ * `--ol-bg` y `--ol-fg` NO están acá a propósito: salen sólo de lo que `body`
+ * pinta. Un nombre es una suposición sobre el vocabulario del modelo, y una
+ * suposición equivocada en esos dos roles es texto invisible. Medido, no
+ * temido: una corrida declaró `--ink:#050505` y pintó
+ * `body{background:var(--ink)}` con él — `--ink` significa por convención el
+ * color del TEXTO, así que la tabla lo habría entregado como `--ol-fg` y la
+ * página habría nacido negro sobre negro. Se salvó porque esa corrida además
+ * declaraba `body{color:…}`, que corre después y tapó el error.
+ *
+ * Las fuentes tampoco viajan: la tipografía de la dirección es una decisión, y
+ * el `--serif` del modelo no es un rol sino su nombre para una familia. */
 const ADOPTABLE: Record<string, string> = {
-  "--bg": "--ol-bg",
-  "--background": "--ol-bg",
-  "--paper": "--ol-bg",
   "--surface": "--ol-surface",
   "--card": "--ol-surface",
-  "--fg": "--ol-fg",
-  "--ink": "--ol-fg",
-  "--text": "--ol-fg",
-  "--foreground": "--ol-fg",
   "--border": "--ol-border",
   "--line": "--ol-border",
   "--accent": "--ol-accent",
