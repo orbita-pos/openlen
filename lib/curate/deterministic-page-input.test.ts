@@ -73,3 +73,81 @@ describe("deterministic page input", () => {
     expect(copy.pitch).toContain("relojes");
   });
 });
+
+describe("placeholder copy never speaks our vocabulary", () => {
+  // Measured on the 10-page sweep of 2026-08-16. A coffee roaster shipped
+  // "Una experiencia uneasy, cinematic, mysterious" as its tagline and six
+  // identical cards titled "call to action" — `emotionalGoals` and the section
+  // role slugs, in English, on a Spanish page. Placeholder copy exists to be
+  // replaced by the fill; when the fill misses a slot the user reads whatever
+  // is underneath, so what is underneath cannot be machine words.
+  // El brief EXACTO que produjo el defecto. Uno más corto no empareja con
+  // ningún nicho y cae en el fallback seguro, o sea que no probaría nada.
+  const BRIEF = "Tostador de café de especialidad con tienda en línea. Vende grano de origen único de Chiapas y Veracruz, suscripción mensual y cursos de barista los sábados. Necesita catálogo de cafés con notas de cata y precio, cómo funciona la suscripción, la historia del tostador y envíos a todo México.";
+
+  it("keeps the emotional-goal slugs out of the tagline", () => {
+    const intent = buildDeterministicIntent(BRIEF);
+    const copy = buildDeterministicPageCopy(BRIEF, intent);
+    const tagline = `${copy.tagline_es ?? ""}${copy.tagline_en ?? ""}`;
+
+    for (const goal of intent.emotionalGoals) {
+      expect(tagline, `leaked ${goal}`).not.toContain(goal.replace(/_/g, " "));
+    }
+  });
+
+  it("titles the cards in the reader's language", () => {
+    const intent = buildDeterministicIntent(BRIEF);
+    const copy = buildDeterministicPageCopy(BRIEF, intent);
+
+    for (const feature of copy.features) {
+      // No slug survives as a title: no underscores, and not a bare lowercase
+      // English word pair like "call to action".
+      expect(feature.title).not.toMatch(/_/);
+      expect(feature.title[0]).toBe(feature.title[0]?.toUpperCase());
+    }
+  });
+
+  it("does not publish a taxonomy slug as the business's industry", () => {
+    const intent = buildDeterministicIntent(BRIEF);
+    const copy = buildDeterministicPageCopy(BRIEF, intent);
+
+    expect(copy.industry ?? "").not.toMatch(/_/);
+  });
+});
+
+describe("a user's page is never named after a fixture", () => {
+  // The most severe of the sweep's findings: all five free-brief pages shipped
+  // carrying a cohort fixture's brand. A coffee roaster, a dental clinic and a
+  // course sales page were all called "El Umbral"; the SaaS was "Lumen Uno" and
+  // the design studio "Risa Brava".
+  //
+  // The comment above `titleFromBrief` already worried about this — "never name
+  // an UNMATCHED brief after a cohort fixture" — but the matched path is the
+  // common one, because the overlap that decides a match is loose enough that a
+  // coffee roaster matches horror.
+  const REAL = [
+    ["Tostador de café de especialidad con tienda en línea. Vende grano de origen único de Chiapas y Veracruz, suscripción mensual y cursos de barista los sábados.", "cafetería"],
+    ["Clínica dental en Monterrey, atención de familias, 14 años de experiencia. Servicios de limpieza, ortodoncia e implantes, con agendar cita por WhatsApp.", "clínica"],
+    ["Estudio de diseño y marca de 6 personas en Guadalajara. Trabajo para restaurantes, hoteles y marcas de producto, con portafolio de casos reales.", "estudio"],
+  ] as const;
+
+  const FIXTURE_NAMES = ["Mundo Pincel", "El Umbral", "Risa Brava", "Eclipse Vale", "Colegio Horizonte", "Mesa Viva", "Lumen Uno"];
+
+  it.each(REAL)("does not borrow a fixture's brand for %#", (brief) => {
+    const copy = buildDeterministicPageCopy(brief, buildDeterministicIntent(brief));
+
+    expect(FIXTURE_NAMES, `named after a fixture: ${copy.business_name}`)
+      .not.toContain(copy.business_name);
+    expect(copy.business_name).toBeTruthy();
+  });
+
+  it("still names the cohort's own brief, which is all the map is for", () => {
+    // Only an EXACT fixture brief keeps the reviewed name. horror-experience
+    // has no "llamada X" in its text, so this is the map's path and not
+    // explicitName's.
+    const horror = AI_HYBRID_NICHE_CASES.find((row) => row.id === "horror-experience")!;
+    const copy = buildDeterministicPageCopy(horror.brief, buildDeterministicIntent(horror.brief));
+
+    expect(copy.business_name).toBe("El Umbral");
+  });
+});

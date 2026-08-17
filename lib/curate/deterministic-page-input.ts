@@ -1,6 +1,8 @@
 import { AI_HYBRID_NICHE_CASES, type AiHybridNicheCase } from "@/lib/generation/ai-hybrid-niche-cohort";
 import { IntentAnalysisSchema, type IntentAnalysis } from "@/lib/generation/contracts";
 import { coerceBusinessData, type ExtractedBusinessData } from "@/lib/style-match/autofill/types";
+import type { CanonicalSectionRole } from "@/lib/generation/structural-taxonomy";
+import { sectionRoleLabel } from "./section-role-labels";
 
 const NAMES: Record<AiHybridNicheCase["id"], string> = {
   "kids-coloring": "Mundo Pincel",
@@ -100,30 +102,58 @@ function titleFromBrief(brief: string, language: "es" | "en"): string {
   return words.length > 0 ? words.join(" ") : (language === "es" ? "Nuevo Proyecto" : "New Project");
 }
 
+/** What this business does, in its own words. The first clause of the brief is
+ *  the user's description of themselves; a taxonomy slug is ours about someone
+ *  else. Bounded so it stays a label, not a paragraph. */
+function industryFromBrief(brief: string, language: "es" | "en"): string {
+  const first = brief.trim().replace(/\s+/g, " ").split(/[.;]/)[0]?.trim() ?? "";
+  if (first.length >= 3) return first.slice(0, 80);
+  return language === "es" ? "Negocio" : "Business";
+}
+
 export function buildDeterministicPageCopy(
   brief: string,
   intent: IntentAnalysis,
 ): ExtractedBusinessData {
   const niche = matchDeterministicNiche(brief);
   const language = intent.language === "es" ? "es" : "en";
-  const name = explicitName(brief) ?? (niche.score > 0 ? NAMES[niche.candidate.id] : titleFromBrief(brief, language));
+  // The reviewed name belongs to the cohort's OWN brief, not to anything that
+  // merely scores against it. The overlap is loose enough that a coffee roaster
+  // matches horror, and the whole sweep of 2026-08-16 shipped under borrowed
+  // brands: a roaster, a dental clinic and a course page all called "El
+  // Umbral", the SaaS "Lumen Uno", the design studio "Risa Brava". A page that
+  // carries someone else's name is the same defect the from-template gate fixed
+  // in the <head> that morning, one layer deeper — here it is the H1.
+  const isFixtureBrief = brief.trim() === niche.candidate.brief.trim();
+  const name = explicitName(brief) ?? (isFixtureBrief ? NAMES[niche.candidate.id] : titleFromBrief(brief, language));
   const roles = intent.functional.requiredSections.filter((role) => !["header", "footer"].includes(role));
-  const tone = intent.emotionalGoals.slice(0, 3).join(", ").replace(/_/g, " ");
   const pitch = brief.trim().replace(/\s+/g, " ").slice(0, 240);
   return coerceBusinessData({
     business_name: name,
-    industry: intent.domains[0] ?? intent.functional.siteType,
+    // NOT `intent.domains[0]`. The direction is chosen by nearest-neighbour
+    // over seven fixed niches, so a coffee roaster's domain came out
+    // "horror_entertainment" — a slug, in English, describing someone else's
+    // business. The brief is the only honest source for what this one does.
+    industry: industryFromBrief(brief, language),
+    // The tagline used to be `"Una experiencia " + emotionalGoals`, which put
+    // "uneasy, cinematic, mysterious" on that same coffee page. `emotionalGoals`
+    // is `TaxonomyListSchema` — an OPEN set, any slug the model invents — so no
+    // translation table can ever be complete for it and it has no business in
+    // visible copy at all. Taxonomy drives the design; it never writes the text.
     ...(language === "es"
-      ? { tagline_es: `Una experiencia ${tone || "clara y memorable"}` }
-      : { tagline_en: `A ${tone || "clear and memorable"} experience` }),
+      ? { tagline_es: "Una experiencia clara y memorable" }
+      : { tagline_en: "A clear and memorable experience" }),
     pitch,
     hero_keyword: name.split(/\s+/)[0],
-    features: roles.slice(0, 6).map((role) => ({
-      title: role.replace(/_/g, " "),
-      desc: language === "es"
-        ? `Descubre ${role.replace(/_/g, " ")} dentro de ${name}.`
-        : `Explore ${role.replace(/_/g, " ")} inside ${name}.`,
-    })),
+    features: roles.slice(0, 6).map((role) => {
+      const label = sectionRoleLabel(role as CanonicalSectionRole, language);
+      return {
+        title: label,
+        desc: language === "es"
+          ? `${label} de ${name}.`
+          : `${label} at ${name}.`,
+      };
+    }),
     cta_primary: language === "es" ? "Comenzar" : "Get started",
     cta_secondary: language === "es" ? "Descubrir más" : "Learn more",
     language_detected: language,
