@@ -294,3 +294,109 @@ describe("inverted surface repair", () => {
     expect(result.ok && result.html).toContain("color:var(--ol-bg)");
   });
 });
+
+describe("la dirección elegida desde el brief", () => {
+  const SEALED_BASELINE: SafeCreativeCandidate = {
+    ...BASELINE,
+    html: '<!doctype html><html lang="es" class="dark" style="--ol-bg:#09090B;--ol-radius:10px"><head>'
+      + '<style data-openlen-visual-engine="creative-direction/1.0">:root{--ol-background:#09090B}</style>'
+      + "</head><body><section>baseline</section></body></html>",
+    visualEngine: { ...(VISUAL_ENGINE as object), compositionManifest: MANIFEST } as never,
+  };
+
+  async function elected() {
+    const { buildDeterministicCreativeDirection } = await import("@/lib/generation/deterministic-creative-direction");
+    const { buildDeterministicIntent } = await import("./deterministic-page-input");
+    const { paletteFromAccent } = await import("@/lib/generation/palette-from-accent");
+    const base = buildDeterministicCreativeDirection(buildDeterministicIntent(INPUT.brief)).direction;
+    return { ...base, mode: "light" as const, palette: paletteFromAccent("#2E86C1", "light") };
+  }
+
+  function withBaseline(over: Partial<CreativeGenerationDeps> = {}) {
+    return deps({
+      buildBaseline: async () => ({ ok: true, candidate: SEALED_BASELINE, intent: { language: "es" } as never, copy: {} as never }),
+      runCreativeSession: async ({ baseline }) => ({ candidate: baseline, changed: false, acceptedMutations: 0, rejections: [], stoppedBy: "finished" }),
+      ...over,
+    });
+  }
+
+  it("repinta la página entregada con la paleta elegida", async () => {
+    const direction = await elected();
+    const result = await runCreativeGeneration(INPUT, withBaseline({ chooseDirection: async () => direction }));
+    expect(result.ok).toBe(true);
+    expect(result.ok && result.html).toContain(`--ol-bg: ${direction.palette.background}`);
+    expect(result.ok && result.html).toMatch(/<html[^>]*class="light/);
+    expect(result.ok && result.html.toLowerCase()).not.toContain("#09090b");
+  });
+
+  it("no se le pregunta hasta que existe una baseline segura", async () => {
+    const order: string[] = [];
+    const direction = await elected();
+    await runCreativeGeneration(INPUT, withBaseline({
+      buildBaseline: async () => {
+        order.push("baseline");
+        return { ok: true, candidate: SEALED_BASELINE, intent: { language: "es" } as never, copy: {} as never };
+      },
+      chooseDirection: async () => { order.push("elector"); return direction; },
+    }));
+    expect(order).toEqual(["baseline", "elector"]);
+  });
+
+  it("nunca se le pregunta si el catálogo no pudo dar una baseline", async () => {
+    const chooseDirection = vi.fn(async () => await elected());
+    const result = await runCreativeGeneration(INPUT, withBaseline({
+      buildBaseline: async () => ({ ok: false, code: "section_inventory_unavailable", detail: "no_published_sections" }),
+      chooseDirection,
+    }));
+    expect(result.ok).toBe(false);
+    expect(chooseDirection).not.toHaveBeenCalled();
+  });
+
+  it("el modelo recibe la dirección elegida, no la del vecino más parecido", async () => {
+    const direction = await elected();
+    let seen: unknown;
+    await runCreativeGeneration(INPUT, withBaseline({
+      chooseDirection: async () => direction,
+      runCreativeSession: async ({ baseline }) => {
+        seen = (baseline.visualEngine as { creativeDirection?: unknown }).creativeDirection;
+        return { candidate: baseline, changed: false, acceptedMutations: 0, rejections: [], stoppedBy: "finished" };
+      },
+    }));
+    expect(seen).toMatchObject({ mode: "light", palette: { background: direction.palette.background } });
+  });
+
+  it("un elector caído cuesta el gusto, no la página, y queda anotado", async () => {
+    const recordDegraded = vi.fn();
+    const result = await runCreativeGeneration(INPUT, withBaseline({
+      chooseDirection: async () => { throw new Error("sin presupuesto"); },
+      recordDegraded,
+    }));
+    expect(result.ok).toBe(true);
+    expect(result.ok && result.html).toContain("--ol-bg:#09090B");
+    expect(recordDegraded).toHaveBeenCalledWith("baseline", "direction_unavailable");
+  });
+
+  it("resella la dirección con su hash, o la puerta descarta la página en silencio", async () => {
+    // Sin restampar `creativeDirectionHash` esto entrega la BASELINE: la puerta
+    // compara el hash contra la dirección, refusa, cae hacia atrás — y lo
+    // reporta como `delivered`. El color por el que se pagó, perdido, y nada en
+    // el resultado lo dice.
+    const { canonicalJsonSha256 } = await import("@/lib/generation/content-hash");
+    const direction = await elected();
+    const validateDelivery = vi.fn(({ visualEngine }: { visualEngine: unknown }) => {
+      const meta = visualEngine as { creativeDirection?: unknown; compositionManifest?: { creativeDirectionHash?: string } };
+      return meta?.compositionManifest?.creativeDirectionHash === canonicalJsonSha256(meta?.creativeDirection)
+        ? { ok: true as const, visualEngine }
+        : { ok: false as const, reasonCode: "invalid_composition_manifest" as const };
+    }) as never;
+
+    const result = await runCreativeGeneration(INPUT, withBaseline({ chooseDirection: async () => direction, validateDelivery }));
+    expect(result.ok).toBe(true);
+    expect(result.ok && result.html).toContain(`--ol-bg: ${direction.palette.background}`);
+  });
+
+  it("sin elector la página sale byte por byte como antes", async () => {
+    const result = await runCreativeGeneration(INPUT, withBaseline());
+    expect(result.ok && result.html).toBe(SEALED_BASELINE.html);
+  });
+});

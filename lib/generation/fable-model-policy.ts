@@ -7,6 +7,7 @@ export const FABLE_MODEL_POLICY = Object.freeze({
 });
 
 export type FableModelOperation =
+  | "creative_direction"
   | "copy"
   | "simple_extraction"
   | "page_planning"
@@ -16,6 +17,9 @@ export type FableModelOperation =
   | "final_scoring";
 
 const OPERATION_POLICY: Readonly<Record<FableModelOperation, { role: FableModelRole; effort: FireworksReasoningEffort }>> = {
+  // Gusto, no razonamiento: elegir modo y acento desde el brief es una lectura
+  // corta, y el fallo ya cae blando a la dirección determinista.
+  creative_direction: { role: "reasoner", effort: "none" },
   copy: { role: "reasoner", effort: "none" },
   simple_extraction: { role: "reasoner", effort: "none" },
   page_planning: { role: "reasoner", effort: "high" },

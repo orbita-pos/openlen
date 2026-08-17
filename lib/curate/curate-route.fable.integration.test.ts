@@ -124,6 +124,12 @@ function lastInspectedTarget(messages: readonly { role: string; content: string 
   return null;
 }
 
+const AESTHETIC_CHOICE = {
+  mode: "light", accent: "#2E86C1", display: "modern_geometric", body: "friendly_high_legibility",
+  scale: "balanced", radius: "round", density: "medium", imagery: "photo_first",
+  archetype: "kids_coloring_shop", tone: ["playful", "warm"],
+};
+
 function toolBoundary(mode: "improve" | "finish" | "down" | "image", calls: string[], timeline: string[] = []): typeof fetch {
   let turn = 0;
   return (async (_url: string | URL | Request, init?: RequestInit) => {
@@ -131,6 +137,15 @@ function toolBoundary(mode: "improve" | "finish" | "down" | "image", calls: stri
     calls.push(`${body.model}:${body.user}`);
     timeline.push("provider");
     if (mode === "down") throw new Error("fireworks unreachable");
+    // La elección de dirección es una llamada JSON aparte, no un turno de
+    // herramienta: contestarla desde la misma cola le robaría su paso a la
+    // sesión creativa y dejaría la petición de imagen sin disparar.
+    if ((body.messages ?? []).some((message) => message.role === "system" && message.content.includes("You choose how a landing page should LOOK"))) {
+      return new Response(JSON.stringify({
+        choices: [{ finish_reason: "stop", message: { role: "assistant", content: JSON.stringify(AESTHETIC_CHOICE) } }],
+        usage: { prompt_tokens: 8, completion_tokens: 4, total_tokens: 12, prompt_tokens_details: { cached_tokens: 0 } },
+      }), { status: 200, headers: { "content-type": "application/json" } });
+    }
     const step = turn++;
     let message: unknown = { role: "assistant", content: "La página quedó bien.", reasoning_content: "listo" };
     if (mode === "improve" && step === 0) {
@@ -243,6 +258,9 @@ describe("POST /api/curate real Fable root", () => {
     expect(calls.some((call) => call.startsWith(`${CRITIC_MODEL}:`))).toBe(true);
     expect(calls.every((call) => call.startsWith(`${DEEPSEEK_MODEL}:`) || call.startsWith(`${CRITIC_MODEL}:`))).toBe(true);
     expect(mocks.commitAtomic).toHaveBeenCalledOnce();
+    // El elector no es código muerto: la dirección determinista de este brief es
+    // OSCURA, y la página sale clara porque el modelo la eligió así.
+    expect(String(events.find((event) => event.event === "preview")?.data.html)).toMatch(/<html[^>]*class="light/);
     expect(events.filter((event) => event.event === "preview")).toHaveLength(1);
     expect(events.filter((event) => event.event === "done")).toHaveLength(1);
     expect(events.filter((event) => event.event === "error")).toHaveLength(0);

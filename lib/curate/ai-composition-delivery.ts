@@ -38,6 +38,32 @@ export function sealAiCompositionOutput(
   };
 }
 
+/**
+ * Sella una página que además cambió de dirección creativa.
+ *
+ * La dirección y su hash viajan juntos porque la puerta los compara: mover una
+ * sin la otra hace que refuse la página entera y entregue la baseline —
+ * reportado como `delivered`, sin que nada diga que se perdió el trabajo. Los
+ * dos sellos viven en la misma función para que sea imposible hacer uno solo.
+ */
+export function sealAiCompositionDirection(
+  visualEngine: CompositionMetadata,
+  html: string,
+  direction: unknown,
+): CompositionMetadata {
+  const parsed = CreativeDirectionSchema.parse(direction);
+  return {
+    ...visualEngine,
+    creativeDirection: parsed,
+    compositionManifest: SectionCompositionManifestSchema.parse({
+      ...visualEngine.compositionManifest,
+      creativeDirectionHash: canonicalJsonSha256(parsed),
+      outputHash: sha256(html),
+      resultCode: "composed",
+    }),
+  };
+}
+
 function record(value: unknown): Record<string, unknown> | null {
   return value !== null && typeof value === "object" && !Array.isArray(value)
     ? value as Record<string, unknown>

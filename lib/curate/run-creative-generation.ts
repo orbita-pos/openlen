@@ -2,11 +2,13 @@ import type { BusinessProfileData } from "@/lib/business-profiles/types";
 import type { IntentAnalysis } from "@/lib/generation/contracts";
 import type { VisualEngineProjectMetadata } from "@/lib/projects/types";
 import type { SectionRecord } from "@/lib/sections/store";
-import { sealAiCompositionOutput, type validateAiCompositionDelivery } from "./ai-composition-delivery";
+import { sealAiCompositionDirection, sealAiCompositionOutput, type validateAiCompositionDelivery } from "./ai-composition-delivery";
 import type { buildCreativeBaseline, SafeCreativeCandidate } from "./creative-baseline";
 import type { AdvisoryReviewResult } from "./advisory-visual-review";
 import type { CreativeSessionResult } from "./deepseek-creative-session";
+import type { CreativeDirection } from "@/lib/generation/creative-contracts";
 import { adoptModelPalette } from "./adopt-model-palette";
+import { applyCreativeDirection } from "./apply-creative-direction";
 import { isolateModelTokens } from "./isolate-model-tokens";
 import { repairInvertedSurfaces } from "./repair-inverted-surfaces";
 
@@ -25,6 +27,11 @@ export interface CreativeGenerationDeps {
   /** The baseline's own render gate. Without it the baseline builder falls back
    * to a stub that approves every document, so overflow ships unchecked. */
   readonly renderCandidate?: (html: string) => Promise<{ mobileOverflow: boolean; invalidGeometry: boolean } | null>;
+  /** Quién elige cómo se ve la página, leyendo el brief. Sin esto la elige el
+   * vecino más parecido entre 7 nichos —así una clínica dental salió con la
+   * paleta de terror—. Se le pregunta una sola vez, y sólo después de que la
+   * baseline segura exista. */
+  readonly chooseDirection?: (brief: string, intent: IntentAnalysis) => Promise<CreativeDirection | null>;
   /** `intent` travels with both improvement stages: the image boundary and the
    * vision critic both speak the taxonomy, not the free-text brief. */
   readonly runCreativeSession: (input: {
@@ -62,6 +69,21 @@ export type CreativeGenerationResult =
     }
   | { readonly ok: false; readonly stage: "composition" | "delivery_gate"; readonly reasonCode: string };
 
+/** La dirección es gusto, no corrección: cualquier fallo —incluido un
+ *  transporte que lanza— deja la determinista y la página sigue. */
+async function elect(
+  brief: string,
+  intent: IntentAnalysis,
+  choose: CreativeGenerationDeps["chooseDirection"],
+): Promise<CreativeDirection | null> {
+  if (!choose) return null;
+  try {
+    return await choose(brief, intent);
+  } catch {
+    return null;
+  }
+}
+
 function notify(input: CreativeGenerationInput, stage: string): void {
   try { input.onStage?.(stage); } catch {
     // Progress reporting cannot change delivery.
@@ -88,6 +110,7 @@ export async function runCreativeGeneration(
     }, {
       ...(deps.fetchText ? { fetchText: deps.fetchText } : {}),
       ...(deps.renderCandidate ? { render: deps.renderCandidate } : {}),
+      ...(deps.chooseDirection ? { chooseDirection: deps.chooseDirection } : {}),
       // The baseline ships even when the gate cannot give it every guarantee,
       // so the reason only exists if it is recorded here.
       onDegraded: (reason: string) => deps.recordDegraded?.("baseline", reason),
@@ -105,6 +128,34 @@ export async function runCreativeGeneration(
 
   let lastKnownGood = baseline.candidate;
   let degraded = false;
+
+  // La dirección se elige AQUÍ y no antes, y el orden no es un detalle: nada se
+  // paga hasta que existe una baseline segura, así que un brief que el catálogo
+  // no puede cubrir no cuesta ni una llamada. Lo que se repinta es sólo el
+  // color —la baseline ya midió su render con estas cajas— y el modelo recibe
+  // la dirección completa, porque su página sí se vuelve a renderizar.
+  const elected = await elect(input.brief, baseline.intent, deps.chooseDirection);
+  if (elected) {
+    const repainted = applyCreativeDirection(lastKnownGood.html, elected);
+    try {
+      lastKnownGood = {
+        ...lastKnownGood,
+        html: repainted,
+        visualEngine: sealAiCompositionDirection(
+          lastKnownGood.visualEngine,
+          repainted,
+          elected,
+        ) as SafeCreativeCandidate["visualEngine"],
+      };
+    } catch {
+      // Repintar es gusto. Un manifiesto que no se puede resellar cuesta el
+      // color, jamás la página: la puerta de entrega compara sha256(html) y
+      // devolvería la baseline entera por un tono.
+      deps.recordDegraded?.("baseline", "direction_unsealable");
+    }
+  } else if (deps.chooseDirection) {
+    deps.recordDegraded?.("baseline", "direction_unavailable");
+  }
 
   notify(input, "creative");
   try {

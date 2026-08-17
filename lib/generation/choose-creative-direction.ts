@@ -33,8 +33,10 @@ import { paletteFromAccent } from "./palette-from-accent";
 
 const FONT_MOODS = Object.keys(CREATIVE_FONT_MOODS) as [string, ...string[]];
 
-/** Lo único que se le pide al modelo. Cerrado salvo el acento y dos slugs. */
-const AestheticChoiceSchema = z.object({
+/** Lo único que se le pide al modelo. Cerrado salvo el acento y dos slugs.
+ *  Exportado porque el transporte lo usa como esquema de respuesta: un solo
+ *  contrato para la decodificación y para la validación. */
+export const AestheticChoiceSchema = z.object({
   mode: z.enum(["light", "dark", "cream"]),
   accent: z.string().regex(/^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/),
   display: z.enum(FONT_MOODS),

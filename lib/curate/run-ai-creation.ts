@@ -19,6 +19,7 @@ import { runAdvisoryVisualReview } from "./advisory-visual-review";
 import { buildCreativeBaseline, type SafeCreativeCandidate } from "./creative-baseline";
 import { resolveCreativeImage } from "./creative-image-resolution";
 import { createCreativeSandbox } from "./creative-sandbox";
+import { electCreativeDirectionWith } from "./elect-creative-direction";
 import { runDeepSeekCreativeSession, type CreativeSessionDeps } from "./deepseek-creative-session";
 import { runOptionalImageTool } from "./optional-image-tool";
 import { createFableRuntimeComposition, type FableRuntimeComposition, type FableRuntimeCompositionOptions } from "./fable-runtime-composition";
@@ -96,6 +97,7 @@ function productionDeps(
   renderViewports: typeof renderVisualQualityViewports,
   resolveImage: typeof resolveCreativeImage,
   creditBalance: number | undefined,
+  projectId: string,
 ): { deps: CreativeGenerationDeps; imagesApplied: () => number } {
   // The advisory reviewer needs the same bytes the render gate just produced.
   // Rendering is a browser launch; one document is rendered once.
@@ -176,6 +178,12 @@ function productionDeps(
 
   const deps: CreativeGenerationDeps = {
     buildBaseline: buildCreativeBaseline,
+    // Sin esto la dirección sale del vecino más parecido entre 7 nichos, y sólo
+    // existen 7 paletas para todos los usuarios. Apagable: con OPENLEN_DIRECTION=0
+    // la página vuelve exactamente a como se generaba antes.
+    ...(process.env.OPENLEN_DIRECTION === "0"
+      ? {}
+      : { chooseDirection: electCreativeDirectionWith(runtime.fireworksClient, projectId) }),
     renderCandidate: render,
     validateDelivery: validateAiCompositionDelivery,
     recordFailure: (stage, reasonCode) => { void runtime.recordFailure(telemetryStage(stage), reasonCode); },
@@ -250,6 +258,7 @@ export async function runAiCreation(
     deps.renderViewports ?? renderVisualQualityViewports,
     deps.resolveImage ?? resolveCreativeImage,
     input.creditBalance,
+    input.projectId,
   );
   const generation = await (deps.runCreativeGeneration ?? runCreativeGeneration)({
     projectId: input.projectId,
