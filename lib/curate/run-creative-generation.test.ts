@@ -15,6 +15,18 @@ const BASELINE: SafeCreativeCandidate = {
 };
 const IMPROVED: SafeCreativeCandidate = { ...BASELINE, html: IMPROVED_HTML, source: "deepseek" };
 
+const H = (c: string) => `sha256:${c.repeat(64)}`;
+// A real manifest: `sealAiCompositionOutput` re-parses it, so a stub shape
+// would only prove the fail-soft path.
+const MANIFEST = {
+  schemaVersion: SECTION_COMPOSITION_MANIFEST_VERSION,
+  intentHash: H("a"), creativeDirectionHash: H("b"), inventoryHash: H("c"),
+  orderedRoles: ["hero"], selectedSectionIds: ["hero-one"], selectedContentHashes: ["d".repeat(12)],
+  selectedSourceKinds: ["manual"], selectedSourceTemplateIds: [null],
+  selectedSourceBandOrdinals: [null], selectedStructuralFingerprints: [H("e")],
+  compatibilityRuleIds: ["section_component:hero"], outputHash: null, resultCode: "composed",
+};
+
 const INPUT = {
   projectId: "11111111-1111-4111-8111-111111111111",
   brief: "Una página de terror con estética VHS",
@@ -176,17 +188,6 @@ describe("model palette adoption", () => {
   const THEMED = '<!doctype html><html class="dark" style="--ol-bg:#09090B"><head>'
     + "<style>:root{--bg:#070606}body{background:var(--bg)}</style></head>"
     + "<body><section>improved</section></body></html>";
-  const H = (c: string) => `sha256:${c.repeat(64)}`;
-  // A real manifest: `sealAiCompositionOutput` re-parses it, so a stub shape
-  // would only prove the fail-soft path.
-  const MANIFEST = {
-    schemaVersion: SECTION_COMPOSITION_MANIFEST_VERSION,
-    intentHash: H("a"), creativeDirectionHash: H("b"), inventoryHash: H("c"),
-    orderedRoles: ["hero"], selectedSectionIds: ["hero-one"], selectedContentHashes: ["d".repeat(12)],
-    selectedSourceKinds: ["manual"], selectedSourceTemplateIds: [null],
-    selectedSourceBandOrdinals: [null], selectedStructuralFingerprints: [H("e")],
-    compatibilityRuleIds: ["section_component:hero"], outputHash: null, resultCode: "composed",
-  };
   const themedEngine = { ...(VISUAL_ENGINE as object), compositionManifest: MANIFEST } as never;
   const themedCandidate: SafeCreativeCandidate = { ...IMPROVED, html: THEMED, visualEngine: themedEngine };
 
@@ -233,5 +234,37 @@ describe("model palette adoption", () => {
 
     expect(result.ok && result.html).toBe(IMPROVED_HTML);
     expect(recordDegraded).not.toHaveBeenCalledWith("delivery_gate", expect.anything());
+  });
+});
+
+describe("model token isolation", () => {
+  // A name the assembler binds (`--ink` = text) that the model reused for its
+  // background collided on the same <section>, and the binding won: the model
+  // asked for #050505 and got the page's text colour.
+  const COLLIDING = '<!doctype html><html class="dark" style="--ol-bg:#09090B;--ol-fg:#F7F1ED"><head>'
+    + '<style>[data-sec="d-4"]{--ink:var(--ol-fg);color:var(--ink)}</style>'
+    + '<style data-openlen-creative="">:root{--ink:#050505}#ol-gallery-4{background:var(--ink)}</style>'
+    + '</head><body><section id="ol-gallery-4" data-sec="d-4">x</section></body></html>';
+
+  it("gives the model its own vocabulary without taking the library's", async () => {
+    const { sha256 } = await import("@/lib/generation/content-hash");
+    const result = await runCreativeGeneration(INPUT, deps({
+      runCreativeSession: async () => ({
+        candidate: {
+          ...IMPROVED,
+          html: COLLIDING,
+          visualEngine: { ...(VISUAL_ENGINE as object), compositionManifest: { ...MANIFEST, outputHash: sha256(COLLIDING) } } as never,
+        },
+        changed: true, acceptedMutations: 2, rejections: [], stoppedBy: "finished",
+      }),
+    }));
+
+    expect(result.ok).toBe(true);
+    const html = result.ok ? result.html : "";
+    expect(html).toContain("background:var(--olm-ink)");
+    expect(html).toContain("--olm-ink:#050505");
+    // The library's binding is untouched, so its text still follows the theme
+    // instead of turning near-black on a dark page.
+    expect(html).toContain('[data-sec="d-4"]{--ink:var(--ol-fg);color:var(--ink)}');
   });
 });
