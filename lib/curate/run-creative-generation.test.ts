@@ -268,3 +268,29 @@ describe("model token isolation", () => {
     expect(html).toContain('[data-sec="d-4"]{--ink:var(--ol-fg);color:var(--ink)}');
   });
 });
+
+describe("inverted surface repair", () => {
+  // A dark CTA panel inside a light page whose heading inherits the page's dark
+  // text: invisible. The page's own contrast is fine, so nothing upstream sees
+  // it — the visual critic approved both pages this came from.
+  const INVERTED = '<!doctype html><html class="cream" style="--ol-bg:#F6F3EE;--ol-fg:#282521"><head>'
+    + '<style data-openlen-creative="">:root{--panel:#0E1626}.cta{background:var(--panel);padding:60px}</style>'
+    + "</head><body><section class='cta'><h2>x</h2></section></body></html>";
+
+  it("gives the panel a colour its text can be read in", async () => {
+    const { sha256 } = await import("@/lib/generation/content-hash");
+    const result = await runCreativeGeneration(INPUT, deps({
+      runCreativeSession: async () => ({
+        candidate: {
+          ...IMPROVED,
+          html: INVERTED,
+          visualEngine: { ...(VISUAL_ENGINE as object), compositionManifest: { ...MANIFEST, outputHash: sha256(INVERTED) } } as never,
+        },
+        changed: true, acceptedMutations: 1, rejections: [], stoppedBy: "finished",
+      }),
+    }));
+
+    expect(result.ok).toBe(true);
+    expect(result.ok && result.html).toContain("color:var(--ol-bg)");
+  });
+});

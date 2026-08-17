@@ -8,6 +8,7 @@ import type { AdvisoryReviewResult } from "./advisory-visual-review";
 import type { CreativeSessionResult } from "./deepseek-creative-session";
 import { adoptModelPalette } from "./adopt-model-palette";
 import { isolateModelTokens } from "./isolate-model-tokens";
+import { repairInvertedSurfaces } from "./repair-inverted-surfaces";
 
 export interface CreativeGenerationInput {
   readonly projectId: string;
@@ -130,9 +131,12 @@ export async function runCreativeGeneration(
     // would make an unchanged session log a delivery_gate degradation it never
     // suffered.
     lastKnownGood = creative.candidate;
-    // Adoption first — it reads the model's own token names, so it has to run
-    // before isolation renames them.
-    const adoptedHtml = isolateModelTokens(adoptModelPalette(creative.candidate.html));
+    // Order is the contract. Adoption reads the model's own token names, so it
+    // runs before isolation renames them; the repair resolves --olm-* against
+    // the page's final --ol-bg, so it runs after both.
+    const adoptedHtml = repairInvertedSurfaces(
+      isolateModelTokens(adoptModelPalette(creative.candidate.html)),
+    );
     if (adoptedHtml !== creative.candidate.html) {
       try {
         lastKnownGood = {
