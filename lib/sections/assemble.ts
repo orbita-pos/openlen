@@ -37,6 +37,8 @@ export interface AssembleTheme {
   textScale?: string;
   /** Google-Fonts <link> hrefs/tags for the theme's own fonts, hoisted to head. */
   fontLinks?: string[];
+  /** BCP-47 language for <html lang>. Absent → "en", the old hardcoded value. */
+  lang?: string;
 }
 
 export interface SectionFragment {
@@ -276,7 +278,20 @@ function htmlOpenTag(theme: AssembleTheme): string {
   ]
     .filter(Boolean)
     .join(";");
-  return `<html lang="en" class="${theme.mode}" style="${vars}">`;
+  // `lang` was hardcoded "en" while every cohort brief and most real users
+  // write Spanish. It is not cosmetic: screen readers pick a voice from it and
+  // browsers offer to translate a page that is already in the reader's
+  // language. IntentAnalysis carries the detected language; a caller without
+  // one keeps the old default rather than guessing.
+  return `<html lang="${langTag(theme.lang)}" class="${theme.mode}" style="${vars}">`;
+}
+
+/** A BCP-47-shaped tag or "en". `theme.lang` comes from model-analysed intent,
+ *  so it is validated by SHAPE rather than escaped — anything that is not a
+ *  language tag has no business in this attribute at all. */
+function langTag(value: string | undefined): string {
+  const v = (value ?? "").trim();
+  return /^[a-z]{2,3}(-[A-Za-z0-9]{2,8})*$/.test(v) ? v : "en";
 }
 
 // Contract :root aliases (--accent → var(--ol-accent) …) so a section that uses

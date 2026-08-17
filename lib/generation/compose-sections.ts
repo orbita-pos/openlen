@@ -42,6 +42,7 @@ import { SECTION_TYPES } from "@/lib/sections/types";
 import type { ExtractedBusinessData } from "@/lib/style-match/autofill/types";
 import { ensureCompositionMobileSafety } from "./composition-mobile-safety";
 import { buildDeterministicCreativeDirection } from "./deterministic-creative-direction";
+import { assembleThemeFor } from "./direction-theme";
 
 export { composeAdaptiveSections } from "./adaptive-section-composition";
 export type {
@@ -298,9 +299,14 @@ export async function composeSectionCandidate(
       });
     }
 
+    // The direction decided the palette, the type and the geometry back at
+    // line ~250; until 2026-08-16 it was used to plan and generate sections and
+    // then dropped here, so every page was assembled on the frozen light
+    // default. A dark niche shipped `<html class="light" --ol-bg:#ffffff>` and
+    // rendered cream-on-white below the hero.
     const stitched = (deps.assembleDocument ?? assembleDocument)(
       fetched.fragments as SectionFragment[],
-      COMPOSITION_BASE_THEME,
+      assembleThemeFor(deterministic.direction, input.intent.language),
     );
     if (deps.beforeCreative && !(await deps.beforeCreative())) {
       return failure(input, "internal_error", inventory, selection);
