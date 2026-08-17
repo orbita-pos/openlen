@@ -68,3 +68,39 @@ describe("adoptModelPalette", () => {
     expect(olToken(out, "--ol-bg")).toBe("#09090B");
   });
 });
+
+describe("adoptModelPalette — namespaced palettes", () => {
+  // Measured on the second horror run: the model called its tokens `--um-bg` /
+  // `--um-bone` (UM for UMBRAL). It invents the prefix per run, so matching
+  // token NAMES catches the conventional case and misses this one entirely —
+  // and this one still shipped the seam (#070505 under var(--ol-bg) #09090B).
+  const namespaced = `<!doctype html><html lang="es" class="dark" style="--ol-bg:#09090B;--ol-fg:#F7F1ED">
+<head><style>:root{--um-bg:#070505;--um-bone:#e8e0d4}
+body{background:var(--um-bg);color:var(--um-bone)}</style></head><body><h1>x</h1></body></html>`;
+
+  const olToken = (html: string, name: string) =>
+    html.match(new RegExp(`${name}:\s*([^;"]*)`))?.[1]?.trim() ?? null;
+
+  it("takes what body actually paints, whatever the model named it", () => {
+    const out = adoptModelPalette(namespaced);
+
+    expect(olToken(out, "--ol-bg")).toBe("#070505");
+    expect(olToken(out, "--ol-fg")).toBe("#e8e0d4");
+  });
+
+  it("does not chase a var chain that ends at the binding", () => {
+    // `:root{--bg:var(--ol-bg)}` is the assembler's binding. Resolving through
+    // it and adopting the result would point --ol-bg at its own value.
+    const bound = `<!doctype html><html class="dark" style="--ol-bg:#09090B">
+<head><style>:root{--bg:var(--ol-bg)}body{background:var(--bg)}</style></head><body>x</body></html>`;
+
+    expect(olToken(adoptModelPalette(bound), "--ol-bg")).toBe("#09090B");
+  });
+
+  it("still refuses a body background that inverts the declared mode", () => {
+    const inverted = `<!doctype html><html class="dark" style="--ol-bg:#09090B">
+<head><style>:root{--um-bg:#fafafa}body{background:var(--um-bg)}</style></head><body>x</body></html>`;
+
+    expect(olToken(adoptModelPalette(inverted), "--ol-bg")).toBe("#09090B");
+  });
+});

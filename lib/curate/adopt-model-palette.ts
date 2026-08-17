@@ -50,6 +50,66 @@ function lightness(hex: string): number | null {
   return 0.2126 * r + 0.7152 * g + 0.0722 * b;
 }
 
+/** Every custom property declared at :root, last-wins, values verbatim. */
+function rootDeclarations(html: string): Map<string, string> {
+  const out = new Map<string, string>();
+  for (const block of html.matchAll(/:root\b[^{]*\{([^}]*)\}/gi)) {
+    for (const decl of (block[1] ?? "").split(";")) {
+      const at = decl.indexOf(":");
+      if (at === -1) continue;
+      const name = decl.slice(0, at).trim().toLowerCase();
+      if (name.startsWith("--")) out.set(name, decl.slice(at + 1).trim());
+    }
+  }
+  return out;
+}
+
+/** Follow `var(--x)` to the literal it ends at. Returns null if the chain runs
+ *  into an --ol-* token (that is the assembler's binding, not the model's
+ *  choice), loops, or ends anywhere that is not a hex colour. */
+function resolveColor(value: string, decls: Map<string, string>): string | null {
+  let v = value.trim();
+  for (let hop = 0; hop < 4; hop++) {
+    if (HEX_RE.test(v)) return v;
+    const ref = /^var\(\s*(--[a-z0-9_-]+)/i.exec(v);
+    if (!ref) return null;
+    const name = ref[1].toLowerCase();
+    if (name.startsWith("--ol-")) return null;
+    const next = decls.get(name);
+    if (next === undefined) return null;
+    v = next.trim();
+  }
+  return null;
+}
+
+/** What `body` actually paints, resolved through the model's own token names.
+ *
+ * The name table below only fires when the model happens to use a conventional
+ * name. Measured on the second horror run: it called its tokens `--um-bg` /
+ * `--um-bone` (UM for UMBRAL) and invents the prefix per page, so name-matching
+ * missed it and the seam shipped anyway (#070505 under var(--ol-bg) #09090B).
+ * The rule the model cannot rename is which declaration paints the page. */
+function bodyPaints(html: string): Map<string, string> {
+  const out = new Map<string, string>();
+  const decls = rootDeclarations(html);
+  for (const rule of html.matchAll(/(^|[\s},;])body\s*\{([^}]*)\}/gi)) {
+    for (const decl of (rule[2] ?? "").split(";")) {
+      const at = decl.indexOf(":");
+      if (at === -1) continue;
+      const prop = decl.slice(0, at).trim().toLowerCase();
+      const ol = prop === "background" || prop === "background-color"
+        ? "--ol-bg"
+        : prop === "color"
+          ? "--ol-fg"
+          : null;
+      if (!ol) continue;
+      const literal = resolveColor(decl.slice(at + 1), decls);
+      if (literal) out.set(ol, literal);
+    }
+  }
+  return out;
+}
+
 /** Last literal declaration of each adoptable token across every :root block,
  *  which is the one the cascade lands on. Values already bound to `var(--ol-*)`
  *  are skipped — that is the assembler's binding, not the model's choice, and
@@ -81,7 +141,11 @@ export function adoptModelPalette(html: string): string {
   const style = openTag.match(/\bstyle\s*=\s*"([^"]*)"/i);
   if (!style) return html;
 
+  // Names first (they carry surface/border/accent, which body cannot), then
+  // what body paints — that one wins, because it is the page's actual floor and
+  // the only signal the model cannot rename out from under us.
   const adopted = modelTokens(html);
+  for (const [token, value] of bodyPaints(html)) adopted.set(token, value);
   if (adopted.size === 0) return html;
 
   // A dark page whose model background reads light (a mistake, or an injected
