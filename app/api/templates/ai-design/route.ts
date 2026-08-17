@@ -457,6 +457,7 @@ VISUAL CONTEXT: the attached image is a full-page render of the CURRENT page (wh
 
   const upstreamAbort = new AbortController();
 
+  const startedAt = Date.now();
   const sse = new ReadableStream<Uint8Array>({
     async start(controller) {
       let closed = false;
@@ -575,7 +576,7 @@ VISUAL CONTEXT: the attached image is a full-page render of the CURRENT page (wh
           | "cancelled"
           | "error"
           | null = null;
-        let usage: { inputTokens: number; outputTokens: number } | null = null;
+        let usage: { inputTokens: number; outputTokens: number; thinkingTokens: number } | null = null;
         let providerError: string | null = null;
 
         try {
@@ -586,6 +587,10 @@ VISUAL CONTEXT: the attached image is a full-page render of the CURRENT page (wh
               usage = {
                 inputTokens: event.inputTokens,
                 outputTokens: event.outputTokens,
+                // El pensamiento del modelo se cobra y se espera como salida, y
+                // esta ruta no fija presupuesto: sin este número no hay forma de
+                // saber si un turno tardó minutos por el documento o por pensar.
+                thinkingTokens: event.thinkingTokens,
               };
             } else if (event.type === "done") {
               finishReason = event.stopReason.kind;
@@ -883,7 +888,7 @@ VISUAL CONTEXT: the attached image is a full-page render of the CURRENT page (wh
             );
         // eslint-disable-next-line no-console
         console.log(
-          `[ai-design] tokens — prompt: ${usage?.inputTokens ?? "?"}, output: ${usage?.outputTokens ?? "?"} → ${credits} credits`,
+          `[ai-design] tokens — prompt: ${usage?.inputTokens ?? "?"}, output: ${usage?.outputTokens ?? "?"}, thinking: ${usage?.thinkingTokens ?? "?"} → ${credits} credits · mode: ${outputMode} · ${Date.now() - startedAt}ms`,
         );
         await debitCredits(userId, credits);
 
