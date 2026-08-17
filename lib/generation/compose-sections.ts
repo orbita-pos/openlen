@@ -90,6 +90,9 @@ export interface ComposeSectionCandidateDeps {
   adaptTemplateSkeleton?: typeof adaptTemplateSkeleton;
   /** Last gate before the first paid composition call (fill). */
   beforeCreative?: () => Promise<boolean>;
+  /** Elige la dirección leyendo el brief. Ausente o devolviendo null → la
+   *  determinista de siempre: el gusto se pierde, la página nunca. */
+  chooseDirection?: (intent: IntentAnalysis) => Promise<CreativeDirection | null>;
   generateMissing?: (input: {
     row: import("./section-composition-contracts").SectionPlanRow;
     intent: IntentAnalysis;
@@ -249,11 +252,17 @@ export async function composeSectionCandidate(
     let plan = planning.plan;
 
     const deterministic = buildDeterministicCreativeDirection(input.intent);
+    // El vecino-más-cercano entre 7 nichos le dio a una clínica dental la
+    // paleta de terror: el solapamiento es estructural, y terror tiene la lista
+    // de secciones más genérica, así que atrae a todo negocio que agende citas.
+    // Cuando hay un elector, decide él; su fallo cae aquí sin costar la página.
+    const chosen = deps.chooseDirection ? await deps.chooseDirection(input.intent) : null;
+    const direction = chosen ?? deterministic.direction;
     const generated = [] as Extract<GenerateMissingSectionResult, { ok: true }>["candidate"][];
     const generatedUsage: NonNullable<Extract<GenerateMissingSectionResult, { ok: true }>["usage"]>[] = [];
     const addGenerated = async (row: import("./section-composition-contracts").SectionPlanRow, excludeIds: readonly string[] = []) => {
       if (!deps.generateMissing || generated.length >= 2 || generated.some((candidate) => candidate.type === row.componentType)) return false as const;
-      const result = await deps.generateMissing({ row, intent: input.intent, direction: deterministic.direction, copy: input.copy });
+      const result = await deps.generateMissing({ row, intent: input.intent, direction, copy: input.copy });
       if (!result.ok) return result;
       generated.push(result.candidate);
       if (result.usage) generatedUsage.push(result.usage);
@@ -266,7 +275,7 @@ export async function composeSectionCandidate(
       try {
         selection = (deps.resolvePlan ?? resolveSectionPlan)(plan, inventory, {
           intent: input.intent,
-          direction: deterministic.direction,
+          direction,
         });
       } catch (error) {
         if (!(error instanceof SectionCompositionSelectionError)
@@ -306,7 +315,7 @@ export async function composeSectionCandidate(
     // rendered cream-on-white below the hero.
     const stitched = (deps.assembleDocument ?? assembleDocument)(
       fetched.fragments as SectionFragment[],
-      assembleThemeFor(deterministic.direction, input.intent.language),
+      assembleThemeFor(direction, input.intent.language),
     );
     if (deps.beforeCreative && !(await deps.beforeCreative())) {
       return failure(input, "internal_error", inventory, selection);
