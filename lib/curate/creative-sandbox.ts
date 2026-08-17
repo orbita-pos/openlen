@@ -6,6 +6,7 @@ import { sha256 } from "@/lib/generation/content-hash";
 import { passHtmlGate } from "@/lib/html-gate/document-gate";
 
 import type { SafeCreativeCandidate } from "./creative-baseline";
+import { reconcileSectionManifest } from "./reconcile-section-manifest";
 import {
   parseCreativePatch,
   type CreativeCanvasInspection,
@@ -200,6 +201,10 @@ function applyOperation(
     return attachSectionCss(document, operation.css, operation.targetId);
   }
   if (operation.op === "remove_section") {
+    // Bajar de tres secciones hace fallar la prueba de originalidad, y eso
+    // descarta la página ENTERA al final — dos minutos de trabajo del modelo a
+    // la basura por una operación. Se le niega ahora, mientras puede reaccionar.
+    if (document.querySelectorAll("[data-openlen-role]").length <= 3) return "invalid_patch";
     target!.remove();
     return null;
   }
@@ -213,6 +218,9 @@ function applyOperation(
       const insertedId = nextId();
       created.setAttribute(EDIT_ID, insertedId);
       created.setAttribute("data-openlen-role", operation.role);
+      // También `data-sec`: la puerta de entrega compara ese atributo contra el
+      // manifiesto, y una sección sin él no puede figurar en ninguna fila.
+      created.setAttribute("data-sec", insertedId);
       const problem = attachSectionCss(document, operation.css, insertedId);
       if (problem) return problem;
       node = created;
@@ -268,7 +276,10 @@ export function createCreativeSandbox(baseline: SafeCreativeCandidate, deps: Cre
   };
 
   // Every accepted mutation re-stamps the manifest hash; otherwise the delivery
-  // gate rejects the improved page for not matching its own bytes.
+  // gate rejects the improved page for not matching its own bytes. And re-states
+  // its rows: the gate also matches roles and `data-sec` against the manifest,
+  // so inserting, removing or moving a section left it describing a document
+  // that no longer existed — and the whole session was discarded for it.
   const commit = (next: SafeCreativeCandidate, html: string): void => {
     const manifest = (next.visualEngine as { compositionManifest?: Record<string, unknown> }).compositionManifest;
     state = {
@@ -276,7 +287,9 @@ export function createCreativeSandbox(baseline: SafeCreativeCandidate, deps: Cre
       html,
       visualEngine: {
         ...next.visualEngine,
-        ...(manifest ? { compositionManifest: { ...manifest, outputHash: sha256(html) } } : {}),
+        ...(manifest
+          ? { compositionManifest: { ...reconcileSectionManifest(manifest, html), outputHash: sha256(html) } }
+          : {}),
       } as SafeCreativeCandidate["visualEngine"],
     };
   };

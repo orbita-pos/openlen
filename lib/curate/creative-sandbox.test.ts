@@ -2,6 +2,9 @@ import { describe, expect, it, vi } from "vitest";
 
 import type { SafeCreativeCandidate } from "./creative-baseline";
 import { createCreativeSandbox, safeCreativeCss, safeCreativeUrl, type CreativeSandboxDeps } from "./creative-sandbox";
+import { CreativeDirectionSchema } from "@/lib/generation/creative-contracts";
+import { canonicalJsonSha256 } from "@/lib/generation/content-hash";
+import { SECTION_COMPOSITION_MANIFEST_VERSION } from "@/lib/generation/section-composition-contracts";
 
 const BASE_HTML = `<!doctype html><html><head></head><body>
 <header data-openlen-role="header" data-openlen-edit-id="ol-header-0"><a href="#top">Marca</a></header>
@@ -383,5 +386,112 @@ describe("transactional creative sandbox", () => {
     });
     expect(result).toMatchObject({ ok: false, code: "invalid_patch", detail: "reserved_marker" });
     expect(sandbox.current().html).toBe(BASE_HTML);
+  });
+});
+
+// El fallo que descartaba páginas enteras: el modelo reestructuraba, el sandbox
+// lo aceptaba, y la puerta de entrega comparaba el documento nuevo contra un
+// manifiesto viejo y devolvía la baseline. Medido: 3 de 10 páginas, reportadas
+// como `delivered`. Aquí se empujan las tres operaciones estructurales por el
+// sandbox y se pasa el resultado por la puerta DE VERDAD.
+describe("reestructurar ya no cuesta la página", () => {
+  const H = (c: string) => `sha256:${c.repeat(64)}`;
+  const SECTIONS = ["ol-header-0", "ol-hero-1", "ol-features-2", "ol-footer-3"];
+  const SEALED_HTML = BASE_HTML
+    .replace(
+      /data-openlen-edit-id="(ol-[a-z0-9-]+)"/g,
+      (_all, id: string) => `data-openlen-edit-id="${id}" data-sec="${id}"`,
+    )
+    // La puerta exige exactamente un marcador de dirección creativa.
+    .replace("</head>", '<style data-openlen-visual-engine="creative-direction/1.0">:root{--ol-accent:#2e86c1}</style></head>');
+
+  function directionHash(): string {
+    // La puerta compara el hash contra la dirección PARSEADA por su esquema.
+    const parsed = CreativeDirectionSchema.parse(direction());
+    return canonicalJsonSha256(parsed);
+  }
+
+  function sealedCandidate(): SafeCreativeCandidate {
+    return {
+      ...CANDIDATE,
+      html: SEALED_HTML,
+      visualEngine: {
+        schemaVersion: "visual-engine-project/1.0", route: "section_composition", templateId: null,
+        promptVersion: "creative-baseline/1.0", policyVersion: "ai-hybrid-policy/1.0",
+        contractVersion: "creative-direction/1.0",
+        creativeDirection: direction(),
+        compositionManifest: {
+          schemaVersion: SECTION_COMPOSITION_MANIFEST_VERSION,
+          intentHash: H("a"), creativeDirectionHash: directionHash(), inventoryHash: H("c"),
+          orderedRoles: ["header", "hero", "features", "footer"],
+          selectedSectionIds: SECTIONS,
+          selectedContentHashes: ["a", "b", "c", "d"].map((c) => c.repeat(12)),
+          selectedSourceKinds: ["template_derived", "template_derived", "template_derived", "template_derived"],
+          selectedSourceTemplateIds: ["donor-one", "donor-two", "donor-three", "donor-four"],
+          selectedSourceBandOrdinals: [0, 1, 2, 3],
+          selectedStructuralFingerprints: [H("1"), H("2"), H("3"), H("4")],
+          compatibilityRuleIds: SECTIONS.map((_id, index) => `section_component:${["header", "hero", "features", "footer"][index]}`),
+          outputHash: null, resultCode: "composed",
+        },
+      } as never,
+    };
+  }
+
+  function direction() {
+    return {
+      schemaVersion: "creative-direction/1.0", mode: "light", visualArchetype: "clean_studio",
+      emotionalTone: ["calm"],
+      palette: { background: "#ffffff", surface: "#f5f5f5", surfaceAlt: "#eeeeee", foreground: "#111111", foregroundMuted: "#555555", accent: "#2e86c1", accentInk: "#ffffff", border: "#dddddd" },
+      typography: { display: "modern_geometric", body: "friendly_high_legibility", mono: null, scale: "balanced" },
+      geometry: { radius: "soft", radiusScale: 1, spacingScale: 1, density: "medium" },
+      imagery: { strategy: "photo_first", artDirection: "clean_studio", subjects: ["studio"], avoid: [] },
+      iconography: { style: "rounded_outline", strokeWeight: "medium", cornerStyle: "soft" },
+      componentTreatment: { cards: "grouped", buttons: "soft", navigation: "simple", sections: "even" },
+      requiredVisualSignals: [], forbiddenVisualSignals: [],
+    };
+  }
+
+  async function deliverAfter(patch: Parameters<ReturnType<typeof createCreativeSandbox>["applyPatch"]>[0]) {
+    const { validateAiCompositionDelivery } = await import("./ai-composition-delivery");
+    const sandbox = createCreativeSandbox(sealedCandidate(), makeDeps());
+    const applied = await sandbox.applyPatch(patch);
+    expect(applied).toMatchObject({ ok: true });
+    const current = sandbox.current();
+    return validateAiCompositionDelivery({ html: current.html, visualEngine: current.visualEngine, leaksAfter: 0 });
+  }
+
+  it("insertar una sección ya no descarta la página", async () => {
+    const result = await deliverAfter({
+      operations: [{
+        op: "insert_section", afterTargetId: "ol-hero-1", role: "gallery",
+        html: '<section><h2>Obra</h2><p>Trabajos recientes</p></section>',
+      }],
+    });
+    expect(result).toMatchObject({ ok: true });
+  });
+
+  it("mover una sección ya no descarta la página", async () => {
+    const result = await deliverAfter({
+      operations: [{ op: "move_section", targetId: "ol-features-2", afterTargetId: null }],
+    });
+    expect(result).toMatchObject({ ok: true });
+  });
+
+  it("quitar una sección ya no descarta la página", async () => {
+    // Cinco secciones para que quitar una no baje del mínimo de tres.
+    const sandbox = createCreativeSandbox(sealedCandidate(), makeDeps());
+    await sandbox.applyPatch({ operations: [{ op: "insert_section", afterTargetId: "ol-hero-1", role: "gallery", html: "<section><h2>Obra</h2></section>" }] });
+    const applied = await sandbox.applyPatch({ operations: [{ op: "remove_section", targetId: "ol-features-2" }] });
+    expect(applied).toMatchObject({ ok: true });
+    const { validateAiCompositionDelivery } = await import("./ai-composition-delivery");
+    const current = sandbox.current();
+    expect(validateAiCompositionDelivery({ html: current.html, visualEngine: current.visualEngine, leaksAfter: 0 })).toMatchObject({ ok: true });
+  });
+
+  it("niega la operación que dejaría la página sin composición, en vez de perderla al final", async () => {
+    const sandbox = createCreativeSandbox(sealedCandidate(), makeDeps());
+    await expect(sandbox.applyPatch({ operations: [{ op: "remove_section", targetId: "ol-features-2" }] })).resolves.toMatchObject({ ok: true });
+    // Quedan tres: la siguiente sí rompería la prueba de originalidad.
+    await expect(sandbox.applyPatch({ operations: [{ op: "remove_section", targetId: "ol-hero-1" }] })).resolves.toMatchObject({ ok: false });
   });
 });
