@@ -93,6 +93,7 @@
     "billing:smoke": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/billing-smoke.ts",
     "sections:seed": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/sections-seed.ts",
     "explore:seed-smoke": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/explore-seed-smoke.ts",
+    "sections:reclassify-navbars": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/sections-reclassify-navbars.ts",
     "sections:count": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/count-sections.ts",
     "sections:backfill-scope": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/sections-backfill-scope.ts",
     "sections:backfill-host-adopt": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/sections-backfill-host-adopt.ts",
