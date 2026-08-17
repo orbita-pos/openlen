@@ -54,16 +54,31 @@ export function matchDeterministicNiche(brief: string): { candidate: AiHybridNic
   return { candidate: ranked.candidate, score: ranked.score };
 }
 
-const SPANISH = /\b(?:para|crea|página|pagina|sitio|necesito|quiero|mi|una|con)\b/i;
+// Los acentos y la puntuación invertida son evidencia dura; la lista de
+// palabras sola dejaba pasar "Clínica dental familiar en Coyoacán" como inglés.
+const SPANISH_MARKS = /[áéíóúñÑü¿¡]/i;
+const SPANISH_WORDS = /\b(?:para|crea|página|pagina|sitio|necesito|quiero|mi|una|con|los|las|del|nuestro|nuestra|somos|tenemos|vendemos|atendemos)\b/i;
+
+/** El idioma es del brief, nunca de la ficha que se le parezca. Una página en
+ *  español que dice `lang="en"` le da al lector de pantalla la voz equivocada y
+ *  hace que el navegador ofrezca traducirla al idioma en el que ya está. */
+function languageOf(brief: string): "es" | "en" {
+  return SPANISH_MARKS.test(brief) || SPANISH_WORDS.test(brief) ? "es" : "en";
+}
 
 // A brief no reviewed niche covers gets a conservative generic intent. Borrowing
 // the top cohort row at score 0 is how eval fixtures reached real pages.
 export function buildDeterministicIntent(brief: string): IntentAnalysis {
+  const language = languageOf(brief);
   const match = matchDeterministicNiche(brief);
-  if (match.score > 0) return match.candidate.intent;
+  if (match.score > 0) {
+    return match.candidate.intent.language === language
+      ? match.candidate.intent
+      : IntentAnalysisSchema.parse({ ...match.candidate.intent, language });
+  }
   return IntentAnalysisSchema.parse({
     schemaVersion: "intent-analysis/1.0",
-    language: SPANISH.test(brief) ? "es" : "en",
+    language,
     functional: {
       siteType: "marketing",
       requiredSections: ["header", "hero", "features", "call_to_action", "footer"],

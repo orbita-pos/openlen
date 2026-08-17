@@ -151,3 +151,31 @@ describe("a user's page is never named after a fixture", () => {
     expect(copy.business_name).toBe("El Umbral");
   });
 });
+
+describe("el idioma sale del brief, no de la ficha que se le parece", () => {
+  const language = (brief: string) => buildDeterministicIntent(brief).language;
+
+  it.each([
+    ["Clínica dental familiar en Coyoacán. Atendemos a niños y adultos: limpiezas y ortodoncia."],
+    ["Tostador de café de especialidad. Vendemos grano fresco y damos catas los sábados."],
+    ["¡Bienvenidos! Taller de reparación de relojes mecánicos con 20 años de oficio."],
+  ])("lee español en %s", (brief) => {
+    expect(language(brief)).toBe("es");
+  });
+
+  it.each([
+    ["Build a landing page for my watch repair shop in Brooklyn."],
+    ["A family dental clinic. We treat kids and adults: cleanings, braces, whitening."],
+  ])("lee inglés en %s", (brief) => {
+    expect(language(brief)).toBe("en");
+  });
+
+  it("no hereda el idioma de la ficha aunque el brief la haya emparejado", () => {
+    // El mismo negocio, escrito en los dos idiomas: la ficha que gane el
+    // solapamiento es la misma, y aun así cada página debe hablar lo suyo.
+    const es = "Una plataforma infantil para colorear, jugar y crear historias, con minijuegos y cuentos ilustrados.";
+    const en = "A kids platform for coloring, playing and creating stories, with minigames and illustrated tales.";
+    expect(language(es)).toBe("es");
+    expect(language(en)).toBe("en");
+  });
+});
