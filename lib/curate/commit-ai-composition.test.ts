@@ -65,3 +65,32 @@ describe("commitAiCompositionDocument", () => {
     expect(emitPreview).not.toHaveBeenCalled();
   });
 });
+
+describe("el flag del módulo, que es lo que hace que el horneado lo cablee", () => {
+  const WITH_BAND = '<html><body><section><div data-ol-bookings-section></div></section></body></html>';
+
+  function engine(html: string) {
+    return {
+      schemaVersion: "visual-engine-project/1.0", route: "section_composition", templateId: null,
+      compositionManifest: { resultCode: "composed", outputHash: sha256(html) },
+    } as unknown as Extract<VisualEngineProjectMetadata, { route: "section_composition" }>;
+  }
+
+  it("enciende reservas cuando la página trae la banda", async () => {
+    let saved: Record<string, unknown> | null = null;
+    await commitAiCompositionDocument({ html: WITH_BAND, visualEngine: engine(WITH_BAND) }, {
+      persist: async (data) => { saved = data as unknown as Record<string, unknown>; },
+      emitPreview: () => {},
+    });
+    expect(saved).toMatchObject({ settings: { bookings: { enabled: true } } });
+  });
+
+  it("no escribe settings cuando no hay nada que encender", async () => {
+    let saved: Record<string, unknown> | null = null;
+    await commitAiCompositionDocument({ html: HTML, visualEngine: metadata() }, {
+      persist: async (data) => { saved = data as unknown as Record<string, unknown>; },
+      emitPreview: () => {},
+    });
+    expect(saved).not.toHaveProperty("settings");
+  });
+});

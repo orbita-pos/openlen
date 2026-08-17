@@ -400,3 +400,61 @@ describe("la dirección elegida desde el brief", () => {
     expect(result.ok && result.html).toBe(SEALED_BASELINE.html);
   });
 });
+
+describe("el puente de módulos en la ruta que no pasa por Gemini", () => {
+  const SEALED = (html: string): SafeCreativeCandidate => ({
+    ...BASELINE, html,
+    visualEngine: { ...(VISUAL_ENGINE as object), compositionManifest: MANIFEST } as never,
+  });
+  const PAGE = '<!doctype html><html lang="es"><head></head><body><section data-openlen-role="hero">a</section><footer data-openlen-role="footer">c</footer></body></html>';
+  const CITAS = { ...INPUT, brief: "Clínica dental familiar. Queremos que la gente agende su cita en línea." };
+
+  function withBaseline(over: Partial<CreativeGenerationDeps> = {}) {
+    return deps({
+      buildBaseline: async () => ({ ok: true, candidate: SEALED(PAGE), intent: { language: "es" } as never, copy: {} as never }),
+      runCreativeSession: async ({ baseline }) => ({ candidate: baseline, changed: false, acceptedMutations: 0, rejections: [], stoppedBy: "finished" }),
+      ...over,
+    });
+  }
+
+  it("deja el hueco que enciende reservas cuando el brief lo pide", async () => {
+    const result = await runCreativeGeneration(CITAS, withBaseline());
+    expect(result.ok && result.html).toContain("data-ol-bookings-section");
+    expect(result.ok && result.html).not.toContain("data-ol-collection-section");
+  });
+
+  it("no inventa módulos cuando el brief no los pide", async () => {
+    // INPUT.brief es una página de terror: ni citas ni catálogo.
+    const result = await runCreativeGeneration(INPUT, withBaseline());
+    expect(result.ok && result.html).toBe(PAGE);
+  });
+
+  it("resella el manifiesto, o la puerta descarta la página por poner una banda", async () => {
+    const { sha256 } = await import("@/lib/generation/content-hash");
+    const validateDelivery = vi.fn(({ html, visualEngine }: { html: string; visualEngine: unknown }) => {
+      const stamped = (visualEngine as { compositionManifest?: { outputHash?: string } })?.compositionManifest?.outputHash;
+      return stamped === sha256(html)
+        ? { ok: true as const, visualEngine }
+        : { ok: false as const, reasonCode: "output_hash_mismatch" as const };
+    }) as never;
+    const result = await runCreativeGeneration(CITAS, withBaseline({ validateDelivery }));
+    expect(result.ok && result.html).toContain("data-ol-bookings-section");
+    // Una sola llamada = la puerta la aceptó a la primera. Sin resellar habría
+    // refusado y reintentado con la baseline.
+    expect(validateDelivery).toHaveBeenCalledTimes(1);
+  });
+
+  it("la baseline también lo lleva cuando la entrega cae hacia atrás", async () => {
+    // La mejorada no pasa la puerta; el módulo no puede perderse en la caída.
+    const improved = SEALED(PAGE.replace("<footer", "<section>mejorado</section><footer"));
+    const validateDelivery = vi.fn(({ html }: { html: string }) => (html.includes("mejorado")
+      ? { ok: false as const, reasonCode: "section_role_coverage_failed" as const }
+      : { ok: true as const, visualEngine: {} })) as never;
+    const result = await runCreativeGeneration(CITAS, withBaseline({
+      runCreativeSession: async () => ({ candidate: improved, changed: true, acceptedMutations: 1, rejections: [], stoppedBy: "finished" }),
+      validateDelivery,
+    }));
+    expect(result.ok && result.degraded).toBe(true);
+    expect(result.ok && result.html).toContain("data-ol-bookings-section");
+  });
+});

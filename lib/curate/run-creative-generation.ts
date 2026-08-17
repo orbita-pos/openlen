@@ -9,6 +9,7 @@ import type { CreativeSessionResult } from "./deepseek-creative-session";
 import type { CreativeDirection } from "@/lib/generation/creative-contracts";
 import { adoptModelPalette } from "./adopt-model-palette";
 import { applyCreativeDirection } from "./apply-creative-direction";
+import { insertModulePlaceholders, modulesFromBrief } from "./module-placeholders";
 import { isolateModelTokens } from "./isolate-model-tokens";
 import { repairInvertedSurfaces } from "./repair-inverted-surfaces";
 
@@ -242,13 +243,39 @@ export async function runCreativeGeneration(
     }
   };
 
-  let chosen = lastKnownGood;
+  // El puente de módulos. Va aquí y no antes porque se aplica a la página que
+  // de verdad se entrega, sea la mejorada o la baseline: si sólo lo llevara la
+  // mejorada, una entrega que cae hacia atrás perdería el módulo en silencio.
+  const modules = modulesFromBrief(input.brief);
+  const withModules = (candidate: SafeCreativeCandidate): SafeCreativeCandidate => {
+    if (modules.length === 0) return candidate;
+    const html = insertModulePlaceholders(candidate.html, modules);
+    if (html === candidate.html) return candidate;
+    try {
+      return {
+        ...candidate,
+        html,
+        visualEngine: sealAiCompositionOutput(candidate.visualEngine, html) as SafeCreativeCandidate["visualEngine"],
+      };
+    } catch {
+      // Un manifiesto que no se puede resellar cuesta el módulo, nunca la
+      // página: la puerta compara sha256(html) y devolvería la baseline entera.
+      deps.recordDegraded?.("delivery_gate", "module_placeholder_unsealable");
+      return candidate;
+    }
+  };
+
+  // La identidad se compara ANTES de insertar: con el hueco puesto todo
+  // candidato es un objeto nuevo, y el reintento se dispararía siempre.
+  let candidate = lastKnownGood;
+  let chosen = withModules(candidate);
   let validated = deliver(chosen);
-  if (!validated.ok && chosen !== baseline.candidate) {
+  if (!validated.ok && candidate !== baseline.candidate) {
     // An improvement that cannot ship must not cost the page the baseline
     // already earned.
     deps.recordDegraded?.("delivery_gate", validated.reasonCode);
-    chosen = baseline.candidate;
+    candidate = baseline.candidate;
+    chosen = withModules(candidate);
     degraded = true;
     validated = deliver(chosen);
   }
