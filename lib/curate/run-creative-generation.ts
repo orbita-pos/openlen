@@ -2,10 +2,11 @@ import type { BusinessProfileData } from "@/lib/business-profiles/types";
 import type { IntentAnalysis } from "@/lib/generation/contracts";
 import type { VisualEngineProjectMetadata } from "@/lib/projects/types";
 import type { SectionRecord } from "@/lib/sections/store";
-import type { validateAiCompositionDelivery } from "./ai-composition-delivery";
+import { sealAiCompositionOutput, type validateAiCompositionDelivery } from "./ai-composition-delivery";
 import type { buildCreativeBaseline, SafeCreativeCandidate } from "./creative-baseline";
 import type { AdvisoryReviewResult } from "./advisory-visual-review";
 import type { CreativeSessionResult } from "./deepseek-creative-session";
+import { adoptModelPalette } from "./adopt-model-palette";
 
 export interface CreativeGenerationInput {
   readonly projectId: string;
@@ -111,7 +112,42 @@ export async function runCreativeGeneration(
       baseline: lastKnownGood,
       intent: baseline.intent,
     });
+    // The model redesigned with its OWN palette while <html> still carried the
+    // direction's, so a section it painted met a library fragment reading
+    // --ol-* and the seam showed. The theme drops to the model's values here —
+    // before the review and the delivery gate, so what they judge is what
+    // ships.
+    //
+    // The manifest is RESEALED, and that is not optional: the delivery gate
+    // compares sha256(html) against manifest.outputHash, so touching the bytes
+    // without restamping makes the gate refuse the improved page and fall back
+    // to the baseline — the entire creative session discarded, reported as
+    // `delivered`. Same seal `quick-visual-repair` uses for the same reason.
+    //
+    // The object identity is preserved when nothing was adopted, because the
+    // fallback below distinguishes candidates by reference and a fresh object
+    // would make an unchanged session log a delivery_gate degradation it never
+    // suffered.
     lastKnownGood = creative.candidate;
+    const adoptedHtml = adoptModelPalette(creative.candidate.html);
+    if (adoptedHtml !== creative.candidate.html) {
+      try {
+        lastKnownGood = {
+          ...creative.candidate,
+          html: adoptedHtml,
+          visualEngine: sealAiCompositionOutput(
+            creative.candidate.visualEngine,
+            adoptedHtml,
+          ) as SafeCreativeCandidate["visualEngine"],
+        };
+      } catch {
+        // Adoption is cosmetic. Resealing validates the manifest, and a
+        // manifest we cannot reseal must cost the page its seam, never its
+        // redesign — the enclosing catch would otherwise drop the whole
+        // creative session back to the baseline over a colour.
+        deps.recordDegraded?.("creative_session", "palette_adoption_unavailable");
+      }
+    }
     if (!creative.changed) {
       degraded = true;
       deps.recordDegraded?.("creative_session", creative.stoppedBy);

@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import type { SafeCreativeCandidate } from "./creative-baseline";
 import { runCreativeGeneration, type CreativeGenerationDeps } from "./run-creative-generation";
+import { SECTION_COMPOSITION_MANIFEST_VERSION } from "@/lib/generation/section-composition-contracts";
 
 const BASELINE_HTML = "<!doctype html><html><body><section>baseline</section></body></html>";
 const IMPROVED_HTML = "<!doctype html><html><body><section>improved</section></body></html>";
@@ -163,5 +164,73 @@ describe("creative generation orchestration", () => {
     const runCreativeSession = vi.fn(async (_input: { baseline: SafeCreativeCandidate; brief: string }) => ({ candidate: IMPROVED, changed: true, acceptedMutations: 1, rejections: [], stoppedBy: "finished" as const }));
     await runCreativeGeneration(INPUT, deps({ runCreativeSession }));
     expect(runCreativeSession.mock.calls[0][0]).toMatchObject({ baseline: BASELINE, brief: INPUT.brief });
+  });
+});
+
+describe("model palette adoption", () => {
+  // The model redesigns with its own tokens while <html> keeps the direction's,
+  // so a section it painted meets a library fragment reading --ol-* and the
+  // seam shows. The theme drops to the model's values — but the delivery gate
+  // compares sha256(html) against manifest.outputHash, so the bytes cannot move
+  // without resealing.
+  const THEMED = '<!doctype html><html class="dark" style="--ol-bg:#09090B"><head>'
+    + "<style>:root{--bg:#070606}</style></head><body><section>improved</section></body></html>";
+  const H = (c: string) => `sha256:${c.repeat(64)}`;
+  // A real manifest: `sealAiCompositionOutput` re-parses it, so a stub shape
+  // would only prove the fail-soft path.
+  const MANIFEST = {
+    schemaVersion: SECTION_COMPOSITION_MANIFEST_VERSION,
+    intentHash: H("a"), creativeDirectionHash: H("b"), inventoryHash: H("c"),
+    orderedRoles: ["hero"], selectedSectionIds: ["hero-one"], selectedContentHashes: ["d".repeat(12)],
+    selectedSourceKinds: ["manual"], selectedSourceTemplateIds: [null],
+    selectedSourceBandOrdinals: [null], selectedStructuralFingerprints: [H("e")],
+    compatibilityRuleIds: ["section_component:hero"], outputHash: null, resultCode: "composed",
+  };
+  const themedEngine = { ...(VISUAL_ENGINE as object), compositionManifest: MANIFEST } as never;
+  const themedCandidate: SafeCreativeCandidate = { ...IMPROVED, html: THEMED, visualEngine: themedEngine };
+
+  it("drops the page theme to the palette the model painted with", async () => {
+    const result = await runCreativeGeneration(INPUT, deps({
+      runCreativeSession: async () => ({ candidate: themedCandidate, changed: true, acceptedMutations: 2, rejections: [], stoppedBy: "finished" }),
+    }));
+
+    expect(result.ok).toBe(true);
+    expect(result.ok && result.html).toContain("--ol-bg:#070606");
+  });
+
+  it("reseals the manifest, or the gate discards the whole session in silence", async () => {
+    // Without the reseal this delivers the BASELINE: hash mismatch → refused →
+    // fall back → still reported ok. The redesign the user paid for, gone, and
+    // nothing in the result says so.
+    const { sha256 } = await import("@/lib/generation/content-hash");
+    const validateDelivery = vi.fn(({ html, visualEngine }: { html: string; visualEngine: unknown }) => {
+      const stamped = (visualEngine as { compositionManifest?: { outputHash?: string } })?.compositionManifest?.outputHash;
+      return stamped === sha256(html)
+        ? { ok: true as const, visualEngine }
+        : { ok: false as const, reasonCode: "output_hash_mismatch" as const };
+    }) as never;
+
+    const result = await runCreativeGeneration(INPUT, deps({
+      runCreativeSession: async () => ({
+        candidate: {
+          ...themedCandidate,
+          visualEngine: { ...(VISUAL_ENGINE as object), compositionManifest: { ...MANIFEST, outputHash: sha256(THEMED) } } as never,
+        },
+        changed: true, acceptedMutations: 2, rejections: [], stoppedBy: "finished",
+      }),
+      validateDelivery,
+    }));
+
+    expect(result.ok).toBe(true);
+    expect(result.ok && result.html).toContain("--ol-bg:#070606");
+    expect(result.ok && result.degraded).toBe(false);
+  });
+
+  it("keeps the candidate untouched when the model painted no palette", async () => {
+    const recordDegraded = vi.fn();
+    const result = await runCreativeGeneration(INPUT, deps({ recordDegraded }));
+
+    expect(result.ok && result.html).toBe(IMPROVED_HTML);
+    expect(recordDegraded).not.toHaveBeenCalledWith("delivery_gate", expect.anything());
   });
 });
