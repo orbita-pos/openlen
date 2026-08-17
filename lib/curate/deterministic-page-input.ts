@@ -119,9 +119,13 @@ function titleFromBrief(brief: string, language: "es" | "en"): string {
 
 /** What this business does, in its own words. The first clause of the brief is
  *  the user's description of themselves; a taxonomy slug is ours about someone
- *  else. Bounded so it stays a label, not a paragraph. */
+ *  else. Bounded so it stays a label, not a paragraph.
+ *
+ *  The comma matters: this string is also the page's headline, and "Hotel
+ *  boutique en Valle de Bravo, ocho habitaciones frente al lago" set in a
+ *  display face is four lines of wall. Up to the first comma it is a headline. */
 function industryFromBrief(brief: string, language: "es" | "en"): string {
-  const first = brief.trim().replace(/\s+/g, " ").split(/[.;]/)[0]?.trim() ?? "";
+  const first = brief.trim().replace(/\s+/g, " ").split(/[.;,]/)[0]?.trim() ?? "";
   if (first.length >= 3) return first.slice(0, 80);
   return language === "es" ? "Negocio" : "Business";
 }

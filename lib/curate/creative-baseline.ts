@@ -12,7 +12,9 @@ import type { VisualEngineProjectMetadata } from "@/lib/projects/types";
 import type { SectionRecord } from "@/lib/sections/store";
 import type { BusinessProfileData } from "@/lib/business-profiles/types";
 import type { ExtractedBusinessData } from "@/lib/style-match/autofill/types";
+import type { CanonicalSectionRole } from "@/lib/generation/structural-taxonomy";
 import { buildDeterministicIntent, buildDeterministicPageCopy } from "./deterministic-page-input";
+import { sectionRoleLabel } from "./section-role-labels";
 import { finalizeComposedDocument } from "./finalize-composed-document";
 
 const PROMPT_VERSION = "creative-baseline/1.0";
@@ -64,27 +66,99 @@ function present(values: readonly (string | null | undefined)[]): string[] {
   return values.filter((value): value is string => typeof value === "string" && value.trim().length > 0);
 }
 
-function roleCopy(role: string, copy: ExtractedBusinessData): string[] {
-  const tagline = copy.tagline_es || copy.tagline_en || copy.pitch || copy.business_name;
-  const features = present(copy.features.flatMap((feature) => [feature.title, feature.desc]));
-  if (role === "header") return present([copy.business_name, copy.cta_primary]);
-  if (role === "hero") return present([tagline, copy.pitch, copy.cta_primary, copy.cta_secondary]);
-  if (role === "footer") return present([copy.business_name, copy.cta_secondary]);
-  return features.length > 0 ? features : present([tagline, copy.pitch]);
+const HEADING_TAGS = new Set(["h1", "h2", "h3", "h4"]);
+const ACTION_TAGS = new Set(["a", "button"]);
+
+/**
+ * Qué texto le toca a cada hueco. El ELEMENTO decide el largo, el ROL decide el
+ * contenido — una sola lista ciclada ponía el brief entero de 240 caracteres
+ * dentro de un `<h1>` y repetía "Comenzar · Hotel Valle · Comenzar" por toda la
+ * barra de navegación.
+ */
+function roleCopy(
+  role: string,
+  copy: ExtractedBusinessData,
+  navLabels: readonly string[],
+): { heading: string[]; label: string[]; body: string[]; action: string[] } {
+  const tagline = copy.tagline_es || copy.tagline_en || copy.business_name;
+  const titles = present(copy.features.map((feature) => feature.title));
+  const descriptions = present(copy.features.map((feature) => feature.desc));
+  const actions = present([copy.cta_primary, copy.cta_secondary]);
+
+  if (role === "header") {
+    // Los enlaces de la barra son las secciones que la página SÍ tiene, no la
+    // marca repetida: un menú que dice el nombre del negocio cuatro veces no es
+    // un menú. El primero es la marca, porque el logotipo de una barra es un
+    // enlace y si no se le nombra sale llamándose "Presentación".
+    return {
+      heading: present([copy.business_name]),
+      label: present([copy.business_name]),
+      body: [],
+      action: present([copy.business_name, ...navLabels, ...actions]),
+    };
+  }
+  if (role === "hero") {
+    // El titular es lo que el negocio dice ser en su propia primera frase,
+    // acotada; el brief completo baja al párrafo, que es donde cabe.
+    return {
+      heading: present([copy.industry, copy.business_name]),
+      label: present([tagline]),
+      body: present([copy.pitch]),
+      action: actions,
+    };
+  }
+  if (role === "footer") {
+    return { heading: present([copy.business_name]), label: present([tagline]), body: present([tagline]), action: actions };
+  }
+  return {
+    heading: titles.length > 0 ? titles : present([tagline]),
+    label: titles.length > 0 ? titles : present([tagline]),
+    body: descriptions.length > 0 ? descriptions : present([copy.pitch]),
+    action: actions,
+  };
 }
 
 /** Removes donor text rather than selectively patching it: every visible leaf
  * under a role gets local copy, so no template sentence can survive. */
-function fillSectionLocally(section: HTMLElement, role: string, copy: ExtractedBusinessData): number {
-  const values = roleCopy(role, copy);
-  if (values.length === 0) return 0;
-  const leaves = section.querySelectorAll(LEAF_SELECTOR)
-    .filter((node) => node.querySelector(LEAF_SELECTOR) === null);
+function fillSectionLocally(
+  section: HTMLElement,
+  role: string,
+  copy: ExtractedBusinessData,
+  navLabels: readonly string[],
+): number {
+  const buckets = roleCopy(role, copy, navLabels);
+  const candidates = section.querySelectorAll(LEAF_SELECTOR);
+  const leaves = candidates.filter((node) => node.querySelector(LEAF_SELECTOR) === null);
+  // `<h1>Una vida <span>X</span> te espera.</h1>`: sólo el span era hoja, así
+  // que "Una vida" y "te espera." sobrevivían — la frase del donante partida en
+  // dos alrededor de nuestro texto. El hijo con estilo es un hueco; el texto
+  // suelto del padre es copia ajena y se va.
+  for (const parent of candidates) {
+    if (parent.querySelector(LEAF_SELECTOR) === null) continue;
+    for (const child of [...parent.childNodes]) {
+      if (child.nodeType === 3 && child.rawText.trim().length > 0) parent.removeChild(child);
+    }
+  }
+  const used = { heading: 0, label: 0, body: 0, action: 0 };
   let applied = 0;
-  for (let index = 0; index < leaves.length; index += 1) {
-    const text = values[index % values.length] ?? copy.business_name;
+  for (const leaf of leaves) {
+    const tag = leaf.rawTagName.toLowerCase();
+    // Un <span> dentro de un <h1> es el titular, no un párrafo: clasificarlo
+    // por su propia etiqueta le metía el brief de 240 caracteres al título.
+    // Un <span> suelto es una pastilla o un antetítulo — siempre corto.
+    const kind = HEADING_TAGS.has(tag) || (tag === "span" && leaf.closest("h1,h2,h3,h4") !== null)
+      ? "heading"
+      : ACTION_TAGS.has(tag) ? "action"
+      : tag === "span" ? "label"
+      : "body";
+    // Un cubo vacío cae al que siempre tiene algo antes que dejar pasar el
+    // texto del donante: un hueco sin rellenar es una frase de otra empresa.
+    const pool = buckets[kind].length > 0 ? buckets[kind] : buckets.body.length > 0 ? buckets.body : buckets.heading;
+    if (pool.length === 0) continue;
+    const text = pool[used[kind] % pool.length];
+    used[kind] += 1;
     if (!text) continue;
-    leaves[index].set_content(escapeHtml(text));
+    leaf.set_content(escapeHtml(text));
     applied += 1;
   }
   return applied;
@@ -100,13 +174,25 @@ function targetId(role: string, ordinal: number): string {
 
 function fillLocally(html: string, copy: ExtractedBusinessData): { html: string; appliedOps: number } {
   const document = parse(html);
+  const sections = document.querySelectorAll("[data-openlen-role]");
+  const language = copy.language_detected === "en" ? "en" : "es";
+  // El menú se arma con las secciones que la página tiene de verdad, así que se
+  // leen todas antes de rellenar ninguna.
+  const navLabels = sections
+    .map((section) => section.getAttribute("data-openlen-role") ?? "")
+    // Una llamada a la acción no es una entrada de menú, y su etiqueta ("Da el
+    // paso") se lee como una frase, no como un destino.
+    .filter((role) => role && !["header", "footer", "call_to_action", "hero"].includes(role))
+    .map((role) => sectionRoleLabel(role as CanonicalSectionRole, language))
+    .filter((label): label is string => Boolean(label));
+
   let appliedOps = 0;
   let ordinal = 0;
-  for (const section of document.querySelectorAll("[data-openlen-role]")) {
+  for (const section of sections) {
     const role = section.getAttribute("data-openlen-role") ?? "";
     ordinal += 1;
     section.setAttribute("data-openlen-edit-id", targetId(role, ordinal));
-    appliedOps += fillSectionLocally(section, role, copy);
+    appliedOps += fillSectionLocally(section, role, copy, navLabels);
   }
   return { html: document.toString(), appliedOps };
 }

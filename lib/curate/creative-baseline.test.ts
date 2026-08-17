@@ -282,3 +282,63 @@ describe("the baseline's own door", () => {
     expect(result.candidate.visualEngine.compositionManifest.outputHash).toBe(sha256(result.candidate.html));
   });
 });
+
+describe("el piso: qué texto cae en qué hueco", () => {
+  // Las formas que rompían: un titular con la frase del donante partida
+  // alrededor de un span, una barra con cuatro enlaces, y una pastilla suelta.
+  const DONOR = `<!doctype html><html><head></head><body>
+<header data-openlen-role="header">
+  <a href="#top">MORADA</a>
+  <nav><a href="#a">Obra</a><a href="#b">Estudio</a><a href="#c">Contacto</a></nav>
+  <a href="#cta" class="btn">Agendar</a>
+</header>
+<section data-openlen-role="hero">
+  <span class="pill">Desde 2009</span>
+  <h1>Una vida <span>de concreto</span> te espera.</h1>
+  <p>Proyectos residenciales en concreto aparente desde 2009.</p>
+  <a href="#x">Ver obra</a>
+</section>
+<section data-openlen-role="features"><h2>Servicios MORADA</h2><p>Obra nueva</p></section>
+<footer data-openlen-role="footer"><p>© MORADA STUDIO</p></footer>
+</body></html>`;
+
+  async function build() {
+    const result = await buildCreativeBaseline(INPUT, makeDeps({ composedHtml: DONOR }));
+    if (!result.ok) throw new Error(`baseline falló: ${result.code}`);
+    return result.candidate.html;
+  }
+
+  it("no deja sobrevivir la frase del donante partida alrededor de un span", async () => {
+    const html = await build();
+    expect(html).not.toContain("Una vida");
+    expect(html).not.toContain("te espera");
+  });
+
+  it("no mete el brief entero en un titular", async () => {
+    const html = await build();
+    const h1 = /<h1[^>]*>([\s\S]*?)<\/h1>/i.exec(html)?.[1] ?? "";
+    expect(h1.replace(/<[^>]*>/g, "").trim().length).toBeLessThanOrEqual(80);
+  });
+
+  it("la barra lleva la marca primero y luego las secciones, no la marca cuatro veces", async () => {
+    const html = await build();
+    const header = /<header[\s\S]*?<\/header>/i.exec(html)?.[0] ?? "";
+    const links = [...header.matchAll(/<a[^>]*>([\s\S]*?)<\/a>/gi)].map((m) => m[1].replace(/<[^>]*>/g, "").trim());
+    expect(links[0]).toBe("Mundo Pincel");
+    expect(new Set(links).size).toBeGreaterThan(1);
+  });
+
+  it("una pastilla suelta recibe algo corto, no el párrafo", async () => {
+    const html = await build();
+    const pill = /<span class="pill">([\s\S]*?)<\/span>/i.exec(html)?.[1] ?? "";
+    expect(pill.length).toBeGreaterThan(0);
+    expect(pill.length).toBeLessThanOrEqual(60);
+  });
+
+  it("el párrafo sí recibe el texto largo", async () => {
+    const html = await build();
+    const hero = /data-openlen-role="hero"[\s\S]*?<\/section>/i.exec(html)?.[0] ?? "";
+    const p = /<p[^>]*>([\s\S]*?)<\/p>/i.exec(hero)?.[1] ?? "";
+    expect(p.length).toBeGreaterThan(40);
+  });
+});
