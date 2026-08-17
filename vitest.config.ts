@@ -66,6 +66,8 @@ export default defineConfig({
       "lib/generation/**/*.test.ts",
       "lib/html-gate/**/*.test.ts",
       "lib/ingestion/**/*.test.ts",
+      // El rellenador escribia copia dentro de elementos aria-hidden.
+      "lib/style-match/autofill/decorative-ops.test.ts",
       "lib/templates/visual-metadata.test.ts",
       "lib/templates/store-visual-metadata.test.ts",
       "lib/templates/suggest-visual-metadata.test.ts",

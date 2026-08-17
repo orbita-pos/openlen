@@ -3,6 +3,7 @@
 // non-streaming generateContent call; onChunk fires once on completion.
 
 import { applyOps, parseOps, stripOpIds, tagWithOpIds } from "@/lib/html-ops";
+import { dropDecorativeOps } from "./decorative-ops";
 import { getCachedFill, hashFillInput, setCachedFill } from "./cache";
 import { sanitizeFilledHtml } from "./sanitize";
 import type { ExtractedBusinessData } from "./types";
@@ -385,7 +386,13 @@ export async function fillTemplate(
     };
   }
 
-  const applyResult = applyOps(taggedHtml, ops);
+  // `aria-hidden="true"` is the author saying "this is not content". The model
+  // wrote the business name into a one-glyph circle and the CTA label into a
+  // card's arrow, so the page showed text it declared did not exist — clipped
+  // to "Col egi" and stranded at the right edge. The filler is a model, so a
+  // rule in its prompt is a request; dropping the op is the same rule as an
+  // invariant.
+  const applyResult = applyOps(taggedHtml, dropDecorativeOps(ops, taggedHtml));
   if (!applyResult.html) {
     return {
       ok: false,
