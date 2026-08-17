@@ -152,3 +152,39 @@ describe("adoptModelPalette — a name can invert a role", () => {
     expect(olToken(out, "--ol-accent")).toBe("#c02030");
   });
 });
+
+describe("adoptModelPalette — background and foreground are one decision", () => {
+  // Measured on the comedy-club run: the model designed a DARK page
+  // (`--olm-ink:#120d0b`) while the direction said cream. The mode guard
+  // refused its background, correctly — and then the foreground it chose FOR
+  // that background was adopted anyway, because only the background had a
+  // guard. The page shipped `--ol-bg:#FFF8E8` with `--ol-fg:#f4e9d4`: cream
+  // text on cream paper.
+  //
+  // A foreground picked for a background we refused describes nothing. Partial
+  // adoption is worse than none.
+  const olToken = (html: string, name: string) =>
+    html.match(new RegExp(`${name}:\s*([^;"]*)`))?.[1]?.trim() ?? null;
+
+  const contradicting = `<!doctype html><html class="cream" style="--ol-bg:#FFF8E8;--ol-fg:#2D2018">
+<head><style>:root{--ink:#120d0b;--paper:#f4e9d4}
+body{background:var(--ink);color:var(--paper)}</style></head><body>x</body></html>`;
+
+  it("keeps both when the background is refused", () => {
+    const out = adoptModelPalette(contradicting);
+
+    expect(olToken(out, "--ol-bg")).toBe("#FFF8E8");
+    expect(olToken(out, "--ol-fg")).toBe("#2D2018");
+  });
+
+  it("still takes both when the background is accepted", () => {
+    const agreeing = `<!doctype html><html class="dark" style="--ol-bg:#09090B;--ol-fg:#F7F1ED">
+<head><style>:root{--ink:#120d0b;--paper:#f4e9d4}
+body{background:var(--ink);color:var(--paper)}</style></head><body>x</body></html>`;
+
+    const out = adoptModelPalette(agreeing);
+
+    expect(olToken(out, "--ol-bg")).toBe("#120d0b");
+    expect(olToken(out, "--ol-fg")).toBe("#f4e9d4");
+  });
+});

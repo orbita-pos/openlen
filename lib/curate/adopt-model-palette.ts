@@ -153,12 +153,25 @@ export function adoptModelPalette(html: string): string {
   // A dark page whose model background reads light (a mistake, or an injected
   // value) would turn every library fragment white under text written for
   // black. The mode the page declares is the contract; a background that
-  // breaks it is not adopted, and neither is anything else in that pass.
+  // breaks it is not adopted.
+  //
+  // And the foreground goes with it. They are ONE decision: a text colour the
+  // model chose FOR a background we just refused describes nothing, and
+  // keeping it is how the comedy-club run shipped `--ol-bg:#FFF8E8` with
+  // `--ol-fg:#f4e9d4` — cream on cream. The model had designed a dark page
+  // against a cream direction; the guard caught its background and let its
+  // foreground through. Partial adoption is worse than none.
   const bg = adopted.get("--ol-bg");
   if (bg) {
     const declaredDark = /\bclass\s*=\s*"[^"]*\bdark\b/i.test(openTag);
     const l = lightness(bg);
-    if (l !== null && declaredDark !== l < 0.5) adopted.delete("--ol-bg");
+    if (l !== null && declaredDark !== l < 0.5) {
+      adopted.delete("--ol-bg");
+      adopted.delete("--ol-fg");
+    }
+  } else {
+    // No background to judge means no ground for its foreground either.
+    adopted.delete("--ol-fg");
   }
   if (adopted.size === 0) return html;
 
