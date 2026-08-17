@@ -457,6 +457,16 @@ VISUAL CONTEXT: the attached image is a full-page render of the CURRENT page (wh
 
   const upstreamAbort = new AbortController();
 
+  // Sin fijarlo, Flash piensa con presupuesto dinámico: medido sobre una página
+  // real de 40KB, 3,251 tokens de pensamiento para producir 208 de edición, y el
+  // usuario mirando la nada 20.3s antes del primer byte. Con 1024 son 9.1s y las
+  // mismas ops. En 0 NO se apaga y ya: el modelo deja de emitir el marcador
+  // `---HTML---` y se pone a conversar, así que el turno entero se pierde.
+  // `auto` devuelve el comportamiento de antes.
+  const raw = process.env.OPENLEN_AIDESIGN_THINKING;
+  const THINKING_BUDGET = raw === "auto" ? undefined
+    : Number.isInteger(Number(raw)) && Number(raw) > 0 ? Number(raw)
+    : 1024;
   const startedAt = Date.now();
   const sse = new ReadableStream<Uint8Array>({
     async start(controller) {
@@ -566,6 +576,7 @@ VISUAL CONTEXT: the attached image is a full-page render of the CURRENT page (wh
             // block in the system prompt that discourages bloat.
             maxOutputTokens: 65_536,
             temperature: 0.8,
+            thinkingBudget: THINKING_BUDGET,
           },
           { signal: upstreamAbort.signal },
         );

@@ -149,4 +149,25 @@ describe("POST /api/templates/ai-design", () => {
     expect(mocks.createVersion).not.toHaveBeenCalled();
     expect(events.some((e) => e.event === "done")).toBe(false);
   });
+
+  it("fija el presupuesto de pensamiento, que es de donde salen los minutos de espera", async () => {
+    // Medido sobre una página real de 40KB: sin fijarlo, 3,251 tokens de
+    // pensamiento para producir 208 de edición y 20.3s hasta el primer byte.
+    mocks.stream.mockReturnValue(modelSays(rewrite("<h1>Hola</h1>")));
+    await readEvents(await call());
+    expect(mocks.stream.mock.calls[0][0]).toMatchObject({ thinkingBudget: 1024 });
+  });
+
+  it("con `auto` vuelve al presupuesto dinámico de antes", async () => {
+    const previous = process.env.OPENLEN_AIDESIGN_THINKING;
+    process.env.OPENLEN_AIDESIGN_THINKING = "auto";
+    try {
+      mocks.stream.mockReturnValue(modelSays(rewrite("<h1>Hola</h1>")));
+      await readEvents(await call());
+      expect((mocks.stream.mock.calls[0][0] as { thinkingBudget?: number }).thinkingBudget).toBeUndefined();
+    } finally {
+      if (previous === undefined) delete process.env.OPENLEN_AIDESIGN_THINKING;
+      else process.env.OPENLEN_AIDESIGN_THINKING = previous;
+    }
+  });
 });
