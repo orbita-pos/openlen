@@ -120,6 +120,17 @@ if (Test-Path "public") {
   Copy-Item -Recurse -Force "public/*" ".next/standalone/public/"
 }
 
+# El file-tracing de Next SIEMPRE omite este manifest, en cada build; no es
+# senal de un bundle corrupto, falta siempre. Se copiaba a mano desde el
+# 2026-08-02 y por tanto se podia olvidar — que es exactamente la clase de paso
+# manual que ya tumbo prod una vez.
+$interceptionManifest = ".next/server/interception-route-rewrite-manifest.js"
+if (Test-Path $interceptionManifest) {
+  Copy-Item -Force $interceptionManifest ".next/standalone/.next/server/"
+} else {
+  Write-Host "    (sin interception-route-rewrite-manifest.js que copiar)"
+}
+
 # Next's Windows file tracer cannot always recreate npm workspace junctions in
 # the standalone tree (EPERM without symlink privileges). Materialize the small
 # JS package wrappers explicitly; step 6.5 builds and adds the Linux .node
