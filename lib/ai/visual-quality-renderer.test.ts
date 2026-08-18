@@ -494,3 +494,35 @@ describe("renderVisualQualityViewports", () => {
     expect(result).toMatchObject({ weakTypographyHierarchy: false, typographyHierarchy: null });
   });
 });
+
+// Con navegador de verdad: el selector es lo que se está probando, así que un
+// evaluate simulado no probaría nada. Las 5 "jerarquías débiles" que salieron
+// midiendo 20 páginas generadas eran esto — el kicker, no el cuerpo.
+describe("qué párrafo es el cuerpo del hero", () => {
+  const page = (ledePx: number) => `<!doctype html><html><head><style>
+    *{box-sizing:border-box}html,body{margin:0;font-family:Arial,sans-serif}
+    .hero{padding:40px 20px}
+    .hero h1{font-size:40px;margin:0}
+    .kicker{font-size:11px;letter-spacing:.2em;text-transform:uppercase}
+    .lede{font-size:${ledePx}px}
+  </style></head><body><main class="hero">
+    <p class="kicker">Club de comedia · CDMX</p>
+    <h1>Risa Brava</h1>
+    <p class="lede">Tres shows a la semana, cero filtros y una barra que nunca duerme, en el corazón de la ciudad.</p>
+  </main></body></html>`;
+
+  it("no confunde el kicker con el cuerpo", async () => {
+    const result = await renderVisualQualityViewports(page(18));
+    expect(result).not.toBeNull();
+    expect(result).toMatchObject({ weakTypographyHierarchy: false, typographyHierarchy: null });
+  }, 30_000);
+
+  it("sigue viendo un cuerpo de verdad ilegible", async () => {
+    const result = await renderVisualQualityViewports(page(11));
+    expect(result).not.toBeNull();
+    expect(result).toMatchObject({
+      weakTypographyHierarchy: true,
+      typographyHierarchy: { rule: "hero_body_too_small", heroBodyFontPx: 11 },
+    });
+  }, 30_000);
+});

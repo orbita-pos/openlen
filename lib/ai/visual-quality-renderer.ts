@@ -232,15 +232,25 @@ async function captureWithPage(
               h1FontPx = value;
             }
           }
-          const heroBody = document.querySelector("[data-openlen-role='hero'] p, main p, body p");
+          // El primer <p> del documento suele ser el kicker o el eyebrow -- una
+          // etiqueta corta que DEBE ser chica, y que la propia guía de diseño
+          // pide escribir. Medirla como si fuera el cuerpo reprobaba páginas
+          // sanas. El cuerpo es el párrafo con más texto de los primeros.
           let heroBodyFontPx: number | null = null;
-          if (heroBody instanceof HTMLElement) {
-            const style = window.getComputedStyle(heroBody);
-            const rect = heroBody.getBoundingClientRect();
+          let longestParagraphChars = 0;
+          const candidates = document.querySelectorAll("[data-openlen-role='hero'] p, main p, body p");
+          for (let index = 0; index < candidates.length && index < 8; index += 1) {
+            const paragraph = candidates[index];
+            if (!(paragraph instanceof HTMLElement)) continue;
+            const style = window.getComputedStyle(paragraph);
+            const rect = paragraph.getBoundingClientRect();
             const value = Number.parseFloat(style.fontSize);
-            if (rect.width > 0 && rect.height > 0 && style.display !== "none" && style.visibility !== "hidden" && Number.isFinite(value) && value >= 0) {
-              heroBodyFontPx = value;
-            }
+            if (rect.width <= 0 || rect.height <= 0 || style.display === "none" || style.visibility === "hidden") continue;
+            if (!Number.isFinite(value) || value < 0) continue;
+            const chars = (paragraph.textContent ?? "").trim().length;
+            if (chars <= longestParagraphChars) continue;
+            longestParagraphChars = chars;
+            heroBodyFontPx = value;
           }
           let componentCount = 0;
           let roundedComponentCount = 0;
