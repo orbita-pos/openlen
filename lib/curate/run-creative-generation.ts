@@ -277,7 +277,7 @@ export async function runCreativeGeneration(
     // Aceptar en la primera ronda de tres es éxito, no degradación: lo que se
     // anota es que el crítico NUNCA firmó, y en cuántas rondas se rindió.
     else if (!reviewed.accepted) {
-      deps.recordDegraded?.("advisory_review", `unaccepted_after_${reviewed.rounds}_of_${profile.reviewRounds}`);
+      deps.recordDegraded?.("advisory_review", `unaccepted_after_${reviewed.rounds}_of_${profile.reviewRounds}_${reviewed.exit}`);
     }
   } catch {
     deps.recordDegraded?.("advisory_review", "internal_error");

@@ -184,4 +184,33 @@ describe("varias rondas de revisión", () => {
     expect(review).toHaveBeenCalledTimes(1);
     expect(result.rounds).toBe(1);
   });
+
+  // Cuatro salidas que antes se veían idénticas en la evidencia («se rindió en
+  // la ronda 1»), y que piden arreglos opuestos: un crítico caído se reintenta,
+  // una reparación que empeora la página se investiga.
+  it.each([
+    ["accepted", {}],
+    ["critic_failed", { review: async () => ({ ok: false as const }) }],
+    ["render_failed", { render: async () => null }],
+    ["repair_unchanged", {
+      review: async () => ({ ok: true as const, accepted: false, issues: ["flojo"] }),
+      repair: async () => ({ candidate: CANDIDATE, changed: false, acceptedMutations: 0, rejections: [], stoppedBy: "finished" as const }),
+    }],
+    ["repair_regressed", {
+      review: async () => ({ ok: true as const, accepted: false, issues: ["flojo"] }),
+      render: vi.fn()
+        .mockResolvedValueOnce({ mobileOverflow: false, invalidGeometry: false })
+        .mockResolvedValueOnce({ mobileOverflow: true, invalidGeometry: false }),
+    }],
+  ])("names %s as the reason the loop ended", async (expected, over) => {
+    const result = await runAdvisoryVisualReview(INPUT, deps(over as Partial<AdvisoryReviewDeps>));
+    expect(result.exit).toBe(expected);
+  });
+
+  it("exhausts every round the level bought before giving up", async () => {
+    const review = vi.fn(async () => ({ ok: true as const, accepted: false, issues: ["flojo"] }));
+    const result = await runAdvisoryVisualReview({ ...INPUT, effort: "high" }, deps({ review }));
+    expect(result.exit).toBe("rounds_exhausted");
+    expect(result.rounds).toBe(effortProfile("high").reviewRounds);
+  });
 });

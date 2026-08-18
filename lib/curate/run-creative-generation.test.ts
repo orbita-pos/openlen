@@ -38,7 +38,7 @@ function deps(over: Partial<CreativeGenerationDeps> = {}): CreativeGenerationDep
   return {
     buildBaseline: async () => ({ ok: true, candidate: BASELINE, intent: { language: "es" } as never, copy: {} as never }),
     runCreativeSession: async () => ({ candidate: IMPROVED, changed: true, acceptedMutations: 2, rejections: [], stoppedBy: "finished" }),
-    runAdvisoryReview: async ({ candidate }) => ({ candidate, reviewed: true, repaired: false, rounds: 1, accepted: true }),
+    runAdvisoryReview: async ({ candidate }) => ({ candidate, reviewed: true, repaired: false, rounds: 1, accepted: true, exit: "accepted" as const }),
     validateDelivery: (({ visualEngine }: { visualEngine: unknown }) => ({ ok: true, visualEngine })) as never,
     ...over,
   };
@@ -75,7 +75,7 @@ describe("creative generation orchestration", () => {
 
   it.each(["qwen_timeout", "qwen_malformed", "qwen_reject"])("delivers the page on %s", async () => {
     const result = await runCreativeGeneration(INPUT, deps({
-      runAdvisoryReview: async ({ candidate }) => ({ candidate, reviewed: false, repaired: false, rounds: 0, accepted: false }),
+      runAdvisoryReview: async ({ candidate }) => ({ candidate, reviewed: false, repaired: false, rounds: 0, accepted: false, exit: "render_failed" as const }),
     }));
     expect(result).toMatchObject({ ok: true });
     expect(result.ok && result.html).toBe(IMPROVED_HTML);
@@ -335,7 +335,7 @@ describe("unreadable text repair", () => {
   });
 
   it("lo que la crítica juzga es lo que se entrega", async () => {
-    const review = vi.fn(async ({ candidate }: { candidate: SafeCreativeCandidate }) => ({ candidate, reviewed: true, repaired: false, rounds: 1, accepted: true }));
+    const review = vi.fn(async ({ candidate }: { candidate: SafeCreativeCandidate }) => ({ candidate, reviewed: true, repaired: false, rounds: 1, accepted: true, exit: "accepted" as const }));
     await runCreativeGeneration(INPUT, await withUnreadable({ runAdvisoryReview: review as never }));
     expect(review.mock.calls[0][0].candidate.html).toContain("color:var(--ol-fg)");
   });

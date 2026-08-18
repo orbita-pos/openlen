@@ -25,6 +25,15 @@ export interface AdvisoryReviewDeps {
   }) => Promise<CreativeSessionResult>;
 }
 
+export type AdvisoryReviewExit =
+  | "accepted"
+  | "rounds_exhausted"
+  | "render_failed"
+  | "critic_failed"
+  | "repair_failed"
+  | "repair_unchanged"
+  | "repair_regressed";
+
 export interface AdvisoryReviewResult {
   readonly candidate: SafeCreativeCandidate;
   readonly reviewed: boolean;
@@ -36,6 +45,10 @@ export interface AdvisoryReviewResult {
    *  éxito; salir pronto porque algo se rompió, no — y sin este campo las dos
    *  salidas son idénticas. */
   readonly accepted: boolean;
+  /** Por qué terminó el bucle. Sin esto, "se rindió en la ronda 1 de 3" no
+   *  distingue un crítico caído de una reparación que empeoró la página, y son
+   *  arreglos opuestos. */
+  readonly exit: AdvisoryReviewExit;
 }
 
 /** Qwen advises; deterministic checks decide. Every branch here returns a
@@ -51,26 +64,27 @@ export async function runAdvisoryVisualReview(
   deps: AdvisoryReviewDeps,
 ): Promise<AdvisoryReviewResult> {
   const profile = effortProfile(input.effort ?? DEFAULT_PAGE_EFFORT);
-  const unchanged = { candidate: input.candidate, reviewed: false, repaired: false, rounds: 0, accepted: false };
+  const unchanged = { candidate: input.candidate, reviewed: false, repaired: false, rounds: 0, accepted: false, exit: "render_failed" as AdvisoryReviewExit };
 
   let current = input.candidate;
   let reviewedAny = false;
   let repairedAny = false;
   let accepted = false;
   let rounds = 0;
+  let exit: AdvisoryReviewExit = "rounds_exhausted";
 
   for (let round = 0; round < profile.reviewRounds; round += 1) {
     let baseline: { mobileOverflow: boolean; invalidGeometry: boolean } | null;
-    try { baseline = await deps.render(current.html); } catch { break; }
-    if (!baseline) break;
+    try { baseline = await deps.render(current.html); } catch { exit = "render_failed"; break; }
+    if (!baseline) { exit = "render_failed"; break; }
 
     let verdict: Awaited<ReturnType<AdvisoryReviewDeps["review"]>>;
-    try { verdict = await deps.review({ html: current.html, brief: input.brief }); } catch { break; }
-    if (!verdict.ok || typeof verdict.accepted !== "boolean" || !Array.isArray(verdict.issues)) break;
+    try { verdict = await deps.review({ html: current.html, brief: input.brief }); } catch { exit = "critic_failed"; break; }
+    if (!verdict.ok || typeof verdict.accepted !== "boolean" || !Array.isArray(verdict.issues)) { exit = "critic_failed"; break; }
 
     reviewedAny = true;
     rounds += 1;
-    if (verdict.accepted) { accepted = true; break; }
+    if (verdict.accepted) { accepted = true; exit = "accepted"; break; }
 
     let repair: CreativeSessionResult;
     try {
@@ -84,19 +98,21 @@ export async function runAdvisoryVisualReview(
         maxTurns: profile.repairTurns,
         candidate: current,
       });
-    } catch { break; }
-    if (!repair.changed) break;
+    } catch { exit = "repair_failed"; break; }
+    if (!repair.changed) { exit = "repair_unchanged"; break; }
 
     // The repaired page must clear the same deterministic bar as the one it
     // replaces, or the previous last-known-good stands.
     let after: { mobileOverflow: boolean; invalidGeometry: boolean } | null;
-    try { after = await deps.render(repair.candidate.html); } catch { break; }
-    if (!after || after.mobileOverflow || after.invalidGeometry) break;
+    try { after = await deps.render(repair.candidate.html); } catch { exit = "repair_regressed"; break; }
+    if (!after || after.mobileOverflow || after.invalidGeometry) { exit = "repair_regressed"; break; }
 
     current = repair.candidate;
     repairedAny = true;
   }
 
-  if (!reviewedAny) return unchanged;
-  return { candidate: current, reviewed: true, repaired: repairedAny, rounds, accepted };
+  // El motivo real viaja también por la salida temprana: si no, un crítico
+  // caído se reporta como un render caído y se investiga lo que no es.
+  if (!reviewedAny) return { ...unchanged, exit };
+  return { candidate: current, reviewed: true, repaired: repairedAny, rounds, accepted, exit };
 }
