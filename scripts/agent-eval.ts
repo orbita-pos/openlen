@@ -216,7 +216,7 @@ async function main(): Promise<void> {
   }
 
   if (!args.yes) {
-    console.log("\nEsto GASTA créditos reales de Gemini. Vuelve a correr con --yes para confirmar.");
+    console.log("\nEsto GASTA dinero real del proveedor que corra el turno. Vuelve a correr con --yes para confirmar.");
     process.exit(2);
   }
 
