@@ -340,6 +340,33 @@ describe("unreadable text repair", () => {
     expect(review.mock.calls[0][0].candidate.html).toContain("color:var(--ol-fg)");
   });
 
+  // El color va EN LÍNEA sobre el elemento medido, y una reparación del modelo
+  // reescribe secciones enteras: se lo lleva por delante. La única de 20
+  // páginas generadas con texto a 1.02:1 fue justo la que pasó por aquí.
+  it("vuelve a medir cuando la revisión reescribió la página", async () => {
+    const review = vi.fn(async ({ candidate }: { candidate: SafeCreativeCandidate }) => ({
+      // El modelo devuelve la sección sin el color en línea que se le había puesto.
+      candidate: { ...candidate, html: UNREADABLE },
+      reviewed: true, repaired: true, rounds: 1, accepted: false, exit: "rounds_exhausted" as const,
+    }));
+    const result = await runCreativeGeneration(INPUT, await withUnreadable({ runAdvisoryReview: review as never }));
+    expect(result.ok).toBe(true);
+    expect(result.ok && result.html).toContain("color:var(--ol-fg)");
+  });
+
+  it("no paga un render de más cuando la revisión no tocó nada", async () => {
+    const renderCandidate = vi.fn(async (html: string) => ({
+      mobileOverflow: false,
+      invalidGeometry: false,
+      unreadableText: [{ probe: probeOf(html, "site-head"), background: "#f4eee2", contrast: 1.01 }],
+    }));
+    const review = vi.fn(async ({ candidate }: { candidate: SafeCreativeCandidate }) => ({
+      candidate, reviewed: true, repaired: false, rounds: 1, accepted: true, exit: "accepted" as const,
+    }));
+    await runCreativeGeneration(INPUT, await withUnreadable({ renderCandidate, runAdvisoryReview: review as never }));
+    expect(renderCandidate).toHaveBeenCalledTimes(1);
+  });
+
   it("lo deja en la bitácora, porque es la única forma de saber cuántas veces pasa", async () => {
     const recordDegraded = vi.fn();
     await runCreativeGeneration(INPUT, await withUnreadable({ recordDegraded }));

@@ -240,28 +240,31 @@ export async function runCreativeGeneration(
   // Se mide y se corrige ANTES de la revisión, no después: lo que Qwen juzga
   // tiene que ser lo que se entrega. Y va aquí, después de adoptar la paleta
   // del modelo, porque hasta ese momento los colores todavía cambian.
-  if (deps.renderCandidate) {
+  const makeLegible = async (candidate: SafeCreativeCandidate): Promise<SafeCreativeCandidate> => {
+    if (!deps.renderCandidate) return candidate;
     try {
-      const legible = await repairUnreadableText(lastKnownGood.html, deps.renderCandidate);
-      if (legible.repaired > 0) {
-        lastKnownGood = {
-          ...lastKnownGood,
-          html: legible.html,
-          visualEngine: sealAiCompositionOutput(
-            lastKnownGood.visualEngine,
-            legible.html,
-          ) as SafeCreativeCandidate["visualEngine"],
-        };
-        // No es una pérdida, es una corrección — pero queda en la bitácora
-        // porque es la única forma de saber cuántas veces el modelo entrega
-        // una página con texto invisible.
-        deps.recordDegraded?.("advisory_review", "unreadable_text_repaired");
-      }
+      const legible = await repairUnreadableText(candidate.html, deps.renderCandidate);
+      if (legible.repaired === 0) return candidate;
+      // No es una pérdida, es una corrección — pero queda en la bitácora
+      // porque es la única forma de saber cuántas veces el modelo entrega
+      // una página con texto invisible.
+      deps.recordDegraded?.("advisory_review", "unreadable_text_repaired");
+      return {
+        ...candidate,
+        html: legible.html,
+        visualEngine: sealAiCompositionOutput(
+          candidate.visualEngine,
+          legible.html,
+        ) as SafeCreativeCandidate["visualEngine"],
+      };
     } catch {
       // Resellar puede fallar; el texto ilegible que quedó lo ve el crítico.
       deps.recordDegraded?.("advisory_review", "unreadable_text_unrepaired");
+      return candidate;
     }
-  }
+  };
+
+  lastKnownGood = await makeLegible(lastKnownGood);
 
   notify(input, "review");
   try {
@@ -273,6 +276,12 @@ export async function runCreativeGeneration(
       effort,
     });
     lastKnownGood = reviewed.candidate;
+    // La corrección de arriba escribe el color EN LÍNEA sobre cada elemento
+    // medido, y una reparación del modelo reescribe secciones enteras: se
+    // lleva esos arreglos por delante. Medido — la única de 20 páginas con
+    // texto a 1.02:1 fue justo la que pasó por aquí. Sólo se vuelve a medir si
+    // la página cambió.
+    if (reviewed.repaired) lastKnownGood = await makeLegible(lastKnownGood);
     if (!reviewed.reviewed) deps.recordDegraded?.("advisory_review", "review_unavailable");
     // Aceptar en la primera ronda de tres es éxito, no degradación: lo que se
     // anota es que el crítico NUNCA firmó, y en cuántas rondas se rindió.
