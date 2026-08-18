@@ -308,7 +308,24 @@ async function captureWithPage(
             let uncertain = false;
             for (let ancestor: HTMLElement | null = node; ancestor; ancestor = ancestor.parentElement) {
               const ancestorStyle = window.getComputedStyle(ancestor);
-              if (ancestorStyle.backgroundImage && ancestorStyle.backgroundImage !== "none") { uncertain = true; break; }
+              // Una foto tapa lo que sea y no se puede juzgar desde el CSS. Un
+              // degradado decorativo casi transparente NO tapa nada, y tratarlo
+              // como incierto silenciaba el hero entero: medido aquí, un patrón
+              // de puntos a 0.05 de alfa escondía un titular a 1.1:1.
+              const ancestorImage = ancestorStyle.backgroundImage;
+              if (ancestorImage && ancestorImage !== "none") {
+                if (ancestorImage.indexOf("url(") !== -1) { uncertain = true; break; }
+                let strongestStop = 0;
+                for (const stop of ancestorImage.match(/rgba?\([^)]*\)/g) ?? []) {
+                  const parts = (RGB_RE.exec(stop) ?? ["", ""])[1]
+                    .split(SEPARATOR_RE).filter((piece) => piece.length > 0).map(Number);
+                  const stopAlpha = parts.length > 3 && Number.isFinite(parts[3]) ? parts[3] : 1;
+                  if (stopAlpha > strongestStop) strongestStop = stopAlpha;
+                }
+                // Sin paradas legibles (colores con nombre, `currentColor`) no
+                // se puede afirmar que sea inocuo.
+                if (strongestStop === 0 || strongestStop > 0.15) { uncertain = true; break; }
+              }
               const painted = (RGB_RE.exec(ancestorStyle.backgroundColor) ?? ["", ""])[1]
                 .split(SEPARATOR_RE).filter((piece) => piece.length > 0).map(Number);
               if (painted.length < 3) continue;

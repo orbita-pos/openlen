@@ -41,3 +41,31 @@ describe("contraste medido en el render", () => {
     expect(after?.unreadableText).toEqual([]);
   }, 90_000);
 });
+
+// Un patrón de puntos decorativo al 5% no tapa nada, pero la guarda "cualquier
+// background-image es incierto" silenciaba el hero entero. Medido en una página
+// generada: titular crema sobre crema a 1.1:1, entregado sin que nadie lo viera.
+const page = (stop: string) => `<!doctype html><html style="--ol-bg:#fbf7f0;--ol-fg:#1e4d3b"><head><style>
+  *{box-sizing:border-box}html,body{margin:0}body{background:#fbf7f0;font-family:Arial,sans-serif}
+  .hero{background-color:#fbf7f0;background-image:radial-gradient(${stop} 1px,transparent 0);background-size:20px 20px;padding:80px 24px}
+  .hero h1{color:#f3ecdb;font-size:56px;margin:0}
+</style></head><body>
+  <header class="hero"><h1>Donde cada niño descubre su propio horizonte</h1></header>
+</body></html>`;
+
+describe("un degradado decorativo no es una foto", () => {
+  it("ve el titular crema sobre crema detrás de los puntos", async () => {
+    const measured = await renderVisualQualityViewports(page("rgba(30,77,59,0.05)"));
+    expect(measured?.unreadableText?.length ?? 0).toBeGreaterThan(0);
+
+    const repair = await repairUnreadableText(page("rgba(30,77,59,0.05)"), renderVisualQualityViewports);
+    expect(repair.repaired).toBe(1);
+    const after = await renderVisualQualityViewports(repair.html);
+    expect(after?.unreadableText?.length ?? 0).toBe(0);
+  }, 60_000);
+
+  it("se sigue callando cuando el degradado sí tapa el fondo", async () => {
+    const measured = await renderVisualQualityViewports(page("rgba(30,77,59,0.6)"));
+    expect(measured?.unreadableText?.length ?? 0).toBe(0);
+  }, 60_000);
+});
