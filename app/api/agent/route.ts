@@ -1,5 +1,7 @@
 import { auth } from "@/auth";
-import { GeminiProvider, type InlineImage } from "@/lib/ai-gateway";
+import { GeminiProvider, type InlineImage, type StreamEvent } from "@/lib/ai-gateway";
+import { createFireworksStreamClient, type FireworksStreamEvent } from "@/lib/ai/fireworks-stream-client";
+import { messagesForFireworks, toolsForFireworks } from "@/lib/agent/fireworks-bridge";
 import { resolveAIProvider } from "@/lib/ai-provider";
 import { getCreditState, debitCredits, creditsForUsage } from "@/lib/credits";
 import { resolveOpIdByPath, tagWithOpIds } from "@/lib/html-ops";
@@ -69,6 +71,23 @@ interface AttachedImageBody {
 const SCOPE_OUTER_MAX = 50_000;
 const ATTACHED_URL_MAX = 2_000;
 const ATTACHED_ALT_MAX = 300;
+
+/**
+ * El loop conoce los eventos del gateway de Gemini y nada más. DeepSeek añade
+ * uno —el pensamiento por canal aparte— que aquí se DESCARTA a propósito: el
+ * Agente narra lo que hace en `text`, y volcarle al usuario la cadena de
+ * pensamiento cruda del modelo es ruido, no transparencia. Con
+ * `page_edit` en esfuerzo `none` ese canal ni siquiera se abre; el descarte
+ * existe para que encenderlo algún día no cambie lo que la gente ve.
+ */
+async function* asAgentStream(
+  source: AsyncIterable<FireworksStreamEvent>,
+): AsyncIterable<StreamEvent> {
+  for await (const event of source) {
+    if (event.type === "reasoning_delta") continue;
+    yield event;
+  }
+}
 
 export async function POST(req: Request): Promise<Response> {
   // F4 Task 7 — emergency kill-switch: OPENLEN_AGENT=0 refuses BEFORE any
@@ -266,6 +285,15 @@ export async function POST(req: Request): Promise<Response> {
   };
   const provider = new GeminiProvider(PROVIDER.key as string);
   const tools = buildFunctionDeclarations();
+  // Quién razona. El loop ya era agnóstico —sólo importa TIPOS del gateway y
+  // recibe `openStream` inyectado—, así que cambiar de proveedor es cambiar esta
+  // función y nada del cerebro. `OPENLEN_AGENT_PROVIDER=gemini` vuelve atrás.
+  //
+  // Un turno con píxeles adjuntos se queda en Gemini: al razonador nunca se le
+  // ha mandado una imagen y adivinar aquí cuesta la acción del usuario.
+  const useDeepSeek = process.env.OPENLEN_AGENT_PROVIDER?.trim().toLowerCase() !== "gemini";
+  const fireworks = createFireworksStreamClient();
+  const wireTools = toolsForFireworks(tools);
 
   const sse = new ReadableStream<Uint8Array>({
     async start(controller) {
@@ -317,6 +345,22 @@ export async function POST(req: Request): Promise<Response> {
               attachedInline && msgs[msgs.length - 1] === promptMessage
                 ? [attachedInline]
                 : undefined;
+            if (useDeepSeek && !withImage) {
+              return streamWithRetry(
+                () => asAgentStream(fireworks.stream(
+                  {
+                    messages: messagesForFireworks(msgs),
+                    tools: wireTools,
+                    maxOutputTokens: 16_384,
+                    temperature: 0.7,
+                    requestId: projectId,
+                    operation: "page_edit",
+                  },
+                  { signal: upstreamAbort.signal },
+                )),
+                { signal: upstreamAbort.signal },
+              );
+            }
             return streamWithRetry(
               () =>
                 provider.stream(
@@ -339,11 +383,15 @@ export async function POST(req: Request): Promise<Response> {
           // ends with "here's what I did / what's pending" instead of a red error.
           closeOut: (msgs) =>
             streamWithRetry(
-              () =>
-                provider.stream(
-                  { model: PROVIDER.model, messages: msgs, tools: [], toolMode: "none", maxOutputTokens: 2_048, temperature: 0.7 },
-                  { signal: upstreamAbort.signal },
-                ),
+              () => (useDeepSeek
+                ? asAgentStream(fireworks.stream(
+                    { messages: messagesForFireworks(msgs), maxOutputTokens: 2_048, temperature: 0.7, requestId: projectId, operation: "page_edit" },
+                    { signal: upstreamAbort.signal },
+                  ))
+                : provider.stream(
+                    { model: PROVIDER.model, messages: msgs, tools: [], toolMode: "none", maxOutputTokens: 2_048, temperature: 0.7 },
+                    { signal: upstreamAbort.signal },
+                  )),
               { signal: upstreamAbort.signal },
             ),
           runTool: (name, args) => runAgentTool(agentSession, deps, name, args),

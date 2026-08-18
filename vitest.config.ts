@@ -93,6 +93,7 @@ export default defineConfig({
       // html-engine binding and runs under node:test (`tsx --test`), so list
       // the vitest agent tests individually (same reason as lib/projects).
       "lib/agent/catalog.test.ts",
+      "lib/agent/fireworks-bridge.test.ts",
       "lib/agent/loop.test.ts",
       "lib/agent/retry.test.ts",
       "lib/agent/context.test.ts",

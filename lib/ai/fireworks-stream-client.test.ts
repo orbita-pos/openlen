@@ -59,7 +59,7 @@ describe("transporte de texto en streaming", () => {
   it("reporta el gasto que el proveedor midió", async () => {
     const { client: c } = client(chunk({ content: "x" }, "stop") + usageChunk(1000, 300, 120) + "data: [DONE]\n\n");
     const events = await drain(c.stream(REQUEST));
-    expect(events).toContainEqual({ type: "usage", inputTokens: 1000, outputTokens: 300, thinkingTokens: 120 });
+    expect(events).toContainEqual({ type: "usage", inputTokens: 1000, outputTokens: 300, cachedTokens: 0, thinkingTokens: 120 });
   });
 
   it("distingue una respuesta truncada de una completa", async () => {
@@ -101,6 +101,58 @@ describe("transporte de texto en streaming", () => {
     // La petición no puede nombrar un modelo: si pudiera, la tabla dejaría de
     // ser el único sitio donde se cambia de proveedor.
     expect(Object.keys(REQUEST)).not.toContain("model");
+  });
+
+  it("arma las llamadas a herramienta partidas en trozos", async () => {
+    // Llegan por índice, no por orden de llegada, y los argumentos de a pocos
+    // caracteres: leerlos ingenuamente parte el JSON a la mitad.
+    const { client: c } = client(
+      chunk({ content: "Voy a activar reservas." })
+      + chunk({ tool_calls: [{ index: 0, id: "call_1", function: { name: "activar_modulo", arguments: '{"mod' } }] })
+      + chunk({ tool_calls: [{ index: 0, function: { arguments: 'ulo":"bookings"}' } }] }, "tool_calls"),
+    );
+    const events = await drain(c.stream({ ...REQUEST, tools: [{ type: "function", function: { name: "activar_modulo" } }] }));
+    // El texto sale EN VIVO y la llamada al cerrar el turno: el Agente narra y
+    // luego actúa, que es lo que lo hace sentir vivo.
+    expect(events[0]).toEqual({ type: "text_delta", text: "Voy a activar reservas." });
+    expect(events[1]).toEqual({ type: "function_call", name: "activar_modulo", args: { modulo: "bookings" } });
+    expect(events.at(-1)).toEqual({ type: "done", stopReason: { kind: "end_turn" } });
+  });
+
+  it("conserva el orden de varias llamadas en un turno", async () => {
+    const { client: c } = client(
+      chunk({ tool_calls: [{ index: 1, id: "b", function: { name: "publicar", arguments: "{}" } }] })
+      + chunk({ tool_calls: [{ index: 0, id: "a", function: { name: "leer_estado", arguments: "{}" } }] }, "tool_calls"),
+    );
+    const events = await drain(c.stream(REQUEST));
+    expect(events.filter((e) => e.type === "function_call").map((e) => (e as { name: string }).name))
+      .toEqual(["leer_estado", "publicar"]);
+  });
+
+  it("no ejecuta a medias una llamada cuyos argumentos no son JSON", async () => {
+    const { client: c } = client(
+      chunk({ tool_calls: [{ index: 0, id: "a", function: { name: "editar_pagina", arguments: '{"edits":' } }] }, "tool_calls"),
+    );
+    const events = await drain(c.stream(REQUEST));
+    expect(events.some((e) => e.type === "function_call")).toBe(false);
+    expect(events.at(-1)).toMatchObject({ type: "done", stopReason: { kind: "error" } });
+  });
+
+  it("manda las herramientas y los turnos de herramienta en el formato del cable", async () => {
+    const { client: c, fetchImpl } = client(chunk({ content: "ok" }, "stop"));
+    await drain(c.stream({
+      ...REQUEST,
+      tools: [{ type: "function", function: { name: "leer_estado" } }],
+      messages: [
+        { role: "user", content: "activa reservas" },
+        { role: "assistant", content: "", toolCalls: [{ id: "a", name: "leer_estado", argumentsJson: "{}" }] },
+        { role: "tool", content: '{"ok":true}', toolCallId: "a" },
+      ],
+    }));
+    const body = JSON.parse((fetchImpl.mock.calls[0] as unknown as [string, { body: string }])[1].body);
+    expect(body.tool_choice).toBe("auto");
+    expect(body.messages[1]).toMatchObject({ role: "assistant", tool_calls: [{ id: "a", type: "function", function: { name: "leer_estado", arguments: "{}" } }] });
+    expect(body.messages[2]).toEqual({ role: "tool", tool_call_id: "a", content: '{"ok":true}' });
   });
 
   it("no inventa un final cuando el transporte se cae", async () => {
