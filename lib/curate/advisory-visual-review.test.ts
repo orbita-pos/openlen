@@ -213,4 +213,26 @@ describe("varias rondas de revisión", () => {
     expect(result.exit).toBe("rounds_exhausted");
     expect(result.rounds).toBe(effortProfile("high").reviewRounds);
   });
+
+  // Medido en este repo: una reparación contestó una queja de tipografía y
+  // dejó detrás texto a 1.02:1. La puerta sólo leía desbordes y geometría, así
+  // que esa página se entregaba.
+  it("descarta una reparación que deja texto invisible que antes no estaba", async () => {
+    const review = vi.fn(async () => ({ ok: true as const, accepted: false, issues: ["typography:both"] }));
+    const render = vi.fn()
+      .mockResolvedValueOnce({ mobileOverflow: false, invalidGeometry: false, unreadableText: [] })
+      .mockResolvedValueOnce({ mobileOverflow: false, invalidGeometry: false, unreadableText: [{ contrast: 1.02 }] });
+    const result = await runAdvisoryVisualReview(INPUT, deps({ review, render }));
+    expect(result.exit).toBe("repair_regressed");
+    expect(result.candidate).toEqual(CANDIDATE);
+  });
+
+  it("no castiga una reparación que hereda el contraste que ya venía roto", async () => {
+    const review = vi.fn(async () => ({ ok: true as const, accepted: false, issues: ["typography:both"] }));
+    const render = vi.fn()
+      .mockResolvedValueOnce({ mobileOverflow: false, invalidGeometry: false, unreadableText: [{ contrast: 1.02 }] })
+      .mockResolvedValueOnce({ mobileOverflow: false, invalidGeometry: false, unreadableText: [{ contrast: 1.02 }] });
+    const result = await runAdvisoryVisualReview(INPUT, deps({ review, render }));
+    expect(result.candidate).toEqual(REPAIRED);
+  });
 });

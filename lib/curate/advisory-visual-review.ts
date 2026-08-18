@@ -11,7 +11,7 @@ export interface AdvisoryReviewInput {
 }
 
 export interface AdvisoryReviewDeps {
-  readonly render: (html: string) => Promise<{ mobileOverflow: boolean; invalidGeometry: boolean } | null>;
+  readonly render: (html: string) => Promise<{ mobileOverflow: boolean; invalidGeometry: boolean; unreadableText?: readonly unknown[] } | null>;
   readonly review: (input: { html: string; brief: string }) => Promise<{ ok: true; accepted: boolean; issues: readonly string[] } | { ok: false }>;
   /** `candidate` viaja en cada llamada y no se captura fuera: con varias
    *  rondas, la segunda reparación tiene que partir de la página que dejó la
@@ -74,7 +74,7 @@ export async function runAdvisoryVisualReview(
   let exit: AdvisoryReviewExit = "rounds_exhausted";
 
   for (let round = 0; round < profile.reviewRounds; round += 1) {
-    let baseline: { mobileOverflow: boolean; invalidGeometry: boolean } | null;
+    let baseline: { mobileOverflow: boolean; invalidGeometry: boolean; unreadableText?: readonly unknown[] } | null;
     try { baseline = await deps.render(current.html); } catch { exit = "render_failed"; break; }
     if (!baseline) { exit = "render_failed"; break; }
 
@@ -102,10 +102,14 @@ export async function runAdvisoryVisualReview(
     if (!repair.changed) { exit = "repair_unchanged"; break; }
 
     // The repaired page must clear the same deterministic bar as the one it
-    // replaces, or the previous last-known-good stands.
-    let after: { mobileOverflow: boolean; invalidGeometry: boolean } | null;
+    // replaces, or the previous last-known-good stands. Contrast counts: a
+    // repair measured in this repo answered a typography complaint and left
+    // text at 1.02:1 behind it, and a gate that only reads overflow and
+    // geometry ships that.
+    let after: { mobileOverflow: boolean; invalidGeometry: boolean; unreadableText?: readonly unknown[] } | null;
     try { after = await deps.render(repair.candidate.html); } catch { exit = "repair_regressed"; break; }
     if (!after || after.mobileOverflow || after.invalidGeometry) { exit = "repair_regressed"; break; }
+    if ((after.unreadableText?.length ?? 0) > (baseline.unreadableText?.length ?? 0)) { exit = "repair_regressed"; break; }
 
     current = repair.candidate;
     repairedAny = true;
