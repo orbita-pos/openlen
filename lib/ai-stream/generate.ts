@@ -51,7 +51,9 @@ import {
 } from "@/lib/html-engine";
 import { extractTwConfig, injectTwCarrier } from "@/lib/publish/tw-config";
 import { hardenVisualQuality } from "@/lib/harden";
-import { creditsForUsage, debitCredits as realDebitCredits } from "@/lib/credits";
+import { creditsForUsage, debitCredits as realDebitCredits, type CreditRate } from "@/lib/credits";
+import { createFireworksStreamClient } from "@/lib/ai/fireworks-stream-client";
+import { messagesForFireworks } from "@/lib/agent/fireworks-bridge";
 import { resolveAIProvider, type AIModel } from "@/lib/ai-provider";
 
 const DEFAULT_MODEL: AIModel = "gemini-pro";
@@ -235,6 +237,45 @@ export interface HtmlStreamLike {
 
 // ─── Implementation ────────────────────────────────────────────────────────
 
+/** Quién escribe la página. Medido sobre los mismos cuatro briefs: escrita de
+ *  una pasada trae cero defectos deterministas y cuesta la quinta parte que
+ *  parchear una baseline. `OPENLEN_GENERATE_PROVIDER=gemini` vuelve atrás.
+ *
+ *  Las imágenes de referencia fijan el turno a Gemini: el papel que razona en
+ *  Fireworks no tiene visión, y una referencia que el modelo no ve es peor que
+ *  no haberla pedido. */
+export function pageWriterUsesDeepSeek(
+  env: Readonly<Record<string, string | undefined>> = process.env,
+  hasImages = false,
+): boolean {
+  return !hasImages && env.OPENLEN_GENERATE_PROVIDER?.trim().toLowerCase() !== "gemini";
+}
+
+function createDeepSeekPageProvider(): GeminiProviderLike {
+  const client = createFireworksStreamClient();
+  return {
+    async *stream(request, streamOpts) {
+      const source = client.stream(
+        {
+          messages: messagesForFireworks(request.messages),
+          maxOutputTokens: request.maxOutputTokens ?? 60_000,
+          temperature: request.temperature ?? 0.8,
+          requestId: `generate.${Math.random().toString(36).slice(2, 14)}`,
+          // El papel que razona, sin presupuesto de pensamiento: medido en esta
+          // misma superficie, pensar costaba tiempo y producía menos.
+          operation: "page_edit",
+        },
+        streamOpts,
+      );
+      for await (const event of source) {
+        // El razonamiento no es la página.
+        if (event.type === "reasoning_delta") continue;
+        yield event;
+      }
+    },
+  };
+}
+
 export function generateHtmlStream(
   opts: GenerateHtmlStreamOpts,
   internals: GenerateHtmlStreamInternals = {},
@@ -242,9 +283,16 @@ export function generateHtmlStream(
   const modelKey: AIModel = opts.model ?? DEFAULT_MODEL;
   const geminiModel = resolveAIProvider(modelKey).model;
 
+  // Un proveedor inyectado (las pruebas) manda: ni cambia de motor ni de tarifa.
+  const wantsDeepSeek = internals.provider === undefined
+    && pageWriterUsesDeepSeek(process.env, (opts.images?.length ?? 0) > 0);
   const provider: GeminiProviderLike =
     internals.provider ??
-    (new RealGeminiProvider(opts.apiKey) as unknown as GeminiProviderLike);
+    (wantsDeepSeek
+      ? createDeepSeekPageProvider()
+      : (new RealGeminiProvider(opts.apiKey) as unknown as GeminiProviderLike));
+  // La tarifa sigue a quien de verdad corrió, no al modelo que se pidió.
+  const creditRate: CreditRate = wantsDeepSeek ? "deepseek-flash" : modelKey;
   const debit: DebitFn = internals.debit ?? realDebitCredits;
   const htmlStream: HtmlStreamLike = internals.makeHtmlStream
     ? internals.makeHtmlStream(opts.htmlOpts)
@@ -401,7 +449,7 @@ export function generateHtmlStream(
             const credits = creditsForUsage(
               event.inputTokens,
               event.outputTokens,
-              modelKey,
+              creditRate,
             );
             try {
               await debit(opts.userId, credits);
