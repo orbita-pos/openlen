@@ -972,8 +972,8 @@ function NewV2Inner() {
     if (aiGenerating) return;
     const brief = aiPrompt.trim();
     if (brief.length < 10) return;
-    void curation.curate(brief, selectedProfileId);
-  }, [aiGenerating, aiPrompt, curation, selectedProfileId]);
+    void curation.curate(brief, selectedProfileId, effort);
+  }, [aiGenerating, aiPrompt, curation, selectedProfileId, effort]);
   // A deep link with `?autostart=1` (the homepage hero) kicks generation
   // off on arrival. The param is stripped right after so a manual reload of
   // this URL doesn't re-fire — and re-bill — the generation.

@@ -14,12 +14,13 @@ import { aiCreationMode } from "@/lib/curate/ai-creation-mode";
 import { isUserInAiCreationRollout } from "@/lib/curate/ai-creation-rollout";
 import { commitAiCompositionDocument } from "@/lib/curate/commit-ai-composition";
 import { runAiCreation, type RunAiCreationDeps } from "@/lib/curate/run-ai-creation";
+import { DEFAULT_PAGE_EFFORT, isPageEffort } from "@/lib/curate/page-effort";
 import { renderProjectThumbnail } from "@/lib/projects/thumbnail";
 import { createVersion } from "@/lib/projects/versions";
 import { consumeToken, RATE_LIMITS } from "@/lib/rate-limit";
 
 // POST /api/curate — hybrid-only AI page creation.
-// Body: { brief: string, profileId?: string }
+// Body: { brief: string, profileId?: string, effort?: "low" | "medium" | "high" }
 //
 // SSE events:
 //   progress { stage }
@@ -80,7 +81,7 @@ return async function curatePost(req: Request): Promise<Response> {
     );
   }
 
-  let body: { brief?: unknown; profileId?: unknown };
+  let body: { brief?: unknown; profileId?: unknown; effort?: unknown };
   try {
     body = await req.json();
   } catch {
@@ -92,6 +93,9 @@ return async function curatePost(req: Request): Promise<Response> {
   }
   if (brief.length > 4000) return errorJson(400, "brief too long (max 4000 characters)");
   const profileId = typeof body.profileId === "string" ? body.profileId : null;
+  // Un nivel desconocido no es un error del usuario: es un cliente viejo o uno
+  // nuevo hablando con un servidor viejo. Cae al de siempre y la página sale.
+  const effort = isPageEffort(body.effort) ? body.effort : DEFAULT_PAGE_EFFORT;
 
   if (inFlightUsers.has(userId)) {
     return new Response(
@@ -157,6 +161,7 @@ return async function curatePost(req: Request): Promise<Response> {
           // Read a few lines above to gate the request; it bounds photography
           // too, so a brief asking for fifty images cannot spend a month.
           creditBalance: balance,
+          effort,
           onStage: (stage: string) => {
             const progress = PROGRESS_STAGE[stage];
             if (progress) emit("progress", { stage: progress });

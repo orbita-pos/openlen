@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { GenerationState } from "@/lib/use-generation";
+import type { PageEffort } from "@/lib/curate/page-effort";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // useCuration — drives the /new AI entry flow on the CURATION path (free tier).
@@ -20,7 +21,7 @@ import type { GenerationState } from "@/lib/use-generation";
 
 export interface UseCurationResult {
   state: GenerationState;
-  curate: (brief: string, profileId?: string | null) => Promise<void>;
+  curate: (brief: string, profileId?: string | null, effort?: PageEffort) => Promise<void>;
 }
 
 const SILENCE_TIMEOUT_MS = 180_000; // curation is short; only a dead connection trips this
@@ -47,7 +48,7 @@ export function useCuration(): UseCurationResult {
 
   // `profileId` (optional) seeds the page from a saved business profile — the
   // server overlays the user's real info onto generated copy before composing.
-  const curate = useCallback(async (brief: string, profileId?: string | null) => {
+  const curate = useCallback(async (brief: string, profileId?: string | null, effort?: PageEffort) => {
     abortRef.current?.abort();
     const controller = new AbortController();
     abortRef.current = controller;
@@ -73,7 +74,7 @@ export function useCuration(): UseCurationResult {
       response = await fetch("/api/curate", {
         method: "POST",
         headers: { "Content-Type": "application/json", Accept: "text/event-stream" },
-        body: JSON.stringify({ brief, profileId: profileId ?? undefined }),
+        body: JSON.stringify({ brief, profileId: profileId ?? undefined, effort }),
         signal: controller.signal,
       });
     } catch (err) {

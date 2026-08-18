@@ -18,11 +18,12 @@ import {
 } from "../icons";
 import type { BriefFormState } from "@/components/workspace/types";
 import { QUICK_PROMPTS } from "@/lib/quick-prompts";
+import type { PageEffort } from "@/lib/curate/page-effort";
 
-/** Cuánto trabajo se pone en la página. Hoy sólo existe `low` — es el nivel con
- *  el que nacieron las páginas que ya funcionan; `medium` y `high` se ven en el
- *  selector, apagados, porque todavía no hay nada detrás de ellos. */
-export type PageEffort = "low" | "medium" | "high";
+/** Cuánto trabajo se pone en la página. El tipo y lo que cada nivel compra
+ *  viven en `lib/curate/page-effort`; aquí sólo se re-exporta para que quien ya
+ *  lo importaba del panel siga compilando. */
+export type { PageEffort };
 
 export interface AiBriefPanelProps {
   state: BriefFormState;
@@ -150,8 +151,10 @@ export function AiBriefPanel({
 // composer. Exportado para que el inicio de /new use exactamente el mismo
 // control.
 //
-// Los niveles que aún no existen se MUESTRAN apagados en vez de esconderse: es
-// lo que hace legible que hay más y que esto es un dial, no un interruptor.
+// Los tres niveles funcionan. Lo que compran está en `lib/curate/page-effort`:
+// turnos de diseño, operaciones aceptadas y ciclos de crítica. El tope de
+// dinero por página NO se mueve, así que subir de nivel nunca puede cobrar de
+// más — como mucho la sesión se queda sin presupuesto antes de agotar el nivel.
 export function EffortSelect({
   effort,
   onEffortChange,
@@ -175,9 +178,9 @@ export function EffortSelect({
   }, [open]);
 
   const OPTIONS = [
-    { value: "low" as const, icon: <Zap size={12} />, label: t("aiBrief.effortLow"), ready: true },
-    { value: "medium" as const, icon: <Sparkles size={12} />, label: t("aiBrief.effortMedium"), ready: false },
-    { value: "high" as const, icon: <WandSparkles size={12} />, label: t("aiBrief.effortHigh"), ready: false },
+    { value: "low" as const, icon: <Zap size={12} />, label: t("aiBrief.effortLow") },
+    { value: "medium" as const, icon: <Sparkles size={12} />, label: t("aiBrief.effortMedium") },
+    { value: "high" as const, icon: <WandSparkles size={12} />, label: t("aiBrief.effortHigh") },
   ];
   const current = OPTIONS.find((o) => o.value === effort) ?? OPTIONS[0];
 
@@ -199,26 +202,16 @@ export function EffortSelect({
             <button
               key={o.value}
               type="button"
-              disabled={!o.ready}
               onClick={() => {
                 onEffortChange(o.value);
                 setOpen(false);
               }}
               className={`w-full inline-flex items-center gap-1.5 px-2 py-1.5 rounded-md text-[11.5px] transition ${
-                !o.ready
-                  ? "fg-faint cursor-not-allowed"
-                  : o.value === effort
-                    ? "bg-accent-soft text-accent"
-                    : "fg hover:bg-hover"
+                o.value === effort ? "bg-accent-soft text-accent" : "fg hover:bg-hover"
               }`}
             >
               {o.icon}
               <span>{o.label}</span>
-              {!o.ready && (
-                <span className="ml-auto text-[8.5px] font-semibold uppercase tracking-wide fg-faint">
-                  {t("aiBrief.effortSoon")}
-                </span>
-              )}
             </button>
           ))}
         </div>

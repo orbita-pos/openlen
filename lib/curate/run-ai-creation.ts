@@ -24,6 +24,7 @@ import { runDeepSeekCreativeSession, type CreativeSessionDeps } from "./deepseek
 import { runOptionalImageTool } from "./optional-image-tool";
 import { createFableRuntimeComposition, type FableRuntimeComposition, type FableRuntimeCompositionOptions } from "./fable-runtime-composition";
 import { runCreativeGeneration, type CreativeGenerationDeps } from "./run-creative-generation";
+import type { PageEffort } from "./page-effort";
 
 export interface RunAiCreationInput {
   projectId: string;
@@ -32,6 +33,8 @@ export interface RunAiCreationInput {
   /** Credits the user has before this page runs. Bounds what the page may
    * spend on photography; omitted, imagery falls back to the default. */
   creditBalance?: number;
+  /** El nivel que el usuario eligió en el compositor. Omitido, el de siempre. */
+  effort?: PageEffort;
   onStage?: (stage: string) => void;
 }
 
@@ -128,7 +131,14 @@ function productionDeps(
     runtime.recordModel(stage, "modelId" in result ? result : {});
 
   const creativeSession = (
-    session: { requestId: string; brief: string; intent: IntentAnalysis; issueSummary?: string; maxTurns?: 1 },
+    session: {
+      requestId: string;
+      brief: string;
+      intent: IntentAnalysis;
+      issueSummary?: string;
+      maxTurns?: number;
+      maxAcceptedMutations?: number;
+    },
     candidate: SafeCreativeCandidate,
   ) => {
     const sandbox = sandboxFor(candidate);
@@ -224,8 +234,8 @@ function productionDeps(
         brief: input.brief,
         intent: review.intent,
         issueSummary: input.issueSummary,
-        maxTurns: 1,
-      }, review.candidate),
+        maxTurns: input.maxTurns,
+      }, input.candidate),
     }),
   };
   return { deps, imagesApplied: () => pageImagesApplied };
@@ -267,6 +277,7 @@ export async function runAiCreation(
     brief: input.brief,
     profileData: input.profileData,
     records,
+    ...(input.effort ? { effort: input.effort } : {}),
     ...(input.onStage ? { onStage: input.onStage } : {}),
   }, {
     ...production.deps,

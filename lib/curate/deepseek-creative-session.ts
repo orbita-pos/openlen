@@ -7,9 +7,13 @@ import type {
 import type { SafeCreativeCandidate } from "./creative-baseline";
 import type { CreativeSandbox } from "./creative-sandbox";
 import { parseCreativePatch, type CreativeToolFailureCode, type CreativeToolResult } from "./creative-sandbox-contracts";
+import { ACCEPTED_MUTATION_CEILING, SESSION_TURN_CEILING, effortProfile } from "./page-effort";
 
-const MAX_TURNS = 4;
-const MAX_ACCEPTED_MUTATIONS = 12;
+// Los valores de `low`, que son con los que se midieron las páginas buenas.
+// Quien llama puede pedir más, hasta el techo que la tabla de niveles fija;
+// nadie puede pedir menos de uno ni más de lo que un nivel compra.
+const DEFAULT_MAX_TURNS = effortProfile("low").sessionTurns;
+const DEFAULT_MAX_ACCEPTED_MUTATIONS = effortProfile("low").acceptedMutations;
 // Measured on a real page, not estimated: the design turn -- the one that
 // rewrites sections -- spent 31,396 output tokens and finished. 12,000 died
 // reasoning; 24,000 truncated mid-patch and burned a turn on the retry. The
@@ -22,6 +26,7 @@ export interface CreativeSessionInput {
   readonly baseline: SafeCreativeCandidate;
   readonly brief: string;
   readonly maxTurns?: number;
+  readonly maxAcceptedMutations?: number;
   readonly maxOutputTokens?: number;
   readonly issueSummary?: string;
 }
@@ -116,7 +121,11 @@ export async function runDeepSeekCreativeSession(
   input: CreativeSessionInput,
   deps: CreativeSessionDeps,
 ): Promise<CreativeSessionResult> {
-  const maxTurns = Math.max(1, Math.min(input.maxTurns ?? MAX_TURNS, MAX_TURNS));
+  const maxTurns = Math.max(1, Math.min(input.maxTurns ?? DEFAULT_MAX_TURNS, SESSION_TURN_CEILING));
+  const maxAcceptedMutations = Math.max(
+    1,
+    Math.min(input.maxAcceptedMutations ?? DEFAULT_MAX_ACCEPTED_MUTATIONS, ACCEPTED_MUTATION_CEILING),
+  );
   const messages: FireworksToolMessage[] = [
     { role: "system", content: systemPrompt() },
     {
@@ -146,10 +155,11 @@ export async function runDeepSeekCreativeSession(
   });
 
   // Explicit and finite: no recursion, no automatic retry, no way to spend more
-  // than four paid turns. Provider and tool failures are observations here —
+  // paid turns than the chosen level bought. Provider and tool failures are
+  // observations here —
   // the page already exists and is safe.
   let maxOutputTokens = input.maxOutputTokens ?? DEFAULT_MAX_OUTPUT_TOKENS;
-  for (let turn = 0; turn < maxTurns && acceptedMutations < MAX_ACCEPTED_MUTATIONS; turn += 1) {
+  for (let turn = 0; turn < maxTurns && acceptedMutations < maxAcceptedMutations; turn += 1) {
     const response = await deps.client.turn({
       requestId: `${input.requestId}.creative-${turn}`,
       maxOutputTokens,
@@ -184,7 +194,7 @@ export async function runDeepSeekCreativeSession(
       acceptedMutations += accepted;
       if ("ok" in result && result.ok === false) rejections.add(refusal(result as { code: CreativeToolFailureCode; detail?: string }));
       messages.push({ role: "tool", toolCallId: call.id, content: redactToolResult(result) });
-      if (acceptedMutations >= MAX_ACCEPTED_MUTATIONS) return finish("tool_limit");
+      if (acceptedMutations >= maxAcceptedMutations) return finish("tool_limit");
     }
   }
   return finish("turn_limit");

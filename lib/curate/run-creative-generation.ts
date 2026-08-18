@@ -10,6 +10,7 @@ import type { CreativeDirection } from "@/lib/generation/creative-contracts";
 import { adoptModelPalette } from "./adopt-model-palette";
 import { applyCreativeDirection } from "./apply-creative-direction";
 import { insertModulePlaceholders, modulesFromBrief } from "./module-placeholders";
+import { DEFAULT_PAGE_EFFORT, effortProfile, type PageEffort } from "./page-effort";
 import { isolateModelTokens } from "./isolate-model-tokens";
 import { repairInvertedSurfaces } from "./repair-inverted-surfaces";
 import { repairUnreadableText } from "./repair-unreadable-text";
@@ -20,6 +21,9 @@ export interface CreativeGenerationInput {
   readonly brief: string;
   readonly profileData: BusinessProfileData;
   readonly records: readonly SectionRecord[];
+  /** Cuánto trabajo compró el usuario. Sólo mueve turnos y rondas: el tope de
+   *  dinero por página no depende de esto. */
+  readonly effort?: PageEffort;
   readonly onStage?: (stage: string) => void;
 }
 
@@ -46,12 +50,15 @@ export interface CreativeGenerationDeps {
     brief: string;
     baseline: SafeCreativeCandidate;
     intent: IntentAnalysis;
+    maxTurns: number;
+    maxAcceptedMutations: number;
   }) => Promise<CreativeSessionResult>;
   readonly runAdvisoryReview: (input: {
     requestId: string;
     brief: string;
     candidate: SafeCreativeCandidate;
     intent: IntentAnalysis;
+    effort: PageEffort;
   }) => Promise<AdvisoryReviewResult>;
   readonly validateDelivery: typeof validateAiCompositionDelivery;
   /** Terminal: only the two branches that cost the user a page use it. */
@@ -106,6 +113,8 @@ export async function runCreativeGeneration(
   input: CreativeGenerationInput,
   deps: CreativeGenerationDeps,
 ): Promise<CreativeGenerationResult> {
+  const effort = input.effort ?? DEFAULT_PAGE_EFFORT;
+  const profile = effortProfile(effort);
   notify(input, "baseline");
   let baseline;
   try {
@@ -171,6 +180,8 @@ export async function runCreativeGeneration(
       brief: input.brief,
       baseline: lastKnownGood,
       intent: baseline.intent,
+      maxTurns: profile.sessionTurns,
+      maxAcceptedMutations: profile.acceptedMutations,
     });
     // The model redesigned with its OWN palette while <html> still carried the
     // direction's, so a section it painted met a library fragment reading
@@ -259,9 +270,15 @@ export async function runCreativeGeneration(
       brief: input.brief,
       candidate: lastKnownGood,
       intent: baseline.intent,
+      effort,
     });
     lastKnownGood = reviewed.candidate;
     if (!reviewed.reviewed) deps.recordDegraded?.("advisory_review", "review_unavailable");
+    // Aceptar en la primera ronda de tres es éxito, no degradación: lo que se
+    // anota es que el crítico NUNCA firmó, y en cuántas rondas se rindió.
+    else if (!reviewed.accepted) {
+      deps.recordDegraded?.("advisory_review", `unaccepted_after_${reviewed.rounds}_of_${profile.reviewRounds}`);
+    }
   } catch {
     deps.recordDegraded?.("advisory_review", "internal_error");
   }

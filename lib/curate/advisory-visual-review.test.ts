@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import type { SafeCreativeCandidate } from "./creative-baseline";
 import { runAdvisoryVisualReview, type AdvisoryReviewDeps } from "./advisory-visual-review";
+import { effortProfile } from "./page-effort";
 
 const CANDIDATE: SafeCreativeCandidate = {
   html: "<!doctype html><html><body><section>safe</section></body></html>",
@@ -104,5 +105,83 @@ describe("advisory visual review", () => {
     const result = await runAdvisoryVisualReview(INPUT, deps({ render: async () => null }));
     expect(result.candidate).toEqual(CANDIDATE);
     expect(result.reviewed).toBe(false);
+  });
+});
+
+describe("varias rondas de revisión", () => {
+  const HIGH = { ...INPUT, effort: "high" as const };
+
+  it("un nivel alto sobre una página que el crítico firma cuesta una sola ronda", async () => {
+    const review = vi.fn(async () => ({ ok: true as const, accepted: true, issues: [] }));
+    const repair = vi.fn();
+    const result = await runAdvisoryVisualReview(HIGH, deps({ review, repair: repair as never }));
+    expect(review).toHaveBeenCalledTimes(1);
+    expect(repair).not.toHaveBeenCalled();
+    expect(result).toMatchObject({ rounds: 1, accepted: true, repaired: false });
+  });
+
+  // La trampa del bucle: si la segunda reparación partiera del candidato con el
+  // que ENTRÓ la revisión, cada ronda desharía la anterior y sólo sobreviviría
+  // la última. El candidato viaja en cada llamada justamente por esto.
+  it("cada reparación parte de la página que dejó la anterior", async () => {
+    const seen: string[] = [];
+    const review = vi.fn(async () => ({ ok: true as const, accepted: false, issues: ["x"] }));
+    let n = 0;
+    const repair = vi.fn(async (input: { candidate: SafeCreativeCandidate }) => {
+      seen.push(input.candidate.html);
+      n += 1;
+      return {
+        candidate: { ...CANDIDATE, html: `<p>ronda-${n}</p>` },
+        changed: true,
+        acceptedMutations: 1,
+        rejections: [],
+        stoppedBy: "finished" as const,
+      };
+    });
+    const result = await runAdvisoryVisualReview(HIGH, deps({ review, repair }));
+    expect(seen).toEqual([CANDIDATE.html, "<p>ronda-1</p>", "<p>ronda-2</p>"]);
+    expect(result.candidate.html).toBe("<p>ronda-3</p>");
+    expect(result).toMatchObject({ rounds: 3, repaired: true, accepted: false });
+  });
+
+  it("el crítico juzga la página reparada, no la que entró", async () => {
+    const judged: string[] = [];
+    const review = vi.fn(async (input: { html: string }) => {
+      judged.push(input.html);
+      return { ok: true as const, accepted: judged.length === 2, issues: ["x"] };
+    });
+    const result = await runAdvisoryVisualReview(HIGH, deps({ review }));
+    expect(judged).toEqual([CANDIDATE.html, REPAIRED.html]);
+    expect(result).toMatchObject({ rounds: 2, accepted: true, repaired: true });
+  });
+
+  it("una reparación que no cambió nada cierra el ciclo en vez de repetirlo", async () => {
+    const review = vi.fn(async () => ({ ok: true as const, accepted: false, issues: ["x"] }));
+    const repair = vi.fn(async () => ({
+      candidate: CANDIDATE, changed: false, acceptedMutations: 0, rejections: [], stoppedBy: "turn_limit" as const,
+    }));
+    const result = await runAdvisoryVisualReview(HIGH, deps({ review, repair }));
+    expect(repair).toHaveBeenCalledTimes(1);
+    expect(result).toMatchObject({ rounds: 1, repaired: false, accepted: false });
+  });
+
+  it("cada nivel compra los turnos de reparación que dice su tabla", async () => {
+    const turns: number[] = [];
+    const repair = vi.fn(async (input: { maxTurns: number }) => {
+      turns.push(input.maxTurns);
+      return { candidate: REPAIRED, changed: true, acceptedMutations: 1, rejections: [], stoppedBy: "finished" as const };
+    });
+    await runAdvisoryVisualReview({ ...INPUT, effort: "low" }, deps({
+      review: async () => ({ ok: true, accepted: false, issues: ["x"] }),
+      repair,
+    }));
+    expect(turns).toEqual([effortProfile("low").repairTurns]);
+  });
+
+  it("sin nivel se comporta exactamente como `low`: una sola ronda", async () => {
+    const review = vi.fn(async () => ({ ok: true as const, accepted: false, issues: ["x"] }));
+    const result = await runAdvisoryVisualReview(INPUT, deps({ review }));
+    expect(review).toHaveBeenCalledTimes(1);
+    expect(result.rounds).toBe(1);
   });
 });

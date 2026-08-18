@@ -5,6 +5,7 @@ import type { SafeCreativeCandidate } from "./creative-baseline";
 import type { CreativeSandbox } from "./creative-sandbox";
 import type { CreativeToolResult } from "./creative-sandbox-contracts";
 import { runDeepSeekCreativeSession } from "./deepseek-creative-session";
+import { SESSION_TURN_CEILING, effortProfile } from "./page-effort";
 
 const BASELINE: SafeCreativeCandidate = {
   html: "<!doctype html><html><body><section data-openlen-edit-id=\"ol-hero-1\">base</section></body></html>",
@@ -102,7 +103,7 @@ describe("finite DeepSeek creative session", () => {
     expect(result.stoppedBy).toBe("timeout");
   });
 
-  it("never runs more than four turns", async () => {
+  it("sin pedir nada, corre los cuatro turnos del nivel de siempre", async () => {
     const { client, seen } = clientReturning(ok([{ id: "c0", name: "inspect_canvas", arguments: {} }]));
     const result = await runDeepSeekCreativeSession(INPUT, { client, sandbox: makeSandbox() });
     expect(seen).toHaveLength(4);
@@ -114,6 +115,43 @@ describe("finite DeepSeek creative session", () => {
     const result = await runDeepSeekCreativeSession({ ...INPUT, maxTurns: 1 }, { client, sandbox: makeSandbox() });
     expect(seen).toHaveLength(1);
     expect(result.stoppedBy).toBe("turn_limit");
+  });
+
+  it("un nivel más caro compra más turnos", async () => {
+    const { client, seen } = clientReturning(ok([{ id: "c0", name: "inspect_canvas", arguments: {} }]));
+    const turns = effortProfile("high").sessionTurns;
+    const result = await runDeepSeekCreativeSession({ ...INPUT, maxTurns: turns }, { client, sandbox: makeSandbox() });
+    expect(seen).toHaveLength(turns);
+    expect(result.stoppedBy).toBe("turn_limit");
+  });
+
+  // El techo no es decoración: quien llama viene de una petición HTTP, y sin
+  // esto un cuerpo con `maxTurns: 500` compraría quinientos turnos pagados.
+  it("no se pueden pedir más turnos de los que compra el nivel más caro", async () => {
+    const { client, seen } = clientReturning(ok([{ id: "c0", name: "inspect_canvas", arguments: {} }]));
+    await runDeepSeekCreativeSession({ ...INPUT, maxTurns: 500 }, { client, sandbox: makeSandbox() });
+    expect(seen).toHaveLength(SESSION_TURN_CEILING);
+  });
+
+  it("ni menos de un turno", async () => {
+    const { client, seen } = clientReturning(ok([{ id: "c0", name: "inspect_canvas", arguments: {} }]));
+    await runDeepSeekCreativeSession({ ...INPUT, maxTurns: 0 }, { client, sandbox: makeSandbox() });
+    expect(seen).toHaveLength(1);
+  });
+
+  it("un nivel más caro también compra más operaciones aceptadas", async () => {
+    const many = {
+      id: "c1",
+      name: "apply_creative_patch",
+      arguments: { operations: Array.from({ length: 6 }, () => ({ op: "replace_section", targetId: "ol-hero-1", html: "<section>x</section>" })) },
+    };
+    const { client } = clientReturning(...Array.from({ length: 5 }, () => ok([many])));
+    const result = await runDeepSeekCreativeSession(
+      { ...INPUT, maxTurns: 5, maxAcceptedMutations: effortProfile("high").acceptedMutations },
+      { client, sandbox: makeSandbox() },
+    );
+    expect(result.acceptedMutations).toBe(effortProfile("high").acceptedMutations);
+    expect(result.stoppedBy).toBe("tool_limit");
   });
 
   it("stops at twelve accepted mutations", async () => {

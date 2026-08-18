@@ -173,6 +173,18 @@ describe("POST /api/curate hybrid-only integration", () => {
     expect(mocks.debitCredits).not.toHaveBeenCalled();
   });
 
+  it.each([
+    ["el nivel que el usuario eligió", { brief: BRIEF, effort: "high" }, "high"],
+    ["el de siempre cuando no manda ninguno", { brief: BRIEF }, "low"],
+    // Un cliente viejo, o uno nuevo hablando con un servidor viejo, no puede
+    // costarle la página al usuario por un nivel que no existe.
+    ["el de siempre cuando manda basura", { brief: BRIEF, effort: "maximo" }, "low"],
+    ["el de siempre cuando manda un objeto", { brief: BRIEF, effort: { level: 9 } }, "low"],
+  ])("le pasa a la creación %s", async (_name, body, expected) => {
+    await post(body);
+    expect(mocks.runAiCreation).toHaveBeenCalledWith(expect.objectContaining({ effort: expected }));
+  });
+
   it("persists one final composition, then previews, debits, and completes with null template metadata", async () => {
     const { events } = await post({ brief: BRIEF, profileId: "profile-requested" });
 
