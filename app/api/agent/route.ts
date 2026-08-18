@@ -1,7 +1,6 @@
 import { auth } from "@/auth";
-import { GeminiProvider, type InlineImage, type StreamEvent } from "@/lib/ai-gateway";
-import { createFireworksStreamClient, type FireworksStreamEvent } from "@/lib/ai/fireworks-stream-client";
-import { messagesForFireworks, toolsForFireworks } from "@/lib/agent/fireworks-bridge";
+import type { InlineImage } from "@/lib/ai-gateway";
+import { createAgentBrain } from "@/lib/agent/brain";
 import { resolveAIProvider } from "@/lib/ai-provider";
 import { getCreditState, debitCredits, creditsForUsage } from "@/lib/credits";
 import { resolveOpIdByPath, tagWithOpIds } from "@/lib/html-ops";
@@ -71,23 +70,6 @@ interface AttachedImageBody {
 const SCOPE_OUTER_MAX = 50_000;
 const ATTACHED_URL_MAX = 2_000;
 const ATTACHED_ALT_MAX = 300;
-
-/**
- * El loop conoce los eventos del gateway de Gemini y nada más. DeepSeek añade
- * uno —el pensamiento por canal aparte— que aquí se DESCARTA a propósito: el
- * Agente narra lo que hace en `text`, y volcarle al usuario la cadena de
- * pensamiento cruda del modelo es ruido, no transparencia. Con
- * `page_edit` en esfuerzo `none` ese canal ni siquiera se abre; el descarte
- * existe para que encenderlo algún día no cambie lo que la gente ve.
- */
-async function* asAgentStream(
-  source: AsyncIterable<FireworksStreamEvent>,
-): AsyncIterable<StreamEvent> {
-  for await (const event of source) {
-    if (event.type === "reasoning_delta") continue;
-    yield event;
-  }
-}
 
 export async function POST(req: Request): Promise<Response> {
   // F4 Task 7 — emergency kill-switch: OPENLEN_AGENT=0 refuses BEFORE any
@@ -283,17 +265,16 @@ export async function POST(req: Request): Promise<Response> {
     imageEditsThisTurn: 0,
     photoSearchesThisTurn: 0,
   };
-  const provider = new GeminiProvider(PROVIDER.key as string);
   const tools = buildFunctionDeclarations();
-  // Quién razona. El loop ya era agnóstico —sólo importa TIPOS del gateway y
-  // recibe `openStream` inyectado—, así que cambiar de proveedor es cambiar esta
-  // función y nada del cerebro. `OPENLEN_AGENT_PROVIDER=gemini` vuelve atrás.
-  //
-  // Un turno con píxeles adjuntos se queda en Gemini: al razonador nunca se le
-  // ha mandado una imagen y adivinar aquí cuesta la acción del usuario.
-  const useDeepSeek = process.env.OPENLEN_AGENT_PROVIDER?.trim().toLowerCase() !== "gemini";
-  const fireworks = createFireworksStreamClient();
-  const wireTools = toolsForFireworks(tools);
+  // Quién razona vive en `lib/agent/brain` — el MISMO sitio del que tiran los
+  // evals. Tenerlo aquí dentro ya dejó a la batería midiendo Gemini después de
+  // que el Agente pasara a DeepSeek, sin que nada fallara.
+  const brain = createAgentBrain({
+    tools,
+    requestId: projectId,
+    signal: upstreamAbort.signal,
+    ...(attachedInline ? { attachedImage: { image: attachedInline, anchorMessage: promptMessage } } : {}),
+  });
 
   const sse = new ReadableStream<Uint8Array>({
     async start(controller) {
@@ -336,64 +317,13 @@ export async function POST(req: Request): Promise<Response> {
           // model produced nothing yet), and honors upstreamAbort so retries can
           // never outlive the STREAM_TIMEOUT_MS ceiling. A mid-stream failure
           // still propagates (no double-applied tool calls).
-          openStream: (msgs) => {
-            // F5: los píxeles adjuntos van SOLO en el turno cuyo último
-            // mensaje es el prompt del usuario (el gateway los ancla ahí);
-            // mezclarlos con un mensaje de functionResponses rompería el
-            // protocolo FC de Gemini.
-            const withImage =
-              attachedInline && msgs[msgs.length - 1] === promptMessage
-                ? [attachedInline]
-                : undefined;
-            if (useDeepSeek && !withImage) {
-              return streamWithRetry(
-                () => asAgentStream(fireworks.stream(
-                  {
-                    messages: messagesForFireworks(msgs),
-                    tools: wireTools,
-                    maxOutputTokens: 16_384,
-                    temperature: 0.7,
-                    requestId: projectId,
-                    operation: "page_edit",
-                  },
-                  { signal: upstreamAbort.signal },
-                )),
-                { signal: upstreamAbort.signal },
-              );
-            }
-            return streamWithRetry(
-              () =>
-                provider.stream(
-                  {
-                    model: PROVIDER.model,
-                    messages: msgs,
-                    tools,
-                    toolMode: "auto",
-                    maxOutputTokens: 16_384,
-                    temperature: 0.7,
-                    ...(withImage ? { images: withImage } : {}),
-                  },
-                  { signal: upstreamAbort.signal },
-                ),
-              { signal: upstreamAbort.signal },
-            );
-          },
+          openStream: (msgs) =>
+            streamWithRetry(() => brain.openStream(msgs), { signal: upstreamAbort.signal }),
           // Graceful termination: a tools-OFF stream the loop uses only to
           // compose a closing summary when a step-budget cap is hit, so the turn
           // ends with "here's what I did / what's pending" instead of a red error.
           closeOut: (msgs) =>
-            streamWithRetry(
-              () => (useDeepSeek
-                ? asAgentStream(fireworks.stream(
-                    { messages: messagesForFireworks(msgs), maxOutputTokens: 2_048, temperature: 0.7, requestId: projectId, operation: "page_edit" },
-                    { signal: upstreamAbort.signal },
-                  ))
-                : provider.stream(
-                    { model: PROVIDER.model, messages: msgs, tools: [], toolMode: "none", maxOutputTokens: 2_048, temperature: 0.7 },
-                    { signal: upstreamAbort.signal },
-                  )),
-              { signal: upstreamAbort.signal },
-            ),
+            streamWithRetry(() => brain.closeOut(msgs), { signal: upstreamAbort.signal }),
           runTool: (name, args) => runAgentTool(agentSession, deps, name, args),
           // F5 — los ojos: tras un turno que mutó el documento, renderiza y
           // verifica rotura visual objetiva; si la hay, el loop inyecta la
@@ -436,7 +366,7 @@ export async function POST(req: Request): Promise<Response> {
         // ended waiting on a confirm card.
         if (!result.terminalError) {
           const { inputTokens, outputTokens, cachedTokens } = result.usage;
-          const credits = creditsForUsage(inputTokens, outputTokens, PROVIDER.rate);
+          const credits = creditsForUsage(inputTokens, outputTokens, brain.creditRate());
           // F3: Gemini's implicit-cache discount (90% off cached input
           // tokens) is automatic on Google's own invoice — creditsForUsage
           // still prices off raw input/output, so OpenLen's product credits

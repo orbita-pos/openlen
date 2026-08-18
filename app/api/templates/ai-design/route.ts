@@ -478,6 +478,12 @@ VISUAL CONTEXT: the attached image is a full-page render of the CURRENT page (wh
   const useDeepSeek = process.env.OPENLEN_CHAT_PROVIDER?.trim().toLowerCase() !== "gemini"
     && (referenceImages?.length ?? 0) === 0;
   const modelLabel = useDeepSeek ? "DeepSeek" : PROVIDER.label;
+  // El turno se cobra al proveedor que lo corrió. A tarifa de Gemini la salida
+  // de DeepSeek se cobraba casi nueve veces de más, y una edición que reescribe
+  // una sección cruza el umbral donde eso son 2 créditos en vez de 1 (ver la
+  // tabla RATES en lib/credits). La decisión de arriba ya contempla las
+  // imágenes, así que aquí no hay mezcla posible.
+  const CREDIT_RATE = useDeepSeek ? "deepseek-flash" : PROVIDER.rate;
 
   const raw = process.env.OPENLEN_AIDESIGN_THINKING;
   const THINKING_BUDGET = raw === "auto" ? undefined
@@ -923,11 +929,11 @@ VISUAL CONTEXT: the attached image is a full-page render of the CURRENT page (wh
         // reports. Falls back to a char estimate only if the usage event
         // never arrived (rare; Gemini emits it on every stream).
         const credits = usage
-          ? creditsForUsage(usage.inputTokens, usage.outputTokens, PROVIDER.rate)
+          ? creditsForUsage(usage.inputTokens, usage.outputTokens, CREDIT_RATE)
           : estimateCredits(
               SYSTEM_PROMPT.length + userMessageContent.length,
               accumulatedReasoning.length + accumulatedHtml.length,
-              PROVIDER.rate,
+              CREDIT_RATE,
             );
         // eslint-disable-next-line no-console
         console.log(
