@@ -10,7 +10,7 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useTranslations } from "next-intl";
 import type { BriefFormState } from "@/components/workspace/types";
-import { EffortSelect, type PageEffort } from "./panels/ai-brief-panel";
+import { type PageEffort } from "./panels/ai-brief-panel";
 import { TemplatePreviewFrame } from "./template-preview-frame";
 import { useTemplates } from "./use-templates";
 import {
@@ -301,7 +301,10 @@ function HeroComposer({
         style={{ minHeight: 56 }}
       />
       <div className="flex items-center justify-between px-2.5 pb-2.5 pt-1">
-        <EffortSelect effort={effort} onEffortChange={onEffortChange} disabled={generating} />
+        {/* El dial está aparcado mientras la puerta es /api/generate: ahí no
+            compra nada todavía, y un selector que no compra nada es la mentira
+            que se arregló en page-effort.ts. El <div> sostiene el justify-between. */}
+        <div />
         <button
           type="button"
           onClick={onGenerate}

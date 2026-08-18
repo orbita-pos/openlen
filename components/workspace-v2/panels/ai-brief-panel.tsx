@@ -111,13 +111,8 @@ export function AiBriefPanel({
             {/* Just the effort chooser on the left — the editing affordances
                 (image / scope / autofill) belong to the edit chat, not the
                 brief, and crowding them here overflowed the row. */}
-            <div className="flex items-center gap-0.5 min-w-0">
-              <EffortSelect
-                effort={effort}
-                onEffortChange={onEffortChange}
-                disabled={generating}
-              />
-            </div>
+            {/* Dial aparcado — ver el comentario en start-landing.tsx. */}
+            <div className="flex items-center gap-0.5 min-w-0" />
             <button
               type="button"
               onClick={onGenerate}

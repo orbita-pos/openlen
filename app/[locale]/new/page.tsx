@@ -14,7 +14,7 @@ import { useSearchParams } from "next/navigation";
 import { useRouter } from "@/i18n/navigation";
 import { useLocale, useTranslations } from "next-intl";
 import { PublishModal } from "@/components/workspace/publish-modal";
-import { useCuration } from "@/lib/use-curation";
+import { useGeneration } from "@/lib/use-generation";
 import { setGenerationBusy } from "@/lib/generation-busy";
 import { scanController } from "@/lib/workspace-v2/scan-controller";
 import { classifyAiError } from "@/components/workspace-v2/ai-error-message";
@@ -780,12 +780,19 @@ function NewV2Inner() {
   // AI generation flow — owned here so the brief survives panel switches
   // inside the same /new?mode=ai session. On completion, we redirect
   // to ?project=<id> which drops the user into editing mode.
-  // La curación (/api/curate) es el único motor. "Desde cero" —la ruta libre
-  // de /api/generate— se retiró como puerta: el selector ahora dice cuánto
-  // trabajo se pone en la página, y hoy sólo `low` existe.
+  // La ruta libre (/api/generate) vuelve a ser la puerta: una llamada escribe
+  // el documento entero. Medido sobre los mismos cuatro briefs y el mismo
+  // modelo, escribir de una pasada dio cero defectos deterministas donde
+  // parchear una baseline dejó texto ilegible y una página sin padding, a la
+  // quinta parte del costo. El parcheo escribía el color en un turno y el
+  // fondo en otro, sin ver nunca los dos juntos.
+  //
+  // El dial de esfuerzo queda aparcado: en esta ruta no compra nada todavía, y
+  // un selector que no compra nada es exactamente la mentira que se arregló en
+  // `lib/curate/page-effort.ts`. Su maquinaria sigue intacta.
   const [effort, setEffort] = useState<PageEffort>("low");
-  const curation = useCuration();
-  const aiGenState = curation.state;
+  const generation = useGeneration();
+  const aiGenState = generation.state;
   // Saved business profiles ("Mi negocio") — seed the curation flow. Fetched on
   // mount; the default profile auto-selects (the user can switch or pick none).
   // (state declaration hoisted above loadedProject — see the comment there.)
@@ -972,8 +979,8 @@ function NewV2Inner() {
     if (aiGenerating) return;
     const brief = aiPrompt.trim();
     if (brief.length < 10) return;
-    void curation.curate(brief, selectedProfileId, effort);
-  }, [aiGenerating, aiPrompt, curation, selectedProfileId, effort]);
+    void generation.generate(brief, "gemini-flash", selectedProfileId);
+  }, [aiGenerating, aiPrompt, generation, selectedProfileId]);
   // A deep link with `?autostart=1` (the homepage hero) kicks generation
   // off on arrival. The param is stripped right after so a manual reload of
   // this URL doesn't re-fire — and re-bill — the generation.
