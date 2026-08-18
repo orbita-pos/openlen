@@ -12,6 +12,7 @@ import {
 import { DESIGN_REFERENCE } from "@/lib/design-guidance";
 import { MARKER, SYSTEM_PROMPT } from "./system-prompt";
 import { resolveAIProvider, type AIModel } from "@/lib/ai-provider";
+import { createFireworksStreamClient } from "@/lib/ai/fireworks-stream-client";
 import { detectSlotPath, sanitizeForPublish } from "@/lib/html-engine";
 import { GeminiProvider, type InlineImage, type Message } from "@/lib/ai-gateway";
 import { renderHtmlToInlineImage } from "@/lib/ai/inline-image";
@@ -463,6 +464,18 @@ VISUAL CONTEXT: the attached image is a full-page render of the CURRENT page (wh
   // mismas ops. En 0 NO se apaga y ya: el modelo deja de emitir el marcador
   // `---HTML---` y se pone a conversar, así que el turno entero se pierde.
   // `auto` devuelve el comportamiento de antes.
+  // Quién edita la página. DeepSeek entra apagado por defecto: se enciende con
+  // OPENLEN_CHAT_PROVIDER=deepseek para poder medirlo contra Gemini con el mismo
+  // prompt, el mismo marcador y el mismo protocolo de ops — sólo cambia quién
+  // habla al otro lado.
+  //
+  // Un turno CON imágenes de referencia se queda en Gemini pase lo que pase: en
+  // la política de Fireworks toda imagen va a Qwen y al razonador nunca se le ha
+  // mandado una. Mandarla a ciegas es apostar la edición del usuario.
+  const useDeepSeek = process.env.OPENLEN_CHAT_PROVIDER?.trim().toLowerCase() === "deepseek"
+    && (referenceImages?.length ?? 0) === 0;
+  const modelLabel = useDeepSeek ? "DeepSeek" : PROVIDER.label;
+
   const raw = process.env.OPENLEN_AIDESIGN_THINKING;
   const THINKING_BUDGET = raw === "auto" ? undefined
     : Number.isInteger(Number(raw)) && Number(raw) > 0 ? Number(raw)
@@ -563,8 +576,18 @@ VISUAL CONTEXT: the attached image is a full-page render of the CURRENT page (wh
           return;
         }
 
-        const provider = new GeminiProvider(PROVIDER.key as string);
-        const events = provider.stream(
+        const events = useDeepSeek
+          ? createFireworksStreamClient().stream(
+              {
+                messages: messages.map((message) => ({ role: message.role, content: message.content })),
+                maxOutputTokens: 65_536,
+                temperature: 0.8,
+                requestId: projectId,
+                operation: "page_edit",
+              },
+              { signal: upstreamAbort.signal },
+            )
+          : new GeminiProvider(PROVIDER.key as string).stream(
           {
             model: PROVIDER.model,
             messages,
@@ -594,6 +617,12 @@ VISUAL CONTEXT: the attached image is a full-page render of the CURRENT page (wh
           for await (const event of events) {
             if (event.type === "text_delta") {
               handleDelta(event.text);
+            } else if (event.type === "reasoning_delta") {
+              // DeepSeek manda su pensamiento por un canal propio en vez de
+              // mezclarlo con la respuesta, así que no pasa por el separador
+              // del marcador: llega ya separado.
+              accumulatedReasoning += event.text;
+              emit("reasoning_chunk", { text: event.text });
             } else if (event.type === "usage") {
               usage = {
                 inputTokens: event.inputTokens,
@@ -617,7 +646,7 @@ VISUAL CONTEXT: the attached image is a full-page render of the CURRENT page (wh
           emit("error", {
             message: upstreamAbort.signal.aborted
               ? "The model took too long (over 6 minutes) and was stopped. Try a smaller / more scoped change (🎯 Select), or try again."
-              : `${PROVIDER.label} stream failed: ${msg}`,
+              : `${modelLabel} stream failed: ${msg}`,
           });
           closeStream();
           return;
@@ -625,7 +654,7 @@ VISUAL CONTEXT: the attached image is a full-page render of the CURRENT page (wh
 
         if (providerError) {
           emit("error", {
-            message: `${PROVIDER.label}: ${providerError}`,
+            message: `${modelLabel}: ${providerError}`,
           });
           closeStream();
           return;

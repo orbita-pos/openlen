@@ -14,7 +14,8 @@ export type FableModelOperation =
   | "initial_section_program"
   | "visual_repair"
   | "candidate_scouting"
-  | "final_scoring";
+  | "final_scoring"
+  | "page_edit";
 
 const OPERATION_POLICY: Readonly<Record<FableModelOperation, { role: FableModelRole; effort: FireworksReasoningEffort }>> = {
   // Gusto, no razonamiento: elegir modo y acento desde el brief es una lectura
@@ -27,12 +28,27 @@ const OPERATION_POLICY: Readonly<Record<FableModelOperation, { role: FableModelR
   visual_repair: { role: "designer", effort: "max" },
   candidate_scouting: { role: "visual_critic", effort: "none" },
   final_scoring: { role: "visual_critic", effort: "none" },
+  // El Chat editando una página ya escrita. Entró como `high` —editar código
+  // PARECE razonar— y la medición lo desmintió sobre la misma página y el mismo
+  // prompt: 130.1s y 16,134 tokens de pensamiento para producir DOS ops; en
+  // `none`, 5.2s y SIETE. El pensamiento no sólo costaba 25x el tiempo, hacía
+  // menos trabajo. Mismo hallazgo que el presupuesto de pensamiento de Gemini
+  // en esta misma superficie, y la razón por la que el esfuerzo vive en una
+  // tabla: corregirlo fue esta línea.
+  page_edit: { role: "reasoner", effort: "none" },
 };
 
 export function reasoningEffortFor(role: FableModelRole, operation: FableModelOperation): FireworksReasoningEffort {
   const policy = OPERATION_POLICY[operation];
   if (policy.role !== role) throw new Error("operation is not allowed for model role");
   return policy.effort;
+}
+
+/** Qué papel hace una operación. Quien llama nombra el TRABAJO; la política
+ *  elige el modelo y el esfuerzo. Es lo que permite cambiar de proveedor
+ *  editando una tabla en vez de cada superficie. */
+export function roleForOperation(operation: FableModelOperation): FableModelRole {
+  return OPERATION_POLICY[operation].role;
 }
 
 export function modelIdForRole(role: FableModelRole): string {
