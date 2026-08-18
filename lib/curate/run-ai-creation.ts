@@ -1,5 +1,5 @@
 import type { BusinessProfileData } from "@/lib/business-profiles/types";
-import { assessFinalVisualCandidate, isFinalVisualAcceptance } from "@/lib/ai/qwen-visual-critic";
+import { assessFinalVisualCandidate, finalVisualRejectionReasons, isFinalVisualAcceptance } from "@/lib/ai/qwen-visual-critic";
 import { renderVisualQualityViewports } from "@/lib/ai/visual-quality-renderer";
 import type { IntentAnalysis } from "@/lib/generation/contracts";
 import type { CreativeDirection } from "@/lib/generation/creative-contracts";
@@ -222,9 +222,18 @@ function productionDeps(
         }, { client: runtime.fireworksClient });
         runtime.recordModel("final_critic", "modelId" in assessed ? assessed : {});
         if (!assessed.ok) return { ok: false };
+        const accepted = isFinalVisualAcceptance(assessed.verdict);
+        // Un rechazo sin motivo registrado es indistinguible de otro: sin esto
+        // no se sabe si el crítico vio algo reparable o sólo puso 6 en gusto.
+        if (!accepted) {
+          runtime.recordDegraded(
+            telemetryStage("advisory_review"),
+            `refused:${finalVisualRejectionReasons(assessed.verdict).join(",")}`.slice(0, 240),
+          );
+        }
         return {
           ok: true,
-          accepted: isFinalVisualAcceptance(assessed.verdict),
+          accepted,
           // Codes only. The critic's prose never reaches the repair prompt.
           issues: assessed.verdict.issues.map((issue) => `${issue.code}:${issue.viewport}`),
         };

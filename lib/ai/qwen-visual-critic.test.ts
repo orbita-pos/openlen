@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import type { FireworksJsonClient, } from "./fireworks-client";
 import type { FireworksJsonRequest } from "./fireworks-contracts";
 import { fireworksJsonSchema } from "./fireworks-contracts";
-import { assessFinalVisualCandidate, type FinalVisualVerdict } from "./qwen-visual-critic";
+import { assessFinalVisualCandidate, finalVisualRejectionReasons, type FinalVisualVerdict } from "./qwen-visual-critic";
 
 const JPEG = "/9j/4AAQSkZJRgABAQEAYABgAAD/2wBDAAMCAgMCAgMDAwMEAwMEBQgFBQQEBQoHBwYIDAoMDAsKCwsNDhIQDQ4RDgsLEBYQERMUFRUVDA8XGBYUGBIUFRT/2wBDAQMEBAUEBQkFBQkUDQsNFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBT/wAARCABAAEADASIAAhEBAxEB/8QAHwAAAQUBAQEBAQEAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAAAgEDAwIEAwUFBAQAAAF9AQIDAAQRBRIhMUEGE1FhByJxFDKBkaEII0KxwRVS0fAkM2JyggkKFhcYGRolJicoKSo0NTY3ODk6Q0RFRkdISUpTVFVWV1hZWmNkZWZnaGlqc3R1dnd4eXqDhIWGh4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMT1NXW19jZ2uHi4+Tl5ufo6erx8vP09fb3+Pn6/8QAHwEAAwEBAQEBAQEBAQAAAAAAAAECAwQFBgcICQoL/8QAtREAAgECBAQDBAcFBAQAAQJ3AAECAxEEBSExBhJBUQdhcRMiMoEIFEKRobHBCSMzUvAVYnLRChYkNOEl8RcYGRomJygpKjU2Nzg5OkNERUZHSElKU1RVVldYWVpjZGVmZ2hpanN0dnd4eXqDhIWGh4iJipKTlJWWl5iZmqKmqsrO0tba3uLm6wsLDxMXGx8jJytLT1NXW19jZ2uHi4+Tl5ufo6erx8vP09fb3+Pn6/9oADAMBAAIRAxEAPwDq6KKK/os/KgooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigD//2Q==";
 
@@ -128,5 +128,42 @@ describe("assessFinalVisualCandidate", () => {
       }).value,
     });
     expect(minor).toMatchObject({ ok: true, verdict: { decision: "accept" } });
+  });
+});
+
+describe("por qué el crítico no firmó", () => {
+  it("no da motivos cuando sí firmó", () => {
+    expect(finalVisualRejectionReasons(verdict)).toEqual([]);
+  });
+
+  // El caso que deja al reparador sin nada que hacer: la página cae por una
+  // nota de gusto y el resumen de incidencias que recibe va vacío.
+  it("separa una caída por nota de una caída por incidencia", () => {
+    const soloNota = finalVisualRejectionReasons({ ...verdict, originality: 6, decision: "repair" });
+    expect(soloNota).toContain("score:originality=6");
+    expect(soloNota.some((reason) => reason.startsWith("issue:"))).toBe(false);
+
+    const conIncidencia = finalVisualRejectionReasons({
+      ...verdict,
+      decision: "repair",
+      issues: [{ code: "contrast", severity: "critical", viewport: "mobile" }],
+    });
+    expect(conIncidencia).toContain("issue:contrast:critical");
+  });
+
+  it("ignora lo menor, que nunca impidió firmar", () => {
+    const reasons = finalVisualRejectionReasons({
+      ...verdict,
+      coherence: 5,
+      decision: "repair",
+      issues: [{ code: "typography", severity: "minor", viewport: "desktop" }],
+    });
+    expect(reasons).toContain("score:coherence=5");
+    expect(reasons.some((reason) => reason.includes("typography"))).toBe(false);
+  });
+
+  it("nombra las banderas duras", () => {
+    const reasons = finalVisualRejectionReasons({ ...verdict, wrongNiche: true, genericAiStyle: true, decision: "reject" });
+    expect(reasons).toEqual(expect.arrayContaining(["decision:reject", "flag:wrong_niche", "flag:generic_ai_style"]));
   });
 });

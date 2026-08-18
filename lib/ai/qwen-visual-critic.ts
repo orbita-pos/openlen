@@ -92,6 +92,32 @@ export function isFinalVisualAcceptance(verdict: FinalVisualVerdict): boolean {
     && !verdict.issues.some((entry) => entry.severity === "major" || entry.severity === "critical");
 }
 
+/** Por qué no firmó, en vocabulario cerrado y sin prosa del modelo. Sin esto,
+ * un rechazo por "originalidad: 6" y uno por "contraste ilegible" quedan como
+ * el mismo registro — y sólo el segundo se puede reparar. La aceptación exige
+ * seis notas >= 7 a la vez, así que una página puede caer sin una sola
+ * incidencia: ese caso manda al reparador un resumen vacío. */
+export function finalVisualRejectionReasons(verdict: FinalVisualVerdict): string[] {
+  if (isFinalVisualAcceptance(verdict)) return [];
+  const reasons: string[] = [];
+  const scores = [
+    ["niche_recognition", verdict.nicheRecognition],
+    ["prompt_fidelity", verdict.promptFidelity],
+    ["visual_quality", verdict.visualQuality],
+    ["coherence", verdict.coherence],
+    ["originality", verdict.originality],
+    ["mobile_quality", verdict.mobileQuality],
+  ] as const;
+  for (const [name, score] of scores) if (score < 7) reasons.push(`score:${name}=${score}`);
+  if (verdict.decision !== "accept") reasons.push(`decision:${verdict.decision}`);
+  if (verdict.wrongNiche) reasons.push("flag:wrong_niche");
+  if (verdict.genericAiStyle) reasons.push("flag:generic_ai_style");
+  for (const entry of verdict.issues) {
+    if (entry.severity === "major" || entry.severity === "critical") reasons.push(`issue:${entry.code}:${entry.severity}`);
+  }
+  return reasons;
+}
+
 function withDeterministicFailures(
   candidate: FinalVisualVerdict,
   deterministic: FinalVisualCriticInput["deterministic"],
