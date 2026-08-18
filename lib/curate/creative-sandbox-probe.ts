@@ -7,6 +7,7 @@ import { createPageGenerationBudget, parseFablePageBudgetConfigFromEnv } from "@
 import { listSections } from "@/lib/sections/store";
 import { coerceBusinessData } from "@/lib/style-match/autofill/types";
 import type { BusinessProfileData } from "@/lib/business-profiles/types";
+import type { PageEffort } from "./page-effort";
 
 import { createFableRuntimeComposition } from "./fable-runtime-composition";
 import { runAiCreation } from "./run-ai-creation";
@@ -82,7 +83,7 @@ export async function runCreativeSandboxProbe(
  * One complete cohort page through the production root: the same budget, the
  * same boundaries, the same delivery gate the route uses.
  */
-export async function runCreativeSandboxCanaryPage(caseId: string): Promise<CreativeSandboxPageOutcome> {
+export async function runCreativeSandboxCanaryPage(caseId: string, effort?: PageEffort): Promise<CreativeSandboxPageOutcome> {
   const fixture = AI_HYBRID_NICHE_CASES.find((row) => row.id === caseId);
   const started = Date.now();
   const blank = { mobileOverflow: false, weakTypographyHierarchy: false, invalidGeometry: false };
@@ -99,6 +100,7 @@ export async function runCreativeSandboxCanaryPage(caseId: string): Promise<Crea
     projectId: crypto.randomUUID(),
     brief: fixture.brief,
     profileData: { ...profile, brand: null, photos: [], links: [] } as unknown as BusinessProfileData,
+    ...(effort ? { effort } : {}),
   }, {
     listSections,
     fableRuntimeOptions: { pageBudget: budget, telemetrySink: (event) => { telemetry = event; } },

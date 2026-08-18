@@ -4,6 +4,7 @@ import { dirname, join } from "node:path";
 
 import { canonicalJsonSha256 } from "@/lib/generation/content-hash";
 import { AI_HYBRID_NICHE_CASES } from "@/lib/generation/ai-hybrid-niche-cohort";
+import { isPageEffort, type PageEffort } from "@/lib/curate/page-effort";
 
 export const CREATIVE_SANDBOX_CANARY_AUTHORIZATION = "AUTHORIZED_CREATIVE_SANDBOX_CANARY_ONCE";
 
@@ -21,6 +22,8 @@ export interface CreativeSandboxCanaryArgs {
   readonly mode: CreativeSandboxCanaryMode;
   readonly maxMicromxn: number;
   readonly commit: string;
+  /** Qué nivel de esfuerzo se está midiendo. Ausente = el del producto. */
+  readonly effort?: PageEffort;
 }
 
 export interface CreativeSandboxProbeOutcome {
@@ -87,7 +90,7 @@ export interface CreativeSandboxCanaryDeps {
   /** Which isolated probes have already passed. A page may not run first. */
   probeEvidence(): Promise<Record<CreativeSandboxProvider, boolean>>;
   runProbe(provider: CreativeSandboxProvider): Promise<CreativeSandboxProbeOutcome>;
-  runPage(caseId: string): Promise<CreativeSandboxPageOutcome>;
+  runPage(caseId: string, effort?: PageEffort): Promise<CreativeSandboxPageOutcome>;
   writeEvidence(report: CreativeSandboxCanaryReport): Promise<void>;
 }
 
@@ -130,6 +133,9 @@ export function parseCreativeSandboxCanaryArgs(argv: readonly string[]): Creativ
 
   const maxMicromxn = positiveInteger(flag(argv, "max-mxn"));
   if (maxMicromxn === null) throw new Error("invalid_budget");
+  const rawEffort = flag(argv, "effort");
+  if (rawEffort !== undefined && !isPageEffort(rawEffort)) throw new Error("unknown_effort");
+
   const commit = flag(argv, "commit");
   if (commit === undefined || !COMMIT.test(commit)) throw new Error("commit_required");
 
@@ -140,6 +146,7 @@ export function parseCreativeSandboxCanaryArgs(argv: readonly string[]): Creativ
       : { kind: "page", caseId: caseId! },
     maxMicromxn,
     commit,
+    ...(rawEffort !== undefined ? { effort: rawEffort } : {}),
   };
 }
 
@@ -251,7 +258,7 @@ export async function runCreativeSandboxCanary(
   try {
     outcome = args.mode.kind === "provider"
       ? await deps.runProbe(args.mode.provider)
-      : await deps.runPage(args.mode.caseId);
+      : await deps.runPage(args.mode.caseId, args.effort);
   } catch (error) {
     // A thrown boundary is one failed unit of work, never a second attempt.
     // The cost is the CAP — a throw can land after paid turns, so anything
@@ -306,9 +313,9 @@ async function productionDeps(): Promise<CreativeSandboxCanaryDeps> {
       const { runCreativeSandboxProbe } = await import("@/lib/curate/creative-sandbox-probe");
       return runCreativeSandboxProbe(provider);
     },
-    runPage: async (caseId) => {
+    runPage: async (caseId, effort) => {
       const { runCreativeSandboxCanaryPage } = await import("@/lib/curate/creative-sandbox-probe");
-      return runCreativeSandboxCanaryPage(caseId);
+      return runCreativeSandboxCanaryPage(caseId, effort);
     },
     writeEvidence: async (finalReport) => {
       await mkdir(dirname(evidenceFile), { recursive: true });
