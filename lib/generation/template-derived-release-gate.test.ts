@@ -7,7 +7,7 @@ describe("template-derived release gate contract", () => {
   it("lists each required release suite exactly once", () => {
     const pkg = JSON.parse(readFileSync(resolve(root, "package.json"), "utf8"));
     const command = String(pkg.scripts["generation:template-derived-sections:gate"]);
-    const required = ["template-section-corpus.test.ts", "template-section-extractor.test.ts", "derived-section-compiler.test.ts", "derived-section-persistence.test.ts", "sections-derived-rollback.test.ts", "section-inventory.test.ts", "compose-sections.test.ts", "gemini-section-spec-provider.test.ts", "generate-missing-section.test.ts", "template-derived-niche-cohort.test.ts", "template-derived-sections-canary.test.ts", "run-ai-creation.test.ts", "explicit-template-clone-contract.test.ts"];
+    const required = ["template-section-corpus.test.ts", "template-section-extractor.test.ts", "derived-section-compiler.test.ts", "derived-section-persistence.test.ts", "sections-derived-rollback.test.ts", "section-inventory.test.ts", "compose-sections.test.ts", "template-derived-niche-cohort.test.ts", "template-derived-sections-canary.test.ts", "run-ai-creation.test.ts", "explicit-template-clone-contract.test.ts"];
     for (const file of required) expect(command.match(new RegExp(file.replaceAll(".", "\\."), "g"))).toHaveLength(1);
     for (const path of command.split(/\s+/).filter((value: string) => value.endsWith(".test.ts"))) expect(readFileSync(resolve(root, path), "utf8").length).toBeGreaterThan(0);
   });

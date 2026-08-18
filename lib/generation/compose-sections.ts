@@ -21,9 +21,40 @@ import {
   resolveSectionPlan,
   SectionCompositionSelectionError,
   type SectionCompositionInventory,
-  type SectionSelectionRow,
+  type SectionSelectionRow,  SectionCompositionInventoryEntry,
 } from "./section-inventory";
-import type { GenerateMissingSectionResult } from "./generate-missing-section";
+// El generador de secciones que faltaban se retiró con el motor híbrido —
+// nunca se le inyecta dep, así que ninguna página lo alcanzaba—, pero su forma
+// de resultado sigue siendo el contrato de esta costura por si vuelve a
+// enchufarse algo aquí. Vive donde se usa, que ahora es sólo este archivo.
+export interface GeneratedSectionSpecUsage {
+  inputTokens: number;
+  outputTokens: number;
+  thinkingTokens: number;
+  cachedTokens: number;
+}
+
+export interface GeneratedSectionCandidate extends SectionCompositionInventoryEntry {
+  html: string;
+  specHash: string;
+}
+
+export type GenerateMissingSectionResult =
+  | {
+      ok: true;
+      candidate: GeneratedSectionCandidate;
+      modelId: string;
+      promptVersion: "generated-section-spec-prompt/1.0";
+      usage?: GeneratedSectionSpecUsage;
+      durationMs: number;
+    }
+  | {
+      ok: false;
+      code: "provider_timeout" | "provider_error" | "invalid_provider_response" | "model_incompatible";
+      modelId?: string;
+      usage?: GeneratedSectionSpecUsage;
+      durationMs?: number;
+    };
 import { planSectionComposition } from "./section-plan";
 import { canonicalJsonSha256, sha256 } from "./content-hash";
 import type { PilotReasonCode } from "./visual-engine-pilot-store";
