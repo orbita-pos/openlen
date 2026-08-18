@@ -58,5 +58,16 @@ describe("Arreglo 3 — el guardia de la costura design-guidance vs design-guida
     it("contiene la sección CONDUCTAS (no solo marcadores sueltos)", () => {
       expect(getPrompt()).toContain("CONDUCTAS");
     });
+
+    // La jerarquía tipográfica débil salió en 5 de 13 páginas medidas, y era
+    // el único defecto que la guía no cubría: explicaba cómo espaciar un
+    // titular y nunca de qué tamaño hacerlo. Se mide en móvil, así que la
+    // regla tiene que hablar de móvil.
+    it("lleva la escala de tamaño, no sólo el oficio tipográfico", () => {
+      const prompt = getPrompt();
+      expect(prompt).toContain("text-4xl");
+      expect(prompt).toMatch(/TWICE the hero body/);
+      expect(prompt).toContain("390px");
+    });
   });
 });

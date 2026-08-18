@@ -59,6 +59,10 @@ function systemPrompt(): string {
     "The canvas comes with the brief, so spend your first turn changing the page, not looking at it.",
     "Make the page unmistakably belong to its niche:",
     "structure, rhythm, colour, typography, texture and motion are all yours through HTML and CSS.",
+    // La jerarquía se mide en móvil, y era el defecto más común de las páginas
+    // medidas. DESIGN_GUIDANCE no llega hasta aquí a propósito: son ~10.8k
+    // tokens contra los ~330 de este prompt, en cada turno de la sesión.
+    "Mobile decides the hierarchy: your h1 is judged at 390px wide, after your responsive classes shrink it -- keep it at text-4xl or larger there, hero body copy at text-base to text-lg, and the headline at least twice the body size. A 24px headline over a 20px paragraph is a tie, not a hierarchy.",
     "A section you replace loses the stylesheet it had: send that section's css in the same operation as its html, or your markup lands with class names nothing styles.",
     "Avoid the generic centred hero-badge-title-paragraph-two-buttons stack unless the brief truly calls for it.",
     "You may not use scripts, event handlers or executable URLs; reach for CSS or an OpenLen module instead.",

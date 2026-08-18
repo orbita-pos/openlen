@@ -170,6 +170,17 @@ can switch modes cleanly; do NOT add a visible theme-toggle button.
 TYPOGRAPHY PRECISIONS
 ═══════════════════════════════════════════════════════════════════════════
 
+• Size scale — the rule that breaks most often, and the one nothing else
+  here covers. Hierarchy is judged ON MOBILE (390px wide), after responsive
+  classes have shrunk everything:
+  – Main headline (h1): never below \`text-4xl\` (36px) at mobile width.
+    \`text-5xl md:text-7xl\` is the healthy pattern. \`text-xl md:text-6xl\`
+    is not — it commands the desktop and collapses on the phone.
+  – Hero body copy: \`text-base\` to \`text-lg\` (16-18px). Never under 14px.
+  – Ratio: the h1 must render at least TWICE the hero body size. A 24px
+    headline over a 20px paragraph is not a hierarchy, it is a tie.
+  Hierarchy comes from size, weight and space — never from colour alone.
+
 • Display headlines: \`letter-spacing: -0.025em to -0.04em\`, \`line-height:
   0.92 to 0.98\`. Tight, confident.
 • Inter as the primary sans family: enable OpenType features with

@@ -65,6 +65,19 @@ function clientReturning(...turns: FireworksToolTurnResult[]): { client: Firewor
 const PATCH_CALL = { id: "c1", name: "apply_creative_patch", arguments: { operations: [{ op: "replace_section", targetId: "ol-hero-1", html: "<section>x</section>" }] } };
 
 describe("finite DeepSeek creative session", () => {
+  // La jerarquía tipográfica débil salió en 5 de 13 páginas medidas. Este
+  // camino NO lee DESIGN_GUIDANCE (~10.8k tokens contra los ~330 de aquí, en
+  // cada turno), así que si la regla no vive en este prompt, para la creación
+  // no existe.
+  it("le dice al diseñador de qué tamaño va el titular, y en qué viewport", async () => {
+    const { client, seen } = clientReturning(ok([], "Listo."));
+    await runDeepSeekCreativeSession(INPUT, { client, sandbox: makeSandbox() });
+    const system = JSON.stringify(seen[0]?.[0] ?? {});
+    expect(system).toContain("390px");
+    expect(system).toContain("text-4xl");
+    expect(system).toContain("twice the body size");
+  });
+
   it("stops when the model returns no tool calls", async () => {
     const { client } = clientReturning(ok([], "Listo."));
     const result = await runDeepSeekCreativeSession(INPUT, { client, sandbox: makeSandbox() });
