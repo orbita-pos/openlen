@@ -74,6 +74,16 @@ describe("assessFinalVisualCandidate", () => {
     ]) }) });
   });
 
+  it("overrides a Qwen accept when text was measured unreadable", async () => {
+    // Una captura no distingue "no hay menú" de "el menú está ahí y no se ve":
+    // el crítico aprobó una página con la barra entera invisible.
+    const result = await assessFinalVisualCandidate({ ...input, deterministic: { ...input.deterministic, unreadableText: true } }, { client: client().value });
+    expect(result).toMatchObject({ ok: true, verdict: expect.objectContaining({
+      decision: "reject",
+      issues: expect.arrayContaining([expect.objectContaining({ code: "contrast", severity: "critical" })]),
+    }) });
+  });
+
   it("does not accept wrong-niche, generic, or low-recognition Qwen output", async () => {
     for (const reply of [
       { ...verdict, wrongNiche: true },

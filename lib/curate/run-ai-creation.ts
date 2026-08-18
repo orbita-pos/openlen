@@ -114,6 +114,7 @@ function productionDeps(
     return {
       mobileOverflow: (rendered as { mobileOverflow?: boolean }).mobileOverflow === true,
       invalidGeometry: (rendered as { invalidGeometry?: boolean }).invalidGeometry === true,
+      unreadableText: rendered.unreadableText ?? [],
     };
   };
   // Two counts, because they answer different questions: the provider bills
@@ -201,6 +202,7 @@ function productionDeps(
             mobileOverflow: rendered.mobileOverflow === true,
             weakTypographyHierarchy: rendered.weakTypographyHierarchy === true,
             invalidGeometry: rendered.invalidGeometry === true,
+            unreadableText: (rendered.unreadableText?.length ?? 0) > 0,
           },
           brief: {
             niche: review.intent.functional.siteType,

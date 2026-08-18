@@ -295,6 +295,72 @@ describe("inverted surface repair", () => {
   });
 });
 
+describe("unreadable text repair", () => {
+  // Una barra que el modelo pintó clara sin fondo propio, sobre la banda crema
+  // que la sección sigue pintando. Ninguna reja estática puede verlo: el mismo
+  // color sobre una foto oscura es correcto.
+  const UNREADABLE = '<!doctype html><html style="--ol-bg:#F4EEE2;--ol-fg:#26261F"><head>'
+    + '<style data-openlen-creative-section="ol-header-1">.site-head{color:#f6efe2}</style>'
+    + '</head><body><section class="band"><div class="site-head">Casa del Lago</div></section></body></html>';
+
+  const probeOf = (html: string, className: string) =>
+    Number(/data-ol-probe="(\d+)"/.exec(new RegExp(`<[^>]*class="${className}"[^>]*>`).exec(html)?.[0] ?? "")?.[1] ?? -1);
+
+  async function withUnreadable(over: Partial<CreativeGenerationDeps> = {}) {
+    const { sha256 } = await import("@/lib/generation/content-hash");
+    return deps({
+      runCreativeSession: async () => ({
+        candidate: {
+          ...IMPROVED,
+          html: UNREADABLE,
+          visualEngine: { ...(VISUAL_ENGINE as object), compositionManifest: { ...MANIFEST, outputHash: sha256(UNREADABLE) } } as never,
+        },
+        changed: true, acceptedMutations: 1, rejections: [], stoppedBy: "finished",
+      }),
+      renderCandidate: async (html: string) => ({
+        mobileOverflow: false,
+        invalidGeometry: false,
+        unreadableText: [{ probe: probeOf(html, "site-head"), background: "#f4eee2", contrast: 1.01 }],
+      }),
+      ...over,
+    });
+  }
+
+  it("le da al texto medido un color en el que se puede leer", async () => {
+    const result = await runCreativeGeneration(INPUT, await withUnreadable());
+    expect(result.ok).toBe(true);
+    expect(result.ok && result.html).toContain('class="site-head" style="color:var(--ol-fg)"');
+    // La regla del modelo no se toca: puede estar pintando bien otros diez.
+    expect(result.ok && result.html).toContain(".site-head{color:#f6efe2}");
+  });
+
+  it("lo que la crítica juzga es lo que se entrega", async () => {
+    const review = vi.fn(async ({ candidate }: { candidate: SafeCreativeCandidate }) => ({ candidate, reviewed: true, repaired: false }));
+    await runCreativeGeneration(INPUT, await withUnreadable({ runAdvisoryReview: review as never }));
+    expect(review.mock.calls[0][0].candidate.html).toContain("color:var(--ol-fg)");
+  });
+
+  it("lo deja en la bitácora, porque es la única forma de saber cuántas veces pasa", async () => {
+    const recordDegraded = vi.fn();
+    await runCreativeGeneration(INPUT, await withUnreadable({ recordDegraded }));
+    expect(recordDegraded).toHaveBeenCalledWith("advisory_review", "unreadable_text_repaired");
+  });
+
+  it("no toca la página cuando el render no mide nada ilegible", async () => {
+    const result = await runCreativeGeneration(INPUT, await withUnreadable({
+      renderCandidate: async () => ({ mobileOverflow: false, invalidGeometry: false, unreadableText: [] }),
+    }));
+    expect(result.ok && result.html).toBe(UNREADABLE);
+  });
+
+  it("un render que lanza no cuesta la página", async () => {
+    const result = await runCreativeGeneration(INPUT, await withUnreadable({
+      renderCandidate: async () => { throw new Error("browser down"); },
+    }));
+    expect(result.ok && result.html).toBe(UNREADABLE);
+  });
+});
+
 describe("la dirección elegida desde el brief", () => {
   const SEALED_BASELINE: SafeCreativeCandidate = {
     ...BASELINE,

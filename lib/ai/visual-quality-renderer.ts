@@ -11,6 +11,16 @@ const MAX_VIEWPORT_BYTES = 1024 * 1024;
 const MAX_CAPTURE_HEIGHT = 4096;
 const DETERMINISTIC_RENDER_RESET = "<style data-openlen-deterministic-render-reset>*,*::before,*::after{animation:none!important;transition:none!important;caret-color:transparent!important;scroll-behavior:auto!important}@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important;caret-color:transparent!important;scroll-behavior:auto!important}}</style>";
 
+/** Un texto que el navegador pintó, medido contra el fondo que de verdad lo
+ *  pinta. `probe` es el `data-ol-probe` del elemento cuando el documento venía
+ *  marcado, y -1 cuando no: sin él la lectura sirve de señal pero no se puede
+ *  reparar. */
+export interface UnreadableTextFinding {
+  readonly probe: number;
+  readonly background: string;
+  readonly contrast: number;
+}
+
 export interface VisualQualityViewports {
   desktop: InlineImage;
   mobile: InlineImage;
@@ -18,6 +28,7 @@ export interface VisualQualityViewports {
   weakTypographyHierarchy?: boolean;
   squareComponentTreatment?: boolean;
   invalidGeometry?: boolean;
+  unreadableText?: readonly UnreadableTextFinding[];
 }
 
 interface PageLike {
@@ -140,6 +151,23 @@ function readVisualDiagnostics(value: unknown): {
   return { weakTypographyHierarchy, squareComponentTreatment };
 }
 
+function readUnreadableText(value: unknown): UnreadableTextFinding[] {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return [];
+  const findings = (value as Record<string, unknown>).unreadableText;
+  if (!Array.isArray(findings)) return [];
+  const out: UnreadableTextFinding[] = [];
+  for (const entry of findings) {
+    if (!entry || typeof entry !== "object") continue;
+    const row = entry as Record<string, unknown>;
+    const probe = typeof row.probe === "number" && Number.isInteger(row.probe) ? row.probe : -1;
+    const background = typeof row.background === "string" && /^#[0-9a-f]{6}$/i.test(row.background) ? row.background : null;
+    const contrast = typeof row.contrast === "number" && Number.isFinite(row.contrast) ? row.contrast : null;
+    if (background === null || contrast === null) continue;
+    out.push({ probe, background, contrast });
+  }
+  return out.slice(0, 12);
+}
+
 async function defaultLaunchBrowser(): Promise<BrowserLike> {
   const puppeteer = (await import("puppeteer")).default;
   const executablePath = process.env.PUPPETEER_EXECUTABLE_PATH?.trim() || undefined;
@@ -164,6 +192,7 @@ async function captureWithPage(
   let weakTypographyHierarchy = false;
   let squareComponentTreatment = false;
   let invalidGeometry = false;
+  let unreadableText: UnreadableTextFinding[] = [];
   for (const viewport of [VISUAL_QUALITY_DESKTOP_VIEWPORT, VISUAL_QUALITY_MOBILE_VIEWPORT]) {
     if (viewport !== VISUAL_QUALITY_DESKTOP_VIEWPORT) await page.setViewport(viewport);
     const documentHeight = await awaitDeterministicLayout(page);
@@ -207,6 +236,95 @@ async function captureWithPage(
               Number.parseFloat(style.borderBottomLeftRadius) || 0,
             ) >= 8) roundedComponentCount += 1;
           }
+          // Texto que el navegador pintó pero nadie puede leer. Se mide aquí
+          // porque sólo el render sabe qué hay DETRÁS de cada texto: el mismo
+          // `color:#f6efe2` sin fondo propio es correcto sobre la foto oscura
+          // del hero e invisible sobre la banda crema de al lado, y ningún
+          // análisis del CSS distingue los dos casos.
+          // Sin funciones auxiliares, a propósito: el empaquetador les pone
+          // nombre con `__name(...)` y ese ayudante no existe en el navegador,
+          // así que una sola `const parseColor = …` aquí dentro tumba la
+          // medición entera con `__name is not defined`. Las devoluciones de
+          // llamada anónimas sí sobreviven.
+          const RGB_RE = /^rgba?\(([^)]+)\)/i;
+          const SEPARATOR_RE = /[\s,/]+/;
+          const WEIGHTS = [0.2126, 0.7152, 0.0722];
+          const unreadableText: { probe: number; background: string; contrast: number }[] = [];
+          const seen = new Set<string>();
+          const TEXT_TAGS = "h1,h2,h3,h4,h5,h6,p,a,span,li,button,strong,em,label,td,th,dt,dd,blockquote,figcaption,div";
+          for (const node of body ? body.querySelectorAll(TEXT_TAGS) : []) {
+            if (unreadableText.length >= 12) break;
+            if (!(node instanceof HTMLElement)) continue;
+            // Sólo elementos que llevan texto PROPIO: el padre de un texto
+            // anidado hereda un color que no es el que se pinta.
+            let owns = false;
+            for (const child of node.childNodes) {
+              if (child.nodeType === 3 && (child.textContent ?? "").trim().length > 1) { owns = true; break; }
+            }
+            if (!owns) continue;
+            const rect = node.getBoundingClientRect();
+            if (rect.width <= 0 || rect.height <= 0) continue;
+            const style = window.getComputedStyle(node);
+            if (style.display === "none" || style.visibility === "hidden") continue;
+            if ((Number.parseFloat(style.opacity) || 0) < 0.5) continue;
+            if ((Number.parseFloat(style.fontSize) || 0) < 6) continue;
+
+            // El primer fondo OPACO hacia arriba es el que de verdad lo pinta.
+            // Una imagen o un velo translúcido en el camino significa que no
+            // sabemos qué hay debajo, y una duda jamás debe convertirse en un
+            // hallazgo. Nada opaco hasta la raíz es el lienzo blanco.
+            let backgroundText = "rgb(255, 255, 255)";
+            let uncertain = false;
+            for (let ancestor: HTMLElement | null = node; ancestor; ancestor = ancestor.parentElement) {
+              const ancestorStyle = window.getComputedStyle(ancestor);
+              if (ancestorStyle.backgroundImage && ancestorStyle.backgroundImage !== "none") { uncertain = true; break; }
+              const painted = (RGB_RE.exec(ancestorStyle.backgroundColor) ?? ["", ""])[1]
+                .split(SEPARATOR_RE).filter((piece) => piece.length > 0).map(Number);
+              if (painted.length < 3) continue;
+              const alpha = painted.length > 3 && Number.isFinite(painted[3]) ? painted[3] : 1;
+              if (alpha <= 0.02) continue;
+              if (alpha < 0.95) { uncertain = true; break; }
+              backgroundText = ancestorStyle.backgroundColor;
+              break;
+            }
+            if (uncertain) continue;
+
+            const luminances: number[] = [];
+            for (const value of [style.color, backgroundText]) {
+              const channels = (RGB_RE.exec(value) ?? ["", ""])[1]
+                .split(SEPARATOR_RE).filter((piece) => piece.length > 0).map(Number);
+              if (channels.length < 3 || channels.slice(0, 3).some((channel) => !Number.isFinite(channel))) break;
+              // Un texto translúcido se lee sobre lo que tenga debajo; medirlo
+              // como si fuera opaco es inventar un hallazgo.
+              if (channels.length > 3 && Number.isFinite(channels[3]) && channels[3] < 0.9) break;
+              let total = 0;
+              for (let index = 0; index < 3; index += 1) {
+                const scaled = Math.min(255, Math.max(0, channels[index])) / 255;
+                total += WEIGHTS[index] * (scaled <= 0.03928 ? scaled / 12.92 : Math.pow((scaled + 0.055) / 1.055, 2.4));
+              }
+              luminances.push(total);
+            }
+            if (luminances.length !== 2) continue;
+            const contrast = (Math.max(luminances[0], luminances[1]) + 0.05) / (Math.min(luminances[0], luminances[1]) + 0.05);
+            // 2:1 es deliberadamente bajo. No mide accesibilidad: separa
+            // "cuesta leerlo" de "no está".
+            if (contrast >= 2) continue;
+
+            const channels = (RGB_RE.exec(backgroundText) ?? ["", ""])[1]
+              .split(SEPARATOR_RE).filter((piece) => piece.length > 0).map(Number);
+            let background = "#";
+            for (let index = 0; index < 3; index += 1) {
+              background += Math.min(255, Math.max(0, Math.round(channels[index]))).toString(16).padStart(2, "0");
+            }
+            const raw = node.getAttribute("data-ol-probe");
+            const probeValue = raw === null ? -1 : Number(raw);
+            const probe = Number.isInteger(probeValue) && probeValue >= 0 ? probeValue : -1;
+            const key = `${probe}|${background}`;
+            if (seen.has(key)) continue;
+            seen.add(key);
+            unreadableText.push({ probe, background, contrast: Math.round(contrast * 100) / 100 });
+          }
+
           return {
             rootScrollWidth: root.scrollWidth,
             bodyScrollWidth: body?.scrollWidth ?? 0,
@@ -215,6 +333,7 @@ async function captureWithPage(
             heroBodyFontPx,
             componentCount,
             roundedComponentCount,
+            unreadableText,
           };
       });
       const firstGeometry = await readGeometry();
@@ -224,6 +343,7 @@ async function captureWithPage(
         || hasDocumentHorizontalOverflow(firstGeometry)
         || hasDocumentHorizontalOverflow(secondGeometry);
       ({ weakTypographyHierarchy, squareComponentTreatment } = readVisualDiagnostics(firstGeometry));
+      unreadableText = readUnreadableText(firstGeometry);
     }
     const bytes = Buffer.from(await page.screenshot({
       type: "jpeg",
@@ -242,6 +362,7 @@ async function captureWithPage(
     weakTypographyHierarchy,
     squareComponentTreatment,
     invalidGeometry,
+    unreadableText,
   };
 }
 
@@ -370,7 +491,8 @@ export async function renderVisualQualityViewports(
     const mobile = await internals.capture(html, VISUAL_QUALITY_MOBILE_VIEWPORT);
     if (!isBoundedJpeg(mobile)) return null;
     return { desktop, mobile };
-  } catch {
+  } catch (error) {
+    if (process.env.OPENLEN_RENDER_DEBUG === "1") console.error(error);
     return null;
   }
 }

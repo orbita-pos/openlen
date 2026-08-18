@@ -12,6 +12,8 @@ import { applyCreativeDirection } from "./apply-creative-direction";
 import { insertModulePlaceholders, modulesFromBrief } from "./module-placeholders";
 import { isolateModelTokens } from "./isolate-model-tokens";
 import { repairInvertedSurfaces } from "./repair-inverted-surfaces";
+import { repairUnreadableText } from "./repair-unreadable-text";
+import type { UnreadableTextFinding } from "@/lib/ai/visual-quality-renderer";
 
 export interface CreativeGenerationInput {
   readonly projectId: string;
@@ -27,7 +29,11 @@ export interface CreativeGenerationDeps {
   readonly fetchText?: (storageUrl: string) => Promise<string | null>;
   /** The baseline's own render gate. Without it the baseline builder falls back
    * to a stub that approves every document, so overflow ships unchecked. */
-  readonly renderCandidate?: (html: string) => Promise<{ mobileOverflow: boolean; invalidGeometry: boolean } | null>;
+  readonly renderCandidate?: (html: string) => Promise<{
+    mobileOverflow: boolean;
+    invalidGeometry: boolean;
+    unreadableText?: readonly UnreadableTextFinding[];
+  } | null>;
   /** Quién elige cómo se ve la página, leyendo el brief. Sin esto la elige el
    * vecino más parecido entre 7 nichos —así una clínica dental salió con la
    * paleta de terror—. Se le pregunta una sola vez, y sólo después de que la
@@ -218,6 +224,32 @@ export async function runCreativeGeneration(
   } catch {
     degraded = true;
     deps.recordDegraded?.("creative_session", "internal_error");
+  }
+
+  // Se mide y se corrige ANTES de la revisión, no después: lo que Qwen juzga
+  // tiene que ser lo que se entrega. Y va aquí, después de adoptar la paleta
+  // del modelo, porque hasta ese momento los colores todavía cambian.
+  if (deps.renderCandidate) {
+    try {
+      const legible = await repairUnreadableText(lastKnownGood.html, deps.renderCandidate);
+      if (legible.repaired > 0) {
+        lastKnownGood = {
+          ...lastKnownGood,
+          html: legible.html,
+          visualEngine: sealAiCompositionOutput(
+            lastKnownGood.visualEngine,
+            legible.html,
+          ) as SafeCreativeCandidate["visualEngine"],
+        };
+        // No es una pérdida, es una corrección — pero queda en la bitácora
+        // porque es la única forma de saber cuántas veces el modelo entrega
+        // una página con texto invisible.
+        deps.recordDegraded?.("advisory_review", "unreadable_text_repaired");
+      }
+    } catch {
+      // Resellar puede fallar; el texto ilegible que quedó lo ve el crítico.
+      deps.recordDegraded?.("advisory_review", "unreadable_text_unrepaired");
+    }
   }
 
   notify(input, "review");

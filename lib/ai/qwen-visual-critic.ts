@@ -10,7 +10,7 @@ const TAXONOMY = /^[a-z0-9]+(?:_[a-z0-9]+)*$/;
 const MAX_IMAGE_BYTES = 1024 * 1024;
 
 export const BoundedVisualIssueSchema = z.object({
-  code: z.enum(["niche", "fidelity", "quality", "coherence", "originality", "mobile", "wrong_niche", "generic_ai", "overflow", "typography", "geometry"]),
+  code: z.enum(["niche", "fidelity", "quality", "coherence", "originality", "mobile", "wrong_niche", "generic_ai", "overflow", "typography", "geometry", "contrast"]),
   severity: z.enum(["minor", "major", "critical"]),
   viewport: z.enum(["desktop", "mobile", "both"]),
 }).strict();
@@ -44,6 +44,10 @@ export interface FinalVisualCriticInput {
     readonly mobileOverflow: boolean;
     readonly weakTypographyHierarchy: boolean;
     readonly invalidGeometry: boolean;
+    /** Texto medido bajo 2:1 contra el fondo que lo pinta. El crítico aprobó un
+     *  menú invisible: una captura no distingue "no hay menú" de "el menú está
+     *  ahí y no se ve". */
+    readonly unreadableText?: boolean;
   };
 }
 
@@ -96,6 +100,7 @@ function withDeterministicFailures(
   if (deterministic.mobileOverflow) failures.push(issue("overflow", "mobile"));
   if (deterministic.weakTypographyHierarchy) failures.push(issue("typography", "both"));
   if (deterministic.invalidGeometry) failures.push(issue("geometry", "both"));
+  if (deterministic.unreadableText === true) failures.push(issue("contrast", "both"));
   const disqualifiesAcceptance = candidate.wrongNiche
     || candidate.genericAiStyle
     || failures.length > 0
