@@ -21,11 +21,21 @@ export interface UnreadableTextFinding {
   readonly contrast: number;
 }
 
+/** Cuál de los tres defectos de jerarquía se midió, y con qué números. Sin
+ *  esto el reparador recibe la palabra "typography" y tiene que adivinar si el
+ *  titular es chico, si el cuerpo es ilegible, o si no se distinguen entre sí. */
+export interface TypographyHierarchyFinding {
+  readonly rule: "h1_too_small" | "hero_body_too_small" | "h1_not_dominant";
+  readonly h1FontPx: number;
+  readonly heroBodyFontPx: number | null;
+}
+
 export interface VisualQualityViewports {
   desktop: InlineImage;
   mobile: InlineImage;
   mobileOverflow?: boolean;
   weakTypographyHierarchy?: boolean;
+  typographyHierarchy?: TypographyHierarchyFinding | null;
   squareComponentTreatment?: boolean;
   invalidGeometry?: boolean;
   unreadableText?: readonly UnreadableTextFinding[];
@@ -127,10 +137,11 @@ function readFiniteMeasurement(value: Record<string, unknown>, key: string): num
 
 function readVisualDiagnostics(value: unknown): {
   weakTypographyHierarchy: boolean;
+  typographyHierarchy: TypographyHierarchyFinding | null;
   squareComponentTreatment: boolean;
 } {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
-    return { weakTypographyHierarchy: false, squareComponentTreatment: false };
+    return { weakTypographyHierarchy: false, typographyHierarchy: null, squareComponentTreatment: false };
   }
   const measurements = value as Record<string, unknown>;
   const h1FontPx = readFiniteMeasurement(measurements, "h1FontPx");
@@ -138,17 +149,26 @@ function readVisualDiagnostics(value: unknown): {
   const componentCount = readFiniteMeasurement(measurements, "componentCount");
   const roundedComponentCount = readFiniteMeasurement(measurements, "roundedComponentCount");
 
-  const weakTypographyHierarchy = h1FontPx !== null && (
-    h1FontPx < 24
-    || (heroBodyFontPx !== null && heroBodyFontPx < 12)
-    || (heroBodyFontPx !== null && heroBodyFontPx > 0 && h1FontPx / heroBodyFontPx < 1.5)
-  );
+  // El orden nombra la causa: el primero que se cumple es el que se reporta.
+  const rule: TypographyHierarchyFinding["rule"] | null = h1FontPx === null
+    ? null
+    : h1FontPx < 24
+      ? "h1_too_small"
+      : heroBodyFontPx !== null && heroBodyFontPx < 12
+        ? "hero_body_too_small"
+        : heroBodyFontPx !== null && heroBodyFontPx > 0 && h1FontPx / heroBodyFontPx < 1.5
+          ? "h1_not_dominant"
+          : null;
+  const weakTypographyHierarchy = rule !== null;
+  const typographyHierarchy = rule === null || h1FontPx === null
+    ? null
+    : { rule, h1FontPx, heroBodyFontPx };
   const squareComponentTreatment = componentCount !== null
     && roundedComponentCount !== null
     && componentCount >= 3
     && roundedComponentCount / componentCount < 0.25;
 
-  return { weakTypographyHierarchy, squareComponentTreatment };
+  return { weakTypographyHierarchy, typographyHierarchy, squareComponentTreatment };
 }
 
 function readUnreadableText(value: unknown): UnreadableTextFinding[] {
@@ -190,6 +210,7 @@ async function captureWithPage(
   const images: InlineImage[] = [];
   let mobileOverflow = false;
   let weakTypographyHierarchy = false;
+  let typographyHierarchy: TypographyHierarchyFinding | null = null;
   let squareComponentTreatment = false;
   let invalidGeometry = false;
   let unreadableText: UnreadableTextFinding[] = [];
@@ -342,7 +363,7 @@ async function captureWithPage(
       mobileOverflow = overflowGeometrySamplesDisagree(firstGeometry, secondGeometry)
         || hasDocumentHorizontalOverflow(firstGeometry)
         || hasDocumentHorizontalOverflow(secondGeometry);
-      ({ weakTypographyHierarchy, squareComponentTreatment } = readVisualDiagnostics(firstGeometry));
+      ({ weakTypographyHierarchy, typographyHierarchy, squareComponentTreatment } = readVisualDiagnostics(firstGeometry));
       unreadableText = readUnreadableText(firstGeometry);
     }
     const bytes = Buffer.from(await page.screenshot({
@@ -360,6 +381,7 @@ async function captureWithPage(
     mobile: images[1]!,
     mobileOverflow,
     weakTypographyHierarchy,
+    typographyHierarchy,
     squareComponentTreatment,
     invalidGeometry,
     unreadableText,

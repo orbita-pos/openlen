@@ -25,8 +25,8 @@ export const DEFAULT_PAGE_EFFORT: PageEffort = "low";
  *  números con los que se midieron las páginas buenas. Cambiarlo cambiaría
  *  el piso, no el techo. */
 const PROFILES: Readonly<Record<PageEffort, EffortProfile>> = Object.freeze({
-  low: Object.freeze({ sessionTurns: 4, acceptedMutations: 12, reviewRounds: 1, repairTurns: 1 }),
-  medium: Object.freeze({ sessionTurns: 6, acceptedMutations: 18, reviewRounds: 2, repairTurns: 1 }),
+  low: Object.freeze({ sessionTurns: 4, acceptedMutations: 12, reviewRounds: 1, repairTurns: 2 }),
+  medium: Object.freeze({ sessionTurns: 6, acceptedMutations: 18, reviewRounds: 2, repairTurns: 2 }),
   high: Object.freeze({ sessionTurns: 8, acceptedMutations: 24, reviewRounds: 3, repairTurns: 2 }),
 });
 

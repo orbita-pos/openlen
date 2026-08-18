@@ -12,14 +12,23 @@ import {
 const LEVELS: readonly PageEffort[] = ["low", "medium", "high"];
 
 describe("niveles de esfuerzo", () => {
-  it("el nivel por defecto es el que corría antes de que el dial existiera", () => {
+  // Ya no es idéntico a lo que corría antes del dial: con un solo turno de
+  // reparación el modelo lo gastaba mirando la página y 7 de 9 reparaciones
+  // medidas no tocaron nada. Todo lo demás del nivel sigue pinchado.
+  it("el nivel por defecto sigue siendo el más barato, con turno para actuar", () => {
     expect(DEFAULT_PAGE_EFFORT).toBe("low");
     expect(effortProfile("low")).toEqual({
       sessionTurns: 4,
       acceptedMutations: 12,
       reviewRounds: 1,
-      repairTurns: 1,
+      repairTurns: 2,
     });
+  });
+
+  // Mirar y actuar no caben en un turno, y una reparación que sólo mira es
+  // dinero gastado en nada.
+  it("ningún nivel compra una reparación que sólo alcanza a mirar", () => {
+    for (const level of LEVELS) expect(effortProfile(level).repairTurns).toBeGreaterThanOrEqual(2);
   });
 
   it("cada nivel compra al menos tanto como el anterior", () => {

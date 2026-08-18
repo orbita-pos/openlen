@@ -432,4 +432,65 @@ describe("renderVisualQualityViewports", () => {
     expect(result).toBeNull();
     expect(close).toHaveBeenCalledTimes(1);
   });
+
+  // Los tres defectos que el booleano mezclaba. El reparador recibe el nombre y
+  // los números, no la palabra "typography", que no dice cuál de los tres es.
+  it.each([
+    ["h1_too_small", { h1FontPx: 9, heroBodyFontPx: 4 }],
+    ["hero_body_too_small", { h1FontPx: 48, heroBodyFontPx: 8 }],
+    ["h1_not_dominant", { h1FontPx: 24, heroBodyFontPx: 20 }],
+  ])("names %s instead of a bare typography flag", async (rule, fonts) => {
+    const geometry = {
+      rootScrollWidth: 390, bodyScrollWidth: 390, clientWidth: 390,
+      ...fonts,
+      componentCount: 4, roundedComponentCount: 4,
+    };
+    const page = {
+      setViewport: vi.fn(async () => undefined),
+      setContent: vi.fn(async () => undefined),
+      evaluate: vi.fn()
+        .mockResolvedValueOnce(undefined)
+        .mockResolvedValueOnce(undefined)
+        .mockResolvedValueOnce(geometry)
+        .mockResolvedValueOnce(geometry),
+      screenshot: vi.fn(async () => Buffer.from("jpeg")),
+    };
+
+    const result = await renderVisualQualityViewports(HTML, {
+      launchBrowser: async () => ({ newPage: async () => page, close: async () => undefined }),
+      installGuard: async () => undefined,
+      settle: async () => undefined,
+    });
+
+    expect(result).toMatchObject({
+      weakTypographyHierarchy: true,
+      typographyHierarchy: { rule, h1FontPx: fonts.h1FontPx, heroBodyFontPx: fonts.heroBodyFontPx },
+    });
+  });
+
+  it("leaves no finding behind when the hierarchy is sound", async () => {
+    const geometry = {
+      rootScrollWidth: 390, bodyScrollWidth: 390, clientWidth: 390,
+      h1FontPx: 48, heroBodyFontPx: 17,
+      componentCount: 4, roundedComponentCount: 4,
+    };
+    const page = {
+      setViewport: vi.fn(async () => undefined),
+      setContent: vi.fn(async () => undefined),
+      evaluate: vi.fn()
+        .mockResolvedValueOnce(undefined)
+        .mockResolvedValueOnce(undefined)
+        .mockResolvedValueOnce(geometry)
+        .mockResolvedValueOnce(geometry),
+      screenshot: vi.fn(async () => Buffer.from("jpeg")),
+    };
+
+    const result = await renderVisualQualityViewports(HTML, {
+      launchBrowser: async () => ({ newPage: async () => page, close: async () => undefined }),
+      installGuard: async () => undefined,
+      settle: async () => undefined,
+    });
+
+    expect(result).toMatchObject({ weakTypographyHierarchy: false, typographyHierarchy: null });
+  });
 });

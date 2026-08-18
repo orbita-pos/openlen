@@ -231,11 +231,19 @@ function productionDeps(
             `refused:${finalVisualRejectionReasons(assessed.verdict).join(",")}`.slice(0, 240),
           );
         }
+        // La prosa del crítico sigue sin llegar al reparador: sólo códigos. Lo
+        // que sí viaja es NUESTRA medición — sin los números, "typography" no
+        // dice si el titular es chico o si no destaca, y no se puede arreglar.
+        const measured = rendered.typographyHierarchy;
         return {
           ok: true,
           accepted,
-          // Codes only. The critic's prose never reaches the repair prompt.
-          issues: assessed.verdict.issues.map((issue) => `${issue.code}:${issue.viewport}`),
+          issues: [
+            ...assessed.verdict.issues.map((issue) => `${issue.code}:${issue.viewport}`),
+            ...(measured
+              ? [`typography_measured:${measured.rule}:h1=${measured.h1FontPx}px:hero_body=${measured.heroBodyFontPx ?? "?"}px`]
+              : []),
+          ],
         };
       },
       repair: (input) => creativeSession({
