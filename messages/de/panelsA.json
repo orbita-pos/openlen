@@ -8,8 +8,10 @@
     "autofill": "Mit meinen Infos automatisch ausfüllen – verfügbar nach der Generierung",
     "availableAfter": "Verfügbar, sobald dein Projekt erstellt ist",
     "generate": "Generieren",
-    "modeQuick": "Schnell",
-    "modeScratch": "Von Grund auf"
+    "effortLow": "Standard",
+    "effortMedium": "Erweitert",
+    "effortHigh": "Maximum",
+    "effortSoon": "Bald"
   },
   "brief": {
     "label": "Briefing",

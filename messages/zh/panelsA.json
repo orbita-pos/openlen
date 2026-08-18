@@ -8,8 +8,10 @@
     "autofill": "用我的信息自动填充 — 生成后可用",
     "availableAfter": "项目创建后即可使用",
     "generate": "生成",
-    "modeQuick": "快速",
-    "modeScratch": "从零开始"
+    "effortLow": "标准",
+    "effortMedium": "进阶",
+    "effortHigh": "最高",
+    "effortSoon": "即将推出"
   },
   "brief": {
     "label": "简介",

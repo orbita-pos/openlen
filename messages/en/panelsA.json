@@ -12,8 +12,10 @@
     "autofill": "Autofill with my info — available after generation",
     "availableAfter": "Available once your project is created",
     "generate": "Generate",
-    "modeQuick": "Quick",
-    "modeScratch": "From scratch"
+    "effortLow": "Standard",
+    "effortMedium": "Advanced",
+    "effortHigh": "Maximum",
+    "effortSoon": "Soon"
   },
   "brief": {
     "label": "Brief",

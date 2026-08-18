@@ -8,8 +8,10 @@
     "autofill": "Automatisch invullen met mijn gegevens — beschikbaar na het genereren",
     "availableAfter": "Beschikbaar zodra je project is aangemaakt",
     "generate": "Genereren",
-    "modeQuick": "Snel",
-    "modeScratch": "Vanaf nul"
+    "effortLow": "Standaard",
+    "effortMedium": "Geavanceerd",
+    "effortHigh": "Maximaal",
+    "effortSoon": "Binnenkort"
   },
   "toast": {
     "saved": "Profiel opgeslagen",

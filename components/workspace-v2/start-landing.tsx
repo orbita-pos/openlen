@@ -10,7 +10,7 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useTranslations } from "next-intl";
 import type { BriefFormState } from "@/components/workspace/types";
-import { ModeSelect } from "./panels/ai-brief-panel";
+import { EffortSelect, type PageEffort } from "./panels/ai-brief-panel";
 import { TemplatePreviewFrame } from "./template-preview-frame";
 import { useTemplates } from "./use-templates";
 import {
@@ -25,9 +25,9 @@ export interface StartLandingProps {
   aiState: BriefFormState;
   onGenerate: () => void;
   generating: boolean;
-  /** "quick" = curated (free), "scratch" = bespoke from-scratch (Pro). */
-  aiMode: "quick" | "scratch";
-  onModeChange: (m: "quick" | "scratch") => void;
+  /** Cuánto trabajo se pone en la página; hoy sólo `low` está vivo. */
+  effort: PageEffort;
+  onEffortChange: (effort: PageEffort) => void;
   /** Preview a template in the main area (it clones on commit). */
   onPreviewTemplate: (t: TemplateSpec) => void;
   /** Switch to the paste-HTML entry flow. */
@@ -38,8 +38,8 @@ export function StartLanding({
   aiState,
   onGenerate,
   generating,
-  aiMode,
-  onModeChange,
+  effort,
+  onEffortChange,
   onPreviewTemplate,
   onPaste,
 }: StartLandingProps) {
@@ -103,8 +103,8 @@ export function StartLanding({
             state={aiState}
             onGenerate={onGenerate}
             generating={generating}
-            mode={aiMode}
-            onModeChange={onModeChange}
+            effort={effort}
+            onEffortChange={onEffortChange}
           />
           <div className="mt-2.5 text-center">
             <button
@@ -255,19 +255,19 @@ function FamilyChip({
 }
 
 // The centered AI composer. Mirrors the sidebar AiBriefPanel composer (auto-grow
-// textarea + Enter-to-send + the shared ModeSelect) at a larger, hero size.
+// textarea + Enter-to-send + the shared EffortSelect) at a larger, hero size.
 function HeroComposer({
   state,
   onGenerate,
   generating,
-  mode,
-  onModeChange,
+  effort,
+  onEffortChange,
 }: {
   state: BriefFormState;
   onGenerate: () => void;
   generating: boolean;
-  mode: "quick" | "scratch";
-  onModeChange: (m: "quick" | "scratch") => void;
+  effort: PageEffort;
+  onEffortChange: (effort: PageEffort) => void;
 }) {
   const t = useTranslations("panelsA");
   const taRef = useRef<HTMLTextAreaElement>(null);
@@ -301,7 +301,7 @@ function HeroComposer({
         style={{ minHeight: 56 }}
       />
       <div className="flex items-center justify-between px-2.5 pb-2.5 pt-1">
-        <ModeSelect mode={mode} onModeChange={onModeChange} disabled={generating} />
+        <EffortSelect effort={effort} onEffortChange={onEffortChange} disabled={generating} />
         <button
           type="button"
           onClick={onGenerate}

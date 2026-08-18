@@ -8,8 +8,10 @@
     "autofill": "내 정보로 자동 채우기 — 생성 후 사용 가능",
     "availableAfter": "프로젝트가 생성되면 사용할 수 있어요",
     "generate": "생성하기",
-    "modeQuick": "빠르게",
-    "modeScratch": "처음부터"
+    "effortLow": "표준",
+    "effortMedium": "고급",
+    "effortHigh": "최대",
+    "effortSoon": "출시 예정"
   },
   "brief": {
     "label": "브리프",

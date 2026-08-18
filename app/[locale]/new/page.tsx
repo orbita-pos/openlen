@@ -15,10 +15,8 @@ import { useRouter } from "@/i18n/navigation";
 import { useLocale, useTranslations } from "next-intl";
 import { PublishModal } from "@/components/workspace/publish-modal";
 import { useCuration } from "@/lib/use-curation";
-import { useGeneration } from "@/lib/use-generation";
 import { setGenerationBusy } from "@/lib/generation-busy";
 import { scanController } from "@/lib/workspace-v2/scan-controller";
-import { useAIModel } from "@/components/workspace-v2/model-picker";
 import { classifyAiError } from "@/components/workspace-v2/ai-error-message";
 import { buildModuleSection } from "@/lib/publish/module-sections";
 import {
@@ -72,6 +70,7 @@ import { SectionPreviewModal } from "@/components/workspace-v2/section-preview-m
 import type { SectionSpec } from "@/components/workspace-v2/sections-data";
 import { PreviewPlaceholder } from "@/components/workspace-v2/preview-placeholder";
 import { StartLanding } from "@/components/workspace-v2/start-landing";
+import type { PageEffort } from "@/components/workspace-v2/panels/ai-brief-panel";
 import { SECTIONS, type Section } from "@/components/workspace-v2/mock-data";
 import { PreviewArea } from "@/components/workspace-v2/preview-area";
 import {
@@ -781,14 +780,12 @@ function NewV2Inner() {
   // AI generation flow — owned here so the brief survives panel switches
   // inside the same /new?mode=ai session. On completion, we redirect
   // to ?project=<id> which drops the user into editing mode.
-  // AI entry: "quick" = curation (free, /api/curate), "scratch" = bespoke
-  // from-scratch (Pro, /api/generate). Both hooks run; the toggle picks which
-  // drives the UI. Same GenerationState shape, so the render + ?project redirect
-  // below are reused for both. Bespoke is gated server-side (free → 403 upsell).
-  const [aiMode, setAiMode] = useState<"quick" | "scratch">("quick");
+  // La curación (/api/curate) es el único motor. "Desde cero" —la ruta libre
+  // de /api/generate— se retiró como puerta: el selector ahora dice cuánto
+  // trabajo se pone en la página, y hoy sólo `low` existe.
+  const [effort, setEffort] = useState<PageEffort>("low");
   const curation = useCuration();
-  const bespoke = useGeneration();
-  const aiGenState = aiMode === "scratch" ? bespoke.state : curation.state;
+  const aiGenState = curation.state;
   // Saved business profiles ("Mi negocio") — seed the curation flow. Fetched on
   // mount; the default profile auto-selects (the user can switch or pick none).
   // (state declaration hoisted above loadedProject — see the comment there.)
@@ -971,22 +968,12 @@ function NewV2Inner() {
     if (isMobile && aiGenState.kind === "generating") setLeftCollapsed(true);
   }, [isMobile, aiGenState.kind]);
   const [genSlow, setGenSlow] = useState(false);
-  const [genModel] = useAIModel();
   const handleAiGenerate = useCallback(() => {
     if (aiGenerating) return;
     const brief = aiPrompt.trim();
     if (brief.length < 10) return;
-    if (aiMode === "scratch") void bespoke.generate(brief, genModel, selectedProfileId);
-    else void curation.curate(brief, selectedProfileId);
-  }, [
-    aiGenerating,
-    aiPrompt,
-    aiMode,
-    bespoke,
-    curation,
-    genModel,
-    selectedProfileId,
-  ]);
+    void curation.curate(brief, selectedProfileId);
+  }, [aiGenerating, aiPrompt, curation, selectedProfileId]);
   // A deep link with `?autostart=1` (the homepage hero) kicks generation
   // off on arrival. The param is stripped right after so a manual reload of
   // this URL doesn't re-fire — and re-bill — the generation.
@@ -3926,7 +3913,7 @@ function NewV2Inner() {
                     ? aiGenState.html || lastPreviewHtmlRef.current
                     : lastPreviewHtmlRef.current
                 }
-                streaming={aiMode === "scratch" && aiGenState.kind === "generating"}
+                streaming={false}
                 done={aiGenState.kind === "done"}
                 slow={genSlow}
                 caption={
@@ -4020,8 +4007,8 @@ function NewV2Inner() {
                   aiState={aiBriefFormState}
                   onGenerate={handleAiGenerate}
                   generating={aiGenerating}
-                  aiMode={aiMode}
-                  onModeChange={setAiMode}
+                  effort={effort}
+                  onEffortChange={setEffort}
                   onPreviewTemplate={(tpl) => {
                     setPreviewingTemplate(tpl);
                     setTemplateError(null);

@@ -8,8 +8,10 @@
     "autofill": "Preencher com os meus dados — disponível após a geração",
     "availableAfter": "Disponível assim que seu projeto for criado",
     "generate": "Gerar",
-    "modeQuick": "Rápido",
-    "modeScratch": "Do zero"
+    "effortLow": "Padrão",
+    "effortMedium": "Avançado",
+    "effortHigh": "Máximo",
+    "effortSoon": "Em breve"
   },
   "brief": {
     "label": "Briefing",

@@ -12,8 +12,10 @@
     "autofill": "Autocompletar con mi información — disponible tras generar",
     "availableAfter": "Disponible una vez que se cree tu proyecto",
     "generate": "Generar",
-    "modeQuick": "Rápido",
-    "modeScratch": "Desde cero"
+    "effortLow": "Estándar",
+    "effortMedium": "Avanzado",
+    "effortHigh": "Máximo",
+    "effortSoon": "Pronto"
   },
   "brief": {
     "label": "Brief",

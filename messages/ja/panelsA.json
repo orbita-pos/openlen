@@ -8,8 +8,10 @@
     "autofill": "自分の情報で自動入力 — 生成後に利用できます",
     "availableAfter": "プロジェクトを作成すると利用できます",
     "generate": "生成",
-    "modeQuick": "クイック",
-    "modeScratch": "ゼロから"
+    "effortLow": "標準",
+    "effortMedium": "高度",
+    "effortHigh": "最大",
+    "effortSoon": "近日"
   },
   "brief": {
     "label": "ブリーフ",

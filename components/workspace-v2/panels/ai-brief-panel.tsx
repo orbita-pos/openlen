@@ -11,29 +11,33 @@ import { useTranslations } from "next-intl";
 import {
   ChevronUp,
   Loader,
-  Pencil,
   SendUp,
   Sparkles,
+  WandSparkles,
   Zap,
 } from "../icons";
 import type { BriefFormState } from "@/components/workspace/types";
 import { QUICK_PROMPTS } from "@/lib/quick-prompts";
 
+/** Cuánto trabajo se pone en la página. Hoy sólo existe `low` — es el nivel con
+ *  el que nacieron las páginas que ya funcionan; `medium` y `high` se ven en el
+ *  selector, apagados, porque todavía no hay nada detrás de ellos. */
+export type PageEffort = "low" | "medium" | "high";
+
 export interface AiBriefPanelProps {
   state: BriefFormState;
   onGenerate: () => void;
   generating: boolean;
-  /** "quick" = curated (free), "scratch" = bespoke from-scratch (Pro). */
-  mode: "quick" | "scratch";
-  onModeChange: (m: "quick" | "scratch") => void;
+  effort: PageEffort;
+  onEffortChange: (effort: PageEffort) => void;
 }
 
 export function AiBriefPanel({
   state,
   onGenerate,
   generating,
-  mode,
-  onModeChange,
+  effort,
+  onEffortChange,
 }: AiBriefPanelProps) {
   const t = useTranslations("panelsA");
   const taRef = useRef<HTMLTextAreaElement>(null);
@@ -103,13 +107,13 @@ export function AiBriefPanel({
             style={{ minHeight: 32 }}
           />
           <div className="flex items-center justify-between px-1.5 pb-1.5 pt-0.5">
-            {/* Just the mode chooser on the left — the editing affordances
+            {/* Just the effort chooser on the left — the editing affordances
                 (image / scope / autofill) belong to the edit chat, not the
-                from-scratch brief, and crowding them here overflowed the row. */}
+                brief, and crowding them here overflowed the row. */}
             <div className="flex items-center gap-0.5 min-w-0">
-              <ModeSelect
-                mode={mode}
-                onModeChange={onModeChange}
+              <EffortSelect
+                effort={effort}
+                onEffortChange={onEffortChange}
                 disabled={generating}
               />
             </div>
@@ -141,17 +145,20 @@ export function AiBriefPanel({
   );
 }
 
-// Mode select — the curated/bespoke chooser, styled as a compact dropdown
-// (the same pattern as the old model picker) so its two option names live in
-// the popover instead of crowding the composer row. Exported so the /new
-// start landing can reuse the exact same quick/scratch control.
-export function ModeSelect({
-  mode,
-  onModeChange,
+// Effort select — cuánto trabajo se pone en la página, como un desplegable
+// compacto para que los nombres vivan en el popover y no aprieten la fila del
+// composer. Exportado para que el inicio de /new use exactamente el mismo
+// control.
+//
+// Los niveles que aún no existen se MUESTRAN apagados en vez de esconderse: es
+// lo que hace legible que hay más y que esto es un dial, no un interruptor.
+export function EffortSelect({
+  effort,
+  onEffortChange,
   disabled,
 }: {
-  mode: "quick" | "scratch";
-  onModeChange: (m: "quick" | "scratch") => void;
+  effort: PageEffort;
+  onEffortChange: (effort: PageEffort) => void;
   disabled: boolean;
 }) {
   const t = useTranslations("panelsA");
@@ -168,10 +175,11 @@ export function ModeSelect({
   }, [open]);
 
   const OPTIONS = [
-    { value: "quick" as const, icon: <Zap size={12} />, label: t("aiBrief.modeQuick"), pro: false },
-    { value: "scratch" as const, icon: <Pencil size={12} />, label: t("aiBrief.modeScratch"), pro: true },
+    { value: "low" as const, icon: <Zap size={12} />, label: t("aiBrief.effortLow"), ready: true },
+    { value: "medium" as const, icon: <Sparkles size={12} />, label: t("aiBrief.effortMedium"), ready: false },
+    { value: "high" as const, icon: <WandSparkles size={12} />, label: t("aiBrief.effortHigh"), ready: false },
   ];
-  const current = OPTIONS.find((o) => o.value === mode) ?? OPTIONS[0];
+  const current = OPTIONS.find((o) => o.value === effort) ?? OPTIONS[0];
 
   return (
     <div className="relative" ref={ref}>
@@ -183,11 +191,6 @@ export function ModeSelect({
       >
         {current.icon}
         <span>{current.label}</span>
-        {current.pro && (
-          <span className="text-[8px] font-semibold uppercase tracking-wide text-accent">
-            Pro
-          </span>
-        )}
         <ChevronUp size={10} className={open ? "rotate-180" : ""} />
       </button>
       {open && (
@@ -196,19 +199,24 @@ export function ModeSelect({
             <button
               key={o.value}
               type="button"
+              disabled={!o.ready}
               onClick={() => {
-                onModeChange(o.value);
+                onEffortChange(o.value);
                 setOpen(false);
               }}
               className={`w-full inline-flex items-center gap-1.5 px-2 py-1.5 rounded-md text-[11.5px] transition ${
-                o.value === mode ? "bg-accent-soft text-accent" : "fg hover:bg-hover"
+                !o.ready
+                  ? "fg-faint cursor-not-allowed"
+                  : o.value === effort
+                    ? "bg-accent-soft text-accent"
+                    : "fg hover:bg-hover"
               }`}
             >
               {o.icon}
               <span>{o.label}</span>
-              {o.pro && (
-                <span className="ml-auto text-[8.5px] font-semibold uppercase tracking-wide text-accent">
-                  Pro
+              {!o.ready && (
+                <span className="ml-auto text-[8.5px] font-semibold uppercase tracking-wide fg-faint">
+                  {t("aiBrief.effortSoon")}
                 </span>
               )}
             </button>
