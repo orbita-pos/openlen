@@ -81,6 +81,10 @@ describe("la puerta de generación manda contrato, no gusto", () => {
     ["la barra de diseño", "DESIGN BAR"],
     ["las marcas ficticias", "FICTIONAL BRANDS"],
     ["la escala tipográfica", "text-4xl"],
+    // Existía porque las páginas de Gemini se truncaban contra el tope. En
+    // DeepSeek la salida más larga medida fue 12,338 tokens de 60,000, y
+    // 65,536 se acepta: comprimía para evitar un problema que no ocurre.
+    ["la presión a comprimir la salida", "OUTPUT EFFICIENCY"],
   ])("no lleva %s", (_name, marker) => {
     expect(GENERATE_SYSTEM_PROMPT).not.toContain(marker);
   });

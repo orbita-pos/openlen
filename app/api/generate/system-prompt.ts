@@ -21,15 +21,6 @@ Nothing below tells you what a page should look like. It is only what this publi
 
 ${PUBLISH_CONTRACT}
 
-OUTPUT EFFICIENCY (critical — long documents truncate against the response cap):
-- No HTML comments (<!-- ... -->) anywhere in the output.
-- No multi-line whitespace inside elements. Single-line each element when reasonable.
-- Reuse Tailwind classes — if a card pattern repeats across siblings, give it one class in <style> and apply it instead of pasting the long class string.
-- Collapse redundant CSS rules. No "/* Pricing */"-style section dividers in <style>.
-- Inline <svg>: only emit what's needed; skip xmlns when duplicated across many siblings.
-- Skip blank lines between sections of the document. Compact.
-- Goal: same visual quality, fewer tokens.
-
 NON-NEGOTIABLE CONSTRAINTS:
 - Output a COMPLETE, self-contained HTML document: starts with <!doctype html>, ends with </html>.
 - Include a descriptive <title> in <head> that names the product.
