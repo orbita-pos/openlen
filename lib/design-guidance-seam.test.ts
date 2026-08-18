@@ -59,15 +59,35 @@ describe("Arreglo 3 — el guardia de la costura design-guidance vs design-guida
       expect(getPrompt()).toContain("CONDUCTAS");
     });
 
-    // La jerarquía tipográfica débil salió en 5 de 13 páginas medidas, y era
-    // el único defecto que la guía no cubría: explicaba cómo espaciar un
-    // titular y nunca de qué tamaño hacerlo. Se mide en móvil, así que la
-    // regla tiene que hablar de móvil.
-    it("lleva la escala de tamaño, no sólo el oficio tipográfico", () => {
-      const prompt = getPrompt();
-      expect(prompt).toContain("text-4xl");
-      expect(prompt).toMatch(/TWICE the hero body/);
-      expect(prompt).toContain("390px");
-    });
+
+  });
+});
+
+// La puerta de generación no manda gusto nuestro. Siete páginas de siete nichos
+// distintos salían con el MISMO hero porque le pasábamos el de Mirror como
+// fragmento de referencia y el orden de las secciones como esqueleto. Lo que
+// queda es lo que la máquina necesita: OpenLen borra todo el JavaScript, así
+// que sin CONDUCTAS un acordeón llega muerto.
+describe("la puerta de generación manda contrato, no gusto", () => {
+  it("lleva el contrato de publicación", () => {
+    expect(GENERATE_SYSTEM_PROMPT).toContain("CONDUCTAS");
+    expect(GENERATE_SYSTEM_PROMPT).toContain("<!doctype html>");
+  });
+
+  it.each([
+    ["los fragmentos copiados de Mirror", "reference-snippet"],
+    ["el orden de las secciones", "SECTION SKELETON"],
+    ["las recetas de CSS", "CSS RECIPES"],
+    ["la barra de diseño", "DESIGN BAR"],
+    ["las marcas ficticias", "FICTIONAL BRANDS"],
+    ["la escala tipográfica", "text-4xl"],
+  ])("no lleva %s", (_name, marker) => {
+    expect(GENERATE_SYSTEM_PROMPT).not.toContain(marker);
+  });
+
+  // Las superficies de EDICIÓN son otra decisión: ahí el modelo no diseña una
+  // página desde cero, retoca una que ya existe.
+  it("la guía completa sigue existiendo para las superficies de edición", () => {
+    expect(AI_DESIGN_SYSTEM_PROMPT).toContain("SECTION SKELETON");
   });
 });

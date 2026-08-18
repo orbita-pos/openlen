@@ -745,3 +745,21 @@ CONTENT RULES — what makes a line of copy "ship-quality"
 
 ═══════════════════════════════════════════════════════════════════════════
 `.trim();
+
+/**
+ * Sólo lo que la máquina necesita para poder publicar la página, sin una sola
+ * opinión de diseño.
+ *
+ * OpenLen borra TODO el JavaScript al publicar (`sanitize_for_publish`), así
+ * que un acordeón escrito con JS llega muerto: la sección de CONDUCTAS es cómo
+ * se pide interactividad que sí sobrevive. Eso es contrato, no gusto.
+ *
+ * Lo demás de DESIGN_GUIDANCE —el orden de las secciones, las recetas de CSS,
+ * los cinco fragmentos copiados de Mirror, la barra de diseño, las marcas
+ * ficticias— es NUESTRO gusto, y medido: hacía que siete páginas de siete
+ * nichos distintos salieran con el mismo hero. El modelo diseña mejor sin él.
+ */
+export const PUBLISH_CONTRACT = DESIGN_GUIDANCE.slice(
+  DESIGN_GUIDANCE.indexOf("OUTPUT FORMAT — strict rules"),
+  DESIGN_GUIDANCE.indexOf("DESIGN CONTRACT — token vocabulary"),
+).trim();
