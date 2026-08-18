@@ -19,6 +19,8 @@ const mocks = vi.hoisted(() => ({
   creditsForUsage: vi.fn(),
   resolveAIProvider: vi.fn(),
   stream: vi.fn(),
+  fireworksStream: vi.fn(),
+  renderReference: vi.fn(async (): Promise<{ mimeType: string; dataBase64: string } | null> => null),
 }));
 
 vi.mock("@/auth", () => ({ auth: mocks.auth }));
@@ -43,8 +45,11 @@ vi.mock("@/lib/ai-gateway", () => ({
     }
   },
 }));
+vi.mock("@/lib/ai/fireworks-stream-client", () => ({
+  createFireworksStreamClient: () => ({ modelId: "deepseek", stream: mocks.fireworksStream }),
+}));
 vi.mock("@/lib/ai/inline-image", () => ({
-  renderHtmlToInlineImage: vi.fn(async () => null),
+  renderHtmlToInlineImage: mocks.renderReference,
 }));
 
 import { POST } from "./route";
@@ -113,10 +118,13 @@ describe("POST /api/templates/ai-design", () => {
       model: "gemini-flash",
       rate: 1,
     });
+    mocks.renderReference.mockResolvedValue(null);
+    delete process.env.OPENLEN_CHAT_PROVIDER;
+    delete process.env.OPENLEN_AIDESIGN_PAGE_REFERENCE;
   });
 
   it("saves a redesign whose behaviours are wired correctly", async () => {
-    mocks.stream.mockReturnValue(
+    mocks.fireworksStream.mockReturnValue(
       modelSays(
         rewrite('<h1>Hola</h1><code id="cupon">TACOS20</code><button data-ol-copy="cupon" aria-label="Copiar">Copiar</button>'),
       ),
@@ -132,7 +140,7 @@ describe("POST /api/templates/ai-design", () => {
   it("refuses a redesign whose control would be born dead, and stores nothing", async () => {
     // data-ol-copy pointing at an id that does not exist: OpenLen would bake a
     // button that copies nothing.
-    mocks.stream.mockReturnValue(
+    mocks.fireworksStream.mockReturnValue(
       modelSays(rewrite('<h1>Hola</h1><button data-ol-copy="cupon-fantasma">Copiar</button>')),
     );
 
@@ -150,9 +158,39 @@ describe("POST /api/templates/ai-design", () => {
     expect(events.some((e) => e.event === "done")).toBe(false);
   });
 
+  it("edita con DeepSeek sin que nadie tenga que encenderlo", async () => {
+    // Medido sobre 6 turnos reales: primer byte de 1.0-2.4s contra 3.8-84.7s,
+    // 6 de 6 turnos completados contra 4 de 6.
+    mocks.fireworksStream.mockReturnValue(modelSays(rewrite("<h1>Hola</h1>")));
+    await readEvents(await call());
+    expect(mocks.fireworksStream).toHaveBeenCalledTimes(1);
+    expect(mocks.stream).not.toHaveBeenCalled();
+    expect(mocks.fireworksStream.mock.calls[0][0]).toMatchObject({ operation: "page_edit" });
+  });
+
+  it("con OPENLEN_CHAT_PROVIDER=gemini vuelve el camino de antes", async () => {
+    process.env.OPENLEN_CHAT_PROVIDER = "gemini";
+    mocks.stream.mockReturnValue(modelSays(rewrite("<h1>Hola</h1>")));
+    await readEvents(await call());
+    expect(mocks.stream).toHaveBeenCalledTimes(1);
+    expect(mocks.fireworksStream).not.toHaveBeenCalled();
+  });
+
+  it("un turno con imagen de referencia se queda en Gemini pase lo que pase", async () => {
+    // En la política de Fireworks toda imagen va a Qwen y al razonador nunca se
+    // le ha mandado una: mandarla a ciegas apuesta la edición del usuario.
+    process.env.OPENLEN_AIDESIGN_PAGE_REFERENCE = "1";
+    mocks.renderReference.mockResolvedValue({ mimeType: "image/jpeg", dataBase64: "AQID" });
+    mocks.stream.mockReturnValue(modelSays(rewrite("<h1>Hola</h1>")));
+    await readEvents(await call());
+    expect(mocks.stream).toHaveBeenCalledTimes(1);
+    expect(mocks.fireworksStream).not.toHaveBeenCalled();
+  });
+
   it("fija el presupuesto de pensamiento, que es de donde salen los minutos de espera", async () => {
     // Medido sobre una página real de 40KB: sin fijarlo, 3,251 tokens de
     // pensamiento para producir 208 de edición y 20.3s hasta el primer byte.
+    process.env.OPENLEN_CHAT_PROVIDER = "gemini";
     mocks.stream.mockReturnValue(modelSays(rewrite("<h1>Hola</h1>")));
     await readEvents(await call());
     expect(mocks.stream.mock.calls[0][0]).toMatchObject({ thinkingBudget: 1024 });
@@ -161,6 +199,7 @@ describe("POST /api/templates/ai-design", () => {
   it("con `auto` vuelve al presupuesto dinámico de antes", async () => {
     const previous = process.env.OPENLEN_AIDESIGN_THINKING;
     process.env.OPENLEN_AIDESIGN_THINKING = "auto";
+    process.env.OPENLEN_CHAT_PROVIDER = "gemini";
     try {
       mocks.stream.mockReturnValue(modelSays(rewrite("<h1>Hola</h1>")));
       await readEvents(await call());

@@ -464,15 +464,18 @@ VISUAL CONTEXT: the attached image is a full-page render of the CURRENT page (wh
   // mismas ops. En 0 NO se apaga y ya: el modelo deja de emitir el marcador
   // `---HTML---` y se pone a conversar, así que el turno entero se pierde.
   // `auto` devuelve el comportamiento de antes.
-  // Quién edita la página. DeepSeek entra apagado por defecto: se enciende con
-  // OPENLEN_CHAT_PROVIDER=deepseek para poder medirlo contra Gemini con el mismo
-  // prompt, el mismo marcador y el mismo protocolo de ops — sólo cambia quién
-  // habla al otro lado.
+  // Quién edita la página. DeepSeek por defecto, medido sobre 6 turnos reales
+  // con este mismo prompt, este mismo marcador y este mismo protocolo de ops:
+  // primer byte de 1.0-2.4s SIEMPRE, contra 3.8-84.7s de Gemini —84.7s para
+  // agrandar un botón—, 6 de 6 turnos completados contra 4 de 6 (un 503 por
+  // demanda y un turno sin marcador), e igual o más ops aplicadas en todos los
+  // casos comparables. `OPENLEN_CHAT_PROVIDER=gemini` devuelve el camino de
+  // antes sin tocar código.
   //
   // Un turno CON imágenes de referencia se queda en Gemini pase lo que pase: en
   // la política de Fireworks toda imagen va a Qwen y al razonador nunca se le ha
   // mandado una. Mandarla a ciegas es apostar la edición del usuario.
-  const useDeepSeek = process.env.OPENLEN_CHAT_PROVIDER?.trim().toLowerCase() === "deepseek"
+  const useDeepSeek = process.env.OPENLEN_CHAT_PROVIDER?.trim().toLowerCase() !== "gemini"
     && (referenceImages?.length ?? 0) === 0;
   const modelLabel = useDeepSeek ? "DeepSeek" : PROVIDER.label;
 
