@@ -19,6 +19,7 @@ import {
   type FableModelOperation,
 } from "../generation/fable-model-policy";
 import { providerUsage } from "./fireworks-client";
+import type { InlineImage } from "@/lib/ai-gateway";
 
 const FIREWORKS_ENDPOINT = "https://api.fireworks.ai/inference/v1/chat/completions";
 
@@ -66,6 +67,11 @@ export interface FireworksStreamRequest {
   readonly operation: FableModelOperation;
   /** Declaraciones en formato OpenAI. Sin herramientas el turno es sólo texto. */
   readonly tools?: readonly Record<string, unknown>[];
+  /** Píxeles para el ÚLTIMO mensaje de usuario. Sólo los papeles con visión. */
+  readonly images?: readonly InlineImage[];
+  /** Pide un objeto JSON sin imponer un esquema: el modo estricto de Fireworks
+   *  rechaza esquemas válidos —medido—, y quien llama ya valida lo que llega. */
+  readonly jsonObject?: boolean;
 }
 
 export interface FireworksStreamClientOptions {
@@ -78,6 +84,19 @@ export interface FireworksStreamClientOptions {
 export interface FireworksStreamClient {
   readonly modelId: string;
   stream(request: FireworksStreamRequest, opts?: { signal?: AbortSignal }): AsyncIterableIterator<FireworksStreamEvent>;
+}
+
+function withImages(message: Record<string, unknown>, images: readonly InlineImage[]): Record<string, unknown> {
+  return {
+    ...message,
+    content: [
+      { type: "text", text: String(message.content ?? "") },
+      ...images.map((image) => ({
+        type: "image_url",
+        image_url: { url: `data:${image.mimeType};base64,${image.dataBase64}` },
+      })),
+    ],
+  };
 }
 
 function wireMessage(message: FireworksStreamMessage): Record<string, unknown> {
@@ -136,7 +155,16 @@ export function createFireworksStreamClient(options: FireworksStreamClientOption
           headers: { "content-type": "application/json", authorization: `Bearer ${apiKey}` },
           body: JSON.stringify({
             model: modelIdForRole(role),
-            messages: request.messages.map(wireMessage),
+            messages: (() => {
+              const wire = request.messages.map(wireMessage);
+              if (!request.images?.length) return wire;
+              // Al ÚLTIMO mensaje de usuario, que es el que hace la pregunta.
+              const at = wire.map((message, index) => (message.role === "user" ? index : -1)).filter((index) => index >= 0).pop();
+              if (at === undefined) return wire;
+              wire[at] = withImages(wire[at], request.images);
+              return wire;
+            })(),
+            ...(request.jsonObject ? { response_format: { type: "json_object" } } : {}),
             ...(request.tools?.length ? { tools: request.tools, tool_choice: "auto" } : {}),
             reasoning_effort: reasoningEffortFor(role, request.operation),
             temperature: request.temperature,

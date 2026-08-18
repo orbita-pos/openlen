@@ -17,6 +17,7 @@
 import { GeminiProvider, type InlineImage, type StreamEvent, type StreamRequest } from "@/lib/ai-gateway";
 import { renderHtmlToInlineImage } from "@/lib/ai/inline-image";
 import { streamWithRetry } from "@/lib/agent/retry";
+import { createFireworksStreamClient } from "@/lib/ai/fireworks-stream-client";
 
 export interface VisualVerdict {
   /** true = la edición dejó rotura visual objetiva. */
@@ -82,6 +83,47 @@ const VERDICT_SCHEMA: Record<string, unknown> = {
 
 function fallbackVerdict(): VisualVerdict {
   return { broken: false, issues: [], fallback: true };
+}
+
+/**
+ * Quién mira. Qwen es el papel con visión de la política —al razonador nunca se
+ * le manda una imagen— y llega por el mismo transporte de streaming que el
+ * resto, así que `verifyEditedPage` no cambia una línea de su cuerpo.
+ *
+ * No se le impone un esquema al modelo: el modo estricto de Fireworks rechaza
+ * esquemas válidos (medido), y `parseVisualVerdict` ya tolera vallas de
+ * markdown, texto alrededor y campos de más. Se pide un objeto JSON y se valida
+ * aquí, que es donde siempre se validó.
+ *
+ * `OPENLEN_AGENT_EYES=gemini` devuelve los ojos de antes. Y como todo en este
+ * archivo, cualquier fallo cae al veredicto de reserva: la verificación sólo
+ * puede mejorar un turno, jamás bloquearlo.
+ */
+function defaultVerifyProvider(): VerifyProviderLike {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (process.env.OPENLEN_AGENT_EYES?.trim().toLowerCase() === "gemini") {
+    return new GeminiProvider(apiKey as string);
+  }
+  const client = createFireworksStreamClient();
+  return {
+    stream(request: StreamRequest, opts: { signal?: AbortSignal }) {
+      return client.stream(
+        {
+          messages: request.messages.map((message) => ({
+            role: message.role === "assistant" ? ("assistant" as const) : message.role === "system" ? ("system" as const) : ("user" as const),
+            content: message.content,
+          })),
+          ...(request.images?.length ? { images: request.images } : {}),
+          jsonObject: true,
+          maxOutputTokens: request.maxOutputTokens ?? 2_048,
+          temperature: request.temperature ?? 0.1,
+          requestId: "agent-verify",
+          operation: "agent_visual_verify",
+        },
+        opts,
+      ) as ReturnType<VerifyProviderLike["stream"]>;
+    },
+  };
 }
 
 /** Verifica visualmente la página editada. Siempre resuelve — nunca lanza;
@@ -159,7 +201,7 @@ async function runVerify(
     return fallbackVerdict();
   }
 
-  const provider: VerifyProviderLike = internals.provider ?? new GeminiProvider(apiKey);
+  const provider: VerifyProviderLike = internals.provider ?? defaultVerifyProvider();
 
   let raw = "";
   const usage = { inputTokens: 0, outputTokens: 0, cachedTokens: 0 };

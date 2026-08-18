@@ -15,7 +15,8 @@ export type FableModelOperation =
   | "visual_repair"
   | "candidate_scouting"
   | "final_scoring"
-  | "page_edit";
+  | "page_edit"
+  | "agent_visual_verify";
 
 const OPERATION_POLICY: Readonly<Record<FableModelOperation, { role: FableModelRole; effort: FireworksReasoningEffort }>> = {
   // Gusto, no razonamiento: elegir modo y acento desde el brief es una lectura
@@ -36,6 +37,10 @@ const OPERATION_POLICY: Readonly<Record<FableModelOperation, { role: FableModelR
   // en esta misma superficie, y la razón por la que el esfuerzo vive en una
   // tabla: corregirlo fue esta línea.
   page_edit: { role: "reasoner", effort: "none" },
+  // Los ojos del Agente: mirar una captura y decir si la edición dejó rotura
+  // OBJETIVA. Es el papel con visión, y su esfuerzo es el único que la política
+  // le permite — juzgar píxeles no mejora pensando más.
+  agent_visual_verify: { role: "visual_critic", effort: "none" },
 };
 
 export function reasoningEffortFor(role: FableModelRole, operation: FableModelOperation): FireworksReasoningEffort {
