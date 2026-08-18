@@ -181,7 +181,13 @@ Write-Host ("    standalone: {0} MB" -f [math]::Round($size/1MB, 1))
 # --- 4. Tar locally ----------------------------------------------------
 Step 4 "Creating tarball ($tarballName)..."
 $sw = [System.Diagnostics.Stopwatch]::StartNew()
-& tar --options "gzip:compression-level=1" -czf $tarballName -C .next/standalone .
+# bsdtar, resuelto por ruta y no por PATH: `--options` es sintaxis suya y NO
+# la entiende el tar de GNU. Lanzar este script desde un shell con MSYS en el
+# PATH (Git Bash) hacia que ganara /usr/bin/tar y el empaquetado muriera con
+# "unrecognized option '--options'".
+$bsdTar = Join-Path $env:SystemRoot (Join-Path "System32" "tar.exe")
+if (-not (Test-Path $bsdTar)) { throw "bsdtar no encontrado en $bsdTar" }
+& $bsdTar --options "gzip:compression-level=1" -czf $tarballName -C .next/standalone .
 if ($LASTEXITCODE -ne 0) { throw "tar failed (exit $LASTEXITCODE)" }
 $tarSize = (Get-Item $tarballName).Length
 $sw.Stop()
@@ -338,7 +344,22 @@ tr '\000' '\n' < "/proc/$pid/environ" | grep -Fx 'OPENLEN_AI_CREATION_ROLLOUT_PE
 curl -sI -o /dev/null -w '  smoke: HTTP %{http_code} (%{time_total}s)' http://127.0.0.1:3000/
 '@
 $swapCmd = $swapCmd.Replace("__TARGET_MODE__", $targetMode).Replace("__TARGET_ROLLOUT_PERCENT__", $targetRolloutPercent).Replace("__BACKUP_DIR__", $backupDir).Replace("__REMOTE_DIR__", $remoteDir).Replace("__STAGING_DIR__", $stagingDir)
-& ssh $host_ (Sh $swapCmd)
+
+# El swap viaja como ARCHIVO, no como texto por ssh. Mandado en linea, el
+# escapado de PowerShell deshacia las comillas del script: el `awk` que escribe
+# la bandera no llegaba a correr y el `test` que la verifica moria con
+# "unary operator expected" -- DESPUES de haber parado el servicio y ANTES de
+# mover los directorios. Resultado el 2026-08-17: produccion detenida con el
+# release viejo intacto, arreglada arrancando el servicio a mano.
+#
+# Es exactamente la solucion que el paso 6.2 ya usaba para las migraciones, por
+# la misma razon. LF explicito: un CR pegado apaga `set -e` en silencio.
+$swapScript = Join-Path ([System.IO.Path]::GetTempPath()) "openlen-swap.sh"
+[System.IO.File]::WriteAllText($swapScript, ($swapCmd -replace "`r`n", "`n"), (New-Object System.Text.UTF8Encoding($false)))
+& scp -q $swapScript "${host_}:/root/openlen-swap.sh"
+if ($LASTEXITCODE -ne 0) { throw "Swap script upload failed (exit $LASTEXITCODE)" }
+Remove-Item -Force $swapScript -ErrorAction SilentlyContinue
+& ssh $host_ "bash /root/openlen-swap.sh"
 if ($LASTEXITCODE -ne 0) { throw "Swap or restart failed (exit $LASTEXITCODE)" }
 
 # --- Cleanup local tarball --------------------------------------------
