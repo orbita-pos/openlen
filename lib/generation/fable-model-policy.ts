@@ -16,7 +16,8 @@ export type FableModelOperation =
   | "candidate_scouting"
   | "final_scoring"
   | "page_edit"
-  | "agent_visual_verify";
+  | "agent_visual_verify"
+  | "template_autofill";
 
 const OPERATION_POLICY: Readonly<Record<FableModelOperation, { role: FableModelRole; effort: FireworksReasoningEffort }>> = {
   // Gusto, no razonamiento: elegir modo y acento desde el brief es una lectura
@@ -41,6 +42,10 @@ const OPERATION_POLICY: Readonly<Record<FableModelOperation, { role: FableModelR
   // OBJETIVA. Es el papel con visión, y su esfuerzo es el único que la política
   // le permite — juzgar píxeles no mejora pensando más.
   agent_visual_verify: { role: "visual_critic", effort: "none" },
+  // Poner los datos del negocio en una plantilla: sustituir copy, no discurrir.
+  // La ruta de Gemini ya lo pedía con `thinkingBudget: 0`, así que `none` no es
+  // una apuesta, es la misma decisión escrita en el otro idioma.
+  template_autofill: { role: "reasoner", effort: "none" },
 };
 
 export function reasoningEffortFor(role: FableModelRole, operation: FableModelOperation): FireworksReasoningEffort {
