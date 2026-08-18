@@ -1446,7 +1446,13 @@ async function toolPublicar(
       response: {
         ok: false,
         error:
-          "este proyecto no tiene subdominio todavía. Pregúntale al usuario qué subdominio quiere (p. ej. mi-negocio) y vuelve a llamar publicar con subdominio.",
+          // Sin ejemplo con forma de valor, y sin «vuelve a llamar»: este texto
+          // entra al modelo como resultado de herramienta, y un modelo que lo
+          // lee literalmente re-llamaba publicar con el ejemplo de muestra
+          // —medido: DeepSeek reclamaba "mi-negocio" 3 de 3 veces— y le mostraba
+          // al usuario una tarjeta de confirmación para una dirección que nunca
+          // pidió. Lo que toca aquí es CERRAR el turno preguntando.
+          "este proyecto no tiene subdominio todavía, y el subdominio no lo eliges tú. NO vuelvas a llamar a publicar en este turno. Termina tu turno preguntándole al usuario qué dirección quiere para su página; cuando él la escriba, entonces sí llama a publicar con ese valor.",
       },
     };
   }

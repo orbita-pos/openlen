@@ -284,7 +284,7 @@ async function main(): Promise<void> {
     );
   }
   console.log(
-    `Costo real de esta corrida: ~$${realCostUsd(results).toFixed(3)} USD (tokens medidos × precios de gemini-2.5-flash)`,
+    `Costo real de esta corrida: ~$${realCostUsd(results).toFixed(3)} USD (tokens medidos × la tarifa del modelo que corrió cada caso)`,
   );
   if (passed < results.length || results.length < cases.length) process.exit(1);
 }

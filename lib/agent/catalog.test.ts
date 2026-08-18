@@ -205,6 +205,27 @@ describe("buildAgentSystemPrompt", () => {
     // publish modal's job (the card omits `languages` when the list is empty).
     expect(p).toContain("QUITAR idiomas");
   });
+  // Medido, no supuesto: con la redacción anterior DeepSeek reclamaba el
+  // subdominio de MUESTRA —"mi-negocio", tomado del «p. ej.» de la propia
+  // instrucción— 3 de 3 veces, y le enseñaba al usuario una tarjeta para
+  // confirmar una dirección que jamás pidió. Gemini no caía, así que nada lo
+  // habría delatado hasta que un usuario reclamara un nombre ajeno.
+  //
+  // Un ejemplo con forma de valor en la posición donde el modelo tiene que
+  // NO poner un valor es una trampa, no una ayuda.
+  it("nunca le ofrece al modelo un subdominio de muestra que pueda reclamar", () => {
+    const p = buildAgentSystemPrompt();
+    const publicar = buildFunctionDeclarations().find((d) => d.name === "publicar");
+    const description = String((publicar as { description?: unknown }).description ?? "");
+
+    for (const text of [p, description]) {
+      expect(text).not.toMatch(/p\.\s?ej\.\s*[a-z0-9-]+\s*\)/i);
+      expect(text).not.toContain("mi-negocio");
+    }
+    // Y la prohibición tiene que estar dicha, no sólo implícita.
+    expect(description).toContain("NUNCA te lo inventes");
+    expect(p).toContain("NUNCA lo eliges tú");
+  });
   it("carries the F2 Task 8 attached-image hard rule (editar_pagina, verbatim URL)", () => {
     const p = buildAgentSystemPrompt();
     expect(p).toContain("IMAGEN ADJUNTA");
