@@ -68,4 +68,17 @@ describe("un degradado decorativo no es una foto", () => {
     const measured = await renderVisualQualityViewports(page("rgba(30,77,59,0.6)"));
     expect(measured?.unreadableText?.length ?? 0).toBe(0);
   }, 60_000);
+
+  // El caso que se escapaba con el umbral de 0.15: un velo POR ENCIMA de ese
+  // alfa pero de un color claro, que no rescata nada. Medido en una página
+  // generada de verdad: titular crema sobre crema a 1.04:1, entregado limpio
+  // porque el hero llevaba `rgba(242,184,75,0.28)` y el medidor se rendía.
+  it("ve el titular bajo un velo claro por encima del viejo umbral", async () => {
+    const measured = await renderVisualQualityViewports(page("rgba(242,184,75,0.28)"));
+    expect(measured?.unreadableText?.length ?? 0).toBeGreaterThan(0);
+  }, 60_000);
+
+  // No hay espejo a 0.28: medido, un velo oscuro a ese alfa sobre crema deja el
+  // texto en 1.69:1 — sigue sin leerse, así que marcarlo es correcto. La
+  // dirección "no lo inventes" la fija el caso de 0.6 de aquí arriba.
 });

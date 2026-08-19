@@ -316,6 +316,7 @@ async function captureWithPage(
             // hallazgo. Nada opaco hasta la raíz es el lienzo blanco.
             let backgroundText = "rgb(255, 255, 255)";
             let uncertain = false;
+            const veils: number[][] = [];
             for (let ancestor: HTMLElement | null = node; ancestor; ancestor = ancestor.parentElement) {
               const ancestorStyle = window.getComputedStyle(ancestor);
               // Una foto tapa lo que sea y no se puede juzgar desde el CSS. Un
@@ -326,15 +327,31 @@ async function captureWithPage(
               if (ancestorImage && ancestorImage !== "none") {
                 if (ancestorImage.indexOf("url(") !== -1) { uncertain = true; break; }
                 let strongestStop = 0;
+                let veilR = 0;
+                let veilG = 0;
+                let veilB = 0;
                 for (const stop of ancestorImage.match(/rgba?\([^)]*\)/g) ?? []) {
                   const parts = (RGB_RE.exec(stop) ?? ["", ""])[1]
                     .split(SEPARATOR_RE).filter((piece) => piece.length > 0).map(Number);
                   const stopAlpha = parts.length > 3 && Number.isFinite(parts[3]) ? parts[3] : 1;
-                  if (stopAlpha > strongestStop) strongestStop = stopAlpha;
+                  const readable = parts.length >= 3 && Number.isFinite(parts[0]) && Number.isFinite(parts[1]) && Number.isFinite(parts[2]);
+                  if (stopAlpha > strongestStop && readable) {
+                    strongestStop = stopAlpha;
+                    veilR = parts[0];
+                    veilG = parts[1];
+                    veilB = parts[2];
+                  }
                 }
                 // Sin paradas legibles (colores con nombre, `currentColor`) no
                 // se puede afirmar que sea inocuo.
-                if (strongestStop === 0 || strongestStop > 0.15) { uncertain = true; break; }
+                if (strongestStop === 0) { uncertain = true; break; }
+                // Un velo translúcido ya NO obliga a rendirse: se guarda y el
+                // texto se mide contra los dos extremos. Medido el 2026-08-19:
+                // un titular crema sobre crema a 1.04:1 se escapaba porque el
+                // hero llevaba un degradado a 0.28 y el umbral de 0.15 lo
+                // declaraba incierto. Rendirse ante la duda dejaba pasar lo
+                // invisible.
+                if (strongestStop > 0.15) veils.push([veilR, veilG, veilB, strongestStop]);
               }
               const painted = (RGB_RE.exec(ancestorStyle.backgroundColor) ?? ["", ""])[1]
                 .split(SEPARATOR_RE).filter((piece) => piece.length > 0).map(Number);
@@ -347,32 +364,50 @@ async function captureWithPage(
             }
             if (uncertain) continue;
 
-            const luminances: number[] = [];
-            for (const value of [style.color, backgroundText]) {
-              const channels = (RGB_RE.exec(value) ?? ["", ""])[1]
-                .split(SEPARATOR_RE).filter((piece) => piece.length > 0).map(Number);
-              if (channels.length < 3 || channels.slice(0, 3).some((channel) => !Number.isFinite(channel))) break;
-              // Un texto translúcido se lee sobre lo que tenga debajo; medirlo
-              // como si fuera opaco es inventar un hallazgo.
-              if (channels.length > 3 && Number.isFinite(channels[3]) && channels[3] < 0.9) break;
-              let total = 0;
-              for (let index = 0; index < 3; index += 1) {
-                const scaled = Math.min(255, Math.max(0, channels[index])) / 255;
-                total += WEIGHTS[index] * (scaled <= 0.03928 ? scaled / 12.92 : Math.pow((scaled + 0.055) / 1.055, 2.4));
+            const textChannels = (RGB_RE.exec(style.color) ?? ["", ""])[1]
+              .split(SEPARATOR_RE).filter((piece) => piece.length > 0).map(Number);
+            if (textChannels.length < 3 || textChannels.slice(0, 3).some((channel) => !Number.isFinite(channel))) continue;
+            // Un texto translúcido se lee sobre lo que tenga debajo; medirlo
+            // como si fuera opaco es inventar un hallazgo.
+            if (textChannels.length > 3 && Number.isFinite(textChannels[3]) && textChannels[3] < 0.9) continue;
+            const baseChannels = (RGB_RE.exec(backgroundText) ?? ["", ""])[1]
+              .split(SEPARATOR_RE).filter((piece) => piece.length > 0).map(Number);
+            if (baseChannels.length < 3 || baseChannels.slice(0, 3).some((channel) => !Number.isFinite(channel))) continue;
+
+            // El otro extremo: todos los velos a plena fuerza, del más lejano
+            // al más cercano. Entre este fondo y el desnudo está cualquier
+            // píxel que el degradado pueda pintar.
+            const veiledChannels = [baseChannels[0], baseChannels[1], baseChannels[2]];
+            for (let index = veils.length - 1; index >= 0; index -= 1) {
+              const veil = veils[index];
+              for (let channel = 0; channel < 3; channel += 1) {
+                veiledChannels[channel] = veil[channel] * veil[3] + veiledChannels[channel] * (1 - veil[3]);
               }
-              luminances.push(total);
             }
-            if (luminances.length !== 2) continue;
-            const contrast = (Math.max(luminances[0], luminances[1]) + 0.05) / (Math.min(luminances[0], luminances[1]) + 0.05);
+
+            let contrast = 0;
+            for (const candidate of [baseChannels, veiledChannels]) {
+              const luminances: number[] = [];
+              for (const channels of [textChannels, candidate]) {
+                let total = 0;
+                for (let index = 0; index < 3; index += 1) {
+                  const scaled = Math.min(255, Math.max(0, channels[index])) / 255;
+                  total += WEIGHTS[index] * (scaled <= 0.03928 ? scaled / 12.92 : Math.pow((scaled + 0.055) / 1.055, 2.4));
+                }
+                luminances.push(total);
+              }
+              const value = (Math.max(luminances[0], luminances[1]) + 0.05) / (Math.min(luminances[0], luminances[1]) + 0.05);
+              // La lectura MÁS favorable manda: si en algún extremo se lee, no
+              // podemos afirmar que sea invisible.
+              if (value > contrast) contrast = value;
+            }
             // 2:1 es deliberadamente bajo. No mide accesibilidad: separa
             // "cuesta leerlo" de "no está".
             if (contrast >= 2) continue;
 
-            const channels = (RGB_RE.exec(backgroundText) ?? ["", ""])[1]
-              .split(SEPARATOR_RE).filter((piece) => piece.length > 0).map(Number);
             let background = "#";
             for (let index = 0; index < 3; index += 1) {
-              background += Math.min(255, Math.max(0, Math.round(channels[index]))).toString(16).padStart(2, "0");
+              background += Math.min(255, Math.max(0, Math.round(baseChannels[index]))).toString(16).padStart(2, "0");
             }
             const raw = node.getAttribute("data-ol-probe");
             const probeValue = raw === null ? -1 : Number(raw);
