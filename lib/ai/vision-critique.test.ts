@@ -318,3 +318,23 @@ test("structuralSummary: extracts text from each section", () => {
 test("structuralSummary: handles no sections", () => {
   assert.match(structuralSummary("<div>nothing</div>"), /no <section>/);
 });
+
+// Medido: el crítico pedía regenerar porque las fotos "no representan los
+// panes". Regenerar la página no cambia las fotos —las coloca un emparejador
+// determinista después— así que esa queja costaba una página entera y un
+// crédito del usuario, y no arreglaba nada.
+test("al crítico se le dice que las fotos no las eligió el modelo", async () => {
+  let sent = "";
+  const provider: CritiqueProviderLike = {
+    stream(req) {
+      sent = String((req.messages?.[0] as { content?: string } | undefined)?.content ?? "");
+      return (async function* (): AsyncIterableIterator<StreamEvent> {})();
+    },
+  };
+  await critiqueGeneratedPage(
+    { brief: "panadería", html: "<!doctype html><html><body><h1>x</h1></body></html>", model: "gemini-3.5-flash", apiKey: "k" },
+    { provider, render: async () => ({ mimeType: "image/jpeg", dataBase64: "AA==" }) },
+  );
+  assert.match(sent, /never set shouldRegenerate because a photo is/i);
+  assert.match(sent, /A photo that is BROKEN is different/i);
+});

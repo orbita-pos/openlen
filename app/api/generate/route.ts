@@ -529,7 +529,23 @@ ${briefBlock}`,
             `[critic] regen=${verdict.shouldRegenerate ? "triggered" : "skipped"}`,
           );
 
-          if (verdict.shouldRegenerate) {
+          // El crítico informa; ya no gasta. Medido dos veces: puntuó la página
+          // baja por las FOTOS —"Bolillo muestra un océano"— y pidió
+          // regenerarla. Las fotos las coloca un emparejador determinista
+          // después de escribir, con los mismos sujetos: la segunda pasada
+          // recibe las mismas. Cada una de esas regeneraciones costaba una
+          // página entera de tokens y un crédito del usuario (93→91→89 en dos
+          // corridas) sin arreglar nada.
+          //
+          // El presupuesto de regeneración es de la ROTURA MEDIDA, que sí
+          // cambia al reescribir. `OPENLEN_VISION_CRITIC_REGEN=1` se lo
+          // devuelve.
+          const criticMayRegen = process.env.OPENLEN_VISION_CRITIC_REGEN === "1";
+          if (verdict.shouldRegenerate && !criticMayRegen) {
+            // eslint-disable-next-line no-console
+            console.log(`[critic] regen NO gastada — ${verdict.issues.join("; ").slice(0, 160)}`);
+          }
+          if (verdict.shouldRegenerate && criticMayRegen) {
             // Reason goes to the client only to drive a neutral "improving the
             // design…" state — never the raw critic text (bad UX to tell a
             // user their page looked bad).

@@ -270,6 +270,16 @@ function buildCriticPrompt(brief: string, html: string): string {
 ${structuralSummary(html)}
 </html-summary>
 </input>
+<photography>
+The photographs on this page were NOT chosen by the model that wrote it. A
+separate deterministic system matches them from a fixed library after the page
+is written, and regenerating the page does not change which photos appear.
+So: never set shouldRegenerate because a photo is generic, unrelated to the
+subject, or not the exact thing described. Say so in issues if you like — that
+feedback is read — but it must not cost a regeneration.
+A photo that is BROKEN is different and does count: a blank frame, a failed
+image, a picture that makes text unreadable.
+</photography>
 <rubric>
 - visualQuality (1-10): Hero polish, section spacing, typography hierarchy, color discipline, mockup detail.
 - briefAdherence (1-10): Does the page match the user's stated industry, audience, tone, and requested sections?
