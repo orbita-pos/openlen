@@ -40,6 +40,11 @@ vi.mock("@/lib/ai-provider", () => ({
 vi.mock("@/lib/ai-stream/generate", () => ({ generateHtmlStream: mocks.generateHtmlStream }));
 vi.mock("@/lib/templates/select-reference", () => ({ selectReferenceTemplate: mocks.selectReference }));
 vi.mock("@/lib/ai/inline-image", () => ({ fetchImageAsInlineData: vi.fn() }));
+// El navegador es dependencia pesada como cualquier otra aquí: un null deja el
+// arreglo de legibilidad en fail-soft y la ruta entrega la página tal cual.
+// El arreglo en sí está cubierto con navegador de verdad en
+// lib/curate/repair-unreadable-text.browser.test.ts.
+vi.mock("@/lib/ai/visual-quality-renderer", () => ({ renderVisualQualityViewports: vi.fn(async () => null) }));
 vi.mock("@/lib/business-profiles/store", () => ({ resolveProfileForCreation: mocks.resolveProfile }));
 vi.mock("@/lib/projects", () => ({ createProject: mocks.createProject }));
 vi.mock("@/lib/projects/versions", () => ({ createVersion: mocks.createVersion }));

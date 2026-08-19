@@ -419,7 +419,13 @@ ${brief}`;
         // textos a 1.87 y 1.98 sobre casi negro, siete elementos corregidos.
         // Fail-soft entero — un arreglo cosmético no puede costar la página.
         try {
-          const legible = await repairUnreadableText(html, renderVisualQualityViewports);
+          // Con plazo: el render vive dentro de la petición del usuario, y un
+          // Chrome colgado no puede quedarse con la página que ya está escrita.
+          const legible = await Promise.race([
+            repairUnreadableText(html, renderVisualQualityViewports),
+            new Promise<{ html: string; repaired: number }>((resolve) =>
+              setTimeout(() => resolve({ html, repaired: 0 }), 20_000)),
+          ]);
           if (legible.repaired > 0) {
             html = legible.html;
             // eslint-disable-next-line no-console
