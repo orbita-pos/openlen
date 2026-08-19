@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { GenerationState } from "@/lib/use-generation";
-import type { PageEffort } from "@/lib/curate/page-effort";
+import type { PageEffort } from "@/lib/document/page-effort";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // useCuration — drives the /new AI entry flow on the CURATION path (free tier).

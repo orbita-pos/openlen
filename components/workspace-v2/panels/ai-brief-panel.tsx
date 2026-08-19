@@ -18,10 +18,10 @@ import {
 } from "../icons";
 import type { BriefFormState } from "@/components/workspace/types";
 import { QUICK_PROMPTS } from "@/lib/quick-prompts";
-import type { PageEffort } from "@/lib/curate/page-effort";
+import type { PageEffort } from "@/lib/document/page-effort";
 
 /** Cuánto trabajo se pone en la página. El tipo y lo que cada nivel compra
- *  viven en `lib/curate/page-effort`; aquí sólo se re-exporta para que quien ya
+ *  viven en `lib/document/page-effort`; aquí sólo se re-exporta para que quien ya
  *  lo importaba del panel siga compilando. */
 export type { PageEffort };
 
@@ -146,7 +146,7 @@ export function AiBriefPanel({
 // composer. Exportado para que el inicio de /new use exactamente el mismo
 // control.
 //
-// Los tres niveles funcionan. Lo que compran está en `lib/curate/page-effort`:
+// Los tres niveles funcionan. Lo que compran está en `lib/document/page-effort`:
 // turnos de diseño, operaciones aceptadas y ciclos de crítica. El tope de
 // dinero por página NO se mueve, así que subir de nivel nunca puede cobrar de
 // más — como mucho la sesión se queda sin presupuesto antes de agotar el nivel.

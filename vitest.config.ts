@@ -63,7 +63,7 @@ export default defineConfig({
       // stays out of this runner.
       "lib/html-engine.sanitize-counters.test.ts",
       "lib/contract/**/*.test.ts",
-      "lib/curate/**/*.test.ts",
+      "lib/document/**/*.test.ts",
       "lib/generation/**/*.test.ts",
       "lib/html-gate/**/*.test.ts",
       "lib/ingestion/**/*.test.ts",

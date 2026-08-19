@@ -29,7 +29,6 @@ import {
   pageHasModule,
   PLACED_MODULE_MARKERS,
 } from "@/lib/projects/module-placements";
-import type { ModuleCardState } from "@/components/workspace-v2/panels/sections-panel";
 import type {
   BookingsSettings,
   ChatSettings,
@@ -66,8 +65,6 @@ import {
   type SectionView,
 } from "@/components/workspace-v2/left-sidebar";
 import { AlertTriangle, Check, Sparkles, Undo, X } from "@/components/workspace-v2/icons";
-import { SectionPreviewModal } from "@/components/workspace-v2/section-preview-modal";
-import type { SectionSpec } from "@/components/workspace-v2/sections-data";
 import { PreviewPlaceholder } from "@/components/workspace-v2/preview-placeholder";
 import { StartLanding } from "@/components/workspace-v2/start-landing";
 import type { PageEffort } from "@/components/workspace-v2/panels/ai-brief-panel";
@@ -213,7 +210,6 @@ const ALL_TABS: SidebarMode[] = [
   "site",
   "chat",
   "images",
-  "library",
   "versions",
   "3d",
 ];
@@ -322,7 +318,6 @@ function NewV2Inner() {
   const [projectName, setProjectName] = useState(t("defaultProjectName"));
   // One-shot deep-links (consumed by the child once applied — nonce refs
   // misfire when the target mounts AFTER the click: took two clicks).
-  const [libraryOpenModules, setLibraryOpenModules] = useState(false);
   const [hubInitialSub, setHubInitialSub] = useState<"collections" | null>(null);
   const [mode, setMode] = useState<SidebarMode>(
     entryMode === "template" || entryMode === "ai" ? "templates" : "chat",
@@ -624,7 +619,6 @@ function NewV2Inner() {
   // server-side (/api/sections/prepare) and drops the already-themed fragment
   // into the live iframe via insertRequest. A section never lands raw (the user
   // rejected the unmatched add). The insert + save rides the html-changed path.
-  const [previewSection, setPreviewSection] = useState<SectionSpec | null>(null);
   const [usingSection, setUsingSection] = useState(false);
   const [useError, setUseError] = useState<string | null>(null);
   const [insertRequest, setInsertRequest] = useState<{
@@ -660,81 +654,7 @@ function NewV2Inner() {
   // the snapshot the Undo falls back to is only stashed by that same message.
   const pendingInsertRef = useRef<{ id: string; name: string } | null>(null);
 
-  const handlePreviewSection = (spec: SectionSpec) => {
-    setUseError(null);
-    setPreviewSection(spec);
-  };
 
-  // "Use on my page": match the section to the page palette, then insert the
-  // already-themed fragment. One Gemini call (a credit) — a section never lands
-  // unmatched. On error the dialog stays open and surfaces the reason.
-  const handleUseSection = async (spec: SectionSpec) => {
-    if (!loadedProject || usingSection) return;
-    const proj = loadedProject;
-    // Snapshot the page scope: the palette is extracted from THIS document,
-    // and the themed fragment must not land on a page switched to mid-flight.
-    const page = activeSitePageRef.current;
-    setUsingSection(true);
-    scanController.start();
-    setUseError(null);
-    try {
-      const res = await fetch("/api/sections/prepare", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          projectId: proj.id,
-          slug: spec.id,
-          ...(page ? { page } : {}),
-        }),
-      });
-      const data = (await res.json().catch(() => null)) as
-        | { html?: string; error?: string }
-        | null;
-      // Navigated to another project / another page while prepare was in
-      // flight? The fragment is themed for that document, so dropping it into
-      // the now-current one would inject the wrong palette. Abort silently
-      // (the credit for the call still applies).
-      if (loadedIdRef.current !== proj.id) {
-        scanController.cancel();
-        return;
-      }
-      if (activeSitePageRef.current !== page) {
-        scanController.cancel();
-        return;
-      }
-      if (!res.ok || !data?.html) {
-        scanController.cancel();
-        setUseError(
-          data?.error === "no_credits"
-            ? tSections("sections.errNoCredits")
-            : tSections("sections.errGeneric"),
-        );
-        return;
-      }
-      insertNonceRef.current += 1;
-      const nonce = insertNonceRef.current;
-      const html = data.html;
-      scanController.finish(() => {
-        // The reveal is deferred (~2.5s) past this point — re-check the same
-        // staleness guards above, since the user can switch project/page during it.
-        if (loadedIdRef.current !== proj.id || activeSitePageRef.current !== page) {
-          return;
-        }
-        setInsertRequest({
-          html,
-          nonce,
-          sectionType: spec.type,
-        });
-      });
-      pendingInsertRef.current = { id: spec.id, name: spec.name };
-      setPreviewSection(null);
-    } catch {
-      scanController.cancel();
-      setUseError(tSections("sections.errGeneric"));
-    } finally {
-      setUsingSection(false);
-    }
-  };
 
   // Undo the most recent insert. Two paths, because the iframe script's node
   // refs die with the document it inserted into (any srcDoc re-derive — the
@@ -789,7 +709,7 @@ function NewV2Inner() {
   //
   // El dial de esfuerzo queda aparcado: en esta ruta no compra nada todavía, y
   // un selector que no compra nada es exactamente la mentira que se arregló en
-  // `lib/curate/page-effort.ts`. Su maquinaria sigue intacta.
+  // `lib/document/page-effort.ts`. Su maquinaria sigue intacta.
   const [effort, setEffort] = useState<PageEffort>("low");
   const generation = useGeneration();
   const aiGenState = generation.state;
@@ -2312,7 +2232,6 @@ function NewV2Inner() {
       // Section library transient UI is project-scoped — a stale preview/Undo
       // pill (or a still-pending insert request themed for the old project) must
       // not carry across a project switch.
-      setPreviewSection(null);
       setUseError(null);
       setLastInserted(null);
       pendingInsertRef.current = null;
@@ -3573,18 +3492,6 @@ function NewV2Inner() {
      insertBookingsSection, insertCommentsSection, insertPlatformsSection,
      createModulePage, toast, t, tMembers, tSections],
   );
-  const moduleCards = useMemo<ModuleCardState[]>(() => {
-    if (!loadedProject) return [];
-    const s = loadedProject.settings;
-    return (["collections", "bookings", "comments", "platforms"] as const).map((module) => ({
-      module,
-      // Platforms no tiene settings.enabled: sus links SON su estado.
-      enabled: module === "platforms" ? !!platformLinks : s?.[module]?.enabled === true,
-      alreadyOnPage: pageHasModule(activeDoc, module),
-      needsMembers: module === "comments" && s?.members?.enabled !== true,
-      needsPlatformLinks: module === "platforms" && !platformLinks,
-    }));
-  }, [loadedProject, activeDoc, platformLinks]);
   const toggleInspect = useCallback(() => {
     setInspectMode((m) => !m);
     setInspectSelection(null);
@@ -3699,7 +3606,6 @@ function NewV2Inner() {
             if (isMobile) setLeftCollapsed(true);
           }}
           previewingTemplateId={previewingTemplate?.id ?? null}
-          onPreviewSection={handlePreviewSection}
           onInsertMotion={loadedProject ? handleInsertMotion : undefined}
           lockedTabs={lockedTabs}
           lockReason={lockReason}
@@ -3775,13 +3681,10 @@ function NewV2Inner() {
           scene3d={loadedProject?.settings?.scene3d}
           onApplyScene3d={loadedProject ? applyScene3d : undefined}
           accent={originalTheme?.tokens["--ol-accent"] || undefined}
-          moduleCards={moduleCards}
           onAddModule={(m, d) => void addModuleFromLibrary(m, d)}
           activePageLabel={activeSitePage ? `/${activeSitePage}` : t("modulesHub.home")}
           homePageLabel={t("modulesHub.home")}
           siteName={loadedProject?.title ?? null}
-          openModulesView={libraryOpenModules}
-          onModulesViewConsumed={() => setLibraryOpenModules(false)}
           onManageCollections={() => {
             setCenterView("modulos");
             setHubInitialSub("collections");
@@ -3861,11 +3764,6 @@ function NewV2Inner() {
                 ? modulePlacements({ html: loadedProject.html, pages: loadedProject.pages })
                 : undefined
             }
-            onOpenLibrary={() => {
-              setCenterView("page");
-              setMode("library");
-              setLibraryOpenModules(true);
-            }}
             initialSub={hubInitialSub}
             onInitialSubConsumed={() => setHubInitialSub(null)}
             sitePages={sitePages}
@@ -4496,20 +4394,6 @@ function NewV2Inner() {
           setAssetModal(null);
         }}
       />
-      {previewSection && (
-        <SectionPreviewModal
-          section={previewSection}
-          using={usingSection}
-          error={useError}
-          onUse={handleUseSection}
-          onClose={() => {
-            if (!usingSection) {
-              setPreviewSection(null);
-              setUseError(null);
-            }
-          }}
-        />
-      )}
     </div>
   );
 }

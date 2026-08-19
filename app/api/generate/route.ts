@@ -1,9 +1,9 @@
 import { auth } from "@/auth";
 import { createProject } from "@/lib/projects";
 import { applyModuleIntent } from "@/lib/projects/module-intent";
-import { bindColorsToTokens } from "@/lib/curate/bind-colors-to-tokens";
-import { ensureSingleH1 } from "@/lib/curate/ensure-single-h1";
-import { repairUnreadableText } from "@/lib/curate/repair-unreadable-text";
+import { bindColorsToTokens } from "@/lib/document/bind-colors-to-tokens";
+import { ensureSingleH1 } from "@/lib/document/ensure-single-h1";
+import { repairUnreadableText } from "@/lib/document/repair-unreadable-text";
 import { objectiveBreakage } from "@/lib/generation/objective-breakage";
 import { renderVisualQualityViewports } from "@/lib/ai/visual-quality-renderer";
 import { resolveProfileForCreation } from "@/lib/business-profiles/store";
