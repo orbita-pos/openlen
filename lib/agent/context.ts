@@ -11,6 +11,7 @@
 // (from catalog) is pure TS too — no native — so importing it here keeps that
 // invariant.
 
+import { todayLine } from "@/lib/ai/today-line";
 import type { Message } from "@/lib/ai-gateway";
 import { buildAgentSystemPrompt } from "@/lib/agent/catalog";
 
@@ -81,9 +82,12 @@ export function buildAgentContext(args: {
 
   // El modelo no sabe qué día es, y eso no es cosmético: pidiéndole una cuenta
   // regresiva "dentro de tres semanas" escribió una fecha DOS MESES ANTERIOR a
-  // hoy, y el contador nace vencido en la página del usuario. Cualquier
-  // razonamiento con fechas —ofertas, eventos, plazos— dependía de adivinar.
-  const hoy = `HOY ES ${(args.now ?? new Date()).toISOString().slice(0, 10)}. Cualquier fecha que escribas (cuentas regresivas, eventos, plazos) tiene que ser POSTERIOR a hoy, salvo que el usuario pida explícitamente una pasada.\n\n`;
+  // hoy, y el contador nace vencido en la página del usuario.
+  //
+  // El día lo dice `todayLine`, que es la única fuente para todas las
+  // superficies. La regla de "posterior a hoy" se queda aquí: es del Agente,
+  // porque lo que él escribe son plazos que nacen vencidos.
+  const hoy = `${todayLine(args.now).trimEnd()} Además: cualquier fecha que escribas (cuentas regresivas, eventos, plazos) tiene que ser POSTERIOR a hoy, salvo que el usuario pida explícitamente una pasada.\n\n`;
 
   return `${hoy}ESTADO DEL PROYECTO (real, leído del servidor ahora mismo):\n${JSON.stringify(stateForPrompt, null, 2)}\n\n${briefBlock}${focusBlock}${imageBlock}${docHeader}\n\n${args.taggedHtml}`;
 }

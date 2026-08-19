@@ -1,5 +1,14 @@
 import { describe, expect, it } from "vitest";
 import { buildAgentContext, estimateContextTokens } from "./context";
+import { todayLine } from "@/lib/ai/today-line";
+
+// El bloque HOY se compone desde `todayLine`, la fuente unica. Fijarlo como
+// literal es lo que dejo al Agente y a la puerta de generar diciendo cosas
+// distintas sobre la misma fecha.
+const HOY = (now: Date) =>
+  `${todayLine(now).trimEnd()} Además: cualquier fecha que escribas (cuentas regresivas, eventos, plazos) tiene que ser POSTERIOR a hoy, salvo que el usuario pida explícitamente una pasada.
+
+`;
 
 describe("buildAgentContext", () => {
   it("carries state JSON, brief and tagged doc in labeled blocks", () => {
@@ -109,7 +118,7 @@ describe("buildAgentContext", () => {
       return `ESTADO DEL PROYECTO (real, leído del servidor ahora mismo):\n${JSON.stringify(a.state, null, 2)}\n\n${briefBlock}DOCUMENTO ACTUAL (cada elemento trae data-op-id inyectado por el servidor — usa esos ids en editar_pagina):\n\n${a.taggedHtml}`;
     };
     const args = { state, taggedHtml, userBrief, now: new Date("2026-08-18T12:00:00Z") };
-    expect(buildAgentContext(args)).toBe(`HOY ES 2026-08-18. Cualquier fecha que escribas (cuentas regresivas, eventos, plazos) tiene que ser POSTERIOR a hoy, salvo que el usuario pida explícitamente una pasada.\n\n` + f1(args));
+    expect(buildAgentContext(args)).toBe(HOY(args.now!) +f1(args));
   });
 
   // F4 Task 1 — multi-page base: buildAgentContext gains activePage.
@@ -137,7 +146,7 @@ describe("buildAgentContext", () => {
       return `ESTADO DEL PROYECTO (real, leído del servidor ahora mismo):\n${JSON.stringify(a.state, null, 2)}\n\n${briefBlock}DOCUMENTO ACTUAL (cada elemento trae data-op-id inyectado por el servidor — usa esos ids en editar_pagina):\n\n${a.taggedHtml}`;
     };
     const args = { state, taggedHtml, userBrief, now: new Date("2026-08-18T12:00:00Z") };
-    expect(buildAgentContext({ ...args, activePage: null })).toBe(`HOY ES 2026-08-18. Cualquier fecha que escribas (cuentas regresivas, eventos, plazos) tiene que ser POSTERIOR a hoy, salvo que el usuario pida explícitamente una pasada.\n\n` + f3(args));
+    expect(buildAgentContext({ ...args, activePage: null })).toBe(HOY(args.now!) +f3(args));
   });
 });
 

@@ -23,6 +23,7 @@ import { photographHtml } from "@/lib/imagery/photograph";
 import { recordCriticRun, recordRegenOutcome } from "@/lib/ai/quality-metrics";
 import type { InlineImage, Message } from "@/lib/ai-gateway";
 import { pageMetaFor } from "@/lib/publish/page-meta-intent";
+import { todayLine } from "@/lib/ai/today-line";
 import {
   PLAN_LIMITS,
   checkAndConsume,
@@ -55,6 +56,7 @@ export const dynamic = "force-dynamic";
 // ─────────────────────────────────────────────────────────────────────────────
 
 const ENCODER = new TextEncoder();
+
 
 // Sin catálogo de gusto. Aquí viajaba un segundo mensaje `<reference>` con las
 // recetas de CSS, cinco fragmentos de HTML de la plantilla Mirror y los
@@ -192,7 +194,7 @@ ${brief}`;
 
   const messages = [
     { role: "system" as const, content: SYSTEM_PROMPT },
-    { role: "user" as const, content: briefBlock },
+    { role: "user" as const, content: `${todayLine()}${briefBlock}` },
   ];
 
   const upstreamAbort = new AbortController();

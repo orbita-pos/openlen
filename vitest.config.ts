@@ -85,6 +85,7 @@ export default defineConfig({
       "lib/ai/fireworks-tool-client.test.ts",
       "lib/ai/fireworks-stream-client.test.ts",
       "lib/ai/qwen-visual-critic.test.ts",
+      "lib/ai/today-line.test.ts",
       "lib/ai/visual-quality-renderer.test.ts",
       "lib/ai/visual-quality-critic.test.ts",
       "lib/business-profiles/**/*.test.ts",

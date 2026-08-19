@@ -225,3 +225,4 @@ describe("POST /api/generate", () => {
     expect(mocks.createProject).not.toHaveBeenCalled();
   });
 });
+

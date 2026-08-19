@@ -28,6 +28,7 @@ import {
 import { passHtmlGate } from "@/lib/html-gate/document-gate";
 import { applyModuleIntent } from "@/lib/projects/module-intent";
 import { describeBehaviorIssues } from "@/lib/behaviors/validate";
+import { todayLine } from "@/lib/ai/today-line";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // POST /api/templates/ai-design — conversational AI page redesign.
@@ -448,8 +449,11 @@ VISUAL CONTEXT: the attached image is a full-page render of the CURRENT page (wh
     { role: "system", content: SYSTEM_PROMPT },
     ...history,
     {
+      // El Chat reescribe el copy de la página igual que la puerta de generar,
+      // así que hereda su fallo: sin la fecha, "desde 1998" sale con los años
+      // contados desde el entrenamiento del modelo.
       role: "user",
-      content: finalUserContent,
+      content: `${todayLine()}${finalUserContent}`,
     },
   ];
 
