@@ -9,6 +9,7 @@ import type { CreativeSessionResult } from "./deepseek-creative-session";
 import type { CreativeDirection } from "@/lib/generation/creative-contracts";
 import { adoptModelPalette } from "./adopt-model-palette";
 import { applyCreativeDirection } from "./apply-creative-direction";
+import { contractReasonCode, measureContract } from "@/lib/contract/measure";
 import { insertModulePlaceholders, modulesFromBrief } from "./module-placeholders";
 import { DEFAULT_PAGE_EFFORT, effortProfile, type PageEffort } from "./page-effort";
 import { isolateModelTokens } from "./isolate-model-tokens";
@@ -341,6 +342,12 @@ export async function runCreativeGeneration(
     deps.recordFailure?.("delivery_gate", validated.reasonCode);
     return { ok: false, stage: "delivery_gate", reasonCode: validated.reasonCode };
   }
+
+  // Mide, no bloquea. Se anota en la página que DE VERDAD se entrega —después
+  // de módulos y de un posible regreso a la baseline— porque medir el candidato
+  // mejorado diría lo que el usuario no recibió.
+  const contract = contractReasonCode(measureContract(chosen.html));
+  if (contract) deps.recordDegraded?.("delivery_gate", contract);
 
   return {
     ok: true,

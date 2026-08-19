@@ -228,6 +228,24 @@ describe("model palette adoption", () => {
     expect(result.ok && result.degraded).toBe(false);
   });
 
+  it("anota el contrato de la página entregada sin poder bloquearla", async () => {
+    const recordDegraded = vi.fn();
+    const dirty = "<!doctype html><html><head><style>.hero{color:#ff0000}.card{background:#111}</style></head><body><section>x</section></body></html>";
+    const result = await runCreativeGeneration(INPUT, deps({
+      runCreativeSession: async () => ({ candidate: { ...IMPROVED, html: dirty }, changed: true, acceptedMutations: 1, rejections: [], stoppedBy: "finished" }),
+      recordDegraded,
+    }));
+
+    expect(result.ok && result.html).toBe(dirty);
+    expect(recordDegraded).toHaveBeenCalledWith("delivery_gate", "contract:colors=2");
+  });
+
+  it("no anota nada cuando la página respeta el contrato", async () => {
+    const recordDegraded = vi.fn();
+    await runCreativeGeneration(INPUT, deps({ recordDegraded }));
+    expect(recordDegraded.mock.calls.some(([, reason]) => String(reason).startsWith("contract:"))).toBe(false);
+  });
+
   it("keeps the candidate untouched when the model painted no palette", async () => {
     const recordDegraded = vi.fn();
     const result = await runCreativeGeneration(INPUT, deps({ recordDegraded }));
