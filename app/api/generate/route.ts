@@ -8,7 +8,6 @@ import { seedBrandIntoHtml } from "@/lib/business-profiles/seed-html";
 import type { BusinessProfile, BusinessProfileData } from "@/lib/business-profiles/types";
 import { createVersion } from "@/lib/projects/versions";
 import { getCreditState } from "@/lib/credits";
-import { DESIGN_REFERENCE } from "@/lib/design-guidance";
 import { SYSTEM_PROMPT } from "./system-prompt";
 import { detectSlotPath, sanitizeForPublish } from "@/lib/html-engine";
 import { passHtmlGate } from "@/lib/html-gate/document-gate";
@@ -54,15 +53,11 @@ export const dynamic = "force-dynamic";
 
 const ENCODER = new TextEncoder();
 
-// CSS recipes, micro-snippets, and brand catalogs ship as a separate
-// user-tagged reference block. Gemini 3.x treats long system prompts as
-// constraints — pushing taste material into a `<reference>`-tagged user
-// turn keeps the model from over-anchoring on phrasing.
-const REFERENCE_MESSAGE = `<reference>
-The following library is the design taste catalog. Use it as material to draw from when filling in the variant brief — match the register, don't quote verbatim.
-
-${DESIGN_REFERENCE}
-</reference>`;
+// Sin catálogo de gusto. Aquí viajaba un segundo mensaje `<reference>` con las
+// recetas de CSS, cinco fragmentos de HTML de la plantilla Mirror y los
+// catálogos de marcas, presentado al modelo como "the design taste catalog".
+// El system prompt ya no lo llevaba, pero esto sí — y por eso una guarda que
+// sólo miraba el system prompt pasaba en verde.
 
 export async function POST(req: Request): Promise<Response> {
   let body: unknown;
@@ -194,7 +189,6 @@ ${brief}`;
 
   const messages = [
     { role: "system" as const, content: SYSTEM_PROMPT },
-    { role: "user" as const, content: REFERENCE_MESSAGE },
     { role: "user" as const, content: briefBlock },
   ];
 
@@ -451,7 +445,6 @@ ${brief}`;
             const regenBriefBlock = `<critic-feedback>\n${verdict.regenerationFeedback}\n\nIssues found in the previous attempt: ${verdict.issues.join(", ")}\n</critic-feedback>\n\n${briefBlock}`;
             const regenMessages: Message[] = [
               { role: "system", content: SYSTEM_PROMPT },
-              { role: "user", content: REFERENCE_MESSAGE },
               { role: "user", content: regenBriefBlock },
             ];
             const regen = await runPass(regenMessages, "regen");

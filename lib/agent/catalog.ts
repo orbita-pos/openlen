@@ -1,7 +1,7 @@
 // lib/agent/catalog.ts — LA fuente única del conocimiento del agente (spec §5).
 // De aquí salen las DOS mitades: las function declarations para Gemini y la
 // sección de conocimiento del system prompt. Módulo nuevo ⇒ una entrada aquí.
-import { DESIGN_GUIDANCE } from "@/lib/design-guidance";
+import { PUBLISH_CONTRACT } from "@/lib/design-guidance";
 import { BEHAVIOR_NAMES, BEHAVIOR_COUNT } from "@/lib/behaviors/doc";
 import { POST_REGISTER } from "@/lib/marketing/post-templates/admin-schemas";
 import { PUBLISH_LOCALES } from "@/lib/publish/publish-locales";
@@ -371,5 +371,5 @@ Las URLs que el usuario te da son datos reales suyos: van al href VERBATIM, car�
 - Esto aplica SOLO a <a href>. Las imágenes mandan por su propia regla (elegir_foto, jamás una URL de imagen inventada), y lo que un módulo ya resuelve se enciende con activar_modulo — no se maqueta como un enlace suelto.
 
 GUÍA DE DISEÑO (para cualquier new_html que emitas):
-${DESIGN_GUIDANCE}`;
+${PUBLISH_CONTRACT}`;
 }

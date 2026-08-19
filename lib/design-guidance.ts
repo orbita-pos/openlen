@@ -754,12 +754,16 @@ CONTENT RULES — what makes a line of copy "ship-quality"
  * que un acordeón escrito con JS llega muerto: la sección de CONDUCTAS es cómo
  * se pide interactividad que sí sobrevive. Eso es contrato, no gusto.
  *
- * Lo demás de DESIGN_GUIDANCE —el orden de las secciones, las recetas de CSS,
- * los cinco fragmentos copiados de Mirror, la barra de diseño, las marcas
- * ficticias— es NUESTRO gusto, y medido: hacía que siete páginas de siete
- * nichos distintos salieran con el mismo hero. El modelo diseña mejor sin él.
+ * El vocabulario de tokens entra por la misma razón: lo exige el linter del
+ * contrato (`npm run contract:lint`) y de él dependen los controles de tema del
+ * editor. Dejarlo fuera costó una página sin `--radius` ni `:root.dark`.
+ *
+ * Lo demás de DESIGN_GUIDANCE —el orden de las secciones, la barra de diseño,
+ * las precisiones tipográficas, las marcas ficticias— es NUESTRO gusto, y
+ * medido: hacía que siete páginas de siete nichos distintos salieran con el
+ * mismo hero. El modelo diseña mejor sin él.
  */
 export const PUBLISH_CONTRACT = DESIGN_GUIDANCE.slice(
   DESIGN_GUIDANCE.indexOf("OUTPUT FORMAT — strict rules"),
-  DESIGN_GUIDANCE.indexOf("DESIGN CONTRACT — token vocabulary"),
+  DESIGN_GUIDANCE.indexOf("TYPOGRAPHY PRECISIONS"),
 ).trim();

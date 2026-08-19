@@ -9,7 +9,6 @@ import {
   estimateCredits,
   creditsForUsage,
 } from "@/lib/credits";
-import { DESIGN_REFERENCE } from "@/lib/design-guidance";
 import { MARKER, SYSTEM_PROMPT } from "./system-prompt";
 import { resolveAIProvider, type AIModel } from "@/lib/ai-provider";
 import { createFireworksStreamClient } from "@/lib/ai/fireworks-stream-client";
@@ -394,14 +393,12 @@ export async function POST(req: Request): Promise<Response> {
   // MAX_PROMPT_TOKENS (240K, itself a fraction of Gemini's 1M-token context).
   const SYSTEM_TOKEN_BUDGET = 10_000;
   const MAX_PROMPT_TOKENS = 240_000;
-  const referenceMessage = `<reference>
-The following library is the design taste catalog. Use it as material to draw from for full rewrites — match the register, don't quote verbatim.
-
-${DESIGN_REFERENCE}
-</reference>`;
+  // Sin catálogo de gusto: aquí viajaban las recetas de CSS, cinco fragmentos
+  // de HTML de la plantilla Mirror y los catálogos de marcas, anunciados como
+  // "the design taste catalog". El modelo edita la página del usuario, no la
+  // nuestra.
   const estimatedTokens =
-    Math.ceil((userMessageContent.length + referenceMessage.length) / 3.5) +
-    SYSTEM_TOKEN_BUDGET;
+    Math.ceil(userMessageContent.length / 3.5) + SYSTEM_TOKEN_BUDGET;
   if (estimatedTokens > MAX_PROMPT_TOKENS) {
     const suggestion = scopedView
       ? "even scoped to this section it's still too large — try clicking 🎯 Select on a smaller child element"
@@ -448,7 +445,6 @@ VISUAL CONTEXT: the attached image is a full-page render of the CURRENT page (wh
 
   const messages: Message[] = [
     { role: "system", content: SYSTEM_PROMPT },
-    { role: "user", content: referenceMessage },
     ...history,
     {
       role: "user",

@@ -63,35 +63,63 @@ describe("Arreglo 3 — el guardia de la costura design-guidance vs design-guida
   });
 });
 
-// La puerta de generación no manda gusto nuestro. Siete páginas de siete nichos
-// distintos salían con el MISMO hero porque le pasábamos el de Mirror como
-// fragmento de referencia y el orden de las secciones como esqueleto. Lo que
-// queda es lo que la máquina necesita: OpenLen borra todo el JavaScript, así
-// que sin CONDUCTAS un acordeón llega muerto.
-describe("la puerta de generación manda contrato, no gusto", () => {
-  it("lleva el contrato de publicación", () => {
-    expect(GENERATE_SYSTEM_PROMPT).toContain("CONDUCTAS");
-    expect(GENERATE_SYSTEM_PROMPT).toContain("<!doctype html>");
+// Ninguna superficie manda gusto nuestro. Volvió por tres puertas en un día:
+// el esqueleto de secciones dentro de DESIGN_GUIDANCE, la captura de una
+// plantilla curada adjunta al brief, y un segundo mensaje `<reference>` que se
+// presentaba al modelo como "the design taste catalog" — ése pasaba por debajo
+// de una guarda que sólo miraba el system prompt.
+//
+// Lo que sí viaja es contrato: OpenLen borra todo el JavaScript (de ahí
+// CONDUCTAS) y el linter del contrato exige el vocabulario de tokens, del que
+// dependen los controles de tema del editor.
+describe("ninguna superficie manda gusto nuestro", () => {
+  const PROMPTS: Array<[string, () => string]> = [
+    ["crear", () => GENERATE_SYSTEM_PROMPT],
+    ["editar", () => AI_DESIGN_SYSTEM_PROMPT],
+    ["Agente", () => buildAgentSystemPrompt()],
+  ];
+
+  it.each(PROMPTS)("%s lleva el contrato de publicación", (_name, getPrompt) => {
+    const prompt = getPrompt();
+    expect(prompt).toContain("CONDUCTAS");
+    expect(prompt).toContain("DESIGN CONTRACT — token vocabulary");
   });
 
-  it.each([
-    ["los fragmentos copiados de Mirror", "reference-snippet"],
+  const GUSTO = [
     ["el orden de las secciones", "SECTION SKELETON"],
-    ["las recetas de CSS", "CSS RECIPES"],
     ["la barra de diseño", "DESIGN BAR"],
     ["las marcas ficticias", "FICTIONAL BRANDS"],
-    ["la escala tipográfica", "text-4xl"],
-    // Existía porque las páginas de Gemini se truncaban contra el tope. En
-    // DeepSeek la salida más larga medida fue 12,338 tokens de 60,000, y
-    // 65,536 se acepta: comprimía para evitar un problema que no ocurre.
+    ["las precisiones tipográficas", "TYPOGRAPHY PRECISIONS"],
+    ["los fragmentos copiados de Mirror", "reference-snippet"],
+    ["las recetas de CSS", "CSS RECIPES"],
     ["la presión a comprimir la salida", "OUTPUT EFFICIENCY"],
-  ])("no lleva %s", (_name, marker) => {
-    expect(GENERATE_SYSTEM_PROMPT).not.toContain(marker);
-  });
+    ["el ojo de otras cuatro empresas", "Linear"],
+  ] as const;
 
-  // Las superficies de EDICIÓN son otra decisión: ahí el modelo no diseña una
-  // página desde cero, retoca una que ya existe.
-  it("la guía completa sigue existiendo para las superficies de edición", () => {
-    expect(AI_DESIGN_SYSTEM_PROMPT).toContain("SECTION SKELETON");
+  for (const [surface, getPrompt] of PROMPTS) {
+    it.each(GUSTO)(`${surface} no lleva %s`, (_name, marker) => {
+      expect(getPrompt()).not.toContain(marker);
+    });
+  }
+
+  // El catálogo de gusto no viajaba por el system prompt sino por un mensaje
+  // aparte, así que la guarda tiene que mirar el código, no sólo el prompt.
+  it("nadie importa el catálogo de gusto", async () => {
+    const { readdirSync, readFileSync, statSync } = await import("node:fs");
+    const { join } = await import("node:path");
+    const offenders: string[] = [];
+    const walk = (dir: string) => {
+      for (const entry of readdirSync(dir)) {
+        if (entry === "node_modules" || entry === ".next") continue;
+        const full = join(dir, entry);
+        if (statSync(full).isDirectory()) { walk(full); continue; }
+        if (!/\.tsx?$/.test(entry) || /\.test\.tsx?$/.test(entry)) continue;
+        if (full.endsWith(join("lib", "design-guidance.ts"))) continue;
+        if (readFileSync(full, "utf8").includes("DESIGN_REFERENCE")) offenders.push(full);
+      }
+    };
+    walk(join(process.cwd(), "app"));
+    walk(join(process.cwd(), "lib"));
+    expect(offenders, offenders.join(", ")).toEqual([]);
   });
 });
