@@ -599,7 +599,12 @@ export const EVAL_CASES: EvalCase[] = [
   },
   {
     id: "chain-foto-y-publicar",
-    prompt: "busca una foto de tacos, ponla en el hero y ya publícala en tacos-demo",
+    // Una foto que el catálogo SÍ tiene. Pedía tacos y no hay ninguno —el
+    // catálogo de comida son croissants, pan, café e interiores—, así que el
+    // Agente buscaba dos veces, se negaba a inventar una URL y paraba a
+    // preguntar. Es la conducta correcta, y el caso la reprobaba por no llegar
+    // a publicar. Lo que este caso prueba es la CADENA, no la cobertura.
+    prompt: "busca una foto de pan artesano, ponla en el hero y ya publícala en tacos-demo",
     assert: (ctx) => {
       if (ctx.result.terminalError) return "terminó en error terminal";
       return hasConfirm(ctx.events) ? null : "no llegó a la tarjeta de confirmación de publicación";
