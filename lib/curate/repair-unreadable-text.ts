@@ -55,10 +55,20 @@ function legibleColor(background: string, pageLight: number | null): string | nu
   return wantsDarkText ? darkPole : lightPole;
 }
 
+/** El fondo de la página, para saber cuál de los dos polos es el legible.
+ *
+ *  Se mira en dos sitios porque las páginas lo declaran en dos: el atributo del
+ *  `<html>` (como lo escribe el normalizador) y el bloque `:root` del CSS (como
+ *  lo escribe el modelo). Leyendo sólo el primero, una página generada por la
+ *  puerta caía al literal `#ffffff`, y el linter del contrato rechaza un hex a
+ *  fuego en un style inline: el arreglo de legibilidad rompía otra regla. */
 function pageLightness(html: string): number | null {
   const openTag = html.match(/<html\b[^>]*>/i)?.[0];
-  const background = openTag?.match(/--ol-bg:\s*([^;"]*)/i)?.[1];
-  return background ? lightness(background) : null;
+  const fromTag = openTag?.match(/--ol-bg:\s*([^;"]*)/i)?.[1];
+  if (fromTag) return lightness(fromTag);
+  const root = html.match(/:root[^{]*\{[^}]*\}/i)?.[0];
+  const fromRoot = root?.match(/--(?:ol-)?bg:\s*([^;}]*)/i)?.[1];
+  return fromRoot ? lightness(fromRoot) : null;
 }
 
 /**

@@ -43,6 +43,21 @@ describe("texto ilegible", () => {
     expect(result.html).toContain("color:var(--ol-bg)");
   });
 
+  // El modelo declara los tokens en `:root`, no en el atributo del <html>. Sin
+  // leer ahí, una página generada por la puerta caía al literal #ffffff — y el
+  // linter del contrato rechaza un hex a fuego en un style inline, así que el
+  // arreglo de legibilidad rompía otra regla al arreglar la suya.
+  it("lee el fondo del bloque :root, no sólo del atributo del html", async () => {
+    const conRoot = '<!doctype html><html><head><style>:root{--ol-bg:#0b0b0f;--ol-fg:#f2efe6}</style></head>'
+      + '<body><header class="site-head"><a class="brand" href="#">x</a></header></body></html>';
+    const result = await repairUnreadableText(conRoot, async (html) => ({
+      unreadableText: [{ probe: probeOf(html, "brand"), background: "#0b0b0f", contrast: 1.02 }],
+    }));
+    expect(result.repaired).toBe(1);
+    expect(result.html).toContain("color:var(--ol-fg)");
+    expect(result.html).not.toContain("#ffffff");
+  });
+
   it("sigue a la paleta cuando la página entera es oscura", async () => {
     const dark = page(`<header class="site-head"><a class="brand" href="#">x</a></header>`, `style="--ol-bg:#101410;--ol-fg:#f2efe6"`);
     const result = await repairUnreadableText(dark, async (html) => ({
