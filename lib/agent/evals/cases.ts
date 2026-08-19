@@ -599,12 +599,12 @@ export const EVAL_CASES: EvalCase[] = [
   },
   {
     id: "chain-foto-y-publicar",
-    // Una foto que el catálogo SÍ tiene. Pedía tacos y no hay ninguno —el
-    // catálogo de comida son croissants, pan, café e interiores—, así que el
-    // Agente buscaba dos veces, se negaba a inventar una URL y paraba a
-    // preguntar. Es la conducta correcta, y el caso la reprobaba por no llegar
-    // a publicar. Lo que este caso prueba es la CADENA, no la cobertura.
-    prompt: "busca una foto de pan artesano, ponla en el hero y ya publícala en tacos-demo",
+    // Se pide una foto que el catálogo NO tiene, a propósito. Antes eso paraba
+    // la cadena entera: el Agente se negaba —bien— a inventar una URL y se
+    // quedaba pidiendo permiso, así que el usuario tampoco conseguía lo demás
+    // que había pedido. Ahora deja un degradado y sigue, que es lo que ya hace
+    // la generación. Quedarse sin una foto no puede cancelar el resto.
+    prompt: "busca una foto de tacos, ponla en el hero y ya publícala en tacos-demo",
     assert: (ctx) => {
       if (ctx.result.terminalError) return "terminó en error terminal";
       return hasConfirm(ctx.events) ? null : "no llegó a la tarjeta de confirmación de publicación";
