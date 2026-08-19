@@ -230,6 +230,25 @@ export async function photographHtml(params: {
 
   // 1. Deterministic shortlist per fillable slot (non-text, with real signal).
   const shortlists = new Map<number, CuratedImage[]>();
+  // Reserva del gremio: el filtro se queda corto a menudo —los sujetos vienen
+  // en español y el catálogo está etiquetado en inglés—, y un hueco con el
+  // degradado puesto es peor que una foto imprecisa. Se ordena por familia del
+  // brief y luego por tono, y sólo se usa donde no hubo nada mejor.
+  //
+  //  Sólo la familia EXACTA. Probé ensanchar al anillo de familias vecinas —las
+  //  que conviven con ella en el catálogo— para llegar al pan de verdad, que
+  //  está etiquetado `hospitality`: sí lo alcanzaba, y traía detrás una casa de
+  //  los cincuenta y unas piedras apiladas. Cambiar una foto rara por otra foto
+  //  rara no es progreso. El techo real es el etiquetado: `food-beverage` tiene
+  //  SEIS imágenes en un catálogo de quinientas, y el pan no está entre ellas.
+  const toneScore = (img: CuratedImage): number => {
+    const tone = imageTone(img.alt);
+    return tone === mode ? 2 : tone === "neutral" ? 1 : 0;
+  };
+  const fallback = family
+    ? images.filter((img) => img.family.includes(family)).sort((a, b) => toneScore(b) - toneScore(a))
+    : [];
+
   slots.forEach((slot, index) => {
     if (slot.hasText) return;
     const subjectToks = tokens(slot.subject || brief);
@@ -252,7 +271,7 @@ export async function photographHtml(params: {
     if (scored.length > 0) shortlists.set(index, scored.slice(0, SHORTLIST).map((s) => s.img));
   });
 
-  if (shortlists.size === 0) {
+  if (shortlists.size === 0 && fallback.length === 0) {
     // Nothing matched — still apply to strip the markers off the doc.
     return finalize(html, slots, () => SKIP);
   }
@@ -302,6 +321,18 @@ export async function photographHtml(params: {
       chosen.set(index, img);
     }
   }
+
+  // Los huecos que ni siquiera entraron al filtro: mejor una foto del gremio
+  // que un bloque de degradado. Medido en una página entregada — seis fotos
+  // puestas y siete huecos vacíos.
+  slots.forEach((slot, index) => {
+    if (slot.hasText || chosen.has(index)) return;
+    const img = fallback.find((candidate) => !used.has(candidate.id));
+    if (img) {
+      used.add(img.id);
+      chosen.set(index, img);
+    }
+  });
 
   return finalize(html, slots, (index) => {
     const img = chosen.get(index);

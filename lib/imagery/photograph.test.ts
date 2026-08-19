@@ -99,6 +99,23 @@ test("deterministic: distinct subjects get distinct photos (dedupe)", async () =
   assert.ok(r.html.includes("office-1920.webp"));
 });
 
+// El listón del producto no es la foto perfecta: es que ninguna esté fuera de
+// lugar y que el hueco no quede vacío — el usuario cambia la que no le guste.
+// Medido en una página entregada: seis fotos puestas y siete huecos con el
+// degradado. Un bloque vacío es peor que una foto imprecisa del mismo gremio.
+test("un hueco sin coincidencia tira de la reserva del gremio antes que quedarse vacío", async () => {
+  __setCuratedImagesForTest([
+    img("ramen", "food-editorial", ["food-beverage"], "Steaming bowl of dark midnight ramen"),
+    img("office", "interior-editorial", ["saas"], "Bright airy modern open office"),
+  ]);
+  const html = `<!doctype html><html><head><style>:root{--ol-bg:#ffffff}</style></head><body>
+    <div class="bg-gradient-to-br h-96" data-ol-photo="la barra al amanecer"></div>
+  </body></html>`;
+  const r = await photographHtml({ html, brief: "restaurante de ramen", pickFn: DET });
+  assert.equal(r.applied, 1, "el hueco se llena");
+  assert.ok(r.html.includes("ramen-1920.webp"), "y con una del gremio, no con la oficina");
+});
+
 test("text-overlay slots are skipped (gradient kept), marker dropped", async () => {
   __setCuratedImagesForTest(LIBRARY);
   const html = `<!doctype html><html><head></head><body>
