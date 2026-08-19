@@ -241,7 +241,7 @@ function productionDeps(
           issues: [
             ...assessed.verdict.issues.map((issue) => `${issue.code}:${issue.viewport}`),
             ...(measured
-              ? [`typography_measured:${measured.rule}:h1=${measured.h1FontPx}px:hero_body=${measured.heroBodyFontPx ?? "?"}px`]
+              ? [`typography_measured:${measured.rule}:h1=${measured.h1FontPx ?? "?"}px:n_h1=${measured.h1Count}:hero_body=${measured.heroBodyFontPx ?? "?"}px`]
               : []),
           ],
         };

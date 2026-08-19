@@ -15,12 +15,15 @@ export interface MeasuredPage {
   readonly unreadableText?: readonly { readonly contrast: number }[];
   readonly typographyHierarchy?: {
     readonly rule: string;
-    readonly h1FontPx: number;
+    readonly h1FontPx: number | null;
+    readonly h1Count?: number;
     readonly heroBodyFontPx: number | null;
   } | null;
 }
 
-const TYPOGRAPHY_REASON: Record<string, (h1: number, body: number | null) => string> = {
+const TYPOGRAPHY_REASON: Record<string, (h1: number | null, body: number | null) => string> = {
+  h1_missing: () => "la página no tiene un solo <h1> — no hay titular que jerarquizar",
+  h1_not_rendered: () => "hay un <h1> pero el navegador no le da caja — está oculto o vacío",
   h1_too_small: (h1) => `el titular mide ${h1}px en móvil — por debajo de 24px no es un titular`,
   hero_body_too_small: (_h1, body) => `el cuerpo del hero mide ${body}px en móvil — por debajo de 12px no se lee`,
   h1_not_dominant: (h1, body) => `el titular mide ${h1}px y el cuerpo ${body}px — no se distinguen`,

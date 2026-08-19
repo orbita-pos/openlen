@@ -526,3 +526,41 @@ describe("qué párrafo es el cuerpo del hero", () => {
     });
   }, 30_000);
 });
+
+// Con navegador de verdad, porque el defecto era del selector: `querySelector("h1")`
+// devolvía nulo y nulo se leía como página sana. Medido: una baseline sin un
+// solo <h1> pasaba el chequeo de jerarquía tipográfica.
+describe("una página sin titular no es una página sana", () => {
+  const SIN_H1 = `<!doctype html><html><head><style>
+    *{box-sizing:border-box}html,body{margin:0;font-family:Arial,sans-serif}
+    .hero{padding:40px 20px}.lede{font-size:18px}
+  </style></head><body><main class="hero">
+    <p class="lede">Tres shows a la semana, cero filtros y una barra que nunca duerme.</p>
+  </main></body></html>`;
+
+  const H1_OCULTO = `<!doctype html><html><head><style>
+    *{box-sizing:border-box}html,body{margin:0;font-family:Arial,sans-serif}
+    .hero{padding:40px 20px}.lede{font-size:18px}h1{display:none}
+  </style></head><body><main class="hero">
+    <h1>Risa Brava</h1>
+    <p class="lede">Tres shows a la semana, cero filtros y una barra que nunca duerme.</p>
+  </main></body></html>`;
+
+  it("marca la ausencia total de titular", async () => {
+    const result = await renderVisualQualityViewports(SIN_H1);
+    expect(result).not.toBeNull();
+    expect(result).toMatchObject({
+      weakTypographyHierarchy: true,
+      typographyHierarchy: { rule: "h1_missing", h1Count: 0, h1FontPx: null },
+    });
+  }, 30_000);
+
+  it("distingue un titular oculto de uno ausente", async () => {
+    const result = await renderVisualQualityViewports(H1_OCULTO);
+    expect(result).not.toBeNull();
+    expect(result).toMatchObject({
+      weakTypographyHierarchy: true,
+      typographyHierarchy: { rule: "h1_not_rendered", h1Count: 1, h1FontPx: null },
+    });
+  }, 30_000);
+});

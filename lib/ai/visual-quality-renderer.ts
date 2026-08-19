@@ -25,8 +25,10 @@ export interface UnreadableTextFinding {
  *  esto el reparador recibe la palabra "typography" y tiene que adivinar si el
  *  titular es chico, si el cuerpo es ilegible, o si no se distinguen entre sí. */
 export interface TypographyHierarchyFinding {
-  readonly rule: "h1_too_small" | "hero_body_too_small" | "h1_not_dominant";
-  readonly h1FontPx: number;
+  readonly rule: "h1_missing" | "h1_not_rendered" | "h1_too_small" | "hero_body_too_small" | "h1_not_dominant";
+  /** Nulo cuando no hubo titular medible. No es cero: es "no se midió". */
+  readonly h1FontPx: number | null;
+  readonly h1Count: number;
   readonly heroBodyFontPx: number | null;
 }
 
@@ -145,13 +147,19 @@ function readVisualDiagnostics(value: unknown): {
   }
   const measurements = value as Record<string, unknown>;
   const h1FontPx = readFiniteMeasurement(measurements, "h1FontPx");
+  const h1Count = readFiniteMeasurement(measurements, "h1Count");
   const heroBodyFontPx = readFiniteMeasurement(measurements, "heroBodyFontPx");
   const componentCount = readFiniteMeasurement(measurements, "componentCount");
   const roundedComponentCount = readFiniteMeasurement(measurements, "roundedComponentCount");
 
   // El orden nombra la causa: el primero que se cumple es el que se reporta.
-  const rule: TypographyHierarchyFinding["rule"] | null = h1FontPx === null
-    ? null
+  // Las dos primeras existen porque un titular ausente, o presente pero sin
+  // caja, dejaba `h1FontPx` en nulo — y nulo se reportaba como página sana.
+  // Medido: una baseline sin un solo <h1> pasaba el chequeo de jerarquía.
+  const rule: TypographyHierarchyFinding["rule"] | null = h1Count === 0
+    ? "h1_missing"
+    : h1FontPx === null
+    ? "h1_not_rendered"
     : h1FontPx < 24
       ? "h1_too_small"
       : heroBodyFontPx !== null && heroBodyFontPx < 12
@@ -160,9 +168,9 @@ function readVisualDiagnostics(value: unknown): {
           ? "h1_not_dominant"
           : null;
   const weakTypographyHierarchy = rule !== null;
-  const typographyHierarchy = rule === null || h1FontPx === null
+  const typographyHierarchy = rule === null
     ? null
-    : { rule, h1FontPx, heroBodyFontPx };
+    : { rule, h1FontPx, h1Count: h1Count ?? 0, heroBodyFontPx };
   const squareComponentTreatment = componentCount !== null
     && roundedComponentCount !== null
     && componentCount >= 3
@@ -222,7 +230,9 @@ async function captureWithPage(
       const readGeometry = () => page.evaluate(() => {
           const root = document.documentElement;
           const body = document.body;
-          const h1 = document.querySelector("h1");
+          const h1All = document.querySelectorAll("h1");
+          const h1Count = h1All.length;
+          const h1 = h1All[0] ?? null;
           let h1FontPx: number | null = null;
           if (h1 instanceof HTMLElement) {
             const style = window.getComputedStyle(h1);
@@ -378,6 +388,7 @@ async function captureWithPage(
             bodyScrollWidth: body?.scrollWidth ?? 0,
             clientWidth: Math.max(window.innerWidth, root.clientWidth),
             h1FontPx,
+            h1Count,
             heroBodyFontPx,
             componentCount,
             roundedComponentCount,
