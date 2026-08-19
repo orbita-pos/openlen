@@ -1,5 +1,5 @@
 import { applyThemeTokensToHtml } from "@/lib/agent/theme-apply";
-import { PALETTE_TOKEN, type CreativeDirection } from "@/lib/generation/creative-contracts";
+import type { CreativeDirection } from "@/lib/generation/creative-contracts";
 import { deriveContractColors } from "@/lib/theme-derive";
 
 const MODES = ["light", "dark", "cream"] as const;
@@ -57,10 +57,29 @@ function withMode(html: string, mode: CreativeDirection["mode"]): string {
   return html.slice(0, tag.index) + replaced + html.slice(tag.index + tag[0].length);
 }
 
+/**
+ * El `:root` del marcador, con los MISMOS colores derivados que van a `<html>`.
+ *
+ * El marcador es un `<style>` vivo, y en la baseline —donde todavía no hay
+ * `style=` en `<html>`— es el único que pinta. Emitir la paleta cruda ahí
+ * saltaría `deriveContractColors`, que es quien garantiza el juego completo y
+ * legible. Y donde sí hay atributo en línea, el atributo gana: que digan lo
+ * mismo evita una página que declara un color y pinta otro.
+ */
+export function markerPaletteCss(palette: CreativeDirection["palette"]): string {
+  const c = deriveContractColors({
+    bg: palette.background, surface: palette.surface, fg: palette.foreground,
+    border: palette.border, accent: palette.accent,
+  });
+  return [
+    `--ol-bg:${c.bg}`, `--ol-surface:${c.surface}`, `--ol-surface-2:${c["surface-2"]}`,
+    `--ol-fg:${c.fg}`, `--ol-fg-muted:${c["fg-muted"]}`, `--ol-fg-faint:${c["fg-faint"]}`,
+    `--ol-border:${c.border}`, `--ol-border-strong:${c["border-strong"]}`,
+    `--ol-accent:${c.accent}`, `--ol-accent-ink:${c["accent-ink"]}`,
+  ].join(";");
+}
+
 function withMarkerPalette(html: string, direction: CreativeDirection): string {
-  const tokens = Object.entries(direction.palette)
-    .filter(([name, value]) => name in PALETTE_TOKEN && typeof value === "string" && /^#[0-9a-f]{3,8}$/i.test(value))
-    .map(([name, value]) => `${PALETTE_TOKEN[name as keyof typeof PALETTE_TOKEN]}:${value}`)
-    .join(";");
+  const tokens = markerPaletteCss(direction.palette);
   return html.replace(MARKER, (_all, open: string, _body: string, close: string) => `${open}:root{${tokens}}${close}`);
 }

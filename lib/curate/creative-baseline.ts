@@ -3,7 +3,8 @@ import { parse, type HTMLElement } from "node-html-parser";
 import { sha256 } from "@/lib/generation/content-hash";
 import { composeSectionCandidate } from "@/lib/generation/compose-sections";
 import { buildDeterministicCreativeDirection } from "@/lib/generation/deterministic-creative-direction";
-import { PALETTE_TOKEN } from "@/lib/generation/creative-contracts";
+import type { CreativeDirection } from "@/lib/generation/creative-contracts";
+import { markerPaletteCss } from "./apply-creative-direction";
 import { fingerprintStructure } from "@/lib/generation/structural-fingerprint";
 import type { IntentAnalysis } from "@/lib/generation/contracts";
 import { sanitizeForPublish, sealRelease } from "@/lib/html-engine";
@@ -198,12 +199,8 @@ function fillLocally(html: string, copy: ExtractedBusinessData): { html: string;
   return { html: document.toString(), appliedOps };
 }
 
-function withCreativeMarker(html: string, direction: { palette: Record<string, string> }): string {
-  const tokens = Object.entries(direction.palette)
-    .filter(([name, value]) => name in PALETTE_TOKEN && typeof value === "string" && /^#[0-9a-f]{3,8}$/i.test(value))
-    .map(([name, value]) => `${PALETTE_TOKEN[name as keyof typeof PALETTE_TOKEN]}:${value}`)
-    .join(";");
-  const marker = `<style data-openlen-visual-engine="creative-direction/1.0">:root{${tokens}}</style>`;
+function withCreativeMarker(html: string, direction: CreativeDirection): string {
+  const marker = `<style data-openlen-visual-engine="creative-direction/1.0">:root{${markerPaletteCss(direction.palette)}}</style>`;
   const document = parse(html);
   const head = document.querySelector("head");
   if (!head) return html.replace("<body", `${marker}<body`);

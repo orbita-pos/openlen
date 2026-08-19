@@ -12,6 +12,7 @@ import { applyCreativeDirection } from "./apply-creative-direction";
 import { contractReasonCode, measureContract } from "@/lib/contract/measure";
 import { insertModulePlaceholders, modulesFromBrief } from "./module-placeholders";
 import { DEFAULT_PAGE_EFFORT, effortProfile, type PageEffort } from "./page-effort";
+import { bindColorsToTokens } from "./bind-colors-to-tokens";
 import { isolateModelTokens } from "./isolate-model-tokens";
 import { repairInvertedSurfaces } from "./repair-inverted-surfaces";
 import { repairUnreadableText } from "./repair-unreadable-text";
@@ -203,10 +204,12 @@ export async function runCreativeGeneration(
     lastKnownGood = creative.candidate;
     // Order is the contract. Adoption reads the model's own token names, so it
     // runs before isolation renames them; the repair resolves --olm-* against
-    // the page's final --ol-bg, so it runs after both.
-    const adoptedHtml = repairInvertedSurfaces(
-      isolateModelTokens(adoptModelPalette(creative.candidate.html)),
-    );
+    // the page's final --ol-bg, so it runs after both. Binding va al final:
+    // necesita los nombres ya definitivos para no atar un color a un token que
+    // está a punto de cambiar de nombre.
+    const adoptedHtml = bindColorsToTokens(
+      repairInvertedSurfaces(isolateModelTokens(adoptModelPalette(creative.candidate.html))),
+    ).html;
     if (adoptedHtml !== creative.candidate.html) {
       try {
         lastKnownGood = {
