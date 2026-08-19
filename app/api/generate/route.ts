@@ -2,6 +2,7 @@ import { auth } from "@/auth";
 import { createProject } from "@/lib/projects";
 import { applyModuleIntent } from "@/lib/projects/module-intent";
 import { repairUnreadableText } from "@/lib/curate/repair-unreadable-text";
+import { objectiveBreakage } from "@/lib/generation/objective-breakage";
 import { renderVisualQualityViewports } from "@/lib/ai/visual-quality-renderer";
 import { resolveProfileForCreation } from "@/lib/business-profiles/store";
 import { seedBrandIntoHtml } from "@/lib/business-profiles/seed-html";
@@ -408,6 +409,65 @@ ${brief}`;
           console.error("[generate] repairUnreadableText falló — sigue la página tal cual", legibleErr);
         }
 
+        // ── Puerta de entrega sobre lo MEDIBLE ──────────────────────────────
+        // Se renderiza la página y se lee lo que sólo el render sabe. Hasta
+        // aquí la ruta calculaba estas cuatro señales para reparar el contraste
+        // y tiraba las otras tres: lo único capaz de disparar una regeneración
+        // era la opinión de un crítico de visión.
+        //
+        // Lo objetivo manda sobre lo opinable: si hay rotura medida se
+        // regenera con los NÚMEROS —no con la categoría—, y esa regeneración
+        // consume la única que el turno permite, así que el crítico no corre.
+        // Medido sobre veinte páginas: desborde 0/20 y geometría 0/20, o sea
+        // que esta puerta casi nunca dispara. Es seguro barato, no un peaje.
+        let breakage: string[] = [];
+        try {
+          breakage = objectiveBreakage(await renderVisualQualityViewports(html));
+        } catch {
+          // No medir no es prueba de rotura: la página sigue su camino.
+          breakage = [];
+        }
+        if (breakage.length > 0) {
+          // eslint-disable-next-line no-console
+          console.warn(`[generate] rotura medida — ${breakage.join(" · ")}`);
+          emit("regen-starting", { reason: breakage.join("; ") });
+          const fixMessages: Message[] = [
+            { role: "system", content: SYSTEM_PROMPT },
+            {
+              role: "user",
+              content: `<measured-breakage>
+El navegador renderizó tu página anterior y midió esto:
+${breakage.map((r) => `- ${r}`).join("\n")}
+
+Escribe la página de nuevo sin esos defectos. No son opiniones: son medidas del render.
+</measured-breakage>
+
+${briefBlock}`,
+            },
+          ];
+          const fixed = await runPass(fixMessages, "regen");
+          if (fixed.ok) {
+            // La segunda puede salir peor que la primera. Se entrega la que
+            // menos rota esté, no la más reciente.
+            let after: string[] = [];
+            try { after = objectiveBreakage(await renderVisualQualityViewports(fixed.html)); } catch { after = []; }
+            if (after.length <= breakage.length) {
+              html = fixed.html;
+              regenerated = true;
+              breakage = after;
+            }
+            recordRegenOutcome(true);
+          } else {
+            recordRegenOutcome(false);
+          }
+          if (breakage.length > 0) {
+            // Guardar-y-avisar: la página se entrega, pero queda dicho qué
+            // sigue roto. Un fallo que nadie registra vuelve a pasar.
+            // eslint-disable-next-line no-console
+            console.warn(`[generate] entregada con rotura — ${breakage.join(" · ")}`);
+          }
+        }
+
         // ── Vision critic loop (Quality S3) ─────────────────────────────────
         // Render the page, show Gemini Flash the screenshot, and regenerate
         // with surgical feedback if the verdict says the page is visually
@@ -420,7 +480,7 @@ ${brief}`;
         // canonical normalization already ran inside each runPass (HtmlStream
         // .end()), so the chosen final — first pass or regen — is canonical;
         // nothing re-normalizes between critique and regen.
-        if (process.env.OPENLEN_VISION_CRITIC !== "0") {
+        if (process.env.OPENLEN_VISION_CRITIC !== "0" && !regenerated) {
           emit("critic-checking", {});
           const verdict = await critiqueGeneratedPage({
             brief,
