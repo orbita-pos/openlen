@@ -215,3 +215,30 @@ describe("AI hybrid production import boundary", () => {
     expect(fs.readFileSync(path.join(root, geminiModules[0]!), "utf8")).toMatch(/responseModalities:\s*\["IMAGE"\]/);
   });
 });
+
+// La puerta de generación no manda nada nuestro. Ha vuelto por dos puertas
+// distintas en un solo día: cinco fragmentos de HTML de Mirror dentro de la
+// guía de diseño, y la captura de una plantilla curada adjunta al brief con un
+// "iguala su calidad, densidad y espaciado". Esta segunda además desviaba el
+// turno a Gemini sin decirlo, porque una imagen adjunta lo exige.
+describe("la puerta de generación no alcanza plantillas ni secciones", () => {
+  const ENTRY = ["app", "api", "generate", "route.ts"] as const;
+
+  // El invariante es que NINGUNA plantilla curada pueda llegarle al modelo, no
+  // que el árbol no toque nada bajo templates/: el almacén sigue alcanzable por
+  // la maquinaria de capturas y metadatos, que no manda contenido de página a
+  // ningún sitio. Lo que se prohíbe es el selector de referencia y el HTML.
+  it("no llega al selector de plantilla de referencia", () => {
+    const root = process.cwd();
+    const offenders = findReachableModules(root, path.join(root, ...ENTRY))
+      .filter((moduleName) => /templates\/select-reference\.ts$/.test(moduleName));
+    expect(offenders, JSON.stringify(offenders)).toEqual([]);
+  });
+
+  it("no llega al catálogo de secciones", () => {
+    const root = process.cwd();
+    const offenders = findReachableModules(root, path.join(root, ...ENTRY))
+      .filter((moduleName) => /sections\/(store|select)\.ts$/.test(moduleName));
+    expect(offenders).toEqual([]);
+  });
+});

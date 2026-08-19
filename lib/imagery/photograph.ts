@@ -26,7 +26,7 @@ import {
   extractPhotoSlots,
   type PhotoAssignment,
 } from "@/lib/html-engine";
-import { classifyBriefFamily } from "@/lib/templates/select-reference";
+import { classifyBriefFamily } from "@/lib/templates/classify-brief-family";
 import { GeminiProvider } from "@/lib/ai-gateway";
 import {
   imageTone,
