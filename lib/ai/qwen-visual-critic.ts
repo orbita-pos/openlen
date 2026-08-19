@@ -84,8 +84,12 @@ function issue(code: BoundedVisualIssue["code"], viewport: BoundedVisualIssue["v
 /** Binding release policy. Minor observations are allowed; weak scores and
  * material issues can never be converted into an acceptance by model prose. */
 export function isFinalVisualAcceptance(verdict: FinalVisualVerdict): boolean {
-  return verdict.decision === "accept"
-    && [verdict.nicheRecognition, verdict.promptFidelity, verdict.visualQuality, verdict.coherence, verdict.originality, verdict.mobileQuality]
+  // `decision` ya no veta por sí solo: un rechazo tiene que DECIR su motivo, y
+  // los motivos son estos tres renglones. Medido: el crítico devolvió las seis
+  // notas en 7 o más, sin banderas, y aun así "reject" citando una tipografía
+  // que el render midió sana. La política ya impedía que la prosa fabricara una
+  // aceptación; esto es el espejo — tampoco puede fabricar un rechazo.
+  return [verdict.nicheRecognition, verdict.promptFidelity, verdict.visualQuality, verdict.coherence, verdict.originality, verdict.mobileQuality]
       .every((score) => score >= 7)
     && !verdict.wrongNiche
     && !verdict.genericAiStyle
@@ -118,10 +122,33 @@ export function finalVisualRejectionReasons(verdict: FinalVisualVerdict): string
   return reasons;
 }
 
+/** Las cuatro categorías donde el render MIDE. En ellas el crítico no es una
+ *  fuente: es una segunda opinión sobre un hecho que ya tenemos. `undefined`
+ *  significa "no se midió", y entonces su palabra se conserva. */
+function contradictedByMeasurement(
+  code: BoundedVisualIssue["code"],
+  deterministic: FinalVisualCriticInput["deterministic"],
+): boolean {
+  if (code === "overflow") return deterministic.mobileOverflow === false;
+  if (code === "typography") return deterministic.weakTypographyHierarchy === false;
+  if (code === "geometry") return deterministic.invalidGeometry === false;
+  if (code === "contrast") return deterministic.unreadableText === false;
+  return false;
+}
+
 function withDeterministicFailures(
   candidate: FinalVisualVerdict,
   deterministic: FinalVisualCriticInput["deterministic"],
 ): FinalVisualVerdict {
+  // Medido el 2026-08-19: sobre páginas donde el render reportó cero desborde y
+  // cero jerarquía débil, el crítico emitió `typography: critical` dos veces y
+  // `mobile: critical` una. Las 31 páginas guardadas de esas corridas miden
+  // sanas. Un veto sobre lo que sí tenemos instrumento para ver no se hereda:
+  // el comentario de esta política siempre dijo que los deterministas deciden.
+  candidate = {
+    ...candidate,
+    issues: candidate.issues.filter((entry) => !contradictedByMeasurement(entry.code, deterministic)),
+  };
   const failures: BoundedVisualIssue[] = [];
   if (deterministic.mobileOverflow) failures.push(issue("overflow", "mobile"));
   if (deterministic.weakTypographyHierarchy) failures.push(issue("typography", "both"));

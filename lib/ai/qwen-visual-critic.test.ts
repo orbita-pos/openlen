@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import type { FireworksJsonClient, } from "./fireworks-client";
 import type { FireworksJsonRequest } from "./fireworks-contracts";
 import { fireworksJsonSchema } from "./fireworks-contracts";
-import { assessFinalVisualCandidate, finalVisualRejectionReasons, type FinalVisualVerdict } from "./qwen-visual-critic";
+import { assessFinalVisualCandidate, finalVisualRejectionReasons, isFinalVisualAcceptance, type FinalVisualVerdict } from "./qwen-visual-critic";
 
 const JPEG = "/9j/4AAQSkZJRgABAQEAYABgAAD/2wBDAAMCAgMCAgMDAwMEAwMEBQgFBQQEBQoHBwYIDAoMDAsKCwsNDhIQDQ4RDgsLEBYQERMUFRUVDA8XGBYUGBIUFRT/2wBDAQMEBAUEBQkFBQkUDQsNFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBT/wAARCABAAEADASIAAhEBAxEB/8QAHwAAAQUBAQEBAQEAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAAAgEDAwIEAwUFBAQAAAF9AQIDAAQRBRIhMUEGE1FhByJxFDKBkaEII0KxwRVS0fAkM2JyggkKFhcYGRolJicoKSo0NTY3ODk6Q0RFRkdISUpTVFVWV1hZWmNkZWZnaGlqc3R1dnd4eXqDhIWGh4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMT1NXW19jZ2uHi4+Tl5ufo6erx8vP09fb3+Pn6/8QAHwEAAwEBAQEBAQEBAQAAAAAAAAECAwQFBgcICQoL/8QAtREAAgECBAQDBAcFBAQAAQJ3AAECAxEEBSExBhJBUQdhcRMiMoEIFEKRobHBCSMzUvAVYnLRChYkNOEl8RcYGRomJygpKjU2Nzg5OkNERUZHSElKU1RVVldYWVpjZGVmZ2hpanN0dnd4eXqDhIWGh4iJipKTlJWWl5iZmqKmqsrO0tba3uLm6wsLDxMXGx8jJytLT1NXW19jZ2uHi4+Tl5ufo6erx8vP09fb3+Pn6/9oADAMBAAIRAxEAPwDq6KKK/os/KgooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigD//2Q==";
 
@@ -165,5 +165,53 @@ describe("por qué el crítico no firmó", () => {
   it("nombra las banderas duras", () => {
     const reasons = finalVisualRejectionReasons({ ...verdict, wrongNiche: true, genericAiStyle: true, decision: "reject" });
     expect(reasons).toEqual(expect.arrayContaining(["decision:reject", "flag:wrong_niche", "flag:generic_ai_style"]));
+  });
+});
+
+// Medido el 2026-08-19: el crítico emitió typography/mobile críticos sobre
+// páginas cuyo render midió cero desborde y cero jerarquía débil, y las 31
+// páginas guardadas de esas corridas miden sanas. Donde hay instrumento, el
+// instrumento manda.
+describe("el crítico no vota sobre lo que ya medimos", () => {
+  const conIncidencia = (code: string) =>
+    ({ ...verdict, decision: "reject" as const, issues: [{ code, severity: "critical", viewport: "both" }] }) as FinalVisualVerdict;
+
+  it.each(["typography", "overflow", "geometry"])("descarta un %s crítico que el render contradice", async (code) => {
+    const result = await assessFinalVisualCandidate(input, { client: client(conIncidencia(code)).value });
+    expect(result).toMatchObject({ ok: true });
+    if (!result.ok) return;
+    expect(result.verdict.issues).toEqual([]);
+    expect(isFinalVisualAcceptance(result.verdict)).toBe(true);
+  });
+
+  it("conserva el mismo código cuando la medición lo confirma", async () => {
+    const result = await assessFinalVisualCandidate(
+      { ...input, deterministic: { mobileOverflow: false, weakTypographyHierarchy: true, invalidGeometry: false } },
+      { client: client(conIncidencia("typography")).value },
+    );
+    expect(result).toMatchObject({ ok: true });
+    if (!result.ok) return;
+    expect(result.verdict.issues).toEqual(expect.arrayContaining([expect.objectContaining({ code: "typography" })]));
+    expect(isFinalVisualAcceptance(result.verdict)).toBe(false);
+  });
+
+  it.each(["mobile", "originality", "generic_ai"])("no toca %s, que nadie mide", async (code) => {
+    const result = await assessFinalVisualCandidate(input, { client: client(conIncidencia(code)).value });
+    expect(result).toMatchObject({ ok: true });
+    if (!result.ok) return;
+    expect(result.verdict.issues).toEqual(expect.arrayContaining([expect.objectContaining({ code })]));
+    expect(isFinalVisualAcceptance(result.verdict)).toBe(false);
+  });
+});
+
+describe("un rechazo tiene que decir su motivo", () => {
+  it("no acepta un veto sin fundamento: notas sanas, sin banderas, sin incidencias", () => {
+    expect(isFinalVisualAcceptance({ ...verdict, decision: "reject" })).toBe(true);
+  });
+
+  it("sigue rechazando cuando el motivo existe", () => {
+    expect(isFinalVisualAcceptance({ ...verdict, decision: "reject", originality: 6 })).toBe(false);
+    expect(isFinalVisualAcceptance({ ...verdict, decision: "accept", wrongNiche: true })).toBe(false);
+    expect(isFinalVisualAcceptance({ ...verdict, decision: "accept", issues: [{ code: "mobile", severity: "critical", viewport: "mobile" }] })).toBe(false);
   });
 });
