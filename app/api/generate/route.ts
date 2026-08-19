@@ -14,8 +14,7 @@ import { detectSlotPath, sanitizeForPublish } from "@/lib/html-engine";
 import { passHtmlGate } from "@/lib/html-gate/document-gate";
 import { collectDegradations } from "@/lib/ingestion/degradations";
 import { resolveAIProvider, type AIModel } from "@/lib/ai-provider";
-import { generateHtmlStream } from "@/lib/ai-stream/generate";
-import { selectReferenceTemplate } from "@/lib/templates/select-reference";
+import { generateHtmlStream, pageWriterUsesDeepSeek } from "@/lib/ai-stream/generate";
 import { fetchImageAsInlineData } from "@/lib/ai/inline-image";
 import { critiqueGeneratedPage } from "@/lib/ai/vision-critique";
 import { photographHtml } from "@/lib/imagery/photograph";
@@ -175,38 +174,15 @@ export async function POST(req: Request): Promise<Response> {
     console.warn("[generate] profile resolve failed — generating unseeded", err);
   }
 
-  // Quality S2 — pick a curated template screenshot as a multimodal quality
-  // reference and attach it (base64 inlineData) to the brief turn, which is
-  // the last user message the gateway anchors images on. Best-effort: a
-  // selector miss or fetch failure falls back cleanly to text-only.
-  let referenceImages: InlineImage[] | undefined;
-  let briefBlock = `BRIEF:\n${brief}`;
-  try {
-    const ref = await selectReferenceTemplate(brief);
-    if (ref) {
-      const img = await fetchImageAsInlineData(ref.screenshotUrl);
-      if (img) {
-        referenceImages = [img];
-        briefBlock = `<reference family="${ref.family}" id="${ref.id}">
-The attached image is a high-quality landing page from our curated set. Match its visual quality, density, spacing discipline, and aesthetic polish. Adapt the layout to fit the brief — do NOT copy sections verbatim.
-</reference>
-
-BRIEF:
+  // Sin referencia adjunta, a propósito. Aquí se elegía una plantilla curada,
+  // se le mandaba la captura y se le decía "iguala su calidad, densidad,
+  // disciplina de espaciado y pulido" — nuestra página otra vez, por otra
+  // puerta. Y tenía un efecto que nadie veía: una imagen adjunta fija el turno
+  // a Gemini, porque el papel que razona en Fireworks no tiene ojos. Medido en
+  // un e2e: `reference template: daybreak` seguido de `calling Gemini 3.5
+  // Flash`. Quitarla es lo que deja escribir a DeepSeek.
+  let briefBlock = `BRIEF:
 ${brief}`;
-        // eslint-disable-next-line no-console
-        console.log(`[generate] reference template: ${ref.id} (family=${ref.family})`);
-      } else {
-        // eslint-disable-next-line no-console
-        console.log(`[generate] reference ${ref.id} chosen but image fetch failed — text-only`);
-      }
-    } else {
-      // eslint-disable-next-line no-console
-      console.log(`[generate] no reference template matched — text-only`);
-    }
-  } catch (err) {
-    // eslint-disable-next-line no-console
-    console.warn("[generate] reference selection failed — text-only", err);
-  }
 
   // Soft-seed the prompt with the user's REAL business facts (if any) so the
   // generated COPY uses them instead of inventing. Empty profile → no block,
@@ -275,7 +251,10 @@ ${brief}`;
 
         // eslint-disable-next-line no-console
         console.log(
-          `[generate] auth + quota + credits ok — calling ${PROVIDER.label}`,
+          // Quién escribe de verdad, no quién resolvió la clave: el label del
+          // proveedor decía "Gemini 3.5 Flash" mientras DeepSeek escribía la
+          // página, y sólo la aritmética de créditos lo desmentía.
+          `[generate] auth + quota + credits ok — escribe ${pageWriterUsesDeepSeek() ? "DeepSeek" : PROVIDER.label}`,
         );
 
         // One generation pass: stream HTML chunks to the client, await the
@@ -293,7 +272,6 @@ ${brief}`;
           const { stream, done } = generateHtmlStream({
             apiKey: PROVIDER.key as string,
             messages: genMessages,
-            images: referenceImages,
             model: aiModel,
             userId,
             signal: upstreamAbort.signal,
