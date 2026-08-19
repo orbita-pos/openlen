@@ -1,5 +1,5 @@
 import { applyThemeTokensToHtml } from "@/lib/agent/theme-apply";
-import type { CreativeDirection } from "@/lib/generation/creative-contracts";
+import { PALETTE_TOKEN, type CreativeDirection } from "@/lib/generation/creative-contracts";
 import { deriveContractColors } from "@/lib/theme-derive";
 
 const MODES = ["light", "dark", "cream"] as const;
@@ -59,8 +59,8 @@ function withMode(html: string, mode: CreativeDirection["mode"]): string {
 
 function withMarkerPalette(html: string, direction: CreativeDirection): string {
   const tokens = Object.entries(direction.palette)
-    .filter(([, value]) => typeof value === "string" && /^#[0-9a-f]{3,8}$/i.test(value))
-    .map(([name, value]) => `--ol-${name.replace(/[^a-z0-9]+/gi, "-").toLowerCase()}:${value}`)
+    .filter(([name, value]) => name in PALETTE_TOKEN && typeof value === "string" && /^#[0-9a-f]{3,8}$/i.test(value))
+    .map(([name, value]) => `${PALETTE_TOKEN[name as keyof typeof PALETTE_TOKEN]}:${value}`)
     .join(";");
   return html.replace(MARKER, (_all, open: string, _body: string, close: string) => `${open}:root{${tokens}}${close}`);
 }

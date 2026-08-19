@@ -62,6 +62,7 @@ export default defineConfig({
       // module it covers; the older lib/html-engine.test.ts is node:test and
       // stays out of this runner.
       "lib/html-engine.sanitize-counters.test.ts",
+      "lib/contract/**/*.test.ts",
       "lib/curate/**/*.test.ts",
       "lib/generation/**/*.test.ts",
       "lib/html-gate/**/*.test.ts",

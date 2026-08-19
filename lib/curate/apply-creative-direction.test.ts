@@ -32,8 +32,15 @@ describe("repintar una página compuesta con la dirección elegida", () => {
 
   it("reescribe el marcador, y sigue habiendo exactamente uno", () => {
     expect(out.match(/data-openlen-visual-engine="creative-direction\/1\.0"/g)).toHaveLength(1);
-    expect(out).toContain(`--ol-background:${ELECTED.palette.background}`);
-    expect(out).not.toContain("--ol-background:#09090B");
+    expect(out).toContain(`--ol-bg:${ELECTED.palette.background}`);
+    expect(out).not.toContain("--ol-bg:#09090B");
+  });
+
+  it("el marcador nombra los tokens como el resto de la página", () => {
+    const marker = /creative-direction\/1\.0"[^>]*>([\s\S]*?)<\/style>/.exec(out)?.[1] ?? "";
+    // Un `:root` vivo con nombres que nada lee es CSS muerto, y el linter del
+    // contrato lo marcaba en cada página generada.
+    expect(marker).not.toMatch(/--ol-(?:background|surfacealt|foreground|foregroundmuted|accentink)/);
   });
 
   it("conserva las demás clases del documento", () => {

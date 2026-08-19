@@ -3,6 +3,7 @@ import { parse, type HTMLElement } from "node-html-parser";
 import { sha256 } from "@/lib/generation/content-hash";
 import { composeSectionCandidate } from "@/lib/generation/compose-sections";
 import { buildDeterministicCreativeDirection } from "@/lib/generation/deterministic-creative-direction";
+import { PALETTE_TOKEN } from "@/lib/generation/creative-contracts";
 import { fingerprintStructure } from "@/lib/generation/structural-fingerprint";
 import type { IntentAnalysis } from "@/lib/generation/contracts";
 import { sanitizeForPublish, sealRelease } from "@/lib/html-engine";
@@ -199,8 +200,8 @@ function fillLocally(html: string, copy: ExtractedBusinessData): { html: string;
 
 function withCreativeMarker(html: string, direction: { palette: Record<string, string> }): string {
   const tokens = Object.entries(direction.palette)
-    .filter(([, value]) => typeof value === "string" && /^#[0-9a-f]{3,8}$/i.test(value))
-    .map(([name, value]) => `--ol-${name.replace(/[^a-z0-9]+/gi, "-").toLowerCase()}:${value}`)
+    .filter(([name, value]) => name in PALETTE_TOKEN && typeof value === "string" && /^#[0-9a-f]{3,8}$/i.test(value))
+    .map(([name, value]) => `${PALETTE_TOKEN[name as keyof typeof PALETTE_TOKEN]}:${value}`)
     .join(";");
   const marker = `<style data-openlen-visual-engine="creative-direction/1.0">:root{${tokens}}</style>`;
   const document = parse(html);

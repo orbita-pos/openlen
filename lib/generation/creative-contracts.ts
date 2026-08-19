@@ -24,6 +24,20 @@ const FontMoodSchema = z.enum(Object.keys(CREATIVE_FONT_MOODS) as [keyof typeof 
 const RadiusScaleSchema = z.union(CREATIVE_RADIUS_SCALES.map((value) => z.literal(value)) as [z.ZodLiteral<0>, z.ZodLiteral<1>, z.ZodLiteral<1.75>]);
 const SpacingScaleSchema = z.union(CREATIVE_SPACING_SCALES.map((value) => z.literal(value)) as [z.ZodLiteral<0.85>, z.ZodLiteral<1>, z.ZodLiteral<1.15>]);
 
+/** Nombre canónico de cada color de la paleta. El marcador de dirección es un
+ *  `:root` vivo: escrito con las llaves del esquema declara `--ol-background`,
+ *  que nada lee y que el linter del contrato marca en cada página. */
+export const PALETTE_TOKEN = {
+  background: "--ol-bg",
+  surface: "--ol-surface",
+  surfaceAlt: "--ol-surface-2",
+  foreground: "--ol-fg",
+  foregroundMuted: "--ol-fg-muted",
+  accent: "--ol-accent",
+  accentInk: "--ol-accent-ink",
+  border: "--ol-border",
+} as const;
+
 export const CreativeDirectionSchema = z.object({
   schemaVersion: z.literal("creative-direction/1.0"),
   mode: z.enum(["light", "dark", "cream"]),

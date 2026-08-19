@@ -53,6 +53,26 @@ const CANONICAL_TOKENS = new Set([
   "--warn", "--danger",
 ]);
 
+// The normalizer writes the same vocabulary under its own reserved `--ol-`
+// namespace (crates/html-engine/src/normalize/*, lib/generation/creative-compiler.ts).
+// Without this the linter flags every normalized page ~80 times for tokens WE
+// wrote, and the real violations drown. The namespace is not blanket-allowed:
+// `--ol-background` / `--ol-accentink` are dialect names the adoption pass
+// failed to map, and staying flagged is the point.
+const OL_MIRRORED = new Set(
+  [...CANONICAL_TOKENS].map((name) => `--ol-${name.slice(2)}`),
+);
+const OL_THEME_EXTRA = new Set(["--ol-r"]);
+// Machine-generated scale families: --ol-space-4, --ol-r-2xl, --ol-text-lg,
+// --ol-lh-xl, plus the three zoom knobs that drive them.
+const OL_SCALE = /^--ol-(?:space|r|text|lh)-(?:scale|[a-z0-9_]+)$/;
+
+function isCanonicalToken(name: string): boolean {
+  if (CANONICAL_TOKENS.has(name)) return true;
+  if (OL_MIRRORED.has(name) || OL_THEME_EXTRA.has(name)) return true;
+  return OL_SCALE.test(name);
+}
+
 const COLOR_PROP =
   /^(color|background|background-color|border|border-(?:top|right|bottom|left)-color|border-color|fill|stroke|outline-color)$/i;
 const BORDER_PROP = /^(border|border-(?:top|right|bottom|left)?-?color)$/i;
@@ -182,7 +202,7 @@ export function lintContract(
       });
 
       for (const name of declaredRootVars) {
-        if (!CANONICAL_TOKENS.has(name)) {
+        if (!isCanonicalToken(name)) {
           warn(
             "non-canonical-token",
             `:root defines ${name}, not in the contract vocabulary — migrate it (e.g. --ink→--fg, --hair/--rule→--border, --bg-2/--paper→--surface).`,
