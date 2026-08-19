@@ -1,6 +1,8 @@
 import { auth } from "@/auth";
 import { createProject } from "@/lib/projects";
 import { applyModuleIntent } from "@/lib/projects/module-intent";
+import { repairUnreadableText } from "@/lib/curate/repair-unreadable-text";
+import { renderVisualQualityViewports } from "@/lib/ai/visual-quality-renderer";
 import { resolveProfileForCreation } from "@/lib/business-profiles/store";
 import { seedBrandIntoHtml } from "@/lib/business-profiles/seed-html";
 import type { BusinessProfile, BusinessProfileData } from "@/lib/business-profiles/types";
@@ -407,6 +409,26 @@ ${brief}`;
         }
         let html = first.html;
         let regenerated = false;
+
+        // Texto que la página pinta y nadie puede leer. Se mide EN EL RENDER
+        // porque el mismo `color:#8a8a92` es correcto sobre negro e ilegible
+        // sobre gris, y ningún análisis del CSS distingue los dos. Va antes del
+        // crítico: lo que el crítico juzga tiene que ser lo que se entrega.
+        //
+        // Medido en una página de terror recién generada por esta ruta: dos
+        // textos a 1.87 y 1.98 sobre casi negro, siete elementos corregidos.
+        // Fail-soft entero — un arreglo cosmético no puede costar la página.
+        try {
+          const legible = await repairUnreadableText(html, renderVisualQualityViewports);
+          if (legible.repaired > 0) {
+            html = legible.html;
+            // eslint-disable-next-line no-console
+            console.log(`[generate] texto ilegible corregido — ${legible.repaired} elementos`);
+          }
+        } catch (legibleErr) {
+          // eslint-disable-next-line no-console
+          console.error("[generate] repairUnreadableText falló — sigue la página tal cual", legibleErr);
+        }
 
         // ── Vision critic loop (Quality S3) ─────────────────────────────────
         // Render the page, show Gemini Flash the screenshot, and regenerate
