@@ -373,7 +373,7 @@ export async function POST(req: Request): Promise<Response> {
           // are UNCHANGED by cachedTokens; this is visibility only.
           const cachedPct = inputTokens > 0 ? Math.round((cachedTokens / inputTokens) * 100) : 0;
           console.log(
-            `[agent] tokens — in ${inputTokens} (cached ${cachedTokens}, ${cachedPct}%) / out ${outputTokens}`,
+            `[agent] ${brain.modelId} — in ${inputTokens} (cached ${cachedTokens}, ${cachedPct}%) / out ${outputTokens}`,
           );
           await debitCredits(userId, Math.max(1, credits));
         } else {

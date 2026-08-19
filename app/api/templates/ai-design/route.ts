@@ -933,7 +933,7 @@ VISUAL CONTEXT: the attached image is a full-page render of the CURRENT page (wh
             );
         // eslint-disable-next-line no-console
         console.log(
-          `[ai-design] tokens — prompt: ${usage?.inputTokens ?? "?"}, output: ${usage?.outputTokens ?? "?"}, thinking: ${usage?.thinkingTokens ?? "?"} → ${credits} credits · mode: ${outputMode} · ${Date.now() - startedAt}ms`,
+          `[ai-design] ${modelLabel} — prompt: ${usage?.inputTokens ?? "?"}, output: ${usage?.outputTokens ?? "?"}, thinking: ${usage?.thinkingTokens ?? "?"} → ${credits} credits · mode: ${outputMode} · ${Date.now() - startedAt}ms`,
         );
         await debitCredits(userId, credits);
 
