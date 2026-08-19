@@ -132,7 +132,11 @@ function contradictedByMeasurement(
   if (code === "overflow") return deterministic.mobileOverflow === false;
   if (code === "typography") return deterministic.weakTypographyHierarchy === false;
   if (code === "geometry") return deterministic.invalidGeometry === false;
-  if (code === "contrast") return deterministic.unreadableText === false;
+  // `contrast` NO está aquí, y es a propósito. Medido el 2026-08-19: un titular
+  // crema sobre crema a 1.04:1 salió con `unreadableText: []` porque el hero
+  // llevaba un degradado decorativo a 0.28 de alfa y el medidor se declara
+  // incierto por encima de 0.15. Un instrumento con un punto ciego demostrado
+  // no puede anular al único que sí vio el defecto.
   return false;
 }
 

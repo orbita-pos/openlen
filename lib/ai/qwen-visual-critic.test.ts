@@ -195,7 +195,9 @@ describe("el crítico no vota sobre lo que ya medimos", () => {
     expect(isFinalVisualAcceptance(result.verdict)).toBe(false);
   });
 
-  it.each(["mobile", "originality", "generic_ai"])("no toca %s, que nadie mide", async (code) => {
+  // `contrast` viaja con los NO medidos a propósito: nuestro medidor tiene un
+  // punto ciego demostrado con degradados por encima de 0.15 de alfa.
+  it.each(["mobile", "originality", "generic_ai", "contrast"])("no toca %s, que nadie mide de forma fiable", async (code) => {
     const result = await assessFinalVisualCandidate(input, { client: client(conIncidencia(code)).value });
     expect(result).toMatchObject({ ok: true });
     if (!result.ok) return;
