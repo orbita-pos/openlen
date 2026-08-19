@@ -55,6 +55,38 @@ test("deterministic: matches a subject hint to the right curated photo", async (
   assert.ok(!r.html.includes('data-ol-photo="'));
 });
 
+// Los sujetos vienen en español y el catálogo está etiquetado en inglés, así
+// que el prefijo no es una flexión sino una colisión. Medido en la biblioteca
+// real: "pan de masa madre" traía una maqueta de dashboard SaaS, porque
+// `"panels".startsWith("pan")`. Un boxeador y unas turbinas eólicas llegaron a
+// una panadería por la misma puerta.
+test("una palabra corta no casa con otra que sólo la lleva de prefijo", async () => {
+  __setCuratedImagesForTest([
+    img("ui-panels", "3d-abstract", ["saas"], "Cluster of floating UI panels and rounded cards"),
+    img("bread", "food-editorial", ["food-beverage"], "Rustic sourdough bread loaves on linen"),
+  ]);
+  const html = `<!doctype html><html><head><style>:root{--ol-bg:#ffffff}</style></head><body>
+    <div class="bg-gradient-to-br h-96" data-ol-photo="pan de masa madre"></div>
+  </body></html>`;
+  const r = await photographHtml({ html, brief: "panadería de barrio", pickFn: DET });
+  assert.ok(!r.html.includes("ui-panels"), "un dashboard no es una panadería");
+});
+
+// El rubro no dice QUÉ se ve, pero sí de qué gremio es. Exigir coincidencia de
+// palabras dejaba al elector sin candidatos: medido, un hueco lleno de cuatro.
+test("el rubro basta para entrar a la piscina aunque no coincida una palabra", async () => {
+  __setCuratedImagesForTest([
+    img("ramen", "food-editorial", ["food-beverage"], "Steaming bowl of dark midnight ramen"),
+    img("office", "interior-editorial", ["saas"], "Bright airy modern open office"),
+  ]);
+  const html = `<!doctype html><html><head><style>:root{--ol-bg:#ffffff}</style></head><body>
+    <div class="bg-gradient-to-br h-96" data-ol-photo="mostrador del local"></div>
+  </body></html>`;
+  const r = await photographHtml({ html, brief: "restaurante de ramen", pickFn: DET });
+  assert.equal(r.applied, 1);
+  assert.ok(r.html.includes("ramen-1920.webp"));
+});
+
 test("deterministic: distinct subjects get distinct photos (dedupe)", async () => {
   __setCuratedImagesForTest(LIBRARY);
   const html = `<!doctype html><html><head></head><body>

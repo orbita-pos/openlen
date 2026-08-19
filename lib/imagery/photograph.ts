@@ -67,11 +67,26 @@ function tokens(s: string): string[] {
     .filter((t) => t.length >= 3 && !STOP.has(t));
 }
 
+/** Igualdad, no prefijo.
+ *
+ *  El emparejador comparaba por prefijo en los dos sentidos. El producto habla
+ *  español y el catálogo está etiquetado en inglés, así que una palabra corta
+ *  española es prefijo de palabras inglesas sin ninguna relación: medido, "pan
+ *  de masa madre" traía una maqueta de dashboard SaaS porque
+ *  `"panels".startsWith("pan")`. En una panadería.
+ *
+ *  Y por longitud no se separa: "pan"/"panes" (la que quiero) y "pan"/"panel"
+ *  (la que no) tienen exactamente la misma forma. Entre dos idiomas el prefijo
+ *  no es una flexión, es una colisión — lo que funcionaba de verdad eran los
+ *  cognados ("croissants", "restaurant"), y ésos coinciden exactos.
+ *
+ *  Llenar menos huecos es el precio, y es el correcto: un degradado neutro es
+ *  mejor que una foto que miente sobre el negocio del usuario. */
 function overlap(subjectToks: string[], hay: string[]): number {
   let n = 0;
   for (const s of subjectToks) {
     for (const h of hay) {
-      if (h === s || h.startsWith(s) || s.startsWith(h)) {
+      if (h === s) {
         n++;
         break;
       }
@@ -222,8 +237,13 @@ export async function photographHtml(params: {
     for (const img of images) {
       const fam = family && img.family.includes(family) ? 1 : 0;
       const ov = overlap(subjectToks, hay.get(img.id) ?? []);
+      // Contenido O rubro entran a la piscina; el contenido pesa mucho más al
+      // ordenar. Exigir contenido dejaba fuera casi todo —los sujetos vienen en
+      // español y el catálogo está etiquetado en inglés— y el elector de IA se
+      // quedaba sin candidatos que mirar: medido, 1 hueco lleno de 4. La
+      // etiqueta de rubro le da un fondo del gremio correcto para elegir.
       const signal = ov * 10 + fam * 4;
-      if (signal < 1) continue; // content match required (tone alone won't do)
+      if (signal < 1) continue;
       const tone = imageTone(img.alt);
       const tv = tone === mode ? 1 : tone === "neutral" ? 0.5 : 0;
       scored.push({ img, score: signal + tv, signal });
