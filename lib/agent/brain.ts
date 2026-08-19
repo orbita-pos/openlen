@@ -67,7 +67,13 @@ export async function* asAgentStream(
   }
 }
 
-const LOOP_MAX_OUTPUT_TOKENS = 16_384;
+// 16k se quedaba corto y el turno moría truncado: el caso del interruptor de
+// modo oscuro —que reescribe :root, :root.dark y el control— produjo 15,631
+// tokens de salida contra el tope, y el bucle lo marca como error terminal.
+// Al usuario le llega "intenta un pedido más corto" por una edición legítima.
+// 65,536 se acepta en esta misma ruta (medido hoy en /api/generate); 32k deja
+// el doble de aire sin acercarse. Sólo se paga lo que se usa.
+const LOOP_MAX_OUTPUT_TOKENS = 32_768;
 const CLOSEOUT_MAX_OUTPUT_TOKENS = 2_048;
 const TEMPERATURE = 0.7;
 
