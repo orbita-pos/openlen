@@ -93,7 +93,11 @@ describe("buildAgentContext", () => {
     expect(s.match(/PIN/g)?.length ?? 0).toBeGreaterThan(0);
   });
 
-  it("byte-identical to F1 output when no new args are passed", () => {
+  // Ya NO es byte-idéntico a F1: delante va el bloque HOY. Se añadió porque el
+  // modelo no sabía qué día era — pidiéndole una cuenta regresiva "dentro de
+  // tres semanas" escribió una fecha dos meses anterior a hoy, y el contador
+  // nacía vencido. El resto del contexto sigue pinchado carácter a carácter.
+  it("igual a F1 salvo el bloque HOY que va delante", () => {
     const state = { publicado: true };
     const taggedHtml = `<html data-op-id="z9"></html>`;
     const userBrief = "Panadería artesanal";
@@ -104,8 +108,8 @@ describe("buildAgentContext", () => {
         : "";
       return `ESTADO DEL PROYECTO (real, leído del servidor ahora mismo):\n${JSON.stringify(a.state, null, 2)}\n\n${briefBlock}DOCUMENTO ACTUAL (cada elemento trae data-op-id inyectado por el servidor — usa esos ids en editar_pagina):\n\n${a.taggedHtml}`;
     };
-    const args = { state, taggedHtml, userBrief };
-    expect(buildAgentContext(args)).toBe(f1(args));
+    const args = { state, taggedHtml, userBrief, now: new Date("2026-08-18T12:00:00Z") };
+    expect(buildAgentContext(args)).toBe(`HOY ES 2026-08-18. Cualquier fecha que escribas (cuentas regresivas, eventos, plazos) tiene que ser POSTERIOR a hoy, salvo que el usuario pida explícitamente una pasada.\n\n` + f1(args));
   });
 
   // F4 Task 1 — multi-page base: buildAgentContext gains activePage.
@@ -120,7 +124,8 @@ describe("buildAgentContext", () => {
     expect(s).toMatch(/DOCUMENTO ACTUAL[^\n]*"menu"/);
   });
 
-  it("byte-identical to the F3 fixture when activePage is explicitly null (pin, matches F1 pattern)", () => {
+  // Mismo motivo que arriba: el bloque HOY va delante, el resto sigue pinchado.
+  it("igual a F3 con activePage null, salvo el bloque HOY", () => {
     const state = { publicado: true };
     const taggedHtml = `<html data-op-id="z9"></html>`;
     const userBrief = "Panadería artesanal";
@@ -131,8 +136,8 @@ describe("buildAgentContext", () => {
         : "";
       return `ESTADO DEL PROYECTO (real, leído del servidor ahora mismo):\n${JSON.stringify(a.state, null, 2)}\n\n${briefBlock}DOCUMENTO ACTUAL (cada elemento trae data-op-id inyectado por el servidor — usa esos ids en editar_pagina):\n\n${a.taggedHtml}`;
     };
-    const args = { state, taggedHtml, userBrief };
-    expect(buildAgentContext({ ...args, activePage: null })).toBe(f3(args));
+    const args = { state, taggedHtml, userBrief, now: new Date("2026-08-18T12:00:00Z") };
+    expect(buildAgentContext({ ...args, activePage: null })).toBe(`HOY ES 2026-08-18. Cualquier fecha que escribas (cuentas regresivas, eventos, plazos) tiene que ser POSTERIOR a hoy, salvo que el usuario pida explícitamente una pasada.\n\n` + f3(args));
   });
 });
 

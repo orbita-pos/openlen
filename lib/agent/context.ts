@@ -15,6 +15,9 @@ import type { Message } from "@/lib/ai-gateway";
 import { buildAgentSystemPrompt } from "@/lib/agent/catalog";
 
 export function buildAgentContext(args: {
+  /** Inyectable sólo para las pruebas: sin esto el bloque HOY cambiaría cada
+   *  día y ninguna prueba podría fijarlo. */
+  now?: Date;
   state: Record<string, unknown>;
   taggedHtml: string;
   userBrief: string | null;
@@ -76,7 +79,13 @@ export function buildAgentContext(args: {
     ? `DOCUMENTO ACTUAL — página "${args.activePage}" (cada elemento trae data-op-id inyectado por el servidor — usa esos ids en editar_pagina):`
     : `DOCUMENTO ACTUAL (cada elemento trae data-op-id inyectado por el servidor — usa esos ids en editar_pagina):`;
 
-  return `ESTADO DEL PROYECTO (real, leído del servidor ahora mismo):\n${JSON.stringify(stateForPrompt, null, 2)}\n\n${briefBlock}${focusBlock}${imageBlock}${docHeader}\n\n${args.taggedHtml}`;
+  // El modelo no sabe qué día es, y eso no es cosmético: pidiéndole una cuenta
+  // regresiva "dentro de tres semanas" escribió una fecha DOS MESES ANTERIOR a
+  // hoy, y el contador nace vencido en la página del usuario. Cualquier
+  // razonamiento con fechas —ofertas, eventos, plazos— dependía de adivinar.
+  const hoy = `HOY ES ${(args.now ?? new Date()).toISOString().slice(0, 10)}. Cualquier fecha que escribas (cuentas regresivas, eventos, plazos) tiene que ser POSTERIOR a hoy, salvo que el usuario pida explícitamente una pasada.\n\n`;
+
+  return `${hoy}ESTADO DEL PROYECTO (real, leído del servidor ahora mismo):\n${JSON.stringify(stateForPrompt, null, 2)}\n\n${briefBlock}${focusBlock}${imageBlock}${docHeader}\n\n${args.taggedHtml}`;
 }
 
 /** Rough chars→tokens estimate (~3.5 chars/token on tag-dense HTML + JSON),

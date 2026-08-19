@@ -17,7 +17,7 @@
 // editar_pagina.
 
 import { applyThemeTokensToHtml } from "@/lib/agent/theme-apply";
-import { getTematica, resolveBackdrop, tematicaCss } from "@/lib/tematicas/presets";
+import { getTematica, resolveBackdrop, tematicaCss, TEMATICA_PRESETS } from "@/lib/tematicas/presets";
 
 const HTML_OPEN_TAG_RE = /<html\b[^>]*>/i;
 const HEAD_CLOSE_RE = /<\/head>/i;
@@ -59,7 +59,19 @@ export function applyTematicaToHtml(
   backdropId?: string,
 ): { html: string } | { error: string } {
   const kit = getTematica(tematicaId);
-  if (!kit) return { error: `temática desconocida: ${tematicaId}` };
+  // El texto del rechazo ES prompt: llega al modelo como resultado de la
+  // herramienta. Uno escueto («temática desconocida») dejaba al Agente
+  // contestarle al usuario que SÍ le había aplicado la temática navideña que
+  // acababa de pedirle — medido en los evals. Se le dice qué existe, qué puede
+  // hacer en su lugar, y qué no puede afirmar.
+  if (!kit) {
+    return {
+      error: `no existe la temática «${tematicaId}». El catálogo entero es: ${TEMATICA_PRESETS.map((k) => k.id).join(", ")}. `
+        + "Puedes conseguir ese ambiente por otra vía —cambiar_tema para la paleta, editar_pagina para el copy y la decoración— "
+        + `pero NO le digas al usuario que aplicaste la temática «${tematicaId}»: no existe y no la aplicaste. `
+        + "Dile con qué la conseguiste, o que esa temática no está en el catálogo.",
+    };
+  }
 
   let out = removeTematicaFromHtml(html);
 
