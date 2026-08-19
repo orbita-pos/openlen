@@ -1,6 +1,8 @@
 import { auth } from "@/auth";
 import { createProject } from "@/lib/projects";
 import { applyModuleIntent } from "@/lib/projects/module-intent";
+import { bindColorsToTokens } from "@/lib/curate/bind-colors-to-tokens";
+import { ensureSingleH1 } from "@/lib/curate/ensure-single-h1";
 import { repairUnreadableText } from "@/lib/curate/repair-unreadable-text";
 import { objectiveBreakage } from "@/lib/generation/objective-breakage";
 import { renderVisualQualityViewports } from "@/lib/ai/visual-quality-renderer";
@@ -600,7 +602,12 @@ ${briefBlock}`,
           html,
           {
             sanitize: sanitizeForPublish,
-            beforeMeta: (h) => seedBrandIntoHtml(h, business.data),
+            // Dos invariantes del documento, ambas comprobadas sin pérdida en
+            // 178 páginas libres: exactamente un <h1> (5 de esas 178 salen con
+            // cero) y el literal que ya vale lo mismo que un token, escrito
+            // como el token — si no, el inspector mueve el tema y media página
+            // no se entera.
+            beforeMeta: (h) => bindColorsToTokens(ensureSingleH1(seedBrandIntoHtml(h, business.data)).html).html,
           },
           {
             render: false,

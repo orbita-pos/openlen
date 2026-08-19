@@ -1,8 +1,15 @@
 import postcss from "postcss";
 
-const MODEL_STYLE = /<style\b([^>]*\bdata-openlen-creative(?:-section)?(?:=[^>]*)?)>([\s\S]*?)<\/style>/gi;
+const STYLE_BLOCK = /<style\b([^>]*)>([\s\S]*?)<\/style>/gi;
+// Nuestras propias hojas las escribe el normalizador, el marcador de direccion
+// o el horneado de Tailwind. Todo lo demas lo escribio el modelo: en la puerta
+// libre sus <style> no llevan ninguna marca, asi que la regla no puede ser "los
+// que estan marcados como suyos" sino "los que no son nuestros". `data-sec`
+// tambien queda fuera: esas hojas son del catalogo, no de quien escribe la pagina.
+const OURS = /\bdata-(?:ol-[a-z]+|openlen-visual-engine|tw-baked|sec)\b/i;
 const COLOR_PROP = /^(color|background|background-color|border-color|border-(?:top|right|bottom|left)-color|fill|stroke|outline-color)$/i;
 const HEX = /#[0-9a-fA-F]{3,8}\b/g;
+const ROOT_RULE = /(?:^|\})\s*:root[^{]*\{([^}]*)\}/g;
 const DECLARED = /(--[\w-]+)\s*:\s*(#[0-9a-fA-F]{3,8})\b/g;
 
 function canonical(hex: string): string | null {
@@ -16,16 +23,30 @@ function canonical(hex: string): string | null {
 /**
  * Sólo los tokens del tema EFECTIVO, y sólo con su valor efectivo.
  *
- * El tema vive en `style=` de `<html>`, y un atributo en línea gana a cualquier
- * regla `:root` de una hoja. Cosechar cualquier declaración del documento ata
- * el literal al valor que NO se ve: medido, el marcador de dirección declara
- * `--ol-surface:#ffffff` mientras la página pinta `#FBF7EF`, y atar ahí cambia
- * el color en pantalla. Un valor que dos tokens comparten se descarta: elegir
- * uno inventaría una intención que la página no declaró.
+ * Se recorre en orden de cascada: primero los `:root` de las hojas (la última
+ * gana), y encima el `style=` de `<html>`, que gana a todas. Los dos importan
+ * porque cada puerta escribe en un sitio — un documento libre declara en
+ * `:root`, la ruta compuesta en el atributo — y quedarse sólo con uno deja la
+ * pasada inerte en la otra.
+ *
+ * Tomar la última declaración que aparece en vez de la que gana ata el literal
+ * al valor que NO se pinta: medido, el marcador de dirección declara
+ * `--ol-surface:#ffffff` mientras la página pinta `#FBF7EF`. Un valor que dos
+ * tokens comparten se descarta: elegir uno inventaría una intención que la
+ * página no declaró.
  */
 function effectiveTokens(html: string): Map<string, string> {
-  const inline = /<html\b[^>]*\sstyle="([^"]*)"/i.exec(html)?.[1] ?? "";
   const byName = new Map<string, string>();
+  for (const block of html.matchAll(STYLE_BLOCK)) {
+    if (OURS.test(block[1] ?? "")) continue;
+    for (const rule of (block[2] ?? "").matchAll(ROOT_RULE)) {
+      for (const decl of (rule[1] ?? "").matchAll(DECLARED)) {
+        const value = canonical(decl[2]!);
+        if (value) byName.set(decl[1]!, value);
+      }
+    }
+  }
+  const inline = /<html\b[^>]*\sstyle="([^"]*)"/i.exec(html)?.[1] ?? "";
   for (const m of inline.matchAll(DECLARED)) {
     const value = canonical(m[2]!);
     if (value) byName.set(m[1]!, value);
@@ -59,7 +80,8 @@ export function bindColorsToTokens(html: string): { html: string; bound: number 
   if (tokens.size === 0) return { html, bound: 0 };
 
   let bound = 0;
-  const out = html.replace(MODEL_STYLE, (all, attrs: string, css: string) => {
+  const out = html.replace(STYLE_BLOCK, (all, attrs: string, css: string) => {
+    if (OURS.test(attrs)) return all;
     let root: postcss.Root;
     try { root = postcss.parse(css); } catch { return all; }
     let touched = false;
