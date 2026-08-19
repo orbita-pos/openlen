@@ -19,6 +19,7 @@ import {
   applyOps,
   buildScopedView,
   parseOps,
+  rejectDocumentWideOps,
   resolveOpIdByPath,
   stripOpIds,
   tagWithOpIds,
@@ -692,6 +693,7 @@ VISUAL CONTEXT: the attached image is a full-page render of the CURRENT page (wh
 
         let trimmedHtml: string;
         let appliedOpCount = 0;
+        let droppedNotice = "";
         let outputMode: "ops" | "rewrite";
 
         if (isOpsMode) {
@@ -712,18 +714,40 @@ VISUAL CONTEXT: the attached image is a full-page render of the CURRENT page (wh
             closeStream();
             return;
           }
-          // Scoped requests get a higher cap — they're naturally focused, so
-          // 16 granular ops on one section is more useful than forcing the
-          // user to chain multiple chats.
-          const opsCap = scopedView ? 16 : 8;
-          if (ops.length > opsCap) {
+          // Una op contra el <body> no es una edición: es un documento nuevo,
+          // y eso es el Modo B. Medido, el modelo llegaba ahí queriendo tocar
+          // `:root` y se llevaba la página entera dos de cada cinco veces.
+          // Las demás ops de la tanda sí se aplican — perder el cambio de
+          // acento es mucho menos malo que perder la página del usuario.
+          const { ops: safeOps, rejected: rejectedOps } = rejectDocumentWideOps(taggedHtml, ops);
+          if (safeOps.length === 0) {
             emit("error", {
-              message: `Model emitted ${ops.length} ops but the cap is ${opsCap}. Break the request into multiple smaller chats.`,
+              message:
+                "El modelo intentó reemplazar la página entera con una sola operación. Pídelo otra vez, o pide un rediseño completo.",
             });
             closeStream();
             return;
           }
-          const applyResult = applyOps(taggedHtml, ops);
+
+          // Scoped requests get a higher cap — they're naturally focused, so
+          // 16 granular ops on one section is more useful than forcing the
+          // user to chain multiple chats.
+          const opsCap = scopedView ? 16 : 8;
+          if (safeOps.length > opsCap) {
+            emit("error", {
+              message: `Model emitted ${safeOps.length} ops but the cap is ${opsCap}. Break the request into multiple smaller chats.`,
+            });
+            closeStream();
+            return;
+          }
+          if (rejectedOps.length > 0) {
+            droppedNotice = rejectedOps.length === 1
+              ? "Descarté una operación que habría reemplazado la página entera; el resto del cambio sí se aplicó."
+              : `Descarté ${rejectedOps.length} operaciones que habrían reemplazado la página entera; el resto del cambio sí se aplicó.`;
+            // eslint-disable-next-line no-console
+            console.warn(`[ai-design] ${rejectedOps.length} op(s) contra la raíz descartadas — targets: ${rejectedOps.map((o) => o.target).join(", ")}`);
+          }
+          const applyResult = applyOps(taggedHtml, safeOps);
           if (applyResult.html === null) {
             const firstErr = applyResult.errors[0];
             const msg = firstErr
@@ -937,8 +961,12 @@ VISUAL CONTEXT: the attached image is a full-page render of the CURRENT page (wh
         );
         await debitCredits(userId, credits);
 
+        // Guardar-y-AVISAR: si se descartó algo, el usuario tiene que leerlo.
+        // Un cambio que se pierde en silencio es peor que uno que no se hizo.
         emit("done", {
-          reasoning,
+          reasoning: droppedNotice ? `${reasoning}
+
+${droppedNotice}` : reasoning,
           html: trimmedHtml,
           updatedAt: now.toISOString(),
           mode: outputMode,

@@ -18,6 +18,7 @@ import {
   resolveOpIdByPath,
   stripOpIds,
   tagWithOpIds,
+  rejectDocumentWideOps,
 } from "./html-ops";
 
 // ─── tagWithOpIds ──────────────────────────────────────────────────────────
@@ -188,4 +189,37 @@ test("buildScopedView: missing pin → null", () => {
   const tagged =
     '<html><body><section data-op-id="s"><p data-op-id="p">x</p></section></body></html>';
   assert.equal(buildScopedView(tagged, "ghost"), null);
+});
+
+// Medido con la sonda: pidiendo "cambia el titular y pon el acento en verde",
+// el modelo emite el replace correcto del <h1> y luego apunta al <body> para
+// meter un `:root`. Dos de cada cinco veces la página pasaba de 13,788 chars a
+// 9,524, sin una sola op `delete` y sin ningún error.
+test("descarta la op que reemplazaría el documento entero", () => {
+  const tagged = '<html data-op-id="r"><body data-op-id="0"><h1 data-op-id="2">Hola</h1></body></html>';
+  const { ops, rejected } = rejectDocumentWideOps(tagged, [
+    { type: "replace", target: "2", newHtml: "<h1>Adiós</h1>" },
+    { type: "replace", target: "0", newHtml: "<style>:root{--ol-accent:#6b8e23}</style>" },
+  ]);
+  assert.equal(ops.length, 1);
+  assert.equal(ops[0].target, "2");
+  assert.equal(rejected.length, 1);
+  assert.equal(rejected[0].target, "0");
+});
+
+test("el <html> tampoco es un objetivo válido", () => {
+  const tagged = '<html data-op-id="r"><body data-op-id="0"><p data-op-id="1">x</p></body></html>';
+  const { ops, rejected } = rejectDocumentWideOps(tagged, [{ type: "delete", target: "r" }]);
+  assert.equal(ops.length, 0);
+  assert.equal(rejected.length, 1);
+});
+
+// Sin raíces marcadas no hay nada que proteger, y tragarse las ops en ese caso
+// sería peor que el fallo original.
+test("deja pasar todo cuando el documento no trae raíces marcadas", () => {
+  const { ops, rejected } = rejectDocumentWideOps("<div data-op-id=\"1\">x</div>", [
+    { type: "replace", target: "1", newHtml: "<div>y</div>" },
+  ]);
+  assert.equal(ops.length, 1);
+  assert.equal(rejected.length, 0);
 });
