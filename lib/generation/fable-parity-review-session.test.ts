@@ -1,7 +1,7 @@
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { isAbsolute, join, relative, resolve } from "node:path";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
   appendBlindDecision,
@@ -22,6 +22,16 @@ import {
   verifyFableParityDeployGate,
   writeFableParityScorecardFile,
 } from "@/scripts/fable-parity-scorecard";
+
+// Cada decisión revalida el paquete ciego COMPLETO antes de sellarla: 180
+// artefactos por pasada, 20 pasadas, y 1,600 de ellas decodifican la imagen.
+// Eso NO es desperdicio — es la propiedad que se está probando: un archivo
+// cambiado a mitad de sesión tiene que saltar. Por eso el archivo corre en su
+// propia puerta (`npm run generation:fable-parity:gate`, cuatro archivos) y
+// está fuera de la corrida por defecto: compitiendo con los otros 350 se
+// quedaba sin CPU y agotaba cualquier presupuesto fijo —medido: 2.7 s solo,
+// más de 90 s en la suite completa—. El presupuesto de abajo es para la puerta.
+vi.setConfig({ testTimeout: 30_000, hookTimeout: 30_000 });
 
 let workspaceRoot: string | undefined;
 
@@ -207,7 +217,7 @@ describe("Fable parity blind artifact and review session", () => {
       ...completed.decisions[0]!.decision,
       comparisonId: completed.decisions[0]!.decision.comparisonId,
     })).rejects.toThrow(/completed/i);
-  }, 20_000);
+  });
 
   it("rejects partial-page screenshots before any artifact directory is created", async () => {
     workspaceRoot = await mkdtemp(join(tmpdir(), "openlen-fable-parity-"));
@@ -271,7 +281,7 @@ describe("Fable parity blind artifact and review session", () => {
     const persisted = JSON.parse(await readFile(sessionPath, "utf8")) as { decisions: unknown[]; completedAt: string | null };
     expect(persisted.decisions).toHaveLength(20);
     expect(persisted.completedAt).toBe("2026-08-13T01:00:00.000Z");
-  }, 20_000);
+  });
 
   it("creates nested session parents below scratch and rejects arbitrary output paths", async () => {
     workspaceRoot = await mkdtemp(join(tmpdir(), "openlen-fable-parity-"));

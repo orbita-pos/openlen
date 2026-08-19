@@ -199,7 +199,7 @@ export default defineConfig({
       // node:test file (run via `tsx --test`, part of test:node) — would
       // otherwise get swept up by the lib/tematicas/**/*.test.ts wildcard
       // above and fail with "No test suite found" under vitest.
-      "lib/tematicas/apply-server.test.ts",
+      "lib/tematicas/apply-server.test.ts", "lib/generation/fable-parity-review-session.test.ts",
     ],
   },
 });
