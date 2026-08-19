@@ -141,8 +141,12 @@ test("handles malformed JSON gracefully (returns no-critique fallback)", async (
   assert.deepEqual(verdict.usage, { inputTokens: 40, outputTokens: 9, cachedTokens: 2, thinkingTokens: 5 });
 });
 
-test("default critic deadline is 18s (smoke: Pulsegrid timed out at 12016ms under 12s)", () => {
-  assert.equal(DEFAULT_TIMEOUT_MS, 18_000);
+// 18s bastaban cuando el crítico veía rellenos de gradiente. Ahora las fotos
+// se siembran ANTES —para que juzgue la página que se entrega— y su render
+// baja ocho imágenes de la CDN antes de la captura: con 18s el crítico se
+// agotaba siempre, y uno que nunca contesta no es una red.
+test("default critic deadline is 30s (con las fotos ya puestas, 18s se agotaba siempre)", () => {
+  assert.equal(DEFAULT_TIMEOUT_MS, 30_000);
 });
 
 test("times out and falls back when the critic call stalls", async () => {

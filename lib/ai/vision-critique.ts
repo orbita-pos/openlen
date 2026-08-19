@@ -72,7 +72,14 @@ export interface CritiqueInternals {
 // ~8–15s), so 12s produced ~33% fallbacks; 18s brings that to ~5–10%. The
 // fallback is safe (ship-as-is, no regen) but each timed-out critic still costs
 // a credit + cycle, so widening the window is worth it. Test-overridable.
-export const DEFAULT_TIMEOUT_MS = 18_000;
+//
+// 18s→30s: el sembrado de fotos pasó a correr ANTES del crítico, para que
+// juzgue la página que se entrega y no los rellenos de gradiente. Eso está
+// bien, y hace que el render tenga que bajar ocho imágenes de la CDN antes de
+// la captura: medido, el plazo de 18s pasó a agotarse siempre. Un crítico que
+// nunca contesta es peor que uno que juzga tarde — falla abierto, sí, pero
+// entonces no hay red.
+export const DEFAULT_TIMEOUT_MS = 30_000;
 // The verdict is tiny, but `issues` can carry a few sentences and Flash spends
 // a thinking budget before its first token — keep this generous so it never
 // truncates mid-JSON.

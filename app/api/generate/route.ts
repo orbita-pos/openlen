@@ -380,7 +380,38 @@ ${brief}`;
           closeStream();
           return;
         }
-        let html = first.html;
+        // ── Born With Imagery ───────────────────────────────────────────────
+        // Swap real curated photos into the gradient image-placeholders the
+        // model marked (data-ol-photo). Deterministic library match on the
+        // model's subject hints — no extra AI call, no network. Soft-fail:
+        // a hiccup just keeps the gradient placeholders.
+        //
+        // Va ANTES de medir y de juzgar, y se aplica a cada pasada. Corría al
+        // final, así que el crítico veía los rellenos de gradiente: en una
+        // corrida real puntuó la página quejándose de que faltaban fotos del
+        // pan, con cuarenta y cinco fotos reales ya dentro. Lo que se juzga
+        // tiene que ser lo que se entrega.
+        //
+        // Y las tres medidas mejoran con las fotos puestas: el contraste sobre
+        // una foto es incierto a propósito —el detector se calla— y el
+        // desborde se mide sobre la maqueta de verdad, no sobre un hueco.
+        const withImagery = async (candidate: string): Promise<string> => {
+          if (process.env.OPENLEN_IMAGERY === "0") return candidate;
+          try {
+            const photographed = await photographHtml({ html: candidate, brief });
+            if (photographed.applied > 0) {
+              // eslint-disable-next-line no-console
+              console.log(`[generate] imagery — ${photographed.applied} photo(s) placed`);
+              return photographed.html;
+            }
+          } catch (err) {
+            // eslint-disable-next-line no-console
+            console.warn("[generate] imagery failed; keeping gradient placeholders", err);
+          }
+          return candidate;
+        };
+
+        let html = await withImagery(first.html);
         let regenerated = false;
 
         // Texto que la página pinta y nadie puede leer. Se mide EN EL RENDER
@@ -447,12 +478,13 @@ ${briefBlock}`,
           ];
           const fixed = await runPass(fixMessages, "regen");
           if (fixed.ok) {
+            const fixedHtml = await withImagery(fixed.html);
             // La segunda puede salir peor que la primera. Se entrega la que
             // menos rota esté, no la más reciente.
             let after: string[] = [];
-            try { after = objectiveBreakage(await renderVisualQualityViewports(fixed.html)); } catch { after = []; }
+            try { after = objectiveBreakage(await renderVisualQualityViewports(fixedHtml)); } catch { after = []; }
             if (after.length <= breakage.length) {
-              html = fixed.html;
+              html = fixedHtml;
               regenerated = true;
               breakage = after;
             }
@@ -509,7 +541,7 @@ ${briefBlock}`,
             ];
             const regen = await runPass(regenMessages, "regen");
             if (regen.ok) {
-              html = regen.html;
+              html = await withImagery(regen.html);
               regenerated = true;
               recordRegenOutcome(true);
             } else {
@@ -521,25 +553,6 @@ ${briefBlock}`,
               );
               recordRegenOutcome(false);
             }
-          }
-        }
-
-        // ── Born With Imagery ───────────────────────────────────────────────
-        // Swap real curated photos into the gradient image-placeholders the
-        // model marked (data-ol-photo). Deterministic library match on the
-        // model's subject hints — no extra AI call, no network. Soft-fail:
-        // a hiccup just keeps the gradient placeholders.
-        if (process.env.OPENLEN_IMAGERY !== "0") {
-          try {
-            const photographed = await photographHtml({ html, brief });
-            if (photographed.applied > 0) {
-              html = photographed.html;
-              // eslint-disable-next-line no-console
-              console.log(`[generate] imagery — ${photographed.applied} photo(s) placed`);
-            }
-          } catch (err) {
-            // eslint-disable-next-line no-console
-            console.warn("[generate] imagery failed; keeping gradient placeholders", err);
           }
         }
 
