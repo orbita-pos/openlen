@@ -72,6 +72,44 @@ function Step($n, $msg) {
 # paso 6 con exactamente esos sintomas.)
 function Sh($cmd) { $cmd -replace "`r`n", "`n" }
 
+# --- 0. Espacio en disco ------------------------------------------------
+# Un deploy escribe lo MISMO TRES VECES: el build llena .next, el paso 3 copia
+# .next/static + public dentro de .next/standalone, y el paso 4 empaqueta todo
+# en un tarball. Sin sitio para las tres, Windows no falla limpio: el I/O se
+# degrada hasta PARECER un cuelgue.
+#
+# Pasó de verdad (2026-08-19): un deploy corrió HORAS en el paso 1 sin mandar
+# nada, con 3,3 GB libres y un `.next` de 4 GB atrapado de builds anteriores.
+# Un simple `du` sobre esa carpeta tardaba más de cinco minutos.
+#
+# Esta comprobación cuesta milisegundos y convierte esas horas en un mensaje.
+#
+# DOS NIVELES, y los números salen de lo medido aquel día, no del susto:
+#   < 5 GB  aborta — con 3,3 GB el deploy se arrastró horas
+#   < 9 GB  avisa  — cabe, pero sin holgura si `.next` vuelve a crecer a 4 GB
+# Abortar por encima de eso sería bloquear deploys que sí caben, y un guard que
+# estorba se acaba desactivando — que es peor que no tenerlo.
+$libreGB = [math]::Round((Get-PSDrive C).Free / 1GB, 1)
+$minimoGB = 5
+$comodoGB = 9
+if ($libreGB -lt $minimoGB) {
+  Write-Host ""
+  Write-Host "  ESPACIO INSUFICIENTE: $libreGB GB libres en C:, hacen falta $minimoGB." -ForegroundColor Red
+  Write-Host "  Un deploy escribe .next, luego lo copia, luego lo empaqueta." -ForegroundColor Yellow
+  Write-Host "  Con menos espacio no falla: se arrastra durante horas." -ForegroundColor Yellow
+  Write-Host ""
+  Write-Host "  Lo que mas suele ocupar (y es regenerable):" -ForegroundColor Yellow
+  Write-Host "    Remove-Item -Recurse -Force .next     # suele rondar los 4 GB"
+  Write-Host ""
+  throw "Espacio en disco insuficiente ($libreGB GB < $minimoGB GB)"
+}
+if ($libreGB -lt $comodoGB) {
+  Write-Host "  espacio en C:: $libreGB GB libres - justo, pero cabe." -ForegroundColor Yellow
+  Write-Host "  Si el deploy se arrastra, borra .next (suele rondar los 4 GB)." -ForegroundColor DarkGray
+} else {
+  Write-Host "  espacio en C:: $libreGB GB libres" -ForegroundColor DarkGray
+}
+
 # Hybrid-only creation is a release invariant, including when a prebuilt
 # standalone bundle is reused. Keep these checks outside the skip-build branch.
 npm.cmd run generation:fable-parity:gate
