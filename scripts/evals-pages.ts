@@ -8,6 +8,18 @@
 //   npm run evals:pages                    # el conjunto entero
 //   npm run evals:pages -- --tag=regresion # sólo los que nacieron de un fallo
 //   npm run evals:pages -- --max-mxn=8     # tope propio
+//   npm run evals:pages -- --solo=solar,quiz --repeat=3
+//                                          # unos pocos casos, N veces
+//
+// POR QUÉ `--repeat`. El modelo NO es determinista, así que una sola muestra
+// por caso no distingue un defecto REAL de la varianza. Se vio medido: cuatro
+// corridas del mismo cohorte dieron 12/12, 14/14, 14/16 y 13/16 sin que el
+// código de las conductas cambiara entre las dos últimas. Los chequeos de
+// forma/puerta/render son estables; los de ADOPCIÓN (¿usó el modelo la
+// conducta?) oscilan, y ahí una corrida sola miente en las dos direcciones.
+//
+// Con `--repeat` el marcador deja de decir "pasó/falló" y pasa a decir "pasó N
+// de M", que es lo único interpretable sobre un modelo no determinista.
 //
 // Reproduce la ruta de /api/generate: comprobaciones de forma → un reintento →
 // el motor → regeneración por rotura medida. Medir un camino más corto que el
@@ -59,8 +71,18 @@ function flag(name: string): string | undefined {
 async function main(): Promise<void> {
   const tag = flag("tag");
   const maxMxn = Number(flag("max-mxn") ?? "26");
-  const cases = PAGE_COHORT.filter((c) => !tag || c.tag === tag);
-  if (cases.length === 0) throw new Error(`no hay casos con tag=${tag}`);
+  const solo = flag("solo")?.split(",").map((s2) => s2.trim()).filter(Boolean);
+  const repeat = Math.max(1, Math.trunc(Number(flag("repeat") ?? "1")));
+  const base = PAGE_COHORT.filter(
+    (c) => (!tag || c.tag === tag) && (!solo || solo.includes(c.id)),
+  );
+  if (base.length === 0) throw new Error(`no hay casos con tag=${tag ?? "*"} solo=${solo?.join(",") ?? "*"}`);
+  // Las repeticiones son casos con id propio (`solar#2`) para que el informe
+  // por caso siga funcionando sin tratarlas como un modo aparte.
+  const cases: PageEvalCase[] =
+    repeat === 1
+      ? [...base]
+      : base.flatMap((c) => Array.from({ length: repeat }, (_, k) => (k === 0 ? c : { ...c, id: `${c.id}#${k + 1}` })));
 
   const apiKey = resolveAIProvider("gemini-flash").key;
   if (!apiKey) throw new Error("falta la clave del proveedor");
@@ -194,6 +216,20 @@ async function main(): Promise<void> {
     partial: aborted || verdicts.length !== PAGE_COHORT.length,
   });
 
+  if (repeat > 1) {
+    console.log("");
+    console.log("tasa por caso (lo único interpretable con un modelo no determinista):");
+    for (const c of base) {
+      const suyos = verdicts.filter((v) => v.id === c.id || v.id.startsWith(`${c.id}#`));
+      const limpios = suyos.filter((v) => v.failures.length === 0).length;
+      const motivos = [...new Set(suyos.flatMap((v) => v.failures))];
+      console.log(
+        `  ${c.id.padEnd(16)} ${limpios}/${suyos.length}` +
+        (motivos.length ? `   (${motivos.join(", ")})` : ""),
+      );
+    }
+  }
+
   let prev: Scorecard | null = null;
   try { prev = JSON.parse(readFileSync(BASELINE, "utf8")) as Scorecard; } catch { prev = null; }
   const cmp = compareScorecards(prev, next);
@@ -212,9 +248,17 @@ async function main(): Promise<void> {
 
   mkdirSync(OUT_DIR, { recursive: true });
   writeFileSync(join(OUT_DIR, `page-scorecard-${revision.slice(0, 8)}.json`), JSON.stringify(next, null, 2));
-  writeFileSync(BASELINE, JSON.stringify(next, null, 2));
+  // Una corrida PARCIAL (--solo/--tag/--repeat) no puede pisar la línea base:
+  // mide otro conjunto, y compararlo luego contra el cohorte entero daría un
+  // delta inventado. Se guarda el marcador de la corrida y punto.
+  if (solo || tag || repeat > 1) {
+    console.log("");
+    console.log("corrida parcial — la línea base NO se toca");
+  } else {
+    writeFileSync(BASELINE, JSON.stringify(next, null, 2));
     console.log(`
 → línea base actualizada: lib/evals/baseline.json`);
+  }
 
   // Una regresión tiene que romper la puerta de quien lo corra en CI.
   if (cmp.regressed.length > 0) process.exitCode = 1;
