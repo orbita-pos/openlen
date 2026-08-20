@@ -15,6 +15,7 @@ import type { InlineImage, Message } from "@/lib/ai-gateway";
 import { preparePage } from "@/lib/page-engine/prepare";
 import { jsonResponse, sseChannel } from "@/lib/ai/sse";
 import { extractDocument } from "@/lib/ai/extract-document";
+import { LANGUAGE_RULE } from "@/lib/ai/authoring-rules";
 import { todayLine } from "@/lib/ai/today-line";
 import {
   PLAN_LIMITS,
@@ -185,7 +186,7 @@ ${brief}`;
 
   const messages = [
     { role: "system" as const, content: SYSTEM_PROMPT },
-    { role: "user" as const, content: `${todayLine()}${briefBlock}` },
+    { role: "user" as const, content: `${todayLine()}${LANGUAGE_RULE}${briefBlock}` },
   ];
 
   const upstreamAbort = new AbortController();

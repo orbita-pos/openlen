@@ -32,6 +32,7 @@ import { usesDeepSeekForTurn } from "@/lib/ai/provider-switch";
 import { persistPage } from "@/lib/page-engine/persist";
 import { applyModuleIntent } from "@/lib/projects/module-intent";
 import { describeBehaviorIssues } from "@/lib/behaviors/validate";
+import { LANGUAGE_RULE } from "@/lib/ai/authoring-rules";
 import { todayLine } from "@/lib/ai/today-line";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -450,7 +451,7 @@ VISUAL CONTEXT: the attached image is a full-page render of the CURRENT page (wh
       // así que hereda su fallo: sin la fecha, "desde 1998" sale con los años
       // contados desde el entrenamiento del modelo.
       role: "user",
-      content: `${todayLine()}${finalUserContent}`,
+      content: `${todayLine()}${LANGUAGE_RULE}${finalUserContent}`,
     },
   ];
 
