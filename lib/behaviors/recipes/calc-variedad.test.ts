@@ -134,8 +134,8 @@ describe("ELEGIR Y MOSTRAR — sin una sola cuenta de por medio", () => {
     expect(oculto("#dm")).toBe(false);
   });
 
-  // El interruptor mensual/anual es una CASILLA, no un data-ol-set: alternar
-  // un booleano con `anual = NO anual` no funciona (ver el describe de abajo).
+  // Una casilla es la forma natural de un interruptor en HTML, y además evita
+  // tener que declarar el estado a mano.
   it("interruptor mensual/anual, hecho con una casilla", () => {
     region(
       `<input id="sw" data-ol-val="anual" type="checkbox">` +
@@ -150,67 +150,79 @@ describe("ELEGIR Y MOSTRAR — sin una sola cuenta de por medio", () => {
   });
 });
 
-describe("LO QUE NO CAE — el límite, medido y no supuesto", () => {
+describe("LA FRONTERA — medida, y NO donde yo creía", () => {
   trackDocumentListeners();
 
   /**
-   * Un contador con botones `+` NO funciona: `data-ol-set="n = n + 1"` lee `n`,
-   * que sólo existe como destino de esa misma asignación, así que la regla del
-   * gesto-no-ocurrido lo bloquea para siempre.
+   * CORRECCIÓN. Una versión anterior de este archivo afirmaba que un
+   * acumulador y un tablero "NO caen". Es falso: lo que fallaba era que yo no
+   * DECLARABA el estado. Un `data-ol-set` cuyo destino no existe en ninguna
+   * parte queda bloqueado por la regla del gesto-no-ocurrido — pero declarar
+   * ese destino como un campo lo desbloquea, y eso ya se puede hoy.
    *
-   * Es una limitación REAL y se documenta como tal en vez de esconderse. La
-   * salida hoy es un `<input type="number">`, que además el visitante puede
-   * teclear directo. Si algún día aparece demanda de acumuladores, el arreglo
-   * es un valor inicial declarado para los destinos de asignación — un cambio
-   * pequeño, pero que no se hace sin un caso real detrás.
+   * La lección es sobre el método, no sobre el lenguaje: "lo probé y falló" no
+   * es lo mismo que "no se puede", y la diferencia entre las dos frases era un
+   * atributo.
    */
-  it("un acumulador (n = n + 1) NO avanza — está documentado, no es sorpresa", () => {
+  it("un acumulador SÍ avanza cuando su estado está declarado", () => {
     region(
-      `<button id="mas" data-ol-set="n = n + 1">+1</button><p id="v" data-ol-out="n">0</p>`,
+      `<input type="hidden" data-ol-val="n" value="0">` +
+      `<button id="mas" data-ol-set="n = n + 1">+1</button>` +
+      `<p id="v" data-ol-out="n">0</p>`,
     );
     click("#mas");
     click("#mas");
-    expect(txt("#v")).toBe("0");
+    click("#mas");
+    expect(txt("#v")).toBe("3");
+  });
+
+  it("un tablero de tres celdas: pinta, y canta la línea al completarse", () => {
+    region(
+      `<input type="hidden" data-ol-val="c1" value=""><input type="hidden" data-ol-val="c2" value="">` +
+      `<input type="hidden" data-ol-val="c3" value="">` +
+      `<button id="b1" data-ol-set="c1 = 'X'">1</button>` +
+      `<button id="b2" data-ol-set="c2 = 'X'">2</button>` +
+      `<button id="b3" data-ol-set="c3 = 'X'">3</button>` +
+      `<span id="s1" data-ol-out="c1">·</span>` +
+      `<p id="g" data-ol-if="c1 = 'X' Y c2 = 'X' Y c3 = 'X'">¡Línea!</p>`,
+    );
+    // Nace bien: nada cantado y la celda vacía.
+    expect(oculto("#g")).toBe(true);
+    click("#b1");
+    expect(txt("#s1")).toBe("X");
+    click("#b2");
+    expect(oculto("#g")).toBe(true);
+    click("#b3");
+    expect(oculto("#g")).toBe(false);
   });
 
   /**
-   * Un juego de cuadrícula tipo Zip/sudoku/laberinto NO cae, y no por un
-   * descuido: el lenguaje no tiene bucles, ni listas que se puedan modificar,
-   * ni forma de preguntar "qué celdas son vecinas de ésta". Cada celda tendría
-   * que ser un nombre suelto y cada regla una fórmula escrita a mano — a las
-   * 25 celdas de un tablero 5x5 eso ya no lo escribe nadie, y a las 128 se
-   * topa con MAX_NODES.
+   * LO QUE DE VERDAD NO CAE, y aquí sí es por diseño y no por un atributo que
+   * falte:
    *
-   * Eso es la línea de la doctrina funcionando: "¿se puede con una página
-   * sellada?" Un tablero con estado por celda pide código por-usuario en el
-   * navegador del visitante, que es L2 fuera y otro modelo de amenaza.
+   *   1. DOS asignaciones en un solo gesto. Un tres en raya de dos jugadores
+   *      necesita, con un clic, poner la ficha Y alternar el turno.
+   *      `data-ol-set` asigna UN nombre. Es un hueco pequeño y quitable — pero
+   *      no se quita sin una petición real detrás.
    *
-   * Un tablero PEQUEÑO sí avanza — tres nombres, tres clics, una condición —
-   * pero arrastra una arruga que hay que decir: mientras ninguna celda se haya
-   * tocado, la condición LEE nombres que aún no existen, así que la regla del
-   * gesto-no-ocurrido no la evalúa y el bloque nace VISIBLE. Un tres en raya
-   * enseñaría "¡Línea!" antes de la primera jugada.
+   *   2. BUCLES. Zip, sudoku y los laberintos piden recorrer celdas: "¿el
+   *      camino pasa por todas?", "¿esta región tiene los nueve dígitos?". Eso
+   *      no es un hueco: es la razón por la que una página no puede colgarse.
+   *      Un tablero de 5x5 además necesitaría 25 nombres y sus reglas escritas
+   *      a mano, y a los 128 nodos se topa con MAX_NODES.
    *
-   * Es coherente (sin runtime nada se oculta: content-intact) y es exactamente
-   * lo que salva a la ruleta de nacer diciendo "0", pero para un tablero es
-   * indeseable. La salida hoy es escribir la condición sobre un campo que SÍ
-   * exista de inicio. Se documenta como límite en vez de venderse como juego.
+   * O sea: la frontera NO es "juegos sí/no" ni "tablero sí/no". Es el BUCLE.
    */
-  it("un tablero pequeño avanza, pero su condición NACE visible", () => {
-    region(
-      `<button id="c1" data-ol-set="c1 = 'X'">1</button>` +
-      `<button id="c2" data-ol-set="c2 = 'X'">2</button>` +
-      `<button id="c3" data-ol-set="c3 = 'X'">3</button>` +
-      `<p id="g" data-ol-if="c1 = 'X' Y c2 = 'X' Y c3 = 'X'">¡Línea!</p>`,
+  it("un turno alterno necesitaría dos asignaciones en un gesto — hoy sólo hay una", () => {
+    // Se comprueba la FORMA, no una opinión: `data-ol-set` parsea "nombre =
+    // expresión" y nada más, así que dos asignaciones no son expresables.
+    const out = compileCalcRegions(
+      `<!doctype html><html><body><div data-ol-calc>` +
+      `<input type="hidden" data-ol-val="t" value="X">` +
+      `<button data-ol-set="c1 = t; t = SI(t = 'X', 'O', 'X')">1</button>` +
+      `</div></body></html>`,
     );
-    // La arruga: antes de tocar nada, visible.
-    expect(oculto("#g")).toBe(false);
-    click("#c1");
-    // Ya hay un nombre, pero faltan dos: la condición sigue sin poder evaluarse.
-    expect(oculto("#g")).toBe(false);
-    click("#c2");
-    click("#c3");
-    // Con las tres puestas, la condición es cierta de verdad.
-    expect(oculto("#g")).toBe(false);
+    expect(out.issues).toHaveLength(1);
+    expect(out.compiled).toBe(0);
   });
 });
