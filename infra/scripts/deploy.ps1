@@ -341,6 +341,15 @@ if ($env:OPENLEN_SKIP_CRATES_REBUILD -ne "1") {
   # staging here is safe — rebuild then continue to the swap in step 7.
   $cratesCmd = @"
 set -e
+# BORRAR antes de extraer, no extraer encima. `mkdir -p` + `tar -xzf` deja
+# intacto lo que ya hubiera: si un intento anterior subio node_modules de
+# WINDOWS (con `napi.cmd` y un `napi` sin bit de ejecucion), el tarball nuevo
+# —ya limpio— no los borra, `npm install` los ve y dice "ya esta instalado", y
+# `napi build` sigue muriendo con Permission denied.
+#
+# Pasó de verdad (2026-08-20): se arreglo el tarball y el paso 6.5 volvio a
+# fallar IGUAL, porque el residuo estaba en el box, no en el envio.
+rm -rf /root/openlen-workspace
 mkdir -p /root/openlen-workspace
 tar -xzf /root/$cratesTarball -C /root/openlen-workspace
 rm /root/$cratesTarball
