@@ -1,0 +1,234 @@
+{
+  "cohortVersion": "page-cohort/1.0",
+  "revision": "69558476272e6a1316dffd2b37c11d5eafe0f9fb",
+  "at": "2026-08-20T03:51:02.577Z",
+  "pages": 12,
+  "clean": 11,
+  "byCode": {
+    "overflow": 1
+  },
+  "retried": 0,
+  "trimmed": 9,
+  "costMxn": 1.87,
+  "partial": false,
+  "verdicts": [
+    {
+      "id": "terror",
+      "failures": [],
+      "measurement": {
+        "id": "terror",
+        "attempts": 1,
+        "trimmed": 0,
+        "mobileOverflow": false,
+        "invalidGeometry": false,
+        "typographyRule": null,
+        "unreadable": 0,
+        "h1Count": 1,
+        "lang": "es",
+        "dir": "",
+        "bytes": 38790,
+        "ms": 73233
+      }
+    },
+    {
+      "id": "colegio",
+      "failures": [],
+      "measurement": {
+        "id": "colegio",
+        "attempts": 1,
+        "trimmed": 12,
+        "mobileOverflow": false,
+        "invalidGeometry": false,
+        "typographyRule": null,
+        "unreadable": 0,
+        "h1Count": 1,
+        "lang": "es",
+        "dir": "",
+        "bytes": 25676,
+        "ms": 47099
+      }
+    },
+    {
+      "id": "saas",
+      "failures": [],
+      "measurement": {
+        "id": "saas",
+        "attempts": 1,
+        "trimmed": 0,
+        "mobileOverflow": false,
+        "invalidGeometry": false,
+        "typographyRule": null,
+        "unreadable": 0,
+        "h1Count": 1,
+        "lang": "es",
+        "dir": "",
+        "bytes": 60027,
+        "ms": 101708
+      }
+    },
+    {
+      "id": "comida",
+      "failures": [],
+      "measurement": {
+        "id": "comida",
+        "attempts": 1,
+        "trimmed": 12,
+        "mobileOverflow": false,
+        "invalidGeometry": false,
+        "typographyRule": null,
+        "unreadable": 0,
+        "h1Count": 1,
+        "lang": "es",
+        "dir": "ltr",
+        "bytes": 27947,
+        "ms": 46835
+      }
+    },
+    {
+      "id": "documentacion",
+      "failures": [
+        "overflow"
+      ],
+      "measurement": {
+        "id": "documentacion",
+        "attempts": 1,
+        "trimmed": 12,
+        "mobileOverflow": true,
+        "invalidGeometry": false,
+        "typographyRule": null,
+        "unreadable": 0,
+        "h1Count": 1,
+        "lang": "es",
+        "dir": "",
+        "bytes": 27309,
+        "ms": 91400
+      }
+    },
+    {
+      "id": "minimo",
+      "failures": [],
+      "measurement": {
+        "id": "minimo",
+        "attempts": 1,
+        "trimmed": 12,
+        "mobileOverflow": false,
+        "invalidGeometry": false,
+        "typographyRule": null,
+        "unreadable": 0,
+        "h1Count": 1,
+        "lang": "es",
+        "dir": "ltr",
+        "bytes": 28378,
+        "ms": 35864
+      }
+    },
+    {
+      "id": "larguisimo",
+      "failures": [],
+      "measurement": {
+        "id": "larguisimo",
+        "attempts": 1,
+        "trimmed": 12,
+        "mobileOverflow": false,
+        "invalidGeometry": false,
+        "typographyRule": null,
+        "unreadable": 0,
+        "h1Count": 1,
+        "lang": "es",
+        "dir": "ltr",
+        "bytes": 33155,
+        "ms": 75179
+      }
+    },
+    {
+      "id": "arabe",
+      "failures": [],
+      "measurement": {
+        "id": "arabe",
+        "attempts": 1,
+        "trimmed": 12,
+        "mobileOverflow": false,
+        "invalidGeometry": false,
+        "typographyRule": null,
+        "unreadable": 0,
+        "h1Count": 1,
+        "lang": "ar",
+        "dir": "rtl",
+        "bytes": 28880,
+        "ms": 49638
+      }
+    },
+    {
+      "id": "con-html",
+      "failures": [],
+      "measurement": {
+        "id": "con-html",
+        "attempts": 1,
+        "trimmed": 12,
+        "mobileOverflow": false,
+        "invalidGeometry": false,
+        "typographyRule": null,
+        "unreadable": 0,
+        "h1Count": 1,
+        "lang": "es",
+        "dir": "",
+        "bytes": 28787,
+        "ms": 46180
+      }
+    },
+    {
+      "id": "una-seccion",
+      "failures": [],
+      "measurement": {
+        "id": "una-seccion",
+        "attempts": 1,
+        "trimmed": 250,
+        "mobileOverflow": false,
+        "invalidGeometry": false,
+        "typographyRule": null,
+        "unreadable": 0,
+        "h1Count": 1,
+        "lang": "es",
+        "dir": "",
+        "bytes": 15704,
+        "ms": 22825
+      }
+    },
+    {
+      "id": "contradictorio",
+      "failures": [],
+      "measurement": {
+        "id": "contradictorio",
+        "attempts": 1,
+        "trimmed": 0,
+        "mobileOverflow": false,
+        "invalidGeometry": false,
+        "typographyRule": null,
+        "unreadable": 0,
+        "h1Count": 1,
+        "lang": "es",
+        "dir": "",
+        "bytes": 42832,
+        "ms": 78906
+      }
+    },
+    {
+      "id": "fecha-derivada",
+      "failures": [],
+      "measurement": {
+        "id": "fecha-derivada",
+        "attempts": 1,
+        "trimmed": 12,
+        "mobileOverflow": false,
+        "invalidGeometry": false,
+        "typographyRule": null,
+        "unreadable": 0,
+        "h1Count": 1,
+        "lang": "es",
+        "dir": "",
+        "bytes": 30984,
+        "ms": 75720
+      }
+    }
+  ]
+}
