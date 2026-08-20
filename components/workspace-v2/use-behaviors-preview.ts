@@ -77,6 +77,7 @@ export const PREVIEW_CD_STYLE_STASH = "data-openlen-cd-style";
 export const PREVIEW_FILTER_PRESSED_STASH = "data-openlen-filter-pressed";
 export const PREVIEW_COPY_TEXT_STASH = "data-openlen-copy-text";
 export const PREVIEW_TABS_SELECTED_STASH = "data-openlen-tab-selected";
+export const PREVIEW_CALC_TEXT_STASH = "data-openlen-calc-text";
 
 /** Preview-only pristine-state snapshot for the behaviors whose runtime
  *  mutation is otherwise indistinguishable, once the live DOM is captured,
@@ -116,12 +117,15 @@ export function stashBehaviorsPristineState(
   const filterMarker = reg.filter?.marker;
   const copyMarker = reg.copy?.marker;
   const tabsMarker = reg.tabs?.marker;
+  const calcMarker = reg.calc?.marker;
   const needsTheme = !!themeMarker && html.includes(themeMarker);
   const needsCountdown = !!cdMarker && html.includes(cdMarker);
   const needsFilter = !!filterMarker && html.includes(filterMarker);
   const needsCopy = !!copyMarker && html.includes(copyMarker);
   const needsTabs = !!tabsMarker && html.includes(tabsMarker);
-  if (!needsTheme && !needsCountdown && !needsFilter && !needsCopy && !needsTabs) return html;
+  const needsCalc = !!calcMarker && html.includes(calcMarker);
+  if (!needsTheme && !needsCountdown && !needsFilter && !needsCopy && !needsTabs && !needsCalc)
+    return html;
   if (typeof DOMParser === "undefined") return html;
   try {
     const doc = new DOMParser().parseFromString(html, "text/html");
@@ -208,6 +212,20 @@ export function stashBehaviorsPristineState(
       doc.querySelectorAll(`[${tabsMarker}]`).forEach((n) => {
         if (n.hasAttribute(PREVIEW_TABS_SELECTED_STASH)) return;
         n.setAttribute(PREVIEW_TABS_SELECTED_STASH, n.getAttribute("aria-selected") ?? "");
+        changed = true;
+      });
+    }
+
+    if (needsCalc) {
+      // El runtime de calc reescribe el texto de cada [data-ol-out] en cuanto
+      // el creador toca un campo del preview. Sin stash, ese número se
+      // persiste como el valor de NACIMIENTO de la página — y por una vía que
+      // el motor no revisa: app/api/projects/[id]/html/route.ts sólo sanea,
+      // no vuelve a pasar por preparePage, así que el gemelo compilado
+      // tampoco se regeneraría. Mismo patrón que el texto de countdown.
+      doc.querySelectorAll("[data-ol-out]").forEach((n) => {
+        if (n.hasAttribute(PREVIEW_CALC_TEXT_STASH)) return;
+        n.setAttribute(PREVIEW_CALC_TEXT_STASH, n.textContent ?? "");
         changed = true;
       });
     }

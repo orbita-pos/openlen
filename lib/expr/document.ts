@@ -13,17 +13,18 @@ import "server-only";
 
 import { parse, type HTMLElement } from "node-html-parser";
 
-import { compile } from "./compile";
+import { compile, type Program } from "./compile";
 import { evaluate } from "./evaluate";
 import { parseAssignment, parseExpression, referencedNames } from "./parse";
-import type { Value } from "./types";
+import type { Node, Value } from "./types";
 
 export const REGION = "data-ol-calc";
 export const VALUE = "data-ol-val";
 export const OUT = "data-ol-out";
 export const IF = "data-ol-if";
-export const WHEN = "data-ol-when";
 export const SET = "data-ol-set";
+/** Cada hijo de un `data-ol-val` que sea una LISTA. La ruleta los necesita. */
+export const ITEM = "data-ol-item";
 /** El gemelo compilado de cada atributo con fórmula. */
 export const compiledAttr = (attr: string): string => `${attr}-c`;
 
@@ -39,6 +40,157 @@ export interface CompileDocumentResult {
   readonly regions: number;
   readonly compiled: number;
   readonly issues: readonly CalcIssue[];
+}
+
+/** Qué atributos de una región llevan fórmula, y cuáles son asignaciones. */
+export const FORMULA_ATTRS: readonly { readonly attr: string; readonly assign: boolean }[] = [
+  { attr: OUT, assign: false },
+  { attr: IF, assign: false },
+  { attr: SET, assign: true },
+];
+
+/**
+ * Los nombres que viven en UNA región.
+ *
+ * `values` son los que el visitante produce (`data-ol-val`). `declared` añade
+ * los destinos de las asignaciones — la ruleta escribe `elegido`, que ningún
+ * campo del visitante produce, y una fórmula que lo lee NO está rota.
+ *
+ * Los dos conjuntos son distintos a propósito y cada uno decide una cosa:
+ * `declared` decide si la fórmula está rota; `values` decide si la fórmula ya
+ * se puede calcular al nacer (ver `readsUnset`).
+ *
+ * Exportada porque `lib/behaviors/validate.ts` la usa a través del `schema` de
+ * la receta: si el validador tuviera su propia idea de "nombre declarado",
+ * serían dos definiciones que pueden separarse en silencio.
+ */
+export interface RegionNames {
+  readonly declared: ReadonlySet<string>;
+  readonly values: ReadonlySet<string>;
+}
+
+export function collectRegionNames(
+  region: HTMLElement,
+  valueAttr: string = VALUE,
+  assignAttrs: readonly string[] = [SET],
+): RegionNames {
+  const values = new Set<string>();
+  for (const el of region.querySelectorAll(`[${valueAttr}]`)) {
+    const name = el.getAttribute(valueAttr)?.trim();
+    if (name) values.add(name);
+  }
+  const declared = new Set(values);
+  for (const attr of assignAttrs) {
+    for (const el of region.querySelectorAll(`[${attr}]`)) {
+      const a = parseAssignment(el.getAttribute(attr) ?? "");
+      if (a.ok) declared.add(a.node.target);
+    }
+  }
+  return { declared, values };
+}
+
+export type FormulaCheck =
+  | { readonly ok: true; readonly node: Node; readonly target?: string }
+  | { readonly ok: false; readonly message: string };
+
+/**
+ * Parsea una fórmula y comprueba que todo nombre que LEE exista en la región.
+ *
+ * Un nombre que nadie produce es una fórmula que nace muerta: se detecta aquí,
+ * mientras todavía se puede decir, y no en la página del visitante donde ya
+ * sólo se ve un cero.
+ */
+export function checkFormula(
+  raw: string,
+  assign: boolean,
+  declared: ReadonlySet<string>,
+): FormulaCheck {
+  let node: Node;
+  let target: string | undefined;
+  if (assign) {
+    const a = parseAssignment(raw);
+    if (!a.ok) return { ok: false, message: a.error.message };
+    node = a.node.value;
+    target = a.node.target;
+  } else {
+    const e = parseExpression(raw);
+    if (!e.ok) return { ok: false, message: e.error.message };
+    node = e.node;
+  }
+
+  const desconocidos = [...referencedNames(node)].filter((n) => !declared.has(n));
+  if (desconocidos.length > 0) {
+    return {
+      ok: false,
+      message: `usa ${desconocidos.map((n) => `"${n}"`).join(", ")}, que no existe en esta región — declara un campo con ${VALUE}="${desconocidos[0]}"`,
+    };
+  }
+  return target === undefined ? { ok: true, node } : { ok: true, node, target };
+}
+
+/**
+ * El entorno con el que la página NACE — leído del documento igual que el
+ * runtime lo lee del DOM vivo.
+ *
+ * Evaluar con `{}` (lo que hacía antes) es la trampa fina de toda esta etapa:
+ * `<input data-ol-val="recibo" value="1800">` con
+ * `data-ol-out="REDONDEA(recibo * 0.72, 0)"` nacía diciendo **0**, y el
+ * navegador decía 1296. Sin JS la página no mostraría un hueco: mostraría un
+ * número FALSO — "ahorras 0" junto a un campo que dice 1800. Eso es la página
+ * que MIENTE, que es peor que la página que perdió algo.
+ *
+ * Cada rama de aquí abajo tiene su gemela exacta en `E()` (recipes/calc.ts):
+ * campo → su valor · casilla → booleano · radio → el marcado (o vacío) ·
+ * `select` → la opción elegida · contenedor con `data-ol-item` → lista ·
+ * cualquier otra cosa → su texto.
+ */
+function initialEnv(region: HTMLElement): Record<string, Value> {
+  const env: Record<string, Value> = {};
+  for (const el of region.querySelectorAll(`[${VALUE}]`)) {
+    const name = el.getAttribute(VALUE)?.trim();
+    if (!name) continue;
+    const tag = el.tagName?.toLowerCase();
+    const type = (el.getAttribute("type") ?? "").toLowerCase();
+
+    if (type === "radio") {
+      if (el.getAttribute("checked") !== undefined) env[name] = el.getAttribute("value") ?? "";
+      else if (!(name in env)) env[name] = "";
+      continue;
+    }
+    const items = el.querySelectorAll(`[${ITEM}]`);
+    if (items.length > 0) {
+      env[name] = items.map((it) => it.textContent.trim());
+    } else if (type === "checkbox") {
+      env[name] = el.getAttribute("checked") !== undefined;
+    } else if (tag === "select") {
+      // `.value` de un <select> es la opción con `selected`, o la primera.
+      const opts = el.querySelectorAll("option");
+      const chosen = opts.find((o) => o.getAttribute("selected") !== undefined) ?? opts[0];
+      env[name] = chosen ? chosen.getAttribute("value") ?? chosen.textContent.trim() : "";
+    } else if (tag === "input" || tag === "textarea") {
+      env[name] = tag === "textarea" ? el.textContent : el.getAttribute("value") ?? "";
+    } else {
+      env[name] = el.textContent.trim();
+    }
+  }
+  return env;
+}
+
+/**
+ * ¿La fórmula depende de algo que todavía no ha pasado?
+ *
+ * `data-ol-out="elegido"` en la ruleta: `elegido` no lo produce ningún campo,
+ * lo produce el clic. Calcularlo al nacer daría `0`, y una ruleta que dice "0"
+ * antes de girar es exactamente la página muerta que este sistema existe para
+ * impedir — así que se respeta el texto que el autor escribió ("—", "Gira para
+ * elegir").
+ *
+ * El runtime aplica la MISMA regla barriendo el programa en busca de un
+ * `$nombre` que no esté en el entorno (ver `recipes/calc.ts`). Dos reglas
+ * distintas aquí serían dos evaluadores separándose en silencio.
+ */
+function readsUnset(node: Node, values: ReadonlySet<string>): boolean {
+  return [...referencedNames(node)].some((n) => !values.has(n));
 }
 
 /**
@@ -67,55 +219,43 @@ export function compileCalcRegions(html: string): CompileDocumentResult {
   for (const region of regions) {
     // Los nombres viven en la REGIÓN, no en el documento: dos calculadoras en
     // la misma página no se pisan, y cada una se valida contra los suyos.
-    const declared = new Set<string>();
-    for (const el of region.querySelectorAll(`[${VALUE}]`)) {
-      const name = el.getAttribute(VALUE)?.trim();
-      if (name) declared.add(name);
-    }
-    // Un `data-ol-set` declara su destino: la ruleta escribe `elegido`, que
-    // ningún campo del visitante produce.
-    for (const el of region.querySelectorAll(`[${SET}]`)) {
-      const a = parseAssignment(el.getAttribute(SET) ?? "");
-      if (a.ok) declared.add(a.node.target);
-    }
+    const { declared, values } = collectRegionNames(region);
+    const env = initialEnv(region);
 
-    for (const [attr, isAssignment] of [[OUT, false], [IF, false], [SET, true]] as const) {
+    for (const { attr, assign } of FORMULA_ATTRS) {
       for (const el of region.querySelectorAll(`[${attr}]`)) {
         const raw = el.getAttribute(attr) ?? "";
-        let node;
-        if (isAssignment) {
-          const a = parseAssignment(raw);
-          if (!a.ok) { issues.push({ attr, formula: raw, message: a.error.message }); continue; }
-          node = a.node.value;
-        } else {
-          const e = parseExpression(raw);
-          if (!e.ok) { issues.push({ attr, formula: raw, message: e.error.message }); continue; }
-          node = e.node;
-        }
-
-        // Un nombre que nadie produce es una fórmula que nace muerta: se
-        // detecta AQUÍ, mientras todavía se puede decir, y no en la página del
-        // visitante donde ya sólo se ve un cero.
-        const desconocidos = [...referencedNames(node)].filter((n) => !declared.has(n));
-        if (desconocidos.length > 0) {
-          issues.push({
-            attr,
-            formula: raw,
-            message: `usa ${desconocidos.map((n) => `"${n}"`).join(", ")}, que no existe en esta región — declara un campo con ${VALUE}="${desconocidos[0]}"`,
-          });
+        const checked = checkFormula(raw, assign, declared);
+        if (!checked.ok) {
+          issues.push({ attr, formula: raw, message: checked.message });
           continue;
         }
 
-        el.setAttribute(compiledAttr(attr), programAttr(compile(node)));
+        // `data-ol-out` se compila envuelto en TEXTO(...) y `data-ol-if` con
+        // el opcode booleano al final. Así el programa devuelve YA convertido
+        // lo que el DOM necesita —una cadena, un booleano— con las MISMAS
+        // `t()`/`f()` que usan los dos evaluadores. Sin esto, el cableado del
+        // navegador tendría que convertir por su cuenta: una tercera
+        // implementación de la coerción, y la tercera es la que se separa.
+        const node = attr === OUT ? textOf(checked.node) : checked.node;
+        const program: Program = attr === IF ? [...compile(node), "b"] : compile(node);
+
+        el.setAttribute(
+          compiledAttr(attr),
+          // El destino viaja CON el programa: si no, el runtime tendría que
+          // re-parsear la fórmula legible del autor para sacarlo, que es
+          // justo lo que compilar en la ingestión existe para no hacer.
+          programAttr(assign ? { n: checked.target, p: program } : program),
+        );
         compiled += 1;
 
         // El resultado inicial se escribe DENTRO del elemento, evaluado con
         // todo vacío. Así la página nace con un número visible aunque el
         // runtime nunca corra (kill-switch, JS bloqueado, CSP): sin esto la
         // degradación de un cálculo sería un hueco, no una mejora perdida.
-        if (attr === OUT) {
+        if (attr === OUT && !readsUnset(checked.node, values)) {
           try {
-            el.set_content(escapeText(String(evaluate(node, {}, () => 0) as Value)));
+            el.set_content(escapeText(String(evaluate(node, env, () => 0) as Value)));
           } catch {
             /* el contenido que ya tenía se queda: mejor eso que vaciarlo */
           }
@@ -125,6 +265,11 @@ export function compileCalcRegions(html: string): CompileDocumentResult {
   }
 
   return { html: document.toString(), regions: regions.length, compiled, issues };
+}
+
+/** `TEXTO(expr)` — el mismo nodo que escribiría el autor, construido a mano. */
+function textOf(node: Node): Node {
+  return { kind: "call", fn: "TEXTO", args: [node] };
 }
 
 /**

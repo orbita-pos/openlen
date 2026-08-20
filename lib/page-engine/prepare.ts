@@ -6,6 +6,7 @@ import { bindColorsToTokens } from "@/lib/document/bind-colors-to-tokens";
 import { ensureSingleH1 } from "@/lib/document/ensure-single-h1";
 import { repairUnreadableText } from "@/lib/document/repair-unreadable-text";
 import { validateBehaviors } from "@/lib/behaviors/validate";
+import { compileCalcRegions } from "@/lib/expr/document";
 import { objectiveBreakage } from "@/lib/generation/objective-breakage";
 import { sanitizeForPublish } from "@/lib/html-engine";
 import { passHtmlGate } from "@/lib/html-gate/document-gate";
@@ -129,12 +130,26 @@ export async function preparePage(
       const seeded = opts.profile ? seedBrandIntoHtml(h, opts.profile) : h;
       const h1 = ensureSingleH1(seeded);
       const bound = bindColorsToTokens(h1.html);
+      // Los cálculos se compilan AQUÍ y no en otro sitio por dos razones
+      // medidas: corre después de sanear+normalizar (así el programa se deriva
+      // del documento que de verdad se guarda) y ANTES de `validateBehaviors`
+      // (document-gate.ts), así que la puerta ve el documento ya compilado y
+      // una fórmula rota se trata como cualquier control muerto — al crear
+      // avisa, al editar rechaza.
+      //
+      // `beforeMeta` corre sobre bytes que el saneador ya no vuelve a mirar, y
+      // el propio HtmlGateDeps pide que quien lo use demuestre por qué es
+      // seguro. Aquí lo es por construcción, no por suerte: lo único que se
+      // inyecta es (a) un programa que sale de un AST cerrado y se serializa
+      // con los ángulos escapados como `<`, y (b) un valor inicial que se
+      // escapa como texto. Ni un `<script>`, ni un `on*`, ni una URL.
+      const calc = compileCalcRegions(bound.html);
       invariants = {
         stage: "invariants",
-        status: h1.changed || bound.bound > 0 ? "changed" : "skipped",
-        detail: `h1=${h1.changed ? "fixed" : "ok"} tokens=${bound.bound}`,
+        status: h1.changed || bound.bound > 0 || calc.compiled > 0 ? "changed" : "skipped",
+        detail: `h1=${h1.changed ? "fixed" : "ok"} tokens=${bound.bound} calc=${calc.compiled}/${calc.regions}`,
       };
-      return bound.html;
+      return calc.html;
     } catch (err) {
       // Un invariante es una mejora, nunca un peaje: si revienta, pasa el
       // documento tal cual y la puerta sigue su curso.

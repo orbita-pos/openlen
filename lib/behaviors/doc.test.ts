@@ -87,7 +87,15 @@ describe("BEHAVIOR_NAMES / BEHAVIOR_COUNT / BEHAVIOR_LABELS excluyen las recetas
       buildBehaviorsDoc: buildDocFresh,
     } = await import("./doc");
 
-    expect(count, "filter (deprecated) sigue contando en BEHAVIOR_COUNT").toBe(7);
+    // Derivado, NO cableado (el `toBe(7)` de antes se ponía rojo con cada
+    // receta nueva sin decir nada sobre lo que la prueba defiende): con una
+    // receta deprecada, el conteo activo es el del registro MENOS una.
+    const realOrder = (
+      await vi.importActual<{ BEHAVIOR_ORDER: BehaviorName[] }>("./registry")
+    ).BEHAVIOR_ORDER;
+    expect(count, "filter (deprecated) sigue contando en BEHAVIOR_COUNT").toBe(
+      realOrder.length - 1,
+    );
     expect(names.split(", "), "filter (deprecated) sigue en BEHAVIOR_NAMES").not.toContain("filter");
     expect(labels, "filter (deprecated) sigue en BEHAVIOR_LABELS ('filtro')").not.toContain("filtro");
     // Cabecera Y cuerpo de la MISMA sección ahora coinciden: ninguno de los

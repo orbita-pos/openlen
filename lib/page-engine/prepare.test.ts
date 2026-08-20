@@ -125,3 +125,35 @@ describe("una edición no paga por lo que ya estaba roto", () => {
     expect(!out.ok && out.report.behaviorIssues?.length).toBe(1);
   });
 });
+
+// L2 — la compilación de los cálculos vive DENTRO de `beforeMeta`, junto a los
+// invariantes, y no en el llamador: así el documento que la puerta valida es el
+// ya compilado, y las tres superficies (crear, Chat, Agente) lo heredan sin que
+// ninguna lo cablee por su cuenta.
+describe("los cálculos se compilan al ingerir", () => {
+  const CALC = `<!doctype html><html><body><div data-ol-calc>` +
+    `<input data-ol-val="recibo" type="number" value="1800">` +
+    `<p data-ol-out="REDONDEA(recibo * 0.72, 0)">0</p>` +
+    `</div></body></html>`;
+
+  it("el gemelo compilado y el valor de nacimiento salen del motor", async () => {
+    const out = await preparePage(CALC, { mode: "create" }, deps());
+    expect(out.ok).toBe(true);
+    expect(out.ok && out.html).toContain("data-ol-out-c=");
+    // Nace con el número visible: sin esto, una página sin JS mostraría un hueco.
+    expect(out.ok && out.html).toContain(">1296<");
+  });
+
+  it("el informe dice cuántas regiones compiló", async () => {
+    const out = await preparePage(CALC, { mode: "create" }, deps());
+    const inv = out.report.stages.find((s) => s.stage === "invariants");
+    expect(inv?.detail).toContain("calc=1/1");
+  });
+
+  it("una página sin cálculos no paga nada", async () => {
+    const out = await preparePage(PAGE, { mode: "create" }, deps());
+    const inv = out.report.stages.find((s) => s.stage === "invariants");
+    expect(inv?.detail).toContain("calc=0/0");
+    expect(out.ok && out.html).not.toContain("-c=");
+  });
+});

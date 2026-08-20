@@ -45,7 +45,8 @@ export type Degradation =
   | "control-inert";
 
 export type BehaviorName =
-  | "countdown" | "filter" | "lightbox" | "copy" | "autoplay" | "theme" | "sticky" | "tabs";
+  | "countdown" | "filter" | "lightbox" | "copy" | "autoplay" | "theme" | "sticky" | "tabs"
+  | "calc";
 
 export interface Behavior {
   name: BehaviorName;
@@ -103,6 +104,26 @@ export interface Behavior {
      *  decide la página): este campo convierte "ojalá el modelo escriba el
      *  CSS" en una garantía mecánica, verificable sin gastar un token. */
     requiresCss?: { pattern: string; why: string };
+    /** Atributos de DESCENDIENTES cuyo valor es una expresión del mini-lenguaje
+     *  (`lib/expr`). El validador las parsea y comprueba que **cada nombre que
+     *  la expresión LEE exista dentro de la misma raíz** — declarado por
+     *  `namesFrom`, o como destino de una asignación (la ruleta escribe
+     *  `elegido`, que ningún campo del visitante produce). Una fórmula que
+     *  apunta a un campo inexistente NACE MUERTA, y se dice por el mismo canal
+     *  que un control mal cableado.
+     *
+     *  Genérico como el resto del `schema` (`validate.ts` no puede tener un
+     *  if/else por receta — lo prohíbe su propia cabecera): quien interpreta
+     *  esto no sabe que existe `calc`. Y el parseo y la definición de "nombre
+     *  declarado" se delegan en `lib/expr/document.ts`, que es el MISMO código
+     *  que usa el compilador de la ingestión — dos definiciones de eso serían
+     *  dos que se separan en silencio. */
+    exprAttrs?: {
+      /** El atributo que DECLARA un nombre dentro de la raíz. */
+      namesFrom: string;
+      /** Los atributos con fórmula. `assign` = "nombre = expresión". */
+      formulas: { attr: string; assign?: boolean }[];
+    };
   };
 
   js: string;

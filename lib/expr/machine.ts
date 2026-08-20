@@ -49,5 +49,12 @@ b=S.pop();a=S.pop();
 S.push(c=="+"?n(a)+n(b):c=="-"?n(a)-n(b):c=="*"?n(a)*n(b):c=="/"?(n(b)?n(a)/n(b):0):c=="%"?(n(b)?n(a)%n(b):0):c=="="?e(a,b):c=="!="?!e(a,b):c=="<"?n(a)<n(b):c=="<="?n(a)<=n(b):c==">"?n(a)>n(b):c==">="?n(a)>=n(b):0)}
 return S.pop()}`;
 
-/** Lo que ocupa de verdad en la página, en bytes UTF-8. */
-export const MACHINE_BYTES = Buffer.byteLength(MACHINE_JS, "utf8");
+/** Lo que ocupa de verdad en la página, en bytes UTF-8.
+ *
+ *  `TextEncoder` y no `Buffer.byteLength`: `lib/behaviors/recipes/calc.ts`
+ *  importa este módulo, y la cadena `registry → build.ts → preview` termina en
+ *  un componente CLIENTE. Un `Buffer` evaluado a nivel de módulo entra en el
+ *  bundle del navegador —el bundler no puede probar que es puro para
+ *  eliminarlo— y `Buffer` no existe ahí. `TextEncoder` es estándar en los dos
+ *  entornos y cuenta exactamente los mismos bytes. */
+export const MACHINE_BYTES = new TextEncoder().encode(MACHINE_JS).length;

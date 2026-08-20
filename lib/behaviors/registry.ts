@@ -9,6 +9,7 @@ import { autoplay } from "./recipes/autoplay";
 import { theme } from "./recipes/theme";
 import { sticky } from "./recipes/sticky";
 import { tabs } from "./recipes/tabs";
+import { calc } from "./recipes/calc";
 import type { Behavior, BehaviorName } from "./types";
 
 // Record completo desde el Task 13 (última receta, séptima y cierre del
@@ -27,6 +28,7 @@ export const BEHAVIORS: Record<BehaviorName, Behavior> = {
   theme,
   sticky,
   tabs,
+  calc,
 };
 
 /** Orden determinista de emisión. NUNCA el orden de aparición en el HTML: un
@@ -34,5 +36,5 @@ export const BEHAVIORS: Record<BehaviorName, Behavior> = {
  *  sello CSP (crates/html-engine/src/publish/seal.rs hace un self-check y
  *  fallaría con "inline script hash drift"). */
 export const BEHAVIOR_ORDER: BehaviorName[] = [
-  "countdown", "filter", "lightbox", "copy", "autoplay", "theme", "sticky", "tabs",
+  "countdown", "filter", "lightbox", "copy", "autoplay", "theme", "sticky", "tabs", "calc",
 ];

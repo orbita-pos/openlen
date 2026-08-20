@@ -12,7 +12,12 @@ describe("compilar una región", () => {
     ));
     // La legible se queda: es lo que el Chat edita y lo que un humano entiende.
     expect(out.html).toContain(`data-ol-out="recibo * 0.72"`);
-    expect(out.html).toContain(`data-ol-out-c="[&quot;$recibo&quot;,0.72,&quot;*&quot;]"`);
+    // Envuelto en TEXTO(...): el programa devuelve YA convertido lo que el DOM
+    // necesita, con la misma `t()` en los dos evaluadores. Sin eso, el
+    // cableado del navegador tendría que convertir por su cuenta.
+    expect(out.html).toContain(
+      `data-ol-out-c="[&quot;$recibo&quot;,0.72,&quot;*&quot;,&quot;@TEXTO:1&quot;]"`,
+    );
     expect(out.issues).toEqual([]);
     expect(out.compiled).toBe(1);
   });
@@ -67,7 +72,7 @@ describe("lo que NACE MUERTO se dice al ingerir, no en la página del visitante"
   it("un destino de asignación SÍ cuenta como declarado — la ruleta lo necesita", () => {
     const out = compileCalcRegions(region(
       `<ul data-ol-val="nombres"><li data-ol-item>Ana</li></ul>` +
-      `<button data-ol-when="clic" data-ol-set="elegido = AZAR(nombres)">Girar</button>` +
+      `<button data-ol-set="elegido = AZAR(nombres)">Girar</button>` +
       `<p data-ol-out="elegido">—</p>`,
     ));
     expect(out.issues).toEqual([]);
@@ -80,6 +85,74 @@ describe("lo que NACE MUERTO se dice al ingerir, no en la página del visitante"
     ));
     expect(out.compiled).toBe(1);
     expect(out.issues).toHaveLength(1);
+  });
+});
+
+describe("lo que depende de un gesto que aún no ocurrió", () => {
+  // Sin esta regla la ruleta nacería diciendo "0" — la página muerta que todo
+  // este sistema existe para impedir.
+  it("respeta el texto del autor en vez de calcular un cero", () => {
+    const out = compileCalcRegions(region(
+      `<ul data-ol-val="nombres"><li data-ol-item>Ana</li></ul>` +
+      `<button data-ol-set="elegido = AZAR(nombres)">Girar</button>` +
+      `<p data-ol-out="elegido">Gira para elegir</p>`,
+    ));
+    expect(out.html).toContain(">Gira para elegir<");
+    // Pero SÍ se compila: en cuanto el visitante gire, hay programa que correr.
+    expect(out.html).toContain("data-ol-out-c=");
+  });
+
+  it("una fórmula que sólo lee campos SÍ se calcula al nacer", () => {
+    const out = compileCalcRegions(region(
+      `<input data-ol-val="x"><p data-ol-out="x + 5">—</p>`,
+    ));
+    expect(out.html).toContain(">5<");
+  });
+});
+
+describe("el gemelo de una asignación lleva su destino", () => {
+  // Si no, el runtime tendría que re-parsear la fórmula legible del autor para
+  // saber a qué nombre asigna — justo lo que compilar en la ingestión evita.
+  it("va como {n,p}, no como programa suelto", () => {
+    const out = compileCalcRegions(region(
+      `<ul data-ol-val="nombres"><li data-ol-item>Ana</li></ul>` +
+      `<button data-ol-set="elegido = AZAR(nombres)">Girar</button>`,
+    ));
+    const attr = /data-ol-set-c="([^"]*)"/.exec(out.html)?.[1] ?? "";
+    const twin = JSON.parse(attr.replace(/&quot;/g, '"').replace(/&amp;/g, "&"));
+    expect(twin.n).toBe("elegido");
+    expect(twin.p).toEqual(["$nombres", "@AZAR:1"]);
+  });
+});
+
+describe("el valor de nacimiento habla el idioma del navegador", () => {
+  // `String(true)` sería "true" y `String([1,2])` sería "1,2" — la máquina del
+  // navegador dice "sí" y "1, 2". Envolver en TEXTO(...) hace que los dos
+  // lados usen LA MISMA conversión, en vez de dos que se separan.
+  it("un booleano nace como sí/no, no como true/false", () => {
+    const out = compileCalcRegions(region(
+      `<input data-ol-val="x" value="9"><p data-ol-out="x > 7">?</p>`,
+    ));
+    expect(out.html).toContain(">sí<");
+    expect(out.html).not.toContain(">true<");
+  });
+
+  it("y el falso también — nunca 'false'", () => {
+    const out = compileCalcRegions(region(
+      `<input data-ol-val="x" value="2"><p data-ol-out="x > 7">?</p>`,
+    ));
+    expect(out.html).toContain(">no<");
+    expect(out.html).not.toContain(">false<");
+  });
+
+  // El valor de nacimiento sale del DOCUMENTO, no de un entorno vacío: si no,
+  // la página diría "ahorras 0" junto a un campo que dice 1800.
+  it("el campo con valor inicial se lee, no se ignora", () => {
+    const out = compileCalcRegions(region(
+      `<input data-ol-val="recibo" type="number" value="1800">` +
+      `<p data-ol-out="REDONDEA(recibo * 0.72, 0)">?</p>`,
+    ));
+    expect(out.html).toContain(">1296<");
   });
 });
 
@@ -141,6 +214,6 @@ describe("el gemelo compilado no lleva marcado crudo", () => {
     ));
     const attr = /data-ol-out-c="([^"]*)"/.exec(out.html)?.[1] ?? "";
     const json = attr.replace(/&quot;/g, '"').replace(/&amp;/g, "&");
-    expect(JSON.parse(json)).toEqual(["'<b>"]);
+    expect(JSON.parse(json)).toEqual(["'<b>", "@TEXTO:1"]);
   });
 });

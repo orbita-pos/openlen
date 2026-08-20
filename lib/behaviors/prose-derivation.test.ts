@@ -90,7 +90,16 @@ describe("Arreglo 1 — los sitios en prosa DERIVAN de BEHAVIOR_ORDER, no lo cop
     const { DESIGN_GUIDANCE } = await import("../design-guidance");
     const { buildAgentSystemPrompt } = await import("../agent/catalog");
 
-    expect(fakeCount, "el registro mockeado debe tener 9 conductas (8 reales + 1 falsa)").toBe(9);
+    // Derivado, NO cableado: un `toBe(9)` a mano se pone rojo cada vez que se
+    // registra una receta, y el rojo no dice nada sobre la propiedad que esta
+    // prueba defiende — sólo que el catálogo creció. Lo que de verdad se
+    // afirma es "el registro mockeado tiene UNA receta más que el real".
+    const realOrder = (
+      await vi.importActual<{ BEHAVIOR_ORDER: BehaviorName[] }>("./registry")
+    ).BEHAVIOR_ORDER;
+    expect(fakeCount, "el registro mockeado debe tener una receta más que el real").toBe(
+      realOrder.length + 1,
+    );
     expect(fakeNames).toContain(FAKE_NAME);
     expect(fakeLabels).toContain("efecto de confeti");
 

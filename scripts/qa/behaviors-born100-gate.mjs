@@ -1,15 +1,17 @@
 // scripts/qa/behaviors-born100-gate.mjs
 //
 // Born-100 acceptance gate for OpenLen "Conductas" (Task 14, the Phase-2
-// gate). Publishes a real page carrying all 7 registered behaviors through
+// gate). Publishes a real page carrying EVERY registered behavior through
 // the REAL publish pipeline (sanitize -> bakeBehaviors -> CSP seal), serves
 // the exact index.html that lands on disk over plain http, then asserts:
 //
 //   - ZERO Content-Security-Policy violations in a real browser console
 //     (the titular assertion — see the header note below on why this is
 //     the only test in the whole project that can catch a CSP hash drift)
-//   - all 7 behaviors work end-to-end (countdown/filter/lightbox/copy/
-//     autoplay/theme/sticky) as observed via Puppeteer, not jsdom
+//   - every registered behavior works end-to-end (countdown/filter/lightbox/
+//     copy/autoplay/theme/sticky/tabs/calc) as observed via Puppeteer, not
+//     jsdom. BEHAVIOR_GATE_ASSERTIONS below makes that list self-enforcing:
+//     register a recipe without an assertion here and the gate fails loudly.
 //   - the creator's own <script> and onclick= do NOT survive the sanitizer
 //   - Lighthouse mobile-throttled: performance >=99, a11y/best-practices/
 //     seo = 100 (Born-100), same thresholds as scripts/qa/3d-born100-gate.mjs
@@ -18,7 +20,7 @@
 // sanitizer and the CSP seal (crates/html-engine/src/publish/seal.rs)
 // hashes each inline <script> it finds in the SERIALIZED output. If that
 // hash ever drifts from the byte-identical script the browser actually
-// receives, Chrome silently refuses to run the script — all 7 behaviors die
+// receives, Chrome silently refuses to run the script — every behavior dies
 // in production while every jsdom unit test in lib/behaviors/ stays green,
 // because jsdom never enforces CSP. Only a real browser hitting a real
 // served artifact can catch that. See lib/behaviors/registry.ts, build.ts,
@@ -63,7 +65,7 @@ import { BEHAVIORS_SCRIPT_BUDGET_BYTES } from "../../lib/behaviors/build.ts";
 // MARKERS (used further down by the static substring checks) is DERIVED from
 // the registry, not hand-copied, so a new recipe's marker is automatically
 // picked up. That is NOT enough on its own: this gate's actual reason to
-// exist is the 8 hand-written Puppeteer interactions below (real clicks /
+// exist is the hand-written Puppeteer interactions below (real clicks /
 // scrolls / computed-style reads through the real seal) — a marker merely
 // showing up in a substring check proves nothing about whether the recipe
 // works. Those interactions can't be generated generically (a generic "does
@@ -71,7 +73,7 @@ import { BEHAVIORS_SCRIPT_BUDGET_BYTES } from "../../lib/behaviors/build.ts";
 // regressions logged in lib/behaviors/conformance.test.ts's "aislamiento
 // entre recetas" comment), so they stay hand-written, one safeAssert per
 // behavior — which means nothing FORCES a new one to get written when
-// behavior #8 is registered. BEHAVIOR_GATE_ASSERTIONS is that missing force:
+// the next behavior is registered. BEHAVIOR_GATE_ASSERTIONS is that missing force:
 // the manually-maintained ledger of which behavior has a numbered safeAssert
 // below (see the numbered safeAssert/record calls further down). If the
 // registry grows and this ledger doesn't move with it, the gate fails here,
@@ -85,6 +87,7 @@ const BEHAVIOR_GATE_ASSERTIONS = {
   theme: 7,
   sticky: 8,
   tabs: 10,
+  calc: 11,
 };
 const MARKERS = BEHAVIOR_ORDER.map((name) => BEHAVIORS[name].marker);
 {
@@ -147,7 +150,7 @@ function buildPage(origin) {
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="description" content="Pagina de aceptacion Born-100 para las 7 conductas de OpenLen.">
+<meta name="description" content="Pagina de aceptacion Born-100 para las conductas de OpenLen.">
 <link rel="icon" href="data:,">
 <title>Gate de conductas — Born-100</title>
 <style>
@@ -171,6 +174,9 @@ function buildPage(origin) {
   [data-ol-filter-group] button[aria-pressed="true"]{background:#111827;color:#fff}
   [data-ol-filter-target]{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:16px}
   [data-ol-filter-target] article{border:1px solid #d1d5db;border-radius:12px;padding:16px;color:#111827}
+  [data-ol-calc]{display:grid;gap:12px;max-width:420px}
+  [data-ol-calc] input{font:inherit;padding:8px 12px;border:1.5px solid #d1d5db;border-radius:8px}
+  [data-ol-calc] [data-ol-out]{font-weight:800}
   [data-ol-countdown]{display:flex;gap:20px;flex-wrap:wrap;font-variant-numeric:tabular-nums}
   [data-ol-countdown] div{text-align:center}
   [data-ol-countdown] span{display:block;font-size:1.8rem;font-weight:800}
@@ -273,6 +279,17 @@ function buildPage(origin) {
     </div>
   </section>
 
+  <section id="calc">
+    <h2>Calculo</h2>
+    <div data-ol-calc>
+      <label>Tu recibo de luz al mes
+        <input id="recibo" data-ol-val="recibo" type="number" value="1800">
+      </label>
+      <p>Ahorrarias <strong data-ol-out="REDONDEA(recibo * 0.72, 0)" aria-live="polite">1296</strong> al mes</p>
+      <p data-ol-if="recibo > 3000">Con ese consumo te conviene el plan grande.</p>
+    </div>
+  </section>
+
   <div class="spacer" aria-hidden="true"></div>
 
   <section id="fin">
@@ -371,7 +388,20 @@ process.env.OPENLEN_IMAGE_BAKE = "0";
 process.env.OPENLEN_FONT_BAKE = "0";
 
 const { publishToDir } = await import("../../lib/publish/filesystem.ts");
-const publishResult = await publishToDir({ subdomain: SUB, html: buildPage(origin) });
+// La compilacion de los calculos ocurre en la INGESTION (preparePage ->
+// beforeMeta), no al publicar: para cuando publishToDir corre, el programa ya
+// viaja en el atributo. Reproducirlo aqui es lo fiel — asi este gate ejercita
+// la costura COMPLETA (ingestion -> publish -> sello CSP -> navegador real) en
+// vez de una pagina que nadie ingirio.
+const { compileCalcRegions } = await import("../../lib/expr/document.ts");
+const compiled = compileCalcRegions(buildPage(origin));
+if (compiled.issues.length > 0) {
+  const lines = ["GATE FAILED — la region de calculo de buildPage() no compila:"];
+  for (const i of compiled.issues) lines.push(`  - ${i.attr}="${i.formula}": ${i.message}`);
+  console.error("\n" + lines.join("\n"));
+  process.exit(1);
+}
+const publishResult = await publishToDir({ subdomain: SUB, html: compiled.html });
 releaseDir = join(publishRoot, SUB, "releases", publishResult.sha);
 
 console.log(`Published ${SUB} -> ${releaseDir} (sha ${publishResult.sha})`);
@@ -397,6 +427,22 @@ if (!servedHtml.includes("data-ol-csp")) {
       "didn't run or self-check failed and degraded to unsealed output. The " +
       "'zero CSP violations' browser assertion would be VACUOUS if this ships.",
   );
+}
+// calc: el valor de nacimiento (1800 * 0.72 = 1296) lo escribe la INGESTION
+// dentro del elemento, y tiene que sobrevivir al publish y al sello — es lo
+// unico que ve un visitante sin JS. Se comprueba sobre el HTML SERVIDO, no en
+// el navegador: alli el runtime ya corrio, asi que leerlo con Puppeteer
+// probaria el runtime otra vez y no la degradacion. Sin esto, una pagina con
+// JS bloqueado enseñaria un hueco — o peor, un numero falso.
+if (!/data-ol-out="[^"]*"[^>]*>1296</.test(servedHtml)) {
+  staticFail.push(
+    "calc: el valor de nacimiento (1296) no esta en el HTML servido — un visitante " +
+      "sin JS no veria ningun resultado. La ingestion (compileCalcRegions) debe " +
+      "escribirlo DENTRO del elemento y sobrevivir publish + sello.",
+  );
+}
+if (!servedHtml.includes("data-ol-out-c=")) {
+  staticFail.push("calc: el gemelo compilado (data-ol-out-c) no llego al HTML servido");
 }
 if (servedHtml.includes("__GATE_CREATOR_SCRIPT__")) {
   staticFail.push("creator <script>window.__GATE_CREATOR_SCRIPT__...</script> text survived sanitizeForPublish");
@@ -611,8 +657,37 @@ try {
     };
   });
 
+  await safeAssert(11, "calc: teclear recalcula el numero y revela el bloque condicional (sello real)", async () => {
+    const out = () => page.$eval("[data-ol-out]", (el) => el.textContent.trim());
+    const cond = () => page.$eval("[data-ol-if]", (el) => getComputedStyle(el).display);
+    // OJO: aqui el runtime YA corrio, asi que esto NO es el valor de
+    // nacimiento — ese se comprueba sobre el HTML servido, arriba, en las
+    // static checks. Lo que se afirma aqui es que el runtime coincide con el:
+    // los dos deben decir 1296 sobre el mismo documento.
+    const born = await out();
+    const condBorn = await cond();
+    // Vaciar por CSSOM y luego teclear: un `click({clickCount:3})` sobre un
+    // input[type=number] no selecciona su contenido de forma fiable en headless
+    // — dejaba "1800"+"5000" = 18005000 y la asercion leia un numero enorme que
+    // en realidad era CORRECTO. Poner value="" no dispara `input`, pero el
+    // page.type de la linea siguiente si, asi que el ultimo recalculo ve 5000.
+    await page.$eval("#recibo", (el) => {
+      el.value = "";
+    });
+    await page.type("#recibo", "5000");
+    await wait(80);
+    const after = await out();
+    const condAfter = await cond();
+    return {
+      pass:
+        born === "1296" && condBorn === "none" && // 1800 no pasa el umbral
+        after === "3600" && condAfter !== "none", // 5000 * 0.72, y revela el bloque
+      detail: `alMontar(out=${born},if=${condBorn}) tras teclear 5000(out=${after},if=${condAfter})`,
+    };
+  });
+
   // Assertion 1 (the titular one) is evaluated LAST, over everything the
-  // 8 interactions above triggered — a hash-drift bug would surface here
+  // interactions above triggered — a hash-drift bug would surface here
   // as a browser-generated console error regardless of which behavior it
   // broke.
   record(
