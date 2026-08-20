@@ -47,7 +47,11 @@ export interface PageEvalCase {
 // crece, así que la comparación contra una línea base de 1.0 se descarta a
 // propósito — comparar 14 páginas contra 12 diría "+2 limpias" por aritmética,
 // no por calidad.
-export const PAGE_COHORT_VERSION = "page-cohort/1.1";
+//
+// 1.1 → 1.2: dos casos más de L3 (listas por posición y comprensiones). Miden
+// lo que ninguna prueba unitaria puede: si el MODELO usa las piezas nuevas
+// cuando el brief las pide, ahora que el `doc` se las enseña.
+export const PAGE_COHORT_VERSION = "page-cohort/1.2";
 
 export const PAGE_COHORT: readonly PageEvalCase[] = Object.freeze([
   // ── cotidiano ────────────────────────────────────────────────────────────
@@ -147,6 +151,23 @@ export const PAGE_COHORT: readonly PageEvalCase[] = Object.freeze([
     tag: "cotidiano",
     brief:
       "Página para una rifa de fin de año de una tienda de bicicletas. Que tenga los nombres de los participantes y un botón que elija a uno al azar delante de todos.",
+    expectLang: "es",
+    expectCalc: true,
+  },
+
+  {
+    id: "quiz",
+    tag: "cotidiano",
+    brief:
+      "Escuela de manejo en Mérida. Quiero un test de 5 preguntas de señales de tránsito, que el visitante avance una por una y al final le diga cuántas acertó y si aprobó (4 de 5).",
+    expectLang: "es",
+    expectCalc: true,
+  },
+  {
+    id: "menu-precio",
+    tag: "cotidiano",
+    brief:
+      "Cafetería de especialidad en Xalapa. Que el visitante elija su bebida de una lista y la página le muestre el precio de esa bebida al instante, y cuántas opciones cuestan menos de 60 pesos.",
     expectLang: "es",
     expectCalc: true,
   },

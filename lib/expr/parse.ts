@@ -239,12 +239,27 @@ export function parseAssignments(src: string): ParseResult<Assignment[]> {
   return { ok: true, node: out };
 }
 
-/** Corta por `;` respetando las comillas. Sin esto, un texto con punto y coma
- *  dentro partiría la asignación en dos mitades que no parsean. */
+/**
+ * Corta por `;` **o por `,`**, respetando comillas y paréntesis.
+ *
+ * La coma no estaba en el diseño: yo elegí `;` y ya. La primera eval con el
+ * prompt de L3 mostró que el modelo escribe `pregunta = 1, aciertos = 0` —
+ * que es lo que escribiría cualquiera en español. Siete fórmulas muertas en
+ * una sola página, todas en cascada de ese separador.
+ *
+ * Se acepta la coma en vez de insistir en el punto y coma: el lenguaje se
+ * adapta a quien lo escribe, no al revés (Nardi). Y el `;` se queda porque ya
+ * está enseñado y no cuesta nada.
+ *
+ * La PROFUNDIDAD de paréntesis es obligatoria desde que la coma cuenta:
+ * `aciertos = SI(a, 1, 0)` tiene comas DENTRO de una llamada, y partirlas ahí
+ * daría tres trozos que no parsean. Con `;` solo no hacía falta.
+ */
 function splitTop(src: string): string[] {
   const partes: string[] = [];
   let cur = "";
   let quote = "";
+  let depth = 0;
   for (const ch of src) {
     if (quote) {
       cur += ch;
@@ -252,7 +267,9 @@ function splitTop(src: string): string[] {
       continue;
     }
     if (ch === '"' || ch === "'") { quote = ch; cur += ch; continue; }
-    if (ch === ";") { partes.push(cur); cur = ""; continue; }
+    if (ch === "(") depth += 1;
+    else if (ch === ")") depth -= 1;
+    else if (depth === 0 && (ch === ";" || ch === ",")) { partes.push(cur); cur = ""; continue; }
     cur += ch;
   }
   partes.push(cur);

@@ -111,21 +111,33 @@ export const calc: Behavior = {
   // 4,300 deja ~97B de margen, el mismo orden que el que tabs se dejó (937 de
   // 950). Si el intérprete crece, se ve.
   budgetBytes: 4300,
-  docBudgetChars: 1200,
+  // 1.200 → 2.000, y es el ÚNICO de los tres techos de esta receta que puede
+  // hacer daño fuera de ella: la sección CONDUCTAS ya es el 45% del prompt de
+  // crear, y lo pagan TODAS las generaciones, calculen o no. Por eso este
+  // número no se sube y ya — se sube y se MIDE con `npm run evals:pages`
+  // contra lib/evals/baseline.json.
+  //
+  // Qué compra los 800 caracteres: cuatro piezas nuevas que sin enseñarse no
+  // existen (el modelo no las va a adivinar), y la regla del "un solo control
+  // por nombre" — que no es cosmética: la primera eval con briefs de cálculo
+  // pilló al modelo emitiendo un campo Y un deslizador para el mismo dato, con
+  // el deslizador naciendo muerto.
+  docBudgetChars: 2000,
   degradation: "content-intact",
   // Un número que cambia sin recargar hay que anunciarlo.
   a11y: [{ selector: "[data-ol-out]", attr: "aria-live" }],
   doc: {
     label: "cálculo en vivo",
-    when: "El visitante escribe o elige algo y la página responde con un número, un texto o un bloque que aparece: cotizadores, presupuestos, calculadoras de ahorro, divisores de cuenta, quizzes, sorteos. Fórmulas: SUMA MIN MAX REDONDEA CUENTA SI AZAR TEXTO UNE MONEDA, operadores + - * / % = != < <= > >= Y O NO, y SOLO nombres declarados con data-ol-val en la MISMA región.",
-    whenNot: "No lo uses para nada que deba guardarse o enviarse (formulario, reserva, pedido): eso es un módulo — la página piensa, no recuerda ni habla con nadie. Tampoco para texto fijo. Todo data-ol-out/-if/-set va DENTRO de un [data-ol-calc], y todo nombre que una fórmula lea debe existir como data-ol-val en esa región o ser destino de un data-ol-set; si no, no se publica.",
-    example: `<div data-ol-calc>
+    when: "El visitante escribe, elige o hace clic y la página responde al instante con un número, un texto o un bloque que aparece: cotizadores, presupuestos, calculadoras, quizzes, sorteos, comparadores, contadores, juegos sencillos. Funciones: SUMA MIN MAX REDONDEA CUENTA SI AZAR TEXTO UNE MONEDA ELEMENTO POSICION TODOS ALGUNO CUENTA_SI FILTRA. Operadores + - * / % = != < <= > >= Y O NO. ELEMENTO(lista, 2) es el segundo (el primero es 1); POSICION(lista, valor) dice su lugar; dos listas ALINEADAS arman un catálogo. TODOS/ALGUNO/CUENTA_SI/FILTRA recorren una lista; dentro, CADA es el elemento: CUENTA_SI(respuestas, CADA = 'sí').",
+    whenNot: "No lo uses para nada que deba guardarse o enviarse (formulario, reserva, pedido): eso es un módulo — la página piensa, no recuerda. Tampoco para texto fijo. REGLAS: el [data-ol-calc] va en un contenedor que ENVUELVA los campos y los resultados, nunca en el botón — todo data-ol-out/-if/-set debe quedar dentro. UN SOLO control por nombre: nunca un campo Y un deslizador para el mismo dato, el segundo nacería muerto. Todo data-ol-val debe leerlo alguna fórmula, y todo nombre que una fórmula lea debe existir como data-ol-val o en data-ol-state (varias, separadas por coma). CADA sólo existe dentro de TODOS/ALGUNO/CUENTA_SI/FILTRA. Si algo falla, no se publica.",
+    example: `<div data-ol-calc data-ol-state="visto = 1">
   <input data-ol-val="recibo" type="number" value="1800">
   <p>Ahorras <strong data-ol-out="MONEDA(recibo * 0.72, 0)" aria-live="polite">1,296</strong> al mes</p>
   <p data-ol-if="recibo > 3000">Te conviene el plan grande.</p>
-  <ul data-ol-val="nombres"><li data-ol-item>Ana</li><li data-ol-item>Luis</li></ul>
-  <button data-ol-set="elegido = AZAR(nombres)">Sortear</button>
-  <p data-ol-out="elegido">Aún nadie</p>
+  <ul data-ol-val="planes"><li data-ol-item>Básico</li><li data-ol-item>Pro</li></ul>
+  <ul data-ol-val="precios"><li data-ol-item>99</li><li data-ol-item>199</li></ul>
+  <p data-ol-out="UNE(ELEMENTO(planes, visto), ': ', MONEDA(ELEMENTO(precios, visto), 0))">Básico: 99</p>
+  <button data-ol-set="visto = SI(visto = 1, 2, 1)">Ver el otro</button>
 </div>`,
   },
   status: "stable",

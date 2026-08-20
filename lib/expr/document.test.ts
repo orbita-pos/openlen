@@ -351,3 +351,74 @@ describe("un campo que nadie lee es un control muerto", () => {
     expect(out.issues.filter((i) => i.message.includes("no lo lee"))).toEqual([]);
   });
 });
+
+/**
+ * Los dos fallos que la PRIMERA eval de L3 destapó, cada uno con su prueba.
+ * Ninguno era hipotético: los dos salieron de páginas que el modelo escribió.
+ */
+describe("lo que la eval de L3 enseñó", () => {
+  // Yo elegí `;` como separador sin preguntarle a nadie. El modelo escribió
+  // `pregunta = 1, aciertos = 0` — que es lo que escribiría cualquiera en
+  // español — y SIETE fórmulas de una misma página murieron en cascada.
+  it("la coma separa asignaciones igual que el punto y coma", () => {
+    const out = compileCalcRegions(
+      `<!doctype html><html><body><div data-ol-calc data-ol-state="pregunta = 1, aciertos = 0">` +
+      `<p data-ol-out="aciertos">0</p><p data-ol-if="pregunta > 5">Fin</p>` +
+      `</div></body></html>`,
+    );
+    expect(out.issues).toEqual([]);
+    expect(twinOf(out.html, "data-ol-state-c")).toEqual({ pregunta: 1, aciertos: 0 });
+  });
+
+  it("y las comas DE UNA LLAMADA no parten nada", () => {
+    const out = compileCalcRegions(
+      `<!doctype html><html><body><div data-ol-calc data-ol-state="n = 0">` +
+      `<button data-ol-set="n = SI(n = 0, 1, 0), n = MAX(n, 1)">x</button>` +
+      `<p data-ol-out="n">0</p></div></body></html>`,
+    );
+    expect(out.issues).toEqual([]);
+    expect(twinOf(out.html, "data-ol-set-c")).toHaveLength(2);
+  });
+
+  // El modelo puso `data-ol-calc` sobre el BOTÓN del sorteo. La región existía,
+  // el botón estaba dentro, y las salidas quedaron fuera: cero compiladas y
+  // CERO issues. Silencio total sobre una página que no calculaba nada.
+  it("una fórmula fuera de toda región se reporta, y dice qué hacer", () => {
+    const out = compileCalcRegions(
+      `<!doctype html><html><body>` +
+      `<button data-ol-calc data-ol-state="x = 1" data-ol-set="x = 2">Girar</button>` +
+      `<p data-ol-out="x">1</p>` +
+      `</body></html>`,
+    );
+    const fuera = out.issues.find((i) => i.message.includes("FUERA"));
+    expect(fuera?.attr).toBe("data-ol-out");
+    expect(fuera?.message).toContain("ENVOLVER");
+  });
+
+  it("y una que sí está dentro no se acusa", () => {
+    const out = compileCalcRegions(region(
+      `<input data-ol-val="x" value="2"><p data-ol-out="x * 2">4</p>`,
+    ));
+    expect(out.issues).toEqual([]);
+  });
+});
+
+describe("fórmulas sin NINGUNA región", () => {
+  // El hueco de mi propio arreglo: el barrido de huérfanas vivía detrás de un
+  // `return` temprano que se disparaba cuando no había ni un `data-ol-calc`.
+  // Un documento con `data-ol-out` y sin contenedor —el modelo olvidando
+  // envolver— se iba en silencio, que es exactamente lo que este archivo
+  // existe para impedir.
+  it("se reportan aunque no exista ni un data-ol-calc", () => {
+    const out = compileCalcRegions(
+      `<!doctype html><html><body><p data-ol-out="x * 2">0</p></body></html>`,
+    );
+    expect(out.regions).toBe(0);
+    expect(out.issues.some((i) => i.message.includes("FUERA"))).toBe(true);
+  });
+
+  it("un documento SIN nada de cálculo sigue saliendo byte-idéntico", () => {
+    const html = `<!doctype html><html><body><p>hola</p></body></html>`;
+    expect(compileCalcRegions(html)).toEqual({ html, regions: 0, compiled: 0, issues: [] });
+  });
+});

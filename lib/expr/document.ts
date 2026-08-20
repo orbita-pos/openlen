@@ -288,7 +288,13 @@ function readsUnset(node: Node, values: ReadonlySet<string>): boolean {
  * gobierna las conductas, resuelta en un solo sitio (`lib/page-engine`).
  */
 export function compileCalcRegions(html: string): CompileDocumentResult {
-  if (!html.includes(REGION)) return { html, regions: 0, compiled: 0, issues: [] };
+  // Se sale sin tocar nada SÓLO si el documento no menciona NINGUNA pieza del
+  // sistema. Salir en cuanto falta `data-ol-calc` era un hueco: un documento con
+  // `data-ol-out` y sin contenedor —el modelo olvidando envolver— se iba en
+  // silencio, que es justo el fallo que este archivo existe para impedir.
+  if (!html.includes(REGION) && !FORMULA_ATTRS.some((f) => html.includes(f.attr))) {
+    return { html, regions: 0, compiled: 0, issues: [] };
+  }
 
   let document: HTMLElement;
   try {
@@ -298,7 +304,6 @@ export function compileCalcRegions(html: string): CompileDocumentResult {
   }
 
   const regions = document.querySelectorAll(`[${REGION}]`);
-  if (regions.length === 0) return { html, regions: 0, compiled: 0, issues: [] };
 
   const issues: CalcIssue[] = [];
   let compiled = 0;
@@ -400,7 +405,34 @@ export function compileCalcRegions(html: string): CompileDocumentResult {
     }
   }
 
+  // Una fórmula FUERA de toda región no la compila nadie y nadie se entera.
+  //
+  // Tampoco es hipotético: en la eval de L3 el modelo puso `data-ol-calc` sobre
+  // el BOTÓN del sorteo en vez de sobre un contenedor que envolviera los
+  // campos y las salidas. La región existía, el botón estaba dentro de ella, y
+  // los `data-ol-out` quedaban fuera — cero fórmulas compiladas y cero issues.
+  // Silencio absoluto sobre una página entera que no calculaba nada.
+  for (const { attr } of FORMULA_ATTRS) {
+    for (const el of document.querySelectorAll(`[${attr}]`)) {
+      if (closestRegion(el)) continue;
+      issues.push({
+        attr,
+        formula: el.getAttribute(attr) ?? "",
+        message: `está FUERA de todo [${REGION}] — el ${REGION} tiene que ENVOLVER los campos y los resultados, no ir sobre el botón`,
+      });
+    }
+  }
+
   return { html: document.toString(), regions: regions.length, compiled, issues };
+}
+
+/** ¿Vive dentro de una región de cálculo? (ancestro-o-sí-mismo, como
+ *  `Element.closest` — el mismo caminado que usa `validate.ts`). */
+function closestRegion(el: HTMLElement): boolean {
+  for (let cur: HTMLElement | null = el; cur; cur = cur.parentNode) {
+    if (cur.getAttribute?.(REGION) !== undefined) return true;
+  }
+  return false;
 }
 
 /** `TEXTO(expr)` — el mismo nodo que escribiría el autor, construido a mano. */
