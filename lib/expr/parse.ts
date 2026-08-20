@@ -10,7 +10,9 @@
 // este archivo NUNCA cae en un caso "genérico".
 
 import {
+  BOUND_NAME,
   FUNCTIONS,
+  LAZY_FUNCTIONS,
   MAX_NODES,
   type Assignment,
   type BinaryOp,
@@ -214,7 +216,50 @@ export function parseExpression(src: string): ParseResult<Node> {
   return { ok: true, node };
 }
 
-/** `nombre = expresión`, la única forma de `data-ol-set`. */
+/**
+ * `nombre = expresión; otro = expresión` — un gesto que hace VARIAS cosas.
+ *
+ * Sin esto no hay turnos: un tres en raya necesita, con un solo clic, poner la
+ * ficha Y cambiar de jugador. Se separa por `;` FUERA de comillas, para que
+ * `msg = 'hola; adiós'` siga siendo una sola asignación.
+ */
+export function parseAssignments(src: string): ParseResult<Assignment[]> {
+  const partes = splitTop(src).filter((p) => p.trim() !== "");
+  if (partes.length === 0) {
+    return { ok: false, error: { message: "falta el = de la asignación", at: 0 } };
+  }
+  const out: Assignment[] = [];
+  let at = 0;
+  for (const parte of partes) {
+    const one = parseAssignment(parte);
+    if (!one.ok) return { ok: false, error: { ...one.error, at: one.error.at + at } };
+    out.push(one.node);
+    at += parte.length + 1;
+  }
+  return { ok: true, node: out };
+}
+
+/** Corta por `;` respetando las comillas. Sin esto, un texto con punto y coma
+ *  dentro partiría la asignación en dos mitades que no parsean. */
+function splitTop(src: string): string[] {
+  const partes: string[] = [];
+  let cur = "";
+  let quote = "";
+  for (const ch of src) {
+    if (quote) {
+      cur += ch;
+      if (ch === quote) quote = "";
+      continue;
+    }
+    if (ch === '"' || ch === "'") { quote = ch; cur += ch; continue; }
+    if (ch === ";") { partes.push(cur); cur = ""; continue; }
+    cur += ch;
+  }
+  partes.push(cur);
+  return partes;
+}
+
+/** `nombre = expresión`, UNA sola. La forma de varias es `parseAssignments`. */
 export function parseAssignment(src: string): ParseResult<Assignment> {
   const eq = src.indexOf("=");
   if (eq === -1) return { ok: false, error: { message: "falta el = de la asignación", at: 0 } };
@@ -230,12 +275,27 @@ export function parseAssignment(src: string): ParseResult<Assignment> {
 /** Todo nombre que la expresión LEE. Con esto la puerta detecta una fórmula que
  *  referencia un valor que no existe en la página — nace muerta, igual que un
  *  control mal cableado. */
-export function referencedNames(node: Node, out: Set<string> = new Set()): Set<string> {
+export function referencedNames(
+  node: Node,
+  out: Set<string> = new Set(),
+  bound = false,
+): Set<string> {
   switch (node.kind) {
-    case "ref": out.add(node.name); break;
-    case "not": case "neg": referencedNames(node.arg, out); break;
-    case "bin": referencedNames(node.left, out); referencedNames(node.right, out); break;
-    case "call": for (const a of node.args) referencedNames(a, out); break;
+    // `CADA` dentro de una comprensión lo LIGA la propia comprensión, así que
+    // no es un nombre que la región tenga que declarar. Fuera de una, sí lo es
+    // — y entonces el validador dirá que no existe, que es lo correcto: quien
+    // escribe `CADA` suelto se equivocó.
+    case "ref": if (!(bound && node.name === BOUND_NAME)) out.add(node.name); break;
+    case "not": case "neg": referencedNames(node.arg, out, bound); break;
+    case "bin":
+      referencedNames(node.left, out, bound);
+      referencedNames(node.right, out, bound);
+      break;
+    case "call": {
+      const liga = (LAZY_FUNCTIONS as readonly string[]).includes(node.fn);
+      node.args.forEach((a, i) => referencedNames(a, out, bound || (liga && i === 1)));
+      break;
+    }
     default: break;
   }
   return out;

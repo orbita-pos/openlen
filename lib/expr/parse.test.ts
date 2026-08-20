@@ -198,3 +198,52 @@ describe("las 19 formas de la tabla del plan", () => {
     expect(r.ok && evaluate(r.node.value, { nombres: ["ana", "beto"] }, () => 0.9)).toBe("beto");
   });
 });
+
+describe("L3 — `CADA` sólo existe dentro de su comprensión", () => {
+  const names = (src: string) => {
+    const r = parseExpression(src);
+    if (!r.ok) throw new Error(`no parseó "${src}": ${r.error.message}`);
+    return [...referencedNames(r.node)].sort();
+  };
+
+  // Si `CADA` contara como nombre libre, la puerta diría "el campo CADA no
+  // existe en esta región" en TODA fórmula con una comprensión — y ninguna se
+  // podría publicar.
+  it("dentro de una comprensión NO cuenta como nombre a declarar", () => {
+    expect(names("TODOS(precios, CADA > 100)")).toEqual(["precios"]);
+  });
+
+  it("pero FUERA sí — quien lo escribe suelto se equivocó y hay que decírselo", () => {
+    expect(names("CADA + 1")).toEqual(["CADA"]);
+  });
+
+  it("el 1er argumento de una comprensión NO liga: ahí `CADA` sería un error", () => {
+    expect(names("TODOS(CADA, x > 1)")).toEqual(["CADA", "x"]);
+  });
+
+  it("los nombres de fuera siguen contando dentro del cuerpo", () => {
+    expect(names("CUENTA_SI(p, CADA > tope)")).toEqual(["p", "tope"]);
+  });
+
+  it("anidada: la de dentro no des-liga a la de fuera", () => {
+    expect(names("ALGUNO(a, TODOS(b, CADA > 1) Y CADA > 0)")).toEqual(["a", "b"]);
+  });
+});
+
+describe("L3 — el catálogo sigue cerrado", () => {
+  it.each([
+    ["ELEMENTO(l)", "ELEMENTO no acepta 1"],
+    ["TODOS(l)", "TODOS no acepta 1"],
+    ["FILTRA(l, CADA > 1, 3)", "FILTRA no acepta 3"],
+  ])("%s se rechaza por aridad", (src, esperado) => {
+    const r = parseExpression(src);
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.error.message).toContain(esperado.split(" ")[0]!);
+  });
+
+  it("una función que no existe sigue siendo un error, no una llamada al entorno", () => {
+    const r = parseExpression("MAPEA(l, CADA)");
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.error.message).toContain("no existe la función");
+  });
+});

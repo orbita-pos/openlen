@@ -4,7 +4,7 @@ import { compile } from "./compile";
 import { evaluate, type Env } from "./evaluate";
 import { MACHINE_BYTES, MACHINE_JS } from "./machine";
 import { parseExpression } from "./parse";
-import type { Node, Value } from "./types";
+import { BOUND_NAME, type Node, type Value } from "./types";
 
 function ast(src: string): Node {
   const r = parseExpression(src);
@@ -30,8 +30,12 @@ const both = (src: string, env: Env = {}, rnd: () => number = () => 0.5) => ({
 
 describe("el peso — el número que decide el techo", () => {
   /**
-   * MEDIDO, no estimado. El plan apuntaba a ≤1,200 B y la realidad son ~2,220:
+   * MEDIDO, no estimado. El plan apuntaba a ≤1,200 B y la realidad fueron 2,220:
    * la estimación se quedó corta casi a la mitad, y el número que manda es éste.
+   *
+   * 2,220 → 2,667 (L3): ELEMENTO, POSICION y las cuatro comprensiones acotadas.
+   * 447 bytes por la diferencia entre "una calculadora" y "cualquier cosa que
+   * se pueda preguntar sobre una lista".
    *
    * Lo que compra: 19 de las 20 formas de petición de la tabla, de UNA
    * implementación. La alternativa —recetas sueltas de calculadora, sorteo,
@@ -47,7 +51,7 @@ describe("el peso — el número que decide el techo", () => {
   it("no crece en silencio", () => {
     // eslint-disable-next-line no-console
     console.log(`\n  máquina de pila: ${MACHINE_BYTES} bytes\n`);
-    expect(MACHINE_BYTES).toBeLessThanOrEqual(2400);
+    expect(MACHINE_BYTES).toBeLessThanOrEqual(2800);
   });
 });
 
@@ -101,6 +105,37 @@ describe("los dos evaluadores dan lo MISMO", () => {
     ["TEXTO(activo)", { activo: true }],
     ["SUMA(1, 2, 3) + MAX(1, 2)", {}],
     ["SI(a > b, SI(a > c, 'a', 'c'), SI(b > c, 'b', 'c'))", { a: 3, b: 9, c: 5 }],
+
+    // ── L3: listas por posición ──────────────────────────────────────────
+    ["ELEMENTO(l, 1)", { l: ["a", "b", "c"] }],
+    ["ELEMENTO(l, 3)", { l: ["a", "b", "c"] }],
+    ["ELEMENTO(l, 0)", { l: ["a", "b", "c"] }],
+    ["ELEMENTO(l, 9)", { l: ["a", "b", "c"] }],
+    ["ELEMENTO(l, i)", { l: [10, 20, 30], i: "2" }],
+    ["ELEMENTO(x, 1)", { x: 7 }],
+    ["POSICION(l, 'b')", { l: ["a", "b", "c"] }],
+    ["POSICION(l, 'z')", { l: ["a", "b", "c"] }],
+    ["POSICION(l, 20)", { l: ["10", "20"] }],
+    // Listas PARALELAS — el carrito sin objetos ni propiedades.
+    ["ELEMENTO(precios, POSICION(nombres, elegido))", { nombres: ["café", "té"], precios: [50, 40], elegido: "té" }],
+
+    // ── L3: comprensiones acotadas ───────────────────────────────────────
+    ["TODOS(p, CADA > 100)", { p: [200, 300] }],
+    ["TODOS(p, CADA > 100)", { p: [200, 50] }],
+    ["TODOS(p, CADA > 100)", { p: [] }],
+    ["ALGUNO(p, CADA > 100)", { p: [50, 200] }],
+    ["ALGUNO(p, CADA > 100)", { p: [] }],
+    ["CUENTA_SI(r, CADA = 'sí')", { r: ["sí", "no", "sí"] }],
+    ["FILTRA(p, CADA > 100)", { p: [50, 200, 300] }],
+    ["SUMA(FILTRA(p, CADA > 100))", { p: [50, 200, 300] }],
+    ["CUENTA(FILTRA(p, CADA > 100))", { p: [50, 200, 300] }],
+    ["ALGUNO(l, CADA = yo)", { l: ["ana", "beto"], yo: "beto" }],
+    // El elemento en curso convive con los nombres de fuera.
+    ["CUENTA_SI(p, CADA > tope)", { p: [10, 50, 90], tope: 40 }],
+    // Anidada: la de dentro no le pisa el elemento a la de fuera.
+    ["ALGUNO(a, TODOS(b, CADA > 1) Y CADA > 0)", { a: [1], b: [2, 3] }],
+    // Una comprensión sobre algo que NO es lista lo trata como lista de uno.
+    ["TODOS(x, CADA > 1)", { x: 5 }],
   ];
 
   it.each(CASOS)("%s", (src, env) => {
@@ -187,5 +222,32 @@ describe("el programa compilado", () => {
     const p = compile(ast("SI(a, 1, 2)"));
     expect(p.some((x) => typeof x === "string" && x.startsWith("?"))).toBe(true);
     expect(p.some((x) => typeof x === "string" && x.startsWith("@SI"))).toBe(false);
+  });
+});
+
+describe("el nombre ligado vive en DOS sitios y no pueden separarse", () => {
+  // `BOUND_NAME` gobierna el compilador y el evaluador del servidor; la máquina
+  // lo lleva escrito literal (`V.CADA`) porque ahí no hay imports. Si alguien
+  // renombra la constante y no el texto, las comprensiones dejarían de ligar
+  // nada EN EL NAVEGADOR y en el servidor seguirían funcionando: la divergencia
+  // silenciosa de siempre, esta vez sin que ningún caso de acuerdo la note
+  // (todos pasarían — el servidor decide el valor esperado).
+  it("la máquina liga exactamente BOUND_NAME", () => {
+    expect(MACHINE_JS).toContain(`V.${BOUND_NAME}`);
+  });
+});
+
+describe("el sub-programa de una comprensión", () => {
+  it("va anidado, y el todo sigue siendo JSON que da la vuelta idéntico", () => {
+    const p = compile(ast("TODOS(precios, CADA > 100)"));
+    expect(p).toEqual(["$precios", ["$CADA", 100, ">"], "@TODOS:2"]);
+    expect(JSON.parse(JSON.stringify(p))).toEqual(p);
+  });
+
+  // Si se compilara en línea, la condición se evaluaría UNA vez con CADA sin
+  // ligar — o sea, nunca. Que el 2º argumento sea un array es el contrato.
+  it("NO se compila en línea", () => {
+    const p = compile(ast("ALGUNO(l, CADA = 'x')"));
+    expect(Array.isArray(p[1])).toBe(true);
   });
 });

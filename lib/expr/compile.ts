@@ -18,15 +18,19 @@
 //   "*"         operador binario (saca dos, empuja uno)
 //   "N"         negación lógica · "~" negación aritmética
 //   "@SUMA:3"   llama SUMA con 3 argumentos
+//   ["$CADA",5,">"]  un SUB-PROGRAMA: el cuerpo de una comprensión
 //   "?7"        si la cima es falsa, salta 7 instrucciones
 //   "j3"        salta 3 instrucciones (NO ">": chocaría con el operador)
 //
 // El sigilo va delante para que la máquina decida con `charAt(0)`, que es lo
 // más barato que se puede escribir.
 
-import type { Assignment, Node } from "./types";
+import { LAZY_FUNCTIONS, type Assignment, type Node } from "./types";
 
-export type Program = readonly (string | number | boolean)[];
+/** Un elemento puede ser un SUB-PROGRAMA (array anidado): el cuerpo de una
+ *  comprensión, que se ejecuta una vez por elemento de la lista en vez de una
+ *  sola vez como el resto. Sigue siendo JSON plano y viaja en el atributo. */
+export type Program = readonly (string | number | boolean | Program)[];
 
 /**
  * `SI` se compila a SALTOS, no a una llamada de tres argumentos.
@@ -40,7 +44,7 @@ export type Program = readonly (string | number | boolean)[];
  * ya pagó una vez.
  */
 export function compile(node: Node): Program {
-  const out: (string | number | boolean)[] = [];
+  const out: Cell[] = [];
   emit(node, out);
   return out;
 }
@@ -49,7 +53,9 @@ export function compileAssignment(a: Assignment): { target: string; program: Pro
   return { target: a.target, program: compile(a.value) };
 }
 
-function emit(n: Node, out: (string | number | boolean)[]): void {
+type Cell = string | number | boolean | Program;
+
+function emit(n: Node, out: Cell[]): void {
   switch (n.kind) {
     case "num": out.push(n.value); return;
     case "bool": out.push(n.value); return;
@@ -102,6 +108,27 @@ function emit(n: Node, out: (string | number | boolean)[]): void {
         out[toElse] = `?${out.length - toElse - 1}`;
         emit(n.args[2]!, out);
         out[toEnd] = `j${out.length - toEnd - 1}`;
+        return;
+      }
+      // Las comprensiones (TODOS/ALGUNO/CUENTA_SI/FILTRA) emiten su 2º
+      // argumento como SUB-PROGRAMA en vez de en línea: es una condición que
+      // se evalúa una vez POR ELEMENTO, con `CADA` ligado. Compilarla en línea
+      // la evaluaría una sola vez, con `CADA` sin ligar — o sea, nada.
+      //
+      // La iteración la hace la máquina y está ACOTADA por el largo de la
+      // lista: no hay `while`, ni recursión de usuario, y el número de vueltas
+      // se conoce antes de empezar. Es la forma de CEL, y es la razón de que el
+      // lenguaje siga sin ser Turing-completo.
+      //
+      // No se DESENROLLA en la ingestión a propósito: OpenLen ya tiene listas
+      // que vienen de una Google Sheet (Datos Vivos), y desenrollar ataría la
+      // fórmula al largo que la lista tenía el día que se ingirió — el día que
+      // crezca, la página mentiría en silencio. `MAX_NODES` además reventaría
+      // con cualquier lista mediana.
+      if ((LAZY_FUNCTIONS as readonly string[]).includes(n.fn)) {
+        emit(n.args[0]!, out);
+        out.push(compile(n.args[1]!));
+        out.push(`@${n.fn}:2`);
         return;
       }
       for (const a of n.args) emit(a, out);

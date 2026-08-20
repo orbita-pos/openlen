@@ -10,7 +10,14 @@
 // copia paralela es un runtime sin probar.
 
 /**
- * Un bucle y un `switch`. Sin recursión, sin `eval`, sin `new Function`.
+ * Un bucle y un `switch`. Sin `eval`, sin `new Function`.
+ *
+ * La ÚNICA recursión es la de las comprensiones (`TODOS`/`ALGUNO`/`CUENTA_SI`/
+ * `FILTRA`), que llaman a `olX` con su sub-programa una vez por elemento. No es
+ * recursión de USUARIO —no hay forma de escribirla en el lenguaje— y su
+ * profundidad la acota `MAX_NODES`: cada nivel de anidamiento cuesta nodos en
+ * la fórmula, y la fórmula tiene tope. `V.CADA` se guarda y se restaura, así
+ * que una comprensión dentro de otra no le pisa el elemento a la de fuera.
  *
  * `P` programa (array plano) · `V` valores con nombre · `R` fuente de azar.
  *
@@ -18,7 +25,7 @@
  * prueba que exige que los dos den el mismo resultado: `n()` a número tolerando
  * lo que una persona teclea ("$1,200.50"), `t()` a texto, `f()` a booleano.
  */
-export const MACHINE_JS = `function olX(P,V,R){var S=[],i=0,c,k,a,b,x,y;R=R||Math.random;
+export const MACHINE_JS = `function olX(P,V,R){var S=[],i=0,c,k,a,b,x,y,w,u;R=R||Math.random;
 function n(v){if(typeof v=="number")return isFinite(v)?v:0;if(typeof v=="boolean")return v?1:0;if(v instanceof Array)return v.length;v=Number(String(v).replace(/[^0-9.-]/g,""));return isFinite(v)?v:0}
 function t(v){return v instanceof Array?v.map(t).join(", "):typeof v=="boolean"?(v?"s\\u00ed":"no"):String(v)}
 function f(v){return typeof v=="boolean"?v:typeof v=="number"?v!==0:v instanceof Array?v.length>0:v!==""}
@@ -42,6 +49,9 @@ if(x=="REDONDEA"){b=Math.pow(10,g(a));S.push(Math.round(n(a[0])*b)/b);continue}
 if(x=="TEXTO"){S.push(t(a[0]));continue}
 if(x=="UNE"){S.push(a.map(t).join(""));continue}
 if(x=="MONEDA"){b=n(a[0]).toFixed(Math.max(0,Math.min(6,(a.length>1?n(a[1]):0)|0)));S.push(b.replace(/\\B(?=(\\d{3})+(?!\\d))/g,","));continue}
+if(x=="ELEMENTO"){b=q(a[0]);y=(n(a[1])|0)-1;S.push(y>=0&&y<b.length?b[y]:0);continue}
+if(x=="POSICION"){b=q(a[0]);x=0;for(y=0;y<b.length;y++)if(!x&&e(b[y],a[1]))x=y+1;S.push(x);continue}
+if(x=="TODOS"||x=="ALGUNO"||x=="CUENTA_SI"||x=="FILTRA"){b=q(a[0]);w=[];u=V.CADA;for(y=0;y<b.length;y++){V.CADA=b[y];if(f(olX(a[1],V,R)))w.push(b[y])}V.CADA=u;S.push(x=="FILTRA"?w:x=="CUENTA_SI"?w.length:x=="TODOS"?w.length==b.length:w.length>0);continue}
 if(x=="AZAR"){if(a[0]instanceof Array&&a.length==1){b=a[0];S.push(b.length?b[Math.floor(R()*b.length)]:0);continue}
 b=Math.ceil(n(a[0]));y=a.length>1?Math.floor(n(a[1])):b;S.push(y<b?b:b+Math.floor(R()*(y-b+1)));continue}
 S.push(0);continue}

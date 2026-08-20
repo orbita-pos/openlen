@@ -15,14 +15,24 @@ import { parse, type HTMLElement } from "node-html-parser";
 
 import { compile, type Program } from "./compile";
 import { evaluate } from "./evaluate";
-import { parseAssignment, parseExpression, referencedNames } from "./parse";
-import type { Node, Value } from "./types";
+import { parseAssignment, parseAssignments, parseExpression, referencedNames } from "./parse";
+import { BOUND_NAME, type Node, type Value } from "./types";
 
 export const REGION = "data-ol-calc";
 export const VALUE = "data-ol-val";
 export const OUT = "data-ol-out";
 export const IF = "data-ol-if";
 export const SET = "data-ol-set";
+/** El estado que la región declara al nacer: `data-ol-state="n = 0; turno = 'X'"`.
+ *
+ *  Sin él, un `data-ol-set` cuyo destino no produce ningún campo queda
+ *  bloqueado por la regla del gesto-no-ocurrido, y una condición sobre ese
+ *  destino nace visible. Se podía desbloquear con un campo oculto —está
+ *  medido— pero era un truco que nadie descubriría y que el prompt no enseña.
+ *
+ *  Los valores se evalúan AQUÍ, en la ingestión, y el gemelo lleva el
+ *  resultado ya calculado: son valores INICIALES, no fórmulas vivas. */
+export const STATE = "data-ol-state";
 /** Cada hijo de un `data-ol-val` que sea una LISTA. La ruleta los necesita. */
 export const ITEM = "data-ol-item";
 /** El gemelo compilado de cada atributo con fórmula. */
@@ -79,11 +89,19 @@ export function collectRegionNames(
     const name = el.getAttribute(valueAttr)?.trim();
     if (name) values.add(name);
   }
+  // El estado declarado cuenta como VALOR, no sólo como declarado: existe desde
+  // que la página nace, así que una fórmula que lo lee SÍ se puede calcular al
+  // nacer (a diferencia del destino de un `set`, que espera un gesto).
+  for (const el of [region, ...region.querySelectorAll(`[${STATE}]`)]) {
+    const estado = parseAssignments(el.getAttribute(STATE) ?? "");
+    if (estado.ok) for (const a of estado.node) values.add(a.target);
+  }
+
   const declared = new Set(values);
   for (const attr of assignAttrs) {
     for (const el of region.querySelectorAll(`[${attr}]`)) {
-      const a = parseAssignment(el.getAttribute(attr) ?? "");
-      if (a.ok) declared.add(a.node.target);
+      const a = parseAssignments(el.getAttribute(attr) ?? "");
+      if (a.ok) for (const one of a.node) declared.add(one.target);
     }
   }
   return { declared, values };
@@ -120,14 +138,15 @@ export function unreadValues(
       // `dia` no contaba como leído — el campo quedaba acusado de muerto
       // estando vivo. Un falso positivo aquí es peor que el hueco que cierra:
       // haría a la puerta rechazar páginas correctas.
-      const parsed = assign
-        ? (() => {
-            const a = parseAssignment(raw);
-            return a.ok ? ({ ok: true, node: a.node.value } as const) : ({ ok: false } as const);
-          })()
-        : parseExpression(raw);
-      // Una fórmula que no parsea ya tiene su propio issue; se abandona el
-      // barrido en vez de acusar de muertos a los campos que sí usaba.
+      if (assign) {
+        const a = parseAssignments(raw);
+        // Una fórmula que no parsea ya tiene su propio issue; se abandona el
+        // barrido en vez de acusar de muertos a los campos que sí usaba.
+        if (!a.ok) return [];
+        for (const one of a.node) for (const n of referencedNames(one.value)) leidos.add(n);
+        continue;
+      }
+      const parsed = parseExpression(raw);
       if (!parsed.ok) return [];
       for (const n of referencedNames(parsed.node)) leidos.add(n);
     }
@@ -152,6 +171,8 @@ export function unreadIssue(name: string): CalcIssue {
 
 export type FormulaCheck =
   | { readonly ok: true; readonly node: Node; readonly target?: string }
+  /** Varias asignaciones en un gesto: `c1 = t; t = SI(...)`. */
+  | { readonly ok: true; readonly parts: readonly { target: string; node: Node }[] }
   | { readonly ok: false; readonly message: string };
 
 /**
@@ -166,27 +187,32 @@ export function checkFormula(
   assign: boolean,
   declared: ReadonlySet<string>,
 ): FormulaCheck {
-  let node: Node;
-  let target: string | undefined;
   if (assign) {
-    const a = parseAssignment(raw);
+    const a = parseAssignments(raw);
     if (!a.ok) return { ok: false, message: a.error.message };
-    node = a.node.value;
-    target = a.node.target;
-  } else {
-    const e = parseExpression(raw);
-    if (!e.ok) return { ok: false, message: e.error.message };
-    node = e.node;
+    for (const one of a.node) {
+      const mal = unknownIn(one.value, declared);
+      if (mal) return { ok: false, message: mal };
+    }
+    return { ok: true, parts: a.node.map((one) => ({ target: one.target, node: one.value })) };
   }
+  const e = parseExpression(raw);
+  if (!e.ok) return { ok: false, message: e.error.message };
+  const mal = unknownIn(e.node, declared);
+  return mal ? { ok: false, message: mal } : { ok: true, node: e.node };
+}
 
+/** El mensaje si la expresión lee algo que la región no tiene, o `null`. */
+function unknownIn(node: Node, declared: ReadonlySet<string>): string | null {
   const desconocidos = [...referencedNames(node)].filter((n) => !declared.has(n));
-  if (desconocidos.length > 0) {
-    return {
-      ok: false,
-      message: `usa ${desconocidos.map((n) => `"${n}"`).join(", ")}, que no existe en esta región — declara un campo con ${VALUE}="${desconocidos[0]}"`,
-    };
+  if (desconocidos.length === 0) return null;
+  // `CADA` sólo existe DENTRO de una comprensión (referencedNames ya lo liga
+  // ahí). Si llega hasta aquí es que alguien lo escribió suelto, y decirle
+  // "declara un campo CADA" sería el consejo exactamente equivocado.
+  if (desconocidos.includes(BOUND_NAME)) {
+    return `usa "${BOUND_NAME}" fuera de una lista — ese nombre sólo existe dentro de TODOS/ALGUNO/CUENTA_SI/FILTRA, donde vale cada elemento`;
   }
-  return target === undefined ? { ok: true, node } : { ok: true, node, target };
+  return `usa ${desconocidos.map((n) => `"${n}"`).join(", ")}, que no existe en esta región — declara un campo con ${VALUE}="${desconocidos[0]}"`;
 }
 
 /**
@@ -285,12 +311,64 @@ export function compileCalcRegions(html: string): CompileDocumentResult {
     // La otra mitad del "nace muerto": un campo que nadie lee.
     for (const huerfano of unreadValues(region)) issues.push(unreadIssue(huerfano));
 
+    // El estado declarado se EVALÚA aquí y el gemelo lleva los valores ya
+    // calculados, no programas: son valores INICIALES, no fórmulas vivas. El
+    // runtime sólo tiene que hacerles JSON.parse al montar, que es lo más
+    // barato que se puede pedir dentro del presupuesto de bytes.
+    // Se acepta en la región O en cualquier descendiente, y se consolida en UN
+    // gemelo sobre la región. Exigir que viviera en el mismo elemento que
+    // `data-ol-calc` sería una regla que el modelo olvidaría, y el castigo
+    // sería que el estado se ignora EN SILENCIO: el acumulador nace muerto y
+    // todo lo demás sale en verde. Ese fallo ya lo cazamos una vez con el
+    // deslizador huérfano; no se repite a propósito.
+    const inicial: Record<string, Value> = {};
+    let declaraEstado = false;
+    for (const el of [region, ...region.querySelectorAll(`[${STATE}]`)]) {
+      const rawState = el.getAttribute(STATE);
+      if (rawState === undefined || rawState === null) continue;
+      declaraEstado = true;
+      const st = parseAssignments(rawState);
+      if (!st.ok) {
+        issues.push({ attr: STATE, formula: rawState, message: st.error.message });
+        continue;
+      }
+      for (const one of st.node) {
+        const mal = unknownIn(one.value, declared);
+        if (mal) { issues.push({ attr: STATE, formula: rawState, message: mal }); continue; }
+        try {
+          inicial[one.target] = evaluate(one.value, { ...env, ...inicial }, () => 0);
+        } catch {
+          inicial[one.target] = 0;
+        }
+      }
+    }
+    if (declaraEstado) {
+      region.setAttribute(compiledAttr(STATE), programAttr(inicial));
+      Object.assign(env, inicial);
+    }
+
     for (const { attr, assign } of FORMULA_ATTRS) {
       for (const el of region.querySelectorAll(`[${attr}]`)) {
         const raw = el.getAttribute(attr) ?? "";
         const checked = checkFormula(raw, assign, declared);
         if (!checked.ok) {
           issues.push({ attr, formula: raw, message: checked.message });
+          continue;
+        }
+
+        // Una asignación puede ser VARIAS: `c1 = turno; turno = SI(...)`. El
+        // gemelo va como lista y el runtime la recorre en orden — sin eso no
+        // hay turnos, porque un clic sólo podría hacer una cosa.
+        //
+        // El destino viaja CON el programa: si no, el runtime tendría que
+        // re-parsear la fórmula legible del autor para sacarlo, que es justo
+        // lo que compilar en la ingestión existe para no hacer.
+        if ("parts" in checked) {
+          el.setAttribute(
+            compiledAttr(attr),
+            programAttr(checked.parts.map((p) => ({ n: p.target, p: compile(p.node) }))),
+          );
+          compiled += 1;
           continue;
         }
 
@@ -303,19 +381,14 @@ export function compileCalcRegions(html: string): CompileDocumentResult {
         const node = attr === OUT ? textOf(checked.node) : checked.node;
         const program: Program = attr === IF ? [...compile(node), "b"] : compile(node);
 
-        el.setAttribute(
-          compiledAttr(attr),
-          // El destino viaja CON el programa: si no, el runtime tendría que
-          // re-parsear la fórmula legible del autor para sacarlo, que es
-          // justo lo que compilar en la ingestión existe para no hacer.
-          programAttr(assign ? { n: checked.target, p: program } : program),
-        );
+        el.setAttribute(compiledAttr(attr), programAttr(program));
         compiled += 1;
 
-        // El resultado inicial se escribe DENTRO del elemento, evaluado con
-        // todo vacío. Así la página nace con un número visible aunque el
-        // runtime nunca corra (kill-switch, JS bloqueado, CSP): sin esto la
-        // degradación de un cálculo sería un hueco, no una mejora perdida.
+        // El resultado inicial se escribe DENTRO del elemento, evaluado con lo
+        // que el documento ya trae. Así la página nace con un número visible
+        // aunque el runtime nunca corra (kill-switch, JS bloqueado, CSP): sin
+        // esto la degradación de un cálculo sería un hueco, no una mejora
+        // perdida.
         if (attr === OUT && !readsUnset(checked.node, values)) {
           try {
             el.set_content(escapeText(String(evaluate(node, env, () => 0) as Value)));

@@ -198,6 +198,85 @@ describe("LA FRONTERA — medida, y NO donde yo creía", () => {
 
   /**
    * LO QUE DE VERDAD NO CAE, y aquí sí es por diseño y no por un atributo que
+   * falte: los BUCLES NO ACOTADOS. Zip, sudoku y los laberintos piden recorrer
+   * celdas preguntando "¿el camino pasa por todas?" un número de veces que
+   * depende del propio recorrido. Eso no es un hueco: es lo que impide que una
+   * página se cuelgue, y Starlark (Google/Bazel) toma la misma decisión.
+   *
+   * Lo que SÍ hay desde L3 es iteración ACOTADA por el largo de una lista
+   * (TODOS/ALGUNO/CUENTA_SI/FILTRA, la forma de CEL). Un tablero de 5x5
+   * seguiría necesitando 25 nombres escritos a mano y toparía con MAX_NODES,
+   * así que la frontera práctica no se movió para los juegos de cuadrícula —
+   * pero sí para todo lo que se pueda PREGUNTAR sobre una lista.
+   */
+  it("un turno alterno SÍ cae: dos asignaciones en un gesto", () => {
+    region(
+      `<div data-ol-state="turno = 'X'; c1 = '·'; c2 = '·'"></div>` +
+      `<button id="b1" data-ol-set="c1 = turno; turno = SI(turno = 'X', 'O', 'X')">1</button>` +
+      `<button id="b2" data-ol-set="c2 = turno; turno = SI(turno = 'X', 'O', 'X')">2</button>` +
+      `<span id="s1" data-ol-out="c1">·</span><span id="s2" data-ol-out="c2">·</span>` +
+      `<span id="t" data-ol-out="turno">X</span>`,
+    );
+    expect(txt("#t")).toBe("X");
+    click("#b1");
+    // La ficha se puso Y el turno cambió, en el mismo clic.
+    expect(txt("#s1")).toBe("X");
+    expect(txt("#t")).toBe("O");
+    click("#b2");
+    expect(txt("#s2")).toBe("O");
+    expect(txt("#t")).toBe("X");
+  });
+
+  it("un quiz multi-paso: UNA fórmula en vez de una por pregunta", () => {
+    region(
+      `<ul data-ol-val="preguntas"><li data-ol-item>¿Capital de Francia?</li>` +
+      `<li data-ol-item>¿Cuántos continentes?</li></ul>` +
+      `<div data-ol-state="i = 1"></div>` +
+      `<p id="q" data-ol-out="ELEMENTO(preguntas, i)">·</p>` +
+      `<button id="sig" data-ol-set="i = i + 1">Siguiente</button>` +
+      `<p id="fin" data-ol-if="i > CUENTA(preguntas)">Terminaste</p>`,
+    );
+    expect(txt("#q")).toBe("¿Capital de Francia?");
+    expect(oculto("#fin")).toBe(true);
+    click("#sig");
+    expect(txt("#q")).toBe("¿Cuántos continentes?");
+    click("#sig");
+    expect(oculto("#fin")).toBe(false);
+  });
+
+  it("un carrito con listas PARALELAS — sin objetos ni propiedades", () => {
+    region(
+      `<ul data-ol-val="nombres"><li data-ol-item>Café</li><li data-ol-item>Té</li></ul>` +
+      `<ul data-ol-val="precios"><li data-ol-item>50</li><li data-ol-item>40</li></ul>` +
+      `<select id="sel" data-ol-val="elegido"><option>Café</option><option>Té</option></select>` +
+      `<p id="p" data-ol-out="MONEDA(ELEMENTO(precios, POSICION(nombres, elegido)), 0)">0</p>`,
+    );
+    expect(txt("#p")).toBe("50");
+    const sel = $("#sel") as HTMLSelectElement;
+    sel.value = "Té";
+    sel.dispatchEvent(new Event("change", { bubbles: true }));
+    expect(txt("#p")).toBe("40");
+  });
+
+  it("una pregunta sobre TODA una lista, con iteración acotada", () => {
+    region(
+      `<ul data-ol-val="precios"><li data-ol-item>50</li><li data-ol-item>200</li>` +
+      `<li data-ol-item>300</li></ul>` +
+      `<input id="t" data-ol-val="tope" type="number" value="100">` +
+      `<p id="n" data-ol-out="CUENTA_SI(precios, CADA > tope)">0</p>` +
+      `<p id="s" data-ol-out="SUMA(FILTRA(precios, CADA > tope))">0</p>` +
+      `<p id="todos" data-ol-if="TODOS(precios, CADA > tope)">Todos caros</p>`,
+    );
+    expect(txt("#n")).toBe("2");
+    expect(txt("#s")).toBe("500");
+    expect(oculto("#todos")).toBe(true);
+    type("#t", "10");
+    expect(txt("#n")).toBe("3");
+    expect(oculto("#todos")).toBe(false);
+  });
+
+  /**
+   * LO QUE DE VERDAD NO CAE, y aquí sí es por diseño y no por un atributo que
    * falte:
    *
    *   1. DOS asignaciones en un solo gesto. Un tres en raya de dos jugadores
@@ -213,16 +292,4 @@ describe("LA FRONTERA — medida, y NO donde yo creía", () => {
    *
    * O sea: la frontera NO es "juegos sí/no" ni "tablero sí/no". Es el BUCLE.
    */
-  it("un turno alterno necesitaría dos asignaciones en un gesto — hoy sólo hay una", () => {
-    // Se comprueba la FORMA, no una opinión: `data-ol-set` parsea "nombre =
-    // expresión" y nada más, así que dos asignaciones no son expresables.
-    const out = compileCalcRegions(
-      `<!doctype html><html><body><div data-ol-calc>` +
-      `<input type="hidden" data-ol-val="t" value="X">` +
-      `<button data-ol-set="c1 = t; t = SI(t = 'X', 'O', 'X')">1</button>` +
-      `</div></body></html>`,
-    );
-    expect(out.issues).toHaveLength(1);
-    expect(out.compiled).toBe(0);
-  });
 });

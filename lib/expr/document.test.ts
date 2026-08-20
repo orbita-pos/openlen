@@ -110,18 +110,99 @@ describe("lo que depende de un gesto que aún no ocurrió", () => {
   });
 });
 
+const twinOf = (html: string, attr: string) => {
+  const m = new RegExp(`${attr}="([^"]*)"`).exec(html);
+  return JSON.parse((m?.[1] ?? "").replace(/&quot;/g, '"').replace(/&amp;/g, "&"));
+};
+
 describe("el gemelo de una asignación lleva su destino", () => {
   // Si no, el runtime tendría que re-parsear la fórmula legible del autor para
   // saber a qué nombre asigna — justo lo que compilar en la ingestión evita.
-  it("va como {n,p}, no como programa suelto", () => {
+  it("va como LISTA de {n,p} — un gesto puede hacer varias cosas", () => {
     const out = compileCalcRegions(region(
       `<ul data-ol-val="nombres"><li data-ol-item>Ana</li></ul>` +
       `<button data-ol-set="elegido = AZAR(nombres)">Girar</button>`,
     ));
-    const attr = /data-ol-set-c="([^"]*)"/.exec(out.html)?.[1] ?? "";
-    const twin = JSON.parse(attr.replace(/&quot;/g, '"').replace(/&amp;/g, "&"));
-    expect(twin.n).toBe("elegido");
-    expect(twin.p).toEqual(["$nombres", "@AZAR:1"]);
+    const twin = twinOf(out.html, "data-ol-set-c");
+    expect(twin).toEqual([{ n: "elegido", p: ["$nombres", "@AZAR:1"] }]);
+  });
+
+  // Sin esto no hay turnos: un clic tiene que poder poner la ficha Y cambiar
+  // de jugador. Se separa por `;` FUERA de comillas.
+  it("varias asignaciones en un gesto, en orden", () => {
+    const out = compileCalcRegions(
+      `<!doctype html><html><body>` +
+      `<div data-ol-calc data-ol-state="turno = 'X'; c1 = ''">` +
+      `<button data-ol-set="c1 = turno; turno = SI(turno = 'X', 'O', 'X')">1</button>` +
+      `<span data-ol-out="c1">·</span>` +
+      `</div></body></html>`,
+    );
+    expect(out.issues).toEqual([]);
+    const twin = twinOf(out.html, "data-ol-set-c");
+    expect(twin).toHaveLength(2);
+    expect(twin.map((t: { n: string }) => t.n)).toEqual(["c1", "turno"]);
+  });
+
+  it("un `;` dentro de un texto NO parte la asignación", () => {
+    const out = compileCalcRegions(region(
+      `<div data-ol-state="msg = ''"></div>` +
+      `<button data-ol-set="msg = 'hola; adiós'">di</button>` +
+      `<p data-ol-out="msg">·</p>`,
+    ));
+    expect(out.issues).toEqual([]);
+    expect(twinOf(out.html, "data-ol-set-c")).toHaveLength(1);
+  });
+});
+
+describe("el estado que la región declara al nacer", () => {
+  // Es lo que desbloquea acumuladores, tableros y turnos: sin un valor
+  // inicial, un `data-ol-set` que lee su propio destino queda bloqueado por la
+  // regla del gesto-no-ocurrido, para siempre.
+  it("se evalúa al ingerir y el gemelo lleva el valor, no el programa", () => {
+    const out = compileCalcRegions(
+      `<!doctype html><html><body><div data-ol-calc data-ol-state="n = 0">` +
+      `<button data-ol-set="n = n + 1">+1</button><p data-ol-out="n">0</p>` +
+      `</div></body></html>`,
+    );
+    expect(out.issues).toEqual([]);
+    expect(twinOf(out.html, "data-ol-state-c")).toEqual({ n: 0 });
+  });
+
+  it("y el valor de nacimiento SÍ lo usa — un acumulador nace en su inicio", () => {
+    const out = compileCalcRegions(
+      `<!doctype html><html><body><div data-ol-calc data-ol-state="n = 7">` +
+      `<button data-ol-set="n = n + 1">+1</button><p data-ol-out="n * 2">?</p>` +
+      `</div></body></html>`,
+    );
+    expect(out.html).toContain(">14<");
+  });
+
+  it("un estado que no parsea se reporta, no se traga", () => {
+    const out = compileCalcRegions(
+      `<!doctype html><html><body><div data-ol-calc data-ol-state="n =">` +
+      `<p data-ol-out="n">0</p></div></body></html>`,
+    );
+    expect(out.issues.length).toBeGreaterThan(0);
+  });
+});
+
+describe("CADA fuera de su lista", () => {
+  it("se rechaza con el consejo correcto, no con 'declara un campo CADA'", () => {
+    const out = compileCalcRegions(region(
+      `<input data-ol-val="x"><p data-ol-out="CADA + x">0</p>`,
+    ));
+    const issue = out.issues.find((i) => i.message.includes("CADA"));
+    expect(issue?.message).toContain("sólo existe dentro de");
+    expect(issue?.message).not.toContain("declara un campo");
+  });
+
+  it("dentro de su lista es perfectamente válido", () => {
+    const out = compileCalcRegions(region(
+      `<ul data-ol-val="precios"><li data-ol-item>50</li><li data-ol-item>200</li></ul>` +
+      `<p data-ol-out="CUENTA_SI(precios, CADA > 100)">0</p>`,
+    ));
+    expect(out.issues).toEqual([]);
+    expect(out.html).toContain(">1<");
   });
 });
 

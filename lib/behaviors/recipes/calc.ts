@@ -10,7 +10,8 @@ import type { Behavior } from "../types";
 //     [data-ol-val="recibo"]    — lo que el visitante escribe o elige
 //     [data-ol-out="fórmula"]   — el texto del elemento pasa a ser el resultado
 //     [data-ol-if="fórmula"]    — visibilidad según una condición
-//     [data-ol-set="x = fórm"]  — al hacer clic, asigna
+//     [data-ol-set="x = fórm"]  — al hacer clic, asigna (varias con `;`)
+//   [data-ol-state="n = 0"]     — el estado con el que la región NACE
 //
 // POR QUÉ UNA REGIÓN Y NO EL PROPIO ELEMENTO DE SALIDA. Una conducta tiene UN
 // marcador (hasMarkerAttr, build.ts:56). Con el marcador en la salida, una
@@ -39,6 +40,16 @@ import type { Behavior } from "../types";
 // EL ESTADO DE LAS ASIGNACIONES vive en una propiedad JS del elemento
 // (`r.olS`), nunca en un atributo: no se serializa, no hay nada que limpiar al
 // guardar, y desaparece al recargar. La página piensa; no recuerda.
+//
+// Se SIEMBRA al montar desde `data-ol-state-c`, que la ingestión dejó con los
+// valores ya evaluados (no programas: son valores iniciales, no fórmulas
+// vivas). Eso es lo que desbloquea acumuladores, tableros y turnos — sin un
+// valor inicial, un `data-ol-set` que lee su propio destino queda bloqueado
+// por `U()` para siempre.
+//
+// Dentro de un mismo gesto las asignaciones se ven entre sí, EN ORDEN: en
+// `c1 = turno; turno = SI(...)`, la segunda ya no puede leer el valor viejo si
+// la primera lo cambió. Por eso `o` se actualiza junto con `s`.
 const WIRING = `function J(s){try{return JSON.parse(s)}catch(e){}}
 function S(r,a){return r.querySelectorAll('['+a+']')}
 function C(e,s){return e.target.closest&&e.target.closest(s)}
@@ -47,8 +58,8 @@ function U(p,o){for(var i=0,c;i<p.length;i++){c=p[i];if(typeof c=='string'&&c.ch
 function R(r){var o=E(r),A=['data-ol-out-c','data-ol-if-c'],f,a,q,i,p;for(f=0;f<2;f++){a=A[f];q=S(r,a);for(i=0;i<q.length;i++){p=J(q[i].getAttribute(a));if(!p||U(p,o))continue;if(f)q[i].toggleAttribute('data-ol-calc-off',!olX(p,o));else q[i].textContent=olX(p,o)}}}
 function W(e){var r=C(e,'[data-ol-calc]');if(r&&!olEditing())R(r)}
 ['input','change'].forEach(function(t){document.addEventListener(t,W)});
-document.addEventListener('click',function(e){if(olEditing())return;var b=C(e,'[data-ol-set-c]');if(!b)return;var r=b.closest('[data-ol-calc]'),a=J(b.getAttribute('data-ol-set-c'));if(!r||!a)return;var o=E(r);if(U(a.p,o))return;(r.olS=r.olS||{})[a.n]=olX(a.p,o);R(r)});
-S(document,'data-ol-calc').forEach(function(r){R(r)});`;
+document.addEventListener('click',function(e){if(olEditing())return;var b=C(e,'[data-ol-set-c]');if(!b)return;var r=b.closest('[data-ol-calc]'),a=J(b.getAttribute('data-ol-set-c'));if(!r||!a)return;var o=E(r),s=r.olS=r.olS||{},z;for(z=0;z<a.length;z++){if(U(a[z].p,o))continue;s[a[z].n]=olX(a[z].p,o);o[a[z].n]=s[a[z].n]}R(r)});
+S(document,'data-ol-calc').forEach(function(r){r.olS=J(r.getAttribute('data-ol-state-c'))||{};R(r)});`;
 
 const JS = `${MACHINE_JS}\n${WIRING}`;
 
@@ -77,26 +88,29 @@ export const calc: Behavior = {
   // El TEXTO de [data-ol-out] NO va aquí: es contenido, y se restaura desde el
   // stash del preview (categoría B, como el de countdown).
   runtimeAttrs: ["data-ol-calc-off"],
-  // 3,650B MEDIDOS (no estimados) — la excepción más grande del catálogo, y la
-  // razón por la que se concede: esto no es una receta, es un INTÉRPRETE. La
-  // máquina de pila sola son 2,220B (lib/expr/machine.test.ts la afirma por
-  // separado, para que no crezca en silencio) y el cableado del DOM los ~1,430
-  // restantes. La proyección del plan eran ~3,150-3,350: se quedó corta, y el
-  // número que manda es el medido.
+  // 4,203B MEDIDOS (no estimados) — la excepción más grande del catálogo, y la
+  // razón por la que se concede: esto no es una receta, es un INTÉRPRETE.
+  //   2,667B  la máquina de pila (lib/expr/machine.test.ts la afirma aparte,
+  //           para que no crezca en silencio)
+  //   1,536B  el cableado del DOM
   //
-  // Qué compra: 19 de las 20 formas de petición de la tabla del plan, de UNA
-  // implementación. La alternativa —recetas sueltas de calculadora, sorteo,
-  // quiz e interruptor— serían 4 x 700 = 2,800B **y seguirían sin cubrir lo que
-  // nadie ha pedido todavía**. Sale más barato y llega más lejos.
+  // 3,650 → 4,203 al añadir L3: listas por posición (ELEMENTO/POSICION), las
+  // cuatro comprensiones acotadas, el estado declarado y las asignaciones
+  // múltiples. 553 bytes por la diferencia entre "una calculadora" y
+  // "cualquier cosa que se pueda preguntar sobre una lista".
+  //
+  // Qué compra: las 19 formas de la tabla del plan MÁS quizzes multi-paso,
+  // tableros, turnos, acumuladores y carritos con listas paralelas — de UNA
+  // implementación. La alternativa (recetas sueltas de calculadora, sorteo,
+  // quiz, interruptor y carrito) serían 5 x 700 = 3,500B **y seguirían sin
+  // cubrir lo que nadie ha pedido todavía**.
   //
   // Y no lo paga ninguna página que no calcule: present() (build.ts:29) sólo
-  // compone las recetas cuyo marcador está de verdad en el documento — una
-  // página con una calculadora y nada más recibe 3,994B, no los 9,3KB del peor
-  // caso teórico.
+  // compone las recetas cuyo marcador está de verdad en el documento.
   //
-  // 3,700 deja 50B de margen: el mismo margen honesto que tabs se dejó (937 de
+  // 4,300 deja ~97B de margen, el mismo orden que el que tabs se dejó (937 de
   // 950). Si el intérprete crece, se ve.
-  budgetBytes: 3700,
+  budgetBytes: 4300,
   docBudgetChars: 1200,
   degradation: "content-intact",
   // Un número que cambia sin recargar hay que anunciarlo.
