@@ -65,6 +65,7 @@ export default defineConfig({
       "lib/contract/**/*.test.ts",
       "lib/document/**/*.test.ts",
       "lib/evals/**/*.test.ts",
+      "lib/expr/**/*.test.ts",
       "lib/page-engine/**/*.test.ts",
       "lib/generation/**/*.test.ts",
       "lib/html-gate/**/*.test.ts",
