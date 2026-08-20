@@ -30,11 +30,21 @@ export function extractDocument(raw: string): string {
   const doctype = out.search(/<!doctype\s+html/i);
   if (doctype > 0) out = out.slice(doctype);
 
-  // 3. Epílogo. Sólo se recorta cuando el documento cierra de verdad, para no
-  //    inventar un final en una respuesta truncada — esa tiene que seguir
-  //    fallando su propia comprobación.
+  // 3. Epílogo, cuando el documento cierra de verdad.
   const close = out.toLowerCase().lastIndexOf("</html>");
-  if (close !== -1) out = out.slice(0, close + "</html>".length);
+  if (close !== -1) return out.slice(0, close + "</html>".length).trim();
+
+  // 4. Y el caso feo: el modelo CIERRA la valla a mitad del documento y sigue
+  //    escribiendo notas de diseño, sin `</body></html>`. Medido en la página
+  //    de SaaS de la muestra — la valla venía tras un `</style>` y detrás
+  //    cuatro párrafos de "Visual Highlights & Design Approach", que el parser
+  //    metió dentro del <body> al cerrar las etiquetas él solo.
+  //
+  //    Sólo se aplica AQUÍ, sin `</html>`: con el documento bien cerrado no se
+  //    toca nada, y una página que enseñe ``` en su contenido —documentación,
+  //    justo la que salió en la misma muestra— no puede verse afectada.
+  const fence = out.search(/\n[\t ]*```/);
+  if (fence > 0) return out.slice(0, fence).trim();
 
   return out.trim();
 }
