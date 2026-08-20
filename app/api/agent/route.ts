@@ -13,6 +13,7 @@ import { streamWithRetry } from "@/lib/agent/retry";
 import { realDeps, runAgentTool, summarizeProjectState, type AgentSession } from "@/lib/agent/tools";
 import { summarizeBusinessForAgent } from "@/lib/agent/business";
 import { verifyEditedPage } from "@/lib/agent/verify";
+import { jsonResponse, sseChannel } from "@/lib/ai/sse";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // POST /api/agent — the OpenLen Agent's agentic loop (F1 Task 9).
@@ -278,25 +279,9 @@ export async function POST(req: Request): Promise<Response> {
 
   const sse = new ReadableStream<Uint8Array>({
     async start(controller) {
-      let closed = false;
-      const emit = (event: string, data: unknown) => {
-        if (closed) return;
-        try {
-          controller.enqueue(ENCODER.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`));
-        } catch {
-          closed = true;
-        }
-      };
-      const close = () => {
-        if (!closed) {
-          closed = true;
-          try {
-            controller.close();
-          } catch {
-            /* already closed */
-          }
-        }
-      };
+      const channel = sseChannel(controller);
+      const emit = channel.emit;
+      const close = () => channel.close();
       const timeout = setTimeout(() => upstreamAbort.abort(), STREAM_TIMEOUT_MS);
       try {
         const { balance } = await getCreditState(userId);
@@ -404,9 +389,8 @@ export async function POST(req: Request): Promise<Response> {
   });
 }
 
+/** El cuerpo vive en lib/ai/sse; el nombre local se queda porque lo usan
+ *  decenas de sitios y renombrarlos no aclara nada. */
 function errorJson(status: number, message: string): Response {
-  return new Response(JSON.stringify({ error: message }), {
-    status,
-    headers: { "content-type": "application/json" },
-  });
+  return jsonResponse({ error: message }, status);
 }

@@ -1,6 +1,7 @@
 import { GeminiProvider, type InlineImage, type Message, type StreamEvent } from "@/lib/ai-gateway";
 import { createFireworksStreamClient, type FireworksStreamEvent } from "@/lib/ai/fireworks-stream-client";
 import { resolveAIProvider } from "@/lib/ai-provider";
+import { usesDeepSeek as deepSeekEnabled } from "@/lib/ai/provider-switch";
 import { messagesForFireworks, toolsForFireworks } from "@/lib/agent/fireworks-bridge";
 import { modelIdForRole, roleForOperation } from "@/lib/generation/fable-model-policy";
 import type { CreditRate } from "@/lib/credits";
@@ -79,7 +80,7 @@ const TEMPERATURE = 0.7;
 
 export function createAgentBrain(options: AgentBrainOptions): AgentBrain {
   const env = options.env ?? process.env;
-  const usesDeepSeek = env.OPENLEN_AGENT_PROVIDER?.trim().toLowerCase() !== "gemini";
+  const usesDeepSeek = deepSeekEnabled("OPENLEN_AGENT_PROVIDER", env);
   const gemini = resolveAIProvider("gemini-flash");
   const provider = new GeminiProvider(gemini.key as string);
   const fireworks = createFireworksStreamClient();

@@ -13,6 +13,7 @@ import { critiqueGeneratedPage } from "@/lib/ai/vision-critique";
 import { recordCriticRun, recordRegenOutcome } from "@/lib/ai/quality-metrics";
 import type { InlineImage, Message } from "@/lib/ai-gateway";
 import { preparePage } from "@/lib/page-engine/prepare";
+import { jsonResponse, sseChannel } from "@/lib/ai/sse";
 import { todayLine } from "@/lib/ai/today-line";
 import {
   PLAN_LIMITS,
@@ -45,7 +46,6 @@ export const dynamic = "force-dynamic";
 //   byte.
 // ─────────────────────────────────────────────────────────────────────────────
 
-const ENCODER = new TextEncoder();
 
 
 // Sin catálogo de gusto. Aquí viajaba un segundo mensaje `<reference>` con las
@@ -191,31 +191,16 @@ ${brief}`;
 
   const sse = new ReadableStream<Uint8Array>({
     async start(controller) {
-      let closed = false;
-      const emit = (event: string, data: unknown) => {
-        if (closed) return;
-        try {
-          controller.enqueue(
-            ENCODER.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`),
-          );
-        } catch {
-          closed = true;
-        }
-      };
+      const channel = sseChannel(controller);
+      const emit = channel.emit;
       let keepalive: ReturnType<typeof setInterval> | null = null;
-      const closeStream = () => {
-        if (closed) return;
-        closed = true;
-        if (keepalive) {
-          clearInterval(keepalive);
-          keepalive = null;
-        }
-        try {
-          controller.close();
-        } catch {
-          /* already closed */
-        }
-      };
+      const closeStream = () =>
+        channel.close(() => {
+          if (keepalive) {
+            clearInterval(keepalive);
+            keepalive = null;
+          }
+        });
 
       let totalHtmlChars = 0;
       // Server-to-client keepalive — emit a progress event every 5s so
@@ -673,9 +658,7 @@ function stripMarkdownFences(s: string): string {
   return out.trim();
 }
 
+/** El cuerpo vive en lib/ai/sse. */
 function json(body: unknown, status: number): Response {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { "Content-Type": "application/json" },
-  });
+  return jsonResponse(body, status);
 }

@@ -55,6 +55,7 @@ import { creditsForUsage, debitCredits as realDebitCredits, type CreditRate } fr
 import { createFireworksStreamClient } from "@/lib/ai/fireworks-stream-client";
 import { messagesForFireworks } from "@/lib/agent/fireworks-bridge";
 import { resolveAIProvider, type AIModel } from "@/lib/ai-provider";
+import { usesDeepSeekForTurn } from "@/lib/ai/provider-switch";
 
 const DEFAULT_MODEL: AIModel = "gemini-pro";
 
@@ -248,7 +249,7 @@ export function pageWriterUsesDeepSeek(
   env: Readonly<Record<string, string | undefined>> = process.env,
   hasImages = false,
 ): boolean {
-  return !hasImages && env.OPENLEN_GENERATE_PROVIDER?.trim().toLowerCase() !== "gemini";
+  return usesDeepSeekForTurn("OPENLEN_GENERATE_PROVIDER", hasImages, env);
 }
 
 function createDeepSeekPageProvider(): GeminiProviderLike {

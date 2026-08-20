@@ -26,6 +26,8 @@ import {
   type ScopedView,
 } from "@/lib/html-ops";
 import { preparePage } from "@/lib/page-engine/prepare";
+import { jsonResponse, sseChannel } from "@/lib/ai/sse";
+import { usesDeepSeekForTurn } from "@/lib/ai/provider-switch";
 import { persistPage } from "@/lib/page-engine/persist";
 import { applyModuleIntent } from "@/lib/projects/module-intent";
 import { describeBehaviorIssues } from "@/lib/behaviors/validate";
@@ -53,7 +55,6 @@ import { todayLine } from "@/lib/ai/today-line";
 
 export const runtime = "nodejs";
 
-const ENCODER = new TextEncoder();
 // Hard upper bound on a single Gemini chat-edit turn. Real edits can take
 // ~3 min on dense pages; this only catches a wedged stream, not a slow one.
 const STREAM_TIMEOUT_MS = 360_000;
@@ -477,8 +478,10 @@ VISUAL CONTEXT: the attached image is a full-page render of the CURRENT page (wh
   // Un turno CON imágenes de referencia se queda en Gemini pase lo que pase: en
   // la política de Fireworks toda imagen va a Qwen y al razonador nunca se le ha
   // mandado una. Mandarla a ciegas es apostar la edición del usuario.
-  const useDeepSeek = process.env.OPENLEN_CHAT_PROVIDER?.trim().toLowerCase() !== "gemini"
-    && (referenceImages?.length ?? 0) === 0;
+  const useDeepSeek = usesDeepSeekForTurn(
+    "OPENLEN_CHAT_PROVIDER",
+    (referenceImages?.length ?? 0) > 0,
+  );
   const modelLabel = useDeepSeek ? "DeepSeek" : PROVIDER.label;
   // El turno se cobra al proveedor que lo corrió. A tarifa de Gemini la salida
   // de DeepSeek se cobraba casi nueve veces de más, y una edición que reescribe
@@ -494,30 +497,15 @@ VISUAL CONTEXT: the attached image is a full-page render of the CURRENT page (wh
   const startedAt = Date.now();
   const sse = new ReadableStream<Uint8Array>({
     async start(controller) {
-      let closed = false;
-      const emit = (event: string, data: unknown) => {
-        if (closed) return;
-        try {
-          controller.enqueue(
-            ENCODER.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`),
-          );
-        } catch {
-          closed = true;
-        }
-      };
-      const closeStream = () => {
-        if (closed) return;
-        closed = true;
-        if (timeoutHandle) {
-          clearTimeout(timeoutHandle);
-          timeoutHandle = null;
-        }
-        try {
-          controller.close();
-        } catch {
-          /* already closed */
-        }
-      };
+      const channel = sseChannel(controller);
+      const emit = channel.emit;
+      const closeStream = () =>
+        channel.close(() => {
+          if (timeoutHandle) {
+            clearTimeout(timeoutHandle);
+            timeoutHandle = null;
+          }
+        });
 
       let accumulatedReasoning = "";
       let accumulatedHtml = "";
@@ -985,9 +973,8 @@ ${droppedNotice}` : reasoning,
   });
 }
 
+/** El cuerpo vive en lib/ai/sse; el nombre local se queda porque lo usan
+ *  decenas de sitios y renombrarlos no aclara nada. */
 function errorJson(status: number, message: string): Response {
-  return new Response(JSON.stringify({ error: message }), {
-    status,
-    headers: { "content-type": "application/json" },
-  });
+  return jsonResponse({ error: message }, status);
 }
