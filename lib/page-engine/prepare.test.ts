@@ -157,3 +157,49 @@ describe("los cálculos se compilan al ingerir", () => {
     expect(out.ok && out.html).not.toContain("-c=");
   });
 });
+
+// Cerrar el bucle: lo que el motor detecta, el motor lo arregla — y lo que no
+// puede arreglar, lo dice en vez de perderlo.
+describe("los cálculos rotos se reparan o se reportan", () => {
+  it("una región puesta sobre el botón se envuelve, y entonces compila", async () => {
+    const html =
+      `<!doctype html><html><body><section>` +
+      `<button data-ol-calc data-ol-set="elegido = AZAR(nombres)">Girar</button>` +
+      `<ul data-ol-val="nombres"><li data-ol-item>Ana</li></ul>` +
+      `<p data-ol-out="elegido">—</p>` +
+      `</section></body></html>`;
+    const out = await preparePage(html, { mode: "create" }, deps());
+    expect(out.ok).toBe(true);
+    expect(out.report.calcRepairs).toContain("wrapped_region");
+    expect(out.report.calcIssues ?? []).toEqual([]);
+    expect(out.ok && out.html).toContain("data-ol-set-c=");
+  });
+
+  it("un campo que nadie lee pierde el marcador — deja de prometer", async () => {
+    const html =
+      `<!doctype html><html><body><div data-ol-calc>` +
+      `<input data-ol-val="recibo" type="number" value="1800">` +
+      `<input data-ol-val="recibo-range" type="range" value="1800">` +
+      `<p data-ol-out="recibo * 0.72">0</p></div></body></html>`;
+    const out = await preparePage(html, { mode: "create" }, deps());
+    expect(out.report.calcRepairs).toContain("dropped_orphan_value");
+    expect(out.ok && out.html).not.toContain('data-ol-val="recibo-range"');
+  });
+
+  // Lo que NO se puede arreglar sin adivinar tiene que LLEGAR. Antes se perdía:
+  // el informe sólo llevaba el conteo en el `detail` de la etapa.
+  it("una fórmula que necesita criterio viaja en el informe", async () => {
+    const html =
+      `<!doctype html><html><body><div data-ol-calc>` +
+      `<input data-ol-val="x" value="1"><p data-ol-out="x * ">0</p></div></body></html>`;
+    const out = await preparePage(html, { mode: "create" }, deps());
+    expect(out.report.calcIssues?.length).toBeGreaterThan(0);
+    expect(out.report.calcIssues?.[0]?.attr).toBe("data-ol-out");
+  });
+
+  it("una página sin cálculos no reporta ni repara nada", async () => {
+    const out = await preparePage(PAGE, { mode: "create" }, deps());
+    expect(out.report.calcIssues).toBeUndefined();
+    expect(out.report.calcRepairs).toBeUndefined();
+  });
+});

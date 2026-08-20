@@ -7,6 +7,7 @@ import { getCreditState } from "@/lib/credits";
 import { SYSTEM_PROMPT } from "./system-prompt";
 import { detectSlotPath } from "@/lib/html-engine";
 import { collectDegradations } from "@/lib/ingestion/degradations";
+import { disableCalcRegions } from "@/lib/expr/repair";
 import { resolveAIProvider, type AIModel } from "@/lib/ai-provider";
 import { generateHtmlStream, pageWriterUsesDeepSeek } from "@/lib/ai-stream/generate";
 import { critiqueGeneratedPage } from "@/lib/ai/vision-critique";
@@ -398,11 +399,20 @@ ${brief}`;
         let html = prepared.html;
         let regenerated = false;
         let breakage = [...prepared.report.breakage];
+        // Una fórmula que el reparador NO pudo arreglar sin adivinar entra en
+        // el mismo reintento que la rotura medida. No es un reintento nuevo:
+        // es que el diagnóstico —que ya era quirúrgico— por fin llega a quien
+        // puede actuar sobre él.
+        let calcRotas = [...(prepared.report.calcIssues ?? [])];
+        const diagnostico = [
+          ...breakage,
+          ...calcRotas.map((i) => `la fórmula ${i.attr}="${i.formula}" ${i.message}`),
+        ];
 
-        if (breakage.length > 0) {
+        if (diagnostico.length > 0) {
           // eslint-disable-next-line no-console
-          console.warn(`[generate] rotura medida — ${breakage.join(" · ")}`);
-          emit("regen-starting", { reason: breakage.join("; ") });
+          console.warn(`[generate] rotura medida — ${diagnostico.join(" · ")}`);
+          emit("regen-starting", { reason: diagnostico.join("; ") });
           const fixMessages: Message[] = [
             { role: "system", content: SYSTEM_PROMPT },
             {
@@ -420,13 +430,21 @@ ${briefBlock}`,
           const fixed = await runPass(fixMessages, "regen");
           if (fixed.ok) {
             const second = await engine(fixed.html);
-            // La segunda puede salir peor que la primera. Se entrega la que
-            // menos rota esté, no la más reciente.
-            if (second.ok && second.report.breakage.length <= breakage.length) {
+            // La segunda puede salir peor que la primera: se entrega la que
+            // menos rota esté, no la más reciente. Y se juzga por el TOTAL, no
+            // sólo por el desborde — si arregla el render y rompe tres
+            // fórmulas, salió peor.
+            const antes = breakage.length + calcRotas.length;
+            const despues =
+              second.ok
+                ? second.report.breakage.length + (second.report.calcIssues?.length ?? 0)
+                : Number.POSITIVE_INFINITY;
+            if (second.ok && despues <= antes) {
               prepared = second;
               html = second.html;
               regenerated = true;
               breakage = [...second.report.breakage];
+              calcRotas = [...(second.report.calcIssues ?? [])];
             }
             recordRegenOutcome(true);
           } else {
@@ -437,6 +455,26 @@ ${briefBlock}`,
             // sigue roto. Un fallo que nadie registra vuelve a pasar.
             // eslint-disable-next-line no-console
             console.warn(`[generate] entregada con rotura — ${breakage.join(" · ")}`);
+          }
+        }
+
+        // DEGRADAR SIN MENTIR. Si tras reparar y reintentar una fórmula sigue
+        // muerta, se le quitan los marcadores a la región: la página queda
+        // estática pero íntegra —el valor de nacimiento ya está escrito dentro
+        // del elemento— y el visitante no ve un control que invite a teclear y
+        // no responda.
+        //
+        // Es lo que hace un error boundary con un widget roto: esconderlo, no
+        // mostrarlo muerto. La otra mitad —decírselo al creador— la lleva
+        // `collectDegradations` con el código `broken_controls`, más abajo.
+        if (calcRotas.length > 0) {
+          const off = disableCalcRegions(html);
+          if (off.repaired > 0) {
+            html = off.html;
+            // eslint-disable-next-line no-console
+            console.warn(
+              `[generate] cálculo apagado tras ${calcRotas.length} fórmula(s) irreparable(s) — la página se entrega sin él`,
+            );
           }
         }
 

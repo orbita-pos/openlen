@@ -6,7 +6,8 @@ import { bindColorsToTokens } from "@/lib/document/bind-colors-to-tokens";
 import { ensureSingleH1 } from "@/lib/document/ensure-single-h1";
 import { repairUnreadableText } from "@/lib/document/repair-unreadable-text";
 import { validateBehaviors } from "@/lib/behaviors/validate";
-import { compileCalcRegions } from "@/lib/expr/document";
+import { compileCalcRegions, type CalcIssue } from "@/lib/expr/document";
+import { repairCalcRegions } from "@/lib/expr/repair";
 import { objectiveBreakage } from "@/lib/generation/objective-breakage";
 import { sanitizeForPublish } from "@/lib/html-engine";
 import { passHtmlGate } from "@/lib/html-gate/document-gate";
@@ -125,6 +126,8 @@ export async function preparePage(
   // Y el sembrado de marca va primero porque los invariantes tienen que ver el
   // documento que de verdad se entrega, logo incluido.
   let invariants: StageOutcome = { stage: "invariants", status: "skipped" };
+  let calcIssues: CalcIssue[] = [];
+  let calcRepairs: string[] = [];
   const beforeMeta = (h: string): string => {
     try {
       const seeded = opts.profile ? seedBrandIntoHtml(h, opts.profile) : h;
@@ -143,11 +146,28 @@ export async function preparePage(
       // inyecta es (a) un programa que sale de un AST cerrado y se serializa
       // con los ángulos escapados como `<`, y (b) un valor inicial que se
       // escapa como texto. Ni un `<script>`, ni un `on*`, ni una URL.
-      const calc = compileCalcRegions(bound.html);
+      //
+      // REPARAR ANTES DE COMPILAR. Lo inequívoco se arregla —una región que el
+      // modelo puso sobre el botón en vez de envolviendo, un campo que ninguna
+      // fórmula lee— y sólo después se compila, para que los gemelos salgan del
+      // documento ya arreglado. Detectar sin reparar deja el defecto en la
+      // página del visitante con un diagnóstico perfecto al lado, que no le
+      // sirve de nada a quien la está mirando.
+      const fixed = repairCalcRegions(bound.html);
+      const calc = compileCalcRegions(fixed.html);
+      calcIssues = [...calc.issues];
+      calcRepairs = [...fixed.did];
       invariants = {
         stage: "invariants",
-        status: h1.changed || bound.bound > 0 || calc.compiled > 0 ? "changed" : "skipped",
-        detail: `h1=${h1.changed ? "fixed" : "ok"} tokens=${bound.bound} calc=${calc.compiled}/${calc.regions}`,
+        status:
+          h1.changed || bound.bound > 0 || calc.compiled > 0 || fixed.repaired > 0
+            ? "changed"
+            : "skipped",
+        detail:
+          `h1=${h1.changed ? "fixed" : "ok"} tokens=${bound.bound}` +
+          ` calc=${calc.compiled}/${calc.regions}` +
+          (fixed.repaired > 0 ? ` reparado=${fixed.did.join(",")}` : "") +
+          (calc.issues.length > 0 ? ` rotas=${calc.issues.length}` : ""),
       };
       return calc.html;
     } catch (err) {
@@ -192,6 +212,8 @@ export async function preparePage(
         breakage,
         ...(gated.removed ? { removed: { ...gated.removed, metaRefresh: 0 } } : {}),
         ...(gated.issues ? { behaviorIssues: [...gated.issues] } : {}),
+        ...(calcIssues.length ? { calcIssues } : {}),
+        ...(calcRepairs.length ? { calcRepairs } : {}),
         modules: [],
       },
     };
@@ -240,6 +262,8 @@ export async function preparePage(
     breakage,
     ...(gated.removed ? { removed: { ...gated.removed, metaRefresh: 0 } } : {}),
     ...(gated.issues ? { behaviorIssues: [...gated.issues] } : {}),
+    ...(calcIssues.length ? { calcIssues } : {}),
+    ...(calcRepairs.length ? { calcRepairs } : {}),
     modules,
     ...(modules.length ? { moduleSettings } : {}),
   };

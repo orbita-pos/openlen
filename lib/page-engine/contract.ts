@@ -41,6 +41,16 @@ export interface PrepareReport {
     metaRefresh: number;
   };
   readonly behaviorIssues?: readonly unknown[];
+  /** Las fórmulas que siguen ROTAS después de reparar lo inequívoco.
+   *
+   *  Antes se perdían: `compileCalcRegions` corre dentro de `beforeMeta` y sólo
+   *  su CONTEO llegaba al `detail` de la etapa. Se salvaban por accidente
+   *  porque `validateBehaviors` las re-detecta vía `exprAttrs` — salvo la de
+   *  "fuera de toda región", que sólo existe en el compilador y se iba en
+   *  silencio. Un diagnóstico que nadie recibe no cierra ningún bucle. */
+  readonly calcIssues?: readonly { attr: string; formula: string; message: string }[];
+  /** Qué arregló el reparador determinista, en códigos de máquina. */
+  readonly calcRepairs?: readonly string[];
   /** Módulos que el documento pidió (huecos `data-openlen-*`). */
   readonly modules: readonly string[];
   readonly moduleSettings?: unknown;
