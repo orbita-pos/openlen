@@ -64,6 +64,7 @@ export default defineConfig({
       "lib/html-engine.sanitize-counters.test.ts",
       "lib/contract/**/*.test.ts",
       "lib/document/**/*.test.ts",
+      "lib/page-engine/**/*.test.ts",
       "lib/generation/**/*.test.ts",
       "lib/html-gate/**/*.test.ts",
       "lib/ingestion/**/*.test.ts",

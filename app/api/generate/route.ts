@@ -1,28 +1,18 @@
 import { auth } from "@/auth";
 import { createProject } from "@/lib/projects";
-import { applyModuleIntent } from "@/lib/projects/module-intent";
-import { bindColorsToTokens } from "@/lib/document/bind-colors-to-tokens";
-import { ensureSingleH1 } from "@/lib/document/ensure-single-h1";
-import { repairUnreadableText } from "@/lib/document/repair-unreadable-text";
-import { objectiveBreakage } from "@/lib/generation/objective-breakage";
-import { renderVisualQualityViewports } from "@/lib/ai/visual-quality-renderer";
 import { resolveProfileForCreation } from "@/lib/business-profiles/store";
-import { seedBrandIntoHtml } from "@/lib/business-profiles/seed-html";
 import type { BusinessProfile, BusinessProfileData } from "@/lib/business-profiles/types";
 import { createVersion } from "@/lib/projects/versions";
 import { getCreditState } from "@/lib/credits";
 import { SYSTEM_PROMPT } from "./system-prompt";
-import { detectSlotPath, sanitizeForPublish } from "@/lib/html-engine";
-import { passHtmlGate } from "@/lib/html-gate/document-gate";
+import { detectSlotPath } from "@/lib/html-engine";
 import { collectDegradations } from "@/lib/ingestion/degradations";
 import { resolveAIProvider, type AIModel } from "@/lib/ai-provider";
 import { generateHtmlStream, pageWriterUsesDeepSeek } from "@/lib/ai-stream/generate";
-import { fetchImageAsInlineData } from "@/lib/ai/inline-image";
 import { critiqueGeneratedPage } from "@/lib/ai/vision-critique";
-import { photographHtml } from "@/lib/imagery/photograph";
 import { recordCriticRun, recordRegenOutcome } from "@/lib/ai/quality-metrics";
 import type { InlineImage, Message } from "@/lib/ai-gateway";
-import { pageMetaFor } from "@/lib/publish/page-meta-intent";
+import { preparePage } from "@/lib/page-engine/prepare";
 import { todayLine } from "@/lib/ai/today-line";
 import {
   PLAN_LIMITS,
@@ -399,69 +389,31 @@ ${brief}`;
         // Y las tres medidas mejoran con las fotos puestas: el contraste sobre
         // una foto es incierto a propósito —el detector se calla— y el
         // desborde se mide sobre la maqueta de verdad, no sobre un hueco.
-        const withImagery = async (candidate: string): Promise<string> => {
-          if (process.env.OPENLEN_IMAGERY === "0") return candidate;
-          try {
-            const photographed = await photographHtml({ html: candidate, brief });
-            if (photographed.applied > 0) {
-              // eslint-disable-next-line no-console
-              console.log(`[generate] imagery — ${photographed.applied} photo(s) placed`);
-              return photographed.html;
-            }
-          } catch (err) {
-            // eslint-disable-next-line no-console
-            console.warn("[generate] imagery failed; keeping gradient placeholders", err);
-          }
-          return candidate;
-        };
+        // Reuse the profile resolved up front (a save-time resolve only if
+        // that failed).
+        const business = profile ?? (await resolveProfileForCreation(userId));
 
-        let html = await withImagery(first.html);
-        let regenerated = false;
+        // El motor: imágenes → legibilidad → medición → invariantes → puerta →
+        // módulos. Vive en lib/page-engine y lo comparten crear, editar y el
+        // Agente. Esta ruta lo corre una vez por candidato; lo único que se
+        // queda aquí es la decisión de regenerar, porque exige volver a llamar
+        // al modelo y eso es presupuesto del usuario.
+        const title = extractTitle(first.html) ?? brief.slice(0, 60).trim();
+        const engine = (candidate: string) =>
+          preparePage(candidate, { mode: "create", brief, title, profile: business.data });
 
-        // Texto que la página pinta y nadie puede leer. Se mide EN EL RENDER
-        // porque el mismo `color:#8a8a92` es correcto sobre negro e ilegible
-        // sobre gris, y ningún análisis del CSS distingue los dos. Va antes del
-        // crítico: lo que el crítico juzga tiene que ser lo que se entrega.
-        //
-        // Medido en una página de terror recién generada por esta ruta: dos
-        // textos a 1.87 y 1.98 sobre casi negro, siete elementos corregidos.
-        // Fail-soft entero — un arreglo cosmético no puede costar la página.
-        try {
-          // Con plazo: el render vive dentro de la petición del usuario, y un
-          // Chrome colgado no puede quedarse con la página que ya está escrita.
-          const legible = await Promise.race([
-            repairUnreadableText(html, renderVisualQualityViewports),
-            new Promise<{ html: string; repaired: number }>((resolve) =>
-              setTimeout(() => resolve({ html, repaired: 0 }), 20_000)),
-          ]);
-          if (legible.repaired > 0) {
-            html = legible.html;
-            // eslint-disable-next-line no-console
-            console.log(`[generate] texto ilegible corregido — ${legible.repaired} elementos`);
-          }
-        } catch (legibleErr) {
+        let prepared = await engine(first.html);
+        if (!prepared.ok) {
           // eslint-disable-next-line no-console
-          console.error("[generate] repairUnreadableText falló — sigue la página tal cual", legibleErr);
+          console.error(`[generate] gate refused (${prepared.code}) — not saving`);
+          emit("error", { message: "The page came out with editor-mode markers — try again." });
+          closeStream();
+          return;
         }
+        let html = prepared.html;
+        let regenerated = false;
+        let breakage = [...prepared.report.breakage];
 
-        // ── Puerta de entrega sobre lo MEDIBLE ──────────────────────────────
-        // Se renderiza la página y se lee lo que sólo el render sabe. Hasta
-        // aquí la ruta calculaba estas cuatro señales para reparar el contraste
-        // y tiraba las otras tres: lo único capaz de disparar una regeneración
-        // era la opinión de un crítico de visión.
-        //
-        // Lo objetivo manda sobre lo opinable: si hay rotura medida se
-        // regenera con los NÚMEROS —no con la categoría—, y esa regeneración
-        // consume la única que el turno permite, así que el crítico no corre.
-        // Medido sobre veinte páginas: desborde 0/20 y geometría 0/20, o sea
-        // que esta puerta casi nunca dispara. Es seguro barato, no un peaje.
-        let breakage: string[] = [];
-        try {
-          breakage = objectiveBreakage(await renderVisualQualityViewports(html));
-        } catch {
-          // No medir no es prueba de rotura: la página sigue su camino.
-          breakage = [];
-        }
         if (breakage.length > 0) {
           // eslint-disable-next-line no-console
           console.warn(`[generate] rotura medida — ${breakage.join(" · ")}`);
@@ -482,15 +434,14 @@ ${briefBlock}`,
           ];
           const fixed = await runPass(fixMessages, "regen");
           if (fixed.ok) {
-            const fixedHtml = await withImagery(fixed.html);
+            const second = await engine(fixed.html);
             // La segunda puede salir peor que la primera. Se entrega la que
             // menos rota esté, no la más reciente.
-            let after: string[] = [];
-            try { after = objectiveBreakage(await renderVisualQualityViewports(fixedHtml)); } catch { after = []; }
-            if (after.length <= breakage.length) {
-              html = fixedHtml;
+            if (second.ok && second.report.breakage.length <= breakage.length) {
+              prepared = second;
+              html = second.html;
               regenerated = true;
-              breakage = after;
+              breakage = [...second.report.breakage];
             }
             recordRegenOutcome(true);
           } else {
@@ -561,8 +512,12 @@ ${briefBlock}`,
             ];
             const regen = await runPass(regenMessages, "regen");
             if (regen.ok) {
-              html = await withImagery(regen.html);
-              regenerated = true;
+              const third = await engine(regen.html);
+              if (third.ok) {
+                prepared = third;
+                html = third.html;
+                regenerated = true;
+              }
               recordRegenOutcome(true);
             } else {
               // Regen produced invalid HTML — ship the (already-valid) first
@@ -576,63 +531,11 @@ ${briefBlock}`,
           }
         }
 
-        // ── Seed + save the chosen final document ───────────────────────────
-        const title = extractTitle(html) ?? brief.slice(0, 60).trim();
-
-        // Reuse the profile resolved up front (a save-time resolve only if
-        // that failed).
-        const business = profile ?? (await resolveProfileForCreation(userId));
-
-        // One gate. `behaviors: "warn"` — this surface FAILS OPEN: the project
-        // does not exist yet, and refusing here costs the user a page they
-        // waited a minute and paid credits for. It ships and we record what
-        // was lost. `seal: false` (publishToDir seals at publish time),
-        // `render: false` (the vision critic above already paid the one render
-        // this request can afford). Brand seeding rides in `beforeMeta` — the
-        // same slot it occupied when it was called inline, unchanged: a
-        // generated page DOES take the brand accent (no `recolor: false`
-        // here), because it was written for this business, not adopted from
-        // someone else's design.
-        //
-        // The four mutations that used to land after the last sanitize — the
-        // Tailwind carrier (a <script>, ours, injected by the stream helper
-        // AFTER it sanitizes), the photo swap, the brand seeding, and the head
-        // completion — are all upstream of this call now. The document that
-        // reaches the DB is one this route sanitized itself, not one it
-        // trusted a helper to have cleaned before four more passes touched it.
-        const gated = await passHtmlGate(
-          html,
-          {
-            sanitize: sanitizeForPublish,
-            // Dos invariantes del documento, ambas comprobadas sin pérdida en
-            // 178 páginas libres: exactamente un <h1> (5 de esas 178 salen con
-            // cero) y el literal que ya vale lo mismo que un token, escrito
-            // como el token — si no, el inspector mueve el tema y media página
-            // no se entera.
-            beforeMeta: (h) => bindColorsToTokens(ensureSingleH1(seedBrandIntoHtml(h, business.data)).html).html,
-          },
-          {
-            render: false,
-            seal: false,
-            behaviors: "warn",
-            // AUTHORED: written for THIS user from their brief, not cloned.
-            meta: pageMetaFor({ provenance: "authored", title, profile: business.data }),
-          },
-        );
-        if (!gated.ok) {
-          // Only reachable on the reserved marker (directly, or via
-          // `sanitizeForPublish` returning null for the same reason) — and
-          // that one never fails open, anywhere. runPass already refuses the
-          // model's own markers; this catches bytes the seeding introduced.
-          // eslint-disable-next-line no-console
-          console.error(`[generate] gate refused (${gated.code}) — not saving`);
-          emit("error", {
-            message: "The page came out with editor-mode markers — try again.",
-          });
-          closeStream();
-          return;
-        }
-        html = gated.html;
+        // ── Guardar el documento elegido ────────────────────────────────────
+        const gated = {
+          removed: prepared.report.removed,
+          issues: (prepared.report.behaviorIssues ?? []) as readonly never[],
+        };
 
         // What the page lost on the way in. On the ROW, not in the SSE payload:
         // the client redirects to the workspace on `project_saved`, so a field
@@ -650,20 +553,18 @@ ${briefBlock}`,
           behaviorIssues: gated.issues,
         });
 
+        // AI→módulos bridge: the engine already read the page's placeholders.
+        const enabledModules = [...prepared.report.modules];
+
         let projectId: string;
-        let enabledModules: string[] = [];
         try {
-          // AI→módulos bridge: if the page carries a module placeholder, turn
-          // that module on so the publish bake wires the real widget.
-          const moduleIntent = applyModuleIntent(undefined, html);
-          enabledModules = moduleIntent.enabled;
           projectId = await createProject(userId, {
             html,
             brief,
             title,
             profileId: business.id,
             logoUrl: business.data.brand?.logoUrl ?? null,
-            settings: moduleIntent.enabled.length ? moduleIntent.settings : undefined,
+            settings: enabledModules.length ? (prepared.report.moduleSettings as never) : undefined,
             degradations: degradations.length > 0 ? degradations : undefined,
           });
         } catch (err) {

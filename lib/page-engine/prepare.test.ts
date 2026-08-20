@@ -1,0 +1,94 @@
+import { describe, expect, it, vi } from "vitest";
+
+import { preparePage } from "./prepare";
+
+const PAGE = `<!doctype html><html><head><style>:root{--ol-fg:#111}</style></head><body><section><h2>Hola</h2></section></body></html>`;
+
+/**
+ * La puerta real hace I/O nativo, pero el doble tiene que respetar su contrato:
+ * llama a `beforeMeta`, que es donde corren los invariantes. Un doble que lo
+ * ignore prueba una tubería que no existe.
+ */
+const gateOk = vi.fn(
+  async (html: string, deps: { beforeMeta?: (h: string) => string }, _policy: unknown) => ({
+    ok: true as const,
+    html: deps.beforeMeta ? deps.beforeMeta(html) : html,
+    removed: { scripts: 0, eventHandlers: 0, iframes: 0, dangerousUrls: 0 },
+    warnings: [] as string[],
+  }),
+);
+
+const deps = (over: Parameters<typeof preparePage>[2] = {}) => ({
+  render: (async () => ({ mobileOverflow: false, invalidGeometry: false })) as never,
+  photograph: (async ({ html }: { html: string }) => ({ html, applied: 0 })) as never,
+  gate: gateOk as never,
+  ...over,
+});
+
+describe("el motor de la página", () => {
+  it("entrega el documento y nombra cada etapa", async () => {
+    const out = await preparePage(PAGE, { mode: "create" }, deps());
+    expect(out.ok).toBe(true);
+    expect(out.report.stages.map((s) => s.stage)).toEqual([
+      "imagery", "legibility", "measure", "invariants", "gate", "modules",
+    ]);
+  });
+
+  it("aplica los invariantes: la página sin <h1> sale con uno", async () => {
+    const out = await preparePage(PAGE, { mode: "create" }, deps());
+    expect(out.ok && out.html).toContain("<h1>Hola</h1>");
+  });
+
+  // El motivo por el que existe: crear no tiene página que perder, editar sí.
+  it.each([
+    ["create", "warn"],
+    ["edit", "block"],
+  ] as const)("en %s la puerta corre con behaviors=%s", async (mode, behaviors) => {
+    gateOk.mockClear();
+    await preparePage(PAGE, { mode }, deps());
+    expect(gateOk.mock.calls[0]?.[2]).toMatchObject({ behaviors });
+  });
+
+  describe("NEVER-THROW — ninguna etapa cosmética puede costar la página", () => {
+    it("un Chrome caído no impide entregar", async () => {
+      const out = await preparePage(PAGE, { mode: "create" }, deps({
+        render: (async () => { throw new Error("chrome muerto"); }) as never,
+      }));
+      expect(out.ok).toBe(true);
+      // Y NO se reporta como "sin roturas": no haber medido es su propio estado.
+      expect(out.report.stages.find((s) => s.stage === "measure")?.status).toBe("unavailable");
+    });
+
+    it("la búsqueda de fotos caída no impide entregar", async () => {
+      const out = await preparePage(PAGE, { mode: "create", brief: "taller de barro" }, deps({
+        photograph: (async () => { throw new Error("sin red"); }) as never,
+      }));
+      expect(out.ok).toBe(true);
+      expect(out.report.stages.find((s) => s.stage === "imagery")?.status).toBe("unavailable");
+    });
+  });
+
+  it("la rotura medida se informa, no se actúa — regenerar es del llamador", async () => {
+    const out = await preparePage(PAGE, { mode: "create" }, deps({
+      render: (async () => ({ mobileOverflow: true, invalidGeometry: false })) as never,
+    }));
+    expect(out.ok).toBe(true);
+    expect(out.report.breakage.length).toBeGreaterThan(0);
+  });
+
+  it("sólo la puerta puede refusar, y devuelve el motivo", async () => {
+    const out = await preparePage(PAGE, { mode: "edit" }, deps({
+      gate: (async () => ({ ok: false as const, code: "reserved_marker" })) as never,
+    }));
+    expect(out.ok).toBe(false);
+    expect(!out.ok && out.code).toBe("reserved_marker");
+    // El informe sobrevive al rechazo: sin él nadie sabe qué llegó a correr.
+    expect(out.report.stages.length).toBeGreaterThan(1);
+  });
+
+  it("sin brief no se buscan fotos", async () => {
+    const photograph = vi.fn();
+    await preparePage(PAGE, { mode: "edit" }, deps({ photograph: photograph as never }));
+    expect(photograph).not.toHaveBeenCalled();
+  });
+});
