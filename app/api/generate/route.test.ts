@@ -124,6 +124,21 @@ describe("POST /api/generate", () => {
     mocks.createVersion.mockResolvedValue("v1");
   });
 
+  // La puerta PRO mandaba al usuario free al "Quick (curated) flow" — que era
+  // /api/curate, borrado con el catálogo. Un usuario nuevo se topaba con un muro
+  // y una salida inexistente. Lo que separa free de pro son el tope por hora y
+  // los créditos, no una puerta.
+  it("un usuario free puede crear su página", async () => {
+    mocks.getUserPlan.mockResolvedValue("free");
+    modelReturns(doc("", "<h1>El Pastor</h1>"));
+
+    const { status, events } = await call();
+
+    expect(status).toBe(200);
+    expect(events.at(-1)?.event).toBe("project_saved");
+    expect(events.map((e) => e.event)).not.toContain("error");
+  });
+
   it("records nothing when the generated page comes through whole", async () => {
     modelReturns(doc("", "<h1>Café Luna</h1>"));
 

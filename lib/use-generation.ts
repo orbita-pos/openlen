@@ -153,11 +153,11 @@ async function errorMessage(response: Response): Promise<string> {
     return "You need to be signed in to generate. Reload the page.";
   }
   if (response.status === 403) {
+    // El texto de reserva apuntaba al "Quick (curated) flow", que era
+    // /api/curate — borrado con el catálogo de secciones. Un mensaje que manda
+    // al usuario a un sitio inexistente es peor que uno genérico.
     const data = (await response.json().catch(() => ({}))) as { message?: string };
-    return (
-      data.message ??
-      "From-scratch generation is a Pro feature. Upgrade to Pro, or use the Quick (curated) flow."
-    );
+    return data.message ?? "No podés generar esta página con tu cuenta ahora mismo.";
   }
   if (response.status === 429) {
     const data = (await response.json().catch(() => ({}))) as {

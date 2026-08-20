@@ -98,20 +98,18 @@ export async function POST(req: Request): Promise<Response> {
 
   const plan = await getUserPlan(userId);
 
-  // Bespoke from-scratch generation is a PRO feature. Free users get the
-  // curation path (/api/curate — pick a curated template + fill copy). The
-  // client only routes here when "From scratch" is selected, so a free user
-  // hitting this gets a graceful upsell instead of a silent no-op.
-  if (plan !== "pro") {
-    return json(
-      {
-        error: "pro_only",
-        message:
-          "From-scratch generation is a Pro feature. Upgrade to Pro, or use the Quick (curated) flow.",
-      },
-      403,
-    );
-  }
+  // Aquí vivía una puerta PRO. Rechazaba a todo usuario free y lo mandaba al
+  // "Quick (curated) flow" — que era /api/curate, la ruta de composición por
+  // secciones, borrada con el catálogo entero. El mensaje señalaba a un sitio
+  // que ya no existe: un usuario nuevo se encontraba un muro y ninguna salida.
+  //
+  // Y el presupuesto para dejarlo pasar ya estaba puesto y medido: el plan free
+  // trae 20 créditos al mes (lib/credits.ts) y 5 generaciones por hora
+  // (PLAN_LIMITS.free). Con el costo real —0.16 MXN por página, medido sobre
+  // las doce del cohorte de evals— eso no es una fuga, es lo que se presupuestó.
+  //
+  // Lo que separa free de pro se queda donde ya estaba: el tope por hora y los
+  // créditos, no la puerta.
 
   // Quota check — hourly + monthly windows defined in lib/limits.ts.
   const decision = await checkAndConsume(
