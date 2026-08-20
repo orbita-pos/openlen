@@ -25,7 +25,7 @@ NON-NEGOTIABLE CONSTRAINTS:
 - Output a COMPLETE, self-contained HTML document: starts with <!doctype html>, ends with </html>.
 - Include a descriptive <title> in <head> that names the product.
 - Tailwind CSS via CDN: <script src="https://cdn.tailwindcss.com"></script>
-- Google Fonts via <link> in <head>. Allowed families: Inter, Geist, Fraunces, Source Serif 4, Crimson Pro, JetBrains Mono.
+- Google Fonts via <link> in <head>. ANY family on Google Fonts is allowed — pick the ones this page's character calls for and load them yourself. A horror page, a children's workshop and a B2B dashboard should not be lettered the same way. Include the <link> for every family you use.
 - All custom CSS inline in a <style> block in <head>. Use CSS custom properties on :root for design tokens (--accent, --accent-r as an RGB triplet, --bg, --surface, --fg, --border, --font-display, --font-body, --radius). Reference them via var() throughout — never hardcode the same color in many places. Also emit a \`:root.dark { … }\` block that redefines --bg, --surface, --fg, --border and --accent with hand-designed dark-theme values (a real dark palette — not a mechanical inversion); every text and heading color MUST resolve from a var() token so the whole page flips cleanly.
 - NO React, NO Babel, NO JSX, NO <script type="text/babel">, NO window.X globals, NO import statements anywhere.
 - NO data-slot-path= attribute anywhere — that is a reserved editor-mode marker.

@@ -6,6 +6,7 @@
 
 use once_cell::sync::Lazy;
 use regex::Regex;
+use std::collections::HashMap;
 
 const FONT_MARKER: &str = "data-ol-font";
 
@@ -50,6 +51,10 @@ static MONO_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"(?i)\bmono(?:space)?\b")
 static SERIF_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"(?i)\bserif\b").unwrap());
 static SANS_SERIF_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"(?i)sans-serif").unwrap());
 static HEAD_CLOSE_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"(?i)</head>").unwrap());
+static CUSTOM_PROP_RE: Lazy<Regex> =
+    Lazy::new(|| Regex::new(r"(?i)(--[a-z0-9_-]+)\s*:\s*([^;}]+)").unwrap());
+static VAR_REF_RE: Lazy<Regex> =
+    Lazy::new(|| Regex::new(r"(?i)^var\(\s*(--[a-z0-9_-]+)").unwrap());
 
 fn strip_outer_quotes(s: &str) -> &str {
     let bytes = s.as_bytes();
@@ -78,6 +83,46 @@ fn is_generic(key: &str) -> bool {
     GENERIC.contains(&key)
 }
 
+/// Every custom property declared anywhere in the document, so a font stack
+/// held behind a token can be read.
+fn custom_properties(html: &str) -> HashMap<String, String> {
+    CUSTOM_PROP_RE
+        .captures_iter(html)
+        .map(|c| {
+            (
+                c.get(1).unwrap().as_str().to_ascii_lowercase(),
+                c.get(2).unwrap().as_str().trim().to_string(),
+            )
+        })
+        .collect()
+}
+
+/// Follow `font-family: var(--font-display)` to the stack that token holds.
+///
+/// The prompt tells the model to declare its tokens on `:root` and reference
+/// them with `var()` everywhere — and then this pass read the literal text
+/// `var(--font-display)` as a FAMILY NAME. Measured on three pages from the
+/// live door, three of three: `--ol-font-display:'var(--font-display)'`, a
+/// family that does not exist, so every one of them fell back to sans-serif
+/// and lost the typography the model chose.
+///
+/// Bounded: token chains are short, and the cap ends a cycle without hanging.
+fn resolve_var(value: &str, props: &HashMap<String, String>) -> String {
+    let mut current = value.trim().to_string();
+    for _ in 0..4 {
+        let first = current.split(',').next().unwrap_or("").trim().to_string();
+        let Some(name) = VAR_REF_RE
+            .captures(&first)
+            .and_then(|c| c.get(1).map(|m| m.as_str().to_ascii_lowercase()))
+        else {
+            return current;
+        };
+        let Some(next) = props.get(&name) else { return current };
+        current = next.trim().to_string();
+    }
+    current
+}
+
 /// Port of `normalizeFont` in lib/normalize-font.ts.
 pub fn normalize_font(html: &str) -> String {
     if html.is_empty() {
@@ -87,14 +132,18 @@ pub fn normalize_font(html: &str) -> String {
         return html.to_string();
     }
 
+    // Resolved through the token indirection the prompt asks the model to use;
+    // without it the family name detected below is the literal `var(--x)`.
+    let props = custom_properties(html);
+
     let body_key = BODY_RULE_RE
         .captures(html)
-        .and_then(|c| c.get(1).map(|m| family_key(m.as_str())))
+        .and_then(|c| c.get(1).map(|m| family_key(&resolve_var(m.as_str(), &props))))
         .unwrap_or_default();
 
     let values: Vec<String> = FONT_FAMILY_RE
         .captures_iter(html)
-        .map(|c| c.get(1).unwrap().as_str().trim().to_string())
+        .map(|c| resolve_var(c.get(1).unwrap().as_str(), &props))
         .collect();
 
     let mut display_name = String::new();
@@ -103,7 +152,10 @@ pub fn normalize_font(html: &str) -> String {
             continue;
         }
         let key = family_key(value);
-        if key.is_empty() || key == body_key || is_generic(&key) {
+        // Un `var(--x)` que sigue sin resolver NO es un nombre de familia. Izarlo
+        // como tal escribe `--ol-font-display:'var(--x)'`, que no resuelve a
+        // nada, y la página cae a sans-serif perdiendo la tipografía elegida.
+        if key.starts_with("var(") || key.is_empty() || key == body_key || is_generic(&key) {
             continue;
         }
         display_name = first_family_preserved(value);
@@ -127,7 +179,7 @@ pub fn normalize_font(html: &str) -> String {
         let whole = cap.get(0).unwrap();
         let value = cap.get(1).unwrap().as_str();
         out.push_str(&html[last..whole.start()]);
-        if family_key(value) == display_key {
+        if family_key(&resolve_var(value, &props)) == display_key {
             let mut parts: Vec<String> = value.split(',').map(|s| s.to_string()).collect();
             parts[0] = " var(--ol-font-display)".to_string();
             out.push_str("font-family:");
@@ -154,5 +206,75 @@ pub fn normalize_font(html: &str) -> String {
             final_out
         }
         None => out + &injection,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// The exact shape the prompt asks the model for: declare the stack on a
+    /// token, reference it with var() everywhere.
+    const TOKENED: &str = concat!(
+        "<html><head><style>:root{--font-display:'Creepster',system-ui,sans-serif;",
+        "--font-body:'Inter',sans-serif}",
+        "body{font-family:var(--font-body)}h1{font-family:var(--font-display)}",
+        "</style></head><body><h1>x</h1></body></html>"
+    );
+
+    #[test]
+    fn follows_the_token_to_the_real_family() {
+        let out = normalize_font(TOKENED);
+        assert!(
+            out.contains("--ol-font-display:'Creepster',sans-serif;"),
+            "hoisted the wrong family: {out}"
+        );
+        // La cadena literal `var(--x)` NUNCA es un nombre de familia: escrita
+        // como tal no resuelve a nada y la página cae a sans-serif.
+        assert!(!out.contains("--ol-font-display:'var("), "hoisted a var() as a name");
+    }
+
+    #[test]
+    fn points_the_display_declaration_at_the_token() {
+        let out = normalize_font(TOKENED);
+        assert!(out.contains("h1{font-family: var(--ol-font-display)}"), "{out}");
+        // El cuerpo no es la display: se queda como estaba.
+        assert!(out.contains("body{font-family:var(--font-body)}"), "{out}");
+    }
+
+    #[test]
+    fn a_family_written_directly_still_works() {
+        let direct = concat!(
+            "<html><head><style>body{font-family:'Inter',sans-serif}",
+            "h1{font-family:'Fraunces',serif}</style></head><body></body></html>"
+        );
+        let out = normalize_font(direct);
+        assert!(out.contains("--ol-font-display:'Fraunces',serif;"), "{out}");
+    }
+
+    #[test]
+    fn a_token_that_points_nowhere_is_left_alone() {
+        let dangling = concat!(
+            "<html><head><style>body{font-family:'Inter',sans-serif}",
+            "h1{font-family:var(--nope)}</style></head><body></body></html>"
+        );
+        // Sin familia real que izar, la pasada no toca el documento.
+        assert_eq!(normalize_font(dangling), dangling);
+    }
+
+    #[test]
+    fn a_token_cycle_terminates() {
+        let cyclic = concat!(
+            "<html><head><style>:root{--a:var(--b);--b:var(--a)}",
+            "body{font-family:'Inter',sans-serif}h1{font-family:var(--a)}",
+            "</style></head><body></body></html>"
+        );
+        let _ = normalize_font(cyclic);
+    }
+
+    #[test]
+    fn stays_idempotent() {
+        let once = normalize_font(TOKENED);
+        assert_eq!(normalize_font(&once), once);
     }
 }

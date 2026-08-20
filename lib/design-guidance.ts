@@ -44,8 +44,8 @@ OUTPUT FORMAT — strict rules (instant failure if violated)
 • Tailwind via CDN: \`<script src="https://cdn.tailwindcss.com"></script>\`
   in <head>. Use Tailwind utility classes freely.
 • Google Fonts via \`<link rel="stylesheet" href="https://fonts.googleapis.com/…">\`
-  in <head>. Pick the family that fits the brand (Inter / Source Serif 4 /
-  Fraunces / JetBrains Mono / etc — see FAMILY AESTHETIC in the reference).
+  in <head>. ANY family on Google Fonts is allowed. Pick what this page's
+  character calls for and load every family you use.
 • All custom CSS inline in \`<style>\` inside <head> — keyframes, gradients,
   custom utility classes (pulse-dot, marquee, hairline borders, etc).
 • NO JAVASCRIPT — it does not survive. Every \`<script>\` (inline or remote,

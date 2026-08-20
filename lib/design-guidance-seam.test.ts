@@ -102,6 +102,16 @@ describe("ninguna superficie manda gusto nuestro", () => {
     });
   }
 
+  // Las fuentes son gusto, no contrato. NADA en la tubería exige una lista:
+  // normalize_font iza la familia que venga (su <link> de 12 es precarga, no
+  // lista blanca), el saneador no toca <link>, y la CSS de publicación deja
+  // `style-src` sin fijar. Aun así las tres superficies decían "Allowed
+  // families:" con seis — y por eso una página de terror no podía tener
+  // tipografía de terror.
+  it.each(PROMPTS)("%s no cierra la lista de tipografías", (_name, getPrompt) => {
+    expect(getPrompt()).not.toMatch(/Allowed families/i);
+  });
+
   // El catálogo de gusto no viajaba por el system prompt sino por un mensaje
   // aparte, así que la guarda tiene que mirar el código, no sólo el prompt.
   it("nadie importa el catálogo de gusto", async () => {
