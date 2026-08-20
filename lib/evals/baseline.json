@@ -1,15 +1,13 @@
 {
   "cohortVersion": "page-cohort/1.0",
-  "revision": "69558476272e6a1316dffd2b37c11d5eafe0f9fb",
-  "at": "2026-08-20T03:51:02.577Z",
+  "revision": "026825c5d1bd8d19b1c12dbe6044db442e7a2e71",
+  "at": "2026-08-20T17:29:28.538Z",
   "pages": 12,
-  "clean": 11,
-  "byCode": {
-    "overflow": 1
-  },
+  "clean": 12,
+  "byCode": {},
   "retried": 0,
-  "trimmed": 9,
-  "costMxn": 1.87,
+  "trimmed": 6,
+  "costMxn": 2.74,
   "partial": false,
   "verdicts": [
     {
@@ -26,8 +24,8 @@
         "h1Count": 1,
         "lang": "es",
         "dir": "",
-        "bytes": 38790,
-        "ms": 73233
+        "bytes": 50961,
+        "ms": 126878
       }
     },
     {
@@ -36,16 +34,16 @@
       "measurement": {
         "id": "colegio",
         "attempts": 1,
-        "trimmed": 12,
+        "trimmed": 307,
         "mobileOverflow": false,
         "invalidGeometry": false,
         "typographyRule": null,
         "unreadable": 0,
         "h1Count": 1,
         "lang": "es",
-        "dir": "",
-        "bytes": 25676,
-        "ms": 47099
+        "dir": "ltr",
+        "bytes": 27053,
+        "ms": 42554
       }
     },
     {
@@ -62,8 +60,8 @@
         "h1Count": 1,
         "lang": "es",
         "dir": "",
-        "bytes": 60027,
-        "ms": 101708
+        "bytes": 73906,
+        "ms": 120297
       }
     },
     {
@@ -79,29 +77,27 @@
         "unreadable": 0,
         "h1Count": 1,
         "lang": "es",
-        "dir": "ltr",
-        "bytes": 27947,
-        "ms": 46835
+        "dir": "",
+        "bytes": 32319,
+        "ms": 63164
       }
     },
     {
       "id": "documentacion",
-      "failures": [
-        "overflow"
-      ],
+      "failures": [],
       "measurement": {
         "id": "documentacion",
         "attempts": 1,
-        "trimmed": 12,
-        "mobileOverflow": true,
+        "trimmed": 8,
+        "mobileOverflow": false,
         "invalidGeometry": false,
         "typographyRule": null,
         "unreadable": 0,
         "h1Count": 1,
         "lang": "es",
         "dir": "",
-        "bytes": 27309,
-        "ms": 91400
+        "bytes": 42419,
+        "ms": 64225
       }
     },
     {
@@ -110,16 +106,16 @@
       "measurement": {
         "id": "minimo",
         "attempts": 1,
-        "trimmed": 12,
+        "trimmed": 0,
         "mobileOverflow": false,
         "invalidGeometry": false,
         "typographyRule": null,
         "unreadable": 0,
         "h1Count": 1,
         "lang": "es",
-        "dir": "ltr",
-        "bytes": 28378,
-        "ms": 35864
+        "dir": "",
+        "bytes": 59411,
+        "ms": 187323
       }
     },
     {
@@ -128,16 +124,16 @@
       "measurement": {
         "id": "larguisimo",
         "attempts": 1,
-        "trimmed": 12,
+        "trimmed": 0,
         "mobileOverflow": false,
         "invalidGeometry": false,
         "typographyRule": null,
         "unreadable": 0,
         "h1Count": 1,
         "lang": "es",
-        "dir": "ltr",
-        "bytes": 33155,
-        "ms": 75179
+        "dir": "",
+        "bytes": 57395,
+        "ms": 93438
       }
     },
     {
@@ -154,8 +150,8 @@
         "h1Count": 1,
         "lang": "ar",
         "dir": "rtl",
-        "bytes": 28880,
-        "ms": 49638
+        "bytes": 31867,
+        "ms": 60410
       }
     },
     {
@@ -171,9 +167,9 @@
         "unreadable": 0,
         "h1Count": 1,
         "lang": "es",
-        "dir": "",
-        "bytes": 28787,
-        "ms": 46180
+        "dir": "ltr",
+        "bytes": 29911,
+        "ms": 47612
       }
     },
     {
@@ -182,7 +178,7 @@
       "measurement": {
         "id": "una-seccion",
         "attempts": 1,
-        "trimmed": 250,
+        "trimmed": 12,
         "mobileOverflow": false,
         "invalidGeometry": false,
         "typographyRule": null,
@@ -190,8 +186,8 @@
         "h1Count": 1,
         "lang": "es",
         "dir": "",
-        "bytes": 15704,
-        "ms": 22825
+        "bytes": 17300,
+        "ms": 23135
       }
     },
     {
@@ -208,8 +204,8 @@
         "h1Count": 1,
         "lang": "es",
         "dir": "",
-        "bytes": 42832,
-        "ms": 78906
+        "bytes": 59399,
+        "ms": 110176
       }
     },
     {
@@ -218,7 +214,7 @@
       "measurement": {
         "id": "fecha-derivada",
         "attempts": 1,
-        "trimmed": 12,
+        "trimmed": 0,
         "mobileOverflow": false,
         "invalidGeometry": false,
         "typographyRule": null,
@@ -226,8 +222,8 @@
         "h1Count": 1,
         "lang": "es",
         "dir": "",
-        "bytes": 30984,
-        "ms": 75720
+        "bytes": 40384,
+        "ms": 68130
       }
     }
   ]
