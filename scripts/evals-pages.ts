@@ -36,6 +36,7 @@ import { LANGUAGE_RULE } from "@/lib/ai/authoring-rules";
 import { todayLine } from "@/lib/ai/today-line";
 import { extractDocument } from "@/lib/ai/extract-document";
 import { resolveAIProvider } from "@/lib/ai-provider";
+import { creditRate } from "@/lib/credits";
 import { compileCalcRegions } from "@/lib/expr/document";
 import { detectSlotPath } from "@/lib/html-engine";
 import { preparePage } from "@/lib/page-engine/prepare";
@@ -59,9 +60,18 @@ const OUT_DIR = join(process.cwd(), "scratch", "evals");
 // —el HTML de cada página— se quedan en scratch.
 const BASELINE = join(process.cwd(), "lib", "evals", "baseline.json");
 const USD_TO_MXN = 18.5;
-// Tarifa de DeepSeek V4 Flash en Fireworks, por millón de tokens.
-const IN_PER_M = 0.22;
-const OUT_PER_M = 0.88;
+// La tarifa sale de `lib/credits.ts` (RATES), la MISMA tabla con la que el
+// producto cobra, y se elige por el `rate` del proveedor que de verdad corre.
+//
+// Estaba cableada a 0,22/0,88 con el comentario "DeepSeek V4 Flash en
+// Fireworks" — pero este arnés llama a `resolveAIProvider("gemini-flash")`,
+// que es Gemini 3.5 Flash a 0,3/2,5. La salida costaba 2,8x lo que yo
+// reportaba, así que TODAS las cifras de coste de las corridas anteriores
+// estaban subestimadas. Un tope de gasto calculado con la tarifa de otro
+// proveedor no es un tope.
+//
+// Derivarlo elimina la divergencia por construcción: cambiar de modelo cambia
+// el precio solo.
 
 function flag(name: string): string | undefined {
   const hit = process.argv.find((a) => a.startsWith(`--${name}=`));
@@ -84,8 +94,11 @@ async function main(): Promise<void> {
       ? [...base]
       : base.flatMap((c) => Array.from({ length: repeat }, (_, k) => (k === 0 ? c : { ...c, id: `${c.id}#${k + 1}` })));
 
-  const apiKey = resolveAIProvider("gemini-flash").key;
+  const provider = resolveAIProvider("gemini-flash");
+  const apiKey = provider.key;
   if (!apiKey) throw new Error("falta la clave del proveedor");
+  const { input: IN_PER_M, output: OUT_PER_M } = creditRate(provider.rate);
+  console.log(`modelo: ${provider.label} · $${IN_PER_M}/M entrada · $${OUT_PER_M}/M salida`);
 
   const revision = execSync("git rev-parse HEAD", { encoding: "utf8" }).trim();
   const profile = { brand: null, photos: [], links: [] } as unknown as BusinessProfileData;
