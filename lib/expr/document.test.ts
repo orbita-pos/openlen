@@ -175,8 +175,14 @@ describe("las regiones no se pisan entre sí", () => {
       `<div data-ol-calc><input data-ol-val="peso"><p data-ol-out="peso * tarifa">0</p></div>` +
       `</body></html>`;
     const out = compileCalcRegions(html);
-    expect(out.issues).toHaveLength(1);
-    expect(out.issues[0]!.message).toContain(`"tarifa"`);
+    // Se reportan DOS problemas distintos y los dos son ciertos: la 2ª región
+    // lee un nombre que ahí no existe, y la 1ª declara un campo que nadie lee.
+    // Se afirma por el MENSAJE y no por el conteo — un `toHaveLength` fijo se
+    // pone rojo cada vez que el sistema aprende a ver una cosa más.
+    const desconocido = out.issues.find((i) => i.message.includes("no existe en esta región"));
+    expect(desconocido?.message).toContain(`"tarifa"`);
+    const huerfano = out.issues.find((i) => i.message.includes("no lo lee ninguna fórmula"));
+    expect(huerfano?.formula).toBe("tarifa");
   });
 });
 
@@ -215,5 +221,52 @@ describe("el gemelo compilado no lleva marcado crudo", () => {
     const attr = /data-ol-out-c="([^"]*)"/.exec(out.html)?.[1] ?? "";
     const json = attr.replace(/&quot;/g, '"').replace(/&amp;/g, "&");
     expect(JSON.parse(json)).toEqual(["'<b>", "@TEXTO:1"]);
+  });
+});
+
+/**
+ * La otra mitad del "nace muerto". Existe porque la PRIMERA eval con briefs de
+ * cálculo lo cazó en la primera página: para los paneles solares el modelo
+ * emitió un campo `recibo` Y un deslizador `recibo-range`, queriendo tenerlos
+ * sincronizados. El deslizador nacía muerto —el visitante lo mueve y no pasa
+ * nada— y todo lo determinista salía VERDE, porque las fórmulas sí compilaban.
+ */
+describe("un campo que nadie lee es un control muerto", () => {
+  it("se reporta, y dice cuál", () => {
+    const out = compileCalcRegions(region(
+      `<input data-ol-val="recibo" type="number" value="1800">` +
+      `<input data-ol-val="recibo-range" type="range" value="1800">` +
+      `<p data-ol-out="recibo * 0.72">1296</p>`,
+    ));
+    const huerfano = out.issues.find((i) => i.message.includes("no lo lee ninguna fórmula"));
+    expect(huerfano?.formula).toBe("recibo-range");
+  });
+
+  it("un campo leído por un mostrar-si NO se acusa — `=` es igualdad, no asignación", () => {
+    // El falso positivo que tuvo esta comprobación al nacer: probar
+    // `parseAssignment` primero hacía que `dia = 'sabado'` se leyera como una
+    // ASIGNACIÓN, así que `dia` no contaba como leído y el campo vivo salía
+    // acusado. Un falso positivo aquí haría a la puerta rechazar páginas
+    // correctas — peor que el hueco que cierra.
+    const out = compileCalcRegions(region(
+      `<select data-ol-val="dia"><option>sabado</option></select>` +
+      `<p data-ol-if="dia = 'sabado'">Sábado: 9 a 20</p>`,
+    ));
+    expect(out.issues).toEqual([]);
+  });
+
+  it("leído sólo por una asignación también cuenta", () => {
+    const out = compileCalcRegions(region(
+      `<ul data-ol-val="nombres"><li data-ol-item>Ana</li></ul>` +
+      `<button data-ol-set="elegido = AZAR(nombres)">Sortear</button>`,
+    ));
+    expect(out.issues).toEqual([]);
+  });
+
+  it("con una fórmula rota se calla — no acusa a los campos que sí usaba", () => {
+    const out = compileCalcRegions(region(
+      `<input data-ol-val="x"><p data-ol-out="x * ">0</p>`,
+    ));
+    expect(out.issues.filter((i) => i.message.includes("no lo lee"))).toEqual([]);
   });
 });

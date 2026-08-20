@@ -6,7 +6,7 @@ import "server-only";
 import { parse } from "node-html-parser";
 import type { HTMLElement as NHPElement } from "node-html-parser"; // aliased: no pisar el HTMLElement global del DOM
 
-import { checkFormula, collectRegionNames } from "@/lib/expr/document";
+import { checkFormula, collectRegionNames, unreadIssue, unreadValues } from "@/lib/expr/document";
 
 import { BEHAVIORS, BEHAVIOR_ORDER } from "./registry";
 import type { AttrSpec, Behavior, BehaviorIssue, BehaviorName } from "./types";
@@ -187,6 +187,12 @@ export function validateBehaviors(html: string, reg: Reg = BEHAVIORS): BehaviorI
           namesFrom,
           formulas.filter((f) => f.assign).map((f) => f.attr),
         );
+        // Un campo que ninguna fórmula lee es un control muerto — la mitad
+        // simétrica de "una fórmula que lee un campo inexistente".
+        for (const huerfano of unreadValues(root, namesFrom, formulas)) {
+          const issue = unreadIssue(huerfano);
+          issues.push({ behavior: b.name, message: `${issue.attr}="${issue.formula}": ${issue.message}` });
+        }
         for (const f of formulas) {
           for (const el of root.querySelectorAll(`[${f.attr}]`)) {
             const raw = el.getAttribute(f.attr) ?? "";

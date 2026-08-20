@@ -89,6 +89,67 @@ export function collectRegionNames(
   return { declared, values };
 }
 
+/**
+ * Los campos que NADIE lee — la otra mitad del "nace muerto".
+ *
+ * `checkFormula` comprueba que cada nombre que una fórmula LEE exista. Faltaba
+ * el sentido contrario: un `data-ol-val` que ninguna fórmula usa es un control
+ * que el visitante mueve y no hace nada.
+ *
+ * No es hipotético. La primera eval con briefs de cálculo (2026-08-20) lo cazó
+ * a la primera: para la página de paneles solares el modelo emitió un campo
+ * `recibo` Y un deslizador `recibo-range`, intentando tenerlos sincronizados.
+ * El deslizador nacía muerto y todo lo determinista salía en verde, porque las
+ * fórmulas SÍ compilaban.
+ *
+ * Es la misma simetría que `crossRefs` le añadió a `requiresHost`: uno
+ * garantiza que el botón vive en su grupo; el otro, que el grupo apunta a algo.
+ */
+export function unreadValues(
+  region: HTMLElement,
+  valueAttr: string = VALUE,
+  formulaAttrs: readonly { readonly attr: string; readonly assign?: boolean }[] = FORMULA_ATTRS,
+): string[] {
+  const leidos = new Set<string>();
+  for (const { attr, assign } of formulaAttrs) {
+    for (const el of region.querySelectorAll(`[${attr}]`)) {
+      const raw = el.getAttribute(attr) ?? "";
+      // `assign` viene del SCHEMA, no se adivina. Probar `parseAssignment`
+      // primero era un bug: `=` es a la vez igualdad y asignación, así que
+      // `data-ol-if="dia = 'sabado'"` parseaba como "asigna 'sabado' a dia" y
+      // `dia` no contaba como leído — el campo quedaba acusado de muerto
+      // estando vivo. Un falso positivo aquí es peor que el hueco que cierra:
+      // haría a la puerta rechazar páginas correctas.
+      const parsed = assign
+        ? (() => {
+            const a = parseAssignment(raw);
+            return a.ok ? ({ ok: true, node: a.node.value } as const) : ({ ok: false } as const);
+          })()
+        : parseExpression(raw);
+      // Una fórmula que no parsea ya tiene su propio issue; se abandona el
+      // barrido en vez de acusar de muertos a los campos que sí usaba.
+      if (!parsed.ok) return [];
+      for (const n of referencedNames(parsed.node)) leidos.add(n);
+    }
+  }
+  const huerfanos: string[] = [];
+  for (const el of region.querySelectorAll(`[${valueAttr}]`)) {
+    const name = el.getAttribute(valueAttr)?.trim();
+    if (name && !leidos.has(name) && !huerfanos.includes(name)) huerfanos.push(name);
+  }
+  return huerfanos;
+}
+
+/** El issue que produce un campo huérfano, con el mismo texto en los dos
+ *  llamantes (el compilador de la ingestión y el validador de conductas). */
+export function unreadIssue(name: string): CalcIssue {
+  return {
+    attr: VALUE,
+    formula: name,
+    message: `el campo "${name}" no lo lee ninguna fórmula de esta región — el visitante lo movería y no pasaría nada; úsalo en un ${OUT}/${IF}/${SET}, o quítale el ${VALUE}`,
+  };
+}
+
 export type FormulaCheck =
   | { readonly ok: true; readonly node: Node; readonly target?: string }
   | { readonly ok: false; readonly message: string };
@@ -221,6 +282,8 @@ export function compileCalcRegions(html: string): CompileDocumentResult {
     // la misma página no se pisan, y cada una se valida contra los suyos.
     const { declared, values } = collectRegionNames(region);
     const env = initialEnv(region);
+    // La otra mitad del "nace muerto": un campo que nadie lee.
+    for (const huerfano of unreadValues(region)) issues.push(unreadIssue(huerfano));
 
     for (const { attr, assign } of FORMULA_ATTRS) {
       for (const el of region.querySelectorAll(`[${attr}]`)) {
