@@ -109,7 +109,10 @@ function emit(n: Node, out: Cell[]): void {
         out.push("j");
         const toEnd = out.length - 1;
         out[toElse] = `?${out.length - toElse - 1}`;
-        emit(n.args[2]!, out);
+        // Sin tercera rama, el texto vacío — el mismo neutro que el evaluador
+        // del servidor, o los dos dirían cosas distintas de la misma fórmula.
+        if (n.args[2]) emit(n.args[2], out);
+        else out.push("'");
         out[toEnd] = `j${out.length - toEnd - 1}`;
         return;
       }

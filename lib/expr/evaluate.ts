@@ -69,9 +69,10 @@ function call(fn: FunctionName, args: readonly Node[], env: Env, rnd: () => numb
   // SI es perezoso: sólo evalúa la rama que gana. Sin esto, `SI(divisor = 0, 0,
   // total / divisor)` evaluaría igualmente la división.
   if (fn === "SI") {
-    return truthy(evaluate(args[0]!, env, rnd))
-      ? evaluate(args[1]!, env, rnd)
-      : evaluate(args[2]!, env, rnd);
+    if (truthy(evaluate(args[0]!, env, rnd))) return evaluate(args[1]!, env, rnd);
+    // Sin tercera rama, el neutro del texto — no un 0, que en la página se
+    // leería como un dato de verdad.
+    return args[2] ? evaluate(args[2], env, rnd) : "";
   }
 
   // Las comprensiones también son perezosas, y por un motivo más fuerte que la
@@ -118,6 +119,7 @@ function call(fn: FunctionName, args: readonly Node[], env: Env, rnd: () => numb
       const hi = v.length > 1 ? Math.floor(num(v[1])) : lo;
       return hi < lo ? lo : lo + Math.floor(rnd() * (hi - lo + 1));
     }
+    case "LISTA": return v;
     case "TEXTO": return text(v[0]!);
     case "ELEMENTO": {
       // 1-BASED: "el primero es el 1". Fuera de rango da el neutro, nunca

@@ -30,8 +30,14 @@ export const FUNCTIONS = {
   MAX: { arity: [1, Infinity], returns: "number" },
   REDONDEA: { arity: [1, 2], returns: "number" },
   CUENTA: { arity: [1, 1], returns: "number" },
-  /** SI(condición, entonces, si_no) — el único condicional. */
-  SI: { arity: [3, 3], returns: "any" },
+  /** SI(condición, entonces) o SI(condición, entonces, si_no) — el único
+   *  condicional. Sin la tercera rama devuelve texto vacío, como en una hoja
+   *  de cálculo: "si no se cumple, no digas nada".
+   *
+   *  Los 2 argumentos NO estaban en el diseño. Los añadió la evidencia: el
+   *  modelo escribió `SI(seleccion = 1, 'Un tiro perfecto...')` y la aridad se
+   *  lo rechazó. Es la forma que escribiría cualquiera. */
+  SI: { arity: [2, 3], returns: "any" },
   /** AZAR(lista) elige un elemento; AZAR(a, b) da un entero entre a y b. */
   AZAR: { arity: [1, 2], returns: "any" },
   TEXTO: { arity: [1, 1], returns: "text" },
@@ -39,6 +45,16 @@ export const FUNCTIONS = {
    *  siempre numérico. */
   UNE: { arity: [1, Infinity], returns: "text" },
   MONEDA: { arity: [1, 2], returns: "text" },
+
+  /** LISTA(45, 55, 62) — lo mismo que `[45, 55, 62]`.
+   *
+   *  Un ALIAS, y existe por evidencia medida: el lenguaje ya tenía la sintaxis
+   *  de corchetes y el modelo escribió `LISTA(...)` de todos modos, que es
+   *  igual de razonable. Es la tercera vez que elijo una forma y el modelo
+   *  elige otra (antes: `;` contra `,`), así que la regla pasa a ser explícita
+   *  — **el lenguaje acepta los sinónimos naturales en vez de tener razón**.
+   *  Cuesta una línea; rechazarlo costaba la página entera. */
+  LISTA: { arity: [0, Infinity], returns: "list" },
 
   // ── listas por posición ──────────────────────────────────────────────────
   // Con dos listas ALINEADAS (una de nombres, otra de precios) se arma un

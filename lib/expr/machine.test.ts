@@ -151,6 +151,16 @@ describe("los dos evaluadores dan lo MISMO", () => {
     // Anidada, y con una comprensión que la recorre.
     ["CUENTA([[1,2],[3]])", {}],
     ["AZAR([7])", {}],
+
+    // ── los sinónimos que el modelo escribe de verdad ────────────────────
+    ["CUENTA_SI(LISTA(45,55,58,62,68), CADA < 60)", {}],
+    ["SUMA(LISTA(1, 2, 3))", {}],
+    ["CUENTA(LISTA())", {}],
+    ["ELEMENTO(LISTA('a','b'), 2)", {}],
+    ["SI(x > 1, 'grande')", { x: 5 }],
+    ["SI(x > 1, 'grande')", { x: 0 }],
+    ["UNE('resultado: ', SI(ok, 'sí'))", { ok: false }],
+    ["SI(a, SI(b, 'ambas'), 'ninguna')", { a: true, b: false }],
   ];
 
   it.each(CASOS)("%s", (src, env) => {
