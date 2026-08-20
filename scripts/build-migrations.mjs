@@ -45,9 +45,32 @@ const targets = [
   "publish-hash-migrate",
   "versions-baseline-migrate",
   "template-visual-metadata-migrate",
-  "sections-derived-migrate",
   "visual-engine-pilot-migrate",
 ];
+
+// Una entrada que apunta a un script BORRADO tumba el deploy en el paso 3,
+// después de los gates y del build — o sea, tras varios minutos de trabajo ya
+// hecho. Pasó de verdad (2026-08-20) con `sections-derived-migrate`, que murió
+// con el catálogo de secciones y siguió listado aquí: el mismo descuido que
+// dejó a los gates nombrando 216 tests eliminados.
+//
+// Comprobarlo cuesta microsegundos y falla ANTES de empezar, diciendo cuál.
+{
+  const { existsSync } = await import("node:fs");
+  const huerfanas = targets.filter((n) => !existsSync(`scripts/${n}.ts`));
+  if (huerfanas.length > 0) {
+    console.error(
+      `
+  Migraciones listadas que YA NO EXISTEN: ${huerfanas.join(", ")}
+` +
+      `  Bórralas de la lista de arriba (scripts/build-migrations.mjs) — si el
+` +
+      `  script se borró, su migración ya no tiene tabla que migrar.
+`,
+    );
+    process.exit(1);
+  }
+}
 
 for (const [i, name] of targets.entries()) {
   const entry = `scripts/${name}.ts`;
