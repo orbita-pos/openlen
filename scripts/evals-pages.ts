@@ -24,6 +24,7 @@ import { LANGUAGE_RULE } from "@/lib/ai/authoring-rules";
 import { todayLine } from "@/lib/ai/today-line";
 import { extractDocument } from "@/lib/ai/extract-document";
 import { resolveAIProvider } from "@/lib/ai-provider";
+import { compileCalcRegions } from "@/lib/expr/document";
 import { detectSlotPath } from "@/lib/html-engine";
 import { preparePage } from "@/lib/page-engine/prepare";
 import { renderVisualQualityViewports } from "@/lib/ai/visual-quality-renderer";
@@ -135,6 +136,12 @@ async function main(): Promise<void> {
     mkdirSync(OUT_DIR, { recursive: true });
     writeFileSync(join(OUT_DIR, `${c.id}.html`), prepared.html);
 
+    // Se vuelve a compilar sobre la página YA preparada — es idempotente, y
+    // devuelve lo único determinista que se puede afirmar de un cálculo:
+    // cuántas fórmulas quedaron vivas y cuántas nacieron muertas.
+    // `preparePage` en modo crear AVISA en vez de rechazar, así que una fórmula
+    // rota SÍ llega hasta aquí y tiene que contarse.
+    const calc = compileCalcRegions(prepared.html);
     const rendered = await renderVisualQualityViewports(prepared.html).catch(() => null);
     const htmlTag = /<html\b([^>]*)>/i.exec(prepared.html)?.[1] ?? "";
     const m: PageMeasurement = {
@@ -151,6 +158,8 @@ async function main(): Promise<void> {
       lang: /lang="([^"]*)"/i.exec(htmlTag)?.[1] ?? "",
       dir: /dir="([^"]*)"/i.exec(htmlTag)?.[1] ?? "",
       bytes: prepared.html.length,
+      calcFormulas: calc.compiled,
+      calcIssues: calc.issues.length,
       ms: Date.now() - started,
     };
     return judgePage(m, c);

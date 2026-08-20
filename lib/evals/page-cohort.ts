@@ -34,11 +34,20 @@ export interface PageEvalCase {
   readonly expectLang: string;
   /** `dir="rtl"` obligatorio para escrituras de derecha a izquierda. */
   readonly expectRtl?: true;
+  /** El brief pide EXPLÍCITAMENTE que la página calcule algo. Se comprueba de
+   *  forma determinista: existe una región `data-ol-calc` y sus fórmulas
+   *  compilan (`lib/expr/document.ts`). No se juzga si el cálculo es el
+   *  "correcto" — eso sería gusto. */
+  readonly expectCalc?: true;
   /** El fallo que este caso vigila. Sólo en los de regresión. */
   readonly guards?: string;
 }
 
-export const PAGE_COHORT_VERSION = "page-cohort/1.0";
+// 1.0 → 1.1: entran los dos casos de CÁLCULO (L2, la 9ª conducta). El cohorte
+// crece, así que la comparación contra una línea base de 1.0 se descarta a
+// propósito — comparar 14 páginas contra 12 diría "+2 limpias" por aritmética,
+// no por calidad.
+export const PAGE_COHORT_VERSION = "page-cohort/1.1";
 
 export const PAGE_COHORT: readonly PageEvalCase[] = Object.freeze([
   // ── cotidiano ────────────────────────────────────────────────────────────
@@ -118,6 +127,28 @@ export const PAGE_COHORT: readonly PageEvalCase[] = Object.freeze([
     brief:
       "Solo quiero un formulario de contacto. Nada más. Sin menú, sin secciones, sin pie de página. Únicamente el formulario centrado.",
     expectLang: "es",
+  },
+
+  // ── cálculo (L2) ─────────────────────────────────────────────────────────
+  // Los dos que Jesús trajo de peticiones REALES. Miden lo que ninguna prueba
+  // unitaria puede: si el MODELO adopta la conducta cuando el brief la pide.
+  // Que el intérprete funcione ya lo prueban lib/behaviors/recipes/calc.test.ts
+  // y el gate del navegador; esto mide la otra mitad.
+  {
+    id: "solar",
+    tag: "cotidiano",
+    brief:
+      "Instalamos paneles solares en casas de Guadalajara. Quiero que el visitante escriba cuánto paga de luz al mes y la página le diga cuánto ahorraría con nosotros (ahorra alrededor del 72%).",
+    expectLang: "es",
+    expectCalc: true,
+  },
+  {
+    id: "sorteo",
+    tag: "cotidiano",
+    brief:
+      "Página para una rifa de fin de año de una tienda de bicicletas. Que tenga los nombres de los participantes y un botón que elija a uno al azar delante de todos.",
+    expectLang: "es",
+    expectCalc: true,
   },
 
   // ── regresión ────────────────────────────────────────────────────────────

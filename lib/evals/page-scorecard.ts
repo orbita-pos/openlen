@@ -23,6 +23,8 @@ export const FAILURE_CODES = [
   "lang",
   /** Falta `dir="rtl"` en una escritura de derecha a izquierda. */
   "rtl",
+  /** El brief pedía calcular y la página no calcula — o su fórmula no compila. */
+  "calc",
 ] as const;
 
 export type FailureCode = (typeof FAILURE_CODES)[number];
@@ -41,6 +43,10 @@ export interface PageMeasurement {
   readonly h1Count?: number;
   readonly lang?: string;
   readonly dir?: string;
+  /** Fórmulas de una región `data-ol-calc` que compilaron. `undefined` = no se midió. */
+  readonly calcFormulas?: number;
+  /** Fórmulas que NACIERON MUERTAS: no parsean, o leen un nombre inexistente. */
+  readonly calcIssues?: number;
   readonly bytes?: number;
   readonly ms: number;
 }
@@ -54,6 +60,7 @@ export interface PageVerdict {
 export interface Expectation {
   readonly expectLang: string;
   readonly expectRtl?: true;
+  readonly expectCalc?: true;
 }
 
 /** Todo lo que salió mal en una página, no sólo lo primero. Un turno puede a la
@@ -71,6 +78,14 @@ export function judgePage(m: PageMeasurement, expect: Expectation): PageVerdict 
   if ((m.unreadable ?? 0) > 0) failures.push("unreadable");
   if (m.lang !== undefined && !m.lang.toLowerCase().startsWith(expect.expectLang)) failures.push("lang");
   if (expect.expectRtl && m.dir?.toLowerCase() !== "rtl") failures.push("rtl");
+  // Determinista como todo lo demás de este marcador: o hay una región de
+  // cálculo y sus fórmulas compilan, o no la hay. No se juzga si el cálculo es
+  // el "correcto" —eso sería gusto, y el juez LLM ya se descartó por ruidoso
+  // ([[llm-judge-is-not-a-ship-gate]])— sino si la página que el brief pidió
+  // calcular de verdad calcula algo que la puerta acepta.
+  if (expect.expectCalc && ((m.calcFormulas ?? 0) === 0 || (m.calcIssues ?? 0) > 0)) {
+    failures.push("calc");
+  }
 
   return { id: m.id, failures, measurement: m };
 }
