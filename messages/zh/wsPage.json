@@ -50,7 +50,8 @@
   "defaultProjectName": "价格页面",
   "chatDraft": {
     "iconChanged": "我刚刚更换了这里的图标。请更新周围的标题和描述，让含义与新图标相符。",
-    "imageChanged": "我刚刚更换了这里的图片。请更新周围的文案，让它与图片所展示的内容相符。"
+    "imageChanged": "我刚刚更换了这里的图片。请更新周围的文案，让它与图片所展示的内容相符。",
+    "fixControls": "请修复这些接线错误、无法工作的控件："
   },
   "lockReason": {
     "created": "页面创建后即可使用"
@@ -283,6 +284,7 @@
     "unsafe_links": "有些链接不安全，已被移除。",
     "dynamic_content": "页面自己生成的部分可能看起来是空的。你可以直接在编辑器里写进去。",
     "broken_controls": "有些交互控件接线不正确，不会生效。可以让助手帮你修好。",
-    "dismiss": "知道了"
+    "dismiss": "知道了",
+    "fix": "修复此问题"
   }
 }

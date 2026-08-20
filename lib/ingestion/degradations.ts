@@ -75,6 +75,11 @@ export function collectDegradations(input: {
       stage: "behaviors",
       code: "broken_controls",
       count: behaviorIssues.length,
+      // El detalle que ya existía y se tiraba. Acotado: tres frases y 200
+      // caracteres cada una. Es lo que hace falta para saber qué pedirle al
+      // asistente — más sería un registro, y un registro que nadie lee es
+      // justo lo que este aviso existe para no ser.
+      detail: behaviorIssues.slice(0, 3).map((i) => i.message.slice(0, 200)),
     });
   }
 

@@ -50,7 +50,8 @@
   "defaultProjectName": "Preisseite",
   "chatDraft": {
     "iconChanged": "Ich habe gerade das Icon hier geändert. Passe den umgebenden Titel und die Beschreibung an, damit die Bedeutung zum neuen Icon passt.",
-    "imageChanged": "Ich habe gerade das Bild hier geändert. Passe den umgebenden Text an, damit er zum Inhalt des Bildes passt."
+    "imageChanged": "Ich habe gerade das Bild hier geändert. Passe den umgebenden Text an, damit er zum Inhalt des Bildes passt.",
+    "fixControls": "Repariere diese Bedienelemente, sie sind falsch verdrahtet:"
   },
   "lockReason": {
     "created": "Verfügbar, sobald deine Seite erstellt ist"
@@ -283,6 +284,7 @@
     "unsafe_links": "Einige Links waren nicht sicher und wurden entfernt.",
     "dynamic_content": "Ein Teil dessen, was deine Seite selbst aufbaut, kann leer aussehen. Du kannst es direkt im Editor eintragen.",
     "broken_controls": "Einige interaktive Elemente sind falsch verdrahtet und funktionieren nicht. Bitte den Assistenten, sie zu reparieren.",
-    "dismiss": "Verstanden"
+    "dismiss": "Verstanden",
+    "fix": "Das reparieren"
   }
 }

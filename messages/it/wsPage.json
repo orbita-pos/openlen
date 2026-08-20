@@ -50,7 +50,8 @@
   "defaultProjectName": "Pagina prezzi",
   "chatDraft": {
     "iconChanged": "Ho appena cambiato l'icona qui. Aggiorna il titolo e la descrizione circostanti in modo che il significato corrisponda alla nuova icona.",
-    "imageChanged": "Ho appena cambiato l'immagine qui. Aggiorna il testo circostante in modo che corrisponda a ciò che mostra l'immagine."
+    "imageChanged": "Ho appena cambiato l'immagine qui. Aggiorna il testo circostante in modo che corrisponda a ciò che mostra l'immagine.",
+    "fixControls": "Sistema questi controlli collegati male che non funzionano:"
   },
   "lockReason": {
     "created": "Disponibile una volta creata la pagina"
@@ -283,6 +284,7 @@
     "unsafe_links": "Alcuni link non erano sicuri e sono stati rimossi.",
     "dynamic_content": "Una parte di ciò che la tua pagina costruisce da sola potrebbe apparire vuota. Puoi scriverla direttamente nell'editor.",
     "broken_controls": "Alcuni controlli interattivi sono collegati male e non funzioneranno. Chiedi all'assistente di sistemarli.",
-    "dismiss": "Ho capito"
+    "dismiss": "Ho capito",
+    "fix": "Sistema questo"
   }
 }

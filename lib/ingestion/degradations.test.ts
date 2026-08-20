@@ -58,7 +58,15 @@ describe("collectDegradations", () => {
       ] as never,
     });
     expect(out).toEqual([
-      { surface: "from-html", stage: "behaviors", code: "broken_controls", count: 2 },
+      {
+        surface: "from-html",
+        stage: "behaviors",
+        code: "broken_controls",
+        count: 2,
+        // El detalle viaja con el conteo: sin él, el creador lee "algunos
+        // controles" y no sabe cuál tocar.
+        detail: ["x", "y"],
+      },
     ]);
   });
 
@@ -139,7 +147,54 @@ describe("collectDegradations", () => {
         behaviorIssues: [{ behavior: "copy", message: "id inexistente" }],
       }),
     ).toEqual([
-      { surface: "generate", stage: "behaviors", code: "broken_controls", count: 1 },
+      {
+        surface: "generate",
+        stage: "behaviors",
+        code: "broken_controls",
+        count: 1,
+        detail: ["id inexistente"],
+      },
     ]);
+  });
+});
+
+describe("el detalle SOBREVIVE hasta el usuario", () => {
+  // El sistema siempre supo qué se rompió — el atributo, la fórmula literal,
+  // qué nombre falta y qué hacer. Lo usaba para reparar y reintentar, y al
+  // guardarlo para el creador lo reducía a un código y un número. "Algunos
+  // controles quedaron mal conectados" no le dice a nadie qué tocar.
+  it("lleva la frase concreta, no sólo el conteo", () => {
+    const out = collectDegradations({
+      surface: "generate",
+      behaviorIssues: [
+        { behavior: "calc", message: 'data-ol-out="recibo * tarifa": usa "tarifa", que no existe' },
+      ],
+    });
+    const roto = out.find((d) => d.code === "broken_controls");
+    expect(roto?.count).toBe(1);
+    expect(roto?.detail?.[0]).toContain("tarifa");
+  });
+
+  // Acotado a propósito: es texto de máquina en la fila del proyecto, no un
+  // registro. Un registro que nadie lee es lo que este aviso existe para NO ser.
+  it("no crece sin límite", () => {
+    const muchos = Array.from({ length: 12 }, (_, i) => ({
+      behavior: "calc" as const,
+      message: `problema ${i} ` + "x".repeat(500),
+    }));
+    const roto = collectDegradations({ surface: "generate", behaviorIssues: muchos })
+      .find((d) => d.code === "broken_controls");
+    expect(roto?.count).toBe(12);
+    expect(roto?.detail).toHaveLength(3);
+    expect(roto?.detail?.[0]?.length).toBeLessThanOrEqual(200);
+  });
+
+  it("sin issues no inventa detalle", () => {
+    const out = collectDegradations({
+      surface: "generate",
+      removed: { scripts: 2, eventHandlers: 0, iframes: 0, dangerousUrls: 0 },
+    });
+    expect(out.find((d) => d.code === "broken_controls")).toBeUndefined();
+    expect(out.find((d) => d.code === "scripts")?.detail).toBeUndefined();
   });
 });

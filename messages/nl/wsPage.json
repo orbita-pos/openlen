@@ -50,7 +50,8 @@
   "defaultProjectName": "Prijzenpagina",
   "chatDraft": {
     "iconChanged": "Ik heb het icoon hier zojuist gewijzigd. Werk de bijbehorende titel en beschrijving bij zodat de betekenis overeenkomt met het nieuwe icoon.",
-    "imageChanged": "Ik heb de afbeelding hier zojuist gewijzigd. Werk de omringende tekst bij zodat die overeenkomt met wat de afbeelding toont."
+    "imageChanged": "Ik heb de afbeelding hier zojuist gewijzigd. Werk de omringende tekst bij zodat die overeenkomt met wat de afbeelding toont.",
+    "fixControls": "Repareer deze verkeerd aangesloten knoppen die niet werken:"
   },
   "lockReason": {
     "created": "Beschikbaar zodra je pagina is aangemaakt"
@@ -283,6 +284,7 @@
     "unsafe_links": "Sommige links waren niet veilig en zijn verwijderd.",
     "dynamic_content": "Een deel van wat je pagina zelf opbouwt kan leeg lijken. Je kunt het rechtstreeks in de editor invullen.",
     "broken_controls": "Sommige interactieve onderdelen zijn verkeerd aangesloten en werken niet. Vraag de assistent om ze te repareren.",
-    "dismiss": "Begrepen"
+    "dismiss": "Begrepen",
+    "fix": "Dit repareren"
   }
 }

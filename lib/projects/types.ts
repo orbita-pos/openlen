@@ -355,6 +355,17 @@ export interface Degradation {
   stage: "transform" | "sanitize" | "behaviors";
   code: DegradationCode;
   count: number;
+  /** Lo que se rompió, EN CONCRETO — la frase que el sistema ya sabía y que
+   *  hasta ahora se tiraba al guardar.
+   *
+   *  El diagnóstico existía completo (el atributo, la fórmula literal, qué
+   *  nombre falta y qué hacer), se usaba para reparar y reintentar, y al
+   *  llegar al usuario se reducía a un código y un número. "Algunos controles
+   *  quedaron mal conectados" no le dice a nadie qué tocar.
+   *
+   *  Va acotado a propósito: son texto de máquina en la fila del proyecto, no
+   *  un registro. Tres frases bastan para saber qué pedirle al asistente. */
+  detail?: string[];
 }
 
 export type DegradationCode =

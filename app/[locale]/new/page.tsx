@@ -188,6 +188,23 @@ interface LoadedProject {
   profileId: string | null;
 }
 
+/** Las frases concretas de un código de degradación, sin repetir.
+ *
+ *  Una clonación multi-página registra la misma pérdida por página, así que el
+ *  mismo detalle puede venir N veces; decirlo N veces sería el ruido que este
+ *  aviso existe para no ser. */
+function degradationDetail(
+  degradations: Degradation[] | undefined,
+  code: string,
+): string[] {
+  const vistos = new Set<string>();
+  for (const d of degradations ?? []) {
+    if (d.code !== code) continue;
+    for (const linea of d.detail ?? []) vistos.add(linea);
+  }
+  return [...vistos].slice(0, 3);
+}
+
 // stripEditorInstrumentation moved to
 // @/components/workspace-v2/strip-editor-instrumentation (so it can be unit
 // tested + reused). It is the single funnel every openlen:html-changed passes
@@ -4089,6 +4106,21 @@ function NewV2Inner() {
                           (code) => (
                             <li key={code} className="text-[12px] fg-muted leading-snug">
                               {t(`degraded.${code}`)}
+                              {/* Lo que se rompió EN CONCRETO. El sistema
+                                  siempre lo supo —el atributo, la fórmula
+                                  literal, qué nombre falta— y hasta ahora lo
+                                  tiraba al guardar, dejando al creador con
+                                  "algunos controles" y ninguna pista de qué
+                                  tocar. */}
+                              {degradationDetail(loadedProject.degradations, code).length > 0 && (
+                                <ul className="mt-1 flex flex-col gap-0.5 pl-3 border-l bd">
+                                  {degradationDetail(loadedProject.degradations, code).map((d) => (
+                                    <li key={d} className="text-[11px] fg-faint leading-snug">
+                                      {d}
+                                    </li>
+                                  ))}
+                                </ul>
+                              )}
                             </li>
                           ),
                         )}
@@ -4104,7 +4136,32 @@ function NewV2Inner() {
                       <X size={13} />
                     </button>
                   </div>
-                  <div className="flex justify-end px-3.5 pb-2.5">
+                  <div className="flex justify-end gap-2 px-3.5 pb-2.5">
+                    {/* "Arreglar esto" — no envía solo: deja el diagnóstico
+                        escrito en el compositor del Chat y lleva ahí al
+                        creador. Cada edición cuesta créditos, así que mandar
+                        una petición sin que la vea sería gastarle dinero por
+                        él. Usa la MISMA vía que el chip post-swap
+                        (pendingChatDraft), no un camino nuevo. */}
+                    {degradationDetail(loadedProject.degradations, "broken_controls").length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const lineas = degradationDetail(
+                            loadedProject.degradations,
+                            "broken_controls",
+                          );
+                          setPendingChatDraft(
+                            [t("chatDraft.fixControls"), ...lineas.map((l) => `- ${l}`)].join("\n"),
+                          );
+                          setMode("chat");
+                          onDismissDegradations();
+                        }}
+                        className="inline-flex items-center h-7 px-3 rounded-full text-[11.5px] font-semibold border bd fg hover:bg-hover transition"
+                      >
+                        {t("degraded.fix")}
+                      </button>
+                    )}
                     <button
                       type="button"
                       onClick={onDismissDegradations}

@@ -50,7 +50,8 @@
   "defaultProjectName": "Pricing Page",
   "chatDraft": {
     "iconChanged": "I just changed the icon here. Update the surrounding title and description so the meaning matches the new icon.",
-    "imageChanged": "I just changed the image here. Update the surrounding copy so it matches what the image shows."
+    "imageChanged": "I just changed the image here. Update the surrounding copy so it matches what the image shows.",
+    "fixControls": "Fix these controls — they were wired incorrectly and don't work:"
   },
   "lockReason": {
     "created": "Available once your page is created"
@@ -283,6 +284,7 @@
     "unsafe_links": "Some links weren't safe to keep, so they were removed.",
     "dynamic_content": "Part of what your page builds by itself may look empty. You can write it in directly in the editor.",
     "broken_controls": "Some interactive controls were wired incorrectly and won't work. Ask the assistant to fix them.",
-    "dismiss": "Got it"
+    "dismiss": "Got it",
+    "fix": "Fix this"
   }
 }

@@ -160,7 +160,16 @@ describe("POST /api/generate", () => {
     expect(events.at(-1)?.event).toBe("project_saved");
     expect(mocks.createProject).toHaveBeenCalledTimes(1);
     expect(savedInput().degradations).toEqual([
-      { surface: "generate", stage: "behaviors", code: "broken_controls", count: 1 },
+      {
+        surface: "generate",
+        stage: "behaviors",
+        code: "broken_controls",
+        count: 1,
+        // El detalle viaja con el conteo hasta la fila del proyecto: es lo que
+        // el botón "Arreglar esto" le pasa al asistente. Sin él, el aviso
+        // vuelve a ser "algunos controles" y el creador no sabe qué pedir.
+        detail: [expect.any(String)],
+      },
     ]);
   });
 

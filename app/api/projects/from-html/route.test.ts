@@ -96,7 +96,16 @@ describe("POST /api/projects/from-html", () => {
 
     expect(res.status).toBe(200);
     expect(storedData().degradations).toEqual([
-      { surface: "from-html", stage: "behaviors", code: "broken_controls", count: 1 },
+      {
+        surface: "from-html",
+        stage: "behaviors",
+        code: "broken_controls",
+        count: 1,
+        // El detalle viaja con el conteo hasta la fila del proyecto: es lo que
+        // el botón "Arreglar esto" le pasa al asistente. Sin él, el aviso
+        // vuelve a ser "algunos controles" y el creador no sabe qué pedir.
+        detail: [expect.any(String)],
+      },
     ]);
   });
 

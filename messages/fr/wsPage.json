@@ -50,7 +50,8 @@
   "defaultProjectName": "Page de tarifs",
   "chatDraft": {
     "iconChanged": "Je viens de changer l'icône ici. Mets à jour le titre et la description autour pour que le sens corresponde à la nouvelle icône.",
-    "imageChanged": "Je viens de changer l'image ici. Mets à jour le texte autour pour qu'il corresponde à ce que montre l'image."
+    "imageChanged": "Je viens de changer l'image ici. Mets à jour le texte autour pour qu'il corresponde à ce que montre l'image.",
+    "fixControls": "Corrige ces contrôles mal reliés qui ne fonctionnent pas :"
   },
   "lockReason": {
     "created": "Disponible une fois votre page créée"
@@ -283,6 +284,7 @@
     "unsafe_links": "Certains liens n'étaient pas sûrs et ont été retirés.",
     "dynamic_content": "Une partie de ce que votre page génère elle-même peut apparaître vide. Vous pouvez la saisir directement dans l'éditeur.",
     "broken_controls": "Certains contrôles interactifs sont mal reliés et ne fonctionneront pas. Demandez à l'assistant de les corriger.",
-    "dismiss": "compris"
+    "dismiss": "compris",
+    "fix": "Corriger ceci"
   }
 }
