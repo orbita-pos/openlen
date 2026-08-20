@@ -65,4 +65,30 @@ export interface PreparePageOptions {
   readonly title?: string;
   /** Ajustes actuales del proyecto, para que el puente de módulos no los pise. */
   readonly settings?: unknown;
+  /**
+   * Las etapas que necesitan un navegador — legibilidad y medición.
+   *
+   * MEDIDO: la puerta sola tarda 7-17 ms; con render, 5.5 s en caliente y 10.7 s
+   * con Chrome frío. Eso es aceptable creando una página (ya son ~60 s) y no lo
+   * es en una edición quirúrgica de dos operaciones, donde el usuario mira la
+   * pantalla. Una reescritura completa SÍ lo vale: es una página nueva con otro
+   * nombre.
+   *
+   * Ausente = true. Apagarlo no salta ninguna comprobación determinista de las
+   * que no necesitan navegador: los invariantes y la puerta corren siempre.
+   */
+  readonly renderChecks?: boolean;
+  /**
+   * El documento ANTES de esta edición. Sólo en `mode: "edit"`.
+   *
+   * Sin esto, una conducta rota que YA venía en la página condena todas las
+   * ediciones futuras: crear falla abierto y entrega la página con el defecto
+   * anotado, editar falla cerrado y la rechaza. Medido en la primera página que
+   * generó el motor — el modelo escribió botones de filtro sin la rejilla que
+   * filtran — y con esa página el Chat y el Agente rechazaban CUALQUIER cambio,
+   * hablándole al usuario de un control que no tocó.
+   *
+   * Con él, la puerta sólo rechaza lo que ESTA edición rompió.
+   */
+  readonly priorHtml?: string;
 }

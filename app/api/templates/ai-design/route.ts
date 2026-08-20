@@ -25,7 +25,8 @@ import {
   tagWithOpIds,
   type ScopedView,
 } from "@/lib/html-ops";
-import { passHtmlGate } from "@/lib/html-gate/document-gate";
+import { preparePage } from "@/lib/page-engine/prepare";
+import { persistPage } from "@/lib/page-engine/persist";
 import { applyModuleIntent } from "@/lib/projects/module-intent";
 import { describeBehaviorIssues } from "@/lib/behaviors/validate";
 import { todayLine } from "@/lib/ai/today-line";
@@ -840,17 +841,32 @@ VISUAL CONTEXT: the attached image is a full-page render of the CURRENT page (wh
         // the model to fix on the NEXT turn — which meant the visitor could
         // meet the dead control first. ai-design edits a page that already
         // exists, so refusing costs the user the edit, not the page.
-        const gated = await passHtmlGate(
-          trimmedHtml,
-          { sanitize: sanitizeForPublish },
-          { render: false, seal: false, behaviors: "block" },
-        );
+        // El motor, el mismo que corre al crear (lib/page-engine). Hasta aquí
+        // esta ruta sólo llamaba a la puerta: se creaba una página medida y a
+        // la primera edición nadie volvía a mirar.
+        //
+        // Las etapas con navegador SÓLO en la reescritura completa. Medido: la
+        // puerta sola tarda 7-17 ms y con render 5.5 s en caliente. Una
+        // reescritura es una página nueva y lo vale; dos operaciones
+        // quirúrgicas sobre un párrafo, no — y el usuario está mirando.
+        const prepared = await preparePage(trimmedHtml, {
+          mode: "edit",
+          renderChecks: outputMode !== "ops",
+          // Sin esto, una conducta rota que ya venía en la página condena TODAS
+          // las ediciones futuras y el usuario oye hablar de un control que no
+          // tocó. La puerta sólo rechaza lo que este turno rompió.
+          priorHtml: currentHtml,
+          ...(existing.data?.settings !== undefined ? { settings: existing.data.settings } : {}),
+        });
+        const gated = prepared.ok
+          ? { ok: true as const, html: prepared.html, issues: prepared.report.behaviorIssues, code: "", detail: "" }
+          : { ok: false as const, html: "", issues: prepared.report.behaviorIssues, code: prepared.code, detail: prepared.detail ?? "" };
         if (!gated.ok) {
           // The reason has to survive as prose: describeBehaviorIssues writes
           // for the person reading the chat, `gated.detail` is the machine
           // slug. Collapsing them into one string is the mistake this whole
           // migration exists to stop repeating.
-          const behaviorList = describeBehaviorIssues([...(gated.issues ?? [])]);
+          const behaviorList = describeBehaviorIssues([...((gated.issues ?? []) as never[])]);
           emit("error", {
             message: behaviorList
               ? `Conductas mal cableadas — no guardé nada para no dejarte un control muerto en la página: ${behaviorList}. Pídemelo otra vez y lo cableo bien.`
@@ -867,87 +883,55 @@ VISUAL CONTEXT: the attached image is a full-page render of the CURRENT page (wh
         const now = new Date();
         let enabledModules: string[] = [];
 
-        try {
-          // Preserve data.settings (per-form notify/redirect/success +
-          // analyticsDisabled) — only the html changes here.
-          const base: ProjectData = existing.data ?? { html: "" };
-          // AI→módulos bridge: enable a module whose placeholder this edit added.
-          const moduleIntent = applyModuleIntent(base.settings, trimmedHtml);
-          enabledModules = moduleIntent.enabled;
-          const withSettings = moduleIntent.enabled.length
-            ? { settings: moduleIntent.settings }
-            : {};
-          const nextData: ProjectData = pageSlug
-            ? {
-                ...base,
-                ...withSettings,
-                pages: {
-                  ...base.pages,
-                  [pageSlug]: { ...base.pages?.[pageSlug], html: trimmedHtml },
-                },
-              }
-            : { ...base, html: trimmedHtml, ...withSettings };
-          await db
-            .update(schema.projects)
-            .set({ data: nextData, updatedAt: now })
-            .where(
-              and(
-                eq(schema.projects.id, projectId),
-                eq(schema.projects.userId, userId),
-              ),
-            );
-        } catch (err) {
-          // eslint-disable-next-line no-console
-          console.error("[ai-design] db update failed", err);
-          emit("error", {
-            message: "Generated successfully but failed to save — try again.",
-          });
-          closeStream();
-          return;
-        }
+        enabledModules = [...prepared.report.modules];
 
-        // Snapshot the pre-edit document FIRST (the server-side stored state
-        // — already sanitized), so an AI edit is always undoable even when
-        // this document had no versions yet (typical for site pages and for
-        // inline edits inside the idle-checkpoint window). createVersion
-        // dedups within the scope, so this no-ops when already captured.
-        const preEditHtml = pageSlug
-          ? existing.data?.pages?.[pageSlug]?.html ?? ""
-          : existing.data?.html ?? "";
-        if (preEditHtml && preEditHtml !== trimmedHtml) {
-          await createVersion({
-            projectId,
-            html: preEditHtml,
-            label: "Before AI edit",
-            source: "manual",
-            page: pageSlug,
-          }).catch((err: unknown) => {
-            // eslint-disable-next-line no-console
-            console.error("[ai-design] pre-edit snapshot failed", err);
-          });
-        }
-
-        // Snapshot the post-chat state into the version timeline so the
-        // user can restore later. Failures here don't break the stream —
-        // we still apply the HTML and emit done. The label tags the mode
-        // + op count explicitly so the timeline reads cleanly.
         const versionLabel =
           outputMode === "ops"
             ? `Ops (${appliedOpCount}): ${prompt.slice(0, 70)}${prompt.length > 70 ? "…" : ""}`
             : `Rewrite: ${prompt.slice(0, 76)}${prompt.length > 76 ? "…" : ""}`;
-        await createVersion({
-          projectId,
-          html: trimmedHtml,
-          label: versionLabel,
-          source: "chat",
-          page: pageSlug,
-          // Un rewrite completo redefine el diseño → nuevo baseline del reset.
-          // Las ops quirúrgicas son ediciones, no rediseños: no lo mueven.
-          isBaseline: outputMode !== "ops",
-        }).catch((err: unknown) => {
+
+        // Guardado + los dos snapshots, en lib/page-engine/persist. Este bloque
+        // era una copia del embudo del Agente — su propio comentario lo decía,
+        // "cloned from ai-design's own page-branch" — y las dos mitades tenían
+        // que no derivar nunca.
+        const saved = await persistPage(
+          {
+            projectId,
+            userId,
+            page: pageSlug,
+            html: trimmedHtml,
+            label: versionLabel,
+            ...(enabledModules.length ? { settings: prepared.report.moduleSettings as ProjectData["settings"] } : {}),
+            // Un rewrite completo redefine el diseño → nuevo baseline del reset.
+            // Las ops quirúrgicas son ediciones, no rediseños: no lo mueven.
+            isBaseline: outputMode !== "ops",
+          },
+          {
+            loadProject: async (id, uid) => {
+              const rows = await db.select({ data: schema.projects.data }).from(schema.projects)
+                .where(and(eq(schema.projects.id, id), eq(schema.projects.userId, uid))).limit(1);
+              return rows[0] ? { data: rows[0].data as ProjectData } : null;
+            },
+            saveProjectData: async (id, uid, data) => {
+              await db.update(schema.projects).set({ data, updatedAt: now })
+                .where(and(eq(schema.projects.id, id), eq(schema.projects.userId, uid)));
+            },
+            // Best-effort: perder un snapshot no puede costar la edición.
+            snapshotVersion: async (v) => {
+              await createVersion(v).catch((err: unknown) => {
+                // eslint-disable-next-line no-console
+                console.error("[ai-design] version snapshot failed", err);
+              });
+            },
+          },
+        );
+        if (!saved.ok) {
           // eslint-disable-next-line no-console
-          console.error("[ai-design] version snapshot failed", err);
-        });
+          console.error("[ai-design] persist failed", saved.error);
+          emit("error", { message: "Generated successfully but failed to save — try again." });
+          closeStream();
+          return;
+        }
 
         // Debit credits — billed from the real token usage the provider
         // reports. Falls back to a char estimate only if the usage event

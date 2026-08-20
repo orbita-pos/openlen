@@ -92,3 +92,36 @@ describe("el motor de la página", () => {
     expect(photograph).not.toHaveBeenCalled();
   });
 });
+
+describe("una edición no paga por lo que ya estaba roto", () => {
+  // El caso real: la primera página que generó el motor traía botones de filtro
+  // sin su rejilla. Crear la entrega (falla abierto); editar la rechazaba
+  // (falla cerrado), así que esa página no se podía cambiar NUNCA.
+  const conDefecto = `<!doctype html><html><head></head><body><div data-ol-filter-group="panes"><button data-ol-filter="a">A</button></div></body></html>`;
+
+  it("sin priorHtml, el defecto heredado bloquea — la trampa que había", async () => {
+    const out = await preparePage(conDefecto, { mode: "edit", renderChecks: false });
+    expect(out.ok).toBe(false);
+  });
+
+  it("con priorHtml, el defecto heredado NO bloquea", async () => {
+    const editada = conDefecto.replace("<button", "<p>texto nuevo</p><button");
+    const out = await preparePage(editada, {
+      mode: "edit",
+      renderChecks: false,
+      priorHtml: conDefecto,
+    });
+    expect(out.ok).toBe(true);
+  });
+
+  it("pero un defecto que ESTA edición introduce sí bloquea", async () => {
+    const sano = `<!doctype html><html><head></head><body><p>hola</p></body></html>`;
+    const out = await preparePage(conDefecto, {
+      mode: "edit",
+      renderChecks: false,
+      priorHtml: sano,
+    });
+    expect(out.ok).toBe(false);
+    expect(!out.ok && out.report.behaviorIssues?.length).toBe(1);
+  });
+});

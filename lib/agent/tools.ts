@@ -34,6 +34,8 @@ import { detectSlotPath, sanitizeForPublish } from "@/lib/html-engine";
 import { applyOps, tagWithOpIds, type Op, type OpType } from "@/lib/html-ops";
 import { fetchSheet, resolveSheetCsvUrl } from "@/lib/live/sheet-source";
 import { passHtmlGate } from "@/lib/html-gate/document-gate";
+import { activeHtml, persistPage } from "@/lib/page-engine/persist";
+import { preparePage } from "@/lib/page-engine/prepare";
 import { setProjectUserBrief, USER_BRIEF_MAX } from "@/lib/projects";
 import { extForMime, getAssetStorage } from "@/lib/projects/assets";
 import { validateUrl } from "@/lib/style-match/scrape/validate-url";
@@ -810,10 +812,6 @@ export function sanitizeAviso(
 // page="<slug>" → that subpage's own document (data.pages[slug].html).
 // This is the single choke point the W1 pin depends on for READS; writes go
 // through the mirrored branch inside persistHtmlChange below.
-function activeHtml(data: ProjectData, page: string | null): string | null {
-  return page ? data.pages?.[page]?.html ?? null : data.html ?? null;
-}
-
 // Shared F1 persist pipeline — same block editar_pagina always ran:
 // editor-mode marker guard -> passHtmlGate (sanitize, normalize, meta,
 // behaviours — fail closed) -> module-intent -> snapshot pre/post -> save ->
@@ -842,11 +840,21 @@ async function persistHtmlChange(
   // Fail closed, through the one gate. `seal: false` — nothing is served from
   // here, publishToDir seals at publish time; `render: false` — an agent turn
   // cannot pay a twenty-second browser launch, publish verifies instead.
-  const gated = await passHtmlGate(
-    candidateHtml,
-    { sanitize: sanitizeForPublish },
-    { render: false, seal: false, behaviors: "block" },
-  );
+  //
+  // `priorHtml`: una conducta rota que ya venía en la página no puede condenar
+  // todas las ediciones futuras. Crear falla ABIERTO y entrega la página con el
+  // defecto anotado; sin esta comparación, editar fallaba CERRADO y el Agente
+  // rechazaba cualquier cambio hablando de un control que el usuario no tocó.
+  const prepared = await preparePage(candidateHtml, {
+    mode: "edit",
+    // Un turno del Agente no puede pagar un arranque de Chrome; publicar
+    // verifica. Los invariantes y la puerta corren igual.
+    renderChecks: false,
+    priorHtml: session.taggedHtml,
+  });
+  const gated = prepared.ok
+    ? { ok: true as const, html: prepared.html, removed: prepared.report.removed, issues: prepared.report.behaviorIssues as never[], code: "", detail: "" }
+    : { ok: false as const, html: "", removed: prepared.report.removed, issues: (prepared.report.behaviorIssues ?? []) as never[], code: prepared.code, detail: prepared.detail ?? "" };
   if (!gated.ok) {
     // Task 16's rule, now enforced instead of advised: un data-ol-* mal
     // cableado ya no llega al documento guardado — se rechaza y la página que
@@ -871,45 +879,28 @@ async function persistHtmlChange(
   const finalHtml = gated.html;
   // Behaviours are the gate's call now, so the only thing left to warn about
   // is what the sanitizer removed from a document that DID pass.
-  const aviso = sanitizeAviso(gated.removed);
+  const aviso = gated.removed ? sanitizeAviso(gated.removed) : undefined;
 
+  // El guardado vive en lib/page-engine/persist: el Chat tenía una copia de
+  // este mismo bloque —dos snapshots, el mismo spread por página— y el
+  // comentario de arriba pedía justo que no derivaran.
   const row = await deps.loadProject(session.projectId, session.userId);
   if (!row) return { ok: false, error: "proyecto no encontrado" };
-
   const moduleIntent = applyModuleIntent(row.data.settings, finalHtml);
-  const withSettings = moduleIntent.enabled.length ? { settings: moduleIntent.settings } : {};
-  const nextData: ProjectData = session.page
-    ? {
-        ...row.data,
-        ...withSettings,
-        pages: {
-          ...row.data.pages,
-          [session.page]: { ...row.data.pages?.[session.page], html: finalHtml },
-        },
-      }
-    : { ...row.data, html: finalHtml, ...withSettings };
 
-  const preEditHtml = activeHtml(row.data, session.page);
-  if (preEditHtml && preEditHtml !== finalHtml) {
-    await deps.snapshotVersion({
+  const saved = await persistPage(
+    {
       projectId: session.projectId,
-      html: preEditHtml,
-      label: "Before AI edit",
-      source: "manual",
+      userId: session.userId,
       page: session.page,
-    });
-  }
-
-  await deps.saveProjectData(session.projectId, session.userId, nextData);
-
-  await deps.snapshotVersion({
-    projectId: session.projectId,
-    html: finalHtml,
-    label,
-    source: "chat",
-    page: session.page,
-    isBaseline: opts.isBaseline,
-  });
+      html: finalHtml,
+      label,
+      ...(moduleIntent.enabled.length ? { settings: moduleIntent.settings } : {}),
+      ...(opts.isBaseline !== undefined ? { isBaseline: opts.isBaseline } : {}),
+    },
+    deps,
+  );
+  if (!saved.ok) return saved;
 
   // Ids change after every apply — re-tag so the next editar_pagina call
   // has fresh targets to address.

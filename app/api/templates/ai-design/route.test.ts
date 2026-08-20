@@ -121,6 +121,11 @@ describe("POST /api/templates/ai-design", () => {
     mocks.renderReference.mockResolvedValue(null);
     delete process.env.OPENLEN_CHAT_PROVIDER;
     delete process.env.OPENLEN_AIDESIGN_PAGE_REFERENCE;
+    // Sin navegador: esta prueba mide el contrato de la RUTA, y las dos etapas
+    // que rinden la página tienen las suyas (lib/page-engine, lib/document).
+    // Con Chrome de verdad cada caso tarda 3.5 s solo y se agota compitiendo
+    // con los otros 255 archivos.
+    process.env.OPENLEN_RENDER_CHECKS = "0";
   });
 
   it("saves a redesign whose behaviours are wired correctly", async () => {

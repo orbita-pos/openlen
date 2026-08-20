@@ -5,6 +5,7 @@ import { seedBrandIntoHtml } from "@/lib/business-profiles/seed-html";
 import { bindColorsToTokens } from "@/lib/document/bind-colors-to-tokens";
 import { ensureSingleH1 } from "@/lib/document/ensure-single-h1";
 import { repairUnreadableText } from "@/lib/document/repair-unreadable-text";
+import { validateBehaviors } from "@/lib/behaviors/validate";
 import { objectiveBreakage } from "@/lib/generation/objective-breakage";
 import { sanitizeForPublish } from "@/lib/html-engine";
 import { passHtmlGate } from "@/lib/html-gate/document-gate";
@@ -74,10 +75,17 @@ export async function preparePage(
     }
   }
 
+  // Kill-switch, como `OPENLEN_IMAGERY=0`: si Chrome se rompe en la caja, la
+  // página sigue saliendo sin las dos etapas que lo necesitan.
+  const renderChecks =
+    opts.renderChecks !== false && process.env.OPENLEN_RENDER_CHECKS !== "0";
+
   // ── 2. legibilidad ─────────────────────────────────────────────────────
   // Se mide EN EL RENDER porque el mismo `color:#8a8a92` es correcto sobre
   // negro e ilegible sobre gris, y ningún análisis del CSS distingue los dos.
-  try {
+  if (!renderChecks) {
+    stages.push({ stage: "legibility", status: "skipped", detail: "no_render" });
+  } else try {
     const legible = await withDeadline(
       repairUnreadableText(current, render),
       { html: current, repaired: 0 },
@@ -96,7 +104,9 @@ export async function preparePage(
   // Se informa, no se actúa: regenerar exige volver a llamar al modelo y eso es
   // decisión —y presupuesto— del llamador.
   let breakage: string[] = [];
-  try {
+  if (!renderChecks) {
+    stages.push({ stage: "measure", status: "skipped", detail: "no_render" });
+  } else try {
     breakage = objectiveBreakage(await render(current));
     stages.push({ stage: "measure", status: breakage.length ? "changed" : "skipped", detail: breakage.join(" · ") || undefined });
   } catch (err) {
@@ -139,8 +149,10 @@ export async function preparePage(
     {
       render: false,
       seal: false,
-      // La asimetría deliberada. Ver el comentario de `PageMode`.
-      behaviors: opts.mode === "create" ? "warn" : "block",
+      // La asimetría deliberada. Ver el comentario de `PageMode`. Y con
+      // `priorHtml` la puerta avisa en vez de bloquear: la comparación de abajo
+      // decide, para no cobrarle al usuario un defecto que ya estaba.
+      behaviors: opts.mode === "create" || opts.priorHtml !== undefined ? "warn" : "block",
       ...(opts.profile
         ? {
             meta: pageMetaFor({
@@ -169,6 +181,28 @@ export async function preparePage(
       },
     };
   }
+  // Sólo lo que ESTA edición rompió. Una conducta que ya venía rota se queda
+  // anotada en el informe, no cuesta la edición.
+  const issues = [...(gated.issues ?? [])];
+  if (opts.mode === "edit" && opts.priorHtml !== undefined && issues.length > 0) {
+    const before = new Set(safeBehaviors(opts.priorHtml).map((i) => JSON.stringify(i)));
+    const nuevos = issues.filter((i) => !before.has(JSON.stringify(i)));
+    if (nuevos.length > 0) {
+      stages.push({ stage: "gate", status: "unavailable", detail: "behaviors_invalid" });
+      return {
+        ok: false,
+        code: "behaviors_invalid",
+        report: {
+          stages,
+          breakage,
+          ...(gated.removed ? { removed: { ...gated.removed, metaRefresh: 0 } } : {}),
+          behaviorIssues: nuevos,
+          modules: [],
+        },
+      };
+    }
+  }
+
   current = gated.html;
   stages.push({ stage: "gate", status: "changed" });
 
@@ -214,6 +248,15 @@ function withDeadline<T>(work: Promise<T>, onTimeout: T): Promise<T> {
       setTimeout(() => resolve(onTimeout), RENDER_DEADLINE_MS).unref?.();
     }),
   ]);
+}
+
+/** Nunca tira: un validador caído no puede costar una edición. */
+function safeBehaviors(html: string): ReturnType<typeof validateBehaviors> {
+  try {
+    return validateBehaviors(html);
+  } catch {
+    return [];
+  }
 }
 
 function reason(err: unknown): string {
