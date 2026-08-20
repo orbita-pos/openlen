@@ -312,7 +312,16 @@ if ($env:OPENLEN_SKIP_CRATES_REBUILD -ne "1") {
   $prevPref = $ErrorActionPreference
   $ErrorActionPreference = "Continue"
   try {
-    $tarOutput = & tar -czf $cratesTarball Cargo.toml Cargo.lock crates 2>&1
+    # --exclude node_modules y target: sin esto el tarball se lleva los
+    # node_modules de WINDOWS que hay en crates/*/ — con `napi.cmd`, `napi.ps1`
+    # y un `napi` sin bit de ejecucion. En el box se extraen, `npm install` ve
+    # que "ya esta instalado" y no reinstala, y `napi build` muere con
+    # `sh: 1: napi: Permission denied` (exit 127).
+    #
+    # Pasó de verdad (2026-08-20) y tumbó el paso 6.5 tras subir 12 MB. Excluir
+    # tambien `target` (artefactos de cargo, cientos de MB de x86_64-pc-windows
+    # que el box no puede usar) hace el tarball mas pequeno de paso.
+    $tarOutput = & tar -czf $cratesTarball --exclude=node_modules --exclude=target Cargo.toml Cargo.lock crates 2>&1
     $tarExit = $LASTEXITCODE
   } finally {
     $ErrorActionPreference = $prevPref
