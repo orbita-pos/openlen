@@ -74,14 +74,12 @@ function Sh($cmd) { $cmd -replace "`r`n", "`n" }
 
 # Hybrid-only creation is a release invariant, including when a prebuilt
 # standalone bundle is reused. Keep these checks outside the skip-build branch.
-npm.cmd run generation:template-derived-sections:gate
-if ($LASTEXITCODE -ne 0) { throw "Template-derived section gate failed" }
 npm.cmd run generation:fable-parity:gate
 if ($LASTEXITCODE -ne 0) { throw "Deterministic Fable parity gate failed" }
 npm.cmd run generation:visual-engine-assets:gate
 if ($LASTEXITCODE -ne 0) { throw "Visual Engine assets gate failed" }
-npm.cmd run generation:ai-hybrid:gate
-if ($LASTEXITCODE -ne 0) { throw "AI hybrid generation gate failed" }
+npm.cmd run generation:page-engine:gate
+if ($LASTEXITCODE -ne 0) { throw "Page engine gate failed" }
 npm.cmd run typecheck
 if ($LASTEXITCODE -ne 0) { throw "Typecheck failed" }
 
