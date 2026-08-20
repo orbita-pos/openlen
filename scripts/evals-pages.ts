@@ -30,13 +30,13 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 
-import { generateHtmlStream } from "@/lib/ai-stream/generate";
+import { generateHtmlStream, pageWriterUsesDeepSeek } from "@/lib/ai-stream/generate";
 import { SYSTEM_PROMPT } from "@/app/api/generate/system-prompt";
 import { LANGUAGE_RULE } from "@/lib/ai/authoring-rules";
 import { todayLine } from "@/lib/ai/today-line";
 import { extractDocument } from "@/lib/ai/extract-document";
 import { resolveAIProvider } from "@/lib/ai-provider";
-import { creditRate } from "@/lib/credits";
+import { creditRate, type CreditRate } from "@/lib/credits";
 import { compileCalcRegions } from "@/lib/expr/document";
 import { detectSlotPath } from "@/lib/html-engine";
 import { preparePage } from "@/lib/page-engine/prepare";
@@ -61,17 +61,18 @@ const OUT_DIR = join(process.cwd(), "scratch", "evals");
 const BASELINE = join(process.cwd(), "lib", "evals", "baseline.json");
 const USD_TO_MXN = 18.5;
 // La tarifa sale de `lib/credits.ts` (RATES), la MISMA tabla con la que el
-// producto cobra, y se elige por el `rate` del proveedor que de verdad corre.
+// producto cobra, y la elige QUIEN DE VERDAD CORRE — no el `model` que se le
+// pasa a `generateHtmlStream`.
 //
-// Estaba cableada a 0,22/0,88 con el comentario "DeepSeek V4 Flash en
-// Fireworks" — pero este arnés llama a `resolveAIProvider("gemini-flash")`,
-// que es Gemini 3.5 Flash a 0,3/2,5. La salida costaba 2,8x lo que yo
-// reportaba, así que TODAS las cifras de coste de las corridas anteriores
-// estaban subestimadas. Un tope de gasto calculado con la tarifa de otro
-// proveedor no es un tope.
+// Ese matiz cuesta dinero si se lee mal, y yo lo leí mal: el arnés pasa
+// `model: "gemini-flash"`, pero `generateHtmlStream` decide el motor con
+// `pageWriterUsesDeepSeek()`, que es OPT-OUT — sin `OPENLEN_GENERATE_PROVIDER`
+// corre DeepSeek. Ver el interruptor y su regla en `lib/ai/provider-switch.ts`.
+// Cobrar estas corridas a tarifa de Gemini las encarecería 9x en el papel, y un
+// tope de gasto calculado sobre el precio de otro proveedor no es un tope.
 //
-// Derivarlo elimina la divergencia por construcción: cambiar de modelo cambia
-// el precio solo.
+// Con imágenes manda Gemini (Fireworks no tiene ojos), pero este cohorte no
+// adjunta ninguna: son briefs de texto.
 
 function flag(name: string): string | undefined {
   const hit = process.argv.find((a) => a.startsWith(`--${name}=`));
@@ -97,8 +98,14 @@ async function main(): Promise<void> {
   const provider = resolveAIProvider("gemini-flash");
   const apiKey = provider.key;
   if (!apiKey) throw new Error("falta la clave del proveedor");
-  const { input: IN_PER_M, output: OUT_PER_M } = creditRate(provider.rate);
-  console.log(`modelo: ${provider.label} · $${IN_PER_M}/M entrada · $${OUT_PER_M}/M salida`);
+  // Sin imágenes en el cohorte, así que el segundo argumento es false.
+  const enDeepSeek = pageWriterUsesDeepSeek(process.env, false);
+  const rateKey: CreditRate = enDeepSeek ? "deepseek-flash" : provider.rate;
+  const { input: IN_PER_M, output: OUT_PER_M } = creditRate(rateKey);
+  console.log(
+    `motor: ${enDeepSeek ? "DeepSeek V4 Flash (Fireworks)" : provider.label}` +
+    ` · $${IN_PER_M}/M entrada · $${OUT_PER_M}/M salida`,
+  );
 
   const revision = execSync("git rev-parse HEAD", { encoding: "utf8" }).trim();
   const profile = { brand: null, photos: [], links: [] } as unknown as BusinessProfileData;
