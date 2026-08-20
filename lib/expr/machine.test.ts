@@ -136,6 +136,21 @@ describe("los dos evaluadores dan lo MISMO", () => {
     ["ALGUNO(a, TODOS(b, CADA > 1) Y CADA > 0)", { a: [1], b: [2, 3] }],
     // Una comprensión sobre algo que NO es lista lo trata como lista de uno.
     ["TODOS(x, CADA > 1)", { x: 5 }],
+
+    // ── listas escritas a mano — el hueco que el modelo intentó llenar solo ──
+    ["CUENTA_SI([45,50,52,58,60,68,55,62], CADA < 60)", {}],
+    ["SUMA([1, 2, 3])", {}],
+    ["CUENTA([])", {}],
+    ["ELEMENTO(['a','b','c'], 2)", {}],
+    ["POSICION([10, 20, 30], 20)", {}],
+    ["TODOS([2, 4], CADA > 1)", {}],
+    ["SUMA(FILTRA([10, 200, 30], CADA > 50))", {}],
+    ["[precio, precio * 2]", { precio: 5 }],
+    ["MAX([a, b, 7])", { a: 3, b: 9 }],
+    ["TEXTO([1, 'dos', cierto])", { cierto: true }],
+    // Anidada, y con una comprensión que la recorre.
+    ["CUENTA([[1,2],[3]])", {}],
+    ["AZAR([7])", {}],
   ];
 
   it.each(CASOS)("%s", (src, env) => {

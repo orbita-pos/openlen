@@ -29,6 +29,7 @@ export function evaluate(node: Node, env: Env, random: () => number = Math.rando
     case "not": return !truthy(evaluate(node.arg, env, random));
     case "bin": return binary(node.op, node.left, node.right, env, random);
     case "call": return call(node.fn, node.args, env, random);
+    case "list": return node.items.map((it) => evaluate(it, env, random));
   }
 }
 

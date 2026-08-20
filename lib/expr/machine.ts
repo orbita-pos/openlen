@@ -41,6 +41,7 @@ if(k=="?"){if(!f(S.pop()))i+=+x;continue}
 if(k=="j"){i+=+x;continue}
 if(k=="b"){S.push(f(S.pop()));continue}
 if(k=="N"){S.push(!f(S.pop()));continue}
+if(k=="L"){S.push(S.splice(S.length-(+x)));continue}
 if(k=="~"){S.push(-n(S.pop()));continue}
 if(k=="@"){y=x.split(":");a=S.splice(S.length-(+y[1]));x=y[0];
 if(x=="SUMA"||x=="MIN"||x=="MAX"){b=[];for(y=0;y<a.length;y++)b=b.concat(q(a[y]).map(n));S.push(x=="MIN"?Math.min.apply(0,b):x=="MAX"?Math.max.apply(0,b):b.reduce(function(u,v){return u+v},0));continue}

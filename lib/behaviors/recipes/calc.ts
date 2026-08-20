@@ -96,7 +96,7 @@ export const calc: Behavior = {
   //
   // 3,650 → 4,203 al añadir L3: listas por posición (ELEMENTO/POSICION), las
   // cuatro comprensiones acotadas, el estado declarado y las asignaciones
-  // múltiples. 553 bytes por la diferencia entre "una calculadora" y
+  // múltiples, más las listas escritas a mano. 606 bytes por la diferencia entre "una calculadora" y
   // "cualquier cosa que se pueda preguntar sobre una lista".
   //
   // Qué compra: las 19 formas de la tabla del plan MÁS quizzes multi-paso,
@@ -128,7 +128,7 @@ export const calc: Behavior = {
   a11y: [{ selector: "[data-ol-out]", attr: "aria-live" }],
   doc: {
     label: "cálculo en vivo",
-    when: "El visitante escribe, elige o hace clic y la página responde al instante con un número, un texto o un bloque que aparece: cotizadores, presupuestos, calculadoras, quizzes, sorteos, comparadores, contadores, juegos sencillos. Funciones: SUMA MIN MAX REDONDEA CUENTA SI AZAR TEXTO UNE MONEDA ELEMENTO POSICION TODOS ALGUNO CUENTA_SI FILTRA. Operadores + - * / % = != < <= > >= Y O NO. ELEMENTO(lista, 2) es el segundo (el primero es 1); POSICION(lista, valor) dice su lugar; dos listas ALINEADAS arman un catálogo. TODOS/ALGUNO/CUENTA_SI/FILTRA recorren una lista; dentro, CADA es el elemento: CUENTA_SI(respuestas, CADA = 'sí').",
+    when: "El visitante escribe, elige o hace clic y la página responde al instante con un número, un texto o un bloque que aparece: cotizadores, presupuestos, calculadoras, quizzes, sorteos, comparadores, contadores, juegos sencillos. Funciones: SUMA MIN MAX REDONDEA CUENTA SI AZAR TEXTO UNE MONEDA ELEMENTO POSICION TODOS ALGUNO CUENTA_SI FILTRA. Operadores + - * / % = != < <= > >= Y O NO. ELEMENTO(lista, 2) es el segundo (el primero es 1); POSICION(lista, valor) dice su lugar; dos listas ALINEADAS arman un catálogo — prefiérelo a encadenar SI. TODOS/ALGUNO/CUENTA_SI/FILTRA recorren una lista; dentro, CADA es el elemento: CUENTA_SI(respuestas, CADA = 'sí').",
     whenNot: "No lo uses para nada que deba guardarse o enviarse (formulario, reserva, pedido): eso es un módulo — la página piensa, no recuerda. Tampoco para texto fijo. REGLAS: el [data-ol-calc] va en un contenedor que ENVUELVA los campos y los resultados, nunca en el botón — todo data-ol-out/-if/-set debe quedar dentro. UN SOLO control por nombre: nunca un campo Y un deslizador para el mismo dato, el segundo nacería muerto. Todo data-ol-val debe leerlo alguna fórmula, y todo nombre que una fórmula lea debe existir como data-ol-val o en data-ol-state (varias, separadas por coma). CADA sólo existe dentro de TODOS/ALGUNO/CUENTA_SI/FILTRA. Si algo falla, no se publica.",
     example: `<div data-ol-calc data-ol-state="visto = 1">
   <input data-ol-val="recibo" type="number" value="1800">

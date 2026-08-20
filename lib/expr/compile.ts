@@ -61,6 +61,9 @@ function emit(n: Node, out: Cell[]): void {
     case "bool": out.push(n.value); return;
     case "text": out.push(`'${n.value}`); return;
     case "ref": out.push(`$${n.name}`); return;
+    // "L3" saca 3 de la pila y empuja la lista con ellos. Ningún operador
+    // empieza por "L" — la prueba estructural de machine.test.ts lo vigila.
+    case "list": for (const it of n.items) emit(it, out); out.push(`L${n.items.length}`); return;
     case "neg": emit(n.arg, out); out.push("~"); return;
     // "N", NO "!" — la máquina decide con charAt(0), así que un sigilo que sea
     // PREFIJO de un operador se lo come: con "!" el operador "!=" se leía como

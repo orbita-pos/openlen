@@ -247,3 +247,37 @@ describe("L3 — el catálogo sigue cerrado", () => {
     if (!r.ok) expect(r.error.message).toContain("no existe la función");
   });
 });
+
+describe("listas escritas a mano", () => {
+  const val = (src: string, env: Env = {}) => {
+    const r = parseExpression(src);
+    if (!r.ok) throw new Error(`no parseó "${src}": ${r.error.message}`);
+    return evaluate(r.node, env);
+  };
+
+  it("una lista literal es una lista", () => {
+    expect(val("[45, 50, 52]")).toEqual([45, 50, 52]);
+  });
+
+  it("vacía también", () => {
+    expect(val("[]")).toEqual([]);
+  });
+
+  it("sus elementos son expresiones, no sólo constantes", () => {
+    expect(val("[a + 1, MAX(2, 5)]", { a: 1 })).toEqual([2, 5]);
+  });
+
+  it("sin cerrar se rechaza con un mensaje que dice qué falta", () => {
+    const r = parseExpression("[1, 2");
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.error.message).toContain("]");
+  });
+
+  // El tope sigue siendo el tope: una lista no es una puerta trasera para
+  // hacer trabajar al parser de la puerta de ingestión más de la cuenta.
+  it("una lista enorme choca con MAX_NODES", () => {
+    const r = parseExpression(`[${Array.from({ length: 200 }, (_, i) => i).join(",")}]`);
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.error.message).toContain("demasiado larga");
+  });
+});

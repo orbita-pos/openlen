@@ -422,3 +422,26 @@ describe("fórmulas sin NINGUNA región", () => {
     expect(compileCalcRegions(html)).toEqual({ html, regions: 0, compiled: 0, issues: [] });
   });
 });
+
+describe("un estado vacío no es un error", () => {
+  // Falso positivo cazado por la eval: el modelo escribió `data-ol-state=""` y
+  // le tumbé la página por "falta el = de la asignación". Un validador que
+  // rechaza lo inofensivo cuesta más de lo que protege.
+  it("data-ol-state=\"\" se ignora en silencio", () => {
+    const out = compileCalcRegions(
+      `<!doctype html><html><body><div data-ol-calc data-ol-state="">` +
+      `<input data-ol-val="x" value="2"><p data-ol-out="x * 2">4</p>` +
+      `</div></body></html>`,
+    );
+    expect(out.issues).toEqual([]);
+    expect(out.compiled).toBe(1);
+  });
+
+  it("pero uno con basura dentro SÍ se reporta", () => {
+    const out = compileCalcRegions(
+      `<!doctype html><html><body><div data-ol-calc data-ol-state="n =">` +
+      `<p data-ol-out="n">0</p></div></body></html>`,
+    );
+    expect(out.issues.length).toBeGreaterThan(0);
+  });
+});

@@ -107,7 +107,17 @@ export type Node =
   | { readonly kind: "not"; readonly arg: Node }
   | { readonly kind: "neg"; readonly arg: Node }
   | { readonly kind: "bin"; readonly op: BinaryOp; readonly left: Node; readonly right: Node }
-  | { readonly kind: "call"; readonly fn: FunctionName; readonly args: readonly Node[] };
+  | { readonly kind: "call"; readonly fn: FunctionName; readonly args: readonly Node[] }
+  /** Una lista escrita a mano: `[45, 50, 52]`.
+   *
+   *  No estaba en el diseño. La añadió la evidencia: el modelo escribió
+   *  `CUENTA_SI([45,50,52,58], CADA < 60)` por su cuenta, que es lo que
+   *  escribiría cualquiera, y el parser se lo rechazó con "no entiendo [".
+   *  Un hueco del lenguaje, no un error suyo.
+   *
+   *  No abre nada: los elementos son expresiones del mismo catálogo cerrado, y
+   *  `MAX_NODES` cuenta cada uno. Una lista de mil elementos no cabe. */
+  | { readonly kind: "list"; readonly items: readonly Node[] };
 
 /** Una asignación: `elegido = AZAR(nombres)`. Sólo aparece en `data-ol-set`. */
 export interface Assignment {

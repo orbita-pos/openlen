@@ -24,7 +24,7 @@ import {
 const NAME_RE = /^[a-z_][a-z0-9_]*$/i;
 
 interface Token {
-  readonly type: "num" | "text" | "name" | "op" | "(" | ")" | "," ;
+  readonly type: "num" | "text" | "name" | "op" | "(" | ")" | "," | "[" | "]";
   readonly value: string;
   readonly at: number;
 }
@@ -74,7 +74,7 @@ function tokenize(src: string): { ok: true; tokens: Token[] } | { ok: false; err
       continue;
     }
 
-    if (c === "(" || c === ")" || c === ",") {
+    if (c === "(" || c === ")" || c === "," || c === "[" || c === "]") {
       tokens.push({ type: c, value: c, at: i });
       i += 1;
       continue;
@@ -162,6 +162,23 @@ export function parseExpression(src: string): ParseResult<Node> {
 
     if (t.type === "num") return count({ kind: "num", value: Number(t.value) });
     if (t.type === "text") return count({ kind: "text", value: t.value });
+
+    // `[45, 50, 52]` — una lista escrita a mano. Los elementos son expresiones
+    // del mismo catálogo, así que no abre nada nuevo; `count` los cobra contra
+    // MAX_NODES uno a uno.
+    if (t.type === "[") {
+      const items: Node[] = [];
+      if (peek()?.type !== "]") {
+        for (;;) {
+          items.push(parseLevel(0));
+          if (peek()?.type === ",") { pos += 1; continue; }
+          break;
+        }
+      }
+      if (peek()?.type !== "]") return fail("falta cerrar la lista con ]", t.at);
+      pos += 1;
+      return count({ kind: "list", items });
+    }
 
     if (t.type === "(") {
       const inner = parseLevel(0);
@@ -313,6 +330,7 @@ export function referencedNames(
       node.args.forEach((a, i) => referencedNames(a, out, bound || (liga && i === 1)));
       break;
     }
+    case "list": for (const it of node.items) referencedNames(it, out, bound); break;
     default: break;
   }
   return out;

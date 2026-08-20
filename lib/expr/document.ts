@@ -331,6 +331,12 @@ export function compileCalcRegions(html: string): CompileDocumentResult {
     for (const el of [region, ...region.querySelectorAll(`[${STATE}]`)]) {
       const rawState = el.getAttribute(STATE);
       if (rawState === undefined || rawState === null) continue;
+      // Un `data-ol-state=""` vacío no es un error: es nada. Tratarlo como
+      // "falta el = de la asignación" fue un falso positivo mío que la eval
+      // cazó — el modelo puso el atributo sin contenido y le tumbé la página
+      // por eso. Un validador que rechaza lo inofensivo cuesta más de lo que
+      // protege.
+      if (rawState.trim() === "") continue;
       declaraEstado = true;
       const st = parseAssignments(rawState);
       if (!st.ok) {
