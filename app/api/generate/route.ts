@@ -14,6 +14,7 @@ import { recordCriticRun, recordRegenOutcome } from "@/lib/ai/quality-metrics";
 import type { InlineImage, Message } from "@/lib/ai-gateway";
 import { preparePage } from "@/lib/page-engine/prepare";
 import { jsonResponse, sseChannel } from "@/lib/ai/sse";
+import { extractDocument } from "@/lib/ai/extract-document";
 import { todayLine } from "@/lib/ai/today-line";
 import {
   PLAN_LIMITS,
@@ -301,7 +302,7 @@ ${brief}`;
           // Gemini occasionally wraps the output in ```html...``` fences
           // despite the system prompt forbidding it. Strip a possible fence
           // pair before validating — same safety net the Kimi-era route had.
-          const passHtml = stripMarkdownFences(summary.finalHtml);
+          const passHtml = extractDocument(summary.finalHtml);
 
           if (passHtml.length < 1000 || !/^<!doctype/i.test(passHtml)) {
             return {
@@ -651,12 +652,6 @@ ${lines.join("\n")}
 </business>`;
 }
 
-function stripMarkdownFences(s: string): string {
-  let out = s.trim();
-  out = out.replace(/^```(?:html|xml)?[\t ]*\r?\n?/i, "");
-  out = out.replace(/\r?\n?[\t ]*```\s*$/i, "");
-  return out.trim();
-}
 
 /** El cuerpo vive en lib/ai/sse. */
 function json(body: unknown, status: number): Response {

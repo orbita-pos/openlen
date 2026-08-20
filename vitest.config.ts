@@ -86,6 +86,7 @@ export default defineConfig({
       "lib/ai/fireworks-tool-client.test.ts",
       "lib/ai/fireworks-stream-client.test.ts",
       "lib/ai/sse.test.ts",
+      "lib/ai/extract-document.test.ts",
       "lib/ai/provider-switch.test.ts",
       "lib/ai/qwen-visual-critic.test.ts",
       "lib/ai/today-line.test.ts",

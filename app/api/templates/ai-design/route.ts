@@ -27,6 +27,7 @@ import {
 } from "@/lib/html-ops";
 import { preparePage } from "@/lib/page-engine/prepare";
 import { jsonResponse, sseChannel } from "@/lib/ai/sse";
+import { extractDocument } from "@/lib/ai/extract-document";
 import { usesDeepSeekForTurn } from "@/lib/ai/provider-switch";
 import { persistPage } from "@/lib/page-engine/persist";
 import { applyModuleIntent } from "@/lib/projects/module-intent";
@@ -145,12 +146,6 @@ USER REQUEST:
 ${args.prompt}`;
 }
 
-function stripMarkdownFences(s: string): string {
-  let out = s.trim();
-  out = out.replace(/^```(?:html|xml)?[\t ]*\r?\n?/i, "");
-  out = out.replace(/\r?\n?[\t ]*```\s*$/i, "");
-  return out.trim();
-}
 
 interface AiDesignBody {
   projectId?: string;
@@ -681,7 +676,7 @@ VISUAL CONTEXT: the attached image is a full-page render of the CURRENT page (wh
         // Sniff the output mode by looking at the first non-whitespace
         // chars after the marker. Mode A (ops) starts with <edits>; Mode B
         // (full rewrite) starts with <!doctype>.
-        const raw = stripMarkdownFences(accumulatedHtml);
+        const raw = extractDocument(accumulatedHtml);
         const isOpsMode = /^\s*<edits[\s>]/i.test(raw);
 
         let trimmedHtml: string;
