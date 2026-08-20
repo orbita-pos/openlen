@@ -72,6 +72,11 @@ describe("los dos evaluadores dan lo MISMO", () => {
     ["SUMA(masa, ingredientes)", { masa: 120, ingredientes: [35, 35, 20] }],
     ["SI(votos_si > votos_no, 'Sí gana', 'No gana')", { votos_si: 12, votos_no: 4 }],
     ["puntaje >= 8", { puntaje: 8 }],
+    ["voto != ''", { voto: "" }],
+    ["voto != ''", { voto: "si" }],
+    ["a != b", { a: 3, b: 3 }],
+    ["a != b", { a: 3, b: 4 }],
+    ["NO (a != b)", { a: 1, b: 2 }],
     ["elegido = 'pro'", { elegido: "pro" }],
     ["dia = 'sabado'", { dia: "sabado" }],
     ["MONEDA(total, 2)", { total: 40800 }],
@@ -129,6 +134,40 @@ describe("los dos evaluadores dan lo MISMO", () => {
     const r = both("AZAR(nombres)", { nombres: ["ana", "beto", "cleo"] }, () => 0.5);
     expect(r.navegador).toBe("beto");
     expect(r.navegador).toBe(r.servidor);
+  });
+});
+
+/**
+ * LA prueba estructural, y existe porque esta familia de bug ya se pagó DOS
+ * veces: la máquina decide con `charAt(0)`, así que cualquier sigilo de una
+ * letra que sea PREFIJO de un operador se lo come antes de llegar al bloque de
+ * operadores binarios.
+ *
+ *   1ª vez — el sigilo de salto era ">", y se comía ">" y ">=".
+ *   2ª vez — el sigilo de negación era "!", y se comía "!=". Nadie lo vio
+ *            porque ningún caso de acuerdo de arriba usaba "!=", pese a que el
+ *            operador SÍ está en el contrato que el prompt le enseña al modelo.
+ *
+ * Un caso más en la lista de arriba habría cazado el segundo. Esto caza a toda
+ * la familia, incluida la 3ª vez.
+ */
+describe("ningún sigilo puede ser prefijo de un operador", () => {
+  const OPERADORES = ["+", "-", "*", "/", "%", "=", "!=", "<", "<=", ">", ">=", "Y", "O"];
+  // Los sigilos que la máquina reconoce por su primera letra, leídos del
+  // propio texto que se hornea — no de una lista escrita a mano que pueda
+  // quedarse vieja.
+  const sigilos = [...MACHINE_JS.matchAll(/k=="(.)"/g)].map((m) => m[1]!);
+
+  it("se leen del texto de la máquina, y hay varios", () => {
+    expect(sigilos.length).toBeGreaterThan(5);
+  });
+
+  it.each(OPERADORES)("%s no empieza por un sigilo", (op) => {
+    expect(
+      sigilos,
+      `el operador "${op}" empieza por "${op[0]}", que la máquina trata como sigilo — ` +
+        `charAt(0) lo desvía antes de llegar al bloque de operadores binarios`,
+    ).not.toContain(op[0]);
   });
 });
 

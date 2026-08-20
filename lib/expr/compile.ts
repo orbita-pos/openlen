@@ -16,7 +16,7 @@
 //   "$recibo"   empuja el valor llamado `recibo`
 //   "'hola"     empuja el texto "hola"
 //   "*"         operador binario (saca dos, empuja uno)
-//   "!"         negación lógica · "~" negación aritmética
+//   "N"         negación lógica · "~" negación aritmética
 //   "@SUMA:3"   llama SUMA con 3 argumentos
 //   "?7"        si la cima es falsa, salta 7 instrucciones
 //   "j3"        salta 3 instrucciones (NO ">": chocaría con el operador)
@@ -56,7 +56,13 @@ function emit(n: Node, out: (string | number | boolean)[]): void {
     case "text": out.push(`'${n.value}`); return;
     case "ref": out.push(`$${n.name}`); return;
     case "neg": emit(n.arg, out); out.push("~"); return;
-    case "not": emit(n.arg, out); out.push("!"); return;
+    // "N", NO "!" — la máquina decide con charAt(0), así que un sigilo que sea
+    // PREFIJO de un operador se lo come: con "!" el operador "!=" se leía como
+    // "niega la cima" y `a != b` daba cualquier cosa en el navegador mientras
+    // el servidor daba lo correcto. Es la MISMA colisión que ya costó el sigilo
+    // de salto (">" contra ">" y ">="). Hay una prueba estructural en
+    // machine.test.ts que ahora lo impide para toda la familia.
+    case "not": emit(n.arg, out); out.push("N"); return;
 
     case "bin": {
       // `Y` y `O` también cortocircuitan, por el mismo motivo que `SI`.
