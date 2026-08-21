@@ -7,6 +7,7 @@ import { getCreditState } from "@/lib/credits";
 import { SYSTEM_PROMPT } from "./system-prompt";
 import { detectSlotPath } from "@/lib/html-engine";
 import { collectDegradations } from "@/lib/ingestion/degradations";
+import { directionToBriefBlock, type StyleDirection } from "@/lib/style-match/direction";
 import { disableCalcRegions } from "@/lib/expr/repair";
 import { resolveAIProvider, type AIModel } from "@/lib/ai-provider";
 import { generateHtmlStream, pageWriterUsesDeepSeek } from "@/lib/ai-stream/generate";
@@ -56,6 +57,45 @@ export const dynamic = "force-dynamic";
 // catálogos de marcas, presentado al modelo como "the design taste catalog".
 // El system prompt ya no lo llevaba, pero esto sí — y por eso una guarda que
 // sólo miraba el system prompt pasaba en verde.
+
+/** La dirección visual que el cliente adjunta, validada campo a campo.
+ *
+ *  Nada de confiar en la forma: esto acaba dentro del prompt, y un objeto con
+ *  un `character` de 50.000 caracteres o una paleta de mil entradas sería una
+ *  forma barata de inflar cada generación. `directionToBriefBlock` recorta al
+ *  final, pero recortar es la última red, no la primera. */
+function parseStyleDirection(body: unknown): StyleDirection | null {
+  const raw = (body as { styleDirection?: unknown })?.styleDirection;
+  if (!raw || typeof raw !== "object") return null;
+  const d = raw as Record<string, unknown>;
+  const palette = Array.isArray(d.palette)
+    ? d.palette
+        .filter(
+          (p): p is { role: string; hex: string } =>
+            !!p && typeof p === "object" &&
+            typeof (p as { hex?: unknown }).hex === "string" &&
+            /^#[0-9a-f]{6}$/i.test((p as { hex: string }).hex) &&
+            typeof (p as { role?: unknown }).role === "string",
+        )
+        .slice(0, 6)
+        .map((p) => ({ role: p.role.slice(0, 24), hex: p.hex }))
+    : [];
+  if (palette.length === 0) return null;
+  const radius = ["sharp", "soft", "rounded", "pill"].includes(String(d.radius))
+    ? (d.radius as StyleDirection["radius"])
+    : "soft";
+  const character = typeof d.character === "string" && d.character.trim().length >= 10
+    ? d.character.trim().slice(0, 320)
+    : undefined;
+  return {
+    hostname: "",
+    palette,
+    polarity: d.polarity === "dark" ? "dark" : "light",
+    fontFamily: typeof d.fontFamily === "string" ? d.fontFamily.slice(0, 60) : "sans-serif",
+    radius,
+    ...(character ? { character } : {}),
+  };
+}
 
 export async function POST(req: Request): Promise<Response> {
   let body: unknown;
@@ -174,6 +214,25 @@ export async function POST(req: Request): Promise<Response> {
   // Flash`. Quitarla es lo que deja escribir a DeepSeek.
   let briefBlock = `BRIEF:
 ${brief}`;
+
+  // ── referencia visual ("hazme una como esta") ─────────────────────────────
+  // El cliente manda la DIRECCIÓN (el objeto), no el texto ya montado: el
+  // bloque se reconstruye AQUÍ con `directionToBriefBlock`, así que su techo de
+  // 900 caracteres y su redacción los garantiza el servidor. Aceptar el texto
+  // hecho sería dejar que el cliente decidiera cuánto prompt gasta.
+  //
+  // Y viaja como TEXTO, nunca como imagen — ver el comentario de arriba: una
+  // imagen adjunta fija el turno a Gemini y DeepSeek deja de escribir la
+  // página. Qwen ya miró la captura en `/api/style-reference`; lo que llega
+  // aquí es su conclusión, no la foto.
+  const direction = parseStyleDirection(body);
+  if (direction) {
+    briefBlock = `${directionToBriefBlock(direction)}
+
+${briefBlock}`;
+    // eslint-disable-next-line no-console
+    console.log(`[generate] referencia visual — ${direction.palette.length} colores${direction.character ? " + carácter" : ""}`);
+  }
 
   // Soft-seed the prompt with the user's REAL business facts (if any) so the
   // generated COPY uses them instead of inventing. Empty profile → no block,

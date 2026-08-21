@@ -250,3 +250,98 @@ describe("POST /api/generate", () => {
   });
 });
 
+
+/**
+ * "Hazme una como esta" — la referencia visual entra por el BRIEF, nunca como
+ * imagen adjunta.
+ *
+ * Ese matiz no es de estilo: una imagen en la llamada fija el turno a Gemini
+ * porque el papel que razona en Fireworks no tiene ojos, y entonces DeepSeek
+ * deja de escribir la página. Qwen ya miró la captura en /api/style-reference;
+ * lo que llega aquí es su conclusión en texto.
+ */
+describe("referencia visual en el brief", () => {
+  const direction = {
+    hostname: "stripe.com",
+    palette: [
+      { role: "principal", hex: "#635bff" },
+      { role: "neutro 900", hex: "#0a2540" },
+    ],
+    polarity: "light" as const,
+    fontFamily: "Söhne",
+    radius: "rounded" as const,
+    character: "Respira mucho, tono sobrio, el peso cae en la tipografía.",
+  };
+
+  async function callConDireccion(styleDirection: unknown): Promise<string> {
+    mocks.generateHtmlStream.mockClear();
+    const res = await POST(
+      new Request("http://localhost/api/generate", {
+        method: "POST",
+        body: JSON.stringify({ brief: "una landing para paneles solares", styleDirection }),
+      }),
+    );
+    const req = mocks.generateHtmlStream.mock.calls[0]?.[0] as {
+      messages: { role: string; content: string }[];
+      images?: unknown[];
+    };
+    return req.messages.map((m) => m.content).join("\n");
+  }
+
+  it("la paleta MEDIDA llega al prompt", async () => {
+    const prompt = await callConDireccion(direction);
+    expect(prompt).toContain("#635bff");
+    expect(prompt).toContain("Söhne");
+  });
+
+  it("y el carácter que Qwen vio", async () => {
+    expect(await callConDireccion(direction)).toContain("el peso cae en la tipografía");
+  });
+
+  it("le dice EXPLÍCITAMENTE que no copie", async () => {
+    const prompt = await callConDireccion(direction);
+    expect(prompt).toMatch(/nunca copies/i);
+  });
+
+  // Un modelo que lee "inspírate en stripe.com" escribe copy de Stripe.
+  it("el dominio de la referencia NO viaja", async () => {
+    expect(await callConDireccion(direction)).not.toContain("stripe.com");
+  });
+
+  // LA invariante que protege a DeepSeek: texto, jamás una imagen adjunta.
+  it("NO adjunta ninguna imagen — eso desviaría el turno a Gemini", async () => {
+    await POST(
+      new Request("http://localhost/api/generate", {
+        method: "POST",
+        body: JSON.stringify({ brief: "una landing para paneles solares", styleDirection: direction }),
+      }),
+    );
+    const req = mocks.generateHtmlStream.mock.calls.at(-1)?.[0] as { images?: unknown[] };
+    expect(req.images ?? []).toHaveLength(0);
+  });
+
+  it("sin referencia, el prompt sale como siempre", async () => {
+    const prompt = await callConDireccion(undefined);
+    expect(prompt).not.toContain("direccion-visual");
+  });
+
+  // Esto acaba dentro del prompt: un objeto con un `character` enorme o una
+  // paleta de mil entradas sería una forma barata de inflar cada generación.
+  it("una dirección con basura se ignora o se acota, nunca se cuela entera", async () => {
+    const prompt = await callConDireccion({
+      palette: [
+        { role: "x".repeat(500), hex: "#111111" },
+        ...Array.from({ length: 50 }, () => ({ role: "r", hex: "#222222" })),
+      ],
+      character: "z".repeat(9000),
+      fontFamily: "f".repeat(900),
+    });
+    const bloque = /<direccion-visual>[\s\S]*?<\/direccion-visual>/.exec(prompt)?.[0] ?? "";
+    expect(bloque.length).toBeLessThanOrEqual(900);
+  });
+
+  it("una paleta con hex inválidos no produce bloque", async () => {
+    const prompt = await callConDireccion({ palette: [{ role: "x", hex: "rojo" }] });
+    expect(prompt).not.toContain("direccion-visual");
+  });
+});
