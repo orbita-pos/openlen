@@ -22,11 +22,25 @@ import { z } from "zod";
 import type { FireworksJsonClient } from "@/lib/ai/fireworks-client";
 import { reasoningEffortFor } from "@/lib/generation/fable-model-policy";
 
-/** Dos o tres frases. El techo es corto a propósito: esto acaba dentro del
- *  bloque de dirección, que tiene su propio presupuesto de 900 caracteres, y un
- *  modelo al que no se le acota la prosa escribe un ensayo. */
+/** Nuestro presupuesto real: esto acaba dentro del bloque de dirección, que
+ *  tiene su propio techo de 900 caracteres. */
+export const CHARACTER_BUDGET_CHARS = 320;
+
+/** EL TECHO DEL WIRE NO ES EL PRESUPUESTO, Y ESTO SE MIDIÓ CONTRA FIREWORKS.
+ *
+ *  `z.string().max(n)` viaja a la API como `maxLength: n` dentro de un
+ *  `json_schema` con `strict: true`. Ahí no es una validación: es una GRAMÁTICA.
+ *  El decodificador no puede emitir el carácter n+1, así que no rechaza la
+ *  respuesta larga — la CORTA a mitad de palabra. Con el techo en 320, Qwen
+ *  devolvió exactamente 320 caracteres terminados en "del titular,".
+ *
+ *  Así que el wire va holgado (el modelo termina su frase) y el recorte lo
+ *  hacemos aquí, por frases completas. Quien baje este número volverá a
+ *  amordazar al modelo en vez de acotarlo. */
+const WIRE_MAX_CHARS = 700;
+
 export const CharacterSchema = z.object({
-  character: z.string().min(10).max(320),
+  character: z.string().min(10).max(WIRE_MAX_CHARS),
 });
 
 export interface ReferenceCharacterInput {
@@ -50,7 +64,47 @@ const SYSTEM =
   "(tipografía grande, imagen a sangre, color plano, ilustración). " +
   "PROHIBIDO: nombrar la marca o el producto, citar o resumir su texto, listar sus secciones, describir su " +
   "estructura o layout, mencionar colores concretos o valores hex. Nada de eso es carácter, y no debe salir de aquí. " +
-  "Devuelve sólo el JSON pedido.";
+  // Qwen es un modelo de origen chino y en la primera prueba contra Fireworks
+  // cambió de idioma a mitad de frase ("…del titular,以及"). Pedirlo explícito es
+  // el arreglo barato; `tidyCharacter` es la red por si vuelve a pasar.
+  "Escribe ÍNTEGRAMENTE en español, sin una sola palabra ni carácter de otro idioma. " +
+  "No pases de 300 caracteres. Devuelve sólo el JSON pedido.";
+
+/** Caracteres CJK y su puntuación. Un solo signo de estos significa que el
+ *  modelo cambió de idioma, y lo que venga después ya no es español. */
+const CJK = /[　-〿぀-ヿ㐀-䶿一-鿿豈-﫿＀-￯]/;
+
+/**
+ * Deja el texto en algo que se pueda anteponer a un brief: español, dentro del
+ * presupuesto, y terminado donde termina una frase — no donde se acabó el cupo.
+ *
+ * Devuelve `null` si no queda nada aprovechable. La dirección MEDIDA viaja
+ * igual; perder el carácter es perder la mitad opinable, no la referencia.
+ */
+export function tidyCharacter(raw: string): string | null {
+  let texto = raw.replace(/\s+/g, " ").trim();
+
+  const fuga = texto.search(CJK);
+  if (fuga >= 0) texto = texto.slice(0, fuga);
+
+  if (texto.length > CHARACTER_BUDGET_CHARS) {
+    const cortado = texto.slice(0, CHARACTER_BUDGET_CHARS);
+    const fin = Math.max(cortado.lastIndexOf("."), cortado.lastIndexOf("!"), cortado.lastIndexOf("?"));
+    // Si la última frase completa deja menos de la mitad del presupuesto, se
+    // pierde demasiado; ahí es mejor cortar por palabra y marcarlo con puntos
+    // suspensivos que devolver una sola frase suelta.
+    if (fin >= CHARACTER_BUDGET_CHARS / 2) {
+      texto = cortado.slice(0, fin + 1);
+    } else {
+      const espacio = cortado.lastIndexOf(" ");
+      texto = `${espacio > 0 ? cortado.slice(0, espacio) : cortado}…`;
+    }
+  }
+
+  // Un corte —de idioma o de cupo— suele dejar la frase colgando de una coma.
+  texto = texto.replace(/[\s,;:—–-]+$/, "");
+  return texto.length >= 10 ? texto : null;
+}
 
 export async function describeReferenceCharacter(
   input: ReferenceCharacterInput,
@@ -78,8 +132,7 @@ export async function describeReferenceCharacter(
       ],
     });
     if (!result.ok) return null;
-    const texto = result.value.character.trim();
-    return texto.length >= 10 ? texto : null;
+    return tidyCharacter(result.value.character);
   } catch {
     // Incluye el caso en que el presupuesto de la página rechaza la llamada:
     // quedarse sin crédito para el extra no puede costar la referencia entera.

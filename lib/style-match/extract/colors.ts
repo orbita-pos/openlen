@@ -6,12 +6,13 @@ const HEADING_TAGS = new Set(["h1", "h2", "h3", "h4", "h5", "h6"]);
 const BODY_TAGS = new Set(["body", "html"]);
 const COLOR_PROPS = ["color", "backgroundColor", "borderColor"] as const;
 const CLUSTER_DELTA_E = 2.5;
+/** Enlace sin estilizar y enlace visitado, tal como los pinta el navegador. */
+const UA_LINK_COLORS = new Set(["#0000ee", "#551a8b"]);
 
 interface ColorUsage {
   parsed: ParsedColor;
   weight: number;
   brandSignal: boolean;
-  isBackground: boolean;
 }
 
 interface Cluster {
@@ -19,7 +20,6 @@ interface Cluster {
   totalWeight: number;
   brandWeight: number;
   occurrences: number;
-  backgroundWeight: number;
 }
 
 function clamp(value: number, min: number, max: number): number {
@@ -55,10 +55,25 @@ function collectUsages(
       const value = el.styles[prop];
       const parsed = parseColor(value);
       if (!parsed) continue;
+      // Lo que el NAVEGADOR pinta cuando nadie estilizó el enlace no es una
+      // decisión de diseño de nadie, y aquí entraba con `brandSignal` puesto
+      // —un enlace lo lleva por definición—, así que un sitio con los enlaces
+      // sin estilizar podía declarar como color de MARCA el azul por defecto de
+      // Chrome.
+      //
+      // Se descarta en `color` Y en `borderColor`, y las dos rutas se midieron
+      // en stripe.com: 10 elementos lo traían en `color` (4 enlaces sin estilo
+      // más 6 hijos que lo HEREDAN) y otros 8 en `borderColor`, porque el valor
+      // inicial de `border-color` es `currentColor` — el mismo no-color, por la
+      // puerta de al lado. Filtrar sólo `<a>`, o sólo `color`, deja pasar el
+      // resto: se comprobó contra la web, no contra una suposición.
+      //
+      // `backgroundColor` NO se filtra: un fondo así hay que declararlo, y
+      // declararlo es elegirlo.
+      if (prop !== "backgroundColor" && UA_LINK_COLORS.has(parsed.hex.toLowerCase())) continue;
 
       let propBoost = 1.0;
       let brandSignal = false;
-      const isBackground = prop === "backgroundColor";
 
       if (prop === "backgroundColor") {
         if (isButton) {
@@ -88,7 +103,6 @@ function collectUsages(
         parsed,
         weight: baseWeight * propBoost,
         brandSignal,
-        isBackground,
       });
     }
   }
@@ -106,7 +120,6 @@ function clusterUsages(usages: ColorUsage[]): Cluster[] {
         cluster.totalWeight += usage.weight;
         cluster.occurrences += 1;
         if (usage.brandSignal) cluster.brandWeight += usage.weight;
-        if (usage.isBackground) cluster.backgroundWeight += usage.weight;
         placed = true;
         break;
       }
@@ -117,7 +130,6 @@ function clusterUsages(usages: ColorUsage[]): Cluster[] {
         totalWeight: usage.weight,
         brandWeight: usage.brandSignal ? usage.weight : 0,
         occurrences: 1,
-        backgroundWeight: usage.isBackground ? usage.weight : 0,
       });
     }
   }
@@ -133,15 +145,34 @@ function clusterToEntry(c: Cluster): ColorEntry {
   };
 }
 
-function detectPolarity(clusters: Cluster[]): "light" | "dark" {
-  let lightWeight = 0;
-  let darkWeight = 0;
-  for (const c of clusters) {
-    if (c.backgroundWeight === 0) continue;
-    if (c.representative.oklch.l > 0.5) lightWeight += c.backgroundWeight;
-    else darkWeight += c.backgroundWeight;
+/**
+ * La polaridad es una pregunta de ÁREA, y por eso NO puede salir de los pesos
+ * del resto del módulo.
+ *
+ * `collectUsages` está afinado para encontrar la MARCA: comprime el área con una
+ * raíz cuadrada, realza botones ×3 y enlaces ×2.5, y baja `body`/`html` a 0.3
+ * precisamente para que un fondo enorme no tape el color de marca. Para la marca
+ * está bien. Para el fondo es ruinoso, y se midió: en linear.app el `body` es
+ * `rgb(8,9,10)` cubriendo 32,17 Mpx —ocho veces todo lo demás junto— y aun así
+ * unas decenas de chips claros ganaban la votación. La página negra se declaraba
+ * "clara", y eso viaja al brief como "Fondo claro".
+ *
+ * Aquí se cuenta el área de verdad: sin raíces, sin realces de rol.
+ */
+function detectPolarity(elements: ElementSnapshot[]): "light" | "dark" {
+  let light = 0;
+  let dark = 0;
+  for (const el of elements) {
+    const parsed = parseColor(el.styles.backgroundColor);
+    // Un velo casi transparente —`rgba(255,255,255,0.02)` es literalmente el
+    // cuarto fondo de linear.app— no es un fondo: deja ver lo de debajo.
+    // Contarlo como blanco es como se invierte una página oscura.
+    if (!parsed || parsed.alpha < 0.5) continue;
+    const area = Math.max(1, el.rect.width * el.rect.height);
+    if (parsed.oklch.l > 0.5) light += area;
+    else dark += area;
   }
-  return lightWeight >= darkWeight ? "light" : "dark";
+  return light >= dark ? "light" : "dark";
 }
 
 function pickNeutralRamp(clusters: Cluster[]): { step: string; entry: ColorEntry }[] {
@@ -191,7 +222,7 @@ export function extractColors(
     .map(clusterToEntry);
 
   const neutrals = pickNeutralRamp(clusters);
-  const polarity = detectPolarity(clusters);
+  const polarity = detectPolarity(elements);
   const raw = clusters
     .slice()
     .sort((a, b) => b.totalWeight - a.totalWeight)
