@@ -194,6 +194,7 @@ export default defineConfig({
       // last sanitize and validated behaviours after the row was written.
       "app/api/generate/route.test.ts",
       "app/api/generate/system-prompt.test.ts",
+      "lib/ai-stream/model-runtime.test.ts",
       // NB: lib/projects/site-pages.test.ts is a node:test file (run via
       // `tsx --test`), so include the vitest project tests explicitly.
       "lib/projects/module-settings.test.ts",

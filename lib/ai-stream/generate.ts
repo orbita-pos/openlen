@@ -56,6 +56,7 @@ import { createFireworksStreamClient } from "@/lib/ai/fireworks-stream-client";
 import { messagesForFireworks } from "@/lib/agent/fireworks-bridge";
 import { resolveAIProvider, type AIModel } from "@/lib/ai-provider";
 import { usesDeepSeekForTurn } from "@/lib/ai/provider-switch";
+import { extractModelRuntime, modelJsEnabled } from "./model-runtime";
 
 const DEFAULT_MODEL: AIModel = "gemini-pro";
 
@@ -190,6 +191,16 @@ export interface GenerateHtmlStreamSummary {
   stopKind: GenerateHtmlStopKind;
   /** Populated when `stopKind === "error"`. */
   error: Error | null;
+  /** Quién escribió DE VERDAD esta página. Se expone en vez de dejar que
+   *  cada llamador lo vuelva a deducir: `pageWriterUsesDeepSeek` depende de
+   *  si había imágenes adjuntas, y quien lo re-infiera más tarde, con otro
+   *  estado a mano, puede acertar hoy y equivocarse mañana. */
+  wroteWith: "deepseek" | "gemini";
+  /** El runtime que escribió el modelo, sacado de su respuesta CRUDA antes
+   *  de que el sanitizador lo borrara. `null` salvo que OPENLEN_MODEL_JS=1,
+   *  lo escribiera DeepSeek y el script cumpla el contrato. NADA lo ejecuta
+   *  ni lo guarda todavía: `finalHtml` sigue saliendo sin scripts. */
+  modelRuntime: string | null;
 }
 
 export interface GenerateHtmlStreamResult {
@@ -212,6 +223,11 @@ export interface GenerateHtmlStreamResult {
 
 export interface GenerateHtmlStreamInternals {
   provider?: GeminiProviderLike;
+  /** Con qué motor fingir que se escribió. Existe porque inyectar un
+   *  proveedor apaga `wantsDeepSeek` por definición, y sin esta costura la
+   *  captura del runtime del modelo —que EXIGE DeepSeek— sería imposible de
+   *  probar: el test pasaría en verde sin haber ejercitado nada. */
+  wroteWith?: "deepseek" | "gemini";
   debit?: DebitFn;
   makeHtmlStream?: (opts: HtmlStreamOpts | undefined) => HtmlStreamLike;
 }
@@ -294,6 +310,34 @@ export function generateHtmlStream(
       : (new RealGeminiProvider(opts.apiKey) as unknown as GeminiProviderLike));
   // La tarifa sigue a quien de verdad corrió, no al modelo que se pidió.
   const creditRate: CreditRate = wantsDeepSeek ? "deepseek-flash" : modelKey;
+  const wroteWith: "deepseek" | "gemini" =
+    internals.wroteWith ?? (wantsDeepSeek ? "deepseek" : "gemini");
+
+  // Captura del runtime del modelo — Etapa 1 de abrir JavaScript.
+  //
+  // Se lee del texto CRUDO del proveedor porque para cuando existe `finalHtml`
+  // el script ya no está: el sanitizador corre en el propio streaming. NO se
+  // toca `sanitize`: ese interruptor no sólo suelta los scripts, también
+  // suelta manejadores `on*`, URLs peligrosas e iframes.
+  //
+  // Sólo si lo escribió DeepSeek. Con Gemini —al que se desvía el turno cuando
+  // hay imágenes adjuntas— la procedencia sería otra, y la Etapa 2 va a firmar
+  // estos bytes: firmar los de un proveedor creyéndolos de otro es exactamente
+  // la clase de error que un hash no puede detectar.
+  //
+  // Capturar NO es publicar. Hoy esto se devuelve y nadie lo usa.
+  const capturarRuntime = (): string | null => {
+    if (!modelJsEnabled(process.env) || wroteWith !== "deepseek") return null;
+    const r = extractModelRuntime(rawText);
+    if (!r.ok) {
+      if (r.reason !== "ausente") {
+        // eslint-disable-next-line no-console
+        console.warn(`[generate] runtime del modelo descartado: ${r.reason}`);
+      }
+      return null;
+    }
+    return r.code;
+  };
   const debit: DebitFn = internals.debit ?? realDebitCredits;
   const htmlStream: HtmlStreamLike = internals.makeHtmlStream
     ? internals.makeHtmlStream(opts.htmlOpts)
@@ -344,11 +388,15 @@ export function generateHtmlStream(
         creditsDebited,
         stopKind,
         error: null,
+        wroteWith,
+        modelRuntime: capturarRuntime(),
       };
     } catch (err) {
       const e = err instanceof Error ? err : new Error(String(err));
       return {
         finalHtml: null,
+        wroteWith,
+        modelRuntime: null,
         result: null,
         usage,
         creditsDebited,
@@ -407,6 +455,8 @@ export function generateHtmlStream(
         safeError(err);
         resolveDone({
           finalHtml: null,
+        wroteWith,
+        modelRuntime: null,
           result: null,
           usage: null,
           creditsDebited: 0,
@@ -431,6 +481,8 @@ export function generateHtmlStream(
               safeError(err);
               resolveDone({
                 finalHtml: null,
+        wroteWith,
+        modelRuntime: null,
                 result: null,
                 usage,
                 creditsDebited,
@@ -484,6 +536,8 @@ export function generateHtmlStream(
                   safeError(err);
                   resolveDone({
                     finalHtml: null,
+        wroteWith,
+        modelRuntime: null,
                     result: null,
                     usage,
                     creditsDebited,
@@ -501,6 +555,8 @@ export function generateHtmlStream(
                 safeClose();
                 resolveDone({
                   finalHtml: null,
+        wroteWith,
+        modelRuntime: null,
                   result: null,
                   usage,
                   creditsDebited,
@@ -514,6 +570,8 @@ export function generateHtmlStream(
                 safeError(err);
                 resolveDone({
                   finalHtml: null,
+        wroteWith,
+        modelRuntime: null,
                   result: null,
                   usage,
                   creditsDebited,
@@ -538,6 +596,8 @@ export function generateHtmlStream(
           safeError(err);
           resolveDone({
             finalHtml: null,
+        wroteWith,
+        modelRuntime: null,
             result: null,
             usage,
             creditsDebited,
@@ -555,6 +615,8 @@ export function generateHtmlStream(
         safeError(err);
         resolveDone({
           finalHtml: null,
+        wroteWith,
+        modelRuntime: null,
           result: null,
           usage,
           creditsDebited,
