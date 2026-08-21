@@ -46,6 +46,7 @@ const targets = [
   "versions-baseline-migrate",
   "template-visual-metadata-migrate",
   "visual-engine-pilot-migrate",
+  "model-runtime-migrate",
 ];
 
 // Una entrada que apunta a un script BORRADO tumba el deploy en el paso 3,

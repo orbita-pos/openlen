@@ -55,6 +55,7 @@
     "sections:derived-rollback": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json --require ./scripts/test-node-server-only-shim.cjs scripts/sections-derived-rollback.ts",
     "sections:compile-templates": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json --require ./scripts/test-node-server-only-shim.cjs scripts/sections-compile-templates.ts",
     "integrations:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/integrations-migrate.ts",
+    "model-runtime:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/model-runtime-migrate.ts",
     "billing:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/billing-migrate.ts",
     "members:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/members-migrate.ts",
     "members:backfill-verified": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/members-backfill-verified.ts",

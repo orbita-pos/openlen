@@ -5,7 +5,7 @@ import type { BusinessProfile, BusinessProfileData } from "@/lib/business-profil
 import { createVersion } from "@/lib/projects/versions";
 import { getCreditState } from "@/lib/credits";
 import { SYSTEM_PROMPT } from "./system-prompt";
-import { modelRuntimePromptBlock } from "@/lib/ai-stream/model-runtime";
+import { modelRuntimePromptBlock, pageAllowsRuntime } from "@/lib/ai-stream/model-runtime";
 import { detectSlotPath } from "@/lib/html-engine";
 import { collectDegradations } from "@/lib/ingestion/degradations";
 import { directionToBriefBlock, type StyleDirection } from "@/lib/style-match/direction";
@@ -301,7 +301,7 @@ ${briefBlock}`;
           genMessages: Message[],
           label: string,
         ): Promise<
-          | { ok: true; html: string }
+          | { ok: true; html: string; modelRuntime: string | null }
           | { ok: false; message: string; retryable: boolean }
         > => {
           const { stream, done } = generateHtmlStream({
@@ -397,7 +397,10 @@ ${briefBlock}`;
           console.log(
             `[generate] tokens (${label}) — prompt: ${summary.usage?.inputTokens ?? "?"}, output: ${summary.usage?.outputTokens ?? "?"} → ${summary.creditsDebited} credits`,
           );
-          return { ok: true, html: passHtml };
+          // El runtime viaja con SU pasada. Si gana una regeneración, se guarda
+          // el script de esa generación y no el de la anterior: un script escrito
+          // para un DOM que ya no existe no falla — hace cosas raras en silencio.
+          return { ok: true, html: passHtml, modelRuntime: summary.modelRuntime };
         };
 
         // ── Initial pass ────────────────────────────────────────────────────
@@ -457,6 +460,7 @@ ${briefBlock}`;
           return;
         }
         let html = prepared.html;
+        let runtimeCode = first.modelRuntime ?? null;
         let regenerated = false;
         let breakage = [...prepared.report.breakage];
         // Una fórmula que el reparador NO pudo arreglar sin adivinar entra en
@@ -502,6 +506,7 @@ ${briefBlock}`,
             if (second.ok && despues <= antes) {
               prepared = second;
               html = second.html;
+              runtimeCode = fixed.modelRuntime ?? null;
               regenerated = true;
               breakage = [...second.report.breakage];
               calcRotas = [...(second.report.calcIssues ?? [])];
@@ -599,6 +604,7 @@ ${briefBlock}`,
               if (third.ok) {
                 prepared = third;
                 html = third.html;
+                runtimeCode = regen.modelRuntime ?? null;
                 regenerated = true;
               }
               recordRegenOutcome(true);
@@ -649,6 +655,10 @@ ${briefBlock}`,
             logoUrl: business.data.brand?.logoUrl ?? null,
             settings: enabledModules.length ? (prepared.report.moduleSettings as never) : undefined,
             degradations: degradations.length > 0 ? degradations : undefined,
+            // Elegibilidad comprobada sobre el HTML FINAL, no sobre el que
+            // escribió el modelo: los bakes de preparePage pueden haber añadido
+            // un formulario o un módulo que en el original no estaba.
+            modelRuntime: runtimeCode && pageAllowsRuntime(html) ? runtimeCode : null,
           });
         } catch (err) {
           // eslint-disable-next-line no-console

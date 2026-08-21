@@ -345,3 +345,83 @@ describe("referencia visual en el brief", () => {
     expect(prompt).not.toContain("direccion-visual");
   });
 });
+
+/**
+ * LA CÁPSULA — quién puede autorizar JavaScript del modelo, y sobre qué página.
+ *
+ * Que llegue en el resumen del stream no basta: sólo se guarda si esta página
+ * puede llevarlo. Un formulario o un módulo la descalifican, porque el script
+ * compartiría origen con las APIs que llevan la sesión del visitante.
+ */
+describe("el runtime del modelo llega a createProject", () => {
+  /** Igual que `modelReturns`, pero con un runtime capturado en el resumen. */
+  function modelReturnsWithRuntime(html: string, code: string | null): void {
+    mocks.generateHtmlStream.mockImplementation(() => ({
+      stream: new ReadableStream<Uint8Array>({
+        start(c) { c.enqueue(new TextEncoder().encode(html)); c.close(); },
+      }),
+      done: Promise.resolve({
+        finalHtml: html,
+        result: null,
+        usage: { inputTokens: 10, outputTokens: 20 },
+        creditsDebited: 1,
+        stopKind: "end_turn" as const,
+        error: null,
+        wroteWith: "deepseek" as const,
+        modelRuntime: code,
+      }),
+    }));
+  }
+
+  // Este describe vive FUERA del de arriba, así que NO hereda su beforeEach.
+  // Sin esto, `calls[0]` era la llamada de OTRO test y los dos rechazos pasaban
+  // en verde leyendo un valor ajeno — el mismo falso verde que ya apareció en
+  // este archivo con la referencia visual.
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.stubEnv("OPENLEN_VISION_CRITIC", "0");
+    vi.stubEnv("OPENLEN_IMAGERY", "0");
+    mocks.auth.mockResolvedValue({ user: { id: "u1" } });
+    mocks.getUserPlan.mockResolvedValue("pro");
+    mocks.checkAndConsume.mockResolvedValue({ ok: true, blocked: null, resetAt: null });
+    mocks.getCreditState.mockResolvedValue({ balance: 50 });
+    mocks.selectReference.mockResolvedValue(null);
+    mocks.resolveProfile.mockResolvedValue({ id: null, data: {} });
+    mocks.createProject.mockResolvedValue("p1");
+    mocks.createVersion.mockResolvedValue("v1");
+  });
+
+  const saved = () =>
+    mocks.createProject.mock.calls[0]?.[1] as { modelRuntime?: string | null } | undefined;
+
+  it("una página de presentación lo guarda", async () => {
+    modelReturnsWithRuntime(
+      `<!doctype html><html lang="es"><head><title>x</title></head><body><h1>Hola</h1>${FILLER}</body></html>`,
+      `document.title = "vivo";`,
+    );
+    const r = await call();
+    expect(r.status).toBe(200);
+    expect(saved(), "la ruta nunca llegó a guardar").toBeDefined();
+    expect(saved()!.modelRuntime).toBe(`document.title = "vivo";`);
+  });
+
+  it("sin runtime capturado, se guarda null — no undefined ni una cadena vacía", async () => {
+    modelReturnsWithRuntime(
+      `<!doctype html><html lang="es"><head><title>x</title></head><body><h1>Hola</h1>${FILLER}</body></html>`,
+      null,
+    );
+    await call();
+    expect(saved()!.modelRuntime).toBeNull();
+  });
+
+  // El script compartiría origen con /api/f/<sub>. Mientras no esté contenido,
+  // una página que recoge datos de un visitante no entra en el piloto.
+  it("una página con formulario NO lo guarda, aunque el modelo lo escribiera", async () => {
+    modelReturnsWithRuntime(
+      `<!doctype html><html lang="es"><head><title>x</title></head><body><h1>Hola</h1>${FILLER}<form><input name="email"></form></body></html>`,
+      `document.title = "vivo";`,
+    );
+    await call();
+    expect(saved()!.modelRuntime).toBeNull();
+  });
+});

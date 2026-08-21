@@ -1,3 +1,4 @@
+import { buildCapsule } from "@/lib/projects/model-runtime";
 import { createHash } from "node:crypto";
 import { and, desc, eq, gte, isNotNull, isNull, ne, sql as sqlOp } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
@@ -207,6 +208,11 @@ function asVisibility(raw: string): ProjectVisibility {
 }
 
 export interface CreateProjectInput {
+  /** El JavaScript que escribió el modelo, si esta creación lo capturó.
+   *  SÓLO lo pasa /api/generate: pegar HTML, clonar una plantilla, duplicar o
+   *  sembrar comunidad lo dejan sin poner, y la columna nace NULL. Se sella
+   *  aquí dentro con el id y el HTML de este mismo insert. */
+  modelRuntime?: string | null;
   /** Publish-ready HTML — the project's source of truth. */
   html: string;
   /** The brief the page was generated from — stored on the `brief` column
@@ -241,11 +247,20 @@ export async function createProject(
     titleFromHtml(input.html) ||
     input.brief.slice(0, 60).trim() ||
     "Untitled page";
+  // La cápsula se calcula sobre el id que acabamos de generar y sobre el HTML
+  // EXACTO que se va a guardar, y entra en el MISMO insert. Escribirla después
+  // dejaría una ventana en la que el proyecto existe con su HTML y sin su
+  // autorización, y —peor— un fallo entre las dos escrituras dejaría una
+  // cápsula huérfana apuntando a un documento que nunca llegó a existir.
+  const generatedRuntime = input.modelRuntime
+    ? buildCapsule({ projectId: id, html: input.html, code: input.modelRuntime })
+    : null;
   await db.insert(schema.projects).values({
     id,
     userId,
     title,
     brief: input.brief,
+    generatedRuntime,
     thumbnailUrl: null,
     tags: [],
     status: "draft",

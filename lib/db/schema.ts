@@ -16,6 +16,7 @@ import {
   uniqueIndex,
 } from "drizzle-orm/pg-core";
 import type { AdapterAccountType } from "next-auth/adapters";
+import type { ModelRuntimeCapsule } from "@/lib/projects/model-runtime";
 import type { ProjectData } from "@/lib/projects/types";
 import type { BusinessProfileData } from "@/lib/business-profiles/types";
 
@@ -215,6 +216,21 @@ export const projects = pgTable(
     // to identify which entry is currently live. Updated atomically with
     // publishedHtml.
     publishedReleaseSha: text("publishedReleaseSha"),
+    // La cápsula que autoriza el JavaScript escrito por el modelo, o NULL —
+    // que es lo que tienen todos los proyectos de hoy y todo lo que no venga
+    // de /api/generate: pegado, plantilla, comunidad, duplicado.
+    //
+    // Vive AQUÍ y no dentro de `data` a propósito. Varias rutas reemplazan
+    // `data.html` conservando el resto del objeto, así que una bandera metida
+    // ahí se "lavaría" sola y quedaría autorizando un documento que ya no
+    // existe. Fuera del objeto, además, no viaja en las respuestas genéricas
+    // del proyecto: el código no tiene por qué llegar al cliente.
+    //
+    // Su forma y su verificación viven en lib/projects/model-runtime.ts. El
+    // hash ata código + HTML + proyecto + política, así que ninguna ruta
+    // necesita acordarse de limpiar esto: si el HTML cambia, la cápsula deja
+    // de autorizar sola.
+    generatedRuntime: jsonb("generatedRuntime").$type<ModelRuntimeCapsule>(),
     createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
     updatedAt: timestamp("updatedAt", { mode: "date" }).notNull().defaultNow(),
   },

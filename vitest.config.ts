@@ -197,6 +197,7 @@ export default defineConfig({
       "lib/ai-stream/model-runtime.test.ts",
       // NB: lib/projects/site-pages.test.ts is a node:test file (run via
       // `tsx --test`), so include the vitest project tests explicitly.
+      "lib/projects/model-runtime.test.ts",
       "lib/projects/module-settings.test.ts",
       "lib/projects/module-intent.test.ts",
       "lib/projects/page-edge-paths.test.ts",
