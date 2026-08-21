@@ -1280,6 +1280,12 @@ export async function publishToDir(
   // devolvía ese dato —`sealed`— y aquí se descartaba junto con el resto del
   // resultado, así que la pérdida era invisible: ni contada, ni avisada.
   const unsealed: string[] = [];
+  // Con el interruptor en 0 NO se sella nada, y entonces `unsealed` vacío
+  // sería una mentira tranquilizadora: el resultado diría "todo sellado"
+  // cuando no se selló ni un documento. El apagado se declara.
+  if (process.env.OPENLEN_CSP_SEAL === "0") {
+    unsealed.push("sellado desactivado (OPENLEN_CSP_SEAL=0)");
+  }
   if (process.env.OPENLEN_CSP_SEAL !== "0") {
     migratedHtml = seal(migratedHtml, "/", unsealed);
     localeDocs = localeDocs.map((d) => ({

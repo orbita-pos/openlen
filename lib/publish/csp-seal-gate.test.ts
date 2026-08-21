@@ -65,6 +65,22 @@ describe("el documento que sale sin CSP ahora se cuenta", () => {
     assert.ok(existsSync(path.join(root, "sellamal", "releases", r.sha, "index.html")));
   });
 
+  // Con el sellado APAGADO no se sella ni un documento. Un `unsealed` vacío ahí
+  // sería una mentira tranquilizadora: diría "todo bien" precisamente cuando
+  // nada se comprobó. El resultado no puede mentir según cómo esté un switch.
+  it("con el sellado apagado, el resultado lo DICE en vez de callarse", async () => {
+    process.env.OPENLEN_CSP_SEAL = "0";
+    try {
+      const r = await publishToDir({ subdomain: "apagado", html: LIMPIO });
+      assert.equal(r.unsealed.length, 1);
+      assert.match(r.unsealed[0]!, /desactivado/);
+      const doc = readFileSync(path.join(root, "apagado", "releases", r.sha, "index.html"), "utf8");
+      assert.doesNotMatch(doc, /data-ol-csp/, "no debería haber sellado nada");
+    } finally {
+      delete process.env.OPENLEN_CSP_SEAL;
+    }
+  });
+
   it("también apunta una subpágina, con su ruta", async () => {
     const r = await publishToDir({
       subdomain: "subpag",
