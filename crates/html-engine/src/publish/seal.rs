@@ -267,11 +267,30 @@ fn build_policy(
     // the canonical YouTube/Vimeo embeds our bake injects (lib/publish/
     // video-embed.ts). Locking frame-src to exactly those two origins means any
     // other iframe that somehow slipped through is blocked by the page's own CSP.
+    // connect-src: LA directiva de salida, y faltaba. Como tampoco hay
+    // `default-src` del que heredar, `fetch`, XHR, WebSocket, EventSource y
+    // sendBeacon podían ir a CUALQUIER host. Mientras la página sólo lleva
+    // script nuestro con hash no cambia nada; el día que lleve JavaScript
+    // escrito por el modelo, esto es lo único que separa "una página
+    // interactiva" de "un canal de salida".
+    //
+    // El conjunto sale de un inventario real de lo que emiten nuestros bakes:
+    // los widgets (reservas, chat, comentarios, miembros) y la analítica llaman
+    // a rutas RELATIVAS → 'self'; el EventSource del chat, también. El único
+    // destino ajeno es el envío de formularios, que ya viaja en este mismo
+    // parámetro. Que coincida con form-action no es casualidad: es el mismo
+    // origen, por eso se reutiliza en vez de duplicar la fuente de verdad.
+    let connect_src = form_action.clone();
+    // worker-src 'none': ningún bake nuestro crea Worker, SharedWorker ni
+    // service worker — comprobado en lib/publish, lib/three3d y este crate. Un
+    // worker es el sitio natural donde esconder trabajo de red o de CPU, así
+    // que se cierra antes de que exista la primera página que pueda abrirlo.
     format!(
-        "script-src {}; object-src 'none'; base-uri 'none'; \
+        "script-src {}; connect-src {}; worker-src 'none'; object-src 'none'; \
+         base-uri 'none'; \
          frame-src https://www.youtube-nocookie.com https://player.vimeo.com; \
          form-action {}",
-        script_src, form_action
+        script_src, connect_src, form_action
     )
 }
 
@@ -424,6 +443,31 @@ mod tests {
         let html = "<html><head></head><body></body></html>";
         let r = seal_release(html, Some("https://openlen.com"));
         assert!(r.html.contains("form-action 'self' https://openlen.com"));
+    }
+
+    /// LA DIRECTIVA DE SALIDA. La política no tiene `default-src`, así que sin
+    /// `connect-src` explícito `fetch`/XHR/WebSocket/EventSource/sendBeacon
+    /// podían ir a cualquier host. Quien borre esta línea reabre exactamente
+    /// eso, y no habría ningún otro síntoma.
+    #[test]
+    fn connect_src_confines_egress_to_self_and_submit_origin() {
+        let html = "<html><head></head><body></body></html>";
+        let r = seal_release(html, Some("https://openlen.com"));
+        assert!(r.sealed);
+        assert!(r.html.contains("connect-src 'self' https://openlen.com"));
+        // Sin origen de envío no se cuela un comodín: se queda en 'self'.
+        let solo = seal_release(html, None);
+        assert!(solo.html.contains("connect-src 'self';"));
+        assert!(!solo.html.contains("connect-src *"));
+    }
+
+    /// Ningún bake nuestro crea Worker ni service worker — es el sitio natural
+    /// donde esconder red o CPU, así que se cierra antes de que exista la
+    /// primera página capaz de abrir uno.
+    #[test]
+    fn worker_src_is_closed() {
+        let r = seal_release("<html><head></head><body></body></html>", None);
+        assert!(r.html.contains("worker-src 'none'"));
     }
 
     #[test]
