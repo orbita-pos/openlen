@@ -67,6 +67,7 @@ import {
 import { AlertTriangle, Check, Sparkles, Undo, X } from "@/components/workspace-v2/icons";
 import { PreviewPlaceholder } from "@/components/workspace-v2/preview-placeholder";
 import { StartLanding } from "@/components/workspace-v2/start-landing";
+import type { StyleDirection } from "@/lib/style-match/direction-types";
 import type { PageEffort } from "@/components/workspace-v2/panels/ai-brief-panel";
 import { SECTIONS, type Section } from "@/components/workspace-v2/mock-data";
 import { PreviewArea } from "@/components/workspace-v2/preview-area";
@@ -901,9 +902,17 @@ function NewV2Inner() {
   const briefParam = searchParams.get("brief");
   const autostartParam = searchParams.get("autostart");
   const [aiPrompt, setAiPrompt] = useState(() => briefParam?.trim() ?? "");
+  // La referencia visual de "hazme una como esta". Vive junto al brief y no
+  // dentro del compositor porque quien llama a /api/generate es esta página.
+  const [aiReference, setAiReference] = useState<StyleDirection | null>(null);
   const aiBriefFormState = useMemo(
-    () => ({ prompt: aiPrompt, setPrompt: setAiPrompt }),
-    [aiPrompt],
+    () => ({
+      prompt: aiPrompt,
+      setPrompt: setAiPrompt,
+      reference: aiReference,
+      setReference: setAiReference,
+    }),
+    [aiPrompt, aiReference],
   );
   const aiGenerating = aiGenState.kind === "generating";
   // Mobile: the brief panel covers the canvas, so close it the moment the
@@ -916,8 +925,8 @@ function NewV2Inner() {
     if (aiGenerating) return;
     const brief = aiPrompt.trim();
     if (brief.length < 10) return;
-    void generation.generate(brief, "gemini-flash", selectedProfileId);
-  }, [aiGenerating, aiPrompt, generation, selectedProfileId]);
+    void generation.generate(brief, "gemini-flash", selectedProfileId, aiReference);
+  }, [aiGenerating, aiPrompt, generation, selectedProfileId, aiReference]);
   // A deep link with `?autostart=1` (the homepage hero) kicks generation
   // off on arrival. The param is stripped right after so a manual reload of
   // this URL doesn't re-fire — and re-bill — the generation.

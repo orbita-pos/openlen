@@ -24,12 +24,15 @@ export type GenerationState =
   | { kind: "done"; projectId: string; title: string }
   | { kind: "error"; message: string };
 
+import type { StyleDirection } from "@/lib/style-match/direction-types";
+
 export interface UseGenerationResult {
   state: GenerationState;
   generate: (
     brief: string,
     model?: AIModel,
     profileId?: string | null,
+    styleDirection?: StyleDirection | null,
   ) => Promise<void>;
 }
 
@@ -48,7 +51,7 @@ export function useGeneration(): UseGenerationResult {
   // from stops server-side (saves Gemini credits / metered usage).
   useEffect(() => () => abortRef.current?.abort(), []);
 
-  const generate = useCallback(async (brief: string, model: AIModel = "gemini-flash", profileId: string | null = null) => {
+  const generate = useCallback(async (brief: string, model: AIModel = "gemini-flash", profileId: string | null = null, styleDirection: StyleDirection | null = null) => {
     // Cancel any in-flight generation before starting a new one.
     abortRef.current?.abort();
     const controller = new AbortController();
@@ -81,7 +84,11 @@ export function useGeneration(): UseGenerationResult {
           "Content-Type": "application/json",
           Accept: "text/event-stream",
         },
-        body: JSON.stringify({ brief, model, profileId }),
+        // La referencia viaja como OBJETO, no como bloque ya montado: el techo
+        // de 900 caracteres y la redacción los garantiza el servidor, no quien
+        // llama. Y viaja como TEXTO, nunca como imagen adjunta — una imagen
+        // desviaría el turno a Gemini y la página la escribe DeepSeek.
+        body: JSON.stringify({ brief, model, profileId, ...(styleDirection ? { styleDirection } : {}) }),
         signal: controller.signal,
       });
     } catch (err) {

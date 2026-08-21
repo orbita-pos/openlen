@@ -16,6 +16,7 @@ import "server-only";
 // dirección sigue siendo útil. Una referencia a medias es mejor que ninguna, y
 // la mitad cara no puede tumbar la mitad gratis.
 
+import type { StyleDirection } from "./direction-types";
 import type { ExtractedTokens } from "./extract/types";
 
 /** El techo del bloque que se antepone al brief.
@@ -26,16 +27,9 @@ import type { ExtractedTokens } from "./extract/types";
  *  "y además enorme". Mismo mecanismo que `docBudgetChars` en las conductas. */
 export const DIRECTION_BUDGET_CHARS = 900;
 
-export interface StyleDirection {
-  readonly hostname: string;
-  /** Hex EXACTOS del render, nunca aproximados por un modelo mirando una foto. */
-  readonly palette: readonly { readonly role: string; readonly hex: string }[];
-  readonly polarity: "light" | "dark";
-  readonly fontFamily: string;
-  readonly radius: "sharp" | "soft" | "rounded" | "pill";
-  /** Lo que Qwen vio y el CSS no dice. Ausente si la visión falló o se apagó. */
-  readonly character?: string;
-}
+/** La forma vive en `direction-types` (sin `server-only`) porque el compositor
+ *  de /new la necesita para enseñar la referencia y poder quitarla. */
+export type { StyleDirection } from "./direction-types";
 
 /** La mitad MEDIDA. Sin modelo, sin red, sin coste. */
 export function directionFromTokens(tokens: ExtractedTokens): StyleDirection {

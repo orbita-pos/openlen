@@ -11,7 +11,21 @@
     "effortLow": "Standard",
     "effortMedium": "Erweitert",
     "effortHigh": "Maximum",
-    "effortSoon": "Bald"
+    "effortSoon": "Bald",
+    "reference": {
+      "add": "Von einer Website inspirieren",
+      "placeholder": "Link zu einer Seite einfügen, die dir gefällt",
+      "use": "Verwenden",
+      "looking": "Wird angesehen…",
+      "remove": "Referenz entfernen",
+      "error": {
+        "blocked": "Dieser Link lässt sich nicht öffnen.",
+        "unreachable": "Diese Seite war nicht erreichbar.",
+        "not_rendered": "Diese Seite hat ihren Stil nicht preisgegeben.",
+        "rate_limited": "Zu viele Referenzen hintereinander. Versuch es später.",
+        "network": "Beim Laden ist etwas schiefgegangen. Versuch es erneut."
+      }
+    }
   },
   "brief": {
     "label": "Briefing",

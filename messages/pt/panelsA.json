@@ -11,7 +11,21 @@
     "effortLow": "Padrão",
     "effortMedium": "Avançado",
     "effortHigh": "Máximo",
-    "effortSoon": "Em breve"
+    "effortSoon": "Em breve",
+    "reference": {
+      "add": "Inspire-se num site",
+      "placeholder": "Cole o link de uma página que você goste",
+      "use": "Usar",
+      "looking": "Olhando…",
+      "remove": "Remover a referência",
+      "error": {
+        "blocked": "Esse link não pode ser aberto.",
+        "unreachable": "Não foi possível abrir essa página.",
+        "not_rendered": "Essa página não mostrou o estilo dela.",
+        "rate_limited": "Referências demais seguidas. Tente daqui a pouco.",
+        "network": "Algo falhou ao buscar. Tente de novo."
+      }
+    }
   },
   "brief": {
     "label": "Briefing",

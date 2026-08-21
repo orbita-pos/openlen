@@ -19,6 +19,7 @@ import {
   type TemplateSpec,
 } from "./templates-data";
 import { Loader, Search, SendUp } from "./icons";
+import { ReferenceField } from "./reference-field";
 
 export interface StartLandingProps {
   /** The shared AI brief form state ({ prompt, setPrompt }). */
@@ -303,8 +304,14 @@ function HeroComposer({
       <div className="flex items-center justify-between px-2.5 pb-2.5 pt-1">
         {/* El dial está aparcado mientras la puerta es /api/generate: ahí no
             compra nada todavía, y un selector que no compra nada es la mentira
-            que se arregló en page-effort.ts. El <div> sostiene el justify-between. */}
-        <div />
+            que se arregló en page-effort.ts. Su hueco lo ocupa ahora la
+            referencia visual, que sí compra algo: la dirección de una web que
+            al usuario le gusta. Se ve y se quita antes de generar. */}
+        <ReferenceField
+          reference={state.reference}
+          onChange={state.setReference}
+          disabled={generating}
+        />
         <button
           type="button"
           onClick={onGenerate}

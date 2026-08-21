@@ -11,7 +11,21 @@
     "effortLow": "표준",
     "effortMedium": "고급",
     "effortHigh": "최대",
-    "effortSoon": "출시 예정"
+    "effortSoon": "출시 예정",
+    "reference": {
+      "add": "다른 사이트에서 스타일 가져오기",
+      "placeholder": "마음에 드는 페이지 링크를 붙여넣으세요",
+      "use": "사용",
+      "looking": "보는 중…",
+      "remove": "참고 제거",
+      "error": {
+        "blocked": "이 링크는 열 수 없습니다.",
+        "unreachable": "그 페이지에 연결하지 못했습니다.",
+        "not_rendered": "그 페이지의 스타일을 읽지 못했습니다.",
+        "rate_limited": "참고를 너무 자주 불러왔습니다. 잠시 후 다시 시도하세요.",
+        "network": "가져오는 데 실패했습니다. 다시 시도하세요."
+      }
+    }
   },
   "brief": {
     "label": "브리프",
