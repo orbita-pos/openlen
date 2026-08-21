@@ -56,6 +56,7 @@ import { createFireworksStreamClient } from "@/lib/ai/fireworks-stream-client";
 import { messagesForFireworks } from "@/lib/agent/fireworks-bridge";
 import { resolveAIProvider, type AIModel } from "@/lib/ai-provider";
 import { usesDeepSeekForTurn } from "@/lib/ai/provider-switch";
+import type { FableModelOperation } from "@/lib/generation/fable-model-policy";
 import { extractModelRuntime, modelJsEnabled } from "./model-runtime";
 
 const DEFAULT_MODEL: AIModel = "gemini-pro";
@@ -162,6 +163,9 @@ export interface GenerateHtmlStreamOpts {
   htmlOpts?: HtmlStreamOpts;
   maxOutputTokens?: number;
   temperature?: number;
+  /** Qué trabajo es éste, para la política de modelo/esfuerzo. Omitido = lo
+   *  que corre hoy. NO viaja al modelo. */
+  operation?: FableModelOperation;
 }
 
 export type GenerateHtmlStopKind =
@@ -268,7 +272,13 @@ export function pageWriterUsesDeepSeek(
   return usesDeepSeekForTurn("OPENLEN_GENERATE_PROVIDER", hasImages, env);
 }
 
-function createDeepSeekPageProvider(): GeminiProviderLike {
+/** `operation` NO viaja al modelo: el cliente sólo la usa para elegir papel y
+ *  `reasoning_effort` (fireworks-stream-client, cuerpo de la petición). Es un
+ *  parámetro para que un experimento pueda variar el esfuerzo sin tocar la
+ *  política; el valor por defecto es el que corre hoy. */
+function createDeepSeekPageProvider(
+  operation: FableModelOperation = "page_edit",
+): GeminiProviderLike {
   const client = createFireworksStreamClient();
   return {
     async *stream(request, streamOpts) {
@@ -280,7 +290,7 @@ function createDeepSeekPageProvider(): GeminiProviderLike {
           requestId: `generate.${Math.random().toString(36).slice(2, 14)}`,
           // El papel que razona, sin presupuesto de pensamiento: medido en esta
           // misma superficie, pensar costaba tiempo y producía menos.
-          operation: "page_edit",
+          operation,
         },
         streamOpts,
       );
@@ -306,7 +316,7 @@ export function generateHtmlStream(
   const provider: GeminiProviderLike =
     internals.provider ??
     (wantsDeepSeek
-      ? createDeepSeekPageProvider()
+      ? createDeepSeekPageProvider(opts.operation)
       : (new RealGeminiProvider(opts.apiKey) as unknown as GeminiProviderLike));
   // La tarifa sigue a quien de verdad corrió, no al modelo que se pidió.
   const creditRate: CreditRate = wantsDeepSeek ? "deepseek-flash" : modelKey;

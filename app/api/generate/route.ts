@@ -4,7 +4,7 @@ import { resolveProfileForCreation } from "@/lib/business-profiles/store";
 import type { BusinessProfile, BusinessProfileData } from "@/lib/business-profiles/types";
 import { createVersion } from "@/lib/projects/versions";
 import { getCreditState } from "@/lib/credits";
-import { SYSTEM_PROMPT } from "./system-prompt";
+import { systemPromptFor } from "./system-prompt";
 import { modelRuntimePromptBlock, pageAllowsRuntime } from "@/lib/ai-stream/model-runtime";
 import { detectSlotPath } from "@/lib/html-engine";
 import { collectDegradations } from "@/lib/ingestion/degradations";
@@ -244,7 +244,7 @@ ${briefBlock}`;
   }
 
   const messages = [
-    { role: "system" as const, content: SYSTEM_PROMPT + modelRuntimePromptBlock(process.env) },
+    { role: "system" as const, content: systemPromptFor(process.env) + modelRuntimePromptBlock(process.env) },
     { role: "user" as const, content: `${todayLine()}${LANGUAGE_RULE}${briefBlock}` },
   ];
 
@@ -478,7 +478,7 @@ ${briefBlock}`;
           console.warn(`[generate] rotura medida — ${diagnostico.join(" · ")}`);
           emit("regen-starting", { reason: diagnostico.join("; ") });
           const fixMessages: Message[] = [
-            { role: "system", content: SYSTEM_PROMPT + modelRuntimePromptBlock(process.env) },
+            { role: "system", content: systemPromptFor(process.env) + modelRuntimePromptBlock(process.env) },
             {
               role: "user",
               content: `<measured-breakage>
@@ -595,7 +595,7 @@ ${briefBlock}`,
             emit("regen-starting", { reason: verdict.issues.join("; ") });
             const regenBriefBlock = `<critic-feedback>\n${verdict.regenerationFeedback}\n\nIssues found in the previous attempt: ${verdict.issues.join(", ")}\n</critic-feedback>\n\n${briefBlock}`;
             const regenMessages: Message[] = [
-              { role: "system", content: SYSTEM_PROMPT + modelRuntimePromptBlock(process.env) },
+              { role: "system", content: systemPromptFor(process.env) + modelRuntimePromptBlock(process.env) },
               { role: "user", content: regenBriefBlock },
             ];
             const regen = await runPass(regenMessages, "regen");

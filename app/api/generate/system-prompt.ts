@@ -1,4 +1,5 @@
 import { PUBLISH_CONTRACT } from "@/lib/design-guidance";
+import { PUBLISH_CONTRACT_MIN } from "@/lib/publish-contract-min";
 
 // Split out of route.ts (not just inlined there) because a Next.js
 // `route.ts` file may ONLY export the recognized route-handler bindings
@@ -39,3 +40,30 @@ NON-NEGOTIABLE CONSTRAINTS:
 
 OUTPUT FORMAT — follow exactly:
 Emit the complete HTML document directly, starting with <!doctype html> and ending with </html>. No preamble, no design notes, no markdown code fences — the first character of your response is <.`;
+
+/**
+ * El prompt que de verdad se envía. `OPENLEN_MIN_CONTRACT=1` cambia los 18.563
+ * caracteres de `PUBLISH_CONTRACT` por los 3.859 de `PUBLISH_CONTRACT_MIN`
+ * (21.850 → 6.100 en total).
+ *
+ * POR QUÉ EXISTE EL INTERRUPTOR. `PUBLISH_CONTRACT` se le presenta al modelo
+ * diciendo que no habla de aspecto visual, y medido no es cierto: lleva 60
+ * etiquetas de HTML de ejemplo y 43 menciones de vocabulario de página
+ * (`nav`×9, `CTA`×6, `hero`×4…). La sospecha —que por eso todas las páginas
+ * salen con la misma forma— NO está probada: hace falta la ablación de 48
+ * briefs. El interruptor existe para poder probarla sin tocar producción.
+ *
+ * ⚠️ LO QUE SE PIERDE CON EL INTERRUPTOR ENCENDIDO: el contrato mínimo NO
+ * enseña las nueve CONDUCTAS ni el carrusel, así que el modelo no emitirá esos
+ * marcadores y esas páginas nacerán sin countdown, filtro, lightbox, copiar,
+ * autoplay, tema, barra pegajosa, pestañas ni cálculo. La capacidad sigue viva
+ * en el horneado; lo que falta es enseñársela. Antes de encender esto en
+ * producción hay que inyectar la receta que el brief pida, no las nueve
+ * siempre.
+ */
+export function systemPromptFor(
+  env: Readonly<Record<string, string | undefined>> = process.env,
+): string {
+  if (env.OPENLEN_MIN_CONTRACT?.trim() !== "1") return SYSTEM_PROMPT;
+  return SYSTEM_PROMPT.replace(PUBLISH_CONTRACT, PUBLISH_CONTRACT_MIN);
+}
