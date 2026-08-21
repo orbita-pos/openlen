@@ -1,3 +1,4 @@
+import { checkSubdomainOrigin, resolveCustomDomainSub } from "@/lib/publish/request-origin";
 import { eq } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
 import { getSubdomainOwner } from "@/lib/projects";
@@ -37,6 +38,28 @@ export async function POST(
   { params }: { params: Promise<{ sub: string }> },
 ): Promise<Response> {
   const { sub } = await params;
+
+  // ¿Viene esta petición de la página de ESTE proyecto?
+  //
+  // El proyecto destino se elegía sólo por la ruta, y esta ruta se sirve bajo
+  // TODOS los subdominios. Un script en victima.openlen.com podía enviar a
+  // /api/f/atacante y los datos caían en la bandeja del atacante — y para la
+  // CSP eso es 'self', así que ni connect-src ni form-action lo ven. Es un relé
+  // de exfiltración entre proyectos que ninguna política de contenido detecta.
+  //
+  // Se rechaza sólo ante un desajuste POSITIVO: lo que no se puede identificar
+  // pasa y se registra. Este endpoint lo usan todos los formularios publicados.
+  const procedencia = await checkSubdomainOrigin({
+    headers: req.headers,
+    targetSub: sub,
+    baseHost: process.env.PUBLISH_BASE_HOST?.trim() || "openlen.com",
+    resolveCustomDomain: resolveCustomDomainSub,
+  });
+  if (procedencia.kind === "mismatch") {
+    // eslint-disable-next-line no-console
+    console.warn(`[forms] envío cruzado rechazado: ${procedencia.from} → ${sub}`);
+    return new Response("forbidden", { status: 403 });
+  }
   const wantsJson = (req.headers.get("accept") ?? "").includes(
     "application/json",
   );

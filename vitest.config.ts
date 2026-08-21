@@ -143,6 +143,7 @@ export default defineConfig({
       "lib/publish/module-markup-tailwind.test.ts",
       "lib/publish/embed-sandbox.test.ts",
       "lib/publish/model-runtime-e2e.test.ts",
+      "lib/publish/request-origin.test.ts",
       "lib/publish/kill-switches.test.ts",
       "lib/publish/tw-config.test.ts",
       "lib/publish/design-stash-strip.test.ts",
