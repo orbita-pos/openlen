@@ -1,16 +1,15 @@
 {
   "cohortVersion": "page-cohort/1.2",
-  "revision": "2f308ee100de7504021879c8cac21e8f2435376d",
-  "at": "2026-08-20T19:36:39.957Z",
+  "revision": "49986f78f9925a428af115bd6e16a38a794a4064",
+  "at": "2026-08-21T02:51:55.817Z",
   "pages": 16,
-  "clean": 13,
+  "clean": 15,
   "byCode": {
-    "overflow": 1,
-    "calc": 2
+    "calc": 1
   },
   "retried": 1,
-  "trimmed": 10,
-  "costMxn": 3.12,
+  "trimmed": 12,
+  "costMxn": 0.99,
   "partial": false,
   "verdicts": [
     {
@@ -27,10 +26,10 @@
         "h1Count": 1,
         "lang": "es",
         "dir": "",
-        "bytes": 30238,
-        "calcFormulas": 0,
+        "bytes": 28962,
+        "calcFormulas": 3,
         "calcIssues": 0,
-        "ms": 55948
+        "ms": 49593
       }
     },
     {
@@ -38,8 +37,8 @@
       "failures": [],
       "measurement": {
         "id": "colegio",
-        "attempts": 2,
-        "trimmed": 0,
+        "attempts": 1,
+        "trimmed": 142,
         "mobileOverflow": false,
         "invalidGeometry": false,
         "typographyRule": null,
@@ -47,10 +46,10 @@
         "h1Count": 1,
         "lang": "es",
         "dir": "",
-        "bytes": 54170,
+        "bytes": 28795,
         "calcFormulas": 0,
         "calcIssues": 0,
-        "ms": 92186
+        "ms": 55993
       }
     },
     {
@@ -67,10 +66,10 @@
         "h1Count": 1,
         "lang": "es",
         "dir": "",
-        "bytes": 30523,
+        "bytes": 27688,
         "calcFormulas": 0,
         "calcIssues": 0,
-        "ms": 54545
+        "ms": 48399
       }
     },
     {
@@ -87,32 +86,30 @@
         "h1Count": 1,
         "lang": "es",
         "dir": "",
-        "bytes": 33951,
+        "bytes": 32382,
         "calcFormulas": 0,
         "calcIssues": 0,
-        "ms": 59810
+        "ms": 52568
       }
     },
     {
       "id": "documentacion",
-      "failures": [
-        "overflow"
-      ],
+      "failures": [],
       "measurement": {
         "id": "documentacion",
-        "attempts": 1,
-        "trimmed": 0,
-        "mobileOverflow": true,
+        "attempts": 2,
+        "trimmed": 12,
+        "mobileOverflow": false,
         "invalidGeometry": false,
         "typographyRule": null,
         "unreadable": 0,
         "h1Count": 1,
         "lang": "es",
-        "dir": "",
-        "bytes": 48353,
+        "dir": "ltr",
+        "bytes": 25695,
         "calcFormulas": 0,
         "calcIssues": 0,
-        "ms": 162948
+        "ms": 44945
       }
     },
     {
@@ -120,26 +117,6 @@
       "failures": [],
       "measurement": {
         "id": "minimo",
-        "attempts": 1,
-        "trimmed": 0,
-        "mobileOverflow": false,
-        "invalidGeometry": false,
-        "typographyRule": null,
-        "unreadable": 0,
-        "h1Count": 1,
-        "lang": "es",
-        "dir": "",
-        "bytes": 66302,
-        "calcFormulas": 5,
-        "calcIssues": 0,
-        "ms": 76968
-      }
-    },
-    {
-      "id": "larguisimo",
-      "failures": [],
-      "measurement": {
-        "id": "larguisimo",
         "attempts": 1,
         "trimmed": 12,
         "mobileOverflow": false,
@@ -149,10 +126,30 @@
         "h1Count": 1,
         "lang": "es",
         "dir": "",
-        "bytes": 34059,
+        "bytes": 31195,
+        "calcFormulas": 2,
+        "calcIssues": 0,
+        "ms": 54084
+      }
+    },
+    {
+      "id": "larguisimo",
+      "failures": [],
+      "measurement": {
+        "id": "larguisimo",
+        "attempts": 1,
+        "trimmed": 0,
+        "mobileOverflow": false,
+        "invalidGeometry": false,
+        "typographyRule": null,
+        "unreadable": 0,
+        "h1Count": 1,
+        "lang": "es",
+        "dir": "",
+        "bytes": 57420,
         "calcFormulas": 0,
         "calcIssues": 0,
-        "ms": 62910
+        "ms": 99533
       }
     },
     {
@@ -169,10 +166,10 @@
         "h1Count": 1,
         "lang": "ar",
         "dir": "rtl",
-        "bytes": 26819,
+        "bytes": 26682,
         "calcFormulas": 0,
         "calcIssues": 0,
-        "ms": 47763
+        "ms": 44156
       }
     },
     {
@@ -181,7 +178,7 @@
       "measurement": {
         "id": "con-html",
         "attempts": 1,
-        "trimmed": 0,
+        "trimmed": 12,
         "mobileOverflow": false,
         "invalidGeometry": false,
         "typographyRule": null,
@@ -189,10 +186,10 @@
         "h1Count": 1,
         "lang": "es",
         "dir": "",
-        "bytes": 39627,
+        "bytes": 30389,
         "calcFormulas": 0,
         "calcIssues": 0,
-        "ms": 65368
+        "ms": 49768
       }
     },
     {
@@ -209,10 +206,10 @@
         "h1Count": 1,
         "lang": "es",
         "dir": "",
-        "bytes": 15372,
+        "bytes": 16713,
         "calcFormulas": 0,
         "calcIssues": 0,
-        "ms": 18867
+        "ms": 24762
       }
     },
     {
@@ -220,28 +217,6 @@
       "failures": [],
       "measurement": {
         "id": "solar",
-        "attempts": 1,
-        "trimmed": 12,
-        "mobileOverflow": false,
-        "invalidGeometry": false,
-        "typographyRule": null,
-        "unreadable": 0,
-        "h1Count": 1,
-        "lang": "es",
-        "dir": "ltr",
-        "bytes": 34761,
-        "calcFormulas": 2,
-        "calcIssues": 0,
-        "ms": 64915
-      }
-    },
-    {
-      "id": "sorteo",
-      "failures": [
-        "calc"
-      ],
-      "measurement": {
-        "id": "sorteo",
         "attempts": 1,
         "trimmed": 0,
         "mobileOverflow": false,
@@ -251,17 +226,17 @@
         "h1Count": 1,
         "lang": "es",
         "dir": "",
-        "bytes": 31879,
-        "calcFormulas": 0,
+        "bytes": 43752,
+        "calcFormulas": 11,
         "calcIssues": 0,
-        "ms": 58382
+        "ms": 78552
       }
     },
     {
-      "id": "quiz",
+      "id": "sorteo",
       "failures": [],
       "measurement": {
-        "id": "quiz",
+        "id": "sorteo",
         "attempts": 1,
         "trimmed": 12,
         "mobileOverflow": false,
@@ -270,18 +245,38 @@
         "unreadable": 0,
         "h1Count": 1,
         "lang": "es",
-        "dir": "",
-        "bytes": 43230,
-        "calcFormulas": 19,
+        "dir": "ltr",
+        "bytes": 35632,
+        "calcFormulas": 2,
         "calcIssues": 0,
-        "ms": 143164
+        "ms": 119794
+      }
+    },
+    {
+      "id": "quiz",
+      "failures": [
+        "calc"
+      ],
+      "measurement": {
+        "id": "quiz",
+        "attempts": 1,
+        "trimmed": 0,
+        "mobileOverflow": false,
+        "invalidGeometry": false,
+        "typographyRule": null,
+        "unreadable": 0,
+        "h1Count": 1,
+        "lang": "es",
+        "dir": "",
+        "bytes": 58964,
+        "calcFormulas": 0,
+        "calcIssues": 4,
+        "ms": 126515
       }
     },
     {
       "id": "menu-precio",
-      "failures": [
-        "calc"
-      ],
+      "failures": [],
       "measurement": {
         "id": "menu-precio",
         "attempts": 1,
@@ -293,10 +288,10 @@
         "h1Count": 1,
         "lang": "es",
         "dir": "",
-        "bytes": 24655,
-        "calcFormulas": 2,
-        "calcIssues": 1,
-        "ms": 60068
+        "bytes": 25767,
+        "calcFormulas": 5,
+        "calcIssues": 0,
+        "ms": 77348
       }
     },
     {
@@ -313,10 +308,10 @@
         "h1Count": 1,
         "lang": "es",
         "dir": "",
-        "bytes": 46202,
+        "bytes": 64928,
         "calcFormulas": 0,
         "calcIssues": 0,
-        "ms": 91009
+        "ms": 112867
       }
     },
     {
@@ -333,10 +328,10 @@
         "h1Count": 1,
         "lang": "es",
         "dir": "",
-        "bytes": 26472,
+        "bytes": 31411,
         "calcFormulas": 0,
         "calcIssues": 0,
-        "ms": 56360
+        "ms": 87582
       }
     }
   ]
