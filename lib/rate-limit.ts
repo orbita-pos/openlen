@@ -52,6 +52,14 @@ export const RATE_LIMITS = {
    *  storage write — 60/hour clears an editing session yet caps a scripted
    *  fetch flood at ~60 × 15 MB ≈ 900 MB/hour/user. */
   proxyImage: { limit: 60, windowMs: 60 * 60 * 1000 },
+  /** Referencia visual por URL: lanza Chrome contra una web ajena Y paga una
+   *  llamada de visión. Es la operación más cara por petición de todo el
+   *  producto, y además nuestro servidor sale a internet a una dirección que
+   *  escribe el visitante — un scraper sin tope es un proxy abierto con
+   *  nuestra IP. Propio cubo (`style-ref:<userId>`), 20/hora: bastan de sobra
+   *  para probar referencias mientras se diseña, y cortan un guión que
+   *  intentara usarnos de rastreador. */
+  styleReference: { limit: 20, windowMs: 60 * 60 * 1000 },
 } as const;
 
 function formatRetry(sec: number): string {
