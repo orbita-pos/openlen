@@ -1,4 +1,4 @@
-import { authorizeRuntimeForPublish, buildCapsule } from "@/lib/projects/model-runtime";
+import { authorizeRuntimeForPublish, buildCapsule, moduleSurfacesActive } from "@/lib/projects/model-runtime";
 import { pageAllowsRuntime } from "@/lib/ai-stream/model-runtime";
 import { createHash } from "node:crypto";
 import { and, desc, eq, gte, isNotNull, isNull, ne, sql as sqlOp } from "drizzle-orm";
@@ -998,6 +998,7 @@ export async function publishProject(
     pageCount: publicPages.length + gatedPages.length,
     hasCustomDomain: dominios.length > 0,
     pageEligible: pageAllowsRuntime(project.data?.html ?? ""),
+    modulesActive: moduleSurfacesActive(project.data?.settings),
   });
   if (project.generatedRuntime && autorizacion.kind === "skipped") {
     // Un proyecto CON cápsula que se publica sin ella es la única señal que

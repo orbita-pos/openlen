@@ -6,6 +6,7 @@ import {
   verifyCapsule,
   RUNTIME_CAPSULE_VERSION,
   authorizeRuntimeForPublish,
+  moduleSurfacesActive,
 } from "./model-runtime";
 
 const BASE = {
@@ -138,6 +139,7 @@ describe("¿se inyecta en esta publicación?", () => {
     pageCount: 0,
     hasCustomDomain: false,
     pageEligible: true,
+    modulesActive: false,
   };
 
   it("con todo en su sitio, autoriza", () => {
@@ -150,6 +152,7 @@ describe("¿se inyecta en esta publicación?", () => {
     ["varias páginas", { pageCount: 2 }, "varias_paginas"],
     ["formularios o módulos", { pageEligible: false }, "pagina_no_elegible"],
     ["sin cápsula", { capsule: null }, "ausente"],
+    ["un módulo encendido por settings", { modulesActive: true }, "modulos_activos"],
   ])("%s lo omite", (_, delta, reason) => {
     expect(authorizeRuntimeForPublish({ ...base, ...delta })).toEqual({ kind: "skipped", reason });
   });
@@ -177,5 +180,45 @@ describe("¿se inyecta en esta publicación?", () => {
       html: "otro documento",
     });
     expect(r).toEqual({ kind: "skipped", reason: "desajuste" });
+  });
+});
+
+/**
+ * LA MITAD QUE FALTABA, y la señaló una auditoría externa.
+ *
+ * Los módulos se encienden por `PATCH /api/projects/[id]/settings`, que NO toca
+ * el documento. El HTML no cambia → la cápsula sigue cuadrando → y la
+ * publicación hornea el widget desde los settings igual. Mirar sólo el marcado
+ * dejaba pasar una página con chat Y con JavaScript del modelo, que es
+ * exactamente lo que el piloto existe para impedir.
+ */
+describe("los módulos encendidos por settings también descalifican", () => {
+  it("sin settings, nada que descalificar", () => {
+    expect(moduleSurfacesActive(undefined)).toBe(false);
+    expect(moduleSurfacesActive({})).toBe(false);
+    expect(moduleSurfacesActive(null)).toBe(false);
+  });
+
+  it.each(["assistant", "chat", "members", "comments", "bookings", "collections", "orders", "whatsapp"])(
+    "%s encendido descalifica",
+    (m) => {
+      expect(moduleSurfacesActive({ [m]: { enabled: true } })).toBe(true);
+    },
+  );
+
+  it("apagado explícitamente NO descalifica", () => {
+    expect(moduleSurfacesActive({ chat: { enabled: false } })).toBe(false);
+  });
+
+  // `forms` no es un interruptor: es el mapa de configuración por formulario.
+  // Que exista una entrada significa que hubo formulario, aunque el marcado
+  // haya cambiado después.
+  it("una configuración de formulario guardada descalifica", () => {
+    expect(moduleSurfacesActive({ forms: { "0": { notifyEmail: "a@b.c" } } })).toBe(true);
+    expect(moduleSurfacesActive({ forms: {} })).toBe(false);
+  });
+
+  it("datos vivos también — la página consulta por nuestra API", () => {
+    expect(moduleSurfacesActive({ liveData: { sheetUrl: "https://docs.google.com/x" } })).toBe(true);
   });
 });

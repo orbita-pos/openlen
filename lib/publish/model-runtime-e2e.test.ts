@@ -61,6 +61,11 @@ function documentoVivo(): string {
   return readFileSync(path.join(sub, "releases", sha, "index.html"), "utf8");
 }
 
+/** Publicar de verdad —base de datos, bakes, disco— no cabe en los 5 s por
+ *  defecto de vitest cuando compite con los otros 3.800 tests de la suite. No
+ *  es inestabilidad: es hambre de CPU, y ya nos pasó con la puerta de paridad. */
+vi.setConfig({ testTimeout: 60_000, hookTimeout: 60_000 });
+
 let projectId = "";
 
 beforeAll(async () => {

@@ -127,6 +127,7 @@ export type RuntimeSkip =
   | CapsuleRejection
   | "apagado"
   | "pagina_no_elegible"
+  | "modulos_activos"
   | "varias_paginas"
   | "dominio_propio";
 
@@ -163,8 +164,12 @@ export function authorizeRuntimeForPublish(input: {
   /** Subpáginas del sitio. El piloto es UN documento. */
   readonly pageCount: number;
   readonly hasCustomDomain: boolean;
-  /** `pageAllowsRuntime` del módulo de ingestión — formularios y módulos. */
+  /** `pageAllowsRuntime` del módulo de ingestión — formularios y módulos
+   *  presentes en el MARCADO. */
   readonly pageEligible: boolean;
+  /** `moduleSurfacesActive` sobre los settings del proyecto. Va aparte
+   *  porque un módulo puede estar encendido sin dejar rastro en el HTML. */
+  readonly modulesActive: boolean;
 }): PublishAuthorization {
   const check = verifyCapsule(input.capsule, {
     projectId: input.projectId,
@@ -182,6 +187,52 @@ export function authorizeRuntimeForPublish(input: {
   if (input.hasCustomDomain) return { kind: "skipped", reason: "dominio_propio" };
   if (input.pageCount > 0) return { kind: "skipped", reason: "varias_paginas" };
   if (!input.pageEligible) return { kind: "skipped", reason: "pagina_no_elegible" };
+  // Los settings se miran SIEMPRE, aunque el marcado esté limpio.
+  if (input.modulesActive) return { kind: "skipped", reason: "modulos_activos" };
 
   return { kind: "authorized", code: check.code };
+}
+
+/**
+ * TODAS las superficies que descalifican a una página, no sólo las del marcado.
+ *
+ * `pageAllowsRuntime` mira el HTML, y con eso no basta: los módulos se activan
+ * por `PATCH /api/projects/[id]/settings`, que NO toca el documento. El HTML no
+ * cambia → la cápsula sigue cuadrando → y la publicación hornea el widget desde
+ * los settings igual. Una página podía acabar con el chat y con el JavaScript
+ * del modelo a la vez, que es justo lo que el piloto existe para impedir.
+ *
+ * Lo señaló una auditoría externa y estaba en lo cierto. Por eso la elegibilidad
+ * se calcula sobre el ESTADO REAL en el momento de publicar —marcado, settings,
+ * páginas y dominio— y no sobre una sola de sus mitades.
+ *
+ * Los settings NO entran en el hash de la cápsula a propósito: el hash ata el
+ * documento, y la elegibilidad se vuelve a evaluar en cada publicación. Meterlos
+ * dentro obligaría a re-sellar la cápsula cada vez que alguien cambia un color.
+ */
+export function moduleSurfacesActive(settings: unknown): boolean {
+  if (settings === null || typeof settings !== "object") return false;
+  const s = settings as Record<string, { enabled?: unknown } | undefined>;
+  // Cada uno de estos hornea un widget que habla con una API del mismo origen,
+  // y varias de esas APIs llevan la sesión del visitante.
+  for (const clave of [
+    "assistant",
+    "chat",
+    "members",
+    "comments",
+    "bookings",
+    "collections",
+    "orders",
+    "whatsapp",
+  ]) {
+    if (s[clave]?.enabled === true) return true;
+  }
+  // `forms` no es un interruptor: es un mapa con la configuración de cada
+  // formulario del documento. Que exista una entrada significa que hay
+  // formulario, aunque el marcado haya cambiado desde entonces.
+  const forms = (settings as { forms?: Record<string, unknown> }).forms;
+  if (forms && Object.keys(forms).length > 0) return true;
+  // Datos vivos: la página consulta una hoja a través de nuestra API.
+  if ((settings as { liveData?: unknown }).liveData) return true;
+  return false;
 }
