@@ -1075,6 +1075,11 @@ export interface PublishResult {
   pages: string[];
   /** Gated slugs — stub in the release, real doc under protected/<sha>/. */
   gatedPages: string[];
+  /** Documentos que salieron SIN su CSP sellada, por etiqueta ("/", "es",
+   *  "/precios"). Vacío es lo normal. Antes esto se tiraba: el sellador
+   *  devuelve `sealed` y la llamada se quedaba sólo con `.html`, así que una
+   *  página podía publicarse sin política y nadie se enteraba jamás. */
+  unsealed: string[];
 }
 
 /**
@@ -1086,6 +1091,41 @@ export interface PublishResult {
  * Either the new release is current, or the previous one still is. Never an
  * in-between (symlink swap via rename(2) is atomic on POSIX).
  */
+/**
+ * Sella un documento y APUNTA el que sale sin política.
+ *
+ * El contrato del sellador es deliberado —"el sellado puede fallar, la
+ * publicación nunca"— y no se cambia aquí: sin política la página sigue
+ * saliendo, porque hoy es HTML estático y perder la CSP no la vuelve mentira.
+ *
+ * Lo que sí se arregla es que la pérdida era INVISIBLE. `sealRelease` devuelve
+ * `sealed` y las cuatro llamadas se quedaban con `.html` a secas, así que un
+ * documento sin CSP no se contaba ni se avisaba — y `sealed:false` ni siquiera
+ * lanza, de modo que el `catch` tampoco lo veía. Un log que nadie lee no es
+ * una solución; un contador que viaja en el resultado, sí.
+ *
+ * `OPENLEN_CSP_SEAL=strict` convierte la pérdida en un aborto. Está apagado
+ * por defecto A PROPÓSITO: encenderlo hoy rompería la publicación de páginas
+ * que hoy se publican bien. Es la palanca que habrá que encender el día que
+ * una página lleve JavaScript escrito por el modelo, porque entonces publicar
+ * sin política deja de ser una pérdida y pasa a ser un agujero.
+ */
+function seal(html: string, label: string, unsealed: string[]): string {
+  try {
+    const r = sealRelease(html, submitOrigin());
+    if (!r.sealed) {
+      unsealed.push(label);
+      return r.html;
+    }
+    return r.html;
+  } catch (err) {
+    unsealed.push(label);
+    // eslint-disable-next-line no-console
+    console.warn(`[publishToDir] el sellado LANZÓ en ${label}; sale sin CSP`, err);
+    return html;
+  }
+}
+
 export async function publishToDir(
   params: PublishParams,
 ): Promise<PublishResult> {
@@ -1236,17 +1276,16 @@ export async function publishToDir(
   // transform — any script injected after this point would be blocked by
   // the page's own policy (the pass self-checks and falls back to unsealed
   // output on drift, so a future mis-ordered injector degrades, never breaks).
+  // `unsealed` recoge los documentos que salen sin política. El sellador ya
+  // devolvía ese dato —`sealed`— y aquí se descartaba junto con el resto del
+  // resultado, así que la pérdida era invisible: ni contada, ni avisada.
+  const unsealed: string[] = [];
   if (process.env.OPENLEN_CSP_SEAL !== "0") {
-    try {
-      migratedHtml = sealRelease(migratedHtml, submitOrigin()).html;
-      localeDocs = localeDocs.map((d) => ({
-        locale: d.locale,
-        html: sealRelease(d.html, submitOrigin()).html,
-      }));
-    } catch (err) {
-      // eslint-disable-next-line no-console
-      console.warn("[publishToDir] release seal failed; publishing without CSP", err);
-    }
+    migratedHtml = seal(migratedHtml, "/", unsealed);
+    localeDocs = localeDocs.map((d) => ({
+      locale: d.locale,
+      html: seal(d.html, d.locale, unsealed),
+    }));
   }
 
   // Multi-page: bake each site page through the same chain, stamp its own
@@ -1273,14 +1312,7 @@ export async function publishToDir(
       selfPath: `/${page.slug}/`,
       cluster: [{ lang: sourceLang, path: `/${page.slug}/` }],
     });
-    if (process.env.OPENLEN_CSP_SEAL !== "0") {
-      try {
-        doc = sealRelease(doc, submitOrigin()).html;
-      } catch (err) {
-        // eslint-disable-next-line no-console
-        console.warn(`[publishToDir] seal failed for page /${page.slug}; publishing unsealed`, err);
-      }
-    }
+    if (process.env.OPENLEN_CSP_SEAL !== "0") doc = seal(doc, `/${page.slug}`, unsealed);
     pageDocs.push({ slug: page.slug, html: doc });
   }
 
@@ -1322,14 +1354,7 @@ export async function publishToDir(
       selfPath: `/${page.slug}/`,
       cluster: [{ lang: sourceLang, path: `/${page.slug}/` }],
     });
-    if (process.env.OPENLEN_CSP_SEAL !== "0") {
-      try {
-        doc = sealRelease(doc, submitOrigin()).html;
-      } catch (err) {
-        // eslint-disable-next-line no-console
-        console.warn(`[publishToDir] seal failed for gated page /${page.slug}; publishing unsealed`, err);
-      }
-    }
+    if (process.env.OPENLEN_CSP_SEAL !== "0") doc = seal(doc, `/${page.slug} (con puerta)`, unsealed);
     protectedDocs.push({ slug: page.slug, html: doc });
     stubFiles.push({
       path: `${page.slug}/index.html`,
@@ -1397,6 +1422,19 @@ export async function publishToDir(
       .map((p) => `  <url>\n    <loc>${baseUrl}/${p.slug}/</loc>\n  </url>`)
       .join("\n");
     sitemap = sitemap.replace("</urlset>", `${extra}\n</urlset>`);
+  }
+
+  // Antes de escribir nada: en modo estricto, un documento sin política NO se
+  // publica. Va aquí y no después del write porque un release ya escrito con
+  // el symlink movido no se "deshace" — o no llega a existir, o es el vivo.
+  if (unsealed.length > 0) {
+    if (process.env.OPENLEN_CSP_SEAL === "strict") {
+      throw new Error(
+        `publishToDir: ${unsealed.length} documento(s) sin CSP sellada (${unsealed.join(", ")}) y OPENLEN_CSP_SEAL=strict`,
+      );
+    }
+    // eslint-disable-next-line no-console
+    console.warn(`[publishToDir] ${sub}: sin CSP → ${unsealed.join(", ")}`);
   }
 
   const releaseFiles: Array<{ path: string; content: string }> = [
@@ -1531,6 +1569,7 @@ export async function publishToDir(
     locales: localeDocs.map((d) => d.locale),
     pages: pageDocs.map((p) => p.slug),
     gatedPages: protectedDocs.map((p) => p.slug),
+    unsealed,
   };
 }
 
