@@ -76,6 +76,7 @@ export default defineConfig({
       // un test que no corre no protege nada.
       "lib/style-match/scrape/**/*.test.ts",
       "lib/style-match/extract/**/*.test.ts",
+      "lib/style-match/direction.test.ts",
       "lib/templates/visual-metadata.test.ts",
       "lib/templates/store-visual-metadata.test.ts",
       "lib/templates/suggest-visual-metadata.test.ts",
