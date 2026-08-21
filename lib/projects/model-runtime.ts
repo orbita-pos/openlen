@@ -121,3 +121,67 @@ export function verifyCapsule(
   }
   return { ok: true, code: c.code };
 }
+
+/** Por qué una página con cápsula acabó publicándose SIN su runtime. */
+export type RuntimeSkip =
+  | CapsuleRejection
+  | "apagado"
+  | "pagina_no_elegible"
+  | "varias_paginas"
+  | "dominio_propio";
+
+export type PublishAuthorization =
+  | { readonly kind: "authorized"; readonly code: string }
+  | { readonly kind: "skipped"; readonly reason: RuntimeSkip };
+
+/**
+ * ¿Se inyecta el runtime en esta publicación?
+ *
+ * SE APARTA DEL PLAN DE LA AUDITORÍA EN UN PUNTO, a propósito: allí una cápsula
+ * que no cuadra ABORTA la publicación. Aquí sólo se omite el runtime.
+ *
+ * El motivo es que abortar no protege de nada. Si la cápsula no cuadra no se
+ * inyecta código, y una página sin código no puede hacer daño — el resultado
+ * seguro se obtiene igual por las dos vías. Lo que sí cambia es quién lo paga:
+ * el caso corriente de "no cuadra" no es un ataque, es un usuario que editó su
+ * titular después de generar. Bloquearle la publicación entera por eso sería
+ * hostil, y además enseñaría a la gente a desconfiar de un mecanismo que está
+ * haciendo su trabajo.
+ *
+ * Abortar sigue siendo lo correcto donde SÍ vamos a inyectar y el sellado falla
+ * — eso es `OPENLEN_CSP_SEAL=strict`, y vive en el publicador.
+ *
+ * Se verifica contra `data.html` TAL CUAL está guardado, antes de que la
+ * tubería de publicación lo transforme: el hash se calculó sobre esos bytes.
+ */
+export function authorizeRuntimeForPublish(input: {
+  readonly env: NodeJS.ProcessEnv;
+  readonly projectId: string;
+  /** El HTML guardado, sin pasar por ningún bake todavía. */
+  readonly html: string;
+  readonly capsule: unknown;
+  /** Subpáginas del sitio. El piloto es UN documento. */
+  readonly pageCount: number;
+  readonly hasCustomDomain: boolean;
+  /** `pageAllowsRuntime` del módulo de ingestión — formularios y módulos. */
+  readonly pageEligible: boolean;
+}): PublishAuthorization {
+  const check = verifyCapsule(input.capsule, {
+    projectId: input.projectId,
+    html: input.html,
+  });
+  if (!check.ok) return { kind: "skipped", reason: check.reason };
+
+  // El interruptor se comprueba DESPUÉS de verificar, no antes: así el motivo
+  // que se registra distingue "está apagado" de "la cápsula no cuadraba", y no
+  // se pierde la única señal que dice si el mecanismo funciona.
+  if (input.env.OPENLEN_MODEL_JS !== "1") return { kind: "skipped", reason: "apagado" };
+
+  // Un dominio propio puede añadirse DESPUÉS y serviría el release ya vivo, así
+  // que se comprueba aquí y se volverá a comprobar al activarlo.
+  if (input.hasCustomDomain) return { kind: "skipped", reason: "dominio_propio" };
+  if (input.pageCount > 0) return { kind: "skipped", reason: "varias_paginas" };
+  if (!input.pageEligible) return { kind: "skipped", reason: "pagina_no_elegible" };
+
+  return { kind: "authorized", code: check.code };
+}

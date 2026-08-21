@@ -5,6 +5,7 @@ import {
   runtimeDigest,
   verifyCapsule,
   RUNTIME_CAPSULE_VERSION,
+  authorizeRuntimeForPublish,
 } from "./model-runtime";
 
 const BASE = {
@@ -125,5 +126,56 @@ describe("verificar contra el documento que se va a publicar", () => {
       .update(BASE.code)
       .digest("hex");
     expect(c.digest).not.toBe(sinPolitica);
+  });
+});
+
+describe("¿se inyecta en esta publicación?", () => {
+  const base = {
+    env: { OPENLEN_MODEL_JS: "1" } as unknown as NodeJS.ProcessEnv,
+    projectId: BASE.projectId,
+    html: BASE.html,
+    capsule: buildCapsule(BASE),
+    pageCount: 0,
+    hasCustomDomain: false,
+    pageEligible: true,
+  };
+
+  it("con todo en su sitio, autoriza", () => {
+    expect(authorizeRuntimeForPublish(base)).toEqual({ kind: "authorized", code: BASE.code });
+  });
+
+  it.each([
+    ["el interruptor apagado", { env: {} as unknown as NodeJS.ProcessEnv }, "apagado"],
+    ["un dominio propio", { hasCustomDomain: true }, "dominio_propio"],
+    ["varias páginas", { pageCount: 2 }, "varias_paginas"],
+    ["formularios o módulos", { pageEligible: false }, "pagina_no_elegible"],
+    ["sin cápsula", { capsule: null }, "ausente"],
+  ])("%s lo omite", (_, delta, reason) => {
+    expect(authorizeRuntimeForPublish({ ...base, ...delta })).toEqual({ kind: "skipped", reason });
+  });
+
+  /**
+   * LA DESVIACIÓN DELIBERADA respecto del plan de la auditoría, que aquí
+   * abortaba la publicación.
+   *
+   * No aborta porque abortar no protege de nada: si la cápsula no cuadra no se
+   * inyecta código, y una página sin código no puede hacer daño. Lo que cambia
+   * es quién lo paga — el caso corriente no es un ataque, es alguien que editó
+   * su titular después de generar.
+   */
+  it("el HTML editado se OMITE, no revienta la publicación", () => {
+    const r = authorizeRuntimeForPublish({ ...base, html: `${BASE.html}<!-- editado -->` });
+    expect(r).toEqual({ kind: "skipped", reason: "desajuste" });
+  });
+
+  // El motivo se distingue: "apagado" y "desajuste" no son lo mismo, y mezclarlos
+  // dejaría sin señal la única pregunta que importa — ¿esto funciona?
+  it("verifica ANTES de mirar el interruptor, para no perder el motivo", () => {
+    const r = authorizeRuntimeForPublish({
+      ...base,
+      env: {} as unknown as NodeJS.ProcessEnv,
+      html: "otro documento",
+    });
+    expect(r).toEqual({ kind: "skipped", reason: "desajuste" });
   });
 });

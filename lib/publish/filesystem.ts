@@ -144,6 +144,11 @@ export class ReleaseNotFoundError extends Error {
 export interface PublishParams {
   subdomain: string;
   html: string;
+  /** El JavaScript escrito por el modelo, YA autorizado por el llamador
+   *  (`authorizeRuntimeForPublish` verificó su cápsula contra el HTML
+   *  guardado). Aquí no se vuelve a decidir si vale: aquí sólo se inyecta,
+   *  en el sitio y el orden correctos. Ausente = publicación de siempre. */
+  modelRuntime?: string | null;
   /** When provided AND the HTML references `/api/projects/<projectId>/assets/<filename>`
    *  URLs (LocalFs upload backend), each referenced file is copied from the
    *  upload dir to `<sub>/assets/<filename>` and the URL is rewritten to
@@ -1092,6 +1097,28 @@ export interface PublishResult {
  * in-between (symlink swap via rename(2) is atomic on POSIX).
  */
 /**
+ * Mete el script del modelo al final del `<body>`.
+ *
+ * Al FINAL y no en el `<head>` porque el contrato que se le dio al modelo dice
+ * que la página tiene que estar completa sin él: un script que corre antes de
+ * que exista el DOM que va a tocar no mejora nada, falla.
+ *
+ * El marcador `data-openlen-model-runtime` NO viaja al documento publicado. En
+ * el HTML servido no confiere autoridad a nadie —la autoridad la dio la cápsula
+ * y la CSP la fija por hash— y dejarlo puesto sólo serviría para que alguien lo
+ * copiara creyendo que significa algo.
+ *
+ * Sin `</body>` se pega al final. Un documento así ya pasó por el normalizador,
+ * de modo que es un caso que no debería existir; perder el runtime en silencio
+ * sería peor que ponerlo donde el navegador lo va a leer igual.
+ */
+function injectModelRuntime(html: string, code: string): string {
+  const tag = `<script>${code}</script>`;
+  const i = html.toLowerCase().lastIndexOf("</body>");
+  return i === -1 ? html + tag : html.slice(0, i) + tag + html.slice(i);
+}
+
+/**
  * Sella un documento y APUNTA el que sale sin política.
  *
  * El contrato del sellador es deliberado —"el sellado puede fallar, la
@@ -1276,6 +1303,20 @@ export async function publishToDir(
   // transform — any script injected after this point would be blocked by
   // the page's own policy (the pass self-checks and falls back to unsealed
   // output on drift, so a future mis-ordered injector degrades, never breaks).
+  // El runtime del modelo entra AQUÍ y en ningún otro sitio: después del
+  // sanitizador y de todos los bakes de primera parte, y justo antes del
+  // sellado — que es quien calcula el hash de este script para meterlo en la
+  // CSP. Inyectarlo después del sellado lo dejaría fuera de la política y el
+  // navegador lo bloquearía; inyectarlo antes del sanitizador lo borraría.
+  // Ese orden ya lo defiende behaviors-sanitize-order.test.ts para los
+  // nuestros, y ahora también para éste.
+  //
+  // Sólo el documento raíz. El piloto es UNA página: las subpáginas y los
+  // locales no lo llevan, y el llamador ya rechaza los proyectos que tienen.
+  if (params.modelRuntime) {
+    migratedHtml = injectModelRuntime(migratedHtml, params.modelRuntime);
+  }
+
   // `unsealed` recoge los documentos que salen sin política. El sellador ya
   // devolvía ese dato —`sealed`— y aquí se descartaba junto con el resto del
   // resultado, así que la pérdida era invisible: ni contada, ni avisada.

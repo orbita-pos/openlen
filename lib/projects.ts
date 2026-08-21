@@ -1,4 +1,5 @@
-import { buildCapsule } from "@/lib/projects/model-runtime";
+import { authorizeRuntimeForPublish, buildCapsule } from "@/lib/projects/model-runtime";
+import { pageAllowsRuntime } from "@/lib/ai-stream/model-runtime";
 import { createHash } from "node:crypto";
 import { and, desc, eq, gte, isNotNull, isNull, ne, sql as sqlOp } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
@@ -785,6 +786,11 @@ export async function publishProject(
       data: schema.projects.data,
       subdomain: schema.projects.subdomain,
       logoUrl: schema.projects.logoUrl,
+      // En el MISMO select que `data`: cápsula y documento tienen que venir
+      // del mismo instante. Leerlos en dos consultas abre la ventana en la que
+      // otra escritura cambia el HTML entre ambas y la cápsula pasa a
+      // autorizar un documento que ya no es el que se va a publicar.
+      generatedRuntime: schema.projects.generatedRuntime,
     })
     .from(schema.projects)
     .where(
@@ -973,6 +979,34 @@ export async function publishProject(
     platformsBake = profile?.links ?? null;
   }
 
+  // ¿Lleva esta publicación el JavaScript del modelo?
+  //
+  // Se verifica contra `project.data.html` TAL CUAL está guardado, antes de
+  // que ningún bake lo toque: el hash se calculó sobre esos bytes. Verificar
+  // después de transformar fallaría SIEMPRE, y el síntoma sería "esto nunca
+  // funciona" en vez de "el orden está mal".
+  const dominios = await db
+    .select({ id: schema.customDomains.id })
+    .from(schema.customDomains)
+    .where(eq(schema.customDomains.projectId, params.projectId))
+    .limit(1);
+  const autorizacion = authorizeRuntimeForPublish({
+    env: process.env,
+    projectId: params.projectId,
+    html: project.data?.html ?? "",
+    capsule: project.generatedRuntime,
+    pageCount: publicPages.length + gatedPages.length,
+    hasCustomDomain: dominios.length > 0,
+    pageEligible: pageAllowsRuntime(project.data?.html ?? ""),
+  });
+  if (project.generatedRuntime && autorizacion.kind === "skipped") {
+    // Un proyecto CON cápsula que se publica sin ella es la única señal que
+    // dice si el mecanismo funciona. Sin esto sólo se vería una página que no
+    // hace nada, y nadie sabría si fue el interruptor, una edición o un fallo.
+    // eslint-disable-next-line no-console
+    console.log(`[publish] ${params.projectId}: runtime omitido — ${autorizacion.reason}`);
+  }
+
   let publishResult: {
     sha: string;
     html: string;
@@ -984,6 +1018,7 @@ export async function publishProject(
       subdomain: v.value,
       html,
       projectId: params.projectId,
+      modelRuntime: autorizacion.kind === "authorized" ? autorizacion.code : null,
       formConfigs: project.data?.settings?.forms,
       analyticsEnabled: !project.data?.settings?.analyticsDisabled,
       logoUrl: effectiveLogoUrl,
