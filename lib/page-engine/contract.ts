@@ -19,7 +19,8 @@ export interface StageOutcome {
     | "measure"
     | "invariants"
     | "gate"
-    | "modules";
+    | "modules"
+    | "form_identity";
   /** `changed` cambió el documento · `skipped` no había nada que hacer o está
    *  apagada · `unavailable` lo intentó y no pudo (el motivo va en `detail`). */
   readonly status: "changed" | "skipped" | "unavailable";

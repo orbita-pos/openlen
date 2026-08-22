@@ -189,6 +189,18 @@ const INSPECT_SCRIPT = `
     return null;
   }
 
+  // Identidad estable del <form> que envuelve a el, si la tiene. Es lo que
+  // ata la configuracion (correo de aviso, mensaje de exito) a ESTE formulario
+  // y no a su posicion en el documento: mover el formulario ya no manda los
+  // leads al correo de otro. Vacia en paginas anteriores al estampado, donde
+  // el servidor cae a formIndex.
+  function formIdOf(el) {
+    var form = el.closest ? el.closest('form') : null;
+    if (!form) return null;
+    var id = form.getAttribute('data-ol-form-id');
+    return id && id.trim() ? id.trim() : null;
+  }
+
   // Convert a computed rgb()/rgba() string to #rrggbb. Returns '' for a
   // fully-transparent color (a color <input> can't represent it).
   function rgbToHex(c) {
@@ -512,6 +524,7 @@ const INSPECT_SCRIPT = `
       hint: buildHint(el),
       props: readProps(el),
       formIndex: formIndexOf(el),
+      formId: formIdOf(el),
       style: readStyle(el),
       wasProps: Object.keys(parseStash(el.getAttribute(STASH_ATTR))),
       ancestors: buildAncestors(el),

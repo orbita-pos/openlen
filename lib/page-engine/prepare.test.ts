@@ -31,6 +31,10 @@ describe("el motor de la página", () => {
     expect(out.ok).toBe(true);
     expect(out.report.stages.map((s) => s.stage)).toEqual([
       "imagery", "legibility", "measure", "invariants", "gate", "modules",
+      // La identidad de los formularios va la ULTIMA: sobre el documento que
+      // de verdad se guarda, para que el saneo o los modulos no anadan un
+      // <form> despues del estampado. Ver lib/publish/form-identity.ts.
+      "form_identity",
     ]);
   });
 

@@ -23,6 +23,9 @@ const MAX_URL = 2000;
 interface PatchBody {
   /** Index of the <form> being configured (document order). */
   formIndex?: number;
+  /** Identidad estable del `<form>` (`data-ol-form-id`), leída del elemento que
+   *  el usuario pulsó. Gana sobre `formIndex` — ver form-identity.ts. */
+  formId?: string;
   /** Multi-page: site page the form lives on (absent = home). The config
    *  persists under "<slug>:<index>" so home's form at the same index keeps
    *  its own config. */
@@ -338,8 +341,28 @@ export function applySettingsPatch(
       }
       page = check.slug;
     }
-    const key = formConfigKey(page, formIndex);
+    // La IDENTIDAD del formulario manda sobre su posición. El inspector la lee
+    // del `data-ol-form-id` del elemento que el usuario acaba de pulsar, así
+    // que el ajuste queda atado a ESE formulario y sobrevive a que una edición
+    // posterior lo mueva de sitio. Sin identificador —página anterior al
+    // estampado, o lectura fallida— se cae a la clave por índice de siempre,
+    // que es lo que había antes y sigue funcionando.
+    const formId = typeof body.formId === "string" ? body.formId.trim() : "";
+    const key = /^f[0-9a-f]{4,32}$/.test(formId)
+      ? formId
+      : formConfigKey(page, formIndex);
     formKey = key;
+    // Migración en el sitio: si este formulario ya tenía ajustes bajo su clave
+    // por índice, se MUEVEN a la identidad. Sin esto el dueño tendría que
+    // reconfigurar su correo para que el arreglo le sirviera de algo.
+    if (key === formId) {
+      const heredada = formConfigKey(page, formIndex);
+      const vieja = forms[heredada];
+      if (vieja && !forms[key]) {
+        forms[key] = vieja;
+        delete forms[heredada];
+      }
+    }
     const next: FormConfig = { ...(forms[key] ?? {}) };
 
     if ("notifyEmail" in patch) {

@@ -2569,17 +2569,25 @@ function NewV2Inner() {
   // Form config is not HTML — it persists straight to ProjectData.settings
   // (so the notify email never reaches the published page source).
   const applyFormConfig = useCallback(
-    (formIndex: number, patch: Partial<FormConfig>) => {
+    (formIndex: number, formId: string | null, patch: Partial<FormConfig>) => {
       const projectId = loadedProject?.id;
       if (!projectId) return;
-      // Forms on a site page persist under their scoped key — home's form
-      // at the same index keeps its own config.
+      // La IDENTIDAD del formulario manda sobre su posición: atada al elemento,
+      // sobrevive a que una edición posterior lo mueva de sitio. Sin ella
+      // —página anterior al estampado— se cae a la clave por índice, que es lo
+      // que había. El servidor aplica el MISMO criterio (settings-patch.ts), y
+      // la respuesta trae la clave real bajo la que guardó.
       const page = activeSitePageRef.current;
-      const key = formConfigKey(page, formIndex);
+      const key = formId ?? formConfigKey(page, formIndex);
       void fetch(`/api/projects/${projectId}/settings`, {
         method: "PATCH",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ formIndex, patch, ...(page ? { page } : {}) }),
+        body: JSON.stringify({
+          formIndex,
+          ...(formId ? { formId } : {}),
+          patch,
+          ...(page ? { page } : {}),
+        }),
       })
         .then((r) => {
           if (!r.ok) throw new Error(`PATCH failed (${r.status})`);
@@ -2591,8 +2599,12 @@ function NewV2Inner() {
           setLoadedProject((prev) => {
             if (!prev) return prev;
             const forms = { ...(prev.settings?.forms ?? {}) };
-            if (res.config) forms[key] = res.config;
-            else delete forms[key];
+            // `res.formKey` es la clave bajo la que el servidor guardó de
+            // verdad. Cuando migró de índice a identidad, la vieja desaparece.
+            const real = typeof res.formKey === "string" ? res.formKey : key;
+            if (real !== key) delete forms[key];
+            if (res.config) forms[real] = res.config;
+            else delete forms[real];
             return { ...prev, settings: { ...prev.settings, forms } };
           });
           toast.success(t("toast.formSaved"));

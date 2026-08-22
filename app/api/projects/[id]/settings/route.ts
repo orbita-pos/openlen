@@ -125,6 +125,11 @@ export async function PATCH(
       {
         ok: true,
         config,
+        // La clave REAL bajo la que se guardó. El cliente ya no puede
+        // derivarla: el servidor prefiere la identidad del formulario sobre su
+        // índice, y al hacerlo MIGRA la entrada vieja — sin esto el espejo
+        // local se quedaría con la clave por índice que ya no existe.
+        formKey: out.formKey,
         settings: out.settings,
       },
       200,

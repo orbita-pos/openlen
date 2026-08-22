@@ -1,6 +1,7 @@
 import "server-only";
 
 import { renderVisualQualityViewports } from "@/lib/ai/visual-quality-renderer";
+import { stampFormIds } from "@/lib/publish/form-identity";
 import { seedBrandIntoHtml } from "@/lib/business-profiles/seed-html";
 import { bindColorsToTokens } from "@/lib/document/bind-colors-to-tokens";
 import { ensureSingleH1 } from "@/lib/document/ensure-single-h1";
@@ -255,6 +256,25 @@ export async function preparePage(
     stages.push({ stage: "modules", status: modules.length ? "changed" : "skipped", detail: modules.join(",") || undefined });
   } catch (err) {
     stages.push({ stage: "modules", status: "unavailable", detail: reason(err) });
+  }
+
+  // ── 7. identidad de los formularios ────────────────────────────────────
+  // Al final, sobre el documento que de verdad se guarda: si el saneo o los
+  // módulos añaden o quitan un `<form>`, se estampa el resultado y no un paso
+  // intermedio. Ver `lib/publish/form-identity.ts` para el fallo que cierra —
+  // el lead del negocio yéndose al correo equivocado, en silencio.
+  try {
+    const marcados = stampFormIds(current);
+    if (marcados.stamped > 0) {
+      current = marcados.html;
+      stages.push({ stage: "form_identity", status: "changed", detail: `${marcados.stamped}` });
+    } else {
+      stages.push({ stage: "form_identity", status: "skipped", detail: marcados.ids.length ? "ya_tenian" : "sin_formularios" });
+    }
+  } catch (err) {
+    // Nunca cuesta una edición: sin identificador se cae a la ruta heredada
+    // por índice, que es exactamente lo que había antes de esto.
+    stages.push({ stage: "form_identity", status: "unavailable", detail: reason(err) });
   }
 
   const report: PrepareReport = {

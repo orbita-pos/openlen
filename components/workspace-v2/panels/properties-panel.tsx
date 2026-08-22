@@ -110,6 +110,8 @@ export interface InspectSelection {
   /** Document-order index of the enclosing <form>, or null when the
    *  selected element isn't inside a form. */
   formIndex?: number | null;
+  /** Identidad estable del <form> (data-ol-form-id). Ver form-identity.ts. */
+  formId?: string | null;
   /** The element's own cascade-safe style, read from getComputedStyle.
    *  Colors are #rrggbb (empty when transparent); borderRadius is an
    *  integer px string. */
@@ -215,7 +217,7 @@ interface PropertiesPanelProps {
   /** Convertir un <button> sin formulario en un <a> con destino. */
   onLinkifyButton: (path: string, href: string) => void;
   onApplyPageMeta: (field: keyof PageMeta, value: string) => void;
-  onApplyFormConfig: (formIndex: number, patch: Partial<FormConfig>) => void;
+  onApplyFormConfig: (formIndex: number, formId: string | null, patch: Partial<FormConfig>) => void;
   /** Set one inline-style property on the selected element (a CSS prop name
    *  + value; empty value removes it). */
   onApplyStyle: (path: string, prop: string, value: string) => void;
@@ -445,7 +447,7 @@ function ElementView({
   accent?: string;
   onApply: (path: string, name: string, value: string | null) => void;
   onLinkify: (path: string, href: string) => void;
-  onApplyFormConfig: (formIndex: number, patch: Partial<FormConfig>) => void;
+  onApplyFormConfig: (formIndex: number, formId: string | null, patch: Partial<FormConfig>) => void;
   onApplyStyle: (path: string, prop: string, value: string) => void;
   onResetProps: (path: string, props: string[]) => void;
   onSelectPath: (path: string) => void;
@@ -461,7 +463,7 @@ function ElementView({
   onBack: () => void;
 }) {
   const t = useTranslations("panelsProps");
-  const { path, tag, hint, props, formIndex, style } = selection;
+  const { path, tag, hint, props, formIndex, formId, style } = selection;
   const ancestors = selection.ancestors ?? [];
   return (
     <div className="fade-in">
@@ -564,6 +566,7 @@ function ElementView({
       {typeof formIndex === "number" && (
         <FormView
           formIndex={formIndex}
+          formId={formId ?? null}
           config={formConfig}
           onApply={onApplyFormConfig}
           onSendTestEmail={onSendTestFormEmail}
@@ -1035,13 +1038,15 @@ function StyleSection({
 
 function FormView({
   formIndex,
+  formId,
   config,
   onApply,
   onSendTestEmail,
 }: {
   formIndex: number;
+  formId: string | null;
   config: FormConfig | null;
-  onApply: (formIndex: number, patch: Partial<FormConfig>) => void;
+  onApply: (formIndex: number, formId: string | null, patch: Partial<FormConfig>) => void;
   onSendTestEmail?: (
     formIndex: number,
   ) => Promise<{ ok: boolean; sentTo?: string; message?: string }>;
@@ -1059,14 +1064,14 @@ function FormView({
             ? null
             : t("form.invalidEmail")
         }
-        onCommit={(v) => onApply(formIndex, { notifyEmail: v })}
+        onCommit={(v) => onApply(formIndex, formId, { notifyEmail: v })}
       />
       <TextField
         label={t("form.successMessage")}
         value={config?.successMessage ?? ""}
         placeholder={t("form.successMessagePlaceholder")}
         multiline
-        onCommit={(v) => onApply(formIndex, { successMessage: v })}
+        onCommit={(v) => onApply(formIndex, formId, { successMessage: v })}
       />
       <TextField
         label={t("form.redirect")}
@@ -1078,7 +1083,7 @@ function FormView({
             ? null
             : t("form.invalidUrl")
         }
-        onCommit={(v) => onApply(formIndex, { redirectUrl: v })}
+        onCommit={(v) => onApply(formIndex, formId, { redirectUrl: v })}
       />
       {onSendTestEmail && (
         <TestEmailButton formIndex={formIndex} onSend={onSendTestEmail} />
