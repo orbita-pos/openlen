@@ -113,6 +113,7 @@ export default defineConfig({
       "lib/agent/loop.test.ts",
       "lib/agent/retry.test.ts",
       "lib/agent/context.test.ts",
+      "lib/agent/user-memory-block.test.ts",
       "lib/agent/photo-search.test.ts",
       // P2 — pure summarizer (no native/DB); verify.test.ts is NOT here (it
       // value-imports the ai-gateway binding → node:test, in test:node).

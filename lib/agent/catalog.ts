@@ -246,11 +246,12 @@ export function buildFunctionDeclarations(): Record<string, unknown>[] {
     {
       name: "recordar_preferencia",
       description:
-        "Guarda una preferencia DURABLE del usuario en el brief del proyecto (persiste entre conversaciones) — úsala SOLO cuando el usuario exprese una preferencia estable sobre cómo trabajar con él o su página (p. ej. \"siempre háblame de tú\", \"nunca uses amarillo\"), NUNCA para un pedido puntual de este turno (eso se resuelve con la herramienta correspondiente, no se guarda). preferencia debe ser texto corto (5–200 caracteres). Si el brief del proyecto ya está lleno, la herramienta te lo dice — no insistas, avisa al usuario que puede podarlo en la pestaña Brief. Confirma siempre en tu texto qué guardaste.",
+        "Guarda una preferencia DURABLE del usuario. Por defecto se guarda para TODAS sus páginas (alcance=\"siempre\") — es lo que la gente quiere decir con «que no se te olvide»: la vas a recordar aunque cambie de proyecto o pasen semanas. Usa alcance=\"esta_pagina\" SÓLO si la preferencia es claramente de este proyecto y no de la persona (p. ej. «en esta página el tono es formal») — úsala SOLO cuando el usuario exprese una preferencia estable sobre cómo trabajar con él o su página (p. ej. \"siempre háblame de tú\", \"nunca uses amarillo\"), NUNCA para un pedido puntual de este turno (eso se resuelve con la herramienta correspondiente, no se guarda). preferencia debe ser texto corto (5–200 caracteres). Si el brief del proyecto ya está lleno, la herramienta te lo dice — no insistas, avisa al usuario que puede podarlo en la pestaña Brief. Confirma siempre en tu texto qué guardaste.",
       parameters: {
         type: "OBJECT",
         properties: {
           preferencia: { type: "STRING" },
+          alcance: { type: "STRING", enum: ["siempre", "esta_pagina"] },
         },
         required: ["preferencia"],
       },

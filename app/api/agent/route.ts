@@ -8,6 +8,7 @@ import { fetchImageAsInlineData } from "@/lib/ai/inline-image";
 import { validateUrl } from "@/lib/style-match/scrape/validate-url";
 import { buildFunctionDeclarations } from "@/lib/agent/catalog";
 import { buildAgentMessages } from "@/lib/agent/context";
+import { getUserMemory } from "@/lib/agent/user-memory";
 import { collectionCatalogBlock } from "@/lib/collections/catalog-block";
 import { listPublishedItems } from "@/lib/collections/store";
 import { modelJsEnabled } from "@/lib/ai-stream/model-runtime";
@@ -329,6 +330,10 @@ export async function POST(req: Request): Promise<Response> {
     catalogo,
     runtime: runtimeCode,
     userBrief: project.userBrief,
+    // Lo que el Agente sabe de ESTA PERSONA. Se lee por turno, no se cachea:
+    // el usuario puede haber guardado algo en OTRA pestaña, en otro proyecto,
+    // hace un minuto — que es justo el caso que esto existe para servir.
+    userMemory: await getUserMemory(session.user.id).catch(() => null),
     prompt,
     history,
     // ¿El turno anterior fue MUDO? Se deriva del historial que acaba de

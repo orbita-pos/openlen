@@ -18,6 +18,23 @@ import { buildAgentSystemPrompt } from "@/lib/agent/catalog";
 // node-html-parser, así que el invariante de arriba se mantiene.
 import { currentRuntimePromptBlock } from "@/lib/ai-stream/model-runtime";
 
+/**
+ * El bloque para el prompt, o `""` cuando no hay nada.
+ *
+ * `""` importa: sin memoria, el contexto sale BYTE A BYTE como antes de que
+ * esto existiera — ningún proyecto paga tokens por una capacidad que no usa,
+ * y la caché de prefijo no se invalida para quien nunca guardó nada.
+ */
+export function userMemoryBlock(memoria: string | null | undefined): string {
+  const v = memoria?.trim();
+  if (!v) return "";
+  return `LO QUE SABES DE ESTA PERSONA (de conversaciones anteriores, en CUALQUIERA de sus páginas — no es de este proyecto, es de ella):
+${v}
+Respétalo sin que te lo repita. Si algo de aquí choca con lo que te pide HOY, manda lo de hoy y no discutas: la memoria es un punto de partida, no una regla sobre él.
+
+`;
+}
+
 export function buildAgentContext(args: {
   /** Inyectable sólo para las pruebas: sin esto el bloque HOY cambiaría cada
    *  día y ninguna prueba podría fijarlo. */
@@ -36,6 +53,9 @@ export function buildAgentContext(args: {
    *  intacta. Medido el 2026-08-22 — el Agente responde «Listo, ya lo
    *  anadi» sin haber tocado nada, y sin esto no se entera nunca. */
   turnoAnteriorMudo?: boolean;
+  /** Lo que el Agente sabe de la PERSONA — sobrevive a cambiar de proyecto.
+   *  Ausente/vacio ⇒ contexto BYTE-identico al de antes de que existiera. */
+  userMemory?: string | null;
   userBrief: string | null;
   /** F2 Task 8 — the user attached an image this turn (same shape the route
    *  validates in ai-design: real http(s) URL, optional alt). Present ⇒ the
@@ -104,15 +124,16 @@ export function buildAgentContext(args: {
   // porque lo que él escribe son plazos que nacen vencidos.
   const hoy = `${todayLine(args.now).trimEnd()} Además: cualquier fecha que escribas (cuentas regresivas, eventos, plazos) tiene que ser POSTERIOR a hoy, salvo que el usuario pida explícitamente una pasada.\n\n`;
 
-    // Hecho, no juicio: no se mira lo que el modelo DIJO, sino si llamo a
+  // Hecho, no juicio: no se mira lo que el modelo DIJO, sino si llamo a
   // alguna herramienta. Va arriba del todo porque corrige una creencia
   // suya sobre el pasado inmediato.
+  const memoriaBlock = userMemoryBlock(args.userMemory);
   const mudoBlock = args.turnoAnteriorMudo
     ? `AVISO: tu turno anterior NO llamo a ninguna herramienta, asi que la pagina NO cambio — hagas lo que hagas ahora, no des por hecho lo que dijiste que habias hecho. Si el usuario te pidio un cambio y sigue sin aplicarse, aplicalo AHORA con editar_pagina.
 
 `
     : "";
-  return `${mudoBlock}${hoy}ESTADO DEL PROYECTO (real, leído del servidor ahora mismo):\n${JSON.stringify(stateForPrompt, null, 2)}\n\n${briefBlock}${focusBlock}${imageBlock}${docHeader}\n\n${args.taggedHtml}${args.catalogo ?? ""}${currentRuntimePromptBlock(args.runtime ?? "", "tool")}`;
+  return `${mudoBlock}${memoriaBlock}${hoy}ESTADO DEL PROYECTO (real, leído del servidor ahora mismo):\n${JSON.stringify(stateForPrompt, null, 2)}\n\n${briefBlock}${focusBlock}${imageBlock}${docHeader}\n\n${args.taggedHtml}${args.catalogo ?? ""}${currentRuntimePromptBlock(args.runtime ?? "", "tool")}`;
 }
 
 /** Rough chars→tokens estimate (~3.5 chars/token on tag-dense HTML + JSON),
@@ -133,6 +154,8 @@ export interface BuildAgentMessagesArgs {
   runtime?: string | null;
   /** Ver buildAgentContext.turnoAnteriorMudo. */
   turnoAnteriorMudo?: boolean;
+  /** Ver buildAgentContext.userMemory. */
+  userMemory?: string | null;
   userBrief: string | null;
   /** The user's turn prompt (already trimmed/validated by the caller). */
   prompt: string;
@@ -169,6 +192,7 @@ export function buildAgentMessages(args: BuildAgentMessagesArgs): BuildAgentMess
     catalogo: args.catalogo,
     userBrief: args.userBrief,
     turnoAnteriorMudo: args.turnoAnteriorMudo,
+    userMemory: args.userMemory,
     attachedImage: args.attachedImage,
     scopePin: args.scopePin,
     scopeHint: args.scopeHint,
