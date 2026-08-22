@@ -1,5 +1,6 @@
 import { PUBLISH_CONTRACT } from "@/lib/design-guidance";
 import { PUBLISH_CONTRACT_MIN } from "@/lib/publish-contract-min";
+import { swapJsClauses } from "@/lib/ai/js-clause";
 
 // Split out of route.ts (not just inlined there) because a Next.js
 // `route.ts` file may ONLY export the recognized route-handler bindings
@@ -56,14 +57,33 @@ Emit the complete HTML document directly, starting with <!doctype html> and endi
  * ⚠️ LO QUE SE PIERDE CON EL INTERRUPTOR ENCENDIDO: el contrato mínimo NO
  * enseña las nueve CONDUCTAS ni el carrusel, así que el modelo no emitirá esos
  * marcadores y esas páginas nacerán sin countdown, filtro, lightbox, copiar,
- * autoplay, tema, barra pegajosa, pestañas ni cálculo. La capacidad sigue viva
- * en el horneado; lo que falta es enseñársela. Antes de encender esto en
- * producción hay que inyectar la receta que el brief pida, no las nueve
- * siempre.
+ * autoplay, tema, barra pegajosa, pestañas ni cálculo.
+ *
+ * QUIÉN TAPA ESE HUECO AHORA: `OPENLEN_MODEL_JS=1`. El modelo escribe esas
+ * interacciones en JavaScript propio en vez de nombrar una receta nuestra —
+ * medido el 2026-08-21, con el hueco SIN tapar salían 0 de 6 páginas
+ * interactivas y con la cláusula cambiada 2 de 2. Los dos interruptores están
+ * pensados para ir juntos; el mínimo a solas entrega páginas inertes.
  */
 export function systemPromptFor(
   env: Readonly<Record<string, string | undefined>> = process.env,
 ): string {
-  if (env.OPENLEN_MIN_CONTRACT?.trim() !== "1") return SYSTEM_PROMPT;
-  return SYSTEM_PROMPT.replace(PUBLISH_CONTRACT, PUBLISH_CONTRACT_MIN);
+  const min = env.OPENLEN_MIN_CONTRACT?.trim() === "1";
+  let prompt = SYSTEM_PROMPT;
+  if (min) {
+    prompt = SYSTEM_PROMPT.replace(PUBLISH_CONTRACT, PUBLISH_CONTRACT_MIN);
+    // `String.replace` que no encuentra su literal devuelve la cadena INTACTA.
+    // Sin esto, un retoque de redacción en `PUBLISH_CONTRACT` haría que este
+    // interruptor dejara de hacer nada y nadie se enterase: el síntoma sería
+    // "el contrato mínimo ya no mejora", no "la sustitución no ocurrió".
+    if (prompt === SYSTEM_PROMPT) {
+      throw new Error(
+        "systemPromptFor: OPENLEN_MIN_CONTRACT=1 pero PUBLISH_CONTRACT no apareció en SYSTEM_PROMPT — la sustitución no ocurrió.",
+      );
+    }
+  }
+  // La cláusula sobre JavaScript va DESPUÉS del recorte: con el contrato mínimo
+  // hay que cambiar su viñeta, y con el completo su bloque. Cuál de las dos está
+  // presente lo decide el mismo interruptor de arriba.
+  return swapJsClauses(prompt, [min ? "contrato-min" : "contrato-completo", "no-negociable"], env);
 }

@@ -230,14 +230,17 @@ describe("POST /api/generate", () => {
   });
 
   it("still bridges a module placeholder to a real module", async () => {
-    modelReturns(doc("", '<section data-ol-bookings-section><h2>Reservá</h2></section>'));
+    // El ejemplo era Reservas; ese módulo se retiró (2026-08-21) y el puente
+    // sigue vivo para Colecciones — que es lo que esta prueba de verdad vigila:
+    // que un hueco del modelo encienda el módulo real.
+    modelReturns(doc("", '<section data-ol-collection-section><h2>Catálogo</h2></section>'));
 
     const { events } = await call();
 
     expect(mocks.createProject.mock.calls[0][1]).toMatchObject({
-      settings: expect.objectContaining({ bookings: expect.anything() }),
+      settings: expect.objectContaining({ collections: expect.anything() }),
     });
-    expect(events.at(-1)?.data.enabledModules).toEqual(["bookings"]);
+    expect(events.at(-1)?.data.enabledModules).toEqual(["collections"]);
   });
 
   it("refuses the reserved marker — that never fails open", async () => {
@@ -414,14 +417,34 @@ describe("el runtime del modelo llega a createProject", () => {
     expect(saved()!.modelRuntime).toBeNull();
   });
 
-  // El script compartiría origen con /api/f/<sub>. Mientras no esté contenido,
-  // una página que recoge datos de un visitante no entra en el piloto.
-  it("una página con formulario NO lo guarda, aunque el modelo lo escribiera", async () => {
+  /**
+   * ANTES ERA AL REVÉS, y se cambió el 2026-08-21.
+   *
+   * Un formulario descalificaba la página entera y el JavaScript se tiraba sin
+   * decírselo a nadie. Medido sobre el cohorte: le pasaba a 1 de cada 6 páginas
+   * corrientes, por llevar un formulario de contacto.
+   *
+   * Levantarlo cuesta poco porque la CSP ya tapa la salida: `form-action` y
+   * `connect-src` son `'self'` y `img-src` está acotada a los orígenes que el
+   * documento ya pide, así que un script sólo alcanza el buzón de su propia
+   * página. El riesgo que quedaba —actuar como el visitante identificado— vive
+   * en la puerta de producción (memoria `model-js-production-gate`).
+   */
+  it("una página con formulario SÍ lo guarda", async () => {
     modelReturnsWithRuntime(
       `<!doctype html><html lang="es"><head><title>x</title></head><body><h1>Hola</h1>${FILLER}<form><input name="email"></form></body></html>`,
       `document.title = "vivo";`,
     );
     await call();
-    expect(saved()!.modelRuntime).toBeNull();
+    expect(saved()!.modelRuntime).toBe(`document.title = "vivo";`);
+  });
+
+  it("y una con módulo también", async () => {
+    modelReturnsWithRuntime(
+      `<!doctype html><html lang="es"><head><title>x</title></head><body><h1>Hola</h1>${FILLER}<section data-ol-chat-section></section></body></html>`,
+      `document.title = "vivo";`,
+    );
+    await call();
+    expect(saved()!.modelRuntime).toBe(`document.title = "vivo";`);
   });
 });

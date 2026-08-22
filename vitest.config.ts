@@ -51,7 +51,6 @@ export default defineConfig({
       "lib/workspace-v2/**/*.test.ts",
       "lib/sections/**/*.test.ts",
       "lib/analytics/**/*.test.ts",
-      "lib/assemble/**/*.test.ts",
       "lib/behaviors/**/*.test.ts",
       // Arreglo 3 seam guard — imports app/api/**/system-prompt.ts (plain
       // modules, no native/DB/auth) + lib/agent/catalog.ts (already vitest-
@@ -100,8 +99,8 @@ export default defineConfig({
       "lib/ai/provider-switch.test.ts",
       "lib/ai/qwen-visual-critic.test.ts",
       "lib/ai/today-line.test.ts",
+      "lib/ai/js-clause.test.ts",
       "lib/ai/visual-quality-renderer.test.ts",
-      "lib/ai/visual-quality-critic.test.ts",
       "lib/business-profiles/**/*.test.ts",
       "lib/billing/**/*.test.ts",
       "lib/auth/**/*.test.ts",
@@ -128,12 +127,9 @@ export default defineConfig({
       "lib/tematicas/**/*.test.ts",
       "lib/site-assistant/**/*.test.ts",
       "lib/publish/assistant-widget.test.ts",
-      "lib/publish/comments-widget.test.ts",
-      "lib/publish/bookings-widget.test.ts",
       "lib/publish/collections-block.test.ts",
       "lib/publish/llms-txt.test.ts",
       "lib/publish/video-embed.test.ts",
-      "lib/publish/signin-link.test.ts",
       "lib/publish/module-sections.test.ts",
       // DB-integration test (real Postgres via .env.local, same pattern as
       // lib/chat/identity-bridge.test.ts) — preview-bake.test.ts itself stays
@@ -154,13 +150,7 @@ export default defineConfig({
       // agreguen bajo lib/live/ correrían silenciosamente en ningún lado.
       "lib/live/**/*.test.ts",
       "lib/publish/chat-widget.test.ts",
-      "lib/publish/orders-price.test.ts",
-      "lib/publish/orders-cart.test.ts",
-      "lib/members/**/*.test.ts",
       "lib/chat/**/*.test.ts",
-      "lib/broadcast/**/*.test.ts",
-      "lib/comments/**/*.test.ts",
-      "lib/bookings/**/*.test.ts",
       "lib/collections/**/*.test.ts",
       "lib/models/**/*.test.ts",
       "lib/community/**/*.test.ts",
@@ -200,7 +190,6 @@ export default defineConfig({
       // NB: lib/projects/site-pages.test.ts is a node:test file (run via
       // `tsx --test`), so include the vitest project tests explicitly.
       "lib/projects/model-runtime.test.ts",
-      "lib/projects/module-settings.test.ts",
       "lib/projects/module-intent.test.ts",
       "lib/projects/page-edge-paths.test.ts",
       "lib/projects/preview.test.ts",

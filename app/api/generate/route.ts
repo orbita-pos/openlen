@@ -5,7 +5,7 @@ import type { BusinessProfile, BusinessProfileData } from "@/lib/business-profil
 import { createVersion } from "@/lib/projects/versions";
 import { getCreditState } from "@/lib/credits";
 import { systemPromptFor } from "./system-prompt";
-import { modelRuntimePromptBlock, pageAllowsRuntime } from "@/lib/ai-stream/model-runtime";
+import { modelRuntimePromptBlock } from "@/lib/ai-stream/model-runtime";
 import { detectSlotPath } from "@/lib/html-engine";
 import { collectDegradations } from "@/lib/ingestion/degradations";
 import { directionToBriefBlock, type StyleDirection } from "@/lib/style-match/direction";
@@ -655,10 +655,11 @@ ${briefBlock}`,
             logoUrl: business.data.brand?.logoUrl ?? null,
             settings: enabledModules.length ? (prepared.report.moduleSettings as never) : undefined,
             degradations: degradations.length > 0 ? degradations : undefined,
-            // Elegibilidad comprobada sobre el HTML FINAL, no sobre el que
-            // escribió el modelo: los bakes de preparePage pueden haber añadido
-            // un formulario o un módulo que en el original no estaba.
-            modelRuntime: runtimeCode && pageAllowsRuntime(html) ? runtimeCode : null,
+            // Sin puerta de elegibilidad: formularios y módulos ya no descalifican
+            // la página (ver la nota en lib/ai-stream/model-runtime.ts). Lo que
+            // sigue atando el código a ESTE documento es la cápsula, y la calcula
+            // createProject sobre el HTML exacto que guarda.
+            modelRuntime: runtimeCode,
           });
         } catch (err) {
           // eslint-disable-next-line no-console

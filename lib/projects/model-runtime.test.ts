@@ -6,7 +6,7 @@ import {
   verifyCapsule,
   RUNTIME_CAPSULE_VERSION,
   authorizeRuntimeForPublish,
-  moduleSurfacesActive,
+  resealRuntime,
 } from "./model-runtime";
 
 const BASE = {
@@ -138,8 +138,6 @@ describe("¿se inyecta en esta publicación?", () => {
     capsule: buildCapsule(BASE),
     pageCount: 0,
     hasCustomDomain: false,
-    pageEligible: true,
-    modulesActive: false,
   };
 
   it("con todo en su sitio, autoriza", () => {
@@ -150,11 +148,27 @@ describe("¿se inyecta en esta publicación?", () => {
     ["el interruptor apagado", { env: {} as unknown as NodeJS.ProcessEnv }, "apagado"],
     ["un dominio propio", { hasCustomDomain: true }, "dominio_propio"],
     ["varias páginas", { pageCount: 2 }, "varias_paginas"],
-    ["formularios o módulos", { pageEligible: false }, "pagina_no_elegible"],
     ["sin cápsula", { capsule: null }, "ausente"],
-    ["un módulo encendido por settings", { modulesActive: true }, "modulos_activos"],
   ])("%s lo omite", (_, delta, reason) => {
     expect(authorizeRuntimeForPublish({ ...base, ...delta })).toEqual({ kind: "skipped", reason });
+  });
+
+  /**
+   * LO QUE YA NO OMITE, y es un cambio de política, no un descuido.
+   *
+   * `pageEligible` y `modulesActive` se quitaron el 2026-08-21: una página con
+   * un formulario de contacto perdía su JavaScript en silencio, y eso le pasaba
+   * a 1 de cada 6 páginas corrientes. La protección se movió a la puerta de
+   * producción (memoria `model-js-production-gate`), que es donde de verdad
+   * estaba el riesgo: `set-password` acepta la cookie ambiental.
+   */
+  it("ni un formulario ni un módulo lo omiten ya — no existen esas puertas", () => {
+    const reasons: string[] = [];
+    for (const delta of [{}, { html: BASE.html }]) {
+      const r = authorizeRuntimeForPublish({ ...base, ...delta });
+      if (r.kind === "skipped") reasons.push(r.reason);
+    }
+    expect(reasons).toEqual([]);
   });
 
   /**
@@ -184,41 +198,69 @@ describe("¿se inyecta en esta publicación?", () => {
 });
 
 /**
- * LA MITAD QUE FALTABA, y la señaló una auditoría externa.
+ * `moduleSurfacesActive` SE QUITÓ el 2026-08-21 y aquí vivían sus pruebas.
  *
- * Los módulos se encienden por `PATCH /api/projects/[id]/settings`, que NO toca
- * el documento. El HTML no cambia → la cápsula sigue cuadrando → y la
- * publicación hornea el widget desde los settings igual. Mirar sólo el marcado
- * dejaba pasar una página con chat Y con JavaScript del modelo, que es
- * exactamente lo que el piloto existe para impedir.
+ * Lo puso una auditoría externa y tenía razón EN SU MOMENTO: los módulos se
+ * encienden por `PATCH /api/projects/[id]/settings`, que no toca el documento,
+ * así que mirar sólo el marcado dejaba pasar una página con chat Y con
+ * JavaScript del modelo.
+ *
+ * 🔴 Se revierte A PROPÓSITO, no por descuido. Tirar el JavaScript era una
+ * herramienta demasiado burda: costaba el JS de 1 de cada 6 páginas corrientes
+ * para tapar un riesgo que vive en OTRO sitio — `set-password` acepta la cookie
+ * ambiental (`app/api/m/[sub]/auth/set-password/route.ts`). La protección se
+ * movió a la puerta de producción, en la memoria `model-js-production-gate`:
+ * `OPENLEN_MODEL_JS=1` no se enciende en producción hasta cerrar ese endpoint o
+ * aislar los módulos en su propio origen.
  */
-describe("los módulos encendidos por settings también descalifican", () => {
-  it("sin settings, nada que descalificar", () => {
-    expect(moduleSurfacesActive(undefined)).toBe(false);
-    expect(moduleSurfacesActive({})).toBe(false);
-    expect(moduleSurfacesActive(null)).toBe(false);
+
+/**
+ * EL FALLO QUE ESTO ARREGLA. `buildCapsule` sólo se llamaba en `createProject`,
+ * así que la primera edición del titular cambiaba los bytes, el hash dejaba de
+ * cuadrar y la página publicada salía SIN su JavaScript — avisando sólo por
+ * consola. El JS del modelo duraba hasta que el usuario tocaba algo.
+ */
+describe("re-sellar: el JavaScript sobrevive a una edición", () => {
+  const EDITADO = BASE.html.replace("hola", "hola de nuevo");
+
+  it("la cápsula nueva cuadra con el documento nuevo", () => {
+    const nueva = resealRuntime({ projectId: BASE.projectId, html: EDITADO, capsule: buildCapsule(BASE) });
+    expect(nueva).not.toBeNull();
+    expect(verifyCapsule(nueva, { projectId: BASE.projectId, html: EDITADO })).toEqual({
+      ok: true,
+      code: BASE.code,
+    });
   });
 
-  it.each(["assistant", "chat", "members", "comments", "bookings", "collections", "orders", "whatsapp"])(
-    "%s encendido descalifica",
-    (m) => {
-      expect(moduleSurfacesActive({ [m]: { enabled: true } })).toBe(true);
-    },
-  );
-
-  it("apagado explícitamente NO descalifica", () => {
-    expect(moduleSurfacesActive({ chat: { enabled: false } })).toBe(false);
+  it("y la vieja ya no — el hash sigue midiendo lo que decía medir", () => {
+    const vieja = buildCapsule(BASE);
+    expect(verifyCapsule(vieja, { projectId: BASE.projectId, html: EDITADO })).toEqual({
+      ok: false,
+      reason: "desajuste",
+    });
   });
 
-  // `forms` no es un interruptor: es el mapa de configuración por formulario.
-  // Que exista una entrada significa que hubo formulario, aunque el marcado
-  // haya cambiado después.
-  it("una configuración de formulario guardada descalifica", () => {
-    expect(moduleSurfacesActive({ forms: { "0": { notifyEmail: "a@b.c" } } })).toBe(true);
-    expect(moduleSurfacesActive({ forms: {} })).toBe(false);
+  /**
+   * LA PROPIEDAD DE SEGURIDAD, y la razón de que esto no debilite el hash: el
+   * código NO se recibe por parámetro, sale de la cápsula que ya estaba
+   * guardada. Re-sellar puede mover el documento al que el código está atado;
+   * es incapaz de introducir código que nadie escribió.
+   */
+  it("re-sellar NO puede introducir código nuevo", () => {
+    const nueva = resealRuntime({ projectId: BASE.projectId, html: EDITADO, capsule: buildCapsule(BASE) });
+    expect(nueva!.code).toBe(BASE.code);
   });
 
-  it("datos vivos también — la página consulta por nuestra API", () => {
-    expect(moduleSurfacesActive({ liveData: { sheetUrl: "https://docs.google.com/x" } })).toBe(true);
+  // Devolver null significa "no toques la columna", NUNCA "bórrala": destruir el
+  // trabajo del modelo por no saber leer su cápsula sería el peor de los fallos.
+  it.each([
+    ["sin cápsula", null],
+    ["indefinida", undefined],
+    ["no es un objeto", "una cadena"],
+    ["sin código", { v: RUNTIME_CAPSULE_VERSION, digest: "a".repeat(64) }],
+    ["código vacío", { v: RUNTIME_CAPSULE_VERSION, code: "", digest: "a".repeat(64) }],
+    ["de una versión que no conocemos", { v: "otra-cosa-v9", code: "var a=1;", digest: "a".repeat(64) }],
+  ])("%s: se deja intacta, no se borra", (_, capsule) => {
+    expect(resealRuntime({ projectId: BASE.projectId, html: EDITADO, capsule })).toBeNull();
   });
 });

@@ -5,6 +5,7 @@ import type { ProjectData } from "@/lib/projects/types";
 import { validatePageSlug } from "@/lib/projects/site-pages";
 import { createVersion } from "@/lib/projects/versions";
 import { sanitizeForPublish } from "@/lib/html-engine";
+import { resealRuntime } from "@/lib/projects/model-runtime";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // PATCH /api/projects/[id]/html — overwrite one of the project's documents:
@@ -95,6 +96,7 @@ export async function PATCH(
     .select({
       data: schema.projects.data,
       updatedAt: schema.projects.updatedAt,
+      generatedRuntime: schema.projects.generatedRuntime,
     })
     .from(schema.projects)
     .where(
@@ -163,10 +165,19 @@ export async function PATCH(
     : { ...baseData, html };
   const now = new Date();
 
+  // El JavaScript del modelo sobrevive a esta edición: la cápsula se vuelve a
+  // atar a los bytes que se guardan ahora. Sin esto, editar un titular dejaba la
+  // página publicada sin su script y el único aviso era un log que nadie lee.
+  // Sólo en el documento raíz — la cápsula ata `data.html`, y una subpágina no
+  // entra en el piloto.
+  const runtime = page
+    ? null
+    : resealRuntime({ projectId: id, html, capsule: existing.generatedRuntime });
+
   try {
     await db
       .update(schema.projects)
-      .set({ data: nextData, updatedAt: now })
+      .set({ data: nextData, updatedAt: now, ...(runtime ? { generatedRuntime: runtime } : {}) })
       .where(
         and(
           eq(schema.projects.id, id),

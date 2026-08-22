@@ -150,11 +150,57 @@ describe("la cadena completa, con base de datos y disco de verdad", () => {
   });
 
   /**
-   * El caso que de verdad ocurre: el usuario edita su página después de
-   * generarla. La cápsula deja de cuadrar y el runtime se cae solo, sin que
-   * nadie haya tenido que acordarse de limpiar nada.
+   * LA EDICIÓN QUE DE VERDAD OCURRE — por el embudo compartido.
+   *
+   * Antes del 2026-08-21 esto fallaba: `buildCapsule` sólo se llamaba al CREAR,
+   * así que la primera edición del titular rompía el hash y la página publicada
+   * salía sin su script, avisando sólo por consola. Con el Chat y el Agente
+   * dentro del alcance —que son superficies de edición— ése habría sido el modo
+   * de fallo principal.
    */
-  it("si se edita el HTML, el runtime deja de publicarse solo", async () => {
+  it("editando por persistPage, el runtime SOBREVIVE", async () => {
+    const { eq } = await import("drizzle-orm");
+    const { persistPage } = await import("../page-engine/persist");
+    process.env.OPENLEN_MODEL_JS = "1";
+    const editado = DOC.replace("Página del piloto", "Título que el usuario cambió");
+
+    const r = await persistPage(
+      { projectId, userId: UID, page: null, html: editado, label: "edición de prueba" },
+      {
+        loadProject: async (id) => {
+          const rows = await db
+            .select({ data: schema.projects.data, generatedRuntime: schema.projects.generatedRuntime })
+            .from(schema.projects)
+            .where(eq(schema.projects.id, id))
+            .limit(1);
+          return rows[0]
+            ? { data: rows[0].data as never, generatedRuntime: rows[0].generatedRuntime }
+            : null;
+        },
+        saveProjectData: async (id, _uid, data, runtime) => {
+          await db
+            .update(schema.projects)
+            .set({ data, ...(runtime ? { generatedRuntime: runtime } : {}) })
+            .where(eq(schema.projects.id, id));
+        },
+        snapshotVersion: async () => {},
+      },
+    );
+    expect(r.ok).toBe(true);
+
+    await publishProject({ projectId, userId: UID, subdomain: SUB, skipFlightCheck: true });
+    const vivo = documentoVivo();
+    expect(vivo).toContain("Título que el usuario cambió");
+    expect(vivo, "el runtime NO sobrevivió a una edición por el embudo").toContain(MARCA);
+  });
+
+  /**
+   * Y LA RED SIGUE PUESTA: un escritor que NO re-sella —aquí, un UPDATE crudo
+   * contra la base de datos— deja la cápsula apuntando a otro documento, y el
+   * publicador lo detecta solo. Es lo que protege del escritor olvidado, que es
+   * justo lo que ningún test puede enumerar.
+   */
+  it("un escritor que NO re-sella pierde el runtime, y eso está bien", async () => {
     const { eq } = await import("drizzle-orm");
     process.env.OPENLEN_MODEL_JS = "1";
     await db
@@ -166,5 +212,28 @@ describe("la cadena completa, con base de datos y disco de verdad", () => {
     const vivo = documentoVivo();
     expect(vivo).toContain("Página editada");
     expect(vivo, "el runtime sobrevivió a una edición del HTML").not.toContain(MARCA);
+  });
+
+  /**
+   * Y AHORA SE VE. Antes, un proyecto con cápsula que se publicaba sin ella
+   * dejaba sólo un `console.log`: el usuario veía una página que no hacía nada
+   * y no tenía forma de saber por qué. Un registro que nadie lee no es una
+   * solución — es la doctrina de degradación de esta casa.
+   *
+   * Depende del test anterior a propósito: ése es el que provoca la pérdida.
+   */
+  it("y la pérdida queda ANOTADA en el proyecto, no sólo en la consola", async () => {
+    const { eq } = await import("drizzle-orm");
+    const [fila] = await db
+      .select({ data: schema.projects.data })
+      .from(schema.projects)
+      .where(eq(schema.projects.id, projectId));
+
+    const aviso = fila?.data?.degradations?.find((d) => d.code === "interactivity_lost");
+    expect(aviso, "la página perdió su JavaScript y nadie se lo dijo al usuario").toBeTruthy();
+    expect(aviso?.surface).toBe("publish");
+    expect(aviso?.detail).toEqual(["desajuste"]);
+    // Un aviso nuevo tiene que verse aunque el usuario hubiera descartado otro.
+    expect(fila?.data?.degradationsDismissed ?? false).toBe(false);
   });
 });

@@ -20,6 +20,10 @@
 
 import { GeminiProvider, type StreamEvent, type StreamRequest } from "@/lib/ai-gateway";
 import { streamWithRetry } from "@/lib/agent/retry";
+import { fireworksStreamProvider } from "@/lib/ai/fireworks-as-stream-provider";
+import { usesDeepSeek } from "@/lib/ai/provider-switch";
+import { extractModelRuntime, modelJsEnabled, modelRuntimePromptBlock } from "@/lib/ai-stream/model-runtime";
+import { swapJsClauses } from "@/lib/ai/js-clause";
 import { DESIGN_GUIDANCE } from "@/lib/design-guidance";
 
 export interface RedesignInput {
@@ -34,16 +38,29 @@ export interface RedesignInput {
 }
 
 export type RedesignOutcome =
-  | { ok: true; html: string; usage: { inputTokens: number; outputTokens: number; cachedTokens: number } }
+  | {
+      ok: true;
+      html: string;
+      usage: { inputTokens: number; outputTokens: number; cachedTokens: number };
+      /** El `<script>` que el modelo escribió, sacado del texto CRUDO antes de
+       *  que el saneado lo borrara. `null` cuando el interruptor está apagado,
+       *  cuando corre Gemini (la cápsula es "deepseek-generate-v1") o cuando el
+       *  modelo no escribió ninguno. */
+      modelRuntime: string | null;
+    }
   | { ok: false; error: string };
 
+/** La superficie mínima del proveedor que el rediseño necesita. Con nombre
+ *  propio para que el adaptador de Fireworks pueda declararla. */
+export interface RedesignProviderLike {
+  stream(
+    request: StreamRequest,
+    opts: { signal?: AbortSignal },
+  ): AsyncIterableIterator<StreamEvent>;
+}
+
 export interface RedesignInternals {
-  provider?: {
-    stream(
-      request: StreamRequest,
-      opts: { signal?: AbortSignal },
-    ): AsyncIterableIterator<StreamEvent>;
-  };
+  provider?: RedesignProviderLike;
   /** Se cobra al dueño por tokens medidos — inyectado por realDeps. */
   debit?: (credits: number) => Promise<void>;
   timeoutMs?: number;
@@ -73,7 +90,7 @@ export function buildRedesignPrompt(input: RedesignInput): string {
 DIRECCIÓN DEL DUEÑO: ${input.direccion}
 ${negocioBlock}${briefBlock}
 REGLAS DURAS DEL REDISEÑO:
-1. CONSERVA todo elemento que lleve un atributo data-ol-* (bandas de módulos como data-ol-bookings-section / data-ol-collection-section / data-ol-comments-section, marcadores de conducta, spans data-ol-live). Puedes moverlos de sección y re-estilizar su envoltorio, pero el elemento y sus atributos data-ol-* sobreviven INTACTOS.
+1. CONSERVA todo elemento que lleve un atributo data-ol-* (bandas de módulos como data-ol-bookings-section / data-ol-collection-section, marcadores de conducta, spans data-ol-live). Puedes moverlos de sección y re-estilizar su envoltorio, pero el elemento y sus atributos data-ol-* sobreviven INTACTOS.
 2. CONSERVA los hechos: nombres, textos con datos concretos (precios, horarios, direcciones, teléfonos) y TODA URL real (href e img src) que exista en el documento actual. Reorganízalos y reescribe el copy alrededor, pero no inventes datos ni URLs nuevas — las únicas imágenes permitidas son las que ya están en el documento.
 3. CONSERVA el idioma del documento actual.
 4. CONSERVA el <title> y los <meta> del <head> actual (puedes reordenarlos).
@@ -144,6 +161,31 @@ export async function redesignWithGemini(
   }
 }
 
+/**
+ * QUIÉN REESCRIBE. DeepSeek, por el mismo transporte que el resto del texto:
+ * un rediseño es escribir una página, no mirar una imagen. Gemini se queda para
+ * los píxeles.
+ *
+ * `OPENLEN_AGENT_PROVIDER=gemini` vuelve atrás — el mismo interruptor que ya
+ * gobierna el cerebro del Agente, no uno nuevo con otra semántica.
+ *
+ * ⚠️ Y ABRE UNA PUERTA: la captura del JavaScript del modelo exige que lo haya
+ * escrito DeepSeek (`RUNTIME_CAPSULE_VERSION` es "deepseek-generate-v1"), así
+ * que con este cambio el rediseño del Agente PUEDE capturar. Cablearlo es un
+ * paso aparte, no automático.
+ */
+function defaultRedesignProvider(apiKey: string): RedesignProviderLike {
+  if (!usesDeepSeek("OPENLEN_AGENT_PROVIDER")) return new GeminiProvider(apiKey);
+  // Sin `jsonObject`: aquí la salida es un documento HTML, no JSON.
+  return fireworksStreamProvider({
+    requestId: "agent-redesign",
+    // Reescribir una página entera es el mismo trabajo que edita el Chat.
+    operation: "page_edit",
+    maxOutputTokens: MAX_OUTPUT_TOKENS,
+    temperature: TEMPERATURE,
+  });
+}
+
 async function runRedesign(
   input: RedesignInput,
   model: string,
@@ -151,7 +193,7 @@ async function runRedesign(
   internals: RedesignInternals,
   signal: AbortSignal,
 ): Promise<RedesignOutcome> {
-  const provider = internals.provider ?? new GeminiProvider(apiKey);
+  const provider = internals.provider ?? defaultRedesignProvider(apiKey);
   try {
     let raw = "";
     const usage = { inputTokens: 0, outputTokens: 0, cachedTokens: 0 };
@@ -162,7 +204,14 @@ async function runRedesign(
         provider.stream(
           {
             model,
-            messages: [{ role: "user", content: buildRedesignPrompt(input) }],
+            messages: [{
+              role: "user",
+              // La cláusula sólo voltea donde HAY captura: el rediseño produce un
+              // documento entero, `editar_pagina` emite ops y no puede llevarla.
+              content:
+                swapJsClauses(buildRedesignPrompt(input), ["rediseno"], process.env) +
+                modelRuntimePromptBlock(process.env),
+            }],
             maxOutputTokens: MAX_OUTPUT_TOKENS,
             temperature: TEMPERATURE,
           },
@@ -197,7 +246,27 @@ async function runRedesign(
       await internals.debit(credits).catch(() => {});
     }
 
-    return { ok: true, html, usage };
+    // EL SCRIPT DEL MODELO. Se lee del CRUDO: para cuando existe el documento
+    // extraído, el saneado de la publicación ya lo habría borrado.
+    //
+    // Sólo si lo escribió DeepSeek — firmar bytes de un proveedor creyéndolos de
+    // otro es justo lo que un hash no puede detectar. Con
+    // `OPENLEN_AGENT_PROVIDER=gemini` esto devuelve `null` y el rediseño sigue
+    // funcionando, sin interactividad.
+    const modelRuntime = (() => {
+      if (!modelJsEnabled(process.env) || !usesDeepSeek("OPENLEN_AGENT_PROVIDER")) return null;
+      const r = extractModelRuntime(raw);
+      if (!r.ok) {
+        if (r.reason !== "ausente") {
+          // eslint-disable-next-line no-console
+          console.warn(`[redesign] runtime del modelo descartado: ${r.reason}`);
+        }
+        return null;
+      }
+      return r.code;
+    })();
+
+    return { ok: true, html, usage, modelRuntime };
   } catch (err) {
     return {
       ok: false,

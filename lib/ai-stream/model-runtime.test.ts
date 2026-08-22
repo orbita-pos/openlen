@@ -3,7 +3,6 @@ import { describe, expect, it } from "vitest";
 import {
   extractModelRuntime,
   modelJsEnabled,
-  pageAllowsRuntime,
   MAX_RUNTIME_BYTES,
   MODEL_RUNTIME_ATTR,
   modelRuntimePromptBlock,
@@ -93,24 +92,23 @@ describe("lo que se rechaza, y por qué", () => {
   });
 });
 
-describe("qué página puede llevarlo", () => {
-  it("una de presentación, sí", () => {
-    expect(pageAllowsRuntime(doc("<p>texto</p>"))).toBe(true);
+/**
+ * `pageAllowsRuntime` SE QUITÓ el 2026-08-21 y aquí vivían sus pruebas.
+ *
+ * Descalificaba la página entera si el HTML traía un `<form>` o el marcador de
+ * un módulo. Medido: 1 de cada 6 páginas corrientes perdía su JavaScript EN
+ * SILENCIO por llevar un formulario de contacto. Jesús: «no debe tirar el JS si
+ * hay módulos, prefiero que los módulos los hagamos diferente a eso».
+ *
+ * NO se re-introduce sin quitar antes la puerta de producción que la sustituye
+ * (memoria `model-js-production-gate`). Esta prueba existe para que reinstalarla
+ * sea una decisión visible y no un parche silencioso.
+ */
+describe("ninguna forma del documento descalifica ya a la página", () => {
+  it("el módulo de ingestión ya no exporta una puerta de elegibilidad", async () => {
+    const mod = await import("./model-runtime");
+    expect(Object.keys(mod)).not.toContain("pageAllowsRuntime");
   });
-
-  // Las superficies con datos de un visitante quedan fuera del piloto: mientras
-  // el runtime no esté contenido, el script comparte origen con esas APIs y la
-  // cookie del miembro viaja sola en cada fetch.
-  it("con formulario, no", () => {
-    expect(pageAllowsRuntime(doc(`<form><input name="email"></form>`))).toBe(false);
-  });
-
-  it.each(["bookings", "collection", "members", "orders", "chat", "comments"])(
-    "con módulo de %s, tampoco",
-    (m) => {
-      expect(pageAllowsRuntime(doc(`<section data-ol-${m}-section></section>`))).toBe(false);
-    },
-  );
 });
 
 /** Una variable mal escrita no puede encender esto por accidente. */
@@ -145,7 +143,10 @@ describe("el bloque de prompt", () => {
 
   it("le dice que la página debe funcionar SIN el script", () => {
     const b = modelRuntimePromptBlock(on);
-    expect(b).toMatch(/COMPLETA y legible sin él/);
+    expect(b).toMatch(/COMPLETA y legible sin el script/);
+    // Y el corolario que faltaba: esconder contenido en CSS para revelarlo desde
+    // el script convierte "se descartó el runtime" en "la página llegó vacía".
+    expect(b).toMatch(/escondas contenido con CSS/);
   });
 
   it("le prohíbe la red, que es justo lo que la CSP bloquea", () => {

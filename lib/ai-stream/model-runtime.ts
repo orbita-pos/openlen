@@ -105,19 +105,32 @@ export function extractModelRuntime(rawHtml: string): RuntimeExtraction {
   return { ok: true, code };
 }
 
-/** Lo que descalifica a la PÁGINA, no al script. Son las superficies con datos
- *  de un visitante: mientras el runtime no esté contenido, una página con
- *  formularios o módulos no entra en el piloto. Se comprueba sobre el HTML ya
- *  canónico, y se vuelve a comprobar al publicar. */
-export function pageAllowsRuntime(html: string): boolean {
-  if (/<form[\s>]/i.test(html)) return false;
-  if (/data-ol-(bookings|collection|members|orders|chat|comments)-section/i.test(html)) return false;
-  return true;
-}
+// `pageAllowsRuntime` VIVÍA AQUÍ y se quitó el 2026-08-21, a petición de Jesús:
+// «no debe tirar el JS si hay módulos, prefiero que los módulos los hagamos
+// diferente a eso». Descalificaba la página entera si el HTML traía un `<form>`
+// o el marcador de un módulo, y el efecto medido era que 1 de cada 6 páginas
+// corrientes perdía su JavaScript EN SILENCIO por llevar un formulario de
+// contacto.
+//
+// 🔴 SE REVIERTE A PROPÓSITO UNA PUERTA QUE PUSO UNA AUDITORÍA (7bc7940c). La
+// protección no desaparece, se MUEVE: el riesgo real no era el formulario —
+// `form-action` y `connect-src` son `'self'`, así que un script sólo alcanza el
+// buzón de su propia página— sino que un script actúe como el VISITANTE
+// IDENTIFICADO contra nuestras APIs. Eso hoy lo tapa la puerta de producción, no
+// esta función: `OPENLEN_MODEL_JS=1` NO puede encenderse en producción hasta que
+// `app/api/m/[sub]/auth/set-password/route.ts` exija algo más que la cookie
+// ambiental, o los módulos vivan en su propio origen. Está escrito en la memoria
+// `model-js-production-gate` y en el plan.
 
 /** Opt-in EXACTO. Ni "true", ni "yes", ni vacío: sólo "1". Una variable de
- *  entorno mal escrita no puede encender esto por accidente. */
-export function modelJsEnabled(env: NodeJS.ProcessEnv): boolean {
+ *  entorno mal escrita no puede encender esto por accidente.
+ *
+ *  El parámetro es deliberadamente MÁS ANCHO que `NodeJS.ProcessEnv`: los
+ *  ensambladores de prompt reciben un `Readonly<Record<…>>` para poder pasarles
+ *  un entorno de mentira en las pruebas, y `ProcessEnv` —con su índice
+ *  mutable— no lo acepta. Ensanchar aquí evita que cada llamador repita la
+ *  comparación con `"1"` por su cuenta, que es como se pierde el opt-in exacto. */
+export function modelJsEnabled(env: Readonly<Record<string, string | undefined>>): boolean {
   return env.OPENLEN_MODEL_JS === "1";
 }
 
@@ -129,24 +142,29 @@ export function modelJsEnabled(env: NodeJS.ProcessEnv): boolean {
  * con el interruptor apagado, así que ninguna generación normal paga un solo
  * token por una capacidad que no puede usar.
  *
+ * ORDEN Y TONO, medidos. La versión anterior abría con "(opcional — sólo si esta
+ * página gana algo real con ella)", ponía cinco de sus ocho líneas en negativo y
+ * CERRABA con "si la página no gana nada, no incluyas el bloque". Leído entero
+ * empujaba a omitir, y eso hacía el modelo: 0 de 6 páginas con JavaScript. Aquí
+ * el permiso va primero y en afirmativo, con ejemplos de PARA QUÉ sirve, y los
+ * límites después y agrupados. Con este orden salieron 2 de 2.
+ *
  * Se le dice que el DOM debe funcionar sin el script, y no por cortesía: el
  * runtime puede rechazarse aquí por diez motivos distintos, y una página cuya
  * información sólo existe si el JavaScript corre sería una página vacía.
  */
-export function modelRuntimePromptBlock(env: NodeJS.ProcessEnv): string {
+export function modelRuntimePromptBlock(
+  env: Readonly<Record<string, string | undefined>>,
+): string {
   if (!modelJsEnabled(env)) return "";
   return `
 
-INTERACCIÓN CON JAVASCRIPT (opcional — sólo si esta página gana algo real con ella):
-Puedes incluir UN único bloque, el último del body, exactamente así:
+INTERACCIÓN CON JAVASCRIPT
+Puedes escribir el JavaScript de esta página. Va en UN bloque, el último del body:
 <script ${MODEL_RUNTIME_ATTR}>
-  // JavaScript clásico. Sin src, sin type="module", sin import, sin fetch a otros dominios.
+  // JavaScript clásico.
 </script>
-Reglas que se comprueban y que, si se incumplen, descartan el bloque entero:
-- Uno solo, inline, y nada de \`src\` ni \`type="module"\`.
-- Máximo ${Math.floor(MAX_RUNTIME_BYTES / 1024)} KiB.
-- La página tiene que estar COMPLETA y legible sin él: el script mejora, nunca construye el contenido.
-- Sin red: ni fetch, ni XMLHttpRequest, ni WebSocket, ni Worker. La política de la página los bloquea.
-- No lo uses para formularios ni para nada que envíe datos de un visitante.
-Si la página no gana nada con interacción, no incluyas el bloque.`;
+Úsalo para lo que el CSS no alcanza: filtrar una lista por categoría, una galería con lightbox, pestañas, una cuenta atrás, buscar dentro de la propia página, un carrusel.
+Límites: uno solo, en línea, sin \`src\` ni \`type="module"\`, máximo ${Math.floor(MAX_RUNTIME_BYTES / 1024)} KiB, sin red (fetch, XMLHttpRequest, WebSocket y Worker los bloquea la política de la página), y nada que envíe datos de un visitante. Si alguno se incumple se descarta el bloque entero.
+La página tiene que estar COMPLETA y legible sin el script: mejora, nunca construye el contenido. Nunca escondas contenido con CSS para revelarlo desde el script — si el script se descarta, la página llega en blanco.`;
 }

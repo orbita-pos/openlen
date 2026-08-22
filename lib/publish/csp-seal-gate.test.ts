@@ -130,3 +130,48 @@ describe("OPENLEN_CSP_SEAL=strict aborta antes de tocar el disco", () => {
     assert.notEqual(r.sha, shaBueno);
   });
 });
+
+/**
+ * EL SCRIPT DEL MODELO NO VIAJA SIN POLÍTICA.
+ *
+ * Para el resto del documento, perder la CSP es una degradación: sigue siendo
+ * HTML estático y no miente. Para un `<script>` en línea escrito por el modelo
+ * NO lo es — la política es justo lo que lo autoriza, por hash, y sin ella la
+ * página saldría con código sin ninguna restricción de salida.
+ *
+ * Y la página se publica IGUAL, sólo que sin el script: por contrato está
+ * completa sin él. Abortar la publicación entera le cobraría al usuario un
+ * fallo nuestro.
+ */
+describe("el JavaScript del modelo se cae si el sellado se pierde", () => {
+  const MARCA = "__RUNTIME_QUE_NO_DEBE_VIAJAR__";
+  const CODIGO = `window.${MARCA} = 1;`;
+  const leer = (sub: string, sha: string) =>
+    readFileSync(path.join(root, sub, "releases", sha, "index.html"), "utf8");
+
+  after(() => rmSync(root, { recursive: true, force: true }));
+
+  it("si se sella bien, el script SÍ viaja", async () => {
+    const r = await publishToDir({ subdomain: "conpolitica", html: LIMPIO, modelRuntime: CODIGO });
+    assert.equal(r.runtimeDropped, null);
+    assert.deepEqual(r.unsealed, []);
+    assert.match(leer("conpolitica", r.sha), new RegExp(MARCA));
+  });
+
+  it("si el sellado se pierde, la página se publica SIN el script", async () => {
+    const r = await publishToDir({ subdomain: "sinpolitica", html: CON_CSP_PROPIA, modelRuntime: CODIGO });
+    const doc = leer("sinpolitica", r.sha);
+    assert.equal(r.runtimeDropped, "sin CSP sellada");
+    assert.doesNotMatch(doc, new RegExp(MARCA), "el script viajó SIN política");
+    // La página sigue publicándose: perder la interactividad no puede costar
+    // la publicación entera.
+    assert.match(doc, /trae su propia política/);
+  });
+
+  // Si la versión sin script tampoco se puede sellar —es el mismo documento—
+  // la pérdida se cuenta UNA vez, no dos.
+  it("y el documento sin política se cuenta una sola vez", async () => {
+    const r = await publishToDir({ subdomain: "unavez", html: CON_CSP_PROPIA, modelRuntime: CODIGO });
+    assert.deepEqual(r.unsealed, ["/"]);
+  });
+});

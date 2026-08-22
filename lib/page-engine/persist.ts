@@ -1,6 +1,7 @@
 import "server-only";
 
 import type { ProjectData } from "@/lib/projects/types";
+import { buildCapsule, resealRuntime, type ModelRuntimeCapsule } from "@/lib/projects/model-runtime";
 
 /**
  * Guardar una página editada, en un solo sitio.
@@ -29,11 +30,31 @@ export interface PersistPageInput {
   readonly settings?: ProjectData["settings"];
   /** Marca la versión como nueva línea base — una reescritura completa lo es. */
   readonly isBaseline?: boolean;
+  /** Un `<script>` que el modelo acaba de escribir, sacado de su respuesta CRUDA
+   *  (`extractModelRuntime`). Sólo llega desde superficies que producen un
+   *  DOCUMENTO completo — una reescritura del Chat, un rediseño del Agente.
+   *
+   *  `undefined`/`null` NO borra nada: una edición por ops no trae script y lo
+   *  que corresponde entonces es RE-SELLAR el que ya había, no tirarlo. Borrar
+   *  el trabajo del modelo porque este turno no produjo uno sería el peor
+   *  comportamiento posible. */
+  readonly modelRuntime?: string | null;
 }
 
 export interface PersistPageDeps {
-  readonly loadProject: (projectId: string, userId: string) => Promise<{ data: ProjectData } | null>;
-  readonly saveProjectData: (projectId: string, userId: string, data: ProjectData) => Promise<void>;
+  readonly loadProject: (
+    projectId: string,
+    userId: string,
+  ) => Promise<{ data: ProjectData; generatedRuntime?: unknown } | null>;
+  /** `runtime` sólo llega cuando hay que RE-ATAR el JavaScript del modelo al
+   *  documento nuevo. Viaja en el mismo UPDATE a propósito: hacerlo aparte
+   *  costaría un SELECT en cada edición de cada proyecto, tenga cápsula o no. */
+  readonly saveProjectData: (
+    projectId: string,
+    userId: string,
+    data: ProjectData,
+    runtime?: ModelRuntimeCapsule | null,
+  ) => Promise<void>;
   /** Best-effort por contrato: perder un snapshot no puede costar la edición. */
   readonly snapshotVersion: (input: {
     projectId: string;
@@ -88,7 +109,31 @@ export async function persistPage(
     });
   }
 
-  await deps.saveProjectData(input.projectId, input.userId, nextData);
+  // El JavaScript del modelo sobrevive a la edición. El hash ata
+  // `projectId + html + code`, así que sin esto la primera edición del titular
+  // dejaba la página publicada sin su script, avisando sólo por consola.
+  //
+  // Sólo el documento de inicio: la cápsula ata `data.html` y una subpágina no
+  // entra en el piloto. Y el código sale de la cápsula guardada, nunca de aquí
+  // — re-sellar puede mover el documento, jamás introducir código nuevo.
+  //
+  // Si este turno trajo un script NUEVO, manda ése y se sella sobre el documento
+  // que se va a guardar. Si no, se re-sella el que ya había.
+  const runtime = input.page
+    ? null
+    : input.modelRuntime
+      ? buildCapsule({
+          projectId: input.projectId,
+          html: input.html,
+          code: input.modelRuntime,
+        })
+      : resealRuntime({
+          projectId: input.projectId,
+          html: input.html,
+          capsule: row.generatedRuntime ?? null,
+        });
+
+  await deps.saveProjectData(input.projectId, input.userId, nextData, runtime);
 
   await deps.snapshotVersion({
     projectId: input.projectId,
