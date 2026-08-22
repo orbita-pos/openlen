@@ -137,10 +137,18 @@ public/openlen-images/motion/
 /.photo-export/
 /.photo-batch*/
 /spike/
-/scratch/visual-engine-2a/
-/scratch/visual-engine-2b/
-/scratch/visual-engine-2c/
-/scratch/fable-parity/
+
+# scratch/ ENTERO. Antes se ignoraban cinco subcarpetas sueltas, asi que todo
+# lo que caia en la raiz de scratch/ quedaba a un `git add -A` de publicarse —
+# y este repo es PUBLICO (AGPL v3). Medido el 2026-08-22: 739 ficheros sin
+# versionar ahi dentro (sondas, paginas generadas, respuestas del modelo,
+# capturas). Ninguno es codigo del producto; los que si lo fueran no viven en
+# una carpeta llamada "scratch".
+#
+# Los dos ficheros que YA estaban versionados (hero-backdrop-fixed.mjs,
+# sanitize-damage-probe.mts) siguen rastreados: .gitignore no desrastrea nada.
+# Si algun dia estorban, `git rm --cached` es una decision aparte.
+/scratch/
 
 # Tematica art workbench (originals archive + smoke screenshots — local only)
 .tematicas-art/
