@@ -16,6 +16,7 @@
 import { detectSiteAccent } from "@/lib/publish/site-accent";
 import type { ItemRow } from "@/lib/collections/store";
 import { inkOn } from "@/lib/publish/color-utils";
+import { fillCollectionTemplate } from "@/lib/publish/collection-template";
 
 const WIDGET_MARKER = "data-ol-collection-widget";
 const SECTION_MARKER = "data-ol-collection-section";
@@ -189,12 +190,20 @@ export function renderCollectionsWidget(html: string, cfg: CollectionsBakeConfig
 
 /** Bake the collection grid/list into the page. Idempotent. Replaces the
  *  data-ol-collection-section placeholder, else appends before </body>. With no
- *  items it just clears the placeholder (so the dashed editor box never ships). */
+ *  items it just clears the placeholder (so the dashed editor box never ships).
+ *
+ *  RUTA PREFERENTE: si la página trae tarjetas marcadas por el modelo
+ *  (`data-ol-item`), se repiten ÉSAS y esta rejilla no llega a dibujarse — el
+ *  gusto lo pone la página, no nosotros. Todo lo de abajo es la ruta de las
+ *  páginas anteriores a ese contrato, que sólo llevan el hueco vacío. */
 export function bakeCollections(
   html: string,
   cfg: CollectionsBakeConfig,
   allowAppend = true,
 ): string {
+  const plantilla = fillCollectionTemplate(html, cfg.items);
+  if (plantilla.touched) return plantilla.html;
+
   if (html.includes(WIDGET_MARKER)) return html;
 
   const accent = detectSiteAccent(html) ?? FALLBACK_ACCENT;

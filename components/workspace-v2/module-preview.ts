@@ -15,6 +15,10 @@
 
 import { bakeWhatsAppButton } from "@/lib/publish/whatsapp-button";
 import { renderCollectionsWidget } from "@/lib/publish/collections-block";
+import {
+  hasCollectionTemplate,
+  previewCollectionCards,
+} from "@/lib/publish/collection-template";
 import { renderPlatformsBand } from "@/lib/business-profiles/platforms-band";
 import { findMarkerTag } from "@/lib/publish/tag-attrs";
 import { detectHtmlLang } from "@/lib/publish/language-cluster";
@@ -201,7 +205,15 @@ export function injectEditorModulesPreview(
 
   const col = cfg.collections;
   if (col) {
-    if (col.items.length) {
+    // Página con tarjetas del modelo: se enseñan SUS tarjetas con los datos
+    // reales. Ni la rejilla genérica ni los fantasmas pueden entrar aquí —
+    // irían ENCIMA de una sección que ya está diseñada y llena.
+    if (hasCollectionTemplate(out)) {
+      out = previewCollectionCards(out, col.items, {
+        marker: MODULES_PREVIEW_MARKER,
+        attrs: { "data-openlen-no-edit": "" },
+      });
+    } else if (col.items.length) {
       const widget = renderCollectionsWidget(out, {
         items: col.items,
         layout: col.layout,

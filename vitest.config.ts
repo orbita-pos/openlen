@@ -128,6 +128,7 @@ export default defineConfig({
       "lib/site-assistant/**/*.test.ts",
       "lib/publish/assistant-widget.test.ts",
       "lib/publish/collections-block.test.ts",
+      "lib/publish/collection-template.test.ts",
       "lib/publish/llms-txt.test.ts",
       "lib/publish/video-embed.test.ts",
       "lib/publish/module-sections.test.ts",

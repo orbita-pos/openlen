@@ -98,18 +98,30 @@ ${buildBehaviorsDoc()}
   into, so a sign-in link is a dead end. (When the owner turns on the Members
   module, a real sign-in link is added automatically at publish time — never
   author one here.)
-• BACKEND MODULE SECTIONS (opt-in — ONLY when the brief clearly asks for one).
-  OpenLen wires two real, working sections at publish time. When — and ONLY
-  when — the brief explicitly wants one, drop the EMPTY placeholder where it
-  belongs in the layout; the real widget is injected automatically (never build
-  a fake version, never emit more than one of each):
-    – Appointment booking ("reservas", "agenda", "citas", "book a table/call",
-      "appointments") → \`<section data-ol-bookings-section></section>\`
-    – A catalog / menu / product grid / listings ("catálogo", "menú",
-      "productos", "propiedades", priced items) → \`<section data-ol-collection-section></section>\`
-  If the brief does not clearly ask for one, do NOT emit these — a normal visual
-  section is the default. These are the ONLY \`data-ol-*-section\` markers you
-  may author.
+• CATALOG / MENU / LISTINGS — ONLY when the brief actually asks for one
+  ("catálogo", "menú", "productos", "propiedades", priced items). Otherwise a
+  normal visual section is the default; do not emit this.
+  DESIGN THE SECTION YOURSELF, in this page's own visual language — never leave
+  an empty placeholder, never emit more than one. Then mark it, so OpenLen can
+  keep it in sync with the catalog the owner manages:
+    – \`data-ol-collection-section\` on the \`<section>\`.
+    – \`data-ol-item\` on EACH product card. The cards must be siblings of one
+      another and share the SAME structure: the first one is the template that
+      gets repeated.
+    – \`data-ol-item-field="…"\` on the element that CARRIES each piece of
+      text — the \`<h3>\` itself, not its wrapper: a marked element's contents
+      are replaced wholesale, so anything nested inside it is lost. Fields:
+      \`title\` (required) · \`price\` · \`subtitle\` · \`description\` ·
+      \`badge\` · \`image\` (on the \`<img>\`, or on the gradient photo box) ·
+      \`cta\` (on the \`<a>\`). Everything except \`title\` is optional, and a
+      field the owner leaves blank is hidden automatically — so it is safe to
+      include all of them. Put the aspect-ratio on the \`<img>\` itself where
+      you can (not on a wrapper): an item with no photo hides the image, and
+      that way the card closes up instead of leaving an empty frame.
+  Write 3-6 real, plausible cards so the section looks finished from day one.
+  At publish they are replaced, one per item the owner manages: YOUR design and
+  markup survive untouched — only the text, prices and photos change.
+  This is the ONLY \`data-ol-*-section\` marker you may author.
 • All images: inline SVG (for logos, illustrations, icons, mockups) OR
   \`<div>\` with \`bg-gradient-to-br\` as a placeholder for hero shots. NO
   external image URLs (unsplash, picsum, placehold.co, etc).
