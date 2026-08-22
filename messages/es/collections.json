@@ -66,6 +66,9 @@
   },
   "sheetBacked": {
     "banner": "Esta lista se sincroniza desde tu Google Sheet. Edítala en el Sheet y tu página se actualiza sola.",
-    "openSheet": "Abrir Sheet"
+    "openSheet": "Abrir Sheet",
+    "disconnect": "Desconectar",
+    "disconnectHint": "Los productos ya sincronizados se quedan y vuelven a ser editables.",
+    "disconnectError": "No se pudo desconectar. Inténtalo otra vez."
   }
 }

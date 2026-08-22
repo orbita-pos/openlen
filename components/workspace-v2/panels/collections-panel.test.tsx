@@ -154,3 +154,83 @@ describe("CollectionsPanel — Task 16 sheet-backed read-only UI", () => {
     });
   });
 });
+
+/**
+ * DESCONECTAR EL SHEET. Antes no existía en ninguna superficie: conectar una
+ * hoja dejaba la colección de SOLO LECTURA para siempre —el API 409ea toda
+ * mutación manual— y la única salida era `OPENLEN_LIVE_DATA=0`, el kill-switch
+ * GLOBAL del servidor, que apaga los datos vivos de todos los proyectos.
+ */
+describe("CollectionsPanel — desconectar el Sheet", () => {
+  const CONECTADA = {
+    collection: { id: "c1", name: "Menu", preset: "menu", layout: "grid" },
+    items: ITEMS,
+    sheetBacked: true,
+    sheetUrl: "https://docs.google.com/spreadsheets/d/xyz/edit",
+  };
+
+  it("el botón sólo aparece cuando hay una hoja conectada", async () => {
+    globalThis.fetch = mockFetch({ ...CONECTADA, sheetBacked: false, sheetUrl: null });
+    const { container, root } = renderPanel({ currentProjectId: "p1" });
+    roots.push(root);
+    await flush();
+    expect(container.textContent).not.toContain("sheetBacked.disconnect");
+  });
+
+  it("dice que lo ya sincronizado se queda ANTES de pulsarlo", async () => {
+    // Si el usuario no sabe que no pierde su catálogo, no pulsa — y se queda
+    // encerrado igual que antes.
+    globalThis.fetch = mockFetch(CONECTADA);
+    const { container, root } = renderPanel({ currentProjectId: "p1" });
+    roots.push(root);
+    await flush();
+    expect(container.textContent).toContain("sheetBacked.disconnectHint");
+  });
+
+  it("pulsarlo manda DELETE a la ruta de la fuente y recarga el panel", async () => {
+    const llamadas: Array<[string, string]> = [];
+    globalThis.fetch = vi.fn(async (url: unknown, init?: unknown) => {
+      llamadas.push([String(url), (init as RequestInit | undefined)?.method ?? "GET"]);
+      return { ok: true, json: async () => CONECTADA };
+    }) as unknown as typeof fetch;
+
+    const { container, root } = renderPanel({ currentProjectId: "p1" });
+    roots.push(root);
+    await flush();
+
+    const boton = Array.from(container.querySelectorAll("button")).find((b) =>
+      b.textContent?.includes("sheetBacked.disconnect"),
+    ) as HTMLButtonElement;
+    expect(boton, "no se pintó el botón de desconectar").toBeTruthy();
+
+    await act(async () => {
+      boton.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+    await flush();
+
+    expect(llamadas).toContainEqual(["/api/projects/p1/collections/source", "DELETE"]);
+    // Y vuelve a leer, para que el panel se destrabe solo sin recargar la app.
+    expect(llamadas.filter(([u, m]) => u.endsWith("/collections/items") && m === "GET").length)
+      .toBeGreaterThanOrEqual(2);
+  });
+
+  it("si el servidor falla, lo dice en vez de fingir que se desconectó", async () => {
+    let n = 0;
+    globalThis.fetch = vi.fn(async () => {
+      n++;
+      return n === 1 ? { ok: true, json: async () => CONECTADA } : { ok: false, status: 500, json: async () => ({}) };
+    }) as unknown as typeof fetch;
+
+    const { container, root } = renderPanel({ currentProjectId: "p1" });
+    roots.push(root);
+    await flush();
+    const boton = Array.from(container.querySelectorAll("button")).find((b) =>
+      b.textContent?.includes("sheetBacked.disconnect"),
+    ) as HTMLButtonElement;
+    await act(async () => {
+      boton.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+    await flush();
+    expect(container.textContent).toContain("sheetBacked.disconnectError");
+  });
+});

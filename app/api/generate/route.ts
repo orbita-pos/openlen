@@ -16,6 +16,7 @@ import { critiqueGeneratedPage } from "@/lib/ai/vision-critique";
 import { recordCriticRun, recordRegenOutcome } from "@/lib/ai/quality-metrics";
 import type { InlineImage, Message } from "@/lib/ai-gateway";
 import { preparePage } from "@/lib/page-engine/prepare";
+import { buildBusinessFacts } from "@/lib/business-profiles/facts";
 import { jsonResponse, sseChannel } from "@/lib/ai/sse";
 import { extractDocument } from "@/lib/ai/extract-document";
 import { LANGUAGE_RULE } from "@/lib/ai/authoring-rules";
@@ -731,34 +732,6 @@ function extractTitle(html: string): string | null {
   return inner && inner.length > 0 ? inner.slice(0, 200) : null;
 }
 
-// Build a <business> instruction block from the saved profile so the model
-// writes the page around the user's REAL facts (name / what-they-do / contact)
-// instead of inventing them. Returns null when the profile has nothing real —
-// the page is then generated exactly as it was before profiles existed.
-function buildBusinessFacts(data: BusinessProfileData): string | null {
-  const lines: string[] = [];
-  const add = (label: string, v: string | null | undefined) => {
-    if (typeof v === "string" && v.trim()) lines.push(`- ${label}: ${v.trim()}`);
-  };
-  add("Business name", data.business_name);
-  add("What they do", data.industry);
-  add("Tagline", data.tagline_es ?? data.tagline_en);
-  add("Pitch", data.pitch);
-  const c = data.contact;
-  add("WhatsApp", c?.whatsapp);
-  add("Phone", c?.phone);
-  add("Email", c?.email);
-  add("Address", c?.address);
-  add("Instagram", c?.socials?.instagram);
-  add("Facebook", c?.socials?.facebook);
-  add("TikTok", c?.socials?.tiktok);
-  add("Website", c?.socials?.website);
-  if (lines.length === 0) return null;
-  return `<business>
-These are the user's REAL business details. Use them as the page's actual content — the business name, what they do, and any contact info must be these exact values, NOT invented. Weave the contact details into the page naturally (e.g. a contact section / footer). Do not fabricate other contact methods.
-${lines.join("\n")}
-</business>`;
-}
 
 
 /** El cuerpo vive en lib/ai/sse. */

@@ -171,6 +171,12 @@ export interface ProjectFull extends ProjectSummary {
   /** Persisted Chat-tab transcript — seeds the chat on load. Empty array
    *  when the project has never been chatted (column NULL). */
   chatHistory: StoredChatTurn[];
+  /** La cápsula del JavaScript del modelo, TAL CUAL se leyó. Se devuelve para
+   *  que quien reescriba `data.html` pueda re-sellarla (`resealRuntime`): sin
+   *  eso la página se publica sin su interactividad y el único aviso es una
+   *  degradación que nadie lee. La consulta ya la traía —`select()` sin
+   *  columnas—, sólo no se devolvía. */
+  generatedRuntime: unknown;
 }
 
 function publishBaseHost(): string {
@@ -440,6 +446,7 @@ export async function getProject(
     updatedAt: row.updatedAt,
     data,
     chatHistory,
+    generatedRuntime: row.generatedRuntime,
   };
 }
 

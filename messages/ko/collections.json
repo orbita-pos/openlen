@@ -66,6 +66,9 @@
   },
   "sheetBacked": {
     "banner": "이 목록은 Google 시트에서 동기화됩니다. 시트에서 수정하면 페이지가 자동으로 업데이트됩니다.",
-    "openSheet": "시트 열기"
+    "openSheet": "시트 열기",
+    "disconnect": "연결 해제",
+    "disconnectHint": "이미 동기화된 항목은 그대로 남고 다시 편집할 수 있습니다.",
+    "disconnectError": "연결을 해제하지 못했습니다. 다시 시도해 주세요."
   }
 }

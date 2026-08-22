@@ -2,6 +2,7 @@ import { and, eq } from "drizzle-orm";
 import { captureException } from "@inariwatch/capture";
 import { auth } from "@/auth";
 import { db, schema } from "@/lib/db";
+import { resealRuntime } from "@/lib/projects/model-runtime";
 import type { ProjectData } from "@/lib/projects/types";
 import { createVersion } from "@/lib/projects/versions";
 import { getCreditState, debitCredits, AUTOFILL_CREDIT_COST } from "@/lib/credits";
@@ -119,7 +120,7 @@ export async function POST(req: Request) {
   }
 
   const rows = await db
-    .select({ data: schema.projects.data })
+    .select({ data: schema.projects.data, generatedRuntime: schema.projects.generatedRuntime })
     .from(schema.projects)
     .where(
       and(eq(schema.projects.id, projectId), eq(schema.projects.userId, userId)),
@@ -315,9 +316,17 @@ export async function POST(req: Request) {
             ...(existing.data ?? {}),
             html: finalHtml,
           };
+          // El JavaScript del modelo sobrevive al autorrelleno: la cápsula se
+          // re-ata a los bytes que se guardan ahora. Autofill sólo escribe el
+          // documento raíz, así que no hay caso de subpágina.
+          const runtime = resealRuntime({
+            projectId,
+            html: finalHtml,
+            capsule: existing.generatedRuntime,
+          });
           await db
             .update(schema.projects)
-            .set({ data: nextData, updatedAt: now })
+            .set({ data: nextData, updatedAt: now, ...(runtime ? { generatedRuntime: runtime } : {}) })
             .where(
               and(
                 eq(schema.projects.id, projectId),

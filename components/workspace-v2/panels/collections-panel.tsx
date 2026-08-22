@@ -52,6 +52,7 @@ export function CollectionsPanel({ currentProjectId }: { currentProjectId?: stri
   // silent 409 on their first click.
   const [sheetBacked, setSheetBacked] = useState(false);
   const [sheetUrl, setSheetUrl] = useState<string | null>(null);
+  const [desconectando, setDesconectando] = useState(false);
 
   const load = (pid: string) => {
     setError(null);
@@ -110,6 +111,26 @@ export function CollectionsPanel({ currentProjectId }: { currentProjectId?: stri
     );
   }
 
+  /** Deja de sincronizar con el Sheet. Lo ya sincronizado se queda: el endpoint
+   *  sólo borra la fuente, nunca los ítems. Al recargar, `sheetBacked` vuelve
+   *  false y el panel entero se vuelve editable otra vez. */
+  const desconectarSheet = async () => {
+    if (!currentProjectId) return;
+    setDesconectando(true);
+    setError(null);
+    try {
+      const r = await fetch(`/api/projects/${currentProjectId}/collections/source`, {
+        method: "DELETE",
+      });
+      if (!r.ok) throw new Error(String(r.status));
+      load(currentProjectId);
+    } catch {
+      setError(t("sheetBacked.disconnectError"));
+    } finally {
+      setDesconectando(false);
+    }
+  };
+
   const live = (items ?? []).filter((i) => i.status === "published");
 
   const updateConfig = async (patch: Partial<Pick<Collection, "preset" | "layout">>) => {
@@ -165,16 +186,30 @@ export function CollectionsPanel({ currentProjectId }: { currentProjectId?: stri
       {sheetBacked && (
         <div className="mx-3 mb-2 shrink-0 rounded-md ring-1 ring-[color:var(--border)] bg-hover px-2.5 py-2 text-[11px] fg-muted leading-relaxed">
           <p>{t("sheetBacked.banner")}</p>
-          {sheetUrl && (
-            <a
-              href={sheetUrl}
-              target="_blank"
-              rel="noreferrer"
-              className="mt-1 inline-flex items-center gap-1 font-medium text-[var(--accent)] hover:underline underline-offset-2"
+          <div className="mt-1 flex items-center gap-3">
+            {sheetUrl && (
+              <a
+                href={sheetUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center gap-1 font-medium text-[var(--accent)] hover:underline underline-offset-2"
+              >
+                {t("sheetBacked.openSheet")} <ExternalLink size={10} />
+              </a>
+            )}
+            {/* Sin esto, conectar una hoja era un viaje de ida: la colección
+                quedaba de SOLO LECTURA (el API 409ea las mutaciones manuales) y
+                la única salida era el kill-switch global del servidor. */}
+            <button
+              type="button"
+              disabled={desconectando}
+              onClick={() => void desconectarSheet()}
+              className="inline-flex items-center gap-1 font-medium fg-muted hover:fg-default underline-offset-2 hover:underline disabled:opacity-50"
             >
-              {t("sheetBacked.openSheet")} <ExternalLink size={10} />
-            </a>
-          )}
+              {t("sheetBacked.disconnect")}
+            </button>
+          </div>
+          <p className="mt-1 fg-faint">{t("sheetBacked.disconnectHint")}</p>
         </div>
       )}
 

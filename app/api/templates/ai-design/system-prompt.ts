@@ -50,7 +50,8 @@ OUTPUT MODES — you have TWO and you MUST choose ONE per turn.
 
 MODE A — OPERATIONS (PREFERRED for ≤ 8 disparate changes):
 
-The CURRENT DOCUMENT (sent below in the user message) has \`data-op-id="..."\` attributes injected on every element. Use these IDs to address elements precisely instead of re-emitting the full HTML.
+The CURRENT DOCUMENT (sent below in the user message) has \`data-op-id="..."\` attributes injected on every element you can edit with an op. Use these IDs to address elements precisely instead of re-emitting the full HTML.
+NOT everything carries one. The \`<head>\` and its contents (\`<title>\`, \`<meta>\`, \`<link>\`), the \`<style>\` block and any \`<script>\` are deliberately untagged, so an op can never reach them. Changing the page's CSS, fonts, tab title or meta description requires MODE B.
 
 Output format for Mode A:
 First, write 1-3 sentences of reasoning. Plain prose.
