@@ -32,6 +32,10 @@ export function buildAgentContext(args: {
   /** Los ítems del catálogo, que NO están en el documento (se hornean al
    *  publicar). Ausente/vacío ⇒ salida byte-idéntica. */
   catalogo?: string;
+  /** El turno ANTERIOR no llamó a ninguna herramienta: la pagina quedo
+   *  intacta. Medido el 2026-08-22 — el Agente responde «Listo, ya lo
+   *  anadi» sin haber tocado nada, y sin esto no se entera nunca. */
+  turnoAnteriorMudo?: boolean;
   userBrief: string | null;
   /** F2 Task 8 — the user attached an image this turn (same shape the route
    *  validates in ai-design: real http(s) URL, optional alt). Present ⇒ the
@@ -100,7 +104,15 @@ export function buildAgentContext(args: {
   // porque lo que él escribe son plazos que nacen vencidos.
   const hoy = `${todayLine(args.now).trimEnd()} Además: cualquier fecha que escribas (cuentas regresivas, eventos, plazos) tiene que ser POSTERIOR a hoy, salvo que el usuario pida explícitamente una pasada.\n\n`;
 
-  return `${hoy}ESTADO DEL PROYECTO (real, leído del servidor ahora mismo):\n${JSON.stringify(stateForPrompt, null, 2)}\n\n${briefBlock}${focusBlock}${imageBlock}${docHeader}\n\n${args.taggedHtml}${args.catalogo ?? ""}${currentRuntimePromptBlock(args.runtime ?? "", "tool")}`;
+    // Hecho, no juicio: no se mira lo que el modelo DIJO, sino si llamo a
+  // alguna herramienta. Va arriba del todo porque corrige una creencia
+  // suya sobre el pasado inmediato.
+  const mudoBlock = args.turnoAnteriorMudo
+    ? `AVISO: tu turno anterior NO llamo a ninguna herramienta, asi que la pagina NO cambio — hagas lo que hagas ahora, no des por hecho lo que dijiste que habias hecho. Si el usuario te pidio un cambio y sigue sin aplicarse, aplicalo AHORA con editar_pagina.
+
+`
+    : "";
+  return `${mudoBlock}${hoy}ESTADO DEL PROYECTO (real, leído del servidor ahora mismo):\n${JSON.stringify(stateForPrompt, null, 2)}\n\n${briefBlock}${focusBlock}${imageBlock}${docHeader}\n\n${args.taggedHtml}${args.catalogo ?? ""}${currentRuntimePromptBlock(args.runtime ?? "", "tool")}`;
 }
 
 /** Rough chars→tokens estimate (~3.5 chars/token on tag-dense HTML + JSON),
@@ -119,6 +131,8 @@ export interface BuildAgentMessagesArgs {
   catalogo?: string;
   /** Ver buildAgentContext.runtime. */
   runtime?: string | null;
+  /** Ver buildAgentContext.turnoAnteriorMudo. */
+  turnoAnteriorMudo?: boolean;
   userBrief: string | null;
   /** The user's turn prompt (already trimmed/validated by the caller). */
   prompt: string;
@@ -154,6 +168,7 @@ export function buildAgentMessages(args: BuildAgentMessagesArgs): BuildAgentMess
     runtime: args.runtime,
     catalogo: args.catalogo,
     userBrief: args.userBrief,
+    turnoAnteriorMudo: args.turnoAnteriorMudo,
     attachedImage: args.attachedImage,
     scopePin: args.scopePin,
     scopeHint: args.scopeHint,

@@ -68,5 +68,8 @@
     "send": "Send",
     "pageTarget": "Page to edit",
     "pageTargetHome": "Home"
+  },
+  "noChange": {
+    "label": "Nothing on the page changed"
   }
 }

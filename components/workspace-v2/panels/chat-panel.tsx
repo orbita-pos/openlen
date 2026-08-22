@@ -31,6 +31,17 @@ import {
 import { ReplaceAssetModal } from "../replace-asset-modal";
 import { ModelPicker, useAIModel } from "../model-picker";
 import { AgentActionCard, type AgentAction } from "../agent-action-card";
+
+/** Un mensaje del historial reproducido. Los dos campos de herramienta viajan
+ *  sólo en los turnos que de verdad usaron una — ver el comentario largo donde
+ *  se arma `history`. El servidor los VALIDA contra el catálogo real; nada de
+ *  lo que manda el navegador se ejecuta. */
+export interface HistoryEntry {
+  role: "user" | "assistant";
+  content: string;
+  functionCalls?: { name: string; args: Record<string, unknown> }[];
+  functionResponses?: { name: string; response: Record<string, unknown> }[];
+}
 import { AgentConfirmCard, type AgentConfirm } from "../agent-confirm-card";
 import type { StoredChatTurn } from "@/lib/projects/types";
 import type { SitePageSummary } from "@/lib/projects/site-pages";
@@ -557,7 +568,7 @@ function AIDesignChat({
       prompt: string;
       preEditHtml: string;
       turnPage: string | null;
-      history: { role: "user" | "assistant"; content: string }[];
+      history: HistoryEntry[];
       turnScope: { hint: string; path: string } | null;
       turnImage: { url: string; alt?: string } | null;
       abort: AbortController;
@@ -823,6 +834,23 @@ function AIDesignChat({
       setAttachedImage(null);
       setSending(true);
 
+      // EL HISTORIAL, CON LA FORMA QUE DE VERDAD TUVO.
+      //
+      // Antes esto emitía dos mensajes planos por turno y tiraba las llamadas a
+      // herramientas. Efecto MEDIDO el 2026-08-22, mismo prompt y misma página,
+      // variando sólo el historial: con las llamadas puestas el Agente editó
+      // 10 de 12 veces; sin ellas, 1 de 12 — y en los 11 fallos respondió
+      // «Listo ✅ añadí el teléfono» sobre una página intacta.
+      //
+      // La causa es que le reescribíamos su propio pasado para que pareciera
+      // que nunca usó una herramienta, y a los pocos turnos lo copiaba. Es la
+      // regla que la documentación de la API enuncia para las llamadas en
+      // paralelo — reproducir mal el historial entrena el comportamiento
+      // futuro — llevada al extremo.
+      //
+      // El resultado que se reproduce es el RESUMEN de la tarjeta, no la carga
+      // real: los resultados de verdad son documentos HTML enteros y mandar
+      // seis turnos de eso reventaría el contexto. Estructura sí, carga no.
       const history = turnsRef.current
         .filter(
           (t) =>
@@ -830,10 +858,33 @@ function AIDesignChat({
             samePage(t.page, turnPage),
         )
         .slice(-6)
-        .flatMap((t) => [
-          { role: "user" as const, content: t.userText },
-          { role: "assistant" as const, content: t.assistantReasoning || "" },
-        ]);
+        .flatMap((t) => {
+          const hechas = (t.actions ?? []).filter((a) => a.status === "done");
+          const turno: HistoryEntry[] = [
+            { role: "user", content: t.userText },
+            {
+              role: "assistant",
+              content: t.assistantReasoning || "",
+              ...(hechas.length
+                ? { functionCalls: hechas.map((a) => ({ name: a.tool, args: {} })) }
+                : {}),
+            },
+          ];
+          // El mensaje de respuestas va INMEDIATAMENTE después: el serializador
+          // del proveedor empareja llamadas y respuestas por POSICIÓN, y una
+          // respuesta sin llamada que la reclame degrada a texto suelto.
+          if (hechas.length) {
+            turno.push({
+              role: "user",
+              content: "",
+              functionResponses: hechas.map((a) => ({
+                name: a.tool,
+                response: { ok: true, resumen: a.summary },
+              })),
+            });
+          }
+          return turno;
+        });
 
       // Snapshot the scope at send time — if the user clears or re-picks
       // mid-stream, the in-flight request keeps the original target. Shared
@@ -1514,9 +1565,26 @@ function TurnFooter({
     );
   }
   if (turn.status === "applied") {
-    // Agent turn that changed no document — "Applied · Undo" would be the
-    // wrong verbs (and Undo a pointless PATCH), so the footer stays silent.
-    if (turn.noDocChange) return null;
+    // Turno del Agente que no cambió el documento. «Aplicado · Deshacer»
+    // serían los verbos equivocados — pero CALLAR era peor.
+    //
+    // MEDIDO el 2026-08-22: el Agente puede responder «Listo ✅ añadí el
+    // teléfono en el pie» sin haber llamado a una sola herramienta, y la página
+    // queda intacta. El usuario lee «Listo ✅» y se lo cree. `noDocChange` ya
+    // se calculaba y su único efecto era esconder el botón.
+    //
+    // Se dice en TODO turno sin cambios, incluidos los que sólo responden una
+    // pregunta: ahí también es verdad y no estorba. Juzgar la prosa para
+    // adivinar si «prometió» algo sería adivinar; esto es un hecho.
+    if (turn.noDocChange) {
+      return (
+        <div
+          className={`${marginClass} inline-flex items-center gap-1.5 rounded-md bg-app border bd px-1.5 py-0.5 text-[10.5px] fg-faint ui-small`}
+        >
+          <span>{t("noChange.label")}</span>
+        </div>
+      );
+    }
     // No preEditHtml = a turn restored from a previous session; the inline
     // Undo can't revert it (the Versions tab does), so hide the button.
     const canUndo = turn.preEditHtml.length > 0;

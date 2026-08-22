@@ -106,7 +106,12 @@ export async function POST(req: Request): Promise<Response> {
     projectId?: string;
     prompt?: string;
     page?: string;
-    history?: { role: "user" | "assistant"; content: string }[];
+    history?: {
+      role: "user" | "assistant";
+      content: string;
+      functionCalls?: unknown;
+      functionResponses?: unknown;
+    }[];
     scope?: ScopeBody;
     attachedImage?: AttachedImageBody;
   } | null;
@@ -120,25 +125,79 @@ export async function POST(req: Request): Promise<Response> {
   // this block). Absent/empty ⇒ home; a non-empty slug MUST already exist in
   // data.pages or the turn 404s rather than silently falling back to home.
   const pageSlugRaw = typeof body?.page === "string" ? body.page.trim() : "";
-  // History hardening: map to ONLY {role, content} (the TS wrapper serializes
-  // functionCalls/functionResponses off Message objects, so a client-supplied
-  // history entry spread whole would be a tool-call injection vector) and cap
-  // each content at 4000 chars.
+  // History hardening. El principio no cambia — NADA de lo que manda el
+  // navegador se pasa tal cual, porque una entrada esparcida entera sería un
+  // vector de inyección de tool-calls. Lo que cambia es que ahora el historial
+  // SÍ lleva la forma de herramienta, reconstruida aquí desde el catálogo real:
+  // del cliente sólo se acepta un NOMBRE, y sólo si es una herramienta que
+  // existe. Los argumentos se descartan siempre (van vacíos) y el resultado se
+  // reduce a un resumen de texto acotado.
+  //
+  // Por qué: MEDIDO el 2026-08-22 — sin las llamadas en el historial el Agente
+  // editó 1 de 12 veces y en los 11 fallos dijo «Listo ✅» sobre una página
+  // intacta; con ellas, 10 de 12.
+  const nombresValidos = new Set(buildFunctionDeclarations().map((d) => String(d.name)));
+  const limpiaLlamadas = (v: unknown) =>
+    Array.isArray(v)
+      ? v
+          .filter(
+            (c): c is { name: string } =>
+              !!c && typeof (c as { name?: unknown }).name === "string" &&
+              nombresValidos.has((c as { name: string }).name),
+          )
+          .slice(0, 8)
+          .map((c) => ({ name: c.name, args: {} }))
+      : [];
+  const limpiaRespuestas = (v: unknown) =>
+    Array.isArray(v)
+      ? v
+          .filter(
+            (r): r is { name: string; response?: { resumen?: unknown } } =>
+              !!r && typeof (r as { name?: unknown }).name === "string" &&
+              nombresValidos.has((r as { name: string }).name),
+          )
+          .slice(0, 8)
+          .map((r) => ({
+            name: r.name,
+            response: { ok: true, resumen: String(r.response?.resumen ?? "").slice(0, 400) },
+          }))
+      : [];
+
   const history = Array.isArray(body?.history)
-    ? body.history
-        .filter(
-          (h) =>
-            h &&
-            (h.role === "user" || h.role === "assistant") &&
-            typeof h.content === "string" &&
-            h.content.length > 0,
-        )
-        // 12 MENSAJES, no 6: el cliente manda 6 TURNOS (usuario+asistente),
-        // así que cortar a 6 mensajes dejaba 3 turnos de memoria — la mitad de
-        // lo que la interfaz cree estar mandando. «Ahora hazlo también en la
-        // otra sección» cuatro turnos después ya no tenía contexto.
-        .slice(-12)
-        .map((h) => ({ role: h.role, content: h.content.slice(0, 4000) }))
+    ? (() => {
+        const limpio = body.history
+          .filter(
+            (h) =>
+              h &&
+              (h.role === "user" || h.role === "assistant") &&
+              typeof h.content === "string",
+          )
+          .map((h) => {
+            const llamadas = limpiaLlamadas((h as { functionCalls?: unknown }).functionCalls);
+            const respuestas = limpiaRespuestas(
+              (h as { functionResponses?: unknown }).functionResponses,
+            );
+            return {
+              role: h.role,
+              content: h.content.slice(0, 4000),
+              ...(llamadas.length ? { functionCalls: llamadas } : {}),
+              ...(respuestas.length ? { functionResponses: respuestas } : {}),
+            };
+          })
+          // Una entrada sin contenido Y sin respuestas no aporta nada; el
+          // mensaje de respuestas SÍ va con `content` vacío, por diseño.
+          .filter((h) => h.content.length > 0 || h.functionResponses);
+        // 18 mensajes: el cliente manda 6 TURNOS y un turno con herramientas
+        // ocupa TRES mensajes (usuario, asistente+llamadas, respuestas). Con el
+        // tope viejo de 12 se perdía un tercio de la memoria que la interfaz
+        // cree estar mandando.
+        const cortado = limpio.slice(-18);
+        // El corte puede dejar huérfano un mensaje de respuestas cuya llamada
+        // quedó fuera. El serializador degrada eso a texto suelto; mejor
+        // quitarlo: media pareja confunde más de lo que recuerda.
+        while (cortado.length > 0 && cortado[0]!.functionResponses) cortado.shift();
+        return cortado;
+      })()
     : [];
 
   // Validate the scope payload (optional) — same shape/limits as ai-design.
@@ -272,6 +331,14 @@ export async function POST(req: Request): Promise<Response> {
     userBrief: project.userBrief,
     prompt,
     history,
+    // ¿El turno anterior fue MUDO? Se deriva del historial que acaba de
+    // sanearse: el último mensaje del asistente sin `functionCalls` significa
+    // que no tocó nada. Es un hecho estructural, no una lectura de su prosa.
+    // Un historial vacío (primer turno) no dispara nada.
+    turnoAnteriorMudo: (() => {
+      const ultimo = [...history].reverse().find((h) => h.role === "assistant");
+      return ultimo ? !("functionCalls" in ultimo) : false;
+    })(),
     attachedImage: attachedImage
       ? { ...attachedImage, ...(attachedInline ? { visible: true } : {}) }
       : null,

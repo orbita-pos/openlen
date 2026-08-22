@@ -68,5 +68,8 @@
     "send": "Versturen",
     "pageTarget": "Te bewerken pagina",
     "pageTargetHome": "Home"
+  },
+  "noChange": {
+    "label": "Er is niets op de pagina veranderd"
   }
 }

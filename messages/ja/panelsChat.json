@@ -68,5 +68,8 @@
     "send": "送信",
     "pageTarget": "編集するページ",
     "pageTargetHome": "ホーム"
+  },
+  "noChange": {
+    "label": "ページに変更はありません"
   }
 }
