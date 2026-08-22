@@ -288,7 +288,9 @@
     "dynamic_content": "Parte de lo que tu página arma sola puede verse vacío. Puedes escribirlo directamente en el editor.",
     "broken_controls": "Algunos controles interactivos quedaron mal conectados y no van a funcionar. Pídele al asistente que los arregle.",
     "interactivity_lost": "Los detalles interactivos que la IA escribió para tu página (filtros, galerías, pestañas) no se publicaron esta vez. El texto y las imágenes están completos. Vuelve a publicar; si siguen faltando, pídele al asistente que los rehaga.",
+    "form_routing_stale": "Puede que algún ajuste de tus formularios (a qué correo te avisa, a dónde redirige) haya dejado de aplicarse tras esta edición. Revisa en cada formulario que siga avisándote a donde quieres.",
     "dismiss": "Entendido",
-    "fix": "Arreglar esto"
+    "fix": "Arreglar esto",
+    "runtime_stale": "El código interactivo de tu página busca elementos que esta edición quitó. Cuando eso pasa el código se detiene, así que puede haber dejado de funcionar más de lo que falta. Pídele al chat que lo arregle."
   }
 }

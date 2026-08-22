@@ -192,6 +192,7 @@ export default defineConfig({
       // NB: lib/projects/site-pages.test.ts is a node:test file (run via
       // `tsx --test`), so include the vitest project tests explicitly.
       "lib/projects/model-runtime.test.ts",
+      "lib/projects/runtime-staleness.test.ts",
       "lib/projects/module-intent.test.ts",
       "lib/projects/page-edge-paths.test.ts",
       "lib/projects/preview.test.ts",

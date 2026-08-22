@@ -51,6 +51,23 @@ const SIN_OCULTAR_ES =
 const SIN_OCULTAR_EN =
   "Never hide content in CSS and reveal it from the script: if the script is dropped, the page ships blank.";
 
+// MEDIDO en la corrida del 21/08: de 6 páginas con JavaScript, la del carrito
+// cableó sus botones con `onclick="addToCart(1)"` y NINGÚN `addEventListener`.
+// El script sobrevivió entero —hash en la CSP incluido— y el carrito quedó mudo:
+// «agregar» no hacía nada. Las otras cinco usaron `addEventListener` y funcionan.
+//
+// El dato ya estaba en el prompt, pero enterrado en la lista de QUÉ MÁS SE BORRA,
+// que se lee como una consecuencia para otros scripts. Aquí va como INSTRUCCIÓN.
+//
+// No hay reparación posible aguas abajo: conservar el `onclick` exigiría
+// `'unsafe-hashes'` en la CSP, y un shim que evaluara la expresión exigiría
+// `'unsafe-eval'` — las dos debilitan la política de TODAS las páginas para
+// salvar el cableado de una. El prompt es la única palanca legítima.
+const CABLEADO_ES =
+  "Cablea los manejadores con `addEventListener` DENTRO del script: los atributos `onclick=` —y cualquier `on*`— se borran al guardar, así que un botón cableado así queda mudo aunque el script sobreviva entero.";
+const CABLEADO_EN =
+  "Wire handlers with `addEventListener` INSIDE the script: `onclick=` — and any `on*` — attributes are stripped on save, so a button wired that way is dead even though the script itself survives.";
+
 const CLAUSULAS: Readonly<Record<ClauseId, Clausula>> = {
   "contrato-min": {
     desde: "• NINGÚN JavaScript sobrevive.",
@@ -58,6 +75,7 @@ const CLAUSULAS: Readonly<Record<ClauseId, Clausula>> = {
     libre:
       "• JavaScript: UN solo `<script data-openlen-model-runtime>`, el último del `<body>`, SOBREVIVE a la publicación — escríbelo cuando la página gane algo de verdad con él: filtrar una lista, una galería con lightbox, pestañas, una cuenta atrás, buscar dentro de la propia página. " +
       "Todo lo demás se sigue borrando: cualquier otro `<script>` salvo el de Tailwind, todo atributo `on*` y todo `<iframe>`. " +
+      `${CABLEADO_ES} ` +
       `La página tiene que estar completa y legible SIN ese script: mejora, nunca construye el contenido. ${SIN_OCULTAR_ES} ` +
       "Cuando el CSS puro ya resuelve —`<details>`/`<summary>`, un checkbox con `peer-checked:`, `:target`, `@keyframes`— prefiérelo; para lo demás, escribe el script.",
   },
@@ -72,6 +90,7 @@ const CLAUSULAS: Readonly<Record<ClauseId, Clausula>> = {
       "  search. Everything else is still STRIPPED before the page is saved: any\n" +
       "  other `<script>` (the Tailwind CDN tag being the one exception), every\n" +
       "  `on*` attribute, and every `<iframe>`.\n" +
+      `  ${CABLEADO_EN}\n` +
       "  The page MUST be complete and readable WITHOUT that script — it improves,\n" +
       `  it never builds the content. ${SIN_OCULTAR_EN}\n` +
       "  When plain CSS already does the job, prefer it:\n" +
@@ -96,6 +115,7 @@ const CLAUSULAS: Readonly<Record<ClauseId, Clausula>> = {
     libre:
       "- Puedes escribir el JavaScript de la página: UN solo `<script data-openlen-model-runtime>`, el último del body, sobrevive al guardar. " +
       "Todo lo demás se sigue borrando: cualquier otro `<script>`, todo atributo `on*` y todo `<iframe>`. " +
+      `${CABLEADO_ES} ` +
       `La página tiene que funcionar SIN él. ${SIN_OCULTAR_ES} ` +
       "Cuando el CSS puro alcanza (`<details>`/`<summary>`, checkbox + `peer-checked:`, `:target`, `scroll-snap`), prefiérelo. " +
       "Y si lo que piden es una feature de backend de verdad (login, agenda, catálogo administrable), eso NO se resuelve con un script: usa activar_modulo.",
@@ -107,6 +127,7 @@ const CLAUSULAS: Readonly<Record<ClauseId, Clausula>> = {
     libre:
       "5. Puedes escribir JavaScript: UN solo `<script data-openlen-model-runtime>`, el último del body. " +
       "Cualquier OTRO `<script>`, los atributos `on*` y los `<iframe>` se siguen borrando al guardar. " +
+      `${CABLEADO_ES} ` +
       `La página tiene que funcionar sin él. ${SIN_OCULTAR_ES}`,
   },
 };

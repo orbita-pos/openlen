@@ -14,6 +14,9 @@
 import { todayLine } from "@/lib/ai/today-line";
 import type { Message } from "@/lib/ai-gateway";
 import { buildAgentSystemPrompt } from "@/lib/agent/catalog";
+// Sin importaciones nativas ni de @/lib/db: model-runtime sólo usa node:vm y
+// node-html-parser, así que el invariante de arriba se mantiene.
+import { currentRuntimePromptBlock } from "@/lib/ai-stream/model-runtime";
 
 export function buildAgentContext(args: {
   /** Inyectable sólo para las pruebas: sin esto el bloque HOY cambiaría cada
@@ -21,6 +24,14 @@ export function buildAgentContext(args: {
   now?: Date;
   state: Record<string, unknown>;
   taggedHtml: string;
+  /** El JavaScript que la página YA tiene, verificado contra su cápsula.
+   *  `taggedHtml` viene SANEADO —sin scripts—, así que sin esto el Agente no ve
+   *  la conducta que el usuario le pide arreglar y la re-inventa.
+   *  Ausente/vacío ⇒ salida byte-idéntica. */
+  runtime?: string | null;
+  /** Los ítems del catálogo, que NO están en el documento (se hornean al
+   *  publicar). Ausente/vacío ⇒ salida byte-idéntica. */
+  catalogo?: string;
   userBrief: string | null;
   /** F2 Task 8 — the user attached an image this turn (same shape the route
    *  validates in ai-design: real http(s) URL, optional alt). Present ⇒ the
@@ -89,7 +100,7 @@ export function buildAgentContext(args: {
   // porque lo que él escribe son plazos que nacen vencidos.
   const hoy = `${todayLine(args.now).trimEnd()} Además: cualquier fecha que escribas (cuentas regresivas, eventos, plazos) tiene que ser POSTERIOR a hoy, salvo que el usuario pida explícitamente una pasada.\n\n`;
 
-  return `${hoy}ESTADO DEL PROYECTO (real, leído del servidor ahora mismo):\n${JSON.stringify(stateForPrompt, null, 2)}\n\n${briefBlock}${focusBlock}${imageBlock}${docHeader}\n\n${args.taggedHtml}`;
+  return `${hoy}ESTADO DEL PROYECTO (real, leído del servidor ahora mismo):\n${JSON.stringify(stateForPrompt, null, 2)}\n\n${briefBlock}${focusBlock}${imageBlock}${docHeader}\n\n${args.taggedHtml}${args.catalogo ?? ""}${currentRuntimePromptBlock(args.runtime ?? "", "tool")}`;
 }
 
 /** Rough chars→tokens estimate (~3.5 chars/token on tag-dense HTML + JSON),
@@ -104,6 +115,10 @@ export interface BuildAgentMessagesArgs {
   state: Record<string, unknown>;
   /** tagWithOpIds(html).taggedHtml — computed by the caller (native). */
   taggedHtml: string;
+  /** Ver buildAgentContext.catalogo. */
+  catalogo?: string;
+  /** Ver buildAgentContext.runtime. */
+  runtime?: string | null;
   userBrief: string | null;
   /** The user's turn prompt (already trimmed/validated by the caller). */
   prompt: string;
@@ -136,6 +151,8 @@ export function buildAgentMessages(args: BuildAgentMessagesArgs): BuildAgentMess
   const contextBlock = buildAgentContext({
     state: args.state,
     taggedHtml: args.taggedHtml,
+    runtime: args.runtime,
+    catalogo: args.catalogo,
     userBrief: args.userBrief,
     attachedImage: args.attachedImage,
     scopePin: args.scopePin,

@@ -32,10 +32,11 @@ import { syncCollectionFromSheet } from "@/lib/collections/sheet-sync";
 import { debitCredits } from "@/lib/credits";
 import { detectSlotPath, sanitizeForPublish } from "@/lib/html-engine";
 import { applyOps, tagWithOpIds, type Op, type OpType } from "@/lib/html-ops";
+import { splitRuntimeOps } from "@/lib/ai-stream/model-runtime";
 import { fetchSheet, resolveSheetCsvUrl } from "@/lib/live/sheet-source";
 import { passHtmlGate } from "@/lib/html-gate/document-gate";
 import { activeHtml, persistPage } from "@/lib/page-engine/persist";
-import type { ModelRuntimeCapsule } from "@/lib/projects/model-runtime";
+import { verifyCapsule, type ModelRuntimeCapsule } from "@/lib/projects/model-runtime";
 import { preparePage } from "@/lib/page-engine/prepare";
 import { setProjectUserBrief, USER_BRIEF_MAX } from "@/lib/projects";
 import { extForMime, getAssetStorage } from "@/lib/projects/assets";
@@ -91,6 +92,9 @@ export interface AgentDeps {
     subdomain: string | null;
     publishedAt: Date | null;
     userBrief: string | null;
+    /** El brief con el que nació la página. Alimenta la etapa de IMÁGENES de
+     *  `preparePage`, que sin él se salta entera. */
+    brief?: string | null;
     /** La cápsula del JavaScript del modelo, para poder RE-ATARLA al documento
      *  que la edición deja guardado (`persistPage`). */
     generatedRuntime?: unknown;
@@ -215,6 +219,7 @@ export function realDeps(): AgentDeps {
           subdomain: schema.projects.subdomain,
           publishedAt: schema.projects.publishedAt,
           userBrief: schema.projects.userBrief,
+          brief: schema.projects.brief,
           generatedRuntime: schema.projects.generatedRuntime,
         })
         .from(schema.projects)
@@ -349,6 +354,12 @@ export interface AgentSession {
    *  from the route's own validation, cloned from ai-design's page handling.
    *  Read-only in T1 — T2 makes tool writes respect it (the W1 pin). */
   page: string | null;
+  /** El brief del proyecto y su perfil de negocio. Van en la sesión porque los
+   *  necesita `persistHtmlChange`, y enhebrarlos por los 6 llamadores sería
+   *  ruido. Sin `brief`, `preparePage` se salta la etapa de imágenes y el
+   *  modelo entrega cajas grises que nadie rellena. */
+  brief?: string | null;
+  profile?: BusinessProfileData | null;
   /** Session email (session.user.email), threaded from the route so an
    *  agent-provisioned owner chat_user is created WITH an email — mirrors
    *  what the settings route passes to getOrCreateOwnerChatUser. */
@@ -411,12 +422,20 @@ export function summarizeProjectState(row: {
   for (const m of AGENT_MODULES) {
     modulos[m] = row.data.settings?.[MODULE_SETTINGS_KEY[m]]?.enabled === true;
   }
+  // `datos_vivos` faltaba: se podía CONECTAR una hoja y después ni el Agente ni
+  // el usuario tenían forma de saber cuál era — «¿qué hoja tengo conectada?»
+  // no tenía respuesta. QUITARLA sigue sin tenerla en ninguna superficie: el
+  // panel sólo ofrece el enlace para abrirla, así que una colección respaldada
+  // por un Sheet se queda de SOLO LECTURA para siempre. Pendiente de decidir
+  // dónde vive ese botón; aquí al menos se sabe cuál es.
+  const sheetUrl = row.data.settings?.liveData?.sheetUrl;
   return {
     titulo: row.title,
     publicado: row.publishedAt !== null,
     subdominio: row.subdomain,
     paginas: Object.keys(row.data.pages ?? {}),
     modulos,
+    ...(sheetUrl ? { datos_vivos: { hoja: sheetUrl } } : {}),
   };
 }
 
@@ -744,7 +763,7 @@ interface RawEdit {
 }
 
 type PersistResult =
-  | { ok: true; finalHtml: string; aviso?: string }
+  | { ok: true; finalHtml: string; aviso?: string; sinCambios?: boolean }
   | { ok: false; error: string };
 
 // The sanitizer silently deletes <script>, on* handlers and <iframe> from any
@@ -829,6 +848,10 @@ async function persistHtmlChange(
   // rechazaba cualquier cambio hablando de un control que el usuario no tocó.
   const prepared = await preparePage(candidateHtml, {
     mode: "edit",
+    // No encarece el turno: `photographHtml` sale sin tocar la red cuando el
+    // documento no trae huecos `data-ol-photo`, que es el caso corriente.
+    ...(session.brief ? { brief: session.brief } : {}),
+    ...(session.profile ? { profile: session.profile } : {}),
     // Un turno del Agente no puede pagar un arranque de Chrome; publicar
     // verifica. Los invariantes y la puerta corren igual.
     renderChecks: false,
@@ -889,7 +912,12 @@ async function persistHtmlChange(
   // has fresh targets to address.
   session.taggedHtml = tagWithOpIds(finalHtml).taggedHtml;
 
-  return { ok: true, finalHtml, ...(aviso ? { aviso } : {}) };
+  return {
+    ok: true,
+    finalHtml,
+    ...(aviso ? { aviso } : {}),
+    ...(saved.sinCambios ? { sinCambios: true } : {}),
+  };
 }
 
 // P4 — rediseño total del documento activo. Una llamada grande de modelo
@@ -927,11 +955,24 @@ async function toolRedisenarPagina(
     await deps.loadBusinessProfile(session.projectId, session.userId),
   );
 
+  // El JavaScript que la página ya tiene. `current` viene saneado —sin
+  // scripts—, así que sin esto el rediseño no ve la conducta que debe conservar
+  // y la re-inventa. Sólo el documento raíz: la cápsula ata `data.html`.
+  const runtime = (() => {
+    if (session.page) return null;
+    const check = verifyCapsule(row.generatedRuntime, {
+      projectId: session.projectId,
+      html: row.data?.html ?? "",
+    });
+    return check.ok ? check.code : null;
+  })();
+
   const redesigned = await deps.redesignDocument(session.userId, {
     html: current,
     direccion,
     negocio,
     brief: row.userBrief,
+    runtime,
   });
   if (!redesigned.ok) {
     return { response: { ok: false, error: redesigned.error } };
@@ -993,17 +1034,42 @@ async function toolEditarPagina(
     });
   }
 
-  const applied = applyOps(session.taggedHtml, ops);
-  if (applied.html === null) {
-    const reason = applied.errors[0]?.reason ?? "no se pudo aplicar la edición";
-    return { response: { ok: false, error: reason } };
+  // El runtime no es un elemento: se aparta antes de que el aplicador vea la
+  // tanda. Sin esto, el camino barato del Agente tampoco podía tocar el
+  // comportamiento de la página — mismo agujero que el Chat, misma cura.
+  const partido = splitRuntimeOps(ops);
+  if (partido.runtime.kind === "error") {
+    return {
+      response: {
+        ok: false,
+        error: `no pude aplicar el cambio de comportamiento (${partido.runtime.reason}). Manda el script COMPLETO y corregido en un solo edit con target="runtime".`,
+      },
+    };
+  }
+  const nuevoRuntime = partido.runtime.kind === "codigo" ? partido.runtime.code : null;
+
+  // Un turno que sólo arregla comportamiento no lleva ops de maquetación: el
+  // documento se guarda igual que estaba y lo que cambia es la cápsula.
+  let htmlAplicado = session.taggedHtml;
+  let aplicadas = 0;
+  if (partido.domOps.length > 0) {
+    const applied = applyOps(session.taggedHtml, partido.domOps);
+    if (applied.html === null) {
+      const reason = applied.errors[0]?.reason ?? "no se pudo aplicar la edición";
+      return { response: { ok: false, error: reason } };
+    }
+    htmlAplicado = applied.html;
+    aplicadas = applied.appliedCount;
+  } else if (nuevoRuntime === null) {
+    return { response: { ok: false, error: "ningún edit aplicable" } };
   }
 
   const persisted = await persistHtmlChange(
     session,
     deps,
-    applied.html,
-    `Agente (${applied.appliedCount} ops): ${resumen}`,
+    htmlAplicado,
+    `Agente (${aplicadas} ops${nuevoRuntime ? " + comportamiento" : ""}): ${resumen}`,
+    nuevoRuntime ? { modelRuntime: nuevoRuntime } : {},
   );
   if (!persisted.ok) {
     return { response: { ok: false, error: persisted.error } };
@@ -1012,9 +1078,19 @@ async function toolEditarPagina(
   return {
     response: {
       ok: true,
-      edits_aplicados: applied.appliedCount,
+      edits_aplicados: aplicadas,
+      ...(nuevoRuntime ? { comportamiento_actualizado: true } : {}),
       nota: "data-op-id regenerados; usa leer_estado incluir_documento=true para editar de nuevo",
       ...(persisted.aviso ? { aviso: persisted.aviso } : {}),
+      // El turno no cambió nada. Se le dice al MODELO para que no cierre
+      // diciéndole al usuario que lo arregló: es el fallo medido el 22/08.
+      ...(persisted.sinCambios
+        ? {
+            sin_cambios: true,
+            aviso_critico:
+              "Este edit NO cambió NADA de la página. NO le digas al usuario que lo arreglaste. Si el problema es de comportamiento, el arreglo va en un edit con target=\"runtime\" que lleve el script completo corregido.",
+          }
+        : {}),
     },
     action: { tool: "editar_pagina", ok: true, summary: resumen },
     updatedHtml: persisted.finalHtml,

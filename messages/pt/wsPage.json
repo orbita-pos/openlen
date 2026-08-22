@@ -288,7 +288,9 @@
     "dynamic_content": "Parte do que sua página monta sozinha pode aparecer vazia. Você pode escrever direto no editor.",
     "broken_controls": "Alguns controles interativos ficaram mal conectados e não vão funcionar. Peça ao assistente para corrigi-los.",
     "interactivity_lost": "Os detalhes interativos que a IA escreveu para a sua página (filtros, galerias, abas) não foram publicados desta vez. O texto e as imagens estão completos. Publique novamente; se continuarem faltando, peça ao assistente que os refaça.",
+    "form_routing_stale": "Alguma configuração dos seus formulários (qual e-mail recebe aviso, para onde redireciona) pode ter deixado de valer após esta edição. Confira cada formulário.",
     "dismiss": "Entendi",
-    "fix": "Corrigir isto"
+    "fix": "Corrigir isto",
+    "runtime_stale": "O código interativo da sua página procura elementos que esta edição removeu. Quando isso acontece o código para, então pode ter quebrado mais do que o que falta. Peça ao chat para corrigir."
   }
 }

@@ -11,7 +11,19 @@ import {
 } from "@/lib/credits";
 import { MARKER, SYSTEM_PROMPT } from "./system-prompt";
 import { swapJsClauses } from "@/lib/ai/js-clause";
-import { extractModelRuntime, modelJsEnabled, modelRuntimePromptBlock } from "@/lib/ai-stream/model-runtime";
+import {
+  currentRuntimePromptBlock,
+  extractModelRuntime,
+  modelJsEnabled,
+  modelRuntimePromptBlock,
+  splitRuntimeOps,
+  runtimeOpAviso,
+} from "@/lib/ai-stream/model-runtime";
+import { verifyCapsule } from "@/lib/projects/model-runtime";
+import { buildBusinessFacts } from "@/lib/business-profiles/facts";
+import { collectionCatalogBlock } from "@/lib/collections/catalog-block";
+import { listPublishedItems } from "@/lib/collections/store";
+import { projectBusinessProfile } from "@/lib/business-profiles/whatsapp-default";
 import { resolveAIProvider, type AIModel } from "@/lib/ai-provider";
 import { createFireworksStreamClient } from "@/lib/ai/fireworks-stream-client";
 import { detectSlotPath, sanitizeForPublish } from "@/lib/html-engine";
@@ -98,6 +110,16 @@ interface AttachedImageBody {
 // wants to touch one section.
 function buildUserMessage(args: {
   briefBlock: string;
+  /** Los hechos reales del negocio (`<business>`), o "". */
+  negocioBlock: string;
+  /** Las otras páginas del sitio, o "". */
+  paginasBlock: string;
+  /** Lo que la ingestión ya sabe que se rompió, o "". */
+  degradacionesBlock: string;
+  /** Los ítems del catálogo, que no están en el documento, o "". */
+  catalogoBlock: string;
+  /** El JavaScript que la página ya tiene, o "" — ver currentRuntimePromptBlock. */
+  runtimeBlock: string;
   taggedHtml: string;
   scopedView: ScopedView | null;
   prompt: string;
@@ -138,12 +160,12 @@ ${args.scopedView.scopedHtml}
 DOCUMENT OUTLINE (all top-level sections of the page, in source order):
 ${args.scopedView.outline}`;
   } else {
-    documentBlock = `CURRENT DOCUMENT (every element has a server-injected \`data-op-id\` attribute — use those values in Mode A's <edit target="..."> calls):
+    documentBlock = `CURRENT DOCUMENT (every EDITABLE element has a server-injected \`data-op-id\` attribute — use those values in Mode A's <edit target="..."> calls; <head>, <style> and <script> carry none and need Mode B):
 
 ${args.taggedHtml}`;
   }
 
-  return `${args.briefBlock}${focusBlock}${imageBlock}${documentBlock}
+  return `${args.negocioBlock}${args.paginasBlock}${args.degradacionesBlock}${args.catalogoBlock}${args.briefBlock}${focusBlock}${imageBlock}${documentBlock}${args.runtimeBlock}
 
 USER REQUEST:
 ${args.prompt}`;
@@ -210,7 +232,11 @@ export async function POST(req: Request): Promise<Response> {
             typeof h.content === "string" &&
             h.content.length > 0,
         )
-        .slice(-6)
+        // 12 MENSAJES, no 6: el cliente manda 6 TURNOS (usuario+asistente),
+        // así que cortar a 6 mensajes dejaba 3 turnos de memoria — la mitad de
+        // lo que la interfaz cree estar mandando. «Ahora hazlo también en la
+        // otra sección» cuatro turnos después ya no tenía contexto.
+        .slice(-12)
         .map((h) => ({ role: h.role, content: h.content.slice(0, 4000) }))
     : [];
 
@@ -277,6 +303,10 @@ export async function POST(req: Request): Promise<Response> {
     .select({
       data: schema.projects.data,
       userBrief: schema.projects.userBrief,
+      brief: schema.projects.brief,
+      // En el MISMO select que `data`: la cápsula se verifica contra el html
+      // GUARDADO, así que los dos tienen que venir del mismo instante.
+      generatedRuntime: schema.projects.generatedRuntime,
     })
     .from(schema.projects)
     .where(
@@ -334,6 +364,80 @@ export async function POST(req: Request): Promise<Response> {
     ? `PROJECT BRIEF (persistent — applies to every request):\n${userBrief}\n\n`
     : "";
 
+  // El catálogo del usuario. La banda de la colección llega al modelo VACÍA
+  // —los ítems se hornean al publicar—, así que sin esto fabricaba tarjetas
+  // inventadas que salían DUPLICADAS junto a las reales.
+  //
+  // Sólo se paga la consulta si la página trae una banda de colección.
+  const catalogoBlock = /data-ol-collection-section/i.test(currentHtml)
+    ? collectionCatalogBlock(
+        await listPublishedItems(projectId).catch(() => []),
+        currentHtml,
+      )
+    : "";
+
+  // Lo que la ingestión ya SABE que se rompió en esta página. El diagnóstico
+  // concreto (el atributo, la fórmula literal) vivía en `data.degradations[].detail`
+  // y sólo llegaba al modelo si el usuario pulsaba «Arreglar esto» — y sólo para
+  // el código `broken_controls`. Quien escribía «los botones no funcionan» a
+  // mano arrancaba sin el diagnóstico que el sistema ya tenía escrito.
+  const degradaciones = (existing.data?.degradations ?? [])
+    .flatMap((d) => (d.detail ?? []).map((t) => `- [${d.code}] ${t}`))
+    .slice(0, 8);
+  const degradacionesBlock = degradaciones.length
+    ? `KNOWN ISSUES ON THIS PAGE (recorded when it was ingested — the user may be describing one of these in vague terms):\n${degradaciones.join("\n")}\n\n`
+    : "";
+
+  // Las OTRAS páginas del sitio. Sin esto el Chat inventaba el `href` al pedirle
+  // «añade un enlace al menú en la barra» — y un enlace roto en una página
+  // publicada SIRVE LA PORTADA con un 200, así que el fallo era invisible.
+  // El Agente ya llevaba esta lista en su ESTADO; el Chat no.
+  const otrasPaginas = Object.keys(existing.data?.pages ?? {}).filter((p) => p !== pageSlug);
+  const paginasBlock = otrasPaginas.length
+    ? `OTHER PAGES ON THIS SITE (link to them with a root-relative href, e.g. /${otrasPaginas[0]}): ${otrasPaginas.map((p) => `/${p}`).join(", ")}\nNever invent a path that is not on this list — an unknown path silently serves the home page instead of erroring.\n\n`
+    : "";
+
+  // Los datos REALES del negocio. La ruta de CREAR ya los antepone al brief
+  // (`buildBusinessFacts`), y esta no los leía siquiera: la página NACÍA con el
+  // teléfono y la dirección de verdad, y al pedir por Chat «añádeme una sección
+  // de contacto» el modelo INVENTABA otros sobre la misma página.
+  //
+  // Best-effort: `projectBusinessProfile` ya traga sus propios errores y
+  // devuelve null. Un perfil ausente deja el bloque vacío y el turno sigue
+  // exactamente como antes.
+  const perfilNegocio = await projectBusinessProfile(projectId, userId);
+  const negocioBlock = (() => {
+    const profile = perfilNegocio;
+    if (!profile) return "";
+    const facts = buildBusinessFacts(profile);
+    return facts ? `${facts}\n\n` : "";
+  })();
+
+  // El JavaScript que la página YA tiene. Sin esto el modelo no puede reparar
+  // lo que no ve, y re-crea la funcionalidad desde cero.
+  //
+  // Se verifica contra el html GUARDADO, no contra `currentHtml`: la cápsula se
+  // selló sobre `data.html` y el cliente puede traer ediciones sin guardar, que
+  // darían `desajuste` sobre un código perfectamente válido.
+  //
+  // Sólo el documento raíz — la cápsula ata `data.html`, y una subpágina no
+  // entra en el piloto.
+  const runtimeBlock = (() => {
+    if (!modelJsEnabled(process.env) || pageSlug) return "";
+    const check = verifyCapsule(existing.generatedRuntime, {
+      projectId,
+      html: existing.data?.html ?? "",
+    });
+    if (!check.ok) {
+      if (check.reason !== "ausente") {
+        // eslint-disable-next-line no-console
+        console.warn(`[ai-design] cápsula no mostrada al modelo: ${check.reason}`);
+      }
+      return "";
+    }
+    return currentRuntimePromptBlock(check.code);
+  })();
+
   // Tag every element of the current document with a short `data-op-id`
   // attribute. The model addresses elements by these IDs in Mode A (ops);
   // we strip them before persisting. Output savings: 5-50x vs emitting
@@ -368,6 +472,11 @@ export async function POST(req: Request): Promise<Response> {
 
   const userMessageContent = buildUserMessage({
     briefBlock,
+    negocioBlock,
+    paginasBlock,
+    degradacionesBlock,
+    catalogoBlock,
+    runtimeBlock,
     taggedHtml,
     scopedView,
     prompt,
@@ -705,19 +814,24 @@ VISUAL CONTEXT: the attached image is a full-page render of the CURRENT page (wh
         let trimmedHtml: string;
         let appliedOpCount = 0;
         let droppedNotice = "";
+        /** El JavaScript que trajo un `<edit target="runtime">`, si vino. */
+        let runtimeDesdeOps: string | null = null;
+        /** Aviso al USUARIO cuando ese script se descartó. Separado de
+         *  `droppedNotice` porque los dos pueden pasar en el mismo turno. */
+        let runtimeNotice = "";
         let outputMode: "ops" | "rewrite";
 
         if (isOpsMode) {
           outputMode = "ops";
-          const { ops, errors: parseErrors } = parseOps(raw);
-          if (parseErrors.length > 0 && ops.length === 0) {
+          const { ops: opsEmitidas, errors: parseErrors } = parseOps(raw);
+          if (parseErrors.length > 0 && opsEmitidas.length === 0) {
             emit("error", {
               message: `Couldn't parse ops: ${parseErrors[0]}`,
             });
             closeStream();
             return;
           }
-          if (ops.length === 0) {
+          if (opsEmitidas.length === 0) {
             emit("error", {
               message:
                 "Empty <edits> block — the model didn't emit any operations. Try again.",
@@ -725,6 +839,38 @@ VISUAL CONTEXT: the attached image is a full-page render of the CURRENT page (wh
             closeStream();
             return;
           }
+
+          // El runtime se aparta ANTES que nada: no es un elemento del
+          // documento, así que ni `rejectDocumentWideOps` ni el aplicador
+          // sabrían qué hacer con él, y tampoco debe gastar cupo de ops de
+          // maquetación. Ver `splitRuntimeOps` para por qué existe.
+          const partido = splitRuntimeOps(opsEmitidas);
+          const ops = partido.domOps;
+          if (partido.runtime.kind === "codigo") {
+            runtimeDesdeOps = partido.runtime.code;
+          } else if (partido.runtime.kind === "error") {
+            runtimeNotice = runtimeOpAviso(partido.runtime.reason);
+            // eslint-disable-next-line no-console
+            console.warn(`[ai-design] op de runtime descartada: ${partido.runtime.reason}`);
+          }
+
+          // Un turno que SÓLO cambia comportamiento es legítimo — de hecho es
+          // el caso corriente de un arreglo de bug — y no lleva ni una op de
+          // maquetación. Antes caía en la rama de "ops vacías" y se rechazaba.
+          if (ops.length === 0 && runtimeDesdeOps !== null) {
+            trimmedHtml = taggedHtml;
+          } else if (ops.length === 0) {
+            // Sin ops de maquetación y sin script válido no queda nada que
+            // hacer. Si el script se cayó, el usuario merece saber por qué —
+            // el mensaje genérico de "ops vacías" le escondería la causa.
+            emit("error", {
+              message:
+                runtimeNotice ||
+                "Empty <edits> block — the model didn't emit any operations. Try again.",
+            });
+            closeStream();
+            return;
+          } else {
           // Una op contra el <body> no es una edición: es un documento nuevo,
           // y eso es el Modo B. Medido, el modelo llegaba ahí queriendo tocar
           // `:root` y se llevaba la página entera dos de cada cinco veces.
@@ -770,6 +916,7 @@ VISUAL CONTEXT: the attached image is a full-page render of the CURRENT page (wh
           }
           trimmedHtml = applyResult.html;
           appliedOpCount = applyResult.appliedCount;
+          }
           if (detectSlotPath(trimmedHtml)) {
             emit("error", {
               message:
@@ -862,6 +1009,18 @@ VISUAL CONTEXT: the attached image is a full-page render of the CURRENT page (wh
           // las ediciones futuras y el usuario oye hablar de un control que no
           // tocó. La puerta sólo rechaza lo que este turno rompió.
           priorHtml: currentHtml,
+          // El brief y el perfil, que faltaban. Sin `brief` la etapa de
+          // IMÁGENES se salta entera (`prepare.ts` la marca "no_brief"), y el
+          // contrato ORDENA al modelo marcar cada hueco con `data-ol-photo`:
+          // el resultado medido era que «añade una galería» por Chat daba CAJAS
+          // GRISES mientras la misma petición al crear daba fotos reales.
+          // Sin `profile`, `seedBrandIntoHtml` tampoco corría, así que una
+          // reescritura podía tirar el logo y nadie lo reponía.
+          //
+          // No encarece el turno normal: `photographHtml` sale sin tocar la red
+          // cuando el documento no trae huecos, que es el caso corriente.
+          ...(existing.brief ? { brief: existing.brief } : {}),
+          ...(perfilNegocio ? { profile: perfilNegocio } : {}),
           ...(existing.data?.settings !== undefined ? { settings: existing.data.settings } : {}),
         });
         const gated = prepared.ok
@@ -891,13 +1050,16 @@ VISUAL CONTEXT: the attached image is a full-page render of the CURRENT page (wh
 
         enabledModules = [...prepared.report.modules];
 
-        // EL SCRIPT DEL MODELO, capturado del texto CRUDO — antes de que el
-        // saneado del gate lo borrara. Sólo en REESCRITURA: en modo ops el
-        // modelo emite `<edits>`, no un documento, y no hay script que sacar.
+        // EL SCRIPT DEL MODELO. En REESCRITURA se captura del texto CRUDO,
+        // antes de que el saneado del gate lo borrara. En modo OPS llega por su
+        // objetivo reservado (`splitRuntimeOps`) — hasta el 2026-08-22 aquí se
+        // devolvía `null` sin más, y por eso el camino barato no podía tocar el
+        // comportamiento de una página ni aunque el modelo quisiera.
         // Sólo con DeepSeek: firmar los bytes de un proveedor creyéndolos de
         // otro es justo la clase de error que un hash no puede detectar.
         const runtimeCapturado = (() => {
-          if (!modelJsEnabled(process.env) || !useDeepSeek || outputMode === "ops") return null;
+          if (!modelJsEnabled(process.env) || !useDeepSeek) return null;
+          if (outputMode === "ops") return runtimeDesdeOps;
           const r = extractModelRuntime(accumulatedHtml);
           if (!r.ok) {
             if (r.reason !== "ausente") {
@@ -968,6 +1130,19 @@ VISUAL CONTEXT: the attached image is a full-page render of the CURRENT page (wh
           return;
         }
 
+        // TURNO VACÍO. Ni un byte de diferencia en el documento y ningún
+        // script nuevo: pase lo que pase el modelo haya escrito en su prosa,
+        // esta página está exactamente como estaba. Se dice, porque el caso
+        // MEDIDO es el peor posible — «ya lo arreglé» sobre algo que sigue
+        // roto. No se juzga lo que dijo: se cuenta lo que hay.
+        if (saved.sinCambios) {
+          runtimeNotice = runtimeNotice
+            ? `${runtimeNotice}\n\nLa página quedó igual que antes de este mensaje.`
+            : "Este cambio no modificó nada de la página: quedó exactamente igual que antes. Si te dije que arreglé algo, no llegó a aplicarse — vuelve a pedírmelo describiendo qué ves.";
+          // eslint-disable-next-line no-console
+          console.warn(`[ai-design] turno sin cambios · modo ${outputMode} · ops ${appliedOpCount}`);
+        }
+
         // Debit credits — billed from the real token usage the provider
         // reports. Falls back to a char estimate only if the usage event
         // never arrived (rare; Gemini emits it on every stream).
@@ -986,10 +1161,11 @@ VISUAL CONTEXT: the attached image is a full-page render of the CURRENT page (wh
 
         // Guardar-y-AVISAR: si se descartó algo, el usuario tiene que leerlo.
         // Un cambio que se pierde en silencio es peor que uno que no se hizo.
+        const avisos = [droppedNotice, runtimeNotice].filter(Boolean).join("\n\n");
         emit("done", {
-          reasoning: droppedNotice ? `${reasoning}
+          reasoning: avisos ? `${reasoning}
 
-${droppedNotice}` : reasoning,
+${avisos}` : reasoning,
           html: trimmedHtml,
           updatedAt: now.toISOString(),
           mode: outputMode,

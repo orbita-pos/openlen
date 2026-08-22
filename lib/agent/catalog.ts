@@ -80,7 +80,7 @@ export function buildFunctionDeclarations(): Record<string, unknown>[] {
     {
       name: "editar_pagina",
       description:
-        "Aplica ediciones quirúrgicas al documento actual dirigidas por data-op-id (máx 8 por llamada). Después de una llamada exitosa los data-op-id CAMBIAN: para editar otra vez, pide leer_estado con incluir_documento=true.",
+        'Aplica ediciones quirúrgicas al documento actual dirigidas por data-op-id (máx 8 por llamada). Después de una llamada exitosa los data-op-id CAMBIAN: para editar otra vez, pide leer_estado con incluir_documento=true. Hay UN target que no es un data-op-id: "runtime", el JavaScript de la página — sólo con op="replace" y con el script COMPLETO corregido en new_html. Es la ÚNICA forma de cambiar el comportamiento de la página desde aquí: editar el marcado no lo cambia nunca. El código actual aparece en tu contexto cuando la página tiene.',
       parameters: {
         type: "OBJECT",
         properties: {

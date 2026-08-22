@@ -22,7 +22,12 @@ import { GeminiProvider, type StreamEvent, type StreamRequest } from "@/lib/ai-g
 import { streamWithRetry } from "@/lib/agent/retry";
 import { fireworksStreamProvider } from "@/lib/ai/fireworks-as-stream-provider";
 import { usesDeepSeek } from "@/lib/ai/provider-switch";
-import { extractModelRuntime, modelJsEnabled, modelRuntimePromptBlock } from "@/lib/ai-stream/model-runtime";
+import {
+  currentRuntimePromptBlock,
+  extractModelRuntime,
+  modelJsEnabled,
+  modelRuntimePromptBlock,
+} from "@/lib/ai-stream/model-runtime";
 import { swapJsClauses } from "@/lib/ai/js-clause";
 import { DESIGN_GUIDANCE } from "@/lib/design-guidance";
 
@@ -35,6 +40,12 @@ export interface RedesignInput {
   negocio: Record<string, unknown> | null;
   /** El brief persistente del proyecto, si existe. */
   brief: string | null;
+  /** El JavaScript que la página YA tiene, ya verificado contra su cápsula.
+   *
+   *  `html` viene SANEADO —sin scripts— porque así se persiste. Sin esto el
+   *  rediseño no puede conservar ni reparar una conducta que no ve, y la
+   *  re-inventa desde cero. Ver `currentRuntimePromptBlock`. */
+  runtime?: string | null;
 }
 
 export type RedesignOutcome =
@@ -84,13 +95,16 @@ export function buildRedesignPrompt(input: RedesignInput): string {
   const briefBlock = input.brief?.trim()
     ? `\nBRIEF PERSISTENTE DEL PROYECTO:\n${input.brief.trim()}\n`
     : "";
+  // El JavaScript que la página ya tiene. Va DESPUÉS del documento, donde el
+  // modelo ya sabe qué marcado está mirando.
+  const runtimeBlock = currentRuntimePromptBlock(input.runtime ?? "", "documento");
 
   return `Rediseña por completo esta landing page siguiendo la dirección del dueño. Emites UN documento HTML completo (<!doctype html> ... </html>) y NADA más — sin markdown, sin fences, sin comentarios fuera del documento.
 
 DIRECCIÓN DEL DUEÑO: ${input.direccion}
 ${negocioBlock}${briefBlock}
 REGLAS DURAS DEL REDISEÑO:
-1. CONSERVA todo elemento que lleve un atributo data-ol-* (bandas de módulos como data-ol-bookings-section / data-ol-collection-section, marcadores de conducta, spans data-ol-live). Puedes moverlos de sección y re-estilizar su envoltorio, pero el elemento y sus atributos data-ol-* sobreviven INTACTOS.
+1. CONSERVA todo elemento que lleve un atributo data-ol-* (la banda data-ol-collection-section y sus tarjetas data-ol-item / data-ol-item-field, marcadores de conducta, spans data-ol-live). Puedes moverlos de sección, rehacer su maquetación y re-estilizarlos por completo, pero el elemento y sus atributos data-ol-* sobreviven INTACTOS: son lo que al publicar se rellena con los datos reales del dueño. Si rediseñas las tarjetas del catálogo, todas siguen siendo hermanas y con la misma estructura.
 2. CONSERVA los hechos: nombres, textos con datos concretos (precios, horarios, direcciones, teléfonos) y TODA URL real (href e img src) que exista en el documento actual. Reorganízalos y reescribe el copy alrededor, pero no inventes datos ni URLs nuevas — las únicas imágenes permitidas son las que ya están en el documento.
 3. CONSERVA el idioma del documento actual.
 4. CONSERVA el <title> y los <meta> del <head> actual (puedes reordenarlos).
@@ -100,6 +114,7 @@ REGLAS DURAS DEL REDISEÑO:
 
 DOCUMENTO ACTUAL:
 ${input.html}
+${runtimeBlock}
 
 GUÍA DE DISEÑO (tu estándar de calidad):
 ${DESIGN_GUIDANCE}

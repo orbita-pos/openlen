@@ -91,7 +91,19 @@ export function extractModelRuntime(rawHtml: string): RuntimeExtraction {
   // El piloto es un script clásico y nada más.
   if (type === "module") return { ok: false, reason: "modulo" };
 
-  const code = el.rawText;
+  return validateRuntimeCode(el.rawText);
+}
+
+/**
+ * Las comprobaciones a nivel de CÓDIGO, sin elemento alrededor.
+ *
+ * Se separó de `extractModelRuntime` cuando el runtime pasó a ser
+ * direccionable por ops: ahí el modelo manda el JavaScript dentro de un
+ * `<edit target="runtime">`, sin documento del que sacarlo. Las reglas tienen
+ * que ser las MISMAS por los dos caminos — un código que se rechaza al crear y
+ * se acepta al editar es una puerta trasera con dos llaves.
+ */
+export function validateRuntimeCode(code: string): RuntimeExtraction {
   if (code.trim() === "") return { ok: false, reason: "vacio" };
   if (Buffer.byteLength(code, "utf8") > MAX_RUNTIME_BYTES) {
     return { ok: false, reason: "demasiado_grande" };
@@ -171,4 +183,188 @@ Puedes escribir el JavaScript de esta página. Va en UN bloque, el último del b
 Úsalo para lo que el CSS no alcanza: filtrar una lista por categoría, una galería con lightbox, pestañas, una cuenta atrás, buscar dentro de la propia página, un carrusel.
 Límites: uno solo, en línea, sin \`src\` ni \`type="module"\`, máximo ${Math.floor(MAX_RUNTIME_BYTES / 1024)} KiB, sin red (fetch, XMLHttpRequest, WebSocket y Worker los bloquea la política de la página), y nada que envíe datos de un visitante. Si alguno se incumple se descarta el bloque entero.
 La página tiene que estar COMPLETA y legible sin el script: mejora, nunca construye el contenido. Nunca escondas contenido con CSS para revelarlo desde el script — si el script se descarta, la página llega en blanco.`;
+}
+
+/**
+ * EL CÓDIGO QUE YA TIENE LA PÁGINA, para que el modelo lo pueda REPARAR.
+ *
+ * POR QUÉ EXISTE. `data.html` se guarda SANEADO: el script del modelo no está
+ * dentro. Vive aparte, en `projects.generatedRuntime`, y sólo el publicador los
+ * vuelve a juntar (`injectModelRuntime`). Consecuencia MEDIDA: cuando el usuario
+ * pedía «arregla el bug del juego», el documento que viajaba al modelo NO LLEVABA
+ * EL SCRIPT — así que el modelo no reparaba nada, RE-CREABA la funcionalidad
+ * desde cero. Nadie lo notaba porque el resultado funciona; simplemente es otra
+ * página, no la tuya arreglada.
+ *
+ * Va en un bloque APARTE, nunca inyectado dentro del documento que se le enseña.
+ * Meterlo ahí lo pondría en el camino de las ops y podría acabar persistido en
+ * `data.html`, que es justo el invariante que no se toca.
+ *
+ * Las dos últimas frases no son cortesía. `resealRuntime` vuelve a atar el
+ * código VIEJO a cualquier HTML nuevo que se guarde, así que una reescritura sin
+ * script deja la página con un runtime que apunta a elementos que ya no existen.
+ * Decírselo es lo que convierte «reescribe» en «reescribe y trae el script».
+ */
+/** Cómo emite ediciones quien lee este bloque. El Chat manda un sobre XML
+ *  `<edits>`; el Agente llama a `editar_pagina` con un array JSON; el rediseño
+ *  siempre produce un documento entero y no tiene camino barato. Enseñarle al
+ *  Agente el ejemplo en XML sería enseñarle una sintaxis que su superficie no
+ *  acepta — el modelo la copiaría y la llamada fallaría. */
+export type RuntimeEditEnvelope = "xml" | "tool" | "documento";
+
+function comoCambiarlo(envelope: RuntimeEditEnvelope): string {
+  if (envelope === "documento") {
+    return `TO CHANGE THE BEHAVIOUR you have to change THIS code: your rewrite must include the corrected \`<script ${MODEL_RUNTIME_ATTR}>\` block. Editing the markup alone never changes behaviour — nothing else on the page runs.`;
+  }
+  const ejemplo =
+    envelope === "xml"
+      ? `<edits>
+  <edit op="replace" target="${RUNTIME_OP_TARGET}">
+    <new><script ${MODEL_RUNTIME_ATTR}>
+    …the complete corrected code, not a fragment and not a diff…
+    </script></new>
+  </edit>
+</edits>`
+      : `{ "op": "replace", "target": "${RUNTIME_OP_TARGET}", "new_html": "<script ${MODEL_RUNTIME_ATTR}>…the complete corrected code, not a fragment and not a diff…</script>" }`;
+  const junto =
+    envelope === "xml"
+      ? "You may combine it with ordinary markup ops in the same `<edits>` block when the fix needs both."
+      : "You may combine it with ordinary markup edits in the same `edits` array when the fix needs both.";
+  return `TO CHANGE THE BEHAVIOUR you have to change THIS code. Editing the markup alone never does it — nothing else on the page runs. Two ways, both valid:
+
+• The cheap path (preferred for a bug fix): address it with the reserved target \`${RUNTIME_OP_TARGET}\`, sending the whole corrected script back —
+
+${ejemplo}
+
+  ${junto} \`${RUNTIME_OP_TARGET}\` is the ONLY target that is not an element of the document.
+
+• A full rewrite that includes the corrected \`<script ${MODEL_RUNTIME_ATTR}>\` block.`;
+}
+
+export function currentRuntimePromptBlock(
+  code: string,
+  envelope: RuntimeEditEnvelope = "xml",
+): string {
+  if (code.trim() === "") return "";
+  return `
+
+THIS PAGE ALREADY HAS JAVASCRIPT. It is stored separately and injected when the page is published, which is why it does NOT appear in the document above. This is the code that runs on the live page:
+
+<script ${MODEL_RUNTIME_ATTR}>
+${code}
+</script>
+
+${comoCambiarlo(envelope)}
+
+If you rewrite the page and its behaviour should survive, RE-EMIT this script, adapted to your new markup. Omitting it does NOT clear the behaviour — the page keeps the script above, and it will reference elements your rewrite may have removed.
+NEVER tell the user you fixed the behaviour in a turn where you emitted neither of the two forms above. If you only touched markup, the code above is still what runs, unchanged.`;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// El runtime como OBJETIVO de una op.
+//
+// POR QUÉ. El camino barato de edición (Modo A) direcciona elementos por
+// `data-op-id`, y `SKIP_TAGS` deja fuera `script` — así que el JavaScript de la
+// página era estructuralmente INALCANZABLE desde ahí. MEDIDO el 2026-08-22: el
+// modelo diagnosticó un bug de comportamiento con precisión, anunció «I'll fix
+// the runtime script», y emitió ops de Modo A. Nada cambió. El usuario leyó
+// «ya lo arreglé» sobre un juego que seguía roto, sin un solo error en consola.
+//
+// El aviso ya estaba en el prompt («Mode A ops cannot reach it»). El modelo lo
+// leyó, lo parafraseó bien, y eligió Modo A igual porque la petición sonaba
+// pequeña. Un agujero estructural no se tapa pidiendo por favor.
+//
+// El arreglo es hacer completo el camino barato, no prohibirlo: un objetivo
+// reservado que el aplicador de ops nunca llega a ver. `parseOps` ya devuelve
+// `target` como string libre, así que el reparto ocurre AQUÍ, en TypeScript,
+// entre parsear y aplicar — el crate de Rust no se toca y la equivalencia byte
+// a byte del shadow soak queda intacta.
+
+import type { Op } from "@/lib/html-ops";
+
+/** El único objetivo de op que no es un elemento del documento. */
+export const RUNTIME_OP_TARGET = "runtime";
+
+export type RuntimeOpRejection =
+  | RuntimeRejection
+  /** Más de una op contra el runtime: no se fusionan (mismo criterio que
+   *  `extractModelRuntime` con dos `<script>`) — no sabríamos en qué orden. */
+  | "varias"
+  /** `insert_before` / `insert_after` / `delete` sobre un blob de código. */
+  | "op_no_soportada";
+
+export type RuntimeOpResult =
+  | { readonly kind: "ninguna" }
+  | { readonly kind: "codigo"; readonly code: string }
+  | { readonly kind: "error"; readonly reason: RuntimeOpRejection };
+
+/**
+ * El JavaScript que viene dentro de un `<edit target="runtime">`.
+ *
+ * Acepta las dos formas que el modelo puede emitir: el `<script>` entero (que
+ * es lo que el prompt le enseña, y lo natural porque toda op de `replace` lleva
+ * un elemento) o el código pelado. Tolerar las dos cuesta una comprobación y
+ * evita perder un arreglo bueno por un envoltorio ausente.
+ */
+export function runtimeCodeFromOpPayload(payload: string): RuntimeExtraction {
+  // Sin expresión regular a propósito: la primera versión llevaba `\b` dentro
+  // de un template literal, que en JavaScript es el CARÁCTER de retroceso y no
+  // un límite de palabra, así que no casaba nunca y todo script entraba como si
+  // fuera código pelado — devolviendo "sintaxis" sobre un arreglo bueno. Dos
+  // `includes` no tienen esa trampa.
+  const pareceElemento = payload.includes("<script") || payload.includes("<SCRIPT");
+  return pareceElemento ? extractModelRuntime(payload) : validateRuntimeCode(payload);
+}
+
+/**
+ * Aparta las ops que apuntan al runtime antes de que el aplicador vea la tanda.
+ *
+ * Devuelve SIEMPRE `domOps` sin ellas, incluso cuando el runtime falla: el
+ * resto del cambio del usuario no tiene por qué caerse porque el script venga
+ * mal. Quien llame decide qué hacer con el error — la doctrina dice avisar, no
+ * tragárselo.
+ */
+export function splitRuntimeOps(ops: readonly Op[]): {
+  domOps: Op[];
+  runtime: RuntimeOpResult;
+} {
+  const mias = ops.filter((o) => o.target === RUNTIME_OP_TARGET);
+  const domOps = ops.filter((o) => o.target !== RUNTIME_OP_TARGET);
+  if (mias.length === 0) return { domOps, runtime: { kind: "ninguna" } };
+  if (mias.length > 1) return { domOps, runtime: { kind: "error", reason: "varias" } };
+
+  const op = mias[0]!;
+  // Sólo `replace`. Insertar "antes" o "después" de un blob de código no
+  // significa nada, y `delete` tampoco se acepta todavía: borrar la cápsula
+  // exige un tercer estado en `saveProjectData` (hoy un `runtime` falsy quiere
+  // decir «no toques la columna», no «vacíala»). Queda anotado como hueco: HOY
+  // NO HAY NINGUNA FORMA de quitarle el JavaScript a una página.
+  if (op.type !== "replace") {
+    return { domOps, runtime: { kind: "error", reason: "op_no_soportada" } };
+  }
+  const extraido = runtimeCodeFromOpPayload(op.newHtml ?? "");
+  return {
+    domOps,
+    runtime: extraido.ok
+      ? { kind: "codigo", code: extraido.code }
+      : { kind: "error", reason: extraido.reason },
+  };
+}
+
+/** Frase para el usuario cuando el script del turno se descartó. En español:
+ *  la ve él, no el modelo. */
+export function runtimeOpAviso(reason: RuntimeOpRejection): string {
+  const porque: Record<RuntimeOpRejection, string> = {
+    varias: "mandó dos versiones del código y no se puede saber cuál quería",
+    op_no_soportada: "intentó insertar o borrar el código en vez de reemplazarlo",
+    sintaxis: "el código que escribió no compila",
+    vacio: "mandó el código vacío",
+    demasiado_grande: "el código pasa del tamaño máximo",
+    marcador_de_editor: "el código traía un marcador reservado del editor",
+    ausente: `el script no llevaba el marcador \`${MODEL_RUNTIME_ATTR}\` que lo identifica`,
+    varios: "mandó varios <script> dentro de la misma edición",
+    con_src: "el script apuntaba a un fichero externo, y sólo se admite código en línea",
+    modulo: "el script era un módulo, y sólo se admite un script clásico",
+  };
+  return `No pude aplicar el cambio de comportamiento: ${porque[reason]}. El resto de la edición sí se guardó, y la página sigue con el JavaScript que ya tenía.`;
 }

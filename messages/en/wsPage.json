@@ -288,7 +288,9 @@
     "dynamic_content": "Part of what your page builds by itself may look empty. You can write it in directly in the editor.",
     "broken_controls": "Some interactive controls were wired incorrectly and won't work. Ask the assistant to fix them.",
     "interactivity_lost": "The interactive details the AI wrote for your page (filters, galleries, tabs) didn't make it into this publish. Your text and images are all there. Publish again; if they're still missing, ask the assistant to rebuild them.",
+    "form_routing_stale": "Some of your form settings (which email gets notified, where it redirects) may have stopped applying after this edit. Check each form still notifies where you want.",
     "dismiss": "Got it",
-    "fix": "Fix this"
+    "fix": "Fix this",
+    "runtime_stale": "Your page's interactive code looks for elements this edit removed. When that happens the code stops running, so more may have broken than what's missing. Ask the chat to fix it."
   }
 }

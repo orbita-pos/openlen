@@ -296,7 +296,28 @@ export type DegradationCode =
    *  después de que la página ya existía. Dos causas: la cápsula dejó de cuadrar
    *  con el documento (algún escritor no re-selló) o el sellado CSP se perdió y
    *  el script no puede viajar sin política. */
-  | "interactivity_lost";
+  | "interactivity_lost"
+  /** Una edición cambió CUÁNTOS formularios tiene la página, y la config de
+   *  cada formulario (a qué correo avisa, a dónde redirige) se resuelve por su
+   *  POSICIÓN en el documento — `formConfigKey`. Insertar o quitar uno corre
+   *  esa numeración, así que un ajuste que el usuario hizo para el formulario
+   *  de contacto puede acabar aplicándose al de newsletter.
+   *
+   *  No se puede arreglar solo: emparejar formularios entre dos versiones del
+   *  documento es adivinar, y adivinar mal manda los mensajes de alguien al
+   *  sitio equivocado sin decirlo. Se AVISA, que es lo que la doctrina pide
+   *  cuando la página no miente pero algo dejó de estar donde estaba. */
+  | "form_routing_stale"
+  /** El JavaScript guardado busca elementos que la edición quitó. No es que
+   *  ese control deje de responder: `getElementById(...)` sobre lo que ya no
+   *  está LANZA, y la excepción aborta el script entero — un elemento borrado
+   *  puede apagar toda la interactividad de la página, con el error viviendo
+   *  en la consola del visitante, que nadie mira.
+   *
+   *  Se AVISA en vez de reparar: reescribir el código del modelo sería
+   *  inventar. Y el aviso llega también al modelo en el turno siguiente, que
+   *  ahora sí puede arreglarlo — el runtime es direccionable por ops. */
+  | "runtime_stale";
 
 // One persisted Chat-tab turn. The Chat panel's live turn type carries HTML
 // snapshots for in-session Undo; this is the transcript-only form written to
