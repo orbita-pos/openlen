@@ -87,6 +87,10 @@ export function createAgentBrain(options: AgentBrainOptions): AgentBrain {
   const wireTools = toolsForFireworks(options.tools);
   const streamOpts = options.signal ? { signal: options.signal } : {};
   let ranOnGemini = false;
+  // Qwen cuesta ~10x la salida del razonador. Sin esto, un turno con imagen
+  // adjunta correría en Qwen y se cobraría a tarifa de DeepSeek — la misma
+  // clase de error que el comentario de `lib/credits.ts` ya documenta al revés.
+  let ranOnQwen = false;
 
   const viaGemini = (
     messages: Message[],
@@ -109,25 +113,40 @@ export function createAgentBrain(options: AgentBrainOptions): AgentBrain {
     );
   };
 
-  const viaFireworks = (messages: Message[], withTools: boolean, maxOutputTokens: number) =>
-    asAgentStream(
+  const viaFireworks = (
+    messages: Message[],
+    withTools: boolean,
+    maxOutputTokens: number,
+    images?: InlineImage[],
+  ) =>
+    ((): ReturnType<typeof asAgentStream> => {
+      if (images?.length) ranOnQwen = true;
+      return asAgentStream(
       fireworks.stream(
         {
           messages: messagesForFireworks(messages),
           ...(withTools ? { tools: wireTools } : {}),
+          // Con píxeles adjuntos la operación cambia de papel: al razonador NUNCA
+          // se le manda una imagen, y quien mira es Qwen.
+          ...(images?.length ? { images } : {}),
           maxOutputTokens,
           temperature: TEMPERATURE,
           requestId: options.requestId,
-          operation: "page_edit",
+          operation: images?.length ? "page_write_with_reference" : "page_edit",
         },
         streamOpts,
       ),
-    );
+      );
+    })();
 
   return {
     usesDeepSeek,
     modelId: usesDeepSeek ? modelIdForRole(roleForOperation("page_edit")) : gemini.model,
-    creditRate: () => (usesDeepSeek && !ranOnGemini ? "deepseek-flash" : gemini.rate),
+    // El proveedor que corrió el turno es el que lo paga. Tres papeles, tres
+    // tarifas: si en algún momento se cayó a Gemini manda Gemini; si miró Qwen,
+    // Qwen; si no, el razonador.
+    creditRate: () =>
+      !usesDeepSeek || ranOnGemini ? gemini.rate : ranOnQwen ? "qwen-vision" : "deepseek-flash",
     openStream: (messages) => {
       // Los píxeles adjuntos van SÓLO en el turno cuyo último mensaje es el
       // prompt del usuario (el gateway los ancla ahí); mezclarlos con un mensaje
@@ -136,7 +155,10 @@ export function createAgentBrain(options: AgentBrainOptions): AgentBrain {
         options.attachedImage && messages[messages.length - 1] === options.attachedImage.anchorMessage
           ? [options.attachedImage.image]
           : undefined;
-      if (usesDeepSeek && !attached) return viaFireworks(messages, true, LOOP_MAX_OUTPUT_TOKENS);
+      // Con imagen adjunta ya NO se cae a Gemini: va a Qwen, el papel con visión,
+      // por el mismo transporte y con las mismas herramientas.
+      // `OPENLEN_AGENT_PROVIDER=gemini` sigue devolviendo el camino de antes.
+      if (usesDeepSeek) return viaFireworks(messages, true, LOOP_MAX_OUTPUT_TOKENS, attached);
       return viaGemini(messages, true, LOOP_MAX_OUTPUT_TOKENS, attached);
     },
     closeOut: (messages) =>

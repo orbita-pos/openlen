@@ -28,6 +28,7 @@ import {
 } from "@/lib/html-engine";
 import { classifyBriefFamily } from "@/lib/templates/classify-brief-family";
 import { GeminiProvider } from "@/lib/ai-gateway";
+import { fireworksStreamProvider, type StreamProviderLike } from "@/lib/ai/fireworks-as-stream-provider";
 import {
   imageTone,
   loadCuratedImages,
@@ -147,8 +148,14 @@ const PICK_SCHEMA: Record<string, unknown> = {
 };
 
 async function geminiPick(req: PickRequest): Promise<Record<number, string> | null> {
+  // Elegir foto es DIRECCIÓN DE ARTE SOBRE TEXTO: se le da una lista de huecos y
+  // otra de fotos, y decide el emparejamiento. No mira un solo píxel, así que
+  // corre en DeepSeek. Gemini se queda para generar y editar imágenes.
+  // `OPENLEN_IMAGERY_PICK=gemini` vuelve atrás.
   const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey || process.env.OPENLEN_IMAGERY_SMART === "0") return null;
+  const usaGemini = process.env.OPENLEN_IMAGERY_PICK?.trim().toLowerCase() === "gemini";
+  if (process.env.OPENLEN_IMAGERY_SMART === "0") return null;
+  if (usaGemini && !apiKey) return null;
 
   const prompt = [
     "You are an art director choosing stock photos for a landing page.",
@@ -166,7 +173,15 @@ async function geminiPick(req: PickRequest): Promise<Record<number, string> | nu
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), PICK_TIMEOUT_MS);
   try {
-    const provider = new GeminiProvider(apiKey);
+    const provider: StreamProviderLike = usaGemini
+      ? (new GeminiProvider(apiKey as string) as unknown as StreamProviderLike)
+      : fireworksStreamProvider({
+          requestId: "imagery-pick",
+          operation: "simple_extraction",
+          maxOutputTokens: 2_048,
+          temperature: 0.1,
+          jsonObject: true,
+        });
     let raw = "";
     for await (const ev of provider.stream(
       {
@@ -182,7 +197,11 @@ async function geminiPick(req: PickRequest): Promise<Record<number, string> | nu
       if (ev.type === "text_delta") raw += ev.text;
       else if (ev.type === "done" && ev.stopReason.kind === "error") return null;
     }
-    const parsed = JSON.parse(raw) as { picks?: { slot?: unknown; imageId?: unknown }[] };
+    // Una valla de markdown aquí no puede costar el emparejamiento entero: el
+    // `catch` de abajo devolvería `null` y la página caería al reparto tonto sin
+    // que nadie supiera por qué.
+    const limpio = raw.trim().replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "");
+    const parsed = JSON.parse(limpio) as { picks?: { slot?: unknown; imageId?: unknown }[] };
     if (!Array.isArray(parsed?.picks)) return null;
     const out: Record<number, string> = {};
     for (const p of parsed.picks) {

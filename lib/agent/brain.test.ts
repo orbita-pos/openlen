@@ -71,7 +71,13 @@ describe("el cerebro del Agente", () => {
 
   // Al razonador de Fireworks nunca se le ha mandado una imagen y la política
   // manda toda imagen a otro papel. Adivinar aquí cuesta la acción del usuario.
-  it("un turno con píxeles adjuntos se queda en Gemini", async () => {
+  /**
+   * ESTO ERA AL REVÉS hasta el 2026-08-21: los píxeles adjuntos caían en Gemini
+   * porque al razonador nunca se le manda una imagen. Sigue siendo cierto que al
+   * razonador no se le manda — por eso la operación cambia de papel y mira QWEN,
+   * que es quien tiene ojos en la política. Gemini se queda para los píxeles.
+   */
+  it("un turno con píxeles adjuntos va a Qwen, no a Gemini", async () => {
     const brain = createAgentBrain({
       tools: TOOLS,
       requestId: "p1",
@@ -79,8 +85,11 @@ describe("el cerebro del Agente", () => {
       attachedImage: { image: IMAGE, anchorMessage: USER },
     });
     await drain(brain.openStream([USER]));
-    expect(geminiStream).toHaveBeenCalledTimes(1);
-    expect(geminiStream.mock.calls[0][0].images).toEqual([IMAGE]);
+    expect(geminiStream, "Gemini no debería haber corrido").not.toHaveBeenCalled();
+    expect(fireworksStream).toHaveBeenCalledTimes(1);
+    expect(fireworksStream.mock.calls[0][0].images).toEqual([IMAGE]);
+    // El papel lo decide la operación: sin esto la imagen iría al razonador.
+    expect(fireworksStream.mock.calls[0][0].operation).toBe("page_write_with_reference");
   });
 
   // Los píxeles se anclan al ÚLTIMO mensaje de usuario. En un turno posterior el
@@ -139,7 +148,7 @@ describe("a qué tarifa se cobra el turno", () => {
 
   // La trampa del dinero: DeepSeek encendido PERO el turno cayó a Gemini por
   // llevar imagen. Decidir la tarifa al abrir lo cobraría a una novena parte.
-  it("un turno mixto se cobra al proveedor caro, nunca al barato", async () => {
+  it("un turno con visión se cobra a tarifa de Qwen, no a la del razonador", async () => {
     const brain = createAgentBrain({
       tools: TOOLS,
       requestId: "p1",
@@ -150,9 +159,13 @@ describe("a qué tarifa se cobra el turno", () => {
     await drain(brain.openStream([USER]));
     const toolTurn: Message = { role: "user", content: "", functionResponses: [] };
     await drain(brain.openStream([USER, toolTurn]));
-    expect(geminiStream).toHaveBeenCalledTimes(1);
-    expect(fireworksStream).toHaveBeenCalledTimes(1);
-    expect(brain.creditRate()).toBe("gemini-flash");
+    // Los dos turnos van por Fireworks: el primero mirando (Qwen), el segundo
+    // sólo con resultados de herramientas (razonador).
+    expect(geminiStream).not.toHaveBeenCalled();
+    expect(fireworksStream).toHaveBeenCalledTimes(2);
+    // Qwen cuesta ~10x la salida del razonador: cobrar el turno como si lo
+    // hubiera escrito DeepSeek regalaría la diferencia justo en el más caro.
+    expect(brain.creditRate()).toBe("qwen-vision");
   });
 
   it("la tarifa se lee DESPUÉS del turno: antes de abrir nada no compromete nada", async () => {
@@ -164,6 +177,6 @@ describe("a qué tarifa se cobra el turno", () => {
     });
     expect(brain.creditRate()).toBe("deepseek-flash");
     await drain(brain.openStream([USER]));
-    expect(brain.creditRate()).toBe("gemini-flash");
+    expect(brain.creditRate()).toBe("qwen-vision");
   });
 });

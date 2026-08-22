@@ -349,8 +349,13 @@ export async function fillTemplate(
   input: FillTemplateInput,
 ): Promise<FillTemplateResult> {
   const t0 = Date.now();
+  // La clave que hace falta es la del camino que VA A CORRER. Exigir la de
+  // Gemini aquí mataba el relleno en un despliegue sin ella, aunque el camino
+  // por defecto (DeepSeek) no la use para nada.
   const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) {
+  const usaGemini = process.env.OPENLEN_AUTOFILL_PROVIDER?.trim().toLowerCase() === "gemini"
+    || !process.env.FIREWORKS_API_KEY?.trim();
+  if (usaGemini && !apiKey) {
     return {
       ok: false,
       error: {
@@ -400,18 +405,22 @@ export async function fillTemplate(
     clonedTemplate: input.clonedTemplate,
     roleAware: input.roleAware,
   });
-  // Aquí la medición NO favoreció el cambio, al revés que en el Chat y el
-  // Agente: misma página y mismos datos, Gemini aplicó 13 ops en 4.36s y
-  // DeepSeek 8 en 3.52s, ambos sin errores de cascada. Un segundo menos a
-  // cambio de cinco huecos que se quedan con el relleno genérico no es un
-  // trato bueno para el usuario. Se deja la costura puesta y el default donde
-  // la evidencia lo sostiene: `OPENLEN_AUTOFILL_PROVIDER=deepseek` para
-  // encenderlo cuando haya con qué decidir.
-  const useDeepSeek = process.env.OPENLEN_AUTOFILL_PROVIDER?.trim().toLowerCase() === "deepseek"
-    && !!process.env.FIREWORKS_API_KEY?.trim();
+  // 🔴 EL DEFAULT SE INVIRTIÓ EL 2026-08-21, Y CONTRA LA MEDICIÓN.
+  //
+  // Lo medido decía lo contrario que en el Chat y el Agente: misma página y
+  // mismos datos, Gemini aplicó 13 ops en 4.36s y DeepSeek 8 en 3.52s, ambos sin
+  // errores de cascada. Un segundo menos a cambio de CINCO huecos que se quedan
+  // con relleno genérico no es un buen trato para el usuario, y por eso el
+  // default estaba en Gemini.
+  //
+  // Se invierte por decisión de Jesús: DeepSeek y Qwen son los modelos de la
+  // casa y Gemini se queda sólo para los píxeles. El coste está medido y
+  // aceptado, no ignorado. `OPENLEN_AUTOFILL_PROVIDER=gemini` lo devuelve, y sin
+  // clave de Fireworks se cae solo a Gemini en vez de quedarse sin relleno.
+  const useDeepSeek = !usaGemini;
   const outcome = useDeepSeek
     ? await callDeepSeekFill(userMessage, input.signal)
-    : await callGeminiFill(apiKey, userMessage, input.signal);
+    : await callGeminiFill(apiKey as string, userMessage, input.signal);
   if (!outcome.ok) {
     return {
       ok: false,

@@ -32,5 +32,3 @@ export { fetchRaw } from "./scrape/fetch-raw";
 export { fetchPuppeteer } from "./scrape/fetch-puppeteer";
 export { validateUrl } from "./scrape/validate-url";
 export { extractTokens } from "./extract/merge-tokens";
-export { callGeminiVision, VisionAnalysisSchema } from "./vision";
-export type { VisionAnalysis, VisionCallInput, VisionCallResult } from "./vision";

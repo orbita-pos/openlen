@@ -17,7 +17,7 @@
 import { GeminiProvider, type InlineImage, type StreamEvent, type StreamRequest } from "@/lib/ai-gateway";
 import { renderHtmlToInlineImage } from "@/lib/ai/inline-image";
 import { streamWithRetry } from "@/lib/agent/retry";
-import { createFireworksStreamClient } from "@/lib/ai/fireworks-stream-client";
+import { fireworksStreamProvider } from "@/lib/ai/fireworks-as-stream-provider";
 
 export interface VisualVerdict {
   /** true = la edición dejó rotura visual objetiva. */
@@ -104,26 +104,12 @@ function defaultVerifyProvider(): VerifyProviderLike {
   if (process.env.OPENLEN_AGENT_EYES?.trim().toLowerCase() === "gemini") {
     return new GeminiProvider(apiKey as string);
   }
-  const client = createFireworksStreamClient();
-  return {
-    stream(request: StreamRequest, opts: { signal?: AbortSignal }) {
-      return client.stream(
-        {
-          messages: request.messages.map((message) => ({
-            role: message.role === "assistant" ? ("assistant" as const) : message.role === "system" ? ("system" as const) : ("user" as const),
-            content: message.content,
-          })),
-          ...(request.images?.length ? { images: request.images } : {}),
-          jsonObject: true,
-          maxOutputTokens: request.maxOutputTokens ?? 2_048,
-          temperature: request.temperature ?? 0.1,
-          requestId: "agent-verify",
-          operation: "agent_visual_verify",
-        },
-        opts,
-      ) as ReturnType<VerifyProviderLike["stream"]>;
-    },
-  };
+  return fireworksStreamProvider({
+    requestId: "agent-verify",
+    operation: "agent_visual_verify",
+    maxOutputTokens: 2_048,
+    jsonObject: true,
+  });
 }
 
 /** Verifica visualmente la página editada. Siempre resuelve — nunca lanza;

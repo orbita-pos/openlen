@@ -209,20 +209,42 @@ test("provider error after usage returns a redacted fallback with accumulated us
   assert.equal(JSON.stringify(verdict).includes("raw-provider-secret"), false);
 });
 
-test("missing API key falls back without calling the provider", async () => {
+// EL CONTRATO CAMBIÓ el 2026-08-21: el crítico mira con Qwen, por el transporte
+// de Fireworks y con SU credencial. `GEMINI_API_KEY` dejó de ser obligatoria —
+// Gemini se queda para los píxeles. Antes esto exigía lo contrario.
+test("sin GEMINI_API_KEY sigue mirando: los ojos ya no son de Gemini", async () => {
   let streamed = false;
   const provider: CritiqueProviderLike = {
     stream() {
       streamed = true;
-      return (async function* (): AsyncIterableIterator<StreamEvent> {})();
+      return (async function* (): AsyncIterableIterator<StreamEvent> {
+        yield { type: "text_delta", text: verdictJson({ visualQuality: 9, briefAdherence: 9, shouldRegenerate: false }) } as StreamEvent;
+      })();
     },
   };
   const verdict = await critiqueGeneratedPage(
     { ...baseParams, apiKey: "" },
     { provider, render: fakeRender },
   );
-  assert.equal(verdict.fallback, true);
-  assert.equal(streamed, false, "must not hit the provider with no key");
+  assert.equal(streamed, true, "sin clave de Gemini el crítico tiene que seguir mirando");
+  assert.equal(verdict.fallback, false);
+});
+
+// Y con la palanca de vuelta atrás puesta, la clave SÍ vuelve a ser obligatoria:
+// sin ella no hay a quién preguntarle, y preguntar a nadie no es un veredicto.
+test("OPENLEN_CREATE_EYES=gemini sin clave sí cae al fallback", async () => {
+  const previo = process.env.OPENLEN_CREATE_EYES;
+  process.env.OPENLEN_CREATE_EYES = "gemini";
+  try {
+    const verdict = await critiqueGeneratedPage(
+      { ...baseParams, apiKey: "" },
+      { render: fakeRender },
+    );
+    assert.equal(verdict.fallback, true);
+  } finally {
+    if (previo === undefined) delete process.env.OPENLEN_CREATE_EYES;
+    else process.env.OPENLEN_CREATE_EYES = previo;
+  }
 });
 
 // ─── parseVerdict ──────────────────────────────────────────────────────────────

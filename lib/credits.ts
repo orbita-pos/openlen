@@ -90,6 +90,10 @@ const RATES = {
   // créditos donde DeepSeek cobra 1. Editar una sección pasa ese umbral.
   // El proveedor que corrió el turno es el que tiene que pagar el turno.
   "deepseek-flash": { input: 0.14, output: 0.28 },
+  // Qwen, el papel con VISIÓN. Sólo corre en los turnos que llevan una imagen
+  // adjunta (una referencia de estilo), y su salida cuesta ~10x la de DeepSeek:
+  // por eso tiene tarifa propia en vez de cobrarse como si fuera el razonador.
+  "qwen-vision": { input: 0.50, output: 3.00 },
 } as const;
 
 export type CreditRate = keyof typeof RATES;

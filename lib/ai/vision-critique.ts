@@ -15,6 +15,7 @@
 
 import { GeminiProvider, type InlineImage, type StreamEvent, type StreamRequest } from "@/lib/ai-gateway";
 import { renderHtmlToInlineImage } from "@/lib/ai/inline-image";
+import { fireworksStreamProvider } from "@/lib/ai/fireworks-as-stream-provider";
 
 export interface CritiqueVerdict {
   /** 1–10. Hero polish, spacing, type hierarchy, color discipline. */
@@ -49,6 +50,35 @@ export interface CritiqueParams {
   model: string;
   /** API key. Defaults to process.env.GEMINI_API_KEY. */
   apiKey?: string;
+}
+
+/**
+ * QUIÉN MIRA. Qwen es el papel con visión de la política de modelos, igual que
+ * en los ojos del Agente (`lib/agent/verify.ts`, Qwen desde el 2026-08-17). Al
+ * razonador NUNCA se le manda una imagen; Gemini se queda para los píxeles —
+ * generar y editar imágenes— y nada más.
+ *
+ * NO se le impone esquema: el modo estricto de Fireworks rechaza esquemas
+ * válidos (medido), y `parseVerdict` ya tolera vallas de markdown y texto
+ * alrededor. Se pide un objeto JSON y se valida aquí, que es donde siempre se
+ * validó.
+ *
+ * `OPENLEN_CREATE_EYES=gemini` devuelve los ojos de antes. Y como todo en este
+ * archivo, cualquier fallo cae al veredicto de reserva: el crítico sólo puede
+ * mejorar una generación, jamás bloquearla.
+ */
+function defaultCritiqueProvider(apiKey: string | undefined): CritiqueProviderLike | null {
+  if (process.env.OPENLEN_CREATE_EYES?.trim().toLowerCase() === "gemini") {
+    if (!apiKey) return null;
+    return new GeminiProvider(apiKey);
+  }
+  return fireworksStreamProvider({
+    requestId: "vision-critique",
+    operation: "final_scoring",
+    maxOutputTokens: CRITIC_MAX_OUTPUT_TOKENS,
+    temperature: CRITIC_TEMPERATURE,
+    jsonObject: true,
+  });
 }
 
 /** Minimal provider surface the critic needs — lets tests inject a fake. */
@@ -185,14 +215,15 @@ async function runCritique(
   }
   if (signal.aborted) return fallbackVerdict();
 
+  // La clave de Gemini ya no es obligatoria: por defecto mira Qwen, que viaja
+  // por el transporte de Fireworks y usa su propia credencial.
   const apiKey = params.apiKey ?? process.env.GEMINI_API_KEY;
-  if (!apiKey) {
-    logFallback("GEMINI_API_KEY missing");
+  const elegido = internals.provider ?? defaultCritiqueProvider(apiKey);
+  if (!elegido) {
+    logFallback("OPENLEN_CREATE_EYES=gemini sin GEMINI_API_KEY");
     return fallbackVerdict();
   }
-
-  const provider: CritiqueProviderLike =
-    internals.provider ?? new GeminiProvider(apiKey);
+  const provider: CritiqueProviderLike = elegido;
   const prompt = buildCriticPrompt(params.brief, params.html);
 
   let raw = "";
@@ -202,6 +233,7 @@ async function runCritique(
         model: params.model,
         messages: [{ role: "user", content: prompt }],
         images: [image],
+        // Sólo los lee el camino de Gemini; Qwen usa `jsonObject` en su adaptador.
         responseMimeType: "application/json",
         responseSchema: VERDICT_SCHEMA,
         maxOutputTokens: CRITIC_MAX_OUTPUT_TOKENS,
