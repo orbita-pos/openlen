@@ -84,11 +84,18 @@ export async function fetchImageAsInlineData(
  *  pre-rendered template screenshot.) */
 export async function renderHtmlToInlineImage(
   html: string,
-  opts: { maxBytes?: number } = {},
+  opts: {
+    maxBytes?: number;
+    /** Se llama con lo que la página tiró al cargar (excepciones + errores de
+     *  consola), deduplicado. Sin esto el render se comporta EXACTAMENTE igual
+     *  que antes: nadie paga nada por una señal que no pidió. */
+    onErrors?: (errores: readonly string[]) => void;
+  } = {},
 ): Promise<InlineImage | null> {
   // Spec: inline base64 when small. 1 MB JPEG of a full page is plenty of
   // visual fidelity for a reference and keeps the request lean.
   const maxBytes = opts.maxBytes ?? 1024 * 1024;
+  const errores: string[] = [];
   try {
     const puppeteer = (await import("puppeteer")).default;
     const executablePath = process.env.PUPPETEER_EXECUTABLE_PATH?.trim() || undefined;
@@ -115,6 +122,20 @@ export async function renderHtmlToInlineImage(
     });
     try {
       const page = await browser.newPage();
+      // LO QUE LA PAGINA GRITA AL CARGAR. El modelo escribe JavaScript y nunca
+      // sabia si explotaba: MEDIDO el 2026-08-22, un juego que el modelo
+      // escribio tenia un TypeError que solo aparecia CARGANDO la pagina — la
+      // captura salia perfecta y el juego estaba muerto.
+      //
+      // Los ojos ya lanzan Chrome para la captura, asi que esto no cuesta un
+      // arranque mas. Es la version barata de «apretar el boton»: no interactua
+      // con la pagina, pero si el script muere al cargar, se entera.
+      page.on("pageerror", (e) => {
+        errores.push(String(e instanceof Error ? e.message : e).slice(0, 300));
+      });
+      page.on("console", (m) => {
+        if (m.type() === "error") errores.push(`consola: ${m.text().slice(0, 300)}`);
+      });
       // Block subresource fetches to internal/loopback/metadata hosts — this
       // HTML is model-generated and not fully trusted. (SSRF guard.)
       await installSubresourceSsrfGuard(page);
@@ -138,6 +159,7 @@ export async function renderHtmlToInlineImage(
         );
         return null;
       }
+      if (errores.length > 0) opts.onErrors?.([...new Set(errores)]);
       return { mimeType: "image/jpeg", dataBase64: Buffer.from(shot).toString("base64") };
     } finally {
       await browser.close();

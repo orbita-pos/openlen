@@ -569,11 +569,14 @@ function AIDesignChat({
       preEditHtml: string;
       turnPage: string | null;
       history: HistoryEntry[];
+      /** Turnos que tiene la conversación ENTERA (no los que caben). Sólo para
+       *  que el modelo sepa que no lo ve todo y pueda decir «no me acuerdo». */
+      historyTotal: number;
       turnScope: { hint: string; path: string } | null;
       turnImage: { url: string; alt?: string } | null;
       abort: AbortController;
     }) => {
-      const { turnId, prompt, preEditHtml, turnPage, history, turnScope, turnImage, abort } = opts;
+      const { turnId, prompt, preEditHtml, turnPage, history, historyTotal, turnScope, turnImage, abort } = opts;
       // Rayo X — idempotent: a no-op if the agent branch already started the
       // loop before falling back here (F4 Task 7 kill-switch replay).
       scanController.start();
@@ -612,6 +615,7 @@ function AIDesignChat({
             currentHtml: preEditHtml,
             prompt,
             history,
+          historyTotal,
             model,
             ...(turnPage ? { page: turnPage } : {}),
             ...(turnScope ? { scope: turnScope } : {}),
@@ -851,17 +855,37 @@ function AIDesignChat({
       // El resultado que se reproduce es el RESUMEN de la tarjeta, no la carga
       // real: los resultados de verdad son documentos HTML enteros y mandar
       // seis turnos de eso reventaría el contexto. Estructura sí, carga no.
-      const history = turnsRef.current
-        .filter(
-          (t) =>
-            (t.status === "applied" || t.status === "reverted") &&
-            samePage(t.page, turnPage),
-        )
-        .slice(-6)
+      // LA CHARLA NO SE REINICIA AL CAMBIAR DE PAGINA.
+      //
+      // Antes el historial se filtraba con `samePage`: pasabas de la home a
+      // /menu y la conversacion arrancaba de CERO — mismo proyecto, misma
+      // sesion, mismo minuto. Para el usuario eso es «no me conoce», y es de
+      // las cosas que mas se notan.
+      //
+      // El filtro existia por una razon buena —que un turno sobre la home no
+      // confunda una edicion de /menu— pero la cura correcta no es esconder el
+      // turno: es DECIR de que pagina fue. Lo mismo que hace el bloque de
+      // cambios unas lineas mas abajo.
+      const relevantes = turnsRef.current.filter(
+        (t) => t.status === "applied" || t.status === "reverted",
+      );
+      // Cuántos turnos tiene la charla de VERDAD. Viaja aparte para que el
+      // modelo pueda decir «de eso ya no me acuerdo» en vez de contestar con el
+      // turno más viejo que le quede a mano — que es lo que hacía, con total
+      // seguridad y equivocándose (medido el 2026-08-22).
+      const historyTotal = relevantes.length;
+      const history = relevantes
+        .slice(-12)
         .flatMap((t) => {
           const hechas = (t.actions ?? []).filter((a) => a.status === "done");
+          // El turno de OTRA pagina viaja etiquetado: el modelo necesita saber
+          // que aquello no fue sobre el documento que tiene delante.
+          const deOtraPagina = !samePage(t.page, turnPage);
+          const etiqueta = deOtraPagina
+            ? `[en la página "${t.page ?? "inicio"}"] `
+            : "";
           const turno: HistoryEntry[] = [
-            { role: "user", content: t.userText },
+            { role: "user", content: `${etiqueta}${t.userText}` },
             {
               role: "assistant",
               content: t.assistantReasoning || "",
@@ -946,6 +970,7 @@ function AIDesignChat({
               projectId,
               prompt,
               history,
+              historyTotal,
               // Same value + same conditional shape ai-design sends below —
               // absent/empty means home, cloned for parity.
               ...(turnPage ? { page: turnPage } : {}),
@@ -1113,6 +1138,7 @@ function AIDesignChat({
               preEditHtml,
               turnPage,
               history,
+              historyTotal,
               turnScope,
               turnImage,
               abort,
@@ -1198,6 +1224,7 @@ function AIDesignChat({
           preEditHtml,
           turnPage,
           history,
+          historyTotal,
           turnScope,
           turnImage,
           abort,
