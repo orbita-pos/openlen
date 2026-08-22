@@ -112,15 +112,19 @@ export function extractModelRuntime(rawHtml: string): RuntimeExtraction {
 // corrientes perdía su JavaScript EN SILENCIO por llevar un formulario de
 // contacto.
 //
-// 🔴 SE REVIERTE A PROPÓSITO UNA PUERTA QUE PUSO UNA AUDITORÍA (7bc7940c). La
-// protección no desaparece, se MUEVE: el riesgo real no era el formulario —
-// `form-action` y `connect-src` son `'self'`, así que un script sólo alcanza el
-// buzón de su propia página— sino que un script actúe como el VISITANTE
-// IDENTIFICADO contra nuestras APIs. Eso hoy lo tapa la puerta de producción, no
-// esta función: `OPENLEN_MODEL_JS=1` NO puede encenderse en producción hasta que
-// `app/api/m/[sub]/auth/set-password/route.ts` exija algo más que la cookie
-// ambiental, o los módulos vivan en su propio origen. Está escrito en la memoria
-// `model-js-production-gate` y en el plan.
+// SE REVIRTIÓ A PROPÓSITO UNA PUERTA QUE PUSO UNA AUDITORÍA (7bc7940c). El
+// riesgo real no era el formulario —`form-action` y `connect-src` son `'self'`,
+// así que un script sólo alcanza el buzón de su propia página— sino que un
+// script actuara como el VISITANTE IDENTIFICADO contra nuestras APIs.
+//
+// Eso se cerró retirando la causa: el módulo Miembros se fue y con él la cookie
+// `ol_member` y `set-password`. De las superficies públicas bajo el subdominio
+// quedan `/api/f` (formularios) y `/api/chat`, y ninguna de las 12 rutas del
+// chat cambia credenciales — `login` sólo las verifica.
+//
+// ⚠️ Si algún día vuelve un módulo con sesión de visitante, la puerta vuelve con
+// él. El patrón correcto es el de las reservas retiradas: un token HMAC por
+// correo, nunca la cookie ambiental.
 
 /** Opt-in EXACTO. Ni "true", ni "yes", ni vacío: sólo "1". Una variable de
  *  entorno mal escrita no puede encender esto por accidente.
