@@ -29,8 +29,8 @@ describe("pageEdgePaths — CF purge set for subpages", () => {
     expect(paths).toEqual(["/about", "/about/", "/pricing", "/pricing/", ...DOOR]); // sorted by slug
   });
 
-  it("INCLUDES members-only (gated) subpages — their stub sits at the public path", () => {
-    const paths = pageEdgePaths(D({ vip: { html: "<html>g</html>", membersOnly: true } }, { members: { enabled: true } }));
+  it("incluye toda subpágina publicada", () => {
+    const paths = pageEdgePaths(D({ vip: { html: "<html>g</html>" } }));
     expect(paths).toEqual(["/vip", "/vip/", ...DOOR]);
   });
 
@@ -42,8 +42,8 @@ describe("pageEdgePaths — CF purge set for subpages", () => {
     ]);
   });
 
-  it("purges the door even with members OFF (a cached login card must not outlive it)", () => {
-    expect(pageEdgePaths(D(undefined, { members: { enabled: false } }))).toEqual(DOOR);
+  it("purga la puerta aunque el módulo ya no exista (una tarjeta cacheada no puede sobrevivir al sitio)", () => {
+    expect(pageEdgePaths(D(undefined))).toEqual(DOOR);
   });
 
   it("never includes the home path", () => {

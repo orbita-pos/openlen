@@ -17,6 +17,9 @@
 # Override defaults via env vars:
 #   $env:OPENLEN_HOST = "openlen"          # ssh alias from ~/.ssh/config
 #   $env:OPENLEN_REMOTE_PATH = "/opt/openlen-app"
+#   $env:OPENLEN_AI_CREATION_TARGET_MODE = "enabled" # or "disabled"; required
+#   $env:OPENLEN_AI_CREATION_TARGET_ROLLOUT_PERCENT = "10" # 1..99 enabled; 0 disabled
+#   $env:OPENLEN_FABLE_PARITY_APPROVED_REVISION = "<git sha>" # exact release revision
 #   $env:OPENLEN_SKIP_BUILD = "1"          # reuse existing .next/standalone
 #   $env:OPENLEN_SKIP_MIGRATE = "1"        # skip billing:migrate (already applied)
 #   $env:OPENLEN_SKIP_CRATES_REBUILD = "1" # skip the Rust crate rebuild step.
@@ -35,6 +38,24 @@ $remoteDir = if ($env:OPENLEN_REMOTE_PATH) { $env:OPENLEN_REMOTE_PATH } else { "
 $tarballName = "openlen-deploy.tar.gz"
 $stagingDir = "$remoteDir-staging"
 $backupDir = "$remoteDir.old"
+$targetMode = $env:OPENLEN_AI_CREATION_TARGET_MODE
+if ($targetMode -ne "enabled" -and $targetMode -ne "disabled") {
+  throw "OPENLEN_AI_CREATION_TARGET_MODE must be explicitly enabled or disabled"
+}
+$targetRolloutPercent = $env:OPENLEN_AI_CREATION_TARGET_ROLLOUT_PERCENT
+if ($targetMode -eq "enabled" -and ($targetRolloutPercent -notmatch '^(?:[1-9]|[1-9][0-9])$')) {
+  throw "Enabled AI creation requires OPENLEN_AI_CREATION_TARGET_ROLLOUT_PERCENT from 1 through 99"
+}
+if ($targetMode -eq "disabled" -and $targetRolloutPercent -ne "0") {
+  throw "Disabled AI creation requires OPENLEN_AI_CREATION_TARGET_ROLLOUT_PERCENT=0"
+}
+$releaseRevision = (& git rev-parse HEAD).Trim()
+if ($LASTEXITCODE -ne 0 -or $releaseRevision -notmatch '^[a-f0-9]{40}([a-f0-9]{24})?$') {
+  throw "Unable to resolve the current release revision"
+}
+if ($env:OPENLEN_FABLE_PARITY_APPROVED_REVISION -ne $releaseRevision) {
+  throw "OPENLEN_FABLE_PARITY_APPROVED_REVISION must equal the current release revision"
+}
 
 function Step($n, $msg) {
   Write-Host ""
@@ -51,10 +72,52 @@ function Step($n, $msg) {
 # paso 6 con exactamente esos sintomas.)
 function Sh($cmd) { $cmd -replace "`r`n", "`n" }
 
+# --- 0. Espacio en disco ------------------------------------------------
+# Un deploy escribe lo MISMO TRES VECES: el build llena .next, el paso 3 copia
+# .next/static + public dentro de .next/standalone, y el paso 4 empaqueta todo
+# en un tarball. Sin sitio para las tres, Windows no falla limpio: el I/O se
+# degrada hasta PARECER un cuelgue.
+#
+# Pasó de verdad (2026-08-19): un deploy corrió HORAS en el paso 1 sin mandar
+# nada, con 3,3 GB libres y un `.next` de 4 GB atrapado de builds anteriores.
+# Un simple `du` sobre esa carpeta tardaba más de cinco minutos.
+#
+# Esta comprobación cuesta milisegundos y convierte esas horas en un mensaje.
+#
+# DOS NIVELES, y los números salen de lo medido aquel día, no del susto:
+#   < 5 GB  aborta — con 3,3 GB el deploy se arrastró horas
+#   < 9 GB  avisa  — cabe, pero sin holgura si `.next` vuelve a crecer a 4 GB
+# Abortar por encima de eso sería bloquear deploys que sí caben, y un guard que
+# estorba se acaba desactivando — que es peor que no tenerlo.
+$libreGB = [math]::Round((Get-PSDrive C).Free / 1GB, 1)
+$minimoGB = 5
+$comodoGB = 9
+if ($libreGB -lt $minimoGB) {
+  Write-Host ""
+  Write-Host "  ESPACIO INSUFICIENTE: $libreGB GB libres en C:, hacen falta $minimoGB." -ForegroundColor Red
+  Write-Host "  Un deploy escribe .next, luego lo copia, luego lo empaqueta." -ForegroundColor Yellow
+  Write-Host "  Con menos espacio no falla: se arrastra durante horas." -ForegroundColor Yellow
+  Write-Host ""
+  Write-Host "  Lo que mas suele ocupar (y es regenerable):" -ForegroundColor Yellow
+  Write-Host "    Remove-Item -Recurse -Force .next     # suele rondar los 4 GB"
+  Write-Host ""
+  throw "Espacio en disco insuficiente ($libreGB GB < $minimoGB GB)"
+}
+if ($libreGB -lt $comodoGB) {
+  Write-Host "  espacio en C:: $libreGB GB libres - justo, pero cabe." -ForegroundColor Yellow
+  Write-Host "  Si el deploy se arrastra, borra .next (suele rondar los 4 GB)." -ForegroundColor DarkGray
+} else {
+  Write-Host "  espacio en C:: $libreGB GB libres" -ForegroundColor DarkGray
+}
+
 # Hybrid-only creation is a release invariant, including when a prebuilt
 # standalone bundle is reused. Keep these checks outside the skip-build branch.
-npm.cmd run generation:ai-hybrid:gate
-if ($LASTEXITCODE -ne 0) { throw "AI hybrid generation gate failed" }
+npm.cmd run generation:fable-parity:gate
+if ($LASTEXITCODE -ne 0) { throw "Deterministic Fable parity gate failed" }
+npm.cmd run generation:visual-engine-assets:gate
+if ($LASTEXITCODE -ne 0) { throw "Visual Engine assets gate failed" }
+npm.cmd run generation:page-engine:gate
+if ($LASTEXITCODE -ne 0) { throw "Page engine gate failed" }
 npm.cmd run typecheck
 if ($LASTEXITCODE -ne 0) { throw "Typecheck failed" }
 
@@ -93,6 +156,17 @@ if (Test-Path "public") {
   Copy-Item -Recurse -Force "public/*" ".next/standalone/public/"
 }
 
+# El file-tracing de Next SIEMPRE omite este manifest, en cada build; no es
+# senal de un bundle corrupto, falta siempre. Se copiaba a mano desde el
+# 2026-08-02 y por tanto se podia olvidar — que es exactamente la clase de paso
+# manual que ya tumbo prod una vez.
+$interceptionManifest = ".next/server/interception-route-rewrite-manifest.js"
+if (Test-Path $interceptionManifest) {
+  Copy-Item -Force $interceptionManifest ".next/standalone/.next/server/"
+} else {
+  Write-Host "    (sin interception-route-rewrite-manifest.js que copiar)"
+}
+
 # Next's Windows file tracer cannot always recreate npm workspace junctions in
 # the standalone tree (EPERM without symlink privileges). Materialize the small
 # JS package wrappers explicitly; step 6.5 builds and adds the Linux .node
@@ -119,6 +193,19 @@ Step 3 "Bundling DB migrations (esbuild) to run on the box..."
 npm run migrations:bundle
 if ($LASTEXITCODE -ne 0) { throw "migrations:bundle failed (exit $LASTEXITCODE)" }
 
+# Never relabel reused output. A normal build receives its attestation only
+# after Next and all local standalone composition steps succeeded; skip-build
+# can only verify the pre-existing revision/build/artifact identity.
+if ($env:OPENLEN_SKIP_BUILD -eq "1") {
+  npm.cmd run generation:fable-parity:build-attestation -- --verify
+  if ($LASTEXITCODE -ne 0) { throw "Existing standalone build attestation is absent, stale, or substituted" }
+} else {
+  npm.cmd run generation:fable-parity:build-attestation -- --write
+  if ($LASTEXITCODE -ne 0) { throw "Standalone build attestation write failed" }
+}
+npm.cmd run generation:fable-parity:scorecard -- --deploy-gate
+if ($LASTEXITCODE -ne 0) { throw "Fable parity activation scorecard gate failed" }
+
 $size = (Get-ChildItem -Recurse ".next/standalone" | Measure-Object -Property Length -Sum).Sum
 Write-Host ("    standalone: {0} MB" -f [math]::Round($size/1MB, 1))
 
@@ -130,7 +217,13 @@ Write-Host ("    standalone: {0} MB" -f [math]::Round($size/1MB, 1))
 # --- 4. Tar locally ----------------------------------------------------
 Step 4 "Creating tarball ($tarballName)..."
 $sw = [System.Diagnostics.Stopwatch]::StartNew()
-& tar --options "gzip:compression-level=1" -czf $tarballName -C .next/standalone .
+# bsdtar, resuelto por ruta y no por PATH: `--options` es sintaxis suya y NO
+# la entiende el tar de GNU. Lanzar este script desde un shell con MSYS en el
+# PATH (Git Bash) hacia que ganara /usr/bin/tar y el empaquetado muriera con
+# "unrecognized option '--options'".
+$bsdTar = Join-Path $env:SystemRoot (Join-Path "System32" "tar.exe")
+if (-not (Test-Path $bsdTar)) { throw "bsdtar no encontrado en $bsdTar" }
+& $bsdTar --options "gzip:compression-level=1" -czf $tarballName -C .next/standalone .
 if ($LASTEXITCODE -ne 0) { throw "tar failed (exit $LASTEXITCODE)" }
 $tarSize = (Get-Item $tarballName).Length
 $sw.Stop()
@@ -219,7 +312,16 @@ if ($env:OPENLEN_SKIP_CRATES_REBUILD -ne "1") {
   $prevPref = $ErrorActionPreference
   $ErrorActionPreference = "Continue"
   try {
-    $tarOutput = & tar -czf $cratesTarball Cargo.toml Cargo.lock crates 2>&1
+    # --exclude node_modules y target: sin esto el tarball se lleva los
+    # node_modules de WINDOWS que hay en crates/*/ — con `napi.cmd`, `napi.ps1`
+    # y un `napi` sin bit de ejecucion. En el box se extraen, `npm install` ve
+    # que "ya esta instalado" y no reinstala, y `napi build` muere con
+    # `sh: 1: napi: Permission denied` (exit 127).
+    #
+    # Pasó de verdad (2026-08-20) y tumbó el paso 6.5 tras subir 12 MB. Excluir
+    # tambien `target` (artefactos de cargo, cientos de MB de x86_64-pc-windows
+    # que el box no puede usar) hace el tarball mas pequeno de paso.
+    $tarOutput = & tar -czf $cratesTarball --exclude=node_modules --exclude=target Cargo.toml Cargo.lock crates 2>&1
     $tarExit = $LASTEXITCODE
   } finally {
     $ErrorActionPreference = $prevPref
@@ -239,6 +341,15 @@ if ($env:OPENLEN_SKIP_CRATES_REBUILD -ne "1") {
   # staging here is safe — rebuild then continue to the swap in step 7.
   $cratesCmd = @"
 set -e
+# BORRAR antes de extraer, no extraer encima. `mkdir -p` + `tar -xzf` deja
+# intacto lo que ya hubiera: si un intento anterior subio node_modules de
+# WINDOWS (con `napi.cmd` y un `napi` sin bit de ejecucion), el tarball nuevo
+# —ya limpio— no los borra, `npm install` los ve y dice "ya esta instalado", y
+# `napi build` sigue muriendo con Permission denied.
+#
+# Pasó de verdad (2026-08-20): se arreglo el tarball y el paso 6.5 volvio a
+# fallar IGUAL, porque el residuo estaba en el box, no en el envio.
+rm -rf /root/openlen-workspace
 mkdir -p /root/openlen-workspace
 tar -xzf /root/$cratesTarball -C /root/openlen-workspace
 rm /root/$cratesTarball
@@ -261,17 +372,48 @@ bash /root/build-crates-on-box.sh $stagingDir
 
 # --- 7. Atomic swap + restart + smoke test ---------------------------
 Step 7 "Atomic swap + restart..."
-$swapCmd = @"
+$swapCmd = @'
+set -eu
 systemctl stop openlen-app
-rm -rf $backupDir
-mv $remoteDir $backupDir
-mv $stagingDir $remoteDir
+test -f /etc/openlen/openlen.env
+tmp_env=$(mktemp /etc/openlen/openlen.env.openlen-ai.XXXXXX)
+trap 'rm -f "$tmp_env"' EXIT
+awk 'BEGIN{seen_mode=0;seen_percent=0} /^OPENLEN_AI_CREATION=/{if(!seen_mode){print "OPENLEN_AI_CREATION=__TARGET_MODE__";seen_mode=1};next} /^OPENLEN_AI_CREATION_ROLLOUT_PERCENT=/{if(!seen_percent){print "OPENLEN_AI_CREATION_ROLLOUT_PERCENT=__TARGET_ROLLOUT_PERCENT__";seen_percent=1};next} {print} END{if(!seen_mode)print "OPENLEN_AI_CREATION=__TARGET_MODE__";if(!seen_percent)print "OPENLEN_AI_CREATION_ROLLOUT_PERCENT=__TARGET_ROLLOUT_PERCENT__"}' /etc/openlen/openlen.env > "$tmp_env"
+chown --reference=/etc/openlen/openlen.env "$tmp_env"
+chmod --reference=/etc/openlen/openlen.env "$tmp_env"
+mv -f "$tmp_env" /etc/openlen/openlen.env
+trap - EXIT
+test "$(sed -n 's/^OPENLEN_AI_CREATION=//p' /etc/openlen/openlen.env | tail -n 1)" = "__TARGET_MODE__"
+test "$(sed -n 's/^OPENLEN_AI_CREATION_ROLLOUT_PERCENT=//p' /etc/openlen/openlen.env | tail -n 1)" = "__TARGET_ROLLOUT_PERCENT__"
+rm -rf __BACKUP_DIR__
+mv __REMOTE_DIR__ __BACKUP_DIR__
+mv __STAGING_DIR__ __REMOTE_DIR__
 systemctl start openlen-app
 sleep 2
-systemctl is-active openlen-app
+systemctl is-active --quiet openlen-app
+pid=$(systemctl show -p MainPID --value openlen-app)
+test "$pid" -gt 0
+tr '\000' '\n' < "/proc/$pid/environ" | grep -Fx 'OPENLEN_AI_CREATION=__TARGET_MODE__' > /dev/null
+tr '\000' '\n' < "/proc/$pid/environ" | grep -Fx 'OPENLEN_AI_CREATION_ROLLOUT_PERCENT=__TARGET_ROLLOUT_PERCENT__' > /dev/null
 curl -sI -o /dev/null -w '  smoke: HTTP %{http_code} (%{time_total}s)' http://127.0.0.1:3000/
-"@
-& ssh $host_ (Sh $swapCmd)
+'@
+$swapCmd = $swapCmd.Replace("__TARGET_MODE__", $targetMode).Replace("__TARGET_ROLLOUT_PERCENT__", $targetRolloutPercent).Replace("__BACKUP_DIR__", $backupDir).Replace("__REMOTE_DIR__", $remoteDir).Replace("__STAGING_DIR__", $stagingDir)
+
+# El swap viaja como ARCHIVO, no como texto por ssh. Mandado en linea, el
+# escapado de PowerShell deshacia las comillas del script: el `awk` que escribe
+# la bandera no llegaba a correr y el `test` que la verifica moria con
+# "unary operator expected" -- DESPUES de haber parado el servicio y ANTES de
+# mover los directorios. Resultado el 2026-08-17: produccion detenida con el
+# release viejo intacto, arreglada arrancando el servicio a mano.
+#
+# Es exactamente la solucion que el paso 6.2 ya usaba para las migraciones, por
+# la misma razon. LF explicito: un CR pegado apaga `set -e` en silencio.
+$swapScript = Join-Path ([System.IO.Path]::GetTempPath()) "openlen-swap.sh"
+[System.IO.File]::WriteAllText($swapScript, ($swapCmd -replace "`r`n", "`n"), (New-Object System.Text.UTF8Encoding($false)))
+& scp -q $swapScript "${host_}:/root/openlen-swap.sh"
+if ($LASTEXITCODE -ne 0) { throw "Swap script upload failed (exit $LASTEXITCODE)" }
+Remove-Item -Force $swapScript -ErrorAction SilentlyContinue
+& ssh $host_ "bash /root/openlen-swap.sh"
 if ($LASTEXITCODE -ne 0) { throw "Swap or restart failed (exit $LASTEXITCODE)" }
 
 # --- Cleanup local tarball --------------------------------------------

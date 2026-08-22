@@ -80,7 +80,32 @@ const CHARS_PER_TOKEN = 3;
 const RATES = {
   "gemini-pro": { input: 1.25, output: 10 },
   "gemini-flash": { input: 0.3, output: 2.5 },
+  // Fireworks, precio estándar (misma tarjeta que FABLE_PRODUCTION_RATES).
+  // Existe porque el Chat y el Agente pasaron a DeepSeek y seguían cobrándose a
+  // tarifa de Gemini, donde la salida cuesta casi NUEVE veces más. Un crédito
+  // vale un centavo y el cargo se redondea hacia arriba, así que el error no se
+  // ve en los turnos cortos —el de una herramienta suelta cae en 1 crédito por
+  // cualquiera de las dos tarifas— y aparece justo en los que escriben HTML:
+  // con ~20k de entrada, a partir de ~1,600 tokens de salida Gemini cobra 2
+  // créditos donde DeepSeek cobra 1. Editar una sección pasa ese umbral.
+  // El proveedor que corrió el turno es el que tiene que pagar el turno.
+  "deepseek-flash": { input: 0.14, output: 0.28 },
+  // Qwen, el papel con VISIÓN. Sólo corre en los turnos que llevan una imagen
+  // adjunta (una referencia de estilo), y su salida cuesta ~10x la de DeepSeek:
+  // por eso tiene tarifa propia en vez de cobrarse como si fuera el razonador.
+  "qwen-vision": { input: 0.50, output: 3.00 },
 } as const;
+
+export type CreditRate = keyof typeof RATES;
+
+/** La tarifa en dólares por millón de tokens, de la MISMA tabla con la que se
+ *  cobra. La expone `scripts/evals-pages.ts` para calcular lo que cuesta una
+ *  corrida: tenía las cifras cableadas —y las de OTRO proveedor—, así que su
+ *  tope de gasto estaba calculado sobre un precio que no era el real. Un tope
+ *  con la tarifa equivocada no es un tope. */
+export function creditRate(rate: CreditRate): { input: number; output: number } {
+  return RATES[rate];
+}
 
 const REFILL_MS = 30 * 24 * 60 * 60 * 1000;
 

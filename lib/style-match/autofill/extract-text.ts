@@ -5,16 +5,15 @@
 // pitch, hero keyword and CTA from the description — but never invents facts
 // (no fake prices, testimonials, or claims the user didn't make).
 
+import { callModel } from "./model-call";
 import {
   ExtractedBusinessDataSchema,
   type ExtractedBusinessData,
 } from "./types";
 
-const GEMINI_BASE = "https://generativelanguage.googleapis.com/v1beta/models";
-const DEFAULT_MODEL_ID =
-  process.env.STYLE_MATCH_TEXT_MODEL ||
-  process.env.STYLE_MATCH_VISION_MODEL ||
-  "gemini-2.5-flash";
+// El modelo lo elige la política de `fable-model-policy` a partir de la
+// `operation` que pasa `callModel`. Nombrarlo aquí sería una constante muerta
+// que además mentiría sobre quién corre.
 const MAX_TOKENS = 4_000;
 
 const SYSTEM_PROMPT = `You turn a short, plain-language description of a business (written by its non-technical owner) into structured data for a landing-page template.
@@ -104,86 +103,33 @@ export async function extractFromText(
   input: ExtractTextInput,
 ): Promise<ExtractTextResult> {
   const t0 = Date.now();
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) {
-    return {
-      ok: false,
-      error: {
-        kind: "missing-key",
-        message: "GEMINI_API_KEY not set. Get one at https://aistudio.google.com/",
-      },
-      durationMs: Date.now() - t0,
-    };
-  }
+  // Extraer datos de negocio de una descripción es TEXTO: lo hace DeepSeek, con
+  // la credencial de Fireworks. Gemini se queda para los píxeles.
 
   const description = input.description.trim();
-  const modelId = input.modelId ?? DEFAULT_MODEL_ID;
-  const url = `${GEMINI_BASE}/${modelId}:generateContent?key=${encodeURIComponent(apiKey)}`;
+  const r = await callModel({
+    system: SYSTEM_PROMPT,
+    user: `Business description:
 
-  const body = {
-    systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
-    contents: [
-      {
-        role: "user",
-        parts: [
-          {
-            text: `Business description:\n\n${description}\n\nReturn the structured JSON only.`,
-          },
-        ],
-      },
-    ],
-    generationConfig: {
-      temperature: 0.4,
-      maxOutputTokens: MAX_TOKENS,
-      responseMimeType: "application/json",
-      thinkingConfig: { thinkingBudget: 0 },
-    },
-  };
+${description}
 
-  let res: Response;
-  try {
-    res = await fetch(url, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify(body),
-      signal: input.signal,
-    });
-  } catch (err) {
-    if (input.signal?.aborted) {
-      return {
-        ok: false,
-        error: { kind: "aborted", message: "Request aborted" },
-        durationMs: Date.now() - t0,
-      };
-    }
+Return the structured JSON only.`,
+    operation: "simple_extraction",
+    requestId: "autofill-extract-text",
+    maxOutputTokens: MAX_TOKENS,
+    temperature: 0.4,
+    jsonObject: true,
+    ...(input.signal ? { signal: input.signal } : {}),
+  });
+  if (!r.ok) {
     return {
       ok: false,
-      error: { kind: "api", message: err instanceof Error ? err.message : String(err) },
+      error: { kind: r.kind, message: r.message },
       durationMs: Date.now() - t0,
     };
   }
-
-  if (!res.ok) {
-    const text = await res.text().catch(() => "");
-    return {
-      ok: false,
-      error: { kind: "api", message: `Gemini ${res.status}: ${text.slice(0, 400)}` },
-      durationMs: Date.now() - t0,
-    };
-  }
-
-  const payload = (await res.json()) as {
-    candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
-    usageMetadata?: { promptTokenCount?: number; candidatesTokenCount?: number };
-  };
-  const raw =
-    payload.candidates?.[0]?.content?.parts?.map((p) => p.text ?? "").join("") ?? "";
-  const usage = payload.usageMetadata
-    ? {
-        inputTokens: payload.usageMetadata.promptTokenCount ?? 0,
-        outputTokens: payload.usageMetadata.candidatesTokenCount ?? 0,
-      }
-    : undefined;
+  const raw = r.raw;
+  const usage = r.usage;
 
   const parsed = tryExtractJson(raw);
   if (parsed === null) {

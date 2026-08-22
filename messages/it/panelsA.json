@@ -8,8 +8,24 @@
     "autofill": "Compila con i miei dati — disponibile dopo la generazione",
     "availableAfter": "Disponibile una volta creato il progetto",
     "generate": "Genera",
-    "modeQuick": "Rapido",
-    "modeScratch": "Da zero"
+    "effortLow": "Standard",
+    "effortMedium": "Avanzato",
+    "effortHigh": "Massimo",
+    "effortSoon": "Presto",
+    "reference": {
+      "add": "Ispirati a un sito",
+      "placeholder": "Incolla il link di una pagina che ti piace",
+      "use": "Usa",
+      "looking": "Sto guardando…",
+      "remove": "Rimuovi il riferimento",
+      "error": {
+        "blocked": "Questo link non si può aprire.",
+        "unreachable": "Non è stato possibile aprire quella pagina.",
+        "not_rendered": "Quella pagina non ha mostrato il suo stile.",
+        "rate_limited": "Troppi riferimenti di fila. Riprova tra poco.",
+        "network": "Qualcosa è andato storto nel recupero. Riprova."
+      }
+    }
   },
   "brief": {
     "label": "Brief",

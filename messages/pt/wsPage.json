@@ -50,7 +50,8 @@
   "defaultProjectName": "Página de Preços",
   "chatDraft": {
     "iconChanged": "Acabei de trocar o ícone aqui. Atualize o título e a descrição ao redor para que o sentido combine com o novo ícone.",
-    "imageChanged": "Acabei de trocar a imagem aqui. Atualize o texto ao redor para que combine com o que a imagem mostra."
+    "imageChanged": "Acabei de trocar a imagem aqui. Atualize o texto ao redor para que combine com o que a imagem mostra.",
+    "fixControls": "Corrige estes controlos mal ligados que não funcionam:"
   },
   "lockReason": {
     "created": "Disponível assim que sua página for criada"
@@ -166,8 +167,6 @@
     "moduleError": "Não foi possível atualizar o módulo.",
     "moduleMembers": "Contas",
     "moduleBroadcast": "Broadcast",
-    "moduleComments": "Comentários",
-    "moduleBookings": "Agendamentos",
     "moduleCollections": "Coleções",
     "membersOnlyOn": "A página agora é apenas para membros",
     "membersOnlyOff": "A página agora é pública",
@@ -181,7 +180,6 @@
     "analyticsDisabled": "Analytics desativado",
     "saveError": "Não foi possível salvar a alteração.",
     "moduleWhatsapp": "WhatsApp",
-    "moduleOrders": "Pedidos",
     "whatsappNeedNumber": "Primeiro adicione um número de WhatsApp",
     "modulePageCreated": "Página criada",
     "modulePageExists": "Abri a página existente",
@@ -196,13 +194,6 @@
     "messagePlaceholder": "Mensagem pré-escrita (opcional)",
     "note": "Aparece no canto inferior direito ao publicar. Um número de 10 dígitos é lido como México (+52).",
     "missingNumber": "Falta o seu número — sem ele, o botão não aparecerá na sua página."
-  },
-  "orders": {
-    "title": "Pedidos por WhatsApp",
-    "tagline": "Um carrinho sobre o seu Catálogo: o pedido montado chega ao seu WhatsApp",
-    "numberPlaceholder": "Número de WhatsApp (ex. 5512345678)",
-    "note": "Funciona com os itens do seu Catálogo. O visitante adiciona produtos e a mensagem sai com quantidades e total.",
-    "needsCatalog": "Ative o módulo Catálogo e adicione itens para que os botões apareçam."
   },
   "moduleSurface": {
     "createBookingPage": "Criar página de reservas",
@@ -265,7 +256,20 @@
     "availableGroup": "Disponíveis",
     "open": "Abrir",
     "activate": "Ativar",
-    "drawerClose": "Fechar"
+    "drawerClose": "Fechar",
+    "perProject": "Abra um projeto para gerenciar seus módulos.",
+    "title": "Módulos",
+    "subtitle": "Backend em um clique para seu site. Sem créditos, sem código.",
+    "included": {
+      "title": "Incluído no seu site",
+      "open": "Abrir",
+      "forms": "Formulários e leads",
+      "formsHint": "Todo formulário já captura leads",
+      "analytics": "Analytics",
+      "analyticsHint": "Visitas e cliques, integrado",
+      "assistant": "Assistente IA",
+      "assistantHint": "Responde aos seus visitantes"
+    }
   },
   "platforms": {
     "title": "Minhas plataformas",
@@ -275,5 +279,18 @@
     "inserted": "Pronto: a faixa está na página",
     "manage": "Ir para Meu negócio",
     "note": "Sem custo. Os links se atualizam sozinhos ao publicar."
+  },
+  "degraded": {
+    "title": "Algumas coisas não puderam vir junto",
+    "scripts": "Sua página tinha partes feitas com JavaScript — coisas como contadores, carrosséis ou botões interativos. O OpenLen os remove por segurança. Você pode recriá-los com Módulos.",
+    "embeds": "Conteúdo incorporado de outros sites (vídeos ou mapas) foi removido. Você pode adicioná-lo novamente com Módulos.",
+    "unsafe_links": "Alguns links não eram seguros e foram removidos.",
+    "dynamic_content": "Parte do que sua página monta sozinha pode aparecer vazia. Você pode escrever direto no editor.",
+    "broken_controls": "Alguns controles interativos ficaram mal conectados e não vão funcionar. Peça ao assistente para corrigi-los.",
+    "interactivity_lost": "Os detalhes interativos que a IA escreveu para a sua página (filtros, galerias, abas) não foram publicados desta vez. O texto e as imagens estão completos. Publique novamente; se continuarem faltando, peça ao assistente que os refaça.",
+    "form_routing_stale": "Alguma configuração dos seus formulários (qual e-mail recebe aviso, para onde redireciona) pode ter deixado de valer após esta edição. Confira cada formulário.",
+    "dismiss": "Entendi",
+    "fix": "Corrigir isto",
+    "runtime_stale": "O código interativo da sua página procura elementos que esta edição removeu. Quando isso acontece o código para, então pode ter quebrado mais do que o que falta. Peça ao chat para corrigir."
   }
 }

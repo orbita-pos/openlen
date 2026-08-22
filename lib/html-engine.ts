@@ -194,15 +194,55 @@ export function sanitizeForPublish(html: string): SanitizeResult {
   const healed = clean !== null ? rustEnsureThemeScripts(clean) : null;
   const out =
     healed !== null && extend !== null ? injectTwCarrier(healed, extend) : healed;
+  // `removed` es lo que el llamador PERDIÓ, no lo que la capa de Rust tocó a
+  // media tubería: el conteo crudo cobraba los tres carriers que la reparación
+  // de arriba acaba de devolver, y el gate creativo se lo decía al modelo como
+  // "3 script element(s) were removed" en cada patch desde el 2º turno
+  // (`warningsFor`), igual que `sanitizeAviso` al Agente. Se descuenta SOLO el
+  // carrier que volvió idéntico: uno forjado vuelve con bytes canónicos, o sea
+  // que sí perdió su contenido y tiene que seguir contando.
+  const removed = out === null
+    ? r.removed
+    : { ...r.removed, scripts: Math.max(0, r.removed.scripts - healedThemeCarriers(pre, out)) };
   // Defensa en profundidad del invariante slot-path: como el config script se
   // extrajo ANTES del gate de Rust, el marcador no pasó por él. El validador
   // del extend ya rechaza data-slot-path en claves y valores; este guard final
   // es el cinturón: si por lo que sea el marcador aparece en la salida, se
   // rechaza el documento entero (jamás llega a disco NI a la DB).
   if (out !== null && out.includes("data-slot-path=")) {
-    return { html: null, errors: [...r.errors, "slot-path marker in output"], removed: r.removed };
+    return { html: null, errors: [...r.errors, "slot-path marker in output"], removed };
   }
-  return { html: out, errors: r.errors, removed: r.removed };
+  return { html: out, errors: r.errors, removed };
+}
+
+const THEME_CARRIERS = ["radius", "space", "type"] as const;
+
+/** Cuerpos de TODOS los scripts que llevan el atributo, en orden. El atributo
+ *  tiene que terminar ahí (`(?=[\s=/>])`) o `data-ol-radius-loquesea` contaría
+ *  como carrier, y va precedido de espacio o `x-data-ol-radius` también. */
+function themeCarrierBodies(html: string, name: string): string[] {
+  const pattern = new RegExp(`<script\\b[^>]*\\sdata-ol-${name}(?=[\\s=/>])[^>]*>([\\s\\S]*?)</script>`, "gi");
+  const bodies: string[] = [];
+  for (let match = pattern.exec(html); match !== null; match = pattern.exec(html)) bodies.push(match[1] ?? "");
+  return bodies;
+}
+
+/** Cuántos carriers volvieron intactos. Se emparejan por CUERPO y de a uno
+ *  (multiconjunto), no por nombre: un documento puede traer dos scripts con el
+ *  mismo atributo y la reparación devuelve uno solo, así que comparar el
+ *  primero de cada lado cobraría de más según el orden del documento. */
+function healedThemeCarriers(before: string, after: string): number {
+  let healed = 0;
+  for (const name of THEME_CARRIERS) {
+    const survivors = themeCarrierBodies(after, name);
+    for (const body of themeCarrierBodies(before, name)) {
+      const index = survivors.indexOf(body);
+      if (index === -1) continue;
+      survivors.splice(index, 1);
+      healed += 1;
+    }
+  }
+  return healed;
 }
 
 export function optimizeForPublish(html: string): OptimizeResult {

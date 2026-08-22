@@ -13,12 +13,10 @@
 // Broadcast has no page widget, so they are intentionally NOT bridged.
 
 import type { ProjectSettings } from "@/lib/projects/types";
-import { reconcileModuleSettings } from "@/lib/projects/module-settings";
 
-export type BridgedModule = "bookings" | "collections" | "scene3d";
+export type BridgedModule = "collections" | "scene3d";
 
 const MARKERS: Record<BridgedModule, string> = {
-  bookings: "data-ol-bookings-section",
   collections: "data-ol-collection-section",
   scene3d: "data-ol-3d-scene",
 };
@@ -26,7 +24,6 @@ const MARKERS: Record<BridgedModule, string> = {
 /** Which bridged modules the page's HTML asks for (placeholder present). */
 export function detectModuleIntent(html: string): Record<BridgedModule, boolean> {
   return {
-    bookings: html.includes(MARKERS.bookings),
     collections: html.includes(MARKERS.collections),
     scene3d: html.includes(MARKERS.scene3d),
   };
@@ -44,10 +41,6 @@ export function applyModuleIntent(
   let next: ProjectSettings = base;
   const enabled: BridgedModule[] = [];
 
-  if (intent.bookings && base.bookings?.enabled !== true) {
-    next = { ...next, bookings: { ...next.bookings, enabled: true } };
-    enabled.push("bookings");
-  }
   if (intent.collections && base.collections?.enabled !== true) {
     next = { ...next, collections: { ...next.collections, enabled: true } };
     enabled.push("collections");
@@ -58,5 +51,5 @@ export function applyModuleIntent(
   }
 
   if (enabled.length === 0) return { settings: base, enabled };
-  return { settings: reconcileModuleSettings(next), enabled };
+  return { settings: next, enabled };
 }

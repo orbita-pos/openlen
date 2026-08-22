@@ -13,13 +13,8 @@ import type { ReactNode } from "react";
 import { useTranslations } from "next-intl";
 import { useFocusTrap } from "../use-focus-trap";
 import type {
-  BookingsSettings,
-  BroadcastSettings,
   ChatSettings,
   CollectionsSettings,
-  CommentsSettings,
-  MembersSettings,
-  OrdersSettings,
   WhatsAppSettings,
 } from "@/lib/projects/types";
 import type { PlacedModule } from "@/lib/projects/module-placements";
@@ -44,14 +39,10 @@ import {
 
 // The 9 modules the hub can show — drives which one the drawer has open.
 type ModuleKey =
-  | "members"
-  | "broadcast"
   | "whatsapp"
   | "chat"
-  | "bookings"
   | "collections"
   | "comments"
-  | "orders"
   | "platforms";
 
 interface ModuleEntry {
@@ -85,29 +76,9 @@ interface MemberItem {
 
 interface ModulesPanelProps {
   currentProjectId?: string | null;
-  membersSettings?: MembersSettings;
   /** How many pages currently carry the members-only flag. */
-  gatedCount: number;
-  /** PATCH settings.members. First enable may auto-create the members page
-   *  (born from the home shell, already locked) — createdPageSlug drives
-   *  the one-time hint under the toggle. */
-  onUpdateMembers?: (
-    patch: MembersSettings,
-  ) => Promise<{ ok: boolean; createdPageSlug?: string }>;
-  /** Broadcast module enable card — toggles settings.broadcast.enabled. */
-  broadcastSettings?: BroadcastSettings;
-  onUpdateBroadcast?: (patch: BroadcastSettings) => Promise<boolean>;
-  onShowBroadcast?: () => void;
   /** Comments module enable card — toggles + moderation + insert section. */
-  commentsSettings?: CommentsSettings;
-  onUpdateComments?: (patch: CommentsSettings) => Promise<boolean>;
-  onInsertCommentsSection?: () => void;
-  onShowComments?: () => void;
   /** Bookings module enable card — toggles + settings + insert section. */
-  bookingsSettings?: BookingsSettings;
-  onUpdateBookings?: (patch: BookingsSettings) => Promise<boolean>;
-  onInsertBookingsSection?: () => void;
-  onShowBookings?: () => void;
   /** Collections module enable card — toggle + insert section + manage. */
   collectionsSettings?: CollectionsSettings;
   onUpdateCollections?: (patch: CollectionsSettings) => Promise<boolean>;
@@ -117,8 +88,6 @@ interface ModulesPanelProps {
   whatsappSettings?: WhatsAppSettings;
   onUpdateWhatsapp?: (patch: WhatsAppSettings) => Promise<boolean>;
   /** Pedidos por WhatsApp module — toggle + destination number. */
-  ordersSettings?: OrdersSettings;
-  onUpdateOrders?: (patch: OrdersSettings) => Promise<boolean>;
   /** Private chat module — toggle + mount + self-serve. */
   chatSettings?: ChatSettings;
   onUpdateChat?: (patch: ChatSettings) => Promise<boolean>;
@@ -153,28 +122,12 @@ interface ModulesPanelProps {
 
 export function ModulesPanel({
   currentProjectId,
-  membersSettings,
-  broadcastSettings,
-  gatedCount,
-  onUpdateMembers,
-  onUpdateBroadcast,
-  onShowBroadcast,
-  commentsSettings,
-  onUpdateComments,
-  onInsertCommentsSection,
-  onShowComments,
-  bookingsSettings,
-  onUpdateBookings,
-  onInsertBookingsSection,
-  onShowBookings,
   collectionsSettings,
   onUpdateCollections,
   onInsertCollectionsSection,
   onShowCollections,
   whatsappSettings,
   onUpdateWhatsapp,
-  ordersSettings,
-  onUpdateOrders,
   chatSettings,
   onUpdateChat,
   platformLinkCount,
@@ -194,27 +147,11 @@ export function ModulesPanel({
   projectTitle,
   projectSubdomain,
 }: ModulesPanelProps) {
-  const t = useTranslations("members");
-  const tb = useTranslations("broadcast");
-  const tc = useTranslations("comments");
-  const tbk = useTranslations("bookings");
   const tcol = useTranslations("collections");
   const tw = useTranslations("wsPage");
-  const enabled = membersSettings?.enabled === true;
-  const mode = membersSettings?.mode === "invite" ? "invite" : "open";
-  const broadcastOn = broadcastSettings?.enabled === true;
-  const commentsOn = commentsSettings?.enabled === true;
-  const commentsMod = commentsSettings?.moderation === "all" ? "all" : "moderated";
-  const commentsTheme = commentsSettings?.theme ?? "light";
-  const bookingsOn = bookingsSettings?.enabled === true;
-  const bookingsRequireLogin = bookingsSettings?.requireLogin === true;
-  const bookingsTheme = bookingsSettings?.theme ?? "light";
-  const bookingsAutoConfirm = bookingsSettings?.autoConfirm !== false;
-  const bookingsReminders = bookingsSettings?.sendReminders !== false;
   const collectionsOn = collectionsSettings?.enabled === true;
   const collectionsTheme = collectionsSettings?.theme ?? "light";
   const whatsappOn = whatsappSettings?.enabled === true;
-  const ordersOn = ordersSettings?.enabled === true;
   const chatOn = chatSettings?.enabled === true;
   const chatMount = chatSettings?.mount ?? "both";
   const chatSelfServe = chatSettings?.selfServeJoin !== false;
@@ -234,17 +171,12 @@ export function ModulesPanel({
     if (n) setWaNumber((cur) => (cur.trim() ? cur : n));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [whatsappSettings?.number]);
-  const [ordBusy, setOrdBusy] = useState(false);
-  const [ordNumber, setOrdNumber] = useState(
-    ordersSettings?.number ?? whatsappSettings?.number ?? "",
-  );
   const [chatBusy, setChatBusy] = useState(false);
   const [chatWelcomeLocal, setChatWelcomeLocal] = useState(chatSettings?.welcome ?? "");
   const [chatQRs, setChatQRs] = useState<{ _key: string; q: string; a: string }[]>(
     (chatSettings?.quickReplies ?? []).map(r => ({ _key: crypto.randomUUID(), q: r.q, a: r.a }))
   );
   const [busy, setBusy] = useState(false);
-  const [bcastBusy, setBcastBusy] = useState(false);
 
   // Fix 3: resync chat local state when the active project changes
   useEffect(() => {
@@ -252,14 +184,6 @@ export function ModulesPanel({
     setChatQRs((chatSettings?.quickReplies ?? []).map(r => ({ _key: crypto.randomUUID(), q: r.q, a: r.a })));
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentProjectId]);
-  const [cmtBusy, setCmtBusy] = useState(false);
-  // Bookings: el lock es POR PERILLA (una perilla en vuelo no congela las
-  // otras) y los PATCH se encolan — el settings del proyecto se reescribe
-  // entero en cada uno, así que en paralelo se pisarían.
-  const [bkBusyKeys, setBkBusyKeys] = useState<(keyof BookingsSettings)[]>([]);
-  const bkQueue = useRef<Promise<void>>(Promise.resolve());
-  const bkBusy = (key: keyof BookingsSettings) => bkBusyKeys.includes(key);
-  const [bkInserted, setBkInserted] = useState(false);
   const [colBusy, setColBusy] = useState(false);
   const [colInserted, setColInserted] = useState(false);
   const [platInserted, setPlatInserted] = useState(false);
@@ -268,13 +192,8 @@ export function ModulesPanel({
   const [openKey, setOpenKey] = useState<ModuleKey | null>(null);
 
   const activeCount = [
-    enabled,
-    bookingsOn,
-    broadcastOn,
-    commentsOn,
     collectionsOn,
     whatsappOn,
-    ordersOn,
     chatOn,
     platformsOn,
   ].filter(Boolean).length;
@@ -286,77 +205,12 @@ export function ModulesPanel({
           <div className="mx-auto mb-4 inline-flex h-12 w-12 items-center justify-center rounded-2xl ring-1 ring-[color:var(--border)] bg-elev fg-faint">
             <Users size={18} />
           </div>
-          <p className="text-[13px] fg-muted leading-relaxed">{t("perProject")}</p>
+          <p className="text-[13px] fg-muted leading-relaxed">{tw("modulesHub.perProject")}</p>
         </div>
       </div>
     );
   }
 
-  const setEnabled = async (next: boolean) => {
-    if (busy || !onUpdateMembers) return;
-    setBusy(true);
-    const result = await onUpdateMembers(
-      next
-        ? { enabled: true, mode: membersSettings?.mode ?? "open", passwordLogin: true, accountArea: true }
-        : { enabled: false },
-    );
-    if (next && result.ok) setAutoPageSlug("cuenta");
-    if (!next) setAutoPageSlug(null);
-    setBusy(false);
-  };
-  const setMode = async (next: "open" | "invite") => {
-    if (busy || !onUpdateMembers || next === mode) return;
-    setBusy(true);
-    await onUpdateMembers({ mode: next });
-    setBusy(false);
-  };
-  const setBroadcastEnabled = async (next: boolean) => {
-    if (bcastBusy || !onUpdateBroadcast) return;
-    setBcastBusy(true);
-    await onUpdateBroadcast({ enabled: next });
-    setBcastBusy(false);
-  };
-  const setCommentsEnabled = async (next: boolean) => {
-    if (cmtBusy || !onUpdateComments) return;
-    setCmtBusy(true);
-    await onUpdateComments({ enabled: next });
-    setCmtBusy(false);
-  };
-  const setCommentsMod = async (next: "all" | "moderated") => {
-    if (cmtBusy || !onUpdateComments || next === commentsMod) return;
-    setCmtBusy(true);
-    await onUpdateComments({ moderation: next });
-    setCmtBusy(false);
-  };
-  const setCommentsTheme = async (next: "light" | "dark") => {
-    if (cmtBusy || !onUpdateComments || next === commentsTheme) return;
-    setCmtBusy(true);
-    await onUpdateComments({ theme: next });
-    setCmtBusy(false);
-  };
-  const updateBookings = (patch: BookingsSettings) => {
-    if (!onUpdateBookings) return;
-    const keys = Object.keys(patch) as (keyof BookingsSettings)[];
-    if (keys.some((k) => bkBusyKeys.includes(k))) return;
-    setBkBusyKeys((cur) => [...cur, ...keys]);
-    const run = async () => {
-      try {
-        // Seed the creator tz from the browser on first enable so new services
-        // default to the right zone without the owner typing it.
-        if (patch.enabled === true && !bookingsSettings?.creatorTz) {
-          try {
-            patch.creatorTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
-          } catch {
-            /* leave unset; the editor defaults it */
-          }
-        }
-        await onUpdateBookings(patch);
-      } finally {
-        setBkBusyKeys((cur) => cur.filter((k) => !keys.includes(k)));
-      }
-    };
-    bkQueue.current = bkQueue.current.then(run, run).catch(() => {});
-  };
   const updateCollections = async (patch: CollectionsSettings) => {
     if (colBusy || !onUpdateCollections) return;
     setColBusy(true);
@@ -372,15 +226,6 @@ export function ModulesPanel({
   const commitWhatsapp = () => {
     void updateWhatsapp({ number: waNumber.trim(), message: waMessage.trim() });
   };
-  const updateOrders = async (patch: OrdersSettings) => {
-    if (ordBusy || !onUpdateOrders) return;
-    setOrdBusy(true);
-    await onUpdateOrders(patch);
-    setOrdBusy(false);
-  };
-  const commitOrders = () => {
-    void updateOrders({ number: ordNumber.trim() });
-  };
   const updateChat = async (patch: ChatSettings) => {
     if (chatBusy || !onUpdateChat) return;
     setChatBusy(true);
@@ -393,8 +238,8 @@ export function ModulesPanel({
       {/* Header */}
       <header className="flex items-start justify-between gap-4 mb-6">
         <div className="min-w-0">
-          <h1 className="text-[26px] font-display fg leading-tight">{t("title")}</h1>
-          <p className="text-[13.5px] fg-muted mt-1.5 leading-snug">{t("subtitle")}</p>
+          <h1 className="text-[26px] font-display fg leading-tight">{tw("modulesHub.title")}</h1>
+          <p className="text-[13.5px] fg-muted mt-1.5 leading-snug">{tw("modulesHub.subtitle")}</p>
           {projectTitle && (
             <div className="mt-3 inline-flex items-center gap-2 rounded-full ring-1 ring-[color:var(--border)] bg-elev px-3 py-1.5 max-w-full">
               <Globe size={13} className="text-accent shrink-0" />
@@ -436,14 +281,6 @@ export function ModulesPanel({
                   .join(", "),
               })
             : tw("modulesHub.placedNowhere");
-        const commentsPlacement =
-          placements && placements.comments.length > 0
-            ? tw("modulesHub.placedIn", {
-                pages: placements.comments
-                  .map((s) => (s === "" ? tw("modulesHub.home") : `/${s}`))
-                  .join(", "),
-              })
-            : tw("modulesHub.placedNowhere");
         const platformsPlacement =
           placements && placements.platforms.length > 0
             ? tw("modulesHub.placedIn", {
@@ -456,77 +293,6 @@ export function ModulesPanel({
         const scopePageText = tw("modulesHub.scopePage");
 
         const modules: ModuleEntry[] = [
-          {
-            key: "members",
-            icon: <Users size={18} />,
-            title: t("module.title"),
-            tagline: t("module.tagline"),
-            scope: scopeSiteText,
-            on: enabled,
-            busy,
-            onToggle: () => void setEnabled(!enabled),
-            status: t(`module.mode.${mode}`),
-            body: (
-              <div className="space-y-2.5">
-                {autoPageSlug && (
-                  <p className="rounded-lg bg-emerald-500/10 ring-1 ring-emerald-500/30 px-2.5 py-2 text-[11px] leading-relaxed text-emerald-700 dark:text-emerald-400">
-                    {t("module.accountLive")}
-                  </p>
-                )}
-                <Segment
-                  value={mode}
-                  options={[
-                    { id: "open", label: t("module.mode.open") },
-                    { id: "invite", label: t("module.mode.invite") },
-                  ]}
-                  disabled={busy}
-                  onPick={(v) => void setMode(v as "open" | "invite")}
-                />
-                <p className="text-[11.5px] fg-faint leading-relaxed">
-                  {t(`module.mode.${mode}Hint`)}
-                </p>
-                <p className="text-[11.5px] leading-relaxed fg-muted inline-flex items-start gap-1.5">
-                  <LockIcon size={12} className="mt-[1px] shrink-0" />
-                  <span>
-                    {gatedCount > 0
-                      ? t("module.gatedCount", { count: gatedCount })
-                      : t("module.gatedNone")}
-                  </span>
-                </p>
-                {enabled && (
-                  <p className="text-[11.5px] fg-muted leading-relaxed">
-                    {t("module.doorPages")}
-                  </p>
-                )}
-                <p className="text-[10.5px] fg-faint leading-relaxed">{tw("modulesHub.seePreview")}</p>
-              </div>
-            ),
-          },
-          {
-            key: "broadcast",
-            icon: <Megaphone size={18} />,
-            title: tb("module.title"),
-            tagline: tb("module.tagline"),
-            scope: scopeSiteText,
-            on: broadcastOn,
-            busy: bcastBusy || !enabled,
-            onToggle: () => void setBroadcastEnabled(!broadcastOn),
-            status: tb("module.enabledHint"),
-            availableHint: !enabled ? tb("module.needsMembers") : undefined,
-            body: !enabled ? (
-              <p className="text-[11.5px] leading-relaxed text-amber-700 dark:text-amber-400">
-                {tb("module.needsMembers")}
-              </p>
-            ) : (
-              <button
-                type="button"
-                onClick={onShowBroadcast}
-                className="w-full inline-flex items-center justify-center h-8 rounded-lg text-[12px] font-medium fg-muted hover:fg bg-app ring-1 ring-[color:var(--border)] hover:bg-hover transition"
-              >
-                {tb("module.enabledHint")}
-              </button>
-            ),
-          },
           {
             key: "whatsapp",
             icon: <MessageSq size={18} />,
@@ -700,86 +466,6 @@ export function ModulesPanel({
             ),
           },
           {
-            key: "bookings",
-            icon: <Calendar size={18} />,
-            title: tbk("module.title"),
-            tagline: tbk("module.tagline"),
-            scope: scopePageText,
-            on: bookingsOn,
-            busy: bkBusy("enabled"),
-            onToggle: () => void updateBookings({ enabled: !bookingsOn }),
-            status: bookingsPlacement,
-            body: (
-              <div className="space-y-2">
-                {enabled && (
-                  <ToggleRow
-                    label={tbk("module.requireLogin")}
-                    hint={bookingsRequireLogin ? tbk("module.requireLoginHint") : tbk("module.guestHint")}
-                    checked={bookingsRequireLogin}
-                    disabled={bkBusy("requireLogin")}
-                    onChange={(v) => void updateBookings({ requireLogin: v })}
-                  />
-                )}
-                <ToggleRow
-                  label={tbk("module.autoConfirm")}
-                  hint={bookingsAutoConfirm ? tbk("module.autoConfirmHint") : tbk("module.approveHint")}
-                  checked={bookingsAutoConfirm}
-                  disabled={bkBusy("autoConfirm")}
-                  onChange={(v) => void updateBookings({ autoConfirm: v })}
-                />
-                <ToggleRow
-                  label={tbk("module.reminders")}
-                  hint={tbk("module.remindersHint")}
-                  checked={bookingsReminders}
-                  disabled={bkBusy("sendReminders")}
-                  onChange={(v) => void updateBookings({ sendReminders: v })}
-                />
-                {/* Tema del widget en la página publicada (los VALORES Claro/
-                    Oscuro sí se reusan del chat; la etiqueta es neutra). */}
-                <div className="space-y-1">
-                  <div className="text-[12px] font-medium fg-muted">{tw("modulesHub.theme")}</div>
-                  <Segment
-                    value={bookingsTheme}
-                    options={[
-                      { id: "light", label: tw("chat.themeLight") },
-                      { id: "dark", label: tw("chat.themeDark") },
-                    ]}
-                    disabled={bkBusy("theme")}
-                    onPick={(v) => void updateBookings({ theme: v as "light" | "dark" })}
-                  />
-                </div>
-                <CardActions
-                  onInsert={onInsertBookingsSection ? () => { onInsertBookingsSection(); setBkInserted(true); } : undefined}
-                  insertLabel={tbk("module.insert")}
-                  inserted={bkInserted}
-                  insertedLabel={tbk("module.inserted")}
-                  onManage={onShowBookings}
-                  manageLabel={tbk("module.manage")}
-                  note={tbk("module.noCharge")}
-                />
-                {onCreateModulePage && (
-                  <SurfaceButton
-                    label={tw("moduleSurface.createBookingPage")}
-                    onClick={() => void onCreateModulePage("bookings")}
-                  />
-                )}
-                <p className="text-[10.5px] fg-faint leading-relaxed">{bookingsPlacement}</p>
-                {onOpenLibrary && (
-                  <SurfaceButton label={tw("modulesHub.addToPage")} onClick={onOpenLibrary} />
-                )}
-                {onSwitchPage && (
-                  <TargetPageSelector
-                    activeSitePage={activeSitePage}
-                    sitePages={sitePages}
-                    homePageLabel={homePageLabel}
-                    onSwitchPage={onSwitchPage}
-                    label={tw("modulesHub.targetLabel")}
-                  />
-                )}
-              </div>
-            ),
-          },
-          {
             key: "collections",
             icon: <Grid3 size={18} />,
             title: tcol("module.title"),
@@ -822,71 +508,6 @@ export function ModulesPanel({
                   />
                 )}
                 <p className="text-[10.5px] fg-faint leading-relaxed">{collectionsPlacement}</p>
-                {onOpenLibrary && (
-                  <SurfaceButton label={tw("modulesHub.addToPage")} onClick={onOpenLibrary} />
-                )}
-                {onSwitchPage && (
-                  <TargetPageSelector
-                    activeSitePage={activeSitePage}
-                    sitePages={sitePages}
-                    homePageLabel={homePageLabel}
-                    onSwitchPage={onSwitchPage}
-                    label={tw("modulesHub.targetLabel")}
-                  />
-                )}
-              </div>
-            ),
-          },
-          {
-            key: "comments",
-            icon: <MessageSq size={18} />,
-            title: tc("module.title"),
-            tagline: tc("module.tagline"),
-            scope: scopePageText,
-            on: commentsOn,
-            busy: cmtBusy || !enabled,
-            onToggle: () => void setCommentsEnabled(!commentsOn),
-            status: commentsPlacement,
-            body: !enabled ? (
-              <p className="text-[11.5px] leading-relaxed text-amber-700 dark:text-amber-400">
-                {tc("module.needsMembers")}
-              </p>
-            ) : (
-              <div className="space-y-2">
-                <Segment
-                  value={commentsMod}
-                  options={[
-                    { id: "moderated", label: tc("module.modModerated") },
-                    { id: "all", label: tc("module.modAll") },
-                  ]}
-                  disabled={cmtBusy}
-                  onPick={(v) => void setCommentsMod(v as "all" | "moderated")}
-                />
-                <p className="text-[11.5px] fg-faint leading-relaxed">
-                  {tc(commentsMod === "moderated" ? "module.modModeratedHint" : "module.modAllHint")}
-                </p>
-                {/* Tema del widget (valores Claro/Oscuro del chat; etiqueta neutra). */}
-                <div className="space-y-1">
-                  <div className="text-[12px] font-medium fg-muted">{tw("modulesHub.theme")}</div>
-                  <Segment
-                    value={commentsTheme}
-                    options={[
-                      { id: "light", label: tw("chat.themeLight") },
-                      { id: "dark", label: tw("chat.themeDark") },
-                    ]}
-                    disabled={cmtBusy}
-                    onPick={(v) => void setCommentsTheme(v as "light" | "dark")}
-                  />
-                </div>
-                <CardActions
-                  onInsert={onInsertCommentsSection ? () => { onInsertCommentsSection(); setInserted(true); } : undefined}
-                  insertLabel={tc("module.insert")}
-                  inserted={inserted}
-                  insertedLabel={tc("module.inserted")}
-                  onManage={onShowComments}
-                  manageLabel={tc("title")}
-                />
-                <p className="text-[10.5px] fg-faint leading-relaxed">{commentsPlacement}</p>
                 {onOpenLibrary && (
                   <SurfaceButton label={tw("modulesHub.addToPage")} onClick={onOpenLibrary} />
                 )}
@@ -957,43 +578,6 @@ export function ModulesPanel({
               </div>
             ),
           },
-          {
-            key: "orders",
-            icon: <Package size={18} />,
-            title: tw("orders.title"),
-            tagline: tw("orders.tagline"),
-            scope: scopePageText,
-            on: ordersOn,
-            busy: ordBusy,
-            onToggle: () =>
-              void updateOrders({
-                enabled: !ordersOn,
-                ...(!ordersOn && ordNumber.trim() ? { number: ordNumber.trim() } : {}),
-              }),
-            status: `${ordNumber.trim() || tw("orders.numberPlaceholder")} · ${scopePageText}`,
-            body: (
-              <div className="space-y-2">
-                <input
-                  value={ordNumber}
-                  onChange={(e) => setOrdNumber(e.target.value)}
-                  onBlur={commitOrders}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") (e.target as HTMLInputElement).blur();
-                  }}
-                  inputMode="tel"
-                  maxLength={32}
-                  placeholder={tw("orders.numberPlaceholder")}
-                  className="w-full bg-app ring-1 ring-[color:var(--border)] rounded-lg px-3 h-9 text-[13px] fg outline-none focus:ring-[color:var(--accent)] transition"
-                />
-                <p className="text-[10.5px] fg-faint leading-relaxed">{tw("orders.note")}</p>
-                {collectionsSettings?.enabled !== true && (
-                  <p className="text-[10.5px] fg-faint leading-relaxed">
-                    {tw("orders.needsCatalog")}
-                  </p>
-                )}
-              </div>
-            ),
-          },
         ];
 
         const activeModules = modules.filter((m) => m.on);
@@ -1047,22 +631,15 @@ export function ModulesPanel({
         );
       })()}
 
-      {/* Members section — the live list, full width. */}
-      {enabled && (
-        <div className="mt-5">
-          <MembersList projectId={currentProjectId} />
-        </div>
-      )}
-
       {/* Already included */}
       <div className="mt-8">
         <div className="text-[10.5px] uppercase tracking-[0.16em] fg-faint font-semibold ui-small mb-2.5">
-          {t("included.title")}
+          {tw("modulesHub.included.title")}
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-          <IncludedCard icon={<Inbox size={15} />} title={t("included.forms")} hint={t("included.formsHint")} onOpen={onShowLeads} openLabel={t("included.open")} />
-          <IncludedCard icon={<BarChart3 size={15} />} title={t("included.analytics")} hint={t("included.analyticsHint")} onOpen={onShowAnalytics} openLabel={t("included.open")} />
-          <IncludedCard icon={<Sparkles size={15} />} title={t("included.assistant")} hint={t("included.assistantHint")} onOpen={onShowAssistant} openLabel={t("included.open")} />
+          <IncludedCard icon={<Inbox size={15} />} title={tw("modulesHub.included.forms")} hint={tw("modulesHub.included.formsHint")} onOpen={onShowLeads} openLabel={tw("modulesHub.included.open")} />
+          <IncludedCard icon={<BarChart3 size={15} />} title={tw("modulesHub.included.analytics")} hint={tw("modulesHub.included.analyticsHint")} onOpen={onShowAnalytics} openLabel={tw("modulesHub.included.open")} />
+          <IncludedCard icon={<Sparkles size={15} />} title={tw("modulesHub.included.assistant")} hint={tw("modulesHub.included.assistantHint")} onOpen={onShowAssistant} openLabel={tw("modulesHub.included.open")} />
         </div>
       </div>
     </div>
@@ -1471,178 +1048,6 @@ function IncludedCard({
   );
 }
 
-function MembersList({ projectId }: { projectId: string }) {
-  const t = useTranslations("members");
-  const [items, setItems] = useState<MemberItem[] | null>(null);
-  const [count, setCount] = useState(0);
-  const [cap, setCap] = useState(0);
-  const [error, setError] = useState<string | null>(null);
-  const [inviteEmail, setInviteEmail] = useState("");
-  const [inviting, setInviting] = useState(false);
-  const [inviteMsg, setInviteMsg] = useState<string | null>(null);
-  const [removing, setRemoving] = useState<string | null>(null);
-
-  const load = () => {
-    setError(null);
-    void fetch(`/api/projects/${projectId}/members`)
-      .then(async (r) => {
-        if (!r.ok) throw new Error(`HTTP ${r.status}`);
-        return r.json() as Promise<{ members: MemberItem[]; count: number; cap: number }>;
-      })
-      .then((d) => {
-        setItems(d.members);
-        setCount(d.count);
-        setCap(d.cap);
-      })
-      .catch((err: unknown) => {
-        setError(err instanceof Error ? err.message : t("list.loadError"));
-        setItems([]);
-      });
-  };
-
-  useEffect(() => {
-    setItems(null);
-    load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [projectId]);
-
-  const invite = async () => {
-    const email = inviteEmail.trim().toLowerCase();
-    if (!email || inviting) return;
-    setInviting(true);
-    setInviteMsg(null);
-    try {
-      const r = await fetch(`/api/projects/${projectId}/members`, {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ email }),
-      });
-      if (r.status === 409) setInviteMsg(t("invite.duplicate"));
-      else if (r.status === 402) setInviteMsg(t("invite.cap"));
-      else if (!r.ok) setInviteMsg(t("invite.error"));
-      else {
-        setInviteEmail("");
-        const d = (await r.json()) as { emailed?: boolean };
-        setInviteMsg(d.emailed ? t("invite.sentEmailed") : t("invite.sent"));
-        load();
-      }
-    } catch {
-      setInviteMsg(t("invite.error"));
-    }
-    setInviting(false);
-  };
-
-  const remove = async (memberId: string) => {
-    setRemoving(memberId);
-    try {
-      const r = await fetch(`/api/projects/${projectId}/members/${memberId}`, {
-        method: "DELETE",
-      });
-      if (r.ok) load();
-    } finally {
-      setRemoving(null);
-    }
-  };
-
-  return (
-    <div className="rounded-2xl ring-1 ring-[color:var(--border)] bg-elev shadow-card p-5">
-      <div className="flex items-start justify-between gap-3 mb-3.5">
-        <div className="min-w-0">
-          <div className="text-[15px] font-semibold fg leading-tight tracking-[-0.01em]">
-            {t("list.title")}
-          </div>
-        </div>
-        {cap > 0 && (
-          <span className="shrink-0 text-[12px] font-semibold fg-muted tabular mt-0.5">
-            {count} / {cap}
-          </span>
-        )}
-      </div>
-
-      <div className="flex items-center gap-2 mb-2">
-        <input
-          value={inviteEmail}
-          onChange={(e) => {
-            setInviteEmail(e.target.value);
-            setInviteMsg(null);
-          }}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") void invite();
-          }}
-          type="email"
-          placeholder={t("invite.placeholder")}
-          className="flex-1 min-w-0 bg-app border bd rounded-lg px-3 h-9 text-[13px] fg outline-none focus:border-[color:var(--accent)] transition"
-        />
-        <button
-          type="button"
-          disabled={inviting || !inviteEmail.trim()}
-          onClick={() => void invite()}
-          className="shrink-0 h-9 px-4 rounded-lg bg-[var(--accent-strong)] text-white text-[12.5px] font-medium hover:brightness-105 transition disabled:opacity-50 inline-flex items-center gap-1.5"
-        >
-          {inviting && <Loader size={11} className="animate-spin" />}
-          {t("invite.cta")}
-        </button>
-      </div>
-      {inviteMsg && (
-        <div className="pb-1 text-[11px] fg-muted leading-snug">{inviteMsg}</div>
-      )}
-      {error && (
-        <div className="mb-1.5 rounded-lg ring-1 ring-red-500/40 bg-red-500/5 px-3 py-2 text-[11px] text-red-600 dark:text-red-400">
-          {error}
-        </div>
-      )}
-
-      {items === null && (
-        <div className="space-y-1.5 pt-1">
-          {[0, 1, 2].map((i) => (
-            <div key={i} className="h-11 rounded-xl bg-zinc-200/60 dark:bg-zinc-800/50 animate-pulse" />
-          ))}
-        </div>
-      )}
-      {items !== null && items.length === 0 && !error && (
-        <p className="pt-2 text-[11.5px] fg-faint leading-relaxed">{t("list.empty")}</p>
-      )}
-      {items !== null && items.length > 0 && (
-        <ul className="pt-1 space-y-0.5">
-          {items.map((m) => (
-            <li
-              key={m.id}
-              className="group flex items-center gap-3 rounded-xl px-2 h-11 hover:bg-hover transition"
-            >
-              <span className="h-8 w-8 shrink-0 grid place-items-center rounded-full bg-accent-soft text-accent text-[12px] font-bold uppercase">
-                {(m.name || m.email).trim().charAt(0) || "?"}
-              </span>
-              <span className="flex-1 min-w-0 text-[13px] fg truncate">{m.email}</span>
-              <span
-                className={`shrink-0 text-[10.5px] font-semibold px-2 py-0.5 rounded-full ${
-                  m.status === "active"
-                    ? "text-emerald-700 dark:text-emerald-400 bg-emerald-500/10"
-                    : "fg-faint bg-hover"
-                }`}
-              >
-                {t(`list.status.${m.status}`)}
-              </span>
-              <button
-                type="button"
-                disabled={removing === m.id}
-                aria-label={t("list.remove", { email: m.email })}
-                title={t("list.remove", { email: m.email })}
-                onClick={() => void remove(m.id)}
-                className="h-7 w-7 hidden group-hover:inline-flex items-center justify-center rounded-md fg-faint hover:text-red-500 hover:bg-hover transition disabled:opacity-50 shrink-0"
-              >
-                {removing === m.id ? (
-                  <Loader size={11} className="animate-spin" />
-                ) : (
-                  <Trash size={11} />
-                )}
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>
-  );
-}
 
 interface AgentItem {
   id: string;

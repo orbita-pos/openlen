@@ -158,6 +158,33 @@ export interface OpApplyResult {
  *  target IDs against the ORIGINAL document first (no partial-apply) — if
  *  any target is missing, bail. Successful run returns the spliced doc with
  *  IDs stripped. */
+/** Las ops que no pueden aplicarse sin destruir el documento.
+ *
+ *  Medido: pidiendo "cambia el titular y pon el acento en verde", el modelo
+ *  emite el `replace` correcto del <h1> y luego, para tocar `:root`, apunta al
+ *  <body> y lo reemplaza por una etiqueta <style>. Dos de cada cinco veces se
+ *  llevaba la página entera por delante — 13,788 chars a 9,524 — sin una sola
+ *  op `delete` y sin ningún error.
+ *
+ *  Reescribir el documento entero es el Modo B, no una op. Las demás ops de la
+ *  misma tanda sí se aplican: el usuario pidió dos cosas y perder una es mucho
+ *  menos malo que perder su página. Quien llama TIENE que avisar de lo que se
+ *  descartó — perderlo en silencio es la degradación que este repo prohíbe. */
+export function rejectDocumentWideOps(
+  taggedHtml: string,
+  ops: readonly Op[],
+): { ops: Op[]; rejected: Op[] } {
+  const roots = new Set<string>();
+  for (const match of taggedHtml.matchAll(/<(?:html|body)\b[^>]*\sdata-op-id="([^"]+)"/gi)) {
+    roots.add(match[1]!);
+  }
+  if (roots.size === 0) return { ops: [...ops], rejected: [] };
+  const kept: Op[] = [];
+  const rejected: Op[] = [];
+  for (const op of ops) (roots.has(op.target) ? rejected : kept).push(op);
+  return { ops: kept, rejected };
+}
+
 export function applyOps(taggedHtml: string, ops: Op[]): OpApplyResult {
   const r = rustApplyOps(taggedHtml, ops);
   return {

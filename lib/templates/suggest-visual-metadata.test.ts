@@ -17,9 +17,11 @@ const TEMPLATE = {
   description: "Technical product page", screenshotUrl: "https://example.test/mirror.jpg",
 } as TemplateRecord;
 
-function geminiResponse(value: unknown = MODEL_VALUE): Response {
+// El sobre es el de OpenAI porque el modelo es Qwen por el endpoint compatible
+// de Fireworks (2026-08-21). Antes era el de Gemini: `candidates[0].content.parts`.
+function modelResponse(value: unknown = MODEL_VALUE): Response {
   return new Response(JSON.stringify({
-    candidates: [{ content: { parts: [{ text: JSON.stringify(value) }] } }],
+    choices: [{ message: { content: JSON.stringify(value) } }],
   }), { status: 200 });
 }
 
@@ -49,14 +51,15 @@ it("sends the screenshot inline and keeps the suggestion unreviewed", async () =
       status: 200,
       headers: { "content-type": "image/jpeg" },
     }))
-    .mockResolvedValueOnce(new Response(JSON.stringify({
-      candidates: [{ content: { parts: [{ text: JSON.stringify(MODEL_VALUE) }] } }],
-    }), { status: 200 }));
+    .mockResolvedValueOnce(modelResponse());
   const result = await suggestVisualMetadata(TEMPLATE, { apiKey: "key", fetchImpl });
   expect(result.ok).toBe(true);
   if (result.ok) expect(result.metadata.reviewStatus).toBe("unreviewed");
   const request = JSON.parse(String(fetchImpl.mock.calls[1][1]?.body));
-  expect(request.contents[0].parts[1].inlineData.data).toBe("AQID");
+  // La captura viaja como data: URL dentro de un `image_url`, que es como la
+  // recibe el papel con visión.
+  expect(request.messages[0].content[1].image_url.url).toBe("data:image/jpeg;base64,AQID");
+  expect(String(fetchImpl.mock.calls[1][0])).toContain("api.fireworks.ai");
 });
 
 describe("suggestVisualMetadata failure boundaries and audit", () => {
@@ -78,7 +81,7 @@ describe("suggestVisualMetadata failure boundaries and audit", () => {
         status: 200,
         headers: { "content-type": "Image/PNG; charset=binary" },
       }))
-      .mockResolvedValueOnce(geminiResponse());
+      .mockResolvedValueOnce(modelResponse());
 
     const result = await suggestVisualMetadata(TEMPLATE, {
       apiKey: "never-log-this-key",
@@ -112,17 +115,17 @@ describe("suggestVisualMetadata failure boundaries and audit", () => {
     });
     expect(JSON.stringify(result)).not.toContain("never-log-this-key");
     const request = JSON.parse(String(fetchImpl.mock.calls[1][1]?.body));
-    expect(request.contents[0].parts[1].inlineData.mimeType).toBe("image/png");
-    expect(request.contents[0].parts[0].text).toContain("ageRanges examples: 5_10, 18_24, 65_plus");
+    expect(request.messages[0].content[1].image_url.url).toContain("data:image/png;base64,");
+    expect(request.messages[0].content[0].text).toContain("ageRanges examples: 5_10, 18_24, 65_plus");
   });
 
   it("sends a low-state response schema while preserving the required output shape", async () => {
     const fetchImpl = vi.fn()
       .mockResolvedValueOnce(new Response(new Uint8Array([1]), { status: 200 }))
-      .mockResolvedValueOnce(geminiResponse());
+      .mockResolvedValueOnce(modelResponse());
     await suggestVisualMetadata(TEMPLATE, { apiKey: "key", fetchImpl });
     const request = JSON.parse(String(fetchImpl.mock.calls[1][1]?.body));
-    const responseJsonSchema = request.generationConfig.responseJsonSchema;
+    const responseJsonSchema = request.response_format.schema;
     expect(responseJsonSchema).toMatchObject({
       type: "object",
       additionalProperties: false,
@@ -157,7 +160,7 @@ describe("suggestVisualMetadata failure boundaries and audit", () => {
   it("canonicalizes only pure numeric hyphenated age ranges before final validation", async () => {
     const fetchImpl = vi.fn()
       .mockResolvedValueOnce(new Response(new Uint8Array([1]), { status: 200 }))
-      .mockResolvedValueOnce(geminiResponse({ ...MODEL_VALUE, ageRanges: ["5-10", "18-24", "65_plus"] }));
+      .mockResolvedValueOnce(modelResponse({ ...MODEL_VALUE, ageRanges: ["5-10", "18-24", "65_plus"] }));
     const result = await suggestVisualMetadata(TEMPLATE, { apiKey: "key", fetchImpl });
     expect(result).toMatchObject({
       ok: true,
@@ -170,7 +173,7 @@ describe("suggestVisualMetadata failure boundaries and audit", () => {
     async (ageRange) => {
       const fetchImpl = vi.fn()
         .mockResolvedValueOnce(new Response(new Uint8Array([1]), { status: 200 }))
-        .mockResolvedValueOnce(geminiResponse({ ...MODEL_VALUE, ageRanges: [ageRange] }));
+        .mockResolvedValueOnce(modelResponse({ ...MODEL_VALUE, ageRanges: [ageRange] }));
       const result = await suggestVisualMetadata(TEMPLATE, { apiKey: "key", fetchImpl });
       expect(result).toMatchObject({ ok: false, kind: "parse" });
     },
@@ -202,7 +205,7 @@ describe("suggestVisualMetadata failure boundaries and audit", () => {
     expect(result).toMatchObject({
       ok: false,
       kind: "model",
-      message: `Gemini 400 INVALID_ARGUMENT: ${providerMessage}`,
+      message: `modelo 400 INVALID_ARGUMENT: ${providerMessage}`,
     });
     expect(JSON.stringify(result)).not.toMatch(/never-retain-(?:request|credential|raw-response|screenshot)/);
   });
@@ -219,7 +222,7 @@ describe("suggestVisualMetadata failure boundaries and audit", () => {
     expect(result).toMatchObject({
       ok: false,
       kind: "model",
-      message: `Gemini 400 ${providerStatus.slice(0, 63)}…: ${providerMessage.slice(0, 511)}…`,
+      message: `modelo 400 ${providerStatus.slice(0, 63)}…: ${providerMessage.slice(0, 511)}…`,
     });
   });
 
@@ -228,7 +231,7 @@ describe("suggestVisualMetadata failure boundaries and audit", () => {
       .mockResolvedValueOnce(new Response(new Uint8Array([1]), { status: 200 }))
       .mockResolvedValueOnce(new Response("not-json never-retain-body", { status: 503 }));
     const result = await suggestVisualMetadata(TEMPLATE, { apiKey: "key", fetchImpl });
-    expect(result).toMatchObject({ ok: false, kind: "model", message: "Gemini 503" });
+    expect(result).toMatchObject({ ok: false, kind: "model", message: "modelo 503" });
     expect(JSON.stringify(result)).not.toContain("never-retain-body");
   });
 
@@ -246,7 +249,7 @@ describe("suggestVisualMetadata failure boundaries and audit", () => {
     expect(result).toMatchObject({ ok: false, kind: "fetch", message: "screenshot body unreadable" });
   });
 
-  it("returns a typed model failure when the Gemini envelope cannot be read", async () => {
+  it("returns a typed model failure when the model envelope cannot be read", async () => {
     const modelResponse = {
       ok: true,
       status: 200,
@@ -256,7 +259,7 @@ describe("suggestVisualMetadata failure boundaries and audit", () => {
       .mockResolvedValueOnce(new Response(new Uint8Array([1]), { status: 200 }))
       .mockResolvedValueOnce(modelResponse);
     const result = await suggestVisualMetadata(TEMPLATE, { apiKey: "key", fetchImpl });
-    expect(result).toMatchObject({ ok: false, kind: "model", message: "invalid Gemini response envelope" });
+    expect(result).toMatchObject({ ok: false, kind: "model", message: "invalid model response envelope" });
   });
 
   it("rejects a non-image screenshot response", async () => {
@@ -279,10 +282,10 @@ describe("suggestVisualMetadata failure boundaries and audit", () => {
     } as unknown as Response;
     const fetchImpl = vi.fn()
       .mockResolvedValueOnce(screenshot)
-      .mockResolvedValueOnce(geminiResponse());
+      .mockResolvedValueOnce(modelResponse());
     await suggestVisualMetadata(TEMPLATE, { apiKey: "key", fetchImpl });
     const request = JSON.parse(String(fetchImpl.mock.calls[1][1]?.body));
-    expect(request.contents[0].parts[1].inlineData.mimeType).toBe("image/jpeg");
+    expect(request.messages[0].content[1].image_url.url).toContain("data:image/jpeg;base64,");
   });
 
   it("returns a typed aborted result without starting a request", async () => {
@@ -329,7 +332,7 @@ describe("suggestVisualMetadata failure boundaries and audit", () => {
     const fetchImpl = vi.fn()
       .mockResolvedValueOnce(new Response(new Uint8Array([1]), { status: 200 }))
       .mockResolvedValueOnce(new Response(JSON.stringify({
-        candidates: [{ content: { parts: [{ text: raw }] } }],
+        choices: [{ message: { content: raw } }],
       }), { status: 200 }));
     const result = await suggestVisualMetadata(TEMPLATE, { apiKey: "key", fetchImpl });
     expect(result).toMatchObject({ ok: false, kind: "parse", raw });

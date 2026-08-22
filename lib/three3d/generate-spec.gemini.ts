@@ -7,6 +7,7 @@ import { parseSceneSpecStrict, coerceSceneSpec } from "./scene-spec";
 import { buildSystemPrompt, buildUserPrompt } from "./gemini-prompt";
 import { GOLDEN } from "./golden-specs";
 import { renderScenePoster } from "../publish/scene-poster";
+import { fireworksStreamProvider, type StreamProviderLike } from "@/lib/ai/fireworks-as-stream-provider";
 import { GeminiProvider, type InlineImage } from "@/lib/ai-gateway";
 
 const FLASH_MODEL = "gemini-3.5-flash";
@@ -16,7 +17,7 @@ const MAX_REROLLS = 2;
 
 /** Streams a single Gemini call and returns the accumulated text output. */
 async function callGemini(
-  provider: GeminiProvider,
+  provider: StreamProviderLike,
   opts: {
     system?: string;
     prompt: string;
@@ -85,7 +86,7 @@ function nearestGolden(describe: string): SceneSpec {
  *  Returns true = keep / false = reroll.
  *  Fails open: any error → true so a critic outage never blocks generation. */
 async function critiqueScene(
-  provider: GeminiProvider,
+  provider: StreamProviderLike,
   posterJpeg: Buffer,
   describe: string,
 ): Promise<boolean> {
@@ -125,8 +126,30 @@ Answer ONLY with the single word ACCEPT or REJECT — nothing else.`;
 export async function runGemini(
   input: GenInput,
 ): Promise<Omit<GenResult, "provider">> {
-  if (!process.env.GEMINI_API_KEY) throw new Error("gemini_key_missing");
-  const provider = new GeminiProvider(process.env.GEMINI_API_KEY);
+  // DOS PAPELES en este módulo, y no son el mismo: escribir el spec es texto
+  // (razonador) y juzgar el póster renderizado es MIRAR (Qwen). Antes los hacía
+  // Gemini los dos; ahora Gemini se queda para los píxeles y nada más.
+  // `OPENLEN_3D_PROVIDER=gemini` vuelve atrás por completo.
+  const usaGemini = process.env.OPENLEN_3D_PROVIDER?.trim().toLowerCase() === "gemini";
+  if (usaGemini && !process.env.GEMINI_API_KEY) throw new Error("gemini_key_missing");
+  const provider: StreamProviderLike = usaGemini
+    ? (new GeminiProvider(process.env.GEMINI_API_KEY as string) as unknown as StreamProviderLike)
+    : fireworksStreamProvider({
+        requestId: "three3d-spec",
+        operation: "page_planning",
+        maxOutputTokens: 8_192,
+        temperature: 0.9,
+        jsonObject: true,
+      });
+  // Al razonador NUNCA se le manda una imagen: el crítico va aparte.
+  const critico: StreamProviderLike = usaGemini
+    ? provider
+    : fireworksStreamProvider({
+        requestId: "three3d-critic",
+        operation: "final_scoring",
+        maxOutputTokens: 256,
+        temperature: 0.2,
+      });
   const system = buildSystemPrompt();
   const user = buildUserPrompt(input);
 
@@ -141,7 +164,7 @@ export async function runGemini(
           height: 360,
           format: "jpeg",
         });
-        if (await critiqueScene(provider, poster, input.describe)) {
+        if (await critiqueScene(critico, poster, input.describe)) {
           return { spec: parsed.value, rerolls, fallback: false };
         }
       }

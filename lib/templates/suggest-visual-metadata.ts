@@ -4,6 +4,7 @@ import {
   type TemplateVisualMetadata,
 } from "./visual-metadata";
 import type { TemplateRecord } from "./store";
+import { modelIdForRole } from "@/lib/generation/fable-model-policy";
 import {
   VISUAL_METADATA_FAILURE_POLICY_VERSION,
   VISUAL_METADATA_GENERATION_CONFIG_VERSION,
@@ -198,8 +199,8 @@ function boundedProviderText(value: unknown, maximumLength: number): string | nu
     : `${normalized.slice(0, maximumLength - 1)}…`;
 }
 
-async function geminiHttpErrorMessage(response: Response): Promise<string> {
-  const fallback = `Gemini ${response.status}`;
+async function modelHttpErrorMessage(response: Response): Promise<string> {
+  const fallback = `modelo ${response.status}`;
   let payload: unknown;
   try {
     payload = await response.json();
@@ -294,53 +295,72 @@ async function executeSuggestion(
 
   let modelResponse: Response;
   try {
+    // MIRA QWEN, por el endpoint compatible con OpenAI de Fireworks.
+    //
+    // Se conserva `fetchImpl` a propósito en vez de pasar al cliente de
+    // streaming: es la costura que hace comprobable este módulo, y cambiarla
+    // habría obligado a reescribir sus 21 casos por una diferencia que al
+    // usuario no le llega. Sólo cambian URL, cabecera, cuerpo y sobre.
     modelResponse = await fetchImpl(
-      `https://generativelanguage.googleapis.com/v1beta/models/${modelId}:generateContent?key=${encodeURIComponent(apiKey)}`,
+      "https://api.fireworks.ai/inference/v1/chat/completions",
       {
         method: "POST",
-        headers: { "content-type": "application/json" },
+        headers: {
+          "content-type": "application/json",
+          authorization: `Bearer ${apiKey}`,
+        },
         signal,
         body: JSON.stringify({
-          contents: [{ role: "user", parts: [
-            { text: promptFor(record) },
-            { inlineData: { mimeType, data: bytes.toString("base64") } },
-          ] }],
-          generationConfig: GENERATION_CONFIG,
+          model: modelId,
+          messages: [{
+            role: "user",
+            content: [
+              { type: "text", text: promptFor(record) },
+              {
+                type: "image_url",
+                image_url: { url: `data:${mimeType};base64,${bytes.toString("base64")}` },
+              },
+            ],
+          }],
+          temperature: GENERATION_CONFIG.temperature,
+          max_tokens: GENERATION_CONFIG.maxOutputTokens,
+          // El esquema VIAJA. Sin él la salida queda sin forma y el modelo se
+          // inventa claves; `coerceSuggestedMetadata` lo rechazaría después,
+          // pero convertir una restricción en un rechazo posterior es perder la
+          // garantía y pagarla en reintentos. Fireworks lo acepta dentro de
+          // `json_object` (no en modo `strict`, que rechaza esquemas válidos).
+          response_format: { type: "json_object", schema: GENERATION_CONFIG.responseJsonSchema },
         }),
       },
     );
   } catch {
-    return cancellationFailure(audit, cancellationState.kind, "model", "Gemini request failed");
+    return cancellationFailure(audit, cancellationState.kind, "model", "model request failed");
   }
   if (!modelResponse.ok) {
-    return failure(audit, "model", await geminiHttpErrorMessage(modelResponse));
+    return failure(audit, "model", await modelHttpErrorMessage(modelResponse));
   }
 
   let payload: unknown;
   try {
     payload = await modelResponse.json();
   } catch {
-    return cancellationFailure(audit, cancellationState.kind, "model", "invalid Gemini response envelope");
+    return cancellationFailure(audit, cancellationState.kind, "model", "invalid model response envelope");
   }
   if (!payload || typeof payload !== "object") {
-    return failure(audit, "model", "invalid Gemini response envelope");
+    return failure(audit, "model", "invalid model response envelope");
   }
-  const candidates = (payload as { candidates?: unknown }).candidates;
-  if (!Array.isArray(candidates)) {
-    return failure(audit, "model", "invalid Gemini response envelope");
+  const choices = (payload as { choices?: unknown }).choices;
+  if (!Array.isArray(choices)) {
+    return failure(audit, "model", "invalid model response envelope");
   }
-  const first = candidates[0];
-  const parts = first && typeof first === "object"
-    ? (first as { content?: { parts?: unknown } }).content?.parts
+  const first = choices[0];
+  const content = first && typeof first === "object"
+    ? (first as { message?: { content?: unknown } }).message?.content
     : null;
-  if (!Array.isArray(parts)) {
-    return failure(audit, "model", "invalid Gemini response envelope");
+  if (typeof content !== "string") {
+    return failure(audit, "model", "invalid model response envelope");
   }
-  const raw = parts
-    .map((part) => part && typeof part === "object" && typeof (part as { text?: unknown }).text === "string"
-      ? (part as { text: string }).text
-      : "")
-    .join("");
+  const raw = content;
   let value: unknown;
   try {
     value = JSON.parse(raw.replace(/^```(?:json)?\s*|\s*```$/gi, "").trim());
@@ -360,11 +380,12 @@ export async function suggestVisualMetadata(
   const modelId = options.modelId
     ?? process.env.OPENLEN_METADATA_MODEL
     ?? process.env.STYLE_MATCH_TEXT_MODEL
-    ?? "gemini-2.5-flash";
+    // Qwen: mirar una captura es el papel con VISIÓN de la política.
+    ?? modelIdForRole("visual_critic");
   const timeoutMs = Math.max(1, options.timeoutMs ?? VISUAL_METADATA_PER_TEMPLATE_TIMEOUT_MS);
   const audit = createAudit(modelId, timeoutMs);
-  const apiKey = options.apiKey ?? process.env.GEMINI_API_KEY;
-  if (!apiKey) return failure(audit, "missing_key", "GEMINI_API_KEY not set");
+  const apiKey = options.apiKey ?? process.env.FIREWORKS_API_KEY;
+  if (!apiKey) return failure(audit, "missing_key", "FIREWORKS_API_KEY not set");
   if (!record.screenshotUrl) {
     return failure(audit, "missing_screenshot", `template ${record.id} has no screenshot`);
   }

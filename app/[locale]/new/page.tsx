@@ -14,11 +14,9 @@ import { useSearchParams } from "next/navigation";
 import { useRouter } from "@/i18n/navigation";
 import { useLocale, useTranslations } from "next-intl";
 import { PublishModal } from "@/components/workspace/publish-modal";
-import { useCuration } from "@/lib/use-curation";
 import { useGeneration } from "@/lib/use-generation";
 import { setGenerationBusy } from "@/lib/generation-busy";
 import { scanController } from "@/lib/workspace-v2/scan-controller";
-import { useAIModel } from "@/components/workspace-v2/model-picker";
 import { classifyAiError } from "@/components/workspace-v2/ai-error-message";
 import { buildModuleSection } from "@/lib/publish/module-sections";
 import {
@@ -31,17 +29,12 @@ import {
   pageHasModule,
   PLACED_MODULE_MARKERS,
 } from "@/lib/projects/module-placements";
-import type { ModuleCardState } from "@/components/workspace-v2/panels/sections-panel";
 import type {
-  BookingsSettings,
   ChatSettings,
   CollectionsSettings,
-  BroadcastSettings,
-  CommentsSettings,
   FormConfig,
-  MembersSettings,
+  Degradation,
   MusicSettings,
-  OrdersSettings,
   ProjectSettings,
   StoredChatTurn,
   WhatsAppSettings,
@@ -66,11 +59,11 @@ import {
   type SidebarMode,
   type SectionView,
 } from "@/components/workspace-v2/left-sidebar";
-import { Check, Sparkles, Undo, X } from "@/components/workspace-v2/icons";
-import { SectionPreviewModal } from "@/components/workspace-v2/section-preview-modal";
-import type { SectionSpec } from "@/components/workspace-v2/sections-data";
+import { AlertTriangle, Check, Sparkles, Undo, X } from "@/components/workspace-v2/icons";
 import { PreviewPlaceholder } from "@/components/workspace-v2/preview-placeholder";
 import { StartLanding } from "@/components/workspace-v2/start-landing";
+import type { StyleDirection } from "@/lib/style-match/direction-types";
+import type { PageEffort } from "@/components/workspace-v2/panels/ai-brief-panel";
 import { SECTIONS, type Section } from "@/components/workspace-v2/mock-data";
 import { PreviewArea } from "@/components/workspace-v2/preview-area";
 import {
@@ -178,12 +171,34 @@ interface LoadedProject {
   /** Non-HTML project settings (Phase 2 form config). Loaded with the
    *  project; updated in place when the inspector edits a form. */
   settings: ProjectSettings | undefined;
+  /** What the page lost on the way in (paste / template clone). Drives the
+   *  one-time notice — the user is TOLD, rather than discovering a dead
+   *  control on the published page. */
+  degradations: Degradation[] | undefined;
+  degradationsDismissed: boolean | undefined;
   /** The business this page is linked to (FK → businessProfiles), same field
    *  GET /api/projects/[id] already returns on `project`. Null = no explicit
    *  link, resolve to the user's default business (mirrors
    *  projectBusinessProfile's linked-first-else-default). Drives the
    *  platforms band preview in the canvas. */
   profileId: string | null;
+}
+
+/** Las frases concretas de un código de degradación, sin repetir.
+ *
+ *  Una clonación multi-página registra la misma pérdida por página, así que el
+ *  mismo detalle puede venir N veces; decirlo N veces sería el ruido que este
+ *  aviso existe para no ser. */
+function degradationDetail(
+  degradations: Degradation[] | undefined,
+  code: string,
+): string[] {
+  const vistos = new Set<string>();
+  for (const d of degradations ?? []) {
+    if (d.code !== code) continue;
+    for (const linea of d.detail ?? []) vistos.add(linea);
+  }
+  return [...vistos].slice(0, 3);
 }
 
 // stripEditorInstrumentation moved to
@@ -208,7 +223,6 @@ const ALL_TABS: SidebarMode[] = [
   "site",
   "chat",
   "images",
-  "library",
   "versions",
   "3d",
 ];
@@ -252,8 +266,6 @@ function readThemeBaseline(m: Record<string, unknown>): {
 function NewV2Inner() {
   const t = useTranslations("wsPage");
   const tSections = useTranslations("panelsA");
-  const tBookings = useTranslations("bookings");
-  const tMembers = useTranslations("members");
   const tCollections = useTranslations("collections");
   const tAsset = useTranslations("modalsAsset");
   const tws = useTranslations("wsChrome");
@@ -317,7 +329,6 @@ function NewV2Inner() {
   const [projectName, setProjectName] = useState(t("defaultProjectName"));
   // One-shot deep-links (consumed by the child once applied — nonce refs
   // misfire when the target mounts AFTER the click: took two clicks).
-  const [libraryOpenModules, setLibraryOpenModules] = useState(false);
   const [hubInitialSub, setHubInitialSub] = useState<"collections" | null>(null);
   const [mode, setMode] = useState<SidebarMode>(
     entryMode === "template" || entryMode === "ai" ? "templates" : "chat",
@@ -486,10 +497,7 @@ function NewV2Inner() {
     loadedProject?.settings?.whatsapp,
     loadedProject?.settings?.assistant?.enabled,
     loadedProject?.settings?.chat,
-    loadedProject?.settings?.orders,
     loadedProject?.settings?.music?.src,
-    loadedProject?.settings?.bookings?.enabled,
-    loadedProject?.settings?.comments?.enabled,
     loadedProject?.settings?.collections?.theme,
   ]);
   const modulesPreview = useMemo<EditorModulesPreviewCfg | null>(() => {
@@ -497,10 +505,8 @@ function NewV2Inner() {
     const wa = st?.whatsapp?.enabled && st.whatsapp.number ? st.whatsapp : null;
     // With the module ON, zero items still previews (ghost product cards).
     const colPayload = previewCollections;
-    const bookingsOn = st?.bookings?.enabled === true;
-    const commentsOn = st?.comments?.enabled === true;
     const platforms = platformLinks;
-    if (!wa && !colPayload && !bookingsOn && !commentsOn && !platforms) return null;
+    if (!wa && !colPayload && !platforms) return null;
     const assistantOn = st?.assistant?.enabled === true;
     const handoffMerged =
       assistantOn &&
@@ -517,14 +523,10 @@ function NewV2Inner() {
         ? {
             items: colPayload.items,
             layout: colPayload.layout,
-            ordersNumber:
-              st?.orders?.enabled && st.orders.number ? st.orders.number : null,
             theme: st?.collections?.theme,
           }
         : null,
       platforms,
-      bookingsOn,
-      commentsOn,
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [modulesPreviewKey, previewCollections, platformLinks]);
@@ -619,7 +621,6 @@ function NewV2Inner() {
   // server-side (/api/sections/prepare) and drops the already-themed fragment
   // into the live iframe via insertRequest. A section never lands raw (the user
   // rejected the unmatched add). The insert + save rides the html-changed path.
-  const [previewSection, setPreviewSection] = useState<SectionSpec | null>(null);
   const [usingSection, setUsingSection] = useState(false);
   const [useError, setUseError] = useState<string | null>(null);
   const [insertRequest, setInsertRequest] = useState<{
@@ -655,81 +656,7 @@ function NewV2Inner() {
   // the snapshot the Undo falls back to is only stashed by that same message.
   const pendingInsertRef = useRef<{ id: string; name: string } | null>(null);
 
-  const handlePreviewSection = (spec: SectionSpec) => {
-    setUseError(null);
-    setPreviewSection(spec);
-  };
 
-  // "Use on my page": match the section to the page palette, then insert the
-  // already-themed fragment. One Gemini call (a credit) — a section never lands
-  // unmatched. On error the dialog stays open and surfaces the reason.
-  const handleUseSection = async (spec: SectionSpec) => {
-    if (!loadedProject || usingSection) return;
-    const proj = loadedProject;
-    // Snapshot the page scope: the palette is extracted from THIS document,
-    // and the themed fragment must not land on a page switched to mid-flight.
-    const page = activeSitePageRef.current;
-    setUsingSection(true);
-    scanController.start();
-    setUseError(null);
-    try {
-      const res = await fetch("/api/sections/prepare", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          projectId: proj.id,
-          slug: spec.id,
-          ...(page ? { page } : {}),
-        }),
-      });
-      const data = (await res.json().catch(() => null)) as
-        | { html?: string; error?: string }
-        | null;
-      // Navigated to another project / another page while prepare was in
-      // flight? The fragment is themed for that document, so dropping it into
-      // the now-current one would inject the wrong palette. Abort silently
-      // (the credit for the call still applies).
-      if (loadedIdRef.current !== proj.id) {
-        scanController.cancel();
-        return;
-      }
-      if (activeSitePageRef.current !== page) {
-        scanController.cancel();
-        return;
-      }
-      if (!res.ok || !data?.html) {
-        scanController.cancel();
-        setUseError(
-          data?.error === "no_credits"
-            ? tSections("sections.errNoCredits")
-            : tSections("sections.errGeneric"),
-        );
-        return;
-      }
-      insertNonceRef.current += 1;
-      const nonce = insertNonceRef.current;
-      const html = data.html;
-      scanController.finish(() => {
-        // The reveal is deferred (~2.5s) past this point — re-check the same
-        // staleness guards above, since the user can switch project/page during it.
-        if (loadedIdRef.current !== proj.id || activeSitePageRef.current !== page) {
-          return;
-        }
-        setInsertRequest({
-          html,
-          nonce,
-          sectionType: spec.type,
-        });
-      });
-      pendingInsertRef.current = { id: spec.id, name: spec.name };
-      setPreviewSection(null);
-    } catch {
-      scanController.cancel();
-      setUseError(tSections("sections.errGeneric"));
-    } finally {
-      setUsingSection(false);
-    }
-  };
 
   // Undo the most recent insert. Two paths, because the iframe script's node
   // refs die with the document it inserted into (any srcDoc re-derive — the
@@ -775,14 +702,19 @@ function NewV2Inner() {
   // AI generation flow — owned here so the brief survives panel switches
   // inside the same /new?mode=ai session. On completion, we redirect
   // to ?project=<id> which drops the user into editing mode.
-  // AI entry: "quick" = curation (free, /api/curate), "scratch" = bespoke
-  // from-scratch (Pro, /api/generate). Both hooks run; the toggle picks which
-  // drives the UI. Same GenerationState shape, so the render + ?project redirect
-  // below are reused for both. Bespoke is gated server-side (free → 403 upsell).
-  const [aiMode, setAiMode] = useState<"quick" | "scratch">("quick");
-  const curation = useCuration();
-  const bespoke = useGeneration();
-  const aiGenState = aiMode === "scratch" ? bespoke.state : curation.state;
+  // La ruta libre (/api/generate) vuelve a ser la puerta: una llamada escribe
+  // el documento entero. Medido sobre los mismos cuatro briefs y el mismo
+  // modelo, escribir de una pasada dio cero defectos deterministas donde
+  // parchear una baseline dejó texto ilegible y una página sin padding, a la
+  // quinta parte del costo. El parcheo escribía el color en un turno y el
+  // fondo en otro, sin ver nunca los dos juntos.
+  //
+  // El dial de esfuerzo queda aparcado: en esta ruta no compra nada todavía, y
+  // un selector que no compra nada es exactamente la mentira que se arregló en
+  // `lib/document/page-effort.ts`. Su maquinaria sigue intacta.
+  const [effort, setEffort] = useState<PageEffort>("low");
+  const generation = useGeneration();
+  const aiGenState = generation.state;
   // Saved business profiles ("Mi negocio") — seed the curation flow. Fetched on
   // mount; the default profile auto-selects (the user can switch or pick none).
   // (state declaration hoisted above loadedProject — see the comment there.)
@@ -929,14 +861,42 @@ function NewV2Inner() {
     pendingReseedRef.current = true;
     setProfileModalOpen(true);
   }, []);
+  // Ingestion-degradation notice. Server-persisted (not localStorage like
+  // makeYours): the person who pasted HTML may come back tomorrow, on another
+  // device, and the point is that they were told once — not once per browser.
+  const showDegradedNotice =
+    entryMode === "editing" &&
+    (loadedProject?.degradations?.length ?? 0) > 0 &&
+    !loadedProject?.degradationsDismissed;
+  const onDismissDegradations = useCallback(() => {
+    const id = loadedProject?.id;
+    if (!id) return;
+    setLoadedProject((p) => (p ? { ...p, degradationsDismissed: true } : p));
+    void fetch(`/api/projects/${id}`, {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ degradationsDismissed: true }),
+    }).catch(() => {
+      // Losing the dismissal is a re-show, not a data loss — the optimistic
+      // update already got it out of the user's way for this session.
+    });
+  }, [loadedProject?.id]);
   // Brief can be pre-filled from a deep link (homepage hero CTA, projects
   // example cards, etc.) via ?brief=<urlencoded>.
   const briefParam = searchParams.get("brief");
   const autostartParam = searchParams.get("autostart");
   const [aiPrompt, setAiPrompt] = useState(() => briefParam?.trim() ?? "");
+  // La referencia visual de "hazme una como esta". Vive junto al brief y no
+  // dentro del compositor porque quien llama a /api/generate es esta página.
+  const [aiReference, setAiReference] = useState<StyleDirection | null>(null);
   const aiBriefFormState = useMemo(
-    () => ({ prompt: aiPrompt, setPrompt: setAiPrompt }),
-    [aiPrompt],
+    () => ({
+      prompt: aiPrompt,
+      setPrompt: setAiPrompt,
+      reference: aiReference,
+      setReference: setAiReference,
+    }),
+    [aiPrompt, aiReference],
   );
   const aiGenerating = aiGenState.kind === "generating";
   // Mobile: the brief panel covers the canvas, so close it the moment the
@@ -945,22 +905,12 @@ function NewV2Inner() {
     if (isMobile && aiGenState.kind === "generating") setLeftCollapsed(true);
   }, [isMobile, aiGenState.kind]);
   const [genSlow, setGenSlow] = useState(false);
-  const [genModel] = useAIModel();
   const handleAiGenerate = useCallback(() => {
     if (aiGenerating) return;
     const brief = aiPrompt.trim();
     if (brief.length < 10) return;
-    if (aiMode === "scratch") void bespoke.generate(brief, genModel, selectedProfileId);
-    else void curation.curate(brief, selectedProfileId);
-  }, [
-    aiGenerating,
-    aiPrompt,
-    aiMode,
-    bespoke,
-    curation,
-    genModel,
-    selectedProfileId,
-  ]);
+    void generation.generate(brief, "gemini-flash", selectedProfileId, aiReference);
+  }, [aiGenerating, aiPrompt, generation, selectedProfileId, aiReference]);
   // A deep link with `?autostart=1` (the homepage hero) kicks generation
   // off on arrival. The param is stripped right after so a manual reload of
   // this URL doesn't re-fire — and re-bill — the generation.
@@ -1224,6 +1174,8 @@ function NewV2Inner() {
                 filledBlocks?: unknown[];
                 settings?: ProjectSettings;
                 pages?: Record<string, SitePage>;
+                degradations?: Degradation[];
+                degradationsDismissed?: boolean;
               };
             };
           }
@@ -1259,6 +1211,8 @@ function NewV2Inner() {
         userBrief: p.userBrief ?? "",
         chatHistory: p.chatHistory ?? [],
         settings: p.data?.settings,
+        degradations: p.data?.degradations,
+        degradationsDismissed: p.data?.degradationsDismissed,
         profileId: p.profileId ?? null,
       });
       setProjectName(p.title);
@@ -2288,7 +2242,6 @@ function NewV2Inner() {
       // Section library transient UI is project-scoped — a stale preview/Undo
       // pill (or a still-pending insert request themed for the old project) must
       // not carry across a project switch.
-      setPreviewSection(null);
       setUseError(null);
       setLastInserted(null);
       pendingInsertRef.current = null;
@@ -2377,6 +2330,15 @@ function NewV2Inner() {
     },
     [],
   );
+  // Un <button> con destino se convierte en el <a> que debió ser. Va por su
+  // propio canal y no por `applyElementProp` porque no es poner un atributo:
+  // es reemplazar el elemento, y la ruta del inspector cambia con él.
+  const linkifyButton = useCallback((path: string, href: string) => {
+    iframeElRef.current?.contentWindow?.postMessage(
+      { type: "openlen:apply-prop", scope: "linkify-button", path, href },
+      "*",
+    );
+  }, []);
   const applyPageMeta = useCallback((field: keyof PageMeta, value: string) => {
     iframeElRef.current?.contentWindow?.postMessage(
       { type: "openlen:apply-prop", scope: "page", field, value },
@@ -2607,17 +2569,25 @@ function NewV2Inner() {
   // Form config is not HTML — it persists straight to ProjectData.settings
   // (so the notify email never reaches the published page source).
   const applyFormConfig = useCallback(
-    (formIndex: number, patch: Partial<FormConfig>) => {
+    (formIndex: number, formId: string | null, patch: Partial<FormConfig>) => {
       const projectId = loadedProject?.id;
       if (!projectId) return;
-      // Forms on a site page persist under their scoped key — home's form
-      // at the same index keeps its own config.
+      // La IDENTIDAD del formulario manda sobre su posición: atada al elemento,
+      // sobrevive a que una edición posterior lo mueva de sitio. Sin ella
+      // —página anterior al estampado— se cae a la clave por índice, que es lo
+      // que había. El servidor aplica el MISMO criterio (settings-patch.ts), y
+      // la respuesta trae la clave real bajo la que guardó.
       const page = activeSitePageRef.current;
-      const key = formConfigKey(page, formIndex);
+      const key = formId ?? formConfigKey(page, formIndex);
       void fetch(`/api/projects/${projectId}/settings`, {
         method: "PATCH",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ formIndex, patch, ...(page ? { page } : {}) }),
+        body: JSON.stringify({
+          formIndex,
+          ...(formId ? { formId } : {}),
+          patch,
+          ...(page ? { page } : {}),
+        }),
       })
         .then((r) => {
           if (!r.ok) throw new Error(`PATCH failed (${r.status})`);
@@ -2629,8 +2599,12 @@ function NewV2Inner() {
           setLoadedProject((prev) => {
             if (!prev) return prev;
             const forms = { ...(prev.settings?.forms ?? {}) };
-            if (res.config) forms[key] = res.config;
-            else delete forms[key];
+            // `res.formKey` es la clave bajo la que el servidor guardó de
+            // verdad. Cuando migró de índice a identidad, la vieja desaparece.
+            const real = typeof res.formKey === "string" ? res.formKey : key;
+            if (real !== key) delete forms[key];
+            if (res.config) forms[real] = res.config;
+            else delete forms[real];
             return { ...prev, settings: { ...prev.settings, forms } };
           });
           toast.success(t("toast.formSaved"));
@@ -2879,238 +2853,6 @@ function NewV2Inner() {
   // so the panel's toggle reflects the server truth. First enable may also
   // auto-create the members page server-side (home shell + lock); the
   // response carries it so the Site tab updates without a refetch.
-  const updateMembersSettings = useCallback(
-    async (
-      patch: MembersSettings,
-    ): Promise<{ ok: boolean; createdPageSlug?: string }> => {
-      const projectId = loadedProject?.id;
-      if (!projectId) return { ok: false };
-      try {
-        const r = await fetch(`/api/projects/${projectId}/settings`, {
-          method: "PATCH",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({ members: patch }),
-        });
-        if (!r.ok) {
-          toast.error(t("toast.moduleError"));
-          return { ok: false };
-        }
-        const d = (await r.json()) as {
-          settings?: ProjectSettings;
-          createdPage?: { slug: string; title: string; html: string };
-        };
-        setLoadedProject((p) =>
-          p
-            ? {
-                ...p,
-                // Trust the server's reconciled settings: disabling members
-                // cascades comments/broadcast off + drops bookings.requireLogin,
-                // so the dependent tabs/toggles converge without a refetch.
-                settings: d.settings ?? {
-                  ...p.settings,
-                  members: { ...p.settings?.members, ...patch },
-                },
-                ...(d.createdPage
-                  ? {
-                      pages: {
-                        ...p.pages,
-                        [d.createdPage.slug]: {
-                          html: d.createdPage.html,
-                          title: d.createdPage.title,
-                          membersOnly: true,
-                        },
-                      },
-                    }
-                  : {}),
-              }
-            : p,
-        );
-        if (typeof patch.enabled === "boolean") {
-          const moduleName = t("toast.moduleMembers");
-          toast.success(
-            t(patch.enabled ? "toast.moduleEnabled" : "toast.moduleDisabled", {
-              module: moduleName,
-            }),
-          );
-        }
-        return { ok: true, createdPageSlug: d.createdPage?.slug };
-      } catch {
-        toast.error(t("toast.moduleError"));
-        return { ok: false };
-      }
-    },
-    [loadedProject?.id, toast, t],
-  );
-  // Members module — flip a subpage's "solo miembros" flag from the Site tab.
-  // The server auto-enables the module when the first page gets gated (atomic
-  // read-modify-write); we mirror both the page flag and that auto-enable.
-  const toggleMembersOnly = useCallback(
-    async (slug: string, next: boolean): Promise<boolean> => {
-      const projectId = loadedProject?.id;
-      if (!projectId) return false;
-      try {
-        const r = await fetch(`/api/projects/${projectId}/pages/${slug}`, {
-          method: "PATCH",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({ membersOnly: next }),
-        });
-        if (!r.ok) {
-          toast.error(t("toast.membersOnlyError"));
-          return false;
-        }
-        const d = (await r.json()) as { membersAutoEnabled?: boolean };
-        setLoadedProject((p) => {
-          if (!p || !p.pages[slug]) return p;
-          const page = { ...p.pages[slug] };
-          if (next) page.membersOnly = true;
-          else delete page.membersOnly;
-          return {
-            ...p,
-            pages: { ...p.pages, [slug]: page },
-            ...(d.membersAutoEnabled
-              ? {
-                  settings: {
-                    ...p.settings,
-                    members: {
-                      enabled: true,
-                      mode: p.settings?.members?.mode ?? "open",
-                    },
-                  },
-                }
-              : {}),
-          };
-        });
-        toast.success(
-          t(next ? "toast.membersOnlyOn" : "toast.membersOnlyOff"),
-        );
-        return true;
-      } catch {
-        toast.error(t("toast.membersOnlyError"));
-        return false;
-      }
-    },
-    [loadedProject?.id, toast, t],
-  );
-  // Broadcast module — enable switch (Módulos card). Awaited; mirrors the
-  // members toggle. Enabling reveals the Broadcast tab.
-  const updateBroadcastSettings = useCallback(
-    async (patch: BroadcastSettings): Promise<boolean> => {
-      const projectId = loadedProject?.id;
-      if (!projectId) return false;
-      try {
-        const r = await fetch(`/api/projects/${projectId}/settings`, {
-          method: "PATCH",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({ broadcast: patch }),
-        });
-        if (!r.ok) {
-          toast.error(t("toast.moduleError"));
-          return false;
-        }
-        // Trust the SERVER's reconciled settings over our own patch:
-        // reconcileModuleSettings forces broadcast off while Accounts is off,
-        // so echoing the patch made the card claim it was on until a reload.
-        const serverBroadcast = (await r.json().catch(() => null))?.settings
-          ?.broadcast as BroadcastSettings | undefined;
-        setLoadedProject((p) =>
-          p
-            ? {
-                ...p,
-                settings: {
-                  ...p.settings,
-                  broadcast: serverBroadcast ?? { ...p.settings?.broadcast, ...patch },
-                },
-              }
-            : p,
-        );
-        if (patch.enabled === true && serverBroadcast?.enabled === false) {
-          toast.error(t("toast.moduleNeedsAccounts"));
-          return false;
-        }
-        if (typeof patch.enabled === "boolean") {
-          const moduleName = t("toast.moduleBroadcast");
-          toast.success(
-            t(patch.enabled ? "toast.moduleEnabled" : "toast.moduleDisabled", {
-              module: moduleName,
-            }),
-          );
-        }
-        return true;
-      } catch {
-        toast.error(t("toast.moduleError"));
-        return false;
-      }
-    },
-    [loadedProject?.id, toast, t],
-  );
-  // Comments module — enable + moderation switches (Módulos card). Awaited,
-  // mirrors the broadcast toggle.
-  const updateCommentsSettings = useCallback(
-    async (patch: CommentsSettings): Promise<boolean> => {
-      const projectId = loadedProject?.id;
-      if (!projectId) return false;
-      try {
-        const r = await fetch(`/api/projects/${projectId}/settings`, {
-          method: "PATCH",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({ comments: patch }),
-        });
-        if (!r.ok) {
-          toast.error(t("toast.moduleError"));
-          return false;
-        }
-        // Same as broadcast: the server may reconcile comments off (Accounts
-        // is the anti-spam basis), so its settings win over the patch.
-        const serverComments = (await r.json().catch(() => null))?.settings
-          ?.comments as CommentsSettings | undefined;
-        setLoadedProject((p) =>
-          p
-            ? {
-                ...p,
-                settings: {
-                  ...p.settings,
-                  comments: serverComments ?? { ...p.settings?.comments, ...patch },
-                },
-              }
-            : p,
-        );
-        if (patch.enabled === true && serverComments?.enabled === false) {
-          toast.error(t("toast.moduleNeedsAccounts"));
-          return false;
-        }
-        if (typeof patch.enabled === "boolean") {
-          const moduleName = t("toast.moduleComments");
-          toast.success(
-            t(patch.enabled ? "toast.moduleEnabled" : "toast.moduleDisabled", {
-              module: moduleName,
-            }),
-          );
-        }
-        return true;
-      } catch {
-        toast.error(t("toast.moduleError"));
-        return false;
-      }
-    },
-    [loadedProject?.id, toast, t],
-  );
-  // Drop a comments-section placeholder into the live page (reuses the
-  // section-insert path). It's a STATIC marker — no Gemini, no credit; the
-  // publish bake swaps it for the live widget. The drop engine lets the
-  // creator drag it where they want.
-  const insertCommentsSection = useCallback(() => {
-    // Match the PAGE's language (es/en from <html lang>), not the UI locale, so
-    // the band copy reads in the visitor's language. Same split the pages API uses.
-    const lang = /<html[^>]*\blang=["']?es/i.test(loadedProject?.html ?? "") ? "es" : "en";
-    insertNonceRef.current += 1;
-    setInsertRequest({
-      html: bandWithPreview("comments", buildModuleSection("comments", { lang }), {
-        docHtml: loadedProject?.html ?? "",
-      }),
-      nonce: insertNonceRef.current,
-      sectionType: "comments",
-    });
-  }, [loadedProject?.html]);
   const insertWhatsappSection = useCallback(() => {
     const wa = loadedProject?.settings?.whatsapp;
     const lang = /<html[^>]*\blang=["']?es/i.test(loadedProject?.html ?? "") ? "es" : "en";
@@ -3153,56 +2895,6 @@ function NewV2Inner() {
       toast.error(t("toast.moduleError"));
     },
     [loadedProject?.id, refetchProject, switchSitePage, flushPendingSave, toast, t],
-  );
-  const updateBookingsSettings = useCallback(
-    async (patch: BookingsSettings): Promise<boolean> => {
-      const projectId = loadedProject?.id;
-      if (!projectId) return false;
-      try {
-        const r = await fetch(`/api/projects/${projectId}/settings`, {
-          method: "PATCH",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({ bookings: patch }),
-        });
-        if (!r.ok) {
-          toast.error(t("toast.moduleError"));
-          return false;
-        }
-        // Server settings win: reconcileModuleSettings neutralizes
-        // requireLogin while Accounts is off (a members-only booking site with
-        // no way to log in is unbookable), and the patch alone hid that.
-        const serverBookings = (await r.json().catch(() => null))?.settings
-          ?.bookings as BookingsSettings | undefined;
-        setLoadedProject((p) =>
-          p
-            ? {
-                ...p,
-                settings: {
-                  ...p.settings,
-                  bookings: serverBookings ?? { ...p.settings?.bookings, ...patch },
-                },
-              }
-            : p,
-        );
-        if (patch.requireLogin === true && serverBookings?.requireLogin === false) {
-          toast.error(t("toast.moduleNeedsAccounts"));
-          return false;
-        }
-        if (typeof patch.enabled === "boolean") {
-          const moduleName = t("toast.moduleBookings");
-          toast.success(
-            t(patch.enabled ? "toast.moduleEnabled" : "toast.moduleDisabled", {
-              module: moduleName,
-            }),
-          );
-        }
-        return true;
-      } catch {
-        toast.error(t("toast.moduleError"));
-        return false;
-      }
-    },
-    [loadedProject?.id, toast, t],
   );
   const updateCollectionsSettings = useCallback(
     async (patch: CollectionsSettings): Promise<boolean> => {
@@ -3277,47 +2969,6 @@ function NewV2Inner() {
         );
         if (typeof patch.enabled === "boolean") {
           const moduleName = t("toast.moduleWhatsapp");
-          toast.success(
-            t(patch.enabled ? "toast.moduleEnabled" : "toast.moduleDisabled", {
-              module: moduleName,
-            }),
-          );
-        }
-        return true;
-      } catch {
-        toast.error(t("toast.moduleError"));
-        return false;
-      }
-    },
-    [loadedProject?.id, toast, t],
-  );
-  const updateOrdersSettings = useCallback(
-    async (patch: OrdersSettings): Promise<boolean> => {
-      const projectId = loadedProject?.id;
-      if (!projectId) return false;
-      try {
-        const r = await fetch(`/api/projects/${projectId}/settings`, {
-          method: "PATCH",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({ orders: patch }),
-        });
-        if (!r.ok) {
-          toast.error(t("toast.moduleError"));
-          return false;
-        }
-        setLoadedProject((p) =>
-          p
-            ? {
-                ...p,
-                settings: {
-                  ...p.settings,
-                  orders: { ...p.settings?.orders, ...patch },
-                },
-              }
-            : p,
-        );
-        if (typeof patch.enabled === "boolean") {
-          const moduleName = t("toast.moduleOrders");
           toast.success(
             t(patch.enabled ? "toast.moduleEnabled" : "toast.moduleDisabled", {
               module: moduleName,
@@ -3416,10 +3067,6 @@ function NewV2Inner() {
           ? {
               items: previewCollections.items,
               layout: previewCollections.layout,
-              ordersNumber:
-                loadedProject?.settings?.orders?.enabled && loadedProject.settings.orders.number
-                  ? loadedProject.settings.orders.number
-                  : null,
               theme: loadedProject?.settings?.collections?.theme,
             }
           : null,
@@ -3429,24 +3076,9 @@ function NewV2Inner() {
     });
   }, [
     loadedProject?.html,
-    loadedProject?.settings?.orders,
     loadedProject?.settings?.collections?.theme,
     previewCollections,
   ]);
-  const insertBookingsSection = useCallback(() => {
-    const lang = /<html[^>]*\blang=["']?es/i.test(loadedProject?.html ?? "") ? "es" : "en";
-    insertNonceRef.current += 1;
-    setInsertRequest({
-      html: bandWithPreview("bookings", buildModuleSection("bookings", { lang }), {
-        docHtml: loadedProject?.html ?? "",
-      }),
-      nonce: insertNonceRef.current,
-      sectionType: "bookings",
-    });
-  }, [loadedProject?.html]);
-  // "Mis plataformas": la banda nace ya con las tarjetas reales (son HTML+CSS
-  // puro, no hay widget que esperar). El marcador queda vacío en data.html —
-  // fillPlatformsBand lo rellena con links frescos al publicar.
   const insertPlatformsSection = useCallback(() => {
     const lang = /<html[^>]*\blang=["']?es/i.test(loadedProject?.html ?? "") ? "es" : "en";
     insertNonceRef.current += 1;
@@ -3476,42 +3108,24 @@ function NewV2Inner() {
           module === "platforms"
             ? !!platformLinks
             : loadedProject?.settings?.[module]?.enabled === true,
-        membersEnabled: loadedProject?.settings?.members?.enabled === true,
         activePageHasBand: pageHasModule(activeDoc, module),
         hasPlatformLinks: !!platformLinks,
       });
       for (const step of steps) {
         switch (step.kind) {
-          case "enableMembers": {
-            const { ok } = await updateMembersSettings({
-              enabled: true, mode: "open", passwordLogin: true, accountArea: true,
-            });
-            if (!ok) return;
-            // Cuentas se encendió como efecto de Comentarios — avisa lo que
-            // existirá (/cuenta al publicar); el hint del hub no cubre este camino.
-            toast.info(tMembers("accountLive"));
-            break;
-          }
           case "enableModule": {
             const ok =
-              step.module === "collections" ? await updateCollectionsSettings({ enabled: true })
-              : step.module === "bookings" ? await updateBookingsSettings({ enabled: true })
-              : await updateCommentsSettings({ enabled: true });
+              await updateCollectionsSettings({ enabled: true });
             if (!ok) return;
             break;
           }
           case "insertSection": {
             (step.module === "collections" ? insertCollectionsSection
-              : step.module === "bookings" ? insertBookingsSection
-              : step.module === "comments" ? insertCommentsSection
               : insertPlatformsSection)();
             // Same Deshacer pill curated sections get — a mis-clicked module
             // band must not need manual deletion via the reorder toolbar.
             const nameKey =
-              step.module === "collections" ? "Catalog"
-              : step.module === "bookings" ? "Bookings"
-              : step.module === "comments" ? "Comments"
-              : "Platforms";
+              step.module === "collections" ? "Catalog" : "Platforms";
             pendingInsertRef.current = {
               id: `module-${step.module}`,
               name: tSections(`sections.module${nameKey}Title`),
@@ -3544,23 +3158,10 @@ function NewV2Inner() {
       }
     },
     [loadedProject?.settings, activeDoc, platformLinks, setCenterView,
-     updateMembersSettings, updateCollectionsSettings,
-     updateBookingsSettings, updateCommentsSettings, insertCollectionsSection,
-     insertBookingsSection, insertCommentsSection, insertPlatformsSection,
-     createModulePage, toast, t, tMembers, tSections],
+     updateCollectionsSettings,
+     insertCollectionsSection, insertPlatformsSection,
+     createModulePage, toast, t, tSections],
   );
-  const moduleCards = useMemo<ModuleCardState[]>(() => {
-    if (!loadedProject) return [];
-    const s = loadedProject.settings;
-    return (["collections", "bookings", "comments", "platforms"] as const).map((module) => ({
-      module,
-      // Platforms no tiene settings.enabled: sus links SON su estado.
-      enabled: module === "platforms" ? !!platformLinks : s?.[module]?.enabled === true,
-      alreadyOnPage: pageHasModule(activeDoc, module),
-      needsMembers: module === "comments" && s?.members?.enabled !== true,
-      needsPlatformLinks: module === "platforms" && !platformLinks,
-    }));
-  }, [loadedProject, activeDoc, platformLinks]);
   const toggleInspect = useCallback(() => {
     setInspectMode((m) => !m);
     setInspectSelection(null);
@@ -3675,7 +3276,6 @@ function NewV2Inner() {
             if (isMobile) setLeftCollapsed(true);
           }}
           previewingTemplateId={previewingTemplate?.id ?? null}
-          onPreviewSection={handlePreviewSection}
           onInsertMotion={loadedProject ? handleInsertMotion : undefined}
           lockedTabs={lockedTabs}
           lockReason={lockReason}
@@ -3739,11 +3339,6 @@ function NewV2Inner() {
           onAddBusiness={() => setProfileModalOpen(true)}
           onPickImage={startPlacementAsset}
           sitePages={sitePages}
-          onToggleMembersOnly={toggleMembersOnly}
-          membersDoorOn={
-            loadedProject?.settings?.members?.enabled === true &&
-            loadedProject?.settings?.members?.accountArea !== false
-          }
           activeSitePage={activeSitePage}
           onSwitchSitePage={switchSitePage}
           onCreateSitePage={createSitePage}
@@ -3751,13 +3346,10 @@ function NewV2Inner() {
           scene3d={loadedProject?.settings?.scene3d}
           onApplyScene3d={loadedProject ? applyScene3d : undefined}
           accent={originalTheme?.tokens["--ol-accent"] || undefined}
-          moduleCards={moduleCards}
           onAddModule={(m, d) => void addModuleFromLibrary(m, d)}
           activePageLabel={activeSitePage ? `/${activeSitePage}` : t("modulesHub.home")}
           homePageLabel={t("modulesHub.home")}
           siteName={loadedProject?.title ?? null}
-          openModulesView={libraryOpenModules}
-          onModulesViewConsumed={() => setLibraryOpenModules(false)}
           onManageCollections={() => {
             setCenterView("modulos");
             setHubInitialSub("collections");
@@ -3799,24 +3391,11 @@ function NewV2Inner() {
         ) : normalizedCenterView === "modulos" ? (
           <ModulesView
             currentProjectId={loadedProject?.id ?? null}
-            gatedCount={sitePages.filter((p) => p.membersOnly).length}
-            membersSettings={loadedProject?.settings?.members}
-            onUpdateMembersSettings={updateMembersSettings}
-            broadcastSettings={loadedProject?.settings?.broadcast}
-            onUpdateBroadcastSettings={updateBroadcastSettings}
-            commentsSettings={loadedProject?.settings?.comments}
-            onUpdateCommentsSettings={updateCommentsSettings}
-            onInsertCommentsSection={() => void addModuleFromLibrary("comments", "section")}
-            bookingsSettings={loadedProject?.settings?.bookings}
-            onUpdateBookingsSettings={updateBookingsSettings}
-            onInsertBookingsSection={() => void addModuleFromLibrary("bookings", "section")}
             collectionsSettings={loadedProject?.settings?.collections}
             onUpdateCollectionsSettings={updateCollectionsSettings}
             onInsertCollectionsSection={() => void addModuleFromLibrary("collections", "section")}
             whatsappSettings={loadedProject?.settings?.whatsapp}
             onUpdateWhatsappSettings={updateWhatsappSettings}
-            ordersSettings={loadedProject?.settings?.orders}
-            onUpdateOrdersSettings={updateOrdersSettings}
             chatSettings={loadedProject?.settings?.chat}
             onUpdateChatSettings={updateChatSettings}
             platformLinkCount={platformLinks?.length ?? 0}
@@ -3837,11 +3416,6 @@ function NewV2Inner() {
                 ? modulePlacements({ html: loadedProject.html, pages: loadedProject.pages })
                 : undefined
             }
-            onOpenLibrary={() => {
-              setCenterView("page");
-              setMode("library");
-              setLibraryOpenModules(true);
-            }}
             initialSub={hubInitialSub}
             onInitialSubConsumed={() => setHubInitialSub(null)}
             sitePages={sitePages}
@@ -3896,7 +3470,7 @@ function NewV2Inner() {
                     ? aiGenState.html || lastPreviewHtmlRef.current
                     : lastPreviewHtmlRef.current
                 }
-                streaming={aiMode === "scratch" && aiGenState.kind === "generating"}
+                streaming={false}
                 done={aiGenState.kind === "done"}
                 slow={genSlow}
                 caption={
@@ -3990,8 +3564,8 @@ function NewV2Inner() {
                   aiState={aiBriefFormState}
                   onGenerate={handleAiGenerate}
                   generating={aiGenerating}
-                  aiMode={aiMode}
-                  onModeChange={setAiMode}
+                  effort={effort}
+                  onEffortChange={setEffort}
                   onPreviewTemplate={(tpl) => {
                     setPreviewingTemplate(tpl);
                     setTemplateError(null);
@@ -4118,6 +3692,7 @@ function NewV2Inner() {
               )}
               {!hasBusinessInfo &&
                 loadedProject &&
+                !showDegradedNotice &&
                 !makeYoursDismissed.has(loadedProject.id) && (
                   <div className="absolute top-12 lg:top-3 left-1/2 -translate-x-1/2 z-30 flex items-center gap-2 pl-3.5 pr-1.5 py-1.5 rounded-full bg-elev border bd shadow-card fade-in max-w-[calc(100%-2rem)]">
                     <span className="inline-flex items-center gap-1.5 text-[12px] fg whitespace-nowrap min-w-0">
@@ -4145,6 +3720,93 @@ function NewV2Inner() {
                     </button>
                   </div>
                 )}
+              {/* What the page lost on the way in. Shown once, then dismissed
+                  for good — a warning that reappears on every load is noise,
+                  and noise is how a silent failure comes back through another
+                  door. It occupies the same slot as the makeYours pill, which
+                  is gated above rather than stacked. */}
+              {showDegradedNotice && loadedProject && (
+                <div className="absolute top-12 lg:top-3 left-1/2 -translate-x-1/2 z-30 w-[min(30rem,calc(100%-2rem))] rounded-2xl bg-elev border bd shadow-card fade-in overflow-hidden">
+                  <div className="flex items-start gap-2.5 px-3.5 pt-3 pb-2.5">
+                    <AlertTriangle size={14} className="text-accent shrink-0 mt-0.5" />
+                    <div className="min-w-0 flex-1">
+                      <b className="block text-[12.5px] fg mb-1">{t("degraded.title")}</b>
+                      <ul className="flex flex-col gap-1">
+                        {/* One sentence per distinct code. A multi-page clone
+                            records the same loss per page, and the copy names
+                            no counts — repeating it four times is noise, and
+                            noise is how the silence comes back. The row keeps
+                            every entry for diagnosis. */}
+                        {[...new Set((loadedProject.degradations ?? []).map((d) => d.code))].map(
+                          (code) => (
+                            <li key={code} className="text-[12px] fg-muted leading-snug">
+                              {t(`degraded.${code}`)}
+                              {/* Lo que se rompió EN CONCRETO. El sistema
+                                  siempre lo supo —el atributo, la fórmula
+                                  literal, qué nombre falta— y hasta ahora lo
+                                  tiraba al guardar, dejando al creador con
+                                  "algunos controles" y ninguna pista de qué
+                                  tocar. */}
+                              {degradationDetail(loadedProject.degradations, code).length > 0 && (
+                                <ul className="mt-1 flex flex-col gap-0.5 pl-3 border-l bd">
+                                  {degradationDetail(loadedProject.degradations, code).map((d) => (
+                                    <li key={d} className="text-[11px] fg-faint leading-snug">
+                                      {d}
+                                    </li>
+                                  ))}
+                                </ul>
+                              )}
+                            </li>
+                          ),
+                        )}
+                      </ul>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={onDismissDegradations}
+                      aria-label={t("degraded.dismiss")}
+                      title={t("degraded.dismiss")}
+                      className="inline-flex items-center justify-center h-7 w-7 rounded-full fg-faint hover:fg hover:bg-hover transition shrink-0"
+                    >
+                      <X size={13} />
+                    </button>
+                  </div>
+                  <div className="flex justify-end gap-2 px-3.5 pb-2.5">
+                    {/* "Arreglar esto" — no envía solo: deja el diagnóstico
+                        escrito en el compositor del Chat y lleva ahí al
+                        creador. Cada edición cuesta créditos, así que mandar
+                        una petición sin que la vea sería gastarle dinero por
+                        él. Usa la MISMA vía que el chip post-swap
+                        (pendingChatDraft), no un camino nuevo. */}
+                    {degradationDetail(loadedProject.degradations, "broken_controls").length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const lineas = degradationDetail(
+                            loadedProject.degradations,
+                            "broken_controls",
+                          );
+                          setPendingChatDraft(
+                            [t("chatDraft.fixControls"), ...lineas.map((l) => `- ${l}`)].join("\n"),
+                          );
+                          setMode("chat");
+                          onDismissDegradations();
+                        }}
+                        className="inline-flex items-center h-7 px-3 rounded-full text-[11.5px] font-semibold border bd fg hover:bg-hover transition"
+                      >
+                        {t("degraded.fix")}
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={onDismissDegradations}
+                      className="inline-flex items-center h-7 px-3 rounded-full text-[11.5px] font-semibold bg-[var(--accent-strong)] text-white shadow-coral hover:brightness-105 transition"
+                    >
+                      {t("degraded.dismiss")}
+                    </button>
+                  </div>
+                </div>
+              )}
               {inspectMode && (
                 // Floating drawer (overlay, not push). PreviewArea keeps its
                 // full width so the iframe's Fit-scale and content layout stay
@@ -4182,6 +3844,7 @@ function NewV2Inner() {
                         : null
                     }
                     onApplyElementProp={applyElementProp}
+                    onLinkifyButton={linkifyButton}
                     onApplyPageMeta={applyPageMeta}
                     onApplyFormConfig={applyFormConfig}
                     onApplyStyle={applyStyle}
@@ -4315,23 +3978,12 @@ function NewV2Inner() {
                 bandsWithModuleOff: (
                   [
                     ["collections", s?.collections?.enabled],
-                    ["bookings", s?.bookings?.enabled],
-                    ["comments", s?.comments?.enabled],
                   ] as const
                 )
                   .filter(([mod, on]) => p[mod].length > 0 && on !== true)
                   .map(([mod]) => mod),
                 platformsBandWithoutLinks: p.platforms.length > 0 && !platformLinks,
               };
-            })(),
-            ...(() => {
-              const flagged = Object.values(loadedProject.pages ?? {}).filter(
-                (p) => p.membersOnly,
-              ).length;
-              const on = loadedProject.settings?.members?.enabled === true;
-              return on
-                ? { gatedPagesCount: flagged }
-                : { gatedFlagsWithModuleOff: flagged };
             })(),
           }}
           onSuccess={(newSubdomain) => {
@@ -4424,20 +4076,6 @@ function NewV2Inner() {
           setAssetModal(null);
         }}
       />
-      {previewSection && (
-        <SectionPreviewModal
-          section={previewSection}
-          using={usingSection}
-          error={useError}
-          onUse={handleUseSection}
-          onClose={() => {
-            if (!usingSection) {
-              setPreviewSection(null);
-              setUseError(null);
-            }
-          }}
-        />
-      )}
     </div>
   );
 }

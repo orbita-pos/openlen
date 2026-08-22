@@ -141,8 +141,12 @@ test("handles malformed JSON gracefully (returns no-critique fallback)", async (
   assert.deepEqual(verdict.usage, { inputTokens: 40, outputTokens: 9, cachedTokens: 2, thinkingTokens: 5 });
 });
 
-test("default critic deadline is 18s (smoke: Pulsegrid timed out at 12016ms under 12s)", () => {
-  assert.equal(DEFAULT_TIMEOUT_MS, 18_000);
+// 18s bastaban cuando el crítico veía rellenos de gradiente. Ahora las fotos
+// se siembran ANTES —para que juzgue la página que se entrega— y su render
+// baja ocho imágenes de la CDN antes de la captura: con 18s el crítico se
+// agotaba siempre, y uno que nunca contesta no es una red.
+test("default critic deadline is 30s (con las fotos ya puestas, 18s se agotaba siempre)", () => {
+  assert.equal(DEFAULT_TIMEOUT_MS, 30_000);
 });
 
 test("times out and falls back when the critic call stalls", async () => {
@@ -205,20 +209,42 @@ test("provider error after usage returns a redacted fallback with accumulated us
   assert.equal(JSON.stringify(verdict).includes("raw-provider-secret"), false);
 });
 
-test("missing API key falls back without calling the provider", async () => {
+// EL CONTRATO CAMBIÓ el 2026-08-21: el crítico mira con Qwen, por el transporte
+// de Fireworks y con SU credencial. `GEMINI_API_KEY` dejó de ser obligatoria —
+// Gemini se queda para los píxeles. Antes esto exigía lo contrario.
+test("sin GEMINI_API_KEY sigue mirando: los ojos ya no son de Gemini", async () => {
   let streamed = false;
   const provider: CritiqueProviderLike = {
     stream() {
       streamed = true;
-      return (async function* (): AsyncIterableIterator<StreamEvent> {})();
+      return (async function* (): AsyncIterableIterator<StreamEvent> {
+        yield { type: "text_delta", text: verdictJson({ visualQuality: 9, briefAdherence: 9, shouldRegenerate: false }) } as StreamEvent;
+      })();
     },
   };
   const verdict = await critiqueGeneratedPage(
     { ...baseParams, apiKey: "" },
     { provider, render: fakeRender },
   );
-  assert.equal(verdict.fallback, true);
-  assert.equal(streamed, false, "must not hit the provider with no key");
+  assert.equal(streamed, true, "sin clave de Gemini el crítico tiene que seguir mirando");
+  assert.equal(verdict.fallback, false);
+});
+
+// Y con la palanca de vuelta atrás puesta, la clave SÍ vuelve a ser obligatoria:
+// sin ella no hay a quién preguntarle, y preguntar a nadie no es un veredicto.
+test("OPENLEN_CREATE_EYES=gemini sin clave sí cae al fallback", async () => {
+  const previo = process.env.OPENLEN_CREATE_EYES;
+  process.env.OPENLEN_CREATE_EYES = "gemini";
+  try {
+    const verdict = await critiqueGeneratedPage(
+      { ...baseParams, apiKey: "" },
+      { render: fakeRender },
+    );
+    assert.equal(verdict.fallback, true);
+  } finally {
+    if (previo === undefined) delete process.env.OPENLEN_CREATE_EYES;
+    else process.env.OPENLEN_CREATE_EYES = previo;
+  }
 });
 
 // ─── parseVerdict ──────────────────────────────────────────────────────────────
@@ -313,4 +339,24 @@ test("structuralSummary: extracts text from each section", () => {
 
 test("structuralSummary: handles no sections", () => {
   assert.match(structuralSummary("<div>nothing</div>"), /no <section>/);
+});
+
+// Medido: el crítico pedía regenerar porque las fotos "no representan los
+// panes". Regenerar la página no cambia las fotos —las coloca un emparejador
+// determinista después— así que esa queja costaba una página entera y un
+// crédito del usuario, y no arreglaba nada.
+test("al crítico se le dice que las fotos no las eligió el modelo", async () => {
+  let sent = "";
+  const provider: CritiqueProviderLike = {
+    stream(req) {
+      sent = String((req.messages?.[0] as { content?: string } | undefined)?.content ?? "");
+      return (async function* (): AsyncIterableIterator<StreamEvent> {})();
+    },
+  };
+  await critiqueGeneratedPage(
+    { brief: "panadería", html: "<!doctype html><html><body><h1>x</h1></body></html>", model: "gemini-3.5-flash", apiKey: "k" },
+    { provider, render: async () => ({ mimeType: "image/jpeg", dataBase64: "AA==" }) },
+  );
+  assert.match(sent, /never set shouldRegenerate because a photo is/i);
+  assert.match(sent, /A photo that is BROKEN is different/i);
 });

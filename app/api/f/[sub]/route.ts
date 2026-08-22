@@ -1,3 +1,4 @@
+import { checkSubdomainOrigin, resolveCustomDomainSub } from "@/lib/publish/request-origin";
 import { eq } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
 import { getSubdomainOwner } from "@/lib/projects";
@@ -6,6 +7,7 @@ import { checkAndConsume, getClientIp, ipLimitKey } from "@/lib/limits";
 import { sendLeadNotificationEmail } from "@/lib/email";
 import { normalizeCountry, parseUserAgent } from "@/lib/analytics/parse";
 import { parseCid } from "@/lib/analytics/cid";
+import { FORM_ID_FIELD } from "@/lib/publish/form-identity";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Public form-submission endpoint. A <form> on a published page (wired by
@@ -37,6 +39,28 @@ export async function POST(
   { params }: { params: Promise<{ sub: string }> },
 ): Promise<Response> {
   const { sub } = await params;
+
+  // ¿Viene esta petición de la página de ESTE proyecto?
+  //
+  // El proyecto destino se elegía sólo por la ruta, y esta ruta se sirve bajo
+  // TODOS los subdominios. Un script en victima.openlen.com podía enviar a
+  // /api/f/atacante y los datos caían en la bandeja del atacante — y para la
+  // CSP eso es 'self', así que ni connect-src ni form-action lo ven. Es un relé
+  // de exfiltración entre proyectos que ninguna política de contenido detecta.
+  //
+  // Se rechaza sólo ante un desajuste POSITIVO: lo que no se puede identificar
+  // pasa y se registra. Este endpoint lo usan todos los formularios publicados.
+  const procedencia = await checkSubdomainOrigin({
+    headers: req.headers,
+    targetSub: sub,
+    baseHost: process.env.PUBLISH_BASE_HOST?.trim() || "openlen.com",
+    resolveCustomDomain: resolveCustomDomainSub,
+  });
+  if (procedencia.kind === "mismatch") {
+    // eslint-disable-next-line no-console
+    console.warn(`[forms] envío cruzado rechazado: ${procedencia.from} → ${sub}`);
+    return new Response("forbidden", { status: 403 });
+  }
   const wantsJson = (req.headers.get("accept") ?? "").includes(
     "application/json",
   );
@@ -73,6 +97,11 @@ export async function POST(
   const data: Record<string, string> = {};
   let count = 0;
   let formIndex: number | null = null;
+  // Identidad estable del formulario. Gana sobre el índice: es lo único que
+  // sobrevive a que una edición mueva el formulario de sitio, que es como los
+  // leads de un negocio acababan en el correo de OTRO formulario. Ver
+  // lib/publish/form-identity.ts.
+  let formId: string | null = null;
   let cid: string | undefined;
   for (const [key, value] of form.entries()) {
     if (key === "_openlen_hp") continue;
@@ -82,6 +111,10 @@ export async function POST(
         const n = Number.parseInt(value, 10);
         if (Number.isInteger(n) && n >= 0) formIndex = n;
       }
+      continue;
+    }
+    if (key === FORM_ID_FIELD) {
+      if (typeof value === "string" && /^f[0-9a-f]{4,32}$/.test(value)) formId = value;
       continue;
     }
     if (key === "_openlen_cid") {
@@ -130,7 +163,7 @@ export async function POST(
   }
 
   // Fire-and-forget — notifying the owner must never delay the visitor.
-  void notifyOwner(owner.projectId, data, formIndex, page, {
+  void notifyOwner(owner.projectId, data, formIndex, formId, page, {
     submittedAt,
     country,
     device,
@@ -156,6 +189,7 @@ async function notifyOwner(
   projectId: string,
   data: Record<string, string>,
   formIndex: number | null,
+  formId: string | null,
   page: string | null,
   meta: NotifyMeta,
 ): Promise<void> {
@@ -175,13 +209,18 @@ async function notifyOwner(
   // fall back to the account email when it's unset. Site-page forms resolve
   // their scoped key ("<slug>:<index>") first, then the legacy shared index.
   let to = row.email ?? "";
-  if (formIndex !== null) {
-    const forms = row.projectData?.settings?.forms;
-    const override =
-      (page ? forms?.[`${page}:${formIndex}`]?.notifyEmail : undefined) ??
-      forms?.[String(formIndex)]?.notifyEmail;
-    if (override) to = override;
-  }
+  const forms = row.projectData?.settings?.forms;
+  // Orden: identidad propia > clave con página > índice heredado. El mismo que
+  // aplica el cableado de publicación (`resolveFormConfigKey`); si los dos
+  // resolvieran distinto, el lead se iría a otro sitio y ningún índice lo
+  // explicaría.
+  const override =
+    (formId ? forms?.[formId]?.notifyEmail : undefined) ??
+    (formIndex !== null
+      ? (page ? forms?.[`${page}:${formIndex}`]?.notifyEmail : undefined) ??
+        forms?.[String(formIndex)]?.notifyEmail
+      : undefined);
+  if (override) to = override;
   if (!to) {
     // Surface the silent-drop in the journal so an OAuth user with no
     // notify override AND no account email knows leads aren't going

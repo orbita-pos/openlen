@@ -50,7 +50,8 @@
   "defaultProjectName": "Preisseite",
   "chatDraft": {
     "iconChanged": "Ich habe gerade das Icon hier geändert. Passe den umgebenden Titel und die Beschreibung an, damit die Bedeutung zum neuen Icon passt.",
-    "imageChanged": "Ich habe gerade das Bild hier geändert. Passe den umgebenden Text an, damit er zum Inhalt des Bildes passt."
+    "imageChanged": "Ich habe gerade das Bild hier geändert. Passe den umgebenden Text an, damit er zum Inhalt des Bildes passt.",
+    "fixControls": "Repariere diese Bedienelemente, sie sind falsch verdrahtet:"
   },
   "lockReason": {
     "created": "Verfügbar, sobald deine Seite erstellt ist"
@@ -166,8 +167,6 @@
     "moduleError": "Das Modul konnte nicht aktualisiert werden.",
     "moduleMembers": "Konten",
     "moduleBroadcast": "Broadcast",
-    "moduleComments": "Kommentare",
-    "moduleBookings": "Buchungen",
     "moduleCollections": "Sammlungen",
     "membersOnlyOn": "Die Seite ist jetzt nur für Mitglieder",
     "membersOnlyOff": "Die Seite ist jetzt öffentlich",
@@ -181,7 +180,6 @@
     "analyticsDisabled": "Analytics deaktiviert",
     "saveError": "Die Änderung konnte nicht gespeichert werden.",
     "moduleWhatsapp": "WhatsApp",
-    "moduleOrders": "Bestellungen",
     "whatsappNeedNumber": "Füge zuerst eine WhatsApp-Nummer hinzu",
     "modulePageCreated": "Seite erstellt",
     "modulePageExists": "Vorhandene Seite geöffnet",
@@ -196,13 +194,6 @@
     "messagePlaceholder": "Vorausgefüllte Nachricht (optional)",
     "note": "Erscheint unten rechts auf der veröffentlichten Seite. Eine 10-stellige Nummer wird als Mexiko (+52) gelesen.",
     "missingNumber": "Deine Nummer fehlt — ohne sie erscheint der Button nicht auf der Seite."
-  },
-  "orders": {
-    "title": "WhatsApp-Bestellungen",
-    "tagline": "Ein Warenkorb über deinem Katalog: die fertige Bestellung landet auf deinem WhatsApp",
-    "numberPlaceholder": "WhatsApp-Nummer (z. B. 5512345678)",
-    "note": "Funktioniert mit den Artikeln deines Katalogs. Besucher fügen Produkte hinzu, und die Nachricht enthält Mengen und Gesamtsumme.",
-    "needsCatalog": "Aktiviere das Katalog-Modul und füge Artikel hinzu, damit die Buttons erscheinen."
   },
   "moduleSurface": {
     "createBookingPage": "Buchungsseite erstellen",
@@ -265,7 +256,20 @@
     "availableGroup": "Verfügbar",
     "open": "Öffnen",
     "activate": "Aktivieren",
-    "drawerClose": "Schließen"
+    "drawerClose": "Schließen",
+    "perProject": "Öffne ein Projekt, um seine Module zu verwalten.",
+    "title": "Module",
+    "subtitle": "Ein-Klick-Backend für deine Seite. Ohne Credits, ohne Code.",
+    "included": {
+      "title": "In deiner Seite enthalten",
+      "open": "Öffnen",
+      "forms": "Formulare & Leads",
+      "formsHint": "Jedes Formular erfasst bereits Leads",
+      "analytics": "Analytics",
+      "analyticsHint": "Besuche und Klicks, eingebaut",
+      "assistant": "KI-Assistent",
+      "assistantHint": "Beantwortet Besucherfragen"
+    }
   },
   "platforms": {
     "title": "Meine Plattformen",
@@ -275,5 +279,18 @@
     "inserted": "Fertig: Das Band steht auf der Seite",
     "manage": "Zu Mein Unternehmen",
     "note": "Kostenlos. Die Links aktualisieren sich beim Veröffentlichen von selbst."
+  },
+  "degraded": {
+    "title": "Einiges konnte nicht übernommen werden",
+    "scripts": "Deine Seite enthielt Teile aus JavaScript — etwa Zähler, Karussells oder interaktive Schaltflächen. OpenLen entfernt sie aus Sicherheitsgründen. Du kannst sie mit Modulen neu aufbauen.",
+    "embeds": "Eingebettete Inhalte von anderen Seiten (Videos oder Karten) wurden entfernt. Du kannst sie mit Modulen wieder hinzufügen.",
+    "unsafe_links": "Einige Links waren nicht sicher und wurden entfernt.",
+    "dynamic_content": "Ein Teil dessen, was deine Seite selbst aufbaut, kann leer aussehen. Du kannst es direkt im Editor eintragen.",
+    "broken_controls": "Einige interaktive Elemente sind falsch verdrahtet und funktionieren nicht. Bitte den Assistenten, sie zu reparieren.",
+    "interactivity_lost": "Die interaktiven Details, die die KI für deine Seite geschrieben hat (Filter, Galerien, Tabs), sind bei dieser Veröffentlichung nicht mitgekommen. Text und Bilder sind vollständig. Veröffentliche erneut; fehlen sie weiterhin, bitte den Assistenten, sie neu zu bauen.",
+    "form_routing_stale": "Einige Formular-Einstellungen (welche E-Mail benachrichtigt wird, wohin weitergeleitet wird) gelten nach dieser Änderung möglicherweise nicht mehr. Prüfe jedes Formular.",
+    "dismiss": "Verstanden",
+    "fix": "Das reparieren",
+    "runtime_stale": "Der interaktive Code deiner Seite sucht Elemente, die diese Änderung entfernt hat. Dann stoppt der Code — es kann mehr kaputt sein als das Fehlende. Bitte den Chat, es zu reparieren."
   }
 }

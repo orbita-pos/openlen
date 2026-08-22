@@ -2,7 +2,7 @@ import { and, eq } from "drizzle-orm";
 import { auth } from "@/auth";
 import { db, schema } from "@/lib/db";
 import { getProfile } from "@/lib/business-profiles/store";
-import { seedBrandIntoHtml, profileMeta } from "@/lib/business-profiles/seed-html";
+import { seedBrandIntoHtml } from "@/lib/business-profiles/seed-html";
 import { ensurePageMeta } from "@/lib/publish/ensure-page-meta";
 import { sanitizeForPublish } from "@/lib/html-engine";
 import {
@@ -12,6 +12,7 @@ import {
 } from "@/lib/projects";
 import { createVersion } from "@/lib/projects/versions";
 import type { ProjectData } from "@/lib/projects/types";
+import { pageMetaFor } from "@/lib/publish/page-meta-intent";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -57,7 +58,7 @@ export async function POST(
       // PROJECT title could stomp their page-specific titles.
       const seededHome = ensurePageMeta(
         seedBrandIntoHtml(homeHtml, profile.data, { recolor: false }),
-        { title: project.title, ...profileMeta(profile.data) },
+        pageMetaFor({ provenance: "authored", title: project.title, profile: profile.data }),
       );
       const sanitizedHome = sanitizeForPublish(seededHome);
       if (sanitizedHome.html === null) {

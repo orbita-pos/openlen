@@ -26,8 +26,9 @@ import {
   extractPhotoSlots,
   type PhotoAssignment,
 } from "@/lib/html-engine";
-import { classifyBriefFamily } from "@/lib/templates/select-reference";
+import { classifyBriefFamily } from "@/lib/templates/classify-brief-family";
 import { GeminiProvider } from "@/lib/ai-gateway";
+import { fireworksStreamProvider, type StreamProviderLike } from "@/lib/ai/fireworks-as-stream-provider";
 import {
   imageTone,
   loadCuratedImages,
@@ -67,11 +68,26 @@ function tokens(s: string): string[] {
     .filter((t) => t.length >= 3 && !STOP.has(t));
 }
 
+/** Igualdad, no prefijo.
+ *
+ *  El emparejador comparaba por prefijo en los dos sentidos. El producto habla
+ *  español y el catálogo está etiquetado en inglés, así que una palabra corta
+ *  española es prefijo de palabras inglesas sin ninguna relación: medido, "pan
+ *  de masa madre" traía una maqueta de dashboard SaaS porque
+ *  `"panels".startsWith("pan")`. En una panadería.
+ *
+ *  Y por longitud no se separa: "pan"/"panes" (la que quiero) y "pan"/"panel"
+ *  (la que no) tienen exactamente la misma forma. Entre dos idiomas el prefijo
+ *  no es una flexión, es una colisión — lo que funcionaba de verdad eran los
+ *  cognados ("croissants", "restaurant"), y ésos coinciden exactos.
+ *
+ *  Llenar menos huecos es el precio, y es el correcto: un degradado neutro es
+ *  mejor que una foto que miente sobre el negocio del usuario. */
 function overlap(subjectToks: string[], hay: string[]): number {
   let n = 0;
   for (const s of subjectToks) {
     for (const h of hay) {
-      if (h === s || h.startsWith(s) || s.startsWith(h)) {
+      if (h === s) {
         n++;
         break;
       }
@@ -132,8 +148,14 @@ const PICK_SCHEMA: Record<string, unknown> = {
 };
 
 async function geminiPick(req: PickRequest): Promise<Record<number, string> | null> {
+  // Elegir foto es DIRECCIÓN DE ARTE SOBRE TEXTO: se le da una lista de huecos y
+  // otra de fotos, y decide el emparejamiento. No mira un solo píxel, así que
+  // corre en DeepSeek. Gemini se queda para generar y editar imágenes.
+  // `OPENLEN_IMAGERY_PICK=gemini` vuelve atrás.
   const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey || process.env.OPENLEN_IMAGERY_SMART === "0") return null;
+  const usaGemini = process.env.OPENLEN_IMAGERY_PICK?.trim().toLowerCase() === "gemini";
+  if (process.env.OPENLEN_IMAGERY_SMART === "0") return null;
+  if (usaGemini && !apiKey) return null;
 
   const prompt = [
     "You are an art director choosing stock photos for a landing page.",
@@ -151,7 +173,15 @@ async function geminiPick(req: PickRequest): Promise<Record<number, string> | nu
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), PICK_TIMEOUT_MS);
   try {
-    const provider = new GeminiProvider(apiKey);
+    const provider: StreamProviderLike = usaGemini
+      ? (new GeminiProvider(apiKey as string) as unknown as StreamProviderLike)
+      : fireworksStreamProvider({
+          requestId: "imagery-pick",
+          operation: "simple_extraction",
+          maxOutputTokens: 2_048,
+          temperature: 0.1,
+          jsonObject: true,
+        });
     let raw = "";
     for await (const ev of provider.stream(
       {
@@ -167,7 +197,11 @@ async function geminiPick(req: PickRequest): Promise<Record<number, string> | nu
       if (ev.type === "text_delta") raw += ev.text;
       else if (ev.type === "done" && ev.stopReason.kind === "error") return null;
     }
-    const parsed = JSON.parse(raw) as { picks?: { slot?: unknown; imageId?: unknown }[] };
+    // Una valla de markdown aquí no puede costar el emparejamiento entero: el
+    // `catch` de abajo devolvería `null` y la página caería al reparto tonto sin
+    // que nadie supiera por qué.
+    const limpio = raw.trim().replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "");
+    const parsed = JSON.parse(limpio) as { picks?: { slot?: unknown; imageId?: unknown }[] };
     if (!Array.isArray(parsed?.picks)) return null;
     const out: Record<number, string> = {};
     for (const p of parsed.picks) {
@@ -215,6 +249,25 @@ export async function photographHtml(params: {
 
   // 1. Deterministic shortlist per fillable slot (non-text, with real signal).
   const shortlists = new Map<number, CuratedImage[]>();
+  // Reserva del gremio: el filtro se queda corto a menudo —los sujetos vienen
+  // en español y el catálogo está etiquetado en inglés—, y un hueco con el
+  // degradado puesto es peor que una foto imprecisa. Se ordena por familia del
+  // brief y luego por tono, y sólo se usa donde no hubo nada mejor.
+  //
+  //  Sólo la familia EXACTA. Probé ensanchar al anillo de familias vecinas —las
+  //  que conviven con ella en el catálogo— para llegar al pan de verdad, que
+  //  está etiquetado `hospitality`: sí lo alcanzaba, y traía detrás una casa de
+  //  los cincuenta y unas piedras apiladas. Cambiar una foto rara por otra foto
+  //  rara no es progreso. El techo real es el etiquetado: `food-beverage` tiene
+  //  SEIS imágenes en un catálogo de quinientas, y el pan no está entre ellas.
+  const toneScore = (img: CuratedImage): number => {
+    const tone = imageTone(img.alt);
+    return tone === mode ? 2 : tone === "neutral" ? 1 : 0;
+  };
+  const fallback = family
+    ? images.filter((img) => img.family.includes(family)).sort((a, b) => toneScore(b) - toneScore(a))
+    : [];
+
   slots.forEach((slot, index) => {
     if (slot.hasText) return;
     const subjectToks = tokens(slot.subject || brief);
@@ -222,8 +275,13 @@ export async function photographHtml(params: {
     for (const img of images) {
       const fam = family && img.family.includes(family) ? 1 : 0;
       const ov = overlap(subjectToks, hay.get(img.id) ?? []);
+      // Contenido O rubro entran a la piscina; el contenido pesa mucho más al
+      // ordenar. Exigir contenido dejaba fuera casi todo —los sujetos vienen en
+      // español y el catálogo está etiquetado en inglés— y el elector de IA se
+      // quedaba sin candidatos que mirar: medido, 1 hueco lleno de 4. La
+      // etiqueta de rubro le da un fondo del gremio correcto para elegir.
       const signal = ov * 10 + fam * 4;
-      if (signal < 1) continue; // content match required (tone alone won't do)
+      if (signal < 1) continue;
       const tone = imageTone(img.alt);
       const tv = tone === mode ? 1 : tone === "neutral" ? 0.5 : 0;
       scored.push({ img, score: signal + tv, signal });
@@ -232,7 +290,7 @@ export async function photographHtml(params: {
     if (scored.length > 0) shortlists.set(index, scored.slice(0, SHORTLIST).map((s) => s.img));
   });
 
-  if (shortlists.size === 0) {
+  if (shortlists.size === 0 && fallback.length === 0) {
     // Nothing matched — still apply to strip the markers off the doc.
     return finalize(html, slots, () => SKIP);
   }
@@ -282,6 +340,18 @@ export async function photographHtml(params: {
       chosen.set(index, img);
     }
   }
+
+  // Los huecos que ni siquiera entraron al filtro: mejor una foto del gremio
+  // que un bloque de degradado. Medido en una página entregada — seis fotos
+  // puestas y siete huecos vacíos.
+  slots.forEach((slot, index) => {
+    if (slot.hasText || chosen.has(index)) return;
+    const img = fallback.find((candidate) => !used.has(candidate.id));
+    if (img) {
+      used.add(img.id);
+      chosen.set(index, img);
+    }
+  });
 
   return finalize(html, slots, (index) => {
     const img = chosen.get(index);

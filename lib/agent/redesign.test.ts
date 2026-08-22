@@ -135,3 +135,54 @@ test("timeout → ok:false, nunca cuelga", async () => {
   });
   assert.equal(r.ok, false);
 });
+
+// ── El JavaScript del modelo ────────────────────────────────────────────────
+//
+// El rediseño es la TERCERA superficie que produce un documento entero, así que
+// es la tercera que puede capturar un script. Estuvo bloqueada hasta el
+// 2026-08-21 por PROCEDENCIA: corría en Gemini y la cápsula se llama
+// "deepseek-generate-v1". Al mover el rediseño a DeepSeek se destrabó.
+
+const CON_SCRIPT =
+  BIG_DOC.replace("</body>", `<script data-openlen-model-runtime>window.__X__=1;</script></body>`);
+
+function conInterruptor<T>(valor: string | undefined, fn: () => Promise<T>): Promise<T> {
+  const previo = process.env.OPENLEN_MODEL_JS;
+  if (valor === undefined) delete process.env.OPENLEN_MODEL_JS;
+  else process.env.OPENLEN_MODEL_JS = valor;
+  return fn().finally(() => {
+    if (previo === undefined) delete process.env.OPENLEN_MODEL_JS;
+    else process.env.OPENLEN_MODEL_JS = previo;
+  });
+}
+
+test("con el interruptor encendido, captura el script del texto CRUDO", async () => {
+  const r = await conInterruptor("1", () =>
+    redesignWithGemini(INPUT, "m", "k", { provider: providerReturning(CON_SCRIPT) }),
+  );
+  assert.equal(r.ok, true);
+  if (r.ok) {
+    assert.equal(r.modelRuntime, "window.__X__=1;");
+    // El documento que sale de AQUÍ todavía lo lleva: `extractRedesignedDocument`
+    // sólo recorta el documento del texto crudo. Quien lo borra es el embudo de
+    // persistencia (`persistHtmlChange` → `preparePage`, que sanea y falla
+    // cerrado), y por eso la captura tiene que ocurrir ANTES — aquí.
+    assert.ok(r.html.includes("__X__"), "a esta altura el saneado aún no ha corrido");
+  }
+});
+
+test("apagado, no captura nada aunque el modelo lo escriba", async () => {
+  const r = await conInterruptor(undefined, () =>
+    redesignWithGemini(INPUT, "m", "k", { provider: providerReturning(CON_SCRIPT) }),
+  );
+  assert.equal(r.ok, true);
+  if (r.ok) assert.equal(r.modelRuntime, null);
+});
+
+test("un rediseño sin script devuelve null, no undefined", async () => {
+  const r = await conInterruptor("1", () =>
+    redesignWithGemini(INPUT, "m", "k", { provider: providerReturning(BIG_DOC) }),
+  );
+  assert.equal(r.ok, true);
+  if (r.ok) assert.equal(r.modelRuntime, null);
+});

@@ -24,20 +24,16 @@ import type { ProjectData } from "@/lib/projects/types";
 export type CreatePageInput = {
   slug?: string;
   title?: string;
-  module?: "bookings" | "collections";
+  module?: "collections";
 };
 
 // Per-module page slug + title, by page language (matches
 // buildAutoMembersPage's es/en split; other locales fall back to English).
 // Copied verbatim from the route (was route.ts:43-57).
 const MODULE_PAGE_META: Record<
-  "bookings" | "collections",
+  "collections",
   { es: { slug: string; title: string }; en: { slug: string; title: string } }
 > = {
-  bookings: {
-    es: { slug: "reservas", title: "Reservas" },
-    en: { slug: "booking", title: "Booking" },
-  },
   collections: {
     es: { slug: "catalogo", title: "Catálogo" },
     en: { slug: "catalog", title: "Catalog" },
@@ -123,12 +119,8 @@ export function createSitePage(
   ) {
     return { error: "invalid_input", message: "el título debe ser un texto de máximo 120 caracteres" };
   }
-  if (
-    input.module !== undefined &&
-    input.module !== "bookings" &&
-    input.module !== "collections"
-  ) {
-    return { error: "invalid_input", message: "modulo debe ser bookings o collections" };
+  if (input.module !== undefined && input.module !== "collections") {
+    return { error: "invalid_input", message: "modulo debe ser collections" };
   }
   if (!input.slug && !input.module && !input.title) {
     return { error: "invalid_input", message: "se requiere slug, titulo o modulo" };

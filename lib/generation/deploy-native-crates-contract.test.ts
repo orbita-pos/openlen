@@ -24,8 +24,14 @@ describe("production deploy native crate packaging", () => {
     expect(compose).toContain(
       'if (-not (Test-Path "$targetDir/index.js")) { throw "Missing native crate wrapper: $crate" }',
     );
+    // Resuelto POR RUTA, no por PATH: bajo Git Bash `tar` es el GNU tar, que no
+    // entiende `--options` y tumba el empaquetado. El de Windows es bsdtar y
+    // vive en System32. Esto se rompió en un deploy real.
     expect(script).toContain(
-      '& tar --options "gzip:compression-level=1" -czf $tarballName -C .next/standalone .',
+      '$bsdTar = Join-Path $env:SystemRoot (Join-Path "System32" "tar.exe")',
+    );
+    expect(script).toContain(
+      '& $bsdTar --options "gzip:compression-level=1" -czf $tarballName -C .next/standalone .',
     );
   });
 });

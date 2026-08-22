@@ -26,6 +26,10 @@ export const IntentAnalysisSchema = z.object({
   emotionalGoals: TaxonomyListSchema,
   requiredVisualSignals: TaxonomyListSchema,
   forbiddenVisualSignals: TaxonomyListSchema,
+  /** How many photographs the brief actually asks for, null when it says
+   * nothing. A count only the user can set: it decides whether the page spends
+   * their credits on imagery or leaves that judgement to the page designer. */
+  requestedImages: z.number().int().min(0).max(12).nullable().optional(),
   explicitConstraints: z.array(z.string().min(1).max(240)).max(12),
   ambiguities: z.array(z.string().min(1).max(240)).max(12),
   confidence: z.number().min(0).max(1),

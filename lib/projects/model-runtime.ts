@@ -1,0 +1,225 @@
+import { createHash, timingSafeEqual } from "node:crypto";
+
+// lib/projects/model-runtime.ts — la cápsula que autoriza el JavaScript del
+// modelo, y el hash que la ata a UN documento exacto.
+//
+// POR QUÉ UN HASH Y NO UNA BANDERA DE PROCEDENCIA.
+//
+// Una columna `source = "deepseek"` parece bastar y no basta: depende de que
+// TODOS los escritores presentes y futuros se acuerden de limpiarla. Hoy
+// reemplazan el HTML el PATCH de `/api/projects/[id]/html`, el guardado del
+// Agente, el restore de versiones y algún helper más. Si uno se olvida, el
+// publicador ve la bandera encendida y NO TIENE FORMA de saber si autoriza el
+// documento original o uno distinto — y el fallo es silencioso.
+//
+// Peor: ningún test puede demostrar "no existe ningún escritor olvidado".
+// Sólo puede probar los que conoce hoy.
+//
+// El hash no depende de que nadie recuerde nada. Cambiar un byte del HTML, del
+// código, del proyecto o de la política produce un desajuste, y el publicador
+// decide LOCALMENTE sin saber qué ruta tocó el documento.
+
+/** La versión de la política. Va DENTRO del hash: cambiar las reglas del piloto
+ *  invalida todas las cápsulas viejas por construcción, en vez de dejarlas
+ *  autorizadas bajo unas reglas que ya no existen. */
+export const RUNTIME_POLICY = "classic-inline:body-end";
+
+/** El prefijo de dominio. Impide que un hash calculado para otra cosa en este
+ *  mismo sistema pueda valer aquí por casualidad. */
+const DOMAIN = "openlen:model-js:v1";
+
+export const RUNTIME_CAPSULE_VERSION = "deepseek-generate-v1";
+
+export interface ModelRuntimeCapsule {
+  readonly v: typeof RUNTIME_CAPSULE_VERSION;
+  /** El script, byte a byte como lo escribió el modelo. */
+  readonly code: string;
+  /** SHA-256 COMPLETO en hex, 64 caracteres. Sin truncar: un hash recortado
+   *  deja de ser una prueba y pasa a ser un indicio. */
+  readonly digest: string;
+}
+
+/**
+ * El hash que ata código, documento, proyecto y política.
+ *
+ * Cada parte va precedida de su LONGITUD. Sin eso, dos triples distintos
+ * podrían concatenarse igual —mover un carácter del final del HTML al principio
+ * del código— y colisionar sin que nadie hubiera roto SHA-256.
+ *
+ * Se calcula sobre los bytes UTF-8 EXACTOS que se van a guardar. Nada de trim,
+ * de normalización Unicode, de parsear y reserializar el DOM ni de tocar los
+ * saltos de línea: cualquiera de esas cosas hace que el hash de la escritura y
+ * el de la lectura dejen de coincidir, y el síntoma sería "la publicación falla
+ * a veces", que es el peor síntoma posible.
+ */
+export function runtimeDigest(input: {
+  readonly projectId: string;
+  readonly html: string;
+  readonly code: string;
+}): string {
+  const h = createHash("sha256");
+  h.update(DOMAIN, "utf8");
+  for (const parte of [input.projectId, input.html, input.code]) {
+    const bytes = Buffer.from(parte, "utf8");
+    h.update(String(bytes.length), "utf8");
+    h.update(bytes);
+  }
+  h.update(RUNTIME_POLICY, "utf8");
+  return h.digest("hex");
+}
+
+export function buildCapsule(input: {
+  readonly projectId: string;
+  readonly html: string;
+  readonly code: string;
+}): ModelRuntimeCapsule {
+  return {
+    v: RUNTIME_CAPSULE_VERSION,
+    code: input.code,
+    digest: runtimeDigest(input),
+  };
+}
+
+/**
+ * Vuelve a atar la cápsula al documento que se ACABA de guardar.
+ *
+ * EL PROBLEMA QUE RESUELVE. El hash ata `projectId + html + code`, y
+ * `buildCapsule` sólo se llamaba al crear el proyecto. La primera edición del
+ * titular cambiaba los bytes → la cápsula dejaba de cuadrar → al publicar el
+ * runtime se omitía con un `console.log` como único aviso. Es decir: el
+ * JavaScript del modelo duraba hasta que el usuario tocaba algo. Con el Chat y
+ * el Agente dentro del alcance —que son superficies de EDICIÓN— eso deja de ser
+ * un detalle y pasa a ser el modo de fallo principal.
+ *
+ * POR QUÉ ESTO NO DEBILITA NADA. El código NO se recibe por parámetro: sale de
+ * la cápsula que ya estaba guardada. Re-sellar puede mover el documento al que
+ * el código está atado, pero es incapaz de introducir código nuevo — que es lo
+ * único de lo que el hash protege de verdad.
+ *
+ * DEVUELVE `null` PARA "NO TOQUES LA COLUMNA", nunca para "bórrala". Una cápsula
+ * de una versión que no conocemos se deja intacta a propósito: interpretarla con
+ * las reglas de hoy sería justo lo que `verifyCapsule` evita, y borrarla sería
+ * destruir el trabajo del modelo por no saber leerlo.
+ *
+ * Se re-sella con el interruptor apagado también. Sin código que inyectar no
+ * cambia nada hoy, y mantiene la cápsula utilizable el día que se encienda.
+ */
+export function resealRuntime(input: {
+  readonly projectId: string;
+  /** Los bytes EXACTOS que se van a guardar en `data.html`. */
+  readonly html: string;
+  /** `projects.generatedRuntime` tal cual se leyó. */
+  readonly capsule: unknown;
+}): ModelRuntimeCapsule | null {
+  if (input.capsule === null || typeof input.capsule !== "object") return null;
+  const c = input.capsule as Partial<ModelRuntimeCapsule>;
+  if (typeof c.code !== "string" || c.code === "") return null;
+  if (c.v !== RUNTIME_CAPSULE_VERSION) return null;
+  return buildCapsule({ projectId: input.projectId, html: input.html, code: c.code });
+}
+
+export type CapsuleRejection =
+  | "ausente"
+  | "malformada"
+  | "version_desconocida"
+  | "desajuste";
+
+export type CapsuleCheck =
+  | { readonly ok: true; readonly code: string }
+  | { readonly ok: false; readonly reason: CapsuleRejection };
+
+/**
+ * ¿Autoriza esta cápsula a ESTE documento?
+ *
+ * Se le pasa lo que se acaba de leer de Postgres, sin tocar. La comparación es
+ * de tiempo constante — no porque un atacante vaya a medir microsegundos contra
+ * un publicador, sino porque un `===` sobre un valor de seguridad es la clase de
+ * detalle que se copia a sitios donde sí importa.
+ */
+export function verifyCapsule(
+  capsule: unknown,
+  doc: { readonly projectId: string; readonly html: string },
+): CapsuleCheck {
+  if (capsule === null || capsule === undefined) return { ok: false, reason: "ausente" };
+  if (typeof capsule !== "object") return { ok: false, reason: "malformada" };
+
+  const c = capsule as Partial<ModelRuntimeCapsule>;
+  if (typeof c.code !== "string" || typeof c.digest !== "string" || typeof c.v !== "string") {
+    return { ok: false, reason: "malformada" };
+  }
+  if (!/^[0-9a-f]{64}$/.test(c.digest)) return { ok: false, reason: "malformada" };
+  // Una versión que no conocemos NO se interpreta con las reglas de hoy.
+  if (c.v !== RUNTIME_CAPSULE_VERSION) return { ok: false, reason: "version_desconocida" };
+
+  const esperado = runtimeDigest({ projectId: doc.projectId, html: doc.html, code: c.code });
+  const a = Buffer.from(esperado, "hex");
+  const b = Buffer.from(c.digest, "hex");
+  if (a.length !== b.length || !timingSafeEqual(a, b)) {
+    return { ok: false, reason: "desajuste" };
+  }
+  return { ok: true, code: c.code };
+}
+
+/** Por qué una página con cápsula acabó publicándose SIN su runtime. */
+export type RuntimeSkip =
+  | CapsuleRejection
+  | "apagado"
+  | "varias_paginas"
+  | "dominio_propio";
+
+export type PublishAuthorization =
+  | { readonly kind: "authorized"; readonly code: string }
+  | { readonly kind: "skipped"; readonly reason: RuntimeSkip };
+
+/**
+ * ¿Se inyecta el runtime en esta publicación?
+ *
+ * SE APARTA DEL PLAN DE LA AUDITORÍA EN UN PUNTO, a propósito: allí una cápsula
+ * que no cuadra ABORTA la publicación. Aquí sólo se omite el runtime.
+ *
+ * El motivo es que abortar no protege de nada. Si la cápsula no cuadra no se
+ * inyecta código, y una página sin código no puede hacer daño — el resultado
+ * seguro se obtiene igual por las dos vías. Lo que sí cambia es quién lo paga:
+ * el caso corriente de "no cuadra" no es un ataque, es un usuario que editó su
+ * titular después de generar. Bloquearle la publicación entera por eso sería
+ * hostil, y además enseñaría a la gente a desconfiar de un mecanismo que está
+ * haciendo su trabajo.
+ *
+ * Abortar sigue siendo lo correcto donde SÍ vamos a inyectar y el sellado falla
+ * — eso es `OPENLEN_CSP_SEAL=strict`, y vive en el publicador.
+ *
+ * Se verifica contra `data.html` TAL CUAL está guardado, antes de que la
+ * tubería de publicación lo transforme: el hash se calculó sobre esos bytes.
+ */
+export function authorizeRuntimeForPublish(input: {
+  readonly env: NodeJS.ProcessEnv;
+  readonly projectId: string;
+  /** El HTML guardado, sin pasar por ningún bake todavía. */
+  readonly html: string;
+  readonly capsule: unknown;
+  /** Subpáginas del sitio. El piloto es UN documento. */
+  readonly pageCount: number;
+  readonly hasCustomDomain: boolean;
+}): PublishAuthorization {
+  const check = verifyCapsule(input.capsule, {
+    projectId: input.projectId,
+    html: input.html,
+  });
+  if (!check.ok) return { kind: "skipped", reason: check.reason };
+
+  // El interruptor se comprueba DESPUÉS de verificar, no antes: así el motivo
+  // que se registra distingue "está apagado" de "la cápsula no cuadraba", y no
+  // se pierde la única señal que dice si el mecanismo funciona.
+  if (input.env.OPENLEN_MODEL_JS !== "1") return { kind: "skipped", reason: "apagado" };
+
+  // Un dominio propio puede añadirse DESPUÉS y serviría el release ya vivo, así
+  // que se comprueba aquí y se volverá a comprobar al activarlo.
+  if (input.hasCustomDomain) return { kind: "skipped", reason: "dominio_propio" };
+  if (input.pageCount > 0) return { kind: "skipped", reason: "varias_paginas" };
+  // Formularios y módulos YA NO descalifican la página — ver la nota en
+  // `lib/ai-stream/model-runtime.ts`, donde vivía `pageAllowsRuntime`. Tirar el
+  // JavaScript era una herramienta demasiado burda para ese problema; la
+  // protección se movió a la puerta de producción.
+
+  return { kind: "authorized", code: check.code };
+}

@@ -15,6 +15,7 @@
 
 import { GeminiProvider, type InlineImage, type StreamEvent, type StreamRequest } from "@/lib/ai-gateway";
 import { renderHtmlToInlineImage } from "@/lib/ai/inline-image";
+import { fireworksStreamProvider } from "@/lib/ai/fireworks-as-stream-provider";
 
 export interface CritiqueVerdict {
   /** 1–10. Hero polish, spacing, type hierarchy, color discipline. */
@@ -51,6 +52,35 @@ export interface CritiqueParams {
   apiKey?: string;
 }
 
+/**
+ * QUIÉN MIRA. Qwen es el papel con visión de la política de modelos, igual que
+ * en los ojos del Agente (`lib/agent/verify.ts`, Qwen desde el 2026-08-17). Al
+ * razonador NUNCA se le manda una imagen; Gemini se queda para los píxeles —
+ * generar y editar imágenes— y nada más.
+ *
+ * NO se le impone esquema: el modo estricto de Fireworks rechaza esquemas
+ * válidos (medido), y `parseVerdict` ya tolera vallas de markdown y texto
+ * alrededor. Se pide un objeto JSON y se valida aquí, que es donde siempre se
+ * validó.
+ *
+ * `OPENLEN_CREATE_EYES=gemini` devuelve los ojos de antes. Y como todo en este
+ * archivo, cualquier fallo cae al veredicto de reserva: el crítico sólo puede
+ * mejorar una generación, jamás bloquearla.
+ */
+function defaultCritiqueProvider(apiKey: string | undefined): CritiqueProviderLike | null {
+  if (process.env.OPENLEN_CREATE_EYES?.trim().toLowerCase() === "gemini") {
+    if (!apiKey) return null;
+    return new GeminiProvider(apiKey);
+  }
+  return fireworksStreamProvider({
+    requestId: "vision-critique",
+    operation: "final_scoring",
+    maxOutputTokens: CRITIC_MAX_OUTPUT_TOKENS,
+    temperature: CRITIC_TEMPERATURE,
+    jsonObject: true,
+  });
+}
+
 /** Minimal provider surface the critic needs — lets tests inject a fake. */
 export interface CritiqueProviderLike {
   stream(
@@ -72,7 +102,14 @@ export interface CritiqueInternals {
 // ~8–15s), so 12s produced ~33% fallbacks; 18s brings that to ~5–10%. The
 // fallback is safe (ship-as-is, no regen) but each timed-out critic still costs
 // a credit + cycle, so widening the window is worth it. Test-overridable.
-export const DEFAULT_TIMEOUT_MS = 18_000;
+//
+// 18s→30s: el sembrado de fotos pasó a correr ANTES del crítico, para que
+// juzgue la página que se entrega y no los rellenos de gradiente. Eso está
+// bien, y hace que el render tenga que bajar ocho imágenes de la CDN antes de
+// la captura: medido, el plazo de 18s pasó a agotarse siempre. Un crítico que
+// nunca contesta es peor que uno que juzga tarde — falla abierto, sí, pero
+// entonces no hay red.
+export const DEFAULT_TIMEOUT_MS = 30_000;
 // The verdict is tiny, but `issues` can carry a few sentences and Flash spends
 // a thinking budget before its first token — keep this generous so it never
 // truncates mid-JSON.
@@ -178,14 +215,15 @@ async function runCritique(
   }
   if (signal.aborted) return fallbackVerdict();
 
+  // La clave de Gemini ya no es obligatoria: por defecto mira Qwen, que viaja
+  // por el transporte de Fireworks y usa su propia credencial.
   const apiKey = params.apiKey ?? process.env.GEMINI_API_KEY;
-  if (!apiKey) {
-    logFallback("GEMINI_API_KEY missing");
+  const elegido = internals.provider ?? defaultCritiqueProvider(apiKey);
+  if (!elegido) {
+    logFallback("OPENLEN_CREATE_EYES=gemini sin GEMINI_API_KEY");
     return fallbackVerdict();
   }
-
-  const provider: CritiqueProviderLike =
-    internals.provider ?? new GeminiProvider(apiKey);
+  const provider: CritiqueProviderLike = elegido;
   const prompt = buildCriticPrompt(params.brief, params.html);
 
   let raw = "";
@@ -195,6 +233,7 @@ async function runCritique(
         model: params.model,
         messages: [{ role: "user", content: prompt }],
         images: [image],
+        // Sólo los lee el camino de Gemini; Qwen usa `jsonObject` en su adaptador.
         responseMimeType: "application/json",
         responseSchema: VERDICT_SCHEMA,
         maxOutputTokens: CRITIC_MAX_OUTPUT_TOKENS,
@@ -263,6 +302,16 @@ function buildCriticPrompt(brief: string, html: string): string {
 ${structuralSummary(html)}
 </html-summary>
 </input>
+<photography>
+The photographs on this page were NOT chosen by the model that wrote it. A
+separate deterministic system matches them from a fixed library after the page
+is written, and regenerating the page does not change which photos appear.
+So: never set shouldRegenerate because a photo is generic, unrelated to the
+subject, or not the exact thing described. Say so in issues if you like — that
+feedback is read — but it must not cost a regeneration.
+A photo that is BROKEN is different and does count: a blank frame, a failed
+image, a picture that makes text unreadable.
+</photography>
 <rubric>
 - visualQuality (1-10): Hero polish, section spacing, typography hierarchy, color discipline, mockup detail.
 - briefAdherence (1-10): Does the page match the user's stated industry, audience, tone, and requested sections?

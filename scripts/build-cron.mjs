@@ -21,7 +21,6 @@ const common = {
 };
 
 const targets = [
-  { entry: "scripts/bookings-remind.ts", out: ".next/standalone/cron/bookings-remind.mjs" },
   { entry: "scripts/analytics/rollup-daily.ts", out: ".next/standalone/cron/analytics-rollup.mjs" },
   { entry: "scripts/notifications-drain.ts", out: ".next/standalone/cron/notifications-drain.mjs" },
   // NB (datos vivos, Task 12): scripts/live-republish.ts NO se bundlea aquí a

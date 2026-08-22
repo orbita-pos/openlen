@@ -77,21 +77,7 @@ describe("bakeModulesForPreviewHtml", () => {
     assert.ok(out.includes("data-ol-chat"), "chat markup present");
   });
 
-  it("bakes the comments widget when comments are on", () => {
-    const out = bakeModulesForPreviewHtml(HOME, {
-      ...baseCtx,
-      settings: { comments: { enabled: true } },
-    });
-    assert.ok(out.includes("data-ol-comments"), "comments markup present");
-  });
 
-  it("bakes the bookings widget when bookings are on", () => {
-    const out = bakeModulesForPreviewHtml(HOME, {
-      ...baseCtx,
-      settings: { bookings: { enabled: true } },
-    });
-    assert.ok(out.includes("data-ol-bookings"), "bookings markup present");
-  });
 
   it("bakes the assistant widget when the assistant is on", () => {
     const out = bakeModulesForPreviewHtml(HOME, {
@@ -144,41 +130,6 @@ describe("preview mirrors publish's FAB stacking", () => {
   });
 });
 
-describe("preview scopes section modules to their band", () => {
-  const bands = { bookings: true, comments: true };
-
-  it("skips the widget on a document without the band when the site has one", () => {
-    const out = bakeModulesForPreviewHtml(HOME, {
-      ...baseCtx,
-      settings: { bookings: { enabled: true }, comments: { enabled: true } },
-      sectionBands: bands,
-    });
-    assert.ok(!out.includes("data-ol-bookings-widget"));
-    assert.ok(!out.includes("data-ol-comments-widget"));
-  });
-
-  it("renders it on the document that carries the band", () => {
-    const withBand = HOME.replace(
-      "<footer",
-      '<section data-ol-bookings-section></section><footer',
-    );
-    const out = bakeModulesForPreviewHtml(withBand, {
-      ...baseCtx,
-      settings: { bookings: { enabled: true } },
-      sectionBands: bands,
-    });
-    assert.ok(out.includes("data-ol-bookings-widget"));
-  });
-
-  it("no band anywhere keeps the append-everywhere fallback", () => {
-    const out = bakeModulesForPreviewHtml(HOME, {
-      ...baseCtx,
-      settings: { bookings: { enabled: true } },
-      sectionBands: { bookings: false, comments: false },
-    });
-    assert.ok(out.includes("data-ol-bookings-widget"));
-  });
-});
 
 describe("preview plays video links the same way publish does", () => {
   const withVideo = HOME.replace(

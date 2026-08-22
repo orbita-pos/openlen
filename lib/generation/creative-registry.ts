@@ -29,3 +29,21 @@ export const HOOK_PROPERTY_POLICY = {
 
 export const CREATIVE_RADIUS_SCALES = [0, 1, 1.75] as const;
 export const CREATIVE_SPACING_SCALES = [0.85, 1, 1.15] as const;
+
+/** `geometry.radius` / `typography.scale` in CSS. Here, not inline in a
+ *  consumer, because two places now turn a CreativeDirection into page tokens —
+ *  the creative compiler and the baseline's assemble theme — and a direction
+ *  that means one radius in one and another in the other is the drift that let
+ *  a dark page ship with a light theme in the first place. */
+export const CREATIVE_RADIUS_PX = {
+  square: "0px",
+  soft: "8px",
+  round: "14px",
+  extra_round: "20px",
+} as const;
+
+export const CREATIVE_TEXT_SCALES = {
+  compact: "0.94",
+  balanced: "1",
+  expressive: "1.08",
+} as const;

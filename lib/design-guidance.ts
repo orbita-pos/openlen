@@ -44,8 +44,8 @@ OUTPUT FORMAT — strict rules (instant failure if violated)
 • Tailwind via CDN: \`<script src="https://cdn.tailwindcss.com"></script>\`
   in <head>. Use Tailwind utility classes freely.
 • Google Fonts via \`<link rel="stylesheet" href="https://fonts.googleapis.com/…">\`
-  in <head>. Pick the family that fits the brand (Inter / Source Serif 4 /
-  Fraunces / JetBrains Mono / etc — see FAMILY AESTHETIC in the reference).
+  in <head>. ANY family on Google Fonts is allowed. Pick what this page's
+  character calls for and load every family you use.
 • All custom CSS inline in \`<style>\` inside <head> — keyframes, gradients,
   custom utility classes (pulse-dot, marquee, hairline borders, etc).
 • NO JAVASCRIPT — it does not survive. Every \`<script>\` (inline or remote,
@@ -98,18 +98,30 @@ ${buildBehaviorsDoc()}
   into, so a sign-in link is a dead end. (When the owner turns on the Members
   module, a real sign-in link is added automatically at publish time — never
   author one here.)
-• BACKEND MODULE SECTIONS (opt-in — ONLY when the brief clearly asks for one).
-  OpenLen wires two real, working sections at publish time. When — and ONLY
-  when — the brief explicitly wants one, drop the EMPTY placeholder where it
-  belongs in the layout; the real widget is injected automatically (never build
-  a fake version, never emit more than one of each):
-    – Appointment booking ("reservas", "agenda", "citas", "book a table/call",
-      "appointments") → \`<section data-ol-bookings-section></section>\`
-    – A catalog / menu / product grid / listings ("catálogo", "menú",
-      "productos", "propiedades", priced items) → \`<section data-ol-collection-section></section>\`
-  If the brief does not clearly ask for one, do NOT emit these — a normal visual
-  section is the default. These are the ONLY \`data-ol-*-section\` markers you
-  may author.
+• CATALOG / MENU / LISTINGS — ONLY when the brief actually asks for one
+  ("catálogo", "menú", "productos", "propiedades", priced items). Otherwise a
+  normal visual section is the default; do not emit this.
+  DESIGN THE SECTION YOURSELF, in this page's own visual language — never leave
+  an empty placeholder, never emit more than one. Then mark it, so OpenLen can
+  keep it in sync with the catalog the owner manages:
+    – \`data-ol-collection-section\` on the \`<section>\`.
+    – \`data-ol-item\` on EACH product card. The cards must be siblings of one
+      another and share the SAME structure: the first one is the template that
+      gets repeated.
+    – \`data-ol-item-field="…"\` on the element that CARRIES each piece of
+      text — the \`<h3>\` itself, not its wrapper: a marked element's contents
+      are replaced wholesale, so anything nested inside it is lost. Fields:
+      \`title\` (required) · \`price\` · \`subtitle\` · \`description\` ·
+      \`badge\` · \`image\` (on the \`<img>\`, or on the gradient photo box) ·
+      \`cta\` (on the \`<a>\`). Everything except \`title\` is optional, and a
+      field the owner leaves blank is hidden automatically — so it is safe to
+      include all of them. Put the aspect-ratio on the \`<img>\` itself where
+      you can (not on a wrapper): an item with no photo hides the image, and
+      that way the card closes up instead of leaving an empty frame.
+  Write 3-6 real, plausible cards so the section looks finished from day one.
+  At publish they are replaced, one per item the owner manages: YOUR design and
+  markup survive untouched — only the text, prices and photos change.
+  This is the ONLY \`data-ol-*-section\` marker you may author.
 • All images: inline SVG (for logos, illustrations, icons, mockups) OR
   \`<div>\` with \`bg-gradient-to-br\` as a placeholder for hero shots. NO
   external image URLs (unsplash, picsum, placehold.co, etc).
@@ -169,6 +181,17 @@ can switch modes cleanly; do NOT add a visible theme-toggle button.
 ═══════════════════════════════════════════════════════════════════════════
 TYPOGRAPHY PRECISIONS
 ═══════════════════════════════════════════════════════════════════════════
+
+• Size scale — the rule that breaks most often, and the one nothing else
+  here covers. Hierarchy is judged ON MOBILE (390px wide), after responsive
+  classes have shrunk everything:
+  – Main headline (h1): never below \`text-4xl\` (36px) at mobile width.
+    \`text-5xl md:text-7xl\` is the healthy pattern. \`text-xl md:text-6xl\`
+    is not — it commands the desktop and collapses on the phone.
+  – Hero body copy: \`text-base\` to \`text-lg\` (16-18px). Never under 14px.
+  – Ratio: the h1 must render at least TWICE the hero body size. A 24px
+    headline over a 20px paragraph is not a hierarchy, it is a tie.
+  Hierarchy comes from size, weight and space — never from colour alone.
 
 • Display headlines: \`letter-spacing: -0.025em to -0.04em\`, \`line-height:
   0.92 to 0.98\`. Tight, confident.
@@ -734,3 +757,25 @@ CONTENT RULES — what makes a line of copy "ship-quality"
 
 ═══════════════════════════════════════════════════════════════════════════
 `.trim();
+
+/**
+ * Sólo lo que la máquina necesita para poder publicar la página, sin una sola
+ * opinión de diseño.
+ *
+ * OpenLen borra TODO el JavaScript al publicar (`sanitize_for_publish`), así
+ * que un acordeón escrito con JS llega muerto: la sección de CONDUCTAS es cómo
+ * se pide interactividad que sí sobrevive. Eso es contrato, no gusto.
+ *
+ * El vocabulario de tokens entra por la misma razón: lo exige el linter del
+ * contrato (`npm run contract:lint`) y de él dependen los controles de tema del
+ * editor. Dejarlo fuera costó una página sin `--radius` ni `:root.dark`.
+ *
+ * Lo demás de DESIGN_GUIDANCE —el orden de las secciones, la barra de diseño,
+ * las precisiones tipográficas, las marcas ficticias— es NUESTRO gusto, y
+ * medido: hacía que siete páginas de siete nichos distintos salieran con el
+ * mismo hero. El modelo diseña mejor sin él.
+ */
+export const PUBLISH_CONTRACT = DESIGN_GUIDANCE.slice(
+  DESIGN_GUIDANCE.indexOf("OUTPUT FORMAT — strict rules"),
+  DESIGN_GUIDANCE.indexOf("TYPOGRAPHY PRECISIONS"),
+).trim();

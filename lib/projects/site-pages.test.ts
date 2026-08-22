@@ -3,11 +3,9 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import {
   buildAutoMembersPage,
-  memberDoorPlan,
   buildPageShell,
   listSitePages,
   MAX_SITE_PAGES,
-  membersGatingEnabled,
   pagesForPublish,
   pageTitle,
   sitePagesFingerprintInput,
@@ -88,54 +86,17 @@ describe("listing + publish helpers", () => {
   });
 });
 
-describe("members gating", () => {
-  const gatedData: ProjectData = {
-    html: "<html>home</html>",
-    settings: { members: { enabled: true } },
-    pages: {
-      menu: { html: "<html>menu</html>" },
-      privada: { html: "<html>secret</html>", membersOnly: true },
-    },
-  };
-
-  it("membersGatingEnabled requires the explicit switch", () => {
-    assert.equal(membersGatingEnabled(gatedData), true);
-    assert.equal(membersGatingEnabled({ html: "x" }), false);
-    assert.equal(membersGatingEnabled(null), false);
-    assert.equal(
-      membersGatingEnabled({ html: "x", settings: { members: {} } }),
-      false,
-    );
-  });
-
-  it("splitPagesForPublish separates gated pages when the module is on", () => {
-    const { publicPages, gatedPages } = splitPagesForPublish(gatedData);
-    assert.deepEqual(publicPages, [{ slug: "menu", html: "<html>menu</html>" }]);
-    assert.deepEqual(gatedPages, [
-      { slug: "privada", html: "<html>secret</html>" },
-    ]);
-  });
-
-  it("flags are inert while the module is off — everything publishes public", () => {
-    const off: ProjectData = {
-      ...gatedData,
-      settings: { members: { enabled: false } },
-    };
-    const { publicPages, gatedPages } = splitPagesForPublish(off);
-    assert.equal(gatedPages.length, 0);
-    assert.equal(publicPages.length, 2);
-    // pagesForPublish keeps returning the full set either way (snapshots).
-    assert.equal(pagesForPublish(gatedData).length, 2);
-  });
-
-  it("listSitePages marks gated pages, only when flagged", () => {
-    assert.deepEqual(listSitePages(gatedData), [
-      { slug: "menu", title: "Menu" },
-      { slug: "privada", title: "Privada", membersOnly: true },
-    ]);
-  });
-
-  it("fingerprint input is byte-identical to the legacy stream when nothing is gated", () => {
+/**
+ * LA COMPATIBILIDAD DE LA HUELLA, que era «load-bearing».
+ *
+ * Aquí vivía el describe de restricción por miembros. El módulo se retiró el
+ * 2026-08-21, y su comentario avisaba de algo que ahora importa MÁS: sin nada
+ * restringido, la huella produce exactamente el flujo legado. Si eso se rompe,
+ * TODO sitio multipágina ya publicado enseña una píldora de deriva fantasma —
+ * un cambio que nadie hizo.
+ */
+describe("huella de páginas", () => {
+  it("es byte a byte el flujo legado", () => {
     const plain: ProjectData = {
       html: "<html>home</html>",
       pages: {
@@ -148,29 +109,36 @@ describe("members gating", () => {
       `menu${NUL}<html>menu</html>${NUL}`,
       `sobre-mi${NUL}<html>about</html>${NUL}`,
     ]);
-    // A membersOnly flag with the module OFF must not move the hash either.
-    const flaggedModuleOff: ProjectData = {
+  });
+
+  // Los proyectos viejos conservan `membersOnly` en su fila: el módulo se
+  // retiró, no se migraron los datos. Ese resto NO puede mover el hash.
+  it("un membersOnly heredado no mueve la huella", () => {
+    const plain: ProjectData = {
+      html: "<html>home</html>",
+      pages: { menu: { html: "<html>menu</html>" } },
+    };
+    const heredado: ProjectData = {
       ...plain,
-      pages: {
-        ...plain.pages,
-        menu: { html: "<html>menu</html>", membersOnly: true },
-      },
+      pages: { menu: { html: "<html>menu</html>", membersOnly: true } },
     };
     assert.deepEqual(
-      sitePagesFingerprintInput(flaggedModuleOff),
+      sitePagesFingerprintInput(heredado),
       sitePagesFingerprintInput(plain),
     );
   });
 
-  it("an effectively gated page appends the marker and changes the stream", () => {
-    const parts = sitePagesFingerprintInput(gatedData);
-    const NUL = String.fromCharCode(0);
-    assert.equal(parts[1], `privada${NUL}<html>secret</html>${NUL}m${NUL}`);
-    const ungated = sitePagesFingerprintInput({
-      ...gatedData,
-      settings: { members: { enabled: false } },
-    });
-    assert.notDeepEqual(parts, ungated);
+  it("todas las páginas publican públicas", () => {
+    const d: ProjectData = {
+      html: "<html>home</html>",
+      pages: {
+        publica: { html: "<html>a</html>" },
+        privada: { html: "<html>b</html>", membersOnly: true },
+      },
+    };
+    const { publicPages, gatedPages } = splitPagesForPublish(d);
+    assert.equal(gatedPages.length, 0);
+    assert.deepEqual(publicPages.map((p) => p.slug).sort(), ["privada", "publica"]);
   });
 });
 
@@ -461,47 +429,3 @@ describe("buildPageShell — adversarial edges", () => {
   });
 });
 
-describe("memberDoorPlan", () => {
-  const data = (members: Record<string, unknown> | undefined): ProjectData =>
-    ({ html: "<html></html>", settings: members ? { members } : {} }) as ProjectData;
-
-  it("module off → no door at all", () => {
-    for (const d of [data(undefined), data({ enabled: false })]) {
-      const plan = memberDoorPlan(d, []);
-      assert.equal(plan.accountArea, false);
-      assert.equal(plan.passwordLogin, false);
-      assert.equal(plan.signinPath, undefined);
-    }
-  });
-
-  it("enabled BARE opens the full door — the Jesús case (2026-07-22)", () => {
-    // Turning the module on via ANY path (agent, chain, old settings) must
-    // publish /cuenta + wire the nav, with no preset flags required.
-    const plan = memberDoorPlan(data({ enabled: true }), []);
-    assert.equal(plan.accountArea, true);
-    assert.equal(plan.passwordLogin, true);
-    assert.equal(plan.signinPath, "cuenta");
-    assert.equal(plan.signinIsAccount, true);
-  });
-
-  it("flags stay explicit opt-outs", () => {
-    const plan = memberDoorPlan(
-      data({ enabled: true, accountArea: false, passwordLogin: false }),
-      [],
-    );
-    assert.equal(plan.accountArea, false);
-    assert.equal(plan.passwordLogin, false);
-    assert.equal(plan.signinPath, undefined);
-  });
-
-  it("accountArea opted out + gated pages → sign-in points at the portal", () => {
-    const plan = memberDoorPlan(data({ enabled: true, accountArea: false }), [
-      "blog",
-      "members",
-    ]);
-    assert.equal(plan.signinPath, "members");
-    assert.equal(plan.signinIsAccount, false);
-    const first = memberDoorPlan(data({ enabled: true, accountArea: false }), ["vip"]);
-    assert.equal(first.signinPath, "vip");
-  });
-});

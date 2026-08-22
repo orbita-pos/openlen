@@ -12,8 +12,24 @@
     "autofill": "Autofill with my info — available after generation",
     "availableAfter": "Available once your project is created",
     "generate": "Generate",
-    "modeQuick": "Quick",
-    "modeScratch": "From scratch"
+    "effortLow": "Standard",
+    "effortMedium": "Advanced",
+    "effortHigh": "Maximum",
+    "effortSoon": "Soon",
+    "reference": {
+      "add": "Take style from a site",
+      "placeholder": "Paste a link to a page you like",
+      "use": "Use",
+      "looking": "Looking…",
+      "remove": "Remove reference",
+      "error": {
+        "blocked": "That link can't be opened.",
+        "unreachable": "Couldn't reach that page.",
+        "not_rendered": "That page didn't show its style.",
+        "rate_limited": "Too many references at once. Try again shortly.",
+        "network": "Something failed while fetching it. Try again."
+      }
+    }
   },
   "brief": {
     "label": "Brief",

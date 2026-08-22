@@ -1,4 +1,4 @@
-// Codemod: migrate the existing template + section library to the canonical
+// Codemod: migrate the existing template library to the canonical
 // OpenLen contract TOKEN VOCABULARY (docs/openlen-contract.md).
 //
 // This is a pure NAME RENAME (e.g. --ink→--fg, --hair→--border, --bg-2→--surface)
@@ -9,7 +9,6 @@
 // linter still flags those as a separate follow-up.
 //
 //   npm run contract:migrate -- --dry-run             # report only (DEFAULT-SAFE)
-//   npm run contract:migrate -- --dry-run --sections  # one kind
 //   npm run contract:migrate -- --dry-run --limit=5   # first N per kind
 //   npm run contract:migrate -- --apply               # RE-UPLOADS to R2 + DB
 //
@@ -22,11 +21,6 @@ import {
   getTemplateHtml,
   upsertTemplate,
 } from "../lib/templates/store";
-import {
-  listAllSectionsForAdmin,
-  getSectionHtml,
-  upsertSection,
-} from "../lib/sections/store";
 import { lintContract, type ContractKind } from "../lib/contract/lint";
 
 // old dialect token → canonical. Longest/most-specific keys first.
@@ -82,9 +76,7 @@ async function main() {
   const apply = args.includes("--apply");
   const dry = !apply; // dry-run is the default; only --apply mutates
   const onlyTemplates = args.includes("--templates");
-  const onlySections = args.includes("--sections");
-  const doTemplates = !onlySections;
-  const doSections = !onlyTemplates;
+  const doTemplates = true;
   const limit = parseLimit(args);
 
   console.log(
@@ -125,47 +117,6 @@ async function main() {
             description: rec.description,
             mode: rec.mode,
             html: next,
-            status: rec.status,
-          });
-        } catch (err) {
-          failed.push({ id: rec.id, reason: err instanceof Error ? err.message : String(err) });
-        }
-      }
-    }
-  }
-
-  if (doSections) {
-    const recs = (await listAllSectionsForAdmin()).slice(0, limit);
-    console.log(`\nSections (${recs.length}):`);
-    for (const rec of recs) {
-      const html = await getSectionHtml(rec.id);
-      if (html === null) {
-        failed.push({ id: rec.id, reason: "no stored HTML (storage unreachable?)" });
-        continue;
-      }
-      const { next, renames } = renameTokens(html);
-      if (renames === 0) {
-        unchanged++;
-        continue;
-      }
-      console.log(
-        `  ${dry ? "would " : "migrate"} ${rec.id.padEnd(18)} ${String(renames).padStart(4)} renames → lint ${lintTally(next, "section")}`,
-      );
-      changed++;
-      if (apply) {
-        try {
-          await upsertSection({
-            id: rec.id,
-            type: rec.type,
-            name: rec.name,
-            variantLabel: rec.variantLabel,
-            rootTag: rec.rootTag,
-            mode: rec.mode,
-            html: next,
-            designTokens: rec.designTokens ?? undefined,
-            fonts: rec.fonts ?? undefined,
-            needsJs: rec.needsJs,
-            hasPlaceholders: rec.hasPlaceholders,
             status: rec.status,
           });
         } catch (err) {

@@ -106,13 +106,13 @@ export function pagesForPublish(
 /** Cloudflare edge paths for every published subpage (NOT home — the caller's
  *  purge already covers `/` and `/index.html`). CF caches `/pricing` and
  *  `/pricing/` as distinct keys, so both are returned. Covers public AND gated
- *  slugs — gated stubs sit at the same public paths. Used by publish, unpublish,
+ *  slugs. Used by publish, unpublish,
  *  rollback and rename so a subpage is never left stale at the edge. */
 export function pageEdgePaths(data: ProjectData | null | undefined): string[] {
-  // The member-door paths purge UNCONDITIONALLY — the door may have existed in
-  // the PREVIOUS release (owner opting out / unpublishing is exactly when a
-  // cached login card must not outlive the site). Purging absent paths is a
-  // no-op at the edge.
+  // Las rutas de la puerta de miembro se purgan SIEMPRE, y esto sobrevive a la
+  // retirada del módulo (2026-08-21) precisamente por su motivo original: la
+  // puerta pudo existir en un release ANTERIOR, y una tarjeta de acceso cacheada
+  // no puede sobrevivir al sitio. Purgar rutas ausentes no cuesta nada.
   const door = ["cuenta", "login", "register"].flatMap((s) => [`/${s}`, `/${s}/`]);
   return [
     ...pagesForPublish(data).flatMap((pg) => [`/${pg.slug}`, `/${pg.slug}/`]),
@@ -120,13 +120,6 @@ export function pageEdgePaths(data: ProjectData | null | undefined): string[] {
   ];
 }
 
-/** Whether members gating is live for this project — the per-page flags only
- *  take effect while the module's master switch is on. */
-export function membersGatingEnabled(
-  data: ProjectData | null | undefined,
-): boolean {
-  return data?.settings?.members?.enabled === true;
-}
 
 /** pagesForPublish, split into the docs that go to the public release vs the
  *  ones that publish as a login stub + protected document. With the module
@@ -135,52 +128,17 @@ export function splitPagesForPublish(data: ProjectData | null | undefined): {
   publicPages: Array<{ slug: string; html: string }>;
   gatedPages: Array<{ slug: string; html: string }>;
 } {
-  const gatingOn = membersGatingEnabled(data);
   const publicPages: Array<{ slug: string; html: string }> = [];
   const gatedPages: Array<{ slug: string; html: string }> = [];
   for (const pg of pagesForPublish(data)) {
-    const gated = gatingOn && data?.pages?.[pg.slug]?.membersOnly === true;
+    // Sin módulo Miembros (retirado 2026-08-21) no hay páginas restringidas.
+    // La función sobrevive porque `lib/integrations` la usa para `publicPages`.
+    const gated = false;
     (gated ? gatedPages : publicPages).push(pg);
   }
   return { publicPages, gatedPages };
 }
 
-/** The member "door" a publish must materialize — where visitors log in,
- *  register and manage their account. Jesús's rule (2026-07-22): turning the
- *  Members module ON means the door EXISTS — /cuenta publishes (register/login
- *  tabs + account dashboard) and the nav gains its entry — without requiring
- *  the «Cuentas» preset flags. The flags stay as explicit OPT-OUTS
- *  (`false` disables), so the defaults here are `!== false`, not `=== true`;
- *  sites that enabled the module bare (like his Kiri test) get the full door
- *  with no settings migration. */
-export interface MemberDoorPlan {
-  /** Publish /cuenta (account card) + /login + /register aliases. */
-  accountArea: boolean;
-  /** Password tabs on the card; the /api/m password endpoints mirror this
-   *  same default server-side (app/api/m/[sub]/_shared.ts). */
-  passwordLogin: boolean;
-  /** Public sign-in entry: slug every public doc links to. undefined → none. */
-  signinPath?: string;
-  /** The entry reads as "Mi cuenta" (account home) instead of "Sign in". */
-  signinIsAccount: boolean;
-}
-
-export function memberDoorPlan(
-  data: ProjectData | null | undefined,
-  gatedSlugs: string[] = [],
-): MemberDoorPlan {
-  const members = data?.settings?.members;
-  const enabled = members?.enabled === true;
-  const accountArea = enabled && members?.accountArea !== false;
-  const passwordLogin = enabled && members?.passwordLogin !== false;
-  const signinPath = accountArea
-    ? "cuenta"
-    : gatedSlugs.length > 0
-      ? (gatedSlugs.find((s) => s === "miembros" || s === "members") ??
-        gatedSlugs[0])
-      : undefined;
-  return { accountArea, passwordLogin, signinPath, signinIsAccount: accountArea };
-}
 
 /** Per-page strings hashSitePages digests. BACKWARD-COMPAT IS LOAD-BEARING:
  *  with nothing gated this concatenates to exactly the legacy
@@ -192,11 +150,11 @@ export function memberDoorPlan(
 export function sitePagesFingerprintInput(
   data: ProjectData | null | undefined,
 ): string[] {
-  const gatingOn = membersGatingEnabled(data);
-  return pagesForPublish(data).map((pg) => {
-    const gated = gatingOn && data?.pages?.[pg.slug]?.membersOnly === true;
-    return `${pg.slug}\u0000${pg.html}\u0000${gated ? "m\u0000" : ""}`;
-  });
+  // Sin páginas restringidas (Miembros se retiró el 2026-08-21), esto produce
+  // EXACTAMENTE el flujo legado "slug\u0000html\u0000" — que es justo lo que
+  // la compatibilidad de arriba existía para conservar. Los publishedPagesHash
+  // anteriores siguen valiendo y nadie ve una píldora de deriva fantasma.
+  return pagesForPublish(data).map((pg) => `${pg.slug}\u0000${pg.html}\u0000`);
 }
 
 function escapeHtml(s: string): string {

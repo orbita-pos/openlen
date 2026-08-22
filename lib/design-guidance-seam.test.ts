@@ -58,5 +58,78 @@ describe("Arreglo 3 — el guardia de la costura design-guidance vs design-guida
     it("contiene la sección CONDUCTAS (no solo marcadores sueltos)", () => {
       expect(getPrompt()).toContain("CONDUCTAS");
     });
+
+
+  });
+});
+
+// Ninguna superficie manda gusto nuestro. Volvió por tres puertas en un día:
+// el esqueleto de secciones dentro de DESIGN_GUIDANCE, la captura de una
+// plantilla curada adjunta al brief, y un segundo mensaje `<reference>` que se
+// presentaba al modelo como "the design taste catalog" — ése pasaba por debajo
+// de una guarda que sólo miraba el system prompt.
+//
+// Lo que sí viaja es contrato: OpenLen borra todo el JavaScript (de ahí
+// CONDUCTAS) y el linter del contrato exige el vocabulario de tokens, del que
+// dependen los controles de tema del editor.
+describe("ninguna superficie manda gusto nuestro", () => {
+  const PROMPTS: Array<[string, () => string]> = [
+    ["crear", () => GENERATE_SYSTEM_PROMPT],
+    ["editar", () => AI_DESIGN_SYSTEM_PROMPT],
+    ["Agente", () => buildAgentSystemPrompt()],
+  ];
+
+  it.each(PROMPTS)("%s lleva el contrato de publicación", (_name, getPrompt) => {
+    const prompt = getPrompt();
+    expect(prompt).toContain("CONDUCTAS");
+    expect(prompt).toContain("DESIGN CONTRACT — token vocabulary");
+  });
+
+  const GUSTO = [
+    ["el orden de las secciones", "SECTION SKELETON"],
+    ["la barra de diseño", "DESIGN BAR"],
+    ["las marcas ficticias", "FICTIONAL BRANDS"],
+    ["las precisiones tipográficas", "TYPOGRAPHY PRECISIONS"],
+    ["los fragmentos copiados de Mirror", "reference-snippet"],
+    ["las recetas de CSS", "CSS RECIPES"],
+    ["la presión a comprimir la salida", "OUTPUT EFFICIENCY"],
+    ["el ojo de otras cuatro empresas", "Linear"],
+  ] as const;
+
+  for (const [surface, getPrompt] of PROMPTS) {
+    it.each(GUSTO)(`${surface} no lleva %s`, (_name, marker) => {
+      expect(getPrompt()).not.toContain(marker);
+    });
+  }
+
+  // Las fuentes son gusto, no contrato. NADA en la tubería exige una lista:
+  // normalize_font iza la familia que venga (su <link> de 12 es precarga, no
+  // lista blanca), el saneador no toca <link>, y la CSS de publicación deja
+  // `style-src` sin fijar. Aun así las tres superficies decían "Allowed
+  // families:" con seis — y por eso una página de terror no podía tener
+  // tipografía de terror.
+  it.each(PROMPTS)("%s no cierra la lista de tipografías", (_name, getPrompt) => {
+    expect(getPrompt()).not.toMatch(/Allowed families/i);
+  });
+
+  // El catálogo de gusto no viajaba por el system prompt sino por un mensaje
+  // aparte, así que la guarda tiene que mirar el código, no sólo el prompt.
+  it("nadie importa el catálogo de gusto", async () => {
+    const { readdirSync, readFileSync, statSync } = await import("node:fs");
+    const { join } = await import("node:path");
+    const offenders: string[] = [];
+    const walk = (dir: string) => {
+      for (const entry of readdirSync(dir)) {
+        if (entry === "node_modules" || entry === ".next") continue;
+        const full = join(dir, entry);
+        if (statSync(full).isDirectory()) { walk(full); continue; }
+        if (!/\.tsx?$/.test(entry) || /\.test\.tsx?$/.test(entry)) continue;
+        if (full.endsWith(join("lib", "design-guidance.ts"))) continue;
+        if (readFileSync(full, "utf8").includes("DESIGN_REFERENCE")) offenders.push(full);
+      }
+    };
+    walk(join(process.cwd(), "app"));
+    walk(join(process.cwd(), "lib"));
+    expect(offenders, offenders.join(", ")).toEqual([]);
   });
 });

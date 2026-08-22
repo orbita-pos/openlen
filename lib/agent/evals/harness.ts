@@ -14,7 +14,8 @@
 
 import { eq } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
-import { GatewayError, GeminiProvider } from "@/lib/ai-gateway";
+import { GatewayError } from "@/lib/ai-gateway";
+import { createAgentBrain } from "@/lib/agent/brain";
 import { resolveAIProvider } from "@/lib/ai-provider";
 import { tagWithOpIds } from "@/lib/html-ops";
 import { buildFunctionDeclarations } from "@/lib/agent/catalog";
@@ -104,6 +105,9 @@ export interface EvalRunResult {
   inputTokens: number;
   cachedTokens: number;
   outputTokens: number;
+  /** Qué modelo llevó el turno. Lo reporta el cerebro, no una constante del
+   *  runner: con el identificador equivocado el tope de gasto miente. */
+  modelId: string;
   seconds: number;
   /** Presente solo en modo visual Y cuando el caso mutó el documento. */
   visual?: EvalVisualResult;
@@ -195,16 +199,15 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
  *  attempt (a 503 almost always hits at stream-open, before any mutation, so a
  *  rebuild-from-fresh retry is safe). Retries bounded + exponential backoff. */
 async function runLoopWithRetry(
-  provider: GeminiProvider,
-  model: string,
   opts: RunEvalOptions,
   projectId: string,
   prompt: string,
   verifyTurn?: AgentLoopArgs["verifyTurn"],
-): Promise<{ events: AgentStreamEvent[]; result: Awaited<ReturnType<typeof runAgentLoop>> }> {
+): Promise<{ events: AgentStreamEvent[]; result: Awaited<ReturnType<typeof runAgentLoop>>; modelId: string }> {
   const deps = realDeps();
   const tools = buildFunctionDeclarations();
   let lastErr: unknown;
+  let modelId = "";
 
   for (let attempt = 1; attempt <= RETRY_ATTEMPTS; attempt++) {
     const abort = new AbortController();
@@ -242,14 +245,17 @@ async function runLoopWithRetry(
         photoSearchesThisTurn: 0,
       };
 
+      // El MISMO cerebro que la ruta. Aquí vivía una copia de su elección de
+      // proveedor, y cuando el Agente pasó a DeepSeek la copia se quedó midiendo
+      // Gemini sin que nada fallara: la batería habría certificado un modelo que
+      // el producto ya no usa.
+      const brain = createAgentBrain({ tools, requestId: projectId, signal: abort.signal });
+      modelId = brain.modelId;
       const result = await runAgentLoop({
         messages: built.messages,
         tools,
-        openStream: (msgs) =>
-          provider.stream(
-            { model, messages: msgs, tools, toolMode: "auto", maxOutputTokens: 16_384, temperature: 0.7 },
-            { signal: abort.signal },
-          ),
+        openStream: (msgs) => brain.openStream(msgs),
+        closeOut: (msgs) => brain.closeOut(msgs),
         runTool: (name, args) => runAgentTool(session, deps, name, args),
         // P3 visual: los ojos encendidos, paridad con producción — el
         // auto-arreglo in-loop cuenta como parte del comportamiento medido.
@@ -272,7 +278,7 @@ async function runLoopWithRetry(
         );
         continue;
       }
-      return { events, result };
+      return { events, result, modelId };
     } catch (err) {
       lastErr = err;
       if (isDepleted(err)) {
@@ -299,18 +305,16 @@ async function runLoopWithRetry(
 /** Run one eval case end-to-end and return its verdict. Always cleans up the
  *  throwaway row (finally), even on assert failure or a thrown loop error. */
 export async function runEvalCase(evalCase: EvalCase, opts: RunEvalOptions): Promise<EvalRunResult> {
-  const provider = new GeminiProvider(opts.apiKey);
-  // EVAL_AGENT_MODEL: override SOLO del harness (producción no lo lee) — para
-  // correr la batería cuando el modelo de producción está caído (2026-07-28:
-  // 3.5-flash pasó el día en 503 sostenido y tumbó 8/10 casos de la muestra).
-  // Una corrida con override NO es línea base de paridad: anótalo al reportar.
-  // ⚠ gemini-2.5-flash NO sirve como override del loop: con el system prompt
-  // del agente (~14k tokens) + las 16 tool declarations devuelve turnos
-  // VACÍOS (end_turn, 0 output, 0 calls) — aislado determinísticamente el
-  // 2026-07-28 (scratch/probe-25-matrix.mjs): tools+system-corto funciona,
-  // system-grande-sin-tools funciona, la combinación enmudece al modelo.
-  const model = process.env.EVAL_AGENT_MODEL?.trim() || resolveAIProvider("gemini-flash").model;
-
+  // Ya no hay `EVAL_AGENT_MODEL`: quién razona lo decide `lib/agent/brain`, el
+  // mismo sitio del que tira la ruta, y un override sólo del harness volvería a
+  // abrir la puerta a certificar un modelo que producción no corre. La salida de
+  // emergencia sigue existiendo, pero es la MISMA que en producción:
+  // `OPENLEN_AGENT_PROVIDER=gemini`.
+  //
+  // Sigue valiendo el hallazgo del 2026-07-28: gemini-2.5-flash NO sirve para el
+  // loop — con el system prompt del agente (~14k tokens) mas las 16 tool
+  // declarations devuelve turnos VACÍOS (end_turn, 0 output, 0 calls), aislado
+  // determinísticamente en scratch/probe-25-matrix.mjs.
   let data: ProjectData = { html: FIXTURE_HTML };
   if (evalCase.setup) data = evalCase.setup(data);
 
@@ -346,7 +350,7 @@ export async function runEvalCase(evalCase: EvalCase, opts: RunEvalOptions): Pro
     : undefined;
 
   try {
-    const { events, result } = await runLoopWithRetry(provider, model, opts, projectId, evalCase.prompt, verifyTurn);
+    const { events, result, modelId } = await runLoopWithRetry(opts, projectId, evalCase.prompt, verifyTurn);
 
     // Re-read the FULL row: the case assert only sees ProjectData, so the
     // publishedAt + userBrief COLUMN invariants are enforced here.
@@ -416,6 +420,7 @@ export async function runEvalCase(evalCase: EvalCase, opts: RunEvalOptions): Pro
       inputTokens: result.usage.inputTokens,
       cachedTokens: result.usage.cachedTokens,
       outputTokens: result.usage.outputTokens,
+      modelId,
       seconds: (Date.now() - started) / 1000,
       ...(visual ? { visual } : {}),
     };
@@ -427,6 +432,7 @@ export async function runEvalCase(evalCase: EvalCase, opts: RunEvalOptions): Pro
       inputTokens: 0,
       cachedTokens: 0,
       outputTokens: 0,
+      modelId: "",
       seconds: (Date.now() - started) / 1000,
     };
   } finally {

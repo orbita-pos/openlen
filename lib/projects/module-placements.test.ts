@@ -6,7 +6,7 @@ import { modulePlacements, pageHasModule } from "./module-placements";
 
 const HOME = `<html><body><div data-ol-collection-section></div></body></html>`;
 const PAGE_BK = `<html><body><div data-ol-bookings-section></div></body></html>`;
-const PAGE_BOTH = `<html><body><div data-ol-collection-section></div><div data-ol-comments-section></div></body></html>`;
+const PAGE_BOTH = `<html><body><div data-ol-collection-section></div></body></html>`;
 const PAGE_PLAT = `<html><body><section><div data-ol-platforms-section></div></section></body></html>`;
 
 describe("modulePlacements", () => {
@@ -17,20 +17,18 @@ describe("modulePlacements", () => {
     });
     assert.deepEqual(out.collections, ["", "zeta"]);
     assert.deepEqual(out.bookings, ["alfa"]);
-    assert.deepEqual(out.comments, ["zeta"]);
   });
   it("empty everywhere → empty lists; null-safe", () => {
     assert.deepEqual(modulePlacements({ html: "<html></html>" }), {
-      collections: [], bookings: [], comments: [], platforms: [],
+      collections: [], bookings: [], platforms: [],
     });
     assert.deepEqual(modulePlacements(null), {
-      collections: [], bookings: [], comments: [], platforms: [],
+      collections: [], bookings: [], platforms: [],
     });
   });
   it("pageHasModule checks one document", () => {
     assert.equal(pageHasModule(HOME, "collections"), true);
     assert.equal(pageHasModule(HOME, "bookings"), false);
-    assert.equal(pageHasModule(null, "comments"), false);
   });
   it("platforms: the band's marker is tracked like every other module", () => {
     const out = modulePlacements({ html: PAGE_PLAT, pages: { beta: { html: HOME } } });

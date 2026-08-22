@@ -51,15 +51,33 @@ export default defineConfig({
       "lib/workspace-v2/**/*.test.ts",
       "lib/sections/**/*.test.ts",
       "lib/analytics/**/*.test.ts",
-      "lib/assemble/**/*.test.ts",
       "lib/behaviors/**/*.test.ts",
       // Arreglo 3 seam guard — imports app/api/**/system-prompt.ts (plain
       // modules, no native/DB/auth) + lib/agent/catalog.ts (already vitest-
       // safe, see the NB below). Lives at lib/ root, not under
       // lib/behaviors/, so it needs its own entry.
       "lib/design-guidance-seam.test.ts",
-      "lib/curate/**/*.test.ts",
+      // Counter arithmetic of sanitizeForPublish. Lives at lib/ root beside the
+      // module it covers; the older lib/html-engine.test.ts is node:test and
+      // stays out of this runner.
+      "lib/html-engine.sanitize-counters.test.ts",
+      "lib/contract/**/*.test.ts",
+      "lib/document/**/*.test.ts",
+      "lib/evals/**/*.test.ts",
+      "lib/expr/**/*.test.ts",
+      "lib/page-engine/**/*.test.ts",
       "lib/generation/**/*.test.ts",
+      "lib/html-gate/**/*.test.ts",
+      "lib/ingestion/**/*.test.ts",
+      // El rellenador escribia copia dentro de elementos aria-hidden.
+      "lib/style-match/autofill/decorative-ops.test.ts",
+      // La defensa SSRF del scraping. Vivía sin pruebas Y fuera de este include:
+      // un test que no corre no protege nada.
+      "lib/style-match/scrape/**/*.test.ts",
+      "lib/style-match/extract/**/*.test.ts",
+      "lib/style-match/direction.test.ts",
+      "lib/style-match/character.test.ts",
+      "lib/style-match/reference.test.ts",
       "lib/templates/visual-metadata.test.ts",
       "lib/templates/store-visual-metadata.test.ts",
       "lib/templates/suggest-visual-metadata.test.ts",
@@ -72,15 +90,26 @@ export default defineConfig({
       // lib/ai mixes runners — vision-critique.test.ts is node:test (in
       // test:node), so list the vitest ai tests individually.
       "lib/ai/image-edit-core.test.ts",
+      "lib/ai/fireworks-client.test.ts",
+      "lib/ai/fireworks-tool-client.test.ts",
+      "lib/ai/fireworks-stream-client.test.ts",
+      "lib/ai/sse.test.ts",
+      "lib/ai/extract-document.test.ts",
+      "lib/ai/authoring-rules.test.ts",
+      "lib/ai/provider-switch.test.ts",
+      "lib/ai/qwen-visual-critic.test.ts",
+      "lib/ai/today-line.test.ts",
+      "lib/ai/js-clause.test.ts",
       "lib/ai/visual-quality-renderer.test.ts",
-      "lib/ai/visual-quality-critic.test.ts",
       "lib/business-profiles/**/*.test.ts",
       "lib/billing/**/*.test.ts",
       "lib/auth/**/*.test.ts",
       // NB: lib/agent mixes runners — tools.test.ts exercises the native
       // html-engine binding and runs under node:test (`tsx --test`), so list
       // the vitest agent tests individually (same reason as lib/projects).
+      "lib/agent/brain.test.ts",
       "lib/agent/catalog.test.ts",
+      "lib/agent/fireworks-bridge.test.ts",
       "lib/agent/loop.test.ts",
       "lib/agent/retry.test.ts",
       "lib/agent/context.test.ts",
@@ -98,12 +127,11 @@ export default defineConfig({
       "lib/tematicas/**/*.test.ts",
       "lib/site-assistant/**/*.test.ts",
       "lib/publish/assistant-widget.test.ts",
-      "lib/publish/comments-widget.test.ts",
-      "lib/publish/bookings-widget.test.ts",
       "lib/publish/collections-block.test.ts",
+      "lib/publish/collection-template.test.ts",
+      "lib/publish/form-identity.test.ts",
       "lib/publish/llms-txt.test.ts",
       "lib/publish/video-embed.test.ts",
-      "lib/publish/signin-link.test.ts",
       "lib/publish/module-sections.test.ts",
       // DB-integration test (real Postgres via .env.local, same pattern as
       // lib/chat/identity-bridge.test.ts) — preview-bake.test.ts itself stays
@@ -112,6 +140,8 @@ export default defineConfig({
       "lib/publish/whatsapp-button.test.ts",
       "lib/publish/module-markup-tailwind.test.ts",
       "lib/publish/embed-sandbox.test.ts",
+      "lib/publish/model-runtime-e2e.test.ts",
+      "lib/publish/request-origin.test.ts",
       "lib/publish/kill-switches.test.ts",
       "lib/publish/tw-config.test.ts",
       "lib/publish/design-stash-strip.test.ts",
@@ -122,13 +152,7 @@ export default defineConfig({
       // agreguen bajo lib/live/ correrían silenciosamente en ningún lado.
       "lib/live/**/*.test.ts",
       "lib/publish/chat-widget.test.ts",
-      "lib/publish/orders-price.test.ts",
-      "lib/publish/orders-cart.test.ts",
-      "lib/members/**/*.test.ts",
       "lib/chat/**/*.test.ts",
-      "lib/broadcast/**/*.test.ts",
-      "lib/comments/**/*.test.ts",
-      "lib/bookings/**/*.test.ts",
       "lib/collections/**/*.test.ts",
       "lib/models/**/*.test.ts",
       "lib/community/**/*.test.ts",
@@ -146,15 +170,36 @@ export default defineConfig({
       // native html-engine binding via lib/projects.ts.
       "app/api/internal/live-republish/route.test.ts",
       "app/api/internal/republish/route.test.ts",
+      // Fail-closed pin for one of the three edit surfaces on the html gate.
+      // Unlike the routes above it does NOT mock @/lib/html-engine — the real
+      // sanitize/normalize load fine here, and mocking them would mock away
+      // the pipeline order the test exists to hold still.
+      "app/api/projects/[id]/apply-template/route.test.ts",
+      // Same, for the Chat surface. Mocks only the model, DB, auth and
+      // credits — the sanitize/normalize/behaviour passes are the real ones.
+      "app/api/templates/ai-design/route.test.ts",
+      // Task 5 — the fill surface that had no gate at all. Mocks fillTemplate
+      // so the test drives the route's gate, not the filler's own sanitizer.
+      "app/api/templates/autofill/route.test.ts",
+      // Task 4 — the two fail-open ingestion surfaces.
+      "app/api/projects/from-html/route.test.ts",
+      "app/api/projects/from-template/route.test.ts",
+      // Task 4 step 3 — the AI creation surface. Ran four mutations after its
+      // last sanitize and validated behaviours after the row was written.
+      "app/api/generate/route.test.ts",
+      "app/api/generate/system-prompt.test.ts",
+      "lib/ai-stream/model-runtime.test.ts",
       // NB: lib/projects/site-pages.test.ts is a node:test file (run via
       // `tsx --test`), so include the vitest project tests explicitly.
-      "lib/projects/module-settings.test.ts",
+      "lib/projects/model-runtime.test.ts",
+      "lib/projects/runtime-staleness.test.ts",
       "lib/projects/module-intent.test.ts",
       "lib/projects/page-edge-paths.test.ts",
       "lib/projects/preview.test.ts",
       "lib/projects/settings-patch.test.ts",
       "lib/projects/create-page.test.ts",
       "lib/projects/drift-pill.test.ts",
+      "lib/projects/dismiss-degradations.test.ts",
       "lib/notifications/**/*.test.ts",
       "lib/publish/scene-host.test.ts",
       "lib/publish/procedural-3d.test.ts",
@@ -166,7 +211,7 @@ export default defineConfig({
       // node:test file (run via `tsx --test`, part of test:node) — would
       // otherwise get swept up by the lib/tematicas/**/*.test.ts wildcard
       // above and fail with "No test suite found" under vitest.
-      "lib/tematicas/apply-server.test.ts",
+      "lib/tematicas/apply-server.test.ts", "lib/generation/fable-parity-review-session.test.ts",
     ],
   },
 });

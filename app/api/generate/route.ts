@@ -1,24 +1,26 @@
 import { auth } from "@/auth";
 import { createProject } from "@/lib/projects";
-import { applyModuleIntent } from "@/lib/projects/module-intent";
 import { resolveProfileForCreation } from "@/lib/business-profiles/store";
-import { seedBrandIntoHtml, profileMeta } from "@/lib/business-profiles/seed-html";
 import type { BusinessProfile, BusinessProfileData } from "@/lib/business-profiles/types";
 import { createVersion } from "@/lib/projects/versions";
 import { getCreditState } from "@/lib/credits";
-import { DESIGN_REFERENCE } from "@/lib/design-guidance";
-import { SYSTEM_PROMPT } from "./system-prompt";
+import { systemPromptFor } from "./system-prompt";
+import { modelRuntimePromptBlock } from "@/lib/ai-stream/model-runtime";
 import { detectSlotPath } from "@/lib/html-engine";
-import { ensurePageMeta } from "@/lib/publish/ensure-page-meta";
-import { validateBehaviors } from "@/lib/behaviors/validate";
+import { collectDegradations } from "@/lib/ingestion/degradations";
+import { directionToBriefBlock, type StyleDirection } from "@/lib/style-match/direction";
+import { disableCalcRegions } from "@/lib/expr/repair";
 import { resolveAIProvider, type AIModel } from "@/lib/ai-provider";
-import { generateHtmlStream } from "@/lib/ai-stream/generate";
-import { selectReferenceTemplate } from "@/lib/templates/select-reference";
-import { fetchImageAsInlineData } from "@/lib/ai/inline-image";
+import { generateHtmlStream, pageWriterUsesDeepSeek } from "@/lib/ai-stream/generate";
 import { critiqueGeneratedPage } from "@/lib/ai/vision-critique";
-import { photographHtml } from "@/lib/imagery/photograph";
 import { recordCriticRun, recordRegenOutcome } from "@/lib/ai/quality-metrics";
 import type { InlineImage, Message } from "@/lib/ai-gateway";
+import { preparePage } from "@/lib/page-engine/prepare";
+import { buildBusinessFacts } from "@/lib/business-profiles/facts";
+import { jsonResponse, sseChannel } from "@/lib/ai/sse";
+import { extractDocument } from "@/lib/ai/extract-document";
+import { LANGUAGE_RULE } from "@/lib/ai/authoring-rules";
+import { todayLine } from "@/lib/ai/today-line";
 import {
   PLAN_LIMITS,
   checkAndConsume,
@@ -50,17 +52,52 @@ export const dynamic = "force-dynamic";
 //   byte.
 // ─────────────────────────────────────────────────────────────────────────────
 
-const ENCODER = new TextEncoder();
 
-// CSS recipes, micro-snippets, and brand catalogs ship as a separate
-// user-tagged reference block. Gemini 3.x treats long system prompts as
-// constraints — pushing taste material into a `<reference>`-tagged user
-// turn keeps the model from over-anchoring on phrasing.
-const REFERENCE_MESSAGE = `<reference>
-The following library is the design taste catalog. Use it as material to draw from when filling in the variant brief — match the register, don't quote verbatim.
 
-${DESIGN_REFERENCE}
-</reference>`;
+// Sin catálogo de gusto. Aquí viajaba un segundo mensaje `<reference>` con las
+// recetas de CSS, cinco fragmentos de HTML de la plantilla Mirror y los
+// catálogos de marcas, presentado al modelo como "the design taste catalog".
+// El system prompt ya no lo llevaba, pero esto sí — y por eso una guarda que
+// sólo miraba el system prompt pasaba en verde.
+
+/** La dirección visual que el cliente adjunta, validada campo a campo.
+ *
+ *  Nada de confiar en la forma: esto acaba dentro del prompt, y un objeto con
+ *  un `character` de 50.000 caracteres o una paleta de mil entradas sería una
+ *  forma barata de inflar cada generación. `directionToBriefBlock` recorta al
+ *  final, pero recortar es la última red, no la primera. */
+function parseStyleDirection(body: unknown): StyleDirection | null {
+  const raw = (body as { styleDirection?: unknown })?.styleDirection;
+  if (!raw || typeof raw !== "object") return null;
+  const d = raw as Record<string, unknown>;
+  const palette = Array.isArray(d.palette)
+    ? d.palette
+        .filter(
+          (p): p is { role: string; hex: string } =>
+            !!p && typeof p === "object" &&
+            typeof (p as { hex?: unknown }).hex === "string" &&
+            /^#[0-9a-f]{6}$/i.test((p as { hex: string }).hex) &&
+            typeof (p as { role?: unknown }).role === "string",
+        )
+        .slice(0, 6)
+        .map((p) => ({ role: p.role.slice(0, 24), hex: p.hex }))
+    : [];
+  if (palette.length === 0) return null;
+  const radius = ["sharp", "soft", "rounded", "pill"].includes(String(d.radius))
+    ? (d.radius as StyleDirection["radius"])
+    : "soft";
+  const character = typeof d.character === "string" && d.character.trim().length >= 10
+    ? d.character.trim().slice(0, 320)
+    : undefined;
+  return {
+    hostname: "",
+    palette,
+    polarity: d.polarity === "dark" ? "dark" : "light",
+    fontFamily: typeof d.fontFamily === "string" ? d.fontFamily.slice(0, 60) : "sans-serif",
+    radius,
+    ...(character ? { character } : {}),
+  };
+}
 
 export async function POST(req: Request): Promise<Response> {
   let body: unknown;
@@ -104,20 +141,18 @@ export async function POST(req: Request): Promise<Response> {
 
   const plan = await getUserPlan(userId);
 
-  // Bespoke from-scratch generation is a PRO feature. Free users get the
-  // curation path (/api/curate — pick a curated template + fill copy). The
-  // client only routes here when "From scratch" is selected, so a free user
-  // hitting this gets a graceful upsell instead of a silent no-op.
-  if (plan !== "pro") {
-    return json(
-      {
-        error: "pro_only",
-        message:
-          "From-scratch generation is a Pro feature. Upgrade to Pro, or use the Quick (curated) flow.",
-      },
-      403,
-    );
-  }
+  // Aquí vivía una puerta PRO. Rechazaba a todo usuario free y lo mandaba al
+  // "Quick (curated) flow" — que era /api/curate, la ruta de composición por
+  // secciones, borrada con el catálogo entero. El mensaje señalaba a un sitio
+  // que ya no existe: un usuario nuevo se encontraba un muro y ninguna salida.
+  //
+  // Y el presupuesto para dejarlo pasar ya estaba puesto y medido: el plan free
+  // trae 20 créditos al mes (lib/credits.ts) y 5 generaciones por hora
+  // (PLAN_LIMITS.free). Con el costo real —0.16 MXN por página, medido sobre
+  // las doce del cohorte de evals— eso no es una fuga, es lo que se presupuestó.
+  //
+  // Lo que separa free de pro se queda donde ya estaba: el tope por hora y los
+  // créditos, no la puerta.
 
   // Quota check — hourly + monthly windows defined in lib/limits.ts.
   const decision = await checkAndConsume(
@@ -172,37 +207,33 @@ export async function POST(req: Request): Promise<Response> {
     console.warn("[generate] profile resolve failed — generating unseeded", err);
   }
 
-  // Quality S2 — pick a curated template screenshot as a multimodal quality
-  // reference and attach it (base64 inlineData) to the brief turn, which is
-  // the last user message the gateway anchors images on. Best-effort: a
-  // selector miss or fetch failure falls back cleanly to text-only.
-  let referenceImages: InlineImage[] | undefined;
-  let briefBlock = `BRIEF:\n${brief}`;
-  try {
-    const ref = await selectReferenceTemplate(brief);
-    if (ref) {
-      const img = await fetchImageAsInlineData(ref.screenshotUrl);
-      if (img) {
-        referenceImages = [img];
-        briefBlock = `<reference family="${ref.family}" id="${ref.id}">
-The attached image is a high-quality landing page from our curated set. Match its visual quality, density, spacing discipline, and aesthetic polish. Adapt the layout to fit the brief — do NOT copy sections verbatim.
-</reference>
-
-BRIEF:
+  // Sin referencia adjunta, a propósito. Aquí se elegía una plantilla curada,
+  // se le mandaba la captura y se le decía "iguala su calidad, densidad,
+  // disciplina de espaciado y pulido" — nuestra página otra vez, por otra
+  // puerta. Y tenía un efecto que nadie veía: una imagen adjunta fija el turno
+  // a Gemini, porque el papel que razona en Fireworks no tiene ojos. Medido en
+  // un e2e: `reference template: daybreak` seguido de `calling Gemini 3.5
+  // Flash`. Quitarla es lo que deja escribir a DeepSeek.
+  let briefBlock = `BRIEF:
 ${brief}`;
-        // eslint-disable-next-line no-console
-        console.log(`[generate] reference template: ${ref.id} (family=${ref.family})`);
-      } else {
-        // eslint-disable-next-line no-console
-        console.log(`[generate] reference ${ref.id} chosen but image fetch failed — text-only`);
-      }
-    } else {
-      // eslint-disable-next-line no-console
-      console.log(`[generate] no reference template matched — text-only`);
-    }
-  } catch (err) {
+
+  // ── referencia visual ("hazme una como esta") ─────────────────────────────
+  // El cliente manda la DIRECCIÓN (el objeto), no el texto ya montado: el
+  // bloque se reconstruye AQUÍ con `directionToBriefBlock`, así que su techo de
+  // 900 caracteres y su redacción los garantiza el servidor. Aceptar el texto
+  // hecho sería dejar que el cliente decidiera cuánto prompt gasta.
+  //
+  // Y viaja como TEXTO, nunca como imagen — ver el comentario de arriba: una
+  // imagen adjunta fija el turno a Gemini y DeepSeek deja de escribir la
+  // página. Qwen ya miró la captura en `/api/style-reference`; lo que llega
+  // aquí es su conclusión, no la foto.
+  const direction = parseStyleDirection(body);
+  if (direction) {
+    briefBlock = `${directionToBriefBlock(direction)}
+
+${briefBlock}`;
     // eslint-disable-next-line no-console
-    console.warn("[generate] reference selection failed — text-only", err);
+    console.log(`[generate] referencia visual — ${direction.palette.length} colores${direction.character ? " + carácter" : ""}`);
   }
 
   // Soft-seed the prompt with the user's REAL business facts (if any) so the
@@ -214,40 +245,24 @@ ${brief}`;
   }
 
   const messages = [
-    { role: "system" as const, content: SYSTEM_PROMPT },
-    { role: "user" as const, content: REFERENCE_MESSAGE },
-    { role: "user" as const, content: briefBlock },
+    { role: "system" as const, content: systemPromptFor(process.env) + modelRuntimePromptBlock(process.env) },
+    { role: "user" as const, content: `${todayLine()}${LANGUAGE_RULE}${briefBlock}` },
   ];
 
   const upstreamAbort = new AbortController();
 
   const sse = new ReadableStream<Uint8Array>({
     async start(controller) {
-      let closed = false;
-      const emit = (event: string, data: unknown) => {
-        if (closed) return;
-        try {
-          controller.enqueue(
-            ENCODER.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`),
-          );
-        } catch {
-          closed = true;
-        }
-      };
+      const channel = sseChannel(controller);
+      const emit = channel.emit;
       let keepalive: ReturnType<typeof setInterval> | null = null;
-      const closeStream = () => {
-        if (closed) return;
-        closed = true;
-        if (keepalive) {
-          clearInterval(keepalive);
-          keepalive = null;
-        }
-        try {
-          controller.close();
-        } catch {
-          /* already closed */
-        }
-      };
+      const closeStream = () =>
+        channel.close(() => {
+          if (keepalive) {
+            clearInterval(keepalive);
+            keepalive = null;
+          }
+        });
 
       let totalHtmlChars = 0;
       // Server-to-client keepalive — emit a progress event every 5s so
@@ -272,7 +287,10 @@ ${brief}`;
 
         // eslint-disable-next-line no-console
         console.log(
-          `[generate] auth + quota + credits ok — calling ${PROVIDER.label}`,
+          // Quién escribe de verdad, no quién resolvió la clave: el label del
+          // proveedor decía "Gemini 3.5 Flash" mientras DeepSeek escribía la
+          // página, y sólo la aritmética de créditos lo desmentía.
+          `[generate] auth + quota + credits ok — escribe ${pageWriterUsesDeepSeek() ? "DeepSeek" : PROVIDER.label}`,
         );
 
         // One generation pass: stream HTML chunks to the client, await the
@@ -284,13 +302,12 @@ ${brief}`;
           genMessages: Message[],
           label: string,
         ): Promise<
-          | { ok: true; html: string }
+          | { ok: true; html: string; modelRuntime: string | null }
           | { ok: false; message: string; retryable: boolean }
         > => {
           const { stream, done } = generateHtmlStream({
             apiKey: PROVIDER.key as string,
             messages: genMessages,
-            images: referenceImages,
             model: aiModel,
             userId,
             signal: upstreamAbort.signal,
@@ -346,7 +363,7 @@ ${brief}`;
           // Gemini occasionally wraps the output in ```html...``` fences
           // despite the system prompt forbidding it. Strip a possible fence
           // pair before validating — same safety net the Kimi-era route had.
-          const passHtml = stripMarkdownFences(summary.finalHtml);
+          const passHtml = extractDocument(summary.finalHtml);
 
           if (passHtml.length < 1000 || !/^<!doctype/i.test(passHtml)) {
             return {
@@ -381,7 +398,10 @@ ${brief}`;
           console.log(
             `[generate] tokens (${label}) — prompt: ${summary.usage?.inputTokens ?? "?"}, output: ${summary.usage?.outputTokens ?? "?"} → ${summary.creditsDebited} credits`,
           );
-          return { ok: true, html: passHtml };
+          // El runtime viaja con SU pasada. Si gana una regeneración, se guarda
+          // el script de esa generación y no el de la anterior: un script escrito
+          // para un DOM que ya no existe no falla — hace cosas raras en silencio.
+          return { ok: true, html: passHtml, modelRuntime: summary.modelRuntime };
         };
 
         // ── Initial pass ────────────────────────────────────────────────────
@@ -404,8 +424,125 @@ ${brief}`;
           closeStream();
           return;
         }
-        let html = first.html;
+        // ── Born With Imagery ───────────────────────────────────────────────
+        // Swap real curated photos into the gradient image-placeholders the
+        // model marked (data-ol-photo). Deterministic library match on the
+        // model's subject hints — no extra AI call, no network. Soft-fail:
+        // a hiccup just keeps the gradient placeholders.
+        //
+        // Va ANTES de medir y de juzgar, y se aplica a cada pasada. Corría al
+        // final, así que el crítico veía los rellenos de gradiente: en una
+        // corrida real puntuó la página quejándose de que faltaban fotos del
+        // pan, con cuarenta y cinco fotos reales ya dentro. Lo que se juzga
+        // tiene que ser lo que se entrega.
+        //
+        // Y las tres medidas mejoran con las fotos puestas: el contraste sobre
+        // una foto es incierto a propósito —el detector se calla— y el
+        // desborde se mide sobre la maqueta de verdad, no sobre un hueco.
+        // Reuse the profile resolved up front (a save-time resolve only if
+        // that failed).
+        const business = profile ?? (await resolveProfileForCreation(userId));
+
+        // El motor: imágenes → legibilidad → medición → invariantes → puerta →
+        // módulos. Vive en lib/page-engine y lo comparten crear, editar y el
+        // Agente. Esta ruta lo corre una vez por candidato; lo único que se
+        // queda aquí es la decisión de regenerar, porque exige volver a llamar
+        // al modelo y eso es presupuesto del usuario.
+        const title = extractTitle(first.html) ?? brief.slice(0, 60).trim();
+        const engine = (candidate: string) =>
+          preparePage(candidate, { mode: "create", brief, title, profile: business.data });
+
+        let prepared = await engine(first.html);
+        if (!prepared.ok) {
+          // eslint-disable-next-line no-console
+          console.error(`[generate] gate refused (${prepared.code}) — not saving`);
+          emit("error", { message: "The page came out with editor-mode markers — try again." });
+          closeStream();
+          return;
+        }
+        let html = prepared.html;
+        let runtimeCode = first.modelRuntime ?? null;
         let regenerated = false;
+        let breakage = [...prepared.report.breakage];
+        // Una fórmula que el reparador NO pudo arreglar sin adivinar entra en
+        // el mismo reintento que la rotura medida. No es un reintento nuevo:
+        // es que el diagnóstico —que ya era quirúrgico— por fin llega a quien
+        // puede actuar sobre él.
+        let calcRotas = [...(prepared.report.calcIssues ?? [])];
+        const diagnostico = [
+          ...breakage,
+          ...calcRotas.map((i) => `la fórmula ${i.attr}="${i.formula}" ${i.message}`),
+        ];
+
+        if (diagnostico.length > 0) {
+          // eslint-disable-next-line no-console
+          console.warn(`[generate] rotura medida — ${diagnostico.join(" · ")}`);
+          emit("regen-starting", { reason: diagnostico.join("; ") });
+          const fixMessages: Message[] = [
+            { role: "system", content: systemPromptFor(process.env) + modelRuntimePromptBlock(process.env) },
+            {
+              role: "user",
+              content: `<measured-breakage>
+El navegador renderizó tu página anterior y midió esto:
+${breakage.map((r) => `- ${r}`).join("\n")}
+
+Escribe la página de nuevo sin esos defectos. No son opiniones: son medidas del render.
+</measured-breakage>
+
+${briefBlock}`,
+            },
+          ];
+          const fixed = await runPass(fixMessages, "regen");
+          if (fixed.ok) {
+            const second = await engine(fixed.html);
+            // La segunda puede salir peor que la primera: se entrega la que
+            // menos rota esté, no la más reciente. Y se juzga por el TOTAL, no
+            // sólo por el desborde — si arregla el render y rompe tres
+            // fórmulas, salió peor.
+            const antes = breakage.length + calcRotas.length;
+            const despues =
+              second.ok
+                ? second.report.breakage.length + (second.report.calcIssues?.length ?? 0)
+                : Number.POSITIVE_INFINITY;
+            if (second.ok && despues <= antes) {
+              prepared = second;
+              html = second.html;
+              runtimeCode = fixed.modelRuntime ?? null;
+              regenerated = true;
+              breakage = [...second.report.breakage];
+              calcRotas = [...(second.report.calcIssues ?? [])];
+            }
+            recordRegenOutcome(true);
+          } else {
+            recordRegenOutcome(false);
+          }
+          if (breakage.length > 0) {
+            // Guardar-y-avisar: la página se entrega, pero queda dicho qué
+            // sigue roto. Un fallo que nadie registra vuelve a pasar.
+            // eslint-disable-next-line no-console
+            console.warn(`[generate] entregada con rotura — ${breakage.join(" · ")}`);
+          }
+        }
+
+        // DEGRADAR SIN MENTIR. Si tras reparar y reintentar una fórmula sigue
+        // muerta, se le quitan los marcadores a la región: la página queda
+        // estática pero íntegra —el valor de nacimiento ya está escrito dentro
+        // del elemento— y el visitante no ve un control que invite a teclear y
+        // no responda.
+        //
+        // Es lo que hace un error boundary con un widget roto: esconderlo, no
+        // mostrarlo muerto. La otra mitad —decírselo al creador— la lleva
+        // `collectDegradations` con el código `broken_controls`, más abajo.
+        if (calcRotas.length > 0) {
+          const off = disableCalcRegions(html);
+          if (off.repaired > 0) {
+            html = off.html;
+            // eslint-disable-next-line no-console
+            console.warn(
+              `[generate] cálculo apagado tras ${calcRotas.length} fórmula(s) irreparable(s) — la página se entrega sin él`,
+            );
+          }
+        }
 
         // ── Vision critic loop (Quality S3) ─────────────────────────────────
         // Render the page, show Gemini Flash the screenshot, and regenerate
@@ -419,7 +556,7 @@ ${brief}`;
         // canonical normalization already ran inside each runPass (HtmlStream
         // .end()), so the chosen final — first pass or regen — is canonical;
         // nothing re-normalizes between critique and regen.
-        if (process.env.OPENLEN_VISION_CRITIC !== "0") {
+        if (process.env.OPENLEN_VISION_CRITIC !== "0" && !regenerated) {
           emit("critic-checking", {});
           const verdict = await critiqueGeneratedPage({
             brief,
@@ -436,21 +573,41 @@ ${brief}`;
             `[critic] regen=${verdict.shouldRegenerate ? "triggered" : "skipped"}`,
           );
 
-          if (verdict.shouldRegenerate) {
+          // El crítico informa; ya no gasta. Medido dos veces: puntuó la página
+          // baja por las FOTOS —"Bolillo muestra un océano"— y pidió
+          // regenerarla. Las fotos las coloca un emparejador determinista
+          // después de escribir, con los mismos sujetos: la segunda pasada
+          // recibe las mismas. Cada una de esas regeneraciones costaba una
+          // página entera de tokens y un crédito del usuario (93→91→89 en dos
+          // corridas) sin arreglar nada.
+          //
+          // El presupuesto de regeneración es de la ROTURA MEDIDA, que sí
+          // cambia al reescribir. `OPENLEN_VISION_CRITIC_REGEN=1` se lo
+          // devuelve.
+          const criticMayRegen = process.env.OPENLEN_VISION_CRITIC_REGEN === "1";
+          if (verdict.shouldRegenerate && !criticMayRegen) {
+            // eslint-disable-next-line no-console
+            console.log(`[critic] regen NO gastada — ${verdict.issues.join("; ").slice(0, 160)}`);
+          }
+          if (verdict.shouldRegenerate && criticMayRegen) {
             // Reason goes to the client only to drive a neutral "improving the
             // design…" state — never the raw critic text (bad UX to tell a
             // user their page looked bad).
             emit("regen-starting", { reason: verdict.issues.join("; ") });
             const regenBriefBlock = `<critic-feedback>\n${verdict.regenerationFeedback}\n\nIssues found in the previous attempt: ${verdict.issues.join(", ")}\n</critic-feedback>\n\n${briefBlock}`;
             const regenMessages: Message[] = [
-              { role: "system", content: SYSTEM_PROMPT },
-              { role: "user", content: REFERENCE_MESSAGE },
+              { role: "system", content: systemPromptFor(process.env) + modelRuntimePromptBlock(process.env) },
               { role: "user", content: regenBriefBlock },
             ];
             const regen = await runPass(regenMessages, "regen");
             if (regen.ok) {
-              html = regen.html;
-              regenerated = true;
+              const third = await engine(regen.html);
+              if (third.ok) {
+                prepared = third;
+                html = third.html;
+                runtimeCode = regen.modelRuntime ?? null;
+                regenerated = true;
+              }
               recordRegenOutcome(true);
             } else {
               // Regen produced invalid HTML — ship the (already-valid) first
@@ -464,50 +621,46 @@ ${brief}`;
           }
         }
 
-        // ── Born With Imagery ───────────────────────────────────────────────
-        // Swap real curated photos into the gradient image-placeholders the
-        // model marked (data-ol-photo). Deterministic library match on the
-        // model's subject hints — no extra AI call, no network. Soft-fail:
-        // a hiccup just keeps the gradient placeholders.
-        if (process.env.OPENLEN_IMAGERY !== "0") {
-          try {
-            const photographed = await photographHtml({ html, brief });
-            if (photographed.applied > 0) {
-              html = photographed.html;
-              // eslint-disable-next-line no-console
-              console.log(`[generate] imagery — ${photographed.applied} photo(s) placed`);
-            }
-          } catch (err) {
-            // eslint-disable-next-line no-console
-            console.warn("[generate] imagery failed; keeping gradient placeholders", err);
-          }
-        }
+        // ── Guardar el documento elegido ────────────────────────────────────
+        const gated = {
+          removed: prepared.report.removed,
+          issues: (prepared.report.behaviorIssues ?? []) as readonly never[],
+        };
 
-        // ── Seed + save the chosen final document ───────────────────────────
-        const title = extractTitle(html) ?? brief.slice(0, 60).trim();
+        // What the page lost on the way in. On the ROW, not in the SSE payload:
+        // the client redirects to the workspace on `project_saved`, so a field
+        // added there dies on arrival.
+        //
+        // In practice this is `broken_controls`. Everything else the gate
+        // counts was already stripped upstream (the stream sanitizes each
+        // write), so the sanitize counters here read zero — which is the
+        // honest answer: the model wrote this page, not the user, and telling
+        // someone their page "had JavaScript removed" about markup they never
+        // typed is the noise this record exists to avoid.
+        const degradations = collectDegradations({
+          surface: "generate",
+          removed: gated.removed,
+          behaviorIssues: gated.issues,
+        });
+
+        // AI→módulos bridge: the engine already read the page's placeholders.
+        const enabledModules = [...prepared.report.modules];
 
         let projectId: string;
-        let enabledModules: string[] = [];
         try {
-          // Reuse the profile resolved up front (a save-time resolve only if
-          // that failed). Seed brand accent + contact widget (no-op for an empty
-          // profile), then complete the <head> (SEO + brand logo/og).
-          const business = profile ?? (await resolveProfileForCreation(userId));
-          html = ensurePageMeta(seedBrandIntoHtml(html, business.data), {
-            title,
-            ...profileMeta(business.data),
-          });
-          // AI→módulos bridge: if the page carries a module placeholder, turn
-          // that module on so the publish bake wires the real widget.
-          const moduleIntent = applyModuleIntent(undefined, html);
-          enabledModules = moduleIntent.enabled;
           projectId = await createProject(userId, {
             html,
             brief,
             title,
             profileId: business.id,
             logoUrl: business.data.brand?.logoUrl ?? null,
-            settings: moduleIntent.enabled.length ? moduleIntent.settings : undefined,
+            settings: enabledModules.length ? (prepared.report.moduleSettings as never) : undefined,
+            degradations: degradations.length > 0 ? degradations : undefined,
+            // Sin puerta de elegibilidad: formularios y módulos ya no descalifican
+            // la página (ver la nota en lib/ai-stream/model-runtime.ts). Lo que
+            // sigue atando el código a ESTE documento es la cápsula, y la calcula
+            // createProject sobre el HTML exacto que guarda.
+            modelRuntime: runtimeCode,
           });
         } catch (err) {
           // eslint-disable-next-line no-console
@@ -519,30 +672,20 @@ ${brief}`;
           return;
         }
 
-        // Arreglo 2 (revisión final de rama) — DESIGN_GUIDANCE animates the
-        // model to emit data-ol-* markers, but this route is a ONE-SHOT
-        // stream: there is no next turn to hand a fix-it note back to (unlike
-        // ai-design/the agent, which reuse this same validateBehaviors call
-        // via their `aviso` channel). The only honest option here is validate
-        // + LOG — never strip the marker: a <button data-ol-copy="x"> whose
-        // id doesn't exist is still a dead button whether or not the
-        // attribute survives, and removing it would only destroy the one
-        // signal that tells us how often this actually happens. One
-        // structured log line, same `[name] ` + one-line-JSON convention
-        // publishToDir already uses for behaviors telemetry (see
-        // lib/publish/filesystem.ts) — no aggregator, no table.
-        try {
-          const behaviorIssues = validateBehaviors(html);
-          if (behaviorIssues.length > 0) {
-            // eslint-disable-next-line no-console
-            console.warn(
-              "[generate] behavior issues " +
-                JSON.stringify({ projectId, issues: behaviorIssues }),
-            );
-          }
-        } catch (err) {
+        // Telemetry only — the same `[name] ` + one-line-JSON convention
+        // publishToDir uses. This used to be the ONLY answer this route had to
+        // a control born dead: validate after the row was written and write a
+        // line nobody reads. The user's answer is the `broken_controls` record
+        // above, which the workspace shows as "algunos controles quedaron mal
+        // conectados — pedile al asistente que los arregle". The log stays
+        // because it is how we count how often the model does this; it is no
+        // longer how the person who owns the page finds out.
+        if (gated.issues && gated.issues.length > 0) {
           // eslint-disable-next-line no-console
-          console.warn("[generate] behavior validation failed", err);
+          console.warn(
+            "[generate] behavior issues " +
+              JSON.stringify({ projectId, issues: gated.issues }),
+          );
         }
 
         await createVersion({
@@ -589,45 +732,9 @@ function extractTitle(html: string): string | null {
   return inner && inner.length > 0 ? inner.slice(0, 200) : null;
 }
 
-// Build a <business> instruction block from the saved profile so the model
-// writes the page around the user's REAL facts (name / what-they-do / contact)
-// instead of inventing them. Returns null when the profile has nothing real —
-// the page is then generated exactly as it was before profiles existed.
-function buildBusinessFacts(data: BusinessProfileData): string | null {
-  const lines: string[] = [];
-  const add = (label: string, v: string | null | undefined) => {
-    if (typeof v === "string" && v.trim()) lines.push(`- ${label}: ${v.trim()}`);
-  };
-  add("Business name", data.business_name);
-  add("What they do", data.industry);
-  add("Tagline", data.tagline_es ?? data.tagline_en);
-  add("Pitch", data.pitch);
-  const c = data.contact;
-  add("WhatsApp", c?.whatsapp);
-  add("Phone", c?.phone);
-  add("Email", c?.email);
-  add("Address", c?.address);
-  add("Instagram", c?.socials?.instagram);
-  add("Facebook", c?.socials?.facebook);
-  add("TikTok", c?.socials?.tiktok);
-  add("Website", c?.socials?.website);
-  if (lines.length === 0) return null;
-  return `<business>
-These are the user's REAL business details. Use them as the page's actual content — the business name, what they do, and any contact info must be these exact values, NOT invented. Weave the contact details into the page naturally (e.g. a contact section / footer). Do not fabricate other contact methods.
-${lines.join("\n")}
-</business>`;
-}
 
-function stripMarkdownFences(s: string): string {
-  let out = s.trim();
-  out = out.replace(/^```(?:html|xml)?[\t ]*\r?\n?/i, "");
-  out = out.replace(/\r?\n?[\t ]*```\s*$/i, "");
-  return out.trim();
-}
 
+/** El cuerpo vive en lib/ai/sse. */
 function json(body: unknown, status: number): Response {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { "Content-Type": "application/json" },
-  });
+  return jsonResponse(body, status);
 }

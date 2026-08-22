@@ -8,8 +8,24 @@
     "autofill": "自分の情報で自動入力 — 生成後に利用できます",
     "availableAfter": "プロジェクトを作成すると利用できます",
     "generate": "生成",
-    "modeQuick": "クイック",
-    "modeScratch": "ゼロから"
+    "effortLow": "標準",
+    "effortMedium": "高度",
+    "effortHigh": "最大",
+    "effortSoon": "近日",
+    "reference": {
+      "add": "サイトの雰囲気を参考にする",
+      "placeholder": "好きなページのリンクを貼ってください",
+      "use": "使う",
+      "looking": "確認中…",
+      "remove": "参考を外す",
+      "error": {
+        "blocked": "このリンクは開けません。",
+        "unreachable": "そのページに接続できませんでした。",
+        "not_rendered": "そのページのスタイルを読み取れませんでした。",
+        "rate_limited": "参考の取得が多すぎます。少し待ってからお試しください。",
+        "network": "取得に失敗しました。もう一度お試しください。"
+      }
+    }
   },
   "brief": {
     "label": "ブリーフ",

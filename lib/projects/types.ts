@@ -67,73 +67,9 @@ export interface ChatSettings {
   theme?: "light" | "dark";
 }
 
-/** Members module — visitor accounts on the published site (siteMembers). */
-export interface MembersSettings {
-  /** Master switch. Absent/false → no gating: membersOnly pages publish
-   *  public and /api/m/* refuses to issue logins. */
-  enabled?: boolean;
-  /** "open" → any visitor can sign up via magic link (default).
-   *  "invite" → only emails the owner pre-approved can log in. */
-  mode?: "open" | "invite";
-  /** Preset «Cuentas»: permite login con email+contraseña además del magic
-   *  link (que se queda como ruta passwordless / de reset). Default off. */
-  passwordLogin?: boolean;
-  /** Preset «Cuentas»: auto-crea el área «Mi cuenta» y surfacea el sign-in
-   *  aunque no haya página con candado. Default off. (Lo consume la Fase 2.) */
-  accountArea?: boolean;
-}
 
-/** Broadcast module — email your members. Rows live in the broadcasts table;
- *  this only holds the per-site master switch (gates the workspace tab). */
-export interface BroadcastSettings {
-  /** Master switch. Absent/false → the Broadcast tab stays hidden and the
-   *  send route refuses. Enabled from a card in the Módulos panel. */
-  enabled?: boolean;
-}
 
-/** Comments module — members-only commenting on published pages. Requires the
- *  members module. Rows live in siteComments; this holds the per-site switches. */
-export interface CommentsSettings {
-  /** Master switch. Requires members.enabled. Drives the publish-time widget
-   *  inject + the same-host post API. */
-  enabled?: boolean;
-  /** "moderated" (default) → comments are hidden until the owner approves.
-   *  "all" → visible immediately, owner hides/deletes after. */
-  moderation?: "all" | "moderated";
-  /** Paleta del widget en la página publicada (mismo patrón que chat.theme):
-   *  "dark" para páginas de fondo oscuro. Default "light". */
-  theme?: "light" | "dark";
-}
 
-/** Bookings module — appointment scheduling on the published site. Services +
- *  their wall-clock availability live in the bookableServices table; bookings
- *  in the bookings table. This holds only the per-site switches.
- *
- *  PAYMENTS ARE OUT OF SCOPE BY PRINCIPLE: OpenLen never charges for a booking.
- *  A service may show an informational `priceDisplay` string, but the creator
- *  collects by their own means — OpenLen is not a payment facilitator. */
-export interface BookingsSettings {
-  /** Master switch. Absent/false → the Reservas tab stays hidden, the widget
-   *  is not baked, and /api/bk/* refuses. Enabled from the Módulos panel. */
-  enabled?: boolean;
-  /** Default IANA zone for new services' wall-clock hours (e.g.
-   *  "America/Mexico_City"). Each service snapshots its own creatorTz. */
-  creatorTz?: string;
-  /** true → only logged-in members (lib/members) can book. false (default) →
-   *  guests book with name + email; a logged-in member is linked + prefilled. */
-  requireLogin?: boolean;
-  /** true (default) → a booking is 'confirmed' on submit. false → it lands
-   *  'pending' and the owner approves it from the Reservas panel. */
-  autoConfirm?: boolean;
-  /** true (default) → the reminder timer emails the visitor before the slot. */
-  sendReminders?: boolean;
-  /** GDPR retention: a past booking older than this many days is swept by the
-   *  reminder timer's housekeeping pass. Default 365; 0 → never. */
-  retentionDays?: number;
-  /** Paleta del widget en la página publicada (mismo patrón que chat.theme):
-   *  "dark" para páginas de fondo oscuro. Default "light". */
-  theme?: "light" | "dark";
-}
 
 /** Collections module — owner-managed item lists (products / menu / listings /
  *  events / team / portfolio) rendered on the published page. Items live in the
@@ -189,15 +125,6 @@ export interface WhatsAppSettings {
   side?: "left" | "right";
 }
 
-/** Pedidos por WhatsApp: carrito sobre los items de Collections, horneado al
- *  publicar. Ausente = off. Requiere Collections ON con items publicados. */
-export interface OrdersSettings {
-  /** Master switch. Ausente/false → nada se hornea. */
-  enabled?: boolean;
-  /** Número WhatsApp destino — misma semántica que WhatsAppSettings.number
-   *  (formato libre; 10 dígitos → +52 México). Ausente/vacío → nada se hornea. */
-  number?: string;
-}
 
 /** Project-level settings that aren't part of the HTML document. */
 export interface ProjectSettings {
@@ -224,20 +151,10 @@ export interface ProjectSettings {
   assistant?: AssistantSettings;
   /** Private chat module: per-project visitor chat. Absent = off. */
   chat?: ChatSettings;
-  /** Members module: visitor login + members-only pages. Absent = off. */
-  members?: MembersSettings;
-  /** Broadcast module: email your members. Absent = off. */
-  broadcast?: BroadcastSettings;
-  /** Comments module: members-only comments on published pages. Absent = off. */
-  comments?: CommentsSettings;
-  /** Bookings module: appointment scheduling on the published site. Absent = off. */
-  bookings?: BookingsSettings;
   /** Collections module: owner-managed item lists rendered on the page. Absent = off. */
   collections?: CollectionsSettings;
   /** WhatsApp button: a floating tap-to-chat FAB baked at publish. Absent = off. */
   whatsapp?: WhatsAppSettings;
-  /** Pedidos por WhatsApp: carrito sobre Collections baked at publish. Absent = off. */
-  orders?: OrdersSettings;
   /** 3D scene: gesture-gated WebGL scene with AVIF poster baked at publish. Absent = off. */
   scene3d?: Scene3dSettings;
   /** Datos vivos: la página se rellena desde un Google Sheet público del dueño
@@ -333,7 +250,74 @@ export interface ProjectData {
   preview?: PreviewSettings;
   /** Versioned Visual Engine memory. Present only for accepted skeleton routes. */
   generation?: { visualEngine?: VisualEngineProjectMetadata };
+  /** What the page lost on the way in. Machine codes only — the user-facing
+   *  sentence is built in the surface, from i18n, never stored. Absent = the
+   *  page came through whole, which is the overwhelmingly common case.
+   *  Lives here (a JSON column) rather than a new column so it needs no
+   *  migration, and on the ROW rather than in the create response because
+   *  every creation client navigates away and destructures the response down
+   *  to `projectId` — the row is what survives a reload and a shared link. */
+  degradations?: Degradation[];
+  /** Set once the user closes the notice. A warning that reappears forever is
+   *  noise, and noise is how we arrive back at silence through another door. */
+  degradationsDismissed?: boolean;
 }
+
+/** One thing lost during ingestion. `count` is for diagnosis; `code` is what
+ *  the surface translates. A code with no user-facing phrasing is not
+ *  recorded — if we cannot say what broke in the user's language, we are not
+ *  ready to tell them anything. */
+export interface Degradation {
+  surface: "from-html" | "from-template" | "generate" | "publish";
+  stage: "transform" | "sanitize" | "behaviors" | "publish";
+  code: DegradationCode;
+  count: number;
+  /** Lo que se rompió, EN CONCRETO — la frase que el sistema ya sabía y que
+   *  hasta ahora se tiraba al guardar.
+   *
+   *  El diagnóstico existía completo (el atributo, la fórmula literal, qué
+   *  nombre falta y qué hacer), se usaba para reparar y reintentar, y al
+   *  llegar al usuario se reducía a un código y un número. "Algunos controles
+   *  quedaron mal conectados" no le dice a nadie qué tocar.
+   *
+   *  Va acotado a propósito: son texto de máquina en la fila del proyecto, no
+   *  un registro. Tres frases bastan para saber qué pedirle al asistente. */
+  detail?: string[];
+}
+
+export type DegradationCode =
+  | "scripts"
+  | "embeds"
+  | "unsafe_links"
+  | "dynamic_content"
+  | "broken_controls"
+  /** El JavaScript que el modelo escribió para esta página no llegó al release.
+   *  Se registra al PUBLICAR, no al ingerir — es la única degradación que nace
+   *  después de que la página ya existía. Dos causas: la cápsula dejó de cuadrar
+   *  con el documento (algún escritor no re-selló) o el sellado CSP se perdió y
+   *  el script no puede viajar sin política. */
+  | "interactivity_lost"
+  /** Una edición cambió CUÁNTOS formularios tiene la página, y la config de
+   *  cada formulario (a qué correo avisa, a dónde redirige) se resuelve por su
+   *  POSICIÓN en el documento — `formConfigKey`. Insertar o quitar uno corre
+   *  esa numeración, así que un ajuste que el usuario hizo para el formulario
+   *  de contacto puede acabar aplicándose al de newsletter.
+   *
+   *  No se puede arreglar solo: emparejar formularios entre dos versiones del
+   *  documento es adivinar, y adivinar mal manda los mensajes de alguien al
+   *  sitio equivocado sin decirlo. Se AVISA, que es lo que la doctrina pide
+   *  cuando la página no miente pero algo dejó de estar donde estaba. */
+  | "form_routing_stale"
+  /** El JavaScript guardado busca elementos que la edición quitó. No es que
+   *  ese control deje de responder: `getElementById(...)` sobre lo que ya no
+   *  está LANZA, y la excepción aborta el script entero — un elemento borrado
+   *  puede apagar toda la interactividad de la página, con el error viviendo
+   *  en la consola del visitante, que nadie mira.
+   *
+   *  Se AVISA en vez de reparar: reescribir el código del modelo sería
+   *  inventar. Y el aviso llega también al modelo en el turno siguiente, que
+   *  ahora sí puede arreglarlo — el runtime es direccionable por ops. */
+  | "runtime_stale";
 
 // One persisted Chat-tab turn. The Chat panel's live turn type carries HTML
 // snapshots for in-session Undo; this is the transcript-only form written to

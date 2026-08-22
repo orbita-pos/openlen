@@ -50,7 +50,8 @@
   "defaultProjectName": "Pagina prezzi",
   "chatDraft": {
     "iconChanged": "Ho appena cambiato l'icona qui. Aggiorna il titolo e la descrizione circostanti in modo che il significato corrisponda alla nuova icona.",
-    "imageChanged": "Ho appena cambiato l'immagine qui. Aggiorna il testo circostante in modo che corrisponda a ciò che mostra l'immagine."
+    "imageChanged": "Ho appena cambiato l'immagine qui. Aggiorna il testo circostante in modo che corrisponda a ciò che mostra l'immagine.",
+    "fixControls": "Sistema questi controlli collegati male che non funzionano:"
   },
   "lockReason": {
     "created": "Disponibile una volta creata la pagina"
@@ -166,8 +167,6 @@
     "moduleError": "Impossibile aggiornare il modulo.",
     "moduleMembers": "Account",
     "moduleBroadcast": "Broadcast",
-    "moduleComments": "Commenti",
-    "moduleBookings": "Prenotazioni",
     "moduleCollections": "Collezioni",
     "membersOnlyOn": "La pagina è ora riservata ai membri",
     "membersOnlyOff": "La pagina è ora pubblica",
@@ -181,7 +180,6 @@
     "analyticsDisabled": "Statistiche disattivate",
     "saveError": "Impossibile salvare la modifica.",
     "moduleWhatsapp": "WhatsApp",
-    "moduleOrders": "Ordini",
     "whatsappNeedNumber": "Aggiungi prima un numero WhatsApp",
     "modulePageCreated": "Pagina creata",
     "modulePageExists": "Pagina esistente aperta",
@@ -196,13 +194,6 @@
     "messagePlaceholder": "Messaggio precompilato (facoltativo)",
     "note": "Appare in basso a destra sulla pagina pubblicata. Un numero di 10 cifre è letto come Messico (+52).",
     "missingNumber": "Manca il tuo numero — senza, il pulsante non apparirà sulla tua pagina."
-  },
-  "orders": {
-    "title": "Ordini via WhatsApp",
-    "tagline": "Un carrello sopra il tuo Catalogo: l'ordine composto arriva sul tuo WhatsApp",
-    "numberPlaceholder": "Numero WhatsApp (es. 5512345678)",
-    "note": "Funziona con gli articoli del tuo Catalogo. Il visitatore aggiunge prodotti e il messaggio parte con quantità e totale.",
-    "needsCatalog": "Attiva il modulo Catalogo e aggiungi articoli perché i pulsanti appaiano."
   },
   "moduleSurface": {
     "createBookingPage": "Crea pagina prenotazioni",
@@ -265,7 +256,20 @@
     "availableGroup": "Disponibili",
     "open": "Apri",
     "activate": "Attiva",
-    "drawerClose": "Chiudi"
+    "drawerClose": "Chiudi",
+    "perProject": "Apri un progetto per gestire i suoi moduli.",
+    "title": "Moduli",
+    "subtitle": "Backend in un click per il tuo sito. Senza crediti, senza codice.",
+    "included": {
+      "title": "Incluso nel tuo sito",
+      "open": "Apri",
+      "forms": "Moduli e lead",
+      "formsHint": "Ogni form cattura già lead",
+      "analytics": "Analytics",
+      "analyticsHint": "Visite e click, integrato",
+      "assistant": "Assistente IA",
+      "assistantHint": "Risponde ai tuoi visitatori"
+    }
   },
   "platforms": {
     "title": "Le mie piattaforme",
@@ -275,5 +279,18 @@
     "inserted": "Fatto: la fascia è nella pagina",
     "manage": "Vai a La mia attività",
     "note": "Senza costi. I link si aggiornano da soli alla pubblicazione."
+  },
+  "degraded": {
+    "title": "Alcune cose non sono potute arrivare",
+    "scripts": "La tua pagina aveva parti fatte in JavaScript — come contatori, caroselli o pulsanti interattivi. OpenLen li rimuove per sicurezza. Puoi ricrearli con i Moduli.",
+    "embeds": "È stato rimosso contenuto incorporato da altri siti (video o mappe). Puoi aggiungerlo di nuovo con i Moduli.",
+    "unsafe_links": "Alcuni link non erano sicuri e sono stati rimossi.",
+    "dynamic_content": "Una parte di ciò che la tua pagina costruisce da sola potrebbe apparire vuota. Puoi scriverla direttamente nell'editor.",
+    "broken_controls": "Alcuni controlli interattivi sono collegati male e non funzioneranno. Chiedi all'assistente di sistemarli.",
+    "interactivity_lost": "I dettagli interattivi che l'IA ha scritto per la tua pagina (filtri, gallerie, schede) non sono stati pubblicati questa volta. Testo e immagini ci sono tutti. Pubblica di nuovo; se continuano a mancare, chiedi all'assistente di rifarli.",
+    "form_routing_stale": "Alcune impostazioni dei tuoi moduli (quale email riceve l'avviso, dove reindirizza) potrebbero non applicarsi più dopo questa modifica. Controlla ogni modulo.",
+    "dismiss": "Ho capito",
+    "fix": "Sistema questo",
+    "runtime_stale": "Il codice interattivo della tua pagina cerca elementi che questa modifica ha rimosso. Quando succede il codice si ferma, quindi potrebbe essersi rotto più di quel che manca. Chiedi alla chat di sistemarlo."
   }
 }

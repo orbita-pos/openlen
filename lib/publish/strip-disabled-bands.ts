@@ -18,6 +18,7 @@
 // publish). Pure string, no DOM. Idempotent. Enabled modules untouched.
 
 import { BAND_ATTR, BAND_ATTR_OPEN, hasAttr, openTagEnd } from "./tag-attrs";
+import { ITEM_ATTR } from "./collection-template";
 
 const MARKERS = {
   bookings: "data-ol-bookings-section",
@@ -143,6 +144,14 @@ export function stripDisabledModuleBands(
   for (const mod of Object.keys(MARKERS) as StrippableModule[]) {
     if (enabled[mod]) continue;
     if (!out.includes(MARKERS[mod])) continue;
+    // Colecciones con tarjetas del MODELO no se borra nunca. Esta limpieza
+    // nació cuando la banda era un hueco vacío: apagar el módulo dejaba un
+    // título sobre la nada, así que fuera. Desde `collection-template.ts` la
+    // banda la escribe el modelo — es una sección diseñada, con su copy y su
+    // maquetación — y borrarla al apagar el módulo le arrancaría al usuario
+    // parte de su página. Apagado ahora significa «no la refresques desde la
+    // base», no «bórrala».
+    if (mod === "collections" && out.includes(ITEM_ATTR)) continue;
     out = stripBandByMarker(out, MARKERS[mod]);
   }
   return out;

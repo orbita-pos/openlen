@@ -16,6 +16,7 @@ import {
   uniqueIndex,
 } from "drizzle-orm/pg-core";
 import type { AdapterAccountType } from "next-auth/adapters";
+import type { ModelRuntimeCapsule } from "@/lib/projects/model-runtime";
 import type { ProjectData } from "@/lib/projects/types";
 import type { BusinessProfileData } from "@/lib/business-profiles/types";
 
@@ -215,6 +216,21 @@ export const projects = pgTable(
     // to identify which entry is currently live. Updated atomically with
     // publishedHtml.
     publishedReleaseSha: text("publishedReleaseSha"),
+    // La cápsula que autoriza el JavaScript escrito por el modelo, o NULL —
+    // que es lo que tienen todos los proyectos de hoy y todo lo que no venga
+    // de /api/generate: pegado, plantilla, comunidad, duplicado.
+    //
+    // Vive AQUÍ y no dentro de `data` a propósito. Varias rutas reemplazan
+    // `data.html` conservando el resto del objeto, así que una bandera metida
+    // ahí se "lavaría" sola y quedaría autorizando un documento que ya no
+    // existe. Fuera del objeto, además, no viaja en las respuestas genéricas
+    // del proyecto: el código no tiene por qué llegar al cliente.
+    //
+    // Su forma y su verificación viven en lib/projects/model-runtime.ts. El
+    // hash ata código + HTML + proyecto + política, así que ninguna ruta
+    // necesita acordarse de limpiar esto: si el HTML cambia, la cápsula deja
+    // de autorizar sola.
+    generatedRuntime: jsonb("generatedRuntime").$type<ModelRuntimeCapsule>(),
     createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
     updatedAt: timestamp("updatedAt", { mode: "date" }).notNull().defaultNow(),
   },
@@ -572,52 +588,6 @@ export const models = pgTable(
   (table) => [
     index("models_status_family_idx").on(table.status, table.family),
   ],
-);
-
-// Section library — curated, re-themeable HTML FRAGMENTS (a single
-// <section>/<header>/<footer>) inserted into existing user pages. Mirrors the
-// `templates` storage pattern (body in object storage under a `sections/`
-// prefix, metadata here) but typed by section TYPE (hero/pricing/…) instead of
-// design family, since a section's look is re-themed to the host on insert.
-export const sections = pgTable(
-  "sections",
-  {
-    id: text("id").primaryKey(), // slug — 'hero-01', 'pricing-03', …
-    type: text("type").notNull(), // 'hero' | 'pricing' | 'features' | …
-    name: text("name").notNull(), // display name, e.g. "Pricing — 3 Tiers"
-    variantLabel: text("variantLabel").notNull(), // "3 Tiers", "Centrado", …
-    rootTag: text("rootTag").notNull(), // 'section' | 'header' | 'footer' | …
-    mode: text("mode").notNull().default("light"), // preview-backdrop hint
-
-    // Scoped HTML fragment in object storage (same bucket as templates,
-    // `sections/<id>-<hash>.html` key).
-    storageKey: text("storageKey").notNull(),
-    storageUrl: text("storageUrl").notNull(),
-    contentHash: text("contentHash").notNull(), // sha256 first 12 chars
-    size: integer("size").notNull(),
-
-    // :root custom properties parsed at ingest (--accent / --font-display /
-    // --radius …), so the re-theme path knows which tokens to remap.
-    designTokens: jsonb("designTokens").$type<Record<string, string>>(),
-    // Google-Fonts stylesheet hrefs to hoist into the host <head> on insert.
-    fonts: jsonb("fonts").$type<string[]>(),
-
-    // Content rendered by inline JS into empty containers (comparison / tab
-    // variants) — insertion must preserve <script>; inline-edit is limited.
-    needsJs: boolean("needsJs").notNull().default(false),
-    // Ships decorative gradient placeholders that don't auto-retheme — prompt
-    // the user to swap real assets on insert (gallery).
-    hasPlaceholders: boolean("hasPlaceholders").notNull().default(false),
-
-    // Pre-rendered gallery thumbnail. Null until a thumbnail pass has run.
-    thumbnailUrl: text("thumbnailUrl"),
-
-    status: text("status").notNull().default("published"),
-    createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
-    updatedAt: timestamp("updatedAt", { mode: "date" }).notNull().defaultNow(),
-    publishedAt: timestamp("publishedAt", { mode: "date" }),
-  },
-  (table) => [index("sections_status_type_idx").on(table.status, table.type)],
 );
 
 // Per-page analytics events — append-only log of pageviews + outbound clicks

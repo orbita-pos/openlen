@@ -8,6 +8,10 @@ import {
 } from "../types";
 import { validateUrl } from "./validate-url";
 
+/** Tope de redirecciones. Cada salto se revalida; el tope existe para que una
+ *  cadena infinita no sea una forma barata de tener el proceso ocupado. */
+const MAX_REDIRECTS = 5;
+
 const CHALLENGE_MARKERS = [
   /just a moment\.{3}/i,
   /cf-challenge-platform/i,
@@ -44,16 +48,46 @@ export async function fetchRaw(
 
   let response: Response;
   try {
-    response = await fetch(url.toString(), {
-      signal: controller.signal,
-      redirect: "follow",
-      headers: {
-        "User-Agent": USER_AGENT,
-        "Accept": "text/html,application/xhtml+xml;q=0.9,*/*;q=0.5",
-        "Accept-Language": "en-US,en;q=0.9,es;q=0.8",
-        "Accept-Encoding": "gzip, deflate, br",
-      },
-    });
+    // `redirect: "manual"` y CADA salto revalidado.
+    //
+    // Con "follow" la defensa SSRF era decorativa: se comprobaba la URL que
+    // escribió el visitante y luego se seguían las redirecciones a ciegas. Una
+    // URL propia que responda 302 hacia http://169.254.169.254/ saltaba el
+    // control entero — y ese endpoint es de donde se roban las credenciales de
+    // la nube. `proxy-image` ya rechazaba redirecciones por este mismo motivo;
+    // aquí no.
+    //
+    // Se siguen, pero validando cada destino con la misma puerta. Tope de
+    // saltos para que una cadena infinita no sea una forma de colgar el
+    // proceso.
+    let current = url;
+    let saltos = 0;
+    for (;;) {
+      response = await fetch(current.toString(), {
+        signal: controller.signal,
+        redirect: "manual",
+        headers: {
+          "User-Agent": USER_AGENT,
+          "Accept": "text/html,application/xhtml+xml;q=0.9,*/*;q=0.5",
+          "Accept-Language": "en-US,en;q=0.9,es;q=0.8",
+          "Accept-Encoding": "gzip, deflate, br",
+        },
+      });
+      if (response.status < 300 || response.status >= 400) break;
+      const location = response.headers.get("location");
+      if (!location) break;
+      if (++saltos > MAX_REDIRECTS) {
+        clearTimeout(timeoutId);
+        return { ok: false, error: { kind: "network", message: "too many redirects" } };
+      }
+      const next = new URL(location, current);
+      const revalidada = await validateUrl(next.toString());
+      if (!revalidada.ok) {
+        clearTimeout(timeoutId);
+        return revalidada;
+      }
+      current = revalidada.value.url;
+    }
   } catch (err) {
     clearTimeout(timeoutId);
     if ((err as { name?: string }).name === "AbortError") {

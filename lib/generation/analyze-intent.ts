@@ -1,12 +1,13 @@
 import { IntentAnalysisSchema, type IntentAnalysis } from "./contracts";
 import type { ModelTokenUsage } from "./model-cost";
+import { modelIdForRole } from "./fable-model-policy";
 import {
   CANONICAL_PRIMARY_AUDIENCES,
   CANONICAL_SECTION_ROLES,
   CANONICAL_SITE_TYPES,
 } from "./structural-taxonomy";
 
-const GEMINI_BASE = "https://generativelanguage.googleapis.com/v1beta/models";
+const FIREWORKS_ENDPOINT = "https://api.fireworks.ai/inference/v1/chat/completions";
 
 export const INTENT_PROMPT_VERSION = "intent-prompt/1.8" as const;
 export const INTENT_ANALYSIS_TIMEOUT_MS = 12_000;
@@ -82,6 +83,7 @@ When the brief does not support a required classification, use the exact slug un
 requiredVisualSignals are concrete cues the finished screenshot must visibly contain.
 forbiddenVisualSignals are concrete cues that would make the screenshot communicate the wrong domain, audience, or emotion.
 Preserve explicit user constraints as concise prose in explicitConstraints. Do not invent requirements the brief does not support.
+Set requestedImages only when the brief itself asks for photography and says how much: a plain number for "four photos", the number of sections for "one image per section", the upper end for "four or five". Use null when the brief is silent about imagery, and 0 when it asks for none. Never infer a count from the niche.
 
 Return keys exactly as follows: schemaVersion, language, functional { siteType, requiredSections, primaryActions, contentModel }, audience { primary, ageRange, secondary }, domains, emotionalGoals, requiredVisualSignals, forbiddenVisualSignals, explicitConstraints, ambiguities, confidence.
 schemaVersion must be the exact literal string "intent-analysis/1.0", not "1.0" or any other shorthand.
@@ -146,17 +148,23 @@ function optionalZeroTokenCount(value: unknown): number | null {
 }
 
 function readUsageMetadata(payload: unknown): IntentModelUsage | undefined {
-  if (!isRecord(payload) || !isRecord(payload.usageMetadata)) return undefined;
-  const metadata = payload.usageMetadata;
-  const cachedTokens = optionalZeroTokenCount(metadata.cachedContentTokenCount);
-  const thinkingTokens = optionalZeroTokenCount(metadata.thoughtsTokenCount);
-  if (!validTokenCount(metadata.promptTokenCount)
-    || !validTokenCount(metadata.candidatesTokenCount)
+  // Forma de OpenAI (`usage.prompt_tokens`), que es la que devuelve el endpoint
+  // compatible de Fireworks. Antes era la de Gemini (`usageMetadata`).
+  if (!isRecord(payload) || !isRecord(payload.usage)) return undefined;
+  const metadata = payload.usage;
+  const cachedTokens = optionalZeroTokenCount(
+    isRecord(metadata.prompt_tokens_details) ? metadata.prompt_tokens_details.cached_tokens : undefined,
+  );
+  const thinkingTokens = optionalZeroTokenCount(
+    isRecord(metadata.completion_tokens_details) ? metadata.completion_tokens_details.reasoning_tokens : undefined,
+  );
+  if (!validTokenCount(metadata.prompt_tokens)
+    || !validTokenCount(metadata.completion_tokens)
     || cachedTokens === null
     || thinkingTokens === null) return undefined;
   return {
-    inputTokens: metadata.promptTokenCount,
-    outputTokens: metadata.candidatesTokenCount,
+    inputTokens: metadata.prompt_tokens,
+    outputTokens: metadata.completion_tokens,
     cachedTokens,
     thinkingTokens,
   };
@@ -205,22 +213,30 @@ async function requestIntent(
 ): Promise<AnalyzeIntentResult> {
   let response: Response;
   try {
+    // Analizar un brief es TEXTO: lo lee DeepSeek, por el endpoint compatible
+    // con OpenAI de Fireworks. Gemini se queda para los píxeles.
+    //
+    // Se conserva `fetchImpl` a propósito: es la costura que hace comprobable
+    // este módulo, y cambiarla por el cliente de streaming habría obligado a
+    // reescribir sus 15 casos por una diferencia que no llega a nadie.
     response = await fetchImpl(
-      `${GEMINI_BASE}/${encodeURIComponent(modelId)}:generateContent`,
+      FIREWORKS_ENDPOINT,
       {
         method: "POST",
         headers: {
           "content-type": "application/json",
-          "x-goog-api-key": apiKey,
+          authorization: `Bearer ${apiKey}`,
         },
         signal,
         body: JSON.stringify({
-          systemInstruction: { parts: [{ text: INTENT_SYSTEM_PROMPT }] },
-          contents: [{
-            role: "user",
-            parts: [{ text: `Brief:\n\n${brief.trim()}\n\nReturn intent JSON only.` }],
-          }],
-          generationConfig: GENERATION_CONFIG,
+          model: modelId,
+          messages: [
+            { role: "system", content: INTENT_SYSTEM_PROMPT },
+            { role: "user", content: `Brief:\n\n${brief.trim()}\n\nReturn intent JSON only.` },
+          ],
+          temperature: GENERATION_CONFIG.temperature,
+          max_tokens: GENERATION_CONFIG.maxOutputTokens,
+          response_format: { type: "json_object" },
         }),
       },
     );
@@ -230,7 +246,7 @@ async function requestIntent(
       ? "intent analysis timed out"
       : kind === "aborted"
         ? "intent analysis aborted"
-        : "Gemini request failed";
+        : "model request failed";
     return { ok: false, ...base, error: { kind, message }, durationMs: elapsed() };
   }
 
@@ -243,7 +259,7 @@ async function requestIntent(
       ...base,
       error: {
         kind: "api",
-        message: response.ok ? "invalid Gemini response envelope" : `Gemini ${response.status}`,
+        message: response.ok ? "invalid model response envelope" : `modelo ${response.status}`,
       },
       durationMs: elapsed(),
     };
@@ -253,35 +269,31 @@ async function requestIntent(
     return {
       ok: false,
       ...base,
-      error: { kind: "api", message: `Gemini ${response.status}` },
+      error: { kind: "api", message: `modelo ${response.status}` },
       ...(usage ? { usage } : {}),
       durationMs: elapsed(),
     };
   }
-  if (!isRecord(payload) || !Array.isArray(payload.candidates)) {
+  if (!isRecord(payload) || !Array.isArray(payload.choices)) {
     return {
       ok: false,
       ...base,
-      error: { kind: "api", message: "invalid Gemini response envelope" },
+      error: { kind: "api", message: "invalid model response envelope" },
       durationMs: elapsed(),
     };
   }
-  const first = payload.candidates[0];
-  const parts = isRecord(first) && isRecord(first.content) && Array.isArray(first.content.parts)
-    ? first.content.parts
-    : null;
-  if (!parts) {
+  const first = payload.choices[0];
+  const content = isRecord(first) && isRecord(first.message) ? first.message.content : null;
+  if (typeof content !== "string") {
     return {
       ok: false,
       ...base,
-      error: { kind: "api", message: "invalid Gemini response envelope" },
+      error: { kind: "api", message: "invalid model response envelope" },
       durationMs: elapsed(),
     };
   }
   const usage = readUsageMetadata(payload);
-  const raw = parts
-    .map((part) => isRecord(part) && typeof part.text === "string" ? part.text : "")
-    .join("");
+  const raw = content;
 
   let parsed: unknown;
   try {
@@ -350,7 +362,8 @@ export async function analyzeIntent(
     ?? process.env.OPENLEN_INTENT_MODEL
     ?? process.env.CURATE_PICK_MODEL
     ?? process.env.STYLE_MATCH_TEXT_MODEL
-    ?? "gemini-2.5-flash";
+    // El razonador: leer un brief es texto.
+    ?? modelIdForRole("reasoner");
   const base = { modelId, promptVersion: INTENT_PROMPT_VERSION };
   if (!brief.trim()) {
     return {
@@ -360,12 +373,12 @@ export async function analyzeIntent(
       durationMs: elapsed(),
     };
   }
-  const apiKey = options.apiKey ?? process.env.GEMINI_API_KEY;
+  const apiKey = options.apiKey ?? process.env.FIREWORKS_API_KEY;
   if (!apiKey) {
     return {
       ok: false,
       ...base,
-      error: { kind: "missing_key", message: "GEMINI_API_KEY not set" },
+      error: { kind: "missing_key", message: "FIREWORKS_API_KEY not set" },
       durationMs: elapsed(),
     };
   }

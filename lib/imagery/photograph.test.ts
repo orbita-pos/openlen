@@ -55,6 +55,38 @@ test("deterministic: matches a subject hint to the right curated photo", async (
   assert.ok(!r.html.includes('data-ol-photo="'));
 });
 
+// Los sujetos vienen en español y el catálogo está etiquetado en inglés, así
+// que el prefijo no es una flexión sino una colisión. Medido en la biblioteca
+// real: "pan de masa madre" traía una maqueta de dashboard SaaS, porque
+// `"panels".startsWith("pan")`. Un boxeador y unas turbinas eólicas llegaron a
+// una panadería por la misma puerta.
+test("una palabra corta no casa con otra que sólo la lleva de prefijo", async () => {
+  __setCuratedImagesForTest([
+    img("ui-panels", "3d-abstract", ["saas"], "Cluster of floating UI panels and rounded cards"),
+    img("bread", "food-editorial", ["food-beverage"], "Rustic sourdough bread loaves on linen"),
+  ]);
+  const html = `<!doctype html><html><head><style>:root{--ol-bg:#ffffff}</style></head><body>
+    <div class="bg-gradient-to-br h-96" data-ol-photo="pan de masa madre"></div>
+  </body></html>`;
+  const r = await photographHtml({ html, brief: "panadería de barrio", pickFn: DET });
+  assert.ok(!r.html.includes("ui-panels"), "un dashboard no es una panadería");
+});
+
+// El rubro no dice QUÉ se ve, pero sí de qué gremio es. Exigir coincidencia de
+// palabras dejaba al elector sin candidatos: medido, un hueco lleno de cuatro.
+test("el rubro basta para entrar a la piscina aunque no coincida una palabra", async () => {
+  __setCuratedImagesForTest([
+    img("ramen", "food-editorial", ["food-beverage"], "Steaming bowl of dark midnight ramen"),
+    img("office", "interior-editorial", ["saas"], "Bright airy modern open office"),
+  ]);
+  const html = `<!doctype html><html><head><style>:root{--ol-bg:#ffffff}</style></head><body>
+    <div class="bg-gradient-to-br h-96" data-ol-photo="mostrador del local"></div>
+  </body></html>`;
+  const r = await photographHtml({ html, brief: "restaurante de ramen", pickFn: DET });
+  assert.equal(r.applied, 1);
+  assert.ok(r.html.includes("ramen-1920.webp"));
+});
+
 test("deterministic: distinct subjects get distinct photos (dedupe)", async () => {
   __setCuratedImagesForTest(LIBRARY);
   const html = `<!doctype html><html><head></head><body>
@@ -65,6 +97,23 @@ test("deterministic: distinct subjects get distinct photos (dedupe)", async () =
   assert.equal(r.applied, 2);
   assert.ok(r.html.includes("tacos-1920.webp"));
   assert.ok(r.html.includes("office-1920.webp"));
+});
+
+// El listón del producto no es la foto perfecta: es que ninguna esté fuera de
+// lugar y que el hueco no quede vacío — el usuario cambia la que no le guste.
+// Medido en una página entregada: seis fotos puestas y siete huecos con el
+// degradado. Un bloque vacío es peor que una foto imprecisa del mismo gremio.
+test("un hueco sin coincidencia tira de la reserva del gremio antes que quedarse vacío", async () => {
+  __setCuratedImagesForTest([
+    img("ramen", "food-editorial", ["food-beverage"], "Steaming bowl of dark midnight ramen"),
+    img("office", "interior-editorial", ["saas"], "Bright airy modern open office"),
+  ]);
+  const html = `<!doctype html><html><head><style>:root{--ol-bg:#ffffff}</style></head><body>
+    <div class="bg-gradient-to-br h-96" data-ol-photo="la barra al amanecer"></div>
+  </body></html>`;
+  const r = await photographHtml({ html, brief: "restaurante de ramen", pickFn: DET });
+  assert.equal(r.applied, 1, "el hueco se llena");
+  assert.ok(r.html.includes("ramen-1920.webp"), "y con una del gremio, no con la oficina");
 });
 
 test("text-overlay slots are skipped (gradient kept), marker dropped", async () => {

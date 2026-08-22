@@ -1,7 +1,7 @@
 // lib/agent/catalog.ts — LA fuente única del conocimiento del agente (spec §5).
 // De aquí salen las DOS mitades: las function declarations para Gemini y la
 // sección de conocimiento del system prompt. Módulo nuevo ⇒ una entrada aquí.
-import { DESIGN_GUIDANCE } from "@/lib/design-guidance";
+import { PUBLISH_CONTRACT } from "@/lib/design-guidance";
 import { BEHAVIOR_NAMES, BEHAVIOR_COUNT } from "@/lib/behaviors/doc";
 import { POST_REGISTER } from "@/lib/marketing/post-templates/admin-schemas";
 import { PUBLISH_LOCALES } from "@/lib/publish/publish-locales";
@@ -9,7 +9,7 @@ import { TEMATICA_PRESETS } from "@/lib/tematicas/presets";
 import { THEME_PRESETS } from "@/lib/theme-presets";
 
 export const AGENT_MODULES = [
-  "members", "bookings", "collections", "chat", "whatsapp", "comments", "pedidos",
+  "collections", "chat", "whatsapp",
 ] as const;
 export type AgentModule = (typeof AGENT_MODULES)[number];
 
@@ -56,20 +56,12 @@ const SETTINGS_TOOL_KNOWLEDGE = `- cambiar_motion: coreografía de scroll (Motio
 // Conocimiento por módulo: qué es + cuándo recomendarlo. Español porque el
 // usuario objetivo habla español; el modelo responde en el idioma del usuario.
 const MODULE_KNOWLEDGE: Record<AgentModule, string> = {
-  members:
-    "Cuentas / sign-in / login de visitantes. Actívalo cuando pidan 'signin', 'login', 'cuentas', 'miembros' o páginas privadas. Al activarlo, el sitio publica con enlace de acceso y área /cuenta — NO fabriques formularios de login en HTML.",
-  bookings:
-    "Reservas / citas / agenda. Actívalo cuando pidan agendar citas, reservas o calendario de servicios. El widget real se hornea al publicar.",
   collections:
     "Catálogo / listados administrables (productos, menú, portafolio). Actívalo cuando pidan un catálogo que el dueño mantenga sin editar HTML.",
   chat:
     "Chat privado visitante↔dueño en la página publicada (estilo messenger). Actívalo cuando pidan 'chat', 'mensajes de clientes' o atención directa.",
   whatsapp:
     "Botón flotante de WhatsApp. Actívalo cuando pidan contacto por WhatsApp. Necesita el número del negocio (si no lo sabes, actívalo y avisa que lo configuren en Módulos).",
-  comments:
-    "Comentarios de miembros en la página. REQUIERE members activo — si members está apagado, activa members primero o explica la dependencia.",
-  pedidos:
-    "Pedidos por WhatsApp: carrito sobre el Catálogo (collections) — cada item gana botón «Agregar» y el pedido armado (cantidades, total, nota) sale al WhatsApp del negocio en la página publicada. Actívalo cuando pidan 'carrito', 'pedidos', 'ordenar', 'que me compren por WhatsApp'. REQUIERE collections activo con items — si falta, activa collections primero (o explica la dependencia). Al activarlo reusa el número de WhatsApp ya guardado (de pedidos o del módulo whatsapp) — si no hay ninguno, la herramienta te lo dirá: pregúntale al usuario su número de WhatsApp (10 dígitos MX) y vuelve a llamar activar_modulo con numero. NUNCA inventes un número. NO es pago en línea: el cobro se acuerda en el chat de WhatsApp.",
 };
 
 export function buildFunctionDeclarations(): Record<string, unknown>[] {
@@ -88,7 +80,7 @@ export function buildFunctionDeclarations(): Record<string, unknown>[] {
     {
       name: "editar_pagina",
       description:
-        "Aplica ediciones quirúrgicas al documento actual dirigidas por data-op-id (máx 8 por llamada). Después de una llamada exitosa los data-op-id CAMBIAN: para editar otra vez, pide leer_estado con incluir_documento=true.",
+        'Aplica ediciones quirúrgicas al documento actual dirigidas por data-op-id (máx 8 por llamada). Después de una llamada exitosa los data-op-id CAMBIAN: para editar otra vez, pide leer_estado con incluir_documento=true. Hay UN target que no es un data-op-id: "runtime", el JavaScript de la página — sólo con op="replace" y con el script COMPLETO corregido en new_html. Es la ÚNICA forma de cambiar el comportamiento de la página desde aquí: editar el marcado no lo cambia nunca. El código actual aparece en tu contexto cuando la página tiene.',
       parameters: {
         type: "OBJECT",
         properties: {
@@ -266,7 +258,7 @@ export function buildFunctionDeclarations(): Record<string, unknown>[] {
     {
       name: "publicar",
       description:
-        `Prepara la publicación de la página en <subdominio>.openlen.com. NUNCA publica por su cuenta: SIEMPRE espera el tap del usuario en la tarjeta de confirmación — tú solo dejas listo el subdominio y los idiomas, y le dices al usuario que toque «Publicar» para confirmar. subdominio (opcional): si el proyecto ya tiene uno reclamado y no pasas otro, se re-publica sobre el actual; si pasas uno nuevo, se reclama ese. Si el proyecto NO tiene subdominio y no pasas ninguno, la herramienta te pide que le preguntes al usuario qué subdominio quiere ANTES de volver a llamar. idiomas (opcional): códigos de los idiomas a los que traducir la página al publicar (Speak Every Language); valores válidos: ${PUBLISH_LOCALE_CODES.join(", ")} (máx 9; los inválidos se ignoran).`,
+        `Prepara la publicación de la página en <subdominio>.openlen.com. NUNCA publica por su cuenta: SIEMPRE espera el tap del usuario en la tarjeta de confirmación — tú solo dejas listo el subdominio y los idiomas, y le dices al usuario que toque «Publicar» para confirmar. subdominio (opcional): SOLO puede salir de dos sitios — el que el proyecto ya tiene reclamado, o uno que el usuario haya escrito él mismo. NUNCA te lo inventes ni lo deduzcas del título del negocio: la dirección es la identidad pública del usuario y elegirla por él es reclamar un nombre que no pidió. Si el proyecto ya tiene uno y no pasas otro, se re-publica sobre el actual; si pasas uno nuevo, se reclama ese. Si el proyecto NO tiene subdominio y el usuario no te dio uno, llama SIN el argumento: la herramienta te dirá que le preguntes. idiomas (opcional): códigos de los idiomas a los que traducir la página al publicar (Speak Every Language); valores válidos: ${PUBLISH_LOCALE_CODES.join(", ")} (máx 9; los inválidos se ignoran).`,
       parameters: {
         type: "OBJECT",
         properties: {
@@ -351,7 +343,7 @@ MEMORIA DE PREFERENCIAS (recordar_preferencia):
 Guarda una preferencia DURABLE en el brief del proyecto — persiste entre conversaciones futuras. Úsala SOLO cuando el usuario exprese una preferencia estable sobre el trato o la página ("siempre háblame de tú", "nunca uses amarillo", "sé más formal") — NUNCA para el pedido puntual de este turno (eso lo resuelves con la herramienta que corresponda: editar_pagina, cambiar_tema, etc., sin guardar nada). Tras llamarla, confirma en tu texto qué preferencia guardaste. Si la herramienta responde que el brief está lleno, no reintentes: dile al usuario que puede podar el brief en la pestaña Brief.
 
 PUBLICAR (publicar):
-publicar SIEMPRE espera el tap del usuario — JAMÁS publicas tú. La herramienta solo prepara la publicación (resuelve el subdominio y los idiomas) y muestra una tarjeta de confirmación; el usuario toca «Publicar» para confirmar y recién ahí se publica de verdad. Tras llamar publicar, cierra tu turno diciéndole al usuario que revise y toque «Publicar» (no afirmes que ya está publicada). Si el proyecto no tiene subdominio y el usuario no te dio uno, la herramienta te pedirá que le preguntes qué subdominio quiere (p. ej. mi-negocio) antes de volver a llamar. idiomas usa códigos de la lista de Speak Every Language (${PUBLISH_LOCALE_CODES.join(", ")}); los inválidos se ignoran. Si no pasas idiomas, la página conserva los que ya tenía configurados; para QUITAR idiomas se usa el modal de Publicar, no el agente.
+publicar SIEMPRE espera el tap del usuario — JAMÁS publicas tú. La herramienta solo prepara la publicación (resuelve el subdominio y los idiomas) y muestra una tarjeta de confirmación; el usuario toca «Publicar» para confirmar y recién ahí se publica de verdad. Tras llamar publicar, cierra tu turno diciéndole al usuario que revise y toque «Publicar» (no afirmes que ya está publicada). El subdominio NUNCA lo eliges tú: o ya está reclamado en el proyecto, o lo escribió el usuario. Si no tienes ninguno de los dos, llama a publicar SIN el argumento subdominio y pregúntale al usuario qué dirección quiere — deducirla del nombre del negocio es reclamar en su nombre una identidad pública que no pidió. idiomas usa códigos de la lista de Speak Every Language (${PUBLISH_LOCALE_CODES.join(", ")}); los inválidos se ignoran. Si no pasas idiomas, la página conserva los que ya tenía configurados; para QUITAR idiomas se usa el modal de Publicar, no el agente.
 
 CAMBIAR DE DOCUMENTO (trabajar_en_pagina):
 Este sitio puede tener varias páginas (ver "paginas" en el estado). Tú SIEMPRE trabajas sobre la página activa — la que trae leer_estado.pagina_activa — y editar_pagina/cambiar_tema/aplicar_tematica/editar_imagen SOLO tocan ESA página, nunca otra. Para editar OTRA página del sitio, primero llama trabajar_en_pagina con su slug (o "principal"/"home" para volver a la Home); la respuesta trae el documento fresco de esa página con data-op-id nuevos — los que tenías antes ya no sirven. Un pedido que toca varias páginas se resuelve en cadena, una página a la vez: trabajar_en_pagina → editar_pagina → trabajar_en_pagina → editar_pagina. trabajar_en_pagina en sí no cambia nada de la página, solo mueve el foco — no genera una edición.
@@ -371,5 +363,5 @@ Las URLs que el usuario te da son datos reales suyos: van al href VERBATIM, car�
 - Esto aplica SOLO a <a href>. Las imágenes mandan por su propia regla (elegir_foto, jamás una URL de imagen inventada), y lo que un módulo ya resuelve se enciende con activar_modulo — no se maqueta como un enlace suelto.
 
 GUÍA DE DISEÑO (para cualquier new_html que emitas):
-${DESIGN_GUIDANCE}`;
+${PUBLISH_CONTRACT}`;
 }

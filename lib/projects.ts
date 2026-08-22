@@ -1,7 +1,8 @@
+import { authorizeRuntimeForPublish, buildCapsule } from "@/lib/projects/model-runtime";
 import { createHash } from "node:crypto";
 import { and, desc, eq, gte, isNotNull, isNull, ne, sql as sqlOp } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
-import type { ProjectData, ProjectSettings, StoredChatTurn } from "@/lib/projects/types";
+import type { Degradation, ProjectData, ProjectSettings, StoredChatTurn } from "@/lib/projects/types";
 import { getUserPlan } from "@/lib/limits";
 import { subdomainLimitForPlan } from "@/lib/subdomain/limits";
 import { validateSubdomain } from "@/lib/subdomain/validate";
@@ -18,7 +19,6 @@ import { getDefaultCollection, listItems, type ItemRow } from "@/lib/collections
 import { createVersion } from "@/lib/projects/versions";
 import { getChatMessages } from "@/lib/projects/chat";
 import {
-  memberDoorPlan,
   pageEdgePaths,
   pagesForPublish,
   sitePagesFingerprintInput,
@@ -37,6 +37,7 @@ import { getProfile } from "@/lib/business-profiles/store";
 import { projectBusinessProfile } from "@/lib/business-profiles/whatsapp-default";
 import { PLATFORMS_BAND_MARKER } from "@/lib/business-profiles/platforms-band";
 import type { BusinessProfileData } from "@/lib/business-profiles/types";
+import { pageMetaFor } from "@/lib/publish/page-meta-intent";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Project persistence helpers.
@@ -170,6 +171,12 @@ export interface ProjectFull extends ProjectSummary {
   /** Persisted Chat-tab transcript — seeds the chat on load. Empty array
    *  when the project has never been chatted (column NULL). */
   chatHistory: StoredChatTurn[];
+  /** La cápsula del JavaScript del modelo, TAL CUAL se leyó. Se devuelve para
+   *  que quien reescriba `data.html` pueda re-sellarla (`resealRuntime`): sin
+   *  eso la página se publica sin su interactividad y el único aviso es una
+   *  degradación que nadie lee. La consulta ya la traía —`select()` sin
+   *  columnas—, sólo no se devolvía. */
+  generatedRuntime: unknown;
 }
 
 function publishBaseHost(): string {
@@ -206,6 +213,11 @@ function asVisibility(raw: string): ProjectVisibility {
 }
 
 export interface CreateProjectInput {
+  /** El JavaScript que escribió el modelo, si esta creación lo capturó.
+   *  SÓLO lo pasa /api/generate: pegar HTML, clonar una plantilla, duplicar o
+   *  sembrar comunidad lo dejan sin poner, y la columna nace NULL. Se sella
+   *  aquí dentro con el id y el HTML de este mismo insert. */
+  modelRuntime?: string | null;
   /** Publish-ready HTML — the project's source of truth. */
   html: string;
   /** The brief the page was generated from — stored on the `brief` column
@@ -223,6 +235,11 @@ export interface CreateProjectInput {
   /** Initial module settings (the AI→módulos bridge sets settings.bookings /
    *  settings.collections when the generated page carries their placeholder). */
   settings?: ProjectSettings;
+  /** What the page lost on the way in. Omitted when nothing was lost — a row
+   *  with nothing to say has to read the same as one written before this
+   *  existed, or every pre-feature project starts claiming a clean bill of
+   *  health it was never given. */
+  degradations?: Degradation[];
 }
 
 export async function createProject(
@@ -235,17 +252,30 @@ export async function createProject(
     titleFromHtml(input.html) ||
     input.brief.slice(0, 60).trim() ||
     "Untitled page";
+  // La cápsula se calcula sobre el id que acabamos de generar y sobre el HTML
+  // EXACTO que se va a guardar, y entra en el MISMO insert. Escribirla después
+  // dejaría una ventana en la que el proyecto existe con su HTML y sin su
+  // autorización, y —peor— un fallo entre las dos escrituras dejaría una
+  // cápsula huérfana apuntando a un documento que nunca llegó a existir.
+  const generatedRuntime = input.modelRuntime
+    ? buildCapsule({ projectId: id, html: input.html, code: input.modelRuntime })
+    : null;
   await db.insert(schema.projects).values({
     id,
     userId,
     title,
     brief: input.brief,
+    generatedRuntime,
     thumbnailUrl: null,
     tags: [],
     status: "draft",
     profileId: input.profileId ?? null,
     logoUrl: input.logoUrl ?? null,
-    data: { html: input.html, ...(input.settings ? { settings: input.settings } : {}) },
+    data: {
+      html: input.html,
+      ...(input.settings ? { settings: input.settings } : {}),
+      ...(input.degradations?.length ? { degradations: input.degradations } : {}),
+    },
   });
   // Render a card thumbnail in the background so the project doesn't show the
   // placeholder icon in /projects. Fire-and-forget: never delays the create
@@ -383,7 +413,7 @@ export async function getProject(
   // projects get a near-no-op pass.
   const rawHtml = row.data?.html ?? "";
   const currentHtml = rawHtml
-    ? ensurePageMeta(normalizeBornCanonical(rawHtml), { title: row.title })
+    ? ensurePageMeta(normalizeBornCanonical(rawHtml), pageMetaFor({ provenance: "authored", title: row.title }))
     : "";
   const data: ProjectData =
     row.data && currentHtml !== rawHtml
@@ -416,6 +446,7 @@ export async function getProject(
     updatedAt: row.updatedAt,
     data,
     chatHistory,
+    generatedRuntime: row.generatedRuntime,
   };
 }
 
@@ -524,6 +555,32 @@ const LOGO_URL_MAX = 2000;
 /** Persist the per-project logo URL. Pass null to clear it.
  *  Acceptable: an absolute http(s) URL (uploaded asset, paste-URL, default
  *  data URL) — validation is the caller's responsibility. */
+/** Mark the ingestion-degradation notice as seen. A warning that reappears on
+ *  every load is noise, and noise gets ignored — which is how we arrive back
+ *  at silence through another door. The record itself STAYS for diagnosis;
+ *  only the telling is dismissed. */
+export async function dismissDegradations(
+  projectId: string,
+  userId: string,
+): Promise<boolean> {
+  const rows = await db
+    .select({ data: schema.projects.data })
+    .from(schema.projects)
+    .where(and(eq(schema.projects.id, projectId), eq(schema.projects.userId, userId)))
+    .limit(1);
+  const existing = rows[0];
+  if (!existing) return false;
+  const result = await db
+    .update(schema.projects)
+    .set({
+      data: { ...(existing.data ?? { html: "" }), degradationsDismissed: true },
+      updatedAt: new Date(),
+    })
+    .where(and(eq(schema.projects.id, projectId), eq(schema.projects.userId, userId)))
+    .returning({ id: schema.projects.id });
+  return result.length > 0;
+}
+
 export async function setProjectLogoUrl(
   projectId: string,
   userId: string,
@@ -734,6 +791,11 @@ export async function publishProject(
       data: schema.projects.data,
       subdomain: schema.projects.subdomain,
       logoUrl: schema.projects.logoUrl,
+      // En el MISMO select que `data`: cápsula y documento tienen que venir
+      // del mismo instante. Leerlos en dos consultas abre la ventana en la que
+      // otra escritura cambia el HTML entre ambas y la cápsula pasa a
+      // autorizar un documento que ya no es el que se va a publicar.
+      generatedRuntime: schema.projects.generatedRuntime,
     })
     .from(schema.projects)
     .where(
@@ -773,7 +835,7 @@ export async function publishProject(
   // hero, or a rendered branded card) so the link unfurls on WhatsApp / X /
   // Facebook — and fill twitter:image / og:image dims / og:url. Both soft: a
   // hiccup must never block a publish.
-  let html = ensurePageMeta(project.data?.html ?? "", { title: project.title });
+  let html = ensurePageMeta(project.data?.html ?? "", pageMetaFor({ provenance: "authored", title: project.title }));
   try {
     const baseUrl = `https://${v.value}.${process.env.PUBLISH_BASE_HOST?.trim() || "openlen.com"}`;
     html = await ensureSocialOgImage(html, { title: project.title, baseUrl });
@@ -866,21 +928,10 @@ export async function publishProject(
     effectiveLogoUrl = project.logoUrl;
   }
 
-  // Members module: gated pages leave the public release (a login stub takes
-  // their path) and publish into the protected store instead. With the module
-  // off, gatedPages is empty and everything ships public as always.
-  const { publicPages, gatedPages } = splitPagesForPublish(project.data);
-
-  // The member door — module ON means /cuenta + /login + /register publish and
-  // the nav gains its entry, no preset flags required (they remain opt-outs).
-  // Decision + defaults live in memberDoorPlan; app/api/m/[sub]/_shared.ts
-  // mirrors the same passwordLogin default so the card's endpoints never 404.
-  const door = memberDoorPlan(
-    project.data,
-    gatedPages.map((p) => p.slug),
-  );
-  const accountArea = door.accountArea;
-  const memberSigninPath = door.signinPath;
+  // Con Miembros retirado (2026-08-21) no hay páginas restringidas: todas son
+  // públicas. `splitPagesForPublish` sobrevive porque lo usa `lib/integrations`,
+  // y ya devuelve `gatedPages` vacío sin el módulo.
+  const { publicPages } = splitPagesForPublish(project.data);
 
   // Collections module: read the published items + layout at publish time so
   // the bake renders them as STATIC HTML (no runtime API). Off → undefined.
@@ -915,11 +966,37 @@ export async function publishProject(
   const siteDocsForBands = [
     html,
     ...publicPages.map((p) => p.html),
-    ...gatedPages.map((p) => p.html),
   ];
   if (siteDocsForBands.some((doc) => doc.includes(PLATFORMS_BAND_MARKER))) {
     const profile = await projectBusinessProfile(params.projectId, params.userId);
     platformsBake = profile?.links ?? null;
+  }
+
+  // ¿Lleva esta publicación el JavaScript del modelo?
+  //
+  // Se verifica contra `project.data.html` TAL CUAL está guardado, antes de
+  // que ningún bake lo toque: el hash se calculó sobre esos bytes. Verificar
+  // después de transformar fallaría SIEMPRE, y el síntoma sería "esto nunca
+  // funciona" en vez de "el orden está mal".
+  const dominios = await db
+    .select({ id: schema.customDomains.id })
+    .from(schema.customDomains)
+    .where(eq(schema.customDomains.projectId, params.projectId))
+    .limit(1);
+  const autorizacion = authorizeRuntimeForPublish({
+    env: process.env,
+    projectId: params.projectId,
+    html: project.data?.html ?? "",
+    capsule: project.generatedRuntime,
+    pageCount: publicPages.length,
+    hasCustomDomain: dominios.length > 0,
+  });
+  if (project.generatedRuntime && autorizacion.kind === "skipped") {
+    // Un proyecto CON cápsula que se publica sin ella es la única señal que
+    // dice si el mecanismo funciona. Sin esto sólo se vería una página que no
+    // hace nada, y nadie sabría si fue el interruptor, una edición o un fallo.
+    // eslint-disable-next-line no-console
+    console.log(`[publish] ${params.projectId}: runtime omitido — ${autorizacion.reason}`);
   }
 
   let publishResult: {
@@ -927,12 +1004,14 @@ export async function publishProject(
     html: string;
     written: boolean;
     locales: string[];
+    runtimeDropped: string | null;
   };
   try {
     publishResult = await publishToDir({
       subdomain: v.value,
       html,
       projectId: params.projectId,
+      modelRuntime: autorizacion.kind === "authorized" ? autorizacion.code : null,
       formConfigs: project.data?.settings?.forms,
       analyticsEnabled: !project.data?.settings?.analyticsDisabled,
       logoUrl: effectiveLogoUrl,
@@ -940,12 +1019,6 @@ export async function publishProject(
       music: project.data?.settings?.music,
       assistant: project.data?.settings?.assistant?.enabled
         ? { enabled: true, businessName: project.title || v.value }
-        : undefined,
-      comments: project.data?.settings?.comments?.enabled
-        ? { enabled: true, theme: project.data?.settings?.comments?.theme }
-        : undefined,
-      bookings: project.data?.settings?.bookings?.enabled
-        ? { enabled: true, theme: project.data?.settings?.bookings?.theme }
         : undefined,
       collections: collectionsBake,
       liveData: liveDataCfg,
@@ -956,10 +1029,6 @@ export async function publishProject(
       whatsapp: project.data?.settings?.whatsapp?.enabled
         ? project.data.settings.whatsapp
         : undefined,
-      orders:
-        project.data?.settings?.orders?.enabled && project.data.settings.orders.number
-          ? { enabled: true, number: project.data.settings.orders.number }
-          : undefined,
       chat: project.data?.settings?.chat?.enabled
         ? {
             enabled: true,
@@ -973,18 +1042,6 @@ export async function publishProject(
           }
         : undefined,
       pages: publicPages,
-      gatedPages: gatedPages.length > 0 ? gatedPages : undefined,
-      memberSigninPath,
-      memberSigninIsAccount: door.signinIsAccount || undefined,
-      memberGate:
-        gatedPages.length > 0 || accountArea
-          ? {
-              projectTitle: project.title || v.value,
-              logoUrl: effectiveLogoUrl,
-              passwordLogin: door.passwordLogin,
-            }
-          : undefined,
-      accountArea: accountArea || undefined,
       sourceLang,
       buildLocaleDocs:
         targets.length > 0
@@ -1049,9 +1106,54 @@ export async function publishProject(
   // currently live. The first UPDATE above happens before publishToDir
   // because we need to claim the subdomain in DB before writing the
   // filesystem; this second UPDATE happens after publishToDir succeeds.
+  // LA INTERACTIVIDAD PERDIDA DEJA DE SER INVISIBLE.
+  //
+  // Antes, un proyecto CON cápsula que se publicaba sin ella sólo dejaba un
+  // `console.log`. El usuario veía una página que no hacía nada y no tenía forma
+  // de saber por qué — que es justo lo que prohíbe la doctrina de degradación:
+  // un registro que nadie lee no es una solución.
+  //
+  // `apagado` NO se cuenta: que el interruptor esté en 0 es asunto nuestro, no
+  // suyo, y avisarle de algo que nunca se le prometió sería ruido.
+  const runtimePerdido: string | null =
+    publishResult.runtimeDropped ??
+    (project.generatedRuntime &&
+    autorizacion.kind === "skipped" &&
+    autorizacion.reason !== "apagado"
+      ? autorizacion.reason
+      : null);
+
   await db
     .update(schema.projects)
-    .set({ publishedReleaseSha: publishResult.sha, updatedAt: now })
+    .set({
+      publishedReleaseSha: publishResult.sha,
+      updatedAt: now,
+      ...(runtimePerdido && project.data
+        ? {
+            data: {
+              ...project.data,
+              // Se repite el cambio de idiomas del paso 4: este UPDATE reescribe
+              // `data` entero y partir de `project.data` a secas lo perdería.
+              ...(persistLanguages ? { settings: { ...settings, languages: targets } } : {}),
+              degradations: [
+                ...(project.data.degradations ?? []).filter(
+                  (d) => d.code !== "interactivity_lost",
+                ),
+                {
+                  surface: "publish" as const,
+                  stage: "publish" as const,
+                  code: "interactivity_lost" as const,
+                  count: 1,
+                  detail: [runtimePerdido],
+                },
+              ],
+              // Un aviso NUEVO merece verse. El "entendido" anterior era sobre
+              // otra cosa, y `degradationsDismissed` esconde el bloque entero.
+              degradationsDismissed: false,
+            },
+          }
+        : {}),
+    })
     .where(eq(schema.projects.id, params.projectId))
     .catch((err) => {
       // The release is live on disk; missing the SHA in DB just means the

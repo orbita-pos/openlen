@@ -8,8 +8,24 @@
     "autofill": "用我的信息自动填充 — 生成后可用",
     "availableAfter": "项目创建后即可使用",
     "generate": "生成",
-    "modeQuick": "快速",
-    "modeScratch": "从零开始"
+    "effortLow": "标准",
+    "effortMedium": "进阶",
+    "effortHigh": "最高",
+    "effortSoon": "即将推出",
+    "reference": {
+      "add": "参考某个网站的风格",
+      "placeholder": "粘贴你喜欢的页面链接",
+      "use": "使用",
+      "looking": "正在查看…",
+      "remove": "移除参考",
+      "error": {
+        "blocked": "这个链接无法打开。",
+        "unreachable": "无法访问该页面。",
+        "not_rendered": "该页面没有显示出它的风格。",
+        "rate_limited": "参考获取过于频繁，请稍后再试。",
+        "network": "获取失败，请重试。"
+      }
+    }
   },
   "brief": {
     "label": "简介",

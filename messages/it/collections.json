@@ -66,6 +66,9 @@
   },
   "sheetBacked": {
     "banner": "Questo elenco si sincronizza dal tuo Google Sheet. Modificalo lì e la tua pagina si aggiorna da sola.",
-    "openSheet": "Apri il foglio"
+    "openSheet": "Apri il foglio",
+    "disconnect": "Disconnetti",
+    "disconnectHint": "Gli elementi già sincronizzati restano e tornano modificabili.",
+    "disconnectError": "Impossibile disconnettere. Riprova."
   }
 }

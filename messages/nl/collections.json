@@ -8,7 +8,10 @@
   },
   "sheetBacked": {
     "banner": "Deze lijst synchroniseert vanuit je Google Sheet. Bewerk hem daar en je pagina werkt zichzelf bij.",
-    "openSheet": "Sheet openen"
+    "openSheet": "Sheet openen",
+    "disconnect": "Loskoppelen",
+    "disconnectHint": "Al gesynchroniseerde items blijven staan en worden weer bewerkbaar.",
+    "disconnectError": "Loskoppelen mislukt. Probeer het opnieuw."
   },
   "module": {
     "title": "Collecties",

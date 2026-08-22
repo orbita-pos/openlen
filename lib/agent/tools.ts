@@ -24,7 +24,7 @@ import {
   type ImageEditInput,
   type ImageEditResult,
 } from "@/lib/ai/image-edit-core";
-import { describeBehaviorIssues, validateBehaviors } from "@/lib/behaviors/validate";
+import { describeBehaviorIssues } from "@/lib/behaviors/validate";
 import { BEHAVIOR_NAMES } from "@/lib/behaviors/doc";
 import { getOrCreateOwnerChatUser } from "@/lib/chat/store";
 import { getOrCreateDefaultCollection, setCollectionSource } from "@/lib/collections/store";
@@ -32,8 +32,12 @@ import { syncCollectionFromSheet } from "@/lib/collections/sheet-sync";
 import { debitCredits } from "@/lib/credits";
 import { detectSlotPath, sanitizeForPublish } from "@/lib/html-engine";
 import { applyOps, tagWithOpIds, type Op, type OpType } from "@/lib/html-ops";
+import { splitRuntimeOps } from "@/lib/ai-stream/model-runtime";
 import { fetchSheet, resolveSheetCsvUrl } from "@/lib/live/sheet-source";
-import { normalizeBornCanonical } from "@/lib/normalize";
+import { passHtmlGate } from "@/lib/html-gate/document-gate";
+import { activeHtml, persistPage } from "@/lib/page-engine/persist";
+import { verifyCapsule, type ModelRuntimeCapsule } from "@/lib/projects/model-runtime";
+import { preparePage } from "@/lib/page-engine/prepare";
 import { setProjectUserBrief, USER_BRIEF_MAX } from "@/lib/projects";
 import { extForMime, getAssetStorage } from "@/lib/projects/assets";
 import { validateUrl } from "@/lib/style-match/scrape/validate-url";
@@ -53,7 +57,6 @@ import type { BusinessProfileData } from "@/lib/business-profiles/types";
 import { summarizeBusinessForAgent } from "@/lib/agent/business";
 import { redesignWithGemini, type RedesignInput, type RedesignOutcome } from "@/lib/agent/redesign";
 import { resolveAIProvider } from "@/lib/ai-provider";
-import { ensurePageMeta } from "@/lib/publish/ensure-page-meta";
 import { liveDataEnabled } from "@/lib/publish/kill-switches";
 import { isPublishLocale } from "@/lib/publish/publish-locales";
 import { AGENT_MODULES, MOTION_LOOKS, type AgentModule } from "@/lib/agent/catalog";
@@ -89,11 +92,22 @@ export interface AgentDeps {
     subdomain: string | null;
     publishedAt: Date | null;
     userBrief: string | null;
+    /** El brief con el que nació la página. Alimenta la etapa de IMÁGENES de
+     *  `preparePage`, que sin él se salta entera. */
+    brief?: string | null;
+    /** La cápsula del JavaScript del modelo, para poder RE-ATARLA al documento
+     *  que la edición deja guardado (`persistPage`). */
+    generatedRuntime?: unknown;
   } | null>;
-  saveProjectData(projectId: string, userId: string, data: ProjectData): Promise<void>;
+  saveProjectData(
+    projectId: string,
+    userId: string,
+    data: ProjectData,
+    runtime?: ModelRuntimeCapsule | null,
+  ): Promise<void>;
   /** The business profile's contact.whatsapp for this project (linked profile,
    *  else the user's default) — the number fallback activar_modulo uses so
-   *  whatsapp/pedidos never enable silent-dark without a number to bake. */
+   *  whatsapp never enables silent-dark without a number to bake. */
   profileWhatsappNumber(projectId: string, userId: string): Promise<string | null>;
   /** P2 — the project's FULL effective business profile (same resolution as
    *  profileWhatsappNumber: linked profile, else user default). Feeds the
@@ -205,16 +219,21 @@ export function realDeps(): AgentDeps {
           subdomain: schema.projects.subdomain,
           publishedAt: schema.projects.publishedAt,
           userBrief: schema.projects.userBrief,
+          brief: schema.projects.brief,
+          generatedRuntime: schema.projects.generatedRuntime,
         })
         .from(schema.projects)
         .where(and(eq(schema.projects.id, projectId), eq(schema.projects.userId, userId)))
         .limit(1);
       return rows[0] ?? null;
     },
-    async saveProjectData(projectId, userId, data) {
+    // `runtime` re-ata el JavaScript del modelo al documento nuevo. Va en el
+    // MISMO update: escribirlo aparte dejaría una ventana con el HTML ya
+    // cambiado y la cápsula apuntando todavía al anterior.
+    async saveProjectData(projectId, userId, data, runtime) {
       await db
         .update(schema.projects)
-        .set({ data, updatedAt: new Date() })
+        .set({ data, updatedAt: new Date(), ...(runtime ? { generatedRuntime: runtime } : {}) })
         .where(and(eq(schema.projects.id, projectId), eq(schema.projects.userId, userId)));
     },
     async profileWhatsappNumber(projectId, userId) {
@@ -335,6 +354,12 @@ export interface AgentSession {
    *  from the route's own validation, cloned from ai-design's page handling.
    *  Read-only in T1 — T2 makes tool writes respect it (the W1 pin). */
   page: string | null;
+  /** El brief del proyecto y su perfil de negocio. Van en la sesión porque los
+   *  necesita `persistHtmlChange`, y enhebrarlos por los 6 llamadores sería
+   *  ruido. Sin `brief`, `preparePage` se salta la etapa de imágenes y el
+   *  modelo entrega cajas grises que nadie rellena. */
+  brief?: string | null;
+  profile?: BusinessProfileData | null;
   /** Session email (session.user.email), threaded from the route so an
    *  agent-provisioned owner chat_user is created WITH an email — mirrors
    *  what the settings route passes to getOrCreateOwnerChatUser. */
@@ -376,21 +401,15 @@ export interface ToolOutcome {
   confirm?: { action: "publicar"; subdominio: string; idiomas: string[]; republicar: boolean };
 }
 
-// AgentModule name -> the settings key it actually lives under. Identity for
-// every module except "pedidos", whose settings live at settings.orders (the
-// activar_modulo enum value stays "pedidos" — user-facing Spanish — while the
-// persisted patch/read key matches the OrdersSettings field name).
+// AgentModule name -> the settings key it actually lives under. Identidad en
+// todos: la excepción era "pedidos" (settings.orders), y ese módulo se retiró.
 const MODULE_SETTINGS_KEY: Record<
   AgentModule,
-  "members" | "bookings" | "collections" | "chat" | "whatsapp" | "comments" | "orders"
+  "collections" | "chat" | "whatsapp"
 > = {
-  members: "members",
-  bookings: "bookings",
   collections: "collections",
   chat: "chat",
   whatsapp: "whatsapp",
-  comments: "comments",
-  pedidos: "orders",
 };
 
 export function summarizeProjectState(row: {
@@ -403,12 +422,20 @@ export function summarizeProjectState(row: {
   for (const m of AGENT_MODULES) {
     modulos[m] = row.data.settings?.[MODULE_SETTINGS_KEY[m]]?.enabled === true;
   }
+  // `datos_vivos` faltaba: se podía CONECTAR una hoja y después ni el Agente ni
+  // el usuario tenían forma de saber cuál era — «¿qué hoja tengo conectada?»
+  // no tenía respuesta. QUITARLA sigue sin tenerla en ninguna superficie: el
+  // panel sólo ofrece el enlace para abrirla, así que una colección respaldada
+  // por un Sheet se queda de SOLO LECTURA para siempre. Pendiente de decidir
+  // dónde vive ese botón; aquí al menos se sabe cuál es.
+  const sheetUrl = row.data.settings?.liveData?.sheetUrl;
   return {
     titulo: row.title,
     publicado: row.publishedAt !== null,
     subdominio: row.subdomain,
     paginas: Object.keys(row.data.pages ?? {}),
     modulos,
+    ...(sheetUrl ? { datos_vivos: { hoja: sheetUrl } } : {}),
   };
 }
 
@@ -440,12 +467,6 @@ async function toolLeerEstado(
 
 function buildModulePatch(modulo: AgentModule, encender: boolean, numero?: string): SettingsPatchBody {
   switch (modulo) {
-    case "members":
-      return encender
-        ? { members: { enabled: true, passwordLogin: true, accountArea: true } }
-        : { members: { enabled: false } };
-    case "bookings":
-      return { bookings: { enabled: encender } };
     case "collections":
       return { collections: { enabled: encender } };
     case "chat":
@@ -454,10 +475,6 @@ function buildModulePatch(modulo: AgentModule, encender: boolean, numero?: strin
       return encender
         ? { whatsapp: { enabled: true, ...(numero ? { number: numero } : {}) } }
         : { whatsapp: { enabled: false } };
-    case "comments":
-      return { comments: { enabled: encender } };
-    case "pedidos":
-      return encender ? { orders: { enabled: true, number: numero } } : { orders: { enabled: false } };
   }
 }
 
@@ -507,32 +524,14 @@ async function toolActivarModulo(
   }
   const encender = args.encender !== false;
 
-  // Loaded up-front (moved ahead of buildModulePatch) so the "pedidos" case can
+  // Loaded up-front (moved ahead of buildModulePatch) so the whatsapp case can
   // resolve its number-fallback chain from the existing row before the patch
   // is built — never a silent-dark { enabled: true } with no number to bake.
   const row = await deps.loadProject(session.projectId, session.userId);
   if (!row) return { response: { ok: false, error: "proyecto no encontrado" } };
 
   let numero: string | undefined;
-  if (modulo === "pedidos" && encender) {
-    const resuelto =
-      (typeof args.numero === "string" && args.numero.trim()) ||
-      row.data.settings?.orders?.number ||
-      row.data.settings?.whatsapp?.number ||
-      (await deps.profileWhatsappNumber(session.projectId, session.userId)) ||
-      null;
-    if (!resuelto) {
-      return {
-        response: {
-          ok: false,
-          error:
-            'pedidos necesita el número de WhatsApp del negocio y no hay ninguno guardado — pregúntale al usuario su número (10 dígitos MX) y vuelve a llamar activar_modulo con modulo="pedidos" y numero',
-        },
-      };
-    }
-    numero = resuelto;
-  }
-  // WhatsApp mirrors pedidos: enabling without a number would bake nothing
+  // WhatsApp: enabling without a number would bake nothing
   // (silent-dark FAB). Chain: explicit arg > the module's saved number > the
   // business profile's contact.whatsapp; none → ask the user for it.
   if (modulo === "whatsapp" && encender) {
@@ -564,7 +563,6 @@ async function toolActivarModulo(
       ok: true,
       modulo,
       encendido: encender,
-      ...(activated.outcome.createdPage ? { paginaCreada: activated.outcome.createdPage.slug } : {}),
     },
     action: { tool: "activar_modulo", ok: true, summary: modulo },
   };
@@ -737,7 +735,7 @@ async function toolCrearPagina(
     slug: typeof args.slug === "string" ? args.slug : undefined,
     title: typeof args.titulo === "string" ? args.titulo : undefined,
     module:
-      args.modulo === "bookings" || args.modulo === "collections"
+      args.modulo === "collections"
         ? args.modulo
         : undefined,
   };
@@ -765,7 +763,7 @@ interface RawEdit {
 }
 
 type PersistResult =
-  | { ok: true; finalHtml: string; aviso?: string }
+  | { ok: true; finalHtml: string; aviso?: string; sinCambios?: boolean }
   | { ok: false; error: string };
 
 // The sanitizer silently deletes <script>, on* handlers and <iframe> from any
@@ -811,13 +809,10 @@ export function sanitizeAviso(
 // page="<slug>" → that subpage's own document (data.pages[slug].html).
 // This is the single choke point the W1 pin depends on for READS; writes go
 // through the mirrored branch inside persistHtmlChange below.
-function activeHtml(data: ProjectData, page: string | null): string | null {
-  return page ? data.pages?.[page]?.html ?? null : data.html ?? null;
-}
-
 // Shared F1 persist pipeline — same block editar_pagina always ran:
-// editor-mode marker guard -> sanitize -> ensurePageMeta(normalizeBornCanonical)
-// -> module-intent -> snapshot pre/post -> save -> re-tag session.taggedHtml.
+// editor-mode marker guard -> passHtmlGate (sanitize, normalize, meta,
+// behaviours — fail closed) -> module-intent -> snapshot pre/post -> save ->
+// re-tag session.taggedHtml.
 // Any tool that hands the model a mutated document (editar_pagina,
 // cambiar_tema, …) funnels its candidate HTML through this so persistence
 // semantics never drift between tools.
@@ -832,80 +827,97 @@ async function persistHtmlChange(
   deps: AgentDeps,
   candidateHtml: string,
   label: string,
-  opts: { isBaseline?: boolean } = {},
+  /** `modelRuntime`: un `<script>` que el modelo acaba de escribir. Sólo llega
+   *  del REDISEÑO, que produce un documento entero; `editar_pagina` emite ops y
+   *  no trae ninguno — ahí `persistPage` re-sella el que ya había en vez de
+   *  tirarlo. */
+  opts: { isBaseline?: boolean; modelRuntime?: string | null } = {},
 ): Promise<PersistResult> {
   // Editor-mode marker guard first (specific message), then the broader
   // sanitize pass (defense in depth — mirrors ai-design route).
   if (detectSlotPath(candidateHtml)) {
     return { ok: false, error: "el HTML contiene un marcador reservado (data-slot-path)" };
   }
-  const sanitized = sanitizeForPublish(candidateHtml);
-  if (sanitized.html === null) {
-    return { ok: false, error: "el HTML no pasó la sanitización" };
+  // Fail closed, through the one gate. `seal: false` — nothing is served from
+  // here, publishToDir seals at publish time; `render: false` — an agent turn
+  // cannot pay a twenty-second browser launch, publish verifies instead.
+  //
+  // `priorHtml`: una conducta rota que ya venía en la página no puede condenar
+  // todas las ediciones futuras. Crear falla ABIERTO y entrega la página con el
+  // defecto anotado; sin esta comparación, editar fallaba CERRADO y el Agente
+  // rechazaba cualquier cambio hablando de un control que el usuario no tocó.
+  const prepared = await preparePage(candidateHtml, {
+    mode: "edit",
+    // No encarece el turno: `photographHtml` sale sin tocar la red cuando el
+    // documento no trae huecos `data-ol-photo`, que es el caso corriente.
+    ...(session.brief ? { brief: session.brief } : {}),
+    ...(session.profile ? { profile: session.profile } : {}),
+    // Un turno del Agente no puede pagar un arranque de Chrome; publicar
+    // verifica. Los invariantes y la puerta corren igual.
+    renderChecks: false,
+    priorHtml: session.taggedHtml,
+  });
+  const gated = prepared.ok
+    ? { ok: true as const, html: prepared.html, removed: prepared.report.removed, issues: prepared.report.behaviorIssues as never[], code: "", detail: "" }
+    : { ok: false as const, html: "", removed: prepared.report.removed, issues: (prepared.report.behaviorIssues ?? []) as never[], code: prepared.code, detail: prepared.detail ?? "" };
+  if (!gated.ok) {
+    // Task 16's rule, now enforced instead of advised: un data-ol-* mal
+    // cableado ya no llega al documento guardado — se rechaza y la página que
+    // el usuario ya tenía queda byte-intacta. El modelo sigue viendo TODAS
+    // las razones: un turno puede a la vez perder un <script> Y traer una
+    // conducta mal cableada, y tiene que arreglar las dos en este mismo
+    // turno; contarle solo la que bloqueó lo devuelve con el mismo script
+    // condenado pegado a un botón ya corregido.
+    const strippedMsg = gated.removed ? sanitizeAviso(gated.removed) : undefined;
+    const behaviorList = describeBehaviorIssues([...(gated.issues ?? [])]);
+    const whyMsg = behaviorList
+      ? `Hay conductas mal cableadas que nacerían MUERTAS en la página: ${behaviorList}. NO se guardó nada — arréglalas y vuelve a mandar el documento en este mismo turno.`
+      : gated.code === "reserved_marker"
+        ? "el HTML contiene un marcador reservado (data-slot-path)"
+        : `el HTML no pasó la puerta de publicación (${gated.code}${gated.detail ? `: ${gated.detail}` : ""})`;
+    return {
+      ok: false,
+      error: [strippedMsg, whyMsg].filter((m): m is string => Boolean(m)).join(" "),
+    };
   }
-  const sanitizeMsg = sanitizeAviso(sanitized.removed);
 
-  const finalHtml = ensurePageMeta(normalizeBornCanonical(sanitized.html));
+  const finalHtml = gated.html;
+  // Behaviours are the gate's call now, so the only thing left to warn about
+  // is what the sanitizer removed from a document that DID pass.
+  const aviso = gated.removed ? sanitizeAviso(gated.removed) : undefined;
 
-  // Task 16 — un data-ol-* mal cableado que llega a la página del usuario es
-  // otra vez un control muerto, solo que nunca pasó por el sanitizer: nació
-  // mal escrito. Corre DESPUÉS del sanitizer, sobre finalHtml (el documento
-  // real que se guarda), y se CONCATENA al aviso de arriba en vez de
-  // reemplazarlo — un turno puede a la vez perder un <script> Y traer una
-  // conducta mal cableada, y el modelo necesita ver los dos problemas para
-  // arreglar los dos en este mismo turno.
-  const behaviorIssues = validateBehaviors(finalHtml);
-  const behaviorList = describeBehaviorIssues(behaviorIssues);
-  const behaviorMsg = behaviorList
-    ? `Hay conductas mal cableadas que nacerían MUERTAS en la página: ${behaviorList}. Arréglalas con editar_pagina en este mismo turno, no las des por buenas.`
-    : undefined;
-
-  const aviso =
-    [sanitizeMsg, behaviorMsg].filter((m): m is string => Boolean(m)).join(" ") || undefined;
-
+  // El guardado vive en lib/page-engine/persist: el Chat tenía una copia de
+  // este mismo bloque —dos snapshots, el mismo spread por página— y el
+  // comentario de arriba pedía justo que no derivaran.
   const row = await deps.loadProject(session.projectId, session.userId);
   if (!row) return { ok: false, error: "proyecto no encontrado" };
-
   const moduleIntent = applyModuleIntent(row.data.settings, finalHtml);
-  const withSettings = moduleIntent.enabled.length ? { settings: moduleIntent.settings } : {};
-  const nextData: ProjectData = session.page
-    ? {
-        ...row.data,
-        ...withSettings,
-        pages: {
-          ...row.data.pages,
-          [session.page]: { ...row.data.pages?.[session.page], html: finalHtml },
-        },
-      }
-    : { ...row.data, html: finalHtml, ...withSettings };
 
-  const preEditHtml = activeHtml(row.data, session.page);
-  if (preEditHtml && preEditHtml !== finalHtml) {
-    await deps.snapshotVersion({
+  const saved = await persistPage(
+    {
       projectId: session.projectId,
-      html: preEditHtml,
-      label: "Before AI edit",
-      source: "manual",
+      userId: session.userId,
       page: session.page,
-    });
-  }
-
-  await deps.saveProjectData(session.projectId, session.userId, nextData);
-
-  await deps.snapshotVersion({
-    projectId: session.projectId,
-    html: finalHtml,
-    label,
-    source: "chat",
-    page: session.page,
-    isBaseline: opts.isBaseline,
-  });
+      html: finalHtml,
+      label,
+      ...(moduleIntent.enabled.length ? { settings: moduleIntent.settings } : {}),
+      ...(opts.isBaseline !== undefined ? { isBaseline: opts.isBaseline } : {}),
+      ...(opts.modelRuntime ? { modelRuntime: opts.modelRuntime } : {}),
+    },
+    deps,
+  );
+  if (!saved.ok) return saved;
 
   // Ids change after every apply — re-tag so the next editar_pagina call
   // has fresh targets to address.
   session.taggedHtml = tagWithOpIds(finalHtml).taggedHtml;
 
-  return { ok: true, finalHtml, ...(aviso ? { aviso } : {}) };
+  return {
+    ok: true,
+    finalHtml,
+    ...(aviso ? { aviso } : {}),
+    ...(saved.sinCambios ? { sinCambios: true } : {}),
+  };
 }
 
 // P4 — rediseño total del documento activo. Una llamada grande de modelo
@@ -943,11 +955,24 @@ async function toolRedisenarPagina(
     await deps.loadBusinessProfile(session.projectId, session.userId),
   );
 
+  // El JavaScript que la página ya tiene. `current` viene saneado —sin
+  // scripts—, así que sin esto el rediseño no ve la conducta que debe conservar
+  // y la re-inventa. Sólo el documento raíz: la cápsula ata `data.html`.
+  const runtime = (() => {
+    if (session.page) return null;
+    const check = verifyCapsule(row.generatedRuntime, {
+      projectId: session.projectId,
+      html: row.data?.html ?? "",
+    });
+    return check.ok ? check.code : null;
+  })();
+
   const redesigned = await deps.redesignDocument(session.userId, {
     html: current,
     direccion,
     negocio,
     brief: row.userBrief,
+    runtime,
   });
   if (!redesigned.ok) {
     return { response: { ok: false, error: redesigned.error } };
@@ -958,7 +983,9 @@ async function toolRedisenarPagina(
     deps,
     redesigned.html,
     `Rediseño: ${direccion.slice(0, 60)}`,
-    { isBaseline: true },
+    // El JavaScript que el modelo escribió para ESTA página viaja con ella: la
+    // cápsula se sella sobre el documento que se guarda.
+    { isBaseline: true, modelRuntime: redesigned.modelRuntime },
   );
   if (!persisted.ok) {
     return { response: { ok: false, error: persisted.error } };
@@ -1007,17 +1034,42 @@ async function toolEditarPagina(
     });
   }
 
-  const applied = applyOps(session.taggedHtml, ops);
-  if (applied.html === null) {
-    const reason = applied.errors[0]?.reason ?? "no se pudo aplicar la edición";
-    return { response: { ok: false, error: reason } };
+  // El runtime no es un elemento: se aparta antes de que el aplicador vea la
+  // tanda. Sin esto, el camino barato del Agente tampoco podía tocar el
+  // comportamiento de la página — mismo agujero que el Chat, misma cura.
+  const partido = splitRuntimeOps(ops);
+  if (partido.runtime.kind === "error") {
+    return {
+      response: {
+        ok: false,
+        error: `no pude aplicar el cambio de comportamiento (${partido.runtime.reason}). Manda el script COMPLETO y corregido en un solo edit con target="runtime".`,
+      },
+    };
+  }
+  const nuevoRuntime = partido.runtime.kind === "codigo" ? partido.runtime.code : null;
+
+  // Un turno que sólo arregla comportamiento no lleva ops de maquetación: el
+  // documento se guarda igual que estaba y lo que cambia es la cápsula.
+  let htmlAplicado = session.taggedHtml;
+  let aplicadas = 0;
+  if (partido.domOps.length > 0) {
+    const applied = applyOps(session.taggedHtml, partido.domOps);
+    if (applied.html === null) {
+      const reason = applied.errors[0]?.reason ?? "no se pudo aplicar la edición";
+      return { response: { ok: false, error: reason } };
+    }
+    htmlAplicado = applied.html;
+    aplicadas = applied.appliedCount;
+  } else if (nuevoRuntime === null) {
+    return { response: { ok: false, error: "ningún edit aplicable" } };
   }
 
   const persisted = await persistHtmlChange(
     session,
     deps,
-    applied.html,
-    `Agente (${applied.appliedCount} ops): ${resumen}`,
+    htmlAplicado,
+    `Agente (${aplicadas} ops${nuevoRuntime ? " + comportamiento" : ""}): ${resumen}`,
+    nuevoRuntime ? { modelRuntime: nuevoRuntime } : {},
   );
   if (!persisted.ok) {
     return { response: { ok: false, error: persisted.error } };
@@ -1026,9 +1078,19 @@ async function toolEditarPagina(
   return {
     response: {
       ok: true,
-      edits_aplicados: applied.appliedCount,
+      edits_aplicados: aplicadas,
+      ...(nuevoRuntime ? { comportamiento_actualizado: true } : {}),
       nota: "data-op-id regenerados; usa leer_estado incluir_documento=true para editar de nuevo",
       ...(persisted.aviso ? { aviso: persisted.aviso } : {}),
+      // El turno no cambió nada. Se le dice al MODELO para que no cierre
+      // diciéndole al usuario que lo arregló: es el fallo medido el 22/08.
+      ...(persisted.sinCambios
+        ? {
+            sin_cambios: true,
+            aviso_critico:
+              "Este edit NO cambió NADA de la página. NO le digas al usuario que lo arreglaste. Si el problema es de comportamiento, el arreglo va en un edit con target=\"runtime\" que lleve el script completo corregido.",
+          }
+        : {}),
     },
     action: { tool: "editar_pagina", ok: true, summary: resumen },
     updatedHtml: persisted.finalHtml,
@@ -1213,7 +1275,11 @@ const MAX_PHOTO_SEARCHES_PER_TURN = 6;
 // curated catalog clearly doesn't carry a genre, stop retrying variants and
 // change approach. Named tools so the model has a concrete next move.
 const PHOTO_PIVOT_NOTE =
-  "El catálogo curado «Imágenes by OpenLen» es acotado y no tiene fotos de esto. NO sigas buscando variantes. Cambia de enfoque: usa cambiar_tema o aplicar_tematica para dar el ambiente pedido (p. ej. una paleta oscura y envolvente), reescribe el hero con editar_pagina, o dile al usuario con honestidad que el catálogo no tiene ese tipo de imagen y ofrécele esas alternativas.";
+  "El catálogo curado «Imágenes by OpenLen» es acotado y no tiene fotos de esto. NO sigas buscando variantes y NUNCA inventes una URL. "
+  + "Deja el hueco con un degradado de la paleta usando editar_pagina — es exactamente lo que hace la generación cuando no encuentra pareja, "
+  + "y una caja neutra es mejor que una foto que miente sobre el negocio del usuario. "
+  + "Después SIGUE con el resto de lo que te pidió: quedarte sin una foto no cancela lo demás ni te obliga a pedir permiso para continuar. "
+  + "En tu respuesta di qué foto no había y qué pusiste en su lugar.";
 
 async function toolElegirFoto(
   session: AgentSession,
@@ -1436,7 +1502,13 @@ async function toolPublicar(
       response: {
         ok: false,
         error:
-          "este proyecto no tiene subdominio todavía. Pregúntale al usuario qué subdominio quiere (p. ej. mi-negocio) y vuelve a llamar publicar con subdominio.",
+          // Sin ejemplo con forma de valor, y sin «vuelve a llamar»: este texto
+          // entra al modelo como resultado de herramienta, y un modelo que lo
+          // lee literalmente re-llamaba publicar con el ejemplo de muestra
+          // —medido: DeepSeek reclamaba "mi-negocio" 3 de 3 veces— y le mostraba
+          // al usuario una tarjeta de confirmación para una dirección que nunca
+          // pidió. Lo que toca aquí es CERRAR el turno preguntando.
+          "este proyecto no tiene subdominio todavía, y el subdominio no lo eliges tú. NO vuelvas a llamar a publicar en este turno. Termina tu turno preguntándole al usuario qué dirección quiere para su página; cuando él la escriba, entonces sí llama a publicar con ese valor.",
       },
     };
   }

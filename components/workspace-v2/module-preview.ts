@@ -15,6 +15,10 @@
 
 import { bakeWhatsAppButton } from "@/lib/publish/whatsapp-button";
 import { renderCollectionsWidget } from "@/lib/publish/collections-block";
+import {
+  hasCollectionTemplate,
+  previewCollectionCards,
+} from "@/lib/publish/collection-template";
 import { renderPlatformsBand } from "@/lib/business-profiles/platforms-band";
 import { findMarkerTag } from "@/lib/publish/tag-attrs";
 import { detectHtmlLang } from "@/lib/publish/language-cluster";
@@ -38,7 +42,6 @@ export interface EditorModulesPreviewCfg {
   collections?: {
     items: ItemRow[];
     layout: "grid" | "list";
-    ordersNumber?: string | null;
     theme?: "light" | "dark";
   } | null;
   /** Links del perfil de negocio; pintan la banda de plataformas si la página
@@ -149,7 +152,7 @@ export function bandWithPreview(
   bandHtml: string,
   opts: {
     docHtml: string;
-    collections?: { items: ItemRow[]; layout: "grid" | "list"; ordersNumber?: string | null; theme?: "light" | "dark" } | null;
+    collections?: { items: ItemRow[]; layout: "grid" | "list"; theme?: "light" | "dark" } | null;
     platforms?: BusinessProfileData["links"] | null;
   },
 ): string {
@@ -182,7 +185,6 @@ export function bandWithPreview(
     const widget = renderCollectionsWidget(opts.docHtml, {
       items: col.items,
       layout: col.layout,
-      orders: col.ordersNumber ? { number: col.ordersNumber } : null,
       theme: col.theme,
     });
     const stamped = widget.replace(
@@ -203,11 +205,18 @@ export function injectEditorModulesPreview(
 
   const col = cfg.collections;
   if (col) {
-    if (col.items.length) {
+    // Página con tarjetas del modelo: se enseñan SUS tarjetas con los datos
+    // reales. Ni la rejilla genérica ni los fantasmas pueden entrar aquí —
+    // irían ENCIMA de una sección que ya está diseñada y llena.
+    if (hasCollectionTemplate(out)) {
+      out = previewCollectionCards(out, col.items, {
+        marker: MODULES_PREVIEW_MARKER,
+        attrs: { "data-openlen-no-edit": "" },
+      });
+    } else if (col.items.length) {
       const widget = renderCollectionsWidget(out, {
         items: col.items,
         layout: col.layout,
-        orders: col.ordersNumber ? { number: col.ordersNumber } : null,
         theme: col.theme,
       });
       const bandOpen = findMarkerTag(out, "data-ol-collection-section");

@@ -1,10 +1,178 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { renderVisualQualityViewports } from "./visual-quality-renderer";
+import { createVisualQualityRendererPool, renderVisualCandidateContactSheet, renderVisualQualityViewports } from "./visual-quality-renderer";
 
 const HTML = "<!doctype html><html><body>hello</body></html>";
 
 describe("renderVisualQualityViewports", () => {
+  it("renders verified fragments once as a labeled bounded JPEG contact sheet through the existing pool", async () => {
+    const jpeg = { mimeType: "image/jpeg", dataBase64: Buffer.from("jpeg").toString("base64") } as const;
+    let renderedHtml = "";
+    const pool = {
+      render: vi.fn(async (html: string) => {
+        renderedHtml = html;
+        return { desktop: jpeg, mobile: jpeg };
+      }),
+      close: vi.fn(async () => undefined),
+    };
+    const result = await renderVisualCandidateContactSheet([
+      { candidateId: "hero-safe", ordinal: 0, role: "hero", html: '<section data-sec="hero-safe">Hero</section>' },
+      { candidateId: "features-safe", ordinal: 1, role: "features", html: '<section data-sec="features-safe">Features</section>' },
+    ], pool);
+    expect(result).toEqual(jpeg);
+    expect(pool.render).toHaveBeenCalledTimes(1);
+    expect(renderedHtml).toContain("0 · hero · hero-safe");
+    expect(renderedHtml).toContain("1 · features · features-safe");
+    expect(renderedHtml).toContain("data-sec=&quot;hero-safe&quot;");
+  });
+
+  it("refuses more than twelve contact-sheet fragments before using a browser worker", async () => {
+    const pool = { render: vi.fn(), close: vi.fn() };
+    const fragments = Array.from({ length: 13 }, (_, index) => ({
+      candidateId: `hero-${index}`,
+      ordinal: index,
+      role: "hero",
+      html: `<section data-sec="hero-${index}">Hero</section>`,
+    }));
+    await expect(renderVisualCandidateContactSheet(fragments, pool)).resolves.toBeNull();
+    expect(pool.render).not.toHaveBeenCalled();
+  });
+
+  it("isolates active fragment content from labels, top navigation, the document, and the next pooled render", async () => {
+    const documents: string[] = [];
+    const jpeg = { mimeType: "image/jpeg", dataBase64: Buffer.from("jpeg").toString("base64") } as const;
+    const pool = {
+      render: vi.fn(async (html: string) => { documents.push(html); return { desktop: jpeg, mobile: jpeg }; }),
+      close: vi.fn(async () => undefined),
+    };
+    const malicious = `<style>body,figcaption{display:none!important}</style><script>top.location='https://private.invalid';document.write('replaced')</script><img onerror="top.location='https://private.invalid'" src=x><svg onload="document.write('svg')"></svg><section data-sec="hero-hostile">first-run-sentinel</section>`;
+    await renderVisualCandidateContactSheet([{ candidateId: "hero-hostile", ordinal: 0, role: "hero", html: malicious }], pool);
+    await renderVisualCandidateContactSheet([{ candidateId: "hero-safe", ordinal: 0, role: "hero", html: '<section data-sec="hero-safe">second</section>' }], pool);
+
+    expect(documents[0]).toContain('<iframe sandbox=""');
+    expect(documents[0]).not.toMatch(/allow-scripts|allow-top-navigation|<script>|<style>body,figcaption/);
+    expect(documents[0]).toContain("&lt;script&gt;top.location=");
+    expect(documents[0].indexOf("<figcaption")).toBeLessThan(documents[0].indexOf("<iframe"));
+    expect(documents[1]).not.toContain("first-run-sentinel");
+    expect(documents[1]).toContain("hero-safe");
+  });
+
+  it("injects a deterministic reset and fails closed when consecutive mobile geometry samples disagree", async () => {
+    const pageHtml: string[] = [];
+    const noOverflow = { rootScrollWidth: 390, bodyScrollWidth: 390, clientWidth: 390 };
+    const shiftedGeometry = { rootScrollWidth: 391, bodyScrollWidth: 390, clientWidth: 390 };
+    const page = {
+      setViewport: vi.fn(async () => undefined),
+      setContent: vi.fn(async (html: string) => { pageHtml.push(html); }),
+      evaluate: vi.fn()
+        .mockResolvedValueOnce(undefined)
+        .mockResolvedValueOnce(undefined)
+        .mockResolvedValueOnce(noOverflow)
+        .mockResolvedValueOnce(shiftedGeometry)
+        .mockResolvedValueOnce(undefined)
+        .mockResolvedValueOnce(undefined)
+        .mockResolvedValueOnce(noOverflow)
+        .mockResolvedValueOnce(shiftedGeometry),
+      screenshot: vi.fn(async () => Buffer.from("jpeg")),
+    };
+    const internals = {
+      launchBrowser: async () => ({ newPage: async () => page, close: async () => undefined }),
+      installGuard: async () => undefined,
+      settle: async () => undefined,
+    };
+
+    const first = await renderVisualQualityViewports(HTML, internals);
+    const second = await renderVisualQualityViewports(HTML, internals);
+
+    expect(first).not.toBeNull();
+    expect(second).not.toBeNull();
+    expect(first?.mobileOverflow).toBe(true);
+    expect(first?.mobileOverflow).toBe(second?.mobileOverflow);
+    expect(pageHtml).toHaveLength(2);
+    expect(pageHtml[0]).toContain("animation:none!important");
+    expect(pageHtml[0]).toContain("transition:none!important");
+  });
+
+  it("ignores diagnostic-only sample changes when deciding mobile overflow", async () => {
+    const firstSample = {
+      rootScrollWidth: 390,
+      bodyScrollWidth: 390,
+      clientWidth: 390,
+      h1FontPx: 9,
+      heroBodyFontPx: 4,
+      componentCount: 4,
+      roundedComponentCount: 0,
+    };
+    const secondSample = {
+      rootScrollWidth: 390,
+      bodyScrollWidth: 390,
+      clientWidth: 390,
+      h1FontPx: 48,
+      heroBodyFontPx: 17,
+      componentCount: 4,
+      roundedComponentCount: 4,
+    };
+    const page = {
+      setViewport: vi.fn(async () => undefined),
+      setContent: vi.fn(async () => undefined),
+      evaluate: vi.fn()
+        .mockResolvedValueOnce(undefined)
+        .mockResolvedValueOnce(undefined)
+        .mockResolvedValueOnce(firstSample)
+        .mockResolvedValueOnce(secondSample),
+      screenshot: vi.fn(async () => Buffer.from("jpeg")),
+    };
+
+    const result = await renderVisualQualityViewports(HTML, {
+      launchBrowser: async () => ({ newPage: async () => page, close: async () => undefined }),
+      installGuard: async () => undefined,
+      settle: async () => undefined,
+    });
+
+    expect(result).toMatchObject({
+      mobileOverflow: false,
+      weakTypographyHierarchy: true,
+      squareComponentTreatment: true,
+    });
+  });
+
+  it("reuses two browser workers and never renders more than two pages concurrently", async () => {
+    let active = 0;
+    let maximum = 0;
+    const release: Array<() => void> = [];
+    const close = vi.fn(async () => undefined);
+    const launchBrowser = vi.fn(async () => ({
+      newPage: async () => ({
+        setViewport: async () => undefined,
+        setContent: async () => {
+          active += 1;
+          maximum = Math.max(maximum, active);
+          await new Promise<void>((resolve) => release.push(resolve));
+          active -= 1;
+        },
+        evaluate: async () => ({}),
+        screenshot: async () => Buffer.from("jpeg"),
+      }),
+      close,
+    }));
+    const pool = await createVisualQualityRendererPool(2, {
+      launchBrowser,
+      installGuard: async () => undefined,
+      settle: async () => undefined,
+    });
+
+    const renders = Array.from({ length: 6 }, (_, index) => pool.render(`${HTML}${index}`));
+    for (let wave = 0; wave < 3; wave += 1) {
+      await vi.waitFor(() => expect(release).toHaveLength(2));
+      release.splice(0).forEach((resolve) => resolve());
+    }
+    await expect(Promise.all(renders)).resolves.toHaveLength(6);
+    await pool.close();
+
+    expect(maximum).toBe(2);
+    expect(launchBrowser).toHaveBeenCalledTimes(2);
+    expect(close).toHaveBeenCalledTimes(2);
+  });
   it("captures desktop then mobile with the exact calibrated viewports", async () => {
     const calls: Array<{ width: number; height: number }> = [];
     const result = await renderVisualQualityViewports(HTML, {
@@ -43,7 +211,7 @@ describe("renderVisualQualityViewports", () => {
     const page = {
       setViewport: vi.fn(async ({ width }: { width: number }) => { order.push(`viewport:${width}`); }),
       setContent: vi.fn(async () => { order.push("content"); }),
-      evaluate: vi.fn(async () => { evaluations += 1; order.push(evaluations === 3 ? "overflow" : "fonts"); return false; }),
+      evaluate: vi.fn(async () => { evaluations += 1; order.push(evaluations > 2 ? "overflow" : "settle"); return false; }),
       screenshot: vi.fn(async () => Buffer.from("jpeg")),
     };
     const close = vi.fn(async () => { order.push("close"); });
@@ -59,9 +227,79 @@ describe("renderVisualQualityViewports", () => {
 
     expect(result).not.toBeNull();
     expect(order).toEqual([
-      "guard", "viewport:1280", "content", "fonts", "viewport:390", "fonts", "overflow", "close",
+      "guard", "viewport:1280", "content", "settle", "viewport:390", "settle", "overflow", "overflow", "close",
     ]);
     expect(close).toHaveBeenCalledTimes(1);
+    expect(page.screenshot).toHaveBeenCalledTimes(2);
+    expect(page.screenshot).toHaveBeenNthCalledWith(1, expect.objectContaining({ clip: { x: 0, y: 0, width: 1280, height: 4096 } }));
+    expect(page.screenshot).toHaveBeenNthCalledWith(2, expect.objectContaining({ clip: { x: 0, y: 0, width: 390, height: 4096 } }));
+  });
+
+  it("bounds a page taller than the inline-image limit at both viewports", async () => {
+    const page = {
+      setViewport: vi.fn(async () => undefined),
+      setContent: vi.fn(async () => undefined),
+      evaluate: vi.fn()
+        .mockResolvedValueOnce(6_400)
+        .mockResolvedValueOnce(18_900)
+        .mockResolvedValue({ rootScrollWidth: 390, bodyScrollWidth: 390, clientWidth: 390 }),
+      screenshot: vi.fn(async () => Buffer.from("jpeg")),
+    };
+
+    const result = await renderVisualQualityViewports(HTML, {
+      launchBrowser: async () => ({ newPage: async () => page, close: async () => undefined }),
+      installGuard: async () => undefined,
+      settle: async () => undefined,
+    });
+
+    expect(result).not.toBeNull();
+    expect(page.screenshot).toHaveBeenNthCalledWith(1, expect.objectContaining({ clip: { x: 0, y: 0, width: 1280, height: 4096 } }));
+    expect(page.screenshot).toHaveBeenNthCalledWith(2, expect.objectContaining({ clip: { x: 0, y: 0, width: 390, height: 4096 } }));
+    expect(page.screenshot).not.toHaveBeenCalledWith(expect.objectContaining({ fullPage: true }));
+  });
+
+  it("captures a page shorter than the limit whole", async () => {
+    const page = {
+      setViewport: vi.fn(async () => undefined),
+      setContent: vi.fn(async () => undefined),
+      evaluate: vi.fn()
+        .mockResolvedValueOnce(1_540)
+        .mockResolvedValueOnce(3_100)
+        .mockResolvedValue({ rootScrollWidth: 390, bodyScrollWidth: 390, clientWidth: 390 }),
+      screenshot: vi.fn(async () => Buffer.from("jpeg")),
+    };
+
+    await renderVisualQualityViewports(HTML, {
+      launchBrowser: async () => ({ newPage: async () => page, close: async () => undefined }),
+      installGuard: async () => undefined,
+      settle: async () => undefined,
+    });
+
+    expect(page.screenshot).toHaveBeenNthCalledWith(1, expect.objectContaining({ clip: { x: 0, y: 0, width: 1280, height: 1540 } }));
+    expect(page.screenshot).toHaveBeenNthCalledWith(2, expect.objectContaining({ clip: { x: 0, y: 0, width: 390, height: 3100 } }));
+  });
+
+  it("derives invalid geometry from renderer measurements rather than non-empty screenshot bytes", async () => {
+    const page = {
+      setViewport: vi.fn(async () => undefined),
+      setContent: vi.fn(async () => undefined),
+      evaluate: vi.fn()
+        .mockResolvedValueOnce(undefined)
+        .mockResolvedValueOnce(undefined)
+        .mockResolvedValueOnce({ rootScrollWidth: Number.NaN, bodyScrollWidth: 390, clientWidth: 390 })
+        .mockResolvedValueOnce({ rootScrollWidth: Number.NaN, bodyScrollWidth: 390, clientWidth: 390 }),
+      screenshot: vi.fn(async () => Buffer.from("non-empty-valid-capture")),
+    };
+
+    const result = await renderVisualQualityViewports(HTML, {
+      launchBrowser: async () => ({ newPage: async () => page, close: async () => undefined }),
+      installGuard: async () => undefined,
+      settle: async () => undefined,
+    });
+
+    expect(result).toMatchObject({ invalidGeometry: true });
+    expect(result?.desktop.dataBase64).not.toBe("");
+    expect(result?.mobile.dataBase64).not.toBe("");
   });
 
   it("reports document-level horizontal overflow measured at the mobile viewport", async () => {
@@ -71,6 +309,7 @@ describe("renderVisualQualityViewports", () => {
       evaluate: vi.fn()
         .mockResolvedValueOnce(undefined)
         .mockResolvedValueOnce(undefined)
+        .mockResolvedValueOnce({ rootScrollWidth: 392, bodyScrollWidth: 390, clientWidth: 390 })
         .mockResolvedValueOnce({ rootScrollWidth: 392, bodyScrollWidth: 390, clientWidth: 390 }),
       screenshot: vi.fn(async () => Buffer.from("jpeg")),
     };
@@ -82,7 +321,7 @@ describe("renderVisualQualityViewports", () => {
     });
 
     expect(result).toMatchObject({ mobileOverflow: true });
-    expect(page.evaluate).toHaveBeenCalledTimes(3);
+    expect(page.evaluate).toHaveBeenCalledTimes(4);
   });
 
   it("tolerates one pixel of mobile layout rounding", async () => {
@@ -92,6 +331,7 @@ describe("renderVisualQualityViewports", () => {
       evaluate: vi.fn()
         .mockResolvedValueOnce(undefined)
         .mockResolvedValueOnce(undefined)
+        .mockResolvedValueOnce({ rootScrollWidth: 391, bodyScrollWidth: 390, clientWidth: 390 })
         .mockResolvedValueOnce({ rootScrollWidth: 391, bodyScrollWidth: 390, clientWidth: 390 }),
       screenshot: vi.fn(async () => Buffer.from("jpeg")),
     };
@@ -116,6 +356,11 @@ describe("renderVisualQualityViewports", () => {
           rootScrollWidth: 390, bodyScrollWidth: 390, clientWidth: 390,
           h1FontPx: 9, heroBodyFontPx: 4,
           componentCount: 4, roundedComponentCount: 4,
+        })
+        .mockResolvedValueOnce({
+          rootScrollWidth: 390, bodyScrollWidth: 390, clientWidth: 390,
+          h1FontPx: 9, heroBodyFontPx: 4,
+          componentCount: 4, roundedComponentCount: 4,
         }),
       screenshot: vi.fn(async () => Buffer.from("jpeg")),
     };
@@ -136,6 +381,11 @@ describe("renderVisualQualityViewports", () => {
       evaluate: vi.fn()
         .mockResolvedValueOnce(undefined)
         .mockResolvedValueOnce(undefined)
+        .mockResolvedValueOnce({
+          rootScrollWidth: 390, bodyScrollWidth: 390, clientWidth: 390,
+          h1FontPx: 48, heroBodyFontPx: 17,
+          componentCount: 4, roundedComponentCount: 0,
+        })
         .mockResolvedValueOnce({
           rootScrollWidth: 390, bodyScrollWidth: 390, clientWidth: 390,
           h1FontPx: 48, heroBodyFontPx: 17,
@@ -182,4 +432,135 @@ describe("renderVisualQualityViewports", () => {
     expect(result).toBeNull();
     expect(close).toHaveBeenCalledTimes(1);
   });
+
+  // Los tres defectos que el booleano mezclaba. El reparador recibe el nombre y
+  // los números, no la palabra "typography", que no dice cuál de los tres es.
+  it.each([
+    ["h1_too_small", { h1FontPx: 9, heroBodyFontPx: 4 }],
+    ["hero_body_too_small", { h1FontPx: 48, heroBodyFontPx: 8 }],
+    ["h1_not_dominant", { h1FontPx: 24, heroBodyFontPx: 20 }],
+  ])("names %s instead of a bare typography flag", async (rule, fonts) => {
+    const geometry = {
+      rootScrollWidth: 390, bodyScrollWidth: 390, clientWidth: 390,
+      ...fonts,
+      componentCount: 4, roundedComponentCount: 4,
+    };
+    const page = {
+      setViewport: vi.fn(async () => undefined),
+      setContent: vi.fn(async () => undefined),
+      evaluate: vi.fn()
+        .mockResolvedValueOnce(undefined)
+        .mockResolvedValueOnce(undefined)
+        .mockResolvedValueOnce(geometry)
+        .mockResolvedValueOnce(geometry),
+      screenshot: vi.fn(async () => Buffer.from("jpeg")),
+    };
+
+    const result = await renderVisualQualityViewports(HTML, {
+      launchBrowser: async () => ({ newPage: async () => page, close: async () => undefined }),
+      installGuard: async () => undefined,
+      settle: async () => undefined,
+    });
+
+    expect(result).toMatchObject({
+      weakTypographyHierarchy: true,
+      typographyHierarchy: { rule, h1FontPx: fonts.h1FontPx, heroBodyFontPx: fonts.heroBodyFontPx },
+    });
+  });
+
+  it("leaves no finding behind when the hierarchy is sound", async () => {
+    const geometry = {
+      rootScrollWidth: 390, bodyScrollWidth: 390, clientWidth: 390,
+      h1FontPx: 48, heroBodyFontPx: 17,
+      componentCount: 4, roundedComponentCount: 4,
+    };
+    const page = {
+      setViewport: vi.fn(async () => undefined),
+      setContent: vi.fn(async () => undefined),
+      evaluate: vi.fn()
+        .mockResolvedValueOnce(undefined)
+        .mockResolvedValueOnce(undefined)
+        .mockResolvedValueOnce(geometry)
+        .mockResolvedValueOnce(geometry),
+      screenshot: vi.fn(async () => Buffer.from("jpeg")),
+    };
+
+    const result = await renderVisualQualityViewports(HTML, {
+      launchBrowser: async () => ({ newPage: async () => page, close: async () => undefined }),
+      installGuard: async () => undefined,
+      settle: async () => undefined,
+    });
+
+    expect(result).toMatchObject({ weakTypographyHierarchy: false, typographyHierarchy: null });
+  });
+});
+
+// Con navegador de verdad: el selector es lo que se está probando, así que un
+// evaluate simulado no probaría nada. Las 5 "jerarquías débiles" que salieron
+// midiendo 20 páginas generadas eran esto — el kicker, no el cuerpo.
+describe("qué párrafo es el cuerpo del hero", () => {
+  const page = (ledePx: number) => `<!doctype html><html><head><style>
+    *{box-sizing:border-box}html,body{margin:0;font-family:Arial,sans-serif}
+    .hero{padding:40px 20px}
+    .hero h1{font-size:40px;margin:0}
+    .kicker{font-size:11px;letter-spacing:.2em;text-transform:uppercase}
+    .lede{font-size:${ledePx}px}
+  </style></head><body><main class="hero">
+    <p class="kicker">Club de comedia · CDMX</p>
+    <h1>Risa Brava</h1>
+    <p class="lede">Tres shows a la semana, cero filtros y una barra que nunca duerme, en el corazón de la ciudad.</p>
+  </main></body></html>`;
+
+  it("no confunde el kicker con el cuerpo", async () => {
+    const result = await renderVisualQualityViewports(page(18));
+    expect(result).not.toBeNull();
+    expect(result).toMatchObject({ weakTypographyHierarchy: false, typographyHierarchy: null });
+  }, 30_000);
+
+  it("sigue viendo un cuerpo de verdad ilegible", async () => {
+    const result = await renderVisualQualityViewports(page(11));
+    expect(result).not.toBeNull();
+    expect(result).toMatchObject({
+      weakTypographyHierarchy: true,
+      typographyHierarchy: { rule: "hero_body_too_small", heroBodyFontPx: 11 },
+    });
+  }, 30_000);
+});
+
+// Con navegador de verdad, porque el defecto era del selector: `querySelector("h1")`
+// devolvía nulo y nulo se leía como página sana. Medido: una baseline sin un
+// solo <h1> pasaba el chequeo de jerarquía tipográfica.
+describe("una página sin titular no es una página sana", () => {
+  const SIN_H1 = `<!doctype html><html><head><style>
+    *{box-sizing:border-box}html,body{margin:0;font-family:Arial,sans-serif}
+    .hero{padding:40px 20px}.lede{font-size:18px}
+  </style></head><body><main class="hero">
+    <p class="lede">Tres shows a la semana, cero filtros y una barra que nunca duerme.</p>
+  </main></body></html>`;
+
+  const H1_OCULTO = `<!doctype html><html><head><style>
+    *{box-sizing:border-box}html,body{margin:0;font-family:Arial,sans-serif}
+    .hero{padding:40px 20px}.lede{font-size:18px}h1{display:none}
+  </style></head><body><main class="hero">
+    <h1>Risa Brava</h1>
+    <p class="lede">Tres shows a la semana, cero filtros y una barra que nunca duerme.</p>
+  </main></body></html>`;
+
+  it("marca la ausencia total de titular", async () => {
+    const result = await renderVisualQualityViewports(SIN_H1);
+    expect(result).not.toBeNull();
+    expect(result).toMatchObject({
+      weakTypographyHierarchy: true,
+      typographyHierarchy: { rule: "h1_missing", h1Count: 0, h1FontPx: null },
+    });
+  }, 30_000);
+
+  it("distingue un titular oculto de uno ausente", async () => {
+    const result = await renderVisualQualityViewports(H1_OCULTO);
+    expect(result).not.toBeNull();
+    expect(result).toMatchObject({
+      weakTypographyHierarchy: true,
+      typographyHierarchy: { rule: "h1_not_rendered", h1Count: 1, h1FontPx: null },
+    });
+  }, 30_000);
 });

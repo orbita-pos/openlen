@@ -3,11 +3,12 @@ import { db, schema } from "@/lib/db";
 import { getTemplate, getTemplateHtml } from "@/lib/templates/store";
 import { createVersion } from "@/lib/projects/versions";
 import { sanitizeForPublish } from "@/lib/html-engine";
-import { normalizeBornCanonical } from "@/lib/normalize";
+import { passHtmlGate } from "@/lib/html-gate/document-gate";
+import { collectDegradations, hadScript } from "@/lib/ingestion/degradations";
 import { transformTemplateCached } from "@/lib/transform/template-cache";
-import { ensurePageMeta } from "@/lib/publish/ensure-page-meta";
 import { resolveProfileForCreation } from "@/lib/business-profiles/store";
-import { seedBrandIntoHtml, profileMeta } from "@/lib/business-profiles/seed-html";
+import { seedBrandIntoHtml } from "@/lib/business-profiles/seed-html";
+import { pageMetaFor } from "@/lib/publish/page-meta-intent";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // POST /api/projects/from-template
@@ -70,46 +71,73 @@ export async function POST(req: Request): Promise<Response> {
   const remainingBudget = () =>
     Math.max(0, TRANSFORM_TOTAL_BUDGET_MS - (Date.now() - transformStarted));
 
-  const transformedHtml =
-    remainingBudget() > 500
-      ? await transformTemplateCached(entry.id, html, {
-          timeoutMs: Math.min(8000, remainingBudget()),
-        })
-      : html;
+  // Captured once: `remainingBudget()` moves, and the record has to say what
+  // actually happened, not what a second call would say.
+  const homeTransformSkipped = remainingBudget() <= 500;
+  const transformedHtml = homeTransformSkipped
+    ? html
+    : await transformTemplateCached(entry.id, html, {
+        timeoutMs: Math.min(8000, remainingBudget()),
+      });
 
   // Defense in depth: sanitize the curated body (strips any stray
   // scripts/handlers/iframes; clean templates pass through byte-identical) and
   // reject the data-slot-path editor marker the publish flow also rejects.
-  const sanitized = sanitizeForPublish(transformedHtml);
-  if (sanitized.html === null) {
-    return json(
-      {
-        error: "invalid_template",
-        message:
-          "Template HTML contains data-slot-path markers — fix the curated file.",
-      },
-      500,
-    );
-  }
-  const cleanHtml = sanitized.html;
-
   // Resolve the business first so the clone is born with the user's info. A
   // hand-picked template keeps its OWN look (recolor:false) but still gets the
-  // real contact widget + brand logo/og.
+  // real contact widget + brand logo/og. Ahead of the gate because seeding is
+  // now its `beforeMeta` seam; the HTML chain's order is unchanged.
   const business = await resolveProfileForCreation(
     session.user.id,
     typeof body.profileId === "string" ? body.profileId : null,
   );
 
-  // Clone through the born-canonical normalizer (so radius / font / accent
-  // become editable in the inspector) → seed the contact widget + logo/og
-  // (no-op for an empty profile) → complete the <head> for SEO.
-  const finalHtml = ensurePageMeta(
-    seedBrandIntoHtml(normalizeBornCanonical(cleanHtml), business.data, {
-      recolor: false,
-    }),
-    { title: entry.name, ...profileMeta(business.data) },
+  // One gate. `behaviors: "warn"` — this surface FAILS OPEN: the project does
+  // not exist yet, so refusing costs the user the whole page rather than an
+  // edit. `seal: false` (publishToDir seals at publish time), `render: false`
+  // (a clone cannot pay a browser launch). Seeding rides in `beforeMeta`.
+  const gated = await passHtmlGate(
+    transformedHtml,
+    {
+      sanitize: sanitizeForPublish,
+      beforeMeta: (h) => seedBrandIntoHtml(h, business.data, { recolor: false }),
+    },
+    {
+      render: false,
+      seal: false,
+      behaviors: "warn",
+      // CLONED: the curated body's <title>/og copy is OUR marketing, not this
+      // user's. Preserving it published another product's name into their tab,
+      // their Google result and their WhatsApp card.
+      meta: pageMetaFor({ provenance: "cloned", title: entry.name, profile: business.data }),
+    },
   );
+  if (!gated.ok) {
+    // A curated template that cannot pass the gate is OUR broken file, not the
+    // user's input — 500 and name it, exactly as before.
+    return json(
+      {
+        error: "invalid_template",
+        message:
+          gated.code === "reserved_marker"
+            ? "Template HTML contains data-slot-path markers — fix the curated file."
+            : "Template HTML could not be cleaned — fix the curated file.",
+      },
+      500,
+    );
+  }
+  const finalHtml = gated.html;
+
+  const degradations = collectDegradations({
+    surface: "from-template",
+    removed: gated.removed,
+    behaviorIssues: gated.issues,
+    // The shared 12s deadline can run out before the home is transformed —
+    // its JS-built sections then clone empty. Degradation #4: real loss, and
+    // the user has no way to see why, so it goes on the record.
+    transformFallback: homeTransformSkipped ? "budget" : undefined,
+    hadScripts: hadScript(html),
+  });
 
   // Multi-page template: clone each extra page through the same born-canonical
   // chain (sanitize → normalize → ensurePageMeta) into project.data.pages, so a
@@ -119,17 +147,61 @@ export async function POST(req: Request): Promise<Response> {
     // Mismo transform que la Home, clave propia por página (el hash del
     // contenido distingue versiones; el sufijo evita colisión de claves) y
     // mismo deadline compartido del request.
-    const pgTransformed =
-      remainingBudget() > 500
-        ? await transformTemplateCached(`${entry.id}--${pg.slug}`, pg.html, {
-            timeoutMs: Math.min(8000, remainingBudget()),
-          })
-        : pg.html;
-    const ps = sanitizeForPublish(pgTransformed);
-    if (ps.html === null) continue; // defensive: skip a page carrying editor markers
-    clonedPages[pg.slug] = {
-      html: ensurePageMeta(normalizeBornCanonical(ps.html), { title: entry.name }),
-    };
+    const pgTransformSkipped = remainingBudget() <= 500;
+    const pgTransformed = pgTransformSkipped
+      ? pg.html
+      : await transformTemplateCached(`${entry.id}--${pg.slug}`, pg.html, {
+          timeoutMs: Math.min(8000, remainingBudget()),
+        });
+    // Degradation #6. This used to `continue` — the subpage vanished, the
+    // clone shipped, and the nav still promised a page that no longer
+    // existed. Because a broken link serves the HOME page
+    // ([[caddy-broken-links-serve-home]]) the user had no way to discover it:
+    // the site LOOKED complete and lied about itself. A page we cannot clean
+    // is our broken curated file, so it fails the whole clone loudly, the
+    // same way the home page already does above.
+    const pgGated = await passHtmlGate(
+      pgTransformed,
+      { sanitize: sanitizeForPublish },
+      {
+        render: false,
+        seal: false,
+        behaviors: "warn",
+        // AUTHORED, deliberately — not because a human wrote a subpage's head,
+        // but because the takeover is all-or-nothing (`takeover =
+        // replaceStaleMeta && title`) and the only title in hand is the
+        // project's. Taking over here would rename "Tienda" and every other
+        // subpage to the template's name, flattening the page-specific titles
+        // that make a multi-page site navigable. The same reasoning is already
+        // written into app/api/profiles/[id]/apply.
+        //
+        // The title still travels: non-destructive means it is used ONLY when
+        // the subpage carries none of its own, which is exactly what a fallback
+        // is for. And the profile now travels too, so a cloned subpage inherits
+        // the brand logo/og the home gets — it did not before.
+        meta: pageMetaFor({ provenance: "authored", title: entry.name, profile: business.data }),
+      },
+    );
+    if (!pgGated.ok) {
+      return json(
+        {
+          error: "invalid_template",
+          message: `Template subpage "${pg.slug}" could not be cleaned — fix the curated file.`,
+        },
+        500,
+      );
+    }
+    clonedPages[pg.slug] = { html: pgGated.html };
+    degradations.push(
+      ...collectDegradations({
+        surface: "from-template",
+        removed: pgGated.removed,
+        behaviorIssues: pgGated.issues,
+        // Degradation #5 — same deadline, per subpage.
+        transformFallback: pgTransformSkipped ? "budget" : undefined,
+        hadScripts: hadScript(pg.html),
+      }),
+    );
   }
 
   const projectId = crypto.randomUUID();
@@ -152,6 +224,7 @@ export async function POST(req: Request): Promise<Response> {
       data: {
         html: finalHtml,
         ...(Object.keys(clonedPages).length ? { pages: clonedPages } : {}),
+        ...(degradations.length > 0 ? { degradations } : {}),
       },
     });
   } catch (err) {

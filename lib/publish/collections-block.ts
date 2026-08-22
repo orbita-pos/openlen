@@ -13,10 +13,10 @@
 // client textContent safety net. ctaUrl/imageUrl were scheme-allow-listed at
 // the API (lib/collections/item-input.ts); we escape again for the attribute.
 
-import { detectSiteAccent } from "@/lib/members/site-accent";
+import { detectSiteAccent } from "@/lib/publish/site-accent";
 import type { ItemRow } from "@/lib/collections/store";
-import { parsePriceCents } from "@/lib/publish/orders-price";
 import { inkOn } from "@/lib/publish/color-utils";
+import { fillCollectionTemplate } from "@/lib/publish/collection-template";
 
 const WIDGET_MARKER = "data-ol-collection-widget";
 const SECTION_MARKER = "data-ol-collection-section";
@@ -80,7 +80,6 @@ export interface CollectionsBakeConfig {
   /** Pedidos por WhatsApp: cuando viene con número, cada tarjeta hornea el
    *  botón «Agregar» (data-ol-order-add) que el runtime del carrito opera.
    *  null/ausente = off → salida byte-idéntica a la histórica. */
-  orders?: { number: string } | null;
   /** settings.collections.theme — mismo patrón que comments/bookings/chat.
    *  Ausente o "light" → salida byte-idéntica a la histórica. */
   theme?: "light" | "dark";
@@ -125,20 +124,6 @@ function ctaHtml(item: ItemRow, accent: string, fullWidth: boolean): string {
   return `<a href="${esc(href)}" style="margin-top:auto;align-self:flex-start;display:inline-block;text-decoration:none;font-size:13px;font-weight:600;padding:9px 16px;border-radius:999px;background:${accent};color:${inkOn(accent)};">${esc(item.ctaLabel)}</a>`;
 }
 
-function orderButtonHtml(
-  item: ItemRow,
-  accent: string,
-  label: string,
-  hasCta: boolean,
-  fullWidth: boolean,
-): string {
-  const cents = parsePriceCents(item.priceDisplay);
-  const attrs = `type="button" data-ol-order-add data-ol-order-id="${esc(item.id)}" data-ol-order-title="${esc(item.title)}" data-ol-order-price="${esc(item.priceDisplay ?? "")}" data-ol-order-cents="${cents ?? ""}"`;
-  if (fullWidth) {
-    return `<button ${attrs} style="margin-top:${hasCta ? "8px" : "12px"};width:100%;cursor:pointer;font-size:14px;font-weight:700;padding:12px 0;border-radius:999px;border:0;background:${accent};color:${inkOn(accent)};box-shadow:0 2px 10px rgba(0,0,0,.16);">+ ${esc(label)}</button>`;
-  }
-  return `<button ${attrs} style="${hasCta ? "margin-top:8px" : "margin-top:auto"};align-self:flex-start;display:inline-block;cursor:pointer;font-size:13px;font-weight:600;padding:8px 15px;border-radius:999px;border:1.5px solid ${accent};background:transparent;color:${accent};">+ ${esc(label)}</button>`;
-}
 
 /** Foto 4:3, o —clave para catálogos nacidos de un Sheet sin fotos— un
  *  placeholder con gradiente del acento + la inicial del item, para que una
@@ -157,38 +142,34 @@ function mediaHtml(item: ItemRow, accent: string, p: Palette): string {
 function gridCard(
   item: ItemRow,
   accent: string,
-  orders: { number: string } | null | undefined,
-  addLabel: string,
   p: Palette,
 ): string {
   const hasCta = Boolean(item.ctaLabel && safeHref(item.ctaUrl));
   const price = item.priceDisplay
     ? `<div style="flex:0 0 auto;font-size:17px;font-weight:800;letter-spacing:-.01em;color:${accent};">${esc(item.priceDisplay)}</div>`
     : "";
-  return `<article class="olc-card" style="border:0;border-radius:18px;overflow:hidden;background:${p.card};display:flex;flex-direction:column;box-shadow:${p.cardShadow};">${mediaHtml(item, accent, p)}<div style="padding:15px 16px 16px;display:flex;flex-direction:column;gap:6px;flex:1;"><div style="display:flex;justify-content:space-between;gap:10px;align-items:baseline;"><h3 style="margin:0;font-size:16.5px;font-weight:700;line-height:1.25;color:${p.ink};">${esc(item.title)}</h3>${price}</div>${item.subtitle ? `<div style="font-size:12.5px;color:${p.muted};">${esc(item.subtitle)}</div>` : ""}${item.description ? `<p style="margin:0;font-size:13.5px;line-height:1.5;color:${p.desc};display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">${esc(item.description)}</p>` : ""}${ctaHtml(item, accent, true)}${orders ? orderButtonHtml(item, accent, addLabel, hasCta, true) : ""}</div></article>`;
+  return `<article class="olc-card" style="border:0;border-radius:18px;overflow:hidden;background:${p.card};display:flex;flex-direction:column;box-shadow:${p.cardShadow};">${mediaHtml(item, accent, p)}<div style="padding:15px 16px 16px;display:flex;flex-direction:column;gap:6px;flex:1;"><div style="display:flex;justify-content:space-between;gap:10px;align-items:baseline;"><h3 style="margin:0;font-size:16.5px;font-weight:700;line-height:1.25;color:${p.ink};">${esc(item.title)}</h3>${price}</div>${item.subtitle ? `<div style="font-size:12.5px;color:${p.muted};">${esc(item.subtitle)}</div>` : ""}${item.description ? `<p style="margin:0;font-size:13.5px;line-height:1.5;color:${p.desc};display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">${esc(item.description)}</p>` : ""}${ctaHtml(item, accent, true)}</div></article>`;
 }
 
 function listRow(
   item: ItemRow,
   accent: string,
-  orders: { number: string } | null | undefined,
-  addLabel: string,
   p: Palette,
 ): string {
   const src = safeImg(item.imageUrl);
   const thumb = src
     ? `<img src="${esc(src)}" alt="${esc(item.title)}" loading="lazy" style="width:84px;height:84px;flex:0 0 auto;object-fit:cover;border-radius:14px;background:${p.imgBg};">`
     : `<div aria-hidden="true" style="width:84px;height:84px;flex:0 0 auto;border-radius:14px;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,${accent}1f,${accent}40);color:${accent};font-size:26px;font-weight:800;font-family:Georgia,'Times New Roman',serif;">${esc((item.title.trim().charAt(0) || "•").toUpperCase())}</div>`;
-  return `<div style="display:flex;gap:16px;padding:16px 0;border-bottom:1px solid ${p.rowBorder};align-items:flex-start;">${thumb}<div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:5px;"><div style="display:flex;justify-content:space-between;gap:14px;align-items:baseline;"><h3 style="margin:0;font-size:16px;font-weight:700;line-height:1.3;color:${p.ink};">${esc(item.title)}</h3>${item.priceDisplay ? `<span style="flex:0 0 auto;font-size:16px;font-weight:800;letter-spacing:-.01em;color:${accent};">${esc(item.priceDisplay)}</span>` : ""}</div>${badgeHtml(item.badge, accent, false, p)}${item.subtitle ? `<div style="font-size:13px;color:${p.muted};">${esc(item.subtitle)}</div>` : ""}${item.description ? `<p style="margin:0;font-size:13.5px;line-height:1.55;color:${p.desc};">${esc(item.description)}</p>` : ""}${ctaHtml(item, accent, false)}${orders ? orderButtonHtml(item, accent, addLabel, Boolean(item.ctaLabel && safeHref(item.ctaUrl)), false) : ""}</div></div>`;
+  return `<div style="display:flex;gap:16px;padding:16px 0;border-bottom:1px solid ${p.rowBorder};align-items:flex-start;">${thumb}<div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:5px;"><div style="display:flex;justify-content:space-between;gap:14px;align-items:baseline;"><h3 style="margin:0;font-size:16px;font-weight:700;line-height:1.3;color:${p.ink};">${esc(item.title)}</h3>${item.priceDisplay ? `<span style="flex:0 0 auto;font-size:16px;font-weight:800;letter-spacing:-.01em;color:${accent};">${esc(item.priceDisplay)}</span>` : ""}</div>${badgeHtml(item.badge, accent, false, p)}${item.subtitle ? `<div style="font-size:13px;color:${p.muted};">${esc(item.subtitle)}</div>` : ""}${item.description ? `<p style="margin:0;font-size:13.5px;line-height:1.55;color:${p.desc};">${esc(item.description)}</p>` : ""}${ctaHtml(item, accent, false)}</div></div>`;
 }
 
-function container(cfg: CollectionsBakeConfig, accent: string, addLabel: string): string {
+function container(cfg: CollectionsBakeConfig, accent: string): string {
   const p = paletteFor(cfg.theme);
   if (cfg.layout === "list") {
-    const rows = cfg.items.map((it) => listRow(it, accent, cfg.orders, addLabel, p)).join("");
+    const rows = cfg.items.map((it) => listRow(it, accent, p)).join("");
     return `<div ${WIDGET_MARKER} style="max-width:680px;margin:32px auto;padding:0 16px;">${rows}</div>`;
   }
-  const cards = cfg.items.map((it) => gridCard(it, accent, cfg.orders, addLabel, p)).join("");
+  const cards = cfg.items.map((it) => gridCard(it, accent, p)).join("");
   // El hover (lift) no puede ser inline — va en un <style> mínimo, scoped al
   // marker (CSP-clean: style-src no se toca; cero JS). Los estilos de las
   // tarjetas siguen INLINE a propósito: ganan en especificidad a cualquier
@@ -204,22 +185,30 @@ export function renderCollectionsWidget(html: string, cfg: CollectionsBakeConfig
   if (!cfg.items.length) return "";
   const accent = detectSiteAccent(html) ?? FALLBACK_ACCENT;
   const addLabel = /<html[^>]*\blang=["']?en/i.test(html) ? "Add" : "Agregar";
-  return container(cfg, accent, addLabel);
+  return container(cfg, accent);
 }
 
 /** Bake the collection grid/list into the page. Idempotent. Replaces the
  *  data-ol-collection-section placeholder, else appends before </body>. With no
- *  items it just clears the placeholder (so the dashed editor box never ships). */
+ *  items it just clears the placeholder (so the dashed editor box never ships).
+ *
+ *  RUTA PREFERENTE: si la página trae tarjetas marcadas por el modelo
+ *  (`data-ol-item`), se repiten ÉSAS y esta rejilla no llega a dibujarse — el
+ *  gusto lo pone la página, no nosotros. Todo lo de abajo es la ruta de las
+ *  páginas anteriores a ese contrato, que sólo llevan el hueco vacío. */
 export function bakeCollections(
   html: string,
   cfg: CollectionsBakeConfig,
   allowAppend = true,
 ): string {
+  const plantilla = fillCollectionTemplate(html, cfg.items);
+  if (plantilla.touched) return plantilla.html;
+
   if (html.includes(WIDGET_MARKER)) return html;
 
   const accent = detectSiteAccent(html) ?? FALLBACK_ACCENT;
   const addLabel = /<html[^>]*\blang=["']?en/i.test(html) ? "Add" : "Agregar";
-  const block = cfg.items.length ? container(cfg, accent, addLabel) : `<div ${WIDGET_MARKER}></div>`;
+  const block = cfg.items.length ? container(cfg, accent) : `<div ${WIDGET_MARKER}></div>`;
 
   // Replace the editor placeholder wherever it sits (any page). With no items
   // the block is an empty widget div, so the dashed editor box never ships —

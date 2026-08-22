@@ -1,7 +1,7 @@
 import type { ComponentType } from "react";
 import {
   BarChart3, ChatIcon, HistoryIcon, HomeIcon, ImageIcon, Inbox,
-  Layers, ListTree, Megaphone, Package, Sparkles, Store,
+  ListTree, Megaphone, Package, Sparkles, Store,
 } from "./icons";
 
 // The account-wide sections, addressable independently of any loaded project,
@@ -13,7 +13,7 @@ export type SectionView =
   | "modulos" | "marketing" | "business" | "explore" | "resultados";
 
 export type SidebarMode =
-  | "site" | "chat" | "templates" | "images" | "library" | "pages"
+  | "site" | "chat" | "templates" | "images" | "pages"
   | "assistant" | "members" | "broadcast" | "comments" | "bookings"
   | "collections" | "modulos" | "versions" | "3d";
 
@@ -34,7 +34,6 @@ export const RAIL_CREAR: ReadonlyArray<RailItemDef> = [
   { kind: "panel", id: "site", icon: ListTree },
   { kind: "panel", id: "chat", icon: ChatIcon },
   { kind: "panel", id: "images", icon: ImageIcon },
-  { kind: "panel", id: "library", icon: Layers },
   { kind: "panel", id: "3d", icon: Sparkles },
 ];
 

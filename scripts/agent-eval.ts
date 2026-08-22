@@ -32,23 +32,34 @@ const COST_PER_CASE_VISUAL_USD = 0.01;
 // caso: si toca el techo, la batería se detiene ahí mismo con los casos
 // restantes sin correr. Preferimos una batería incompleta a una cuenta vacía.
 const DEFAULT_BUDGET_USD = 0.3;
-// Precios de gemini-2.5-flash por millón de tokens (aprox — actualizar si
-// cambia el pricing; mejor sobreestimar que drenar).
-const USD_PER_M_INPUT = 0.3;
-const USD_PER_M_CACHED = 0.075;
-const USD_PER_M_OUTPUT = 2.5;
+// Precios por millón de tokens. El razonador dejó de ser Gemini y estas cifras
+// se quedaron: con las de Gemini, la salida de DeepSeek se contaba casi NUEVE
+// veces cara y el tope frenaba una batería que apenas había gastado. Un tope
+// que miente en cualquiera de las dos direcciones no protege nada.
+//
+// Las llamadas de VISIÓN siguen siendo Gemini pase lo que pase (los ojos del
+// harness usan gemini-2.5-flash), así que se cobran aparte, a su tarifa.
+const RATES_PER_M = {
+  "gemini-2.5-flash": { input: 0.3, cached: 0.075, output: 2.5 },
+  "accounts/fireworks/models/deepseek-v4-flash-0731": { input: 0.14, cached: 0.028, output: 0.28 },
+} as const;
+const VISION_RATE = RATES_PER_M["gemini-2.5-flash"];
+
+function rateFor(modelId: string): { input: number; cached: number; output: number } {
+  // Un modelo desconocido se cobra al MÁS CARO que conocemos: equivocarse hacia
+  // arriba detiene la batería antes de tiempo; hacia abajo, vacía la cuenta.
+  return RATES_PER_M[modelId as keyof typeof RATES_PER_M] ?? RATES_PER_M["gemini-2.5-flash"];
+}
 
 function realCostUsd(rs: EvalRunResult[]): number {
-  let inTok = 0, cached = 0, outTok = 0;
+  let usd = 0;
   for (const r of rs) {
-    inTok += r.inputTokens;
-    cached += r.cachedTokens;
-    outTok += r.outputTokens;
-    // P3 — las llamadas de visión del eje visual también son gasto real.
-    inTok += r.visual?.visionInputTokens ?? 0;
-    outTok += r.visual?.visionOutputTokens ?? 0;
+    const rate = rateFor(r.modelId);
+    usd += (r.inputTokens * rate.input + r.cachedTokens * rate.cached + r.outputTokens * rate.output) / 1e6;
+    usd += ((r.visual?.visionInputTokens ?? 0) * VISION_RATE.input
+      + (r.visual?.visionOutputTokens ?? 0) * VISION_RATE.output) / 1e6;
   }
-  return (inTok * USD_PER_M_INPUT + cached * USD_PER_M_CACHED + outTok * USD_PER_M_OUTPUT) / 1e6;
+  return usd;
 }
 
 function fail(msg: string): never {
@@ -205,7 +216,7 @@ async function main(): Promise<void> {
   }
 
   if (!args.yes) {
-    console.log("\nEsto GASTA créditos reales de Gemini. Vuelve a correr con --yes para confirmar.");
+    console.log("\nEsto GASTA dinero real del proveedor que corra el turno. Vuelve a correr con --yes para confirmar.");
     process.exit(2);
   }
 
@@ -237,6 +248,7 @@ async function main(): Promise<void> {
         inputTokens: 0,
         cachedTokens: 0,
         outputTokens: 0,
+        modelId: "",
         seconds: (Date.now() - started) / 1000,
       };
     }
@@ -272,7 +284,7 @@ async function main(): Promise<void> {
     );
   }
   console.log(
-    `Costo real de esta corrida: ~$${realCostUsd(results).toFixed(3)} USD (tokens medidos × precios de gemini-2.5-flash)`,
+    `Costo real de esta corrida: ~$${realCostUsd(results).toFixed(3)} USD (tokens medidos × la tarifa del modelo que corrió cada caso)`,
   );
   if (passed < results.length || results.length < cases.length) process.exit(1);
 }

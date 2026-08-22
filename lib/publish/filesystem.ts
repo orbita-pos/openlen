@@ -21,8 +21,6 @@ import { bakeGoogleFonts } from "@/lib/publish/font-bake";
 import { bakeMotion } from "@/lib/publish/motion";
 import { bakeMusic } from "@/lib/publish/music";
 import { bakeAssistantWidget } from "@/lib/publish/assistant-widget";
-import { bakeComments, hasCommentsSection } from "@/lib/publish/comments-widget";
-import { bakeBookings, hasBookingsSection } from "@/lib/publish/bookings-widget";
 import { bakeCollections } from "@/lib/publish/collections-block";
 import { stripDisabledModuleBands } from "@/lib/publish/strip-disabled-bands";
 import { fillPlatformsBand } from "@/lib/business-profiles/seed-html";
@@ -30,7 +28,6 @@ import { PLATFORMS_BAND_MARKER } from "@/lib/business-profiles/platforms-band";
 import type { BusinessProfileData } from "@/lib/business-profiles/types";
 import { applyLiveData } from "@/lib/live";
 import { bakeWhatsAppButton, waHref } from "@/lib/publish/whatsapp-button";
-import { injectOrdersCart } from "@/lib/publish/orders-cart";
 import { bakeChatWidget } from "@/lib/publish/chat-widget";
 import { bakeVideoEmbeds, bakeMediaPreconnect } from "@/lib/publish/video-embed";
 import { bakeCarousels } from "@/lib/publish/carousel";
@@ -52,10 +49,8 @@ import { injectAnalyticsSnippet } from "@/lib/analytics/snippet";
 import { injectTrackingStrip } from "@/lib/publish/tracking-strip";
 import { injectLogoIntoHtml } from "@/lib/branding/inject-logo";
 import { absolutizeSocialMeta } from "@/lib/branding/social-image";
-import { buildGateStub, wireMemberLogout } from "@/lib/members/gate-stub";
-import { applySigninLink, signinLabelFor, accountLabelFor } from "@/lib/publish/signin-link";
 import { buildLlmsTxt, pageTitle } from "@/lib/publish/llms-txt";
-import { detectSiteAccent } from "@/lib/members/site-accent";
+import { detectSiteAccent } from "@/lib/publish/site-accent";
 import { validatePageSlug } from "@/lib/projects/site-pages";
 import type {
   FormConfig,
@@ -144,6 +139,11 @@ export class ReleaseNotFoundError extends Error {
 export interface PublishParams {
   subdomain: string;
   html: string;
+  /** El JavaScript escrito por el modelo, YA autorizado por el llamador
+   *  (`authorizeRuntimeForPublish` verificó su cápsula contra el HTML
+   *  guardado). Aquí no se vuelve a decidir si vale: aquí sólo se inyecta,
+   *  en el sitio y el orden correctos. Ausente = publicación de siempre. */
+  modelRuntime?: string | null;
   /** When provided AND the HTML references `/api/projects/<projectId>/assets/<filename>`
    *  URLs (LocalFs upload backend), each referenced file is copied from the
    *  upload dir to `<sub>/assets/<filename>` and the URL is rewritten to
@@ -191,16 +191,6 @@ export interface PublishParams {
    *  page/locale variant. The owner's business brain never ships — the widget
    *  calls back to /api/assistant/<sub> which reads it server-side. */
   assistant?: AssistantBake;
-  /** Comments module (settings.comments). When enabled, the members-only
-   *  comments widget is injected on the root doc + every page/locale variant
-   *  (at the data-ol-comments-section placeholder, or appended before
-   *  </body>). The thread is fetched live from /api/cm/<sub>/*. */
-  comments?: { enabled: boolean; theme?: "light" | "dark" };
-  /** Bookings module (settings.bookings). When enabled, the appointment-booking
-   *  widget is injected on the root doc + every page/locale variant (at the
-   *  data-ol-bookings-section placeholder, or appended before </body>). Slots
-   *  are fetched live from /api/bk/<sub>/*. */
-  bookings?: { enabled: boolean; theme?: "light" | "dark" };
   /** Collections module (settings.collections). When enabled, the owner's item
    *  list is baked as STATIC HTML (a grid/list of cards) at the
    *  data-ol-collection-section placeholder, or appended before </body>. No
@@ -238,22 +228,17 @@ export interface PublishParams {
    *  release — <sub>/protected/<sha>/<slug>/index.html, unreachable by the
    *  web tier — and served only by /api/m/[sub]/page/[slug] after a session
    *  check. Slugs pre-validated like `pages`. */
-  gatedPages?: Array<{ slug: string; html: string }>;
   /** Branding for the gate stubs (site title + optional logo on the login
    *  card). Required in spirit when gatedPages is non-empty. */
-  memberGate?: { projectTitle: string; logoUrl?: string | null; passwordLogin?: boolean };
   /** Members module: when set (module on + a gated portal exists), every
    *  PUBLIC doc gets a sign-in link to this portal slug — the page's own
    *  sign-in link is rewired to it, or a neutral one is injected. Absent →
    *  no-op (module off / no gated page). */
-  memberSigninPath?: string;
   /** When the signin path is the Cuentas account home (/cuenta), the injected
    *  nav link reads as an account entry ("Mi cuenta") not "Iniciar sesión". */
-  memberSigninIsAccount?: boolean;
   /** Cuentas preset: also publish the account card at /cuenta (its bytes ARE
    *  the auth card / dashboard — mode:"account" — with no protected doc behind
    *  it). Wears the same detected accent as the gate stubs. */
-  accountArea?: boolean;
 }
 
 const ASSET_URL_RE_FOR =
@@ -508,12 +493,6 @@ interface BakeDocumentCtx {
   music?: MusicSettings;
   /** Site assistant widget config. Absent/disabled = no widget injected. */
   assistant?: AssistantBake;
-  /** Comments module. When enabled, the members-only comments widget is
-   *  injected (at the placeholder, or appended) on every document. */
-  comments?: { enabled: boolean; theme?: "light" | "dark" };
-  /** Bookings module. When enabled, the appointment-booking widget is injected
-   *  (at the placeholder, or appended) on every document. */
-  bookings?: { enabled: boolean; theme?: "light" | "dark" };
   /** Collections module. When enabled, the owner's item list is baked as STATIC
    *  HTML (grid/list of cards) at the placeholder, or appended. */
   collections?: { enabled: boolean; items: ItemRow[]; layout: "grid" | "list"; theme?: "light" | "dark" };
@@ -536,7 +515,6 @@ interface BakeDocumentCtx {
    *  document? True → the widget bakes ONLY in the documents that carry the
    *  band. False → the historical fallback (append before </body> everywhere)
    *  so "turn the module on and something shows up" keeps working. */
-  sectionBands: { bookings: boolean; comments: boolean };
 }
 
 interface AssistantBake {
@@ -576,10 +554,6 @@ async function bakeDocument(
   // ships ONLY where its band is — inserting Reservas on /citas must not also
   // publish it on home and /menu. Read off the incoming document (the same
   // source the site-wide scan used), so both halves of the rule always agree.
-  const bakeCommentsHere =
-    !ctx.sectionBands.comments || hasCommentsSection(html);
-  const bakeBookingsHere =
-    !ctx.sectionBands.bookings || hasBookingsSection(html);
 
   const optimized = await optimizeHtmlForProduction(html);
 
@@ -608,10 +582,15 @@ async function bakeDocument(
   // (env kill-switch AND settings) so this never disagrees with what bakes.
   try {
     migratedHtml = stripDisabledModuleBands(migratedHtml, {
-      bookings: process.env.OPENLEN_BOOKINGS !== "0" && ctx.bookings?.enabled === true,
       collections: process.env.OPENLEN_COLLECTION !== "0" && ctx.collections?.enabled === true,
-      comments: process.env.OPENLEN_COMMENTS !== "0" && ctx.comments?.enabled === true,
       chat: process.env.OPENLEN_CHAT !== "0" && ctx.chat?.enabled === true,
+      // Reservas y Comentarios se retiraron (2026-08-21). Quedan en `false`
+      // PERMANENTE a
+      // propósito, no fuera del limpiador: así una banda heredada en una página
+      // ya publicada se borra sola en la próxima publicación, en vez de quedarse
+      // como un hueco vacío con su titular encima.
+      comments: false,
+      bookings: false,
     });
   } catch (err) {
     // eslint-disable-next-line no-console
@@ -647,19 +626,10 @@ async function bakeDocument(
   if (process.env.OPENLEN_COLLECTION !== "0") {
     try {
       // Same "usable number" predicate the runtime enforces (waHref -> null
-      // below 8 digits) — a merely non-empty, invalid number must NOT bake
-      // buttons the runtime will then no-op on (dead «Agregar»).
-      const ordersNumberUsable =
-        ctx.orders?.enabled === true && waHref(ctx.orders.number) !== null;
-      const ordersCfg =
-        process.env.OPENLEN_ORDERS !== "0" && ordersNumberUsable
-          ? { number: ctx.orders!.number }
-          : null;
       const colCfg = ctx.collections?.enabled
         ? {
             items: ctx.collections.items,
             layout: ctx.collections.layout,
-            orders: ordersCfg,
             theme: ctx.collections.theme,
           }
         : { items: [], layout: "grid" as const };
@@ -836,37 +806,7 @@ async function bakeDocument(
   // (Minor de la revisión del pase de superficies, 2026-07-15).
   const siteAccent = detectSiteAccent(migratedHtml) ?? undefined;
 
-  // Comments widget — AFTER the assistant, still BEFORE the seal (so its inline
-  // script hash enters the CSP). Renders at the placeholder or appends.
-  if (process.env.OPENLEN_COMMENTS !== "0" && ctx.comments?.enabled && bakeCommentsHere) {
-    try {
-      migratedHtml = bakeComments(migratedHtml, {
-        sub: ctx.sub,
-        page,
-        accent: siteAccent,
-        theme: ctx.comments.theme,
-      });
-    } catch (err) {
-      // eslint-disable-next-line no-console
-      console.warn("[publishToDir] comments widget inject failed; publishing without it", err);
-    }
-  }
-
-  // Bookings widget — same window (before the seal so its inline hash is sealed).
-  if (process.env.OPENLEN_BOOKINGS !== "0" && ctx.bookings?.enabled && bakeBookingsHere) {
-    try {
-      migratedHtml = bakeBookings(migratedHtml, {
-        sub: ctx.sub,
-        accent: siteAccent,
-        theme: ctx.bookings.theme,
-      });
-    } catch (err) {
-      // eslint-disable-next-line no-console
-      console.warn("[publishToDir] bookings widget inject failed; publishing without it", err);
-    }
-  }
-
-  // Private chat widget — AFTER bookings, BEFORE video-embed (so its sealed
+  // Private chat widget — BEFORE video-embed (so its sealed
   // script hash enters the CSP). Gated on OPENLEN_CHAT != "0" and chat.enabled.
   //
   // Single-launcher rule: when the assistant is ALSO enabled AND the chat can
@@ -1020,26 +960,6 @@ async function bakeDocument(
     }
   }
 
-  // Pedidos por WhatsApp — cart runtime over the collections «Agregar»
-  // buttons baked above. injectOrdersCart self-gates on the buttons being
-  // present in THIS document, so subpages without the grid stay untouched.
-  // Same usable-number predicate as the bake gate above (waHref -> null
-  // below 8 digits), so this can never inject a cart over buttons that were
-  // correctly skipped upstream, and never diverge from the runtime's own check.
-  const ordersInjectNumberUsable =
-    ctx.orders?.enabled === true && waHref(ctx.orders.number) !== null;
-  if (process.env.OPENLEN_ORDERS !== "0" && ordersInjectNumberUsable) {
-    try {
-      migratedHtml = injectOrdersCart(migratedHtml, {
-        number: ctx.orders!.number,
-        projectId: ctx.projectId,
-        page,
-      });
-    } catch (err) {
-      // eslint-disable-next-line no-console
-      console.warn("[publishToDir] orders cart inject failed; publishing without it", err);
-    }
-  }
 
   // Social meta must be ABSOLUTE for crawlers — re-absolutize any og:image /
   // twitter:image / og:url that an asset migration above relativized (e.g. an
@@ -1074,7 +994,16 @@ export interface PublishResult {
   /** Site-page slugs published as /<slug>/index.html. */
   pages: string[];
   /** Gated slugs — stub in the release, real doc under protected/<sha>/. */
-  gatedPages: string[];
+  /** Documentos que salieron SIN su CSP sellada, por etiqueta ("/", "es",
+   *  "/precios"). Vacío es lo normal. Antes esto se tiraba: el sellador
+   *  devuelve `sealed` y la llamada se quedaba sólo con `.html`, así que una
+   *  página podía publicarse sin política y nadie se enteraba jamás. */
+  unsealed: string[];
+  /** Puesto cuando el JavaScript del modelo NO viajó al release aunque la
+   *  cápsula lo autorizaba. Hoy sólo ocurre por una razón: el sellado CSP se
+   *  perdió en el documento raíz, y un script en línea sin política no es una
+   *  degradación, es un agujero. `null` es lo normal. */
+  runtimeDropped: string | null;
 }
 
 /**
@@ -1086,6 +1015,63 @@ export interface PublishResult {
  * Either the new release is current, or the previous one still is. Never an
  * in-between (symlink swap via rename(2) is atomic on POSIX).
  */
+/**
+ * Mete el script del modelo al final del `<body>`.
+ *
+ * Al FINAL y no en el `<head>` porque el contrato que se le dio al modelo dice
+ * que la página tiene que estar completa sin él: un script que corre antes de
+ * que exista el DOM que va a tocar no mejora nada, falla.
+ *
+ * El marcador `data-openlen-model-runtime` NO viaja al documento publicado. En
+ * el HTML servido no confiere autoridad a nadie —la autoridad la dio la cápsula
+ * y la CSP la fija por hash— y dejarlo puesto sólo serviría para que alguien lo
+ * copiara creyendo que significa algo.
+ *
+ * Sin `</body>` se pega al final. Un documento así ya pasó por el normalizador,
+ * de modo que es un caso que no debería existir; perder el runtime en silencio
+ * sería peor que ponerlo donde el navegador lo va a leer igual.
+ */
+function injectModelRuntime(html: string, code: string): string {
+  const tag = `<script>${code}</script>`;
+  const i = html.toLowerCase().lastIndexOf("</body>");
+  return i === -1 ? html + tag : html.slice(0, i) + tag + html.slice(i);
+}
+
+/**
+ * Sella un documento y APUNTA el que sale sin política.
+ *
+ * El contrato del sellador es deliberado —"el sellado puede fallar, la
+ * publicación nunca"— y no se cambia aquí: sin política la página sigue
+ * saliendo, porque hoy es HTML estático y perder la CSP no la vuelve mentira.
+ *
+ * Lo que sí se arregla es que la pérdida era INVISIBLE. `sealRelease` devuelve
+ * `sealed` y las cuatro llamadas se quedaban con `.html` a secas, así que un
+ * documento sin CSP no se contaba ni se avisaba — y `sealed:false` ni siquiera
+ * lanza, de modo que el `catch` tampoco lo veía. Un log que nadie lee no es
+ * una solución; un contador que viaja en el resultado, sí.
+ *
+ * `OPENLEN_CSP_SEAL=strict` convierte la pérdida en un aborto. Está apagado
+ * por defecto A PROPÓSITO: encenderlo hoy rompería la publicación de páginas
+ * que hoy se publican bien. Es la palanca que habrá que encender el día que
+ * una página lleve JavaScript escrito por el modelo, porque entonces publicar
+ * sin política deja de ser una pérdida y pasa a ser un agujero.
+ */
+function seal(html: string, label: string, unsealed: string[]): string {
+  try {
+    const r = sealRelease(html, submitOrigin());
+    if (!r.sealed) {
+      unsealed.push(label);
+      return r.html;
+    }
+    return r.html;
+  } catch (err) {
+    unsealed.push(label);
+    // eslint-disable-next-line no-console
+    console.warn(`[publishToDir] el sellado LANZÓ en ${label}; sale sin CSP`, err);
+    return html;
+  }
+}
+
 export async function publishToDir(
   params: PublishParams,
 ): Promise<PublishResult> {
@@ -1145,12 +1131,7 @@ export async function publishToDir(
   const siteDocs = [
     params.html,
     ...(params.pages ?? []).map((p) => p.html),
-    ...(params.gatedPages ?? []).map((p) => p.html),
   ];
-  const sectionBands = {
-    bookings: siteDocs.some(hasBookingsSection),
-    comments: siteDocs.some(hasCommentsSection),
-  };
 
   // The full per-document bake (optimize → assets → images → fonts →
   // unsplash → forms → logo → analytics → motion → music). SHA is computed
@@ -1166,8 +1147,6 @@ export async function publishToDir(
     motion: params.motion,
     music: effectiveMusic,
     assistant: params.assistant,
-    comments: params.comments,
-    bookings: params.bookings,
     collections: params.collections,
     liveData: params.liveData,
     whatsapp: params.whatsapp,
@@ -1175,23 +1154,9 @@ export async function publishToDir(
     scene3d: params.scene3d,
     chat: params.chat,
     platforms: params.platforms,
-    sectionBands,
   };
   let migratedHtml = await bakeDocument(publishHtml, bakeCtx);
 
-  // Members module — sign-in entry on public docs: rewire the page's own
-  // sign-in link to the gated portal, or inject one. BEFORE the locale
-  // variants (so they inherit + translate it) and BEFORE the seal. No portal
-  // (module off / no gated page) → no-op. OPENLEN_MEMBER_SIGNIN=0 disables it.
-  if (params.memberSigninPath && process.env.OPENLEN_MEMBER_SIGNIN !== "0") {
-    const lang =
-      params.sourceLang?.trim() || detectHtmlLang(migratedHtml) || "en";
-    migratedHtml = applySigninLink(migratedHtml, {
-      href: `/${params.memberSigninPath}`,
-      label: params.memberSigninIsAccount ? accountLabelFor(lang) : signinLabelFor(lang),
-      rewriteText: params.memberSigninIsAccount ? accountLabelFor(lang) : undefined,
-    });
-  }
 
   // Speak Every Language: translated locale variants of the final baked
   // page, written as /<locale>/index.html inside the same release. Soft-
@@ -1236,17 +1201,59 @@ export async function publishToDir(
   // transform — any script injected after this point would be blocked by
   // the page's own policy (the pass self-checks and falls back to unsealed
   // output on drift, so a future mis-ordered injector degrades, never breaks).
+  // El runtime del modelo entra AQUÍ y en ningún otro sitio: después del
+  // sanitizador y de todos los bakes de primera parte, y justo antes del
+  // sellado — que es quien calcula el hash de este script para meterlo en la
+  // CSP. Inyectarlo después del sellado lo dejaría fuera de la política y el
+  // navegador lo bloquearía; inyectarlo antes del sanitizador lo borraría.
+  // Ese orden ya lo defiende behaviors-sanitize-order.test.ts para los
+  // nuestros, y ahora también para éste.
+  //
+  // Sólo el documento raíz. El piloto es UNA página: las subpáginas y los
+  // locales no lo llevan, y el llamador ya rechaza los proyectos que tienen.
+  //
+  // Se guarda la versión SIN el script antes de inyectarlo: si el sellado se
+  // pierde, ésa es la que se publica. Ver más abajo.
+  const htmlSinRuntime = params.modelRuntime ? migratedHtml : null;
+  if (params.modelRuntime) {
+    migratedHtml = injectModelRuntime(migratedHtml, params.modelRuntime);
+  }
+  let runtimeDropped: string | null = null;
+
+  // `unsealed` recoge los documentos que salen sin política. El sellador ya
+  // devolvía ese dato —`sealed`— y aquí se descartaba junto con el resto del
+  // resultado, así que la pérdida era invisible: ni contada, ni avisada.
+  const unsealed: string[] = [];
+  // Con el interruptor en 0 NO se sella nada, y entonces `unsealed` vacío
+  // sería una mentira tranquilizadora: el resultado diría "todo sellado"
+  // cuando no se selló ni un documento. El apagado se declara.
+  if (process.env.OPENLEN_CSP_SEAL === "0") {
+    unsealed.push("sellado desactivado (OPENLEN_CSP_SEAL=0)");
+  }
   if (process.env.OPENLEN_CSP_SEAL !== "0") {
-    try {
-      migratedHtml = sealRelease(migratedHtml, submitOrigin()).html;
-      localeDocs = localeDocs.map((d) => ({
-        locale: d.locale,
-        html: sealRelease(d.html, submitOrigin()).html,
-      }));
-    } catch (err) {
-      // eslint-disable-next-line no-console
-      console.warn("[publishToDir] release seal failed; publishing without CSP", err);
+    migratedHtml = seal(migratedHtml, "/", unsealed);
+    // EL SCRIPT DEL MODELO NO VIAJA SIN POLÍTICA.
+    //
+    // Para el resto del documento perder la CSP es una degradación: sigue siendo
+    // HTML estático y no miente. Para un `<script>` en línea escrito por el
+    // modelo NO lo es — la política es justo lo que lo autoriza, por hash, y sin
+    // ella la página sale con código sin restricción de salida.
+    //
+    // Se publica igual, pero SIN el script: por contrato la página está completa
+    // sin él, así que quitarlo cuesta la interactividad y nada más. Abortar la
+    // publicación entera le cobraría al usuario un fallo nuestro.
+    //
+    // La etiqueta "/" se retira antes de re-sellar para que, si la versión sin
+    // script tampoco se puede sellar, vuelva a contarse una sola vez.
+    if (htmlSinRuntime !== null && unsealed.includes("/")) {
+      runtimeDropped = "sin CSP sellada";
+      unsealed.splice(unsealed.indexOf("/"), 1);
+      migratedHtml = seal(htmlSinRuntime, "/", unsealed);
     }
+    localeDocs = localeDocs.map((d) => ({
+      locale: d.locale,
+      html: seal(d.html, d.locale, unsealed),
+    }));
   }
 
   // Multi-page: bake each site page through the same chain, stamp its own
@@ -1261,133 +1268,15 @@ export async function publishToDir(
       );
     }
     let doc = await bakeDocument(pageSanitized.html, bakeCtx, page.slug);
-    if (params.memberSigninPath && process.env.OPENLEN_MEMBER_SIGNIN !== "0") {
-      doc = applySigninLink(doc, {
-        href: `/${params.memberSigninPath}`,
-        label: params.memberSigninIsAccount ? accountLabelFor(sourceLang) : signinLabelFor(sourceLang),
-        rewriteText: params.memberSigninIsAccount ? accountLabelFor(sourceLang) : undefined,
-      });
-    }
     doc = annotateLanguageCluster(doc, {
       baseUrl,
       selfPath: `/${page.slug}/`,
       cluster: [{ lang: sourceLang, path: `/${page.slug}/` }],
     });
-    if (process.env.OPENLEN_CSP_SEAL !== "0") {
-      try {
-        doc = sealRelease(doc, submitOrigin()).html;
-      } catch (err) {
-        // eslint-disable-next-line no-console
-        console.warn(`[publishToDir] seal failed for page /${page.slug}; publishing unsealed`, err);
-      }
-    }
+    if (process.env.OPENLEN_CSP_SEAL !== "0") doc = seal(doc, `/${page.slug}`, unsealed);
     pageDocs.push({ slug: page.slug, html: doc });
   }
 
-  // Members module: gated pages run the SAME chain (bake → canonical → seal),
-  // but the result never enters the release — it lands in protectedDocs and
-  // gets written under <sub>/protected/<sha>/ below. What DOES enter the
-  // release at the page's path is a login STUB with zero protected bytes.
-  // The stub is deliberately NOT sealed: a document's CSP survives
-  // document.open(), and a meta policy parsed during the member swap is
-  // additive — a sealed stub would block the protected doc's own sealed
-  // inline scripts. The stub carries no user content, so unsealed is safe
-  // (same posture as the branded 404 page).
-  const protectedDocs: Array<{ slug: string; html: string }> = [];
-  const stubFiles: Array<{ path: string; content: string }> = [];
-  // The stub wears the site's accent — extracted deterministically from the
-  // baked home document (the brand source), computed once per publish.
-  // Null degrades to the neutral card.
-  let memberAccent: string | null = null;
-  if ((params.gatedPages ?? []).length > 0 || params.accountArea) {
-    try {
-      memberAccent = detectSiteAccent(migratedHtml);
-    } catch {
-      memberAccent = null;
-    }
-  }
-  for (const page of params.gatedPages ?? []) {
-    const pageSanitized = sanitizeForPublish(page.html);
-    if (pageSanitized.html === null) {
-      throw new Error(
-        `publishToDir: refusing to write gated page /${page.slug} containing data-slot-path`,
-      );
-    }
-    let doc = await bakeDocument(pageSanitized.html, bakeCtx, page.slug);
-    // Logout wiring (data-ol-logout elements) — BEFORE the seal so the
-    // inline script's hash enters the page's CSP.
-    doc = wireMemberLogout(doc, sub);
-    doc = annotateLanguageCluster(doc, {
-      baseUrl,
-      selfPath: `/${page.slug}/`,
-      cluster: [{ lang: sourceLang, path: `/${page.slug}/` }],
-    });
-    if (process.env.OPENLEN_CSP_SEAL !== "0") {
-      try {
-        doc = sealRelease(doc, submitOrigin()).html;
-      } catch (err) {
-        // eslint-disable-next-line no-console
-        console.warn(`[publishToDir] seal failed for gated page /${page.slug}; publishing unsealed`, err);
-      }
-    }
-    protectedDocs.push({ slug: page.slug, html: doc });
-    stubFiles.push({
-      path: `${page.slug}/index.html`,
-      content: buildGateStub({
-        sub,
-        slug: page.slug,
-        projectTitle: params.memberGate?.projectTitle ?? sub,
-        locale: sourceLang,
-        logoUrl: params.memberGate?.logoUrl,
-        accent: memberAccent,
-        passwordLogin: params.memberGate?.passwordLogin,
-      }),
-    });
-  }
-
-  // The account page (/cuenta): published bytes ARE the auth card / dashboard
-  // (mode:"account"); no protected doc behind it. On when the Cuentas account
-  // area is enabled. Same detected accent as the gate stubs.
-  if (params.accountArea) {
-    // A USER page already occupying a door slug wins (legacy sites predating
-    // the reserved slugs) — a stub must never silently replace an owner's
-    // content page.
-    const occupied = new Set(
-      [...(params.pages ?? []), ...(params.gatedPages ?? [])].map((p) => p.slug),
-    );
-    if (!occupied.has("cuenta")) {
-      stubFiles.push({
-        path: `cuenta/index.html`,
-        content: buildGateStub({
-          sub,
-          slug: "cuenta",
-          mode: "account",
-          passwordLogin: params.memberGate?.passwordLogin ?? true,
-          projectTitle: params.memberGate?.projectTitle ?? sub,
-          locale: sourceLang,
-          logoUrl: params.memberGate?.logoUrl,
-          accent: memberAccent,
-        }),
-      });
-    }
-    // /login and /register answer at the URLs visitors actually type — both
-    // are the same /cuenta card (tabs), so they redirect. Static meta-refresh,
-    // no script → nothing for the CSP seal to care about. The lang
-    // interpolates only when it's shaped like a lang tag — the stub bypasses
-    // sanitizeForPublish, so it must be safe by CONSTRUCTION for any caller.
-    const stubLang = /^[a-z]{2,5}$/i.test(sourceLang ?? "") ? sourceLang : "en";
-    for (const alias of ["login", "register"]) {
-      if (occupied.has(alias)) continue;
-      stubFiles.push({
-        path: `${alias}/index.html`,
-        content:
-          `<!doctype html><html lang="${stubLang}"><head><meta charset="utf-8">` +
-          `<meta http-equiv="refresh" content="0;url=/cuenta/">` +
-          `<link rel="canonical" href="/cuenta/"><meta name="robots" content="noindex">` +
-          `<title>/cuenta</title></head><body></body></html>`,
-      });
-    }
-  }
 
   // Site pages enter the sitemap as plain entries — they are NOT language
   // alternates of home, so they stay outside the hreflang cluster.
@@ -1397,6 +1286,19 @@ export async function publishToDir(
       .map((p) => `  <url>\n    <loc>${baseUrl}/${p.slug}/</loc>\n  </url>`)
       .join("\n");
     sitemap = sitemap.replace("</urlset>", `${extra}\n</urlset>`);
+  }
+
+  // Antes de escribir nada: en modo estricto, un documento sin política NO se
+  // publica. Va aquí y no después del write porque un release ya escrito con
+  // el symlink movido no se "deshace" — o no llega a existir, o es el vivo.
+  if (unsealed.length > 0) {
+    if (process.env.OPENLEN_CSP_SEAL === "strict") {
+      throw new Error(
+        `publishToDir: ${unsealed.length} documento(s) sin CSP sellada (${unsealed.join(", ")}) y OPENLEN_CSP_SEAL=strict`,
+      );
+    }
+    // eslint-disable-next-line no-console
+    console.warn(`[publishToDir] ${sub}: sin CSP → ${unsealed.join(", ")}`);
   }
 
   const releaseFiles: Array<{ path: string; content: string }> = [
@@ -1409,8 +1311,6 @@ export async function publishToDir(
       path: `${p.slug}/index.html`,
       content: p.html,
     })),
-    // Gate stubs occupy the gated pages' public paths inside the release.
-    ...stubFiles,
     { path: "sitemap.xml", content: sitemap },
     { path: "robots.txt", content: buildRobots(baseUrl) },
     {
@@ -1426,13 +1326,7 @@ export async function publishToDir(
   // Protected docs shape the sha (an edit to a gated page must mint a new
   // release) without ever entering the release dir — the __protected__/
   // prefix only exists inside this hash input.
-  const sha = computeShaFiles([
-    ...releaseFiles,
-    ...protectedDocs.map((p) => ({
-      path: `__protected__/${p.slug}/index.html`,
-      content: p.html,
-    })),
-  ]);
+  const sha = computeShaFiles(releaseFiles);
 
   const releaseDir = safeJoin(releasesDir, sha);
   let written = false;
@@ -1464,37 +1358,6 @@ export async function publishToDir(
       // If rename failed (e.g. race with another publish that won), clean
       // up the orphaned tmpdir.
       await rm(tmpDir, { recursive: true, force: true }).catch(() => {});
-    }
-  }
-
-  // Members: write the protected docs OUTSIDE the public root, keyed by the
-  // SAME sha so stub and content always travel together (rollback included).
-  // This runs BEFORE the symlink flip — the member API resolves content via
-  // the current sha and must never land on a sha whose protected dir hasn't
-  // been written yet. Idempotent like the release write.
-  if (protectedDocs.length > 0) {
-    const protectedRoot = safeJoin(subDir, "protected");
-    const protectedShaDir = safeJoin(protectedRoot, sha);
-    let protectedExists = false;
-    try {
-      await stat(protectedShaDir);
-      protectedExists = true;
-    } catch {
-      // ENOENT — first write for this sha.
-    }
-    if (!protectedExists) {
-      const tmpDir = safeJoin(protectedRoot, `.tmp-${sha}-${randomUUID()}`);
-      await mkdir(tmpDir, { recursive: true });
-      try {
-        for (const p of protectedDocs) {
-          const dst = path.join(tmpDir, p.slug, "index.html");
-          await mkdir(path.dirname(dst), { recursive: true });
-          await writeFile(dst, p.html, "utf8");
-        }
-        await rename(tmpDir, protectedShaDir);
-      } finally {
-        await rm(tmpDir, { recursive: true, force: true }).catch(() => {});
-      }
     }
   }
 
@@ -1530,7 +1393,8 @@ export async function publishToDir(
     written,
     locales: localeDocs.map((d) => d.locale),
     pages: pageDocs.map((p) => p.slug),
-    gatedPages: protectedDocs.map((p) => p.slug),
+    unsealed,
+    runtimeDropped,
   };
 }
 

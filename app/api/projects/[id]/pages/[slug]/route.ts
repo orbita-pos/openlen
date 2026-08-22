@@ -53,14 +53,11 @@ export async function GET(
   );
 }
 
-const PatchSchema = z
-  .object({
-    title: z.string().min(1).max(120).optional(),
-    membersOnly: z.boolean().optional(),
-  })
-  .refine((o) => o.title !== undefined || o.membersOnly !== undefined, {
-    message: "expected title and/or membersOnly",
-  });
+// `membersOnly` desapareció con el módulo Miembros (2026-08-21): sin él no hay
+// páginas restringidas, así que lo único que se edita aquí es el título.
+const PatchSchema = z.object({
+  title: z.string().min(1).max(120),
+});
 
 export async function PATCH(
   req: Request,
@@ -81,30 +78,10 @@ export async function PATCH(
   if (!row || !row.data || !page) return json({ error: "not_found" }, 404);
 
   const nextPage = { ...page };
-  if (parsed.data.title !== undefined) {
-    nextPage.title = parsed.data.title.trim();
-  }
-  if (parsed.data.membersOnly !== undefined) {
-    if (parsed.data.membersOnly) nextPage.membersOnly = true;
-    else delete nextPage.membersOnly;
-  }
-
-  // Flipping a page to members-only auto-enables the module in the same
-  // read-modify-write — atomic, so the flag can never land "armed" with the
-  // master switch off by accident. The UI toasts off membersAutoEnabled.
-  let settings = row.data.settings;
-  let membersAutoEnabled = false;
-  if (parsed.data.membersOnly === true && settings?.members?.enabled !== true) {
-    settings = {
-      ...settings,
-      members: { enabled: true, mode: settings?.members?.mode ?? "open" },
-    };
-    membersAutoEnabled = true;
-  }
+  nextPage.title = parsed.data.title.trim();
 
   const nextData: ProjectData = {
     ...row.data,
-    ...(settings !== row.data.settings ? { settings } : {}),
     pages: {
       ...row.data.pages,
       [slug]: nextPage,
@@ -117,7 +94,7 @@ export async function PATCH(
       and(eq(schema.projects.id, id), eq(schema.projects.userId, session.user.id)),
     );
   return json(
-    membersAutoEnabled ? { ok: true, membersAutoEnabled: true } : { ok: true },
+    { ok: true },
     200,
   );
 }

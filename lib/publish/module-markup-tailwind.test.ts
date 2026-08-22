@@ -1,13 +1,10 @@
 import { describe, expect, test } from "vitest";
 
 import { bakeAssistantWidget } from "./assistant-widget";
-import { bakeBookings } from "./bookings-widget";
 import { bakeChatWidget } from "./chat-widget";
 import { bakeCollections } from "./collections-block";
-import { bakeComments } from "./comments-widget";
 import { bakeMusic } from "./music";
 import { buildModuleSection } from "./module-sections";
-import { injectOrdersCart } from "./orders-cart";
 import { bakeWhatsAppButton } from "./whatsapp-button";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -103,24 +100,13 @@ const CATALOG_ITEM = {
 const catalog = (layout: "grid" | "list") => () =>
   bakeCollections(
     CATALOG_HOST,
-    { items: [CATALOG_ITEM], layout, orders: { number: "5512345678" } } as never,
+    { items: [CATALOG_ITEM], layout } as never,
     true,
   );
 
 const MODULES: Array<[string, () => string]> = [
   ["collections (catálogo, grid)", catalog("grid")],
   ["collections (catálogo, list)", catalog("list")],
-  [
-    "orders (carrito WhatsApp)",
-    () =>
-      injectOrdersCart(
-        BASE.replace(
-          '<div id="host"></div>',
-          '<button data-ol-order-add data-ol-order-id="i1" data-ol-order-title="x" data-ol-order-cents="9000"></button>',
-        ),
-        { number: "5512345678", projectId: "p1" } as never,
-      ),
-  ],
   ["whatsapp (FAB)", () => bakeWhatsAppButton(BASE, { number: "5512345678" } as never)],
   [
     "assistant (burbuja IA)",
@@ -131,8 +117,6 @@ const MODULES: Array<[string, () => string]> = [
         businessName: "Demo",
       } as never),
   ],
-  ["comments (comentarios)", () => bakeComments(BASE, { sub: "demo", page: null } as never)],
-  ["bookings (reservas)", () => bakeBookings(BASE, { sub: "demo" } as never)],
   [
     "chat (mensajería)",
     () =>

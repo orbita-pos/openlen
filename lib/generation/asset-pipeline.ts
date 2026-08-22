@@ -372,7 +372,14 @@ export async function resolveDomainAssetManifest(
 
   let providerResult: Extract<AssetPackResult, { ok: true }> | null = null;
   let generatedAssignments: GeneratedAssignment[] = [];
-  if (input.mode === "hybrid" && unresolved.some((assetIntent) => assetIntent.required)) {
+  // `required` was deciding two different questions: whether the page fails
+  // without this asset, and whether it is worth paying to make one. The
+  // creative tool marks every request optional precisely so a missing image
+  // can never fail a page closed, which left it unable to ever get one. An
+  // optional slot is now worth generating -- and never worth failing for, so
+  // every refusal below leaves the page to its placeholder instead.
+  const requiredWasUnresolved = unresolved.some((assetIntent) => assetIntent.required);
+  generation: if (input.mode === "hybrid" && unresolved.length > 0) {
     let generated: AssetPackResult;
     try {
       generated = await deps.provider.createPack({
@@ -382,6 +389,7 @@ export async function resolveDomainAssetManifest(
         budget: deps.budget,
       });
     } catch {
+      if (!requiredWasUnresolved) break generation;
       return {
         ok: false,
         code: "provider_error",
@@ -389,6 +397,7 @@ export async function resolveDomainAssetManifest(
       };
     }
     if (!generated.ok) {
+      if (!requiredWasUnresolved) break generation;
       if (!validProviderFailureTelemetry(generated)) {
         return {
           ok: false,
@@ -412,6 +421,7 @@ export async function resolveDomainAssetManifest(
       };
     }
     if (!validProviderSuccessTelemetry(generated)) {
+      if (!requiredWasUnresolved) break generation;
       return {
         ok: false,
         code: "invalid_asset",
@@ -421,6 +431,7 @@ export async function resolveDomainAssetManifest(
     providerResult = generated;
     const validatedPack = await validateProviderPack(input.projectId, unresolved, generated);
     if (!validatedPack) {
+      if (!requiredWasUnresolved) break generation;
       return {
         ok: false,
         code: "invalid_asset",
@@ -435,6 +446,7 @@ export async function resolveDomainAssetManifest(
       }
     }
     if (!buildValidatedManifest(parsed.intents, group, prospectiveResolutions)) {
+      if (!requiredWasUnresolved) break generation;
       return {
         ok: false,
         code: "invalid_asset",
@@ -443,6 +455,7 @@ export async function resolveDomainAssetManifest(
     }
     const stored = await storeGeneratedPack(input.projectId, validatedPack, deps.storage);
     if (!stored) {
+      if (!requiredWasUnresolved) break generation;
       return {
         ok: false,
         code: "storage_error",

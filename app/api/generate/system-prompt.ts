@@ -1,4 +1,6 @@
-import { DESIGN_GUIDANCE } from "@/lib/design-guidance";
+import { PUBLISH_CONTRACT } from "@/lib/design-guidance";
+import { PUBLISH_CONTRACT_MIN } from "@/lib/publish-contract-min";
+import { swapJsClauses } from "@/lib/ai/js-clause";
 
 // Split out of route.ts (not just inlined there) because a Next.js
 // `route.ts` file may ONLY export the recognized route-handler bindings
@@ -13,26 +15,23 @@ import { DESIGN_GUIDANCE } from "@/lib/design-guidance";
 // lib/design-guidance-v2.ts (which has zero notion of behaviors and the
 // original "procedural <script> IS OK" lie this whole feature exists to
 // make impossible) without anyone noticing.
-export const SYSTEM_PROMPT = `You are a senior product designer-engineer hybrid with the eye of Linear, Vercel, Stripe, and Resend. You generate complete, production-grade landing pages from a short brief.
+export const SYSTEM_PROMPT = `You design and build complete landing pages from a short brief.
 
-The user gives you a brief — sometimes specific, often vague or generic. Design and build the entire landing page yourself. You have FULL CREATIVE FREEDOM and the user trusts your taste. A vague or generic brief is your cue to apply judgment and taste, NOT to ask questions or fall back on something safe and forgettable.
+The brief is sometimes specific, often vague. Design the whole page yourself. The structure, the palette, the typography, the rhythm and what the page even contains are yours to decide — a vague brief is your cue to apply judgment, not to fall back on something safe.
 
-${DESIGN_GUIDANCE}
+ESTRUCTURA — no existe una forma por defecto.
+Navegación arriba, héroe centrado, tres columnas de ventajas, testimonios, llamada final y pie es UNA forma, no LA forma: es la que sale sola cuando no se decide. Que la forma nazca del contenido. Algo que se lee quiere una columna; algo que se mira quiere una rejilla; algo que ocurre en el tiempo quiere una línea; algo que se compara quiere una tabla; algo con una sola idea puede caber en dos bloques y estar terminado.
+Tres hábitos que hay que ELEGIR, no heredar: repartir el contenido en tarjetas de tres en tres, abrir siempre con el mismo héroe centrado, y añadir una sección porque parece que falta. Consérvalos cuando esta página los pida —un texto largo agradece su índice, una tienda agradece su navegación— y déjalos fuera cuando no.
 
-OUTPUT EFFICIENCY (critical — long documents truncate against the response cap):
-- No HTML comments (<!-- ... -->) anywhere in the output.
-- No multi-line whitespace inside elements. Single-line each element when reasonable.
-- Reuse Tailwind classes — if a card pattern repeats across siblings, give it one class in <style> and apply it instead of pasting the long class string.
-- Collapse redundant CSS rules. No "/* Pricing */"-style section dividers in <style>.
-- Inline <svg>: only emit what's needed; skip xmlns when duplicated across many siblings.
-- Skip blank lines between sections of the document. Compact.
-- Goal: same visual quality, fewer tokens.
+Nothing below tells you what a page should look like. It is only what this publishing pipeline can carry.
+
+${PUBLISH_CONTRACT}
 
 NON-NEGOTIABLE CONSTRAINTS:
 - Output a COMPLETE, self-contained HTML document: starts with <!doctype html>, ends with </html>.
 - Include a descriptive <title> in <head> that names the product.
 - Tailwind CSS via CDN: <script src="https://cdn.tailwindcss.com"></script>
-- Google Fonts via <link> in <head>. Allowed families: Inter, Geist, Fraunces, Source Serif 4, Crimson Pro, JetBrains Mono.
+- Google Fonts via <link> in <head>. ANY family on Google Fonts is allowed — pick the ones this page's character calls for and load them yourself. A horror page, a children's workshop and a B2B dashboard should not be lettered the same way. Include the <link> for every family you use.
 - All custom CSS inline in a <style> block in <head>. Use CSS custom properties on :root for design tokens (--accent, --accent-r as an RGB triplet, --bg, --surface, --fg, --border, --font-display, --font-body, --radius). Reference them via var() throughout — never hardcode the same color in many places. Also emit a \`:root.dark { … }\` block that redefines --bg, --surface, --fg, --border and --accent with hand-designed dark-theme values (a real dark palette — not a mechanical inversion); every text and heading color MUST resolve from a var() token so the whole page flips cleanly.
 - NO React, NO Babel, NO JSX, NO <script type="text/babel">, NO window.X globals, NO import statements anywhere.
 - NO data-slot-path= attribute anywhere — that is a reserved editor-mode marker.
@@ -42,3 +41,49 @@ NON-NEGOTIABLE CONSTRAINTS:
 
 OUTPUT FORMAT — follow exactly:
 Emit the complete HTML document directly, starting with <!doctype html> and ending with </html>. No preamble, no design notes, no markdown code fences — the first character of your response is <.`;
+
+/**
+ * El prompt que de verdad se envía. `OPENLEN_MIN_CONTRACT=1` cambia los 18.563
+ * caracteres de `PUBLISH_CONTRACT` por los 3.859 de `PUBLISH_CONTRACT_MIN`
+ * (21.850 → 6.100 en total).
+ *
+ * POR QUÉ EXISTE EL INTERRUPTOR. `PUBLISH_CONTRACT` se le presenta al modelo
+ * diciendo que no habla de aspecto visual, y medido no es cierto: lleva 60
+ * etiquetas de HTML de ejemplo y 43 menciones de vocabulario de página
+ * (`nav`×9, `CTA`×6, `hero`×4…). La sospecha —que por eso todas las páginas
+ * salen con la misma forma— NO está probada: hace falta la ablación de 48
+ * briefs. El interruptor existe para poder probarla sin tocar producción.
+ *
+ * ⚠️ LO QUE SE PIERDE CON EL INTERRUPTOR ENCENDIDO: el contrato mínimo NO
+ * enseña las nueve CONDUCTAS ni el carrusel, así que el modelo no emitirá esos
+ * marcadores y esas páginas nacerán sin countdown, filtro, lightbox, copiar,
+ * autoplay, tema, barra pegajosa, pestañas ni cálculo.
+ *
+ * QUIÉN TAPA ESE HUECO AHORA: `OPENLEN_MODEL_JS=1`. El modelo escribe esas
+ * interacciones en JavaScript propio en vez de nombrar una receta nuestra —
+ * medido el 2026-08-21, con el hueco SIN tapar salían 0 de 6 páginas
+ * interactivas y con la cláusula cambiada 2 de 2. Los dos interruptores están
+ * pensados para ir juntos; el mínimo a solas entrega páginas inertes.
+ */
+export function systemPromptFor(
+  env: Readonly<Record<string, string | undefined>> = process.env,
+): string {
+  const min = env.OPENLEN_MIN_CONTRACT?.trim() === "1";
+  let prompt = SYSTEM_PROMPT;
+  if (min) {
+    prompt = SYSTEM_PROMPT.replace(PUBLISH_CONTRACT, PUBLISH_CONTRACT_MIN);
+    // `String.replace` que no encuentra su literal devuelve la cadena INTACTA.
+    // Sin esto, un retoque de redacción en `PUBLISH_CONTRACT` haría que este
+    // interruptor dejara de hacer nada y nadie se enterase: el síntoma sería
+    // "el contrato mínimo ya no mejora", no "la sustitución no ocurrió".
+    if (prompt === SYSTEM_PROMPT) {
+      throw new Error(
+        "systemPromptFor: OPENLEN_MIN_CONTRACT=1 pero PUBLISH_CONTRACT no apareció en SYSTEM_PROMPT — la sustitución no ocurrió.",
+      );
+    }
+  }
+  // La cláusula sobre JavaScript va DESPUÉS del recorte: con el contrato mínimo
+  // hay que cambiar su viñeta, y con el completo su bloque. Cuál de las dos está
+  // presente lo decide el mismo interruptor de arriba.
+  return swapJsClauses(prompt, [min ? "contrato-min" : "contrato-completo", "no-negociable"], env);
+}

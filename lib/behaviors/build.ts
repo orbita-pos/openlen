@@ -4,14 +4,36 @@ import type { Behavior, BehaviorName } from "./types";
 export const BEHAVIORS_MARKER = "data-ol-behaviors";
 
 /** Techo real del script COMPUESTO (guard + inyector de estilos + wrappers +
- *  las 7 recetas), en bytes UTF-8. Fuente única para dos consumidores que
+ *  las recetas), en bytes UTF-8. Fuente única para dos consumidores que
  *  antes podían divergir (Arreglo 6, revisión final de rama): el test
  *  unitario en jsdom (lib/behaviors/conformance.test.ts) y el gate end-to-end
  *  que lo mide sobre una página PUBLICADA de verdad
  *  (scripts/qa/behaviors-born100-gate.mjs) — este último solo IMPRIMÍA el
  *  peso antes de este fix, nunca lo afirmaba. Ver conformance.test.ts para el
- *  razonamiento completo de por qué 6144 y no otro número. */
-export const BEHAVIORS_SCRIPT_BUDGET_BYTES = 6144;
+ *  razonamiento completo de por qué el techo es el que es.
+ *
+ *  6144 → 10240 → 11264. Se sube por el MISMO motivo que 4096 → 6144: el techo
+ *  tiene que cubrir el peor caso que los presupuestos POR RECETA ya conceden, o
+ *  los dos números se contradicen entre sí. Cota superior derivada, no
+ *  adivinada:
+ *      7 x 700B  (countdown, filter, lightbox, copy, autoplay, theme, sticky)
+ *      +   950B  (tabs, excepción escrita en su propia receta)
+ *      + 4.300B  (calc, excepción escrita en su propia receta — es un
+ *                 intérprete, no una receta; ver recipes/calc.ts)
+ *      +   145B  (EDIT_GUARD_JS)
+ *      +    82B  (el inyector de <style> fijo, sin el CSS que inyecta)
+ *      +  10x17B (wrappers IIFE: 1 exterior + 1 por receta)
+ *      +  ~350B  (el CSS de las recetas que lo declaran)
+ *      = ~10.900B
+ *  Medido HOY con las 9 a la vez: 9.861B. 11264 (11 KiB) lo cubre y SIGUE
+ *  siendo un techo real. Con 10240 el peor caso LEGÍTIMO ya se pasaba — la
+ *  misma incoherencia que tenía 4096, otra vez.
+ *
+ *  Y esto no le añade un byte a ninguna página: present() (abajo) compone sólo
+ *  las recetas cuyo marcador está de verdad en el documento, así que 11 KiB es
+ *  el peor caso TEÓRICO —una página que usa las nueve—, no lo que paga nadie.
+ *  Una página con una calculadora y nada más recibe 4.547B. */
+export const BEHAVIORS_SCRIPT_BUDGET_BYTES = 11264;
 
 // El guard de modo edición. En el preview el tab Contenido pone
 // contentEditable sobre el documento; un contador que reescribe su texto cada

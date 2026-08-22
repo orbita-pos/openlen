@@ -12,6 +12,13 @@ import {
 } from "@/lib/html-engine";
 import type { FormConfig } from "@/lib/projects/types";
 import { cidExpr } from "@/lib/analytics/cid";
+import { parse } from "node-html-parser";
+import {
+  FORM_ID_ATTR,
+  FORM_ID_FIELD,
+  readFormIds,
+  resolveFormConfigKey,
+} from "@/lib/publish/form-identity";
 
 function submitBase(): string {
   return process.env.NEXT_PUBLIC_SITE_URL?.trim() || "https://openlen.com";
@@ -56,16 +63,31 @@ export function wirePublishedForms(
   const action =
     `${submitBase()}/api/f/${subdomain}` +
     (page ? `?page=${encodeURIComponent(page)}` : "");
+  // La resolución la decide `resolveFormConfigKey`, compartida con el endpoint
+  // de envío: si publicar y recibir resolvieran distinto, el lead se iría a
+  // otro sitio sin que ningún índice lo explicara. Identidad propia primero,
+  // clave con página después, índice heredado al final.
+  const cfgs = formConfigs ?? {};
+  const ids = readFormIds(html);
   const byIndex = new Map<number, FormConfig>();
-  for (const [k, v] of Object.entries(formConfigs ?? {})) {
-    if (/^\d+$/.test(k)) byIndex.set(Number(k), v);
+  for (let i = 0; i < ids.length; i++) {
+    const key = resolveFormConfigKey(ids, i, page, cfgs);
+    if (key) byIndex.set(i, cfgs[key] as FormConfig);
   }
-  if (page) {
-    const prefix = `${page}:`;
-    for (const [k, v] of Object.entries(formConfigs ?? {})) {
-      if (!k.startsWith(prefix)) continue;
-      const idx = Number(k.slice(prefix.length));
-      if (Number.isInteger(idx) && idx >= 0) byIndex.set(idx, v);
+  // Sin `<form>` legibles (documento raro, parser caído) se conserva la ruta de
+  // siempre: las claves numéricas tal cual. Perder el aviso de éxito de un
+  // formulario por un fallo de lectura sería peor que la ambigüedad heredada.
+  if (ids.length === 0) {
+    for (const [k, v] of Object.entries(cfgs)) {
+      if (/^\d+$/.test(k)) byIndex.set(Number(k), v);
+    }
+    if (page) {
+      const prefix = `${page}:`;
+      for (const [k, v] of Object.entries(cfgs)) {
+        if (!k.startsWith(prefix)) continue;
+        const idx = Number(k.slice(prefix.length));
+        if (Number.isInteger(idx) && idx >= 0) byIndex.set(idx, v);
+      }
     }
   }
   const configs: WireFormConfig[] = [...byIndex.entries()].map(
@@ -75,5 +97,39 @@ export function wirePublishedForms(
       redirectUrl: v.redirectUrl,
     }),
   );
-  return injectFormCidStamp(rustWirePublishedForms(html, action, configs));
+  const wired = rustWirePublishedForms(html, action, configs);
+  return injectFormCidStamp(injectFormIdField(wired));
+}
+
+/**
+ * El identificador del formulario, como campo oculto ESTÁTICO.
+ *
+ * Estático y no inyectado por JavaScript —al revés que `_openlen_cid`, donde la
+ * ausencia significa algo— porque de esto depende a qué correo llega un lead:
+ * un POST nativo sin JavaScript tiene que enrutar igual de bien. Idempotente y
+ * blando: cualquier fallo deja el documento como estaba y el endpoint cae a la
+ * ruta por índice.
+ */
+function injectFormIdField(html: string): string {
+  if (!html.includes(FORM_ID_ATTR) || !html.includes("/api/f/")) return html;
+  try {
+    const dom = parse(html);
+    let añadidos = 0;
+    for (const form of dom.querySelectorAll("form")) {
+      const id = form.getAttribute(FORM_ID_ATTR)?.trim();
+      if (!id) continue;
+      // Sólo los que apuntan a nuestro buzón: un `<form>` ajeno del usuario no
+      // se toca.
+      if (!(form.getAttribute("action") ?? "").includes("/api/f/")) continue;
+      if (form.querySelector(`input[name="${FORM_ID_FIELD}"]`)) continue;
+      form.insertAdjacentHTML(
+        "beforeend",
+        `<input type="hidden" name="${FORM_ID_FIELD}" value="${id}">`,
+      );
+      añadidos++;
+    }
+    return añadidos === 0 ? html : dom.toString();
+  } catch {
+    return html;
+  }
 }

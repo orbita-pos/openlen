@@ -29,11 +29,9 @@ import { useIsMobile } from "./use-is-mobile";
 import { PastePanel } from "./panels/paste-panel";
 import { SitePagesPanel } from "./panels/site-pages-panel";
 import type { SitePageSummary } from "@/lib/projects/site-pages";
-import { SectionsPanel, type ModuleCardState } from "./panels/sections-panel";
 import { TemplatesPanel } from "./panels/templates-panel";
 import { VersionsPanel } from "./panels/versions-panel";
 import { ThreePanel } from "./panels/three-panel";
-import type { SectionSpec } from "./sections-data";
 import type {
   ContentModule,
   ModuleDestination,
@@ -158,20 +156,10 @@ interface LeftSidebarProps {
   }) => void;
   /** ID of the currently previewed template (highlights the matching card). */
   previewingTemplateId?: string | null;
-  /** Open the preview dialog for a library section (Library tab). The actual
-   *  match-then-insert happens from the dialog's "Use on my page" action. */
-  onPreviewSection?: (s: SectionSpec) => void;
-  /** Module cards (collections/bookings/comments) shown atop the Library
-   *  panel's section filters. Omitted entirely when not passed. */
-  moduleCards?: ModuleCardState[];
-  /** Fired when a Library module card's action button is clicked. */
+  /** Fired when a module card's action button is clicked. */
   onAddModule?: (module: ContentModule, destination: ModuleDestination) => void;
-  /** Readable name of the destination page ("inicio" or "/<slug>") for the
-   *  Library module cards — forwarded to SectionsPanel unchanged. */
+  /** Readable name of the destination page ("inicio" or "/<slug>"). */
   activePageLabel?: string;
-  /** One-shot: open the Library on its Módulos view (hub deep-link). */
-  openModulesView?: boolean;
-  onModulesViewConsumed?: () => void;
   onManageCollections?: () => void;
   /** Home label for the Módulos destination selector ("inicio"). */
   homePageLabel?: string;
@@ -273,9 +261,7 @@ interface LeftSidebarProps {
   onDeleteSitePage?: (slug: string) => Promise<boolean>;
   /** Members-only page toggle, used by the Site (page tree) panel. The module
    *  settings/handlers themselves now live in ModulesView (the center view). */
-  onToggleMembersOnly?: (slug: string, next: boolean) => Promise<boolean>;
   /** Members door on → the page tree shows the auto /cuenta access page. */
-  membersDoorOn?: boolean;
   /** 3D scene settings for the active project. */
   scene3d?: { enabled?: boolean; spec?: unknown };
   /** Called when the user applies or removes a 3D scene. */
@@ -295,12 +281,8 @@ export function LeftSidebar({
   onUpdateSection,
   onPreviewTemplate,
   previewingTemplateId,
-  onPreviewSection,
-  moduleCards,
   onAddModule,
   activePageLabel,
-  openModulesView,
-  onModulesViewConsumed,
   onManageCollections,
   homePageLabel,
   siteName,
@@ -339,8 +321,6 @@ export function LeftSidebar({
   onSwitchSitePage,
   onCreateSitePage,
   onDeleteSitePage,
-  onToggleMembersOnly,
-  membersDoorOn = false,
   scene3d,
   onApplyScene3d,
   accent,
@@ -478,8 +458,6 @@ export function LeftSidebar({
                 onSwitch={onSwitchSitePage ?? (() => {})}
                 onCreate={onCreateSitePage ?? (async () => "errInvalid")}
                 onDelete={onDeleteSitePage ?? (async () => false)}
-                onToggleMembersOnly={onToggleMembersOnly}
-                membersDoorOn={membersDoorOn}
               />
             )}
             {mode === "chat" && (
@@ -542,22 +520,6 @@ export function LeftSidebar({
                       }
                     : undefined
                 }
-              />
-            )}
-            {mode === "library" && (
-              <SectionsPanel
-                onPreview={onPreviewSection ?? (() => {})}
-                moduleCards={moduleCards}
-                onAddModule={onAddModule}
-                activePageLabel={activePageLabel}
-                openModulesView={openModulesView}
-                onModulesViewConsumed={onModulesViewConsumed}
-                onManageCollections={onManageCollections}
-                sitePages={sitePages}
-                activeSitePage={activeSitePage}
-                onSwitchPage={onSwitchSitePage}
-                homeLabel={homePageLabel}
-                siteName={siteName}
               />
             )}
             {mode === "versions" && (

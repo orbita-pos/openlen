@@ -9,9 +9,23 @@ import {
   estimateCredits,
   creditsForUsage,
 } from "@/lib/credits";
-import { DESIGN_REFERENCE } from "@/lib/design-guidance";
 import { MARKER, SYSTEM_PROMPT } from "./system-prompt";
+import { swapJsClauses } from "@/lib/ai/js-clause";
+import {
+  currentRuntimePromptBlock,
+  extractModelRuntime,
+  modelJsEnabled,
+  modelRuntimePromptBlock,
+  splitRuntimeOps,
+  runtimeOpAviso,
+} from "@/lib/ai-stream/model-runtime";
+import { verifyCapsule } from "@/lib/projects/model-runtime";
+import { buildBusinessFacts } from "@/lib/business-profiles/facts";
+import { collectionCatalogBlock } from "@/lib/collections/catalog-block";
+import { listPublishedItems } from "@/lib/collections/store";
+import { projectBusinessProfile } from "@/lib/business-profiles/whatsapp-default";
 import { resolveAIProvider, type AIModel } from "@/lib/ai-provider";
+import { createFireworksStreamClient } from "@/lib/ai/fireworks-stream-client";
 import { detectSlotPath, sanitizeForPublish } from "@/lib/html-engine";
 import { GeminiProvider, type InlineImage, type Message } from "@/lib/ai-gateway";
 import { renderHtmlToInlineImage } from "@/lib/ai/inline-image";
@@ -19,15 +33,21 @@ import {
   applyOps,
   buildScopedView,
   parseOps,
+  rejectDocumentWideOps,
   resolveOpIdByPath,
   stripOpIds,
   tagWithOpIds,
   type ScopedView,
 } from "@/lib/html-ops";
-import { normalizeBornCanonical } from "@/lib/normalize";
+import { preparePage } from "@/lib/page-engine/prepare";
+import { jsonResponse, sseChannel } from "@/lib/ai/sse";
+import { extractDocument } from "@/lib/ai/extract-document";
+import { writerForTurn } from "@/lib/ai/provider-switch";
+import { persistPage } from "@/lib/page-engine/persist";
 import { applyModuleIntent } from "@/lib/projects/module-intent";
-import { ensurePageMeta } from "@/lib/publish/ensure-page-meta";
-import { describeBehaviorIssues, validateBehaviors } from "@/lib/behaviors/validate";
+import { describeBehaviorIssues } from "@/lib/behaviors/validate";
+import { LANGUAGE_RULE } from "@/lib/ai/authoring-rules";
+import { todayLine } from "@/lib/ai/today-line";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // POST /api/templates/ai-design — conversational AI page redesign.
@@ -51,7 +71,6 @@ import { describeBehaviorIssues, validateBehaviors } from "@/lib/behaviors/valid
 
 export const runtime = "nodejs";
 
-const ENCODER = new TextEncoder();
 // Hard upper bound on a single Gemini chat-edit turn. Real edits can take
 // ~3 min on dense pages; this only catches a wedged stream, not a slow one.
 const STREAM_TIMEOUT_MS = 360_000;
@@ -91,6 +110,16 @@ interface AttachedImageBody {
 // wants to touch one section.
 function buildUserMessage(args: {
   briefBlock: string;
+  /** Los hechos reales del negocio (`<business>`), o "". */
+  negocioBlock: string;
+  /** Las otras páginas del sitio, o "". */
+  paginasBlock: string;
+  /** Lo que la ingestión ya sabe que se rompió, o "". */
+  degradacionesBlock: string;
+  /** Los ítems del catálogo, que no están en el documento, o "". */
+  catalogoBlock: string;
+  /** El JavaScript que la página ya tiene, o "" — ver currentRuntimePromptBlock. */
+  runtimeBlock: string;
   taggedHtml: string;
   scopedView: ScopedView | null;
   prompt: string;
@@ -131,23 +160,17 @@ ${args.scopedView.scopedHtml}
 DOCUMENT OUTLINE (all top-level sections of the page, in source order):
 ${args.scopedView.outline}`;
   } else {
-    documentBlock = `CURRENT DOCUMENT (every element has a server-injected \`data-op-id\` attribute — use those values in Mode A's <edit target="..."> calls):
+    documentBlock = `CURRENT DOCUMENT (every EDITABLE element has a server-injected \`data-op-id\` attribute — use those values in Mode A's <edit target="..."> calls; <head>, <style> and <script> carry none and need Mode B):
 
 ${args.taggedHtml}`;
   }
 
-  return `${args.briefBlock}${focusBlock}${imageBlock}${documentBlock}
+  return `${args.negocioBlock}${args.paginasBlock}${args.degradacionesBlock}${args.catalogoBlock}${args.briefBlock}${focusBlock}${imageBlock}${documentBlock}${args.runtimeBlock}
 
 USER REQUEST:
 ${args.prompt}`;
 }
 
-function stripMarkdownFences(s: string): string {
-  let out = s.trim();
-  out = out.replace(/^```(?:html|xml)?[\t ]*\r?\n?/i, "");
-  out = out.replace(/\r?\n?[\t ]*```\s*$/i, "");
-  return out.trim();
-}
 
 interface AiDesignBody {
   projectId?: string;
@@ -209,7 +232,11 @@ export async function POST(req: Request): Promise<Response> {
             typeof h.content === "string" &&
             h.content.length > 0,
         )
-        .slice(-6)
+        // 12 MENSAJES, no 6: el cliente manda 6 TURNOS (usuario+asistente),
+        // así que cortar a 6 mensajes dejaba 3 turnos de memoria — la mitad de
+        // lo que la interfaz cree estar mandando. «Ahora hazlo también en la
+        // otra sección» cuatro turnos después ya no tenía contexto.
+        .slice(-12)
         .map((h) => ({ role: h.role, content: h.content.slice(0, 4000) }))
     : [];
 
@@ -276,6 +303,10 @@ export async function POST(req: Request): Promise<Response> {
     .select({
       data: schema.projects.data,
       userBrief: schema.projects.userBrief,
+      brief: schema.projects.brief,
+      // En el MISMO select que `data`: la cápsula se verifica contra el html
+      // GUARDADO, así que los dos tienen que venir del mismo instante.
+      generatedRuntime: schema.projects.generatedRuntime,
     })
     .from(schema.projects)
     .where(
@@ -333,6 +364,80 @@ export async function POST(req: Request): Promise<Response> {
     ? `PROJECT BRIEF (persistent — applies to every request):\n${userBrief}\n\n`
     : "";
 
+  // El catálogo del usuario. La banda de la colección llega al modelo VACÍA
+  // —los ítems se hornean al publicar—, así que sin esto fabricaba tarjetas
+  // inventadas que salían DUPLICADAS junto a las reales.
+  //
+  // Sólo se paga la consulta si la página trae una banda de colección.
+  const catalogoBlock = /data-ol-collection-section/i.test(currentHtml)
+    ? collectionCatalogBlock(
+        await listPublishedItems(projectId).catch(() => []),
+        currentHtml,
+      )
+    : "";
+
+  // Lo que la ingestión ya SABE que se rompió en esta página. El diagnóstico
+  // concreto (el atributo, la fórmula literal) vivía en `data.degradations[].detail`
+  // y sólo llegaba al modelo si el usuario pulsaba «Arreglar esto» — y sólo para
+  // el código `broken_controls`. Quien escribía «los botones no funcionan» a
+  // mano arrancaba sin el diagnóstico que el sistema ya tenía escrito.
+  const degradaciones = (existing.data?.degradations ?? [])
+    .flatMap((d) => (d.detail ?? []).map((t) => `- [${d.code}] ${t}`))
+    .slice(0, 8);
+  const degradacionesBlock = degradaciones.length
+    ? `KNOWN ISSUES ON THIS PAGE (recorded when it was ingested — the user may be describing one of these in vague terms):\n${degradaciones.join("\n")}\n\n`
+    : "";
+
+  // Las OTRAS páginas del sitio. Sin esto el Chat inventaba el `href` al pedirle
+  // «añade un enlace al menú en la barra» — y un enlace roto en una página
+  // publicada SIRVE LA PORTADA con un 200, así que el fallo era invisible.
+  // El Agente ya llevaba esta lista en su ESTADO; el Chat no.
+  const otrasPaginas = Object.keys(existing.data?.pages ?? {}).filter((p) => p !== pageSlug);
+  const paginasBlock = otrasPaginas.length
+    ? `OTHER PAGES ON THIS SITE (link to them with a root-relative href, e.g. /${otrasPaginas[0]}): ${otrasPaginas.map((p) => `/${p}`).join(", ")}\nNever invent a path that is not on this list — an unknown path silently serves the home page instead of erroring.\n\n`
+    : "";
+
+  // Los datos REALES del negocio. La ruta de CREAR ya los antepone al brief
+  // (`buildBusinessFacts`), y esta no los leía siquiera: la página NACÍA con el
+  // teléfono y la dirección de verdad, y al pedir por Chat «añádeme una sección
+  // de contacto» el modelo INVENTABA otros sobre la misma página.
+  //
+  // Best-effort: `projectBusinessProfile` ya traga sus propios errores y
+  // devuelve null. Un perfil ausente deja el bloque vacío y el turno sigue
+  // exactamente como antes.
+  const perfilNegocio = await projectBusinessProfile(projectId, userId);
+  const negocioBlock = (() => {
+    const profile = perfilNegocio;
+    if (!profile) return "";
+    const facts = buildBusinessFacts(profile);
+    return facts ? `${facts}\n\n` : "";
+  })();
+
+  // El JavaScript que la página YA tiene. Sin esto el modelo no puede reparar
+  // lo que no ve, y re-crea la funcionalidad desde cero.
+  //
+  // Se verifica contra el html GUARDADO, no contra `currentHtml`: la cápsula se
+  // selló sobre `data.html` y el cliente puede traer ediciones sin guardar, que
+  // darían `desajuste` sobre un código perfectamente válido.
+  //
+  // Sólo el documento raíz — la cápsula ata `data.html`, y una subpágina no
+  // entra en el piloto.
+  const runtimeBlock = (() => {
+    if (!modelJsEnabled(process.env) || pageSlug) return "";
+    const check = verifyCapsule(existing.generatedRuntime, {
+      projectId,
+      html: existing.data?.html ?? "",
+    });
+    if (!check.ok) {
+      if (check.reason !== "ausente") {
+        // eslint-disable-next-line no-console
+        console.warn(`[ai-design] cápsula no mostrada al modelo: ${check.reason}`);
+      }
+      return "";
+    }
+    return currentRuntimePromptBlock(check.code);
+  })();
+
   // Tag every element of the current document with a short `data-op-id`
   // attribute. The model addresses elements by these IDs in Mode A (ops);
   // we strip them before persisting. Output savings: 5-50x vs emitting
@@ -367,6 +472,11 @@ export async function POST(req: Request): Promise<Response> {
 
   const userMessageContent = buildUserMessage({
     briefBlock,
+    negocioBlock,
+    paginasBlock,
+    degradacionesBlock,
+    catalogoBlock,
+    runtimeBlock,
     taggedHtml,
     scopedView,
     prompt,
@@ -394,14 +504,12 @@ export async function POST(req: Request): Promise<Response> {
   // MAX_PROMPT_TOKENS (240K, itself a fraction of Gemini's 1M-token context).
   const SYSTEM_TOKEN_BUDGET = 10_000;
   const MAX_PROMPT_TOKENS = 240_000;
-  const referenceMessage = `<reference>
-The following library is the design taste catalog. Use it as material to draw from for full rewrites — match the register, don't quote verbatim.
-
-${DESIGN_REFERENCE}
-</reference>`;
+  // Sin catálogo de gusto: aquí viajaban las recetas de CSS, cinco fragmentos
+  // de HTML de la plantilla Mirror y los catálogos de marcas, anunciados como
+  // "the design taste catalog". El modelo edita la página del usuario, no la
+  // nuestra.
   const estimatedTokens =
-    Math.ceil((userMessageContent.length + referenceMessage.length) / 3.5) +
-    SYSTEM_TOKEN_BUDGET;
+    Math.ceil(userMessageContent.length / 3.5) + SYSTEM_TOKEN_BUDGET;
   if (estimatedTokens > MAX_PROMPT_TOKENS) {
     const suggestion = scopedView
       ? "even scoped to this section it's still too large — try clicking 🎯 Select on a smaller child element"
@@ -447,43 +555,81 @@ VISUAL CONTEXT: the attached image is a full-page render of the CURRENT page (wh
   }
 
   const messages: Message[] = [
-    { role: "system", content: SYSTEM_PROMPT },
-    { role: "user", content: referenceMessage },
+    {
+      role: "system",
+      // El Chat sólo promete JavaScript cuando SABE capturarlo: la captura de
+      // abajo es exclusiva del modo reescritura, y con Gemini no corre. Ver
+      // lib/ai/js-clause.ts — prometerlo sin captura entrega botones muertos.
+      content:
+        swapJsClauses(SYSTEM_PROMPT, ["contrato-completo", "no-negociable"], process.env) +
+        modelRuntimePromptBlock(process.env),
+    },
     ...history,
     {
+      // El Chat reescribe el copy de la página igual que la puerta de generar,
+      // así que hereda su fallo: sin la fecha, "desde 1998" sale con los años
+      // contados desde el entrenamiento del modelo.
       role: "user",
-      content: finalUserContent,
+      content: `${todayLine()}${LANGUAGE_RULE}${finalUserContent}`,
     },
   ];
 
   const upstreamAbort = new AbortController();
 
+  // Sin fijarlo, Flash piensa con presupuesto dinámico: medido sobre una página
+  // real de 40KB, 3,251 tokens de pensamiento para producir 208 de edición, y el
+  // usuario mirando la nada 20.3s antes del primer byte. Con 1024 son 9.1s y las
+  // mismas ops. En 0 NO se apaga y ya: el modelo deja de emitir el marcador
+  // `---HTML---` y se pone a conversar, así que el turno entero se pierde.
+  // `auto` devuelve el comportamiento de antes.
+  // Quién edita la página. DeepSeek por defecto, medido sobre 6 turnos reales
+  // con este mismo prompt, este mismo marcador y este mismo protocolo de ops:
+  // primer byte de 1.0-2.4s SIEMPRE, contra 3.8-84.7s de Gemini —84.7s para
+  // agrandar un botón—, 6 de 6 turnos completados contra 4 de 6 (un 503 por
+  // demanda y un turno sin marcador), e igual o más ops aplicadas en todos los
+  // casos comparables. `OPENLEN_CHAT_PROVIDER=gemini` devuelve el camino de
+  // antes sin tocar código.
+  //
+  // Un turno CON imágenes de referencia se queda en Gemini pase lo que pase: en
+  // la política de Fireworks toda imagen va a Qwen y al razonador nunca se le ha
+  // mandado una. Mandarla a ciegas es apostar la edición del usuario.
+  //
+  // ⚠️ ESO CAMBIÓ el 2026-08-21: la referencia adjunta ya NO cae en Gemini, cae
+  // en QWEN — el papel con visión, por el mismo transporte. La cautela de arriba
+  // era real (Qwen no se había medido editando páginas) y se acepta a
+  // sabiendas: Gemini queda para los píxeles. `OPENLEN_CHAT_PROVIDER=gemini`
+  // vuelve atrás por completo.
+  const writer = writerForTurn("OPENLEN_CHAT_PROVIDER", (referenceImages?.length ?? 0) > 0);
+  /** El razonador. Es además el ÚNICO que puede capturar JavaScript del modelo:
+   *  la cápsula se llama "deepseek-generate-v1". */
+  const useDeepSeek = writer === "deepseek";
+  /** Cualquiera de los dos papeles de Fireworks — razonador o visión. */
+  const useFireworks = writer !== "gemini";
+  const modelLabel = writer === "deepseek" ? "DeepSeek" : writer === "qwen" ? "Qwen" : PROVIDER.label;
+  // El turno se cobra al proveedor que lo corrió. A tarifa de Gemini la salida
+  // de DeepSeek se cobraba casi nueve veces de más, y una edición que reescribe
+  // una sección cruza el umbral donde eso son 2 créditos en vez de 1 (ver la
+  // tabla RATES en lib/credits). La decisión de arriba ya contempla las
+  // imágenes, así que aquí no hay mezcla posible.
+  const CREDIT_RATE =
+    writer === "deepseek" ? "deepseek-flash" : writer === "qwen" ? "qwen-vision" : PROVIDER.rate;
+
+  const raw = process.env.OPENLEN_AIDESIGN_THINKING;
+  const THINKING_BUDGET = raw === "auto" ? undefined
+    : Number.isInteger(Number(raw)) && Number(raw) > 0 ? Number(raw)
+    : 1024;
+  const startedAt = Date.now();
   const sse = new ReadableStream<Uint8Array>({
     async start(controller) {
-      let closed = false;
-      const emit = (event: string, data: unknown) => {
-        if (closed) return;
-        try {
-          controller.enqueue(
-            ENCODER.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`),
-          );
-        } catch {
-          closed = true;
-        }
-      };
-      const closeStream = () => {
-        if (closed) return;
-        closed = true;
-        if (timeoutHandle) {
-          clearTimeout(timeoutHandle);
-          timeoutHandle = null;
-        }
-        try {
-          controller.close();
-        } catch {
-          /* already closed */
-        }
-      };
+      const channel = sseChannel(controller);
+      const emit = channel.emit;
+      const closeStream = () =>
+        channel.close(() => {
+          if (timeoutHandle) {
+            clearTimeout(timeoutHandle);
+            timeoutHandle = null;
+          }
+        });
 
       let accumulatedReasoning = "";
       let accumulatedHtml = "";
@@ -553,8 +699,21 @@ VISUAL CONTEXT: the attached image is a full-page render of the CURRENT page (wh
           return;
         }
 
-        const provider = new GeminiProvider(PROVIDER.key as string);
-        const events = provider.stream(
+        const events = useFireworks
+          ? createFireworksStreamClient().stream(
+              {
+                messages: messages.map((message) => ({ role: message.role, content: message.content })),
+                // La referencia viaja SÓLO en el turno de visión: mandársela al
+                // razonador es exactamente lo que la política prohíbe.
+                ...(writer === "qwen" && referenceImages?.length ? { images: referenceImages } : {}),
+                maxOutputTokens: 65_536,
+                temperature: 0.8,
+                requestId: projectId,
+                operation: writer === "qwen" ? "page_write_with_reference" : "page_edit",
+              },
+              { signal: upstreamAbort.signal },
+            )
+          : new GeminiProvider(PROVIDER.key as string).stream(
           {
             model: PROVIDER.model,
             messages,
@@ -566,6 +725,7 @@ VISUAL CONTEXT: the attached image is a full-page render of the CURRENT page (wh
             // block in the system prompt that discourages bloat.
             maxOutputTokens: 65_536,
             temperature: 0.8,
+            thinkingBudget: THINKING_BUDGET,
           },
           { signal: upstreamAbort.signal },
         );
@@ -576,17 +736,27 @@ VISUAL CONTEXT: the attached image is a full-page render of the CURRENT page (wh
           | "cancelled"
           | "error"
           | null = null;
-        let usage: { inputTokens: number; outputTokens: number } | null = null;
+        let usage: { inputTokens: number; outputTokens: number; thinkingTokens: number } | null = null;
         let providerError: string | null = null;
 
         try {
           for await (const event of events) {
             if (event.type === "text_delta") {
               handleDelta(event.text);
+            } else if (event.type === "reasoning_delta") {
+              // DeepSeek manda su pensamiento por un canal propio en vez de
+              // mezclarlo con la respuesta, así que no pasa por el separador
+              // del marcador: llega ya separado.
+              accumulatedReasoning += event.text;
+              emit("reasoning_chunk", { text: event.text });
             } else if (event.type === "usage") {
               usage = {
                 inputTokens: event.inputTokens,
                 outputTokens: event.outputTokens,
+                // El pensamiento del modelo se cobra y se espera como salida, y
+                // esta ruta no fija presupuesto: sin este número no hay forma de
+                // saber si un turno tardó minutos por el documento o por pensar.
+                thinkingTokens: event.thinkingTokens,
               };
             } else if (event.type === "done") {
               finishReason = event.stopReason.kind;
@@ -602,7 +772,7 @@ VISUAL CONTEXT: the attached image is a full-page render of the CURRENT page (wh
           emit("error", {
             message: upstreamAbort.signal.aborted
               ? "The model took too long (over 6 minutes) and was stopped. Try a smaller / more scoped change (🎯 Select), or try again."
-              : `${PROVIDER.label} stream failed: ${msg}`,
+              : `${modelLabel} stream failed: ${msg}`,
           });
           closeStream();
           return;
@@ -610,7 +780,7 @@ VISUAL CONTEXT: the attached image is a full-page render of the CURRENT page (wh
 
         if (providerError) {
           emit("error", {
-            message: `${PROVIDER.label}: ${providerError}`,
+            message: `${modelLabel}: ${providerError}`,
           });
           closeStream();
           return;
@@ -638,24 +808,30 @@ VISUAL CONTEXT: the attached image is a full-page render of the CURRENT page (wh
         // Sniff the output mode by looking at the first non-whitespace
         // chars after the marker. Mode A (ops) starts with <edits>; Mode B
         // (full rewrite) starts with <!doctype>.
-        const raw = stripMarkdownFences(accumulatedHtml);
+        const raw = extractDocument(accumulatedHtml);
         const isOpsMode = /^\s*<edits[\s>]/i.test(raw);
 
         let trimmedHtml: string;
         let appliedOpCount = 0;
+        let droppedNotice = "";
+        /** El JavaScript que trajo un `<edit target="runtime">`, si vino. */
+        let runtimeDesdeOps: string | null = null;
+        /** Aviso al USUARIO cuando ese script se descartó. Separado de
+         *  `droppedNotice` porque los dos pueden pasar en el mismo turno. */
+        let runtimeNotice = "";
         let outputMode: "ops" | "rewrite";
 
         if (isOpsMode) {
           outputMode = "ops";
-          const { ops, errors: parseErrors } = parseOps(raw);
-          if (parseErrors.length > 0 && ops.length === 0) {
+          const { ops: opsEmitidas, errors: parseErrors } = parseOps(raw);
+          if (parseErrors.length > 0 && opsEmitidas.length === 0) {
             emit("error", {
               message: `Couldn't parse ops: ${parseErrors[0]}`,
             });
             closeStream();
             return;
           }
-          if (ops.length === 0) {
+          if (opsEmitidas.length === 0) {
             emit("error", {
               message:
                 "Empty <edits> block — the model didn't emit any operations. Try again.",
@@ -663,18 +839,72 @@ VISUAL CONTEXT: the attached image is a full-page render of the CURRENT page (wh
             closeStream();
             return;
           }
-          // Scoped requests get a higher cap — they're naturally focused, so
-          // 16 granular ops on one section is more useful than forcing the
-          // user to chain multiple chats.
-          const opsCap = scopedView ? 16 : 8;
-          if (ops.length > opsCap) {
+
+          // El runtime se aparta ANTES que nada: no es un elemento del
+          // documento, así que ni `rejectDocumentWideOps` ni el aplicador
+          // sabrían qué hacer con él, y tampoco debe gastar cupo de ops de
+          // maquetación. Ver `splitRuntimeOps` para por qué existe.
+          const partido = splitRuntimeOps(opsEmitidas);
+          const ops = partido.domOps;
+          if (partido.runtime.kind === "codigo") {
+            runtimeDesdeOps = partido.runtime.code;
+          } else if (partido.runtime.kind === "error") {
+            runtimeNotice = runtimeOpAviso(partido.runtime.reason);
+            // eslint-disable-next-line no-console
+            console.warn(`[ai-design] op de runtime descartada: ${partido.runtime.reason}`);
+          }
+
+          // Un turno que SÓLO cambia comportamiento es legítimo — de hecho es
+          // el caso corriente de un arreglo de bug — y no lleva ni una op de
+          // maquetación. Antes caía en la rama de "ops vacías" y se rechazaba.
+          if (ops.length === 0 && runtimeDesdeOps !== null) {
+            trimmedHtml = taggedHtml;
+          } else if (ops.length === 0) {
+            // Sin ops de maquetación y sin script válido no queda nada que
+            // hacer. Si el script se cayó, el usuario merece saber por qué —
+            // el mensaje genérico de "ops vacías" le escondería la causa.
             emit("error", {
-              message: `Model emitted ${ops.length} ops but the cap is ${opsCap}. Break the request into multiple smaller chats.`,
+              message:
+                runtimeNotice ||
+                "Empty <edits> block — the model didn't emit any operations. Try again.",
+            });
+            closeStream();
+            return;
+          } else {
+          // Una op contra el <body> no es una edición: es un documento nuevo,
+          // y eso es el Modo B. Medido, el modelo llegaba ahí queriendo tocar
+          // `:root` y se llevaba la página entera dos de cada cinco veces.
+          // Las demás ops de la tanda sí se aplican — perder el cambio de
+          // acento es mucho menos malo que perder la página del usuario.
+          const { ops: safeOps, rejected: rejectedOps } = rejectDocumentWideOps(taggedHtml, ops);
+          if (safeOps.length === 0) {
+            emit("error", {
+              message:
+                "El modelo intentó reemplazar la página entera con una sola operación. Pídelo otra vez, o pide un rediseño completo.",
             });
             closeStream();
             return;
           }
-          const applyResult = applyOps(taggedHtml, ops);
+
+          // Scoped requests get a higher cap — they're naturally focused, so
+          // 16 granular ops on one section is more useful than forcing the
+          // user to chain multiple chats.
+          const opsCap = scopedView ? 16 : 8;
+          if (safeOps.length > opsCap) {
+            emit("error", {
+              message: `Model emitted ${safeOps.length} ops but the cap is ${opsCap}. Break the request into multiple smaller chats.`,
+            });
+            closeStream();
+            return;
+          }
+          if (rejectedOps.length > 0) {
+            droppedNotice = rejectedOps.length === 1
+              ? "Descarté una operación que habría reemplazado la página entera; el resto del cambio sí se aplicó."
+              : `Descarté ${rejectedOps.length} operaciones que habrían reemplazado la página entera; el resto del cambio sí se aplicó.`;
+            // eslint-disable-next-line no-console
+            console.warn(`[ai-design] ${rejectedOps.length} op(s) contra la raíz descartadas — targets: ${rejectedOps.map((o) => o.target).join(", ")}`);
+          }
+          const applyResult = applyOps(taggedHtml, safeOps);
           if (applyResult.html === null) {
             const firstErr = applyResult.errors[0];
             const msg = firstErr
@@ -686,6 +916,7 @@ VISUAL CONTEXT: the attached image is a full-page render of the CURRENT page (wh
           }
           trimmedHtml = applyResult.html;
           appliedOpCount = applyResult.appliedCount;
+          }
           if (detectSlotPath(trimmedHtml)) {
             emit("error", {
               message:
@@ -747,149 +978,194 @@ VISUAL CONTEXT: the attached image is a full-page render of the CURRENT page (wh
           }
         }
 
-        // Sanitize the model output before persistence — strip any inline
-        // scripts / on*-handlers / dangerous URLs / iframes the model may have
-        // emitted despite the system prompt (prompt guidance is not an
-        // enforcement boundary). Mirrors the /api/generate sanitize:true path.
-        const sanitizeResult = sanitizeForPublish(trimmedHtml);
-        if (sanitizeResult.html === null) {
+        // One gate before persistence — sanitize (inline scripts, on*
+        // handlers, dangerous URLs, iframes the prompt asked the model not to
+        // emit; prompt guidance is not an enforcement boundary), then
+        // born-canonical + <head> completion, which a Mode B rewrite or ops
+        // that hit the token blocks can otherwise drop.
+        //
+        // `seal: false` — nothing is served from here, publishToDir seals at
+        // publish time. `render: false` — a chat turn cannot pay a
+        // twenty-second browser launch; publish verifies instead.
+        //
+        // behaviors: "block" is the user-visible trade. DESIGN_GUIDANCE
+        // animates the model to emit data-ol-* markers, and until now a
+        // mis-wired one landed anyway with a note appended to `reasoning` for
+        // the model to fix on the NEXT turn — which meant the visitor could
+        // meet the dead control first. ai-design edits a page that already
+        // exists, so refusing costs the user the edit, not the page.
+        // El motor, el mismo que corre al crear (lib/page-engine). Hasta aquí
+        // esta ruta sólo llamaba a la puerta: se creaba una página medida y a
+        // la primera edición nadie volvía a mirar.
+        //
+        // Las etapas con navegador SÓLO en la reescritura completa. Medido: la
+        // puerta sola tarda 7-17 ms y con render 5.5 s en caliente. Una
+        // reescritura es una página nueva y lo vale; dos operaciones
+        // quirúrgicas sobre un párrafo, no — y el usuario está mirando.
+        const prepared = await preparePage(trimmedHtml, {
+          mode: "edit",
+          renderChecks: outputMode !== "ops",
+          // Sin esto, una conducta rota que ya venía en la página condena TODAS
+          // las ediciones futuras y el usuario oye hablar de un control que no
+          // tocó. La puerta sólo rechaza lo que este turno rompió.
+          priorHtml: currentHtml,
+          // El brief y el perfil, que faltaban. Sin `brief` la etapa de
+          // IMÁGENES se salta entera (`prepare.ts` la marca "no_brief"), y el
+          // contrato ORDENA al modelo marcar cada hueco con `data-ol-photo`:
+          // el resultado medido era que «añade una galería» por Chat daba CAJAS
+          // GRISES mientras la misma petición al crear daba fotos reales.
+          // Sin `profile`, `seedBrandIntoHtml` tampoco corría, así que una
+          // reescritura podía tirar el logo y nadie lo reponía.
+          //
+          // No encarece el turno normal: `photographHtml` sale sin tocar la red
+          // cuando el documento no trae huecos, que es el caso corriente.
+          ...(existing.brief ? { brief: existing.brief } : {}),
+          ...(perfilNegocio ? { profile: perfilNegocio } : {}),
+          ...(existing.data?.settings !== undefined ? { settings: existing.data.settings } : {}),
+        });
+        const gated = prepared.ok
+          ? { ok: true as const, html: prepared.html, issues: prepared.report.behaviorIssues, code: "", detail: "" }
+          : { ok: false as const, html: "", issues: prepared.report.behaviorIssues, code: prepared.code, detail: prepared.detail ?? "" };
+        if (!gated.ok) {
+          // The reason has to survive as prose: describeBehaviorIssues writes
+          // for the person reading the chat, `gated.detail` is the machine
+          // slug. Collapsing them into one string is the mistake this whole
+          // migration exists to stop repeating.
+          const behaviorList = describeBehaviorIssues([...((gated.issues ?? []) as never[])]);
           emit("error", {
-            message: "Model emitted editor-mode markers — try again.",
+            message: behaviorList
+              ? `Conductas mal cableadas — no guardé nada para no dejarte un control muerto en la página: ${behaviorList}. Pídemelo otra vez y lo cableo bien.`
+              : gated.code === "reserved_marker"
+                ? "Model emitted editor-mode markers — try again."
+                : `El HTML no pasó la puerta de publicación (${gated.code}${gated.detail ? `: ${gated.detail}` : ""}) — try again.`,
           });
           closeStream();
           return;
         }
-        // Born-canonical: a Mode B rewrite — or ops that hit the token
-        // blocks — can drop the data-ol-* contract. Re-run the chain so
-        // the page stays themeable. Idempotent: a no-op when the markers
-        // survived. Then re-complete the <head> in case a full rewrite
-        // dropped the meta description / og tags / favicon.
-        trimmedHtml = ensurePageMeta(normalizeBornCanonical(sanitizeResult.html));
+        trimmedHtml = gated.html;
 
-        // Arreglo 2 (revisión final de rama) — DESIGN_GUIDANCE animates the
-        // model to emit data-ol-* markers, but until now only the agent (via
-        // lib/agent/tools.ts's `aviso` channel) actually validated them.
-        // ai-design is a conversational loop (unlike /api/generate's one-shot
-        // stream) — it HAS a next turn — so it gets the same net, reusing
-        // describeBehaviorIssues (shared with the agent, not duplicated)
-        // instead of building its own tool-call round trip. There's no
-        // in-turn tool loop here to re-call itself, so the note rides in
-        // `reasoning`: that's the EXACT string chat-panel.tsx stores as this
-        // turn's assistant history entry (`t.assistantReasoning`, spread into
-        // `history` on the next request — see the `history` builder in
-        // chat-panel.tsx's send()), so appending it here puts the issue back
-        // in front of the model on the next real turn, AND shows the user
-        // the same honesty the agent's system prompt requires ("DÍSELO al
-        // usuario"). The SYSTEM_PROMPT rule above ("if your OWN previous
-        // reasoning... fix those FIRST") is what turns this from "the model
-        // MIGHT notice" into "the model is told to self-correct".
-        const behaviorAviso = describeBehaviorIssues(validateBehaviors(trimmedHtml));
-        const reasoning = behaviorAviso
-          ? `${accumulatedReasoning.trim()}\n\n⚠️ Conductas mal cableadas — las arreglo en tu próximo mensaje: ${behaviorAviso}`
-          : accumulatedReasoning.trim();
+        const reasoning = accumulatedReasoning.trim();
         const now = new Date();
         let enabledModules: string[] = [];
 
-        try {
-          // Preserve data.settings (per-form notify/redirect/success +
-          // analyticsDisabled) — only the html changes here.
-          const base: ProjectData = existing.data ?? { html: "" };
-          // AI→módulos bridge: enable a module whose placeholder this edit added.
-          const moduleIntent = applyModuleIntent(base.settings, trimmedHtml);
-          enabledModules = moduleIntent.enabled;
-          const withSettings = moduleIntent.enabled.length
-            ? { settings: moduleIntent.settings }
-            : {};
-          const nextData: ProjectData = pageSlug
-            ? {
-                ...base,
-                ...withSettings,
-                pages: {
-                  ...base.pages,
-                  [pageSlug]: { ...base.pages?.[pageSlug], html: trimmedHtml },
-                },
-              }
-            : { ...base, html: trimmedHtml, ...withSettings };
-          await db
-            .update(schema.projects)
-            .set({ data: nextData, updatedAt: now })
-            .where(
-              and(
-                eq(schema.projects.id, projectId),
-                eq(schema.projects.userId, userId),
-              ),
-            );
-        } catch (err) {
-          // eslint-disable-next-line no-console
-          console.error("[ai-design] db update failed", err);
-          emit("error", {
-            message: "Generated successfully but failed to save — try again.",
-          });
-          closeStream();
-          return;
-        }
+        enabledModules = [...prepared.report.modules];
 
-        // Snapshot the pre-edit document FIRST (the server-side stored state
-        // — already sanitized), so an AI edit is always undoable even when
-        // this document had no versions yet (typical for site pages and for
-        // inline edits inside the idle-checkpoint window). createVersion
-        // dedups within the scope, so this no-ops when already captured.
-        const preEditHtml = pageSlug
-          ? existing.data?.pages?.[pageSlug]?.html ?? ""
-          : existing.data?.html ?? "";
-        if (preEditHtml && preEditHtml !== trimmedHtml) {
-          await createVersion({
-            projectId,
-            html: preEditHtml,
-            label: "Before AI edit",
-            source: "manual",
-            page: pageSlug,
-          }).catch((err: unknown) => {
-            // eslint-disable-next-line no-console
-            console.error("[ai-design] pre-edit snapshot failed", err);
-          });
-        }
+        // EL SCRIPT DEL MODELO. En REESCRITURA se captura del texto CRUDO,
+        // antes de que el saneado del gate lo borrara. En modo OPS llega por su
+        // objetivo reservado (`splitRuntimeOps`) — hasta el 2026-08-22 aquí se
+        // devolvía `null` sin más, y por eso el camino barato no podía tocar el
+        // comportamiento de una página ni aunque el modelo quisiera.
+        // Sólo con DeepSeek: firmar los bytes de un proveedor creyéndolos de
+        // otro es justo la clase de error que un hash no puede detectar.
+        const runtimeCapturado = (() => {
+          if (!modelJsEnabled(process.env) || !useDeepSeek) return null;
+          if (outputMode === "ops") return runtimeDesdeOps;
+          const r = extractModelRuntime(accumulatedHtml);
+          if (!r.ok) {
+            if (r.reason !== "ausente") {
+              // eslint-disable-next-line no-console
+              console.warn(`[ai-design] runtime del modelo descartado: ${r.reason}`);
+            }
+            return null;
+          }
+          return r.code;
+        })();
 
-        // Snapshot the post-chat state into the version timeline so the
-        // user can restore later. Failures here don't break the stream —
-        // we still apply the HTML and emit done. The label tags the mode
-        // + op count explicitly so the timeline reads cleanly.
         const versionLabel =
           outputMode === "ops"
             ? `Ops (${appliedOpCount}): ${prompt.slice(0, 70)}${prompt.length > 70 ? "…" : ""}`
             : `Rewrite: ${prompt.slice(0, 76)}${prompt.length > 76 ? "…" : ""}`;
-        await createVersion({
-          projectId,
-          html: trimmedHtml,
-          label: versionLabel,
-          source: "chat",
-          page: pageSlug,
-          // Un rewrite completo redefine el diseño → nuevo baseline del reset.
-          // Las ops quirúrgicas son ediciones, no rediseños: no lo mueven.
-          isBaseline: outputMode !== "ops",
-        }).catch((err: unknown) => {
+
+        // Guardado + los dos snapshots, en lib/page-engine/persist. Este bloque
+        // era una copia del embudo del Agente — su propio comentario lo decía,
+        // "cloned from ai-design's own page-branch" — y las dos mitades tenían
+        // que no derivar nunca.
+        const saved = await persistPage(
+          {
+            projectId,
+            userId,
+            page: pageSlug,
+            html: trimmedHtml,
+            label: versionLabel,
+            ...(enabledModules.length ? { settings: prepared.report.moduleSettings as ProjectData["settings"] } : {}),
+            // Un rewrite completo redefine el diseño → nuevo baseline del reset.
+            // Las ops quirúrgicas son ediciones, no rediseños: no lo mueven.
+            isBaseline: outputMode !== "ops",
+            // `null` NO borra: una edición por ops re-sella el script que ya
+            // había en vez de tirarlo.
+            ...(runtimeCapturado ? { modelRuntime: runtimeCapturado } : {}),
+          },
+          {
+            loadProject: async (id, uid) => {
+              const rows = await db
+                .select({ data: schema.projects.data, generatedRuntime: schema.projects.generatedRuntime })
+                .from(schema.projects)
+                .where(and(eq(schema.projects.id, id), eq(schema.projects.userId, uid))).limit(1);
+              return rows[0]
+                ? { data: rows[0].data as ProjectData, generatedRuntime: rows[0].generatedRuntime }
+                : null;
+            },
+            // `runtime` re-ata el JavaScript del modelo al documento nuevo. Va en
+            // el MISMO update: escribirlo aparte abriría una ventana con el HTML
+            // ya cambiado y la cápsula todavía apuntando al anterior.
+            saveProjectData: async (id, uid, data, runtime) => {
+              await db.update(schema.projects)
+                .set({ data, updatedAt: now, ...(runtime ? { generatedRuntime: runtime } : {}) })
+                .where(and(eq(schema.projects.id, id), eq(schema.projects.userId, uid)));
+            },
+            // Best-effort: perder un snapshot no puede costar la edición.
+            snapshotVersion: async (v) => {
+              await createVersion(v).catch((err: unknown) => {
+                // eslint-disable-next-line no-console
+                console.error("[ai-design] version snapshot failed", err);
+              });
+            },
+          },
+        );
+        if (!saved.ok) {
           // eslint-disable-next-line no-console
-          console.error("[ai-design] version snapshot failed", err);
-        });
+          console.error("[ai-design] persist failed", saved.error);
+          emit("error", { message: "Generated successfully but failed to save — try again." });
+          closeStream();
+          return;
+        }
+
+        // TURNO VACÍO. Ni un byte de diferencia en el documento y ningún
+        // script nuevo: pase lo que pase el modelo haya escrito en su prosa,
+        // esta página está exactamente como estaba. Se dice, porque el caso
+        // MEDIDO es el peor posible — «ya lo arreglé» sobre algo que sigue
+        // roto. No se juzga lo que dijo: se cuenta lo que hay.
+        if (saved.sinCambios) {
+          runtimeNotice = runtimeNotice
+            ? `${runtimeNotice}\n\nLa página quedó igual que antes de este mensaje.`
+            : "Este cambio no modificó nada de la página: quedó exactamente igual que antes. Si te dije que arreglé algo, no llegó a aplicarse — vuelve a pedírmelo describiendo qué ves.";
+          // eslint-disable-next-line no-console
+          console.warn(`[ai-design] turno sin cambios · modo ${outputMode} · ops ${appliedOpCount}`);
+        }
 
         // Debit credits — billed from the real token usage the provider
         // reports. Falls back to a char estimate only if the usage event
         // never arrived (rare; Gemini emits it on every stream).
         const credits = usage
-          ? creditsForUsage(usage.inputTokens, usage.outputTokens, PROVIDER.rate)
+          ? creditsForUsage(usage.inputTokens, usage.outputTokens, CREDIT_RATE)
           : estimateCredits(
               SYSTEM_PROMPT.length + userMessageContent.length,
               accumulatedReasoning.length + accumulatedHtml.length,
-              PROVIDER.rate,
+              CREDIT_RATE,
             );
         // eslint-disable-next-line no-console
         console.log(
-          `[ai-design] tokens — prompt: ${usage?.inputTokens ?? "?"}, output: ${usage?.outputTokens ?? "?"} → ${credits} credits`,
+          `[ai-design] ${modelLabel} — prompt: ${usage?.inputTokens ?? "?"}, output: ${usage?.outputTokens ?? "?"}, thinking: ${usage?.thinkingTokens ?? "?"} → ${credits} credits · mode: ${outputMode} · ${Date.now() - startedAt}ms`,
         );
         await debitCredits(userId, credits);
 
+        // Guardar-y-AVISAR: si se descartó algo, el usuario tiene que leerlo.
+        // Un cambio que se pierde en silencio es peor que uno que no se hizo.
+        const avisos = [droppedNotice, runtimeNotice].filter(Boolean).join("\n\n");
         emit("done", {
-          reasoning,
+          reasoning: avisos ? `${reasoning}
+
+${avisos}` : reasoning,
           html: trimmedHtml,
           updatedAt: now.toISOString(),
           mode: outputMode,
@@ -920,9 +1196,8 @@ VISUAL CONTEXT: the attached image is a full-page render of the CURRENT page (wh
   });
 }
 
+/** El cuerpo vive en lib/ai/sse; el nombre local se queda porque lo usan
+ *  decenas de sitios y renombrarlos no aclara nada. */
 function errorJson(status: number, message: string): Response {
-  return new Response(JSON.stringify({ error: message }), {
-    status,
-    headers: { "content-type": "application/json" },
-  });
+  return jsonResponse({ error: message }, status);
 }

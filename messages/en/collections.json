@@ -66,6 +66,9 @@
   },
   "sheetBacked": {
     "banner": "This list syncs from your Google Sheet. Edit it there and your page updates itself.",
-    "openSheet": "Open Sheet"
+    "openSheet": "Open Sheet",
+    "disconnect": "Disconnect",
+    "disconnectHint": "Items already synced stay, and become editable again.",
+    "disconnectError": "Couldn't disconnect. Try again."
   }
 }

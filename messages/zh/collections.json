@@ -66,6 +66,9 @@
   },
   "sheetBacked": {
     "banner": "此列表与你的 Google 表格同步。请在表格中编辑，你的页面会自动更新。",
-    "openSheet": "打开表格"
+    "openSheet": "打开表格",
+    "disconnect": "断开连接",
+    "disconnectHint": "已同步的条目会保留，并可再次编辑。",
+    "disconnectError": "断开连接失败，请重试。"
   }
 }

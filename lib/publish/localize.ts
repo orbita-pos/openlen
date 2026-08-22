@@ -29,6 +29,7 @@ import { and, eq } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
 import { extractTranslatables, reinjectTranslatables } from "@/lib/html-engine";
 import { GeminiProvider } from "@/lib/ai-gateway";
+import { fireworksStreamProvider, type StreamProviderLike } from "@/lib/ai/fireworks-as-stream-provider";
 import {
   isPublishLocale,
   LOCALE_ENGLISH_NAMES,
@@ -107,7 +108,23 @@ async function geminiTranslate(
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), TRANSLATE_TIMEOUT_MS);
   try {
-    const provider = new GeminiProvider(apiKey);
+    // Traducir es texto, no píxeles: lo hace DeepSeek por el transporte de
+    // Fireworks. `OPENLEN_TRANSLATE=gemini` vuelve atrás.
+    //
+    // Sin esquema estricto a propósito: Fireworks rechaza esquemas válidos
+    // (medido), y el parseo de abajo ya tolera vallas de markdown. Lo que NO se
+    // relaja es la comprobación de longitud: una traducción con menos entradas
+    // que el original se descarta entera, aquí y antes.
+    const usaGemini = process.env.OPENLEN_TRANSLATE?.trim().toLowerCase() === "gemini";
+    const provider: StreamProviderLike = usaGemini
+      ? (new GeminiProvider(apiKey) as unknown as StreamProviderLike)
+      : fireworksStreamProvider({
+          requestId: `localize.${targetLocale}`,
+          operation: "copy",
+          maxOutputTokens: MAX_OUTPUT_TOKENS,
+          temperature: 0.2,
+          jsonObject: true,
+        });
     let raw = "";
     for await (const ev of provider.stream(
       {

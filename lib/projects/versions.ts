@@ -14,6 +14,7 @@
 
 import { and, desc, eq, isNull, inArray, ne } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
+import { resealRuntime } from "@/lib/projects/model-runtime";
 import type { ProjectData } from "@/lib/projects/types";
 
 const VERSION_LIMIT = 50; // unpinned rows per (project, page) scope
@@ -323,6 +324,7 @@ export async function restoreVersion(
       versionLabel: schema.projectVersions.label,
       versionPage: schema.projectVersions.page,
       projectData: schema.projects.data,
+      generatedRuntime: schema.projects.generatedRuntime,
     })
     .from(schema.projectVersions)
     .innerJoin(
@@ -370,9 +372,22 @@ export async function restoreVersion(
       }
     : { ...base, html: row.versionHtml };
   const now = new Date();
+  // El JavaScript del modelo sigue al documento restaurado. Restaurar cambia los
+  // bytes, y sin re-atar la cápsula la página volvería sin su script — perder la
+  // interactividad no es lo que pide quien restaura un texto anterior.
+  //
+  // Sólo el documento de inicio, y el código sale de la cápsula guardada: esto
+  // puede mover a qué documento apunta, nunca introducir código nuevo.
+  const runtime = page
+    ? null
+    : resealRuntime({
+        projectId: params.projectId,
+        html: row.versionHtml,
+        capsule: row.generatedRuntime,
+      });
   await db
     .update(schema.projects)
-    .set({ data: nextData, updatedAt: now })
+    .set({ data: nextData, updatedAt: now, ...(runtime ? { generatedRuntime: runtime } : {}) })
     .where(eq(schema.projects.id, params.projectId));
 
   // Forward marker: the live document is now this restored version. Snapshot

@@ -24,6 +24,7 @@ import {
   PREVIEW_COPY_TEXT_STASH,
   PREVIEW_FILTER_PRESSED_STASH,
   PREVIEW_TABS_SELECTED_STASH,
+  PREVIEW_CALC_TEXT_STASH,
   PREVIEW_HTML_CLASS_STASH,
 } from "./use-behaviors-preview";
 import { MARKER as CAROUSEL_MARKER } from "@/lib/publish/carousel";
@@ -39,6 +40,8 @@ export function stripEditorInstrumentation(html: string): string {
     !html.includes("data-ol-filtered") &&
     !html.includes("data-ol-stuck") &&
     !html.includes("data-ol-tab-ready") &&
+    !html.includes("data-ol-calc-off") &&
+    !html.includes(PREVIEW_CALC_TEXT_STASH) &&
     !html.includes("data-ol-tab-active") &&
     !html.includes("data-ol-lb-modal") &&
     !html.includes(BEHAVIORS_MARKER) &&
@@ -108,6 +111,10 @@ export function stripEditorInstrumentation(html: string): string {
       "data-openlen-edit-noedit",
       "data-openlen-drop-target",
       "data-openlen-block-hover",
+      // calc: estado PURO de su runtime (categoría A) — sólo lo escribe el
+      // intérprete al evaluar un data-ol-if, nadie más en el repo lo usa (lo
+      // afirma el test de colisión de namespace en conformance.test.ts).
+      "data-ol-calc-off",
     ]) {
       doc.querySelectorAll(`[${attr}]`).forEach((n) => n.removeAttribute(attr));
     }
@@ -289,6 +296,19 @@ export function stripEditorInstrumentation(html: string): string {
     doc.querySelectorAll(`[${PREVIEW_TABS_SELECTED_STASH}]`).forEach((n) => {
       n.setAttribute("aria-selected", n.getAttribute(PREVIEW_TABS_SELECTED_STASH) ?? "");
       n.removeAttribute(PREVIEW_TABS_SELECTED_STASH);
+    });
+    // calc: el texto de cada [data-ol-out] — el runtime lo reescribe en cuanto
+    // el creador toca un campo del preview, y ese número quedaría como el
+    // valor de NACIMIENTO de la página publicada. Peor que en las otras
+    // recetas: el guardado del tab Contenido (app/api/projects/[id]/html)
+    // sólo sanea, no vuelve a pasar por preparePage, así que nada
+    // recalcularía ese texto después. Restauración incondicional, como la de
+    // countdown y por el mismo motivo: el runtime lo reescribe en cada
+    // interacción, así que una edición del creador ahí es efímera de todas
+    // formas — y el valor autorado ES el que la ingestión computó.
+    doc.querySelectorAll(`[${PREVIEW_CALC_TEXT_STASH}]`).forEach((n) => {
+      n.textContent = n.getAttribute(PREVIEW_CALC_TEXT_STASH) ?? "";
+      n.removeAttribute(PREVIEW_CALC_TEXT_STASH);
     });
     // copy: the button label mid-confirmation ("¡Copiado!") — restored ONLY
     // when the live text is exactly the data-ol-copied value, the one string

@@ -19,8 +19,7 @@ import {
   type GeminiProviderLike,
   type DebitFn,
   type HtmlStreamLike,
-  type GenerateHtmlStreamSummary,
-} from "./generate";
+  type GenerateHtmlStreamSummary, pageWriterUsesDeepSeek } from "./generate";
 import type { StreamEvent } from "../ai-gateway";
 import type { HtmlStreamOpts, HtmlStreamResult } from "../html-engine";
 
@@ -737,4 +736,21 @@ test("bypass: sin config del modelo no se inventa carrier y el doc queda canóni
   const summary = await done;
   assert.ok(summary.finalHtml);
   assert.ok(!summary.finalHtml!.includes("data-ol-tw"), "sin carrier fantasma");
+});
+
+// Quién escribe la página. La medición que motivó el cambio está en el
+// comentario de `pageWriterUsesDeepSeek`; esto sólo fija las tres reglas.
+test("el escritor por defecto es DeepSeek", () => {
+  assert.equal(pageWriterUsesDeepSeek({}, false), true);
+});
+
+test("OPENLEN_GENERATE_PROVIDER=gemini vuelve atrás", () => {
+  assert.equal(pageWriterUsesDeepSeek({ OPENLEN_GENERATE_PROVIDER: "gemini" }, false), false);
+  assert.equal(pageWriterUsesDeepSeek({ OPENLEN_GENERATE_PROVIDER: "  GEMINI  " }, false), false);
+});
+
+// El papel que razona en Fireworks no tiene visión: una referencia que el
+// modelo no ve es peor que no haberla pedido.
+test("una imagen de referencia fija el turno a Gemini", () => {
+  assert.equal(pageWriterUsesDeepSeek({}, true), false);
 });

@@ -1,5 +1,6 @@
 import { auth } from "@/auth";
-import { GeminiProvider, type InlineImage } from "@/lib/ai-gateway";
+import type { InlineImage } from "@/lib/ai-gateway";
+import { createAgentBrain } from "@/lib/agent/brain";
 import { resolveAIProvider } from "@/lib/ai-provider";
 import { getCreditState, debitCredits, creditsForUsage } from "@/lib/credits";
 import { resolveOpIdByPath, tagWithOpIds } from "@/lib/html-ops";
@@ -7,11 +8,16 @@ import { fetchImageAsInlineData } from "@/lib/ai/inline-image";
 import { validateUrl } from "@/lib/style-match/scrape/validate-url";
 import { buildFunctionDeclarations } from "@/lib/agent/catalog";
 import { buildAgentMessages } from "@/lib/agent/context";
+import { collectionCatalogBlock } from "@/lib/collections/catalog-block";
+import { listPublishedItems } from "@/lib/collections/store";
+import { modelJsEnabled } from "@/lib/ai-stream/model-runtime";
+import { verifyCapsule } from "@/lib/projects/model-runtime";
 import { runAgentLoop, type AgentErrorCode } from "@/lib/agent/loop";
 import { streamWithRetry } from "@/lib/agent/retry";
 import { realDeps, runAgentTool, summarizeProjectState, type AgentSession } from "@/lib/agent/tools";
 import { summarizeBusinessForAgent } from "@/lib/agent/business";
 import { verifyEditedPage } from "@/lib/agent/verify";
+import { jsonResponse, sseChannel } from "@/lib/ai/sse";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // POST /api/agent — the OpenLen Agent's agentic loop (F1 Task 9).
@@ -127,7 +133,11 @@ export async function POST(req: Request): Promise<Response> {
             typeof h.content === "string" &&
             h.content.length > 0,
         )
-        .slice(-6)
+        // 12 MENSAJES, no 6: el cliente manda 6 TURNOS (usuario+asistente),
+        // así que cortar a 6 mensajes dejaba 3 turnos de memoria — la mitad de
+        // lo que la interfaz cree estar mandando. «Ahora hazlo también en la
+        // otra sección» cuatro turnos después ya no tenía contexto.
+        .slice(-12)
         .map((h) => ({ role: h.role, content: h.content.slice(0, 4000) }))
     : [];
 
@@ -195,6 +205,19 @@ export async function POST(req: Request): Promise<Response> {
   const { taggedHtml, taggedCount } = tagWithOpIds(activeHtml);
   if (taggedCount === 0) return errorJson(400, "project html has no taggable elements");
 
+  // El JavaScript que la página ya tiene. `activeHtml` viene saneado, así que
+  // sin esto el Agente no ve la conducta que el usuario le pide arreglar: la
+  // re-inventa, o escala a un rediseño entero por una línea. Sólo el documento
+  // raíz — la cápsula ata `data.html`.
+  const runtimeCode = (() => {
+    if (!modelJsEnabled(process.env) || pageSlug) return null;
+    const check = verifyCapsule(project.generatedRuntime, {
+      projectId,
+      html: project.data?.html ?? "",
+    });
+    return check.ok ? check.code : null;
+  })();
+
   // Hard-pin: only when the client sent BOTH a path and a hint (mirrors
   // ai-design) AND the path resolves against the freshly tagged document.
   // Any failure degrades silently to the soft hint.
@@ -228,13 +251,24 @@ export async function POST(req: Request): Promise<Response> {
   // P2 — el agente sabe quién es el dueño: el perfil efectivo del proyecto
   // (vinculado, si no el default del usuario) entra al ESTADO como `negocio`.
   // Sin perfil lleno, el ESTADO queda idéntico al de antes.
-  const negocio = summarizeBusinessForAgent(
-    await deps.loadBusinessProfile(projectId, userId),
-  );
+  const perfilNegocio = await deps.loadBusinessProfile(projectId, userId);
+  const negocio = summarizeBusinessForAgent(perfilNegocio);
   if (negocio) state.negocio = negocio;
+  // El catálogo del usuario. La banda de la colección llega VACÍA en el
+  // documento —los ítems se hornean al publicar—, así que sin esto el Agente
+  // fabricaba tarjetas inventadas que salían duplicadas junto a las reales.
+  // Sólo se paga la consulta si la página trae la banda.
+  const catalogo = /data-ol-collection-section/i.test(activeHtml)
+    ? collectionCatalogBlock(
+        await listPublishedItems(projectId).catch(() => []),
+        activeHtml,
+      )
+    : "";
   const built = buildAgentMessages({
     state,
     taggedHtml,
+    catalogo,
+    runtime: runtimeCode,
     userBrief: project.userBrief,
     prompt,
     history,
@@ -260,34 +294,30 @@ export async function POST(req: Request): Promise<Response> {
     userId,
     taggedHtml,
     page: pageSlug,
+    // Alimentan la etapa de imágenes y el sembrado de marca de `preparePage`,
+    // que sin ellos se saltaban en TODA edición del Agente.
+    brief: project.brief ?? null,
+    profile: perfilNegocio,
     ownerEmail: session.user.email ?? null,
     imageEditsThisTurn: 0,
     photoSearchesThisTurn: 0,
   };
-  const provider = new GeminiProvider(PROVIDER.key as string);
   const tools = buildFunctionDeclarations();
+  // Quién razona vive en `lib/agent/brain` — el MISMO sitio del que tiran los
+  // evals. Tenerlo aquí dentro ya dejó a la batería midiendo Gemini después de
+  // que el Agente pasara a DeepSeek, sin que nada fallara.
+  const brain = createAgentBrain({
+    tools,
+    requestId: projectId,
+    signal: upstreamAbort.signal,
+    ...(attachedInline ? { attachedImage: { image: attachedInline, anchorMessage: promptMessage } } : {}),
+  });
 
   const sse = new ReadableStream<Uint8Array>({
     async start(controller) {
-      let closed = false;
-      const emit = (event: string, data: unknown) => {
-        if (closed) return;
-        try {
-          controller.enqueue(ENCODER.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`));
-        } catch {
-          closed = true;
-        }
-      };
-      const close = () => {
-        if (!closed) {
-          closed = true;
-          try {
-            controller.close();
-          } catch {
-            /* already closed */
-          }
-        }
-      };
+      const channel = sseChannel(controller);
+      const emit = channel.emit;
+      const close = () => channel.close();
       const timeout = setTimeout(() => upstreamAbort.abort(), STREAM_TIMEOUT_MS);
       try {
         const { balance } = await getCreditState(userId);
@@ -308,44 +338,13 @@ export async function POST(req: Request): Promise<Response> {
           // model produced nothing yet), and honors upstreamAbort so retries can
           // never outlive the STREAM_TIMEOUT_MS ceiling. A mid-stream failure
           // still propagates (no double-applied tool calls).
-          openStream: (msgs) => {
-            // F5: los píxeles adjuntos van SOLO en el turno cuyo último
-            // mensaje es el prompt del usuario (el gateway los ancla ahí);
-            // mezclarlos con un mensaje de functionResponses rompería el
-            // protocolo FC de Gemini.
-            const withImage =
-              attachedInline && msgs[msgs.length - 1] === promptMessage
-                ? [attachedInline]
-                : undefined;
-            return streamWithRetry(
-              () =>
-                provider.stream(
-                  {
-                    model: PROVIDER.model,
-                    messages: msgs,
-                    tools,
-                    toolMode: "auto",
-                    maxOutputTokens: 16_384,
-                    temperature: 0.7,
-                    ...(withImage ? { images: withImage } : {}),
-                  },
-                  { signal: upstreamAbort.signal },
-                ),
-              { signal: upstreamAbort.signal },
-            );
-          },
+          openStream: (msgs) =>
+            streamWithRetry(() => brain.openStream(msgs), { signal: upstreamAbort.signal }),
           // Graceful termination: a tools-OFF stream the loop uses only to
           // compose a closing summary when a step-budget cap is hit, so the turn
           // ends with "here's what I did / what's pending" instead of a red error.
           closeOut: (msgs) =>
-            streamWithRetry(
-              () =>
-                provider.stream(
-                  { model: PROVIDER.model, messages: msgs, tools: [], toolMode: "none", maxOutputTokens: 2_048, temperature: 0.7 },
-                  { signal: upstreamAbort.signal },
-                ),
-              { signal: upstreamAbort.signal },
-            ),
+            streamWithRetry(() => brain.closeOut(msgs), { signal: upstreamAbort.signal }),
           runTool: (name, args) => runAgentTool(agentSession, deps, name, args),
           // F5 — los ojos: tras un turno que mutó el documento, renderiza y
           // verifica rotura visual objetiva; si la hay, el loop inyecta la
@@ -388,14 +387,14 @@ export async function POST(req: Request): Promise<Response> {
         // ended waiting on a confirm card.
         if (!result.terminalError) {
           const { inputTokens, outputTokens, cachedTokens } = result.usage;
-          const credits = creditsForUsage(inputTokens, outputTokens, PROVIDER.rate);
+          const credits = creditsForUsage(inputTokens, outputTokens, brain.creditRate());
           // F3: Gemini's implicit-cache discount (90% off cached input
           // tokens) is automatic on Google's own invoice — creditsForUsage
           // still prices off raw input/output, so OpenLen's product credits
           // are UNCHANGED by cachedTokens; this is visibility only.
           const cachedPct = inputTokens > 0 ? Math.round((cachedTokens / inputTokens) * 100) : 0;
           console.log(
-            `[agent] tokens — in ${inputTokens} (cached ${cachedTokens}, ${cachedPct}%) / out ${outputTokens}`,
+            `[agent] ${brain.modelId} — in ${inputTokens} (cached ${cachedTokens}, ${cachedPct}%) / out ${outputTokens}`,
           );
           await debitCredits(userId, Math.max(1, credits));
         } else {
@@ -426,9 +425,8 @@ export async function POST(req: Request): Promise<Response> {
   });
 }
 
+/** El cuerpo vive en lib/ai/sse; el nombre local se queda porque lo usan
+ *  decenas de sitios y renombrarlos no aclara nada. */
 function errorJson(status: number, message: string): Response {
-  return new Response(JSON.stringify({ error: message }), {
-    status,
-    headers: { "content-type": "application/json" },
-  });
+  return jsonResponse({ error: message }, status);
 }

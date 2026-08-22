@@ -50,7 +50,8 @@
   "defaultProjectName": "Pricing Page",
   "chatDraft": {
     "iconChanged": "I just changed the icon here. Update the surrounding title and description so the meaning matches the new icon.",
-    "imageChanged": "I just changed the image here. Update the surrounding copy so it matches what the image shows."
+    "imageChanged": "I just changed the image here. Update the surrounding copy so it matches what the image shows.",
+    "fixControls": "Fix these controls — they were wired incorrectly and don't work:"
   },
   "lockReason": {
     "created": "Available once your page is created"
@@ -166,8 +167,6 @@
     "moduleError": "Couldn't update the module.",
     "moduleMembers": "Accounts",
     "moduleBroadcast": "Broadcast",
-    "moduleComments": "Comments",
-    "moduleBookings": "Bookings",
     "moduleCollections": "Collections",
     "membersOnlyOn": "Page is now members only",
     "membersOnlyOff": "Page is now public",
@@ -181,7 +180,6 @@
     "analyticsDisabled": "Analytics disabled",
     "saveError": "Couldn't save the change.",
     "moduleWhatsapp": "WhatsApp",
-    "moduleOrders": "Orders",
     "whatsappNeedNumber": "Add a WhatsApp number first",
     "modulePageCreated": "Page created",
     "modulePageExists": "Opened the existing page",
@@ -196,13 +194,6 @@
     "messagePlaceholder": "Prefilled message (optional)",
     "note": "Shows bottom-right on your published page. A 10-digit number is read as Mexico (+52).",
     "missingNumber": "Add your number — without it, the button won’t show on your page."
-  },
-  "orders": {
-    "title": "WhatsApp Orders",
-    "tagline": "A cart over your Catalog: the composed order lands on your WhatsApp",
-    "numberPlaceholder": "WhatsApp number (e.g. 5512345678)",
-    "note": "Works with your Catalog items. Visitors add products and the message goes out with quantities and total.",
-    "needsCatalog": "Turn on the Catalog module and add items so the buttons appear."
   },
   "moduleSurface": {
     "createBookingPage": "Create booking page",
@@ -265,7 +256,20 @@
     "availableGroup": "Available",
     "open": "Open",
     "activate": "Turn on",
-    "drawerClose": "Close"
+    "drawerClose": "Close",
+    "perProject": "Open a project to manage its modules.",
+    "title": "Modules",
+    "subtitle": "One-click backend for your site. No credits, no code.",
+    "included": {
+      "title": "Included with your site",
+      "open": "Open",
+      "forms": "Forms & leads",
+      "formsHint": "Every form already captures leads",
+      "analytics": "Analytics",
+      "analyticsHint": "Visits and clicks, built in",
+      "assistant": "AI assistant",
+      "assistantHint": "Answers your visitors' questions"
+    }
   },
   "platforms": {
     "title": "My platforms",
@@ -275,5 +279,18 @@
     "inserted": "Done: the band is on the page",
     "manage": "Go to My business",
     "note": "No charge. Links refresh themselves on publish."
+  },
+  "degraded": {
+    "title": "Some things couldn't come across",
+    "scripts": "Your page had parts built with JavaScript — things like counters, carousels or interactive buttons. OpenLen removes those for safety. You can rebuild them with Modules.",
+    "embeds": "Content embedded from other sites (videos or maps) was removed. You can add it back with Modules.",
+    "unsafe_links": "Some links weren't safe to keep, so they were removed.",
+    "dynamic_content": "Part of what your page builds by itself may look empty. You can write it in directly in the editor.",
+    "broken_controls": "Some interactive controls were wired incorrectly and won't work. Ask the assistant to fix them.",
+    "interactivity_lost": "The interactive details the AI wrote for your page (filters, galleries, tabs) didn't make it into this publish. Your text and images are all there. Publish again; if they're still missing, ask the assistant to rebuild them.",
+    "form_routing_stale": "Some of your form settings (which email gets notified, where it redirects) may have stopped applying after this edit. Check each form still notifies where you want.",
+    "dismiss": "Got it",
+    "fix": "Fix this",
+    "runtime_stale": "Your page's interactive code looks for elements this edit removed. When that happens the code stops running, so more may have broken than what's missing. Ask the chat to fix it."
   }
 }

@@ -6,9 +6,10 @@ import { createVersion } from "@/lib/projects/versions";
 import type { ProjectData } from "@/lib/projects/types";
 import { validatePageSlug } from "@/lib/projects/site-pages";
 import { resolveProfileForCreation } from "@/lib/business-profiles/store";
-import { seedBrandIntoHtml, profileMeta } from "@/lib/business-profiles/seed-html";
+import { seedBrandIntoHtml } from "@/lib/business-profiles/seed-html";
 import { ensurePageMeta } from "@/lib/publish/ensure-page-meta";
 import { sanitizeForPublish } from "@/lib/html-engine";
+import { pageMetaFor } from "@/lib/publish/page-meta-intent";
 
 export const runtime = "nodejs";
 
@@ -58,7 +59,8 @@ export async function POST(
   const profile = await resolveProfileForCreation(userId, project.profileId);
   const seeded = ensurePageMeta(
     seedBrandIntoHtml(html, profile.data, { recolor: false }),
-    { title: project.title, ...profileMeta(profile.data) },
+    // AUTHORED: this page already belongs to the user; only add what is missing.
+    pageMetaFor({ provenance: "authored", title: project.title, profile: profile.data }),
   );
 
   // Defense in depth — reject the editor marker, strip stray scripts.

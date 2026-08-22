@@ -345,9 +345,41 @@ describe("resolveDomainAssetManifest", () => {
     expect(assetStorage.put).not.toHaveBeenCalled();
   });
 
+  it("generates for an optional slot too, so an image nobody required can still exist", async () => {
+    const optional = intent(0, { required: false, identityBearing: false });
+    const packProvider = provider(generatedSuccess([0]));
+    const result = await resolveDomainAssetManifest(input([optional]), deps({
+      resolveCurated: async () => incompleteCurated([], [0]),
+      provider: packProvider.value,
+    }));
+
+    // `required` used to decide both "the page fails without this" and "this is
+    // worth paying for". The creative tool marks every request optional so a
+    // missing image can never fail a page closed, which left it unable to ever
+    // get one generated.
+    expect(packProvider.createPack).toHaveBeenCalledTimes(1);
+    expect(result.ok).toBe(true);
+  });
+
+  it("still ships the page with a placeholder when generating an optional image fails", async () => {
+    const optional = intent(0, { required: false, identityBearing: false });
+    const failing = provider({ ok: false, code: "provider_unavailable", provider: "gemini", modelId: "gemini-2.5-flash-image", durationMs: 5 } as never);
+    const result = await resolveDomainAssetManifest(input([optional]), deps({
+      resolveCurated: async () => incompleteCurated([], [0]),
+      provider: failing.value,
+    }));
+
+    // Paying to try is the change; failing the page for an optional image is
+    // not, and that distinction is the whole point of the split.
+    expect(failing.createPack).toHaveBeenCalledTimes(1);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.manifest.slots[0].resolution).toMatchObject({ source: "placeholder" });
+  });
+
   it("uses the repository-verified neutral placeholder only for optional non-identity slots", async () => {
     const optional = intent(0, { required: false, identityBearing: false });
-    const result = await resolveDomainAssetManifest(input([optional]), deps({
+    const result = await resolveDomainAssetManifest(input([optional], "curated"), deps({
       resolveCurated: async () => incompleteCurated([], [0]),
     }));
 

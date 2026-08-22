@@ -66,6 +66,9 @@
   },
   "sheetBacked": {
     "banner": "Diese Liste wird aus deinem Google Sheet synchronisiert. Bearbeite sie dort, und deine Seite aktualisiert sich von selbst.",
-    "openSheet": "Sheet öffnen"
+    "openSheet": "Sheet öffnen",
+    "disconnect": "Trennen",
+    "disconnectHint": "Bereits synchronisierte Einträge bleiben und sind wieder bearbeitbar.",
+    "disconnectError": "Trennen fehlgeschlagen. Bitte erneut versuchen."
   }
 }

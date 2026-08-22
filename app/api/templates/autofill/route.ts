@@ -2,11 +2,14 @@ import { and, eq } from "drizzle-orm";
 import { captureException } from "@inariwatch/capture";
 import { auth } from "@/auth";
 import { db, schema } from "@/lib/db";
+import { resealRuntime } from "@/lib/projects/model-runtime";
 import type { ProjectData } from "@/lib/projects/types";
 import { createVersion } from "@/lib/projects/versions";
 import { getCreditState, debitCredits, AUTOFILL_CREDIT_COST } from "@/lib/credits";
 import { consumeToken, RATE_LIMITS } from "@/lib/rate-limit";
-import { detectSlotPath } from "@/lib/html-engine";
+import { sanitizeForPublish } from "@/lib/html-engine";
+import { passHtmlGate } from "@/lib/html-gate/document-gate";
+import { describeBehaviorIssues } from "@/lib/behaviors/validate";
 import {
   extractFromImage,
   extractFromText,
@@ -117,7 +120,7 @@ export async function POST(req: Request) {
   }
 
   const rows = await db
-    .select({ data: schema.projects.data })
+    .select({ data: schema.projects.data, generatedRuntime: schema.projects.generatedRuntime })
     .from(schema.projects)
     .where(
       and(eq(schema.projects.id, projectId), eq(schema.projects.userId, userId)),
@@ -227,32 +230,83 @@ export async function POST(req: Request) {
           closeStream();
           return;
         }
-        if (detectSlotPath(fill.filledHtml)) {
+        // Until now `fill.filledHtml` went straight into the row: this route
+        // ran no normalizeBornCanonical, no ensurePageMeta and no behaviour
+        // validation, so an autofilled page was born without the theme
+        // contract and with a half-empty <head> that every other ingestion
+        // path fills in.
+        //
+        // Policy. `behaviors: "block"` — autofill EDITS a project that already
+        // exists (the route 400s above if its HTML is missing or malformed),
+        // so refusing costs the user the fill, not the page; that is the same
+        // fail-closed trade as apply-template, its sibling surface. `seal:
+        // false` — nothing is served from here, publishToDir seals at publish
+        // time. `render: false` — this is an interactive SSE stream and cannot
+        // pay a browser launch; publish verifies geometry instead.
+        const gated = await passHtmlGate(
+          fill.filledHtml,
+          { sanitize: sanitizeForPublish },
+          { render: false, seal: false, behaviors: "block" },
+        );
+        if (!gated.ok) {
+          // The modal renders `message` verbatim and never reads `kind`, so
+          // the reason has to survive as Spanish prose for the person who
+          // clicked Apply; `kind` stays for the logs.
+          const behaviorList = describeBehaviorIssues([...(gated.issues ?? [])]);
           emit("error", {
-            kind: "editor-marker-leak",
-            message: "Model emitted editor-mode markers — try again.",
+            kind:
+              gated.code === "reserved_marker"
+                ? "editor-marker-leak"
+                : gated.code === "behaviors_invalid"
+                  ? "behaviors-invalid"
+                  : "sanitize",
+            message: behaviorList
+              ? `Los datos entraron bien, pero quedaron controles mal cableados que no funcionarían en tu página: ${behaviorList}. No guardé nada — probá de nuevo.`
+              : gated.code === "reserved_marker"
+                ? "Model emitted editor-mode markers — try again."
+                : "El HTML no pasó la revisión de publicación — probá de nuevo.",
           });
           closeStream();
           return;
         }
+        const finalHtml = gated.html;
 
         emit("progress", { stage: "persisting" });
 
-        // Snapshot the PRE-apply HTML so the user can revert.
-        await createVersion({
-          projectId,
-          html: currentHtml,
-          label:
-            source === "image"
-              ? `Before Autofill (image)`
-              : `Before Autofill (${businessData.business_name ?? "data"})`,
-          source: "style-match",
-        }).catch((err: unknown) => {
-          console.error("[autofill] pre-apply snapshot failed", err);
-          if (err instanceof Error) {
-            captureException(err, { route: "autofill", stage: "pre-snapshot", projectId, userId });
+        // Snapshot the PRE-apply HTML so the user can revert. This is the
+        // ONLY way back to the page they had, and autofill overwrites it a
+        // few lines below — so a swallowed failure here costs the user their
+        // restore point without telling them. One retry recovers the common
+        // transient blip; losing it still must not cost them the fill they
+        // paid for, so a second failure proceeds (best-effort by design).
+        const preSnapshotLabel =
+          source === "image"
+            ? `Before Autofill (image)`
+            : `Before Autofill (${businessData.business_name ?? "data"})`;
+        let preSnapshotOk = false;
+        for (let attempt = 1; attempt <= 2 && !preSnapshotOk; attempt++) {
+          try {
+            await createVersion({
+              projectId,
+              html: currentHtml,
+              label: preSnapshotLabel,
+              source: "style-match",
+            });
+            preSnapshotOk = true;
+          } catch (err: unknown) {
+            console.error(`[autofill] pre-apply snapshot failed (attempt ${attempt}/2)`, err);
+            if (attempt === 2 && err instanceof Error) {
+              captureException(err, { route: "autofill", stage: "pre-snapshot", projectId, userId });
+            }
           }
-        });
+        }
+        if (!preSnapshotOk) {
+          // TODO(gate/request-surfaces #8): the user should be TOLD they have
+          // no restore point. The modal auto-closes 1200ms after `done`, so
+          // there is nowhere to say it yet — pending the notice-surface
+          // decision that also blocks from-html/from-template.
+          console.error("[autofill] proceeding WITHOUT a restore point", { projectId, userId });
+        }
 
         const now = new Date();
         try {
@@ -260,11 +314,19 @@ export async function POST(req: Request) {
           // analyticsDisabled) — only the html changes here.
           const nextData: ProjectData = {
             ...(existing.data ?? {}),
-            html: fill.filledHtml,
+            html: finalHtml,
           };
+          // El JavaScript del modelo sobrevive al autorrelleno: la cápsula se
+          // re-ata a los bytes que se guardan ahora. Autofill sólo escribe el
+          // documento raíz, así que no hay caso de subpágina.
+          const runtime = resealRuntime({
+            projectId,
+            html: finalHtml,
+            capsule: existing.generatedRuntime,
+          });
           await db
             .update(schema.projects)
-            .set({ data: nextData, updatedAt: now })
+            .set({ data: nextData, updatedAt: now, ...(runtime ? { generatedRuntime: runtime } : {}) })
             .where(
               and(
                 eq(schema.projects.id, projectId),
@@ -283,7 +345,7 @@ export async function POST(req: Request) {
 
         const postVersionId = await createVersion({
           projectId,
-          html: fill.filledHtml,
+          html: finalHtml,
           label: `Autofill: ${businessData.business_name ?? "untitled"}`,
           source: "style-match",
         }).catch((err: unknown) => {
@@ -295,7 +357,7 @@ export async function POST(req: Request) {
 
         emit("done", {
           source,
-          newHtml: fill.filledHtml,
+          newHtml: finalHtml,
           appliedOps: fill.appliedOps,
           totalOps: fill.totalOps,
           versionId: postVersionId,

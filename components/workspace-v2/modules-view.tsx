@@ -13,48 +13,24 @@ import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Globe } from "./icons";
 import type {
-  BookingsSettings,
-  BroadcastSettings,
   ChatSettings,
   CollectionsSettings,
-  CommentsSettings,
-  MembersSettings,
-  OrdersSettings,
   WhatsAppSettings,
 } from "@/lib/projects/types";
 import type { PlacedModule } from "@/lib/projects/module-placements";
 import { ModulesPanel } from "./panels/modules-panel";
-import { BroadcastPanel } from "./panels/broadcast-panel";
-import { CommentsPanel } from "./panels/comments-panel";
-import { BookingsPanel } from "./panels/bookings-panel";
 import { CollectionsPanel } from "./panels/collections-panel";
 import { AssistantPanel } from "./panels/assistant-panel";
 
-type Sub = "hub" | "broadcast" | "comments" | "bookings" | "collections" | "assistant";
+type Sub = "hub" | "collections" | "assistant";
 
 export interface ModulesViewProps {
   currentProjectId?: string | null;
-  /** Pages currently carrying the members-only flag (drives the hub hint). */
-  gatedCount: number;
-  membersSettings?: MembersSettings;
-  onUpdateMembersSettings?: (
-    patch: MembersSettings,
-  ) => Promise<{ ok: boolean; createdPageSlug?: string }>;
-  broadcastSettings?: BroadcastSettings;
-  onUpdateBroadcastSettings?: (patch: BroadcastSettings) => Promise<boolean>;
-  commentsSettings?: CommentsSettings;
-  onUpdateCommentsSettings?: (patch: CommentsSettings) => Promise<boolean>;
-  onInsertCommentsSection?: () => void;
-  bookingsSettings?: BookingsSettings;
-  onUpdateBookingsSettings?: (patch: BookingsSettings) => Promise<boolean>;
-  onInsertBookingsSection?: () => void;
   collectionsSettings?: CollectionsSettings;
   onUpdateCollectionsSettings?: (patch: CollectionsSettings) => Promise<boolean>;
   onInsertCollectionsSection?: () => void;
   whatsappSettings?: WhatsAppSettings;
   onUpdateWhatsappSettings?: (patch: WhatsAppSettings) => Promise<boolean>;
-  ordersSettings?: OrdersSettings;
-  onUpdateOrdersSettings?: (patch: OrdersSettings) => Promise<boolean>;
   chatSettings?: ChatSettings;
   onUpdateChatSettings?: (patch: ChatSettings) => Promise<boolean>;
   /** "Mis plataformas" — links captured on the active business profile, the
@@ -62,8 +38,8 @@ export interface ModulesViewProps {
   platformLinkCount?: number;
   onInsertPlatformsSection?: () => void;
   onOpenBusinessProfile?: () => void;
-  /** Create a dedicated, brand-matched page for a module (bookings/collections). */
-  onCreateModulePage?: (module: "bookings" | "collections") => void | Promise<void>;
+  /** Create a dedicated, brand-matched page for a module (collections). */
+  onCreateModulePage?: (module: "collections") => void | Promise<void>;
   /** Insert the designed WhatsApp CTA section into the home. */
   onAddWhatsappSection?: () => void;
   /** Jump to the account sections that already host these (center swap). */
@@ -90,7 +66,6 @@ export interface ModulesViewProps {
 }
 
 export function ModulesView(props: ModulesViewProps) {
-  const t = useTranslations("members");
   const tw = useTranslations("wsPage");
   const [sub, setSub] = useState<Sub>("hub");
   useEffect(() => {
@@ -114,35 +89,19 @@ export function ModulesView(props: ModulesViewProps) {
           <div className="max-w-[880px] mx-auto px-6 sm:px-8 py-9">
             <ModulesPanel
               currentProjectId={props.currentProjectId}
-              gatedCount={props.gatedCount}
-              membersSettings={props.membersSettings}
-              onUpdateMembers={props.onUpdateMembersSettings}
-              broadcastSettings={props.broadcastSettings}
-              onUpdateBroadcast={props.onUpdateBroadcastSettings}
-              onShowBroadcast={() => setSub("broadcast")}
-              commentsSettings={props.commentsSettings}
-              onUpdateComments={props.onUpdateCommentsSettings}
-              onInsertCommentsSection={() => afterInsert(props.onInsertCommentsSection)}
-              onShowComments={() => setSub("comments")}
-              bookingsSettings={props.bookingsSettings}
-              onUpdateBookings={props.onUpdateBookingsSettings}
-              onInsertBookingsSection={() => afterInsert(props.onInsertBookingsSection)}
-              onShowBookings={() => setSub("bookings")}
               collectionsSettings={props.collectionsSettings}
               onUpdateCollections={props.onUpdateCollectionsSettings}
               onInsertCollectionsSection={() => afterInsert(props.onInsertCollectionsSection)}
               onShowCollections={() => setSub("collections")}
               whatsappSettings={props.whatsappSettings}
               onUpdateWhatsapp={props.onUpdateWhatsappSettings}
-              ordersSettings={props.ordersSettings}
-              onUpdateOrders={props.onUpdateOrdersSettings}
               chatSettings={props.chatSettings}
               onUpdateChat={props.onUpdateChatSettings}
               platformLinkCount={props.platformLinkCount}
               onInsertPlatformsSection={() => afterInsert(props.onInsertPlatformsSection)}
               onOpenBusinessProfile={props.onOpenBusinessProfile}
-              onCreateModulePage={async (m) => {
-                await props.onCreateModulePage?.(m);
+              onCreateModulePage={async () => {
+                await props.onCreateModulePage?.("collections");
                 props.onReturnToCanvas?.();
               }}
               onAddWhatsappSection={() => afterInsert(props.onAddWhatsappSection)}
@@ -169,7 +128,7 @@ export function ModulesView(props: ModulesViewProps) {
               className="inline-flex items-center gap-1 text-[12px] fg-muted hover:fg transition"
             >
               <span aria-hidden>‹</span>
-              <span>{t("title")}</span>
+              <span>{tw("modulesHub.title")}</span>
             </button>
             {props.projectTitle && (
               <span className="inline-flex items-center gap-1.5 rounded-full ring-1 ring-[color:var(--border)] bg-elev px-2.5 py-1 min-w-0">
@@ -187,21 +146,6 @@ export function ModulesView(props: ModulesViewProps) {
             )}
           </div>
           <div className="flex-1 min-h-0 w-full max-w-2xl mx-auto flex flex-col">
-            {sub === "broadcast" && (
-              <BroadcastPanel
-                currentProjectId={props.currentProjectId}
-                membersEnabled={props.membersSettings?.enabled === true}
-              />
-            )}
-            {sub === "comments" && (
-              <CommentsPanel currentProjectId={props.currentProjectId} />
-            )}
-            {sub === "bookings" && (
-              <BookingsPanel
-                currentProjectId={props.currentProjectId}
-                defaultTz={props.bookingsSettings?.creatorTz}
-              />
-            )}
             {sub === "collections" && (
               <CollectionsPanel currentProjectId={props.currentProjectId} />
             )}

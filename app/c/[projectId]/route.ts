@@ -1,3 +1,4 @@
+import { checkSubdomainOrigin, resolveCustomDomainSub, subdomainOfProject } from "@/lib/publish/request-origin";
 import { createHash } from "node:crypto";
 import { db, schema } from "@/lib/db";
 import { isBot, normalizeCountry, parseUserAgent } from "@/lib/analytics/parse";
@@ -64,6 +65,28 @@ export async function POST(
   // and stops obvious mischief (extremely long path segments).
   if (!projectId || projectId.length > 64) {
     return new Response(null, { status: 204 });
+  }
+
+  // El mismo relé que en /api/f: esta ruta se sirve bajo TODOS los subdominios
+  // y elige el proyecto por la ruta, así que un script en una página podía
+  // meter datos en la analítica de OTRO proyecto —el `href` admite 2.000
+  // caracteres— y leerlos desde su propio panel. Para la CSP es 'self'.
+  //
+  // Se responde 204 como en el resto de rechazos de esta ruta: es una baliza,
+  // no una API; un error visible sólo enseñaría al atacante que le vimos.
+  const suyo = await subdomainOfProject(projectId);
+  if (suyo) {
+    const procedencia = await checkSubdomainOrigin({
+      headers: req.headers,
+      targetSub: suyo,
+      baseHost: process.env.PUBLISH_BASE_HOST?.trim() || "openlen.com",
+      resolveCustomDomain: resolveCustomDomainSub,
+    });
+    if (procedencia.kind === "mismatch") {
+      // eslint-disable-next-line no-console
+      console.warn(`[analytics] baliza cruzada rechazada: ${procedencia.from} → ${suyo}`);
+      return new Response(null, { status: 204 });
+    }
   }
 
   // Per-IP rate limit: silently drop events past 100/min per IP. Spam

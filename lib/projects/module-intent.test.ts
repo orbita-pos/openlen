@@ -3,18 +3,19 @@ import { describe, expect, it } from "vitest";
 import { applyModuleIntent, detectModuleIntent } from "./module-intent";
 
 describe("detectModuleIntent", () => {
-  it("detects bookings + collections placeholders", () => {
-    expect(detectModuleIntent("<section data-ol-bookings-section></section>")).toEqual({
-      bookings: true,
-      collections: false,
-      scene3d: false,
-    });
-    expect(detectModuleIntent("<div data-ol-collection-section></div>")).toEqual({
-      bookings: false,
-      collections: true,
-      scene3d: false,
-    });
-    expect(detectModuleIntent("<p>hi</p>")).toEqual({ bookings: false, collections: false, scene3d: false });
+  // El marcador se detecta esté en la etiqueta que esté: el modelo lo pone en un
+  // <section> o en un <div> según le convenga, y el puente tiene que verlo igual.
+  it("detecta el hueco de Catálogo en cualquier etiqueta", () => {
+    for (const html of [
+      "<section data-ol-collection-section></section>",
+      "<div data-ol-collection-section></div>",
+    ]) {
+      expect(detectModuleIntent(html)).toEqual({ collections: true, scene3d: false });
+    }
+  });
+
+  it("una página sin huecos no enciende nada", () => {
+    expect(detectModuleIntent("<p>hi</p>")).toEqual({ collections: false, scene3d: false });
   });
 });
 
@@ -28,10 +29,9 @@ describe("applyModuleIntent", () => {
   it("enables both when both appear, preserving existing settings", () => {
     const r = applyModuleIntent(
       { analyticsDisabled: true },
-      "<section data-ol-bookings-section></section><section data-ol-collection-section></section>",
+      "<section data-ol-collection-section></section>",
     );
-    expect([...r.enabled].sort()).toEqual(["bookings", "collections"]);
-    expect(r.settings.bookings?.enabled).toBe(true);
+    expect([...r.enabled].sort()).toEqual(["collections"]);
     expect(r.settings.collections?.enabled).toBe(true);
     expect(r.settings.analyticsDisabled).toBe(true);
   });

@@ -2,6 +2,7 @@ import { eq } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
 import { getSubdomainOwner } from "@/lib/projects";
 import { checkAndConsume, getClientIp, ipLimitKey } from "@/lib/limits";
+import { fireworksStreamProvider, type StreamProviderLike } from "@/lib/ai/fireworks-as-stream-provider";
 import { GeminiProvider } from "@/lib/ai-gateway";
 import {
   buildMessages,
@@ -122,11 +123,22 @@ export async function POST(
     parsed.message,
   );
 
+  // El asistente del sitio responde TEXTO: lo escribe DeepSeek, por el mismo
+  // transporte que el resto. `OPENLEN_ASSISTANT_PROVIDER=gemini` vuelve atrás,
+  // y sólo entonces hace falta la clave de Gemini.
   const key = process.env.GEMINI_API_KEY;
-  if (!key) return reply(503, { error: "unavailable" });
+  const usaGemini = process.env.OPENLEN_ASSISTANT_PROVIDER?.trim().toLowerCase() === "gemini";
+  if (usaGemini && !key) return reply(503, { error: "unavailable" });
 
   try {
-    const provider = new GeminiProvider(key);
+    const provider: StreamProviderLike = usaGemini
+      ? (new GeminiProvider(key as string) as unknown as StreamProviderLike)
+      : fireworksStreamProvider({
+          requestId: "site-assistant",
+          operation: "copy",
+          maxOutputTokens: MAX_OUTPUT_TOKENS,
+          jsonObject: true,
+        });
     const events = provider.stream(
       {
         model: ASSISTANT_MODEL,

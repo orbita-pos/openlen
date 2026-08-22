@@ -3,6 +3,7 @@
 // structured business data the autofill pipeline can use to fill a
 // template. Never invents — only extracts what's visible.
 
+import { callModel } from "./model-call";
 import {
   getCachedExtraction,
   hashImage,
@@ -14,9 +15,9 @@ import {
   type ImageMime,
 } from "./types";
 
-const GEMINI_BASE = "https://generativelanguage.googleapis.com/v1beta/models";
-const DEFAULT_MODEL_ID =
-  process.env.STYLE_MATCH_VISION_MODEL || "gemini-2.5-flash";
+// El modelo lo elige la política de `fable-model-policy` a partir de la
+// `operation` que pasa `callModel`. Nombrarlo aquí sería una constante muerta
+// que además mentiría sobre quién corre.
 const MAX_TOKENS = 4_000;
 
 const SYSTEM_PROMPT = `You analyze an image (screenshot of a website, product photo, menu, business card, brochure, etc.) and extract structured business data for use in a landing page template.
@@ -119,17 +120,9 @@ export async function extractFromImage(
   input: ExtractImageInput,
 ): Promise<ExtractImageResult> {
   const t0 = Date.now();
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) {
-    return {
-      ok: false,
-      error: {
-        kind: "missing-key",
-        message: "GEMINI_API_KEY not set. Get one at https://aistudio.google.com/",
-      },
-      durationMs: Date.now() - t0,
-    };
-  }
+  // Sin comprobación de credencial: el transporte de Fireworks usa la suya y
+  // falla con un error de API si falta. `missing-key` se conserva en el tipo
+  // porque otros caminos de este módulo aún pueden devolverlo.
 
   // Cache check — same image bytes = same extraction (assumed deterministic
   // enough at temperature 0.2). Saves ~$0.0003 and 2s per repeat call.
@@ -144,80 +137,30 @@ export async function extractFromImage(
     };
   }
 
+  // Leer datos de negocio de una IMAGEN es MIRAR: lo hace Qwen, el papel con
+  // visión de la política. Al razonador nunca se le manda una imagen, y Gemini
+  // se queda para generar píxeles, no para leerlos.
   const mime = input.mime ?? "image/jpeg";
-  const modelId = input.modelId ?? DEFAULT_MODEL_ID;
-  const url = `${GEMINI_BASE}/${modelId}:generateContent?key=${encodeURIComponent(apiKey)}`;
-
-  const body = {
-    systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
-    contents: [
-      {
-        role: "user",
-        parts: [
-          { inline_data: { mime_type: mime, data: input.image.toString("base64") } },
-          { text: "Extract structured business data from this image. Return JSON only." },
-        ],
-      },
-    ],
-    generationConfig: {
-      temperature: 0.2,
-      maxOutputTokens: MAX_TOKENS,
-      responseMimeType: "application/json",
-      thinkingConfig: { thinkingBudget: 0 },
-    },
-  };
-
-  let res: Response;
-  try {
-    res = await fetch(url, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify(body),
-      signal: input.signal,
-    });
-  } catch (err) {
-    if (input.signal?.aborted) {
-      return {
-        ok: false,
-        error: { kind: "aborted", message: "Request aborted" },
-        durationMs: Date.now() - t0,
-      };
-    }
+  const r = await callModel({
+    system: SYSTEM_PROMPT,
+    user: "Extract structured business data from this image. Return JSON only.",
+    images: [{ mimeType: mime, dataBase64: input.image.toString("base64") }],
+    operation: "candidate_scouting",
+    requestId: "autofill-extract-image",
+    maxOutputTokens: MAX_TOKENS,
+    temperature: 0.2,
+    jsonObject: true,
+    ...(input.signal ? { signal: input.signal } : {}),
+  });
+  if (!r.ok) {
     return {
       ok: false,
-      error: {
-        kind: "api",
-        message: err instanceof Error ? err.message : String(err),
-      },
+      error: { kind: r.kind, message: r.message },
       durationMs: Date.now() - t0,
     };
   }
-
-  if (!res.ok) {
-    const text = await res.text().catch(() => "");
-    return {
-      ok: false,
-      error: { kind: "api", message: `Gemini ${res.status}: ${text.slice(0, 400)}` },
-      durationMs: Date.now() - t0,
-    };
-  }
-
-  const payload = (await res.json()) as {
-    candidates?: Array<{
-      content?: { parts?: Array<{ text?: string }> };
-      finishReason?: string;
-    }>;
-    usageMetadata?: { promptTokenCount?: number; candidatesTokenCount?: number };
-  };
-  const raw =
-    payload.candidates?.[0]?.content?.parts?.map((p) => p.text ?? "").join("") ??
-    "";
-  const usage = payload.usageMetadata
-    ? {
-        inputTokens: payload.usageMetadata.promptTokenCount ?? 0,
-        outputTokens: payload.usageMetadata.candidatesTokenCount ?? 0,
-      }
-    : undefined;
+  const raw = r.raw;
+  const usage = r.usage;
 
   const parsed = tryExtractJson(raw);
   if (parsed === null) {

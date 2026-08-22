@@ -50,7 +50,8 @@
   "defaultProjectName": "가격 페이지",
   "chatDraft": {
     "iconChanged": "방금 여기 아이콘을 바꿨어요. 새 아이콘에 맞게 주변 제목과 설명을 업데이트해 주세요.",
-    "imageChanged": "방금 여기 이미지를 바꿨어요. 이미지 내용에 맞게 주변 문구를 업데이트해 주세요."
+    "imageChanged": "방금 여기 이미지를 바꿨어요. 이미지 내용에 맞게 주변 문구를 업데이트해 주세요.",
+    "fixControls": "잘못 연결되어 작동하지 않는 컨트롤을 고쳐 주세요:"
   },
   "lockReason": {
     "created": "페이지가 생성되면 사용할 수 있습니다"
@@ -166,8 +167,6 @@
     "moduleError": "모듈을 업데이트하지 못했습니다.",
     "moduleMembers": "계정",
     "moduleBroadcast": "Broadcast",
-    "moduleComments": "댓글",
-    "moduleBookings": "예약",
     "moduleCollections": "컬렉션",
     "membersOnlyOn": "이제 페이지가 멤버 전용입니다",
     "membersOnlyOff": "이제 페이지가 공개되었습니다",
@@ -181,7 +180,6 @@
     "analyticsDisabled": "분석을 껐습니다",
     "saveError": "변경 사항을 저장하지 못했습니다.",
     "moduleWhatsapp": "WhatsApp",
-    "moduleOrders": "주문",
     "whatsappNeedNumber": "먼저 WhatsApp 번호를 추가하세요",
     "modulePageCreated": "페이지를 만들었습니다",
     "modulePageExists": "기존 페이지를 열었습니다",
@@ -196,13 +194,6 @@
     "messagePlaceholder": "미리 입력된 메시지 (선택)",
     "note": "게시된 페이지 오른쪽 아래에 표시됩니다. 10자리 번호는 멕시코(+52)로 인식됩니다.",
     "missingNumber": "번호가 없습니다. 입력하지 않으면 페이지에 버튼이 표시되지 않습니다."
-  },
-  "orders": {
-    "title": "WhatsApp 주문",
-    "tagline": "카탈로그 위의 장바구니: 완성된 주문이 WhatsApp으로 전달됩니다",
-    "numberPlaceholder": "WhatsApp 번호 (예: 5512345678)",
-    "note": "카탈로그 항목과 연동됩니다. 방문자가 상품을 담으면 수량과 합계가 포함된 메시지가 전송됩니다.",
-    "needsCatalog": "카탈로그 모듈을 켜고 항목을 추가하면 버튼이 나타납니다."
   },
   "moduleSurface": {
     "createBookingPage": "예약 페이지 만들기",
@@ -265,7 +256,20 @@
     "availableGroup": "사용 가능",
     "open": "열기",
     "activate": "켜기",
-    "drawerClose": "닫기"
+    "drawerClose": "닫기",
+    "perProject": "프로젝트를 열면 모듈을 관리할 수 있습니다.",
+    "title": "모듈",
+    "subtitle": "원클릭 백엔드. 크레딧도 코드도 필요 없습니다.",
+    "included": {
+      "title": "사이트에 포함된 기능",
+      "open": "열기",
+      "forms": "폼과 리드",
+      "formsHint": "모든 폼이 리드를 수집합니다",
+      "analytics": "애널리틱스",
+      "analyticsHint": "방문과 클릭, 기본 제공",
+      "assistant": "AI 어시스턴트",
+      "assistantHint": "방문자 질문에 답변"
+    }
   },
   "platforms": {
     "title": "내 플랫폼",
@@ -275,5 +279,18 @@
     "inserted": "완료: 띠가 페이지에 추가되었습니다",
     "manage": "내 비즈니스로 이동",
     "note": "무료입니다. 게시할 때 링크가 자동으로 갱신됩니다."
+  },
+  "degraded": {
+    "title": "일부 항목을 가져오지 못했습니다",
+    "scripts": "페이지에 JavaScript로 만든 부분(카운터, 캐러셀, 대화형 버튼 등)이 있었습니다. OpenLen은 안전을 위해 이를 제거합니다. 모듈로 다시 만들 수 있습니다.",
+    "embeds": "다른 사이트에서 삽입된 콘텐츠(동영상 또는 지도)를 제거했습니다. 모듈로 다시 추가할 수 있습니다.",
+    "unsafe_links": "안전하지 않은 링크가 있어 제거했습니다.",
+    "dynamic_content": "페이지가 스스로 구성하는 부분이 비어 보일 수 있습니다. 편집기에서 직접 입력할 수 있습니다.",
+    "broken_controls": "일부 대화형 컨트롤이 잘못 연결되어 작동하지 않습니다. 어시스턴트에게 수정을 요청하세요.",
+    "interactivity_lost": "AI가 이 페이지를 위해 작성한 상호작용 요소(필터, 갤러리, 탭)가 이번 게시에 포함되지 않았습니다. 텍스트와 이미지는 모두 그대로입니다. 다시 게시해 보시고, 그래도 없으면 어시스턴트에게 다시 만들어 달라고 요청하세요.",
+    "form_routing_stale": "이번 편집 후 폼 설정(알림 받는 이메일, 리다이렉션 위치)이 적용되지 않을 수 있습니다. 각 폼을 확인하세요.",
+    "dismiss": "확인",
+    "fix": "이것 수정하기",
+    "runtime_stale": "페이지의 인터랙티브 코드가 이번 편집으로 사라진 요소를 찾고 있습니다. 그러면 코드가 멈춰서 보이는 것보다 더 많이 고장날 수 있습니다. 채팅에 수정을 요청하세요."
   }
 }

@@ -50,7 +50,8 @@
   "defaultProjectName": "Page de tarifs",
   "chatDraft": {
     "iconChanged": "Je viens de changer l'icône ici. Mets à jour le titre et la description autour pour que le sens corresponde à la nouvelle icône.",
-    "imageChanged": "Je viens de changer l'image ici. Mets à jour le texte autour pour qu'il corresponde à ce que montre l'image."
+    "imageChanged": "Je viens de changer l'image ici. Mets à jour le texte autour pour qu'il corresponde à ce que montre l'image.",
+    "fixControls": "Corrige ces contrôles mal reliés qui ne fonctionnent pas :"
   },
   "lockReason": {
     "created": "Disponible une fois votre page créée"
@@ -166,8 +167,6 @@
     "moduleError": "Mise à jour du module impossible.",
     "moduleMembers": "Comptes",
     "moduleBroadcast": "Broadcast",
-    "moduleComments": "Commentaires",
-    "moduleBookings": "Réservations",
     "moduleCollections": "Collections",
     "membersOnlyOn": "La page est désormais réservée aux membres",
     "membersOnlyOff": "La page est désormais publique",
@@ -181,7 +180,6 @@
     "analyticsDisabled": "Statistiques désactivées",
     "saveError": "Impossible d'enregistrer la modification.",
     "moduleWhatsapp": "WhatsApp",
-    "moduleOrders": "Commandes",
     "whatsappNeedNumber": "Ajoutez d'abord un numéro WhatsApp",
     "modulePageCreated": "Page créée",
     "modulePageExists": "Page existante ouverte",
@@ -196,13 +194,6 @@
     "messagePlaceholder": "Message pré-rempli (facultatif)",
     "note": "S'affiche en bas à droite sur votre page publiée. Un numéro à 10 chiffres est lu comme le Mexique (+52).",
     "missingNumber": "Ajoutez votre numéro — sans lui, le bouton n’apparaîtra pas sur votre page."
-  },
-  "orders": {
-    "title": "Commandes WhatsApp",
-    "tagline": "Un panier sur votre Catalogue : la commande composée arrive sur votre WhatsApp",
-    "numberPlaceholder": "Numéro WhatsApp (ex. 5512345678)",
-    "note": "Fonctionne avec les articles de votre Catalogue. Le visiteur ajoute des produits et le message part avec les quantités et le total.",
-    "needsCatalog": "Activez le module Catalogue et ajoutez des articles pour que les boutons apparaissent."
   },
   "moduleSurface": {
     "createBookingPage": "Créer une page de réservation",
@@ -265,7 +256,20 @@
     "availableGroup": "Disponibles",
     "open": "Ouvrir",
     "activate": "Activer",
-    "drawerClose": "Fermer"
+    "drawerClose": "Fermer",
+    "perProject": "Ouvrez un projet pour gérer ses modules.",
+    "title": "Modules",
+    "subtitle": "Backend en un clic pour votre site. Sans crédits, sans code.",
+    "included": {
+      "title": "Inclus avec votre site",
+      "open": "Ouvrir",
+      "forms": "Formulaires et leads",
+      "formsHint": "Chaque formulaire capture déjà des leads",
+      "analytics": "Analytics",
+      "analyticsHint": "Visites et clics, intégré",
+      "assistant": "Assistant IA",
+      "assistantHint": "Répond à vos visiteurs"
+    }
   },
   "platforms": {
     "title": "Mes plateformes",
@@ -275,5 +279,18 @@
     "inserted": "La bande est sur la page",
     "manage": "Aller à Mon entreprise",
     "note": "Sans frais. Les liens se mettent à jour tout seuls à la publication."
+  },
+  "degraded": {
+    "title": "Certains éléments n'ont pas pu être repris",
+    "scripts": "Votre page contenait des éléments en JavaScript — compteurs, carrousels ou boutons interactifs. OpenLen les retire par sécurité. Vous pouvez les recréer avec les Modules.",
+    "embeds": "Du contenu intégré depuis d'autres sites (vidéos ou cartes) a été retiré. Vous pouvez le rajouter avec les Modules.",
+    "unsafe_links": "Certains liens n'étaient pas sûrs et ont été retirés.",
+    "dynamic_content": "Une partie de ce que votre page génère elle-même peut apparaître vide. Vous pouvez la saisir directement dans l'éditeur.",
+    "broken_controls": "Certains contrôles interactifs sont mal reliés et ne fonctionneront pas. Demandez à l'assistant de les corriger.",
+    "interactivity_lost": "Les éléments interactifs que l'IA a écrits pour votre page (filtres, galeries, onglets) n'ont pas été publiés cette fois-ci. Votre texte et vos images sont intacts. Republiez ; s'ils manquent toujours, demandez à l'assistant de les refaire.",
+    "form_routing_stale": "Certains réglages de tes formulaires (quel e-mail est notifié, où ça redirige) ont peut-être cessé de s'appliquer après cette modification. Vérifie chaque formulaire.",
+    "dismiss": "compris",
+    "fix": "Corriger ceci",
+    "runtime_stale": "Le code interactif de ta page cherche des éléments que cette modification a supprimés. Quand ça arrive, le code s'arrête : plus de choses que celles manquantes peuvent être cassées. Demande au chat de le corriger."
   }
 }
