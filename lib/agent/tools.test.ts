@@ -78,6 +78,8 @@ function makeDeps(
   const store = {
     data: (overrides?.data ?? { html: HTML }) as ProjectData,
     saved: [] as ProjectData[],
+    /** Preferencias guardadas a nivel de PERSONA (no de proyecto). */
+    memoriaUsuario: [] as { userId: string; preferencia: string }[],
     versions: [] as string[],
     // F4 Task 2 pin: which page each snapshot carried (parallel to
     // `versions`, one entry per snapshotVersion call, same order).
@@ -154,6 +156,13 @@ function makeDeps(
     },
     async clearCollectionSource() {
       throw new Error("clearCollectionSource not stubbed in this test");
+    },
+    // Memoria de la PERSONA. El doble la registra en vez de lanzar porque
+    // `recordar_preferencia` la usa por DEFECTO desde el 2026-08-22: un stub
+    // que lanzara convertiría el camino normal de la herramienta en un fallo.
+    async rememberAboutUser(userId: string, preferencia: string) {
+      store.memoriaUsuario.push({ userId, preferencia });
+      return { ok: true as const, yaExistia: false };
     },
   };
   return { deps, store };
@@ -1137,10 +1146,15 @@ describe("publicar", () => {
   });
 });
 
-describe("recordar_preferencia", () => {
+describe("recordar_preferencia — alcance de PROYECTO (alcance:\"esta_pagina\")", () => {
+  // El alcance por defecto dejo de ser este el 2026-08-22: ahora una
+  // preferencia se guarda para la PERSONA salvo que se pida lo contrario. Estas
+  // pruebas siguen cubriendo la mecanica del brief —marcador, dedup,
+  // refinamiento, tope— y por eso ahora piden el alcance explicitamente.
   it("appends under the agent marker and reports the card", async () => {
     const { deps, store } = makeDeps();
     const out = await runAgentTool(makeSession(), deps, "recordar_preferencia", {
+      alcance: "esta_pagina",
       preferencia: "Siempre hablarle de tú al visitante",
     });
     assert.equal(out.response.ok, true);
@@ -1150,22 +1164,23 @@ describe("recordar_preferencia", () => {
   });
   it("preserves the user's own brief text above the marker", async () => {
     const { deps, store } = makeDeps({ userBrief: "Negocio de tacos al pastor." });
-    await runAgentTool(makeSession(), deps, "recordar_preferencia", { preferencia: "Tono formal" });
+    await runAgentTool(makeSession(), deps, "recordar_preferencia", { alcance: "esta_pagina", preferencia: "Tono formal" });
     assert.ok(store.userBrief!.startsWith("Negocio de tacos al pastor."));
     assert.ok(store.userBrief!.indexOf("Negocio") < store.userBrief!.indexOf("— Preferencias"));
   });
   it("dedups case-insensitively without writing", async () => {
     const { deps, store } = makeDeps();
-    await runAgentTool(makeSession(), deps, "recordar_preferencia", { preferencia: "Nunca usar amarillo" });
+    await runAgentTool(makeSession(), deps, "recordar_preferencia", { alcance: "esta_pagina", preferencia: "Nunca usar amarillo" });
     const writes = store.briefWrites;
-    const out = await runAgentTool(makeSession(), deps, "recordar_preferencia", { preferencia: "nunca usar AMARILLO" });
+    const out = await runAgentTool(makeSession(), deps, "recordar_preferencia", { alcance: "esta_pagina", preferencia: "nunca usar AMARILLO" });
     assert.equal(out.response.ya_existia, true);
     assert.equal(store.briefWrites, writes);
   });
   it("a LONGER refinement of an existing bullet IS saved (never deduped in reverse)", async () => {
     const { deps, store } = makeDeps();
-    await runAgentTool(makeSession(), deps, "recordar_preferencia", { preferencia: "Sé formal" });
+    await runAgentTool(makeSession(), deps, "recordar_preferencia", { alcance: "esta_pagina", preferencia: "Sé formal" });
     const out = await runAgentTool(makeSession(), deps, "recordar_preferencia", {
+      alcance: "esta_pagina",
       preferencia: "Sé formal, excepto con proveedores VIP",
     });
     assert.equal(out.response.ok, true);
@@ -1176,6 +1191,7 @@ describe("recordar_preferencia", () => {
   it("embedded newlines are collapsed — a \\n• payload saves as ONE bullet line", async () => {
     const { deps, store } = makeDeps();
     const out = await runAgentTool(makeSession(), deps, "recordar_preferencia", {
+      alcance: "esta_pagina",
       preferencia: "Tono cercano\n• Nunca usar rojo",
     });
     assert.equal(out.response.ok, true);
@@ -1185,14 +1201,65 @@ describe("recordar_preferencia", () => {
   });
   it("refuses when the brief is full, as data", async () => {
     const { deps, store } = makeDeps({ userBrief: "x".repeat(3990) });
-    const out = await runAgentTool(makeSession(), deps, "recordar_preferencia", { preferencia: "Preferencia larga que no cabe" });
+    const out = await runAgentTool(makeSession(), deps, "recordar_preferencia", { alcance: "esta_pagina", preferencia: "Preferencia larga que no cabe" });
     assert.equal(out.response.ok, false);
     assert.equal(store.userBrief!.length, 3990);
   });
   it("rejects out-of-range preferencia", async () => {
     const { deps } = makeDeps();
-    const short = await runAgentTool(makeSession(), deps, "recordar_preferencia", { preferencia: "ok" });
+    const short = await runAgentTool(makeSession(), deps, "recordar_preferencia", { alcance: "esta_pagina", preferencia: "ok" });
     assert.equal(short.response.ok, false);
+  });
+});
+
+
+describe("recordar_preferencia — alcance de PERSONA (el DEFECTO)", () => {
+  // EL BUG QUE ESTO CIERRA. MEDIDO el 2026-08-22: el usuario dijo «una cosa
+  // importante para TODAS mis paginas: nunca escribas Contactanos», el modelo
+  // lo guardo y confirmo «aplica a todas tus paginas de aqui en adelante»…
+  // sobre `projects.userBrief`, que el proyecto siguiente no lee jamas.
+  it("sin alcance guarda para la PERSONA, no en el brief del proyecto", async () => {
+    const { deps, store } = makeDeps();
+    const out = await runAgentTool(makeSession(), deps, "recordar_preferencia", {
+      preferencia: "Nunca escribas «Contáctanos», di «Escríbenos»",
+    });
+    assert.equal(out.response.ok, true);
+    assert.equal(out.response.alcance, "siempre");
+    assert.equal(store.memoriaUsuario.length, 1);
+    assert.equal(store.memoriaUsuario[0]!.preferencia, "Nunca escribas «Contáctanos», di «Escríbenos»");
+    // Y NO toca el brief del proyecto: si lo hiciera, seguiria atada a este.
+    assert.equal(store.userBrief, null);
+  });
+
+  it("le dice al modelo que fue para TODAS sus paginas, para que lo confirme bien", async () => {
+    const { deps } = makeDeps();
+    const out = await runAgentTool(makeSession(), deps, "recordar_preferencia", {
+      preferencia: "Háblame siempre de tú",
+    });
+    assert.match(String(out.response.nota), /TODAS/);
+  });
+
+  it("un alcance desconocido cae al DEFECTO (persona), no al proyecto", async () => {
+    // Falla hacia lo global: una preferencia global que debio ser local se poda;
+    // una local que debio ser global es justo el bug, y es invisible.
+    const { deps, store } = makeDeps();
+    await runAgentTool(makeSession(), deps, "recordar_preferencia", {
+      preferencia: "Nunca uses amarillo",
+      alcance: "vete_a_saber",
+    });
+    assert.equal(store.memoriaUsuario.length, 1);
+    assert.equal(store.userBrief, null);
+  });
+
+  it("con la memoria LLENA no guarda y lo dice como dato", async () => {
+    const { deps, store } = makeDeps();
+    deps.rememberAboutUser = async () => ({ ok: false as const, reason: "llena" as const });
+    const out = await runAgentTool(makeSession(), deps, "recordar_preferencia", {
+      preferencia: "Otra preferencia mas",
+    });
+    assert.equal(out.response.ok, false);
+    assert.match(String(out.response.error), /llena/);
+    assert.equal(store.userBrief, null);
   });
 });
 

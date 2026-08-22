@@ -68,5 +68,8 @@
     "send": "发送",
     "pageTarget": "要编辑的页面",
     "pageTargetHome": "首页"
+  },
+  "noChange": {
+    "label": "页面没有任何变化"
   }
 }

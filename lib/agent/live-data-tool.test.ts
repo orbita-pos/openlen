@@ -114,6 +114,9 @@ function makeDeps(
     async clearCollectionSource(projectId) {
       store.clearCollectionSourceCalls.push(projectId);
     },
+    async rememberAboutUser() {
+      return { ok: true as const, yaExistia: false };
+    },
   };
   return { deps, store };
 }

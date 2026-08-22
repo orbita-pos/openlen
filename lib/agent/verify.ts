@@ -35,6 +35,13 @@ export interface VisualVerdict {
 export interface VerifyParams {
   /** El documento YA editado (el último updatedHtml del turno). */
   html: string;
+  /** El JavaScript del modelo, verificado contra su cápsula.
+   *
+   *  `html` viene SANEADO —así se persiste— así que sin esto los ojos miran una
+   *  página sin scripts y jamás verían reventar el código que el propio modelo
+   *  escribió. Se inyecta igual que al publicar: un `<script>` clásico antes de
+   *  `</body>`. Ausente ⇒ se renderiza exactamente como antes. */
+  runtime?: string | null;
   /** El pedido original del usuario este turno — contexto de intención. */
   userPrompt: string;
   /** Model id Gemini, e.g. "gemini-3.5-flash". */
@@ -174,7 +181,19 @@ async function runVerify(
   signal: AbortSignal,
 ): Promise<VisualVerdict> {
   const render = internals.render ?? renderHtmlToInlineImage;
-  const image = await render(params.html);
+  // Mismo injerto que `injectModelRuntime` hace al publicar: script clásico al
+  // final del body. Aquí NO se persiste nada — es una vista de usar y tirar
+  // dentro del navegador de los ojos.
+  const codigo = params.runtime?.trim();
+  const paraRenderizar = codigo
+    ? (() => {
+        const i = params.html.toLowerCase().lastIndexOf("</body>");
+        const tag = `<script>${codigo}</script>`;
+        return i === -1 ? params.html + tag : params.html.slice(0, i) + tag + params.html.slice(i);
+      })()
+    : params.html;
+  const gritos: string[] = [];
+  const image = await render(paraRenderizar, { onErrors: (e) => gritos.push(...e) });
   if (!image) {
     logFallback("render failed — no screenshot");
     return fallbackVerdict();
@@ -228,6 +247,21 @@ async function runVerify(
   if (!verdict) {
     logFallback("malformed JSON verdict");
     return fallbackVerdict();
+  }
+  // LO QUE EL NAVEGADOR GRITÓ. No pasa por el juicio del crítico visual: una
+  // excepción al cargar es un HECHO, y encima de los que el ojo no puede ver —
+  // la captura de una página cuyo JavaScript murió sale idéntica a la de una
+  // sana. MEDIDO el 2026-08-22: un juego que el modelo escribió tenía un
+  // TypeError que sólo aparecía CARGANDO la página, y la foto salía perfecta.
+  //
+  // Va primero en la lista: es lo más accionable de todo lo que el turno puede
+  // decirle al modelo.
+  if (gritos.length > 0) {
+    verdict.issues = [
+      ...gritos.map((g) => `El código de la página falla al cargar: ${g}`),
+      ...verdict.issues,
+    ];
+    verdict.broken = true;
   }
   verdict.usage = usage;
   // eslint-disable-next-line no-console

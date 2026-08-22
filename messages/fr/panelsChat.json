@@ -68,5 +68,8 @@
     "send": "Envoyer",
     "pageTarget": "Page à modifier",
     "pageTargetHome": "Accueil"
+  },
+  "noChange": {
+    "label": "Rien n'a changé sur la page"
   }
 }

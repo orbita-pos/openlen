@@ -8,6 +8,8 @@ import { fetchImageAsInlineData } from "@/lib/ai/inline-image";
 import { validateUrl } from "@/lib/style-match/scrape/validate-url";
 import { buildFunctionDeclarations } from "@/lib/agent/catalog";
 import { buildAgentMessages } from "@/lib/agent/context";
+import { getUserMemory } from "@/lib/agent/user-memory";
+import { listVersions } from "@/lib/projects/versions";
 import { collectionCatalogBlock } from "@/lib/collections/catalog-block";
 import { listPublishedItems } from "@/lib/collections/store";
 import { modelJsEnabled } from "@/lib/ai-stream/model-runtime";
@@ -106,7 +108,15 @@ export async function POST(req: Request): Promise<Response> {
     projectId?: string;
     prompt?: string;
     page?: string;
-    history?: { role: "user" | "assistant"; content: string }[];
+    history?: {
+      role: "user" | "assistant";
+      content: string;
+      functionCalls?: unknown;
+      functionResponses?: unknown;
+    }[];
+    /** Cuántos turnos tiene la conversación entera (el cliente sólo manda los
+     *  últimos). Sólo sirve para avisarle al modelo de que no lo ve todo. */
+    historyTotal?: number;
     scope?: ScopeBody;
     attachedImage?: AttachedImageBody;
   } | null;
@@ -120,25 +130,94 @@ export async function POST(req: Request): Promise<Response> {
   // this block). Absent/empty ⇒ home; a non-empty slug MUST already exist in
   // data.pages or the turn 404s rather than silently falling back to home.
   const pageSlugRaw = typeof body?.page === "string" ? body.page.trim() : "";
-  // History hardening: map to ONLY {role, content} (the TS wrapper serializes
-  // functionCalls/functionResponses off Message objects, so a client-supplied
-  // history entry spread whole would be a tool-call injection vector) and cap
-  // each content at 4000 chars.
+  // History hardening. El principio no cambia — NADA de lo que manda el
+  // navegador se pasa tal cual, porque una entrada esparcida entera sería un
+  // vector de inyección de tool-calls. Lo que cambia es que ahora el historial
+  // SÍ lleva la forma de herramienta, reconstruida aquí desde el catálogo real:
+  // del cliente sólo se acepta un NOMBRE, y sólo si es una herramienta que
+  // existe. Los argumentos se descartan siempre (van vacíos) y el resultado se
+  // reduce a un resumen de texto acotado.
+  //
+  // Por qué: MEDIDO el 2026-08-22 — sin las llamadas en el historial el Agente
+  // editó 1 de 12 veces y en los 11 fallos dijo «Listo ✅» sobre una página
+  // intacta; con ellas, 10 de 12.
+  // Cuántos turnos tiene la conversación DE VERDAD, no cuántos caben. Del
+  // mismo `turnsRef` del cliente del que salieron los que sí viajan.
+  const turnosTotales =
+    typeof body?.historyTotal === "number" && Number.isFinite(body.historyTotal)
+      ? Math.min(Math.max(Math.trunc(body.historyTotal), 0), 500)
+      : 0;
+  const nombresValidos = new Set(buildFunctionDeclarations().map((d) => String(d.name)));
+  const limpiaLlamadas = (v: unknown) =>
+    Array.isArray(v)
+      ? v
+          .filter(
+            (c): c is { name: string } =>
+              !!c && typeof (c as { name?: unknown }).name === "string" &&
+              nombresValidos.has((c as { name: string }).name),
+          )
+          .slice(0, 8)
+          .map((c) => ({ name: c.name, args: {} }))
+      : [];
+  const limpiaRespuestas = (v: unknown) =>
+    Array.isArray(v)
+      ? v
+          .filter(
+            (r): r is { name: string; response?: { resumen?: unknown } } =>
+              !!r && typeof (r as { name?: unknown }).name === "string" &&
+              nombresValidos.has((r as { name: string }).name),
+          )
+          .slice(0, 8)
+          .map((r) => ({
+            name: r.name,
+            response: { ok: true, resumen: String(r.response?.resumen ?? "").slice(0, 400) },
+          }))
+      : [];
+
   const history = Array.isArray(body?.history)
-    ? body.history
-        .filter(
-          (h) =>
-            h &&
-            (h.role === "user" || h.role === "assistant") &&
-            typeof h.content === "string" &&
-            h.content.length > 0,
-        )
-        // 12 MENSAJES, no 6: el cliente manda 6 TURNOS (usuario+asistente),
-        // así que cortar a 6 mensajes dejaba 3 turnos de memoria — la mitad de
-        // lo que la interfaz cree estar mandando. «Ahora hazlo también en la
-        // otra sección» cuatro turnos después ya no tenía contexto.
-        .slice(-12)
-        .map((h) => ({ role: h.role, content: h.content.slice(0, 4000) }))
+    ? (() => {
+        const limpio = body.history
+          .filter(
+            (h) =>
+              h &&
+              (h.role === "user" || h.role === "assistant") &&
+              typeof h.content === "string",
+          )
+          .map((h) => {
+            const llamadas = limpiaLlamadas((h as { functionCalls?: unknown }).functionCalls);
+            const respuestas = limpiaRespuestas(
+              (h as { functionResponses?: unknown }).functionResponses,
+            );
+            return {
+              role: h.role,
+              content: h.content.slice(0, 4000),
+              ...(llamadas.length ? { functionCalls: llamadas } : {}),
+              ...(respuestas.length ? { functionResponses: respuestas } : {}),
+            };
+          })
+          // Una entrada sin contenido Y sin respuestas no aporta nada; el
+          // mensaje de respuestas SÍ va con `content` vacío, por diseño.
+          .filter((h) => h.content.length > 0 || h.functionResponses);
+        // 36 mensajes = 12 TURNOS, y un turno con herramientas ocupa TRES
+        // (usuario, asistente+llamadas, respuestas).
+        //
+        // El recorrido de este número cuenta la historia: eran 6 mensajes (3
+        // turnos), luego 12 (6 turnos), y con las llamadas de vuelta un turno
+        // pasó a ocupar tres. Doce turnos es una conversación de verdad y sigue
+        // cabiendo de sobra al lado del documento etiquetado, que es lo que de
+        // verdad pesa en este prompt.
+        //
+        // No se sube a los 50 que la base guarda: el prompt se paga en CADA
+        // turno para siempre, y el caso que motivaba una ventana enorme —«¿qué
+        // hemos hecho?»— lo cubre ahora el registro de cambios, que sobrevive a
+        // cualquier tope.
+        const cortado = limpio.slice(-36);
+        // El corte puede dejar huérfano un mensaje de respuestas cuya llamada
+        // quedó fuera. El serializador degrada eso a texto suelto; mejor
+        // quitarlo: media pareja confunde más de lo que recuerda.
+        while (cortado.length > 0 && cortado[0]!.functionResponses) cortado.shift();
+        return cortado;
+      })()
     : [];
 
   // Validate the scope payload (optional) — same shape/limits as ai-design.
@@ -270,8 +349,45 @@ export async function POST(req: Request): Promise<Response> {
     catalogo,
     runtime: runtimeCode,
     userBrief: project.userBrief,
+    // Lo que el Agente sabe de ESTA PERSONA. Se lee por turno, no se cachea:
+    // el usuario puede haber guardado algo en OTRA pestaña, en otro proyecto,
+    // hace un minuto — que es justo el caso que esto existe para servir.
+    userMemory: await getUserMemory(session.user.id).catch(() => null),
+    // LO QUE YA SE HIZO. `projectVersions` guarda cada edición con su etiqueta
+    // ya escrita en español y nadie se la enseñaba al modelo. Sobrevive a la
+    // ventana de la conversación, a recargar y a volver un mes después — que es
+    // por qué esto vale más que ampliar la ventana.
+    cambios: await listVersions({ projectId, userId: session.user.id })
+      .then((vs) =>
+        vs
+          // El «Before AI edit» es el respaldo que se guarda ANTES de cada
+          // cambio; contarlo como cambio duplicaría el registro entero.
+          .filter((v) => v.label && !/^Before AI edit/i.test(v.label))
+          .map((v) => ({ label: v.label, page: v.page, createdAt: v.createdAt })),
+      )
+      .catch(() => []),
+    // Qué parte de la conversación NO ve — para que pueda decir «no me
+    // acuerdo» en vez de nombrar el turno más viejo que tenga a mano.
+    conversacionRecortada:
+      turnosTotales > 0
+        ? {
+            // Los mensajes de respuestas de herramienta TAMBIÉN son role
+            // "user" (con contenido vacío): contarlos infla la cuenta y le
+            // diría al modelo que ve más turnos de los que ve.
+            visibles: history.filter((h) => h.role === "user" && h.content.length > 0).length,
+            totales: turnosTotales,
+          }
+        : null,
     prompt,
     history,
+    // ¿El turno anterior fue MUDO? Se deriva del historial que acaba de
+    // sanearse: el último mensaje del asistente sin `functionCalls` significa
+    // que no tocó nada. Es un hecho estructural, no una lectura de su prosa.
+    // Un historial vacío (primer turno) no dispara nada.
+    turnoAnteriorMudo: (() => {
+      const ultimo = [...history].reverse().find((h) => h.role === "assistant");
+      return ultimo ? !("functionCalls" in ultimo) : false;
+    })(),
     attachedImage: attachedImage
       ? { ...attachedImage, ...(attachedInline ? { visible: true } : {}) }
       : null,
@@ -357,6 +473,13 @@ export async function POST(req: Request): Promise<Response> {
               : async ({ html }) => {
                   const verdict = await verifyEditedPage({
                     html,
+                    // EL JAVASCRIPT DEL MODELO, para que los ojos lo VEAN
+                    // correr. `html` viene saneado —así se persiste—, así que
+                    // sin esto la verificación mira una página sin scripts y
+                    // jamás vería reventar el código que el propio modelo
+                    // acaba de escribir. Es la misma variable que ya se le
+                    // enseña en el prompt unas líneas más arriba.
+                    runtime: runtimeCode,
                     userPrompt: prompt,
                     // 2.5-flash, NO el modelo del loop: el veredicto es una
                     // tarea auxiliar chica con schema, y 3.5-flash gasta

@@ -42,6 +42,19 @@ export const users = pgTable("users", {
   // Leads-inbox "seen" watermark — the inbox badge counts submissions newer
   // than this. Null = never opened the Formularios tab (everything counts).
   lastSeenLeadsAt: timestamp("lastSeenLeadsAt", { mode: "date" }),
+  // Lo que el Agente sabe de ESTA PERSONA, no de un proyecto suyo.
+  //
+  // POR QUÉ EXISTE. `recordar_preferencia` guardaba en `projects.userBrief`, o
+  // sea por proyecto — y MEDIDO el 2026-08-22, el usuario dice «una cosa
+  // importante para TODAS mis páginas: nunca escribas Contáctanos», el modelo
+  // la guarda y confirma «aplica a todas tus páginas de aquí en adelante»…
+  // sobre una columna que el siguiente proyecto no lee jamás. Len ya prometía
+  // memoria de usuario; sólo no la tenía.
+  //
+  // Texto plano, con la misma forma de viñetas que el brief: se lee entero en
+  // cada turno de cada proyecto, así que va acotado (AGENT_MEMORY_MAX) y lo
+  // escribe SÓLO `recordar_preferencia`.
+  agentMemory: text("agentMemory"),
   image: text("image"),
   passwordHash: text("passwordHash"),
   // Subscription tier. The Polar billing webhook (app/api/billing/webhook)

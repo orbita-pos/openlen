@@ -33,6 +33,7 @@ import { debitCredits } from "@/lib/credits";
 import { detectSlotPath, sanitizeForPublish } from "@/lib/html-engine";
 import { applyOps, tagWithOpIds, type Op, type OpType } from "@/lib/html-ops";
 import { splitRuntimeOps } from "@/lib/ai-stream/model-runtime";
+import { AGENT_MEMORY_MAX, rememberAboutUser } from "@/lib/agent/user-memory";
 import { fetchSheet, resolveSheetCsvUrl } from "@/lib/live/sheet-source";
 import { passHtmlGate } from "@/lib/html-gate/document-gate";
 import { activeHtml, persistPage } from "@/lib/page-engine/persist";
@@ -180,6 +181,12 @@ export interface AgentDeps {
    *  la colección vuelve a ser editable (source null). Solo se usa en ese
    *  camino de error. */
   clearCollectionSource(projectId: string): Promise<void>;
+  /** Memoria de la PERSONA, no del proyecto: sobrevive a cambiar de página y
+   *  de proyecto. Ver lib/agent/user-memory.ts. */
+  rememberAboutUser(
+    userId: string,
+    preferencia: string,
+  ): Promise<{ ok: true; yaExistia: boolean } | { ok: false; reason: "llena" | "no_guardado" }>;
 }
 
 // public/openlen-images/manifest.json is a build-committed static file (see
@@ -338,6 +345,9 @@ export function realDeps(): AgentDeps {
     },
     async clearCollectionSource(projectId) {
       await setCollectionSource(projectId, null);
+    },
+    async rememberAboutUser(userId, preferencia) {
+      return rememberAboutUser(userId, preferencia);
     },
   };
 }
@@ -1573,6 +1583,38 @@ async function toolRecordarPreferencia(
         ok: false,
         error: `preferencia debe tener entre ${PREFERENCIA_MIN} y ${PREFERENCIA_MAX} caracteres`,
       },
+    };
+  }
+
+  // ALCANCE. Por defecto «siempre» — a la PERSONA, no al proyecto.
+  //
+  // No es un capricho: MEDIDO el 2026-08-22, el usuario dijo «una cosa
+  // importante para TODAS mis páginas…» y el modelo confirmó «aplica a todas
+  // tus páginas de aquí en adelante» mientras lo guardaba en una columna del
+  // proyecto. La promesa que el modelo hace por su cuenta es la global, así
+  // que el default debe ser la global.
+  //
+  // Los dos fallos no son simétricos: una preferencia global que debió ser
+  // local el usuario la poda; una local que debió ser global es justo el bug
+  // que esto cierra — la repite en cada proyecto nuevo y nunca se entera.
+  const alcance = args.alcance === "esta_pagina" ? "esta_pagina" : "siempre";
+  if (alcance === "siempre") {
+    const res = await deps.rememberAboutUser(session.userId, preferencia);
+    if (!res.ok) {
+      return {
+        response: {
+          ok: false,
+          error:
+            res.reason === "llena"
+              ? `tu memoria de preferencias está llena (máx ${AGENT_MEMORY_MAX} caracteres) — dile al usuario que ya guardaste varias y pregúntale cuál quitar antes de añadir otra`
+              : "no se pudo guardar la preferencia",
+        },
+      };
+    }
+    if (res.yaExistia) return { response: { ok: true, ya_existia: true, alcance } };
+    return {
+      response: { ok: true, alcance, nota: "guardado para TODAS sus páginas, no sólo ésta" },
+      action: { tool: "recordar_preferencia", ok: true, summary: preferencia.slice(0, 60) },
     };
   }
 

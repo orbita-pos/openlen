@@ -18,6 +18,65 @@ import { buildAgentSystemPrompt } from "@/lib/agent/catalog";
 // node-html-parser, así que el invariante de arriba se mantiene.
 import { currentRuntimePromptBlock } from "@/lib/ai-stream/model-runtime";
 
+/**
+ * El bloque para el prompt, o `""` cuando no hay nada.
+ *
+ * `""` importa: sin memoria, el contexto sale BYTE A BYTE como antes de que
+ * esto existiera — ningún proyecto paga tokens por una capacidad que no usa,
+ * y la caché de prefijo no se invalida para quien nunca guardó nada.
+ */
+export function userMemoryBlock(memoria: string | null | undefined): string {
+  const v = memoria?.trim();
+  if (!v) return "";
+  return `LO QUE SABES DE ESTA PERSONA (de conversaciones anteriores, en CUALQUIERA de sus páginas — no es de este proyecto, es de ella):
+${v}
+Respétalo sin que te lo repita. Si algo de aquí choca con lo que te pide HOY, manda lo de hoy y no discutas: la memoria es un punto de partida, no una regla sobre él.
+
+`;
+}
+
+/** Un cambio ya hecho, tal como lo cuenta el registro de versiones. */
+export interface CambioHecho {
+  label: string;
+  page: string | null;
+  createdAt: Date;
+}
+
+/** Cuántos cambios se enseñan. Con una docena el modelo ya puede contestar
+ *  «¿qué le hemos hecho a esta página?» sin inventar; más allá es relleno que
+ *  se paga en cada turno. */
+const MAX_CAMBIOS = 12;
+
+/**
+ * EL REGISTRO DE CAMBIOS — lo que el Agente HIZO, no lo que se dijo.
+ *
+ * POR QUÉ EXISTE. `projectVersions` guarda CADA edición con su etiqueta ya
+ * escrita en español («Agente (1 ops): Actualizar el título del hero a
+ * "Taller El Norte — desde 1998"») y nadie se la enseñaba al modelo. MEDIDO el
+ * 2026-08-22: preguntándole «hazme una lista de todos los cambios que le has
+ * hecho hoy» acertó 5 de 7 — reconstruyéndolos de la conversación, o sea que
+ * los dos que se le cayeron eran los que quedaron fuera de la ventana.
+ *
+ * Esto es MEJOR que ampliar la ventana, y por eso va primero: el registro
+ * sobrevive a cualquier tope, a recargar, a cerrar el navegador y a volver un
+ * mes después. La conversación no.
+ *
+ * Es un HECHO, no una interpretación: cada línea existe porque una edición se
+ * guardó de verdad. Si el modelo dijo que hizo algo y no está aquí, no lo hizo.
+ */
+export function changelogBlock(cambios: readonly CambioHecho[]): string {
+  if (cambios.length === 0) return "";
+  const linea = (c: CambioHecho) =>
+    `- ${c.label}${c.page ? ` (página "${c.page}")` : ""}`;
+  return `
+
+LO QUE YA SE LE HIZO A ESTA PÁGINA (registro real de versiones, de lo más reciente a lo más antiguo — no es la conversación, son los cambios que de verdad se guardaron):
+${cambios.slice(0, MAX_CAMBIOS).map(linea).join("\n")}
+Úsalo para contestar «¿qué hemos hecho?» sin inventar, y para no repetir un cambio que ya está hecho. Si algo que creías haber hecho NO aparece aquí, es que no llegó a guardarse.
+
+`;
+}
+
 export function buildAgentContext(args: {
   /** Inyectable sólo para las pruebas: sin esto el bloque HOY cambiaría cada
    *  día y ninguna prueba podría fijarlo. */
@@ -32,6 +91,19 @@ export function buildAgentContext(args: {
   /** Los ítems del catálogo, que NO están en el documento (se hornean al
    *  publicar). Ausente/vacío ⇒ salida byte-idéntica. */
   catalogo?: string;
+  /** El turno ANTERIOR no llamó a ninguna herramienta: la pagina quedo
+   *  intacta. Medido el 2026-08-22 — el Agente responde «Listo, ya lo
+   *  anadi» sin haber tocado nada, y sin esto no se entera nunca. */
+  turnoAnteriorMudo?: boolean;
+  /** Lo que el Agente sabe de la PERSONA — sobrevive a cambiar de proyecto.
+   *  Ausente/vacio ⇒ contexto BYTE-identico al de antes de que existiera. */
+  userMemory?: string | null;
+  /** Los cambios que ya se guardaron (projectVersions). Ausente/vacío ⇒ salida
+   *  byte-idéntica. */
+  cambios?: readonly CambioHecho[];
+  /** Cuántos turnos de la conversación ve, de cuántos hay. Ausente o iguales ⇒
+   *  no se dice nada. */
+  conversacionRecortada?: { visibles: number; totales: number } | null;
   userBrief: string | null;
   /** F2 Task 8 — the user attached an image this turn (same shape the route
    *  validates in ai-design: real http(s) URL, optional alt). Present ⇒ the
@@ -100,7 +172,29 @@ export function buildAgentContext(args: {
   // porque lo que él escribe son plazos que nacen vencidos.
   const hoy = `${todayLine(args.now).trimEnd()} Además: cualquier fecha que escribas (cuentas regresivas, eventos, plazos) tiene que ser POSTERIOR a hoy, salvo que el usuario pida explícitamente una pasada.\n\n`;
 
-  return `${hoy}ESTADO DEL PROYECTO (real, leído del servidor ahora mismo):\n${JSON.stringify(stateForPrompt, null, 2)}\n\n${briefBlock}${focusBlock}${imageBlock}${docHeader}\n\n${args.taggedHtml}${args.catalogo ?? ""}${currentRuntimePromptBlock(args.runtime ?? "", "tool")}`;
+  // EL AVISO DE QUE NO LO VE TODO. MEDIDO el 2026-08-22: a «¿qué fue LO
+  // PRIMERO que te pedí en esta conversación?» contestó nombrando el turno más
+  // VIEJO que aún tenía en su ventana, presentándolo como el primero — con
+  // seguridad total, sin decir «no me acuerdo». No sabía que estaba truncado.
+  // Decírselo no le da memoria; le da honestidad, que es lo que faltaba. Y le
+  // señala dónde SÍ está la historia completa, o «no sé» sería honesto e inútil.
+  const rec = args.conversacionRecortada;
+  const recorteBlock =
+    rec && rec.totales > rec.visibles
+      ? `NOTA SOBRE LA CONVERSACIÓN: ves los últimos ${rec.visibles} turnos, pero esta charla lleva ${rec.totales}. Si te preguntan por algo anterior a lo que ves, DILO («de eso ya no me acuerdo») en vez de contestar con el turno más viejo que tengas a mano — eso es equivocarse con seguridad, que es la peor forma. Lo que sí sobrevive entero es el registro de cambios de más abajo.
+
+`
+      : "";
+  const memoriaBlock = userMemoryBlock(args.userMemory);
+  // Hecho, no juicio: no se mira lo que el modelo DIJO, sino si llamó a alguna
+  // herramienta. Va arriba del todo porque corrige una creencia suya sobre el
+  // pasado inmediato.
+  const mudoBlock = args.turnoAnteriorMudo
+    ? `AVISO: tu turno anterior NO llamó a ninguna herramienta, así que la página NO cambió — hagas lo que hagas ahora, no des por hecho lo que dijiste que habías hecho. Si el usuario te pidió un cambio y sigue sin aplicarse, aplícalo AHORA con editar_pagina.
+
+`
+    : "";
+  return `${mudoBlock}${recorteBlock}${memoriaBlock}${hoy}ESTADO DEL PROYECTO (real, leído del servidor ahora mismo):\n${JSON.stringify(stateForPrompt, null, 2)}\n\n${briefBlock}${focusBlock}${imageBlock}${docHeader}\n\n${args.taggedHtml}${args.catalogo ?? ""}${changelogBlock(args.cambios ?? [])}${currentRuntimePromptBlock(args.runtime ?? "", "tool")}`;
 }
 
 /** Rough chars→tokens estimate (~3.5 chars/token on tag-dense HTML + JSON),
@@ -119,6 +213,14 @@ export interface BuildAgentMessagesArgs {
   catalogo?: string;
   /** Ver buildAgentContext.runtime. */
   runtime?: string | null;
+  /** Ver buildAgentContext.turnoAnteriorMudo. */
+  turnoAnteriorMudo?: boolean;
+  /** Ver buildAgentContext.userMemory. */
+  userMemory?: string | null;
+  /** Ver buildAgentContext.cambios. */
+  cambios?: readonly CambioHecho[];
+  /** Ver buildAgentContext.conversacionRecortada. */
+  conversacionRecortada?: { visibles: number; totales: number } | null;
   userBrief: string | null;
   /** The user's turn prompt (already trimmed/validated by the caller). */
   prompt: string;
@@ -154,6 +256,10 @@ export function buildAgentMessages(args: BuildAgentMessagesArgs): BuildAgentMess
     runtime: args.runtime,
     catalogo: args.catalogo,
     userBrief: args.userBrief,
+    turnoAnteriorMudo: args.turnoAnteriorMudo,
+    userMemory: args.userMemory,
+    cambios: args.cambios,
+    conversacionRecortada: args.conversacionRecortada,
     attachedImage: args.attachedImage,
     scopePin: args.scopePin,
     scopeHint: args.scopeHint,
