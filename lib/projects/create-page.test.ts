@@ -98,19 +98,6 @@ describe("createSitePage", () => {
     expect(out.error).toBe("no_home");
   });
 
-  it('module="bookings" injects the designed module section into the shell', () => {
-    const out = createSitePage(baseData(), { module: "bookings" });
-    if ("error" in out) throw new Error(`unexpected error: ${out.error} — ${out.message}`);
-    expect(out.slug).toBe("reservas");
-    expect(out.title).toBe("Reservas");
-    const pageHtml = out.nextData.pages!["reservas"]!.html;
-    expect(pageHtml).toContain("data-ol-bookings-section");
-    expect(pageHtml).toContain("Agenda una cita");
-    // Section lands before the footer.
-    expect(pageHtml.indexOf("data-ol-bookings-section")).toBeLessThan(
-      pageHtml.indexOf("<footer>"),
-    );
-  });
 
   it("module branch ignores a co-supplied title (module's own title wins, matching today's route)", () => {
     const out = createSitePage(baseData(), { module: "collections", title: "Mi Catálogo" });

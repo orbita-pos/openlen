@@ -118,6 +118,7 @@ function makeDeps(
         ok: true,
         html: `<!doctype html><html lang="es"><head><title>Rediseñada</title></head><body><h1>Nuevo diseño</h1></body></html>`,
         usage: { inputTokens: 10_000, outputTokens: 8_000, cachedTokens: 0 },
+        modelRuntime: null,
       };
     },
     async snapshotVersion(a) { store.versions.push(a.label); store.versionPages.push(a.page); },
@@ -188,20 +189,13 @@ describe("summarizeProjectState", () => {
   it("reports modules off by default and unpublished", () => {
     const s = summarizeProjectState({ data: { html: HTML }, title: "Tacos", subdomain: null, publishedAt: null });
     assert.equal(s.publicado, false);
-    assert.equal((s.modulos as Record<string, boolean>).members, false);
+    // `members` se retiró (2026-08-21); `collections` es un módulo VIVO y sirve
+    // igual para lo que esto vigila: que el estado nazca con todo apagado.
+    assert.equal((s.modulos as Record<string, boolean>).collections, false);
   });
 });
 
 describe("activar_modulo", () => {
-  it("enables members with the Cuentas preset and saves", async () => {
-    const { deps, store } = makeDeps();
-    const out = await runAgentTool(makeSession(), deps, "activar_modulo", { modulo: "members" });
-    assert.equal(out.response.ok, true);
-    assert.equal(store.data.settings?.members?.enabled, true);
-    assert.equal(store.data.settings?.members?.accountArea, true);
-    assert.equal(out.action?.tool, "activar_modulo");
-    assert.equal(store.saved.length, 1);
-  });
   it("provisions owner chat on chat enable, threading the session email", async () => {
     const { deps, store } = makeDeps();
     await runAgentTool(makeSession(), deps, "activar_modulo", { modulo: "chat" });
@@ -211,11 +205,17 @@ describe("activar_modulo", () => {
     assert.equal(store.provisionedOpts?.email, "owner@example.com");
     assert.equal(store.provisionedOpts?.displayName, "Tacos");
   });
-  it("surfaces the comments-without-members error to the model, not as a throw", async () => {
-    const { deps } = makeDeps();
+  // Antes esto comprobaba el error de «comments requiere members». Comentarios
+  // se retiró (2026-08-21), así que ahora vigila algo MÁS general y más útil: un
+  // módulo que no existe se rechaza limpio, sin lanzar y sin fingir que se
+  // activó. Es la red para cualquier nombre que el modelo se invente.
+  it("un módulo que no existe se rechaza al modelo, no lanza", async () => {
+    const { deps, store } = makeDeps();
     const out = await runAgentTool(makeSession(), deps, "activar_modulo", { modulo: "comments" });
     assert.equal(out.response.ok, false);
-    assert.ok(String(out.response.error).includes("members"));
+    assert.ok(String(out.response.error).includes("desconocido"));
+    // Y no toca nada: un rechazo que además escribiera sería peor que un throw.
+    assert.equal(store.data.settings, undefined);
   });
 
   // WhatsApp mirrors the pedidos rule: never a silent-dark {enabled:true}
@@ -251,61 +251,6 @@ describe("activar_modulo", () => {
     });
     assert.equal(out.response.ok, true);
     assert.equal(store.data.settings?.whatsapp?.number, "5511111111");
-  });
-  it("pedidos ON falls back to the business profile's number as last resort", async () => {
-    const { deps, store } = makeDeps({ profileNumber: "5598765432" });
-    const out = await runAgentTool(makeSession(), deps, "activar_modulo", { modulo: "pedidos" });
-    assert.equal(out.response.ok, true);
-    assert.equal(store.data.settings?.orders?.number, "5598765432");
-  });
-
-  // Task 8 review round 2 — CI coverage for the pedidos number-resolution
-  // chain (previously only exercised by the eval battery, never by a fast
-  // unit test): args.numero > settings.orders.number > settings.whatsapp.number
-  // fallback, the no-number-anywhere guard, and off preserving the number.
-  it("pedidos ON with only whatsapp.number set falls back to it", async () => {
-    const { deps, store } = makeDeps({
-      data: { html: HTML, settings: { whatsapp: { enabled: true, number: "5512345678" } } },
-    });
-    const out = await runAgentTool(makeSession(), deps, "activar_modulo", { modulo: "pedidos" });
-    assert.equal(out.response.ok, true);
-    assert.deepEqual(store.data.settings?.orders, { enabled: true, number: "5512345678" });
-    assert.equal(store.saved.length, 1);
-  });
-
-  it("pedidos ON with both orders.number and whatsapp.number set — orders.number wins (precedence)", async () => {
-    const { deps, store } = makeDeps({
-      data: {
-        html: HTML,
-        settings: {
-          orders: { enabled: false, number: "5599999999" },
-          whatsapp: { enabled: true, number: "5512345678" },
-        },
-      },
-    });
-    const out = await runAgentTool(makeSession(), deps, "activar_modulo", { modulo: "pedidos" });
-    assert.equal(out.response.ok, true);
-    assert.equal(store.data.settings?.orders?.number, "5599999999");
-  });
-
-  it("pedidos ON with no number anywhere — ok:false asking for the number, nothing saved", async () => {
-    const { deps, store } = makeDeps();
-    const out = await runAgentTool(makeSession(), deps, "activar_modulo", { modulo: "pedidos" });
-    assert.equal(out.response.ok, false);
-    assert.ok(String(out.response.error).includes("número"));
-    assert.equal(store.saved.length, 0);
-  });
-
-  it("pedidos OFF preserves the existing number (apagar no lo borra)", async () => {
-    const { deps, store } = makeDeps({
-      data: { html: HTML, settings: { orders: { enabled: true, number: "5512345678" } } },
-    });
-    const out = await runAgentTool(makeSession(), deps, "activar_modulo", {
-      modulo: "pedidos",
-      encender: false,
-    });
-    assert.equal(out.response.ok, true);
-    assert.deepEqual(store.data.settings?.orders, { enabled: false, number: "5512345678" });
   });
 });
 
@@ -356,6 +301,7 @@ describe("redisenar_pagina", () => {
         ok: true,
         html: '<!doctype html><html><body><div data-slot-path="x">hola</div>' + "x".repeat(2000) + "</body></html>",
         usage: { inputTokens: 1, outputTokens: 1, cachedTokens: 0 },
+        modelRuntime: null,
       },
     });
     const out = await runAgentTool(makeSession(), deps, "redisenar_pagina", CALL);
@@ -712,9 +658,12 @@ describe("leer_estado", () => {
   it("returns fresh module state after a mutation", async () => {
     const { deps } = makeDeps();
     const session = makeSession();
-    await runAgentTool(session, deps, "activar_modulo", { modulo: "bookings" });
+    // El ejemplo era Reservas; se retiró (2026-08-21). Lo que esta prueba
+    // vigila —que `leer_estado` vea la mutación del turno anterior y no una
+    // copia rancia— sigue vivo con cualquier módulo.
+    await runAgentTool(session, deps, "activar_modulo", { modulo: "collections" });
     const out = await runAgentTool(session, deps, "leer_estado", {});
-    assert.equal((out.response.modulos as Record<string, boolean>).bookings, true);
+    assert.equal((out.response.modulos as Record<string, boolean>).collections, true);
   });
   it("incluir_documento returns a freshly tagged doc", async () => {
     const { deps } = makeDeps();
@@ -866,16 +815,6 @@ describe("crear_pagina", () => {
     assert.equal(store.saved.length, 1);
   });
 
-  it("modulo=bookings injects the module section and does not touch settings.bookings", async () => {
-    const { deps, store } = makeDeps();
-    const out = await runAgentTool(makeSession(), deps, "crear_pagina", { modulo: "bookings" });
-    assert.equal(out.response.ok, true);
-    // The fixture HTML carries no lang="es" attribute, so the module's
-    // language resolution (isSpanish test in create-page.ts) falls to English.
-    assert.equal(out.response.slug, "booking");
-    assert.ok(store.data.pages?.["booking"]?.html.includes("data-ol-bookings-section"));
-    assert.equal(store.data.settings?.bookings?.enabled, undefined);
-  });
 
   it("surfaces exists/limit/reserved-slug errors as data, without saving", async () => {
     const { deps: depsExists } = makeDeps({ data: { html: HTML, pages: { menu: { html: "<html>x</html>" } } } });

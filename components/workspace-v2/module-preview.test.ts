@@ -81,7 +81,7 @@ describe("injectEditorModulesPreview", () => {
 
   it("renders the catalog INSIDE the band without touching the band markup", () => {
     const out = injectEditorModulesPreview(HOME, cfg({
-      collections: { items: [item()], layout: "grid", ordersNumber: null },
+      collections: { items: [item()], layout: "grid" },
     }));
     expect(out).toContain("Producto Uno");
     // Band open tag preserved verbatim.
@@ -102,7 +102,7 @@ describe("injectEditorModulesPreview", () => {
   it("collections without items only ghosts when the band exists (no band → untouched)", () => {
     const noBand = HOME.replace('<section data-ol-collection-section style="padding:32px"><div></div></section>\n', "");
     const out = injectEditorModulesPreview(noBand, cfg({
-      collections: { items: [], layout: "grid", ordersNumber: null },
+      collections: { items: [], layout: "grid" },
     }));
     expect(out).toBe(noBand);
   });
@@ -151,7 +151,7 @@ describe("injectEditorModulesPreview", () => {
       '<div data-ol-collection-section></div><footer',
     );
     const out = injectEditorModulesPreview(withPlaceholder, cfg({
-      collections: { items: [], layout: "grid", ordersNumber: null },
+      collections: { items: [], layout: "grid" },
     }));
     const tag = /<div[^>]*data-ol-collection-ghosts[^>]*>/.exec(out)?.[0] ?? "";
     expect(tag).toContain("data-openlen-modules-preview");
@@ -165,7 +165,7 @@ describe("injectEditorModulesPreview", () => {
     const injected = injectEditorModulesPreview(withBands, cfg({
       bookingsOn: true,
       commentsOn: true,
-      collections: { items: [], layout: "grid", ordersNumber: null },
+      collections: { items: [], layout: "grid" },
     }));
     const norm = (h: string) =>
       new DOMParser().parseFromString(h, "text/html").documentElement.outerHTML;
@@ -194,7 +194,7 @@ describe("injectEditorModulesPreview", () => {
   it("round-trips clean: strip(inject(x)) equals x", () => {
     const injected = injectEditorModulesPreview(HOME, cfg({
       whatsapp: { enabled: true, number: "5215512345678" },
-      collections: { items: [item()], layout: "grid", ordersNumber: "5215587654321" },
+      collections: { items: [item()], layout: "grid" },
     }));
     // Normalize both sides through the same parser — strip's fast-path returns
     // marker-less docs verbatim, so raw string equality would compare two

@@ -595,6 +595,40 @@ const INSPECT_SCRIPT = `
     if (selected === el) postSelected(el);
   }
 
+  // Un <button> que no envía un formulario no hace NADA — es lo que el contrato
+  // de diseño ya le dice al modelo. Cuando el usuario le pone un destino en el
+  // inspector, lo convertimos en el <a> que debió ser: mismas clases, mismo
+  // contenido, mismo aspecto. Es lo que sustituye al módulo de Pedidos — pones
+  // tu WhatsApp, tu Telegram o tu enlace de pago y el botón lleva ahí.
+  //
+  // NUNCA dentro de un <form>: ahí el botón sí tiene trabajo (enviar), y
+  // convertirlo rompería el formulario en silencio.
+  function applyLinkifyButton(path, href) {
+    var el = resolvePath(path);
+    if (!el || el.tagName.toLowerCase() !== 'button') return;
+    if (el.closest && el.closest('form')) return;
+    var a = document.createElement('a');
+    for (var i = 0; i < el.attributes.length; i++) {
+      var at = el.attributes[i];
+      // Atributos que sólo significan algo en un <button>: arrastrarlos dejaría
+      // marcado sin sentido en el HTML publicado.
+      if (at.name === 'type' || at.name === 'disabled' || at.name === 'name'
+        || at.name === 'value' || at.name === 'form') continue;
+      a.setAttribute(at.name, at.value);
+    }
+    while (el.firstChild) a.appendChild(el.firstChild);
+    a.setAttribute('href', href);
+    el.parentNode.replaceChild(a, el);
+    // La ruta lleva el nombre de etiqueta (button:nth-of-type(n)), así que al
+    // convertir deja de resolver. Re-seleccionar es obligatorio o el panel
+    // seguiría apuntando a un elemento que ya no existe.
+    if (selected === el) {
+      selected = a;
+      postSelected(a);
+    }
+    postClean();
+  }
+
   function applyPageMeta(field, value) {
     var head = document.head;
     if (!head) return;
@@ -1164,6 +1198,8 @@ const INSPECT_SCRIPT = `
     if (!d || typeof d !== 'object' || d.type !== 'openlen:apply-prop') return;
     if (d.scope === 'element' && typeof d.path === 'string' && typeof d.name === 'string') {
       applyElementProp(d.path, d.name, d.value === undefined ? null : d.value);
+    } else if (d.scope === 'linkify-button' && typeof d.path === 'string' && typeof d.href === 'string') {
+      applyLinkifyButton(d.path, d.href);
     } else if (d.scope === 'page' && typeof d.field === 'string') {
       applyPageMeta(d.field, typeof d.value === 'string' ? d.value : '');
     } else if (d.scope === 'style' && typeof d.path === 'string' && typeof d.prop === 'string') {

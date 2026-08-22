@@ -167,8 +167,6 @@
     "moduleError": "モジュールを更新できませんでした。",
     "moduleMembers": "アカウント",
     "moduleBroadcast": "Broadcast",
-    "moduleComments": "コメント",
-    "moduleBookings": "予約",
     "moduleCollections": "コレクション",
     "membersOnlyOn": "ページをメンバー限定にしました",
     "membersOnlyOff": "ページを公開にしました",
@@ -182,7 +180,6 @@
     "analyticsDisabled": "アナリティクスを無効にしました",
     "saveError": "変更を保存できませんでした。",
     "moduleWhatsapp": "WhatsApp",
-    "moduleOrders": "注文",
     "whatsappNeedNumber": "先にWhatsApp番号を追加してください",
     "modulePageCreated": "ページを作成しました",
     "modulePageExists": "既存のページを開きました",
@@ -197,13 +194,6 @@
     "messagePlaceholder": "定型メッセージ（任意）",
     "note": "公開ページの右下に表示されます。10桁の番号はメキシコ（+52）として扱われます。",
     "missingNumber": "番号が未入力です。入力しないと、ページにボタンが表示されません。"
-  },
-  "orders": {
-    "title": "WhatsAppで注文",
-    "tagline": "カタログの上にカートを追加。組み立てた注文がWhatsAppに届きます",
-    "numberPlaceholder": "WhatsApp番号（例: 5512345678）",
-    "note": "カタログの商品と連動します。訪問者が商品を追加すると、数量と合計金額つきのメッセージが送信されます。",
-    "needsCatalog": "カタログモジュールを有効にして商品を追加すると、ボタンが表示されます。"
   },
   "moduleSurface": {
     "createBookingPage": "予約ページを作成",
@@ -266,7 +256,20 @@
     "availableGroup": "利用可能",
     "open": "開く",
     "activate": "オンにする",
-    "drawerClose": "閉じる"
+    "drawerClose": "閉じる",
+    "perProject": "プロジェクトを開くとモジュールを管理できます。",
+    "title": "モジュール",
+    "subtitle": "ワンクリックのバックエンド。クレジット不要、コード不要。",
+    "included": {
+      "title": "サイトに含まれる機能",
+      "open": "開く",
+      "forms": "フォームとリード",
+      "formsHint": "すべてのフォームがリードを取得",
+      "analytics": "アナリティクス",
+      "analyticsHint": "訪問とクリックを計測",
+      "assistant": "AIアシスタント",
+      "assistantHint": "訪問者の質問に回答"
+    }
   },
   "platforms": {
     "title": "あなたのプラットフォーム",
@@ -284,6 +287,7 @@
     "unsafe_links": "安全でないリンクがあったため削除しました。",
     "dynamic_content": "ページが自動で組み立てる部分が空に見えることがあります。エディターで直接入力できます。",
     "broken_controls": "一部の操作パーツの接続が正しくないため動作しません。アシスタントに修正を頼んでください。",
+    "interactivity_lost": "AI がこのページ用に書いた操作まわり（絞り込み、ギャラリー、タブ）は今回の公開に含まれませんでした。文章と画像はそのまま揃っています。もう一度公開してください。それでも足りない場合はアシスタントに作り直すよう頼んでください。",
     "dismiss": "了解",
     "fix": "これを修正"
   }

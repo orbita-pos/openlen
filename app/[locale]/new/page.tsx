@@ -30,16 +30,11 @@ import {
   PLACED_MODULE_MARKERS,
 } from "@/lib/projects/module-placements";
 import type {
-  BookingsSettings,
   ChatSettings,
   CollectionsSettings,
-  BroadcastSettings,
-  CommentsSettings,
   FormConfig,
   Degradation,
-  MembersSettings,
   MusicSettings,
-  OrdersSettings,
   ProjectSettings,
   StoredChatTurn,
   WhatsAppSettings,
@@ -271,8 +266,6 @@ function readThemeBaseline(m: Record<string, unknown>): {
 function NewV2Inner() {
   const t = useTranslations("wsPage");
   const tSections = useTranslations("panelsA");
-  const tBookings = useTranslations("bookings");
-  const tMembers = useTranslations("members");
   const tCollections = useTranslations("collections");
   const tAsset = useTranslations("modalsAsset");
   const tws = useTranslations("wsChrome");
@@ -504,10 +497,7 @@ function NewV2Inner() {
     loadedProject?.settings?.whatsapp,
     loadedProject?.settings?.assistant?.enabled,
     loadedProject?.settings?.chat,
-    loadedProject?.settings?.orders,
     loadedProject?.settings?.music?.src,
-    loadedProject?.settings?.bookings?.enabled,
-    loadedProject?.settings?.comments?.enabled,
     loadedProject?.settings?.collections?.theme,
   ]);
   const modulesPreview = useMemo<EditorModulesPreviewCfg | null>(() => {
@@ -515,10 +505,8 @@ function NewV2Inner() {
     const wa = st?.whatsapp?.enabled && st.whatsapp.number ? st.whatsapp : null;
     // With the module ON, zero items still previews (ghost product cards).
     const colPayload = previewCollections;
-    const bookingsOn = st?.bookings?.enabled === true;
-    const commentsOn = st?.comments?.enabled === true;
     const platforms = platformLinks;
-    if (!wa && !colPayload && !bookingsOn && !commentsOn && !platforms) return null;
+    if (!wa && !colPayload && !platforms) return null;
     const assistantOn = st?.assistant?.enabled === true;
     const handoffMerged =
       assistantOn &&
@@ -535,14 +523,10 @@ function NewV2Inner() {
         ? {
             items: colPayload.items,
             layout: colPayload.layout,
-            ordersNumber:
-              st?.orders?.enabled && st.orders.number ? st.orders.number : null,
             theme: st?.collections?.theme,
           }
         : null,
       platforms,
-      bookingsOn,
-      commentsOn,
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [modulesPreviewKey, previewCollections, platformLinks]);
@@ -2346,6 +2330,15 @@ function NewV2Inner() {
     },
     [],
   );
+  // Un <button> con destino se convierte en el <a> que debió ser. Va por su
+  // propio canal y no por `applyElementProp` porque no es poner un atributo:
+  // es reemplazar el elemento, y la ruta del inspector cambia con él.
+  const linkifyButton = useCallback((path: string, href: string) => {
+    iframeElRef.current?.contentWindow?.postMessage(
+      { type: "openlen:apply-prop", scope: "linkify-button", path, href },
+      "*",
+    );
+  }, []);
   const applyPageMeta = useCallback((field: keyof PageMeta, value: string) => {
     iframeElRef.current?.contentWindow?.postMessage(
       { type: "openlen:apply-prop", scope: "page", field, value },
@@ -2848,238 +2841,6 @@ function NewV2Inner() {
   // so the panel's toggle reflects the server truth. First enable may also
   // auto-create the members page server-side (home shell + lock); the
   // response carries it so the Site tab updates without a refetch.
-  const updateMembersSettings = useCallback(
-    async (
-      patch: MembersSettings,
-    ): Promise<{ ok: boolean; createdPageSlug?: string }> => {
-      const projectId = loadedProject?.id;
-      if (!projectId) return { ok: false };
-      try {
-        const r = await fetch(`/api/projects/${projectId}/settings`, {
-          method: "PATCH",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({ members: patch }),
-        });
-        if (!r.ok) {
-          toast.error(t("toast.moduleError"));
-          return { ok: false };
-        }
-        const d = (await r.json()) as {
-          settings?: ProjectSettings;
-          createdPage?: { slug: string; title: string; html: string };
-        };
-        setLoadedProject((p) =>
-          p
-            ? {
-                ...p,
-                // Trust the server's reconciled settings: disabling members
-                // cascades comments/broadcast off + drops bookings.requireLogin,
-                // so the dependent tabs/toggles converge without a refetch.
-                settings: d.settings ?? {
-                  ...p.settings,
-                  members: { ...p.settings?.members, ...patch },
-                },
-                ...(d.createdPage
-                  ? {
-                      pages: {
-                        ...p.pages,
-                        [d.createdPage.slug]: {
-                          html: d.createdPage.html,
-                          title: d.createdPage.title,
-                          membersOnly: true,
-                        },
-                      },
-                    }
-                  : {}),
-              }
-            : p,
-        );
-        if (typeof patch.enabled === "boolean") {
-          const moduleName = t("toast.moduleMembers");
-          toast.success(
-            t(patch.enabled ? "toast.moduleEnabled" : "toast.moduleDisabled", {
-              module: moduleName,
-            }),
-          );
-        }
-        return { ok: true, createdPageSlug: d.createdPage?.slug };
-      } catch {
-        toast.error(t("toast.moduleError"));
-        return { ok: false };
-      }
-    },
-    [loadedProject?.id, toast, t],
-  );
-  // Members module — flip a subpage's "solo miembros" flag from the Site tab.
-  // The server auto-enables the module when the first page gets gated (atomic
-  // read-modify-write); we mirror both the page flag and that auto-enable.
-  const toggleMembersOnly = useCallback(
-    async (slug: string, next: boolean): Promise<boolean> => {
-      const projectId = loadedProject?.id;
-      if (!projectId) return false;
-      try {
-        const r = await fetch(`/api/projects/${projectId}/pages/${slug}`, {
-          method: "PATCH",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({ membersOnly: next }),
-        });
-        if (!r.ok) {
-          toast.error(t("toast.membersOnlyError"));
-          return false;
-        }
-        const d = (await r.json()) as { membersAutoEnabled?: boolean };
-        setLoadedProject((p) => {
-          if (!p || !p.pages[slug]) return p;
-          const page = { ...p.pages[slug] };
-          if (next) page.membersOnly = true;
-          else delete page.membersOnly;
-          return {
-            ...p,
-            pages: { ...p.pages, [slug]: page },
-            ...(d.membersAutoEnabled
-              ? {
-                  settings: {
-                    ...p.settings,
-                    members: {
-                      enabled: true,
-                      mode: p.settings?.members?.mode ?? "open",
-                    },
-                  },
-                }
-              : {}),
-          };
-        });
-        toast.success(
-          t(next ? "toast.membersOnlyOn" : "toast.membersOnlyOff"),
-        );
-        return true;
-      } catch {
-        toast.error(t("toast.membersOnlyError"));
-        return false;
-      }
-    },
-    [loadedProject?.id, toast, t],
-  );
-  // Broadcast module — enable switch (Módulos card). Awaited; mirrors the
-  // members toggle. Enabling reveals the Broadcast tab.
-  const updateBroadcastSettings = useCallback(
-    async (patch: BroadcastSettings): Promise<boolean> => {
-      const projectId = loadedProject?.id;
-      if (!projectId) return false;
-      try {
-        const r = await fetch(`/api/projects/${projectId}/settings`, {
-          method: "PATCH",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({ broadcast: patch }),
-        });
-        if (!r.ok) {
-          toast.error(t("toast.moduleError"));
-          return false;
-        }
-        // Trust the SERVER's reconciled settings over our own patch:
-        // reconcileModuleSettings forces broadcast off while Accounts is off,
-        // so echoing the patch made the card claim it was on until a reload.
-        const serverBroadcast = (await r.json().catch(() => null))?.settings
-          ?.broadcast as BroadcastSettings | undefined;
-        setLoadedProject((p) =>
-          p
-            ? {
-                ...p,
-                settings: {
-                  ...p.settings,
-                  broadcast: serverBroadcast ?? { ...p.settings?.broadcast, ...patch },
-                },
-              }
-            : p,
-        );
-        if (patch.enabled === true && serverBroadcast?.enabled === false) {
-          toast.error(t("toast.moduleNeedsAccounts"));
-          return false;
-        }
-        if (typeof patch.enabled === "boolean") {
-          const moduleName = t("toast.moduleBroadcast");
-          toast.success(
-            t(patch.enabled ? "toast.moduleEnabled" : "toast.moduleDisabled", {
-              module: moduleName,
-            }),
-          );
-        }
-        return true;
-      } catch {
-        toast.error(t("toast.moduleError"));
-        return false;
-      }
-    },
-    [loadedProject?.id, toast, t],
-  );
-  // Comments module — enable + moderation switches (Módulos card). Awaited,
-  // mirrors the broadcast toggle.
-  const updateCommentsSettings = useCallback(
-    async (patch: CommentsSettings): Promise<boolean> => {
-      const projectId = loadedProject?.id;
-      if (!projectId) return false;
-      try {
-        const r = await fetch(`/api/projects/${projectId}/settings`, {
-          method: "PATCH",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({ comments: patch }),
-        });
-        if (!r.ok) {
-          toast.error(t("toast.moduleError"));
-          return false;
-        }
-        // Same as broadcast: the server may reconcile comments off (Accounts
-        // is the anti-spam basis), so its settings win over the patch.
-        const serverComments = (await r.json().catch(() => null))?.settings
-          ?.comments as CommentsSettings | undefined;
-        setLoadedProject((p) =>
-          p
-            ? {
-                ...p,
-                settings: {
-                  ...p.settings,
-                  comments: serverComments ?? { ...p.settings?.comments, ...patch },
-                },
-              }
-            : p,
-        );
-        if (patch.enabled === true && serverComments?.enabled === false) {
-          toast.error(t("toast.moduleNeedsAccounts"));
-          return false;
-        }
-        if (typeof patch.enabled === "boolean") {
-          const moduleName = t("toast.moduleComments");
-          toast.success(
-            t(patch.enabled ? "toast.moduleEnabled" : "toast.moduleDisabled", {
-              module: moduleName,
-            }),
-          );
-        }
-        return true;
-      } catch {
-        toast.error(t("toast.moduleError"));
-        return false;
-      }
-    },
-    [loadedProject?.id, toast, t],
-  );
-  // Drop a comments-section placeholder into the live page (reuses the
-  // section-insert path). It's a STATIC marker — no Gemini, no credit; the
-  // publish bake swaps it for the live widget. The drop engine lets the
-  // creator drag it where they want.
-  const insertCommentsSection = useCallback(() => {
-    // Match the PAGE's language (es/en from <html lang>), not the UI locale, so
-    // the band copy reads in the visitor's language. Same split the pages API uses.
-    const lang = /<html[^>]*\blang=["']?es/i.test(loadedProject?.html ?? "") ? "es" : "en";
-    insertNonceRef.current += 1;
-    setInsertRequest({
-      html: bandWithPreview("comments", buildModuleSection("comments", { lang }), {
-        docHtml: loadedProject?.html ?? "",
-      }),
-      nonce: insertNonceRef.current,
-      sectionType: "comments",
-    });
-  }, [loadedProject?.html]);
   const insertWhatsappSection = useCallback(() => {
     const wa = loadedProject?.settings?.whatsapp;
     const lang = /<html[^>]*\blang=["']?es/i.test(loadedProject?.html ?? "") ? "es" : "en";
@@ -3122,56 +2883,6 @@ function NewV2Inner() {
       toast.error(t("toast.moduleError"));
     },
     [loadedProject?.id, refetchProject, switchSitePage, flushPendingSave, toast, t],
-  );
-  const updateBookingsSettings = useCallback(
-    async (patch: BookingsSettings): Promise<boolean> => {
-      const projectId = loadedProject?.id;
-      if (!projectId) return false;
-      try {
-        const r = await fetch(`/api/projects/${projectId}/settings`, {
-          method: "PATCH",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({ bookings: patch }),
-        });
-        if (!r.ok) {
-          toast.error(t("toast.moduleError"));
-          return false;
-        }
-        // Server settings win: reconcileModuleSettings neutralizes
-        // requireLogin while Accounts is off (a members-only booking site with
-        // no way to log in is unbookable), and the patch alone hid that.
-        const serverBookings = (await r.json().catch(() => null))?.settings
-          ?.bookings as BookingsSettings | undefined;
-        setLoadedProject((p) =>
-          p
-            ? {
-                ...p,
-                settings: {
-                  ...p.settings,
-                  bookings: serverBookings ?? { ...p.settings?.bookings, ...patch },
-                },
-              }
-            : p,
-        );
-        if (patch.requireLogin === true && serverBookings?.requireLogin === false) {
-          toast.error(t("toast.moduleNeedsAccounts"));
-          return false;
-        }
-        if (typeof patch.enabled === "boolean") {
-          const moduleName = t("toast.moduleBookings");
-          toast.success(
-            t(patch.enabled ? "toast.moduleEnabled" : "toast.moduleDisabled", {
-              module: moduleName,
-            }),
-          );
-        }
-        return true;
-      } catch {
-        toast.error(t("toast.moduleError"));
-        return false;
-      }
-    },
-    [loadedProject?.id, toast, t],
   );
   const updateCollectionsSettings = useCallback(
     async (patch: CollectionsSettings): Promise<boolean> => {
@@ -3246,47 +2957,6 @@ function NewV2Inner() {
         );
         if (typeof patch.enabled === "boolean") {
           const moduleName = t("toast.moduleWhatsapp");
-          toast.success(
-            t(patch.enabled ? "toast.moduleEnabled" : "toast.moduleDisabled", {
-              module: moduleName,
-            }),
-          );
-        }
-        return true;
-      } catch {
-        toast.error(t("toast.moduleError"));
-        return false;
-      }
-    },
-    [loadedProject?.id, toast, t],
-  );
-  const updateOrdersSettings = useCallback(
-    async (patch: OrdersSettings): Promise<boolean> => {
-      const projectId = loadedProject?.id;
-      if (!projectId) return false;
-      try {
-        const r = await fetch(`/api/projects/${projectId}/settings`, {
-          method: "PATCH",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({ orders: patch }),
-        });
-        if (!r.ok) {
-          toast.error(t("toast.moduleError"));
-          return false;
-        }
-        setLoadedProject((p) =>
-          p
-            ? {
-                ...p,
-                settings: {
-                  ...p.settings,
-                  orders: { ...p.settings?.orders, ...patch },
-                },
-              }
-            : p,
-        );
-        if (typeof patch.enabled === "boolean") {
-          const moduleName = t("toast.moduleOrders");
           toast.success(
             t(patch.enabled ? "toast.moduleEnabled" : "toast.moduleDisabled", {
               module: moduleName,
@@ -3385,10 +3055,6 @@ function NewV2Inner() {
           ? {
               items: previewCollections.items,
               layout: previewCollections.layout,
-              ordersNumber:
-                loadedProject?.settings?.orders?.enabled && loadedProject.settings.orders.number
-                  ? loadedProject.settings.orders.number
-                  : null,
               theme: loadedProject?.settings?.collections?.theme,
             }
           : null,
@@ -3398,24 +3064,9 @@ function NewV2Inner() {
     });
   }, [
     loadedProject?.html,
-    loadedProject?.settings?.orders,
     loadedProject?.settings?.collections?.theme,
     previewCollections,
   ]);
-  const insertBookingsSection = useCallback(() => {
-    const lang = /<html[^>]*\blang=["']?es/i.test(loadedProject?.html ?? "") ? "es" : "en";
-    insertNonceRef.current += 1;
-    setInsertRequest({
-      html: bandWithPreview("bookings", buildModuleSection("bookings", { lang }), {
-        docHtml: loadedProject?.html ?? "",
-      }),
-      nonce: insertNonceRef.current,
-      sectionType: "bookings",
-    });
-  }, [loadedProject?.html]);
-  // "Mis plataformas": la banda nace ya con las tarjetas reales (son HTML+CSS
-  // puro, no hay widget que esperar). El marcador queda vacío en data.html —
-  // fillPlatformsBand lo rellena con links frescos al publicar.
   const insertPlatformsSection = useCallback(() => {
     const lang = /<html[^>]*\blang=["']?es/i.test(loadedProject?.html ?? "") ? "es" : "en";
     insertNonceRef.current += 1;
@@ -3445,42 +3096,24 @@ function NewV2Inner() {
           module === "platforms"
             ? !!platformLinks
             : loadedProject?.settings?.[module]?.enabled === true,
-        membersEnabled: loadedProject?.settings?.members?.enabled === true,
         activePageHasBand: pageHasModule(activeDoc, module),
         hasPlatformLinks: !!platformLinks,
       });
       for (const step of steps) {
         switch (step.kind) {
-          case "enableMembers": {
-            const { ok } = await updateMembersSettings({
-              enabled: true, mode: "open", passwordLogin: true, accountArea: true,
-            });
-            if (!ok) return;
-            // Cuentas se encendió como efecto de Comentarios — avisa lo que
-            // existirá (/cuenta al publicar); el hint del hub no cubre este camino.
-            toast.info(tMembers("accountLive"));
-            break;
-          }
           case "enableModule": {
             const ok =
-              step.module === "collections" ? await updateCollectionsSettings({ enabled: true })
-              : step.module === "bookings" ? await updateBookingsSettings({ enabled: true })
-              : await updateCommentsSettings({ enabled: true });
+              await updateCollectionsSettings({ enabled: true });
             if (!ok) return;
             break;
           }
           case "insertSection": {
             (step.module === "collections" ? insertCollectionsSection
-              : step.module === "bookings" ? insertBookingsSection
-              : step.module === "comments" ? insertCommentsSection
               : insertPlatformsSection)();
             // Same Deshacer pill curated sections get — a mis-clicked module
             // band must not need manual deletion via the reorder toolbar.
             const nameKey =
-              step.module === "collections" ? "Catalog"
-              : step.module === "bookings" ? "Bookings"
-              : step.module === "comments" ? "Comments"
-              : "Platforms";
+              step.module === "collections" ? "Catalog" : "Platforms";
             pendingInsertRef.current = {
               id: `module-${step.module}`,
               name: tSections(`sections.module${nameKey}Title`),
@@ -3513,10 +3146,9 @@ function NewV2Inner() {
       }
     },
     [loadedProject?.settings, activeDoc, platformLinks, setCenterView,
-     updateMembersSettings, updateCollectionsSettings,
-     updateBookingsSettings, updateCommentsSettings, insertCollectionsSection,
-     insertBookingsSection, insertCommentsSection, insertPlatformsSection,
-     createModulePage, toast, t, tMembers, tSections],
+     updateCollectionsSettings,
+     insertCollectionsSection, insertPlatformsSection,
+     createModulePage, toast, t, tSections],
   );
   const toggleInspect = useCallback(() => {
     setInspectMode((m) => !m);
@@ -3695,11 +3327,6 @@ function NewV2Inner() {
           onAddBusiness={() => setProfileModalOpen(true)}
           onPickImage={startPlacementAsset}
           sitePages={sitePages}
-          onToggleMembersOnly={toggleMembersOnly}
-          membersDoorOn={
-            loadedProject?.settings?.members?.enabled === true &&
-            loadedProject?.settings?.members?.accountArea !== false
-          }
           activeSitePage={activeSitePage}
           onSwitchSitePage={switchSitePage}
           onCreateSitePage={createSitePage}
@@ -3752,24 +3379,11 @@ function NewV2Inner() {
         ) : normalizedCenterView === "modulos" ? (
           <ModulesView
             currentProjectId={loadedProject?.id ?? null}
-            gatedCount={sitePages.filter((p) => p.membersOnly).length}
-            membersSettings={loadedProject?.settings?.members}
-            onUpdateMembersSettings={updateMembersSettings}
-            broadcastSettings={loadedProject?.settings?.broadcast}
-            onUpdateBroadcastSettings={updateBroadcastSettings}
-            commentsSettings={loadedProject?.settings?.comments}
-            onUpdateCommentsSettings={updateCommentsSettings}
-            onInsertCommentsSection={() => void addModuleFromLibrary("comments", "section")}
-            bookingsSettings={loadedProject?.settings?.bookings}
-            onUpdateBookingsSettings={updateBookingsSettings}
-            onInsertBookingsSection={() => void addModuleFromLibrary("bookings", "section")}
             collectionsSettings={loadedProject?.settings?.collections}
             onUpdateCollectionsSettings={updateCollectionsSettings}
             onInsertCollectionsSection={() => void addModuleFromLibrary("collections", "section")}
             whatsappSettings={loadedProject?.settings?.whatsapp}
             onUpdateWhatsappSettings={updateWhatsappSettings}
-            ordersSettings={loadedProject?.settings?.orders}
-            onUpdateOrdersSettings={updateOrdersSettings}
             chatSettings={loadedProject?.settings?.chat}
             onUpdateChatSettings={updateChatSettings}
             platformLinkCount={platformLinks?.length ?? 0}
@@ -4218,6 +3832,7 @@ function NewV2Inner() {
                         : null
                     }
                     onApplyElementProp={applyElementProp}
+                    onLinkifyButton={linkifyButton}
                     onApplyPageMeta={applyPageMeta}
                     onApplyFormConfig={applyFormConfig}
                     onApplyStyle={applyStyle}
@@ -4351,23 +3966,12 @@ function NewV2Inner() {
                 bandsWithModuleOff: (
                   [
                     ["collections", s?.collections?.enabled],
-                    ["bookings", s?.bookings?.enabled],
-                    ["comments", s?.comments?.enabled],
                   ] as const
                 )
                   .filter(([mod, on]) => p[mod].length > 0 && on !== true)
                   .map(([mod]) => mod),
                 platformsBandWithoutLinks: p.platforms.length > 0 && !platformLinks,
               };
-            })(),
-            ...(() => {
-              const flagged = Object.values(loadedProject.pages ?? {}).filter(
-                (p) => p.membersOnly,
-              ).length;
-              const on = loadedProject.settings?.members?.enabled === true;
-              return on
-                ? { gatedPagesCount: flagged }
-                : { gatedFlagsWithModuleOff: flagged };
             })(),
           }}
           onSuccess={(newSubdomain) => {

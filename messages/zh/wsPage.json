@@ -167,8 +167,6 @@
     "moduleError": "无法更新该模块。",
     "moduleMembers": "账户",
     "moduleBroadcast": "Broadcast",
-    "moduleComments": "评论",
-    "moduleBookings": "预约",
     "moduleCollections": "合集",
     "membersOnlyOn": "页面现已设为仅限会员",
     "membersOnlyOff": "页面现已设为公开",
@@ -182,7 +180,6 @@
     "analyticsDisabled": "已停用分析",
     "saveError": "无法保存更改。",
     "moduleWhatsapp": "WhatsApp",
-    "moduleOrders": "订单",
     "whatsappNeedNumber": "请先填写 WhatsApp 号码",
     "modulePageCreated": "页面已创建",
     "modulePageExists": "已打开现有页面",
@@ -197,13 +194,6 @@
     "messagePlaceholder": "预填消息（可选）",
     "note": "显示在已发布页面的右下角。10 位号码会被识别为墨西哥（+52）。",
     "missingNumber": "还没有填写号码——不填写，按钮不会显示在页面上。"
-  },
-  "orders": {
-    "title": "WhatsApp 订单",
-    "tagline": "在你的产品目录上添加购物车：整理好的订单会发送到你的 WhatsApp",
-    "numberPlaceholder": "WhatsApp 号码（例如 5512345678）",
-    "note": "与你的产品目录商品联动。访客添加商品后，消息会附带数量和总价发出。",
-    "needsCatalog": "开启产品目录模块并添加商品，按钮才会出现。"
   },
   "moduleSurface": {
     "createBookingPage": "创建预约页面",
@@ -266,7 +256,20 @@
     "availableGroup": "可用",
     "open": "打开",
     "activate": "开启",
-    "drawerClose": "关闭"
+    "drawerClose": "关闭",
+    "perProject": "打开一个项目以管理其模块。",
+    "title": "模块",
+    "subtitle": "一键后端。无需积分，无需代码。",
+    "included": {
+      "title": "你的网站已包含",
+      "open": "打开",
+      "forms": "表单与线索",
+      "formsHint": "每个表单都会收集线索",
+      "analytics": "分析",
+      "analyticsHint": "访问与点击，开箱即用",
+      "assistant": "AI 助手",
+      "assistantHint": "回答访客的问题"
+    }
   },
   "platforms": {
     "title": "我的平台",
@@ -284,6 +287,7 @@
     "unsafe_links": "有些链接不安全，已被移除。",
     "dynamic_content": "页面自己生成的部分可能看起来是空的。你可以直接在编辑器里写进去。",
     "broken_controls": "有些交互控件接线不正确，不会生效。可以让助手帮你修好。",
+    "interactivity_lost": "AI 为你的页面编写的交互细节（筛选、图库、标签页）这次没有发布出去。文字和图片都完好。请重新发布；如果仍然缺失，可以让助手重新做一遍。",
     "dismiss": "知道了",
     "fix": "修复此问题"
   }

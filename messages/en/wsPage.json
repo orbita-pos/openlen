@@ -167,8 +167,6 @@
     "moduleError": "Couldn't update the module.",
     "moduleMembers": "Accounts",
     "moduleBroadcast": "Broadcast",
-    "moduleComments": "Comments",
-    "moduleBookings": "Bookings",
     "moduleCollections": "Collections",
     "membersOnlyOn": "Page is now members only",
     "membersOnlyOff": "Page is now public",
@@ -182,7 +180,6 @@
     "analyticsDisabled": "Analytics disabled",
     "saveError": "Couldn't save the change.",
     "moduleWhatsapp": "WhatsApp",
-    "moduleOrders": "Orders",
     "whatsappNeedNumber": "Add a WhatsApp number first",
     "modulePageCreated": "Page created",
     "modulePageExists": "Opened the existing page",
@@ -197,13 +194,6 @@
     "messagePlaceholder": "Prefilled message (optional)",
     "note": "Shows bottom-right on your published page. A 10-digit number is read as Mexico (+52).",
     "missingNumber": "Add your number — without it, the button won’t show on your page."
-  },
-  "orders": {
-    "title": "WhatsApp Orders",
-    "tagline": "A cart over your Catalog: the composed order lands on your WhatsApp",
-    "numberPlaceholder": "WhatsApp number (e.g. 5512345678)",
-    "note": "Works with your Catalog items. Visitors add products and the message goes out with quantities and total.",
-    "needsCatalog": "Turn on the Catalog module and add items so the buttons appear."
   },
   "moduleSurface": {
     "createBookingPage": "Create booking page",
@@ -266,7 +256,20 @@
     "availableGroup": "Available",
     "open": "Open",
     "activate": "Turn on",
-    "drawerClose": "Close"
+    "drawerClose": "Close",
+    "perProject": "Open a project to manage its modules.",
+    "title": "Modules",
+    "subtitle": "One-click backend for your site. No credits, no code.",
+    "included": {
+      "title": "Included with your site",
+      "open": "Open",
+      "forms": "Forms & leads",
+      "formsHint": "Every form already captures leads",
+      "analytics": "Analytics",
+      "analyticsHint": "Visits and clicks, built in",
+      "assistant": "AI assistant",
+      "assistantHint": "Answers your visitors' questions"
+    }
   },
   "platforms": {
     "title": "My platforms",
@@ -284,6 +287,7 @@
     "unsafe_links": "Some links weren't safe to keep, so they were removed.",
     "dynamic_content": "Part of what your page builds by itself may look empty. You can write it in directly in the editor.",
     "broken_controls": "Some interactive controls were wired incorrectly and won't work. Ask the assistant to fix them.",
+    "interactivity_lost": "The interactive details the AI wrote for your page (filters, galleries, tabs) didn't make it into this publish. Your text and images are all there. Publish again; if they're still missing, ask the assistant to rebuild them.",
     "dismiss": "Got it",
     "fix": "Fix this"
   }

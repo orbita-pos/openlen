@@ -195,57 +195,17 @@ import koMiNegocio from "../messages/ko/miNegocio.json";
 import zhMiNegocio from "../messages/zh/miNegocio.json";
 import nlMiNegocio from "../messages/nl/miNegocio.json";
 
-import enMembers from "../messages/en/members.json";
-import esMembers from "../messages/es/members.json";
-import ptMembers from "../messages/pt/members.json";
-import frMembers from "../messages/fr/members.json";
-import deMembers from "../messages/de/members.json";
-import itMembers from "../messages/it/members.json";
-import jaMembers from "../messages/ja/members.json";
-import koMembers from "../messages/ko/members.json";
-import zhMembers from "../messages/zh/members.json";
-import nlMembers from "../messages/nl/members.json";
 
-import enBroadcast from "../messages/en/broadcast.json";
-import esBroadcast from "../messages/es/broadcast.json";
-import ptBroadcast from "../messages/pt/broadcast.json";
-import frBroadcast from "../messages/fr/broadcast.json";
-import deBroadcast from "../messages/de/broadcast.json";
-import itBroadcast from "../messages/it/broadcast.json";
-import jaBroadcast from "../messages/ja/broadcast.json";
-import koBroadcast from "../messages/ko/broadcast.json";
-import zhBroadcast from "../messages/zh/broadcast.json";
-import nlBroadcast from "../messages/nl/broadcast.json";
 
-import enComments from "../messages/en/comments.json";
-import enBookings from "../messages/en/bookings.json";
 import enCollections from "../messages/en/collections.json";
-import esComments from "../messages/es/comments.json";
-import esBookings from "../messages/es/bookings.json";
 import esCollections from "../messages/es/collections.json";
-import ptComments from "../messages/pt/comments.json";
-import ptBookings from "../messages/pt/bookings.json";
 import ptCollections from "../messages/pt/collections.json";
-import frComments from "../messages/fr/comments.json";
-import frBookings from "../messages/fr/bookings.json";
 import frCollections from "../messages/fr/collections.json";
-import deComments from "../messages/de/comments.json";
-import deBookings from "../messages/de/bookings.json";
 import deCollections from "../messages/de/collections.json";
-import itComments from "../messages/it/comments.json";
-import itBookings from "../messages/it/bookings.json";
 import itCollections from "../messages/it/collections.json";
-import jaComments from "../messages/ja/comments.json";
-import jaBookings from "../messages/ja/bookings.json";
 import jaCollections from "../messages/ja/collections.json";
-import koComments from "../messages/ko/comments.json";
-import koBookings from "../messages/ko/bookings.json";
 import koCollections from "../messages/ko/collections.json";
-import zhComments from "../messages/zh/comments.json";
-import zhBookings from "../messages/zh/bookings.json";
 import zhCollections from "../messages/zh/collections.json";
-import nlComments from "../messages/nl/comments.json";
-import nlBookings from "../messages/nl/bookings.json";
 import nlCollections from "../messages/nl/collections.json";
 
 import enInbox from "../messages/en/inbox.json";
@@ -290,10 +250,6 @@ const MESSAGES = {
     modalsDomain: enModalsDomain,
     modalsDeploy: enModalsDeploy,
     miNegocio: enMiNegocio,
-    members: enMembers,
-    broadcast: enBroadcast,
-    comments: enComments,
-    bookings: enBookings,
     collections: enCollections,
     inbox: enInbox,
     explore: enExplore,
@@ -317,10 +273,6 @@ const MESSAGES = {
     modalsDomain: esModalsDomain,
     modalsDeploy: esModalsDeploy,
     miNegocio: esMiNegocio,
-    members: esMembers,
-    broadcast: esBroadcast,
-    comments: esComments,
-    bookings: esBookings,
     collections: esCollections,
     inbox: esInbox,
     explore: esExplore,
@@ -344,10 +296,6 @@ const MESSAGES = {
     modalsDomain: ptModalsDomain,
     modalsDeploy: ptModalsDeploy,
     miNegocio: ptMiNegocio,
-    members: ptMembers,
-    broadcast: ptBroadcast,
-    comments: ptComments,
-    bookings: ptBookings,
     collections: ptCollections,
     inbox: ptInbox,
     explore: ptExplore,
@@ -371,10 +319,6 @@ const MESSAGES = {
     modalsDomain: frModalsDomain,
     modalsDeploy: frModalsDeploy,
     miNegocio: frMiNegocio,
-    members: frMembers,
-    broadcast: frBroadcast,
-    comments: frComments,
-    bookings: frBookings,
     collections: frCollections,
     inbox: frInbox,
     explore: frExplore,
@@ -398,10 +342,6 @@ const MESSAGES = {
     modalsDomain: deModalsDomain,
     modalsDeploy: deModalsDeploy,
     miNegocio: deMiNegocio,
-    members: deMembers,
-    broadcast: deBroadcast,
-    comments: deComments,
-    bookings: deBookings,
     collections: deCollections,
     inbox: deInbox,
     explore: deExplore,
@@ -425,10 +365,6 @@ const MESSAGES = {
     modalsDomain: itModalsDomain,
     modalsDeploy: itModalsDeploy,
     miNegocio: itMiNegocio,
-    members: itMembers,
-    broadcast: itBroadcast,
-    comments: itComments,
-    bookings: itBookings,
     collections: itCollections,
     inbox: itInbox,
     explore: itExplore,
@@ -452,10 +388,6 @@ const MESSAGES = {
     modalsDomain: jaModalsDomain,
     modalsDeploy: jaModalsDeploy,
     miNegocio: jaMiNegocio,
-    members: jaMembers,
-    broadcast: jaBroadcast,
-    comments: jaComments,
-    bookings: jaBookings,
     collections: jaCollections,
     inbox: jaInbox,
     explore: jaExplore,
@@ -479,10 +411,6 @@ const MESSAGES = {
     modalsDomain: koModalsDomain,
     modalsDeploy: koModalsDeploy,
     miNegocio: koMiNegocio,
-    members: koMembers,
-    broadcast: koBroadcast,
-    comments: koComments,
-    bookings: koBookings,
     collections: koCollections,
     inbox: koInbox,
     explore: koExplore,
@@ -506,10 +434,6 @@ const MESSAGES = {
     modalsDomain: zhModalsDomain,
     modalsDeploy: zhModalsDeploy,
     miNegocio: zhMiNegocio,
-    members: zhMembers,
-    broadcast: zhBroadcast,
-    comments: zhComments,
-    bookings: zhBookings,
     collections: zhCollections,
     inbox: zhInbox,
     explore: zhExplore,
@@ -533,10 +457,6 @@ const MESSAGES = {
     modalsDomain: nlModalsDomain,
     modalsDeploy: nlModalsDeploy,
     miNegocio: nlMiNegocio,
-    members: nlMembers,
-    broadcast: nlBroadcast,
-    comments: nlComments,
-    bookings: nlBookings,
     collections: nlCollections,
     inbox: nlInbox,
     explore: nlExplore,

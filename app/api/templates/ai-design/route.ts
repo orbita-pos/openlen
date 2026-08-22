@@ -10,6 +10,8 @@ import {
   creditsForUsage,
 } from "@/lib/credits";
 import { MARKER, SYSTEM_PROMPT } from "./system-prompt";
+import { swapJsClauses } from "@/lib/ai/js-clause";
+import { extractModelRuntime, modelJsEnabled, modelRuntimePromptBlock } from "@/lib/ai-stream/model-runtime";
 import { resolveAIProvider, type AIModel } from "@/lib/ai-provider";
 import { createFireworksStreamClient } from "@/lib/ai/fireworks-stream-client";
 import { detectSlotPath, sanitizeForPublish } from "@/lib/html-engine";
@@ -28,7 +30,7 @@ import {
 import { preparePage } from "@/lib/page-engine/prepare";
 import { jsonResponse, sseChannel } from "@/lib/ai/sse";
 import { extractDocument } from "@/lib/ai/extract-document";
-import { usesDeepSeekForTurn } from "@/lib/ai/provider-switch";
+import { writerForTurn } from "@/lib/ai/provider-switch";
 import { persistPage } from "@/lib/page-engine/persist";
 import { applyModuleIntent } from "@/lib/projects/module-intent";
 import { describeBehaviorIssues } from "@/lib/behaviors/validate";
@@ -444,7 +446,15 @@ VISUAL CONTEXT: the attached image is a full-page render of the CURRENT page (wh
   }
 
   const messages: Message[] = [
-    { role: "system", content: SYSTEM_PROMPT },
+    {
+      role: "system",
+      // El Chat sólo promete JavaScript cuando SABE capturarlo: la captura de
+      // abajo es exclusiva del modo reescritura, y con Gemini no corre. Ver
+      // lib/ai/js-clause.ts — prometerlo sin captura entrega botones muertos.
+      content:
+        swapJsClauses(SYSTEM_PROMPT, ["contrato-completo", "no-negociable"], process.env) +
+        modelRuntimePromptBlock(process.env),
+    },
     ...history,
     {
       // El Chat reescribe el copy de la página igual que la puerta de generar,
@@ -474,17 +484,26 @@ VISUAL CONTEXT: the attached image is a full-page render of the CURRENT page (wh
   // Un turno CON imágenes de referencia se queda en Gemini pase lo que pase: en
   // la política de Fireworks toda imagen va a Qwen y al razonador nunca se le ha
   // mandado una. Mandarla a ciegas es apostar la edición del usuario.
-  const useDeepSeek = usesDeepSeekForTurn(
-    "OPENLEN_CHAT_PROVIDER",
-    (referenceImages?.length ?? 0) > 0,
-  );
-  const modelLabel = useDeepSeek ? "DeepSeek" : PROVIDER.label;
+  //
+  // ⚠️ ESO CAMBIÓ el 2026-08-21: la referencia adjunta ya NO cae en Gemini, cae
+  // en QWEN — el papel con visión, por el mismo transporte. La cautela de arriba
+  // era real (Qwen no se había medido editando páginas) y se acepta a
+  // sabiendas: Gemini queda para los píxeles. `OPENLEN_CHAT_PROVIDER=gemini`
+  // vuelve atrás por completo.
+  const writer = writerForTurn("OPENLEN_CHAT_PROVIDER", (referenceImages?.length ?? 0) > 0);
+  /** El razonador. Es además el ÚNICO que puede capturar JavaScript del modelo:
+   *  la cápsula se llama "deepseek-generate-v1". */
+  const useDeepSeek = writer === "deepseek";
+  /** Cualquiera de los dos papeles de Fireworks — razonador o visión. */
+  const useFireworks = writer !== "gemini";
+  const modelLabel = writer === "deepseek" ? "DeepSeek" : writer === "qwen" ? "Qwen" : PROVIDER.label;
   // El turno se cobra al proveedor que lo corrió. A tarifa de Gemini la salida
   // de DeepSeek se cobraba casi nueve veces de más, y una edición que reescribe
   // una sección cruza el umbral donde eso son 2 créditos en vez de 1 (ver la
   // tabla RATES en lib/credits). La decisión de arriba ya contempla las
   // imágenes, así que aquí no hay mezcla posible.
-  const CREDIT_RATE = useDeepSeek ? "deepseek-flash" : PROVIDER.rate;
+  const CREDIT_RATE =
+    writer === "deepseek" ? "deepseek-flash" : writer === "qwen" ? "qwen-vision" : PROVIDER.rate;
 
   const raw = process.env.OPENLEN_AIDESIGN_THINKING;
   const THINKING_BUDGET = raw === "auto" ? undefined
@@ -571,14 +590,17 @@ VISUAL CONTEXT: the attached image is a full-page render of the CURRENT page (wh
           return;
         }
 
-        const events = useDeepSeek
+        const events = useFireworks
           ? createFireworksStreamClient().stream(
               {
                 messages: messages.map((message) => ({ role: message.role, content: message.content })),
+                // La referencia viaja SÓLO en el turno de visión: mandársela al
+                // razonador es exactamente lo que la política prohíbe.
+                ...(writer === "qwen" && referenceImages?.length ? { images: referenceImages } : {}),
                 maxOutputTokens: 65_536,
                 temperature: 0.8,
                 requestId: projectId,
-                operation: "page_edit",
+                operation: writer === "qwen" ? "page_write_with_reference" : "page_edit",
               },
               { signal: upstreamAbort.signal },
             )
@@ -869,6 +891,24 @@ VISUAL CONTEXT: the attached image is a full-page render of the CURRENT page (wh
 
         enabledModules = [...prepared.report.modules];
 
+        // EL SCRIPT DEL MODELO, capturado del texto CRUDO — antes de que el
+        // saneado del gate lo borrara. Sólo en REESCRITURA: en modo ops el
+        // modelo emite `<edits>`, no un documento, y no hay script que sacar.
+        // Sólo con DeepSeek: firmar los bytes de un proveedor creyéndolos de
+        // otro es justo la clase de error que un hash no puede detectar.
+        const runtimeCapturado = (() => {
+          if (!modelJsEnabled(process.env) || !useDeepSeek || outputMode === "ops") return null;
+          const r = extractModelRuntime(accumulatedHtml);
+          if (!r.ok) {
+            if (r.reason !== "ausente") {
+              // eslint-disable-next-line no-console
+              console.warn(`[ai-design] runtime del modelo descartado: ${r.reason}`);
+            }
+            return null;
+          }
+          return r.code;
+        })();
+
         const versionLabel =
           outputMode === "ops"
             ? `Ops (${appliedOpCount}): ${prompt.slice(0, 70)}${prompt.length > 70 ? "…" : ""}`
@@ -889,15 +929,26 @@ VISUAL CONTEXT: the attached image is a full-page render of the CURRENT page (wh
             // Un rewrite completo redefine el diseño → nuevo baseline del reset.
             // Las ops quirúrgicas son ediciones, no rediseños: no lo mueven.
             isBaseline: outputMode !== "ops",
+            // `null` NO borra: una edición por ops re-sella el script que ya
+            // había en vez de tirarlo.
+            ...(runtimeCapturado ? { modelRuntime: runtimeCapturado } : {}),
           },
           {
             loadProject: async (id, uid) => {
-              const rows = await db.select({ data: schema.projects.data }).from(schema.projects)
+              const rows = await db
+                .select({ data: schema.projects.data, generatedRuntime: schema.projects.generatedRuntime })
+                .from(schema.projects)
                 .where(and(eq(schema.projects.id, id), eq(schema.projects.userId, uid))).limit(1);
-              return rows[0] ? { data: rows[0].data as ProjectData } : null;
+              return rows[0]
+                ? { data: rows[0].data as ProjectData, generatedRuntime: rows[0].generatedRuntime }
+                : null;
             },
-            saveProjectData: async (id, uid, data) => {
-              await db.update(schema.projects).set({ data, updatedAt: now })
+            // `runtime` re-ata el JavaScript del modelo al documento nuevo. Va en
+            // el MISMO update: escribirlo aparte abriría una ventana con el HTML
+            // ya cambiado y la cápsula todavía apuntando al anterior.
+            saveProjectData: async (id, uid, data, runtime) => {
+              await db.update(schema.projects)
+                .set({ data, updatedAt: now, ...(runtime ? { generatedRuntime: runtime } : {}) })
                 .where(and(eq(schema.projects.id, id), eq(schema.projects.userId, uid)));
             },
             // Best-effort: perder un snapshot no puede costar la edición.

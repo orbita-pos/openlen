@@ -4,12 +4,11 @@
 // rule. String-level marker checks (same markers module-sections.ts emits).
 import type { ProjectData } from "./types";
 
-export type PlacedModule = "collections" | "bookings" | "comments" | "platforms";
+export type PlacedModule = "collections" | "bookings" | "platforms";
 
 export const PLACED_MODULE_MARKERS: Record<PlacedModule, string> = {
   collections: "data-ol-collection-section",
   bookings: "data-ol-bookings-section",
-  comments: "data-ol-comments-section",
   platforms: "data-ol-platforms-section",
 };
 
@@ -20,7 +19,6 @@ export function modulePlacements(
   const out: Record<PlacedModule, string[]> = {
     collections: [],
     bookings: [],
-    comments: [],
     platforms: [],
   };
   if (!data) return out;

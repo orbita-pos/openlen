@@ -9,7 +9,7 @@ import { TEMATICA_PRESETS } from "@/lib/tematicas/presets";
 import { THEME_PRESETS } from "@/lib/theme-presets";
 
 export const AGENT_MODULES = [
-  "members", "bookings", "collections", "chat", "whatsapp", "comments", "pedidos",
+  "collections", "chat", "whatsapp",
 ] as const;
 export type AgentModule = (typeof AGENT_MODULES)[number];
 
@@ -56,20 +56,12 @@ const SETTINGS_TOOL_KNOWLEDGE = `- cambiar_motion: coreografía de scroll (Motio
 // Conocimiento por módulo: qué es + cuándo recomendarlo. Español porque el
 // usuario objetivo habla español; el modelo responde en el idioma del usuario.
 const MODULE_KNOWLEDGE: Record<AgentModule, string> = {
-  members:
-    "Cuentas / sign-in / login de visitantes. Actívalo cuando pidan 'signin', 'login', 'cuentas', 'miembros' o páginas privadas. Al activarlo, el sitio publica con enlace de acceso y área /cuenta — NO fabriques formularios de login en HTML.",
-  bookings:
-    "Reservas / citas / agenda. Actívalo cuando pidan agendar citas, reservas o calendario de servicios. El widget real se hornea al publicar.",
   collections:
     "Catálogo / listados administrables (productos, menú, portafolio). Actívalo cuando pidan un catálogo que el dueño mantenga sin editar HTML.",
   chat:
     "Chat privado visitante↔dueño en la página publicada (estilo messenger). Actívalo cuando pidan 'chat', 'mensajes de clientes' o atención directa.",
   whatsapp:
     "Botón flotante de WhatsApp. Actívalo cuando pidan contacto por WhatsApp. Necesita el número del negocio (si no lo sabes, actívalo y avisa que lo configuren en Módulos).",
-  comments:
-    "Comentarios de miembros en la página. REQUIERE members activo — si members está apagado, activa members primero o explica la dependencia.",
-  pedidos:
-    "Pedidos por WhatsApp: carrito sobre el Catálogo (collections) — cada item gana botón «Agregar» y el pedido armado (cantidades, total, nota) sale al WhatsApp del negocio en la página publicada. Actívalo cuando pidan 'carrito', 'pedidos', 'ordenar', 'que me compren por WhatsApp'. REQUIERE collections activo con items — si falta, activa collections primero (o explica la dependencia). Al activarlo reusa el número de WhatsApp ya guardado (de pedidos o del módulo whatsapp) — si no hay ninguno, la herramienta te lo dirá: pregúntale al usuario su número de WhatsApp (10 dígitos MX) y vuelve a llamar activar_modulo con numero. NUNCA inventes un número. NO es pago en línea: el cobro se acuerda en el chat de WhatsApp.",
 };
 
 export function buildFunctionDeclarations(): Record<string, unknown>[] {

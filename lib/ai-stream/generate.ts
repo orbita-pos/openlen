@@ -55,7 +55,8 @@ import { creditsForUsage, debitCredits as realDebitCredits, type CreditRate } fr
 import { createFireworksStreamClient } from "@/lib/ai/fireworks-stream-client";
 import { messagesForFireworks } from "@/lib/agent/fireworks-bridge";
 import { resolveAIProvider, type AIModel } from "@/lib/ai-provider";
-import { usesDeepSeekForTurn } from "@/lib/ai/provider-switch";
+import { usesDeepSeekForTurn, writerForTurn, type TurnWriter } from "@/lib/ai/provider-switch";
+import { fireworksStreamProvider } from "@/lib/ai/fireworks-as-stream-provider";
 import type { FableModelOperation } from "@/lib/generation/fable-model-policy";
 import { extractModelRuntime, modelJsEnabled } from "./model-runtime";
 
@@ -311,17 +312,36 @@ export function generateHtmlStream(
   const geminiModel = resolveAIProvider(modelKey).model;
 
   // Un proveedor inyectado (las pruebas) manda: ni cambia de motor ni de tarifa.
-  const wantsDeepSeek = internals.provider === undefined
-    && pageWriterUsesDeepSeek(process.env, (opts.images?.length ?? 0) > 0);
+  //
+  // Con una imagen adjunta escribe QWEN, no Gemini: el razonador no tiene ojos
+  // pero el papel con visión sí, y viaja por el mismo transporte. Gemini se
+  // queda para los píxeles. `OPENLEN_GENERATE_PROVIDER=gemini` vuelve atrás.
+  const writer: TurnWriter =
+    internals.provider !== undefined
+      ? "gemini"
+      : writerForTurn("OPENLEN_GENERATE_PROVIDER", (opts.images?.length ?? 0) > 0, process.env);
   const provider: GeminiProviderLike =
     internals.provider ??
-    (wantsDeepSeek
+    (writer === "deepseek"
       ? createDeepSeekPageProvider(opts.operation)
-      : (new RealGeminiProvider(opts.apiKey) as unknown as GeminiProviderLike));
-  // La tarifa sigue a quien de verdad corrió, no al modelo que se pidió.
-  const creditRate: CreditRate = wantsDeepSeek ? "deepseek-flash" : modelKey;
+      : writer === "qwen"
+        ? (fireworksStreamProvider({
+            requestId: `generate.ref.${Math.random().toString(36).slice(2, 10)}`,
+            operation: "page_write_with_reference",
+            maxOutputTokens: 60_000,
+            temperature: 0.8,
+          }) as unknown as GeminiProviderLike)
+        : (new RealGeminiProvider(opts.apiKey) as unknown as GeminiProviderLike));
+  // La tarifa sigue a quien de verdad corrió, no al modelo que se pidió. Qwen
+  // cuesta ~10x la salida de DeepSeek: cobrarlo como razonador sería regalar la
+  // diferencia justo en los turnos más caros.
+  const creditRate: CreditRate =
+    writer === "deepseek" ? "deepseek-flash" : writer === "qwen" ? "qwen-vision" : modelKey;
+  // La captura del runtime sigue atada a DeepSeek: la cápsula se llama
+  // "deepseek-generate-v1" y firmar bytes de otro proveedor creyéndolos suyos es
+  // justo lo que un hash no puede detectar. Un turno con referencia no captura.
   const wroteWith: "deepseek" | "gemini" =
-    internals.wroteWith ?? (wantsDeepSeek ? "deepseek" : "gemini");
+    internals.wroteWith ?? (writer === "deepseek" ? "deepseek" : "gemini");
 
   // Captura del runtime del modelo — Etapa 1 de abrir JavaScript.
   //

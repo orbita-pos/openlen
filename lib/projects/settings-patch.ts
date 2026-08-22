@@ -1,10 +1,7 @@
-import { isKnownTimeZone } from "@/lib/bookings/tz";
 import {
-  buildAutoMembersPage,
   formConfigKey,
   validatePageSlug,
 } from "@/lib/projects/site-pages";
-import { reconcileModuleSettings } from "@/lib/projects/module-settings";
 import { POST_REGISTER } from "@/lib/marketing/post-templates/admin-schemas";
 import type {
   FormConfig,
@@ -46,28 +43,6 @@ interface PatchBody {
   /** Page music: the floating player's track, or null to remove it. Takes
    *  effect on the next publish (previews live in the editor). */
   music?: { src?: string; title?: string; cover?: string } | null;
-  /** Members module switches. Merged into settings.members; gating takes
-   *  effect on the next publish. */
-  members?: {
-    enabled?: boolean;
-    mode?: "open" | "invite";
-    passwordLogin?: boolean;
-    accountArea?: boolean;
-  };
-  /** Broadcast module switch. Merged into settings.broadcast. */
-  broadcast?: { enabled?: boolean };
-  /** Comments module switches. Merged into settings.comments. */
-  comments?: { enabled?: boolean; moderation?: "all" | "moderated"; theme?: "light" | "dark" };
-  /** Bookings module switches. Merged into settings.bookings. */
-  bookings?: {
-    enabled?: boolean;
-    creatorTz?: string;
-    requireLogin?: boolean;
-    autoConfirm?: boolean;
-    sendReminders?: boolean;
-    retentionDays?: number;
-    theme?: "light" | "dark";
-  };
   /** Collections module switch. Merged into settings.collections. */
   collections?: { enabled?: boolean; theme?: "light" | "dark" };
   /** WhatsApp button. Merged into settings.whatsapp. Takes effect next publish. */
@@ -77,8 +52,6 @@ interface PatchBody {
     message?: string;
     side?: "left" | "right";
   };
-  /** Pedidos por WhatsApp. Merged into settings.orders. Takes effect next publish. */
-  orders?: { enabled?: boolean; number?: string };
   /** Private chat module. Merged into settings.chat. Takes effect next publish. */
   chat?: {
     enabled?: boolean;
@@ -106,7 +79,6 @@ export type PatchValidation =
 export interface SettingsPatchOutcome {
   nextData: ProjectData;
   settings: ProjectSettings;
-  createdPage: { slug: string; title: string; html: string } | null;
   formKey: string | null;
   chatJustEnabled: boolean;
 }
@@ -159,77 +131,6 @@ export function validateSettingsPatch(
       return { ok: false, message: "music.cover must be one of this project's uploaded assets" };
     }
   }
-  const hasMembers = "members" in body;
-  if (hasMembers) {
-    const m = body.members;
-    if (!m || typeof m !== "object") {
-      return { ok: false, message: "members must be an object" };
-    }
-    if ("enabled" in m && typeof m.enabled !== "boolean") {
-      return { ok: false, message: "members.enabled must be boolean" };
-    }
-    if ("mode" in m && m.mode !== "open" && m.mode !== "invite") {
-      return { ok: false, message: "members.mode must be open|invite" };
-    }
-    if ("passwordLogin" in m && typeof m.passwordLogin !== "boolean") {
-      return { ok: false, message: "members.passwordLogin must be boolean" };
-    }
-    if ("accountArea" in m && typeof m.accountArea !== "boolean") {
-      return { ok: false, message: "members.accountArea must be boolean" };
-    }
-  }
-  const hasBroadcast = "broadcast" in body;
-  if (hasBroadcast) {
-    const b = body.broadcast;
-    if (!b || typeof b !== "object") {
-      return { ok: false, message: "broadcast must be an object" };
-    }
-    if ("enabled" in b && typeof b.enabled !== "boolean") {
-      return { ok: false, message: "broadcast.enabled must be boolean" };
-    }
-  }
-  const hasComments = "comments" in body;
-  if (hasComments) {
-    const c = body.comments;
-    if (!c || typeof c !== "object") {
-      return { ok: false, message: "comments must be an object" };
-    }
-    if ("enabled" in c && typeof c.enabled !== "boolean") {
-      return { ok: false, message: "comments.enabled must be boolean" };
-    }
-    if ("moderation" in c && c.moderation !== "all" && c.moderation !== "moderated") {
-      return { ok: false, message: "comments.moderation must be all|moderated" };
-    }
-    if ("theme" in c && c.theme !== undefined && c.theme !== "light" && c.theme !== "dark") {
-      return { ok: false, message: "comments.theme must be light|dark" };
-    }
-  }
-  const hasBookings = "bookings" in body;
-  if (hasBookings) {
-    const b = body.bookings;
-    if (!b || typeof b !== "object") {
-      return { ok: false, message: "bookings must be an object" };
-    }
-    for (const k of ["enabled", "requireLogin", "autoConfirm", "sendReminders"] as const) {
-      if (k in b && typeof b[k] !== "boolean") {
-        return { ok: false, message: `bookings.${k} must be boolean` };
-      }
-    }
-    if ("creatorTz" in b && b.creatorTz !== undefined) {
-      if (typeof b.creatorTz !== "string" || !isKnownTimeZone(b.creatorTz)) {
-        return { ok: false, message: "bookings.creatorTz must be a valid IANA time zone" };
-      }
-    }
-    if ("retentionDays" in b && b.retentionDays !== undefined) {
-      const r = b.retentionDays;
-      if (typeof r !== "number" || !Number.isInteger(r) || r < 0 || r > 3650) {
-        return { ok: false, message: "bookings.retentionDays must be an integer 0-3650" };
-      }
-    }
-    if ("theme" in b && b.theme !== undefined && b.theme !== "light" && b.theme !== "dark") {
-      return { ok: false, message: "bookings.theme must be light|dark" };
-    }
-  }
   const hasCollections = "collections" in body;
   if (hasCollections) {
     const c = body.collections;
@@ -260,19 +161,6 @@ export function validateSettingsPatch(
     }
     if ("side" in w && w.side !== undefined && w.side !== "left" && w.side !== "right") {
       return { ok: false, message: "whatsapp.side must be left|right" };
-    }
-  }
-  const hasOrders = "orders" in body;
-  if (hasOrders) {
-    const o = body.orders;
-    if (!o || typeof o !== "object") {
-      return { ok: false, message: "orders must be an object" };
-    }
-    if ("enabled" in o && typeof o.enabled !== "boolean") {
-      return { ok: false, message: "orders.enabled must be boolean" };
-    }
-    if ("number" in o && !(typeof o.number === "string" && o.number.length <= 32)) {
-      return { ok: false, message: "orders.number must be a string ≤32 chars" };
     }
   }
   const hasScene3d = "scene3d" in body;
@@ -373,13 +261,8 @@ export function validateSettingsPatch(
     !hasAnalyticsToggle &&
     !hasMotion &&
     !hasMusic &&
-    !hasMembers &&
-    !hasBroadcast &&
-    !hasComments &&
-    !hasBookings &&
     !hasCollections &&
     !hasWhatsapp &&
-    !hasOrders &&
     !hasChat &&
     !hasScene3d &&
     !hasMarketing
@@ -387,7 +270,7 @@ export function validateSettingsPatch(
     return {
       ok: false,
       message:
-        "expected formIndex+patch OR analyticsDisabled OR motion OR music OR members OR broadcast OR comments OR bookings OR collections OR whatsapp OR orders OR chat OR scene3d OR marketing",
+        "expected formIndex+patch OR analyticsDisabled OR motion OR music OR collections OR whatsapp OR chat OR scene3d OR marketing",
     };
   }
   if (hasFormPatch) {
@@ -422,13 +305,8 @@ export function applySettingsPatch(
   const hasAnalyticsToggle = typeof body.analyticsDisabled === "boolean";
   const hasMotion = "motion" in body;
   const hasMusic = "music" in body;
-  const hasMembers = "members" in body;
-  const hasBroadcast = "broadcast" in body;
-  const hasComments = "comments" in body;
-  const hasBookings = "bookings" in body;
   const hasCollections = "collections" in body;
   const hasWhatsapp = "whatsapp" in body;
-  const hasOrders = "orders" in body;
   const hasScene3d = "scene3d" in body;
   const hasChat = "chat" in body;
   const hasMarketing = "marketing" in body;
@@ -499,76 +377,6 @@ export function applySettingsPatch(
     if (musicValue) nextSettings.music = musicValue;
     else delete nextSettings.music;
   }
-  let createdPage: { slug: string; title: string; html: string } | null = null;
-  if (hasMembers && body.members) {
-    nextSettings.members = {
-      ...(data.settings?.members ?? {}),
-      ...("enabled" in body.members ? { enabled: body.members.enabled } : {}),
-      ...("mode" in body.members ? { mode: body.members.mode } : {}),
-      ...("passwordLogin" in body.members
-        ? { passwordLogin: body.members.passwordLogin }
-        : {}),
-      ...("accountArea" in body.members
-        ? { accountArea: body.members.accountArea }
-        : {}),
-    };
-    // ONE member surface, never two. Turning the module on materializes the
-    // door at /cuenta (memberDoorPlan defaults accountArea to on — it's an
-    // opt-out since 2026-07-22), so the gated /miembros landing is only born
-    // for the opt-out case, where the site would otherwise have no member
-    // surface at all. buildAutoMembersPage null = nothing to create.
-    const turningOn =
-      body.members.enabled === true && data.settings?.members?.enabled !== true;
-    if (turningOn && nextSettings.members?.accountArea === false) {
-      createdPage = buildAutoMembersPage(data);
-    }
-  }
-  if (hasBroadcast && body.broadcast) {
-    nextSettings.broadcast = {
-      ...(data.settings?.broadcast ?? {}),
-      ...("enabled" in body.broadcast ? { enabled: body.broadcast.enabled } : {}),
-    };
-  }
-  if (hasComments && body.comments) {
-    // Comments require the members module (that's the whole anti-spam basis).
-    // Honor a members-enable arriving in the SAME PATCH, else the prior state.
-    const willHaveMembers =
-      (hasMembers && body.members?.enabled === true) ||
-      (data.settings?.members?.enabled === true && body.members?.enabled !== false);
-    if (body.comments.enabled === true && !willHaveMembers) {
-      return { error: "comments require the members module" };
-    }
-    const firstEnable =
-      body.comments.enabled === true && data.settings?.comments?.enabled !== true;
-    nextSettings.comments = {
-      ...(data.settings?.comments ?? {}),
-      ...("enabled" in body.comments ? { enabled: body.comments.enabled } : {}),
-      ...("moderation" in body.comments ? { moderation: body.comments.moderation } : {}),
-      ...("theme" in body.comments ? { theme: body.comments.theme } : {}),
-      // Make the write self-documenting: default to the safe posture on first
-      // enable when no moderation is set (don't lean on the read-path default).
-      ...(firstEnable &&
-      !("moderation" in body.comments) &&
-      !data.settings?.comments?.moderation
-        ? { moderation: "moderated" as const }
-        : {}),
-    };
-  }
-  if (hasBookings && body.bookings) {
-    const b = body.bookings;
-    nextSettings.bookings = {
-      ...(data.settings?.bookings ?? {}),
-      ...("enabled" in b ? { enabled: b.enabled } : {}),
-      ...("creatorTz" in b && b.creatorTz !== undefined ? { creatorTz: b.creatorTz } : {}),
-      ...("requireLogin" in b ? { requireLogin: b.requireLogin } : {}),
-      ...("autoConfirm" in b ? { autoConfirm: b.autoConfirm } : {}),
-      ...("sendReminders" in b ? { sendReminders: b.sendReminders } : {}),
-      ...("retentionDays" in b && b.retentionDays !== undefined
-        ? { retentionDays: b.retentionDays }
-        : {}),
-      ...("theme" in b ? { theme: b.theme } : {}),
-    };
-  }
   if (hasCollections && body.collections) {
     nextSettings.collections = {
       ...(data.settings?.collections ?? {}),
@@ -584,14 +392,6 @@ export function applySettingsPatch(
       ...("number" in w ? { number: (w.number ?? "").trim() } : {}),
       ...("message" in w ? { message: (w.message ?? "").trim() } : {}),
       ...("side" in w ? { side: w.side } : {}),
-    };
-  }
-  if (hasOrders && body.orders) {
-    const o = body.orders;
-    nextSettings.orders = {
-      ...(data.settings?.orders ?? {}),
-      ...("enabled" in o ? { enabled: o.enabled } : {}),
-      ...("number" in o ? { number: clean(o.number, 32) } : {}),
     };
   }
   if (hasChat && body.chat) {
@@ -633,32 +433,20 @@ export function applySettingsPatch(
   const chatJustEnabled =
     hasChat && body.chat?.enabled === true && data.settings?.chat?.enabled !== true;
 
-  // Enforce the Members-dependency invariant in one place: disabling Members
-  // cascades comments/broadcast OFF and neutralizes bookings.requireLogin, so a
-  // stale flag can never bake a dead widget or strand a booking flow.
-  const reconciledSettings = reconcileModuleSettings(nextSettings);
+  // Aquí vivía `reconcileModuleSettings`: el invariante entre módulos, que con
+  // Members apagado cascadeaba Comentarios/Broadcast y neutralizaba el
+  // "require login" de Reservas. Los cuatro módulos se retiraron el 2026-08-21
+  // y el invariante se quedó sin nada que vigilar.
+  const reconciledSettings = nextSettings;
 
   const nextData: ProjectData = {
     ...data,
     settings: reconciledSettings,
-    ...(createdPage
-      ? {
-          pages: {
-            ...data.pages,
-            [createdPage.slug]: {
-              html: createdPage.html,
-              title: createdPage.title,
-              membersOnly: true,
-            },
-          },
-        }
-      : {}),
   };
 
   return {
     nextData,
     settings: reconciledSettings,
-    createdPage,
     formKey,
     chatJustEnabled,
   };

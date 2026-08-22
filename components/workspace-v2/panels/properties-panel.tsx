@@ -212,6 +212,8 @@ interface PropertiesPanelProps {
    *  generate paths to populate it. */
   logoUrl?: string | null;
   onApplyElementProp: (path: string, name: string, value: string | null) => void;
+  /** Convertir un <button> sin formulario en un <a> con destino. */
+  onLinkifyButton: (path: string, href: string) => void;
   onApplyPageMeta: (field: keyof PageMeta, value: string) => void;
   onApplyFormConfig: (formIndex: number, patch: Partial<FormConfig>) => void;
   /** Set one inline-style property on the selected element (a CSS prop name
@@ -319,6 +321,7 @@ export function PropertiesPanel({
   projectTitle,
   logoUrl,
   onApplyElementProp,
+  onLinkifyButton,
   onApplyPageMeta,
   onApplyFormConfig,
   onApplyStyle,
@@ -375,6 +378,7 @@ export function PropertiesPanel({
             projectId={projectId}
             accent={originalAccent}
             onApply={onApplyElementProp}
+            onLinkify={onLinkifyButton}
             onApplyFormConfig={onApplyFormConfig}
             onApplyStyle={onApplyStyle}
             onResetProps={onResetProps}
@@ -424,6 +428,7 @@ function ElementView({
   projectId,
   accent,
   onApply,
+  onLinkify,
   onApplyFormConfig,
   onApplyStyle,
   onResetProps,
@@ -439,6 +444,7 @@ function ElementView({
   /** The page's authored accent — seeds the gradient editor's presets. */
   accent?: string;
   onApply: (path: string, name: string, value: string | null) => void;
+  onLinkify: (path: string, href: string) => void;
   onApplyFormConfig: (formIndex: number, patch: Partial<FormConfig>) => void;
   onApplyStyle: (path: string, prop: string, value: string) => void;
   onResetProps: (path: string, props: string[]) => void;
@@ -512,6 +518,26 @@ function ElementView({
             label={t("link.openInNewTab")}
             on={(props.target ?? "") === "_blank"}
             onChange={(on) => onApply(path, "target", on ? "_blank" : null)}
+          />
+        </Section>
+      )}
+      {/* Un <button> que no envía un formulario no hace NADA — el contrato de
+          diseño se lo dice al modelo con esas palabras. Aquí el usuario le pone
+          un destino (su WhatsApp, su Telegram, su enlace de pago) y el botón
+          pasa a ser el <a> que debió ser, con el mismo aspecto.
+
+          DENTRO de un <form> no se ofrece: ahí el botón sí tiene trabajo. */}
+      {tag === "button" && formIndex == null && (
+        <Section label={t("link.title")} icon={<ExternalLink size={11} />}>
+          <TextField
+            label={t("link.destination")}
+            value=""
+            placeholder={t("link.destinationPlaceholder")}
+            mono
+            onCommit={(v) => {
+              const href = normalizeHref(v);
+              if (href) onLinkify(path, href);
+            }}
           />
         </Section>
       )}

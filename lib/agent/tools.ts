@@ -35,6 +35,7 @@ import { applyOps, tagWithOpIds, type Op, type OpType } from "@/lib/html-ops";
 import { fetchSheet, resolveSheetCsvUrl } from "@/lib/live/sheet-source";
 import { passHtmlGate } from "@/lib/html-gate/document-gate";
 import { activeHtml, persistPage } from "@/lib/page-engine/persist";
+import type { ModelRuntimeCapsule } from "@/lib/projects/model-runtime";
 import { preparePage } from "@/lib/page-engine/prepare";
 import { setProjectUserBrief, USER_BRIEF_MAX } from "@/lib/projects";
 import { extForMime, getAssetStorage } from "@/lib/projects/assets";
@@ -90,11 +91,19 @@ export interface AgentDeps {
     subdomain: string | null;
     publishedAt: Date | null;
     userBrief: string | null;
+    /** La cápsula del JavaScript del modelo, para poder RE-ATARLA al documento
+     *  que la edición deja guardado (`persistPage`). */
+    generatedRuntime?: unknown;
   } | null>;
-  saveProjectData(projectId: string, userId: string, data: ProjectData): Promise<void>;
+  saveProjectData(
+    projectId: string,
+    userId: string,
+    data: ProjectData,
+    runtime?: ModelRuntimeCapsule | null,
+  ): Promise<void>;
   /** The business profile's contact.whatsapp for this project (linked profile,
    *  else the user's default) — the number fallback activar_modulo uses so
-   *  whatsapp/pedidos never enable silent-dark without a number to bake. */
+   *  whatsapp never enables silent-dark without a number to bake. */
   profileWhatsappNumber(projectId: string, userId: string): Promise<string | null>;
   /** P2 — the project's FULL effective business profile (same resolution as
    *  profileWhatsappNumber: linked profile, else user default). Feeds the
@@ -206,16 +215,20 @@ export function realDeps(): AgentDeps {
           subdomain: schema.projects.subdomain,
           publishedAt: schema.projects.publishedAt,
           userBrief: schema.projects.userBrief,
+          generatedRuntime: schema.projects.generatedRuntime,
         })
         .from(schema.projects)
         .where(and(eq(schema.projects.id, projectId), eq(schema.projects.userId, userId)))
         .limit(1);
       return rows[0] ?? null;
     },
-    async saveProjectData(projectId, userId, data) {
+    // `runtime` re-ata el JavaScript del modelo al documento nuevo. Va en el
+    // MISMO update: escribirlo aparte dejaría una ventana con el HTML ya
+    // cambiado y la cápsula apuntando todavía al anterior.
+    async saveProjectData(projectId, userId, data, runtime) {
       await db
         .update(schema.projects)
-        .set({ data, updatedAt: new Date() })
+        .set({ data, updatedAt: new Date(), ...(runtime ? { generatedRuntime: runtime } : {}) })
         .where(and(eq(schema.projects.id, projectId), eq(schema.projects.userId, userId)));
     },
     async profileWhatsappNumber(projectId, userId) {
@@ -377,21 +390,15 @@ export interface ToolOutcome {
   confirm?: { action: "publicar"; subdominio: string; idiomas: string[]; republicar: boolean };
 }
 
-// AgentModule name -> the settings key it actually lives under. Identity for
-// every module except "pedidos", whose settings live at settings.orders (the
-// activar_modulo enum value stays "pedidos" — user-facing Spanish — while the
-// persisted patch/read key matches the OrdersSettings field name).
+// AgentModule name -> the settings key it actually lives under. Identidad en
+// todos: la excepción era "pedidos" (settings.orders), y ese módulo se retiró.
 const MODULE_SETTINGS_KEY: Record<
   AgentModule,
-  "members" | "bookings" | "collections" | "chat" | "whatsapp" | "comments" | "orders"
+  "collections" | "chat" | "whatsapp"
 > = {
-  members: "members",
-  bookings: "bookings",
   collections: "collections",
   chat: "chat",
   whatsapp: "whatsapp",
-  comments: "comments",
-  pedidos: "orders",
 };
 
 export function summarizeProjectState(row: {
@@ -441,12 +448,6 @@ async function toolLeerEstado(
 
 function buildModulePatch(modulo: AgentModule, encender: boolean, numero?: string): SettingsPatchBody {
   switch (modulo) {
-    case "members":
-      return encender
-        ? { members: { enabled: true, passwordLogin: true, accountArea: true } }
-        : { members: { enabled: false } };
-    case "bookings":
-      return { bookings: { enabled: encender } };
     case "collections":
       return { collections: { enabled: encender } };
     case "chat":
@@ -455,10 +456,6 @@ function buildModulePatch(modulo: AgentModule, encender: boolean, numero?: strin
       return encender
         ? { whatsapp: { enabled: true, ...(numero ? { number: numero } : {}) } }
         : { whatsapp: { enabled: false } };
-    case "comments":
-      return { comments: { enabled: encender } };
-    case "pedidos":
-      return encender ? { orders: { enabled: true, number: numero } } : { orders: { enabled: false } };
   }
 }
 
@@ -508,32 +505,14 @@ async function toolActivarModulo(
   }
   const encender = args.encender !== false;
 
-  // Loaded up-front (moved ahead of buildModulePatch) so the "pedidos" case can
+  // Loaded up-front (moved ahead of buildModulePatch) so the whatsapp case can
   // resolve its number-fallback chain from the existing row before the patch
   // is built — never a silent-dark { enabled: true } with no number to bake.
   const row = await deps.loadProject(session.projectId, session.userId);
   if (!row) return { response: { ok: false, error: "proyecto no encontrado" } };
 
   let numero: string | undefined;
-  if (modulo === "pedidos" && encender) {
-    const resuelto =
-      (typeof args.numero === "string" && args.numero.trim()) ||
-      row.data.settings?.orders?.number ||
-      row.data.settings?.whatsapp?.number ||
-      (await deps.profileWhatsappNumber(session.projectId, session.userId)) ||
-      null;
-    if (!resuelto) {
-      return {
-        response: {
-          ok: false,
-          error:
-            'pedidos necesita el número de WhatsApp del negocio y no hay ninguno guardado — pregúntale al usuario su número (10 dígitos MX) y vuelve a llamar activar_modulo con modulo="pedidos" y numero',
-        },
-      };
-    }
-    numero = resuelto;
-  }
-  // WhatsApp mirrors pedidos: enabling without a number would bake nothing
+  // WhatsApp: enabling without a number would bake nothing
   // (silent-dark FAB). Chain: explicit arg > the module's saved number > the
   // business profile's contact.whatsapp; none → ask the user for it.
   if (modulo === "whatsapp" && encender) {
@@ -565,7 +544,6 @@ async function toolActivarModulo(
       ok: true,
       modulo,
       encendido: encender,
-      ...(activated.outcome.createdPage ? { paginaCreada: activated.outcome.createdPage.slug } : {}),
     },
     action: { tool: "activar_modulo", ok: true, summary: modulo },
   };
@@ -738,7 +716,7 @@ async function toolCrearPagina(
     slug: typeof args.slug === "string" ? args.slug : undefined,
     title: typeof args.titulo === "string" ? args.titulo : undefined,
     module:
-      args.modulo === "bookings" || args.modulo === "collections"
+      args.modulo === "collections"
         ? args.modulo
         : undefined,
   };
@@ -830,7 +808,11 @@ async function persistHtmlChange(
   deps: AgentDeps,
   candidateHtml: string,
   label: string,
-  opts: { isBaseline?: boolean } = {},
+  /** `modelRuntime`: un `<script>` que el modelo acaba de escribir. Sólo llega
+   *  del REDISEÑO, que produce un documento entero; `editar_pagina` emite ops y
+   *  no trae ninguno — ahí `persistPage` re-sella el que ya había en vez de
+   *  tirarlo. */
+  opts: { isBaseline?: boolean; modelRuntime?: string | null } = {},
 ): Promise<PersistResult> {
   // Editor-mode marker guard first (specific message), then the broader
   // sanitize pass (defense in depth — mirrors ai-design route).
@@ -897,6 +879,7 @@ async function persistHtmlChange(
       label,
       ...(moduleIntent.enabled.length ? { settings: moduleIntent.settings } : {}),
       ...(opts.isBaseline !== undefined ? { isBaseline: opts.isBaseline } : {}),
+      ...(opts.modelRuntime ? { modelRuntime: opts.modelRuntime } : {}),
     },
     deps,
   );
@@ -959,7 +942,9 @@ async function toolRedisenarPagina(
     deps,
     redesigned.html,
     `Rediseño: ${direccion.slice(0, 60)}`,
-    { isBaseline: true },
+    // El JavaScript que el modelo escribió para ESTA página viaja con ella: la
+    // cápsula se sella sobre el documento que se guarda.
+    { isBaseline: true, modelRuntime: redesigned.modelRuntime },
   );
   if (!persisted.ok) {
     return { response: { ok: false, error: persisted.error } };

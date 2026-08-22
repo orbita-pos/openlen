@@ -181,15 +181,30 @@ describe("POST /api/templates/ai-design", () => {
     expect(mocks.fireworksStream).not.toHaveBeenCalled();
   });
 
-  it("un turno con imagen de referencia se queda en Gemini pase lo que pase", async () => {
-    // En la política de Fireworks toda imagen va a Qwen y al razonador nunca se
-    // le ha mandado una: mandarla a ciegas apuesta la edición del usuario.
+  /**
+   * ESTO ERA AL REVÉS. La referencia adjunta se quedaba en Gemini «pase lo que
+   * pase», con este motivo: *"al razonador nunca se le ha mandado una imagen;
+   * mandarla a ciegas apuesta la edición del usuario"*.
+   *
+   * Cambió el 2026-08-21 por decisión de Jesús: DeepSeek y Qwen son los modelos
+   * de la casa, Gemini se queda para los píxeles. La imagen ya no va al
+   * razonador —eso seguiría estando mal— sino a QWEN, que es el papel con visión
+   * de la política. `OPENLEN_CHAT_PROVIDER=gemini` sigue devolviendo el camino
+   * de antes.
+   */
+  it("un turno con imagen de referencia va a Qwen, no a Gemini", async () => {
     process.env.OPENLEN_AIDESIGN_PAGE_REFERENCE = "1";
     mocks.renderReference.mockResolvedValue({ mimeType: "image/jpeg", dataBase64: "AQID" });
-    mocks.stream.mockReturnValue(modelSays(rewrite("<h1>Hola</h1>")));
+    mocks.fireworksStream.mockReturnValue(modelSays(rewrite("<h1>Hola</h1>")));
     await readEvents(await call());
-    expect(mocks.stream).toHaveBeenCalledTimes(1);
-    expect(mocks.fireworksStream).not.toHaveBeenCalled();
+    expect(mocks.stream, "Gemini no debería haber corrido").not.toHaveBeenCalled();
+    expect(mocks.fireworksStream).toHaveBeenCalledTimes(1);
+    // Y la referencia tiene que VIAJAR: un turno de visión sin la imagen sería
+    // peor que el anterior — el modelo decidiría a ciegas y nadie lo notaría.
+    expect(mocks.fireworksStream.mock.calls[0][0]).toMatchObject({
+      operation: "page_write_with_reference",
+    });
+    expect(mocks.fireworksStream.mock.calls[0][0].images).toHaveLength(1);
   });
 
   it("fija el presupuesto de pensamiento, que es de donde salen los minutos de espera", async () => {

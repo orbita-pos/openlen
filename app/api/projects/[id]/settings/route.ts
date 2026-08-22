@@ -126,7 +126,6 @@ export async function PATCH(
         ok: true,
         config,
         settings: out.settings,
-        ...(out.createdPage ? { createdPage: out.createdPage } : {}),
       },
       200,
     );
@@ -135,21 +134,13 @@ export async function PATCH(
   return json({ error: "conflict" }, 409);
 }
 
-/** The patched `settings` (plus the members auto-page, when one was born)
- *  written INTO the live row — everything else in `data` stays whatever the row
- *  holds now, so a concurrent html save survives this write. */
+/** The patched `settings` written INTO the live row — everything else in `data`
+ *  stays whatever the row holds now, so a concurrent html save survives this
+ *  write. (Antes esto podía además parir la página auto de Miembros; ese módulo
+ *  se retiró el 2026-08-21.) */
 function settingsWrite(out: SettingsPatchOutcome): SQL<unknown> {
   const col = schema.projects.data;
-  const settings = sql`jsonb_set(${col}, '{settings}', ${JSON.stringify(out.settings)}::jsonb)`;
-  if (!out.createdPage) return settings;
-  const page = {
-    [out.createdPage.slug]: {
-      html: out.createdPage.html,
-      title: out.createdPage.title,
-      membersOnly: true,
-    },
-  };
-  return sql`jsonb_set(${settings}, '{pages}', coalesce(${col} -> 'pages', '{}'::jsonb) || ${JSON.stringify(page)}::jsonb)`;
+  return sql`jsonb_set(${col}, '{settings}', ${JSON.stringify(out.settings)}::jsonb, true)`;
 }
 
 /** Row guard: the settings are still the ones this request merged against. */

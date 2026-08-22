@@ -16,7 +16,7 @@ export const dynamic = "force-dynamic";
 //      immediately; the user then edits its content. No HTML is accepted
 //      here — page edits flow through PATCH /html (which sanitizes).
 //
-//      With `module` ("bookings" | "collections") the page is born as the shell
+//      With `module` ("collections") the page is born as the shell
 //      PLUS a designed, brand-matched module section (lib/publish/module-
 //      sections) — slug/title are derived per module + page language; the
 //      module's publish placeholder rides inside so the bake wires the widget.
@@ -28,7 +28,7 @@ export const dynamic = "force-dynamic";
 //      returned -> write.
 // ─────────────────────────────────────────────────────────────────────────────
 
-const MODULE_PAGE = z.enum(["bookings", "collections"]);
+const MODULE_PAGE = z.enum(["collections"]);
 
 const CreateSchema = z
   .object({

@@ -38,7 +38,6 @@ export interface EditorModulesPreviewCfg {
   collections?: {
     items: ItemRow[];
     layout: "grid" | "list";
-    ordersNumber?: string | null;
     theme?: "light" | "dark";
   } | null;
   /** Links del perfil de negocio; pintan la banda de plataformas si la página
@@ -149,7 +148,7 @@ export function bandWithPreview(
   bandHtml: string,
   opts: {
     docHtml: string;
-    collections?: { items: ItemRow[]; layout: "grid" | "list"; ordersNumber?: string | null; theme?: "light" | "dark" } | null;
+    collections?: { items: ItemRow[]; layout: "grid" | "list"; theme?: "light" | "dark" } | null;
     platforms?: BusinessProfileData["links"] | null;
   },
 ): string {
@@ -182,7 +181,6 @@ export function bandWithPreview(
     const widget = renderCollectionsWidget(opts.docHtml, {
       items: col.items,
       layout: col.layout,
-      orders: col.ordersNumber ? { number: col.ordersNumber } : null,
       theme: col.theme,
     });
     const stamped = widget.replace(
@@ -207,7 +205,6 @@ export function injectEditorModulesPreview(
       const widget = renderCollectionsWidget(out, {
         items: col.items,
         layout: col.layout,
-        orders: col.ordersNumber ? { number: col.ordersNumber } : null,
         theme: col.theme,
       });
       const bandOpen = findMarkerTag(out, "data-ol-collection-section");

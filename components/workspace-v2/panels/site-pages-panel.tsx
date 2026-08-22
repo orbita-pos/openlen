@@ -34,10 +34,8 @@ interface SitePagesPanelProps {
   onDelete: (slug: string) => Promise<boolean>;
   /** Members module: flip a subpage's members-only flag. Resolves false on
    *  failure (the row reverts). Absent → no lock affordance rendered. */
-  onToggleMembersOnly?: (slug: string, next: boolean) => Promise<boolean>;
   /** Members door on → show the auto /cuenta access page as a system row, so
    *  the owner SEES the login/register page exists (Jesús, 2026-07-22). */
-  membersDoorOn?: boolean;
 }
 
 export function SitePagesPanel({
@@ -46,8 +44,6 @@ export function SitePagesPanel({
   onSwitch,
   onCreate,
   onDelete,
-  onToggleMembersOnly,
-  membersDoorOn = false,
 }: SitePagesPanelProps) {
   const t = useTranslations("wsChrome");
   const toast = useToast();
@@ -102,7 +98,6 @@ export function SitePagesPanel({
 
         {pages.map((p) => {
           const active = activePage === p.slug;
-          const gated = p.membersOnly === true;
           return (
             <div key={p.slug} className="relative group">
               <button
@@ -112,48 +107,7 @@ export function SitePagesPanel({
               >
                 <FileText size={13} className="shrink-0" />
                 <span className="text-[12px] truncate tabular">/{p.slug}</span>
-                {gated && (
-                  <span
-                    className="ml-auto shrink-0 text-accent group-hover:opacity-0 transition-opacity"
-                    title={t("sitePages.membersOnlyBadge")}
-                  >
-                    <LockIcon size={11} />
-                  </span>
-                )}
               </button>
-              {onToggleMembersOnly && (
-                <button
-                  type="button"
-                  disabled={togglingLock === p.slug}
-                  aria-label={t(
-                    gated ? "sitePages.membersOnlyOff" : "sitePages.membersOnlyOn",
-                    { slug: p.slug },
-                  )}
-                  title={t(
-                    gated ? "sitePages.membersOnlyOff" : "sitePages.membersOnlyOn",
-                    { slug: p.slug },
-                  )}
-                  onClick={async () => {
-                    if (togglingLock) return;
-                    setTogglingLock(p.slug);
-                    await onToggleMembersOnly(p.slug, !gated);
-                    setTogglingLock(null);
-                  }}
-                  className={`absolute right-8 top-1 h-6 w-6 hidden group-hover:inline-flex items-center justify-center rounded transition disabled:opacity-50 ${
-                    gated
-                      ? "text-accent hover:bg-hover"
-                      : "fg-faint hover:fg hover:bg-hover"
-                  }`}
-                >
-                  {togglingLock === p.slug ? (
-                    <Loader size={11} className="animate-spin" />
-                  ) : gated ? (
-                    <LockIcon size={11} />
-                  ) : (
-                    <LockOpen size={11} />
-                  )}
-                </button>
-              )}
               <button
                 type="button"
                 disabled={deleting === p.slug}
@@ -172,18 +126,6 @@ export function SitePagesPanel({
           );
         })}
 
-        {membersDoorOn && (
-          <div
-            className="flex items-center gap-2 w-full h-8 px-2 rounded-md fg-muted cursor-default"
-            title={t("sitePages.doorTitle")}
-          >
-            <LockOpen size={13} className="shrink-0" />
-            <span className="text-[12px] truncate tabular">/cuenta</span>
-            <span className="ml-auto shrink-0 text-[10px] uppercase tracking-wide fg-faint rounded px-1 py-0.5 ring-1 ring-[color:var(--border)]">
-              {t("sitePages.doorBadge")}
-            </span>
-          </div>
-        )}
 
         {adding ? (
           <div className="mt-2 rounded-md border bd bg-elev p-2 space-y-2 fade-in">

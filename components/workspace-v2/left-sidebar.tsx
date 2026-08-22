@@ -261,9 +261,7 @@ interface LeftSidebarProps {
   onDeleteSitePage?: (slug: string) => Promise<boolean>;
   /** Members-only page toggle, used by the Site (page tree) panel. The module
    *  settings/handlers themselves now live in ModulesView (the center view). */
-  onToggleMembersOnly?: (slug: string, next: boolean) => Promise<boolean>;
   /** Members door on → the page tree shows the auto /cuenta access page. */
-  membersDoorOn?: boolean;
   /** 3D scene settings for the active project. */
   scene3d?: { enabled?: boolean; spec?: unknown };
   /** Called when the user applies or removes a 3D scene. */
@@ -323,8 +321,6 @@ export function LeftSidebar({
   onSwitchSitePage,
   onCreateSitePage,
   onDeleteSitePage,
-  onToggleMembersOnly,
-  membersDoorOn = false,
   scene3d,
   onApplyScene3d,
   accent,
@@ -462,8 +458,6 @@ export function LeftSidebar({
                 onSwitch={onSwitchSitePage ?? (() => {})}
                 onCreate={onCreateSitePage ?? (async () => "errInvalid")}
                 onDelete={onDeleteSitePage ?? (async () => false)}
-                onToggleMembersOnly={onToggleMembersOnly}
-                membersDoorOn={membersDoorOn}
               />
             )}
             {mode === "chat" && (

@@ -167,8 +167,6 @@
     "moduleError": "Das Modul konnte nicht aktualisiert werden.",
     "moduleMembers": "Konten",
     "moduleBroadcast": "Broadcast",
-    "moduleComments": "Kommentare",
-    "moduleBookings": "Buchungen",
     "moduleCollections": "Sammlungen",
     "membersOnlyOn": "Die Seite ist jetzt nur für Mitglieder",
     "membersOnlyOff": "Die Seite ist jetzt öffentlich",
@@ -182,7 +180,6 @@
     "analyticsDisabled": "Analytics deaktiviert",
     "saveError": "Die Änderung konnte nicht gespeichert werden.",
     "moduleWhatsapp": "WhatsApp",
-    "moduleOrders": "Bestellungen",
     "whatsappNeedNumber": "Füge zuerst eine WhatsApp-Nummer hinzu",
     "modulePageCreated": "Seite erstellt",
     "modulePageExists": "Vorhandene Seite geöffnet",
@@ -197,13 +194,6 @@
     "messagePlaceholder": "Vorausgefüllte Nachricht (optional)",
     "note": "Erscheint unten rechts auf der veröffentlichten Seite. Eine 10-stellige Nummer wird als Mexiko (+52) gelesen.",
     "missingNumber": "Deine Nummer fehlt — ohne sie erscheint der Button nicht auf der Seite."
-  },
-  "orders": {
-    "title": "WhatsApp-Bestellungen",
-    "tagline": "Ein Warenkorb über deinem Katalog: die fertige Bestellung landet auf deinem WhatsApp",
-    "numberPlaceholder": "WhatsApp-Nummer (z. B. 5512345678)",
-    "note": "Funktioniert mit den Artikeln deines Katalogs. Besucher fügen Produkte hinzu, und die Nachricht enthält Mengen und Gesamtsumme.",
-    "needsCatalog": "Aktiviere das Katalog-Modul und füge Artikel hinzu, damit die Buttons erscheinen."
   },
   "moduleSurface": {
     "createBookingPage": "Buchungsseite erstellen",
@@ -266,7 +256,20 @@
     "availableGroup": "Verfügbar",
     "open": "Öffnen",
     "activate": "Aktivieren",
-    "drawerClose": "Schließen"
+    "drawerClose": "Schließen",
+    "perProject": "Öffne ein Projekt, um seine Module zu verwalten.",
+    "title": "Module",
+    "subtitle": "Ein-Klick-Backend für deine Seite. Ohne Credits, ohne Code.",
+    "included": {
+      "title": "In deiner Seite enthalten",
+      "open": "Öffnen",
+      "forms": "Formulare & Leads",
+      "formsHint": "Jedes Formular erfasst bereits Leads",
+      "analytics": "Analytics",
+      "analyticsHint": "Besuche und Klicks, eingebaut",
+      "assistant": "KI-Assistent",
+      "assistantHint": "Beantwortet Besucherfragen"
+    }
   },
   "platforms": {
     "title": "Meine Plattformen",
@@ -284,6 +287,7 @@
     "unsafe_links": "Einige Links waren nicht sicher und wurden entfernt.",
     "dynamic_content": "Ein Teil dessen, was deine Seite selbst aufbaut, kann leer aussehen. Du kannst es direkt im Editor eintragen.",
     "broken_controls": "Einige interaktive Elemente sind falsch verdrahtet und funktionieren nicht. Bitte den Assistenten, sie zu reparieren.",
+    "interactivity_lost": "Die interaktiven Details, die die KI für deine Seite geschrieben hat (Filter, Galerien, Tabs), sind bei dieser Veröffentlichung nicht mitgekommen. Text und Bilder sind vollständig. Veröffentliche erneut; fehlen sie weiterhin, bitte den Assistenten, sie neu zu bauen.",
     "dismiss": "Verstanden",
     "fix": "Das reparieren"
   }

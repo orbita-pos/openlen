@@ -167,8 +167,6 @@
     "moduleError": "Kon de module niet bijwerken.",
     "moduleMembers": "Accounts",
     "moduleBroadcast": "Broadcast",
-    "moduleComments": "Reacties",
-    "moduleBookings": "Afspraken",
     "moduleCollections": "Collecties",
     "membersOnlyOn": "Pagina is nu alleen voor leden",
     "membersOnlyOff": "Pagina is nu openbaar",
@@ -182,7 +180,6 @@
     "analyticsDisabled": "Analytics uitgeschakeld",
     "saveError": "Kon de wijziging niet opslaan.",
     "moduleWhatsapp": "WhatsApp",
-    "moduleOrders": "Bestellingen",
     "whatsappNeedNumber": "Voeg eerst een WhatsApp-nummer toe",
     "modulePageCreated": "Pagina gemaakt",
     "modulePageExists": "Bestaande pagina geopend",
@@ -197,13 +194,6 @@
     "messagePlaceholder": "Vooraf ingevuld bericht (optioneel)",
     "note": "Verschijnt rechtsonder op je gepubliceerde pagina. Een 10-cijferig nummer wordt gelezen als Mexico (+52).",
     "missingNumber": "Je nummer ontbreekt — zonder nummer verschijnt de knop niet op je pagina."
-  },
-  "orders": {
-    "title": "WhatsApp-bestellingen",
-    "tagline": "Een winkelwagen boven je Catalogus: de samengestelde bestelling komt aan op je WhatsApp",
-    "numberPlaceholder": "WhatsApp-nummer (bijv. 5512345678)",
-    "note": "Werkt met de items uit je Catalogus. Bezoekers voegen producten toe en het bericht gaat uit met aantallen en totaal.",
-    "needsCatalog": "Zet de Catalogus-module aan en voeg items toe zodat de knoppen verschijnen."
   },
   "moduleSurface": {
     "createBookingPage": "Boekingspagina maken",
@@ -266,7 +256,20 @@
     "availableGroup": "Beschikbaar",
     "open": "Openen",
     "activate": "Inschakelen",
-    "drawerClose": "Sluiten"
+    "drawerClose": "Sluiten",
+    "perProject": "Open een project om de modules te beheren.",
+    "title": "Modules",
+    "subtitle": "Backend met één klik voor je site. Geen credits, geen code.",
+    "included": {
+      "title": "Inbegrepen bij je site",
+      "open": "Openen",
+      "forms": "Formulieren & leads",
+      "formsHint": "Elk formulier vangt al leads",
+      "analytics": "Analytics",
+      "analyticsHint": "Bezoeken en klikken, ingebouwd",
+      "assistant": "AI-assistent",
+      "assistantHint": "Beantwoordt vragen van bezoekers"
+    }
   },
   "platforms": {
     "title": "Mijn platforms",
@@ -284,6 +287,7 @@
     "unsafe_links": "Sommige links waren niet veilig en zijn verwijderd.",
     "dynamic_content": "Een deel van wat je pagina zelf opbouwt kan leeg lijken. Je kunt het rechtstreeks in de editor invullen.",
     "broken_controls": "Sommige interactieve onderdelen zijn verkeerd aangesloten en werken niet. Vraag de assistent om ze te repareren.",
+    "interactivity_lost": "De interactieve onderdelen die de AI voor je pagina schreef (filters, galerijen, tabbladen) zijn deze keer niet meegepubliceerd. Je tekst en afbeeldingen zijn compleet. Publiceer opnieuw; ontbreken ze nog steeds, vraag de assistent ze opnieuw te maken.",
     "dismiss": "Begrepen",
     "fix": "Dit repareren"
   }
