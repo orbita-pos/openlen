@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { avisoHechosPerdidos, hechosPerdidos } from "./facts-kept";
+import { avisoHechosPerdidos, avisoMetaDesfasada, hechosPerdidos, metaDesfasada } from "./facts-kept";
 
 const FOTO = "https://images.openlen.com/taller-fachada.webp";
 const WA = "https://wa.me/525512345678";
@@ -89,5 +89,47 @@ describe("el aviso al modelo", () => {
     const a = avisoHechosPerdidos(muchos);
     expect(a).toContain("9 dato(s)");
     expect(a).toContain("y 3 más");
+  });
+});
+
+// MEDIDO con los ataques de QA (2026-08-22): «cambia nuestro telefono en TODA
+// la pagina» actualizaba texto, tel: y WhatsApp, y dejaba el viejo en la meta
+// description — 3 de 3. Con el camino abierto paso a 1 de 3; con este detector,
+// 4 de 4. Pedirlo no bastaba; hacerlo COMPROBABLE si.
+describe("la meta description que se queda atras", () => {
+  const pagina = (meta: string, cuerpo: string) =>
+    `<html><head><meta name="description" content="${meta}"></head><body>${cuerpo}</body></html>`;
+
+  it("caza el telefono viejo que sobrevive en la meta", () => {
+    const r = metaDesfasada(pagina("Clínica Ríos · Tel. 614 555 0100", "<p>Tel. 614 555 0198</p>"));
+    expect(r).toHaveLength(1);
+    expect(r[0]).toContain("614 555 0100");
+  });
+
+  // Reformatear no es quedarse atras: se comparan DIGITOS.
+  it("un telefono reformateado NO es un desfase", () => {
+    expect(metaDesfasada(pagina("Tel. 614 555 0198", "<p>(614) 555-0198</p>"))).toEqual([]);
+  });
+
+  it("caza tambien un correo que ya no esta", () => {
+    const r = metaDesfasada(pagina("Escríbenos a viejo@clinica.com", "<p>citas@clinica.com</p>"));
+    expect(r).toEqual(["viejo@clinica.com"]);
+  });
+
+  // Del resto del texto no se puede decir lo mismo: reescribir un eslogan no
+  // deja la meta «mal», la deja distinta.
+  it("un eslogan reescrito no dispara nada", () => {
+    expect(metaDesfasada(pagina("La mejor clínica de la ciudad", "<p>Odontología integral</p>"))).toEqual([]);
+  });
+
+  it("sin meta description no hay nada que comprobar", () => {
+    expect(metaDesfasada(`<html><head></head><body><p>Tel. 614 555 0100</p></body></html>`)).toEqual([]);
+  });
+
+  it("el aviso dice el dato y por que importa", () => {
+    const a = avisoMetaDesfasada(["614 555 0100"]);
+    expect(a).toContain("614 555 0100");
+    expect(a).toMatch(/Google/);
+    expect(a).toMatch(/target="head"/);
   });
 });

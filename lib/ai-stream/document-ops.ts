@@ -70,14 +70,27 @@ export type HeadOpResult =
  *  esquivaría la cápsula y el sellado CSP — el script viajaría sin política y
  *  sin quedar atado al documento. NUNCA `<base>` (reescribe TODOS los enlaces
  *  relativos de la página de una vez) ni `<meta http-equiv>` (un refresco o una
- *  CSP propia). `<title>` y la meta description tampoco: los escribe
- *  `ensurePageMeta`, y dos escritores del mismo campo es cómo se pierde uno.
+ *  CSP propia).
  *
- *  Queda una cosa, que es justo la que hacía falta: la hoja de Google Fonts.
- *  Sin ella, cambiar la tipografía deja el `font-family` apuntando a una fuente
- *  que el navegador no tiene y la página cae al serif del sistema. */
+ *  SÍ el `<title>` y la meta description. La primera versión los excluía
+ *  razonando que `ensurePageMeta` ya los escribe y dos escritores del mismo
+ *  campo es cómo se pierde uno. Dos cosas lo desmintieron: `ensurePageMeta` es
+ *  NO DESTRUCTIVO por contrato —sólo añade lo ausente, su propio encabezado lo
+ *  dice— y, MEDIDO el 2026-08-22 con los ataques de QA, «cambia el teléfono en
+ *  TODA la página» dejaba el número viejo en la meta description 3 de 3 veces.
+ *  Un teléfono muerto en el fragmento que enseña Google son llamadas perdidas.
+ *
+ *  Y la hoja de Google Fonts, que es con lo que empezó esto: sin ella, cambiar
+ *  la tipografía deja el `font-family` apuntando a una fuente que el navegador
+ *  no tiene y la página cae al serif del sistema. */
 function nodoDeCabezaPermitido(fragmento: string): boolean {
   const t = fragmento.trim();
+  if (/^<title[\s>]/i.test(t)) return /<\/title\s*>$/i.test(t);
+  if (/^<meta[\s>]/i.test(t)) {
+    // `http-equiv` fuera: es un refresco, o una CSP propia.
+    if (/\shttp-equiv\s*=/i.test(t)) return false;
+    return /\sname\s*=\s*["'](description|keywords|author)["']/i.test(t);
+  }
   if (!t.startsWith("<link")) return false;
   if (/<\s*\//.test(t.slice(5))) return false; // un solo elemento vacío
   const href = /\shref\s*=\s*["']([^"']+)["']/i.exec(t)?.[1]?.trim() ?? "";
@@ -238,17 +251,97 @@ export function applyStylesOp(html: string, result: StylesOpResult): string {
   return BLOQUE_RE.test(html) ? html.replace(BLOQUE_RE, bloque) : insertarEnCabeza(html, bloque);
 }
 
-/** Añade los nodos al `<head>`, sin duplicar lo que ya está. */
+/**
+ * Pone los nodos en el `<head>`.
+ *
+ * Un `<title>` o una `<meta name="…">` REEMPLAZAN al que ya hubiera: dos
+ * títulos o dos descripciones no son un añadido, son un documento roto del que
+ * el navegador elige uno y nadie sabe cuál. Lo demás se añade, sin duplicar.
+ */
 export function applyHeadOp(html: string, result: HeadOpResult): string {
   if (result.kind !== "nodos") return html;
-  const nuevos = separarPorEtiqueta(result.html).filter((nodo) => {
+  let out = html;
+  const aAñadir: string[] = [];
+
+  for (const nodo of separarPorEtiqueta(result.html)) {
+    if (/^<title[\s>]/i.test(nodo)) {
+      out = /<title[^>]*>[\s\S]*?<\/title\s*>/i.test(out)
+        ? out.replace(/<title[^>]*>[\s\S]*?<\/title\s*>/i, nodo)
+        : ((aAñadir.push(nodo), out));
+      continue;
+    }
+    const meta = /^<meta[^>]*\sname\s*=\s*["']([\w-]+)["']/i.exec(nodo);
+    if (meta) {
+      const re = new RegExp(`<meta[^>]*\\sname\\s*=\\s*["']${meta[1]}["'][^>]*>`, "i");
+      out = re.test(out) ? out.replace(re, nodo) : ((aAñadir.push(nodo), out));
+      continue;
+    }
     const href = /\shref\s*=\s*["']([^"']+)["']/i.exec(nodo)?.[1];
     // Repetir la hoja de fuentes no rompe la página, pero la hace pesar dos
     // veces y el horneado de fuentes al publicar tiene que resolverla dos
     // veces. Un turno que pide lo que ya está no cambia nada.
-    return href ? !html.includes(href) : true;
-  });
-  return nuevos.length === 0 ? html : insertarEnCabeza(html, nuevos.join(""));
+    if (!href || !out.includes(href)) aAñadir.push(nodo);
+  }
+  return aAñadir.length === 0 ? out : insertarEnCabeza(out, aAñadir.join(""));
+}
+
+/** El idioma del documento — `lang` en `<html>`. */
+export const LANG_OP_TARGET = "idioma";
+
+/** Códigos BCP-47 sencillos: `en`, `es`, `pt-BR`. Nada más entra a un atributo
+ *  que el navegador y los lectores de pantalla obedecen. */
+const LANG_RE = /^[a-z]{2,3}(?:-[A-Za-z0-9]{2,8})?$/;
+
+export type LangOpResult =
+  | { readonly kind: "ninguna" }
+  | { readonly kind: "idioma"; readonly lang: string }
+  | { readonly kind: "error"; readonly reason: DocumentOpRejection };
+
+/**
+ * EL IDIOMA DEL DOCUMENTO, que tampoco era alcanzable.
+ *
+ * `<html>` está en `SKIP_TAGS`, así que no lleva `data-op-id` y su `lang` no se
+ * podía tocar por el camino barato. MEDIDO el 2026-08-22 con los ataques de QA:
+ * «pon la página en inglés» tradujo el cuerpo correctamente y dejó `lang="es"`
+ * 3 de 3 veces.
+ *
+ * No es cosmético por dos razones: un lector de pantalla lee inglés con voz y
+ * fonética españolas —ilegible para quien depende de él— y `detectHtmlLang`
+ * alimenta el `hreflang` del clúster multilingüe al publicar, así que el error
+ * se propaga al SEO.
+ *
+ * Objetivo propio y no parte de `head` porque no es un nodo de la cabecera: es
+ * un atributo de la raíz. Meterlo ahí sería mentir sobre lo que hace.
+ */
+export function splitLangOp(ops: readonly Op[]): { domOps: Op[]; lang: LangOpResult } {
+  const domOps = ops.filter((o) => o.target !== LANG_OP_TARGET);
+  if (!documentOpsEnabled()) return { domOps: [...ops], lang: { kind: "ninguna" } };
+  const mias = ops.filter((o) => o.target === LANG_OP_TARGET);
+  if (mias.length === 0) return { domOps, lang: { kind: "ninguna" } };
+  if (mias.length > 1) return { domOps, lang: { kind: "error", reason: "varias" } };
+  const op = mias[0]!;
+  if (op.type !== "replace") return { domOps, lang: { kind: "error", reason: "op_no_soportada" } };
+  // Se tolera el código pelado (`en`) y el atributo entero (`lang="en"`), igual
+  // que `styles` tolera el `<style>` entero: toda op de replace lleva algo, y
+  // perder un cambio bueno por el envoltorio no sale a cuenta.
+  const bruto = (op.newHtml ?? "").trim();
+  const code = (/lang\s*=\s*["']?([\w-]+)/i.exec(bruto)?.[1] ?? bruto).trim();
+  if (!code) return { domOps, lang: { kind: "error", reason: "vacio" } };
+  if (!LANG_RE.test(code)) return { domOps, lang: { kind: "error", reason: "no_permitido" } };
+  return { domOps, lang: { kind: "idioma", lang: code } };
+}
+
+const HTML_TAG_RE = /<html\b[^>]*>/i;
+
+/** Escribe `lang` en `<html>`, reemplazando el que hubiera. */
+export function applyLangOp(html: string, result: LangOpResult): string {
+  if (result.kind !== "idioma") return html;
+  const m = HTML_TAG_RE.exec(html);
+  if (!m) return html;
+  const tag = /\slang\s*=\s*["'][^"']*["']/i.test(m[0])
+    ? m[0].replace(/\slang\s*=\s*["'][^"']*["']/i, ` lang="${result.lang}"`)
+    : m[0].replace(/^<html\b/i, `<html lang="${result.lang}"`);
+  return html.slice(0, m.index) + tag + html.slice(m.index + m[0].length);
 }
 
 /** Frase para el USUARIO cuando el cambio de estilo se descartó. En español:

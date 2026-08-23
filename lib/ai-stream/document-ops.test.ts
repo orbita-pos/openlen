@@ -3,6 +3,9 @@ import { describe, expect, it } from "vitest";
 import type { Op } from "@/lib/html-ops";
 import {
   HEAD_OP_TARGET,
+  LANG_OP_TARGET,
+  applyLangOp,
+  splitLangOp,
   MODEL_CSS_ATTR,
   STYLES_OP_TARGET,
   applyHeadOp,
@@ -194,5 +197,87 @@ describe("el aviso al usuario", () => {
     expect(documentOpAviso("styles", "demasiado_grande")).toContain("16 KiB");
     expect(documentOpAviso("head", "no_permitido")).toContain("fuentes de Google");
     expect(documentOpAviso("styles", "varias")).toContain("El resto de la edición sí se guardó");
+  });
+});
+
+// ─── LO QUE ENCONTRARON LOS ATAQUES DE QA (2026-08-22) ──────────────────────
+// La primera version limitaba `head` a hojas de fuentes, y `<html>` no era
+// alcanzable en absoluto. Dos peticiones normalisimas quedaban rotas y MEDIDAS
+// 0 de 3: «cambia el telefono en TODA la pagina» dejaba el viejo en la meta
+// description, y «pon la pagina en ingles» dejaba lang="es".
+
+describe("la cabecera: titulo y metadatos", () => {
+  it("acepta el <title> y la meta description", () => {
+    const r = splitDocumentOps([
+      op({
+        target: HEAD_OP_TARGET,
+        type: "insert_after",
+        newHtml: `<meta name="description" content="Clínica Ríos · Tel. 614 555 0198">`,
+      }),
+    ]);
+    expect(r.head.kind).toBe("nodos");
+  });
+
+  // Dos titulos o dos descripciones no son un anadido: son un documento roto
+  // del que el navegador elige uno y nadie sabe cual.
+  it("un <title> REEMPLAZA al que habia, no se duplica", () => {
+    const base = `<html><head><title>Viejo</title></head><body>x</body></html>`;
+    const out = applyHeadOp(base, { kind: "nodos", html: `<title>Nuevo</title>` });
+    expect(out).toContain("<title>Nuevo</title>");
+    expect(out).not.toContain("Viejo");
+    expect(out.split("<title").length - 1).toBe(1);
+  });
+
+  it("una <meta> del mismo name tambien reemplaza", () => {
+    const base = `<html><head><meta name="description" content="viejo"></head><body>x</body></html>`;
+    const out = applyHeadOp(base, {
+      kind: "nodos",
+      html: `<meta name="description" content="nuevo">`,
+    });
+    expect(out).toContain('content="nuevo"');
+    expect(out).not.toContain("viejo");
+  });
+
+  it("pero un <meta http-equiv> sigue prohibido — es un refresco o una CSP propia", () => {
+    const r = splitDocumentOps([
+      op({ target: HEAD_OP_TARGET, type: "insert_after", newHtml: `<meta http-equiv="refresh" content="0;url=https://x">` }),
+    ]);
+    expect(r.head).toEqual({ kind: "error", reason: "no_permitido" });
+  });
+});
+
+describe("el idioma del documento", () => {
+  it("acepta el codigo pelado y el atributo entero", () => {
+    for (const bruto of ["en", `lang="pt-BR"`]) {
+      const r = splitLangOp([op({ target: LANG_OP_TARGET, newHtml: bruto })]);
+      expect(r.lang.kind, bruto).toBe("idioma");
+    }
+  });
+
+  it("escribe lang en <html>, reemplazando el que hubiera", () => {
+    const out = applyLangOp(`<!doctype html><html lang="es"><body>x</body></html>`, {
+      kind: "idioma",
+      lang: "en",
+    });
+    expect(out).toContain('<html lang="en">');
+    expect(out).not.toContain('lang="es"');
+  });
+
+  it("y lo anade cuando no habia", () => {
+    expect(applyLangOp(`<html><body>x</body></html>`, { kind: "idioma", lang: "en" }))
+      .toContain('<html lang="en"');
+  });
+
+  it("cualquier cosa que no sea un codigo se rechaza", () => {
+    for (const malo of ["", "javascript:x", "en'><script>", "esto es español"]) {
+      expect(splitLangOp([op({ target: LANG_OP_TARGET, newHtml: malo })]).lang.kind, malo).toBe("error");
+    }
+  });
+
+  it("una tanda sin idioma no toca nada", () => {
+    const ops = [op({ target: "a4", newHtml: "<p>x</p>" })];
+    const r = splitLangOp(ops);
+    expect(r.domOps).toHaveLength(1);
+    expect(r.lang).toEqual({ kind: "ninguna" });
   });
 });

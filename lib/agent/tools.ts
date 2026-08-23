@@ -33,8 +33,8 @@ import { debitCredits } from "@/lib/credits";
 import { detectSlotPath, sanitizeForPublish } from "@/lib/html-engine";
 import { applyOps, rejectDocumentWideOps, tagWithOpIds, type Op, type OpType } from "@/lib/html-ops";
 import { splitRuntimeOps } from "@/lib/ai-stream/model-runtime";
-import { applyHeadOp, applyStylesOp, splitDocumentOps } from "@/lib/ai-stream/document-ops";
-import { avisoHechosPerdidos, hechosPerdidos } from "@/lib/agent/facts-kept";
+import { applyHeadOp, applyLangOp, applyStylesOp, splitDocumentOps, splitLangOp } from "@/lib/ai-stream/document-ops";
+import { avisoHechosPerdidos, avisoMetaDesfasada, hechosPerdidos, metaDesfasada } from "@/lib/agent/facts-kept";
 import { parseBehaviorSpec, specRechazoAviso, type PasoSpec } from "@/lib/agent/behavior-spec";
 import { AGENT_MEMORY_MAX, rememberAboutUser } from "@/lib/agent/user-memory";
 import { fetchSheet, resolveSheetCsvUrl } from "@/lib/live/sheet-source";
@@ -1106,6 +1106,7 @@ async function toolEditarPagina(
   // `data-op-id`. Sin esto, «cámbiame la tipografía» sólo tenía la salida cara
   // —reescribir la página entera— y cada reescritura puede perder algo.
   const documento = splitDocumentOps(partido.domOps);
+  const idioma = splitLangOp(documento.domOps);
   if (partido.runtime.kind === "error") {
     return {
       response: {
@@ -1131,7 +1132,8 @@ async function toolEditarPagina(
     };
   }
   const nuevoRuntime = partido.runtime.kind === "codigo" ? partido.runtime.code : null;
-  const tocaDocumento = documento.styles.kind === "css" || documento.head.kind === "nodos";
+  const tocaDocumento =
+    documento.styles.kind === "css" || documento.head.kind === "nodos" || idioma.lang.kind === "idioma";
 
   // LA PRUEBA DE LO QUE ESTE TURNO PROMETIÓ.
   //
@@ -1180,7 +1182,7 @@ async function toolEditarPagina(
   // página entera del usuario.
   const { ops: opsSeguras, rejected: opsRechazadas } = rejectDocumentWideOps(
     session.taggedHtml,
-    documento.domOps,
+    idioma.domOps,
   );
 
   let htmlAplicado = session.taggedHtml;
@@ -1208,7 +1210,10 @@ async function toolEditarPagina(
   } else if (nuevoRuntime === null && !tocaDocumento) {
     return { response: { ok: false, error: "ningún edit aplicable" } };
   }
-  htmlAplicado = applyHeadOp(applyStylesOp(htmlAplicado, documento.styles), documento.head);
+  htmlAplicado = applyLangOp(
+    applyHeadOp(applyStylesOp(htmlAplicado, documento.styles), documento.head),
+    idioma.lang,
+  );
 
   const persisted = await persistHtmlChange(
     session,
@@ -1227,6 +1232,12 @@ async function toolEditarPagina(
       edits_aplicados: aplicadas,
       ...(nuevoRuntime ? { comportamiento_actualizado: true } : {}),
       ...(tocaDocumento ? { estilo_actualizado: true } : {}),
+      // La META se quedo atras: el dato viejo sigue en el fragmento que ensena
+      // Google. Se mira sobre el documento que de verdad se guardo.
+      ...(() => {
+        const viejos = metaDesfasada(persisted.finalHtml ?? htmlAplicado);
+        return viejos.length > 0 ? { meta_desfasada: viejos, aviso_critico: avisoMetaDesfasada(viejos) } : {};
+      })(),
       // Sin prueba, nadie sabrá si el comportamiento hace lo que promete —
       // sólo si explota. Se le dice, y se le dice por qué.
       ...((nuevoRuntime || tocaConducta(htmlAplicado, session.taggedHtml)) && !session.behaviorSpec

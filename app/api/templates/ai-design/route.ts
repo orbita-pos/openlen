@@ -21,9 +21,11 @@ import {
 } from "@/lib/ai-stream/model-runtime";
 import {
   applyHeadOp,
+  applyLangOp,
   applyStylesOp,
   documentOpAviso,
   splitDocumentOps,
+  splitLangOp,
 } from "@/lib/ai-stream/document-ops";
 import { verifyCapsule } from "@/lib/projects/model-runtime";
 import { buildBusinessFacts } from "@/lib/business-profiles/facts";
@@ -869,7 +871,8 @@ VISUAL CONTEXT: the attached image is a full-page render of the CURRENT page (wh
           // `SKIP_TAGS` los deja sin `data-op-id`, así que el aplicador no
           // sabría a qué apuntan. Ver lib/ai-stream/document-ops.ts.
           const documento = splitDocumentOps(partido.domOps);
-          const ops = documento.domOps;
+          const idioma = splitLangOp(documento.domOps);
+          const ops = idioma.domOps;
           if (partido.runtime.kind === "codigo") {
             runtimeDesdeOps = partido.runtime.code;
           } else if (partido.runtime.kind === "error") {
@@ -883,7 +886,8 @@ VISUAL CONTEXT: the attached image is a full-page render of the CURRENT page (wh
             // eslint-disable-next-line no-console
             console.warn(`[ai-design] op de ${cual} descartada: ${res.reason}`);
           }
-          const tocaDocumento = documento.styles.kind === "css" || documento.head.kind === "nodos";
+          const tocaDocumento =
+            documento.styles.kind === "css" || documento.head.kind === "nodos" || idioma.lang.kind === "idioma";
 
           // Un turno que SÓLO cambia comportamiento o SÓLO estilo es legítimo
           // —de hecho «cámbiame la tipografía» es exactamente eso— y no lleva
@@ -951,7 +955,10 @@ VISUAL CONTEXT: the attached image is a full-page render of the CURRENT page (wh
           // Después de las ops del DOM, sobre el documento que de verdad sale:
           // el bloque del modelo tiene que quedar el último del <head> para que
           // a igual especificidad sus reglas ganen a las de la plantilla.
-          trimmedHtml = applyHeadOp(applyStylesOp(trimmedHtml, documento.styles), documento.head);
+          trimmedHtml = applyLangOp(
+            applyHeadOp(applyStylesOp(trimmedHtml, documento.styles), documento.head),
+            idioma.lang,
+          );
           if (detectSlotPath(trimmedHtml)) {
             emit("error", {
               message:

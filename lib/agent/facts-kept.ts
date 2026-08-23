@@ -105,6 +105,50 @@ export function hechosPerdidos(antes: string, despues: string): HechoPerdido[] {
  * falta y se le dice que lo reponga AHORA — que es lo que ya se hace con las
  * conductas mal cableadas (`aviso_critico`), y funciona.
  */
+/**
+ * ¿LA META DESCRIPTION QUEDÓ DESFASADA?
+ *
+ * Devuelve los datos de contacto que la meta sigue anunciando y que ya NO
+ * existen en el cuerpo del documento.
+ *
+ * POR QUÉ. MEDIDO el 2026-08-22 con los ataques de QA: «cambia nuestro teléfono
+ * en TODA la página» actualizaba el texto, el `tel:` y el WhatsApp, y dejaba el
+ * número viejo en la meta description — 3 de 3 veces. Con el objetivo
+ * `target="head"` abierto pasó a 1 de 3: un camino que existe y no siempre se
+ * toma. Pedirlo no basta; esto lo hace COMPROBABLE.
+ *
+ * No es cosmético: la meta description es el fragmento que enseña Google, así
+ * que un teléfono muerto ahí son llamadas que nunca entran. Y es el fallo
+ * silencioso perfecto — la página se ve impecable.
+ *
+ * Sólo teléfonos y correos: un dato de contacto que desapareció del cuerpo es
+ * inequívocamente viejo. Del resto del texto no se puede decir lo mismo —
+ * reescribir un eslogan no deja la meta «mal», la deja distinta.
+ */
+export function metaDesfasada(html: string): string[] {
+  const meta = /<meta[^>]*\sname\s*=\s*["']description["'][^>]*\scontent\s*=\s*["']([^"']*)["']/i
+    .exec(html)?.[1];
+  if (!meta) return [];
+  const cuerpoAt = html.toLowerCase().indexOf("<body");
+  const cuerpo = cuerpoAt === -1 ? html : html.slice(cuerpoAt);
+  const digitosCuerpo = cuerpo.replace(/\D/g, "");
+  const fuera: string[] = [];
+
+  for (const m of meta.matchAll(/(?:\+?\d[\d\s().-]{7,17}\d)/g)) {
+    const d = m[0].replace(/\D/g, "");
+    if (d.length >= 8 && d.length <= 15 && !digitosCuerpo.includes(d)) fuera.push(m[0].trim());
+  }
+  for (const m of meta.matchAll(/[\w.+-]+@[\w-]+\.[\w.]+/g)) {
+    if (!cuerpo.includes(m[0])) fuera.push(m[0]);
+  }
+  return fuera;
+}
+
+/** El aviso PARA EL MODELO cuando la meta se quedó atrás. */
+export function avisoMetaDesfasada(viejos: readonly string[]): string {
+  return `La <meta name="description"> sigue anunciando ${viejos.join(" y ")}, y eso ya NO está en la página. Ese es el texto que enseña Google: ahí quedaría un dato muerto que le cuesta clientes al dueño. Corrígela AHORA, en este mismo turno, con un edit target="head" que lleve la <meta name="description"> completa y actualizada.`;
+}
+
 export function avisoHechosPerdidos(perdidos: readonly HechoPerdido[]): string {
   const lista = perdidos
     .slice(0, MAX_NOMBRADOS)
