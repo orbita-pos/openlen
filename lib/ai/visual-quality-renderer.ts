@@ -41,11 +41,26 @@ export interface VisualQualityViewports {
   squareComponentTreatment?: boolean;
   invalidGeometry?: boolean;
   unreadableText?: readonly UnreadableTextFinding[];
+  /** LO QUE LA PÁGINA GRITÓ AL CARGAR — excepciones no capturadas y errores de
+   *  consola, deduplicados.
+   *
+   *  Este render se hace DOS veces por página al crearla y nunca preguntaba si
+   *  el JavaScript reventaba. MEDIDO el 2026-08-21: el modelo escribió un
+   *  `const` y luego lo reasignó, la captura salió perfecta y el juego estaba
+   *  muerto antes del primer clic. Los ojos del Agente ya recogen esto tras
+   *  editar (`lib/ai/inline-image.ts`); al NACER, nadie miraba.
+   *
+   *  Ausente cuando el llamador inyectó su propio `capture` (no hay página a la
+   *  que escuchar) o cuando la página no dijo nada. */
+  runtimeErrors?: readonly string[];
 }
 
 interface PageLike {
   setViewport(viewport: { width: number; height: number }): Promise<unknown>;
   setContent(html: string, options?: { waitUntil?: "load"; timeout?: number }): Promise<unknown>;
+  /** Opcional a propósito: los dobles de prueba implementan esta interfaz a
+   *  mano y exigirlo los rompería a todos por una señal que no piden. */
+  on?(event: string, handler: (payload: unknown) => void): unknown;
   evaluate(pageFunction: () => unknown): Promise<unknown>;
   screenshot(options: {
     type: "jpeg";
@@ -212,6 +227,18 @@ async function captureWithPage(
   html: string,
   internals: VisualQualityRendererInternals,
 ): Promise<VisualQualityViewports | null> {
+  // Antes de `setContent`, o los errores del arranque se pierden.
+  const gritos: string[] = [];
+  page.on?.("pageerror", (e) => {
+    gritos.push(String(e instanceof Error ? e.message : e).slice(0, 300));
+  });
+  page.on?.("console", (m) => {
+    const mensaje = m as { type?: () => string; text?: () => string };
+    if (typeof mensaje.type === "function" && mensaje.type() === "error") {
+      gritos.push(`consola: ${String(mensaje.text?.() ?? "").slice(0, 300)}`);
+    }
+  });
+
   await page.setViewport(VISUAL_QUALITY_DESKTOP_VIEWPORT);
   await page.setContent(injectDeterministicRenderReset(html), { waitUntil: "load", timeout: 20_000 });
 
@@ -458,6 +485,9 @@ async function captureWithPage(
     squareComponentTreatment,
     invalidGeometry,
     unreadableText,
+    // Ausente —no vacío— cuando la página no gritó: así el resto del objeto
+    // queda idéntico al de antes de que esto existiera.
+    ...(gritos.length > 0 ? { runtimeErrors: [...new Set(gritos)] } : {}),
   };
 }
 

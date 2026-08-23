@@ -39,4 +39,29 @@ describe("rotura objetiva", () => {
   it("una regla de tipografía que no conoce no inventa un motivo", () => {
     expect(objectiveBreakage({ typographyHierarchy: { rule: "algo_nuevo", h1FontPx: 40, heroBodyFontPx: 18 } })).toEqual([]);
   });
+
+  // El modo de fallo que NINGUNA captura enseña: el script muere en el arranque
+  // y la foto sale perfecta. Medido el 2026-08-21 sobre un juego del modelo.
+  it("el error del JavaScript va LITERAL, no como categoría", () => {
+    const reasons = objectiveBreakage({
+      runtimeErrors: ["TypeError: Assignment to constant variable."],
+    });
+    expect(reasons).toHaveLength(1);
+    // La lección de la tipografía, aplicada al JS: «el script falla» no dice
+    // qué arreglar; el mensaje del motor sí.
+    expect(reasons[0]).toContain("Assignment to constant variable");
+  });
+
+  it("se acota a tres — más suele ser el mismo fallo rebotando", () => {
+    const reasons = objectiveBreakage({
+      runtimeErrors: ["uno", "dos", "tres", "cuatro", "cinco"],
+    });
+    expect(reasons).toHaveLength(3);
+    expect(reasons.join(" ")).not.toContain("cuatro");
+  });
+
+  it("una página sin gritos sigue sin dar motivos", () => {
+    expect(objectiveBreakage({ runtimeErrors: [] })).toEqual([]);
+    expect(objectiveBreakage({ mobileOverflow: false })).toEqual([]);
+  });
 });
