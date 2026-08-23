@@ -18,6 +18,13 @@ import { GeminiProvider, type InlineImage, type StreamEvent, type StreamRequest 
 import { renderHtmlToInlineImage } from "@/lib/ai/inline-image";
 import { renderVisualQualityViewports } from "@/lib/ai/visual-quality-renderer";
 import { injectModelRuntime } from "@/lib/ai-stream/model-runtime";
+import {
+  avisoSpec,
+  leerFallos,
+  specProgram,
+  type FalloSpec,
+  type PasoSpec,
+} from "@/lib/agent/behavior-spec";
 import { streamWithRetry } from "@/lib/agent/retry";
 import { fireworksStreamProvider } from "@/lib/ai/fireworks-as-stream-provider";
 
@@ -46,6 +53,12 @@ export interface VerifyParams {
   runtime?: string | null;
   /** El pedido original del usuario este turno — contexto de intención. */
   userPrompt: string;
+  /** LO QUE EL MODELO PROMETIÓ que su código haría, si lo declaró.
+   *
+   *  Sin esto los ojos sólo responden «¿explotó?». Una ruleta que gira y no
+   *  para nunca carga limpia, sale perfecta en la foto y no lanza un error —
+   *  y está rota. Ausente ⇒ se pulsa a ciegas como hasta ahora. */
+  spec?: readonly PasoSpec[] | null;
   /** Model id Gemini, e.g. "gemini-3.5-flash". */
   model: string;
   apiKey?: string;
@@ -204,13 +217,21 @@ async function runVerify(
   const medicion = medir(paraRenderizar).catch(() => null);
 
   const gritos: string[] = [];
+  let fallosSpec: FalloSpec[] = [];
+  // Si el modelo declaró qué debe pasar, se comprueba ESO. Si no, se pulsa a
+  // ciegas: sigue viendo el script que muere al primer clic, que es lo que
+  // había antes de que existiera el guion.
+  const conGuion = codigo && params.spec && params.spec.length > 0;
   const image = await render(paraRenderizar, {
     onErrors: (e) => gritos.push(...e),
-    // Que APRIETE el boton. Recoger errores al cargar ve el script que muere en
-    // el arranque; un juego que se rompe en la segunda jugada carga limpio y
-    // sale perfecto en la foto. Solo cuando hay codigo que pulsar: sin runtime
-    // no hay nada que el modelo haya cableado y el render queda como estaba.
-    ...(codigo ? { pressButtons: true } : {}),
+    ...(conGuion
+      ? {
+          behaviorProgram: specProgram(params.spec!),
+          onBehaviorResult: (b) => { fallosSpec = leerFallos(b); },
+        }
+      : codigo
+        ? { pressButtons: true }
+        : {}),
   });
   if (!image) {
     logFallback("render failed — no screenshot");
@@ -299,6 +320,16 @@ async function runVerify(
   //
   // El detector ya existía y ya lo cazaba con el número exacto: sólo no llegaba
   // al Agente. Es fail-open como todo lo demás — sin medidor, sin cambios.
+  // LA PROMESA DEL MODELO, ejecutada. Va ANTES que todo lo demás en la lista:
+  // un contraste flojo es un defecto; una página que no hace lo que el usuario
+  // pidió no es la página que pidió.
+  //
+  // Esto es lo que separa escribir código de entregarlo. Hasta aquí los ojos
+  // sabían si la página explotaba; ahora saben si CUMPLE.
+  if (fallosSpec.length > 0) {
+    verdict.issues = [avisoSpec(fallosSpec), ...verdict.issues];
+    verdict.broken = true;
+  }
   if (contrastes.length > 0) {
     const peor = Math.min(...contrastes.map((c) => c.contrast));
     verdict.issues = [

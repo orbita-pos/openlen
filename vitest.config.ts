@@ -114,6 +114,7 @@ export default defineConfig({
       "lib/agent/retry.test.ts",
       "lib/agent/context.test.ts",
       "lib/agent/facts-kept.test.ts",
+      "lib/agent/behavior-spec.test.ts",
       "lib/agent/user-memory-block.test.ts",
       "lib/agent/memoria-larga.test.ts",
       "lib/agent/photo-search.test.ts",

@@ -140,6 +140,15 @@ export async function renderHtmlToInlineImage(
      *  la captura, y recoger lo que revienten. Apagado por omisión: cuesta unos
      *  cientos de ms y no todo render lo quiere. */
     pressButtons?: boolean;
+    /** El programa de comprobación de comportamiento (lib/agent/behavior-spec)
+     *  a ejecutar DESPUÉS de la captura, en este mismo navegador. Devuelve lo
+     *  que el navegador respondió, sin interpretar.
+     *
+     *  Va en vez de `pressButtons`, no además: pulsar a ciegas y luego seguir
+     *  un guion dejaría la página en un estado que el guion no espera — y una
+     *  prueba sobre un estado desconocido no comprueba nada. */
+    behaviorProgram?: string;
+    onBehaviorResult?: (bruto: unknown) => void;
   } = {},
 ): Promise<InlineImage | null> {
   // Spec: inline base64 when small. 1 MB JPEG of a full page is plenty of
@@ -222,12 +231,27 @@ export async function renderHtmlToInlineImage(
       // un carrito cuyo botón lanza al pulsarlo, cargan limpios y salen
       // perfectos en la foto. Sin esto, los ojos daban por sana una página que
       // no funciona en cuanto alguien la toca.
-      if (opts.pressButtons) {
+      //
+      // El GUION del modelo tiene prioridad sobre pulsar a ciegas: si declaró
+      // qué debe pasar, se comprueba eso, sobre una página en el estado que él
+      // espera. Pulsar antes la dejaría en un estado que su guion no previó.
+      if (opts.behaviorProgram) {
+        try {
+          const bruto = await page.evaluate(opts.behaviorProgram);
+          // Un manejador que lanza se reporta de forma asíncrona; sin esta
+          // espera el navegador se cierra antes de que llegue el aviso.
+          await new Promise((resolve) => setTimeout(resolve, 150));
+          opts.onBehaviorResult?.(bruto);
+        } catch (err) {
+          // FAIL-OPEN: una prueba que no se pudo correr NO acusa a la página.
+          // No medir no es lo mismo que medir mal.
+          // eslint-disable-next-line no-console
+          console.warn("[inline-image] la prueba de comportamiento no corrió:", err);
+        }
+      } else if (opts.pressButtons) {
         try {
           const pulsados = await page.evaluate(PULSAR);
           if (typeof pulsados === "number" && pulsados > 0) {
-            // Un manejador que lanza se reporta de forma asíncrona; sin esta
-            // espera el navegador se cierra antes de que llegue el aviso.
             await new Promise((resolve) => setTimeout(resolve, 150));
           }
         } catch (err) {

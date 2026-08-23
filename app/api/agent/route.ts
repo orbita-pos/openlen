@@ -475,16 +475,40 @@ export async function POST(req: Request): Promise<Response> {
           verifyTurn:
             process.env.OPENLEN_AGENT_VISION === "0"
               ? undefined
-              : async ({ html }) => {
+              : async ({ html, page }) => {
+                  // EL JAVASCRIPT DEL MODELO, para que los ojos lo VEAN correr.
+                  // `html` viene saneado —así se persiste—, así que sin esto la
+                  // verificación mira una página sin scripts.
+                  //
+                  // SE RE-LEE AQUÍ, no se usa `runtimeCode`. Ése se calcula una
+                  // vez ANTES del turno, así que en el turno donde el modelo
+                  // ESCRIBE el JavaScript los ojos miraban una página con el
+                  // código viejo — o sin ninguno. Es decir: escribía la ruleta
+                  // y se verificaba una página sin ruleta, justo en el único
+                  // turno donde eso importa.
+                  //
+                  // Releer cuesta una fila; la verificación ya paga segundos de
+                  // Chrome y una llamada de visión. Y es lo correcto por otra
+                  // razón: comprueba lo que se GUARDÓ, no lo que creemos que se
+                  // guardó.
+                  const fresco = await (async () => {
+                    if (!modelJsEnabled(process.env) || page) return runtimeCode;
+                    const row = await deps.loadProject(projectId, userId).catch(() => null);
+                    if (!row) return runtimeCode;
+                    const check = verifyCapsule(row.generatedRuntime, {
+                      projectId,
+                      html: row.data?.html ?? "",
+                    });
+                    return check.ok ? check.code : null;
+                  })();
                   const verdict = await verifyEditedPage({
                     html,
-                    // EL JAVASCRIPT DEL MODELO, para que los ojos lo VEAN
-                    // correr. `html` viene saneado —así se persiste—, así que
-                    // sin esto la verificación mira una página sin scripts y
-                    // jamás vería reventar el código que el propio modelo
-                    // acaba de escribir. Es la misma variable que ya se le
-                    // enseña en el prompt unas líneas más arriba.
-                    runtime: runtimeCode,
+                    runtime: fresco,
+                    // LO QUE EL MODELO PROMETIÓ que su código haría. La declara
+                    // en el mismo edit que escribe el JavaScript y vive en la
+                    // sesión; sin ella, los ojos pulsan a ciegas y sólo ven lo
+                    // que EXPLOTA — nunca lo que simplemente no cumple.
+                    spec: agentSession.behaviorSpec ?? null,
                     userPrompt: prompt,
                     // 2.5-flash, NO el modelo del loop: el veredicto es una
                     // tarea auxiliar chica con schema, y 3.5-flash gasta

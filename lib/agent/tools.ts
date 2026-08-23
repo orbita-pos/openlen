@@ -35,6 +35,7 @@ import { applyOps, rejectDocumentWideOps, tagWithOpIds, type Op, type OpType } f
 import { splitRuntimeOps } from "@/lib/ai-stream/model-runtime";
 import { applyHeadOp, applyStylesOp, splitDocumentOps } from "@/lib/ai-stream/document-ops";
 import { avisoHechosPerdidos, hechosPerdidos } from "@/lib/agent/facts-kept";
+import { parseBehaviorSpec, specRechazoAviso, type PasoSpec } from "@/lib/agent/behavior-spec";
 import { AGENT_MEMORY_MAX, rememberAboutUser } from "@/lib/agent/user-memory";
 import { fetchSheet, resolveSheetCsvUrl } from "@/lib/live/sheet-source";
 import { passHtmlGate } from "@/lib/html-gate/document-gate";
@@ -386,6 +387,15 @@ export interface AgentSession {
    *  at 1 (a redesign is one big paid call AND a whole-document rewrite —
    *  two in one turn means the model is flailing, not designing). */
   redesignsThisTurn?: number;
+  /** LA PRUEBA QUE EL MODELO DECLARÓ para su propio JavaScript, este turno.
+   *
+   *  Vive en la sesión —y no se persiste— porque describe la promesa de ESTE
+   *  cambio: el turno que viene traerá otro código y otra promesa. Los ojos la
+   *  leen al cerrar el turno; si no hay, pulsan a ciegas como antes.
+   *
+   *  La última gana: un turno con dos ediciones de comportamiento promete lo
+   *  que dijo la última, igual que la cápsula guarda el último script. */
+  behaviorSpec?: readonly PasoSpec[] | null;
   /** elegir_foto calls so far this request. Read-only + exempt from the action
    *  budget, but the curated catalog is finite: after the 2nd empty result the
    *  tool tells the model to pivot instead of retrying variants, and a hard
@@ -1047,6 +1057,17 @@ async function toolRedisenarPagina(
   };
 }
 
+/** ¿Esta edición añadió una CONDUCTA que antes no estaba?
+ *
+ *  Se compara con el documento previo a propósito: una página que ya tenía
+ *  conductas y a la que sólo se le cambió un titular no debe pedir una prueba
+ *  de comportamiento — el comportamiento no se tocó, y un aviso que sale
+ *  siempre acaba ignorado. */
+function tocaConducta(despues: string, antes: string): boolean {
+  const cuenta = (h: string) => (h.match(/data-ol-(?:calc|behavior|countdown|filter|lightbox|copy|autoplay|sticky|theme)\b/g) ?? []).length;
+  return cuenta(despues) > cuenta(antes);
+}
+
 async function toolEditarPagina(
   session: AgentSession,
   deps: AgentDeps,
@@ -1111,6 +1132,33 @@ async function toolEditarPagina(
   }
   const nuevoRuntime = partido.runtime.kind === "codigo" ? partido.runtime.code : null;
   const tocaDocumento = documento.styles.kind === "css" || documento.head.kind === "nodos";
+
+  // LA PRUEBA DE LO QUE ESTE TURNO PROMETIÓ.
+  //
+  // Se acepta venga con runtime o SIN él, y no es un detalle: MEDIDO el
+  // 2026-08-22, la primera versión sólo la miraba cuando el turno traía
+  // JavaScript nuevo, y con eso no corrió NUNCA. El Agente no escribe JS —su
+  // prompt se lo prohíbe sin condiciones— y repara el comportamiento con
+  // CONDUCTAS (`data-ol-calc` y las demás). El modelo mandó su prueba, bien
+  // formada, y la puerta la tiró; luego cerró el turno diciéndole al usuario
+  // «la prueba pasó sin errores» sobre una prueba que nunca se ejecutó.
+  //
+  // Una conducta necesita la comprobación TANTO como el JS libre: es una receta
+  // cerrada que se cablea a mano en el HTML, y mal cableada nace muda —sin un
+  // error en consola— que es justo el fallo invisible.
+  //
+  // Una prueba mal formada NO tumba la edición: se avisa y se sigue. Perder el
+  // arreglo del usuario porque su comprobación venía torcida sería castigar lo
+  // que se quiere fomentar.
+  let avisoPrueba = "";
+  const spec = parseBehaviorSpec(args.prueba);
+  if (spec.kind === "spec") {
+    session.behaviorSpec = spec.pasos;
+  } else if (spec.kind === "error") {
+    avisoPrueba = specRechazoAviso(spec.reason);
+    // eslint-disable-next-line no-console
+    console.warn(`[agente] prueba de comportamiento descartada: ${spec.reason}`);
+  }
 
   // Un turno que sólo arregla comportamiento —o sólo el estilo— no lleva ops de
   // maquetación: el cuerpo del documento se queda igual y cambia lo de fuera.
@@ -1179,6 +1227,15 @@ async function toolEditarPagina(
       edits_aplicados: aplicadas,
       ...(nuevoRuntime ? { comportamiento_actualizado: true } : {}),
       ...(tocaDocumento ? { estilo_actualizado: true } : {}),
+      // Sin prueba, nadie sabrá si el comportamiento hace lo que promete —
+      // sólo si explota. Se le dice, y se le dice por qué.
+      ...((nuevoRuntime || tocaConducta(htmlAplicado, session.taggedHtml)) && !session.behaviorSpec
+        ? {
+            aviso_critico: avisoPrueba
+              ? `${avisoPrueba} Vuelve a mandarla bien formada en tu siguiente edit.`
+              : 'Cambiaste el COMPORTAMIENTO de la página SIN mandar `prueba`, así que nadie va a comprobar que haga lo que promete — sólo que no explote. Un botón cableado a una conducta mal puesta nace MUDO, sin un solo error en consola. Manda `prueba` describiendo qué debe pasar al pulsar.',
+          }
+        : {}),
       // Guardar-y-AVISAR: perder una op en silencio es la degradacion que este
       // repo prohibe, y aqui lo perdido habria sido la pagina entera.
       ...(opsRechazadas.length > 0

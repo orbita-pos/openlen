@@ -82,7 +82,7 @@ export function buildFunctionDeclarations(): Record<string, unknown>[] {
       name: "editar_pagina",
       description:
         (documentOpsEnabled()
-          ? 'Aplica ediciones quirúrgicas al documento actual dirigidas por data-op-id (máx 8 por llamada). Después de una llamada exitosa los data-op-id CAMBIAN: para editar otra vez, pide leer_estado con incluir_documento=true. Hay TRES targets que no son data-op-id, porque <head>, <style> y <script> no llevan ninguno: (1) "runtime" — el JavaScript de la página, sólo con op="replace" y con el script COMPLETO corregido en new_html; es la ÚNICA forma de cambiar el comportamiento, editar el marcado no lo cambia nunca, y el código actual aparece en tu contexto cuando la página tiene. (2) "styles" con op="insert_after" — añade reglas CSS a TU propio bloque, que va el último del <head>, así que a igual especificidad tus reglas ganan a las de la plantilla; es como se cambia tipografía, color o espaciado en una página cuyo CSS no usa var(--ol-*). IMPORTANTE: si la página SÍ usa var(--ol-*), para color, tipografía o redondeo usa cambiar_tema en su lugar — es instantánea, no gasta salida, y su acento viene con contraste WCAG garantizado, cosa que escribir el CSS a mano no da. Este target es para las páginas que NO leen tokens, o para CSS que ningún preset cubre (animaciones, media queries, un layout concreto). Con op="replace" reescribes sólo lo que tú añadiste; el CSS de la plantilla no se toca. (3) "head" con op="insert_after" — añade el <link> de la hoja de Google Fonts; nombrar una fuente en el CSS NO la carga, y sin la hoja el navegador cae a un genérico. Nada más entra por ahí. Un cambio de una línea de CSS es un edit, nunca un motivo para llamar a redisenar_pagina.'
+          ? 'Aplica ediciones quirúrgicas al documento actual dirigidas por data-op-id (máx 8 por llamada). Después de una llamada exitosa los data-op-id CAMBIAN: para editar otra vez, pide leer_estado con incluir_documento=true. Hay TRES targets que no son data-op-id, porque <head>, <style> y <script> no llevan ninguno: (1) "runtime" — el JavaScript de la página, sólo con op="replace" y con el script COMPLETO corregido en new_html; es la ÚNICA forma de cambiar el comportamiento, editar el marcado no lo cambia nunca, y el código actual aparece en tu contexto cuando la página tiene. (2) "styles" con op="insert_after" — añade reglas CSS a TU propio bloque, que va el último del <head>, así que a igual especificidad tus reglas ganan a las de la plantilla; es como se cambia tipografía, color o espaciado en una página cuyo CSS no usa var(--ol-*). IMPORTANTE: si la página SÍ usa var(--ol-*), para color, tipografía o redondeo usa cambiar_tema en su lugar — es instantánea, no gasta salida, y su acento viene con contraste WCAG garantizado, cosa que escribir el CSS a mano no da. Este target es para las páginas que NO leen tokens, o para CSS que ningún preset cubre (animaciones, media queries, un layout concreto). Con op="replace" reescribes sólo lo que tú añadiste; el CSS de la plantilla no se toca. (3) "head" con op="insert_after" — añade el <link> de la hoja de Google Fonts; nombrar una fuente en el CSS NO la carga, y sin la hoja el navegador cae a un genérico. Nada más entra por ahí. Un cambio de una línea de CSS es un edit, nunca un motivo para llamar a redisenar_pagina. SIEMPRE QUE CAMBIES EL COMPORTAMIENTO de la página —da igual si lo haces cableando una CONDUCTA (data-ol-calc y las demás) o con target="runtime"— MANDA TAMBIÉN `prueba`: una lista corta (máx 6 pasos) de lo que tu código DEBE hacer, que se ejecuta en un navegador de verdad justo después de guardar. Cada paso: {clic:"#selector", veces?:N, escribe?:{"#campo":"valor"}, entonces:[{donde:"#selector", que:"cambia"|"contiene"|"es"|"visible"|"oculto", valor?:"texto"}]}. Ejemplo para una ruleta: [{clic:"#girar", entonces:[{donde:"#resultado", que:"cambia"}]}]. Para un carrito: [{clic:"#add", veces:3, entonces:[{donde:"#total", que:"es", valor:"3"}]}]. NO es opcional: se ejecuta de verdad y es la ÚNICA forma de saber si lo que cableaste FUNCIONA. Recoger errores sólo ve lo que EXPLOTA, y los dos fallos que de verdad pasan no explotan — una conducta mal cableada nace MUDA (el botón no hace nada, consola limpia) y una ruleta puede girar y no parar nunca. Y NUNCA le digas al usuario que probaste algo si no mandaste `prueba`: no se probó. Si tu prueba falla te lo digo con el elemento y lo que se esperaba, y lo arreglas en ese mismo turno.'
           : 'Aplica ediciones quirúrgicas al documento actual dirigidas por data-op-id (máx 8 por llamada). Después de una llamada exitosa los data-op-id CAMBIAN: para editar otra vez, pide leer_estado con incluir_documento=true. Hay UN target que no es un data-op-id: "runtime", el JavaScript de la página — sólo con op="replace" y con el script COMPLETO corregido en new_html. Es la ÚNICA forma de cambiar el comportamiento de la página desde aquí: editar el marcado no lo cambia nunca. El código actual aparece en tu contexto cuando la página tiene.'),
       parameters: {
         type: "OBJECT",
@@ -100,6 +100,33 @@ export function buildFunctionDeclarations(): Record<string, unknown>[] {
             },
           },
           resumen: { type: "STRING" },
+          // LA PRUEBA QUE TU PROPIO CODIGO DEBE PASAR. Solo cuando el edit
+          // lleva target="runtime": es la unica forma de que alguien sepa si el
+          // JavaScript hace lo que promete, y no solo si explota.
+          prueba: {
+            type: "ARRAY",
+            items: {
+              type: "OBJECT",
+              properties: {
+                clic: { type: "STRING" },
+                veces: { type: "NUMBER" },
+                escribe: { type: "OBJECT" },
+                entonces: {
+                  type: "ARRAY",
+                  items: {
+                    type: "OBJECT",
+                    properties: {
+                      donde: { type: "STRING" },
+                      que: { type: "STRING", enum: ["cambia", "contiene", "es", "visible", "oculto"] },
+                      valor: { type: "STRING" },
+                    },
+                    required: ["donde", "que"],
+                  },
+                },
+              },
+              required: ["entonces"],
+            },
+          },
         },
         required: ["edits", "resumen"],
       },
