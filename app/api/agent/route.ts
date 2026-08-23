@@ -366,6 +366,11 @@ export async function POST(req: Request): Promise<Response> {
           .map((v) => ({ label: v.label, page: v.page, createdAt: v.createdAt })),
       )
       .catch(() => []),
+    // Lo que la ingestión ya sabe que se perdió en esta página. El Chat lo
+    // recibe desde hace tiempo (`KNOWN ISSUES ON THIS PAGE`); el Agente no lo
+    // veía por ningún lado, así que empezaba a ciegas una conversación sobre
+    // un fallo que el sistema tenía diagnosticado por escrito.
+    degradaciones: project.data?.degradations ?? [],
     // Qué parte de la conversación NO ve — para que pueda decir «no me
     // acuerdo» en vez de nombrar el turno más viejo que tenga a mano.
     conversacionRecortada:
