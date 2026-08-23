@@ -122,6 +122,25 @@ describe("una página publicada CON runtime del modelo", () => {
   });
 });
 
+// 🔴 El OTRO marcador de modo-editor. `data-slot-path` se rechaza desde
+// siempre; `data-op-id` no lo miraba nadie en esta puerta, y el 2026-08-23 un
+// proyecto real acabó con 60 dentro de `data.html` — de aquí habrían salido
+// tal cual al subdominio del usuario.
+describe("los marcadores de modo-editor no llegan al disco", () => {
+  it("un documento con data-op-id se publica SIN ellos", async () => {
+    const sucio = DOC.replace("<h1>", '<h1 data-op-id="7">').replace(
+      '<button id="b">',
+      '<button id="b" data-op-id="8">',
+    );
+    const r = await publishToDir({ subdomain: "conids", html: sucio });
+    const html = readFileSync(path.join(root, "conids", "releases", r.sha, "index.html"), "utf8");
+    assert.ok(!html.includes("data-op-id"), "los op-id llegaron al disco");
+    // Se quita el atributo y NADA más del elemento.
+    assert.ok(html.includes('id="b"'));
+    assert.ok(html.includes("Contador"));
+  });
+});
+
 describe("sin runtime, la publicación es exactamente la de siempre", () => {
   after(() => rmSync(root, { recursive: true, force: true }));
 

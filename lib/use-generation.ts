@@ -116,6 +116,58 @@ export function useGeneration(): UseGenerationResult {
       return;
     }
 
+    // Los trozos se AGRUPAN por fotograma en vez de escribir estado por cada
+    // uno. En localhost el stream no tiene latencia de red: los `html_chunk`
+    // llegan más rápido de lo que el navegador pinta, y un `setState` por trozo
+    // son cientos de renders por segundo del árbol entero de `/new` — que es lo
+    // que dispara «Maximum update depth exceeded» al generar. En producción la
+    // latencia entre trozos dejaba pintar y lo escondía.
+    //
+    // Visualmente no se pierde nada: el preview no puede pintar más de una vez
+    // por fotograma de todas formas, y el iframe recibe el mismo texto, sólo
+    // que en trozos más grandes. Lo pendiente se vacía SIEMPRE al terminar el
+    // stream, así que el último trozo no se queda dentro.
+    let pendienteHtml = "";
+    let pendienteRazon = "";
+    let fotograma: number | null = null;
+    const programar = (fn: () => void): number =>
+      typeof requestAnimationFrame === "function"
+        ? requestAnimationFrame(fn)
+        : (setTimeout(fn, 16) as unknown as number);
+    const cancelar = (h: number): void => {
+      if (typeof cancelAnimationFrame === "function") cancelAnimationFrame(h);
+      else clearTimeout(h);
+    };
+    const sink: EventSink = {
+      setState,
+      chunk(kind, text) {
+        if (kind === "html") pendienteHtml += text;
+        else pendienteRazon += text;
+        if (fotograma === null) {
+          fotograma = programar(() => {
+            fotograma = null;
+            sink.flush();
+          });
+        }
+      },
+      flush() {
+        if (fotograma !== null) {
+          cancelar(fotograma);
+          fotograma = null;
+        }
+        if (!pendienteHtml && !pendienteRazon) return;
+        const h = pendienteHtml;
+        const r = pendienteRazon;
+        pendienteHtml = "";
+        pendienteRazon = "";
+        setState((prev) =>
+          prev.kind === "generating"
+            ? { ...prev, html: prev.html + h, reasoning: prev.reasoning + r }
+            : prev,
+        );
+      },
+    };
+
     const reader = response.body.getReader();
     const decoder = new TextDecoder();
     let buffer = "";
@@ -129,11 +181,13 @@ export function useGeneration(): UseGenerationResult {
         while ((sep = buffer.indexOf("\n\n")) !== -1) {
           const rawEvent = buffer.slice(0, sep);
           buffer = buffer.slice(sep + 2);
-          applyEvent(rawEvent, setState);
+          applyEvent(rawEvent, sink);
         }
       }
+      sink.flush();
       clearWatchdog();
     } catch (err) {
+      sink.flush();
       clearWatchdog();
       if (controller.signal.aborted) {
         if (timedOut) {
@@ -186,10 +240,20 @@ async function errorMessage(response: Response): Promise<string> {
   return text || `Request failed (${response.status})`;
 }
 
-function applyEvent(
-  rawEvent: string,
-  setState: (updater: (prev: GenerationState) => GenerationState) => void,
-) {
+/**
+ * Adónde van los eventos ya parseados.
+ *
+ * Los TROZOS no llegan a `setState`: se acumulan y se pintan como mucho una vez
+ * por fotograma (`chunk`). El resto de eventos sí escriben directo, pero antes
+ * vacían lo acumulado (`flush`) — ver la nota de orden dentro de `applyEvent`.
+ */
+interface EventSink {
+  setState: (updater: (prev: GenerationState) => GenerationState) => void;
+  chunk: (kind: "html" | "reasoning", text: string) => void;
+  flush: () => void;
+}
+
+function applyEvent(rawEvent: string, sink: EventSink) {
   let event = "";
   const dataLines: string[] = [];
   for (const line of rawEvent.split("\n")) {
@@ -207,22 +271,20 @@ function applyEvent(
     return;
   }
 
+  // EL ORDEN IMPORTA. Todo evento que no es un trozo vacía primero lo
+  // acumulado: sin esto, un trozo pendiente se aplicaría DESPUÉS del
+  // `regen-starting` que limpia el buffer, y el preview mezclaría la versión
+  // descartada con la nueva.
+  if (event !== "html_chunk" && event !== "reasoning_chunk") sink.flush();
+
   if (event === "reasoning_chunk" && typeof data.text === "string") {
-    const text = data.text;
-    setState((prev) =>
-      prev.kind === "generating"
-        ? { ...prev, reasoning: prev.reasoning + text }
-        : prev,
-    );
+    sink.chunk("reasoning", data.text);
   } else if (event === "html_chunk" && typeof data.text === "string") {
-    const text = data.text;
-    setState((prev) =>
-      prev.kind === "generating" ? { ...prev, html: prev.html + text } : prev,
-    );
+    sink.chunk("html", data.text);
   } else if (event === "critic-checking") {
     // S3 vision critic is rendering + scoring the page. Abstract progress
     // text only — never surface that "the AI is checking if it looks bad".
-    setState((prev) =>
+    sink.setState((prev) =>
       prev.kind === "generating"
         ? { ...prev, notice: "Checking visual quality…" }
         : prev,
@@ -232,7 +294,7 @@ function applyEvent(
     // version streams in fresh (replacing the discarded first pass — Phase
     // 3.3). The `reason` payload is intentionally NOT shown: keep it abstract
     // (Phase 3.2) so we never tell the user their page looked broken.
-    setState((prev) =>
+    sink.setState((prev) =>
       prev.kind === "generating"
         ? { ...prev, html: "", notice: "Improving the design…" }
         : prev,
@@ -241,11 +303,11 @@ function applyEvent(
     const projectId = typeof data.projectId === "string" ? data.projectId : "";
     const title =
       typeof data.title === "string" ? data.title : "Untitled page";
-    if (projectId) setState(() => ({ kind: "done", projectId, title }));
+    if (projectId) sink.setState(() => ({ kind: "done", projectId, title }));
   } else if (event === "error") {
     const message =
       typeof data.message === "string" ? data.message : "Generation failed";
-    setState(() => ({ kind: "error", message }));
+    sink.setState(() => ({ kind: "error", message }));
   }
 }
 

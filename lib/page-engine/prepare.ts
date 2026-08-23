@@ -10,6 +10,8 @@ import { repairUnreadableText } from "@/lib/document/repair-unreadable-text";
 import { validateBehaviors } from "@/lib/behaviors/validate";
 import { compileCalcRegions, type CalcIssue } from "@/lib/expr/document";
 import { repairCalcRegions } from "@/lib/expr/repair";
+import { reglasQueNuncaAplican, type ReglaMuerta } from "@/lib/document/css-wiring";
+import { leerFallos, specProgram, type FalloSpec } from "@/lib/agent/behavior-spec";
 import { objectiveBreakage } from "@/lib/generation/objective-breakage";
 import { sanitizeForPublish } from "@/lib/html-engine";
 import { passHtmlGate } from "@/lib/html-gate/document-gate";
@@ -108,6 +110,7 @@ export async function preparePage(
   // Se informa, no se actúa: regenerar exige volver a llamar al modelo y eso es
   // decisión —y presupuesto— del llamador.
   let breakage: string[] = [];
+  let specFailures: FalloSpec[] = [];
   if (!renderChecks) {
     stages.push({ stage: "measure", status: "skipped", detail: "no_render" });
   } else try {
@@ -115,8 +118,19 @@ export async function preparePage(
     // no puede escaparse a `current` — y sin él se mide una maqueta que nadie
     // recibe, ciega además al script que muere en el arranque.
     const codigo = opts.runtime?.trim();
-    breakage = objectiveBreakage(await render(codigo ? injectModelRuntime(current, codigo) : current));
-    stages.push({ stage: "measure", status: breakage.length ? "changed" : "skipped", detail: breakage.join(" · ") || undefined });
+    // Y CON SU PRUEBA, si la declaró. Ocupa el hueco donde el render pulsa los
+    // controles a ciegas: mismo navegador, misma pasada, cero arranques nuevos.
+    const guion = opts.prueba && opts.prueba.length > 0 ? specProgram(opts.prueba) : undefined;
+    const medido = await render(
+      codigo ? injectModelRuntime(current, codigo) : current,
+      {},
+      guion ? { behaviorProgram: guion } : {},
+    );
+    breakage = objectiveBreakage(medido);
+    // `leerFallos` descarta cualquier forma inesperada: no medir no es medir mal.
+    specFailures = guion ? leerFallos(medido?.behaviorResult) : [];
+    const detalle = [...breakage, ...specFailures.map((f) => `prueba paso ${f.paso}: ${f.mensaje}`)];
+    stages.push({ stage: "measure", status: detalle.length ? "changed" : "skipped", detail: detalle.join(" · ") || undefined });
   } catch (err) {
     // No haber medido no es prueba de que no haya rotura, y por eso se anota
     // como `unavailable` en vez de como "sin roturas".
@@ -282,6 +296,25 @@ export async function preparePage(
     stages.push({ stage: "form_identity", status: "unavailable", detail: reason(err) });
   }
 
+  // ── 8. el CSS que nunca aplica ─────────────────────────────────────────
+  // Sobre el documento FINAL: el saneo, los módulos y el estampado pueden
+  // añadir o quitar clases, así que auditar antes mediría un documento que
+  // nadie recibe.
+  //
+  // DETERMINISTA Y SIN NAVEGADOR, y eso es lo que lo hace valioso: corre fuera
+  // de la puerta de `renderChecks`, así que también en el turno del Agente, que
+  // no puede pagar un arranque de Chrome. Microsegundos.
+  //
+  // Cierra el punto ciego que ninguna otra etapa ve: el render mide lo que se
+  // PINTA y la puerta valida lo que está CABLEADO, pero un selector que no casa
+  // no rompe nada — simplemente no ocurre. Ver `lib/document/css-wiring.ts`.
+  let deadRules: readonly ReglaMuerta[] = [];
+  try {
+    deadRules = reglasQueNuncaAplican(current, opts.runtime ?? null);
+  } catch {
+    /* nunca puede costar la página: es un diagnóstico, no una puerta */
+  }
+
   const report: PrepareReport = {
     stages,
     breakage,
@@ -289,6 +322,8 @@ export async function preparePage(
     ...(gated.issues ? { behaviorIssues: [...gated.issues] } : {}),
     ...(calcIssues.length ? { calcIssues } : {}),
     ...(calcRepairs.length ? { calcRepairs } : {}),
+    ...(deadRules.length ? { deadRules } : {}),
+    ...(specFailures.length ? { specFailures } : {}),
     modules,
     ...(modules.length ? { moduleSettings } : {}),
   };

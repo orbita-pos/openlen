@@ -59,6 +59,8 @@ import { usesDeepSeekForTurn, writerForTurn, type TurnWriter } from "@/lib/ai/pr
 import { fireworksStreamProvider } from "@/lib/ai/fireworks-as-stream-provider";
 import type { FableModelOperation } from "@/lib/generation/fable-model-policy";
 import { extractModelRuntime, modelJsEnabled } from "./model-runtime";
+import { extractModelPrueba } from "./model-prueba";
+import type { PasoSpec } from "@/lib/agent/behavior-spec";
 
 const DEFAULT_MODEL: AIModel = "gemini-pro";
 
@@ -206,6 +208,11 @@ export interface GenerateHtmlStreamSummary {
    *  lo escribiera DeepSeek y el script cumpla el contrato. NADA lo ejecuta
    *  ni lo guarda todavía: `finalHtml` sigue saliendo sin scripts. */
   modelRuntime: string | null;
+  /** LA PRUEBA QUE EL PROPIO MODELO DECLARÓ para ese runtime: qué debe pasar
+   *  al usar la página. Sale del mismo texto crudo y por el mismo interruptor,
+   *  y sólo cuando hay runtime — una promesa sin código que la cumpla no tiene
+   *  autor. Ausente en todo lo demás; nada la ejecuta aquí. */
+  modelPrueba?: readonly PasoSpec[];
 }
 
 export interface GenerateHtmlStreamResult {
@@ -368,6 +375,20 @@ export function generateHtmlStream(
     }
     return r.code;
   };
+  /** Sólo se pide cuando el runtime sobrevivió: probar el comportamiento de una
+   *  página sin código es probar el HTML, y eso no es lo que esto mide. */
+  const capturarPrueba = (runtime: string | null): readonly PasoSpec[] | undefined => {
+    if (!runtime) return undefined;
+    const p = extractModelPrueba(rawText);
+    if (!p.ok) {
+      if (p.reason !== "ausente") {
+        // eslint-disable-next-line no-console
+        console.warn(`[generate] prueba del modelo descartada: ${p.reason}`);
+      }
+      return undefined;
+    }
+    return p.pasos;
+  };
   const debit: DebitFn = internals.debit ?? realDebitCredits;
   const htmlStream: HtmlStreamLike = internals.makeHtmlStream
     ? internals.makeHtmlStream(opts.htmlOpts)
@@ -419,7 +440,11 @@ export function generateHtmlStream(
         stopKind,
         error: null,
         wroteWith,
-        modelRuntime: capturarRuntime(),
+        ...(() => {
+          const runtime = capturarRuntime();
+          const prueba = capturarPrueba(runtime);
+          return { modelRuntime: runtime, ...(prueba ? { modelPrueba: prueba } : {}) };
+        })(),
       };
     } catch (err) {
       const e = err instanceof Error ? err : new Error(String(err));

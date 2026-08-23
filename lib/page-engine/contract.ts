@@ -1,4 +1,5 @@
 import type { BusinessProfileData } from "@/lib/business-profiles/types";
+import type { PasoSpec } from "@/lib/agent/behavior-spec";
 
 /**
  * Crear vs editar. La diferencia NO es cosmética y se conserva a propósito:
@@ -52,6 +53,31 @@ export interface PrepareReport {
   readonly calcIssues?: readonly { attr: string; formula: string; message: string }[];
   /** Qué arregló el reparador determinista, en códigos de máquina. */
   readonly calcRepairs?: readonly string[];
+  /**
+   * Selectores que NO pueden aplicar nunca sobre este documento — el CSS está
+   * escrito, el elemento existe, y no se tocan.
+   *
+   * Aparte de `breakage` a propósito: aquello son roturas MEDIDAS en el render
+   * y esto es determinista, así que llega también cuando no hubo navegador (el
+   * turno del Agente). Mismo trato que `calcIssues`: el motor diagnostica, el
+   * llamador decide si eso vale una llamada más al modelo.
+   */
+  readonly deadRules?: readonly {
+    selector: string;
+    ausentes: readonly string[];
+    presentes: readonly string[];
+  }[];
+  /**
+   * Los pasos de la prueba QUE EL MODELO DECLARÓ y que fallaron al ejecutarla
+   * en el navegador. Ausente cuando no hubo prueba, no hubo navegador, o pasó.
+   *
+   * Aparte de `breakage` a propósito, y no por orden: aquello es rotura
+   * OBSERVABLE —algo gritó— y esto es una PROMESA INCUMPLIDA, que no grita.
+   * También se tratan distinto aguas arriba: la prueba del modelo puede estar
+   * mal (medido — Len escribió una que esperaba `49:59` donde reiniciar da
+   * `50:00`), así que vale una reparación barata y NUNCA una reescritura.
+   */
+  readonly specFailures?: readonly { paso: number; mensaje: string }[];
   /** Módulos que el documento pidió (huecos `data-openlen-*`). */
   readonly modules: readonly string[];
   readonly moduleSettings?: unknown;
@@ -118,4 +144,16 @@ export interface PreparePageOptions {
    * Ausente/vacío ⇒ tubería byte-idéntica a la de antes de que existiera.
    */
   readonly runtime?: string | null;
+  /**
+   * QUÉ DEBE PASAR, según el modelo que escribió el `runtime`.
+   *
+   * Se ejecuta en el MISMO navegador de la etapa de medición, justo después de
+   * las capturas y en el hueco donde si no se pulsan los controles a ciegas.
+   * Sin esto la medición sólo responde «¿explotó?»; con esto responde también
+   * «¿hizo lo que prometió?», que es donde viven los dos fallos que de verdad
+   * ocurren — el botón cableado a nada y el bucle que no para.
+   *
+   * Ausente ⇒ se pulsa a ciegas, exactamente como antes.
+   */
+  readonly prueba?: readonly PasoSpec[];
 }

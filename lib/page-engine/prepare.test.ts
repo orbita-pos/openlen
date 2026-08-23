@@ -256,3 +256,78 @@ describe("los cálculos rotos se reparan o se reportan", () => {
     expect(out.report.breakage.join(" ")).toContain("noExiste is not defined");
   });
 });
+
+// ── LA PROMESA DEL MODELO ───────────────────────────────────────────────────
+// Recoger errores responde «¿explotó?». Esto responde «¿hizo lo que prometió?»,
+// que es donde viven los dos fallos que de verdad ocurren: el botón cableado a
+// nada (consola limpia) y el bucle que no para.
+describe("la prueba declarada, dentro de la medición", () => {
+  const PRUEBA = [
+    { clic: "#empezar", veces: 1, entonces: [{ donde: "#reloj", que: "cambia" as const }] },
+  ];
+
+  it("el guion viaja al render y sus fallos llegan al informe", async () => {
+    let recibido: { behaviorProgram?: string } | undefined;
+    const out = await preparePage(
+      PAGE,
+      { mode: "create", runtime: "1", prueba: PRUEBA },
+      deps({
+        render: (async (_h: string, _i: unknown, o: { behaviorProgram?: string }) => {
+          recibido = o;
+          return { behaviorResult: [[0, "#reloj no cambió"]] };
+        }) as never,
+      }),
+    );
+    // El programa lleva DENTRO los pasos declarados: si se compilara vacío, la
+    // prueba correría sin comprobar nada y diría que pasó.
+    expect(recibido?.behaviorProgram).toContain("#empezar");
+    expect(out.report.specFailures).toEqual([{ paso: 1, mensaje: "#reloj no cambió" }]);
+  });
+
+  it("una prueba que PASA no deja nada en el informe", async () => {
+    const out = await preparePage(
+      PAGE,
+      { mode: "create", runtime: "1", prueba: PRUEBA },
+      deps({ render: (async () => ({ behaviorResult: [] })) as never }),
+    );
+    expect(out.report.specFailures).toBeUndefined();
+  });
+
+  it("sin prueba no se manda guion — se pulsa a ciegas como siempre", async () => {
+    let recibido: { behaviorProgram?: string } | undefined = { behaviorProgram: "sucio" };
+    const out = await preparePage(
+      PAGE,
+      { mode: "create", runtime: "1" },
+      deps({
+        render: (async (_h: string, _i: unknown, o: { behaviorProgram?: string }) => {
+          recibido = o;
+          return {};
+        }) as never,
+      }),
+    );
+    expect(recibido?.behaviorProgram).toBeUndefined();
+    expect(out.report.specFailures).toBeUndefined();
+  });
+
+  it("una respuesta con forma inesperada NO acusa a la página", async () => {
+    // No medir no es medir mal. Lo mismo que hace el Agente con una spec que
+    // no se pudo correr: se calla, no reprueba.
+    const out = await preparePage(
+      PAGE,
+      { mode: "create", runtime: "1", prueba: PRUEBA },
+      deps({ render: (async () => ({ behaviorResult: "vaya" })) as never }),
+    );
+    expect(out.report.specFailures).toBeUndefined();
+  });
+
+  it("los fallos de la prueba se nombran en la etapa `measure`", async () => {
+    const out = await preparePage(
+      PAGE,
+      { mode: "create", runtime: "1", prueba: PRUEBA },
+      deps({ render: (async () => ({ behaviorResult: [[0, "#reloj no cambió"]] })) as never }),
+    );
+    const medir = out.report.stages.find((s) => s.stage === "measure");
+    expect(medir?.status).toBe("changed");
+    expect(medir?.detail).toContain("prueba paso 1");
+  });
+});

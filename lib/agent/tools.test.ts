@@ -5,7 +5,7 @@
 // load. See vitest.config.ts's NB comment on lib/agent for the split.
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { tagWithOpIds } from "@/lib/html-ops";
+import { stripOpIds, tagWithOpIds } from "@/lib/html-ops";
 import { lookFromAccent } from "@/lib/palette-gen";
 import { applyTematicaToHtml } from "@/lib/tematicas/apply-server";
 import { TEMATICA_PRESETS } from "@/lib/tematicas/presets";
@@ -383,6 +383,61 @@ describe("editar_pagina", () => {
     assert.ok(session.taggedHtml.includes("Tacos y Más"));
     assert.ok(session.taggedHtml.includes("data-op-id"));
   });
+  // 🔴 REGRESIÓN medida en un proyecto REAL el 2026-08-23 (Pomodoro, 60 ids
+  // dentro de `data.html`). Un turno de SÓLO comportamiento no llama a
+  // `applyOps` —que es quien quitaba los ids, por accidente y no por contrato—
+  // y guardaba `session.taggedHtml` entero. El daño no era cosmético: es
+  // PERMANENTE, porque `tag_with_op_ids` salta el elemento que ya lleva id sin
+  // contarlo, y al turno siguiente la ruta responde 400 «no taggable elements»
+  // del que ya no se sale. El proyecto quedaba imposible de editar.
+  it("un edit de SOLO runtime no deja data-op-id en el documento guardado", async () => {
+    const { deps, store } = makeDeps();
+    const out = await runAgentTool(makeSession(), deps, "editar_pagina", {
+      edits: [
+        { op: "replace", target: "runtime", new_html: "document.querySelector('h1');" },
+      ],
+      resumen: "solo comportamiento",
+    });
+    assert.equal(out.response.ok, true);
+    assert.equal((out.response as { edits_aplicados?: number }).edits_aplicados, 0);
+    assert.ok(!store.data.html.includes("data-op-id"), "data.html se guardo etiquetado");
+    // Lo que de verdad importa: el documento guardado sigue siendo editable.
+    assert.ok(tagWithOpIds(store.data.html).taggedCount > 0, "el proyecto quedo inservible");
+  });
+
+  // La otra mitad del arreglo, y el motivo por el que hace falta desetiquetar
+  // en la puerta: sin esto no hay forma de recuperar un proyecto ya dañado.
+  it("un documento YA etiquetado solo vuelve a ser editable si se desetiqueta", () => {
+    const etiquetado = tagWithOpIds(HTML).taggedHtml;
+    assert.equal(tagWithOpIds(etiquetado).taggedCount, 0);
+    assert.ok(tagWithOpIds(stripOpIds(etiquetado)).taggedCount > 0);
+  });
+
+  // 🔴 LOS AVISOS SE PISABAN. Eran CUATRO claves `aviso_critico` sueltas en el
+  // mismo objeto literal, así que la última ganaba en silencio: un turno que a
+  // la vez descartaba ops contra la raíz y cambiaba el comportamiento sin
+  // `prueba` sólo contaba UNA de las dos cosas. El comentario de
+  // `persistHtmlChange` ya pedía lo contrario — «el modelo sigue viendo TODAS
+  // las razones» — y el código decía otra cosa.
+  it("dos problemas a la vez llegan LOS DOS al modelo", async () => {
+    const { deps } = makeDeps();
+    const session = makeSession();
+    const raiz = /<body[^>]*\bdata-op-id="([^"]+)"/.exec(session.taggedHtml)?.[1] ?? "0";
+    const out = await runAgentTool(session, deps, "editar_pagina", {
+      edits: [
+        { op: "replace", target: "runtime", new_html: "document.title = document.title;" },
+        { op: "replace", target: raiz, new_html: "<body><p>toda la pagina</p></body>" },
+      ],
+      resumen: "dos problemas",
+    });
+    assert.equal(out.response.ok, true);
+    const aviso = (out.response as { aviso_critico?: string }).aviso_critico ?? "";
+    // (a) la op contra la raíz se descartó
+    assert.match(aviso, /raiz|<body>|ENTERA/i);
+    // (b) y cambió el comportamiento sin mandar `prueba`
+    assert.match(aviso, /prueba/i);
+  });
+
   it("rejects >8 edits without touching the doc", async () => {
     const { deps, store } = makeDeps();
     const edits = Array.from({ length: 9 }, () => ({ op: "delete", target: "zz" }));

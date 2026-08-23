@@ -68,7 +68,17 @@ Emit the complete HTML document directly, starting with <!doctype html> and endi
 export function systemPromptFor(
   env: Readonly<Record<string, string | undefined>> = process.env,
 ): string {
-  const min = env.OPENLEN_MIN_CONTRACT?.trim() === "1";
+  // EL MÍNIMO ES EL CAMINO — decisión de Jesús del 2026-08-20, EJECUTADA el
+  // 2026-08-23. Estuvo tres días escrita con el interruptor apagado, esperando
+  // «probarlo con OPENLEN_MODEL_JS=1» mientras ese otro interruptor también
+  // estaba apagado. Medido entonces: empata en belleza (3 y 3 por su ojo), gana
+  // en tamaño y gana en marcadores de foto (6/6 contra 19/24).
+  //
+  // Pasa a OPT-OUT, la misma semántica que los kill-switches de
+  // `lib/publish/kill-switches.ts`: la ausencia enciende, sólo el literal "0"
+  // devuelve el contrato completo. Un interruptor que hay que acordarse de
+  // encender no es un camino, es una nota.
+  const min = env.OPENLEN_MIN_CONTRACT?.trim() !== "0";
   let prompt = SYSTEM_PROMPT;
   if (min) {
     prompt = SYSTEM_PROMPT.replace(PUBLISH_CONTRACT, PUBLISH_CONTRACT_MIN);
@@ -85,5 +95,15 @@ export function systemPromptFor(
   // La cláusula sobre JavaScript va DESPUÉS del recorte: con el contrato mínimo
   // hay que cambiar su viñeta, y con el completo su bloque. Cuál de las dos está
   // presente lo decide el mismo interruptor de arriba.
-  return swapJsClauses(prompt, [min ? "contrato-min" : "contrato-completo", "no-negociable"], env);
+  // `conductas` SOLO con el contrato completo: el mínimo ya sustituyó
+  // `PUBLISH_CONTRACT` entero, y con él se fueron el carrusel y el manual de las
+  // 9 — pedir esa marca aquí haría LANZAR a `swapJsClauses`. O sea que el mínimo
+  // llevaba razón desde el principio y esto sólo le da alcance al completo.
+  return swapJsClauses(
+    prompt,
+    min
+      ? ["contrato-min", "no-negociable"]
+      : ["contrato-completo", "conductas", "no-negociable"],
+    env,
+  );
 }

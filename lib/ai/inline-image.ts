@@ -11,6 +11,7 @@
 
 import type { InlineImage } from "@/lib/ai-gateway";
 import { installSubresourceSsrfGuard } from "@/lib/security/render-ssrf-guard";
+import { PULSAR_CONTROLES } from "@/lib/ai/press-controls";
 
 const ALLOWED_MIME = ["image/jpeg", "image/png", "image/webp", "image/gif"];
 
@@ -103,30 +104,7 @@ export async function fetchImageAsInlineData(
  * Tope de ocho: con eso ya se sabe si los controles viven, y cada clic puede
  * disparar trabajo arbitrario del modelo.
  */
-const PULSAR = `
-(() => {
-  // Un clic que navega se lleva la página y con ella la medición. Se impide
-  // sólo la ACCIÓN por defecto: los manejadores del modelo corren igual, que es
-  // justo lo que se quiere comprobar.
-  document.addEventListener("click", (e) => e.preventDefault(), true);
-  document.addEventListener("submit", (e) => e.preventDefault(), true);
-  const nodos = Array.from(
-    document.querySelectorAll("button, [role=button], a[href], input[type=submit], summary, [data-ol-behavior]")
-  ).slice(0, 8);
-  // DOS rondas, no una. MEDIDO: pulsando una sola vez, un contador que cachea
-  // \`{1:'uno'}\` y falla en la jugada 2 pasaba como sano — que es exactamente
-  // el fallo que este detector existe para ver. La segunda ronda cuesta unos
-  // milisegundos y encuentra los estados que sólo aparecen jugando.
-  for (let ronda = 0; ronda < 2; ronda++) {
-    for (const n of nodos) {
-      try {
-        n.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
-      } catch (e) {}
-    }
-  }
-  return nodos.length;
-})();
-`;
+const PULSAR = PULSAR_CONTROLES;
 
 export async function renderHtmlToInlineImage(
   html: string,

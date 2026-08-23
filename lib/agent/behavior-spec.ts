@@ -71,6 +71,25 @@ export type SpecResultado =
 export const MAX_PASOS = 6;
 export const MAX_VECES = 10;
 
+/**
+ * CUÁNTO SE ESPERA a que la promesa se cumpla, por paso.
+ *
+ * 🔴 EL FALLO QUE ESTO ARREGLA, medido el 2026-08-23 sobre una página que
+ * DeepSeek acababa de escribir: un pomodoro correcto, con `setInterval(…, 1000)`
+ * y consola limpia. Su propia prueba —«pulsa #startBtn, el reloj cambia»— es
+ * exactamente la que escribiría cualquiera. Fallaba SIEMPRE, porque se
+ * comprobaba a los 0 ms y el reloj todavía marcaba 25:00. Con el navegador
+ * delante: al instante 25:00, al segundo 24:59, cero gritos.
+ *
+ * Sin ventana, TODA promesa con tiempo dentro es infalseable: una cuenta atrás,
+ * un carrusel que avanza solo, una búsqueda con retardo, un revelado por
+ * transición. Y no es teórico — falla en el 100% de los casos, no en algunos.
+ *
+ * 1,5 s cubre el intervalo de un segundo con margen. Sólo lo paga el paso que
+ * FALLA: en cuanto todas sus expectativas se cumplen, se sigue al siguiente.
+ */
+export const VENTANA_PRUEBA_MS = 1_500;
+
 /** Selectores conservadores a propósito: id, clase, etiqueta, atributo,
  *  descendencia. Nada de `:has()` ni comas — un selector que casa con varios
  *  elementos hace la prueba ambigua, y una prueba ambigua miente. */
@@ -177,8 +196,9 @@ export interface FalloSpec {
  */
 export function specProgram(pasos: readonly PasoSpec[]): string {
   return `
-(() => {
+(async () => {
   var PASOS = ${JSON.stringify(JSON.stringify(pasos))};
+  var VENTANA = ${VENTANA_PRUEBA_MS};
   var pasos = JSON.parse(PASOS);
   var fallos = [];
   // Un clic que navega se lleva la página y con ella la comprobación. Se
@@ -192,6 +212,28 @@ export function specProgram(pasos: readonly PasoSpec[]): string {
     if (cs.display === "none" || cs.visibility === "hidden" || Number(cs.opacity) === 0) return false;
     var r = el.getBoundingClientRect();
     return r.width > 0 && r.height > 0;
+  };
+  var espera = function (ms) { return new Promise(function (r) { setTimeout(r, ms); }); };
+
+  // El mensaje del fallo, o null si la expectativa se cumple EN ESTE INSTANTE.
+  var comprueba = function (exp, antes) {
+    var el = document.querySelector(exp.donde);
+    if (!el) return "no existe " + exp.donde;
+    var ahora = texto(el);
+    if (exp.que === "cambia") {
+      if (ahora === antes[exp.donde]) return exp.donde + ' no cambió (sigue diciendo "' + ahora.slice(0, 40) + '")';
+    } else if (exp.que === "contiene") {
+      if (ahora.toLowerCase().indexOf(String(exp.valor).toLowerCase()) === -1) {
+        return exp.donde + ' debía contener "' + exp.valor + '" y dice "' + ahora.slice(0, 40) + '"';
+      }
+    } else if (exp.que === "es") {
+      if (ahora !== String(exp.valor)) return exp.donde + ' debía ser "' + exp.valor + '" y es "' + ahora.slice(0, 40) + '"';
+    } else if (exp.que === "visible") {
+      if (!seVe(el)) return exp.donde + " debía verse y no se ve";
+    } else if (exp.que === "oculto") {
+      if (seVe(el)) return exp.donde + " debía estar oculto y se ve";
+    }
+    return null;
   };
 
   for (var i = 0; i < pasos.length; i++) {
@@ -229,29 +271,21 @@ export function specProgram(pasos: readonly PasoSpec[]): string {
       continue;
     }
 
-    for (var k = 0; k < p.entonces.length; k++) {
-      var exp = p.entonces[k];
-      var el = document.querySelector(exp.donde);
-      if (!el) { fallos.push([i, "no existe " + exp.donde]); continue; }
-      var ahora = texto(el);
-      if (exp.que === "cambia") {
-        if (ahora === antes[exp.donde]) {
-          fallos.push([i, exp.donde + ' no cambió (sigue diciendo "' + ahora.slice(0, 40) + '")']);
-        }
-      } else if (exp.que === "contiene") {
-        if (ahora.toLowerCase().indexOf(String(exp.valor).toLowerCase()) === -1) {
-          fallos.push([i, exp.donde + ' debía contener "' + exp.valor + '" y dice "' + ahora.slice(0, 40) + '"']);
-        }
-      } else if (exp.que === "es") {
-        if (ahora !== String(exp.valor)) {
-          fallos.push([i, exp.donde + ' debía ser "' + exp.valor + '" y es "' + ahora.slice(0, 40) + '"']);
-        }
-      } else if (exp.que === "visible") {
-        if (!seVe(el)) fallos.push([i, exp.donde + " debía verse y no se ve"]);
-      } else if (exp.que === "oculto") {
-        if (seVe(el)) fallos.push([i, exp.donde + " debía estar oculto y se ve"]);
+    // EN VENTANA, no al instante: casi todo lo que promete una página tarda —
+    // un intervalo de un segundo, una transición, un retardo de búsqueda. Se
+    // sale en cuanto TODO se cumple, así que un paso que pasa no cuesta nada.
+    var mensajes = [];
+    var limite = Date.now() + VENTANA;
+    while (true) {
+      mensajes = [];
+      for (var k = 0; k < p.entonces.length; k++) {
+        var m = comprueba(p.entonces[k], antes);
+        if (m) mensajes.push(m);
       }
+      if (mensajes.length === 0 || Date.now() >= limite) break;
+      await espera(50);
     }
+    for (var q = 0; q < mensajes.length; q++) fallos.push([i, mensajes[q]]);
   }
   return fallos;
 })();

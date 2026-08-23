@@ -25,6 +25,22 @@ export type ClauseId =
   | "contrato-min"
   /** El bloque `• NO JAVASCRIPT` de `PUBLISH_CONTRACT`. */
   | "contrato-completo"
+  /**
+   * El CONTRATO DEL CARRUSEL + el manual entero de las 9 CONDUCTAS
+   * (`buildBehaviorsDoc()`), que son adyacentes: 10.752 caracteres.
+   *
+   * Las conductas existían SÓLO porque el JavaScript estaba cerrado. Con el
+   * interruptor encendido el modelo escribe la interactividad él mismo, que es
+   * como la escribe cualquier desarrollador — y como la escriben v0 y Claude.
+   *
+   * 🔴 Por qué hacía falta ESTA cláusula además de `contrato-completo`: aquélla
+   * ya se llevaba la ORDEN («2. A CONDUCTA, for the 9 things…»), pero dejaba el
+   * MANUAL DE REFERENCIA delante del modelo. Medido el 2026-08-23: con el JS
+   * libre encendido el modelo siguió emitiendo `data-ol-sticky` —y olvidó la
+   * regla CSS de `[data-ol-stuck]`, así que el nav nacía mudo. Quitar la orden
+   * y dejar el manual es no quitar nada.
+   */
+  | "conductas"
   /** La línea de NON-NEGOTIABLE CONSTRAINTS (crear y Chat la comparten). */
   | "no-negociable"
   /** La regla del Agente en `lib/agent/catalog.ts`. */
@@ -100,6 +116,26 @@ const CLAUSULAS: Readonly<Record<ClauseId, Clausula>> = {
       "         – entrances, hovers, marquees → `@keyframes` / `transition`\n" +
       "  A `<button>` still does NOTHING unless it submits a form, carries a\n" +
       "  behavior marker, or your script wires it up. Never ship a dead control.\n",
+  },
+
+  conductas: {
+    desde: "• CAROUSEL — a horizontal rail WITH working arrows",
+    hasta: "• NO `data-slot-path=` attribute anywhere",
+    libre:
+      "• INTERACTIVIDAD — la escribes TÚ, con CSS y con tu `<script>`. No hay\n" +
+      "  marcadores declarativos que aprender ni contratos de OpenLen que seguir.\n" +
+      "  Si la página gana algo con un contador en vivo, un filtro, un lightbox,\n" +
+      "  copiar al portapapeles, pestañas, un tema claro/oscuro o una barra que se\n" +
+      "  vuelve sólida al bajar, constrúyelo como lo construirías en cualquier otro\n" +
+      "  sitio web.\n" +
+      "  Prefiere CSS cuando ya basta — `position: sticky`, `<details>`,\n" +
+      "  `scroll-snap`, `@keyframes`, `peer-checked:` — y deja el JavaScript para el\n" +
+      "  estado que el CSS no puede llevar solo. Un carrusel es un contenedor\n" +
+      "  `overflow-x:auto snap-x` con dos botones que llaman a `scrollBy`; no\n" +
+      "  necesita ningún contrato especial.\n" +
+      "  Escribe SIEMPRE LAS DOS MITADES: el comportamiento y el CSS del estado que\n" +
+      "  ese comportamiento activa. Una clase que el script pone y que nadie define\n" +
+      "  en el CSS deja el control mudo — se ejecuta y no se nota.\n",
   },
 
   "no-negociable": {

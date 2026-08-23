@@ -395,11 +395,22 @@ fn build_policy(
         Some(origin) if !origin.trim().is_empty() => format!("'self' {}", origin.trim()),
         _ => "'self'".to_string(),
     };
-    // frame-src: defense-in-depth for the in-page video embeds. The sanitizer
-    // already strips all user iframes; the only frames on a published page are
-    // the canonical YouTube/Vimeo embeds our bake injects (lib/publish/
-    // video-embed.ts). Locking frame-src to exactly those two origins means any
-    // other iframe that somehow slipped through is blocked by the page's own CSP.
+    // frame-src: defense-in-depth for the in-page video and map embeds. The
+    // sanitizer already strips all user iframes; the only frames on a published
+    // page are the canonical embeds our bakes inject — YouTube/Vimeo
+    // (lib/publish/video-embed.ts) and Google Maps (lib/publish/map-embed.ts).
+    // Locking frame-src to exactly those origins means any other iframe that
+    // somehow slipped through is blocked by the page's own CSP.
+    //
+    // `https://www.google.com` cubre las DOS URLs del mapa: `?output=embed`
+    // devuelve un 301 a `/maps/embed` en ese mismo origen (verificado con Chrome
+    // real el 2026-08-23), así que no hace falta una segunda entrada.
+    //
+    // ⚠️ CADA ORIGEN NUEVO AQUÍ CUESTA UN REBUILD DEL MÓDULO NATIVO. Añadir
+    // Spotify o Calendly es barato en TypeScript y caro en despliegue: si esta
+    // lista y el bake se desincronizan, el embebido se inyecta y el navegador lo
+    // bloquea — la página se ve bien en el editor y muerta al publicar, que es
+    // la peor forma de fallar.
     // connect-src: LA directiva de salida, y faltaba. Como tampoco hay
     // `default-src` del que heredar, `fetch`, XHR, WebSocket, EventSource y
     // sendBeacon podían ir a CUALQUIER host. Mientras la página sólo lleva
@@ -444,7 +455,7 @@ fn build_policy(
     format!(
         "script-src {}; connect-src {}; worker-src 'none'; object-src 'none'; \
          base-uri 'none'; img-src {}; media-src {}; font-src {}; style-src {}; \
-         frame-src https://www.youtube-nocookie.com https://player.vimeo.com; \
+         frame-src https://www.youtube-nocookie.com https://player.vimeo.com https://www.google.com; \
          form-action {}",
         script_src, connect_src, img_src, media_src, font_src, style_src, form_action
     )
@@ -502,7 +513,7 @@ mod tests {
         assert!(r.html.contains("form-action 'self'"));
         assert!(r
             .html
-            .contains("frame-src https://www.youtube-nocookie.com https://player.vimeo.com"));
+            .contains("frame-src https://www.youtube-nocookie.com https://player.vimeo.com https://www.google.com;"));
         assert!(r.html.contains("data-ol-csp"));
     }
 
@@ -514,7 +525,7 @@ mod tests {
         let r = seal_release(html, None);
         assert!(r
             .html
-            .contains("frame-src https://www.youtube-nocookie.com https://player.vimeo.com"));
+            .contains("frame-src https://www.youtube-nocookie.com https://player.vimeo.com https://www.google.com;"));
         assert!(!r.html.contains("frame-src 'self'"));
         assert!(!r.html.contains("frame-src *"));
     }

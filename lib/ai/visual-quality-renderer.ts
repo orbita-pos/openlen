@@ -1,5 +1,6 @@
 import type { InlineImage } from "@/lib/ai-gateway";
 import { installSubresourceSsrfGuard } from "@/lib/security/render-ssrf-guard";
+import { PULSAR_CONTROLES } from "@/lib/ai/press-controls";
 
 export const VISUAL_QUALITY_DESKTOP_VIEWPORT = { width: 1280, height: 720 } as const;
 export const VISUAL_QUALITY_MOBILE_VIEWPORT = { width: 390, height: 844 } as const;
@@ -46,8 +47,8 @@ export interface VisualQualityViewports {
    *  Ver la sonda: nombrar al ancestro manda a mirar donde no está la causa. */
   overflowCulprit?: string;
   overflowCulpritRight?: number;
-  /** LO QUE LA PÁGINA GRITÓ AL CARGAR — excepciones no capturadas y errores de
-   *  consola, deduplicados.
+  /** LO QUE LA PÁGINA GRITÓ — al cargar Y AL APRETAR SUS CONTROLES; excepciones
+   *  no capturadas y errores de consola, deduplicados.
    *
    *  Este render se hace DOS veces por página al crearla y nunca preguntaba si
    *  el JavaScript reventaba. MEDIDO el 2026-08-21: el modelo escribió un
@@ -58,6 +59,24 @@ export interface VisualQualityViewports {
    *  Ausente cuando el llamador inyectó su propio `capture` (no hay página a la
    *  que escuchar) o cuando la página no dijo nada. */
   runtimeErrors?: readonly string[];
+  /** Lo CRUDO que devolvió el guion declarado por el modelo, tal cual sale del
+   *  navegador. Se deja sin tipar aquí a propósito: este módulo no sabe de
+   *  specs, sólo ejecuta el programa que le dan y devuelve lo que salga. Quien
+   *  lo pidió lo interpreta con `leerFallos`. Ausente si no se pidió guion. */
+  behaviorResult?: unknown;
+}
+
+/** Opciones de PRODUCTO del render — distintas de `Internals`, que son puntos
+ *  de inyección para las pruebas. */
+export interface VisualQualityRenderOptions {
+  /**
+   * El guion que el modelo declaró para su propio JavaScript, ya compilado a
+   * programa de navegador (`specProgram`). Cuando viene, se ejecuta EN LUGAR
+   * del pulsado a ciegas: pulsar todo comprueba «¿explota?» y el guion
+   * comprueba «¿hizo lo que prometió?», que es la pregunta que de verdad
+   * separa una página entregada de una redactada.
+   */
+  readonly behaviorProgram?: string;
 }
 
 interface PageLike {
@@ -66,7 +85,9 @@ interface PageLike {
   /** Opcional a propósito: los dobles de prueba implementan esta interfaz a
    *  mano y exigirlo los rompería a todos por una señal que no piden. */
   on?(event: string, handler: (payload: unknown) => void): unknown;
-  evaluate(pageFunction: () => unknown): Promise<unknown>;
+  /** Acepta también una CADENA: el programa de pulsar no puede ser una función
+   *  (el ayudante `__name` de esbuild no existe en el navegador). */
+  evaluate(pageFunction: (() => unknown) | string): Promise<unknown>;
   screenshot(options: {
     type: "jpeg";
     quality: number;
@@ -231,6 +252,7 @@ async function captureWithPage(
   page: PageLike,
   html: string,
   internals: VisualQualityRendererInternals,
+  opts: VisualQualityRenderOptions = {},
 ): Promise<VisualQualityViewports | null> {
   // Antes de `setContent`, o los errores del arranque se pierden.
   const gritos: string[] = [];
@@ -398,6 +420,100 @@ async function captureWithPage(
             }
             if (uncertain) continue;
 
+            // ── LO QUE HAY DEBAJO Y NO ES ANCESTRO ──────────────────────────
+            //
+            // 🔴 EL PUNTO CIEGO, medido en una página real el 2026-08-23: el
+            // reloj de un pomodoro salía gris ilegible sobre un disco NEGRO y
+            // esto reportaba contraste PERFECTO (#1f1e1b sobre #ffffff). Lo que
+            // tapaba el texto no era un ancestro: era un `<svg>` HERMANO,
+            // posicionado en absoluto y pintado detrás. El paseo de arriba no
+            // puede verlo por construcción.
+            //
+            // Se pregunta al navegador QUÉ HAY de verdad bajo ese píxel
+            // (`elementsFromPoint` devuelve la pila, de arriba abajo) y se
+            // busca el primer elemento que PINTE algo opaco y que NO sea
+            // ancestro del texto. Si existe, manda: está más cerca del píxel.
+            //
+            // Aditivo a propósito: la lógica de velos de arriba está medida
+            // caso por caso y no se toca. Esto sólo corrige el fondo cuando hay
+            // un pintor intermedio que aquélla no podía ver.
+            //
+            // En SVG el color de relleno es `fill`, no `backgroundColor` — y es
+            // justo el caso que motivó esto: un `<circle>` sin `fill` se pinta
+            // NEGRO por defecto.
+            // 🔴 HAY QUE LLEVARLO A LA VENTANA PRIMERO. `elementsFromPoint`
+            // sólo responde dentro del viewport, y el resto de esta medición es
+            // independiente de él (lee CSS, no píxeles). Medido: el reloj del
+            // pomodoro cae en y=1657 con una ventana de 900, así que la pila
+            // volvía VACÍA — o sea que sin esto la comprobación no corría bajo
+            // la línea de flotación, que es casi toda la página.
+            const scrollPrevioX = window.scrollX;
+            const scrollPrevioY = window.scrollY;
+            node.scrollIntoView({ block: "center", inline: "center" });
+            const rects = node.getClientRects();
+            const rect0 = rects.length > 0 ? rects[0] : node.getBoundingClientRect();
+            const px = rect0.left + rect0.width / 2;
+            const py = rect0.top + rect0.height / 2;
+            if (px >= 0 && py >= 0 && px <= window.innerWidth && py <= window.innerHeight) {
+              const pila = document.elementsFromPoint(px, py);
+              // LA REGLA: desde el texto hacia abajo, GANA EL PRIMER OPACO —
+              // sea ancestro o no. Es la misma semántica del paseo de arriba
+              // (que también empieza en el propio nodo), sólo que la pila
+              // incluye además a los hermanos pintados detrás, que es lo que
+              // aquél no puede ver.
+              //
+              // 🔴 Y por qué NO se saltan los ancestros, que fue mi primer
+              // intento y era un generador de falsos positivos: el botón
+              // «empezar ahora» lleva texto casi blanco sobre su propio fondo
+              // acento. Saltando ancestros, el paseo se iba hasta el `<body>`
+              // y medía blanco sobre crema — 1.03:1, un hallazgo INVENTADO.
+              //
+              // Lo que sí se salta es todo lo que está por ENCIMA del texto: si
+              // algo opaco lo tapa, eso es OCLUSIÓN, otro defecto, y juzgarlo
+              // aquí sería medir una cosa por otra. Cuando el texto ni siquiera
+              // sale en la pila —lo cubre una cabecera fija— no se anula nada y
+              // manda el paseo por ancestros: fallar hacia lo de antes es la
+              // propiedad que hace esto seguro de añadir.
+              let empezar = false;
+              for (const capa of pila) {
+                if (!empezar) {
+                  if (capa === node || capa.contains(node)) empezar = true;
+                  else continue;
+                }
+                const cs = window.getComputedStyle(capa);
+                if (cs.visibility === "hidden" || (Number.parseFloat(cs.opacity) || 0) < 0.95) continue;
+                // Una foto no se puede juzgar desde el CSS: se abandona, igual
+                // que arriba. La duda nunca se convierte en un hallazgo.
+                if (cs.backgroundImage && cs.backgroundImage.indexOf("url(") !== -1) { uncertain = true; break; }
+                // SVG: `fill` es su color de superficie — pero SÓLO en las
+                // formas que de verdad rellenan.
+                //
+                // 🔴 `fill` es una propiedad HEREDADA cuyo valor inicial es
+                // NEGRO, así que `getComputedStyle` devuelve negro en CUALQUIER
+                // nodo SVG: el `<svg>` contenedor, un `<g>`, un `<defs>`. Sin
+                // esta lista, un `<circle fill="none">` correcto seguía dando
+                // "fondo negro" porque el `<svg>` de encima ya lo decía — un
+                // hallazgo inventado, cazado por el brazo de control de su
+                // prueba.
+                const tag = (capa.tagName || "").toLowerCase();
+                const esForma = tag === "circle" || tag === "ellipse" || tag === "rect" || tag === "path" || tag === "polygon";
+                const bruto = esForma && cs.fill && cs.fill !== "none" ? cs.fill : cs.backgroundColor;
+                const canales = (RGB_RE.exec(bruto ?? "") ?? ["", ""])[1]
+                  .split(SEPARATOR_RE).filter((piece) => piece.length > 0).map(Number);
+                if (canales.length < 3) continue;
+                const a = canales.length > 3 && Number.isFinite(canales[3]) ? canales[3] : 1;
+                const aFill = esForma ? Number.parseFloat(cs.fillOpacity || "1") : 1;
+                if (a * (Number.isFinite(aFill) ? aFill : 1) < 0.95) continue;
+                backgroundText = `rgb(${canales[0]}, ${canales[1]}, ${canales[2]})`;
+                break;
+              }
+            }
+            // Se devuelve el scroll donde estaba: la captura se toma después y
+            // una página medida a media altura saldría distinta de la que el
+            // usuario recibe.
+            window.scrollTo(scrollPrevioX, scrollPrevioY);
+            if (uncertain) continue;
+
             const textChannels = (RGB_RE.exec(style.color) ?? ["", ""])[1]
               .split(SEPARATOR_RE).filter((piece) => piece.length > 0).map(Number);
             if (textChannels.length < 3 || textChannels.slice(0, 3).some((channel) => !Number.isFinite(channel))) continue;
@@ -523,6 +639,42 @@ async function captureWithPage(
     if (!isBoundedJpeg(image)) return null;
     images.push(image);
   }
+
+  // ── APRETAR LOS BOTONES ────────────────────────────────────────────────
+  //
+  // DESPUÉS de las dos capturas, nunca antes: un clic puede mover el DOM y las
+  // fotos tienen que enseñar la página tal como se recibe.
+  //
+  // Esto es lo que separaba crear de editar. Los ojos del Agente pulsan desde
+  // el 2026-08-22; una página recién creada nunca veía un clic — nacía, se
+  // fotografiaba y se entregaba. El modo de fallo que sólo se ve así: un
+  // manejador que revienta en la SEGUNDA jugada carga limpio, sale perfecto en
+  // la captura y no dice una palabra en consola.
+  //
+  // Los errores caen solos en `gritos`: los escuchas de `pageerror` y `console`
+  // llevan puestos desde el principio de esta función. Nunca puede costar la
+  // medición — un fallo aquí deja el resto del informe intacto.
+  //
+  // Y si el modelo DECLARÓ qué debe pasar, se comprueba ESO en vez de pulsar a
+  // ciegas. Es la misma elección que hacen los ojos del Agente
+  // (`lib/agent/verify.ts`): con guion se prueba la promesa, sin guion se pulsa
+  // todo. Aquí ocupa el mismo hueco, en el mismo navegador y tras las mismas
+  // capturas — cero arranques nuevos.
+  let behaviorResult: unknown;
+  try {
+    if (opts.behaviorProgram) {
+      behaviorResult = await page.evaluate(opts.behaviorProgram);
+    } else {
+      await page.evaluate(PULSAR_CONTROLES);
+    }
+    // Un manejador puede programar trabajo (un `setTimeout`, una animación) que
+    // revienta después del clic. Sin esta espera, el error llega tarde y se
+    // pierde al cerrar la página.
+    await (internals.settle ?? (() => new Promise((resolve) => setTimeout(resolve, 400))))();
+  } catch {
+    /* pulsar es diagnóstico, no puerta */
+  }
+
   return {
     desktop: images[0]!,
     mobile: images[1]!,
@@ -536,6 +688,7 @@ async function captureWithPage(
     // Ausente —no vacío— cuando la página no gritó: así el resto del objeto
     // queda idéntico al de antes de que esto existiera.
     ...(gritos.length > 0 ? { runtimeErrors: [...new Set(gritos)] } : {}),
+    ...(behaviorResult !== undefined ? { behaviorResult } : {}),
   };
 }
 
@@ -556,10 +709,11 @@ async function createBrowserWorker(internals: VisualQualityRendererInternals) {
 async function captureWithBrowser(
   html: string,
   internals: VisualQualityRendererInternals,
+  opts: VisualQualityRenderOptions = {},
 ): Promise<VisualQualityViewports | null> {
   const worker = await createBrowserWorker(internals);
   try {
-    return await captureWithPage(worker.page, html, internals);
+    return await captureWithPage(worker.page, html, internals, opts);
   } finally {
     await worker.browser.close();
   }
@@ -656,9 +810,10 @@ export async function createVisualQualityRendererPool(
 export async function renderVisualQualityViewports(
   html: string,
   internals: VisualQualityRendererInternals = {},
+  opts: VisualQualityRenderOptions = {},
 ): Promise<VisualQualityViewports | null> {
   try {
-    if (!internals.capture) return await captureWithBrowser(html, internals);
+    if (!internals.capture) return await captureWithBrowser(html, internals, opts);
     const desktop = await internals.capture(html, VISUAL_QUALITY_DESKTOP_VIEWPORT);
     if (!isBoundedJpeg(desktop)) return null;
     const mobile = await internals.capture(html, VISUAL_QUALITY_MOBILE_VIEWPORT);

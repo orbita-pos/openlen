@@ -14,7 +14,7 @@ import {
 import path from "node:path";
 import { legacyWebp2000Variant, processImage } from "@/lib/images";
 import { validateSubdomain } from "@/lib/subdomain/validate";
-import { sanitizeForPublish, sealRelease } from "@/lib/html-engine";
+import { sanitizeForPublish, sealRelease, stripOpIds } from "@/lib/html-engine";
 import { injectModelRuntime } from "@/lib/ai-stream/model-runtime";
 import { optimizeHtmlForProduction } from "@/lib/publish/optimize-html";
 import { bakeResponsiveImages } from "@/lib/publish/image-bake";
@@ -31,6 +31,7 @@ import { applyLiveData } from "@/lib/live";
 import { bakeWhatsAppButton, waHref } from "@/lib/publish/whatsapp-button";
 import { bakeChatWidget } from "@/lib/publish/chat-widget";
 import { bakeVideoEmbeds, bakeMediaPreconnect } from "@/lib/publish/video-embed";
+import { bakeMapEmbeds } from "@/lib/publish/map-embed";
 import { bakeCarousels } from "@/lib/publish/carousel";
 import { bakeBehaviors, usedBehaviors } from "@/lib/behaviors/build";
 import { behaviorsBakeEnabled, carouselBakeEnabled } from "@/lib/publish/kill-switches";
@@ -862,6 +863,20 @@ async function bakeDocument(
     }
   }
 
+  // Mapa en la página — el enlace a Google Maps se convierte en una fachada que
+  // carga el mapa AL PULSAR. Misma posición en la cadena que el vídeo y por el
+  // mismo motivo: después de sanear, antes de sellar, para que el hash del
+  // runtime entre en `script-src` y el origen del iframe esté en `frame-src`.
+  // OPENLEN_MAP_EMBED=0 lo apaga.
+  if (process.env.OPENLEN_MAP_EMBED !== "0") {
+    try {
+      migratedHtml = bakeMapEmbeds(migratedHtml);
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.warn("[publishToDir] map embed bake failed; publishing without it", err);
+    }
+  }
+
   // Resource hint for self-hosted video: warm the cross-origin media host
   // (uploads/R2) so a cinema autoplay hero starts without a cold handshake.
   // No-op when there's no absolute-https <video>/<source> on the page.
@@ -1058,11 +1073,27 @@ export async function publishToDir(
   if (!v.ok) {
     throw new Error(`publishToDir: invalid subdomain (${v.reason})`);
   }
+  // `data-op-id` es el OTRO marcador de modo-editor, y hasta el 2026-08-23 esta
+  // puerta no lo miraba: el Agente guardó 60 de ellos en `data.html` en un
+  // proyecto real y de aquí habrían salido al subdominio del usuario.
+  //
+  // Se QUITA en vez de rechazar, al revés que `data-slot-path`. No es indulgencia:
+  // el slot-path significa que llegó un documento de una tubería que no existe
+  // —no hay nada que salvar—, mientras que un op-id es un atributo inerte sobre
+  // un documento por lo demás correcto. Rechazar castigaría al usuario, dejándolo
+  // sin publicar, por un fallo NUESTRO aguas arriba.
+  //
+  // Va antes del saneador para que lo que se sella sea ya el documento limpio.
+  // La cápsula no se ve afectada: su hash se comprueba en `lib/projects.ts`
+  // ANTES de llegar aquí, y sirve para autorizar, no se vuelve a validar contra
+  // los bytes que se escriben.
+  const sinMarcadores = stripOpIds(params.html);
+
   // Defense-in-depth: sanitize immediately before the disk write. Strips any
   // inline script / on*-handler / dangerous URL / iframe that slipped past the
   // ingestion gates (Tailwind CDN preserved); rejects data-slot-path editor
   // markers. Clean HTML passes through byte-identical.
-  const sanitized = sanitizeForPublish(params.html);
+  const sanitized = sanitizeForPublish(sinMarcadores);
   if (sanitized.html === null) {
     throw new Error(
       "publishToDir: refusing to write HTML containing data-slot-path (editor-mode leaked into publish path)",
@@ -1240,7 +1271,9 @@ export async function publishToDir(
   // whole publish — half a site must never ship silently.
   const pageDocs: Array<{ slug: string; html: string }> = [];
   for (const page of params.pages ?? []) {
-    const pageSanitized = sanitizeForPublish(page.html);
+    // Misma cura que el documento raíz: una subpágina llega por las mismas
+    // tuberías y puede traer los mismos op-ids.
+    const pageSanitized = sanitizeForPublish(stripOpIds(page.html));
     if (pageSanitized.html === null) {
       throw new Error(
         `publishToDir: refusing to write page /${page.slug} containing data-slot-path`,

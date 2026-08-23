@@ -49,12 +49,19 @@ import { PUBLISH_CONTRACT_MIN } from "@/lib/publish-contract-min";
 const min = () => systemPromptFor({ OPENLEN_MIN_CONTRACT: "1" });
 
 describe("el interruptor del contrato mínimo", () => {
-  it("apagado, el prompt es EXACTAMENTE el de hoy", () => {
-    expect(systemPromptFor({})).toBe(SYSTEM_PROMPT);
+  // INVERTIDO el 2026-08-23: el mínimo es el DEFECTO. Antes había que
+  // acordarse de encenderlo, y por eso pasó tres días decidido y sin usar.
+  it("por defecto sale el MÍNIMO — la ausencia enciende", () => {
+    expect(systemPromptFor({})).not.toBe(SYSTEM_PROMPT);
+    expect(systemPromptFor({})).toContain(PUBLISH_CONTRACT_MIN);
+  });
+
+  it("sólo el literal 0 devuelve el contrato completo", () => {
     expect(systemPromptFor({ OPENLEN_MIN_CONTRACT: "0" })).toBe(SYSTEM_PROMPT);
-    // Sólo el literal "1" enciende: un "true" no puede cambiar producción por
-    // accidente.
-    expect(systemPromptFor({ OPENLEN_MIN_CONTRACT: "true" })).toBe(SYSTEM_PROMPT);
+    // Un "false" o un "no" NO apagan: la vuelta atrás es una sola forma, igual
+    // que en `lib/publish/kill-switches.ts`.
+    expect(systemPromptFor({ OPENLEN_MIN_CONTRACT: "false" })).not.toBe(SYSTEM_PROMPT);
+    expect(systemPromptFor({ OPENLEN_MIN_CONTRACT: "true" })).not.toBe(SYSTEM_PROMPT);
   });
 
   it("encendido, la sustitución OCURRE — si no, el brazo sería falso", () => {

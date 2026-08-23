@@ -6,6 +6,8 @@ import { createVersion } from "@/lib/projects/versions";
 import { getCreditState } from "@/lib/credits";
 import { systemPromptFor } from "./system-prompt";
 import { modelRuntimePromptBlock } from "@/lib/ai-stream/model-runtime";
+import { modelPruebaPromptBlock } from "@/lib/ai-stream/model-prueba";
+import type { PasoSpec } from "@/lib/agent/behavior-spec";
 import { detectSlotPath } from "@/lib/html-engine";
 import { collectDegradations } from "@/lib/ingestion/degradations";
 import { directionToBriefBlock, type StyleDirection } from "@/lib/style-match/direction";
@@ -13,6 +15,7 @@ import { disableCalcRegions } from "@/lib/expr/repair";
 import { resolveAIProvider, type AIModel } from "@/lib/ai-provider";
 import { generateHtmlStream, pageWriterUsesDeepSeek } from "@/lib/ai-stream/generate";
 import { critiqueGeneratedPage } from "@/lib/ai/vision-critique";
+import { repairGeneratedPage } from "@/lib/generation/repair-pass";
 import { recordCriticRun, recordRegenOutcome } from "@/lib/ai/quality-metrics";
 import type { InlineImage, Message } from "@/lib/ai-gateway";
 import { preparePage } from "@/lib/page-engine/prepare";
@@ -245,7 +248,7 @@ ${briefBlock}`;
   }
 
   const messages = [
-    { role: "system" as const, content: systemPromptFor(process.env) + modelRuntimePromptBlock(process.env) },
+    { role: "system" as const, content: systemPromptFor(process.env) + modelRuntimePromptBlock(process.env) + modelPruebaPromptBlock(process.env) },
     { role: "user" as const, content: `${todayLine()}${LANGUAGE_RULE}${briefBlock}` },
   ];
 
@@ -302,7 +305,7 @@ ${briefBlock}`;
           genMessages: Message[],
           label: string,
         ): Promise<
-          | { ok: true; html: string; modelRuntime: string | null }
+          | { ok: true; html: string; modelRuntime: string | null; modelPrueba?: readonly PasoSpec[] }
           | { ok: false; message: string; retryable: boolean }
         > => {
           const { stream, done } = generateHtmlStream({
@@ -401,7 +404,14 @@ ${briefBlock}`;
           // El runtime viaja con SU pasada. Si gana una regeneración, se guarda
           // el script de esa generación y no el de la anterior: un script escrito
           // para un DOM que ya no existe no falla — hace cosas raras en silencio.
-          return { ok: true, html: passHtml, modelRuntime: summary.modelRuntime };
+          // La PRUEBA viaja con su pasada por la misma razón que el runtime: es
+          // la promesa de ESE código sobre ESE DOM.
+          return {
+            ok: true,
+            html: passHtml,
+            modelRuntime: summary.modelRuntime,
+            ...(summary.modelPrueba ? { modelPrueba: summary.modelPrueba } : {}),
+          };
         };
 
         // ── Initial pass ────────────────────────────────────────────────────
@@ -453,10 +463,21 @@ ${briefBlock}`;
         // mide tiene que llevar el script que ESE candidato escribió. Sin él la
         // medición era ciega al modo de fallo que ninguna captura enseña — un
         // script que muere en el arranque deja una foto perfecta.
-        const engine = (candidate: string, runtime: string | null) =>
-          preparePage(candidate, { mode: "create", brief, title, profile: business.data, runtime });
+        // La PRUEBA declarada viaja con el runtime: el motor la ejecuta dentro
+        // del navegador que ya abre para medir, en el hueco donde si no pulsa
+        // los controles a ciegas.
+        const engine = (candidate: string, runtime: string | null, prueba?: readonly PasoSpec[]) =>
+          preparePage(candidate, {
+            mode: "create",
+            brief,
+            title,
+            profile: business.data,
+            runtime,
+            ...(prueba && prueba.length > 0 ? { prueba } : {}),
+          });
 
-        let prepared = await engine(first.html, first.modelRuntime);
+        const prueba = first.modelPrueba;
+        let prepared = await engine(first.html, first.modelRuntime, prueba);
         if (!prepared.ok) {
           // eslint-disable-next-line no-console
           console.error(`[generate] gate refused (${prepared.code}) — not saving`);
@@ -473,22 +494,133 @@ ${briefBlock}`;
         // es que el diagnóstico —que ya era quirúrgico— por fin llega a quien
         // puede actuar sobre él.
         let calcRotas = [...(prepared.report.calcIssues ?? [])];
+        // CSS que no puede aplicar nunca. Entra por el MISMO reintento, sin
+        // presupuesto nuevo — es el defecto que ninguna otra etapa ve: el render
+        // mide lo que se pinta y la puerta valida lo que está cableado, pero un
+        // selector que no casa simplemente no ocurre. Medido en una página real
+        // el 2026-08-23: `.timer-ring .track-ring` con la clase ausente dejó dos
+        // `<circle>` de SVG con su relleno NEGRO por defecto, tapando el reloj.
+        const cssMuerto = [...(prepared.report.deadRules ?? [])];
         const diagnostico = [
           ...breakage,
           ...calcRotas.map((i) => `la fórmula ${i.attr}="${i.formula}" ${i.message}`),
+          ...cssMuerto.map(
+            (r) =>
+              `el selector \`${r.selector}\` no aplica NUNCA: falta class="${r.ausentes[0]}" en el documento`,
+          ),
         ];
 
-        if (diagnostico.length > 0) {
+        // ── LA PROMESA DEL PROPIO MODELO, y por qué va APARTE ──────────────
+        //
+        // `diagnostico` es rotura OBSERVABLE: algo gritó, una fórmula no
+        // compila, un selector no puede casar. Todo eso justifica el gasto
+        // grande —una reescritura entera— porque es cierto pase lo que pase.
+        //
+        // Una prueba fallida NO es eso. La escribió el mismo modelo que
+        // escribió el código, y PUEDE ESTAR MAL: medido el 2026-08-23, Len
+        // declaró una prueba que esperaba `49:59` donde reiniciar da `50:00`.
+        // Con un bucle de conversación eso da igual —se corrige en el turno
+        // siguiente—; al crear dispararía una reescritura completa para nada.
+        //
+        // Así que vale exactamente UN intento de reparación (~234 tokens
+        // medidos) y NUNCA una reescritura. Si la reparación no baja el
+        // número de defectos, la página se entrega tal cual: no tenemos
+        // autoridad suficiente para tirar la página del usuario por una
+        // promesa que quizá esté mal escrita.
+        const promesasRotas = (prepared.report.specFailures ?? []).map(
+          (f) => `tu propia prueba falló — paso ${f.paso}: ${f.mensaje}`,
+        );
+        const paraReparar = [...diagnostico, ...promesasRotas];
+
+        // ── REPARAR ANTES DE REESCRIBIR ────────────────────────────────────
+        //
+        // Primero se intenta un arreglo QUIRÚRGICO sobre la página que el
+        // modelo acaba de escribir, con el mismo protocolo de ops que usan el
+        // Chat y el Agente. Sólo si eso no produce nada aplicable se cae a la
+        // reescritura completa, que es el comportamiento de antes.
+        //
+        // POR QUÉ ESTE ORDEN, con números: una reescritura cuesta una página de
+        // SALIDA (~8.800 tokens medidos) y no sabe qué conservar — el mismo
+        // fallo que en el rediseño del Agente se comía la foto del dueño en 8
+        // de 20 turnos. Un arreglo por ops son unos cientos de tokens de salida
+        // y no puede tocar lo que no nombra. Un intento fallido cuesta ~1/3 de
+        // una reescritura, así que probar primero sale a cuenta incluso cuando
+        // no acierta.
+        //
+        // Está MEDIDO que el modelo repara cuando se le enseña su propio
+        // trabajo: 90% de líneas idénticas ([[model-repairs-not-recreates-measured]]).
+        let repaired = false;
+        if (paraReparar.length > 0) {
           // eslint-disable-next-line no-console
-          console.warn(`[generate] rotura medida — ${diagnostico.join(" · ")}`);
-          emit("regen-starting", { reason: diagnostico.join("; ") });
+          console.warn(`[generate] rotura medida — ${paraReparar.join(" · ")}`);
+          emit("regen-starting", { reason: paraReparar.join("; ") });
+          try {
+            const arreglo = await repairGeneratedPage({
+              html,
+              runtime: runtimeCode,
+              defectos: paraReparar,
+              brief,
+              signal: upstreamAbort.signal,
+            });
+            if (arreglo.ok && arreglo.html) {
+              // La MISMA prueba sobre el código reparado. No se le pide otra al
+              // modelo: la promesa no cambió, cambió el código que debe
+              // cumplirla — y volver a preguntarla dejaría al reparador
+              // ajustando el examen en vez de la respuesta.
+              const tras = await engine(arreglo.html, arreglo.runtime ?? null, prueba);
+              // La reparación tiene que MEJORAR para quedarse. Si deja la
+              // página igual de rota —o peor— se descarta y se reescribe: un
+              // arreglo que no arregla nada es una degradación silenciosa.
+              const defectosTras = tras.ok
+                ? [
+                    ...tras.report.breakage,
+                    ...(tras.report.calcIssues ?? []).map((i) => `la fórmula ${i.attr}="${i.formula}" ${i.message}`),
+                    ...(tras.report.deadRules ?? []).map((r) => `el selector \`${r.selector}\` no aplica NUNCA`),
+                    ...(tras.report.specFailures ?? []).map((f) => `tu propia prueba falló — paso ${f.paso}`),
+                  ]
+                : null;
+              if (tras.ok && defectosTras !== null && defectosTras.length < paraReparar.length) {
+                // eslint-disable-next-line no-console
+                console.log(`[generate] reparado con ${arreglo.appliedOps} ops — ${paraReparar.length} → ${defectosTras.length} defectos`);
+                html = tras.html;
+                runtimeCode = arreglo.runtime ?? runtimeCode;
+                prepared = tras;
+                breakage = [...tras.report.breakage];
+                calcRotas = [...(tras.report.calcIssues ?? [])];
+                repaired = true;
+                regenerated = true;
+              } else {
+                // eslint-disable-next-line no-console
+                console.log(`[generate] reparación descartada — no bajó el número de defectos`);
+              }
+            } else if (!arreglo.ok) {
+              // eslint-disable-next-line no-console
+              console.log(`[generate] reparación sin resultado (${arreglo.reason}) — se reescribe`);
+            }
+          } catch (err) {
+            // Nunca puede costar la página: se cae a la reescritura de siempre.
+            // eslint-disable-next-line no-console
+            console.warn("[generate] la reparación falló; se reescribe", err);
+          }
+        }
+
+        if (diagnostico.length > 0 && !repaired) {
           const fixMessages: Message[] = [
-            { role: "system", content: systemPromptFor(process.env) + modelRuntimePromptBlock(process.env) },
+            { role: "system", content: systemPromptFor(process.env) + modelRuntimePromptBlock(process.env) + modelPruebaPromptBlock(process.env) },
             {
               role: "user",
+              // TODO el diagnóstico, no sólo `breakage`.
+              //
+              // Esto mandaba `breakage.map(...)` mientras la CONDICIÓN de
+              // regenerar usaba `diagnostico`, que además lleva las fórmulas
+              // rotas y el CSS que no aplica. O sea que una página podía
+              // regenerarse POR una fórmula rota y el modelo recibía una lista
+              // VACÍA: reescribía a ciegas y pagábamos la llamada igual. Un
+              // diagnóstico que no llega a quien puede actuar no cierra ningún
+              // bucle — es la doctrina de degradación de este repo.
               content: `<measured-breakage>
 El navegador renderizó tu página anterior y midió esto:
-${breakage.map((r) => `- ${r}`).join("\n")}
+${diagnostico.map((r) => `- ${r}`).join("\n")}
 
 Escribe la página de nuevo sin esos defectos. No son opiniones: son medidas del render.
 </measured-breakage>
@@ -498,7 +630,7 @@ ${briefBlock}`,
           ];
           const fixed = await runPass(fixMessages, "regen");
           if (fixed.ok) {
-            const second = await engine(fixed.html, fixed.modelRuntime ?? null);
+            const second = await engine(fixed.html, fixed.modelRuntime ?? null, fixed.modelPrueba);
             // La segunda puede salir peor que la primera: se entrega la que
             // menos rota esté, no la más reciente. Y se juzga por el TOTAL, no
             // sólo por el desborde — si arregla el render y rompe tres
@@ -600,12 +732,12 @@ ${briefBlock}`,
             emit("regen-starting", { reason: verdict.issues.join("; ") });
             const regenBriefBlock = `<critic-feedback>\n${verdict.regenerationFeedback}\n\nIssues found in the previous attempt: ${verdict.issues.join(", ")}\n</critic-feedback>\n\n${briefBlock}`;
             const regenMessages: Message[] = [
-              { role: "system", content: systemPromptFor(process.env) + modelRuntimePromptBlock(process.env) },
+              { role: "system", content: systemPromptFor(process.env) + modelRuntimePromptBlock(process.env) + modelPruebaPromptBlock(process.env) },
               { role: "user", content: regenBriefBlock },
             ];
             const regen = await runPass(regenMessages, "regen");
             if (regen.ok) {
-              const third = await engine(regen.html, regen.modelRuntime ?? null);
+              const third = await engine(regen.html, regen.modelRuntime ?? null, regen.modelPrueba);
               if (third.ok) {
                 prepared = third;
                 html = third.html;

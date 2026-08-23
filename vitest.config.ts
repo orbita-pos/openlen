@@ -136,6 +136,9 @@ export default defineConfig({
       "lib/publish/form-identity.test.ts",
       "lib/publish/llms-txt.test.ts",
       "lib/publish/video-embed.test.ts",
+      // El `include` es LISTA BLANCA: sin esta línea el fichero existe, pasa
+      // `tsc` y NO CORRE NUNCA — una prueba que no corre no protege nada.
+      "lib/publish/map-embed.test.ts",
       "lib/publish/module-sections.test.ts",
       // DB-integration test (real Postgres via .env.local, same pattern as
       // lib/chat/identity-bridge.test.ts) — preview-bake.test.ts itself stays
@@ -198,6 +201,7 @@ export default defineConfig({
       // test suite found" aunque estén sanas. Y ojo — `include` es una LISTA
       // BLANCA: un fichero nuevo NO CORRE hasta aparecer aquí.
       "lib/ai-stream/model-runtime.test.ts",
+      "lib/ai-stream/model-prueba.test.ts",
       "lib/ai-stream/document-ops.test.ts",
       // NB: lib/projects/site-pages.test.ts is a node:test file (run via
       // `tsx --test`), so include the vitest project tests explicitly.

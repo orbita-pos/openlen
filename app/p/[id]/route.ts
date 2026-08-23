@@ -10,6 +10,9 @@ import {
   verifyUnlockToken,
 } from "@/lib/projects/preview";
 import type { ProjectData } from "@/lib/projects/types";
+import { authorizeRuntimeForPublish } from "@/lib/projects/model-runtime";
+import { splitPagesForPublish } from "@/lib/projects/site-pages";
+import { injectModelRuntime } from "@/lib/ai-stream/model-runtime";
 import { bakeModulesForPreview } from "@/lib/publish/preview-bake";
 
 export const runtime = "nodejs";
@@ -100,6 +103,45 @@ export async function GET(
     /* raw draft is still a valid preview */
   }
 
+  // El JavaScript del modelo. Ésta es la ÚNICA superficie del editor donde
+  // puede correr: el iframe del taller lleva `allow-same-origin` —lo necesita
+  // para la edición inline— y meter ahí un script del modelo fue un agujero
+  // REAL, medido el 2026-07-29 (leía cookies y localStorage). Aquí la
+  // `PREVIEW_CSP` de arriba da ORIGEN OPACO, que es el contenedor que ese
+  // script merece: se ejecuta, y no alcanza nada de openlen.com.
+  //
+  // Sin esto, desde que las páginas nacen con JavaScript el usuario no tenía
+  // NINGUNA forma de ver su página funcionando antes de publicarla — el editor
+  // se la enseñaba muerta. Un preview que no ejecuta la página miente sobre lo
+  // que el usuario acaba de hacer.
+  //
+  // Se autoriza con la MISMA función que publica: el interruptor, el hash de la
+  // cápsula, el dominio propio y la regla de un solo documento se deciden en un
+  // único sitio. Una vista previa que enseñara algo que la publicación no va a
+  // servir sería otra mentira, sólo que en la otra dirección.
+  //
+  // Sólo el documento raíz: la cápsula ata `data.html` y una subpágina no entra.
+  if (!pageSlug && meta.generatedRuntime) {
+    try {
+      const dominios = await db
+        .select({ id: schema.customDomains.id })
+        .from(schema.customDomains)
+        .where(eq(schema.customDomains.projectId, id))
+        .limit(1);
+      const permiso = authorizeRuntimeForPublish({
+        env: process.env,
+        projectId: id,
+        html: data.html ?? "",
+        capsule: meta.generatedRuntime,
+        pageCount: splitPagesForPublish(data).publicPages.length,
+        hasCustomDomain: dominios.length > 0,
+      });
+      if (permiso.kind === "authorized") html = injectModelRuntime(html, permiso.code);
+    } catch {
+      /* el borrador sin script sigue siendo una vista previa válida */
+    }
+  }
+
   return draftResponse(html);
 }
 
@@ -147,21 +189,31 @@ export async function POST(
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
-async function loadPreviewData(
-  id: string,
-): Promise<{ data: ProjectData; title: string | null; subdomain: string | null } | null> {
+async function loadPreviewData(id: string): Promise<{
+  data: ProjectData;
+  title: string | null;
+  subdomain: string | null;
+  /** La cápsula del modelo, sin verificar — `authorizeRuntimeForPublish` decide. */
+  generatedRuntime: unknown;
+} | null> {
   const rows = await db
     .select({
       data: schema.projects.data,
       title: schema.projects.title,
       subdomain: schema.projects.subdomain,
+      generatedRuntime: schema.projects.generatedRuntime,
     })
     .from(schema.projects)
     .where(eq(schema.projects.id, id))
     .limit(1);
   const row = rows[0];
   if (!row?.data) return null;
-  return { data: row.data, title: row.title ?? null, subdomain: row.subdomain ?? null };
+  return {
+    data: row.data,
+    title: row.title ?? null,
+    subdomain: row.subdomain ?? null,
+    generatedRuntime: row.generatedRuntime ?? null,
+  };
 }
 
 function unlockCookieName(id: string): string {

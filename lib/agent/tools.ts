@@ -31,10 +31,11 @@ import { getOrCreateDefaultCollection, setCollectionSource } from "@/lib/collect
 import { syncCollectionFromSheet } from "@/lib/collections/sheet-sync";
 import { debitCredits } from "@/lib/credits";
 import { detectSlotPath, sanitizeForPublish } from "@/lib/html-engine";
-import { applyOps, rejectDocumentWideOps, tagWithOpIds, type Op, type OpType } from "@/lib/html-ops";
+import { applyOps, rejectDocumentWideOps, stripOpIds, tagWithOpIds, type Op, type OpType } from "@/lib/html-ops";
 import { splitRuntimeOps } from "@/lib/ai-stream/model-runtime";
 import { applyHeadOp, applyLangOp, applyStylesOp, splitDocumentOps, splitLangOp } from "@/lib/ai-stream/document-ops";
 import { avisoHechosPerdidos, avisoMetaDesfasada, hechosPerdidos, metaDesfasada } from "@/lib/agent/facts-kept";
+import { avisoReglasMuertas, type ReglaMuerta } from "@/lib/document/css-wiring";
 import { parseBehaviorSpec, specRechazoAviso, type PasoSpec } from "@/lib/agent/behavior-spec";
 import { AGENT_MEMORY_MAX, rememberAboutUser } from "@/lib/agent/user-memory";
 import { fetchSheet, resolveSheetCsvUrl } from "@/lib/live/sheet-source";
@@ -802,7 +803,14 @@ interface RawEdit {
 }
 
 type PersistResult =
-  | { ok: true; finalHtml: string; aviso?: string; sinCambios?: boolean }
+  | {
+      ok: true;
+      finalHtml: string;
+      aviso?: string;
+      sinCambios?: boolean;
+      /** Selectores que no pueden aplicar sobre el documento guardado. */
+      reglasMuertas?: readonly ReglaMuerta[];
+    }
   | { ok: false; error: string };
 
 // The sanitizer silently deletes <script>, on* handlers and <iframe> from any
@@ -866,15 +874,32 @@ async function persistHtmlChange(
   deps: AgentDeps,
   candidateHtml: string,
   label: string,
-  /** `modelRuntime`: un `<script>` que el modelo acaba de escribir. Sólo llega
-   *  del REDISEÑO, que produce un documento entero; `editar_pagina` emite ops y
-   *  no trae ninguno — ahí `persistPage` re-sella el que ya había en vez de
-   *  tirarlo. */
+  /** `modelRuntime`: un `<script>` que el modelo acaba de escribir. Llega del
+   *  REDISEÑO (documento entero) y también de `editar_pagina` con un edit
+   *  `target="runtime"`. Cuando NO llega ninguno, `persistPage` re-sella el que
+   *  ya había en vez de tirarlo. */
   opts: { isBaseline?: boolean; modelRuntime?: string | null } = {},
 ): Promise<PersistResult> {
+  // `data-op-id` es un marcador de MODO EDICIÓN: se estampa para que el modelo
+  // pueda apuntar a un elemento y NUNCA debe persistirse. `applyOps` los quita
+  // al aplicar, así que mientras el turno traía ops el documento salía limpio
+  // por ACCIDENTE, no por contrato. Un turno de sólo comportamiento —o sólo
+  // `styles`/`head`/`idioma`— no llama a `applyOps` y guardaba el documento
+  // entero etiquetado.
+  //
+  // El daño era PERMANENTE, no cosmético: `tag_with_op_ids` salta sin contar el
+  // elemento que ya lleva id (`tagger.rs`), así que al turno siguiente
+  // `taggedCount` es 0 y la ruta responde 400 «no taggable elements» para
+  // siempre. Medido en un proyecto real el 2026-08-23: 60 ids en `data.html` y
+  // el proyecto imposible de editar.
+  //
+  // Va aquí, en el embudo por el que pasa TODA escritura, y no en la rama que
+  // faltaba: es el único sitio donde la garantía no depende del camino tomado.
+  const limpio = stripOpIds(candidateHtml);
+
   // Editor-mode marker guard first (specific message), then the broader
   // sanitize pass (defense in depth — mirrors ai-design route).
-  if (detectSlotPath(candidateHtml)) {
+  if (detectSlotPath(limpio)) {
     return { ok: false, error: "el HTML contiene un marcador reservado (data-slot-path)" };
   }
   // Fail closed, through the one gate. `seal: false` — nothing is served from
@@ -885,7 +910,7 @@ async function persistHtmlChange(
   // todas las ediciones futuras. Crear falla ABIERTO y entrega la página con el
   // defecto anotado; sin esta comparación, editar fallaba CERRADO y el Agente
   // rechazaba cualquier cambio hablando de un control que el usuario no tocó.
-  const prepared = await preparePage(candidateHtml, {
+  const prepared = await preparePage(limpio, {
     mode: "edit",
     // No encarece el turno: `photographHtml` sale sin tocar la red cuando el
     // documento no trae huecos `data-ol-photo`, que es el caso corriente.
@@ -925,6 +950,15 @@ async function persistHtmlChange(
   // is what the sanitizer removed from a document that DID pass.
   const aviso = gated.removed ? sanitizeAviso(gated.removed) : undefined;
 
+  // El CSS que nunca aplica. El motor lo diagnostica desde hoy y el Agente es
+  // la superficie que MEJOR puede actuar sobre él: tiene bucle, así que lo
+  // arregla en este mismo turno en vez de entregar la página torcida.
+  //
+  // Se GUARDA igual y se AVISA — no se rechaza. Un selector que no casa no
+  // rompe la página, la deja con el aspecto por defecto; bloquear la edición
+  // por eso le costaría al usuario un cambio que sí quería.
+  const reglasMuertas = prepared.ok ? [...(prepared.report.deadRules ?? [])] : [];
+
   // El guardado vive en lib/page-engine/persist: el Chat tenía una copia de
   // este mismo bloque —dos snapshots, el mismo spread por página— y el
   // comentario de arriba pedía justo que no derivaran.
@@ -956,6 +990,7 @@ async function persistHtmlChange(
     finalHtml,
     ...(aviso ? { aviso } : {}),
     ...(saved.sinCambios ? { sinCambios: true } : {}),
+    ...(reglasMuertas.length ? { reglasMuertas } : {}),
   };
 }
 
@@ -1047,9 +1082,18 @@ async function toolRedisenarPagina(
       ok: true,
       nota: "rediseño aplicado; los data-op-id cambiaron — usa leer_estado incluir_documento=true antes de editar encima",
       ...(persisted.aviso ? { aviso: persisted.aviso } : {}),
-      ...(perdidos.length > 0
-        ? { hechos_perdidos: perdidos.length, aviso_critico: avisoHechosPerdidos(perdidos) }
+      ...(perdidos.length > 0 ? { hechos_perdidos: perdidos.length } : {}),
+      ...(persisted.reglasMuertas?.length
+        ? { css_sin_efecto: persisted.reglasMuertas.map((r) => r.selector) }
         : {}),
+      // Acumulados, no pisados — misma razón que en `editar_pagina`: un
+      // rediseño puede a la vez tirar la foto del dueño Y dejar CSS colgando.
+      ...(() => {
+        const c: string[] = [];
+        if (perdidos.length > 0) c.push(avisoHechosPerdidos(perdidos));
+        if (persisted.reglasMuertas?.length) c.push(avisoReglasMuertas(persisted.reglasMuertas));
+        return c.length ? { aviso_critico: c.join(" · ") } : {};
+      })(),
     },
     action: { tool: "redisenar_pagina", ok: true, summary: resumen },
     updatedHtml: persisted.finalHtml,
@@ -1226,46 +1270,73 @@ async function toolEditarPagina(
     return { response: { ok: false, error: persisted.error } };
   }
 
+  // 🔴 LOS AVISOS SE ACUMULAN, NO SE PISAN.
+  //
+  // Esto eran CUATRO claves `aviso_critico` sueltas dentro del mismo objeto
+  // literal, así que en JavaScript la última ganaba EN SILENCIO. Un turno que a
+  // la vez dejaba la meta desfasada y cambiaba el comportamiento sin prueba
+  // sólo contaba una de las dos cosas — y el comentario de `persistHtmlChange`
+  // ya pedía justo lo contrario: *"el modelo sigue viendo TODAS las razones …
+  // contarle sólo la que bloqueó lo devuelve con el mismo script condenado
+  // pegado a un botón ya corregido"*. La intención estaba escrita y el código
+  // decía otra cosa.
+  const criticos: string[] = [];
+  const extra: Record<string, unknown> = {};
+
+  // La META se quedó atrás: el dato viejo sigue en el fragmento que enseña
+  // Google. Se mira sobre el documento que de verdad se guardó.
+  const viejos = metaDesfasada(persisted.finalHtml ?? htmlAplicado);
+  if (viejos.length > 0) {
+    extra.meta_desfasada = viejos;
+    criticos.push(avisoMetaDesfasada(viejos));
+  }
+
+  // CSS que no puede aplicar nunca: el estilo existe, el elemento existe, y no
+  // se tocan. Lo diagnostica el motor para las TRES superficies; el Agente es
+  // la única que puede arreglarlo en el mismo turno.
+  if (persisted.reglasMuertas?.length) {
+    extra.css_sin_efecto = persisted.reglasMuertas.map((r) => r.selector);
+    criticos.push(avisoReglasMuertas(persisted.reglasMuertas));
+  }
+
+  // Sin prueba, nadie sabrá si el comportamiento hace lo que promete — sólo si
+  // explota. Se le dice, y se le dice por qué.
+  if ((nuevoRuntime || tocaConducta(htmlAplicado, session.taggedHtml)) && !session.behaviorSpec) {
+    criticos.push(
+      avisoPrueba
+        ? `${avisoPrueba} Vuelve a mandarla bien formada en tu siguiente edit.`
+        : 'Cambiaste el COMPORTAMIENTO de la página SIN mandar `prueba`, así que nadie va a comprobar que haga lo que promete — sólo que no explote. Un botón cableado a una conducta mal puesta nace MUDO, sin un solo error en consola. Manda `prueba` describiendo qué debe pasar al pulsar.',
+    );
+  }
+
+  // Guardar-y-AVISAR: perder una op en silencio es la degradación que este repo
+  // prohíbe, y aquí lo perdido habría sido la página entera.
+  if (opsRechazadas.length > 0) {
+    extra.edits_descartados = opsRechazadas.length;
+    criticos.push(
+      `Descarte ${opsRechazadas.length} edit(s) que apuntaban al <html> o al <body>: habrian reemplazado la pagina ENTERA. El resto SI se aplico. Si querias cambiar CSS, usa target="styles"; para una hoja de fuentes, target="head".`,
+    );
+  }
+
+  // El turno no cambió nada. Se le dice al MODELO para que no cierre diciéndole
+  // al usuario que lo arregló: es el fallo medido el 22/08.
+  if (persisted.sinCambios) {
+    extra.sin_cambios = true;
+    criticos.push(
+      'Este edit NO cambió NADA de la página. NO le digas al usuario que lo arreglaste. Si el problema es de comportamiento, el arreglo va en un edit con target="runtime" que lleve el script completo corregido.',
+    );
+  }
+
   return {
     response: {
       ok: true,
       edits_aplicados: aplicadas,
       ...(nuevoRuntime ? { comportamiento_actualizado: true } : {}),
       ...(tocaDocumento ? { estilo_actualizado: true } : {}),
-      // La META se quedo atras: el dato viejo sigue en el fragmento que ensena
-      // Google. Se mira sobre el documento que de verdad se guardo.
-      ...(() => {
-        const viejos = metaDesfasada(persisted.finalHtml ?? htmlAplicado);
-        return viejos.length > 0 ? { meta_desfasada: viejos, aviso_critico: avisoMetaDesfasada(viejos) } : {};
-      })(),
-      // Sin prueba, nadie sabrá si el comportamiento hace lo que promete —
-      // sólo si explota. Se le dice, y se le dice por qué.
-      ...((nuevoRuntime || tocaConducta(htmlAplicado, session.taggedHtml)) && !session.behaviorSpec
-        ? {
-            aviso_critico: avisoPrueba
-              ? `${avisoPrueba} Vuelve a mandarla bien formada en tu siguiente edit.`
-              : 'Cambiaste el COMPORTAMIENTO de la página SIN mandar `prueba`, así que nadie va a comprobar que haga lo que promete — sólo que no explote. Un botón cableado a una conducta mal puesta nace MUDO, sin un solo error en consola. Manda `prueba` describiendo qué debe pasar al pulsar.',
-          }
-        : {}),
-      // Guardar-y-AVISAR: perder una op en silencio es la degradacion que este
-      // repo prohibe, y aqui lo perdido habria sido la pagina entera.
-      ...(opsRechazadas.length > 0
-        ? {
-            edits_descartados: opsRechazadas.length,
-            aviso_critico: `Descarte ${opsRechazadas.length} edit(s) que apuntaban al <html> o al <body>: habrian reemplazado la pagina ENTERA. El resto SI se aplico. Si querias cambiar CSS, usa target="styles"; para una hoja de fuentes, target="head".`,
-          }
-        : {}),
+      ...extra,
       nota: "data-op-id regenerados; usa leer_estado incluir_documento=true para editar de nuevo",
       ...(persisted.aviso ? { aviso: persisted.aviso } : {}),
-      // El turno no cambió nada. Se le dice al MODELO para que no cierre
-      // diciéndole al usuario que lo arregló: es el fallo medido el 22/08.
-      ...(persisted.sinCambios
-        ? {
-            sin_cambios: true,
-            aviso_critico:
-              "Este edit NO cambió NADA de la página. NO le digas al usuario que lo arreglaste. Si el problema es de comportamiento, el arreglo va en un edit con target=\"runtime\" que lleve el script completo corregido.",
-          }
-        : {}),
+      ...(criticos.length ? { aviso_critico: criticos.join(" · ") } : {}),
     },
     action: { tool: "editar_pagina", ok: true, summary: resumen },
     updatedHtml: persisted.finalHtml,
