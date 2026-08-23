@@ -102,6 +102,31 @@ export function readThemeModeFromHtml(html: string): "light" | "dark" {
   return /\sdata-ol-mode="dark"/i.test(tagMatch[0]) ? "dark" : "light";
 }
 
+/**
+ * ¿ESTE DOCUMENTO LEE ESTE TOKEN?
+ *
+ * POR QUÉ EXISTE. Escribir el token en `<html style>` siempre "funciona" — la
+ * declaración queda puesta. Que la página CAMBIE depende de que su CSS diga
+ * `var(--ol-…)` en algún sitio, y MEDIDO el 2026-08-22 sobre las 178 plantillas
+ * del repo: sólo 7 lo dicen. En las otras 171 el tema se aplicaba, la
+ * herramienta devolvía `ok: true, tokens_aplicados: 1` y la página se quedaba
+ * exactamente igual.
+ *
+ * Contar tokens ESCRITOS y llamarlo éxito es la degradación que este repo
+ * prohíbe: reportar un cambio que no se hizo. Esto cuenta los LEÍDOS.
+ *
+ * Comprobación de cadena, sin render: `var(--ol-x)` en el CSS del documento.
+ * Es tonta a propósito — un `var()` dentro de una regla que nunca casa con
+ * nada daría un falso positivo, pero equivocarse por optimista aquí sólo
+ * cuesta un turno, y equivocarse por pesimista le quita al usuario un camino
+ * que sí funcionaba.
+ */
+export function documentReadsToken(html: string, token: string): boolean {
+  // `var(  --ol-accent )` es CSS válido; el espacio opcional no puede costar
+  // un falso negativo.
+  return new RegExp(`var\\(\\s*${token.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`).test(html);
+}
+
 /** Merge `tokens` as inline-style custom properties onto the document's root
  *  <html> tag: creates the style attribute if missing, replaces prior values
  *  of the same token, keeps the rest of the style untouched. A null/empty
@@ -153,4 +178,46 @@ export function applyThemeTokensToHtml(html: string, tokens: Record<string, stri
   }
 
   return html.slice(0, tagStart) + newTag + html.slice(tagEnd);
+}
+
+/** El nombre de familia que abre un valor de `font-family`, sin comillas.
+ *  `"'Plus Jakarta Sans', sans-serif"` → `Plus Jakarta Sans`. */
+export function fontFamilyName(tokenValue: string): string | null {
+  const primera = tokenValue.split(",")[0]?.trim() ?? "";
+  const limpia = primera.replace(/^["']|["']$/g, "").trim();
+  // Sólo familias con nombre. Un `serif` o `sans-serif` genérico no se carga de
+  // ningún sitio, y pedirle a Google una hoja para "serif" da un 400.
+  if (!limpia || /^(serif|sans-serif|monospace|cursive|fantasy|system-ui|ui-[a-z-]+)$/i.test(limpia)) {
+    return null;
+  }
+  return /^[A-Za-z0-9 ]{1,40}$/.test(limpia) ? limpia : null;
+}
+
+/**
+ * La hoja de Google Fonts que hace falta para que la fuente EXISTA.
+ *
+ * MEDIDO el 2026-08-22: ni `cambiar_tema` ni el inspector del iframe añadían
+ * nunca el `<link>`. Así que poner `--ol-font-display: 'Fraunces', serif` en
+ * una página que no carga Fraunces no cambiaba la tipografía — el navegador
+ * caía al `serif` del sistema y el usuario veía Times New Roman donde pidió una
+ * editorial. Los kits de temáticas sí lo hacen (`lib/tematicas/presets.ts`);
+ * el camino de tema plano se había quedado a medias.
+ *
+ * Devuelve el html intacto cuando la familia ya está cargada, cuando es
+ * genérica, o cuando no hay `<head>` donde ponerla.
+ */
+export function ensureFontLink(html: string, tokenValue: string): string {
+  const familia = fontFamilyName(tokenValue);
+  if (!familia) return html;
+  const paraUrl = familia.replace(/ /g, "+");
+  // Ya cargada (por el <link> de Google o por un @font-face propio): no se
+  // duplica. Se mira el nombre con `+` y con espacio porque las dos formas
+  // aparecen en las plantillas.
+  if (html.includes(`family=${paraUrl}`) || html.includes(`family=${familia}`)) return html;
+  const i = html.toLowerCase().lastIndexOf("</head>");
+  if (i === -1) return html;
+  // Pesos 400 y 700: el cuerpo y el titular. Pedir la variable completa engorda
+  // la descarga y el horneado al publicar la deja local de todos modos.
+  const link = `<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=${paraUrl}:wght@400;700&display=swap">`;
+  return html.slice(0, i) + link + html.slice(i);
 }

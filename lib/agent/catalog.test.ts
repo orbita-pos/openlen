@@ -46,6 +46,47 @@ describe("buildFunctionDeclarations", () => {
     expect(d.parameters.properties.edits.items.properties.op.enum)
       .toEqual(["replace", "insert_before", "insert_after", "delete"]);
   });
+  // La otra mitad del interruptor OPENLEN_DOC_OPS: apagar el reparto sin apagar
+  // el anuncio sería lo peor de los dos mundos — el modelo emite el objetivo y
+  // la op desaparece. (El reparto se fija en document-ops.test.ts.)
+  it("anuncia los objetivos styles/head sólo cuando están encendidos", () => {
+    const desc = () =>
+      String(
+        (buildFunctionDeclarations().find((x) => x.name === "editar_pagina") as any).description,
+      );
+    const previo = process.env.OPENLEN_DOC_OPS;
+    try {
+      process.env.OPENLEN_DOC_OPS = "1";
+      expect(desc()).toContain('"styles"');
+      expect(desc()).toContain('"head"');
+      // El runtime NO depende del interruptor: es anterior y va aparte.
+      expect(desc()).toContain('"runtime"');
+
+      process.env.OPENLEN_DOC_OPS = "0";
+      expect(desc()).not.toContain('"styles"');
+      expect(desc()).not.toContain('"head"');
+      expect(desc()).toContain('"runtime"');
+    } finally {
+      if (previo === undefined) delete process.env.OPENLEN_DOC_OPS;
+      else process.env.OPENLEN_DOC_OPS = previo;
+    }
+  });
+  // MEDIDO el 2026-08-22 con el modelo real: a «ponme un formulario para que me
+  // manden su cotización» contestaba que «OpenLen no tiene un módulo de
+  // formularios que guarde o envíe los datos» y que «sería un formulario
+  // muerto, no te lo recomiendo» — 4 de 6 turnos no tocaban la página. Las dos
+  // afirmaciones son FALSAS: lib/publish/forms.ts hornea el action al publicar
+  // y app/api/f/[sub] entrega al correo del dueño y a su Bandeja. Con la verdad
+  // en el prompt: 10/10 construyen el formulario. Este pin evita que la línea
+  // se pierda en una futura poda del prompt.
+  it("el prompt dice la VERDAD sobre los formularios", () => {
+    const p = buildAgentSystemPrompt();
+    expect(p).toContain("LOS FORMULARIOS SÍ FUNCIONAN");
+    expect(p).toContain("/api/f/");
+    // Y le dice cómo: sin action, sin method, sin JavaScript — el publicador
+    // los pone. Un action escrito a mano por el modelo NO recibiría nada.
+    expect(p).toMatch(/NO le pongas action/);
+  });
   it("cambiar_motion enum matches MOTION_LOOKS", () => {
     const d = buildFunctionDeclarations().find((x) => x.name === "cambiar_motion") as any;
     expect(d.parameters.properties.look.enum).toEqual([...MOTION_LOOKS]);

@@ -315,3 +315,29 @@ describe("conectar_datos_vivos", () => {
     assert.equal(store.fetchSheetRowsCalls.length, 0);
   });
 });
+
+// El caso `lista` era INVISIBLE para el Agente: la hoja de la coleccion vive en
+// settings.collections.source, no en settings.liveData, y `summarizeProjectState`
+// solo miraba la segunda. Es el peor de los dos, porque es el que deja la
+// coleccion de SOLO LECTURA — el Agente intentaba anadir un producto, recibia un
+// 409 y no tenia forma de saber por que.
+describe("leer_estado dice si el catalogo viene de una hoja", () => {
+  it("lo reporta, y dice que por eso no se puede editar a mano", async () => {
+    const { deps } = makeDeps({
+      data: {
+        html: HTML,
+        settings: { collections: { enabled: true, source: { sheet: GOOD_SHEET_URL } } },
+      } as ProjectData,
+    });
+    const out = await runAgentTool(makeSession(), deps, "leer_estado", {});
+    const estado = out.response as Record<string, { hoja?: string; solo_lectura?: boolean }>;
+    assert.equal(estado.coleccion_desde_hoja?.hoja, GOOD_SHEET_URL);
+    assert.equal(estado.coleccion_desde_hoja?.solo_lectura, true);
+  });
+
+  it("sin hoja conectada, el estado no menciona nada", async () => {
+    const { deps } = makeDeps();
+    const out = await runAgentTool(makeSession(), deps, "leer_estado", {});
+    assert.equal("coleccion_desde_hoja" in out.response, false);
+  });
+});
