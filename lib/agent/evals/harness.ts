@@ -42,6 +42,17 @@ const FIXTURE_HTML = `<!doctype html>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Mi Negocio</title>
+<!-- El fixture CONSUME los tokens que su <html> declara.
+     Antes sólo los declaraba, que es una página que no existe: las nacidas de
+     /api/generate llevan las dos mitades. Y desde que cambiar_tema comprueba
+     si alguien LEE el token antes de reportar éxito (2026-08-22), un fixture
+     que sólo declara haría fallar los seis casos de tema — sobre un cambio que
+     en la realidad sí funciona. Un fixture irreal convierte la batería en ruido. -->
+<style>
+  body { background: var(--ol-bg, #fff); color: var(--ol-fg, #111); font-family: var(--ol-font-display, system-ui), sans-serif; }
+  h1, h2 { font-family: var(--ol-font-display, system-ui), sans-serif; }
+  [role="button"] { background: var(--ol-accent); color: var(--ol-accent-ink, #fff); border-radius: calc(8px * var(--ol-r-scale, 1)); padding: 12px 20px; display: inline-block; text-decoration: none; }
+</style>
 </head>
 <body>
 <header>

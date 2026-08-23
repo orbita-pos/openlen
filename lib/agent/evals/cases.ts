@@ -228,11 +228,12 @@ export function claimsOnlinePayment(text: string): boolean {
   });
 }
 
-// The 6 canary ids (F4 Task 9) — a fast, cheap (~18¢) smoke slice of the
+// The 7 canary ids (F4 Task 9) — a fast, cheap (~21¢) smoke slice of the
 // battery covering: a module toggle, an exact-text edit, a honesty
-// negative-check, a publish-safety guard, a multi-edit chain, and a
-// preference-memory case. cases.test.ts asserts every one of these is a real
-// EVAL_CASES id, so this list can never silently drift from the battery.
+// negative-check, a publish-safety guard, a multi-edit chain, a
+// preference-memory case, and the page-survives floor. cases.test.ts asserts
+// every one of these is a real EVAL_CASES id, so this list can never silently
+// drift from the battery.
 export const CANARY_IDS = [
   "activar-reservas",
   "editar-titular-exacto",
@@ -240,6 +241,12 @@ export const CANARY_IDS = [
   "publicar-sin-subdominio",
   "chain-dos-ediciones",
   "memoria-tono-formal",
+  // EL PISO. Sube al canario porque junta el peor resultado posible con la
+  // comprobación más barata: una petición de tipografía dejaba la página EN
+  // BLANCO 1 de cada 5 veces (medido el 2026-08-22, 8/40). Cualquier otro
+  // fallo de la batería es un cambio que no se hizo; éste es la página del
+  // usuario borrada. Si algún día sólo se puede correr una cosa, que sea ésta.
+  "tipografia-no-borra-la-pagina",
 ] as const;
 
 // F4 Task 5: setup for the multi-page cases — a real "menu" subpage built
@@ -1113,6 +1120,118 @@ export const EVAL_CASES: EvalCase[] = [
       return null;
     },
   },
+
+  // ─── LOS TRES BUGS DE PRODUCCIÓN DEL 2026-08-22 ───────────────────────────
+  //
+  // Los tres se encontraron MIDIENDO, ninguno estaba en una lista de tareas, y
+  // los tres estaban vivos en producción. Suben aquí para que dejen de ser la
+  // anécdota de una sesión: lo que se comprueba solo no vuelve en silencio.
+  // Ver [[control-arm-finds-real-bugs]].
+
+  {
+    // MEDIDO: 8 de 40 turnos de este prompt dejaron el <body> REEMPLAZADO por
+    // el <link> de la fuente — `<html><head>…</head><link…></html>`, sin
+    // titular, sin teléfono, sin botón. El modelo quería meter la hoja en el
+    // <head>, el <head> no tiene op-id, y apuntaba al <body>.
+    //
+    // Este caso NO exige que la tipografía cambie (eso es gusto y depende del
+    // camino que elija): exige que la PÁGINA SIGA EXISTIENDO. Es el piso.
+    id: "tipografia-no-borra-la-pagina",
+    prompt: "cámbiame la tipografía a algo editorial, con serifas",
+    // EL FIXTURE IMPORTA, y no es un detalle. El de la batería consume
+    // `var(--ol-*)`, así que el modelo resuelve por `cambiar_tema` y NUNCA
+    // toca el <head> — con ese suelo el caso pasa 3/3 aunque se apaguen el
+    // guardián Y los objetivos nuevos, o sea que no protegería de nada.
+    //
+    // El bug vive en la página con las fuentes CABLEADAS, que es lo que son
+    // 171 de las 178 plantillas curadas: ahí el modelo necesita meter un
+    // <link> en el <head>, el <head> no tiene op-id, y acaba reemplazando el
+    // <body>. Este setup pone ese suelo.
+    setup: (data) => ({
+      ...data,
+      html: `<!doctype html>
+<html lang="es"><head><meta charset="utf-8"><title>Mi Negocio</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@700&family=Inter:wght@400&display=swap">
+<style>
+  body{margin:0;background:#0f1115;color:#e8e8ea;font-family:'Inter',sans-serif}
+  h1,h2{font-family:'Space Grotesk',sans-serif}
+  h1{font-size:44px;margin:32px 24px 8px} p{margin:8px 24px;line-height:1.6}
+  [role="button"]{display:inline-block;margin:16px 24px;padding:12px 22px;border-radius:999px;background:#e8743a;color:#12131a;font-weight:700;text-decoration:none}
+</style></head>
+<body>
+<main>
+<section id="inicio"><h1>Bienvenido a Mi Negocio</h1>
+<p>El mejor lugar de la ciudad, atendido por su propia dueña desde el primer día.</p>
+<a href="#contacto" role="button">Contáctanos</a></section>
+<section id="servicios"><h2>Nuestros servicios</h2><p>Calidad, cercanía y trato humano.</p></section>
+<footer><p>© 2026 Mi Negocio · Tel. 55 1234 5678</p></footer>
+</main>
+</body></html>`,
+    }),
+    assert: (ctx) => {
+      const clean = completedCleanly(ctx);
+      if (clean) return clean;
+      const html = ctx.data.html;
+      if (!/<body[\s>]/i.test(html)) return "🔴 el documento se quedó SIN <body> — la página está en blanco";
+      if (!/<h1[\s>]/i.test(html)) return "🔴 desapareció el <h1> — el rediseño se llevó el contenido";
+      if (!/Bienvenido a Mi Negocio/i.test(html)) return "🔴 desapareció el titular del dueño";
+      // El botón y la imagen del fixture son contenido, no decoración.
+      if (!/role="button"/i.test(html)) return "desapareció el botón de contacto";
+      return null;
+    },
+  },
+  {
+    // MEDIDO: 4 de 6 turnos NO tocaban la página. El Agente contestaba que
+    // «OpenLen no tiene un módulo de formularios que guarde o envíe los datos»
+    // y que «sería un formulario muerto, no te lo recomiendo» — las dos cosas
+    // FALSAS (lib/publish/forms.ts hornea el action al publicar y
+    // app/api/f/[sub] entrega al correo del dueño y a su Bandeja).
+    //
+    // Es la feature más pedida de una landing, y se la estaba negando.
+    id: "formulario-si-funciona",
+    prompt: "ponme un formulario para que los clientes me manden su cotización",
+    assert: (ctx) => {
+      const clean = completedCleanly(ctx);
+      if (clean) return clean;
+      const html = ctx.data.html;
+      if (!/<form[\s>]/i.test(html)) return "🔴 no construyó el formulario";
+      if (!/<(input|textarea)[\s>]/i.test(html)) return "el <form> no tiene campos";
+      // El `action` lo hornea el PUBLICADOR. Uno escrito a mano por el modelo
+      // apunta a donde no debe y el lead no llega a ninguna parte.
+      const action = /<form[^>]*\saction\s*=\s*["']([^"']*)["']/i.exec(html);
+      if (action && action[1].trim() && !action[1].includes("/api/f/")) {
+        return `escribió un action propio (${action[1].slice(0, 40)}) — el publicador lo hornea, un action a mano manda el lead a la nada`;
+      }
+      // Y que no lo desaconseje en la respuesta: eso es lo que hacía.
+      if (/formulario muerto|no te lo recomiendo|no (?:hay|tiene|tenemos) (?:un )?m[óo]dulo de formularios/i.test(finalText(ctx))) {
+        return "🔴 construyó el formulario pero le dijo al usuario que no sirve";
+      }
+      return null;
+    },
+  },
+  {
+    // MEDIDO, n=20: `redisenar_pagina` perdió la URL de la FOTO real del dueño
+    // en 8 de 20 turnos (40%). La regla ya estaba en el prompt del rediseño, en
+    // mayúsculas. No bastó — por eso ahora hay código (lib/agent/facts-kept.ts)
+    // que lo comprueba y se lo dice al modelo en el mismo turno.
+    //
+    // Una foto que desaparece es trabajo del dueño borrado, y el modelo no
+    // puede re-inventarla.
+    id: "rediseno-conserva-la-foto",
+    prompt: "rediséñala completa, quiero algo mucho más moderno y minimalista",
+    assert: (ctx) => {
+      const clean = completedCleanly(ctx);
+      if (clean) return clean;
+      const html = ctx.data.html;
+      // La MISMA imagen del fixture, por su URL exacta.
+      if (!html.includes("01-warm-glassy-800.webp")) {
+        return "🔴 el rediseño perdió la foto REAL del dueño (no puede re-inventarla)";
+      }
+      if (!/Mi Negocio/i.test(html)) return "🔴 perdió el nombre del negocio";
+      if (!/<h1[\s>]/i.test(html)) return "el documento salió sin <h1>";
+      return null;
+    },
+  },
 ];
 
 // ─── Coverage map — which catalog tool(s) each case exercises ─────────────────
@@ -1193,4 +1312,10 @@ export const coverage: Record<string, string[]> = {
   // Answer-only por diseño: la conducta correcta (href="#" + preguntar) NO
   // exige mutar, así que el assert no pide ninguna herramienta.
   "enlace-no-inventado": [],
+  // Los tres bugs del 2026-08-22. El de tipografía puede resolverse por dos
+  // caminos legítimos (cambiar_tema si la página lee tokens, editar_pagina si
+  // no), así que su lista nombra el que de verdad ejercita el arreglo.
+  "tipografia-no-borra-la-pagina": ["editar_pagina"],
+  "formulario-si-funciona": ["editar_pagina"],
+  "rediseno-conserva-la-foto": ["redisenar_pagina"],
 };
