@@ -16,6 +16,8 @@
 
 import { GeminiProvider, type InlineImage, type StreamEvent, type StreamRequest } from "@/lib/ai-gateway";
 import { renderHtmlToInlineImage } from "@/lib/ai/inline-image";
+import { renderVisualQualityViewports } from "@/lib/ai/visual-quality-renderer";
+import { injectModelRuntime } from "@/lib/ai-stream/model-runtime";
 import { streamWithRetry } from "@/lib/agent/retry";
 import { fireworksStreamProvider } from "@/lib/ai/fireworks-as-stream-provider";
 
@@ -59,6 +61,9 @@ export interface VerifyProviderLike {
 export interface VerifyInternals {
   provider?: VerifyProviderLike;
   render?: (html: string) => Promise<InlineImage | null>;
+  /** El medidor DETERMINISTA de contraste. Se inyecta aparte del render de la
+   *  foto porque son dos navegadores distintos y sólo uno sabe medir. */
+  medir?: (html: string) => Promise<{ unreadableText?: readonly { contrast: number }[] } | null>;
   /** Override del deadline — solo tests. */
   timeoutMs?: number;
 }
@@ -181,23 +186,37 @@ async function runVerify(
   signal: AbortSignal,
 ): Promise<VisualVerdict> {
   const render = internals.render ?? renderHtmlToInlineImage;
-  // Mismo injerto que `injectModelRuntime` hace al publicar: script clásico al
-  // final del body. Aquí NO se persiste nada — es una vista de usar y tirar
-  // dentro del navegador de los ojos.
+  // EL MISMO injerto que hace el publicador, no uno parecido: si los ojos miran
+  // un documento armado de otra forma, miran una página que nadie recibe. Aquí
+  // NO se persiste nada — es una vista de usar y tirar dentro del navegador.
   const codigo = params.runtime?.trim();
-  const paraRenderizar = codigo
-    ? (() => {
-        const i = params.html.toLowerCase().lastIndexOf("</body>");
-        const tag = `<script>${codigo}</script>`;
-        return i === -1 ? params.html + tag : params.html.slice(0, i) + tag + params.html.slice(i);
-      })()
-    : params.html;
+  const paraRenderizar = codigo ? injectModelRuntime(params.html, codigo) : params.html;
+  // El medidor de contraste corre EN PARALELO con la foto: son dos navegadores
+  // y encadenarlos gastaría ~2s del presupuesto de 20 para nada. Fail-open como
+  // el resto — si no hay medidor o revienta, se sigue exactamente igual.
+  //
+  // Sólo cuando el llamador inyectó un `render` propio se toma también su
+  // `medir`: un doble de prueba que sustituye el navegador de la foto no puede
+  // acabar arrancando Chrome de verdad por la puerta de al lado. Con los dos
+  // por omisión (producción), corre el medidor real.
+  const medir =
+    internals.medir ?? (internals.render ? async () => null : renderVisualQualityViewports);
+  const medicion = medir(paraRenderizar).catch(() => null);
+
   const gritos: string[] = [];
-  const image = await render(paraRenderizar, { onErrors: (e) => gritos.push(...e) });
+  const image = await render(paraRenderizar, {
+    onErrors: (e) => gritos.push(...e),
+    // Que APRIETE el boton. Recoger errores al cargar ve el script que muere en
+    // el arranque; un juego que se rompe en la segunda jugada carga limpio y
+    // sale perfecto en la foto. Solo cuando hay codigo que pulsar: sin runtime
+    // no hay nada que el modelo haya cableado y el render queda como estaba.
+    ...(codigo ? { pressButtons: true } : {}),
+  });
   if (!image) {
     logFallback("render failed — no screenshot");
     return fallbackVerdict();
   }
+  const contrastes = (await medicion)?.unreadableText ?? [];
   if (signal.aborted) return fallbackVerdict();
 
   const apiKey = params.apiKey ?? process.env.GEMINI_API_KEY;
@@ -249,16 +268,41 @@ async function runVerify(
     return fallbackVerdict();
   }
   // LO QUE EL NAVEGADOR GRITÓ. No pasa por el juicio del crítico visual: una
-  // excepción al cargar es un HECHO, y encima de los que el ojo no puede ver —
-  // la captura de una página cuyo JavaScript murió sale idéntica a la de una
-  // sana. MEDIDO el 2026-08-22: un juego que el modelo escribió tenía un
-  // TypeError que sólo aparecía CARGANDO la página, y la foto salía perfecta.
+  // excepción es un HECHO, y encima de los que el ojo no puede ver — la captura
+  // de una página cuyo JavaScript murió sale idéntica a la de una sana. MEDIDO
+  // el 2026-08-22 con tres páginas cuya foto pesaba exactamente lo mismo: una
+  // sana, una que revienta al cargar y una que revienta al pulsar.
+  //
+  // Cuando hubo runtime, además se PULSARON sus controles (dos rondas), así que
+  // esto cubre las tres formas de estar muerto: al cargar, al primer clic y a
+  // la segunda jugada. Por eso la frase no dice «al cargar» — diría una cosa
+  // que a veces es falsa, y el modelo buscaría el bug en el sitio equivocado.
   //
   // Va primero en la lista: es lo más accionable de todo lo que el turno puede
   // decirle al modelo.
   if (gritos.length > 0) {
     verdict.issues = [
-      ...gritos.map((g) => `El código de la página falla al cargar: ${g}`),
+      ...gritos.map((g) => `El JavaScript de la página falla (al cargarla o al usar sus controles): ${g}`),
+      ...verdict.issues,
+    ];
+    verdict.broken = true;
+  }
+  // TEXTO QUE NADIE PUEDE LEER, medido en el render — no juzgado por el ojo del
+  // crítico, que es malo justo en esto: un botón amarillo con letras blancas se
+  // ve «bonito» en una captura y es ilegible.
+  //
+  // MEDIDO el 2026-08-22: pidiéndole «pon el botón en #f5e050 con el texto en
+  // blanco» el Agente obedece al pie de la letra y entrega 1.34:1 — el usuario
+  // pidió los colores, así que `cambiar_tema` (que camina el contraste hasta
+  // cumplir WCAG) ni entra en juego. Por el camino determinista el peor caso de
+  // 12 fue 4.88:1; escribiendo el CSS a mano, la mitad quedó por debajo de 4.5.
+  //
+  // El detector ya existía y ya lo cazaba con el número exacto: sólo no llegaba
+  // al Agente. Es fail-open como todo lo demás — sin medidor, sin cambios.
+  if (contrastes.length > 0) {
+    const peor = Math.min(...contrastes.map((c) => c.contrast));
+    verdict.issues = [
+      `${contrastes.length} texto(s) que el navegador pinta y nadie puede leer — el peor a ${peor.toFixed(2)}:1 de contraste (el mínimo legible es 3:1). Arregla el color del texto o el del fondo con editar_pagina; si el usuario pidió ESOS colores exactos, dile que así no se lee y propón el ajuste mínimo que sí cumple.`,
       ...verdict.issues,
     ];
     verdict.broken = true;
