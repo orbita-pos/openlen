@@ -113,6 +113,7 @@ export default defineConfig({
       "lib/agent/loop.test.ts",
       "lib/agent/retry.test.ts",
       "lib/agent/context.test.ts",
+      "lib/agent/facts-kept.test.ts",
       "lib/agent/user-memory-block.test.ts",
       "lib/agent/memoria-larga.test.ts",
       "lib/agent/photo-search.test.ts",
@@ -190,7 +191,13 @@ export default defineConfig({
       // last sanitize and validated behaviours after the row was written.
       "app/api/generate/route.test.ts",
       "app/api/generate/system-prompt.test.ts",
+      // Uno a uno, NO un glob: `lib/ai-stream/` tiene además pruebas escritas
+      // con `node:test` (generate, model-runtime-capture) que corren en el otro
+      // runner (`npm run test:node`); barrerlas aquí las hace fallar con "No
+      // test suite found" aunque estén sanas. Y ojo — `include` es una LISTA
+      // BLANCA: un fichero nuevo NO CORRE hasta aparecer aquí.
       "lib/ai-stream/model-runtime.test.ts",
+      "lib/ai-stream/document-ops.test.ts",
       // NB: lib/projects/site-pages.test.ts is a node:test file (run via
       // `tsx --test`), so include the vitest project tests explicitly.
       "lib/projects/model-runtime.test.ts",
