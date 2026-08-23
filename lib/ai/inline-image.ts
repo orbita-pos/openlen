@@ -82,6 +82,52 @@ export async function fetchImageAsInlineData(
  *  leaves it OFF by default — opt in with OPENLEN_AIDESIGN_PAGE_REFERENCE=1.
  *  (The /api/generate reference path doesn't use this — it fetches a
  *  pre-rendered template screenshot.) */
+/**
+ * Pulsa los controles de la página y devuelve cuántos.
+ *
+ * VA COMO CADENA, no como función. `page.evaluate(() => …)` pasa por
+ * esbuild/tsx, que inyecta el ayudante `__name` para conservar los nombres de
+ * las funciones — y `__name` no existe dentro del navegador, así que la
+ * evaluación revienta con un error que no tiene nada que ver con la página. Ya
+ * nos costó una sesión ([[render-measured-contrast]]). La cadena no pasa por
+ * ningún transformador.
+ *
+ * SE PULSA POR ETIQUETA, no por quién tenga un `click` atado. El primer intento
+ * envolvía `addEventListener` desde `evaluateOnNewDocument` para marcar
+ * exactamente lo que el modelo cableaba — y MEDIDO: no corría nunca.
+ * `page.setContent` usa `document.write`, que no crea un documento nuevo, así
+ * que el enganche no llega a instalarse y el marcado salía a cero. Pulsar lo
+ * que un visitante pulsaría es además lo honesto: si un botón no tiene nada
+ * atado, no pasa nada; si lo tiene y revienta, se entera.
+ *
+ * Tope de ocho: con eso ya se sabe si los controles viven, y cada clic puede
+ * disparar trabajo arbitrario del modelo.
+ */
+const PULSAR = `
+(() => {
+  // Un clic que navega se lleva la página y con ella la medición. Se impide
+  // sólo la ACCIÓN por defecto: los manejadores del modelo corren igual, que es
+  // justo lo que se quiere comprobar.
+  document.addEventListener("click", (e) => e.preventDefault(), true);
+  document.addEventListener("submit", (e) => e.preventDefault(), true);
+  const nodos = Array.from(
+    document.querySelectorAll("button, [role=button], a[href], input[type=submit], summary, [data-ol-behavior]")
+  ).slice(0, 8);
+  // DOS rondas, no una. MEDIDO: pulsando una sola vez, un contador que cachea
+  // \`{1:'uno'}\` y falla en la jugada 2 pasaba como sano — que es exactamente
+  // el fallo que este detector existe para ver. La segunda ronda cuesta unos
+  // milisegundos y encuentra los estados que sólo aparecen jugando.
+  for (let ronda = 0; ronda < 2; ronda++) {
+    for (const n of nodos) {
+      try {
+        n.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
+      } catch (e) {}
+    }
+  }
+  return nodos.length;
+})();
+`;
+
 export async function renderHtmlToInlineImage(
   html: string,
   opts: {
@@ -90,6 +136,19 @@ export async function renderHtmlToInlineImage(
      *  consola), deduplicado. Sin esto el render se comporta EXACTAMENTE igual
      *  que antes: nadie paga nada por una señal que no pidió. */
     onErrors?: (errores: readonly string[]) => void;
+    /** Pulsar los controles que el JavaScript de la página cableó, DESPUÉS de
+     *  la captura, y recoger lo que revienten. Apagado por omisión: cuesta unos
+     *  cientos de ms y no todo render lo quiere. */
+    pressButtons?: boolean;
+    /** El programa de comprobación de comportamiento (lib/agent/behavior-spec)
+     *  a ejecutar DESPUÉS de la captura, en este mismo navegador. Devuelve lo
+     *  que el navegador respondió, sin interpretar.
+     *
+     *  Va en vez de `pressButtons`, no además: pulsar a ciegas y luego seguir
+     *  un guion dejaría la página en un estado que el guion no espera — y una
+     *  prueba sobre un estado desconocido no comprueba nada. */
+    behaviorProgram?: string;
+    onBehaviorResult?: (bruto: unknown) => void;
   } = {},
 ): Promise<InlineImage | null> {
   // Spec: inline base64 when small. 1 MB JPEG of a full page is plenty of
@@ -136,6 +195,11 @@ export async function renderHtmlToInlineImage(
       page.on("console", (m) => {
         if (m.type() === "error") errores.push(`consola: ${m.text().slice(0, 300)}`);
       });
+      // Un `confirm()` o un `alert()` dentro de un manejador deja la página
+      // colgada esperando a nadie. Se descartan antes de que puedan aparecer.
+      page.on("dialog", (d) => {
+        void d.dismiss().catch(() => {});
+      });
       // Block subresource fetches to internal/loopback/metadata hosts — this
       // HTML is model-generated and not fully trusted. (SSRF guard.)
       await installSubresourceSsrfGuard(page);
@@ -158,6 +222,44 @@ export async function renderHtmlToInlineImage(
           `[inline-image] rendered page ${shot.length}B exceeds cap ${maxBytes} — skipping reference`,
         );
         return null;
+      }
+      // DESPUÉS de la captura, nunca antes: pulsar puede mover el DOM, y la
+      // foto tiene que ser de la página tal como llega el visitante.
+      //
+      // POR QUÉ EXISTE. Recoger `pageerror` al cargar ve el script que muere en
+      // el arranque, y nada más. Un juego que se rompe en la SEGUNDA jugada, o
+      // un carrito cuyo botón lanza al pulsarlo, cargan limpios y salen
+      // perfectos en la foto. Sin esto, los ojos daban por sana una página que
+      // no funciona en cuanto alguien la toca.
+      //
+      // El GUION del modelo tiene prioridad sobre pulsar a ciegas: si declaró
+      // qué debe pasar, se comprueba eso, sobre una página en el estado que él
+      // espera. Pulsar antes la dejaría en un estado que su guion no previó.
+      if (opts.behaviorProgram) {
+        try {
+          const bruto = await page.evaluate(opts.behaviorProgram);
+          // Un manejador que lanza se reporta de forma asíncrona; sin esta
+          // espera el navegador se cierra antes de que llegue el aviso.
+          await new Promise((resolve) => setTimeout(resolve, 150));
+          opts.onBehaviorResult?.(bruto);
+        } catch (err) {
+          // FAIL-OPEN: una prueba que no se pudo correr NO acusa a la página.
+          // No medir no es lo mismo que medir mal.
+          // eslint-disable-next-line no-console
+          console.warn("[inline-image] la prueba de comportamiento no corrió:", err);
+        }
+      } else if (opts.pressButtons) {
+        try {
+          const pulsados = await page.evaluate(PULSAR);
+          if (typeof pulsados === "number" && pulsados > 0) {
+            await new Promise((resolve) => setTimeout(resolve, 150));
+          }
+        } catch (err) {
+          // Pulsar es un extra. Que falle no puede costar la captura, que es
+          // para lo que se lanzó Chrome.
+          // eslint-disable-next-line no-console
+          console.warn("[inline-image] no se pudieron pulsar los controles:", err);
+        }
       }
       if (errores.length > 0) opts.onErrors?.([...new Set(errores)]);
       return { mimeType: "image/jpeg", dataBase64: Buffer.from(shot).toString("base64") };

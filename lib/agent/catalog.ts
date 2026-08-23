@@ -7,6 +7,7 @@ import { POST_REGISTER } from "@/lib/marketing/post-templates/admin-schemas";
 import { PUBLISH_LOCALES } from "@/lib/publish/publish-locales";
 import { TEMATICA_PRESETS } from "@/lib/tematicas/presets";
 import { THEME_PRESETS } from "@/lib/theme-presets";
+import { documentOpsEnabled } from "@/lib/publish/kill-switches";
 
 export const AGENT_MODULES = [
   "collections", "chat", "whatsapp",
@@ -80,7 +81,9 @@ export function buildFunctionDeclarations(): Record<string, unknown>[] {
     {
       name: "editar_pagina",
       description:
-        'Aplica ediciones quirúrgicas al documento actual dirigidas por data-op-id (máx 8 por llamada). Después de una llamada exitosa los data-op-id CAMBIAN: para editar otra vez, pide leer_estado con incluir_documento=true. Hay UN target que no es un data-op-id: "runtime", el JavaScript de la página — sólo con op="replace" y con el script COMPLETO corregido en new_html. Es la ÚNICA forma de cambiar el comportamiento de la página desde aquí: editar el marcado no lo cambia nunca. El código actual aparece en tu contexto cuando la página tiene.',
+        (documentOpsEnabled()
+          ? 'Aplica ediciones quirúrgicas al documento actual dirigidas por data-op-id (máx 8 por llamada). Después de una llamada exitosa los data-op-id CAMBIAN: para editar otra vez, pide leer_estado con incluir_documento=true. Hay TRES targets que no son data-op-id, porque <head>, <style> y <script> no llevan ninguno: (1) "runtime" — el JavaScript de la página, sólo con op="replace" y con el script COMPLETO corregido en new_html; es la ÚNICA forma de cambiar el comportamiento, editar el marcado no lo cambia nunca, y el código actual aparece en tu contexto cuando la página tiene. (2) "styles" con op="insert_after" — añade reglas CSS a TU propio bloque, que va el último del <head>, así que a igual especificidad tus reglas ganan a las de la plantilla; es como se cambia tipografía, color o espaciado en una página cuyo CSS no usa var(--ol-*). IMPORTANTE: si la página SÍ usa var(--ol-*), para color, tipografía o redondeo usa cambiar_tema en su lugar — es instantánea, no gasta salida, y su acento viene con contraste WCAG garantizado, cosa que escribir el CSS a mano no da. Este target es para las páginas que NO leen tokens, o para CSS que ningún preset cubre (animaciones, media queries, un layout concreto). Con op="replace" reescribes sólo lo que tú añadiste; el CSS de la plantilla no se toca. (3) "head" con op="insert_after" — lo que va en la cabecera: el <link> de la hoja de Google Fonts (nombrar una fuente en el CSS NO la carga, y sin la hoja el navegador cae a un genérico), el <title>, y las <meta name="description"|"keywords"|"author">. Un <title> o una <meta> REEMPLAZAN al que hubiera, no se duplican. Acuérdate de la meta description cuando cambies un dato que aparezca en ella —un teléfono viejo ahí son llamadas perdidas en el resultado de Google—. Nada más entra por ahí. (4) "idioma" con op="replace" y el código dentro (por ejemplo `en` o `pt-BR`) — cambia el lang de <html>. Al TRADUCIR una página es obligatorio: un lector de pantalla leería el inglés con voz y fonética españolas, y ese lang alimenta el hreflang del sitio al publicar. Un cambio de una línea de CSS es un edit, nunca un motivo para llamar a redisenar_pagina. SIEMPRE QUE CAMBIES EL COMPORTAMIENTO de la página —da igual si lo haces cableando una CONDUCTA (data-ol-calc y las demás) o con target="runtime"— MANDA TAMBIÉN `prueba`: una lista corta (máx 6 pasos) de lo que tu código DEBE hacer, que se ejecuta en un navegador de verdad justo después de guardar. Cada paso: {clic:"#selector", veces?:N, escribe?:{"#campo":"valor"}, entonces:[{donde:"#selector", que:"cambia"|"contiene"|"es"|"visible"|"oculto", valor?:"texto"}]}. Ejemplo para una ruleta: [{clic:"#girar", entonces:[{donde:"#resultado", que:"cambia"}]}]. Para un carrito: [{clic:"#add", veces:3, entonces:[{donde:"#total", que:"es", valor:"3"}]}]. NO es opcional: se ejecuta de verdad y es la ÚNICA forma de saber si lo que cableaste FUNCIONA. Recoger errores sólo ve lo que EXPLOTA, y los dos fallos que de verdad pasan no explotan — una conducta mal cableada nace MUDA (el botón no hace nada, consola limpia) y una ruleta puede girar y no parar nunca. Y NUNCA le digas al usuario que probaste algo si no mandaste `prueba`: no se probó. Si tu prueba falla te lo digo con el elemento y lo que se esperaba, y lo arreglas en ese mismo turno.'
+          : 'Aplica ediciones quirúrgicas al documento actual dirigidas por data-op-id (máx 8 por llamada). Después de una llamada exitosa los data-op-id CAMBIAN: para editar otra vez, pide leer_estado con incluir_documento=true. Hay UN target que no es un data-op-id: "runtime", el JavaScript de la página — sólo con op="replace" y con el script COMPLETO corregido en new_html. Es la ÚNICA forma de cambiar el comportamiento de la página desde aquí: editar el marcado no lo cambia nunca. El código actual aparece en tu contexto cuando la página tiene.'),
       parameters: {
         type: "OBJECT",
         properties: {
@@ -97,6 +100,33 @@ export function buildFunctionDeclarations(): Record<string, unknown>[] {
             },
           },
           resumen: { type: "STRING" },
+          // LA PRUEBA QUE TU PROPIO CODIGO DEBE PASAR. Solo cuando el edit
+          // lleva target="runtime": es la unica forma de que alguien sepa si el
+          // JavaScript hace lo que promete, y no solo si explota.
+          prueba: {
+            type: "ARRAY",
+            items: {
+              type: "OBJECT",
+              properties: {
+                clic: { type: "STRING" },
+                veces: { type: "NUMBER" },
+                escribe: { type: "OBJECT" },
+                entonces: {
+                  type: "ARRAY",
+                  items: {
+                    type: "OBJECT",
+                    properties: {
+                      donde: { type: "STRING" },
+                      que: { type: "STRING", enum: ["cambia", "contiene", "es", "visible", "oculto"] },
+                      valor: { type: "STRING" },
+                    },
+                    required: ["donde", "que"],
+                  },
+                },
+              },
+              required: ["entonces"],
+            },
+          },
         },
         required: ["edits", "resumen"],
       },
@@ -104,7 +134,7 @@ export function buildFunctionDeclarations(): Record<string, unknown>[] {
     {
       name: "redisenar_pagina",
       description:
-        "Rediseña POR COMPLETO el documento activo — layout, secciones, estilo — en una sola operación, conservando los hechos (nombres, contacto, precios, URLs reales), los elementos con atributos data-ol-* (bandas de módulos, conductas, datos vivos) y el idioma. Úsala SOLO cuando el usuario pida un rediseño total ('rediséñala', 'cámbiale todo el estilo', 'hazla más moderna/minimalista/oscura de arriba a abajo'); para cambios puntuales usa editar_pagina y para solo color/fuente usa cambiar_tema. Es una operación GRANDE (cuesta créditos, tarda ~1 min) y está limitada a UNA por turno. El usuario siempre puede deshacerla (se guarda una versión previa). direccion: la dirección creativa en las palabras del usuario.",
+        "Rediseña POR COMPLETO el documento activo — layout, secciones, estilo — en una sola operación, conservando los hechos (nombres, contacto, precios, URLs reales), los elementos con atributos data-ol-* (bandas de módulos, conductas, datos vivos) y el idioma. Úsala SOLO cuando el usuario pida un rediseño total ('rediséñala', 'cámbiale todo el estilo', 'hazla más moderna/minimalista/oscura de arriba a abajo'); para cambios puntuales usa editar_pagina y para solo color/fuente usa cambiar_tema. NO la uses cuando el usuario PROHÍBA tocar el contenido («que se vea más moderna pero no cambies ni una palabra/foto/precio»): esta herramienta REESCRIBE el copy por diseño y MEDIDO el 2026-08-22 lo hizo pese a la prohibición. Ese encargo es puro CSS — hazlo con un edit target=\"styles\" (y target=\"head\" si necesitas otra fuente), que cambia el aspecto sin tocar una sola palabra del documento. Es una operación GRANDE (cuesta créditos, tarda ~1 min) y está limitada a UNA por turno. El usuario siempre puede deshacerla (se guarda una versión previa). direccion: la dirección creativa en las palabras del usuario.",
       parameters: {
         type: "OBJECT",
         properties: {
@@ -315,6 +345,8 @@ REGLAS DURAS:
 - Si tu contexto trae un bloque "IMAGEN ADJUNTA DEL USUARIO", esa URL es REAL — colócala con editar_pagina usando esa URL EXACTA (verbatim) como <img src>, nunca inventes ni cambies la URL. Si hay un placeholder para ella (div con gradiente, caja vacía con borde), reemplázalo entero por el <img>.
 - Los enlaces que te dé el usuario (su Instagram, su tienda, su WhatsApp) son DATOS REALES suyos: van al href VERBATIM, absolutos y con esquema. Si no te dio el destino, deja href="#" y pregúntaselo — NUNCA inventes un enlace. Ver ENLACES.
 - Si el ESTADO trae "negocio", son los datos REALES del dueño guardados en su perfil («Mi negocio»): nombre, rubro, contacto (whatsapp/teléfono/email/dirección), redes y links. Cuando la petición los necesite ("pon mi WhatsApp", "agrega mi Instagram", "escribe la sección nosotros"), úsalos VERBATIM sin volver a preguntarlos — pedirle al dueño un dato que ya te dio es hacerle perder el tiempo. Lo que NO esté en "negocio" ni en la página, pregúntalo; jamás lo inventes ni lo "completes". El contacto real manda sobre cualquier placeholder de la página (un tel/mailto/wa.me genérico del template se corrige con el dato de "negocio").
+- CADA EDICIÓN TUYA SE GUARDA COMO VERSIÓN, y el dueño puede volver atrás. NO le digas nunca que OpenLen no guarda copias: antes de tocar nada se archiva un «Before AI edit» con la página tal como estaba, y el usuario la restaura desde el historial de versiones del editor. MEDIDO el 2026-08-22: a «pon un aviso de cerrado por remodelación pero guarda la página actual para volver a ponerla» contestaste que «OpenLen no tiene un sistema de guardar y restaurar versiones» y NO hiciste el trabajo — es FALSO, y encima dejaste al dueño sin su aviso. Haz el cambio y dile que su página anterior queda guardada y se restaura desde el historial.
+- LOS FORMULARIOS SÍ FUNCIONAN, y son una feature REAL — no los desaconsejes. Un <form> normal (sin JavaScript y sin action escrito por ti) recibe su destino al PUBLICAR: OpenLen le hornea action="…/api/f/<subdominio>", y lo que el visitante envía llega al correo del dueño y a su Bandeja. MEDIDO el 2026-08-22: pidiéndote «ponme un formulario para que me manden su cotización» contestabas que «OpenLen no tiene un módulo de formularios que guarde o envíe los datos» y que «sería un formulario muerto, no te lo recomiendo» — las dos cosas son FALSAS, y con eso le quitaste al dueño la forma más común de recibir clientes. Constrúyelo: un <form> con sus <label> + <input name="…"> y un <button type="submit">. NO le pongas action, ni method, ni JavaScript. Si el dueño además prefiere WhatsApp o chat en vivo, ofrécele esos módulos ADEMÁS — nunca EN LUGAR del formulario.
 - OpenLen NO ejecuta JavaScript de la página: todo <script> y todo atributo on* se BORRA al guardar, igual que los <iframe>. Nunca prometas interactividad que no puedas cablear: resuélvela en este orden — (1) CSS puro cuando alcanza (<details>/<summary>, checkbox + peer-checked, :target, scroll-snap); (2) una CONDUCTA para las ${BEHAVIOR_COUNT} cosas que el CSS no puede solo (${BEHAVIOR_NAMES}) — son recetas CERRADAS: se NOMBRAN emitiendo solo su marcador data-ol-*, nunca se improvisan; el contrato completo de cada una (cuándo usarla, cuándo no, markup exacto) está en la sección CONDUCTAS de la GUÍA DE DISEÑO al final de este prompt, no lo dupliques aquí; (3) si ninguna de las dos alcanza, NUNCA tu propio JavaScript, ni una línea — dilo con honestidad, o si lo que piden es en realidad una feature real de backend (login, agenda, catálogo administrable), usa activar_modulo. Un <button> que no envía un formulario ni lleva un marcador de conducta no hace NADA: usa un <a> con destino de verdad.
 - Si una herramienta te responde con un campo "aviso", puede traer uno o dos problemas juntos: (a) algo de tu HTML fue REMOVIDO por seguridad — DÍSELO al usuario en tu respuesta y ofrécele la alternativa real; JAMÁS afirmes que pusiste algo que fue removido, eso es mentirle; (b) una CONDUCTA quedó mal cableada y nacería MUERTA en la página (un id que no existe, una fecha que no es ISO, un marcador fuera de su host) — ARRÉGLALA tú mismo en este mismo turno llamando editar_pagina de nuevo, no la ignores ni la des por buena, y no dependas de que el usuario la note.
 - Responde SIEMPRE en el idioma del usuario (usuario típico: español). Tono claro, cero jerga técnica: di "activé el módulo de cuentas", no "muté settings.members.enabled".

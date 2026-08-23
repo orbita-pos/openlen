@@ -8,6 +8,67 @@ import { buildFunctionDeclarations } from "@/lib/agent/catalog";
 
 const KEBAB = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
+// ─── ¿LOS ASSERTS CAZAN DE VERDAD LO QUE DICEN CAZAR? ───────────────────────
+//
+// Un caso que nunca ha visto fallar su assert es una promesa, no una prueba. Y
+// perseguir un bug PROBABILÍSTICO con el modelo no sirve para comprobarlo: el
+// de la página en blanco salía 35% de las veces, así que cuatro corridas
+// verdes seguidas tienen un 18% de probabilidad por pura suerte — MEDIDO el
+// 2026-08-22, salieron 4/4 verdes con el arreglo apagado.
+//
+// La forma correcta es determinista: enfrentar el assert al documento ROTO de
+// verdad. Estos son recortes literales de lo que el brazo de control guardó en
+// la base — no maquetas escritas para que fallen.
+
+/** El documento REAL que guardó un turno del brazo de control: el <body> entero
+ *  sustituido por el <link> de la fuente. Sin titular, sin teléfono, sin botón. */
+const PAGINA_EN_BLANCO = `<!doctype html>
+<html lang="es"><head><meta charset="utf-8"><title>Mi Negocio</title>
+<style>body{margin:0}</style></head>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&display=swap"></html>`;
+
+function veredicto(id: string, html: string): string | null {
+  const c = EVAL_CASES.find((x) => x.id === id);
+  if (!c) throw new Error(`caso desconocido: ${id}`);
+  return c.assert({
+    data: { html } as never,
+    events: [{ type: "action", tool: "editar_pagina", status: "done" }] as never,
+    result: { finalText: "Listo, ya cambié la tipografía.", terminalError: false } as never,
+  });
+}
+
+describe("los asserts cazan el fallo real", () => {
+  it("la página EN BLANCO del brazo de control reprueba", () => {
+    const r = veredicto("tipografia-no-borra-la-pagina", PAGINA_EN_BLANCO);
+    expect(r, "el assert dio por buena una página sin <body>").not.toBeNull();
+    expect(r).toMatch(/body|blanco/i);
+  });
+
+  it("…y una página sana pasa", () => {
+    const sana = `<!doctype html><html><head><title>x</title></head><body>
+      <h1>Bienvenido a Mi Negocio</h1><a href="#c" role="button">Contáctanos</a></body></html>`;
+    expect(veredicto("tipografia-no-borra-la-pagina", sana)).toBeNull();
+  });
+
+  it("un rediseño SIN la foto del dueño reprueba", () => {
+    const sinFoto = `<html><body><h1>Mi Negocio</h1><p>Bonito pero vacío</p></body></html>`;
+    const r = veredicto("rediseno-conserva-la-foto", sinFoto);
+    expect(r).toMatch(/foto/i);
+    // Con la foto — la MISMA URL — pasa.
+    const conFoto = `<html><body><h1>Mi Negocio</h1><img src="https://images.openlen.com/01-warm-glassy-800.webp"></body></html>`;
+    expect(veredicto("rediseno-conserva-la-foto", conFoto)).toBeNull();
+  });
+
+  it("un turno sin <form> reprueba, y uno con action propio también", () => {
+    expect(veredicto("formulario-si-funciona", `<html><body><h1>x</h1></body></html>`)).toMatch(/formulario/i);
+    // El action lo hornea el PUBLICADOR: uno escrito a mano manda el lead a la nada.
+    const propio = `<html><body><form action="https://formspree.io/x"><input name="a"></form></body></html>`;
+    expect(veredicto("formulario-si-funciona", propio)).toMatch(/action/i);
+    const bueno = `<html><body><form><input name="nombre"><textarea name="m"></textarea></form></body></html>`;
+    expect(veredicto("formulario-si-funciona", bueno)).toBeNull();
+  });
+});
+
 describe("EVAL_CASES shape", () => {
   it("has at least 35 cases", () => {
     expect(EVAL_CASES.length).toBeGreaterThanOrEqual(35);
@@ -40,8 +101,13 @@ describe("EVAL_CASES shape", () => {
 });
 
 describe("CANARY_IDS (F4 Task 9)", () => {
-  it("is exactly 6 ids, all real EVAL_CASES ids, no duplicates", () => {
-    expect(CANARY_IDS.length).toBe(6);
+  // El número está fijado A PROPÓSITO: el canario es la muestra que se corre
+  // seguido, y crece por descuido si nadie lo mira. Subirlo es una decisión que
+  // se toma, no un efecto secundario — 6 → 7 el 2026-08-22 para meter el piso
+  // («la página no se queda en blanco»), que es el peor resultado posible con
+  // la comprobación más barata.
+  it("is exactly 7 ids, all real EVAL_CASES ids, no duplicates", () => {
+    expect(CANARY_IDS.length).toBe(7);
     expect(new Set(CANARY_IDS).size).toBe(CANARY_IDS.length);
     const caseIds = new Set(EVAL_CASES.map((c) => c.id));
     for (const id of CANARY_IDS) {

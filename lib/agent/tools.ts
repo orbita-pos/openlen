@@ -31,8 +31,11 @@ import { getOrCreateDefaultCollection, setCollectionSource } from "@/lib/collect
 import { syncCollectionFromSheet } from "@/lib/collections/sheet-sync";
 import { debitCredits } from "@/lib/credits";
 import { detectSlotPath, sanitizeForPublish } from "@/lib/html-engine";
-import { applyOps, tagWithOpIds, type Op, type OpType } from "@/lib/html-ops";
+import { applyOps, rejectDocumentWideOps, tagWithOpIds, type Op, type OpType } from "@/lib/html-ops";
 import { splitRuntimeOps } from "@/lib/ai-stream/model-runtime";
+import { applyHeadOp, applyLangOp, applyStylesOp, splitDocumentOps, splitLangOp } from "@/lib/ai-stream/document-ops";
+import { avisoHechosPerdidos, avisoMetaDesfasada, hechosPerdidos, metaDesfasada } from "@/lib/agent/facts-kept";
+import { parseBehaviorSpec, specRechazoAviso, type PasoSpec } from "@/lib/agent/behavior-spec";
 import { AGENT_MEMORY_MAX, rememberAboutUser } from "@/lib/agent/user-memory";
 import { fetchSheet, resolveSheetCsvUrl } from "@/lib/live/sheet-source";
 import { passHtmlGate } from "@/lib/html-gate/document-gate";
@@ -64,6 +67,8 @@ import { AGENT_MODULES, MOTION_LOOKS, type AgentModule } from "@/lib/agent/catal
 import { searchCuratedPhotos } from "@/lib/agent/photo-search";
 import {
   applyThemeTokensToHtml,
+  documentReadsToken,
+  ensureFontLink,
   readThemeModeFromHtml,
   readThemeTokenFromHtml,
 } from "@/lib/agent/theme-apply";
@@ -382,6 +387,15 @@ export interface AgentSession {
    *  at 1 (a redesign is one big paid call AND a whole-document rewrite —
    *  two in one turn means the model is flailing, not designing). */
   redesignsThisTurn?: number;
+  /** LA PRUEBA QUE EL MODELO DECLARÓ para su propio JavaScript, este turno.
+   *
+   *  Vive en la sesión —y no se persiste— porque describe la promesa de ESTE
+   *  cambio: el turno que viene traerá otro código y otra promesa. Los ojos la
+   *  leen al cerrar el turno; si no hay, pulsan a ciegas como antes.
+   *
+   *  La última gana: un turno con dos ediciones de comportamiento promete lo
+   *  que dijo la última, igual que la cápsula guarda el último script. */
+  behaviorSpec?: readonly PasoSpec[] | null;
   /** elegir_foto calls so far this request. Read-only + exempt from the action
    *  budget, but the curated catalog is finite: after the 2nd empty result the
    *  tool tells the model to pivot instead of retrying variants, and a hard
@@ -434,11 +448,17 @@ export function summarizeProjectState(row: {
   }
   // `datos_vivos` faltaba: se podía CONECTAR una hoja y después ni el Agente ni
   // el usuario tenían forma de saber cuál era — «¿qué hoja tengo conectada?»
-  // no tenía respuesta. QUITARLA sigue sin tenerla en ninguna superficie: el
-  // panel sólo ofrece el enlace para abrirla, así que una colección respaldada
-  // por un Sheet se queda de SOLO LECTURA para siempre. Pendiente de decidir
-  // dónde vive ese botón; aquí al menos se sabe cuál es.
+  // no tenía respuesta. (Quitarla SÍ tiene botón desde el 2026-08-22:
+  // DELETE /api/projects/[id]/collections/source, en el banner del panel.)
   const sheetUrl = row.data.settings?.liveData?.sheetUrl;
+  // La hoja de la COLECCIÓN es otra cosa, vive en otro sitio de `settings`, y
+  // era invisible aquí — que es el peor de los dos casos: es la que deja la
+  // colección de SOLO LECTURA, así que el Agente intentaba añadir un producto,
+  // recibía un 409 y no tenía forma de saber por qué. Lo lee de `row.data`
+  // igual que `getCollectionSource`, sin una consulta más.
+  const hojaColeccion = liveDataEnabled()
+    ? row.data.settings?.collections?.source?.sheet
+    : undefined;
   return {
     titulo: row.title,
     publicado: row.publishedAt !== null,
@@ -446,6 +466,15 @@ export function summarizeProjectState(row: {
     paginas: Object.keys(row.data.pages ?? {}),
     modulos,
     ...(sheetUrl ? { datos_vivos: { hoja: sheetUrl } } : {}),
+    ...(hojaColeccion
+      ? {
+          coleccion_desde_hoja: {
+            hoja: hojaColeccion,
+            solo_lectura: true,
+            nota: "El catálogo se sincroniza desde esta hoja, así que NO se puede editar ítem por ítem desde OpenLen (toda mutación devuelve 409). Para volver a editarlo a mano hay que desconectar la hoja con el botón del panel de Colecciones.",
+          },
+        }
+      : {}),
   };
 }
 
@@ -1002,16 +1031,41 @@ async function toolRedisenarPagina(
   }
 
   session.redesignsThisTurn = (session.redesignsThisTurn ?? 0) + 1;
+
+  // ¿SOBREVIVIERON LOS HECHOS DEL DUEÑO? La regla 2 del prompt del rediseño lo
+  // ORDENA en mayúsculas, y MEDIDO (n=20): la URL de la foto real desaparece en
+  // 8 de 20 turnos. Se compara sobre el documento que de verdad se guardó, no
+  // sobre lo que el modelo dijo que haría.
+  //
+  // Se AVISA, no se rechaza: la página nueva es lo que el usuario pidió, y
+  // tirarla entera por una foto sería peor que la pérdida. El modelo repone en
+  // este mismo turno, igual que con las conductas mal cableadas.
+  const perdidos = hechosPerdidos(current, persisted.finalHtml ?? redesigned.html);
+
   return {
     response: {
       ok: true,
       nota: "rediseño aplicado; los data-op-id cambiaron — usa leer_estado incluir_documento=true antes de editar encima",
       ...(persisted.aviso ? { aviso: persisted.aviso } : {}),
+      ...(perdidos.length > 0
+        ? { hechos_perdidos: perdidos.length, aviso_critico: avisoHechosPerdidos(perdidos) }
+        : {}),
     },
     action: { tool: "redisenar_pagina", ok: true, summary: resumen },
     updatedHtml: persisted.finalHtml,
     page: session.page,
   };
+}
+
+/** ¿Esta edición añadió una CONDUCTA que antes no estaba?
+ *
+ *  Se compara con el documento previo a propósito: una página que ya tenía
+ *  conductas y a la que sólo se le cambió un titular no debe pedir una prueba
+ *  de comportamiento — el comportamiento no se tocó, y un aviso que sale
+ *  siempre acaba ignorado. */
+function tocaConducta(despues: string, antes: string): boolean {
+  const cuenta = (h: string) => (h.match(/data-ol-(?:calc|behavior|countdown|filter|lightbox|copy|autoplay|sticky|theme)\b/g) ?? []).length;
+  return cuenta(despues) > cuenta(antes);
 }
 
 async function toolEditarPagina(
@@ -1048,6 +1102,11 @@ async function toolEditarPagina(
   // tanda. Sin esto, el camino barato del Agente tampoco podía tocar el
   // comportamiento de la página — mismo agujero que el Chat, misma cura.
   const partido = splitRuntimeOps(ops);
+  // El CSS y el <head> tampoco son elementos: `SKIP_TAGS` los deja sin
+  // `data-op-id`. Sin esto, «cámbiame la tipografía» sólo tenía la salida cara
+  // —reescribir la página entera— y cada reescritura puede perder algo.
+  const documento = splitDocumentOps(partido.domOps);
+  const idioma = splitLangOp(documento.domOps);
   if (partido.runtime.kind === "error") {
     return {
       response: {
@@ -1056,29 +1115,111 @@ async function toolEditarPagina(
       },
     };
   }
+  if (documento.styles.kind === "error") {
+    return {
+      response: {
+        ok: false,
+        error: `no pude aplicar el cambio de estilo (${documento.styles.reason}). Manda UN solo edit con target="styles" y CSS dentro, sin etiquetas.`,
+      },
+    };
+  }
+  if (documento.head.kind === "error") {
+    return {
+      response: {
+        ok: false,
+        error: `no pude tocar la cabecera (${documento.head.reason}). Con target="head" sólo se puede AÑADIR un <link> de fuentes de Google.`,
+      },
+    };
+  }
   const nuevoRuntime = partido.runtime.kind === "codigo" ? partido.runtime.code : null;
+  const tocaDocumento =
+    documento.styles.kind === "css" || documento.head.kind === "nodos" || idioma.lang.kind === "idioma";
 
-  // Un turno que sólo arregla comportamiento no lleva ops de maquetación: el
-  // documento se guarda igual que estaba y lo que cambia es la cápsula.
+  // LA PRUEBA DE LO QUE ESTE TURNO PROMETIÓ.
+  //
+  // Se acepta venga con runtime o SIN él, y no es un detalle: MEDIDO el
+  // 2026-08-22, la primera versión sólo la miraba cuando el turno traía
+  // JavaScript nuevo, y con eso no corrió NUNCA. El Agente no escribe JS —su
+  // prompt se lo prohíbe sin condiciones— y repara el comportamiento con
+  // CONDUCTAS (`data-ol-calc` y las demás). El modelo mandó su prueba, bien
+  // formada, y la puerta la tiró; luego cerró el turno diciéndole al usuario
+  // «la prueba pasó sin errores» sobre una prueba que nunca se ejecutó.
+  //
+  // Una conducta necesita la comprobación TANTO como el JS libre: es una receta
+  // cerrada que se cablea a mano en el HTML, y mal cableada nace muda —sin un
+  // error en consola— que es justo el fallo invisible.
+  //
+  // Una prueba mal formada NO tumba la edición: se avisa y se sigue. Perder el
+  // arreglo del usuario porque su comprobación venía torcida sería castigar lo
+  // que se quiere fomentar.
+  let avisoPrueba = "";
+  const spec = parseBehaviorSpec(args.prueba);
+  if (spec.kind === "spec") {
+    session.behaviorSpec = spec.pasos;
+  } else if (spec.kind === "error") {
+    avisoPrueba = specRechazoAviso(spec.reason);
+    // eslint-disable-next-line no-console
+    console.warn(`[agente] prueba de comportamiento descartada: ${spec.reason}`);
+  }
+
+  // Un turno que sólo arregla comportamiento —o sólo el estilo— no lleva ops de
+  // maquetación: el cuerpo del documento se queda igual y cambia lo de fuera.
+  // UNA OP CONTRA EL <body> NO ES UNA EDICIÓN: ES UN DOCUMENTO NUEVO.
+  //
+  // El Chat lleva este guardián desde que se midió que el modelo, queriendo
+  // tocar `:root`, apuntaba al <body> y lo reemplazaba por un <style>. El
+  // Agente —que va ENCENDIDO por defecto— no lo tenía.
+  //
+  // MEDIDO el 2026-08-22 en el brazo de control del experimento: 8 de 40
+  // peticiones de «cámbiame la tipografía» acabaron con el <body> reemplazado
+  // por el <link> de la fuente. El documento guardado era
+  // `<html><head>…</head><link …></html>`: sin titular, sin teléfono, sin
+  // botón. El usuario pide una fuente y recibe una página en blanco.
+  //
+  // Los objetivos `styles`/`head` quitan el MOTIVO (el modelo ya tiene por
+  // dónde), y en el brazo de tratamiento no pasó ni una vez. Esto quita la
+  // POSIBILIDAD, que es lo que hace falta cuando lo que está en juego es la
+  // página entera del usuario.
+  const { ops: opsSeguras, rejected: opsRechazadas } = rejectDocumentWideOps(
+    session.taggedHtml,
+    idioma.domOps,
+  );
+
   let htmlAplicado = session.taggedHtml;
   let aplicadas = 0;
-  if (partido.domOps.length > 0) {
-    const applied = applyOps(session.taggedHtml, partido.domOps);
+  if (opsSeguras.length > 0) {
+    const applied = applyOps(session.taggedHtml, opsSeguras);
     if (applied.html === null) {
       const reason = applied.errors[0]?.reason ?? "no se pudo aplicar la edición";
       return { response: { ok: false, error: reason } };
     }
     htmlAplicado = applied.html;
     aplicadas = applied.appliedCount;
-  } else if (nuevoRuntime === null) {
+  } else if (opsRechazadas.length > 0 && nuevoRuntime === null && !tocaDocumento) {
+    // Todo lo que mandó era contra la raíz: no hay nada que salvar, y decírselo
+    // con el camino correcto vale más que un "no se pudo".
+    return {
+      response: {
+        ok: false,
+        error: "op_contra_la_raiz",
+        detalle: `${opsRechazadas.length} edit(s) apuntaban al <html> o al <body>, lo que habría reemplazado la página ENTERA. No se guardó nada.`,
+        como_hacerlo:
+          'Para CSS usa un edit con target="styles"; para una hoja de fuentes, target="head". Para cambiar el contenido, apunta al data-op-id del elemento concreto, nunca al del body.',
+      },
+    };
+  } else if (nuevoRuntime === null && !tocaDocumento) {
     return { response: { ok: false, error: "ningún edit aplicable" } };
   }
+  htmlAplicado = applyLangOp(
+    applyHeadOp(applyStylesOp(htmlAplicado, documento.styles), documento.head),
+    idioma.lang,
+  );
 
   const persisted = await persistHtmlChange(
     session,
     deps,
     htmlAplicado,
-    `Agente (${aplicadas} ops${nuevoRuntime ? " + comportamiento" : ""}): ${resumen}`,
+    `Agente (${aplicadas} ops${nuevoRuntime ? " + comportamiento" : ""}${tocaDocumento ? " + estilo" : ""}): ${resumen}`,
     nuevoRuntime ? { modelRuntime: nuevoRuntime } : {},
   );
   if (!persisted.ok) {
@@ -1090,6 +1231,30 @@ async function toolEditarPagina(
       ok: true,
       edits_aplicados: aplicadas,
       ...(nuevoRuntime ? { comportamiento_actualizado: true } : {}),
+      ...(tocaDocumento ? { estilo_actualizado: true } : {}),
+      // La META se quedo atras: el dato viejo sigue en el fragmento que ensena
+      // Google. Se mira sobre el documento que de verdad se guardo.
+      ...(() => {
+        const viejos = metaDesfasada(persisted.finalHtml ?? htmlAplicado);
+        return viejos.length > 0 ? { meta_desfasada: viejos, aviso_critico: avisoMetaDesfasada(viejos) } : {};
+      })(),
+      // Sin prueba, nadie sabrá si el comportamiento hace lo que promete —
+      // sólo si explota. Se le dice, y se le dice por qué.
+      ...((nuevoRuntime || tocaConducta(htmlAplicado, session.taggedHtml)) && !session.behaviorSpec
+        ? {
+            aviso_critico: avisoPrueba
+              ? `${avisoPrueba} Vuelve a mandarla bien formada en tu siguiente edit.`
+              : 'Cambiaste el COMPORTAMIENTO de la página SIN mandar `prueba`, así que nadie va a comprobar que haga lo que promete — sólo que no explote. Un botón cableado a una conducta mal puesta nace MUDO, sin un solo error en consola. Manda `prueba` describiendo qué debe pasar al pulsar.',
+          }
+        : {}),
+      // Guardar-y-AVISAR: perder una op en silencio es la degradacion que este
+      // repo prohibe, y aqui lo perdido habria sido la pagina entera.
+      ...(opsRechazadas.length > 0
+        ? {
+            edits_descartados: opsRechazadas.length,
+            aviso_critico: `Descarte ${opsRechazadas.length} edit(s) que apuntaban al <html> o al <body>: habrian reemplazado la pagina ENTERA. El resto SI se aplico. Si querias cambiar CSS, usa target="styles"; para una hoja de fuentes, target="head".`,
+          }
+        : {}),
       nota: "data-op-id regenerados; usa leer_estado incluir_documento=true para editar de nuevo",
       ...(persisted.aviso ? { aviso: persisted.aviso } : {}),
       // El turno no cambió nada. Se le dice al MODELO para que no cierre
@@ -1210,7 +1375,38 @@ async function toolCambiarTema(
     if (radiusToken) tokens["--ol-r-scale"] = radiusToken;
   }
 
-  const candidateHtml = applyThemeTokensToHtml(activeDoc, tokens);
+  // ¿LA PÁGINA LEE ESTOS TOKENS? MEDIDO: 171 de 178 plantillas curadas no leen
+  // ninguno. Sobre ellas esto escribía la declaración, devolvía `ok: true,
+  // tokens_aplicados: 1` y la página se quedaba idéntica — un cambio reportado
+  // que no ocurrió, que es justo lo que la doctrina de degradación prohíbe.
+  //
+  // No se convierte el CSS de la plantilla (eso es Canva-mode en miniatura, y
+  // ya se rechazó): se dice la verdad y se señala el camino que SÍ funciona.
+  // En el bucle del Agente, un `ok:false` con pista es el idioma normal — el
+  // modelo encadena la op y el cambio ocurre de verdad.
+  const pedidos = new Set<string>();
+  if (accent !== undefined || modoArg !== undefined) pedidos.add("--ol-accent");
+  if (fuente !== undefined) pedidos.add("--ol-font-display");
+  if (radius !== undefined) pedidos.add("--ol-r-scale");
+  const muertos = [...pedidos].filter((t) => !documentReadsToken(activeDoc, t));
+  if (muertos.length === pedidos.size) {
+    return {
+      response: {
+        ok: false,
+        error: "sin_tokens",
+        detalle: `Esta página no usa el sistema de tokens (su CSS no dice var(${muertos.join(") ni var(")})), así que escribirlos NO cambiaría nada de lo que se ve.`,
+        como_hacerlo:
+          'Cámbialo en el CSS de verdad con editar_pagina: un edit con target="styles" e insert_after. Dentro, DOS cosas: (1) las reglas que de verdad pintan, por ejemplo `body,h1,h2{font-family:\'Fraunces\',Georgia,serif}`; y (2) el token en `:root{--ol-font-display:\'Fraunces\',serif}` — los módulos que se añaden al publicar (reproductor de música, secciones de módulo) SÍ leen los tokens, así que definirlo los deja a juego. Si la fuente es de Google, añade su hoja con otro edit target="head" e insert_after.',
+      },
+    };
+  }
+
+  let candidateHtml = applyThemeTokensToHtml(activeDoc, tokens);
+  // La fuente tiene que EXISTIR, no sólo estar nombrada: sin su hoja el
+  // navegador cae al genérico y el usuario ve Times New Roman donde pidió una
+  // editorial.
+  const fontToken = tokens["--ol-font-display"];
+  if (fontToken) candidateHtml = ensureFontLink(candidateHtml, fontToken);
 
   const persisted = await persistHtmlChange(
     session,
@@ -1223,7 +1419,18 @@ async function toolCambiarTema(
   }
 
   return {
-    response: { ok: true, tokens_aplicados: Object.keys(tokens).length },
+    response: {
+      ok: true,
+      tokens_aplicados: Object.keys(tokens).length,
+      // Parcial: unos rasgos entran y otros no. Callarlo sería la misma mentira
+      // en pequeño.
+      ...(muertos.length > 0
+        ? {
+            sin_efecto: muertos,
+            aviso_critico: `La página no lee ${muertos.join(" ni ")}, así que ESA parte no cambió. Si el usuario la pidió, hazla con un edit target="styles".`,
+          }
+        : {}),
+    },
     action: { tool: "cambiar_tema", ok: true, summary: accent ?? fuente ?? radius ?? modoArg ?? "" },
     updatedHtml: persisted.finalHtml,
     page: session.page,

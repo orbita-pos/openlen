@@ -150,6 +150,49 @@ describe("buildAgentContext", () => {
   });
 });
 
+describe("lo que ya se sabe roto", () => {
+  const args = {
+    state: {},
+    taggedHtml: "<html></html>",
+    userBrief: null,
+    now: new Date("2026-08-22T12:00:00Z"),
+  };
+
+  // El diagnóstico existía escrito y el Agente empezaba a ciegas: quien decía
+  // «los botones no funcionan» arrancaba sin lo que el sistema ya sabía.
+  it("le llega el diagnóstico CONCRETO, no el código", () => {
+    const s = buildAgentContext({
+      ...args,
+      degradaciones: [
+        { code: "broken_controls", detail: ['el botón data-ol-filter="tacos" no tiene rejilla que filtrar'] },
+      ],
+    });
+    expect(s).toContain("data-ol-filter");
+    expect(s).toContain("LO QUE YA SE SABE ROTO");
+  });
+
+  // Un código a secas no dice qué tocar, y del recuento ya se entera el usuario
+  // por otra vía. Pagar tokens por «scripts, 12» no compra nada.
+  it("una degradación sin detalle no gasta ni una línea", () => {
+    const s = buildAgentContext({ ...args, degradaciones: [{ code: "scripts" }] });
+    expect(s).not.toContain("LO QUE YA SE SABE ROTO");
+  });
+
+  // El invariante de este módulo: una capacidad que no se usa no cuesta un byte,
+  // y la caché de prefijo no se invalida para quien nunca perdió nada.
+  it("sin degradaciones el contexto sale IDÉNTICO", () => {
+    expect(buildAgentContext({ ...args, degradaciones: [] })).toBe(buildAgentContext(args));
+    expect(buildAgentContext({ ...args, degradaciones: undefined })).toBe(buildAgentContext(args));
+  });
+
+  it("se acota a ocho", () => {
+    const muchas = Array.from({ length: 20 }, (_, i) => ({ code: "x", detail: [`fallo-${i}`] }));
+    const s = buildAgentContext({ ...args, degradaciones: muchas });
+    expect(s).toContain("fallo-7");
+    expect(s).not.toContain("fallo-8");
+  });
+});
+
 describe("estimateContextTokens", () => {
   it("scales with combined content length (~chars/3.5, ceil'd)", () => {
     const userContent = "a".repeat(35);

@@ -19,6 +19,10 @@ export interface MeasuredPage {
     readonly h1Count?: number;
     readonly heroBodyFontPx: number | null;
   } | null;
+  /** Lo que la página tiró al cargar. Es el quinto hecho que sólo el render
+   *  conoce, y el único que NO se ve en la captura: un script que muere deja un
+   *  screenshot perfecto. */
+  readonly runtimeErrors?: readonly string[];
 }
 
 const TYPOGRAPHY_REASON: Record<string, (h1: number | null, body: number | null) => string> = {
@@ -53,6 +57,14 @@ export function objectiveBreakage(page: MeasuredPage | null | undefined): string
   if (typography) {
     const reason = TYPOGRAPHY_REASON[typography.rule];
     if (reason) reasons.push(reason(typography.h1FontPx, typography.heroBodyFontPx));
+  }
+  // El error LITERAL, no una categoría: es la lección de arriba aplicada al
+  // JavaScript. "el script falla" no dice qué arreglar; «Assignment to constant
+  // variable» sí, y es exactamente lo que el modelo necesita para REPARAR en
+  // vez de re-crear. Se acotan a tres: más que eso suelen ser el mismo fallo
+  // rebotando, y el presupuesto del prompt no es infinito.
+  for (const grito of (page.runtimeErrors ?? []).slice(0, 3)) {
+    reasons.push(`el JavaScript de la página falla al cargar: ${grito}`);
   }
   return reasons;
 }

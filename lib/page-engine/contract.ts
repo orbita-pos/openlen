@@ -102,4 +102,20 @@ export interface PreparePageOptions {
    * Con él, la puerta sólo rechaza lo que ESTA edición rompió.
    */
   readonly priorHtml?: string;
+  /**
+   * El JavaScript que acompaña a este documento (la cápsula del modelo).
+   *
+   * NO se persiste ni se devuelve dentro del `html`: sólo se injerta para la
+   * etapa de MEDICIÓN, que es de sólo lectura. Sin esto se mide una página que
+   * nadie recibe —el documento va saneado, sin script— y sobre todo no hay
+   * forma de enterarse de que el script muere al cargar: la captura sale
+   * perfecta ([[model-js-two-blind-spots]]).
+   *
+   * La etapa de legibilidad NO lo ve, y es deliberado: esa sí devuelve HTML, y
+   * un injerto que se colara en lo que devuelve acabaría persistido en
+   * `data.html`, que es el invariante que no se toca.
+   *
+   * Ausente/vacío ⇒ tubería byte-idéntica a la de antes de que existiera.
+   */
+  readonly runtime?: string | null;
 }

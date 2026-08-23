@@ -16,6 +16,15 @@
 
 import { GeminiProvider, type InlineImage, type StreamEvent, type StreamRequest } from "@/lib/ai-gateway";
 import { renderHtmlToInlineImage } from "@/lib/ai/inline-image";
+import { renderVisualQualityViewports } from "@/lib/ai/visual-quality-renderer";
+import { injectModelRuntime } from "@/lib/ai-stream/model-runtime";
+import {
+  avisoSpec,
+  leerFallos,
+  specProgram,
+  type FalloSpec,
+  type PasoSpec,
+} from "@/lib/agent/behavior-spec";
 import { streamWithRetry } from "@/lib/agent/retry";
 import { fireworksStreamProvider } from "@/lib/ai/fireworks-as-stream-provider";
 
@@ -44,6 +53,12 @@ export interface VerifyParams {
   runtime?: string | null;
   /** El pedido original del usuario este turno — contexto de intención. */
   userPrompt: string;
+  /** LO QUE EL MODELO PROMETIÓ que su código haría, si lo declaró.
+   *
+   *  Sin esto los ojos sólo responden «¿explotó?». Una ruleta que gira y no
+   *  para nunca carga limpia, sale perfecta en la foto y no lanza un error —
+   *  y está rota. Ausente ⇒ se pulsa a ciegas como hasta ahora. */
+  spec?: readonly PasoSpec[] | null;
   /** Model id Gemini, e.g. "gemini-3.5-flash". */
   model: string;
   apiKey?: string;
@@ -59,6 +74,16 @@ export interface VerifyProviderLike {
 export interface VerifyInternals {
   provider?: VerifyProviderLike;
   render?: (html: string) => Promise<InlineImage | null>;
+  /** El medidor DETERMINISTA de contraste. Se inyecta aparte del render de la
+   *  foto porque son dos navegadores distintos y sólo uno sabe medir. */
+  medir?: (
+    html: string,
+  ) => Promise<{
+    unreadableText?: readonly { contrast: number }[];
+    mobileOverflow?: boolean;
+    overflowCulprit?: string;
+    overflowCulpritRight?: number;
+  } | null>;
   /** Override del deadline — solo tests. */
   timeoutMs?: number;
 }
@@ -181,23 +206,49 @@ async function runVerify(
   signal: AbortSignal,
 ): Promise<VisualVerdict> {
   const render = internals.render ?? renderHtmlToInlineImage;
-  // Mismo injerto que `injectModelRuntime` hace al publicar: script clásico al
-  // final del body. Aquí NO se persiste nada — es una vista de usar y tirar
-  // dentro del navegador de los ojos.
+  // EL MISMO injerto que hace el publicador, no uno parecido: si los ojos miran
+  // un documento armado de otra forma, miran una página que nadie recibe. Aquí
+  // NO se persiste nada — es una vista de usar y tirar dentro del navegador.
   const codigo = params.runtime?.trim();
-  const paraRenderizar = codigo
-    ? (() => {
-        const i = params.html.toLowerCase().lastIndexOf("</body>");
-        const tag = `<script>${codigo}</script>`;
-        return i === -1 ? params.html + tag : params.html.slice(0, i) + tag + params.html.slice(i);
-      })()
-    : params.html;
+  const paraRenderizar = codigo ? injectModelRuntime(params.html, codigo) : params.html;
+  // El medidor de contraste corre EN PARALELO con la foto: son dos navegadores
+  // y encadenarlos gastaría ~2s del presupuesto de 20 para nada. Fail-open como
+  // el resto — si no hay medidor o revienta, se sigue exactamente igual.
+  //
+  // Sólo cuando el llamador inyectó un `render` propio se toma también su
+  // `medir`: un doble de prueba que sustituye el navegador de la foto no puede
+  // acabar arrancando Chrome de verdad por la puerta de al lado. Con los dos
+  // por omisión (producción), corre el medidor real.
+  const medir =
+    internals.medir ?? (internals.render ? async () => null : renderVisualQualityViewports);
+  const medicion = medir(paraRenderizar).catch(() => null);
+
   const gritos: string[] = [];
-  const image = await render(paraRenderizar, { onErrors: (e) => gritos.push(...e) });
+  let fallosSpec: FalloSpec[] = [];
+  // Si el modelo declaró qué debe pasar, se comprueba ESO. Si no, se pulsa a
+  // ciegas: sigue viendo el script que muere al primer clic, que es lo que
+  // había antes de que existiera el guion.
+  const conGuion = codigo && params.spec && params.spec.length > 0;
+  const image = await render(paraRenderizar, {
+    onErrors: (e) => gritos.push(...e),
+    ...(conGuion
+      ? {
+          behaviorProgram: specProgram(params.spec!),
+          onBehaviorResult: (b) => { fallosSpec = leerFallos(b); },
+        }
+      : codigo
+        ? { pressButtons: true }
+        : {}),
+  });
   if (!image) {
     logFallback("render failed — no screenshot");
     return fallbackVerdict();
   }
+  const medido = await medicion;
+  const contrastes = medido?.unreadableText ?? [];
+  const desbordaMovil = medido?.mobileOverflow === true;
+  const culpable = medido?.overflowCulprit ?? "";
+  const culpableAncho = medido?.overflowCulpritRight ?? 0;
   if (signal.aborted) return fallbackVerdict();
 
   const apiKey = params.apiKey ?? process.env.GEMINI_API_KEY;
@@ -249,16 +300,74 @@ async function runVerify(
     return fallbackVerdict();
   }
   // LO QUE EL NAVEGADOR GRITÓ. No pasa por el juicio del crítico visual: una
-  // excepción al cargar es un HECHO, y encima de los que el ojo no puede ver —
-  // la captura de una página cuyo JavaScript murió sale idéntica a la de una
-  // sana. MEDIDO el 2026-08-22: un juego que el modelo escribió tenía un
-  // TypeError que sólo aparecía CARGANDO la página, y la foto salía perfecta.
+  // excepción es un HECHO, y encima de los que el ojo no puede ver — la captura
+  // de una página cuyo JavaScript murió sale idéntica a la de una sana. MEDIDO
+  // el 2026-08-22 con tres páginas cuya foto pesaba exactamente lo mismo: una
+  // sana, una que revienta al cargar y una que revienta al pulsar.
+  //
+  // Cuando hubo runtime, además se PULSARON sus controles (dos rondas), así que
+  // esto cubre las tres formas de estar muerto: al cargar, al primer clic y a
+  // la segunda jugada. Por eso la frase no dice «al cargar» — diría una cosa
+  // que a veces es falsa, y el modelo buscaría el bug en el sitio equivocado.
   //
   // Va primero en la lista: es lo más accionable de todo lo que el turno puede
   // decirle al modelo.
   if (gritos.length > 0) {
     verdict.issues = [
-      ...gritos.map((g) => `El código de la página falla al cargar: ${g}`),
+      ...gritos.map((g) => `El JavaScript de la página falla (al cargarla o al usar sus controles): ${g}`),
+      ...verdict.issues,
+    ];
+    verdict.broken = true;
+  }
+  // TEXTO QUE NADIE PUEDE LEER, medido en el render — no juzgado por el ojo del
+  // crítico, que es malo justo en esto: un botón amarillo con letras blancas se
+  // ve «bonito» en una captura y es ilegible.
+  //
+  // MEDIDO el 2026-08-22: pidiéndole «pon el botón en #f5e050 con el texto en
+  // blanco» el Agente obedece al pie de la letra y entrega 1.34:1 — el usuario
+  // pidió los colores, así que `cambiar_tema` (que camina el contraste hasta
+  // cumplir WCAG) ni entra en juego. Por el camino determinista el peor caso de
+  // 12 fue 4.88:1; escribiendo el CSS a mano, la mitad quedó por debajo de 4.5.
+  //
+  // El detector ya existía y ya lo cazaba con el número exacto: sólo no llegaba
+  // al Agente. Es fail-open como todo lo demás — sin medidor, sin cambios.
+  // LA PROMESA DEL MODELO, ejecutada. Va ANTES que todo lo demás en la lista:
+  // un contraste flojo es un defecto; una página que no hace lo que el usuario
+  // pidió no es la página que pidió.
+  //
+  // Esto es lo que separa escribir código de entregarlo. Hasta aquí los ojos
+  // sabían si la página explotaba; ahora saben si CUMPLE.
+  if (fallosSpec.length > 0) {
+    verdict.issues = [avisoSpec(fallosSpec), ...verdict.issues];
+    verdict.broken = true;
+  }
+  // SE DESBORDA A LO ANCHO EN EL TELEFONO. Es el otro hecho que el ojo del
+  // critico no puede juzgar: la captura se toma del documento COMPLETO, asi que
+  // una pagina que se sale 48px de la pantalla sale entera y bien compuesta en
+  // la foto — y en el telefono del dueno hay una barra horizontal y texto
+  // cortado.
+  //
+  // MEDIDO el 2026-08-22 con los ataques de QA, y es el caso mas doloroso: el
+  // usuario dice «en mi telefono se corta la tabla», el modelo aplica una
+  // transformacion a tarjetas CORRECTA, se le olvida limpiar un `margin:16px
+  // 24px` heredado dentro del media query, y entrega 100%+48px. Dijo «listo».
+  //
+  // La medicion ya estaba en la misma respuesta del render que el contraste;
+  // solo no se miraba. La edicion del Agente corre con renderChecks:false —un
+  // turno no puede pagar un arranque de Chrome— pero los ojos YA lo arrancaron.
+  if (desbordaMovil) {
+    verdict.issues = [
+      culpable
+        ? `La página se desborda a lo ancho en el teléfono (390px): \`${culpable}\` llega hasta ${culpableAncho}px, o sea ${culpableAncho - 390}px fuera de la pantalla. El visitante ve una barra horizontal con contenido cortado. Mira ese elemento y su regla: lo más común es un \`width:100%\` cuyo \`margin\` heredado suma POR FUERA, un ancho fijo en px, o contenido que no puede partirse. Si es una tabla ancha, la solución correcta es envolverla en un contenedor con \`overflow-x:auto\` — NUNCA \`overflow:hidden\`, que recorta en vez de arreglar. Arréglalo con editar_pagina.`
+        : "La página se desborda a lo ancho en el teléfono (390px): algo se sale de la pantalla y el visitante ve una barra horizontal con contenido cortado. Suele ser un ancho fijo, un `width:100%` con márgenes heredados que suman por fuera, o contenido que no puede partirse. Arréglalo con editar_pagina.",
+      ...verdict.issues,
+    ];
+    verdict.broken = true;
+  }
+  if (contrastes.length > 0) {
+    const peor = Math.min(...contrastes.map((c) => c.contrast));
+    verdict.issues = [
+      `${contrastes.length} texto(s) que el navegador pinta y nadie puede leer — el peor a ${peor.toFixed(2)}:1 de contraste (el mínimo legible es 3:1). Arregla el color del texto o el del fondo con editar_pagina; si el usuario pidió ESOS colores exactos, dile que así no se lee y propón el ajuste mínimo que sí cumple.`,
       ...verdict.issues,
     ];
     verdict.broken = true;

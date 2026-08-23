@@ -206,4 +206,53 @@ describe("los cálculos rotos se reparan o se reportan", () => {
     expect(out.report.calcIssues).toBeUndefined();
     expect(out.report.calcRepairs).toBeUndefined();
   });
+
+  // ── el JavaScript en la MEDICIÓN ──────────────────────────────────────────
+  // El documento se guarda saneado, así que sin injertarlo se medía una maqueta
+  // que nadie recibe — y sobre todo no había forma de ver el script que muere
+  // al cargar, porque la captura sale perfecta.
+
+  it("la medición ve la página CON su JavaScript", async () => {
+    const vistos: string[] = [];
+    await preparePage(
+      PAGE,
+      { mode: "create", runtime: "console.log('hola')" },
+      deps({ render: (async (h: string) => { vistos.push(h); return {}; }) as never }),
+    );
+    expect(vistos.some((h) => h.includes("console.log('hola')"))).toBe(true);
+  });
+
+  // El invariante que protege `data.html`: el injerto es para MIRAR, no para
+  // guardar. Si se colara en lo que devuelve la etapa, acabaría persistido.
+  it("pero el script NO sale en el documento entregado", async () => {
+    const out = await preparePage(
+      PAGE,
+      { mode: "create", runtime: "console.log('hola')" },
+      deps(),
+    );
+    expect(out.ok && out.html).not.toContain("console.log('hola')");
+  });
+
+  it("sin runtime, la medición ve exactamente lo de siempre", async () => {
+    const vistos: string[] = [];
+    await preparePage(
+      PAGE,
+      { mode: "create" },
+      deps({ render: (async (h: string) => { vistos.push(h); return {}; }) as never }),
+    );
+    expect(vistos.every((h) => !h.includes("<script"))).toBe(true);
+  });
+
+  it("lo que la página grita al cargar entra como rotura", async () => {
+    const out = await preparePage(
+      PAGE,
+      { mode: "create", runtime: "noExiste()" },
+      deps({
+        render: (async () => ({
+          runtimeErrors: ["ReferenceError: noExiste is not defined"],
+        })) as never,
+      }),
+    );
+    expect(out.report.breakage.join(" ")).toContain("noExiste is not defined");
+  });
 });

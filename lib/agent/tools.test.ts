@@ -15,6 +15,12 @@ import type { ProjectData } from "@/lib/projects/types";
 
 const HTML = `<!doctype html><html><head><title>Tacos El Güero</title><meta name="description" content="Tacos"></head><body><h1 data-x="k">Tacos El Güero</h1><p>Los mejores del barrio.</p></body></html>`;
 
+// Una pagina que SI consume los tokens --ol-*, como las que nacen de
+// /api/generate. `HTML` no los lee (igual que 171 de las 178 plantillas
+// curadas), y sobre esa `cambiar_tema` ahora se niega en vez de reportar un
+// cambio que no ocurre: ver "no miente sobre una pagina que no lee tokens".
+const THEMED_HTML = `<!doctype html><html><head><title>Tacos El Güero</title><meta name="description" content="Tacos"><style>body{background:var(--ol-bg);color:var(--ol-fg);font-family:var(--ol-font-display)}a{color:var(--ol-accent);border-radius:calc(8px * var(--ol-r-scale))}</style></head><body><h1 data-x="k">Tacos El Güero</h1><p>Los mejores del barrio.</p><a href="#x">Pide</a></body></html>`;
+
 // Fixture with an image already on the page — editar_imagen only edits images
 // whose URL appears verbatim in the current document.
 const IMG_URL = "https://images.openlen.com/orig-photo.webp";
@@ -192,6 +198,21 @@ function firstOpId(taggedHtml: string): string {
   const m = /data-op-id="([^"]+)"/.exec(taggedHtml);
   if (!m) throw new Error("no data-op-id found in taggedHtml");
   return m[1];
+}
+
+/** El op-id de un elemento de CONTENIDO, nunca el de la raiz.
+ *
+ *  `firstOpId` devuelve el PRIMER id del documento, que es el del <html> o el
+ *  <body> — y desde el 2026-08-22 una op contra la raiz se rechaza, porque
+ *  reemplazarla borra la pagina entera del usuario (medido: 8 de 40 turnos del
+ *  brazo de control acabaron con el <body> sustituido por un <link>). Los pines
+ *  de abajo prueban a QUE PAGINA se escribe, no que se pueda editar la raiz, y
+ *  con `firstOpId` dependian sin querer de lo que ahora esta prohibido. */
+function contentOpId(taggedHtml: string): string {
+  const m = /<h1[^>]*data-op-id="([^"]+)"|<p[^>]*data-op-id="([^"]+)"/.exec(taggedHtml);
+  const id = m?.[1] ?? m?.[2];
+  if (!id) throw new Error("no content data-op-id found in taggedHtml");
+  return id;
 }
 
 describe("summarizeProjectState", () => {
@@ -590,7 +611,7 @@ describe("sanitizeAviso deriva su lista de conductas, no la hardcodea (Arreglo 1
 
 describe("cambiar_tema", () => {
   it("applies an accent bundle, persists through the sanitize pipeline, re-tags", async () => {
-    const { deps, store } = makeDeps();
+    const { deps, store } = makeDeps({ data: { html: THEMED_HTML } });
     const session = makeSession();
     const out = await runAgentTool(session, deps, "cambiar_tema", { accent: "#e8743a" });
     assert.equal(out.response.ok, true);
@@ -610,7 +631,7 @@ describe("cambiar_tema", () => {
     assert.equal(store.saved.length, 0);
   });
   it("accent without modo keeps the page's current dark mode (button reads modeRef)", async () => {
-    const darkDoc = HTML.replace("<html>", `<html data-ol-mode="dark">`);
+    const darkDoc = THEMED_HTML.replace("<html>", `<html data-ol-mode="dark">`);
     const { deps, store } = makeDeps({ data: { html: darkDoc } });
     const out = await runAgentTool(makeSession(), deps, "cambiar_tema", { accent: "#e8743a" });
     assert.equal(out.response.ok, true);
@@ -620,7 +641,7 @@ describe("cambiar_tema", () => {
     assert.ok(store.data.html!.includes(`--ol-bg: ${dark["--ol-bg"]}`));
   });
   it("standalone modo:dark re-derives the bundle from the page's current accent + stamps the attr", async () => {
-    const withAccent = HTML.replace("<html>", `<html style="--ol-accent: #e8743a">`);
+    const withAccent = THEMED_HTML.replace("<html>", `<html style="--ol-accent: #e8743a">`);
     const { deps, store } = makeDeps({ data: { html: withAccent } });
     const out = await runAgentTool(makeSession(), deps, "cambiar_tema", { modo: "dark" });
     assert.equal(out.response.ok, true);
@@ -628,6 +649,95 @@ describe("cambiar_tema", () => {
     const dark = lookFromAccent("#e8743a").dark;
     assert.ok(store.data.html!.includes(`--ol-bg: ${dark["--ol-bg"]}`));
     assert.ok(store.data.html!.includes(`--ol-accent: ${dark["--ol-accent"]}`));
+  });
+
+  // ── LA PAGINA EN BLANCO ───────────────────────────────────────────────────
+  // MEDIDO el 2026-08-22 en el brazo de CONTROL del experimento: 8 de 40 turnos
+  // de «cambiame la tipografia» acabaron con el <body> reemplazado por el <link>
+  // de la fuente. El documento guardado era `<html><head>…</head><link…></html>`
+  // — sin titular, sin telefono, sin boton. El Chat llevaba el guardian desde
+  // hacia meses; el Agente, que va ENCENDIDO por defecto, no.
+  it("una op contra la RAIZ no se aplica: borraria la pagina entera", async () => {
+    const { deps, store } = makeDeps();
+    const session = makeSession();
+    const raiz = firstOpId(session.taggedHtml); // <html> o <body>
+    const out = await runAgentTool(session, deps, "editar_pagina", {
+      edits: [{ op: "replace", target: raiz, new_html: `<link rel="stylesheet" href="https://x">` }],
+      resumen: "fuente",
+    });
+    assert.equal(out.response.ok, false);
+    assert.equal(out.response.error, "op_contra_la_raiz");
+    // Lo que importa: NO se guardo nada. La pagina del usuario sigue entera.
+    assert.equal(store.saved.length, 0);
+    // Y se le dice al modelo por donde SI se hace.
+    assert.match(String(out.response.como_hacerlo), /target="styles"/);
+  });
+
+  it("si solo UNA op es contra la raiz, el resto del cambio SI se aplica", async () => {
+    const { deps, store } = makeDeps();
+    const session = makeSession();
+    const raiz = firstOpId(session.taggedHtml);
+    const contenido = contentOpId(session.taggedHtml);
+    const out = await runAgentTool(session, deps, "editar_pagina", {
+      edits: [
+        { op: "replace", target: contenido, new_html: "<h1>Tacos El Güero</h1>" },
+        { op: "replace", target: raiz, new_html: "<style>a{}</style>" },
+      ],
+      resumen: "dos cosas",
+    });
+    assert.equal(out.response.ok, true);
+    assert.equal(out.response.edits_descartados, 1);
+    // Guardar-y-AVISAR: perder una op en silencio es la degradacion prohibida.
+    assert.match(String(out.response.aviso_critico), /pagina ENTERA/);
+    assert.ok(store.data.html!.includes("Tacos El Güero"));
+  });
+
+  // MEDIDO el 2026-08-22: 171 de las 178 plantillas curadas no dicen var(--ol-*)
+  // en ninguna parte. Sobre ellas esto devolvia `ok:true, tokens_aplicados:1` y
+  // la pagina se quedaba IDENTICA — un cambio reportado que no ocurrio.
+  it("no miente sobre una pagina que no lee tokens: se niega y señala el camino", async () => {
+    const { deps, store } = makeDeps({ data: { html: HTML } });
+    const out = await runAgentTool(makeSession(), deps, "cambiar_tema", { fuente: "editorial" });
+    assert.equal(out.response.ok, false);
+    assert.equal(out.response.error, "sin_tokens");
+    // No basta con negarse: hay que decir como SI se hace, o el usuario queda
+    // encerrado con la respuesta correcta.
+    assert.match(String(out.response.como_hacerlo), /target="styles"/);
+    // Y nada se guardo: la pagina queda byte-intacta.
+    assert.equal(store.saved.length, 0);
+  });
+
+  it("si un rasgo vive y otro no, aplica el que vive y AVISA del muerto", async () => {
+    // Lee el acento pero no la fuente.
+    const medio = HTML.replace("</head>", "<style>a{color:var(--ol-accent)}</style></head>");
+    const { deps, store } = makeDeps({ data: { html: medio } });
+    const out = await runAgentTool(makeSession(), deps, "cambiar_tema", {
+      accent: "#e8743a",
+      fuente: "editorial",
+    });
+    assert.equal(out.response.ok, true);
+    assert.deepEqual(out.response.sin_efecto, ["--ol-font-display"]);
+    assert.match(String(out.response.aviso_critico), /no cambió/);
+    assert.ok(store.data.html!.includes("--ol-accent: "));
+  });
+
+  // La fuente tiene que EXISTIR, no solo estar nombrada: sin su hoja el
+  // navegador cae al generico y el usuario ve Times New Roman.
+  it("carga la hoja de Google de la fuente que acaba de nombrar", async () => {
+    const { deps, store } = makeDeps({ data: { html: THEMED_HTML } });
+    const out = await runAgentTool(makeSession(), deps, "cambiar_tema", { fuente: "editorial" });
+    assert.equal(out.response.ok, true);
+    assert.ok(store.data.html!.includes("fonts.googleapis.com/css2?family=Fraunces"));
+  });
+
+  it("no duplica la hoja si la fuente ya estaba cargada", async () => {
+    const ya = THEMED_HTML.replace(
+      "</head>",
+      `<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:wght@700&display=swap"></head>`,
+    );
+    const { deps, store } = makeDeps({ data: { html: ya } });
+    await runAgentTool(makeSession(), deps, "cambiar_tema", { fuente: "editorial" });
+    assert.equal(store.data.html!.split("family=Fraunces").length - 1, 1);
   });
 });
 
@@ -1281,7 +1391,7 @@ describe("W1 regression pins (multi-página)", () => {
   const HOME_IMG_URL = "https://images.openlen.com/home-hero.webp";
   const HOME_HTML = `<!doctype html><html><head><title>Tacos El Güero</title><meta name="description" content="Tacos"></head><body><img src="${HOME_IMG_URL}" alt="foto"><h1 data-x="k">Tacos El Güero</h1><p>Los mejores del barrio.</p></body></html>`;
   const MENU_ACCENT = "#2266aa";
-  const MENU_HTML = `<!doctype html><html style="--ol-accent: ${MENU_ACCENT}"><head><title>Menú</title><meta name="description" content="Menú"></head><body><h1 data-x="k">Menú</h1><p>Estas son nuestras opciones.</p></body></html>`;
+  const MENU_HTML = `<!doctype html><html style="--ol-accent: ${MENU_ACCENT}"><head><title>Menú</title><meta name="description" content="Menú"><style>a{color:var(--ol-accent)}body{background:var(--ol-bg)}</style></head><body><h1 data-x="k">Menú</h1><p>Estas son nuestras opciones.</p></body></html>`;
   const DATA_MP: ProjectData = {
     html: HOME_HTML,
     pages: { menu: { html: MENU_HTML, title: "Menú" } },
@@ -1290,7 +1400,7 @@ describe("W1 regression pins (multi-página)", () => {
   it("PIN: session.page='menu' → editar_pagina escribe SOLO pages.menu.html; data.html byte-intacto", async () => {
     const { deps, store } = makeDeps({ data: DATA_MP });
     const session = makeSession({ page: "menu", html: MENU_HTML });
-    const target = firstOpId(session.taggedHtml);
+    const target = contentOpId(session.taggedHtml);
     await runAgentTool(session, deps, "editar_pagina", {
       edits: [{ op: "replace", target, new_html: "<h1>Tacos al pastor</h1>" }],
       resumen: "titular menú",
@@ -1302,7 +1412,7 @@ describe("W1 regression pins (multi-página)", () => {
   it("PIN: session.page=null → escribe SOLO data.html; pages byte-intactas", async () => {
     const { deps, store } = makeDeps({ data: DATA_MP });
     const session = makeSession({ page: null, html: HOME_HTML });
-    const target = firstOpId(session.taggedHtml);
+    const target = contentOpId(session.taggedHtml);
     await runAgentTool(session, deps, "editar_pagina", {
       edits: [{ op: "replace", target, new_html: "<h1>Bienvenidos</h1>" }],
       resumen: "titular home",
@@ -1319,7 +1429,7 @@ describe("W1 regression pins (multi-página)", () => {
     };
     const { deps, store } = makeDeps({ data: dataMulti });
     const session = makeSession({ page: "menu", html: MENU_HTML });
-    const target = firstOpId(session.taggedHtml);
+    const target = contentOpId(session.taggedHtml);
     await runAgentTool(session, deps, "editar_pagina", {
       edits: [{ op: "replace", target, new_html: "<h1>Tacos al pastor</h1>" }],
       resumen: "titular menú",
@@ -1332,7 +1442,7 @@ describe("W1 regression pins (multi-página)", () => {
   it("PIN: snapshots llevan page=session.page (pre y post)", async () => {
     const { deps, store } = makeDeps({ data: DATA_MP });
     const session = makeSession({ page: "menu", html: MENU_HTML });
-    const target = firstOpId(session.taggedHtml);
+    const target = contentOpId(session.taggedHtml);
     await runAgentTool(session, deps, "editar_pagina", {
       edits: [{ op: "replace", target, new_html: "<h1>Nuevo titular</h1>" }],
       resumen: "x",
@@ -1499,7 +1609,7 @@ describe("trabajar_en_pagina", () => {
     const session = makeSession({ page: null, html: HOME_HTML });
     const switched = await runAgentTool(session, deps, "trabajar_en_pagina", { pagina: "menu" });
     assert.equal(switched.response.ok, true);
-    const target = firstOpId(session.taggedHtml);
+    const target = contentOpId(session.taggedHtml);
     const edited = await runAgentTool(session, deps, "editar_pagina", {
       edits: [{ op: "replace", target, new_html: "<h1>Tacos al pastor</h1>" }],
       resumen: "titular menú",

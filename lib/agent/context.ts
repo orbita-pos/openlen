@@ -77,6 +77,42 @@ ${cambios.slice(0, MAX_CAMBIOS).map(linea).join("\n")}
 `;
 }
 
+/** Una pérdida ya registrada en la fila del proyecto. Forma mínima a
+ *  propósito: esto se formatea, no se interpreta. */
+export interface DegradacionConocida {
+  code: string;
+  detail?: readonly string[];
+}
+
+/** Cuántas se le enseñan. Ocho es lo que ya usa el Chat; más es una lista que
+ *  el modelo hojea en vez de leer. */
+const MAX_DEGRADACIONES = 8;
+
+/**
+ * LO QUE LA PÁGINA YA PERDIÓ, y el Agente no sabía.
+ *
+ * El diagnóstico existía completo —el atributo, la fórmula literal, qué falta y
+ * qué hacer— y se guardaba en `data.degradations[].detail`. El Chat ya lo
+ * recibe (`KNOWN ISSUES ON THIS PAGE`); el Agente no lo veía por ningún lado.
+ * Así que quien escribía «los botones no funcionan» arrancaba una conversación
+ * a ciegas sobre un fallo que el sistema tenía diagnosticado por escrito.
+ *
+ * Sólo viajan las que traen `detail`: un código a secas («scripts, 12») no le
+ * dice al modelo qué tocar, y ya se le cuenta al usuario por otra vía.
+ */
+export function degradacionesBlock(
+  degradaciones: readonly DegradacionConocida[],
+): string {
+  const lineas = degradaciones
+    .flatMap((d) => (d.detail ?? []).map((t) => `- [${d.code}] ${t}`))
+    .slice(0, MAX_DEGRADACIONES);
+  if (lineas.length === 0) return "";
+  return `LO QUE YA SE SABE ROTO EN ESTA PÁGINA (lo registró la ingestión; el usuario puede estar describiéndotelo con otras palabras):
+${lineas.join("\n")}
+
+`;
+}
+
 export function buildAgentContext(args: {
   /** Inyectable sólo para las pruebas: sin esto el bloque HOY cambiaría cada
    *  día y ninguna prueba podría fijarlo. */
@@ -101,6 +137,9 @@ export function buildAgentContext(args: {
   /** Los cambios que ya se guardaron (projectVersions). Ausente/vacío ⇒ salida
    *  byte-idéntica. */
   cambios?: readonly CambioHecho[];
+  /** Lo que la ingestión registró como perdido (`data.degradations`).
+   *  Ausente/vacío ⇒ salida byte-idéntica. */
+  degradaciones?: readonly DegradacionConocida[];
   /** Cuántos turnos de la conversación ve, de cuántos hay. Ausente o iguales ⇒
    *  no se dice nada. */
   conversacionRecortada?: { visibles: number; totales: number } | null;
@@ -194,7 +233,10 @@ export function buildAgentContext(args: {
 
 `
     : "";
-  return `${mudoBlock}${recorteBlock}${memoriaBlock}${hoy}ESTADO DEL PROYECTO (real, leído del servidor ahora mismo):\n${JSON.stringify(stateForPrompt, null, 2)}\n\n${briefBlock}${focusBlock}${imageBlock}${docHeader}\n\n${args.taggedHtml}${args.catalogo ?? ""}${changelogBlock(args.cambios ?? [])}${currentRuntimePromptBlock(args.runtime ?? "", "tool")}`;
+  // Antes del ESTADO: es lo que hay que tener en la cabeza al leer lo demás, y
+  // la petición del usuario suele ser justo esto contado con otras palabras.
+  const rotoBlock = degradacionesBlock(args.degradaciones ?? []);
+  return `${mudoBlock}${recorteBlock}${memoriaBlock}${rotoBlock}${hoy}ESTADO DEL PROYECTO (real, leído del servidor ahora mismo):\n${JSON.stringify(stateForPrompt, null, 2)}\n\n${briefBlock}${focusBlock}${imageBlock}${docHeader}\n\n${args.taggedHtml}${args.catalogo ?? ""}${changelogBlock(args.cambios ?? [])}${currentRuntimePromptBlock(args.runtime ?? "", "tool")}`;
 }
 
 /** Rough chars→tokens estimate (~3.5 chars/token on tag-dense HTML + JSON),
@@ -219,6 +261,8 @@ export interface BuildAgentMessagesArgs {
   userMemory?: string | null;
   /** Ver buildAgentContext.cambios. */
   cambios?: readonly CambioHecho[];
+  /** Ver buildAgentContext.degradaciones. */
+  degradaciones?: readonly DegradacionConocida[];
   /** Ver buildAgentContext.conversacionRecortada. */
   conversacionRecortada?: { visibles: number; totales: number } | null;
   userBrief: string | null;
@@ -259,6 +303,7 @@ export function buildAgentMessages(args: BuildAgentMessagesArgs): BuildAgentMess
     turnoAnteriorMudo: args.turnoAnteriorMudo,
     userMemory: args.userMemory,
     cambios: args.cambios,
+    degradaciones: args.degradaciones,
     conversacionRecortada: args.conversacionRecortada,
     attachedImage: args.attachedImage,
     scopePin: args.scopePin,

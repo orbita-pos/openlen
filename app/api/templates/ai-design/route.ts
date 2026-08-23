@@ -19,9 +19,18 @@ import {
   splitRuntimeOps,
   runtimeOpAviso,
 } from "@/lib/ai-stream/model-runtime";
+import {
+  applyHeadOp,
+  applyLangOp,
+  applyStylesOp,
+  documentOpAviso,
+  splitDocumentOps,
+  splitLangOp,
+} from "@/lib/ai-stream/document-ops";
 import { verifyCapsule } from "@/lib/projects/model-runtime";
 import { buildBusinessFacts } from "@/lib/business-profiles/facts";
 import { collectionCatalogBlock } from "@/lib/collections/catalog-block";
+import { documentOpsEnabled } from "@/lib/publish/kill-switches";
 import { listPublishedItems } from "@/lib/collections/store";
 import { projectBusinessProfile } from "@/lib/business-profiles/whatsapp-default";
 import { resolveAIProvider, type AIModel } from "@/lib/ai-provider";
@@ -160,7 +169,17 @@ ${args.scopedView.scopedHtml}
 DOCUMENT OUTLINE (all top-level sections of the page, in source order):
 ${args.scopedView.outline}`;
   } else {
-    documentBlock = `CURRENT DOCUMENT (every EDITABLE element has a server-injected \`data-op-id\` attribute — use those values in Mode A's <edit target="..."> calls; <head>, <style> and <script> carry none and need Mode B):
+    documentBlock = !documentOpsEnabled()
+      ? `CURRENT DOCUMENT (every EDITABLE element has a server-injected \`data-op-id\` attribute — use those values in Mode A's <edit target="..."> calls; <head>, <style> and <script> carry none and need Mode B):
+
+${args.taggedHtml}`
+      : `CURRENT DOCUMENT (every EDITABLE element has a server-injected \`data-op-id\` attribute — use those values in Mode A's <edit target="..."> calls).
+
+THREE RESERVED TARGETS that are NOT data-op-id values — \`<head>\`, \`<style>\` and \`<script>\` carry no id, and these reach them WITHOUT a full rewrite:
+  · \`<edit target="styles" op="insert_after">\` — appends CSS rules to YOUR OWN style block, which sits last in <head>, so at equal specificity your rules win over the template's. This is how you change typography, colour or spacing on a page whose CSS does not use \`var(--ol-*)\` tokens. Use \`op="replace"\` to rewrite only what you previously added; the template's own CSS is never touched.
+  · \`<edit target="head" op="insert_after">\` — adds a Google Fonts stylesheet \`<link>\`. Naming a font in CSS does NOT load it: without this link the browser falls back to a generic serif. Nothing else may be added here.
+  · \`<edit target="runtime" op="replace">\` — the page's JavaScript, as described below.
+A one-line CSS change is an \`edit\`, never a reason to rewrite the whole document. Rewriting is Mode B and every rewrite is a chance to lose something the user never asked you to touch.
 
 ${args.taggedHtml}`;
   }
@@ -819,6 +838,9 @@ VISUAL CONTEXT: the attached image is a full-page render of the CURRENT page (wh
         /** Aviso al USUARIO cuando ese script se descartó. Separado de
          *  `droppedNotice` porque los dos pueden pasar en el mismo turno. */
         let runtimeNotice = "";
+        /** Lo mismo para el CSS y la hoja de fuentes: tres cosas distintas
+         *  pueden caerse en el mismo turno y el usuario merece las tres. */
+        let documentNotice = "";
         let outputMode: "ops" | "rewrite";
 
         if (isOpsMode) {
@@ -845,7 +867,12 @@ VISUAL CONTEXT: the attached image is a full-page render of the CURRENT page (wh
           // sabrían qué hacer con él, y tampoco debe gastar cupo de ops de
           // maquetación. Ver `splitRuntimeOps` para por qué existe.
           const partido = splitRuntimeOps(opsEmitidas);
-          const ops = partido.domOps;
+          // El CSS y el <head> se apartan por lo mismo y en el mismo sitio:
+          // `SKIP_TAGS` los deja sin `data-op-id`, así que el aplicador no
+          // sabría a qué apuntan. Ver lib/ai-stream/document-ops.ts.
+          const documento = splitDocumentOps(partido.domOps);
+          const idioma = splitLangOp(documento.domOps);
+          const ops = idioma.domOps;
           if (partido.runtime.kind === "codigo") {
             runtimeDesdeOps = partido.runtime.code;
           } else if (partido.runtime.kind === "error") {
@@ -853,11 +880,19 @@ VISUAL CONTEXT: the attached image is a full-page render of the CURRENT page (wh
             // eslint-disable-next-line no-console
             console.warn(`[ai-design] op de runtime descartada: ${partido.runtime.reason}`);
           }
+          for (const [cual, res] of [["styles", documento.styles], ["head", documento.head]] as const) {
+            if (res.kind !== "error") continue;
+            documentNotice = [documentNotice, documentOpAviso(cual, res.reason)].filter(Boolean).join("\n\n");
+            // eslint-disable-next-line no-console
+            console.warn(`[ai-design] op de ${cual} descartada: ${res.reason}`);
+          }
+          const tocaDocumento =
+            documento.styles.kind === "css" || documento.head.kind === "nodos" || idioma.lang.kind === "idioma";
 
-          // Un turno que SÓLO cambia comportamiento es legítimo — de hecho es
-          // el caso corriente de un arreglo de bug — y no lleva ni una op de
-          // maquetación. Antes caía en la rama de "ops vacías" y se rechazaba.
-          if (ops.length === 0 && runtimeDesdeOps !== null) {
+          // Un turno que SÓLO cambia comportamiento o SÓLO estilo es legítimo
+          // —de hecho «cámbiame la tipografía» es exactamente eso— y no lleva
+          // ni una op de maquetación. Antes caía en "ops vacías" y se rechazaba.
+          if (ops.length === 0 && (runtimeDesdeOps !== null || tocaDocumento)) {
             trimmedHtml = taggedHtml;
           } else if (ops.length === 0) {
             // Sin ops de maquetación y sin script válido no queda nada que
@@ -865,7 +900,7 @@ VISUAL CONTEXT: the attached image is a full-page render of the CURRENT page (wh
             // el mensaje genérico de "ops vacías" le escondería la causa.
             emit("error", {
               message:
-                runtimeNotice ||
+                [runtimeNotice, documentNotice].filter(Boolean).join("\n\n") ||
                 "Empty <edits> block — the model didn't emit any operations. Try again.",
             });
             closeStream();
@@ -917,6 +952,13 @@ VISUAL CONTEXT: the attached image is a full-page render of the CURRENT page (wh
           trimmedHtml = applyResult.html;
           appliedOpCount = applyResult.appliedCount;
           }
+          // Después de las ops del DOM, sobre el documento que de verdad sale:
+          // el bloque del modelo tiene que quedar el último del <head> para que
+          // a igual especificidad sus reglas ganen a las de la plantilla.
+          trimmedHtml = applyLangOp(
+            applyHeadOp(applyStylesOp(trimmedHtml, documento.styles), documento.head),
+            idioma.lang,
+          );
           if (detectSlotPath(trimmedHtml)) {
             emit("error", {
               message:
@@ -1161,7 +1203,7 @@ VISUAL CONTEXT: the attached image is a full-page render of the CURRENT page (wh
 
         // Guardar-y-AVISAR: si se descartó algo, el usuario tiene que leerlo.
         // Un cambio que se pierde en silencio es peor que uno que no se hizo.
-        const avisos = [droppedNotice, runtimeNotice].filter(Boolean).join("\n\n");
+        const avisos = [droppedNotice, runtimeNotice, documentNotice].filter(Boolean).join("\n\n");
         emit("done", {
           reasoning: avisos ? `${reasoning}
 

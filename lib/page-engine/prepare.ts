@@ -1,6 +1,7 @@
 import "server-only";
 
 import { renderVisualQualityViewports } from "@/lib/ai/visual-quality-renderer";
+import { injectModelRuntime } from "@/lib/ai-stream/model-runtime";
 import { stampFormIds } from "@/lib/publish/form-identity";
 import { seedBrandIntoHtml } from "@/lib/business-profiles/seed-html";
 import { bindColorsToTokens } from "@/lib/document/bind-colors-to-tokens";
@@ -110,7 +111,11 @@ export async function preparePage(
   if (!renderChecks) {
     stages.push({ stage: "measure", status: "skipped", detail: "no_render" });
   } else try {
-    breakage = objectiveBreakage(await render(current));
+    // CON su JavaScript. Esta etapa no devuelve documento, así que el injerto
+    // no puede escaparse a `current` — y sin él se mide una maqueta que nadie
+    // recibe, ciega además al script que muere en el arranque.
+    const codigo = opts.runtime?.trim();
+    breakage = objectiveBreakage(await render(codigo ? injectModelRuntime(current, codigo) : current));
     stages.push({ stage: "measure", status: breakage.length ? "changed" : "skipped", detail: breakage.join(" · ") || undefined });
   } catch (err) {
     // No haber medido no es prueba de que no haya rotura, y por eso se anota

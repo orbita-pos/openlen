@@ -148,3 +148,110 @@ test("veredicto malformado → fallback", async () => {
   });
   assert.equal(v.fallback, true);
 });
+
+// ── lo que el navegador GRITA ───────────────────────────────────────────────
+// La captura de una pagina cuyo JavaScript murio pesa EXACTAMENTE lo mismo que
+// la de una sana (medido con tres paginas: 12908 bytes las tres). Asi que este
+// hecho no puede pasar por el juicio del critico visual — el ojo no lo ve.
+
+test("un grito del navegador rompe el veredicto aunque el critico diga que esta bien", async () => {
+  const v = await verifyEditedPage(PARAMS, {
+    render: async (_html, opts?: { onErrors?: (e: readonly string[]) => void }) => {
+      opts?.onErrors?.(["TypeError: Cannot read properties of undefined"]);
+      return IMAGE;
+    },
+    provider: providerReturning('{"broken":false,"issues":[]}'),
+  });
+  assert.equal(v.broken, true);
+  // Va PRIMERO: es lo mas accionable que el turno puede darle al modelo.
+  assert.match(v.issues[0]!, /Cannot read properties of undefined/);
+});
+
+test("la frase no promete «al cargar» — tambien se pulsan los controles", async () => {
+  const v = await verifyEditedPage(PARAMS, {
+    render: async (_html, opts?: { onErrors?: (e: readonly string[]) => void }) => {
+      opts?.onErrors?.(["boom"]);
+      return IMAGE;
+    },
+    provider: providerReturning('{"broken":false,"issues":[]}'),
+  });
+  // Decir «al cargar» sobre un fallo que aparece al pulsar manda al modelo a
+  // buscar el bug al sitio equivocado.
+  assert.match(v.issues[0]!, /al cargarla o al usar sus controles/);
+});
+
+// ── EL TEXTO QUE NADIE PUEDE LEER ───────────────────────────────────────────
+// MEDIDO el 2026-08-22: a «pon el boton de acento en #f5e050 con el texto en
+// blanco» el Agente obedece y entrega 1.34:1. El usuario pidio los colores, asi
+// que cambiar_tema (que camina el contraste hasta cumplir WCAG) ni entra. Por
+// el camino determinista el peor de 12 fue 4.88:1; a mano, la mitad quedo bajo
+// 4.5. El detector ya existia y ya lo cazaba — solo no llegaba al Agente.
+
+test("un texto ilegible rompe el veredicto aunque el critico lo vea bonito", async () => {
+  const v = await verifyEditedPage(PARAMS, {
+    render: async () => IMAGE,
+    medir: async () => ({ unreadableText: [{ contrast: 1.34 }] }),
+    provider: providerReturning('{"broken":false,"issues":[]}'),
+  });
+  assert.equal(v.broken, true);
+  assert.match(v.issues[0]!, /1\.34:1/);
+  // Y el caso REAL: si el usuario pidio esos colores, decirselo en vez de
+  // pisarlo en silencio.
+  assert.match(v.issues[0]!, /si el usuario pidió ESOS colores/);
+});
+
+test("un contraste sano no dice nada", async () => {
+  const v = await verifyEditedPage(PARAMS, {
+    render: async () => IMAGE,
+    medir: async () => ({ unreadableText: [] }),
+    provider: providerReturning('{"broken":false,"issues":[]}'),
+  });
+  assert.equal(v.broken, false);
+});
+
+// Fail-open, como TODO en este archivo: el medidor solo puede mejorar un turno.
+test("si el medidor revienta, el turno sigue igual", async () => {
+  const v = await verifyEditedPage(PARAMS, {
+    render: async () => IMAGE,
+    medir: async () => { throw new Error("chrome murio"); },
+    provider: providerReturning('{"broken":true,"issues":["texto encimado"]}'),
+  });
+  assert.equal(v.broken, true);
+  assert.deepEqual(v.issues, ["texto encimado"]);
+});
+
+test("sin gritos, el veredicto del critico manda", async () => {
+  const v = await verifyEditedPage(PARAMS, {
+    render: async () => IMAGE,
+    medir: async () => ({ unreadableText: [] }),
+    provider: providerReturning('{"broken":false,"issues":[]}'),
+  });
+  assert.equal(v.broken, false);
+  assert.deepEqual(v.issues, []);
+});
+
+// El desborde a lo ancho en movil: el otro hecho que el ojo del critico no
+// puede juzgar. La captura se toma del documento COMPLETO, asi que una pagina
+// que se sale 48px sale entera y bien compuesta en la foto — y en el telefono
+// del dueno hay una barra horizontal y texto cortado.
+test("el desborde en movil rompe el veredicto aunque la foto salga bien", async () => {
+  const v = await verifyEditedPage(PARAMS, {
+    render: async () => IMAGE,
+    medir: async () => ({ mobileOverflow: true, unreadableText: [] }),
+    provider: providerReturning('{"broken":false,"issues":[]}'),
+  });
+  assert.equal(v.broken, true);
+  assert.match(v.issues[0]!, /se desborda a lo ancho en el teléfono/);
+  // Y le dice DONDE mirar: la causa medida fue un width:100% con margenes
+  // heredados que suman por fuera.
+  assert.match(v.issues[0]!, /márgenes heredados/);
+});
+
+test("sin desborde no dice nada", async () => {
+  const v = await verifyEditedPage(PARAMS, {
+    render: async () => IMAGE,
+    medir: async () => ({ mobileOverflow: false, unreadableText: [] }),
+    provider: providerReturning('{"broken":false,"issues":[]}'),
+  });
+  assert.equal(v.broken, false);
+});

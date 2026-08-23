@@ -15,6 +15,7 @@ import path from "node:path";
 import { legacyWebp2000Variant, processImage } from "@/lib/images";
 import { validateSubdomain } from "@/lib/subdomain/validate";
 import { sanitizeForPublish, sealRelease } from "@/lib/html-engine";
+import { injectModelRuntime } from "@/lib/ai-stream/model-runtime";
 import { optimizeHtmlForProduction } from "@/lib/publish/optimize-html";
 import { bakeResponsiveImages } from "@/lib/publish/image-bake";
 import { bakeGoogleFonts } from "@/lib/publish/font-bake";
@@ -1015,28 +1016,6 @@ export interface PublishResult {
  * Either the new release is current, or the previous one still is. Never an
  * in-between (symlink swap via rename(2) is atomic on POSIX).
  */
-/**
- * Mete el script del modelo al final del `<body>`.
- *
- * Al FINAL y no en el `<head>` porque el contrato que se le dio al modelo dice
- * que la página tiene que estar completa sin él: un script que corre antes de
- * que exista el DOM que va a tocar no mejora nada, falla.
- *
- * El marcador `data-openlen-model-runtime` NO viaja al documento publicado. En
- * el HTML servido no confiere autoridad a nadie —la autoridad la dio la cápsula
- * y la CSP la fija por hash— y dejarlo puesto sólo serviría para que alguien lo
- * copiara creyendo que significa algo.
- *
- * Sin `</body>` se pega al final. Un documento así ya pasó por el normalizador,
- * de modo que es un caso que no debería existir; perder el runtime en silencio
- * sería peor que ponerlo donde el navegador lo va a leer igual.
- */
-function injectModelRuntime(html: string, code: string): string {
-  const tag = `<script>${code}</script>`;
-  const i = html.toLowerCase().lastIndexOf("</body>");
-  return i === -1 ? html + tag : html.slice(0, i) + tag + html.slice(i);
-}
-
 /**
  * Sella un documento y APUNTA el que sale sin política.
  *

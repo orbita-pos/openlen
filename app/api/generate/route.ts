@@ -449,10 +449,14 @@ ${briefBlock}`;
         // queda aquí es la decisión de regenerar, porque exige volver a llamar
         // al modelo y eso es presupuesto del usuario.
         const title = extractTitle(first.html) ?? brief.slice(0, 60).trim();
-        const engine = (candidate: string) =>
-          preparePage(candidate, { mode: "create", brief, title, profile: business.data });
+        // El runtime viaja con SU pasada, igual que arriba: el candidato que se
+        // mide tiene que llevar el script que ESE candidato escribió. Sin él la
+        // medición era ciega al modo de fallo que ninguna captura enseña — un
+        // script que muere en el arranque deja una foto perfecta.
+        const engine = (candidate: string, runtime: string | null) =>
+          preparePage(candidate, { mode: "create", brief, title, profile: business.data, runtime });
 
-        let prepared = await engine(first.html);
+        let prepared = await engine(first.html, first.modelRuntime);
         if (!prepared.ok) {
           // eslint-disable-next-line no-console
           console.error(`[generate] gate refused (${prepared.code}) — not saving`);
@@ -494,7 +498,7 @@ ${briefBlock}`,
           ];
           const fixed = await runPass(fixMessages, "regen");
           if (fixed.ok) {
-            const second = await engine(fixed.html);
+            const second = await engine(fixed.html, fixed.modelRuntime ?? null);
             // La segunda puede salir peor que la primera: se entrega la que
             // menos rota esté, no la más reciente. Y se juzga por el TOTAL, no
             // sólo por el desborde — si arregla el render y rompe tres
@@ -601,7 +605,7 @@ ${briefBlock}`,
             ];
             const regen = await runPass(regenMessages, "regen");
             if (regen.ok) {
-              const third = await engine(regen.html);
+              const third = await engine(regen.html, regen.modelRuntime ?? null);
               if (third.ok) {
                 prepared = third;
                 html = third.html;
