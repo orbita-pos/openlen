@@ -76,7 +76,12 @@ export interface VerifyInternals {
   render?: (html: string) => Promise<InlineImage | null>;
   /** El medidor DETERMINISTA de contraste. Se inyecta aparte del render de la
    *  foto porque son dos navegadores distintos y sólo uno sabe medir. */
-  medir?: (html: string) => Promise<{ unreadableText?: readonly { contrast: number }[] } | null>;
+  medir?: (
+    html: string,
+  ) => Promise<{
+    unreadableText?: readonly { contrast: number }[];
+    mobileOverflow?: boolean;
+  } | null>;
   /** Override del deadline — solo tests. */
   timeoutMs?: number;
 }
@@ -237,7 +242,9 @@ async function runVerify(
     logFallback("render failed — no screenshot");
     return fallbackVerdict();
   }
-  const contrastes = (await medicion)?.unreadableText ?? [];
+  const medido = await medicion;
+  const contrastes = medido?.unreadableText ?? [];
+  const desbordaMovil = medido?.mobileOverflow === true;
   if (signal.aborted) return fallbackVerdict();
 
   const apiKey = params.apiKey ?? process.env.GEMINI_API_KEY;
@@ -328,6 +335,27 @@ async function runVerify(
   // sabían si la página explotaba; ahora saben si CUMPLE.
   if (fallosSpec.length > 0) {
     verdict.issues = [avisoSpec(fallosSpec), ...verdict.issues];
+    verdict.broken = true;
+  }
+  // SE DESBORDA A LO ANCHO EN EL TELEFONO. Es el otro hecho que el ojo del
+  // critico no puede juzgar: la captura se toma del documento COMPLETO, asi que
+  // una pagina que se sale 48px de la pantalla sale entera y bien compuesta en
+  // la foto — y en el telefono del dueno hay una barra horizontal y texto
+  // cortado.
+  //
+  // MEDIDO el 2026-08-22 con los ataques de QA, y es el caso mas doloroso: el
+  // usuario dice «en mi telefono se corta la tabla», el modelo aplica una
+  // transformacion a tarjetas CORRECTA, se le olvida limpiar un `margin:16px
+  // 24px` heredado dentro del media query, y entrega 100%+48px. Dijo «listo».
+  //
+  // La medicion ya estaba en la misma respuesta del render que el contraste;
+  // solo no se miraba. La edicion del Agente corre con renderChecks:false —un
+  // turno no puede pagar un arranque de Chrome— pero los ojos YA lo arrancaron.
+  if (desbordaMovil) {
+    verdict.issues = [
+      "La página se desborda a lo ancho en el teléfono (390px): algo se sale de la pantalla y el visitante ve una barra horizontal con contenido cortado. Suele ser un ancho fijo, un `width:100%` con márgenes heredados que suman por fuera, o contenido que no puede partirse. Arréglalo con editar_pagina.",
+      ...verdict.issues,
+    ];
     verdict.broken = true;
   }
   if (contrastes.length > 0) {

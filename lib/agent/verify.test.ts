@@ -229,3 +229,29 @@ test("sin gritos, el veredicto del critico manda", async () => {
   assert.equal(v.broken, false);
   assert.deepEqual(v.issues, []);
 });
+
+// El desborde a lo ancho en movil: el otro hecho que el ojo del critico no
+// puede juzgar. La captura se toma del documento COMPLETO, asi que una pagina
+// que se sale 48px sale entera y bien compuesta en la foto — y en el telefono
+// del dueno hay una barra horizontal y texto cortado.
+test("el desborde en movil rompe el veredicto aunque la foto salga bien", async () => {
+  const v = await verifyEditedPage(PARAMS, {
+    render: async () => IMAGE,
+    medir: async () => ({ mobileOverflow: true, unreadableText: [] }),
+    provider: providerReturning('{"broken":false,"issues":[]}'),
+  });
+  assert.equal(v.broken, true);
+  assert.match(v.issues[0]!, /se desborda a lo ancho en el teléfono/);
+  // Y le dice DONDE mirar: la causa medida fue un width:100% con margenes
+  // heredados que suman por fuera.
+  assert.match(v.issues[0]!, /márgenes heredados/);
+});
+
+test("sin desborde no dice nada", async () => {
+  const v = await verifyEditedPage(PARAMS, {
+    render: async () => IMAGE,
+    medir: async () => ({ mobileOverflow: false, unreadableText: [] }),
+    provider: providerReturning('{"broken":false,"issues":[]}'),
+  });
+  assert.equal(v.broken, false);
+});
