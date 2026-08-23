@@ -81,6 +81,8 @@ export interface VerifyInternals {
   ) => Promise<{
     unreadableText?: readonly { contrast: number }[];
     mobileOverflow?: boolean;
+    overflowCulprit?: string;
+    overflowCulpritRight?: number;
   } | null>;
   /** Override del deadline — solo tests. */
   timeoutMs?: number;
@@ -245,6 +247,8 @@ async function runVerify(
   const medido = await medicion;
   const contrastes = medido?.unreadableText ?? [];
   const desbordaMovil = medido?.mobileOverflow === true;
+  const culpable = medido?.overflowCulprit ?? "";
+  const culpableAncho = medido?.overflowCulpritRight ?? 0;
   if (signal.aborted) return fallbackVerdict();
 
   const apiKey = params.apiKey ?? process.env.GEMINI_API_KEY;
@@ -353,7 +357,9 @@ async function runVerify(
   // turno no puede pagar un arranque de Chrome— pero los ojos YA lo arrancaron.
   if (desbordaMovil) {
     verdict.issues = [
-      "La página se desborda a lo ancho en el teléfono (390px): algo se sale de la pantalla y el visitante ve una barra horizontal con contenido cortado. Suele ser un ancho fijo, un `width:100%` con márgenes heredados que suman por fuera, o contenido que no puede partirse. Arréglalo con editar_pagina.",
+      culpable
+        ? `La página se desborda a lo ancho en el teléfono (390px): \`${culpable}\` llega hasta ${culpableAncho}px, o sea ${culpableAncho - 390}px fuera de la pantalla. El visitante ve una barra horizontal con contenido cortado. Mira ese elemento y su regla: lo más común es un \`width:100%\` cuyo \`margin\` heredado suma POR FUERA, un ancho fijo en px, o contenido que no puede partirse. Si es una tabla ancha, la solución correcta es envolverla en un contenedor con \`overflow-x:auto\` — NUNCA \`overflow:hidden\`, que recorta en vez de arreglar. Arréglalo con editar_pagina.`
+        : "La página se desborda a lo ancho en el teléfono (390px): algo se sale de la pantalla y el visitante ve una barra horizontal con contenido cortado. Suele ser un ancho fijo, un `width:100%` con márgenes heredados que suman por fuera, o contenido que no puede partirse. Arréglalo con editar_pagina.",
       ...verdict.issues,
     ];
     verdict.broken = true;

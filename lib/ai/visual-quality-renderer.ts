@@ -41,6 +41,11 @@ export interface VisualQualityViewports {
   squareComponentTreatment?: boolean;
   invalidGeometry?: boolean;
   unreadableText?: readonly UnreadableTextFinding[];
+  /** El elemento MÁS PROFUNDO que se sale de la pantalla en móvil, y hasta
+   *  dónde llega. Vacío cuando no hay desborde o no se pudo identificar.
+   *  Ver la sonda: nombrar al ancestro manda a mirar donde no está la causa. */
+  overflowCulprit?: string;
+  overflowCulpritRight?: number;
   /** LO QUE LA PÁGINA GRITÓ AL CARGAR — excepciones no capturadas y errores de
    *  consola, deduplicados.
    *
@@ -249,6 +254,8 @@ async function captureWithPage(
   let squareComponentTreatment = false;
   let invalidGeometry = false;
   let unreadableText: UnreadableTextFinding[] = [];
+  let overflowCulprit = "";
+  let overflowCulpritRight = 0;
   for (const viewport of [VISUAL_QUALITY_DESKTOP_VIEWPORT, VISUAL_QUALITY_MOBILE_VIEWPORT]) {
     if (viewport !== VISUAL_QUALITY_DESKTOP_VIEWPORT) await page.setViewport(viewport);
     const documentHeight = await awaitDeterministicLayout(page);
@@ -445,10 +452,47 @@ async function captureWithPage(
             unreadableText.push({ probe, background, contrast: Math.round(contrast * 100) / 100 });
           }
 
+          // QUIÉN se sale. Decir «la página se desborda» es una categoría, y
+          // este repo ya midió lo que pasa con las categorías: al reparador se
+          // le mandaba la palabra "typography" y no tocaba nada, porque una
+          // categoría no dice QUÉ cambiar. Aquí igual — MEDIDO el 2026-08-22:
+          // con el aviso genérico el modelo arreglaba el desborde 1 de 3 veces.
+          //
+          // Se busca el elemento MÁS PROFUNDO que se sale: un ancestro se
+          // desborda porque su hijo lo hace, y nombrar al ancestro manda a
+          // mirar donde no está la causa.
+          const ancho = Math.max(window.innerWidth, root.clientWidth);
+          let culpable = "";
+          let culpableAncho = 0;
+          let culpableProfundidad = -1;
+          for (const nodo of body ? body.querySelectorAll("*") : []) {
+            if (!(nodo instanceof HTMLElement)) continue;
+            const r = nodo.getBoundingClientRect();
+            if (r.width <= 0 || r.right <= ancho + 1) continue;
+            const st = window.getComputedStyle(nodo);
+            if (st.display === "none" || st.visibility === "hidden") continue;
+            // Un contenedor que YA scrollea por dentro no es el problema: es la
+            // solución correcta para una tabla ancha.
+            if (st.overflowX === "auto" || st.overflowX === "scroll") continue;
+            let prof = 0;
+            for (let a: HTMLElement | null = nodo; a; a = a.parentElement) prof += 1;
+            if (prof > culpableProfundidad) {
+              culpableProfundidad = prof;
+              culpableAncho = Math.round(r.right);
+              const id = nodo.id ? `#${nodo.id}` : "";
+              const cls = nodo.className && typeof nodo.className === "string"
+                ? `.${nodo.className.trim().split(/\s+/).slice(0, 2).join(".")}`
+                : "";
+              culpable = `${nodo.tagName.toLowerCase()}${id}${cls}`;
+            }
+          }
+
           return {
             rootScrollWidth: root.scrollWidth,
             bodyScrollWidth: body?.scrollWidth ?? 0,
             clientWidth: Math.max(window.innerWidth, root.clientWidth),
+            overflowCulprit: culpable,
+            overflowCulpritRight: culpableAncho,
             h1FontPx,
             h1Count,
             heroBodyFontPx,
@@ -465,6 +509,9 @@ async function captureWithPage(
         || hasDocumentHorizontalOverflow(secondGeometry);
       ({ weakTypographyHierarchy, typographyHierarchy, squareComponentTreatment } = readVisualDiagnostics(firstGeometry));
       unreadableText = readUnreadableText(firstGeometry);
+      const g = firstGeometry as Record<string, unknown> | null;
+      overflowCulprit = typeof g?.overflowCulprit === "string" ? g.overflowCulprit : "";
+      overflowCulpritRight = typeof g?.overflowCulpritRight === "number" ? g.overflowCulpritRight : 0;
     }
     const bytes = Buffer.from(await page.screenshot({
       type: "jpeg",
@@ -485,6 +532,7 @@ async function captureWithPage(
     squareComponentTreatment,
     invalidGeometry,
     unreadableText,
+    ...(overflowCulprit ? { overflowCulprit, overflowCulpritRight } : {}),
     // Ausente —no vacío— cuando la página no gritó: así el resto del objeto
     // queda idéntico al de antes de que esto existiera.
     ...(gritos.length > 0 ? { runtimeErrors: [...new Set(gritos)] } : {}),
