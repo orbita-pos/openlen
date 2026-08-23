@@ -49,6 +49,8 @@ import {
   type ScopedView,
 } from "@/lib/html-ops";
 import { preparePage } from "@/lib/page-engine/prepare";
+import { extractModelPrueba, extractPruebaFromEdits, modelPruebaPromptBlock } from "@/lib/ai-stream/model-prueba";
+import { avisoSpec, type PasoSpec } from "@/lib/agent/behavior-spec";
 import { jsonResponse, sseChannel } from "@/lib/ai/sse";
 import { extractDocument } from "@/lib/ai/extract-document";
 import { writerForTurn } from "@/lib/ai/provider-switch";
@@ -441,8 +443,11 @@ export async function POST(req: Request): Promise<Response> {
   //
   // Sólo el documento raíz — la cápsula ata `data.html`, y una subpágina no
   // entra en el piloto.
-  const runtimeBlock = (() => {
-    if (!modelJsEnabled(process.env) || pageSlug) return "";
+  /** El JavaScript que la página YA tiene, verificado. Se usa dos veces: para
+   *  enseñárselo al modelo y para MEDIR — un render sin él mide una página que
+   *  nadie recibe, y una prueba de comportamiento sin él falla siempre. */
+  const runtimeExistente = (() => {
+    if (!modelJsEnabled(process.env) || pageSlug) return null;
     const check = verifyCapsule(existing.generatedRuntime, {
       projectId,
       html: existing.data?.html ?? "",
@@ -452,16 +457,22 @@ export async function POST(req: Request): Promise<Response> {
         // eslint-disable-next-line no-console
         console.warn(`[ai-design] cápsula no mostrada al modelo: ${check.reason}`);
       }
-      return "";
+      return null;
     }
-    return currentRuntimePromptBlock(check.code);
+    return check.code;
   })();
+  const runtimeBlock = runtimeExistente ? currentRuntimePromptBlock(runtimeExistente) : "";
 
   // Tag every element of the current document with a short `data-op-id`
   // attribute. The model addresses elements by these IDs in Mode A (ops);
   // we strip them before persisting. Output savings: 5-50x vs emitting
   // full outerHTML as anchors.
-  const { taggedHtml, taggedCount } = tagWithOpIds(currentHtml);
+  //
+  // Se DESETIQUETA primero, igual que la ruta del Agente: `tag_with_op_ids`
+  // salta sin contar el elemento que ya lleva id, así que un documento ya
+  // etiquetado —guardado así por cualquier superficie— daría `taggedCount = 0`
+  // y un 400 permanente. Un documento limpio pasa byte-idéntico.
+  const { taggedHtml, taggedCount } = tagWithOpIds(stripOpIds(currentHtml));
   if (taggedCount === 0) {
     return errorJson(400, "currentHtml has no taggable elements");
   }
@@ -580,8 +591,13 @@ VISUAL CONTEXT: the attached image is a full-page render of the CURRENT page (wh
       // abajo es exclusiva del modo reescritura, y con Gemini no corre. Ver
       // lib/ai/js-clause.ts — prometerlo sin captura entrega botones muertos.
       content:
-        swapJsClauses(SYSTEM_PROMPT, ["contrato-completo", "no-negociable"], process.env) +
-        modelRuntimePromptBlock(process.env),
+        swapJsClauses(
+          SYSTEM_PROMPT,
+          ["contrato-completo", "conductas", "no-negociable"],
+          process.env,
+        ) +
+        modelRuntimePromptBlock(process.env) +
+        modelPruebaPromptBlock(process.env, "edits"),
     },
     ...history,
     {
@@ -842,6 +858,22 @@ VISUAL CONTEXT: the attached image is a full-page render of the CURRENT page (wh
          *  pueden caerse en el mismo turno y el usuario merece las tres. */
         let documentNotice = "";
         let outputMode: "ops" | "rewrite";
+        /** QUÉ DEBE PASAR, según el modelo. En ops llega tras `</edits>`; en
+         *  reescritura, dentro del documento, igual que al crear. */
+        let pruebaDeclarada: readonly PasoSpec[] | undefined;
+        /** Aviso cuando su prueba falló. Va con los demás: el usuario lo lee y
+         *  el modelo lo recibe en el turno siguiente por el historial. */
+        let pruebaNotice = "";
+        const capturarPrueba = (crudo: string, de: "edits" | "documento") => {
+          if (!modelJsEnabled(process.env)) return;
+          const p = de === "edits" ? extractPruebaFromEdits(crudo) : extractModelPrueba(crudo);
+          if (p.ok) {
+            pruebaDeclarada = p.pasos;
+          } else if (p.reason !== "ausente") {
+            // eslint-disable-next-line no-console
+            console.warn(`[ai-design] prueba del modelo descartada: ${p.reason}`);
+          }
+        };
 
         if (isOpsMode) {
           outputMode = "ops";
@@ -875,6 +907,9 @@ VISUAL CONTEXT: the attached image is a full-page render of the CURRENT page (wh
           const ops = idioma.domOps;
           if (partido.runtime.kind === "codigo") {
             runtimeDesdeOps = partido.runtime.code;
+            // Sólo si el turno tocó el comportamiento: una prueba sin código
+            // nuevo que probar mediría la página de antes.
+            capturarPrueba(raw, "edits");
           } else if (partido.runtime.kind === "error") {
             runtimeNotice = runtimeOpAviso(partido.runtime.reason);
             // eslint-disable-next-line no-console
@@ -972,6 +1007,10 @@ VISUAL CONTEXT: the attached image is a full-page render of the CURRENT page (wh
           // model might have re-emitted into the output even though the
           // prompt told it not to.
           outputMode = "rewrite";
+          // La reescritura entrega UN documento, así que la prueba viaja
+          // dentro, igual que al crear. Aquí ya se abre navegador de todas
+          // formas: la comprobación no cuesta un arranque más.
+          capturarPrueba(raw, "documento");
           // Scoped requests must NEVER produce a Mode B response — the
           // model only saw a slice of the doc, so a "full rewrite" from
           // that context would replace the entire page with what's
@@ -1036,6 +1075,27 @@ VISUAL CONTEXT: the attached image is a full-page render of the CURRENT page (wh
         // the model to fix on the NEXT turn — which meant the visitor could
         // meet the dead control first. ai-design edits a page that already
         // exists, so refusing costs the user the edit, not the page.
+        // EL SCRIPT DEL MODELO. En REESCRITURA se captura del texto CRUDO,
+        // antes de que el saneado del gate lo borrara. En modo OPS llega por su
+        // objetivo reservado (`splitRuntimeOps`) — hasta el 2026-08-22 aquí se
+        // devolvía `null` sin más, y por eso el camino barato no podía tocar el
+        // comportamiento de una página ni aunque el modelo quisiera.
+        // Sólo con DeepSeek: firmar los bytes de un proveedor creyéndolos de
+        // otro es justo la clase de error que un hash no puede detectar.
+        const runtimeCapturado = (() => {
+          if (!modelJsEnabled(process.env) || !useDeepSeek) return null;
+          if (outputMode === "ops") return runtimeDesdeOps;
+          const r = extractModelRuntime(accumulatedHtml);
+          if (!r.ok) {
+            if (r.reason !== "ausente") {
+              // eslint-disable-next-line no-console
+              console.warn(`[ai-design] runtime del modelo descartado: ${r.reason}`);
+            }
+            return null;
+          }
+          return r.code;
+        })();
+
         // El motor, el mismo que corre al crear (lib/page-engine). Hasta aquí
         // esta ruta sólo llamaba a la puerta: se creaba una página medida y a
         // la primera edición nadie volvía a mirar.
@@ -1044,9 +1104,15 @@ VISUAL CONTEXT: the attached image is a full-page render of the CURRENT page (wh
         // puerta sola tarda 7-17 ms y con render 5.5 s en caliente. Una
         // reescritura es una página nueva y lo vale; dos operaciones
         // quirúrgicas sobre un párrafo, no — y el usuario está mirando.
+
         const prepared = await preparePage(trimmedHtml, {
           mode: "edit",
-          renderChecks: outputMode !== "ops",
+          // …salvo cuando el turno tocó el COMPORTAMIENTO. Ahí sí se paga el
+          // navegador: es el único caso donde el camino barato podía cambiar
+          // el JavaScript de la página entera sin que nada lo mirara — ni
+          // siquiera recogía lo que gritaba, porque no había navegador que
+          // escuchase. Cambiar un párrafo sigue costando 17 ms.
+          renderChecks: outputMode !== "ops" || runtimeDesdeOps !== null,
           // Sin esto, una conducta rota que ya venía en la página condena TODAS
           // las ediciones futuras y el usuario oye hablar de un control que no
           // tocó. La puerta sólo rechaza lo que este turno rompió.
@@ -1064,6 +1130,16 @@ VISUAL CONTEXT: the attached image is a full-page render of the CURRENT page (wh
           ...(existing.brief ? { brief: existing.brief } : {}),
           ...(perfilNegocio ? { profile: perfilNegocio } : {}),
           ...(existing.data?.settings !== undefined ? { settings: existing.data.settings } : {}),
+          // EL JAVASCRIPT, que faltaba. `data.html` se guarda saneado, así que
+          // sin injertarlo el navegador medía una página sin comportamiento —
+          // ciego al script que muere al cargar, y con cualquier prueba
+          // condenada a fallar porque no había ni un manejador puesto.
+          //
+          // El de ESTE turno si el turno lo cambió; si no, el que la página ya
+          // tenía: `resealRuntime` lo vuelve a atar al HTML nuevo, así que es
+          // el que de verdad va a correr.
+          runtime: runtimeCapturado ?? runtimeExistente,
+          ...(pruebaDeclarada ? { prueba: pruebaDeclarada } : {}),
         });
         const gated = prepared.ok
           ? { ok: true as const, html: prepared.html, issues: prepared.report.behaviorIssues, code: "", detail: "" }
@@ -1092,26 +1168,6 @@ VISUAL CONTEXT: the attached image is a full-page render of the CURRENT page (wh
 
         enabledModules = [...prepared.report.modules];
 
-        // EL SCRIPT DEL MODELO. En REESCRITURA se captura del texto CRUDO,
-        // antes de que el saneado del gate lo borrara. En modo OPS llega por su
-        // objetivo reservado (`splitRuntimeOps`) — hasta el 2026-08-22 aquí se
-        // devolvía `null` sin más, y por eso el camino barato no podía tocar el
-        // comportamiento de una página ni aunque el modelo quisiera.
-        // Sólo con DeepSeek: firmar los bytes de un proveedor creyéndolos de
-        // otro es justo la clase de error que un hash no puede detectar.
-        const runtimeCapturado = (() => {
-          if (!modelJsEnabled(process.env) || !useDeepSeek) return null;
-          if (outputMode === "ops") return runtimeDesdeOps;
-          const r = extractModelRuntime(accumulatedHtml);
-          if (!r.ok) {
-            if (r.reason !== "ausente") {
-              // eslint-disable-next-line no-console
-              console.warn(`[ai-design] runtime del modelo descartado: ${r.reason}`);
-            }
-            return null;
-          }
-          return r.code;
-        })();
 
         const versionLabel =
           outputMode === "ops"
@@ -1201,9 +1257,32 @@ VISUAL CONTEXT: the attached image is a full-page render of the CURRENT page (wh
         );
         await debitCredits(userId, credits);
 
+        // CSS que no puede aplicar nunca. El motor lo diagnostica para las tres
+        // superficies; el Chat no tiene bucle con el que arreglarlo solo, así
+        // que se lo dice al USUARIO en su idioma — que es quien puede pedir el
+        // arreglo en el mensaje siguiente. Callarlo sería entregar una página
+        // con un control de aspecto roto y no decir por qué.
+        const cssMuerto = prepared.ok ? (prepared.report.deadRules ?? []) : [];
+        const cssNotice = cssMuerto.length
+          ? `⚠️ Escribí estilos que no llegan a aplicarse: ${cssMuerto
+              .map((r) => `\`${r.selector}\` (falta \`class="${r.ausentes[0]}"\`)`)
+              .join(", ")}. Esa parte va a salir con el aspecto por defecto del navegador. Pídeme que lo conecte y lo arreglo.`
+          : "";
+
+        // Su propia prueba, fallada. A diferencia de crear, el Chat SÍ tiene
+        // bucle: esto viaja en `reasoning`, el cliente lo guarda como el turno
+        // del asistente y el modelo lo recibe en el siguiente. Es el mismo
+        // mensaje que ya usa el Agente — un vocabulario, no dos.
+        const fallosPrueba = prepared.ok ? (prepared.report.specFailures ?? []) : [];
+        if (fallosPrueba.length > 0) {
+          pruebaNotice = avisoSpec(fallosPrueba);
+          // eslint-disable-next-line no-console
+          console.warn(`[ai-design] la prueba del modelo falló — ${fallosPrueba.map((f) => `paso ${f.paso}: ${f.mensaje}`).join(" · ")}`);
+        }
+
         // Guardar-y-AVISAR: si se descartó algo, el usuario tiene que leerlo.
         // Un cambio que se pierde en silencio es peor que uno que no se hizo.
-        const avisos = [droppedNotice, runtimeNotice, documentNotice].filter(Boolean).join("\n\n");
+        const avisos = [droppedNotice, runtimeNotice, documentNotice, cssNotice, pruebaNotice].filter(Boolean).join("\n\n");
         emit("done", {
           reasoning: avisos ? `${reasoning}
 

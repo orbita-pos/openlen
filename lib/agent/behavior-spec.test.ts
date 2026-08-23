@@ -6,6 +6,8 @@ import {
   leerFallos,
   parseBehaviorSpec,
   specProgram,
+  VENTANA_PRUEBA_MS,
+  type PasoSpec,
   specRechazoAviso,
 } from "./behavior-spec";
 
@@ -156,4 +158,62 @@ describe("los avisos", () => {
   it("el del usuario dice que su cambio SÍ se guardó", () => {
     expect(specRechazoAviso("sin_accion")).toContain("El cambio sí se guardó");
   });
+});
+
+// ── EN UN NAVEGADOR DE VERDAD ───────────────────────────────────────────────
+//
+// 🔴 El defecto que sólo se ve así, medido el 2026-08-23 sobre una página que
+// DeepSeek acababa de escribir: un pomodoro CORRECTO —`setInterval(…, 1000)`,
+// consola limpia, 24:59 al segundo— cuya propia prueba fallaba SIEMPRE, porque
+// se comprobaba a los 0 ms. Ningún doble lo habría enseñado: el bug es el
+// tiempo, y un `evaluate` simulado no tiene tiempo dentro.
+describe("la ventana de espera, con Chrome", () => {
+  const RELOJ = `<!doctype html><html><body>
+<p id="reloj">25:00</p><button id="empezar">ir</button>
+<script>document.getElementById("empezar").addEventListener("click", function () {
+  setTimeout(function () { document.getElementById("reloj").textContent = "24:59"; }, 900);
+});</script></body></html>`;
+
+  const correr = async (html: string, pasos: readonly PasoSpec[]) => {
+    const puppeteer = (await import("puppeteer")).default;
+    const browser = await puppeteer.launch({ headless: true, args: ["--no-sandbox"] });
+    try {
+      const page = await browser.newPage();
+      await page.setContent(html, { waitUntil: "load" });
+      return leerFallos(await page.evaluate(specProgram(pasos)));
+    } finally {
+      await browser.close();
+    }
+  };
+
+  it("un cambio que tarda 900 ms se da por bueno", async () => {
+    const fallos = await correr(RELOJ, [
+      { clic: "#empezar", veces: 1, entonces: [{ donde: "#reloj", que: "cambia" }] },
+    ]);
+    expect(fallos).toEqual([]);
+  }, 30_000);
+
+  it("y un botón cableado a NADA sigue fallando — la ventana no perdona, espera", async () => {
+    // El control arm. Sin él, «espera 1,5 s» podría estar tapando el fallo que
+    // esto existe para encontrar en vez de esperando a que se cumpla.
+    const mudo = RELOJ.replace('getElementById("empezar")', 'getElementById("empezarr")?');
+    const fallos = await correr(mudo, [
+      { clic: "#empezar", veces: 1, entonces: [{ donde: "#reloj", que: "cambia" }] },
+    ]);
+    expect(fallos).toHaveLength(1);
+    expect(fallos[0]!.mensaje).toContain("no cambió");
+  }, 30_000);
+
+  it("sale en cuanto se cumple: un paso que pasa al instante no paga la ventana", async () => {
+    const instante = `<!doctype html><html><body><p id="r">a</p><button id="b">x</button>
+<script>document.getElementById("b").addEventListener("click", function () {
+  document.getElementById("r").textContent = "b";
+});</script></body></html>`;
+    const t0 = Date.now();
+    const fallos = await correr(instante, [
+      { clic: "#b", veces: 1, entonces: [{ donde: "#r", que: "es", valor: "b" }] },
+    ]);
+    expect(fallos).toEqual([]);
+    expect(Date.now() - t0).toBeLessThan(VENTANA_PRUEBA_MS + 10_000);
+  }, 30_000);
 });

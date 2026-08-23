@@ -224,7 +224,14 @@ async function runRedesign(
               // La cláusula sólo voltea donde HAY captura: el rediseño produce un
               // documento entero, `editar_pagina` emite ops y no puede llevarla.
               content:
-                swapJsClauses(buildRedesignPrompt(input), ["rediseno"], process.env) +
+                swapJsClauses(
+                  buildRedesignPrompt(input),
+                  // `conductas`: el rediseño interpola `DESIGN_GUIDANCE` entera,
+                  // así que arrastraba el manual de las 9 igual que crear y el
+                  // Chat. Las tres superficies quedan con el mismo trato.
+                  ["rediseno", "conductas"],
+                  process.env,
+                ) +
                 modelRuntimePromptBlock(process.env),
             }],
             maxOutputTokens: MAX_OUTPUT_TOKENS,

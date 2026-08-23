@@ -3,7 +3,7 @@ import type { InlineImage } from "@/lib/ai-gateway";
 import { createAgentBrain } from "@/lib/agent/brain";
 import { resolveAIProvider } from "@/lib/ai-provider";
 import { getCreditState, debitCredits, creditsForUsage } from "@/lib/credits";
-import { resolveOpIdByPath, tagWithOpIds } from "@/lib/html-ops";
+import { resolveOpIdByPath, stripOpIds, tagWithOpIds } from "@/lib/html-ops";
 import { fetchImageAsInlineData } from "@/lib/ai/inline-image";
 import { validateUrl } from "@/lib/style-match/scrape/validate-url";
 import { buildFunctionDeclarations } from "@/lib/agent/catalog";
@@ -281,7 +281,16 @@ export async function POST(req: Request): Promise<Response> {
   // Same no-taggable-elements 400 as before, now checked against whichever
   // document is actually active this turn.
   const activeHtml = pageSlug ? project.data.pages?.[pageSlug]?.html ?? "" : project.data.html ?? "";
-  const { taggedHtml, taggedCount } = tagWithOpIds(activeHtml);
+  // Se DESETIQUETA antes de etiquetar. `tag_with_op_ids` salta —sin contarlo—
+  // el elemento que ya lleva `data-op-id` (`tagger.rs`), así que un documento
+  // ya etiquetado devuelve `taggedCount = 0` y esta ruta lo rechazaba con un
+  // 400 del que no se salía NUNCA: el proyecto quedaba inservible.
+  //
+  // El escape estaba tapado en `persistHtmlChange`, pero eso sólo protege lo
+  // que se guarde de aquí en adelante. Los proyectos que YA tienen ids dentro
+  // necesitan que la puerta sepa curarlos, y hacerla idempotente es más barato
+  // que una migración. Un documento limpio pasa por aquí byte-idéntico.
+  const { taggedHtml, taggedCount } = tagWithOpIds(stripOpIds(activeHtml));
   if (taggedCount === 0) return errorJson(400, "project html has no taggable elements");
 
   // El JavaScript que la página ya tiene. `activeHtml` viene saneado, así que

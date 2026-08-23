@@ -211,7 +211,13 @@ describe("renderVisualQualityViewports", () => {
     const page = {
       setViewport: vi.fn(async ({ width }: { width: number }) => { order.push(`viewport:${width}`); }),
       setContent: vi.fn(async () => { order.push("content"); }),
-      evaluate: vi.fn(async () => { evaluations += 1; order.push(evaluations > 2 ? "overflow" : "settle"); return false; }),
+      // La 5ª evaluación es el programa de PULSAR — llega como cadena, no como
+      // función, y va DESPUÉS de las dos capturas. Distinguirla por su tipo es
+      // lo que fija que se pulse al final y no en medio de las fotos.
+      evaluate: vi.fn(async (arg: unknown) => {
+        if (typeof arg === "string") { order.push("pulsar"); return 3; }
+        evaluations += 1; order.push(evaluations > 2 ? "overflow" : "settle"); return false;
+      }),
       screenshot: vi.fn(async () => Buffer.from("jpeg")),
     };
     const close = vi.fn(async () => { order.push("close"); });
@@ -227,7 +233,11 @@ describe("renderVisualQualityViewports", () => {
 
     expect(result).not.toBeNull();
     expect(order).toEqual([
-      "guard", "viewport:1280", "content", "settle", "viewport:390", "settle", "overflow", "overflow", "close",
+      "guard", "viewport:1280", "content", "settle", "viewport:390", "settle", "overflow", "overflow",
+      // Los botones se aprietan al FINAL: un clic puede mover el DOM y las dos
+      // capturas tienen que enseñar la página tal como se recibe.
+      "pulsar",
+      "close",
     ]);
     expect(close).toHaveBeenCalledTimes(1);
     expect(page.screenshot).toHaveBeenCalledTimes(2);
@@ -321,7 +331,9 @@ describe("renderVisualQualityViewports", () => {
     });
 
     expect(result).toMatchObject({ mobileOverflow: true });
-    expect(page.evaluate).toHaveBeenCalledTimes(4);
+    // 4 medidas + 1 el programa de pulsar (que llega como cadena).
+    expect(page.evaluate).toHaveBeenCalledTimes(5);
+    expect(typeof page.evaluate.mock.calls[4]?.[0]).toBe("string");
   });
 
   it("tolerates one pixel of mobile layout rounding", async () => {
@@ -563,4 +575,159 @@ describe("una página sin titular no es una página sana", () => {
       typographyHierarchy: { rule: "h1_not_rendered", h1Count: 1, h1FontPx: null },
     });
   }, 30_000);
+});
+
+// 🔴 EL PUNTO CIEGO DEL CONTRASTE, con navegador de verdad porque lo que se
+// prueba es la resolución del fondo REAL — un evaluate simulado no probaría nada.
+//
+// Medido el 2026-08-23 en una página real: el reloj de un pomodoro salía gris
+// ilegible sobre un disco NEGRO y esto reportaba contraste PERFECTO. Lo que
+// tapaba el texto no era un ancestro sino un `<svg>` HERMANO pintado detrás, y
+// el paseo por `parentElement` no puede verlo por construcción.
+describe("el fondo que pinta un HERMANO, no un ancestro", () => {
+  // Calco del pomodoro: un <svg> en absoluto detrás y el texto encima, los dos
+  // hijos del mismo contenedor transparente. Los <circle> sin `fill` se pintan
+  // NEGROS por defecto — el defecto exacto que el modelo escribió.
+  const pagina = (relleno: string) => `<!doctype html><html><head><style>
+    *{box-sizing:border-box}html,body{margin:0;background:#fff;font-family:Arial,sans-serif}
+    .caja{position:relative;width:280px;height:280px;margin:600px auto}
+    .caja svg{position:absolute;inset:0;width:100%;height:100%}
+    .reloj{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:48px;color:#1f1e1b}
+  </style></head><body>
+    <h1 style="font-size:40px">Pomodoro</h1>
+    <div class="caja">
+      <svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="45" ${relleno}></circle></svg>
+      <div class="reloj">25:00</div>
+    </div>
+  </body></html>`;
+
+  it("ve el texto ilegible sobre el disco negro", async () => {
+    const r = await renderVisualQualityViewports(pagina(""));
+    expect(r).not.toBeNull();
+    const hallazgos = r?.unreadableText ?? [];
+    expect(hallazgos.some((h) => h.background === "#000000")).toBe(true);
+  }, 30_000);
+
+  // El brazo de control: la MISMA página con el relleno puesto no puede dar
+  // ningún hallazgo. Sin esto, un detector que dijera "ilegible" siempre
+  // pasaría la prueba de arriba sin proteger nada.
+  it("y con fill=none no inventa ninguno", async () => {
+    const r = await renderVisualQualityViewports(pagina('fill="none" stroke="#ccc"'));
+    expect(r).not.toBeNull();
+    expect(r?.unreadableText ?? []).toEqual([]);
+  }, 30_000);
+
+  // El falso positivo que mi primera versión sí generaba: saltarse los
+  // ancestros mandaba el paseo hasta el <body> y medía el texto claro de un
+  // botón contra el fondo de la página en vez de contra su propio acento.
+  it("un botón de acento NO es un hallazgo — su propio fondo manda", async () => {
+    const html = `<!doctype html><html><head><style>
+      html,body{margin:0;background:#f7f5f0;font-family:Arial,sans-serif}
+      .btn{display:inline-block;margin:600px 40px;padding:14px 22px;border-radius:99px;background:#b4472a;color:#fdfcf9;font-size:16px}
+    </style></head><body><h1 style="font-size:40px">Hola</h1>
+      <a class="btn" href="#x">empezar ahora</a></body></html>`;
+    const r = await renderVisualQualityViewports(html);
+    expect(r).not.toBeNull();
+    expect(r?.unreadableText ?? []).toEqual([]);
+  }, 30_000);
+});
+
+// APRETAR LOS BOTONES, con navegador de verdad. Los ojos del Agente pulsan
+// desde el 22/08; una página recién CREADA nunca veía un clic — nacía, se
+// fotografiaba y se entregaba. Este es el modo de fallo que sólo se ve así.
+describe("los controles se aprietan al medir", () => {
+  const pagina = (cuerpo: string) => `<!doctype html><html><head><style>
+      body{margin:0;font-family:Arial,sans-serif;background:#fff;color:#111}
+    </style></head><body>
+    <h1 style="font-size:40px">Contador</h1>
+    <button id="b" style="font-size:16px">sumar</button>
+    <span id="n" style="font-size:16px">0</span>
+    <script>${cuerpo}</script>
+  </body></html>`;
+
+  it("caza el manejador que revienta en la SEGUNDA jugada", async () => {
+    // Carga limpio, la captura sale perfecta y la consola está muda hasta que
+    // alguien pulsa dos veces. Sin pulsar, esta página pasa por sana.
+    const r = await renderVisualQualityViewports(
+      pagina(`var v=0;document.getElementById("b").addEventListener("click",function(){
+        v++; if (v>1) { null.x = 1; } document.getElementById("n").textContent=String(v);
+      });`),
+    );
+    expect(r).not.toBeNull();
+    expect((r?.runtimeErrors ?? []).join(" ")).toMatch(/null|undefined|TypeError/i);
+  }, 30_000);
+
+  // El brazo de control: sin él, un detector que dijera "roto" siempre pasaría
+  // la prueba de arriba sin proteger nada.
+  it("y un botón que funciona no inventa ningún grito", async () => {
+    const r = await renderVisualQualityViewports(
+      pagina(`var v=0;document.getElementById("b").addEventListener("click",function(){
+        v++; document.getElementById("n").textContent=String(v);
+      });`),
+    );
+    expect(r).not.toBeNull();
+    expect(r?.runtimeErrors ?? []).toEqual([]);
+  }, 30_000);
+});
+
+// EL GUION DEL MODELO ocupa el mismo hueco que el pulsado a ciegas: mismo
+// navegador, después de las dos capturas. Lo que se prueba aquí es la ELECCIÓN
+// (guion o pulsado, nunca los dos) y que lo que devuelve el navegador llega
+// intacto a quien lo pidió — este módulo no interpreta specs.
+describe("el guion declarado por el modelo", () => {
+  const GUION = "(() => [[0, '#reloj no cambió']])();";
+
+  const doble = (alEvaluarCadena: (arg: string) => unknown) => ({
+    setViewport: vi.fn(async () => undefined),
+    setContent: vi.fn(async () => undefined),
+    evaluate: vi.fn(async (arg: unknown) =>
+      typeof arg === "string" ? alEvaluarCadena(arg) : undefined,
+    ),
+    screenshot: vi.fn(async () => Buffer.from("jpeg")),
+  });
+
+  const conPagina = (page: ReturnType<typeof doble>, opts: { behaviorProgram?: string }) =>
+    renderVisualQualityViewports(
+      HTML,
+      {
+        launchBrowser: async () => ({ newPage: async () => page, close: async () => undefined }),
+        installGuard: async () => undefined,
+        settle: async () => undefined,
+      },
+      opts,
+    );
+
+  it("ejecuta el guion y devuelve lo crudo, sin interpretarlo", async () => {
+    const page = doble(() => [[0, "#reloj no cambió"]]);
+    const r = await conPagina(page, { behaviorProgram: GUION });
+    expect(r?.behaviorResult).toEqual([[0, "#reloj no cambió"]]);
+  });
+
+  it("con guion NO se pulsa a ciegas — es una cosa o la otra", async () => {
+    const page = doble(() => []);
+    await conPagina(page, { behaviorProgram: GUION });
+    const cadenas = page.evaluate.mock.calls.map((c) => c[0]).filter((a) => typeof a === "string");
+    expect(cadenas).toEqual([GUION]);
+  });
+
+  it("sin guion se pulsa como siempre y no hay resultado que leer", async () => {
+    const page = doble(() => 3);
+    const r = await conPagina(page, {});
+    const cadenas = page.evaluate.mock.calls.map((c) => c[0]).filter((a) => typeof a === "string");
+    expect(cadenas).toHaveLength(1);
+    expect(cadenas[0]).not.toBe(GUION);
+    // Ausente, no `undefined` explícito: el objeto queda idéntico al de antes
+    // de que esto existiera.
+    expect("behaviorResult" in (r ?? {})).toBe(false);
+  });
+
+  it("un guion que revienta no cuesta la medición", async () => {
+    const page = doble(() => {
+      throw new Error("boom");
+    });
+    const r = await conPagina(page, { behaviorProgram: GUION });
+    expect(r).not.toBeNull();
+    expect(r?.desktop.dataBase64).not.toBe("");
+    expect("behaviorResult" in (r ?? {})).toBe(false);
+  });
 });

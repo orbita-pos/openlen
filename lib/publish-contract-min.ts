@@ -44,7 +44,10 @@ Nada de esto habla de cómo debe verse la página. Son las condiciones para que 
 • Google Fonts por \`<link rel="stylesheet" href="https://fonts.googleapis.com/…">\` en el \`<head>\`. Cualquier familia del catálogo vale; carga todas las que uses.
 • Tu CSS propio va en un \`<style>\` dentro del \`<head>\`.
 • NINGÚN JavaScript sobrevive. Todo \`<script>\` —salvo el de Tailwind— y todo atributo \`on*\` se BORRAN antes de guardar el documento. Lo que deba moverse o responder se resuelve sin código: \`<details>\`/\`<summary>\`, un checkbox oculto con \`peer-checked:\`, \`:target\`, \`@keyframes\`, \`transition\`. Un control que sólo funcionaría con un script llega muerto.
-• NINGÚN \`<iframe>\` sobrevive: también se borra.
+• NINGÚN \`<iframe>\` sobrevive: también se borra. Hay DOS excepciones y ninguna necesita iframe, sólo un \`<a href>\` normal que se transforma al publicar:
+  – VÍDEO: un enlace a YouTube o Vimeo se convierte en reproductor dentro de la página.
+  – MAPA: un enlace a \`https://maps.google.com/?q=<dirección>\` se convierte en un mapa que se abre al pulsar. Si el negocio tiene dirección física, ponla así donde des el contacto — un negocio local sin mapa está a medias.
+  Para cualquier otra cosa (Spotify, Calendly, reservas de terceros), no finjas un embebido.
 • Ningún atributo \`data-slot-path=\` en ninguna parte.
 • Ninguna interfaz de acceso, registro o cuenta: estas páginas no tienen aplicación detrás, así que un enlace de entrada no lleva a ningún sitio.
 

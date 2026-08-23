@@ -19,6 +19,7 @@ import { bakeCollections } from "@/lib/publish/collections-block";
 import { bakeWhatsAppButton, waHref } from "@/lib/publish/whatsapp-button";
 import { bakeChatWidget } from "@/lib/publish/chat-widget";
 import { bakeVideoEmbeds } from "@/lib/publish/video-embed";
+import { bakeMapEmbeds } from "@/lib/publish/map-embed";
 import { detectSiteAccent } from "@/lib/publish/site-accent";
 import { splitPagesForPublish } from "@/lib/projects/site-pages";
 import type { ItemRow } from "@/lib/collections/store";
@@ -147,6 +148,21 @@ export function bakeModulesForPreviewHtml(html: string, ctx: PreviewBakeCtx): st
   if (process.env.OPENLEN_VIDEO_EMBED !== "0" && !ctx.sandboxed) {
     try {
       out = bakeVideoEmbeds(out);
+    } catch {
+      /* soft-fail */
+    }
+  }
+
+  // Mapa en la página. Igual que el vídeo: sin esto el enlace sólo se convierte
+  // en mapa al publicar y la vista previa promete de menos.
+  //
+  // También se salta en superficies con sandbox, y por el mismo motivo que el
+  // vídeo: `PREVIEW_CSP` no lleva `allow-same-origin` y los iframes anidados
+  // heredan la bandera, así que el mapa no montaría — enseñaría un hueco gris
+  // donde la publicada tiene un mapa, que es peor que enseñar el enlace.
+  if (process.env.OPENLEN_MAP_EMBED !== "0" && !ctx.sandboxed) {
+    try {
+      out = bakeMapEmbeds(out);
     } catch {
       /* soft-fail */
     }

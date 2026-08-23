@@ -63,8 +63,12 @@ export function objectiveBreakage(page: MeasuredPage | null | undefined): string
   // variable» sí, y es exactamente lo que el modelo necesita para REPARAR en
   // vez de re-crear. Se acotan a tres: más que eso suelen ser el mismo fallo
   // rebotando, y el presupuesto del prompt no es infinito.
+  // "al cargar" ya no es cierto: desde el 2026-08-23 la medición también APRIETA
+  // los controles, así que un grito puede venir del clic. Mandar al modelo a
+  // mirar el arranque cuando el fallo está en un manejador es peor que no
+  // decirle dónde — se pone a revisar el código que sí funciona.
   for (const grito of (page.runtimeErrors ?? []).slice(0, 3)) {
-    reasons.push(`el JavaScript de la página falla al cargar: ${grito}`);
+    reasons.push(`el JavaScript de la página falla (al cargarla o al usar sus controles): ${grito}`);
   }
   return reasons;
 }

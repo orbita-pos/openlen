@@ -21,6 +21,7 @@ const mocks = vi.hoisted(() => ({
   stream: vi.fn(),
   fireworksStream: vi.fn(),
   renderReference: vi.fn(async (): Promise<{ mimeType: string; dataBase64: string } | null> => null),
+  render: vi.fn(),
 }));
 
 vi.mock("@/auth", () => ({ auth: mocks.auth }));
@@ -51,9 +52,18 @@ vi.mock("@/lib/ai/fireworks-stream-client", () => ({
 vi.mock("@/lib/ai/inline-image", () => ({
   renderHtmlToInlineImage: mocks.renderReference,
 }));
+// El navegador de la etapa de medición. Se dobla —no se apaga— porque lo que
+// estas pruebas vigilan es CUÁNDO se abre y CON QUÉ, no lo que ve dentro.
+vi.mock("@/lib/ai/visual-quality-renderer", async (original) => ({
+  ...(await original<Record<string, unknown>>()),
+  renderVisualQualityViewports: (...args: unknown[]) => mocks.render(...args),
+}));
 
 import { POST } from "./route";
 import { MARKER } from "./system-prompt";
+import { tagWithOpIds } from "@/lib/html-ops";
+
+const JPEG = { mimeType: "image/jpeg", dataBase64: Buffer.from("jpeg").toString("base64") } as const;
 
 const FILLER = "<p>Contenido real de la página para que el documento no parezca truncado.</p>".repeat(20);
 const CURRENT_HTML = `<!doctype html><html lang="es"><head><title>Mi página</title></head><body><h1>Hola</h1>${FILLER}</body></html>`;
@@ -228,5 +238,108 @@ describe("POST /api/templates/ai-design", () => {
       if (previous === undefined) delete process.env.OPENLEN_AIDESIGN_THINKING;
       else process.env.OPENLEN_AIDESIGN_THINKING = previous;
     }
+  });
+
+// ── LA PRUEBA DECLARADA EN EL CHAT ──────────────────────────────────────────
+//
+// Lo que se vigila aquí es la DECISIÓN de la ruta, que es donde esto puede
+// nacer dark: un turno de ops que cambia el JavaScript tiene que pagar el
+// navegador —era el único camino capaz de reescribir el comportamiento de la
+// página entera sin que nada lo mirara— y un turno que sólo toca texto NO.
+  describe("la prueba declarada, en la pestaña Chat", () => {
+    const RUNTIME = '<script data-openlen-model-runtime>document.title="x";</script>';
+
+    /** Cada llamada al render, con el HTML que vio y el guion que se le mandó. */
+    let vistas: { html: string; behaviorProgram?: string }[] = [];
+
+    const opsSays = (inner: string) =>
+      (async function* () {
+        yield { type: "text_delta" as const, text: `Lo hago.\n${MARKER}\n${inner}` };
+        yield { type: "usage" as const, inputTokens: 10, outputTokens: 10 };
+        yield { type: "done" as const, stopReason: { kind: "end_turn" as const } };
+      })();
+
+    /** El `data-op-id` de un elemento del documento que la ruta va a etiquetar. */
+    const opIdDelH1 = () => {
+      const { taggedHtml } = tagWithOpIds(CURRENT_HTML);
+      return /<h1[^>]*\bdata-op-id="([^"]+)"/.exec(taggedHtml)?.[1] ?? "";
+    };
+
+    beforeEach(() => {
+      vistas = [];
+      process.env.OPENLEN_MODEL_JS = "1";
+      delete process.env.OPENLEN_RENDER_CHECKS;
+      mocks.render.mockImplementation(async (html: string, _i: unknown, o: { behaviorProgram?: string } = {}) => {
+        vistas.push({ html, ...(o.behaviorProgram ? { behaviorProgram: o.behaviorProgram } : {}) });
+        return { desktop: JPEG, mobile: JPEG, behaviorResult: [] };
+      });
+    });
+
+    it("un turno de ops que toca el JavaScript SÍ paga el navegador", async () => {
+      mocks.fireworksStream.mockReturnValue(
+        opsSays(`<edits><edit op="replace" target="runtime">${RUNTIME}</edit></edits>
+  <prueba>[{"clic":"#b","entonces":[{"donde":"#r","que":"cambia"}]}]</prueba>`),
+      );
+
+      const events = await readEvents(await call());
+
+      expect(events.find((e) => e.event === "error")?.data.message ?? null).toBeNull();
+      // `preparePage` abre el navegador dos veces —legibilidad y medición— y
+      // sólo la SEGUNDA lleva guion. La primera devuelve documento, así que un
+      // injerto suyo acabaría persistido en `data.html`: por eso no ve el
+      // script. Ese reparto se comprueba aquí, no se da por hecho.
+      const conGuion = vistas.filter((v) => v.behaviorProgram);
+      expect(conGuion).toHaveLength(1);
+      // Con el JavaScript dentro: sin él se mide una página sin comportamiento
+      // y cualquier prueba falla porque no hay ni un manejador puesto.
+      expect(conGuion[0]!.html).toContain('document.title="x"');
+      expect(conGuion[0]!.behaviorProgram).toContain("#b");
+      expect(vistas.filter((v) => v.html.includes('document.title="x"'))).toHaveLength(1);
+    });
+
+    it("y un turno de ops que sólo toca texto NO lo paga — sigue costando 17 ms", async () => {
+      mocks.fireworksStream.mockReturnValue(
+        opsSays(`<edits><edit op="replace" target="${opIdDelH1()}"><h1>Otro título</h1></edit></edits>`),
+      );
+
+      const events = await readEvents(await call());
+
+      expect(events.some((e) => e.event === "error")).toBe(false);
+      expect(vistas).toHaveLength(0);
+    });
+
+    it("cuando su prueba falla, el aviso llega al chat con el elemento", async () => {
+      mocks.render.mockImplementation(async (html: string, _i: unknown, o: { behaviorProgram?: string } = {}) => {
+        vistas.push({ html, ...(o.behaviorProgram ? { behaviorProgram: o.behaviorProgram } : {}) });
+        return { desktop: JPEG, mobile: JPEG, behaviorResult: [[0, "#r no cambió"]] };
+      });
+      mocks.fireworksStream.mockReturnValue(
+        opsSays(`<edits><edit op="replace" target="runtime">${RUNTIME}</edit></edits>
+  <prueba>[{"clic":"#b","entonces":[{"donde":"#r","que":"cambia"}]}]</prueba>`),
+      );
+
+      const events = await readEvents(await call());
+
+      // Se GUARDA igual: una promesa incumplida no cuesta la edición del usuario.
+      // El bucle lo cierra el turno siguiente — el aviso viaja en `reasoning`, el
+      // cliente lo guarda como turno del asistente y el modelo lo recibe.
+      const done = events.find((e) => e.event === "done");
+      expect(done).toBeDefined();
+      expect(String(done?.data.reasoning)).toContain("#r no cambió");
+      expect(String(done?.data.reasoning)).toMatch(/TU PROPIA PRUEBA FALLÓ/);
+    });
+
+    it("sin prueba declarada se mide igual, pero sin guion", async () => {
+      mocks.fireworksStream.mockReturnValue(
+        opsSays(`<edits><edit op="replace" target="runtime">${RUNTIME}</edit></edits>`),
+      );
+
+      await readEvents(await call());
+
+      // Se abre igual —el turno cambió el comportamiento— pero se pulsa a
+      // ciegas: sin promesa declarada sólo se puede preguntar «¿explotó?».
+      expect(vistas.length).toBeGreaterThan(0);
+      expect(vistas.every((v) => v.behaviorProgram === undefined)).toBe(true);
+    });
   });
 });
