@@ -339,13 +339,25 @@ if ($env:OPENLEN_SKIP_CRATES_REBUILD -ne "1") {
   # Extract the workspace + run the build script against the staging dir.
   # The script restarts only when targeting the live dir, so passing
   # staging here is safe — rebuild then continue to the swap in step 7.
+  # SIN COMILLAS INVERTIDAS EN ESTE BLOQUE. Es un here-string de PowerShell con
+  # comillas DOBLES, donde la comilla invertida es el caracter de ESCAPE: los
+  # comentarios de abajo llevaban `napi.cmd` y `npm install` entrecomillados asi,
+  # y PowerShell leia esa secuencia como un SALTO DE LINEA que ademas se comia la
+  # n. El comentario se partia en dos y la mitad quedaba como comando: el box
+  # respondia "bash: line 5: api.cmd: command not found" (exit 127) y el deploy
+  # moria SIEMPRE en el paso 6.5, justo antes del swap.
+  #
+  # Medido el 2026-08-23: llevaba desde el 2026-08-20 bloqueando todos los
+  # deploys — la misma fecha del /opt/openlen-app-staging huerfano que quedo en
+  # el box. Se introdujo al escribir el comentario de abajo, que explicaba OTRO
+  # fallo del mismo paso. Un comentario tumbo el deploy.
   $cratesCmd = @"
 set -e
-# BORRAR antes de extraer, no extraer encima. `mkdir -p` + `tar -xzf` deja
+# BORRAR antes de extraer, no extraer encima. Un mkdir -p + tar -xzf deja
 # intacto lo que ya hubiera: si un intento anterior subio node_modules de
-# WINDOWS (con `napi.cmd` y un `napi` sin bit de ejecucion), el tarball nuevo
-# —ya limpio— no los borra, `npm install` los ve y dice "ya esta instalado", y
-# `napi build` sigue muriendo con Permission denied.
+# WINDOWS (con napi.cmd y un napi sin bit de ejecucion), el tarball nuevo
+# —ya limpio— no los borra, npm install los ve y dice "ya esta instalado", y
+# napi build sigue muriendo con Permission denied.
 #
 # Pasó de verdad (2026-08-20): se arreglo el tarball y el paso 6.5 volvio a
 # fallar IGUAL, porque el residuo estaba en el box, no en el envio.
